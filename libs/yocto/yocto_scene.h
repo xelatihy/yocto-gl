@@ -117,11 +117,9 @@ struct scene_camera {
 // Texture containing either an LDR or HDR image. HdR images are encoded
 // in linear color space, while LDRs are encoded as sRGB.
 struct scene_texture {
-  string       name    = "";
-  image<vec3f> colorf  = {};
-  image<vec3b> colorb  = {};
-  image<float> scalarf = {};
-  image<byte>  scalarb = {};
+  string       name = "";
+  image<vec4f> hdr  = {};
+  image<vec4b> ldr  = {};
 };
 
 // Material for surfaces, lines and triangles.
@@ -299,10 +297,8 @@ void set_material(scene_instance* instance, scene_material* material);
 void set_shape(scene_instance* instance, scene_shape* shape);
 
 // set texture properties
-void set_texture(scene_texture* texture, const image<vec3b>& img);
-void set_texture(scene_texture* texture, const image<vec3f>& img);
-void set_texture(scene_texture* texture, const image<byte>& img);
-void set_texture(scene_texture* texture, const image<float>& img);
+void set_texture(scene_texture* texture, const image<vec4b>& img);
+void set_texture(scene_texture* texture, const image<vec4f>& img);
 
 // set material properties
 void set_emission(scene_material* material, const vec3f& emission,
@@ -381,9 +377,9 @@ ray3f eval_camera(
 
 // Evaluates a texture
 vec2i texture_size(const scene_texture* texture);
-vec3f lookup_texture(
+vec4f lookup_texture(
     const scene_texture* texture, const vec2i& ij, bool ldr_as_linear = false);
-vec3f eval_texture(const scene_texture* texture, const vec2f& uv,
+vec4f eval_texture(const scene_texture* texture, const vec2f& uv,
     bool ldr_as_linear = false, bool no_interpolation = false,
     bool clamp_to_edge = false);
 

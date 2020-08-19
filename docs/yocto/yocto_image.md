@@ -149,15 +149,13 @@ auto display = image_difference(a,b, true);        // diff display
 
 ## Image loading and saving
 
-Images are loaded with `load_image(filename,img,error)` and saved with
+Images are loaded with `load_image(filename, img, error)` and saved with
 `save_image(filename, img, error)`. Both loading and saving take a filename,
 an image buffer and return whether or not the image was loaded successfully.
 In the case of an error, the IO functions set the `error` string with a
 message suitable for displaying to a user.
-Yocto/Images supports loading and saving to JPG, PNG, TGA, BMP, HDR, EXR.
-Yocto/Image supports loading and saving of images that have 1-4 channels and
-have either float or byte channels. The number of channel and type is selected
-using overloads.
+Yocto/Images supports loading and saving to JPG, PNG, TGA, BMP, HDR, EXR for
+images of either float or byte. The type is selected using overloads.
 
 When loading images, the desired number of channels is determined by the
 function overload. If the image content does not contain the same number of
