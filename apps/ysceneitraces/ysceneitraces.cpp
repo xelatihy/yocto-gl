@@ -49,8 +49,9 @@ struct app_state {
   trace_params params = {};
 
   // scene
-  trace_scene*  scene  = new trace_scene{};
-  trace_camera* camera = nullptr;
+  trace_scene*   scene        = new trace_scene{};
+  trace_camera*  camera       = nullptr;
+  vector<string> camera_names = {};
 
   // rendering state
   image<vec4f> render   = {};
@@ -262,6 +263,10 @@ int main(int argc, const char* argv[]) {
   // get camera
   auto iocamera = get_camera(ioscene, camera_name);
 
+  // camera names
+  for (auto iocamera : ioscene->cameras)
+    app->camera_names.push_back(iocamera->name);
+
   // trace scene initialization
   init_scene(app->scene, ioscene, app->camera, iocamera);
 
@@ -307,7 +312,8 @@ int main(int argc, const char* argv[]) {
     auto  edited  = 0;
     auto& tparams = app->params;
     draw_progressbar(win, "render", app->current, app->total);
-    edited += draw_combobox(win, "camera", app->camera, app->scene->cameras);
+    edited += draw_combobox(
+        win, "camera", app->camera, app->scene->cameras, app->camera_names);
     edited += draw_slider(win, "resolution", tparams.resolution, 180, 4096);
     edited += draw_slider(win, "nsamples", tparams.samples, 16, 4096);
     edited += draw_combobox(
