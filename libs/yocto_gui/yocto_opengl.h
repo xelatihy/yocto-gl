@@ -237,7 +237,6 @@ struct ogl_program {
   uint program_id  = 0;
   uint vertex_id   = 0;
   uint fragment_id = 0;
-  uint array_id    = 0;
 };
 
 // initialize program

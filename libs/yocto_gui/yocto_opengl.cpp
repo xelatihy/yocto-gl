@@ -626,12 +626,6 @@ bool init_program(ogl_program* program, const string& vertex,
   program->vertex_code   = vertex;
   program->fragment_code = fragment;
 
-  // create arrays
-  assert_ogl_error();
-  glGenVertexArrays(1, &program->array_id);
-  glBindVertexArray(program->array_id);
-  assert_ogl_error();
-
   const char* ccvertex   = vertex.data();
   const char* ccfragment = fragment.data();
   int         errflags;
@@ -695,11 +689,9 @@ void clear_program(ogl_program* program) {
   if (program->program_id) glDeleteProgram(program->program_id);
   if (program->vertex_id) glDeleteShader(program->vertex_id);
   if (program->fragment_id) glDeleteProgram(program->fragment_id);
-  if (program->array_id) glDeleteVertexArrays(1, &program->array_id);
   program->program_id  = 0;
   program->vertex_id   = 0;
   program->fragment_id = 0;
-  program->array_id    = 0;
 }
 
 bool is_initialized(const ogl_program* program) {
@@ -1191,6 +1183,8 @@ void clear_shape(ogl_shape* shape) {
   clear_elementbuffer(shape->triangles);
   clear_elementbuffer(shape->quads);
   clear_elementbuffer(shape->edges);
+  glDeleteVertexArrays(1, &shape->shape_id);
+  shape->shape_id = 0;
 }
 
 ogl_shape::~ogl_shape() {
@@ -1232,7 +1226,7 @@ void set_vertex_attribute(int location, const ogl_arraybuffer* buffer) {
 template <typename T>
 void set_vertex_attribute(ogl_shape* shape, ogl_arraybuffer* attribute,
     const vector<T>& data, int location) {
-    assert(!data.empty());
+  assert(!data.empty());
   set_arraybuffer(attribute, data, false);
   assert_ogl_error();
   bind_shape(shape);
