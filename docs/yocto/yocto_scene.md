@@ -41,7 +41,7 @@ To compute good apertures, one can use the F-stop number from photography
 and set the aperture to focal length over f-stop.
 
 **Textures**, represented as `scene_texture` contain either 8-bit LDR or
-32-bit float HDR images of either scalar or color (RGB) type.
+32-bit float HDR images with four channels.
 HDR images are encoded in linear color space, while LDR images
 are encoded in sRGB.
 
@@ -158,10 +158,8 @@ one or three channels and with float or byte channel types.
 ```cpp
 auto scene = new scene_model{};             // create a scene
 auto texture = add_texture(scene, "tex");   // create a texture named tex
-set_texture(texture,image<vec3f>{...});     // set as a color HDR texture
-set_texture(texture,image<vec3b>{...});     // set as a color LDR texture
-set_texture(texture,image<float>{...});     // set as a scalar HDR texture
-set_texture(texture,image<byte >{...});     // set as a scalar LDR texture
+set_texture(texture,image<vec4f>{...});     // set as a HDR texture
+set_texture(texture,image<vec4b>{...});     // set as a LDR texture
 ```
 
 For materials, Yocto/Scene defines functions to set each material property.
