@@ -37,19 +37,22 @@ using namespace std::string_literals;
 #include <OpenImageDenoise/oidn.hpp>
 #include <iostream>
 
-static bool oidn_image_denoise(const image<vec3f> &color, bool hdr,
-    const image<vec3f> *albedo, const image<vec3f> *normal, image<vec3f> &out,
-    std::string &error, progress_callback progress_cb) {
-  if (normal && !albedo)
-    throw std::runtime_error{
-        "cannot use normal feature image without specifying an albedo feature image."};
+static bool oidn_image_denoise(image<vec4f>& denoised,
+    const image<vec4f>& color, const image<vec4f>& albedo,
+    const image<vec4f>& normal, bool hdr, std::string& error,
+    progress_callback progress_cb) {
+  if (!normal.empty() && albedo.empty()) {
+    error =
+        "cannot use normal feature image without specifying an albedo feature image.";
+    return false;
+  }
 
   // All feature images must be the same size as the color image
-  if (albedo && albedo->imsize() != color.imsize()) {
+  if (!albedo.empty() && albedo.imsize() != color.imsize()) {
     error = "albedo image size doesn't match color image size";
     return false;
   }
-  if (normal && normal->imsize() != color.imsize()) {
+  if (!normal.empty() && normal.imsize() != color.imsize()) {
     error = "normal image size doesn't match color image size";
     return false;
   }
@@ -64,32 +67,34 @@ static bool oidn_image_denoise(const image<vec3f> &color, bool hdr,
   // set the color image of the filter
   filter.set("hdr", hdr);
   filter.setImage(
-      "color", (void *)color.data(), oidn::Format::Float3, width, height);
+      "color", (void*)color.data(), oidn::Format::Float4, width, height);
 
   // set albedo if present
-  if (albedo)
+  if (!albedo.empty()) {
     filter.setImage(
-        "albedo", (void *)albedo->data(), oidn::Format::Float3, width, height);
+        "albedo", (void*)albedo.data(), oidn::Format::Float4, width, height);
+  }
 
   // set normal if present
-  if (normal)
+  if (!normal.empty()) {
     filter.setImage(
-        "normal", (void *)normal->data(), oidn::Format::Float3, width, height);
+        "normal", (void*)normal.data(), oidn::Format::Float4, width, height);
+  }
 
   // initialize 'out' image to the correct size and set it as filter output
-  out.resize(color.imsize());
+  denoised.resize(color.imsize());
   filter.setImage(
-      "output", (void *)out.data(), oidn::Format::Float3, width, height);
+      "output", (void*)denoised.data(), oidn::Format::Float4, width, height);
 
   // register the user provided progress callback in the filter
   if (progress_cb) {
-    auto prog_monitor = [](void *uptr, double prog) {
+    auto prog_monitor = [](void* uptr, double prog) {
       int  current     = (int)(prog * 100);
-      auto progress_cb = *(progress_callback *)uptr;
+      auto progress_cb = *(progress_callback*)uptr;
       progress_cb("denoise image", current, 100);
       return true;
     };
-    filter.setProgressMonitorFunction(prog_monitor, (void *)&progress_cb);
+    filter.setProgressMonitorFunction(prog_monitor, (void*)&progress_cb);
   }
 
   // excecute the filter
@@ -97,7 +102,7 @@ static bool oidn_image_denoise(const image<vec3f> &color, bool hdr,
   filter.execute();
 
   // check and return eventual oidn errors
-  const char *errorMessage;
+  const char* errorMessage;
   if (device.getError(errorMessage) != oidn::Error::None) {
     error = errorMessage;
     return false;
@@ -106,27 +111,7 @@ static bool oidn_image_denoise(const image<vec3f> &color, bool hdr,
   return true;
 }
 
-bool oidn_image_denoise(const image<vec3f> &color, bool hdr, image<vec3f> &out,
-    std::string &error, progress_callback progress_cb) {
-  return oidn_image_denoise(
-      color, hdr, nullptr, nullptr, out, error, progress_cb);
-}
-
-bool oidn_image_denoise(const image<vec3f> &color, bool hdr,
-    const image<vec3f> &albedo, image<vec3f> &out, std::string &error,
-    progress_callback progress_cb) {
-  return oidn_image_denoise(
-      color, hdr, &albedo, nullptr, out, error, progress_cb);
-}
-
-bool oidn_image_denoise(const image<vec3f> &color, bool hdr,
-    const image<vec3f> &albedo, const image<vec3f> &normal, image<vec3f> &out,
-    std::string &error, progress_callback progress_cb) {
-  return oidn_image_denoise(
-      color, hdr, &albedo, &normal, out, error, progress_cb);
-}
-
-int main(int argc, const char *argv[]) {
+int main(int argc, const char* argv[]) {
   auto outname     = "out.png"s;
   auto filename    = "img.hdr"s;
   auto albedo_name = ""s;
@@ -150,8 +135,8 @@ int main(int argc, const char *argv[]) {
   auto error = ""s;
 
   // load all the provided images
-  auto         hdr = is_hdr_filename(filename);
-  image<vec3f> color, albedo, normal;
+  auto hdr   = is_hdr_filename(filename);
+  auto color = image<vec4f>{}, albedo = image<vec4f>{}, normal = image<vec4f>{};
 
   if (!load_image(filename, color, error)) {
     print_fatal(error);
@@ -165,21 +150,13 @@ int main(int argc, const char *argv[]) {
 
   // call the denoiser passing in the noisy image and the provided feature
   // images
-  image<vec3f> out;
-  if (albedo_name == "") {
-    if (!oidn_image_denoise(color, hdr, out, error, print_progress))
-      print_fatal(error);
-  } else if (normal_name != "") {
-    if (!oidn_image_denoise(
-            color, hdr, albedo, normal, out, error, print_progress))
-      print_fatal(error);
-  } else {
-    if (!oidn_image_denoise(color, hdr, albedo, out, error, print_progress))
-      print_fatal(error);
-  }
+  auto denoised = image<vec4f>{};
+  if (!oidn_image_denoise(
+          denoised, color, albedo, normal, hdr, error, print_progress))
+    print_fatal(error);
 
   // finally save the result
   print_progress("save image", 0, 1);
-  if (!save_image(outname, out, error)) print_fatal(error);
+  if (!save_image(outname, denoised, error)) print_fatal(error);
   print_progress("save image", 1, 1);
 }

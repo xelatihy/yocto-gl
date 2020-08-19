@@ -9,7 +9,6 @@
 #include "yocto_shape.h"
 
 #include <algorithm>
-#include <atomic>
 #include <deque>
 #include <memory>
 #include <string>
@@ -26,7 +25,6 @@
 namespace yocto {
 
 // using directives
-using std::atomic;
 using std::deque;
 using namespace std::string_literals;
 
@@ -374,7 +372,7 @@ int insert_edge(edge_map& emap, const vec2i& edge) {
   }
 }
 // Get number of edges
-int num_edges(const edge_map& emap) { return emap.edges.size(); }
+int num_edges(const edge_map& emap) { return (int)emap.edges.size(); }
 // Get the edge index
 int edge_index(const edge_map& emap, const vec2i& edge) {
   auto es       = edge.x < edge.y ? edge : vec2i{edge.y, edge.x};
@@ -774,7 +772,7 @@ static void build_bvh(bvh_tree& bvh, vector<bbox3f>& bboxes) {
 
       // make an internal node
       node.internal = true;
-      node.axis     = axis;
+      node.axis     = (int8_t)axis;
       node.num      = 2;
       node.start    = (int)nodes.size();
       nodes.emplace_back();
@@ -784,7 +782,7 @@ static void build_bvh(bvh_tree& bvh, vector<bbox3f>& bboxes) {
     } else {
       // Make a leaf node
       node.internal = false;
-      node.num      = end - start;
+      node.num      = (int16_t)(end - start);
       node.start    = start;
     }
   }
@@ -2111,7 +2109,7 @@ void make_bulged_rect(vector<vec4i>& quads, vector<vec3f>& positions,
     vector<vec3f>& normals, vector<vec2f>& texcoords, const vec2i& steps,
     const vec2f& scale, const vec2f& uvscale, float height) {
   make_rect(quads, positions, normals, texcoords, steps, scale, uvscale);
-  if (height) {
+  if (height != 0) {
     height      = min(height, min(scale));
     auto radius = (1 + height * height) / (2 * height);
     auto center = vec3f{0, 0, -radius + height};
@@ -2211,7 +2209,7 @@ void make_rounded_box(vector<vec4i>& quads, vector<vec3f>& positions,
     vector<vec3f>& normals, vector<vec2f>& texcoords, const vec3i& steps,
     const vec3f& scale, const vec3f& uvscale, float radius) {
   make_box(quads, positions, normals, texcoords, steps, scale, uvscale);
-  if (radius) {
+  if (radius != 0) {
     radius = min(radius, min(scale));
     auto c = scale - radius;
     for (auto i = 0; i < positions.size(); i++) {
@@ -2275,7 +2273,7 @@ void make_bent_floor(vector<vec4i>& quads, vector<vec3f>& positions,
     vector<vec3f>& normals, vector<vec2f>& texcoords, const vec2i& steps,
     const vec2f& scale, const vec2f& uvscale, float radius) {
   make_floor(quads, positions, normals, texcoords, steps, scale, uvscale);
-  if (radius) {
+  if (radius != 0) {
     radius     = min(radius, scale.y);
     auto start = (scale.y - radius) / 2;
     auto end   = start + radius;
@@ -2324,7 +2322,7 @@ void make_capped_uvsphere(vector<vec4i>& quads, vector<vec3f>& positions,
     vector<vec3f>& normals, vector<vec2f>& texcoords, const vec2i& steps,
     float scale, const vec2f& uvscale, float cap) {
   make_uvsphere(quads, positions, normals, texcoords, steps, scale, uvscale);
-  if (cap) {
+  if (cap != 0) {
     cap        = min(cap, scale / 2);
     auto zflip = (scale - cap);
     for (auto i = 0; i < positions.size(); i++) {
@@ -2361,7 +2359,7 @@ void make_bulged_disk(vector<vec4i>& quads, vector<vec3f>& positions,
     vector<vec3f>& normals, vector<vec2f>& texcoords, int steps, float scale,
     float uvscale, float height) {
   make_disk(quads, positions, normals, texcoords, steps, scale, uvscale);
-  if (height) {
+  if (height != 0) {
     height      = min(height, scale);
     auto radius = (1 + height * height) / (2 * height);
     auto center = vec3f{0, 0, -radius + height};
@@ -2443,7 +2441,7 @@ void make_rounded_uvcylinder(vector<vec4i>& quads, vector<vec3f>& positions,
     vector<vec3f>& normals, vector<vec2f>& texcoords, const vec3i& steps,
     const vec2f& scale, const vec3f& uvscale, float radius) {
   make_uvcylinder(quads, positions, normals, texcoords, steps, scale, uvscale);
-  if (radius) {
+  if (radius != 0) {
     radius = min(radius, min(scale));
     auto c = scale - radius;
     for (auto i = 0; i < positions.size(); i++) {
@@ -3740,16 +3738,15 @@ namespace yocto {
 }
 
 // Load/save a shape as indexed meshes
-[[nodiscard]] bool load_shape(const string& filename, generic_shape& shape,
-    string& error, bool facevarying, bool flip_texcoords) {
+bool load_shape(const string& filename, generic_shape& shape, string& error,
+    bool facevarying, bool flip_texcoords) {
   return load_shape(filename, shape.points, shape.lines, shape.triangles,
       shape.quads, shape.quadspos, shape.quadsnorm, shape.quadstexcoord,
       shape.positions, shape.normals, shape.texcoords, shape.colors,
       shape.radius, error, facevarying, flip_texcoords);
 }
-[[nodiscard]] bool save_shape(const string& filename,
-    const generic_shape& shape, string& error, bool facevarying,
-    bool flip_texcoords, bool ascii) {
+bool save_shape(const string& filename, const generic_shape& shape,
+    string& error, bool facevarying, bool flip_texcoords, bool ascii) {
   return save_shape(filename, shape.points, shape.lines, shape.triangles,
       shape.quads, shape.quadspos, shape.quadsnorm, shape.quadstexcoord,
       shape.positions, shape.normals, shape.texcoords, shape.colors,

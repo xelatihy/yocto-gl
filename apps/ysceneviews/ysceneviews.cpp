@@ -29,15 +29,14 @@
 #include <yocto/yocto_commonio.h>
 #include <yocto/yocto_geometry.h>
 #include <yocto/yocto_image.h>
+#include <yocto/yocto_parallel.h>
 #include <yocto/yocto_sceneio.h>
 #include <yocto/yocto_shape.h>
 #include <yocto_gui/yocto_draw.h>
 #include <yocto_gui/yocto_imgui.h>
 using namespace yocto;
 
-#include <atomic>
 #include <deque>
-#include <future>
 using namespace std::string_literals;
 
 #ifdef _WIN32
@@ -151,14 +150,10 @@ void init_glscene(ogl_scene* glscene, scene_model* ioscene,
   for (auto iotexture : ioscene->textures) {
     if (progress_cb) progress_cb("convert texture", progress.x++, progress.y);
     auto gltexture = add_texture(glscene);
-    if (!iotexture->colorf.empty()) {
-      set_texture(gltexture, iotexture->colorf);
-    } else if (!iotexture->colorb.empty()) {
-      set_texture(gltexture, iotexture->colorb);
-    } else if (!iotexture->scalarf.empty()) {
-      set_texture(gltexture, iotexture->scalarf);
-    } else if (!iotexture->scalarb.empty()) {
-      set_texture(gltexture, iotexture->scalarb);
+    if (!iotexture->hdr.empty()) {
+      set_texture(gltexture, iotexture->hdr);
+    } else if (!iotexture->ldr.empty()) {
+      set_texture(gltexture, iotexture->ldr);
     }
     texture_map[iotexture] = gltexture;
   }
@@ -288,7 +283,7 @@ int main(int argc, const char* argv[]) {
     draw_slider(win, "near", params.near, 0.01f, 1.0f);
     draw_slider(win, "far", params.far, 1000.0f, 10000.0f);
   };
-  callbacks.update_cb = [app](gui_window* win, const gui_input& input) {
+  callbacks.update_cb = [](gui_window* win, const gui_input& input) {
     // update(win, apps);
   };
   callbacks.uiupdate_cb = [app](gui_window* win, const gui_input& input) {

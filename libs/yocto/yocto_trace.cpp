@@ -28,14 +28,12 @@
 
 #include "yocto_trace.h"
 
-#include <atomic>
 #include <cstring>
 #include <deque>
-#include <future>
 #include <memory>
-#include <mutex>
 
 #include "yocto_geometry.h"
+#include "yocto_parallel.h"
 #include "yocto_sampling.h"
 #include "yocto_shading.h"
 
@@ -49,7 +47,6 @@
 namespace yocto {
 
 // using directives
-using std::atomic;
 using std::deque;
 using namespace std::string_literals;
 
@@ -101,7 +98,7 @@ static ray3f sample_camera(const scene_camera* camera, const vec2i& ij,
         width *
             vec2f{
                 puv.x < 0.5f ? sqrt(2 * puv.x) - 1 : 1 - sqrt(2 - 2 * puv.x),
-                puv.y - 0.5f ? sqrt(2 * puv.y) - 1 : 1 - sqrt(2 - 2 * puv.y),
+                puv.y < 0.5f ? sqrt(2 * puv.y) - 1 : 1 - sqrt(2 - 2 * puv.y),
             } +
         offset;
     auto uv = vec2f{
@@ -126,7 +123,7 @@ static vec3f eval_emission(
 // Evaluates/sample the BRDF scaled by the cosine of the incoming direction.
 static vec3f eval_bsdfcos(const scene_bsdf& bsdf, const vec3f& normal,
     const vec3f& outgoing, const vec3f& incoming) {
-  if (!bsdf.roughness) return zero3f;
+  if (bsdf.roughness == 0) return zero3f;
 
   // accumulate the lobes
   auto brdfcos = zero3f;
@@ -165,7 +162,7 @@ static vec3f eval_bsdfcos(const scene_bsdf& bsdf, const vec3f& normal,
 
 static vec3f eval_delta(const scene_bsdf& bsdf, const vec3f& normal,
     const vec3f& outgoing, const vec3f& incoming) {
-  if (bsdf.roughness) return zero3f;
+  if (bsdf.roughness != 0) return zero3f;
 
   auto brdfcos = zero3f;
 
@@ -196,49 +193,49 @@ static vec3f eval_delta(const scene_bsdf& bsdf, const vec3f& normal,
 // Picks a direction based on the BRDF
 static vec3f sample_bsdfcos(const scene_bsdf& bsdf, const vec3f& normal,
     const vec3f& outgoing, float rnl, const vec2f& rn) {
-  if (!bsdf.roughness) return zero3f;
+  if (bsdf.roughness == 0) return zero3f;
 
   auto cdf = 0.0f;
 
-  if (bsdf.diffuse_pdf) {
+  if (bsdf.diffuse_pdf != 0) {
     cdf += bsdf.diffuse_pdf;
     if (rnl < cdf) return sample_diffuse_reflection(normal, outgoing, rn);
   }
 
-  if (bsdf.specular_pdf && !bsdf.refraction_pdf) {
+  if (bsdf.specular_pdf != 0 && bsdf.refraction_pdf == 0) {
     cdf += bsdf.specular_pdf;
     if (rnl < cdf)
       return sample_microfacet_reflection(
           bsdf.ior, bsdf.roughness, normal, outgoing, rn);
   }
 
-  if (bsdf.metal_pdf) {
+  if (bsdf.metal_pdf != 0) {
     cdf += bsdf.metal_pdf;
     if (rnl < cdf)
       return sample_microfacet_reflection(
           bsdf.meta, bsdf.metak, bsdf.roughness, normal, outgoing, rn);
   }
 
-  if (bsdf.coat_pdf) {
+  if (bsdf.coat_pdf != 0) {
     cdf += bsdf.coat_pdf;
     if (rnl < cdf)
       return sample_microfacet_reflection(
           coat_ior, coat_roughness, normal, outgoing, rn);
   }
 
-  if (bsdf.transmission_pdf) {
+  if (bsdf.transmission_pdf != 0) {
     cdf += bsdf.transmission_pdf;
     if (rnl < cdf)
       return sample_microfacet_transmission(
           bsdf.ior, bsdf.roughness, normal, outgoing, rn);
   }
 
-  if (bsdf.translucency_pdf) {
+  if (bsdf.translucency_pdf != 0) {
     cdf += bsdf.translucency_pdf;
     if (rnl < cdf) return sample_diffuse_transmission(normal, outgoing, rn);
   }
 
-  if (bsdf.refraction_pdf) {
+  if (bsdf.refraction_pdf != 0) {
     cdf += bsdf.refraction_pdf;
     if (rnl < cdf)
       return sample_microfacet_refraction(
@@ -250,41 +247,41 @@ static vec3f sample_bsdfcos(const scene_bsdf& bsdf, const vec3f& normal,
 
 static vec3f sample_delta(const scene_bsdf& bsdf, const vec3f& normal,
     const vec3f& outgoing, float rnl) {
-  if (bsdf.roughness) return zero3f;
+  if (bsdf.roughness != 0) return zero3f;
 
   // keep a weight sum to pick a lobe
   auto cdf = 0.0f;
   cdf += bsdf.diffuse_pdf;
 
-  if (bsdf.specular_pdf && !bsdf.refraction_pdf) {
+  if (bsdf.specular_pdf != 0 && bsdf.refraction_pdf == 0) {
     cdf += bsdf.specular_pdf;
     if (rnl < cdf) {
       return sample_delta_reflection(bsdf.ior, normal, outgoing);
     }
   }
 
-  if (bsdf.metal_pdf) {
+  if (bsdf.metal_pdf != 0) {
     cdf += bsdf.metal_pdf;
     if (rnl < cdf) {
       return sample_delta_reflection(bsdf.meta, bsdf.metak, normal, outgoing);
     }
   }
 
-  if (bsdf.coat_pdf) {
+  if (bsdf.coat_pdf != 0) {
     cdf += bsdf.coat_pdf;
     if (rnl < cdf) {
       return sample_delta_reflection(coat_ior, normal, outgoing);
     }
   }
 
-  if (bsdf.transmission_pdf) {
+  if (bsdf.transmission_pdf != 0) {
     cdf += bsdf.transmission_pdf;
     if (rnl < cdf) {
       return sample_delta_transmission(bsdf.ior, normal, outgoing);
     }
   }
 
-  if (bsdf.refraction_pdf) {
+  if (bsdf.refraction_pdf != 0) {
     cdf += bsdf.refraction_pdf;
     if (rnl < cdf) {
       return sample_delta_refraction(bsdf.ior, normal, outgoing, rnl);
@@ -297,43 +294,43 @@ static vec3f sample_delta(const scene_bsdf& bsdf, const vec3f& normal,
 // Compute the weight for sampling the BRDF
 static float sample_bsdfcos_pdf(const scene_bsdf& bsdf, const vec3f& normal,
     const vec3f& outgoing, const vec3f& incoming) {
-  if (!bsdf.roughness) return 0;
+  if (bsdf.roughness == 0) return 0;
 
   auto pdf = 0.0f;
 
-  if (bsdf.diffuse_pdf) {
+  if (bsdf.diffuse_pdf != 0) {
     pdf += bsdf.diffuse_pdf *
            sample_diffuse_reflection_pdf(normal, outgoing, incoming);
   }
 
-  if (bsdf.specular_pdf && !bsdf.refraction_pdf) {
+  if (bsdf.specular_pdf != 0 && bsdf.refraction_pdf == 0) {
     pdf += bsdf.specular_pdf * sample_microfacet_reflection_pdf(bsdf.ior,
                                    bsdf.roughness, normal, outgoing, incoming);
   }
 
-  if (bsdf.metal_pdf) {
+  if (bsdf.metal_pdf != 0) {
     pdf += bsdf.metal_pdf * sample_microfacet_reflection_pdf(bsdf.meta,
                                 bsdf.metak, bsdf.roughness, normal, outgoing,
                                 incoming);
   }
 
-  if (bsdf.coat_pdf) {
+  if (bsdf.coat_pdf != 0) {
     pdf += bsdf.coat_pdf * sample_microfacet_reflection_pdf(coat_ior,
                                coat_roughness, normal, outgoing, incoming);
   }
 
-  if (bsdf.transmission_pdf) {
+  if (bsdf.transmission_pdf != 0) {
     pdf += bsdf.transmission_pdf * sample_microfacet_transmission_pdf(bsdf.ior,
                                        bsdf.roughness, normal, outgoing,
                                        incoming);
   }
 
-  if (bsdf.translucency_pdf) {
+  if (bsdf.translucency_pdf != 0) {
     pdf += bsdf.translucency_pdf *
            sample_diffuse_transmission_pdf(normal, outgoing, incoming);
   }
 
-  if (bsdf.refraction_pdf) {
+  if (bsdf.refraction_pdf != 0) {
     pdf += bsdf.refraction_pdf * sample_microfacet_refraction_pdf(bsdf.ior,
                                      bsdf.roughness, normal, outgoing,
                                      incoming);
@@ -344,26 +341,26 @@ static float sample_bsdfcos_pdf(const scene_bsdf& bsdf, const vec3f& normal,
 
 static float sample_delta_pdf(const scene_bsdf& bsdf, const vec3f& normal,
     const vec3f& outgoing, const vec3f& incoming) {
-  if (bsdf.roughness) return 0;
+  if (bsdf.roughness != 0) return 0;
 
   auto pdf = 0.0f;
-  if (bsdf.specular_pdf && !bsdf.refraction_pdf) {
+  if (bsdf.specular_pdf != 0 && bsdf.refraction_pdf == 0) {
     pdf += bsdf.specular_pdf *
            sample_delta_reflection_pdf(bsdf.ior, normal, outgoing, incoming);
   }
-  if (bsdf.metal_pdf) {
+  if (bsdf.metal_pdf != 0) {
     pdf += bsdf.metal_pdf * sample_delta_reflection_pdf(bsdf.meta, bsdf.metak,
                                 normal, outgoing, incoming);
   }
-  if (bsdf.coat_pdf) {
+  if (bsdf.coat_pdf != 0) {
     pdf += bsdf.coat_pdf *
            sample_delta_reflection_pdf(coat_ior, normal, outgoing, incoming);
   }
-  if (bsdf.transmission_pdf) {
+  if (bsdf.transmission_pdf != 0) {
     pdf += bsdf.transmission_pdf *
            sample_delta_transmission_pdf(bsdf.ior, normal, outgoing, incoming);
   }
-  if (bsdf.refraction_pdf) {
+  if (bsdf.refraction_pdf != 0) {
     pdf += bsdf.refraction_pdf *
            sample_delta_refraction_pdf(bsdf.ior, normal, outgoing, incoming);
   }
@@ -392,7 +389,7 @@ static float sample_scattering_pdf(
 // Sample lights wrt solid angle
 static vec3f sample_lights(const scene_model* scene, const vec3f& position,
     float rl, float rel, const vec2f& ruv) {
-  auto light_id = sample_uniform(scene->lights.size(), rl);
+  auto light_id = sample_uniform((int)scene->lights.size(), rl);
   auto light    = scene->lights[light_id];
   if (light->instance) {
     auto instance = light->instance;
@@ -468,7 +465,7 @@ static float sample_lights_pdf(
       }
     }
   }
-  pdf *= sample_uniform_pdf(scene->lights.size());
+  pdf *= sample_uniform_pdf((int)scene->lights.size());
   return pdf;
 }
 
@@ -653,7 +650,7 @@ static vec4f trace_naive(const scene_model* scene, const ray3f& ray_,
 
     // next direction
     auto incoming = zero3f;
-    if (bsdf.roughness) {
+    if (bsdf.roughness != 0) {
       incoming = sample_bsdfcos(
           bsdf, normal, outgoing, rand1f(rng), rand2f(rng));
       weight *= eval_bsdfcos(bsdf, normal, outgoing, incoming) /
@@ -727,7 +724,7 @@ static vec4f trace_eyelight(const scene_model* scene, const ray3f& ray_,
     radiance += weight * pif * eval_bsdfcos(bsdf, normal, outgoing, incoming);
 
     // continue path
-    if (bsdf.roughness) break;
+    if (bsdf.roughness != 0) break;
     incoming = sample_delta(bsdf, normal, outgoing, rand1f(rng));
     weight *= eval_delta(bsdf, normal, outgoing, incoming) /
               sample_delta_pdf(bsdf, normal, outgoing, incoming);
@@ -843,7 +840,7 @@ static vec4f trace_albedo(const scene_model* scene, const ray3f& ray,
   }
 
   auto albedo = material->color * color *
-                eval_texture(material->color_tex, texcoord, false);
+                xyz(eval_texture(material->color_tex, texcoord, false));
 
   // handle opacity
   if (opacity < 1.0f) {
@@ -980,7 +977,7 @@ void trace_sample(trace_state* state, const scene_model* scene,
     sample = sample * (params.clamp / max(sample));
   state->accumulation[ij] += sample;
   state->samples[ij] += 1;
-  auto radiance = state->accumulation[ij].w
+  auto radiance = state->accumulation[ij].w != 0
                       ? xyz(state->accumulation[ij]) / state->accumulation[ij].w
                       : zero3f;
   auto coverage     = state->accumulation[ij].w / state->samples[ij];
@@ -1092,26 +1089,6 @@ void init_lights(scene_model* scene, progress_callback progress_cb) {
   if (progress_cb) progress_cb("build light", progress.x++, progress.y);
 }
 
-// Simple parallel for used since our target platforms do not yet support
-// parallel algorithms. `Func` takes the integer index.
-template <typename Func>
-inline void parallel_for(const vec2i& size, Func&& func) {
-  auto        futures  = vector<future<void>>{};
-  auto        nthreads = std::thread::hardware_concurrency();
-  atomic<int> next_idx(0);
-  for (auto thread_id = 0; thread_id < nthreads; thread_id++) {
-    futures.emplace_back(
-        std::async(std::launch::async, [&func, &next_idx, size]() {
-          while (true) {
-            auto j = next_idx.fetch_add(1);
-            if (j >= size.y) break;
-            for (auto i = 0; i < size.x; i++) func({i, j});
-          }
-        }));
-  }
-  for (auto& f : futures) f.get();
-}
-
 // Progressively compute an image by calling trace_samples multiple times.
 image<vec4f> trace_image(const scene_model* scene, const scene_camera* camera,
     const trace_params& params, progress_callback progress_cb,
@@ -1129,9 +1106,9 @@ image<vec4f> trace_image(const scene_model* scene, const scene_camera* camera,
         }
       }
     } else {
-      parallel_for(state->render.imsize(),
-          [state, scene, camera, &params](const vec2i& ij) {
-            trace_sample(state, scene, camera, ij, params);
+      parallel_for(state->render.imsize().x, state->render.imsize().y,
+          [state, scene, camera, &params](int i, int j) {
+            trace_sample(state, scene, camera, {i, j}, params);
           });
     }
     if (image_cb) image_cb(state->render, sample + 1, params.samples);
@@ -1170,11 +1147,13 @@ void trace_start(trace_state* state, const scene_model* scene,
     for (auto sample = 0; sample < params.samples; sample++) {
       if (state->stop) return;
       if (progress_cb) progress_cb("trace image", sample, params.samples);
-      parallel_for(state->render.imsize(), [&](const vec2i& ij) {
-        if (state->stop) return;
-        trace_sample(state, scene, camera, ij, params);
-        if (async_cb) async_cb(state->render, sample, params.samples, ij);
-      });
+      parallel_for(state->render.imsize().x, state->render.imsize().y,
+          [&](int i, int j) {
+            if (state->stop) return;
+            trace_sample(state, scene, camera, {i, j}, params);
+            if (async_cb)
+              async_cb(state->render, sample, params.samples, {i, j});
+          });
       if (image_cb) image_cb(state->render, sample + 1, params.samples);
     }
     if (progress_cb) progress_cb("trace image", params.samples, params.samples);
