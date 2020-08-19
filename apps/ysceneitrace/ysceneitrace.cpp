@@ -52,9 +52,9 @@ struct app_state {
 
   // scene
   scene_model*  ioscene  = new scene_model{};
-  scene_model*  scene    = new scene_model{};
+  trace_scene*  scene    = new trace_scene{};
   scene_camera* iocamera = nullptr;
-  scene_camera* camera   = nullptr;
+  trace_camera* camera   = nullptr;
 
   // options
   trace_params params = {};
@@ -119,7 +119,7 @@ struct app_states {
 };
 
 // Construct a scene from io
-void init_scene(scene_model* scene, scene_model* ioscene, scene_camera*& camera,
+void init_scene(trace_scene* scene, scene_model* ioscene, trace_camera*& camera,
     scene_camera* iocamera, progress_callback progress_cb = {}) {
   // handle progress
   auto progress = vec2i{
@@ -127,7 +127,7 @@ void init_scene(scene_model* scene, scene_model* ioscene, scene_camera*& camera,
              (int)ioscene->materials.size() + (int)ioscene->textures.size() +
              (int)ioscene->shapes.size() + (int)ioscene->instances.size()};
 
-  auto camera_map     = unordered_map<scene_camera*, scene_camera*>{};
+  auto camera_map     = unordered_map<scene_camera*, trace_camera*>{};
   camera_map[nullptr] = nullptr;
   for (auto iocamera : ioscene->cameras) {
     if (progress_cb)
@@ -140,7 +140,7 @@ void init_scene(scene_model* scene, scene_model* ioscene, scene_camera*& camera,
     camera_map[iocamera] = camera;
   }
 
-  auto texture_map     = unordered_map<scene_texture*, scene_texture*>{};
+  auto texture_map     = unordered_map<scene_texture*, trace_texture*>{};
   texture_map[nullptr] = nullptr;
   for (auto iotexture : ioscene->textures) {
     if (progress_cb)
@@ -154,7 +154,7 @@ void init_scene(scene_model* scene, scene_model* ioscene, scene_camera*& camera,
     texture_map[iotexture] = texture;
   }
 
-  auto material_map     = unordered_map<scene_material*, scene_material*>{};
+  auto material_map     = unordered_map<scene_material*, trace_material*>{};
   material_map[nullptr] = nullptr;
   for (auto iomaterial : ioscene->materials) {
     if (progress_cb)
@@ -184,7 +184,7 @@ void init_scene(scene_model* scene, scene_model* ioscene, scene_camera*& camera,
     material_map[iomaterial] = material;
   }
 
-  auto shape_map     = unordered_map<scene_shape*, scene_shape*>{};
+  auto shape_map     = unordered_map<scene_shape*, trace_shape*>{};
   shape_map[nullptr] = nullptr;
   for (auto ioshape : ioscene->shapes) {
     if (progress_cb) progress_cb("converting shapes", progress.x++, progress.y);
@@ -193,12 +193,16 @@ void init_scene(scene_model* scene, scene_model* ioscene, scene_camera*& camera,
     set_lines(shape, ioshape->lines);
     set_triangles(shape, ioshape->triangles);
     set_quads(shape, ioshape->quads);
+    set_fvquads(
+        shape, ioshape->quadspos, ioshape->quadsnorm, ioshape->quadstexcoord);
     set_positions(shape, ioshape->positions);
     set_normals(shape, ioshape->normals);
     set_texcoords(shape, ioshape->texcoords);
     set_colors(shape, ioshape->colors);
     set_radius(shape, ioshape->radius);
     set_tangents(shape, ioshape->tangents);
+    set_subdivision(
+        shape, ioshape->subdivisions, ioshape->catmullclark, ioshape->smooth);
     shape_map[ioshape] = shape;
   }
 
@@ -279,9 +283,9 @@ void load_scene_async(app_states* apps, const string& filename,
     app->total   = 1;
     if (add_skyenv) add_sky(app->ioscene);
     app->iocamera = get_camera(app->ioscene, camera_name);
-    tesselate_shapes(app->ioscene, progress_cb);
     init_scene(
         app->scene, app->ioscene, app->camera, app->iocamera, progress_cb);
+    tesselate_shapes(app->scene, progress_cb);
     init_bvh(app->scene, app->params);
     init_lights(app->scene);
     if (app->scene->lights.empty() && is_sampler_lit(app->params)) {
@@ -742,7 +746,7 @@ int main(int argc, const char* argv[]) {
       cli, "--filter/--no-filter", apps->params.tentfilter, "Filter image.");
   add_option(cli, "--env-hidden/--no-env-hidden", apps->params.envhidden,
       "Environments are hidden in renderer");
-  add_option(cli, "--bvh", apps->params.bvh, "Bvh type", bvh_names);
+  add_option(cli, "--bvh", apps->params.bvh, "Bvh type", trace_bvh_names);
   add_option(cli, "--skyenv/--no-skyenv", add_skyenv, "Add sky envmap");
   add_option(cli, "scenes", filenames, "Scene filenames", true);
   parse_cli(cli, argc, argv);

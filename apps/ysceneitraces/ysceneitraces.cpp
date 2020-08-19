@@ -49,8 +49,9 @@ struct app_state {
   trace_params params = {};
 
   // scene
-  scene_model*  scene  = new scene_model{};
-  scene_camera* camera = nullptr;
+  trace_scene*   scene        = new trace_scene{};
+  trace_camera*  camera       = nullptr;
+  vector<string> camera_names = {};
 
   // rendering state
   image<vec4f> render   = {};
@@ -104,6 +105,119 @@ void reset_display(app_state* app) {
       });
 }
 
+// Construct a scene from io
+void init_scene(trace_scene* scene, scene_model* ioscene, trace_camera*& camera,
+    scene_camera* iocamera, progress_callback progress_cb = {}) {
+  // handle progress
+  auto progress = vec2i{
+      0, (int)ioscene->cameras.size() + (int)ioscene->environments.size() +
+             (int)ioscene->materials.size() + (int)ioscene->textures.size() +
+             (int)ioscene->shapes.size() + (int)ioscene->instances.size()};
+
+  auto camera_map     = unordered_map<scene_camera*, trace_camera*>{};
+  camera_map[nullptr] = nullptr;
+  for (auto iocamera : ioscene->cameras) {
+    if (progress_cb)
+      progress_cb("converting cameras", progress.x++, progress.y);
+    auto camera = add_camera(scene);
+    set_frame(camera, iocamera->frame);
+    set_lens(camera, iocamera->lens, iocamera->aspect, iocamera->film,
+        iocamera->orthographic);
+    set_focus(camera, iocamera->aperture, iocamera->focus);
+    camera_map[iocamera] = camera;
+  }
+
+  auto texture_map     = unordered_map<scene_texture*, trace_texture*>{};
+  texture_map[nullptr] = nullptr;
+  for (auto iotexture : ioscene->textures) {
+    if (progress_cb)
+      progress_cb("converting textures", progress.x++, progress.y);
+    auto texture = add_texture(scene);
+    if (!iotexture->hdr.empty()) {
+      set_texture(texture, iotexture->hdr);
+    } else if (!iotexture->ldr.empty()) {
+      set_texture(texture, iotexture->ldr);
+    }
+    texture_map[iotexture] = texture;
+  }
+
+  auto material_map     = unordered_map<scene_material*, trace_material*>{};
+  material_map[nullptr] = nullptr;
+  for (auto iomaterial : ioscene->materials) {
+    if (progress_cb)
+      progress_cb("converting materials", progress.x++, progress.y);
+    auto material = add_material(scene);
+    set_emission(material, iomaterial->emission,
+        texture_map.at(iomaterial->emission_tex));
+    set_color(
+        material, iomaterial->color, texture_map.at(iomaterial->color_tex));
+    set_specular(material, iomaterial->specular,
+        texture_map.at(iomaterial->specular_tex));
+    set_ior(material, iomaterial->ior);
+    set_metallic(material, iomaterial->metallic,
+        texture_map.at(iomaterial->metallic_tex));
+    set_transmission(material, iomaterial->transmission, iomaterial->thin,
+        iomaterial->trdepth, texture_map.at(iomaterial->transmission_tex));
+    set_translucency(material, iomaterial->translucency, iomaterial->thin,
+        iomaterial->trdepth, texture_map.at(iomaterial->translucency_tex));
+    set_roughness(material, iomaterial->roughness,
+        texture_map.at(iomaterial->roughness_tex));
+    set_opacity(
+        material, iomaterial->opacity, texture_map.at(iomaterial->opacity_tex));
+    set_thin(material, iomaterial->thin);
+    set_normalmap(material, texture_map.at(iomaterial->normal_tex));
+    set_scattering(material, iomaterial->scattering, iomaterial->scanisotropy,
+        texture_map.at(iomaterial->scattering_tex));
+    material_map[iomaterial] = material;
+  }
+
+  auto shape_map     = unordered_map<scene_shape*, trace_shape*>{};
+  shape_map[nullptr] = nullptr;
+  for (auto ioshape : ioscene->shapes) {
+    if (progress_cb) progress_cb("converting shapes", progress.x++, progress.y);
+    auto shape = add_shape(scene);
+    set_points(shape, ioshape->points);
+    set_lines(shape, ioshape->lines);
+    set_triangles(shape, ioshape->triangles);
+    set_quads(shape, ioshape->quads);
+    set_fvquads(
+        shape, ioshape->quadspos, ioshape->quadsnorm, ioshape->quadstexcoord);
+    set_positions(shape, ioshape->positions);
+    set_normals(shape, ioshape->normals);
+    set_texcoords(shape, ioshape->texcoords);
+    set_colors(shape, ioshape->colors);
+    set_radius(shape, ioshape->radius);
+    set_tangents(shape, ioshape->tangents);
+    set_subdivision(
+        shape, ioshape->subdivisions, ioshape->catmullclark, ioshape->smooth);
+    shape_map[ioshape] = shape;
+  }
+
+  for (auto ioobject : ioscene->instances) {
+    if (progress_cb)
+      progress_cb("converting objects", progress.x++, progress.y);
+    auto instance = add_instance(scene);
+    set_frame(instance, ioobject->frame);
+    set_shape(instance, shape_map.at(ioobject->shape));
+    set_material(instance, material_map.at(ioobject->material));
+  }
+
+  for (auto ioenvironment : ioscene->environments) {
+    if (progress_cb)
+      progress_cb("converting environments", progress.x++, progress.y);
+    auto environment = add_environment(scene);
+    set_frame(environment, ioenvironment->frame);
+    set_emission(environment, ioenvironment->emission,
+        texture_map.at(ioenvironment->emission_tex));
+  }
+
+  // done
+  if (progress_cb) progress_cb("converting done", progress.x++, progress.y);
+
+  // get camera
+  camera = camera_map.at(iocamera);
+}
+
 int main(int argc, const char* argv[]) {
   // application
   auto app_guard = std::make_unique<app_state>();
@@ -130,22 +244,34 @@ int main(int argc, const char* argv[]) {
       cli, "--filter/--no-filter", app->params.tentfilter, "Filter image.");
   add_option(cli, "--env-hidden/--no-env-hidden", app->params.envhidden,
       "Environments are hidden in renderer");
-  add_option(cli, "--bvh", app->params.bvh, "Bvh type", bvh_names);
+  add_option(cli, "--bvh", app->params.bvh, "Bvh type", trace_bvh_names);
   add_option(cli, "--skyenv/--no-skyenv", add_skyenv, "Add sky envmap");
   add_option(cli, "--output,-o", app->imagename, "Image output");
   add_option(cli, "scene", app->filename, "Scene filename", true);
   parse_cli(cli, argc, argv);
 
   // scene loading
-  auto ioerror = ""s;
-  if (!load_scene(app->filename, app->scene, ioerror, print_progress))
+  auto ioscene_guard = std::make_unique<scene_model>();
+  auto ioscene       = ioscene_guard.get();
+  auto ioerror       = ""s;
+  if (!load_scene(app->filename, ioscene, ioerror, print_progress))
     print_fatal(ioerror);
 
   // add sky
-  if (add_skyenv) add_sky(app->scene);
+  if (add_skyenv) add_sky(ioscene);
 
   // get camera
-  app->camera = get_camera(app->scene, camera_name);
+  auto iocamera = get_camera(ioscene, camera_name);
+
+  // camera names
+  for (auto iocamera : ioscene->cameras)
+    app->camera_names.push_back(iocamera->name);
+
+  // trace scene initialization
+  init_scene(app->scene, ioscene, app->camera, iocamera);
+
+  // cleanup
+  ioscene_guard.reset();
 
   // tesselation
   tesselate_shapes(app->scene, print_progress);
@@ -186,7 +312,8 @@ int main(int argc, const char* argv[]) {
     auto  edited  = 0;
     auto& tparams = app->params;
     draw_progressbar(win, "render", app->current, app->total);
-    edited += draw_combobox(win, "camera", app->camera, app->scene->cameras);
+    edited += draw_combobox(
+        win, "camera", app->camera, app->scene->cameras, app->camera_names);
     edited += draw_slider(win, "resolution", tparams.resolution, 180, 4096);
     edited += draw_slider(win, "nsamples", tparams.samples, 16, 4096);
     edited += draw_combobox(
