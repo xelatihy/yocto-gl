@@ -961,6 +961,26 @@ void set_normalmap(gui_material* material, ogl_texture* normal_tex) {
   material->normal_tex = normal_tex;
 }
 
+ogl_shape* add_shape(gui_scene* scene, const vector<int>& points,
+    const vector<vec2i>& lines, const vector<vec3i>& triangles,
+    const vector<vec4i>& quads, const vector<vec3f>& positions,
+    const vector<vec3f>& normals, const vector<vec2f>& texcoords,
+    const vector<vec4f>& colors, bool edges) {
+  auto shape = add_shape(scene);
+  set_points(shape, points);
+  set_lines(shape, lines);
+  set_triangles(shape, triangles);
+  set_quads(shape, quads);
+  set_positions(shape, positions);
+  set_normals(shape, normals);
+  set_texcoords(shape, texcoords);
+  set_colors(shape, colors);
+  if (edges && (!triangles.empty() || !quads.empty())) {
+    set_edges(shape, triangles, quads);
+  }
+  return shape;
+}
+
 // shortcuts
 gui_camera* add_camera(gui_scene* scene, const frame3f& frame, float lens,
     float aspect, float film, float near, float far) {

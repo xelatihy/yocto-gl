@@ -146,7 +146,7 @@ struct gui_scene_params {
   bool             wireframe        = false;
   bool             edges            = false;
   float            edge_offset      = 0.01f;
-  gui_shading_type shading          = gui_shading_type::environment;
+  gui_shading_type shading          = gui_shading_type::eyelight;
   float            exposure         = 0;
   float            gamma            = 2.2f;
   vec3f            ambient          = {0, 0, 0};
@@ -196,6 +196,12 @@ void set_specular(gui_material* material, float specular,
 void set_opacity(
     gui_material* material, float opacity, ogl_texture* opacity_tex = nullptr);
 void set_normalmap(gui_material* material, ogl_texture* normal_tex);
+
+ogl_shape* add_shape(gui_scene* scene, const vector<int>& points,
+    const vector<vec2i>& lines, const vector<vec3i>& triangles,
+    const vector<vec4i>& quads, const vector<vec3f>& positions,
+    const vector<vec3f>& normals, const vector<vec2f>& texcoords,
+    const vector<vec4f>& colors, bool edges = false);
 
 // instance properties
 void set_frame(gui_instance* instance, const frame3f& frame);
