@@ -47,10 +47,6 @@
 #include "yocto_image.h"
 #include "yocto_math.h"
 
-#ifdef YOCTO_EMBREE
-#include <embree3/rtcore.h>
-#endif
-
 // -----------------------------------------------------------------------------
 // USING DIRECTIVES
 // -----------------------------------------------------------------------------
@@ -68,27 +64,6 @@ using std::vector;
 // SCENE DATA
 // -----------------------------------------------------------------------------
 namespace yocto {
-
-// BVH tree node containing its bounds, indices to the BVH arrays of either
-// primitives or internal nodes, the node element type,
-// and the split axis. Leaf and internal nodes are identical, except that
-// indices refer to primitives for leaf nodes or other nodes for internal nodes.
-struct scene_bvh_node {
-  bbox3f  bbox;
-  int32_t start;
-  int16_t num;
-  int8_t  axis;
-  bool    internal;
-};
-
-// BVH tree stored as a node array with the tree structure is encoded using
-// array indices. BVH nodes indices refer to either the node array,
-// for internal nodes, or the primitive arrays, for leaf nodes.
-// Application data is not stored explicitly.
-struct scene_bvh {
-  vector<scene_bvh_node> nodes      = {};
-  vector<int>            primitives = {};
-};
 
 // Camera based on a simple lens model. The camera is placed using a frame.
 // Camera projection is described in photographic terms. In particular,
@@ -198,17 +173,8 @@ struct sceneio_shape {
   float            displacement     = 0;
   sceneio_texture* displacement_tex = nullptr;
 
-  // computed properties
-  scene_bvh* bvh = nullptr;
-#ifdef YOCTO_EMBREE
-  RTCScene embree_bvh = nullptr;
-#endif
-
   // element cdf for sampling
   vector<float> elements_cdf = {};
-
-  // cleanup
-  ~sceneio_shape();
 };
 
 // Object.
@@ -231,12 +197,6 @@ struct sceneio_environment {
   vector<float> texels_cdf = {};
 };
 
-// Scene lights used during rendering. These are created automatically.
-struct scene_light {
-  sceneio_instance*    instance    = nullptr;
-  sceneio_environment* environment = nullptr;
-};
-
 // Scene comprised an array of objects whose memory is owened by the scene.
 // All members are optional,Scene objects (camera, instances, environments)
 // have transforms defined internally. A scene can optionally contain a
@@ -245,6 +205,10 @@ struct scene_light {
 // the hierarchy. Animation is also optional, with keyframe data that
 // updates node transformations only if defined.
 struct sceneio_scene {
+  // additional information
+  string name      = "";
+  string copyright = "";
+
   // scene elements
   vector<sceneio_camera*>      cameras      = {};
   vector<sceneio_instance*>    instances    = {};
@@ -252,17 +216,6 @@ struct sceneio_scene {
   vector<sceneio_shape*>       shapes       = {};
   vector<sceneio_texture*>     textures     = {};
   vector<sceneio_material*>    materials    = {};
-
-  // additional information
-  string name      = "";
-  string copyright = "";
-
-  // computed properties
-  vector<scene_light*> lights = {};
-  scene_bvh*           bvh    = nullptr;
-#ifdef YOCTO_EMBREE
-  RTCScene embree_bvh = nullptr;
-#endif
 
   // cleanup
   ~sceneio_scene();
