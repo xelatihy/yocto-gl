@@ -179,8 +179,8 @@ sceneio_shape* add_shape(sceneio_scene* scene, const string& name,
   shape->displacement_tex = displacement_tex;
   return shape;
 }
-sceneio_material* add_emission_material(sceneio_scene* scene, const string& name,
-    const vec3f& emission, sceneio_texture* emission_tex) {
+sceneio_material* add_emission_material(sceneio_scene* scene,
+    const string& name, const vec3f& emission, sceneio_texture* emission_tex) {
   auto material          = add_material(scene, name);
   material->emission     = emission;
   material->emission_tex = emission_tex;
@@ -196,11 +196,12 @@ sceneio_material* add_matte_material(sceneio_scene* scene, const string& name,
   material->normal_tex = normal_tex;
   return material;
 }
-sceneio_material* add_specular_material(sceneio_scene* scene, const string& name,
-    const vec3f& color, sceneio_texture* color_tex, float roughness,
-    sceneio_texture* roughness_tex = nullptr, sceneio_texture* normal_tex = nullptr,
-    float ior = 1.5, float specular = 1, sceneio_texture* specular_tex = nullptr,
-    const vec3f& spectint = {1, 1, 1}, sceneio_texture* spectint_tex = nullptr) {
+sceneio_material* add_specular_material(sceneio_scene* scene,
+    const string& name, const vec3f& color, sceneio_texture* color_tex,
+    float roughness, sceneio_texture* roughness_tex = nullptr,
+    sceneio_texture* normal_tex = nullptr, float ior = 1.5, float specular = 1,
+    sceneio_texture* specular_tex = nullptr, const vec3f& spectint = {1, 1, 1},
+    sceneio_texture* spectint_tex = nullptr) {
   auto material           = add_material(scene, name);
   material->color         = color;
   material->color_tex     = color_tex;
@@ -214,10 +215,11 @@ sceneio_material* add_specular_material(sceneio_scene* scene, const string& name
   material->normal_tex    = normal_tex;
   return material;
 }
-sceneio_material* add_metallic_material(sceneio_scene* scene, const string& name,
-    const vec3f& color, sceneio_texture* color_tex, float roughness,
-    sceneio_texture* roughness_tex = nullptr, sceneio_texture* normal_tex = nullptr,
-    float metallic = 1, sceneio_texture* metallic_tex = nullptr) {
+sceneio_material* add_metallic_material(sceneio_scene* scene,
+    const string& name, const vec3f& color, sceneio_texture* color_tex,
+    float roughness, sceneio_texture* roughness_tex = nullptr,
+    sceneio_texture* normal_tex = nullptr, float metallic = 1,
+    sceneio_texture* metallic_tex = nullptr) {
   auto material           = add_material(scene, name);
   material->color         = color;
   material->color_tex     = color_tex;
@@ -248,9 +250,10 @@ sceneio_material* add_transmission_material(sceneio_scene* scene,
   material->normal_tex       = normal_tex;
   return material;
 }
-sceneio_material* add_volumetric_material(sceneio_scene* scene, const string& name,
-    const vec3f& color, sceneio_texture* color_tex, float roughness,
-    sceneio_texture* roughness_tex = nullptr, const vec3f& scattering = {0, 0, 0},
+sceneio_material* add_volumetric_material(sceneio_scene* scene,
+    const string& name, const vec3f& color, sceneio_texture* color_tex,
+    float roughness, sceneio_texture* roughness_tex = nullptr,
+    const vec3f&     scattering     = {0, 0, 0},
     sceneio_texture* scattering_tex = nullptr,
     sceneio_texture* normal_tex = nullptr, float ior = 1.5,
     float scanisotropy = 0, float trdepth = 0.01, float specular = 1,
@@ -274,9 +277,10 @@ sceneio_material* add_volumetric_material(sceneio_scene* scene, const string& na
   material->thin             = false;
   return material;
 }
-sceneio_material* add_volumetrict_material(sceneio_scene* scene, const string& name,
-    const vec3f& color, sceneio_texture* color_tex, float roughness,
-    sceneio_texture* roughness_tex = nullptr, const vec3f& scattering = {0, 0, 0},
+sceneio_material* add_volumetrict_material(sceneio_scene* scene,
+    const string& name, const vec3f& color, sceneio_texture* color_tex,
+    float roughness, sceneio_texture* roughness_tex = nullptr,
+    const vec3f&     scattering     = {0, 0, 0},
     sceneio_texture* scattering_tex = nullptr,
     sceneio_texture* normal_tex = nullptr, float ior = 1.5,
     float scanisotropy = 0, float trdepth = 0.01, float specular = 1,
@@ -337,9 +341,9 @@ sceneio_material* add_metallic_coated_material(sceneio_scene* scene,
   material->normal_tex    = normal_tex;
   return material;
 }
-sceneio_material* add_transparent_material(sceneio_scene* scene, const string& name,
-    const vec3f& color, sceneio_texture* color_tex, float opacity = 1,
-    sceneio_texture* normal_tex = nullptr) {
+sceneio_material* add_transparent_material(sceneio_scene* scene,
+    const string& name, const vec3f& color, sceneio_texture* color_tex,
+    float opacity = 1, sceneio_texture* normal_tex = nullptr) {
   auto material        = add_material(scene, name);
   material->color      = color;
   material->color_tex  = color_tex;

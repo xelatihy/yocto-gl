@@ -195,7 +195,7 @@ struct sceneio_shape {
   bool smooth       = true;
 
   // displacement data [experimental]
-  float          displacement     = 0;
+  float            displacement     = 0;
   sceneio_texture* displacement_tex = nullptr;
 
   // computed properties
@@ -214,17 +214,17 @@ struct sceneio_shape {
 // Object.
 struct sceneio_instance {
   // instance data
-  string          name     = "";
-  frame3f         frame    = identity3x4f;
+  string            name     = "";
+  frame3f           frame    = identity3x4f;
   sceneio_shape*    shape    = nullptr;
   sceneio_material* material = nullptr;
 };
 
 // Environment map.
 struct sceneio_environment {
-  string         name         = "";
-  frame3f        frame        = identity3x4f;
-  vec3f          emission     = {0, 0, 0};
+  string           name         = "";
+  frame3f          frame        = identity3x4f;
+  vec3f            emission     = {0, 0, 0};
   sceneio_texture* emission_tex = nullptr;
 
   // computed properties
@@ -246,7 +246,7 @@ struct scene_light {
 // updates node transformations only if defined.
 struct sceneio_scene {
   // scene elements
-  vector<sceneio_camera*>    cameras      = {};
+  vector<sceneio_camera*>      cameras      = {};
   vector<sceneio_instance*>    instances    = {};
   vector<sceneio_environment*> environments = {};
   vector<sceneio_shape*>       shapes       = {};
@@ -276,7 +276,7 @@ struct sceneio_scene {
 namespace yocto {
 
 // add element to a scene
-sceneio_camera*    add_camera(sceneio_scene* scene, const string& name = "");
+sceneio_camera*      add_camera(sceneio_scene* scene, const string& name = "");
 sceneio_environment* add_environment(
     sceneio_scene* scene, const string& name = "");
 sceneio_instance* add_instance(sceneio_scene* scene, const string& name = "");
@@ -339,8 +339,8 @@ void set_radius(sceneio_shape* shape, const vector<float>& radius);
 void set_tangents(sceneio_shape* shape, const vector<vec4f>& tangents);
 void set_subdivision(sceneio_shape* shape, int subdivisions, bool catmullclark,
     bool smooth = true);
-void set_displacement(
-    sceneio_shape* shape, float displacement, sceneio_texture* displacement_tex);
+void set_displacement(sceneio_shape* shape, float displacement,
+    sceneio_texture* displacement_tex);
 
 // set environment properties
 void set_frame(sceneio_environment* environment, const frame3f& frame);
@@ -378,8 +378,8 @@ ray3f eval_camera(
 
 // Evaluates a texture
 vec2i texture_size(const sceneio_texture* texture);
-vec4f lookup_texture(
-    const sceneio_texture* texture, const vec2i& ij, bool ldr_as_linear = false);
+vec4f lookup_texture(const sceneio_texture* texture, const vec2i& ij,
+    bool ldr_as_linear = false);
 vec4f eval_texture(const sceneio_texture* texture, const vec2f& uv,
     bool ldr_as_linear = false, bool no_interpolation = false,
     bool clamp_to_edge = false);
@@ -388,7 +388,8 @@ vec4f eval_texture(const sceneio_texture* texture, const vec2f& uv,
 vec3f eval_position(
     const sceneio_instance* instance, int element, const vec2f& uv);
 vec3f eval_element_normal(const sceneio_instance* instance, int element);
-vec3f eval_normal(const sceneio_instance* instance, int element, const vec2f& uv);
+vec3f eval_normal(
+    const sceneio_instance* instance, int element, const vec2f& uv);
 vec2f eval_texcoord(
     const sceneio_instance* instance, int element, const vec2f& uv);
 pair<vec3f, vec3f> eval_element_tangents(
@@ -397,7 +398,8 @@ vec3f eval_normalmap(
     const sceneio_instance* instance, int element, const vec2f& uv);
 vec3f eval_shading_normal(const sceneio_instance* instance, int element,
     const vec2f& uv, const vec3f& outgoing);
-vec4f eval_color(const sceneio_instance* instance, int element, const vec2f& uv);
+vec4f eval_color(
+    const sceneio_instance* instance, int element, const vec2f& uv);
 
 // Environment
 vec3f eval_environment(
@@ -458,8 +460,8 @@ vec3f eval_emission(const sceneio_instance* instance, int element,
 // Eval material to obatain emission, brdf and opacity.
 scene_bsdf eval_bsdf(const sceneio_instance* instance, int element,
     const vec2f& uv, const vec3f& normal, const vec3f& outgoing);
-float eval_opacity(const sceneio_instance* instance, int element, const vec2f& uv,
-    const vec3f& normal, const vec3f& outgoing);
+float      eval_opacity(const sceneio_instance* instance, int element,
+         const vec2f& uv, const vec3f& normal, const vec3f& outgoing);
 // check if a brdf is a delta
 bool is_delta(const scene_bsdf& bsdf);
 
@@ -511,9 +513,10 @@ void init_bvh(sceneio_scene* scene, const scene_bvh_params& params,
     progress_callback progress_cb = {});
 
 // Refit bvh data
-void update_bvh(sceneio_scene*     scene,
+void update_bvh(sceneio_scene*       scene,
     const vector<sceneio_instance*>& updated_objects,
-    const vector<sceneio_shape*>& updated_shapes, const scene_bvh_params& params);
+    const vector<sceneio_shape*>&    updated_shapes,
+    const scene_bvh_params&          params);
 
 // Results of intersect functions that include hit flag, the instance id,
 // the shape element id, the shape element uv and intersection distance.
@@ -575,12 +578,12 @@ void tesselate_shape(sceneio_shape* shape);
 // -----------------------------------------------------------------------------
 namespace yocto {
 
-using scene_model [[deprecated]] = sceneio_scene;
-using scene_camera [[deprecated]] = sceneio_camera;
-using scene_texture [[deprecated]] = sceneio_texture;
-using scene_material [[deprecated]] = sceneio_material;
-using scene_shape [[deprecated]] = sceneio_shape;
-using scene_instance [[deprecated]] = sceneio_instance;
+using scene_model [[deprecated]]       = sceneio_scene;
+using scene_camera [[deprecated]]      = sceneio_camera;
+using scene_texture [[deprecated]]     = sceneio_texture;
+using scene_material [[deprecated]]    = sceneio_material;
+using scene_shape [[deprecated]]       = sceneio_shape;
+using scene_instance [[deprecated]]    = sceneio_instance;
 using scene_environment [[deprecated]] = sceneio_environment;
 
 }  // namespace yocto

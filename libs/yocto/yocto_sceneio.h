@@ -68,8 +68,8 @@ using progress_callback =
 // Calls the progress callback, if defined, as we process more data.
 bool load_scene(const string& filename, sceneio_scene* scene, string& error,
     progress_callback progress_cb = {}, bool noparallel = false);
-bool save_scene(const string& filename, const sceneio_scene* scene, string& error,
-    progress_callback progress_cb = {}, bool noparallel = false);
+bool save_scene(const string& filename, const sceneio_scene* scene,
+    string& error, progress_callback progress_cb = {}, bool noparallel = false);
 
 }  // namespace yocto
 

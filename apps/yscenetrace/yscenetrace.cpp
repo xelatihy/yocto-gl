@@ -39,8 +39,9 @@ using namespace yocto;
 using std::unordered_map;
 
 // Construct a scene from io
-void init_scene(trace_scene* scene, sceneio_scene* ioscene, trace_camera*& camera,
-    sceneio_camera* iocamera, progress_callback progress_cb = {}) {
+void init_scene(trace_scene* scene, sceneio_scene* ioscene,
+    trace_camera*& camera, sceneio_camera* iocamera,
+    progress_callback progress_cb = {}) {
   // handle progress
   auto progress = vec2i{
       0, (int)ioscene->cameras.size() + (int)ioscene->environments.size() +

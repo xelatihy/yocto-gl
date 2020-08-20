@@ -336,7 +336,8 @@ bool draw_widgets(
   return edited;
 }
 
-bool draw_widgets(gui_window* win, sceneio_scene* ioscene, sceneio_shape* ioshape) {
+bool draw_widgets(
+    gui_window* win, sceneio_scene* ioscene, sceneio_shape* ioshape) {
   if (!ioshape) return false;
   auto edited = 0;
   draw_label(win, "name", ioshape->name);
@@ -377,8 +378,8 @@ bool draw_widgets(
   return edited;
 }
 
-bool draw_widgets(
-    gui_window* win, sceneio_scene* ioscene, sceneio_environment* ioenvironment) {
+bool draw_widgets(gui_window* win, sceneio_scene* ioscene,
+    sceneio_environment* ioenvironment) {
   if (!ioenvironment) return false;
   auto edited = 0;
   edited += draw_textinput(win, "name", ioenvironment->name);

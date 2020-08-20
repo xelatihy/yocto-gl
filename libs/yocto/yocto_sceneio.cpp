@@ -372,7 +372,7 @@ static bool load_json_scene(const string& filename, sceneio_scene* scene,
   auto get_ply_instances = [&ply_instances, &ply_instance_map, &instance_ply,
                                &get_value](const json& ejs, const string& name,
                                sceneio_instance* instance,
-                               const string&   dirname = "instances/") -> bool {
+                               const string& dirname = "instances/") -> bool {
     if (!ejs.contains(name)) return true;
     auto path = ""s;
     if (!get_value(ejs, name, path)) return false;

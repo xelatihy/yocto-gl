@@ -69,7 +69,7 @@ struct app_state {
   ogl_image_params glparams = {};
 
   // editing
-  sceneio_camera*    selected_camera      = nullptr;
+  sceneio_camera*      selected_camera      = nullptr;
   sceneio_instance*    selected_instance    = nullptr;
   sceneio_shape*       selected_shape       = nullptr;
   sceneio_material*    selected_material    = nullptr;
@@ -424,8 +424,8 @@ bool draw_widgets(
   return edited;
 }
 
-bool draw_widgets(
-    gui_window* win, sceneio_scene* ioscene, sceneio_environment* ioenvironment) {
+bool draw_widgets(gui_window* win, sceneio_scene* ioscene,
+    sceneio_environment* ioenvironment) {
   if (!ioenvironment) return false;
   auto edited = 0;
   draw_label(win, "name", ioenvironment->name);

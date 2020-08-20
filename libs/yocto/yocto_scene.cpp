@@ -343,8 +343,8 @@ void set_subdivision(
   shape->catmullclark = catmullclark;
   shape->smooth       = smooth;
 }
-void set_displacement(
-    sceneio_shape* shape, float displacement, sceneio_texture* displacement_tex) {
+void set_displacement(sceneio_shape* shape, float displacement,
+    sceneio_texture* displacement_tex) {
   shape->displacement     = displacement;
   shape->displacement_tex = displacement_tex;
 }
@@ -366,8 +366,8 @@ void set_emission(sceneio_material* material, const vec3f& emission,
   material->emission     = emission;
   material->emission_tex = emission_tex;
 }
-void set_color(
-    sceneio_material* material, const vec3f& color, sceneio_texture* color_tex) {
+void set_color(sceneio_material* material, const vec3f& color,
+    sceneio_texture* color_tex) {
   material->color     = color;
   material->color_tex = color_tex;
 }
@@ -397,8 +397,8 @@ void set_translucency(sceneio_material* material, float translucency, bool thin,
   material->translucency_tex = translucency_tex;
 }
 void set_thin(sceneio_material* material, bool thin) { material->thin = thin; }
-void set_roughness(
-    sceneio_material* material, float roughness, sceneio_texture* roughness_tex) {
+void set_roughness(sceneio_material* material, float roughness,
+    sceneio_texture* roughness_tex) {
   material->roughness     = roughness;
   material->roughness_tex = roughness_tex;
 }
@@ -1015,7 +1015,8 @@ vec3f eval_shading_normal(const sceneio_instance* instance, int element,
 }
 
 // Eval color
-vec4f eval_color(const sceneio_instance* instance, int element, const vec2f& uv) {
+vec4f eval_color(
+    const sceneio_instance* instance, int element, const vec2f& uv) {
   auto shape = instance->shape;
   if (shape->colors.empty()) return {1, 1, 1, 1};
   if (!shape->triangles.empty()) {
@@ -1105,8 +1106,8 @@ vec3f eval_emission(const sceneio_instance* instance, int element,
 }
 
 // Eval material to obtain emission, brdf and opacity.
-float eval_opacity(const sceneio_instance* instance, int element, const vec2f& uv,
-    const vec3f& normal, const vec3f& outgoing) {
+float eval_opacity(const sceneio_instance* instance, int element,
+    const vec2f& uv, const vec3f& normal, const vec3f& outgoing) {
   auto material = instance->material;
   auto texcoord = eval_texcoord(instance, element, uv);
   auto opacity  = material->opacity *
@@ -1403,8 +1404,8 @@ static void init_embree_bvh(
 }
 
 static void update_embree_bvh(sceneio_scene* scene,
-    const vector<sceneio_instance*>&           updated_objects,
-    const vector<sceneio_shape*>&              updated_shapes,
+    const vector<sceneio_instance*>&         updated_objects,
+    const vector<sceneio_shape*>&            updated_shapes,
     const scene_bvh_params&                  params) {
   throw std::runtime_error("not implemented yet");
   // // scene bvh
@@ -1953,10 +1954,10 @@ static void update_bvh(sceneio_shape* shape, const scene_bvh_params& params) {
   update_bvh(shape->bvh, bboxes);
 }
 
-void update_bvh(sceneio_scene*     scene,
+void update_bvh(sceneio_scene*       scene,
     const vector<sceneio_instance*>& updated_objects,
     const vector<sceneio_shape*>&    updated_shapes,
-    const scene_bvh_params&        params) {
+    const scene_bvh_params&          params) {
   for (auto shape : updated_shapes) update_bvh(shape, params);
 
 #ifdef YOCTO_EMBREE
