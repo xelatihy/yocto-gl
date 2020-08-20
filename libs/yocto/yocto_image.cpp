@@ -32,10 +32,7 @@
 
 #include "yocto_image.h"
 
-#include <atomic>
-#include <future>
 #include <memory>
-#include <thread>
 
 #include "ext/stb_image.h"
 #include "ext/stb_image_resize.h"
@@ -44,17 +41,7 @@
 #include "yocto_color.h"
 #include "yocto_commonio.h"
 #include "yocto_noise.h"
-
-// -----------------------------------------------------------------------------
-// USING DIRECTIVES
-// -----------------------------------------------------------------------------
-namespace yocto {
-
-// using directives
-using std::atomic;
-using std::future;
-
-}  // namespace yocto
+#include "yocto_parallel.h"
 
 // -----------------------------------------------------------------------------
 // IMPLEMENTATION FOR COLOR UTILITIES
@@ -217,10 +204,10 @@ inline color_space_params get_color_scape_params(color_space space) {
 // gamma to linear
 inline float gamma_display_to_linear(float x, float gamma) {
   return pow(x, gamma);
-};
+}
 inline float gamma_linear_to_display(float x, float gamma) {
   return pow(x, 1 / gamma);
-};
+}
 
 // https://en.wikipedia.org/wiki/Rec._709
 inline float gamma_display_to_linear(float x, float gamma, const vec4f& abcd) {
@@ -230,7 +217,7 @@ inline float gamma_display_to_linear(float x, float gamma, const vec4f& abcd) {
   } else {
     return pow((x + b) / a, gamma);
   }
-};
+}
 inline float gamma_linear_to_display(float x, float gamma, const vec4f& abcd) {
   auto& [a, b, c, d] = abcd;
   if (x < d) {
@@ -238,7 +225,7 @@ inline float gamma_linear_to_display(float x, float gamma, const vec4f& abcd) {
   } else {
     return a * pow(x, 1 / gamma) - b;
   }
-};
+}
 
 // https://en.wikipedia.org/wiki/Academy_Color_Encoding_Systemx
 inline float acescc_display_to_linear(float x) {
@@ -446,7 +433,7 @@ vec3f lookup_image(const image<vec3b>& img, const vec2i& ij, bool as_linear) {
 
 // Evaluate a texture
 template <typename T, typename R>
-inline R eval_image_generic(const image<T>& img, const vec2f& uv,
+static R eval_image_generic(const image<T>& img, const vec2f& uv,
     bool as_linear, bool no_interpolation, bool clamp_to_edge) {
   if (img.empty()) return R{};
 
@@ -513,8 +500,8 @@ namespace yocto {
 template <typename T>
 inline void set_region(
     image<T>& img, const image<T>& region, const vec2i& offset) {
-  for (auto j = 0; j < region.imsize().y; j++) {
-    for (auto i = 0; i < region.imsize().x; i++) {
+  for (auto j = 0; j < region.height(); j++) {
+    for (auto i = 0; i < region.width(); i++) {
       if (!img.contains({i, j})) continue;
       img[vec2i{i, j} + offset] = region[{i, j}];
     }
@@ -530,26 +517,6 @@ inline void get_region(image<T>& clipped, const image<T>& img,
       clipped[{i, j}] = img[{i + offset.x, j + offset.y}];
     }
   }
-}
-
-// Simple parallel for used since our target platforms do not yet support
-// parallel algorithms. `Func` takes the integer index.
-template <typename Func>
-inline void parallel_for(const vec2i& size, Func&& func) {
-  auto        futures  = vector<future<void>>{};
-  auto        nthreads = std::thread::hardware_concurrency();
-  atomic<int> next_idx(0);
-  for (auto thread_id = 0; thread_id < nthreads; thread_id++) {
-    futures.emplace_back(
-        std::async(std::launch::async, [&func, &next_idx, size]() {
-          while (true) {
-            auto j = next_idx.fetch_add(1);
-            if (j >= size.y) break;
-            for (auto i = 0; i < size.x; i++) func({i, j});
-          }
-        }));
-  }
-  for (auto& f : futures) f.get();
 }
 
 // Conversion from/to floats.
@@ -579,26 +546,24 @@ image<vec3b> float_to_byte(const image<vec3f>& fl) {
 // Conversion from/to floats.
 image<float> byte_to_float(const image<byte>& bt) {
   auto fl = image<float>{bt.imsize()};
-  for (auto i = 0ull; i < fl.count(); i++) fl[i] = yocto::byte_to_float(bt[i]);
+  for (auto i = 0ull; i < fl.count(); i++) fl[i] = byte_to_float(bt[i]);
   return fl;
 }
 image<byte> float_to_byte(const image<float>& fl) {
   auto bt = image<byte>{fl.imsize()};
-  for (auto i = 0ull; i < bt.count(); i++) bt[i] = yocto::float_to_byte(fl[i]);
+  for (auto i = 0ull; i < bt.count(); i++) bt[i] = float_to_byte(fl[i]);
   return bt;
 }
 
 // Conversion from/to floats.
-image<float> ushort_to_float(const image<ushort>& bt) {
-  auto fl = image<float>{bt.imsize()};
-  for (auto i = 0ull; i < fl.count(); i++)
-    fl[i] = yocto::ushort_to_float(bt[i]);
+image<vec4f> ushort_to_float(const image<vec4s>& bt) {
+  auto fl = image<vec4f>{bt.imsize()};
+  for (auto i = 0ull; i < fl.count(); i++) fl[i] = ushort_to_float(bt[i]);
   return fl;
 }
-image<ushort> float_to_ushort(const image<float>& fl) {
-  auto bt = image<ushort>{fl.imsize()};
-  for (auto i = 0ull; i < bt.count(); i++)
-    bt[i] = yocto::float_to_ushort(fl[i]);
+image<vec4s> float_to_ushort(const image<vec4f>& fl) {
+  auto bt = image<vec4s>{fl.imsize()};
+  for (auto i = 0ull; i < bt.count(); i++) bt[i] = float_to_ushort(fl[i]);
   return bt;
 }
 
@@ -653,27 +618,87 @@ image<vec3b> rgb_to_srgbb(const image<vec3f>& rgb) {
 // Conversion between linear and gamma-encoded images.
 image<float> srgb_to_rgb(const image<float>& srgb) {
   auto rgb = image<float>{srgb.imsize()};
-  for (auto i = 0ull; i < rgb.count(); i++)
-    rgb[i] = yocto::srgb_to_rgb(srgb[i]);
+  for (auto i = 0ull; i < rgb.count(); i++) rgb[i] = srgb_to_rgb(srgb[i]);
   return rgb;
 }
 image<float> rgb_to_srgb(const image<float>& rgb) {
   auto srgb = image<float>{rgb.imsize()};
-  for (auto i = 0ull; i < srgb.count(); i++)
-    srgb[i] = yocto::rgb_to_srgb(rgb[i]);
+  for (auto i = 0ull; i < srgb.count(); i++) srgb[i] = rgb_to_srgb(rgb[i]);
   return srgb;
 }
 image<float> srgb_to_rgb(const image<byte>& srgb) {
   auto rgb = image<float>{srgb.imsize()};
   for (auto i = 0ull; i < rgb.count(); i++)
-    rgb[i] = yocto::srgb_to_rgb(yocto::byte_to_float(srgb[i]));
+    rgb[i] = srgb_to_rgb(byte_to_float(srgb[i]));
   return rgb;
 }
 image<byte> rgb_to_srgbb(const image<float>& rgb) {
   auto srgb = image<byte>{rgb.imsize()};
   for (auto i = 0ull; i < srgb.count(); i++)
-    srgb[i] = yocto::float_to_byte(yocto::rgb_to_srgb(rgb[i]));
+    srgb[i] = float_to_byte(rgb_to_srgb(rgb[i]));
   return srgb;
+}
+
+// Conversion between number of channels.
+image<vec4f> rgb_to_rgba(const image<vec3f>& rgb) {
+  auto rgba = image<vec4f>{rgb.imsize()};
+  for (auto i = 0ull; i < rgb.count(); i++) rgba[i] = rgb_to_rgba(rgb[i]);
+  return rgba;
+}
+image<vec3f> rgba_to_rgb(const image<vec4f>& rgba) {
+  auto rgb = image<vec3f>{rgba.imsize()};
+  for (auto i = 0ull; i < rgba.count(); i++) rgb[i] = rgba_to_rgb(rgba[i]);
+  return rgb;
+}
+image<vec4b> rgb_to_rgba(const image<vec3b>& rgb) {
+  auto rgba = image<vec4b>{rgb.imsize()};
+  for (auto i = 0ull; i < rgb.count(); i++) rgba[i] = rgb_to_rgba(rgb[i]);
+  return rgba;
+}
+image<vec3b> rgba_to_rgb(const image<vec4b>& rgba) {
+  auto rgb = image<vec3b>{rgba.imsize()};
+  for (auto i = 0ull; i < rgba.count(); i++) rgb[i] = rgba_to_rgb(rgba[i]);
+  return rgb;
+}
+image<vec4f> red_to_rgba(const image<float>& red) {
+  auto rgba = image<vec4f>{red.imsize()};
+  for (auto i = 0ull; i < red.count(); i++) rgba[i] = red_to_rgba(red[i]);
+  return rgba;
+}
+image<float> rgba_to_red(const image<vec4f>& rgba) {
+  auto red = image<float>{rgba.imsize()};
+  for (auto i = 0ull; i < rgba.count(); i++) red[i] = rgba_to_red(rgba[i]);
+  return red;
+}
+image<vec4b> red_to_rgba(const image<byte>& red) {
+  auto rgba = image<vec4b>{red.imsize()};
+  for (auto i = 0ull; i < red.count(); i++) rgba[i] = red_to_rgba(red[i]);
+  return rgba;
+}
+image<byte> rgba_to_red(const image<vec4b>& rgba) {
+  auto red = image<byte>{rgba.imsize()};
+  for (auto i = 0ull; i < rgba.count(); i++) red[i] = rgba_to_red(rgba[i]);
+  return red;
+}
+image<vec4f> gray_to_rgba(const image<float>& gray) {
+  auto rgba = image<vec4f>{gray.imsize()};
+  for (auto i = 0ull; i < gray.count(); i++) rgba[i] = gray_to_rgba(gray[i]);
+  return rgba;
+}
+image<float> rgba_to_gray(const image<vec4f>& rgba) {
+  auto gray = image<float>{rgba.imsize()};
+  for (auto i = 0ull; i < rgba.count(); i++) gray[i] = rgba_to_gray(rgba[i]);
+  return gray;
+}
+image<vec4b> gray_to_rgba(const image<byte>& gray) {
+  auto rgba = image<vec4b>{gray.imsize()};
+  for (auto i = 0ull; i < gray.count(); i++) rgba[i] = gray_to_rgba(gray[i]);
+  return rgba;
+}
+image<byte> rgba_to_gray(const image<vec4b>& rgba) {
+  auto gray = image<byte>{rgba.imsize()};
+  for (auto i = 0ull; i < rgba.count(); i++) gray[i] = rgba_to_gray(rgba[i]);
+  return gray;
 }
 
 // Apply exposure and filmic tone mapping
@@ -694,8 +719,8 @@ image<vec4b> tonemap_imageb(
 
 void tonemap_image_mt(image<vec4f>& ldr, const image<vec4f>& hdr,
     float exposure, bool filmic, bool srgb) {
-  parallel_for(hdr.imsize(), [&](const vec2i& ij) {
-    ldr[ij] = tonemap(hdr[ij], exposure, filmic, srgb);
+  parallel_for(hdr.width(), hdr.height(), [&](int i, int j) {
+    ldr[{i, j}] = tonemap(hdr[{i, j}], exposure, filmic, srgb);
   });
 }
 vec3f colorgrade(
@@ -749,8 +774,8 @@ image<vec4f> colorgrade_image(
 // Apply exposure and filmic tone mapping
 void colorgrade_image_mt(image<vec4f>& corrected, const image<vec4f>& img,
     bool linear, const colorgrade_params& params) {
-  parallel_for(img.imsize(), [&](const vec2i& ij) {
-    corrected[ij] = colorgrade(img[ij], linear, params);
+  parallel_for(img.width(), img.height(), [&](int i, int j) {
+    corrected[{i, j}] = colorgrade(img[{i, j}], linear, params);
   });
 }
 
@@ -778,19 +803,18 @@ static vec2i resize_size(const vec2i& img_size, const vec2i& size_) {
 image<vec4f> resize_image(const image<vec4f>& img, const vec2i& size_) {
   auto size    = resize_size(img.imsize(), size_);
   auto res_img = image<vec4f>{size};
-  stbir_resize_float_generic((float*)img.data(), img.imsize().x, img.imsize().y,
-      sizeof(vec4f) * img.imsize().x, (float*)res_img.data(),
-      res_img.imsize().x, res_img.imsize().y,
-      sizeof(vec4f) * res_img.imsize().x, 4, 3, 0, STBIR_EDGE_CLAMP,
-      STBIR_FILTER_DEFAULT, STBIR_COLORSPACE_LINEAR, nullptr);
+  stbir_resize_float_generic((float*)img.data(), img.width(), img.height(),
+      sizeof(vec4f) * img.width(), (float*)res_img.data(), res_img.width(),
+      res_img.height(), sizeof(vec4f) * res_img.width(), 4, 3, 0,
+      STBIR_EDGE_CLAMP, STBIR_FILTER_DEFAULT, STBIR_COLORSPACE_LINEAR, nullptr);
   return res_img;
 }
 image<vec4b> resize_image(const image<vec4b>& img, const vec2i& size_) {
   auto size    = resize_size(img.imsize(), size_);
   auto res_img = image<vec4b>{size};
-  stbir_resize_uint8_generic((byte*)img.data(), img.imsize().x, img.imsize().y,
-      sizeof(vec4b) * img.imsize().x, (byte*)res_img.data(), res_img.imsize().x,
-      res_img.imsize().y, sizeof(vec4b) * res_img.imsize().x, 4, 3, 0,
+  stbir_resize_uint8_generic((byte*)img.data(), img.width(), img.height(),
+      sizeof(vec4b) * img.width(), (byte*)res_img.data(), res_img.width(),
+      res_img.height(), sizeof(vec4b) * res_img.width(), 4, 3, 0,
       STBIR_EDGE_CLAMP, STBIR_FILTER_DEFAULT, STBIR_COLORSPACE_LINEAR, nullptr);
   return res_img;
 }
@@ -820,10 +844,10 @@ namespace yocto {
 // Comvert a bump map to a normal map.
 void bump_to_normal(image<vec4f>& norm, const image<vec4f>& img, float scale) {
   norm.resize(img.imsize());
-  auto dx = 1.0f / img.imsize().x, dy = 1.0f / img.imsize().y;
-  for (int j = 0; j < img.imsize().y; j++) {
-    for (int i = 0; i < img.imsize().x; i++) {
-      auto i1 = (i + 1) % img.imsize().x, j1 = (j + 1) % img.imsize().y;
+  auto dx = 1.0f / img.width(), dy = 1.0f / img.height();
+  for (int j = 0; j < img.height(); j++) {
+    for (int i = 0; i < img.width(); i++) {
+      auto i1 = (i + 1) % img.width(), j1 = (j + 1) % img.height();
       auto p00 = img[{i, j}], p10 = img[{i1, j}], p01 = img[{i, j1}];
       auto g00    = (p00.x + p00.y + p00.z) / 3;
       auto g01    = (p01.x + p01.y + p01.z) / 3;
@@ -847,8 +871,8 @@ template <typename Shader>
 image<vec4f> make_image(const vec2i& size, Shader&& shader) {
   auto img   = image<vec4f>{size};
   auto scale = 1.0f / max(size);
-  for (auto j = 0; j < img.imsize().y; j++) {
-    for (auto i = 0; i < img.imsize().x; i++) {
+  for (auto j = 0; j < img.height(); j++) {
+    for (auto i = 0; i < img.width(); i++) {
       auto uv     = vec2f{i * scale, j * scale};
       img[{i, j}] = shader(uv);
     }
@@ -1032,18 +1056,17 @@ image<vec4f> add_border(
     const image<vec4f>& source, float width, const vec4f& color) {
   auto img   = source;
   auto scale = 1.0f / max(img.imsize());
-  for (auto j = 0; j < img.imsize().y; j++) {
-    for (auto i = 0; i < img.imsize().x; i++) {
+  for (auto j = 0; j < img.height(); j++) {
+    for (auto i = 0; i < img.width(); i++) {
       auto uv = vec2f{i * scale, j * scale};
-      if (uv.x < width || uv.y < width ||
-          uv.x > img.imsize().x * scale - width ||
-          uv.y > img.imsize().y * scale - width) {
+      if (uv.x < width || uv.y < width || uv.x > img.width() * scale - width ||
+          uv.y > img.height() * scale - width) {
         img[{i, j}] = color;
       }
     }
   }
   return img;
-};
+}
 
 // Implementation of sunsky modified heavily from pbrt
 image<vec4f> make_sunsky(const vec2i& size, float theta_sun, float turbidity,
@@ -1138,11 +1161,11 @@ image<vec4f> make_sunsky(const vec2i& size, float theta_sun, float turbidity,
   // Make the sun sky image
   auto img          = image<vec4f>{size};
   auto sky_integral = 0.0f, sun_integral = 0.0f;
-  for (auto j = 0; j < img.imsize().y / 2; j++) {
-    auto theta = pif * ((j + 0.5f) / img.imsize().y);
+  for (auto j = 0; j < img.height() / 2; j++) {
+    auto theta = pif * ((j + 0.5f) / img.height());
     theta      = clamp(theta, 0.0f, pif / 2 - flt_eps);
-    for (int i = 0; i < img.imsize().x; i++) {
-      auto phi = 2 * pif * (float(i + 0.5f) / img.imsize().x);
+    for (int i = 0; i < img.width(); i++) {
+      auto phi = 2 * pif * (float(i + 0.5f) / img.width());
       auto w = vec3f{cos(phi) * sin(theta), cos(theta), sin(phi) * sin(theta)};
       auto gamma   = acos(clamp(dot(w, sun_direction), -1.0f, 1.0f));
       auto sky_col = sky(theta, gamma, theta_sun);
@@ -1156,23 +1179,23 @@ image<vec4f> make_sunsky(const vec2i& size, float theta_sun, float turbidity,
 
   if (ground_albedo != zero3f) {
     auto ground = zero3f;
-    for (auto j = 0; j < img.imsize().y / 2; j++) {
-      auto theta = pif * ((j + 0.5f) / img.imsize().y);
-      for (int i = 0; i < img.imsize().x; i++) {
+    for (auto j = 0; j < img.height() / 2; j++) {
+      auto theta = pif * ((j + 0.5f) / img.height());
+      for (int i = 0; i < img.width(); i++) {
         auto pxl   = img[{i, j}];
         auto le    = vec3f{pxl.x, pxl.y, pxl.z};
-        auto angle = sin(theta) * 4 * pif / (img.imsize().x * img.imsize().y);
+        auto angle = sin(theta) * 4 * pif / (img.width() * img.height());
         ground += le * (ground_albedo / pif) * cos(theta) * angle;
       }
     }
-    for (auto j = img.imsize().y / 2; j < img.imsize().y; j++) {
-      for (int i = 0; i < img.imsize().x; i++) {
+    for (auto j = img.height() / 2; j < img.height(); j++) {
+      for (int i = 0; i < img.width(); i++) {
         img[{i, j}] = {ground.x, ground.y, ground.z, 1};
       }
     }
   } else {
-    for (auto j = img.imsize().y / 2; j < img.imsize().y; j++) {
-      for (int i = 0; i < img.imsize().x; i++) {
+    for (auto j = img.height() / 2; j < img.height(); j++) {
+      for (int i = 0; i < img.width(); i++) {
         img[{i, j}] = {0, 0, 0, 1};
       }
     }
@@ -1186,12 +1209,12 @@ image<vec4f> make_sunsky(const vec2i& size, float theta_sun, float turbidity,
 image<vec4f> make_lights(const vec2i& size, const vec3f& le, int nlights,
     float langle, float lwidth, float lheight) {
   auto img = image<vec4f>{size};
-  for (auto j = 0; j < img.imsize().y / 2; j++) {
-    auto theta = pif * ((j + 0.5f) / img.imsize().y);
+  for (auto j = 0; j < img.height() / 2; j++) {
+    auto theta = pif * ((j + 0.5f) / img.height());
     theta      = clamp(theta, 0.0f, pif / 2 - 0.00001f);
     if (fabs(theta - langle) > lheight / 2) continue;
-    for (int i = 0; i < img.imsize().x; i++) {
-      auto phi     = 2 * pif * (float(i + 0.5f) / img.imsize().x);
+    for (int i = 0; i < img.width(); i++) {
+      auto phi     = 2 * pif * (float(i + 0.5f) / img.width());
       auto inlight = false;
       for (auto l = 0; l < nlights; l++) {
         auto lphi = 2 * pif * (l + 0.5f) / nlights;
@@ -1208,72 +1231,72 @@ image<vec4b> make_logo(const string& type) {
   static const auto logo_small_size  = vec2i{72, 28};
   // clang-format off
   static const auto logo_medium = vector<byte>{
-    0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 
-    0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 
-    0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 
-    0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 
-    0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 
-    0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 139, 193, 55, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 
-    0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 209, 255, 43, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 
-    0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 14, 253, 239, 1, 0, 0, 0, 0, 0, 0, 0, 0, 30, 18, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 
-    0, 0, 0, 0, 0, 0, 167, 234, 190, 0, 0, 0, 0, 0, 0, 59, 234, 233, 40, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 6, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 69, 255, 183, 0, 0, 0, 0, 0, 0, 31, 169, 230, 255, 255, 224, 152, 15, 0, 0, 0, 0, 203, 234, 116, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 
-    0, 0, 0, 0, 0, 0, 73, 255, 255, 52, 0, 0, 0, 0, 0, 164, 255, 189, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 54, 228, 253, 6, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 127, 255, 125, 0, 0, 0, 0, 0, 66, 235, 255, 252, 206, 217, 254, 255, 225, 45, 0, 0, 0, 222, 255, 127, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 
-    0, 0, 0, 0, 0, 0, 1, 213, 255, 157, 0, 0, 0, 0, 20, 248, 255, 73, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 67, 255, 255, 6, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 185, 255, 66, 0, 0, 0, 0, 43, 251, 255, 182, 15, 0, 0, 22, 166, 188, 8, 0, 0, 0, 222, 255, 127, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 
-    0, 0, 0, 0, 0, 0, 0, 99, 255, 245, 16, 0, 0, 0, 117, 255, 213, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 67, 255, 255, 6, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 2, 241, 252, 12, 0, 0, 0, 0, 174, 255, 198, 4, 0, 0, 0, 0, 0, 3, 0, 0, 0, 0, 222, 255, 127, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 
-    0, 0, 0, 0, 0, 0, 0, 7, 232, 255, 111, 0, 0, 1, 219, 255, 99, 0, 0, 0, 29, 152, 206, 238, 193, 128, 6, 0, 0, 0, 0, 0, 0, 25, 149, 207, 239, 199, 118, 4, 43, 179, 199, 255, 255, 181, 179, 136, 0, 0, 0, 0, 61, 166, 220, 231, 180, 95, 0, 0, 0, 0, 0, 0, 0, 0, 45, 255, 206, 0, 0, 0, 0, 52, 255, 255, 82, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 222, 255, 127, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 
-    0, 0, 0, 0, 0, 0, 0, 0, 125, 255, 215, 0, 0, 69, 255, 232, 7, 0, 0, 56, 232, 255, 254, 235, 255, 255, 198, 21, 0, 0, 0, 0, 46, 226, 255, 254, 234, 255, 255, 170, 61, 255, 255, 255, 255, 255, 255, 166, 0, 0, 0, 101, 250, 255, 248, 241, 255, 255, 153, 3, 0, 0, 0, 0, 0, 0, 104, 255, 148, 0, 0, 0, 0, 137, 255, 232, 3, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 222, 255, 127, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 
-    0, 0, 0, 0, 0, 0, 0, 0, 20, 246, 255, 65, 0, 173, 255, 124, 0, 0, 3, 221, 255, 183, 17, 0, 49, 232, 255, 151, 0, 0, 0, 1, 213, 255, 198, 22, 0, 26, 153, 46, 5, 23, 84, 255, 255, 29, 23, 13, 0, 0, 36, 253, 255, 129, 7, 2, 90, 251, 255, 87, 0, 0, 0, 0, 0, 0, 162, 255, 90, 0, 0, 0, 0, 173, 255, 194, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 222, 255, 127, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 
-    0, 0, 0, 0, 0, 0, 0, 0, 0, 151, 255, 170, 26, 251, 245, 19, 0, 0, 89, 255, 248, 15, 0, 0, 0, 91, 255, 247, 23, 0, 0, 77, 255, 253, 27, 0, 0, 0, 0, 0, 0, 0, 67, 255, 255, 6, 0, 0, 0, 0, 153, 255, 199, 0, 0, 0, 0, 155, 255, 206, 0, 0, 0, 0, 0, 0, 220, 255, 32, 0, 0, 0, 0, 208, 255, 167, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 222, 255, 127, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 
-    0, 0, 0, 0, 0, 0, 0, 0, 0, 38, 254, 250, 150, 255, 149, 0, 0, 0, 174, 255, 177, 0, 0, 0, 0, 13, 250, 255, 95, 0, 0, 168, 255, 191, 0, 0, 0, 0, 0, 0, 0, 0, 67, 255, 255, 6, 0, 0, 0, 0, 238, 255, 113, 0, 0, 0, 0, 71, 255, 255, 31, 0, 0, 0, 0, 22, 255, 230, 0, 0, 0, 0, 0, 243, 255, 140, 0, 0, 0, 108, 231, 231, 231, 231, 149, 0, 0, 0, 222, 255, 127, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 
-    0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 177, 255, 255, 253, 36, 0, 0, 0, 205, 255, 140, 0, 0, 0, 0, 0, 227, 255, 125, 0, 0, 201, 255, 149, 0, 0, 0, 0, 0, 0, 0, 0, 67, 255, 255, 6, 0, 0, 0, 14, 255, 255, 76, 0, 0, 0, 0, 35, 255, 255, 61, 0, 0, 0, 0, 80, 255, 172, 0, 0, 0, 0, 1, 248, 255, 135, 0, 0, 0, 86, 255, 255, 255, 255, 165, 0, 0, 0, 222, 255, 127, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 
-    0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 62, 255, 255, 175, 0, 0, 0, 0, 236, 255, 119, 0, 0, 0, 0, 0, 207, 255, 156, 0, 0, 232, 255, 128, 0, 0, 0, 0, 0, 0, 0, 0, 67, 255, 255, 6, 0, 0, 0, 44, 255, 255, 55, 0, 0, 0, 0, 15, 255, 255, 92, 0, 0, 0, 0, 138, 255, 113, 0, 0, 0, 0, 0, 222, 255, 155, 0, 0, 0, 1, 4, 4, 166, 255, 165, 0, 0, 0, 222, 255, 127, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 
-    0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 245, 255, 105, 0, 0, 0, 0, 245, 255, 113, 0, 0, 0, 0, 0, 202, 255, 163, 0, 0, 246, 255, 120, 0, 0, 0, 0, 0, 0, 0, 0, 67, 255, 255, 6, 0, 0, 0, 53, 255, 255, 49, 0, 0, 0, 0, 10, 255, 255, 99, 0, 0, 0, 0, 196, 255, 55, 0, 0, 0, 0, 0, 194, 255, 175, 0, 0, 0, 0, 0, 0, 164, 255, 165, 0, 0, 0, 222, 255, 127, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 
-    0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 244, 255, 104, 0, 0, 0, 0, 215, 255, 133, 0, 0, 0, 0, 0, 221, 255, 132, 0, 0, 218, 255, 141, 0, 0, 0, 0, 0, 0, 0, 0, 67, 255, 255, 6, 0, 0, 0, 23, 255, 255, 69, 0, 0, 0, 0, 29, 255, 255, 68, 0, 0, 0, 6, 248, 247, 6, 0, 0, 0, 0, 0, 166, 255, 206, 0, 0, 0, 0, 0, 0, 164, 255, 165, 0, 0, 0, 222, 255, 127, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 
-    0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 244, 255, 104, 0, 0, 0, 0, 185, 255, 159, 0, 0, 0, 0, 3, 243, 255, 100, 0, 0, 187, 255, 167, 0, 0, 0, 0, 0, 0, 0, 0, 67, 255, 255, 6, 0, 0, 0, 1, 247, 255, 95, 0, 0, 0, 0, 54, 255, 255, 36, 0, 0, 0, 57, 255, 195, 0, 0, 0, 0, 0, 0, 103, 255, 255, 32, 0, 0, 0, 0, 0, 164, 255, 165, 0, 0, 0, 222, 255, 127, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 
-    0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 244, 255, 104, 0, 0, 0, 0, 123, 255, 232, 2, 0, 0, 0, 65, 255, 253, 36, 0, 0, 133, 255, 239, 7, 0, 0, 0, 0, 0, 0, 0, 67, 255, 255, 7, 0, 0, 0, 0, 187, 255, 170, 0, 0, 0, 0, 129, 255, 222, 3, 0, 0, 0, 115, 255, 137, 0, 0, 0, 0, 0, 0, 9, 236, 255, 127, 0, 0, 0, 0, 0, 164, 255, 165, 0, 0, 0, 222, 255, 127, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 
-    0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 244, 255, 104, 0, 0, 0, 0, 17, 243, 255, 113, 0, 0, 8, 191, 255, 170, 0, 0, 0, 23, 247, 255, 135, 0, 0, 1, 91, 18, 0, 0, 42, 255, 255, 51, 0, 1, 0, 0, 69, 255, 247, 58, 0, 0, 32, 231, 255, 106, 0, 0, 0, 0, 173, 255, 79, 0, 0, 0, 0, 0, 0, 0, 132, 255, 252, 91, 0, 0, 0, 21, 197, 255, 165, 0, 0, 0, 222, 255, 137, 20, 20, 20, 20, 20, 15, 0, 0, 0, 0, 0, 
-    0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 244, 255, 104, 0, 0, 0, 0, 0, 111, 254, 255, 187, 153, 216, 255, 230, 39, 0, 0, 0, 0, 124, 255, 255, 208, 170, 219, 255, 170, 0, 0, 5, 226, 255, 233, 172, 234, 59, 0, 0, 174, 255, 244, 171, 162, 234, 255, 197, 9, 0, 0, 0, 0, 231, 255, 21, 0, 0, 0, 0, 0, 0, 0, 9, 169, 255, 255, 224, 176, 195, 246, 255, 255, 145, 0, 0, 0, 222, 255, 255, 255, 255, 255, 255, 255, 176, 0, 0, 0, 0, 0, 
-    0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 244, 255, 104, 0, 0, 0, 0, 0, 0, 87, 233, 255, 255, 253, 196, 29, 0, 0, 0, 0, 0, 0, 94, 237, 255, 255, 255, 188, 34, 0, 0, 0, 65, 233, 255, 255, 246, 103, 0, 0, 2, 138, 244, 255, 255, 247, 160, 7, 0, 0, 0, 0, 33, 255, 219, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 126, 227, 255, 255, 255, 250, 194, 73, 0, 0, 0, 0, 222, 255, 255, 255, 255, 255, 255, 255, 144, 0, 0, 0, 0, 0, 
-    0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 33, 63, 14, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 36, 64, 18, 0, 0, 0, 0, 0, 0, 11, 56, 60, 15, 0, 0, 0, 0, 0, 3, 47, 55, 6, 0, 0, 0, 0, 0, 0, 91, 255, 160, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 25, 67, 40, 5, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 
-    0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 149, 255, 102, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 
-    0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 69, 140, 36, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 
-    0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 
-    0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 
-    0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 
-    0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 
-    0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 
-    0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 
-    0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 
+    0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+    0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+    0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+    0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+    0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+    0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 139, 193, 55, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+    0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 209, 255, 43, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+    0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 14, 253, 239, 1, 0, 0, 0, 0, 0, 0, 0, 0, 30, 18, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+    0, 0, 0, 0, 0, 0, 167, 234, 190, 0, 0, 0, 0, 0, 0, 59, 234, 233, 40, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 6, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 69, 255, 183, 0, 0, 0, 0, 0, 0, 31, 169, 230, 255, 255, 224, 152, 15, 0, 0, 0, 0, 203, 234, 116, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+    0, 0, 0, 0, 0, 0, 73, 255, 255, 52, 0, 0, 0, 0, 0, 164, 255, 189, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 54, 228, 253, 6, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 127, 255, 125, 0, 0, 0, 0, 0, 66, 235, 255, 252, 206, 217, 254, 255, 225, 45, 0, 0, 0, 222, 255, 127, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+    0, 0, 0, 0, 0, 0, 1, 213, 255, 157, 0, 0, 0, 0, 20, 248, 255, 73, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 67, 255, 255, 6, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 185, 255, 66, 0, 0, 0, 0, 43, 251, 255, 182, 15, 0, 0, 22, 166, 188, 8, 0, 0, 0, 222, 255, 127, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+    0, 0, 0, 0, 0, 0, 0, 99, 255, 245, 16, 0, 0, 0, 117, 255, 213, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 67, 255, 255, 6, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 2, 241, 252, 12, 0, 0, 0, 0, 174, 255, 198, 4, 0, 0, 0, 0, 0, 3, 0, 0, 0, 0, 222, 255, 127, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+    0, 0, 0, 0, 0, 0, 0, 7, 232, 255, 111, 0, 0, 1, 219, 255, 99, 0, 0, 0, 29, 152, 206, 238, 193, 128, 6, 0, 0, 0, 0, 0, 0, 25, 149, 207, 239, 199, 118, 4, 43, 179, 199, 255, 255, 181, 179, 136, 0, 0, 0, 0, 61, 166, 220, 231, 180, 95, 0, 0, 0, 0, 0, 0, 0, 0, 45, 255, 206, 0, 0, 0, 0, 52, 255, 255, 82, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 222, 255, 127, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+    0, 0, 0, 0, 0, 0, 0, 0, 125, 255, 215, 0, 0, 69, 255, 232, 7, 0, 0, 56, 232, 255, 254, 235, 255, 255, 198, 21, 0, 0, 0, 0, 46, 226, 255, 254, 234, 255, 255, 170, 61, 255, 255, 255, 255, 255, 255, 166, 0, 0, 0, 101, 250, 255, 248, 241, 255, 255, 153, 3, 0, 0, 0, 0, 0, 0, 104, 255, 148, 0, 0, 0, 0, 137, 255, 232, 3, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 222, 255, 127, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+    0, 0, 0, 0, 0, 0, 0, 0, 20, 246, 255, 65, 0, 173, 255, 124, 0, 0, 3, 221, 255, 183, 17, 0, 49, 232, 255, 151, 0, 0, 0, 1, 213, 255, 198, 22, 0, 26, 153, 46, 5, 23, 84, 255, 255, 29, 23, 13, 0, 0, 36, 253, 255, 129, 7, 2, 90, 251, 255, 87, 0, 0, 0, 0, 0, 0, 162, 255, 90, 0, 0, 0, 0, 173, 255, 194, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 222, 255, 127, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+    0, 0, 0, 0, 0, 0, 0, 0, 0, 151, 255, 170, 26, 251, 245, 19, 0, 0, 89, 255, 248, 15, 0, 0, 0, 91, 255, 247, 23, 0, 0, 77, 255, 253, 27, 0, 0, 0, 0, 0, 0, 0, 67, 255, 255, 6, 0, 0, 0, 0, 153, 255, 199, 0, 0, 0, 0, 155, 255, 206, 0, 0, 0, 0, 0, 0, 220, 255, 32, 0, 0, 0, 0, 208, 255, 167, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 222, 255, 127, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+    0, 0, 0, 0, 0, 0, 0, 0, 0, 38, 254, 250, 150, 255, 149, 0, 0, 0, 174, 255, 177, 0, 0, 0, 0, 13, 250, 255, 95, 0, 0, 168, 255, 191, 0, 0, 0, 0, 0, 0, 0, 0, 67, 255, 255, 6, 0, 0, 0, 0, 238, 255, 113, 0, 0, 0, 0, 71, 255, 255, 31, 0, 0, 0, 0, 22, 255, 230, 0, 0, 0, 0, 0, 243, 255, 140, 0, 0, 0, 108, 231, 231, 231, 231, 149, 0, 0, 0, 222, 255, 127, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+    0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 177, 255, 255, 253, 36, 0, 0, 0, 205, 255, 140, 0, 0, 0, 0, 0, 227, 255, 125, 0, 0, 201, 255, 149, 0, 0, 0, 0, 0, 0, 0, 0, 67, 255, 255, 6, 0, 0, 0, 14, 255, 255, 76, 0, 0, 0, 0, 35, 255, 255, 61, 0, 0, 0, 0, 80, 255, 172, 0, 0, 0, 0, 1, 248, 255, 135, 0, 0, 0, 86, 255, 255, 255, 255, 165, 0, 0, 0, 222, 255, 127, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+    0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 62, 255, 255, 175, 0, 0, 0, 0, 236, 255, 119, 0, 0, 0, 0, 0, 207, 255, 156, 0, 0, 232, 255, 128, 0, 0, 0, 0, 0, 0, 0, 0, 67, 255, 255, 6, 0, 0, 0, 44, 255, 255, 55, 0, 0, 0, 0, 15, 255, 255, 92, 0, 0, 0, 0, 138, 255, 113, 0, 0, 0, 0, 0, 222, 255, 155, 0, 0, 0, 1, 4, 4, 166, 255, 165, 0, 0, 0, 222, 255, 127, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+    0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 245, 255, 105, 0, 0, 0, 0, 245, 255, 113, 0, 0, 0, 0, 0, 202, 255, 163, 0, 0, 246, 255, 120, 0, 0, 0, 0, 0, 0, 0, 0, 67, 255, 255, 6, 0, 0, 0, 53, 255, 255, 49, 0, 0, 0, 0, 10, 255, 255, 99, 0, 0, 0, 0, 196, 255, 55, 0, 0, 0, 0, 0, 194, 255, 175, 0, 0, 0, 0, 0, 0, 164, 255, 165, 0, 0, 0, 222, 255, 127, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+    0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 244, 255, 104, 0, 0, 0, 0, 215, 255, 133, 0, 0, 0, 0, 0, 221, 255, 132, 0, 0, 218, 255, 141, 0, 0, 0, 0, 0, 0, 0, 0, 67, 255, 255, 6, 0, 0, 0, 23, 255, 255, 69, 0, 0, 0, 0, 29, 255, 255, 68, 0, 0, 0, 6, 248, 247, 6, 0, 0, 0, 0, 0, 166, 255, 206, 0, 0, 0, 0, 0, 0, 164, 255, 165, 0, 0, 0, 222, 255, 127, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+    0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 244, 255, 104, 0, 0, 0, 0, 185, 255, 159, 0, 0, 0, 0, 3, 243, 255, 100, 0, 0, 187, 255, 167, 0, 0, 0, 0, 0, 0, 0, 0, 67, 255, 255, 6, 0, 0, 0, 1, 247, 255, 95, 0, 0, 0, 0, 54, 255, 255, 36, 0, 0, 0, 57, 255, 195, 0, 0, 0, 0, 0, 0, 103, 255, 255, 32, 0, 0, 0, 0, 0, 164, 255, 165, 0, 0, 0, 222, 255, 127, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+    0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 244, 255, 104, 0, 0, 0, 0, 123, 255, 232, 2, 0, 0, 0, 65, 255, 253, 36, 0, 0, 133, 255, 239, 7, 0, 0, 0, 0, 0, 0, 0, 67, 255, 255, 7, 0, 0, 0, 0, 187, 255, 170, 0, 0, 0, 0, 129, 255, 222, 3, 0, 0, 0, 115, 255, 137, 0, 0, 0, 0, 0, 0, 9, 236, 255, 127, 0, 0, 0, 0, 0, 164, 255, 165, 0, 0, 0, 222, 255, 127, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+    0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 244, 255, 104, 0, 0, 0, 0, 17, 243, 255, 113, 0, 0, 8, 191, 255, 170, 0, 0, 0, 23, 247, 255, 135, 0, 0, 1, 91, 18, 0, 0, 42, 255, 255, 51, 0, 1, 0, 0, 69, 255, 247, 58, 0, 0, 32, 231, 255, 106, 0, 0, 0, 0, 173, 255, 79, 0, 0, 0, 0, 0, 0, 0, 132, 255, 252, 91, 0, 0, 0, 21, 197, 255, 165, 0, 0, 0, 222, 255, 137, 20, 20, 20, 20, 20, 15, 0, 0, 0, 0, 0,
+    0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 244, 255, 104, 0, 0, 0, 0, 0, 111, 254, 255, 187, 153, 216, 255, 230, 39, 0, 0, 0, 0, 124, 255, 255, 208, 170, 219, 255, 170, 0, 0, 5, 226, 255, 233, 172, 234, 59, 0, 0, 174, 255, 244, 171, 162, 234, 255, 197, 9, 0, 0, 0, 0, 231, 255, 21, 0, 0, 0, 0, 0, 0, 0, 9, 169, 255, 255, 224, 176, 195, 246, 255, 255, 145, 0, 0, 0, 222, 255, 255, 255, 255, 255, 255, 255, 176, 0, 0, 0, 0, 0,
+    0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 244, 255, 104, 0, 0, 0, 0, 0, 0, 87, 233, 255, 255, 253, 196, 29, 0, 0, 0, 0, 0, 0, 94, 237, 255, 255, 255, 188, 34, 0, 0, 0, 65, 233, 255, 255, 246, 103, 0, 0, 2, 138, 244, 255, 255, 247, 160, 7, 0, 0, 0, 0, 33, 255, 219, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 126, 227, 255, 255, 255, 250, 194, 73, 0, 0, 0, 0, 222, 255, 255, 255, 255, 255, 255, 255, 144, 0, 0, 0, 0, 0,
+    0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 33, 63, 14, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 36, 64, 18, 0, 0, 0, 0, 0, 0, 11, 56, 60, 15, 0, 0, 0, 0, 0, 3, 47, 55, 6, 0, 0, 0, 0, 0, 0, 91, 255, 160, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 25, 67, 40, 5, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+    0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 149, 255, 102, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+    0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 69, 140, 36, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+    0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+    0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+    0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+    0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+    0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+    0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+    0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
   };
 static const auto logo_small = vector<byte> {
-    0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 
-    0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 
-    0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 
-    0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 
-    0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 4, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 
-    0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 165, 221, 125, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 
-    0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 223, 255, 139, 0, 0, 0, 0, 7, 55, 39, 2, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 
-    0, 0, 0, 8, 236, 255, 241, 6, 0, 0, 132, 255, 255, 80, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 52, 84, 88, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 25, 255, 255, 81, 0, 0, 10, 160, 249, 255, 255, 242, 120, 3, 0, 213, 255, 254, 0, 0, 0, 0, 0, 0, 0, 
-    0, 0, 0, 0, 138, 255, 255, 72, 0, 0, 214, 255, 226, 3, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 235, 255, 204, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 83, 255, 255, 24, 0, 9, 207, 255, 255, 247, 249, 255, 253, 57, 0, 213, 255, 254, 0, 0, 0, 0, 0, 0, 0, 
-    0, 0, 0, 0, 34, 254, 255, 153, 0, 40, 255, 255, 124, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 235, 255, 204, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 140, 255, 222, 0, 0, 115, 255, 255, 160, 9, 9, 129, 129, 0, 0, 213, 255, 254, 0, 0, 0, 0, 0, 0, 0, 
-    0, 0, 0, 0, 0, 182, 255, 232, 2, 122, 255, 250, 23, 0, 90, 199, 242, 214, 135, 6, 0, 0, 0, 36, 175, 231, 229, 164, 24, 173, 249, 255, 239, 176, 112, 0, 4, 130, 212, 243, 202, 95, 0, 0, 0, 0, 0, 198, 255, 165, 0, 7, 234, 255, 243, 9, 0, 0, 0, 0, 0, 0, 213, 255, 254, 0, 0, 0, 0, 0, 0, 0, 
-    0, 0, 0, 0, 0, 76, 255, 255, 60, 204, 255, 168, 0, 111, 255, 255, 255, 255, 255, 182, 0, 0, 41, 239, 255, 255, 255, 255, 135, 251, 255, 255, 255, 255, 130, 0, 175, 255, 255, 255, 255, 255, 118, 0, 0, 0, 7, 248, 255, 107, 0, 42, 255, 255, 172, 0, 0, 0, 0, 0, 0, 0, 213, 255, 254, 0, 0, 0, 0, 0, 0, 0, 
-    0, 0, 0, 0, 0, 2, 224, 255, 172, 255, 255, 61, 14, 237, 255, 208, 31, 152, 255, 255, 65, 0, 170, 255, 254, 90, 63, 143, 7, 58, 240, 255, 216, 59, 24, 60, 255, 255, 157, 31, 204, 255, 240, 16, 0, 0, 57, 255, 255, 50, 0, 77, 255, 255, 141, 0, 43, 61, 61, 61, 30, 0, 213, 255, 254, 0, 0, 0, 0, 0, 0, 0, 
-    0, 0, 0, 0, 0, 0, 121, 255, 255, 255, 211, 0, 72, 255, 255, 116, 0, 47, 255, 255, 137, 5, 252, 255, 200, 0, 0, 0, 0, 0, 235, 255, 204, 0, 0, 136, 255, 255, 52, 0, 111, 255, 255, 73, 0, 0, 115, 255, 244, 3, 0, 108, 255, 255, 122, 0, 160, 255, 255, 255, 129, 0, 213, 255, 254, 0, 0, 0, 0, 0, 0, 0, 
-    0, 0, 0, 0, 0, 0, 22, 249, 255, 255, 105, 0, 105, 255, 255, 89, 0, 20, 255, 255, 169, 37, 255, 255, 166, 0, 0, 0, 0, 0, 235, 255, 204, 0, 0, 169, 255, 255, 25, 0, 84, 255, 255, 105, 0, 0, 172, 255, 191, 0, 0, 94, 255, 255, 129, 0, 103, 211, 255, 255, 129, 0, 213, 255, 254, 0, 0, 0, 0, 0, 0, 0, 
-    0, 0, 0, 0, 0, 0, 0, 193, 255, 255, 29, 0, 115, 255, 255, 84, 0, 15, 255, 255, 179, 52, 255, 255, 159, 0, 0, 0, 0, 0, 235, 255, 204, 0, 0, 179, 255, 255, 20, 0, 79, 255, 255, 115, 0, 0, 230, 255, 133, 0, 0, 67, 255, 255, 145, 0, 0, 40, 255, 255, 129, 0, 213, 255, 254, 0, 0, 0, 0, 0, 0, 0, 
-    0, 0, 0, 0, 0, 0, 0, 189, 255, 255, 26, 0, 83, 255, 255, 101, 0, 33, 255, 255, 147, 19, 255, 255, 182, 0, 0, 0, 0, 0, 235, 255, 204, 0, 0, 147, 255, 255, 37, 0, 97, 255, 255, 83, 0, 32, 255, 255, 76, 0, 0, 32, 255, 255, 195, 0, 0, 40, 255, 255, 129, 0, 213, 255, 254, 0, 0, 0, 0, 0, 0, 0, 
-    0, 0, 0, 0, 0, 0, 0, 189, 255, 255, 26, 0, 36, 254, 255, 164, 0, 98, 255, 255, 94, 0, 221, 255, 245, 28, 8, 61, 0, 0, 214, 255, 224, 2, 6, 98, 255, 255, 100, 0, 162, 255, 253, 33, 0, 89, 255, 255, 19, 0, 0, 0, 185, 255, 251, 56, 0, 58, 255, 255, 129, 0, 213, 255, 254, 63, 63, 63, 63, 7, 0, 0, 
-    0, 0, 0, 0, 0, 0, 0, 189, 255, 255, 26, 0, 0, 168, 255, 255, 197, 244, 255, 222, 5, 0, 93, 255, 255, 244, 239, 255, 77, 0, 136, 255, 255, 242, 178, 6, 225, 255, 244, 197, 255, 255, 163, 0, 0, 147, 255, 217, 0, 0, 0, 0, 61, 248, 255, 251, 216, 254, 255, 255, 129, 0, 213, 255, 255, 255, 255, 255, 254, 9, 0, 0, 
-    0, 0, 0, 0, 0, 0, 0, 189, 255, 255, 26, 0, 0, 17, 174, 255, 255, 255, 208, 36, 0, 0, 0, 110, 248, 255, 255, 239, 90, 0, 41, 231, 255, 255, 230, 21, 43, 212, 255, 255, 255, 168, 12, 0, 0, 204, 255, 159, 0, 0, 0, 0, 0, 55, 219, 255, 255, 255, 241, 131, 17, 0, 213, 255, 255, 255, 255, 255, 229, 0, 0, 0, 
-    0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 24, 65, 34, 0, 0, 0, 0, 0, 0, 8, 54, 52, 8, 0, 0, 0, 11, 59, 56, 8, 0, 0, 1, 36, 65, 21, 0, 0, 0, 11, 251, 255, 102, 0, 0, 0, 0, 0, 0, 0, 21, 61, 35, 2, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 
-    0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 24, 161, 221, 44, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 
-    0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 
-    0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 
-    0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 
-    0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 
-    0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 
-    0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 
+    0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+    0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+    0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+    0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+    0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 4, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+    0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 165, 221, 125, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+    0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 223, 255, 139, 0, 0, 0, 0, 7, 55, 39, 2, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+    0, 0, 0, 8, 236, 255, 241, 6, 0, 0, 132, 255, 255, 80, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 52, 84, 88, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 25, 255, 255, 81, 0, 0, 10, 160, 249, 255, 255, 242, 120, 3, 0, 213, 255, 254, 0, 0, 0, 0, 0, 0, 0,
+    0, 0, 0, 0, 138, 255, 255, 72, 0, 0, 214, 255, 226, 3, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 235, 255, 204, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 83, 255, 255, 24, 0, 9, 207, 255, 255, 247, 249, 255, 253, 57, 0, 213, 255, 254, 0, 0, 0, 0, 0, 0, 0,
+    0, 0, 0, 0, 34, 254, 255, 153, 0, 40, 255, 255, 124, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 235, 255, 204, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 140, 255, 222, 0, 0, 115, 255, 255, 160, 9, 9, 129, 129, 0, 0, 213, 255, 254, 0, 0, 0, 0, 0, 0, 0,
+    0, 0, 0, 0, 0, 182, 255, 232, 2, 122, 255, 250, 23, 0, 90, 199, 242, 214, 135, 6, 0, 0, 0, 36, 175, 231, 229, 164, 24, 173, 249, 255, 239, 176, 112, 0, 4, 130, 212, 243, 202, 95, 0, 0, 0, 0, 0, 198, 255, 165, 0, 7, 234, 255, 243, 9, 0, 0, 0, 0, 0, 0, 213, 255, 254, 0, 0, 0, 0, 0, 0, 0,
+    0, 0, 0, 0, 0, 76, 255, 255, 60, 204, 255, 168, 0, 111, 255, 255, 255, 255, 255, 182, 0, 0, 41, 239, 255, 255, 255, 255, 135, 251, 255, 255, 255, 255, 130, 0, 175, 255, 255, 255, 255, 255, 118, 0, 0, 0, 7, 248, 255, 107, 0, 42, 255, 255, 172, 0, 0, 0, 0, 0, 0, 0, 213, 255, 254, 0, 0, 0, 0, 0, 0, 0,
+    0, 0, 0, 0, 0, 2, 224, 255, 172, 255, 255, 61, 14, 237, 255, 208, 31, 152, 255, 255, 65, 0, 170, 255, 254, 90, 63, 143, 7, 58, 240, 255, 216, 59, 24, 60, 255, 255, 157, 31, 204, 255, 240, 16, 0, 0, 57, 255, 255, 50, 0, 77, 255, 255, 141, 0, 43, 61, 61, 61, 30, 0, 213, 255, 254, 0, 0, 0, 0, 0, 0, 0,
+    0, 0, 0, 0, 0, 0, 121, 255, 255, 255, 211, 0, 72, 255, 255, 116, 0, 47, 255, 255, 137, 5, 252, 255, 200, 0, 0, 0, 0, 0, 235, 255, 204, 0, 0, 136, 255, 255, 52, 0, 111, 255, 255, 73, 0, 0, 115, 255, 244, 3, 0, 108, 255, 255, 122, 0, 160, 255, 255, 255, 129, 0, 213, 255, 254, 0, 0, 0, 0, 0, 0, 0,
+    0, 0, 0, 0, 0, 0, 22, 249, 255, 255, 105, 0, 105, 255, 255, 89, 0, 20, 255, 255, 169, 37, 255, 255, 166, 0, 0, 0, 0, 0, 235, 255, 204, 0, 0, 169, 255, 255, 25, 0, 84, 255, 255, 105, 0, 0, 172, 255, 191, 0, 0, 94, 255, 255, 129, 0, 103, 211, 255, 255, 129, 0, 213, 255, 254, 0, 0, 0, 0, 0, 0, 0,
+    0, 0, 0, 0, 0, 0, 0, 193, 255, 255, 29, 0, 115, 255, 255, 84, 0, 15, 255, 255, 179, 52, 255, 255, 159, 0, 0, 0, 0, 0, 235, 255, 204, 0, 0, 179, 255, 255, 20, 0, 79, 255, 255, 115, 0, 0, 230, 255, 133, 0, 0, 67, 255, 255, 145, 0, 0, 40, 255, 255, 129, 0, 213, 255, 254, 0, 0, 0, 0, 0, 0, 0,
+    0, 0, 0, 0, 0, 0, 0, 189, 255, 255, 26, 0, 83, 255, 255, 101, 0, 33, 255, 255, 147, 19, 255, 255, 182, 0, 0, 0, 0, 0, 235, 255, 204, 0, 0, 147, 255, 255, 37, 0, 97, 255, 255, 83, 0, 32, 255, 255, 76, 0, 0, 32, 255, 255, 195, 0, 0, 40, 255, 255, 129, 0, 213, 255, 254, 0, 0, 0, 0, 0, 0, 0,
+    0, 0, 0, 0, 0, 0, 0, 189, 255, 255, 26, 0, 36, 254, 255, 164, 0, 98, 255, 255, 94, 0, 221, 255, 245, 28, 8, 61, 0, 0, 214, 255, 224, 2, 6, 98, 255, 255, 100, 0, 162, 255, 253, 33, 0, 89, 255, 255, 19, 0, 0, 0, 185, 255, 251, 56, 0, 58, 255, 255, 129, 0, 213, 255, 254, 63, 63, 63, 63, 7, 0, 0,
+    0, 0, 0, 0, 0, 0, 0, 189, 255, 255, 26, 0, 0, 168, 255, 255, 197, 244, 255, 222, 5, 0, 93, 255, 255, 244, 239, 255, 77, 0, 136, 255, 255, 242, 178, 6, 225, 255, 244, 197, 255, 255, 163, 0, 0, 147, 255, 217, 0, 0, 0, 0, 61, 248, 255, 251, 216, 254, 255, 255, 129, 0, 213, 255, 255, 255, 255, 255, 254, 9, 0, 0,
+    0, 0, 0, 0, 0, 0, 0, 189, 255, 255, 26, 0, 0, 17, 174, 255, 255, 255, 208, 36, 0, 0, 0, 110, 248, 255, 255, 239, 90, 0, 41, 231, 255, 255, 230, 21, 43, 212, 255, 255, 255, 168, 12, 0, 0, 204, 255, 159, 0, 0, 0, 0, 0, 55, 219, 255, 255, 255, 241, 131, 17, 0, 213, 255, 255, 255, 255, 255, 229, 0, 0, 0,
+    0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 24, 65, 34, 0, 0, 0, 0, 0, 0, 8, 54, 52, 8, 0, 0, 0, 11, 59, 56, 8, 0, 0, 1, 36, 65, 21, 0, 0, 0, 11, 251, 255, 102, 0, 0, 0, 0, 0, 0, 0, 21, 61, 35, 2, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+    0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 24, 161, 221, 44, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+    0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+    0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+    0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+    0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+    0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+    0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
   };
   // clang-format on
   if (type == "logo-medium") {
@@ -1316,34 +1339,34 @@ image<vec4b> add_logo(const image<vec4b>& img, const string& type) {
 namespace yocto {
 
 // Lookup volume
-inline float lookup_volume(
+static float lookup_volume(
     const volume<float>& vol, const vec3i& ijk, bool as_linear) {
   return vol[ijk];
 }
 
 // Evaluates a color image at a point `uv`.
-inline float eval_volume(const volume<float>& vol, const vec3f& uvw,
+float eval_volume(const volume<float>& vol, const vec3f& uvw,
     bool ldr_as_linear, bool no_interpolation, bool clamp_to_edge) {
   if (vol.empty()) return 0;
 
   // get coordinates normalized for tiling
-  auto s = clamp((uvw.x + 1.0f) * 0.5f, 0.0f, 1.0f) * vol.size().x;
-  auto t = clamp((uvw.y + 1.0f) * 0.5f, 0.0f, 1.0f) * vol.size().y;
-  auto r = clamp((uvw.z + 1.0f) * 0.5f, 0.0f, 1.0f) * vol.size().z;
+  auto s = clamp((uvw.x + 1.0f) * 0.5f, 0.0f, 1.0f) * vol.width();
+  auto t = clamp((uvw.y + 1.0f) * 0.5f, 0.0f, 1.0f) * vol.height();
+  auto r = clamp((uvw.z + 1.0f) * 0.5f, 0.0f, 1.0f) * vol.depth();
 
   // get image coordinates and residuals
-  auto i  = clamp((int)s, 0, vol.size().x - 1);
-  auto j  = clamp((int)t, 0, vol.size().y - 1);
-  auto k  = clamp((int)r, 0, vol.size().z - 1);
-  auto ii = (i + 1) % vol.size().x, jj = (j + 1) % vol.size().y,
-       kk = (k + 1) % vol.size().z;
+  auto i  = clamp((int)s, 0, vol.width() - 1);
+  auto j  = clamp((int)t, 0, vol.height() - 1);
+  auto k  = clamp((int)r, 0, vol.depth() - 1);
+  auto ii = (i + 1) % vol.width(), jj = (j + 1) % vol.height(),
+       kk = (k + 1) % vol.depth();
   auto u = s - i, v = t - j, w = r - k;
 
   // nearest-neighbor interpolation
   if (no_interpolation) {
-    i = u < 0.5 ? i : min(i + 1, vol.size().x - 1);
-    j = v < 0.5 ? j : min(j + 1, vol.size().y - 1);
-    k = w < 0.5 ? k : min(k + 1, vol.size().z - 1);
+    i = u < 0.5 ? i : min(i + 1, vol.width() - 1);
+    j = v < 0.5 ? j : min(j + 1, vol.height() - 1);
+    k = w < 0.5 ? k : min(k + 1, vol.depth() - 1);
     return lookup_volume(vol, {i, j, k}, ldr_as_linear);
   }
 
@@ -1370,11 +1393,11 @@ namespace yocto {
 void make_test(
     volume<float>& vol, const vec3i& size, float scale, float exponent) {
   vol.resize(size);
-  for (auto k = 0; k < vol.size().z; k++) {
-    for (auto j = 0; j < vol.size().y; j++) {
-      for (auto i = 0; i < vol.size().x; i++) {
-        auto p     = vec3f{i / (float)vol.size().x, j / (float)vol.size().y,
-            k / (float)vol.size().z};
+  for (auto k = 0; k < vol.depth(); k++) {
+    for (auto j = 0; j < vol.height(); j++) {
+      for (auto i = 0; i < vol.width(); i++) {
+        auto p     = vec3f{i / (float)vol.width(), j / (float)vol.height(),
+            k / (float)vol.depth()};
         auto value = pow(
             max(max(cos(scale * p.x), cos(scale * p.y)), 0.0f), exponent);
         vol[{i, j, k}] = clamp(value, 0.0f, 1.0f);
@@ -1586,7 +1609,7 @@ bool is_hdr_filename(const string& filename) {
   if (ext == ".exr" || ext == ".EXR") {
     auto width = 0, height = 0;
     auto pixels = (float*)nullptr;
-    if (LoadEXR(&pixels, &width, &height, filename.c_str(), nullptr) < 0)
+    if (LoadEXR(&pixels, &width, &height, filename.c_str(), nullptr) != 0)
       return read_error();
     if (!pixels) return read_error();
     img = image{{width, height}, (const vec4f*)pixels};
@@ -1630,18 +1653,18 @@ bool is_hdr_filename(const string& filename) {
 
   auto ext = path_extension(filename);
   if (ext == ".hdr" || ext == ".HDR") {
-    if (!stbi_write_hdr(filename.c_str(), img.imsize().x, img.imsize().y, 4,
-            (float*)img.data()))
+    if (!stbi_write_hdr(
+            filename.c_str(), img.width(), img.height(), 4, (float*)img.data()))
       return write_error();
     return true;
   } else if (ext == ".pfm" || ext == ".PFM") {
-    if (!save_pfm(filename.c_str(), img.imsize().x, img.imsize().y, 4,
-            (float*)img.data()))
+    if (!save_pfm(
+            filename.c_str(), img.width(), img.height(), 4, (float*)img.data()))
       return write_error();
     return true;
   } else if (ext == ".exr" || ext == ".EXR") {
-    if (SaveEXR((float*)img.data(), img.imsize().x, img.imsize().y, 4,
-            filename.c_str()) < 0)
+    if (SaveEXR((float*)img.data(), img.width(), img.height(), 4, 1,
+            filename.c_str(), nullptr) < 0)
       return write_error();
     return true;
   } else if (!is_hdr_filename(filename)) {
@@ -1696,345 +1719,23 @@ bool is_hdr_filename(const string& filename) {
 
   auto ext = path_extension(filename);
   if (ext == ".png" || ext == ".PNG") {
-    if (!stbi_write_png(filename.c_str(), img.imsize().x, img.imsize().y, 4,
-            img.data(), img.imsize().x * 4))
+    if (!stbi_write_png(filename.c_str(), img.width(), img.height(), 4,
+            img.data(), img.width() * 4))
       return write_error();
     return true;
   } else if (ext == ".jpg" || ext == ".JPG") {
-    if (!stbi_write_jpg(filename.c_str(), img.imsize().x, img.imsize().y, 4,
-            img.data(), 75))
+    if (!stbi_write_jpg(
+            filename.c_str(), img.width(), img.height(), 4, img.data(), 75))
       return write_error();
     return true;
   } else if (ext == ".tga" || ext == ".TGA") {
     if (!stbi_write_tga(
-            filename.c_str(), img.imsize().x, img.imsize().y, 4, img.data()))
+            filename.c_str(), img.width(), img.height(), 4, img.data()))
       return write_error();
     return true;
   } else if (ext == ".bmp" || ext == ".BMP") {
     if (!stbi_write_bmp(
-            filename.c_str(), img.imsize().x, img.imsize().y, 4, img.data()))
-      return write_error();
-    return true;
-  } else if (is_hdr_filename(filename)) {
-    return save_image(filename, srgb_to_rgb(img), error);
-  } else {
-    return format_error();
-  }
-}
-
-// Loads an hdr image.
-[[nodiscard]] bool load_image(
-    const string& filename, image<vec3f>& img, string& error) {
-  auto format_error = [filename, &error]() {
-    error = filename + ": unknown format";
-    return false;
-  };
-  auto read_error = [filename, &error]() {
-    error = filename + ": read error";
-    return false;
-  };
-
-  auto ext = path_extension(filename);
-  if (ext == ".exr" || ext == ".EXR") {
-    auto width = 0, height = 0;
-    auto pixels = (float*)nullptr;
-    if (LoadEXR(&pixels, &width, &height, filename.c_str(), nullptr) < 0)
-      return read_error();
-    if (!pixels) return read_error();
-    auto cpixels = std::unique_ptr<float[]>(new float[width * height * 3]);
-    for (auto i = (size_t)0; i < (size_t)width * (size_t)height; i++) {
-      cpixels[i * 3 + 0] = pixels[i * 4 + 0];
-      cpixels[i * 3 + 1] = pixels[i * 4 + 1];
-      cpixels[i * 3 + 2] = pixels[i * 4 + 2];
-    }
-    img = image{{width, height}, (const vec3f*)cpixels.get()};
-    free(pixels);
-    return true;
-  } else if (ext == ".pfm" || ext == ".PFM") {
-    auto width = 0, height = 0, ncomp = 0;
-    auto pixels = load_pfm(filename.c_str(), &width, &height, &ncomp, 3);
-    if (!pixels) return read_error();
-    img = image{{width, height}, (const vec3f*)pixels};
-    delete[] pixels;
-    return true;
-  } else if (ext == ".hdr" || ext == ".HDR") {
-    auto width = 0, height = 0, ncomp = 0;
-    auto pixels = stbi_loadf(filename.c_str(), &width, &height, &ncomp, 3);
-    if (!pixels) return read_error();
-    img = image{{width, height}, (const vec3f*)pixels};
-    free(pixels);
-    return true;
-  } else if (!is_hdr_filename(filename)) {
-    auto imgb = image<vec3b>{};
-    if (!load_image(filename, imgb, error)) return false;
-    img = srgb_to_rgb(imgb);
-    return true;
-  } else {
-    return format_error();
-  }
-}
-
-// Saves an hdr image.
-[[nodiscard]] bool save_image(
-    const string& filename, const image<vec3f>& img, string& error) {
-  auto format_error = [filename, &error]() {
-    error = filename + ": unknown format";
-    return false;
-  };
-  auto write_error = [filename, &error]() {
-    error = filename + ": write error";
-    return false;
-  };
-
-  auto ext = path_extension(filename);
-  if (ext == ".hdr" || ext == ".HDR") {
-    if (!stbi_write_hdr(filename.c_str(), img.imsize().x, img.imsize().y, 3,
-            (float*)img.data()))
-      return write_error();
-    return true;
-  } else if (ext == ".pfm" || ext == ".PFM") {
-    if (!save_pfm(filename.c_str(), img.imsize().x, img.imsize().y, 3,
-            (float*)img.data()))
-      return write_error();
-    return true;
-  } else if (ext == ".exr" || ext == ".EXR") {
-    if (SaveEXR((float*)img.data(), img.imsize().x, img.imsize().y, 3,
-            filename.c_str()) < 0)
-      return write_error();
-    return true;
-  } else if (!is_hdr_filename(filename)) {
-    return save_image(filename, rgb_to_srgbb(img), error);
-  } else {
-    return format_error();
-  }
-}
-
-// Loads an ldr image.
-[[nodiscard]] bool load_image(
-    const string& filename, image<vec3b>& img, string& error) {
-  auto format_error = [filename, &error]() {
-    error = filename + ": unknown format";
-    return false;
-  };
-  auto read_error = [filename, &error]() {
-    error = filename + ": read error";
-    return false;
-  };
-
-  auto ext = path_extension(filename);
-  if (ext == ".png" || ext == ".PNG" || ext == ".jpg" || ext == ".JPG" ||
-      ext == ".tga" || ext == ".TGA" || ext == ".bmp" || ext == ".BMP") {
-    auto width = 0, height = 0, ncomp = 0;
-    auto pixels = stbi_load(filename.c_str(), &width, &height, &ncomp, 3);
-    if (!pixels) return read_error();
-    img = image{{width, height}, (const vec3b*)pixels};
-    free(pixels);
-    return true;
-  } else if (is_hdr_filename(filename)) {
-    auto imgf = image<vec3f>{};
-    if (!load_image(filename, imgf, error)) return false;
-    img = rgb_to_srgbb(imgf);
-    return true;
-  } else {
-    return format_error();
-  }
-}
-
-// Saves an ldr image.
-[[nodiscard]] bool save_image(
-    const string& filename, const image<vec3b>& img, string& error) {
-  auto format_error = [filename, &error]() {
-    error = filename + ": unknown format";
-    return false;
-  };
-  auto write_error = [filename, &error]() {
-    error = filename + ": write error";
-    return false;
-  };
-
-  auto ext = path_extension(filename);
-  if (ext == ".png" || ext == ".PNG") {
-    if (!stbi_write_png(filename.c_str(), img.imsize().x, img.imsize().y, 3,
-            img.data(), img.imsize().x * 3))
-      return write_error();
-    return true;
-  } else if (ext == ".jpg" || ext == ".JPG") {
-    if (!stbi_write_jpg(filename.c_str(), img.imsize().x, img.imsize().y, 3,
-            img.data(), 75))
-      return write_error();
-    return true;
-  } else if (ext == ".tga" || ext == ".TGA") {
-    if (!stbi_write_tga(
-            filename.c_str(), img.imsize().x, img.imsize().y, 3, img.data()))
-      return write_error();
-    return true;
-  } else if (ext == ".bmp" || ext == ".BMP") {
-    if (!stbi_write_bmp(
-            filename.c_str(), img.imsize().x, img.imsize().y, 3, img.data()))
-      return write_error();
-    return true;
-  } else if (is_hdr_filename(filename)) {
-    return save_image(filename, srgb_to_rgb(img), error);
-  } else {
-    return format_error();
-  }
-}
-
-// Loads an hdr image.
-[[nodiscard]] bool load_image(
-    const string& filename, image<float>& img, string& error) {
-  auto format_error = [filename, &error]() {
-    error = filename + ": unknown format";
-    return false;
-  };
-  auto read_error = [filename, &error]() {
-    error = filename + ": read error";
-    return false;
-  };
-
-  auto ext = path_extension(filename);
-  if (ext == ".exr" || ext == ".EXR") {
-    auto width = 0, height = 0;
-    auto pixels = (float*)nullptr;
-    if (LoadEXR(&pixels, &width, &height, filename.c_str(), nullptr) < 0)
-      return read_error();
-    if (!pixels) return read_error();
-    auto cpixels = std::unique_ptr<float[]>(new float[width * height]);
-    for (auto i = (size_t)0; i < (size_t)width * (size_t)height; i++) {
-      cpixels[i + 0] =
-          (pixels[i * 4 + 0] + pixels[i * 4 + 1] + pixels[i * 4 + 2]) / 3;
-    }
-    img = image{{width, height}, (const float*)cpixels.get()};
-    free(pixels);
-    return true;
-  } else if (ext == ".pfm" || ext == ".PFM") {
-    auto width = 0, height = 0, ncomp = 0;
-    auto pixels = load_pfm(filename.c_str(), &width, &height, &ncomp, 1);
-    if (!pixels) return read_error();
-    img = image{{width, height}, (const float*)pixels};
-    delete[] pixels;
-    return true;
-  } else if (ext == ".hdr" || ext == ".HDR") {
-    auto width = 0, height = 0, ncomp = 0;
-    auto pixels = stbi_loadf(filename.c_str(), &width, &height, &ncomp, 1);
-    if (!pixels) return read_error();
-    img = image{{width, height}, (const float*)pixels};
-    free(pixels);
-    return true;
-  } else if (!is_hdr_filename(filename)) {
-    auto imgb = image<byte>{};
-    if (!load_image(filename, imgb, error)) return false;
-    img = srgb_to_rgb(imgb);
-    return true;
-  } else {
-    return format_error();
-  }
-}
-
-// Saves an hdr image.
-[[nodiscard]] bool save_image(
-    const string& filename, const image<float>& img, string& error) {
-  auto format_error = [filename, &error]() {
-    error = filename + ": unknown format";
-    return false;
-  };
-  auto write_error = [filename, &error]() {
-    error = filename + ": write error";
-    return false;
-  };
-
-  auto ext = path_extension(filename);
-  if (ext == ".hdr" || ext == ".HDR") {
-    auto npixels = (size_t)img.imsize().x * (size_t)img.imsize().y;
-    auto cpixels = std::unique_ptr<float[]>(new float[npixels * 3]);
-    for (auto idx = (size_t)0; idx < npixels; idx++) {
-      cpixels[idx * 3 + 0] = *(img.begin() + idx);
-      cpixels[idx * 3 + 1] = *(img.begin() + idx);
-      cpixels[idx * 3 + 2] = *(img.begin() + idx);
-    }
-    if (!stbi_write_hdr(filename.c_str(), img.imsize().x, img.imsize().y, 3,
-            (float*)cpixels.get()))
-      return write_error();
-    return true;
-  } else if (ext == ".pfm" || ext == ".PFM") {
-    if (!save_pfm(filename.c_str(), img.imsize().x, img.imsize().y, 1,
-            (float*)img.data()))
-      return write_error();
-    return true;
-  } else if (ext == ".exr" || ext == ".EXR") {
-    if (SaveEXR((float*)img.data(), img.imsize().x, img.imsize().y, 1,
-            filename.c_str()) < 0)
-      return write_error();
-    return true;
-  } else if (!is_hdr_filename(filename)) {
-    return save_image(filename, rgb_to_srgbb(img), error);
-  } else {
-    return format_error();
-  }
-}
-
-// Loads an ldr image.
-[[nodiscard]] bool load_image(
-    const string& filename, image<byte>& img, string& error) {
-  auto format_error = [filename, &error]() {
-    error = filename + ": unknown format";
-    return false;
-  };
-  auto read_error = [filename, &error]() {
-    error = filename + ": read error";
-    return false;
-  };
-
-  auto ext = path_extension(filename);
-  if (ext == ".png" || ext == ".PNG" || ext == ".jpg" || ext == ".JPG" ||
-      ext == ".tga" || ext == ".TGA" || ext == ".bmp" || ext == ".BMP") {
-    auto width = 0, height = 0, ncomp = 0;
-    auto pixels = stbi_load(filename.c_str(), &width, &height, &ncomp, 1);
-    if (!pixels) return read_error();
-    img = image{{width, height}, (const byte*)pixels};
-    free(pixels);
-    return true;
-  } else if (is_hdr_filename(filename)) {
-    auto imgf = image<float>{};
-    if (!load_image(filename, imgf, error)) return false;
-    img = rgb_to_srgbb(imgf);
-    return true;
-  } else {
-    return format_error();
-  }
-}
-
-// Saves an ldr image.
-[[nodiscard]] bool save_image(
-    const string& filename, const image<byte>& img, string& error) {
-  auto format_error = [filename, &error]() {
-    error = filename + ": unknown format";
-    return false;
-  };
-  auto write_error = [filename, &error]() {
-    error = filename + ": write error";
-    return false;
-  };
-
-  auto ext = path_extension(filename);
-  if (ext == ".png" || ext == ".PNG") {
-    if (!stbi_write_png(filename.c_str(), img.imsize().x, img.imsize().y, 1,
-            img.data(), img.imsize().x * 1))
-      return write_error();
-    return true;
-  } else if (ext == ".jpg" || ext == ".JPG") {
-    if (!stbi_write_jpg(filename.c_str(), img.imsize().x, img.imsize().y, 1,
-            img.data(), 75))
-      return write_error();
-    return true;
-  } else if (ext == ".tga" || ext == ".TGA") {
-    if (!stbi_write_tga(
-            filename.c_str(), img.imsize().x, img.imsize().y, 1, img.data()))
-      return write_error();
-    return true;
-  } else if (ext == ".bmp" || ext == ".BMP") {
-    if (!stbi_write_bmp(
-            filename.c_str(), img.imsize().x, img.imsize().y, 1, img.data()))
+            filename.c_str(), img.width(), img.height(), 4, img.data()))
       return write_error();
     return true;
   } else if (is_hdr_filename(filename)) {
@@ -2046,7 +1747,7 @@ bool is_hdr_filename(const string& filename) {
 
 // Loads a 16 bit image.
 [[nodiscard]] bool load_image(
-    const string& filename, image<ushort>& img, string& error) {
+    const string& filename, image<vec4s>& img, string& error) {
   auto format_error = [filename, &error]() {
     error = filename + ": unknown format";
     return false;
@@ -2060,18 +1761,38 @@ bool is_hdr_filename(const string& filename) {
   if (ext == ".png" || ext == ".PNG" || ext == ".jpg" || ext == ".JPG" ||
       ext == ".tga" || ext == ".TGA" || ext == ".bmp" || ext == ".BMP") {
     auto width = 0, height = 0, ncomp = 0;
-    auto pixels = stbi_load_16(filename.c_str(), &width, &height, &ncomp, 1);
+    auto pixels = stbi_load_16(filename.c_str(), &width, &height, &ncomp, 4);
     if (!pixels) return read_error();
-    img = image{{width, height}, (const uint16_t*)pixels};
+    img = image{{width, height}, (const vec4s*)pixels};
     free(pixels);
     return true;
   } else if (is_hdr_filename(filename)) {
-    auto imgf = image<float>{};
+    auto imgf = image<vec4f>{};
     if (!load_image(filename, imgf, error)) return false;
     img = float_to_ushort(imgf);
     return true;
   } else {
     return format_error();
+  }
+}
+
+// Loads/saves a  channel float/byte image in linear/srgb color space.
+bool load_image(const string& filename, image<vec4f>& imgf, image<vec4b>& imgb,
+    string& error) {
+  if (is_hdr_filename(filename)) {
+    return load_image(filename, imgf, error);
+  } else {
+    return load_image(filename, imgb, error);
+  }
+}
+
+// Loads/saves a  channel float/byte image in linear/srgb color space.
+bool save_image(const string& filename, const image<vec4f>& imgf,
+    const image<vec4b>& imgb, string& error) {
+  if (!imgf.empty()) {
+    return save_image(filename, imgf, error);
+  } else {
+    return save_image(filename, imgb, error);
   }
 }
 
@@ -2237,7 +1958,7 @@ bool save_volume(
     error = filename + ": write error";
     return false;
   };
-  if (!save_yvol(filename.c_str(), vol.size().x, vol.size().y, vol.size().z, 1,
+  if (!save_yvol(filename.c_str(), vol.width(), vol.height(), vol.depth(), 1,
           vol.data()))
     return write_error();
   return true;

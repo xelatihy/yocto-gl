@@ -29,15 +29,14 @@
 #include <yocto/yocto_commonio.h>
 #include <yocto/yocto_geometry.h>
 #include <yocto/yocto_image.h>
+#include <yocto/yocto_parallel.h>
 #include <yocto/yocto_sceneio.h>
 #include <yocto/yocto_shape.h>
 #include <yocto_gui/yocto_imgui.h>
-#include <yocto_gui/yocto_opengl.h>
+#include <yocto_gui/yocto_draw.h>
 using namespace yocto;
 
-#include <atomic>
 #include <deque>
-#include <future>
 
 #ifdef _WIN32
 #undef near
@@ -45,7 +44,7 @@ using namespace yocto;
 #endif
 
 namespace yocto {
-void print_obj_camera(scene_camera* camera);
+void print_obj_camera(sceneio_camera* camera);
 };
 
 // Application state
@@ -57,14 +56,14 @@ struct app_state {
   string name      = "";
 
   // options
-  ogl_scene_params drawgl_prms = {};
+  gui_scene_params drawgl_prms = {};
 
   // scene
   generic_shape* ioshape = new generic_shape{};
 
   // rendering state
-  ogl_scene*  glscene  = new ogl_scene{};
-  ogl_camera* glcamera = nullptr;
+  gui_scene*  glscene  = new gui_scene{};
+  gui_camera* glcamera = nullptr;
 
   // loading status
   std::atomic<bool> ok           = false;
@@ -89,7 +88,7 @@ struct app_states {
   std::deque<app_state*> loading  = {};
 
   // default options
-  ogl_scene_params drawgl_prms = {};
+  gui_scene_params drawgl_prms = {};
 
   // cleanup
   ~app_states() {
@@ -107,10 +106,6 @@ void load_shape_async(
   app->drawgl_prms = apps->drawgl_prms;
   app->status      = "load";
   app->loader      = std::async(std::launch::async, [app, camera_name]() {
-    auto progress_cb = [app](const string& message, int current, int total) {
-      app->current = current;
-      app->total   = total;
-    };
     if (!load_shape(app->filename, *app->ioshape, app->loader_error)) return;
   });
   apps->loading.push_back(app);
@@ -175,7 +170,7 @@ quads_shape make_cylinders(const vector<vec2i>& lines,
   return shape;
 }
 
-void init_glscene(ogl_scene* glscene, const generic_shape* ioshape,
+void init_glscene(gui_scene* glscene, const generic_shape* ioshape,
     progress_callback progress_cb) {
   // handle progress
   auto progress = vec2i{0, 4};
@@ -238,8 +233,8 @@ void draw_widgets(gui_window* win, app_states* apps, const gui_input& input) {
           path_filename(save_path), "*.ply;*.obj")) {
     auto app     = apps->selected;
     app->outname = save_path;
-    auto ok      = save_shape(app->outname, *app->ioshape, app->error);
-    save_path    = "";
+    save_shape(app->outname, *app->ioshape, app->error);
+    save_path = "";
   }
   continue_line(win);
   if (draw_button(win, "close", (bool)apps->selected)) {
@@ -285,7 +280,7 @@ void draw_widgets(gui_window* win, app_states* apps, const gui_input& input) {
     draw_coloredit(win, "color", glmaterial->color);
     auto& params = app->drawgl_prms;
     draw_slider(win, "resolution", params.resolution, 0, 4096);
-    draw_combobox(win, "shading", (int&)params.shading, ogl_shading_names);
+    draw_combobox(win, "shading", (int&)params.shading, gui_shading_names);
     draw_checkbox(win, "wireframe", params.wireframe);
     continue_line(win);
     draw_checkbox(win, "edges", params.edges);
@@ -369,7 +364,7 @@ int main(int argc, const char* argv[]) {
   add_option(cli, "--resolution,-r", apps->drawgl_prms.resolution,
       "Image resolution.");
   add_option(cli, "--shading", apps->drawgl_prms.shading, "Shading type.",
-      ogl_shading_names);
+      gui_shading_names);
   add_option(cli, "shapes", filenames, "Shape filenames", true);
   parse_cli(cli, argc, argv);
 
@@ -410,7 +405,7 @@ int main(int argc, const char* argv[]) {
         dolly = (input.mouse_pos.x - input.mouse_last.x) / 100.0f;
       if (input.mouse_left && input.modifier_shift)
         pan = (input.mouse_pos - input.mouse_last) / 100.0f;
-      update_turntable(
+      std::tie(app->glcamera->frame, app->glcamera->focus) = camera_turntable(
           app->glcamera->frame, app->glcamera->focus, rotate, dolly, pan);
     }
   };

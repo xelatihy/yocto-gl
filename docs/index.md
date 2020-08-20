@@ -33,10 +33,8 @@ See each header file for documentation.
 - [Yocto/Image](yocto/yocto_image.md): simple image data type, image resizing,
   tonemapping, color correction, image loading and saving,
   procedural images, procedural sun-sky, advanced color conversion utilities
-- [Yocto/Scene](yocto/yocto_scene.md): simple scene representation useful for
-  rendering
-- [Yocto/SceneIO](yocto/yocto_sceneio.md`: scene loading and saving of
-  Ply/Obj/Pbrt/glTF and a custom and scalable Json format
+- [Yocto/SceneIO](yocto/yocto_sceneio.md): simple scene and scene loading and
+  saving of Ply/Obj/Pbrt/glTF and a custom and scalable Json format
 - [Yocto/Trace](yocto/yocto_trace.md): path tracing of surfaces and hairs
   supporting area and environment illumination, microfacet GGX and subsurface
   scattering, multiple importance sampling
@@ -44,8 +42,8 @@ See each header file for documentation.
   formats
 - [Yocto/CommonIO](yocto/yocto_commonio.md): printing utilities, file io utilities,
   command line parsing
-- [Yocto/CommonIO](yocto/yocto_common.md): container, iterators and concurrency
-  utilities
+- [Yocto/Common](yocto/yocto_common.md): container and iterator utilities
+- [Yocto/Parallel](yocto/yocto_parallel.md): concurrency utilities
 
 ## Example Applications
 

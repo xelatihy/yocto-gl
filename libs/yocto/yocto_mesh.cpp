@@ -12,7 +12,6 @@
 
 #include "yocto_mesh.h"
 
-#include <atomic>
 #include <cassert>
 #include <deque>
 #include <filesystem>
@@ -31,7 +30,6 @@
 namespace yocto {
 
 // using directives
-using std::atomic;
 using std::deque;
 using std::pair;
 using std::unordered_set;
@@ -45,13 +43,13 @@ using namespace std::string_literals;
 namespace yocto {
 
 // find a value in a vector or vecs
-inline int find_in_vec(const vector<int>& vec, int x) {
+static int find_in_vec(const vector<int>& vec, int x) {
   for (int i = 0; i < size(vec); i++)
     if (vec[i] == x) return i;
   return -1;
 }
 
-inline int find_in_vec(const vec3i& vec, int x) {
+static int find_in_vec(const vec3i& vec, int x) {
   for (auto i = 0; i < 3; i++)
     if (vec[i] == x) return i;
   return -1;
@@ -113,7 +111,7 @@ pair<bool, vec2f> point_in_triangle(const vector<vec3i>& triangles,
   assert(!isnan(b[2]));
   b[1] = (d11 * d20 - d01 * d21) / d;
   assert(!isnan(b[1]));
-  b[0] = 1.0 - b[1] - b[2];
+  b[0] = 1 - b[1] - b[2];
   assert(!isnan(b[0]));
 
   for (auto i = 0; i < 3; ++i) {
@@ -631,7 +629,8 @@ geodesic_solver make_geodesic_solver(const vector<vec3i>& triangles,
       solver.graph[i].push_back({p, length(e)});
       auto opp   = opposite_face(triangles, adjacencies, tid, i);
       auto strip = vector<int>{tid, opp};
-      auto k = find_in_vec(adjacencies[tid], opp);  // TODO: this is not needeed
+      auto k     = find_in_vec(
+          adjacencies[tid], opp);  // TODO(fabio): this is not needeed
       assert(k != -1);
       auto a       = opposite_vertex(triangles, adjacencies, tid, k);
       offset       = find_in_vec(triangles[opp], a);
@@ -869,7 +868,7 @@ vector<vector<float>> compute_voronoi_fields(
     fields[i]                = vector<float>(solver.graph.size(), flt_max);
     fields[i][generators[i]] = 0;
     fields[i] = compute_geodesic_distances(solver, {generators[i]}, max);
-  };
+  }
   return fields;
 }
 
@@ -1424,11 +1423,11 @@ vector<float> solve_with_parents(const geodesic_solver& solver,
 // point having nbr as neighborhood
 int set_target_parent(const vector<pair<int, float>>& nbr,
     const vector<int>& parents, const vector<float>& f) {
-  auto vid    = -1;
-  auto lambda = flt_max;
-  if (nbr.size() == 1)
-    vid = parents[nbr[0].first];
-  else {
+  if (nbr.size() == 1) {
+    return parents[nbr[0].first];
+  } else {
+    auto vid    = -1;
+    auto lambda = flt_max;
     for (auto i = 0; i < nbr.size(); ++i) {
       auto val = f[nbr[i].first] + nbr[i].second;
       if (val < lambda) {
@@ -1436,8 +1435,8 @@ int set_target_parent(const vector<pair<int, float>>& nbr,
         vid    = nbr[i].first;
       }
     }
+    return vid;
   }
-  return vid;
 }
 
 // given a vector of parents(parents) and a starting vertex (target_parent),
@@ -1626,10 +1625,10 @@ void heuristic_visit_geodesic_graph(vector<float>& field,
     const vector<vec3f>& positions, int start, int end, Update&& update,
     Stop&& stop, Exit&& exit) {
   auto destination_pos = eval_position(
-      triangles, positions, {end, {1.0 / 3, 1.0 / 3}});
+      triangles, positions, {end, {1.0f / 3, 1.0f / 3}});
 
   auto estimate_dist = [&](int face) {
-    auto p = eval_position(triangles, positions, {face, {1.0 / 3, 1.0 / 3}});
+    auto p = eval_position(triangles, positions, {face, {1.0f / 3, 1.0f / 3}});
     return length(p - destination_pos);
   };
   field[start] = estimate_dist(start);
@@ -1815,7 +1814,7 @@ vector<int> strip_on_dual_graph(const dual_geodesic_solver& solver,
   return strip;
 }
 
-inline int node_is_neighboor(const geodesic_solver& solver, int vid, int node) {
+static int node_is_neighboor(const geodesic_solver& solver, int vid, int node) {
   auto nbr = solver.graph[vid];
   for (auto i = 0; i < nbr.size(); ++i) {
     if (nbr[i].node == node) {
@@ -1882,9 +1881,9 @@ static int get_entry(vector<int>& strip, const geodesic_solver& solver,
     auto entry = node_is_neighboor(solver, vid, parent);
     assert(entry >= 0);
     auto star        = v2t[vid];
-    auto s           = star.size();
+    auto s           = (int)star.size();
     auto it          = find(star.begin(), star.end(), p.face);
-    auto first       = distance(star.begin(), it);
+    auto first       = (int)distance(star.begin(), it);
     auto last        = (entry % 2) ? (entry - 1) / 2 : (entry / 2) % s;
     auto ccw         = set_ord(s, first, last, entry % 2);
     auto nei_is_dual = (bool)(entry % 2);  // TODO(fabio): ma qusto e' giusto?
@@ -1923,13 +1922,13 @@ static int get_entry(vector<int>& strip, const geodesic_solver& solver,
 void close_strip(vector<int>& strip, const vector<vector<int>>& v2t, int vid,
     int prev_tri, int last_tri) {
   auto star    = v2t[vid];
-  auto s       = star.size();
+  auto s       = (int)star.size();
   auto prev_it = find(star.begin(), star.end(), prev_tri);
   assert(prev_it != star.end());
-  auto first   = distance(star.begin(), prev_it);
+  auto first   = (int)distance(star.begin(), prev_it);
   auto next_it = find(star.begin(), star.end(), last_tri);
   assert(next_it != star.end());
-  auto last = distance(star.begin(), next_it);
+  auto last = (int)distance(star.begin(), next_it);
   auto ccw  = set_ord(s, first, last, true);
   fill_strip(strip, v2t, vid, first, last, true, ccw);
 }
@@ -1966,7 +1965,7 @@ static vector<int> short_strip(const geodesic_solver& solver,
 
 // returns a strip of triangles such target belongs to the first one and
 // source to the last one
-//(TO DO:may be the names could change in order to get the call
+// TODO(fabio_): may be the names could change in order to get the call
 // more consistent with the output)
 vector<int> get_strip(const geodesic_solver& solver,
     const vector<vec3i>& triangles, const vector<vec3f>& positions,
@@ -1992,7 +1991,7 @@ vector<int> get_strip(const geodesic_solver& solver,
     first       = find_in_vec(v2t[v], strip.back());
     nei_is_dual = next_entry % 2;
     last        = (nei_is_dual) ? (next_entry - 1) / 2 : next_entry / 2;
-    ccw         = set_ord(v2t[v].size(), first, last, nei_is_dual);
+    ccw         = set_ord((int)v2t[v].size(), first, last, nei_is_dual);
     fill_strip(strip, v2t, v, first, last, nei_is_dual, ccw);
     close_strip(strip, v2t, v, strip.back(), strip_to_point.back());
     if (strip.back() == strip_to_point.back()) strip_to_point.pop_back();
@@ -2011,14 +2010,14 @@ vector<int> get_strip(const geodesic_solver& solver,
       next_entry = get_entry(strip_to_point, solver, triangles, positions,
           adjacencies, v2t, angles, v, source);
       last       = find_in_vec(v2t[v], strip_to_point.back());
-      ccw        = set_ord(v2t[v].size(), first, last, next_entry % 2);
+      ccw        = set_ord((int)v2t[v].size(), first, last, next_entry % 2);
     } else {
       first = find_in_vec(v2t[v], strip.back());
       assert(first != -1);
       next_entry  = node_is_neighboor(solver, v, parents[i + 1]);
       nei_is_dual = next_entry % 2;
       last        = (nei_is_dual) ? (next_entry - 1) / 2 : next_entry / 2;
-      ccw         = set_ord(v2t[v].size(), first, last, nei_is_dual);
+      ccw         = set_ord((int)v2t[v].size(), first, last, nei_is_dual);
     }
 
     fill_strip(strip, v2t, v, first, last, nei_is_dual, ccw);
@@ -2378,9 +2377,9 @@ static vector<int> fix_strip(const vector<vec3i>& adjacencies,
   auto second_strip_intersection = index;
   auto second_fan_intersection   = 0;
   for (auto i = 0; i < fan.size(); i++) {
-    auto fan_index   = fan.size() - 1 - i;
+    auto fan_index   = (int)fan.size() - 1 - i;
     auto strip_index = index + i + 1;
-    if (strip_index >= strip.size()) break;
+    if (strip_index >= (int)strip.size()) break;
     if (fan[fan_index] == strip[strip_index]) {
       second_strip_intersection = strip_index;
       second_fan_intersection   = fan_index;
@@ -2552,7 +2551,7 @@ namespace yocto {
     return true;
   } else if (ext == ".obj" || ext == ".OBJ") {
     // load obj
-    auto obj_guard = std::make_unique<obj_model>();
+    auto obj_guard = std::make_unique<obj_scene>();
     auto obj       = obj_guard.get();
     if (!load_obj(filename, obj, error, true)) return false;
 
@@ -2608,7 +2607,7 @@ namespace yocto {
     if (!save_ply(filename, ply, error)) return false;
     return true;
   } else if (ext == ".obj" || ext == ".OBJ") {
-    auto obj_guard = std::make_unique<obj_model>();
+    auto obj_guard = std::make_unique<obj_scene>();
     auto obj       = obj_guard.get();
     auto oshape    = add_shape(obj);
     if (!triangles.empty()) {
@@ -2664,7 +2663,7 @@ namespace yocto {
     return true;
   } else if (ext == ".obj" || ext == ".OBJ") {
     // load obj
-    auto obj_guard = std::make_unique<obj_model>();
+    auto obj_guard = std::make_unique<obj_scene>();
     auto obj       = obj_guard.get();
     if (!load_obj(filename, obj, error, true)) return false;
 
@@ -2720,7 +2719,7 @@ namespace yocto {
     if (!save_ply(filename, ply, error)) return false;
     return true;
   } else if (ext == ".obj" || ext == ".OBJ") {
-    auto obj_guard = std::make_unique<obj_model>();
+    auto obj_guard = std::make_unique<obj_scene>();
     auto obj       = obj_guard.get();
     auto oshape    = add_shape(obj);
     if (!lines.empty()) {

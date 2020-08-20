@@ -29,15 +29,14 @@
 #include <yocto/yocto_commonio.h>
 #include <yocto/yocto_geometry.h>
 #include <yocto/yocto_image.h>
+#include <yocto/yocto_parallel.h>
 #include <yocto/yocto_sceneio.h>
 #include <yocto/yocto_shape.h>
+#include <yocto_gui/yocto_draw.h>
 #include <yocto_gui/yocto_imgui.h>
-#include <yocto_gui/yocto_opengl.h>
 using namespace yocto;
 
-#include <atomic>
 #include <deque>
-#include <future>
 
 #ifdef _WIN32
 #undef near
@@ -45,7 +44,7 @@ using namespace yocto;
 #endif
 
 namespace yocto {
-void print_obj_camera(scene_camera* camera);
+void print_obj_camera(sceneio_camera* camera);
 };
 
 // Application state
@@ -57,23 +56,23 @@ struct app_state {
   string name      = "";
 
   // options
-  ogl_scene_params drawgl_prms = {};
+  gui_scene_params drawgl_prms = {};
 
   // scene
-  scene_model*  ioscene  = new scene_model{};
-  scene_camera* iocamera = nullptr;
+  sceneio_scene*  ioscene  = new sceneio_scene{};
+  sceneio_camera* iocamera = nullptr;
 
   // rendering state
-  ogl_scene*  glscene  = new ogl_scene{};
-  ogl_camera* glcamera = nullptr;
+  gui_scene*  glscene  = new gui_scene{};
+  gui_camera* glcamera = nullptr;
 
   // editing
-  scene_camera*      selected_camera      = nullptr;
-  scene_instance*    selected_instance    = nullptr;
-  scene_shape*       selected_shape       = nullptr;
-  scene_material*    selected_material    = nullptr;
-  scene_environment* selected_environment = nullptr;
-  scene_texture*     selected_texture     = nullptr;
+  sceneio_camera*      selected_camera      = nullptr;
+  sceneio_instance*    selected_instance    = nullptr;
+  sceneio_shape*       selected_shape       = nullptr;
+  sceneio_material*    selected_material    = nullptr;
+  sceneio_environment* selected_environment = nullptr;
+  sceneio_texture*     selected_texture     = nullptr;
 
   // loading status
   std::atomic<bool> ok           = false;
@@ -98,7 +97,7 @@ struct app_states {
   std::deque<app_state*> loading  = {};
 
   // default options
-  ogl_scene_params drawgl_prms = {};
+  gui_scene_params drawgl_prms = {};
 
   // cleanup
   ~app_states() {
@@ -130,7 +129,7 @@ void load_scene_async(
   if (!apps->selected) apps->selected = app;
 }
 
-void update_lights(ogl_scene* glscene, scene_model* ioscene) {
+void update_lights(gui_scene* glscene, sceneio_scene* ioscene) {
   clear_lights(glscene);
   for (auto ioobject : ioscene->instances) {
     if (has_max_lights(glscene)) break;
@@ -160,8 +159,8 @@ void update_lights(ogl_scene* glscene, scene_model* ioscene) {
   }
 }
 
-void init_glscene(ogl_scene* glscene, scene_model* ioscene,
-    ogl_camera*& glcamera, scene_camera* iocamera,
+void init_glscene(gui_scene* glscene, sceneio_scene* ioscene,
+    gui_camera*& glcamera, sceneio_camera* iocamera,
     progress_callback progress_cb) {
   // handle progress
   auto progress = vec2i{
@@ -173,7 +172,7 @@ void init_glscene(ogl_scene* glscene, scene_model* ioscene,
   init_scene(glscene);
 
   // camera
-  auto camera_map     = unordered_map<scene_camera*, ogl_camera*>{};
+  auto camera_map     = unordered_map<sceneio_camera*, gui_camera*>{};
   camera_map[nullptr] = nullptr;
   for (auto iocamera : ioscene->cameras) {
     if (progress_cb) progress_cb("convert camera", progress.x++, progress.y);
@@ -185,25 +184,21 @@ void init_glscene(ogl_scene* glscene, scene_model* ioscene,
   }
 
   // textures
-  auto texture_map     = unordered_map<scene_texture*, ogl_texture*>{};
+  auto texture_map     = unordered_map<sceneio_texture*, ogl_texture*>{};
   texture_map[nullptr] = nullptr;
   for (auto iotexture : ioscene->textures) {
     if (progress_cb) progress_cb("convert texture", progress.x++, progress.y);
     auto gltexture = add_texture(glscene);
-    if (!iotexture->colorf.empty()) {
-      set_texture(gltexture, iotexture->colorf);
-    } else if (!iotexture->colorb.empty()) {
-      set_texture(gltexture, iotexture->colorb);
-    } else if (!iotexture->scalarf.empty()) {
-      set_texture(gltexture, iotexture->scalarf);
-    } else if (!iotexture->scalarb.empty()) {
-      set_texture(gltexture, iotexture->scalarb);
+    if (!iotexture->hdr.empty()) {
+      set_texture(gltexture, iotexture->hdr);
+    } else if (!iotexture->ldr.empty()) {
+      set_texture(gltexture, iotexture->ldr);
     }
     texture_map[iotexture] = gltexture;
   }
 
   // material
-  auto material_map     = unordered_map<scene_material*, ogl_material*>{};
+  auto material_map     = unordered_map<sceneio_material*, gui_material*>{};
   material_map[nullptr] = nullptr;
   for (auto iomaterial : ioscene->materials) {
     if (progress_cb) progress_cb("convert material", progress.x++, progress.y);
@@ -227,7 +222,7 @@ void init_glscene(ogl_scene* glscene, scene_model* ioscene,
   }
 
   // shapes
-  auto shape_map     = unordered_map<scene_shape*, ogl_shape*>{};
+  auto shape_map     = unordered_map<sceneio_shape*, ogl_shape*>{};
   shape_map[nullptr] = nullptr;
   for (auto ioshape : ioscene->shapes) {
     if (progress_cb) progress_cb("convert shape", progress.x++, progress.y);
@@ -253,6 +248,12 @@ void init_glscene(ogl_scene* glscene, scene_model* ioscene,
     set_material(globject, material_map.at(ioinstance->material));
   }
 
+  // bake prefiltered environments
+  if (ioscene->environments.size()) {
+    ibl::init_ibl_data(
+        glscene, texture_map[ioscene->environments[0]->emission_tex]);
+  }
+
   // done
   if (progress_cb) progress_cb("convert done", progress.x++, progress.y);
 
@@ -261,7 +262,7 @@ void init_glscene(ogl_scene* glscene, scene_model* ioscene,
 }
 
 bool draw_widgets(
-    gui_window* win, scene_model* ioscene, scene_camera* iocamera) {
+    gui_window* win, sceneio_scene* ioscene, sceneio_camera* iocamera) {
   if (!iocamera) return false;
   auto edited = 0;
   draw_label(win, "name", iocamera->name);
@@ -288,26 +289,20 @@ bool draw_widgets(
 
 /// Visit struct elements.
 bool draw_widgets(
-    gui_window* win, scene_model* ioscene, scene_texture* iotexture) {
+    gui_window* win, sceneio_scene* ioscene, sceneio_texture* iotexture) {
   if (!iotexture) return false;
   draw_label(win, "name", iotexture->name);
-  draw_label(win, "colorf",
-      std::to_string(iotexture->colorf.imsize().x) + " x " +
-          std::to_string(iotexture->colorf.imsize().y));
-  draw_label(win, "colorb",
-      std::to_string(iotexture->colorb.imsize().x) + " x " +
-          std::to_string(iotexture->colorb.imsize().y));
-  draw_label(win, "scalarf",
-      std::to_string(iotexture->scalarf.imsize().x) + " x " +
-          std::to_string(iotexture->scalarf.imsize().y));
-  draw_label(win, "scalarb",
-      std::to_string(iotexture->scalarb.imsize().x) + " x " +
-          std::to_string(iotexture->scalarb.imsize().y));
+  draw_label(win, "hdr",
+      std::to_string(iotexture->hdr.width()) + " x " +
+          std::to_string(iotexture->hdr.height()));
+  draw_label(win, "ldr",
+      std::to_string(iotexture->ldr.width()) + " x " +
+          std::to_string(iotexture->ldr.height()));
   return false;
 }
 
 bool draw_widgets(
-    gui_window* win, scene_model* ioscene, scene_material* iomaterial) {
+    gui_window* win, sceneio_scene* ioscene, sceneio_material* iomaterial) {
   if (!iomaterial) return false;
   auto edited = 0;
   draw_label(win, "name", iomaterial->name);
@@ -347,7 +342,8 @@ bool draw_widgets(
   return edited;
 }
 
-bool draw_widgets(gui_window* win, scene_model* ioscene, scene_shape* ioshape) {
+bool draw_widgets(
+    gui_window* win, sceneio_scene* ioscene, sceneio_shape* ioshape) {
   if (!ioshape) return false;
   auto edited = 0;
   draw_label(win, "name", ioshape->name);
@@ -374,7 +370,7 @@ bool draw_widgets(gui_window* win, scene_model* ioscene, scene_shape* ioshape) {
 }
 
 bool draw_widgets(
-    gui_window* win, scene_model* ioscene, scene_instance* ioobject) {
+    gui_window* win, sceneio_scene* ioscene, sceneio_instance* ioobject) {
   if (!ioobject) return false;
   auto edited = 0;
   draw_label(win, "name", ioobject->name);
@@ -388,8 +384,8 @@ bool draw_widgets(
   return edited;
 }
 
-bool draw_widgets(
-    gui_window* win, scene_model* ioscene, scene_environment* ioenvironment) {
+bool draw_widgets(gui_window* win, sceneio_scene* ioscene,
+    sceneio_environment* ioenvironment) {
   if (!ioenvironment) return false;
   auto edited = 0;
   edited += draw_textinput(win, "name", ioenvironment->name);
@@ -460,7 +456,7 @@ void draw_widgets(gui_window* win, app_states* apps, const gui_input& input) {
     }
     auto& params = app->drawgl_prms;
     draw_slider(win, "resolution", params.resolution, 0, 4096);
-    draw_combobox(win, "shading", (int&)params.shading, ogl_shading_names);
+    draw_combobox(win, "shading", (int&)params.shading, gui_shading_names);
     draw_checkbox(win, "wireframe", params.wireframe);
     continue_line(win);
     draw_checkbox(win, "edges", params.edges);
@@ -489,7 +485,7 @@ void draw_widgets(gui_window* win, app_states* apps, const gui_input& input) {
     }
     end_header(win);
   }
-  auto get_texture = [app](scene_texture* iotexture) {
+  auto get_texture = [app](sceneio_texture* iotexture) {
     return get_element(
         iotexture, app->ioscene->textures, app->glscene->textures);
   };
@@ -579,14 +575,10 @@ void draw_widgets(gui_window* win, app_states* apps, const gui_input& input) {
       auto iotexture = app->selected_texture;
       auto gltexture = get_element(
           iotexture, app->ioscene->textures, app->glscene->textures);
-      if (!iotexture->colorf.empty()) {
-        set_texture(gltexture, iotexture->colorf);
-      } else if (!iotexture->colorb.empty()) {
-        set_texture(gltexture, iotexture->colorb);
-      } else if (!iotexture->scalarf.empty()) {
-        set_texture(gltexture, iotexture->scalarf);
-      } else if (!iotexture->scalarb.empty()) {
-        set_texture(gltexture, iotexture->scalarb);
+      if (!iotexture->hdr.empty()) {
+        set_texture(gltexture, iotexture->hdr);
+      } else if (!iotexture->ldr.empty()) {
+        set_texture(gltexture, iotexture->ldr);
       }
     }
     end_header(win);
@@ -597,7 +589,7 @@ void draw_widgets(gui_window* win, app_states* apps, const gui_input& input) {
 void draw(gui_window* win, app_states* apps, const gui_input& input) {
   if (!apps->selected || !apps->selected->ok) return;
   auto app = apps->selected;
-  if (app->drawgl_prms.shading == ogl_shading_type::lights)
+  if (app->drawgl_prms.shading == gui_shading_type::eyelight)
     update_lights(app->glscene, app->ioscene);
   draw_scene(app->glscene, app->glcamera, input.framebuffer_viewport,
       app->drawgl_prms);
@@ -645,7 +637,7 @@ int main(int argc, const char* argv[]) {
   add_option(cli, "--resolution,-r", apps->drawgl_prms.resolution,
       "Image resolution.");
   add_option(cli, "--shading", apps->drawgl_prms.shading, "Shading type.",
-      ogl_shading_names);
+      gui_shading_names);
   add_option(cli, "scenes", filenames, "Scene filenames", true);
   parse_cli(cli, argc, argv);
 
@@ -686,7 +678,7 @@ int main(int argc, const char* argv[]) {
         dolly = (input.mouse_pos.x - input.mouse_last.x) / 100.0f;
       if (input.mouse_left && input.modifier_shift)
         pan = (input.mouse_pos - input.mouse_last) / 100.0f;
-      update_turntable(
+      std::tie(app->iocamera->frame, app->iocamera->focus) = camera_turntable(
           app->iocamera->frame, app->iocamera->focus, rotate, dolly, pan);
       set_frame(app->glcamera, app->iocamera->frame);
     }

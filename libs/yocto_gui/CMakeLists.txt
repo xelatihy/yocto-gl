@@ -10,6 +10,8 @@ if(YOCTO_OPENGL)
   add_library(yocto_gui 
     yocto_opengl.h 
     yocto_opengl.cpp 
+    yocto_draw.h 
+    yocto_draw.cpp 
     yocto_imgui.h 
     yocto_imgui.cpp 
     ext/imgui/imgui.cpp 
@@ -33,9 +35,9 @@ endif(YOCTO_OPENGL)
 
 # warning flags
 if(APPLE)
-  target_compile_options(yocto_gui PRIVATE -Wall)
+  target_compile_options(yocto_gui PUBLIC -Wall -Wconversion -Wno-sign-conversion -Wno-implicit-float-conversion)
 endif(APPLE)
 if(MSVC)
-target_compile_options(yocto_gui PRIVATE /D_CRT_SECURE_NO_WARNINGS /wd4018 /wd4244 /wd4305 /wd4800 /wd4267)
+target_compile_options(yocto_gui PUBLIC /D_CRT_SECURE_NO_WARNINGS /wd4018 /wd4244 /wd4305 /wd4800 /wd4267)
 target_compile_options(yocto_gui PUBLIC /EHsc)
 endif(MSVC)

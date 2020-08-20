@@ -866,6 +866,19 @@ bool get_texcoords(ply_model* ply, vector<vec2f>& texcoords, bool flipv) {
 bool get_colors(ply_model* ply, vector<vec3f>& colors) {
   return get_values(ply, "vertex", {"red", "green", "blue"}, colors);
 }
+bool get_colors(ply_model* ply, vector<vec4f>& colors) {
+  if (has_property(ply, "vertex", "alpha")) {
+    return get_values(ply, "vertex", {"red", "green", "blue", "alpha"}, colors);
+  } else {
+    auto colors3 = vector<vec3f>{};
+    if (!get_values(ply, "vertex", {"red", "green", "blue"}, colors3))
+      return false;
+    colors.resize(colors3.size());
+    for (auto i = 0; i < colors.size(); i++)
+      colors[i] = {colors3[i].x, colors3[i].y, colors3[i].z, 1};
+    return true;
+  }
+}
 bool get_radius(ply_model* ply, vector<float>& radius) {
   return get_value(ply, "vertex", "radius", radius);
 }
@@ -1016,7 +1029,7 @@ bool add_values(ply_model* ply, const string& element,
     const array<string, 12>& properties, const vector<frame3f>& values) {
   if (values.empty()) return false;
   return add_values(ply, (float*)values.data(), values.size(), element,
-      properties.data(), properties.size());
+      properties.data(), (int)properties.size());
 }
 
 bool add_lists(ply_model* ply, const string& element, const string& property,
@@ -1050,7 +1063,7 @@ bool add_lists(ply_model* ply, const int* values, size_t count, int size,
     return false;
   auto prop = get_property(ply, element, property);
   prop->data_i32.assign(values, values + count * size);
-  prop->ldata_u8.assign(count, size);
+  prop->ldata_u8.assign(count, (byte)size);
   return true;
 }
 bool add_lists(ply_model* ply, const string& element, const string& property,
@@ -1090,6 +1103,9 @@ bool add_texcoords(ply_model* ply, const vector<vec2f>& values, bool flipv) {
 }
 bool add_colors(ply_model* ply, const vector<vec3f>& values) {
   return add_values(ply, "vertex", {"red", "green", "blue"}, values);
+}
+bool add_colors(ply_model* ply, const vector<vec4f>& values) {
+  return add_values(ply, "vertex", {"red", "green", "blue", "alpha"}, values);
 }
 bool add_radius(ply_model* ply, const vector<float>& values) {
   return add_value(ply, "vertex", "radius", values);
@@ -1199,7 +1215,7 @@ namespace yocto {
 
 // Read obj
 [[nodiscard]] inline bool load_mtl(
-    const string& filename, obj_model* obj, string& error) {
+    const string& filename, obj_scene* obj, string& error) {
   // error helpers
   auto open_error = [filename, &error]() {
     error = filename + ": file not found";
@@ -1414,7 +1430,7 @@ namespace yocto {
     } else {
       material->pbr_base     = material->diffuse;
       material->pbr_base_tex = material->diffuse_tex;
-      material->pbr_specular = max(material->specular) ? 1 : 0;
+      material->pbr_specular = max(material->specular) != 0 ? 1 : 0;
     }
     material->pbr_bump_tex         = material->bump_tex;
     material->pbr_normal_tex       = material->normal_tex;
@@ -1426,7 +1442,7 @@ namespace yocto {
 
 // Read obj
 [[nodiscard]] inline bool load_objx(
-    const string& filename, obj_model* obj, string& error) {
+    const string& filename, obj_scene* obj, string& error) {
   // error helpers
   auto open_error = [filename, &error]() {
     error = filename + ": file not found";
@@ -1504,7 +1520,7 @@ namespace yocto {
   return true;
 }
 
-obj_model::~obj_model() {
+obj_scene::~obj_scene() {
   for (auto shape : shapes) delete shape;
   for (auto material : materials) delete material;
   for (auto camera : cameras) delete camera;
@@ -1512,21 +1528,21 @@ obj_model::~obj_model() {
 }
 
 // Make obj
-obj_camera* add_camera(obj_model* obj) {
+obj_camera* add_camera(obj_scene* obj) {
   return obj->cameras.emplace_back(new obj_camera{});
 }
-obj_material* add_material(obj_model* obj) {
+obj_material* add_material(obj_scene* obj) {
   return obj->materials.emplace_back(new obj_material{});
 }
-obj_environment* add_environment(obj_model* obj) {
+obj_environment* add_environment(obj_scene* obj) {
   return obj->environments.emplace_back(new obj_environment{});
 }
-obj_shape* add_shape(obj_model* obj) {
+obj_shape* add_shape(obj_scene* obj) {
   return obj->shapes.emplace_back(new obj_shape{});
 }
 
 // Read obj
-bool load_obj(const string& filename, obj_model* obj, string& error,
+bool load_obj(const string& filename, obj_scene* obj, string& error,
     bool geom_only, bool split_elements, bool split_materials) {
   // error helpers
   auto open_error = [filename, &error]() {
@@ -1562,7 +1578,7 @@ bool load_obj(const string& filename, obj_model* obj, string& error,
   auto material_map = unordered_map<string, obj_material*>{};
 
   // initialize obj
-  obj->~obj_model();
+  obj->~obj_scene();
   obj->cameras.clear();
   obj->environments.clear();
   obj->shapes.clear();
@@ -1634,7 +1650,7 @@ bool load_obj(const string& filename, obj_model* obj, string& error,
           if (shape->materials[midx]->name == mname) mat_idx = midx;
         if (mat_idx < 0) {
           shape->materials.push_back(material_map.at(mname));
-          mat_idx = shape->materials.size() - 1;
+          mat_idx = (int)shape->materials.size() - 1;
         }
         element.material = (uint8_t)mat_idx;
       }
@@ -1763,7 +1779,7 @@ inline void format_value(string& str, const obj_vertex& value) {
 
 // Save obj
 [[nodiscard]] inline bool save_mtl(
-    const string& filename, obj_model* obj, string& error) {
+    const string& filename, obj_scene* obj, string& error) {
   // throw helpers
   // error helpers
   auto open_error = [filename, &error]() {
@@ -1855,37 +1871,37 @@ inline void format_value(string& str, const obj_vertex& value) {
       if (material->pbr_base != zero3f)
         if (!format_values(fs, "Pb {}\n", material->pbr_base))
           return write_error();
-      if (material->pbr_specular)
+      if (material->pbr_specular != 0)
         if (!format_values(fs, "Ps {}\n", material->pbr_specular))
           return write_error();
-      if (material->pbr_roughness)
+      if (material->pbr_roughness != 0)
         if (!format_values(fs, "Pr {}\n", material->pbr_roughness))
           return write_error();
-      if (material->pbr_metallic)
+      if (material->pbr_metallic != 0)
         if (!format_values(fs, "Pm {}\n", material->pbr_metallic))
           return write_error();
-      if (material->pbr_sheen)
+      if (material->pbr_sheen != 0)
         if (!format_values(fs, "Psh {}\n", material->pbr_sheen))
           return write_error();
-      if (material->pbr_transmission)
+      if (material->pbr_transmission != 0)
         if (!format_values(fs, "Pt {}\n", material->pbr_transmission))
           return write_error();
-      if (material->pbr_translucency)
+      if (material->pbr_translucency != 0)
         if (!format_values(fs, "Pss {}\n", material->pbr_translucency))
           return write_error();
-      if (material->pbr_coat)
+      if (material->pbr_coat != 0)
         if (!format_values(fs, "Pc {}\n", material->pbr_coat))
           return write_error();
-      if (material->pbr_coatroughness)
+      if (material->pbr_coatroughness != 0)
         if (!format_values(fs, "Pcr {}\n", material->pbr_coatroughness))
           return write_error();
       if (material->pbr_volscattering != zero3f)
         if (!format_values(fs, "Pvs {}\n", material->pbr_volscattering))
           return write_error();
-      if (material->pbr_volanisotropy)
+      if (material->pbr_volanisotropy != 0)
         if (!format_values(fs, "Pvg {}\n", material->pbr_volanisotropy))
           return write_error();
-      if (material->pbr_volscale)
+      if (material->pbr_volscale != 0)
         if (!format_values(fs, "Pvr {}\n", material->pbr_volscale))
           return write_error();
       if (!material->pbr_emission_tex.path.empty())
@@ -1939,7 +1955,7 @@ inline void format_value(string& str, const obj_vertex& value) {
 
 // Save obj
 [[nodiscard]] inline bool save_objx(
-    const string& filename, obj_model* obj, string& error) {
+    const string& filename, obj_scene* obj, string& error) {
   // error helpers
   auto open_error = [filename, &error]() {
     error = filename + ": file not found";
@@ -1998,7 +2014,7 @@ inline void format_value(string& str, const obj_vertex& value) {
 
 // Save obj
 [[nodiscard]] bool save_obj(
-    const string& filename, obj_model* obj, string& error) {
+    const string& filename, obj_scene* obj, string& error) {
   // error helpers
   auto open_error = [filename, &error]() {
     error = filename + ": file not found";
@@ -4035,7 +4051,7 @@ struct pbrt_context {
 };
 
 // load pbrt
-[[nodiscard]] inline bool load_pbrt(const string& filename, pbrt_model* pbrt,
+[[nodiscard]] inline bool load_pbrt(const string& filename, pbrt_scene* pbrt,
     string& error, pbrt_context& ctx,
     unordered_map<string, pbrt_material*>& material_map,
     unordered_map<string, pbrt_material>&  named_materials,
@@ -4336,7 +4352,7 @@ struct pbrt_context {
   return true;
 }
 
-pbrt_model::~pbrt_model() {
+pbrt_scene::~pbrt_scene() {
   for (auto camera : cameras) delete camera;
   for (auto shape : shapes) delete shape;
   for (auto environment : environments) delete environment;
@@ -4345,24 +4361,24 @@ pbrt_model::~pbrt_model() {
 }
 
 // Make pbrt
-pbrt_camera* add_camera(pbrt_model* pbrt) {
+pbrt_camera* add_camera(pbrt_scene* pbrt) {
   return pbrt->cameras.emplace_back(new pbrt_camera{});
 }
-pbrt_shape* add_shape(pbrt_model* pbrt) {
+pbrt_shape* add_shape(pbrt_scene* pbrt) {
   return pbrt->shapes.emplace_back(new pbrt_shape{});
 }
-pbrt_material* add_material(pbrt_model* pbrt) {
+pbrt_material* add_material(pbrt_scene* pbrt) {
   return pbrt->materials.emplace_back(new pbrt_material{});
 }
-pbrt_environment* add_environment(pbrt_model* pbrt) {
+pbrt_environment* add_environment(pbrt_scene* pbrt) {
   return pbrt->environments.emplace_back(new pbrt_environment{});
 }
-pbrt_light* add_light(pbrt_model* pbrt) {
+pbrt_light* add_light(pbrt_scene* pbrt) {
   return pbrt->lights.emplace_back(new pbrt_light{});
 }
 
 // load pbrt
-bool load_pbrt(const string& filename, pbrt_model* pbrt, string& error) {
+bool load_pbrt(const string& filename, pbrt_scene* pbrt, string& error) {
   auto ctx             = pbrt_context{};
   auto material_map    = unordered_map<string, pbrt_material*>{};
   auto named_materials = unordered_map<string, pbrt_material>{{"", {}}};
@@ -4463,7 +4479,7 @@ inline void format_value(string& str, const vector<pbrt_value>& values) {
 }
 
 bool save_pbrt(
-    const string& filename, pbrt_model* pbrt, string& error, bool ply_meshes) {
+    const string& filename, pbrt_scene* pbrt, string& error, bool ply_meshes) {
   // error helpers
   auto open_error = [filename, &error]() {
     error = filename + ": file not found";

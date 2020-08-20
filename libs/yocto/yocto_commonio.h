@@ -173,6 +173,9 @@ inline bool path_isfile(const string& filename);
 // List the contents of a directory
 inline vector<string> list_directory(const string& filename);
 
+// Create a directory and all missing parent directories if needed
+inline bool make_directory(const string& dirname, string& error);
+
 }  // namespace yocto
 
 // -----------------------------------------------------------------------------
@@ -376,6 +379,18 @@ inline vector<string> list_directory(const string& filename) {
   return entries;
 }
 
+// Create a directory and all missing parent directories if needed
+inline bool make_directory(const string& dirname, string& error) {
+  if (path_exists(dirname)) return true;
+  try {
+    create_directories(make_path(dirname));
+    return true;
+  } catch (...) {
+    error = dirname + ": cannot create directory";
+    return false;
+  }
+}
+
 }  // namespace yocto
 
 // -----------------------------------------------------------------------------
@@ -426,7 +441,7 @@ inline void close_file(file_stream& fs) {
 
 // Read a line of text
 inline bool read_line(file_stream& fs, char* buffer, size_t size) {
-  return fgets(buffer, size, fs.fs);
+  return fgets(buffer, (int)size, fs.fs);
 }
 
 // Write text to a file
@@ -775,8 +790,8 @@ inline bool parse_cli_value(
       value    = (int)strtol(args[0].c_str(), &end, 10);
       return end != nullptr;
     } else {
-      value = std::find(choices.begin(), choices.end(), args[0]) -
-              choices.begin();
+      value = (T)(
+          std::find(choices.begin(), choices.end(), args[0]) - choices.begin());
       return true;
     }
   } else if constexpr (std::is_same_v<T, float>) {

@@ -28,6 +28,7 @@
 
 #include <yocto/yocto_color.h>
 #include <yocto/yocto_commonio.h>
+#include <yocto/yocto_parallel.h>
 #include <yocto/yocto_sceneio.h>
 #include <yocto/yocto_shape.h>
 #include <yocto/yocto_trace.h>
@@ -35,12 +36,10 @@
 #include <yocto_gui/yocto_opengl.h>
 using namespace yocto;
 
-#include <atomic>
 #include <deque>
-#include <future>
 
 namespace yocto {
-void print_obj_camera(scene_camera* camera);
+void print_obj_camera(sceneio_camera* camera);
 };  // namespace yocto
 
 // Application scene
@@ -52,10 +51,10 @@ struct app_state {
   string name      = "";
 
   // scene
-  scene_model*  ioscene  = new scene_model{};
-  scene_model*  scene    = new scene_model{};
-  scene_camera* iocamera = nullptr;
-  scene_camera* camera   = nullptr;
+  sceneio_scene*  ioscene  = new sceneio_scene{};
+  trace_scene*    scene    = new trace_scene{};
+  sceneio_camera* iocamera = nullptr;
+  trace_camera*   camera   = nullptr;
 
   // options
   trace_params params = {};
@@ -70,12 +69,12 @@ struct app_state {
   ogl_image_params glparams = {};
 
   // editing
-  scene_camera*      selected_camera      = nullptr;
-  scene_instance*    selected_instance    = nullptr;
-  scene_shape*       selected_shape       = nullptr;
-  scene_material*    selected_material    = nullptr;
-  scene_environment* selected_environment = nullptr;
-  scene_texture*     selected_texture     = nullptr;
+  sceneio_camera*      selected_camera      = nullptr;
+  sceneio_instance*    selected_instance    = nullptr;
+  sceneio_shape*       selected_shape       = nullptr;
+  sceneio_material*    selected_material    = nullptr;
+  sceneio_environment* selected_environment = nullptr;
+  sceneio_texture*     selected_texture     = nullptr;
 
   // computation
   int          render_sample  = 0;
@@ -120,15 +119,16 @@ struct app_states {
 };
 
 // Construct a scene from io
-void init_scene(scene_model* scene, scene_model* ioscene, scene_camera*& camera,
-    scene_camera* iocamera, progress_callback progress_cb = {}) {
+void init_scene(trace_scene* scene, sceneio_scene* ioscene,
+    trace_camera*& camera, sceneio_camera* iocamera,
+    progress_callback progress_cb = {}) {
   // handle progress
   auto progress = vec2i{
       0, (int)ioscene->cameras.size() + (int)ioscene->environments.size() +
              (int)ioscene->materials.size() + (int)ioscene->textures.size() +
              (int)ioscene->shapes.size() + (int)ioscene->instances.size()};
 
-  auto camera_map     = unordered_map<scene_camera*, scene_camera*>{};
+  auto camera_map     = unordered_map<sceneio_camera*, trace_camera*>{};
   camera_map[nullptr] = nullptr;
   for (auto iocamera : ioscene->cameras) {
     if (progress_cb)
@@ -141,25 +141,21 @@ void init_scene(scene_model* scene, scene_model* ioscene, scene_camera*& camera,
     camera_map[iocamera] = camera;
   }
 
-  auto texture_map     = unordered_map<scene_texture*, scene_texture*>{};
+  auto texture_map     = unordered_map<sceneio_texture*, trace_texture*>{};
   texture_map[nullptr] = nullptr;
   for (auto iotexture : ioscene->textures) {
     if (progress_cb)
       progress_cb("converting textures", progress.x++, progress.y);
     auto texture = add_texture(scene);
-    if (!iotexture->colorf.empty()) {
-      set_texture(texture, iotexture->colorf);
-    } else if (!iotexture->colorb.empty()) {
-      set_texture(texture, iotexture->colorb);
-    } else if (!iotexture->scalarf.empty()) {
-      set_texture(texture, iotexture->scalarf);
-    } else if (!iotexture->scalarb.empty()) {
-      set_texture(texture, iotexture->scalarb);
+    if (!iotexture->hdr.empty()) {
+      set_texture(texture, iotexture->hdr);
+    } else if (!iotexture->ldr.empty()) {
+      set_texture(texture, iotexture->ldr);
     }
     texture_map[iotexture] = texture;
   }
 
-  auto material_map     = unordered_map<scene_material*, scene_material*>{};
+  auto material_map     = unordered_map<sceneio_material*, trace_material*>{};
   material_map[nullptr] = nullptr;
   for (auto iomaterial : ioscene->materials) {
     if (progress_cb)
@@ -189,7 +185,7 @@ void init_scene(scene_model* scene, scene_model* ioscene, scene_camera*& camera,
     material_map[iomaterial] = material;
   }
 
-  auto shape_map     = unordered_map<scene_shape*, scene_shape*>{};
+  auto shape_map     = unordered_map<sceneio_shape*, trace_shape*>{};
   shape_map[nullptr] = nullptr;
   for (auto ioshape : ioscene->shapes) {
     if (progress_cb) progress_cb("converting shapes", progress.x++, progress.y);
@@ -198,22 +194,26 @@ void init_scene(scene_model* scene, scene_model* ioscene, scene_camera*& camera,
     set_lines(shape, ioshape->lines);
     set_triangles(shape, ioshape->triangles);
     set_quads(shape, ioshape->quads);
+    set_fvquads(
+        shape, ioshape->quadspos, ioshape->quadsnorm, ioshape->quadstexcoord);
     set_positions(shape, ioshape->positions);
     set_normals(shape, ioshape->normals);
     set_texcoords(shape, ioshape->texcoords);
     set_colors(shape, ioshape->colors);
     set_radius(shape, ioshape->radius);
     set_tangents(shape, ioshape->tangents);
+    set_subdivision(
+        shape, ioshape->subdivisions, ioshape->catmullclark, ioshape->smooth);
     shape_map[ioshape] = shape;
   }
 
-  for (auto ioobject : ioscene->instances) {
+  for (auto ioinstance : ioscene->instances) {
     if (progress_cb)
-      progress_cb("converting objects", progress.x++, progress.y);
+      progress_cb("converting instances", progress.x++, progress.y);
     auto instance = add_instance(scene);
-    set_frame(instance, ioobject->frame);
-    set_shape(instance, shape_map.at(ioobject->shape));
-    set_material(instance, material_map.at(ioobject->material));
+    set_frame(instance, ioinstance->frame);
+    set_shape(instance, shape_map.at(ioinstance->shape));
+    set_material(instance, material_map.at(ioinstance->material));
   }
 
   for (auto ioenvironment : ioscene->environments) {
@@ -284,9 +284,9 @@ void load_scene_async(app_states* apps, const string& filename,
     app->total   = 1;
     if (add_skyenv) add_sky(app->ioscene);
     app->iocamera = get_camera(app->ioscene, camera_name);
-    tesselate_shapes(app->ioscene, progress_cb);
     init_scene(
         app->scene, app->ioscene, app->camera, app->iocamera, progress_cb);
+    tesselate_shapes(app->scene, progress_cb);
     init_bvh(app->scene, app->params);
     init_lights(app->scene);
     if (app->scene->lights.empty() && is_sampler_lit(app->params)) {
@@ -298,7 +298,7 @@ void load_scene_async(app_states* apps, const string& filename,
 }
 
 bool draw_widgets(
-    gui_window* win, scene_model* ioscene, scene_camera* iocamera) {
+    gui_window* win, sceneio_scene* ioscene, sceneio_camera* iocamera) {
   if (!iocamera) return false;
   auto edited = 0;
   draw_label(win, "name", iocamera->name);
@@ -324,28 +324,22 @@ bool draw_widgets(
 }
 
 bool draw_widgets(
-    gui_window* win, scene_model* ioscene, scene_texture* iotexture) {
+    gui_window* win, sceneio_scene* ioscene, sceneio_texture* iotexture) {
   if (!iotexture) return false;
   auto edited = 0;
   draw_label(win, "name", iotexture->name);
-  draw_label(win, "colorf",
-      std::to_string(iotexture->colorf.imsize().x) + " x " +
-          std::to_string(iotexture->colorf.imsize().y));
-  draw_label(win, "colorb",
-      std::to_string(iotexture->colorb.imsize().x) + " x " +
-          std::to_string(iotexture->colorb.imsize().y));
-  draw_label(win, "scalarf",
-      std::to_string(iotexture->scalarf.imsize().x) + " x " +
-          std::to_string(iotexture->scalarf.imsize().y));
-  draw_label(win, "scalarb",
-      std::to_string(iotexture->scalarb.imsize().x) + " x " +
-          std::to_string(iotexture->scalarb.imsize().y));
+  draw_label(win, "hdr",
+      std::to_string(iotexture->hdr.width()) + " x " +
+          std::to_string(iotexture->hdr.height()));
+  draw_label(win, "ldr",
+      std::to_string(iotexture->ldr.width()) + " x " +
+          std::to_string(iotexture->ldr.height()));
   // TODO: load texture
   return edited;
 }
 
 bool draw_widgets(
-    gui_window* win, scene_model* ioscene, scene_material* iomaterial) {
+    gui_window* win, sceneio_scene* ioscene, sceneio_material* iomaterial) {
   if (!iomaterial) return false;
   auto edited = 0;
   draw_label(win, "name", iomaterial->name);
@@ -388,7 +382,8 @@ bool draw_widgets(
   return edited;
 }
 
-bool draw_widgets(gui_window* win, scene_model* ioscene, scene_shape* ioshape) {
+bool draw_widgets(
+    gui_window* win, sceneio_scene* ioscene, sceneio_shape* ioshape) {
   if (!ioshape) return false;
   auto edited = 0;
   draw_label(win, "name", ioshape->name);
@@ -415,7 +410,7 @@ bool draw_widgets(gui_window* win, scene_model* ioscene, scene_shape* ioshape) {
 }
 
 bool draw_widgets(
-    gui_window* win, scene_model* ioscene, scene_instance* ioobject) {
+    gui_window* win, sceneio_scene* ioscene, sceneio_instance* ioobject) {
   if (!ioobject) return false;
   auto edited = 0;
   draw_label(win, "name", ioobject->name);
@@ -429,8 +424,8 @@ bool draw_widgets(
   return edited;
 }
 
-bool draw_widgets(
-    gui_window* win, scene_model* ioscene, scene_environment* ioenvironment) {
+bool draw_widgets(gui_window* win, sceneio_scene* ioscene,
+    sceneio_environment* ioenvironment) {
   if (!ioenvironment) return false;
   auto edited = 0;
   draw_label(win, "name", ioenvironment->name);
@@ -533,8 +528,8 @@ void draw_widgets(gui_window* win, app_states* apps, const gui_input& input) {
     draw_label(win, "imagename", app->imagename);
     if (app->ok) {
       draw_label(win, "image",
-          std::to_string(app->render.imsize().x) + " x " +
-              std::to_string(app->render.imsize().y) + " @ " +
+          std::to_string(app->render.width()) + " x " +
+              std::to_string(app->render.height()) + " @ " +
               std::to_string(app->render_sample));
       draw_slider(win, "zoom", app->glparams.scale, 0.1, 10);
       draw_checkbox(win, "zoom to fit", app->glparams.fit);
@@ -548,11 +543,11 @@ void draw_widgets(gui_window* win, app_states* apps, const gui_input& input) {
       if (draw_button(win, "print stats")) {
         for (auto stat : scene_stats(app->ioscene)) print_info(stat);
       }
-      auto ij = get_image_coords(input.mouse_pos, app->glparams.center,
+      auto ij = image_coords(input.mouse_pos, app->glparams.center,
           app->glparams.scale, app->render.imsize());
       draw_dragger(win, "mouse", ij);
-      if (ij.x >= 0 && ij.x < app->render.imsize().x && ij.y >= 0 &&
-          ij.y < app->render.imsize().y) {
+      if (ij.x >= 0 && ij.x < app->render.width() && ij.y >= 0 &&
+          ij.y < app->render.height()) {
         draw_coloredit(win, "pixel", app->render[{ij.x, ij.y}]);
       } else {
         auto zero4f_ = zero4f;
@@ -561,7 +556,7 @@ void draw_widgets(gui_window* win, app_states* apps, const gui_input& input) {
     }
     end_header(win);
   }
-  auto get_texture = [app](scene_texture* iotexture) {
+  auto get_texture = [app](sceneio_texture* iotexture) {
     return get_element(iotexture, app->ioscene->textures, app->scene->textures);
   };
   if (!app->ioscene->cameras.empty() && begin_header(win, "cameras")) {
@@ -681,14 +676,10 @@ void draw_widgets(gui_window* win, app_states* apps, const gui_input& input) {
       auto iotexture = app->selected_texture;
       auto texture   = get_element(
           iotexture, app->ioscene->textures, app->scene->textures);
-      if (!iotexture->colorf.empty()) {
-        set_texture(texture, iotexture->colorf);
-      } else if (!iotexture->colorb.empty()) {
-        set_texture(texture, iotexture->colorb);
-      } else if (!iotexture->scalarf.empty()) {
-        set_texture(texture, iotexture->scalarf);
-      } else if (!iotexture->scalarb.empty()) {
-        set_texture(texture, iotexture->scalarb);
+      if (!iotexture->hdr.empty()) {
+        set_texture(texture, iotexture->hdr);
+      } else if (!iotexture->ldr.empty()) {
+        set_texture(texture, iotexture->ldr);
       }
       reset_display(app);
     }
@@ -703,8 +694,9 @@ void draw(gui_window* win, app_states* apps, const gui_input& input) {
   app->glparams.framebuffer = input.framebuffer_viewport;
   if (!is_initialized(app->glimage)) init_image(app->glimage);
   if (!app->render_counter) set_image(app->glimage, app->display, false, false);
-  update_imview(app->glparams.center, app->glparams.scale,
-      app->display.imsize(), app->glparams.window, app->glparams.fit);
+  std::tie(app->glparams.center, app->glparams.scale) = camera_imview(
+      app->glparams.center, app->glparams.scale, app->display.imsize(),
+      app->glparams.window, app->glparams.fit);
   draw_image(app->glimage, app->glparams);
   app->render_counter++;
   if (app->render_counter > 10) app->render_counter = 0;
@@ -757,7 +749,7 @@ int main(int argc, const char* argv[]) {
       cli, "--filter/--no-filter", apps->params.tentfilter, "Filter image.");
   add_option(cli, "--env-hidden/--no-env-hidden", apps->params.envhidden,
       "Environments are hidden in renderer");
-  add_option(cli, "--bvh", apps->params.bvh, "Bvh type", bvh_names);
+  add_option(cli, "--bvh", apps->params.bvh, "Bvh type", trace_bvh_names);
   add_option(cli, "--skyenv/--no-skyenv", add_skyenv, "Add sky envmap");
   add_option(cli, "scenes", filenames, "Scene filenames", true);
   parse_cli(cli, argc, argv);
@@ -803,7 +795,7 @@ int main(int argc, const char* argv[]) {
               200.0f;
       pan.x = -pan.x;
       stop_display(app);
-      update_turntable(
+      std::tie(app->iocamera->frame, app->iocamera->focus) = camera_turntable(
           app->iocamera->frame, app->iocamera->focus, rotate, dolly, pan);
       set_frame(app->camera, app->iocamera->frame);
       set_lens(app->camera, app->iocamera->lens, app->iocamera->aspect,
@@ -815,15 +807,14 @@ int main(int argc, const char* argv[]) {
     // selection
     if ((input.mouse_left || input.mouse_right) && input.modifier_alt &&
         !input.widgets_active) {
-      auto ij = get_image_coords(input.mouse_pos, app->glparams.center,
+      auto ij = image_coords(input.mouse_pos, app->glparams.center,
           app->glparams.scale, app->render.imsize());
-      if (ij.x >= 0 && ij.x < app->render.imsize().x && ij.y >= 0 &&
-          ij.y < app->render.imsize().y) {
+      if (ij.x >= 0 && ij.x < app->render.width() && ij.y >= 0 &&
+          ij.y < app->render.height()) {
         auto ray = camera_ray(app->camera->frame, app->camera->lens,
             app->camera->lens, app->camera->film,
             vec2f{ij.x + 0.5f, ij.y + 0.5f} /
-                vec2f{(float)app->render.imsize().x,
-                    (float)app->render.imsize().y});
+                vec2f{(float)app->render.width(), (float)app->render.height()});
         if (auto isec = intersect_scene_bvh(app->scene, ray); isec.hit) {
           app->selected_instance = app->ioscene->instances[isec.instance];
         }

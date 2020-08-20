@@ -165,8 +165,8 @@ inline float perlin_noise(float p, int w) {
 
 inline float perlin_noise(const vec2f& p, const vec2i& w) {
   auto ease   = [](float a) { return ((a * 6 - 15) * a + 10) * a * a * a; };
-  auto ifloor = [](int a) -> int {
-    int ai = (int)a;
+  auto ifloor = [](float a) -> int {
+    auto ai = (int)a;
     return (a < ai) ? ai - 1 : ai;
   };
   auto grad = [m = vec2i{(w.x - 1) & 255, (w.y - 1) & 255}](
