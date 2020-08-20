@@ -17,7 +17,7 @@ See each header file for documentation.
 - [Yocto/Geometry](yocto/yocto_geometry.md): geometry functions, ray-primitive
   intersection, point-primitive overlap
 - [Yocto/Noise](yocto/yocto_noise.md): Perlin noise
-- [Yocto/Sampling](yocto/yocto_sampling.md): random number generation,
+- [Yocto/Random](yocto/yocto_random.md): random number generation,
   generation of points and directions, Monte Carlo utilities
 - [Yocto/Shading](yocto/yocto_shading.md): evaluation and sampling of fresnel
   functions, bsdf lobes, transmittance lobes, phase functions

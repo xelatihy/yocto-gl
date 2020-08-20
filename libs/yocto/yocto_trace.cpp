@@ -35,7 +35,7 @@
 #include "yocto_color.h"
 #include "yocto_geometry.h"
 #include "yocto_parallel.h"
-#include "yocto_sampling.h"
+#include "yocto_random.h"
 #include "yocto_shading.h"
 #include "yocto_shape.h"
 

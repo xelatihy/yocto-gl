@@ -1,12 +1,12 @@
-# Yocto/Sampling: Sampling routines
+# Yocto/Random: Sampling routines
 
-Yocto/Sampling provides many functions to generate points and directions
+Yocto/Random provides many functions to generate points and directions
 useful in path tracing and procedural generation. We also include a random
 number generator suitable for ray tracing.
 
 ## Random number generation
 
-Yocto/Sampling includes an implementation of the [PCG32](https://www.pcg-random.org)
+Yocto/Random includes an implementation of the [PCG32](https://www.pcg-random.org)
 random number generator, that is a portable generator well suited for
 graphics applications. The state of the generator is stored in `rng_state`
 and uses only 16 bytes. The generator is default-initialized to be able to
@@ -31,14 +31,14 @@ shuffle(vec, rng);                             // random shuffle of a vector
 
 ## Generating points and directions
 
-Yocto/Sampling defines several functions to generate random points and
+Yocto/Random defines several functions to generate random points and
 directions. Each of these functions is a warp that takes random numbers in the
 [0,1) domain and warps them to the desired distributions. The functions
 are particularly useful in procedural modeling and path tracing. For each
-function, Yocto/Sampling provides both the warp as well as its pdf, that can
+function, Yocto/Random provides both the warp as well as its pdf, that can
 be used in Monte Carlo integration.
 
-Yocto/Sampling supports generating directions uniformly over the unit hemisphere
+Yocto/Random supports generating directions uniformly over the unit hemisphere
 and sphere, or cosine distributed over the hemisphere, using respectively
 `sample_hemisphere(ruv)`, `sample_sphere(ruv)`, `sample_hemisphere_cos(ruv)`
 `sample_hemisphere_cos(ruv)` and `sample_hemisphere_cos(ruv)`.
@@ -55,7 +55,7 @@ auto rhu2 = sample_hemisphere(normal,rand2f(rng));     // oriented hemisphere
 auto rhc2 = sample_hemisphere_cos(normal,rand2f(rng)); // oriented hemisphere
 ```
 
-Yocto/Sampling supports generating points uniformly on geometric primitives.
+Yocto/Random supports generating points uniformly on geometric primitives.
 Use `sample_disk(uv)` to uniformly sample a disk and `sample_triangle(uv)`
 to uniformly sample a triangle. For triangles we also support direct
 sampling of triangle points with `sample_triangle(p0,p1,p2,ruv)`.
@@ -77,10 +77,10 @@ auto stp = sample_triangle(p0,p1,p2,rand2f(rng));   // uniform triangle point
 
 ## Sampling distributions
 
-Yocto/Sampling defines several functions to sample distributions.
+Yocto/Random defines several functions to sample distributions.
 Each of these functions is a warp that takes a random number in the
 [0,1) domain and warps it to the desired distribution. For each
-function, Yocto/Sampling provides both the warp as well as its pdf, that can
+function, Yocto/Random provides both the warp as well as its pdf, that can
 be used in Monte Carlo integration.
 
 Use `sample_uniform(n,r)` to randomly pick an index in the `[0,n)` range,

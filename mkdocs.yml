@@ -29,7 +29,7 @@ nav:
   - Math types: yocto/yocto_math.md
   - Color operations: yocto/yocto_color.md
   - Geometry operations: yocto/yocto_geometry.md
-  - Sampling routines: yocto/yocto_sampling.md
+  - Sampling routines: yocto/yocto_random.md
   - Noise functions: yocto/yocto_noise.md
   - Shading routines: yocto/yocto_shading.md
   - Image utilities: yocto/yocto_image.md

@@ -1,7 +1,7 @@
 //
-// # Yocto/Sampling: Sampling routines
+// # Yocto/Random: Sampling routines
 //
-// Yocto/Sampling provides many functions to generate points and directions
+// Yocto/Random provides many functions to generate points and directions
 // useful in path tracing and procedural generation. We also include a random
 // number generator suitable for ray tracing.
 //
@@ -39,8 +39,8 @@
 // Licensed under Apache License 2.0 (NO WARRANTY, etc. see website)
 //
 
-#ifndef _YOCTO_SAMPLING_H_
-#define _YOCTO_SAMPLING_H_
+#ifndef _YOCTO_RANDOM_H_
+#define _YOCTO_RANDOM_H_
 
 // -----------------------------------------------------------------------------
 // INCLUDES

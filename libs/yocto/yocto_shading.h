@@ -42,7 +42,7 @@
 #include <utility>
 
 #include "yocto_math.h"
-#include "yocto_sampling.h"
+#include "yocto_random.h"
 
 // -----------------------------------------------------------------------------
 // USING DIRECTIVES
