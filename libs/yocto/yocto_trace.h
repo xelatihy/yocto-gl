@@ -46,7 +46,6 @@
 #include "yocto_image.h"
 #include "yocto_math.h"
 #include "yocto_sampling.h"
-#include "yocto_scene.h"
 
 #ifdef YOCTO_EMBREE
 #include <embree3/rtcore.h>
