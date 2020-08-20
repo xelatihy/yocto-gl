@@ -40,7 +40,7 @@ The functions take a progress callback as an optional parameter,
 that is called as scene loading progresses.
 
 ```cpp
-auto scene = new scene_model{};                    // scene
+auto scene = new sceneio_scene{};                    // scene
 auto progress = [](const string& message,          // progress callback
                    int current, int total) {
   print_info(message, current, total);

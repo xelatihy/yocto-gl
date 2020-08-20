@@ -123,7 +123,7 @@ inline T keyframe_bezier(
 // -----------------------------------------------------------------------------
 namespace yocto {
 
-vector<string> scene_stats(const scene_model* scene, bool verbose) {
+vector<string> scene_stats(const sceneio_scene* scene, bool verbose) {
   auto accumulate = [](const auto& values, const auto& func) -> size_t {
     auto sum = (size_t)0;
     for (auto& value : values) sum += func(value);
@@ -165,8 +165,7 @@ vector<string> scene_stats(const scene_model* scene, bool verbose) {
                       [](auto shape) { return shape->quadspos.size(); })));
   stats.push_back(
       "texels4b:     " + format(accumulate(scene->textures, [](auto texture) {
-        return (size_t)texture->ldr.width() *
-               (size_t)texture->ldr.width();
+        return (size_t)texture->ldr.width() * (size_t)texture->ldr.width();
       })));
   stats.push_back(
       "texels4f:     " + format(accumulate(scene->textures, [](auto texture) {
@@ -179,7 +178,7 @@ vector<string> scene_stats(const scene_model* scene, bool verbose) {
 }
 
 // Checks for validity of the scene->
-vector<string> scene_validation(const scene_model* scene, bool notextures) {
+vector<string> scene_validation(const sceneio_scene* scene, bool notextures) {
   auto errs        = vector<string>();
   auto check_names = [&errs](const auto& vals, const string& base) {
     auto used = unordered_map<string, int>();
@@ -193,7 +192,7 @@ vector<string> scene_validation(const scene_model* scene, bool notextures) {
       }
     }
   };
-  auto check_empty_textures = [&errs](const vector<scene_texture*>& vals) {
+  auto check_empty_textures = [&errs](const vector<sceneio_texture*>& vals) {
     for (auto value : vals) {
       if (value->hdr.empty() && value->ldr.empty()) {
         errs.push_back("empty texture " + value->name);
@@ -218,14 +217,14 @@ vector<string> scene_validation(const scene_model* scene, bool notextures) {
 // -----------------------------------------------------------------------------
 namespace yocto {
 
-scene_shape::~scene_shape() {
+sceneio_shape::~sceneio_shape() {
   if (bvh) delete bvh;
 #ifdef YOCTO_EMBREE
   if (embree_bvh) rtcReleaseScene(embree_bvh);
 #endif
 }
 
-scene_model::~scene_model() {
+sceneio_scene::~sceneio_scene() {
   for (auto camera : cameras) delete camera;
   for (auto shape : shapes) delete shape;
   for (auto material : materials) delete material;
@@ -249,25 +248,26 @@ static T* add_element(
 }
 
 // add element
-scene_camera* add_camera(scene_model* scene, const string& name) {
+sceneio_camera* add_camera(sceneio_scene* scene, const string& name) {
   return add_element(scene->cameras, name, "camera");
 }
-scene_environment* add_environment(scene_model* scene, const string& name) {
+sceneio_environment* add_environment(sceneio_scene* scene, const string& name) {
   return add_element(scene->environments, name, "environment");
 }
-scene_shape* add_shape(scene_model* scene, const string& name) {
+sceneio_shape* add_shape(sceneio_scene* scene, const string& name) {
   return add_element(scene->shapes, name, "shape");
 }
-scene_texture* add_texture(scene_model* scene, const string& name) {
+sceneio_texture* add_texture(sceneio_scene* scene, const string& name) {
   return add_element(scene->textures, name, "texture");
 }
-scene_instance* add_instance(scene_model* scene, const string& name) {
+sceneio_instance* add_instance(sceneio_scene* scene, const string& name) {
   return add_element(scene->instances, name, "instance");
 }
-scene_material* add_material(scene_model* scene, const string& name) {
+sceneio_material* add_material(sceneio_scene* scene, const string& name) {
   return add_element(scene->materials, name, "material");
 }
-scene_instance* add_complete_instance(scene_model* scene, const string& name) {
+sceneio_instance* add_complete_instance(
+    sceneio_scene* scene, const string& name) {
   auto instance      = add_instance(scene, name);
   instance->shape    = add_shape(scene, name);
   instance->material = add_material(scene, name);
@@ -275,160 +275,160 @@ scene_instance* add_complete_instance(scene_model* scene, const string& name) {
 }
 
 // Set cameras
-void set_frame(scene_camera* camera, const frame3f& frame) {
+void set_frame(sceneio_camera* camera, const frame3f& frame) {
   camera->frame = frame;
 }
 void set_lens(
-    scene_camera* camera, float lens, float aspect, float film, bool ortho) {
+    sceneio_camera* camera, float lens, float aspect, float film, bool ortho) {
   camera->lens         = lens;
   camera->aspect       = aspect;
   camera->film         = film;
   camera->orthographic = ortho;
 }
-void set_focus(scene_camera* camera, float aperture, float focus) {
+void set_focus(sceneio_camera* camera, float aperture, float focus) {
   camera->aperture = aperture;
   camera->focus    = focus;
 }
 
 // Add texture
-void set_texture(scene_texture* texture, const image<vec4b>& img) {
+void set_texture(sceneio_texture* texture, const image<vec4b>& img) {
   texture->ldr = img;
   texture->hdr = {};
 }
-void set_texture(scene_texture* texture, const image<vec4f>& img) {
+void set_texture(sceneio_texture* texture, const image<vec4f>& img) {
   texture->ldr = {};
   texture->hdr = img;
 }
 
 // Add shape
-void set_points(scene_shape* shape, const vector<int>& points) {
+void set_points(sceneio_shape* shape, const vector<int>& points) {
   shape->points = points;
 }
-void set_lines(scene_shape* shape, const vector<vec2i>& lines) {
+void set_lines(sceneio_shape* shape, const vector<vec2i>& lines) {
   shape->lines = lines;
 }
-void set_triangles(scene_shape* shape, const vector<vec3i>& triangles) {
+void set_triangles(sceneio_shape* shape, const vector<vec3i>& triangles) {
   shape->triangles = triangles;
 }
-void set_quads(scene_shape* shape, const vector<vec4i>& quads) {
+void set_quads(sceneio_shape* shape, const vector<vec4i>& quads) {
   shape->quads = quads;
 }
-void set_fvquads(scene_shape* shape, const vector<vec4i>& quadspos,
+void set_fvquads(sceneio_shape* shape, const vector<vec4i>& quadspos,
     const vector<vec4i>& quadsnorm, const vector<vec4i>& quadstexcoord) {
   shape->quadspos      = quadspos;
   shape->quadsnorm     = quadsnorm;
   shape->quadstexcoord = quadstexcoord;
 }
-void set_positions(scene_shape* shape, const vector<vec3f>& positions) {
+void set_positions(sceneio_shape* shape, const vector<vec3f>& positions) {
   shape->positions = positions;
 }
-void set_normals(scene_shape* shape, const vector<vec3f>& normals) {
+void set_normals(sceneio_shape* shape, const vector<vec3f>& normals) {
   shape->normals = normals;
 }
-void set_texcoords(scene_shape* shape, const vector<vec2f>& texcoords) {
+void set_texcoords(sceneio_shape* shape, const vector<vec2f>& texcoords) {
   shape->texcoords = texcoords;
 }
-void set_colors(scene_shape* shape, const vector<vec4f>& colors) {
+void set_colors(sceneio_shape* shape, const vector<vec4f>& colors) {
   shape->colors = colors;
 }
-void set_radius(scene_shape* shape, const vector<float>& radius) {
+void set_radius(sceneio_shape* shape, const vector<float>& radius) {
   shape->radius = radius;
 }
-void set_tangents(scene_shape* shape, const vector<vec4f>& tangents) {
+void set_tangents(sceneio_shape* shape, const vector<vec4f>& tangents) {
   shape->tangents = tangents;
 }
 void set_subdivision(
-    scene_shape* shape, int subdivisions, bool catmullclark, bool smooth) {
+    sceneio_shape* shape, int subdivisions, bool catmullclark, bool smooth) {
   shape->subdivisions = subdivisions;
   shape->catmullclark = catmullclark;
   shape->smooth       = smooth;
 }
 void set_displacement(
-    scene_shape* shape, float displacement, scene_texture* displacement_tex) {
+    sceneio_shape* shape, float displacement, sceneio_texture* displacement_tex) {
   shape->displacement     = displacement;
   shape->displacement_tex = displacement_tex;
 }
 
 // Add instance
-void set_frame(scene_instance* instance, const frame3f& frame) {
+void set_frame(sceneio_instance* instance, const frame3f& frame) {
   instance->frame = frame;
 }
-void set_shape(scene_instance* instance, scene_shape* shape) {
+void set_shape(sceneio_instance* instance, sceneio_shape* shape) {
   instance->shape = shape;
 }
-void set_material(scene_instance* instance, scene_material* material) {
+void set_material(sceneio_instance* instance, sceneio_material* material) {
   instance->material = material;
 }
 
 // Add material
-void set_emission(scene_material* material, const vec3f& emission,
-    scene_texture* emission_tex) {
+void set_emission(sceneio_material* material, const vec3f& emission,
+    sceneio_texture* emission_tex) {
   material->emission     = emission;
   material->emission_tex = emission_tex;
 }
 void set_color(
-    scene_material* material, const vec3f& color, scene_texture* color_tex) {
+    sceneio_material* material, const vec3f& color, sceneio_texture* color_tex) {
   material->color     = color;
   material->color_tex = color_tex;
 }
 void set_specular(
-    scene_material* material, float specular, scene_texture* specular_tex) {
+    sceneio_material* material, float specular, sceneio_texture* specular_tex) {
   material->specular     = specular;
   material->specular_tex = specular_tex;
 }
 void set_metallic(
-    scene_material* material, float metallic, scene_texture* metallic_tex) {
+    sceneio_material* material, float metallic, sceneio_texture* metallic_tex) {
   material->metallic     = metallic;
   material->metallic_tex = metallic_tex;
 }
-void set_ior(scene_material* material, float ior) { material->ior = ior; }
-void set_transmission(scene_material* material, float transmission, bool thin,
-    float trdepth, scene_texture* transmission_tex) {
+void set_ior(sceneio_material* material, float ior) { material->ior = ior; }
+void set_transmission(sceneio_material* material, float transmission, bool thin,
+    float trdepth, sceneio_texture* transmission_tex) {
   material->transmission     = transmission;
   material->thin             = thin;
   material->trdepth          = trdepth;
   material->transmission_tex = transmission_tex;
 }
-void set_translucency(scene_material* material, float translucency, bool thin,
-    float trdepth, scene_texture* translucency_tex) {
+void set_translucency(sceneio_material* material, float translucency, bool thin,
+    float trdepth, sceneio_texture* translucency_tex) {
   material->translucency     = translucency;
   material->thin             = thin;
   material->trdepth          = trdepth;
   material->translucency_tex = translucency_tex;
 }
-void set_thin(scene_material* material, bool thin) { material->thin = thin; }
+void set_thin(sceneio_material* material, bool thin) { material->thin = thin; }
 void set_roughness(
-    scene_material* material, float roughness, scene_texture* roughness_tex) {
+    sceneio_material* material, float roughness, sceneio_texture* roughness_tex) {
   material->roughness     = roughness;
   material->roughness_tex = roughness_tex;
 }
 void set_opacity(
-    scene_material* material, float opacity, scene_texture* opacity_tex) {
+    sceneio_material* material, float opacity, sceneio_texture* opacity_tex) {
   material->opacity     = opacity;
   material->opacity_tex = opacity_tex;
 }
-void set_scattering(scene_material* material, const vec3f& scattering,
-    float scanisotropy, scene_texture* scattering_tex) {
+void set_scattering(sceneio_material* material, const vec3f& scattering,
+    float scanisotropy, sceneio_texture* scattering_tex) {
   material->scattering     = scattering;
   material->scanisotropy   = scanisotropy;
   material->scattering_tex = scattering_tex;
 }
-void set_normalmap(scene_material* material, scene_texture* normal_tex) {
+void set_normalmap(sceneio_material* material, sceneio_texture* normal_tex) {
   material->normal_tex = normal_tex;
 }
 
 // Add environment
-void set_frame(scene_environment* environment, const frame3f& frame) {
+void set_frame(sceneio_environment* environment, const frame3f& frame) {
   environment->frame = frame;
 }
-void set_emission(scene_environment* environment, const vec3f& emission,
-    scene_texture* emission_tex) {
+void set_emission(sceneio_environment* environment, const vec3f& emission,
+    sceneio_texture* emission_tex) {
   environment->emission     = emission;
   environment->emission_tex = emission_tex;
 }
 
 // Add missing cameras.
-void add_cameras(scene_model* scene) {
+void add_cameras(sceneio_scene* scene) {
   if (!scene->cameras.empty()) return;
   auto camera          = add_camera(scene, "camera");
   camera->orthographic = false;
@@ -451,7 +451,7 @@ void add_cameras(scene_model* scene) {
 }
 
 // Add missing radius.
-void add_radius(scene_model* scene, float radius) {
+void add_radius(sceneio_scene* scene, float radius) {
   for (auto shape : scene->shapes) {
     if (shape->points.empty() && shape->lines.empty()) continue;
     if (!shape->radius.empty()) continue;
@@ -460,8 +460,8 @@ void add_radius(scene_model* scene, float radius) {
 }
 
 // Add missing materials.
-void add_materials(scene_model* scene) {
-  auto default_material = (scene_material*)nullptr;
+void add_materials(sceneio_scene* scene) {
+  auto default_material = (sceneio_material*)nullptr;
   for (auto& instance : scene->instances) {
     if (instance->material) continue;
     if (!default_material) {
@@ -473,7 +473,7 @@ void add_materials(scene_model* scene) {
 }
 
 // Add a sky environment
-void add_sky(scene_model* scene, float sun_angle) {
+void add_sky(sceneio_scene* scene, float sun_angle) {
   auto texture              = add_texture(scene, "sky");
   texture->hdr              = make_sunsky({1024, 512}, sun_angle);
   auto environment          = add_environment(scene, "sky");
@@ -482,7 +482,7 @@ void add_sky(scene_model* scene, float sun_angle) {
 }
 
 // get named camera or default if camera is empty
-scene_camera* get_camera(const scene_model* scene, const string& name) {
+sceneio_camera* get_camera(const sceneio_scene* scene, const string& name) {
   if (scene->cameras.empty()) return nullptr;
   for (auto camera : scene->cameras) {
     if (camera->name == name) return camera;
@@ -500,8 +500,8 @@ scene_camera* get_camera(const scene_model* scene, const string& name) {
 }
 
 // Updates the scene and scene's instances bounding boxes
-bbox3f compute_bounds(const scene_model* scene) {
-  auto shape_bbox = unordered_map<scene_shape*, bbox3f>{};
+bbox3f compute_bounds(const sceneio_scene* scene) {
+  auto shape_bbox = unordered_map<sceneio_shape*, bbox3f>{};
   auto bbox       = invalidb3f;
   for (auto shape : scene->shapes) {
     auto sbvh = invalidb3f;
@@ -516,14 +516,14 @@ bbox3f compute_bounds(const scene_model* scene) {
 }
 
 // Clone a scene
-void clone_scene(scene_model* dest, const scene_model* scene) {
+void clone_scene(sceneio_scene* dest, const sceneio_scene* scene) {
   dest->name      = scene->name;
   dest->copyright = scene->copyright;
   throw std::runtime_error("not implemented yet");
 }
 
 // Reduce memory usage
-void trim_memory(scene_model* scene) {
+void trim_memory(sceneio_scene* scene) {
   for (auto shape : scene->shapes) {
     shape->points.shrink_to_fit();
     shape->lines.shrink_to_fit();
@@ -549,7 +549,7 @@ void trim_memory(scene_model* scene) {
   scene->environments.shrink_to_fit();
 }
 
-void tesselate_shape(scene_shape* shape) {
+void tesselate_shape(sceneio_shape* shape) {
   if (shape->subdivisions) {
     if (!shape->points.empty()) {
       throw std::runtime_error("cannot subdivide points");
@@ -696,7 +696,7 @@ void tesselate_shape(scene_shape* shape) {
   }
 }  // namespace yocto
 
-void tesselate_shapes(scene_model* scene, progress_callback progress_cb) {
+void tesselate_shapes(sceneio_scene* scene, progress_callback progress_cb) {
   // handle progress
   auto progress = vec2i{0, (int)scene->shapes.size()};
 
@@ -718,7 +718,7 @@ void tesselate_shapes(scene_model* scene, progress_callback progress_cb) {
 namespace yocto {
 
 // Check texture size
-vec2i texture_size(const scene_texture* texture) {
+vec2i texture_size(const sceneio_texture* texture) {
   if (!texture->hdr.empty()) {
     return texture->hdr.imsize();
   } else if (!texture->ldr.empty()) {
@@ -730,7 +730,7 @@ vec2i texture_size(const scene_texture* texture) {
 
 // Evaluate a texture
 vec4f lookup_texture(
-    const scene_texture* texture, const vec2i& ij, bool ldr_as_linear) {
+    const sceneio_texture* texture, const vec2i& ij, bool ldr_as_linear) {
   if (!texture->hdr.empty()) {
     return texture->hdr[ij];
   } else if (!texture->ldr.empty()) {
@@ -742,7 +742,7 @@ vec4f lookup_texture(
 }
 
 // Evaluate a texture
-vec4f eval_texture(const scene_texture* texture, const vec2f& uv,
+vec4f eval_texture(const sceneio_texture* texture, const vec2f& uv,
     bool ldr_as_linear, bool no_interpolation, bool clamp_to_edge) {
   // get texture
   if (!texture) return {1, 1, 1, 1};
@@ -779,7 +779,7 @@ vec4f eval_texture(const scene_texture* texture, const vec2f& uv,
 // Generates a ray from a camera for yimg::image plane coordinate uv and
 // the lens coordinates luv.
 ray3f eval_camera(
-    const scene_camera* camera, const vec2f& image_uv, const vec2f& lens_uv) {
+    const sceneio_camera* camera, const vec2f& image_uv, const vec2f& lens_uv) {
   auto film = camera->aspect >= 1
                   ? vec2f{camera->film, camera->film / camera->aspect}
                   : vec2f{camera->film * camera->aspect, camera->film};
@@ -817,7 +817,7 @@ ray3f eval_camera(
 
 // Eval position
 vec3f eval_position(
-    const scene_instance* instance, int element, const vec2f& uv) {
+    const sceneio_instance* instance, int element, const vec2f& uv) {
   auto shape = instance->shape;
   if (!shape->triangles.empty()) {
     auto t = shape->triangles[element];
@@ -842,7 +842,7 @@ vec3f eval_position(
 }
 
 // Shape element normal.
-vec3f eval_element_normal(const scene_instance* instance, int element) {
+vec3f eval_element_normal(const sceneio_instance* instance, int element) {
   auto shape = instance->shape;
   if (!shape->triangles.empty()) {
     auto t = shape->triangles[element];
@@ -867,7 +867,7 @@ vec3f eval_element_normal(const scene_instance* instance, int element) {
 
 // Eval normal
 vec3f eval_normal(
-    const scene_instance* instance, int element, const vec2f& uv) {
+    const sceneio_instance* instance, int element, const vec2f& uv) {
   auto shape = instance->shape;
   if (shape->normals.empty()) return eval_element_normal(instance, element);
   if (!shape->triangles.empty()) {
@@ -895,7 +895,7 @@ vec3f eval_normal(
 
 // Eval texcoord
 vec2f eval_texcoord(
-    const scene_instance* instance, int element, const vec2f& uv) {
+    const sceneio_instance* instance, int element, const vec2f& uv) {
   auto shape = instance->shape;
   if (shape->texcoords.empty()) return uv;
   if (!shape->triangles.empty()) {
@@ -919,7 +919,7 @@ vec2f eval_texcoord(
 #if 0
 // Shape element normal.
 static pair<vec3f, vec3f> eval_tangents(
-    const scene_shape* shape, int element, const vec2f& uv) {
+    const sceneio_shape* shape, int element, const vec2f& uv) {
   if (!shape->triangles.empty()) {
     auto t = shape->triangles[element];
     if (shape->texcoords.empty()) {
@@ -950,7 +950,7 @@ static pair<vec3f, vec3f> eval_tangents(
 
 // Shape element normal.
 pair<vec3f, vec3f> eval_element_tangents(
-    const scene_instance* instance, int element) {
+    const sceneio_instance* instance, int element) {
   auto shape = instance->shape;
   if (!shape->triangles.empty() && !shape->texcoords.empty()) {
     auto t        = shape->triangles[element];
@@ -973,7 +973,7 @@ pair<vec3f, vec3f> eval_element_tangents(
 }
 
 vec3f eval_normalmap(
-    const scene_instance* instance, int element, const vec2f& uv) {
+    const sceneio_instance* instance, int element, const vec2f& uv) {
   auto shape      = instance->shape;
   auto normal_tex = instance->material->normal_tex;
   // apply normal mapping
@@ -993,7 +993,7 @@ vec3f eval_normalmap(
 }
 
 // Eval shading normal
-vec3f eval_shading_normal(const scene_instance* instance, int element,
+vec3f eval_shading_normal(const sceneio_instance* instance, int element,
     const vec2f& uv, const vec3f& outgoing) {
   auto shape    = instance->shape;
   auto material = instance->material;
@@ -1015,7 +1015,7 @@ vec3f eval_shading_normal(const scene_instance* instance, int element,
 }
 
 // Eval color
-vec4f eval_color(const scene_instance* instance, int element, const vec2f& uv) {
+vec4f eval_color(const sceneio_instance* instance, int element, const vec2f& uv) {
   auto shape = instance->shape;
   if (shape->colors.empty()) return {1, 1, 1, 1};
   if (!shape->triangles.empty()) {
@@ -1038,7 +1038,7 @@ vec4f eval_color(const scene_instance* instance, int element, const vec2f& uv) {
 
 // Evaluate environment color.
 vec3f eval_environment(
-    const scene_environment* environment, const vec3f& direction) {
+    const sceneio_environment* environment, const vec3f& direction) {
   auto wl       = transform_direction(inverse(environment->frame), direction);
   auto texcoord = vec2f{
       atan2(wl.z, wl.x) / (2 * pif), acos(clamp(wl.y, -1.0f, 1.0f)) / pif};
@@ -1048,7 +1048,7 @@ vec3f eval_environment(
 }
 
 // Evaluate all environment color.
-vec3f eval_environment(const scene_model* scene, const vec3f& direction) {
+vec3f eval_environment(const sceneio_scene* scene, const vec3f& direction) {
   auto emission = zero3f;
   for (auto environment : scene->environments) {
     emission += eval_environment(environment, direction);
@@ -1058,7 +1058,7 @@ vec3f eval_environment(const scene_model* scene, const vec3f& direction) {
 
 // Evaluate point
 scene_material_sample eval_material(
-    const scene_material* material, const vec2f& texcoord) {
+    const sceneio_material* material, const vec2f& texcoord) {
   auto mat     = scene_material_sample{};
   mat.emission = material->emission *
                  xyz(eval_texture(material->emission_tex, texcoord, false));
@@ -1096,7 +1096,7 @@ static const auto coat_ior       = 1.5f;
 static const auto coat_roughness = 0.03f * 0.03f;
 
 // Eval material to obtain emission, brdf and opacity.
-vec3f eval_emission(const scene_instance* instance, int element,
+vec3f eval_emission(const sceneio_instance* instance, int element,
     const vec2f& uv, const vec3f& normal, const vec3f& outgoing) {
   auto material = instance->material;
   auto texcoord = eval_texcoord(instance, element, uv);
@@ -1105,7 +1105,7 @@ vec3f eval_emission(const scene_instance* instance, int element,
 }
 
 // Eval material to obtain emission, brdf and opacity.
-float eval_opacity(const scene_instance* instance, int element, const vec2f& uv,
+float eval_opacity(const sceneio_instance* instance, int element, const vec2f& uv,
     const vec3f& normal, const vec3f& outgoing) {
   auto material = instance->material;
   auto texcoord = eval_texcoord(instance, element, uv);
@@ -1116,7 +1116,7 @@ float eval_opacity(const scene_instance* instance, int element, const vec2f& uv,
 }
 
 // Evaluate bsdf
-scene_bsdf eval_bsdf(const scene_instance* instance, int element,
+scene_bsdf eval_bsdf(const sceneio_instance* instance, int element,
     const vec2f& uv, const vec3f& normal, const vec3f& outgoing) {
   auto material = instance->material;
   auto texcoord = eval_texcoord(instance, element, uv);
@@ -1201,7 +1201,7 @@ bool is_delta(const scene_bsdf& bsdf) { return bsdf.roughness == 0; }
 
 // evaluate volume
 scene_vsdf eval_vsdf(
-    const scene_instance* instance, int element, const vec2f& uv) {
+    const sceneio_instance* instance, int element, const vec2f& uv) {
   auto material = instance->material;
   // initialize factors
   auto texcoord = eval_texcoord(instance, element, uv);
@@ -1232,7 +1232,7 @@ scene_vsdf eval_vsdf(
 }
 
 // check if we have a volume
-bool has_volume(const scene_instance* instance) {
+bool has_volume(const sceneio_instance* instance) {
   return !instance->material->thin && instance->material->transmission != 0;
 }
 
@@ -1284,7 +1284,7 @@ static RTCDevice       embree_device() {
 
 // Initialize Embree BVH
 static void init_embree_bvh(
-    scene_shape* shape, const scene_bvh_params& params) {
+    sceneio_shape* shape, const scene_bvh_params& params) {
   auto edevice = embree_device();
   if (shape->embree_bvh) rtcReleaseScene(shape->embree_bvh);
   shape->embree_bvh = rtcNewScene(edevice);
@@ -1380,7 +1380,7 @@ static void init_embree_bvh(
 }
 
 static void init_embree_bvh(
-    scene_model* scene, const scene_bvh_params& params) {
+    sceneio_scene* scene, const scene_bvh_params& params) {
   // scene bvh
   auto edevice = embree_device();
   if (scene->embree_bvh) rtcReleaseScene(scene->embree_bvh);
@@ -1402,10 +1402,10 @@ static void init_embree_bvh(
   rtcCommitScene(escene);
 }
 
-static void update_embree_bvh(scene_model* scene,
-    const vector<scene_instance*>&         updated_objects,
-    const vector<scene_shape*>&            updated_shapes,
-    const scene_bvh_params&                params) {
+static void update_embree_bvh(sceneio_scene* scene,
+    const vector<sceneio_instance*>&           updated_objects,
+    const vector<sceneio_shape*>&              updated_shapes,
+    const scene_bvh_params&                  params) {
   throw std::runtime_error("not implemented yet");
   // // scene bvh
   // auto escene = scene->embree_bvh;
@@ -1421,7 +1421,7 @@ static void update_embree_bvh(scene_model* scene,
   // rtcCommitScene(escene);
 }
 
-static bool intersect_shape_embree_bvh(scene_shape* shape, const ray3f& ray,
+static bool intersect_shape_embree_bvh(sceneio_shape* shape, const ray3f& ray,
     int& element, vec2f& uv, float& distance, bool find_any) {
   RTCRayHit embree_ray;
   embree_ray.ray.org_x     = ray.o.x;
@@ -1445,7 +1445,7 @@ static bool intersect_shape_embree_bvh(scene_shape* shape, const ray3f& ray,
   return true;
 }
 
-static bool intersect_scene_embree_bvh(const scene_model* scene,
+static bool intersect_scene_embree_bvh(const sceneio_scene* scene,
     const ray3f& ray, int& instance, int& element, vec2f& uv, float& distance,
     bool find_any) {
   RTCRayHit embree_ray;
@@ -1799,7 +1799,7 @@ static void update_bvh(scene_bvh* bvh, const vector<bbox3f>& bboxes) {
   }
 }
 
-static void init_bvh(scene_shape* shape, const scene_bvh_params& params) {
+static void init_bvh(sceneio_shape* shape, const scene_bvh_params& params) {
 #ifdef YOCTO_EMBREE
   // call Embree if needed
   if (params.bvh == scene_bvh_type::embree_default ||
@@ -1860,7 +1860,7 @@ static void init_bvh(scene_shape* shape, const scene_bvh_params& params) {
   }
 }
 
-void init_bvh(scene_model* scene, const scene_bvh_params& params,
+void init_bvh(sceneio_scene* scene, const scene_bvh_params& params,
     progress_callback progress_cb) {
   // handle progress
   auto progress = vec2i{0, 1 + (int)scene->shapes.size()};
@@ -1912,7 +1912,7 @@ void init_bvh(scene_model* scene, const scene_bvh_params& params,
   if (progress_cb) progress_cb("build bvh", progress.x++, progress.y);
 }
 
-static void update_bvh(scene_shape* shape, const scene_bvh_params& params) {
+static void update_bvh(sceneio_shape* shape, const scene_bvh_params& params) {
 #ifdef YOCTO_EMBREE
   if (shape->embree_bvh) {
     throw std::runtime_error("embree shape update not implemented");
@@ -1953,9 +1953,9 @@ static void update_bvh(scene_shape* shape, const scene_bvh_params& params) {
   update_bvh(shape->bvh, bboxes);
 }
 
-void update_bvh(scene_model*       scene,
-    const vector<scene_instance*>& updated_objects,
-    const vector<scene_shape*>&    updated_shapes,
+void update_bvh(sceneio_scene*     scene,
+    const vector<sceneio_instance*>& updated_objects,
+    const vector<sceneio_shape*>&    updated_shapes,
     const scene_bvh_params&        params) {
   for (auto shape : updated_shapes) update_bvh(shape, params);
 
@@ -1978,7 +1978,7 @@ void update_bvh(scene_model*       scene,
 }
 
 // Intersect ray with a bvh->
-static bool intersect_shape_bvh(scene_shape* shape, const ray3f& ray_,
+static bool intersect_shape_bvh(sceneio_shape* shape, const ray3f& ray_,
     int& element, vec2f& uv, float& distance, bool find_any) {
 #ifdef YOCTO_EMBREE
   // call Embree if needed
@@ -2081,7 +2081,7 @@ static bool intersect_shape_bvh(scene_shape* shape, const ray3f& ray_,
 }
 
 // Intersect ray with a bvh->
-static bool intersect_scene_bvh(const scene_model* scene, const ray3f& ray_,
+static bool intersect_scene_bvh(const sceneio_scene* scene, const ray3f& ray_,
     int& instance, int& element, vec2f& uv, float& distance, bool find_any,
     bool non_rigid_frames) {
 #ifdef YOCTO_EMBREE
@@ -2157,7 +2157,7 @@ static bool intersect_scene_bvh(const scene_model* scene, const ray3f& ray_,
 }
 
 // Intersect ray with a bvh->
-static bool intersect_instance_bvh(const scene_instance* instance,
+static bool intersect_instance_bvh(const sceneio_instance* instance,
     const ray3f& ray, int& element, vec2f& uv, float& distance, bool find_any,
     bool non_rigid_frames) {
   auto inv_ray = transform_ray(inverse(instance->frame, non_rigid_frames), ray);
@@ -2165,7 +2165,7 @@ static bool intersect_instance_bvh(const scene_instance* instance,
       instance->shape, inv_ray, element, uv, distance, find_any);
 }
 
-scene_intersection intersect_scene_bvh(const scene_model* scene,
+scene_intersection intersect_scene_bvh(const sceneio_scene* scene,
     const ray3f& ray, bool find_any, bool non_rigid_frames) {
   auto intersection = scene_intersection{};
   intersection.hit  = intersect_scene_bvh(scene, ray, intersection.instance,
@@ -2173,7 +2173,7 @@ scene_intersection intersect_scene_bvh(const scene_model* scene,
       non_rigid_frames);
   return intersection;
 }
-scene_intersection intersect_instance_bvh(const scene_instance* instance,
+scene_intersection intersect_instance_bvh(const sceneio_instance* instance,
     const ray3f& ray, bool find_any, bool non_rigid_frames) {
   auto intersection = scene_intersection{};
   intersection.hit = intersect_instance_bvh(instance, ray, intersection.element,
@@ -2188,7 +2188,7 @@ scene_intersection intersect_instance_bvh(const scene_instance* instance,
 // -----------------------------------------------------------------------------
 namespace yocto {
 
-void make_cornellbox(scene_model* scene) {
+void make_cornellbox(sceneio_scene* scene) {
   scene->name      = "cornellbox";
   auto camera      = add_camera(scene);
   camera->frame    = frame3f{{1, 0, 0}, {0, 1, 0}, {0, 0, 1}, {0, 1, 3.9}};

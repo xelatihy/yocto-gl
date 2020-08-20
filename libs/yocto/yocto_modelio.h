@@ -555,4 +555,14 @@ pbrt_light*       add_light(pbrt_scene* pbrt);
 
 }  // namespace yocto
 
+// -----------------------------------------------------------------------------
+// BACKWARDS COMPATIBILITY
+// -----------------------------------------------------------------------------
+namespace yocto {
+
+using obj_model [[deprecated]]  = obj_scene;
+using pbrt_model [[deprecated]] = pbrt_scene;
+
+}  // namespace yocto
+
 #endif

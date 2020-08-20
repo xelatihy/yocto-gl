@@ -6,7 +6,7 @@ Yocto/Scene is implemented in `yocto_scene.h` and `yocto_scene.cpp`.
 
 ## Scene representation
 
-Scenes are stored in `scene_model` structs and are comprised of array
+Scenes are stored in `sceneio_scene` structs and are comprised of array
 of objects whose memory is owned by the scene.
 Scenes are comprised of camera, instances, shapes, materials, textures
 and environments. Animation is not currently supported.
@@ -23,7 +23,7 @@ Frames are presented as affine 3x4 matrices and are intended to be
 rigid transforms, although most scene processing support frames with
 scaling.
 
-**Cameras**, represented by `scene_camera`, are based on a simple lens model.
+**Cameras**, represented by `sceneio_camera`, are based on a simple lens model.
 Cameras coordinate systems are defined by their frame.
 Cameras projections are described in photographic terms. In particular,
 we specify film size (35mm by default), film aspect ration,
@@ -40,7 +40,7 @@ Common aspect ratios used in video and still photography are
 To compute good apertures, one can use the F-stop number from photography
 and set the aperture to focal length over f-stop.
 
-**Textures**, represented as `scene_texture` contain either 8-bit LDR or
+**Textures**, represented as `sceneio_texture` contain either 8-bit LDR or
 32-bit float HDR images with four channels.
 HDR images are encoded in linear color space, while LDR images
 are encoded in sRGB.
@@ -77,7 +77,7 @@ volume density, while the volume scattering albedo is defined by the
 `scattering` property.
 
 **Shapes** are represented as indexed meshes of elements using the
-`scene_shape` type. Shapes can contain only one type of element, either
+`sceneio_shape` type. Shapes can contain only one type of element, either
 points, lines, triangles or quads. Shape elements are parametrized as in
 [Yocto/Geometry](yocto_geometry.md).
 Vertex properties are defined as separate arrays and include
@@ -97,13 +97,13 @@ shapes have to be tessellated, as shown later.
 
 Shapes are placed in the scene by defining shape **instances** that
 take a coordinate frame, a shape pointer and a material pointer.
-Instances are represented by the `scene_instance` type.
-Instances are represented as `scene_instance` objects. Thought the
+Instances are represented by the `sceneio_instance` type.
+Instances are represented as `sceneio_instance` objects. Thought the
 use of instancing Yocto/Scene scales well to large environments without
 introducing more complex mechanisms.
 
 Scenes might be lit by background illumination defined by **environments**,
-represented by the `scene_environment` type. Environments have a frame,
+represented by the `sceneio_environment` type. Environments have a frame,
 to rotate illumination, an emission term and an optional emission texture.
 The emission texture is an HDR environment map stored in a LatLon
 parametrization.
@@ -123,7 +123,7 @@ photographic lens parameters, and `set_focus(camera, aperture, focus)` to set
 the camera aperture and focus distance.
 
 ```cpp
-auto scene = new scene_model{};          // create a scene
+auto scene = new sceneio_scene{};          // create a scene
 auto camera = add_camera(scene, "cam");  // create a camera named cam
 set_frame(camera,identity3x4f);          // set frame to identity
 set_lens(camera,0.050,1.5,0.036);     // set as 50mm lens 3:2 aspect on 35mm
@@ -138,7 +138,7 @@ shapes is common in simpler scenes, the function
 material.
 
 ```cpp
-auto scene = new scene_model{};             // create a scene
+auto scene = new sceneio_scene{};             // create a scene
 auto instance = add_instance(scene, "ist"); // create an instance named ist
 set_frame(instance,identity3x4f);           // set frame to identity
 auto shape = add_shape(scene, "shp");
@@ -156,7 +156,7 @@ to the specified image. The function has overloads for images with
 one or three channels and with float or byte channel types.
 
 ```cpp
-auto scene = new scene_model{};             // create a scene
+auto scene = new sceneio_scene{};             // create a scene
 auto texture = add_texture(scene, "tex");   // create a texture named tex
 set_texture(texture,image<vec4f>{...});     // set as a HDR texture
 set_texture(texture,image<vec4b>{...});     // set as a LDR texture
@@ -176,7 +176,7 @@ for specular, metallic and transmission weights,
 `set_thin(material, thin)` for the thin flag.
 
 ```cpp
-auto scene = new scene_model{};               // create a scene
+auto scene = new sceneio_scene{};               // create a scene
 auto matte = add_texture(scene, "matte");     // create a matte material
 set_color(matte, {1,0.5,0.5}, add_texture(scene)); // textured albedo
 auto plastic = add_texture(scene, "plastic"); // create a plastic material
@@ -216,7 +216,7 @@ to set positions, normals, texture coordinates, colors, radius and
 tangent spaces respectively.
 
 ```cpp
-auto scene = new scene_model{};             // create a scene
+auto scene = new sceneio_scene{};             // create a scene
 auto shape = add_shape(scene, "shp");       // create a shape named shp
 set_triangles(shape, vector<vec3i>{...});   // set triangle indices
 set_positions(shape, vector<vec3f>{...});   // set positions
@@ -231,7 +231,7 @@ to set the subdivision level and whether to use Catmull-Clark or linear
 subdivision.
 
 ```cpp
-auto scene = new scene_model{};             // create a scene
+auto scene = new sceneio_scene{};             // create a scene
 auto shape = add_shape(scene, "shp");       // create a shape named shp
 set_fvquads(shape, vector<vec4i>{...},      // set face-varying indices
   {}, vector<vec4i>{...});                  // for positions and textures
@@ -246,7 +246,7 @@ world frame, `set_emission(instance, emission, emission_tex)` to set the
 environment emission and emission texture.
 
 ```cpp
-auto scene = new scene_model{};             // create a scene
+auto scene = new sceneio_scene{};             // create a scene
 auto environment = add_environment(scene, "env"); // create an environment
 set_frame(environment, identity3x4f);       // set identity transform
 auto tex = add_scene(scene, "sky");         // add hdr texture
@@ -261,7 +261,7 @@ to add points and lines thickness for rendering, and `add_sky(scene)` to
 add a procedural sky environment map.
 
 ```cpp
-auto scene = new scene_model{};       // create a scene
+auto scene = new sceneio_scene{};       // create a scene
 auto shape = add_shape(scene);        // add a shape
 auto instance = add_instance(scene);  // add a shape instance
 set_shape(instance,shape);
@@ -278,7 +278,7 @@ given. Use `eval_camera(camera, image_uv, lens_uv)` to get a camera ray
 from the normalized image coordinates `image_uv` and lens coordinates `lens_uv`.
 
 ```cpp
-auto scene = new scene_model{...};             // create a complete scene
+auto scene = new sceneio_scene{...};             // create a complete scene
 auto camera = get_camera(scene);               // get default camera
 auto ray = eval_camera(camera,{0.5,0.5},{0,0});// get ray though image center
 ```
@@ -289,7 +289,7 @@ Textures evaluation returns a color in linear color space, regardless of
 the texture representation.
 
 ```cpp
-auto scene = new scene_model{...};             // create a complete scene
+auto scene = new sceneio_scene{...};             // create a complete scene
 auto texture = scene->textures.front();         // get first texture
 auto col = eval_texture(texture,{0.5,0.5});    // eval texture
 ```
@@ -300,7 +300,7 @@ combine them with parameter values. The function returns a
 textures defined.
 
 ```cpp
-auto scene = new scene_model{...};             // create a complete scene
+auto scene = new sceneio_scene{...};             // create a complete scene
 auto material = scene->materials.front();      // get first material
 auto mat = eval_texture(material,{0.5,0.5});   // eval material
 ```
@@ -316,7 +316,7 @@ Use `eval_position(...)` to evaluate the point position,
 Use `eval_material(...)` as a convenience function to evaluate material properties of instance points.
 
 ```cpp
-auto scene = new scene_model{...};             // create a complete scene
+auto scene = new sceneio_scene{...};             // create a complete scene
 auto instance = scene->instances.front();      // get first instance
 auto eid = 0; auto euv = vec3f{0.5,0.5};       // element id and uvs
 auto pos  = eval_position(instance, eid, euv); // eval point position
@@ -333,7 +333,7 @@ map emission along a specific direction `direction`. Use
 environment maps.
 
 ```cpp
-auto scene = new scene_model{...};               // create a complete scene
+auto scene = new sceneio_scene{...};               // create a complete scene
 auto enva = eval_environment(scene, dir);        // eval all environments
 auto environment = scene->environments.front();  // get first environment
 auto envi = eval_environment(environment, dir);  // eval environment
@@ -351,7 +351,7 @@ After initialization, if scene shapes and instances are modified, the BVH
 can be updated with `update_bvh(...)`.
 
 ```cpp
-auto scene = new scene_model{...};               // create a complete scene
+auto scene = new sceneio_scene{...};               // create a complete scene
 auto params = scene_bvh_params{};                // default params
 auto progress = [](const string& message,        // progress callback
    int current, int total) {
@@ -369,7 +369,7 @@ a hit flag, the instance id, the shape element id, the shape element uv
 and intersection distance.
 
 ```cpp
-auto scene = new scene_model{...};          // create a complete scene
+auto scene = new sceneio_scene{...};          // create a complete scene
 init_bvh(scene, {});                        // build default bvh
 auto ray = ray3f{...};                      // ray
 auto isec = intersect_scene_bvh(scene, ray);// ray-scene intersection
@@ -389,7 +389,7 @@ whole scene. Note that tesselations are destructive, meaning that the original
 shape data is lost. This is done to avoid copying whenever possible.
 
 ```cpp
-auto scene = new scene_model{...};          // create a complete scene
+auto scene = new sceneio_scene{...};          // create a complete scene
 void tesselate_shapes(scene);               // tesselate shapes in the scene
 ```
 
@@ -400,7 +400,7 @@ scene data. Use `scene_stats(scene)` to get scene stats and
 `scene_validation(scene)` to validate scene objects.
 
 ```cpp
-auto scene = new scene_model{...};          // create a complete scene
+auto scene = new sceneio_scene{...};          // create a complete scene
 auto stats = scene_stats(scene);            // get stats
 for(auto stat : stats) print_info(stat);    // print stats
 auto errors = validate_stats(scene);        // get validation errors
@@ -413,6 +413,6 @@ Yocto/Scene has a function to create a simple Cornell Box scene for testing.
 There are plans to increase support for more test scenes in the future.
 
 ```cpp
-auto scene = new scene_model{...};          // create a complete scene
+auto scene = new sceneio_scene{...};          // create a complete scene
 make_cornellbox(scene);                     // make cornell box
 ```

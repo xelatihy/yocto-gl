@@ -103,7 +103,7 @@ struct scene_bvh {
 // 2.4:1  on 35 mm:  0.036 x 0.015   or 0.05760 x 0.024 (approx. 2.39 : 1)
 // To compute good apertures, one can use the F-stop number from photography
 // and set the aperture to focal length over f-stop.
-struct scene_camera {
+struct sceneio_camera {
   string  name         = "";
   frame3f frame        = identity3x4f;
   bool    orthographic = false;
@@ -116,7 +116,7 @@ struct scene_camera {
 
 // Texture containing either an LDR or HDR image. HdR images are encoded
 // in linear color space, while LDRs are encoded as sRGB.
-struct scene_texture {
+struct sceneio_texture {
   string       name = "";
   image<vec4f> hdr  = {};
   image<vec4b> ldr  = {};
@@ -126,7 +126,7 @@ struct scene_texture {
 // For surfaces, uses a microfacet model with thin sheet transmission.
 // The model is based on OBJ, but contains glTF compatibility.
 // For the documentation on the values, please see the OBJ format.
-struct scene_material {
+struct sceneio_material {
   // material data
   string name = "";
 
@@ -148,25 +148,25 @@ struct scene_material {
   bool  thin         = true;
 
   // textures
-  scene_texture* emission_tex     = nullptr;
-  scene_texture* color_tex        = nullptr;
-  scene_texture* specular_tex     = nullptr;
-  scene_texture* metallic_tex     = nullptr;
-  scene_texture* roughness_tex    = nullptr;
-  scene_texture* transmission_tex = nullptr;
-  scene_texture* translucency_tex = nullptr;
-  scene_texture* spectint_tex     = nullptr;
-  scene_texture* scattering_tex   = nullptr;
-  scene_texture* coat_tex         = nullptr;
-  scene_texture* opacity_tex      = nullptr;
-  scene_texture* normal_tex       = nullptr;
+  sceneio_texture* emission_tex     = nullptr;
+  sceneio_texture* color_tex        = nullptr;
+  sceneio_texture* specular_tex     = nullptr;
+  sceneio_texture* metallic_tex     = nullptr;
+  sceneio_texture* roughness_tex    = nullptr;
+  sceneio_texture* transmission_tex = nullptr;
+  sceneio_texture* translucency_tex = nullptr;
+  sceneio_texture* spectint_tex     = nullptr;
+  sceneio_texture* scattering_tex   = nullptr;
+  sceneio_texture* coat_tex         = nullptr;
+  sceneio_texture* opacity_tex      = nullptr;
+  sceneio_texture* normal_tex       = nullptr;
 };
 
 // Shape data represented as indexed meshes of elements.
 // May contain either points, lines, triangles and quads.
 // Additionally, we support face-varying primitives where
 // each vertex data has its own topology.
-struct scene_shape {
+struct sceneio_shape {
   // shape data
   string name = "";
 
@@ -196,7 +196,7 @@ struct scene_shape {
 
   // displacement data [experimental]
   float          displacement     = 0;
-  scene_texture* displacement_tex = nullptr;
+  sceneio_texture* displacement_tex = nullptr;
 
   // computed properties
   scene_bvh* bvh = nullptr;
@@ -208,24 +208,24 @@ struct scene_shape {
   vector<float> elements_cdf = {};
 
   // cleanup
-  ~scene_shape();
+  ~sceneio_shape();
 };
 
 // Object.
-struct scene_instance {
+struct sceneio_instance {
   // instance data
   string          name     = "";
   frame3f         frame    = identity3x4f;
-  scene_shape*    shape    = nullptr;
-  scene_material* material = nullptr;
+  sceneio_shape*    shape    = nullptr;
+  sceneio_material* material = nullptr;
 };
 
 // Environment map.
-struct scene_environment {
+struct sceneio_environment {
   string         name         = "";
   frame3f        frame        = identity3x4f;
   vec3f          emission     = {0, 0, 0};
-  scene_texture* emission_tex = nullptr;
+  sceneio_texture* emission_tex = nullptr;
 
   // computed properties
   vector<float> texels_cdf = {};
@@ -233,8 +233,8 @@ struct scene_environment {
 
 // Scene lights used during rendering. These are created automatically.
 struct scene_light {
-  scene_instance*    instance    = nullptr;
-  scene_environment* environment = nullptr;
+  sceneio_instance*    instance    = nullptr;
+  sceneio_environment* environment = nullptr;
 };
 
 // Scene comprised an array of objects whose memory is owened by the scene.
@@ -244,14 +244,14 @@ struct scene_light {
 // environment. In that case, the element transforms are computed from
 // the hierarchy. Animation is also optional, with keyframe data that
 // updates node transformations only if defined.
-struct scene_model {
+struct sceneio_scene {
   // scene elements
-  vector<scene_camera*>      cameras      = {};
-  vector<scene_instance*>    instances    = {};
-  vector<scene_environment*> environments = {};
-  vector<scene_shape*>       shapes       = {};
-  vector<scene_texture*>     textures     = {};
-  vector<scene_material*>    materials    = {};
+  vector<sceneio_camera*>    cameras      = {};
+  vector<sceneio_instance*>    instances    = {};
+  vector<sceneio_environment*> environments = {};
+  vector<sceneio_shape*>       shapes       = {};
+  vector<sceneio_texture*>     textures     = {};
+  vector<sceneio_material*>    materials    = {};
 
   // additional information
   string name      = "";
@@ -265,7 +265,7 @@ struct scene_model {
 #endif
 
   // cleanup
-  ~scene_model();
+  ~sceneio_scene();
 };
 
 }  // namespace yocto
@@ -276,93 +276,94 @@ struct scene_model {
 namespace yocto {
 
 // add element to a scene
-scene_camera*      add_camera(scene_model* scene, const string& name = "");
-scene_environment* add_environment(scene_model* scene, const string& name = "");
-scene_instance*    add_instance(scene_model* scene, const string& name = "");
-scene_material*    add_material(scene_model* scene, const string& name = "");
-scene_shape*       add_shape(scene_model* scene, const string& name = "");
-scene_texture*     add_texture(scene_model* scene, const string& name = "");
-scene_instance*    add_complete_instance(
-       scene_model* scene, const string& name = "");
+sceneio_camera*    add_camera(sceneio_scene* scene, const string& name = "");
+sceneio_environment* add_environment(
+    sceneio_scene* scene, const string& name = "");
+sceneio_instance* add_instance(sceneio_scene* scene, const string& name = "");
+sceneio_material* add_material(sceneio_scene* scene, const string& name = "");
+sceneio_shape*    add_shape(sceneio_scene* scene, const string& name = "");
+sceneio_texture*  add_texture(sceneio_scene* scene, const string& name = "");
+sceneio_instance* add_complete_instance(
+    sceneio_scene* scene, const string& name = "");
 
 // set camera properties
-void set_frame(scene_camera* camera, const frame3f& frame);
-void set_lens(scene_camera* camera, float lens, float aspect, float film,
+void set_frame(sceneio_camera* camera, const frame3f& frame);
+void set_lens(sceneio_camera* camera, float lens, float aspect, float film,
     bool ortho = false);
-void set_focus(scene_camera* camera, float aperture, float focus);
+void set_focus(sceneio_camera* camera, float aperture, float focus);
 
 // set instance properties
-void set_frame(scene_instance* instance, const frame3f& frame);
-void set_material(scene_instance* instance, scene_material* material);
-void set_shape(scene_instance* instance, scene_shape* shape);
+void set_frame(sceneio_instance* instance, const frame3f& frame);
+void set_material(sceneio_instance* instance, sceneio_material* material);
+void set_shape(sceneio_instance* instance, sceneio_shape* shape);
 
 // set texture properties
-void set_texture(scene_texture* texture, const image<vec4b>& img);
-void set_texture(scene_texture* texture, const image<vec4f>& img);
+void set_texture(sceneio_texture* texture, const image<vec4b>& img);
+void set_texture(sceneio_texture* texture, const image<vec4f>& img);
 
 // set material properties
-void set_emission(scene_material* material, const vec3f& emission,
-    scene_texture* emission_tex = nullptr);
-void set_color(scene_material* material, const vec3f& color,
-    scene_texture* color_tex = nullptr);
-void set_specular(scene_material* material, float specular = 1,
-    scene_texture* specular_tex = nullptr);
-void set_ior(scene_material* material, float ior);
-void set_metallic(scene_material* material, float metallic,
-    scene_texture* metallic_tex = nullptr);
-void set_transmission(scene_material* material, float transmission, bool thin,
-    float trdepth, scene_texture* transmission_tex = nullptr);
-void set_translucency(scene_material* material, float translucency, bool thin,
-    float trdepth, scene_texture* translucency_tex = nullptr);
-void set_roughness(scene_material* material, float roughness,
-    scene_texture* roughness_tex = nullptr);
-void set_opacity(scene_material* material, float opacity,
-    scene_texture* opacity_tex = nullptr);
-void set_thin(scene_material* material, bool thin);
-void set_scattering(scene_material* material, const vec3f& scattering,
-    float scanisotropy, scene_texture* scattering_tex = nullptr);
-void set_normalmap(scene_material* material, scene_texture* normal_tex);
+void set_emission(sceneio_material* material, const vec3f& emission,
+    sceneio_texture* emission_tex = nullptr);
+void set_color(sceneio_material* material, const vec3f& color,
+    sceneio_texture* color_tex = nullptr);
+void set_specular(sceneio_material* material, float specular = 1,
+    sceneio_texture* specular_tex = nullptr);
+void set_ior(sceneio_material* material, float ior);
+void set_metallic(sceneio_material* material, float metallic,
+    sceneio_texture* metallic_tex = nullptr);
+void set_transmission(sceneio_material* material, float transmission, bool thin,
+    float trdepth, sceneio_texture* transmission_tex = nullptr);
+void set_translucency(sceneio_material* material, float translucency, bool thin,
+    float trdepth, sceneio_texture* translucency_tex = nullptr);
+void set_roughness(sceneio_material* material, float roughness,
+    sceneio_texture* roughness_tex = nullptr);
+void set_opacity(sceneio_material* material, float opacity,
+    sceneio_texture* opacity_tex = nullptr);
+void set_thin(sceneio_material* material, bool thin);
+void set_scattering(sceneio_material* material, const vec3f& scattering,
+    float scanisotropy, sceneio_texture* scattering_tex = nullptr);
+void set_normalmap(sceneio_material* material, sceneio_texture* normal_tex);
 
 // set shape properties
-void set_points(scene_shape* shape, const vector<int>& points);
-void set_lines(scene_shape* shape, const vector<vec2i>& lines);
-void set_triangles(scene_shape* shape, const vector<vec3i>& triangles);
-void set_quads(scene_shape* shape, const vector<vec4i>& quads);
-void set_fvquads(scene_shape* shape, const vector<vec4i>& quadspos,
+void set_points(sceneio_shape* shape, const vector<int>& points);
+void set_lines(sceneio_shape* shape, const vector<vec2i>& lines);
+void set_triangles(sceneio_shape* shape, const vector<vec3i>& triangles);
+void set_quads(sceneio_shape* shape, const vector<vec4i>& quads);
+void set_fvquads(sceneio_shape* shape, const vector<vec4i>& quadspos,
     const vector<vec4i>& quadsnorm, const vector<vec4i>& quadstexcoord);
-void set_positions(scene_shape* shape, const vector<vec3f>& positions);
-void set_normals(scene_shape* shape, const vector<vec3f>& normals);
-void set_texcoords(scene_shape* shape, const vector<vec2f>& texcoords);
-void set_colors(scene_shape* shape, const vector<vec4f>& colors);
-void set_radius(scene_shape* shape, const vector<float>& radius);
-void set_tangents(scene_shape* shape, const vector<vec4f>& tangents);
-void set_subdivision(scene_shape* shape, int subdivisions, bool catmullclark,
+void set_positions(sceneio_shape* shape, const vector<vec3f>& positions);
+void set_normals(sceneio_shape* shape, const vector<vec3f>& normals);
+void set_texcoords(sceneio_shape* shape, const vector<vec2f>& texcoords);
+void set_colors(sceneio_shape* shape, const vector<vec4f>& colors);
+void set_radius(sceneio_shape* shape, const vector<float>& radius);
+void set_tangents(sceneio_shape* shape, const vector<vec4f>& tangents);
+void set_subdivision(sceneio_shape* shape, int subdivisions, bool catmullclark,
     bool smooth = true);
 void set_displacement(
-    scene_shape* shape, float displacement, scene_texture* displacement_tex);
+    sceneio_shape* shape, float displacement, sceneio_texture* displacement_tex);
 
 // set environment properties
-void set_frame(scene_environment* environment, const frame3f& frame);
-void set_emission(scene_environment* environment, const vec3f& emission,
-    scene_texture* emission_tex = nullptr);
+void set_frame(sceneio_environment* environment, const frame3f& frame);
+void set_emission(sceneio_environment* environment, const vec3f& emission,
+    sceneio_texture* emission_tex = nullptr);
 
 // add missing elements
-void add_cameras(scene_model* scene);
-void add_radius(scene_model* scene, float radius = 0.001f);
-void add_materials(scene_model* scene);
-void add_sky(scene_model* scene, float sun_angle = pif / 4);
+void add_cameras(sceneio_scene* scene);
+void add_radius(sceneio_scene* scene, float radius = 0.001f);
+void add_materials(sceneio_scene* scene);
+void add_sky(sceneio_scene* scene, float sun_angle = pif / 4);
 
 // Trim all unused memory
-void trim_memory(scene_model* scene);
+void trim_memory(sceneio_scene* scene);
 
 // Clone a scene
-void clone_scene(scene_model* dest, const scene_model* scene);
+void clone_scene(sceneio_scene* dest, const sceneio_scene* scene);
 
 // compute scene bounds
-bbox3f compute_bounds(const scene_model* scene);
+bbox3f compute_bounds(const sceneio_scene* scene);
 
 // get named camera or default if name is empty
-scene_camera* get_camera(const scene_model* scene, const string& name = "");
+sceneio_camera* get_camera(const sceneio_scene* scene, const string& name = "");
 
 }  // namespace yocto
 
@@ -373,35 +374,35 @@ namespace yocto {
 
 // Generates a ray from a camera.
 ray3f eval_camera(
-    const scene_camera* camera, const vec2f& image_uv, const vec2f& lens_uv);
+    const sceneio_camera* camera, const vec2f& image_uv, const vec2f& lens_uv);
 
 // Evaluates a texture
-vec2i texture_size(const scene_texture* texture);
+vec2i texture_size(const sceneio_texture* texture);
 vec4f lookup_texture(
-    const scene_texture* texture, const vec2i& ij, bool ldr_as_linear = false);
-vec4f eval_texture(const scene_texture* texture, const vec2f& uv,
+    const sceneio_texture* texture, const vec2i& ij, bool ldr_as_linear = false);
+vec4f eval_texture(const sceneio_texture* texture, const vec2f& uv,
     bool ldr_as_linear = false, bool no_interpolation = false,
     bool clamp_to_edge = false);
 
 // Evaluate instance properties
 vec3f eval_position(
-    const scene_instance* instance, int element, const vec2f& uv);
-vec3f eval_element_normal(const scene_instance* instance, int element);
-vec3f eval_normal(const scene_instance* instance, int element, const vec2f& uv);
+    const sceneio_instance* instance, int element, const vec2f& uv);
+vec3f eval_element_normal(const sceneio_instance* instance, int element);
+vec3f eval_normal(const sceneio_instance* instance, int element, const vec2f& uv);
 vec2f eval_texcoord(
-    const scene_instance* instance, int element, const vec2f& uv);
+    const sceneio_instance* instance, int element, const vec2f& uv);
 pair<vec3f, vec3f> eval_element_tangents(
-    const scene_instance* instance, int element);
+    const sceneio_instance* instance, int element);
 vec3f eval_normalmap(
-    const scene_instance* instance, int element, const vec2f& uv);
-vec3f eval_shading_normal(const scene_instance* instance, int element,
+    const sceneio_instance* instance, int element, const vec2f& uv);
+vec3f eval_shading_normal(const sceneio_instance* instance, int element,
     const vec2f& uv, const vec3f& outgoing);
-vec4f eval_color(const scene_instance* instance, int element, const vec2f& uv);
+vec4f eval_color(const sceneio_instance* instance, int element, const vec2f& uv);
 
 // Environment
 vec3f eval_environment(
-    const scene_environment* environment, const vec3f& direction);
-vec3f eval_environment(const scene_model* scene, const vec3f& direction);
+    const sceneio_environment* environment, const vec3f& direction);
+vec3f eval_environment(const sceneio_scene* scene, const vec3f& direction);
 
 // Material sample
 struct scene_material_sample {
@@ -425,7 +426,7 @@ struct scene_material_sample {
 
 // Evaluates material and textures
 scene_material_sample eval_material(
-    const scene_material* material, const vec2f& texcoord);
+    const sceneio_material* material, const vec2f& texcoord);
 
 // Material Bsdf parameters
 struct scene_bsdf {
@@ -452,12 +453,12 @@ struct scene_bsdf {
 };
 
 // Eval material to obtain emission, brdf and opacity.
-vec3f eval_emission(const scene_instance* instance, int element,
+vec3f eval_emission(const sceneio_instance* instance, int element,
     const vec2f& uv, const vec3f& normal, const vec3f& outgoing);
 // Eval material to obatain emission, brdf and opacity.
-scene_bsdf eval_bsdf(const scene_instance* instance, int element,
+scene_bsdf eval_bsdf(const sceneio_instance* instance, int element,
     const vec2f& uv, const vec3f& normal, const vec3f& outgoing);
-float eval_opacity(const scene_instance* instance, int element, const vec2f& uv,
+float eval_opacity(const sceneio_instance* instance, int element, const vec2f& uv,
     const vec3f& normal, const vec3f& outgoing);
 // check if a brdf is a delta
 bool is_delta(const scene_bsdf& bsdf);
@@ -470,10 +471,10 @@ struct scene_vsdf {
 };
 
 // check if we have a volume
-bool has_volume(const scene_instance* instance);
+bool has_volume(const sceneio_instance* instance);
 // evaluate volume
 scene_vsdf eval_vsdf(
-    const scene_instance* instance, int element, const vec2f& uv);
+    const sceneio_instance* instance, int element, const vec2f& uv);
 
 }  // namespace yocto
 
@@ -506,13 +507,13 @@ using progress_callback =
     function<void(const string& message, int current, int total)>;
 
 // Build the bvh acceleration structure.
-void init_bvh(scene_model* scene, const scene_bvh_params& params,
+void init_bvh(sceneio_scene* scene, const scene_bvh_params& params,
     progress_callback progress_cb = {});
 
 // Refit bvh data
-void update_bvh(scene_model*       scene,
-    const vector<scene_instance*>& updated_objects,
-    const vector<scene_shape*>& updated_shapes, const scene_bvh_params& params);
+void update_bvh(sceneio_scene*     scene,
+    const vector<sceneio_instance*>& updated_objects,
+    const vector<sceneio_shape*>& updated_shapes, const scene_bvh_params& params);
 
 // Results of intersect functions that include hit flag, the instance id,
 // the shape element id, the shape element uv and intersection distance.
@@ -528,9 +529,9 @@ struct scene_intersection {
 // Intersect ray with a bvh returning either the first or any intersection
 // depending on `find_any`. Returns the ray distance , the instance id,
 // the shape element index and the element barycentric coordinates.
-scene_intersection intersect_scene_bvh(const scene_model* scene,
+scene_intersection intersect_scene_bvh(const sceneio_scene* scene,
     const ray3f& ray, bool find_any = false, bool non_rigid_frames = true);
-scene_intersection intersect_instance_bvh(const scene_instance* instance,
+scene_intersection intersect_instance_bvh(const sceneio_instance* instance,
     const ray3f& ray, bool find_any = false, bool non_rigid_frames = true);
 
 }  // namespace yocto
@@ -541,7 +542,7 @@ scene_intersection intersect_instance_bvh(const scene_instance* instance,
 namespace yocto {
 
 // Make Cornell Box scene
-void make_cornellbox(scene_model* scene);
+void make_cornellbox(sceneio_scene* scene);
 
 }  // namespace yocto
 
@@ -551,10 +552,10 @@ void make_cornellbox(scene_model* scene);
 namespace yocto {
 
 // Return scene statistics as list of strings.
-vector<string> scene_stats(const scene_model* scene, bool verbose = false);
+vector<string> scene_stats(const sceneio_scene* scene, bool verbose = false);
 // Return validation errors as list of strings.
 vector<string> scene_validation(
-    const scene_model* scene, bool notextures = false);
+    const sceneio_scene* scene, bool notextures = false);
 
 }  // namespace yocto
 
@@ -564,8 +565,23 @@ vector<string> scene_validation(
 namespace yocto {
 
 // Apply subdivision and displacement rules.
-void tesselate_shapes(scene_model* scene, progress_callback progress_cb = {});
-void tesselate_shape(scene_shape* shape);
+void tesselate_shapes(sceneio_scene* scene, progress_callback progress_cb = {});
+void tesselate_shape(sceneio_shape* shape);
+
+}  // namespace yocto
+
+// -----------------------------------------------------------------------------
+// BACKWARDS COMPATIBILITY
+// -----------------------------------------------------------------------------
+namespace yocto {
+
+using scene_model [[deprecated]] = sceneio_scene;
+using scene_camera [[deprecated]] = sceneio_camera;
+using scene_texture [[deprecated]] = sceneio_texture;
+using scene_material [[deprecated]] = sceneio_material;
+using scene_shape [[deprecated]] = sceneio_shape;
+using scene_instance [[deprecated]] = sceneio_instance;
+using scene_environment [[deprecated]] = sceneio_environment;
 
 }  // namespace yocto
 

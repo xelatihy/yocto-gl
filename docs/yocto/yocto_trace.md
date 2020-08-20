@@ -41,7 +41,7 @@ function used to report partial images during rendering.
 Both callback functions are optional.
 
 ```cpp
-auto scene = new scene_model{...};        // initialize scene
+auto scene = new sceneio_scene{...};        // initialize scene
 auto params = trace_params{};             // default params
 auto progress = [](const string& message, // progress callback
       int current, int total) {
@@ -131,7 +131,7 @@ To update the BVH, use `update_bvh(scene, instances, shapes, params)` where
 `instances` and `shapes` are the list of modified ids.
 
 ```cpp
-auto scene = new scene_model{...};        // initialize scene
+auto scene = new sceneio_scene{...};        // initialize scene
 auto params = trace_params{};             // default params
 init_bvh(scene, params, progress);        // init bvh
 init_lights(scene, params, progress);     // init lights
