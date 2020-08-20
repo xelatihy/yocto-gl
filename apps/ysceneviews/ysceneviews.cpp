@@ -299,7 +299,7 @@ int main(int argc, const char* argv[]) {
         dolly = (input.mouse_pos.x - input.mouse_last.x) / 100.0f;
       if (input.mouse_left && input.modifier_shift)
         pan = (input.mouse_pos - input.mouse_last) / 100.0f;
-      update_turntable(
+      std::tie(app->iocamera->frame, app->iocamera->focus) = camera_turntable(
           app->iocamera->frame, app->iocamera->focus, rotate, dolly, pan);
       set_frame(app->glcamera, app->iocamera->frame);
     }

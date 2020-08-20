@@ -541,7 +541,7 @@ void draw_widgets(gui_window* win, app_states* apps, const gui_input& input) {
       if (draw_button(win, "print stats")) {
         for (auto stat : scene_stats(app->ioscene)) print_info(stat);
       }
-      auto ij = get_image_coords(input.mouse_pos, app->glparams.center,
+      auto ij = image_coords(input.mouse_pos, app->glparams.center,
           app->glparams.scale, app->render.imsize());
       draw_dragger(win, "mouse", ij);
       if (ij.x >= 0 && ij.x < app->render.width() && ij.y >= 0 &&
@@ -692,8 +692,9 @@ void draw(gui_window* win, app_states* apps, const gui_input& input) {
   app->glparams.framebuffer = input.framebuffer_viewport;
   if (!is_initialized(app->glimage)) init_image(app->glimage);
   if (!app->render_counter) set_image(app->glimage, app->display, false, false);
-  update_imview(app->glparams.center, app->glparams.scale,
-      app->display.imsize(), app->glparams.window, app->glparams.fit);
+  std::tie(app->glparams.center, app->glparams.scale) = camera_imview(
+      app->glparams.center, app->glparams.scale, app->display.imsize(),
+      app->glparams.window, app->glparams.fit);
   draw_image(app->glimage, app->glparams);
   app->render_counter++;
   if (app->render_counter > 10) app->render_counter = 0;
@@ -792,7 +793,7 @@ int main(int argc, const char* argv[]) {
               200.0f;
       pan.x = -pan.x;
       stop_display(app);
-      update_turntable(
+      std::tie(app->iocamera->frame, app->iocamera->focus) = camera_turntable(
           app->iocamera->frame, app->iocamera->focus, rotate, dolly, pan);
       set_frame(app->camera, app->iocamera->frame);
       set_lens(app->camera, app->iocamera->lens, app->iocamera->aspect,
@@ -804,7 +805,7 @@ int main(int argc, const char* argv[]) {
     // selection
     if ((input.mouse_left || input.mouse_right) && input.modifier_alt &&
         !input.widgets_active) {
-      auto ij = get_image_coords(input.mouse_pos, app->glparams.center,
+      auto ij = image_coords(input.mouse_pos, app->glparams.center,
           app->glparams.scale, app->render.imsize());
       if (ij.x >= 0 && ij.x < app->render.width() && ij.y >= 0 &&
           ij.y < app->render.height()) {

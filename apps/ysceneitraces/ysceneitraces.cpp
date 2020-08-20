@@ -302,8 +302,9 @@ int main(int argc, const char* argv[]) {
       set_image(app->glimage, app->display, false, false);
     app->glparams.window      = input.window_size;
     app->glparams.framebuffer = input.framebuffer_viewport;
-    update_imview(app->glparams.center, app->glparams.scale,
-        app->display.imsize(), app->glparams.window, app->glparams.fit);
+    std::tie(app->glparams.center, app->glparams.scale) = camera_imview(
+        app->glparams.center, app->glparams.scale, app->display.imsize(),
+        app->glparams.window, app->glparams.fit);
     draw_image(app->glimage, app->glparams);
     app->render_counter++;
     if (app->render_counter > 10) app->render_counter = 0;
@@ -371,8 +372,8 @@ int main(int argc, const char* argv[]) {
       if (input.mouse_left && input.modifier_shift)
         pan = (input.mouse_pos - input.mouse_last) * app->camera->focus /
               200.0f;
-      pan.x = -pan.x;
-      update_turntable(
+      pan.x                                            = -pan.x;
+      std::tie(app->camera->frame, app->camera->focus) = camera_turntable(
           app->camera->frame, app->camera->focus, rotate, dolly, pan);
       reset_display(app);
     }

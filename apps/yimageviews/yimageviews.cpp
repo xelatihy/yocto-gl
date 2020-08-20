@@ -101,8 +101,9 @@ int main(int argc, const char* argv[]) {
       init_image(app->glimage);
       set_image(app->glimage, app->display, false, false);
     }
-    update_imview(app->glparams.center, app->glparams.scale,
-        app->display.imsize(), app->glparams.window, app->glparams.fit);
+    std::tie(app->glparams.center, app->glparams.scale) = camera_imview(
+        app->glparams.center, app->glparams.scale, app->display.imsize(),
+        app->glparams.window, app->glparams.fit);
     draw_image(app->glimage, app->glparams);
   };
   callbacks.widgets_cb = [app](gui_window* win, const gui_input& input) {
@@ -137,7 +138,7 @@ int main(int argc, const char* argv[]) {
     if (begin_header(win, "inspect")) {
       draw_slider(win, "zoom", app->glparams.scale, 0.1, 10);
       draw_checkbox(win, "fit", app->glparams.fit);
-      auto ij = get_image_coords(input.mouse_pos, app->glparams.center,
+      auto ij = image_coords(input.mouse_pos, app->glparams.center,
           app->glparams.scale, app->source.imsize());
       draw_dragger(win, "mouse", ij);
       auto img_pixel = zero4f, display_pixel = zero4f;
