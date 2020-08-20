@@ -543,7 +543,10 @@ void draw_object(
   if (instance->hidden) return;
 
   assert_ogl_error();
-  auto program         = scene->lights_program;
+  auto program = (params.shading == gui_shading_type::environment)
+                     ? scene->ibl_program
+                     : scene->lights_program;
+  
   auto shape_xform     = frame_to_mat(instance->frame);
   auto shape_inv_xform = transpose(
       frame_to_mat(inverse(instance->frame, params.non_rigid_frames)));
@@ -641,24 +644,24 @@ void draw_scene(gui_scene* scene, gui_camera* camera, const vec4i& viewport,
   set_ogl_viewport(viewport);
 
   assert_ogl_error();
-  bind_program(scene->lights_program);
+  auto program = (params.shading == gui_shading_type::environment)
+                     ? scene->ibl_program
+                     : scene->lights_program;
+    
+  bind_program(program);
   assert_ogl_error();
-  set_uniform(scene->lights_program, "eye", camera->frame.o);
-  set_uniform(scene->lights_program, "view", camera_view);
-  set_uniform(scene->lights_program, "projection", camera_proj);
-  set_uniform(scene->lights_program, "eyelight",
-      params.shading == gui_shading_type::eyelight ? 1 : 0);
-  set_uniform(scene->lights_program, "exposure", params.exposure);
-  set_uniform(scene->lights_program, "gamma", params.gamma);
+  set_uniform(program, "eye", camera->frame.o);
+  set_uniform(program, "view", camera_view);
+  set_uniform(program, "projection", camera_proj);
+  set_uniform(program, "exposure", params.exposure);
+  set_uniform(program, "gamma", params.gamma);
   assert_ogl_error();
 
-  if (params.shading == gui_shading_type::lights ||
-      params.shading == gui_shading_type::camlights) {
+  if (params.shading == gui_shading_type::eyelight) {
     assert_ogl_error();
-    auto& lights = params.shading == gui_shading_type::lights ? scene->lights
-                                                              : camera_lights;
-    set_uniform(scene->lights_program, "lamb", vec3f{0, 0, 0});
-    set_uniform(scene->lights_program, "lnum", (int)lights.size());
+    auto& lights = camera_lights;
+    set_uniform(program, "lamb", vec3f{0, 0, 0});
+    set_uniform(program, "lnum", (int)lights.size());
     auto lid = 0;
     for (auto light : lights) {
       auto is = std::to_string(lid);
@@ -667,16 +670,12 @@ void draw_scene(gui_scene* scene, gui_camera* camera, const vec4i& viewport,
                             ? transform_direction(
                                   camera->frame, light->position)
                             : transform_point(camera->frame, light->position);
-        set_uniform(
-            scene->lights_program, ("lpos[" + is + "]").c_str(), position);
+        set_uniform(program, ("lpos[" + is + "]").c_str(), position);
       } else {
-        set_uniform(scene->lights_program, ("lpos[" + is + "]").c_str(),
-            light->position);
+        set_uniform(program, ("lpos[" + is + "]").c_str(), light->position);
       }
-      set_uniform(
-          scene->lights_program, ("lke[" + is + "]").c_str(), light->emission);
-      set_uniform(scene->lights_program, ("ltype[" + is + "]").c_str(),
-          (int)light->type);
+      set_uniform(program, ("lke[" + is + "]").c_str(), light->emission);
+      set_uniform(program, ("ltype[" + is + "]").c_str(), (int)light->type);
       lid++;
     }
     assert_ogl_error();
@@ -832,7 +831,7 @@ inline void bake_specular_brdf_texture(ogl_texture* texture) {
 }
 
 void init_ibl_data(gui_scene* scene, const ogl_texture* environment_texture) {
-  scene->lights_program = ibl::load_program(
+  scene->ibl_program = ibl::load_program(
       "apps/ibl/shaders/scene.vert", "apps/ibl/shaders/ibl.frag");
   scene->environment_program = ibl::load_program(
       "apps/ibl/shaders/environment.vert", "apps/ibl/shaders/environment.frag");

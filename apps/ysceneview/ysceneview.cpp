@@ -586,7 +586,7 @@ void draw_widgets(gui_window* win, app_states* apps, const gui_input& input) {
 void draw(gui_window* win, app_states* apps, const gui_input& input) {
   if (!apps->selected || !apps->selected->ok) return;
   auto app = apps->selected;
-  if (app->drawgl_prms.shading == gui_shading_type::lights)
+  if (app->drawgl_prms.shading == gui_shading_type::eyelight)
     update_lights(app->glscene, app->ioscene);
   draw_scene(app->glscene, app->glcamera, input.framebuffer_viewport,
       app->drawgl_prms);

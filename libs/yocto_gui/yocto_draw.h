@@ -130,11 +130,14 @@ struct gui_scene {
 };
 
 // Shading type
-enum struct gui_shading_type { lights, eyelight, camlights };
+enum struct gui_shading_type {
+  environment,
+  eyelight,
+  // scene_lights
+};
 
 // Shading name
-const auto gui_shading_names = vector<string>{
-    "lights", "eyelight", "camlights"};
+const auto gui_shading_names = vector<string>{"environment", "camera_lights"};
 
 // Draw options
 struct gui_scene_params {
@@ -142,7 +145,7 @@ struct gui_scene_params {
   bool             wireframe        = false;
   bool             edges            = false;
   float            edge_offset      = 0.01f;
-  gui_shading_type shading          = gui_shading_type::camlights;
+  gui_shading_type shading          = gui_shading_type::environment;
   float            exposure         = 0;
   float            gamma            = 2.2f;
   vec3f            ambient          = {0, 0, 0};
