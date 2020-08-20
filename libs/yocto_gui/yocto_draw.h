@@ -123,6 +123,7 @@ struct gui_scene {
   ogl_program* ibl_program         = new ogl_program{};
   ogl_program* environment_program = new ogl_program{};
 
+  // IBL data
   ogl_cubemap* environment_cubemap = new ogl_cubemap{};
   ogl_cubemap* diffuse_cubemap     = new ogl_cubemap{};
   ogl_cubemap* specular_cubemap    = new ogl_cubemap{};

@@ -819,75 +819,6 @@ void main() {
 )";
 #endif
 
-ogl_image::~ogl_image() {
-  if (program) delete program;
-  if (texcoords) delete texcoords;
-  if (triangles) delete triangles;
-}
-
-bool is_initialized(const ogl_image* image) {
-  return is_initialized(image->program);
-}
-
-// init image program
-bool init_image(ogl_image* image) {
-  if (is_initialized(image)) return true;
-
-  auto texcoords = vector<vec2f>{{0, 0}, {0, 1}, {1, 1}, {1, 0}};
-  auto triangles = vector<vec3i>{{0, 1, 2}, {0, 2, 3}};
-
-  auto error = ""s, errorlog = ""s;
-  if (!init_program(
-          image->program, glimage_vertex, glimage_fragment, error, errorlog))
-    return false;
-  set_arraybuffer(
-      image->texcoords, texcoords.size() * 2, 2, (float*)texcoords.data());
-  set_elementbuffer(image->triangles, triangles.size() * 3,
-      ogl_element_type::triangles, (int*)triangles.data());
-  return true;
-}
-
-// clear an opengl image
-void clear_image(ogl_image* image) {
-  clear_program(image->program);
-  clear_texture(image->texture);
-  clear_arraybuffer(image->texcoords);
-  clear_elementbuffer(image->triangles);
-}
-
-// update image data
-void set_image(
-    ogl_image* oimg, const image<vec4f>& img, bool linear, bool mipmap) {
-  set_texture(oimg->texture, img, false, linear, mipmap);
-}
-void set_image(
-    ogl_image* oimg, const image<vec4b>& img, bool linear, bool mipmap) {
-  set_texture(oimg->texture, img, false, linear, mipmap);
-}
-
-// draw image
-void draw_image(ogl_image* image, const ogl_image_params& params) {
-  assert_ogl_error();
-  glViewport(params.framebuffer.x, params.framebuffer.y, params.framebuffer.z,
-      params.framebuffer.w);
-  glClearColor(params.background.x, params.background.y, params.background.z,
-      params.background.w);
-  glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
-  glEnable(GL_DEPTH_TEST);
-  bind_program(image->program);
-  set_uniform(image->program, "txt", image->texture, 0);
-  set_uniform(image->program, "window_size",
-      vec2f{(float)params.window.x, (float)params.window.y});
-  set_uniform(image->program, "image_size",
-      vec2f{(float)image->texture->size.x, (float)image->texture->size.y});
-  set_uniform(image->program, "image_center", params.center);
-  set_uniform(image->program, "image_scale", params.scale);
-  set_attribute(image->program, "texcoord", image->texcoords);
-  draw_elements(image->triangles);
-  unbind_program(image->program);
-  assert_ogl_error();
-}
-
 // set uniforms
 void set_uniform(ogl_program* program, int location, int value) {
   assert_ogl_error();
@@ -1371,6 +1302,71 @@ ogl_shape* quad_shape() {
     set_triangles(quad, quad_triangles);
   }
   return quad;
+}
+
+ogl_image::~ogl_image() {
+  if (program) delete program;
+  if (quad) delete quad;
+}
+
+bool is_initialized(const ogl_image* image) {
+  return is_initialized(image->program);
+}
+
+// init image program
+bool init_image(ogl_image* image) {
+  if (is_initialized(image)) return true;
+  auto error = ""s, errorlog = ""s;
+  if (!init_program(
+          image->program, glimage_vertex, glimage_fragment, error, errorlog))
+    return false;
+
+  auto texcoords = vector<vec2f>{{0, 0}, {0, 1}, {1, 1}, {1, 0}};
+  auto triangles = vector<vec3i>{{0, 1, 2}, {0, 2, 3}};
+  set_shape(image->quad);
+  set_vertex_attribute(image->quad, image->quad->texcoords, texcoords, 0);
+  set_triangles(image->quad, triangles);
+
+  return true;
+}
+
+// clear an opengl image
+void clear_image(ogl_image* image) {
+  clear_program(image->program);
+  clear_texture(image->texture);
+  clear_shape(image->quad);
+}
+
+// update image data
+void set_image(
+    ogl_image* oimg, const image<vec4f>& img, bool linear, bool mipmap) {
+  set_texture(oimg->texture, img, false, linear, mipmap);
+}
+void set_image(
+    ogl_image* oimg, const image<vec4b>& img, bool linear, bool mipmap) {
+  set_texture(oimg->texture, img, false, linear, mipmap);
+}
+
+// draw image
+void draw_image(ogl_image* image, const ogl_image_params& params) {
+  assert_ogl_error();
+  glViewport(params.framebuffer.x, params.framebuffer.y, params.framebuffer.z,
+      params.framebuffer.w);
+  glClearColor(params.background.x, params.background.y, params.background.z,
+      params.background.w);
+  glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+  glEnable(GL_DEPTH_TEST);
+  bind_program(image->program);
+  set_uniform(image->program, "txt", image->texture, 0);
+  set_uniform(image->program, "window_size",
+      vec2f{(float)params.window.x, (float)params.window.y});
+  set_uniform(image->program, "image_size",
+      vec2f{(float)image->texture->size.x, (float)image->texture->size.y});
+  set_uniform(image->program, "image_center", params.center);
+  set_uniform(image->program, "image_scale", params.scale);
+  draw_shape(image->quad);
+  unbind_program(image->program);
+  assert_ogl_error();
 }
 
 }  // namespace yocto

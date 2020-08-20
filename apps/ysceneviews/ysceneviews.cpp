@@ -263,7 +263,7 @@ int main(int argc, const char* argv[]) {
     clear_scene(app->glscene);
   };
   callbacks.draw_cb = [app](gui_window* win, const gui_input& input) {
-    if (app->drawgl_prms.shading == gui_shading_type::lights)
+    if (app->drawgl_prms.shading == gui_shading_type::eyelight)
       update_lights(app->glscene, app->ioscene);
     draw_scene(app->glscene, app->glcamera, input.framebuffer_viewport,
         app->drawgl_prms);

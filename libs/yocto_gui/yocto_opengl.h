@@ -338,50 +338,9 @@ void draw_elements(ogl_elementbuffer* buffer);
 }  // namespace yocto
 
 // -----------------------------------------------------------------------------
-// IMAGE DRAWING
+// FRAMEBUFFERS
 // -----------------------------------------------------------------------------
 namespace yocto {
-
-// OpenGL image data
-struct ogl_image {
-  ogl_image() {}
-  ogl_image(const ogl_image&) = delete;
-  ogl_image& operator=(const ogl_image&) = delete;
-  ~ogl_image();
-
-  ogl_program*       program   = new ogl_program{};
-  ogl_texture*       texture   = new ogl_texture{};
-  ogl_arraybuffer*   texcoords = new ogl_arraybuffer{};
-  ogl_elementbuffer* triangles = new ogl_elementbuffer{};
-};
-
-// create image drawing program
-bool init_image(ogl_image* oimg);
-bool is_initialized(const ogl_image* oimg);
-
-// clear image
-void clear_image(ogl_image* oimg);
-
-// update image data
-void set_image(ogl_image* oimg, const image<vec4f>& img, bool linear = false,
-    bool mipmap = false);
-void set_image(ogl_image* oimg, const image<vec4b>& img, bool linear = false,
-    bool mipmap = false);
-
-// OpenGL image drawing params
-struct ogl_image_params {
-  vec2i window      = {512, 512};
-  vec4i framebuffer = {0, 0, 512, 512};
-  vec2f center      = {0, 0};
-  float scale       = 1;
-  bool  fit         = true;
-  bool  checker     = true;
-  float border_size = 2;
-  vec4f background  = {0.15f, 0.15f, 0.15f, 1.0f};
-};
-
-// draw image
-void draw_image(ogl_image* image, const ogl_image_params& params);
 
 struct ogl_framebuffer {
   vec2i size            = {0, 0};
@@ -404,7 +363,12 @@ void set_framebuffer_texture(const ogl_framebuffer* framebuffer,
 void bind_framebuffer(const ogl_framebuffer* target);
 void unbind_framebuffer();
 void clear_framebuffer(ogl_framebuffer* target);
+}  // namespace yocto
 
+// -----------------------------------------------------------------------------
+// SHAPES
+// -----------------------------------------------------------------------------
+namespace yocto {
 // Opengl shape
 struct ogl_shape {
   // vertex buffers
@@ -450,6 +414,53 @@ void draw_shape(const ogl_shape* shape);
 
 ogl_shape* cube_shape();
 ogl_shape* quad_shape();
+
+}  // namespace yocto
+
+// -----------------------------------------------------------------------------
+// IMAGE DRAWING
+// -----------------------------------------------------------------------------
+namespace yocto {
+
+// OpenGL image data
+struct ogl_image {
+  ogl_image() {}
+  ogl_image(const ogl_image&) = delete;
+  ogl_image& operator=(const ogl_image&) = delete;
+  ~ogl_image();
+
+  ogl_program* program = new ogl_program{};
+  ogl_texture* texture = new ogl_texture{};
+  ogl_shape*   quad    = new ogl_shape{};
+};
+
+// create image drawing program
+bool init_image(ogl_image* oimg);
+bool is_initialized(const ogl_image* oimg);
+
+// clear image
+void clear_image(ogl_image* oimg);
+
+// update image data
+void set_image(ogl_image* oimg, const image<vec4f>& img, bool linear = false,
+    bool mipmap = false);
+void set_image(ogl_image* oimg, const image<vec4b>& img, bool linear = false,
+    bool mipmap = false);
+
+// OpenGL image drawing params
+struct ogl_image_params {
+  vec2i window      = {512, 512};
+  vec4i framebuffer = {0, 0, 512, 512};
+  vec2f center      = {0, 0};
+  float scale       = 1;
+  bool  fit         = true;
+  bool  checker     = true;
+  float border_size = 2;
+  vec4f background  = {0.15f, 0.15f, 0.15f, 1.0f};
+};
+
+// draw image
+void draw_image(ogl_image* image, const ogl_image_params& params);
 
 }  // namespace yocto
 
