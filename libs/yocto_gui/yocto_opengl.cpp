@@ -71,27 +71,26 @@ bool init_ogl(string& error) {
   return true;
 }
 
-// GLenum _assert_ogl_error() {
-//   auto error_code = glGetError();
-//   if (error_code != GL_NO_ERROR) {
-//     auto error = ""s;
-//     switch (error_code) {
-//       case GL_INVALID_ENUM: error = "INVALID_ENUM"; break;
-//       case GL_INVALID_VALUE: error = "INVALID_VALUE"; break;
-//       case GL_INVALID_OPERATION: error = "INVALID_OPERATION"; break;
-//       // case GL_STACK_OVERFLOW: error = "STACK_OVERFLOW"; break;
-//       // case GL_STACK_UNDERFLOW: error = "STACK_UNDERFLOW"; break;
-//       case GL_OUT_OF_MEMORY: error = "OUT_OF_MEMORY"; break;
-//       case GL_INVALID_FRAMEBUFFER_OPERATION:
-//         error = "INVALID_FRAMEBUFFER_OPERATION";
-//         break;
-//     }
-//     printf("\n    OPENGL ERROR: %s\n\n", error.c_str());
-//   }
-//   return error_code;
-// }
-// void assert_ogl_error() assert(_assert_ogl_error() == GL_NO_ERROR)
-void assert_ogl_error() { assert(glGetError() == GL_NO_ERROR); }
+GLenum _assert_ogl_error() {
+  auto error_code = glGetError();
+  if (error_code != GL_NO_ERROR) {
+    auto error = ""s;
+    switch (error_code) {
+      case GL_INVALID_ENUM: error = "INVALID_ENUM"; break;
+      case GL_INVALID_VALUE: error = "INVALID_VALUE"; break;
+      case GL_INVALID_OPERATION: error = "INVALID_OPERATION"; break;
+      // case GL_STACK_OVERFLOW: error = "STACK_OVERFLOW"; break;
+      // case GL_STACK_UNDERFLOW: error = "STACK_UNDERFLOW"; break;
+      case GL_OUT_OF_MEMORY: error = "OUT_OF_MEMORY"; break;
+      case GL_INVALID_FRAMEBUFFER_OPERATION:
+        error = "INVALID_FRAMEBUFFER_OPERATION";
+        break;
+    }
+    printf("\n    OPENGL ERROR: %s\n\n", error.c_str());
+  }
+  return error_code;
+}
+void assert_ogl_error() { assert(_assert_ogl_error() == GL_NO_ERROR); }
 
 bool check_ogl_error(string& error) {
   if (glGetError() != GL_NO_ERROR) {

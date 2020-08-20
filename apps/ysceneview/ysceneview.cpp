@@ -249,8 +249,10 @@ void init_glscene(gui_scene* glscene, sceneio_scene* ioscene,
   }
 
   // bake prefiltered environments
-  if (progress_cb) progress_cb("baking environment", progress.x++, progress.y);
-  ibl::init_ibl_data(glscene, texture_map[ioscene->textures[0]]);
+  if (ioscene->environments.size()) {
+    ibl::init_ibl_data(
+        glscene, texture_map[ioscene->environments[0]->emission_tex]);
+  }
 
   // done
   if (progress_cb) progress_cb("convert done", progress.x++, progress.y);
