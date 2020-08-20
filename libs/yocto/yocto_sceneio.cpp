@@ -1556,8 +1556,8 @@ static bool load_gltf_scene(const string& filename, scene_model* scene,
       ctexture->hdr.resize(color_opacityf.imsize());
       otexture->hdr.resize(color_opacityf.imsize());
       auto oempty = true;
-      for (auto j = 0; j < color_opacityf.imsize().y; j++) {
-        for (auto i = 0; i < color_opacityf.imsize().x; i++) {
+      for (auto j = 0; j < color_opacityf.height(); j++) {
+        for (auto i = 0; i < color_opacityf.width(); i++) {
           auto color            = xyz(color_opacityf[{i, j}]);
           auto opacity          = color_opacityf[{i, j}].w;
           ctexture->hdr[{i, j}] = {color.x, color.y, color.z, opacity};
@@ -1572,8 +1572,8 @@ static bool load_gltf_scene(const string& filename, scene_model* scene,
       ctexture->ldr.resize(color_opacityb.imsize());
       otexture->ldr.resize(color_opacityb.imsize());
       auto oempty = true;
-      for (auto j = 0; j < color_opacityb.imsize().y; j++) {
-        for (auto i = 0; i < color_opacityb.imsize().x; i++) {
+      for (auto j = 0; j < color_opacityb.height(); j++) {
+        for (auto i = 0; i < color_opacityb.width(); i++) {
           auto color            = xyz(color_opacityb[{i, j}]);
           auto opacity          = color_opacityb[{i, j}].w;
           ctexture->ldr[{i, j}] = {color.x, color.y, color.z, opacity};
@@ -1598,8 +1598,8 @@ static bool load_gltf_scene(const string& filename, scene_model* scene,
       auto [mtexture, rtexture] = textures;
       mtexture->hdr.resize(metallic_roughnessf.imsize());
       rtexture->hdr.resize(metallic_roughnessf.imsize());
-      for (auto j = 0; j < metallic_roughnessf.imsize().y; j++) {
-        for (auto i = 0; i < metallic_roughnessf.imsize().x; i++) {
+      for (auto j = 0; j < metallic_roughnessf.height(); j++) {
+        for (auto i = 0; i < metallic_roughnessf.width(); i++) {
           auto metallic         = metallic_roughnessf[{i, j}].z;
           auto roughness        = metallic_roughnessf[{i, j}].y;
           mtexture->hdr[{i, j}] = {metallic, metallic, metallic, 1};
@@ -1611,8 +1611,8 @@ static bool load_gltf_scene(const string& filename, scene_model* scene,
       auto [mtexture, rtexture] = textures;
       mtexture->ldr.resize(metallic_roughnessb.imsize());
       rtexture->ldr.resize(metallic_roughnessb.imsize());
-      for (auto j = 0; j < metallic_roughnessb.imsize().y; j++) {
-        for (auto i = 0; i < metallic_roughnessb.imsize().x; i++) {
+      for (auto j = 0; j < metallic_roughnessb.height(); j++) {
+        for (auto i = 0; i < metallic_roughnessb.width(); i++) {
           auto metallic         = metallic_roughnessb[{i, j}].z;
           auto roughness        = metallic_roughnessb[{i, j}].y;
           mtexture->ldr[{i, j}] = {metallic, metallic, metallic, 1};

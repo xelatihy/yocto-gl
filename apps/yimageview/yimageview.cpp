@@ -114,7 +114,7 @@ void compute_stats(
     stats.histogram[(int)(clamp(p.y / max_histo, 0.f, 1.f) * 255)].y += 1;
     stats.histogram[(int)(clamp(p.z / max_histo, 0.f, 1.f) * 255)].z += 1;
   }
-  auto num_pixels = (size_t)img.imsize().x * (size_t)img.imsize().y;
+  auto num_pixels = (size_t)img.width() * (size_t)img.height();
   for (auto& v : stats.histogram) v /= num_pixels;
   stats.average /= num_pixels;
 }
@@ -230,16 +230,16 @@ void draw_widgets(gui_window* win, app_states* apps, const gui_input& input) {
     draw_label(win, "filename", app->filename);
     draw_label(win, "outname", app->outname);
     draw_label(win, "image",
-        std::to_string(app->source.imsize().x) + " x " +
-            std::to_string(app->source.imsize().y));
+        std::to_string(app->source.width()) + " x " +
+            std::to_string(app->source.height()));
     draw_slider(win, "zoom", app->glparams.scale, 0.1, 10);
     draw_checkbox(win, "fit", app->glparams.fit);
     auto ij = get_image_coords(input.mouse_pos, app->glparams.center,
         app->glparams.scale, app->source.imsize());
     draw_dragger(win, "mouse", ij);
     auto img_pixel = zero4f, display_pixel = zero4f;
-    if (ij.x >= 0 && ij.x < app->source.imsize().x && ij.y >= 0 &&
-        ij.y < app->source.imsize().y) {
+    if (ij.x >= 0 && ij.x < app->source.width() && ij.y >= 0 &&
+        ij.y < app->source.height()) {
       img_pixel     = app->source[{ij.x, ij.y}];
       display_pixel = app->display[{ij.x, ij.y}];
     }

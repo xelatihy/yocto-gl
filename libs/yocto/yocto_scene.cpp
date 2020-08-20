@@ -165,13 +165,12 @@ vector<string> scene_stats(const scene_model* scene, bool verbose) {
                       [](auto shape) { return shape->quadspos.size(); })));
   stats.push_back(
       "texels4b:     " + format(accumulate(scene->textures, [](auto texture) {
-        return (size_t)texture->ldr.imsize().x *
-               (size_t)texture->ldr.imsize().x;
+        return (size_t)texture->ldr.width() *
+               (size_t)texture->ldr.width();
       })));
   stats.push_back(
       "texels4f:     " + format(accumulate(scene->textures, [](auto texture) {
-        return (size_t)texture->hdr.imsize().x *
-               (size_t)texture->hdr.imsize().y;
+        return (size_t)texture->hdr.width() * (size_t)texture->hdr.height();
       })));
   stats.push_back("center:       " + format3(center(bbox)));
   stats.push_back("size:         " + format3(size(bbox)));

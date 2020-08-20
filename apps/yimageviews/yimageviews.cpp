@@ -141,8 +141,8 @@ int main(int argc, const char* argv[]) {
           app->glparams.scale, app->source.imsize());
       draw_dragger(win, "mouse", ij);
       auto img_pixel = zero4f, display_pixel = zero4f;
-      if (ij.x >= 0 && ij.x < app->source.imsize().x && ij.y >= 0 &&
-          ij.y < app->source.imsize().y) {
+      if (ij.x >= 0 && ij.x < app->source.width() && ij.y >= 0 &&
+          ij.y < app->source.height()) {
         img_pixel     = app->source[{ij.x, ij.y}];
         display_pixel = app->display[{ij.x, ij.y}];
       }

@@ -287,11 +287,11 @@ bool draw_widgets(
   if (!iotexture) return false;
   draw_label(win, "name", iotexture->name);
   draw_label(win, "hdr",
-      std::to_string(iotexture->hdr.imsize().x) + " x " +
-          std::to_string(iotexture->hdr.imsize().y));
+      std::to_string(iotexture->hdr.width()) + " x " +
+          std::to_string(iotexture->hdr.height()));
   draw_label(win, "ldr",
-      std::to_string(iotexture->ldr.imsize().x) + " x " +
-          std::to_string(iotexture->ldr.imsize().y));
+      std::to_string(iotexture->ldr.width()) + " x " +
+          std::to_string(iotexture->ldr.height()));
   return false;
 }
 

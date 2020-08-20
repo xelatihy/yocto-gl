@@ -328,11 +328,11 @@ bool draw_widgets(
   auto edited = 0;
   draw_label(win, "name", iotexture->name);
   draw_label(win, "hdr",
-      std::to_string(iotexture->hdr.imsize().x) + " x " +
-          std::to_string(iotexture->hdr.imsize().y));
+      std::to_string(iotexture->hdr.width()) + " x " +
+          std::to_string(iotexture->hdr.height()));
   draw_label(win, "ldr",
-      std::to_string(iotexture->ldr.imsize().x) + " x " +
-          std::to_string(iotexture->ldr.imsize().y));
+      std::to_string(iotexture->ldr.width()) + " x " +
+          std::to_string(iotexture->ldr.height()));
   // TODO: load texture
   return edited;
 }
@@ -526,8 +526,8 @@ void draw_widgets(gui_window* win, app_states* apps, const gui_input& input) {
     draw_label(win, "imagename", app->imagename);
     if (app->ok) {
       draw_label(win, "image",
-          std::to_string(app->render.imsize().x) + " x " +
-              std::to_string(app->render.imsize().y) + " @ " +
+          std::to_string(app->render.width()) + " x " +
+              std::to_string(app->render.height()) + " @ " +
               std::to_string(app->render_sample));
       draw_slider(win, "zoom", app->glparams.scale, 0.1, 10);
       draw_checkbox(win, "zoom to fit", app->glparams.fit);
@@ -544,8 +544,8 @@ void draw_widgets(gui_window* win, app_states* apps, const gui_input& input) {
       auto ij = get_image_coords(input.mouse_pos, app->glparams.center,
           app->glparams.scale, app->render.imsize());
       draw_dragger(win, "mouse", ij);
-      if (ij.x >= 0 && ij.x < app->render.imsize().x && ij.y >= 0 &&
-          ij.y < app->render.imsize().y) {
+      if (ij.x >= 0 && ij.x < app->render.width() && ij.y >= 0 &&
+          ij.y < app->render.height()) {
         draw_coloredit(win, "pixel", app->render[{ij.x, ij.y}]);
       } else {
         auto zero4f_ = zero4f;
@@ -806,13 +806,13 @@ int main(int argc, const char* argv[]) {
         !input.widgets_active) {
       auto ij = get_image_coords(input.mouse_pos, app->glparams.center,
           app->glparams.scale, app->render.imsize());
-      if (ij.x >= 0 && ij.x < app->render.imsize().x && ij.y >= 0 &&
-          ij.y < app->render.imsize().y) {
+      if (ij.x >= 0 && ij.x < app->render.width() && ij.y >= 0 &&
+          ij.y < app->render.height()) {
         auto ray = camera_ray(app->camera->frame, app->camera->lens,
             app->camera->lens, app->camera->film,
             vec2f{ij.x + 0.5f, ij.y + 0.5f} /
-                vec2f{(float)app->render.imsize().x,
-                    (float)app->render.imsize().y});
+                vec2f{(float)app->render.width(),
+                    (float)app->render.height()});
         if (auto isec = intersect_scene_bvh(app->scene, ray); isec.hit) {
           app->selected_instance = app->ioscene->instances[isec.instance];
         }
