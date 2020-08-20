@@ -1260,7 +1260,7 @@ void set_texcoords(ogl_shape* shape, const vector<vec2f>& texcoords) {
   else
     set_vertex_attribute(shape, shape->texcoords, texcoords, 2);
 }
-void set_colors(ogl_shape* shape, const vector<vec3f>& colors) {
+void set_colors(ogl_shape* shape, const vector<vec4f>& colors) {
   if (colors.empty())
     set_vertex_attribute(shape, vec4f{1, 1, 1, 1}, 3);
   else
@@ -1278,10 +1278,6 @@ void set_index_buffer(
     ogl_shape* shape, ogl_elementbuffer* elements, const vector<T>& data) {
   bind_shape(shape);
   set_arraybuffer(elements, data);
-  // auto elem_size = sizeof(T) / sizeof(int);
-  // if (elem_size == 1) shape.type = Shape::type::points;
-  // if (elem_size == 2) shape.type = Shape::type::lines;
-  // if (elem_size == 3) shape.type = Shape::type::triangles;
   assert_ogl_error();
 }
 

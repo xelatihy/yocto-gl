@@ -334,6 +334,346 @@ void main() {
 }
 )";
 
+static const char* glibl_fragment = R"(
+#version 330
+
+in vec3 position;  // [from vertex shader] position in world space
+in vec3 normal;    // [from vertex shader] normal in world space
+in vec2 texcoord;  // [from vertex shader] texcoord
+in vec4 color;     // [from vertex shader] color
+in vec4 tangsp;    // [from vertex shader] tangent space
+
+float pif = 3.14159265;
+
+uniform int  etype;
+uniform bool faceted;
+uniform int  shading_type;
+
+uniform vec3  emission;   // material ke
+uniform vec3  diffuse;    // material kd
+uniform vec3  specular;   // material ks
+uniform float roughness;  // material rs
+uniform float opacity;    // material op
+
+// baked textures for image based lighting
+uniform samplerCube irradiance_cubemap;
+uniform samplerCube reflection_cubemap;
+uniform sampler2D   brdf_lut;
+
+uniform bool      emission_tex_on;   // material ke texture on
+uniform sampler2D emission_tex;      // material ke texture
+uniform bool      diffuse_tex_on;    // material kd texture on
+uniform sampler2D diffuse_tex;       // material kd texture
+uniform bool      specular_tex_on;   // material ks texture on
+uniform sampler2D specular_tex;      // material ks texture
+uniform bool      roughness_tex_on;  // material rs texture on
+uniform sampler2D roughness_tex;     // material rs texture
+uniform bool      opacity_tex_on;    // material op texture on
+uniform sampler2D opacity_tex;       // material op texture
+
+uniform bool      mat_norm_tex_on;  // material normal texture on
+uniform sampler2D mat_norm_tex;     // material normal texture
+
+uniform bool double_sided;  // double sided rendering
+
+uniform mat4 frame;    // shape transform
+uniform mat4 frameit;  // shape transform
+
+uniform vec3 eye;         // camera position
+uniform mat4 view;        // inverse of the camera frame (as a matrix)
+uniform mat4 projection;  // camera projection
+
+uniform float exposure;
+uniform float gamma;
+
+out vec4 frag_color;
+
+struct brdf_struct {
+  vec3  emission;
+  vec3  diffuse;
+  vec3  specular;
+  float roughness;
+  float opacity;
+} brdf;
+
+vec3 eval_brdf_color(vec3 value, sampler2D tex, bool tex_on) {
+  vec3 result = value;
+  if (tex_on) result *= texture(tex, texcoord).rgb;
+  return result;
+}
+float eval_brdf_value(float value, sampler2D tex, bool tex_on) {
+  float result = value;
+  if (tex_on) result *= texture(tex, texcoord).r;
+  return result;
+}
+
+brdf_struct compute_brdf() {
+  brdf_struct brdf;
+  brdf.emission  = eval_brdf_color(emission, emission_tex, emission_tex_on);
+  brdf.diffuse   = eval_brdf_color(diffuse, diffuse_tex, diffuse_tex_on);
+  brdf.specular  = eval_brdf_color(specular, specular_tex, specular_tex_on);
+  brdf.roughness = eval_brdf_value(roughness, roughness_tex, roughness_tex_on);
+  brdf.opacity   = eval_brdf_value(opacity, opacity_tex, opacity_tex_on);
+  return brdf;
+}
+
+vec3 apply_normal_map(vec2 texcoord, vec3 normal, vec4 tangsp) {
+  if (!mat_norm_tex_on) return normal;
+  vec3 tangu = normalize((frame * vec4(normalize(tangsp.xyz), 0)).xyz);
+  vec3 tangv = normalize(cross(normal, tangu));
+  if (tangsp.w < 0) tangv = -tangv;
+  vec3 texture = 2 * pow(texture(mat_norm_tex, texcoord).xyz, vec3(1 / 2.2)) -
+                 1;
+  // texture.y = -texture.y;
+  return normalize(tangu * texture.x + tangv * texture.y + normal * texture.z);
+}
+
+vec3 triangle_normal(vec3 position) {
+  vec3 fdx = dFdx(position);
+  vec3 fdy = dFdy(position);
+  return normalize((frame * vec4(normalize(cross(fdx, fdy)), 0)).xyz);
+}
+
+#define etype_points 1
+#define etype_lines 2
+#define etype_triangles 3
+#define etype_quads 3
+
+vec3 compute_normal(vec3 V) {
+  vec3 N;
+  if (etype == etype_triangles) {
+    if (faceted) {
+      N = triangle_normal(position);
+    } else {
+      N = normalize(normal);
+    }
+  }
+
+  if (etype == etype_lines) {
+    // normal of lines is coplanar with view vector and direction tangent to the
+    // line
+    vec3 tangent = normalize(normal);
+    N            = normalize(V - tangent * dot(V, tangent));
+  }
+
+  // apply normal map
+  N = apply_normal_map(texcoord, N, tangsp);
+
+  // use faceforward to ensure the normals points toward us
+  if (double_sided) N = faceforward(N, -V, N);
+  return N;
+}
+
+vec3 sample_prefiltered_refleciton(vec3 L, float roughness) {
+  int   MAX_REFLECTION_LOD = 5;
+  float lod                = sqrt(roughness) * MAX_REFLECTION_LOD;
+  return textureLod(reflection_cubemap, L, lod).rgb;
+}
+
+// main
+void main() {
+  vec3 V = normalize(eye - position);
+  vec3 N = compute_normal(V);
+
+  brdf_struct brdf = compute_brdf();
+  if (brdf.opacity < 0.005) discard;
+
+  // emission
+  vec3 radiance = brdf.emission;
+
+  // diffuse
+  radiance += brdf.diffuse * textureLod(irradiance_cubemap, N, 0).rgb;
+
+  // specular
+  vec3 L          = normalize(reflect(-V, N));
+  vec3 reflection = sample_prefiltered_refleciton(L, brdf.roughness);
+  vec2 env_brdf   = texture(brdf_lut, vec2(max(dot(N, V), 0.0), roughness)).rg;
+  radiance += reflection * (brdf.specular * env_brdf.x + env_brdf.y);
+
+  // final color correction
+  radiance = pow(radiance * pow(2, exposure), vec3(1 / gamma));
+
+  // output final color by setting gl_FragColor
+  frag_color = vec4(radiance, brdf.opacity);
+}
+)";
+
+static const char* bake_brdf_vertex = R"(
+#version 330
+
+layout(location = 0) in vec3 positions;  // vertex position
+
+out vec3 position;  // vertex position (in world coordinate)
+
+// main function
+void main() {
+  position = positions;
+
+  gl_Position = vec4(position, 1);
+}
+)";
+
+static const char* bake_brdf_fragment = R"(
+#version 330
+
+out vec3 frag_color;
+
+in vec3 position;  //  position in world space
+
+const float pif = 3.14159265359;
+
+float radical_inverse(uint bits) {
+  bits = (bits << 16u) | (bits >> 16u);
+  bits = ((bits & 0x55555555u) << 1u) | ((bits & 0xAAAAAAAAu) >> 1u);
+  bits = ((bits & 0x33333333u) << 2u) | ((bits & 0xCCCCCCCCu) >> 2u);
+  bits = ((bits & 0x0F0F0F0Fu) << 4u) | ((bits & 0xF0F0F0F0u) >> 4u);
+  bits = ((bits & 0x00FF00FFu) << 8u) | ((bits & 0xFF00FF00u) >> 8u);
+  return float(bits) * 2.3283064365386963e-10;  // / 0x100000000
+}
+
+vec2 hammersley(uint i, uint N) {
+  return vec2(float(i) / float(N), radical_inverse(i));
+}
+
+float geometry_schlick_ggx(float NdotV, float roughness) {
+  float a = roughness;
+  float k = (a * a) / 2.0;
+
+  float nom   = NdotV;
+  float denom = NdotV * (1.0 - k) + k;
+
+  return nom / denom;
+}
+
+float geometry_smith(vec3 N, vec3 V, vec3 L, float roughness) {
+  float NdotV = max(dot(N, V), 0.0);
+  float NdotL = max(dot(N, L), 0.0);
+  float ggx2  = geometry_schlick_ggx(NdotV, roughness);
+  float ggx1  = geometry_schlick_ggx(NdotL, roughness);
+
+  return ggx1 * ggx2;
+}
+
+vec3 importance_sample_ggx(vec2 Xi, vec3 N, float roughness) {
+  float a = roughness * roughness;
+
+  float phi      = 2.0 * pif * Xi.x;
+  float cosTheta = sqrt((1.0 - Xi.y) / (1.0 + (a * a - 1.0) * Xi.y));
+  float sinTheta = sqrt(1.0 - cosTheta * cosTheta);
+
+  // from spherical coordinates to cartesian coordinates
+  vec3 H;
+  H.x = cos(phi) * sinTheta;
+  H.y = sin(phi) * sinTheta;
+  H.z = cosTheta;
+
+  // from tangent-space vector to world-space sample vector
+  vec3 up        = abs(N.z) < 0.999 ? vec3(0.0, 0.0, 1.0) : vec3(1.0, 0.0, 0.0);
+  vec3 tangent   = normalize(cross(up, N));
+  vec3 bitangent = cross(N, tangent);
+
+  vec3 sampleVec = tangent * H.x + bitangent * H.y + N * H.z;
+  return normalize(sampleVec);
+}
+
+vec2 integrate_brdf(float NdotV, float roughness) {
+  vec3 V;
+  V.x = sqrt(1.0 - NdotV * NdotV);
+  V.y = 0.0;
+  V.z = NdotV;
+
+  float A = 0.0;
+  float B = 0.0;
+
+  vec3 N = vec3(0.0, 0.0, 1.0);
+
+  const uint SAMPLE_COUNT = 1024u;
+  for (uint i = 0u; i < SAMPLE_COUNT; ++i) {
+    vec2 Xi = hammersley(i, SAMPLE_COUNT);
+    vec3 H  = importance_sample_ggx(Xi, N, roughness);
+    vec3 L  = normalize(2.0 * dot(V, H) * H - V);
+
+    float NdotL = max(L.z, 0.0);
+    float NdotH = max(H.z, 0.0);
+    float VdotH = max(dot(V, H), 0.0);
+
+    if (NdotL > 0.0) {
+      float G     = geometry_smith(N, V, L, roughness);
+      float G_Vis = (G * VdotH) / (NdotH * NdotV);
+      float Fc    = pow(1.0 - VdotH, 5.0);
+
+      A += (1.0 - Fc) * G_Vis;
+      B += Fc * G_Vis;
+    }
+  }
+  A /= float(SAMPLE_COUNT);
+  B /= float(SAMPLE_COUNT);
+  return vec2(A, B);
+}
+
+void main() {
+  vec2 uv              = position.xy * 0.5 + 0.5;
+  vec2 integrated_brdf = integrate_brdf(uv.x, uv.y);
+  frag_color           = vec3(integrated_brdf, 0.0);
+}
+)";
+
+static const char* bake_cubemap_vert = R"(
+#version 330
+
+layout(location = 0) in vec3 positions;  // vertex position
+
+uniform mat4 view;        // inverse of the camera frame (as a matrix)
+uniform mat4 projection;  // camera projection
+
+out vec3 position;  // vertex position (in world coordinate)
+out vec2 texcoord;  // vertex texture coordinates
+
+// main function
+void main() {
+  // copy values
+  position = positions;
+
+  // clip
+  vec3 view_no_transform = (view * vec4(position * 100.0, 0)).xyz;
+  gl_Position            = projection * vec4(view_no_transform, 1);
+}
+)";
+
+static const char* bake_environment_frag = R"(
+#version 330
+
+out vec3 frag_color;
+
+in vec3 position;  //  position in world space
+
+uniform vec3 eye;         // camera position
+uniform mat4 view;        // inverse of the camera frame (as a matrix)
+uniform mat4 projection;  // camera projection
+
+uniform sampler2D environment;
+
+const float PI = 3.14159265359;
+
+vec2 sample_spherical_map(vec3 v) {
+  vec2 uv = vec2(atan(v.z, v.x), asin(v.y));
+  uv *= vec2(0.1591, 0.3183);  // inv atan
+  uv += 0.5;
+  uv.x = 1 - uv.x;
+  return uv;
+}
+
+void main() {
+  vec3 normal = normalize(position);
+  vec2 uv     = sample_spherical_map(normal);
+  vec3 color  = texture(environment, uv).rgb;
+
+  // TODO(giacomo): We skip gamma correction, assuming the environment is stored
+  // in linear space. Is it always true? Probably not.
+  frag_color = vec3(color);
+}
+)";
+
 #ifndef _WIN32
 #pragma GCC diagnostic pop
 #endif
@@ -477,25 +817,7 @@ gui_material* add_material(gui_scene* scene, const vec3f& emission,
   set_normalmap(material, normalmap_tex);
   return material;
 }
-ogl_shape* add_shape(gui_scene* scene, const vector<int>& points,
-    const vector<vec2i>& lines, const vector<vec3i>& triangles,
-    const vector<vec4i>& quads, const vector<vec3f>& positions,
-    const vector<vec3f>& normals, const vector<vec2f>& texcoords,
-    const vector<vec3f>& colors, bool edges) {
-  auto shape = add_shape(scene);
-  set_points(shape, points);
-  set_lines(shape, lines);
-  set_triangles(shape, triangles);
-  set_quads(shape, quads);
-  set_positions(shape, positions);
-  set_normals(shape, normals);
-  set_texcoords(shape, texcoords);
-  set_colors(shape, colors);
-  if (edges && (!triangles.empty() || !quads.empty())) {
-    set_edges(shape, triangles, quads);
-  }
-  return shape;
-}
+
 gui_instance* add_instance(gui_scene* scene, const frame3f& frame,
     ogl_shape* shape, gui_material* material, bool hidden, bool highlighted) {
   auto instance = add_instance(scene);
@@ -546,7 +868,7 @@ void draw_object(
   auto program = (params.shading == gui_shading_type::environment)
                      ? scene->ibl_program
                      : scene->lights_program;
-  
+
   auto shape_xform     = frame_to_mat(instance->frame);
   auto shape_inv_xform = transpose(
       frame_to_mat(inverse(instance->frame, params.non_rigid_frames)));
@@ -647,7 +969,7 @@ void draw_scene(gui_scene* scene, gui_camera* camera, const vec4i& viewport,
   auto program = (params.shading == gui_shading_type::environment)
                      ? scene->ibl_program
                      : scene->lights_program;
-    
+
   bind_program(program);
   assert_ogl_error();
   set_uniform(program, "eye", camera->frame.o);
@@ -792,8 +1114,10 @@ inline void bake_specular_brdf_texture(ogl_texture* texture) {
   auto framebuffer = ogl_framebuffer{};
   auto screen_quad = quad_shape();
 
-  auto program = load_program(
-      "apps/ibl/shaders/bake_brdf.vert", "apps/ibl/shaders/bake_brdf.frag");
+  auto program = ogl_program{};
+  auto error = ""s, errorlog = ""s;
+  init_program(&program, bake_brdf_vertex, bake_brdf_fragment, error, errorlog);
+
   assert_ogl_error();
 
   texture->is_float  = true;
@@ -816,7 +1140,7 @@ inline void bake_specular_brdf_texture(ogl_texture* texture) {
   set_framebuffer_texture(&framebuffer, texture, 0);
 
   bind_framebuffer(&framebuffer);
-  bind_program(program);
+  bind_program(&program);
 
   set_ogl_viewport(vec2i{size, size});
   clear_ogl_framebuffer({0, 0, 0, 0}, true);
@@ -827,23 +1151,29 @@ inline void bake_specular_brdf_texture(ogl_texture* texture) {
   unbind_program();
   unbind_framebuffer();
   clear_framebuffer(&framebuffer);
-  clear_program(program);
+  clear_program(&program);
 }
 
 void init_ibl_data(gui_scene* scene, const ogl_texture* environment_texture) {
-  scene->ibl_program = ibl::load_program(
-      "apps/ibl/shaders/scene.vert", "apps/ibl/shaders/ibl.frag");
+  auto load_program = [scene](ogl_program* program, const char* vertex,
+                          const char* fragment) {
+    auto error = ""s, errorlog = ""s;
+    init_program(program, vertex, fragment, error, errorlog);
+  };
+  load_program(scene->ibl_program, glscene_vertex, glibl_fragment);
+
   scene->environment_program = ibl::load_program(
       "apps/ibl/shaders/environment.vert", "apps/ibl/shaders/environment.frag");
 
   // make cubemap from environment texture
   {
     auto size    = environment_texture->size.y;
-    auto program = ibl::load_program("apps/ibl/shaders/bake_cubemap.vert",
-        "apps/ibl/shaders/bake_environment.frag");
+    auto program = new ogl_program{};
+    load_program(program, bake_cubemap_vert, bake_environment_frag);
     bake_cubemap(
         scene->environment_cubemap, environment_texture, program, size);
     clear_program(program);
+    delete program;
   }
 
   // bake irradiance map

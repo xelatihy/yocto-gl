@@ -211,11 +211,11 @@ gui_material* add_material(gui_scene* scene, const vec3f& emission,
     ogl_texture* emission_tex = nullptr, ogl_texture* color_tex = nullptr,
     ogl_texture* specular_tex = nullptr, ogl_texture* metallic_tex = nullptr,
     ogl_texture* roughness_tex = nullptr, ogl_texture* normalmap_tex = nullptr);
-ogl_shape*    add_shape(gui_scene* scene, const vector<int>& points,
-       const vector<vec2i>& lines, const vector<vec3i>& triangles,
-       const vector<vec4i>& quads, const vector<vec3f>& positions,
-       const vector<vec3f>& normals, const vector<vec2f>& texcoords,
-       const vector<vec3f>& colors, bool edges = false);
+// ogl_shape*    _add_shape(gui_scene* scene, const vector<int>& points,
+//        const vector<vec2i>& lines, const vector<vec3i>& triangles,
+//        const vector<vec4i>& quads, const vector<vec3f>& positions,
+//        const vector<vec3f>& normals, const vector<vec2f>& texcoords,
+//        const vector<vec3f>& colors, bool edges = false);
 gui_instance* add_instance(gui_scene* scene, const frame3f& frame,
     ogl_shape* shape, gui_material* material, bool hidden = false,
     bool highlighted = false);
