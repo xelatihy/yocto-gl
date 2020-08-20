@@ -2926,8 +2926,8 @@ void trace_start(trace_state* state, const trace_scene* scene,
   auto preview  = trace_image(scene, camera, pprms);
   for (auto j = 0; j < state->render.height(); j++) {
     for (auto i = 0; i < state->render.width(); i++) {
-      auto pi = clamp(i / params.pratio, 0, preview.width() - 1),
-           pj = clamp(j / params.pratio, 0, preview.height() - 1);
+      auto pi               = clamp(i / params.pratio, 0, preview.width() - 1),
+           pj               = clamp(j / params.pratio, 0, preview.height() - 1);
       state->render[{i, j}] = preview[{pi, pj}];
     }
   }

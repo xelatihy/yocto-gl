@@ -44,7 +44,7 @@ using namespace yocto;
 #endif
 
 namespace yocto {
-void print_obj_camera(scene_camera* camera);
+void print_obj_camera(sceneio_camera* camera);
 };
 
 // Application state

@@ -39,15 +39,16 @@ using namespace yocto;
 using std::unordered_map;
 
 // Construct a scene from io
-void init_scene(trace_scene* scene, scene_model* ioscene, trace_camera*& camera,
-    scene_camera* iocamera, progress_callback progress_cb = {}) {
+void init_scene(trace_scene* scene, sceneio_scene* ioscene,
+    trace_camera*& camera, sceneio_camera* iocamera,
+    progress_callback progress_cb = {}) {
   // handle progress
   auto progress = vec2i{
       0, (int)ioscene->cameras.size() + (int)ioscene->environments.size() +
              (int)ioscene->materials.size() + (int)ioscene->textures.size() +
              (int)ioscene->shapes.size() + (int)ioscene->instances.size()};
 
-  auto camera_map     = unordered_map<scene_camera*, trace_camera*>{};
+  auto camera_map     = unordered_map<sceneio_camera*, trace_camera*>{};
   camera_map[nullptr] = nullptr;
   for (auto iocamera : ioscene->cameras) {
     if (progress_cb)
@@ -60,7 +61,7 @@ void init_scene(trace_scene* scene, scene_model* ioscene, trace_camera*& camera,
     camera_map[iocamera] = camera;
   }
 
-  auto texture_map     = unordered_map<scene_texture*, trace_texture*>{};
+  auto texture_map     = unordered_map<sceneio_texture*, trace_texture*>{};
   texture_map[nullptr] = nullptr;
   for (auto iotexture : ioscene->textures) {
     if (progress_cb)
@@ -74,7 +75,7 @@ void init_scene(trace_scene* scene, scene_model* ioscene, trace_camera*& camera,
     texture_map[iotexture] = texture;
   }
 
-  auto material_map     = unordered_map<scene_material*, trace_material*>{};
+  auto material_map     = unordered_map<sceneio_material*, trace_material*>{};
   material_map[nullptr] = nullptr;
   for (auto iomaterial : ioscene->materials) {
     if (progress_cb)
@@ -104,7 +105,7 @@ void init_scene(trace_scene* scene, scene_model* ioscene, trace_camera*& camera,
     material_map[iomaterial] = material;
   }
 
-  auto shape_map     = unordered_map<scene_shape*, trace_shape*>{};
+  auto shape_map     = unordered_map<sceneio_shape*, trace_shape*>{};
   shape_map[nullptr] = nullptr;
   for (auto ioshape : ioscene->shapes) {
     if (progress_cb) progress_cb("converting shapes", progress.x++, progress.y);
@@ -185,7 +186,7 @@ int main(int argc, const char* argv[]) {
   parse_cli(cli, argc, argv);
 
   // scene loading
-  auto ioscene_guard = std::make_unique<scene_model>();
+  auto ioscene_guard = std::make_unique<sceneio_scene>();
   auto ioscene       = ioscene_guard.get();
   auto ioerror       = ""s;
   if (!load_scene(filename, ioscene, ioerror, print_progress))

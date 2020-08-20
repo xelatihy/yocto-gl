@@ -225,7 +225,7 @@ file format for example from the
 [Obj Wikipedia page](<https://en.wikipedia.org/wiki/OBJ_(file_format)>).
 Obj files come in pairs, `.obj` for shapes and `.mtl` for materials.
 
-Yocto/ModelIO represents Obj data with the `obj_model` struct.
+Yocto/ModelIO represents Obj data with the `obj_scene` struct.
 Obj models are defined as collections of shapes and materials.
 Obj shapes use a face-varying representation that has vertex positions,
 normals and texture coordinates, with their their own topology.
@@ -249,14 +249,14 @@ namely `.objx`, that stores cameras and environment maps, respectively as
 capable of storing full scenes.
 
 The Obj model is defined as an array of objects of the types defined above.
-Obj objects are pointers owned by the main `obj_model`.
+Obj objects are pointers owned by the main `obj_scene`.
 Objects properties can be read and written directly from the model data,
 and are documented in the header file for now.
 For shapes, Yocto/ModelIO provides several functions to read and write Obj
 shapes, with a simpler interface than accessing data directly.
 
 ```cpp
-auto obj = new obj_model{...};             // obj model buffer
+auto obj = new obj_scene{...};             // obj model buffer
 for(auto shape : obj->shapes)              // access shapes
   print_info(shape->name);                 // access shape properties
 for(auto material : obj->material)         // access materials
@@ -277,7 +277,7 @@ In the case of an error, the IO functions set the `error` string with a
 message suitable for displaying to a user.
 
 ```cpp
-auto obj = new obj_model{};             // obj model buffer
+auto obj = new obj_scene{};             // obj model buffer
 auto error = string{};                  // error buffer
 if(!load_obj(filename, obj, error))     // load obj
   print_error(error);                   // check and print error
@@ -315,7 +315,7 @@ but differ in that they take a material is as input, instead of returning
 materials tags.
 
 ```cpp
-auto obj = new obj_model{};             // obj model buffer
+auto obj = new obj_scene{};             // obj model buffer
 auto error = string{};                  // error buffer
 load_obj(filename, obj, error);         // load obj
 auto shape = obj->shapes.front();       // get shape
@@ -351,7 +351,7 @@ Yocto/ModelIO supports also reading Obj shapes as face-varying quads
 with `get_fvquads(...)`.
 
 ```cpp
-auto obj = new obj_model{};             // obj model buffer
+auto obj = new obj_scene{};             // obj model buffer
 auto error = string{};                  // error buffer
 load_obj(filename, obj, error);         // load obj
 auto shape = obj->shapes.front();       // get shape
@@ -391,7 +391,7 @@ empty if only one material is used. To set material points
 use `set_materials(shape,materials)`.
 
 ```cpp
-auto obj = new obj_model{};             // obj model buffer
+auto obj = new obj_scene{};             // obj model buffer
 
 auto camera = add_camera(obj);          // add camera
 camera->name = "camera";                // set camera name
@@ -422,7 +422,7 @@ Yocto/ModelIO supports also writing of face-varying shapes with
 `set_fvquads(...)` with an API similar to above.
 
 ```cpp
-auto obj = new obj_model{};             // obj model buffer
+auto obj = new obj_scene{};             // obj model buffer
 
 auto quadspos  = vector<vec4i>{...};    // face-varying element data
 auto quadsnorm = vector<vec4i>{...};
@@ -457,7 +457,7 @@ approach and translates camera, shapes, materials, textures and lights from
 Pbrt plugins to a common representation that presents users a simpler and
 more uniform scene representation.
 
-Yocto/ModelIO represents Pbrt data with the `pbrt_model` struct.
+Yocto/ModelIO represents Pbrt data with the `pbrt_scene` struct.
 Pbrt models are defined as collections of cameras, instanced shapes, materials,
 texture and environments. Pbrt cameras are translate into a thin-len
 approximations. Pbrt materials are translated to a material representation
@@ -466,7 +466,7 @@ defined by a image file. Pbrt area lights are translated to either emissive
 materials and environments.
 
 The Pbrt model is defined as an array of objects of the types defined above.
-Pbrt objects are pointers owned by the main `pbrt_model`.
+Pbrt objects are pointers owned by the main `pbrt_scene`.
 Objects properties can be read and written directly from the model data,
 and are documented in the header file for now.
 Yocto/ModelIO does not currently provide functions to read and write Pbrt
@@ -477,7 +477,7 @@ parse most Pbrt files. The objects properties documentations are for now
 stored in the header file.
 
 ```cpp
-auto pbrt = new pbrt_model{...};            // obj model buffer
+auto pbrt = new pbrt_scene{...};            // obj model buffer
 for(auto shape : pbrt->shapes)              // access shapes
   print_info(shape->name);                  // access shape properties
 for(auto material : pbrt->material)         // access materials
@@ -498,7 +498,7 @@ In the case of an error, the IO functions set the `error` string with a
 message suitable for displaying to a user.
 
 ```cpp
-auto pbrt = new pbrt_model{};           // obj model buffer
+auto pbrt = new pbrt_scene{};           // obj model buffer
 auto error = string{};                  // error buffer
 if(!load_pbrt(filename, pbrt, error))   // load obj
   print_error(error);                   // check and print error

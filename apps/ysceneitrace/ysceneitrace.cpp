@@ -39,7 +39,7 @@ using namespace yocto;
 #include <deque>
 
 namespace yocto {
-void print_obj_camera(scene_camera* camera);
+void print_obj_camera(sceneio_camera* camera);
 };  // namespace yocto
 
 // Application scene
@@ -51,10 +51,10 @@ struct app_state {
   string name      = "";
 
   // scene
-  scene_model*  ioscene  = new scene_model{};
-  trace_scene*  scene    = new trace_scene{};
-  scene_camera* iocamera = nullptr;
-  trace_camera* camera   = nullptr;
+  sceneio_scene*  ioscene  = new sceneio_scene{};
+  trace_scene*    scene    = new trace_scene{};
+  sceneio_camera* iocamera = nullptr;
+  trace_camera*   camera   = nullptr;
 
   // options
   trace_params params = {};
@@ -69,12 +69,12 @@ struct app_state {
   ogl_image_params glparams = {};
 
   // editing
-  scene_camera*      selected_camera      = nullptr;
-  scene_instance*    selected_instance    = nullptr;
-  scene_shape*       selected_shape       = nullptr;
-  scene_material*    selected_material    = nullptr;
-  scene_environment* selected_environment = nullptr;
-  scene_texture*     selected_texture     = nullptr;
+  sceneio_camera*      selected_camera      = nullptr;
+  sceneio_instance*    selected_instance    = nullptr;
+  sceneio_shape*       selected_shape       = nullptr;
+  sceneio_material*    selected_material    = nullptr;
+  sceneio_environment* selected_environment = nullptr;
+  sceneio_texture*     selected_texture     = nullptr;
 
   // computation
   int          render_sample  = 0;
@@ -119,15 +119,16 @@ struct app_states {
 };
 
 // Construct a scene from io
-void init_scene(trace_scene* scene, scene_model* ioscene, trace_camera*& camera,
-    scene_camera* iocamera, progress_callback progress_cb = {}) {
+void init_scene(trace_scene* scene, sceneio_scene* ioscene,
+    trace_camera*& camera, sceneio_camera* iocamera,
+    progress_callback progress_cb = {}) {
   // handle progress
   auto progress = vec2i{
       0, (int)ioscene->cameras.size() + (int)ioscene->environments.size() +
              (int)ioscene->materials.size() + (int)ioscene->textures.size() +
              (int)ioscene->shapes.size() + (int)ioscene->instances.size()};
 
-  auto camera_map     = unordered_map<scene_camera*, trace_camera*>{};
+  auto camera_map     = unordered_map<sceneio_camera*, trace_camera*>{};
   camera_map[nullptr] = nullptr;
   for (auto iocamera : ioscene->cameras) {
     if (progress_cb)
@@ -140,7 +141,7 @@ void init_scene(trace_scene* scene, scene_model* ioscene, trace_camera*& camera,
     camera_map[iocamera] = camera;
   }
 
-  auto texture_map     = unordered_map<scene_texture*, trace_texture*>{};
+  auto texture_map     = unordered_map<sceneio_texture*, trace_texture*>{};
   texture_map[nullptr] = nullptr;
   for (auto iotexture : ioscene->textures) {
     if (progress_cb)
@@ -154,7 +155,7 @@ void init_scene(trace_scene* scene, scene_model* ioscene, trace_camera*& camera,
     texture_map[iotexture] = texture;
   }
 
-  auto material_map     = unordered_map<scene_material*, trace_material*>{};
+  auto material_map     = unordered_map<sceneio_material*, trace_material*>{};
   material_map[nullptr] = nullptr;
   for (auto iomaterial : ioscene->materials) {
     if (progress_cb)
@@ -184,7 +185,7 @@ void init_scene(trace_scene* scene, scene_model* ioscene, trace_camera*& camera,
     material_map[iomaterial] = material;
   }
 
-  auto shape_map     = unordered_map<scene_shape*, trace_shape*>{};
+  auto shape_map     = unordered_map<sceneio_shape*, trace_shape*>{};
   shape_map[nullptr] = nullptr;
   for (auto ioshape : ioscene->shapes) {
     if (progress_cb) progress_cb("converting shapes", progress.x++, progress.y);
@@ -297,7 +298,7 @@ void load_scene_async(app_states* apps, const string& filename,
 }
 
 bool draw_widgets(
-    gui_window* win, scene_model* ioscene, scene_camera* iocamera) {
+    gui_window* win, sceneio_scene* ioscene, sceneio_camera* iocamera) {
   if (!iocamera) return false;
   auto edited = 0;
   draw_label(win, "name", iocamera->name);
@@ -323,7 +324,7 @@ bool draw_widgets(
 }
 
 bool draw_widgets(
-    gui_window* win, scene_model* ioscene, scene_texture* iotexture) {
+    gui_window* win, sceneio_scene* ioscene, sceneio_texture* iotexture) {
   if (!iotexture) return false;
   auto edited = 0;
   draw_label(win, "name", iotexture->name);
@@ -338,7 +339,7 @@ bool draw_widgets(
 }
 
 bool draw_widgets(
-    gui_window* win, scene_model* ioscene, scene_material* iomaterial) {
+    gui_window* win, sceneio_scene* ioscene, sceneio_material* iomaterial) {
   if (!iomaterial) return false;
   auto edited = 0;
   draw_label(win, "name", iomaterial->name);
@@ -381,7 +382,8 @@ bool draw_widgets(
   return edited;
 }
 
-bool draw_widgets(gui_window* win, scene_model* ioscene, scene_shape* ioshape) {
+bool draw_widgets(
+    gui_window* win, sceneio_scene* ioscene, sceneio_shape* ioshape) {
   if (!ioshape) return false;
   auto edited = 0;
   draw_label(win, "name", ioshape->name);
@@ -408,7 +410,7 @@ bool draw_widgets(gui_window* win, scene_model* ioscene, scene_shape* ioshape) {
 }
 
 bool draw_widgets(
-    gui_window* win, scene_model* ioscene, scene_instance* ioobject) {
+    gui_window* win, sceneio_scene* ioscene, sceneio_instance* ioobject) {
   if (!ioobject) return false;
   auto edited = 0;
   draw_label(win, "name", ioobject->name);
@@ -422,8 +424,8 @@ bool draw_widgets(
   return edited;
 }
 
-bool draw_widgets(
-    gui_window* win, scene_model* ioscene, scene_environment* ioenvironment) {
+bool draw_widgets(gui_window* win, sceneio_scene* ioscene,
+    sceneio_environment* ioenvironment) {
   if (!ioenvironment) return false;
   auto edited = 0;
   draw_label(win, "name", ioenvironment->name);
@@ -554,7 +556,7 @@ void draw_widgets(gui_window* win, app_states* apps, const gui_input& input) {
     }
     end_header(win);
   }
-  auto get_texture = [app](scene_texture* iotexture) {
+  auto get_texture = [app](sceneio_texture* iotexture) {
     return get_element(iotexture, app->ioscene->textures, app->scene->textures);
   };
   if (!app->ioscene->cameras.empty() && begin_header(win, "cameras")) {
@@ -812,8 +814,7 @@ int main(int argc, const char* argv[]) {
         auto ray = camera_ray(app->camera->frame, app->camera->lens,
             app->camera->lens, app->camera->film,
             vec2f{ij.x + 0.5f, ij.y + 0.5f} /
-                vec2f{(float)app->render.width(),
-                    (float)app->render.height()});
+                vec2f{(float)app->render.width(), (float)app->render.height()});
         if (auto isec = intersect_scene_bvh(app->scene, ray); isec.hit) {
           app->selected_instance = app->ioscene->instances[isec.instance];
         }
