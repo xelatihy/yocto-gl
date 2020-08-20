@@ -1352,23 +1352,23 @@ inline float eval_volume(const volume<float>& vol, const vec3f& uvw,
   if (vol.empty()) return 0;
 
   // get coordinates normalized for tiling
-  auto s = clamp((uvw.x + 1.0f) * 0.5f, 0.0f, 1.0f) * vol.size().x;
-  auto t = clamp((uvw.y + 1.0f) * 0.5f, 0.0f, 1.0f) * vol.size().y;
-  auto r = clamp((uvw.z + 1.0f) * 0.5f, 0.0f, 1.0f) * vol.size().z;
+  auto s = clamp((uvw.x + 1.0f) * 0.5f, 0.0f, 1.0f) * vol.volsize().x;
+  auto t = clamp((uvw.y + 1.0f) * 0.5f, 0.0f, 1.0f) * vol.volsize().y;
+  auto r = clamp((uvw.z + 1.0f) * 0.5f, 0.0f, 1.0f) * vol.volsize().z;
 
   // get image coordinates and residuals
-  auto i  = clamp((int)s, 0, vol.size().x - 1);
-  auto j  = clamp((int)t, 0, vol.size().y - 1);
-  auto k  = clamp((int)r, 0, vol.size().z - 1);
-  auto ii = (i + 1) % vol.size().x, jj = (j + 1) % vol.size().y,
-       kk = (k + 1) % vol.size().z;
+  auto i  = clamp((int)s, 0, vol.volsize().x - 1);
+  auto j  = clamp((int)t, 0, vol.volsize().y - 1);
+  auto k  = clamp((int)r, 0, vol.volsize().z - 1);
+  auto ii = (i + 1) % vol.volsize().x, jj = (j + 1) % vol.volsize().y,
+       kk = (k + 1) % vol.volsize().z;
   auto u = s - i, v = t - j, w = r - k;
 
   // nearest-neighbor interpolation
   if (no_interpolation) {
-    i = u < 0.5 ? i : min(i + 1, vol.size().x - 1);
-    j = v < 0.5 ? j : min(j + 1, vol.size().y - 1);
-    k = w < 0.5 ? k : min(k + 1, vol.size().z - 1);
+    i = u < 0.5 ? i : min(i + 1, vol.volsize().x - 1);
+    j = v < 0.5 ? j : min(j + 1, vol.volsize().y - 1);
+    k = w < 0.5 ? k : min(k + 1, vol.volsize().z - 1);
     return lookup_volume(vol, {i, j, k}, ldr_as_linear);
   }
 
@@ -1395,11 +1395,11 @@ namespace yocto {
 void make_test(
     volume<float>& vol, const vec3i& size, float scale, float exponent) {
   vol.resize(size);
-  for (auto k = 0; k < vol.size().z; k++) {
-    for (auto j = 0; j < vol.size().y; j++) {
-      for (auto i = 0; i < vol.size().x; i++) {
-        auto p     = vec3f{i / (float)vol.size().x, j / (float)vol.size().y,
-            k / (float)vol.size().z};
+  for (auto k = 0; k < vol.volsize().z; k++) {
+    for (auto j = 0; j < vol.volsize().y; j++) {
+      for (auto i = 0; i < vol.volsize().x; i++) {
+        auto p = vec3f{i / (float)vol.volsize().x, j / (float)vol.volsize().y,
+            k / (float)vol.volsize().z};
         auto value = pow(
             max(max(cos(scale * p.x), cos(scale * p.y)), 0.0f), exponent);
         vol[{i, j, k}] = clamp(value, 0.0f, 1.0f);
@@ -1960,8 +1960,8 @@ bool save_volume(
     error = filename + ": write error";
     return false;
   };
-  if (!save_yvol(filename.c_str(), vol.size().x, vol.size().y, vol.size().z, 1,
-          vol.data()))
+  if (!save_yvol(filename.c_str(), vol.volsize().x, vol.volsize().y,
+          vol.volsize().z, 1, vol.data()))
     return write_error();
   return true;
 }
