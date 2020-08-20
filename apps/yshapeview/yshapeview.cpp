@@ -33,7 +33,7 @@
 #include <yocto/yocto_sceneio.h>
 #include <yocto/yocto_shape.h>
 #include <yocto_gui/yocto_imgui.h>
-#include <yocto_gui/yocto_opengl.h>
+#include <yocto_gui/yocto_draw.h>
 using namespace yocto;
 
 #include <deque>
@@ -56,14 +56,14 @@ struct app_state {
   string name      = "";
 
   // options
-  ogl_scene_params drawgl_prms = {};
+  gui_scene_params drawgl_prms = {};
 
   // scene
   generic_shape* ioshape = new generic_shape{};
 
   // rendering state
-  ogl_scene*  glscene  = new ogl_scene{};
-  ogl_camera* glcamera = nullptr;
+  gui_scene*  glscene  = new gui_scene{};
+  gui_camera* glcamera = nullptr;
 
   // loading status
   std::atomic<bool> ok           = false;
@@ -88,7 +88,7 @@ struct app_states {
   std::deque<app_state*> loading  = {};
 
   // default options
-  ogl_scene_params drawgl_prms = {};
+  gui_scene_params drawgl_prms = {};
 
   // cleanup
   ~app_states() {
@@ -170,7 +170,7 @@ quads_shape make_cylinders(const vector<vec2i>& lines,
   return shape;
 }
 
-void init_glscene(ogl_scene* glscene, const generic_shape* ioshape,
+void init_glscene(gui_scene* glscene, const generic_shape* ioshape,
     progress_callback progress_cb) {
   // handle progress
   auto progress = vec2i{0, 4};
@@ -280,7 +280,7 @@ void draw_widgets(gui_window* win, app_states* apps, const gui_input& input) {
     draw_coloredit(win, "color", glmaterial->color);
     auto& params = app->drawgl_prms;
     draw_slider(win, "resolution", params.resolution, 0, 4096);
-    draw_combobox(win, "shading", (int&)params.shading, ogl_shading_names);
+    draw_combobox(win, "shading", (int&)params.shading, gui_shading_names);
     draw_checkbox(win, "wireframe", params.wireframe);
     continue_line(win);
     draw_checkbox(win, "edges", params.edges);
@@ -364,7 +364,7 @@ int main(int argc, const char* argv[]) {
   add_option(cli, "--resolution,-r", apps->drawgl_prms.resolution,
       "Image resolution.");
   add_option(cli, "--shading", apps->drawgl_prms.shading, "Shading type.",
-      ogl_shading_names);
+      gui_shading_names);
   add_option(cli, "shapes", filenames, "Shape filenames", true);
   parse_cli(cli, argc, argv);
 
