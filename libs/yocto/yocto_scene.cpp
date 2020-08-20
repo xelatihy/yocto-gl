@@ -34,8 +34,6 @@
 #include <climits>
 #include <cstdlib>
 #include <cstring>
-#include <deque>
-#include <future>
 #include <memory>
 #include <unordered_map>
 
@@ -51,7 +49,6 @@
 namespace yocto {
 
 // using directives
-using std::deque;
 using namespace std::string_literals;
 
 }  // namespace yocto
