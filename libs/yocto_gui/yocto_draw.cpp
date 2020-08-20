@@ -618,7 +618,7 @@ void main() {
 }
 )";
 
-static const char* bake_cubemap_vert = R"(
+static const char* cubemap_vertex = R"(
 #version 330
 
 layout(location = 0) in vec3 positions;  // vertex position
@@ -674,6 +674,162 @@ void main() {
 }
 )";
 
+static const char* bake_diffuse_frag = R"(
+#version 330
+
+out vec3 frag_color;
+
+in vec3 position;  //  position in world space
+
+uniform vec3 eye;         // camera position
+uniform mat4 view;        // inverse of the camera frame (as a matrix)
+uniform mat4 projection;  // camera projection
+
+uniform samplerCube environment;
+
+const float pif = 3.14159265359;
+
+vec3 direction(float phi, float theta) {
+  return vec3(sin(theta) * cos(phi), sin(theta) * sin(phi), cos(theta));
+}
+
+void main() {
+  vec3 normal = normalize(position);
+  // TODO: Why do we need these flips?
+  normal.z *= -1;
+  normal.y *= -1;
+
+  vec3 up    = vec3(0.0, 1.0, 0.0);
+  vec3 right = normalize(cross(up, normal));
+  up         = normalize(cross(normal, right));
+  mat3 rot   = mat3(right, up, normal);
+
+  vec3 irradiance = vec3(0.0);
+
+  int phi_samples   = 256;
+  int theta_samples = 128;
+  for (int x = 0; x < phi_samples; x++) {
+    for (int y = 0; y < theta_samples; y++) {
+      float phi    = (2.0 * pif * x) / phi_samples;
+      float theta  = (0.5 * pif * y) / theta_samples;
+      vec3  sample = rot * direction(phi, theta);
+      // TODO: Artifacts on Mac if we don't force the LOD.
+      vec3 environment = textureLod(environment, sample, 0).rgb;
+      irradiance += environment * cos(theta) * sin(theta);
+    }
+  }
+  irradiance *= pif / (phi_samples * theta_samples);
+  frag_color = irradiance;
+}
+)";
+
+static const char* bake_specular_frag = R"(
+#version 330
+
+out vec3 frag_color;
+
+in vec3 position;  //  position in world space
+
+uniform vec3 eye;         // camera position
+uniform mat4 view;        // inverse of the camera frame (as a matrix)
+uniform mat4 projection;  // camera projection
+uniform int  mipmap_level;
+uniform int  num_samples = 1024;
+
+uniform samplerCube environment;
+
+const float pif = 3.14159265359;
+
+float radical_inverse(uint bits) {
+  bits = (bits << 16u) | (bits >> 16u);
+  bits = ((bits & 0x55555555u) << 1u) | ((bits & 0xAAAAAAAAu) >> 1u);
+  bits = ((bits & 0x33333333u) << 2u) | ((bits & 0xCCCCCCCCu) >> 2u);
+  bits = ((bits & 0x0F0F0F0Fu) << 4u) | ((bits & 0xF0F0F0F0u) >> 4u);
+  bits = ((bits & 0x00FF00FFu) << 8u) | ((bits & 0xFF00FF00u) >> 8u);
+  return float(bits) * 2.3283064365386963e-10;  // / 0x100000000
+}
+
+vec2 hammersley(uint i, int N) {
+  return vec2(float(i) / float(N), radical_inverse(i));
+}
+
+vec3 sample_ggx(vec2 rn, vec3 N, float roughness) {
+  float a = roughness * roughness;
+
+  float phi       = 2.0 * pif * rn.x;
+  float cos_theta = sqrt((1.0 - rn.y) / (1.0 + (a * a - 1.0) * rn.y));
+  float sin_theta = sqrt(1.0 - cos_theta * cos_theta);
+
+  // from spherical coordinates to cartesian coordinates
+  vec3 H;
+  H.x = cos(phi) * sin_theta;
+  H.y = sin(phi) * sin_theta;
+  H.z = cos_theta;
+
+  // from tangent-space vector to world-space sample vector
+  vec3 up        = abs(N.z) < 0.999 ? vec3(0.0, 0.0, 1.0) : vec3(1.0, 0.0, 0.0);
+  vec3 tangent   = normalize(cross(up, N));
+  vec3 bitangent = normalize(cross(N, tangent));
+
+  vec3 result = tangent * H.x + bitangent * H.y + N * H.z;
+  return normalize(result);
+}
+
+void main() {
+  vec3 N = normalize(position);
+  N.z *= -1;
+  N.y *= -1;
+  vec3 R = N;
+  vec3 V = N;
+
+  float roughness = float(mipmap_level) / 5.0;
+  roughness *= roughness;
+
+  float total_weight = 0.0;
+  vec3  result       = vec3(0.0);
+  for (uint i = 0u; i < uint(num_samples); i++) {
+    vec2  rn    = hammersley(i, num_samples);
+    vec3  H     = sample_ggx(rn, N, roughness);
+    vec3  L     = normalize(reflect(-V, H));
+    float NdotL = dot(N, L);
+    if (NdotL > 0.0) {
+      result += textureLod(environment, L, 0).rgb * NdotL;
+      total_weight += NdotL;
+    }
+  }
+  result = result / total_weight;
+
+  frag_color = vec3(result);
+}
+)";
+
+static const char* environment_fragment = R"(
+#version 330
+
+out vec3 frag_color;
+
+in vec3 position;  //  position in world space
+
+uniform vec3 eye;         // camera position
+uniform mat4 view;        // inverse of the camera frame (as a matrix)
+uniform mat4 projection;  // camera projection
+
+uniform float exposure;
+uniform float gamma;
+
+uniform samplerCube environment;
+
+void main() {
+  vec3 v = normalize(position);
+
+  vec3 radiance = texture(environment, v).rgb;
+
+  // final color correction
+  radiance   = pow(radiance * pow(2, exposure), vec3(1 / gamma));
+  frag_color = radiance;
+}
+)";
+
 #ifndef _WIN32
 #pragma GCC diagnostic pop
 #endif
@@ -685,6 +841,13 @@ gui_scene::~gui_scene() {
   for (auto material : materials) delete material;
   for (auto texture : textures) delete texture;
   for (auto light : lights) delete light;
+  delete lights_program;
+  delete ibl_program;
+  delete environment_program;
+  delete environment_cubemap;
+  delete diffuse_cubemap;
+  delete specular_cubemap;
+  delete brdf_lut;
 }
 
 // Initialize an OpenGL scene
@@ -703,8 +866,12 @@ void clear_scene(gui_scene* scene) {
   for (auto texture : scene->textures) clear_texture(texture);
   for (auto shape : scene->shapes) clear_shape(shape);
   clear_program(scene->lights_program);
+  clear_program(scene->ibl_program);
   clear_program(scene->environment_program);
   clear_cubemap(scene->environment_cubemap);
+  clear_cubemap(scene->diffuse_cubemap);
+  clear_cubemap(scene->specular_cubemap);
+  clear_texture(scene->brdf_lut);
 }
 
 // add camera
@@ -1028,35 +1195,6 @@ void draw_scene(gui_scene* scene, gui_camera* camera, const vec4i& viewport,
 
 // image based lighting
 namespace ibl {
-
-static ogl_program* load_program(
-    const string& vertex_filename, const string& fragment_filename) {
-  auto error           = ""s;
-  auto vertex_source   = ""s;
-  auto fragment_source = ""s;
-
-  if (!load_text(vertex_filename, vertex_source, error)) {
-    printf("error loading vertex shader (%s): \n%s\n", vertex_filename.c_str(),
-        error.c_str());
-    return nullptr;
-  }
-  if (!load_text(fragment_filename, fragment_source, error)) {
-    printf("error loading fragment shader (%s): \n%s\n",
-        fragment_filename.c_str(), error.c_str());
-    return nullptr;
-  }
-
-  auto program   = new ogl_program();
-  auto error_buf = ""s;
-  if (!init_program(
-          program, vertex_source, fragment_source, error, error_buf)) {
-    printf("\nerror: %s\n", error.c_str());
-    printf("    %s\n", error_buf.c_str());
-    return nullptr;
-  }
-  return program;
-}
-
 // Using 6 render passes, bake a cubemap given a sampler for the environment.
 // The input sampler can be either a cubemap or a latlong texture.
 template <typename Sampler>
@@ -1160,16 +1298,16 @@ void init_ibl_data(gui_scene* scene, const ogl_texture* environment_texture) {
     auto error = ""s, errorlog = ""s;
     init_program(program, vertex, fragment, error, errorlog);
   };
-  load_program(scene->ibl_program, glscene_vertex, glibl_fragment);
 
-  scene->environment_program = ibl::load_program(
-      "apps/ibl/shaders/environment.vert", "apps/ibl/shaders/environment.frag");
+  load_program(scene->ibl_program, glscene_vertex, glibl_fragment);
+  load_program(
+      scene->environment_program, cubemap_vertex, environment_fragment);
 
   // make cubemap from environment texture
   {
     auto size    = environment_texture->size.y;
     auto program = new ogl_program{};
-    load_program(program, bake_cubemap_vert, bake_environment_frag);
+    load_program(program, cubemap_vertex, bake_environment_frag);
     bake_cubemap(
         scene->environment_cubemap, environment_texture, program, size);
     clear_program(program);
@@ -1178,20 +1316,22 @@ void init_ibl_data(gui_scene* scene, const ogl_texture* environment_texture) {
 
   // bake irradiance map
   {
-    auto program = ibl::load_program("apps/ibl/shaders/bake_cubemap.vert",
-        "apps/ibl/shaders/bake_irradiance.frag");
+    auto program = new ogl_program{};
+    load_program(program, cubemap_vertex, bake_diffuse_frag);
     bake_cubemap(
         scene->diffuse_cubemap, scene->environment_cubemap, program, 64);
     clear_program(program);
+    delete program;
   }
 
   // bake specular map
   {
-    auto program = ibl::load_program("apps/ibl/shaders/bake_cubemap.vert",
-        "apps/ibl/shaders/bake_specular.frag");
+    auto program = new ogl_program{};
+    load_program(program, cubemap_vertex, bake_specular_frag);
     bake_cubemap(
         scene->specular_cubemap, scene->environment_cubemap, program, 256, 6);
     clear_program(program);
+    delete program;
   }
 
   bake_specular_brdf_texture(scene->brdf_lut);
