@@ -43,13 +43,13 @@ using namespace std::string_literals;
 namespace yocto {
 
 // find a value in a vector or vecs
-inline int find_in_vec(const vector<int>& vec, int x) {
+static int find_in_vec(const vector<int>& vec, int x) {
   for (int i = 0; i < size(vec); i++)
     if (vec[i] == x) return i;
   return -1;
 }
 
-inline int find_in_vec(const vec3i& vec, int x) {
+static int find_in_vec(const vec3i& vec, int x) {
   for (auto i = 0; i < 3; i++)
     if (vec[i] == x) return i;
   return -1;
@@ -1814,7 +1814,7 @@ vector<int> strip_on_dual_graph(const dual_geodesic_solver& solver,
   return strip;
 }
 
-inline int node_is_neighboor(const geodesic_solver& solver, int vid, int node) {
+static int node_is_neighboor(const geodesic_solver& solver, int vid, int node) {
   auto nbr = solver.graph[vid];
   for (auto i = 0; i < nbr.size(); ++i) {
     if (nbr[i].node == node) {

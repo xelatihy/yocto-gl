@@ -433,7 +433,7 @@ vec3f lookup_image(const image<vec3b>& img, const vec2i& ij, bool as_linear) {
 
 // Evaluate a texture
 template <typename T, typename R>
-inline R eval_image_generic(const image<T>& img, const vec2f& uv,
+static R eval_image_generic(const image<T>& img, const vec2f& uv,
     bool as_linear, bool no_interpolation, bool clamp_to_edge) {
   if (img.empty()) return R{};
 
@@ -1339,13 +1339,13 @@ image<vec4b> add_logo(const image<vec4b>& img, const string& type) {
 namespace yocto {
 
 // Lookup volume
-inline float lookup_volume(
+static float lookup_volume(
     const volume<float>& vol, const vec3i& ijk, bool as_linear) {
   return vol[ijk];
 }
 
 // Evaluates a color image at a point `uv`.
-inline float eval_volume(const volume<float>& vol, const vec3f& uvw,
+static float eval_volume(const volume<float>& vol, const vec3f& uvw,
     bool ldr_as_linear, bool no_interpolation, bool clamp_to_edge) {
   if (vol.empty()) return 0;
 
