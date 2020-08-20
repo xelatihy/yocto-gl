@@ -1194,6 +1194,9 @@ void draw_scene(gui_scene* scene, gui_camera* camera, const vec4i& viewport,
   for (auto instance : scene->instances) {
     draw_object(scene, instance, params);
   }
+  unbind_program();
+
+  if (!scene->environment_program->program_id) return;
 
   bind_program(scene->environment_program);
   // set_scene_uniforms
