@@ -2891,13 +2891,13 @@ image<vec4f> trace_image(const trace_scene* scene, const trace_camera* camera,
   for (auto sample = 0; sample < params.samples; sample++) {
     if (progress_cb) progress_cb("trace image", sample, params.samples);
     if (params.noparallel) {
-      for (auto j = 0; j < state->render.imsize().y; j++) {
-        for (auto i = 0; i < state->render.imsize().x; i++) {
+      for (auto j = 0; j < state->render.height(); j++) {
+        for (auto i = 0; i < state->render.width(); i++) {
           trace_sample(state, scene, camera, {i, j}, params);
         }
       }
     } else {
-      parallel_for(state->render.imsize().x, state->render.imsize().y,
+      parallel_for(state->render.width(), state->render.height(),
           [state, scene, camera, &params](int i, int j) {
             trace_sample(state, scene, camera, {i, j}, params);
           });
@@ -2924,10 +2924,10 @@ void trace_start(trace_state* state, const trace_scene* scene,
   pprms.resolution /= params.pratio;
   pprms.samples = 1;
   auto preview  = trace_image(scene, camera, pprms);
-  for (auto j = 0; j < state->render.imsize().y; j++) {
-    for (auto i = 0; i < state->render.imsize().x; i++) {
-      auto pi = clamp(i / params.pratio, 0, preview.imsize().x - 1),
-           pj = clamp(j / params.pratio, 0, preview.imsize().y - 1);
+  for (auto j = 0; j < state->render.height(); j++) {
+    for (auto i = 0; i < state->render.width(); i++) {
+      auto pi = clamp(i / params.pratio, 0, preview.width() - 1),
+           pj = clamp(j / params.pratio, 0, preview.height() - 1);
       state->render[{i, j}] = preview[{pi, pj}];
     }
   }
@@ -2938,8 +2938,8 @@ void trace_start(trace_state* state, const trace_scene* scene,
     for (auto sample = 0; sample < params.samples; sample++) {
       if (state->stop) return;
       if (progress_cb) progress_cb("trace image", sample, params.samples);
-      parallel_for(state->render.imsize().x, state->render.imsize().y,
-          [&](int i, int j) {
+      parallel_for(
+          state->render.width(), state->render.height(), [&](int i, int j) {
             if (state->stop) return;
             trace_sample(state, scene, camera, {i, j}, params);
             if (async_cb)

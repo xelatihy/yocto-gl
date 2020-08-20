@@ -500,8 +500,8 @@ namespace yocto {
 template <typename T>
 inline void set_region(
     image<T>& img, const image<T>& region, const vec2i& offset) {
-  for (auto j = 0; j < region.imsize().y; j++) {
-    for (auto i = 0; i < region.imsize().x; i++) {
+  for (auto j = 0; j < region.height(); j++) {
+    for (auto i = 0; i < region.width(); i++) {
       if (!img.contains({i, j})) continue;
       img[vec2i{i, j} + offset] = region[{i, j}];
     }
@@ -719,7 +719,7 @@ image<vec4b> tonemap_imageb(
 
 void tonemap_image_mt(image<vec4f>& ldr, const image<vec4f>& hdr,
     float exposure, bool filmic, bool srgb) {
-  parallel_for(hdr.imsize().x, hdr.imsize().y, [&](int i, int j) {
+  parallel_for(hdr.width(), hdr.height(), [&](int i, int j) {
     ldr[{i, j}] = tonemap(hdr[{i, j}], exposure, filmic, srgb);
   });
 }
@@ -774,7 +774,7 @@ image<vec4f> colorgrade_image(
 // Apply exposure and filmic tone mapping
 void colorgrade_image_mt(image<vec4f>& corrected, const image<vec4f>& img,
     bool linear, const colorgrade_params& params) {
-  parallel_for(img.imsize().x, img.imsize().y, [&](int i, int j) {
+  parallel_for(img.width(), img.height(), [&](int i, int j) {
     corrected[{i, j}] = colorgrade(img[{i, j}], linear, params);
   });
 }
@@ -803,19 +803,18 @@ static vec2i resize_size(const vec2i& img_size, const vec2i& size_) {
 image<vec4f> resize_image(const image<vec4f>& img, const vec2i& size_) {
   auto size    = resize_size(img.imsize(), size_);
   auto res_img = image<vec4f>{size};
-  stbir_resize_float_generic((float*)img.data(), img.imsize().x, img.imsize().y,
-      sizeof(vec4f) * img.imsize().x, (float*)res_img.data(),
-      res_img.imsize().x, res_img.imsize().y,
-      sizeof(vec4f) * res_img.imsize().x, 4, 3, 0, STBIR_EDGE_CLAMP,
-      STBIR_FILTER_DEFAULT, STBIR_COLORSPACE_LINEAR, nullptr);
+  stbir_resize_float_generic((float*)img.data(), img.width(), img.height(),
+      sizeof(vec4f) * img.width(), (float*)res_img.data(), res_img.width(),
+      res_img.height(), sizeof(vec4f) * res_img.width(), 4, 3, 0,
+      STBIR_EDGE_CLAMP, STBIR_FILTER_DEFAULT, STBIR_COLORSPACE_LINEAR, nullptr);
   return res_img;
 }
 image<vec4b> resize_image(const image<vec4b>& img, const vec2i& size_) {
   auto size    = resize_size(img.imsize(), size_);
   auto res_img = image<vec4b>{size};
-  stbir_resize_uint8_generic((byte*)img.data(), img.imsize().x, img.imsize().y,
-      sizeof(vec4b) * img.imsize().x, (byte*)res_img.data(), res_img.imsize().x,
-      res_img.imsize().y, sizeof(vec4b) * res_img.imsize().x, 4, 3, 0,
+  stbir_resize_uint8_generic((byte*)img.data(), img.width(), img.height(),
+      sizeof(vec4b) * img.width(), (byte*)res_img.data(), res_img.width(),
+      res_img.height(), sizeof(vec4b) * res_img.width(), 4, 3, 0,
       STBIR_EDGE_CLAMP, STBIR_FILTER_DEFAULT, STBIR_COLORSPACE_LINEAR, nullptr);
   return res_img;
 }
@@ -845,10 +844,10 @@ namespace yocto {
 // Comvert a bump map to a normal map.
 void bump_to_normal(image<vec4f>& norm, const image<vec4f>& img, float scale) {
   norm.resize(img.imsize());
-  auto dx = 1.0f / img.imsize().x, dy = 1.0f / img.imsize().y;
-  for (int j = 0; j < img.imsize().y; j++) {
-    for (int i = 0; i < img.imsize().x; i++) {
-      auto i1 = (i + 1) % img.imsize().x, j1 = (j + 1) % img.imsize().y;
+  auto dx = 1.0f / img.width(), dy = 1.0f / img.height();
+  for (int j = 0; j < img.height(); j++) {
+    for (int i = 0; i < img.width(); i++) {
+      auto i1 = (i + 1) % img.width(), j1 = (j + 1) % img.height();
       auto p00 = img[{i, j}], p10 = img[{i1, j}], p01 = img[{i, j1}];
       auto g00    = (p00.x + p00.y + p00.z) / 3;
       auto g01    = (p01.x + p01.y + p01.z) / 3;
@@ -872,8 +871,8 @@ template <typename Shader>
 image<vec4f> make_image(const vec2i& size, Shader&& shader) {
   auto img   = image<vec4f>{size};
   auto scale = 1.0f / max(size);
-  for (auto j = 0; j < img.imsize().y; j++) {
-    for (auto i = 0; i < img.imsize().x; i++) {
+  for (auto j = 0; j < img.height(); j++) {
+    for (auto i = 0; i < img.width(); i++) {
       auto uv     = vec2f{i * scale, j * scale};
       img[{i, j}] = shader(uv);
     }
@@ -1057,12 +1056,11 @@ image<vec4f> add_border(
     const image<vec4f>& source, float width, const vec4f& color) {
   auto img   = source;
   auto scale = 1.0f / max(img.imsize());
-  for (auto j = 0; j < img.imsize().y; j++) {
-    for (auto i = 0; i < img.imsize().x; i++) {
+  for (auto j = 0; j < img.height(); j++) {
+    for (auto i = 0; i < img.width(); i++) {
       auto uv = vec2f{i * scale, j * scale};
-      if (uv.x < width || uv.y < width ||
-          uv.x > img.imsize().x * scale - width ||
-          uv.y > img.imsize().y * scale - width) {
+      if (uv.x < width || uv.y < width || uv.x > img.width() * scale - width ||
+          uv.y > img.height() * scale - width) {
         img[{i, j}] = color;
       }
     }
@@ -1163,11 +1161,11 @@ image<vec4f> make_sunsky(const vec2i& size, float theta_sun, float turbidity,
   // Make the sun sky image
   auto img          = image<vec4f>{size};
   auto sky_integral = 0.0f, sun_integral = 0.0f;
-  for (auto j = 0; j < img.imsize().y / 2; j++) {
-    auto theta = pif * ((j + 0.5f) / img.imsize().y);
+  for (auto j = 0; j < img.height() / 2; j++) {
+    auto theta = pif * ((j + 0.5f) / img.height());
     theta      = clamp(theta, 0.0f, pif / 2 - flt_eps);
-    for (int i = 0; i < img.imsize().x; i++) {
-      auto phi = 2 * pif * (float(i + 0.5f) / img.imsize().x);
+    for (int i = 0; i < img.width(); i++) {
+      auto phi = 2 * pif * (float(i + 0.5f) / img.width());
       auto w = vec3f{cos(phi) * sin(theta), cos(theta), sin(phi) * sin(theta)};
       auto gamma   = acos(clamp(dot(w, sun_direction), -1.0f, 1.0f));
       auto sky_col = sky(theta, gamma, theta_sun);
@@ -1181,23 +1179,23 @@ image<vec4f> make_sunsky(const vec2i& size, float theta_sun, float turbidity,
 
   if (ground_albedo != zero3f) {
     auto ground = zero3f;
-    for (auto j = 0; j < img.imsize().y / 2; j++) {
-      auto theta = pif * ((j + 0.5f) / img.imsize().y);
-      for (int i = 0; i < img.imsize().x; i++) {
+    for (auto j = 0; j < img.height() / 2; j++) {
+      auto theta = pif * ((j + 0.5f) / img.height());
+      for (int i = 0; i < img.width(); i++) {
         auto pxl   = img[{i, j}];
         auto le    = vec3f{pxl.x, pxl.y, pxl.z};
-        auto angle = sin(theta) * 4 * pif / (img.imsize().x * img.imsize().y);
+        auto angle = sin(theta) * 4 * pif / (img.width() * img.height());
         ground += le * (ground_albedo / pif) * cos(theta) * angle;
       }
     }
-    for (auto j = img.imsize().y / 2; j < img.imsize().y; j++) {
-      for (int i = 0; i < img.imsize().x; i++) {
+    for (auto j = img.height() / 2; j < img.height(); j++) {
+      for (int i = 0; i < img.width(); i++) {
         img[{i, j}] = {ground.x, ground.y, ground.z, 1};
       }
     }
   } else {
-    for (auto j = img.imsize().y / 2; j < img.imsize().y; j++) {
-      for (int i = 0; i < img.imsize().x; i++) {
+    for (auto j = img.height() / 2; j < img.height(); j++) {
+      for (int i = 0; i < img.width(); i++) {
         img[{i, j}] = {0, 0, 0, 1};
       }
     }
@@ -1211,12 +1209,12 @@ image<vec4f> make_sunsky(const vec2i& size, float theta_sun, float turbidity,
 image<vec4f> make_lights(const vec2i& size, const vec3f& le, int nlights,
     float langle, float lwidth, float lheight) {
   auto img = image<vec4f>{size};
-  for (auto j = 0; j < img.imsize().y / 2; j++) {
-    auto theta = pif * ((j + 0.5f) / img.imsize().y);
+  for (auto j = 0; j < img.height() / 2; j++) {
+    auto theta = pif * ((j + 0.5f) / img.height());
     theta      = clamp(theta, 0.0f, pif / 2 - 0.00001f);
     if (fabs(theta - langle) > lheight / 2) continue;
-    for (int i = 0; i < img.imsize().x; i++) {
-      auto phi     = 2 * pif * (float(i + 0.5f) / img.imsize().x);
+    for (int i = 0; i < img.width(); i++) {
+      auto phi     = 2 * pif * (float(i + 0.5f) / img.width());
       auto inlight = false;
       for (auto l = 0; l < nlights; l++) {
         auto lphi = 2 * pif * (l + 0.5f) / nlights;
@@ -1352,23 +1350,23 @@ inline float eval_volume(const volume<float>& vol, const vec3f& uvw,
   if (vol.empty()) return 0;
 
   // get coordinates normalized for tiling
-  auto s = clamp((uvw.x + 1.0f) * 0.5f, 0.0f, 1.0f) * vol.size().x;
-  auto t = clamp((uvw.y + 1.0f) * 0.5f, 0.0f, 1.0f) * vol.size().y;
-  auto r = clamp((uvw.z + 1.0f) * 0.5f, 0.0f, 1.0f) * vol.size().z;
+  auto s = clamp((uvw.x + 1.0f) * 0.5f, 0.0f, 1.0f) * vol.width();
+  auto t = clamp((uvw.y + 1.0f) * 0.5f, 0.0f, 1.0f) * vol.height();
+  auto r = clamp((uvw.z + 1.0f) * 0.5f, 0.0f, 1.0f) * vol.depth();
 
   // get image coordinates and residuals
-  auto i  = clamp((int)s, 0, vol.size().x - 1);
-  auto j  = clamp((int)t, 0, vol.size().y - 1);
-  auto k  = clamp((int)r, 0, vol.size().z - 1);
-  auto ii = (i + 1) % vol.size().x, jj = (j + 1) % vol.size().y,
-       kk = (k + 1) % vol.size().z;
+  auto i  = clamp((int)s, 0, vol.width() - 1);
+  auto j  = clamp((int)t, 0, vol.height() - 1);
+  auto k  = clamp((int)r, 0, vol.depth() - 1);
+  auto ii = (i + 1) % vol.width(), jj = (j + 1) % vol.height(),
+       kk = (k + 1) % vol.depth();
   auto u = s - i, v = t - j, w = r - k;
 
   // nearest-neighbor interpolation
   if (no_interpolation) {
-    i = u < 0.5 ? i : min(i + 1, vol.size().x - 1);
-    j = v < 0.5 ? j : min(j + 1, vol.size().y - 1);
-    k = w < 0.5 ? k : min(k + 1, vol.size().z - 1);
+    i = u < 0.5 ? i : min(i + 1, vol.width() - 1);
+    j = v < 0.5 ? j : min(j + 1, vol.height() - 1);
+    k = w < 0.5 ? k : min(k + 1, vol.depth() - 1);
     return lookup_volume(vol, {i, j, k}, ldr_as_linear);
   }
 
@@ -1395,11 +1393,11 @@ namespace yocto {
 void make_test(
     volume<float>& vol, const vec3i& size, float scale, float exponent) {
   vol.resize(size);
-  for (auto k = 0; k < vol.size().z; k++) {
-    for (auto j = 0; j < vol.size().y; j++) {
-      for (auto i = 0; i < vol.size().x; i++) {
-        auto p     = vec3f{i / (float)vol.size().x, j / (float)vol.size().y,
-            k / (float)vol.size().z};
+  for (auto k = 0; k < vol.depth(); k++) {
+    for (auto j = 0; j < vol.height(); j++) {
+      for (auto i = 0; i < vol.width(); i++) {
+        auto p     = vec3f{i / (float)vol.width(), j / (float)vol.height(),
+            k / (float)vol.depth()};
         auto value = pow(
             max(max(cos(scale * p.x), cos(scale * p.y)), 0.0f), exponent);
         vol[{i, j, k}] = clamp(value, 0.0f, 1.0f);
@@ -1655,17 +1653,17 @@ bool is_hdr_filename(const string& filename) {
 
   auto ext = path_extension(filename);
   if (ext == ".hdr" || ext == ".HDR") {
-    if (!stbi_write_hdr(filename.c_str(), img.imsize().x, img.imsize().y, 4,
-            (float*)img.data()))
+    if (!stbi_write_hdr(
+            filename.c_str(), img.width(), img.height(), 4, (float*)img.data()))
       return write_error();
     return true;
   } else if (ext == ".pfm" || ext == ".PFM") {
-    if (!save_pfm(filename.c_str(), img.imsize().x, img.imsize().y, 4,
-            (float*)img.data()))
+    if (!save_pfm(
+            filename.c_str(), img.width(), img.height(), 4, (float*)img.data()))
       return write_error();
     return true;
   } else if (ext == ".exr" || ext == ".EXR") {
-    if (SaveEXR((float*)img.data(), img.imsize().x, img.imsize().y, 4,
+    if (SaveEXR((float*)img.data(), img.width(), img.height(), 4,
             filename.c_str()) < 0)
       return write_error();
     return true;
@@ -1721,23 +1719,23 @@ bool is_hdr_filename(const string& filename) {
 
   auto ext = path_extension(filename);
   if (ext == ".png" || ext == ".PNG") {
-    if (!stbi_write_png(filename.c_str(), img.imsize().x, img.imsize().y, 4,
-            img.data(), img.imsize().x * 4))
+    if (!stbi_write_png(filename.c_str(), img.width(), img.height(), 4,
+            img.data(), img.width() * 4))
       return write_error();
     return true;
   } else if (ext == ".jpg" || ext == ".JPG") {
-    if (!stbi_write_jpg(filename.c_str(), img.imsize().x, img.imsize().y, 4,
-            img.data(), 75))
+    if (!stbi_write_jpg(
+            filename.c_str(), img.width(), img.height(), 4, img.data(), 75))
       return write_error();
     return true;
   } else if (ext == ".tga" || ext == ".TGA") {
     if (!stbi_write_tga(
-            filename.c_str(), img.imsize().x, img.imsize().y, 4, img.data()))
+            filename.c_str(), img.width(), img.height(), 4, img.data()))
       return write_error();
     return true;
   } else if (ext == ".bmp" || ext == ".BMP") {
     if (!stbi_write_bmp(
-            filename.c_str(), img.imsize().x, img.imsize().y, 4, img.data()))
+            filename.c_str(), img.width(), img.height(), 4, img.data()))
       return write_error();
     return true;
   } else if (is_hdr_filename(filename)) {
@@ -1960,7 +1958,7 @@ bool save_volume(
     error = filename + ": write error";
     return false;
   };
-  if (!save_yvol(filename.c_str(), vol.size().x, vol.size().y, vol.size().z, 1,
+  if (!save_yvol(filename.c_str(), vol.width(), vol.height(), vol.depth(), 1,
           vol.data()))
     return write_error();
   return true;
