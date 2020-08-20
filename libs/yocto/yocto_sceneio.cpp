@@ -803,7 +803,7 @@ static bool load_obj_scene(const string& filename, scene_model* scene,
   if (progress_cb) progress_cb("load scene", progress.x++, progress.y);
 
   // load obj
-  auto obj_guard = std::make_unique<obj_model>();
+  auto obj_guard = std::make_unique<obj_scene>();
   auto obj       = obj_guard.get();
   if (!load_obj(filename, obj, error, false, true, false)) return false;
 
@@ -980,7 +980,7 @@ static bool save_obj_scene(const string& filename, const scene_model* scene,
   auto progress = vec2i{0, 2 + (int)scene->textures.size()};
   if (progress_cb) progress_cb("save scene", progress.x++, progress.y);
 
-  auto obj_guard = std::make_unique<obj_model>();
+  auto obj_guard = std::make_unique<obj_scene>();
   auto obj       = obj_guard.get();
 
   // convert cameras
@@ -1679,7 +1679,7 @@ static bool load_pbrt_scene(const string& filename, scene_model* scene,
   if (progress_cb) progress_cb("load scene", progress.x++, progress.y);
 
   // load pbrt
-  auto pbrt_guard = std::make_unique<pbrt_model>();
+  auto pbrt_guard = std::make_unique<pbrt_scene>();
   auto pbrt       = pbrt_guard.get();
   if (!load_pbrt(filename, pbrt, error)) return false;
 
@@ -1859,7 +1859,7 @@ static bool save_pbrt_scene(const string& filename, const scene_model* scene,
   if (progress_cb) progress_cb("save scene", progress.x++, progress.y);
 
   // save pbrt
-  auto pbrt_guard = std::make_unique<pbrt_model>();
+  auto pbrt_guard = std::make_unique<pbrt_scene>();
   auto pbrt       = pbrt_guard.get();
 
   // convert camera

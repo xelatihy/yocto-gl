@@ -2551,7 +2551,7 @@ namespace yocto {
     return true;
   } else if (ext == ".obj" || ext == ".OBJ") {
     // load obj
-    auto obj_guard = std::make_unique<obj_model>();
+    auto obj_guard = std::make_unique<obj_scene>();
     auto obj       = obj_guard.get();
     if (!load_obj(filename, obj, error, true)) return false;
 
@@ -2607,7 +2607,7 @@ namespace yocto {
     if (!save_ply(filename, ply, error)) return false;
     return true;
   } else if (ext == ".obj" || ext == ".OBJ") {
-    auto obj_guard = std::make_unique<obj_model>();
+    auto obj_guard = std::make_unique<obj_scene>();
     auto obj       = obj_guard.get();
     auto oshape    = add_shape(obj);
     if (!triangles.empty()) {
@@ -2663,7 +2663,7 @@ namespace yocto {
     return true;
   } else if (ext == ".obj" || ext == ".OBJ") {
     // load obj
-    auto obj_guard = std::make_unique<obj_model>();
+    auto obj_guard = std::make_unique<obj_scene>();
     auto obj       = obj_guard.get();
     if (!load_obj(filename, obj, error, true)) return false;
 
@@ -2719,7 +2719,7 @@ namespace yocto {
     if (!save_ply(filename, ply, error)) return false;
     return true;
   } else if (ext == ".obj" || ext == ".OBJ") {
-    auto obj_guard = std::make_unique<obj_model>();
+    auto obj_guard = std::make_unique<obj_scene>();
     auto obj       = obj_guard.get();
     auto oshape    = add_shape(obj);
     if (!lines.empty()) {
