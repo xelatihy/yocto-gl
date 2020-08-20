@@ -13,7 +13,8 @@ Scenes are stored in `sceneio_scene` structs and are comprised of array
 of objects whose memory is owned by the scene.
 Scenes are comprised of camera, instances, shapes, materials, textures
 and environments. Animation is not currently supported.
-The scene representation is geared toward modeling physically-based environments.
+The scene representation is geared toward modeling physically-based environments
+and and is similar to the [Yocto/Trace](yocto_trace.md) scene.
 In Yocto/SceneIO, lights are not explicitly defined, but
 implicitly comprised of instances with emissive materials and environment maps.
 All scenes and objects properties are accessible directly.
@@ -428,46 +429,4 @@ auto scene = new sceneio_scene{...};               // create a complete scene
 auto enva = eval_environment(scene, dir);        // eval all environments
 auto environment = scene->environments.front();  // get first environment
 auto envi = eval_environment(environment, dir);  // eval environment
-```
-
-## Ray-scene intersection
-
-Yocto/SceneIO supports ray-scene intersection queries accelerated by a two-level
-BVH. We provide both our implementation and an Embree wrapper. To perform
-ray intersection queries, first initialize the BVH with
-`init_bvh(scene, params, progress)`. The function takes a scene as input and
-builds a BVH that is stored internally. The BVH build strategy,
-and whether or not Embree is used is determined by the `params` settings.
-The function takes also an optional progress callback that is called as
-the BVH is build to report build progress. After initialization,
-if scene shapes and instances are modified, the BVH can be updated with
-`update_bvh(...)`.
-
-```cpp
-auto scene = new sceneio_scene{...};               // create a complete scene
-auto params = scene_bvh_params{};                // default params
-auto progress = [](const string& message,        // progress callback
-   int current, int total) {
-  print_info(message, current, total);
-};
-init_bvh(scene, params, progress);               // build bvh
-params.type = scene_bvh_type::embree_default;    // set build type as Embree
-init_bvh(scene, params);        // build Embree bvh with no progress report
-```
-
-Use `intersect_scene_bvh(scene, ray)` to intersect a ray with a scene,
-and `intersect_instance_bvh(instance, ray)` to intersect a ray with an
-instance. Both functions return a `scene_intersection` that includes
-a hit flag, the instance id, the shape element id, the shape element uv
-and intersection distance.
-
-```cpp
-auto scene = new sceneio_scene{...};          // create a complete scene
-init_bvh(scene, {});                        // build default bvh
-auto ray = ray3f{...};                      // ray
-auto isec = intersect_scene_bvh(scene, ray);// ray-scene intersection
-if (isec.hit) print_info(isec);
-auto instance = scene->instances.first();   // get instance
-auto iisec = intersect_instance_bvh(instance, ray); // ray-instance int,
-if (iisec.hit) print_info(isec);
 ```
