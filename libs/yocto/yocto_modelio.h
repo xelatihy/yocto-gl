@@ -147,6 +147,7 @@ bool get_positions(ply_model* ply, vector<vec3f>& values);
 bool get_normals(ply_model* ply, vector<vec3f>& values);
 bool get_texcoords(ply_model* ply, vector<vec2f>& values, bool flipv = false);
 bool get_colors(ply_model* ply, vector<vec3f>& values);
+bool get_colors(ply_model* ply, vector<vec4f>& values);
 bool get_radius(ply_model* ply, vector<float>& values);
 bool get_faces(ply_model* ply, vector<vector<int>>*& values);
 bool get_lines(ply_model* ply, vector<vec2i>& values);
@@ -186,6 +187,7 @@ bool add_normals(ply_model* ply, const vector<vec3f>& values);
 bool add_texcoords(
     ply_model* ply, const vector<vec2f>& values, bool flipv = false);
 bool add_colors(ply_model* ply, const vector<vec3f>& values);
+bool add_colors(ply_model* ply, const vector<vec4f>& values);
 bool add_radius(ply_model* ply, const vector<float>& values);
 bool add_faces(ply_model* ply, const vector<vector<int>>& values);
 bool add_faces(
@@ -336,20 +338,20 @@ struct obj_environment {
 };
 
 // Obj model
-struct obj_model {
+struct obj_scene {
   vector<string>           comments     = {};
   vector<obj_shape*>       shapes       = {};
   vector<obj_material*>    materials    = {};
   vector<obj_camera*>      cameras      = {};
   vector<obj_environment*> environments = {};
-  ~obj_model();
+  ~obj_scene();
 };
 
 // Load and save obj
-bool load_obj(const string& filename, obj_model* obj, string& error,
+bool load_obj(const string& filename, obj_scene* obj, string& error,
     bool geom_only = false, bool split_elements = true,
     bool split_materials = false);
-bool save_obj(const string& filename, obj_model* obj, string& error);
+bool save_obj(const string& filename, obj_scene* obj, string& error);
 
 // Get obj shape. Obj is a facevarying format, so vertices might be duplicated.
 // to ensure that no duplication occurs, either use the facevarying interface,
@@ -393,10 +395,10 @@ void get_points(const obj_shape* shape, int material, vector<int>& points,
     bool flip_texcoord = false);
 
 // Create OBJ
-obj_camera*      add_camera(obj_model* obj);
-obj_material*    add_material(obj_model* obj);
-obj_environment* add_environment(obj_model* obj);
-obj_shape*       add_shape(obj_model* obj);
+obj_camera*      add_camera(obj_scene* obj);
+obj_material*    add_material(obj_scene* obj);
+obj_environment* add_environment(obj_scene* obj);
+obj_shape*       add_shape(obj_scene* obj);
 
 // Add obj shape
 void set_triangles(obj_shape* shape, const vector<vec3i>& triangles,
@@ -526,7 +528,7 @@ struct pbrt_environment {
 };
 
 // Pbrt model
-struct pbrt_model {
+struct pbrt_scene {
   // pbrt data
   vector<string>            comments     = {};
   vector<pbrt_camera*>      cameras      = {};
@@ -536,20 +538,30 @@ struct pbrt_model {
   vector<pbrt_material*>    materials    = {};
 
   // cleanup
-  ~pbrt_model();
+  ~pbrt_scene();
 };
 
 // Load/save pbrt
-bool load_pbrt(const string& filename, pbrt_model* pbrt, string& error);
-bool save_pbrt(const string& filename, pbrt_model* pbrt, string& error,
+bool load_pbrt(const string& filename, pbrt_scene* pbrt, string& error);
+bool save_pbrt(const string& filename, pbrt_scene* pbrt, string& error,
     bool ply_meshes = false);
 
 // Create pbrt
-pbrt_camera*      add_camera(pbrt_model* pbrt);
-pbrt_shape*       add_shape(pbrt_model* pbrt);
-pbrt_material*    add_material(pbrt_model* pbrt);
-pbrt_environment* add_environment(pbrt_model* pbrt);
-pbrt_light*       add_light(pbrt_model* pbrt);
+pbrt_camera*      add_camera(pbrt_scene* pbrt);
+pbrt_shape*       add_shape(pbrt_scene* pbrt);
+pbrt_material*    add_material(pbrt_scene* pbrt);
+pbrt_environment* add_environment(pbrt_scene* pbrt);
+pbrt_light*       add_light(pbrt_scene* pbrt);
+
+}  // namespace yocto
+
+// -----------------------------------------------------------------------------
+// BACKWARDS COMPATIBILITY
+// -----------------------------------------------------------------------------
+namespace yocto {
+
+using obj_model [[deprecated]]  = obj_scene;
+using pbrt_model [[deprecated]] = pbrt_scene;
 
 }  // namespace yocto
 

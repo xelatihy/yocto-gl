@@ -45,7 +45,7 @@ using namespace std::string_literals;
 #endif
 
 namespace yocto::sceneio {
-void print_obj_camera(scene_camera* camera);
+void print_obj_camera(sceneio_camera* camera);
 };
 
 // Application state
@@ -60,20 +60,20 @@ struct app_state {
   gui_scene_params drawgl_prms = {};
 
   // scene
-  scene_model*  ioscene  = new scene_model{};
-  scene_camera* iocamera = nullptr;
+  sceneio_scene*  ioscene  = new sceneio_scene{};
+  sceneio_camera* iocamera = nullptr;
 
   // rendering state
   gui_scene*  glscene  = new gui_scene{};
   gui_camera* glcamera = nullptr;
 
   // editing
-  scene_camera*      selected_camera      = nullptr;
-  scene_instance*    selected_instance    = nullptr;
-  scene_shape*       selected_shape       = nullptr;
-  scene_material*    selected_material    = nullptr;
-  scene_environment* selected_environment = nullptr;
-  scene_texture*     selected_texture     = nullptr;
+  sceneio_camera*      selected_camera      = nullptr;
+  sceneio_instance*    selected_instance    = nullptr;
+  sceneio_shape*       selected_shape       = nullptr;
+  sceneio_material*    selected_material    = nullptr;
+  sceneio_environment* selected_environment = nullptr;
+  sceneio_texture*     selected_texture     = nullptr;
 
   // loading status
   std::atomic<bool> ok           = false;
@@ -90,7 +90,7 @@ struct app_state {
   }
 };
 
-void update_lights(gui_scene* glscene, scene_model* ioscene) {
+void update_lights(gui_scene* glscene, sceneio_scene* ioscene) {
   clear_lights(glscene);
   for (auto ioobject : ioscene->instances) {
     if (has_max_lights(glscene)) break;
@@ -120,8 +120,8 @@ void update_lights(gui_scene* glscene, scene_model* ioscene) {
   }
 }
 
-void init_glscene(gui_scene* glscene, scene_model* ioscene,
-    gui_camera*& glcamera, scene_camera* iocamera,
+void init_glscene(gui_scene* glscene, sceneio_scene* ioscene,
+    gui_camera*& glcamera, sceneio_camera* iocamera,
     progress_callback progress_cb) {
   // handle progress
   auto progress = vec2i{
@@ -133,7 +133,7 @@ void init_glscene(gui_scene* glscene, scene_model* ioscene,
   init_scene(glscene);
 
   // camera
-  auto camera_map     = unordered_map<scene_camera*, gui_camera*>{};
+  auto camera_map     = unordered_map<sceneio_camera*, gui_camera*>{};
   camera_map[nullptr] = nullptr;
   for (auto iocamera : ioscene->cameras) {
     if (progress_cb) progress_cb("convert camera", progress.x++, progress.y);
@@ -145,7 +145,7 @@ void init_glscene(gui_scene* glscene, scene_model* ioscene,
   }
 
   // textures
-  auto texture_map     = unordered_map<scene_texture*, ogl_texture*>{};
+  auto texture_map     = unordered_map<sceneio_texture*, ogl_texture*>{};
   texture_map[nullptr] = nullptr;
   for (auto iotexture : ioscene->textures) {
     if (progress_cb) progress_cb("convert texture", progress.x++, progress.y);
@@ -159,7 +159,7 @@ void init_glscene(gui_scene* glscene, scene_model* ioscene,
   }
 
   // material
-  auto material_map     = unordered_map<scene_material*, gui_material*>{};
+  auto material_map     = unordered_map<sceneio_material*, gui_material*>{};
   material_map[nullptr] = nullptr;
   for (auto iomaterial : ioscene->materials) {
     if (progress_cb) progress_cb("convert material", progress.x++, progress.y);
@@ -183,7 +183,7 @@ void init_glscene(gui_scene* glscene, scene_model* ioscene,
   }
 
   // shapes
-  auto shape_map     = unordered_map<scene_shape*, ogl_shape*>{};
+  auto shape_map     = unordered_map<sceneio_shape*, ogl_shape*>{};
   shape_map[nullptr] = nullptr;
   for (auto ioshape : ioscene->shapes) {
     if (progress_cb) progress_cb("convert shape", progress.x++, progress.y);
@@ -305,7 +305,7 @@ int main(int argc, const char* argv[]) {
         dolly = (input.mouse_pos.x - input.mouse_last.x) / 100.0f;
       if (input.mouse_left && input.modifier_shift)
         pan = (input.mouse_pos - input.mouse_last) / 100.0f;
-      update_turntable(
+      std::tie(app->iocamera->frame, app->iocamera->focus) = camera_turntable(
           app->iocamera->frame, app->iocamera->focus, rotate, dolly, pan);
       set_frame(app->glcamera, app->iocamera->frame);
     }

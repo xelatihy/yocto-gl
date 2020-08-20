@@ -866,6 +866,19 @@ bool get_texcoords(ply_model* ply, vector<vec2f>& texcoords, bool flipv) {
 bool get_colors(ply_model* ply, vector<vec3f>& colors) {
   return get_values(ply, "vertex", {"red", "green", "blue"}, colors);
 }
+bool get_colors(ply_model* ply, vector<vec4f>& colors) {
+  if (has_property(ply, "vertex", "alpha")) {
+    return get_values(ply, "vertex", {"red", "green", "blue", "alpha"}, colors);
+  } else {
+    auto colors3 = vector<vec3f>{};
+    if (!get_values(ply, "vertex", {"red", "green", "blue"}, colors3))
+      return false;
+    colors.resize(colors3.size());
+    for (auto i = 0; i < colors.size(); i++)
+      colors[i] = {colors3[i].x, colors3[i].y, colors3[i].z, 1};
+    return true;
+  }
+}
 bool get_radius(ply_model* ply, vector<float>& radius) {
   return get_value(ply, "vertex", "radius", radius);
 }
@@ -1091,6 +1104,9 @@ bool add_texcoords(ply_model* ply, const vector<vec2f>& values, bool flipv) {
 bool add_colors(ply_model* ply, const vector<vec3f>& values) {
   return add_values(ply, "vertex", {"red", "green", "blue"}, values);
 }
+bool add_colors(ply_model* ply, const vector<vec4f>& values) {
+  return add_values(ply, "vertex", {"red", "green", "blue", "alpha"}, values);
+}
 bool add_radius(ply_model* ply, const vector<float>& values) {
   return add_value(ply, "vertex", "radius", values);
 }
@@ -1199,7 +1215,7 @@ namespace yocto {
 
 // Read obj
 [[nodiscard]] inline bool load_mtl(
-    const string& filename, obj_model* obj, string& error) {
+    const string& filename, obj_scene* obj, string& error) {
   // error helpers
   auto open_error = [filename, &error]() {
     error = filename + ": file not found";
@@ -1426,7 +1442,7 @@ namespace yocto {
 
 // Read obj
 [[nodiscard]] inline bool load_objx(
-    const string& filename, obj_model* obj, string& error) {
+    const string& filename, obj_scene* obj, string& error) {
   // error helpers
   auto open_error = [filename, &error]() {
     error = filename + ": file not found";
@@ -1504,7 +1520,7 @@ namespace yocto {
   return true;
 }
 
-obj_model::~obj_model() {
+obj_scene::~obj_scene() {
   for (auto shape : shapes) delete shape;
   for (auto material : materials) delete material;
   for (auto camera : cameras) delete camera;
@@ -1512,21 +1528,21 @@ obj_model::~obj_model() {
 }
 
 // Make obj
-obj_camera* add_camera(obj_model* obj) {
+obj_camera* add_camera(obj_scene* obj) {
   return obj->cameras.emplace_back(new obj_camera{});
 }
-obj_material* add_material(obj_model* obj) {
+obj_material* add_material(obj_scene* obj) {
   return obj->materials.emplace_back(new obj_material{});
 }
-obj_environment* add_environment(obj_model* obj) {
+obj_environment* add_environment(obj_scene* obj) {
   return obj->environments.emplace_back(new obj_environment{});
 }
-obj_shape* add_shape(obj_model* obj) {
+obj_shape* add_shape(obj_scene* obj) {
   return obj->shapes.emplace_back(new obj_shape{});
 }
 
 // Read obj
-bool load_obj(const string& filename, obj_model* obj, string& error,
+bool load_obj(const string& filename, obj_scene* obj, string& error,
     bool geom_only, bool split_elements, bool split_materials) {
   // error helpers
   auto open_error = [filename, &error]() {
@@ -1562,7 +1578,7 @@ bool load_obj(const string& filename, obj_model* obj, string& error,
   auto material_map = unordered_map<string, obj_material*>{};
 
   // initialize obj
-  obj->~obj_model();
+  obj->~obj_scene();
   obj->cameras.clear();
   obj->environments.clear();
   obj->shapes.clear();
@@ -1763,7 +1779,7 @@ inline void format_value(string& str, const obj_vertex& value) {
 
 // Save obj
 [[nodiscard]] inline bool save_mtl(
-    const string& filename, obj_model* obj, string& error) {
+    const string& filename, obj_scene* obj, string& error) {
   // throw helpers
   // error helpers
   auto open_error = [filename, &error]() {
@@ -1939,7 +1955,7 @@ inline void format_value(string& str, const obj_vertex& value) {
 
 // Save obj
 [[nodiscard]] inline bool save_objx(
-    const string& filename, obj_model* obj, string& error) {
+    const string& filename, obj_scene* obj, string& error) {
   // error helpers
   auto open_error = [filename, &error]() {
     error = filename + ": file not found";
@@ -1998,7 +2014,7 @@ inline void format_value(string& str, const obj_vertex& value) {
 
 // Save obj
 [[nodiscard]] bool save_obj(
-    const string& filename, obj_model* obj, string& error) {
+    const string& filename, obj_scene* obj, string& error) {
   // error helpers
   auto open_error = [filename, &error]() {
     error = filename + ": file not found";
@@ -4035,7 +4051,7 @@ struct pbrt_context {
 };
 
 // load pbrt
-[[nodiscard]] inline bool load_pbrt(const string& filename, pbrt_model* pbrt,
+[[nodiscard]] inline bool load_pbrt(const string& filename, pbrt_scene* pbrt,
     string& error, pbrt_context& ctx,
     unordered_map<string, pbrt_material*>& material_map,
     unordered_map<string, pbrt_material>&  named_materials,
@@ -4336,7 +4352,7 @@ struct pbrt_context {
   return true;
 }
 
-pbrt_model::~pbrt_model() {
+pbrt_scene::~pbrt_scene() {
   for (auto camera : cameras) delete camera;
   for (auto shape : shapes) delete shape;
   for (auto environment : environments) delete environment;
@@ -4345,24 +4361,24 @@ pbrt_model::~pbrt_model() {
 }
 
 // Make pbrt
-pbrt_camera* add_camera(pbrt_model* pbrt) {
+pbrt_camera* add_camera(pbrt_scene* pbrt) {
   return pbrt->cameras.emplace_back(new pbrt_camera{});
 }
-pbrt_shape* add_shape(pbrt_model* pbrt) {
+pbrt_shape* add_shape(pbrt_scene* pbrt) {
   return pbrt->shapes.emplace_back(new pbrt_shape{});
 }
-pbrt_material* add_material(pbrt_model* pbrt) {
+pbrt_material* add_material(pbrt_scene* pbrt) {
   return pbrt->materials.emplace_back(new pbrt_material{});
 }
-pbrt_environment* add_environment(pbrt_model* pbrt) {
+pbrt_environment* add_environment(pbrt_scene* pbrt) {
   return pbrt->environments.emplace_back(new pbrt_environment{});
 }
-pbrt_light* add_light(pbrt_model* pbrt) {
+pbrt_light* add_light(pbrt_scene* pbrt) {
   return pbrt->lights.emplace_back(new pbrt_light{});
 }
 
 // load pbrt
-bool load_pbrt(const string& filename, pbrt_model* pbrt, string& error) {
+bool load_pbrt(const string& filename, pbrt_scene* pbrt, string& error) {
   auto ctx             = pbrt_context{};
   auto material_map    = unordered_map<string, pbrt_material*>{};
   auto named_materials = unordered_map<string, pbrt_material>{{"", {}}};
@@ -4463,7 +4479,7 @@ inline void format_value(string& str, const vector<pbrt_value>& values) {
 }
 
 bool save_pbrt(
-    const string& filename, pbrt_model* pbrt, string& error, bool ply_meshes) {
+    const string& filename, pbrt_scene* pbrt, string& error, bool ply_meshes) {
   // error helpers
   auto open_error = [filename, &error]() {
     error = filename + ": file not found";

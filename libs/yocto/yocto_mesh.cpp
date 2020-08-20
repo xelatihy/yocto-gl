@@ -43,13 +43,13 @@ using namespace std::string_literals;
 namespace yocto {
 
 // find a value in a vector or vecs
-inline int find_in_vec(const vector<int>& vec, int x) {
+static int find_in_vec(const vector<int>& vec, int x) {
   for (int i = 0; i < size(vec); i++)
     if (vec[i] == x) return i;
   return -1;
 }
 
-inline int find_in_vec(const vec3i& vec, int x) {
+static int find_in_vec(const vec3i& vec, int x) {
   for (auto i = 0; i < 3; i++)
     if (vec[i] == x) return i;
   return -1;
@@ -1814,7 +1814,7 @@ vector<int> strip_on_dual_graph(const dual_geodesic_solver& solver,
   return strip;
 }
 
-inline int node_is_neighboor(const geodesic_solver& solver, int vid, int node) {
+static int node_is_neighboor(const geodesic_solver& solver, int vid, int node) {
   auto nbr = solver.graph[vid];
   for (auto i = 0; i < nbr.size(); ++i) {
     if (nbr[i].node == node) {
@@ -2551,7 +2551,7 @@ namespace yocto {
     return true;
   } else if (ext == ".obj" || ext == ".OBJ") {
     // load obj
-    auto obj_guard = std::make_unique<obj_model>();
+    auto obj_guard = std::make_unique<obj_scene>();
     auto obj       = obj_guard.get();
     if (!load_obj(filename, obj, error, true)) return false;
 
@@ -2607,7 +2607,7 @@ namespace yocto {
     if (!save_ply(filename, ply, error)) return false;
     return true;
   } else if (ext == ".obj" || ext == ".OBJ") {
-    auto obj_guard = std::make_unique<obj_model>();
+    auto obj_guard = std::make_unique<obj_scene>();
     auto obj       = obj_guard.get();
     auto oshape    = add_shape(obj);
     if (!triangles.empty()) {
@@ -2663,7 +2663,7 @@ namespace yocto {
     return true;
   } else if (ext == ".obj" || ext == ".OBJ") {
     // load obj
-    auto obj_guard = std::make_unique<obj_model>();
+    auto obj_guard = std::make_unique<obj_scene>();
     auto obj       = obj_guard.get();
     if (!load_obj(filename, obj, error, true)) return false;
 
@@ -2719,7 +2719,7 @@ namespace yocto {
     if (!save_ply(filename, ply, error)) return false;
     return true;
   } else if (ext == ".obj" || ext == ".OBJ") {
-    auto obj_guard = std::make_unique<obj_model>();
+    auto obj_guard = std::make_unique<obj_scene>();
     auto obj       = obj_guard.get();
     auto oshape    = add_shape(obj);
     if (!lines.empty()) {

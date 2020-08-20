@@ -444,6 +444,7 @@ void set_positions(ogl_shape* shape, const vector<vec3f>& positions);
 void set_normals(ogl_shape* shape, const vector<vec3f>& normals);
 void set_texcoords(ogl_shape* shape, const vector<vec2f>& texcoords);
 void set_colors(ogl_shape* shape, const vector<vec3f>& colors);
+void set_colors(ogl_shape* shape, const vector<vec4f>& colors);
 void set_tangents(ogl_shape* shape, const vector<vec4f>& tangents);
 
 void draw_shape(const ogl_shape* shape);
