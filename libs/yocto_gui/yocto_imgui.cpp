@@ -29,6 +29,8 @@
 
 #include "yocto_imgui.h"
 
+#include <yocto/yocto_commonio.h>
+
 #include <algorithm>
 #include <cstdarg>
 #include <filesystem>
@@ -65,82 +67,6 @@ using std::mutex;
 using std::unordered_map;
 using std::unordered_set;
 using namespace std::string_literals;
-
-}  // namespace yocto
-
-// -----------------------------------------------------------------------------
-// FILE UTILITIES
-// -----------------------------------------------------------------------------
-namespace yocto {
-
-// Make a path from a utf8 string
-inline std::filesystem::path make_path(const string& filename) {
-  return std::filesystem::u8path(filename);
-}
-
-// Normalize path
-inline string normalize_path(const string& filename) {
-  return make_path(filename).generic_u8string();
-}
-
-// Get directory name (not including /)
-inline string path_dirname(const string& filename) {
-  return make_path(filename).parent_path().generic_u8string();
-}
-
-// Get extension (including .)
-inline string path_extension(const string& filename) {
-  return make_path(filename).extension().u8string();
-}
-
-// Get filename without directory.
-inline string path_filename(const string& filename) {
-  return make_path(filename).filename().u8string();
-}
-
-// Get filename without directory and extension.
-inline string path_basename(const string& filename) {
-  return make_path(filename).stem().u8string();
-}
-
-// Joins paths
-inline string path_join(const string& patha, const string& pathb) {
-  return (make_path(patha) / make_path(pathb)).generic_u8string();
-}
-inline string path_join(
-    const string& patha, const string& pathb, const string& pathc) {
-  return (make_path(patha) / make_path(pathb) / make_path(pathc))
-      .generic_u8string();
-}
-
-// Replaces extensions
-inline string replace_extension(const string& filename, const string& ext) {
-  return make_path(filename).replace_extension(ext).u8string();
-}
-
-// Check if a file can be opened for reading.
-inline bool path_exists(const string& filename) {
-  return exists(make_path(filename));
-}
-
-// Check if a file is a directory
-inline bool path_isdir(const string& filename) {
-  return is_directory(make_path(filename));
-}
-
-// Check if a file is a file
-inline bool path_isfile(const string& filename) {
-  return is_regular_file(make_path(filename));
-}
-
-// List the contents of a directory
-inline vector<string> list_directory(const string& filename) {
-  auto entries = vector<string>{};
-  for (auto entry : std::filesystem::directory_iterator(make_path(filename))) {
-    entries.push_back(entry.path().generic_u8string());
-  }
-  return entries;
-}
 
 }  // namespace yocto
 
