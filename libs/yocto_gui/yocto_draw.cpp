@@ -1119,7 +1119,7 @@ void draw_object(
     set_uniform(program, "emission", vec3f{0, 0, 0});
     set_uniform(program, "diffuse", vec3f{0, 0, 0});
     set_uniform(program, "specular", vec3f{0, 0, 0});
-    set_uniform(program, "roughness", 0);
+    set_uniform(program, "roughness", 0.0f);
     set_uniform(program, "etype", 3);
     draw_shape(shape);
     assert_ogl_error();

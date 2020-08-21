@@ -32,8 +32,8 @@
 #include <yocto/yocto_parallel.h>
 #include <yocto/yocto_sceneio.h>
 #include <yocto/yocto_shape.h>
-#include <yocto_gui/yocto_imgui.h>
 #include <yocto_gui/yocto_draw.h>
+#include <yocto_gui/yocto_imgui.h>
 using namespace yocto;
 
 #include <deque>
@@ -113,14 +113,11 @@ void load_shape_async(
 }
 
 // TODO(fabio): move this function to math
-frame3f camera_frame(
-    const bbox3f& bbox, float lens, float aspect, float film = 0.036) {
-  auto center      = (bbox.max + bbox.min) / 2;
-  auto bbox_radius = length(bbox.max - bbox.min) / 2;
-  auto camera_dir  = vec3f{0, 0, 1};
+frame3f camera_frame(float lens, float aspect, float film = 0.036) {
+  auto camera_dir  = normalize(vec3f{0, 0.5, 1});
+  auto bbox_radius = 2.0f;
   auto camera_dist = bbox_radius * lens / (film / aspect);
-  camera_dist *= 2.0f;  // correction
-  return lookat_frame(camera_dir * camera_dist + center, center, {0, 1, 0});
+  return lookat_frame(camera_dir * camera_dist, {0, 0, 0}, {0, 1, 0});
 }
 
 // TODO(fabio): move this function to shape
@@ -170,8 +167,8 @@ quads_shape make_cylinders(const vector<vec2i>& lines,
   return shape;
 }
 
-void init_glscene(gui_scene* glscene, const generic_shape* ioshape,
-    progress_callback progress_cb) {
+void init_glscene(
+    gui_scene* glscene, generic_shape* ioshape, progress_callback progress_cb) {
   // handle progress
   auto progress = vec2i{0, 4};
 
@@ -181,13 +178,14 @@ void init_glscene(gui_scene* glscene, const generic_shape* ioshape,
   // compute bounding box
   auto bbox = invalidb3f;
   for (auto& pos : ioshape->positions) bbox = merge(bbox, pos);
+  for (auto& pos : ioshape->positions) pos -= center(bbox);
+  for (auto& pos : ioshape->positions) pos /= max(size(bbox));
   // TODO(fabio): this should be a math function
 
   // camera
   if (progress_cb) progress_cb("convert camera", progress.x++, progress.y);
-  auto glcamera   = add_camera(glscene,
-      camera_frame(bbox, 0.050, 16.0f / 9.0f, 0.036), 0.050, 16.0f / 9.0f,
-      0.036);
+  auto glcamera = add_camera(glscene, camera_frame(0.050, 16.0f / 9.0f, 0.036),
+      0.050, 16.0f / 9.0f, 0.036);
   glcamera->focus = length(glcamera->frame.o - center(bbox));
 
   // material
@@ -202,10 +200,10 @@ void init_glscene(gui_scene* glscene, const generic_shape* ioshape,
       ioshape->triangles, ioshape->quads, ioshape->positions, ioshape->normals,
       ioshape->texcoords, ioshape->colors, true);
   auto edges    = make_cylinders(get_edges(ioshape->triangles, ioshape->quads),
-      ioshape->positions, 0.005, {4, 1, 1});
+      ioshape->positions, 0.0003, {4, 1, 1});
   auto glshapee = add_shape(glscene, {}, {}, {}, edges.quads, edges.positions,
       edges.normals, edges.texcoords, {});
-  auto vertices = make_spheres(ioshape->positions, 0.01, 2);
+  auto vertices = make_spheres(ioshape->positions, 0.001, 2);
   auto glshapev = add_shape(glscene, {}, {}, {}, vertices.quads,
       vertices.positions, vertices.normals, vertices.texcoords, {});
 
