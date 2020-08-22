@@ -646,25 +646,6 @@ template <class T>
 inline constexpr bool cli_is_vector_v = cli_is_vector<T>::value;
 
 template <typename T>
-inline string cli_to_string(const T& value, const vector<string>& choices) {
-  if constexpr (std::is_same_v<T, string>) return value;
-  if constexpr (std::is_same_v<T, bool>) return value ? "true" : "false";
-  if constexpr (std::is_integral_v<T>)
-    return choices.empty() ? std::to_string(value) : choices.at(value);
-  if constexpr (std::is_floating_point_v<T>) return std::to_string(value);
-  if constexpr (std::is_enum_v<T>)
-    return choices.empty() ? std::to_string((int)value)
-                           : choices.at((int)value);
-  if constexpr (cli_is_vector_v<T>) {
-    auto def = string{"["};
-    for (auto i = 0; i < value.size(); i++)
-      def += (i ? "," : "") + cli_to_string(value[i], choices);
-    return def;
-  }
-  throw std::invalid_argument{"unsupported type"};
-}
-
-template <typename T>
 inline int cli_nargs() {
   if constexpr (std::is_same_v<T, string>) return 1;
   if constexpr (std::is_same_v<T, bool>) return 0;
