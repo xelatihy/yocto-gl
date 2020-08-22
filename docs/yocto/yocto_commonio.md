@@ -4,6 +4,7 @@ Yocto/CommonIO is a collection of utilities used in writing command-line
 applications, including parsing command line arguments, simple path
 manipulation, file lading and saving, printing values, timers and
 progress bars.
+Yocto/CommonIO is implemented in `yocto_commonio.h` and `yocto_commonio.cpp`.
 
 ## Printing values
 
