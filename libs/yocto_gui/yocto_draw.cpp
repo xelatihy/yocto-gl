@@ -1316,7 +1316,7 @@ inline void bake_specular_brdf_texture(ogl_texture* texture) {
 }
 
 void init_ibl_data(gui_scene* scene, const ogl_texture* environment_texture) {
-  auto load_program = [scene](ogl_program* program, const char* vertex,
+  auto load_program = [](ogl_program* program, const char* vertex,
                           const char* fragment) {
     auto error = ""s, errorlog = ""s;
     init_program(program, vertex, fragment, error, errorlog);

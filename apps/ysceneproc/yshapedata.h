@@ -29,6 +29,9 @@
 #include <yocto/yocto_math.h>
 using namespace yocto;
 
+#include <vector>
+using std::vector;
+
 extern vector<vec3f> bunny_positions;
 extern vector<vec3f> bunny_normals;
 extern vector<vec2f> bunny_texcoords;
