@@ -32,8 +32,10 @@
 #include <yocto/yocto_commonio.h>
 
 #include <algorithm>
+#include <array>
 #include <cassert>
 #include <cstdarg>
+#include <stdexcept>
 #include <string>
 #include <unordered_map>
 #include <unordered_set>

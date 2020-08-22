@@ -16,6 +16,7 @@
 #include <deque>
 #include <filesystem>
 #include <memory>
+#include <stdexcept>
 #include <string>
 #include <unordered_set>
 #include <utility>

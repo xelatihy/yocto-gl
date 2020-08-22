@@ -38,7 +38,6 @@
 // INCLUDES
 // -----------------------------------------------------------------------------
 
-#include <algorithm>
 #include <utility>
 
 #include "yocto_math.h"

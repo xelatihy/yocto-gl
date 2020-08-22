@@ -38,11 +38,8 @@
 // INCLUDES
 // -----------------------------------------------------------------------------
 
+#include <array>
 #include <cstdint>
-#include <memory>
-#include <string>
-#include <tuple>
-#include <unordered_map>
 #include <vector>
 
 #include "yocto_math.h"
@@ -58,8 +55,6 @@ namespace yocto {
 
 // using directives
 using std::array;
-using std::string;
-using std::unordered_map;
 using std::vector;
 
 }  // namespace yocto

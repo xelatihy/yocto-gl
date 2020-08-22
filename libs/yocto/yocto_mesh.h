@@ -37,9 +37,9 @@
 // INCLUDES
 // -----------------------------------------------------------------------------
 
+#include <array>
 #include <memory>
 #include <string>
-#include <tuple>
 #include <unordered_map>
 #include <utility>
 #include <vector>

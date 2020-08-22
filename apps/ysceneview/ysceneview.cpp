@@ -406,7 +406,8 @@ T1* get_element(
   for (auto pos = 0; pos < ioelements.size(); pos++) {
     if (ioelements[pos] == ioelement) return elements[pos];
   }
-  throw std::runtime_error{"element not found"};
+  print_fatal("element not found");
+  return nullptr;
 }
 
 // draw with shading

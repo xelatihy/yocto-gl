@@ -1119,7 +1119,7 @@ void draw_object(
     set_uniform(program, "emission", vec3f{0, 0, 0});
     set_uniform(program, "diffuse", vec3f{0, 0, 0});
     set_uniform(program, "specular", vec3f{0, 0, 0});
-    set_uniform(program, "roughness", 0);
+    set_uniform(program, "roughness", 0.0f);
     set_uniform(program, "etype", 3);
     draw_shape(shape);
     assert_ogl_error();
@@ -1316,7 +1316,7 @@ inline void bake_specular_brdf_texture(ogl_texture* texture) {
 }
 
 void init_ibl_data(gui_scene* scene, const ogl_texture* environment_texture) {
-  auto load_program = [scene](ogl_program* program, const char* vertex,
+  auto load_program = [](ogl_program* program, const char* vertex,
                           const char* fragment) {
     auto error = ""s, errorlog = ""s;
     init_program(program, vertex, fragment, error, errorlog);
