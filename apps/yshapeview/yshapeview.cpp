@@ -201,6 +201,9 @@ void init_glscene(app_state* app, gui_scene* glscene, generic_shape* ioshape,
   auto model_shape = add_shape(glscene, ioshape->points, ioshape->lines,
       ioshape->triangles, ioshape->quads, ioshape->positions, ioshape->normals,
       ioshape->texcoords, ioshape->colors, true);
+  if (!is_initialized(get_normals(model_shape))) {
+    app->drawgl_prms.faceted = true;
+  }
   set_vertex_attribute(model_shape, vec3f{0, 0, 0}, 5);
   set_vertex_attribute(model_shape, vec3f{0, 0, 0}, 6);
 
@@ -305,12 +308,8 @@ void draw_widgets(gui_window* win, app_states* apps, const gui_input& input) {
   if (!apps->selected->ok) return;
   auto app = apps->selected;
   if (begin_header(win, "view")) {
-    auto  glshape    = app->glscene->shapes.front();
     auto  glmaterial = app->glscene->materials.front();
     auto& params     = app->drawgl_prms;
-    if (!is_initialized(get_normals(glshape))) {
-      params.faceted = true;
-    }
     draw_checkbox(win, "faceted", params.faceted);
     continue_line(win);
     draw_checkbox(win, "lines", app->glscene->instances[1]->hidden, true);
