@@ -407,6 +407,7 @@ T1* get_element(
     if (ioelements[pos] == ioelement) return elements[pos];
   }
   print_fatal("element not found");
+  return nullptr;
 }
 
 // draw with shading

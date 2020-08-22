@@ -447,6 +447,7 @@ T1* get_element(
     if (ioelements[pos] == ioelement) return elements[pos];
   }
   print_fatal("element not found");
+  return nullptr;
 }
 
 void draw_widgets(gui_window* win, app_states* apps, const gui_input& input) {
