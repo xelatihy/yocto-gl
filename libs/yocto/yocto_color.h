@@ -541,7 +541,6 @@ inline vec3f colormap(float t, colormap_type type) {
     case colormap_type::magma: return colormap_magma(t);
     case colormap_type::inferno: return colormap_inferno(t);
     case colormap_type::plasma: return colormap_plasma(t);
-    default: throw std::runtime_error{"unknown color map type"};
   }
 }
 

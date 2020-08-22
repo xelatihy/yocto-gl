@@ -12,6 +12,7 @@
 #include <cstring>
 #include <deque>
 #include <memory>
+#include <stdexcept>
 #include <string>
 
 #include "yocto_geometry.h"
@@ -320,7 +321,7 @@ static pair<int, int> split_sah(vector<int>& primitives,
   if (mid == start || mid == end) {
     split_axis = 0;
     mid        = (start + end) / 2;
-    throw std::runtime_error("bad bvh split");
+    throw std::runtime_error{"bad bvh split"};
   }
 
   return {mid, split_axis};

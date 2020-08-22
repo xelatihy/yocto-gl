@@ -31,6 +31,7 @@
 #include <cstring>
 #include <deque>
 #include <memory>
+#include <stdexcept>
 
 #include "yocto_color.h"
 #include "yocto_geometry.h"
