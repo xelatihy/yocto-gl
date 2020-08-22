@@ -576,13 +576,28 @@ inline bool format_value(file_stream& fs, const T& value) {
 // -----------------------------------------------------------------------------
 namespace yocto {
 
-// Command line parser data. All data should be considered private.
+// Command line value type
+enum struct cli_type { integer, uinteger, number, boolean, string };
+// Command line value
+struct cli_value {
+  cli_type type     = cli_type::integer;
+  int64_t  integer  = 0;
+  uint64_t uinteger = 0;
+  double   number   = 0;
+  string   text     = "";
+};
+// Command line option. All data should be considered private.
 struct cli_option {
   string                                name          = "";
   bool                                  req           = false;
   int                                   nargs         = 0;
   function<bool(const vector<string>&)> parse_and_set = {};
+  cli_type                              type          = cli_type::string;
+  vector<cli_value>                     value         = {};
+  vector<cli_value>                     def           = {};
+  vector<string>                        choices       = {};
 };
+// Command line parser. All data should be considered private.
 struct cli_state {
   string             name            = "";
   string             usage           = "";
@@ -734,9 +749,7 @@ inline bool parse_cli_value(
   }
 }
 
-template <typename T>
-inline void add_cli_option(cli_state& cli, const string& name, T& value,
-    const string& usage, bool req, const vector<string>& choices) {
+inline void validate_names(const cli_state& cli) {
   // check for errors
   auto used = unordered_set<string>{};
   for (auto& option : cli.options) {
@@ -752,7 +765,11 @@ inline void add_cli_option(cli_state& cli, const string& name, T& value,
         throw std::invalid_argument("inconsistent option type for " + name);
     }
   }
+}
 
+template <typename T>
+inline void add_cli_option(cli_state& cli, const string& name, T& value,
+    const string& usage, bool req, const vector<string>& choices) {
   // help message
   auto line = "  " + name + " " + cli_type_name<T>();
   while (line.size() < 32) line += " ";
@@ -777,6 +794,7 @@ inline void add_cli_option(cli_state& cli, const string& name, T& value,
   } else {
     cli.usage_arguments += line;
   }
+
   // add option
   cli.options.push_back({name, req, cli_nargs<T>(),
       [&value, choices](const vector<string>& args) -> bool {
@@ -831,6 +849,9 @@ inline bool parse_cli(
     error = message;
     return false;
   };
+
+  // validate names
+  validate_names(cli);
 
   // prepare args
   auto args = vector<string>{argv + 1, argv + argc};
