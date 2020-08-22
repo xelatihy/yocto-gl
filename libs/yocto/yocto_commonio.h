@@ -819,41 +819,12 @@ inline void validate_names(const cli_state& cli) {
 }
 
 template <typename T>
-inline void add_help_message(cli_state& cli, const string& name, const T& value,
-    const string& usage, const vector<string>& choices, bool req) {
-  auto line = "  " + name + " " + cli_type_name<T>();
-  while (line.size() < 32) line += " ";
-  line += usage;
-  line += !req ? " [" + cli_to_string(value, choices) + "]\n" : " [required]\n";
-  if (!choices.empty()) {
-    line += "    with choices: ";
-    auto len = 16;
-    for (auto& choice : choices) {
-      if (len + choice.size() + 2 > 78) {
-        line += "\n                 ";
-        len = 16;
-      }
-      line += choice + ", ";
-      len += choice.size() + 2;
-    }
-    line = line.substr(0, line.size() - 2);
-    line += "\n";
-  }
-  if (name.find("-") == 0) {
-    cli.usage_options += line;
-  } else {
-    cli.usage_arguments += line;
-  }
-}
-
-template <typename T>
 inline void add_option(cli_state& cli, const string& name, T& value,
     const string& usage, bool req) {
   static_assert(std::is_same_v<T, string> || std::is_same_v<T, bool> ||
                     std::is_integral_v<T> || std::is_floating_point_v<T> ||
                     std::is_enum_v<T>,
       "unsupported type");
-  add_help_message(cli, name, value, usage, {}, req);
   auto& option         = cli.options.emplace_back();
   option.name          = name;
   option.type          = get_cli_type<T>();
@@ -874,7 +845,6 @@ inline void add_option(cli_state& cli, const string& name, T& value,
   static_assert(
       std::is_same_v<T, string> || std::is_integral_v<T> || std::is_enum_v<T>,
       "unsupported type");
-  add_help_message(cli, name, value, usage, choices, req);
   auto& option         = cli.options.emplace_back();
   option.name          = name;
   option.type          = get_cli_type<T>();
@@ -897,7 +867,6 @@ inline void add_option(cli_state& cli, const string& name, vector<T>& value,
       "unsupported type");
   auto def_value = vector<cli_value>{};
   for (auto& v : value) def_value.push_back(make_cli_value(v));
-  add_help_message(cli, name, value, usage, {}, req);
   auto& option         = cli.options.emplace_back();
   option.name          = name;
   option.type          = get_cli_type<T>();
@@ -915,16 +884,84 @@ inline void add_option(cli_state& cli, const string& name, vector<T>& value,
 inline bool get_help(const cli_state& cli) { return cli.help; }
 
 inline string get_usage(const cli_state& cli) {
-  auto message = string{};
-  message +=
-      "usage: " + cli.name + (cli.usage_options.empty() ? "" : " [options]") +
-      (cli.usage_arguments.empty() ? "" : " <arguments>") + cli.usage + "\n\n";
-  if (!cli.usage_options.empty())
-    message += "options:\n" + cli.usage_options + "\n";
-  if (!cli.usage_options.empty())
-    message += "arguments:\n" + cli.usage_arguments + "\n";
+  auto type_name = [](const cli_option& option) -> string {
+    auto str = string{};
+    str += "<";
+    if (option.nargs < 0) str += "[";
+    if (!option.choices.empty()) str += "string";
+    switch (option.type) {
+      case cli_type::integer: str += "integer"; break;
+      case cli_type::uinteger: str += "uinteger"; break;
+      case cli_type::number: str += "number"; break;
+      case cli_type::string: str += "string"; break;
+      case cli_type::boolean: str += "boolean"; break;
+    }
+    if (option.nargs < 0) str += "]";
+    str += ">";
+    return str;
+  };
+  auto def_string = [](const cli_option& option) -> string {
+    if (option.req) return string{"[required]"};
+    auto str = string{};
+    str += "[";
+    for (auto& value : option.def) {
+      switch (value.type) {
+        case cli_type::integer:
+          str += option.choices.empty() ? std::to_string(value.number)
+                                        : option.choices[value.integer];
+          break;
+        case cli_type::uinteger:
+          str += option.choices.empty() ? std::to_string(value.number)
+                                        : option.choices[value.uinteger];
+          break;
+        case cli_type::number: str += std::to_string(value.number); break;
+        case cli_type::string: str += value.text; break;
+        case cli_type::boolean: str += value.integer ? "true" : "false"; break;
+      }
+    }
+    str += "]";
+    return str;
+  };
+  auto message      = string{};
+  auto has_optional = false, has_positional = false;
+  auto usage_optional = string{}, usage_positional = string{};
+  for (auto& option : cli.options) {
+    auto line = "  " + option.name + " " + type_name(option);
+    while (line.size() < 32) line += " ";
+    line += option.usage;
+    line += " " + def_string(option) + "\n";
+    if (!option.choices.empty()) {
+      line += "    with choices: ";
+      auto len = 16;
+      for (auto& choice : option.choices) {
+        if (len + choice.size() + 2 > 78) {
+          line += "\n                 ";
+          len = 16;
+        }
+        line += choice + ", ";
+        len += choice.size() + 2;
+      }
+      line = line.substr(0, line.size() - 2);
+      line += "\n";
+    }
+    if (option.name.find("-") == 0) {
+      has_optional = true;
+      usage_optional += line;
+    } else {
+      has_positional = true;
+      usage_positional += line;
+    }
+  }
+  message += "usage: " + cli.name + (has_optional ? "" : " [options]") +
+             (has_positional ? "" : " <arguments>") + cli.usage + "\n\n";
+  if (has_optional) {
+    message += "options:\n" + usage_optional + "\n";
+  }
+  if (has_positional) {
+    message += "arguments:\n" + usage_positional + "\n";
+  }
   return message;
-}
+}  // namespace yocto
 
 inline bool parse_cli(
     cli_state& cli, int argc, const char** argv, string& error) {
@@ -1016,7 +1053,6 @@ inline void parse_cli(cli_state& cli, int argc, const char** argv) {
     exit(0);
   }
 }
-
 }  // namespace yocto
 
 #endif
