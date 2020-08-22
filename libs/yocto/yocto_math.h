@@ -37,13 +37,10 @@
 // INCLUDES
 // -----------------------------------------------------------------------------
 
-#include <algorithm>
-#include <array>
 #include <cmath>
 #include <cstdint>
 #include <functional>
 #include <limits>
-#include <stdexcept>
 #include <utility>
 
 // -----------------------------------------------------------------------------
@@ -52,7 +49,6 @@
 namespace yocto {
 
 // using directives
-using std::array;
 using std::pair;
 
 }  // namespace yocto

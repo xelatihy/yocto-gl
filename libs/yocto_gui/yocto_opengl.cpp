@@ -32,6 +32,7 @@
 #include <yocto/yocto_commonio.h>
 
 #include <algorithm>
+#include <array>
 #include <cassert>
 #include <cstdarg>
 #include <string>
