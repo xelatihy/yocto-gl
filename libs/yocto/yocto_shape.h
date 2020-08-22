@@ -38,6 +38,7 @@
 // INCLUDES
 // -----------------------------------------------------------------------------
 
+#include <array>
 #include <cstdint>
 #include <memory>
 #include <string>

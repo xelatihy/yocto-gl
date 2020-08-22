@@ -37,6 +37,7 @@
 #include <yocto/yocto_image.h>
 #include <yocto/yocto_math.h>
 
+#include <array>
 #include <string>
 #include <vector>
 
@@ -49,6 +50,7 @@ struct GLFWwindow;
 namespace yocto {
 
 // using directives
+using std::array;
 using std::string;
 using std::vector;
 

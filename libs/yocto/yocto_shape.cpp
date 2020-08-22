@@ -11,6 +11,7 @@
 #include <algorithm>
 #include <deque>
 #include <memory>
+#include <stdexcept>
 #include <string>
 
 #include "yocto_commonio.h"

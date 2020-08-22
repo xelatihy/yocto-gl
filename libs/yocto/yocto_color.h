@@ -74,7 +74,6 @@
 // INCLUDES
 // -----------------------------------------------------------------------------
 
-#include <algorithm>
 #include <utility>
 
 #include "yocto_math.h"
@@ -381,11 +380,11 @@ inline vec3f rgb_to_hsv(const vec3f& rgb) {
   auto r = rgb.x, g = rgb.y, b = rgb.z;
   auto K = 0.f;
   if (g < b) {
-    swap(g, b);
+    std::swap(g, b);
     K = -1;
   }
   if (r < g) {
-    swap(r, g);
+    std::swap(r, g);
     K = -2 / 6.0f - K;
   }
 
@@ -542,7 +541,6 @@ inline vec3f colormap(float t, colormap_type type) {
     case colormap_type::magma: return colormap_magma(t);
     case colormap_type::inferno: return colormap_inferno(t);
     case colormap_type::plasma: return colormap_plasma(t);
-    default: throw std::runtime_error{"unknown color map type"};
   }
 }
 
