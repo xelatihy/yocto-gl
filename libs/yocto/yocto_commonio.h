@@ -646,18 +646,6 @@ template <class T>
 inline constexpr bool cli_is_vector_v = cli_is_vector<T>::value;
 
 template <typename T>
-inline string cli_type_name() {
-  if constexpr (std::is_same_v<T, string>) return "<string>";
-  if constexpr (std::is_same_v<T, bool>) return "";
-  if constexpr (std::is_integral_v<T>) return "<integer>";
-  if constexpr (std::is_floating_point_v<T>) return "<number>";
-  if constexpr (std::is_enum_v<T>) return "<enum>";
-  if constexpr (cli_is_vector_v<T>)
-    return "<[" + cli_type_name<typename T::value_type>() + "]>";
-  return "<value>";
-}
-
-template <typename T>
 inline string cli_to_string(const T& value, const vector<string>& choices) {
   if constexpr (std::is_same_v<T, string>) return value;
   if constexpr (std::is_same_v<T, bool>) return value ? "true" : "false";
