@@ -30,6 +30,7 @@ namespace yocto {
 using std::atomic;
 using std::deque;
 using std::pair;
+using std::string;
 using namespace std::string_literals;
 
 }  // namespace yocto
