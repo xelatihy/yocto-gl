@@ -41,7 +41,6 @@
 #include <array>
 #include <memory>
 #include <string>
-#include <unordered_map>
 #include <vector>
 
 #include "yocto_math.h"
@@ -54,7 +53,6 @@ namespace yocto {
 // using directives
 using std::array;
 using std::string;
-using std::unordered_map;
 using std::vector;
 
 }  // namespace yocto
@@ -222,9 +220,6 @@ struct obj_texture {
   string path  = "";     // file path
   bool   clamp = false;  // clamp to edge
   float  scale = 1;      // scale for bump/displacement
-
-  // Properties not explicitly handled.
-  unordered_map<string, vector<float>> props;
 
   obj_texture() {}
   explicit obj_texture(const char* path) : path{path} {}
