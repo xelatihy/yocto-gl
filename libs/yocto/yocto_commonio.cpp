@@ -42,6 +42,17 @@
 #include <vector>
 
 // -----------------------------------------------------------------------------
+// USING DIRECTIVES
+// -----------------------------------------------------------------------------
+namespace yocto {
+
+// using directives
+using std::unordered_set;
+using namespace std::string_literals;
+
+}  // namespace yocto
+
+// -----------------------------------------------------------------------------
 // PRINT/FORMATTING UTILITIES
 // -----------------------------------------------------------------------------
 namespace yocto {

@@ -40,15 +40,11 @@
 // INCLUDES
 // -----------------------------------------------------------------------------
 
-#include <algorithm>
-#include <chrono>
 #include <cstdio>
 #include <functional>
-#include <memory>
 #include <stdexcept>
 #include <string>
 #include <type_traits>
-#include <unordered_set>
 #include <vector>
 
 // -----------------------------------------------------------------------------
@@ -59,7 +55,6 @@ namespace yocto {
 // using directives
 using std::function;
 using std::string;
-using std::unordered_set;
 using std::vector;
 using namespace std::string_literals;
 
