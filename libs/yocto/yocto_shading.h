@@ -37,8 +37,8 @@
 // -----------------------------------------------------------------------------
 
 #include <string>
-#include <unordered_map>
 #include <utility>
+#include <vector>
 
 #include "yocto_math.h"
 #include "yocto_sampling.h"
@@ -51,7 +51,7 @@ namespace yocto {
 // using directives
 using std::pair;
 using std::string;
-using std::unordered_map;
+using std::vector;
 
 }  // namespace yocto
 
@@ -855,7 +855,7 @@ inline float sample_phasefunction_pdf(
 
 // Conductor etas
 inline pair<vec3f, vec3f> conductor_eta(const string& name) {
-  static const unordered_map<string, pair<vec3f, vec3f>> metal_ior_table = {
+  static const vector<pair<string, pair<vec3f, vec3f>>> metal_ior_table = {
       {"a-C", {{2.9440999183f, 2.2271502925f, 1.9681668794f},
                   {0.8874329109f, 0.7993216383f, 0.8152862927f}}},
       {"Ag", {{0.1552646489f, 0.1167232965f, 0.1383806959f},
@@ -937,7 +937,10 @@ inline pair<vec3f, vec3f> conductor_eta(const string& name) {
       {"W", {{4.3707029924f, 3.3002972445f, 2.9982666528f},
                 {3.5006778591f, 2.6048652781f, 2.2731930614f}}},
   };
-  return metal_ior_table.at(name);
+  for (auto& [ename, etas] : metal_ior_table) {
+    if (ename == name) return etas;
+  }
+  return {zero3f, zero3f};
 }
 
 }  // namespace yocto

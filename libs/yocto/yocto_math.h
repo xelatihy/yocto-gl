@@ -39,7 +39,6 @@
 
 #include <cmath>
 #include <cstdint>
-#include <functional>
 #include <limits>
 #include <utility>
 
@@ -653,21 +652,6 @@ inline vec4i abs(const vec4i& a);
 inline void  swap(vec4i& a, vec4i& b);
 
 }  // namespace yocto
-
-// -----------------------------------------------------------------------------
-// VECTOR HASHING
-// -----------------------------------------------------------------------------
-namespace std {
-
-// Hash functor for vector for use with hash_map
-template <>
-struct hash<yocto::vec2i>;
-template <>
-struct hash<yocto::vec3i>;
-template <>
-struct hash<yocto::vec4i>;
-
-}  // namespace std
 
 // -----------------------------------------------------------------------------
 // MATRICES
@@ -1941,48 +1925,6 @@ inline vec4i abs(const vec4i& a) {
 inline void swap(vec4i& a, vec4i& b) { std::swap(a, b); }
 
 }  // namespace yocto
-
-// -----------------------------------------------------------------------------
-// IMPLEMENRTATION OF VECTOR HASHING
-// -----------------------------------------------------------------------------
-namespace std {
-
-// Hash functor for vector for use with hash_map
-template <>
-struct hash<yocto::vec2i> {
-  size_t operator()(const yocto::vec2i& v) const {
-    static const auto hasher = std::hash<int>();
-    auto              h      = (size_t)0;
-    h ^= hasher(v.x) + 0x9e3779b9 + (h << 6) + (h >> 2);
-    h ^= hasher(v.y) + 0x9e3779b9 + (h << 6) + (h >> 2);
-    return h;
-  }
-};
-template <>
-struct hash<yocto::vec3i> {
-  size_t operator()(const yocto::vec3i& v) const {
-    static const auto hasher = std::hash<int>();
-    auto              h      = (size_t)0;
-    h ^= hasher(v.x) + 0x9e3779b9 + (h << 6) + (h >> 2);
-    h ^= hasher(v.y) + 0x9e3779b9 + (h << 6) + (h >> 2);
-    h ^= hasher(v.z) + 0x9e3779b9 + (h << 6) + (h >> 2);
-    return h;
-  }
-};
-template <>
-struct hash<yocto::vec4i> {
-  size_t operator()(const yocto::vec4i& v) const {
-    static const auto hasher = std::hash<int>();
-    auto              h      = (size_t)0;
-    h ^= hasher(v.x) + 0x9e3779b9 + (h << 6) + (h >> 2);
-    h ^= hasher(v.y) + 0x9e3779b9 + (h << 6) + (h >> 2);
-    h ^= hasher(v.z) + 0x9e3779b9 + (h << 6) + (h >> 2);
-    h ^= hasher(v.w) + 0x9e3779b9 + (h << 6) + (h >> 2);
-    return h;
-  }
-};
-
-}  // namespace std
 
 // -----------------------------------------------------------------------------
 // MATRICES

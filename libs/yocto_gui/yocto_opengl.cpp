@@ -37,7 +37,6 @@
 #include <cstdarg>
 #include <stdexcept>
 #include <string>
-#include <unordered_map>
 #include <unordered_set>
 #include <utility>
 
@@ -54,11 +53,29 @@
 namespace yocto {
 
 // using directives
-using std::unordered_map;
 using std::unordered_set;
 using namespace std::string_literals;
 
 }  // namespace yocto
+
+// -----------------------------------------------------------------------------
+// VECTOR HASHING
+// -----------------------------------------------------------------------------
+namespace std {
+
+// Hash functor for vector for use with hash_map
+template <>
+struct hash<yocto::vec2i> {
+  size_t operator()(const yocto::vec2i& v) const {
+    static const auto hasher = std::hash<int>();
+    auto              h      = (size_t)0;
+    h ^= hasher(v.x) + 0x9e3779b9 + (h << 6) + (h >> 2);
+    h ^= hasher(v.y) + 0x9e3779b9 + (h << 6) + (h >> 2);
+    return h;
+  }
+};
+
+}  // namespace std
 
 // -----------------------------------------------------------------------------
 // LOW-LEVEL OPENGL HELPERS
@@ -141,24 +158,10 @@ void set_ogl_point_size(int size) { glPointSize(size); }
 
 void set_texture(ogl_texture* texture, const vec2i& size, int nchannels,
     const byte* img, bool as_srgb, bool linear, bool mipmap) {
-  static auto sformat = unordered_map<int, uint>{
-      {1, GL_SRGB},
-      {2, GL_SRGB},
-      {3, GL_SRGB},
-      {4, GL_SRGB_ALPHA},
-  };
-  static auto iformat = unordered_map<int, uint>{
-      {1, GL_RGB},
-      {2, GL_RGB},
-      {3, GL_RGB},
-      {4, GL_RGBA},
-  };
-  static auto cformat = unordered_map<int, uint>{
-      {1, GL_RED},
-      {2, GL_RG},
-      {3, GL_RGB},
-      {4, GL_RGBA},
-  };
+  static auto sformat = vector<uint>{
+      0, GL_SRGB, GL_SRGB, GL_SRGB, GL_SRGB_ALPHA};
+  static auto iformat = vector<uint>{0, GL_RGB, GL_RGB, GL_RGB, GL_RGBA};
+  static auto cformat = vector<uint>{0, GL_RED, GL_RG, GL_RGB, GL_RGBA};
   assert_ogl_error();
   if (size == zero2i) {
     clear_texture(texture);
@@ -195,24 +198,10 @@ void set_texture(ogl_texture* texture, const vec2i& size, int nchannels,
 
 void set_texture(ogl_texture* texture, const vec2i& size, int nchannels,
     const float* img, bool as_float, bool linear, bool mipmap) {
-  static auto fformat = unordered_map<int, uint>{
-      {1, GL_RGB16F},
-      {2, GL_RGB16F},
-      {3, GL_RGB16F},
-      {4, GL_RGBA32F},
-  };
-  static auto iformat = unordered_map<int, uint>{
-      {1, GL_RGB},
-      {2, GL_RGB},
-      {3, GL_RGB},
-      {4, GL_RGBA},
-  };
-  static auto cformat = unordered_map<int, uint>{
-      {1, GL_RED},
-      {2, GL_RG},
-      {3, GL_RGB},
-      {4, GL_RGBA},
-  };
+  static auto fformat = vector<uint>{
+      0, GL_RGB16F, GL_RGB16F, GL_RGB16F, GL_RGBA32F};
+  static auto iformat = vector<uint>{0, GL_RGB, GL_RGB, GL_RGB, GL_RGBA};
+  static auto cformat = vector<uint>{0, GL_RED, GL_RG, GL_RGB, GL_RGBA};
   assert_ogl_error();
   if (size == zero2i) {
     clear_texture(texture);
@@ -298,24 +287,10 @@ void set_texture(ogl_texture* texture, const image<float>& img, bool as_float,
 
 void set_cubemap(ogl_cubemap* cubemap, int size, int nchannels,
     const array<byte*, 6>& images, bool as_srgb, bool linear, bool mipmap) {
-  static auto sformat = unordered_map<int, uint>{
-      {1, GL_SRGB},
-      {2, GL_SRGB},
-      {3, GL_SRGB},
-      {4, GL_SRGB_ALPHA},
-  };
-  static auto iformat = unordered_map<int, uint>{
-      {1, GL_RGB},
-      {2, GL_RGB},
-      {3, GL_RGB},
-      {4, GL_RGBA},
-  };
-  static auto cformat = unordered_map<int, uint>{
-      {1, GL_RED},
-      {2, GL_RG},
-      {3, GL_RGB},
-      {4, GL_RGBA},
-  };
+  static auto sformat = vector<uint>{
+      0, GL_SRGB, GL_SRGB, GL_SRGB, GL_SRGB_ALPHA};
+  static auto iformat = vector<uint>{0, GL_RGB, GL_RGB, GL_RGB, GL_RGBA};
+  static auto cformat = vector<uint>{0, GL_RED, GL_RG, GL_RGB, GL_RGBA};
   assert_ogl_error();
   if (size == 0) {
     clear_cubemap(cubemap);
@@ -369,24 +344,10 @@ void set_cubemap(ogl_cubemap* cubemap, int size, int nchannels,
 
 void set_cubemap(ogl_cubemap* cubemap, int size, int nchannels,
     const array<float*, 6>& images, bool as_float, bool linear, bool mipmap) {
-  static auto fformat = unordered_map<int, uint>{
-      {1, GL_RGB16F},
-      {2, GL_RGB16F},
-      {3, GL_RGB16F},
-      {4, GL_RGBA32F},
-  };
-  static auto iformat = unordered_map<int, uint>{
-      {1, GL_RGB},
-      {2, GL_RGB},
-      {3, GL_RGB},
-      {4, GL_RGBA},
-  };
-  static auto cformat = unordered_map<int, uint>{
-      {1, GL_RED},
-      {2, GL_RG},
-      {3, GL_RGB},
-      {4, GL_RGBA},
-  };
+  static auto fformat = vector<uint>{
+      0, GL_RGB16F, GL_RGB16F, GL_RGB16F, GL_RGBA32F};
+  static auto iformat = vector<uint>{0, GL_RGB, GL_RGB, GL_RGB, GL_RGBA};
+  static auto cformat = vector<uint>{0, GL_RED, GL_RG, GL_RGB, GL_RGBA};
   assert_ogl_error();
   if (size == 0) {
     clear_cubemap(cubemap);
@@ -1009,14 +970,20 @@ void set_attribute(ogl_program* program, int location, const vec4f& value) {
 
 // draw elements
 void draw_elements(ogl_elementbuffer* buffer) {
-  static auto elements = unordered_map<ogl_element_type, uint>{
-      {ogl_element_type::points, GL_POINTS},
-      {ogl_element_type::lines, GL_LINES},
-      {ogl_element_type::triangles, GL_TRIANGLES},
-  };
   glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, buffer->buffer_id);
-  glDrawElements(elements.at(buffer->element), (GLsizei)buffer->size,
-      GL_UNSIGNED_INT, nullptr);
+  switch (buffer->element) {
+    case ogl_element_type::points:
+      glDrawElements(
+          GL_POINTS, (GLsizei)buffer->size, GL_UNSIGNED_INT, nullptr);
+      break;
+    case ogl_element_type::lines:
+      glDrawElements(GL_LINES, (GLsizei)buffer->size, GL_UNSIGNED_INT, nullptr);
+      break;
+    case ogl_element_type::triangles:
+      glDrawElements(
+          GL_TRIANGLES, (GLsizei)buffer->size, GL_UNSIGNED_INT, nullptr);
+      break;
+  }
   assert_ogl_error();
 }
 

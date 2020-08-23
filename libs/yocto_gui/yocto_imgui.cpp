@@ -38,7 +38,6 @@
 #include <stdexcept>
 #include <string>
 #include <unordered_map>
-#include <unordered_set>
 #include <utility>
 
 #include "ext/glad/glad.h"
@@ -66,7 +65,6 @@ namespace yocto {
 // using directives
 using std::mutex;
 using std::unordered_map;
-using std::unordered_set;
 using namespace std::string_literals;
 
 }  // namespace yocto
