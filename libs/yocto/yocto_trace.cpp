@@ -28,6 +28,7 @@
 
 #include "yocto_trace.h"
 
+#include <algorithm>
 #include <cstring>
 #include <deque>
 #include <memory>

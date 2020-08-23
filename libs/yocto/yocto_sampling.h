@@ -46,6 +46,7 @@
 // INCLUDES
 // -----------------------------------------------------------------------------
 
+#include <algorithm>  // std::upper_bound
 #include <array>
 #include <utility>
 #include <vector>
