@@ -167,8 +167,10 @@ quads_shape make_cylinders(const vector<vec2i>& lines,
   return shape;
 }
 
-void init_glscene(
-    gui_scene* glscene, generic_shape* ioshape, progress_callback progress_cb) {
+const char* draw_instanced_vertex_code();
+
+void init_glscene(app_state* app, gui_scene* glscene, generic_shape* ioshape,
+    progress_callback progress_cb) {
   // handle progress
   auto progress = vec2i{0, 4};
 
@@ -196,25 +198,73 @@ void init_glscene(
 
   // shapes
   if (progress_cb) progress_cb("convert shape", progress.x++, progress.y);
-  auto glshape  = add_shape(glscene, ioshape->points, ioshape->lines,
+  auto model_shape = add_shape(glscene, ioshape->points, ioshape->lines,
       ioshape->triangles, ioshape->quads, ioshape->positions, ioshape->normals,
       ioshape->texcoords, ioshape->colors, true);
-  auto edges    = make_cylinders(get_edges(ioshape->triangles, ioshape->quads),
-      ioshape->positions, 0.0003, {4, 1, 1});
-  auto glshapee = add_shape(glscene, {}, {}, {}, edges.quads, edges.positions,
-      edges.normals, edges.texcoords, {});
-  auto vertices = make_spheres(ioshape->positions, 0.001, 2);
-  auto glshapev = add_shape(glscene, {}, {}, {}, vertices.quads,
+  if (!is_initialized(get_normals(model_shape))) {
+    app->drawgl_prms.faceted = true;
+  }
+  set_vertex_attribute(model_shape, vec3f{0, 0, 0}, 5);
+  set_vertex_attribute(model_shape, vec3f{0, 0, 0}, 6);
+
+  auto cylinder = make_uvcylinder({4, 1, 1}, {0.0003, 1});
+  for (auto& p : cylinder.positions) {
+    p.z = p.z * 0.5 + 0.5;
+  }
+
+  auto edges_shape = add_shape(glscene, {}, {}, {}, cylinder.quads,
+      cylinder.positions, cylinder.normals, cylinder.texcoords, {});
+
+  auto edges = get_edges(ioshape->triangles, ioshape->quads);
+  auto froms = vector<vec3f>();
+  auto tos   = vector<vec3f>();
+  froms.reserve(edges.size());
+  tos.reserve(edges.size());
+  for (auto& edge : edges) {
+    froms.push_back(ioshape->positions[edge.x]);
+    tos.push_back(ioshape->positions[edge.y]);
+  }
+  set_vertex_attribute(edges_shape, froms, 5);
+  set_instance_buffer(edges_shape, 5);
+  set_vertex_attribute(edges_shape, tos, 6);
+  set_instance_buffer(edges_shape, 6);
+
+  auto vertices       = make_spheres(ioshape->positions, 0.001, 2);
+  auto vertices_shape = add_shape(glscene, {}, {}, {}, vertices.quads,
       vertices.positions, vertices.normals, vertices.texcoords, {});
+  set_vertex_attribute(vertices_shape, vec3f{0, 0, 0}, 5);
+  set_vertex_attribute(vertices_shape, vec3f{0, 0, 0}, 6);
 
   // shapes
   if (progress_cb) progress_cb("convert instance", progress.x++, progress.y);
-  add_instance(glscene, identity3x4f, glshape, glmaterial);
-  add_instance(glscene, identity3x4f, glshapee, glmateriale, true);
-  add_instance(glscene, identity3x4f, glshapev, glmaterialv, true);
+
+  add_instance(glscene, identity3x4f, model_shape, glmaterial);
+
+  auto edges_instance = add_instance(
+      glscene, identity3x4f, edges_shape, glmateriale, true);
+  edges_instance->shading_type = 0;
+
+  auto points_instance = add_instance(
+      glscene, identity3x4f, vertices_shape, glmaterialv, true);
+  points_instance->shading_type = 0;
+
+  auto error  = string{};
+  auto errorb = string{};
+  auto vert   = draw_instanced_vertex_code();
+  auto frag   = draw_instances_eyelight_fragment_code();
+  init_program(glscene->eyelight_program, vert, frag, error, errorb);
 
   // done
   if (progress_cb) progress_cb("convert done", progress.x++, progress.y);
+
+  // init_program(glscene->ibl_program, vertex_source,
+  //     draw_instances_ibl_fragment_code(), error, errorb);
+
+  // auto img = image<vec4f>{};
+  // load_image("apps/yshapeview/env.hdr", img, error);
+  // auto texture = new ogl_texture{};
+  // set_texture(texture, img, true, true, true);
+  // init_ibl_data(glscene, texture, {1, 1, 1});
 }
 
 // draw with shading
@@ -258,30 +308,17 @@ void draw_widgets(gui_window* win, app_states* apps, const gui_input& input) {
   if (!apps->selected->ok) return;
   auto app = apps->selected;
   if (begin_header(win, "view")) {
-    auto ioshape    = app->ioshape;
-    auto glshape    = app->glscene->shapes.front();
-    auto glmaterial = app->glscene->materials.front();
-    auto smooth     = is_initialized(glshape->normals);
-    if (draw_checkbox(win, "smooth", smooth)) {
-      if (smooth) {
-        set_normals(glshape, !ioshape->normals.empty()
-                                 ? ioshape->normals
-                                 : compute_normals(*ioshape));
-      } else {
-        set_normals(glshape, {});
-      }
-    }
+    auto  glmaterial = app->glscene->materials.front();
+    auto& params     = app->drawgl_prms;
+    draw_checkbox(win, "faceted", params.faceted);
     continue_line(win);
     draw_checkbox(win, "lines", app->glscene->instances[1]->hidden, true);
     continue_line(win);
     draw_checkbox(win, "points", app->glscene->instances[2]->hidden, true);
     draw_coloredit(win, "color", glmaterial->color);
-    auto& params = app->drawgl_prms;
     draw_slider(win, "resolution", params.resolution, 0, 4096);
     draw_combobox(win, "shading", (int&)params.shading, gui_shading_names);
     draw_checkbox(win, "wireframe", params.wireframe);
-    continue_line(win);
-    draw_checkbox(win, "edges", params.edges);
     continue_line(win);
     draw_checkbox(win, "double sided", params.double_sided);
     draw_slider(win, "exposure", params.exposure, -10, 10);
@@ -338,7 +375,7 @@ void update(gui_window* win, app_states* apps) {
     };
     app->loader.get();
     if (app->loader_error.empty()) {
-      init_glscene(app->glscene, app->ioshape, progress_cb);
+      init_glscene(app, app->glscene, app->ioshape, progress_cb);
       app->glcamera = app->glscene->cameras.front();
       app->ok       = true;
       app->status   = "ok";
@@ -403,14 +440,86 @@ int main(int argc, const char* argv[]) {
         dolly = (input.mouse_pos.x - input.mouse_last.x) / 100.0f;
       if (input.mouse_left && input.modifier_shift)
         pan = (input.mouse_pos - input.mouse_last) / 100.0f;
+      pan.x    = -pan.x;
+      rotate.y = -rotate.y;
+
       std::tie(app->glcamera->frame, app->glcamera->focus) = camera_turntable(
           app->glcamera->frame, app->glcamera->focus, rotate, dolly, pan);
     }
   };
 
   // run ui
-  run_ui({1280 + 320, 720}, "ysceneview", callbacks);
+  run_ui({1280 + 320, 720}, "yshapeview", callbacks);
 
   // done
   return 0;
+}
+
+const char* draw_instanced_vertex_code() {
+  static const char* code = R"(
+#version 330
+
+layout(location = 0) in vec3 positions;
+layout(location = 1) in vec3 normals;
+layout(location = 2) in vec2 texcoords;
+layout(location = 3) in vec4 colors;
+layout(location = 4) in vec4 tangents;
+layout(location = 5) in vec3 instance_from;
+layout(location = 6) in vec3 instance_to;
+
+uniform mat4  frame;
+uniform mat4  frameit;
+uniform float offset = 0;
+
+uniform mat4 view;
+uniform mat4 projection;
+
+out vec3 position;
+out vec3 normal;
+out vec2 texcoord;
+out vec4 color;
+out vec4 tangsp;
+
+// main function
+void main() {
+  // copy values
+  position = positions;
+  normal   = normals;
+  tangsp   = tangents;
+  texcoord = texcoords;
+  color    = colors;
+
+  // normal offset
+  if (offset != 0) {
+    position += offset * normal;
+  }
+
+  // world projection
+  position   = (frame * vec4(position, 1)).xyz;
+  normal     = (frameit * vec4(normal, 0)).xyz;
+  tangsp.xyz = (frame * vec4(tangsp.xyz, 0)).xyz;
+
+  if (instance_from != instance_to) {
+    vec3 dir = instance_to - instance_from;
+
+    vec3 up = abs(dir.z) < 0.999 ? vec3(0.0, 0.0, 1.0) : vec3(1.0, 0.0, 0.0);
+    vec3 tangent   = normalize(cross(up, dir));
+    vec3 bitangent = normalize(cross(dir, tangent));
+
+    mat3 mat;
+    mat[2]    = dir;
+    mat[0]    = tangent;
+    mat[1]    = bitangent;
+    position  = mat * position;
+    normal    = mat * normal;
+    tangent   = mat * tangent;
+    bitangent = mat * bitangent;
+  }
+  position += instance_from;
+
+  // clip
+  gl_Position = projection * view * vec4(position, 1);
+}
+)";
+  return code;
 }

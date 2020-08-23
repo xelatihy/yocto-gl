@@ -36,9 +36,6 @@
 
 #include "yocto_opengl.h"
 
-// forward declaration
-struct GLFWwindow;
-
 // -----------------------------------------------------------------------------
 // USING DIRECTIVES
 // -----------------------------------------------------------------------------
@@ -64,6 +61,8 @@ struct gui_camera {
   float   focus    = 0;
 };
 
+struct gui_texture : ogl_texture {};
+
 // Opengl material
 struct gui_material {
   // material
@@ -73,35 +72,50 @@ struct gui_material {
   float        roughness     = 0;
   float        specular      = 0;
   float        opacity       = 1;
-  ogl_texture* emission_tex  = nullptr;
-  ogl_texture* color_tex     = nullptr;
-  ogl_texture* metallic_tex  = nullptr;
-  ogl_texture* roughness_tex = nullptr;
-  ogl_texture* specular_tex  = nullptr;
-  ogl_texture* opacity_tex   = nullptr;
-  ogl_texture* normal_tex    = nullptr;
+  gui_texture* emission_tex  = nullptr;
+  gui_texture* color_tex     = nullptr;
+  gui_texture* metallic_tex  = nullptr;
+  gui_texture* roughness_tex = nullptr;
+  gui_texture* specular_tex  = nullptr;
+  gui_texture* opacity_tex   = nullptr;
+  gui_texture* normal_tex    = nullptr;
 };
+
+struct gui_shape : ogl_shape {
+  float points_size    = 10;
+  float line_thickness = 4;
+};
+
+// shape properties
+void set_points(gui_shape* shape, const vector<int>& points);
+void set_lines(gui_shape* shape, const vector<vec2i>& lines);
+void set_triangles(gui_shape* shape, const vector<vec3i>& triangles);
+void set_quads(gui_shape* shape, const vector<vec4i>& quads);
+
+void set_positions(gui_shape* shape, const vector<vec3f>& positions);
+void set_normals(gui_shape* shape, const vector<vec3f>& normals);
+void set_texcoords(gui_shape* shape, const vector<vec2f>& texcoords);
+void set_colors(gui_shape* shape, const vector<vec4f>& colors);
+void set_tangents(gui_shape* shape, const vector<vec4f>& tangents);
+ogl_arraybuffer* get_positions(gui_shape* shape);
+ogl_arraybuffer* get_normals(gui_shape* shape);
+ogl_arraybuffer* get_texcoords(gui_shape* shape);
+ogl_arraybuffer* get_colors(gui_shape* shape);
+ogl_arraybuffer* get_tangents(gui_shape* shape);
 
 // Opengl instance
 struct gui_instance {
   // instance properties
-  frame3f       frame       = identity3x4f;
-  ogl_shape*    shape       = nullptr;
-  gui_material* material    = nullptr;
-  bool          hidden      = false;
-  bool          highlighted = false;
+  frame3f       frame        = identity3x4f;
+  gui_shape*    shape        = nullptr;
+  gui_material* material     = nullptr;
+  bool          hidden       = false;
+  bool          highlighted  = false;
+  int           shading_type = 1;
 };
 
 // Light type
 enum struct ogl_light_type { point = 0, directional };
-
-// Opengl light
-struct gui_light {
-  vec3f          position = {0, 0, 0};
-  vec3f          emission = {0, 0, 0};
-  ogl_light_type type     = ogl_light_type::point;
-  bool           camera   = false;
-};
 
 // Opengl scene
 struct gui_scene {
@@ -113,13 +127,12 @@ struct gui_scene {
   // scene objects
   vector<gui_camera*>   cameras   = {};
   vector<gui_instance*> instances = {};
-  vector<ogl_shape*>    shapes    = {};
+  vector<gui_shape*>    shapes    = {};
   vector<gui_material*> materials = {};
-  vector<ogl_texture*>  textures  = {};
-  vector<gui_light*>    lights    = {};
+  vector<gui_texture*>  textures  = {};
 
   // OpenGL state
-  ogl_program* lights_program      = new ogl_program{};
+  ogl_program* eyelight_program    = new ogl_program{};
   ogl_program* ibl_program         = new ogl_program{};
   ogl_program* environment_program = new ogl_program{};
 
@@ -127,7 +140,7 @@ struct gui_scene {
   ogl_cubemap* environment_cubemap = new ogl_cubemap{};
   ogl_cubemap* diffuse_cubemap     = new ogl_cubemap{};
   ogl_cubemap* specular_cubemap    = new ogl_cubemap{};
-  ogl_texture* brdf_lut            = new ogl_texture{};
+  gui_texture* brdf_lut            = new gui_texture{};
 };
 
 // Shading type
@@ -144,12 +157,10 @@ const auto gui_shading_names = vector<string>{"environment", "camera_lights"};
 struct gui_scene_params {
   int              resolution       = 1280;
   bool             wireframe        = false;
-  bool             edges            = false;
-  float            edge_offset      = 0.01f;
   gui_shading_type shading          = gui_shading_type::eyelight;
   float            exposure         = 0;
   float            gamma            = 2.2f;
-  vec3f            ambient          = {0, 0, 0};
+  bool             faceted          = false;
   bool             double_sided     = true;
   bool             non_rigid_frames = true;
   float            near             = 0.01f;
@@ -157,25 +168,30 @@ struct gui_scene_params {
   vec4f            background       = vec4f{0.15f, 0.15f, 0.15f, 1.0f};
 };
 
+struct gui_scene_view {
+  frame3f          camera_frame      = {};
+  mat4f            view_matrix       = {};
+  mat4f            projection_matrix = {};
+  gui_scene_params params            = {};
+};
+
 // Initialize an OpenGL scene
 void init_scene(gui_scene* scene);
 bool is_initialized(const gui_scene* scene);
 
-namespace ibl {
 // Initialize data for image based lighting
-void init_ibl_data(gui_scene* scene, const ogl_texture* environment);
-}  // namespace ibl
+void init_ibl_data(
+    gui_scene* scene, const gui_texture* environment, const vec3f& emission);
 
 // Clear an OpenGL scene
 void clear_scene(gui_scene* scene);
 
 // add scene elements
 gui_camera*   add_camera(gui_scene* scene);
-ogl_texture*  add_texture(gui_scene* scene);
+gui_texture*  add_texture(gui_scene* scene);
 gui_material* add_material(gui_scene* scene);
-ogl_shape*    add_shape(gui_scene* scene);
+gui_shape*    add_shape(gui_scene* scene);
 gui_instance* add_instance(gui_scene* scene);
-gui_light*    add_light(gui_scene* scene);
 
 // camera properties
 void set_frame(gui_camera* camera, const frame3f& frame);
@@ -184,20 +200,20 @@ void set_nearfar(gui_camera* camera, float near, float far);
 
 // material properties
 void set_emission(gui_material* material, const vec3f& emission,
-    ogl_texture* emission_tex = nullptr);
+    gui_texture* emission_tex = nullptr);
 void set_color(gui_material* material, const vec3f& color,
-    ogl_texture* color_tex = nullptr);
+    gui_texture* color_tex = nullptr);
 void set_metallic(gui_material* material, float metallic,
-    ogl_texture* metallic_tex = nullptr);
+    gui_texture* metallic_tex = nullptr);
 void set_roughness(gui_material* material, float roughness,
-    ogl_texture* roughness_tex = nullptr);
+    gui_texture* roughness_tex = nullptr);
 void set_specular(gui_material* material, float specular,
-    ogl_texture* specular_tex = nullptr);
+    gui_texture* specular_tex = nullptr);
 void set_opacity(
-    gui_material* material, float opacity, ogl_texture* opacity_tex = nullptr);
-void set_normalmap(gui_material* material, ogl_texture* normal_tex);
+    gui_material* material, float opacity, gui_texture* opacity_tex = nullptr);
+void set_normalmap(gui_material* material, gui_texture* normal_tex);
 
-ogl_shape* add_shape(gui_scene* scene, const vector<int>& points,
+gui_shape* add_shape(gui_scene* scene, const vector<int>& points,
     const vector<vec2i>& lines, const vector<vec3i>& triangles,
     const vector<vec4i>& quads, const vector<vec3f>& positions,
     const vector<vec3f>& normals, const vector<vec2f>& texcoords,
@@ -205,7 +221,7 @@ ogl_shape* add_shape(gui_scene* scene, const vector<int>& points,
 
 // instance properties
 void set_frame(gui_instance* instance, const frame3f& frame);
-void set_shape(gui_instance* instance, ogl_shape* shape);
+void set_shape(gui_instance* instance, gui_shape* shape);
 void set_material(gui_instance* instance, gui_material* material);
 void set_hidden(gui_instance* instance, bool hidden);
 void set_highlighted(gui_instance* instance, bool highlighted);
@@ -215,30 +231,30 @@ gui_camera*   add_camera(gui_scene* scene, const frame3f& frame, float lens,
       float aspect, float film = 0.036, float near = 0.001, float far = 10000);
 gui_material* add_material(gui_scene* scene, const vec3f& emission,
     const vec3f& color, float specular, float metallic, float roughness,
-    ogl_texture* emission_tex = nullptr, ogl_texture* color_tex = nullptr,
-    ogl_texture* specular_tex = nullptr, ogl_texture* metallic_tex = nullptr,
-    ogl_texture* roughness_tex = nullptr, ogl_texture* normalmap_tex = nullptr);
-// ogl_shape*    _add_shape(gui_scene* scene, const vector<int>& points,
-//        const vector<vec2i>& lines, const vector<vec3i>& triangles,
-//        const vector<vec4i>& quads, const vector<vec3f>& positions,
-//        const vector<vec3f>& normals, const vector<vec2f>& texcoords,
-//        const vector<vec3f>& colors, bool edges = false);
+    gui_texture* emission_tex = nullptr, gui_texture* color_tex = nullptr,
+    gui_texture* specular_tex = nullptr, gui_texture* metallic_tex = nullptr,
+    gui_texture* roughness_tex = nullptr, gui_texture* normalmap_tex = nullptr);
 gui_instance* add_instance(gui_scene* scene, const frame3f& frame,
-    ogl_shape* shape, gui_material* material, bool hidden = false,
+    gui_shape* shape, gui_material* material, bool hidden = false,
     bool highlighted = false);
 
-// light properties
-void add_default_lights(gui_scene* scene);
-void set_light(gui_light* light, const vec3f& position, const vec3f& emission,
-    ogl_light_type type, bool camera);
+void set_scene_view_uniforms(ogl_program* program, const gui_scene_view& view);
+void set_instance_uniforms(ogl_program* program, const gui_instance* instance,
+    const gui_scene_view& view);
+void set_eyelight_uniforms(ogl_program* program, const gui_scene_view& view);
+void set_ibl_uniforms(ogl_program* program, const gui_scene* scene);
 
-// light size
-void clear_lights(gui_scene* scene);
-bool has_max_lights(gui_scene* scene);
+void draw_instances(gui_scene* scene, const gui_scene_view& view);
+void draw_environment(gui_scene* scene, const gui_scene_view& view);
 
-// Draw an OpenGL scene
 void draw_scene(gui_scene* scene, gui_camera* camera, const vec4i& viewport,
     const gui_scene_params& params);
+
+// read-only access to defualt shader code
+const char* draw_instances_vertex_code();
+const char* draw_instances_eyelight_fragment_code();
+const char* draw_instances_ibl_fragment_code();
+const char* draw_enivronment_fragment_code();
 
 }  // namespace yocto
 

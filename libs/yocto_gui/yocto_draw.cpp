@@ -55,8 +55,622 @@ namespace yocto {
 #pragma GCC diagnostic ignored "-Woverlength-strings"
 #endif
 
-static const char* glscene_vertex =
-    R"(
+#ifndef _WIN32
+#pragma GCC diagnostic pop
+#endif
+
+ogl_arraybuffer* get_positions(gui_shape* shape) {
+  if (shape->vertex_buffers.size() <= 0) return nullptr;
+  return &shape->vertex_buffers[0];
+}
+ogl_arraybuffer* get_normals(gui_shape* shape) {
+  if (shape->vertex_buffers.size() <= 1) return nullptr;
+  return &shape->vertex_buffers[1];
+}
+ogl_arraybuffer* get_texcoords(gui_shape* shape) {
+  if (shape->vertex_buffers.size() <= 2) return nullptr;
+  return &shape->vertex_buffers[2];
+}
+ogl_arraybuffer* get_colors(gui_shape* shape) {
+  if (shape->vertex_buffers.size() <= 3) return nullptr;
+  return &shape->vertex_buffers[3];
+}
+ogl_arraybuffer* get_tangents(gui_shape* shape) {
+  if (shape->vertex_buffers.size() <= 4) return nullptr;
+  return &shape->vertex_buffers[4];
+}
+
+void set_positions(gui_shape* shape, const vector<vec3f>& positions) {
+  if (positions.empty())
+    set_vertex_attribute(shape, vec3f{0, 0, 0}, 0);
+  else
+    set_vertex_attribute(shape, positions, 0);
+}
+void set_normals(gui_shape* shape, const vector<vec3f>& normals) {
+  if (normals.empty())
+    set_vertex_attribute(shape, vec3f{0, 0, 1}, 1);
+  else
+    set_vertex_attribute(shape, normals, 1);
+}
+void set_texcoords(gui_shape* shape, const vector<vec2f>& texcoords) {
+  if (texcoords.empty())
+    set_vertex_attribute(shape, vec2f{0, 0}, 2);
+  else
+    set_vertex_attribute(shape, texcoords, 2);
+}
+void set_colors(gui_shape* shape, const vector<vec4f>& colors) {
+  if (colors.empty())
+    set_vertex_attribute(shape, vec4f{1, 1, 1, 1}, 3);
+  else
+    set_vertex_attribute(shape, colors, 3);
+}
+void set_tangents(gui_shape* shape, const vector<vec4f>& tangents) {
+  if (tangents.empty())
+    set_vertex_attribute(shape, vec4f{0, 0, 1, 1}, 4);
+  else
+    set_vertex_attribute(shape, tangents, 4);
+}
+
+void set_points(gui_shape* shape, const vector<int>& points) {
+  set_index_buffer(shape, points);
+}
+void set_lines(gui_shape* shape, const vector<vec2i>& lines) {
+  set_index_buffer(shape, lines);
+}
+void set_triangles(gui_shape* shape, const vector<vec3i>& triangles) {
+  set_index_buffer(shape, triangles);
+}
+void set_quads(gui_shape* shape, const vector<vec4i>& quads) {
+  auto triangles = vector<vec3i>{};
+  triangles.reserve(quads.size() * 2);
+  for (auto& q : quads) {
+    triangles.push_back({q.x, q.y, q.w});
+    if (q.z != q.w) triangles.push_back({q.z, q.w, q.y});
+  }
+  set_index_buffer(shape, triangles);
+}
+
+gui_scene::~gui_scene() {
+  clear_scene(this);
+  for (auto camera : cameras) delete camera;
+  for (auto shape : shapes) delete shape;
+  for (auto material : materials) delete material;
+  for (auto texture : textures) delete texture;
+  delete eyelight_program;
+  delete ibl_program;
+  delete environment_program;
+  delete environment_cubemap;
+  delete diffuse_cubemap;
+  delete specular_cubemap;
+  delete brdf_lut;
+}
+
+const char* bake_brdf_vertex_code();
+const char* bake_brdf_fragment_code();
+
+const char* bake_cubemap_vertex_code();
+const char* bake_environment_fragment_code();
+const char* bake_irradiance_fragment_code();
+const char* bake_reflections_fragment_code();
+
+// Initialize an OpenGL scene
+void init_scene(gui_scene* scene) {
+  if (is_initialized(scene->eyelight_program)) return;
+  auto error = ""s, errorlog = ""s;
+  auto vert = draw_instances_vertex_code();
+  auto frag = draw_instances_eyelight_fragment_code();
+  init_program(scene->eyelight_program, vert, frag, error, errorlog);
+}
+
+bool is_initialized(gui_scene* scene) {
+  return scene && is_initialized(scene->eyelight_program);
+}
+
+// Clear an OpenGL scene
+void clear_scene(gui_scene* scene) {
+  for (auto texture : scene->textures) clear_texture(texture);
+  for (auto shape : scene->shapes) clear_shape(shape);
+  clear_program(scene->eyelight_program);
+  clear_program(scene->ibl_program);
+  clear_program(scene->environment_program);
+  clear_cubemap(scene->environment_cubemap);
+  clear_cubemap(scene->diffuse_cubemap);
+  clear_cubemap(scene->specular_cubemap);
+  clear_texture(scene->brdf_lut);
+}
+
+// add camera
+gui_camera* add_camera(gui_scene* scene) {
+  return scene->cameras.emplace_back(new gui_camera{});
+}
+void set_frame(gui_camera* camera, const frame3f& frame) {
+  camera->frame = frame;
+}
+void set_lens(gui_camera* camera, float lens, float aspect, float film) {
+  camera->lens   = lens;
+  camera->aspect = aspect;
+  camera->film   = film;
+}
+void set_nearfar(gui_camera* camera, float near, float far) {
+  camera->near = near;
+  camera->far  = far;
+}
+
+// add texture
+gui_texture* add_texture(gui_scene* scene) {
+  return scene->textures.emplace_back(new gui_texture{});
+}
+
+// add shape
+gui_shape* add_shape(gui_scene* scene) {
+  auto shape = new gui_shape{};
+  shape->vertex_buffers.resize(5);
+  set_shape(shape);
+  scene->shapes.push_back(shape);
+  return shape;
+}
+
+// add instance
+gui_instance* add_instance(gui_scene* scene) {
+  return scene->instances.emplace_back(new gui_instance{});
+}
+void set_frame(gui_instance* instance, const frame3f& frame) {
+  instance->frame = frame;
+}
+void set_shape(gui_instance* instance, gui_shape* shape) {
+  instance->shape = shape;
+}
+void set_material(gui_instance* instance, gui_material* material) {
+  instance->material = material;
+}
+void set_hidden(gui_instance* instance, bool hidden) {
+  instance->hidden = hidden;
+}
+void set_highlighted(gui_instance* instance, bool highlighted) {
+  instance->highlighted = highlighted;
+}
+
+// add material
+gui_material* add_material(gui_scene* scene) {
+  return scene->materials.emplace_back(new gui_material{});
+}
+void set_emission(
+    gui_material* material, const vec3f& emission, gui_texture* emission_tex) {
+  material->emission     = emission;
+  material->emission_tex = emission_tex;
+}
+void set_color(
+    gui_material* material, const vec3f& color, gui_texture* color_tex) {
+  material->color     = color;
+  material->color_tex = color_tex;
+}
+void set_specular(
+    gui_material* material, float specular, gui_texture* specular_tex) {
+  material->specular     = specular;
+  material->specular_tex = specular_tex;
+}
+void set_roughness(
+    gui_material* material, float roughness, gui_texture* roughness_tex) {
+  material->roughness     = roughness;
+  material->roughness_tex = roughness_tex;
+}
+void set_opacity(
+    gui_material* material, float opacity, gui_texture* opacity_tex) {
+  material->opacity = opacity;
+}
+void set_metallic(
+    gui_material* material, float metallic, gui_texture* metallic_tex) {
+  material->metallic     = metallic;
+  material->metallic_tex = metallic_tex;
+}
+void set_normalmap(gui_material* material, gui_texture* normal_tex) {
+  material->normal_tex = normal_tex;
+}
+
+gui_shape* add_shape(gui_scene* scene, const vector<int>& points,
+    const vector<vec2i>& lines, const vector<vec3i>& triangles,
+    const vector<vec4i>& quads, const vector<vec3f>& positions,
+    const vector<vec3f>& normals, const vector<vec2f>& texcoords,
+    const vector<vec4f>& colors, bool edges) {
+  auto shape = add_shape(scene);
+  if (points.size() != 0) {
+    set_points(shape, points);
+  } else if (lines.size() != 0) {
+    set_lines(shape, lines);
+  } else if (triangles.size() != 0) {
+    set_triangles(shape, triangles);
+  } else if (quads.size() != 0) {
+    set_quads(shape, quads);
+  }
+  set_positions(shape, positions);
+  set_normals(shape, normals);
+  set_texcoords(shape, texcoords);
+  set_colors(shape, colors);
+  return shape;
+}
+
+// shortcuts
+gui_camera* add_camera(gui_scene* scene, const frame3f& frame, float lens,
+    float aspect, float film, float near, float far) {
+  auto camera = add_camera(scene);
+  set_frame(camera, frame);
+  set_lens(camera, lens, aspect, film);
+  set_nearfar(camera, near, far);
+  return camera;
+}
+gui_material* add_material(gui_scene* scene, const vec3f& emission,
+    const vec3f& color, float specular, float metallic, float roughness,
+    gui_texture* emission_tex, gui_texture* color_tex,
+    gui_texture* specular_tex, gui_texture* metallic_tex,
+    gui_texture* roughness_tex, gui_texture* normalmap_tex) {
+  auto material = add_material(scene);
+  set_emission(material, emission, emission_tex);
+  set_color(material, color, color_tex);
+  set_specular(material, specular, specular_tex);
+  set_metallic(material, metallic, metallic_tex);
+  set_roughness(material, roughness, roughness_tex);
+  set_normalmap(material, normalmap_tex);
+  return material;
+}
+
+gui_instance* add_instance(gui_scene* scene, const frame3f& frame,
+    gui_shape* shape, gui_material* material, bool hidden, bool highlighted) {
+  auto instance = add_instance(scene);
+  set_frame(instance, frame);
+  set_shape(instance, shape);
+  set_material(instance, material);
+  set_hidden(instance, hidden);
+  set_highlighted(instance, highlighted);
+  return instance;
+}
+
+void set_scene_view_uniforms(ogl_program* program, const gui_scene_view& view) {
+  set_uniform(program, "eye", view.camera_frame.o);
+  set_uniform(program, "view", view.view_matrix);
+  set_uniform(program, "projection", view.projection_matrix);
+  set_uniform(program, "exposure", view.params.exposure);
+  set_uniform(program, "gamma", view.params.gamma);
+  set_uniform(program, "faceted", view.params.faceted);
+  set_uniform(program, "double_sided", view.params.double_sided);
+}
+
+// Draw a shape
+void set_instance_uniforms(ogl_program* program, const gui_instance* instance,
+    const gui_scene_view& view) {
+  auto shape_xform     = frame_to_mat(instance->frame);
+  auto shape_inv_xform = transpose(
+      frame_to_mat(inverse(instance->frame, view.params.non_rigid_frames)));
+  set_uniform(program, "frame", shape_xform);
+  set_uniform(program, "frameit", shape_inv_xform);
+  set_uniform(program, "offset", 0.0f);
+  if (instance->highlighted) {
+    set_uniform(program, "highlight", vec4f{1, 1, 0, 1});
+  } else {
+    set_uniform(program, "highlight", vec4f{0, 0, 0, 0});
+  }
+  assert_ogl_error();
+
+  auto material = instance->material;
+  auto mtype    = instance->shading_type;
+  set_uniform(program, "mtype", mtype);
+  set_uniform(program, "emission", material->emission);
+  set_uniform(program, "diffuse", material->color);
+  set_uniform(program, "specular",
+      vec3f{material->metallic, material->metallic, material->metallic});
+  set_uniform(program, "roughness", material->roughness);
+  set_uniform(program, "opacity", material->opacity);
+  set_uniform(program, "double_sided", (int)view.params.double_sided);
+  set_uniform(
+      program, "emission_tex", "emission_tex_on", material->emission_tex, 0);
+  set_uniform(program, "diffuse_tex", "diffuse_tex_on", material->color_tex, 1);
+  set_uniform(
+      program, "specular_tex", "specular_tex_on", material->metallic_tex, 2);
+  set_uniform(
+      program, "roughness_tex", "roughness_tex_on", material->roughness_tex, 3);
+  set_uniform(
+      program, "opacity_tex", "opacity_tex_on", material->opacity_tex, 4);
+  set_uniform(
+      program, "mat_norm_tex", "mat_norm_tex_on", material->normal_tex, 5);
+
+  assert_ogl_error();
+
+  auto shape = instance->shape;
+  auto type  = shape->index_buffer.element;
+  if (type == ogl_element_type::points) set_uniform(program, "etype", 1);
+  if (type == ogl_element_type::lines) set_uniform(program, "etype", 2);
+  if (type == ogl_element_type::triangles) set_uniform(program, "etype", 3);
+  assert_ogl_error();
+}
+
+void draw_environment(gui_scene* scene, const gui_scene_view& view) {
+  auto program = scene->environment_program;
+  if (program->program_id == 0) return;
+
+  bind_program(program);
+
+  set_scene_view_uniforms(program, view);
+  set_uniform(program, "environment", scene->environment_cubemap, 0);
+
+  auto cube = cube_shape();
+  draw_shape(cube);
+
+  unbind_program();
+}
+
+void set_eyelight_uniforms(ogl_program* program, const gui_scene_view& view) {
+  // Opengl light
+  struct gui_light {
+    vec3f          position = {0, 0, 0};
+    vec3f          emission = {0, 0, 0};
+    ogl_light_type type     = ogl_light_type::point;
+    bool           camera   = false;
+  };
+
+  static auto camera_light0 = gui_light{normalize(vec3f{1, 1, 1}),
+      vec3f{pif / 2, pif / 2, pif / 2}, ogl_light_type::directional, true};
+  static auto camera_light1 = gui_light{normalize(vec3f{-1, 1, 1}),
+      vec3f{pif / 2, pif / 2, pif / 2}, ogl_light_type::directional, true};
+  static auto camera_light2 = gui_light{normalize(vec3f{-1, -1, 1}),
+      vec3f{pif / 4, pif / 4, pif / 4}, ogl_light_type::directional, true};
+  static auto camera_light3 = gui_light{normalize(vec3f{0.1, 0.5, -1}),
+      vec3f{pif / 4, pif / 4, pif / 4}, ogl_light_type::directional, true};
+  static auto camera_lights = vector<gui_light*>{
+      &camera_light0, &camera_light1, &camera_light2, &camera_light3};
+
+  auto& lights = camera_lights;
+  set_uniform(program, "lamb", vec3f{0, 0, 0});
+  set_uniform(program, "lnum", (int)lights.size());
+  auto lid = 0;
+  for (auto light : lights) {
+    auto is = std::to_string(lid);
+    if (light->camera) {
+      auto position = light->type == ogl_light_type::directional
+                          ? transform_direction(
+                                view.camera_frame, light->position)
+                          : transform_point(view.camera_frame, light->position);
+      set_uniform(program, ("lpos[" + is + "]").c_str(), position);
+    } else {
+      set_uniform(program, ("lpos[" + is + "]").c_str(), light->position);
+    }
+    set_uniform(program, ("lke[" + is + "]").c_str(), light->emission);
+    set_uniform(program, ("ltype[" + is + "]").c_str(), (int)light->type);
+    lid++;
+  }
+  assert_ogl_error();
+}
+
+void set_ibl_uniforms(ogl_program* program, const gui_scene* scene) {
+  set_uniform(program, "irradiance_cubemap", scene->diffuse_cubemap, 6);
+  set_uniform(program, "reflection_cubemap", scene->specular_cubemap, 7);
+  set_uniform(program, "brdf_lut", scene->brdf_lut, 8);
+}
+
+void draw_instances(gui_scene* scene, const gui_scene_view& view) {
+  auto program = scene->eyelight_program;
+  if (is_initialized(scene->environment_cubemap) &&
+      view.params.shading == gui_shading_type::environment) {
+    program = scene->ibl_program;
+  }
+
+  bind_program(program);
+  set_scene_view_uniforms(program, view);
+  if (view.params.shading == gui_shading_type::eyelight) {
+    set_eyelight_uniforms(program, view);
+  } else {
+    set_ibl_uniforms(program, scene);
+  }
+
+  set_ogl_wireframe(view.params.wireframe);
+  for (auto instance : scene->instances) {
+    if (instance->hidden) continue;
+    set_instance_uniforms(program, instance, view);
+    draw_shape(instance->shape);
+  }
+  unbind_program();
+}
+
+gui_scene_view make_scene_view(
+    gui_camera* camera, const vec4i& viewport, const gui_scene_params& params) {
+  auto camera_aspect = (float)viewport.z / (float)viewport.w;
+  auto camera_yfov =
+      camera_aspect >= 0
+          ? (2 * atan(camera->film / (camera_aspect * 2 * camera->lens)))
+          : (2 * atan(camera->film / (2 * camera->lens)));
+  auto view_matrix       = frame_to_mat(inverse(camera->frame));
+  auto projection_matrix = perspective_mat(
+      camera_yfov, camera_aspect, params.near, params.far);
+
+  auto view              = gui_scene_view{};
+  view.camera_frame      = camera->frame;
+  view.view_matrix       = view_matrix;
+  view.projection_matrix = projection_matrix;
+  view.params            = params;
+  return view;
+}
+
+void draw_scene(gui_scene* scene, gui_camera* camera, const vec4i& viewport,
+    const gui_scene_params& params) {
+  assert_ogl_error();
+  clear_ogl_framebuffer(params.background);
+  set_ogl_viewport(viewport);
+  assert_ogl_error();
+
+  auto view = make_scene_view(camera, viewport, params);
+  draw_instances(scene, view);
+  draw_environment(scene, view);
+}
+
+// image based lighting
+
+// Using 6 render passes, bake a cubemap given a sampler for the environment.
+// The input sampler can be either a cubemap or a latlong texture.
+template <typename Sampler>
+inline void bake_cubemap(ogl_cubemap* cubemap, const Sampler* environment,
+    ogl_program* program, int size, int num_mipmap_levels = 1,
+    const vec3f& emission = {1, 1, 1}) {
+  // init cubemap with no data
+  set_cubemap<float>(cubemap, size, 3, true, true, true);
+  auto cube = cube_shape();
+
+  auto framebuffer = ogl_framebuffer{};
+  set_framebuffer(&framebuffer, {size, size});
+
+  // clang-format off
+  frame3f cameras[6] = {
+    lookat_frame({0, 0, 0}, { 1, 0, 0}, {0, 1, 0}),
+    lookat_frame({0, 0, 0}, {-1, 0, 0}, {0, 1, 0}),
+    lookat_frame({0, 0, 0}, { 0,-1, 0}, {0, 0,-1}),
+    lookat_frame({0, 0, 0}, { 0, 1, 0}, {0, 0, 1}),
+    lookat_frame({0, 0, 0}, { 0, 0,-1}, {0, 1, 0}),
+    lookat_frame({0, 0, 0}, { 0, 0, 1}, {0, 1, 0})
+  };
+  // clang-format on
+
+  bind_framebuffer(&framebuffer);
+  bind_program(program);
+  for (int mipmap_level = 0; mipmap_level < num_mipmap_levels; mipmap_level++) {
+    // resize render buffer and viewport
+    set_framebuffer(&framebuffer, {size, size});
+    set_ogl_viewport(vec2i{size, size});
+
+    for (auto i = 0; i < 6; ++i) {
+      // perspective_mat(fov, aspect, near, far)
+      auto camera_proj = perspective_mat(radians(90), 1, 1, 100);
+      auto camera_view = frame_to_mat(inverse(cameras[i]));
+
+      set_framebuffer_texture(&framebuffer, cubemap, i, mipmap_level);
+      clear_ogl_framebuffer({0, 0, 0, 0}, true);
+
+      set_uniform(program, "view", camera_view);
+      set_uniform(program, "projection", camera_proj);
+      set_uniform(program, "eye", vec3f{0, 0, 0});
+      set_uniform(program, "mipmap_level", mipmap_level);
+      set_uniform(program, "emission", emission);
+      set_uniform(program, "environment", environment, 0);
+
+      draw_shape(cube);
+    }
+    size /= 2;
+  }
+  unbind_program();
+  unbind_framebuffer();
+}
+
+inline void bake_specular_brdf_texture(gui_texture* texture) {
+  auto size        = 512;
+  auto framebuffer = ogl_framebuffer{};
+  auto screen_quad = quad_shape();
+
+  auto program = ogl_program{};
+  auto error = ""s, errorlog = ""s;
+  auto vert = bake_brdf_vertex_code();
+  auto frag = bake_brdf_fragment_code();
+  init_program(&program, vert, frag, error, errorlog);
+
+  assert_ogl_error();
+
+  texture->is_float     = true;
+  texture->linear       = true;
+  texture->num_channels = 3;
+  texture->size         = {size, size};
+  glGenTextures(1, &texture->texture_id);
+
+  glBindTexture(GL_TEXTURE_2D, texture->texture_id);
+  glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB16F, size, size, 0, GL_RGB, GL_FLOAT, 0);
+  glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
+  glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
+  glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+  glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+  // TODO(giacomo): mipmaps?
+
+  assert_ogl_error();
+
+  set_framebuffer(&framebuffer, {size, size});
+  set_framebuffer_texture(&framebuffer, texture, 0);
+
+  bind_framebuffer(&framebuffer);
+  bind_program(&program);
+
+  set_ogl_viewport(vec2i{size, size});
+  clear_ogl_framebuffer({0, 0, 0, 0}, true);
+
+  draw_shape(screen_quad);
+  assert_ogl_error();
+
+  unbind_program();
+  unbind_framebuffer();
+  clear_framebuffer(&framebuffer);
+  clear_program(&program);
+}
+
+void init_ibl_data(gui_scene* scene, const gui_texture* environment_texture,
+    const vec3f& emission) {
+  auto load_program = [](ogl_program* program, const string& vertex,
+                          const string& fragment) {
+    auto error = ""s, errorlog = ""s;
+    if (!init_program(program, vertex, fragment, error, errorlog)) {
+      printf("error: %s\n", error.c_str());
+      printf("errorlog: %s\n", errorlog.c_str());
+    }
+  };
+
+  // shader with IBL shading
+  {
+    auto vert = draw_instances_vertex_code();
+    auto frag = draw_instances_ibl_fragment_code();
+    load_program(scene->ibl_program, vert, frag);
+  }
+
+  // shader for drawing the environment
+  {
+    auto vert = bake_cubemap_vertex_code();
+    auto frag = draw_enivronment_fragment_code();
+    load_program(scene->environment_program, vert, frag);
+  }
+
+  // bake cubemap from environment texture
+  {
+    auto size    = environment_texture->size.y;
+    auto program = new ogl_program{};
+    auto vert    = bake_cubemap_vertex_code();
+    auto frag    = bake_environment_fragment_code();
+    load_program(program, vert, frag);
+    bake_cubemap(scene->environment_cubemap, environment_texture, program, size,
+        1, emission);
+    clear_program(program);
+    delete program;
+  }
+
+  // bake irradiance map
+  {
+    auto program = new ogl_program{};
+    auto vert    = bake_cubemap_vertex_code();
+    auto frag    = bake_irradiance_fragment_code();
+    load_program(program, vert, frag);
+    bake_cubemap(
+        scene->diffuse_cubemap, scene->environment_cubemap, program, 64);
+    clear_program(program);
+    delete program;
+  }
+
+  // bake specular map
+  {
+    auto program = new ogl_program{};
+    auto vert    = bake_cubemap_vertex_code();
+    auto frag    = bake_reflections_fragment_code();
+    load_program(program, vert, frag);
+    bake_cubemap(
+        scene->specular_cubemap, scene->environment_cubemap, program, 256, 6);
+    clear_program(program);
+    delete program;
+  }
+
+  bake_specular_brdf_texture(scene->brdf_lut);
+}
+
+const char* draw_instances_vertex_code() {
+  static const char* code =
+      R"(
 #version 330
 
 layout(location = 0) in vec3 positions;           // vertex position (in mesh coordinate frame)
@@ -101,9 +715,12 @@ void main() {
   gl_Position = projection * view * vec4(position,1);
 }
 )";
+  return code;
+}
 
-static const char* glscene_fragment =
-    R"(
+const char* draw_instances_eyelight_fragment_code() {
+  static const char* code =
+      R"(
 #version 330
 
 float pif = 3.14159265;
@@ -264,6 +881,11 @@ vec3 triangle_normal(vec3 position) {
 
 // main
 void main() {
+  if(mtype == 0) {
+    frag_color = vec4(emission, 1);
+    return; 
+  }
+
   // view vector
   vec3 wo = normalize(eye - position);
 
@@ -328,8 +950,11 @@ void main() {
   frag_color = vec4(c,brdf_op);
 }
 )";
+  return code;
+}
 
-static const char* glibl_fragment = R"(
+const char* draw_instances_ibl_fragment_code() {
+  static const char* code = R"(
 #version 330
 
 in vec3 position;  // [from vertex shader] position in world space
@@ -341,6 +966,7 @@ in vec4 tangsp;    // [from vertex shader] tangent space
 float pif = 3.14159265;
 
 uniform int  etype;
+uniform int  mtype;
 uniform bool faceted;
 uniform int  shading_type;
 
@@ -467,6 +1093,11 @@ vec3 sample_prefiltered_refleciton(vec3 L, float roughness) {
 
 // main
 void main() {
+  if(mtype == 0) {
+    frag_color = vec4(emission, 1);
+    return; 
+  }
+
   vec3 V = normalize(eye - position);
   vec3 N = compute_normal(V);
 
@@ -492,8 +1123,11 @@ void main() {
   frag_color = vec4(radiance, brdf.opacity);
 }
 )";
+  return code;
+}
 
-static const char* bake_brdf_vertex = R"(
+const char* bake_brdf_vertex_code() {
+  static const char* code = R"(
 #version 330
 
 layout(location = 0) in vec3 positions;  // vertex position
@@ -507,8 +1141,11 @@ void main() {
   gl_Position = vec4(position, 1);
 }
 )";
+  return code;
+}
 
-static const char* bake_brdf_fragment = R"(
+const char* bake_brdf_fragment_code() {
+  static const char* code = R"(
 #version 330
 
 out vec3 frag_color;
@@ -612,8 +1249,11 @@ void main() {
   frag_color           = vec3(integrated_brdf, 0.0);
 }
 )";
+  return code;
+}
 
-static const char* cubemap_vertex = R"(
+const char* bake_cubemap_vertex_code() {
+  static const char* code = R"(
 #version 330
 
 layout(location = 0) in vec3 positions;  // vertex position
@@ -634,8 +1274,11 @@ void main() {
   gl_Position            = projection * vec4(view_no_transform, 1);
 }
 )";
+  return code;
+}
 
-static const char* bake_environment_frag = R"(
+const char* bake_environment_fragment_code() {
+  static const char* code = R"(
 #version 330
 
 out vec3 frag_color;
@@ -647,8 +1290,7 @@ uniform mat4 view;        // inverse of the camera frame (as a matrix)
 uniform mat4 projection;  // camera projection
 
 uniform sampler2D environment;
-
-const float PI = 3.14159265359;
+uniform vec3 emission = vec3(1);
 
 vec2 sample_spherical_map(vec3 v) {
   vec2 uv = vec2(atan(v.z, v.x), asin(v.y));
@@ -665,11 +1307,14 @@ void main() {
 
   // TODO(giacomo): We skip gamma correction, assuming the environment is stored
   // in linear space. Is it always true? Probably not.
-  frag_color = vec3(color);
+  frag_color = emission * color;
 }
 )";
+  return code;
+}
 
-static const char* bake_diffuse_frag = R"(
+const char* bake_irradiance_fragment_code() {
+  static const char* code = R"(
 #version 330
 
 out vec3 frag_color;
@@ -717,8 +1362,11 @@ void main() {
   frag_color = irradiance;
 }
 )";
+  return code;
+}
 
-static const char* bake_specular_frag = R"(
+const char* bake_reflections_fragment_code() {
+  static const char* code = R"(
 #version 330
 
 out vec3 frag_color;
@@ -797,8 +1445,11 @@ void main() {
   frag_color = vec3(result);
 }
 )";
+  return code;
+}
 
-static const char* environment_fragment = R"(
+const char* draw_enivronment_fragment_code() {
+  static const char* code = R"(
 #version 330
 
 out vec3 frag_color;
@@ -824,536 +1475,7 @@ void main() {
   frag_color = radiance;
 }
 )";
-
-#ifndef _WIN32
-#pragma GCC diagnostic pop
-#endif
-
-gui_scene::~gui_scene() {
-  clear_scene(this);
-  for (auto camera : cameras) delete camera;
-  for (auto shape : shapes) delete shape;
-  for (auto material : materials) delete material;
-  for (auto texture : textures) delete texture;
-  for (auto light : lights) delete light;
-  delete lights_program;
-  delete ibl_program;
-  delete environment_program;
-  delete environment_cubemap;
-  delete diffuse_cubemap;
-  delete specular_cubemap;
-  delete brdf_lut;
+  return code;
 }
-
-// Initialize an OpenGL scene
-void init_scene(gui_scene* scene) {
-  if (is_initialized(scene->lights_program)) return;
-  auto error = ""s, errorlog = ""s;
-  init_program(
-      scene->lights_program, glscene_vertex, glscene_fragment, error, errorlog);
-}
-bool is_initialized(gui_scene* scene) {
-  return is_initialized(scene->lights_program);
-}
-
-// Clear an OpenGL scene
-void clear_scene(gui_scene* scene) {
-  for (auto texture : scene->textures) clear_texture(texture);
-  for (auto shape : scene->shapes) clear_shape(shape);
-  clear_program(scene->lights_program);
-  clear_program(scene->ibl_program);
-  clear_program(scene->environment_program);
-  clear_cubemap(scene->environment_cubemap);
-  clear_cubemap(scene->diffuse_cubemap);
-  clear_cubemap(scene->specular_cubemap);
-  clear_texture(scene->brdf_lut);
-}
-
-// add camera
-gui_camera* add_camera(gui_scene* scene) {
-  return scene->cameras.emplace_back(new gui_camera{});
-}
-void set_frame(gui_camera* camera, const frame3f& frame) {
-  camera->frame = frame;
-}
-void set_lens(gui_camera* camera, float lens, float aspect, float film) {
-  camera->lens   = lens;
-  camera->aspect = aspect;
-  camera->film   = film;
-}
-void set_nearfar(gui_camera* camera, float near, float far) {
-  camera->near = near;
-  camera->far  = far;
-}
-
-// add texture
-ogl_texture* add_texture(gui_scene* scene) {
-  return scene->textures.emplace_back(new ogl_texture{});
-}
-
-// add shape
-ogl_shape* add_shape(gui_scene* scene) {
-  auto shape = new ogl_shape{};
-  set_shape(shape);
-  scene->shapes.push_back(shape);
-  return shape;
-}
-
-// add instance
-gui_instance* add_instance(gui_scene* scene) {
-  return scene->instances.emplace_back(new gui_instance{});
-}
-void set_frame(gui_instance* instance, const frame3f& frame) {
-  instance->frame = frame;
-}
-void set_shape(gui_instance* instance, ogl_shape* shape) {
-  instance->shape = shape;
-}
-void set_material(gui_instance* instance, gui_material* material) {
-  instance->material = material;
-}
-void set_hidden(gui_instance* instance, bool hidden) {
-  instance->hidden = hidden;
-}
-void set_highlighted(gui_instance* instance, bool highlighted) {
-  instance->highlighted = highlighted;
-}
-
-// add material
-gui_material* add_material(gui_scene* scene) {
-  return scene->materials.emplace_back(new gui_material{});
-}
-void set_emission(
-    gui_material* material, const vec3f& emission, ogl_texture* emission_tex) {
-  material->emission     = emission;
-  material->emission_tex = emission_tex;
-}
-void set_color(
-    gui_material* material, const vec3f& color, ogl_texture* color_tex) {
-  material->color     = color;
-  material->color_tex = color_tex;
-}
-void set_specular(
-    gui_material* material, float specular, ogl_texture* specular_tex) {
-  material->specular     = specular;
-  material->specular_tex = specular_tex;
-}
-void set_roughness(
-    gui_material* material, float roughness, ogl_texture* roughness_tex) {
-  material->roughness     = roughness;
-  material->roughness_tex = roughness_tex;
-}
-void set_opacity(
-    gui_material* material, float opacity, ogl_texture* opacity_tex) {
-  material->opacity = opacity;
-}
-void set_metallic(
-    gui_material* material, float metallic, ogl_texture* metallic_tex) {
-  material->metallic     = metallic;
-  material->metallic_tex = metallic_tex;
-}
-void set_normalmap(gui_material* material, ogl_texture* normal_tex) {
-  material->normal_tex = normal_tex;
-}
-
-ogl_shape* add_shape(gui_scene* scene, const vector<int>& points,
-    const vector<vec2i>& lines, const vector<vec3i>& triangles,
-    const vector<vec4i>& quads, const vector<vec3f>& positions,
-    const vector<vec3f>& normals, const vector<vec2f>& texcoords,
-    const vector<vec4f>& colors, bool edges) {
-  auto shape = add_shape(scene);
-  set_points(shape, points);
-  set_lines(shape, lines);
-  set_triangles(shape, triangles);
-  set_quads(shape, quads);
-  set_positions(shape, positions);
-  set_normals(shape, normals);
-  set_texcoords(shape, texcoords);
-  set_colors(shape, colors);
-  if (edges && (!triangles.empty() || !quads.empty())) {
-    set_edges(shape, triangles, quads);
-  }
-  return shape;
-}
-
-// shortcuts
-gui_camera* add_camera(gui_scene* scene, const frame3f& frame, float lens,
-    float aspect, float film, float near, float far) {
-  auto camera = add_camera(scene);
-  set_frame(camera, frame);
-  set_lens(camera, lens, aspect, film);
-  set_nearfar(camera, near, far);
-  return camera;
-}
-gui_material* add_material(gui_scene* scene, const vec3f& emission,
-    const vec3f& color, float specular, float metallic, float roughness,
-    ogl_texture* emission_tex, ogl_texture* color_tex,
-    ogl_texture* specular_tex, ogl_texture* metallic_tex,
-    ogl_texture* roughness_tex, ogl_texture* normalmap_tex) {
-  auto material = add_material(scene);
-  set_emission(material, emission, emission_tex);
-  set_color(material, color, color_tex);
-  set_specular(material, specular, specular_tex);
-  set_metallic(material, metallic, metallic_tex);
-  set_roughness(material, roughness, roughness_tex);
-  set_normalmap(material, normalmap_tex);
-  return material;
-}
-
-gui_instance* add_instance(gui_scene* scene, const frame3f& frame,
-    ogl_shape* shape, gui_material* material, bool hidden, bool highlighted) {
-  auto instance = add_instance(scene);
-  set_frame(instance, frame);
-  set_shape(instance, shape);
-  set_material(instance, material);
-  set_hidden(instance, hidden);
-  set_highlighted(instance, highlighted);
-  return instance;
-}
-
-// add light
-gui_light* add_light(gui_scene* scene) {
-  return scene->lights.emplace_back(new gui_light{});
-}
-void set_light(gui_light* light, const vec3f& position, const vec3f& emission,
-    ogl_light_type type, bool camera) {
-  light->position = position;
-  light->emission = emission;
-  light->type     = type;
-  light->camera   = camera;
-}
-void clear_lights(gui_scene* scene) {
-  for (auto light : scene->lights) delete light;
-  scene->lights.clear();
-}
-bool has_max_lights(gui_scene* scene) { return scene->lights.size() >= 16; }
-void add_default_lights(gui_scene* scene) {
-  clear_lights(scene);
-  set_light(add_light(scene), normalize(vec3f{1, 1, 1}),
-      vec3f{pif / 2, pif / 2, pif / 2}, ogl_light_type::directional, true);
-  set_light(add_light(scene), normalize(vec3f{-1, 1, 1}),
-      vec3f{pif / 2, pif / 2, pif / 2}, ogl_light_type::directional, true);
-  set_light(add_light(scene), normalize(vec3f{-1, -1, 1}),
-      vec3f{pif / 4, pif / 4, pif / 4}, ogl_light_type::directional, true);
-  set_light(add_light(scene), normalize(vec3f{0.1, 0.5, -1}),
-      vec3f{pif / 4, pif / 4, pif / 4}, ogl_light_type::directional, true);
-}
-
-// Draw a shape
-void draw_object(
-    gui_scene* scene, gui_instance* instance, const gui_scene_params& params) {
-  static auto empty_instances = vector<frame3f>{identity3x4f};
-
-  if (instance->hidden) return;
-
-  assert_ogl_error();
-  auto program = (params.shading == gui_shading_type::environment)
-                     ? scene->ibl_program
-                     : scene->lights_program;
-
-  auto shape_xform     = frame_to_mat(instance->frame);
-  auto shape_inv_xform = transpose(
-      frame_to_mat(inverse(instance->frame, params.non_rigid_frames)));
-  set_uniform(program, "frame", shape_xform);
-  set_uniform(program, "frameit", shape_inv_xform);
-  set_uniform(program, "offset", 0.0f);
-  if (instance->highlighted) {
-    set_uniform(program, "highlight", vec4f{1, 1, 0, 1});
-  } else {
-    set_uniform(program, "highlight", vec4f{0, 0, 0, 0});
-  }
-  assert_ogl_error();
-
-  auto material = instance->material;
-  auto mtype    = 2;
-  set_uniform(program, "mtype", mtype);
-  set_uniform(program, "emission", material->emission);
-  set_uniform(program, "diffuse", material->color);
-  set_uniform(program, "specular",
-      vec3f{material->metallic, material->metallic, material->metallic});
-  set_uniform(program, "roughness", material->roughness);
-  set_uniform(program, "opacity", material->opacity);
-  set_uniform(program, "double_sided", (int)params.double_sided);
-  set_uniform(
-      program, "emission_tex", "emission_tex_on", material->emission_tex, 0);
-  set_uniform(program, "diffuse_tex", "diffuse_tex_on", material->color_tex, 1);
-  set_uniform(
-      program, "specular_tex", "specular_tex_on", material->metallic_tex, 2);
-  set_uniform(
-      program, "roughness_tex", "roughness_tex_on", material->roughness_tex, 3);
-  set_uniform(
-      program, "opacity_tex", "opacity_tex_on", material->opacity_tex, 4);
-  set_uniform(
-      program, "mat_norm_tex", "mat_norm_tex_on", material->normal_tex, 5);
-
-  set_uniform(program, "irradiance_cubemap", scene->diffuse_cubemap, 6);
-  set_uniform(program, "reflection_cubemap", scene->specular_cubemap, 7);
-  set_uniform(program, "brdf_lut", scene->brdf_lut, 8);
-  assert_ogl_error();
-
-  auto shape = instance->shape;
-
-  if (is_initialized(shape->points)) {
-    set_uniform(program, "etype", 1);
-  }
-  if (is_initialized(shape->lines)) {
-    set_uniform(program, "etype", 2);
-  }
-  if (is_initialized(shape->triangles)) {
-    set_uniform(program, "etype", 3);
-  }
-  if (is_initialized(shape->quads)) {
-    set_uniform(program, "etype", 3);
-  }
-  draw_shape(shape);
-
-  assert_ogl_error();
-
-  if (is_initialized(shape->edges) && params.edges && !params.wireframe) {
-    set_uniform(program, "mtype", mtype);
-    set_uniform(program, "emission", vec3f{0, 0, 0});
-    set_uniform(program, "diffuse", vec3f{0, 0, 0});
-    set_uniform(program, "specular", vec3f{0, 0, 0});
-    set_uniform(program, "roughness", 0.0f);
-    set_uniform(program, "etype", 3);
-    draw_shape(shape);
-    assert_ogl_error();
-  }
-}
-
-// Display a scene
-void draw_scene(gui_scene* scene, gui_camera* camera, const vec4i& viewport,
-    const gui_scene_params& params) {
-  static auto camera_light0 = gui_light{normalize(vec3f{1, 1, 1}),
-      vec3f{pif / 2, pif / 2, pif / 2}, ogl_light_type::directional, true};
-  static auto camera_light1 = gui_light{normalize(vec3f{-1, 1, 1}),
-      vec3f{pif / 2, pif / 2, pif / 2}, ogl_light_type::directional, true};
-  static auto camera_light2 = gui_light{normalize(vec3f{-1, -1, 1}),
-      vec3f{pif / 4, pif / 4, pif / 4}, ogl_light_type::directional, true};
-  static auto camera_light3 = gui_light{normalize(vec3f{0.1, 0.5, -1}),
-      vec3f{pif / 4, pif / 4, pif / 4}, ogl_light_type::directional, true};
-  static auto camera_lights = vector<gui_light*>{
-      &camera_light0, &camera_light1, &camera_light2, &camera_light3};
-  auto camera_aspect = (float)viewport.z / (float)viewport.w;
-  auto camera_yfov =
-      camera_aspect >= 0
-          ? (2 * atan(camera->film / (camera_aspect * 2 * camera->lens)))
-          : (2 * atan(camera->film / (2 * camera->lens)));
-  auto camera_view = frame_to_mat(inverse(camera->frame));
-  auto camera_proj = perspective_mat(
-      camera_yfov, camera_aspect, params.near, params.far);
-
-  assert_ogl_error();
-  clear_ogl_framebuffer(params.background);
-  set_ogl_viewport(viewport);
-
-  assert_ogl_error();
-  auto program = (params.shading == gui_shading_type::environment)
-                     ? scene->ibl_program
-                     : scene->lights_program;
-
-  bind_program(program);
-  assert_ogl_error();
-  set_uniform(program, "eye", camera->frame.o);
-  set_uniform(program, "view", camera_view);
-  set_uniform(program, "projection", camera_proj);
-  set_uniform(program, "exposure", params.exposure);
-  set_uniform(program, "gamma", params.gamma);
-  assert_ogl_error();
-
-  if (params.shading == gui_shading_type::eyelight) {
-    assert_ogl_error();
-    auto& lights = camera_lights;
-    set_uniform(program, "lamb", vec3f{0, 0, 0});
-    set_uniform(program, "lnum", (int)lights.size());
-    auto lid = 0;
-    for (auto light : lights) {
-      auto is = std::to_string(lid);
-      if (light->camera) {
-        auto position = light->type == ogl_light_type::directional
-                            ? transform_direction(
-                                  camera->frame, light->position)
-                            : transform_point(camera->frame, light->position);
-        set_uniform(program, ("lpos[" + is + "]").c_str(), position);
-      } else {
-        set_uniform(program, ("lpos[" + is + "]").c_str(), light->position);
-      }
-      set_uniform(program, ("lke[" + is + "]").c_str(), light->emission);
-      set_uniform(program, ("ltype[" + is + "]").c_str(), (int)light->type);
-      lid++;
-    }
-    assert_ogl_error();
-  }
-
-  if (params.wireframe) set_ogl_wireframe(true);
-  for (auto instance : scene->instances) {
-    draw_object(scene, instance, params);
-  }
-  unbind_program();
-
-  if (!scene->environment_program->program_id) return;
-
-  bind_program(scene->environment_program);
-  // set_scene_uniforms
-  set_uniform(scene->environment_program, "eye", camera->frame.o);
-  set_uniform(scene->environment_program, "view", camera_view);
-  set_uniform(scene->environment_program, "projection", camera_proj);
-  set_uniform(scene->environment_program, "exposure", params.exposure);
-  set_uniform(scene->environment_program, "gamma", params.gamma);
-
-  set_uniform(
-      scene->environment_program, "environment", scene->environment_cubemap, 0);
-  set_uniform(scene->environment_program, "roughness", 0.0f);
-
-  auto cube = cube_shape();
-  draw_shape(cube);
-
-  unbind_program();
-}
-
-// image based lighting
-namespace ibl {
-// Using 6 render passes, bake a cubemap given a sampler for the environment.
-// The input sampler can be either a cubemap or a latlong texture.
-template <typename Sampler>
-inline void bake_cubemap(ogl_cubemap* cubemap, const Sampler* environment,
-    ogl_program* program, int size, int num_mipmap_levels = 1) {
-  // init cubemap with no data
-  set_cubemap<float>(cubemap, size, 3, true, true, true);
-  auto cube = cube_shape();
-
-  auto framebuffer = ogl_framebuffer{};
-  set_framebuffer(&framebuffer, {size, size});
-
-  // clang-format off
-  frame3f cameras[6] = {
-    lookat_frame({0, 0, 0}, { 1, 0, 0}, {0, 1, 0}),
-    lookat_frame({0, 0, 0}, {-1, 0, 0}, {0, 1, 0}),
-    lookat_frame({0, 0, 0}, { 0,-1, 0}, {0, 0,-1}),
-    lookat_frame({0, 0, 0}, { 0, 1, 0}, {0, 0, 1}),
-    lookat_frame({0, 0, 0}, { 0, 0,-1}, {0, 1, 0}),
-    lookat_frame({0, 0, 0}, { 0, 0, 1}, {0, 1, 0})
-  };
-  // clang-format on
-
-  bind_framebuffer(&framebuffer);
-  bind_program(program);
-  for (int mipmap_level = 0; mipmap_level < num_mipmap_levels; mipmap_level++) {
-    // resize render buffer and viewport
-    set_framebuffer(&framebuffer, {size, size});
-    set_ogl_viewport(vec2i{size, size});
-
-    for (auto i = 0; i < 6; ++i) {
-      // perspective_mat(fov, aspect, near, far)
-      auto camera_proj = perspective_mat(radians(90), 1, 1, 100);
-      auto camera_view = frame_to_mat(inverse(cameras[i]));
-
-      set_framebuffer_texture(&framebuffer, cubemap, i, mipmap_level);
-      clear_ogl_framebuffer({0, 0, 0, 0}, true);
-
-      set_uniform(program, "view", camera_view);
-      set_uniform(program, "projection", camera_proj);
-      set_uniform(program, "eye", vec3f{0, 0, 0});
-      set_uniform(program, "mipmap_level", mipmap_level);
-      set_uniform(program, "environment", environment, 0);
-
-      draw_shape(cube);
-    }
-    size /= 2;
-  }
-  unbind_program();
-  unbind_framebuffer();
-}
-
-inline void bake_specular_brdf_texture(ogl_texture* texture) {
-  auto size        = 512;
-  auto framebuffer = ogl_framebuffer{};
-  auto screen_quad = quad_shape();
-
-  auto program = ogl_program{};
-  auto error = ""s, errorlog = ""s;
-  init_program(&program, bake_brdf_vertex, bake_brdf_fragment, error, errorlog);
-
-  assert_ogl_error();
-
-  texture->is_float  = true;
-  texture->linear    = true;
-  texture->nchannels = 3;
-  texture->size      = {size, size};
-  glGenTextures(1, &texture->texture_id);
-
-  glBindTexture(GL_TEXTURE_2D, texture->texture_id);
-  glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB16F, size, size, 0, GL_RGB, GL_FLOAT, 0);
-  glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
-  glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
-  glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
-  glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
-  // TODO(giacomo): mipmaps?
-
-  assert_ogl_error();
-
-  set_framebuffer(&framebuffer, {size, size});
-  set_framebuffer_texture(&framebuffer, texture, 0);
-
-  bind_framebuffer(&framebuffer);
-  bind_program(&program);
-
-  set_ogl_viewport(vec2i{size, size});
-  clear_ogl_framebuffer({0, 0, 0, 0}, true);
-
-  draw_shape(screen_quad);
-  assert_ogl_error();
-
-  unbind_program();
-  unbind_framebuffer();
-  clear_framebuffer(&framebuffer);
-  clear_program(&program);
-}
-
-void init_ibl_data(gui_scene* scene, const ogl_texture* environment_texture) {
-  auto load_program = [](ogl_program* program, const char* vertex,
-                          const char* fragment) {
-    auto error = ""s, errorlog = ""s;
-    init_program(program, vertex, fragment, error, errorlog);
-  };
-
-  load_program(scene->ibl_program, glscene_vertex, glibl_fragment);
-  load_program(
-      scene->environment_program, cubemap_vertex, environment_fragment);
-
-  // make cubemap from environment texture
-  {
-    auto size    = environment_texture->size.y;
-    auto program = new ogl_program{};
-    load_program(program, cubemap_vertex, bake_environment_frag);
-    bake_cubemap(
-        scene->environment_cubemap, environment_texture, program, size);
-    clear_program(program);
-    delete program;
-  }
-
-  // bake irradiance map
-  {
-    auto program = new ogl_program{};
-    load_program(program, cubemap_vertex, bake_diffuse_frag);
-    bake_cubemap(
-        scene->diffuse_cubemap, scene->environment_cubemap, program, 64);
-    clear_program(program);
-    delete program;
-  }
-
-  // bake specular map
-  {
-    auto program = new ogl_program{};
-    load_program(program, cubemap_vertex, bake_specular_frag);
-    bake_cubemap(
-        scene->specular_cubemap, scene->environment_cubemap, program, 256, 6);
-    clear_program(program);
-    delete program;
-  }
-
-  bake_specular_brdf_texture(scene->brdf_lut);
-}
-}  // namespace ibl
 
 }  // namespace yocto

@@ -75,12 +75,12 @@ void set_ogl_point_size(int size);
 // OpenGL texture
 struct ogl_texture {
   // Texture properties
-  vec2i size      = {0, 0};
-  int   nchannels = 0;
-  bool  is_srgb   = false;
-  bool  is_float  = false;
-  bool  linear    = false;
-  bool  mipmap    = false;
+  vec2i size         = {0, 0};
+  int   num_channels = 0;
+  bool  is_srgb      = false;
+  bool  is_float     = false;
+  bool  linear       = false;
+  bool  mipmap       = false;
 
   // OpenGL state
   uint texture_id = 0;
@@ -92,15 +92,15 @@ struct ogl_texture {
 };
 
 // set texture
-void set_texture(ogl_texture* texture, const vec2i& size, int nchannels,
+void set_texture(ogl_texture* texture, const vec2i& size, int num_channels,
     const byte* img, bool as_srgb = false, bool linear = true,
     bool mipmap = true);
-void set_texture(ogl_texture* texture, const vec2i& size, int nchannels,
+void set_texture(ogl_texture* texture, const vec2i& size, int num_channels,
     const float* img, bool as_float = false, bool linear = true,
     bool mipmap = true);
 
 // check if texture is initialized
-bool is_initialized(ogl_texture* texture);
+bool is_initialized(const ogl_texture* texture);
 
 // clear texture
 void clear_texture(ogl_texture* texture);
@@ -121,52 +121,55 @@ void set_texture(ogl_texture* texture, const image<float>& img,
 
 struct ogl_cubemap {
   // Cubemap properties
-  int  size      = 0;
-  int  nchannels = 0;
-  bool is_srgb   = false;
-  bool is_float  = false;
-  bool linear    = false;
-  bool mipmap    = false;
+  int  size         = 0;
+  int  num_channels = 0;
+  bool is_srgb      = false;
+  bool is_float     = false;
+  bool linear       = false;
+  bool mipmap       = false;
 
   // OpenGL state
   uint cubemap_id = 0;
 };
 
 // set cubemap
-void set_cubemap(ogl_cubemap* cubemap, int size, int nchannels,
+void set_cubemap(ogl_cubemap* cubemap, int size, int num_channels,
     const array<byte*, 6>& img, bool as_srgb = false, bool linear = true,
     bool mipmap = true);
-void set_cubemap(ogl_cubemap* cubemap, int size, int nchannels,
+void set_cubemap(ogl_cubemap* cubemap, int size, int num_channels,
     const array<float*, 6>& img, bool as_float = false, bool linear = true,
     bool mipmap = true);
 
 template <typename T>
-void set_cubemap(ogl_cubemap* cubemap, int size, int nchannels,
+void set_cubemap(ogl_cubemap* cubemap, int size, int num_channels,
     bool as_float = false, bool linear = true, bool mipmap = true) {
   auto img = array<T*, 6>{0, 0, 0, 0, 0, 0};
-  set_cubemap(cubemap, size, nchannels, img, as_float, mipmap);
+  set_cubemap(cubemap, size, num_channels, img, as_float, mipmap);
 }
 
 // check if cubemap is initialized
-bool is_initialized(ogl_cubemap* cubemap);
+bool is_initialized(const ogl_cubemap* cubemap);
 
 // clear cubemap
 void clear_cubemap(ogl_cubemap* cubemap);
 
 void set_cubemap(ogl_cubemap* cubemap, const array<image<vec4b>, 6>& img,
-    int nchannels, bool as_srgb = true, bool linear = true, bool mipmap = true);
+    int num_channels, bool as_srgb = true, bool linear = true,
+    bool mipmap = true);
 void set_cubemap(ogl_cubemap* cubemap, const array<image<vec4f>, 6>& img,
-    int nchannels, bool as_float = false, bool linear = true,
+    int num_channels, bool as_float = false, bool linear = true,
     bool mipmap = true);
 void set_cubemap(ogl_cubemap* cubemap, const array<image<vec3b>, 6>& img,
-    int nchannels, bool as_srgb = true, bool linear = true, bool mipmap = true);
+    int num_channels, bool as_srgb = true, bool linear = true,
+    bool mipmap = true);
 void set_cubemap(ogl_cubemap* cubemap, const array<image<vec3f>, 6>& img,
-    int nchannels, bool as_float = false, bool linear = true,
+    int num_channels, bool as_float = false, bool linear = true,
     bool mipmap = true);
 void set_cubemap(ogl_cubemap* cubemap, const array<image<byte>, 6>& img,
-    int nchannels, bool as_srgb = true, bool linear = true, bool mipmap = true);
+    int num_channels, bool as_srgb = true, bool linear = true,
+    bool mipmap = true);
 void set_cubemap(ogl_cubemap* cubemap, const array<image<float>, 6>& img,
-    int nchannels, bool as_float = false, bool linear = true,
+    int num_channels, bool as_float = false, bool linear = true,
     bool mipmap = true);
 
 // Opengl array/element buffer
@@ -184,7 +187,7 @@ void set_arraybuffer(ogl_arraybuffer* buffer, size_t size, int esize,
     const float* data, bool dynamic = false);
 
 // check if buffer is initialized
-bool is_initialized(ogl_arraybuffer* buffer);
+bool is_initialized(const ogl_arraybuffer* buffer);
 
 // clear buffer
 void clear_arraybuffer(ogl_arraybuffer* buffer);
@@ -217,7 +220,7 @@ void set_elementbuffer(ogl_elementbuffer* buffer, size_t size,
     ogl_element_type element, const int* data, bool dynamic = false);
 
 // check if buffer is initialized
-bool is_initialized(ogl_elementbuffer* buffer);
+bool is_initialized(const ogl_elementbuffer* buffer);
 
 // clear buffer
 void clear_elementbuffer(ogl_elementbuffer* buffer);
@@ -244,6 +247,8 @@ struct ogl_program {
 // initialize program
 bool init_program(ogl_program* program, const string& vertex,
     const string& fragment, string& error, string& errorlog);
+bool load_program(ogl_program* program, const string& vertex_filename,
+    const string& fragment_filename);
 bool is_initialized(const ogl_program* program);
 
 // clear program
@@ -251,92 +256,55 @@ void clear_program(ogl_program* program);
 
 // bind program
 void bind_program(ogl_program* program);
-// unbind program
-void unbind_program(ogl_program* program);
+
 // unbind program
 void unbind_program();
 
 // get uniform location
-int get_uniform_location(ogl_program* program, const char* name);
+int get_uniform_location(const ogl_program* program, const char* name);
 
 // set uniforms
-void set_uniform(ogl_program* program, int location, int value);
-void set_uniform(ogl_program* program, int location, const vec2i& value);
-void set_uniform(ogl_program* program, int location, const vec3i& value);
-void set_uniform(ogl_program* program, int location, const vec4i& value);
-void set_uniform(ogl_program* program, int location, float value);
-void set_uniform(ogl_program* program, int location, const vec2f& value);
-void set_uniform(ogl_program* program, int location, const vec3f& value);
-void set_uniform(ogl_program* program, int location, const vec4f& value);
-void set_uniform(ogl_program* program, int location, const mat2f& value);
-void set_uniform(ogl_program* program, int location, const mat3f& value);
-void set_uniform(ogl_program* program, int location, const mat4f& value);
-void set_uniform(ogl_program* program, int location, const frame2f& value);
-void set_uniform(ogl_program* program, int location, const frame3f& value);
+void set_uniform(const ogl_program* program, int location, int value);
+void set_uniform(const ogl_program* program, int location, const vec2i& value);
+void set_uniform(const ogl_program* program, int location, const vec3i& value);
+void set_uniform(const ogl_program* program, int location, const vec4i& value);
+void set_uniform(const ogl_program* program, int location, float value);
+void set_uniform(const ogl_program* program, int location, const vec2f& value);
+void set_uniform(const ogl_program* program, int location, const vec3f& value);
+void set_uniform(const ogl_program* program, int location, const vec4f& value);
+void set_uniform(const ogl_program* program, int location, const mat2f& value);
+void set_uniform(const ogl_program* program, int location, const mat3f& value);
+void set_uniform(const ogl_program* program, int location, const mat4f& value);
+void set_uniform(
+    const ogl_program* program, int location, const frame2f& value);
+void set_uniform(
+    const ogl_program* program, int location, const frame3f& value);
+
 template <typename T>
 inline void set_uniform(
-    ogl_program* program, const char* name, const T& value) {
+    const ogl_program* program, const char* name, const T& value) {
   return set_uniform(program, get_uniform_location(program, name), value);
 }
 
 // set uniform texture
-void set_uniform(
-    ogl_program* program, int location, const ogl_texture* texture, int unit);
-void set_uniform(ogl_program* program, const char* name,
+void set_uniform(const ogl_program* program, int location,
     const ogl_texture* texture, int unit);
-void set_uniform(ogl_program* program, int location, int location_on,
+void set_uniform(const ogl_program* program, const char* name,
     const ogl_texture* texture, int unit);
-void set_uniform(ogl_program* program, const char* name, const char* name_on,
+void set_uniform(const ogl_program* program, int location, int location_on,
     const ogl_texture* texture, int unit);
+void set_uniform(const ogl_program* program, const char* name,
+    const char* name_on, const ogl_texture* texture, int unit);
 
 // set uniform cubemap
-void set_uniform(
-    ogl_program* program, int location, const ogl_cubemap* cubemap, int unit);
-void set_uniform(ogl_program* program, const char* name,
+void set_uniform(const ogl_program* program, int location,
+    const ogl_cubemap* cubemap, int unit);
+void set_uniform(const ogl_program* program, const char* name,
     const ogl_cubemap* cubemap, int unit);
 void set_uniform(ogl_program* program, int location, int location_on,
     const ogl_cubemap* cubemap, int unit);
 void set_uniform(ogl_program* program, const char* name, const char* name_on,
     const ogl_cubemap* cubemap, int unit);
-
-// get attribute location
-int get_attribute_location(ogl_program* program, const char* name);
-
-// set vertex attributes
-void set_attribute(ogl_program* program, int location, ogl_arraybuffer* buffer);
-void set_attribute(
-    ogl_program* program, const char* name, ogl_arraybuffer* buffer);
-
-// set vertex attributes
-void set_attribute(ogl_program* program, int location, float value);
-void set_attribute(ogl_program* program, int location, const vec2f& value);
-void set_attribute(ogl_program* program, int location, const vec3f& value);
-void set_attribute(ogl_program* program, int location, const vec4f& value);
-template <typename T>
-inline void set_attribute(
-    ogl_program* program, const char* name, const T& value) {
-  return set_attribute(program, get_attribute_location(program, name), value);
-}
-
-// set vertex attributes
-template <typename T>
-inline void set_attribute(ogl_program* program, int location,
-    ogl_arraybuffer* buffer, const T& value) {
-  if (buffer && is_initialized(buffer)) {
-    return set_attribute(program, location, buffer);
-  } else {
-    set_attribute(program, location, value);
-  }
-}
-template <typename T>
-inline void set_attribute(ogl_program* program, const char* name,
-    ogl_arraybuffer* buffer, const T& def) {
-  set_attribute(program, get_attribute_location(program, name), buffer, def);
-}
-
-// draw elements
-void draw_elements(ogl_elementbuffer* buffer);
-
 }  // namespace yocto
 
 // -----------------------------------------------------------------------------
@@ -350,8 +318,6 @@ struct ogl_framebuffer {
   uint  renderbuffer_id = 0;
 
   static inline uint bound_framebuffer_id = 0;
-  // TODO(giacomo): Maybe the following is better
-  // static inline ogl_framebuffer* bound_framebuffer = nullptr;
 };
 
 void set_framebuffer(ogl_framebuffer* framebuffer, const vec2i& size);
@@ -373,21 +339,11 @@ void clear_framebuffer(ogl_framebuffer* target);
 namespace yocto {
 // Opengl shape
 struct ogl_shape {
-  // vertex buffers
-  ogl_arraybuffer*   positions      = new ogl_arraybuffer{};
-  ogl_arraybuffer*   normals        = new ogl_arraybuffer{};
-  ogl_arraybuffer*   texcoords      = new ogl_arraybuffer{};
-  ogl_arraybuffer*   colors         = new ogl_arraybuffer{};
-  ogl_arraybuffer*   tangents       = new ogl_arraybuffer{};
-  ogl_elementbuffer* points         = new ogl_elementbuffer{};
-  ogl_elementbuffer* lines          = new ogl_elementbuffer{};
-  ogl_elementbuffer* triangles      = new ogl_elementbuffer{};
-  ogl_elementbuffer* quads          = new ogl_elementbuffer{};
-  ogl_elementbuffer* edges          = new ogl_elementbuffer{};
-  float              points_size    = 10;
-  float              line_thickness = 4;
+  uint                    shape_id       = 0;
+  vector<ogl_arraybuffer> vertex_buffers = {};
+  ogl_elementbuffer       index_buffer   = {};
 
-  uint shape_id = 0;
+  int num_instances = 0;
 
   ogl_shape() {}
   ogl_shape(const ogl_shape&) = delete;
@@ -399,18 +355,39 @@ void set_shape(ogl_shape* shape);
 void clear_shape(ogl_shape* shape);
 void bind_shape(const ogl_shape* shape);
 
-// shape properties
-void set_points(ogl_shape* shape, const vector<int>& points);
-void set_lines(ogl_shape* shape, const vector<vec2i>& lines);
-void set_triangles(ogl_shape* shape, const vector<vec3i>& triangles);
-void set_quads(ogl_shape* shape, const vector<vec4i>& quads);
-void set_edges(ogl_shape* shape, const vector<vec3i>& triangles,
-    const vector<vec4i>& quads);
-void set_positions(ogl_shape* shape, const vector<vec3f>& positions);
-void set_normals(ogl_shape* shape, const vector<vec3f>& normals);
-void set_texcoords(ogl_shape* shape, const vector<vec2f>& texcoords);
-void set_colors(ogl_shape* shape, const vector<vec4f>& colors);
-void set_tangents(ogl_shape* shape, const vector<vec4f>& tangents);
+void set_vertex_attribute_const(int location, float value);
+void set_vertex_attribute_const(int location, const vec2f& value);
+void set_vertex_attribute_const(int location, const vec3f& value);
+void set_vertex_attribute_const(int location, const vec4f& value);
+void set_vertex_attribute(int location, const ogl_arraybuffer* buffer);
+
+template <typename T>
+void set_vertex_attribute(
+    ogl_shape* shape, const vector<T>& data, int location) {
+  if (shape->vertex_buffers.size() <= location) {
+    shape->vertex_buffers.resize(location + 1);
+  }
+  set_arraybuffer(&shape->vertex_buffers[location], data, false);
+  assert_ogl_error();
+  bind_shape(shape);
+  set_vertex_attribute(location, &shape->vertex_buffers[location]);
+  assert_ogl_error();
+}
+
+template <typename T>
+void set_vertex_attribute(ogl_shape* shape, const T& attribute, int location) {
+  assert_ogl_error();
+  bind_shape(shape);
+  set_vertex_attribute_const(location, attribute);
+  assert_ogl_error();
+}
+
+void set_instance_buffer(ogl_shape* shape, int location);
+
+template <typename T>
+void set_index_buffer(ogl_shape* shape, const vector<T>& primitives) {
+  set_elementbuffer(&shape->index_buffer, primitives);
+}
 
 void draw_shape(const ogl_shape* shape);
 

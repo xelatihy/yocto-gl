@@ -111,14 +111,6 @@ GLenum _assert_ogl_error() {
 }
 void assert_ogl_error() { assert(_assert_ogl_error() == GL_NO_ERROR); }
 
-bool check_ogl_error(string& error) {
-  if (glGetError() != GL_NO_ERROR) {
-    error = "";
-    return false;
-  }
-  return true;
-}
-
 void clear_ogl_framebuffer(const vec4f& color, bool clear_depth) {
   glClearColor(color.x, color.y, color.z, color.w);
   if (clear_depth) {
@@ -156,7 +148,7 @@ void set_ogl_blending(bool enabled) {
 
 void set_ogl_point_size(int size) { glPointSize(size); }
 
-void set_texture(ogl_texture* texture, const vec2i& size, int nchannels,
+void set_texture(ogl_texture* texture, const vec2i& size, int num_channels,
     const byte* img, bool as_srgb, bool linear, bool mipmap) {
   static auto sformat = vector<uint>{
       0, GL_SRGB, GL_SRGB, GL_SRGB, GL_SRGB_ALPHA};
@@ -168,13 +160,13 @@ void set_texture(ogl_texture* texture, const vec2i& size, int nchannels,
     return;
   }
   if (!texture->texture_id) glGenTextures(1, &texture->texture_id);
-  if (texture->size != size || texture->nchannels != nchannels ||
+  if (texture->size != size || texture->num_channels != num_channels ||
       texture->is_srgb != as_srgb || texture->is_float == true ||
       texture->linear != linear || texture->mipmap != mipmap) {
     glBindTexture(GL_TEXTURE_2D, texture->texture_id);
     glTexImage2D(GL_TEXTURE_2D, 0,
-        as_srgb ? sformat.at(nchannels) : iformat.at(nchannels), size.x, size.y,
-        0, cformat.at(nchannels), GL_UNSIGNED_BYTE, img);
+        as_srgb ? sformat.at(num_channels) : iformat.at(num_channels), size.x,
+        size.y, 0, cformat.at(num_channels), GL_UNSIGNED_BYTE, img);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER,
         mipmap ? (linear ? GL_LINEAR_MIPMAP_LINEAR : GL_NEAREST_MIPMAP_NEAREST)
                : (linear ? GL_LINEAR : GL_NEAREST));
@@ -184,19 +176,19 @@ void set_texture(ogl_texture* texture, const vec2i& size, int nchannels,
   } else {
     glBindTexture(GL_TEXTURE_2D, texture->texture_id);
     glTexSubImage2D(GL_TEXTURE_2D, 0, 0, 0, size.x, size.y,
-        cformat.at(nchannels), GL_UNSIGNED_BYTE, img);
+        cformat.at(num_channels), GL_UNSIGNED_BYTE, img);
     if (mipmap) glGenerateMipmap(GL_TEXTURE_2D);
   }
-  texture->size      = size;
-  texture->nchannels = nchannels;
-  texture->is_srgb   = as_srgb;
-  texture->is_float  = false;
-  texture->linear    = linear;
-  texture->mipmap    = mipmap;
+  texture->size         = size;
+  texture->num_channels = num_channels;
+  texture->is_srgb      = as_srgb;
+  texture->is_float     = false;
+  texture->linear       = linear;
+  texture->mipmap       = mipmap;
   assert_ogl_error();
 }
 
-void set_texture(ogl_texture* texture, const vec2i& size, int nchannels,
+void set_texture(ogl_texture* texture, const vec2i& size, int num_channels,
     const float* img, bool as_float, bool linear, bool mipmap) {
   static auto fformat = vector<uint>{
       0, GL_RGB16F, GL_RGB16F, GL_RGB16F, GL_RGBA32F};
@@ -208,14 +200,14 @@ void set_texture(ogl_texture* texture, const vec2i& size, int nchannels,
     return;
   }
   if (!texture->texture_id) glGenTextures(1, &texture->texture_id);
-  if (texture->size != size || texture->nchannels != nchannels ||
+  if (texture->size != size || texture->num_channels != num_channels ||
       texture->is_float != as_float || texture->is_srgb == true ||
       texture->linear != linear || texture->mipmap != mipmap) {
     glGenTextures(1, &texture->texture_id);
     glBindTexture(GL_TEXTURE_2D, texture->texture_id);
     glTexImage2D(GL_TEXTURE_2D, 0,
-        as_float ? fformat.at(nchannels) : iformat.at(nchannels), size.x,
-        size.y, 0, iformat.at(nchannels), GL_FLOAT, img);
+        as_float ? fformat.at(num_channels) : iformat.at(num_channels), size.x,
+        size.y, 0, iformat.at(num_channels), GL_FLOAT, img);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER,
         mipmap ? (linear ? GL_LINEAR_MIPMAP_LINEAR : GL_NEAREST_MIPMAP_NEAREST)
                : (linear ? GL_LINEAR : GL_NEAREST));
@@ -225,31 +217,33 @@ void set_texture(ogl_texture* texture, const vec2i& size, int nchannels,
   } else {
     glBindTexture(GL_TEXTURE_2D, texture->texture_id);
     glTexSubImage2D(GL_TEXTURE_2D, 0, 0, 0, size.x, size.y,
-        iformat.at(nchannels), GL_FLOAT, img);
+        iformat.at(num_channels), GL_FLOAT, img);
     if (mipmap) glGenerateMipmap(GL_TEXTURE_2D);
   }
-  texture->size      = size;
-  texture->nchannels = nchannels;
-  texture->is_srgb   = false;
-  texture->is_float  = as_float;
-  texture->linear    = linear;
-  texture->mipmap    = mipmap;
+  texture->size         = size;
+  texture->num_channels = num_channels;
+  texture->is_srgb      = false;
+  texture->is_float     = as_float;
+  texture->linear       = linear;
+  texture->mipmap       = mipmap;
   assert_ogl_error();
 }
 
 // check if texture is initialized
-bool is_initialized(ogl_texture* texture) { return texture->texture_id != 0; }
+bool is_initialized(const ogl_texture* texture) {
+  return texture && texture->texture_id != 0;
+}
 
 // clear texture
 void clear_texture(ogl_texture* texture) {
   if (texture->texture_id) glDeleteTextures(1, &texture->texture_id);
-  texture->texture_id = 0;
-  texture->size       = {0, 0};
-  texture->nchannels  = 0;
-  texture->is_srgb    = false;
-  texture->is_float   = false;
-  texture->linear     = false;
-  texture->mipmap     = false;
+  texture->texture_id   = 0;
+  texture->size         = {0, 0};
+  texture->num_channels = 0;
+  texture->is_srgb      = false;
+  texture->is_float     = false;
+  texture->linear       = false;
+  texture->mipmap       = false;
 }
 
 void set_texture(ogl_texture* texture, const image<vec4b>& img, bool as_srgb,
@@ -285,7 +279,7 @@ void set_texture(ogl_texture* texture, const image<float>& img, bool as_float,
       linear, mipmap);
 }
 
-void set_cubemap(ogl_cubemap* cubemap, int size, int nchannels,
+void set_cubemap(ogl_cubemap* cubemap, int size, int num_channels,
     const array<byte*, 6>& images, bool as_srgb, bool linear, bool mipmap) {
   static auto sformat = vector<uint>{
       0, GL_SRGB, GL_SRGB, GL_SRGB, GL_SRGB_ALPHA};
@@ -298,7 +292,7 @@ void set_cubemap(ogl_cubemap* cubemap, int size, int nchannels,
   }
 
   if (!cubemap->cubemap_id) glGenTextures(1, &cubemap->cubemap_id);
-  if (cubemap->size != size || cubemap->nchannels != nchannels ||
+  if (cubemap->size != size || cubemap->num_channels != num_channels ||
       cubemap->is_srgb != as_srgb || cubemap->is_float == true ||
       cubemap->linear != linear || cubemap->mipmap != mipmap) {
     glBindTexture(GL_TEXTURE_CUBE_MAP, cubemap->cubemap_id);
@@ -309,8 +303,8 @@ void set_cubemap(ogl_cubemap* cubemap, int size, int nchannels,
         return;
       }
       glTexImage2D(GL_TEXTURE_CUBE_MAP_POSITIVE_X + i, 0,
-          as_srgb ? sformat.at(nchannels) : iformat.at(nchannels), size, size,
-          0, cformat.at(nchannels), GL_UNSIGNED_BYTE, images[i]);
+          as_srgb ? sformat.at(num_channels) : iformat.at(num_channels), size,
+          size, 0, cformat.at(num_channels), GL_UNSIGNED_BYTE, images[i]);
     }
     glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_MIN_FILTER,
         mipmap ? (linear ? GL_LINEAR_MIPMAP_LINEAR : GL_NEAREST_MIPMAP_NEAREST)
@@ -329,20 +323,20 @@ void set_cubemap(ogl_cubemap* cubemap, int size, int nchannels,
     throw std::runtime_error{"cannot modify initialized cubemap"};
     // glBindTexture(GL_TEXTURE_2D, cubemap->cubemap_id);
     // glTexSubImage2D(GL_TEXTURE_2D, 0, 0, 0, size.x, size.y,
-    //     cformat.at(nchannels), GL_UNSIGNED_BYTE, img);
+    //     cformat.at(num_channels), GL_UNSIGNED_BYTE, img);
     // if (mipmap) glGenerateMipmap(GL_TEXTURE_2D);
   }
   glEnable(GL_TEXTURE_CUBE_MAP_SEAMLESS);
-  cubemap->size      = size;
-  cubemap->nchannels = nchannels;
-  cubemap->is_srgb   = as_srgb;
-  cubemap->is_float  = false;
-  cubemap->linear    = linear;
-  cubemap->mipmap    = mipmap;
+  cubemap->size         = size;
+  cubemap->num_channels = num_channels;
+  cubemap->is_srgb      = as_srgb;
+  cubemap->is_float     = false;
+  cubemap->linear       = linear;
+  cubemap->mipmap       = mipmap;
   assert_ogl_error();
 }
 
-void set_cubemap(ogl_cubemap* cubemap, int size, int nchannels,
+void set_cubemap(ogl_cubemap* cubemap, int size, int num_channels,
     const array<float*, 6>& images, bool as_float, bool linear, bool mipmap) {
   static auto fformat = vector<uint>{
       0, GL_RGB16F, GL_RGB16F, GL_RGB16F, GL_RGBA32F};
@@ -355,7 +349,7 @@ void set_cubemap(ogl_cubemap* cubemap, int size, int nchannels,
   }
 
   if (!cubemap->cubemap_id) glGenTextures(1, &cubemap->cubemap_id);
-  if (cubemap->size != size || cubemap->nchannels != nchannels ||
+  if (cubemap->size != size || cubemap->num_channels != num_channels ||
       cubemap->is_float != as_float || cubemap->is_srgb == true ||
       cubemap->linear != linear || cubemap->mipmap != mipmap) {
     glGenTextures(1, &cubemap->cubemap_id);
@@ -364,8 +358,8 @@ void set_cubemap(ogl_cubemap* cubemap, int size, int nchannels,
 
     for (auto i = 0; i < 6; i++) {
       glTexImage2D(GL_TEXTURE_CUBE_MAP_POSITIVE_X + i, 0,
-          as_float ? fformat.at(nchannels) : iformat.at(nchannels), size, size,
-          0, iformat.at(nchannels), GL_FLOAT, images[i]);
+          as_float ? fformat.at(num_channels) : iformat.at(num_channels), size,
+          size, 0, iformat.at(num_channels), GL_FLOAT, images[i]);
     }
     glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_MIN_FILTER,
         mipmap ? (linear ? GL_LINEAR_MIPMAP_LINEAR : GL_NEAREST_MIPMAP_NEAREST)
@@ -387,21 +381,23 @@ void set_cubemap(ogl_cubemap* cubemap, int size, int nchannels,
 
     //    glBindTexture(GL_TEXTURE_2D, cubemap->cubemap_id);
     //    glTexSubImage2D(GL_TEXTURE_2D, 0, 0, 0, size, size,
-    //        iformat.at(nchannels), GL_FLOAT, img);
+    //        iformat.at(num_channels), GL_FLOAT, img);
     //    if (mipmap) glGenerateMipmap(GL_TEXTURE_2D);
   }
   glEnable(GL_TEXTURE_CUBE_MAP_SEAMLESS);
-  cubemap->size      = size;
-  cubemap->nchannels = nchannels;
-  cubemap->is_srgb   = false;
-  cubemap->is_float  = as_float;
-  cubemap->linear    = linear;
-  cubemap->mipmap    = mipmap;
+  cubemap->size         = size;
+  cubemap->num_channels = num_channels;
+  cubemap->is_srgb      = false;
+  cubemap->is_float     = as_float;
+  cubemap->linear       = linear;
+  cubemap->mipmap       = mipmap;
   assert_ogl_error();
 }
 
 // check if cubemap is initialized
-bool is_initialized(ogl_cubemap* cubemap) { return cubemap->cubemap_id != 0; }
+bool is_initialized(const ogl_cubemap* cubemap) {
+  return cubemap && cubemap->cubemap_id != 0;
+}
 
 // clear cubemap
 void clear_cubemap(ogl_cubemap* cubemap) {
@@ -410,56 +406,58 @@ void clear_cubemap(ogl_cubemap* cubemap) {
 }
 
 void set_cubemap(ogl_cubemap* cubemap, const array<image<vec4b>, 6>& img,
-    int nchannels, bool as_srgb, bool linear, bool mipmap) {
+    int num_channels, bool as_srgb, bool linear, bool mipmap) {
   auto data = array<byte*, 6>{(byte*)img[0].data(), (byte*)img[1].data(),
       (byte*)img[2].data(), (byte*)img[3].data(), (byte*)img[4].data(),
       (byte*)img[5].data()};
   set_cubemap(
-      cubemap, img[0].imsize().x, nchannels, data, as_srgb, linear, mipmap);
+      cubemap, img[0].imsize().x, num_channels, data, as_srgb, linear, mipmap);
 }
 void set_cubemap(ogl_cubemap* cubemap, const array<image<vec4f>, 6>& img,
-    int nchannels, bool as_float, bool linear, bool mipmap) {
+    int num_channels, bool as_float, bool linear, bool mipmap) {
   auto data = array<float*, 6>{(float*)img[0].data(), (float*)img[1].data(),
       (float*)img[2].data(), (float*)img[3].data(), (float*)img[4].data(),
       (float*)img[5].data()};
   set_cubemap(
-      cubemap, img[0].imsize().x, nchannels, data, as_float, linear, mipmap);
+      cubemap, img[0].imsize().x, num_channels, data, as_float, linear, mipmap);
 }
 void set_cubemap(ogl_cubemap* cubemap, const array<image<vec3b>, 6>& img,
-    int nchannels, bool as_srgb, bool linear, bool mipmap) {
+    int num_channels, bool as_srgb, bool linear, bool mipmap) {
   auto data = array<byte*, 6>{(byte*)img[0].data(), (byte*)img[1].data(),
       (byte*)img[2].data(), (byte*)img[3].data(), (byte*)img[4].data(),
       (byte*)img[5].data()};
   set_cubemap(
-      cubemap, img[0].imsize().x, nchannels, data, as_srgb, linear, mipmap);
+      cubemap, img[0].imsize().x, num_channels, data, as_srgb, linear, mipmap);
 }
 void set_cubemap(ogl_cubemap* cubemap, const array<image<vec3f>, 6>& img,
-    int nchannels, bool as_float, bool linear, bool mipmap) {
+    int num_channels, bool as_float, bool linear, bool mipmap) {
   auto data = array<float*, 6>{(float*)img[0].data(), (float*)img[1].data(),
       (float*)img[2].data(), (float*)img[3].data(), (float*)img[4].data(),
       (float*)img[5].data()};
   set_cubemap(
-      cubemap, img[0].imsize().x, nchannels, data, as_float, linear, mipmap);
+      cubemap, img[0].imsize().x, num_channels, data, as_float, linear, mipmap);
 }
 void set_cubemap(ogl_cubemap* cubemap, const array<image<byte>, 6>& img,
-    int nchannels, bool as_srgb, bool linear, bool mipmap) {
+    int num_channels, bool as_srgb, bool linear, bool mipmap) {
   auto data = array<byte*, 6>{(byte*)img[0].data(), (byte*)img[1].data(),
       (byte*)img[2].data(), (byte*)img[3].data(), (byte*)img[4].data(),
       (byte*)img[5].data()};
   set_cubemap(
-      cubemap, img[0].imsize().x, nchannels, data, as_srgb, linear, mipmap);
+      cubemap, img[0].imsize().x, num_channels, data, as_srgb, linear, mipmap);
 }
 void set_cubemap(ogl_cubemap* cubemap, const array<image<float>, 6>& img,
-    int nchannels, bool as_float, bool linear, bool mipmap) {
+    int num_channels, bool as_float, bool linear, bool mipmap) {
   auto data = array<float*, 6>{(float*)img[0].data(), (float*)img[1].data(),
       (float*)img[2].data(), (float*)img[3].data(), (float*)img[4].data(),
       (float*)img[5].data()};
   set_cubemap(
-      cubemap, img[0].imsize().x, nchannels, data, as_float, linear, mipmap);
+      cubemap, img[0].imsize().x, num_channels, data, as_float, linear, mipmap);
 }
 
 // check if buffer is initialized
-bool is_initialized(ogl_arraybuffer* buffer) { return buffer->buffer_id != 0; }
+bool is_initialized(const ogl_arraybuffer* buffer) {
+  return buffer && buffer->buffer_id != 0;
+}
 
 // set buffer
 void set_arraybuffer(ogl_arraybuffer* buffer, size_t size, int esize,
@@ -537,8 +535,8 @@ void set_elementbuffer(ogl_elementbuffer* buffer, size_t size,
 }
 
 // check if buffer is initialized
-bool is_initialized(ogl_elementbuffer* buffer) {
-  return buffer->buffer_id != 0;
+bool is_initialized(const ogl_elementbuffer* buffer) {
+  return buffer && buffer->buffer_id != 0;
 }
 
 // clear buffer
@@ -646,18 +644,46 @@ bool init_program(ogl_program* program, const string& vertex,
   return true;
 }
 
+bool load_program(ogl_program* program, const string& vertex_filename,
+    const string& fragment_filename) {
+  auto error           = ""s;
+  auto vertex_source   = ""s;
+  auto fragment_source = ""s;
+
+  if (!load_text(vertex_filename, vertex_source, error)) {
+    printf("error loading vertex shader (%s): \n%s\n", vertex_filename.c_str(),
+        error.c_str());
+    return false;
+  }
+  if (!load_text(fragment_filename, fragment_source, error)) {
+    printf("error loading fragment shader (%s): \n%s\n",
+        fragment_filename.c_str(), error.c_str());
+    return false;
+  }
+
+  auto error_buf = ""s;
+  if (!init_program(
+          program, vertex_source, fragment_source, error, error_buf)) {
+    printf("\nerror: %s\n", error.c_str());
+    printf("    %s\n", error_buf.c_str());
+    return false;
+  }
+  return true;
+}
+
 // clear program
 void clear_program(ogl_program* program) {
   if (program->program_id) glDeleteProgram(program->program_id);
   if (program->vertex_id) glDeleteShader(program->vertex_id);
-  if (program->fragment_id) glDeleteProgram(program->fragment_id);
+  if (program->fragment_id) glDeleteShader(program->fragment_id);
   program->program_id  = 0;
   program->vertex_id   = 0;
   program->fragment_id = 0;
+  assert_ogl_error();
 }
 
 bool is_initialized(const ogl_program* program) {
-  return program->program_id != 0;
+  return program && program->program_id != 0;
 }
 
 // bind program
@@ -666,8 +692,7 @@ void bind_program(ogl_program* program) {
   glUseProgram(program->program_id);
   assert_ogl_error();
 }
-// unbind program
-void unbind_program(ogl_program* program) { glUseProgram(0); }
+
 // unbind program
 void unbind_program() { glUseProgram(0); }
 
@@ -782,104 +807,106 @@ void main() {
 #endif
 
 // set uniforms
-void set_uniform(ogl_program* program, int location, int value) {
+void set_uniform(const ogl_program* program, int location, int value) {
   assert_ogl_error();
   glUniform1i(location, value);
   assert_ogl_error();
 }
 
-void set_uniform(ogl_program* program, int location, const vec2i& value) {
+void set_uniform(const ogl_program* program, int location, const vec2i& value) {
   assert_ogl_error();
   glUniform2i(location, value.x, value.y);
   assert_ogl_error();
 }
 
-void set_uniform(ogl_program* program, int location, const vec3i& value) {
+void set_uniform(const ogl_program* program, int location, const vec3i& value) {
   assert_ogl_error();
   glUniform3i(location, value.x, value.y, value.z);
   assert_ogl_error();
 }
 
-void set_uniform(ogl_program* program, int location, const vec4i& value) {
+void set_uniform(const ogl_program* program, int location, const vec4i& value) {
   assert_ogl_error();
   glUniform4i(location, value.x, value.y, value.z, value.w);
   assert_ogl_error();
 }
 
-void set_uniform(ogl_program* program, int location, float value) {
+void set_uniform(const ogl_program* program, int location, float value) {
   assert_ogl_error();
   glUniform1f(location, value);
   assert_ogl_error();
 }
 
-void set_uniform(ogl_program* program, int location, const vec2f& value) {
+void set_uniform(const ogl_program* program, int location, const vec2f& value) {
   assert_ogl_error();
   glUniform2f(location, value.x, value.y);
   assert_ogl_error();
 }
 
-void set_uniform(ogl_program* program, int location, const vec3f& value) {
+void set_uniform(const ogl_program* program, int location, const vec3f& value) {
   assert_ogl_error();
   glUniform3f(location, value.x, value.y, value.z);
   assert_ogl_error();
 }
 
-void set_uniform(ogl_program* program, int location, const vec4f& value) {
+void set_uniform(const ogl_program* program, int location, const vec4f& value) {
   assert_ogl_error();
   glUniform4f(location, value.x, value.y, value.z, value.w);
   assert_ogl_error();
 }
 
-void set_uniform(ogl_program* program, int location, const mat2f& value) {
+void set_uniform(const ogl_program* program, int location, const mat2f& value) {
   assert_ogl_error();
   glUniformMatrix2fv(location, 1, false, &value.x.x);
   assert_ogl_error();
 }
 
-void set_uniform(ogl_program* program, int location, const mat3f& value) {
+void set_uniform(const ogl_program* program, int location, const mat3f& value) {
   assert_ogl_error();
   glUniformMatrix3fv(location, 1, false, &value.x.x);
   assert_ogl_error();
 }
 
-void set_uniform(ogl_program* program, int location, const mat4f& value) {
+void set_uniform(const ogl_program* program, int location, const mat4f& value) {
   assert_ogl_error();
   glUniformMatrix4fv(location, 1, false, &value.x.x);
   assert_ogl_error();
 }
 
-void set_uniform(ogl_program* program, int location, const frame2f& value) {
+void set_uniform(
+    const ogl_program* program, int location, const frame2f& value) {
   assert_ogl_error();
   glUniformMatrix3x2fv(location, 1, false, &value.x.x);
   assert_ogl_error();
 }
 
-void set_uniform(ogl_program* program, int location, const frame3f& value) {
+void set_uniform(
+    const ogl_program* program, int location, const frame3f& value) {
   assert_ogl_error();
   glUniformMatrix4x3fv(location, 1, false, &value.x.x);
   assert_ogl_error();
 }
 
 // get uniform location
-int get_uniform_location(ogl_program* program, const char* name) {
+int get_uniform_location(const ogl_program* program, const char* name) {
   return glGetUniformLocation(program->program_id, name);
 }
 
 // set uniform texture
-void set_uniform(
-    ogl_program* program, int location, const ogl_texture* texture, int unit) {
+void set_uniform(const ogl_program* program, int location,
+    const ogl_texture* texture, int unit) {
   assert_ogl_error();
   glActiveTexture(GL_TEXTURE0 + unit);
   glBindTexture(GL_TEXTURE_2D, texture->texture_id);
   glUniform1i(location, unit);
   assert_ogl_error();
 }
-void set_uniform(ogl_program* program, const char* name,
+void set_uniform(const ogl_program* program, const char* name,
     const ogl_texture* texture, int unit) {
   return set_uniform(
       program, get_uniform_location(program, name), texture, unit);
 }
-void set_uniform(ogl_program* program, int location, int location_on,
+void set_uniform(const ogl_program* program, int location, int location_on,
     const ogl_texture* texture, int unit) {
   assert_ogl_error();
   if (texture && texture->texture_id) {
@@ -892,27 +919,27 @@ void set_uniform(ogl_program* program, int location, int location_on,
   }
   assert_ogl_error();
 }
-void set_uniform(ogl_program* program, const char* name, const char* name_on,
-    const ogl_texture* texture, int unit) {
+void set_uniform(const ogl_program* program, const char* name,
+    const char* name_on, const ogl_texture* texture, int unit) {
   return set_uniform(program, get_uniform_location(program, name),
       get_uniform_location(program, name_on), texture, unit);
 }
 
 // set uniform cubemap
-void set_uniform(
-    ogl_program* program, int location, const ogl_cubemap* cubemap, int unit) {
+void set_uniform(const ogl_program* program, int location,
+    const ogl_cubemap* cubemap, int unit) {
   assert_ogl_error();
   glActiveTexture(GL_TEXTURE0 + unit);
   glBindTexture(GL_TEXTURE_CUBE_MAP, cubemap->cubemap_id);
   glUniform1i(location, unit);
   assert_ogl_error();
 }
-void set_uniform(ogl_program* program, const char* name,
+void set_uniform(const ogl_program* program, const char* name,
     const ogl_cubemap* cubemap, int unit) {
   return set_uniform(
       program, get_uniform_location(program, name), cubemap, unit);
 }
-void set_uniform(ogl_program* program, int location, int location_on,
+void set_uniform(const ogl_program* program, int location, int location_on,
     const ogl_cubemap* cubemap, int unit) {
   assert_ogl_error();
   if (cubemap && cubemap->cubemap_id) {
@@ -925,8 +952,8 @@ void set_uniform(ogl_program* program, int location, int location_on,
   }
   assert_ogl_error();
 }
-void set_uniform(ogl_program* program, const char* name, const char* name_on,
-    const ogl_cubemap* cubemap, int unit) {
+void set_uniform(const ogl_program* program, const char* name,
+    const char* name_on, const ogl_cubemap* cubemap, int unit) {
   return set_uniform(program, get_uniform_location(program, name),
       get_uniform_location(program, name_on), cubemap, unit);
 }
@@ -966,25 +993,6 @@ void set_attribute(ogl_program* program, int location, const vec3f& value) {
 void set_attribute(ogl_program* program, int location, const vec4f& value) {
   glDisableVertexAttribArray(location);
   glVertexAttrib4f(location, value.x, value.y, value.z, value.w);
-}
-
-// draw elements
-void draw_elements(ogl_elementbuffer* buffer) {
-  glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, buffer->buffer_id);
-  switch (buffer->element) {
-    case ogl_element_type::points:
-      glDrawElements(
-          GL_POINTS, (GLsizei)buffer->size, GL_UNSIGNED_INT, nullptr);
-      break;
-    case ogl_element_type::lines:
-      glDrawElements(GL_LINES, (GLsizei)buffer->size, GL_UNSIGNED_INT, nullptr);
-      break;
-    case ogl_element_type::triangles:
-      glDrawElements(
-          GL_TRIANGLES, (GLsizei)buffer->size, GL_UNSIGNED_INT, nullptr);
-      break;
-  }
-  assert_ogl_error();
 }
 
 void set_framebuffer(ogl_framebuffer* framebuffer, const vec2i& size) {
@@ -1072,163 +1080,64 @@ void set_shape(ogl_shape* shape) {
 
 // Clear an OpenGL shape
 void clear_shape(ogl_shape* shape) {
-  clear_arraybuffer(shape->positions);
-  clear_arraybuffer(shape->normals);
-  clear_arraybuffer(shape->texcoords);
-  clear_arraybuffer(shape->colors);
-  clear_arraybuffer(shape->tangents);
-  clear_elementbuffer(shape->points);
-  clear_elementbuffer(shape->lines);
-  clear_elementbuffer(shape->triangles);
-  clear_elementbuffer(shape->quads);
-  clear_elementbuffer(shape->edges);
+  for (auto& buffer : shape->vertex_buffers) {
+    clear_arraybuffer(&buffer);
+  }
+  clear_elementbuffer(&shape->index_buffer);
   glDeleteVertexArrays(1, &shape->shape_id);
   shape->shape_id = 0;
 }
 
-ogl_shape::~ogl_shape() {
-  clear_shape(this);
-  if (positions) delete positions;
-  if (normals) delete normals;
-  if (texcoords) delete texcoords;
-  if (colors) delete colors;
-  if (tangents) delete tangents;
-  if (points) delete points;
-  if (lines) delete lines;
-  if (triangles) delete triangles;
-  if (quads) delete quads;
-  if (edges) delete edges;
-}
+ogl_shape::~ogl_shape() { clear_shape(this); }
 
-void set_vertex_attribute(int location, float value) {
+void set_vertex_attribute_const(int location, float value) {
   glVertexAttrib1f(location, value);
 }
-void set_vertex_attribute(int location, const vec2f& value) {
+void set_vertex_attribute_const(int location, const vec2f& value) {
   glVertexAttrib2f(location, value.x, value.y);
 }
-void set_vertex_attribute(int location, const vec3f& value) {
+void set_vertex_attribute_const(int location, const vec3f& value) {
   glVertexAttrib3f(location, value.x, value.y, value.z);
 }
-void set_vertex_attribute(int location, const vec4f& value) {
+void set_vertex_attribute_const(int location, const vec4f& value) {
   glVertexAttrib4f(location, value.x, value.y, value.z, value.w);
 }
 
 void set_vertex_attribute(int location, const ogl_arraybuffer* buffer) {
   assert_ogl_error();
-  assert(buffer->buffer_id);  // == 0) return;
+  assert(buffer->buffer_id);
   glBindBuffer(GL_ARRAY_BUFFER, buffer->buffer_id);
   glEnableVertexAttribArray(location);
   glVertexAttribPointer(location, buffer->esize, GL_FLOAT, false, 0, nullptr);
   assert_ogl_error();
 }
 
-template <typename T>
-void set_vertex_attribute(ogl_shape* shape, ogl_arraybuffer* attribute,
-    const vector<T>& data, int location) {
-  assert(!data.empty());
-  set_arraybuffer(attribute, data, false);
-  assert_ogl_error();
+void set_instance_buffer(ogl_shape* shape, int location) {
   bind_shape(shape);
-  set_vertex_attribute(location, attribute);
+  glVertexAttribDivisor(location, 1);
+  shape->num_instances = (int)shape->vertex_buffers[location].size /
+                         shape->vertex_buffers[location].esize;
   assert_ogl_error();
-}
-
-template <typename T>
-void set_vertex_attribute(ogl_shape* shape, const T& attribute, int location) {
-  assert_ogl_error();
-  bind_shape(shape);
-  set_vertex_attribute(location, attribute);
-  assert_ogl_error();
-}
-
-void set_positions(ogl_shape* shape, const vector<vec3f>& positions) {
-  if (positions.empty())
-    set_vertex_attribute(shape, vec3f{0, 0, 0}, 0);
-  else
-    set_vertex_attribute(shape, shape->positions, positions, 0);
-}
-void set_normals(ogl_shape* shape, const vector<vec3f>& normals) {
-  if (normals.empty())
-    set_vertex_attribute(shape, vec3f{0, 0, 1}, 1);
-  else
-    set_vertex_attribute(shape, shape->normals, normals, 1);
-}
-void set_texcoords(ogl_shape* shape, const vector<vec2f>& texcoords) {
-  if (texcoords.empty())
-    set_vertex_attribute(shape, vec2f{0, 0}, 2);
-  else
-    set_vertex_attribute(shape, shape->texcoords, texcoords, 2);
-}
-void set_colors(ogl_shape* shape, const vector<vec4f>& colors) {
-  if (colors.empty())
-    set_vertex_attribute(shape, vec4f{1, 1, 1, 1}, 3);
-  else
-    set_vertex_attribute(shape, shape->colors, colors, 3);
-}
-void set_tangents(ogl_shape* shape, const vector<vec4f>& tangents) {
-  if (tangents.empty())
-    set_vertex_attribute(shape, vec4f{0, 0, 1, 1}, 4);
-  else
-    set_vertex_attribute(shape, shape->tangents, tangents, 4);
-}
-
-template <typename T>
-void set_index_buffer(
-    ogl_shape* shape, ogl_elementbuffer* elements, const vector<T>& data) {
-  bind_shape(shape);
-  set_arraybuffer(elements, data);
-  assert_ogl_error();
-}
-
-void set_points(ogl_shape* shape, const vector<int>& points) {
-  set_elementbuffer(shape->points, points);
-}
-void set_lines(ogl_shape* shape, const vector<vec2i>& lines) {
-  set_elementbuffer(shape->lines, lines);
-}
-void set_triangles(ogl_shape* shape, const vector<vec3i>& triangles) {
-  set_elementbuffer(shape->triangles, triangles);
-}
-void set_quads(ogl_shape* shape, const vector<vec4i>& quads) {
-  auto triangles = vector<vec3i>{};
-  triangles.reserve(quads.size() * 2);
-  for (auto& q : quads) {
-    triangles.push_back({q.x, q.y, q.w});
-    if (q.z != q.w) triangles.push_back({q.z, q.w, q.y});
-  }
-  set_elementbuffer(shape->quads, triangles);
-}
-void set_edges(ogl_shape* shape, const vector<vec3i>& triangles,
-    const vector<vec4i>& quads) {
-  auto edgemap = unordered_set<vec2i>{};
-  for (auto t : triangles) {
-    edgemap.insert({min(t.x, t.y), max(t.x, t.y)});
-    edgemap.insert({min(t.y, t.z), max(t.y, t.z)});
-    edgemap.insert({min(t.z, t.x), max(t.z, t.x)});
-  }
-  for (auto t : quads) {
-    edgemap.insert({min(t.x, t.y), max(t.x, t.y)});
-    edgemap.insert({min(t.y, t.z), max(t.y, t.z)});
-    edgemap.insert({min(t.z, t.w), max(t.z, t.w)});
-    edgemap.insert({min(t.w, t.x), max(t.w, t.x)});
-  }
-  auto edges = vector<vec2i>(edgemap.begin(), edgemap.end());
-  set_elementbuffer(shape->edges, edges);
 }
 
 void draw_shape(const ogl_shape* shape) {
   bind_shape(shape);
-
-  if (is_initialized(shape->points)) {
-    glPointSize(shape->points_size);
-    draw_elements(shape->points);
-  } else if (is_initialized(shape->lines)) {
-    draw_elements(shape->lines);
-  } else if (is_initialized(shape->triangles)) {
-    draw_elements(shape->triangles);
-  } else if (is_initialized(shape->quads)) {
-    draw_elements(shape->quads);
+  auto elements = GL_TRIANGLES;
+  switch (shape->index_buffer.element) {
+    case ogl_element_type::points: elements = GL_POINTS; break;
+    case ogl_element_type::lines: elements = GL_LINES; break;
+    case ogl_element_type::triangles: elements = GL_TRIANGLES; break;
   }
+    
+    auto& buffer = shape->index_buffer;
+  glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, buffer.buffer_id);
+  if (shape->num_instances == 0) {
+    glDrawElements(elements, (GLsizei)buffer.size, GL_UNSIGNED_INT, nullptr);
+  } else {
+    glDrawElementsInstanced(elements, (GLsizei)buffer.size, GL_UNSIGNED_INT,
+        nullptr, shape->num_instances);
+  }
+  assert_ogl_error();
 }
 
 ogl_shape* cube_shape() {
@@ -1247,8 +1156,8 @@ ogl_shape* cube_shape() {
     // clang-format on
     cube = new ogl_shape{};
     set_shape(cube);
-    set_positions(cube, cube_positions);
-    set_triangles(cube, cube_triangles);
+    set_vertex_attribute(cube, cube_positions, 0);
+    set_index_buffer(cube, cube_triangles);
   }
   return cube;
 }
@@ -1266,8 +1175,8 @@ ogl_shape* quad_shape() {
     // clang-format on
     quad = new ogl_shape{};
     set_shape(quad);
-    set_positions(quad, quad_positions);
-    set_triangles(quad, quad_triangles);
+    set_vertex_attribute(quad, quad_positions, 0);
+    set_index_buffer(quad, quad_triangles);
   }
   return quad;
 }
@@ -1292,8 +1201,8 @@ bool init_image(ogl_image* image) {
   auto texcoords = vector<vec2f>{{0, 0}, {0, 1}, {1, 1}, {1, 0}};
   auto triangles = vector<vec3i>{{0, 1, 2}, {0, 2, 3}};
   set_shape(image->quad);
-  set_vertex_attribute(image->quad, image->quad->texcoords, texcoords, 0);
-  set_triangles(image->quad, triangles);
+  set_vertex_attribute(image->quad, texcoords, 0);
+  set_index_buffer(image->quad, triangles);
 
   return true;
 }
@@ -1333,7 +1242,7 @@ void draw_image(ogl_image* image, const ogl_image_params& params) {
   set_uniform(image->program, "image_center", params.center);
   set_uniform(image->program, "image_scale", params.scale);
   draw_shape(image->quad);
-  unbind_program(image->program);
+  unbind_program();
   assert_ogl_error();
 }
 

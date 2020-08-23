@@ -129,36 +129,6 @@ void load_scene_async(
   if (!apps->selected) apps->selected = app;
 }
 
-void update_lights(gui_scene* glscene, sceneio_scene* ioscene) {
-  clear_lights(glscene);
-  for (auto ioobject : ioscene->instances) {
-    if (has_max_lights(glscene)) break;
-    if (ioobject->material->emission == zero3f) continue;
-    auto ioshape = ioobject->shape;
-    auto bbox    = invalidb3f;
-    for (auto p : ioshape->positions) bbox = merge(bbox, p);
-    auto pos  = (bbox.max + bbox.min) / 2;
-    auto area = 0.0f;
-    if (!ioshape->triangles.empty()) {
-      for (auto t : ioshape->triangles)
-        area += triangle_area(ioshape->positions[t.x], ioshape->positions[t.y],
-            ioshape->positions[t.z]);
-    } else if (!ioshape->quads.empty()) {
-      for (auto q : ioshape->quads)
-        area += quad_area(ioshape->positions[q.x], ioshape->positions[q.y],
-            ioshape->positions[q.z], ioshape->positions[q.w]);
-    } else if (!ioshape->lines.empty()) {
-      for (auto l : ioshape->lines)
-        area += line_length(ioshape->positions[l.x], ioshape->positions[l.y]);
-    } else {
-      area += ioshape->positions.size();
-    }
-    auto ke = ioobject->material->emission * area;
-    set_light(add_light(glscene), transform_point(ioobject->frame, pos), ke,
-        ogl_light_type::point, false);
-  }
-}
-
 void init_glscene(gui_scene* glscene, sceneio_scene* ioscene,
     gui_camera*& glcamera, sceneio_camera* iocamera,
     progress_callback progress_cb) {
@@ -184,7 +154,7 @@ void init_glscene(gui_scene* glscene, sceneio_scene* ioscene,
   }
 
   // textures
-  auto texture_map     = unordered_map<sceneio_texture*, ogl_texture*>{};
+  auto texture_map     = unordered_map<sceneio_texture*, gui_texture*>{};
   texture_map[nullptr] = nullptr;
   for (auto iotexture : ioscene->textures) {
     if (progress_cb) progress_cb("convert texture", progress.x++, progress.y);
@@ -222,36 +192,30 @@ void init_glscene(gui_scene* glscene, sceneio_scene* ioscene,
   }
 
   // shapes
-  auto shape_map     = unordered_map<sceneio_shape*, ogl_shape*>{};
+  auto shape_map     = unordered_map<sceneio_shape*, gui_shape*>{};
   shape_map[nullptr] = nullptr;
   for (auto ioshape : ioscene->shapes) {
     if (progress_cb) progress_cb("convert shape", progress.x++, progress.y);
-    auto glshape = add_shape(glscene);
-    set_positions(glshape, ioshape->positions);
-    set_normals(glshape, ioshape->normals);
-    set_texcoords(glshape, ioshape->texcoords);
-    set_colors(glshape, ioshape->colors);
-    set_points(glshape, ioshape->points);
-    set_lines(glshape, ioshape->lines);
-    set_triangles(glshape, ioshape->triangles);
-    set_quads(glshape, ioshape->quads);
-    set_edges(glshape, ioshape->triangles, ioshape->quads);
+    auto glshape       = add_shape(glscene, ioshape->points, ioshape->lines,
+        ioshape->triangles, ioshape->quads, ioshape->positions,
+        ioshape->normals, ioshape->texcoords, ioshape->colors);
     shape_map[ioshape] = glshape;
   }
 
   // shapes
   for (auto ioinstance : ioscene->instances) {
     if (progress_cb) progress_cb("convert instance", progress.x++, progress.y);
-    auto globject = add_instance(glscene);
-    set_frame(globject, ioinstance->frame);
-    set_shape(globject, shape_map.at(ioinstance->shape));
-    set_material(globject, material_map.at(ioinstance->material));
+    auto instance = add_instance(glscene);
+    set_frame(instance, ioinstance->frame);
+    set_shape(instance, shape_map.at(ioinstance->shape));
+    set_material(instance, material_map.at(ioinstance->material));
   }
 
   // bake prefiltered environments
   if (ioscene->environments.size()) {
-    ibl::init_ibl_data(
-        glscene, texture_map[ioscene->environments[0]->emission_tex]);
+    auto environment = ioscene->environments[0];
+    init_ibl_data(
+        glscene, texture_map[environment->emission_tex], environment->emission);
   }
 
   // done
@@ -460,7 +424,8 @@ void draw_widgets(gui_window* win, app_states* apps, const gui_input& input) {
     draw_combobox(win, "shading", (int&)params.shading, gui_shading_names);
     draw_checkbox(win, "wireframe", params.wireframe);
     continue_line(win);
-    draw_checkbox(win, "edges", params.edges);
+    draw_checkbox(win, "faceted", params.faceted);
+    // draw_checkbox(win, "edges", params.edges);
     continue_line(win);
     draw_checkbox(win, "double sided", params.double_sided);
     draw_slider(win, "exposure", params.exposure, -10, 10);
@@ -590,8 +555,6 @@ void draw_widgets(gui_window* win, app_states* apps, const gui_input& input) {
 void draw(gui_window* win, app_states* apps, const gui_input& input) {
   if (!apps->selected || !apps->selected->ok) return;
   auto app = apps->selected;
-  if (app->drawgl_prms.shading == gui_shading_type::eyelight)
-    update_lights(app->glscene, app->ioscene);
   draw_scene(app->glscene, app->glcamera, input.framebuffer_viewport,
       app->drawgl_prms);
 }
@@ -615,7 +578,6 @@ void update(gui_window* win, app_states* apps) {
     if (app->loader_error.empty()) {
       init_glscene(app->glscene, app->ioscene, app->glcamera, app->iocamera,
           progress_cb);
-      update_lights(app->glscene, app->ioscene);
       app->ok     = true;
       app->status = "ok";
     } else {
