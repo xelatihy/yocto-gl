@@ -31,9 +31,6 @@
 
 #include <yocto/yocto_commonio.h>
 
-#include <unordered_map>
-#include <unordered_set>
-
 #include "ext/glad/glad.h"
 
 #ifdef _WIN32
@@ -47,8 +44,6 @@
 namespace yocto {
 
 // using directives
-using std::unordered_map;
-using std::unordered_set;
 using namespace std::string_literals;
 
 }  // namespace yocto
