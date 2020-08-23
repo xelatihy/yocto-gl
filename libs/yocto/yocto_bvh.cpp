@@ -8,6 +8,7 @@
 
 #include "yocto_bvh.h"
 
+#include <algorithm>
 #include <atomic>
 #include <cstring>
 #include <deque>
