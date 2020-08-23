@@ -42,6 +42,234 @@
 #include <vector>
 
 // -----------------------------------------------------------------------------
+// USING DIRECTIVES
+// -----------------------------------------------------------------------------
+namespace yocto {
+
+// using directives
+using std::unordered_set;
+using namespace std::string_literals;
+
+}  // namespace yocto
+
+// -----------------------------------------------------------------------------
+// PRINT/FORMATTING UTILITIES
+// -----------------------------------------------------------------------------
+namespace yocto {
+
+// Print a message to the console
+void print_info(const string& msg) { printf("%s\n", msg.c_str()); }
+// Prints a messgae to the console and exit with an error.
+void print_fatal(const string& msg) {
+  printf("%s\n", msg.c_str());
+  exit(1);
+}
+
+// get time in nanoseconds - useful only to compute difference of times
+int64_t get_time_() {
+  return std::chrono::high_resolution_clock::now().time_since_epoch().count();
+}
+
+// Format duration string from nanoseconds
+string format_duration(int64_t duration) {
+  auto elapsed = duration / 1000000;  // milliseconds
+  auto hours   = (int)(elapsed / 3600000);
+  elapsed %= 3600000;
+  auto mins = (int)(elapsed / 60000);
+  elapsed %= 60000;
+  auto secs  = (int)(elapsed / 1000);
+  auto msecs = (int)(elapsed % 1000);
+  char buffer[256];
+  snprintf(
+      buffer, sizeof(buffer), "%02d:%02d:%02d.%03d", hours, mins, secs, msecs);
+  return buffer;
+}
+
+// Format a large integer number in human readable form
+string format_num(uint64_t num) {
+  auto rem = num % 1000;
+  auto div = num / 1000;
+  if (div > 0) return format_num(div) + "," + std::to_string(rem);
+  return std::to_string(rem);
+}
+
+// Print traces for timing and program debugging
+print_timer print_timed(const string& msg) {
+  printf("%s", msg.c_str());
+  fflush(stdout);
+  // print_info(fmt + " [started]", args...);
+  return print_timer{get_time_()};
+}
+void print_elapsed(print_timer& timer) {
+  if (timer.start_time < 0) return;
+  printf(" in %s\n", format_duration(get_time_() - timer.start_time).c_str());
+  timer.start_time = -1;
+}
+print_timer::~print_timer() { print_elapsed(*this); }
+
+// Print progress
+void print_progress(const string& message, int current, int total) {
+  static auto pad = [](const string& str, int n) -> string {
+    return string(std::max(0, n - (int)str.size()), '0') + str;
+  };
+  static auto pade = [](const string& str, int n) -> string {
+    return str + string(std::max(0, n - (int)str.size()), ' ');
+  };
+  static auto pads = [](const string& str, int n) -> string {
+    return string(std::max(0, n - (int)str.size()), ' ') + str;
+  };
+  using clock               = std::chrono::high_resolution_clock;
+  static int64_t start_time = 0;
+  if (current == 0) start_time = clock::now().time_since_epoch().count();
+  auto elapsed = clock::now().time_since_epoch().count() - start_time;
+  elapsed /= 1000000;  // millisecs
+  auto mins  = pad(std::to_string(elapsed / 60000), 2);
+  auto secs  = pad(std::to_string((elapsed % 60000) / 1000), 2);
+  auto msecs = pad(std::to_string((elapsed % 60000) % 1000), 3);
+  auto cur   = pads(std::to_string(current), 4);
+  auto tot   = pads(std::to_string(total), 4);
+  auto n     = (int)(20 * (float)current / (float)total);
+  auto bar   = "[" + pade(string(n, '='), 20) + "]";
+  auto line  = bar + " " + cur + "/" + tot + " " + mins + ":" + secs + "." +
+              msecs + " " + pade(message, 30);
+  printf("\r%s\r", line.c_str());
+  if (current == total) printf("\n");
+  fflush(stdout);
+}
+
+}  // namespace yocto
+
+// -----------------------------------------------------------------------------
+// FILE IO
+// -----------------------------------------------------------------------------
+namespace yocto {
+
+// Cleanup
+file_stream::~file_stream() {
+  if (owned && fs) fclose(fs);
+}
+
+// Open a file
+file_stream open_file(const string& filename, const string& mode) {
+#ifdef _Win32
+  auto path8 = std::filesystem::u8path(filename);
+  auto wmode = std::wstring(mode.begin(), mode.end());
+  auto fs    = _wfopen(path.c_str(), wmode.c_str());
+#else
+  auto fs = fopen(filename.c_str(), mode.c_str());
+#endif
+  return {filename, fs, true};
+}
+
+// Close a file
+void close_file(file_stream& fs) {
+  if (fs.owned && fs.fs) fclose(fs.fs);
+  fs.filename = "";
+  fs.fs       = nullptr;
+  fs.owned    = false;
+}
+
+// Read a line of text
+bool read_line(file_stream& fs, char* buffer, size_t size) {
+  return fgets(buffer, (int)size, fs.fs);
+}
+
+// Write text to a file
+bool write_text(file_stream& fs, const string& str) {
+  return fprintf(fs.fs, "%s", str.c_str()) >= 0;
+}
+
+// Read data from a file
+bool read_data(file_stream& fs, void* buffer, size_t count) {
+  return fread(buffer, 1, count, fs.fs) == count;
+}
+
+// Write data from a file
+bool write_data(file_stream& fs, const void* buffer, size_t count) {
+  return fwrite(buffer, 1, count, fs.fs) == count;
+}
+
+// Opens a file with a utf8 file name
+FILE* fopen_utf8(const char* filename, const char* mode) {
+#ifdef _Win32
+  auto path8 = std::filesystem::u8path(filename);
+  auto wmode = std::wstring(string{mode}.begin(), string{mode}.end());
+  return _wfopen(path.c_str(), wmode.c_str());
+#else
+  return fopen(filename, mode);
+#endif
+}
+
+// Load a text file
+bool load_text(const string& filename, string& str, string& error) {
+  // https://stackoverflow.com/questions/174531/how-to-read-the-content-of-a-file-to-a-string-in-c
+  auto fs = open_file(filename, "rb");
+  if (!fs) {
+    error = filename + ": file not found";
+    return false;
+  }
+  fseek(fs.fs, 0, SEEK_END);
+  auto length = ftell(fs.fs);
+  fseek(fs.fs, 0, SEEK_SET);
+  str.resize(length);
+  if (!read_values(fs, str.data(), length)) {
+    error = filename + ": read error";
+    return false;
+  }
+  return true;
+}
+
+// Save a text file
+bool save_text(const string& filename, const string& str, string& error) {
+  auto fs = open_file(filename, "wt");
+  if (!fs) {
+    error = filename + ": file not found";
+    return false;
+  }
+  if (!write_text(fs, str)) {
+    error = filename + ": write error";
+    return false;
+  }
+  return true;
+}
+
+// Load a binary file
+bool load_binary(const string& filename, vector<byte>& data, string& error) {
+  // https://stackoverflow.com/questions/174531/how-to-read-the-content-of-a-file-to-a-string-in-c
+  auto fs = open_file(filename, "rb");
+  if (!fs) {
+    error = filename + ": file not found";
+    return false;
+  }
+  fseek(fs.fs, 0, SEEK_END);
+  auto length = ftell(fs.fs);
+  fseek(fs.fs, 0, SEEK_SET);
+  data.resize(length);
+  if (!read_values(fs, data.data(), length)) {
+    error = filename + ": read error";
+    return false;
+  }
+  return true;
+}
+
+// Save a binary file
+bool save_binary(
+    const string& filename, const vector<byte>& data, string& error) {
+  auto fs = open_file(filename, "wb");
+  if (!fs) {
+    error = filename + ": file not found";
+    return false;
+  }
+  if (!write_values(fs, data.data(), data.size()) != data.size()) {
+    error = filename + ": write error";
+    return false;
+  }
+  return true;
+}
+
+}  // namespace yocto
+
+// -----------------------------------------------------------------------------
 // PATH UTILITIES
 // -----------------------------------------------------------------------------
 namespace yocto {
