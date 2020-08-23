@@ -1026,15 +1026,6 @@ inline bool parse_value(
   return false;
 }
 
-inline bool parse_values(vector<cli_value>& values, const vector<string>& args,
-    const vector<string>& choices) {
-  values.resize(args.size());
-  for (auto idx = 0ull; idx < args.size(); idx++) {
-    if (!parse_value(values[idx], args[idx], choices)) return false;
-  }
-  return true;
-}
-
 inline bool parse_cli(
     cli_state& cli, int argc, const char** argv, string& error) {
   auto cli_error = [&error](const string& message) {
@@ -1071,8 +1062,13 @@ inline bool parse_cli(
       }
     }
     if (option.set) {
-      if (!parse_values(option.value, values, option.choices))
-        return cli_error("bad value for " + option.name);
+      option.value.clear();
+      for (auto& value : values) {
+        option.value.emplace_back();
+        option.value.back().type = option.type;
+        if (!parse_value(option.value.back(), value, option.choices))
+          return cli_error("bad value for " + option.name);
+      }
       option.set_reference(option.value);
     } else {
       if (option.req) return cli_error("missing value for " + option.name);
@@ -1104,8 +1100,13 @@ inline bool parse_cli(
       throw std::invalid_argument{"unsupported number of arguments"};
     }
     if (option.set) {
-      if (!parse_values(option.value, values, option.choices))
-        return cli_error("bad value for " + option.name);
+      option.value.clear();
+      for (auto& value : values) {
+        option.value.emplace_back();
+        option.value.back().type = option.type;
+        if (!parse_value(option.value.back(), value, option.choices))
+          return cli_error("bad value for " + option.name);
+      }
       option.set_reference(option.value);
     } else {
       if (option.req) return cli_error("missing value for " + option.name);
