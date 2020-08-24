@@ -542,6 +542,7 @@ inline vec3f colormap(float t, colormap_type type) {
     case colormap_type::inferno: return colormap_inferno(t);
     case colormap_type::plasma: return colormap_plasma(t);
   }
+  return {0, 0, 0};
 }
 
 }  // namespace yocto
