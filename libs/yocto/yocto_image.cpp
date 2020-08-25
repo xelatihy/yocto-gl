@@ -2044,22 +2044,36 @@ bool save_image(const string& filename, const image<vec4f>& imgf,
 namespace yocto {
 
 // Volume load
-static vector<float> load_yvol(const char* filename, int& width, int& height,
-    int& depth, int& components) {
+static bool load_yvol(const string& filename, int& width, int& height,
+    int& depth, int& components, vector<float>& voxels, string& error) {
+  // error helpers
+  auto open_error = [filename, &error]() {
+    error = filename + ": file not found";
+    return false;
+  };
+  auto parse_error = [filename, &error]() {
+    error = filename + ": parse error";
+    return false;
+  };
+  auto read_error = [filename, &error]() {
+    error = filename + ": read error";
+    return false;
+  };
+
   auto fs = open_file(filename, "rb");
-  if (!fs) return {};
+  if (!fs) return open_error();
 
   // buffer
   auto buffer = array<char, 4096>{};
   auto toks   = vector<string>();
 
   // read magic
-  if (!read_line(fs, buffer)) return {};
+  if (!read_line(fs, buffer)) return parse_error();
   toks = split_string(buffer.data());
-  if (toks[0] != "YVOL") return {};
+  if (toks[0] != "YVOL") return parse_error();
 
   // read width, height
-  if (!read_line(fs, buffer)) return {};
+  if (!read_line(fs, buffer)) return parse_error();
   toks       = split_string(buffer.data());
   width      = atoi(toks[0].c_str());
   height     = atoi(toks[1].c_str());
@@ -2069,27 +2083,38 @@ static vector<float> load_yvol(const char* filename, int& width, int& height,
   // read data
   auto nvoxels = (size_t)width * (size_t)height * (size_t)depth;
   auto nvalues = nvoxels * (size_t)components;
-  auto voxels  = vector<float>(nvalues);
-  if (!read_values(fs, voxels.data(), nvalues)) return {};
+  voxels       = vector<float>(nvalues);
+  if (!read_values(fs, voxels.data(), nvalues)) return read_error();
 
   // done
-  return voxels;
+  return true;
 }
 
 // save pfm
-static bool save_yvol(const char* filename, int width, int height, int depth,
-    int components, const float* voxels) {
-  auto fs = open_file(filename, "wb");
-  if (!fs) return false;
+static bool save_yvol(const string& filename, int width, int height, int depth,
+    int components, const vector<float>& voxels, string& error) {
+  // error helpers
+  auto open_error = [filename, &error]() {
+    error = filename + ": file not found";
+    return false;
+  };
+  auto write_error = [filename, &error]() {
+    error = filename + ": read error";
+    return false;
+  };
 
-  if (!write_text(fs, "YVOL\n")) return false;
+  auto fs = open_file(filename, "wb");
+  if (!fs) return open_error();
+
+  if (!write_text(fs, "YVOL\n")) return write_error();
   if (!write_text(fs, std::to_string(width) + " " + std::to_string(height) +
                           " " + std::to_string(depth) + " " +
                           std::to_string(components) + "\n"))
-    return false;
+    return write_error();
   auto nvalues = (size_t)width * (size_t)height * (size_t)depth *
                  (size_t)components;
-  return write_values(fs, voxels, nvalues);
+  if (!write_values(fs, voxels.data(), nvalues)) return write_error();
+  return true;
 }
 
 // Loads volume data from binary format.
@@ -2099,8 +2124,9 @@ bool load_volume(const string& filename, volume<float>& vol, string& error) {
     return false;
   };
   auto width = 0, height = 0, depth = 0, ncomp = 0;
-  auto voxels = load_yvol(filename.c_str(), width, height, depth, ncomp);
-  if (voxels.empty()) return read_error();
+  auto voxels = vector<float>{};
+  if (!load_yvol(filename, width, height, depth, ncomp, voxels, error))
+    return false;
   if (ncomp != 1) voxels = convert_components(voxels, ncomp, 1);
   vol = volume{{width, height, depth}, (const float*)voxels.data()};
   return true;
@@ -2109,14 +2135,8 @@ bool load_volume(const string& filename, volume<float>& vol, string& error) {
 // Saves volume data in binary format.
 bool save_volume(
     const string& filename, const volume<float>& vol, string& error) {
-  auto write_error = [filename, &error]() {
-    error = filename + ": write error";
-    return false;
-  };
-  if (!save_yvol(filename.c_str(), vol.width(), vol.height(), vol.depth(), 1,
-          vol.data()))
-    return write_error();
-  return true;
+  return save_yvol(filename, vol.width(), vol.height(), vol.depth(), 1,
+      {vol.data(), vol.data() + vol.count()}, error);
 }
 
 }  // namespace yocto
