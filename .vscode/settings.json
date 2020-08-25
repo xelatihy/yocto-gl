@@ -117,7 +117,8 @@
     "-build/include_subdir",
     "-whitespace/braces",
     "-readability/casting",
-    "-build/c++11"
+    "-build/c++11",
+    "-build/namespaces"
   ],
   "clang-tidy.executable": "/usr/local/opt/llvm/bin/clang-tidy",
   "clang-tidy.compilerArgs": [
@@ -141,6 +142,7 @@
     "portability-*",
     "bugprone-*",
     "-bugprone-narrowing-conversions",
+    "-bugprone-branch-clone",
     "cppcoreguidelines-*",
     "-cppcoreguidelines-avoid-magic-numbers",
     "-cppcoreguidelines-pro-type-vararg",

@@ -221,8 +221,7 @@ struct obj_texture {
   bool   clamp = false;  // clamp to edge
   float  scale = 1;      // scale for bump/displacement
 
-  obj_texture() {}
-  explicit obj_texture(const char* path) : path{path} {}
+  obj_texture() = default;
   explicit obj_texture(const string& path) : path{path} {}
 };
 

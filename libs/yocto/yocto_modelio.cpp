@@ -35,6 +35,7 @@
 #include <string_view>
 #include <unordered_map>
 #include <unordered_set>
+#include <utility>
 
 #include "yocto_color.h"
 #include "yocto_commonio.h"
@@ -60,31 +61,31 @@ namespace yocto {
 // Formats values to string
 inline void format_value(string& str, const vec2f& value) {
   for (auto i = 0; i < 2; i++) {
-    if (i) str += " ";
+    if (i != 0) str += " ";
     format_value(str, value[i]);
   }
 }
 inline void format_value(string& str, const vec3f& value) {
   for (auto i = 0; i < 3; i++) {
-    if (i) str += " ";
+    if (i != 0) str += " ";
     format_value(str, value[i]);
   }
 }
 inline void format_value(string& str, const frame3f& value) {
   for (auto i = 0; i < 4; i++) {
-    if (i) str += " ";
+    if (i != 0) str += " ";
     format_value(str, value[i]);
   }
 }
 inline void format_value(string& str, const vec4f& value) {
   for (auto i = 0; i < 4; i++) {
-    if (i) str += " ";
+    if (i != 0) str += " ";
     format_value(str, value[i]);
   }
 }
 inline void format_value(string& str, const mat4f& value) {
   for (auto i = 0; i < 4; i++) {
-    if (i) str += " ";
+    if (i != 0) str += " ";
     format_value(str, value[i]);
   }
 }
@@ -309,10 +310,10 @@ bool load_ply(const string& filename, ply_model* ply, string& error) {
   auto end_header = false;
 
   // read header ---------------------------------------------
-  char buffer[4096];
-  while (read_line(fs, buffer, sizeof(buffer))) {
+  auto buffer = array<char, 4096>{};
+  while (read_line(fs, buffer)) {
     // str
-    auto str = string_view{buffer};
+    auto str = string_view{buffer.data()};
     remove_comment(str);
     skip_whitespace(str);
     if (str.empty()) continue;
@@ -320,7 +321,7 @@ bool load_ply(const string& filename, ply_model* ply, string& error) {
     // get command
     auto cmd = ""s;
     if (!parse_value(str, cmd)) return parse_error();
-    if (cmd == "") continue;
+    if (cmd.empty()) continue;
 
     // check magic number
     if (first_line) {
@@ -346,7 +347,7 @@ bool load_ply(const string& filename, ply_model* ply, string& error) {
       }
     } else if (cmd == "comment") {
       skip_whitespace(str);
-      ply->comments.push_back(string{str});
+      ply->comments.emplace_back(str);
     } else if (cmd == "obj_info") {
       skip_whitespace(str);
       // comment is the rest of the str
@@ -407,11 +408,11 @@ bool load_ply(const string& filename, ply_model* ply, string& error) {
 
   // read data -------------------------------------
   if (ply->format == ply_format::ascii) {
-    char buffer[4096];
+    auto buffer = array<char, 4096>{};
     for (auto elem : ply->elements) {
       for (auto idx = 0; idx < elem->count; idx++) {
-        if (!read_line(fs, buffer, sizeof(buffer))) return read_error();
-        auto str = string_view{buffer};
+        if (!read_line(fs, buffer)) return read_error();
+        auto str = string_view{buffer.data()};
         for (auto prop : elem->properties) {
           if (prop->is_list) {
             if (!parse_value(str, prop->ldata_u8.emplace_back()))
@@ -586,8 +587,7 @@ bool save_ply(const string& filename, ply_model* ply, string& error) {
     for (auto elem : ply->elements) {
       auto cur = vector<size_t>(elem->properties.size(), 0);
       for (auto idx = 0; idx < elem->count; idx++) {
-        for (auto pidx = 0; pidx < elem->properties.size(); pidx++) {
-          auto prop = elem->properties[pidx];
+        for (auto prop : elem->properties) {
           if (prop->is_list)
             if (!format_values(fs, "{} ", (int)prop->ldata_u8[idx]))
               return write_error();
@@ -745,7 +745,7 @@ inline bool convert_property(ply_property* prop, vector<T>& values) {
     case ply_type::f64: return convert_property(prop->data_f64, values);
   }
   // return here to silence warnings
-  std::runtime_error("should not have gotten here");
+  throw std::runtime_error{"should not have gotten here"};
   return false;
 }
 bool get_value(ply_model* ply, const string& element, const string& property,
@@ -967,7 +967,7 @@ inline ply_element* add_element(
 }
 inline ply_property* add_property(ply_model* ply, const string& element_name,
     const string& property_name, size_t count, ply_type type, bool is_list) {
-  if (!add_element(ply, element_name, count)) return nullptr;
+  if (add_element(ply, element_name, count) == nullptr) return nullptr;
   for (auto elem : ply->elements) {
     if (elem->name != element_name) continue;
     for (auto prop : elem->properties) {
@@ -990,9 +990,10 @@ inline vector<T> make_vector(const T* value, size_t count, int stride) {
 
 inline bool add_values(ply_model* ply, const float* values, size_t count,
     const string& element, const string* properties, int nprops) {
-  if (!values) return false;
+  if (values == nullptr) return false;
   for (auto p = 0; p < nprops; p++) {
-    if (!add_property(ply, element, properties[p], count, ply_type::f32, false))
+    if (add_property(ply, element, properties[p], count, ply_type::f32,
+            false) == nullptr)
       return false;
     auto prop = get_property(ply, element, properties[p]);
     prop->data_f32.resize(count);
@@ -1006,37 +1007,38 @@ bool add_value(ply_model* ply, const string& element, const string& property,
   if (values.empty()) return false;
   auto properties = vector{property};
   return add_values(
-      ply, (float*)values.data(), values.size(), element, properties.data(), 1);
+      ply, values.data(), values.size(), element, properties.data(), 1);
 }
 bool add_values(ply_model* ply, const string& element,
     const array<string, 2>& properties, const vector<vec2f>& values) {
   if (values.empty()) return false;
   return add_values(
-      ply, (float*)values.data(), values.size(), element, properties.data(), 2);
+      ply, &values.front().x, values.size(), element, properties.data(), 2);
 }
 bool add_values(ply_model* ply, const string& element,
     const array<string, 3>& properties, const vector<vec3f>& values) {
   if (values.empty()) return false;
   return add_values(
-      ply, (float*)values.data(), values.size(), element, properties.data(), 3);
+      ply, &values.front().x, values.size(), element, properties.data(), 3);
 }
 bool add_values(ply_model* ply, const string& element,
     const array<string, 4>& properties, const vector<vec4f>& values) {
   if (values.empty()) return false;
   return add_values(
-      ply, (float*)values.data(), values.size(), element, properties.data(), 4);
+      ply, &values.front().x, values.size(), element, properties.data(), 4);
 }
 bool add_values(ply_model* ply, const string& element,
     const array<string, 12>& properties, const vector<frame3f>& values) {
   if (values.empty()) return false;
-  return add_values(ply, (float*)values.data(), values.size(), element,
+  return add_values(ply, &values.front().x.x, values.size(), element,
       properties.data(), (int)properties.size());
 }
 
 bool add_lists(ply_model* ply, const string& element, const string& property,
     const vector<vector<int>>& values) {
   if (values.empty()) return false;
-  if (!add_property(ply, element, property, values.size(), ply_type::i32, true))
+  if (add_property(ply, element, property, values.size(), ply_type::i32,
+          true) == nullptr)
     return false;
   auto prop = get_property(ply, element, property);
   prop->data_i32.reserve(values.size() * 4);
@@ -1050,7 +1052,8 @@ bool add_lists(ply_model* ply, const string& element, const string& property,
 bool add_lists(ply_model* ply, const string& element, const string& property,
     const vector<byte>& sizes, const vector<int>& values) {
   if (values.empty()) return false;
-  if (!add_property(ply, element, property, sizes.size(), ply_type::i32, true))
+  if (add_property(ply, element, property, sizes.size(), ply_type::i32, true) ==
+      nullptr)
     return false;
   auto prop      = get_property(ply, element, property);
   prop->data_i32 = values;
@@ -1059,8 +1062,9 @@ bool add_lists(ply_model* ply, const string& element, const string& property,
 }
 bool add_lists(ply_model* ply, const int* values, size_t count, int size,
     const string& element, const string& property) {
-  if (!values) return false;
-  if (!add_property(ply, element, property, count, ply_type::i32, true))
+  if (values != nullptr) return false;
+  if (add_property(ply, element, property, count, ply_type::i32, true) ==
+      nullptr)
     return false;
   auto prop = get_property(ply, element, property);
   prop->data_i32.assign(values, values + count * size);
@@ -1075,20 +1079,17 @@ bool add_lists(ply_model* ply, const string& element, const string& property,
 bool add_lists(ply_model* ply, const string& element, const string& property,
     const vector<vec2i>& values) {
   if (values.empty()) return false;
-  return add_lists(
-      ply, (int*)values.data(), values.size(), 2, element, property);
+  return add_lists(ply, &values.front().x, values.size(), 2, element, property);
 }
 bool add_lists(ply_model* ply, const string& element, const string& property,
     const vector<vec3i>& values) {
   if (values.empty()) return false;
-  return add_lists(
-      ply, (int*)values.data(), values.size(), 3, element, property);
+  return add_lists(ply, &values.front().x, values.size(), 3, element, property);
 }
 bool add_lists(ply_model* ply, const string& element, const string& property,
     const vector<vec4i>& values) {
   if (values.empty()) return false;
-  return add_lists(
-      ply, (int*)values.data(), values.size(), 4, element, property);
+  return add_lists(ply, &values.front().x, values.size(), 4, element, property);
 }
 
 // Add ply properties for meshes
@@ -1239,10 +1240,10 @@ namespace yocto {
   add_material(obj);
 
   // read the file str by str
-  char buffer[4096];
-  while (read_line(fs, buffer, sizeof(buffer))) {
+  auto buffer = array<char, 4096>{};
+  while (read_line(fs, buffer)) {
     // str
-    auto str = string_view{buffer};
+    auto str = string_view{buffer.data()};
     remove_comment(str);
     skip_whitespace(str);
     if (str.empty()) continue;
@@ -1250,7 +1251,7 @@ namespace yocto {
     // get command
     auto cmd = ""s;
     if (!parse_value(str, cmd)) return parse_error();
-    if (cmd == "") continue;
+    if (cmd.empty()) continue;
 
     // grab material
     auto material = obj->materials.back();
@@ -1469,10 +1470,10 @@ namespace yocto {
   }
 
   // read the file str by str
-  char buffer[4096];
-  while (read_line(fs, buffer, sizeof(buffer))) {
+  auto buffer = array<char, 4096>{};
+  while (read_line(fs, buffer)) {
     // str
-    auto str = string_view{buffer};
+    auto str = string_view{buffer.data()};
     remove_comment(str);
     skip_whitespace(str);
     if (str.empty()) continue;
@@ -1480,7 +1481,7 @@ namespace yocto {
     // get command
     auto cmd = ""s;
     if (!parse_value(str, cmd)) return parse_error();
-    if (cmd == "") continue;
+    if (cmd.empty()) continue;
 
     // read values
     if (cmd == "c") {
@@ -1590,10 +1591,10 @@ bool load_obj(const string& filename, obj_scene* obj, string& error,
   auto empty_material = (obj_material*)nullptr;
 
   // read the file str by str
-  char buffer[4096];
-  while (read_line(fs, buffer, sizeof(buffer))) {
+  auto buffer = array<char, 4096>{};
+  while (read_line(fs, buffer)) {
     // str
-    auto str = string_view{buffer};
+    auto str = string_view{buffer.data()};
     remove_comment(str);
     skip_whitespace(str);
     if (str.empty()) continue;
@@ -1601,7 +1602,7 @@ bool load_obj(const string& filename, obj_scene* obj, string& error,
     // get command
     auto cmd = ""s;
     if (!parse_value(str, cmd)) return parse_error();
-    if (cmd == "") continue;
+    if (cmd.empty()) continue;
 
     // possible token values
     if (cmd == "v") {
@@ -1642,7 +1643,7 @@ bool load_obj(const string& filename, obj_scene* obj, string& error,
                                          : shape->points.emplace_back();
       // get element material or add if needed
       if (!geom_only) {
-        if (mname.empty() && !empty_material) {
+        if (mname.empty() && empty_material == nullptr) {
           empty_material   = obj->materials.emplace_back(new obj_material{});
           material_map[""] = empty_material;
         }
@@ -1660,7 +1661,7 @@ bool load_obj(const string& filename, obj_scene* obj, string& error,
       while (!str.empty()) {
         auto vert = obj_vertex{};
         if (!parse_value(str, vert)) return parse_error();
-        if (!vert.position) break;
+        if (vert.position == 0) break;
         if (vert.position < 0)
           vert.position = vert_size.position + vert.position + 1;
         if (vert.texcoord < 0)
@@ -1714,7 +1715,7 @@ bool load_obj(const string& filename, obj_scene* obj, string& error,
   }
 
   // fix empty material
-  if (empty_material) {
+  if (empty_material != nullptr) {
     empty_material->name     = "empty_material";
     empty_material->diffuse  = {0.8, 0.8, 0.8};
     empty_material->pbr_base = {0.8, 0.8, 0.8};
@@ -1729,15 +1730,15 @@ bool load_obj(const string& filename, obj_scene* obj, string& error,
     inormals.assign(onormals.size() + 1, 0);
     itexcoords.assign(otexcoords.size() + 1, 0);
     for (auto& vertex : shape->vertices) {
-      if (vertex.position && !ipositions[vertex.position]) {
+      if (vertex.position != 0 && ipositions[vertex.position] == 0) {
         shape->positions.push_back(opositions[vertex.position - 1]);
         ipositions[vertex.position] = (int)shape->positions.size();
       }
-      if (vertex.normal && !inormals[vertex.normal]) {
+      if (vertex.normal != 0 && inormals[vertex.normal] == 0) {
         shape->normals.push_back(onormals[vertex.normal - 1]);
         inormals[vertex.normal] = (int)shape->normals.size();
       }
-      if (vertex.texcoord && !itexcoords[vertex.texcoord]) {
+      if (vertex.texcoord != 0 && itexcoords[vertex.texcoord] == 0) {
         shape->texcoords.push_back(otexcoords[vertex.texcoord - 1]);
         itexcoords[vertex.texcoord] = (int)shape->texcoords.size();
       }
@@ -1765,14 +1766,14 @@ inline void format_value(string& str, const obj_texture& value) {
 }
 inline void format_value(string& str, const obj_vertex& value) {
   format_value(str, value.position);
-  if (value.texcoord) {
+  if (value.texcoord != 0) {
     str += "/";
     format_value(str, value.texcoord);
-    if (value.normal) {
+    if (value.normal != 0) {
       str += "/";
       format_value(str, value.normal);
     }
-  } else if (value.normal) {
+  } else if (value.normal != 0) {
     str += "//";
     format_value(str, value.normal);
   }
@@ -2079,9 +2080,9 @@ inline void format_value(string& str, const obj_vertex& value) {
         if (!format_values(fs, "{}", label)) return write_error();
         for (auto c = 0; c < element.size; c++) {
           auto vert = shape->vertices[cur_vertex++];
-          if (vert.position) vert.position += vert_size.position;
-          if (vert.normal) vert.normal += vert_size.normal;
-          if (vert.texcoord) vert.texcoord += vert_size.texcoord;
+          if (vert.position != 0) vert.position += vert_size.position;
+          if (vert.normal != 0) vert.normal += vert_size.normal;
+          if (vert.texcoord != 0) vert.texcoord += vert_size.texcoord;
           if (!format_values(fs, " {}", vert)) return write_error();
         }
         if (!format_values(fs, "\n")) return write_error();
@@ -2127,11 +2128,11 @@ void get_vertices(const obj_shape* shape, vector<vec3f>& positions,
     auto nverts = (int)positions.size();
     vindex.push_back(nverts);
     vmap.insert(it, {vert, nverts});
-    if (!shape->positions.empty() && vert.position)
+    if (!shape->positions.empty() && vert.position != 0)
       positions.push_back(shape->positions[vert.position - 1]);
-    if (!shape->normals.empty() && vert.normal)
+    if (!shape->normals.empty() && vert.normal != 0)
       normals.push_back(shape->normals[vert.normal - 1]);
-    if (!shape->texcoords.empty() && vert.texcoord)
+    if (!shape->texcoords.empty() && vert.texcoord != 0)
       texcoords.push_back(shape->texcoords[vert.texcoord - 1]);
   }
   if (flipv) {
@@ -2234,24 +2235,25 @@ void get_fvquads(const obj_shape* shape, vector<vec4i>& quadspos,
   normals   = shape->normals;
   texcoords = flipv ? flip_obj_texcoord(shape->texcoords) : shape->texcoords;
   materials = shape->materials;
-  if (shape->vertices[0].position) quadspos.reserve(shape->faces.size());
-  if (shape->vertices[0].normal) quadsnorm.reserve(shape->faces.size());
-  if (shape->vertices[0].texcoord) quadstexcoord.reserve(shape->faces.size());
+  if (shape->vertices[0].position != 0) quadspos.reserve(shape->faces.size());
+  if (shape->vertices[0].normal != 0) quadsnorm.reserve(shape->faces.size());
+  if (shape->vertices[0].texcoord != 0)
+    quadstexcoord.reserve(shape->faces.size());
   if (!materials.empty()) ematerials.reserve(shape->faces.size());
   auto cur = 0;
   for (auto& face : shape->faces) {
     if (face.size == 4) {
-      if (shape->vertices[0].position)
+      if (shape->vertices[0].position != 0)
         quadspos.push_back({shape->vertices[cur + 0].position - 1,
             shape->vertices[cur + 1].position - 1,
             shape->vertices[cur + 2].position - 1,
             shape->vertices[cur + 3].position - 1});
-      if (shape->vertices[0].normal)
+      if (shape->vertices[0].normal != 0)
         quadsnorm.push_back({shape->vertices[cur + 0].normal - 1,
             shape->vertices[cur + 1].normal - 1,
             shape->vertices[cur + 2].normal - 1,
             shape->vertices[cur + 3].normal - 1});
-      if (shape->vertices[0].texcoord)
+      if (shape->vertices[0].texcoord != 0)
         quadstexcoord.push_back({shape->vertices[cur + 0].texcoord - 1,
             shape->vertices[cur + 1].texcoord - 1,
             shape->vertices[cur + 2].texcoord - 1,
@@ -2259,17 +2261,17 @@ void get_fvquads(const obj_shape* shape, vector<vec4i>& quadspos,
       if (!materials.empty()) ematerials.push_back(face.material);
     } else {
       for (auto c = 2; c < face.size; c++) {
-        if (shape->vertices[0].position)
+        if (shape->vertices[0].position != 0)
           quadspos.push_back({shape->vertices[cur + 0].position - 1,
               shape->vertices[cur + c - 1].position - 1,
               shape->vertices[cur + c].position - 1,
               shape->vertices[cur + c].position - 1});
-        if (shape->vertices[0].normal)
+        if (shape->vertices[0].normal != 0)
           quadsnorm.push_back({shape->vertices[cur + 0].normal - 1,
               shape->vertices[cur + c - 1].normal - 1,
               shape->vertices[cur + c].normal - 1,
               shape->vertices[cur + c].normal - 1});
-        if (shape->vertices[0].texcoord)
+        if (shape->vertices[0].texcoord != 0)
           quadstexcoord.push_back({shape->vertices[cur + 0].texcoord - 1,
               shape->vertices[cur + c - 1].texcoord - 1,
               shape->vertices[cur + c].texcoord - 1,
@@ -2324,11 +2326,11 @@ void get_vertices(const obj_shape* shape, int material,
     auto nverts = (int)positions.size();
     vindex[vid] = nverts;
     vmap.insert(it, {vert, nverts});
-    if (!shape->positions.empty() && vert.position)
+    if (!shape->positions.empty() && vert.position != 0)
       positions.push_back(shape->positions[vert.position - 1]);
-    if (!shape->normals.empty() && vert.normal)
+    if (!shape->normals.empty() && vert.normal != 0)
       normals.push_back(shape->normals[vert.normal - 1]);
-    if (!shape->texcoords.empty() && vert.texcoord)
+    if (!shape->texcoords.empty() && vert.texcoord != 0)
       texcoords.push_back(shape->texcoords[vert.texcoord - 1]);
   }
   if (flipv) {
@@ -2640,7 +2642,7 @@ struct pbrt_command {
     }
     return true;
   } else if (pbrt.type == pbrt_type::real) {
-    if (pbrt.vector1f.empty() || pbrt.vector1f.size() % 2)
+    if (pbrt.vector1f.empty() || (pbrt.vector1f.size() % 2) != 0)
       throw std::runtime_error("bad pbrt type");
     val.resize(pbrt.vector1f.size() / 2);
     for (auto i = 0; i < val.size(); i++)
@@ -2661,7 +2663,7 @@ struct pbrt_command {
     }
     return true;
   } else if (pbrt.type == pbrt_type::real) {
-    if (pbrt.vector1f.empty() || pbrt.vector1f.size() % 3)
+    if (pbrt.vector1f.empty() || (pbrt.vector1f.size() % 3) != 0)
       throw std::invalid_argument{"expected float3 array"};
     val.resize(pbrt.vector1f.size() / 3);
     for (auto i = 0; i < val.size(); i++)
@@ -2689,7 +2691,7 @@ struct pbrt_command {
 [[nodiscard]] inline bool get_pbrt_value(
     const pbrt_value& pbrt, vector<vec3i>& val) {
   if (pbrt.type == pbrt_type::integer) {
-    if (pbrt.vector1i.empty() || pbrt.vector1i.size() % 3)
+    if (pbrt.vector1i.empty() || (pbrt.vector1i.size() % 3) != 0)
       throw std::invalid_argument{"expected int3 array"};
     val.resize(pbrt.vector1i.size() / 3);
     for (auto i = 0; i < val.size(); i++)
@@ -2801,7 +2803,7 @@ inline pbrt_value make_pbrt_value(const string& name, const vector<vec3i>& val,
   auto pbrt     = pbrt_value{};
   pbrt.name     = name;
   pbrt.type     = type;
-  pbrt.vector1i = {(int*)val.data(), (int*)val.data() + val.size() * 3};
+  pbrt.vector1i = {&val.front().x, &val.front().x + val.size() * 3};
   return pbrt;
 }
 
@@ -2819,13 +2821,13 @@ inline void remove_pbrt_comment(string_view& str, char comment_char = '#') {
 
 // Read a pbrt command from file
 [[nodiscard]] inline bool read_pbrt_cmdline(file_stream& fs, string& cmd) {
-  char buffer[4096];
+  auto buffer = array<char, 4096>{};
   cmd.clear();
   auto found = false;
   auto pos   = ftell(fs.fs);
-  while (read_line(fs, buffer, sizeof(buffer))) {
+  while (read_line(fs, buffer)) {
     // line
-    auto line = string_view{buffer};
+    auto line = string_view{buffer.data()};
     remove_comment(line);
     skip_whitespace(line);
     if (line.empty()) continue;
@@ -2887,7 +2889,7 @@ template <typename T>
     string_view& str_, string& name, string& type) {
   auto value = ""s;
   if (!parse_value(str_, value)) return false;
-  if (!str_.data()) return false;
+  if (str_.empty()) return false;
   auto str  = string_view{value};
   auto pos1 = str.find(' ');
   if (pos1 == string_view::npos) return false;
@@ -3182,7 +3184,7 @@ inline pair<vec3f, vec3f> get_subsurface(const string& name) {
         auto filename  = ""s;
         auto filenames = vector<string>{};
         if (!parse_value(str, filename)) return false;
-        if (!str.data()) return false;
+        if (str.empty()) return false;
         auto filenamep = path_filename(filename);
         if (path_extension(filenamep) == ".spd") {
           filenamep = replace_extension(filenamep, "");
@@ -3449,7 +3451,7 @@ inline bool convert_material(pbrt_material*     pmaterial,
                          const vec3f& def) -> bool {
     auto textured = pair{def, ""s};
     if (!get_pbrt_value(values, name, textured)) return parse_error();
-    if (textured.second == "") {
+    if (textured.second.empty()) {
       color    = textured.first;
       filename = "";
     } else {
@@ -3468,7 +3470,7 @@ inline bool convert_material(pbrt_material*     pmaterial,
                         float& scalar, float def) -> bool {
     auto textured = pair{vec3f{def, def, def}, ""s};
     if (!get_pbrt_value(values, name, textured)) return parse_error();
-    if (textured.second == "") {
+    if (textured.second.empty()) {
       scalar = mean(textured.first);
     } else {
       auto& texture = named_textures.at(textured.second);
@@ -3484,7 +3486,7 @@ inline bool convert_material(pbrt_material*     pmaterial,
                        vec3f& color, const vec3f& def) -> bool {
     auto textured = pair{def, ""s};
     if (!get_pbrt_value(values, name, textured)) return parse_error();
-    if (textured.second == "") {
+    if (textured.second.empty()) {
       color = textured.first;
     } else {
       auto& texture = named_textures.at(textured.second);
@@ -3708,8 +3710,8 @@ inline bool convert_material(pbrt_material*     pmaterial,
     auto bsdffile = ""s;
     if (!get_pbrt_value(command.values, "bsdffile", bsdffile))
       return parse_error();
-    if (bsdffile.rfind("/") != string::npos)
-      bsdffile = bsdffile.substr(bsdffile.rfind("/") + 1);
+    if (bsdffile.rfind('/') != string::npos)
+      bsdffile = bsdffile.substr(bsdffile.rfind('/') + 1);
     if (bsdffile == "paint.bsdf") {
       pmaterial->color     = {0.6f, 0.6f, 0.6f};
       pmaterial->specular  = 1;
@@ -3845,7 +3847,7 @@ inline bool convert_shape(pbrt_shape* shape, const pbrt_command& command,
     auto def      = 1.0f;
     auto textured = pair{def, ""s};
     if (!get_pbrt_value(values, name, textured)) return parse_error();
-    if (textured.second == "") {
+    if (textured.second.empty()) {
       filename = "";
     } else {
       filename = named_textures.at(textured.second).filename;
@@ -4252,7 +4254,7 @@ struct pbrt_context {
       command.name = "__unnamed__material__" + std::to_string(material_id++);
       if (!parse_param(str, command.type)) return parse_error();
       if (!parse_params(str, command.values)) return parse_error();
-      if (command.type == "") {
+      if (command.type.empty()) {
         ctx.stack.back().material = {};
       } else {
         ctx.stack.back().material = {};
@@ -4296,7 +4298,7 @@ struct pbrt_context {
         material_map[matkey] = material;
       }
       shape->material = material_map.at(matkey);
-      if (ctx.cur_object != "") {
+      if (!ctx.cur_object.empty()) {
         ctx.objects[ctx.cur_object].push_back(shape);
       }
     } else if (cmd == "AreaLightSource") {
