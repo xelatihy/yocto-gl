@@ -63,7 +63,7 @@ using namespace std::string_literals;
 namespace yocto {
 
 trace_shape::~trace_shape() {
-  if (bvh) delete bvh;
+  delete bvh;
 #ifdef YOCTO_EMBREE
   if (embree_bvh) rtcReleaseScene(embree_bvh);
 #endif
@@ -77,7 +77,7 @@ trace_scene::~trace_scene() {
   for (auto texture : textures) delete texture;
   for (auto environment : environments) delete environment;
   for (auto light : lights) delete light;
-  if (bvh) delete bvh;
+  delete bvh;
 #ifdef YOCTO_EMBREE
   if (embree_bvh) rtcReleaseScene(embree_bvh);
 #endif
@@ -270,7 +270,7 @@ void set_emission(trace_environment* environment, const vec3f& emission,
 namespace yocto {
 
 void tesselate_shape(trace_shape* shape) {
-  if (shape->subdivisions) {
+  if (shape->subdivisions > 0) {
     if (!shape->points.empty()) {
       throw std::runtime_error("cannot subdivide points");
     } else if (!shape->lines.empty()) {
@@ -349,7 +349,7 @@ void tesselate_shape(trace_shape* shape) {
     shape->subdivisions = 0;
   }
 
-  if (shape->displacement != 0 && shape->displacement_tex) {
+  if (shape->displacement != 0 && shape->displacement_tex != nullptr) {
     if (shape->texcoords.empty())
       throw std::runtime_error("missing texture coordinates");
 
@@ -414,9 +414,10 @@ void tesselate_shape(trace_shape* shape) {
     shape->colors    = {};
     shape->radius    = {};
   }
-}  // namespace yocto
+}
 
-void tesselate_shapes(trace_scene* scene, progress_callback progress_cb) {
+void tesselate_shapes(
+    trace_scene* scene, const progress_callback& progress_cb) {
   // handle progress
   auto progress = vec2i{0, (int)scene->shapes.size()};
 
@@ -465,7 +466,7 @@ vec4f lookup_texture(
 vec4f eval_texture(const trace_texture* texture, const vec2f& uv,
     bool ldr_as_linear, bool no_interpolation, bool clamp_to_edge) {
   // get texture
-  if (!texture) return {1, 1, 1, 1};
+  if (texture == nullptr) return {1, 1, 1, 1};
 
   // get image width/height
   auto size = texture_size(texture);
@@ -699,7 +700,8 @@ vec3f eval_normalmap(
   // apply normal mapping
   auto normal   = eval_normal(instance, element, uv);
   auto texcoord = eval_texcoord(instance, element, uv);
-  if (normal_tex && (!shape->triangles.empty() || !shape->quads.empty())) {
+  if (normal_tex != nullptr &&
+      (!shape->triangles.empty() || !shape->quads.empty())) {
     auto normalmap = -1 + 2 * xyz(eval_texture(normal_tex, texcoord, true));
     auto [tu, tv]  = eval_element_tangents(instance, element);
     auto frame     = frame3f{tu, tv, normal, zero3f};
@@ -719,7 +721,7 @@ vec3f eval_shading_normal(const trace_instance* instance, int element,
   auto material = instance->material;
   if (!shape->triangles.empty() || !shape->quads.empty()) {
     auto normal = eval_normal(instance, element, uv);
-    if (material->normal_tex) {
+    if (material->normal_tex != nullptr) {
       normal = eval_normalmap(instance, element, uv);
     }
     if (!material->thin) return normal;
@@ -805,7 +807,7 @@ trace_material_sample eval_material(
   mat.scanisotropy = material->scanisotropy;
   mat.trdepth      = material->trdepth;
   mat.normalmap =
-      material->normal_tex
+      material->normal_tex != nullptr
           ? -1 + 2 * xyz(eval_texture(material->normal_tex, texcoord, true))
           : vec3f{0, 0, 1};
   return mat;
@@ -1275,7 +1277,7 @@ static pair<int, int> split_sah(
   if (mid == start || mid == end) {
     split_axis = 0;
     mid        = (start + end) / 2;
-    throw std::runtime_error("bad bvh split");
+    // throw std::runtime_error("bad bvh split");
   }
 
   return {mid, split_axis};
@@ -1589,7 +1591,7 @@ static void init_bvh(trace_shape* shape, const trace_params& params) {
   }
 
   // build nodes
-  if (shape->bvh) delete shape->bvh;
+  delete shape->bvh;
   shape->bvh = new trace_bvh{};
   build_bvh_serial(shape->bvh->nodes, primitives, params.bvh);
 
@@ -1601,14 +1603,14 @@ static void init_bvh(trace_shape* shape, const trace_params& params) {
 }
 
 void init_bvh(trace_scene* scene, const trace_params& params,
-    progress_callback progress_cb) {
+    const progress_callback& progress_cb) {
   // handle progress
   auto progress = vec2i{0, 1 + (int)scene->shapes.size()};
 
   // shapes
-  for (auto idx = 0; idx < scene->shapes.size(); idx++) {
+  for (auto shape : scene->shapes) {
     if (progress_cb) progress_cb("build shape bvh", progress.x++, progress.y);
-    init_bvh(scene->shapes[idx], params);
+    init_bvh(shape, params);
   }
 
   // embree
@@ -1638,7 +1640,7 @@ void init_bvh(trace_scene* scene, const trace_params& params,
   }
 
   // build nodes
-  if (scene->bvh) delete scene->bvh;
+  delete scene->bvh;
   scene->bvh = new trace_bvh{};
   build_bvh_serial(scene->bvh->nodes, primitives, params.bvh);
 
@@ -1734,7 +1736,7 @@ static bool intersect_shape_bvh(trace_shape* shape, const ray3f& ray_,
   if (bvh->nodes.empty()) return false;
 
   // node stack
-  int  node_stack[128];
+  auto node_stack        = array<int, 128>{};
   auto node_cur          = 0;
   node_stack[node_cur++] = 0;
 
@@ -1750,7 +1752,7 @@ static bool intersect_shape_bvh(trace_shape* shape, const ray3f& ray_,
       (ray_dinv.z < 0) ? 1 : 0};
 
   // walking stack
-  while (node_cur) {
+  while (node_cur != 0) {
     // grab node
     auto& node = bvh->nodes[node_stack[--node_cur]];
 
@@ -1763,7 +1765,7 @@ static bool intersect_shape_bvh(trace_shape* shape, const ray3f& ray_,
     if (node.internal) {
       // for internal nodes, attempts to proceed along the
       // split axis from smallest to largest nodes
-      if (ray_dsign[node.axis]) {
+      if (ray_dsign[node.axis] != 0) {
         node_stack[node_cur++] = node.start + 0;
         node_stack[node_cur++] = node.start + 1;
       } else {
@@ -1838,7 +1840,7 @@ static bool intersect_scene_bvh(const trace_scene* scene, const ray3f& ray_,
   if (bvh->nodes.empty()) return false;
 
   // node stack
-  int  node_stack[128];
+  auto node_stack        = array<int, 128>{};
   auto node_cur          = 0;
   node_stack[node_cur++] = 0;
 
@@ -1854,7 +1856,7 @@ static bool intersect_scene_bvh(const trace_scene* scene, const ray3f& ray_,
       (ray_dinv.z < 0) ? 1 : 0};
 
   // walking stack
-  while (node_cur) {
+  while (node_cur != 0) {
     // grab node
     auto& node = bvh->nodes[node_stack[--node_cur]];
 
@@ -1867,7 +1869,7 @@ static bool intersect_scene_bvh(const trace_scene* scene, const ray3f& ray_,
     if (node.internal) {
       // for internal nodes, attempts to proceed along the
       // split axis from smallest to largest nodes
-      if (ray_dsign[node.axis]) {
+      if (ray_dsign[node.axis] != 0) {
         node_stack[node_cur++] = node.start + 0;
         node_stack[node_cur++] = node.start + 1;
       } else {
@@ -2204,21 +2206,21 @@ static vec3f sample_lights(const trace_scene* scene, const vec3f& position,
     float rl, float rel, const vec2f& ruv) {
   auto light_id = sample_uniform((int)scene->lights.size(), rl);
   auto light    = scene->lights[light_id];
-  if (light->instance) {
+  if (light->instance != nullptr) {
     auto instance = light->instance;
     auto element  = sample_discrete_cdf(instance->shape->elements_cdf, rel);
     auto uv       = (!instance->shape->triangles.empty()) ? sample_triangle(ruv)
                                                     : ruv;
     auto lposition = eval_position(light->instance, element, uv);
     return normalize(lposition - position);
-  } else if (light->environment) {
+  } else if (light->environment != nullptr) {
     auto environment = light->environment;
-    if (environment->emission_tex) {
+    if (environment->emission_tex != nullptr) {
       auto emission_tex = environment->emission_tex;
       auto idx          = sample_discrete_cdf(environment->texels_cdf, rel);
       auto size         = texture_size(emission_tex);
       auto uv           = vec2f{
-          (idx % size.x + 0.5f) / size.x, (idx / size.x + 0.5f) / size.y};
+          ((idx % size.x) + 0.5f) / size.x, ((idx / size.x) + 0.5f) / size.y};
       return transform_direction(environment->frame,
           {cos(uv.x * 2 * pif) * sin(uv.y * pif), cos(uv.y * pif),
               sin(uv.x * 2 * pif) * sin(uv.y * pif)});
@@ -2235,7 +2237,7 @@ static float sample_lights_pdf(
     const trace_scene* scene, const vec3f& position, const vec3f& direction) {
   auto pdf = 0.0f;
   for (auto light : scene->lights) {
-    if (light->instance) {
+    if (light->instance != nullptr) {
       // check all intersection
       auto lpdf          = 0.0f;
       auto next_position = position;
@@ -2256,9 +2258,9 @@ static float sample_lights_pdf(
         next_position = lposition + direction * 1e-3f;
       }
       pdf += lpdf;
-    } else if (light->environment) {
+    } else if (light->environment != nullptr) {
       auto environment = light->environment;
-      if (environment->emission_tex) {
+      if (environment->emission_tex != nullptr) {
         auto emission_tex = environment->emission_tex;
         auto size         = texture_size(emission_tex);
         auto wl = transform_direction(inverse(environment->frame), direction);
@@ -2298,7 +2300,7 @@ static vec4f trace_path(const trace_scene* scene, const ray3f& ray_,
     // intersect next point
     auto intersection = intersect_scene_bvh(scene, ray);
     if (!intersection.hit) {
-      if (bounce || !params.envhidden)
+      if (bounce > 0 || !params.envhidden)
         radiance += weight * eval_environment(scene, ray.d);
       break;
     }
@@ -2434,7 +2436,7 @@ static vec4f trace_naive(const trace_scene* scene, const ray3f& ray_,
     // intersect next point
     auto intersection = intersect_scene_bvh(scene, ray);
     if (!intersection.hit) {
-      if (bounce || !params.envhidden)
+      if (bounce > 0 || !params.envhidden)
         radiance += weight * eval_environment(scene, ray.d);
       break;
     }
@@ -2505,7 +2507,7 @@ static vec4f trace_eyelight(const trace_scene* scene, const ray3f& ray_,
     // intersect next point
     auto intersection = intersect_scene_bvh(scene, ray);
     if (!intersection.hit) {
-      if (bounce || !params.envhidden)
+      if (bounce > 0 || !params.envhidden)
         radiance += weight * eval_environment(scene, ray.d);
       break;
     }
@@ -2821,7 +2823,7 @@ static trace_light* add_light(trace_scene* scene) {
 }
 
 // Init trace lights
-void init_lights(trace_scene* scene, progress_callback progress_cb) {
+void init_lights(trace_scene* scene, const progress_callback& progress_cb) {
   // handle progress
   auto progress = vec2i{0, 1};
   if (progress_cb) progress_cb("build light", progress.x++, progress.y);
@@ -2840,7 +2842,7 @@ void init_lights(trace_scene* scene, progress_callback progress_cb) {
         auto& t                  = shape->triangles[idx];
         shape->elements_cdf[idx] = triangle_area(shape->positions[t.x],
             shape->positions[t.y], shape->positions[t.z]);
-        if (idx) shape->elements_cdf[idx] += shape->elements_cdf[idx - 1];
+        if (idx != 0) shape->elements_cdf[idx] += shape->elements_cdf[idx - 1];
       }
     }
     if (!shape->quads.empty()) {
@@ -2850,7 +2852,7 @@ void init_lights(trace_scene* scene, progress_callback progress_cb) {
         shape->elements_cdf[idx] = quad_area(shape->positions[t.x],
             shape->positions[t.y], shape->positions[t.z],
             shape->positions[t.w]);
-        if (idx) shape->elements_cdf[idx] += shape->elements_cdf[idx - 1];
+        if (idx != 0) shape->elements_cdf[idx] += shape->elements_cdf[idx - 1];
       }
     }
     auto light         = add_light(scene);
@@ -2860,7 +2862,7 @@ void init_lights(trace_scene* scene, progress_callback progress_cb) {
   for (auto environment : scene->environments) {
     if (environment->emission == zero3f) continue;
     if (progress_cb) progress_cb("build light", progress.x++, ++progress.y);
-    if (environment->emission_tex) {
+    if (environment->emission_tex != nullptr) {
       auto texture            = environment->emission_tex;
       auto size               = texture_size(texture);
       environment->texels_cdf = vector<float>(size.x * size.y);
@@ -2870,7 +2872,8 @@ void init_lights(trace_scene* scene, progress_callback progress_cb) {
           auto th                    = (ij.y + 0.5f) * pif / size.y;
           auto value                 = lookup_texture(texture, ij);
           environment->texels_cdf[i] = max(value) * sin(th);
-          if (i) environment->texels_cdf[i] += environment->texels_cdf[i - 1];
+          if (i != 0)
+            environment->texels_cdf[i] += environment->texels_cdf[i - 1];
         }
       }
     }
@@ -2885,8 +2888,8 @@ void init_lights(trace_scene* scene, progress_callback progress_cb) {
 
 // Progressively compute an image by calling trace_samples multiple times.
 image<vec4f> trace_image(const trace_scene* scene, const trace_camera* camera,
-    const trace_params& params, progress_callback progress_cb,
-    image_callback image_cb) {
+    const trace_params& params, const progress_callback& progress_cb,
+    const image_callback& image_cb) {
   auto state_guard = std::make_unique<trace_state>();
   auto state       = state_guard.get();
   init_state(state, scene, camera, params);
@@ -2915,8 +2918,8 @@ image<vec4f> trace_image(const trace_scene* scene, const trace_camera* camera,
 // [experimental] Asynchronous interface
 void trace_start(trace_state* state, const trace_scene* scene,
     const trace_camera* camera, const trace_params& params,
-    progress_callback progress_cb, image_callback image_cb,
-    async_callback async_cb) {
+    const progress_callback& progress_cb, const image_callback& image_cb,
+    const async_callback& async_cb) {
   init_state(state, scene, camera, params);
   state->worker = {};
   state->stop   = false;
@@ -2955,7 +2958,7 @@ void trace_start(trace_state* state, const trace_scene* scene,
   });
 }
 void trace_stop(trace_state* state) {
-  if (!state) return;
+  if (state == nullptr) return;
   state->stop = true;
   if (state->worker.valid()) state->worker.get();
 }

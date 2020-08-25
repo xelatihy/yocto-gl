@@ -2346,7 +2346,7 @@ void make_disk(vector<vec4i>& quads, vector<vec3f>& positions,
     float uvscale) {
   make_rect(quads, positions, normals, texcoords, {steps, steps}, {1, 1},
       {uvscale, uvscale});
-  for (auto& position : position) {
+  for (auto& position : positions) {
     // Analytical Methods for Squaring the Disc, by C. Fong
     // https://arxiv.org/abs/1509.06344
     auto xy = vec2f{position.x, position.y};
@@ -2432,7 +2432,7 @@ void make_uvcylinder(vector<vec4i>& quads, vector<vec3f>& positions,
     qpositions[i].z = -scale.y;
     qnormals[i]     = -qnormals[i];
   }
-  for (auto& qquad : qquad) swap(qquad.x, qquad.z);
+  for (auto& qquad : qquads) swap(qquad.x, qquad.z);
   merge_quads(quads, positions, normals, texcoords, qquads, qpositions,
       qnormals, qtexcoords);
 }
