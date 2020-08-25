@@ -1452,34 +1452,48 @@ static vector<string> split_string(const string& str) {
 }
 
 // Pfm load
-static vector<float> load_pfm(
-    const char* filename, int& w, int& h, int& nc, int req) {
+static bool load_pfm(const string& filename, int& w, int& h, int& nc,
+    vector<float>& pixels, string& error, int req) {
+  // error helpers
+  auto open_error = [filename, &error]() {
+    error = filename + ": file not found";
+    return false;
+  };
+  auto parse_error = [filename, &error]() {
+    error = filename + ": parse error";
+    return false;
+  };
+  auto read_error = [filename, &error]() {
+    error = filename + ": read error";
+    return false;
+  };
+
   auto fs = open_file(filename, "rb");
-  if (!fs) return {};
+  if (!fs) return open_error();
 
   // buffer
   auto buffer = array<char, 4096>{};
   auto toks   = vector<string>();
 
   // read magic
-  if (!read_line(fs, buffer)) return {};
+  if (!read_line(fs, buffer)) return read_error();
   toks = split_string(buffer.data());
   if (toks[0] == "Pf") {
     nc = 1;
   } else if (toks[0] == "PF") {
     nc = 3;
   } else {
-    return {};
+    return parse_error();
   }
 
   // read w, h
-  if (!read_line(fs, buffer)) return {};
+  if (!read_line(fs, buffer)) return read_error();
   toks = split_string(buffer.data());
   w    = atoi(toks[0].c_str());
   h    = atoi(toks[1].c_str());
 
   // read scale
-  if (!read_line(fs, buffer)) return {};
+  if (!read_line(fs, buffer)) return read_error();
   toks   = split_string(buffer.data());
   auto s = atof(toks[0].c_str());
 
@@ -1487,7 +1501,7 @@ static vector<float> load_pfm(
   auto npixels = (size_t)(w) * (size_t)(h);
   auto nvalues = npixels * (size_t)(nc);
   auto nrow    = (size_t)(w) * (size_t)(nc);
-  auto pixels  = vector<float>(nvalues);
+  pixels       = vector<float>(nvalues);
   for (auto j = h - 1; j >= 0; j--) {
     if (!read_values(fs, pixels.data() + j * nrow, nrow)) return {};
   }
@@ -1506,7 +1520,7 @@ static vector<float> load_pfm(
   }
 
   // proper number of channels
-  if (req == 0 || nc == req) return pixels;
+  if (req == 0 || nc == req) return true;
 
   // pack into channels
   if (req < 0 || req > 4) return {};
@@ -1554,31 +1568,43 @@ static vector<float> load_pfm(
       }
     }
   }
-  return cpixels;
+
+  swap(pixels, cpixels);
+  return true;
 }
 
 // save pfm
-static bool save_pfm(
-    const char* filename, int w, int h, int nc, const float* pixels) {
-  auto fs = open_file(filename, "wb");
-  if (!fs) return false;
+static bool save_pfm(const string& filename, int w, int h, int nc,
+    const vector<float>& pixels, string& error) {
+  // error helpers
+  auto open_error = [filename, &error]() {
+    error = filename + ": file not found";
+    return false;
+  };
+  auto write_error = [filename, &error]() {
+    error = filename + ": write error";
+    return false;
+  };
 
-  if (!write_text(fs, (nc == 1) ? "Pf\n"s : "PF\n"s)) return false;
+  auto fs = open_file(filename, "wb");
+  if (!fs) return open_error();
+
+  if (!write_text(fs, (nc == 1) ? "Pf\n"s : "PF\n"s)) return write_error();
   if (!write_text(fs, std::to_string(w) + " " + std::to_string(h) + "\n"))
     return false;
-  if (!write_text(fs, "-1\n")) return false;
+  if (!write_text(fs, "-1\n")) return write_error();
   if (nc == 1 || nc == 3) {
-    if (!write_values(fs, pixels, w * h * nc)) return false;
+    if (!write_values(fs, pixels.data(), pixels.size())) return write_error();
   } else {
     for (auto i = 0; i < w * h; i++) {
       auto vz = 0.0f;
-      auto v  = pixels + i * nc;
-      if (!write_value(fs, v + 0)) return false;
-      if (!write_value(fs, v + 1)) return false;
+      auto v  = pixels.data() + i * nc;
+      if (!write_value(fs, v + 0)) return write_error();
+      if (!write_value(fs, v + 1)) return write_error();
       if (nc == 2) {
-        if (!write_value(fs, &vz)) return false;
+        if (!write_value(fs, &vz)) return write_error();
       } else {
-        if (!write_value(fs, v + 2)) return false;
+        if (!write_value(fs, v + 2)) return write_error();
       }
     }
   }
@@ -1616,7 +1642,9 @@ bool is_hdr_filename(const string& filename) {
     return true;
   } else if (ext == ".pfm" || ext == ".PFM") {
     auto width = 0, height = 0, ncomp = 0;
-    auto pixels = load_pfm(filename.c_str(), width, height, ncomp, 4);
+    auto pixels = vector<float>{};
+    if (!load_pfm(filename, width, height, ncomp, pixels, error, 4))
+      return false;
     if (pixels.empty()) return read_error();
     img = image{{width, height}, (const vec4f*)pixels.data()};
     return true;
@@ -1651,15 +1679,14 @@ bool is_hdr_filename(const string& filename) {
 
   auto ext = path_extension(filename);
   if (ext == ".hdr" || ext == ".HDR") {
-    if (!stbi_write_hdr(
-            filename.c_str(), img.width(), img.height(), 4, (float*)img.data()))
+    if (!stbi_write_hdr(filename.c_str(), img.width(), img.height(), 4,
+            (const float*)img.data()))
       return write_error();
     return true;
   } else if (ext == ".pfm" || ext == ".PFM") {
-    if (!save_pfm(
-            filename.c_str(), img.width(), img.height(), 4, (float*)img.data()))
-      return write_error();
-    return true;
+    return save_pfm(filename, img.width(), img.height(), 4,
+        {(const float*)img.data(), (const float*)img.data() + img.count() * 4},
+        error);
   } else if (ext == ".exr" || ext == ".EXR") {
     if (SaveEXR((float*)img.data(), img.width(), img.height(), 4, 1,
             filename.c_str(), nullptr) < 0)
