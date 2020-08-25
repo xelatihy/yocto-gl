@@ -1777,8 +1777,7 @@ vector<int> strip_ascending_distance_field(const geodesic_solver& solver,
   return result;
 }
 
-[[nodiscard]] bool check_strip(
-    const vector<vec3i>& adjacencies, const vector<int>& strip) {
+bool check_strip(const vector<vec3i>& adjacencies, const vector<int>& strip) {
   auto faces = std::unordered_set<int>{};
   faces.insert(strip[0]);
   for (auto i = 1; i < strip.size(); ++i) {
@@ -2212,7 +2211,7 @@ static float intersect_segments(const vec2f& start1, const vec2f& end1,
   return (a.x * d.y - a.y * d.x) / det;
 }
 
-[[nodiscard]] bool path_check_strip(
+bool path_check_strip(
     const vector<vec3i>& adjacencies, const vector<int>& strip) {
   auto faces = unordered_set<int>{};
   faces.insert(strip[0]);
@@ -2358,7 +2357,7 @@ static vector<float> funnel(
   return lerps;
 }
 
-[[nodiscard]] bool check_point(const mesh_point& point) {
+bool check_point(const mesh_point& point) {
   assert(point.face != -1);
   assert(point.uv.x >= 0);
   assert(point.uv.y >= 0);
@@ -2533,7 +2532,7 @@ mesh_point eval_path_point(const geodesic_path& path,
 namespace yocto {
 
 // Load ply mesh
-[[nodiscard]] bool load_mesh(const string& filename, vector<vec3i>& triangles,
+bool load_mesh(const string& filename, vector<vec3i>& triangles,
     vector<vec3f>& positions, vector<vec3f>& normals, vector<vec2f>& texcoords,
     vector<vec3f>& colors, string& error, bool flip_texcoord) {
   auto format_error = [filename, &error]() {
@@ -2600,11 +2599,10 @@ namespace yocto {
 }
 
 // Save ply mesh
-[[nodiscard]] bool save_mesh(const string& filename,
-    const vector<vec3i>& triangles, const vector<vec3f>& positions,
-    const vector<vec3f>& normals, const vector<vec2f>& texcoords,
-    const vector<vec3f>& colors, string& error, bool ascii,
-    bool flip_texcoord) {
+bool save_mesh(const string& filename, const vector<vec3i>& triangles,
+    const vector<vec3f>& positions, const vector<vec3f>& normals,
+    const vector<vec2f>& texcoords, const vector<vec3f>& colors, string& error,
+    bool ascii, bool flip_texcoord) {
   auto format_error = [filename, &error]() {
     error = filename + ": unknown format";
     return false;
@@ -2645,7 +2643,7 @@ namespace yocto {
 }
 
 // Load ply mesh
-[[nodiscard]] bool load_lines(const string& filename, vector<vec2i>& lines,
+bool load_lines(const string& filename, vector<vec2i>& lines,
     vector<vec3f>& positions, vector<vec3f>& normals, vector<vec2f>& texcoords,
     vector<vec3f>& colors, string& error, bool flip_texcoord) {
   auto format_error = [filename, &error]() {
@@ -2712,11 +2710,10 @@ namespace yocto {
 }
 
 // Save ply mesh
-[[nodiscard]] bool save_lines(const string& filename,
-    const vector<vec2i>& lines, const vector<vec3f>& positions,
-    const vector<vec3f>& normals, const vector<vec2f>& texcoords,
-    const vector<vec3f>& colors, string& error, bool ascii,
-    bool flip_texcoord) {
+bool save_lines(const string& filename, const vector<vec2i>& lines,
+    const vector<vec3f>& positions, const vector<vec3f>& normals,
+    const vector<vec2f>& texcoords, const vector<vec3f>& colors, string& error,
+    bool ascii, bool flip_texcoord) {
   auto format_error = [filename, &error]() {
     error = filename + ": unknown format";
     return false;

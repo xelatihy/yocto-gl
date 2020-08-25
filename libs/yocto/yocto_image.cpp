@@ -1813,8 +1813,7 @@ bool is_hdr_filename(const string& filename) {
 }
 
 // Loads an hdr image.
-[[nodiscard]] bool load_image(
-    const string& filename, image<vec4f>& img, string& error) {
+bool load_image(const string& filename, image<vec4f>& img, string& error) {
   auto format_error = [filename, &error]() {
     error = filename + ": unknown format";
     return false;
@@ -1864,7 +1863,7 @@ bool is_hdr_filename(const string& filename) {
 }
 
 // Saves an hdr image.
-[[nodiscard]] bool save_image(
+bool save_image(
     const string& filename, const image<vec4f>& img, string& error) {
   auto format_error = [filename, &error]() {
     error = filename + ": unknown format";
@@ -1896,8 +1895,7 @@ bool is_hdr_filename(const string& filename) {
 }
 
 // Loads an ldr image.
-[[nodiscard]] bool load_image(
-    const string& filename, image<vec4b>& img, string& error) {
+bool load_image(const string& filename, image<vec4b>& img, string& error) {
   auto format_error = [filename, &error]() {
     error = filename + ": unknown format";
     return false;
@@ -1951,7 +1949,7 @@ bool is_hdr_filename(const string& filename) {
 }
 
 // Saves an ldr image.
-[[nodiscard]] bool save_image(
+bool save_image(
     const string& filename, const image<vec4b>& img, string& error) {
   auto format_error = [filename, &error]() {
     error = filename + ": unknown format";
@@ -1987,8 +1985,7 @@ bool is_hdr_filename(const string& filename) {
 }
 
 // Loads a 16 bit image.
-[[nodiscard]] bool load_image(
-    const string& filename, image<vec4s>& img, string& error) {
+bool load_image(const string& filename, image<vec4s>& img, string& error) {
   auto format_error = [filename, &error]() {
     error = filename + ": unknown format";
     return false;
