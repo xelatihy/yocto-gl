@@ -194,11 +194,11 @@ inline color_space_params get_color_scape_params(color_space space) {
     case color_space::p3d60: return p3d60_params;
     case color_space::p3d65: return p3d65_params;
     case color_space::p3display: return p3display_params;
-    default: std::runtime_error("should not have gotten here");
+    default: throw std::runtime_error{"should not have gotten here"};
   }
 
   // return here to silence warnings
-  std::runtime_error("should not have gotten here");
+  throw std::runtime_error{"should not have gotten here"};
   return {};
 }
 
@@ -1438,9 +1438,9 @@ static vector<string> split_string(const string& str) {
   auto ret = vector<string>();
   if (str.empty()) return ret;
   auto lpos = (size_t)0;
-  while (lpos != str.npos) {
+  while (lpos != string::npos) {
     auto pos = str.find_first_of(" \t\n\r", lpos);
-    if (pos != str.npos) {
+    if (pos != string::npos) {
       if (pos > lpos) ret.push_back(str.substr(lpos, pos - lpos));
       lpos = pos + 1;
     } else {
@@ -1457,12 +1457,12 @@ static float* load_pfm(const char* filename, int* w, int* h, int* nc, int req) {
   if (!fs) return nullptr;
 
   // buffer
-  char buffer[4096];
-  auto toks = vector<string>();
+  auto buffer = array<char, 4096>{};
+  auto toks   = vector<string>();
 
   // read magic
-  if (!read_line(fs, buffer, sizeof(buffer))) return nullptr;
-  toks = split_string(buffer);
+  if (!read_line(fs, buffer)) return nullptr;
+  toks = split_string(buffer.data());
   if (toks[0] == "Pf")
     *nc = 1;
   else if (toks[0] == "PF")
@@ -1471,14 +1471,14 @@ static float* load_pfm(const char* filename, int* w, int* h, int* nc, int req) {
     return nullptr;
 
   // read w, h
-  if (!read_line(fs, buffer, sizeof(buffer))) return nullptr;
-  toks = split_string(buffer);
+  if (!read_line(fs, buffer)) return nullptr;
+  toks = split_string(buffer.data());
   *w   = atoi(toks[0].c_str());
   *h   = atoi(toks[1].c_str());
 
   // read scale
-  if (!read_line(fs, buffer, sizeof(buffer))) return nullptr;
-  toks   = split_string(buffer);
+  if (!read_line(fs, buffer)) return nullptr;
+  toks   = split_string(buffer.data());
   auto s = atof(toks[0].c_str());
 
   // read the data (flip y)
@@ -1506,7 +1506,7 @@ static float* load_pfm(const char* filename, int* w, int* h, int* nc, int req) {
   }
 
   // proper number of channels
-  if (!req || *nc == req) return pixels.release();
+  if (req == 0 || *nc == req) return pixels.release();
 
   // pack into channels
   if (req < 0 || req > 4) {
@@ -1565,7 +1565,7 @@ static bool save_pfm(
   auto fs = open_file(filename, "wb");
   if (!fs) return false;
 
-  if (!write_text(fs, (nc == 1) ? "Pf\n" : "PF\n")) return false;
+  if (!write_text(fs, (nc == 1) ? "Pf\n"s : "PF\n"s)) return false;
   if (!write_text(fs, std::to_string(w) + " " + std::to_string(h) + "\n"))
     return false;
   if (!write_text(fs, "-1\n")) return false;
@@ -1612,21 +1612,21 @@ bool is_hdr_filename(const string& filename) {
     auto pixels = (float*)nullptr;
     if (LoadEXR(&pixels, &width, &height, filename.c_str(), nullptr) != 0)
       return read_error();
-    if (!pixels) return read_error();
+    if (pixels == nullptr) return read_error();
     img = image{{width, height}, (const vec4f*)pixels};
     free(pixels);
     return true;
   } else if (ext == ".pfm" || ext == ".PFM") {
     auto width = 0, height = 0, ncomp = 0;
     auto pixels = load_pfm(filename.c_str(), &width, &height, &ncomp, 4);
-    if (!pixels) return read_error();
+    if (pixels == nullptr) return read_error();
     img = image{{width, height}, (const vec4f*)pixels};
     delete[] pixels;
     return true;
   } else if (ext == ".hdr" || ext == ".HDR") {
     auto width = 0, height = 0, ncomp = 0;
     auto pixels = stbi_loadf(filename.c_str(), &width, &height, &ncomp, 4);
-    if (!pixels) return read_error();
+    if (pixels == nullptr) return read_error();
     img = image{{width, height}, (const vec4f*)pixels};
     free(pixels);
     return true;
@@ -1763,7 +1763,7 @@ bool is_hdr_filename(const string& filename) {
       ext == ".tga" || ext == ".TGA" || ext == ".bmp" || ext == ".BMP") {
     auto width = 0, height = 0, ncomp = 0;
     auto pixels = stbi_load_16(filename.c_str(), &width, &height, &ncomp, 4);
-    if (!pixels) return read_error();
+    if (pixels == nullptr) return read_error();
     img = image{{width, height}, (const vec4s*)pixels};
     free(pixels);
     return true;
@@ -1811,17 +1811,17 @@ static float* load_yvol(
   if (!fs) return nullptr;
 
   // buffer
-  char buffer[4096];
-  auto toks = vector<string>();
+  auto buffer = array<char, 4096>{};
+  auto toks   = vector<string>();
 
   // read magic
-  if (!read_line(fs, buffer, sizeof(buffer))) return nullptr;
-  toks = split_string(buffer);
+  if (!read_line(fs, buffer)) return nullptr;
+  toks = split_string(buffer.data());
   if (toks[0] != "YVOL") return nullptr;
 
   // read w, h
-  if (!read_line(fs, buffer, sizeof(buffer))) return nullptr;
-  toks = split_string(buffer);
+  if (!read_line(fs, buffer)) return nullptr;
+  toks = split_string(buffer.data());
   *w   = atoi(toks[0].c_str());
   *h   = atoi(toks[1].c_str());
   *d   = atoi(toks[2].c_str());
@@ -1834,7 +1834,7 @@ static float* load_yvol(
   if (!read_values(fs, voxels.get(), nvalues)) return nullptr;
 
   // proper number of channels
-  if (!req || *nc == req) return voxels.release();
+  if (req == 0 || *nc == req) return voxels.release();
 
   // pack into channels
   if (req < 0 || req > 4) {
@@ -1934,7 +1934,6 @@ static bool save_yvol(
     return false;
   auto nvalues = (size_t)w * (size_t)h * (size_t)d * (size_t)nc;
   if (!write_values(fs, voxels, nvalues)) return false;
-
   return true;
 }
 

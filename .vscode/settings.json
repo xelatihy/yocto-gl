@@ -100,7 +100,8 @@
     "ranges": "cpp",
     "compare": "cpp",
     "concepts": "cpp",
-    "stop_token": "cpp"
+    "stop_token": "cpp",
+    "charconv": "cpp"
   },
   "json.schemas": [
     {
@@ -116,7 +117,41 @@
     "-build/include_subdir",
     "-whitespace/braces",
     "-readability/casting",
-    "-build/c++11"
+    "-build/c++11",
+    "-build/namespaces"
   ],
-  "clang-tidy.executable": "/usr/local/opt/llvm/bin/clang-tidy"
+  "clang-tidy.executable": "/usr/local/opt/llvm/bin/clang-tidy",
+  "clang-tidy.compilerArgs": [
+    "-xc++",
+    "-std=c++17",
+    "-I/usr/local/opt/llvm/include/c++/v1/"
+  ],
+  "clang-tidy.lintOnSave": false,
+  "clang-tidy.buildPath": "${workspaceFolder}/build/vscode/x64-Release",
+  "clang-tidy.checks": [
+    "clang-diagnostic-*",
+    "clang-analyzer-*",
+    "performance-*",
+    "readability-*",
+    "-readability-braces-around-statements",
+    "-readability-uppercase-literal-suffix",
+    "-readability-magic-numbers",
+    "-readability-qualified-auto",
+    "-readability-else-after-return",
+    "-readability-isolate-declaration",
+    "portability-*",
+    "bugprone-*",
+    "-bugprone-narrowing-conversions",
+    "-bugprone-branch-clone",
+    "cppcoreguidelines-*",
+    "-cppcoreguidelines-avoid-magic-numbers",
+    "-cppcoreguidelines-pro-type-vararg",
+    "-cppcoreguidelines-pro-bounds-pointer-arithmetic",
+    "-cppcoreguidelines-narrowing-conversions",
+    "-cppcoreguidelines-special-member-functions",
+    "-cppcoreguidelines-pro-bounds-constant-array-index",
+    "modernize-*",
+    "-modernize-use-nodiscard",
+    "-modernize-use-trailing-return-type"
+  ]
 }

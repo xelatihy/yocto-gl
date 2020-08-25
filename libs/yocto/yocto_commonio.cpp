@@ -260,7 +260,7 @@ bool save_binary(
     error = filename + ": file not found";
     return false;
   }
-  if (!write_values(fs, data.data(), data.size()) != data.size()) {
+  if (!write_values(fs, data.data(), data.size())) {
     error = filename + ": write error";
     return false;
   }

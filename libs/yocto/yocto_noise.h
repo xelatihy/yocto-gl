@@ -36,7 +36,19 @@
 // INCLUDES
 // -----------------------------------------------------------------------------
 
+#include <array>
+
 #include "yocto_math.h"
+
+// -----------------------------------------------------------------------------
+// USING DIRECTIVES
+// -----------------------------------------------------------------------------
+namespace yocto {
+
+// Using directives
+using std::array;
+
+}  // namespace yocto
 
 // -----------------------------------------------------------------------------
 // PERLIN NOISE FUNCTION
@@ -99,7 +111,7 @@ namespace yocto {
 // print('};')
 
 // not same permutation table as Perlin's reference to avoid copyright issues;
-inline const unsigned char __perlin_permutation[512] = {
+inline const auto __perlin_permutation = array<unsigned char, 512>{
     // clang-format off
   124, 56, 113, 233, 69, 219, 244, 236, 246, 92, 26, 82, 218, 176, 78, 143, 238,
   145, 119, 38, 132, 112, 51, 7, 27, 81, 158, 241, 98, 37, 91, 230, 198, 205,
@@ -147,9 +159,9 @@ inline float perlin_noise(float p, int w) {
     auto& _p   = __perlin_permutation;
     auto  hash = (int)_p[i & m];
     auto  h    = hash & 15;
-    auto  grad = 1.0f + (h & 7);  // Gradient value 1.0, 2.0, ..., 8.0
-    if (h & 8) grad = -grad;      // and a random sign for the gradient
-    return (grad * f);            // Multiply the gradient with the distance
+    auto  grad = 1.0f + (h & 7);     // Gradient value 1.0, 2.0, ..., 8.0
+    if ((h & 8) != 0) grad = -grad;  // and a random sign for the gradient
+    return (grad * f);               // Multiply the gradient with the distance
   };
 
   auto i = ifloor(p);
@@ -176,7 +188,7 @@ inline float perlin_noise(const vec2f& p, const vec2i& w) {
     auto  h    = hash & 7;           // Convert low 3 bits of hash code
     float u    = h < 4 ? f.x : f.y;  // into 8 simple gradient directions,
     float v = h < 4 ? f.y : f.x;  // and compute the dot product with (f.x,f.y).
-    return ((h & 1) ? -u : u) + ((h & 2) ? -2 * v : 2 * v);
+    return ((h & 1) != 0 ? -u : u) + ((h & 2) != 0 ? -2 * v : 2 * v);
   };
 
   auto i = vec2i{ifloor(p.x), ifloor(p.y)};
@@ -209,7 +221,7 @@ inline float perlin_noise(const vec3f& p, const vec3i& w) {
     auto h = hash & 15;
     auto u = h < 8 ? f.x : f.y;
     auto v = h < 4 ? f.y : h == 12 || h == 14 ? f.x : f.z;
-    return ((h & 1) ? -u : u) + ((h & 2) ? -v : v);
+    return ((h & 1) != 0 ? -u : u) + ((h & 2) != 0 ? -v : v);
   };
 
   auto i = vec3i{ifloor(p.x), ifloor(p.y), ifloor(p.z)};
@@ -253,7 +265,8 @@ inline float perlin_noise(const vec4f& p, const vec4i& w) {
     auto u = h < 24 ? f.x : f.y;
     auto v = h < 16 ? f.y : f.z;
     auto w = h < 8 ? f.z : f.w;
-    return ((h & 1) ? -u : u) + ((h & 2) ? -v : v) + ((h & 4) ? -w : w);
+    return ((h & 1) != 0 ? -u : u) + ((h & 2) != 0 ? -v : v) +
+           ((h & 4) != 0 ? -w : w);
   };
 
   auto i = vec4i{ifloor(p.x), ifloor(p.y), ifloor(p.z), ifloor(p.w)};

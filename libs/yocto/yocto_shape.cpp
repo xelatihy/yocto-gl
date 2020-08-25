@@ -545,7 +545,7 @@ vector<vector<int>> ordered_boundaries(const vector<vec3i>& triangles,
     if (next_vert[i] == -1) continue;
 
     // add new empty boundary
-    boundaries.push_back({});
+    boundaries.emplace_back();
     auto current = i;
 
     while (true) {
@@ -640,7 +640,7 @@ static pair<int, int> split_sah(vector<int>& primitives,
   if (mid == start || mid == end) {
     split_axis = 0;
     mid        = (start + end) / 2;
-    throw std::runtime_error("bad bvh split");
+    // throw std::runtime_error("bad bvh split");
   }
 
   return {mid, split_axis};
@@ -679,7 +679,7 @@ static pair<int, int> split_balanced(vector<int>& primitives,
   if (mid == start || mid == end) {
     axis = 0;
     mid  = (start + end) / 2;
-    throw std::runtime_error("bad bvh split");
+    // throw std::runtime_error("bad bvh split");
   }
 
   return {mid, axis};
@@ -718,7 +718,7 @@ static pair<int, int> split_middle(vector<int>& primitives,
   if (mid == start || mid == end) {
     axis = 0;
     mid  = (start + end) / 2;
-    throw std::runtime_error("bad bvh split");
+    // throw std::runtime_error("bad bvh split");
   }
 
   return {mid, axis};
@@ -931,7 +931,7 @@ static bool intersect_elements_bvh(const bvh_tree& bvh,
   if (bvh.nodes.empty()) return false;
 
   // node stack
-  int  node_stack[128];
+  auto node_stack        = array<int, 128>{};
   auto node_cur          = 0;
   node_stack[node_cur++] = 0;
 
@@ -1059,7 +1059,7 @@ static bool overlap_elements_bvh(const bvh_tree& bvh, Overlap&& overlap_element,
   if (bvh.nodes.empty()) return false;
 
   // node stack
-  int  node_stack[64];
+  auto node_stack        = array<int, 128>{};
   auto node_cur          = 0;
   node_stack[node_cur++] = 0;
 
@@ -1941,7 +1941,7 @@ int sample_points(const vector<float>& cdf, float re) {
 }
 vector<float> sample_points_cdf(int npoints) {
   auto cdf = vector<float>(npoints);
-  for (auto i = 0; i < cdf.size(); i++) cdf[i] = 1 + (i ? cdf[i - 1] : 0);
+  for (auto i = 0; i < cdf.size(); i++) cdf[i] = 1 + (i != 0 ? cdf[i - 1] : 0);
   return cdf;
 }
 
@@ -1955,7 +1955,7 @@ vector<float> sample_lines_cdf(
   for (auto i = 0; i < cdf.size(); i++) {
     auto l = lines[i];
     auto w = line_length(positions[l.x], positions[l.y]);
-    cdf[i] = w + (i ? cdf[i - 1] : 0);
+    cdf[i] = w + (i != 0 ? cdf[i - 1] : 0);
   }
   return cdf;
 }
@@ -1971,7 +1971,7 @@ vector<float> sample_triangles_cdf(
   for (auto i = 0; i < cdf.size(); i++) {
     auto t = triangles[i];
     auto w = triangle_area(positions[t.x], positions[t.y], positions[t.z]);
-    cdf[i] = w + (i ? cdf[i - 1] : 0);
+    cdf[i] = w + (i != 0 ? cdf[i - 1] : 0);
   }
   return cdf;
 }
@@ -2346,13 +2346,13 @@ void make_disk(vector<vec4i>& quads, vector<vec3f>& positions,
     float uvscale) {
   make_rect(quads, positions, normals, texcoords, {steps, steps}, {1, 1},
       {uvscale, uvscale});
-  for (auto i = 0; i < positions.size(); i++) {
+  for (auto& position : positions) {
     // Analytical Methods for Squaring the Disc, by C. Fong
     // https://arxiv.org/abs/1509.06344
-    auto xy = vec2f{positions[i].x, positions[i].y};
+    auto xy = vec2f{position.x, position.y};
     auto uv = vec2f{
         xy.x * sqrt(1 - xy.y * xy.y / 2), xy.y * sqrt(1 - xy.x * xy.x / 2)};
-    positions[i] = vec3f{uv.x, uv.y, 0} * scale;
+    position = vec3f{uv.x, uv.y, 0} * scale;
   }
 }
 
@@ -2432,7 +2432,7 @@ void make_uvcylinder(vector<vec4i>& quads, vector<vec3f>& positions,
     qpositions[i].z = -scale.y;
     qnormals[i]     = -qnormals[i];
   }
-  for (auto i = 0; i < qquads.size(); i++) swap(qquads[i].x, qquads[i].z);
+  for (auto& qquad : qquads) swap(qquad.x, qquad.z);
   merge_quads(quads, positions, normals, texcoords, qquads, qpositions,
       qnormals, qtexcoords);
 }
@@ -2689,8 +2689,8 @@ void make_random_points(vector<int>& points, vector<vec3f>& positions,
   make_points(points, positions, normals, texcoords, radius, num, uvscale,
       point_radius);
   auto rng = make_rng(seed);
-  for (auto i = 0; i < positions.size(); i++) {
-    positions[i] = (rand3f(rng) - vec3f{0.5f, 0.5f, 0.5f}) * size;
+  for (auto& position : positions) {
+    position = (rand3f(rng) - vec3f{0.5f, 0.5f, 0.5f}) * size;
   }
 }
 
@@ -3652,8 +3652,7 @@ namespace yocto {
       add_texcoords(ply, split_texcoords, flip_texcoord);
       add_faces(ply, {}, split_quads);
     }
-    if (!save_ply(filename, ply, error)) return false;
-    return true;
+    return save_ply(filename, ply, error);
   } else if (ext == ".obj" || ext == ".OBJ") {
     auto obj_guard = std::make_unique<obj_scene>();
     auto obj       = obj_guard.get();
@@ -3677,8 +3676,7 @@ namespace yocto {
       return shape_error();
     }
     auto err = ""s;
-    if (!save_obj(filename, obj, error)) return false;
-    return true;
+    return save_obj(filename, obj, error);
   } else if (ext == ".cpp" || ext == ".CPP") {
     auto to_cpp = [](const string& name, const string& vname,
                       const auto& values) -> string {
