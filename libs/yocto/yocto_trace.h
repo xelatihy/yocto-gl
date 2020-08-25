@@ -41,6 +41,7 @@
 #include <future>
 #include <memory>
 #include <string>
+#include <utility>
 #include <vector>
 
 #include "yocto_image.h"
@@ -60,6 +61,7 @@ namespace yocto {
 using std::atomic;
 using std::function;
 using std::future;
+using std::pair;
 using std::string;
 using std::vector;
 
@@ -75,11 +77,11 @@ namespace yocto {
 // and the split axis. Leaf and internal nodes are identical, except that
 // indices refer to primitives for leaf nodes or other nodes for internal nodes.
 struct trace_bvh_node {
-  bbox3f  bbox;
-  int32_t start;
-  int16_t num;
-  int8_t  axis;
-  bool    internal;
+  bbox3f  bbox     = invalidb3f;
+  int32_t start    = 0;
+  int16_t num      = 0;
+  int8_t  axis     = 0;
+  bool    internal = false;
 };
 
 // BVH tree stored as a node array with the tree structure is encoded using
@@ -528,15 +530,16 @@ using image_callback =
     function<void(const image<vec4f>& render, int current, int total)>;
 
 // Apply subdivision and displacement rules.
-void tesselate_shapes(trace_scene* scene, progress_callback progress_cb = {});
+void tesselate_shapes(
+    trace_scene* scene, const progress_callback& progress_cb = {});
 void tesselate_shape(trace_scene* shape);
 
 // Initialize lights.
-void init_lights(trace_scene* scene, progress_callback progress_cb = {});
+void init_lights(trace_scene* scene, const progress_callback& progress_cb = {});
 
 // Build the bvh acceleration structure.
 void init_bvh(trace_scene* scene, const trace_params& params,
-    progress_callback progress_cb = {});
+    const progress_callback& progress_cb = {});
 
 // Refit bvh data
 void update_bvh(trace_scene*       scene,
@@ -545,8 +548,8 @@ void update_bvh(trace_scene*       scene,
 
 // Progressively computes an image.
 image<vec4f> trace_image(const trace_scene* scene, const trace_camera* camera,
-    const trace_params& params, progress_callback progress_cb = {},
-    image_callback image_cb = {});
+    const trace_params& params, const progress_callback& progress_cb = {},
+    const image_callback& image_cb = {});
 
 // Check is a sampler requires lights
 bool is_sampler_lit(const trace_params& params);
@@ -569,8 +572,8 @@ using async_callback = function<void(
 struct trace_state;
 void trace_start(trace_state* state, const trace_scene* scene,
     const trace_camera* camera, const trace_params& params,
-    progress_callback progress_cb = {}, image_callback image_cb = {},
-    async_callback async_cb = {});
+    const progress_callback& progress_cb = {},
+    const image_callback& image_cb = {}, const async_callback& async_cb = {});
 void trace_stop(trace_state* state);
 
 }  // namespace yocto

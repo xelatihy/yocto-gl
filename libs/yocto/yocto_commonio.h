@@ -40,6 +40,7 @@
 // INCLUDES
 // -----------------------------------------------------------------------------
 
+#include <array>
 #include <cstdio>
 #include <functional>
 #include <stdexcept>
@@ -53,6 +54,7 @@
 namespace yocto {
 
 // using directives
+using std::array;
 using std::function;
 using std::string;
 using std::vector;
@@ -241,6 +243,12 @@ void close_file(file_stream& fs);
 // Read a line of text
 bool read_line(file_stream& fs, char* buffer, size_t size);
 
+// Read a line of text
+template <size_t N>
+inline bool read_line(file_stream& fs, array<char, N>& buffer) {
+  return read_line(fs, buffer.data(), buffer.size());
+}
+
 // Write text to a file
 bool write_text(file_stream& fs, const string& str);
 
@@ -298,8 +306,7 @@ inline bool read_value(file_stream& fs, T& value, bool big_endian) {
 template <typename T>
 inline bool write_value(file_stream& fs, const T& value_, bool big_endian) {
   auto value = big_endian ? swap_endian(value_) : value_;
-  if (!write_value(fs, value)) return false;
-  return true;
+  return write_value(fs, value);
 }
 
 // Opens a file with a utf8 file name
@@ -339,14 +346,14 @@ inline void format_value(string& str, uint64_t value) {
   str += std::to_string(value);
 }
 inline void format_value(string& str, float value) {
-  char buf[256];
-  snprintf(buf, sizeof(buf), "%g", value);
-  str += buf;
+  auto buf = array<char, 256>{};
+  snprintf(buf.data(), buf.size(), "%g", value);
+  str += buf.data();
 }
 inline void format_value(string& str, double value) {
-  char buf[256];
-  snprintf(buf, sizeof(buf), "%g", value);
-  str += buf;
+  auto buf = array<char, 256>{};
+  snprintf(buf.data(), buf.size(), "%g", value);
+  str += buf.data();
 }
 
 // Foramt to file
@@ -370,15 +377,13 @@ inline bool format_values(
     file_stream& fs, const string& fmt, const Args&... args) {
   auto str = ""s;
   format_values(str, fmt, args...);
-  if (!write_text(fs, str)) return false;
-  return true;
+  return write_text(fs, str);
 }
 template <typename T>
 inline bool format_value(file_stream& fs, const T& value) {
   auto str = ""s;
   format_value(str, value);
-  if (!write_text(fs, str)) return false;
-  return true;
+  return write_text(fs, str);
 }
 
 }  // namespace yocto
@@ -479,7 +484,7 @@ inline bool get_value(const cli_value& cvalue, T& value) {
     return true;
   } else if constexpr (std::is_same_v<T, bool>) {
     if (cvalue.type != cli_type::boolean) return false;
-    value = cvalue.integer == 0 ? false : true;
+    value = cvalue.integer != 0;
     return true;
   } else if constexpr (std::is_integral_v<T> && !std::is_unsigned_v<T>) {
     if (cvalue.type != cli_type::integer) return false;
@@ -518,8 +523,7 @@ inline void add_option(cli_state& cli, const string& name, T& value,
   option.choices       = {};
   option.set_reference = [&value](const vector<cli_value>& cvalues) -> bool {
     if (cvalues.size() != 1) throw std::out_of_range{"invalid number of args"};
-    if (!get_value(cvalues.front(), value)) return false;
-    return true;
+    return get_value(cvalues.front(), value);
   };
 }
 
@@ -542,8 +546,7 @@ inline void add_option(cli_state& cli, const string& name, T& value,
   option.choices       = choices;
   option.set_reference = [&value](const vector<cli_value>& cvalues) -> bool {
     if (cvalues.size() != 1) throw std::out_of_range{"invalid number of args"};
-    if (!get_value(cvalues.front(), value)) return false;
-    return true;
+    return get_value(cvalues.front(), value);
   };
 }
 

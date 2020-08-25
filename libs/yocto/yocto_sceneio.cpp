@@ -190,7 +190,7 @@ vector<string> scene_validation(const sceneio_scene* scene, bool notextures) {
     used.reserve(vals.size());
     for (auto& value : vals) used[value->name] += 1;
     for (auto& [name, used] : used) {
-      if (name == "") {
+      if (name.empty()) {
         errs.push_back("empty " + base + " name");
       } else if (used > 1) {
         errs.push_back("duplicated " + base + " name " + name);
@@ -236,7 +236,8 @@ template <typename T>
 static T* add_element(
     vector<T*>& elements, const string& name, const string& base) {
   auto element  = elements.emplace_back(new T{});
-  element->name = name != "" ? name : (base + std::to_string(elements.size()));
+  element->name = !name.empty() ? name
+                                : (base + std::to_string(elements.size()));
   return element;
 }
 
@@ -456,8 +457,8 @@ void add_radius(sceneio_scene* scene, float radius) {
 void add_materials(sceneio_scene* scene) {
   auto default_material = (sceneio_material*)nullptr;
   for (auto& instance : scene->instances) {
-    if (instance->material) continue;
-    if (!default_material) {
+    if (instance->material != nullptr) continue;
+    if (default_material == nullptr) {
       default_material        = add_material(scene);
       default_material->color = {0.8, 0.8, 0.8};
     }
@@ -543,7 +544,7 @@ void trim_memory(sceneio_scene* scene) {
 }
 
 void tesselate_shape(sceneio_shape* shape) {
-  if (shape->subdivisions) {
+  if (shape->subdivisions != 0) {
     if (!shape->points.empty()) {
       throw std::runtime_error("cannot subdivide points");
     } else if (!shape->lines.empty()) {
@@ -622,7 +623,7 @@ void tesselate_shape(sceneio_shape* shape) {
     shape->subdivisions = 0;
   }
 
-  if (shape->displacement != 0 && shape->displacement_tex) {
+  if (shape->displacement != 0 && shape->displacement_tex != nullptr) {
     if (shape->texcoords.empty())
       throw std::runtime_error("missing texture coordinates");
 
@@ -689,7 +690,8 @@ void tesselate_shape(sceneio_shape* shape) {
   }
 }  // namespace yocto
 
-void tesselate_shapes(sceneio_scene* scene, progress_callback progress_cb) {
+void tesselate_shapes(
+    sceneio_scene* scene, const progress_callback& progress_cb) {
   // handle progress
   auto progress = vec2i{0, (int)scene->shapes.size()};
 
@@ -738,7 +740,7 @@ vec4f lookup_texture(
 vec4f eval_texture(const sceneio_texture* texture, const vec2f& uv,
     bool ldr_as_linear, bool no_interpolation, bool clamp_to_edge) {
   // get texture
-  if (!texture) return {1, 1, 1, 1};
+  if (texture == nullptr) return {1, 1, 1, 1};
 
   // get image width/height
   auto size = texture_size(texture);
@@ -972,7 +974,8 @@ vec3f eval_normalmap(
   // apply normal mapping
   auto normal   = eval_normal(instance, element, uv);
   auto texcoord = eval_texcoord(instance, element, uv);
-  if (normal_tex && (!shape->triangles.empty() || !shape->quads.empty())) {
+  if (normal_tex != nullptr &&
+      (!shape->triangles.empty() || !shape->quads.empty())) {
     auto normalmap = -1 + 2 * xyz(eval_texture(normal_tex, texcoord, true));
     auto [tu, tv]  = eval_element_tangents(instance, element);
     auto frame     = frame3f{tu, tv, normal, zero3f};
@@ -992,7 +995,7 @@ vec3f eval_shading_normal(const sceneio_instance* instance, int element,
   auto material = instance->material;
   if (!shape->triangles.empty() || !shape->quads.empty()) {
     auto normal = eval_normal(instance, element, uv);
-    if (material->normal_tex) {
+    if (material->normal_tex != nullptr) {
       normal = eval_normalmap(instance, element, uv);
     }
     if (!material->thin) return normal;
@@ -1079,7 +1082,7 @@ scene_material_sample eval_material(
   mat.scanisotropy = material->scanisotropy;
   mat.trdepth      = material->trdepth;
   mat.normalmap =
-      material->normal_tex
+      material->normal_tex != nullptr
           ? -1 + 2 * xyz(eval_texture(material->normal_tex, texcoord, true))
           : vec3f{0, 0, 1};
   return mat;
@@ -1166,37 +1169,37 @@ namespace yocto {
 
 // Load/save a scene in the builtin JSON format.
 static bool load_json_scene(const string& filename, sceneio_scene* scene,
-    string& error, progress_callback progress_cb, bool noparallel);
+    string& error, const progress_callback& progress_cb, bool noparallel);
 static bool save_json_scene(const string& filename, const sceneio_scene* scene,
-    string& error, progress_callback progress_cb, bool noparallel);
+    string& error, const progress_callback& progress_cb, bool noparallel);
 
 // Load/save a scene from/to OBJ.
 static bool load_obj_scene(const string& filename, sceneio_scene* scene,
-    string& error, progress_callback progress_cb, bool noparallel);
+    string& error, const progress_callback& progress_cb, bool noparallel);
 static bool save_obj_scene(const string& filename, const sceneio_scene* scene,
-    string& error, progress_callback progress_cb, bool noparallel);
+    string& error, const progress_callback& progress_cb, bool noparallel);
 
 // Load/save a scene from/to PLY. Loads/saves only one mesh with no other data.
 static bool load_ply_scene(const string& filename, sceneio_scene* scene,
-    string& error, progress_callback progress_cb, bool noparallel);
+    string& error, const progress_callback& progress_cb, bool noparallel);
 static bool save_ply_scene(const string& filename, const sceneio_scene* scene,
-    string& error, progress_callback progress_cb, bool noparallel);
+    string& error, const progress_callback& progress_cb, bool noparallel);
 
 // Load/save a scene from/to glTF.
 static bool load_gltf_scene(const string& filename, sceneio_scene* scene,
-    string& error, progress_callback progress_cb, bool noparallel);
+    string& error, const progress_callback& progress_cb, bool noparallel);
 
 // Load/save a scene from/to pbrt-> This is not robust at all and only
 // works on scene that have been previously adapted since the two renderers
 // are too different to match.
 static bool load_pbrt_scene(const string& filename, sceneio_scene* scene,
-    string& error, progress_callback progress_cb, bool noparallel);
+    string& error, const progress_callback& progress_cb, bool noparallel);
 static bool save_pbrt_scene(const string& filename, const sceneio_scene* scene,
-    string& error, progress_callback progress_cb, bool noparallel);
+    string& error, const progress_callback& progress_cb, bool noparallel);
 
 // Load a scene
 bool load_scene(const string& filename, sceneio_scene* scene, string& error,
-    progress_callback progress_cb, bool noparallel) {
+    const progress_callback& progress_cb, bool noparallel) {
   auto format_error = [filename, &error]() {
     error = filename + ": unknown format";
     return false;
@@ -1220,7 +1223,7 @@ bool load_scene(const string& filename, sceneio_scene* scene, string& error,
 
 // Save a scene
 bool save_scene(const string& filename, const sceneio_scene* scene,
-    string& error, progress_callback progress_cb, bool noparallel) {
+    string& error, const progress_callback& progress_cb, bool noparallel) {
   auto format_error = [filename, &error]() {
     error = filename + ": unknown format";
     return false;
@@ -1283,8 +1286,7 @@ bool save_instance(const string& filename, const vector<frame3f>& frames,
         {"xx", "xy", "xz", "yx", "yy", "yz", "zx", "zy", "zz", "ox", "oy",
             "oz"},
         frames);
-    if (!save_ply(filename, &ply, error)) return false;
-    return true;
+    return save_ply(filename, &ply, error);
   } else {
     return format_error();
   }
@@ -1350,7 +1352,7 @@ static bool save_json(const string& filename, const json& js, string& error) {
 
 // Save a scene in the builtin JSON format.
 static bool load_json_scene(const string& filename, sceneio_scene* scene,
-    string& error, progress_callback progress_cb, bool noparallel) {
+    string& error, const progress_callback& progress_cb, bool noparallel) {
   auto parse_error = [filename, &error]() {
     error = filename + ": parse error";
     return false;
@@ -1391,7 +1393,7 @@ static bool load_json_scene(const string& filename, sceneio_scene* scene,
     if (!ejs.contains(name)) return true;
     auto ref = ""s;
     if (!get_value(ejs, name, ref)) return false;
-    if (ref == "") {
+    if (ref.empty()) {
       value = nullptr;
     } else {
       if (refs.find(ref) == refs.end()) return material_error(ref);
@@ -1408,7 +1410,7 @@ static bool load_json_scene(const string& filename, sceneio_scene* scene,
     if (!ejs.contains(name)) return true;
     auto path = ""s;
     if (!get_value(ejs, name, path)) return false;
-    if (path == "") return true;
+    if (path.empty()) return true;
     auto it = ctexture_map.find(path);
     if (it != ctexture_map.end()) {
       value = it->second;
@@ -1428,7 +1430,7 @@ static bool load_json_scene(const string& filename, sceneio_scene* scene,
     if (!ejs.contains(name)) return true;
     auto path = ""s;
     if (!get_value(ejs, name, path)) return false;
-    if (path == "") return true;
+    if (path.empty()) return true;
     auto it = stexture_map.find(path);
     if (it != stexture_map.end()) {
       value = it->second;
@@ -1448,11 +1450,11 @@ static bool load_json_scene(const string& filename, sceneio_scene* scene,
     if (!ejs.contains(name)) return true;
     auto path = ""s;
     if (!get_value(ejs, name, path)) return false;
-    if (path == "") return true;
+    if (path.empty()) return true;
     auto it = shape_map.find(path);
     if (it != shape_map.end()) {
       value = it->second;
-      return it->second;
+      return it->second != nullptr;
     }
     auto shape      = add_shape(scene, path);
     shape_map[path] = shape;
@@ -1475,7 +1477,7 @@ static bool load_json_scene(const string& filename, sceneio_scene* scene,
     if (!ejs.contains(name)) return true;
     auto path = ""s;
     if (!get_value(ejs, name, path)) return false;
-    if (path == "") return true;
+    if (path.empty()) return true;
     auto it = ply_instance_map.find(path);
     if (it != ply_instance_map.end()) {
       instance_ply[instance] = it->second;
@@ -1589,7 +1591,7 @@ static bool load_json_scene(const string& filename, sceneio_scene* scene,
         return false;
       if (!get_shape(ejs, "shape", instance->shape)) return false;
       if (!get_ply_instances(ejs, "instance", instance)) return false;
-      if (instance->shape) {
+      if (instance->shape != nullptr) {
         if (!get_value(ejs, "subdivisions", instance->shape->subdivisions))
           return false;
         if (!get_value(ejs, "catmullcark", instance->shape->catmullclark))
@@ -1617,7 +1619,7 @@ static bool load_json_scene(const string& filename, sceneio_scene* scene,
         return false;
       if (!get_shape(ejs, "shape", instance->shape)) return false;
       if (!get_ply_instances(ejs, "instance", instance)) return false;
-      if (instance->shape) {
+      if (instance->shape != nullptr) {
         if (!get_value(ejs, "subdivisions", instance->shape->subdivisions))
           return false;
         if (!get_value(ejs, "catmullcark", instance->shape->catmullclark))
@@ -1657,7 +1659,7 @@ static bool load_json_scene(const string& filename, sceneio_scene* scene,
             shape->quads, shape->quadspos, shape->quadsnorm,
             shape->quadstexcoord, shape->positions, shape->normals,
             shape->texcoords, shape->colors, shape->radius, error,
-            shape->catmullclark && shape->subdivisions))
+            shape->catmullclark && shape->subdivisions > 0))
       return dependent_error();
   }
   // load textures
@@ -1714,7 +1716,7 @@ static bool load_json_scene(const string& filename, sceneio_scene* scene,
   }
 
   // fix scene
-  if (scene->name == "") scene->name = path_basename(filename);
+  if (scene->name.empty()) scene->name = path_basename(filename);
   add_cameras(scene);
   add_radius(scene);
   add_materials(scene);
@@ -1727,7 +1729,7 @@ static bool load_json_scene(const string& filename, sceneio_scene* scene,
 
 // Save a scene in the builtin JSON format.
 static bool save_json_scene(const string& filename, const sceneio_scene* scene,
-    string& error, progress_callback progress_cb, bool noparallel) {
+    string& error, const progress_callback& progress_cb, bool noparallel) {
   auto dependent_error = [filename, &error]() {
     error = filename + ": error in " + error;
     return false;
@@ -1740,11 +1742,11 @@ static bool save_json_scene(const string& filename, const sceneio_scene* scene,
     ejs[name] = value;
   };
   auto add_tex = [](json& ejs, const string& name, sceneio_texture* texture) {
-    if (!texture) return;
+    if (texture == nullptr) return;
     ejs[name] = texture->name;
   };
   auto add_ref = [](json& ejs, const string& name, auto ref) {
-    if (!ref) return;
+    if (ref == nullptr) return;
     ejs[name] = ref->name;
   };
 
@@ -1827,7 +1829,7 @@ static bool save_json_scene(const string& filename, const sceneio_scene* scene,
     add_opt(ejs, "frame", instance->frame, def_object.frame);
     add_ref(ejs, "shape", instance->shape);
     add_ref(ejs, "material", instance->material);
-    if (instance->shape) {
+    if (instance->shape != nullptr) {
       add_opt(ejs, "subdivisions", instance->shape->subdivisions,
           def_shape.subdivisions);
       add_opt(ejs, "catmullclark", instance->shape->catmullclark,
@@ -1855,12 +1857,12 @@ static bool save_json_scene(const string& filename, const sceneio_scene* scene,
   for (auto shape : scene->shapes) {
     if (progress_cb) progress_cb("save shape", progress.x++, progress.y);
     auto path = make_filename(shape->name, "shapes",
-        (shape->catmullclark && shape->subdivisions) ? ".obj" : ".ply");
+        (shape->catmullclark && shape->subdivisions > 0) ? ".obj"s : ".ply"s);
     if (!save_shape(path, shape->points, shape->lines, shape->triangles,
             shape->quads, shape->quadspos, shape->quadsnorm,
             shape->quadstexcoord, shape->positions, shape->normals,
             shape->texcoords, shape->colors, shape->radius, error,
-            shape->catmullclark && shape->subdivisions))
+            shape->catmullclark && shape->subdivisions > 0))
       return dependent_error();
   }
 
@@ -1868,7 +1870,7 @@ static bool save_json_scene(const string& filename, const sceneio_scene* scene,
   for (auto texture : scene->textures) {
     if (progress_cb) progress_cb("save texture", progress.x++, progress.y);
     auto path = make_filename(
-        texture->name, "textures", (!texture->hdr.empty()) ? ".hdr" : ".png");
+        texture->name, "textures", (!texture->hdr.empty()) ? ".hdr"s : ".png"s);
     if (!save_image(path, texture->hdr, texture->ldr, error))
       return dependent_error();
   }
@@ -1887,7 +1889,7 @@ namespace yocto {
 
 // Loads an OBJ
 static bool load_obj_scene(const string& filename, sceneio_scene* scene,
-    string& error, progress_callback progress_cb, bool noparallel) {
+    string& error, const progress_callback& progress_cb, bool noparallel) {
   auto shape_error = [filename, &error]() {
     error = filename + ": empty shape";
     return false;
@@ -1927,7 +1929,7 @@ static bool load_obj_scene(const string& filename, sceneio_scene* scene,
   auto get_ctexture = [&ctexture_map, scene](
                           const obj_texture& tinfo) -> sceneio_texture* {
     auto path = tinfo.path;
-    if (path == "") return nullptr;
+    if (path.empty()) return nullptr;
     auto it = ctexture_map.find(path);
     if (it != ctexture_map.end()) return it->second;
     auto texture       = add_texture(scene);
@@ -1940,7 +1942,7 @@ static bool load_obj_scene(const string& filename, sceneio_scene* scene,
   auto get_stexture = [&stexture_map, scene](
                           const obj_texture& tinfo) -> sceneio_texture* {
     auto path = tinfo.path;
-    if (path == "") return nullptr;
+    if (path.empty()) return nullptr;
     auto it = stexture_map.find(path);
     if (it != stexture_map.end()) return it->second;
     auto texture       = add_texture(scene);
@@ -2054,7 +2056,7 @@ static bool load_obj_scene(const string& filename, sceneio_scene* scene,
   }
 
   // fix scene
-  if (scene->name == "") scene->name = path_basename(filename);
+  if (scene->name.empty()) scene->name = path_basename(filename);
   add_cameras(scene);
   add_radius(scene);
   add_materials(scene);
@@ -2065,7 +2067,7 @@ static bool load_obj_scene(const string& filename, sceneio_scene* scene,
 }
 
 static bool save_obj_scene(const string& filename, const sceneio_scene* scene,
-    string& error, progress_callback progress_cb, bool noparallel) {
+    string& error, const progress_callback& progress_cb, bool noparallel) {
   auto shape_error = [filename, &error]() {
     error = filename + ": empty shape";
     return false;
@@ -2097,7 +2099,7 @@ static bool save_obj_scene(const string& filename, const sceneio_scene* scene,
 
   // textures
   auto get_texture = [](sceneio_texture* texture) {
-    if (!texture) return obj_texture{};
+    if (texture == nullptr) return obj_texture{};
     auto tinfo = obj_texture{};
     tinfo.path = texture->name;
     return tinfo;
@@ -2184,7 +2186,7 @@ static bool save_obj_scene(const string& filename, const sceneio_scene* scene,
   for (auto texture : scene->textures) {
     if (progress_cb) progress_cb("save texture", progress.x++, progress.y);
     auto path = make_filename(
-        texture->name, "textures", (!texture->hdr.empty()) ? ".hdr" : ".png");
+        texture->name, "textures", (!texture->hdr.empty()) ? ".hdr"s : ".png"s);
     if (!save_image(path, texture->hdr, texture->ldr, error))
       return dependent_error();
   }
@@ -2212,7 +2214,7 @@ void print_obj_camera(sceneio_camera* camera) {
 namespace yocto {
 
 static bool load_ply_scene(const string& filename, sceneio_scene* scene,
-    string& error, progress_callback progress_cb, bool noparallel) {
+    string& error, const progress_callback& progress_cb, bool noparallel) {
   // handle progress
   auto progress = vec2i{0, 1};
   if (progress_cb) progress_cb("load scene", progress.x++, progress.y);
@@ -2240,7 +2242,7 @@ static bool load_ply_scene(const string& filename, sceneio_scene* scene,
 }
 
 static bool save_ply_scene(const string& filename, const sceneio_scene* scene,
-    string& error, progress_callback progress_cb, bool noparallel) {
+    string& error, const progress_callback& progress_cb, bool noparallel) {
   auto shape_error = [filename, &error]() {
     error = filename + ": empty shape";
     return false;
@@ -2274,7 +2276,7 @@ namespace yocto {
 
 // Load a scene
 static bool load_gltf_scene(const string& filename, sceneio_scene* scene,
-    string& error, progress_callback progress_cb, bool noparallel) {
+    string& error, const progress_callback& progress_cb, bool noparallel) {
   auto read_error = [filename, &error]() {
     error = filename + ": read error";
     return false;
@@ -2306,7 +2308,7 @@ static bool load_gltf_scene(const string& filename, sceneio_scene* scene,
 
   // load buffers
   auto dirname = path_dirname(filename);
-  if (dirname != "") dirname += "/";
+  if (dirname.empty()) dirname += "/";
   if (cgltf_load_buffers(&params, data, dirname.c_str()) !=
       cgltf_result_success)
     return read_error();
@@ -2317,13 +2319,13 @@ static bool load_gltf_scene(const string& filename, sceneio_scene* scene,
   // convert asset
   {
     auto gast = &gltf->asset;
-    if (gast->copyright) scene->copyright = gast->copyright;
+    if (gast->copyright != nullptr) scene->copyright = gast->copyright;
   }
 
   // prepare list of effective nodes
   auto visible_nodes = vector<bool>(gltf->nodes_count, false);
-  auto gscene        = gltf->scene ? gltf->scene : gltf->scenes;
-  if (gscene) {
+  auto gscene        = gltf->scene != nullptr ? gltf->scene : gltf->scenes;
+  if (gscene != nullptr) {
     auto node_index = unordered_map<cgltf_node*, int>{};
     node_index.reserve(gltf->nodes_count);
     for (auto nid = 0; nid < gltf->nodes_count; nid++)
@@ -2347,7 +2349,7 @@ static bool load_gltf_scene(const string& filename, sceneio_scene* scene,
   for (auto nid = 0; nid < gltf->nodes_count; nid++) {
     if (!visible_nodes[nid]) continue;
     auto gnde = &gltf->nodes[nid];
-    if (!gnde->camera) continue;
+    if (gnde->camera == nullptr) continue;
     auto mat = mat4f{};
     cgltf_node_transform_world(gnde, &mat.x.x);
     auto gcam            = gnde->camera;
@@ -2377,9 +2379,10 @@ static bool load_gltf_scene(const string& filename, sceneio_scene* scene,
   auto ctexture_map = unordered_map<string, sceneio_texture*>{{"", nullptr}};
   auto get_ctexture = [&scene, &ctexture_map](
                           const cgltf_texture_view& ginfo) -> sceneio_texture* {
-    if (!ginfo.texture || !ginfo.texture->image) return nullptr;
+    if (ginfo.texture == nullptr || ginfo.texture->image == nullptr)
+      return nullptr;
     auto path = string{ginfo.texture->image->uri};
-    if (path == "") return nullptr;
+    if (path.empty()) return nullptr;
     auto it = ctexture_map.find(path);
     if (it != ctexture_map.end()) return it->second;
     auto texture       = add_texture(scene);
@@ -2392,9 +2395,10 @@ static bool load_gltf_scene(const string& filename, sceneio_scene* scene,
           {"", {nullptr, nullptr}}};
   auto get_cotexture = [&scene, &cotexture_map](const cgltf_texture_view& ginfo)
       -> pair<sceneio_texture*, sceneio_texture*> {
-    if (!ginfo.texture || !ginfo.texture->image) return {nullptr, nullptr};
+    if (ginfo.texture == nullptr || ginfo.texture->image == nullptr)
+      return {nullptr, nullptr};
     auto path = string{ginfo.texture->image->uri};
-    if (path == "") return {nullptr, nullptr};
+    if (path.empty()) return {nullptr, nullptr};
     auto it = cotexture_map.find(path);
     if (it != cotexture_map.end()) return it->second;
     auto color_texture   = add_texture(scene);
@@ -2408,9 +2412,10 @@ static bool load_gltf_scene(const string& filename, sceneio_scene* scene,
           {"", {nullptr, nullptr}}};
   auto get_mrtexture = [&scene, &mrtexture_map](const cgltf_texture_view& ginfo)
       -> pair<sceneio_texture*, sceneio_texture*> {
-    if (!ginfo.texture || !ginfo.texture->image) return {nullptr, nullptr};
+    if (ginfo.texture == nullptr || ginfo.texture->image == nullptr)
+      return {nullptr, nullptr};
     auto path = string{ginfo.texture->image->uri};
-    if (path == "") return {nullptr, nullptr};
+    if (path.empty()) return {nullptr, nullptr};
     auto it = mrtexture_map.find(path);
     if (it != mrtexture_map.end()) return it->second;
     auto metallic_texture  = add_texture(scene);
@@ -2428,7 +2433,7 @@ static bool load_gltf_scene(const string& filename, sceneio_scene* scene,
     material->emission     = {gmaterial->emissive_factor[0],
         gmaterial->emissive_factor[1], gmaterial->emissive_factor[2]};
     material->emission_tex = get_ctexture(gmaterial->emissive_texture);
-    if (gmaterial->has_pbr_metallic_roughness) {
+    if (gmaterial->has_pbr_metallic_roughness != 0) {
       auto gmr          = &gmaterial->pbr_metallic_roughness;
       material->color   = {gmr->base_color_factor[0], gmr->base_color_factor[1],
           gmr->base_color_factor[2]};
@@ -2452,7 +2457,7 @@ static bool load_gltf_scene(const string& filename, sceneio_scene* scene,
     auto gmesh = &gltf->meshes[mid];
     for (auto sid = 0; sid < gmesh->primitives_count; sid++) {
       auto gprim = &gmesh->primitives[sid];
-      if (!gprim->attributes_count) continue;
+      if (gprim->attributes_count == 0) continue;
       auto instance = add_instance(scene);
       mesh_map[gmesh].push_back(instance);
       auto shape         = add_shape(scene);
@@ -2460,7 +2465,7 @@ static bool load_gltf_scene(const string& filename, sceneio_scene* scene,
       instance->material = material_map.at(gprim->material);
       for (auto aid = 0; aid < gprim->attributes_count; aid++) {
         auto gattr    = &gprim->attributes[aid];
-        auto semantic = string(gattr->name ? gattr->name : "");
+        auto semantic = string(gattr->name != nullptr ? gattr->name : "");
         auto gacc     = gattr->data;
         if (semantic == "POSITION") {
           shape->positions.resize(gacc->count);
@@ -2500,7 +2505,7 @@ static bool load_gltf_scene(const string& filename, sceneio_scene* scene,
         }
       }
       // indices
-      if (!gprim->indices) {
+      if (gprim->indices == nullptr) {
         if (gprim->type == cgltf_primitive_type_triangles) {
           shape->triangles.resize(shape->positions.size() / 3);
           for (auto i = 0; i < shape->positions.size() / 3; i++)
@@ -2603,7 +2608,7 @@ static bool load_gltf_scene(const string& filename, sceneio_scene* scene,
   for (auto nid = 0; nid < gltf->nodes_count; nid++) {
     if (!visible_nodes[nid]) continue;
     auto gnde = &gltf->nodes[nid];
-    if (!gnde->mesh) continue;
+    if (gnde->mesh == nullptr) continue;
     auto mat = mat4f{};
     cgltf_node_transform_world(gnde, &mat.x.x);
     auto frame = mat_to_frame(mat);
@@ -2723,7 +2728,7 @@ static bool load_gltf_scene(const string& filename, sceneio_scene* scene,
 
   // remove empty textures
   for (auto material : scene->materials) {
-    if (material->opacity_tex) {
+    if (material->opacity_tex != nullptr) {
       if (material->opacity_tex->hdr.empty() &&
           material->opacity_tex->ldr.empty())
         material->opacity_tex = nullptr;
@@ -2740,7 +2745,7 @@ static bool load_gltf_scene(const string& filename, sceneio_scene* scene,
       scene->textures.end());
 
   // fix scene
-  if (scene->name == "") scene->name = path_basename(filename);
+  if (scene->name.empty()) scene->name = path_basename(filename);
   add_cameras(scene);
   add_radius(scene);
   add_materials(scene);
@@ -2756,7 +2761,7 @@ static bool load_gltf_scene(const string& filename, sceneio_scene* scene,
   // load done
   if (progress_cb) progress_cb("load scene", progress.x++, progress.y);
   return true;
-}  // namespace yocto
+}
 
 }  // namespace yocto
 
@@ -2767,7 +2772,7 @@ namespace yocto {
 
 // load pbrt scenes
 static bool load_pbrt_scene(const string& filename, sceneio_scene* scene,
-    string& error, progress_callback progress_cb, bool noparallel) {
+    string& error, const progress_callback& progress_cb, bool noparallel) {
   auto dependent_error = [filename, &error]() {
     error = filename + ": error in " + error;
     return false;
@@ -2799,7 +2804,7 @@ static bool load_pbrt_scene(const string& filename, sceneio_scene* scene,
   auto ctexture_map = unordered_map<string, sceneio_texture*>{{"", nullptr}};
   auto get_ctexture = [&scene, &ctexture_map](
                           const string& path) -> sceneio_texture* {
-    if (path == "") return nullptr;
+    if (path.empty()) return nullptr;
     auto it = ctexture_map.find(path);
     if (it != ctexture_map.end()) return it->second;
     auto texture       = add_texture(scene);
@@ -2809,7 +2814,7 @@ static bool load_pbrt_scene(const string& filename, sceneio_scene* scene,
   auto stexture_map = unordered_map<string, sceneio_texture*>{{"", nullptr}};
   auto get_stexture = [&scene, &stexture_map](
                           const string& path) -> sceneio_texture* {
-    if (path == "") return nullptr;
+    if (path.empty()) return nullptr;
     auto it = stexture_map.find(path);
     if (it != stexture_map.end()) return it->second;
     auto texture       = add_texture(scene);
@@ -2819,7 +2824,7 @@ static bool load_pbrt_scene(const string& filename, sceneio_scene* scene,
   auto atexture_map = unordered_map<string, sceneio_texture*>{{"", nullptr}};
   auto get_atexture = [&scene, &atexture_map](
                           const string& path) -> sceneio_texture* {
-    if (path == "") return nullptr;
+    if (path.empty()) return nullptr;
     auto it = atexture_map.find(path);
     if (it != atexture_map.end()) return it->second;
     auto texture       = add_texture(scene);
@@ -2842,7 +2847,7 @@ static bool load_pbrt_scene(const string& filename, sceneio_scene* scene,
     material->thin         = pmaterial->thin;
     material->color_tex    = get_ctexture(pmaterial->color_tex);
     material->opacity_tex  = get_stexture(pmaterial->opacity_tex);
-    if (!material->opacity_tex)
+    if (material->opacity_tex == nullptr)
       material->opacity_tex = get_atexture(pmaterial->alpha_tex);
     material_map[pmaterial] = material;
   }
@@ -2935,7 +2940,7 @@ static bool load_pbrt_scene(const string& filename, sceneio_scene* scene,
   }
 
   // fix scene
-  if (scene->name == "") scene->name = path_basename(filename);
+  if (scene->name.empty()) scene->name = path_basename(filename);
   add_cameras(scene);
   add_radius(scene);
   add_materials(scene);
@@ -2947,7 +2952,7 @@ static bool load_pbrt_scene(const string& filename, sceneio_scene* scene,
 
 // Save a pbrt scene
 static bool save_pbrt_scene(const string& filename, const sceneio_scene* scene,
-    string& error, progress_callback progress_cb, bool noparallel) {
+    string& error, const progress_callback& progress_cb, bool noparallel) {
   auto dependent_error = [filename, &error]() {
     error = filename + ": error in " + error;
     return false;
@@ -2971,7 +2976,7 @@ static bool save_pbrt_scene(const string& filename, const sceneio_scene* scene,
 
   // get texture name
   auto get_texture = [](const sceneio_texture* texture) {
-    return texture ? texture->name : "";
+    return texture != nullptr ? texture->name : "";
   };
 
   // convert materials
@@ -3027,7 +3032,7 @@ static bool save_pbrt_scene(const string& filename, const sceneio_scene* scene,
   for (auto texture : scene->textures) {
     if (progress_cb) progress_cb("save texture", progress.x++, progress.y);
     auto path = make_filename(
-        texture->name, "textures", (!texture->hdr.empty()) ? ".hdr" : ".png");
+        texture->name, "textures", (!texture->hdr.empty()) ? ".hdr"s : ".png"s);
     if (!save_image(path, texture->hdr, texture->ldr, error))
       return dependent_error();
   }

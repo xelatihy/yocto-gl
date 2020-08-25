@@ -9,12 +9,14 @@
 #include "yocto_bvh.h"
 
 #include <algorithm>
+#include <array>
 #include <atomic>
 #include <cstring>
 #include <deque>
 #include <memory>
 #include <stdexcept>
 #include <string>
+#include <utility>
 
 #include "yocto_geometry.h"
 
@@ -28,6 +30,7 @@
 namespace yocto {
 
 // using directives
+using std::array;
 using std::atomic;
 using std::deque;
 using std::pair;
@@ -323,7 +326,7 @@ static pair<int, int> split_sah(vector<int>& primitives,
   if (mid == start || mid == end) {
     split_axis = 0;
     mid        = (start + end) / 2;
-    throw std::runtime_error{"bad bvh split"};
+    // throw std::runtime_error{"bad bvh split"};
   }
 
   return {mid, split_axis};
@@ -362,7 +365,7 @@ static pair<int, int> split_balanced(vector<int>& primitives,
   if (mid == start || mid == end) {
     axis = 0;
     mid  = (start + end) / 2;
-    throw std::runtime_error("bad bvh split");
+    // throw std::runtime_error("bad bvh split");
   }
 
   return {mid, axis};
@@ -401,7 +404,7 @@ static pair<int, int> split_middle(vector<int>& primitives,
   if (mid == start || mid == end) {
     axis = 0;
     mid  = (start + end) / 2;
-    throw std::runtime_error("bad bvh split");
+    // throw std::runtime_error("bad bvh split");
   }
 
   return {mid, axis};
@@ -544,8 +547,8 @@ void init_shape_bvh(bvh_shape* shape, bool embree) {
 
 void init_scene_bvh(bvh_scene* scene, bool embree) {
   // Make shape bvh
-  for (auto idx = 0; idx < scene->shapes.size(); idx++) {
-    init_shape_bvh(scene->shapes[idx], embree);
+  for (auto shape : scene->shapes) {
+    init_shape_bvh(shape, embree);
   }
 
   // embree
@@ -649,7 +652,7 @@ static bool intersect_shape_bvh(const bvh_shape* shape, const ray3f& ray_,
   if (shape->bvh.nodes.empty()) return false;
 
   // node stack
-  int  node_stack[128];
+  auto node_stack        = array<int, 128>{};
   auto node_cur          = 0;
   node_stack[node_cur++] = 0;
 
@@ -665,7 +668,7 @@ static bool intersect_shape_bvh(const bvh_shape* shape, const ray3f& ray_,
       (ray_dinv.z < 0) ? 1 : 0};
 
   // walking stack
-  while (node_cur) {
+  while (node_cur != 0) {
     // grab node
     auto& node = shape->bvh.nodes[node_stack[--node_cur]];
 
@@ -678,7 +681,7 @@ static bool intersect_shape_bvh(const bvh_shape* shape, const ray3f& ray_,
     if (node.internal) {
       // for internal nodes, attempts to proceed along the
       // split axis from smallest to largest nodes
-      if (ray_dsign[node.axis]) {
+      if (ray_dsign[node.axis] != 0) {
         node_stack[node_cur++] = node.start + 0;
         node_stack[node_cur++] = node.start + 1;
       } else {
@@ -750,7 +753,7 @@ static bool intersect_scene_bvh(const bvh_scene* scene, const ray3f& ray_,
   if (scene->bvh.nodes.empty()) return false;
 
   // node stack
-  int  node_stack[128];
+  auto node_stack        = array<int, 128>{};
   auto node_cur          = 0;
   node_stack[node_cur++] = 0;
 
@@ -766,7 +769,7 @@ static bool intersect_scene_bvh(const bvh_scene* scene, const ray3f& ray_,
       (ray_dinv.z < 0) ? 1 : 0};
 
   // walking stack
-  while (node_cur) {
+  while (node_cur != 0) {
     // grab node
     auto& node = scene->bvh.nodes[node_stack[--node_cur]];
 
@@ -779,7 +782,7 @@ static bool intersect_scene_bvh(const bvh_scene* scene, const ray3f& ray_,
     if (node.internal) {
       // for internal nodes, attempts to proceed along the
       // split axis from smallest to largest nodes
-      if (ray_dsign[node.axis]) {
+      if (ray_dsign[node.axis] != 0) {
         node_stack[node_cur++] = node.start + 0;
         node_stack[node_cur++] = node.start + 1;
       } else {
@@ -826,7 +829,7 @@ static bool overlap_shape_bvh(const bvh_shape* shape, const vec3f& pos,
   if (shape->bvh.nodes.empty()) return false;
 
   // node stack
-  int  node_stack[64];
+  auto node_stack        = array<int, 64>{};
   auto node_cur          = 0;
   node_stack[node_cur++] = 0;
 
@@ -834,7 +837,7 @@ static bool overlap_shape_bvh(const bvh_shape* shape, const vec3f& pos,
   auto hit = false;
 
   // walking stack
-  while (node_cur) {
+  while (node_cur != 0) {
     // grab node
     auto& node = shape->bvh.nodes[node_stack[--node_cur]];
 
@@ -913,7 +916,7 @@ static bool overlap_scene_bvh(const bvh_scene* scene, const vec3f& pos,
   if (scene->bvh.nodes.empty()) return false;
 
   // node stack
-  int  node_stack[64];
+  auto node_stack        = array<int, 64>{};
   auto node_cur          = 0;
   node_stack[node_cur++] = 0;
 
@@ -921,7 +924,7 @@ static bool overlap_scene_bvh(const bvh_scene* scene, const vec3f& pos,
   auto hit = false;
 
   // walking stack
-  while (node_cur) {
+  while (node_cur != 0) {
     // grab node
     auto& node = scene->bvh.nodes[node_stack[--node_cur]];
 
@@ -957,64 +960,64 @@ static bool overlap_scene_bvh(const bvh_scene* scene, const vec3f& pos,
 }
 
 #if 0
-    // Finds the overlap between BVH leaf nodes.
-    template <typename OverlapElem>
-    void overlap_bvh_elems(const bvh_scene_data& bvh1, const bvh_scene_data& bvh2,
-                           bool skip_duplicates, bool skip_self, vector<vec2i>& overlaps,
-                           const OverlapElem& overlap_elems) {
-        // node stack
-        vec2i node_stack[128];
-        auto node_cur = 0;
-        node_stack[node_cur++] = {0, 0};
+// Finds the overlap between BVH leaf nodes.
+template <typename OverlapElem>
+void overlap_bvh_elems(const bvh_scene_data& bvh1, const bvh_scene_data& bvh2,
+                bool skip_duplicates, bool skip_self, vector<vec2i>& overlaps,
+                const OverlapElem& overlap_elems) {
+    // node stack
+    vec2i node_stack[128];
+    auto node_cur = 0;
+    node_stack[node_cur++] = {0, 0};
 
-        // walking stack
-        while (node_cur) {
-            // grab node
-            auto node_idx = node_stack[--node_cur];
-            const auto node1 = bvh1->nodes[node_idx.x];
-            const auto node2 = bvh2->nodes[node_idx.y];
+    // walking stack
+    while (node_cur) {
+        // grab node
+        auto node_idx = node_stack[--node_cur];
+        const auto node1 = bvh1->nodes[node_idx.x];
+        const auto node2 = bvh2->nodes[node_idx.y];
 
-            // intersect bbox
-            if (!overlap_bbox(node1.bbox, node2.bbox)) continue;
+        // intersect bbox
+        if (!overlap_bbox(node1.bbox, node2.bbox)) continue;
 
-            // check for leaves
-            if (node1.isleaf && node2.isleaf) {
-                // collide primitives
-                for (auto i1 = node1.start; i1 < node1.start + node1.count; i1++) {
-                    for (auto i2 = node2.start; i2 < node2.start + node2.count;
-                         i2++) {
-                        auto idx1 = bvh1->sorted_prim[i1];
-                        auto idx2 = bvh2->sorted_prim[i2];
-                        if (skip_duplicates && idx1 > idx2) continue;
-                        if (skip_self && idx1 == idx2) continue;
-                        if (overlap_elems(idx1, idx2))
-                            overlaps.push_back({idx1, idx2});
-                    }
+        // check for leaves
+        if (node1.isleaf && node2.isleaf) {
+            // collide primitives
+            for (auto i1 = node1.start; i1 < node1.start + node1.count; i1++) {
+                for (auto i2 = node2.start; i2 < node2.start + node2.count;
+                      i2++) {
+                    auto idx1 = bvh1->sorted_prim[i1];
+                    auto idx2 = bvh2->sorted_prim[i2];
+                    if (skip_duplicates && idx1 > idx2) continue;
+                    if (skip_self && idx1 == idx2) continue;
+                    if (overlap_elems(idx1, idx2))
+                        overlaps.push_back({idx1, idx2});
+                }
+            }
+        } else {
+            // descend
+            if (node1.isleaf) {
+                for (auto idx2 = node2.start; idx2 < node2.start + node2.count;
+                      idx2++) {
+                    node_stack[node_cur++] = {node_idx.x, (int)idx2};
+                }
+            } else if (node2.isleaf) {
+                for (auto idx1 = node1.start; idx1 < node1.start + node1.count;
+                      idx1++) {
+                    node_stack[node_cur++] = {(int)idx1, node_idx.y};
                 }
             } else {
-                // descend
-                if (node1.isleaf) {
-                    for (auto idx2 = node2.start; idx2 < node2.start + node2.count;
-                         idx2++) {
-                        node_stack[node_cur++] = {node_idx.x, (int)idx2};
-                    }
-                } else if (node2.isleaf) {
-                    for (auto idx1 = node1.start; idx1 < node1.start + node1.count;
-                         idx1++) {
-                        node_stack[node_cur++] = {(int)idx1, node_idx.y};
-                    }
-                } else {
-                    for (auto idx2 = node2.start; idx2 < node2.start + node2.count;
-                         idx2++) {
-                        for (auto idx1 = node1.start;
-                             idx1 < node1.start + node1.count; idx1++) {
-                            node_stack[node_cur++] = {(int)idx1, (int)idx2};
-                        }
+                for (auto idx2 = node2.start; idx2 < node2.start + node2.count;
+                      idx2++) {
+                    for (auto idx1 = node1.start;
+                          idx1 < node1.start + node1.count; idx1++) {
+                        node_stack[node_cur++] = {(int)idx1, (int)idx2};
                     }
                 }
             }
         }
     }
+}
 #endif
 
 bvh_shape_intersection intersect_shape_bvh(

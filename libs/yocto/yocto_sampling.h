@@ -60,6 +60,7 @@ namespace yocto {
 
 // using directives
 using std::array;
+using std::vector;
 
 }  // namespace yocto
 
@@ -73,7 +74,7 @@ struct rng_state {
   uint64_t state = 0x853c49e6748fea9bULL;
   uint64_t inc   = 0xda3e39cb94b95bdbULL;
 
-  rng_state();
+  rng_state() = default;
   rng_state(uint64_t state, uint64_t inc);
 };
 
@@ -189,17 +190,15 @@ inline float sample_discrete_weights_pdf(
 namespace yocto {
 
 // PCG random numbers from http://www.pcg-random.org/
-inline rng_state::rng_state()
-    : state{0x853c49e6748fea9bULL}, inc{0xda3e39cb94b95bdbULL} {}
 inline rng_state::rng_state(uint64_t state, uint64_t inc)
     : state{state}, inc{inc} {}
 
 // Next random number, used internally only.
 inline uint32_t _advance_rng(rng_state& rng) {
-  uint64_t oldstate   = rng.state;
-  rng.state           = oldstate * 6364136223846793005ULL + rng.inc;
-  uint32_t xorshifted = (uint32_t)(((oldstate >> 18u) ^ oldstate) >> 27u);
-  uint32_t rot        = (uint32_t)(oldstate >> 59u);
+  uint64_t oldstate = rng.state;
+  rng.state         = oldstate * 6364136223846793005ULL + rng.inc;
+  auto xorshifted   = (uint32_t)(((oldstate >> 18u) ^ oldstate) >> 27u);
+  auto rot          = (uint32_t)(oldstate >> 59u);
   return (xorshifted >> rot) | (xorshifted << ((-rot) & 31));
 }
 
