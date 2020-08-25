@@ -82,33 +82,33 @@ ogl_arraybuffer* get_tangents(gui_shape* shape) {
 
 void set_positions(gui_shape* shape, const vector<vec3f>& positions) {
   if (positions.empty())
-    set_vertex_attribute(shape, vec3f{0, 0, 0}, 0);
+    set_vertex_buffer(shape, vec3f{0, 0, 0}, 0);
   else
-    set_vertex_attribute(shape, positions, 0);
+    set_vertex_buffer(shape, positions, 0);
 }
 void set_normals(gui_shape* shape, const vector<vec3f>& normals) {
   if (normals.empty())
-    set_vertex_attribute(shape, vec3f{0, 0, 1}, 1);
+    set_vertex_buffer(shape, vec3f{0, 0, 1}, 1);
   else
-    set_vertex_attribute(shape, normals, 1);
+    set_vertex_buffer(shape, normals, 1);
 }
 void set_texcoords(gui_shape* shape, const vector<vec2f>& texcoords) {
   if (texcoords.empty())
-    set_vertex_attribute(shape, vec2f{0, 0}, 2);
+    set_vertex_buffer(shape, vec2f{0, 0}, 2);
   else
-    set_vertex_attribute(shape, texcoords, 2);
+    set_vertex_buffer(shape, texcoords, 2);
 }
 void set_colors(gui_shape* shape, const vector<vec4f>& colors) {
   if (colors.empty())
-    set_vertex_attribute(shape, vec4f{1, 1, 1, 1}, 3);
+    set_vertex_buffer(shape, vec4f{1, 1, 1, 1}, 3);
   else
-    set_vertex_attribute(shape, colors, 3);
+    set_vertex_buffer(shape, colors, 3);
 }
 void set_tangents(gui_shape* shape, const vector<vec4f>& tangents) {
   if (tangents.empty())
-    set_vertex_attribute(shape, vec4f{0, 0, 1, 1}, 4);
+    set_vertex_buffer(shape, vec4f{0, 0, 1, 1}, 4);
   else
-    set_vertex_attribute(shape, tangents, 4);
+    set_vertex_buffer(shape, tangents, 4);
 }
 
 void set_points(gui_shape* shape, const vector<int>& points) {

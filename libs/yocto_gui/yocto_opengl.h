@@ -84,11 +84,6 @@ struct ogl_texture {
 
   // OpenGL state
   uint texture_id = 0;
-
-  // ensuring no copies
-  ogl_texture() {}
-  ogl_texture(const ogl_texture&) = delete;
-  ogl_texture& operator=(ogl_texture&) = delete;
 };
 
 // set texture
@@ -349,50 +344,33 @@ enum struct ogl_element_type {
 
 // Opengl shape
 struct ogl_shape {
-  uint                    shape_id       = 0;
   vector<ogl_arraybuffer> vertex_buffers = {};
+  ogl_elementbuffer       index_buffer   = {};
+  ogl_element_type        elements       = ogl_element_type::triangles;
+  int                     num_instances  = 0;
 
-  ogl_elementbuffer index_buffer = {};
-  ogl_element_type  elements     = ogl_element_type::triangles;
-
-  int num_instances = 0;
-
-  // ogl_shape() {}
-  // ogl_shape(const ogl_shape&) = delete;
-  // ogl_shape& operator=(const ogl_shape&) = delete;
-  // ~ogl_shape();
+  uint shape_id = 0;
 };
 
 void set_shape(ogl_shape* shape);
 void clear_shape(ogl_shape* shape);
 void bind_shape(const ogl_shape* shape);
 
-void set_vertex_attribute_const(int location, float value);
-void set_vertex_attribute_const(int location, const vec2f& value);
-void set_vertex_attribute_const(int location, const vec3f& value);
-void set_vertex_attribute_const(int location, const vec4f& value);
-void set_vertex_attribute(int location, const ogl_arraybuffer* buffer);
+// set vertex buffer
+void set_vertex_buffer(
+    ogl_shape* shape, const vector<float>& values, int location);
+void set_vertex_buffer(
+    ogl_shape* shape, const vector<vec2f>& values, int location);
+void set_vertex_buffer(
+    ogl_shape* shape, const vector<vec3f>& values, int location);
+void set_vertex_buffer(
+    ogl_shape* shape, const vector<vec4f>& values, int location);
 
-template <typename T>
-void set_vertex_attribute(
-    ogl_shape* shape, const vector<T>& data, int location) {
-  if (shape->vertex_buffers.size() <= location) {
-    shape->vertex_buffers.resize(location + 1);
-  }
-  set_arraybuffer(&shape->vertex_buffers[location], data, false);
-  assert_ogl_error();
-  bind_shape(shape);
-  set_vertex_attribute(location, &shape->vertex_buffers[location]);
-  assert_ogl_error();
-}
-
-template <typename T>
-void set_vertex_attribute(ogl_shape* shape, const T& attribute, int location) {
-  assert_ogl_error();
-  bind_shape(shape);
-  set_vertex_attribute_const(location, attribute);
-  assert_ogl_error();
-}
+// set vertex buffer with constant value
+void set_vertex_buffer(ogl_shape* shape, float attribute, int location);
+void set_vertex_buffer(ogl_shape* shape, const vec2f& attribute, int location);
+void set_vertex_buffer(ogl_shape* shape, const vec3f& attribute, int location);
+void set_vertex_buffer(ogl_shape* shape, const vec4f& attribute, int location);
 
 void set_instance_buffer(ogl_shape* shape, int location);
 
@@ -423,11 +401,7 @@ namespace yocto {
 
 // OpenGL image data
 struct ogl_image {
-  ogl_image() {}
-  ogl_image(const ogl_image&) = delete;
-  ogl_image& operator=(const ogl_image&) = delete;
   ~ogl_image();
-
   ogl_program* program = new ogl_program{};
   ogl_texture* texture = new ogl_texture{};
   ogl_shape*   quad    = new ogl_shape{};

@@ -964,28 +964,58 @@ void clear_shape(ogl_shape* shape) {
   shape->shape_id = 0;
 }
 
-// ogl_shape::~ogl_shape() { clear_shape(this); }
-
-void set_vertex_attribute_const(int location, float value) {
-  glVertexAttrib1f(location, value);
-}
-void set_vertex_attribute_const(int location, const vec2f& value) {
-  glVertexAttrib2f(location, value.x, value.y);
-}
-void set_vertex_attribute_const(int location, const vec3f& value) {
-  glVertexAttrib3f(location, value.x, value.y, value.z);
-}
-void set_vertex_attribute_const(int location, const vec4f& value) {
-  glVertexAttrib4f(location, value.x, value.y, value.z, value.w);
-}
-
-void set_vertex_attribute(int location, const ogl_arraybuffer* buffer) {
+template <typename T>
+void set_vertex_buffer_impl(
+    ogl_shape* shape, const vector<T>& data, int location) {
+  if (shape->vertex_buffers.size() <= location) {
+    shape->vertex_buffers.resize(location + 1);
+  }
+  set_arraybuffer(&shape->vertex_buffers[location], data, false);
+  bind_shape(shape);
+  auto& buffer = shape->vertex_buffers[location];
   assert_ogl_error();
-  assert(buffer->buffer_id);
-  glBindBuffer(GL_ARRAY_BUFFER, buffer->buffer_id);
+  glBindBuffer(GL_ARRAY_BUFFER, buffer.buffer_id);
   glEnableVertexAttribArray(location);
   glVertexAttribPointer(
-      location, buffer->element_size, GL_FLOAT, false, 0, nullptr);
+      location, buffer.element_size, GL_FLOAT, false, 0, nullptr);
+  assert_ogl_error();
+}
+
+void set_vertex_buffer(
+    ogl_shape* shape, const vector<float>& values, int location) {
+  set_vertex_buffer_impl(shape, values, location);
+}
+void set_vertex_buffer(
+    ogl_shape* shape, const vector<vec2f>& values, int location) {
+  set_vertex_buffer_impl(shape, values, location);
+}
+void set_vertex_buffer(
+    ogl_shape* shape, const vector<vec3f>& values, int location) {
+  set_vertex_buffer_impl(shape, values, location);
+}
+void set_vertex_buffer(
+    ogl_shape* shape, const vector<vec4f>& values, int location) {
+  set_vertex_buffer_impl(shape, values, location);
+}
+
+void set_vertex_buffer(ogl_shape* shape, float value, int location) {
+  bind_shape(shape);
+  glVertexAttrib1f(location, value);
+  assert_ogl_error();
+}
+void set_vertex_buffer(ogl_shape* shape, const vec2f& value, int location) {
+  bind_shape(shape);
+  glVertexAttrib2f(location, value.x, value.y);
+  assert_ogl_error();
+}
+void set_vertex_buffer(ogl_shape* shape, const vec3f& value, int location) {
+  bind_shape(shape);
+  glVertexAttrib3f(location, value.x, value.y, value.z);
+  assert_ogl_error();
+}
+void set_vertex_buffer(ogl_shape* shape, const vec4f& value, int location) {
+  bind_shape(shape);
+  glVertexAttrib4f(location, value.x, value.y, value.z, value.w);
   assert_ogl_error();
 }
 
@@ -1043,7 +1073,7 @@ ogl_shape* cube_shape() {
     // clang-format on
     cube = new ogl_shape{};
     set_shape(cube);
-    set_vertex_attribute(cube, cube_positions, 0);
+    set_vertex_buffer(cube, cube_positions, 0);
     set_index_buffer(cube, cube_triangles);
   }
   return cube;
@@ -1062,7 +1092,7 @@ ogl_shape* quad_shape() {
     // clang-format on
     quad = new ogl_shape{};
     set_shape(quad);
-    set_vertex_attribute(quad, quad_positions, 0);
+    set_vertex_buffer(quad, quad_positions, 0);
     set_index_buffer(quad, quad_triangles);
   }
   return quad;
@@ -1152,7 +1182,7 @@ bool init_image(ogl_image* image) {
   auto texcoords = vector<vec2f>{{0, 0}, {0, 1}, {1, 1}, {1, 0}};
   auto triangles = vector<vec3i>{{0, 1, 2}, {0, 2, 3}};
   set_shape(image->quad);
-  set_vertex_attribute(image->quad, texcoords, 0);
+  set_vertex_buffer(image->quad, texcoords, 0);
   set_index_buffer(image->quad, triangles);
 
   return true;

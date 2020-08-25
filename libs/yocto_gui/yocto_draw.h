@@ -115,8 +115,6 @@ struct gui_instance {
 
 // Opengl scene
 struct gui_scene {
-  ~gui_scene();
-
   // scene objects
   vector<gui_camera*>   cameras   = {};
   vector<gui_instance*> instances = {};
@@ -124,16 +122,18 @@ struct gui_scene {
   vector<gui_material*> materials = {};
   vector<gui_texture*>  textures  = {};
 
-  // OpenGL state
+  // programs
   ogl_program* eyelight_program    = new ogl_program{};
   ogl_program* ibl_program         = new ogl_program{};
   ogl_program* environment_program = new ogl_program{};
 
-  // IBL data
+  // IBL baked data
   ogl_cubemap* environment_cubemap = new ogl_cubemap{};
   ogl_cubemap* diffuse_cubemap     = new ogl_cubemap{};
   ogl_cubemap* specular_cubemap    = new ogl_cubemap{};
   gui_texture* brdf_lut            = new gui_texture{};
+
+  ~gui_scene();
 };
 
 // Shading type

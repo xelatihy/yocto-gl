@@ -204,8 +204,8 @@ void init_glscene(app_state* app, gui_scene* glscene, generic_shape* ioshape,
   if (!is_initialized(get_normals(model_shape))) {
     app->drawgl_prms.faceted = true;
   }
-  set_vertex_attribute(model_shape, vec3f{0, 0, 0}, 5);
-  set_vertex_attribute(model_shape, vec3f{0, 0, 0}, 6);
+  set_vertex_buffer(model_shape, vec3f{0, 0, 0}, 5);
+  set_vertex_buffer(model_shape, vec3f{0, 0, 0}, 6);
 
   auto cylinder = make_uvcylinder({4, 1, 1}, {0.0003, 1});
   for (auto& p : cylinder.positions) {
@@ -224,16 +224,16 @@ void init_glscene(app_state* app, gui_scene* glscene, generic_shape* ioshape,
     froms.push_back(ioshape->positions[edge.x]);
     tos.push_back(ioshape->positions[edge.y]);
   }
-  set_vertex_attribute(edges_shape, froms, 5);
+  set_vertex_buffer(edges_shape, froms, 5);
   set_instance_buffer(edges_shape, 5);
-  set_vertex_attribute(edges_shape, tos, 6);
+  set_vertex_buffer(edges_shape, tos, 6);
   set_instance_buffer(edges_shape, 6);
 
   auto vertices       = make_spheres(ioshape->positions, 0.001, 2);
   auto vertices_shape = add_shape(glscene, {}, {}, {}, vertices.quads,
       vertices.positions, vertices.normals, vertices.texcoords, {});
-  set_vertex_attribute(vertices_shape, vec3f{0, 0, 0}, 5);
-  set_vertex_attribute(vertices_shape, vec3f{0, 0, 0}, 6);
+  set_vertex_buffer(vertices_shape, vec3f{0, 0, 0}, 5);
+  set_vertex_buffer(vertices_shape, vec3f{0, 0, 0}, 6);
 
   // shapes
   if (progress_cb) progress_cb("convert instance", progress.x++, progress.y);
