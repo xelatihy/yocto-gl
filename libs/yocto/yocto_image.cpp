@@ -1452,50 +1452,50 @@ static vector<string> split_string(const string& str) {
 }
 
 // Pfm load
-static float* load_pfm(const char* filename, int* w, int* h, int* nc, int req) {
+static vector<float> load_pfm(
+    const char* filename, int& w, int& h, int& nc, int req) {
   auto fs = open_file(filename, "rb");
-  if (!fs) return nullptr;
+  if (!fs) return {};
 
   // buffer
   auto buffer = array<char, 4096>{};
   auto toks   = vector<string>();
 
   // read magic
-  if (!read_line(fs, buffer)) return nullptr;
+  if (!read_line(fs, buffer)) return {};
   toks = split_string(buffer.data());
-  if (toks[0] == "Pf")
-    *nc = 1;
-  else if (toks[0] == "PF")
-    *nc = 3;
-  else
-    return nullptr;
+  if (toks[0] == "Pf") {
+    nc = 1;
+  } else if (toks[0] == "PF") {
+    nc = 3;
+  } else {
+    return {};
+  }
 
   // read w, h
-  if (!read_line(fs, buffer)) return nullptr;
+  if (!read_line(fs, buffer)) return {};
   toks = split_string(buffer.data());
-  *w   = atoi(toks[0].c_str());
-  *h   = atoi(toks[1].c_str());
+  w    = atoi(toks[0].c_str());
+  h    = atoi(toks[1].c_str());
 
   // read scale
-  if (!read_line(fs, buffer)) return nullptr;
+  if (!read_line(fs, buffer)) return {};
   toks   = split_string(buffer.data());
   auto s = atof(toks[0].c_str());
 
   // read the data (flip y)
-  auto npixels = (size_t)(*w) * (size_t)(*h);
-  auto nvalues = npixels * (size_t)(*nc);
-  auto nrow    = (size_t)(*w) * (size_t)(*nc);
-  auto pixels  = std::unique_ptr<float[]>(new float[nvalues]);
-  for (auto j = *h - 1; j >= 0; j--) {
-    if (!read_values(fs, pixels.get() + j * nrow, nrow)) return nullptr;
+  auto npixels = (size_t)(w) * (size_t)(h);
+  auto nvalues = npixels * (size_t)(nc);
+  auto nrow    = (size_t)(w) * (size_t)(nc);
+  auto pixels  = vector<float>(nvalues);
+  for (auto j = h - 1; j >= 0; j--) {
+    if (!read_values(fs, pixels.data() + j * nrow, nrow)) return {};
   }
 
   // endian conversion
   if (s > 0) {
     for (auto i = 0; i < nvalues; ++i) {
-      auto dta = (uint8_t*)(pixels.get() + i);
-      std::swap(dta[0], dta[3]);
-      std::swap(dta[1], dta[2]);
+      pixels[i] = swap_endian(pixels[i]);
     }
   }
 
@@ -1506,17 +1506,15 @@ static float* load_pfm(const char* filename, int* w, int* h, int* nc, int req) {
   }
 
   // proper number of channels
-  if (req == 0 || *nc == req) return pixels.release();
+  if (req == 0 || nc == req) return pixels;
 
   // pack into channels
-  if (req < 0 || req > 4) {
-    return nullptr;
-  }
-  auto cpixels = std::unique_ptr<float[]>(new float[req * npixels]);
+  if (req < 0 || req > 4) return {};
+  auto cpixels = vector<float>(req * npixels);
   for (auto i = 0ull; i < npixels; i++) {
-    auto vp = pixels.get() + i * (*nc);
-    auto cp = cpixels.get() + i * req;
-    if (*nc == 1) {
+    auto vp = pixels.data() + i * (nc);
+    auto cp = cpixels.data() + i * req;
+    if (nc == 1) {
       switch (req) {
         case 1: cp[0] = vp[0]; break;
         case 2:
@@ -1556,7 +1554,7 @@ static float* load_pfm(const char* filename, int* w, int* h, int* nc, int req) {
       }
     }
   }
-  return cpixels.release();
+  return cpixels;
 }
 
 // save pfm
@@ -1618,10 +1616,9 @@ bool is_hdr_filename(const string& filename) {
     return true;
   } else if (ext == ".pfm" || ext == ".PFM") {
     auto width = 0, height = 0, ncomp = 0;
-    auto pixels = load_pfm(filename.c_str(), &width, &height, &ncomp, 4);
-    if (pixels == nullptr) return read_error();
-    img = image{{width, height}, (const vec4f*)pixels};
-    delete[] pixels;
+    auto pixels = load_pfm(filename.c_str(), width, height, ncomp, 4);
+    if (pixels.empty()) return read_error();
+    img = image{{width, height}, (const vec4f*)pixels.data()};
     return true;
   } else if (ext == ".hdr" || ext == ".HDR") {
     auto width = 0, height = 0, ncomp = 0;
