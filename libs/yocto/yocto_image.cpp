@@ -1802,46 +1802,44 @@ bool save_image(const string& filename, const image<vec4f>& imgf,
 namespace yocto {
 
 // Volume load
-static float* load_yvol(
-    const char* filename, int* w, int* h, int* d, int* nc, int req) {
+static vector<float> load_yvol(
+    const char* filename, int& w, int& h, int& d, int& nc, int req) {
   auto fs = open_file(filename, "rb");
-  if (!fs) return nullptr;
+  if (!fs) return {};
 
   // buffer
   auto buffer = array<char, 4096>{};
   auto toks   = vector<string>();
 
   // read magic
-  if (!read_line(fs, buffer)) return nullptr;
+  if (!read_line(fs, buffer)) return {};
   toks = split_string(buffer.data());
-  if (toks[0] != "YVOL") return nullptr;
+  if (toks[0] != "YVOL") return {};
 
   // read w, h
-  if (!read_line(fs, buffer)) return nullptr;
+  if (!read_line(fs, buffer)) return {};
   toks = split_string(buffer.data());
-  *w   = atoi(toks[0].c_str());
-  *h   = atoi(toks[1].c_str());
-  *d   = atoi(toks[2].c_str());
-  *nc  = atoi(toks[3].c_str());
+  w    = atoi(toks[0].c_str());
+  h    = atoi(toks[1].c_str());
+  d    = atoi(toks[2].c_str());
+  nc   = atoi(toks[3].c_str());
 
   // read data
-  auto nvoxels = (size_t)(*w) * (size_t)(*h) * (size_t)(*d);
-  auto nvalues = nvoxels * (size_t)(*nc);
-  auto voxels  = std::unique_ptr<float[]>(new float[nvalues]);
-  if (!read_values(fs, voxels.get(), nvalues)) return nullptr;
+  auto nvoxels = (size_t)(w) * (size_t)(h) * (size_t)(d);
+  auto nvalues = nvoxels * (size_t)(nc);
+  auto voxels  = vector<float>(nvalues);
+  if (!read_values(fs, voxels.data(), nvalues)) return {};
 
   // proper number of channels
-  if (req == 0 || *nc == req) return voxels.release();
+  if (req == 0 || nc == req) return voxels;
 
   // pack into channels
-  if (req < 0 || req > 4) {
-    return nullptr;
-  }
-  auto cvoxels = std::unique_ptr<float[]>(new float[req * nvoxels]);
+  if (req < 0 || req > 4) return {};
+  auto cvoxels = vector<float>(req * nvoxels);
   for (auto i = 0; i < nvoxels; i++) {
-    auto vp = voxels.get() + i * (*nc);
-    auto cp = cvoxels.get() + i * req;
-    if (*nc == 1) {
+    auto vp = voxels.data() + i * nc;
+    auto cp = cvoxels.data() + i * req;
+    if (nc == 1) {
       switch (req) {
         case 1: cp[0] = vp[0]; break;
         case 2:
@@ -1860,7 +1858,7 @@ static float* load_yvol(
           cp[3] = 1;
           break;
       }
-    } else if (*nc == 2) {
+    } else if (nc == 2) {
       switch (req) {
         case 1: cp[0] = vp[0]; break;
         case 2:
@@ -1876,7 +1874,7 @@ static float* load_yvol(
           cp[1] = vp[1];
           break;
       }
-    } else if (*nc == 3) {
+    } else if (nc == 3) {
       switch (req) {
         case 1: cp[0] = vp[0]; break;
         case 2:
@@ -1895,7 +1893,7 @@ static float* load_yvol(
           cp[3] = 1;
           break;
       }
-    } else if (*nc == 4) {
+    } else if (nc == 4) {
       switch (req) {
         case 1: cp[0] = vp[0]; break;
         case 2:
@@ -1916,7 +1914,7 @@ static float* load_yvol(
       }
     }
   }
-  return cvoxels.release();
+  return cvoxels;
 }
 
 // save pfm
@@ -1941,10 +1939,9 @@ bool load_volume(const string& filename, volume<float>& vol, string& error) {
     return false;
   };
   auto width = 0, height = 0, depth = 0, ncomp = 0;
-  auto voxels = load_yvol(filename.c_str(), &width, &height, &depth, &ncomp, 1);
-  if (!voxels) return read_error();
-  vol = volume{{width, height, depth}, (const float*)voxels};
-  delete[] voxels;
+  auto voxels = load_yvol(filename.c_str(), width, height, depth, ncomp, 1);
+  if (voxels.empty()) return read_error();
+  vol = volume{{width, height, depth}, (const float*)voxels.data()};
   return true;
 }
 
