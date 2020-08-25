@@ -331,9 +331,10 @@ using progress_callback =
 // Load/save a scene in the supported formats. Throws on error.
 // Calls the progress callback, if defined, as we process more data.
 bool load_scene(const string& filename, sceneio_scene* scene, string& error,
-    progress_callback progress_cb = {}, bool noparallel = false);
+    const progress_callback& progress_cb = {}, bool noparallel = false);
 bool save_scene(const string& filename, const sceneio_scene* scene,
-    string& error, progress_callback progress_cb = {}, bool noparallel = false);
+    string& error, const progress_callback& progress_cb = {},
+    bool noparallel = false);
 
 }  // namespace yocto
 
@@ -343,7 +344,8 @@ bool save_scene(const string& filename, const sceneio_scene* scene,
 namespace yocto {
 
 // Apply subdivision and displacement rules.
-void tesselate_shapes(sceneio_scene* scene, progress_callback progress_cb = {});
+void tesselate_shapes(
+    sceneio_scene* scene, const progress_callback& progress_cb = {});
 void tesselate_shape(sceneio_shape* shape);
 
 }  // namespace yocto
