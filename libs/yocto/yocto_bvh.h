@@ -72,11 +72,11 @@ const int bvh_max_prims = 4;
 // and the split axis. Leaf and internal nodes are identical, except that
 // indices refer to primitives for leaf nodes or other nodes for internal nodes.
 struct bvh_node_ {
-  bbox3f  bbox;
-  int32_t start;
-  int16_t num;
-  int8_t  axis;
-  bool    internal;
+  bbox3f  bbox     = invalidb3f;
+  int32_t start    = 0;
+  int16_t num      = 0;
+  int8_t  axis     = 0;
+  bool    internal = false;
 };
 
 // BVH tree stored as a node array with the tree structure is encoded using

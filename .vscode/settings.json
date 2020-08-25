@@ -145,6 +145,8 @@
     "-cppcoreguidelines-pro-type-vararg",
     "-cppcoreguidelines-pro-bounds-pointer-arithmetic",
     "-cppcoreguidelines-narrowing-conversions",
+    "-cppcoreguidelines-special-member-functions",
+    "-cppcoreguidelines-pro-bounds-constant-array-index",
     "modernize-*",
     "-modernize-use-trailing-return-type"
   ]
