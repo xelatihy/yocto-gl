@@ -42,6 +42,7 @@
 // -----------------------------------------------------------------------------
 
 #include <string>
+#include <utility>
 #include <vector>
 
 #include "yocto_math.h"
@@ -353,7 +354,7 @@ template <typename T>
 struct volume {
   // constructors
   volume();
-  volume(const vec3i& size, const T& value = {});
+  explicit volume(const vec3i& size, const T& value = {});
   volume(const vec3i& size, const T* value);
 
   // size

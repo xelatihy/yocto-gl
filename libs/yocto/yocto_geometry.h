@@ -70,19 +70,6 @@ inline bbox3f quad_bounds(
 }  // namespace yocto
 
 // -----------------------------------------------------------------------------
-// TRANSFORMS
-// -----------------------------------------------------------------------------
-namespace yocto {
-
-// Transforms rays and bounding boxes by matrices.
-inline ray3f  transform_ray(const mat4f& a, const ray3f& b);
-inline ray3f  transform_ray(const frame3f& a, const ray3f& b);
-inline bbox3f transform_bbox(const mat4f& a, const bbox3f& b);
-inline bbox3f transform_bbox(const frame3f& a, const bbox3f& b);
-
-}  // namespace yocto
-
-// -----------------------------------------------------------------------------
 // GEOMETRY UTILITIES
 // -----------------------------------------------------------------------------
 namespace yocto {

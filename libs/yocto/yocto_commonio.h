@@ -243,6 +243,12 @@ void close_file(file_stream& fs);
 // Read a line of text
 bool read_line(file_stream& fs, char* buffer, size_t size);
 
+// Read a line of text
+template <size_t N>
+inline bool read_line(file_stream& fs, array<char, N>& buffer) {
+  return read_line(fs, buffer.data(), buffer.size());
+}
+
 // Write text to a file
 bool write_text(file_stream& fs, const string& str);
 
