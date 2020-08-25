@@ -106,7 +106,7 @@ inline void remove_comment(string_view& str, char comment_char = '#') {
 }
 
 // Parse values from a string
-[[nodiscard]] inline bool parse_value(string_view& str, string_view& value) {
+inline bool parse_value(string_view& str, string_view& value) {
   skip_whitespace(str);
   if (str.empty()) return false;
   if (str.front() != '"') {
@@ -129,76 +129,76 @@ inline void remove_comment(string_view& str, char comment_char = '#') {
   }
   return true;
 }
-[[nodiscard]] inline bool parse_value(string_view& str, string& value) {
+inline bool parse_value(string_view& str, string& value) {
   auto valuev = string_view{};
   if (!parse_value(str, valuev)) return false;
   value = string{valuev};
   return true;
 }
-[[nodiscard]] inline bool parse_value(string_view& str, int8_t& value) {
+inline bool parse_value(string_view& str, int8_t& value) {
   char* end = nullptr;
   value     = (int8_t)strtol(str.data(), &end, 10);
   if (str.data() == end) return false;
   str.remove_prefix(end - str.data());
   return true;
 }
-[[nodiscard]] inline bool parse_value(string_view& str, int16_t& value) {
+inline bool parse_value(string_view& str, int16_t& value) {
   char* end = nullptr;
   value     = (int16_t)strtol(str.data(), &end, 10);
   if (str.data() == end) return false;
   str.remove_prefix(end - str.data());
   return true;
 }
-[[nodiscard]] inline bool parse_value(string_view& str, int32_t& value) {
+inline bool parse_value(string_view& str, int32_t& value) {
   char* end = nullptr;
   value     = (int32_t)strtol(str.data(), &end, 10);
   if (str.data() == end) return false;
   str.remove_prefix(end - str.data());
   return true;
 }
-[[nodiscard]] inline bool parse_value(string_view& str, int64_t& value) {
+inline bool parse_value(string_view& str, int64_t& value) {
   char* end = nullptr;
   value     = (int64_t)strtoll(str.data(), &end, 10);
   if (str.data() == end) return false;
   str.remove_prefix(end - str.data());
   return true;
 }
-[[nodiscard]] inline bool parse_value(string_view& str, uint8_t& value) {
+inline bool parse_value(string_view& str, uint8_t& value) {
   char* end = nullptr;
   value     = (uint8_t)strtoul(str.data(), &end, 10);
   if (str.data() == end) return false;
   str.remove_prefix(end - str.data());
   return true;
 }
-[[nodiscard]] inline bool parse_value(string_view& str, uint16_t& value) {
+inline bool parse_value(string_view& str, uint16_t& value) {
   char* end = nullptr;
   value     = (uint16_t)strtoul(str.data(), &end, 10);
   if (str.data() == end) return false;
   str.remove_prefix(end - str.data());
   return true;
 }
-[[nodiscard]] inline bool parse_value(string_view& str, uint32_t& value) {
+inline bool parse_value(string_view& str, uint32_t& value) {
   char* end = nullptr;
   value     = (uint32_t)strtoul(str.data(), &end, 10);
   if (str.data() == end) return false;
   str.remove_prefix(end - str.data());
   return true;
 }
-[[nodiscard]] inline bool parse_value(string_view& str, uint64_t& value) {
+inline bool parse_value(string_view& str, uint64_t& value) {
   char* end = nullptr;
   value     = (uint64_t)strtoull(str.data(), &end, 10);
   if (str.data() == end) return false;
   str.remove_prefix(end - str.data());
   return true;
 }
-[[nodiscard]] inline bool parse_value(string_view& str, float& value) {
+inline bool parse_value(string_view& str, float& value) {
   char* end = nullptr;
   value     = strtof(str.data(), &end);
   if (str.data() == end) return false;
   str.remove_prefix(end - str.data());
   return true;
 }
-[[nodiscard]] inline bool parse_value(string_view& str, double& value) {
+inline bool parse_value(string_view& str, double& value) {
   char* end = nullptr;
   value     = strtod(str.data(), &end);
   if (str.data() == end) return false;
@@ -206,7 +206,7 @@ inline void remove_comment(string_view& str, char comment_char = '#') {
   return true;
 }
 #ifdef __APPLE__
-[[nodiscard]] inline bool parse_value(string_view& str, size_t& value) {
+inline bool parse_value(string_view& str, size_t& value) {
   char* end = nullptr;
   value     = (size_t)strtoull(str.data(), &end, 10);
   if (str.data() == end) return false;
@@ -214,34 +214,34 @@ inline void remove_comment(string_view& str, char comment_char = '#') {
   return true;
 }
 #endif
-[[nodiscard]] inline bool parse_value(string_view& str, bool& value) {
+inline bool parse_value(string_view& str, bool& value) {
   auto valuei = 0;
   if (!parse_value(str, valuei)) return false;
   value = (bool)valuei;
   return true;
 }
 
-[[nodiscard]] inline bool parse_value(string_view& str, vec2f& value) {
+inline bool parse_value(string_view& str, vec2f& value) {
   for (auto i = 0; i < 2; i++)
     if (!parse_value(str, value[i])) return false;
   return true;
 }
-[[nodiscard]] inline bool parse_value(string_view& str, vec3f& value) {
+inline bool parse_value(string_view& str, vec3f& value) {
   for (auto i = 0; i < 3; i++)
     if (!parse_value(str, value[i])) return false;
   return true;
 }
-[[nodiscard]] inline bool parse_value(string_view& str, vec4f& value) {
+inline bool parse_value(string_view& str, vec4f& value) {
   for (auto i = 0; i < 4; i++)
     if (!parse_value(str, value[i])) return false;
   return true;
 }
-[[nodiscard]] inline bool parse_value(string_view& str, mat4f& value) {
+inline bool parse_value(string_view& str, mat4f& value) {
   for (auto i = 0; i < 4; i++)
     if (!parse_value(str, value[i])) return false;
   return true;
 }
-[[nodiscard]] inline bool parse_value(string_view& str, frame3f& value) {
+inline bool parse_value(string_view& str, frame3f& value) {
   for (auto i = 0; i < 4; i++)
     if (!parse_value(str, value[i])) return false;
   return true;
@@ -259,14 +259,6 @@ ply_element::~ply_element() {
 }
 ply_model::~ply_model() {
   for (auto element : elements) delete element;
-}
-
-// Make ply
-inline ply_element* add_property(ply_model* ply) {
-  return ply->elements.emplace_back(new ply_element{});
-}
-inline ply_property* add_property(ply_element* element) {
-  return element->properties.emplace_back(new ply_property{});
 }
 
 // Load ply
@@ -1165,7 +1157,7 @@ bool add_points(ply_model* ply, const vector<int>& values) {
 // -----------------------------------------------------------------------------
 namespace yocto {
 
-[[nodiscard]] inline bool parse_value(string_view& str, obj_vertex& value) {
+inline bool parse_value(string_view& str, obj_vertex& value) {
   value = obj_vertex{0, 0, 0};
   if (!parse_value(str, value.position)) return false;
   if (!str.empty() && str.front() == '/') {
@@ -1185,7 +1177,7 @@ namespace yocto {
 }
 
 // Input for OBJ textures
-[[nodiscard]] inline bool parse_value(string_view& str, obj_texture& info) {
+inline bool parse_value(string_view& str, obj_texture& info) {
   // initialize
   info = obj_texture();
 
@@ -1216,8 +1208,7 @@ namespace yocto {
 }
 
 // Read obj
-[[nodiscard]] inline bool load_mtl(
-    const string& filename, obj_scene* obj, string& error) {
+inline bool load_mtl(const string& filename, obj_scene* obj, string& error) {
   // error helpers
   auto open_error = [filename, &error]() {
     error = filename + ": file not found";
@@ -1443,8 +1434,7 @@ namespace yocto {
 }
 
 // Read obj
-[[nodiscard]] inline bool load_objx(
-    const string& filename, obj_scene* obj, string& error) {
+inline bool load_objx(const string& filename, obj_scene* obj, string& error) {
   // error helpers
   auto open_error = [filename, &error]() {
     error = filename + ": file not found";
@@ -1780,8 +1770,7 @@ inline void format_value(string& str, const obj_vertex& value) {
 }
 
 // Save obj
-[[nodiscard]] inline bool save_mtl(
-    const string& filename, obj_scene* obj, string& error) {
+inline bool save_mtl(const string& filename, obj_scene* obj, string& error) {
   // throw helpers
   // error helpers
   auto open_error = [filename, &error]() {
@@ -1956,8 +1945,7 @@ inline void format_value(string& str, const obj_vertex& value) {
 }
 
 // Save obj
-[[nodiscard]] inline bool save_objx(
-    const string& filename, obj_scene* obj, string& error) {
+inline bool save_objx(const string& filename, obj_scene* obj, string& error) {
   // error helpers
   auto open_error = [filename, &error]() {
     error = filename + ": file not found";
@@ -2015,8 +2003,7 @@ inline void format_value(string& str, const obj_vertex& value) {
 }
 
 // Save obj
-[[nodiscard]] bool save_obj(
-    const string& filename, obj_scene* obj, string& error) {
+bool save_obj(const string& filename, obj_scene* obj, string& error) {
   // error helpers
   auto open_error = [filename, &error]() {
     error = filename + ": file not found";
@@ -2567,7 +2554,7 @@ struct pbrt_command {
 };
 
 // get pbrt value
-[[nodiscard]] inline bool get_pbrt_value(const pbrt_value& pbrt, string& val) {
+inline bool get_pbrt_value(const pbrt_value& pbrt, string& val) {
   if (pbrt.type == pbrt_type::string || pbrt.type == pbrt_type::texture) {
     val = pbrt.value1s;
     return true;
@@ -2575,7 +2562,7 @@ struct pbrt_command {
     return false;
   }
 }
-[[nodiscard]] inline bool get_pbrt_value(const pbrt_value& pbrt, bool& val) {
+inline bool get_pbrt_value(const pbrt_value& pbrt, bool& val) {
   if (pbrt.type == pbrt_type::boolean) {
     val = pbrt.value1b;
     return true;
@@ -2583,7 +2570,7 @@ struct pbrt_command {
     return false;
   }
 }
-[[nodiscard]] inline bool get_pbrt_value(const pbrt_value& pbrt, int& val) {
+inline bool get_pbrt_value(const pbrt_value& pbrt, int& val) {
   if (pbrt.type == pbrt_type::integer) {
     val = pbrt.value1i;
     return true;
@@ -2591,7 +2578,7 @@ struct pbrt_command {
     return false;
   }
 }
-[[nodiscard]] inline bool get_pbrt_value(const pbrt_value& pbrt, float& val) {
+inline bool get_pbrt_value(const pbrt_value& pbrt, float& val) {
   if (pbrt.type == pbrt_type::real) {
     val = pbrt.value1f;
     return true;
@@ -2599,7 +2586,7 @@ struct pbrt_command {
     return false;
   }
 }
-[[nodiscard]] inline bool get_pbrt_value(const pbrt_value& pbrt, vec2f& val) {
+inline bool get_pbrt_value(const pbrt_value& pbrt, vec2f& val) {
   if (pbrt.type == pbrt_type::point2 || pbrt.type == pbrt_type::vector2) {
     val = pbrt.value2f;
     return true;
@@ -2607,7 +2594,7 @@ struct pbrt_command {
     return false;
   }
 }
-[[nodiscard]] inline bool get_pbrt_value(const pbrt_value& pbrt, vec3f& val) {
+inline bool get_pbrt_value(const pbrt_value& pbrt, vec3f& val) {
   if (pbrt.type == pbrt_type::point || pbrt.type == pbrt_type::vector ||
       pbrt.type == pbrt_type::normal || pbrt.type == pbrt_type::color) {
     val = pbrt.value3f;
@@ -2619,8 +2606,7 @@ struct pbrt_command {
     return false;
   }
 }
-[[nodiscard]] inline bool get_pbrt_value(
-    const pbrt_value& pbrt, vector<float>& val) {
+inline bool get_pbrt_value(const pbrt_value& pbrt, vector<float>& val) {
   if (pbrt.type == pbrt_type::real) {
     if (!pbrt.vector1f.empty()) {
       val = pbrt.vector1f;
@@ -2632,8 +2618,7 @@ struct pbrt_command {
     return false;
   }
 }
-[[nodiscard]] inline bool get_pbrt_value(
-    const pbrt_value& pbrt, vector<vec2f>& val) {
+inline bool get_pbrt_value(const pbrt_value& pbrt, vector<vec2f>& val) {
   if (pbrt.type == pbrt_type::point2 || pbrt.type == pbrt_type::vector2) {
     if (!pbrt.vector2f.empty()) {
       val = pbrt.vector2f;
@@ -2652,8 +2637,7 @@ struct pbrt_command {
     return false;
   }
 }
-[[nodiscard]] inline bool get_pbrt_value(
-    const pbrt_value& pbrt, vector<vec3f>& val) {
+inline bool get_pbrt_value(const pbrt_value& pbrt, vector<vec3f>& val) {
   if (pbrt.type == pbrt_type::point || pbrt.type == pbrt_type::vector ||
       pbrt.type == pbrt_type::normal || pbrt.type == pbrt_type::color) {
     if (!pbrt.vector3f.empty()) {
@@ -2675,8 +2659,7 @@ struct pbrt_command {
   }
 }
 
-[[nodiscard]] inline bool get_pbrt_value(
-    const pbrt_value& pbrt, vector<int>& val) {
+inline bool get_pbrt_value(const pbrt_value& pbrt, vector<int>& val) {
   if (pbrt.type == pbrt_type::integer) {
     if (!pbrt.vector1i.empty()) {
       val = pbrt.vector1i;
@@ -2688,8 +2671,7 @@ struct pbrt_command {
     return false;
   }
 }
-[[nodiscard]] inline bool get_pbrt_value(
-    const pbrt_value& pbrt, vector<vec3i>& val) {
+inline bool get_pbrt_value(const pbrt_value& pbrt, vector<vec3i>& val) {
   if (pbrt.type == pbrt_type::integer) {
     if (pbrt.vector1i.empty() || (pbrt.vector1i.size() % 3) != 0)
       throw std::invalid_argument{"expected int3 array"};
@@ -2702,8 +2684,7 @@ struct pbrt_command {
     return false;
   }
 }
-[[nodiscard]] inline bool get_pbrt_value(
-    const pbrt_value& pbrt, pair<float, string>& val) {
+inline bool get_pbrt_value(const pbrt_value& pbrt, pair<float, string>& val) {
   if (pbrt.type == pbrt_type::string || pbrt.type == pbrt_type::texture) {
     val.first = 0;
     return get_pbrt_value(pbrt, val.second);
@@ -2712,8 +2693,7 @@ struct pbrt_command {
     return get_pbrt_value(pbrt, val.first);
   }
 }
-[[nodiscard]] inline bool get_pbrt_value(
-    const pbrt_value& pbrt, pair<vec3f, string>& val) {
+inline bool get_pbrt_value(const pbrt_value& pbrt, pair<vec3f, string>& val) {
   if (pbrt.type == pbrt_type::string || pbrt.type == pbrt_type::texture) {
     val.first = zero3f;
     return get_pbrt_value(pbrt, val.second);
@@ -2723,7 +2703,7 @@ struct pbrt_command {
   }
 }
 template <typename T>
-[[nodiscard]] inline bool get_pbrt_value(
+inline bool get_pbrt_value(
     const vector<pbrt_value>& pbrt, const string& name, T& val) {
   for (auto& p : pbrt) {
     if (p.name == name) {
@@ -2820,7 +2800,7 @@ inline void remove_pbrt_comment(string_view& str, char comment_char = '#') {
 }
 
 // Read a pbrt command from file
-[[nodiscard]] inline bool read_pbrt_cmdline(file_stream& fs, string& cmd) {
+inline bool read_pbrt_cmdline(file_stream& fs, string& cmd) {
   auto buffer = array<char, 4096>{};
   cmd.clear();
   auto found = false;
@@ -2853,7 +2833,7 @@ inline void remove_pbrt_comment(string_view& str, char comment_char = '#') {
 }
 
 // parse a quoted string
-[[nodiscard]] inline bool parse_command(string_view& str, string& value) {
+inline bool parse_command(string_view& str, string& value) {
   skip_whitespace(str);
   if (!isalpha((int)str.front())) return false;
   auto pos = str.find_first_not_of(
@@ -2870,7 +2850,7 @@ inline void remove_pbrt_comment(string_view& str, char comment_char = '#') {
 
 // parse pbrt value with optional parens
 template <typename T>
-[[nodiscard]] inline bool parse_param(string_view& str, T& value) {
+inline bool parse_param(string_view& str, T& value) {
   skip_whitespace(str);
   auto parens = !str.empty() && str.front() == '[';
   if (parens) str.remove_prefix(1);
@@ -2885,8 +2865,7 @@ template <typename T>
 }
 
 // parse a quoted string
-[[nodiscard]] inline bool parse_nametype(
-    string_view& str_, string& name, string& type) {
+inline bool parse_nametype(string_view& str_, string& name, string& type) {
   auto value = ""s;
   if (!parse_value(str_, value)) return false;
   if (str_.empty()) return false;
@@ -3079,8 +3058,7 @@ inline pair<vec3f, vec3f> get_subsurface(const string& name) {
   return params.at(name);
 }
 
-[[nodiscard]] inline bool parse_params(
-    string_view& str, vector<pbrt_value>& values) {
+inline bool parse_params(string_view& str, vector<pbrt_value>& values) {
   auto parse_pvalues = [](string_view& str, auto& value, auto& values) -> bool {
     values.clear();
     skip_whitespace(str);
@@ -4054,13 +4032,12 @@ struct pbrt_context {
 };
 
 // load pbrt
-[[nodiscard]] inline bool load_pbrt(const string& filename, pbrt_scene* pbrt,
-    string& error, pbrt_context& ctx,
-    unordered_map<string, pbrt_material*>& material_map,
-    unordered_map<string, pbrt_material>&  named_materials,
-    unordered_map<string, pbrt_texture>&   named_textures,
-    unordered_map<string, pbrt_medium>&    named_mediums,
-    const string&                          ply_dirname) {
+inline bool load_pbrt(const string& filename, pbrt_scene* pbrt, string& error,
+    pbrt_context& ctx, unordered_map<string, pbrt_material*>& material_map,
+    unordered_map<string, pbrt_material>& named_materials,
+    unordered_map<string, pbrt_texture>&  named_textures,
+    unordered_map<string, pbrt_medium>&   named_mediums,
+    const string&                         ply_dirname) {
   // error helpers
   auto open_error = [filename, &error]() {
     error = filename + ": file not found";

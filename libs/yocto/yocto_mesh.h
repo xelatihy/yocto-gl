@@ -354,24 +354,22 @@ void meandering_triangles(const vector<float>& field, float isoline,
 namespace yocto {
 
 // Load/save a shape as indexed meshes
-[[nodiscard]] bool load_mesh(const string& filename, vector<vec3i>& triangles,
+bool load_mesh(const string& filename, vector<vec3i>& triangles,
     vector<vec3f>& positions, vector<vec3f>& normals, vector<vec2f>& texcoords,
     vector<vec3f>& colors, string& error, bool flip_texcoords = true);
-[[nodiscard]] bool save_mesh(const string& filename,
-    const vector<vec3i>& triangles, const vector<vec3f>& positions,
-    const vector<vec3f>& normals, const vector<vec2f>& texcoords,
-    const vector<vec3f>& colors, string& error, bool ascii = false,
-    bool flip_texcoords = true);
+bool save_mesh(const string& filename, const vector<vec3i>& triangles,
+    const vector<vec3f>& positions, const vector<vec3f>& normals,
+    const vector<vec2f>& texcoords, const vector<vec3f>& colors, string& error,
+    bool ascii = false, bool flip_texcoords = true);
 
 // Load/save a set of lines
-[[nodiscard]] bool load_lines(const string& filename, vector<vec2i>& lines,
+bool load_lines(const string& filename, vector<vec2i>& lines,
     vector<vec3f>& positions, vector<vec3f>& normals, vector<vec2f>& texcoords,
     vector<vec3f>& colors, string& error, bool flip_texcoords = true);
-[[nodiscard]] bool save_lines(const string& filename,
-    const vector<vec2i>& lines, const vector<vec3f>& positions,
-    const vector<vec3f>& normals, const vector<vec2f>& texcoords,
-    const vector<vec3f>& colors, string& error, bool ascii = false,
-    bool flip_texcoords = true);
+bool save_lines(const string& filename, const vector<vec2i>& lines,
+    const vector<vec3f>& positions, const vector<vec3f>& normals,
+    const vector<vec2f>& texcoords, const vector<vec3f>& colors, string& error,
+    bool ascii = false, bool flip_texcoords = true);
 
 }  // namespace yocto
 

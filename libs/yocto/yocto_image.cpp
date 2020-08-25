@@ -1451,51 +1451,105 @@ static vector<string> split_string(const string& str) {
   return ret;
 }
 
+// Convert numbert of components
+static vector<float> convert_components(
+    const vector<float>& pixels, int components, int components_to) {
+  if (components <= 0 || components > 4 || components_to <= 0 ||
+      components_to > 4)
+    throw std::invalid_argument{"components not supported"};
+  if (components == components_to) return pixels;
+
+  auto cpixels = vector<float>((size_t)components_to * pixels.size());
+  for (auto i = 0ull; i < pixels.size(); i++) {
+    auto vp = pixels.data() + i * components;
+    auto cp = cpixels.data() + i * components_to;
+    if (components_to > 0) cp[0] = (components > 0) ? vp[0] : 0;
+    if (components_to > 1) cp[1] = (components > 1) ? vp[1] : 0;
+    if (components_to > 2) cp[2] = (components > 2) ? vp[2] : 0;
+    if (components_to > 3) cp[3] = (components > 3) ? vp[3] : 1;
+  }
+  return cpixels;
+}
+
+// Convert numbert of components
+static vector<byte> convert_components(
+    const vector<byte>& pixels, int components, int components_to) {
+  if (components <= 0 || components > 4 || components_to <= 0 ||
+      components_to > 4)
+    throw std::invalid_argument{"components not supported"};
+  if (components == components_to) return pixels;
+
+  auto cpixels = vector<byte>((size_t)components_to * pixels.size());
+  for (auto i = 0ull; i < pixels.size(); i++) {
+    auto vp = pixels.data() + i * components;
+    auto cp = cpixels.data() + i * components_to;
+    if (components_to > 0) cp[0] = (components > 0) ? vp[0] : 0;
+    if (components_to > 1) cp[1] = (components > 1) ? vp[1] : 0;
+    if (components_to > 2) cp[2] = (components > 2) ? vp[2] : 0;
+    if (components_to > 3) cp[3] = (components > 3) ? vp[3] : 255;
+  }
+  return cpixels;
+}
+
 // Pfm load
-static float* load_pfm(const char* filename, int* w, int* h, int* nc, int req) {
+static bool load_pfm(const string& filename, int& width, int& height,
+    int& components, vector<float>& pixels, string& error) {
+  // error helpers
+  auto open_error = [filename, &error]() {
+    error = filename + ": file not found";
+    return false;
+  };
+  auto parse_error = [filename, &error]() {
+    error = filename + ": parse error";
+    return false;
+  };
+  auto read_error = [filename, &error]() {
+    error = filename + ": read error";
+    return false;
+  };
+
   auto fs = open_file(filename, "rb");
-  if (!fs) return nullptr;
+  if (!fs) return open_error();
 
   // buffer
   auto buffer = array<char, 4096>{};
   auto toks   = vector<string>();
 
   // read magic
-  if (!read_line(fs, buffer)) return nullptr;
+  if (!read_line(fs, buffer)) return read_error();
   toks = split_string(buffer.data());
-  if (toks[0] == "Pf")
-    *nc = 1;
-  else if (toks[0] == "PF")
-    *nc = 3;
-  else
-    return nullptr;
+  if (toks[0] == "Pf") {
+    components = 1;
+  } else if (toks[0] == "PF") {
+    components = 3;
+  } else {
+    return parse_error();
+  }
 
-  // read w, h
-  if (!read_line(fs, buffer)) return nullptr;
-  toks = split_string(buffer.data());
-  *w   = atoi(toks[0].c_str());
-  *h   = atoi(toks[1].c_str());
+  // read width, height
+  if (!read_line(fs, buffer)) return read_error();
+  toks   = split_string(buffer.data());
+  width  = atoi(toks[0].c_str());
+  height = atoi(toks[1].c_str());
 
   // read scale
-  if (!read_line(fs, buffer)) return nullptr;
+  if (!read_line(fs, buffer)) return read_error();
   toks   = split_string(buffer.data());
   auto s = atof(toks[0].c_str());
 
   // read the data (flip y)
-  auto npixels = (size_t)(*w) * (size_t)(*h);
-  auto nvalues = npixels * (size_t)(*nc);
-  auto nrow    = (size_t)(*w) * (size_t)(*nc);
-  auto pixels  = std::unique_ptr<float[]>(new float[nvalues]);
-  for (auto j = *h - 1; j >= 0; j--) {
-    if (!read_values(fs, pixels.get() + j * nrow, nrow)) return nullptr;
+  auto npixels = (size_t)width * (size_t)height;
+  auto nvalues = npixels * (size_t)components;
+  auto nrow    = (size_t)width * (size_t)components;
+  pixels       = vector<float>(nvalues);
+  for (auto j = height - 1; j >= 0; j--) {
+    if (!read_values(fs, pixels.data() + j * nrow, nrow)) return {};
   }
 
   // endian conversion
   if (s > 0) {
     for (auto i = 0; i < nvalues; ++i) {
-      auto dta = (uint8_t*)(pixels.get() + i);
-      std::swap(dta[0], dta[3]);
-      std::swap(dta[1], dta[2]);
+      pixels[i] = swap_endian(pixels[i]);
     }
   }
 
@@ -1505,86 +1559,250 @@ static float* load_pfm(const char* filename, int* w, int* h, int* nc, int req) {
     for (auto i = 0; i < nvalues; i++) pixels[i] *= scl;
   }
 
-  // proper number of channels
-  if (req == 0 || *nc == req) return pixels.release();
-
-  // pack into channels
-  if (req < 0 || req > 4) {
-    return nullptr;
-  }
-  auto cpixels = std::unique_ptr<float[]>(new float[req * npixels]);
-  for (auto i = 0ull; i < npixels; i++) {
-    auto vp = pixels.get() + i * (*nc);
-    auto cp = cpixels.get() + i * req;
-    if (*nc == 1) {
-      switch (req) {
-        case 1: cp[0] = vp[0]; break;
-        case 2:
-          cp[0] = vp[0];
-          cp[1] = vp[0];
-          break;
-        case 3:
-          cp[0] = vp[0];
-          cp[1] = vp[0];
-          cp[2] = vp[0];
-          break;
-        case 4:
-          cp[0] = vp[0];
-          cp[1] = vp[0];
-          cp[2] = vp[0];
-          cp[3] = 1;
-          break;
-      }
-    } else {
-      switch (req) {
-        case 1: cp[0] = vp[0]; break;
-        case 2:
-          cp[0] = vp[0];
-          cp[1] = vp[1];
-          break;
-        case 3:
-          cp[0] = vp[0];
-          cp[1] = vp[1];
-          cp[2] = vp[2];
-          break;
-        case 4:
-          cp[0] = vp[0];
-          cp[1] = vp[1];
-          cp[2] = vp[2];
-          cp[3] = 1;
-          break;
-      }
-    }
-  }
-  return cpixels.release();
+  // done
+  return true;
 }
 
 // save pfm
-static bool save_pfm(
-    const char* filename, int w, int h, int nc, const float* pixels) {
-  auto fs = open_file(filename, "wb");
-  if (!fs) return false;
-
-  if (!write_text(fs, (nc == 1) ? "Pf\n"s : "PF\n"s)) return false;
-  if (!write_text(fs, std::to_string(w) + " " + std::to_string(h) + "\n"))
+static bool save_pfm(const string& filename, int width, int height,
+    int components, const vector<float>& pixels, string& error) {
+  // error helpers
+  auto open_error = [filename, &error]() {
+    error = filename + ": file not found";
     return false;
-  if (!write_text(fs, "-1\n")) return false;
-  if (nc == 1 || nc == 3) {
-    if (!write_values(fs, pixels, w * h * nc)) return false;
+  };
+  auto write_error = [filename, &error]() {
+    error = filename + ": write error";
+    return false;
+  };
+
+  auto fs = open_file(filename, "wb");
+  if (!fs) return open_error();
+
+  if (!write_text(fs, (components == 1) ? "Pf\n"s : "PF\n"s))
+    return write_error();
+  if (!write_text(
+          fs, std::to_string(width) + " " + std::to_string(height) + "\n"))
+    return false;
+  if (!write_text(fs, "-1\n")) return write_error();
+  if (components == 1 || components == 3) {
+    if (!write_values(fs, pixels.data(), pixels.size())) return write_error();
   } else {
-    for (auto i = 0; i < w * h; i++) {
+    for (auto i = 0; i < width * height; i++) {
       auto vz = 0.0f;
-      auto v  = pixels + i * nc;
-      if (!write_value(fs, v + 0)) return false;
-      if (!write_value(fs, v + 1)) return false;
-      if (nc == 2) {
-        if (!write_value(fs, &vz)) return false;
+      auto v  = pixels.data() + i * components;
+      if (!write_value(fs, v + 0)) return write_error();
+      if (!write_value(fs, v + 1)) return write_error();
+      if (components == 2) {
+        if (!write_value(fs, &vz)) return write_error();
       } else {
-        if (!write_value(fs, v + 2)) return false;
+        if (!write_value(fs, v + 2)) return write_error();
       }
     }
   }
 
+  return true;
+}
+
+// Png load
+static bool load_png(const string& filename, int& width, int& height,
+    int& components, vector<byte>& pixels, string& error) {
+  // error helpers
+  auto open_error = [filename, &error]() {
+    error = filename + ": file not found";
+    return false;
+  };
+
+  auto pixels_ptr = stbi_load(
+      filename.c_str(), &width, &height, &components, 0);
+  if (!pixels_ptr) return open_error();
+  pixels = {pixels_ptr,
+      pixels_ptr + (size_t)width * (size_t)height * (size_t)components};
+  free(pixels_ptr);
+  return true;
+}
+
+// save png
+static bool save_png(const string& filename, int width, int height,
+    int components, const vector<byte>& pixels, string& error) {
+  // error helpers
+  auto write_error = [filename, &error]() {
+    error = filename + ": write error";
+    return false;
+  };
+
+  if (!stbi_write_png(filename.c_str(), width, height, components,
+          pixels.data(), width * components))
+    return write_error();
+  return true;
+}
+
+// jpg load
+static bool load_jpg(const string& filename, int& width, int& height,
+    int& components, vector<byte>& pixels, string& error) {
+  // error helpers
+  auto open_error = [filename, &error]() {
+    error = filename + ": file not found";
+    return false;
+  };
+
+  auto pixels_ptr = stbi_load(
+      filename.c_str(), &width, &height, &components, 0);
+  if (!pixels_ptr) return open_error();
+  pixels = {pixels_ptr,
+      pixels_ptr + (size_t)width * (size_t)height * (size_t)components};
+  free(pixels_ptr);
+  return true;
+}
+
+// save jpg
+static bool save_jpg(const string& filename, int width, int height,
+    int components, const vector<byte>& pixels, string& error) {
+  // error helpers
+  auto write_error = [filename, &error]() {
+    error = filename + ": write error";
+    return false;
+  };
+
+  if (!stbi_write_jpg(
+          filename.c_str(), width, height, components, pixels.data(), 75))
+    return write_error();
+  return true;
+}
+
+// tga load
+static bool load_tga(const string& filename, int& width, int& height,
+    int& components, vector<byte>& pixels, string& error) {
+  // error helpers
+  auto open_error = [filename, &error]() {
+    error = filename + ": file not found";
+    return false;
+  };
+
+  auto pixels_ptr = stbi_load(
+      filename.c_str(), &width, &height, &components, 0);
+  if (!pixels_ptr) return open_error();
+  pixels = {pixels_ptr,
+      pixels_ptr + (size_t)width * (size_t)height * (size_t)components};
+  free(pixels_ptr);
+  return true;
+}
+
+// save tga
+static bool save_tga(const string& filename, int width, int height,
+    int components, const vector<byte>& pixels, string& error) {
+  // error helpers
+  auto write_error = [filename, &error]() {
+    error = filename + ": write error";
+    return false;
+  };
+
+  if (!stbi_write_tga(
+          filename.c_str(), width, height, components, pixels.data()))
+    return write_error();
+  return true;
+}
+
+// jpg load
+static bool load_bmp(const string& filename, int& width, int& height,
+    int& components, vector<byte>& pixels, string& error) {
+  // error helpers
+  auto open_error = [filename, &error]() {
+    error = filename + ": file not found";
+    return false;
+  };
+
+  auto pixels_ptr = stbi_load(
+      filename.c_str(), &width, &height, &components, 0);
+  if (!pixels_ptr) return open_error();
+  pixels = {pixels_ptr,
+      pixels_ptr + (size_t)width * (size_t)height * (size_t)components};
+  free(pixels_ptr);
+  return true;
+}
+
+// save jpg
+static bool save_bmp(const string& filename, int width, int height,
+    int components, const vector<byte>& pixels, string& error) {
+  // error helpers
+  auto write_error = [filename, &error]() {
+    error = filename + ": write error";
+    return false;
+  };
+
+  if (!stbi_write_bmp(
+          filename.c_str(), width, height, components, pixels.data()))
+    return write_error();
+  return true;
+}
+
+// hdr load
+static bool load_hdr(const string& filename, int& width, int& height,
+    int& components, vector<float>& pixels, string& error) {
+  // error helpers
+  auto open_error = [filename, &error]() {
+    error = filename + ": file not found";
+    return false;
+  };
+
+  auto pixels_ptr = stbi_loadf(
+      filename.c_str(), &width, &height, &components, 0);
+  if (!pixels_ptr) return open_error();
+  pixels = {pixels_ptr,
+      pixels_ptr + (size_t)width * (size_t)height * (size_t)components};
+  free(pixels_ptr);
+  return true;
+}
+
+// save hdr
+static bool save_hdr(const string& filename, int width, int height,
+    int components, const vector<float>& pixels, string& error) {
+  // error helpers
+  auto write_error = [filename, &error]() {
+    error = filename + ": write error";
+    return false;
+  };
+
+  if (!stbi_write_hdr(
+          filename.c_str(), width, height, components, pixels.data()))
+    return write_error();
+  return true;
+}
+
+// exr load
+static bool load_exr(const string& filename, int& width, int& height,
+    int& components, vector<float>& pixels, string& error) {
+  // error helpers
+  auto open_error = [filename, &error]() {
+    error = filename + ": file not found";
+    return false;
+  };
+
+  auto pixels_ptr = (float*)nullptr;
+  if (LoadEXR(&pixels_ptr, &width, &height, filename.c_str(), nullptr) != 0)
+    return open_error();
+  if (pixels_ptr == nullptr) return open_error();
+  components = 4;
+  pixels     = {pixels_ptr,
+      pixels_ptr + (size_t)width * (size_t)height * (size_t)components};
+  free(pixels_ptr);
+  return true;
+}
+
+// save exr
+static bool save_exr(const string& filename, int width, int height,
+    int components, const vector<float>& pixels, string& error) {
+  // error helpers
+  auto write_error = [filename, &error]() {
+    error = filename + ": write error";
+    return false;
+  };
+
+  if (components != 4) throw std::invalid_argument{"not supported yet"};
+
+  if (SaveEXR(pixels.data(), width, height, components, 1, filename.c_str(),
+          nullptr) < 0)
+    return write_error();
   return true;
 }
 
@@ -1595,8 +1813,7 @@ bool is_hdr_filename(const string& filename) {
 }
 
 // Loads an hdr image.
-[[nodiscard]] bool load_image(
-    const string& filename, image<vec4f>& img, string& error) {
+bool load_image(const string& filename, image<vec4f>& img, string& error) {
   auto format_error = [filename, &error]() {
     error = filename + ": unknown format";
     return false;
@@ -1618,22 +1835,27 @@ bool is_hdr_filename(const string& filename) {
     return true;
   } else if (ext == ".pfm" || ext == ".PFM") {
     auto width = 0, height = 0, ncomp = 0;
-    auto pixels = load_pfm(filename.c_str(), &width, &height, &ncomp, 4);
-    if (pixels == nullptr) return read_error();
-    img = image{{width, height}, (const vec4f*)pixels};
-    delete[] pixels;
+    auto pixels = vector<float>{};
+    if (!load_pfm(filename, width, height, ncomp, pixels, error)) return false;
+    if (pixels.empty()) return read_error();
+    if (ncomp != 4) pixels = convert_components(pixels, ncomp, 4);
+    img = image{{width, height}, (const vec4f*)pixels.data()};
     return true;
   } else if (ext == ".hdr" || ext == ".HDR") {
     auto width = 0, height = 0, ncomp = 0;
-    auto pixels = stbi_loadf(filename.c_str(), &width, &height, &ncomp, 4);
-    if (pixels == nullptr) return read_error();
-    img = image{{width, height}, (const vec4f*)pixels};
-    free(pixels);
+    auto pixels = vector<float>{};
+    if (!load_hdr(filename, width, height, ncomp, pixels, error)) return false;
+    if (pixels.empty()) return read_error();
+    if (ncomp != 4) pixels = convert_components(pixels, ncomp, 4);
+    img = image{{width, height}, (const vec4f*)pixels.data()};
     return true;
   } else if (!is_hdr_filename(filename)) {
-    auto imgb = image<vec4b>{};
-    if (!load_image(filename, imgb, error)) return false;
-    img = srgb_to_rgb(imgb);
+    auto width = 0, height = 0, ncomp = 0;
+    auto pixels = vector<float>{};
+    if (!load_exr(filename, width, height, ncomp, pixels, error)) return false;
+    if (pixels.empty()) return read_error();
+    if (ncomp != 4) pixels = convert_components(pixels, ncomp, 4);
+    img = image{{width, height}, (const vec4f*)pixels.data()};
     return true;
   } else {
     return format_error();
@@ -1641,7 +1863,7 @@ bool is_hdr_filename(const string& filename) {
 }
 
 // Saves an hdr image.
-[[nodiscard]] bool save_image(
+bool save_image(
     const string& filename, const image<vec4f>& img, string& error) {
   auto format_error = [filename, &error]() {
     error = filename + ": unknown format";
@@ -1654,20 +1876,17 @@ bool is_hdr_filename(const string& filename) {
 
   auto ext = path_extension(filename);
   if (ext == ".hdr" || ext == ".HDR") {
-    if (!stbi_write_hdr(
-            filename.c_str(), img.width(), img.height(), 4, (float*)img.data()))
-      return write_error();
-    return true;
+    return save_hdr(filename, img.width(), img.height(), 4,
+        {(const float*)img.data(), (const float*)img.data() + img.count() * 4},
+        error);
   } else if (ext == ".pfm" || ext == ".PFM") {
-    if (!save_pfm(
-            filename.c_str(), img.width(), img.height(), 4, (float*)img.data()))
-      return write_error();
-    return true;
+    return save_pfm(filename, img.width(), img.height(), 4,
+        {(const float*)img.data(), (const float*)img.data() + img.count() * 4},
+        error);
   } else if (ext == ".exr" || ext == ".EXR") {
-    if (SaveEXR((float*)img.data(), img.width(), img.height(), 4, 1,
-            filename.c_str(), nullptr) < 0)
-      return write_error();
-    return true;
+    return save_exr(filename, img.width(), img.height(), 4,
+        {(const float*)img.data(), (const float*)img.data() + img.count() * 4},
+        error);
   } else if (!is_hdr_filename(filename)) {
     return save_image(filename, rgb_to_srgbb(img), error);
   } else {
@@ -1676,8 +1895,7 @@ bool is_hdr_filename(const string& filename) {
 }
 
 // Loads an ldr image.
-[[nodiscard]] bool load_image(
-    const string& filename, image<vec4b>& img, string& error) {
+bool load_image(const string& filename, image<vec4b>& img, string& error) {
   auto format_error = [filename, &error]() {
     error = filename + ": unknown format";
     return false;
@@ -1688,13 +1906,37 @@ bool is_hdr_filename(const string& filename) {
   };
 
   auto ext = path_extension(filename);
-  if (ext == ".png" || ext == ".PNG" || ext == ".jpg" || ext == ".JPG" ||
-      ext == ".tga" || ext == ".TGA" || ext == ".bmp" || ext == ".BMP") {
+  if (ext == ".png" || ext == ".PNG") {
     auto width = 0, height = 0, ncomp = 0;
-    auto pixels = stbi_load(filename.c_str(), &width, &height, &ncomp, 4);
-    if (!pixels) return read_error();
-    img = image{{width, height}, (const vec4b*)pixels};
-    free(pixels);
+    auto pixels = vector<byte>{};
+    if (!load_png(filename, width, height, ncomp, pixels, error)) return false;
+    if (pixels.empty()) return read_error();
+    if (ncomp != 4) pixels = convert_components(pixels, ncomp, 4);
+    img = image{{width, height}, (const vec4b*)pixels.data()};
+    return true;
+  } else if (ext == ".jpg" || ext == ".JPG") {
+    auto width = 0, height = 0, ncomp = 0;
+    auto pixels = vector<byte>{};
+    if (!load_jpg(filename, width, height, ncomp, pixels, error)) return false;
+    if (pixels.empty()) return read_error();
+    if (ncomp != 4) pixels = convert_components(pixels, ncomp, 4);
+    img = image{{width, height}, (const vec4b*)pixels.data()};
+    return true;
+  } else if (ext == ".tga" || ext == ".TGA") {
+    auto width = 0, height = 0, ncomp = 0;
+    auto pixels = vector<byte>{};
+    if (!load_tga(filename, width, height, ncomp, pixels, error)) return false;
+    if (pixels.empty()) return read_error();
+    if (ncomp != 4) pixels = convert_components(pixels, ncomp, 4);
+    img = image{{width, height}, (const vec4b*)pixels.data()};
+    return true;
+  } else if (ext == ".bmp" || ext == ".BMP") {
+    auto width = 0, height = 0, ncomp = 0;
+    auto pixels = vector<byte>{};
+    if (!load_bmp(filename, width, height, ncomp, pixels, error)) return false;
+    if (pixels.empty()) return read_error();
+    if (ncomp != 4) pixels = convert_components(pixels, ncomp, 4);
+    img = image{{width, height}, (const vec4b*)pixels.data()};
     return true;
   } else if (is_hdr_filename(filename)) {
     auto imgf = image<vec4f>{};
@@ -1707,7 +1949,7 @@ bool is_hdr_filename(const string& filename) {
 }
 
 // Saves an ldr image.
-[[nodiscard]] bool save_image(
+bool save_image(
     const string& filename, const image<vec4b>& img, string& error) {
   auto format_error = [filename, &error]() {
     error = filename + ": unknown format";
@@ -1720,25 +1962,21 @@ bool is_hdr_filename(const string& filename) {
 
   auto ext = path_extension(filename);
   if (ext == ".png" || ext == ".PNG") {
-    if (!stbi_write_png(filename.c_str(), img.width(), img.height(), 4,
-            img.data(), img.width() * 4))
-      return write_error();
-    return true;
+    return save_png(filename, img.width(), img.height(), 4,
+        {(const byte*)img.data(), (const byte*)img.data() + img.count() * 4},
+        error);
   } else if (ext == ".jpg" || ext == ".JPG") {
-    if (!stbi_write_jpg(
-            filename.c_str(), img.width(), img.height(), 4, img.data(), 75))
-      return write_error();
-    return true;
+    return save_jpg(filename, img.width(), img.height(), 4,
+        {(const byte*)img.data(), (const byte*)img.data() + img.count() * 4},
+        error);
   } else if (ext == ".tga" || ext == ".TGA") {
-    if (!stbi_write_tga(
-            filename.c_str(), img.width(), img.height(), 4, img.data()))
-      return write_error();
-    return true;
+    return save_tga(filename, img.width(), img.height(), 4,
+        {(const byte*)img.data(), (const byte*)img.data() + img.count() * 4},
+        error);
   } else if (ext == ".bmp" || ext == ".BMP") {
-    if (!stbi_write_bmp(
-            filename.c_str(), img.width(), img.height(), 4, img.data()))
-      return write_error();
-    return true;
+    return save_bmp(filename, img.width(), img.height(), 4,
+        {(const byte*)img.data(), (const byte*)img.data() + img.count() * 4},
+        error);
   } else if (is_hdr_filename(filename)) {
     return save_image(filename, srgb_to_rgb(img), error);
   } else {
@@ -1747,8 +1985,7 @@ bool is_hdr_filename(const string& filename) {
 }
 
 // Loads a 16 bit image.
-[[nodiscard]] bool load_image(
-    const string& filename, image<vec4s>& img, string& error) {
+bool load_image(const string& filename, image<vec4s>& img, string& error) {
   auto format_error = [filename, &error]() {
     error = filename + ": unknown format";
     return false;
@@ -1759,8 +1996,7 @@ bool is_hdr_filename(const string& filename) {
   };
 
   auto ext = path_extension(filename);
-  if (ext == ".png" || ext == ".PNG" || ext == ".jpg" || ext == ".JPG" ||
-      ext == ".tga" || ext == ".TGA" || ext == ".bmp" || ext == ".BMP") {
+  if (ext == ".png" || ext == ".PNG") {
     auto width = 0, height = 0, ncomp = 0;
     auto pixels = stbi_load_16(filename.c_str(), &width, &height, &ncomp, 4);
     if (pixels == nullptr) return read_error();
@@ -1805,135 +2041,76 @@ bool save_image(const string& filename, const image<vec4f>& imgf,
 namespace yocto {
 
 // Volume load
-static float* load_yvol(
-    const char* filename, int* w, int* h, int* d, int* nc, int req) {
+static bool load_yvol(const string& filename, int& width, int& height,
+    int& depth, int& components, vector<float>& voxels, string& error) {
+  // error helpers
+  auto open_error = [filename, &error]() {
+    error = filename + ": file not found";
+    return false;
+  };
+  auto parse_error = [filename, &error]() {
+    error = filename + ": parse error";
+    return false;
+  };
+  auto read_error = [filename, &error]() {
+    error = filename + ": read error";
+    return false;
+  };
+
   auto fs = open_file(filename, "rb");
-  if (!fs) return nullptr;
+  if (!fs) return open_error();
 
   // buffer
   auto buffer = array<char, 4096>{};
   auto toks   = vector<string>();
 
   // read magic
-  if (!read_line(fs, buffer)) return nullptr;
+  if (!read_line(fs, buffer)) return parse_error();
   toks = split_string(buffer.data());
-  if (toks[0] != "YVOL") return nullptr;
+  if (toks[0] != "YVOL") return parse_error();
 
-  // read w, h
-  if (!read_line(fs, buffer)) return nullptr;
-  toks = split_string(buffer.data());
-  *w   = atoi(toks[0].c_str());
-  *h   = atoi(toks[1].c_str());
-  *d   = atoi(toks[2].c_str());
-  *nc  = atoi(toks[3].c_str());
+  // read width, height
+  if (!read_line(fs, buffer)) return parse_error();
+  toks       = split_string(buffer.data());
+  width      = atoi(toks[0].c_str());
+  height     = atoi(toks[1].c_str());
+  depth      = atoi(toks[2].c_str());
+  components = atoi(toks[3].c_str());
 
   // read data
-  auto nvoxels = (size_t)(*w) * (size_t)(*h) * (size_t)(*d);
-  auto nvalues = nvoxels * (size_t)(*nc);
-  auto voxels  = std::unique_ptr<float[]>(new float[nvalues]);
-  if (!read_values(fs, voxels.get(), nvalues)) return nullptr;
+  auto nvoxels = (size_t)width * (size_t)height * (size_t)depth;
+  auto nvalues = nvoxels * (size_t)components;
+  voxels       = vector<float>(nvalues);
+  if (!read_values(fs, voxels.data(), nvalues)) return read_error();
 
-  // proper number of channels
-  if (req == 0 || *nc == req) return voxels.release();
-
-  // pack into channels
-  if (req < 0 || req > 4) {
-    return nullptr;
-  }
-  auto cvoxels = std::unique_ptr<float[]>(new float[req * nvoxels]);
-  for (auto i = 0; i < nvoxels; i++) {
-    auto vp = voxels.get() + i * (*nc);
-    auto cp = cvoxels.get() + i * req;
-    if (*nc == 1) {
-      switch (req) {
-        case 1: cp[0] = vp[0]; break;
-        case 2:
-          cp[0] = vp[0];
-          cp[1] = vp[0];
-          break;
-        case 3:
-          cp[0] = vp[0];
-          cp[1] = vp[0];
-          cp[2] = vp[0];
-          break;
-        case 4:
-          cp[0] = vp[0];
-          cp[1] = vp[0];
-          cp[2] = vp[0];
-          cp[3] = 1;
-          break;
-      }
-    } else if (*nc == 2) {
-      switch (req) {
-        case 1: cp[0] = vp[0]; break;
-        case 2:
-          cp[0] = vp[0];
-          cp[1] = vp[1];
-          break;
-        case 3:
-          cp[0] = vp[0];
-          cp[1] = vp[1];
-          break;
-        case 4:
-          cp[0] = vp[0];
-          cp[1] = vp[1];
-          break;
-      }
-    } else if (*nc == 3) {
-      switch (req) {
-        case 1: cp[0] = vp[0]; break;
-        case 2:
-          cp[0] = vp[0];
-          cp[1] = vp[1];
-          break;
-        case 3:
-          cp[0] = vp[0];
-          cp[1] = vp[1];
-          cp[2] = vp[2];
-          break;
-        case 4:
-          cp[0] = vp[0];
-          cp[1] = vp[1];
-          cp[2] = vp[2];
-          cp[3] = 1;
-          break;
-      }
-    } else if (*nc == 4) {
-      switch (req) {
-        case 1: cp[0] = vp[0]; break;
-        case 2:
-          cp[0] = vp[0];
-          cp[1] = vp[1];
-          break;
-        case 3:
-          cp[0] = vp[0];
-          cp[1] = vp[1];
-          cp[2] = vp[2];
-          break;
-        case 4:
-          cp[0] = vp[0];
-          cp[1] = vp[1];
-          cp[2] = vp[2];
-          cp[3] = vp[3];
-          break;
-      }
-    }
-  }
-  return cvoxels.release();
+  // done
+  return true;
 }
 
 // save pfm
-static bool save_yvol(
-    const char* filename, int w, int h, int d, int nc, const float* voxels) {
-  auto fs = open_file(filename, "wb");
-  if (!fs) return false;
-
-  if (!write_text(fs, "YVOL\n")) return false;
-  if (!write_text(fs, std::to_string(w) + " " + std::to_string(h) + " " +
-                          std::to_string(d) + " " + std::to_string(nc) + "\n"))
+static bool save_yvol(const string& filename, int width, int height, int depth,
+    int components, const vector<float>& voxels, string& error) {
+  // error helpers
+  auto open_error = [filename, &error]() {
+    error = filename + ": file not found";
     return false;
-  auto nvalues = (size_t)w * (size_t)h * (size_t)d * (size_t)nc;
-  if (!write_values(fs, voxels, nvalues)) return false;
+  };
+  auto write_error = [filename, &error]() {
+    error = filename + ": read error";
+    return false;
+  };
+
+  auto fs = open_file(filename, "wb");
+  if (!fs) return open_error();
+
+  if (!write_text(fs, "YVOL\n")) return write_error();
+  if (!write_text(fs, std::to_string(width) + " " + std::to_string(height) +
+                          " " + std::to_string(depth) + " " +
+                          std::to_string(components) + "\n"))
+    return write_error();
+  auto nvalues = (size_t)width * (size_t)height * (size_t)depth *
+                 (size_t)components;
+  if (!write_values(fs, voxels.data(), nvalues)) return write_error();
   return true;
 }
 
@@ -1944,24 +2121,19 @@ bool load_volume(const string& filename, volume<float>& vol, string& error) {
     return false;
   };
   auto width = 0, height = 0, depth = 0, ncomp = 0;
-  auto voxels = load_yvol(filename.c_str(), &width, &height, &depth, &ncomp, 1);
-  if (!voxels) return read_error();
-  vol = volume{{width, height, depth}, (const float*)voxels};
-  delete[] voxels;
+  auto voxels = vector<float>{};
+  if (!load_yvol(filename, width, height, depth, ncomp, voxels, error))
+    return false;
+  if (ncomp != 1) voxels = convert_components(voxels, ncomp, 1);
+  vol = volume{{width, height, depth}, (const float*)voxels.data()};
   return true;
 }
 
 // Saves volume data in binary format.
 bool save_volume(
     const string& filename, const volume<float>& vol, string& error) {
-  auto write_error = [filename, &error]() {
-    error = filename + ": write error";
-    return false;
-  };
-  if (!save_yvol(filename.c_str(), vol.width(), vol.height(), vol.depth(), 1,
-          vol.data()))
-    return write_error();
-  return true;
+  return save_yvol(filename, vol.width(), vol.height(), vol.depth(), 1,
+      {vol.data(), vol.data() + vol.count()}, error);
 }
 
 }  // namespace yocto
