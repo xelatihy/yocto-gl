@@ -151,7 +151,7 @@ inline const auto one3f = vec3f{1, 1, 1};
 inline const auto one4f = vec4f{1, 1, 1, 1};
 
 // Element access
-inline const vec3f& xyz(const vec4f& a);
+inline vec3f xyz(const vec4f& a);
 
 // Vector sequence operations.
 inline int          size(const vec2f& a);
@@ -481,13 +481,13 @@ inline const auto zero3s = vec3s{0, 0, 0};
 inline const auto zero4s = vec4s{0, 0, 0, 0};
 
 // Element access
-inline const vec3i& xyz(const vec4i& a);
+inline vec3i xyz(const vec4i& a);
 
 // Element access
-inline const vec3b& xyz(const vec4b& a);
+inline vec3b xyz(const vec4b& a);
 
 // Element access
-inline const vec3s& xyz(const vec4s& a);
+inline vec3s xyz(const vec4s& a);
 
 // Vector sequence operations.
 inline int        size(const vec2i& a);
@@ -801,15 +801,15 @@ inline const auto identity3x4f = frame3f{
     {1, 0, 0}, {0, 1, 0}, {0, 0, 1}, {0, 0, 0}};
 
 // Frame properties
-inline const mat2f& rotation(const frame2f& a);
-inline const vec2f& translation(const frame2f& a);
+inline mat2f rotation(const frame2f& a);
+inline vec2f translation(const frame2f& a);
 
 // Frame construction
 inline frame2f make_frame(const mat2f& m, const vec2f& t);
 
 // Conversion between frame and mat
-inline mat3f   frame_to_mat(const frame2f& a);
-inline frame2f mat_to_frame(const mat3f& a);
+inline mat3f   frame_to_mat(const frame2f& f);
+inline frame2f mat_to_frame(const mat3f& ma);
 
 // Frame comparisons.
 inline bool operator==(const frame2f& a, const frame2f& b);
@@ -823,15 +823,15 @@ inline frame2f& operator*=(frame2f& a, const frame2f& b);
 inline frame2f inverse(const frame2f& a, bool non_rigid = false);
 
 // Frame properties
-inline const mat3f& rotation(const frame3f& a);
-inline const vec3f& translation(const frame3f& a);
+inline mat3f rotation(const frame3f& a);
+inline vec3f translation(const frame3f& a);
 
 // Frame construction
 inline frame3f make_frame(const mat3f& m, const vec3f& t);
 
 // Conversion between frame and mat
-inline mat4f   frame_to_mat(const frame3f& a);
-inline frame3f mat_to_frame(const mat4f& a);
+inline mat4f   frame_to_mat(const frame3f& f);
+inline frame3f mat_to_frame(const mat4f& m);
 
 // Frame comparisons.
 inline bool operator==(const frame3f& a, const frame3f& b);
@@ -1170,7 +1170,7 @@ inline float& vec4f::operator[](int i) { return (&x)[i]; }
 inline const float& vec4f::operator[](int i) const { return (&x)[i]; }
 
 // Element access
-inline const vec3f& xyz(const vec4f& a) { return (const vec3f&)a; }
+inline vec3f xyz(const vec4f& a) { return {a.x, a.y, a.z}; }
 
 // Vector sequence operations.
 inline int          size(const vec2f& a) { return 2; }
@@ -1657,13 +1657,13 @@ inline ushort& vec4s::operator[](int i) { return (&x)[i]; }
 inline const ushort& vec4s::operator[](int i) const { return (&x)[i]; }
 
 // Element access
-inline const vec3i& xyz(const vec4i& a) { return (const vec3i&)a; }
+inline vec3i xyz(const vec4i& a) { return {a.x, a.y, a.z}; }
 
 // Element access
-inline const vec3b& xyz(const vec4b& a) { return (const vec3b&)a; }
+inline vec3b xyz(const vec4b& a) { return {a.x, a.y, a.z}; }
 
 // Element access
-inline const vec3s& xyz(const vec4s& a) { return (const vec3s&)a; }
+inline vec3s xyz(const vec4s& a) { return {a.x, a.y, a.z}; }
 
 // Vector sequence operations.
 inline int        size(const vec2i& a) { return 2; }
@@ -2098,8 +2098,8 @@ inline vec3f& frame3f::operator[](int i) { return (&x)[i]; }
 inline const vec3f& frame3f::operator[](int i) const { return (&x)[i]; }
 
 // Frame properties
-inline const mat2f& rotation(const frame2f& a) { return (const mat2f&)a; }
-inline const vec2f& translation(const frame2f& a) { return a.o; }
+inline mat2f rotation(const frame2f& a) { return {a.x, a.y}; }
+inline vec2f translation(const frame2f& a) { return a.o; }
 
 // Frame construction
 inline frame2f make_frame(const mat2f& m, const vec2f& t) {
@@ -2138,8 +2138,8 @@ inline frame2f inverse(const frame2f& a, bool non_rigid) {
 }
 
 // Frame properties
-inline const mat3f& rotation(const frame3f& a) { return (const mat3f&)a; }
-inline const vec3f& translation(const frame3f& a) { return a.o; }
+inline mat3f rotation(const frame3f& a) { return {a.x, a.y}; }
+inline vec3f translation(const frame3f& a) { return a.o; }
 
 // Frame construction
 inline frame3f make_frame(const mat3f& m, const vec3f& t) {
@@ -2561,8 +2561,9 @@ inline pair<vec2f, float> camera_imview(const vec2f& center, float scale,
     return {{(float)winsize.x / 2, (float)winsize.y / 2},
         min(winsize.x / (float)imsize.x, winsize.y / (float)imsize.y)};
   } else {
-    return {{(winsize.x >= imsize.x * scale) ? winsize.x / 2 : center.x,
-                (winsize.y >= imsize.y * scale) ? winsize.y / 2 : center.y},
+    return {
+        {(winsize.x >= imsize.x * scale) ? (float)winsize.x / 2 : center.x,
+            (winsize.y >= imsize.y * scale) ? (float)winsize.y / 2 : center.y},
         scale};
   }
 }
@@ -2701,8 +2702,8 @@ inline void update_imview(vec2f& center, float& scale, const vec2i& imsize,
     scale  = min(winsize.x / (float)imsize.x, winsize.y / (float)imsize.y);
     center = {(float)winsize.x / 2, (float)winsize.y / 2};
   } else {
-    if (winsize.x >= imsize.x * scale) center.x = winsize.x / 2;
-    if (winsize.y >= imsize.y * scale) center.y = winsize.y / 2;
+    if (winsize.x >= imsize.x * scale) center.x = (float)winsize.x / 2;
+    if (winsize.y >= imsize.y * scale) center.y = (float)winsize.y / 2;
   }
 }
 

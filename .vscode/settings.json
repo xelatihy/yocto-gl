@@ -136,12 +136,15 @@
     "-readability-magic-numbers",
     "-readability-qualified-auto",
     "-readability-else-after-return",
+    "-readability-isolate-declaration",
     "portability-*",
     "bugprone-*",
+    "-bugprone-narrowing-conversions",
     "cppcoreguidelines-*",
     "-cppcoreguidelines-avoid-magic-numbers",
     "-cppcoreguidelines-pro-type-vararg",
     "-cppcoreguidelines-pro-bounds-pointer-arithmetic",
+    "-cppcoreguidelines-narrowing-conversions",
     "modernize-*",
     "-modernize-use-trailing-return-type"
   ]
