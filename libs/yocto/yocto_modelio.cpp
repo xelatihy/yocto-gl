@@ -261,14 +261,6 @@ ply_model::~ply_model() {
   for (auto element : elements) delete element;
 }
 
-// Make ply
-inline ply_element* add_property(ply_model* ply) {
-  return ply->elements.emplace_back(new ply_element{});
-}
-inline ply_property* add_property(ply_element* element) {
-  return element->properties.emplace_back(new ply_property{});
-}
-
 // Load ply
 bool load_ply(const string& filename, ply_model* ply, string& error) {
   // ply type names

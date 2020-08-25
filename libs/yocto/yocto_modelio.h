@@ -120,8 +120,6 @@ bool save_ply(const string& filename, ply_model* ply, string& error);
 // Get ply properties
 bool has_property(
     ply_model* ply, const string& element, const string& property);
-ply_property* get_property(
-    ply_model* ply, const string& element, const string& property);
 
 bool get_value(ply_model* ply, const string& element, const string& property,
     vector<float>& values);
