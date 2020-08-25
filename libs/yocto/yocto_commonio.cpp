@@ -151,10 +151,10 @@ file_stream::~file_stream() {
 
 // Open a file
 file_stream open_file(const string& filename, const string& mode) {
-#ifdef _Win32
+#ifdef _WIN32
   auto path8 = std::filesystem::u8path(filename);
   auto wmode = std::wstring(mode.begin(), mode.end());
-  auto fs    = _wfopen(path.c_str(), wmode.c_str());
+  auto fs    = _wfopen(path8.c_str(), wmode.c_str());
 #else
   auto fs = fopen(filename.c_str(), mode.c_str());
 #endif
@@ -191,10 +191,10 @@ bool write_data(file_stream& fs, const void* buffer, size_t count) {
 
 // Opens a file with a utf8 file name
 FILE* fopen_utf8(const char* filename, const char* mode) {
-#ifdef _Win32
+#ifdef _WIN32
   auto path8 = std::filesystem::u8path(filename);
   auto wmode = std::wstring(string{mode}.begin(), string{mode}.end());
-  return _wfopen(path.c_str(), wmode.c_str());
+  return _wfopen(path8.c_str(), wmode.c_str());
 #else
   return fopen(filename, mode);
 #endif
