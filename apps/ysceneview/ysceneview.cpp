@@ -421,7 +421,7 @@ void draw_widgets(gui_window* win, app_states* apps, const gui_input& input) {
     }
     auto& params = app->drawgl_prms;
     draw_slider(win, "resolution", params.resolution, 0, 4096);
-    draw_combobox(win, "shading", (int&)params.shading, gui_shading_names);
+    draw_combobox(win, "lighting", (int&)params.lighting, gui_lighting_names);
     draw_checkbox(win, "wireframe", params.wireframe);
     continue_line(win);
     draw_checkbox(win, "faceted", params.faceted);
@@ -599,8 +599,8 @@ int main(int argc, const char* argv[]) {
   add_option(cli, "--camera", camera_name, "Camera name.");
   add_option(cli, "--resolution,-r", apps->drawgl_prms.resolution,
       "Image resolution.");
-  add_option(cli, "--shading", apps->drawgl_prms.shading, "Shading type.",
-      gui_shading_names);
+  add_option(cli, "--lighting", apps->drawgl_prms.lighting, "Lighting type.",
+      gui_lighting_names);
   add_option(cli, "scenes", filenames, "Scene filenames", true);
   parse_cli(cli, argc, argv);
 

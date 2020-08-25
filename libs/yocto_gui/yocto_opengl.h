@@ -174,10 +174,11 @@ void set_cubemap(ogl_cubemap* cubemap, const array<image<float>, 6>& img,
 
 // Opengl array/element buffer
 struct ogl_arraybuffer {
-  // buffer data
-  size_t size    = 0;
-  int    esize   = 0;
-  bool   dynamic = false;
+  size_t capacity     = 0;
+  size_t num_elements = 0;
+  int    element_size = 0;
+
+  bool dynamic = false;
   // OpenGL state
   uint buffer_id = 0;
 };
@@ -202,22 +203,20 @@ void set_arraybuffer(
 void set_arraybuffer(
     ogl_arraybuffer* buffer, const vector<vec4f>& data, bool dynamic = false);
 
-// Opengl draw elements
-enum struct ogl_element_type { points, lines, triangles };
-
 // Opengl array/element buffer
 struct ogl_elementbuffer {
-  // buffer data
-  size_t           size    = 0;
-  ogl_element_type element = ogl_element_type::points;
-  bool             dynamic = false;
+  size_t capacity     = 0;
+  size_t num_elements = 0;
+  int    element_size = 0;
+
+  bool dynamic = false;
   // OpenGL state
   uint buffer_id = 0;
 };
 
 // set buffer
-void set_elementbuffer(ogl_elementbuffer* buffer, size_t size,
-    ogl_element_type element, const int* data, bool dynamic = false);
+void set_elementbuffer(ogl_elementbuffer* buffer, size_t size, const int* data,
+    bool dynamic = false);
 
 // check if buffer is initialized
 bool is_initialized(const ogl_elementbuffer* buffer);
@@ -337,18 +336,31 @@ void clear_framebuffer(ogl_framebuffer* target);
 // SHAPES
 // -----------------------------------------------------------------------------
 namespace yocto {
+
+// Opengl draw elements
+enum struct ogl_element_type {
+  points,
+  lines,
+  line_strip,
+  triangles,
+  triangle_strip,
+  triangle_fan,
+};
+
 // Opengl shape
 struct ogl_shape {
   uint                    shape_id       = 0;
   vector<ogl_arraybuffer> vertex_buffers = {};
-  ogl_elementbuffer       index_buffer   = {};
+
+  ogl_elementbuffer index_buffer = {};
+  ogl_element_type  elements     = ogl_element_type::triangles;
 
   int num_instances = 0;
 
-  ogl_shape() {}
-  ogl_shape(const ogl_shape&) = delete;
-  ogl_shape& operator=(const ogl_shape&) = delete;
-  ~ogl_shape();
+  // ogl_shape() {}
+  // ogl_shape(const ogl_shape&) = delete;
+  // ogl_shape& operator=(const ogl_shape&) = delete;
+  // ~ogl_shape();
 };
 
 void set_shape(ogl_shape* shape);
@@ -384,9 +396,17 @@ void set_vertex_attribute(ogl_shape* shape, const T& attribute, int location) {
 
 void set_instance_buffer(ogl_shape* shape, int location);
 
-template <typename T>
-void set_index_buffer(ogl_shape* shape, const vector<T>& primitives) {
-  set_elementbuffer(&shape->index_buffer, primitives);
+inline void set_index_buffer(ogl_shape* shape, const vector<int>& indices) {
+  set_elementbuffer(&shape->index_buffer, indices);
+  shape->elements = ogl_element_type::points;
+}
+inline void set_index_buffer(ogl_shape* shape, const vector<vec2i>& indices) {
+  set_elementbuffer(&shape->index_buffer, indices);
+  shape->elements = ogl_element_type::lines;
+}
+inline void set_index_buffer(ogl_shape* shape, const vector<vec3i>& indices) {
+  set_elementbuffer(&shape->index_buffer, indices);
+  shape->elements = ogl_element_type::triangles;
 }
 
 void draw_shape(const ogl_shape* shape);
