@@ -1451,9 +1451,49 @@ static vector<string> split_string(const string& str) {
   return ret;
 }
 
+// Convert numbert of components
+static vector<float> convert_components(
+    const vector<float>& pixels, int components, int components_to) {
+  if (components <= 0 || components > 4 || components_to <= 0 ||
+      components_to > 4)
+    throw std::invalid_argument{"components not supported"};
+  if (components == components_to) return pixels;
+
+  auto cpixels = vector<float>((size_t)components_to * pixels.size());
+  for (auto i = 0ull; i < pixels.size(); i++) {
+    auto vp = pixels.data() + i * components;
+    auto cp = cpixels.data() + i * components_to;
+    if (components_to > 0) cp[0] = (components > 0) ? vp[0] : 0;
+    if (components_to > 1) cp[1] = (components > 1) ? vp[1] : 0;
+    if (components_to > 2) cp[2] = (components > 2) ? vp[2] : 0;
+    if (components_to > 3) cp[3] = (components > 3) ? vp[3] : 1;
+  }
+  return cpixels;
+}
+
+// Convert numbert of components
+static vector<byte> convert_components(
+    const vector<byte>& pixels, int components, int components_to) {
+  if (components <= 0 || components > 4 || components_to <= 0 ||
+      components_to > 4)
+    throw std::invalid_argument{"components not supported"};
+  if (components == components_to) return pixels;
+
+  auto cpixels = vector<byte>((size_t)components_to * pixels.size());
+  for (auto i = 0ull; i < pixels.size(); i++) {
+    auto vp = pixels.data() + i * components;
+    auto cp = cpixels.data() + i * components_to;
+    if (components_to > 0) cp[0] = (components > 0) ? vp[0] : 0;
+    if (components_to > 1) cp[1] = (components > 1) ? vp[1] : 0;
+    if (components_to > 2) cp[2] = (components > 2) ? vp[2] : 0;
+    if (components_to > 3) cp[3] = (components > 3) ? vp[3] : 255;
+  }
+  return cpixels;
+}
+
 // Pfm load
 static bool load_pfm(const string& filename, int& width, int& height,
-    int& components, vector<float>& pixels, string& error, int req) {
+    int& components, vector<float>& pixels, string& error) {
   // error helpers
   auto open_error = [filename, &error]() {
     error = filename + ": file not found";
@@ -1519,57 +1559,7 @@ static bool load_pfm(const string& filename, int& width, int& height,
     for (auto i = 0; i < nvalues; i++) pixels[i] *= scl;
   }
 
-  // proper number of channels
-  if (req == 0 || components == req) return true;
-
-  // pack into channels
-  if (req < 0 || req > 4) return {};
-  auto cpixels = vector<float>(req * npixels);
-  for (auto i = 0ull; i < npixels; i++) {
-    auto vp = pixels.data() + i * components;
-    auto cp = cpixels.data() + i * req;
-    if (components == 1) {
-      switch (req) {
-        case 1: cp[0] = vp[0]; break;
-        case 2:
-          cp[0] = vp[0];
-          cp[1] = vp[0];
-          break;
-        case 3:
-          cp[0] = vp[0];
-          cp[1] = vp[0];
-          cp[2] = vp[0];
-          break;
-        case 4:
-          cp[0] = vp[0];
-          cp[1] = vp[0];
-          cp[2] = vp[0];
-          cp[3] = 1;
-          break;
-      }
-    } else {
-      switch (req) {
-        case 1: cp[0] = vp[0]; break;
-        case 2:
-          cp[0] = vp[0];
-          cp[1] = vp[1];
-          break;
-        case 3:
-          cp[0] = vp[0];
-          cp[1] = vp[1];
-          cp[2] = vp[2];
-          break;
-        case 4:
-          cp[0] = vp[0];
-          cp[1] = vp[1];
-          cp[2] = vp[2];
-          cp[3] = 1;
-          break;
-      }
-    }
-  }
-
-  swap(pixels, cpixels);
+  // done
   return true;
 }
 
@@ -1616,7 +1606,7 @@ static bool save_pfm(const string& filename, int width, int height,
 
 // Png load
 static bool load_png(const string& filename, int& width, int& height,
-    int& components, vector<byte>& pixels, string& error, int req) {
+    int& components, vector<byte>& pixels, string& error) {
   // error helpers
   auto open_error = [filename, &error]() {
     error = filename + ": file not found";
@@ -1624,11 +1614,10 @@ static bool load_png(const string& filename, int& width, int& height,
   };
 
   auto pixels_ptr = stbi_load(
-      filename.c_str(), &width, &height, &components, req);
+      filename.c_str(), &width, &height, &components, 0);
   if (!pixels_ptr) return open_error();
   pixels = {pixels_ptr,
-      pixels_ptr + (size_t)width * (size_t)height *
-                       (req == 0 ? (size_t)components : (size_t)req)};
+      pixels_ptr + (size_t)width * (size_t)height * (size_t)components};
   free(pixels_ptr);
   return true;
 }
@@ -1650,7 +1639,7 @@ static bool save_png(const string& filename, int width, int height,
 
 // jpg load
 static bool load_jpg(const string& filename, int& width, int& height,
-    int& components, vector<byte>& pixels, string& error, int req) {
+    int& components, vector<byte>& pixels, string& error) {
   // error helpers
   auto open_error = [filename, &error]() {
     error = filename + ": file not found";
@@ -1658,11 +1647,10 @@ static bool load_jpg(const string& filename, int& width, int& height,
   };
 
   auto pixels_ptr = stbi_load(
-      filename.c_str(), &width, &height, &components, req);
+      filename.c_str(), &width, &height, &components, 0);
   if (!pixels_ptr) return open_error();
   pixels = {pixels_ptr,
-      pixels_ptr + (size_t)width * (size_t)height *
-                       (req == 0 ? (size_t)components : (size_t)req)};
+      pixels_ptr + (size_t)width * (size_t)height * (size_t)components};
   free(pixels_ptr);
   return true;
 }
@@ -1684,7 +1672,7 @@ static bool save_jpg(const string& filename, int width, int height,
 
 // tga load
 static bool load_tga(const string& filename, int& width, int& height,
-    int& components, vector<byte>& pixels, string& error, int req) {
+    int& components, vector<byte>& pixels, string& error) {
   // error helpers
   auto open_error = [filename, &error]() {
     error = filename + ": file not found";
@@ -1692,11 +1680,10 @@ static bool load_tga(const string& filename, int& width, int& height,
   };
 
   auto pixels_ptr = stbi_load(
-      filename.c_str(), &width, &height, &components, req);
+      filename.c_str(), &width, &height, &components, 0);
   if (!pixels_ptr) return open_error();
   pixels = {pixels_ptr,
-      pixels_ptr + (size_t)width * (size_t)height *
-                       (req == 0 ? (size_t)components : (size_t)req)};
+      pixels_ptr + (size_t)width * (size_t)height * (size_t)components};
   free(pixels_ptr);
   return true;
 }
@@ -1718,7 +1705,7 @@ static bool save_tga(const string& filename, int width, int height,
 
 // jpg load
 static bool load_bmp(const string& filename, int& width, int& height,
-    int& components, vector<byte>& pixels, string& error, int req) {
+    int& components, vector<byte>& pixels, string& error) {
   // error helpers
   auto open_error = [filename, &error]() {
     error = filename + ": file not found";
@@ -1726,11 +1713,10 @@ static bool load_bmp(const string& filename, int& width, int& height,
   };
 
   auto pixels_ptr = stbi_load(
-      filename.c_str(), &width, &height, &components, req);
+      filename.c_str(), &width, &height, &components, 0);
   if (!pixels_ptr) return open_error();
   pixels = {pixels_ptr,
-      pixels_ptr + (size_t)width * (size_t)height *
-                       (req == 0 ? (size_t)components : (size_t)req)};
+      pixels_ptr + (size_t)width * (size_t)height * (size_t)components};
   free(pixels_ptr);
   return true;
 }
@@ -1752,7 +1738,7 @@ static bool save_bmp(const string& filename, int width, int height,
 
 // hdr load
 static bool load_hdr(const string& filename, int& width, int& height,
-    int& components, vector<float>& pixels, string& error, int req) {
+    int& components, vector<float>& pixels, string& error) {
   // error helpers
   auto open_error = [filename, &error]() {
     error = filename + ": file not found";
@@ -1760,11 +1746,10 @@ static bool load_hdr(const string& filename, int& width, int& height,
   };
 
   auto pixels_ptr = stbi_loadf(
-      filename.c_str(), &width, &height, &components, req);
+      filename.c_str(), &width, &height, &components, 0);
   if (!pixels_ptr) return open_error();
   pixels = {pixels_ptr,
-      pixels_ptr + (size_t)width * (size_t)height *
-                       (req == 0 ? (size_t)components : (size_t)req)};
+      pixels_ptr + (size_t)width * (size_t)height * (size_t)components};
   free(pixels_ptr);
   return true;
 }
@@ -1786,22 +1771,20 @@ static bool save_hdr(const string& filename, int width, int height,
 
 // exr load
 static bool load_exr(const string& filename, int& width, int& height,
-    int& components, vector<float>& pixels, string& error, int req) {
+    int& components, vector<float>& pixels, string& error) {
   // error helpers
   auto open_error = [filename, &error]() {
     error = filename + ": file not found";
     return false;
   };
 
-  if (req != 4) throw std::invalid_argument{"not supported yet"};
-
   auto pixels_ptr = (float*)nullptr;
   if (LoadEXR(&pixels_ptr, &width, &height, filename.c_str(), nullptr) != 0)
     return open_error();
   if (pixels_ptr == nullptr) return open_error();
-  pixels = {pixels_ptr,
-      pixels_ptr + (size_t)width * (size_t)height *
-                       (req == 0 ? (size_t)components : (size_t)req)};
+  components = 4;
+  pixels     = {pixels_ptr,
+      pixels_ptr + (size_t)width * (size_t)height * (size_t)components};
   free(pixels_ptr);
   return true;
 }
@@ -1854,25 +1837,25 @@ bool is_hdr_filename(const string& filename) {
   } else if (ext == ".pfm" || ext == ".PFM") {
     auto width = 0, height = 0, ncomp = 0;
     auto pixels = vector<float>{};
-    if (!load_pfm(filename, width, height, ncomp, pixels, error, 4))
-      return false;
+    if (!load_pfm(filename, width, height, ncomp, pixels, error)) return false;
     if (pixels.empty()) return read_error();
+    if (ncomp != 4) pixels = convert_components(pixels, ncomp, 4);
     img = image{{width, height}, (const vec4f*)pixels.data()};
     return true;
   } else if (ext == ".hdr" || ext == ".HDR") {
     auto width = 0, height = 0, ncomp = 0;
     auto pixels = vector<float>{};
-    if (!load_hdr(filename, width, height, ncomp, pixels, error, 4))
-      return false;
+    if (!load_hdr(filename, width, height, ncomp, pixels, error)) return false;
     if (pixels.empty()) return read_error();
+    if (ncomp != 4) pixels = convert_components(pixels, ncomp, 4);
     img = image{{width, height}, (const vec4f*)pixels.data()};
     return true;
   } else if (!is_hdr_filename(filename)) {
     auto width = 0, height = 0, ncomp = 0;
     auto pixels = vector<float>{};
-    if (!load_exr(filename, width, height, ncomp, pixels, error, 4))
-      return false;
+    if (!load_exr(filename, width, height, ncomp, pixels, error)) return false;
     if (pixels.empty()) return read_error();
+    if (ncomp != 4) pixels = convert_components(pixels, ncomp, 4);
     img = image{{width, height}, (const vec4f*)pixels.data()};
     return true;
   } else {
@@ -1928,33 +1911,33 @@ bool is_hdr_filename(const string& filename) {
   if (ext == ".png" || ext == ".PNG") {
     auto width = 0, height = 0, ncomp = 0;
     auto pixels = vector<byte>{};
-    if (!load_png(filename, width, height, ncomp, pixels, error, 4))
-      return false;
+    if (!load_png(filename, width, height, ncomp, pixels, error)) return false;
     if (pixels.empty()) return read_error();
+    if (ncomp != 4) pixels = convert_components(pixels, ncomp, 4);
     img = image{{width, height}, (const vec4b*)pixels.data()};
     return true;
   } else if (ext == ".jpg" || ext == ".JPG") {
     auto width = 0, height = 0, ncomp = 0;
     auto pixels = vector<byte>{};
-    if (!load_jpg(filename, width, height, ncomp, pixels, error, 4))
-      return false;
+    if (!load_jpg(filename, width, height, ncomp, pixels, error)) return false;
     if (pixels.empty()) return read_error();
+    if (ncomp != 4) pixels = convert_components(pixels, ncomp, 4);
     img = image{{width, height}, (const vec4b*)pixels.data()};
     return true;
   } else if (ext == ".tga" || ext == ".TGA") {
     auto width = 0, height = 0, ncomp = 0;
     auto pixels = vector<byte>{};
-    if (!load_tga(filename, width, height, ncomp, pixels, error, 4))
-      return false;
+    if (!load_tga(filename, width, height, ncomp, pixels, error)) return false;
     if (pixels.empty()) return read_error();
+    if (ncomp != 4) pixels = convert_components(pixels, ncomp, 4);
     img = image{{width, height}, (const vec4b*)pixels.data()};
     return true;
   } else if (ext == ".bmp" || ext == ".BMP") {
     auto width = 0, height = 0, ncomp = 0;
     auto pixels = vector<byte>{};
-    if (!load_bmp(filename, width, height, ncomp, pixels, error, 4))
-      return false;
+    if (!load_bmp(filename, width, height, ncomp, pixels, error)) return false;
     if (pixels.empty()) return read_error();
+    if (ncomp != 4) pixels = convert_components(pixels, ncomp, 4);
     img = image{{width, height}, (const vec4b*)pixels.data()};
     return true;
   } else if (is_hdr_filename(filename)) {
@@ -2062,7 +2045,7 @@ namespace yocto {
 
 // Volume load
 static vector<float> load_yvol(const char* filename, int& width, int& height,
-    int& depth, int& components, int req) {
+    int& depth, int& components) {
   auto fs = open_file(filename, "rb");
   if (!fs) return {};
 
@@ -2089,91 +2072,8 @@ static vector<float> load_yvol(const char* filename, int& width, int& height,
   auto voxels  = vector<float>(nvalues);
   if (!read_values(fs, voxels.data(), nvalues)) return {};
 
-  // proper number of channels
-  if (req == 0 || components == req) return voxels;
-
-  // pack into channels
-  if (req < 0 || req > 4) return {};
-  auto cvoxels = vector<float>(req * nvoxels);
-  for (auto i = 0; i < nvoxels; i++) {
-    auto vp = voxels.data() + i * components;
-    auto cp = cvoxels.data() + i * req;
-    if (components == 1) {
-      switch (req) {
-        case 1: cp[0] = vp[0]; break;
-        case 2:
-          cp[0] = vp[0];
-          cp[1] = vp[0];
-          break;
-        case 3:
-          cp[0] = vp[0];
-          cp[1] = vp[0];
-          cp[2] = vp[0];
-          break;
-        case 4:
-          cp[0] = vp[0];
-          cp[1] = vp[0];
-          cp[2] = vp[0];
-          cp[3] = 1;
-          break;
-      }
-    } else if (components == 2) {
-      switch (req) {
-        case 1: cp[0] = vp[0]; break;
-        case 2:
-          cp[0] = vp[0];
-          cp[1] = vp[1];
-          break;
-        case 3:
-          cp[0] = vp[0];
-          cp[1] = vp[1];
-          break;
-        case 4:
-          cp[0] = vp[0];
-          cp[1] = vp[1];
-          break;
-      }
-    } else if (components == 3) {
-      switch (req) {
-        case 1: cp[0] = vp[0]; break;
-        case 2:
-          cp[0] = vp[0];
-          cp[1] = vp[1];
-          break;
-        case 3:
-          cp[0] = vp[0];
-          cp[1] = vp[1];
-          cp[2] = vp[2];
-          break;
-        case 4:
-          cp[0] = vp[0];
-          cp[1] = vp[1];
-          cp[2] = vp[2];
-          cp[3] = 1;
-          break;
-      }
-    } else if (components == 4) {
-      switch (req) {
-        case 1: cp[0] = vp[0]; break;
-        case 2:
-          cp[0] = vp[0];
-          cp[1] = vp[1];
-          break;
-        case 3:
-          cp[0] = vp[0];
-          cp[1] = vp[1];
-          cp[2] = vp[2];
-          break;
-        case 4:
-          cp[0] = vp[0];
-          cp[1] = vp[1];
-          cp[2] = vp[2];
-          cp[3] = vp[3];
-          break;
-      }
-    }
-  }
-  return cvoxels;
+  // done
+  return voxels;
 }
 
 // save pfm
@@ -2189,8 +2089,7 @@ static bool save_yvol(const char* filename, int width, int height, int depth,
     return false;
   auto nvalues = (size_t)width * (size_t)height * (size_t)depth *
                  (size_t)components;
-  if (!write_values(fs, voxels, nvalues)) return false;
-  return true;
+  return write_values(fs, voxels, nvalues);
 }
 
 // Loads volume data from binary format.
@@ -2200,8 +2099,9 @@ bool load_volume(const string& filename, volume<float>& vol, string& error) {
     return false;
   };
   auto width = 0, height = 0, depth = 0, ncomp = 0;
-  auto voxels = load_yvol(filename.c_str(), width, height, depth, ncomp, 1);
+  auto voxels = load_yvol(filename.c_str(), width, height, depth, ncomp);
   if (voxels.empty()) return read_error();
+  if (ncomp != 1) voxels = convert_components(voxels, ncomp, 1);
   vol = volume{{width, height, depth}, (const float*)voxels.data()};
   return true;
 }
