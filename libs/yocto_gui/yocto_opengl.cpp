@@ -155,10 +155,7 @@ void set_texture(ogl_texture* texture, const vec2i& size, int num_channels,
   static auto iformat = vector<uint>{0, GL_RGB, GL_RGB, GL_RGB, GL_RGBA};
   static auto cformat = vector<uint>{0, GL_RED, GL_RG, GL_RGB, GL_RGBA};
   assert_ogl_error();
-  if (size == zero2i) {
-    clear_texture(texture);
-    return;
-  }
+
   if (!texture->texture_id) glGenTextures(1, &texture->texture_id);
   if (texture->size != size || texture->num_channels != num_channels ||
       texture->is_srgb != as_srgb || texture->is_float == true ||
@@ -195,10 +192,7 @@ void set_texture(ogl_texture* texture, const vec2i& size, int num_channels,
   static auto iformat = vector<uint>{0, GL_RGB, GL_RGB, GL_RGB, GL_RGBA};
   static auto cformat = vector<uint>{0, GL_RED, GL_RG, GL_RGB, GL_RGBA};
   assert_ogl_error();
-  if (size == zero2i) {
-    clear_texture(texture);
-    return;
-  }
+
   if (!texture->texture_id) glGenTextures(1, &texture->texture_id);
   if (texture->size != size || texture->num_channels != num_channels ||
       texture->is_float != as_float || texture->is_srgb == true ||
@@ -286,10 +280,6 @@ void set_cubemap(ogl_cubemap* cubemap, int size, int num_channels,
   static auto iformat = vector<uint>{0, GL_RGB, GL_RGB, GL_RGB, GL_RGBA};
   static auto cformat = vector<uint>{0, GL_RED, GL_RG, GL_RGB, GL_RGBA};
   assert_ogl_error();
-  if (size == 0) {
-    clear_cubemap(cubemap);
-    return;
-  }
 
   if (!cubemap->cubemap_id) glGenTextures(1, &cubemap->cubemap_id);
   if (cubemap->size != size || cubemap->num_channels != num_channels ||
@@ -343,10 +333,6 @@ void set_cubemap(ogl_cubemap* cubemap, int size, int num_channels,
   static auto iformat = vector<uint>{0, GL_RGB, GL_RGB, GL_RGB, GL_RGBA};
   static auto cformat = vector<uint>{0, GL_RED, GL_RG, GL_RGB, GL_RGBA};
   assert_ogl_error();
-  if (size == 0) {
-    clear_cubemap(cubemap);
-    return;
-  }
 
   if (!cubemap->cubemap_id) glGenTextures(1, &cubemap->cubemap_id);
   if (cubemap->size != size || cubemap->num_channels != num_channels ||
@@ -463,22 +449,27 @@ bool is_initialized(const ogl_arraybuffer* buffer) {
 void set_arraybuffer(ogl_arraybuffer* buffer, size_t size, int esize,
     const float* data, bool dynamic) {
   assert_ogl_error();
-  if (size == 0 || data == nullptr) {
-    clear_arraybuffer(buffer);
-    return;
-  }
-  if (!buffer->buffer_id) glGenBuffers(1, &buffer->buffer_id);
   auto target = GL_ARRAY_BUFFER;
-  glBindBuffer(target, buffer->buffer_id);
-  if (buffer->size != size || buffer->dynamic != dynamic) {
+  if (size > buffer->capacity) {
+    // reallocate buffer if needed
+    if (buffer->buffer_id) {
+      glDeleteBuffers(1, &buffer->buffer_id);
+    }
+    glGenBuffers(1, &buffer->buffer_id);
+    glBindBuffer(target, buffer->buffer_id);
     glBufferData(target, size * sizeof(float), data,
         dynamic ? GL_DYNAMIC_DRAW : GL_STATIC_DRAW);
+    buffer->capacity = size;
   } else {
+    // we have enough space
+    assert(buffer->buffer_id);
+    glBindBuffer(target, buffer->buffer_id);
     glBufferSubData(target, 0, size * sizeof(float), data);
   }
-  buffer->size    = size;
-  buffer->esize   = esize;
-  buffer->dynamic = dynamic;
+
+  buffer->element_size = esize;
+  buffer->num_elements = size / esize;
+  buffer->dynamic      = dynamic;
   assert_ogl_error();
 }
 
@@ -487,10 +478,7 @@ void clear_arraybuffer(ogl_arraybuffer* buffer) {
   assert_ogl_error();
   if (buffer->buffer_id) glDeleteBuffers(1, &buffer->buffer_id);
   assert_ogl_error();
-  buffer->buffer_id = 0;
-  buffer->size      = 0;
-  buffer->esize     = 0;
-  buffer->dynamic   = false;
+  *buffer = {};
 }
 
 // set buffer
@@ -511,26 +499,30 @@ void set_arraybuffer(
   set_arraybuffer(buffer, data.size() * 4, 4, (float*)data.data(), dynamic);
 }
 
-// set buffer
-void set_elementbuffer(ogl_elementbuffer* buffer, size_t size,
-    ogl_element_type element, const int* data, bool dynamic) {
+void set_elementbuffer(ogl_elementbuffer* buffer, size_t size, int esize,
+    const int* data, bool dynamic) {
   assert_ogl_error();
-  if (size == 0 || data == nullptr) {
-    clear_elementbuffer(buffer);
-    return;
-  }
-  if (!buffer->buffer_id) glGenBuffers(1, &buffer->buffer_id);
   auto target = GL_ELEMENT_ARRAY_BUFFER;
-  glBindBuffer(target, buffer->buffer_id);
-  if (buffer->size != size || buffer->dynamic != dynamic) {
+  if (size > buffer->capacity) {
+    // reallocate buffer if needed
+    if (buffer->buffer_id) {
+      glDeleteBuffers(1, &buffer->buffer_id);
+    }
+    glGenBuffers(1, &buffer->buffer_id);
+    glBindBuffer(target, buffer->buffer_id);
     glBufferData(target, size * sizeof(int), data,
         dynamic ? GL_DYNAMIC_DRAW : GL_STATIC_DRAW);
+    buffer->capacity = size;
   } else {
+    // we have enough space
+    assert(buffer->buffer_id);
+    glBindBuffer(target, buffer->buffer_id);
     glBufferSubData(target, 0, size * sizeof(int), data);
   }
-  buffer->size    = size;
-  buffer->element = element;
-  buffer->dynamic = dynamic;
+
+  buffer->element_size = esize;
+  buffer->num_elements = size / esize;
+  buffer->dynamic      = dynamic;
   assert_ogl_error();
 }
 
@@ -544,27 +536,22 @@ void clear_elementbuffer(ogl_elementbuffer* buffer) {
   assert_ogl_error();
   if (buffer->buffer_id) glDeleteBuffers(1, &buffer->buffer_id);
   assert_ogl_error();
-  buffer->buffer_id = 0;
-  buffer->size      = 0;
-  buffer->element   = ogl_element_type::points;
-  buffer->dynamic   = false;
+  *buffer = {};
 }
 
 // set buffer
 void set_elementbuffer(
     ogl_elementbuffer* buffer, const vector<int>& points, bool dynamic) {
-  set_elementbuffer(buffer, points.size() * 1, ogl_element_type::points,
-      (int*)points.data(), dynamic);
+  set_elementbuffer(buffer, points.size() * 1, 1, (int*)points.data(), dynamic);
 }
 void set_elementbuffer(
     ogl_elementbuffer* buffer, const vector<vec2i>& lines, bool dynamic) {
-  set_elementbuffer(buffer, lines.size() * 2, ogl_element_type::lines,
-      (int*)lines.data(), dynamic);
+  set_elementbuffer(buffer, lines.size() * 2, 2, (int*)lines.data(), dynamic);
 }
 void set_elementbuffer(
     ogl_elementbuffer* buffer, const vector<vec3i>& triangles, bool dynamic) {
-  set_elementbuffer(buffer, triangles.size() * 3, ogl_element_type::triangles,
-      (int*)triangles.data(), dynamic);
+  set_elementbuffer(
+      buffer, triangles.size() * 3, 3, (int*)triangles.data(), dynamic);
 }
 
 // initialize program
@@ -676,9 +663,7 @@ void clear_program(ogl_program* program) {
   if (program->program_id) glDeleteProgram(program->program_id);
   if (program->vertex_id) glDeleteShader(program->vertex_id);
   if (program->fragment_id) glDeleteShader(program->fragment_id);
-  program->program_id  = 0;
-  program->vertex_id   = 0;
-  program->fragment_id = 0;
+  *program = {};
   assert_ogl_error();
 }
 
@@ -695,116 +680,6 @@ void bind_program(ogl_program* program) {
 
 // unbind program
 void unbind_program() { glUseProgram(0); }
-
-}  // namespace yocto
-
-// -----------------------------------------------------------------------------
-// OPENGL UTILITIES
-// -----------------------------------------------------------------------------
-namespace yocto {
-
-void init_glbuffer(
-    uint& buffer_id, bool element, int size, int count, const float* array) {
-  assert_ogl_error();
-  glGenBuffers(1, &buffer_id);
-  glBindBuffer(element ? GL_ELEMENT_ARRAY_BUFFER : GL_ARRAY_BUFFER, buffer_id);
-  glBufferData(element ? GL_ELEMENT_ARRAY_BUFFER : GL_ARRAY_BUFFER,
-      count * size * sizeof(float), array, GL_STATIC_DRAW);
-  assert_ogl_error();
-}
-
-void init_glbuffer(
-    uint& buffer_id, bool element, int size, int count, const int* array) {
-  assert_ogl_error();
-  glGenBuffers(1, &buffer_id);
-  glBindBuffer(element ? GL_ELEMENT_ARRAY_BUFFER : GL_ARRAY_BUFFER, buffer_id);
-  glBufferData(element ? GL_ELEMENT_ARRAY_BUFFER : GL_ARRAY_BUFFER,
-      count * size * sizeof(int), array, GL_STATIC_DRAW);
-  assert_ogl_error();
-}
-
-void update_glbuffer(
-    uint& buffer_id, bool element, int size, int count, const int* array) {
-  assert_ogl_error();
-  glBindBuffer(element ? GL_ELEMENT_ARRAY_BUFFER : GL_ARRAY_BUFFER, buffer_id);
-  glBufferSubData(element ? GL_ELEMENT_ARRAY_BUFFER : GL_ARRAY_BUFFER, 0,
-      size * count * sizeof(int), array);
-  assert_ogl_error();
-}
-
-void update_glbuffer(
-    uint& buffer_id, bool element, int size, int count, const float* array) {
-  assert_ogl_error();
-  glBindBuffer(element ? GL_ELEMENT_ARRAY_BUFFER : GL_ARRAY_BUFFER, buffer_id);
-  glBufferSubData(element ? GL_ELEMENT_ARRAY_BUFFER : GL_ARRAY_BUFFER, 0,
-      size * count * sizeof(float), array);
-  assert_ogl_error();
-}
-
-}  // namespace yocto
-
-// -----------------------------------------------------------------------------
-// HIGH-LEVEL OPENGL IMAGE DRAWING
-// -----------------------------------------------------------------------------
-namespace yocto {
-
-auto glimage_vertex =
-    R"(
-#version 330
-in vec2 texcoord;
-out vec2 frag_texcoord;
-uniform vec2 window_size, image_size;
-uniform vec2 image_center;
-uniform float image_scale;
-void main() {
-    vec2 pos = (texcoord - vec2(0.5,0.5)) * image_size * image_scale + image_center;
-    gl_Position = vec4(2 * pos.x / window_size.x - 1, 1 - 2 * pos.y / window_size.y, 0, 1);
-    frag_texcoord = texcoord;
-}
-)";
-#if 0
-  auto glimage_vertex = R"(
-#version 330
-in vec2 texcoord;
-out vec2 frag_texcoord;
-uniform vec2 window_size, image_size, border_size;
-uniform vec2 image_center;
-uniform float image_scale;
-void main() {
-    vec2 pos = (texcoord - vec2(0.5,0.5)) * (image_size + border_size*2) * image_scale + image_center;
-    gl_Position = vec4(2 * pos.x / window_size.x - 1, 1 - 2 * pos.y / window_size.y, 0.1, 1);
-    frag_texcoord = texcoord;
-}
-)";
-#endif
-auto glimage_fragment =
-    R"(
-#version 330
-in vec2 frag_texcoord;
-out vec4 frag_color;
-uniform sampler2D txt;
-void main() {
-    frag_color = texture(txt, frag_texcoord);
-}
-)";
-#if 0
-auto glimage_fragment = R"(
-#version 330
-in vec2 frag_texcoord;
-out vec4 frag_color;
-uniform vec2 image_size, border_size;
-uniform float image_scale;
-void main() {
-    ivec2 imcoord = ivec2(frag_texcoord * (image_size + border_size*2) - border_size);
-    ivec2 tilecoord = ivec2(frag_texcoord * (image_size + border_size*2) * image_scale - border_size);
-    ivec2 tile = tilecoord / 16;
-    if(imcoord.x <= 0 || imcoord.y <= 0 || 
-        imcoord.x >= image_size.x || imcoord.y >= image_size.y) frag_color = vec4(0,0,0,1);
-    else if((tile.x + tile.y) % 2 == 0) frag_color = vec4(0.1,0.1,0.1,1);
-    else frag_color = vec4(0.3,0.3,0.3,1);
-}
-)";
-#endif
 
 // set uniforms
 void set_uniform(const ogl_program* program, int location, int value) {
@@ -969,7 +844,8 @@ void set_attribute(
   assert_ogl_error();
   glBindBuffer(GL_ARRAY_BUFFER, buffer->buffer_id);
   glEnableVertexAttribArray(location);
-  glVertexAttribPointer(location, buffer->esize, GL_FLOAT, false, 0, nullptr);
+  glVertexAttribPointer(
+      location, buffer->element_size, GL_FLOAT, false, 0, nullptr);
   assert_ogl_error();
 }
 void set_attribute(
@@ -1003,7 +879,8 @@ void set_framebuffer(ogl_framebuffer* framebuffer, const vec2i& size) {
   if (!framebuffer->renderbuffer_id) {
     glGenRenderbuffers(1, &framebuffer->renderbuffer_id);
     // bind together frame buffer and render buffer
-    // TODO(giacomo): We put STENCIL here for the same reason...
+    // TODO(giacomo): Why do we need to put STENCIL8 to make things work on
+    // Mac??
     glBindFramebuffer(GL_FRAMEBUFFER, framebuffer->framebuffer_id);
     glBindRenderbuffer(GL_RENDERBUFFER, framebuffer->renderbuffer_id);
     glFramebufferRenderbuffer(GL_FRAMEBUFFER, GL_DEPTH_STENCIL_ATTACHMENT,
@@ -1012,8 +889,7 @@ void set_framebuffer(ogl_framebuffer* framebuffer, const vec2i& size) {
 
   if (size != framebuffer->size) {
     // create render buffer for depth and stencil
-    // TODO(giacomo): Why do we need to put STENCIL8 to make things work on
-    // Mac??
+    // TODO(giacomo): We put STENCIL here for the same reason...
     glBindRenderbuffer(GL_RENDERBUFFER, framebuffer->renderbuffer_id);
     glRenderbufferStorage(GL_RENDERBUFFER, GL_DEPTH24_STENCIL8, size.x, size.y);
     framebuffer->size = size;
@@ -1033,7 +909,7 @@ inline void set_framebuffer_texture(const ogl_framebuffer* framebuffer,
   glBindFramebuffer(GL_FRAMEBUFFER, framebuffer->framebuffer_id);
   glFramebufferTexture2D(
       GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, target, texture_id, mipmap_level);
-  // glBindFramebuffer(GL_FRAMEBUFFER, ogl_framebuffer::bound_framebuffer_id);
+  glBindFramebuffer(GL_FRAMEBUFFER, ogl_framebuffer::bound_framebuffer_id);
   assert_ogl_error();
 }
 
@@ -1088,54 +964,95 @@ void clear_shape(ogl_shape* shape) {
   shape->shape_id = 0;
 }
 
-ogl_shape::~ogl_shape() { clear_shape(this); }
-
-void set_vertex_attribute_const(int location, float value) {
-  glVertexAttrib1f(location, value);
-}
-void set_vertex_attribute_const(int location, const vec2f& value) {
-  glVertexAttrib2f(location, value.x, value.y);
-}
-void set_vertex_attribute_const(int location, const vec3f& value) {
-  glVertexAttrib3f(location, value.x, value.y, value.z);
-}
-void set_vertex_attribute_const(int location, const vec4f& value) {
-  glVertexAttrib4f(location, value.x, value.y, value.z, value.w);
-}
-
-void set_vertex_attribute(int location, const ogl_arraybuffer* buffer) {
+template <typename T>
+void set_vertex_buffer_impl(
+    ogl_shape* shape, const vector<T>& data, int location) {
+  if (shape->vertex_buffers.size() <= location) {
+    shape->vertex_buffers.resize(location + 1);
+  }
+  set_arraybuffer(&shape->vertex_buffers[location], data, false);
+  bind_shape(shape);
+  auto& buffer = shape->vertex_buffers[location];
   assert_ogl_error();
-  assert(buffer->buffer_id);
-  glBindBuffer(GL_ARRAY_BUFFER, buffer->buffer_id);
+  glBindBuffer(GL_ARRAY_BUFFER, buffer.buffer_id);
   glEnableVertexAttribArray(location);
-  glVertexAttribPointer(location, buffer->esize, GL_FLOAT, false, 0, nullptr);
+  glVertexAttribPointer(
+      location, buffer.element_size, GL_FLOAT, false, 0, nullptr);
+  assert_ogl_error();
+}
+
+void set_vertex_buffer(
+    ogl_shape* shape, const vector<float>& values, int location) {
+  set_vertex_buffer_impl(shape, values, location);
+}
+void set_vertex_buffer(
+    ogl_shape* shape, const vector<vec2f>& values, int location) {
+  set_vertex_buffer_impl(shape, values, location);
+}
+void set_vertex_buffer(
+    ogl_shape* shape, const vector<vec3f>& values, int location) {
+  set_vertex_buffer_impl(shape, values, location);
+}
+void set_vertex_buffer(
+    ogl_shape* shape, const vector<vec4f>& values, int location) {
+  set_vertex_buffer_impl(shape, values, location);
+}
+
+void set_vertex_buffer(ogl_shape* shape, float value, int location) {
+  bind_shape(shape);
+  glVertexAttrib1f(location, value);
+  assert_ogl_error();
+}
+void set_vertex_buffer(ogl_shape* shape, const vec2f& value, int location) {
+  bind_shape(shape);
+  glVertexAttrib2f(location, value.x, value.y);
+  assert_ogl_error();
+}
+void set_vertex_buffer(ogl_shape* shape, const vec3f& value, int location) {
+  bind_shape(shape);
+  glVertexAttrib3f(location, value.x, value.y, value.z);
+  assert_ogl_error();
+}
+void set_vertex_buffer(ogl_shape* shape, const vec4f& value, int location) {
+  bind_shape(shape);
+  glVertexAttrib4f(location, value.x, value.y, value.z, value.w);
   assert_ogl_error();
 }
 
 void set_instance_buffer(ogl_shape* shape, int location) {
   bind_shape(shape);
   glVertexAttribDivisor(location, 1);
-  shape->num_instances = (int)shape->vertex_buffers[location].size /
-                         shape->vertex_buffers[location].esize;
+  shape->num_instances = (int)shape->vertex_buffers[location].num_elements;
   assert_ogl_error();
 }
 
 void draw_shape(const ogl_shape* shape) {
+  if (shape->shape_id == 0) return;
   bind_shape(shape);
-  auto elements = GL_TRIANGLES;
-  switch (shape->index_buffer.element) {
-    case ogl_element_type::points: elements = GL_POINTS; break;
-    case ogl_element_type::lines: elements = GL_LINES; break;
-    case ogl_element_type::triangles: elements = GL_TRIANGLES; break;
+  auto type = GL_TRIANGLES;
+  switch (shape->elements) {
+    case ogl_element_type::points: type = GL_POINTS; break;
+    case ogl_element_type::lines: type = GL_LINES; break;
+    case ogl_element_type::line_strip: type = GL_LINE_STRIP; break;
+    case ogl_element_type::triangles: type = GL_TRIANGLES; break;
+    case ogl_element_type::triangle_strip: type = GL_TRIANGLE_STRIP; break;
+    case ogl_element_type::triangle_fan: type = GL_TRIANGLE_FAN; break;
   }
-    
-    auto& buffer = shape->index_buffer;
-  glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, buffer.buffer_id);
-  if (shape->num_instances == 0) {
-    glDrawElements(elements, (GLsizei)buffer.size, GL_UNSIGNED_INT, nullptr);
+
+  auto& indices = shape->index_buffer;
+  if (indices.buffer_id != 0) {
+    glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, indices.buffer_id);
+    if (shape->num_instances == 0) {
+      glDrawElements(type, (GLsizei)indices.num_elements * indices.element_size,
+          GL_UNSIGNED_INT, nullptr);
+    } else {
+      glDrawElementsInstanced(type,
+          (GLsizei)indices.num_elements * indices.element_size, GL_UNSIGNED_INT,
+          nullptr, shape->num_instances);
+    }
   } else {
-    glDrawElementsInstanced(elements, (GLsizei)buffer.size, GL_UNSIGNED_INT,
-        nullptr, shape->num_instances);
+    auto& vertices = shape->vertex_buffers[0];
+    glDrawArrays(type, 0, (int)vertices.num_elements);
   }
   assert_ogl_error();
 }
@@ -1156,7 +1073,7 @@ ogl_shape* cube_shape() {
     // clang-format on
     cube = new ogl_shape{};
     set_shape(cube);
-    set_vertex_attribute(cube, cube_positions, 0);
+    set_vertex_buffer(cube, cube_positions, 0);
     set_index_buffer(cube, cube_triangles);
   }
   return cube;
@@ -1175,11 +1092,75 @@ ogl_shape* quad_shape() {
     // clang-format on
     quad = new ogl_shape{};
     set_shape(quad);
-    set_vertex_attribute(quad, quad_positions, 0);
+    set_vertex_buffer(quad, quad_positions, 0);
     set_index_buffer(quad, quad_triangles);
   }
   return quad;
 }
+}  // namespace yocto
+
+// -----------------------------------------------------------------------------
+// HIGH-LEVEL OPENGL IMAGE DRAWING
+// -----------------------------------------------------------------------------
+namespace yocto {
+
+auto glimage_vertex =
+    R"(
+#version 330
+in vec2 texcoord;
+out vec2 frag_texcoord;
+uniform vec2 window_size, image_size;
+uniform vec2 image_center;
+uniform float image_scale;
+void main() {
+    vec2 pos = (texcoord - vec2(0.5,0.5)) * image_size * image_scale + image_center;
+    gl_Position = vec4(2 * pos.x / window_size.x - 1, 1 - 2 * pos.y / window_size.y, 0, 1);
+    frag_texcoord = texcoord;
+}
+)";
+#if 0
+  auto glimage_vertex = R"(
+#version 330
+in vec2 texcoord;
+out vec2 frag_texcoord;
+uniform vec2 window_size, image_size, border_size;
+uniform vec2 image_center;
+uniform float image_scale;
+void main() {
+    vec2 pos = (texcoord - vec2(0.5,0.5)) * (image_size + border_size*2) * image_scale + image_center;
+    gl_Position = vec4(2 * pos.x / window_size.x - 1, 1 - 2 * pos.y / window_size.y, 0.1, 1);
+    frag_texcoord = texcoord;
+}
+)";
+#endif
+auto glimage_fragment =
+    R"(
+#version 330
+in vec2 frag_texcoord;
+out vec4 frag_color;
+uniform sampler2D txt;
+void main() {
+    frag_color = texture(txt, frag_texcoord);
+}
+)";
+#if 0
+auto glimage_fragment = R"(
+#version 330
+in vec2 frag_texcoord;
+out vec4 frag_color;
+uniform vec2 image_size, border_size;
+uniform float image_scale;
+void main() {
+    ivec2 imcoord = ivec2(frag_texcoord * (image_size + border_size*2) - border_size);
+    ivec2 tilecoord = ivec2(frag_texcoord * (image_size + border_size*2) * image_scale - border_size);
+    ivec2 tile = tilecoord / 16;
+    if(imcoord.x <= 0 || imcoord.y <= 0 || 
+        imcoord.x >= image_size.x || imcoord.y >= image_size.y) frag_color = vec4(0,0,0,1);
+    else if((tile.x + tile.y) % 2 == 0) frag_color = vec4(0.1,0.1,0.1,1);
+    else frag_color = vec4(0.3,0.3,0.3,1);
+}
+)";
+#endif
 
 ogl_image::~ogl_image() {
   if (program) delete program;
@@ -1201,7 +1182,7 @@ bool init_image(ogl_image* image) {
   auto texcoords = vector<vec2f>{{0, 0}, {0, 1}, {1, 1}, {1, 0}};
   auto triangles = vector<vec3i>{{0, 1, 2}, {0, 2, 3}};
   set_shape(image->quad);
-  set_vertex_attribute(image->quad, texcoords, 0);
+  set_vertex_buffer(image->quad, texcoords, 0);
   set_index_buffer(image->quad, triangles);
 
   return true;

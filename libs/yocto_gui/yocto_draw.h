@@ -81,10 +81,7 @@ struct gui_material {
   gui_texture* normal_tex    = nullptr;
 };
 
-struct gui_shape : ogl_shape {
-  float points_size    = 10;
-  float line_thickness = 4;
-};
+struct gui_shape : ogl_shape {};
 
 // shape properties
 void set_points(gui_shape* shape, const vector<int>& points);
@@ -103,27 +100,21 @@ ogl_arraybuffer* get_texcoords(gui_shape* shape);
 ogl_arraybuffer* get_colors(gui_shape* shape);
 ogl_arraybuffer* get_tangents(gui_shape* shape);
 
+enum struct gui_shading_type { constant = 0, shaded };
+
 // Opengl instance
 struct gui_instance {
   // instance properties
-  frame3f       frame        = identity3x4f;
-  gui_shape*    shape        = nullptr;
-  gui_material* material     = nullptr;
-  bool          hidden       = false;
-  bool          highlighted  = false;
-  int           shading_type = 1;
+  frame3f          frame       = identity3x4f;
+  gui_shape*       shape       = nullptr;
+  gui_material*    material    = nullptr;
+  bool             hidden      = false;
+  bool             highlighted = false;
+  gui_shading_type shading     = gui_shading_type::shaded;
 };
-
-// Light type
-enum struct ogl_light_type { point = 0, directional };
 
 // Opengl scene
 struct gui_scene {
-  gui_scene() {}
-  gui_scene(const gui_scene&) = delete;
-  gui_scene& operator=(const gui_scene&) = delete;
-  ~gui_scene();
-
   // scene objects
   vector<gui_camera*>   cameras   = {};
   vector<gui_instance*> instances = {};
@@ -131,41 +122,43 @@ struct gui_scene {
   vector<gui_material*> materials = {};
   vector<gui_texture*>  textures  = {};
 
-  // OpenGL state
+  // programs
   ogl_program* eyelight_program    = new ogl_program{};
   ogl_program* ibl_program         = new ogl_program{};
   ogl_program* environment_program = new ogl_program{};
 
-  // IBL data
+  // IBL baked data
   ogl_cubemap* environment_cubemap = new ogl_cubemap{};
   ogl_cubemap* diffuse_cubemap     = new ogl_cubemap{};
   ogl_cubemap* specular_cubemap    = new ogl_cubemap{};
   gui_texture* brdf_lut            = new gui_texture{};
+
+  ~gui_scene();
 };
 
 // Shading type
-enum struct gui_shading_type {
+enum struct gui_lighting_type {
   environment,
   eyelight,
   // scene_lights
 };
 
 // Shading name
-const auto gui_shading_names = vector<string>{"environment", "camera_lights"};
+const auto gui_lighting_names = vector<string>{"environment", "camera_lights"};
 
 // Draw options
 struct gui_scene_params {
-  int              resolution       = 1280;
-  bool             wireframe        = false;
-  gui_shading_type shading          = gui_shading_type::eyelight;
-  float            exposure         = 0;
-  float            gamma            = 2.2f;
-  bool             faceted          = false;
-  bool             double_sided     = true;
-  bool             non_rigid_frames = true;
-  float            near             = 0.01f;
-  float            far              = 10000.0f;
-  vec4f            background       = vec4f{0.15f, 0.15f, 0.15f, 1.0f};
+  int               resolution       = 1280;
+  bool              wireframe        = false;
+  gui_lighting_type lighting         = gui_lighting_type::eyelight;
+  float             exposure         = 0;
+  float             gamma            = 2.2f;
+  bool              faceted          = false;
+  bool              double_sided     = true;
+  bool              non_rigid_frames = true;
+  float             near             = 0.01f;
+  float             far              = 10000.0f;
+  vec4f             background       = vec4f{0.15f, 0.15f, 0.15f, 1.0f};
 };
 
 struct gui_scene_view {
@@ -239,8 +232,9 @@ gui_instance* add_instance(gui_scene* scene, const frame3f& frame,
     bool highlighted = false);
 
 void set_scene_view_uniforms(ogl_program* program, const gui_scene_view& view);
-void set_instance_uniforms(ogl_program* program, const gui_instance* instance,
-    const gui_scene_view& view);
+void set_instance_uniforms(ogl_program* program, const frame3f& frame,
+    const gui_shape* shape, const gui_material* material, int shading_type = 0,
+    bool double_sided = true, bool non_rigid_frames = false);
 void set_eyelight_uniforms(ogl_program* program, const gui_scene_view& view);
 void set_ibl_uniforms(ogl_program* program, const gui_scene* scene);
 

@@ -198,8 +198,8 @@ int main(int argc, const char* argv[]) {
   add_option(cli, "--camera", camera_name, "Camera name.");
   add_option(
       cli, "--resolution,-r", app->drawgl_prms.resolution, "Image resolution.");
-  add_option(cli, "--shading", app->drawgl_prms.shading, "Eyelight rendering.",
-      gui_shading_names);
+  add_option(cli, "--lighting", app->drawgl_prms.lighting, "Lighting type.",
+      gui_lighting_names);
   add_option(cli, "scene", app->filename, "Scene filename", true);
   parse_cli(cli, argc, argv);
 
@@ -246,7 +246,7 @@ int main(int argc, const char* argv[]) {
     draw_checkbox(win, "faceted", params.faceted);
     continue_line(win);
     draw_checkbox(win, "double sided", params.double_sided);
-    draw_combobox(win, "shading", (int&)params.shading, gui_shading_names);
+    draw_combobox(win, "lighting", (int&)params.lighting, gui_lighting_names);
     // draw_checkbox(win, "edges", params.edges);
     draw_slider(win, "exposure", params.exposure, -10, 10);
     draw_slider(win, "gamma", params.gamma, 0.1f, 4);

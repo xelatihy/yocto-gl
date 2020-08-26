@@ -82,33 +82,33 @@ ogl_arraybuffer* get_tangents(gui_shape* shape) {
 
 void set_positions(gui_shape* shape, const vector<vec3f>& positions) {
   if (positions.empty())
-    set_vertex_attribute(shape, vec3f{0, 0, 0}, 0);
+    set_vertex_buffer(shape, vec3f{0, 0, 0}, 0);
   else
-    set_vertex_attribute(shape, positions, 0);
+    set_vertex_buffer(shape, positions, 0);
 }
 void set_normals(gui_shape* shape, const vector<vec3f>& normals) {
   if (normals.empty())
-    set_vertex_attribute(shape, vec3f{0, 0, 1}, 1);
+    set_vertex_buffer(shape, vec3f{0, 0, 1}, 1);
   else
-    set_vertex_attribute(shape, normals, 1);
+    set_vertex_buffer(shape, normals, 1);
 }
 void set_texcoords(gui_shape* shape, const vector<vec2f>& texcoords) {
   if (texcoords.empty())
-    set_vertex_attribute(shape, vec2f{0, 0}, 2);
+    set_vertex_buffer(shape, vec2f{0, 0}, 2);
   else
-    set_vertex_attribute(shape, texcoords, 2);
+    set_vertex_buffer(shape, texcoords, 2);
 }
 void set_colors(gui_shape* shape, const vector<vec4f>& colors) {
   if (colors.empty())
-    set_vertex_attribute(shape, vec4f{1, 1, 1, 1}, 3);
+    set_vertex_buffer(shape, vec4f{1, 1, 1, 1}, 3);
   else
-    set_vertex_attribute(shape, colors, 3);
+    set_vertex_buffer(shape, colors, 3);
 }
 void set_tangents(gui_shape* shape, const vector<vec4f>& tangents) {
   if (tangents.empty())
-    set_vertex_attribute(shape, vec4f{0, 0, 1, 1}, 4);
+    set_vertex_buffer(shape, vec4f{0, 0, 1, 1}, 4);
   else
-    set_vertex_attribute(shape, tangents, 4);
+    set_vertex_buffer(shape, tangents, 4);
 }
 
 void set_points(gui_shape* shape, const vector<int>& points) {
@@ -335,23 +335,23 @@ void set_scene_view_uniforms(ogl_program* program, const gui_scene_view& view) {
 }
 
 // Draw a shape
-void set_instance_uniforms(ogl_program* program, const gui_instance* instance,
-    const gui_scene_view& view) {
-  auto shape_xform     = frame_to_mat(instance->frame);
+void set_instance_uniforms(ogl_program* program, const frame3f& frame,
+    const gui_shape* shape, const gui_material* material,
+    gui_shading_type shading, bool double_sided, bool non_rigid_frames) {
+  auto shape_xform     = frame_to_mat(frame);
   auto shape_inv_xform = transpose(
-      frame_to_mat(inverse(instance->frame, view.params.non_rigid_frames)));
+      frame_to_mat(inverse(frame, non_rigid_frames)));
   set_uniform(program, "frame", shape_xform);
   set_uniform(program, "frameit", shape_inv_xform);
   set_uniform(program, "offset", 0.0f);
-  if (instance->highlighted) {
-    set_uniform(program, "highlight", vec4f{1, 1, 0, 1});
-  } else {
-    set_uniform(program, "highlight", vec4f{0, 0, 0, 0});
-  }
+  //  if (instance->highlighted) {
+  //    set_uniform(program, "highlight", vec4f{1, 1, 0, 1});
+  //  } else {
+  //    set_uniform(program, "highlight", vec4f{0, 0, 0, 0});
+  //  }
   assert_ogl_error();
 
-  auto material = instance->material;
-  auto mtype    = instance->shading_type;
+  auto mtype = (int)shading;
   set_uniform(program, "mtype", mtype);
   set_uniform(program, "emission", material->emission);
   set_uniform(program, "diffuse", material->color);
@@ -359,7 +359,7 @@ void set_instance_uniforms(ogl_program* program, const gui_instance* instance,
       vec3f{material->metallic, material->metallic, material->metallic});
   set_uniform(program, "roughness", material->roughness);
   set_uniform(program, "opacity", material->opacity);
-  set_uniform(program, "double_sided", (int)view.params.double_sided);
+  set_uniform(program, "double_sided", double_sided);
   set_uniform(
       program, "emission_tex", "emission_tex_on", material->emission_tex, 0);
   set_uniform(program, "diffuse_tex", "diffuse_tex_on", material->color_tex, 1);
@@ -374,8 +374,7 @@ void set_instance_uniforms(ogl_program* program, const gui_instance* instance,
 
   assert_ogl_error();
 
-  auto shape = instance->shape;
-  auto type  = shape->index_buffer.element;
+  auto type = shape->elements;
   if (type == ogl_element_type::points) set_uniform(program, "etype", 1);
   if (type == ogl_element_type::lines) set_uniform(program, "etype", 2);
   if (type == ogl_element_type::triangles) set_uniform(program, "etype", 3);
@@ -400,20 +399,19 @@ void draw_environment(gui_scene* scene, const gui_scene_view& view) {
 void set_eyelight_uniforms(ogl_program* program, const gui_scene_view& view) {
   // Opengl light
   struct gui_light {
-    vec3f          position = {0, 0, 0};
-    vec3f          emission = {0, 0, 0};
-    ogl_light_type type     = ogl_light_type::point;
-    bool           camera   = false;
+    vec3f position = {0, 0, 0};
+    vec3f emission = {0, 0, 0};
+    bool  camera   = false;
   };
 
-  static auto camera_light0 = gui_light{normalize(vec3f{1, 1, 1}),
-      vec3f{pif / 2, pif / 2, pif / 2}, ogl_light_type::directional, true};
-  static auto camera_light1 = gui_light{normalize(vec3f{-1, 1, 1}),
-      vec3f{pif / 2, pif / 2, pif / 2}, ogl_light_type::directional, true};
-  static auto camera_light2 = gui_light{normalize(vec3f{-1, -1, 1}),
-      vec3f{pif / 4, pif / 4, pif / 4}, ogl_light_type::directional, true};
-  static auto camera_light3 = gui_light{normalize(vec3f{0.1, 0.5, -1}),
-      vec3f{pif / 4, pif / 4, pif / 4}, ogl_light_type::directional, true};
+  static auto camera_light0 = gui_light{
+      normalize(vec3f{1, 1, 1}), vec3f{pif / 2, pif / 2, pif / 2}, true};
+  static auto camera_light1 = gui_light{
+      normalize(vec3f{-1, 1, 1}), vec3f{pif / 2, pif / 2, pif / 2}, true};
+  static auto camera_light2 = gui_light{
+      normalize(vec3f{-1, -1, 1}), vec3f{pif / 4, pif / 4, pif / 4}, true};
+  static auto camera_light3 = gui_light{
+      normalize(vec3f{0.1, 0.5, -1}), vec3f{pif / 4, pif / 4, pif / 4}, true};
   static auto camera_lights = vector<gui_light*>{
       &camera_light0, &camera_light1, &camera_light2, &camera_light3};
 
@@ -424,16 +422,13 @@ void set_eyelight_uniforms(ogl_program* program, const gui_scene_view& view) {
   for (auto light : lights) {
     auto is = std::to_string(lid);
     if (light->camera) {
-      auto position = light->type == ogl_light_type::directional
-                          ? transform_direction(
-                                view.camera_frame, light->position)
-                          : transform_point(view.camera_frame, light->position);
+      auto position = transform_direction(view.camera_frame, light->position);
       set_uniform(program, ("lpos[" + is + "]").c_str(), position);
     } else {
       set_uniform(program, ("lpos[" + is + "]").c_str(), light->position);
     }
     set_uniform(program, ("lke[" + is + "]").c_str(), light->emission);
-    set_uniform(program, ("ltype[" + is + "]").c_str(), (int)light->type);
+    set_uniform(program, ("ltype[" + is + "]").c_str(), 1);
     lid++;
   }
   assert_ogl_error();
@@ -448,13 +443,13 @@ void set_ibl_uniforms(ogl_program* program, const gui_scene* scene) {
 void draw_instances(gui_scene* scene, const gui_scene_view& view) {
   auto program = scene->eyelight_program;
   if (is_initialized(scene->environment_cubemap) &&
-      view.params.shading == gui_shading_type::environment) {
+      view.params.lighting == gui_lighting_type::environment) {
     program = scene->ibl_program;
   }
 
   bind_program(program);
   set_scene_view_uniforms(program, view);
-  if (view.params.shading == gui_shading_type::eyelight) {
+  if (view.params.lighting == gui_lighting_type::eyelight) {
     set_eyelight_uniforms(program, view);
   } else {
     set_ibl_uniforms(program, scene);
@@ -463,7 +458,9 @@ void draw_instances(gui_scene* scene, const gui_scene_view& view) {
   set_ogl_wireframe(view.params.wireframe);
   for (auto instance : scene->instances) {
     if (instance->hidden) continue;
-    set_instance_uniforms(program, instance, view);
+    set_instance_uniforms(program, instance->frame, instance->shape,
+        instance->material, instance->shading, view.params.double_sided,
+        view.params.non_rigid_frames);
     draw_shape(instance->shape);
   }
   unbind_program();
@@ -815,14 +812,6 @@ uniform mat4 frameit;            // shape transform
 
 bool evaluate_material(vec2 texcoord, vec4 color, out vec3 ke, 
                     out vec3 kd, out vec3 ks, out float rs, out float op) {
-  if(mtype == 0) {
-    ke = emission;
-    kd = vec3(0,0,0);
-    ks = vec3(0,0,0);
-    op = 1;
-    return false;
-  }
-
   ke = color.xyz * emission;
   kd = color.xyz * diffuse;
   ks = color.xyz * specular;

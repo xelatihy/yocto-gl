@@ -204,8 +204,8 @@ void init_glscene(app_state* app, gui_scene* glscene, generic_shape* ioshape,
   if (!is_initialized(get_normals(model_shape))) {
     app->drawgl_prms.faceted = true;
   }
-  set_vertex_attribute(model_shape, vec3f{0, 0, 0}, 5);
-  set_vertex_attribute(model_shape, vec3f{0, 0, 0}, 6);
+  set_vertex_buffer(model_shape, vec3f{0, 0, 0}, 5);
+  set_vertex_buffer(model_shape, vec3f{0, 0, 0}, 6);
 
   auto cylinder = make_uvcylinder({4, 1, 1}, {0.0003, 1});
   for (auto& p : cylinder.positions) {
@@ -224,16 +224,16 @@ void init_glscene(app_state* app, gui_scene* glscene, generic_shape* ioshape,
     froms.push_back(ioshape->positions[edge.x]);
     tos.push_back(ioshape->positions[edge.y]);
   }
-  set_vertex_attribute(edges_shape, froms, 5);
+  set_vertex_buffer(edges_shape, froms, 5);
   set_instance_buffer(edges_shape, 5);
-  set_vertex_attribute(edges_shape, tos, 6);
+  set_vertex_buffer(edges_shape, tos, 6);
   set_instance_buffer(edges_shape, 6);
 
   auto vertices       = make_spheres(ioshape->positions, 0.001, 2);
   auto vertices_shape = add_shape(glscene, {}, {}, {}, vertices.quads,
       vertices.positions, vertices.normals, vertices.texcoords, {});
-  set_vertex_attribute(vertices_shape, vec3f{0, 0, 0}, 5);
-  set_vertex_attribute(vertices_shape, vec3f{0, 0, 0}, 6);
+  set_vertex_buffer(vertices_shape, vec3f{0, 0, 0}, 5);
+  set_vertex_buffer(vertices_shape, vec3f{0, 0, 0}, 6);
 
   // shapes
   if (progress_cb) progress_cb("convert instance", progress.x++, progress.y);
@@ -242,11 +242,11 @@ void init_glscene(app_state* app, gui_scene* glscene, generic_shape* ioshape,
 
   auto edges_instance = add_instance(
       glscene, identity3x4f, edges_shape, glmateriale, true);
-  edges_instance->shading_type = 0;
+  edges_instance->shading = gui_shading_type::constant;
 
   auto points_instance = add_instance(
       glscene, identity3x4f, vertices_shape, glmaterialv, true);
-  points_instance->shading_type = 0;
+  points_instance->shading = gui_shading_type::constant;
 
   auto error  = string{};
   auto errorb = string{};
@@ -317,7 +317,7 @@ void draw_widgets(gui_window* win, app_states* apps, const gui_input& input) {
     draw_checkbox(win, "points", app->glscene->instances[2]->hidden, true);
     draw_coloredit(win, "color", glmaterial->color);
     draw_slider(win, "resolution", params.resolution, 0, 4096);
-    draw_combobox(win, "shading", (int&)params.shading, gui_shading_names);
+    draw_combobox(win, "lighting", (int&)params.lighting, gui_lighting_names);
     draw_checkbox(win, "wireframe", params.wireframe);
     continue_line(win);
     draw_checkbox(win, "double sided", params.double_sided);
@@ -398,8 +398,8 @@ int main(int argc, const char* argv[]) {
   add_option(cli, "--camera", camera_name, "Camera name.");
   add_option(cli, "--resolution,-r", apps->drawgl_prms.resolution,
       "Image resolution.");
-  add_option(cli, "--shading", apps->drawgl_prms.shading, "Shading type.",
-      gui_shading_names);
+  add_option(cli, "--lighting", apps->drawgl_prms.lighting, "Lighting type.",
+      gui_lighting_names);
   add_option(cli, "shapes", filenames, "Shape filenames", true);
   parse_cli(cli, argc, argv);
 

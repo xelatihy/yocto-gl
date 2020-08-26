@@ -2138,7 +2138,7 @@ inline frame2f inverse(const frame2f& a, bool non_rigid) {
 }
 
 // Frame properties
-inline mat3f rotation(const frame3f& a) { return {a.x, a.y}; }
+inline mat3f rotation(const frame3f& a) { return {a.x, a.y, a.z}; }
 inline vec3f translation(const frame3f& a) { return a.o; }
 
 // Frame construction
