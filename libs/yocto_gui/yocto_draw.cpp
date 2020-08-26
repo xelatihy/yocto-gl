@@ -148,13 +148,13 @@ gui_scene::~gui_scene() {
   delete brdf_lut;
 }
 
-const char* bake_brdf_vertex_code();
-const char* bake_brdf_fragment_code();
+static const char* bake_brdf_vertex_code();
+static const char* bake_brdf_fragment_code();
 
-const char* bake_cubemap_vertex_code();
-const char* bake_environment_fragment_code();
-const char* bake_irradiance_fragment_code();
-const char* bake_reflections_fragment_code();
+static const char* bake_cubemap_vertex_code();
+static const char* bake_environment_fragment_code();
+static const char* bake_irradiance_fragment_code();
+static const char* bake_reflections_fragment_code();
 
 // Initialize an OpenGL scene
 void init_scene(gui_scene* scene) {
@@ -510,7 +510,7 @@ inline void bake_cubemap(ogl_cubemap* cubemap, const Sampler* environment,
     const vec3f& emission = {1, 1, 1}) {
   // init cubemap with no data
   set_cubemap<float>(cubemap, size, 3, true, true, true);
-  auto cube = cube_shape();
+  auto cube = cube_shape();  // TODO(fabio): this is dangerous
 
   auto framebuffer = ogl_framebuffer{};
   set_framebuffer(&framebuffer, {size, size});
@@ -552,12 +552,13 @@ inline void bake_cubemap(ogl_cubemap* cubemap, const Sampler* environment,
   }
   unbind_program();
   unbind_framebuffer();
+  // TODO:(fabio): shoudl we clear the framebuffer here?
 }
 
 inline void bake_specular_brdf_texture(gui_texture* texture) {
   auto size        = 512;
   auto framebuffer = ogl_framebuffer{};
-  auto screen_quad = quad_shape();
+  auto screen_quad = quad_shape();  // THIS is DANGEROUS
 
   auto program = ogl_program{};
   auto error = ""s, errorlog = ""s;
@@ -609,6 +610,7 @@ void init_ibl_data(gui_scene* scene, const gui_texture* environment_texture,
     if (!init_program(program, vertex, fragment, error, errorlog)) {
       printf("error: %s\n", error.c_str());
       printf("errorlog: %s\n", errorlog.c_str());
+      // TODO(fabio): this shoudl return an error
     }
   };
 
@@ -1116,7 +1118,7 @@ void main() {
   return code;
 }
 
-const char* bake_brdf_vertex_code() {
+static const char* bake_brdf_vertex_code() {
   static const char* code = R"(
 #version 330
 
@@ -1134,7 +1136,7 @@ void main() {
   return code;
 }
 
-const char* bake_brdf_fragment_code() {
+static const char* bake_brdf_fragment_code() {
   static const char* code = R"(
 #version 330
 
@@ -1242,7 +1244,7 @@ void main() {
   return code;
 }
 
-const char* bake_cubemap_vertex_code() {
+static const char* bake_cubemap_vertex_code() {
   static const char* code = R"(
 #version 330
 
@@ -1267,7 +1269,7 @@ void main() {
   return code;
 }
 
-const char* bake_environment_fragment_code() {
+static const char* bake_environment_fragment_code() {
   static const char* code = R"(
 #version 330
 
@@ -1303,7 +1305,7 @@ void main() {
   return code;
 }
 
-const char* bake_irradiance_fragment_code() {
+static const char* bake_irradiance_fragment_code() {
   static const char* code = R"(
 #version 330
 
@@ -1355,7 +1357,7 @@ void main() {
   return code;
 }
 
-const char* bake_reflections_fragment_code() {
+static const char* bake_reflections_fragment_code() {
   static const char* code = R"(
 #version 330
 
