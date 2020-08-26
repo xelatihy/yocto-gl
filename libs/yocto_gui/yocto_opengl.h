@@ -389,6 +389,7 @@ inline void set_index_buffer(ogl_shape* shape, const vector<vec3i>& indices) {
 
 void draw_shape(const ogl_shape* shape);
 
+// TODO(fabio) these should chanhe to initialization and avoid static GL data
 ogl_shape* cube_shape();
 ogl_shape* quad_shape();
 
