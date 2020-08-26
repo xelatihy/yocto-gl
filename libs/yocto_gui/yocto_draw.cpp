@@ -31,6 +31,8 @@
 
 #include <yocto/yocto_commonio.h>
 
+#include <array>
+
 #include "ext/glad/glad.h"
 
 #ifdef _WIN32
@@ -44,6 +46,7 @@
 namespace yocto {
 
 // using directives
+using std::array;
 using namespace std::string_literals;
 
 }  // namespace yocto
@@ -512,16 +515,14 @@ inline void bake_cubemap(ogl_cubemap* cubemap, const Sampler* environment,
   auto framebuffer = ogl_framebuffer{};
   set_framebuffer(&framebuffer, {size, size});
 
-  // clang-format off
-  frame3f cameras[6] = {
-    lookat_frame({0, 0, 0}, { 1, 0, 0}, {0, 1, 0}),
-    lookat_frame({0, 0, 0}, {-1, 0, 0}, {0, 1, 0}),
-    lookat_frame({0, 0, 0}, { 0,-1, 0}, {0, 0,-1}),
-    lookat_frame({0, 0, 0}, { 0, 1, 0}, {0, 0, 1}),
-    lookat_frame({0, 0, 0}, { 0, 0,-1}, {0, 1, 0}),
-    lookat_frame({0, 0, 0}, { 0, 0, 1}, {0, 1, 0})
+  auto cameras = array<frame3f, 6>{
+      lookat_frame({0, 0, 0}, {1, 0, 0}, {0, 1, 0}),
+      lookat_frame({0, 0, 0}, {-1, 0, 0}, {0, 1, 0}),
+      lookat_frame({0, 0, 0}, {0, -1, 0}, {0, 0, -1}),
+      lookat_frame({0, 0, 0}, {0, 1, 0}, {0, 0, 1}),
+      lookat_frame({0, 0, 0}, {0, 0, -1}, {0, 1, 0}),
+      lookat_frame({0, 0, 0}, {0, 0, 1}, {0, 1, 0}),
   };
-  // clang-format on
 
   bind_framebuffer(&framebuffer);
   bind_program(program);
