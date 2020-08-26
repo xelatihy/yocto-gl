@@ -575,8 +575,8 @@ bool init_program(ogl_program* program, const string& vertex,
 
   const char* ccvertex   = vertex.data();
   const char* ccfragment = fragment.data();
-  int         errflags;
-  char        errbuf[10000];
+  auto        errflags   = 0;
+  auto        errbuf     = array<char, 10000>{};
 
   // create vertex
   assert_ogl_error();
@@ -584,9 +584,9 @@ bool init_program(ogl_program* program, const string& vertex,
   glShaderSource(program->vertex_id, 1, &ccvertex, NULL);
   glCompileShader(program->vertex_id);
   glGetShaderiv(program->vertex_id, GL_COMPILE_STATUS, &errflags);
-  if (!errflags) {
-    glGetShaderInfoLog(program->vertex_id, 10000, 0, errbuf);
-    return program_error("vertex shader not compiled", errbuf);
+  if (errflags == 0) {
+    glGetShaderInfoLog(program->vertex_id, 10000, 0, errbuf.data());
+    return program_error("vertex shader not compiled", errbuf.data());
   }
   assert_ogl_error();
 
@@ -596,9 +596,9 @@ bool init_program(ogl_program* program, const string& vertex,
   glShaderSource(program->fragment_id, 1, &ccfragment, NULL);
   glCompileShader(program->fragment_id);
   glGetShaderiv(program->fragment_id, GL_COMPILE_STATUS, &errflags);
-  if (!errflags) {
-    glGetShaderInfoLog(program->fragment_id, 10000, 0, errbuf);
-    return program_error("fragment shader not compiled", errbuf);
+  if (errflags == 0) {
+    glGetShaderInfoLog(program->fragment_id, 10000, 0, errbuf.data());
+    return program_error("fragment shader not compiled", errbuf.data());
   }
   assert_ogl_error();
 
@@ -609,9 +609,9 @@ bool init_program(ogl_program* program, const string& vertex,
   glAttachShader(program->program_id, program->fragment_id);
   glLinkProgram(program->program_id);
   glGetProgramiv(program->program_id, GL_LINK_STATUS, &errflags);
-  if (!errflags) {
-    glGetProgramInfoLog(program->program_id, 10000, 0, errbuf);
-    return program_error("program not linked", errbuf);
+  if (errflags == 0) {
+    glGetProgramInfoLog(program->program_id, 10000, 0, errbuf.data());
+    return program_error("program not linked", errbuf.data());
   }
   // TODO(giacomo): Apparently validation must be done just before drawing.
   //    https://community.khronos.org/t/samplers-of-different-types-use-the-same-textur/66329
@@ -1058,8 +1058,9 @@ void draw_shape(const ogl_shape* shape) {
 }
 
 ogl_shape* cube_shape() {
+  // TODO(fabio): this is dangerous
   static ogl_shape* cube = nullptr;
-  if (!cube) {
+  if (cube != nullptr) {
     // clang-format off
     static const auto cube_positions = vector<vec3f>{
       {1, -1, -1}, {1, -1,  1}, {-1, -1,  1}, {-1, -1, -1},
@@ -1080,8 +1081,9 @@ ogl_shape* cube_shape() {
 }
 
 ogl_shape* quad_shape() {
+  // TODO(fabio): this is dangerous
   static ogl_shape* quad = nullptr;
-  if (!quad) {
+  if (quad != nullptr) {
     // clang-format off
     static const auto quad_positions = vector<vec3f>{
       {-1, -1, 0}, {1, -1,  0}, {1, 1,  0}, {-1, 1, 0},
