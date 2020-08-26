@@ -1134,23 +1134,19 @@ void set_image(
 // draw image
 void draw_image(ogl_image* image, const ogl_image_params& params) {
   assert_ogl_error();
-  glViewport(params.framebuffer.x, params.framebuffer.y, params.framebuffer.z,
-      params.framebuffer.w);
-  glClearColor(params.background.x, params.background.y, params.background.z,
-      params.background.w);
-  glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
-  glEnable(GL_DEPTH_TEST);
-  bind_program(image->program);
-  set_uniform(image->program, "txt", image->texture, 0);
-  set_uniform(image->program, "window_size",
+  set_ogl_viewport(params.framebuffer);
+  clear_ogl_framebuffer(params.background);
+  auto program = image->program;
+  bind_program(program);
+  set_uniform(program, "txt", image->texture, 0);
+  set_uniform(program, "window_size",
       vec2f{(float)params.window.x, (float)params.window.y});
-  set_uniform(image->program, "image_size",
+  set_uniform(program, "image_size",
       vec2f{(float)image->texture->size.x, (float)image->texture->size.y});
-  set_uniform(image->program, "image_center", params.center);
-  set_uniform(image->program, "image_scale", params.scale);
+  set_uniform(program, "image_center", params.center);
+  set_uniform(program, "image_scale", params.scale);
   draw_shape(image->quad);
   unbind_program();
-  assert_ogl_error();
 }
 
 }  // namespace yocto
