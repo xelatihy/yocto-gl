@@ -33,13 +33,6 @@
 
 #include <array>
 
-#include "ext/glad/glad.h"
-
-#ifdef _WIN32
-#undef near
-#undef far
-#endif
-
 // -----------------------------------------------------------------------------
 // USING DIRECTIVES
 // -----------------------------------------------------------------------------
@@ -578,21 +571,7 @@ inline void bake_specular_brdf_texture(gui_texture* texture) {
   auto frag = bake_brdf_fragment_code();
   init_program(&program, vert, frag, error, errorlog);
 
-  texture->is_float     = true;
-  texture->linear       = true;
-  texture->num_channels = 3;
-  texture->size         = size;
-  glGenTextures(1, &texture->texture_id);
-
-  glBindTexture(GL_TEXTURE_2D, texture->texture_id);
-  glTexImage2D(
-      GL_TEXTURE_2D, 0, GL_RGB16F, size.x, size.y, 0, GL_RGB, GL_FLOAT, 0);
-  glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
-  glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
-  glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
-  glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
-  assert_ogl_error();
-  // TODO(giacomo): mipmaps?
+  set_texture(texture, size, 3, (float*)nullptr, true, true, false, false);
 
   set_framebuffer(&framebuffer, size);
   set_framebuffer_texture(&framebuffer, texture, 0);

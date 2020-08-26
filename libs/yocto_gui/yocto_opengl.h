@@ -89,10 +89,10 @@ struct ogl_texture {
 // set texture
 void set_texture(ogl_texture* texture, const vec2i& size, int num_channels,
     const byte* img, bool as_srgb = false, bool linear = true,
-    bool mipmap = true);
+    bool mipmap = true, bool wrap_repeat = true);
 void set_texture(ogl_texture* texture, const vec2i& size, int num_channels,
     const float* img, bool as_float = false, bool linear = true,
-    bool mipmap = true);
+    bool mipmap = true, bool wrap_repeat = true);
 
 // check if texture is initialized
 bool is_initialized(const ogl_texture* texture);

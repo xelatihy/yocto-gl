@@ -149,7 +149,7 @@ void set_ogl_blending(bool enabled) {
 void set_ogl_point_size(int size) { glPointSize(size); }
 
 void set_texture(ogl_texture* texture, const vec2i& size, int num_channels,
-    const byte* img, bool as_srgb, bool linear, bool mipmap) {
+    const byte* img, bool as_srgb, bool linear, bool mipmap, bool wrap_repeat) {
   static auto sformat = vector<uint>{
       0, GL_SRGB, GL_SRGB, GL_SRGB, GL_SRGB_ALPHA};
   static auto iformat = vector<uint>{0, GL_RGB, GL_RGB, GL_RGB, GL_RGBA};
@@ -169,12 +169,19 @@ void set_texture(ogl_texture* texture, const vec2i& size, int num_channels,
                : (linear ? GL_LINEAR : GL_NEAREST));
     glTexParameteri(
         GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, linear ? GL_LINEAR : GL_NEAREST);
-    if (mipmap) glGenerateMipmap(GL_TEXTURE_2D);
+    if (mipmap && img) glGenerateMipmap(GL_TEXTURE_2D);
   } else {
     glBindTexture(GL_TEXTURE_2D, texture->texture_id);
     glTexSubImage2D(GL_TEXTURE_2D, 0, 0, 0, size.x, size.y,
         cformat.at(num_channels), GL_UNSIGNED_BYTE, img);
-    if (mipmap) glGenerateMipmap(GL_TEXTURE_2D);
+    if (mipmap && img) glGenerateMipmap(GL_TEXTURE_2D);
+  }
+  if (wrap_repeat) {
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
+  } else {
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
   }
   texture->size         = size;
   texture->num_channels = num_channels;
@@ -186,7 +193,8 @@ void set_texture(ogl_texture* texture, const vec2i& size, int num_channels,
 }
 
 void set_texture(ogl_texture* texture, const vec2i& size, int num_channels,
-    const float* img, bool as_float, bool linear, bool mipmap) {
+    const float* img, bool as_float, bool linear, bool mipmap,
+    bool wrap_repeat) {
   static auto fformat = vector<uint>{
       0, GL_RGB16F, GL_RGB16F, GL_RGB16F, GL_RGBA32F};
   static auto iformat = vector<uint>{0, GL_RGB, GL_RGB, GL_RGB, GL_RGBA};
@@ -197,7 +205,6 @@ void set_texture(ogl_texture* texture, const vec2i& size, int num_channels,
   if (texture->size != size || texture->num_channels != num_channels ||
       texture->is_float != as_float || texture->is_srgb == true ||
       texture->linear != linear || texture->mipmap != mipmap) {
-    glGenTextures(1, &texture->texture_id);
     glBindTexture(GL_TEXTURE_2D, texture->texture_id);
     glTexImage2D(GL_TEXTURE_2D, 0,
         as_float ? fformat.at(num_channels) : iformat.at(num_channels), size.x,
@@ -207,12 +214,19 @@ void set_texture(ogl_texture* texture, const vec2i& size, int num_channels,
                : (linear ? GL_LINEAR : GL_NEAREST));
     glTexParameteri(
         GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, linear ? GL_LINEAR : GL_NEAREST);
-    if (mipmap) glGenerateMipmap(GL_TEXTURE_2D);
+    if (mipmap && img) glGenerateMipmap(GL_TEXTURE_2D);
   } else {
     glBindTexture(GL_TEXTURE_2D, texture->texture_id);
     glTexSubImage2D(GL_TEXTURE_2D, 0, 0, 0, size.x, size.y,
         iformat.at(num_channels), GL_FLOAT, img);
-    if (mipmap) glGenerateMipmap(GL_TEXTURE_2D);
+    if (mipmap && img) glGenerateMipmap(GL_TEXTURE_2D);
+  }
+  if (wrap_repeat) {
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
+  } else {
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
   }
   texture->size         = size;
   texture->num_channels = num_channels;
