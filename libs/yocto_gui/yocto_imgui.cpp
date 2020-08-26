@@ -32,8 +32,10 @@
 #include <yocto/yocto_commonio.h>
 
 #include <algorithm>
+#include <array>
 #include <cstdarg>
 #include <filesystem>
+#include <memory>
 #include <mutex>
 #include <stdexcept>
 #include <string>
@@ -63,6 +65,7 @@
 namespace yocto {
 
 // using directives
+using std::array;
 using std::mutex;
 using std::unordered_map;
 using namespace std::string_literals;
@@ -156,7 +159,8 @@ void init_window(gui_window* win, const vec2i& size, const string& title,
   // create window
   win->title = title;
   win->win = glfwCreateWindow(size.x, size.y, title.c_str(), nullptr, nullptr);
-  if (!win->win) throw std::runtime_error("cannot initialize windowing system");
+  if (win->win == nullptr)
+    throw std::runtime_error{"cannot initialize windowing system"};
   glfwMakeContextCurrent(win->win);
   glfwSwapInterval(1);  // Enable vsync
 
@@ -400,7 +404,7 @@ struct filedialog_state {
   string                     filter        = "";
   vector<string>             extensions    = {};
 
-  filedialog_state() {}
+  filedialog_state() = default;
   filedialog_state(const string& dirname, const string& filename,
       const string& filter, bool save) {
     set(dirname, filename, filter, save);
@@ -493,11 +497,11 @@ bool draw_filedialog(gui_window* win, const char* lbl, string& path, bool save,
     if (states.find(lbl) == states.end()) {
       states[lbl] = filedialog_state{dirname, filename, filter, save};
     }
-    auto& state = states.at(lbl);
-    char  dir_buffer[1024];
-    snprintf(dir_buffer, sizeof(dir_buffer), "%s", state.dirname.c_str());
-    if (ImGui::InputText("dir", dir_buffer, sizeof(dir_buffer))) {
-      state.set(dir_buffer, state.filename, state.filter, save);
+    auto& state      = states.at(lbl);
+    auto  dir_buffer = array<char, 1024>{};
+    snprintf(dir_buffer.data(), dir_buffer.size(), "%s", state.dirname.c_str());
+    if (ImGui::InputText("dir", dir_buffer.data(), sizeof(dir_buffer))) {
+      state.set(dir_buffer.data(), state.filename, state.filter, save);
     }
     auto current_item = -1;
     if (ImGui::ListBox(
@@ -510,15 +514,18 @@ bool draw_filedialog(gui_window* win, const char* lbl, string& path, bool save,
             &state, (int)state.entries.size())) {
       state.select(current_item);
     }
-    char file_buffer[1024];
-    snprintf(file_buffer, sizeof(file_buffer), "%s", state.filename.c_str());
-    if (ImGui::InputText("file", file_buffer, sizeof(file_buffer))) {
-      state.set(state.dirname, file_buffer, state.filter, save);
+    auto file_buffer = array<char, 1024>{};
+    snprintf(
+        file_buffer.data(), file_buffer.size(), "%s", state.filename.c_str());
+    if (ImGui::InputText("file", file_buffer.data(), file_buffer.size())) {
+      state.set(state.dirname, file_buffer.data(), state.filter, save);
     }
-    char filter_buffer[1024];
-    snprintf(filter_buffer, sizeof(filter_buffer), "%s", state.filter.c_str());
-    if (ImGui::InputText("filter", filter_buffer, sizeof(filter_buffer))) {
-      state.set(state.dirname, state.filename, filter_buffer, save);
+    auto filter_buffer = array<char, 1024>{};
+    snprintf(
+        filter_buffer.data(), filter_buffer.size(), "%s", state.filter.c_str());
+    if (ImGui::InputText(
+            "filter", filter_buffer.data(), filter_buffer.size())) {
+      state.set(state.dirname, state.filename, filter_buffer.data(), save);
     }
     auto ok = false, exit = false;
     if (ImGui::Button("Ok")) {
@@ -577,12 +584,12 @@ void draw_separator(gui_window* win) { ImGui::Separator(); }
 void continue_line(gui_window* win) { ImGui::SameLine(); }
 
 bool draw_textinput(gui_window* win, const char* lbl, string& value) {
-  char buffer[4096];
-  auto num = 0;
+  auto buffer = array<char, 4096>{};
+  auto num    = 0;
   for (auto c : value) buffer[num++] = c;
   buffer[num] = 0;
-  auto edited = ImGui::InputText(lbl, buffer, sizeof(buffer));
-  if (edited) value = buffer;
+  auto edited = ImGui::InputText(lbl, buffer.data(), buffer.size());
+  if (edited) value = buffer.data();
   return edited;
 }
 
@@ -840,9 +847,9 @@ struct ImGuiAppLog {
   }
 
   void AddLog(const char* msg, const char* lbl) {
-    int old_size = Buf.size();
+    auto old_size = Buf.size();
     Buf.appendf("[%s] %s\n", lbl, msg);
-    for (int new_size = Buf.size(); old_size < new_size; old_size++)
+    for (auto new_size = Buf.size(); old_size < new_size; old_size++)
       if (Buf[old_size] == '\n') LineOffsets.push_back(old_size);
     ScrollToBottom = true;
   }
@@ -861,13 +868,13 @@ struct ImGuiAppLog {
     if (Filter.IsActive()) {
       const char* buf_begin = Buf.begin();
       const char* line      = buf_begin;
-      for (int line_no = 0; line != NULL; line_no++) {
+      for (int line_no = 0; line != nullptr; line_no++) {
         const char* line_end = (line_no < LineOffsets.Size)
                                    ? buf_begin + LineOffsets[line_no]
-                                   : NULL;
+                                   : nullptr;
         if (Filter.PassFilter(line, line_end))
           ImGui::TextUnformatted(line, line_end);
-        line = line_end && line_end[1] ? line_end + 1 : NULL;
+        line = line_end != nullptr && line_end[1] != 0 ? line_end + 1 : nullptr;
       }
     } else {
       ImGui::TextUnformatted(Buf.begin());
@@ -878,7 +885,7 @@ struct ImGuiAppLog {
     ImGui::PopStyleVar();
     ImGui::EndChild();
   }
-  void Draw(const char* title, bool* p_opened = NULL) {
+  void Draw(const char* title, bool* p_opened = nullptr) {
     ImGui::SetNextWindowSize(ImVec2(500, 400), ImGuiSetCond_FirstUseEver);
     ImGui::Begin(title, p_opened);
     Draw();
