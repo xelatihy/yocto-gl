@@ -33,13 +33,6 @@
 
 #include <array>
 
-#include "ext/glad/glad.h"
-
-#ifdef _WIN32
-#undef near
-#undef far
-#endif
-
 // -----------------------------------------------------------------------------
 // USING DIRECTIVES
 // -----------------------------------------------------------------------------
@@ -139,13 +132,14 @@ gui_scene::~gui_scene() {
   for (auto shape : shapes) delete shape;
   for (auto material : materials) delete material;
   for (auto texture : textures) delete texture;
-  delete eyelight_program;
-  delete ibl_program;
-  delete environment_program;
+  delete environment_shape;
   delete environment_cubemap;
+  delete environment_program;
   delete diffuse_cubemap;
   delete specular_cubemap;
   delete brdf_lut;
+  delete eyelight_program;
+  delete ibl_program;
 }
 
 static const char* bake_brdf_vertex_code();
@@ -182,13 +176,14 @@ bool is_initialized(gui_scene* scene) {
 void clear_scene(gui_scene* scene) {
   for (auto texture : scene->textures) clear_texture(texture);
   for (auto shape : scene->shapes) clear_shape(shape);
-  clear_program(scene->eyelight_program);
-  clear_program(scene->ibl_program);
-  clear_program(scene->environment_program);
+  clear_shape(scene->environment_shape);
   clear_cubemap(scene->environment_cubemap);
+  clear_program(scene->environment_program);
   clear_cubemap(scene->diffuse_cubemap);
   clear_cubemap(scene->specular_cubemap);
   clear_texture(scene->brdf_lut);
+  clear_program(scene->eyelight_program);
+  clear_program(scene->ibl_program);
 }
 
 // add camera
@@ -361,7 +356,6 @@ void set_instance_uniforms(ogl_program* program, const frame3f& frame,
   //  } else {
   //    set_uniform(program, "highlight", vec4f{0, 0, 0, 0});
   //  }
-  assert_ogl_error();
 
   auto mtype = (int)shading;
   set_uniform(program, "mtype", mtype);
@@ -408,7 +402,6 @@ void draw_environment(gui_scene* scene, const gui_scene_view& view) {
 }
 
 void set_eyelight_uniforms(ogl_program* program, const gui_scene_view& view) {
-  // Opengl light
   struct gui_light {
     vec3f position = {0, 0, 0};
     vec3f emission = {0, 0, 0};
@@ -459,7 +452,11 @@ void draw_instances(gui_scene* scene, const gui_scene_view& view) {
   }
 
   bind_program(program);
+
+  // set scene uniforms
   set_scene_view_uniforms(program, view);
+
+  // set lighting uniforms
   if (view.params.lighting == gui_lighting_type::eyelight) {
     set_eyelight_uniforms(program, view);
   } else {
@@ -498,10 +495,8 @@ gui_scene_view make_scene_view(
 
 void draw_scene(gui_scene* scene, gui_camera* camera, const vec4i& viewport,
     const gui_scene_params& params) {
-  assert_ogl_error();
   clear_ogl_framebuffer(params.background);
   set_ogl_viewport(viewport);
-  assert_ogl_error();
 
   auto view = make_scene_view(camera, viewport, params);
   draw_instances(scene, view);
@@ -565,7 +560,7 @@ inline void bake_cubemap(ogl_cubemap* cubemap, const Sampler* environment,
 }
 
 inline void bake_specular_brdf_texture(gui_texture* texture) {
-  auto size        = 512;
+  auto size        = vec2i{512, 512};
   auto framebuffer = ogl_framebuffer{};
   auto screen_quad = ogl_shape{};
   set_quad_shape(&screen_quad);
@@ -576,35 +571,18 @@ inline void bake_specular_brdf_texture(gui_texture* texture) {
   auto frag = bake_brdf_fragment_code();
   init_program(&program, vert, frag, error, errorlog);
 
-  assert_ogl_error();
+  set_texture(texture, size, 3, (float*)nullptr, true, true, false, false);
 
-  texture->is_float     = true;
-  texture->linear       = true;
-  texture->num_channels = 3;
-  texture->size         = {size, size};
-  glGenTextures(1, &texture->texture_id);
-
-  glBindTexture(GL_TEXTURE_2D, texture->texture_id);
-  glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB16F, size, size, 0, GL_RGB, GL_FLOAT, 0);
-  glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
-  glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
-  glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
-  glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
-  // TODO(giacomo): mipmaps?
-
-  assert_ogl_error();
-
-  set_framebuffer(&framebuffer, {size, size});
+  set_framebuffer(&framebuffer, size);
   set_framebuffer_texture(&framebuffer, texture, 0);
 
   bind_framebuffer(&framebuffer);
   bind_program(&program);
 
-  set_ogl_viewport(vec2i{size, size});
+  set_ogl_viewport(size);
   clear_ogl_framebuffer({0, 0, 0, 0}, true);
 
   draw_shape(&screen_quad);
-  assert_ogl_error();
 
   unbind_program();
   unbind_framebuffer();

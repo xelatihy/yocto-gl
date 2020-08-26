@@ -126,8 +126,9 @@ struct gui_scene {
   vector<gui_texture*>  textures  = {};
 
   // environment
-  ogl_cubemap* environment_cubemap = new ogl_cubemap{};
   gui_shape*   environment_shape   = new gui_shape{};
+  ogl_cubemap* environment_cubemap = new ogl_cubemap{};
+  ogl_program* environment_program = new ogl_program{};
 
   // IBL baked data
   ogl_cubemap* diffuse_cubemap  = new ogl_cubemap{};
@@ -135,9 +136,8 @@ struct gui_scene {
   gui_texture* brdf_lut         = new gui_texture{};
 
   // programs
-  ogl_program* eyelight_program    = new ogl_program{};
-  ogl_program* ibl_program         = new ogl_program{};
-  ogl_program* environment_program = new ogl_program{};
+  ogl_program* eyelight_program = new ogl_program{};
+  ogl_program* ibl_program      = new ogl_program{};
 
   ~gui_scene();
 };

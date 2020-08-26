@@ -149,7 +149,7 @@ void set_ogl_blending(bool enabled) {
 void set_ogl_point_size(int size) { glPointSize(size); }
 
 void set_texture(ogl_texture* texture, const vec2i& size, int num_channels,
-    const byte* img, bool as_srgb, bool linear, bool mipmap) {
+    const byte* img, bool as_srgb, bool linear, bool mipmap, bool wrap_repeat) {
   static auto sformat = vector<uint>{
       0, GL_SRGB, GL_SRGB, GL_SRGB, GL_SRGB_ALPHA};
   static auto iformat = vector<uint>{0, GL_RGB, GL_RGB, GL_RGB, GL_RGBA};
@@ -169,12 +169,19 @@ void set_texture(ogl_texture* texture, const vec2i& size, int num_channels,
                : (linear ? GL_LINEAR : GL_NEAREST));
     glTexParameteri(
         GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, linear ? GL_LINEAR : GL_NEAREST);
-    if (mipmap) glGenerateMipmap(GL_TEXTURE_2D);
+    if (mipmap && img) glGenerateMipmap(GL_TEXTURE_2D);
   } else {
     glBindTexture(GL_TEXTURE_2D, texture->texture_id);
     glTexSubImage2D(GL_TEXTURE_2D, 0, 0, 0, size.x, size.y,
         cformat.at(num_channels), GL_UNSIGNED_BYTE, img);
-    if (mipmap) glGenerateMipmap(GL_TEXTURE_2D);
+    if (mipmap && img) glGenerateMipmap(GL_TEXTURE_2D);
+  }
+  if (wrap_repeat) {
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
+  } else {
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
   }
   texture->size         = size;
   texture->num_channels = num_channels;
@@ -186,7 +193,8 @@ void set_texture(ogl_texture* texture, const vec2i& size, int num_channels,
 }
 
 void set_texture(ogl_texture* texture, const vec2i& size, int num_channels,
-    const float* img, bool as_float, bool linear, bool mipmap) {
+    const float* img, bool as_float, bool linear, bool mipmap,
+    bool wrap_repeat) {
   static auto fformat = vector<uint>{
       0, GL_RGB16F, GL_RGB16F, GL_RGB16F, GL_RGBA32F};
   static auto iformat = vector<uint>{0, GL_RGB, GL_RGB, GL_RGB, GL_RGBA};
@@ -197,7 +205,6 @@ void set_texture(ogl_texture* texture, const vec2i& size, int num_channels,
   if (texture->size != size || texture->num_channels != num_channels ||
       texture->is_float != as_float || texture->is_srgb == true ||
       texture->linear != linear || texture->mipmap != mipmap) {
-    glGenTextures(1, &texture->texture_id);
     glBindTexture(GL_TEXTURE_2D, texture->texture_id);
     glTexImage2D(GL_TEXTURE_2D, 0,
         as_float ? fformat.at(num_channels) : iformat.at(num_channels), size.x,
@@ -207,12 +214,19 @@ void set_texture(ogl_texture* texture, const vec2i& size, int num_channels,
                : (linear ? GL_LINEAR : GL_NEAREST));
     glTexParameteri(
         GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, linear ? GL_LINEAR : GL_NEAREST);
-    if (mipmap) glGenerateMipmap(GL_TEXTURE_2D);
+    if (mipmap && img) glGenerateMipmap(GL_TEXTURE_2D);
   } else {
     glBindTexture(GL_TEXTURE_2D, texture->texture_id);
     glTexSubImage2D(GL_TEXTURE_2D, 0, 0, 0, size.x, size.y,
         iformat.at(num_channels), GL_FLOAT, img);
-    if (mipmap) glGenerateMipmap(GL_TEXTURE_2D);
+    if (mipmap && img) glGenerateMipmap(GL_TEXTURE_2D);
+  }
+  if (wrap_repeat) {
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
+  } else {
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
   }
   texture->size         = size;
   texture->num_channels = num_channels;
@@ -231,13 +245,8 @@ bool is_initialized(const ogl_texture* texture) {
 // clear texture
 void clear_texture(ogl_texture* texture) {
   if (texture->texture_id) glDeleteTextures(1, &texture->texture_id);
-  texture->texture_id   = 0;
-  texture->size         = {0, 0};
-  texture->num_channels = 0;
-  texture->is_srgb      = false;
-  texture->is_float     = false;
-  texture->linear       = false;
-  texture->mipmap       = false;
+  *texture = {};
+  assert_ogl_error();
 }
 
 void set_texture(ogl_texture* texture, const image<vec4b>& img, bool as_srgb,
@@ -389,6 +398,7 @@ bool is_initialized(const ogl_cubemap* cubemap) {
 void clear_cubemap(ogl_cubemap* cubemap) {
   if (cubemap->cubemap_id) glDeleteTextures(1, &cubemap->cubemap_id);
   *cubemap = ogl_cubemap{};
+  assert_ogl_error();
 }
 
 void set_cubemap(ogl_cubemap* cubemap, const array<image<vec4b>, 6>& img,
@@ -477,8 +487,8 @@ void set_arraybuffer(ogl_arraybuffer* buffer, size_t size, int esize,
 void clear_arraybuffer(ogl_arraybuffer* buffer) {
   assert_ogl_error();
   if (buffer->buffer_id) glDeleteBuffers(1, &buffer->buffer_id);
-  assert_ogl_error();
   *buffer = {};
+  assert_ogl_error();
 }
 
 // set buffer
@@ -535,8 +545,8 @@ bool is_initialized(const ogl_elementbuffer* buffer) {
 void clear_elementbuffer(ogl_elementbuffer* buffer) {
   assert_ogl_error();
   if (buffer->buffer_id) glDeleteBuffers(1, &buffer->buffer_id);
-  assert_ogl_error();
   *buffer = {};
+  assert_ogl_error();
 }
 
 // set buffer
@@ -631,16 +641,18 @@ bool init_program(ogl_program* program, const string& vertex,
   return true;
 }
 
-// initialize program
-void init_program(ogl_program* program, const string& vertex,
+// initialize program, print eventual errors to stdout
+bool init_program(ogl_program* program, const string& vertex,
     const string& fragment, bool exceptions) {
   auto error    = string{};
   auto errorlog = string{};
   if (!init_program(program, vertex, fragment, error, errorlog)) {
     printf("error: %s\n", error.c_str());
     printf("errorlog: %s\n", errorlog.c_str());
-    if (exceptions)
+    if (exceptions) {
       throw std::runtime_error{"error initalizing OpenGL program"};
+    }
+    return false;
   }
 }
 
@@ -661,89 +673,81 @@ bool is_initialized(const ogl_program* program) {
 void bind_program(ogl_program* program) {
   assert_ogl_error();
   glUseProgram(program->program_id);
+  ogl_program::bound_program_id = program->program_id;
   assert_ogl_error();
 }
 
 // unbind program
-void unbind_program() { glUseProgram(0); }
+void unbind_program() {
+  glUseProgram(0);
+  assert_ogl_error();
+  ogl_program::bound_program_id = 0;
+}
 
 // set uniforms
 void set_uniform(const ogl_program* program, int location, int value) {
-  assert_ogl_error();
   glUniform1i(location, value);
   assert_ogl_error();
 }
 
 void set_uniform(const ogl_program* program, int location, const vec2i& value) {
-  assert_ogl_error();
   glUniform2i(location, value.x, value.y);
   assert_ogl_error();
 }
 
 void set_uniform(const ogl_program* program, int location, const vec3i& value) {
-  assert_ogl_error();
   glUniform3i(location, value.x, value.y, value.z);
   assert_ogl_error();
 }
 
 void set_uniform(const ogl_program* program, int location, const vec4i& value) {
-  assert_ogl_error();
   glUniform4i(location, value.x, value.y, value.z, value.w);
   assert_ogl_error();
 }
 
 void set_uniform(const ogl_program* program, int location, float value) {
-  assert_ogl_error();
   glUniform1f(location, value);
   assert_ogl_error();
 }
 
 void set_uniform(const ogl_program* program, int location, const vec2f& value) {
-  assert_ogl_error();
   glUniform2f(location, value.x, value.y);
   assert_ogl_error();
 }
 
 void set_uniform(const ogl_program* program, int location, const vec3f& value) {
-  assert_ogl_error();
   glUniform3f(location, value.x, value.y, value.z);
   assert_ogl_error();
 }
 
 void set_uniform(const ogl_program* program, int location, const vec4f& value) {
-  assert_ogl_error();
   glUniform4f(location, value.x, value.y, value.z, value.w);
   assert_ogl_error();
 }
 
 void set_uniform(const ogl_program* program, int location, const mat2f& value) {
-  assert_ogl_error();
   glUniformMatrix2fv(location, 1, false, &value.x.x);
   assert_ogl_error();
 }
 
 void set_uniform(const ogl_program* program, int location, const mat3f& value) {
-  assert_ogl_error();
   glUniformMatrix3fv(location, 1, false, &value.x.x);
   assert_ogl_error();
 }
 
 void set_uniform(const ogl_program* program, int location, const mat4f& value) {
-  assert_ogl_error();
   glUniformMatrix4fv(location, 1, false, &value.x.x);
   assert_ogl_error();
 }
 
 void set_uniform(
     const ogl_program* program, int location, const frame2f& value) {
-  assert_ogl_error();
   glUniformMatrix3x2fv(location, 1, false, &value.x.x);
   assert_ogl_error();
 }
 
 void set_uniform(
     const ogl_program* program, int location, const frame3f& value) {
-  assert_ogl_error();
   glUniformMatrix4x3fv(location, 1, false, &value.x.x);
   assert_ogl_error();
 }
@@ -756,7 +760,6 @@ int get_uniform_location(const ogl_program* program, const char* name) {
 // set uniform texture
 void set_uniform(const ogl_program* program, int location,
     const ogl_texture* texture, int unit) {
-  assert_ogl_error();
   glActiveTexture(GL_TEXTURE0 + unit);
   glBindTexture(GL_TEXTURE_2D, texture->texture_id);
   glUniform1i(location, unit);
@@ -819,44 +822,6 @@ void set_uniform(const ogl_program* program, const char* name,
       get_uniform_location(program, name_on), cubemap, unit);
 }
 
-// get attribute location
-int get_attribute_location(ogl_program* program, const char* name) {
-  return glGetAttribLocation(program->program_id, name);
-}
-
-// set vertex attributes
-void set_attribute(
-    ogl_program* program, int location, ogl_arraybuffer* buffer) {
-  assert_ogl_error();
-  glBindBuffer(GL_ARRAY_BUFFER, buffer->buffer_id);
-  glEnableVertexAttribArray(location);
-  glVertexAttribPointer(
-      location, buffer->element_size, GL_FLOAT, false, 0, nullptr);
-  assert_ogl_error();
-}
-void set_attribute(
-    ogl_program* program, const char* name, ogl_arraybuffer* buffer) {
-  return set_attribute(program, get_attribute_location(program, name), buffer);
-}
-
-// set vertex attributes
-void set_attribute(ogl_program* program, int location, float value) {
-  glDisableVertexAttribArray(location);
-  glVertexAttrib1f(location, value);
-}
-void set_attribute(ogl_program* program, int location, const vec2f& value) {
-  glDisableVertexAttribArray(location);
-  glVertexAttrib2f(location, value.x, value.y);
-}
-void set_attribute(ogl_program* program, int location, const vec3f& value) {
-  glDisableVertexAttribArray(location);
-  glVertexAttrib3f(location, value.x, value.y, value.z);
-}
-void set_attribute(ogl_program* program, int location, const vec4f& value) {
-  glDisableVertexAttribArray(location);
-  glVertexAttrib4f(location, value.x, value.y, value.z, value.w);
-}
-
 void set_framebuffer(ogl_framebuffer* framebuffer, const vec2i& size) {
   if (!framebuffer->framebuffer_id) {
     glGenFramebuffers(1, &framebuffer->framebuffer_id);
@@ -890,8 +855,6 @@ void set_framebuffer(ogl_framebuffer* framebuffer, const vec2i& size) {
 
 inline void set_framebuffer_texture(const ogl_framebuffer* framebuffer,
     uint texture_id, uint target, uint mipmap_level) {
-  // TODO(giacomo): We change the state of the framebuffer, but we don't store
-  // this information anywhere, unlike the rest of the library.
   glBindFramebuffer(GL_FRAMEBUFFER, framebuffer->framebuffer_id);
   glFramebufferTexture2D(
       GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, target, texture_id, mipmap_level);
@@ -917,20 +880,24 @@ void set_framebuffer_texture(const ogl_framebuffer* framebuffer,
 
 void bind_framebuffer(const ogl_framebuffer* framebuffer) {
   glBindFramebuffer(GL_FRAMEBUFFER, framebuffer->framebuffer_id);
-  ogl_framebuffer::bound_framebuffer_id = framebuffer->framebuffer_id;
   assert_ogl_error();
+  ogl_framebuffer::bound_framebuffer_id = framebuffer->framebuffer_id;
 }
 
 void unbind_framebuffer() {
   glBindFramebuffer(GL_FRAMEBUFFER, 0);
-  ogl_framebuffer::bound_framebuffer_id = 0;
   assert_ogl_error();
+  ogl_framebuffer::bound_framebuffer_id = 0;
 }
 
 void clear_framebuffer(ogl_framebuffer* framebuffer) {
+  if (ogl_framebuffer::bound_framebuffer_id == framebuffer->framebuffer_id) {
+    unbind_framebuffer();
+  }
   glDeleteFramebuffers(1, &framebuffer->framebuffer_id);
   glDeleteRenderbuffers(1, &framebuffer->renderbuffer_id);
   *framebuffer = {};
+  assert_ogl_error();
 }
 
 void bind_shape(const ogl_shape* shape) { glBindVertexArray(shape->shape_id); }
@@ -947,7 +914,8 @@ void clear_shape(ogl_shape* shape) {
   }
   clear_elementbuffer(&shape->index_buffer);
   glDeleteVertexArrays(1, &shape->shape_id);
-  shape->shape_id = 0;
+  *shape = {};
+  assert_ogl_error();
 }
 
 template <typename T>
@@ -1084,29 +1052,29 @@ namespace yocto {
 auto glimage_vertex =
     R"(
 #version 330
-in vec2 texcoord;
+in vec2 positions;
 out vec2 frag_texcoord;
 uniform vec2 window_size, image_size;
 uniform vec2 image_center;
 uniform float image_scale;
 void main() {
-    vec2 pos = (texcoord - vec2(0.5,0.5)) * image_size * image_scale + image_center;
+    vec2 pos = (positions * 0.5) * image_size * image_scale + image_center;
     gl_Position = vec4(2 * pos.x / window_size.x - 1, 1 - 2 * pos.y / window_size.y, 0, 1);
-    frag_texcoord = texcoord;
+    frag_texcoord = positions * 0.5 + 0.5;
 }
 )";
 #if 0
   auto glimage_vertex = R"(
 #version 330
-in vec2 texcoord;
+in vec2 positions;
 out vec2 frag_texcoord;
 uniform vec2 window_size, image_size, border_size;
 uniform vec2 image_center;
 uniform float image_scale;
 void main() {
-    vec2 pos = (texcoord - vec2(0.5,0.5)) * (image_size + border_size*2) * image_scale + image_center;
+    vec2 pos = (positions * 0.5) * (image_size + border_size*2) * image_scale + image_center;
     gl_Position = vec4(2 * pos.x / window_size.x - 1, 1 - 2 * pos.y / window_size.y, 0.1, 1);
-    frag_texcoord = texcoord;
+    frag_texcoord = positions * 0.5 + 0.5;
 }
 )";
 #endif
@@ -1151,17 +1119,10 @@ bool is_initialized(const ogl_image* image) {
 // init image program
 bool init_image(ogl_image* image) {
   if (is_initialized(image)) return true;
-  auto error = ""s, errorlog = ""s;
-  if (!init_program(
-          image->program, glimage_vertex, glimage_fragment, error, errorlog))
+  if (!init_program(image->program, glimage_vertex, glimage_fragment))
     return false;
 
-  auto texcoords = vector<vec2f>{{0, 0}, {0, 1}, {1, 1}, {1, 0}};
-  auto triangles = vector<vec3i>{{0, 1, 2}, {0, 2, 3}};
-  set_shape(image->quad);
-  set_vertex_buffer(image->quad, texcoords, 0);
-  set_index_buffer(image->quad, triangles);
-
+  set_quad_shape(image->quad);
   return true;
 }
 
@@ -1170,6 +1131,7 @@ void clear_image(ogl_image* image) {
   clear_program(image->program);
   clear_texture(image->texture);
   clear_shape(image->quad);
+  *image = {};
 }
 
 // update image data
@@ -1185,23 +1147,19 @@ void set_image(
 // draw image
 void draw_image(ogl_image* image, const ogl_image_params& params) {
   assert_ogl_error();
-  glViewport(params.framebuffer.x, params.framebuffer.y, params.framebuffer.z,
-      params.framebuffer.w);
-  glClearColor(params.background.x, params.background.y, params.background.z,
-      params.background.w);
-  glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
-  glEnable(GL_DEPTH_TEST);
-  bind_program(image->program);
-  set_uniform(image->program, "txt", image->texture, 0);
-  set_uniform(image->program, "window_size",
+  set_ogl_viewport(params.framebuffer);
+  clear_ogl_framebuffer(params.background);
+  auto program = image->program;
+  bind_program(program);
+  set_uniform(program, "txt", image->texture, 0);
+  set_uniform(program, "window_size",
       vec2f{(float)params.window.x, (float)params.window.y});
-  set_uniform(image->program, "image_size",
+  set_uniform(program, "image_size",
       vec2f{(float)image->texture->size.x, (float)image->texture->size.y});
-  set_uniform(image->program, "image_center", params.center);
-  set_uniform(image->program, "image_scale", params.scale);
+  set_uniform(program, "image_center", params.center);
+  set_uniform(program, "image_scale", params.scale);
   draw_shape(image->quad);
   unbind_program();
-  assert_ogl_error();
 }
 
 }  // namespace yocto
