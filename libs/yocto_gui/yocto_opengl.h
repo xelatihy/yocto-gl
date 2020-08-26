@@ -241,8 +241,8 @@ struct ogl_program {
 // initialize program
 bool init_program(ogl_program* program, const string& vertex,
     const string& fragment, string& error, string& errorlog);
-bool load_program(ogl_program* program, const string& vertex_filename,
-    const string& fragment_filename);
+void init_program(ogl_program* program, const string& vertex,
+    const string& fragment, bool exceptions = true);
 bool is_initialized(const ogl_program* program);
 
 // clear program
@@ -389,9 +389,9 @@ inline void set_index_buffer(ogl_shape* shape, const vector<vec3i>& indices) {
 
 void draw_shape(const ogl_shape* shape);
 
-// TODO(fabio) these should chanhe to initialization and avoid static GL data
-ogl_shape* cube_shape();
-ogl_shape* quad_shape();
+// init common shapes
+void set_cube_shape(ogl_shape* shape);
+void set_quad_shape(ogl_shape* shape);
 
 }  // namespace yocto
 

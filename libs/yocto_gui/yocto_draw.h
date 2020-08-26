@@ -125,16 +125,19 @@ struct gui_scene {
   vector<gui_material*> materials = {};
   vector<gui_texture*>  textures  = {};
 
+  // environment
+  ogl_cubemap* environment_cubemap = new ogl_cubemap{};
+  gui_shape*   environment_shape   = new gui_shape{};
+
+  // IBL baked data
+  ogl_cubemap* diffuse_cubemap  = new ogl_cubemap{};
+  ogl_cubemap* specular_cubemap = new ogl_cubemap{};
+  gui_texture* brdf_lut         = new gui_texture{};
+
   // programs
   ogl_program* eyelight_program    = new ogl_program{};
   ogl_program* ibl_program         = new ogl_program{};
   ogl_program* environment_program = new ogl_program{};
-
-  // IBL baked data
-  ogl_cubemap* environment_cubemap = new ogl_cubemap{};
-  ogl_cubemap* diffuse_cubemap     = new ogl_cubemap{};
-  ogl_cubemap* specular_cubemap    = new ogl_cubemap{};
-  gui_texture* brdf_lut            = new gui_texture{};
 
   ~gui_scene();
 };
@@ -172,12 +175,12 @@ struct gui_scene_view {
 };
 
 // Initialize an OpenGL scene
-void init_scene(gui_scene* scene);
+void init_scene(gui_scene* scene, const gui_texture* environment_tex = nullptr,
+    const vec3f& environment_emission = {1, 1, 1});
 bool is_initialized(const gui_scene* scene);
 
 // Initialize data for image based lighting
-void init_ibl_data(
-    gui_scene* scene, const gui_texture* environment, const vec3f& emission);
+void init_ibl_data(gui_scene* scene);
 
 // Clear an OpenGL scene
 void clear_scene(gui_scene* scene);
