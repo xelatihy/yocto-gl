@@ -631,31 +631,17 @@ bool init_program(ogl_program* program, const string& vertex,
   return true;
 }
 
-bool load_program(ogl_program* program, const string& vertex_filename,
-    const string& fragment_filename) {
-  auto error           = ""s;
-  auto vertex_source   = ""s;
-  auto fragment_source = ""s;
-
-  if (!load_text(vertex_filename, vertex_source, error)) {
-    printf("error loading vertex shader (%s): \n%s\n", vertex_filename.c_str(),
-        error.c_str());
-    return false;
+// initialize program
+void init_program(ogl_program* program, const string& vertex,
+    const string& fragment, bool exceptions) {
+  auto error    = string{};
+  auto errorlog = string{};
+  if (!init_program(program, vertex, fragment, error, errorlog)) {
+    printf("error: %s\n", error.c_str());
+    printf("errorlog: %s\n", errorlog.c_str());
+    if (exceptions)
+      throw std::runtime_error{"error initalizing OpenGL program"};
   }
-  if (!load_text(fragment_filename, fragment_source, error)) {
-    printf("error loading fragment shader (%s): \n%s\n",
-        fragment_filename.c_str(), error.c_str());
-    return false;
-  }
-
-  auto error_buf = ""s;
-  if (!init_program(
-          program, vertex_source, fragment_source, error, error_buf)) {
-    printf("\nerror: %s\n", error.c_str());
-    printf("    %s\n", error_buf.c_str());
-    return false;
-  }
-  return true;
 }
 
 // clear program
@@ -1057,48 +1043,37 @@ void draw_shape(const ogl_shape* shape) {
   assert_ogl_error();
 }
 
-ogl_shape* cube_shape() {
-  // TODO(fabio): this is dangerous
-  static ogl_shape* cube = nullptr;
-  if (cube != nullptr) {
-    // clang-format off
-    static const auto cube_positions = vector<vec3f>{
-      {1, -1, -1}, {1, -1,  1}, {-1, -1,  1}, {-1, -1, -1},
-      {1,  1, -1}, {1,  1,  1}, {-1,  1,  1}, {-1,  1, -1},
-    };
-    static const auto cube_triangles = vector<vec3i>{
-      {1, 3, 0}, {7, 5, 4}, {4, 1, 0}, {5, 2, 1},
-      {2, 7, 3}, {0, 7, 4}, {1, 2, 3}, {7, 6, 5},
-      {4, 5, 1}, {5, 6, 2}, {2, 6, 7}, {0, 3, 7}
-    };
-    // clang-format on
-    cube = new ogl_shape{};
-    set_shape(cube);
-    set_vertex_buffer(cube, cube_positions, 0);
-    set_index_buffer(cube, cube_triangles);
-  }
-  return cube;
+void set_cube_shape(ogl_shape* shape) {
+  // clang-format off
+  static const auto positions = vector<vec3f>{
+    {1, -1, -1}, {1, -1,  1}, {-1, -1,  1}, {-1, -1, -1},
+    {1,  1, -1}, {1,  1,  1}, {-1,  1,  1}, {-1,  1, -1},
+  };
+  static const auto triangles = vector<vec3i>{
+    {1, 3, 0}, {7, 5, 4}, {4, 1, 0}, {5, 2, 1},
+    {2, 7, 3}, {0, 7, 4}, {1, 2, 3}, {7, 6, 5},
+    {4, 5, 1}, {5, 6, 2}, {2, 6, 7}, {0, 3, 7}
+  };
+  // clang-format on
+  set_shape(shape);
+  set_vertex_buffer(shape, positions, 0);
+  set_index_buffer(shape, triangles);
 }
 
-ogl_shape* quad_shape() {
-  // TODO(fabio): this is dangerous
-  static ogl_shape* quad = nullptr;
-  if (quad != nullptr) {
-    // clang-format off
-    static const auto quad_positions = vector<vec3f>{
+void set_quad_shape(ogl_shape* shape) {
+  // clang-format off
+    static const auto positions = vector<vec3f>{
       {-1, -1, 0}, {1, -1,  0}, {1, 1,  0}, {-1, 1, 0},
     };
-    static const auto quad_triangles = vector<vec3i>{
+    static const auto triangles = vector<vec3i>{
       {0, 1, 3}, {3, 2, 1}
     };
-    // clang-format on
-    quad = new ogl_shape{};
-    set_shape(quad);
-    set_vertex_buffer(quad, quad_positions, 0);
-    set_index_buffer(quad, quad_triangles);
-  }
-  return quad;
+  // clang-format on
+  set_shape(shape);
+  set_vertex_buffer(shape, positions, 0);
+  set_index_buffer(shape, triangles);
 }
+
 }  // namespace yocto
 
 // -----------------------------------------------------------------------------

@@ -138,9 +138,6 @@ void init_glscene(gui_scene* glscene, sceneio_scene* ioscene,
              (int)ioscene->textures.size() + (int)ioscene->shapes.size() +
              (int)ioscene->instances.size()};
 
-  // create scene
-  init_scene(glscene);
-
   // camera
   auto camera_map     = unordered_map<sceneio_camera*, gui_camera*>{};
   camera_map[nullptr] = nullptr;
@@ -211,12 +208,16 @@ void init_glscene(gui_scene* glscene, sceneio_scene* ioscene,
     set_material(instance, material_map.at(ioinstance->material));
   }
 
-  // bake prefiltered environments
-  if (ioscene->environments.size()) {
-    auto environment = ioscene->environments[0];
-    init_ibl_data(
-        glscene, texture_map[environment->emission_tex], environment->emission);
+  gui_texture* environment_tex      = nullptr;
+  auto         environment_emission = vec3f{0, 0, 0};
+  if (!ioscene->environments.empty()) {
+    auto environment     = ioscene->environments[0];
+    environment_tex      = texture_map[environment->emission_tex];
+    environment_emission = environment->emission;
   }
+
+  // init scene
+  init_scene(glscene, environment_tex, environment_emission);
 
   // done
   if (progress_cb) progress_cb("convert done", progress.x++, progress.y);

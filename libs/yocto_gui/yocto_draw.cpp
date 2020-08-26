@@ -156,13 +156,22 @@ static const char* bake_environment_fragment_code();
 static const char* bake_irradiance_fragment_code();
 static const char* bake_reflections_fragment_code();
 
+static void init_environment(gui_scene* scene,
+    const gui_texture* environment_tex, const vec3f& environment_emission);
+
 // Initialize an OpenGL scene
-void init_scene(gui_scene* scene) {
+void init_scene(gui_scene* scene, const gui_texture* environment_tex,
+    const vec3f& environment_emission) {
   if (is_initialized(scene->eyelight_program)) return;
   auto error = ""s, errorlog = ""s;
   auto vert = draw_instances_vertex_code();
   auto frag = draw_instances_eyelight_fragment_code();
   init_program(scene->eyelight_program, vert, frag, error, errorlog);
+
+  if (environment_tex && environment_emission != vec3f{0, 0, 0}) {
+    init_environment(scene, environment_tex, environment_emission);
+    init_ibl_data(scene);
+  }
 }
 
 bool is_initialized(gui_scene* scene) {
@@ -393,8 +402,7 @@ void draw_environment(gui_scene* scene, const gui_scene_view& view) {
   set_scene_view_uniforms(program, view);
   set_uniform(program, "environment", scene->environment_cubemap, 0);
 
-  auto cube = cube_shape();
-  draw_shape(cube);
+  draw_shape(scene->environment_shape);
 
   unbind_program();
 }
@@ -510,7 +518,8 @@ inline void bake_cubemap(ogl_cubemap* cubemap, const Sampler* environment,
     const vec3f& emission = {1, 1, 1}) {
   // init cubemap with no data
   set_cubemap<float>(cubemap, size, 3, true, true, true);
-  auto cube = cube_shape();  // TODO(fabio): this is dangerous
+  auto cube = ogl_shape{};
+  set_cube_shape(&cube);
 
   auto framebuffer = ogl_framebuffer{};
   set_framebuffer(&framebuffer, {size, size});
@@ -546,19 +555,20 @@ inline void bake_cubemap(ogl_cubemap* cubemap, const Sampler* environment,
       set_uniform(program, "emission", emission);
       set_uniform(program, "environment", environment, 0);
 
-      draw_shape(cube);
+      draw_shape(&cube);
     }
     size /= 2;
   }
   unbind_program();
   unbind_framebuffer();
-  // TODO:(fabio): shoudl we clear the framebuffer here?
+  clear_framebuffer(&framebuffer);
 }
 
 inline void bake_specular_brdf_texture(gui_texture* texture) {
   auto size        = 512;
   auto framebuffer = ogl_framebuffer{};
-  auto screen_quad = quad_shape();  // THIS is DANGEROUS
+  auto screen_quad = ogl_shape{};
+  set_quad_shape(&screen_quad);
 
   auto program = ogl_program{};
   auto error = ""s, errorlog = ""s;
@@ -593,60 +603,48 @@ inline void bake_specular_brdf_texture(gui_texture* texture) {
   set_ogl_viewport(vec2i{size, size});
   clear_ogl_framebuffer({0, 0, 0, 0}, true);
 
-  draw_shape(screen_quad);
+  draw_shape(&screen_quad);
   assert_ogl_error();
 
   unbind_program();
   unbind_framebuffer();
   clear_framebuffer(&framebuffer);
   clear_program(&program);
+  clear_shape(&screen_quad);
 }
 
-void init_ibl_data(gui_scene* scene, const gui_texture* environment_texture,
-    const vec3f& emission) {
-  auto load_program = [](ogl_program* program, const string& vertex,
-                          const string& fragment) {
-    auto error = ""s, errorlog = ""s;
-    if (!init_program(program, vertex, fragment, error, errorlog)) {
-      printf("error: %s\n", error.c_str());
-      printf("errorlog: %s\n", errorlog.c_str());
-      // TODO(fabio): this shoudl return an error
-    }
-  };
+static void init_environment(gui_scene* scene,
+    const gui_texture* environment_tex, const vec3f& environment_emission) {
+  set_cube_shape(scene->environment_shape);
 
-  // shader with IBL shading
-  {
-    auto vert = draw_instances_vertex_code();
-    auto frag = draw_instances_ibl_fragment_code();
-    load_program(scene->ibl_program, vert, frag);
-  }
-
-  // shader for drawing the environment
+  // init program for drawing the environment
   {
     auto vert = bake_cubemap_vertex_code();
     auto frag = draw_enivronment_fragment_code();
-    load_program(scene->environment_program, vert, frag);
+    init_program(scene->environment_program, vert, frag);
   }
 
   // bake cubemap from environment texture
   {
-    auto size    = environment_texture->size.y;
+    auto size    = environment_tex->size.y;
     auto program = new ogl_program{};
     auto vert    = bake_cubemap_vertex_code();
     auto frag    = bake_environment_fragment_code();
-    load_program(program, vert, frag);
-    bake_cubemap(scene->environment_cubemap, environment_texture, program, size,
-        1, emission);
+    init_program(program, vert, frag);
+    bake_cubemap(scene->environment_cubemap, environment_tex, program, size, 1,
+        environment_emission);
     clear_program(program);
     delete program;
   }
+}
 
+void init_ibl_data(gui_scene* scene) {
   // bake irradiance map
   {
     auto program = new ogl_program{};
     auto vert    = bake_cubemap_vertex_code();
     auto frag    = bake_irradiance_fragment_code();
-    load_program(program, vert, frag);
+    init_program(program, vert, frag);
     bake_cubemap(
         scene->diffuse_cubemap, scene->environment_cubemap, program, 64);
     clear_program(program);
@@ -658,14 +656,22 @@ void init_ibl_data(gui_scene* scene, const gui_texture* environment_texture,
     auto program = new ogl_program{};
     auto vert    = bake_cubemap_vertex_code();
     auto frag    = bake_reflections_fragment_code();
-    load_program(program, vert, frag);
+    init_program(program, vert, frag);
     bake_cubemap(
         scene->specular_cubemap, scene->environment_cubemap, program, 256, 6);
     clear_program(program);
     delete program;
   }
 
+  // bake lookup texture for specular brdf
   bake_specular_brdf_texture(scene->brdf_lut);
+
+  // init shader for IBL shading
+  {
+    auto vert = draw_instances_vertex_code();
+    auto frag = draw_instances_ibl_fragment_code();
+    init_program(scene->ibl_program, vert, frag);
+  }
 }
 
 const char* draw_instances_vertex_code() {
