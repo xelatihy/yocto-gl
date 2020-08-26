@@ -174,9 +174,6 @@ void init_glscene(app_state* app, gui_scene* glscene, generic_shape* ioshape,
   // handle progress
   auto progress = vec2i{0, 4};
 
-  // create scene
-  init_scene(glscene);
-
   // compute bounding box
   auto bbox = invalidb3f;
   for (auto& pos : ioshape->positions) bbox = merge(bbox, pos);
@@ -207,30 +204,36 @@ void init_glscene(app_state* app, gui_scene* glscene, generic_shape* ioshape,
   set_vertex_buffer(model_shape, vec3f{0, 0, 0}, 5);
   set_vertex_buffer(model_shape, vec3f{0, 0, 0}, 6);
 
-  auto cylinder = make_uvcylinder({4, 1, 1}, {0.0003, 1});
-  for (auto& p : cylinder.positions) {
-    p.z = p.z * 0.5 + 0.5;
-  }
-
-  auto edges_shape = add_shape(glscene, {}, {}, {}, cylinder.quads,
-      cylinder.positions, cylinder.normals, cylinder.texcoords, {});
-
   auto edges = get_edges(ioshape->triangles, ioshape->quads);
   auto froms = vector<vec3f>();
   auto tos   = vector<vec3f>();
   froms.reserve(edges.size());
   tos.reserve(edges.size());
+  float avg_edge_length = 0;
   for (auto& edge : edges) {
-    froms.push_back(ioshape->positions[edge.x]);
-    tos.push_back(ioshape->positions[edge.y]);
+    auto from = ioshape->positions[edge.x];
+    auto to   = ioshape->positions[edge.y];
+    froms.push_back(from);
+    tos.push_back(to);
+    avg_edge_length += length(from - to);
   }
+  avg_edge_length /= edges.size();
+  auto cylinder_radius = 0.05f * avg_edge_length;
+  auto cylinder        = make_uvcylinder({4, 1, 1}, {cylinder_radius, 1});
+  for (auto& p : cylinder.positions) {
+    p.z = p.z * 0.5 + 0.5;
+  }
+  auto edges_shape = add_shape(glscene, {}, {}, {}, cylinder.quads,
+      cylinder.positions, cylinder.normals, cylinder.texcoords, {});
+
   set_vertex_buffer(edges_shape, froms, 5);
   set_instance_buffer(edges_shape, 5);
   set_vertex_buffer(edges_shape, tos, 6);
   set_instance_buffer(edges_shape, 6);
 
-  auto vertices       = make_spheres(ioshape->positions, 0.001, 2);
-  auto vertices_shape = add_shape(glscene, {}, {}, {}, vertices.quads,
+  auto vertices_radius = 3.0f * cylinder_radius;
+  auto vertices        = make_spheres(ioshape->positions, vertices_radius, 2);
+  auto vertices_shape  = add_shape(glscene, {}, {}, {}, vertices.quads,
       vertices.positions, vertices.normals, vertices.texcoords, {});
   set_vertex_buffer(vertices_shape, vec3f{0, 0, 0}, 5);
   set_vertex_buffer(vertices_shape, vec3f{0, 0, 0}, 6);
@@ -248,11 +251,13 @@ void init_glscene(app_state* app, gui_scene* glscene, generic_shape* ioshape,
       glscene, identity3x4f, vertices_shape, glmaterialv, true);
   points_instance->shading = gui_shading_type::constant;
 
-  auto error  = string{};
-  auto errorb = string{};
-  auto vert   = draw_instanced_vertex_code();
-  auto frag   = draw_instances_eyelight_fragment_code();
-  init_program(glscene->eyelight_program, vert, frag, error, errorb);
+  // init scene
+  init_scene(glscene);
+
+  // override eyelight vertex shader
+  auto vert = draw_instanced_vertex_code();
+  auto frag = draw_instances_eyelight_fragment_code();
+  init_program(glscene->eyelight_program, vert, frag);
 
   // done
   if (progress_cb) progress_cb("convert done", progress.x++, progress.y);

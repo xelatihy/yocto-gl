@@ -139,13 +139,14 @@ gui_scene::~gui_scene() {
   for (auto shape : shapes) delete shape;
   for (auto material : materials) delete material;
   for (auto texture : textures) delete texture;
-  delete eyelight_program;
-  delete ibl_program;
-  delete environment_program;
+  delete environment_shape;
   delete environment_cubemap;
+  delete environment_program;
   delete diffuse_cubemap;
   delete specular_cubemap;
   delete brdf_lut;
+  delete eyelight_program;
+  delete ibl_program;
 }
 
 static const char* bake_brdf_vertex_code();
@@ -182,13 +183,14 @@ bool is_initialized(gui_scene* scene) {
 void clear_scene(gui_scene* scene) {
   for (auto texture : scene->textures) clear_texture(texture);
   for (auto shape : scene->shapes) clear_shape(shape);
-  clear_program(scene->eyelight_program);
-  clear_program(scene->ibl_program);
-  clear_program(scene->environment_program);
+  clear_shape(scene->environment_shape);
   clear_cubemap(scene->environment_cubemap);
+  clear_program(scene->environment_program);
   clear_cubemap(scene->diffuse_cubemap);
   clear_cubemap(scene->specular_cubemap);
   clear_texture(scene->brdf_lut);
+  clear_program(scene->eyelight_program);
+  clear_program(scene->ibl_program);
 }
 
 // add camera

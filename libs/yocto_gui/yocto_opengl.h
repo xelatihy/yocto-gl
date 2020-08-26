@@ -236,12 +236,14 @@ struct ogl_program {
   uint program_id  = 0;
   uint vertex_id   = 0;
   uint fragment_id = 0;
+
+  static inline uint bound_program_id = 0;
 };
 
 // initialize program
 bool init_program(ogl_program* program, const string& vertex,
     const string& fragment, string& error, string& errorlog);
-void init_program(ogl_program* program, const string& vertex,
+bool init_program(ogl_program* program, const string& vertex,
     const string& fragment, bool exceptions = true);
 bool is_initialized(const ogl_program* program);
 
