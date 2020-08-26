@@ -654,7 +654,6 @@ bool init_program(ogl_program* program, const string& vertex,
     }
     return false;
   }
-  return true;
 }
 
 // clear program

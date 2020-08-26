@@ -1459,8 +1459,8 @@ static vector<float> convert_components(
     throw std::invalid_argument{"components not supported"};
   if (components == components_to) return pixels;
 
-  auto cpixels = vector<float>((size_t)components_to * pixels.size());
-  for (auto i = 0ull; i < pixels.size(); i++) {
+  auto cpixels = vector<float>((size_t)components_to * pixels.size() / components);
+  for (auto i = 0ull; i < pixels.size() / components; i++) {
     auto vp = pixels.data() + i * components;
     auto cp = cpixels.data() + i * components_to;
     if (components_to > 0) cp[0] = (components > 0) ? vp[0] : 0;
