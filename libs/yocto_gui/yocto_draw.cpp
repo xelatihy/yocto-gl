@@ -363,7 +363,6 @@ void set_instance_uniforms(ogl_program* program, const frame3f& frame,
   //  } else {
   //    set_uniform(program, "highlight", vec4f{0, 0, 0, 0});
   //  }
-  assert_ogl_error();
 
   auto mtype = (int)shading;
   set_uniform(program, "mtype", mtype);
@@ -410,7 +409,6 @@ void draw_environment(gui_scene* scene, const gui_scene_view& view) {
 }
 
 void set_eyelight_uniforms(ogl_program* program, const gui_scene_view& view) {
-  // Opengl light
   struct gui_light {
     vec3f position = {0, 0, 0};
     vec3f emission = {0, 0, 0};
@@ -461,7 +459,11 @@ void draw_instances(gui_scene* scene, const gui_scene_view& view) {
   }
 
   bind_program(program);
+
+  // set scene uniforms
   set_scene_view_uniforms(program, view);
+
+  // set lighting uniforms
   if (view.params.lighting == gui_lighting_type::eyelight) {
     set_eyelight_uniforms(program, view);
   } else {
@@ -500,10 +502,8 @@ gui_scene_view make_scene_view(
 
 void draw_scene(gui_scene* scene, gui_camera* camera, const vec4i& viewport,
     const gui_scene_params& params) {
-  assert_ogl_error();
   clear_ogl_framebuffer(params.background);
   set_ogl_viewport(viewport);
-  assert_ogl_error();
 
   auto view = make_scene_view(camera, viewport, params);
   draw_instances(scene, view);
@@ -567,7 +567,7 @@ inline void bake_cubemap(ogl_cubemap* cubemap, const Sampler* environment,
 }
 
 inline void bake_specular_brdf_texture(gui_texture* texture) {
-  auto size        = 512;
+  auto size        = vec2i{512, 512};
   auto framebuffer = ogl_framebuffer{};
   auto screen_quad = ogl_shape{};
   set_quad_shape(&screen_quad);
@@ -578,35 +578,32 @@ inline void bake_specular_brdf_texture(gui_texture* texture) {
   auto frag = bake_brdf_fragment_code();
   init_program(&program, vert, frag, error, errorlog);
 
-  assert_ogl_error();
-
   texture->is_float     = true;
   texture->linear       = true;
   texture->num_channels = 3;
-  texture->size         = {size, size};
+  texture->size         = size;
   glGenTextures(1, &texture->texture_id);
 
   glBindTexture(GL_TEXTURE_2D, texture->texture_id);
-  glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB16F, size, size, 0, GL_RGB, GL_FLOAT, 0);
+  glTexImage2D(
+      GL_TEXTURE_2D, 0, GL_RGB16F, size.x, size.y, 0, GL_RGB, GL_FLOAT, 0);
   glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
   glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
   glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
   glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+  assert_ogl_error();
   // TODO(giacomo): mipmaps?
 
-  assert_ogl_error();
-
-  set_framebuffer(&framebuffer, {size, size});
+  set_framebuffer(&framebuffer, size);
   set_framebuffer_texture(&framebuffer, texture, 0);
 
   bind_framebuffer(&framebuffer);
   bind_program(&program);
 
-  set_ogl_viewport(vec2i{size, size});
+  set_ogl_viewport(size);
   clear_ogl_framebuffer({0, 0, 0, 0}, true);
 
   draw_shape(&screen_quad);
-  assert_ogl_error();
 
   unbind_program();
   unbind_framebuffer();
