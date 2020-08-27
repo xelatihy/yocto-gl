@@ -29,16 +29,8 @@
 
 #include "yocto_opengl.h"
 
-#include <yocto/yocto_commonio.h>
-
-#include <algorithm>
-#include <array>
 #include <cassert>
-#include <cstdarg>
-#include <stdexcept>
-#include <string>
 #include <unordered_set>
-#include <utility>
 
 #include "ext/glad/glad.h"
 
@@ -1201,15 +1193,14 @@ void draw_image(ogl_image* image, const ogl_image_params& params) {
   assert_ogl_error();
   set_ogl_viewport(params.framebuffer);
   clear_ogl_framebuffer(params.background);
-  auto program = image->program;
-  bind_program(program);
-  set_uniform(program, "txt", image->texture, 0);
-  set_uniform(program, "window_size",
+  bind_program(image->program);
+  set_uniform(image->program, "txt", image->texture, 0);
+  set_uniform(image->program, "window_size",
       vec2f{(float)params.window.x, (float)params.window.y});
-  set_uniform(program, "image_size",
+  set_uniform(image->program, "image_size",
       vec2f{(float)image->texture->size.x, (float)image->texture->size.y});
-  set_uniform(program, "image_center", params.center);
-  set_uniform(program, "image_scale", params.scale);
+  set_uniform(image->program, "image_center", params.center);
+  set_uniform(image->program, "image_scale", params.scale);
   draw_shape(image->quad);
   unbind_program();
 }
