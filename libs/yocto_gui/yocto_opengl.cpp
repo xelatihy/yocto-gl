@@ -1125,7 +1125,7 @@ void set_quad_shape(ogl_shape* shape) {
 // -----------------------------------------------------------------------------
 namespace yocto {
 
-auto ogl_image_vertex =
+static auto ogl_image_vertex =
     R"(
 #version 330
 in vec2 positions;
@@ -1140,7 +1140,7 @@ void main() {
 }
 )";
 #if 0
-auto ogl_image_vertex = R"(
+static auto ogl_image_vertex = R"(
 #version 330
 in vec2 positions;
 out vec2 frag_texcoord;
@@ -1154,7 +1154,7 @@ void main() {
 }
 )";
 #endif
-auto ogl_image_fragment =
+static auto ogl_image_fragment =
     R"(
 #version 330
 in vec2 frag_texcoord;
@@ -1165,7 +1165,7 @@ void main() {
 }
 )";
 #if 0
-auto ogl_image_fragment = R"(
+static auto ogl_image_fragment = R"(
 #version 330
 in vec2 frag_texcoord;
 out vec4 frag_color;
