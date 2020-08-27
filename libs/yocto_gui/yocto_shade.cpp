@@ -156,7 +156,7 @@ shade_scene::~shade_scene() {
   for (auto instance : instances) delete instance;
   for (auto environment : environments) delete environment;
   delete environment_program;
-  delete camlight_program;
+  delete instance_program;
   delete envlight_program;
 }
 
@@ -173,8 +173,8 @@ static void init_envlight(shade_environment* environment);
 
 // Initialize an OpenGL scene
 void init_scene(shade_scene* scene) {
-  if (is_initialized(scene->camlight_program)) return;
-  set_program(scene->camlight_program, shade_instance_vertex(),
+  if (is_initialized(scene->instance_program)) return;
+  set_program(scene->instance_program, shade_instance_vertex(),
       shade_instance_fragment(), true);
   set_program(scene->envlight_program, shade_instance_vertex(),
       shade_instance_fragment(), true);
@@ -183,7 +183,7 @@ void init_scene(shade_scene* scene) {
 }
 
 bool is_initialized(shade_scene* scene) {
-  return scene && is_initialized(scene->camlight_program);
+  return scene && is_initialized(scene->instance_program);
 }
 
 // Initialize data for environment lighting
@@ -206,7 +206,7 @@ void clear_scene(shade_scene* scene) {
   for (auto shape : scene->shapes) clear_shape(shape);
   for (auto environment : scene->environments) clear_environment(environment);
   clear_program(scene->environment_program);
-  clear_program(scene->camlight_program);
+  clear_program(scene->instance_program);
   clear_program(scene->envlight_program);
 }
 
@@ -593,7 +593,7 @@ void draw_instances(
   // set program
   auto program =
       (params.lighting == shade_lighting_type::camlight || !has_envlight(scene))
-          ? scene->camlight_program
+          ? scene->instance_program
           : scene->envlight_program;
   bind_program(program);
 

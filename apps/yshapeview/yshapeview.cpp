@@ -244,7 +244,7 @@ void init_glscene(app_state* app, shade_scene* glscene, generic_shape* ioshape,
   add_instance(glscene, identity3x4f, vertices_shape, glmaterialv, true);
 
   // override eyelight vertex shader
-  set_program(glscene->camlight_program, draw_instanced_vertex_code(),
+  set_program(glscene->instance_program, draw_instanced_vertex_code(),
       shade_instance_fragment());
 
   // done

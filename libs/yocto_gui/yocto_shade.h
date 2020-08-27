@@ -160,7 +160,7 @@ struct shade_scene {
 
   // programs
   ogl_program* environment_program = new ogl_program{};
-  ogl_program* camlight_program    = new ogl_program{};
+  ogl_program* instance_program    = new ogl_program{};
   ogl_program* envlight_program    = new ogl_program{};
 
   // disable copy construction
@@ -173,13 +173,11 @@ struct shade_scene {
 };
 
 // Shading type
-enum struct shade_lighting_type {
-  envlight,
-  camlight,
-};
+enum struct shade_lighting_type { envlight, camlight, eyelight };
 
 // Shading name
-const auto shade_lighting_names = vector<string>{"envlight", "camlight"};
+const auto shade_lighting_names = vector<string>{
+    "envlight", "camlight", "eyelight"};
 
 // Draw options
 struct shade_params {
