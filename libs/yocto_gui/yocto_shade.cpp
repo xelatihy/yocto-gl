@@ -576,9 +576,10 @@ void set_envlight_uniforms(
     ogl_program* program, const shade_scene* scene, const shade_view& view) {
   if (!has_envlight(scene)) return;
   auto environment = scene->environments.front();
-  set_uniform(program, "irradiance_cubemap", environment->envlight_diffuse, 6);
-  set_uniform(program, "reflection_cubemap", environment->envlight_specular, 7);
-  set_uniform(program, "brdf_lut", environment->envlight_brdflut, 8);
+  set_uniform(program, "envlight_irradiance", environment->envlight_diffuse, 6);
+  set_uniform(
+      program, "envlight_reflection", environment->envlight_specular, 7);
+  set_uniform(program, "envlight_brdflut", environment->envlight_brdflut, 8);
 }
 
 void draw_instances(
@@ -1084,9 +1085,9 @@ uniform bool      normalmap_tex_on;  // material normal texture on
 uniform sampler2D normalmap_tex;     // material normal texture
 
 // precomputed textures for image based lighting
-uniform samplerCube irradiance_cubemap;
-uniform samplerCube reflection_cubemap;
-uniform sampler2D   brdf_lut;
+uniform samplerCube envlight_irradiance;
+uniform samplerCube envlight_reflection;
+uniform sampler2D   envlight_brdflut;
 
 uniform mat4 frame;    // shape transform
 uniform mat4 frameit;  // shape transform
@@ -1181,7 +1182,7 @@ vec3 compute_normal(vec3 V) {
 vec3 sample_prefiltered_refleciton(vec3 L, float roughness) {
   int   MAX_REFLECTION_LOD = 5;
   float lod                = sqrt(roughness) * MAX_REFLECTION_LOD;
-  return textureLod(reflection_cubemap, L, lod).rgb;
+  return textureLod(envlight_reflection, L, lod).rgb;
 }
 
 // main
@@ -1201,12 +1202,12 @@ void main() {
   vec3 radiance = brdf.emission;
 
   // diffuse
-  radiance += brdf.diffuse * textureLod(irradiance_cubemap, N, 0).rgb;
+  radiance += brdf.diffuse * textureLod(envlight_irradiance, N, 0).rgb;
 
   // specular
   vec3 L          = normalize(reflect(-V, N));
   vec3 reflection = sample_prefiltered_refleciton(L, brdf.roughness);
-  vec2 env_brdf   = texture(brdf_lut, vec2(max(dot(N, V), 0.0), roughness)).rg;
+  vec2 env_brdf   = texture(envlight_brdflut, vec2(max(dot(N, V), 0.0), roughness)).rg;
   radiance += reflection * (brdf.specular * env_brdf.x + env_brdf.y);
 
   // final color correction
