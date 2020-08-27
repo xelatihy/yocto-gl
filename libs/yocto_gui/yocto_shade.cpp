@@ -700,9 +700,6 @@ inline void precompute_cubemap(ogl_cubemap* cubemap, const Sampler* environment,
   }
   unbind_program();
   unbind_framebuffer();
-
-  clear_shape(cube);
-  clear_framebuffer(framebuffer);
 }
 
 inline void precompute_specular_brdf_texture(ogl_texture* texture) {
@@ -735,9 +732,6 @@ inline void precompute_specular_brdf_texture(ogl_texture* texture) {
 
   unbind_program();
   unbind_framebuffer();
-  clear_framebuffer(framebuffer);
-  clear_program(program);
-  clear_shape(screen_quad);
 }
 
 static void init_environment(shade_environment* environment) {
@@ -752,7 +746,6 @@ static void init_environment(shade_environment* environment) {
       program, precompute_cubemap_vertex(), precompute_environment_fragment());
   precompute_cubemap(environment->cubemap, environment->emission_tex->texture,
       program, size, 1, environment->emission);
-  clear_program(program);
 }
 
 void init_envlight(shade_environment* environment) {
@@ -763,8 +756,6 @@ void init_envlight(shade_environment* environment) {
       precompute_irradiance_fragment());
   precompute_cubemap(
       environment->envlight_diffuse, environment->cubemap, diffuse_program, 64);
-  clear_program(diffuse_program);
-  diffuse_program_guard.release();
 
   // precompute specular map
   auto specular_program_guard = make_unique<ogl_program>();
@@ -773,8 +764,6 @@ void init_envlight(shade_environment* environment) {
       precompute_reflections_fragment());
   precompute_cubemap(environment->envlight_specular, environment->cubemap,
       specular_program, 256, 6);
-  clear_program(specular_program);
-  specular_program_guard.release();
 
   // precompute lookup texture for specular brdf
   precompute_specular_brdf_texture(environment->envlight_brdflut);
