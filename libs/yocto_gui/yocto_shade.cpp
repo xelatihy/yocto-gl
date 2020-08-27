@@ -554,7 +554,7 @@ void set_camlight_uniforms(
       &camera_light0, &camera_light1, &camera_light2, &camera_light3};
 
   auto& lights = camera_lights;
-  set_uniform(program, "lamb", vec3f{0, 0, 0});
+  set_uniform(program, "ambient", vec3f{0, 0, 0});
   set_uniform(program, "lnum", (int)lights.size());
   auto lid = 0;
   for (auto light : lights) {
@@ -565,8 +565,9 @@ void set_camlight_uniforms(
     } else {
       set_uniform(program, ("lpos[" + is + "]").c_str(), light->position);
     }
-    set_uniform(program, ("lke[" + is + "]").c_str(), light->emission);
-    set_uniform(program, ("ltype[" + is + "]").c_str(), 1);
+    set_uniform(
+        program, ("lights_emission[" + is + "]").c_str(), light->emission);
+    set_uniform(program, ("lights_type[" + is + "]").c_str(), 1);
     lid++;
   }
   assert_ogl_error();
@@ -865,11 +866,11 @@ uniform bool normalmap_tex_on;    // material normal texture on
 uniform sampler2D normalmap_tex;  // material normal texture
 
 uniform bool eyelight;         // eyelight shading
-uniform vec3 lamb;             // ambient light
+uniform vec3 ambient;             // ambient light
 uniform int  lnum;             // number of lights
-uniform int  ltype[16];        // light type (0 -> point, 1 -> directional)
+uniform int  lights_type[16];        // light type (0 -> point, 1 -> directional)
 uniform vec3 lpos[16];         // light positions
-uniform vec3 lke[16];          // light intensities
+uniform vec3 lights_emission[16];          // light intensities
 
 uniform mat4 frame;              // shape transform
 uniform mat4 frameit;            // shape transform
@@ -923,15 +924,15 @@ shade_brdf eval_brdf() {
 void eval_light(int lid, vec3 position, out vec3 radiance, out vec3 incoming) {
   radiance = vec3(0,0,0);
   incoming = vec3(0,0,0);
-  if(ltype[lid] == 0) {
+  if(lights_type[lid] == 0) {
     // compute point light color at position
-    radiance = lke[lid] / pow(length(lpos[lid]-position),2);
+    radiance = lights_emission[lid] / pow(length(lpos[lid]-position),2);
     // compute light direction at position
     incoming = normalize(lpos[lid]-position);
   }
-  else if(ltype[lid] == 1) {
+  else if(lights_type[lid] == 1) {
     // compute light color
-    radiance = lke[lid];
+    radiance = lights_emission[lid];
     // compute light direction
     incoming = normalize(lpos[lid]);
   }
@@ -1023,7 +1024,7 @@ void main() {
       radiance += pif * eval_brdfcos(brdf, n, incoming, outgoing);
     } else {
       // accumulate ambient
-      radiance += lamb * brdf.diffuse;
+      radiance += ambient * brdf.diffuse;
       // foreach light
       for(int lid = 0; lid < lnum; lid ++) {
         vec3 cl = vec3(0,0,0); vec3 incoming = vec3(0,0,0);
@@ -1129,6 +1130,11 @@ shade_brdf eval_brdf() {
   brdf.specular  = eval_brdf_color(specular, specular_tex, specular_tex_on);
   brdf.roughness = eval_brdf_value(roughness, roughness_tex, roughness_tex_on);
   brdf.opacity   = eval_brdf_value(opacity, opacity_tex, opacity_tex_on);
+  vec3 base = brdf.diffuse;
+  float metallic = brdf.specular.x;
+  brdf.diffuse = base * (1 - metallic);
+  brdf.specular = base * metallic + vec3(0.04) * (1 - metallic);
+  brdf.roughness = brdf.roughness * brdf.roughness;
   return brdf;
 }
 
