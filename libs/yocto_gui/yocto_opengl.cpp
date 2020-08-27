@@ -148,6 +148,11 @@ void set_texture(ogl_texture* texture, const vec2i& size, int num_channels,
   static auto cformat = vector<uint>{0, GL_RED, GL_RG, GL_RGB, GL_RGBA};
   assert_ogl_error();
 
+  if (size == zero2i) {
+    clear_texture(texture);
+    return;
+  }
+
   if (!texture->texture_id) glGenTextures(1, &texture->texture_id);
   if (texture->size != size || texture->num_channels != num_channels ||
       texture->is_srgb != as_srgb || texture->is_float == true ||
@@ -192,6 +197,11 @@ void set_texture(ogl_texture* texture, const vec2i& size, int num_channels,
   static auto iformat = vector<uint>{0, GL_RGB, GL_RGB, GL_RGB, GL_RGBA};
   static auto cformat = vector<uint>{0, GL_RED, GL_RG, GL_RGB, GL_RGBA};
   assert_ogl_error();
+
+  if (size == zero2i) {
+    clear_texture(texture);
+    return;
+  }
 
   if (!texture->texture_id) glGenTextures(1, &texture->texture_id);
   if (texture->size != size || texture->num_channels != num_channels ||
@@ -291,6 +301,11 @@ void set_cubemap(ogl_cubemap* cubemap, int size, int num_channels,
   static auto cformat = vector<uint>{0, GL_RED, GL_RG, GL_RGB, GL_RGBA};
   assert_ogl_error();
 
+  if (size == 0) {
+    clear_cubemap(cubemap);
+    return;
+  }
+
   if (!cubemap->cubemap_id) glGenTextures(1, &cubemap->cubemap_id);
   if (cubemap->size != size || cubemap->num_channels != num_channels ||
       cubemap->is_srgb != as_srgb || cubemap->is_float == true ||
@@ -343,6 +358,11 @@ void set_cubemap(ogl_cubemap* cubemap, int size, int num_channels,
   static auto iformat = vector<uint>{0, GL_RGB, GL_RGB, GL_RGB, GL_RGBA};
   static auto cformat = vector<uint>{0, GL_RED, GL_RG, GL_RGB, GL_RGBA};
   assert_ogl_error();
+
+  if (size == 0) {
+    clear_cubemap(cubemap);
+    return;
+  }
 
   if (!cubemap->cubemap_id) glGenTextures(1, &cubemap->cubemap_id);
   if (cubemap->size != size || cubemap->num_channels != num_channels ||
@@ -472,6 +492,12 @@ bool is_initialized(const ogl_arraybuffer* buffer) {
 void set_arraybuffer(ogl_arraybuffer* buffer, size_t size, int esize,
     const float* data, bool dynamic) {
   assert_ogl_error();
+
+  if (size == 0) {
+    clear_arraybuffer(buffer);
+    return;
+  }
+
   auto target = GL_ARRAY_BUFFER;
   if (size > buffer->capacity) {
     // reallocate buffer if needed
@@ -529,6 +555,12 @@ void set_arraybuffer(
 void set_elementbuffer(ogl_elementbuffer* buffer, size_t size, int esize,
     const int* data, bool dynamic) {
   assert_ogl_error();
+
+  if (size == 0) {
+    clear_elementbuffer(buffer);
+    return;
+  }
+
   auto target = GL_ELEMENT_ARRAY_BUFFER;
   if (size > buffer->capacity) {
     // reallocate buffer if needed
@@ -867,6 +899,11 @@ void set_uniform(const ogl_program* program, const char* name,
 ogl_framebuffer::~ogl_framebuffer() { clear_framebuffer(this); }
 
 void set_framebuffer(ogl_framebuffer* framebuffer, const vec2i& size) {
+  if (size == zero2i) {
+    clear_framebuffer(framebuffer);
+    return;
+  }
+
   if (!framebuffer->framebuffer_id) {
     glGenFramebuffers(1, &framebuffer->framebuffer_id);
   }
