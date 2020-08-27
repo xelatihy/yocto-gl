@@ -453,14 +453,17 @@ shade_environment* add_environment(shade_scene* scene, const frame3f& frame,
   return environment;
 }
 
-void set_scene_view_uniforms(ogl_program* program, const shade_view& view) {
+void set_view_uniforms(ogl_program* program, const shade_view& view) {
   set_uniform(program, "eye", view.camera_frame.o);
   set_uniform(program, "view", view.view_matrix);
   set_uniform(program, "projection", view.projection_matrix);
-  set_uniform(program, "exposure", view.params.exposure);
-  set_uniform(program, "gamma", view.params.gamma);
-  set_uniform(program, "faceted", view.params.faceted);
-  set_uniform(program, "double_sided", view.params.double_sided);
+}
+
+void set_params_uniforms(ogl_program* program, const shade_params& params) {
+  set_uniform(program, "exposure", params.exposure);
+  set_uniform(program, "gamma", params.gamma);
+  set_uniform(program, "faceted", params.faceted);
+  set_uniform(program, "double_sided", params.double_sided);
 }
 
 // Draw a shape
@@ -522,11 +525,13 @@ void set_instance_uniforms(ogl_program* program, const frame3f& frame,
 
 static void draw_shape(shade_shape* shape) { draw_shape(shape->shape); }
 
-void draw_environments(shade_scene* scene, const shade_view& view) {
+void draw_environments(
+    shade_scene* scene, const shade_view& view, const shade_params& params) {
   auto program = scene->environment_program;
   if (!is_initialized(program)) return;
   bind_program(program);
-  set_scene_view_uniforms(program, view);
+  set_view_uniforms(program, view);
+  set_params_uniforms(program, params);
   for (auto environment : scene->environments) {
     if (!is_initialized(environment->cubemap)) continue;
     set_uniform(program, "environment", environment->cubemap, 0);
@@ -535,7 +540,8 @@ void draw_environments(shade_scene* scene, const shade_view& view) {
   unbind_program();
 }
 
-void set_eyelight_uniforms(ogl_program* program, const shade_view& view) {
+void set_camlight_uniforms(
+    ogl_program* program, const shade_scene* scene, const shade_view& view) {
   struct gui_light {
     vec3f position = {0, 0, 0};
     vec3f emission = {0, 0, 0};
@@ -572,14 +578,16 @@ void set_eyelight_uniforms(ogl_program* program, const shade_view& view) {
   assert_ogl_error();
 }
 
-void set_ibl_uniforms(ogl_program* program, const shade_scene* scene) {
+void set_envlight_uniforms(
+    ogl_program* program, const shade_scene* scene, const shade_view& view) {
   auto environment = scene->environments.front();
   set_uniform(program, "irradiance_cubemap", environment->envlight_diffuse, 6);
   set_uniform(program, "reflection_cubemap", environment->envlight_specular, 7);
   set_uniform(program, "brdf_lut", environment->envlight_brdflut, 8);
 }
 
-void draw_instances(shade_scene* scene, const shade_view& view) {
+void draw_instances(
+    shade_scene* scene, const shade_view& view, const shade_params& params) {
   auto program = scene->camlight_program;
   if (!scene->environments.empty() &&
       is_initialized(scene->environments.front()->cubemap) &&
@@ -590,13 +598,14 @@ void draw_instances(shade_scene* scene, const shade_view& view) {
   bind_program(program);
 
   // set scene uniforms
-  set_scene_view_uniforms(program, view);
+  set_view_uniforms(program, view);
+  set_params_uniforms(program, params);
 
   // set lighting uniforms
   if (view.params.lighting == shade_lighting_type::camlight) {
-    set_eyelight_uniforms(program, view);
+    set_camlight_uniforms(program, scene, view);
   } else {
-    set_ibl_uniforms(program, scene);
+    set_envlight_uniforms(program, scene, view);
   }
 
   set_ogl_wireframe(view.params.wireframe);
@@ -635,8 +644,8 @@ void draw_scene(shade_scene* scene, shade_camera* camera, const vec4i& viewport,
   set_ogl_viewport(viewport);
 
   auto view = make_scene_view(camera, viewport, params);
-  draw_instances(scene, view);
-  draw_environments(scene, view);
+  draw_instances(scene, view, params);
+  draw_environments(scene, view, params);
 }
 
 // image based lighting

@@ -328,16 +328,20 @@ struct shade_view {
   [[deprecated]] shade_params params            = {};
 };
 
-void set_scene_view_uniforms(ogl_program* program, const shade_view& view);
+void set_view_uniforms(ogl_program* program, const shade_view& view);
 void set_instance_uniforms(ogl_program* program, const frame3f& frame,
     const shade_shape* shape, const shade_material* material,
     int shading_type = 0, bool double_sided = true,
     bool non_rigid_frames = false);
-void set_eyelight_uniforms(ogl_program* program, const shade_view& view);
-void set_ibl_uniforms(ogl_program* program, const shade_scene* scene);
+void set_camlight_uniforms(
+    ogl_program* program, const shade_scene* scene, const shade_view& view);
+void set_envlight_uniforms(
+    ogl_program* program, const shade_scene* scene, const shade_view& view);
 
-void draw_instances(shade_scene* scene, const shade_view& view);
-void draw_environment(shade_scene* scene, const shade_view& view);
+void draw_instances(
+    shade_scene* scene, const shade_view& view, const shade_params& params);
+void draw_environments(
+    shade_scene* scene, const shade_view& view, const shade_params& params);
 
 void draw_scene(shade_scene* scene, shade_camera* camera, const vec4i& viewport,
     const shade_params& params);
