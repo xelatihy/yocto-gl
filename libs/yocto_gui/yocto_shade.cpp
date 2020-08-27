@@ -905,12 +905,18 @@ float eval_brdf_value(float value, sampler2D tex, bool tex_on) {
 }
 
 brdf_struct eval_brdf() {
+  // color?
   brdf_struct brdf;
   brdf.emission  = eval_brdf_color(emission, emission_tex, emission_tex_on);
   brdf.diffuse   = eval_brdf_color(diffuse, diffuse_tex, diffuse_tex_on);
   brdf.specular  = eval_brdf_color(specular, specular_tex, specular_tex_on);
   brdf.roughness = eval_brdf_value(roughness, roughness_tex, roughness_tex_on);
   brdf.opacity   = eval_brdf_value(opacity, opacity_tex, opacity_tex_on);
+  vec3 base = brdf.diffuse;
+  float metallic = brdf.specular.x;
+  brdf.diffuse = base * (1 - metallic);
+  brdf.specular = base * metallic + vec3(0.04) * (1 - metallic);
+  brdf.roughness = brdf.roughness * brdf.roughness;
   return brdf;
 }
 
