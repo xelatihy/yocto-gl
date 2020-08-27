@@ -161,13 +161,13 @@ shade_scene::~shade_scene() {
   delete envlight_program;
 }
 
-static const char* preeval_brdf_vertex_code();
-static const char* preeval_brdf_fragment_code();
+static const char* precompute_brdf_vertex();
+static const char* precompute_brdf_fragment();
 
-static const char* precompute_cubemap_vertex_code();
-static const char* precompute_environment_fragment_code();
-static const char* precompute_irradiance_fragment_code();
-static const char* precompute_reflections_fragment_code();
+static const char* precompute_cubemap_vertex();
+static const char* precompute_environment_fragment();
+static const char* precompute_irradiance_fragment();
+static const char* precompute_reflections_fragment();
 
 static void init_environment(shade_environment* environment);
 static void init_envlight(shade_environment* environment);
@@ -175,12 +175,12 @@ static void init_envlight(shade_environment* environment);
 // Initialize an OpenGL scene
 void init_scene(shade_scene* scene) {
   if (is_initialized(scene->camlight_program)) return;
-  set_program(scene->camlight_program, draw_instances_vertex_code(),
-      draw_instances_eyelight_fragment_code(), true);
-  set_program(scene->envlight_program, draw_instances_vertex_code(),
-      draw_instances_ibl_fragment_code(), true);
-  set_program(scene->environment_program, precompute_cubemap_vertex_code(),
-      draw_enivronment_fragment_code(), true);
+  set_program(scene->camlight_program, shade_scene_vertex(),
+      shade_camlight_fragment(), true);
+  set_program(scene->envlight_program, shade_scene_vertex(),
+      shade_envlight_fragment(), true);
+  set_program(scene->environment_program, precompute_cubemap_vertex(),
+      shade_enivronment_fragment(), true);
 }
 
 bool is_initialized(shade_scene* scene) {
@@ -711,8 +711,8 @@ inline void precompute_specular_brdf_texture(ogl_texture* texture) {
   auto program_guard = make_unique<ogl_program>();
   auto program       = program_guard.get();
   auto error = ""s, errorlog = ""s;
-  auto vert = preeval_brdf_vertex_code();
-  auto frag = preeval_brdf_fragment_code();
+  auto vert = precompute_brdf_vertex();
+  auto frag = precompute_brdf_fragment();
   set_program(program, vert, frag, error, errorlog);
 
   set_texture(texture, size, 3, (float*)nullptr, true, true, false, false);
@@ -745,8 +745,8 @@ static void init_environment(shade_environment* environment) {
   auto size          = environment->emission_tex->texture->size.y;
   auto program_guard = make_unique<ogl_program>();
   auto program       = program_guard.get();
-  set_program(program, precompute_cubemap_vertex_code(),
-      precompute_environment_fragment_code());
+  set_program(
+      program, precompute_cubemap_vertex(), precompute_environment_fragment());
   precompute_cubemap(environment->cubemap, environment->emission_tex->texture,
       program, size, 1, environment->emission);
   clear_program(program);
@@ -756,8 +756,8 @@ void init_envlight(shade_environment* environment) {
   // precompute irradiance map
   auto diffuse_program_guard = make_unique<ogl_program>();
   auto diffuse_program       = diffuse_program_guard.get();
-  auto vert                  = precompute_cubemap_vertex_code();
-  auto frag                  = precompute_irradiance_fragment_code();
+  auto vert                  = precompute_cubemap_vertex();
+  auto frag                  = precompute_irradiance_fragment();
   set_program(diffuse_program, vert, frag);
   precompute_cubemap(
       environment->envlight_diffuse, environment->cubemap, diffuse_program, 64);
@@ -767,8 +767,8 @@ void init_envlight(shade_environment* environment) {
   // precompute specular map
   auto specular_program_guard = make_unique<ogl_program>();
   auto specular_program       = specular_program_guard.get();
-  set_program(specular_program, precompute_cubemap_vertex_code(),
-      precompute_reflections_fragment_code());
+  set_program(specular_program, precompute_cubemap_vertex(),
+      precompute_reflections_fragment());
   precompute_cubemap(environment->envlight_specular, environment->cubemap,
       specular_program, 256, 6);
   clear_program(specular_program);
@@ -778,7 +778,7 @@ void init_envlight(shade_environment* environment) {
   precompute_specular_brdf_texture(environment->envlight_brdflut);
 }
 
-const char* draw_instances_vertex_code() {
+const char* shade_scene_vertex() {
   static const char* code =
       R"(
 #version 330
@@ -828,7 +828,7 @@ void main() {
   return code;
 }
 
-const char* draw_instances_eyelight_fragment_code() {
+const char* shade_camlight_fragment() {
   static const char* code =
       R"(
 #version 330
@@ -1049,7 +1049,7 @@ void main() {
   return code;
 }
 
-const char* draw_instances_ibl_fragment_code() {
+const char* shade_envlight_fragment() {
   static const char* code = R"(
 #version 330
 
@@ -1220,7 +1220,7 @@ void main() {
   return code;
 }
 
-static const char* preeval_brdf_vertex_code() {
+static const char* precompute_brdf_vertex() {
   static const char* code = R"(
 #version 330
 
@@ -1238,7 +1238,7 @@ void main() {
   return code;
 }
 
-static const char* preeval_brdf_fragment_code() {
+static const char* precompute_brdf_fragment() {
   static const char* code = R"(
 #version 330
 
@@ -1346,7 +1346,7 @@ void main() {
   return code;
 }
 
-static const char* precompute_cubemap_vertex_code() {
+static const char* precompute_cubemap_vertex() {
   static const char* code = R"(
 #version 330
 
@@ -1371,7 +1371,7 @@ void main() {
   return code;
 }
 
-static const char* precompute_environment_fragment_code() {
+static const char* precompute_environment_fragment() {
   static const char* code = R"(
 #version 330
 
@@ -1407,7 +1407,7 @@ void main() {
   return code;
 }
 
-static const char* precompute_irradiance_fragment_code() {
+static const char* precompute_irradiance_fragment() {
   static const char* code = R"(
 #version 330
 
@@ -1459,7 +1459,7 @@ void main() {
   return code;
 }
 
-static const char* precompute_reflections_fragment_code() {
+static const char* precompute_reflections_fragment() {
   static const char* code = R"(
 #version 330
 
@@ -1542,7 +1542,7 @@ void main() {
   return code;
 }
 
-const char* draw_enivronment_fragment_code() {
+const char* shade_enivronment_fragment() {
   static const char* code = R"(
 #version 330
 

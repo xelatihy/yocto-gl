@@ -345,10 +345,10 @@ void draw_scene(shade_scene* scene, shade_camera* camera, const vec4i& viewport,
     const shade_params& params);
 
 // read-only access to defualt shader code
-const char* draw_instances_vertex_code();
-const char* draw_instances_eyelight_fragment_code();
-const char* draw_instances_ibl_fragment_code();
-const char* draw_enivronment_fragment_code();
+const char* shade_scene_vertex();
+const char* shade_camlight_fragment();
+const char* shade_envlight_fragment();
+const char* shade_enivronment_fragment();
 
 }  // namespace yocto
 
