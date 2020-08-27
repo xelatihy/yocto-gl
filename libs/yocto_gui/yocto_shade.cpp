@@ -756,9 +756,8 @@ void init_envlight(shade_environment* environment) {
   // precompute irradiance map
   auto diffuse_program_guard = make_unique<ogl_program>();
   auto diffuse_program       = diffuse_program_guard.get();
-  auto vert                  = precompute_cubemap_vertex();
-  auto frag                  = precompute_irradiance_fragment();
-  set_program(diffuse_program, vert, frag);
+  set_program(diffuse_program, precompute_cubemap_vertex(),
+      precompute_irradiance_fragment());
   precompute_cubemap(
       environment->envlight_diffuse, environment->cubemap, diffuse_program, 64);
   clear_program(diffuse_program);
