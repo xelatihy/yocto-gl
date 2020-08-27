@@ -429,7 +429,6 @@ void draw_widgets(gui_window* win, app_states* apps, const gui_input& input) {
     draw_checkbox(win, "wireframe", params.wireframe);
     continue_line(win);
     draw_checkbox(win, "faceted", params.faceted);
-    // draw_checkbox(win, "edges", params.edges);
     continue_line(win);
     draw_checkbox(win, "double sided", params.double_sided);
     draw_slider(win, "exposure", params.exposure, -10, 10);

@@ -280,11 +280,11 @@ void set_instance_from(shade_shape* shape, const vector<vec3f>& froms);
 void set_instance_to(shade_shape* shape, const vector<vec3f>& tos);
 
 // get shaoe properties
-ogl_arraybuffer* get_positions(shade_shape* shape);
-ogl_arraybuffer* get_normals(shade_shape* shape);
-ogl_arraybuffer* get_texcoords(shade_shape* shape);
-ogl_arraybuffer* get_colors(shade_shape* shape);
-ogl_arraybuffer* get_tangents(shade_shape* shape);
+const ogl_arraybuffer* get_positions(const shade_shape* shape);
+const ogl_arraybuffer* get_normals(const shade_shape* shape);
+const ogl_arraybuffer* get_texcoords(const shade_shape* shape);
+const ogl_arraybuffer* get_colors(const shade_shape* shape);
+const ogl_arraybuffer* get_tangents(const shade_shape* shape);
 
 // instance properties
 void set_frame(shade_instance* instance, const frame3f& frame);
@@ -334,8 +334,7 @@ struct shade_view {
 void set_view_uniforms(ogl_program* program, const shade_view& view);
 void set_instance_uniforms(ogl_program* program, const frame3f& frame,
     const shade_shape* shape, const shade_material* material,
-    int shading_type = 0, bool double_sided = true,
-    bool non_rigid_frames = false);
+    const shade_params& params);
 void set_camlight_uniforms(
     ogl_program* program, const shade_scene* scene, const shade_view& view);
 void set_envlight_uniforms(

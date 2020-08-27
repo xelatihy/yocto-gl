@@ -55,23 +55,23 @@ namespace yocto {
 #pragma GCC diagnostic pop
 #endif
 
-ogl_arraybuffer* get_positions(shade_shape* shape) {
+const ogl_arraybuffer* get_positions(const shade_shape* shape) {
   if (shape->shape->vertex_buffers.size() <= 0) return nullptr;
   return shape->shape->vertex_buffers[0];
 }
-ogl_arraybuffer* get_normals(shade_shape* shape) {
+const ogl_arraybuffer* get_normals(const shade_shape* shape) {
   if (shape->shape->vertex_buffers.size() <= 1) return nullptr;
   return shape->shape->vertex_buffers[1];
 }
-ogl_arraybuffer* get_texcoords(shade_shape* shape) {
+const ogl_arraybuffer* get_texcoords(const shade_shape* shape) {
   if (shape->shape->vertex_buffers.size() <= 2) return nullptr;
   return shape->shape->vertex_buffers[2];
 }
-ogl_arraybuffer* get_colors(shade_shape* shape) {
+const ogl_arraybuffer* get_colors(const shade_shape* shape) {
   if (shape->shape->vertex_buffers.size() <= 3) return nullptr;
   return shape->shape->vertex_buffers[3];
 }
-ogl_arraybuffer* get_tangents(shade_shape* shape) {
+const ogl_arraybuffer* get_tangents(const shade_shape* shape) {
   if (shape->shape->vertex_buffers.size() <= 4) return nullptr;
   return shape->shape->vertex_buffers[4];
 }
@@ -469,20 +469,21 @@ void set_view_uniforms(ogl_program* program, const shade_view& view) {
 void set_params_uniforms(ogl_program* program, const shade_params& params) {
   set_uniform(program, "exposure", params.exposure);
   set_uniform(program, "gamma", params.gamma);
-  set_uniform(program, "faceted", params.faceted);
   set_uniform(program, "double_sided", params.double_sided);
 }
 
 // Draw a shape
 void set_instance_uniforms(ogl_program* program, const frame3f& frame,
-    const shade_shape* shape, const shade_material* material, bool double_sided,
-    bool non_rigid_frames) {
+    const shade_shape* shape, const shade_material* material,
+    const shade_params& params) {
   auto shape_xform     = frame_to_mat(frame);
   auto shape_inv_xform = transpose(
-      frame_to_mat(inverse(frame, non_rigid_frames)));
+      frame_to_mat(inverse(frame, params.non_rigid_frames)));
   set_uniform(program, "frame", shape_xform);
   set_uniform(program, "frameit", shape_inv_xform);
   set_uniform(program, "offset", 0.0f);
+  set_uniform(program, "faceted",
+      params.faceted || !is_initialized(get_normals(shape)));
   //  if (instance->highlighted) {
   //    set_uniform(program, "highlight", vec4f{1, 1, 0, 1});
   //  } else {
@@ -503,7 +504,7 @@ void set_instance_uniforms(ogl_program* program, const frame3f& frame,
       vec3f{material->metallic, material->metallic, material->metallic});
   set_uniform(program, "roughness", material->roughness);
   set_uniform(program, "opacity", material->opacity);
-  set_uniform(program, "double_sided", double_sided);
+  set_uniform(program, "double_sided", params.double_sided);
   set_texture(
       program, "emission_tex", "emission_tex_on", material->emission_tex, 0);
   set_texture(program, "diffuse_tex", "diffuse_tex_on", material->color_tex, 1);
@@ -617,8 +618,8 @@ void draw_instances(
   set_ogl_wireframe(params.wireframe);
   for (auto instance : scene->instances) {
     if (instance->hidden) continue;
-    set_instance_uniforms(program, instance->frame, instance->shape,
-        instance->material, params.double_sided, params.non_rigid_frames);
+    set_instance_uniforms(
+        program, instance->frame, instance->shape, instance->material, params);
     draw_shape(instance->shape);
   }
   unbind_program();
