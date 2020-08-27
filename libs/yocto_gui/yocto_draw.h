@@ -123,28 +123,40 @@ struct gui_instance {
   gui_shading_type shading     = gui_shading_type::shaded;
 };
 
-// Opengl scene
-struct gui_scene {
-  // scene objects
-  vector<gui_camera*>   cameras   = {};
-  vector<gui_instance*> instances = {};
-  vector<gui_shape*>    shapes    = {};
-  vector<gui_material*> materials = {};
-  vector<gui_texture*>  textures  = {};
-
-  // environment
+// Opengl environment
+struct gui_environment {
+  // environment properties
   gui_shape*   environment_shape   = new gui_shape{};
   ogl_cubemap* environment_cubemap = new ogl_cubemap{};
-  ogl_program* environment_program = new ogl_program{};
 
-  // envlight baked data
+  // envlight precomputed data
   ogl_cubemap* diffuse_cubemap  = new ogl_cubemap{};
   ogl_cubemap* specular_cubemap = new ogl_cubemap{};
   ogl_texture* brdf_lut         = new ogl_texture{};
 
+  // Disable copy construction
+  gui_environment()                       = default;
+  gui_environment(const gui_environment&) = delete;
+  gui_environment& operator=(const gui_environment&) = delete;
+
+  // Cleanup
+  ~gui_environment();
+};
+
+// Opengl scene
+struct gui_scene {
+  // scene objects
+  vector<gui_camera*>      cameras      = {};
+  vector<gui_instance*>    instances    = {};
+  vector<gui_shape*>       shapes       = {};
+  vector<gui_material*>    materials    = {};
+  vector<gui_texture*>     textures     = {};
+  vector<gui_environment*> environments = {};
+
   // programs
-  ogl_program* camlight_program = new ogl_program{};
-  ogl_program* envlight_program = new ogl_program{};
+  ogl_program* environment_program = new ogl_program{};
+  ogl_program* camlight_program    = new ogl_program{};
+  ogl_program* envlight_program    = new ogl_program{};
 
   // disable copy construction
   gui_scene()                 = default;
@@ -180,9 +192,10 @@ struct gui_scene_params {
 };
 
 // Initialize an OpenGL scene
-void init_scene(gui_scene* scene, const gui_texture* environment_tex = nullptr,
-    const vec3f& environment_emission = {1, 1, 1});
-bool is_initialized(const gui_scene* scene);
+[[deprecated]] void init_scene(gui_scene* scene,
+    const gui_texture*                    environment_tex      = nullptr,
+    const vec3f&                          environment_emission = {1, 1, 1});
+bool                is_initialized(const gui_scene* scene);
 
 // Initialize data for environment lighting
 void init_ibl_data(gui_scene* scene);
@@ -191,11 +204,12 @@ void init_ibl_data(gui_scene* scene);
 void clear_scene(gui_scene* scene);
 
 // add scene elements
-gui_camera*   add_camera(gui_scene* scene);
-gui_texture*  add_texture(gui_scene* scene);
-gui_material* add_material(gui_scene* scene);
-gui_shape*    add_shape(gui_scene* scene);
-gui_instance* add_instance(gui_scene* scene);
+gui_camera*      add_camera(gui_scene* scene);
+gui_texture*     add_texture(gui_scene* scene);
+gui_material*    add_material(gui_scene* scene);
+gui_shape*       add_shape(gui_scene* scene);
+gui_instance*    add_instance(gui_scene* scene);
+gui_environment* add_environment(gui_scene* scene);
 
 // camera properties
 void set_frame(gui_camera* camera, const frame3f& frame);
@@ -267,6 +281,11 @@ void set_shape(gui_instance* instance, gui_shape* shape);
 void set_material(gui_instance* instance, gui_material* material);
 void set_hidden(gui_instance* instance, bool hidden);
 void set_highlighted(gui_instance* instance, bool highlighted);
+
+// check if initialized
+bool is_initialized(const gui_environment* environment);
+// clear environment
+void clear_environment(gui_environment* environment);
 
 // shortcuts
 gui_camera*   add_camera(gui_scene* scene, const frame3f& frame, float lens,
