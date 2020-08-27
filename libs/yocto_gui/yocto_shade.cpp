@@ -484,7 +484,7 @@ void set_instance_uniforms(ogl_program* program, const frame3f& frame,
         texture == nullptr ? nullptr : texture->texture, unit);
   };
 
-  set_uniform(program, "mtype", material->unlit ? 0 : 1);
+  set_uniform(program, "unlit", material->unlit);
   set_uniform(program, "emission", material->emission);
   set_uniform(program, "diffuse", material->color);
   set_uniform(program, "specular",
@@ -840,7 +840,7 @@ in vec4 color;     // [from vertex shader] color
 in vec4 tangsp;    // [from vertex shader] tangent space
 
 uniform int etype;
-uniform int  mtype;
+uniform bool unlit;
 uniform bool faceted;
 uniform vec4 highlight;
 uniform bool double_sided;
@@ -885,7 +885,7 @@ out vec4 frag_color;
 
 float pif = 3.14159265;
 
-struct brdf_struct {
+struct shade_brdf {
   vec3  emission;
   vec3  diffuse;
   vec3  specular;
@@ -904,9 +904,9 @@ float eval_brdf_value(float value, sampler2D tex, bool tex_on) {
   return result;
 }
 
-brdf_struct eval_brdf() {
+shade_brdf eval_brdf() {
   // color?
-  brdf_struct brdf;
+  shade_brdf brdf;
   brdf.emission  = eval_brdf_color(emission, emission_tex, emission_tex_on);
   brdf.diffuse   = eval_brdf_color(diffuse, diffuse_tex, diffuse_tex_on);
   brdf.specular  = eval_brdf_color(specular, specular_tex, specular_tex_on);
@@ -937,7 +937,7 @@ void eval_light(int lid, vec3 position, out vec3 radiance, out vec3 incoming) {
   }
 }
 
-vec3 eval_brdfcos(brdf_struct brdf, vec3 n, vec3 incoming, vec3 outgoing) {
+vec3 eval_brdfcos(shade_brdf brdf, vec3 n, vec3 incoming, vec3 outgoing) {
   vec3 halfway = normalize(incoming+outgoing);
   float ndi = dot(incoming,n), ndo = dot(outgoing,n), ndh = dot(halfway,n);
   if(ndi<=0 || ndo <=0) return vec3(0);
@@ -1004,10 +1004,10 @@ void main() {
   vec3 n = eval_normal(outgoing);
 
   // get material color from textures
-  brdf_struct brdf = eval_brdf();
+  shade_brdf brdf = eval_brdf();
   if(brdf.opacity < 0.005) discard;
 
-  if(mtype == 0) {
+  if(unlit) {
     frag_color = vec4(brdf.emission + brdf.diffuse, brdf.opacity);
     return; 
   }
@@ -1060,7 +1060,7 @@ in vec4 color;     // [from vertex shader] color
 in vec4 tangsp;    // [from vertex shader] tangent space
 
 uniform int  etype;
-uniform int  mtype;
+uniform bool unlit;
 uniform bool faceted;
 uniform vec4 highlight;
 uniform bool double_sided;
@@ -1103,7 +1103,7 @@ out vec4 frag_color;
 
 float pif = 3.14159265;
 
-struct brdf_struct {
+struct shade_brdf {
   vec3  emission;
   vec3  diffuse;
   vec3  specular;
@@ -1122,8 +1122,8 @@ float eval_brdf_value(float value, sampler2D tex, bool tex_on) {
   return result;
 }
 
-brdf_struct eval_brdf() {
-  brdf_struct brdf;
+shade_brdf eval_brdf() {
+  shade_brdf brdf;
   brdf.emission  = eval_brdf_color(emission, emission_tex, emission_tex_on);
   brdf.diffuse   = eval_brdf_color(diffuse, diffuse_tex, diffuse_tex_on);
   brdf.specular  = eval_brdf_color(specular, specular_tex, specular_tex_on);
@@ -1190,10 +1190,10 @@ void main() {
   vec3 V = normalize(eye - position);
   vec3 N = compute_normal(V);
 
-  brdf_struct brdf = eval_brdf();
+  shade_brdf brdf = eval_brdf();
   if (brdf.opacity < 0.005) discard;
 
-  if(mtype == 0) {
+  if(unlit) {
     frag_color = vec4(brdf.emission + brdf.diffuse, brdf.opacity);
     return; 
   }
