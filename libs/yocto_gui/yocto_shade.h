@@ -209,10 +209,6 @@ bool has_envlight(const shade_scene* scene);
 // Clear an OpenGL scene
 void clear_scene(shade_scene* scene);
 
-// old interface
-[[deprecated]] void init_scene(shade_scene* scene,
-    shade_texture* environment_tex, const vec3f& environment_emission);
-
 // add scene elements
 shade_camera*      add_camera(shade_scene* scene);
 shade_texture*     add_texture(shade_scene* scene);
@@ -276,8 +272,8 @@ void set_normals(shade_shape* shape, const vector<vec3f>& normals);
 void set_texcoords(shade_shape* shape, const vector<vec2f>& texcoords);
 void set_colors(shade_shape* shape, const vector<vec4f>& colors);
 void set_tangents(shade_shape* shape, const vector<vec4f>& tangents);
-void set_instance_from(shade_shape* shape, const vector<vec3f>& froms);
-void set_instance_to(shade_shape* shape, const vector<vec3f>& tos);
+void set_instances(
+    shade_shape* shape, const vector<vec3f>& froms, const vector<vec3f>& tos);
 
 // get shaoe properties
 const ogl_arraybuffer* get_positions(const shade_shape* shape);
@@ -349,10 +345,10 @@ void draw_scene(shade_scene* scene, shade_camera* camera, const vec4i& viewport,
     const shade_params& params);
 
 // read-only access to defualt shader code
-const char* draw_instances_vertex_code();
-const char* draw_instances_eyelight_fragment_code();
-const char* draw_instances_ibl_fragment_code();
-const char* draw_enivronment_fragment_code();
+const char* shade_scene_vertex();
+const char* shade_camlight_fragment();
+const char* shade_envlight_fragment();
+const char* shade_enivronment_fragment();
 
 }  // namespace yocto
 

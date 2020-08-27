@@ -666,7 +666,7 @@ bool set_program(ogl_program* program, const string& vertex,
   auto error    = string{};
   auto errorlog = string{};
   if (!set_program(program, vertex, fragment, error, errorlog)) {
-    if (exceptions) throw std::runtime_error{error};
+    if (exceptions) throw std::runtime_error{error + "\n" + errorlog};
     return false;
   }
   return true;
@@ -1099,7 +1099,7 @@ void set_quad_shape(ogl_shape* shape) {
 // -----------------------------------------------------------------------------
 namespace yocto {
 
-auto glimage_vertex =
+auto ogl_image_vertex =
     R"(
 #version 330
 in vec2 positions;
@@ -1114,7 +1114,7 @@ void main() {
 }
 )";
 #if 0
-  auto glimage_vertex = R"(
+auto ogl_image_vertex = R"(
 #version 330
 in vec2 positions;
 out vec2 frag_texcoord;
@@ -1128,7 +1128,7 @@ void main() {
 }
 )";
 #endif
-auto glimage_fragment =
+auto ogl_image_fragment =
     R"(
 #version 330
 in vec2 frag_texcoord;
@@ -1139,7 +1139,7 @@ void main() {
 }
 )";
 #if 0
-auto glimage_fragment = R"(
+auto ogl_image_fragment = R"(
 #version 330
 in vec2 frag_texcoord;
 out vec4 frag_color;
@@ -1170,7 +1170,7 @@ bool is_initialized(const ogl_image* image) {
 // init image program
 bool init_image(ogl_image* image) {
   if (is_initialized(image)) return true;
-  if (!set_program(image->program, glimage_vertex, glimage_fragment))
+  if (!set_program(image->program, ogl_image_vertex, ogl_image_fragment))
     return false;
   set_quad_shape(image->quad);
   return true;
