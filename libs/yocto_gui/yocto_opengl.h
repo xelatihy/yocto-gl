@@ -377,10 +377,15 @@ struct ogl_shape {
   vector<ogl_arraybuffer*> vertex_buffers = {};
   ogl_elementbuffer*       index_buffer   = new ogl_elementbuffer{};
   ogl_element_type         elements       = ogl_element_type::triangles;
-  int                      num_instances  = 0;
+  size_t                   num_instances  = 0;
 
   // OpenGl state
   uint shape_id = 0;
+
+  // Disable copy construction
+  ogl_shape()                 = default;
+  ogl_shape(const ogl_shape&) = delete;
+  ogl_shape& operator=(const ogl_shape&) = delete;
 
   // Cleanup
   ~ogl_shape();

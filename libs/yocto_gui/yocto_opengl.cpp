@@ -945,7 +945,6 @@ void clear_shape(ogl_shape* shape) {
   }
   clear_elementbuffer(shape->index_buffer);
   glDeleteVertexArrays(1, &shape->shape_id);
-  // TODO(fabio): delete here
   shape->num_instances = 0;
   shape->shape_id      = 0;
   assert_ogl_error();
@@ -1009,7 +1008,7 @@ void set_vertex_buffer(ogl_shape* shape, const vec4f& value, int location) {
 void set_instance_buffer(ogl_shape* shape, int location) {
   bind_shape(shape);
   glVertexAttribDivisor(location, 1);
-  shape->num_instances = (int)shape->vertex_buffers[location]->num_elements;
+  shape->num_instances = shape->vertex_buffers[location]->num_elements;
   assert_ogl_error();
 }
 
@@ -1049,10 +1048,10 @@ void draw_shape(const ogl_shape* shape) {
     } else {
       glDrawElementsInstanced(type,
           (GLsizei)indices->num_elements * indices->element_size,
-          GL_UNSIGNED_INT, nullptr, shape->num_instances);
+          GL_UNSIGNED_INT, nullptr, (GLsizei)shape->num_instances);
     }
   } else {
-    auto& vertices = shape->vertex_buffers[0];
+    auto vertices = shape->vertex_buffers[0];
     glDrawArrays(type, 0, (int)vertices->num_elements);
   }
   assert_ogl_error();
