@@ -937,21 +937,20 @@ void eval_light(int lid, vec3 position, out vec3 radiance, out vec3 incoming) {
   }
 }
 
-vec3 eval_brdfcos(int etype, vec3 ke, vec3 kd, vec3 ks, float rs, float op,
-    vec3 n, vec3 incoming, vec3 outgoing) {
+vec3 eval_brdfcos(brdf_struct brdf, vec3 n, vec3 incoming, vec3 outgoing) {
   vec3 halfway = normalize(incoming+outgoing);
   float ndi = dot(incoming,n), ndo = dot(outgoing,n), ndh = dot(halfway,n);
   if(ndi<=0 || ndo <=0) return vec3(0);
-  vec3 diff = ndi * kd / pif;
+  vec3 diff = ndi * brdf.diffuse / pif;
   if(ndh<=0) return diff;
   float cos2 = ndh * ndh;
   float tan2 = (1 - cos2) / cos2;
-  float alpha2 = rs * rs;
+  float alpha2 = brdf.roughness * brdf.roughness;
   float d = alpha2 / (pif * cos2 * cos2 * (alpha2 + tan2) * (alpha2 + tan2));
   float lambda_o = (-1 + sqrt(1 + (1 - ndo * ndo) / (ndo * ndo))) / 2;
   float lambda_i = (-1 + sqrt(1 + (1 - ndi * ndi) / (ndi * ndi))) / 2;
   float g = 1 / (1 + lambda_o + lambda_i);
-  vec3 spec = ndi * ks * d * g / (4*ndi*ndo);
+  vec3 spec = ndi * brdf.specular * d * g / (4*ndi*ndo);
   return diff+spec;
 }
 
@@ -1021,7 +1020,7 @@ void main() {
     // eyelight shading
     if(eyelight) {
       vec3 incoming = outgoing;
-      radiance += pif * eval_brdfcos(etype, brdf.emission, brdf.diffuse, brdf.specular, brdf.roughness, brdf.opacity, n, incoming, outgoing);
+      radiance += pif * eval_brdfcos(brdf, n, incoming, outgoing);
     } else {
       // accumulate ambient
       radiance += lamb * brdf.diffuse;
@@ -1029,7 +1028,7 @@ void main() {
       for(int lid = 0; lid < lnum; lid ++) {
         vec3 cl = vec3(0,0,0); vec3 incoming = vec3(0,0,0);
         eval_light(lid, position, cl, incoming);
-        radiance += cl * eval_brdfcos(etype, brdf.emission, brdf.diffuse, brdf.specular, brdf.roughness, brdf.opacity, n, incoming, outgoing);
+        radiance += cl * eval_brdfcos(brdf, n, incoming, outgoing);
       }
     }
   }
