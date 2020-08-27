@@ -339,7 +339,7 @@ struct ogl_framebuffer {
   static inline uint bound_framebuffer_id = 0;
 };
 
-void init_framebuffer(ogl_framebuffer* framebuffer, const vec2i& size);
+void set_framebuffer(ogl_framebuffer* framebuffer, const vec2i& size);
 
 void set_framebuffer_texture(const ogl_framebuffer* framebuffer,
     const ogl_texture* texture, uint mipmap_level = 0);

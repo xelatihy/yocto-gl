@@ -672,7 +672,7 @@ inline void precompute_cubemap(ogl_cubemap* cubemap, const Sampler* environment,
 
   auto framebuffer_guard = make_unique<ogl_framebuffer>();
   auto framebuffer       = framebuffer_guard.get();
-  init_framebuffer(framebuffer, {size, size});
+  set_framebuffer(framebuffer, {size, size});
 
   auto cameras = array<frame3f, 6>{
       lookat_frame({0, 0, 0}, {1, 0, 0}, {0, 1, 0}),
@@ -687,7 +687,7 @@ inline void precompute_cubemap(ogl_cubemap* cubemap, const Sampler* environment,
   bind_program(program);
   for (int mipmap_level = 0; mipmap_level < num_mipmap_levels; mipmap_level++) {
     // resize render buffer and viewport
-    init_framebuffer(framebuffer, {size, size});
+    set_framebuffer(framebuffer, {size, size});
     set_ogl_viewport(vec2i{size, size});
 
     for (auto i = 0; i < 6; ++i) {
@@ -733,7 +733,7 @@ inline void precompute_specular_brdf_texture(ogl_texture* texture) {
 
   auto framebuffer_guard = make_unique<ogl_framebuffer>();
   auto framebuffer       = framebuffer_guard.get();
-  init_framebuffer(framebuffer, size);
+  set_framebuffer(framebuffer, size);
   set_framebuffer_texture(framebuffer, texture, 0);
 
   bind_framebuffer(framebuffer);

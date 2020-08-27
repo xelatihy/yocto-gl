@@ -842,7 +842,7 @@ void set_uniform(const ogl_program* program, const char* name,
       get_uniform_location(program, name_on), cubemap, unit);
 }
 
-void init_framebuffer(ogl_framebuffer* framebuffer, const vec2i& size) {
+void set_framebuffer(ogl_framebuffer* framebuffer, const vec2i& size) {
   if (!framebuffer->framebuffer_id) {
     glGenFramebuffers(1, &framebuffer->framebuffer_id);
   }
