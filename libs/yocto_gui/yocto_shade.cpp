@@ -149,7 +149,6 @@ void set_quads(shade_shape* shape, const vector<vec4i>& quads) {
 }
 
 shade_scene::~shade_scene() {
-  clear_scene(this);
   for (auto camera : cameras) delete camera;
   for (auto shape : shapes) delete shape;
   for (auto material : materials) delete material;
