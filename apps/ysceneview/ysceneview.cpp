@@ -56,15 +56,15 @@ struct app_state {
   string name      = "";
 
   // options
-  gui_scene_params drawgl_prms = {};
+  shade_params drawgl_prms = {};
 
   // scene
   sceneio_scene*  ioscene  = new sceneio_scene{};
   sceneio_camera* iocamera = nullptr;
 
   // rendering state
-  gui_scene*  glscene  = new gui_scene{};
-  gui_camera* glcamera = nullptr;
+  shade_scene*  glscene  = new shade_scene{};
+  shade_camera* glcamera = nullptr;
 
   // editing
   sceneio_camera*      selected_camera      = nullptr;
@@ -97,7 +97,7 @@ struct app_states {
   std::deque<app_state*> loading  = {};
 
   // default options
-  gui_scene_params drawgl_prms = {};
+  shade_params drawgl_prms = {};
 
   // cleanup
   ~app_states() {
@@ -129,8 +129,8 @@ void load_scene_async(
   if (!apps->selected) apps->selected = app;
 }
 
-void init_glscene(gui_scene* glscene, sceneio_scene* ioscene,
-    gui_camera*& glcamera, sceneio_camera* iocamera,
+void init_glscene(shade_scene* glscene, sceneio_scene* ioscene,
+    shade_camera*& glcamera, sceneio_camera* iocamera,
     progress_callback progress_cb) {
   // handle progress
   auto progress = vec2i{
@@ -142,7 +142,7 @@ void init_glscene(gui_scene* glscene, sceneio_scene* ioscene,
   init_scene(glscene);
 
   // camera
-  auto camera_map     = unordered_map<sceneio_camera*, gui_camera*>{};
+  auto camera_map     = unordered_map<sceneio_camera*, shade_camera*>{};
   camera_map[nullptr] = nullptr;
   for (auto iocamera : ioscene->cameras) {
     if (progress_cb) progress_cb("convert camera", progress.x++, progress.y);
@@ -154,7 +154,7 @@ void init_glscene(gui_scene* glscene, sceneio_scene* ioscene,
   }
 
   // textures
-  auto texture_map     = unordered_map<sceneio_texture*, gui_texture*>{};
+  auto texture_map     = unordered_map<sceneio_texture*, shade_texture*>{};
   texture_map[nullptr] = nullptr;
   for (auto iotexture : ioscene->textures) {
     if (progress_cb) progress_cb("convert texture", progress.x++, progress.y);
@@ -168,7 +168,7 @@ void init_glscene(gui_scene* glscene, sceneio_scene* ioscene,
   }
 
   // material
-  auto material_map     = unordered_map<sceneio_material*, gui_material*>{};
+  auto material_map     = unordered_map<sceneio_material*, shade_material*>{};
   material_map[nullptr] = nullptr;
   for (auto iomaterial : ioscene->materials) {
     if (progress_cb) progress_cb("convert material", progress.x++, progress.y);
@@ -192,7 +192,7 @@ void init_glscene(gui_scene* glscene, sceneio_scene* ioscene,
   }
 
   // shapes
-  auto shape_map     = unordered_map<sceneio_shape*, gui_shape*>{};
+  auto shape_map     = unordered_map<sceneio_shape*, shade_shape*>{};
   shape_map[nullptr] = nullptr;
   for (auto ioshape : ioscene->shapes) {
     if (progress_cb) progress_cb("convert shape", progress.x++, progress.y);
@@ -425,11 +425,10 @@ void draw_widgets(gui_window* win, app_states* apps, const gui_input& input) {
     }
     auto& params = app->drawgl_prms;
     draw_slider(win, "resolution", params.resolution, 0, 4096);
-    draw_combobox(win, "lighting", (int&)params.lighting, gui_lighting_names);
+    draw_combobox(win, "lighting", (int&)params.lighting, shade_lighting_names);
     draw_checkbox(win, "wireframe", params.wireframe);
     continue_line(win);
     draw_checkbox(win, "faceted", params.faceted);
-    // draw_checkbox(win, "edges", params.edges);
     continue_line(win);
     draw_checkbox(win, "double sided", params.double_sided);
     draw_slider(win, "exposure", params.exposure, -10, 10);
@@ -604,7 +603,7 @@ int main(int argc, const char* argv[]) {
   add_option(cli, "--resolution,-r", apps->drawgl_prms.resolution,
       "Image resolution.");
   add_option(cli, "--lighting", apps->drawgl_prms.lighting, "Lighting type.",
-      gui_lighting_names);
+      shade_lighting_names);
   add_option(cli, "scenes", filenames, "Scene filenames", true);
   parse_cli(cli, argc, argv);
 

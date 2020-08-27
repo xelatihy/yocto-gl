@@ -146,13 +146,6 @@ void set_cubemap(ogl_cubemap* cubemap, int size, int num_channels,
     const array<float*, 6>& img, bool as_float = false, bool linear = true,
     bool mipmap = true);
 
-template <typename T>
-void set_cubemap(ogl_cubemap* cubemap, int size, int num_channels,
-    bool as_float = false, bool linear = true, bool mipmap = true) {
-  auto img = array<T*, 6>{0, 0, 0, 0, 0, 0};
-  set_cubemap(cubemap, size, num_channels, img, as_float, mipmap);
-}
-
 // check if cubemap is initialized
 bool is_initialized(const ogl_cubemap* cubemap);
 
@@ -269,9 +262,11 @@ struct ogl_program {
 };
 
 // initialize program
-bool init_program(ogl_program* program, const string& vertex,
+bool set_program(ogl_program* program, const string& vertex,
+    const string& fragment, string& error);
+bool set_program(ogl_program* program, const string& vertex,
     const string& fragment, string& error, string& errorlog);
-bool init_program(ogl_program* program, const string& vertex,
+bool set_program(ogl_program* program, const string& vertex,
     const string& fragment, bool exceptions = true);
 bool is_initialized(const ogl_program* program);
 
@@ -344,7 +339,7 @@ struct ogl_framebuffer {
   static inline uint bound_framebuffer_id = 0;
 };
 
-void init_framebuffer(ogl_framebuffer* framebuffer, const vec2i& size);
+void set_framebuffer(ogl_framebuffer* framebuffer, const vec2i& size);
 
 void set_framebuffer_texture(const ogl_framebuffer* framebuffer,
     const ogl_texture* texture, uint mipmap_level = 0);
@@ -392,17 +387,6 @@ struct ogl_shape {
   ~ogl_shape();
 };
 
-[[deprecated]] void init_shape(ogl_shape* shape);
-
-// check if shape is initialized
-bool is_initialized(const ogl_shape* shape);
-
-// clear buffer
-void clear_shape(ogl_shape* shape);
-
-// bind shape
-void bind_shape(const ogl_shape* shape);
-
 // set vertex buffer
 void set_vertex_buffer(
     ogl_shape* shape, const vector<float>& values, int location);
@@ -426,6 +410,15 @@ void set_instance_buffer(ogl_shape* shape, int location, bool is_instance);
 void set_index_buffer(ogl_shape* shape, const vector<int>& indices);
 void set_index_buffer(ogl_shape* shape, const vector<vec2i>& indices);
 void set_index_buffer(ogl_shape* shape, const vector<vec3i>& indices);
+
+// check if shape is initialized
+bool is_initialized(const ogl_shape* shape);
+
+// clear buffer
+void clear_shape(ogl_shape* shape);
+
+// bind shape
+void bind_shape(const ogl_shape* shape);
 
 // draw shape
 void draw_shape(const ogl_shape* shape);
