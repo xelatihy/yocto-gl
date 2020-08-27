@@ -171,9 +171,10 @@ static void init_environment(shade_environment* environment);
 static void init_envlight(shade_environment* environment);
 
 // Initialize an OpenGL scene
-void init_scene(shade_scene* scene) {
+void init_scene(shade_scene* scene, bool instanced_drawing) {
   if (is_initialized(scene->instance_program)) return;
-  set_program(scene->instance_program, shade_instance_vertex(),
+  set_program(scene->instance_program,
+      instanced_drawing ? shade_instanced_vertex() : shade_instance_vertex(),
       shade_instance_fragment(), true);
   // set_program(scene->envlight_program, shade_instance_vertex(),
   //     shade_instance_fragment(), true);
@@ -818,6 +819,75 @@ void main() {
 
   // clip
   gl_Position = projection * view * vec4(position,1);
+}
+)";
+  return code;
+}
+
+const char* shade_instanced_vertex() {
+  static const char* code = R"(
+#version 330
+
+layout(location = 0) in vec3 positions;
+layout(location = 1) in vec3 normals;
+layout(location = 2) in vec2 texcoords;
+layout(location = 3) in vec4 colors;
+layout(location = 4) in vec4 tangents;
+layout(location = 5) in vec3 instance_from;
+layout(location = 6) in vec3 instance_to;
+
+uniform mat4  frame;
+uniform mat4  frameit;
+uniform float offset = 0;
+
+uniform mat4 view;
+uniform mat4 projection;
+
+out vec3 position;
+out vec3 normal;
+out vec2 texcoord;
+out vec4 color;
+out vec4 tangsp;
+
+// main function
+void main() {
+  // copy values
+  position = positions;
+  normal   = normals;
+  tangsp   = tangents;
+  texcoord = texcoords;
+  color    = colors;
+
+  // normal offset
+  if (offset != 0) {
+    position += offset * normal;
+  }
+
+  // world projection
+  position   = (frame * vec4(position, 1)).xyz;
+  normal     = (frameit * vec4(normal, 0)).xyz;
+  tangsp.xyz = (frame * vec4(tangsp.xyz, 0)).xyz;
+
+  if (instance_from != instance_to) {
+    vec3 dir = instance_to - instance_from;
+
+    vec3 up = abs(dir.z) < 0.999 ? vec3(0.0, 0.0, 1.0) : vec3(1.0, 0.0, 0.0);
+    vec3 tangent   = normalize(cross(up, dir));
+    vec3 bitangent = normalize(cross(dir, tangent));
+
+    mat3 mat;
+    mat[2]    = dir;
+    mat[0]    = tangent;
+    mat[1]    = bitangent;
+    position  = mat * position;
+    normal    = mat * normal;
+    tangent   = mat * tangent;
+    bitangent = mat * bitangent;
+  }
+  position += instance_from;
+
+  // clip
+  gl_Position = projection * view * vec4(position, 1);
 }
 )";
   return code;

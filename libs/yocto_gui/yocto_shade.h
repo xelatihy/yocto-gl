@@ -194,7 +194,7 @@ struct shade_params {
 };
 
 // Initialize an OpenGL scene
-void init_scene(shade_scene* scene);
+void init_scene(shade_scene* scene, bool instanced_drawing = false);
 bool is_initialized(const shade_scene* scene);
 
 // Initialize data for environment lighting
@@ -343,6 +343,7 @@ void draw_scene(shade_scene* scene, shade_camera* camera, const vec4i& viewport,
 
 // read-only access to defualt shader code
 const char* shade_instance_vertex();
+const char* shade_instanced_vertex();
 const char* shade_instance_fragment();
 const char* shade_envlight_fragment();
 const char* shade_enivronment_fragment();
