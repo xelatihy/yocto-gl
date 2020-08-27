@@ -476,6 +476,10 @@ void draw_widgets(gui_window* win, app_states* apps, const gui_input& input) {
     draw_combobox(win, "environments##2", app->selected_environment,
         app->ioscene->environments);
     if (draw_widgets(win, app->ioscene, app->selected_environment)) {
+      auto ioenvironment = app->selected_environment;
+      auto glenvironment = get_element(ioenvironment,
+          app->ioscene->environments, app->glscene->environments);
+      set_emission(glenvironment, ioenvironment->emission);
     }
     end_header(win);
   }
