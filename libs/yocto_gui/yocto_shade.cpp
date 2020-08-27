@@ -502,7 +502,7 @@ void set_instance_uniforms(ogl_program* program, const frame3f& frame,
   set_texture(
       program, "opacity_tex", "opacity_tex_on", material->opacity_tex, 4);
   set_texture(
-      program, "mat_norm_tex", "mat_norm_tex_on", material->normal_tex, 5);
+      program, "normalmap_tex", "normalmap_tex_on", material->normal_tex, 5);
 
   assert_ogl_error();
 
@@ -833,7 +833,36 @@ const char* draw_instances_eyelight_fragment_code() {
       R"(
 #version 330
 
-float pif = 3.14159265;
+in vec3 position;  // [from vertex shader] position in world space
+in vec3 normal;    // [from vertex shader] normal in world space
+in vec2 texcoord;  // [from vertex shader] texcoord
+in vec4 color;     // [from vertex shader] color
+in vec4 tangsp;    // [from vertex shader] tangent space
+
+uniform int etype;
+uniform int  mtype;
+uniform bool faceted;
+uniform vec4 highlight;
+uniform bool double_sided;
+
+uniform vec3 emission;            // material ke
+uniform vec3 diffuse;             // material kd
+uniform vec3 specular;            // material ks
+uniform float roughness;          // material rs
+uniform float opacity;            // material op
+
+uniform bool emission_tex_on;     // material ke texture on
+uniform sampler2D emission_tex;   // material ke texture
+uniform bool diffuse_tex_on;      // material kd texture on
+uniform sampler2D diffuse_tex;    // material kd texture
+uniform bool specular_tex_on;     // material ks texture on
+uniform sampler2D specular_tex;   // material ks texture
+uniform bool roughness_tex_on;    // material rs texture on
+uniform sampler2D roughness_tex;  // material rs texture
+uniform bool opacity_tex_on;      // material op texture on
+uniform sampler2D opacity_tex;    // material op texture
+uniform bool normalmap_tex_on;    // material normal texture on
+uniform sampler2D normalmap_tex;  // material normal texture
 
 uniform bool eyelight;         // eyelight shading
 uniform vec3 lamb;             // ambient light
@@ -841,6 +870,20 @@ uniform int  lnum;             // number of lights
 uniform int  ltype[16];        // light type (0 -> point, 1 -> directional)
 uniform vec3 lpos[16];         // light positions
 uniform vec3 lke[16];          // light intensities
+
+uniform mat4 frame;              // shape transform
+uniform mat4 frameit;            // shape transform
+
+uniform vec3 eye;              // camera position
+uniform mat4 view;             // inverse of the camera frame (as a matrix)
+uniform mat4 projection;       // camera projection
+
+uniform float exposure; 
+uniform float gamma;
+
+out vec4 frag_color;      
+
+float pif = 3.14159265;
 
 void evaluate_light(int lid, vec3 position, out vec3 cl, out vec3 wi) {
   cl = vec3(0,0,0);
@@ -893,36 +936,6 @@ vec3 brdfcos(int etype, vec3 ke, vec3 kd, vec3 ks, float rs, float op,
   }
 }
 
-uniform int etype;
-uniform bool faceted;
-uniform vec4 highlight;           // highlighted color
-
-uniform int mtype;                // material type
-uniform vec3 emission;            // material ke
-uniform vec3 diffuse;             // material kd
-uniform vec3 specular;            // material ks
-uniform float roughness;          // material rs
-uniform float opacity;            // material op
-
-uniform bool emission_tex_on;     // material ke texture on
-uniform sampler2D emission_tex;   // material ke texture
-uniform bool diffuse_tex_on;      // material kd texture on
-uniform sampler2D diffuse_tex;    // material kd texture
-uniform bool specular_tex_on;     // material ks texture on
-uniform sampler2D specular_tex;   // material ks texture
-uniform bool roughness_tex_on;    // material rs texture on
-uniform sampler2D roughness_tex;  // material rs texture
-uniform bool opacity_tex_on;      // material op texture on
-uniform sampler2D opacity_tex;    // material op texture
-
-uniform bool mat_norm_tex_on;     // material normal texture on
-uniform sampler2D mat_norm_tex;   // material normal texture
-
-uniform bool double_sided;        // double sided rendering
-
-uniform mat4 frame;              // shape transform
-uniform mat4 frameit;            // shape transform
-
 bool evaluate_material(vec2 texcoord, vec4 color, out vec3 ke, 
                     out vec3 kd, out vec3 ks, out float rs, out float op) {
   ke = color.xyz * emission;
@@ -951,29 +964,14 @@ bool evaluate_material(vec2 texcoord, vec4 color, out vec3 ke,
 }
 
 vec3 apply_normal_map(vec2 texcoord, vec3 normal, vec4 tangsp) {
-    if(!mat_norm_tex_on) return normal;
+    if(!normalmap_tex_on) return normal;
   vec3 tangu = normalize((frame * vec4(normalize(tangsp.xyz),0)).xyz);
   vec3 tangv = normalize(cross(normal, tangu));
   if(tangsp.w < 0) tangv = -tangv;
-  vec3 texture = 2 * pow(texture(mat_norm_tex,texcoord).xyz, vec3(1/2.2)) - 1;
+  vec3 texture = 2 * pow(texture(normalmap_tex,texcoord).xyz, vec3(1/2.2)) - 1;
   // texture.y = -texture.y;
   return normalize( tangu * texture.x + tangv * texture.y + normal * texture.z );
 }
-
-in vec3 position;              // [from vertex shader] position in world space
-in vec3 normal;                // [from vertex shader] normal in world space (need normalization)
-in vec2 texcoord;              // [from vertex shader] texcoord
-in vec4 color;                 // [from vertex shader] color
-in vec4 tangsp;                // [from vertex shader] tangent space
-
-uniform vec3 eye;              // camera position
-uniform mat4 view;             // inverse of the camera frame (as a matrix)
-uniform mat4 projection;       // camera projection
-
-uniform float exposure; 
-uniform float gamma;
-
-out vec4 frag_color;      
 
 vec3 triangle_normal(vec3 position) {
   vec3 fdx = dFdx(position); 
@@ -1065,23 +1063,17 @@ in vec2 texcoord;  // [from vertex shader] texcoord
 in vec4 color;     // [from vertex shader] color
 in vec4 tangsp;    // [from vertex shader] tangent space
 
-float pif = 3.14159265;
-
 uniform int  etype;
 uniform int  mtype;
 uniform bool faceted;
-uniform int  shading_type;
+uniform vec4 highlight;
+uniform bool double_sided;
 
 uniform vec3  emission;   // material ke
 uniform vec3  diffuse;    // material kd
 uniform vec3  specular;   // material ks
 uniform float roughness;  // material rs
 uniform float opacity;    // material op
-
-// precomputed textures for image based lighting
-uniform samplerCube irradiance_cubemap;
-uniform samplerCube reflection_cubemap;
-uniform sampler2D   brdf_lut;
 
 uniform bool      emission_tex_on;   // material ke texture on
 uniform sampler2D emission_tex;      // material ke texture
@@ -1093,11 +1085,13 @@ uniform bool      roughness_tex_on;  // material rs texture on
 uniform sampler2D roughness_tex;     // material rs texture
 uniform bool      opacity_tex_on;    // material op texture on
 uniform sampler2D opacity_tex;       // material op texture
+uniform bool      normalmap_tex_on;  // material normal texture on
+uniform sampler2D normalmap_tex;     // material normal texture
 
-uniform bool      mat_norm_tex_on;  // material normal texture on
-uniform sampler2D mat_norm_tex;     // material normal texture
-
-uniform bool double_sided;  // double sided rendering
+// precomputed textures for image based lighting
+uniform samplerCube irradiance_cubemap;
+uniform samplerCube reflection_cubemap;
+uniform sampler2D   brdf_lut;
 
 uniform mat4 frame;    // shape transform
 uniform mat4 frameit;  // shape transform
@@ -1110,6 +1104,8 @@ uniform float exposure;
 uniform float gamma;
 
 out vec4 frag_color;
+
+float pif = 3.14159265;
 
 struct brdf_struct {
   vec3  emission;
@@ -1141,11 +1137,11 @@ brdf_struct compute_brdf() {
 }
 
 vec3 apply_normal_map(vec2 texcoord, vec3 normal, vec4 tangsp) {
-  if (!mat_norm_tex_on) return normal;
+  if (!normalmap_tex_on) return normal;
   vec3 tangu = normalize((frame * vec4(normalize(tangsp.xyz), 0)).xyz);
   vec3 tangv = normalize(cross(normal, tangu));
   if (tangsp.w < 0) tangv = -tangv;
-  vec3 texture = 2 * pow(texture(mat_norm_tex, texcoord).xyz, vec3(1 / 2.2)) -
+  vec3 texture = 2 * pow(texture(normalmap_tex, texcoord).xyz, vec3(1 / 2.2)) -
                  1;
   // texture.y = -texture.y;
   return normalize(tangu * texture.x + tangv * texture.y + normal * texture.z);
