@@ -556,15 +556,16 @@ void set_camlight_uniforms(
   auto& lights = camera_lights;
   set_uniform(program, "lighting", 1);
   set_uniform(program, "ambient", vec3f{0, 0, 0});
-  set_uniform(program, "lnum", (int)lights.size());
+  set_uniform(program, "lights_num", (int)lights.size());
   auto lid = 0;
   for (auto light : lights) {
     auto is = std::to_string(lid);
     if (light->camera) {
       auto position = transform_direction(view.camera_frame, light->position);
-      set_uniform(program, ("lpos[" + is + "]").c_str(), position);
+      set_uniform(program, ("lights_position[" + is + "]").c_str(), position);
     } else {
-      set_uniform(program, ("lpos[" + is + "]").c_str(), light->position);
+      set_uniform(
+          program, ("lights_position[" + is + "]").c_str(), light->position);
     }
     set_uniform(
         program, ("lights_emission[" + is + "]").c_str(), light->emission);
@@ -868,10 +869,10 @@ uniform sampler2D normalmap_tex;  // material normal texture
 
 uniform int  lighting;            // eyelight shading
 uniform vec3 ambient;             // ambient light
-uniform int  lnum;                // number of lights
+uniform int  lights_num;                // number of lights
 uniform int  lights_type[16];     // light type (0 -> point, 1 -> directional)
-uniform vec3 lpos[16];            // light positions
-uniform vec3 lights_emission[16];          // light intensities
+uniform vec3 lights_position[16];            // light positions
+uniform vec3 lights_emission[16]; // light intensities
 
 // precomputed textures for image based lighting
 // uniform samplerCube envlight_irradiance;
@@ -932,15 +933,15 @@ void eval_light(int lid, vec3 position, out vec3 radiance, out vec3 incoming) {
   incoming = vec3(0,0,0);
   if(lights_type[lid] == 0) {
     // compute point light color at position
-    radiance = lights_emission[lid] / pow(length(lpos[lid]-position),2);
+    radiance = lights_emission[lid] / pow(length(lights_position[lid]-position),2);
     // compute light direction at position
-    incoming = normalize(lpos[lid]-position);
+    incoming = normalize(lights_position[lid]-position);
   }
   else if(lights_type[lid] == 1) {
     // compute light color
     radiance = lights_emission[lid];
     // compute light direction
-    incoming = normalize(lpos[lid]);
+    incoming = normalize(lights_position[lid]);
   }
 }
 
@@ -1043,7 +1044,7 @@ void main() {
       // accumulate ambient
       radiance += ambient * brdf.diffuse;
       // foreach light
-      for(int lid = 0; lid < lnum; lid ++) {
+      for(int lid = 0; lid < lights_num; lid ++) {
         vec3 cl = vec3(0,0,0); vec3 incoming = vec3(0,0,0);
         eval_light(lid, position, cl, incoming);
         radiance += cl * eval_brdfcos(brdf, n, incoming, outgoing);
