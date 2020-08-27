@@ -34,11 +34,9 @@
 #include <algorithm>
 #include <array>
 #include <cstdarg>
-#include <filesystem>
 #include <memory>
 #include <mutex>
 #include <stdexcept>
-#include <string>
 #include <unordered_map>
 #include <utility>
 
@@ -67,6 +65,7 @@ namespace yocto {
 // using directives
 using std::array;
 using std::mutex;
+using std::pair;
 using std::unordered_map;
 using namespace std::string_literals;
 
@@ -424,7 +423,7 @@ struct filedialog_state {
     } else if (path_exists(dirname) && path_isdir(dirname)) {
       // leave it like this
     } else {
-      dirname = std::filesystem::current_path().u8string();
+      dirname = path_current();
     }
     dirname = normalize_path(dirname);
     entries.clear();

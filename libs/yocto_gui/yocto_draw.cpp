@@ -29,8 +29,6 @@
 
 #include "yocto_draw.h"
 
-#include <yocto/yocto_commonio.h>
-
 #include <array>
 #include <memory>
 

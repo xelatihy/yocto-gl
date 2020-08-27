@@ -172,6 +172,9 @@ vector<string> list_directory(const string& filename);
 // Create a directory and all missing parent directories if needed
 bool make_directory(const string& dirname, string& error);
 
+// Get the current directory
+string path_current();
+
 }  // namespace yocto
 
 // -----------------------------------------------------------------------------
