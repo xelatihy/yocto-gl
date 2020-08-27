@@ -131,13 +131,13 @@ struct gui_environment {
   gui_texture* emission_tex = nullptr;
 
   // drawing data
-  gui_shape*   environment_shape   = new gui_shape{};
-  ogl_cubemap* environment_cubemap = new ogl_cubemap{};
+  gui_shape*   shape   = new gui_shape{};
+  ogl_cubemap* cubemap = new ogl_cubemap{};
 
   // envlight precomputed data
-  ogl_cubemap* diffuse_cubemap  = new ogl_cubemap{};
-  ogl_cubemap* specular_cubemap = new ogl_cubemap{};
-  ogl_texture* brdf_lut         = new ogl_texture{};
+  ogl_cubemap* envlight_diffuse  = new ogl_cubemap{};
+  ogl_cubemap* envlight_specular = new ogl_cubemap{};
+  ogl_texture* envlight_brdflut  = new ogl_texture{};
 
   // Disable copy construction
   gui_environment()                       = default;

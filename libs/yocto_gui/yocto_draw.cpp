@@ -377,25 +377,25 @@ gui_shape* add_shape(gui_scene* scene, const vector<int>& points,
 
 // cleanup
 gui_environment::~gui_environment() {
-  delete environment_shape;
-  delete environment_cubemap;
-  delete diffuse_cubemap;
-  delete specular_cubemap;
-  delete brdf_lut;
+  delete shape;
+  delete cubemap;
+  delete envlight_diffuse;
+  delete envlight_specular;
+  delete envlight_brdflut;
 }
 
 // cheeck if initialized
 bool is_initialized(const gui_environment* environment) {
-  return is_initialized(environment->environment_shape);
+  return is_initialized(environment->shape);
 }
 
 // clear
 void clear_environment(gui_environment* environment) {
-  clear_shape(environment->environment_shape);
-  clear_cubemap(environment->environment_cubemap);
-  clear_cubemap(environment->diffuse_cubemap);
-  clear_cubemap(environment->specular_cubemap);
-  clear_texture(environment->brdf_lut);
+  clear_shape(environment->shape);
+  clear_cubemap(environment->cubemap);
+  clear_cubemap(environment->envlight_diffuse);
+  clear_cubemap(environment->envlight_specular);
+  clear_texture(environment->envlight_brdflut);
 }
 
 // environment properties
@@ -528,9 +528,9 @@ void draw_environments(gui_scene* scene, const gui_scene_view& view) {
   bind_program(program);
   set_scene_view_uniforms(program, view);
   for (auto environment : scene->environments) {
-    if (!is_initialized(environment->environment_cubemap)) continue;
-    set_uniform(program, "environment", environment->environment_cubemap, 0);
-    draw_shape(environment->environment_shape);
+    if (!is_initialized(environment->cubemap)) continue;
+    set_uniform(program, "environment", environment->cubemap, 0);
+    draw_shape(environment->shape);
   }
   unbind_program();
 }
@@ -574,15 +574,15 @@ void set_eyelight_uniforms(ogl_program* program, const gui_scene_view& view) {
 
 void set_ibl_uniforms(ogl_program* program, const gui_scene* scene) {
   auto environment = scene->environments.front();
-  set_uniform(program, "irradiance_cubemap", environment->diffuse_cubemap, 6);
-  set_uniform(program, "reflection_cubemap", environment->specular_cubemap, 7);
-  set_uniform(program, "brdf_lut", environment->brdf_lut, 8);
+  set_uniform(program, "irradiance_cubemap", environment->envlight_diffuse, 6);
+  set_uniform(program, "reflection_cubemap", environment->envlight_specular, 7);
+  set_uniform(program, "brdf_lut", environment->envlight_brdflut, 8);
 }
 
 void draw_instances(gui_scene* scene, const gui_scene_view& view) {
   auto program = scene->camlight_program;
   if (!scene->environments.empty() &&
-      is_initialized(scene->environments.front()->environment_cubemap) &&
+      is_initialized(scene->environments.front()->cubemap) &&
       view.params.lighting == gui_lighting_type::envlight) {
     program = scene->envlight_program;
   }
@@ -736,7 +736,7 @@ inline void precompute_specular_brdf_texture(ogl_texture* texture) {
 
 static void init_environment(gui_environment* environment) {
   // init program and shape for drawing the environment
-  set_cube_shape(environment->environment_shape->shape);
+  set_cube_shape(environment->shape->shape);
 
   // precompute cubemap from environment texture
   auto size          = environment->emission_tex->texture->size.y;
@@ -744,9 +744,8 @@ static void init_environment(gui_environment* environment) {
   auto program       = program_guard.get();
   init_program(program, precompute_cubemap_vertex_code(),
       precompute_environment_fragment_code());
-  precompute_cubemap(environment->environment_cubemap,
-      environment->emission_tex->texture, program, size, 1,
-      environment->emission);
+  precompute_cubemap(environment->cubemap, environment->emission_tex->texture,
+      program, size, 1, environment->emission);
   clear_program(program);
 }
 
@@ -757,8 +756,8 @@ void init_envlight(gui_environment* environment) {
   auto vert                  = precompute_cubemap_vertex_code();
   auto frag                  = precompute_irradiance_fragment_code();
   init_program(diffuse_program, vert, frag);
-  precompute_cubemap(environment->diffuse_cubemap,
-      environment->environment_cubemap, diffuse_program, 64);
+  precompute_cubemap(
+      environment->envlight_diffuse, environment->cubemap, diffuse_program, 64);
   clear_program(diffuse_program);
   diffuse_program_guard.release();
 
@@ -767,13 +766,13 @@ void init_envlight(gui_environment* environment) {
   auto specular_program       = specular_program_guard.get();
   init_program(specular_program, precompute_cubemap_vertex_code(),
       precompute_reflections_fragment_code());
-  precompute_cubemap(environment->specular_cubemap,
-      environment->environment_cubemap, specular_program, 256, 6);
+  precompute_cubemap(environment->envlight_specular, environment->cubemap,
+      specular_program, 256, 6);
   clear_program(specular_program);
   specular_program_guard.release();
 
   // bake lookup texture for specular brdf
-  precompute_specular_brdf_texture(environment->brdf_lut);
+  precompute_specular_brdf_texture(environment->envlight_brdflut);
 }
 
 const char* draw_instances_vertex_code() {
