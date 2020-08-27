@@ -197,6 +197,12 @@ void init_environments(shade_scene* scene, bool precompute_envlight) {
   }
 }
 
+// Check if we have an envlight
+bool has_envlight(shade_scene* scene) {
+  return !scene->environments.empty() &&
+         is_initialized(scene->environments.front()->cubemap);
+}
+
 // Clear an OpenGL scene
 void clear_scene(shade_scene* scene) {
   for (auto texture : scene->textures) clear_texture(texture);
@@ -580,6 +586,7 @@ void set_camlight_uniforms(
 
 void set_envlight_uniforms(
     ogl_program* program, const shade_scene* scene, const shade_view& view) {
+  if (!has_envlight(scene)) return;
   auto environment = scene->environments.front();
   set_uniform(program, "irradiance_cubemap", environment->envlight_diffuse, 6);
   set_uniform(program, "reflection_cubemap", environment->envlight_specular, 7);
@@ -588,13 +595,9 @@ void set_envlight_uniforms(
 
 void draw_instances(
     shade_scene* scene, const shade_view& view, const shade_params& params) {
-  // check that we have an envlight to avoid crashing
-  auto has_envlight = !scene->environments.empty() &&
-                      is_initialized(scene->environments.front()->cubemap);
-
   // set program
   auto program =
-      (params.lighting == shade_lighting_type::camlight || !has_envlight)
+      (params.lighting == shade_lighting_type::camlight || !has_envlight(scene))
           ? scene->camlight_program
           : scene->envlight_program;
   bind_program(program);
@@ -604,7 +607,8 @@ void draw_instances(
   set_params_uniforms(program, params);
 
   // set lighting uniforms
-  if (params.lighting == shade_lighting_type::camlight || !has_envlight) {
+  if (params.lighting == shade_lighting_type::camlight ||
+      !has_envlight(scene)) {
     set_camlight_uniforms(program, scene, view);
   } else {
     set_envlight_uniforms(program, scene, view);
