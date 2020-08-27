@@ -29,16 +29,7 @@
 
 #include "yocto_opengl.h"
 
-#include <yocto/yocto_commonio.h>
-
-#include <algorithm>
-#include <array>
 #include <cassert>
-#include <cstdarg>
-#include <stdexcept>
-#include <string>
-#include <unordered_set>
-#include <utility>
 
 #include "ext/glad/glad.h"
 
@@ -46,36 +37,6 @@
 #undef near
 #undef far
 #endif
-
-// -----------------------------------------------------------------------------
-// USING DIRECTIVES
-// -----------------------------------------------------------------------------
-namespace yocto {
-
-// using directives
-using std::unordered_set;
-using namespace std::string_literals;
-
-}  // namespace yocto
-
-// -----------------------------------------------------------------------------
-// VECTOR HASHING
-// -----------------------------------------------------------------------------
-namespace std {
-
-// Hash functor for vector for use with hash_map
-template <>
-struct hash<yocto::vec2i> {
-  size_t operator()(const yocto::vec2i& v) const {
-    static const auto hasher = std::hash<int>();
-    auto              h      = (size_t)0;
-    h ^= hasher(v.x) + 0x9e3779b9 + (h << 6) + (h >> 2);
-    h ^= hasher(v.y) + 0x9e3779b9 + (h << 6) + (h >> 2);
-    return h;
-  }
-};
-
-}  // namespace std
 
 // -----------------------------------------------------------------------------
 // LOW-LEVEL OPENGL HELPERS
@@ -93,7 +54,7 @@ bool init_ogl(string& error) {
 GLenum _assert_ogl_error() {
   auto error_code = glGetError();
   if (error_code != GL_NO_ERROR) {
-    auto error = ""s;
+    auto error = string{};
     switch (error_code) {
       case GL_INVALID_ENUM: error = "INVALID_ENUM"; break;
       case GL_INVALID_VALUE: error = "INVALID_VALUE"; break;
