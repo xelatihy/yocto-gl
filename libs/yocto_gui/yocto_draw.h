@@ -94,6 +94,7 @@ struct shade_material {
   shade_texture* specular_tex  = nullptr;
   shade_texture* opacity_tex   = nullptr;
   shade_texture* normal_tex    = nullptr;
+  bool           unlit         = false;
 };
 
 struct shade_shape {
@@ -115,12 +116,11 @@ enum struct shade_shading_type { constant = 0, shaded };
 // Opengl instance
 struct shade_instance {
   // instance properties
-  frame3f                           frame       = identity3x4f;
-  shade_shape*                      shape       = nullptr;
-  shade_material*                   material    = nullptr;
-  bool                              hidden      = false;
-  bool                              highlighted = false;
-  [[deprecated]] shade_shading_type shading     = shade_shading_type::shaded;
+  frame3f         frame       = identity3x4f;
+  shade_shape*    shape       = nullptr;
+  shade_material* material    = nullptr;
+  bool            hidden      = false;
+  bool            highlighted = false;
 };
 
 // Opengl environment
@@ -259,6 +259,7 @@ void set_specular(shade_material* material, float specular,
 void set_opacity(shade_material* material, float opacity,
     shade_texture* opacity_tex = nullptr);
 void set_normalmap(shade_material* material, shade_texture* normal_tex);
+void set_unlit(shade_material* material, bool unlit);
 
 // cheeck if initialized
 bool is_initialized(const shade_shape* shape);

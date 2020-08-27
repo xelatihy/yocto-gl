@@ -356,6 +356,9 @@ void set_metallic(
 void set_normalmap(shade_material* material, shade_texture* normal_tex) {
   material->normal_tex = normal_tex;
 }
+void set_unlit(shade_material* material, bool unlit) {
+  material->unlit = unlit;
+}
 
 shade_shape* add_shape(shade_scene* scene, const vector<int>& points,
     const vector<vec2i>& lines, const vector<vec3i>& triangles,
@@ -474,8 +477,8 @@ void set_params_uniforms(ogl_program* program, const shade_params& params) {
 
 // Draw a shape
 void set_instance_uniforms(ogl_program* program, const frame3f& frame,
-    const shade_shape* shape, const shade_material* material,
-    shade_shading_type shading, bool double_sided, bool non_rigid_frames) {
+    const shade_shape* shape, const shade_material* material, bool double_sided,
+    bool non_rigid_frames) {
   auto shape_xform     = frame_to_mat(frame);
   auto shape_inv_xform = transpose(
       frame_to_mat(inverse(frame, non_rigid_frames)));
@@ -495,8 +498,7 @@ void set_instance_uniforms(ogl_program* program, const frame3f& frame,
         texture == nullptr ? nullptr : texture->texture, unit);
   };
 
-  auto mtype = (int)shading;
-  set_uniform(program, "mtype", mtype);
+  set_uniform(program, "mtype", material->unlit ? 0 : 1);
   set_uniform(program, "emission", material->emission);
   set_uniform(program, "diffuse", material->color);
   set_uniform(program, "specular",
@@ -618,8 +620,7 @@ void draw_instances(
   for (auto instance : scene->instances) {
     if (instance->hidden) continue;
     set_instance_uniforms(program, instance->frame, instance->shape,
-        instance->material, instance->shading, params.double_sided,
-        params.non_rigid_frames);
+        instance->material, params.double_sided, params.non_rigid_frames);
     draw_shape(instance->shape);
   }
   unbind_program();

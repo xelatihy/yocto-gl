@@ -195,6 +195,8 @@ void init_glscene(app_state* app, shade_scene* glscene, generic_shape* ioshape,
   auto glmaterial  = add_material(glscene, {0, 0, 0}, {0.5, 1, 0.5}, 1, 0, 0.2);
   auto glmateriale = add_material(glscene, {0, 0, 0}, {0, 0, 0}, 0, 0, 1);
   auto glmaterialv = add_material(glscene, {0, 0, 0}, {0, 0, 0}, 0, 0, 1);
+  set_unlit(glmateriale, true);
+  set_unlit(glmaterialv, true);
 
   // shapes
   if (progress_cb) progress_cb("convert shape", progress.x++, progress.y);
@@ -241,31 +243,15 @@ void init_glscene(app_state* app, shade_scene* glscene, generic_shape* ioshape,
   // shapes
   if (progress_cb) progress_cb("convert instance", progress.x++, progress.y);
   add_instance(glscene, identity3x4f, model_shape, glmaterial);
-
-  auto edges_instance = add_instance(
-      glscene, identity3x4f, edges_shape, glmateriale, true);
-  edges_instance->shading = shade_shading_type::constant;
-
-  auto points_instance = add_instance(
-      glscene, identity3x4f, vertices_shape, glmaterialv, true);
-  points_instance->shading = shade_shading_type::constant;
+  add_instance(glscene, identity3x4f, edges_shape, glmateriale, true);
+  add_instance(glscene, identity3x4f, vertices_shape, glmaterialv, true);
 
   // override eyelight vertex shader
-  auto vert = draw_instanced_vertex_code();
-  auto frag = draw_instances_eyelight_fragment_code();
-  init_program(glscene->camlight_program, vert, frag);
+  init_program(glscene->camlight_program, draw_instanced_vertex_code(),
+      draw_instances_eyelight_fragment_code());
 
   // done
   if (progress_cb) progress_cb("convert done", progress.x++, progress.y);
-
-  // init_program(glscene->ibl_program, vertex_source,
-  //     draw_instances_ibl_fragment_code(), error, errorb);
-
-  // auto img = image<vec4f>{};
-  // load_image("apps/yshapeview/env.hdr", img, error);
-  // auto texture = new ogl_texture{};
-  // set_texture(texture, img, true, true, true);
-  // init_ibl_data(glscene, texture, {1, 1, 1});
 }
 
 // draw with shading
