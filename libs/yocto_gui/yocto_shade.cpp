@@ -873,6 +873,11 @@ uniform int  lights_type[16];     // light type (0 -> point, 1 -> directional)
 uniform vec3 lpos[16];            // light positions
 uniform vec3 lights_emission[16];          // light intensities
 
+// precomputed textures for image based lighting
+// uniform samplerCube envlight_irradiance;
+// uniform samplerCube envlight_reflection;
+// uniform sampler2D   envlight_brdflut;
+
 uniform mat4 frame;              // shape transform
 uniform mat4 frameit;            // shape transform
 
@@ -999,8 +1004,15 @@ vec3 eval_normal(vec3 outgoing) {
   return norm;
 }
     
+// vec3 sample_prefiltered_refleciton(vec3 incoming, float roughness) {
+//   int   MAX_REFLECTION_LOD = 5;
+//   float lod                = sqrt(roughness) * MAX_REFLECTION_LOD;
+//   return textureLod(envlight_reflection, incoming, lod).rgb;
+// }
+
 #define lighting_eyelight 0
 #define lighting_camlight 1
+#define lighting_envlight 2
 
 // main
 void main() {
@@ -1037,6 +1049,15 @@ void main() {
         radiance += cl * eval_brdfcos(brdf, n, incoming, outgoing);
       }
     }
+    // if (lighting == lighting_envlight) {
+    //   // diffuse
+    //   radiance += brdf.diffuse * textureLod(envlight_irradiance, n, 0).rgb;
+    //   // specular
+    //   vec3 incoming   = normalize(reflect(-outgoing, n));
+    //   vec3 reflection = sample_prefiltered_refleciton(incoming, brdf.roughness);
+    //   vec2 env_brdf   = texture(envlight_brdflut, vec2(max(dot(n, outgoing), 0.0), roughness)).rg;
+    //   radiance += reflection * (brdf.specular * env_brdf.x + env_brdf.y);
+    // }
   }
 
   // final color correction
