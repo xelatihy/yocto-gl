@@ -522,18 +522,16 @@ void set_instance_uniforms(ogl_program* program, const frame3f& frame,
 
 static void draw_shape(gui_shape* shape) { draw_shape(shape->shape); }
 
-void draw_environment(gui_scene* scene, const gui_scene_view& view) {
-  auto environment = scene->environments.front();
-
+void draw_environments(gui_scene* scene, const gui_scene_view& view) {
   auto program = scene->environment_program;
-  if (program->program_id == 0) return;
-
+  if (!is_initialized(program)) return;
   bind_program(program);
-
   set_scene_view_uniforms(program, view);
-  set_uniform(program, "environment", environment->environment_cubemap, 0);
-  draw_shape(environment->environment_shape);
-
+  for (auto environment : scene->environments) {
+    if (!is_initialized(environment->environment_cubemap)) continue;
+    set_uniform(program, "environment", environment->environment_cubemap, 0);
+    draw_shape(environment->environment_shape);
+  }
   unbind_program();
 }
 
@@ -638,7 +636,7 @@ void draw_scene(gui_scene* scene, gui_camera* camera, const vec4i& viewport,
 
   auto view = make_scene_view(camera, viewport, params);
   draw_instances(scene, view);
-  draw_environment(scene, view);
+  draw_environments(scene, view);
 }
 
 // image based lighting

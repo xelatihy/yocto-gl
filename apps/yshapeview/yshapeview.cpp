@@ -251,9 +251,6 @@ void init_glscene(app_state* app, gui_scene* glscene, generic_shape* ioshape,
       glscene, identity3x4f, vertices_shape, glmaterialv, true);
   points_instance->shading = gui_shading_type::constant;
 
-  // init scene
-  init_scene(glscene);
-
   // override eyelight vertex shader
   auto vert = draw_instanced_vertex_code();
   auto frag = draw_instances_eyelight_fragment_code();
