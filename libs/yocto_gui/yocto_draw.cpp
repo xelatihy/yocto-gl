@@ -588,13 +588,15 @@ void set_envlight_uniforms(
 
 void draw_instances(
     shade_scene* scene, const shade_view& view, const shade_params& params) {
-  auto program = scene->camlight_program;
-  if (!scene->environments.empty() &&
-      is_initialized(scene->environments.front()->cubemap) &&
-      view.params.lighting == shade_lighting_type::envlight) {
-    program = scene->envlight_program;
-  }
+  // check that we have an envlight to avoid crashing
+  auto has_envlight = !scene->environments.empty() &&
+                      is_initialized(scene->environments.front()->cubemap);
 
+  // set program
+  auto program =
+      (params.lighting == shade_lighting_type::camlight || !has_envlight)
+          ? scene->camlight_program
+          : scene->envlight_program;
   bind_program(program);
 
   // set scene uniforms
@@ -602,18 +604,18 @@ void draw_instances(
   set_params_uniforms(program, params);
 
   // set lighting uniforms
-  if (view.params.lighting == shade_lighting_type::camlight) {
+  if (params.lighting == shade_lighting_type::camlight || !has_envlight) {
     set_camlight_uniforms(program, scene, view);
   } else {
     set_envlight_uniforms(program, scene, view);
   }
 
-  set_ogl_wireframe(view.params.wireframe);
+  set_ogl_wireframe(params.wireframe);
   for (auto instance : scene->instances) {
     if (instance->hidden) continue;
     set_instance_uniforms(program, instance->frame, instance->shape,
-        instance->material, instance->shading, view.params.double_sided,
-        view.params.non_rigid_frames);
+        instance->material, instance->shading, params.double_sided,
+        params.non_rigid_frames);
     draw_shape(instance->shape);
   }
   unbind_program();

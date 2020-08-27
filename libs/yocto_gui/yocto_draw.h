@@ -322,10 +322,9 @@ shade_environment* add_environment(shade_scene* scene, const frame3f& frame,
 
 // internal drawing functions
 struct shade_view {
-  frame3f                     camera_frame      = {};
-  mat4f                       view_matrix       = {};
-  mat4f                       projection_matrix = {};
-  [[deprecated]] shade_params params            = {};
+  frame3f camera_frame      = {};
+  mat4f   view_matrix       = {};
+  mat4f   projection_matrix = {};
 };
 
 void set_view_uniforms(ogl_program* program, const shade_view& view);
