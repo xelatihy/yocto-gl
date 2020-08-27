@@ -434,10 +434,17 @@ namespace yocto {
 
 // OpenGL image data
 struct ogl_image {
-  ~ogl_image();
   ogl_program* program = new ogl_program{};
   ogl_texture* texture = new ogl_texture{};
   ogl_shape*   quad    = new ogl_shape{};
+
+  // Disable copy construction
+  ogl_image()                 = default;
+  ogl_image(const ogl_image&) = delete;
+  ogl_image& operator=(const ogl_image&) = delete;
+
+  // Cleanup
+  ~ogl_image();
 };
 
 // create image drawing program
