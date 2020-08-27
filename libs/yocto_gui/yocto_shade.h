@@ -209,10 +209,6 @@ bool has_envlight(const shade_scene* scene);
 // Clear an OpenGL scene
 void clear_scene(shade_scene* scene);
 
-// old interface
-[[deprecated]] void init_scene(shade_scene* scene,
-    shade_texture* environment_tex, const vec3f& environment_emission);
-
 // add scene elements
 shade_camera*      add_camera(shade_scene* scene);
 shade_texture*     add_texture(shade_scene* scene);

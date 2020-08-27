@@ -213,17 +213,6 @@ void clear_scene(shade_scene* scene) {
   clear_program(scene->envlight_program);
 }
 
-// Initialize an OpenGL scene
-[[deprecated]] void init_scene(shade_scene* scene,
-    shade_texture* environment_tex, const vec3f& environment_emission) {
-  if (is_initialized(scene->camlight_program)) return;
-  if (environment_tex && environment_emission != vec3f{0, 0, 0}) {
-    add_environment(scene, identity3x4f, environment_emission, environment_tex);
-  }
-  init_scene(scene);
-  init_environments(scene);
-}
-
 // add camera
 shade_camera* add_camera(shade_scene* scene) {
   return scene->cameras.emplace_back(new shade_camera{});
