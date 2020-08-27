@@ -197,16 +197,18 @@ struct gui_scene_params {
 };
 
 // Initialize an OpenGL scene
-[[deprecated]] void init_scene(gui_scene* scene,
-    gui_texture*                          environment_tex      = nullptr,
-    const vec3f&                          environment_emission = {1, 1, 1});
-bool                is_initialized(const gui_scene* scene);
+void init_scene(gui_scene* scene);
+bool is_initialized(const gui_scene* scene);
 
 // Initialize data for environment lighting
 void init_environments(gui_scene* scene, bool precompute_envlight = true);
 
 // Clear an OpenGL scene
 void clear_scene(gui_scene* scene);
+
+// old interface
+[[deprecated]] void init_scene(gui_scene* scene, gui_texture* environment_tex,
+    const vec3f& environment_emission);
 
 // add scene elements
 gui_camera*      add_camera(gui_scene* scene);

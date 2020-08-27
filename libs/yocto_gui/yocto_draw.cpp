@@ -176,15 +176,8 @@ static void init_environment(gui_environment* environment);
 static void init_envlight(gui_environment* environment);
 
 // Initialize an OpenGL scene
-void init_scene(gui_scene* scene, gui_texture* environment_tex,
-    const vec3f& environment_emission) {
+void init_scene(gui_scene* scene) {
   if (is_initialized(scene->camlight_program)) return;
-
-  // HACK
-  if (environment_tex && environment_emission != vec3f{0, 0, 0}) {
-    add_environment(scene, identity3x4f, environment_emission, environment_tex);
-  }
-
   auto error = ""s, errorlog = ""s;
   init_program(scene->camlight_program, draw_instances_vertex_code(),
       draw_instances_eyelight_fragment_code(), error, errorlog);
@@ -192,16 +185,18 @@ void init_scene(gui_scene* scene, gui_texture* environment_tex,
       draw_instances_ibl_fragment_code(), error, errorlog);
   init_program(scene->environment_program, precompute_cubemap_vertex_code(),
       draw_enivronment_fragment_code());
-
-  // HACK
-  for (auto environment : scene->environments) {
-    init_environment(environment);
-    init_envlight(environment);
-  }
 }
 
 bool is_initialized(gui_scene* scene) {
   return scene && is_initialized(scene->camlight_program);
+}
+
+// Initialize data for environment lighting
+void init_environments(gui_scene* scene, bool precompute_envlight) {
+  for (auto environment : scene->environments) {
+    init_environment(environment);
+    if (precompute_envlight) init_envlight(environment);
+  }
 }
 
 // Clear an OpenGL scene
@@ -212,6 +207,17 @@ void clear_scene(gui_scene* scene) {
   clear_program(scene->environment_program);
   clear_program(scene->camlight_program);
   clear_program(scene->envlight_program);
+}
+
+// Initialize an OpenGL scene
+[[deprecated]] void init_scene(gui_scene* scene, gui_texture* environment_tex,
+    const vec3f& environment_emission) {
+  if (is_initialized(scene->camlight_program)) return;
+  if (environment_tex && environment_emission != vec3f{0, 0, 0}) {
+    add_environment(scene, identity3x4f, environment_emission, environment_tex);
+  }
+  init_scene(scene);
+  init_environments(scene);
 }
 
 // add camera
