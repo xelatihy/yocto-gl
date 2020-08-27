@@ -885,31 +885,31 @@ out vec4 frag_color;
 
 float pif = 3.14159265;
 
-void evaluate_light(int lid, vec3 position, out vec3 cl, out vec3 wi) {
+void evaluate_light(int lid, vec3 position, out vec3 cl, out vec3 incoming) {
   cl = vec3(0,0,0);
-  wi = vec3(0,0,0);
+  incoming = vec3(0,0,0);
   if(ltype[lid] == 0) {
     // compute point light color at position
     cl = lke[lid] / pow(length(lpos[lid]-position),2);
     // compute light direction at position
-    wi = normalize(lpos[lid]-position);
+    incoming = normalize(lpos[lid]-position);
   }
   else if(ltype[lid] == 1) {
     // compute light color
     cl = lke[lid];
     // compute light direction
-    wi = normalize(lpos[lid]);
+    incoming = normalize(lpos[lid]);
   }
 }
 
 vec3 brdfcos(int etype, vec3 ke, vec3 kd, vec3 ks, float rs, float op,
-    vec3 n, vec3 wi, vec3 wo) {
+    vec3 n, vec3 incoming, vec3 outgoing) {
   if(etype == 0) return vec3(0);
-  vec3 wh = normalize(wi+wo);
+  vec3 halfway = normalize(incoming+outgoing);
   float ns = 2/(rs*rs)-2;
-  float ndi = dot(wi,n), ndo = dot(wo,n), ndh = dot(wh,n);
+  float ndi = dot(incoming,n), ndo = dot(outgoing,n), ndh = dot(halfway,n);
   if(etype == 1) {
-      return ((1+dot(wo,wi))/2) * kd/pif;
+      return ((1+dot(outgoing,incoming))/2) * kd/pif;
   } else if(etype == 2) {
       float si = sqrt(1-ndi*ndi);
       float so = sqrt(1-ndo*ndo);
@@ -987,7 +987,7 @@ void main() {
   }
 
   // view vector
-  vec3 wo = normalize(eye - position);
+  vec3 outgoing = normalize(eye - position);
 
   // prepare normals
   vec3 n;
@@ -1001,7 +1001,7 @@ void main() {
   n = apply_normal_map(texcoord, n, tangsp);
 
   // use faceforward to ensure the normals points toward us
-  if(double_sided) n = faceforward(n,-wo,n);
+  if(double_sided) n = faceforward(n,-outgoing,n);
 
   // get material color from textures
   vec3 brdf_ke, brdf_kd, brdf_ks; float brdf_rs, brdf_op;
@@ -1023,16 +1023,16 @@ void main() {
   if(brdf_kd != vec3(0,0,0) || brdf_ks != vec3(0,0,0)) {
     // eyelight shading
     if(eyelight) {
-      vec3 wi = wo;
-      c += pif * brdfcos((has_brdf) ? etype : 0, brdf_ke, brdf_kd, brdf_ks, brdf_rs, brdf_op, n,wi,wo);
+      vec3 incoming = outgoing;
+      c += pif * brdfcos((has_brdf) ? etype : 0, brdf_ke, brdf_kd, brdf_ks, brdf_rs, brdf_op, n,incoming,outgoing);
     } else {
       // accumulate ambient
       c += lamb * brdf_kd;
       // foreach light
       for(int lid = 0; lid < lnum; lid ++) {
-        vec3 cl = vec3(0,0,0); vec3 wi = vec3(0,0,0);
-        evaluate_light(lid, position, cl, wi);
-        c += cl * brdfcos((has_brdf) ? etype : 0, brdf_ke, brdf_kd, brdf_ks, brdf_rs, brdf_op, n,wi,wo);
+        vec3 cl = vec3(0,0,0); vec3 incoming = vec3(0,0,0);
+        evaluate_light(lid, position, cl, incoming);
+        c += cl * brdfcos((has_brdf) ? etype : 0, brdf_ke, brdf_kd, brdf_ks, brdf_rs, brdf_op, n,incoming,outgoing);
       }
     }
   }
