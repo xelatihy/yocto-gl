@@ -40,6 +40,7 @@ namespace yocto {
 
 // using directives
 using std::array;
+using std::make_unique;
 using namespace std::string_literals;
 
 }  // namespace yocto
@@ -57,23 +58,23 @@ namespace yocto {
 
 ogl_arraybuffer* get_positions(gui_shape* shape) {
   if (shape->vertex_buffers.size() <= 0) return nullptr;
-  return &shape->vertex_buffers[0];
+  return shape->vertex_buffers[0];
 }
 ogl_arraybuffer* get_normals(gui_shape* shape) {
   if (shape->vertex_buffers.size() <= 1) return nullptr;
-  return &shape->vertex_buffers[1];
+  return shape->vertex_buffers[1];
 }
 ogl_arraybuffer* get_texcoords(gui_shape* shape) {
   if (shape->vertex_buffers.size() <= 2) return nullptr;
-  return &shape->vertex_buffers[2];
+  return shape->vertex_buffers[2];
 }
 ogl_arraybuffer* get_colors(gui_shape* shape) {
   if (shape->vertex_buffers.size() <= 3) return nullptr;
-  return &shape->vertex_buffers[3];
+  return shape->vertex_buffers[3];
 }
 ogl_arraybuffer* get_tangents(gui_shape* shape) {
   if (shape->vertex_buffers.size() <= 4) return nullptr;
-  return &shape->vertex_buffers[4];
+  return shape->vertex_buffers[4];
 }
 
 void set_positions(gui_shape* shape, const vector<vec3f>& positions) {
@@ -210,10 +211,8 @@ gui_texture* add_texture(gui_scene* scene) {
 
 // add shape
 gui_shape* add_shape(gui_scene* scene) {
-  auto shape = new gui_shape{};
-  shape->vertex_buffers.resize(5);
-  set_shape(shape);
-  scene->shapes.push_back(shape);
+  auto shape = scene->shapes.emplace_back(new gui_shape{});
+  init_shape(shape);
   return shape;
 }
 
@@ -516,8 +515,9 @@ inline void bake_cubemap(ogl_cubemap* cubemap, const Sampler* environment,
   auto cube = ogl_shape{};
   set_cube_shape(&cube);
 
-  auto framebuffer = ogl_framebuffer{};
-  set_framebuffer(&framebuffer, {size, size});
+  auto framebuffer_guard = make_unique<ogl_framebuffer>();
+  auto framebuffer       = framebuffer_guard.get();
+  init_framebuffer(framebuffer, {size, size});
 
   auto cameras = array<frame3f, 6>{
       lookat_frame({0, 0, 0}, {1, 0, 0}, {0, 1, 0}),
@@ -528,11 +528,11 @@ inline void bake_cubemap(ogl_cubemap* cubemap, const Sampler* environment,
       lookat_frame({0, 0, 0}, {0, 0, 1}, {0, 1, 0}),
   };
 
-  bind_framebuffer(&framebuffer);
+  bind_framebuffer(framebuffer);
   bind_program(program);
   for (int mipmap_level = 0; mipmap_level < num_mipmap_levels; mipmap_level++) {
     // resize render buffer and viewport
-    set_framebuffer(&framebuffer, {size, size});
+    init_framebuffer(framebuffer, {size, size});
     set_ogl_viewport(vec2i{size, size});
 
     for (auto i = 0; i < 6; ++i) {
@@ -540,7 +540,7 @@ inline void bake_cubemap(ogl_cubemap* cubemap, const Sampler* environment,
       auto camera_proj = perspective_mat(radians(90), 1, 1, 100);
       auto camera_view = frame_to_mat(inverse(cameras[i]));
 
-      set_framebuffer_texture(&framebuffer, cubemap, i, mipmap_level);
+      set_framebuffer_texture(framebuffer, cubemap, i, mipmap_level);
       clear_ogl_framebuffer({0, 0, 0, 0}, true);
 
       set_uniform(program, "view", camera_view);
@@ -556,39 +556,42 @@ inline void bake_cubemap(ogl_cubemap* cubemap, const Sampler* environment,
   }
   unbind_program();
   unbind_framebuffer();
-  clear_framebuffer(&framebuffer);
+  clear_framebuffer(framebuffer);
 }
 
 inline void bake_specular_brdf_texture(gui_texture* texture) {
-  auto size        = vec2i{512, 512};
-  auto framebuffer = ogl_framebuffer{};
-  auto screen_quad = ogl_shape{};
-  set_quad_shape(&screen_quad);
+  auto size              = vec2i{512, 512};
+  auto screen_quad_guard = make_unique<ogl_shape>();
+  auto screen_quad       = screen_quad_guard.get();
+  set_quad_shape(screen_quad);
 
-  auto program = ogl_program{};
+  auto program_guard = make_unique<ogl_program>();
+  auto program       = program_guard.get();
   auto error = ""s, errorlog = ""s;
   auto vert = bake_brdf_vertex_code();
   auto frag = bake_brdf_fragment_code();
-  init_program(&program, vert, frag, error, errorlog);
+  init_program(program, vert, frag, error, errorlog);
 
   set_texture(texture, size, 3, (float*)nullptr, true, true, false, false);
 
-  set_framebuffer(&framebuffer, size);
-  set_framebuffer_texture(&framebuffer, texture, 0);
+  auto framebuffer_guard = make_unique<ogl_framebuffer>();
+  auto framebuffer       = framebuffer_guard.get();
+  init_framebuffer(framebuffer, size);
+  set_framebuffer_texture(framebuffer, texture, 0);
 
-  bind_framebuffer(&framebuffer);
-  bind_program(&program);
+  bind_framebuffer(framebuffer);
+  bind_program(program);
 
   set_ogl_viewport(size);
   clear_ogl_framebuffer({0, 0, 0, 0}, true);
 
-  draw_shape(&screen_quad);
+  draw_shape(screen_quad);
 
   unbind_program();
   unbind_framebuffer();
-  clear_framebuffer(&framebuffer);
-  clear_program(&program);
-  clear_shape(&screen_quad);
+  clear_framebuffer(framebuffer);
+  clear_program(program);
+  clear_shape(screen_quad);
 }
 
 static void init_environment(gui_scene* scene,
