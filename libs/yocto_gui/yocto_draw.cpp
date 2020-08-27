@@ -32,6 +32,7 @@
 #include <yocto/yocto_commonio.h>
 
 #include <array>
+#include <memory>
 
 // -----------------------------------------------------------------------------
 // USING DIRECTIVES
@@ -57,70 +58,88 @@ namespace yocto {
 #endif
 
 ogl_arraybuffer* get_positions(gui_shape* shape) {
-  if (shape->vertex_buffers.size() <= 0) return nullptr;
-  return shape->vertex_buffers[0];
+  if (shape->shape->vertex_buffers.size() <= 0) return nullptr;
+  return shape->shape->vertex_buffers[0];
 }
 ogl_arraybuffer* get_normals(gui_shape* shape) {
-  if (shape->vertex_buffers.size() <= 1) return nullptr;
-  return shape->vertex_buffers[1];
+  if (shape->shape->vertex_buffers.size() <= 1) return nullptr;
+  return shape->shape->vertex_buffers[1];
 }
 ogl_arraybuffer* get_texcoords(gui_shape* shape) {
-  if (shape->vertex_buffers.size() <= 2) return nullptr;
-  return shape->vertex_buffers[2];
+  if (shape->shape->vertex_buffers.size() <= 2) return nullptr;
+  return shape->shape->vertex_buffers[2];
 }
 ogl_arraybuffer* get_colors(gui_shape* shape) {
-  if (shape->vertex_buffers.size() <= 3) return nullptr;
-  return shape->vertex_buffers[3];
+  if (shape->shape->vertex_buffers.size() <= 3) return nullptr;
+  return shape->shape->vertex_buffers[3];
 }
 ogl_arraybuffer* get_tangents(gui_shape* shape) {
-  if (shape->vertex_buffers.size() <= 4) return nullptr;
-  return shape->vertex_buffers[4];
+  if (shape->shape->vertex_buffers.size() <= 4) return nullptr;
+  return shape->shape->vertex_buffers[4];
 }
 
 void set_positions(gui_shape* shape, const vector<vec3f>& positions) {
   if (positions.empty()) {
-    set_vertex_buffer(shape, vec3f{0, 0, 0}, 0);
+    set_vertex_buffer(shape->shape, vec3f{0, 0, 0}, 0);
   } else {
-    set_vertex_buffer(shape, positions, 0);
+    set_vertex_buffer(shape->shape, positions, 0);
   }
 }
 void set_normals(gui_shape* shape, const vector<vec3f>& normals) {
   if (normals.empty()) {
-    set_vertex_buffer(shape, vec3f{0, 0, 1}, 1);
+    set_vertex_buffer(shape->shape, vec3f{0, 0, 1}, 1);
   } else {
-    set_vertex_buffer(shape, normals, 1);
+    set_vertex_buffer(shape->shape, normals, 1);
   }
 }
 void set_texcoords(gui_shape* shape, const vector<vec2f>& texcoords) {
   if (texcoords.empty()) {
-    set_vertex_buffer(shape, vec2f{0, 0}, 2);
+    set_vertex_buffer(shape->shape, vec2f{0, 0}, 2);
   } else {
-    set_vertex_buffer(shape, texcoords, 2);
+    set_vertex_buffer(shape->shape, texcoords, 2);
   }
 }
 void set_colors(gui_shape* shape, const vector<vec4f>& colors) {
   if (colors.empty()) {
-    set_vertex_buffer(shape, vec4f{1, 1, 1, 1}, 3);
+    set_vertex_buffer(shape->shape, vec4f{1, 1, 1, 1}, 3);
   } else {
-    set_vertex_buffer(shape, colors, 3);
+    set_vertex_buffer(shape->shape, colors, 3);
   }
 }
 void set_tangents(gui_shape* shape, const vector<vec4f>& tangents) {
   if (tangents.empty()) {
-    set_vertex_buffer(shape, vec4f{0, 0, 1, 1}, 4);
+    set_vertex_buffer(shape->shape, vec4f{0, 0, 1, 1}, 4);
   } else {
-    set_vertex_buffer(shape, tangents, 4);
+    set_vertex_buffer(shape->shape, tangents, 4);
+  }
+}
+void set_instance_from(gui_shape* shape, const vector<vec3f>& froms) {
+  if (froms.empty()) {
+    set_vertex_buffer(shape->shape, vec3f{0, 0, 0}, 5);
+    set_instance_buffer(shape->shape, 5, false);
+  } else {
+    set_vertex_buffer(shape->shape, froms, 5);
+    set_instance_buffer(shape->shape, 5, true);
+  }
+}
+void set_instance_to(gui_shape* shape, const vector<vec3f>& tos) {
+  if (tos.empty()) {
+    set_vertex_buffer(shape->shape, vec3f{0, 0, 0}, 5);
+    set_instance_buffer(shape->shape, 6, false);
+  } else {
+    set_vertex_buffer(shape->shape, tos, 6);
+    set_instance_buffer(shape->shape, 6, true);
   }
 }
 
 void set_points(gui_shape* shape, const vector<int>& points) {
-  set_index_buffer(shape, points);
+  set_index_buffer(shape->shape, points);
 }
 void set_lines(gui_shape* shape, const vector<vec2i>& lines) {
-  set_index_buffer(shape, lines);
+  set_index_buffer(shape->shape, lines);
 }
 void set_triangles(gui_shape* shape, const vector<vec3i>& triangles) {
-  set_index_buffer(shape, triangles);
+  set_index_buffer(shape->shape, triangles);
 }
 void set_quads(gui_shape* shape, const vector<vec4i>& quads) {
   auto triangles = vector<vec3i>{};
@@ -129,7 +148,7 @@ void set_quads(gui_shape* shape, const vector<vec4i>& quads) {
     triangles.push_back({q.x, q.y, q.w});
     if (q.z != q.w) triangles.push_back({q.z, q.w, q.y});
   }
-  set_index_buffer(shape, triangles);
+  set_index_buffer(shape->shape, triangles);
 }
 
 gui_scene::~gui_scene() {
@@ -214,10 +233,21 @@ gui_texture* add_texture(gui_scene* scene) {
   return scene->textures.emplace_back(new gui_texture{});
 }
 
+// cleanup
+gui_shape::~gui_shape() { delete shape; }
+
+// cheeck if initialized
+bool is_initialized(const gui_shape* shape) {
+  return is_initialized(shape->shape);
+}
+
+// clear
+void clear_shape(gui_shape* shape) { clear_shape(shape->shape); }
+
 // add shape
 gui_shape* add_shape(gui_scene* scene) {
   auto shape = scene->shapes.emplace_back(new gui_shape{});
-  init_shape(shape);
+  init_shape(shape->shape);
   return shape;
 }
 
@@ -384,12 +414,18 @@ void set_instance_uniforms(ogl_program* program, const frame3f& frame,
 
   assert_ogl_error();
 
-  auto type = shape->elements;
-  if (type == ogl_element_type::points) set_uniform(program, "etype", 1);
-  if (type == ogl_element_type::lines) set_uniform(program, "etype", 2);
-  if (type == ogl_element_type::triangles) set_uniform(program, "etype", 3);
+  switch (shape->shape->elements) {
+    case ogl_element_type::points: set_uniform(program, "etype", 1); break;
+    case ogl_element_type::line_strip:
+    case ogl_element_type::lines: set_uniform(program, "etype", 2); break;
+    case ogl_element_type::triangle_strip:
+    case ogl_element_type::triangle_fan:
+    case ogl_element_type::triangles: set_uniform(program, "etype", 3); break;
+  }
   assert_ogl_error();
 }
+
+static void draw_shape(gui_shape* shape) { draw_shape(shape->shape); }
 
 void draw_environment(gui_scene* scene, const gui_scene_view& view) {
   auto program = scene->environment_program;
@@ -605,7 +641,7 @@ inline void precompute_specular_brdf_texture(gui_texture* texture) {
 static void init_environment(gui_scene* scene,
     const gui_texture* environment_tex, const vec3f& environment_emission) {
   // init program and shape for drawing the environment
-  set_cube_shape(scene->environment_shape);
+  set_cube_shape(scene->environment_shape->shape);
   init_program(scene->environment_program, precompute_cubemap_vertex_code(),
       draw_enivronment_fragment_code());
 

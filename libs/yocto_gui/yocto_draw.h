@@ -85,7 +85,18 @@ struct gui_material {
   gui_texture* normal_tex    = nullptr;
 };
 
-struct gui_shape : ogl_shape {};
+struct gui_shape {
+  // shape properties
+  ogl_shape* shape = new ogl_shape{};
+
+  // Disable copy construction
+  gui_shape()                 = default;
+  gui_shape(const gui_shape&) = delete;
+  gui_shape& operator=(const gui_shape&) = delete;
+
+  // Cleanup
+  ~gui_shape();
+};
 
 // Shading type
 enum struct gui_shading_type { constant = 0, shaded };
@@ -124,7 +135,7 @@ struct gui_scene {
   ogl_program* camlight_program = new ogl_program{};
   ogl_program* envlight_program = new ogl_program{};
 
-  // Disable copy construction
+  // disable copy construction
   gui_scene()                 = default;
   gui_scene(const gui_scene&) = delete;
   gui_scene& operator=(const gui_scene&) = delete;
@@ -195,6 +206,11 @@ void set_opacity(
     gui_material* material, float opacity, gui_texture* opacity_tex = nullptr);
 void set_normalmap(gui_material* material, gui_texture* normal_tex);
 
+// cheeck if initialized
+bool is_initialized(const gui_shape* shape);
+// clear
+void clear_shape(gui_shape* shape);
+
 // shape properties
 void set_points(gui_shape* shape, const vector<int>& points);
 void set_lines(gui_shape* shape, const vector<vec2i>& lines);
@@ -205,6 +221,8 @@ void set_normals(gui_shape* shape, const vector<vec3f>& normals);
 void set_texcoords(gui_shape* shape, const vector<vec2f>& texcoords);
 void set_colors(gui_shape* shape, const vector<vec4f>& colors);
 void set_tangents(gui_shape* shape, const vector<vec4f>& tangents);
+void set_instance_from(gui_shape* shape, const vector<vec3f>& froms);
+void set_instance_to(gui_shape* shape, const vector<vec3f>& tos);
 
 // get shaoe properties
 ogl_arraybuffer* get_positions(gui_shape* shape);

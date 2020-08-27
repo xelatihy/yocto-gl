@@ -391,8 +391,15 @@ struct ogl_shape {
   ~ogl_shape();
 };
 
-void init_shape(ogl_shape* shape);
+[[deprecated]] void init_shape(ogl_shape* shape);
+
+// check if shape is initialized
+bool is_initialized(const ogl_shape* shape);
+
+// clear buffer
 void clear_shape(ogl_shape* shape);
+
+// bind shape
 void bind_shape(const ogl_shape* shape);
 
 // set vertex buffer
@@ -411,7 +418,8 @@ void set_vertex_buffer(ogl_shape* shape, const vec2f& attribute, int location);
 void set_vertex_buffer(ogl_shape* shape, const vec3f& attribute, int location);
 void set_vertex_buffer(ogl_shape* shape, const vec4f& attribute, int location);
 
-void set_instance_buffer(ogl_shape* shape, int location);
+// set vertex buffer instance
+void set_instance_buffer(ogl_shape* shape, int location, bool is_instance);
 
 // set element buffer
 void set_index_buffer(ogl_shape* shape, const vector<int>& indices);

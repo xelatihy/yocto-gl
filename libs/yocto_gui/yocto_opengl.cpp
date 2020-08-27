@@ -938,6 +938,8 @@ void init_shape(ogl_shape* shape) {
   assert_ogl_error();
 }
 
+bool is_initialized(const ogl_shape* shape) { return shape->shape_id != 0; }
+
 // Clear an OpenGL shape
 void clear_shape(ogl_shape* shape) {
   for (auto buffer : shape->vertex_buffers) {
@@ -1005,10 +1007,15 @@ void set_vertex_buffer(ogl_shape* shape, const vec4f& value, int location) {
   assert_ogl_error();
 }
 
-void set_instance_buffer(ogl_shape* shape, int location) {
+void set_instance_buffer(ogl_shape* shape, int location, bool is_instance) {
   bind_shape(shape);
-  glVertexAttribDivisor(location, 1);
-  shape->num_instances = shape->vertex_buffers[location]->num_elements;
+  if (is_instance) {
+    glVertexAttribDivisor(location, 1);
+    shape->num_instances = shape->vertex_buffers[location]->num_elements;
+  } else {
+    glVertexAttribDivisor(location, 0);
+    shape->num_instances = 0;
+  }
   assert_ogl_error();
 }
 
