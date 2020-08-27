@@ -353,6 +353,9 @@ bool make_directory(const string& dirname, string& error) {
   }
 }
 
+// Get the current directory
+string path_current() { return std::filesystem::current_path().u8string(); }
+
 }  // namespace yocto
 
 // -----------------------------------------------------------------------------

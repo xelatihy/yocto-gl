@@ -27,9 +27,10 @@
 //
 //
 
-#include "yocto_draw.h"
+#include "yocto_shade.h"
 
 #include <array>
+#include <memory>
 
 // -----------------------------------------------------------------------------
 // USING DIRECTIVES
@@ -38,6 +39,7 @@ namespace yocto {
 
 // using directives
 using std::array;
+using std::make_unique;
 using namespace std::string_literals;
 
 }  // namespace yocto
@@ -53,226 +55,297 @@ namespace yocto {
 #pragma GCC diagnostic pop
 #endif
 
-ogl_arraybuffer* get_positions(gui_shape* shape) {
-  if (shape->vertex_buffers.size() <= 0) return nullptr;
-  return &shape->vertex_buffers[0];
+const ogl_arraybuffer* get_positions(const shade_shape* shape) {
+  if (shape->shape->vertex_buffers.size() <= 0) return nullptr;
+  return shape->shape->vertex_buffers[0];
 }
-ogl_arraybuffer* get_normals(gui_shape* shape) {
-  if (shape->vertex_buffers.size() <= 1) return nullptr;
-  return &shape->vertex_buffers[1];
+const ogl_arraybuffer* get_normals(const shade_shape* shape) {
+  if (shape->shape->vertex_buffers.size() <= 1) return nullptr;
+  return shape->shape->vertex_buffers[1];
 }
-ogl_arraybuffer* get_texcoords(gui_shape* shape) {
-  if (shape->vertex_buffers.size() <= 2) return nullptr;
-  return &shape->vertex_buffers[2];
+const ogl_arraybuffer* get_texcoords(const shade_shape* shape) {
+  if (shape->shape->vertex_buffers.size() <= 2) return nullptr;
+  return shape->shape->vertex_buffers[2];
 }
-ogl_arraybuffer* get_colors(gui_shape* shape) {
-  if (shape->vertex_buffers.size() <= 3) return nullptr;
-  return &shape->vertex_buffers[3];
+const ogl_arraybuffer* get_colors(const shade_shape* shape) {
+  if (shape->shape->vertex_buffers.size() <= 3) return nullptr;
+  return shape->shape->vertex_buffers[3];
 }
-ogl_arraybuffer* get_tangents(gui_shape* shape) {
-  if (shape->vertex_buffers.size() <= 4) return nullptr;
-  return &shape->vertex_buffers[4];
-}
-
-void set_positions(gui_shape* shape, const vector<vec3f>& positions) {
-  if (positions.empty())
-    set_vertex_buffer(shape, vec3f{0, 0, 0}, 0);
-  else
-    set_vertex_buffer(shape, positions, 0);
-}
-void set_normals(gui_shape* shape, const vector<vec3f>& normals) {
-  if (normals.empty())
-    set_vertex_buffer(shape, vec3f{0, 0, 1}, 1);
-  else
-    set_vertex_buffer(shape, normals, 1);
-}
-void set_texcoords(gui_shape* shape, const vector<vec2f>& texcoords) {
-  if (texcoords.empty())
-    set_vertex_buffer(shape, vec2f{0, 0}, 2);
-  else
-    set_vertex_buffer(shape, texcoords, 2);
-}
-void set_colors(gui_shape* shape, const vector<vec4f>& colors) {
-  if (colors.empty())
-    set_vertex_buffer(shape, vec4f{1, 1, 1, 1}, 3);
-  else
-    set_vertex_buffer(shape, colors, 3);
-}
-void set_tangents(gui_shape* shape, const vector<vec4f>& tangents) {
-  if (tangents.empty())
-    set_vertex_buffer(shape, vec4f{0, 0, 1, 1}, 4);
-  else
-    set_vertex_buffer(shape, tangents, 4);
+const ogl_arraybuffer* get_tangents(const shade_shape* shape) {
+  if (shape->shape->vertex_buffers.size() <= 4) return nullptr;
+  return shape->shape->vertex_buffers[4];
 }
 
-void set_points(gui_shape* shape, const vector<int>& points) {
-  set_index_buffer(shape, points);
+void set_positions(shade_shape* shape, const vector<vec3f>& positions) {
+  if (positions.empty()) {
+    set_vertex_buffer(shape->shape, vec3f{0, 0, 0}, 0);
+  } else {
+    set_vertex_buffer(shape->shape, positions, 0);
+  }
 }
-void set_lines(gui_shape* shape, const vector<vec2i>& lines) {
-  set_index_buffer(shape, lines);
+void set_normals(shade_shape* shape, const vector<vec3f>& normals) {
+  if (normals.empty()) {
+    set_vertex_buffer(shape->shape, vec3f{0, 0, 1}, 1);
+  } else {
+    set_vertex_buffer(shape->shape, normals, 1);
+  }
 }
-void set_triangles(gui_shape* shape, const vector<vec3i>& triangles) {
-  set_index_buffer(shape, triangles);
+void set_texcoords(shade_shape* shape, const vector<vec2f>& texcoords) {
+  if (texcoords.empty()) {
+    set_vertex_buffer(shape->shape, vec2f{0, 0}, 2);
+  } else {
+    set_vertex_buffer(shape->shape, texcoords, 2);
+  }
 }
-void set_quads(gui_shape* shape, const vector<vec4i>& quads) {
+void set_colors(shade_shape* shape, const vector<vec4f>& colors) {
+  if (colors.empty()) {
+    set_vertex_buffer(shape->shape, vec4f{1, 1, 1, 1}, 3);
+  } else {
+    set_vertex_buffer(shape->shape, colors, 3);
+  }
+}
+void set_tangents(shade_shape* shape, const vector<vec4f>& tangents) {
+  if (tangents.empty()) {
+    set_vertex_buffer(shape->shape, vec4f{0, 0, 1, 1}, 4);
+  } else {
+    set_vertex_buffer(shape->shape, tangents, 4);
+  }
+}
+void set_instances(
+    shade_shape* shape, const vector<vec3f>& froms, const vector<vec3f>& tos) {
+  if (froms.empty()) {
+    set_vertex_buffer(shape->shape, vec3f{0, 0, 0}, 5);
+    set_instance_buffer(shape->shape, 5, false);
+  } else {
+    set_vertex_buffer(shape->shape, froms, 5);
+    set_instance_buffer(shape->shape, 5, true);
+  }
+  if (tos.empty()) {
+    set_vertex_buffer(shape->shape, vec3f{0, 0, 0}, 5);
+    set_instance_buffer(shape->shape, 6, false);
+  } else {
+    set_vertex_buffer(shape->shape, tos, 6);
+    set_instance_buffer(shape->shape, 6, true);
+  }
+}
+
+void set_points(shade_shape* shape, const vector<int>& points) {
+  set_index_buffer(shape->shape, points);
+}
+void set_lines(shade_shape* shape, const vector<vec2i>& lines) {
+  set_index_buffer(shape->shape, lines);
+}
+void set_triangles(shade_shape* shape, const vector<vec3i>& triangles) {
+  set_index_buffer(shape->shape, triangles);
+}
+void set_quads(shade_shape* shape, const vector<vec4i>& quads) {
   auto triangles = vector<vec3i>{};
   triangles.reserve(quads.size() * 2);
   for (auto& q : quads) {
     triangles.push_back({q.x, q.y, q.w});
     if (q.z != q.w) triangles.push_back({q.z, q.w, q.y});
   }
-  set_index_buffer(shape, triangles);
+  set_index_buffer(shape->shape, triangles);
 }
 
-gui_scene::~gui_scene() {
+shade_scene::~shade_scene() {
   clear_scene(this);
   for (auto camera : cameras) delete camera;
   for (auto shape : shapes) delete shape;
   for (auto material : materials) delete material;
   for (auto texture : textures) delete texture;
-  delete environment_shape;
-  delete environment_cubemap;
+  for (auto instance : instances) delete instance;
+  for (auto environment : environments) delete environment;
   delete environment_program;
-  delete diffuse_cubemap;
-  delete specular_cubemap;
-  delete brdf_lut;
-  delete eyelight_program;
-  delete ibl_program;
+  delete camlight_program;
+  delete envlight_program;
 }
 
-static const char* bake_brdf_vertex_code();
-static const char* bake_brdf_fragment_code();
+static const char* precompute_brdf_vertex();
+static const char* precompute_brdf_fragment();
 
-static const char* bake_cubemap_vertex_code();
-static const char* bake_environment_fragment_code();
-static const char* bake_irradiance_fragment_code();
-static const char* bake_reflections_fragment_code();
+static const char* precompute_cubemap_vertex();
+static const char* precompute_environment_fragment();
+static const char* precompute_irradiance_fragment();
+static const char* precompute_reflections_fragment();
 
-static void init_environment(gui_scene* scene,
-    const gui_texture* environment_tex, const vec3f& environment_emission);
+static void init_environment(shade_environment* environment);
+static void init_envlight(shade_environment* environment);
 
 // Initialize an OpenGL scene
-void init_scene(gui_scene* scene, const gui_texture* environment_tex,
-    const vec3f& environment_emission) {
-  if (is_initialized(scene->eyelight_program)) return;
-  auto error = ""s, errorlog = ""s;
-  auto vert = draw_instances_vertex_code();
-  auto frag = draw_instances_eyelight_fragment_code();
-  init_program(scene->eyelight_program, vert, frag, error, errorlog);
+void init_scene(shade_scene* scene) {
+  if (is_initialized(scene->camlight_program)) return;
+  set_program(scene->camlight_program, shade_scene_vertex(),
+      shade_camlight_fragment(), true);
+  set_program(scene->envlight_program, shade_scene_vertex(),
+      shade_envlight_fragment(), true);
+  set_program(scene->environment_program, precompute_cubemap_vertex(),
+      shade_enivronment_fragment(), true);
+}
 
-  if (environment_tex && environment_emission != vec3f{0, 0, 0}) {
-    init_environment(scene, environment_tex, environment_emission);
-    init_ibl_data(scene);
+bool is_initialized(shade_scene* scene) {
+  return scene && is_initialized(scene->camlight_program);
+}
+
+// Initialize data for environment lighting
+void init_environments(shade_scene* scene, bool precompute_envlight) {
+  for (auto environment : scene->environments) {
+    init_environment(environment);
+    if (precompute_envlight) init_envlight(environment);
   }
 }
 
-bool is_initialized(gui_scene* scene) {
-  return scene && is_initialized(scene->eyelight_program);
+// Check if we have an envlight
+bool has_envlight(const shade_scene* scene) {
+  return !scene->environments.empty() &&
+         is_initialized(scene->environments.front()->cubemap);
 }
 
 // Clear an OpenGL scene
-void clear_scene(gui_scene* scene) {
+void clear_scene(shade_scene* scene) {
   for (auto texture : scene->textures) clear_texture(texture);
   for (auto shape : scene->shapes) clear_shape(shape);
-  clear_shape(scene->environment_shape);
-  clear_cubemap(scene->environment_cubemap);
+  for (auto environment : scene->environments) clear_environment(environment);
   clear_program(scene->environment_program);
-  clear_cubemap(scene->diffuse_cubemap);
-  clear_cubemap(scene->specular_cubemap);
-  clear_texture(scene->brdf_lut);
-  clear_program(scene->eyelight_program);
-  clear_program(scene->ibl_program);
+  clear_program(scene->camlight_program);
+  clear_program(scene->envlight_program);
 }
 
 // add camera
-gui_camera* add_camera(gui_scene* scene) {
-  return scene->cameras.emplace_back(new gui_camera{});
+shade_camera* add_camera(shade_scene* scene) {
+  return scene->cameras.emplace_back(new shade_camera{});
 }
-void set_frame(gui_camera* camera, const frame3f& frame) {
+void set_frame(shade_camera* camera, const frame3f& frame) {
   camera->frame = frame;
 }
-void set_lens(gui_camera* camera, float lens, float aspect, float film) {
+void set_lens(shade_camera* camera, float lens, float aspect, float film) {
   camera->lens   = lens;
   camera->aspect = aspect;
   camera->film   = film;
 }
-void set_nearfar(gui_camera* camera, float near, float far) {
+void set_nearfar(shade_camera* camera, float near, float far) {
   camera->near = near;
   camera->far  = far;
 }
 
 // add texture
-gui_texture* add_texture(gui_scene* scene) {
-  return scene->textures.emplace_back(new gui_texture{});
+shade_texture* add_texture(shade_scene* scene) {
+  return scene->textures.emplace_back(new shade_texture{});
 }
 
+// cleanup
+shade_texture::~shade_texture() { delete texture; }
+
+// check if initialized
+bool is_initialized(const shade_texture* texture) {
+  return is_initialized(texture->texture);
+}
+// clear texture
+void clear_texture(shade_texture* texture) { clear_texture(texture->texture); }
+
+// set texture
+void set_texture(shade_texture* texture, const image<vec4b>& img, bool as_srgb,
+    bool linear, bool mipmap) {
+  set_texture(texture->texture, img, as_srgb, linear, mipmap);
+}
+void set_texture(shade_texture* texture, const image<vec4f>& img, bool as_float,
+    bool linear, bool mipmap) {
+  set_texture(texture->texture, img, as_float, linear, mipmap);
+}
+void set_texture(shade_texture* texture, const image<vec3b>& img, bool as_srgb,
+    bool linear, bool mipmap) {
+  set_texture(texture->texture, img, as_srgb, linear, mipmap);
+}
+void set_texture(shade_texture* texture, const image<vec3f>& img, bool as_float,
+    bool linear, bool mipmap) {
+  set_texture(texture->texture, img, as_float, linear, mipmap);
+}
+void set_texture(shade_texture* texture, const image<byte>& img, bool as_srgb,
+    bool linear, bool mipmap) {
+  set_texture(texture->texture, img, as_srgb, linear, mipmap);
+}
+void set_texture(shade_texture* texture, const image<float>& img, bool as_float,
+    bool linear, bool mipmap) {
+  set_texture(texture->texture, img, as_float, linear, mipmap);
+}
+
+// cleanup
+shade_shape::~shade_shape() { delete shape; }
+
+// cheeck if initialized
+bool is_initialized(const shade_shape* shape) {
+  return is_initialized(shape->shape);
+}
+
+// clear
+void clear_shape(shade_shape* shape) { clear_shape(shape->shape); }
+
 // add shape
-gui_shape* add_shape(gui_scene* scene) {
-  auto shape = new gui_shape{};
-  shape->vertex_buffers.resize(5);
-  set_shape(shape);
-  scene->shapes.push_back(shape);
-  return shape;
+shade_shape* add_shape(shade_scene* scene) {
+  return scene->shapes.emplace_back(new shade_shape{});
 }
 
 // add instance
-gui_instance* add_instance(gui_scene* scene) {
-  return scene->instances.emplace_back(new gui_instance{});
+shade_instance* add_instance(shade_scene* scene) {
+  return scene->instances.emplace_back(new shade_instance{});
 }
-void set_frame(gui_instance* instance, const frame3f& frame) {
+void set_frame(shade_instance* instance, const frame3f& frame) {
   instance->frame = frame;
 }
-void set_shape(gui_instance* instance, gui_shape* shape) {
+void set_shape(shade_instance* instance, shade_shape* shape) {
   instance->shape = shape;
 }
-void set_material(gui_instance* instance, gui_material* material) {
+void set_material(shade_instance* instance, shade_material* material) {
   instance->material = material;
 }
-void set_hidden(gui_instance* instance, bool hidden) {
+void set_hidden(shade_instance* instance, bool hidden) {
   instance->hidden = hidden;
 }
-void set_highlighted(gui_instance* instance, bool highlighted) {
+void set_highlighted(shade_instance* instance, bool highlighted) {
   instance->highlighted = highlighted;
 }
 
 // add material
-gui_material* add_material(gui_scene* scene) {
-  return scene->materials.emplace_back(new gui_material{});
+shade_material* add_material(shade_scene* scene) {
+  return scene->materials.emplace_back(new shade_material{});
 }
-void set_emission(
-    gui_material* material, const vec3f& emission, gui_texture* emission_tex) {
+void set_emission(shade_material* material, const vec3f& emission,
+    shade_texture* emission_tex) {
   material->emission     = emission;
   material->emission_tex = emission_tex;
 }
 void set_color(
-    gui_material* material, const vec3f& color, gui_texture* color_tex) {
+    shade_material* material, const vec3f& color, shade_texture* color_tex) {
   material->color     = color;
   material->color_tex = color_tex;
 }
 void set_specular(
-    gui_material* material, float specular, gui_texture* specular_tex) {
+    shade_material* material, float specular, shade_texture* specular_tex) {
   material->specular     = specular;
   material->specular_tex = specular_tex;
 }
 void set_roughness(
-    gui_material* material, float roughness, gui_texture* roughness_tex) {
+    shade_material* material, float roughness, shade_texture* roughness_tex) {
   material->roughness     = roughness;
   material->roughness_tex = roughness_tex;
 }
 void set_opacity(
-    gui_material* material, float opacity, gui_texture* opacity_tex) {
+    shade_material* material, float opacity, shade_texture* opacity_tex) {
   material->opacity = opacity;
 }
 void set_metallic(
-    gui_material* material, float metallic, gui_texture* metallic_tex) {
+    shade_material* material, float metallic, shade_texture* metallic_tex) {
   material->metallic     = metallic;
   material->metallic_tex = metallic_tex;
 }
-void set_normalmap(gui_material* material, gui_texture* normal_tex) {
+void set_normalmap(shade_material* material, shade_texture* normal_tex) {
   material->normal_tex = normal_tex;
 }
+void set_unlit(shade_material* material, bool unlit) {
+  material->unlit = unlit;
+}
 
-gui_shape* add_shape(gui_scene* scene, const vector<int>& points,
+shade_shape* add_shape(shade_scene* scene, const vector<int>& points,
     const vector<vec2i>& lines, const vector<vec3i>& triangles,
     const vector<vec4i>& quads, const vector<vec3f>& positions,
     const vector<vec3f>& normals, const vector<vec2f>& texcoords,
@@ -294,8 +367,44 @@ gui_shape* add_shape(gui_scene* scene, const vector<int>& points,
   return shape;
 }
 
+// cleanup
+shade_environment::~shade_environment() {
+  delete shape;
+  delete cubemap;
+  delete envlight_diffuse;
+  delete envlight_specular;
+  delete envlight_brdflut;
+}
+
+// cheeck if initialized
+bool is_initialized(const shade_environment* environment) {
+  return is_initialized(environment->shape);
+}
+
+// clear
+void clear_environment(shade_environment* environment) {
+  clear_shape(environment->shape);
+  clear_cubemap(environment->cubemap);
+  clear_cubemap(environment->envlight_diffuse);
+  clear_cubemap(environment->envlight_specular);
+  clear_texture(environment->envlight_brdflut);
+}
+
+// environment properties
+shade_environment* add_environment(shade_scene* scene) {
+  return scene->environments.emplace_back(new shade_environment{});
+}
+void set_frame(shade_environment* environment, const frame3f& frame) {
+  environment->frame = frame;
+}
+void set_emission(shade_environment* environment, const vec3f& emission,
+    shade_texture* emission_tex) {
+  environment->emission     = emission;
+  environment->emission_tex = emission_tex;
+}
+
 // shortcuts
-gui_camera* add_camera(gui_scene* scene, const frame3f& frame, float lens,
+shade_camera* add_camera(shade_scene* scene, const frame3f& frame, float lens,
     float aspect, float film, float near, float far) {
   auto camera = add_camera(scene);
   set_frame(camera, frame);
@@ -303,11 +412,11 @@ gui_camera* add_camera(gui_scene* scene, const frame3f& frame, float lens,
   set_nearfar(camera, near, far);
   return camera;
 }
-gui_material* add_material(gui_scene* scene, const vec3f& emission,
+shade_material* add_material(shade_scene* scene, const vec3f& emission,
     const vec3f& color, float specular, float metallic, float roughness,
-    gui_texture* emission_tex, gui_texture* color_tex,
-    gui_texture* specular_tex, gui_texture* metallic_tex,
-    gui_texture* roughness_tex, gui_texture* normalmap_tex) {
+    shade_texture* emission_tex, shade_texture* color_tex,
+    shade_texture* specular_tex, shade_texture* metallic_tex,
+    shade_texture* roughness_tex, shade_texture* normalmap_tex) {
   auto material = add_material(scene);
   set_emission(material, emission, emission_tex);
   set_color(material, color, color_tex);
@@ -318,8 +427,9 @@ gui_material* add_material(gui_scene* scene, const vec3f& emission,
   return material;
 }
 
-gui_instance* add_instance(gui_scene* scene, const frame3f& frame,
-    gui_shape* shape, gui_material* material, bool hidden, bool highlighted) {
+shade_instance* add_instance(shade_scene* scene, const frame3f& frame,
+    shade_shape* shape, shade_material* material, bool hidden,
+    bool highlighted) {
   auto instance = add_instance(scene);
   set_frame(instance, frame);
   set_shape(instance, shape);
@@ -329,77 +439,103 @@ gui_instance* add_instance(gui_scene* scene, const frame3f& frame,
   return instance;
 }
 
-void set_scene_view_uniforms(ogl_program* program, const gui_scene_view& view) {
+shade_environment* add_environment(shade_scene* scene, const frame3f& frame,
+    const vec3f& emission, shade_texture* emission_tex) {
+  auto environment = add_environment(scene);
+  set_frame(environment, frame);
+  set_emission(environment, emission, emission_tex);
+  return environment;
+}
+
+void set_view_uniforms(ogl_program* program, const shade_view& view) {
   set_uniform(program, "eye", view.camera_frame.o);
   set_uniform(program, "view", view.view_matrix);
   set_uniform(program, "projection", view.projection_matrix);
-  set_uniform(program, "exposure", view.params.exposure);
-  set_uniform(program, "gamma", view.params.gamma);
-  set_uniform(program, "faceted", view.params.faceted);
-  set_uniform(program, "double_sided", view.params.double_sided);
+}
+
+void set_params_uniforms(ogl_program* program, const shade_params& params) {
+  set_uniform(program, "exposure", params.exposure);
+  set_uniform(program, "gamma", params.gamma);
+  set_uniform(program, "double_sided", params.double_sided);
 }
 
 // Draw a shape
 void set_instance_uniforms(ogl_program* program, const frame3f& frame,
-    const gui_shape* shape, const gui_material* material,
-    gui_shading_type shading, bool double_sided, bool non_rigid_frames) {
+    const shade_shape* shape, const shade_material* material,
+    const shade_params& params) {
   auto shape_xform     = frame_to_mat(frame);
   auto shape_inv_xform = transpose(
-      frame_to_mat(inverse(frame, non_rigid_frames)));
+      frame_to_mat(inverse(frame, params.non_rigid_frames)));
   set_uniform(program, "frame", shape_xform);
   set_uniform(program, "frameit", shape_inv_xform);
   set_uniform(program, "offset", 0.0f);
+  set_uniform(program, "faceted",
+      params.faceted || !is_initialized(get_normals(shape)));
   //  if (instance->highlighted) {
   //    set_uniform(program, "highlight", vec4f{1, 1, 0, 1});
   //  } else {
   //    set_uniform(program, "highlight", vec4f{0, 0, 0, 0});
   //  }
 
-  auto mtype = (int)shading;
-  set_uniform(program, "mtype", mtype);
+  auto set_texture = [](ogl_program* program, const char* name,
+                         const char* name_on, shade_texture* texture,
+                         int unit) {
+    set_uniform(program, name, name_on,
+        texture == nullptr ? nullptr : texture->texture, unit);
+  };
+
+  set_uniform(program, "unlit", material->unlit);
   set_uniform(program, "emission", material->emission);
   set_uniform(program, "diffuse", material->color);
   set_uniform(program, "specular",
       vec3f{material->metallic, material->metallic, material->metallic});
   set_uniform(program, "roughness", material->roughness);
   set_uniform(program, "opacity", material->opacity);
-  set_uniform(program, "double_sided", double_sided);
-  set_uniform(
+  set_uniform(program, "double_sided", params.double_sided);
+  set_texture(
       program, "emission_tex", "emission_tex_on", material->emission_tex, 0);
-  set_uniform(program, "diffuse_tex", "diffuse_tex_on", material->color_tex, 1);
-  set_uniform(
+  set_texture(program, "diffuse_tex", "diffuse_tex_on", material->color_tex, 1);
+  set_texture(
       program, "specular_tex", "specular_tex_on", material->metallic_tex, 2);
-  set_uniform(
+  set_texture(
       program, "roughness_tex", "roughness_tex_on", material->roughness_tex, 3);
-  set_uniform(
+  set_texture(
       program, "opacity_tex", "opacity_tex_on", material->opacity_tex, 4);
-  set_uniform(
-      program, "mat_norm_tex", "mat_norm_tex_on", material->normal_tex, 5);
+  set_texture(
+      program, "normalmap_tex", "normalmap_tex_on", material->normal_tex, 5);
 
   assert_ogl_error();
 
-  auto type = shape->elements;
-  if (type == ogl_element_type::points) set_uniform(program, "etype", 1);
-  if (type == ogl_element_type::lines) set_uniform(program, "etype", 2);
-  if (type == ogl_element_type::triangles) set_uniform(program, "etype", 3);
+  switch (shape->shape->elements) {
+    case ogl_element_type::points: set_uniform(program, "element", 1); break;
+    case ogl_element_type::line_strip:
+    case ogl_element_type::lines: set_uniform(program, "element", 2); break;
+    case ogl_element_type::triangle_strip:
+    case ogl_element_type::triangle_fan:
+    case ogl_element_type::triangles: set_uniform(program, "element", 3); break;
+  }
   assert_ogl_error();
 }
 
-void draw_environment(gui_scene* scene, const gui_scene_view& view) {
+static void draw_shape(shade_shape* shape) { draw_shape(shape->shape); }
+
+void draw_environments(
+    shade_scene* scene, const shade_view& view, const shade_params& params) {
   auto program = scene->environment_program;
-  if (program->program_id == 0) return;
-
+  if (!is_initialized(program)) return;
   bind_program(program);
-
-  set_scene_view_uniforms(program, view);
-  set_uniform(program, "environment", scene->environment_cubemap, 0);
-
-  draw_shape(scene->environment_shape);
-
+  set_view_uniforms(program, view);
+  set_params_uniforms(program, params);
+  for (auto environment : scene->environments) {
+    if (!is_initialized(environment->cubemap)) continue;
+    set_uniform(program, "environment", environment->cubemap, 0);
+    draw_shape(environment->shape);
+  }
   unbind_program();
 }
 
-void set_eyelight_uniforms(ogl_program* program, const gui_scene_view& view) {
+void set_camlight_uniforms(
+    ogl_program* program, const shade_scene* scene, const shade_view& view) {
   struct gui_light {
     vec3f position = {0, 0, 0};
     vec3f emission = {0, 0, 0};
@@ -418,62 +554,70 @@ void set_eyelight_uniforms(ogl_program* program, const gui_scene_view& view) {
       &camera_light0, &camera_light1, &camera_light2, &camera_light3};
 
   auto& lights = camera_lights;
-  set_uniform(program, "lamb", vec3f{0, 0, 0});
-  set_uniform(program, "lnum", (int)lights.size());
+  set_uniform(program, "lighting", 1);
+  set_uniform(program, "ambient", vec3f{0, 0, 0});
+  set_uniform(program, "lights_num", (int)lights.size());
   auto lid = 0;
   for (auto light : lights) {
     auto is = std::to_string(lid);
     if (light->camera) {
       auto position = transform_direction(view.camera_frame, light->position);
-      set_uniform(program, ("lpos[" + is + "]").c_str(), position);
+      set_uniform(program, ("lights_position[" + is + "]").c_str(), position);
     } else {
-      set_uniform(program, ("lpos[" + is + "]").c_str(), light->position);
+      set_uniform(
+          program, ("lights_position[" + is + "]").c_str(), light->position);
     }
-    set_uniform(program, ("lke[" + is + "]").c_str(), light->emission);
-    set_uniform(program, ("ltype[" + is + "]").c_str(), 1);
+    set_uniform(
+        program, ("lights_emission[" + is + "]").c_str(), light->emission);
+    set_uniform(program, ("lights_type[" + is + "]").c_str(), 1);
     lid++;
   }
   assert_ogl_error();
 }
 
-void set_ibl_uniforms(ogl_program* program, const gui_scene* scene) {
-  set_uniform(program, "irradiance_cubemap", scene->diffuse_cubemap, 6);
-  set_uniform(program, "reflection_cubemap", scene->specular_cubemap, 7);
-  set_uniform(program, "brdf_lut", scene->brdf_lut, 8);
+void set_envlight_uniforms(
+    ogl_program* program, const shade_scene* scene, const shade_view& view) {
+  if (!has_envlight(scene)) return;
+  auto environment = scene->environments.front();
+  set_uniform(program, "envlight_irradiance", environment->envlight_diffuse, 6);
+  set_uniform(
+      program, "envlight_reflection", environment->envlight_specular, 7);
+  set_uniform(program, "envlight_brdflut", environment->envlight_brdflut, 8);
 }
 
-void draw_instances(gui_scene* scene, const gui_scene_view& view) {
-  auto program = scene->eyelight_program;
-  if (is_initialized(scene->environment_cubemap) &&
-      view.params.lighting == gui_lighting_type::environment) {
-    program = scene->ibl_program;
-  }
-
+void draw_instances(
+    shade_scene* scene, const shade_view& view, const shade_params& params) {
+  // set program
+  auto program =
+      (params.lighting == shade_lighting_type::camlight || !has_envlight(scene))
+          ? scene->camlight_program
+          : scene->envlight_program;
   bind_program(program);
 
   // set scene uniforms
-  set_scene_view_uniforms(program, view);
+  set_view_uniforms(program, view);
+  set_params_uniforms(program, params);
 
   // set lighting uniforms
-  if (view.params.lighting == gui_lighting_type::eyelight) {
-    set_eyelight_uniforms(program, view);
+  if (params.lighting == shade_lighting_type::camlight ||
+      !has_envlight(scene)) {
+    set_camlight_uniforms(program, scene, view);
   } else {
-    set_ibl_uniforms(program, scene);
+    set_envlight_uniforms(program, scene, view);
   }
 
-  set_ogl_wireframe(view.params.wireframe);
+  set_ogl_wireframe(params.wireframe);
   for (auto instance : scene->instances) {
     if (instance->hidden) continue;
-    set_instance_uniforms(program, instance->frame, instance->shape,
-        instance->material, instance->shading, view.params.double_sided,
-        view.params.non_rigid_frames);
+    set_instance_uniforms(
+        program, instance->frame, instance->shape, instance->material, params);
     draw_shape(instance->shape);
   }
   unbind_program();
 }
 
-gui_scene_view make_scene_view(
-    gui_camera* camera, const vec4i& viewport, const gui_scene_params& params) {
+shade_view make_scene_view(
+    shade_camera* camera, const vec4i& viewport, const shade_params& params) {
   auto camera_aspect = (float)viewport.z / (float)viewport.w;
   auto camera_yfov =
       camera_aspect >= 0
@@ -483,39 +627,42 @@ gui_scene_view make_scene_view(
   auto projection_matrix = perspective_mat(
       camera_yfov, camera_aspect, params.near, params.far);
 
-  auto view              = gui_scene_view{};
+  auto view              = shade_view{};
   view.camera_frame      = camera->frame;
   view.view_matrix       = view_matrix;
   view.projection_matrix = projection_matrix;
-  view.params            = params;
   return view;
 }
 
-void draw_scene(gui_scene* scene, gui_camera* camera, const vec4i& viewport,
-    const gui_scene_params& params) {
+void draw_scene(shade_scene* scene, shade_camera* camera, const vec4i& viewport,
+    const shade_params& params) {
   clear_ogl_framebuffer(params.background);
   set_ogl_viewport(viewport);
 
   auto view = make_scene_view(camera, viewport, params);
-  draw_instances(scene, view);
-  draw_environment(scene, view);
+  draw_instances(scene, view, params);
+  draw_environments(scene, view, params);
 }
 
 // image based lighting
 
-// Using 6 render passes, bake a cubemap given a sampler for the environment.
-// The input sampler can be either a cubemap or a latlong texture.
+// Using 6 render passes, precompute a cubemap given a sampler for the
+// environment. The input sampler can be either a cubemap or a latlong texture.
 template <typename Sampler>
-inline void bake_cubemap(ogl_cubemap* cubemap, const Sampler* environment,
+inline void precompute_cubemap(ogl_cubemap* cubemap, const Sampler* environment,
     ogl_program* program, int size, int num_mipmap_levels = 1,
     const vec3f& emission = {1, 1, 1}) {
   // init cubemap with no data
-  set_cubemap<float>(cubemap, size, 3, true, true, true);
-  auto cube = ogl_shape{};
-  set_cube_shape(&cube);
+  set_cubemap(cubemap, size, 3,
+      array<float*, 6>{nullptr, nullptr, nullptr, nullptr, nullptr, nullptr},
+      true, true, true);
+  auto cube_guard = make_unique<ogl_shape>();
+  auto cube       = cube_guard.get();
+  set_cube_shape(cube);
 
-  auto framebuffer = ogl_framebuffer{};
-  set_framebuffer(&framebuffer, {size, size});
+  auto framebuffer_guard = make_unique<ogl_framebuffer>();
+  auto framebuffer       = framebuffer_guard.get();
+  set_framebuffer(framebuffer, {size, size});
 
   auto cameras = array<frame3f, 6>{
       lookat_frame({0, 0, 0}, {1, 0, 0}, {0, 1, 0}),
@@ -526,11 +673,11 @@ inline void bake_cubemap(ogl_cubemap* cubemap, const Sampler* environment,
       lookat_frame({0, 0, 0}, {0, 0, 1}, {0, 1, 0}),
   };
 
-  bind_framebuffer(&framebuffer);
+  bind_framebuffer(framebuffer);
   bind_program(program);
   for (int mipmap_level = 0; mipmap_level < num_mipmap_levels; mipmap_level++) {
     // resize render buffer and viewport
-    set_framebuffer(&framebuffer, {size, size});
+    set_framebuffer(framebuffer, {size, size});
     set_ogl_viewport(vec2i{size, size});
 
     for (auto i = 0; i < 6; ++i) {
@@ -538,7 +685,7 @@ inline void bake_cubemap(ogl_cubemap* cubemap, const Sampler* environment,
       auto camera_proj = perspective_mat(radians(90), 1, 1, 100);
       auto camera_view = frame_to_mat(inverse(cameras[i]));
 
-      set_framebuffer_texture(&framebuffer, cubemap, i, mipmap_level);
+      set_framebuffer_texture(framebuffer, cubemap, i, mipmap_level);
       clear_ogl_framebuffer({0, 0, 0, 0}, true);
 
       set_uniform(program, "view", camera_view);
@@ -548,109 +695,93 @@ inline void bake_cubemap(ogl_cubemap* cubemap, const Sampler* environment,
       set_uniform(program, "emission", emission);
       set_uniform(program, "environment", environment, 0);
 
-      draw_shape(&cube);
+      draw_shape(cube);
     }
     size /= 2;
   }
   unbind_program();
   unbind_framebuffer();
-  clear_framebuffer(&framebuffer);
+
+  clear_shape(cube);
+  clear_framebuffer(framebuffer);
 }
 
-inline void bake_specular_brdf_texture(gui_texture* texture) {
-  auto size        = vec2i{512, 512};
-  auto framebuffer = ogl_framebuffer{};
-  auto screen_quad = ogl_shape{};
-  set_quad_shape(&screen_quad);
+inline void precompute_specular_brdf_texture(ogl_texture* texture) {
+  auto size              = vec2i{512, 512};
+  auto screen_quad_guard = make_unique<ogl_shape>();
+  auto screen_quad       = screen_quad_guard.get();
+  set_quad_shape(screen_quad);
 
-  auto program = ogl_program{};
+  auto program_guard = make_unique<ogl_program>();
+  auto program       = program_guard.get();
   auto error = ""s, errorlog = ""s;
-  auto vert = bake_brdf_vertex_code();
-  auto frag = bake_brdf_fragment_code();
-  init_program(&program, vert, frag, error, errorlog);
+  auto vert = precompute_brdf_vertex();
+  auto frag = precompute_brdf_fragment();
+  set_program(program, vert, frag, error, errorlog);
 
   set_texture(texture, size, 3, (float*)nullptr, true, true, false, false);
 
-  set_framebuffer(&framebuffer, size);
-  set_framebuffer_texture(&framebuffer, texture, 0);
+  auto framebuffer_guard = make_unique<ogl_framebuffer>();
+  auto framebuffer       = framebuffer_guard.get();
+  set_framebuffer(framebuffer, size);
+  set_framebuffer_texture(framebuffer, texture, 0);
 
-  bind_framebuffer(&framebuffer);
-  bind_program(&program);
+  bind_framebuffer(framebuffer);
+  bind_program(program);
 
   set_ogl_viewport(size);
   clear_ogl_framebuffer({0, 0, 0, 0}, true);
 
-  draw_shape(&screen_quad);
+  draw_shape(screen_quad);
 
   unbind_program();
   unbind_framebuffer();
-  clear_framebuffer(&framebuffer);
-  clear_program(&program);
-  clear_shape(&screen_quad);
+  clear_framebuffer(framebuffer);
+  clear_program(program);
+  clear_shape(screen_quad);
 }
 
-static void init_environment(gui_scene* scene,
-    const gui_texture* environment_tex, const vec3f& environment_emission) {
-  set_cube_shape(scene->environment_shape);
+static void init_environment(shade_environment* environment) {
+  // init program and shape for drawing the environment
+  set_cube_shape(environment->shape->shape);
 
-  // init program for drawing the environment
-  {
-    auto vert = bake_cubemap_vertex_code();
-    auto frag = draw_enivronment_fragment_code();
-    init_program(scene->environment_program, vert, frag);
-  }
-
-  // bake cubemap from environment texture
-  {
-    auto size    = environment_tex->size.y;
-    auto program = new ogl_program{};
-    auto vert    = bake_cubemap_vertex_code();
-    auto frag    = bake_environment_fragment_code();
-    init_program(program, vert, frag);
-    bake_cubemap(scene->environment_cubemap, environment_tex, program, size, 1,
-        environment_emission);
-    clear_program(program);
-    delete program;
-  }
+  // precompute cubemap from environment texture
+  auto size          = environment->emission_tex->texture->size.y;
+  auto program_guard = make_unique<ogl_program>();
+  auto program       = program_guard.get();
+  set_program(
+      program, precompute_cubemap_vertex(), precompute_environment_fragment());
+  precompute_cubemap(environment->cubemap, environment->emission_tex->texture,
+      program, size, 1, environment->emission);
+  clear_program(program);
 }
 
-void init_ibl_data(gui_scene* scene) {
-  // bake irradiance map
-  {
-    auto program = new ogl_program{};
-    auto vert    = bake_cubemap_vertex_code();
-    auto frag    = bake_irradiance_fragment_code();
-    init_program(program, vert, frag);
-    bake_cubemap(
-        scene->diffuse_cubemap, scene->environment_cubemap, program, 64);
-    clear_program(program);
-    delete program;
-  }
+void init_envlight(shade_environment* environment) {
+  // precompute irradiance map
+  auto diffuse_program_guard = make_unique<ogl_program>();
+  auto diffuse_program       = diffuse_program_guard.get();
+  set_program(diffuse_program, precompute_cubemap_vertex(),
+      precompute_irradiance_fragment());
+  precompute_cubemap(
+      environment->envlight_diffuse, environment->cubemap, diffuse_program, 64);
+  clear_program(diffuse_program);
+  diffuse_program_guard.release();
 
-  // bake specular map
-  {
-    auto program = new ogl_program{};
-    auto vert    = bake_cubemap_vertex_code();
-    auto frag    = bake_reflections_fragment_code();
-    init_program(program, vert, frag);
-    bake_cubemap(
-        scene->specular_cubemap, scene->environment_cubemap, program, 256, 6);
-    clear_program(program);
-    delete program;
-  }
+  // precompute specular map
+  auto specular_program_guard = make_unique<ogl_program>();
+  auto specular_program       = specular_program_guard.get();
+  set_program(specular_program, precompute_cubemap_vertex(),
+      precompute_reflections_fragment());
+  precompute_cubemap(environment->envlight_specular, environment->cubemap,
+      specular_program, 256, 6);
+  clear_program(specular_program);
+  specular_program_guard.release();
 
-  // bake lookup texture for specular brdf
-  bake_specular_brdf_texture(scene->brdf_lut);
-
-  // init shader for IBL shading
-  {
-    auto vert = draw_instances_vertex_code();
-    auto frag = draw_instances_ibl_fragment_code();
-    init_program(scene->ibl_program, vert, frag);
-  }
+  // precompute lookup texture for specular brdf
+  precompute_specular_brdf_texture(environment->envlight_brdflut);
 }
 
-const char* draw_instances_vertex_code() {
+const char* shade_scene_vertex() {
   static const char* code =
       R"(
 #version 330
@@ -700,76 +831,23 @@ void main() {
   return code;
 }
 
-const char* draw_instances_eyelight_fragment_code() {
+const char* shade_camlight_fragment() {
   static const char* code =
       R"(
 #version 330
 
-float pif = 3.14159265;
+in vec3 position;  // [from vertex shader] position in world space
+in vec3 normal;    // [from vertex shader] normal in world space
+in vec2 texcoord;  // [from vertex shader] texcoord
+in vec4 color;     // [from vertex shader] color
+in vec4 tangsp;    // [from vertex shader] tangent space
 
-uniform bool eyelight;         // eyelight shading
-uniform vec3 lamb;             // ambient light
-uniform int  lnum;             // number of lights
-uniform int  ltype[16];        // light type (0 -> point, 1 -> directional)
-uniform vec3 lpos[16];         // light positions
-uniform vec3 lke[16];          // light intensities
-
-void evaluate_light(int lid, vec3 position, out vec3 cl, out vec3 wi) {
-  cl = vec3(0,0,0);
-  wi = vec3(0,0,0);
-  if(ltype[lid] == 0) {
-    // compute point light color at position
-    cl = lke[lid] / pow(length(lpos[lid]-position),2);
-    // compute light direction at position
-    wi = normalize(lpos[lid]-position);
-  }
-  else if(ltype[lid] == 1) {
-    // compute light color
-    cl = lke[lid];
-    // compute light direction
-    wi = normalize(lpos[lid]);
-  }
-}
-
-vec3 brdfcos(int etype, vec3 ke, vec3 kd, vec3 ks, float rs, float op,
-    vec3 n, vec3 wi, vec3 wo) {
-  if(etype == 0) return vec3(0);
-  vec3 wh = normalize(wi+wo);
-  float ns = 2/(rs*rs)-2;
-  float ndi = dot(wi,n), ndo = dot(wo,n), ndh = dot(wh,n);
-  if(etype == 1) {
-      return ((1+dot(wo,wi))/2) * kd/pif;
-  } else if(etype == 2) {
-      float si = sqrt(1-ndi*ndi);
-      float so = sqrt(1-ndo*ndo);
-      float sh = sqrt(1-ndh*ndh);
-      if(si <= 0) return vec3(0);
-      vec3 diff = si * kd / pif;
-      if(sh<=0) return diff;
-      float d = ((2+ns)/(2*pif)) * pow(si,ns);
-      vec3 spec = si * ks * d / (4*si*so);
-      return diff+spec;
-  } else if(etype == 3) {
-      if(ndi<=0 || ndo <=0) return vec3(0);
-      vec3 diff = ndi * kd / pif;
-      if(ndh<=0) return diff;
-      float cos2 = ndh * ndh;
-      float tan2 = (1 - cos2) / cos2;
-      float alpha2 = rs * rs;
-      float d = alpha2 / (pif * cos2 * cos2 * (alpha2 + tan2) * (alpha2 + tan2));
-      float lambda_o = (-1 + sqrt(1 + (1 - ndo * ndo) / (ndo * ndo))) / 2;
-      float lambda_i = (-1 + sqrt(1 + (1 - ndi * ndi) / (ndi * ndi))) / 2;
-      float g = 1 / (1 + lambda_o + lambda_i);
-      vec3 spec = ndi * ks * d * g / (4*ndi*ndo);
-      return diff+spec;
-  }
-}
-
-uniform int etype;
+uniform int element;
+uniform bool unlit;
 uniform bool faceted;
-uniform vec4 highlight;           // highlighted color
+uniform vec4 highlight;
+uniform bool double_sided;
 
-uniform int mtype;                // material type
 uniform vec3 emission;            // material ke
 uniform vec3 diffuse;             // material kd
 uniform vec3 specular;            // material ks
@@ -786,57 +864,23 @@ uniform bool roughness_tex_on;    // material rs texture on
 uniform sampler2D roughness_tex;  // material rs texture
 uniform bool opacity_tex_on;      // material op texture on
 uniform sampler2D opacity_tex;    // material op texture
+uniform bool normalmap_tex_on;    // material normal texture on
+uniform sampler2D normalmap_tex;  // material normal texture
 
-uniform bool mat_norm_tex_on;     // material normal texture on
-uniform sampler2D mat_norm_tex;   // material normal texture
+uniform int  lighting;            // eyelight shading
+uniform vec3 ambient;             // ambient light
+uniform int  lights_num;                // number of lights
+uniform int  lights_type[16];     // light type (0 -> point, 1 -> directional)
+uniform vec3 lights_position[16];            // light positions
+uniform vec3 lights_emission[16]; // light intensities
 
-uniform bool double_sided;        // double sided rendering
+// precomputed textures for image based lighting
+// uniform samplerCube envlight_irradiance;
+// uniform samplerCube envlight_reflection;
+// uniform sampler2D   envlight_brdflut;
 
 uniform mat4 frame;              // shape transform
 uniform mat4 frameit;            // shape transform
-
-bool evaluate_material(vec2 texcoord, vec4 color, out vec3 ke, 
-                    out vec3 kd, out vec3 ks, out float rs, out float op) {
-  ke = color.xyz * emission;
-  kd = color.xyz * diffuse;
-  ks = color.xyz * specular;
-  rs = roughness;
-  op = color.w * opacity;
-
-  vec4 ke_tex = (emission_tex_on) ? texture(emission_tex,texcoord) : vec4(1,1,1,1);
-  vec4 kd_tex = (diffuse_tex_on) ? texture(diffuse_tex,texcoord) : vec4(1,1,1,1);
-  vec4 ks_tex = (specular_tex_on) ? texture(specular_tex,texcoord) : vec4(1,1,1,1);
-  vec4 rs_tex = (roughness_tex_on) ? texture(roughness_tex,texcoord) : vec4(1,1,1,1);
-  vec4 op_tex = (opacity_tex_on) ? texture(opacity_tex,texcoord) : vec4(1,1,1,1);
-
-  // get material color from textures and adjust values
-  ke *= ke_tex.xyz;
-  vec3 kb = kd * kd_tex.xyz;
-  float km = ks.x * ks_tex.z;
-  kd = kb * (1 - km);
-  ks = kb * km + vec3(0.04) * (1 - km);
-  rs *= ks_tex.y;
-  rs = rs*rs;
-  op *= kd_tex.w;
-
-  return true;
-}
-
-vec3 apply_normal_map(vec2 texcoord, vec3 normal, vec4 tangsp) {
-    if(!mat_norm_tex_on) return normal;
-  vec3 tangu = normalize((frame * vec4(normalize(tangsp.xyz),0)).xyz);
-  vec3 tangv = normalize(cross(normal, tangu));
-  if(tangsp.w < 0) tangv = -tangv;
-  vec3 texture = 2 * pow(texture(mat_norm_tex,texcoord).xyz, vec3(1/2.2)) - 1;
-  // texture.y = -texture.y;
-  return normalize( tangu * texture.x + tangv * texture.y + normal * texture.z );
-}
-
-in vec3 position;              // [from vertex shader] position in world space
-in vec3 normal;                // [from vertex shader] normal in world space (need normalization)
-in vec2 texcoord;              // [from vertex shader] texcoord
-in vec4 color;                 // [from vertex shader] color
-in vec4 tangsp;                // [from vertex shader] tangent space
 
 uniform vec3 eye;              // camera position
 uniform mat4 view;             // inverse of the camera frame (as a matrix)
@@ -847,87 +891,193 @@ uniform float gamma;
 
 out vec4 frag_color;      
 
+float pif = 3.14159265;
+
+struct shade_brdf {
+  vec3  emission;
+  vec3  diffuse;
+  vec3  specular;
+  float roughness;
+  float opacity;
+};
+
+vec3 eval_brdf_color(vec3 value, sampler2D tex, bool tex_on) {
+  vec3 result = value;
+  if (tex_on) result *= texture(tex, texcoord).rgb;
+  return result;
+}
+float eval_brdf_value(float value, sampler2D tex, bool tex_on) {
+  float result = value;
+  if (tex_on) result *= texture(tex, texcoord).r;
+  return result;
+}
+
+shade_brdf eval_brdf() {
+  // color?
+  shade_brdf brdf;
+  brdf.emission  = eval_brdf_color(emission, emission_tex, emission_tex_on);
+  brdf.diffuse   = eval_brdf_color(diffuse, diffuse_tex, diffuse_tex_on);
+  brdf.specular  = eval_brdf_color(specular, specular_tex, specular_tex_on);
+  brdf.roughness = eval_brdf_value(roughness, roughness_tex, roughness_tex_on);
+  brdf.opacity   = eval_brdf_value(opacity, opacity_tex, opacity_tex_on);
+  vec3 base = brdf.diffuse;
+  float metallic = brdf.specular.x;
+  brdf.diffuse = base * (1 - metallic);
+  brdf.specular = base * metallic + vec3(0.04) * (1 - metallic);
+  brdf.roughness = brdf.roughness * brdf.roughness;
+  return brdf;
+}
+
+void eval_light(int lid, vec3 position, out vec3 radiance, out vec3 incoming) {
+  radiance = vec3(0,0,0);
+  incoming = vec3(0,0,0);
+  if(lights_type[lid] == 0) {
+    // compute point light color at position
+    radiance = lights_emission[lid] / pow(length(lights_position[lid]-position),2);
+    // compute light direction at position
+    incoming = normalize(lights_position[lid]-position);
+  }
+  else if(lights_type[lid] == 1) {
+    // compute light color
+    radiance = lights_emission[lid];
+    // compute light direction
+    incoming = normalize(lights_position[lid]);
+  }
+}
+
+vec3 eval_brdfcos(shade_brdf brdf, vec3 n, vec3 incoming, vec3 outgoing) {
+  vec3 halfway = normalize(incoming+outgoing);
+  float ndi = dot(incoming,n), ndo = dot(outgoing,n), ndh = dot(halfway,n);
+  if(ndi<=0 || ndo <=0) return vec3(0);
+  vec3 diff = ndi * brdf.diffuse / pif;
+  if(ndh<=0) return diff;
+  float cos2 = ndh * ndh;
+  float tan2 = (1 - cos2) / cos2;
+  float alpha2 = brdf.roughness * brdf.roughness;
+  float d = alpha2 / (pif * cos2 * cos2 * (alpha2 + tan2) * (alpha2 + tan2));
+  float lambda_o = (-1 + sqrt(1 + (1 - ndo * ndo) / (ndo * ndo))) / 2;
+  float lambda_i = (-1 + sqrt(1 + (1 - ndi * ndi) / (ndi * ndi))) / 2;
+  float g = 1 / (1 + lambda_o + lambda_i);
+  vec3 spec = ndi * brdf.specular * d * g / (4*ndi*ndo);
+  return diff+spec;
+}
+
+vec3 apply_normal_map(vec2 texcoord, vec3 normal, vec4 tangsp) {
+    if(!normalmap_tex_on) return normal;
+  vec3 tangu = normalize((frame * vec4(normalize(tangsp.xyz),0)).xyz);
+  vec3 tangv = normalize(cross(normal, tangu));
+  if(tangsp.w < 0) tangv = -tangv;
+  vec3 texture = 2 * pow(texture(normalmap_tex,texcoord).xyz, vec3(1/2.2)) - 1;
+  // texture.y = -texture.y;
+  return normalize( tangu * texture.x + tangv * texture.y + normal * texture.z );
+}
+
 vec3 triangle_normal(vec3 position) {
   vec3 fdx = dFdx(position); 
   vec3 fdy = dFdy(position); 
   return normalize((frame * vec4(normalize(cross(fdx, fdy)), 0)).xyz);
 }
 
-// main
-void main() {
-  if(mtype == 0) {
-    frag_color = vec4(emission, 1);
-    return; 
-  }
+#define element_points 1
+#define element_lines 2
+#define element_triangles 3
 
-  // view vector
-  vec3 wo = normalize(eye - position);
-
-  // prepare normals
-  vec3 n;
-  if(faceted) {
-    n = triangle_normal(position);
-  } else {
-    n = normalize(normal);
-  }
-
-  // apply normal map
-  n = apply_normal_map(texcoord, n, tangsp);
-
-  // use faceforward to ensure the normals points toward us
-  if(double_sided) n = faceforward(n,-wo,n);
-
-  // get material color from textures
-  vec3 brdf_ke, brdf_kd, brdf_ks; float brdf_rs, brdf_op;
-  bool has_brdf = evaluate_material(texcoord, color, brdf_ke, brdf_kd, brdf_ks, brdf_rs, brdf_op);
-
-  // exit if needed
-  if(brdf_op < 0.005) discard;
-
-  // check const color
-  if(etype == 0) {
-    frag_color = vec4(brdf_ke,brdf_op);
-    return;
-  }
-
-  // emission
-  vec3 c = brdf_ke;
-
-  // check early exit
-  if(brdf_kd != vec3(0,0,0) || brdf_ks != vec3(0,0,0)) {
-    // eyelight shading
-    if(eyelight) {
-      vec3 wi = wo;
-      c += pif * brdfcos((has_brdf) ? etype : 0, brdf_ke, brdf_kd, brdf_ks, brdf_rs, brdf_op, n,wi,wo);
+vec3 eval_normal(vec3 outgoing) {
+  vec3 norm;
+  if (element == element_triangles) {
+    if (faceted) {
+      norm = triangle_normal(position);
     } else {
-      // accumulate ambient
-      c += lamb * brdf_kd;
-      // foreach light
-      for(int lid = 0; lid < lnum; lid ++) {
-        vec3 cl = vec3(0,0,0); vec3 wi = vec3(0,0,0);
-        evaluate_light(lid, position, cl, wi);
-        c += cl * brdfcos((has_brdf) ? etype : 0, brdf_ke, brdf_kd, brdf_ks, brdf_rs, brdf_op, n,wi,wo);
-      }
+      norm = normalize(normal);
     }
   }
 
+  if (element == element_lines) {
+    vec3 tangent = normalize(normal);
+    norm         = normalize(outgoing - tangent * dot(outgoing, tangent));
+  }
+
+  // apply normal map
+  norm = apply_normal_map(texcoord, norm, tangsp);
+
+  // use faceforward to ensure the normals points toward us
+  if (double_sided) norm = faceforward(norm, -outgoing, norm);
+  return norm;
+}
+    
+// vec3 sample_prefiltered_refleciton(vec3 incoming, float roughness) {
+//   int   MAX_REFLECTION_LOD = 5;
+//   float lod                = sqrt(roughness) * MAX_REFLECTION_LOD;
+//   return textureLod(envlight_reflection, incoming, lod).rgb;
+// }
+
+#define lighting_eyelight 0
+#define lighting_camlight 1
+#define lighting_envlight 2
+
+// main
+void main() {
+  // view vector
+  vec3 outgoing = normalize(eye - position);
+  vec3 n = eval_normal(outgoing);
+
+  // get material color from textures
+  shade_brdf brdf = eval_brdf();
+  if(brdf.opacity < 0.005) discard;
+
+  if(unlit) {
+    frag_color = vec4(brdf.emission + brdf.diffuse, brdf.opacity);
+    return; 
+  }
+
+  // emission
+  vec3 radiance = brdf.emission;
+
+  // check early exit
+  if(brdf.diffuse != vec3(0,0,0) || brdf.specular != vec3(0,0,0)) {
+    // eyelight shading
+    if(lighting == lighting_eyelight) {
+      vec3 incoming = outgoing;
+      radiance += pif * eval_brdfcos(brdf, n, incoming, outgoing);
+    }
+    if(lighting == lighting_camlight) {
+      // accumulate ambient
+      radiance += ambient * brdf.diffuse;
+      // foreach light
+      for(int lid = 0; lid < lights_num; lid ++) {
+        vec3 cl = vec3(0,0,0); vec3 incoming = vec3(0,0,0);
+        eval_light(lid, position, cl, incoming);
+        radiance += cl * eval_brdfcos(brdf, n, incoming, outgoing);
+      }
+    }
+    // if (lighting == lighting_envlight) {
+    //   // diffuse
+    //   radiance += brdf.diffuse * textureLod(envlight_irradiance, n, 0).rgb;
+    //   // specular
+    //   vec3 incoming   = normalize(reflect(-outgoing, n));
+    //   vec3 reflection = sample_prefiltered_refleciton(incoming, brdf.roughness);
+    //   vec2 env_brdf   = texture(envlight_brdflut, vec2(max(dot(n, outgoing), 0.0), roughness)).rg;
+    //   radiance += reflection * (brdf.specular * env_brdf.x + env_brdf.y);
+    // }
+  }
+
   // final color correction
-  c = pow(c * pow(2,exposure), vec3(1/gamma));
+  radiance = pow(radiance * pow(2,exposure), vec3(1/gamma));
 
   // highlighting
   if(highlight.w > 0) {
     if(mod(int(gl_FragCoord.x)/4 + int(gl_FragCoord.y)/4, 2)  == 0)
-        c = highlight.xyz * highlight.w + c * (1-highlight.w);
+        radiance = highlight.xyz * highlight.w + radiance * (1-highlight.w);
   }
 
   // output final color by setting gl_FragColor
-  frag_color = vec4(c,brdf_op);
+  frag_color = vec4(radiance, brdf.opacity);
 }
 )";
   return code;
 }
 
-const char* draw_instances_ibl_fragment_code() {
+const char* shade_envlight_fragment() {
   static const char* code = R"(
 #version 330
 
@@ -937,23 +1087,17 @@ in vec2 texcoord;  // [from vertex shader] texcoord
 in vec4 color;     // [from vertex shader] color
 in vec4 tangsp;    // [from vertex shader] tangent space
 
-float pif = 3.14159265;
-
-uniform int  etype;
-uniform int  mtype;
+uniform int  element;
+uniform bool unlit;
 uniform bool faceted;
-uniform int  shading_type;
+uniform vec4 highlight;
+uniform bool double_sided;
 
 uniform vec3  emission;   // material ke
 uniform vec3  diffuse;    // material kd
 uniform vec3  specular;   // material ks
 uniform float roughness;  // material rs
 uniform float opacity;    // material op
-
-// baked textures for image based lighting
-uniform samplerCube irradiance_cubemap;
-uniform samplerCube reflection_cubemap;
-uniform sampler2D   brdf_lut;
 
 uniform bool      emission_tex_on;   // material ke texture on
 uniform sampler2D emission_tex;      // material ke texture
@@ -965,11 +1109,13 @@ uniform bool      roughness_tex_on;  // material rs texture on
 uniform sampler2D roughness_tex;     // material rs texture
 uniform bool      opacity_tex_on;    // material op texture on
 uniform sampler2D opacity_tex;       // material op texture
+uniform bool      normalmap_tex_on;  // material normal texture on
+uniform sampler2D normalmap_tex;     // material normal texture
 
-uniform bool      mat_norm_tex_on;  // material normal texture on
-uniform sampler2D mat_norm_tex;     // material normal texture
-
-uniform bool double_sided;  // double sided rendering
+// precomputed textures for image based lighting
+uniform samplerCube envlight_irradiance;
+uniform samplerCube envlight_reflection;
+uniform sampler2D   envlight_brdflut;
 
 uniform mat4 frame;    // shape transform
 uniform mat4 frameit;  // shape transform
@@ -983,13 +1129,15 @@ uniform float gamma;
 
 out vec4 frag_color;
 
-struct brdf_struct {
+float pif = 3.14159265;
+
+struct shade_brdf {
   vec3  emission;
   vec3  diffuse;
   vec3  specular;
   float roughness;
   float opacity;
-} brdf;
+};
 
 vec3 eval_brdf_color(vec3 value, sampler2D tex, bool tex_on) {
   vec3 result = value;
@@ -1002,22 +1150,27 @@ float eval_brdf_value(float value, sampler2D tex, bool tex_on) {
   return result;
 }
 
-brdf_struct compute_brdf() {
-  brdf_struct brdf;
+shade_brdf eval_brdf() {
+  shade_brdf brdf;
   brdf.emission  = eval_brdf_color(emission, emission_tex, emission_tex_on);
   brdf.diffuse   = eval_brdf_color(diffuse, diffuse_tex, diffuse_tex_on);
   brdf.specular  = eval_brdf_color(specular, specular_tex, specular_tex_on);
   brdf.roughness = eval_brdf_value(roughness, roughness_tex, roughness_tex_on);
   brdf.opacity   = eval_brdf_value(opacity, opacity_tex, opacity_tex_on);
+  vec3 base = brdf.diffuse;
+  float metallic = brdf.specular.x;
+  brdf.diffuse = base * (1 - metallic);
+  brdf.specular = base * metallic + vec3(0.04) * (1 - metallic);
+  brdf.roughness = brdf.roughness * brdf.roughness;
   return brdf;
 }
 
 vec3 apply_normal_map(vec2 texcoord, vec3 normal, vec4 tangsp) {
-  if (!mat_norm_tex_on) return normal;
+  if (!normalmap_tex_on) return normal;
   vec3 tangu = normalize((frame * vec4(normalize(tangsp.xyz), 0)).xyz);
   vec3 tangv = normalize(cross(normal, tangu));
   if (tangsp.w < 0) tangv = -tangv;
-  vec3 texture = 2 * pow(texture(mat_norm_tex, texcoord).xyz, vec3(1 / 2.2)) -
+  vec3 texture = 2 * pow(texture(normalmap_tex, texcoord).xyz, vec3(1 / 2.2)) -
                  1;
   // texture.y = -texture.y;
   return normalize(tangu * texture.x + tangv * texture.y + normal * texture.z);
@@ -1029,14 +1182,14 @@ vec3 triangle_normal(vec3 position) {
   return normalize((frame * vec4(normalize(cross(fdx, fdy)), 0)).xyz);
 }
 
-#define etype_points 1
-#define etype_lines 2
-#define etype_triangles 3
+#define element_points 1
+#define element_lines 2
+#define element_triangles 3
 #define etype_quads 3
 
 vec3 compute_normal(vec3 V) {
   vec3 N;
-  if (etype == etype_triangles) {
+  if (element == element_triangles) {
     if (faceted) {
       N = triangle_normal(position);
     } else {
@@ -1044,7 +1197,7 @@ vec3 compute_normal(vec3 V) {
     }
   }
 
-  if (etype == etype_lines) {
+  if (element == element_lines) {
     // normal of lines is coplanar with view vector and direction tangent to the
     // line
     vec3 tangent = normalize(normal);
@@ -1062,32 +1215,32 @@ vec3 compute_normal(vec3 V) {
 vec3 sample_prefiltered_refleciton(vec3 L, float roughness) {
   int   MAX_REFLECTION_LOD = 5;
   float lod                = sqrt(roughness) * MAX_REFLECTION_LOD;
-  return textureLod(reflection_cubemap, L, lod).rgb;
+  return textureLod(envlight_reflection, L, lod).rgb;
 }
 
 // main
 void main() {
-  if(mtype == 0) {
-    frag_color = vec4(emission, 1);
-    return; 
-  }
-
   vec3 V = normalize(eye - position);
   vec3 N = compute_normal(V);
 
-  brdf_struct brdf = compute_brdf();
+  shade_brdf brdf = eval_brdf();
   if (brdf.opacity < 0.005) discard;
+
+  if(unlit) {
+    frag_color = vec4(brdf.emission + brdf.diffuse, brdf.opacity);
+    return; 
+  }
 
   // emission
   vec3 radiance = brdf.emission;
 
   // diffuse
-  radiance += brdf.diffuse * textureLod(irradiance_cubemap, N, 0).rgb;
+  radiance += brdf.diffuse * textureLod(envlight_irradiance, N, 0).rgb;
 
   // specular
   vec3 L          = normalize(reflect(-V, N));
   vec3 reflection = sample_prefiltered_refleciton(L, brdf.roughness);
-  vec2 env_brdf   = texture(brdf_lut, vec2(max(dot(N, V), 0.0), roughness)).rg;
+  vec2 env_brdf   = texture(envlight_brdflut, vec2(max(dot(N, V), 0.0), roughness)).rg;
   radiance += reflection * (brdf.specular * env_brdf.x + env_brdf.y);
 
   // final color correction
@@ -1100,7 +1253,7 @@ void main() {
   return code;
 }
 
-static const char* bake_brdf_vertex_code() {
+static const char* precompute_brdf_vertex() {
   static const char* code = R"(
 #version 330
 
@@ -1118,7 +1271,7 @@ void main() {
   return code;
 }
 
-static const char* bake_brdf_fragment_code() {
+static const char* precompute_brdf_fragment() {
   static const char* code = R"(
 #version 330
 
@@ -1226,7 +1379,7 @@ void main() {
   return code;
 }
 
-static const char* bake_cubemap_vertex_code() {
+static const char* precompute_cubemap_vertex() {
   static const char* code = R"(
 #version 330
 
@@ -1251,7 +1404,7 @@ void main() {
   return code;
 }
 
-static const char* bake_environment_fragment_code() {
+static const char* precompute_environment_fragment() {
   static const char* code = R"(
 #version 330
 
@@ -1287,7 +1440,7 @@ void main() {
   return code;
 }
 
-static const char* bake_irradiance_fragment_code() {
+static const char* precompute_irradiance_fragment() {
   static const char* code = R"(
 #version 330
 
@@ -1339,7 +1492,7 @@ void main() {
   return code;
 }
 
-static const char* bake_reflections_fragment_code() {
+static const char* precompute_reflections_fragment() {
   static const char* code = R"(
 #version 330
 
@@ -1422,7 +1575,7 @@ void main() {
   return code;
 }
 
-const char* draw_enivronment_fragment_code() {
+const char* shade_enivronment_fragment() {
   static const char* code = R"(
 #version 330
 

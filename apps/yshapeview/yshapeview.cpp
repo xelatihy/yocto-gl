@@ -32,8 +32,8 @@
 #include <yocto/yocto_parallel.h>
 #include <yocto/yocto_sceneio.h>
 #include <yocto/yocto_shape.h>
-#include <yocto_gui/yocto_draw.h>
 #include <yocto_gui/yocto_imgui.h>
+#include <yocto_gui/yocto_shade.h>
 using namespace yocto;
 
 #include <deque>
@@ -56,14 +56,14 @@ struct app_state {
   string name      = "";
 
   // options
-  gui_scene_params drawgl_prms = {};
+  shade_params drawgl_prms = {};
 
   // scene
   generic_shape* ioshape = new generic_shape{};
 
   // rendering state
-  gui_scene*  glscene  = new gui_scene{};
-  gui_camera* glcamera = nullptr;
+  shade_scene*  glscene  = new shade_scene{};
+  shade_camera* glcamera = nullptr;
 
   // loading status
   std::atomic<bool> ok           = false;
@@ -88,7 +88,7 @@ struct app_states {
   std::deque<app_state*> loading  = {};
 
   // default options
-  gui_scene_params drawgl_prms = {};
+  shade_params drawgl_prms = {};
 
   // cleanup
   ~app_states() {
@@ -169,10 +169,13 @@ quads_shape make_cylinders(const vector<vec2i>& lines,
 
 const char* draw_instanced_vertex_code();
 
-void init_glscene(app_state* app, gui_scene* glscene, generic_shape* ioshape,
+void init_glscene(app_state* app, shade_scene* glscene, generic_shape* ioshape,
     progress_callback progress_cb) {
   // handle progress
   auto progress = vec2i{0, 4};
+
+  // init scene
+  init_scene(glscene);
 
   // compute bounding box
   auto bbox = invalidb3f;
@@ -192,6 +195,8 @@ void init_glscene(app_state* app, gui_scene* glscene, generic_shape* ioshape,
   auto glmaterial  = add_material(glscene, {0, 0, 0}, {0.5, 1, 0.5}, 1, 0, 0.2);
   auto glmateriale = add_material(glscene, {0, 0, 0}, {0, 0, 0}, 0, 0, 1);
   auto glmaterialv = add_material(glscene, {0, 0, 0}, {0, 0, 0}, 0, 0, 1);
+  set_unlit(glmateriale, true);
+  set_unlit(glmaterialv, true);
 
   // shapes
   if (progress_cb) progress_cb("convert shape", progress.x++, progress.y);
@@ -201,8 +206,7 @@ void init_glscene(app_state* app, gui_scene* glscene, generic_shape* ioshape,
   if (!is_initialized(get_normals(model_shape))) {
     app->drawgl_prms.faceted = true;
   }
-  set_vertex_buffer(model_shape, vec3f{0, 0, 0}, 5);
-  set_vertex_buffer(model_shape, vec3f{0, 0, 0}, 6);
+  set_instances(model_shape, {}, {});
 
   auto edges = get_edges(ioshape->triangles, ioshape->quads);
   auto froms = vector<vec3f>();
@@ -225,51 +229,26 @@ void init_glscene(app_state* app, gui_scene* glscene, generic_shape* ioshape,
   }
   auto edges_shape = add_shape(glscene, {}, {}, {}, cylinder.quads,
       cylinder.positions, cylinder.normals, cylinder.texcoords, {});
-
-  set_vertex_buffer(edges_shape, froms, 5);
-  set_instance_buffer(edges_shape, 5);
-  set_vertex_buffer(edges_shape, tos, 6);
-  set_instance_buffer(edges_shape, 6);
+  set_instances(edges_shape, froms, tos);
 
   auto vertices_radius = 3.0f * cylinder_radius;
   auto vertices        = make_spheres(ioshape->positions, vertices_radius, 2);
   auto vertices_shape  = add_shape(glscene, {}, {}, {}, vertices.quads,
       vertices.positions, vertices.normals, vertices.texcoords, {});
-  set_vertex_buffer(vertices_shape, vec3f{0, 0, 0}, 5);
-  set_vertex_buffer(vertices_shape, vec3f{0, 0, 0}, 6);
+  set_instances(vertices_shape, {}, {});
 
   // shapes
   if (progress_cb) progress_cb("convert instance", progress.x++, progress.y);
-
   add_instance(glscene, identity3x4f, model_shape, glmaterial);
-
-  auto edges_instance = add_instance(
-      glscene, identity3x4f, edges_shape, glmateriale, true);
-  edges_instance->shading = gui_shading_type::constant;
-
-  auto points_instance = add_instance(
-      glscene, identity3x4f, vertices_shape, glmaterialv, true);
-  points_instance->shading = gui_shading_type::constant;
-
-  // init scene
-  init_scene(glscene);
+  add_instance(glscene, identity3x4f, edges_shape, glmateriale, true);
+  add_instance(glscene, identity3x4f, vertices_shape, glmaterialv, true);
 
   // override eyelight vertex shader
-  auto vert = draw_instanced_vertex_code();
-  auto frag = draw_instances_eyelight_fragment_code();
-  init_program(glscene->eyelight_program, vert, frag);
+  set_program(glscene->camlight_program, draw_instanced_vertex_code(),
+      shade_camlight_fragment());
 
   // done
   if (progress_cb) progress_cb("convert done", progress.x++, progress.y);
-
-  // init_program(glscene->ibl_program, vertex_source,
-  //     draw_instances_ibl_fragment_code(), error, errorb);
-
-  // auto img = image<vec4f>{};
-  // load_image("apps/yshapeview/env.hdr", img, error);
-  // auto texture = new ogl_texture{};
-  // set_texture(texture, img, true, true, true);
-  // init_ibl_data(glscene, texture, {1, 1, 1});
 }
 
 // draw with shading
@@ -322,7 +301,7 @@ void draw_widgets(gui_window* win, app_states* apps, const gui_input& input) {
     draw_checkbox(win, "points", app->glscene->instances[2]->hidden, true);
     draw_coloredit(win, "color", glmaterial->color);
     draw_slider(win, "resolution", params.resolution, 0, 4096);
-    draw_combobox(win, "lighting", (int&)params.lighting, gui_lighting_names);
+    draw_combobox(win, "lighting", (int&)params.lighting, shade_lighting_names);
     draw_checkbox(win, "wireframe", params.wireframe);
     continue_line(win);
     draw_checkbox(win, "double sided", params.double_sided);
@@ -404,7 +383,7 @@ int main(int argc, const char* argv[]) {
   add_option(cli, "--resolution,-r", apps->drawgl_prms.resolution,
       "Image resolution.");
   add_option(cli, "--lighting", apps->drawgl_prms.lighting, "Lighting type.",
-      gui_lighting_names);
+      shade_lighting_names);
   add_option(cli, "shapes", filenames, "Shape filenames", true);
   parse_cli(cli, argc, argv);
 
