@@ -1047,50 +1047,47 @@ void main() {
   vec3 n = eval_normal(outgoing);
 
   // get material color from textures
-  vec3 brdf_ke, brdf_kd, brdf_ks; float brdf_rs, brdf_op;
-  bool has_brdf = eval_material(texcoord, color, brdf_ke, brdf_kd, brdf_ks, brdf_rs, brdf_op);
-
-  // exit if needed
-  if(brdf_op < 0.005) discard;
+  brdf_struct brdf = eval_brdf();
+  if(brdf.opacity < 0.005) discard;
 
   // check const color
   if(etype == 0) {
-    frag_color = vec4(brdf_ke,brdf_op);
+    frag_color = vec4(brdf.emission, brdf.opacity);
     return;
   }
 
   // emission
-  vec3 c = brdf_ke;
+  vec3 radiance = brdf.emission;
 
   // check early exit
-  if(brdf_kd != vec3(0,0,0) || brdf_ks != vec3(0,0,0)) {
+  if(brdf.diffuse != vec3(0,0,0) || brdf.specular != vec3(0,0,0)) {
     // eyelight shading
     if(eyelight) {
       vec3 incoming = outgoing;
-      c += pif * brdfcos((has_brdf) ? etype : 0, brdf_ke, brdf_kd, brdf_ks, brdf_rs, brdf_op, n,incoming,outgoing);
+      radiance += pif * brdfcos(etype, brdf.emission, brdf.diffuse, brdf.specular, brdf.roughness, brdf.opacity, n, incoming, outgoing);
     } else {
       // accumulate ambient
-      c += lamb * brdf_kd;
+      radiance += lamb * brdf.diffuse;
       // foreach light
       for(int lid = 0; lid < lnum; lid ++) {
         vec3 cl = vec3(0,0,0); vec3 incoming = vec3(0,0,0);
         eval_light(lid, position, cl, incoming);
-        c += cl * brdfcos((has_brdf) ? etype : 0, brdf_ke, brdf_kd, brdf_ks, brdf_rs, brdf_op, n,incoming,outgoing);
+        radiance += cl * brdfcos(etype, brdf.emission, brdf.diffuse, brdf.specular, brdf.roughness, brdf.opacity, n, incoming, outgoing);
       }
     }
   }
 
   // final color correction
-  c = pow(c * pow(2,exposure), vec3(1/gamma));
+  radiance = pow(radiance * pow(2,exposure), vec3(1/gamma));
 
   // highlighting
   if(highlight.w > 0) {
     if(mod(int(gl_FragCoord.x)/4 + int(gl_FragCoord.y)/4, 2)  == 0)
-        c = highlight.xyz * highlight.w + c * (1-highlight.w);
+        radiance = highlight.xyz * highlight.w + radiance * (1-highlight.w);
   }
 
   // output final color by setting gl_FragColor
-  frag_color = vec4(c,brdf_op);
+  frag_color = vec4(radiance, brdf.opacity);
 }
 )";
   return code;
