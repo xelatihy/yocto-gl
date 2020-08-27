@@ -162,7 +162,7 @@ void init_scene(gui_scene* scene, const gui_texture* environment_tex = nullptr,
     const vec3f& environment_emission = {1, 1, 1});
 bool is_initialized(const gui_scene* scene);
 
-// Initialize data for image based lighting
+// Initialize data for environment lighting
 void init_ibl_data(gui_scene* scene);
 
 // Clear an OpenGL scene
