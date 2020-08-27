@@ -526,7 +526,8 @@ void draw_environments(
   set_params_uniforms(program, params);
   for (auto environment : scene->environments) {
     if (!is_initialized(environment->cubemap)) continue;
-    set_uniform(program, "environment", environment->cubemap, 0);
+    set_uniform(program, "emission", environment->emission);
+    set_uniform(program, "emission_tex", environment->cubemap, 0);
     draw_shape(environment->shape);
   }
   unbind_program();
@@ -559,6 +560,7 @@ void set_lighting_uniforms(ogl_program* program, const shade_scene* scene,
     auto environment = scene->environments.front();
     set_uniform(program, "lighting", 2);
     set_uniform(program, "lights_num", 0);
+    set_uniform(program, "envlight_scale", environment->emission);
     set_uniform(
         program, "envlight_irradiance", environment->envlight_diffuse, 6);
     set_uniform(
@@ -750,7 +752,7 @@ static void init_environment(shade_environment* environment) {
   set_program(program, precompute_cubemap_vertex(),
       precompute_environment_fragment(), true);
   precompute_cubemap(environment->cubemap, environment->emission_tex->texture,
-      program, size, 1, environment->emission);
+      program, size, 1);
 }
 
 void init_envlight(shade_environment* environment) {
@@ -937,6 +939,7 @@ uniform vec3 lights_position[16];            // light positions
 uniform vec3 lights_emission[16]; // light intensities
 
 // precomputed textures for image based lighting
+uniform vec3        envlight_scale;
 uniform samplerCube envlight_irradiance;
 uniform samplerCube envlight_reflection;
 uniform sampler2D   envlight_brdflut;
@@ -1114,10 +1117,10 @@ void main() {
     }
     if (lighting == lighting_envlight) {
       // diffuse
-      radiance += brdf.diffuse * textureLod(envlight_irradiance, n, 0).rgb;
+      radiance += brdf.diffuse * envlight_scale * textureLod(envlight_irradiance, n, 0).rgb;
       // specular
       vec3 incoming   = normalize(reflect(-outgoing, n));
-      vec3 reflection = sample_prefiltered_refleciton(incoming, brdf.roughness);
+      vec3 reflection = envlight_scale * sample_prefiltered_refleciton(incoming, brdf.roughness);
       vec2 env_brdf   = texture(envlight_brdflut, vec2(max(dot(n, outgoing), 0.0), roughness)).rg;
       radiance += reflection * (brdf.specular * env_brdf.x + env_brdf.y);
     }
@@ -1466,6 +1469,36 @@ void main() {
   return code;
 }
 
+const char* shade_enivronment_fragment() {
+  static const char* code = R"(
+#version 330
+
+out vec3 frag_color;
+
+in vec3 position;  //  position in world space
+
+uniform vec3 eye;         // camera position
+uniform mat4 view;        // inverse of the camera frame (as a matrix)
+uniform mat4 projection;  // camera projection
+
+uniform float exposure;
+uniform float gamma;
+
+uniform vec3 emission;
+uniform samplerCube emission_tex;
+
+void main() {
+  vec3 direction = normalize(position);
+  vec3 radiance = emission * texture(emission_tex, direction).rgb;
+
+  // final color correction
+  radiance   = pow(radiance * pow(2, exposure), vec3(1 / gamma));
+  frag_color = radiance;
+}
+)";
+  return code;
+}
+
 static const char* precompute_environment_fragment() {
   static const char* code = R"(
 #version 330
@@ -1632,36 +1665,6 @@ void main() {
   result = result / total_weight;
 
   frag_color = vec3(result);
-}
-)";
-  return code;
-}
-
-const char* shade_enivronment_fragment() {
-  static const char* code = R"(
-#version 330
-
-out vec3 frag_color;
-
-in vec3 position;  //  position in world space
-
-uniform vec3 eye;         // camera position
-uniform mat4 view;        // inverse of the camera frame (as a matrix)
-uniform mat4 projection;  // camera projection
-
-uniform float exposure;
-uniform float gamma;
-
-uniform samplerCube environment;
-
-void main() {
-  vec3 v = normalize(position);
-
-  vec3 radiance = texture(environment, v).rgb;
-
-  // final color correction
-  radiance   = pow(radiance * pow(2, exposure), vec3(1 / gamma));
-  frag_color = radiance;
 }
 )";
   return code;
