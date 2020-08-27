@@ -32,8 +32,8 @@
 #include <yocto/yocto_parallel.h>
 #include <yocto/yocto_sceneio.h>
 #include <yocto/yocto_shape.h>
-#include <yocto_gui/yocto_draw.h>
 #include <yocto_gui/yocto_imgui.h>
+#include <yocto_gui/yocto_shade.h>
 using namespace yocto;
 
 #include <deque>
