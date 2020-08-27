@@ -30,6 +30,7 @@
 #include "yocto_opengl.h"
 
 #include <cassert>
+#include <stdexcept>
 #include <unordered_set>
 
 #include "ext/glad/glad.h"
