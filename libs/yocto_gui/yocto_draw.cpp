@@ -198,7 +198,7 @@ void init_environments(shade_scene* scene, bool precompute_envlight) {
 }
 
 // Check if we have an envlight
-bool has_envlight(shade_scene* scene) {
+bool has_envlight(const shade_scene* scene) {
   return !scene->environments.empty() &&
          is_initialized(scene->environments.front()->cubemap);
 }
@@ -640,7 +640,6 @@ shade_view make_scene_view(
   view.camera_frame      = camera->frame;
   view.view_matrix       = view_matrix;
   view.projection_matrix = projection_matrix;
-  view.params            = params;
   return view;
 }
 

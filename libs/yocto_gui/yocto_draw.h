@@ -204,7 +204,7 @@ bool is_initialized(const shade_scene* scene);
 void init_environments(shade_scene* scene, bool precompute_envlight = true);
 
 // Check if we have an envlight
-bool has_envlight(shade_scene* scene);
+bool has_envlight(const shade_scene* scene);
 
 // Clear an OpenGL scene
 void clear_scene(shade_scene* scene);
