@@ -262,11 +262,11 @@ struct ogl_program {
 };
 
 // initialize program
-bool init_program(ogl_program* program, const string& vertex,
+bool set_program(ogl_program* program, const string& vertex,
     const string& fragment, string& error);
-bool init_program(ogl_program* program, const string& vertex,
+bool set_program(ogl_program* program, const string& vertex,
     const string& fragment, string& error, string& errorlog);
-bool init_program(ogl_program* program, const string& vertex,
+bool set_program(ogl_program* program, const string& vertex,
     const string& fragment, bool exceptions = true);
 bool is_initialized(const ogl_program* program);
 

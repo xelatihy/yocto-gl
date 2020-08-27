@@ -177,11 +177,11 @@ static void init_envlight(shade_environment* environment);
 void init_scene(shade_scene* scene) {
   if (is_initialized(scene->camlight_program)) return;
   auto error = ""s, errorlog = ""s;
-  init_program(scene->camlight_program, draw_instances_vertex_code(),
+  set_program(scene->camlight_program, draw_instances_vertex_code(),
       draw_instances_eyelight_fragment_code(), error, errorlog);
-  init_program(scene->envlight_program, draw_instances_vertex_code(),
+  set_program(scene->envlight_program, draw_instances_vertex_code(),
       draw_instances_ibl_fragment_code(), error, errorlog);
-  init_program(scene->environment_program, precompute_cubemap_vertex_code(),
+  set_program(scene->environment_program, precompute_cubemap_vertex_code(),
       draw_enivronment_fragment_code());
 }
 
@@ -727,7 +727,7 @@ inline void precompute_specular_brdf_texture(ogl_texture* texture) {
   auto error = ""s, errorlog = ""s;
   auto vert = precompute_brdf_vertex_code();
   auto frag = precompute_brdf_fragment_code();
-  init_program(program, vert, frag, error, errorlog);
+  set_program(program, vert, frag, error, errorlog);
 
   set_texture(texture, size, 3, (float*)nullptr, true, true, false, false);
 
@@ -759,7 +759,7 @@ static void init_environment(shade_environment* environment) {
   auto size          = environment->emission_tex->texture->size.y;
   auto program_guard = make_unique<ogl_program>();
   auto program       = program_guard.get();
-  init_program(program, precompute_cubemap_vertex_code(),
+  set_program(program, precompute_cubemap_vertex_code(),
       precompute_environment_fragment_code());
   precompute_cubemap(environment->cubemap, environment->emission_tex->texture,
       program, size, 1, environment->emission);
@@ -772,7 +772,7 @@ void init_envlight(shade_environment* environment) {
   auto diffuse_program       = diffuse_program_guard.get();
   auto vert                  = precompute_cubemap_vertex_code();
   auto frag                  = precompute_irradiance_fragment_code();
-  init_program(diffuse_program, vert, frag);
+  set_program(diffuse_program, vert, frag);
   precompute_cubemap(
       environment->envlight_diffuse, environment->cubemap, diffuse_program, 64);
   clear_program(diffuse_program);
@@ -781,7 +781,7 @@ void init_envlight(shade_environment* environment) {
   // bake specular map
   auto specular_program_guard = make_unique<ogl_program>();
   auto specular_program       = specular_program_guard.get();
-  init_program(specular_program, precompute_cubemap_vertex_code(),
+  set_program(specular_program, precompute_cubemap_vertex_code(),
       precompute_reflections_fragment_code());
   precompute_cubemap(environment->envlight_specular, environment->cubemap,
       specular_program, 256, 6);

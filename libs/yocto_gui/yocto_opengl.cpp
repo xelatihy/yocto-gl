@@ -577,7 +577,7 @@ void set_elementbuffer(
 }
 
 // initialize program
-bool init_program(ogl_program* program, const string& vertex,
+bool set_program(ogl_program* program, const string& vertex,
     const string& fragment, string& error, string& errorlog) {
   // error
   auto program_error = [&error, &errorlog, program](
@@ -654,18 +654,18 @@ bool init_program(ogl_program* program, const string& vertex,
 }
 
 // initialize program
-bool init_program(ogl_program* program, const string& vertex,
+bool set_program(ogl_program* program, const string& vertex,
     const string& fragment, string& error) {
   auto errorlog = string{};
-  return init_program(program, vertex, fragment, error, errorlog);
+  return set_program(program, vertex, fragment, error, errorlog);
 }
 
 // initialize program, print eventual errors to stdout
-bool init_program(ogl_program* program, const string& vertex,
+bool set_program(ogl_program* program, const string& vertex,
     const string& fragment, bool exceptions) {
   auto error    = string{};
   auto errorlog = string{};
-  if (!init_program(program, vertex, fragment, error, errorlog)) {
+  if (!set_program(program, vertex, fragment, error, errorlog)) {
     if (exceptions) throw std::runtime_error{error};
     return false;
   }
@@ -1168,7 +1168,7 @@ bool is_initialized(const ogl_image* image) {
 // init image program
 bool init_image(ogl_image* image) {
   if (is_initialized(image)) return true;
-  if (!init_program(image->program, glimage_vertex, glimage_fragment))
+  if (!set_program(image->program, glimage_vertex, glimage_fragment))
     return false;
   set_quad_shape(image->quad);
   return true;
