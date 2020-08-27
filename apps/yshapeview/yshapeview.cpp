@@ -240,7 +240,6 @@ void init_glscene(app_state* app, shade_scene* glscene, generic_shape* ioshape,
 
   // shapes
   if (progress_cb) progress_cb("convert instance", progress.x++, progress.y);
-
   add_instance(glscene, identity3x4f, model_shape, glmaterial);
 
   auto edges_instance = add_instance(
