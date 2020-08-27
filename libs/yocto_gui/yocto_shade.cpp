@@ -885,6 +885,35 @@ out vec4 frag_color;
 
 float pif = 3.14159265;
 
+struct brdf_struct {
+  vec3  emission;
+  vec3  diffuse;
+  vec3  specular;
+  float roughness;
+  float opacity;
+};
+
+vec3 eval_brdf_color(vec3 value, sampler2D tex, bool tex_on) {
+  vec3 result = value;
+  if (tex_on) result *= texture(tex, texcoord).rgb;
+  return result;
+}
+float eval_brdf_value(float value, sampler2D tex, bool tex_on) {
+  float result = value;
+  if (tex_on) result *= texture(tex, texcoord).r;
+  return result;
+}
+
+brdf_struct eval_brdf() {
+  brdf_struct brdf;
+  brdf.emission  = eval_brdf_color(emission, emission_tex, emission_tex_on);
+  brdf.diffuse   = eval_brdf_color(diffuse, diffuse_tex, diffuse_tex_on);
+  brdf.specular  = eval_brdf_color(specular, specular_tex, specular_tex_on);
+  brdf.roughness = eval_brdf_value(roughness, roughness_tex, roughness_tex_on);
+  brdf.opacity   = eval_brdf_value(opacity, opacity_tex, opacity_tex_on);
+  return brdf;
+}
+
 void eval_light(int lid, vec3 position, out vec3 radiance, out vec3 incoming) {
   radiance = vec3(0,0,0);
   incoming = vec3(0,0,0);
@@ -1127,7 +1156,7 @@ struct brdf_struct {
   vec3  specular;
   float roughness;
   float opacity;
-} brdf;
+};
 
 vec3 eval_brdf_color(vec3 value, sampler2D tex, bool tex_on) {
   vec3 result = value;
