@@ -345,8 +345,8 @@ void draw_scene(shade_scene* scene, shade_camera* camera, const vec4i& viewport,
     const shade_params& params);
 
 // read-only access to defualt shader code
-const char* shade_scene_vertex();
-const char* shade_camlight_fragment();
+const char* shade_instance_vertex();
+const char* shade_instance_fragment();
 const char* shade_envlight_fragment();
 const char* shade_enivronment_fragment();
 

@@ -160,8 +160,8 @@ shade_scene::~shade_scene() {
   delete envlight_program;
 }
 
-static const char* precompute_brdf_vertex();
-static const char* precompute_brdf_fragment();
+static const char* precompute_brdflut_vertex();
+static const char* precompute_brdflut_fragment();
 
 static const char* precompute_cubemap_vertex();
 static const char* precompute_environment_fragment();
@@ -174,10 +174,10 @@ static void init_envlight(shade_environment* environment);
 // Initialize an OpenGL scene
 void init_scene(shade_scene* scene) {
   if (is_initialized(scene->camlight_program)) return;
-  set_program(scene->camlight_program, shade_scene_vertex(),
-      shade_camlight_fragment(), true);
-  set_program(scene->envlight_program, shade_scene_vertex(),
-      shade_camlight_fragment(), true);
+  set_program(scene->camlight_program, shade_instance_vertex(),
+      shade_instance_fragment(), true);
+  set_program(scene->envlight_program, shade_instance_vertex(),
+      shade_instance_fragment(), true);
   set_program(scene->environment_program, precompute_cubemap_vertex(),
       shade_enivronment_fragment(), true);
 }
@@ -652,7 +652,7 @@ void draw_scene(shade_scene* scene, shade_camera* camera, const vec4i& viewport,
 // Using 6 render passes, precompute a cubemap given a sampler for the
 // environment. The input sampler can be either a cubemap or a latlong texture.
 template <typename Sampler>
-inline void precompute_cubemap(ogl_cubemap* cubemap, const Sampler* environment,
+static void precompute_cubemap(ogl_cubemap* cubemap, const Sampler* environment,
     ogl_program* program, int size, int num_mipmap_levels = 1,
     const vec3f& emission = {1, 1, 1}) {
   // init cubemap with no data
@@ -706,7 +706,7 @@ inline void precompute_cubemap(ogl_cubemap* cubemap, const Sampler* environment,
   unbind_framebuffer();
 }
 
-inline void precompute_specular_brdf_texture(ogl_texture* texture) {
+static void precompute_brdflut(ogl_texture* texture) {
   auto size              = vec2i{512, 512};
   auto screen_quad_guard = make_unique<ogl_shape>();
   auto screen_quad       = screen_quad_guard.get();
@@ -714,10 +714,8 @@ inline void precompute_specular_brdf_texture(ogl_texture* texture) {
 
   auto program_guard = make_unique<ogl_program>();
   auto program       = program_guard.get();
-  auto error = ""s, errorlog = ""s;
-  auto vert = precompute_brdf_vertex();
-  auto frag = precompute_brdf_fragment();
-  set_program(program, vert, frag, error, errorlog);
+  set_program(program, precompute_brdflut_vertex(),
+      precompute_brdflut_fragment(), true);
 
   set_texture(texture, size, 3, (float*)nullptr, true, true, false, false);
 
@@ -746,8 +744,8 @@ static void init_environment(shade_environment* environment) {
   auto size          = environment->emission_tex->texture->size.y;
   auto program_guard = make_unique<ogl_program>();
   auto program       = program_guard.get();
-  set_program(
-      program, precompute_cubemap_vertex(), precompute_environment_fragment());
+  set_program(program, precompute_cubemap_vertex(),
+      precompute_environment_fragment(), true);
   precompute_cubemap(environment->cubemap, environment->emission_tex->texture,
       program, size, 1, environment->emission);
 }
@@ -757,7 +755,7 @@ void init_envlight(shade_environment* environment) {
   auto diffuse_program_guard = make_unique<ogl_program>();
   auto diffuse_program       = diffuse_program_guard.get();
   set_program(diffuse_program, precompute_cubemap_vertex(),
-      precompute_irradiance_fragment());
+      precompute_irradiance_fragment(), true);
   precompute_cubemap(
       environment->envlight_diffuse, environment->cubemap, diffuse_program, 64);
 
@@ -765,15 +763,15 @@ void init_envlight(shade_environment* environment) {
   auto specular_program_guard = make_unique<ogl_program>();
   auto specular_program       = specular_program_guard.get();
   set_program(specular_program, precompute_cubemap_vertex(),
-      precompute_reflections_fragment());
+      precompute_reflections_fragment(), true);
   precompute_cubemap(environment->envlight_specular, environment->cubemap,
       specular_program, 256, 6);
 
   // precompute lookup texture for specular brdf
-  precompute_specular_brdf_texture(environment->envlight_brdflut);
+  precompute_brdflut(environment->envlight_brdflut);
 }
 
-const char* shade_scene_vertex() {
+const char* shade_instance_vertex() {
   static const char* code =
       R"(
 #version 330
@@ -823,7 +821,7 @@ void main() {
   return code;
 }
 
-const char* shade_camlight_fragment() {
+const char* shade_instance_fragment() {
   static const char* code =
       R"(
 #version 330
@@ -1245,7 +1243,7 @@ void main() {
   return code;
 }
 
-static const char* precompute_brdf_vertex() {
+static const char* precompute_brdflut_vertex() {
   static const char* code = R"(
 #version 330
 
@@ -1263,7 +1261,7 @@ void main() {
   return code;
 }
 
-static const char* precompute_brdf_fragment() {
+static const char* precompute_brdflut_fragment() {
   static const char* code = R"(
 #version 330
 
