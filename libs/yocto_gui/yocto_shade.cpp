@@ -1080,7 +1080,7 @@ uniform vec3  specular;   // material ks
 uniform float roughness;  // material rs
 uniform float opacity;    // material op
 
-// baked textures for image based lighting
+// precomputed textures for image based lighting
 uniform samplerCube irradiance_cubemap;
 uniform samplerCube reflection_cubemap;
 uniform sampler2D   brdf_lut;
