@@ -1016,11 +1016,6 @@ vec3 eval_normal(vec3 outgoing) {
 
 // main
 void main() {
-  if(mtype == 0) {
-    frag_color = vec4(emission, 1);
-    return; 
-  }
-
   // view vector
   vec3 outgoing = normalize(eye - position);
   vec3 n = eval_normal(outgoing);
@@ -1029,10 +1024,9 @@ void main() {
   brdf_struct brdf = eval_brdf();
   if(brdf.opacity < 0.005) discard;
 
-  // check const color
-  if(etype == 0) {
-    frag_color = vec4(brdf.emission, brdf.opacity);
-    return;
+  if(mtype == 0) {
+    frag_color = vec4(brdf.emission + brdf.diffuse, brdf.opacity);
+    return; 
   }
 
   // emission
@@ -1210,16 +1204,16 @@ vec3 sample_prefiltered_refleciton(vec3 L, float roughness) {
 
 // main
 void main() {
-  if(mtype == 0) {
-    frag_color = vec4(emission, 1);
-    return; 
-  }
-
   vec3 V = normalize(eye - position);
   vec3 N = compute_normal(V);
 
   brdf_struct brdf = eval_brdf();
   if (brdf.opacity < 0.005) discard;
+
+  if(mtype == 0) {
+    frag_color = vec4(brdf.emission + brdf.diffuse, brdf.opacity);
+    return; 
+  }
 
   // emission
   vec3 radiance = brdf.emission;
