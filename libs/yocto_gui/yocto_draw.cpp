@@ -172,21 +172,31 @@ static const char* precompute_environment_fragment_code();
 static const char* precompute_irradiance_fragment_code();
 static const char* precompute_reflections_fragment_code();
 
-static void init_environment(gui_scene* scene,
-    const gui_texture* environment_tex, const vec3f& environment_emission);
+static void init_environment(gui_environment* environment);
+static void init_envlight(gui_environment* environment);
 
 // Initialize an OpenGL scene
-void init_scene(gui_scene* scene, const gui_texture* environment_tex,
+void init_scene(gui_scene* scene, gui_texture* environment_tex,
     const vec3f& environment_emission) {
   if (is_initialized(scene->camlight_program)) return;
-  auto error = ""s, errorlog = ""s;
-  auto vert = draw_instances_vertex_code();
-  auto frag = draw_instances_eyelight_fragment_code();
-  init_program(scene->camlight_program, vert, frag, error, errorlog);
 
+  // HACK
   if (environment_tex && environment_emission != vec3f{0, 0, 0}) {
-    init_environment(scene, environment_tex, environment_emission);
-    init_ibl_data(scene);
+    add_environment(scene, identity3x4f, environment_emission, environment_tex);
+  }
+
+  auto error = ""s, errorlog = ""s;
+  init_program(scene->camlight_program, draw_instances_vertex_code(),
+      draw_instances_eyelight_fragment_code(), error, errorlog);
+  init_program(scene->envlight_program, draw_instances_vertex_code(),
+      draw_instances_ibl_fragment_code(), error, errorlog);
+  init_program(scene->environment_program, precompute_cubemap_vertex_code(),
+      draw_enivronment_fragment_code());
+
+  // HACK
+  for (auto environment : scene->environments) {
+    init_environment(environment);
+    init_envlight(environment);
   }
 }
 
@@ -382,6 +392,19 @@ void clear_environment(gui_environment* environment) {
   clear_texture(environment->brdf_lut);
 }
 
+// environment properties
+gui_environment* add_environment(gui_scene* scene) {
+  return scene->environments.emplace_back(new gui_environment{});
+}
+void set_frame(gui_environment* environment, const frame3f& frame) {
+  environment->frame = frame;
+}
+void set_emission(gui_environment* environment, const vec3f& emission,
+    gui_texture* emission_tex) {
+  environment->emission     = emission;
+  environment->emission_tex = emission_tex;
+}
+
 // shortcuts
 gui_camera* add_camera(gui_scene* scene, const frame3f& frame, float lens,
     float aspect, float film, float near, float far) {
@@ -415,6 +438,14 @@ gui_instance* add_instance(gui_scene* scene, const frame3f& frame,
   set_hidden(instance, hidden);
   set_highlighted(instance, highlighted);
   return instance;
+}
+
+gui_environment* add_environment(gui_scene* scene, const frame3f& frame,
+    const vec3f& emission, gui_texture* emission_tex) {
+  auto environment = add_environment(scene);
+  set_frame(environment, frame);
+  set_emission(environment, emission, emission_tex);
+  return environment;
 }
 
 void set_scene_view_uniforms(ogl_program* program, const gui_scene_view& view) {
@@ -699,28 +730,23 @@ inline void precompute_specular_brdf_texture(ogl_texture* texture) {
   clear_shape(screen_quad);
 }
 
-static void init_environment(gui_scene* scene,
-    const gui_texture* environment_tex, const vec3f& environment_emission) {
-  auto environment = scene->environments.emplace_back(new gui_environment{});
+static void init_environment(gui_environment* environment) {
   // init program and shape for drawing the environment
   set_cube_shape(environment->environment_shape->shape);
-  init_program(scene->environment_program, precompute_cubemap_vertex_code(),
-      draw_enivronment_fragment_code());
 
   // precompute cubemap from environment texture
-  auto size          = environment_tex->texture->size.y;
+  auto size          = environment->emission_tex->texture->size.y;
   auto program_guard = make_unique<ogl_program>();
   auto program       = program_guard.get();
   init_program(program, precompute_cubemap_vertex_code(),
       precompute_environment_fragment_code());
-  precompute_cubemap(environment->environment_cubemap, environment_tex->texture,
-      program, size, 1, environment_emission);
+  precompute_cubemap(environment->environment_cubemap,
+      environment->emission_tex->texture, program, size, 1,
+      environment->emission);
   clear_program(program);
 }
 
-void init_ibl_data(gui_scene* scene) {
-  auto environment = scene->environments.front();
-
+void init_envlight(gui_environment* environment) {
   // precompute irradiance map
   auto diffuse_program_guard = make_unique<ogl_program>();
   auto diffuse_program       = diffuse_program_guard.get();
@@ -744,10 +770,6 @@ void init_ibl_data(gui_scene* scene) {
 
   // bake lookup texture for specular brdf
   precompute_specular_brdf_texture(environment->brdf_lut);
-
-  // init shader for IBL shading
-  init_program(scene->envlight_program, draw_instances_vertex_code(),
-      draw_instances_ibl_fragment_code());
 }
 
 const char* draw_instances_vertex_code() {
