@@ -161,8 +161,8 @@ shade_scene::~shade_scene() {
   delete envlight_program;
 }
 
-static const char* precompute_brdf_vertex_code();
-static const char* precompute_brdf_fragment_code();
+static const char* preeval_brdf_vertex_code();
+static const char* preeval_brdf_fragment_code();
 
 static const char* precompute_cubemap_vertex_code();
 static const char* precompute_environment_fragment_code();
@@ -711,8 +711,8 @@ inline void precompute_specular_brdf_texture(ogl_texture* texture) {
   auto program_guard = make_unique<ogl_program>();
   auto program       = program_guard.get();
   auto error = ""s, errorlog = ""s;
-  auto vert = precompute_brdf_vertex_code();
-  auto frag = precompute_brdf_fragment_code();
+  auto vert = preeval_brdf_vertex_code();
+  auto frag = preeval_brdf_fragment_code();
   set_program(program, vert, frag, error, errorlog);
 
   set_texture(texture, size, 3, (float*)nullptr, true, true, false, false);
@@ -885,18 +885,18 @@ out vec4 frag_color;
 
 float pif = 3.14159265;
 
-void evaluate_light(int lid, vec3 position, out vec3 cl, out vec3 incoming) {
-  cl = vec3(0,0,0);
+void eval_light(int lid, vec3 position, out vec3 radiance, out vec3 incoming) {
+  radiance = vec3(0,0,0);
   incoming = vec3(0,0,0);
   if(ltype[lid] == 0) {
     // compute point light color at position
-    cl = lke[lid] / pow(length(lpos[lid]-position),2);
+    radiance = lke[lid] / pow(length(lpos[lid]-position),2);
     // compute light direction at position
     incoming = normalize(lpos[lid]-position);
   }
   else if(ltype[lid] == 1) {
     // compute light color
-    cl = lke[lid];
+    radiance = lke[lid];
     // compute light direction
     incoming = normalize(lpos[lid]);
   }
@@ -936,7 +936,7 @@ vec3 brdfcos(int etype, vec3 ke, vec3 kd, vec3 ks, float rs, float op,
   }
 }
 
-bool evaluate_material(vec2 texcoord, vec4 color, out vec3 ke, 
+bool eval_material(vec2 texcoord, vec4 color, out vec3 ke, 
                     out vec3 kd, out vec3 ks, out float rs, out float op) {
   ke = color.xyz * emission;
   kd = color.xyz * diffuse;
@@ -979,6 +979,33 @@ vec3 triangle_normal(vec3 position) {
   return normalize((frame * vec4(normalize(cross(fdx, fdy)), 0)).xyz);
 }
 
+#define etype_points 1
+#define etype_lines 2
+#define etype_triangles 3
+
+vec3 eval_normal(vec3 outgoing) {
+  vec3 norm;
+  if (etype == etype_triangles) {
+    if (faceted) {
+      norm = triangle_normal(position);
+    } else {
+      norm = normalize(normal);
+    }
+  }
+
+  if (etype == etype_lines) {
+    vec3 tangent = normalize(normal);
+    norm         = normalize(outgoing - tangent * dot(outgoing, tangent));
+  }
+
+  // apply normal map
+  norm = apply_normal_map(texcoord, norm, tangsp);
+
+  // use faceforward to ensure the normals points toward us
+  if (double_sided) norm = faceforward(norm, -outgoing, norm);
+  return norm;
+}
+
 // main
 void main() {
   if(mtype == 0) {
@@ -988,24 +1015,11 @@ void main() {
 
   // view vector
   vec3 outgoing = normalize(eye - position);
-
-  // prepare normals
-  vec3 n;
-  if(faceted) {
-    n = triangle_normal(position);
-  } else {
-    n = normalize(normal);
-  }
-
-  // apply normal map
-  n = apply_normal_map(texcoord, n, tangsp);
-
-  // use faceforward to ensure the normals points toward us
-  if(double_sided) n = faceforward(n,-outgoing,n);
+  vec3 n = eval_normal(outgoing);
 
   // get material color from textures
   vec3 brdf_ke, brdf_kd, brdf_ks; float brdf_rs, brdf_op;
-  bool has_brdf = evaluate_material(texcoord, color, brdf_ke, brdf_kd, brdf_ks, brdf_rs, brdf_op);
+  bool has_brdf = eval_material(texcoord, color, brdf_ke, brdf_kd, brdf_ks, brdf_rs, brdf_op);
 
   // exit if needed
   if(brdf_op < 0.005) discard;
@@ -1031,7 +1045,7 @@ void main() {
       // foreach light
       for(int lid = 0; lid < lnum; lid ++) {
         vec3 cl = vec3(0,0,0); vec3 incoming = vec3(0,0,0);
-        evaluate_light(lid, position, cl, incoming);
+        eval_light(lid, position, cl, incoming);
         c += cl * brdfcos((has_brdf) ? etype : 0, brdf_ke, brdf_kd, brdf_ks, brdf_rs, brdf_op, n,incoming,outgoing);
       }
     }
@@ -1126,7 +1140,7 @@ float eval_brdf_value(float value, sampler2D tex, bool tex_on) {
   return result;
 }
 
-brdf_struct compute_brdf() {
+brdf_struct eval_brdf() {
   brdf_struct brdf;
   brdf.emission  = eval_brdf_color(emission, emission_tex, emission_tex_on);
   brdf.diffuse   = eval_brdf_color(diffuse, diffuse_tex, diffuse_tex_on);
@@ -1199,7 +1213,7 @@ void main() {
   vec3 V = normalize(eye - position);
   vec3 N = compute_normal(V);
 
-  brdf_struct brdf = compute_brdf();
+  brdf_struct brdf = eval_brdf();
   if (brdf.opacity < 0.005) discard;
 
   // emission
@@ -1224,7 +1238,7 @@ void main() {
   return code;
 }
 
-static const char* precompute_brdf_vertex_code() {
+static const char* preeval_brdf_vertex_code() {
   static const char* code = R"(
 #version 330
 
@@ -1242,7 +1256,7 @@ void main() {
   return code;
 }
 
-static const char* precompute_brdf_fragment_code() {
+static const char* preeval_brdf_fragment_code() {
   static const char* code = R"(
 #version 330
 

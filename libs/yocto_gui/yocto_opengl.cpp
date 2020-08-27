@@ -666,7 +666,7 @@ bool set_program(ogl_program* program, const string& vertex,
   auto error    = string{};
   auto errorlog = string{};
   if (!set_program(program, vertex, fragment, error, errorlog)) {
-    if (exceptions) throw std::runtime_error{error};
+    if (exceptions) throw std::runtime_error{error + "\n" + errorlog};
     return false;
   }
   return true;
