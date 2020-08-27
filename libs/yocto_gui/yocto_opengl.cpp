@@ -229,6 +229,9 @@ void set_texture(ogl_texture* texture, const vec2i& size, int num_channels,
   assert_ogl_error();
 }
 
+// cleanup
+ogl_texture::~ogl_texture() { clear_texture(this); }
+
 // check if texture is initialized
 bool is_initialized(const ogl_texture* texture) {
   return texture && texture->texture_id != 0;
@@ -387,6 +390,9 @@ void set_cubemap(ogl_cubemap* cubemap, int size, int num_channels,
   assert_ogl_error();
 }
 
+// cleanup
+ogl_cubemap::~ogl_cubemap() { clear_cubemap(this); }
+
 // check if cubemap is initialized
 bool is_initialized(const ogl_cubemap* cubemap) {
   return cubemap && cubemap->cubemap_id != 0;
@@ -453,6 +459,9 @@ void set_cubemap(ogl_cubemap* cubemap, const array<image<float>, 6>& img,
   set_cubemap(
       cubemap, img[0].imsize().x, num_channels, data, as_float, linear, mipmap);
 }
+
+// cleanup
+ogl_arraybuffer::~ogl_arraybuffer() { clear_arraybuffer(this); }
 
 // check if buffer is initialized
 bool is_initialized(const ogl_arraybuffer* buffer) {
@@ -543,6 +552,9 @@ void set_elementbuffer(ogl_elementbuffer* buffer, size_t size, int esize,
   buffer->dynamic      = dynamic;
   assert_ogl_error();
 }
+
+// cleanup
+ogl_elementbuffer::~ogl_elementbuffer() { clear_elementbuffer(this); }
 
 // check if buffer is initialized
 bool is_initialized(const ogl_elementbuffer* buffer) {
@@ -684,6 +696,9 @@ void clear_program(ogl_program* program) {
   program->fragment_id   = 0;
   assert_ogl_error();
 }
+
+// cleanup
+ogl_program::~ogl_program() { clear_program(this); }
 
 bool is_initialized(const ogl_program* program) {
   return program && program->program_id != 0;
@@ -842,6 +857,9 @@ void set_uniform(const ogl_program* program, const char* name,
       get_uniform_location(program, name_on), cubemap, unit);
 }
 
+// cleanup
+ogl_framebuffer::~ogl_framebuffer() { clear_framebuffer(this); }
+
 void set_framebuffer(ogl_framebuffer* framebuffer, const vec2i& size) {
   if (!framebuffer->framebuffer_id) {
     glGenFramebuffers(1, &framebuffer->framebuffer_id);
@@ -916,7 +934,9 @@ void clear_framebuffer(ogl_framebuffer* framebuffer) {
   }
   glDeleteFramebuffers(1, &framebuffer->framebuffer_id);
   glDeleteRenderbuffers(1, &framebuffer->renderbuffer_id);
-  *framebuffer = {};
+  framebuffer->size            = {0, 0};
+  framebuffer->framebuffer_id  = 0;
+  framebuffer->renderbuffer_id = 0;
   assert_ogl_error();
 }
 
