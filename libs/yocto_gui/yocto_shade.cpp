@@ -175,13 +175,12 @@ static void init_envlight(shade_environment* environment);
 // Initialize an OpenGL scene
 void init_scene(shade_scene* scene) {
   if (is_initialized(scene->camlight_program)) return;
-  auto error = ""s, errorlog = ""s;
   set_program(scene->camlight_program, draw_instances_vertex_code(),
-      draw_instances_eyelight_fragment_code(), error, errorlog);
+      draw_instances_eyelight_fragment_code(), true);
   set_program(scene->envlight_program, draw_instances_vertex_code(),
-      draw_instances_ibl_fragment_code(), error, errorlog);
+      draw_instances_ibl_fragment_code(), true);
   set_program(scene->environment_program, precompute_cubemap_vertex_code(),
-      draw_enivronment_fragment_code());
+      draw_enivronment_fragment_code(), true);
 }
 
 bool is_initialized(shade_scene* scene) {
