@@ -123,28 +123,45 @@ struct gui_instance {
   gui_shading_type shading     = gui_shading_type::shaded;
 };
 
+// Opengl environment
+struct gui_environment {
+  // environment properties
+  frame3f      frame        = identity3x4f;
+  vec3f        emission     = {1, 1, 1};
+  gui_texture* emission_tex = nullptr;
+
+  // drawing data
+  gui_shape*   shape   = new gui_shape{};
+  ogl_cubemap* cubemap = new ogl_cubemap{};
+
+  // envlight precomputed data
+  ogl_cubemap* envlight_diffuse  = new ogl_cubemap{};
+  ogl_cubemap* envlight_specular = new ogl_cubemap{};
+  ogl_texture* envlight_brdflut  = new ogl_texture{};
+
+  // Disable copy construction
+  gui_environment()                       = default;
+  gui_environment(const gui_environment&) = delete;
+  gui_environment& operator=(const gui_environment&) = delete;
+
+  // Cleanup
+  ~gui_environment();
+};
+
 // Opengl scene
 struct gui_scene {
   // scene objects
-  vector<gui_camera*>   cameras   = {};
-  vector<gui_instance*> instances = {};
-  vector<gui_shape*>    shapes    = {};
-  vector<gui_material*> materials = {};
-  vector<gui_texture*>  textures  = {};
-
-  // environment
-  gui_shape*   environment_shape   = new gui_shape{};
-  ogl_cubemap* environment_cubemap = new ogl_cubemap{};
-  ogl_program* environment_program = new ogl_program{};
-
-  // envlight baked data
-  ogl_cubemap* diffuse_cubemap  = new ogl_cubemap{};
-  ogl_cubemap* specular_cubemap = new ogl_cubemap{};
-  ogl_texture* brdf_lut         = new ogl_texture{};
+  vector<gui_camera*>      cameras      = {};
+  vector<gui_instance*>    instances    = {};
+  vector<gui_shape*>       shapes       = {};
+  vector<gui_material*>    materials    = {};
+  vector<gui_texture*>     textures     = {};
+  vector<gui_environment*> environments = {};
 
   // programs
-  ogl_program* camlight_program = new ogl_program{};
-  ogl_program* envlight_program = new ogl_program{};
+  ogl_program* environment_program = new ogl_program{};
+  ogl_program* camlight_program    = new ogl_program{};
+  ogl_program* envlight_program    = new ogl_program{};
 
   // disable copy construction
   gui_scene()                 = default;
@@ -180,22 +197,26 @@ struct gui_scene_params {
 };
 
 // Initialize an OpenGL scene
-void init_scene(gui_scene* scene, const gui_texture* environment_tex = nullptr,
-    const vec3f& environment_emission = {1, 1, 1});
+void init_scene(gui_scene* scene);
 bool is_initialized(const gui_scene* scene);
 
 // Initialize data for environment lighting
-void init_ibl_data(gui_scene* scene);
+void init_environments(gui_scene* scene, bool precompute_envlight = true);
 
 // Clear an OpenGL scene
 void clear_scene(gui_scene* scene);
 
+// old interface
+[[deprecated]] void init_scene(gui_scene* scene, gui_texture* environment_tex,
+    const vec3f& environment_emission);
+
 // add scene elements
-gui_camera*   add_camera(gui_scene* scene);
-gui_texture*  add_texture(gui_scene* scene);
-gui_material* add_material(gui_scene* scene);
-gui_shape*    add_shape(gui_scene* scene);
-gui_instance* add_instance(gui_scene* scene);
+gui_camera*      add_camera(gui_scene* scene);
+gui_texture*     add_texture(gui_scene* scene);
+gui_material*    add_material(gui_scene* scene);
+gui_shape*       add_shape(gui_scene* scene);
+gui_instance*    add_instance(gui_scene* scene);
+gui_environment* add_environment(gui_scene* scene);
 
 // camera properties
 void set_frame(gui_camera* camera, const frame3f& frame);
@@ -268,22 +289,34 @@ void set_material(gui_instance* instance, gui_material* material);
 void set_hidden(gui_instance* instance, bool hidden);
 void set_highlighted(gui_instance* instance, bool highlighted);
 
+// check if initialized
+bool is_initialized(const gui_environment* environment);
+// clear environment
+void clear_environment(gui_environment* environment);
+
+// environment properties
+void set_frame(gui_environment* environment, const frame3f& frame);
+void set_emission(gui_environment* environment, const vec3f& emission,
+    gui_texture* emission_tex = nullptr);
+
 // shortcuts
-gui_camera*   add_camera(gui_scene* scene, const frame3f& frame, float lens,
-      float aspect, float film = 0.036, float near = 0.001, float far = 10000);
-gui_material* add_material(gui_scene* scene, const vec3f& emission,
-    const vec3f& color, float specular, float metallic, float roughness,
-    gui_texture* emission_tex = nullptr, gui_texture* color_tex = nullptr,
-    gui_texture* specular_tex = nullptr, gui_texture* metallic_tex = nullptr,
-    gui_texture* roughness_tex = nullptr, gui_texture* normalmap_tex = nullptr);
-gui_shape*    add_shape(gui_scene* scene, const vector<int>& points,
-       const vector<vec2i>& lines, const vector<vec3i>& triangles,
-       const vector<vec4i>& quads, const vector<vec3f>& positions,
-       const vector<vec3f>& normals, const vector<vec2f>& texcoords,
-       const vector<vec4f>& colors, bool edges = false);
-gui_instance* add_instance(gui_scene* scene, const frame3f& frame,
-    gui_shape* shape, gui_material* material, bool hidden = false,
-    bool highlighted = false);
+gui_camera*      add_camera(gui_scene* scene, const frame3f& frame, float lens,
+         float aspect, float film = 0.036, float near = 0.001, float far = 10000);
+gui_material*    add_material(gui_scene* scene, const vec3f& emission,
+       const vec3f& color, float specular, float metallic, float roughness,
+       gui_texture* emission_tex = nullptr, gui_texture* color_tex = nullptr,
+       gui_texture* specular_tex = nullptr, gui_texture* metallic_tex = nullptr,
+       gui_texture* roughness_tex = nullptr, gui_texture* normalmap_tex = nullptr);
+gui_shape*       add_shape(gui_scene* scene, const vector<int>& points,
+          const vector<vec2i>& lines, const vector<vec3i>& triangles,
+          const vector<vec4i>& quads, const vector<vec3f>& positions,
+          const vector<vec3f>& normals, const vector<vec2f>& texcoords,
+          const vector<vec4f>& colors, bool edges = false);
+gui_instance*    add_instance(gui_scene* scene, const frame3f& frame,
+       gui_shape* shape, gui_material* material, bool hidden = false,
+       bool highlighted = false);
+gui_environment* add_environment(gui_scene* scene, const frame3f& frame,
+    const vec3f& emission, gui_texture* emission_tex = nullptr);
 
 // internal drawing functions
 struct gui_scene_view {
