@@ -899,6 +899,11 @@ void set_uniform(const ogl_program* program, const char* name,
 ogl_framebuffer::~ogl_framebuffer() { clear_framebuffer(this); }
 
 void set_framebuffer(ogl_framebuffer* framebuffer, const vec2i& size) {
+  if (size == zero2i) {
+    clear_framebuffer(framebuffer);
+    return;
+  }
+
   if (!framebuffer->framebuffer_id) {
     glGenFramebuffers(1, &framebuffer->framebuffer_id);
   }
