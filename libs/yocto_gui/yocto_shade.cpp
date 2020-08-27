@@ -159,6 +159,12 @@ shade_scene::~shade_scene() {
   delete instance_program;
 }
 
+static const char* shade_instance_vertex();
+static const char* shade_instanced_vertex();
+static const char* shade_instance_fragment();
+
+static const char* shade_environment_fragment();
+
 static const char* precompute_brdflut_vertex();
 static const char* precompute_brdflut_fragment();
 
@@ -179,7 +185,7 @@ void init_scene(shade_scene* scene, bool instanced_drawing) {
   // set_program(scene->envlight_program, shade_instance_vertex(),
   //     shade_instance_fragment(), true);
   set_program(scene->environment_program, precompute_cubemap_vertex(),
-      shade_enivronment_fragment(), true);
+      shade_environment_fragment(), true);
 }
 
 bool is_initialized(shade_scene* scene) {
@@ -444,6 +450,12 @@ shade_environment* add_environment(shade_scene* scene, const frame3f& frame,
   set_emission(environment, emission, emission_tex);
   return environment;
 }
+
+struct shade_view {
+  frame3f camera_frame      = {};
+  mat4f   view_matrix       = {};
+  mat4f   projection_matrix = {};
+};
 
 void set_view_uniforms(ogl_program* program, const shade_view& view) {
   set_uniform(program, "eye", view.camera_frame.o);
@@ -774,7 +786,7 @@ void init_envlight(shade_environment* environment) {
   precompute_brdflut(environment->envlight_brdflut);
 }
 
-const char* shade_instance_vertex() {
+static const char* shade_instance_vertex() {
   static const char* code =
       R"(
 #version 330
@@ -824,7 +836,7 @@ void main() {
   return code;
 }
 
-const char* shade_instanced_vertex() {
+static const char* shade_instanced_vertex() {
   static const char* code = R"(
 #version 330
 
@@ -893,7 +905,7 @@ void main() {
   return code;
 }
 
-const char* shade_instance_fragment() {
+static const char* shade_instance_fragment() {
   static const char* code =
       R"(
 #version 330
@@ -1140,7 +1152,8 @@ void main() {
   return code;
 }
 
-const char* shade_envlight_fragment() {
+#if 0
+static const char* shade_envlight_fragment() {
   static const char* code = R"(
 #version 330
 
@@ -1316,6 +1329,8 @@ void main() {
   return code;
 }
 
+#endif
+
 static const char* precompute_brdflut_vertex() {
   static const char* code = R"(
 #version 330
@@ -1467,7 +1482,7 @@ void main() {
   return code;
 }
 
-const char* shade_enivronment_fragment() {
+static const char* shade_environment_fragment() {
   static const char* code = R"(
 #version 330
 

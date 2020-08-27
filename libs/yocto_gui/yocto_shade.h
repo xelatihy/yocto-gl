@@ -317,36 +317,9 @@ shade_instance* add_instance(shade_scene* scene, const frame3f& frame,
 shade_environment* add_environment(shade_scene* scene, const frame3f& frame,
     const vec3f& emission, shade_texture* emission_tex = nullptr);
 
-// internal drawing functions
-struct shade_view {
-  frame3f camera_frame      = {};
-  mat4f   view_matrix       = {};
-  mat4f   projection_matrix = {};
-};
-
-void set_view_uniforms(ogl_program* program, const shade_view& view);
-void set_instance_uniforms(ogl_program* program, const frame3f& frame,
-    const shade_shape* shape, const shade_material* material,
-    const shade_params& params);
-void set_camlight_uniforms(
-    ogl_program* program, const shade_scene* scene, const shade_view& view);
-void set_envlight_uniforms(
-    ogl_program* program, const shade_scene* scene, const shade_view& view);
-
-void draw_instances(
-    shade_scene* scene, const shade_view& view, const shade_params& params);
-void draw_environments(
-    shade_scene* scene, const shade_view& view, const shade_params& params);
-
+// draw scene
 void draw_scene(shade_scene* scene, shade_camera* camera, const vec4i& viewport,
     const shade_params& params);
-
-// read-only access to defualt shader code
-const char* shade_instance_vertex();
-const char* shade_instanced_vertex();
-const char* shade_instance_fragment();
-const char* shade_envlight_fragment();
-const char* shade_enivronment_fragment();
 
 }  // namespace yocto
 
