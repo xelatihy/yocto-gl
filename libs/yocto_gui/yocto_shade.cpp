@@ -937,7 +937,7 @@ void eval_light(int lid, vec3 position, out vec3 radiance, out vec3 incoming) {
   }
 }
 
-vec3 brdfcos(int etype, vec3 ke, vec3 kd, vec3 ks, float rs, float op,
+vec3 eval_brdfcos(int etype, vec3 ke, vec3 kd, vec3 ks, float rs, float op,
     vec3 n, vec3 incoming, vec3 outgoing) {
   if(etype == 0) return vec3(0);
   vec3 halfway = normalize(incoming+outgoing);
@@ -969,33 +969,6 @@ vec3 brdfcos(int etype, vec3 ke, vec3 kd, vec3 ks, float rs, float op,
       vec3 spec = ndi * ks * d * g / (4*ndi*ndo);
       return diff+spec;
   }
-}
-
-bool eval_material(vec2 texcoord, vec4 color, out vec3 ke, 
-                    out vec3 kd, out vec3 ks, out float rs, out float op) {
-  ke = color.xyz * emission;
-  kd = color.xyz * diffuse;
-  ks = color.xyz * specular;
-  rs = roughness;
-  op = color.w * opacity;
-
-  vec4 ke_tex = (emission_tex_on) ? texture(emission_tex,texcoord) : vec4(1,1,1,1);
-  vec4 kd_tex = (diffuse_tex_on) ? texture(diffuse_tex,texcoord) : vec4(1,1,1,1);
-  vec4 ks_tex = (specular_tex_on) ? texture(specular_tex,texcoord) : vec4(1,1,1,1);
-  vec4 rs_tex = (roughness_tex_on) ? texture(roughness_tex,texcoord) : vec4(1,1,1,1);
-  vec4 op_tex = (opacity_tex_on) ? texture(opacity_tex,texcoord) : vec4(1,1,1,1);
-
-  // get material color from textures and adjust values
-  ke *= ke_tex.xyz;
-  vec3 kb = kd * kd_tex.xyz;
-  float km = ks.x * ks_tex.z;
-  kd = kb * (1 - km);
-  ks = kb * km + vec3(0.04) * (1 - km);
-  rs *= ks_tex.y;
-  rs = rs*rs;
-  op *= kd_tex.w;
-
-  return true;
 }
 
 vec3 apply_normal_map(vec2 texcoord, vec3 normal, vec4 tangsp) {
@@ -1070,7 +1043,7 @@ void main() {
     // eyelight shading
     if(eyelight) {
       vec3 incoming = outgoing;
-      radiance += pif * brdfcos(etype, brdf.emission, brdf.diffuse, brdf.specular, brdf.roughness, brdf.opacity, n, incoming, outgoing);
+      radiance += pif * eval_brdfcos(etype, brdf.emission, brdf.diffuse, brdf.specular, brdf.roughness, brdf.opacity, n, incoming, outgoing);
     } else {
       // accumulate ambient
       radiance += lamb * brdf.diffuse;
@@ -1078,7 +1051,7 @@ void main() {
       for(int lid = 0; lid < lnum; lid ++) {
         vec3 cl = vec3(0,0,0); vec3 incoming = vec3(0,0,0);
         eval_light(lid, position, cl, incoming);
-        radiance += cl * brdfcos(etype, brdf.emission, brdf.diffuse, brdf.specular, brdf.roughness, brdf.opacity, n, incoming, outgoing);
+        radiance += cl * eval_brdfcos(etype, brdf.emission, brdf.diffuse, brdf.specular, brdf.roughness, brdf.opacity, n, incoming, outgoing);
       }
     }
   }
