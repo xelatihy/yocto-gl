@@ -78,34 +78,39 @@ ogl_arraybuffer* get_tangents(gui_shape* shape) {
 }
 
 void set_positions(gui_shape* shape, const vector<vec3f>& positions) {
-  if (positions.empty())
+  if (positions.empty()) {
     set_vertex_buffer(shape, vec3f{0, 0, 0}, 0);
-  else
+  } else {
     set_vertex_buffer(shape, positions, 0);
+  }
 }
 void set_normals(gui_shape* shape, const vector<vec3f>& normals) {
-  if (normals.empty())
+  if (normals.empty()) {
     set_vertex_buffer(shape, vec3f{0, 0, 1}, 1);
-  else
+  } else {
     set_vertex_buffer(shape, normals, 1);
+  }
 }
 void set_texcoords(gui_shape* shape, const vector<vec2f>& texcoords) {
-  if (texcoords.empty())
+  if (texcoords.empty()) {
     set_vertex_buffer(shape, vec2f{0, 0}, 2);
-  else
+  } else {
     set_vertex_buffer(shape, texcoords, 2);
+  }
 }
 void set_colors(gui_shape* shape, const vector<vec4f>& colors) {
-  if (colors.empty())
+  if (colors.empty()) {
     set_vertex_buffer(shape, vec4f{1, 1, 1, 1}, 3);
-  else
+  } else {
     set_vertex_buffer(shape, colors, 3);
+  }
 }
 void set_tangents(gui_shape* shape, const vector<vec4f>& tangents) {
-  if (tangents.empty())
+  if (tangents.empty()) {
     set_vertex_buffer(shape, vec4f{0, 0, 1, 1}, 4);
-  else
+  } else {
     set_vertex_buffer(shape, tangents, 4);
+  }
 }
 
 void set_points(gui_shape* shape, const vector<int>& points) {
@@ -139,17 +144,17 @@ gui_scene::~gui_scene() {
   delete diffuse_cubemap;
   delete specular_cubemap;
   delete brdf_lut;
-  delete eyelight_program;
-  delete ibl_program;
+  delete camlight_program;
+  delete envlight_program;
 }
 
-static const char* bake_brdf_vertex_code();
-static const char* bake_brdf_fragment_code();
+static const char* precompute_brdf_vertex_code();
+static const char* precompute_brdf_fragment_code();
 
-static const char* bake_cubemap_vertex_code();
-static const char* bake_environment_fragment_code();
-static const char* bake_irradiance_fragment_code();
-static const char* bake_reflections_fragment_code();
+static const char* precompute_cubemap_vertex_code();
+static const char* precompute_environment_fragment_code();
+static const char* precompute_irradiance_fragment_code();
+static const char* precompute_reflections_fragment_code();
 
 static void init_environment(gui_scene* scene,
     const gui_texture* environment_tex, const vec3f& environment_emission);
@@ -157,11 +162,11 @@ static void init_environment(gui_scene* scene,
 // Initialize an OpenGL scene
 void init_scene(gui_scene* scene, const gui_texture* environment_tex,
     const vec3f& environment_emission) {
-  if (is_initialized(scene->eyelight_program)) return;
+  if (is_initialized(scene->camlight_program)) return;
   auto error = ""s, errorlog = ""s;
   auto vert = draw_instances_vertex_code();
   auto frag = draw_instances_eyelight_fragment_code();
-  init_program(scene->eyelight_program, vert, frag, error, errorlog);
+  init_program(scene->camlight_program, vert, frag, error, errorlog);
 
   if (environment_tex && environment_emission != vec3f{0, 0, 0}) {
     init_environment(scene, environment_tex, environment_emission);
@@ -170,7 +175,7 @@ void init_scene(gui_scene* scene, const gui_texture* environment_tex,
 }
 
 bool is_initialized(gui_scene* scene) {
-  return scene && is_initialized(scene->eyelight_program);
+  return scene && is_initialized(scene->camlight_program);
 }
 
 // Clear an OpenGL scene
@@ -183,8 +188,8 @@ void clear_scene(gui_scene* scene) {
   clear_cubemap(scene->diffuse_cubemap);
   clear_cubemap(scene->specular_cubemap);
   clear_texture(scene->brdf_lut);
-  clear_program(scene->eyelight_program);
-  clear_program(scene->ibl_program);
+  clear_program(scene->camlight_program);
+  clear_program(scene->envlight_program);
 }
 
 // add camera
@@ -444,10 +449,10 @@ void set_ibl_uniforms(ogl_program* program, const gui_scene* scene) {
 }
 
 void draw_instances(gui_scene* scene, const gui_scene_view& view) {
-  auto program = scene->eyelight_program;
+  auto program = scene->camlight_program;
   if (is_initialized(scene->environment_cubemap) &&
       view.params.lighting == gui_lighting_type::envlight) {
-    program = scene->ibl_program;
+    program = scene->envlight_program;
   }
 
   bind_program(program);
@@ -507,7 +512,7 @@ void draw_scene(gui_scene* scene, gui_camera* camera, const vec4i& viewport,
 // Using 6 render passes, bake a cubemap given a sampler for the environment.
 // The input sampler can be either a cubemap or a latlong texture.
 template <typename Sampler>
-inline void bake_cubemap(ogl_cubemap* cubemap, const Sampler* environment,
+inline void precompute_cubemap(ogl_cubemap* cubemap, const Sampler* environment,
     ogl_program* program, int size, int num_mipmap_levels = 1,
     const vec3f& emission = {1, 1, 1}) {
   // init cubemap with no data
@@ -559,7 +564,7 @@ inline void bake_cubemap(ogl_cubemap* cubemap, const Sampler* environment,
   clear_framebuffer(framebuffer);
 }
 
-inline void bake_specular_brdf_texture(gui_texture* texture) {
+inline void precompute_specular_brdf_texture(gui_texture* texture) {
   auto size              = vec2i{512, 512};
   auto screen_quad_guard = make_unique<ogl_shape>();
   auto screen_quad       = screen_quad_guard.get();
@@ -568,8 +573,8 @@ inline void bake_specular_brdf_texture(gui_texture* texture) {
   auto program_guard = make_unique<ogl_program>();
   auto program       = program_guard.get();
   auto error = ""s, errorlog = ""s;
-  auto vert = bake_brdf_vertex_code();
-  auto frag = bake_brdf_fragment_code();
+  auto vert = precompute_brdf_vertex_code();
+  auto frag = precompute_brdf_fragment_code();
   init_program(program, vert, frag, error, errorlog);
 
   set_texture(texture, size, 3, (float*)nullptr, true, true, false, false);
@@ -600,7 +605,7 @@ static void init_environment(gui_scene* scene,
 
   // init program for drawing the environment
   {
-    auto vert = bake_cubemap_vertex_code();
+    auto vert = precompute_cubemap_vertex_code();
     auto frag = draw_enivronment_fragment_code();
     init_program(scene->environment_program, vert, frag);
   }
@@ -609,11 +614,11 @@ static void init_environment(gui_scene* scene,
   {
     auto size    = environment_tex->size.y;
     auto program = new ogl_program{};
-    auto vert    = bake_cubemap_vertex_code();
-    auto frag    = bake_environment_fragment_code();
+    auto vert    = precompute_cubemap_vertex_code();
+    auto frag    = precompute_environment_fragment_code();
     init_program(program, vert, frag);
-    bake_cubemap(scene->environment_cubemap, environment_tex, program, size, 1,
-        environment_emission);
+    precompute_cubemap(scene->environment_cubemap, environment_tex, program,
+        size, 1, environment_emission);
     clear_program(program);
     delete program;
   }
@@ -623,10 +628,10 @@ void init_ibl_data(gui_scene* scene) {
   // bake irradiance map
   {
     auto program = new ogl_program{};
-    auto vert    = bake_cubemap_vertex_code();
-    auto frag    = bake_irradiance_fragment_code();
+    auto vert    = precompute_cubemap_vertex_code();
+    auto frag    = precompute_irradiance_fragment_code();
     init_program(program, vert, frag);
-    bake_cubemap(
+    precompute_cubemap(
         scene->diffuse_cubemap, scene->environment_cubemap, program, 64);
     clear_program(program);
     delete program;
@@ -635,23 +640,23 @@ void init_ibl_data(gui_scene* scene) {
   // bake specular map
   {
     auto program = new ogl_program{};
-    auto vert    = bake_cubemap_vertex_code();
-    auto frag    = bake_reflections_fragment_code();
+    auto vert    = precompute_cubemap_vertex_code();
+    auto frag    = precompute_reflections_fragment_code();
     init_program(program, vert, frag);
-    bake_cubemap(
+    precompute_cubemap(
         scene->specular_cubemap, scene->environment_cubemap, program, 256, 6);
     clear_program(program);
     delete program;
   }
 
   // bake lookup texture for specular brdf
-  bake_specular_brdf_texture(scene->brdf_lut);
+  precompute_specular_brdf_texture(scene->brdf_lut);
 
   // init shader for IBL shading
   {
     auto vert = draw_instances_vertex_code();
     auto frag = draw_instances_ibl_fragment_code();
-    init_program(scene->ibl_program, vert, frag);
+    init_program(scene->envlight_program, vert, frag);
   }
 }
 
@@ -1105,7 +1110,7 @@ void main() {
   return code;
 }
 
-static const char* bake_brdf_vertex_code() {
+static const char* precompute_brdf_vertex_code() {
   static const char* code = R"(
 #version 330
 
@@ -1123,7 +1128,7 @@ void main() {
   return code;
 }
 
-static const char* bake_brdf_fragment_code() {
+static const char* precompute_brdf_fragment_code() {
   static const char* code = R"(
 #version 330
 
@@ -1231,7 +1236,7 @@ void main() {
   return code;
 }
 
-static const char* bake_cubemap_vertex_code() {
+static const char* precompute_cubemap_vertex_code() {
   static const char* code = R"(
 #version 330
 
@@ -1256,7 +1261,7 @@ void main() {
   return code;
 }
 
-static const char* bake_environment_fragment_code() {
+static const char* precompute_environment_fragment_code() {
   static const char* code = R"(
 #version 330
 
@@ -1292,7 +1297,7 @@ void main() {
   return code;
 }
 
-static const char* bake_irradiance_fragment_code() {
+static const char* precompute_irradiance_fragment_code() {
   static const char* code = R"(
 #version 330
 
@@ -1344,7 +1349,7 @@ void main() {
   return code;
 }
 
-static const char* bake_reflections_fragment_code() {
+static const char* precompute_reflections_fragment_code() {
   static const char* code = R"(
 #version 330
 

@@ -257,7 +257,7 @@ void init_glscene(app_state* app, gui_scene* glscene, generic_shape* ioshape,
   // override eyelight vertex shader
   auto vert = draw_instanced_vertex_code();
   auto frag = draw_instances_eyelight_fragment_code();
-  init_program(glscene->eyelight_program, vert, frag);
+  init_program(glscene->camlight_program, vert, frag);
 
   // done
   if (progress_cb) progress_cb("convert done", progress.x++, progress.y);

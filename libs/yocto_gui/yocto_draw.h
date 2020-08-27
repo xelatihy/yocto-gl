@@ -115,14 +115,14 @@ struct gui_scene {
   ogl_cubemap* environment_cubemap = new ogl_cubemap{};
   ogl_program* environment_program = new ogl_program{};
 
-  // IBL baked data
+  // envlight baked data
   ogl_cubemap* diffuse_cubemap  = new ogl_cubemap{};
   ogl_cubemap* specular_cubemap = new ogl_cubemap{};
   gui_texture* brdf_lut         = new gui_texture{};
 
   // programs
-  ogl_program* eyelight_program = new ogl_program{};
-  ogl_program* ibl_program      = new ogl_program{};
+  ogl_program* camlight_program = new ogl_program{};
+  ogl_program* envlight_program = new ogl_program{};
 
   // Disable copy construction
   gui_scene()                 = default;
