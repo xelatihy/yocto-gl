@@ -446,7 +446,7 @@ void set_ibl_uniforms(ogl_program* program, const gui_scene* scene) {
 void draw_instances(gui_scene* scene, const gui_scene_view& view) {
   auto program = scene->eyelight_program;
   if (is_initialized(scene->environment_cubemap) &&
-      view.params.lighting == gui_lighting_type::environment) {
+      view.params.lighting == gui_lighting_type::envlight) {
     program = scene->ibl_program;
   }
 
@@ -456,7 +456,7 @@ void draw_instances(gui_scene* scene, const gui_scene_view& view) {
   set_scene_view_uniforms(program, view);
 
   // set lighting uniforms
-  if (view.params.lighting == gui_lighting_type::eyelight) {
+  if (view.params.lighting == gui_lighting_type::camlight) {
     set_eyelight_uniforms(program, view);
   } else {
     set_ibl_uniforms(program, scene);
