@@ -658,8 +658,7 @@ void draw_scene(shade_scene* scene, shade_camera* camera, const vec4i& viewport,
 // environment. The input sampler can be either a cubemap or a latlong texture.
 template <typename Sampler>
 static void precompute_cubemap(ogl_cubemap* cubemap, const Sampler* environment,
-    ogl_program* program, int size, int num_mipmap_levels = 1,
-    const vec3f& emission = {1, 1, 1}) {
+    ogl_program* program, int size, int num_mipmap_levels = 1) {
   // init cubemap with no data
   set_cubemap(cubemap, size, 3,
       array<float*, 6>{nullptr, nullptr, nullptr, nullptr, nullptr, nullptr},
@@ -700,7 +699,6 @@ static void precompute_cubemap(ogl_cubemap* cubemap, const Sampler* environment,
       set_uniform(program, "projection", camera_proj);
       set_uniform(program, "eye", vec3f{0, 0, 0});
       set_uniform(program, "mipmap_level", mipmap_level);
-      set_uniform(program, "emission", emission);
       set_uniform(program, "environment", environment, 0);
 
       draw_shape(cube);
@@ -1512,7 +1510,6 @@ uniform mat4 view;        // inverse of the camera frame (as a matrix)
 uniform mat4 projection;  // camera projection
 
 uniform sampler2D environment;
-uniform vec3 emission = vec3(1);
 
 vec2 sample_spherical_map(vec3 v) {
   vec2 uv = vec2(atan(v.z, v.x), asin(v.y));
@@ -1526,10 +1523,7 @@ void main() {
   vec3 normal = normalize(position);
   vec2 uv     = sample_spherical_map(normal);
   vec3 color  = texture(environment, uv).rgb;
-
-  // TODO(giacomo): We skip gamma correction, assuming the environment is stored
-  // in linear space. Is it always true? Probably not.
-  frag_color = emission * color;
+  frag_color = color;
 }
 )";
   return code;
