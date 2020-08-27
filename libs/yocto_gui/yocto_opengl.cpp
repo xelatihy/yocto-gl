@@ -927,12 +927,6 @@ ogl_shape::~ogl_shape() {
 
 void bind_shape(const ogl_shape* shape) { glBindVertexArray(shape->shape_id); }
 
-void init_shape(ogl_shape* shape) {
-  if (shape->shape_id) glDeleteVertexArrays(1, &shape->shape_id);
-  glGenVertexArrays(1, &shape->shape_id);
-  assert_ogl_error();
-}
-
 bool is_initialized(const ogl_shape* shape) { return shape->shape_id != 0; }
 
 // Clear an OpenGL shape
@@ -950,11 +944,12 @@ void clear_shape(ogl_shape* shape) {
 template <typename T>
 void set_vertex_buffer_impl(
     ogl_shape* shape, const vector<T>& data, int location) {
+  if (!shape->shape_id) glGenVertexArrays(1, &shape->shape_id);
   while (shape->vertex_buffers.size() <= location) {
     shape->vertex_buffers.push_back(new ogl_arraybuffer{});
   }
   set_arraybuffer(shape->vertex_buffers[location], data, false);
-  bind_shape(shape);
+  glBindVertexArray(shape->shape_id);
   auto buffer = shape->vertex_buffers[location];
   assert_ogl_error();
   glBindBuffer(GL_ARRAY_BUFFER, buffer->buffer_id);
@@ -966,43 +961,52 @@ void set_vertex_buffer_impl(
 
 void set_vertex_buffer(
     ogl_shape* shape, const vector<float>& values, int location) {
+  if (!shape->shape_id) glGenVertexArrays(1, &shape->shape_id);
   set_vertex_buffer_impl(shape, values, location);
 }
 void set_vertex_buffer(
     ogl_shape* shape, const vector<vec2f>& values, int location) {
+  if (!shape->shape_id) glGenVertexArrays(1, &shape->shape_id);
   set_vertex_buffer_impl(shape, values, location);
 }
 void set_vertex_buffer(
     ogl_shape* shape, const vector<vec3f>& values, int location) {
+  if (!shape->shape_id) glGenVertexArrays(1, &shape->shape_id);
   set_vertex_buffer_impl(shape, values, location);
 }
 void set_vertex_buffer(
     ogl_shape* shape, const vector<vec4f>& values, int location) {
+  if (!shape->shape_id) glGenVertexArrays(1, &shape->shape_id);
   set_vertex_buffer_impl(shape, values, location);
 }
 
 void set_vertex_buffer(ogl_shape* shape, float value, int location) {
-  bind_shape(shape);
+  if (!shape->shape_id) glGenVertexArrays(1, &shape->shape_id);
+  glBindVertexArray(shape->shape_id);
   glVertexAttrib1f(location, value);
   assert_ogl_error();
 }
 void set_vertex_buffer(ogl_shape* shape, const vec2f& value, int location) {
-  bind_shape(shape);
+  if (!shape->shape_id) glGenVertexArrays(1, &shape->shape_id);
+  glBindVertexArray(shape->shape_id);
   glVertexAttrib2f(location, value.x, value.y);
   assert_ogl_error();
 }
 void set_vertex_buffer(ogl_shape* shape, const vec3f& value, int location) {
-  bind_shape(shape);
+  if (!shape->shape_id) glGenVertexArrays(1, &shape->shape_id);
+  glBindVertexArray(shape->shape_id);
   glVertexAttrib3f(location, value.x, value.y, value.z);
   assert_ogl_error();
 }
 void set_vertex_buffer(ogl_shape* shape, const vec4f& value, int location) {
-  bind_shape(shape);
+  if (!shape->shape_id) glGenVertexArrays(1, &shape->shape_id);
+  glBindVertexArray(shape->shape_id);
   glVertexAttrib4f(location, value.x, value.y, value.z, value.w);
   assert_ogl_error();
 }
 
 void set_instance_buffer(ogl_shape* shape, int location, bool is_instance) {
+  if (!shape->shape_id) glGenVertexArrays(1, &shape->shape_id);
   bind_shape(shape);
   if (is_instance) {
     glVertexAttribDivisor(location, 1);
@@ -1071,7 +1075,6 @@ void set_cube_shape(ogl_shape* shape) {
     {4, 5, 1}, {5, 6, 2}, {2, 6, 7}, {0, 3, 7}
   };
   // clang-format on
-  init_shape(shape);
   set_vertex_buffer(shape, positions, 0);
   set_index_buffer(shape, triangles);
 }
@@ -1085,7 +1088,6 @@ void set_quad_shape(ogl_shape* shape) {
     {0, 1, 3}, {3, 2, 1}
   };
   // clang-format on
-  init_shape(shape);
   set_vertex_buffer(shape, positions, 0);
   set_index_buffer(shape, triangles);
 }

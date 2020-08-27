@@ -295,9 +295,7 @@ void clear_shape(shade_shape* shape) { clear_shape(shape->shape); }
 
 // add shape
 shade_shape* add_shape(shade_scene* scene) {
-  auto shape = scene->shapes.emplace_back(new shade_shape{});
-  init_shape(shape->shape);
-  return shape;
+  return scene->shapes.emplace_back(new shade_shape{});
 }
 
 // add instance
