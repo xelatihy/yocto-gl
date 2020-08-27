@@ -211,6 +211,7 @@ void init_glscene(gui_scene* glscene, sceneio_scene* ioscene,
     set_material(instance, material_map.at(ioinstance->material));
   }
 
+  // environments
   for (auto ioenvironment : ioscene->environments) {
     auto environment = add_environment(glscene);
     set_frame(environment, ioenvironment->frame);

@@ -174,6 +174,9 @@ void init_glscene(app_state* app, gui_scene* glscene, generic_shape* ioshape,
   // handle progress
   auto progress = vec2i{0, 4};
 
+  // init scene
+  init_scene(glscene);
+
   // compute bounding box
   auto bbox = invalidb3f;
   for (auto& pos : ioshape->positions) bbox = merge(bbox, pos);
