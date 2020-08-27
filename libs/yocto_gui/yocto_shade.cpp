@@ -644,8 +644,8 @@ void draw_scene(shade_scene* scene, shade_camera* camera, const vec4i& viewport,
 
 // image based lighting
 
-// Using 6 render passes, bake a cubemap given a sampler for the environment.
-// The input sampler can be either a cubemap or a latlong texture.
+// Using 6 render passes, precompute a cubemap given a sampler for the
+// environment. The input sampler can be either a cubemap or a latlong texture.
 template <typename Sampler>
 inline void precompute_cubemap(ogl_cubemap* cubemap, const Sampler* environment,
     ogl_program* program, int size, int num_mipmap_levels = 1,
@@ -766,7 +766,7 @@ void init_envlight(shade_environment* environment) {
   clear_program(diffuse_program);
   diffuse_program_guard.release();
 
-  // bake specular map
+  // precompute specular map
   auto specular_program_guard = make_unique<ogl_program>();
   auto specular_program       = specular_program_guard.get();
   set_program(specular_program, precompute_cubemap_vertex_code(),
@@ -776,7 +776,7 @@ void init_envlight(shade_environment* environment) {
   clear_program(specular_program);
   specular_program_guard.release();
 
-  // bake lookup texture for specular brdf
+  // precompute lookup texture for specular brdf
   precompute_specular_brdf_texture(environment->envlight_brdflut);
 }
 
