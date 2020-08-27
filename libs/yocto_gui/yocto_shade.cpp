@@ -507,12 +507,12 @@ void set_instance_uniforms(ogl_program* program, const frame3f& frame,
   assert_ogl_error();
 
   switch (shape->shape->elements) {
-    case ogl_element_type::points: set_uniform(program, "etype", 1); break;
+    case ogl_element_type::points: set_uniform(program, "element", 1); break;
     case ogl_element_type::line_strip:
-    case ogl_element_type::lines: set_uniform(program, "etype", 2); break;
+    case ogl_element_type::lines: set_uniform(program, "element", 2); break;
     case ogl_element_type::triangle_strip:
     case ogl_element_type::triangle_fan:
-    case ogl_element_type::triangles: set_uniform(program, "etype", 3); break;
+    case ogl_element_type::triangles: set_uniform(program, "element", 3); break;
   }
   assert_ogl_error();
 }
@@ -840,7 +840,7 @@ in vec2 texcoord;  // [from vertex shader] texcoord
 in vec4 color;     // [from vertex shader] color
 in vec4 tangsp;    // [from vertex shader] tangent space
 
-uniform int etype;
+uniform int element;
 uniform bool unlit;
 uniform bool faceted;
 uniform vec4 highlight;
@@ -971,13 +971,13 @@ vec3 triangle_normal(vec3 position) {
   return normalize((frame * vec4(normalize(cross(fdx, fdy)), 0)).xyz);
 }
 
-#define etype_points 1
-#define etype_lines 2
-#define etype_triangles 3
+#define element_points 1
+#define element_lines 2
+#define element_triangles 3
 
 vec3 eval_normal(vec3 outgoing) {
   vec3 norm;
-  if (etype == etype_triangles) {
+  if (element == element_triangles) {
     if (faceted) {
       norm = triangle_normal(position);
     } else {
@@ -985,7 +985,7 @@ vec3 eval_normal(vec3 outgoing) {
     }
   }
 
-  if (etype == etype_lines) {
+  if (element == element_lines) {
     vec3 tangent = normalize(normal);
     norm         = normalize(outgoing - tangent * dot(outgoing, tangent));
   }
@@ -1060,7 +1060,7 @@ in vec2 texcoord;  // [from vertex shader] texcoord
 in vec4 color;     // [from vertex shader] color
 in vec4 tangsp;    // [from vertex shader] tangent space
 
-uniform int  etype;
+uniform int  element;
 uniform bool unlit;
 uniform bool faceted;
 uniform vec4 highlight;
@@ -1155,14 +1155,14 @@ vec3 triangle_normal(vec3 position) {
   return normalize((frame * vec4(normalize(cross(fdx, fdy)), 0)).xyz);
 }
 
-#define etype_points 1
-#define etype_lines 2
-#define etype_triangles 3
+#define element_points 1
+#define element_lines 2
+#define element_triangles 3
 #define etype_quads 3
 
 vec3 compute_normal(vec3 V) {
   vec3 N;
-  if (etype == etype_triangles) {
+  if (element == element_triangles) {
     if (faceted) {
       N = triangle_normal(position);
     } else {
@@ -1170,7 +1170,7 @@ vec3 compute_normal(vec3 V) {
     }
   }
 
-  if (etype == etype_lines) {
+  if (element == element_lines) {
     // normal of lines is coplanar with view vector and direction tangent to the
     // line
     vec3 tangent = normalize(normal);
