@@ -662,7 +662,9 @@ inline void precompute_cubemap(ogl_cubemap* cubemap, const Sampler* environment,
     ogl_program* program, int size, int num_mipmap_levels = 1,
     const vec3f& emission = {1, 1, 1}) {
   // init cubemap with no data
-  set_cubemap<float>(cubemap, size, 3, true, true, true);
+  set_cubemap(cubemap, size, 3,
+      array<float*, 6>{nullptr, nullptr, nullptr, nullptr, nullptr, nullptr},
+      true, true, true);
   auto cube_guard = make_unique<ogl_shape>();
   auto cube       = cube_guard.get();
   set_cube_shape(cube);

@@ -146,13 +146,6 @@ void set_cubemap(ogl_cubemap* cubemap, int size, int num_channels,
     const array<float*, 6>& img, bool as_float = false, bool linear = true,
     bool mipmap = true);
 
-template <typename T>
-void set_cubemap(ogl_cubemap* cubemap, int size, int num_channels,
-    bool as_float = false, bool linear = true, bool mipmap = true) {
-  auto img = array<T*, 6>{0, 0, 0, 0, 0, 0};
-  set_cubemap(cubemap, size, num_channels, img, as_float, mipmap);
-}
-
 // check if cubemap is initialized
 bool is_initialized(const ogl_cubemap* cubemap);
 
