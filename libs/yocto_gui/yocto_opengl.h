@@ -119,6 +119,7 @@ void set_texture(ogl_texture* texture, const image<byte>& img,
 void set_texture(ogl_texture* texture, const image<float>& img,
     bool as_float = false, bool linear = true, bool mipmap = true);
 
+// OpenGL cubemap
 struct ogl_cubemap {
   // Cubemap properties
   int  size         = 0;

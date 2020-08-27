@@ -234,6 +234,42 @@ gui_texture* add_texture(gui_scene* scene) {
 }
 
 // cleanup
+gui_texture::~gui_texture() { delete texture; }
+
+// check if initialized
+bool is_initialized(const gui_texture* texture) {
+  return is_initialized(texture->texture);
+}
+// clear texture
+void clear_texture(gui_texture* texture) { clear_texture(texture->texture); }
+
+// set texture
+void set_texture(gui_texture* texture, const image<vec4b>& img, bool as_srgb,
+    bool linear, bool mipmap) {
+  set_texture(texture->texture, img, as_srgb, linear, mipmap);
+}
+void set_texture(gui_texture* texture, const image<vec4f>& img, bool as_float,
+    bool linear, bool mipmap) {
+  set_texture(texture->texture, img, as_float, linear, mipmap);
+}
+void set_texture(gui_texture* texture, const image<vec3b>& img, bool as_srgb,
+    bool linear, bool mipmap) {
+  set_texture(texture->texture, img, as_srgb, linear, mipmap);
+}
+void set_texture(gui_texture* texture, const image<vec3f>& img, bool as_float,
+    bool linear, bool mipmap) {
+  set_texture(texture->texture, img, as_float, linear, mipmap);
+}
+void set_texture(gui_texture* texture, const image<byte>& img, bool as_srgb,
+    bool linear, bool mipmap) {
+  set_texture(texture->texture, img, as_srgb, linear, mipmap);
+}
+void set_texture(gui_texture* texture, const image<float>& img, bool as_float,
+    bool linear, bool mipmap) {
+  set_texture(texture->texture, img, as_float, linear, mipmap);
+}
+
+// cleanup
 gui_shape::~gui_shape() { delete shape; }
 
 // cheeck if initialized
@@ -391,6 +427,12 @@ void set_instance_uniforms(ogl_program* program, const frame3f& frame,
   //    set_uniform(program, "highlight", vec4f{0, 0, 0, 0});
   //  }
 
+  auto set_texture = [](ogl_program* program, const char* name,
+                         const char* name_on, gui_texture* texture, int unit) {
+    set_uniform(program, name, name_on,
+        texture == nullptr ? nullptr : texture->texture, unit);
+  };
+
   auto mtype = (int)shading;
   set_uniform(program, "mtype", mtype);
   set_uniform(program, "emission", material->emission);
@@ -400,16 +442,16 @@ void set_instance_uniforms(ogl_program* program, const frame3f& frame,
   set_uniform(program, "roughness", material->roughness);
   set_uniform(program, "opacity", material->opacity);
   set_uniform(program, "double_sided", double_sided);
-  set_uniform(
+  set_texture(
       program, "emission_tex", "emission_tex_on", material->emission_tex, 0);
-  set_uniform(program, "diffuse_tex", "diffuse_tex_on", material->color_tex, 1);
-  set_uniform(
+  set_texture(program, "diffuse_tex", "diffuse_tex_on", material->color_tex, 1);
+  set_texture(
       program, "specular_tex", "specular_tex_on", material->metallic_tex, 2);
-  set_uniform(
+  set_texture(
       program, "roughness_tex", "roughness_tex_on", material->roughness_tex, 3);
-  set_uniform(
+  set_texture(
       program, "opacity_tex", "opacity_tex_on", material->opacity_tex, 4);
-  set_uniform(
+  set_texture(
       program, "mat_norm_tex", "mat_norm_tex_on", material->normal_tex, 5);
 
   assert_ogl_error();
@@ -603,7 +645,7 @@ inline void precompute_cubemap(ogl_cubemap* cubemap, const Sampler* environment,
   clear_framebuffer(framebuffer);
 }
 
-inline void precompute_specular_brdf_texture(gui_texture* texture) {
+inline void precompute_specular_brdf_texture(ogl_texture* texture) {
   auto size              = vec2i{512, 512};
   auto screen_quad_guard = make_unique<ogl_shape>();
   auto screen_quad       = screen_quad_guard.get();
@@ -646,13 +688,13 @@ static void init_environment(gui_scene* scene,
       draw_enivronment_fragment_code());
 
   // precompute cubemap from environment texture
-  auto size          = environment_tex->size.y;
+  auto size          = environment_tex->texture->size.y;
   auto program_guard = make_unique<ogl_program>();
   auto program       = program_guard.get();
   init_program(program, precompute_cubemap_vertex_code(),
       precompute_environment_fragment_code());
-  precompute_cubemap(scene->environment_cubemap, environment_tex, program, size,
-      1, environment_emission);
+  precompute_cubemap(scene->environment_cubemap, environment_tex->texture,
+      program, size, 1, environment_emission);
   clear_program(program);
 }
 

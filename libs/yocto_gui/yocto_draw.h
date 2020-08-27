@@ -65,7 +65,18 @@ struct gui_camera {
 };
 
 // Opengl texture
-struct gui_texture : ogl_texture {};
+struct gui_texture {
+  // shape properties
+  ogl_texture* texture = new ogl_texture{};
+
+  // Disable copy construction
+  gui_texture()                   = default;
+  gui_texture(const gui_texture&) = delete;
+  gui_texture& operator=(const gui_texture&) = delete;
+
+  // Cleanup
+  ~gui_texture();
+};
 
 // Opengl material
 struct gui_material {
@@ -129,7 +140,7 @@ struct gui_scene {
   // envlight baked data
   ogl_cubemap* diffuse_cubemap  = new ogl_cubemap{};
   ogl_cubemap* specular_cubemap = new ogl_cubemap{};
-  gui_texture* brdf_lut         = new gui_texture{};
+  ogl_texture* brdf_lut         = new ogl_texture{};
 
   // programs
   ogl_program* camlight_program = new ogl_program{};
@@ -190,6 +201,25 @@ gui_instance* add_instance(gui_scene* scene);
 void set_frame(gui_camera* camera, const frame3f& frame);
 void set_lens(gui_camera* camera, float lens, float aspect, float film);
 void set_nearfar(gui_camera* camera, float near, float far);
+
+// check if initialized
+bool is_initialized(const gui_texture* texture);
+// clear texture
+void clear_texture(gui_texture* texture);
+
+// set texture
+void set_texture(gui_texture* texture, const image<vec4b>& img,
+    bool as_srgb = true, bool linear = true, bool mipmap = true);
+void set_texture(gui_texture* texture, const image<vec4f>& img,
+    bool as_float = false, bool linear = true, bool mipmap = true);
+void set_texture(gui_texture* texture, const image<vec3b>& img,
+    bool as_srgb = true, bool linear = true, bool mipmap = true);
+void set_texture(gui_texture* texture, const image<vec3f>& img,
+    bool as_float = false, bool linear = true, bool mipmap = true);
+void set_texture(gui_texture* texture, const image<byte>& img,
+    bool as_srgb = true, bool linear = true, bool mipmap = true);
+void set_texture(gui_texture* texture, const image<float>& img,
+    bool as_float = false, bool linear = true, bool mipmap = true);
 
 // material properties
 void set_emission(gui_material* material, const vec3f& emission,
