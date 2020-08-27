@@ -160,8 +160,7 @@ struct shade_scene {
 
   // programs
   ogl_program* environment_program = new ogl_program{};
-  ogl_program* camlight_program    = new ogl_program{};
-  ogl_program* envlight_program    = new ogl_program{};
+  ogl_program* instance_program    = new ogl_program{};
 
   // disable copy construction
   shade_scene()                   = default;
@@ -173,13 +172,11 @@ struct shade_scene {
 };
 
 // Shading type
-enum struct shade_lighting_type {
-  envlight,
-  camlight,
-};
+enum struct shade_lighting_type { envlight, camlight, eyelight };
 
 // Shading name
-const auto shade_lighting_names = vector<string>{"envlight", "camlight"};
+const auto shade_lighting_names = vector<string>{
+    "envlight", "camlight", "eyelight"};
 
 // Draw options
 struct shade_params {
@@ -197,7 +194,7 @@ struct shade_params {
 };
 
 // Initialize an OpenGL scene
-void init_scene(shade_scene* scene);
+void init_scene(shade_scene* scene, bool instanced_drawing = false);
 bool is_initialized(const shade_scene* scene);
 
 // Initialize data for environment lighting
@@ -345,8 +342,9 @@ void draw_scene(shade_scene* scene, shade_camera* camera, const vec4i& viewport,
     const shade_params& params);
 
 // read-only access to defualt shader code
-const char* shade_scene_vertex();
-const char* shade_camlight_fragment();
+const char* shade_instance_vertex();
+const char* shade_instanced_vertex();
+const char* shade_instance_fragment();
 const char* shade_envlight_fragment();
 const char* shade_enivronment_fragment();
 
