@@ -654,6 +654,7 @@ bool init_program(ogl_program* program, const string& vertex,
     }
     return false;
   }
+  return true;
 }
 
 // clear program
@@ -1109,6 +1110,7 @@ void main() {
 
 ogl_image::~ogl_image() {
   if (program) delete program;
+  if (texture) delete texture;
   if (quad) delete quad;
 }
 
@@ -1121,7 +1123,6 @@ bool init_image(ogl_image* image) {
   if (is_initialized(image)) return true;
   if (!init_program(image->program, glimage_vertex, glimage_fragment))
     return false;
-
   set_quad_shape(image->quad);
   return true;
 }
@@ -1131,7 +1132,6 @@ void clear_image(ogl_image* image) {
   clear_program(image->program);
   clear_texture(image->texture);
   clear_shape(image->quad);
-  *image = {};
 }
 
 // update image data
