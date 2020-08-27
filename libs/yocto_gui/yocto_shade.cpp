@@ -31,6 +31,7 @@
 
 #include <array>
 #include <memory>
+#include <stdexcept>
 
 // -----------------------------------------------------------------------------
 // USING DIRECTIVES
