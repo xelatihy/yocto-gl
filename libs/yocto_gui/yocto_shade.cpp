@@ -533,8 +533,8 @@ void draw_environments(
   unbind_program();
 }
 
-void set_camlight_uniforms(
-    ogl_program* program, const shade_scene* scene, const shade_view& view) {
+void set_lighting_uniforms(ogl_program* program, const shade_scene* scene,
+    const shade_view& view, const shade_params& params) {
   struct gui_light {
     vec3f position = {0, 0, 0};
     vec3f emission = {0, 0, 0};
@@ -552,40 +552,52 @@ void set_camlight_uniforms(
   static auto camera_lights = vector<gui_light*>{
       &camera_light0, &camera_light1, &camera_light2, &camera_light3};
 
-  auto& lights = camera_lights;
-  set_uniform(program, "lighting", 1);
-  set_uniform(program, "ambient", vec3f{0, 0, 0});
-  set_uniform(program, "lights_num", (int)lights.size());
-  auto lid = 0;
-  for (auto light : lights) {
-    auto is = std::to_string(lid);
-    if (light->camera) {
-      auto position = transform_direction(view.camera_frame, light->position);
-      set_uniform(program, ("lights_position[" + is + "]").c_str(), position);
-    } else {
-      set_uniform(
-          program, ("lights_position[" + is + "]").c_str(), light->position);
-    }
+  auto lighting = params.lighting;
+  if (lighting == shade_lighting_type::envlight && !has_envlight(scene))
+    lighting = shade_lighting_type::camlight;
+  if (lighting == shade_lighting_type::envlight && has_envlight(scene)) {
+    if (!has_envlight(scene)) return;
+    auto environment = scene->environments.front();
+    set_uniform(program, "lighting", 2);
+    set_uniform(program, "lights_num", 0);
     set_uniform(
-        program, ("lights_emission[" + is + "]").c_str(), light->emission);
-    set_uniform(program, ("lights_type[" + is + "]").c_str(), 1);
-    lid++;
+        program, "envlight_irradiance", environment->envlight_diffuse, 6);
+    set_uniform(
+        program, "envlight_reflection", environment->envlight_specular, 7);
+    set_uniform(program, "envlight_brdflut", environment->envlight_brdflut, 8);
+  } else if (lighting == shade_lighting_type::camlight) {
+    auto& lights = camera_lights;
+    set_uniform(program, "lighting", 1);
+    set_uniform(program, "ambient", vec3f{0, 0, 0});
+    set_uniform(program, "lights_num", (int)lights.size());
+    auto lid = 0;
+    for (auto light : lights) {
+      auto is = std::to_string(lid);
+      if (light->camera) {
+        auto position = transform_direction(view.camera_frame, light->position);
+        set_uniform(program, ("lights_position[" + is + "]").c_str(), position);
+      } else {
+        set_uniform(
+            program, ("lights_position[" + is + "]").c_str(), light->position);
+      }
+      set_uniform(
+          program, ("lights_emission[" + is + "]").c_str(), light->emission);
+      set_uniform(program, ("lights_type[" + is + "]").c_str(), 1);
+      lid++;
+    }
+    set_uniform(program, "envlight_irradiance", (const ogl_cubemap*)nullptr, 6);
+    set_uniform(program, "envlight_reflection", (const ogl_cubemap*)nullptr, 7);
+    set_uniform(program, "envlight_brdflut", (const ogl_texture*)nullptr, 8);
+  } else if (lighting == shade_lighting_type::eyelight) {
+    set_uniform(program, "lighting", 0);
+    set_uniform(program, "lights_num", 0);
+    set_uniform(program, "envlight_irradiance", (const ogl_cubemap*)nullptr, 6);
+    set_uniform(program, "envlight_reflection", (const ogl_cubemap*)nullptr, 7);
+    set_uniform(program, "envlight_brdflut", (const ogl_texture*)nullptr, 8);
+  } else {
+    throw std::invalid_argument{"unknown lighting type"};
   }
-  set_uniform(program, "envlight_irradiance", (const ogl_cubemap*)nullptr, 6);
-  set_uniform(program, "envlight_reflection", (const ogl_cubemap*)nullptr, 7);
-  set_uniform(program, "envlight_brdflut", (const ogl_texture*)nullptr, 8);
   assert_ogl_error();
-}
-
-void set_envlight_uniforms(
-    ogl_program* program, const shade_scene* scene, const shade_view& view) {
-  if (!has_envlight(scene)) return;
-  auto environment = scene->environments.front();
-  set_uniform(program, "lighting", 2);
-  set_uniform(program, "envlight_irradiance", environment->envlight_diffuse, 6);
-  set_uniform(
-      program, "envlight_reflection", environment->envlight_specular, 7);
-  set_uniform(program, "envlight_brdflut", environment->envlight_brdflut, 8);
 }
 
 void draw_instances(
@@ -602,12 +614,7 @@ void draw_instances(
   set_params_uniforms(program, params);
 
   // set lighting uniforms
-  if (params.lighting == shade_lighting_type::camlight ||
-      !has_envlight(scene)) {
-    set_camlight_uniforms(program, scene, view);
-  } else {
-    set_envlight_uniforms(program, scene, view);
-  }
+  set_lighting_uniforms(program, scene, view, params);
 
   set_ogl_wireframe(params.wireframe);
   for (auto instance : scene->instances) {
