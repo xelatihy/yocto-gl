@@ -939,36 +939,20 @@ void eval_light(int lid, vec3 position, out vec3 radiance, out vec3 incoming) {
 
 vec3 eval_brdfcos(int etype, vec3 ke, vec3 kd, vec3 ks, float rs, float op,
     vec3 n, vec3 incoming, vec3 outgoing) {
-  if(etype == 0) return vec3(0);
   vec3 halfway = normalize(incoming+outgoing);
-  float ns = 2/(rs*rs)-2;
   float ndi = dot(incoming,n), ndo = dot(outgoing,n), ndh = dot(halfway,n);
-  if(etype == 1) {
-      return ((1+dot(outgoing,incoming))/2) * kd/pif;
-  } else if(etype == 2) {
-      float si = sqrt(1-ndi*ndi);
-      float so = sqrt(1-ndo*ndo);
-      float sh = sqrt(1-ndh*ndh);
-      if(si <= 0) return vec3(0);
-      vec3 diff = si * kd / pif;
-      if(sh<=0) return diff;
-      float d = ((2+ns)/(2*pif)) * pow(si,ns);
-      vec3 spec = si * ks * d / (4*si*so);
-      return diff+spec;
-  } else if(etype == 3) {
-      if(ndi<=0 || ndo <=0) return vec3(0);
-      vec3 diff = ndi * kd / pif;
-      if(ndh<=0) return diff;
-      float cos2 = ndh * ndh;
-      float tan2 = (1 - cos2) / cos2;
-      float alpha2 = rs * rs;
-      float d = alpha2 / (pif * cos2 * cos2 * (alpha2 + tan2) * (alpha2 + tan2));
-      float lambda_o = (-1 + sqrt(1 + (1 - ndo * ndo) / (ndo * ndo))) / 2;
-      float lambda_i = (-1 + sqrt(1 + (1 - ndi * ndi) / (ndi * ndi))) / 2;
-      float g = 1 / (1 + lambda_o + lambda_i);
-      vec3 spec = ndi * ks * d * g / (4*ndi*ndo);
-      return diff+spec;
-  }
+  if(ndi<=0 || ndo <=0) return vec3(0);
+  vec3 diff = ndi * kd / pif;
+  if(ndh<=0) return diff;
+  float cos2 = ndh * ndh;
+  float tan2 = (1 - cos2) / cos2;
+  float alpha2 = rs * rs;
+  float d = alpha2 / (pif * cos2 * cos2 * (alpha2 + tan2) * (alpha2 + tan2));
+  float lambda_o = (-1 + sqrt(1 + (1 - ndo * ndo) / (ndo * ndo))) / 2;
+  float lambda_i = (-1 + sqrt(1 + (1 - ndi * ndi) / (ndi * ndi))) / 2;
+  float g = 1 / (1 + lambda_o + lambda_i);
+  vec3 spec = ndi * ks * d * g / (4*ndi*ndo);
+  return diff+spec;
 }
 
 vec3 apply_normal_map(vec2 texcoord, vec3 normal, vec4 tangsp) {
