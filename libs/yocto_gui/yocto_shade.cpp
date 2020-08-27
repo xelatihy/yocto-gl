@@ -554,6 +554,7 @@ void set_camlight_uniforms(
       &camera_light0, &camera_light1, &camera_light2, &camera_light3};
 
   auto& lights = camera_lights;
+  set_uniform(program, "lighting", 1);
   set_uniform(program, "ambient", vec3f{0, 0, 0});
   set_uniform(program, "lnum", (int)lights.size());
   auto lid = 0;
@@ -865,11 +866,11 @@ uniform sampler2D opacity_tex;    // material op texture
 uniform bool normalmap_tex_on;    // material normal texture on
 uniform sampler2D normalmap_tex;  // material normal texture
 
-uniform bool eyelight;         // eyelight shading
+uniform int  lighting;            // eyelight shading
 uniform vec3 ambient;             // ambient light
-uniform int  lnum;             // number of lights
-uniform int  lights_type[16];        // light type (0 -> point, 1 -> directional)
-uniform vec3 lpos[16];         // light positions
+uniform int  lnum;                // number of lights
+uniform int  lights_type[16];     // light type (0 -> point, 1 -> directional)
+uniform vec3 lpos[16];            // light positions
 uniform vec3 lights_emission[16];          // light intensities
 
 uniform mat4 frame;              // shape transform
@@ -997,6 +998,9 @@ vec3 eval_normal(vec3 outgoing) {
   if (double_sided) norm = faceforward(norm, -outgoing, norm);
   return norm;
 }
+    
+#define lighting_eyelight 0
+#define lighting_camlight 1
 
 // main
 void main() {
@@ -1019,10 +1023,11 @@ void main() {
   // check early exit
   if(brdf.diffuse != vec3(0,0,0) || brdf.specular != vec3(0,0,0)) {
     // eyelight shading
-    if(eyelight) {
+    if(lighting == lighting_eyelight) {
       vec3 incoming = outgoing;
       radiance += pif * eval_brdfcos(brdf, n, incoming, outgoing);
-    } else {
+    }
+    if(lighting == lighting_camlight) {
       // accumulate ambient
       radiance += ambient * brdf.diffuse;
       // foreach light
