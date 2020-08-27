@@ -201,8 +201,8 @@ void init_glscene(app_state* app, gui_scene* glscene, generic_shape* ioshape,
   if (!is_initialized(get_normals(model_shape))) {
     app->drawgl_prms.faceted = true;
   }
-  set_vertex_buffer(model_shape, vec3f{0, 0, 0}, 5);
-  set_vertex_buffer(model_shape, vec3f{0, 0, 0}, 6);
+  set_instance_from(model_shape, {});
+  set_instance_to(model_shape, {});
 
   auto edges = get_edges(ioshape->triangles, ioshape->quads);
   auto froms = vector<vec3f>();
@@ -225,18 +225,15 @@ void init_glscene(app_state* app, gui_scene* glscene, generic_shape* ioshape,
   }
   auto edges_shape = add_shape(glscene, {}, {}, {}, cylinder.quads,
       cylinder.positions, cylinder.normals, cylinder.texcoords, {});
-
-  set_vertex_buffer(edges_shape, froms, 5);
-  set_instance_buffer(edges_shape, 5);
-  set_vertex_buffer(edges_shape, tos, 6);
-  set_instance_buffer(edges_shape, 6);
+  set_instance_from(edges_shape, froms);
+  set_instance_to(edges_shape, tos);
 
   auto vertices_radius = 3.0f * cylinder_radius;
   auto vertices        = make_spheres(ioshape->positions, vertices_radius, 2);
   auto vertices_shape  = add_shape(glscene, {}, {}, {}, vertices.quads,
       vertices.positions, vertices.normals, vertices.texcoords, {});
-  set_vertex_buffer(vertices_shape, vec3f{0, 0, 0}, 5);
-  set_vertex_buffer(vertices_shape, vec3f{0, 0, 0}, 6);
+  set_instance_from(vertices_shape, {});
+  set_instance_to(vertices_shape, {});
 
   // shapes
   if (progress_cb) progress_cb("convert instance", progress.x++, progress.y);
@@ -257,7 +254,7 @@ void init_glscene(app_state* app, gui_scene* glscene, generic_shape* ioshape,
   // override eyelight vertex shader
   auto vert = draw_instanced_vertex_code();
   auto frag = draw_instances_eyelight_fragment_code();
-  init_program(glscene->eyelight_program, vert, frag);
+  init_program(glscene->camlight_program, vert, frag);
 
   // done
   if (progress_cb) progress_cb("convert done", progress.x++, progress.y);

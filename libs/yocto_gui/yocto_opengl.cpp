@@ -245,7 +245,13 @@ bool is_initialized(const ogl_texture* texture) {
 // clear texture
 void clear_texture(ogl_texture* texture) {
   if (texture->texture_id) glDeleteTextures(1, &texture->texture_id);
-  *texture = {};
+  texture->size         = {0, 0};
+  texture->num_channels = 0;
+  texture->is_srgb      = false;
+  texture->is_float     = false;
+  texture->linear       = false;
+  texture->mipmap       = false;
+  texture->texture_id   = 0;
   assert_ogl_error();
 }
 
@@ -397,7 +403,13 @@ bool is_initialized(const ogl_cubemap* cubemap) {
 // clear cubemap
 void clear_cubemap(ogl_cubemap* cubemap) {
   if (cubemap->cubemap_id) glDeleteTextures(1, &cubemap->cubemap_id);
-  *cubemap = ogl_cubemap{};
+  cubemap->size         = 0;
+  cubemap->num_channels = 0;
+  cubemap->is_srgb      = false;
+  cubemap->is_float     = false;
+  cubemap->linear       = false;
+  cubemap->mipmap       = false;
+  cubemap->cubemap_id   = 0;
   assert_ogl_error();
 }
 
@@ -487,7 +499,11 @@ void set_arraybuffer(ogl_arraybuffer* buffer, size_t size, int esize,
 void clear_arraybuffer(ogl_arraybuffer* buffer) {
   assert_ogl_error();
   if (buffer->buffer_id) glDeleteBuffers(1, &buffer->buffer_id);
-  *buffer = {};
+  buffer->capacity     = 0;
+  buffer->num_elements = 0;
+  buffer->element_size = 0;
+  buffer->dynamic      = false;
+  buffer->buffer_id    = 0;
   assert_ogl_error();
 }
 
@@ -545,7 +561,11 @@ bool is_initialized(const ogl_elementbuffer* buffer) {
 void clear_elementbuffer(ogl_elementbuffer* buffer) {
   assert_ogl_error();
   if (buffer->buffer_id) glDeleteBuffers(1, &buffer->buffer_id);
-  *buffer = {};
+  buffer->capacity     = 0;
+  buffer->num_elements = 0;
+  buffer->element_size = 0;
+  buffer->dynamic      = false;
+  buffer->buffer_id    = 0;
   assert_ogl_error();
 }
 
@@ -662,7 +682,11 @@ void clear_program(ogl_program* program) {
   if (program->program_id) glDeleteProgram(program->program_id);
   if (program->vertex_id) glDeleteShader(program->vertex_id);
   if (program->fragment_id) glDeleteShader(program->fragment_id);
-  *program = {};
+  program->vertex_code   = {};
+  program->fragment_code = {};
+  program->program_id    = 0;
+  program->vertex_id     = 0;
+  program->fragment_id   = 0;
   assert_ogl_error();
 }
 
@@ -823,7 +847,7 @@ void set_uniform(const ogl_program* program, const char* name,
       get_uniform_location(program, name_on), cubemap, unit);
 }
 
-void set_framebuffer(ogl_framebuffer* framebuffer, const vec2i& size) {
+void init_framebuffer(ogl_framebuffer* framebuffer, const vec2i& size) {
   if (!framebuffer->framebuffer_id) {
     glGenFramebuffers(1, &framebuffer->framebuffer_id);
   }
@@ -901,38 +925,47 @@ void clear_framebuffer(ogl_framebuffer* framebuffer) {
   assert_ogl_error();
 }
 
+ogl_shape::~ogl_shape() {
+  for (auto buffer : vertex_buffers) delete buffer;
+  delete index_buffer;
+}
+
 void bind_shape(const ogl_shape* shape) { glBindVertexArray(shape->shape_id); }
 
-void set_shape(ogl_shape* shape) {
+void init_shape(ogl_shape* shape) {
+  if (shape->shape_id) glDeleteVertexArrays(1, &shape->shape_id);
   glGenVertexArrays(1, &shape->shape_id);
   assert_ogl_error();
 }
 
+bool is_initialized(const ogl_shape* shape) { return shape->shape_id != 0; }
+
 // Clear an OpenGL shape
 void clear_shape(ogl_shape* shape) {
-  for (auto& buffer : shape->vertex_buffers) {
-    clear_arraybuffer(&buffer);
+  for (auto buffer : shape->vertex_buffers) {
+    clear_arraybuffer(buffer);
   }
-  clear_elementbuffer(&shape->index_buffer);
+  clear_elementbuffer(shape->index_buffer);
   glDeleteVertexArrays(1, &shape->shape_id);
-  *shape = {};
+  shape->num_instances = 0;
+  shape->shape_id      = 0;
   assert_ogl_error();
 }
 
 template <typename T>
 void set_vertex_buffer_impl(
     ogl_shape* shape, const vector<T>& data, int location) {
-  if (shape->vertex_buffers.size() <= location) {
-    shape->vertex_buffers.resize(location + 1);
+  while (shape->vertex_buffers.size() <= location) {
+    shape->vertex_buffers.push_back(new ogl_arraybuffer{});
   }
-  set_arraybuffer(&shape->vertex_buffers[location], data, false);
+  set_arraybuffer(shape->vertex_buffers[location], data, false);
   bind_shape(shape);
-  auto& buffer = shape->vertex_buffers[location];
+  auto buffer = shape->vertex_buffers[location];
   assert_ogl_error();
-  glBindBuffer(GL_ARRAY_BUFFER, buffer.buffer_id);
+  glBindBuffer(GL_ARRAY_BUFFER, buffer->buffer_id);
   glEnableVertexAttribArray(location);
   glVertexAttribPointer(
-      location, buffer.element_size, GL_FLOAT, false, 0, nullptr);
+      location, buffer->element_size, GL_FLOAT, false, 0, nullptr);
   assert_ogl_error();
 }
 
@@ -974,11 +1007,29 @@ void set_vertex_buffer(ogl_shape* shape, const vec4f& value, int location) {
   assert_ogl_error();
 }
 
-void set_instance_buffer(ogl_shape* shape, int location) {
+void set_instance_buffer(ogl_shape* shape, int location, bool is_instance) {
   bind_shape(shape);
-  glVertexAttribDivisor(location, 1);
-  shape->num_instances = (int)shape->vertex_buffers[location].num_elements;
+  if (is_instance) {
+    glVertexAttribDivisor(location, 1);
+    shape->num_instances = shape->vertex_buffers[location]->num_elements;
+  } else {
+    glVertexAttribDivisor(location, 0);
+    shape->num_instances = 0;
+  }
   assert_ogl_error();
+}
+
+void set_index_buffer(ogl_shape* shape, const vector<int>& indices) {
+  set_elementbuffer(shape->index_buffer, indices);
+  shape->elements = ogl_element_type::points;
+}
+void set_index_buffer(ogl_shape* shape, const vector<vec2i>& indices) {
+  set_elementbuffer(shape->index_buffer, indices);
+  shape->elements = ogl_element_type::lines;
+}
+void set_index_buffer(ogl_shape* shape, const vector<vec3i>& indices) {
+  set_elementbuffer(shape->index_buffer, indices);
+  shape->elements = ogl_element_type::triangles;
 }
 
 void draw_shape(const ogl_shape* shape) {
@@ -994,20 +1045,21 @@ void draw_shape(const ogl_shape* shape) {
     case ogl_element_type::triangle_fan: type = GL_TRIANGLE_FAN; break;
   }
 
-  auto& indices = shape->index_buffer;
-  if (indices.buffer_id != 0) {
-    glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, indices.buffer_id);
+  auto indices = shape->index_buffer;
+  if (indices->buffer_id != 0) {
+    glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, indices->buffer_id);
     if (shape->num_instances == 0) {
-      glDrawElements(type, (GLsizei)indices.num_elements * indices.element_size,
+      glDrawElements(type,
+          (GLsizei)indices->num_elements * indices->element_size,
           GL_UNSIGNED_INT, nullptr);
     } else {
       glDrawElementsInstanced(type,
-          (GLsizei)indices.num_elements * indices.element_size, GL_UNSIGNED_INT,
-          nullptr, shape->num_instances);
+          (GLsizei)indices->num_elements * indices->element_size,
+          GL_UNSIGNED_INT, nullptr, (GLsizei)shape->num_instances);
     }
   } else {
-    auto& vertices = shape->vertex_buffers[0];
-    glDrawArrays(type, 0, (int)vertices.num_elements);
+    auto vertices = shape->vertex_buffers[0];
+    glDrawArrays(type, 0, (int)vertices->num_elements);
   }
   assert_ogl_error();
 }
@@ -1024,21 +1076,21 @@ void set_cube_shape(ogl_shape* shape) {
     {4, 5, 1}, {5, 6, 2}, {2, 6, 7}, {0, 3, 7}
   };
   // clang-format on
-  set_shape(shape);
+  init_shape(shape);
   set_vertex_buffer(shape, positions, 0);
   set_index_buffer(shape, triangles);
 }
 
 void set_quad_shape(ogl_shape* shape) {
   // clang-format off
-    static const auto positions = vector<vec3f>{
-      {-1, -1, 0}, {1, -1,  0}, {1, 1,  0}, {-1, 1, 0},
-    };
-    static const auto triangles = vector<vec3i>{
-      {0, 1, 3}, {3, 2, 1}
-    };
+  static const auto positions = vector<vec3f>{
+    {-1, -1, 0}, {1, -1,  0}, {1, 1,  0}, {-1, 1, 0},
+  };
+  static const auto triangles = vector<vec3i>{
+    {0, 1, 3}, {3, 2, 1}
+  };
   // clang-format on
-  set_shape(shape);
+  init_shape(shape);
   set_vertex_buffer(shape, positions, 0);
   set_index_buffer(shape, triangles);
 }

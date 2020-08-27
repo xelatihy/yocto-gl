@@ -84,6 +84,11 @@ struct ogl_texture {
 
   // OpenGL state
   uint texture_id = 0;
+
+  // Disable copy construction
+  ogl_texture()                   = default;
+  ogl_texture(const ogl_texture&) = delete;
+  ogl_texture& operator=(const ogl_texture&) = delete;
 };
 
 // set texture
@@ -114,6 +119,7 @@ void set_texture(ogl_texture* texture, const image<byte>& img,
 void set_texture(ogl_texture* texture, const image<float>& img,
     bool as_float = false, bool linear = true, bool mipmap = true);
 
+// OpenGL cubemap
 struct ogl_cubemap {
   // Cubemap properties
   int  size         = 0;
@@ -125,6 +131,11 @@ struct ogl_cubemap {
 
   // OpenGL state
   uint cubemap_id = 0;
+
+  // Disable copy construction
+  ogl_cubemap()                   = default;
+  ogl_cubemap(const ogl_cubemap&) = delete;
+  ogl_cubemap& operator=(const ogl_cubemap&) = delete;
 };
 
 // set cubemap
@@ -172,10 +183,15 @@ struct ogl_arraybuffer {
   size_t capacity     = 0;
   size_t num_elements = 0;
   int    element_size = 0;
+  bool   dynamic      = false;
 
-  bool dynamic = false;
   // OpenGL state
   uint buffer_id = 0;
+
+  // Disable copy construction
+  ogl_arraybuffer()                       = default;
+  ogl_arraybuffer(const ogl_arraybuffer&) = delete;
+  ogl_arraybuffer& operator=(const ogl_arraybuffer&) = delete;
 };
 
 // set buffer
@@ -203,10 +219,15 @@ struct ogl_elementbuffer {
   size_t capacity     = 0;
   size_t num_elements = 0;
   int    element_size = 0;
+  bool   dynamic      = false;
 
-  bool dynamic = false;
   // OpenGL state
   uint buffer_id = 0;
+
+  // Disable copy construction
+  ogl_elementbuffer()                         = default;
+  ogl_elementbuffer(const ogl_elementbuffer&) = delete;
+  ogl_elementbuffer& operator=(const ogl_elementbuffer&) = delete;
 };
 
 // set buffer
@@ -230,14 +251,21 @@ void set_elementbuffer(ogl_elementbuffer* buffer,
 // Opengl program
 struct ogl_program {
   // program code
-  string vertex_code;
-  string fragment_code;
+  string vertex_code   = {};
+  string fragment_code = {};
+
   // OpenGL state
   uint program_id  = 0;
   uint vertex_id   = 0;
   uint fragment_id = 0;
 
+  // Debugging
   static inline uint bound_program_id = 0;
+
+  // Disable copy construction
+  ogl_program()                   = default;
+  ogl_program(const ogl_program&) = delete;
+  ogl_program& operator=(const ogl_program&) = delete;
 };
 
 // initialize program
@@ -316,7 +344,7 @@ struct ogl_framebuffer {
   static inline uint bound_framebuffer_id = 0;
 };
 
-void set_framebuffer(ogl_framebuffer* framebuffer, const vec2i& size);
+void init_framebuffer(ogl_framebuffer* framebuffer, const vec2i& size);
 
 void set_framebuffer_texture(const ogl_framebuffer* framebuffer,
     const ogl_texture* texture, uint mipmap_level = 0);
@@ -346,16 +374,33 @@ enum struct ogl_element_type {
 
 // Opengl shape
 struct ogl_shape {
-  vector<ogl_arraybuffer> vertex_buffers = {};
-  ogl_elementbuffer       index_buffer   = {};
-  ogl_element_type        elements       = ogl_element_type::triangles;
-  int                     num_instances  = 0;
+  // OpenGL objects
+  vector<ogl_arraybuffer*> vertex_buffers = {};
+  ogl_elementbuffer*       index_buffer   = new ogl_elementbuffer{};
+  ogl_element_type         elements       = ogl_element_type::triangles;
+  size_t                   num_instances  = 0;
 
+  // OpenGl state
   uint shape_id = 0;
+
+  // Disable copy construction
+  ogl_shape()                 = default;
+  ogl_shape(const ogl_shape&) = delete;
+  ogl_shape& operator=(const ogl_shape&) = delete;
+
+  // Cleanup
+  ~ogl_shape();
 };
 
-void set_shape(ogl_shape* shape);
+[[deprecated]] void init_shape(ogl_shape* shape);
+
+// check if shape is initialized
+bool is_initialized(const ogl_shape* shape);
+
+// clear buffer
 void clear_shape(ogl_shape* shape);
+
+// bind shape
 void bind_shape(const ogl_shape* shape);
 
 // set vertex buffer
@@ -374,21 +419,15 @@ void set_vertex_buffer(ogl_shape* shape, const vec2f& attribute, int location);
 void set_vertex_buffer(ogl_shape* shape, const vec3f& attribute, int location);
 void set_vertex_buffer(ogl_shape* shape, const vec4f& attribute, int location);
 
-void set_instance_buffer(ogl_shape* shape, int location);
+// set vertex buffer instance
+void set_instance_buffer(ogl_shape* shape, int location, bool is_instance);
 
-inline void set_index_buffer(ogl_shape* shape, const vector<int>& indices) {
-  set_elementbuffer(&shape->index_buffer, indices);
-  shape->elements = ogl_element_type::points;
-}
-inline void set_index_buffer(ogl_shape* shape, const vector<vec2i>& indices) {
-  set_elementbuffer(&shape->index_buffer, indices);
-  shape->elements = ogl_element_type::lines;
-}
-inline void set_index_buffer(ogl_shape* shape, const vector<vec3i>& indices) {
-  set_elementbuffer(&shape->index_buffer, indices);
-  shape->elements = ogl_element_type::triangles;
-}
+// set element buffer
+void set_index_buffer(ogl_shape* shape, const vector<int>& indices);
+void set_index_buffer(ogl_shape* shape, const vector<vec2i>& indices);
+void set_index_buffer(ogl_shape* shape, const vector<vec3i>& indices);
 
+// draw shape
 void draw_shape(const ogl_shape* shape);
 
 // init common shapes
@@ -404,10 +443,17 @@ namespace yocto {
 
 // OpenGL image data
 struct ogl_image {
-  ~ogl_image();
   ogl_program* program = new ogl_program{};
   ogl_texture* texture = new ogl_texture{};
   ogl_shape*   quad    = new ogl_shape{};
+
+  // Disable copy construction
+  ogl_image()                 = default;
+  ogl_image(const ogl_image&) = delete;
+  ogl_image& operator=(const ogl_image&) = delete;
+
+  // Cleanup
+  ~ogl_image();
 };
 
 // create image drawing program

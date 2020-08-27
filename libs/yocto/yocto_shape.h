@@ -237,10 +237,10 @@ const int bvh_max_prims = 4;
 // and the split axis. Leaf and internal nodes are identical, except that
 // indices refer to primitives for leaf nodes or other nodes for internal nodes.
 struct bvh_node {
-  bbox3f  bbox = invalidb3f;
-  int32_t start = 0;
-  int16_t num = 0;
-  int8_t  axis = 0;
+  bbox3f  bbox     = invalidb3f;
+  int32_t start    = 0;
+  int16_t num      = 0;
+  int8_t  axis     = 0;
   bool    internal = false;
 };
 

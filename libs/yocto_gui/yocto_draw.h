@@ -64,7 +64,19 @@ struct gui_camera {
   float   focus    = 0;
 };
 
-struct gui_texture : ogl_texture {};
+// Opengl texture
+struct gui_texture {
+  // shape properties
+  ogl_texture* texture = new ogl_texture{};
+
+  // Disable copy construction
+  gui_texture()                   = default;
+  gui_texture(const gui_texture&) = delete;
+  gui_texture& operator=(const gui_texture&) = delete;
+
+  // Cleanup
+  ~gui_texture();
+};
 
 // Opengl material
 struct gui_material {
@@ -84,25 +96,20 @@ struct gui_material {
   gui_texture* normal_tex    = nullptr;
 };
 
-struct gui_shape : ogl_shape {};
+struct gui_shape {
+  // shape properties
+  ogl_shape* shape = new ogl_shape{};
 
-// shape properties
-void set_points(gui_shape* shape, const vector<int>& points);
-void set_lines(gui_shape* shape, const vector<vec2i>& lines);
-void set_triangles(gui_shape* shape, const vector<vec3i>& triangles);
-void set_quads(gui_shape* shape, const vector<vec4i>& quads);
+  // Disable copy construction
+  gui_shape()                 = default;
+  gui_shape(const gui_shape&) = delete;
+  gui_shape& operator=(const gui_shape&) = delete;
 
-void set_positions(gui_shape* shape, const vector<vec3f>& positions);
-void set_normals(gui_shape* shape, const vector<vec3f>& normals);
-void set_texcoords(gui_shape* shape, const vector<vec2f>& texcoords);
-void set_colors(gui_shape* shape, const vector<vec4f>& colors);
-void set_tangents(gui_shape* shape, const vector<vec4f>& tangents);
-ogl_arraybuffer* get_positions(gui_shape* shape);
-ogl_arraybuffer* get_normals(gui_shape* shape);
-ogl_arraybuffer* get_texcoords(gui_shape* shape);
-ogl_arraybuffer* get_colors(gui_shape* shape);
-ogl_arraybuffer* get_tangents(gui_shape* shape);
+  // Cleanup
+  ~gui_shape();
+};
 
+// Shading type
 enum struct gui_shading_type { constant = 0, shaded };
 
 // Opengl instance
@@ -130,33 +137,38 @@ struct gui_scene {
   ogl_cubemap* environment_cubemap = new ogl_cubemap{};
   ogl_program* environment_program = new ogl_program{};
 
-  // IBL baked data
+  // envlight baked data
   ogl_cubemap* diffuse_cubemap  = new ogl_cubemap{};
   ogl_cubemap* specular_cubemap = new ogl_cubemap{};
-  gui_texture* brdf_lut         = new gui_texture{};
+  ogl_texture* brdf_lut         = new ogl_texture{};
 
   // programs
-  ogl_program* eyelight_program = new ogl_program{};
-  ogl_program* ibl_program      = new ogl_program{};
+  ogl_program* camlight_program = new ogl_program{};
+  ogl_program* envlight_program = new ogl_program{};
 
+  // disable copy construction
+  gui_scene()                 = default;
+  gui_scene(const gui_scene&) = delete;
+  gui_scene& operator=(const gui_scene&) = delete;
+
+  // cleanup
   ~gui_scene();
 };
 
 // Shading type
 enum struct gui_lighting_type {
-  environment,
-  eyelight,
-  // scene_lights
+  envlight,
+  camlight,
 };
 
 // Shading name
-const auto gui_lighting_names = vector<string>{"environment", "camera_lights"};
+const auto gui_lighting_names = vector<string>{"envlight", "camlight"};
 
 // Draw options
 struct gui_scene_params {
   int               resolution       = 1280;
   bool              wireframe        = false;
-  gui_lighting_type lighting         = gui_lighting_type::eyelight;
+  gui_lighting_type lighting         = gui_lighting_type::camlight;
   float             exposure         = 0;
   float             gamma            = 2.2f;
   bool              faceted          = false;
@@ -167,19 +179,12 @@ struct gui_scene_params {
   vec4f             background       = vec4f{0.15f, 0.15f, 0.15f, 1.0f};
 };
 
-struct gui_scene_view {
-  frame3f          camera_frame      = {};
-  mat4f            view_matrix       = {};
-  mat4f            projection_matrix = {};
-  gui_scene_params params            = {};
-};
-
 // Initialize an OpenGL scene
 void init_scene(gui_scene* scene, const gui_texture* environment_tex = nullptr,
     const vec3f& environment_emission = {1, 1, 1});
 bool is_initialized(const gui_scene* scene);
 
-// Initialize data for image based lighting
+// Initialize data for environment lighting
 void init_ibl_data(gui_scene* scene);
 
 // Clear an OpenGL scene
@@ -197,6 +202,25 @@ void set_frame(gui_camera* camera, const frame3f& frame);
 void set_lens(gui_camera* camera, float lens, float aspect, float film);
 void set_nearfar(gui_camera* camera, float near, float far);
 
+// check if initialized
+bool is_initialized(const gui_texture* texture);
+// clear texture
+void clear_texture(gui_texture* texture);
+
+// set texture
+void set_texture(gui_texture* texture, const image<vec4b>& img,
+    bool as_srgb = true, bool linear = true, bool mipmap = true);
+void set_texture(gui_texture* texture, const image<vec4f>& img,
+    bool as_float = false, bool linear = true, bool mipmap = true);
+void set_texture(gui_texture* texture, const image<vec3b>& img,
+    bool as_srgb = true, bool linear = true, bool mipmap = true);
+void set_texture(gui_texture* texture, const image<vec3f>& img,
+    bool as_float = false, bool linear = true, bool mipmap = true);
+void set_texture(gui_texture* texture, const image<byte>& img,
+    bool as_srgb = true, bool linear = true, bool mipmap = true);
+void set_texture(gui_texture* texture, const image<float>& img,
+    bool as_float = false, bool linear = true, bool mipmap = true);
+
 // material properties
 void set_emission(gui_material* material, const vec3f& emission,
     gui_texture* emission_tex = nullptr);
@@ -212,11 +236,30 @@ void set_opacity(
     gui_material* material, float opacity, gui_texture* opacity_tex = nullptr);
 void set_normalmap(gui_material* material, gui_texture* normal_tex);
 
-gui_shape* add_shape(gui_scene* scene, const vector<int>& points,
-    const vector<vec2i>& lines, const vector<vec3i>& triangles,
-    const vector<vec4i>& quads, const vector<vec3f>& positions,
-    const vector<vec3f>& normals, const vector<vec2f>& texcoords,
-    const vector<vec4f>& colors, bool edges = false);
+// cheeck if initialized
+bool is_initialized(const gui_shape* shape);
+// clear
+void clear_shape(gui_shape* shape);
+
+// shape properties
+void set_points(gui_shape* shape, const vector<int>& points);
+void set_lines(gui_shape* shape, const vector<vec2i>& lines);
+void set_triangles(gui_shape* shape, const vector<vec3i>& triangles);
+void set_quads(gui_shape* shape, const vector<vec4i>& quads);
+void set_positions(gui_shape* shape, const vector<vec3f>& positions);
+void set_normals(gui_shape* shape, const vector<vec3f>& normals);
+void set_texcoords(gui_shape* shape, const vector<vec2f>& texcoords);
+void set_colors(gui_shape* shape, const vector<vec4f>& colors);
+void set_tangents(gui_shape* shape, const vector<vec4f>& tangents);
+void set_instance_from(gui_shape* shape, const vector<vec3f>& froms);
+void set_instance_to(gui_shape* shape, const vector<vec3f>& tos);
+
+// get shaoe properties
+ogl_arraybuffer* get_positions(gui_shape* shape);
+ogl_arraybuffer* get_normals(gui_shape* shape);
+ogl_arraybuffer* get_texcoords(gui_shape* shape);
+ogl_arraybuffer* get_colors(gui_shape* shape);
+ogl_arraybuffer* get_tangents(gui_shape* shape);
 
 // instance properties
 void set_frame(gui_instance* instance, const frame3f& frame);
@@ -233,9 +276,22 @@ gui_material* add_material(gui_scene* scene, const vec3f& emission,
     gui_texture* emission_tex = nullptr, gui_texture* color_tex = nullptr,
     gui_texture* specular_tex = nullptr, gui_texture* metallic_tex = nullptr,
     gui_texture* roughness_tex = nullptr, gui_texture* normalmap_tex = nullptr);
+gui_shape*    add_shape(gui_scene* scene, const vector<int>& points,
+       const vector<vec2i>& lines, const vector<vec3i>& triangles,
+       const vector<vec4i>& quads, const vector<vec3f>& positions,
+       const vector<vec3f>& normals, const vector<vec2f>& texcoords,
+       const vector<vec4f>& colors, bool edges = false);
 gui_instance* add_instance(gui_scene* scene, const frame3f& frame,
     gui_shape* shape, gui_material* material, bool hidden = false,
     bool highlighted = false);
+
+// internal drawing functions
+struct gui_scene_view {
+  frame3f          camera_frame      = {};
+  mat4f            view_matrix       = {};
+  mat4f            projection_matrix = {};
+  gui_scene_params params            = {};
+};
 
 void set_scene_view_uniforms(ogl_program* program, const gui_scene_view& view);
 void set_instance_uniforms(ogl_program* program, const frame3f& frame,
