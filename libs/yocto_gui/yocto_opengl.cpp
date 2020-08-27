@@ -653,17 +653,20 @@ bool init_program(ogl_program* program, const string& vertex,
   return true;
 }
 
+// initialize program
+bool init_program(ogl_program* program, const string& vertex,
+    const string& fragment, string& error) {
+  auto errorlog = string{};
+  return init_program(program, vertex, fragment, error, errorlog);
+}
+
 // initialize program, print eventual errors to stdout
 bool init_program(ogl_program* program, const string& vertex,
     const string& fragment, bool exceptions) {
   auto error    = string{};
   auto errorlog = string{};
   if (!init_program(program, vertex, fragment, error, errorlog)) {
-    printf("error: %s\n", error.c_str());
-    printf("errorlog: %s\n", errorlog.c_str());
-    if (exceptions) {
-      throw std::runtime_error{"error initalizing OpenGL program"};
-    }
+    if (exceptions) throw std::runtime_error{error};
     return false;
   }
   return true;
