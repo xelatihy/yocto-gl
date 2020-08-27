@@ -56,14 +56,14 @@ struct app_state {
   string name      = "";
 
   // options
-  gui_scene_params drawgl_prms = {};
+  shade_params drawgl_prms = {};
 
   // scene
   generic_shape* ioshape = new generic_shape{};
 
   // rendering state
-  gui_scene*  glscene  = new gui_scene{};
-  gui_camera* glcamera = nullptr;
+  shade_scene*  glscene  = new shade_scene{};
+  shade_camera* glcamera = nullptr;
 
   // loading status
   std::atomic<bool> ok           = false;
@@ -88,7 +88,7 @@ struct app_states {
   std::deque<app_state*> loading  = {};
 
   // default options
-  gui_scene_params drawgl_prms = {};
+  shade_params drawgl_prms = {};
 
   // cleanup
   ~app_states() {
@@ -169,7 +169,7 @@ quads_shape make_cylinders(const vector<vec2i>& lines,
 
 const char* draw_instanced_vertex_code();
 
-void init_glscene(app_state* app, gui_scene* glscene, generic_shape* ioshape,
+void init_glscene(app_state* app, shade_scene* glscene, generic_shape* ioshape,
     progress_callback progress_cb) {
   // handle progress
   auto progress = vec2i{0, 4};
@@ -245,11 +245,11 @@ void init_glscene(app_state* app, gui_scene* glscene, generic_shape* ioshape,
 
   auto edges_instance = add_instance(
       glscene, identity3x4f, edges_shape, glmateriale, true);
-  edges_instance->shading = gui_shading_type::constant;
+  edges_instance->shading = shade_shading_type::constant;
 
   auto points_instance = add_instance(
       glscene, identity3x4f, vertices_shape, glmaterialv, true);
-  points_instance->shading = gui_shading_type::constant;
+  points_instance->shading = shade_shading_type::constant;
 
   // override eyelight vertex shader
   auto vert = draw_instanced_vertex_code();
@@ -319,7 +319,7 @@ void draw_widgets(gui_window* win, app_states* apps, const gui_input& input) {
     draw_checkbox(win, "points", app->glscene->instances[2]->hidden, true);
     draw_coloredit(win, "color", glmaterial->color);
     draw_slider(win, "resolution", params.resolution, 0, 4096);
-    draw_combobox(win, "lighting", (int&)params.lighting, gui_lighting_names);
+    draw_combobox(win, "lighting", (int&)params.lighting, shade_lighting_names);
     draw_checkbox(win, "wireframe", params.wireframe);
     continue_line(win);
     draw_checkbox(win, "double sided", params.double_sided);
@@ -401,7 +401,7 @@ int main(int argc, const char* argv[]) {
   add_option(cli, "--resolution,-r", apps->drawgl_prms.resolution,
       "Image resolution.");
   add_option(cli, "--lighting", apps->drawgl_prms.lighting, "Lighting type.",
-      gui_lighting_names);
+      shade_lighting_names);
   add_option(cli, "shapes", filenames, "Shape filenames", true);
   parse_cli(cli, argc, argv);
 
