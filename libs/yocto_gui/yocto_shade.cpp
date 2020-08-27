@@ -177,7 +177,7 @@ void init_scene(shade_scene* scene) {
   set_program(scene->camlight_program, shade_scene_vertex(),
       shade_camlight_fragment(), true);
   set_program(scene->envlight_program, shade_scene_vertex(),
-      shade_envlight_fragment(), true);
+      shade_camlight_fragment(), true);
   set_program(scene->environment_program, precompute_cubemap_vertex(),
       shade_enivronment_fragment(), true);
 }
@@ -571,6 +571,9 @@ void set_camlight_uniforms(
     set_uniform(program, ("lights_type[" + is + "]").c_str(), 1);
     lid++;
   }
+  set_uniform(program, "envlight_irradiance", (const ogl_cubemap*)nullptr, 6);
+  set_uniform(program, "envlight_reflection", (const ogl_cubemap*)nullptr, 7);
+  set_uniform(program, "envlight_brdflut", (const ogl_texture*)nullptr, 8);
   assert_ogl_error();
 }
 
@@ -578,6 +581,7 @@ void set_envlight_uniforms(
     ogl_program* program, const shade_scene* scene, const shade_view& view) {
   if (!has_envlight(scene)) return;
   auto environment = scene->environments.front();
+  set_uniform(program, "lighting", 2);
   set_uniform(program, "envlight_irradiance", environment->envlight_diffuse, 6);
   set_uniform(
       program, "envlight_reflection", environment->envlight_specular, 7);
@@ -863,9 +867,9 @@ uniform vec3 lights_position[16];            // light positions
 uniform vec3 lights_emission[16]; // light intensities
 
 // precomputed textures for image based lighting
-// uniform samplerCube envlight_irradiance;
-// uniform samplerCube envlight_reflection;
-// uniform sampler2D   envlight_brdflut;
+uniform samplerCube envlight_irradiance;
+uniform samplerCube envlight_reflection;
+uniform sampler2D   envlight_brdflut;
 
 uniform mat4 frame;              // shape transform
 uniform mat4 frameit;            // shape transform
@@ -993,11 +997,11 @@ vec3 eval_normal(vec3 outgoing) {
   return norm;
 }
     
-// vec3 sample_prefiltered_refleciton(vec3 incoming, float roughness) {
-//   int   MAX_REFLECTION_LOD = 5;
-//   float lod                = sqrt(roughness) * MAX_REFLECTION_LOD;
-//   return textureLod(envlight_reflection, incoming, lod).rgb;
-// }
+vec3 sample_prefiltered_refleciton(vec3 incoming, float roughness) {
+  int   MAX_REFLECTION_LOD = 5;
+  float lod                = sqrt(roughness) * MAX_REFLECTION_LOD;
+  return textureLod(envlight_reflection, incoming, lod).rgb;
+}
 
 #define lighting_eyelight 0
 #define lighting_camlight 1
@@ -1038,15 +1042,15 @@ void main() {
         radiance += cl * eval_brdfcos(brdf, n, incoming, outgoing);
       }
     }
-    // if (lighting == lighting_envlight) {
-    //   // diffuse
-    //   radiance += brdf.diffuse * textureLod(envlight_irradiance, n, 0).rgb;
-    //   // specular
-    //   vec3 incoming   = normalize(reflect(-outgoing, n));
-    //   vec3 reflection = sample_prefiltered_refleciton(incoming, brdf.roughness);
-    //   vec2 env_brdf   = texture(envlight_brdflut, vec2(max(dot(n, outgoing), 0.0), roughness)).rg;
-    //   radiance += reflection * (brdf.specular * env_brdf.x + env_brdf.y);
-    // }
+    if (lighting == lighting_envlight) {
+      // diffuse
+      radiance += brdf.diffuse * textureLod(envlight_irradiance, n, 0).rgb;
+      // specular
+      vec3 incoming   = normalize(reflect(-outgoing, n));
+      vec3 reflection = sample_prefiltered_refleciton(incoming, brdf.roughness);
+      vec2 env_brdf   = texture(envlight_brdflut, vec2(max(dot(n, outgoing), 0.0), roughness)).rg;
+      radiance += reflection * (brdf.specular * env_brdf.x + env_brdf.y);
+    }
   }
 
   // final color correction

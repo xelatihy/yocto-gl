@@ -796,7 +796,7 @@ int get_uniform_location(const ogl_program* program, const char* name) {
 void set_uniform(const ogl_program* program, int location,
     const ogl_texture* texture, int unit) {
   glActiveTexture(GL_TEXTURE0 + unit);
-  glBindTexture(GL_TEXTURE_2D, texture->texture_id);
+  glBindTexture(GL_TEXTURE_2D, texture ? texture->texture_id : 0);
   glUniform1i(location, unit);
   assert_ogl_error();
 }
@@ -814,6 +814,9 @@ void set_uniform(const ogl_program* program, int location, int location_on,
     glUniform1i(location, unit);
     glUniform1i(location_on, 1);
   } else {
+    glActiveTexture(GL_TEXTURE0 + unit);
+    glBindTexture(GL_TEXTURE_2D, 0);
+    glUniform1i(location, unit);
     glUniform1i(location_on, 0);
   }
   assert_ogl_error();
@@ -829,7 +832,7 @@ void set_uniform(const ogl_program* program, int location,
     const ogl_cubemap* cubemap, int unit) {
   assert_ogl_error();
   glActiveTexture(GL_TEXTURE0 + unit);
-  glBindTexture(GL_TEXTURE_CUBE_MAP, cubemap->cubemap_id);
+  glBindTexture(GL_TEXTURE_CUBE_MAP, cubemap ? cubemap->cubemap_id : 0);
   glUniform1i(location, unit);
   assert_ogl_error();
 }
@@ -847,6 +850,9 @@ void set_uniform(const ogl_program* program, int location, int location_on,
     glUniform1i(location, unit);
     glUniform1i(location_on, 1);
   } else {
+    glActiveTexture(GL_TEXTURE0 + unit);
+    glBindTexture(GL_TEXTURE_CUBE_MAP, 0);
+    glUniform1i(location, unit);
     glUniform1i(location_on, 0);
   }
   assert_ogl_error();
