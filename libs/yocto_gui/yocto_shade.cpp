@@ -157,7 +157,6 @@ shade_scene::~shade_scene() {
   for (auto environment : environments) delete environment;
   delete environment_program;
   delete instance_program;
-  delete envlight_program;
 }
 
 static const char* precompute_brdflut_vertex();
@@ -176,8 +175,8 @@ void init_scene(shade_scene* scene) {
   if (is_initialized(scene->instance_program)) return;
   set_program(scene->instance_program, shade_instance_vertex(),
       shade_instance_fragment(), true);
-  set_program(scene->envlight_program, shade_instance_vertex(),
-      shade_instance_fragment(), true);
+  // set_program(scene->envlight_program, shade_instance_vertex(),
+  //     shade_instance_fragment(), true);
   set_program(scene->environment_program, precompute_cubemap_vertex(),
       shade_enivronment_fragment(), true);
 }
@@ -207,7 +206,6 @@ void clear_scene(shade_scene* scene) {
   for (auto environment : scene->environments) clear_environment(environment);
   clear_program(scene->environment_program);
   clear_program(scene->instance_program);
-  clear_program(scene->envlight_program);
 }
 
 // add camera
@@ -603,10 +601,7 @@ void set_lighting_uniforms(ogl_program* program, const shade_scene* scene,
 void draw_instances(
     shade_scene* scene, const shade_view& view, const shade_params& params) {
   // set program
-  auto program =
-      (params.lighting == shade_lighting_type::camlight || !has_envlight(scene))
-          ? scene->instance_program
-          : scene->envlight_program;
+  auto program = scene->instance_program;
   bind_program(program);
 
   // set scene uniforms

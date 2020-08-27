@@ -161,7 +161,6 @@ struct shade_scene {
   // programs
   ogl_program* environment_program = new ogl_program{};
   ogl_program* instance_program    = new ogl_program{};
-  ogl_program* envlight_program    = new ogl_program{};
 
   // disable copy construction
   shade_scene()                   = default;
