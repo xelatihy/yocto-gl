@@ -30,6 +30,7 @@
 #include "yocto_opengl.h"
 
 #include <cassert>
+#include <stdexcept>
 #include <unordered_set>
 
 #include "ext/glad/glad.h"
@@ -148,6 +149,11 @@ void set_texture(ogl_texture* texture, const vec2i& size, int num_channels,
   static auto cformat = vector<uint>{0, GL_RED, GL_RG, GL_RGB, GL_RGBA};
   assert_ogl_error();
 
+  if (size == zero2i) {
+    clear_texture(texture);
+    return;
+  }
+
   if (!texture->texture_id) glGenTextures(1, &texture->texture_id);
   if (texture->size != size || texture->num_channels != num_channels ||
       texture->is_srgb != as_srgb || texture->is_float == true ||
@@ -193,6 +199,11 @@ void set_texture(ogl_texture* texture, const vec2i& size, int num_channels,
   static auto cformat = vector<uint>{0, GL_RED, GL_RG, GL_RGB, GL_RGBA};
   assert_ogl_error();
 
+  if (size == zero2i) {
+    clear_texture(texture);
+    return;
+  }
+
   if (!texture->texture_id) glGenTextures(1, &texture->texture_id);
   if (texture->size != size || texture->num_channels != num_channels ||
       texture->is_float != as_float || texture->is_srgb == true ||
@@ -228,6 +239,9 @@ void set_texture(ogl_texture* texture, const vec2i& size, int num_channels,
   texture->mipmap       = mipmap;
   assert_ogl_error();
 }
+
+// cleanup
+ogl_texture::~ogl_texture() { clear_texture(this); }
 
 // check if texture is initialized
 bool is_initialized(const ogl_texture* texture) {
@@ -288,6 +302,11 @@ void set_cubemap(ogl_cubemap* cubemap, int size, int num_channels,
   static auto cformat = vector<uint>{0, GL_RED, GL_RG, GL_RGB, GL_RGBA};
   assert_ogl_error();
 
+  if (size == 0) {
+    clear_cubemap(cubemap);
+    return;
+  }
+
   if (!cubemap->cubemap_id) glGenTextures(1, &cubemap->cubemap_id);
   if (cubemap->size != size || cubemap->num_channels != num_channels ||
       cubemap->is_srgb != as_srgb || cubemap->is_float == true ||
@@ -341,6 +360,11 @@ void set_cubemap(ogl_cubemap* cubemap, int size, int num_channels,
   static auto cformat = vector<uint>{0, GL_RED, GL_RG, GL_RGB, GL_RGBA};
   assert_ogl_error();
 
+  if (size == 0) {
+    clear_cubemap(cubemap);
+    return;
+  }
+
   if (!cubemap->cubemap_id) glGenTextures(1, &cubemap->cubemap_id);
   if (cubemap->size != size || cubemap->num_channels != num_channels ||
       cubemap->is_float != as_float || cubemap->is_srgb == true ||
@@ -386,6 +410,9 @@ void set_cubemap(ogl_cubemap* cubemap, int size, int num_channels,
   cubemap->mipmap       = mipmap;
   assert_ogl_error();
 }
+
+// cleanup
+ogl_cubemap::~ogl_cubemap() { clear_cubemap(this); }
 
 // check if cubemap is initialized
 bool is_initialized(const ogl_cubemap* cubemap) {
@@ -454,6 +481,9 @@ void set_cubemap(ogl_cubemap* cubemap, const array<image<float>, 6>& img,
       cubemap, img[0].imsize().x, num_channels, data, as_float, linear, mipmap);
 }
 
+// cleanup
+ogl_arraybuffer::~ogl_arraybuffer() { clear_arraybuffer(this); }
+
 // check if buffer is initialized
 bool is_initialized(const ogl_arraybuffer* buffer) {
   return buffer && buffer->buffer_id != 0;
@@ -463,6 +493,12 @@ bool is_initialized(const ogl_arraybuffer* buffer) {
 void set_arraybuffer(ogl_arraybuffer* buffer, size_t size, int esize,
     const float* data, bool dynamic) {
   assert_ogl_error();
+
+  if (size == 0) {
+    clear_arraybuffer(buffer);
+    return;
+  }
+
   auto target = GL_ARRAY_BUFFER;
   if (size > buffer->capacity) {
     // reallocate buffer if needed
@@ -520,6 +556,12 @@ void set_arraybuffer(
 void set_elementbuffer(ogl_elementbuffer* buffer, size_t size, int esize,
     const int* data, bool dynamic) {
   assert_ogl_error();
+
+  if (size == 0) {
+    clear_elementbuffer(buffer);
+    return;
+  }
+
   auto target = GL_ELEMENT_ARRAY_BUFFER;
   if (size > buffer->capacity) {
     // reallocate buffer if needed
@@ -543,6 +585,9 @@ void set_elementbuffer(ogl_elementbuffer* buffer, size_t size, int esize,
   buffer->dynamic      = dynamic;
   assert_ogl_error();
 }
+
+// cleanup
+ogl_elementbuffer::~ogl_elementbuffer() { clear_elementbuffer(this); }
 
 // check if buffer is initialized
 bool is_initialized(const ogl_elementbuffer* buffer) {
@@ -685,6 +730,9 @@ void clear_program(ogl_program* program) {
   assert_ogl_error();
 }
 
+// cleanup
+ogl_program::~ogl_program() { clear_program(this); }
+
 bool is_initialized(const ogl_program* program) {
   return program && program->program_id != 0;
 }
@@ -781,7 +829,7 @@ int get_uniform_location(const ogl_program* program, const char* name) {
 void set_uniform(const ogl_program* program, int location,
     const ogl_texture* texture, int unit) {
   glActiveTexture(GL_TEXTURE0 + unit);
-  glBindTexture(GL_TEXTURE_2D, texture->texture_id);
+  glBindTexture(GL_TEXTURE_2D, texture ? texture->texture_id : 0);
   glUniform1i(location, unit);
   assert_ogl_error();
 }
@@ -799,6 +847,9 @@ void set_uniform(const ogl_program* program, int location, int location_on,
     glUniform1i(location, unit);
     glUniform1i(location_on, 1);
   } else {
+    glActiveTexture(GL_TEXTURE0 + unit);
+    glBindTexture(GL_TEXTURE_2D, 0);
+    glUniform1i(location, unit);
     glUniform1i(location_on, 0);
   }
   assert_ogl_error();
@@ -814,7 +865,7 @@ void set_uniform(const ogl_program* program, int location,
     const ogl_cubemap* cubemap, int unit) {
   assert_ogl_error();
   glActiveTexture(GL_TEXTURE0 + unit);
-  glBindTexture(GL_TEXTURE_CUBE_MAP, cubemap->cubemap_id);
+  glBindTexture(GL_TEXTURE_CUBE_MAP, cubemap ? cubemap->cubemap_id : 0);
   glUniform1i(location, unit);
   assert_ogl_error();
 }
@@ -832,6 +883,9 @@ void set_uniform(const ogl_program* program, int location, int location_on,
     glUniform1i(location, unit);
     glUniform1i(location_on, 1);
   } else {
+    glActiveTexture(GL_TEXTURE0 + unit);
+    glBindTexture(GL_TEXTURE_CUBE_MAP, 0);
+    glUniform1i(location, unit);
     glUniform1i(location_on, 0);
   }
   assert_ogl_error();
@@ -842,7 +896,15 @@ void set_uniform(const ogl_program* program, const char* name,
       get_uniform_location(program, name_on), cubemap, unit);
 }
 
+// cleanup
+ogl_framebuffer::~ogl_framebuffer() { clear_framebuffer(this); }
+
 void set_framebuffer(ogl_framebuffer* framebuffer, const vec2i& size) {
+  if (size == zero2i) {
+    clear_framebuffer(framebuffer);
+    return;
+  }
+
   if (!framebuffer->framebuffer_id) {
     glGenFramebuffers(1, &framebuffer->framebuffer_id);
   }
@@ -916,7 +978,9 @@ void clear_framebuffer(ogl_framebuffer* framebuffer) {
   }
   glDeleteFramebuffers(1, &framebuffer->framebuffer_id);
   glDeleteRenderbuffers(1, &framebuffer->renderbuffer_id);
-  *framebuffer = {};
+  framebuffer->size            = {0, 0};
+  framebuffer->framebuffer_id  = 0;
+  framebuffer->renderbuffer_id = 0;
   assert_ogl_error();
 }
 
@@ -1099,7 +1163,7 @@ void set_quad_shape(ogl_shape* shape) {
 // -----------------------------------------------------------------------------
 namespace yocto {
 
-auto ogl_image_vertex =
+static auto ogl_image_vertex =
     R"(
 #version 330
 in vec2 positions;
@@ -1114,7 +1178,7 @@ void main() {
 }
 )";
 #if 0
-auto ogl_image_vertex = R"(
+static auto ogl_image_vertex = R"(
 #version 330
 in vec2 positions;
 out vec2 frag_texcoord;
@@ -1128,7 +1192,7 @@ void main() {
 }
 )";
 #endif
-auto ogl_image_fragment =
+static auto ogl_image_fragment =
     R"(
 #version 330
 in vec2 frag_texcoord;
@@ -1139,7 +1203,7 @@ void main() {
 }
 )";
 #if 0
-auto ogl_image_fragment = R"(
+static auto ogl_image_fragment = R"(
 #version 330
 in vec2 frag_texcoord;
 out vec4 frag_color;

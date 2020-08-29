@@ -160,8 +160,7 @@ struct shade_scene {
 
   // programs
   ogl_program* environment_program = new ogl_program{};
-  ogl_program* camlight_program    = new ogl_program{};
-  ogl_program* envlight_program    = new ogl_program{};
+  ogl_program* instance_program    = new ogl_program{};
 
   // disable copy construction
   shade_scene()                   = default;
@@ -173,13 +172,11 @@ struct shade_scene {
 };
 
 // Shading type
-enum struct shade_lighting_type {
-  envlight,
-  camlight,
-};
+enum struct shade_lighting_type { envlight, camlight, eyelight };
 
 // Shading name
-const auto shade_lighting_names = vector<string>{"envlight", "camlight"};
+const auto shade_lighting_names = vector<string>{
+    "envlight", "camlight", "eyelight"};
 
 // Draw options
 struct shade_params {
@@ -197,7 +194,7 @@ struct shade_params {
 };
 
 // Initialize an OpenGL scene
-void init_scene(shade_scene* scene);
+void init_scene(shade_scene* scene, bool instanced_drawing = false);
 bool is_initialized(const shade_scene* scene);
 
 // Initialize data for environment lighting
@@ -320,35 +317,9 @@ shade_instance* add_instance(shade_scene* scene, const frame3f& frame,
 shade_environment* add_environment(shade_scene* scene, const frame3f& frame,
     const vec3f& emission, shade_texture* emission_tex = nullptr);
 
-// internal drawing functions
-struct shade_view {
-  frame3f camera_frame      = {};
-  mat4f   view_matrix       = {};
-  mat4f   projection_matrix = {};
-};
-
-void set_view_uniforms(ogl_program* program, const shade_view& view);
-void set_instance_uniforms(ogl_program* program, const frame3f& frame,
-    const shade_shape* shape, const shade_material* material,
-    const shade_params& params);
-void set_camlight_uniforms(
-    ogl_program* program, const shade_scene* scene, const shade_view& view);
-void set_envlight_uniforms(
-    ogl_program* program, const shade_scene* scene, const shade_view& view);
-
-void draw_instances(
-    shade_scene* scene, const shade_view& view, const shade_params& params);
-void draw_environments(
-    shade_scene* scene, const shade_view& view, const shade_params& params);
-
+// draw scene
 void draw_scene(shade_scene* scene, shade_camera* camera, const vec4i& viewport,
     const shade_params& params);
-
-// read-only access to defualt shader code
-const char* shade_scene_vertex();
-const char* shade_camlight_fragment();
-const char* shade_envlight_fragment();
-const char* shade_enivronment_fragment();
 
 }  // namespace yocto
 

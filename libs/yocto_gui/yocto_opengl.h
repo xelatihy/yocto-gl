@@ -89,6 +89,9 @@ struct ogl_texture {
   ogl_texture()                   = default;
   ogl_texture(const ogl_texture&) = delete;
   ogl_texture& operator=(const ogl_texture&) = delete;
+
+  // cleanup
+  ~ogl_texture();
 };
 
 // set texture
@@ -136,6 +139,9 @@ struct ogl_cubemap {
   ogl_cubemap()                   = default;
   ogl_cubemap(const ogl_cubemap&) = delete;
   ogl_cubemap& operator=(const ogl_cubemap&) = delete;
+
+  // cleanup
+  ~ogl_cubemap();
 };
 
 // set cubemap
@@ -185,6 +191,9 @@ struct ogl_arraybuffer {
   ogl_arraybuffer()                       = default;
   ogl_arraybuffer(const ogl_arraybuffer&) = delete;
   ogl_arraybuffer& operator=(const ogl_arraybuffer&) = delete;
+
+  // Cleanup
+  ~ogl_arraybuffer();
 };
 
 // set buffer
@@ -221,6 +230,9 @@ struct ogl_elementbuffer {
   ogl_elementbuffer()                         = default;
   ogl_elementbuffer(const ogl_elementbuffer&) = delete;
   ogl_elementbuffer& operator=(const ogl_elementbuffer&) = delete;
+
+  // Cleanup
+  ~ogl_elementbuffer();
 };
 
 // set buffer
@@ -259,6 +271,9 @@ struct ogl_program {
   ogl_program()                   = default;
   ogl_program(const ogl_program&) = delete;
   ogl_program& operator=(const ogl_program&) = delete;
+
+  // Cleanup
+  ~ogl_program();
 };
 
 // initialize program
@@ -332,11 +347,23 @@ void set_uniform(ogl_program* program, const char* name, const char* name_on,
 namespace yocto {
 
 struct ogl_framebuffer {
-  vec2i size            = {0, 0};
-  uint  framebuffer_id  = 0;
-  uint  renderbuffer_id = 0;
+  // framebuffer properties
+  vec2i size = {0, 0};
 
+  // opengl state
+  uint framebuffer_id  = 0;
+  uint renderbuffer_id = 0;
+
+  // Denugging
   static inline uint bound_framebuffer_id = 0;
+
+  // Disable copy construction
+  ogl_framebuffer()                       = default;
+  ogl_framebuffer(const ogl_framebuffer&) = delete;
+  ogl_framebuffer& operator=(const ogl_framebuffer&) = delete;
+
+  // Cleanup
+  ~ogl_framebuffer();
 };
 
 void set_framebuffer(ogl_framebuffer* framebuffer, const vec2i& size);
