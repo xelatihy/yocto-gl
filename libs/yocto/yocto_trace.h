@@ -199,9 +199,6 @@ struct trace_shape {
   RTCScene embree_bvh = nullptr;
 #endif
 
-  // element cdf for sampling
-  vector<float> elements_cdf = {};
-
   // cleanup
   ~trace_shape();
 };
@@ -218,9 +215,6 @@ struct trace_environment {
   frame3f        frame        = identity3x4f;
   vec3f          emission     = {0, 0, 0};
   trace_texture* emission_tex = nullptr;
-
-  // computed properties
-  vector<float> texels_cdf = {};
 };
 
 // Scene comprised an array of objects whose memory is owened by the scene.
@@ -537,8 +531,9 @@ namespace yocto {
 
 // Scene lights used during rendering. These are created automatically.
 struct trace_light {
-  trace_instance*    instance    = nullptr;
-  trace_environment* environment = nullptr;
+  trace_instance*    instance     = nullptr;
+  trace_environment* environment  = nullptr;
+  vector<float>      elements_cdf = {};
 };
 
 // Scene lights
