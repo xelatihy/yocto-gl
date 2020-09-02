@@ -2209,7 +2209,7 @@ static vec3f sample_lights(const trace_scene* scene, const trace_lights* lights,
   auto light    = lights->lights[light_id];
   if (light->instance != nullptr) {
     auto instance = light->instance;
-    auto element  = sample_discrete_cdf(instance->shape->elements_cdf, rel);
+    auto element  = sample_discrete_cdf(light->elements_cdf, rel);
     auto uv       = (!instance->shape->triangles.empty()) ? sample_triangle(ruv)
                                                     : ruv;
     auto lposition = eval_position(light->instance, element, uv);
@@ -2218,7 +2218,7 @@ static vec3f sample_lights(const trace_scene* scene, const trace_lights* lights,
     auto environment = light->environment;
     if (environment->emission_tex != nullptr) {
       auto emission_tex = environment->emission_tex;
-      auto idx          = sample_discrete_cdf(environment->texels_cdf, rel);
+      auto idx          = sample_discrete_cdf(light->elements_cdf, rel);
       auto size         = texture_size(emission_tex);
       auto uv           = vec2f{
           ((idx % size.x) + 0.5f) / size.x, ((idx / size.x) + 0.5f) / size.y};
@@ -2252,7 +2252,7 @@ static float sample_lights_pdf(const trace_scene* scene,
         auto lnormal = eval_element_normal(
             light->instance, intersection.element);
         // prob triangle * area triangle = area triangle mesh
-        auto area = light->instance->shape->elements_cdf.back();
+        auto area = light->elements_cdf.back();
         lpdf += distance_squared(lposition, position) /
                 (abs(dot(lnormal, direction)) * area);
         // continue
@@ -2271,8 +2271,8 @@ static float sample_lights_pdf(const trace_scene* scene,
         auto i    = clamp((int)(texcoord.x * size.x), 0, size.x - 1);
         auto j    = clamp((int)(texcoord.y * size.y), 0, size.y - 1);
         auto prob = sample_discrete_cdf_pdf(
-                        light->environment->texels_cdf, j * size.x + i) /
-                    light->environment->texels_cdf.back();
+                        light->elements_cdf, j * size.x + i) /
+                    light->elements_cdf.back();
         auto angle = (2 * pif / size.x) * (pif / size.y) *
                      sin(pif * (j + 0.5f) / size.y);
         pdf += prob / angle;
@@ -2844,50 +2844,49 @@ void init_lights(trace_lights* lights, const trace_scene* scene,
     auto shape = instance->shape;
     if (shape->triangles.empty() && shape->quads.empty()) continue;
     if (progress_cb) progress_cb("build light", progress.x++, ++progress.y);
-    if (!shape->triangles.empty()) {
-      shape->elements_cdf = vector<float>(shape->triangles.size());
-      for (auto idx = 0; idx < shape->elements_cdf.size(); idx++) {
-        auto& t                  = shape->triangles[idx];
-        shape->elements_cdf[idx] = triangle_area(shape->positions[t.x],
-            shape->positions[t.y], shape->positions[t.z]);
-        if (idx != 0) shape->elements_cdf[idx] += shape->elements_cdf[idx - 1];
-      }
-    }
-    if (!shape->quads.empty()) {
-      shape->elements_cdf = vector<float>(shape->quads.size());
-      for (auto idx = 0; idx < shape->elements_cdf.size(); idx++) {
-        auto& t                  = shape->quads[idx];
-        shape->elements_cdf[idx] = quad_area(shape->positions[t.x],
-            shape->positions[t.y], shape->positions[t.z],
-            shape->positions[t.w]);
-        if (idx != 0) shape->elements_cdf[idx] += shape->elements_cdf[idx - 1];
-      }
-    }
     auto light         = add_light(lights);
     light->instance    = instance;
     light->environment = nullptr;
+    if (!shape->triangles.empty()) {
+      light->elements_cdf = vector<float>(shape->triangles.size());
+      for (auto idx = 0; idx < light->elements_cdf.size(); idx++) {
+        auto& t                  = shape->triangles[idx];
+        light->elements_cdf[idx] = triangle_area(shape->positions[t.x],
+            shape->positions[t.y], shape->positions[t.z]);
+        if (idx != 0) light->elements_cdf[idx] += light->elements_cdf[idx - 1];
+      }
+    }
+    if (!shape->quads.empty()) {
+      light->elements_cdf = vector<float>(shape->quads.size());
+      for (auto idx = 0; idx < light->elements_cdf.size(); idx++) {
+        auto& t                  = shape->quads[idx];
+        light->elements_cdf[idx] = quad_area(shape->positions[t.x],
+            shape->positions[t.y], shape->positions[t.z],
+            shape->positions[t.w]);
+        if (idx != 0) light->elements_cdf[idx] += light->elements_cdf[idx - 1];
+      }
+    }
   }
   for (auto environment : scene->environments) {
     if (environment->emission == zero3f) continue;
     if (progress_cb) progress_cb("build light", progress.x++, ++progress.y);
-    if (environment->emission_tex != nullptr) {
-      auto texture            = environment->emission_tex;
-      auto size               = texture_size(texture);
-      environment->texels_cdf = vector<float>(size.x * size.y);
-      if (size != zero2i) {
-        for (auto i = 0; i < environment->texels_cdf.size(); i++) {
-          auto ij                    = vec2i{i % size.x, i / size.x};
-          auto th                    = (ij.y + 0.5f) * pif / size.y;
-          auto value                 = lookup_texture(texture, ij);
-          environment->texels_cdf[i] = max(value) * sin(th);
-          if (i != 0)
-            environment->texels_cdf[i] += environment->texels_cdf[i - 1];
-        }
-      }
-    }
     auto light         = add_light(lights);
     light->instance    = nullptr;
     light->environment = environment;
+    if (environment->emission_tex != nullptr) {
+      auto texture        = environment->emission_tex;
+      auto size           = texture_size(texture);
+      light->elements_cdf = vector<float>(size.x * size.y);
+      if (size != zero2i) {
+        for (auto i = 0; i < light->elements_cdf.size(); i++) {
+          auto ij                = vec2i{i % size.x, i / size.x};
+          auto th                = (ij.y + 0.5f) * pif / size.y;
+          auto value             = lookup_texture(texture, ij);
+          light->elements_cdf[i] = max(value) * sin(th);
+          if (i != 0) light->elements_cdf[i] += light->elements_cdf[i - 1];
+        }
+      }
+    }
   }
 
   // handle progress
