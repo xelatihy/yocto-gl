@@ -223,12 +223,6 @@ struct trace_environment {
   vector<float> texels_cdf = {};
 };
 
-// Scene lights used during rendering. These are created automatically.
-struct trace_light {
-  trace_instance*    instance    = nullptr;
-  trace_environment* environment = nullptr;
-};
-
 // Scene comprised an array of objects whose memory is owened by the scene.
 // All members are optional,Scene objects (camera, instances, environments)
 // have transforms defined internally. A scene can optionally contain a
@@ -245,13 +239,8 @@ struct trace_scene {
   vector<trace_texture*>     textures     = {};
   vector<trace_material*>    materials    = {};
 
-  // additional information
-  string name      = "";
-  string copyright = "";
-
   // computed properties
-  vector<trace_light*> lights = {};
-  trace_bvh*           bvh    = nullptr;
+  trace_bvh* bvh = nullptr;
 #ifdef YOCTO_EMBREE
   RTCScene embree_bvh = nullptr;
 #endif
@@ -534,8 +523,36 @@ void tesselate_shapes(
     trace_scene* scene, const progress_callback& progress_cb = {});
 void tesselate_shape(trace_scene* shape);
 
+// Progressively computes an image.
+image<vec4f> trace_image(const trace_scene* scene, const trace_camera* camera,
+    const trace_params& params, const progress_callback& progress_cb = {},
+    const image_callback& image_cb = {});
+
+}  // namespace yocto
+
+// -----------------------------------------------------------------------------
+// LOWER-LEVEL RENDERING API
+// -----------------------------------------------------------------------------
+namespace yocto {
+
+// Scene lights used during rendering. These are created automatically.
+struct trace_light {
+  trace_instance*    instance    = nullptr;
+  trace_environment* environment = nullptr;
+};
+
+// Scene lights
+struct trace_lights {
+  // light elements
+  vector<trace_light*> lights = {};
+
+  // cleanup
+  ~trace_lights();
+};
+
 // Initialize lights.
-void init_lights(trace_scene* scene, const progress_callback& progress_cb = {});
+void init_lights(trace_lights* lights, const trace_scene* scene,
+    const progress_callback& progress_cb = {});
 
 // Build the bvh acceleration structure.
 void init_bvh(trace_scene* scene, const trace_params& params,
@@ -548,8 +565,9 @@ void update_bvh(trace_scene*       scene,
 
 // Progressively computes an image.
 image<vec4f> trace_image(const trace_scene* scene, const trace_camera* camera,
-    const trace_params& params, const progress_callback& progress_cb = {},
-    const image_callback& image_cb = {});
+    const trace_lights* lights, const trace_params& params,
+    const progress_callback& progress_cb = {},
+    const image_callback&    image_cb    = {});
 
 // Check is a sampler requires lights
 bool is_sampler_lit(const trace_params& params);
@@ -571,8 +589,8 @@ using async_callback = function<void(
 // [experimental] Asynchronous interface
 struct trace_state;
 void trace_start(trace_state* state, const trace_scene* scene,
-    const trace_camera* camera, const trace_params& params,
-    const progress_callback& progress_cb = {},
+    const trace_camera* camera, const trace_lights* lights,
+    const trace_params& params, const progress_callback& progress_cb = {},
     const image_callback& image_cb = {}, const async_callback& async_cb = {});
 void trace_stop(trace_state* state);
 
