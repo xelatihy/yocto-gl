@@ -31,9 +31,7 @@ or stop-and-resume renders.
 ## Rendering a scene
 
 To render a scene, first tesselate shapes for subdivs and displacement,
-with `tesselate_shapes(scene, params, progress)`, then initialize the scene
-bvh and lights, with `init_bvh(scene, params, progress)` and
-`init_lights(scene, params, progress)`, and then call
+with `tesselate_shapes(scene, params, progress)`, then call
 `trace_image(scene, camera, params, progress, image_progress)`.
 In these functions, `params` are the rendering options used to
 render the scene, `progress` is a callback function used to
@@ -49,8 +47,6 @@ auto progress = [](const string& message, // progress callback
   print_info(message, current, total);
 };
 tesselate_shapes(scene, params, progress);// tesselate shapes if needed
-init_bvh(scene, params, progress);        // init bvh
-init_lights(scene, params, progress);     // init lights
 trace_image(scene, params, progress);     // render image
 auto improgress = [](const image<vec4f>& render, // image progress
       int sample, int samples) {
@@ -130,6 +126,30 @@ render the scene, `progress` is a callback function used to
 report rendering progress and `image_progress` is a callback
 function used to report partial images during rendering.
 Both callback functions are optional.
+
+```cpp
+auto scene = new trace_scene{...};        // initialize scene
+auto params = trace_params{};             // default params
+auto progress = [](const string& message, // progress callback
+      int current, int total) {
+  print_info(message, current, total);
+};
+tesselate_shapes(scene, params, progress);// tesselate shapes if needed
+init_bvh(scene, params, progress);            // init bvh
+auto lights = new trace_lights{};             // trace lights
+init_lights(lights, scene, params, progress); // init lights
+auto state = new trace_state{};               // trace state
+init_state(state, scene, params, progress);   // init lights
+trace_image(state, scene, camera, lights,     // render image
+  params, progress);
+auto improgress = [](const image<vec4f>& render, // image progress
+      int sample, int samples) {
+  if(sample % 16 == 0)                        // every 16 samples
+    save_image(filename, render);             // save image
+};
+trace_image(state, scene, camera, lights,     // render image
+  params, progress, improgress);
+```
 
 ## Experimental async rendering
 
