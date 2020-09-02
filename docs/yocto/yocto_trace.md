@@ -108,6 +108,29 @@ db_params.resolution = 720;                  // medium-res render
 db_params.samples    = 16;                   // low-sample count
 ```
 
+## Low-Level Rendering API
+
+Yocto/Trace supports a low-level rendering API that is more flexible for
+applications that need it. In this modality, you have to manage all state
+manually.
+
+Yocto/Trace internally uses a `trace_bvh` BVH for ray-scene intersection,
+a `trace_lights` objects to store lighting information, and a `trace_state`
+object to tracks the rendering process and contains all data needed to perform
+progressive computation. Each object need to be initialized separately.
+
+To render a scene, first tesselate shapes for subdivs and displacement,
+with `tesselate_shapes(scene, params, progress)`, then initialize the scene
+bvh and lights, with `init_bvh(scene, params, progress)` and
+`init_lights(lights, scene, params, progress)`, then initialize the state
+with `init_state(state, scene, params)` and then call
+`trace_image(state, scene, camera, lights, params, progress, image_progress)`.
+In these functions, `params` are the rendering options used to
+render the scene, `progress` is a callback function used to
+report rendering progress and `image_progress` is a callback
+function used to report partial images during rendering.
+Both callback functions are optional.
+
 ## Experimental async rendering
 
 The render can run in asynchronous mode where the rendering process is
@@ -119,14 +142,14 @@ by rendering a low resolution preview and then proceeds progressively.
 
 The async renderer takes a `trace_state` struct that tracks the rendering
 process and contains all data needed by the async renderer. Rendering progress
-ifs given by three callbacks. The first two are the rendering callbacks
+is given by three callbacks. The first two are the rendering callbacks
 defined for offline rendeirng, that return progress report and an image buffer
 for each sample. In async mode, a further callback is called after each
 pixel is rendered.
 
 During rendering, no scenes changes are allowed, and changes to bvh and lights
 are not tracked. This is on purpose since it allows for a simple API while
-retaining maximum speed. To changes the scene, first stop the render, than
+retaining maximum speed. To change the scene, first stop the render, than
 apply scene changes, than update lights and bvh if needed, and finally restart
 the renderer.
 To update the BVH, use `update_bvh(scene, instances, shapes, params)` where
