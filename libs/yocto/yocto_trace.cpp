@@ -2894,6 +2894,17 @@ void init_lights(trace_lights* lights, const trace_scene* scene,
   if (progress_cb) progress_cb("build light", progress.x++, progress.y);
 }
 
+// Progressively computes an image.
+image<vec4f> trace_image(const trace_scene* scene, const trace_camera* camera,
+    const trace_params& params, const progress_callback& progress_cb,
+    const image_callback& image_cb) {
+  auto lights_guard = std::make_unique<trace_lights>();
+  auto lights       = lights_guard.get();
+  init_lights(lights, scene, progress_cb);
+
+  return trace_image(scene, camera, lights, params, progress_cb, image_cb);
+}
+
 // Progressively compute an image by calling trace_samples multiple times.
 image<vec4f> trace_image(const trace_scene* scene, const trace_camera* camera,
     const trace_lights* lights, const trace_params& params,

@@ -528,6 +528,13 @@ image<vec4f> trace_image(const trace_scene* scene, const trace_camera* camera,
     const trace_params& params, const progress_callback& progress_cb = {},
     const image_callback& image_cb = {});
 
+}  // namespace yocto
+
+// -----------------------------------------------------------------------------
+// LOWER-LEVEL RENDERING API
+// -----------------------------------------------------------------------------
+namespace yocto {
+
 // Scene lights used during rendering. These are created automatically.
 struct trace_light {
   trace_instance*    instance    = nullptr;
