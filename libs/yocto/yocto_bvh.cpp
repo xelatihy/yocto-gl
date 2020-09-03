@@ -315,25 +315,43 @@ static bvh_instance* get_instance(bvh_scene* scene, int instance_id) {
 }
 
 // set shape properties
-void set_points(bvh_scene* scene, int shape_id, const vector<int>& points) {
-  get_shape(scene, shape_id)->points = points;
+void set_points(
+    bvh_scene* scene, int shape_id, const vector<int>& points, bool as_view) {
+  auto shape         = get_shape(scene, shape_id);
+  shape->points_data = as_view ? vector<int>{} : points;
+  shape->points = as_view ? bvh_span{points} : bvh_span{shape->points_data};
 }
-void set_lines(bvh_scene* scene, int shape_id, const vector<vec2i>& lines) {
-  get_shape(scene, shape_id)->lines = lines;
+void set_lines(
+    bvh_scene* scene, int shape_id, const vector<vec2i>& lines, bool as_view) {
+  auto shape        = get_shape(scene, shape_id);
+  shape->lines_data = as_view ? vector<vec2i>{} : lines;
+  shape->lines      = as_view ? bvh_span{lines} : bvh_span{shape->lines_data};
 }
-void set_triangles(
-    bvh_scene* scene, int shape_id, const vector<vec3i>& triangles) {
-  get_shape(scene, shape_id)->triangles = triangles;
+void set_triangles(bvh_scene* scene, int shape_id,
+    const vector<vec3i>& triangles, bool as_view) {
+  auto shape            = get_shape(scene, shape_id);
+  shape->triangles_data = as_view ? vector<vec3i>{} : triangles;
+  shape->triangles      = as_view ? bvh_span{triangles}
+                             : bvh_span{shape->triangles_data};
 }
-void set_quads(bvh_scene* scene, int shape_id, const vector<vec4i>& quads) {
-  get_shape(scene, shape_id)->quads = quads;
+void set_quads(
+    bvh_scene* scene, int shape_id, const vector<vec4i>& quads, bool as_view) {
+  auto shape        = get_shape(scene, shape_id);
+  shape->quads_data = as_view ? vector<vec4i>{} : quads;
+  shape->quads      = as_view ? bvh_span{quads} : bvh_span{shape->quads_data};
 }
-void set_positions(
-    bvh_scene* scene, int shape_id, const vector<vec3f>& positions) {
-  get_shape(scene, shape_id)->positions = positions;
+void set_positions(bvh_scene* scene, int shape_id,
+    const vector<vec3f>& positions, bool as_view) {
+  auto shape            = get_shape(scene, shape_id);
+  shape->positions_data = as_view ? vector<vec3f>{} : positions;
+  shape->positions      = as_view ? bvh_span{positions}
+                             : bvh_span{shape->positions_data};
 }
-void set_radius(bvh_scene* scene, int shape_id, const vector<float>& radius) {
-  get_shape(scene, shape_id)->radius = radius;
+void set_radius(
+    bvh_scene* scene, int shape_id, const vector<float>& radius, bool as_view) {
+  auto shape         = get_shape(scene, shape_id);
+  shape->radius_data = as_view ? vector<float>{} : radius;
+  shape->radius = as_view ? bvh_span{radius} : bvh_span{shape->radius_data};
 }
 
 // set instance properties
@@ -348,14 +366,14 @@ void set_shape(bvh_scene* scene, int instance_id, int shape) {
 int add_shape(bvh_scene* bvh, const vector<int>& points,
     const vector<vec2i>& lines, const vector<vec3i>& triangles,
     const vector<vec4i>& quads, const vector<vec3f>& positions,
-    const vector<float>& radius) {
+    const vector<float>& radius, bool as_view) {
   auto shape = add_shape(bvh);
-  set_points(bvh, shape, points);
-  set_lines(bvh, shape, lines);
-  set_triangles(bvh, shape, triangles);
-  set_quads(bvh, shape, quads);
-  set_positions(bvh, shape, positions);
-  set_radius(bvh, shape, radius);
+  set_points(bvh, shape, points, as_view);
+  set_lines(bvh, shape, lines, as_view);
+  set_triangles(bvh, shape, triangles, as_view);
+  set_quads(bvh, shape, quads, as_view);
+  set_positions(bvh, shape, positions, as_view);
+  set_radius(bvh, shape, radius, as_view);
   return shape;
 }
 int add_instance(bvh_scene* bvh, const frame3f& frame, int shape) {

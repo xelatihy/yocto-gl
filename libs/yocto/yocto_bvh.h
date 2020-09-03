@@ -92,17 +92,45 @@ struct bvh_tree_ {
   vector<int>       primitives = {};
 };
 
+// BVH span to give a view over an array
+template <typename T>
+struct bvh_span {
+  explicit bvh_span(const vector<T>& data)
+      : _data{data.data()}, _size{data.size()} {}
+  bvh_span()                = default;
+  bvh_span(const bvh_span&) = default;
+  bvh_span& operator=(const bvh_span&) = default;
+  bool      empty() const { return _size == 0; }
+  size_t    size() const { return _size; }
+  const T&  operator[](int idx) const { return _data[idx]; }
+  const T*  begin() const { return _data; }
+  const T*  end() const { return _data + _size; }
+  const T*  data() const { return _data; }
+  const T*  _data = nullptr;
+  size_t    _size = 0;
+};
+
 // BVH data for whole shapes. This interface makes copies of all the data.
 struct bvh_shape {
   // elements
-  vector<int>   points    = {};
-  vector<vec2i> lines     = {};
-  vector<vec3i> triangles = {};
-  vector<vec4i> quads     = {};
+  bvh_span<int>   points    = {};
+  bvh_span<vec2i> lines     = {};
+  bvh_span<vec3i> triangles = {};
+  bvh_span<vec4i> quads     = {};
 
   // vertices
-  vector<vec3f> positions = {};
-  vector<float> radius    = {};
+  bvh_span<vec3f> positions = {};
+  bvh_span<float> radius    = {};
+
+  // owned elements
+  vector<int>   points_data    = {};
+  vector<vec2i> lines_data     = {};
+  vector<vec3i> triangles_data = {};
+  vector<vec4i> quads_data     = {};
+
+  // owned vertices
+  vector<vec3f> positions_data = {};
+  vector<float> radius_data    = {};
 
   // nodes
   bvh_tree_ bvh = {};
@@ -137,24 +165,28 @@ int add_shape(bvh_scene* scene);
 int add_instance(bvh_scene* scene);
 
 // set shape properties
-void set_points(bvh_scene* scene, int shape_id, const vector<int>& points);
-void set_lines(bvh_scene* scene, int shape_id, const vector<vec2i>& lines);
-void set_triangles(
-    bvh_scene* scene, int shape_id, const vector<vec3i>& triangles);
-void set_quads(bvh_scene* scene, int shape_id, const vector<vec4i>& quads);
-void set_positions(
-    bvh_scene* scene, int shape_id, const vector<vec3f>& positions);
-void set_radius(bvh_scene* scene, int shape_id, const vector<float>& radius);
+void set_points(bvh_scene* scene, int shape, const vector<int>& points,
+    bool as_view = false);
+void set_lines(bvh_scene* scene, int shape, const vector<vec2i>& lines,
+    bool as_view = false);
+void set_triangles(bvh_scene* scene, int shape, const vector<vec3i>& triangles,
+    bool as_view = false);
+void set_quads(bvh_scene* scene, int shape, const vector<vec4i>& quads,
+    bool as_view = false);
+void set_positions(bvh_scene* scene, int shape, const vector<vec3f>& positions,
+    bool as_view = false);
+void set_radius(bvh_scene* scene, int shape, const vector<float>& radius,
+    bool as_view = false);
 
 // set instance properties
-void set_frame(bvh_scene* scene, int instance_id, const frame3f& frame);
-void set_shape(bvh_scene* scene, int instance_id, int shape);
+void set_frame(bvh_scene* scene, int instance, const frame3f& frame);
+void set_shape(bvh_scene* scene, int instance, int shape);
 
 // Create BVH shortcuts
 int add_shape(bvh_scene* bvh, const vector<int>& points,
     const vector<vec2i>& lines, const vector<vec3i>& triangles,
     const vector<vec4i>& quads, const vector<vec3f>& positions,
-    const vector<float>& radius);
+    const vector<float>& radius, bool as_view = false);
 int add_instance(bvh_scene* bvh, const frame3f& frame, int shape);
 
 // Strategy used to build the bvh
@@ -214,7 +246,7 @@ struct bvh_intersection {
 // depending on `find_any`. Returns the ray distance , the instance id,
 // the shape element index and the element barycentric coordinates.
 bvh_intersection intersect_shape_bvh(
-    const bvh_shape* bvh, const ray3f& ray, bool find_any = false);
+    const bvh_scene* bvh, int shape, const ray3f& ray, bool find_any = false);
 bvh_intersection intersect_scene_bvh(const bvh_scene* bvh, const ray3f& ray,
     bool find_any = false, bool non_rigid_frames = true);
 bvh_intersection intersect_instance_bvh(const bvh_scene* bvh, int instance,
