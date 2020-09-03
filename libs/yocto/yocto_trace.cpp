@@ -42,10 +42,6 @@
 #include "yocto_shading.h"
 #include "yocto_shape.h"
 
-#ifdef YOCTO_EMBREE
-#include <embree3/rtcore.h>
-#endif
-
 // -----------------------------------------------------------------------------
 // USING DIRECTIVES
 // -----------------------------------------------------------------------------
@@ -62,13 +58,6 @@ using namespace std::string_literals;
 // -----------------------------------------------------------------------------
 namespace yocto {
 
-trace_shape::~trace_shape() {
-  delete bvh;
-#ifdef YOCTO_EMBREE
-  if (embree_bvh) rtcReleaseScene(embree_bvh);
-#endif
-}
-
 trace_scene::~trace_scene() {
   for (auto camera : cameras) delete camera;
   for (auto shape : shapes) delete shape;
@@ -76,12 +65,9 @@ trace_scene::~trace_scene() {
   for (auto instance : instances) delete instance;
   for (auto texture : textures) delete texture;
   for (auto environment : environments) delete environment;
-  for (auto light : lights) delete light;
-  delete bvh;
-#ifdef YOCTO_EMBREE
-  if (embree_bvh) rtcReleaseScene(embree_bvh);
-#endif
 }
+
+trace_lights::~trace_lights() {}
 
 // add element
 trace_camera* add_camera(trace_scene* scene) {
@@ -91,13 +77,17 @@ trace_environment* add_environment(trace_scene* scene) {
   return scene->environments.emplace_back(new trace_environment{});
 }
 trace_shape* add_shape(trace_scene* scene) {
-  return scene->shapes.emplace_back(new trace_shape{});
+  auto shape      = scene->shapes.emplace_back(new trace_shape{});
+  shape->shape_id = (int)scene->shapes.size() - 1;
+  return shape;
 }
 trace_texture* add_texture(trace_scene* scene) {
   return scene->textures.emplace_back(new trace_texture{});
 }
 trace_instance* add_instance(trace_scene* scene) {
-  return scene->instances.emplace_back(new trace_instance{});
+  auto instance         = scene->instances.emplace_back(new trace_instance{});
+  instance->instance_id = (int)scene->instances.size() - 1;
+  return instance;
 }
 trace_material* add_material(trace_scene* scene) {
   return scene->materials.emplace_back(new trace_material{});
@@ -988,938 +978,45 @@ static ray3f sample_camera(const trace_camera* camera, const vec2i& ij,
 // -----------------------------------------------------------------------------
 namespace yocto {
 
-#ifdef YOCTO_EMBREE
-// Get Embree device
-static atomic<ssize_t> embree_memory = 0;
-static RTCDevice       embree_device() {
-  static RTCDevice device = nullptr;
-  if (!device) {
-    device = rtcNewDevice("");
-    rtcSetDeviceErrorFunction(
-        device,
-        [](void* ctx, RTCError code, const char* message) {
-          auto str = string{message};
-          switch (code) {
-            case RTC_ERROR_UNKNOWN:
-              throw std::runtime_error("RTC_ERROR_UNKNOWN: " + str);
-            case RTC_ERROR_INVALID_ARGUMENT:
-              throw std::runtime_error("RTC_ERROR_INVALID_ARGUMENT: " + str);
-            case RTC_ERROR_INVALID_OPERATION:
-              throw std::runtime_error("RTC_ERROR_INVALID_OPERATION: " + str);
-            case RTC_ERROR_OUT_OF_MEMORY:
-              throw std::runtime_error("RTC_ERROR_OUT_OF_MEMORY: " + str);
-            case RTC_ERROR_UNSUPPORTED_CPU:
-              throw std::runtime_error("RTC_ERROR_UNSUPPORTED_CPU: " + str);
-            case RTC_ERROR_CANCELLED:
-              throw std::runtime_error("RTC_ERROR_CANCELLED: " + str);
-            default: throw std::runtime_error("invalid error code");
-          }
-        },
-        nullptr);
-    rtcSetDeviceMemoryMonitorFunction(
-        device,
-        [](void* userPtr, ssize_t bytes, bool post) {
-          embree_memory += bytes;
-          return true;
-        },
-        nullptr);
-  }
-  return device;
-}
-
-// Initialize Embree BVH
-static void init_embree_bvh(trace_shape* shape, const trace_params& params) {
-  auto edevice = embree_device();
-  if (shape->embree_bvh) rtcReleaseScene(shape->embree_bvh);
-  shape->embree_bvh = rtcNewScene(edevice);
-  auto escene       = shape->embree_bvh;
-  if (params.bvh == trace_bvh_type::embree_compact)
-    rtcSetSceneFlags(escene, RTC_SCENE_FLAG_COMPACT);
-  if (params.bvh == trace_bvh_type::embree_highquality)
-    rtcSetSceneBuildQuality(escene, RTC_BUILD_QUALITY_HIGH);
-  if (!shape->points.empty()) {
-    throw std::runtime_error("embree does not support points");
-  } else if (!shape->lines.empty()) {
-    auto elines     = vector<int>{};
-    auto epositions = vector<vec4f>{};
-    auto last_index = -1;
-    for (auto& l : shape->lines) {
-      if (last_index == l.x) {
-        elines.push_back((int)epositions.size() - 1);
-        auto& posy = shape->positions[l.y];
-        auto& rady = shape->radius[l.y];
-        epositions.push_back({posy.x, posy.y, posy.z, rady});
-      } else {
-        elines.push_back((int)epositions.size());
-        auto& posx = shape->positions[l.x];
-        auto& radx = shape->radius[l.x];
-        epositions.push_back({posx.x, posx.y, posx.z, radx});
-        auto& posy = shape->positions[l.y];
-        auto& rady = shape->radius[l.y];
-        epositions.push_back({posy.x, posy.y, posy.z, rady});
-      }
-      last_index = l.y;
-    }
-    auto egeometry = rtcNewGeometry(
-        edevice, RTC_GEOMETRY_TYPE_FLAT_LINEAR_CURVE);
-    rtcSetGeometryVertexAttributeCount(egeometry, 1);
-    auto embree_positions = rtcSetNewGeometryBuffer(egeometry,
-        RTC_BUFFER_TYPE_VERTEX, 0, RTC_FORMAT_FLOAT4, 4 * 4, epositions.size());
-    auto embree_lines     = rtcSetNewGeometryBuffer(
-        egeometry, RTC_BUFFER_TYPE_INDEX, 0, RTC_FORMAT_UINT, 4, elines.size());
-    memcpy(embree_positions, epositions.data(), epositions.size() * 16);
-    memcpy(embree_lines, elines.data(), elines.size() * 4);
-    rtcCommitGeometry(egeometry);
-    rtcAttachGeometryByID(escene, egeometry, 0);
-  } else if (!shape->triangles.empty()) {
-    auto egeometry = rtcNewGeometry(edevice, RTC_GEOMETRY_TYPE_TRIANGLE);
-    rtcSetGeometryVertexAttributeCount(egeometry, 1);
-    if (params.bvh == trace_bvh_type::embree_compact) {
-      rtcSetSharedGeometryBuffer(egeometry, RTC_BUFFER_TYPE_VERTEX, 0,
-          RTC_FORMAT_FLOAT3, shape->positions.data(), 0, 3 * 4,
-          shape->positions.size());
-      rtcSetSharedGeometryBuffer(egeometry, RTC_BUFFER_TYPE_INDEX, 0,
-          RTC_FORMAT_UINT3, shape->triangles.data(), 0, 3 * 4,
-          shape->triangles.size());
-    } else {
-      auto embree_positions = rtcSetNewGeometryBuffer(egeometry,
-          RTC_BUFFER_TYPE_VERTEX, 0, RTC_FORMAT_FLOAT3, 3 * 4,
-          shape->positions.size());
-      auto embree_triangles = rtcSetNewGeometryBuffer(egeometry,
-          RTC_BUFFER_TYPE_INDEX, 0, RTC_FORMAT_UINT3, 3 * 4,
-          shape->triangles.size());
-      memcpy(embree_positions, shape->positions.data(),
-          shape->positions.size() * 12);
-      memcpy(embree_triangles, shape->triangles.data(),
-          shape->triangles.size() * 12);
-    }
-    rtcCommitGeometry(egeometry);
-    rtcAttachGeometryByID(escene, egeometry, 0);
-  } else if (!shape->quads.empty()) {
-    auto egeometry = rtcNewGeometry(edevice, RTC_GEOMETRY_TYPE_QUAD);
-    rtcSetGeometryVertexAttributeCount(egeometry, 1);
-    if (params.bvh == trace_bvh_type::embree_compact) {
-      rtcSetSharedGeometryBuffer(egeometry, RTC_BUFFER_TYPE_VERTEX, 0,
-          RTC_FORMAT_FLOAT3, shape->positions.data(), 0, 3 * 4,
-          shape->positions.size());
-      rtcSetSharedGeometryBuffer(egeometry, RTC_BUFFER_TYPE_INDEX, 0,
-          RTC_FORMAT_UINT4, shape->quads.data(), 0, 4 * 4, shape->quads.size());
-    } else {
-      auto embree_positions = rtcSetNewGeometryBuffer(egeometry,
-          RTC_BUFFER_TYPE_VERTEX, 0, RTC_FORMAT_FLOAT3, 3 * 4,
-          shape->positions.size());
-      auto embree_quads     = rtcSetNewGeometryBuffer(egeometry,
-          RTC_BUFFER_TYPE_INDEX, 0, RTC_FORMAT_UINT4, 4 * 4,
-          shape->quads.size());
-      memcpy(embree_positions, shape->positions.data(),
-          shape->positions.size() * 12);
-      memcpy(embree_quads, shape->quads.data(), shape->quads.size() * 16);
-    }
-    rtcCommitGeometry(egeometry);
-    rtcAttachGeometryByID(escene, egeometry, 0);
-  } else {
-    throw std::runtime_error("empty shapes not supported");
-  }
-  rtcCommitScene(escene);
-}
-
-static void init_embree_bvh(trace_scene* scene, const trace_params& params) {
-  // scene bvh
-  auto edevice = embree_device();
-  if (scene->embree_bvh) rtcReleaseScene(scene->embree_bvh);
-  scene->embree_bvh = rtcNewScene(edevice);
-  auto escene       = scene->embree_bvh;
-  if (params.bvh == trace_bvh_type::embree_compact)
-    rtcSetSceneFlags(escene, RTC_SCENE_FLAG_COMPACT);
-  if (params.bvh == trace_bvh_type::embree_highquality)
-    rtcSetSceneBuildQuality(escene, RTC_BUILD_QUALITY_HIGH);
-  auto object_id = 0;
-  for (auto instance : scene->instances) {
-    auto egeometry = rtcNewGeometry(edevice, RTC_GEOMETRY_TYPE_INSTANCE);
-    rtcSetGeometryInstancedScene(egeometry, instance->shape->embree_bvh);
-    rtcSetGeometryTransform(
-        egeometry, 0, RTC_FORMAT_FLOAT3X4_COLUMN_MAJOR, &instance->frame);
-    rtcCommitGeometry(egeometry);
-    rtcAttachGeometryByID(escene, egeometry, object_id++);
-  }
-  rtcCommitScene(escene);
-}
-
-static void update_embree_bvh(trace_scene* scene,
-    const vector<trace_instance*>&         updated_objects,
-    const vector<trace_shape*>& updated_shapes, const trace_params& params) {
-  throw std::runtime_error("not implemented yet");
-  // // scene bvh
-  // auto escene = scene->embree_bvh;
-  // for (auto& [object_id, instance_id] : scene->embree_instances) {
-  //   auto instance    = scene->objects[object_id];
-  //   auto frame     = scene->objects[instance_id]->frame * instance->frame;
-  //   auto egeometry = rtcGetGeometry(escene, instance_id);
-  //   rtcSetGeometryInstancedScene(egeometry, instance->shape->embree_bvh);
-  //   rtcSetGeometryTransform(
-  //       egeometry, 0, RTC_FORMAT_FLOAT3X4_COLUMN_MAJOR, &frame);
-  //   rtcCommitGeometry(egeometry);
-  // }
-  // rtcCommitScene(escene);
-}
-
-static bool intersect_shape_embree_bvh(trace_shape* shape, const ray3f& ray,
-    int& element, vec2f& uv, float& distance, bool find_any) {
-  RTCRayHit embree_ray;
-  embree_ray.ray.org_x     = ray.o.x;
-  embree_ray.ray.org_y     = ray.o.y;
-  embree_ray.ray.org_z     = ray.o.z;
-  embree_ray.ray.dir_x     = ray.d.x;
-  embree_ray.ray.dir_y     = ray.d.y;
-  embree_ray.ray.dir_z     = ray.d.z;
-  embree_ray.ray.tnear     = ray.tmin;
-  embree_ray.ray.tfar      = ray.tmax;
-  embree_ray.ray.flags     = 0;
-  embree_ray.hit.geomID    = RTC_INVALID_GEOMETRY_ID;
-  embree_ray.hit.instID[0] = RTC_INVALID_GEOMETRY_ID;
-  RTCIntersectContext embree_ctx;
-  rtcInitIntersectContext(&embree_ctx);
-  rtcIntersect1(shape->embree_bvh, &embree_ctx, &embree_ray);
-  if (embree_ray.hit.geomID == RTC_INVALID_GEOMETRY_ID) return false;
-  element  = (int)embree_ray.hit.primID;
-  uv       = {embree_ray.hit.u, embree_ray.hit.v};
-  distance = embree_ray.ray.tfar;
-  return true;
-}
-
-static bool intersect_scene_embree_bvh(const trace_scene* scene,
-    const ray3f& ray, int& instance, int& element, vec2f& uv, float& distance,
-    bool find_any) {
-  RTCRayHit embree_ray;
-  embree_ray.ray.org_x     = ray.o.x;
-  embree_ray.ray.org_y     = ray.o.y;
-  embree_ray.ray.org_z     = ray.o.z;
-  embree_ray.ray.dir_x     = ray.d.x;
-  embree_ray.ray.dir_y     = ray.d.y;
-  embree_ray.ray.dir_z     = ray.d.z;
-  embree_ray.ray.tnear     = ray.tmin;
-  embree_ray.ray.tfar      = ray.tmax;
-  embree_ray.ray.flags     = 0;
-  embree_ray.hit.geomID    = RTC_INVALID_GEOMETRY_ID;
-  embree_ray.hit.instID[0] = RTC_INVALID_GEOMETRY_ID;
-  RTCIntersectContext embree_ctx;
-  rtcInitIntersectContext(&embree_ctx);
-  rtcIntersect1(scene->embree_bvh, &embree_ctx, &embree_ray);
-  if (embree_ray.hit.geomID == RTC_INVALID_GEOMETRY_ID) return false;
-  instance = (int)embree_ray.hit.instID[0];
-  element  = (int)embree_ray.hit.primID;
-  uv       = {embree_ray.hit.u, embree_ray.hit.v};
-  distance = embree_ray.ray.tfar;
-  return true;
-}
-#endif
-
-// primitive used to sort bvh entries
-struct trace_bvh_primitive {
-  bbox3f bbox      = invalidb3f;
-  vec3f  center    = zero3f;
-  int    primitive = 0;
-};
-
-// Splits a BVH node using the SAH heuristic. Returns split position and axis.
-static pair<int, int> split_sah(
-    vector<trace_bvh_primitive>& primitives, int start, int end) {
-  // initialize split axis and position
-  auto split_axis = 0;
-  auto mid        = (start + end) / 2;
-
-  // compute primintive bounds and size
-  auto cbbox = invalidb3f;
-  for (auto i = start; i < end; i++) cbbox = merge(cbbox, primitives[i].center);
-  auto csize = cbbox.max - cbbox.min;
-  if (csize == zero3f) return {mid, split_axis};
-
-  // consider N bins, compute their cost and keep the minimum
-  const int nbins    = 16;
-  auto      middle   = 0.0f;
-  auto      min_cost = flt_max;
-  auto      area     = [](auto& b) {
-    auto size = b.max - b.min;
-    return 1e-12f + 2 * size.x * size.y + 2 * size.x * size.z +
-           2 * size.y * size.z;
-  };
-  for (auto saxis = 0; saxis < 3; saxis++) {
-    for (auto b = 1; b < nbins; b++) {
-      auto split     = cbbox.min[saxis] + b * csize[saxis] / nbins;
-      auto left_bbox = invalidb3f, right_bbox = invalidb3f;
-      auto left_nprims = 0, right_nprims = 0;
-      for (auto i = start; i < end; i++) {
-        if (primitives[i].center[saxis] < split) {
-          left_bbox = merge(left_bbox, primitives[i].bbox);
-          left_nprims += 1;
-        } else {
-          right_bbox = merge(right_bbox, primitives[i].bbox);
-          right_nprims += 1;
-        }
-      }
-      auto cost = 1 + left_nprims * area(left_bbox) / area(cbbox) +
-                  right_nprims * area(right_bbox) / area(cbbox);
-      if (cost < min_cost) {
-        min_cost   = cost;
-        middle     = split;
-        split_axis = saxis;
-      }
-    }
-  }
-  // split
-  mid = (int)(std::partition(primitives.data() + start, primitives.data() + end,
-                  [split_axis, middle](auto& primitive) {
-                    return primitive.center[split_axis] < middle;
-                  }) -
-              primitives.data());
-
-  // if we were not able to split, just break the primitives in half
-  if (mid == start || mid == end) {
-    split_axis = 0;
-    mid        = (start + end) / 2;
-    // throw std::runtime_error("bad bvh split");
-  }
-
-  return {mid, split_axis};
-}
-
-// Splits a BVH node using the balance heuristic. Returns split position and
-// axis.
-static pair<int, int> split_balanced(
-    vector<trace_bvh_primitive>& primitives, int start, int end) {
-  // initialize split axis and position
-  auto axis = 0;
-  auto mid  = (start + end) / 2;
-
-  // compute primintive bounds and size
-  auto cbbox = invalidb3f;
-  for (auto i = start; i < end; i++) cbbox = merge(cbbox, primitives[i].center);
-  auto csize = cbbox.max - cbbox.min;
-  if (csize == zero3f) return {mid, axis};
-
-  // split along largest
-  if (csize.x >= csize.y && csize.x >= csize.z) axis = 0;
-  if (csize.y >= csize.x && csize.y >= csize.z) axis = 1;
-  if (csize.z >= csize.x && csize.z >= csize.y) axis = 2;
-
-  // balanced tree split: find the largest axis of the
-  // bounding box and split along this one right in the middle
-  mid = (start + end) / 2;
-  std::nth_element(primitives.data() + start, primitives.data() + mid,
-      primitives.data() + end, [axis](auto& primitive_a, auto& primitive_b) {
-        return primitive_a.center[axis] < primitive_b.center[axis];
-      });
-
-  // if we were not able to split, just break the primitives in half
-  if (mid == start || mid == end) {
-    // throw std::runtime_error("bad bvh split");
-    mid = (start + end) / 2;
-  }
-
-  return {mid, axis};
-}
-
-// Splits a BVH node using the middle heuristic. Returns split position and
-// axis.
-static pair<int, int> split_middle(
-    vector<trace_bvh_primitive>& primitives, int start, int end) {
-  // initialize split axis and position
-  auto axis = 0;
-  auto mid  = (start + end) / 2;
-
-  // compute primintive bounds and size
-  auto cbbox = invalidb3f;
-  for (auto i = start; i < end; i++) cbbox = merge(cbbox, primitives[i].center);
-  auto csize = cbbox.max - cbbox.min;
-  if (csize == zero3f) return {mid, axis};
-
-  // split along largest
-  if (csize.x >= csize.y && csize.x >= csize.z) axis = 0;
-  if (csize.y >= csize.x && csize.y >= csize.z) axis = 1;
-  if (csize.z >= csize.x && csize.z >= csize.y) axis = 2;
-
-  // split the space in the middle along the largest axis
-  mid = (int)(std::partition(primitives.data() + start, primitives.data() + end,
-                  [axis, middle = center(cbbox)[axis]](auto& primitive) {
-                    return primitive.center[axis] < middle;
-                  }) -
-              primitives.data());
-
-  // if we were not able to split, just break the primitives in half
-  if (mid == start || mid == end) {
-    // throw std::runtime_error("bad bvh split");
-    mid = (start + end) / 2;
-  }
-
-  return {mid, axis};
-}
-
-// Split bvh nodes according to a type
-static pair<int, int> split_nodes(vector<trace_bvh_primitive>& primitives,
-    int start, int end, trace_bvh_type type) {
-  switch (type) {
-    case trace_bvh_type::default_: return split_middle(primitives, start, end);
-    case trace_bvh_type::highquality: return split_sah(primitives, start, end);
-    case trace_bvh_type::middle: return split_middle(primitives, start, end);
-    case trace_bvh_type::balanced:
-      return split_balanced(primitives, start, end);
-    default: throw std::runtime_error("should not have gotten here");
-  }
-}
-
-// Maximum number of primitives per BVH node.
-const int trace_bvh_max_prims = 4;
-
-// Build BVH nodes
-static void build_bvh_serial(vector<trace_bvh_node>& nodes,
-    vector<trace_bvh_primitive>& primitives, trace_bvh_type type) {
-  // prepare to build nodes
-  nodes.clear();
-  nodes.reserve(primitives.size() * 2);
-
-  // queue up first node
-  auto queue = deque<vec3i>{{0, 0, (int)primitives.size()}};
-  nodes.emplace_back();
-
-  // create nodes until the queue is empty
-  while (!queue.empty()) {
-    // grab node to work on
-    auto next = queue.front();
-    queue.pop_front();
-    auto nodeid = next.x, start = next.y, end = next.z;
-
-    // grab node
-    auto& node = nodes[nodeid];
-
-    // compute bounds
-    node.bbox = invalidb3f;
-    for (auto i = start; i < end; i++)
-      node.bbox = merge(node.bbox, primitives[i].bbox);
-
-    // split into two children
-    if (end - start > trace_bvh_max_prims) {
-      // get split
-      auto [mid, axis] = split_nodes(primitives, start, end, type);
-
-      // make an internal node
-      node.internal = true;
-      node.axis     = (uint8_t)axis;
-      node.num      = 2;
-      node.start    = (int)nodes.size();
-      nodes.emplace_back();
-      nodes.emplace_back();
-      queue.push_back({node.start + 0, start, mid});
-      queue.push_back({node.start + 1, mid, end});
-    } else {
-      // Make a leaf node
-      node.internal = false;
-      node.num      = (int16_t)(end - start);
-      node.start    = start;
-    }
-  }
-
-  // cleanup
-  nodes.shrink_to_fit();
-}
-
-#if 0
-
-// Build BVH nodes
-static void build_bvh_parallel(
-    const shared_ptr<bvh_tree>& bvh, vector<bbox3f>& bboxes, bvh_type type) {
-  // get values
-  auto& nodes      = bvh->nodes;
-  auto& primitives = bvh->primitives;
-
-  // prepare to build nodes
-  nodes.clear();
-  nodes.reserve(bboxes.size() * 2);
-
-  // prepare primitives
-  bvh->primitives.resize(bboxes.size());
-  for (auto idx = 0; idx < bboxes.size(); idx++) bvh->primitives[idx] = idx;
-
-  // prepare centers
-  auto centers = vector<vec3f>(bboxes.size());
-  for (auto idx = 0; idx < bboxes.size(); idx++)
-    centers[idx] = center(bboxes[idx]);
-
-  // queue up first node
-  auto queue = deque<vec3i>{{0, 0, (int)primitives.size()}};
-  nodes.emplace_back();
-
-  // synchronization
-  atomic<int>          num_processed_prims(0);
-  std::mutex                queue_mutex;
-  vector<future<void>> futures;
-  auto                      nthreads = std::thread::hardware_concurrency();
-
-  // create nodes until the queue is empty
-  for (auto thread_id = 0; thread_id < nthreads; thread_id++) {
-    futures.emplace_back(std::async(
-        std::launch::async, [&nodes, &primitives, &bboxes, &centers, &type,
-                                &num_processed_prims, &queue_mutex, &queue] {
-          while (true) {
-            // exit if needed
-            if (num_processed_prims >= primitives.size()) return;
-
-            // grab node to work on
-            auto next = zero3i;
-            {
-              std::lock_guard<std::mutex> lock{queue_mutex};
-              if (!queue.empty()) {
-                next = queue.front();
-                queue.pop_front();
-              }
-            }
-
-            // wait a bit if needed
-            if (next == zero3i) {
-              std::this_thread::sleep_for(std::chrono::microseconds(10));
-              continue;
-            }
-
-            // grab node
-            auto  nodeid = next.x, start = next.y, end = next.z;
-            auto& node = nodes[nodeid];
-
-            // compute bounds
-            node.bbox = invalidb3f;
-            for (auto i = start; i < end; i++)
-              node.bbox = merge(node.bbox, bboxes[primitives[i]]);
-
-            // split into two children
-            if (end - start > bvh_max_prims) {
-              // get split
-              auto [mid, axis] = split_nodes(
-                  primitives, bboxes, centers, start, end, type);
-
-              // make an internal node
-              {
-                std::lock_guard<std::mutex> lock{queue_mutex};
-                node.internal = true;
-                node.axis     = axis;
-                node.num      = 2;
-                node.start    = (int)nodes.size();
-                nodes.emplace_back();
-                nodes.emplace_back();
-                queue.push_back({node.start + 0, start, mid});
-                queue.push_back({node.start + 1, mid, end});
-              }
-            } else {
-              // Make a leaf node
-              node.internal = false;
-              node.num      = end - start;
-              node.start    = start;
-              num_processed_prims += node.num;
-            }
-          }
-        }));
-  }
-  for (auto& f : futures) f.get();
-
-  // cleanup
-  nodes.shrink_to_fit();
-}
-
-#endif
-
-// Update bvh
-static void update_bvh(trace_bvh* bvh, const vector<bbox3f>& bboxes) {
-  for (auto nodeid = (int)bvh->nodes.size() - 1; nodeid >= 0; nodeid--) {
-    auto& node = bvh->nodes[nodeid];
-    node.bbox  = invalidb3f;
-    if (node.internal) {
-      for (auto idx = 0; idx < 2; idx++) {
-        node.bbox = merge(node.bbox, bvh->nodes[node.start + idx].bbox);
-      }
-    } else {
-      for (auto idx = 0; idx < node.num; idx++) {
-        node.bbox = merge(node.bbox, bboxes[node.start + idx]);
-      }
-    }
-  }
-}
-
-static void init_bvh(trace_shape* shape, const trace_params& params) {
-#ifdef YOCTO_EMBREE
-  // call Embree if needed
-  if (params.bvh == trace_bvh_type::embree_default ||
-      params.bvh == trace_bvh_type::embree_highquality ||
-      params.bvh == trace_bvh_type::embree_compact) {
-    return init_embree_bvh(shape, params);
-  }
-#endif
-
-  // build primitives
-  auto primitives = vector<trace_bvh_primitive>{};
-  if (!shape->points.empty()) {
-    for (auto idx = 0; idx < shape->points.size(); idx++) {
-      auto& p             = shape->points[idx];
-      auto& primitive     = primitives.emplace_back();
-      primitive.bbox      = point_bounds(shape->positions[p], shape->radius[p]);
-      primitive.center    = center(primitive.bbox);
-      primitive.primitive = idx;
-    }
-  } else if (!shape->lines.empty()) {
-    for (auto idx = 0; idx < shape->lines.size(); idx++) {
-      auto& l         = shape->lines[idx];
-      auto& primitive = primitives.emplace_back();
-      primitive.bbox = line_bounds(shape->positions[l.x], shape->positions[l.y],
-          shape->radius[l.x], shape->radius[l.y]);
-      primitive.center    = center(primitive.bbox);
-      primitive.primitive = idx;
-    }
-  } else if (!shape->triangles.empty()) {
-    for (auto idx = 0; idx < shape->triangles.size(); idx++) {
-      auto& primitive = primitives.emplace_back();
-      auto& t         = shape->triangles[idx];
-      primitive.bbox  = triangle_bounds(
-          shape->positions[t.x], shape->positions[t.y], shape->positions[t.z]);
-      primitive.center    = center(primitive.bbox);
-      primitive.primitive = idx;
-    }
-  } else if (!shape->quads.empty()) {
-    for (auto idx = 0; idx < shape->quads.size(); idx++) {
-      auto& q         = shape->quads[idx];
-      auto& primitive = primitives.emplace_back();
-      primitive.bbox = quad_bounds(shape->positions[q.x], shape->positions[q.y],
-          shape->positions[q.z], shape->positions[q.w]);
-      primitive.center    = center(primitive.bbox);
-      primitive.primitive = idx;
-    }
-  }
-
-  // build nodes
-  delete shape->bvh;
-  shape->bvh = new trace_bvh{};
-  build_bvh_serial(shape->bvh->nodes, primitives, params.bvh);
-
-  // set bvh primitives
-  shape->bvh->primitives.reserve(primitives.size());
-  for (auto& primitive : primitives) {
-    shape->bvh->primitives.push_back(primitive.primitive);
-  }
-}
-
-void init_bvh(trace_scene* scene, const trace_params& params,
-    const progress_callback& progress_cb) {
-  // handle progress
-  auto progress = vec2i{0, 1 + (int)scene->shapes.size()};
-
-  // shapes
+// Build the bvh acceleration structure.
+void init_bvh(trace_bvh* bvh, const trace_scene* scene,
+    const trace_params& params, const progress_callback& progress_cb) {
+  // initialize bvh
   for (auto shape : scene->shapes) {
-    if (progress_cb) progress_cb("build shape bvh", progress.x++, progress.y);
-    init_bvh(shape, params);
+    add_shape(bvh, shape->points, shape->lines, shape->triangles, shape->quads,
+        shape->positions, shape->radius, true);
   }
+  set_instances(
+      bvh, (int)scene->instances.size(),
+      [scene](int idx) {
+        auto instance = scene->instances[idx];
+        return bvh_instance{instance->frame, instance->shape->shape_id};
+      },
+      true);
 
-  // embree
-#ifdef YOCTO_EMBREE
-  if (params.bvh == trace_bvh_type::embree_default ||
-      params.bvh == trace_bvh_type::embree_highquality ||
-      params.bvh == trace_bvh_type::embree_compact) {
-    return init_embree_bvh(scene, params);
-  }
-#endif
-
-  // handle progress
-  if (progress_cb) progress_cb("build scene bvh", progress.x++, progress.y);
-
-  // instance bboxes
-  auto primitives            = vector<trace_bvh_primitive>{};
-  auto object_id             = 0;
-  auto empty_instance_frames = vector<frame3f>{identity3x4f};
-  for (auto instance : scene->instances) {
-    auto& primitive = primitives.emplace_back();
-    primitive.bbox  = instance->shape->bvh->nodes.empty()
-                         ? invalidb3f
-                         : transform_bbox(instance->frame,
-                               instance->shape->bvh->nodes[0].bbox);
-    primitive.center    = center(primitive.bbox);
-    primitive.primitive = object_id++;
-  }
-
-  // build nodes
-  delete scene->bvh;
-  scene->bvh = new trace_bvh{};
-  build_bvh_serial(scene->bvh->nodes, primitives, params.bvh);
-
-  // set bvh primitives
-  scene->bvh->primitives.reserve(primitives.size());
-  for (auto& primitive : primitives) {
-    scene->bvh->primitives.push_back(primitive.primitive);
-  }
-
-  // handle progress
-  if (progress_cb) progress_cb("build bvh", progress.x++, progress.y);
+  // build
+  init_bvh(bvh, bvh_params{(bvh_build_type)params.bvh, params.noparallel},
+      progress_cb);
 }
 
-static void update_bvh(trace_shape* shape, const trace_params& params) {
-#ifdef YOCTO_EMBREE
-  if (shape->embree_bvh) {
-    throw std::runtime_error("embree shape update not implemented");
-  }
-#endif
-
-  // build primitives
-  auto bboxes = vector<bbox3f>(shape->bvh->primitives.size());
-  if (!shape->points.empty()) {
-    for (auto idx = 0; idx < bboxes.size(); idx++) {
-      auto& p     = shape->points[shape->bvh->primitives[idx]];
-      bboxes[idx] = point_bounds(shape->positions[p], shape->radius[p]);
-    }
-  } else if (!shape->lines.empty()) {
-    bboxes = vector<bbox3f>(shape->lines.size());
-    for (auto idx = 0; idx < bboxes.size(); idx++) {
-      auto& l     = shape->lines[shape->bvh->primitives[idx]];
-      bboxes[idx] = line_bounds(shape->positions[l.x], shape->positions[l.y],
-          shape->radius[l.x], shape->radius[l.y]);
-    }
-  } else if (!shape->triangles.empty()) {
-    bboxes = vector<bbox3f>(shape->triangles.size());
-    for (auto idx = 0; idx < bboxes.size(); idx++) {
-      auto& t     = shape->triangles[shape->bvh->primitives[idx]];
-      bboxes[idx] = triangle_bounds(
-          shape->positions[t.x], shape->positions[t.y], shape->positions[t.z]);
-    }
-  } else if (!shape->quads.empty()) {
-    bboxes = vector<bbox3f>(shape->quads.size());
-    for (auto idx = 0; idx < bboxes.size(); idx++) {
-      auto& q     = shape->quads[shape->bvh->primitives[idx]];
-      bboxes[idx] = quad_bounds(shape->positions[q.x], shape->positions[q.y],
-          shape->positions[q.z], shape->positions[q.w]);
-    }
-  }
-
-  // update nodes
-  update_bvh(shape->bvh, bboxes);
-}
-
-void update_bvh(trace_scene*       scene,
-    const vector<trace_instance*>& updated_objects,
+// Refit bvh data
+void update_bvh(trace_bvh* bvh, const trace_scene* scene,
+    const vector<trace_instance*>& updated_instances,
     const vector<trace_shape*>& updated_shapes, const trace_params& params) {
-  for (auto shape : updated_shapes) update_bvh(shape, params);
-
-#ifdef YOCTO_EMBREE
-  if (scene->embree_bvh) {
-    update_embree_bvh(scene, updated_objects, updated_shapes, params);
+  auto updated_instances_ids = vector<int>{};
+  auto updated_shapes_ids    = vector<int>{};
+  for (auto shape : updated_shapes) {
+    updated_shapes_ids.push_back(
+        (int)(std::find(scene->shapes.begin(), scene->shapes.end(), shape) -
+              scene->shapes.begin()));
   }
-#endif
-
-  // build primitives
-  auto bboxes = vector<bbox3f>(scene->bvh->primitives.size());
-  for (auto idx = 0; idx < bboxes.size(); idx++) {
-    auto instance = scene->instances[scene->bvh->primitives[idx]];
-    auto sbvh     = instance->shape->bvh;
-    bboxes[idx]   = transform_bbox(instance->frame, sbvh->nodes[0].bbox);
+  for (auto instance : updated_instances) {
+    updated_instances_ids.push_back(
+        (int)(std::find(
+                  scene->instances.begin(), scene->instances.end(), instance) -
+              scene->instances.begin()));
   }
-
-  // update nodes
-  update_bvh(scene->bvh, bboxes);
-}
-
-// Intersect ray with a bvh->
-static bool intersect_shape_bvh(trace_shape* shape, const ray3f& ray_,
-    int& element, vec2f& uv, float& distance, bool find_any) {
-#ifdef YOCTO_EMBREE
-  // call Embree if needed
-  if (shape->embree_bvh) {
-    return intersect_shape_embree_bvh(
-        shape, ray_, element, uv, distance, find_any);
-  }
-#endif
-
-  // get bvh and shape pointers for fast access
-  auto bvh = shape->bvh;
-
-  // check empty
-  if (bvh->nodes.empty()) return false;
-
-  // node stack
-  auto node_stack        = array<int, 128>{};
-  auto node_cur          = 0;
-  node_stack[node_cur++] = 0;
-
-  // shared variables
-  auto hit = false;
-
-  // copy ray to modify it
-  auto ray = ray_;
-
-  // prepare ray for fast queries
-  auto ray_dinv  = vec3f{1 / ray.d.x, 1 / ray.d.y, 1 / ray.d.z};
-  auto ray_dsign = vec3i{(ray_dinv.x < 0) ? 1 : 0, (ray_dinv.y < 0) ? 1 : 0,
-      (ray_dinv.z < 0) ? 1 : 0};
-
-  // walking stack
-  while (node_cur != 0) {
-    // grab node
-    auto& node = bvh->nodes[node_stack[--node_cur]];
-
-    // intersect bbox
-    // if (!intersect_bbox(ray, ray_dinv, ray_dsign, node.bbox)) continue;
-    if (!intersect_bbox(ray, ray_dinv, node.bbox)) continue;
-
-    // intersect node, switching based on node type
-    // for each type, iterate over the the primitive list
-    if (node.internal) {
-      // for internal nodes, attempts to proceed along the
-      // split axis from smallest to largest nodes
-      if (ray_dsign[node.axis] != 0) {
-        node_stack[node_cur++] = node.start + 0;
-        node_stack[node_cur++] = node.start + 1;
-      } else {
-        node_stack[node_cur++] = node.start + 1;
-        node_stack[node_cur++] = node.start + 0;
-      }
-    } else if (!shape->points.empty()) {
-      for (auto idx = node.start; idx < node.start + node.num; idx++) {
-        auto& p = shape->points[shape->bvh->primitives[idx]];
-        if (intersect_point(
-                ray, shape->positions[p], shape->radius[p], uv, distance)) {
-          hit      = true;
-          element  = shape->bvh->primitives[idx];
-          ray.tmax = distance;
-        }
-      }
-    } else if (!shape->lines.empty()) {
-      for (auto idx = node.start; idx < node.start + node.num; idx++) {
-        auto& l = shape->lines[shape->bvh->primitives[idx]];
-        if (intersect_line(ray, shape->positions[l.x], shape->positions[l.y],
-                shape->radius[l.x], shape->radius[l.y], uv, distance)) {
-          hit      = true;
-          element  = shape->bvh->primitives[idx];
-          ray.tmax = distance;
-        }
-      }
-    } else if (!shape->triangles.empty()) {
-      for (auto idx = node.start; idx < node.start + node.num; idx++) {
-        auto& t = shape->triangles[shape->bvh->primitives[idx]];
-        if (intersect_triangle(ray, shape->positions[t.x],
-                shape->positions[t.y], shape->positions[t.z], uv, distance)) {
-          hit      = true;
-          element  = shape->bvh->primitives[idx];
-          ray.tmax = distance;
-        }
-      }
-    } else if (!shape->quads.empty()) {
-      for (auto idx = node.start; idx < node.start + node.num; idx++) {
-        auto& q = shape->quads[shape->bvh->primitives[idx]];
-        if (intersect_quad(ray, shape->positions[q.x], shape->positions[q.y],
-                shape->positions[q.z], shape->positions[q.w], uv, distance)) {
-          hit      = true;
-          element  = shape->bvh->primitives[idx];
-          ray.tmax = distance;
-        }
-      }
-    }
-
-    // check for early exit
-    if (find_any && hit) return hit;
-  }
-
-  return hit;
-}
-
-// Intersect ray with a bvh->
-static bool intersect_scene_bvh(const trace_scene* scene, const ray3f& ray_,
-    int& instance, int& element, vec2f& uv, float& distance, bool find_any,
-    bool non_rigid_frames) {
-#ifdef YOCTO_EMBREE
-  // call Embree if needed
-  if (scene->embree_bvh) {
-    return intersect_scene_embree_bvh(
-        scene, ray_, instance, element, uv, distance, find_any);
-  }
-#endif
-
-  // get bvh and scene pointers for fast access
-  auto bvh = scene->bvh;
-
-  // check empty
-  if (bvh->nodes.empty()) return false;
-
-  // node stack
-  auto node_stack        = array<int, 128>{};
-  auto node_cur          = 0;
-  node_stack[node_cur++] = 0;
-
-  // shared variables
-  auto hit = false;
-
-  // copy ray to modify it
-  auto ray = ray_;
-
-  // prepare ray for fast queries
-  auto ray_dinv  = vec3f{1 / ray.d.x, 1 / ray.d.y, 1 / ray.d.z};
-  auto ray_dsign = vec3i{(ray_dinv.x < 0) ? 1 : 0, (ray_dinv.y < 0) ? 1 : 0,
-      (ray_dinv.z < 0) ? 1 : 0};
-
-  // walking stack
-  while (node_cur != 0) {
-    // grab node
-    auto& node = bvh->nodes[node_stack[--node_cur]];
-
-    // intersect bbox
-    // if (!intersect_bbox(ray, ray_dinv, ray_dsign, node.bbox)) continue;
-    if (!intersect_bbox(ray, ray_dinv, node.bbox)) continue;
-
-    // intersect node, switching based on node type
-    // for each type, iterate over the the primitive list
-    if (node.internal) {
-      // for internal nodes, attempts to proceed along the
-      // split axis from smallest to largest nodes
-      if (ray_dsign[node.axis] != 0) {
-        node_stack[node_cur++] = node.start + 0;
-        node_stack[node_cur++] = node.start + 1;
-      } else {
-        node_stack[node_cur++] = node.start + 1;
-        node_stack[node_cur++] = node.start + 0;
-      }
-    } else {
-      for (auto idx = node.start; idx < node.start + node.num; idx++) {
-        auto object_ = scene->instances[scene->bvh->primitives[idx]];
-        auto inv_ray = transform_ray(
-            inverse(object_->frame, non_rigid_frames), ray);
-        if (intersect_shape_bvh(
-                object_->shape, inv_ray, element, uv, distance, find_any)) {
-          hit      = true;
-          instance = scene->bvh->primitives[idx];
-          ray.tmax = distance;
-        }
-      }
-    }
-
-    // check for early exit
-    if (find_any && hit) return hit;
-  }
-
-  return hit;
-}
-
-// Intersect ray with a bvh->
-static bool intersect_instance_bvh(const trace_instance* instance,
-    const ray3f& ray, int& element, vec2f& uv, float& distance, bool find_any,
-    bool non_rigid_frames) {
-  auto inv_ray = transform_ray(inverse(instance->frame, non_rigid_frames), ray);
-  return intersect_shape_bvh(
-      instance->shape, inv_ray, element, uv, distance, find_any);
-}
-
-trace_intersection intersect_scene_bvh(const trace_scene* scene,
-    const ray3f& ray, bool find_any, bool non_rigid_frames) {
-  auto intersection = trace_intersection{};
-  intersection.hit  = intersect_scene_bvh(scene, ray, intersection.instance,
-      intersection.element, intersection.uv, intersection.distance, find_any,
-      non_rigid_frames);
-  return intersection;
-}
-trace_intersection intersect_instance_bvh(const trace_instance* instance,
-    const ray3f& ray, bool find_any, bool non_rigid_frames) {
-  auto intersection = trace_intersection{};
-  intersection.hit = intersect_instance_bvh(instance, ray, intersection.element,
-      intersection.uv, intersection.distance, find_any, non_rigid_frames);
-  return intersection;
+  update_bvh(bvh, updated_instances_ids, updated_shapes_ids);
 }
 
 }  // namespace yocto
@@ -2202,13 +1299,13 @@ static float sample_scattering_pdf(
 }
 
 // Sample lights wrt solid angle
-static vec3f sample_lights(const trace_scene* scene, const vec3f& position,
-    float rl, float rel, const vec2f& ruv) {
-  auto light_id = sample_uniform((int)scene->lights.size(), rl);
-  auto light    = scene->lights[light_id];
+static vec3f sample_lights(const trace_scene* scene, const trace_lights* lights,
+    const vec3f& position, float rl, float rel, const vec2f& ruv) {
+  auto light_id = sample_uniform((int)lights->lights.size(), rl);
+  auto light    = lights->lights[light_id];
   if (light->instance != nullptr) {
     auto instance = light->instance;
-    auto element  = sample_discrete_cdf(instance->shape->elements_cdf, rel);
+    auto element  = sample_discrete_cdf(light->elements_cdf, rel);
     auto uv       = (!instance->shape->triangles.empty()) ? sample_triangle(ruv)
                                                     : ruv;
     auto lposition = eval_position(light->instance, element, uv);
@@ -2217,7 +1314,7 @@ static vec3f sample_lights(const trace_scene* scene, const vec3f& position,
     auto environment = light->environment;
     if (environment->emission_tex != nullptr) {
       auto emission_tex = environment->emission_tex;
-      auto idx          = sample_discrete_cdf(environment->texels_cdf, rel);
+      auto idx          = sample_discrete_cdf(light->elements_cdf, rel);
       auto size         = texture_size(emission_tex);
       auto uv           = vec2f{
           ((idx % size.x) + 0.5f) / size.x, ((idx / size.x) + 0.5f) / size.y};
@@ -2233,17 +1330,17 @@ static vec3f sample_lights(const trace_scene* scene, const vec3f& position,
 }
 
 // Sample lights pdf
-static float sample_lights_pdf(
-    const trace_scene* scene, const vec3f& position, const vec3f& direction) {
+static float sample_lights_pdf(const trace_scene* scene, const trace_bvh* bvh,
+    const trace_lights* lights, const vec3f& position, const vec3f& direction) {
   auto pdf = 0.0f;
-  for (auto light : scene->lights) {
+  for (auto light : lights->lights) {
     if (light->instance != nullptr) {
       // check all intersection
       auto lpdf          = 0.0f;
       auto next_position = position;
       for (auto bounce = 0; bounce < 100; bounce++) {
-        auto intersection = intersect_instance_bvh(
-            light->instance, {next_position, direction});
+        auto intersection = intersect_bvh(
+            bvh, light->instance->instance_id, {next_position, direction});
         if (!intersection.hit) break;
         // accumulate pdf
         auto lposition = eval_position(
@@ -2251,7 +1348,7 @@ static float sample_lights_pdf(
         auto lnormal = eval_element_normal(
             light->instance, intersection.element);
         // prob triangle * area triangle = area triangle mesh
-        auto area = light->instance->shape->elements_cdf.back();
+        auto area = light->elements_cdf.back();
         lpdf += distance_squared(lposition, position) /
                 (abs(dot(lnormal, direction)) * area);
         // continue
@@ -2270,8 +1367,8 @@ static float sample_lights_pdf(
         auto i    = clamp((int)(texcoord.x * size.x), 0, size.x - 1);
         auto j    = clamp((int)(texcoord.y * size.y), 0, size.y - 1);
         auto prob = sample_discrete_cdf_pdf(
-                        light->environment->texels_cdf, j * size.x + i) /
-                    light->environment->texels_cdf.back();
+                        light->elements_cdf, j * size.x + i) /
+                    light->elements_cdf.back();
         auto angle = (2 * pif / size.x) * (pif / size.y) *
                      sin(pif * (j + 0.5f) / size.y);
         pdf += prob / angle;
@@ -2280,13 +1377,14 @@ static float sample_lights_pdf(
       }
     }
   }
-  pdf *= sample_uniform_pdf((int)scene->lights.size());
+  pdf *= sample_uniform_pdf((int)lights->lights.size());
   return pdf;
 }
 
 // Recursive path tracing.
-static vec4f trace_path(const trace_scene* scene, const ray3f& ray_,
-    rng_state& rng, const trace_params& params) {
+static vec4f trace_path(const trace_scene* scene, const trace_bvh* bvh,
+    const trace_lights* lights, const ray3f& ray_, rng_state& rng,
+    const trace_params& params) {
   // initialize
   auto radiance      = zero3f;
   auto weight        = vec3f{1, 1, 1};
@@ -2298,7 +1396,7 @@ static vec4f trace_path(const trace_scene* scene, const ray3f& ray_,
   // trace  path
   for (auto bounce = 0; bounce < params.bounces; bounce++) {
     // intersect next point
-    auto intersection = intersect_scene_bvh(scene, ray);
+    auto intersection = intersect_bvh(bvh, ray);
     if (!intersection.hit) {
       if (bounce > 0 || !params.envhidden)
         radiance += weight * eval_environment(scene, ray.d);
@@ -2356,11 +1454,12 @@ static vec4f trace_path(const trace_scene* scene, const ray3f& ray_,
               bsdf, normal, outgoing, rand1f(rng), rand2f(rng));
         } else {
           incoming = sample_lights(
-              scene, position, rand1f(rng), rand1f(rng), rand2f(rng));
+              scene, lights, position, rand1f(rng), rand1f(rng), rand2f(rng));
         }
         weight *= eval_bsdfcos(bsdf, normal, outgoing, incoming) /
                   (0.5f * sample_bsdfcos_pdf(bsdf, normal, outgoing, incoming) +
-                      0.5f * sample_lights_pdf(scene, position, incoming));
+                      0.5f * sample_lights_pdf(
+                                 scene, bvh, lights, position, incoming));
       } else {
         incoming = sample_delta(bsdf, normal, outgoing, rand1f(rng));
         weight *= eval_delta(bsdf, normal, outgoing, incoming) /
@@ -2398,11 +1497,12 @@ static vec4f trace_path(const trace_scene* scene, const ray3f& ray_,
         incoming = sample_scattering(vsdf, outgoing, rand1f(rng), rand2f(rng));
       } else {
         incoming = sample_lights(
-            scene, position, rand1f(rng), rand1f(rng), rand2f(rng));
+            scene, lights, position, rand1f(rng), rand1f(rng), rand2f(rng));
       }
-      weight *= eval_scattering(vsdf, outgoing, incoming) /
-                (0.5f * sample_scattering_pdf(vsdf, outgoing, incoming) +
-                    0.5f * sample_lights_pdf(scene, position, incoming));
+      weight *=
+          eval_scattering(vsdf, outgoing, incoming) /
+          (0.5f * sample_scattering_pdf(vsdf, outgoing, incoming) +
+              0.5f * sample_lights_pdf(scene, bvh, lights, position, incoming));
 
       // setup next iteration
       ray = {position, incoming};
@@ -2423,8 +1523,9 @@ static vec4f trace_path(const trace_scene* scene, const ray3f& ray_,
 }
 
 // Recursive path tracing.
-static vec4f trace_naive(const trace_scene* scene, const ray3f& ray_,
-    rng_state& rng, const trace_params& params) {
+static vec4f trace_naive(const trace_scene* scene, const trace_bvh* bvh,
+    const trace_lights* lights, const ray3f& ray_, rng_state& rng,
+    const trace_params& params) {
   // initialize
   auto radiance = zero3f;
   auto weight   = vec3f{1, 1, 1};
@@ -2434,7 +1535,7 @@ static vec4f trace_naive(const trace_scene* scene, const ray3f& ray_,
   // trace  path
   for (auto bounce = 0; bounce < params.bounces; bounce++) {
     // intersect next point
-    auto intersection = intersect_scene_bvh(scene, ray);
+    auto intersection = intersect_bvh(bvh, ray);
     if (!intersection.hit) {
       if (bounce > 0 || !params.envhidden)
         radiance += weight * eval_environment(scene, ray.d);
@@ -2494,8 +1595,9 @@ static vec4f trace_naive(const trace_scene* scene, const ray3f& ray_,
 }
 
 // Eyelight for quick previewing.
-static vec4f trace_eyelight(const trace_scene* scene, const ray3f& ray_,
-    rng_state& rng, const trace_params& params) {
+static vec4f trace_eyelight(const trace_scene* scene, const trace_bvh* bvh,
+    const trace_lights* lights, const ray3f& ray_, rng_state& rng,
+    const trace_params& params) {
   // initialize
   auto radiance = zero3f;
   auto weight   = vec3f{1, 1, 1};
@@ -2505,7 +1607,7 @@ static vec4f trace_eyelight(const trace_scene* scene, const ray3f& ray_,
   // trace  path
   for (auto bounce = 0; bounce < max(params.bounces, 4); bounce++) {
     // intersect next point
-    auto intersection = intersect_scene_bvh(scene, ray);
+    auto intersection = intersect_bvh(bvh, ray);
     if (!intersection.hit) {
       if (bounce > 0 || !params.envhidden)
         radiance += weight * eval_environment(scene, ray.d);
@@ -2553,10 +1655,11 @@ static vec4f trace_eyelight(const trace_scene* scene, const ray3f& ray_,
 }
 
 // False color rendering
-static vec4f trace_falsecolor(const trace_scene* scene, const ray3f& ray,
-    rng_state& rng, const trace_params& params) {
+static vec4f trace_falsecolor(const trace_scene* scene, const trace_bvh* bvh,
+    const trace_lights* lights, const ray3f& ray, rng_state& rng,
+    const trace_params& params) {
   // intersect next point
-  auto intersection = intersect_scene_bvh(scene, ray);
+  auto intersection = intersect_bvh(bvh, ray);
   if (!intersection.hit) {
     return {0, 0, 0, 0};
   }
@@ -2628,9 +1731,10 @@ static vec4f trace_falsecolor(const trace_scene* scene, const ray3f& ray,
   }
 }
 
-static vec4f trace_albedo(const trace_scene* scene, const ray3f& ray,
-    rng_state& rng, const trace_params& params, int bounce) {
-  auto intersection = intersect_scene_bvh(scene, ray);
+static vec4f trace_albedo(const trace_scene* scene, const trace_bvh* bvh,
+    const trace_lights* lights, const ray3f& ray, rng_state& rng,
+    const trace_params& params, int bounce) {
+  auto intersection = intersect_bvh(bvh, ray);
   if (!intersection.hit) {
     auto radiance = eval_environment(scene, ray.d);
     return {radiance.x, radiance.y, radiance.z, 1};
@@ -2659,28 +1763,28 @@ static vec4f trace_albedo(const trace_scene* scene, const ray3f& ray,
 
   // handle opacity
   if (opacity < 1.0f) {
-    auto blend_albedo = trace_albedo(
-        scene, ray3f{position + ray.d * 1e-2f, ray.d}, rng, params, bounce);
+    auto blend_albedo = trace_albedo(scene, bvh, lights,
+        ray3f{position + ray.d * 1e-2f, ray.d}, rng, params, bounce);
     return lerp(blend_albedo, vec4f{albedo.x, albedo.y, albedo.z, 1}, opacity);
   }
 
   if (bsdf.roughness < 0.05 && bounce < 5) {
     if (bsdf.transmission != zero3f && material->thin) {
       auto incoming     = -outgoing;
-      auto trans_albedo = trace_albedo(
-          scene, ray3f{position, incoming}, rng, params, bounce + 1);
+      auto trans_albedo = trace_albedo(scene, bvh, lights,
+          ray3f{position, incoming}, rng, params, bounce + 1);
 
       incoming         = reflect(outgoing, normal);
-      auto spec_albedo = trace_albedo(
-          scene, ray3f{position, incoming}, rng, params, bounce + 1);
+      auto spec_albedo = trace_albedo(scene, bvh, lights,
+          ray3f{position, incoming}, rng, params, bounce + 1);
 
       auto fresnel = fresnel_dielectric(material->ior, outgoing, normal);
       auto dielectric_albedo = lerp(trans_albedo, spec_albedo, fresnel);
       return dielectric_albedo * vec4f{albedo.x, albedo.y, albedo.z, 1};
     } else if (bsdf.metal != zero3f) {
       auto incoming    = reflect(outgoing, normal);
-      auto refl_albedo = trace_albedo(
-          scene, ray3f{position, incoming}, rng, params, bounce + 1);
+      auto refl_albedo = trace_albedo(scene, bvh, lights,
+          ray3f{position, incoming}, rng, params, bounce + 1);
       return refl_albedo * vec4f{albedo.x, albedo.y, albedo.z, 1};
     }
   }
@@ -2688,15 +1792,17 @@ static vec4f trace_albedo(const trace_scene* scene, const ray3f& ray,
   return {albedo.x, albedo.y, albedo.z, 1};
 }
 
-static vec4f trace_albedo(const trace_scene* scene, const ray3f& ray,
-    rng_state& rng, const trace_params& params) {
-  auto albedo = trace_albedo(scene, ray, rng, params, 0);
+static vec4f trace_albedo(const trace_scene* scene, const trace_bvh* bvh,
+    const trace_lights* lights, const ray3f& ray, rng_state& rng,
+    const trace_params& params) {
+  auto albedo = trace_albedo(scene, bvh, lights, ray, rng, params, 0);
   return clamp(albedo, 0.0, 1.0);
 }
 
-static vec4f trace_normal(const trace_scene* scene, const ray3f& ray,
-    rng_state& rng, const trace_params& params, int bounce) {
-  auto intersection = intersect_scene_bvh(scene, ray);
+static vec4f trace_normal(const trace_scene* scene, const trace_bvh* bvh,
+    const trace_lights* lights, const ray3f& ray, rng_state& rng,
+    const trace_params& params, int bounce) {
+  auto intersection = intersect_bvh(bvh, ray);
   if (!intersection.hit) {
     return {0, 0, 0, 1};
   }
@@ -2714,41 +1820,43 @@ static vec4f trace_normal(const trace_scene* scene, const ray3f& ray,
 
   // handle opacity
   if (opacity < 1.0f) {
-    auto normal = trace_normal(
-        scene, ray3f{position + ray.d * 1e-2f, ray.d}, rng, params, bounce);
+    auto normal = trace_normal(scene, bvh, lights,
+        ray3f{position + ray.d * 1e-2f, ray.d}, rng, params, bounce);
     return lerp(normal, normal, opacity);
   }
 
   if (bsdf.roughness < 0.05f && bounce < 5) {
     if (bsdf.transmission != zero3f && material->thin) {
       auto incoming   = -outgoing;
-      auto trans_norm = trace_normal(
-          scene, ray3f{position, incoming}, rng, params, bounce + 1);
+      auto trans_norm = trace_normal(scene, bvh, lights,
+          ray3f{position, incoming}, rng, params, bounce + 1);
 
       incoming       = reflect(outgoing, normal);
-      auto spec_norm = trace_normal(
-          scene, ray3f{position, incoming}, rng, params, bounce + 1);
+      auto spec_norm = trace_normal(scene, bvh, lights,
+          ray3f{position, incoming}, rng, params, bounce + 1);
 
       auto fresnel = fresnel_dielectric(material->ior, outgoing, normal);
       return lerp(trans_norm, spec_norm, fresnel);
     } else if (bsdf.metal != zero3f) {
       auto incoming = reflect(outgoing, normal);
-      return trace_normal(
-          scene, ray3f{position, incoming}, rng, params, bounce + 1);
+      return trace_normal(scene, bvh, lights, ray3f{position, incoming}, rng,
+          params, bounce + 1);
     }
   }
 
   return {normal.x, normal.y, normal.z, 1};
 }
 
-static vec4f trace_normal(const trace_scene* scene, const ray3f& ray,
-    rng_state& rng, const trace_params& params) {
-  return trace_normal(scene, ray, rng, params, 0);
+static vec4f trace_normal(const trace_scene* scene, const trace_bvh* bvh,
+    const trace_lights* lights, const ray3f& ray, rng_state& rng,
+    const trace_params& params) {
+  return trace_normal(scene, bvh, lights, ray, rng, params, 0);
 }
 
 // Trace a single ray from the camera using the given algorithm.
-using sampler_func = vec4f (*)(const trace_scene* scene, const ray3f& ray,
-    rng_state& rng, const trace_params& params);
+using sampler_func = vec4f (*)(const trace_scene* scene, const trace_bvh* bvh,
+    const trace_lights* lights, const ray3f& ray, rng_state& rng,
+    const trace_params& params);
 static sampler_func get_trace_sampler_func(const trace_params& params) {
   switch (params.sampler) {
     case trace_sampler_type::path: return trace_path;
@@ -2782,11 +1890,12 @@ bool is_sampler_lit(const trace_params& params) {
 
 // Trace a block of samples
 void trace_sample(trace_state* state, const trace_scene* scene,
-    const trace_camera* camera, const vec2i& ij, const trace_params& params) {
+    const trace_camera* camera, const trace_bvh* bvh,
+    const trace_lights* lights, const vec2i& ij, const trace_params& params) {
   auto sampler = get_trace_sampler_func(params);
   auto ray     = sample_camera(camera, ij, state->render.imsize(),
       rand2f(state->rngs[ij]), rand2f(state->rngs[ij]), params.tentfilter);
-  auto sample  = sampler(scene, ray, state->rngs[ij], params);
+  auto sample  = sampler(scene, bvh, lights, ray, state->rngs[ij], params);
   if (!isfinite(xyz(sample))) sample = {0, 0, 0, sample.w};
   if (max(sample) > params.clamp)
     sample = sample * (params.clamp / max(sample));
@@ -2818,76 +1927,92 @@ void init_state(trace_state* state, const trace_scene* scene,
 }
 
 // Forward declaration
-static trace_light* add_light(trace_scene* scene) {
-  return scene->lights.emplace_back(new trace_light{});
+static trace_light* add_light(trace_lights* lights) {
+  return lights->lights.emplace_back(new trace_light{});
 }
 
 // Init trace lights
-void init_lights(trace_scene* scene, const progress_callback& progress_cb) {
+void init_lights(trace_lights* lights, const trace_scene* scene,
+    const trace_params& params, const progress_callback& progress_cb) {
   // handle progress
   auto progress = vec2i{0, 1};
   if (progress_cb) progress_cb("build light", progress.x++, progress.y);
 
-  for (auto light : scene->lights) delete light;
-  scene->lights.clear();
+  for (auto light : lights->lights) delete light;
+  lights->lights.clear();
 
   for (auto instance : scene->instances) {
     if (instance->material->emission == zero3f) continue;
     auto shape = instance->shape;
     if (shape->triangles.empty() && shape->quads.empty()) continue;
     if (progress_cb) progress_cb("build light", progress.x++, ++progress.y);
+    auto light         = add_light(lights);
+    light->instance    = instance;
+    light->environment = nullptr;
     if (!shape->triangles.empty()) {
-      shape->elements_cdf = vector<float>(shape->triangles.size());
-      for (auto idx = 0; idx < shape->elements_cdf.size(); idx++) {
+      light->elements_cdf = vector<float>(shape->triangles.size());
+      for (auto idx = 0; idx < light->elements_cdf.size(); idx++) {
         auto& t                  = shape->triangles[idx];
-        shape->elements_cdf[idx] = triangle_area(shape->positions[t.x],
+        light->elements_cdf[idx] = triangle_area(shape->positions[t.x],
             shape->positions[t.y], shape->positions[t.z]);
-        if (idx != 0) shape->elements_cdf[idx] += shape->elements_cdf[idx - 1];
+        if (idx != 0) light->elements_cdf[idx] += light->elements_cdf[idx - 1];
       }
     }
     if (!shape->quads.empty()) {
-      shape->elements_cdf = vector<float>(shape->quads.size());
-      for (auto idx = 0; idx < shape->elements_cdf.size(); idx++) {
+      light->elements_cdf = vector<float>(shape->quads.size());
+      for (auto idx = 0; idx < light->elements_cdf.size(); idx++) {
         auto& t                  = shape->quads[idx];
-        shape->elements_cdf[idx] = quad_area(shape->positions[t.x],
+        light->elements_cdf[idx] = quad_area(shape->positions[t.x],
             shape->positions[t.y], shape->positions[t.z],
             shape->positions[t.w]);
-        if (idx != 0) shape->elements_cdf[idx] += shape->elements_cdf[idx - 1];
+        if (idx != 0) light->elements_cdf[idx] += light->elements_cdf[idx - 1];
       }
     }
-    auto light         = add_light(scene);
-    light->instance    = instance;
-    light->environment = nullptr;
   }
   for (auto environment : scene->environments) {
     if (environment->emission == zero3f) continue;
     if (progress_cb) progress_cb("build light", progress.x++, ++progress.y);
+    auto light         = add_light(lights);
+    light->instance    = nullptr;
+    light->environment = environment;
     if (environment->emission_tex != nullptr) {
-      auto texture            = environment->emission_tex;
-      auto size               = texture_size(texture);
-      environment->texels_cdf = vector<float>(size.x * size.y);
+      auto texture        = environment->emission_tex;
+      auto size           = texture_size(texture);
+      light->elements_cdf = vector<float>(size.x * size.y);
       if (size != zero2i) {
-        for (auto i = 0; i < environment->texels_cdf.size(); i++) {
-          auto ij                    = vec2i{i % size.x, i / size.x};
-          auto th                    = (ij.y + 0.5f) * pif / size.y;
-          auto value                 = lookup_texture(texture, ij);
-          environment->texels_cdf[i] = max(value) * sin(th);
-          if (i != 0)
-            environment->texels_cdf[i] += environment->texels_cdf[i - 1];
+        for (auto i = 0; i < light->elements_cdf.size(); i++) {
+          auto ij                = vec2i{i % size.x, i / size.x};
+          auto th                = (ij.y + 0.5f) * pif / size.y;
+          auto value             = lookup_texture(texture, ij);
+          light->elements_cdf[i] = max(value) * sin(th);
+          if (i != 0) light->elements_cdf[i] += light->elements_cdf[i - 1];
         }
       }
     }
-    auto light         = add_light(scene);
-    light->instance    = nullptr;
-    light->environment = environment;
   }
 
   // handle progress
   if (progress_cb) progress_cb("build light", progress.x++, progress.y);
 }
 
+// Progressively computes an image.
+image<vec4f> trace_image(const trace_scene* scene, const trace_camera* camera,
+    const trace_params& params, const progress_callback& progress_cb,
+    const image_callback& image_cb) {
+  auto bvh_guard = std::make_unique<trace_bvh>();
+  auto bvh       = bvh_guard.get();
+  init_bvh(bvh, scene, params, progress_cb);
+
+  auto lights_guard = std::make_unique<trace_lights>();
+  auto lights       = lights_guard.get();
+  init_lights(lights, scene, params, progress_cb);
+
+  return trace_image(scene, camera, bvh, lights, params, progress_cb, image_cb);
+}
+
 // Progressively compute an image by calling trace_samples multiple times.
 image<vec4f> trace_image(const trace_scene* scene, const trace_camera* camera,
+    const trace_bvh* bvh, const trace_lights* lights,
     const trace_params& params, const progress_callback& progress_cb,
     const image_callback& image_cb) {
   auto state_guard = std::make_unique<trace_state>();
@@ -2899,13 +2024,13 @@ image<vec4f> trace_image(const trace_scene* scene, const trace_camera* camera,
     if (params.noparallel) {
       for (auto j = 0; j < state->render.height(); j++) {
         for (auto i = 0; i < state->render.width(); i++) {
-          trace_sample(state, scene, camera, {i, j}, params);
+          trace_sample(state, scene, camera, bvh, lights, {i, j}, params);
         }
       }
     } else {
       parallel_for(state->render.width(), state->render.height(),
-          [state, scene, camera, &params](int i, int j) {
-            trace_sample(state, scene, camera, {i, j}, params);
+          [state, scene, camera, bvh, lights, &params](int i, int j) {
+            trace_sample(state, scene, camera, bvh, lights, {i, j}, params);
           });
     }
     if (image_cb) image_cb(state->render, sample + 1, params.samples);
@@ -2917,7 +2042,8 @@ image<vec4f> trace_image(const trace_scene* scene, const trace_camera* camera,
 
 // [experimental] Asynchronous interface
 void trace_start(trace_state* state, const trace_scene* scene,
-    const trace_camera* camera, const trace_params& params,
+    const trace_camera* camera, const trace_bvh* bvh,
+    const trace_lights* lights, const trace_params& params,
     const progress_callback& progress_cb, const image_callback& image_cb,
     const async_callback& async_cb) {
   init_state(state, scene, camera, params);
@@ -2929,7 +2055,7 @@ void trace_start(trace_state* state, const trace_scene* scene,
   auto pprms = params;
   pprms.resolution /= params.pratio;
   pprms.samples = 1;
-  auto preview  = trace_image(scene, camera, pprms);
+  auto preview  = trace_image(scene, camera, bvh, lights, pprms);
   for (auto j = 0; j < state->render.height(); j++) {
     for (auto i = 0; i < state->render.width(); i++) {
       auto pi               = clamp(i / params.pratio, 0, preview.width() - 1),
@@ -2947,7 +2073,7 @@ void trace_start(trace_state* state, const trace_scene* scene,
       parallel_for(
           state->render.width(), state->render.height(), [&](int i, int j) {
             if (state->stop) return;
-            trace_sample(state, scene, camera, {i, j}, params);
+            trace_sample(state, scene, camera, bvh, lights, {i, j}, params);
             if (async_cb)
               async_cb(state->render, sample, params.samples, {i, j});
           });

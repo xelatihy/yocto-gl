@@ -53,6 +53,10 @@ struct app_state {
   trace_camera*  camera       = nullptr;
   vector<string> camera_names = {};
 
+  // rendering objects
+  trace_lights* lights = new trace_lights{};
+  trace_bvh*    bvh    = new trace_bvh{};
+
   // rendering state
   image<vec4f> render   = {};
   image<vec4f> display  = {};
@@ -72,11 +76,11 @@ struct app_state {
   std::atomic<int> total   = 0;
 
   ~app_state() {
-    if (render_state) {
-      trace_stop(render_state);
-      delete render_state;
-    }
-    if (scene) delete scene;
+    if (render_state) trace_stop(render_state);
+    delete render_state;
+    delete lights;
+    delete bvh;
+    delete scene;
     if (glimage) delete glimage;
   }
 };
@@ -88,7 +92,8 @@ void reset_display(app_state* app) {
   // start render
   app->render_counter = 0;
   trace_start(
-      app->render_state, app->scene, app->camera, app->params,
+      app->render_state, app->scene, app->camera, app->bvh, app->lights,
+      app->params,
       [app](const string& message, int sample, int nsamples) {
         app->current = sample;
         app->total   = nsamples;
@@ -278,13 +283,13 @@ int main(int argc, const char* argv[]) {
   tesselate_shapes(app->scene, print_progress);
 
   // build bvh
-  init_bvh(app->scene, app->params, print_progress);
+  init_bvh(app->bvh, app->scene, app->params, print_progress);
 
   // init renderer
-  init_lights(app->scene, print_progress);
+  init_lights(app->lights, app->scene, app->params, print_progress);
 
   // fix renderer type if no lights
-  if (app->scene->lights.empty() && is_sampler_lit(app->params)) {
+  if (app->lights->lights.empty() && is_sampler_lit(app->params)) {
     print_info("no lights presents, switching to eyelight shader");
     app->params.sampler = trace_sampler_type::eyelight;
   }

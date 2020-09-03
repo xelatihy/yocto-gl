@@ -44,13 +44,10 @@
 #include <utility>
 #include <vector>
 
+#include "yocto_bvh.h"
 #include "yocto_image.h"
 #include "yocto_math.h"
 #include "yocto_sampling.h"
-
-#ifdef YOCTO_EMBREE
-#include <embree3/rtcore.h>
-#endif
 
 // -----------------------------------------------------------------------------
 // USING DIRECTIVES
@@ -71,27 +68,6 @@ using std::vector;
 // SCENE DATA
 // -----------------------------------------------------------------------------
 namespace yocto {
-
-// BVH tree node containing its bounds, indices to the BVH arrays of either
-// primitives or internal nodes, the node element type,
-// and the split axis. Leaf and internal nodes are identical, except that
-// indices refer to primitives for leaf nodes or other nodes for internal nodes.
-struct trace_bvh_node {
-  bbox3f  bbox     = invalidb3f;
-  int32_t start    = 0;
-  int16_t num      = 0;
-  int8_t  axis     = 0;
-  bool    internal = false;
-};
-
-// BVH tree stored as a node array with the tree structure is encoded using
-// array indices. BVH nodes indices refer to either the node array,
-// for internal nodes, or the primitive arrays, for leaf nodes.
-// Application data is not stored explicitly.
-struct trace_bvh {
-  vector<trace_bvh_node> nodes      = {};
-  vector<int>            primitives = {};
-};
 
 // Camera based on a simple lens model. The camera is placed using a frame.
 // Camera projection is described in photographic terms. In particular,
@@ -193,17 +169,8 @@ struct trace_shape {
   float          displacement     = 0;
   trace_texture* displacement_tex = nullptr;
 
-  // computed properties
-  trace_bvh* bvh = nullptr;
-#ifdef YOCTO_EMBREE
-  RTCScene embree_bvh = nullptr;
-#endif
-
-  // element cdf for sampling
-  vector<float> elements_cdf = {};
-
-  // cleanup
-  ~trace_shape();
+  // shape is assigned at creation
+  int shape_id = -1;
 };
 
 // Object.
@@ -211,6 +178,9 @@ struct trace_instance {
   frame3f         frame    = identity3x4f;
   trace_shape*    shape    = nullptr;
   trace_material* material = nullptr;
+
+  // instance id assigned at creation
+  int instance_id = -1;
 };
 
 // Environment map.
@@ -218,15 +188,6 @@ struct trace_environment {
   frame3f        frame        = identity3x4f;
   vec3f          emission     = {0, 0, 0};
   trace_texture* emission_tex = nullptr;
-
-  // computed properties
-  vector<float> texels_cdf = {};
-};
-
-// Scene lights used during rendering. These are created automatically.
-struct trace_light {
-  trace_instance*    instance    = nullptr;
-  trace_environment* environment = nullptr;
 };
 
 // Scene comprised an array of objects whose memory is owened by the scene.
@@ -244,17 +205,6 @@ struct trace_scene {
   vector<trace_shape*>       shapes       = {};
   vector<trace_texture*>     textures     = {};
   vector<trace_material*>    materials    = {};
-
-  // additional information
-  string name      = "";
-  string copyright = "";
-
-  // computed properties
-  vector<trace_light*> lights = {};
-  trace_bvh*           bvh    = nullptr;
-#ifdef YOCTO_EMBREE
-  RTCScene embree_bvh = nullptr;
-#endif
 
   // cleanup
   ~trace_scene();
@@ -534,20 +484,53 @@ void tesselate_shapes(
     trace_scene* scene, const progress_callback& progress_cb = {});
 void tesselate_shape(trace_scene* shape);
 
+// Progressively computes an image.
+image<vec4f> trace_image(const trace_scene* scene, const trace_camera* camera,
+    const trace_params& params, const progress_callback& progress_cb = {},
+    const image_callback& image_cb = {});
+
+}  // namespace yocto
+
+// -----------------------------------------------------------------------------
+// LOWER-LEVEL RENDERING API
+// -----------------------------------------------------------------------------
+namespace yocto {
+
+// Scene lights used during rendering. These are created automatically.
+struct trace_light {
+  trace_instance*    instance     = nullptr;
+  trace_environment* environment  = nullptr;
+  vector<float>      elements_cdf = {};
+};
+
+// Scene lights
+struct trace_lights {
+  // light elements
+  vector<trace_light*> lights = {};
+
+  // cleanup
+  ~trace_lights();
+};
+
 // Initialize lights.
-void init_lights(trace_scene* scene, const progress_callback& progress_cb = {});
+void init_lights(trace_lights* lights, const trace_scene* scene,
+    const trace_params& params, const progress_callback& progress_cb = {});
+
+// Define BVH
+using trace_bvh = bvh_scene;
 
 // Build the bvh acceleration structure.
-void init_bvh(trace_scene* scene, const trace_params& params,
-    const progress_callback& progress_cb = {});
+void init_bvh(trace_bvh* bvh, const trace_scene* scene,
+    const trace_params& params, const progress_callback& progress_cb = {});
 
 // Refit bvh data
-void update_bvh(trace_scene*       scene,
-    const vector<trace_instance*>& updated_objects,
+void update_bvh(trace_bvh* bvh, const trace_scene* scene,
+    const vector<trace_instance*>& updated_instances,
     const vector<trace_shape*>& updated_shapes, const trace_params& params);
 
 // Progressively computes an image.
 image<vec4f> trace_image(const trace_scene* scene, const trace_camera* camera,
+    const trace_bvh* bvh, const trace_lights* lights,
     const trace_params& params, const progress_callback& progress_cb = {},
     const image_callback& image_cb = {});
 
@@ -571,36 +554,11 @@ using async_callback = function<void(
 // [experimental] Asynchronous interface
 struct trace_state;
 void trace_start(trace_state* state, const trace_scene* scene,
-    const trace_camera* camera, const trace_params& params,
+    const trace_camera* camera, const trace_bvh* bvh,
+    const trace_lights* lights, const trace_params& params,
     const progress_callback& progress_cb = {},
     const image_callback& image_cb = {}, const async_callback& async_cb = {});
 void trace_stop(trace_state* state);
-
-}  // namespace yocto
-
-// -----------------------------------------------------------------------------
-// RAY-SCENE INTERSECTION
-// -----------------------------------------------------------------------------
-namespace yocto {
-
-// Results of intersect functions that include hit flag, the instance id,
-// the shape element id, the shape element uv and intersection distance.
-// Results values are set only if hit is true.
-struct trace_intersection {
-  int   instance = -1;
-  int   element  = -1;
-  vec2f uv       = {0, 0};
-  float distance = 0;
-  bool  hit      = false;
-};
-
-// Intersect ray with a bvh returning either the first or any intersection
-// depending on `find_any`. Returns the ray distance , the instance id,
-// the shape element index and the element barycentric coordinates.
-trace_intersection intersect_scene_bvh(const trace_scene* scene,
-    const ray3f& ray, bool find_any = false, bool non_rigid_frames = true);
-trace_intersection intersect_instance_bvh(const trace_instance* instance,
-    const ray3f& ray, bool find_any = false, bool non_rigid_frames = true);
 
 }  // namespace yocto
 

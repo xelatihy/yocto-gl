@@ -211,19 +211,23 @@ int main(int argc, const char* argv[]) {
   tesselate_shapes(scene, print_progress);
 
   // build bvh
-  init_bvh(scene, params, print_progress);
+  auto bvh_guard = std::make_unique<trace_bvh>();
+  auto bvh       = bvh_guard.get();
+  init_bvh(bvh, scene, params, print_progress);
 
   // init renderer
-  init_lights(scene, print_progress);
+  auto lights_guard = std::make_unique<trace_lights>();
+  auto lights       = lights_guard.get();
+  init_lights(lights, scene, params, print_progress);
 
   // fix renderer type if no lights
-  if (scene->lights.empty() && is_sampler_lit(params)) {
+  if (lights->lights.empty() && is_sampler_lit(params)) {
     print_info("no lights presents, switching to eyelight shader");
     params.sampler = trace_sampler_type::eyelight;
   }
 
   // render
-  auto render = trace_image(scene, camera, params, print_progress,
+  auto render = trace_image(scene, camera, bvh, lights, params, print_progress,
       [save_batch, imfilename](
           const image<vec4f>& render, int sample, int samples) {
         if (!save_batch) return;
@@ -253,8 +257,9 @@ int main(int argc, const char* argv[]) {
     fparams.samples = feature_samples;
 
     // render denoise albedo
-    fparams.sampler      = trace_sampler_type::albedo;
-    auto albedo          = trace_image(scene, camera, fparams, print_progress);
+    fparams.sampler = trace_sampler_type::albedo;
+    auto albedo     = trace_image(
+        scene, camera, bvh, lights, fparams, print_progress);
     auto albedo_filename = replace_extension(
         imfilename, "-albedo" + feature_ext);
 
@@ -263,8 +268,9 @@ int main(int argc, const char* argv[]) {
     print_progress("save albedo feature", 1, 1);
 
     // render denoise normals
-    fparams.sampler      = trace_sampler_type::normal;
-    auto normal          = trace_image(scene, camera, fparams, print_progress);
+    fparams.sampler = trace_sampler_type::normal;
+    auto normal     = trace_image(
+        scene, camera, bvh, lights, fparams, print_progress);
     auto normal_filename = replace_extension(
         imfilename, "-normal" + feature_ext);
 
