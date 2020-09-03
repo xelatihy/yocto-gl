@@ -195,14 +195,14 @@ static void init_embree_bvh(bvh_scene* scene, const bvh_params& params) {
     rtcSetSceneFlags(escene, RTC_SCENE_FLAG_COMPACT);
   if (params.bvh == bvh_build_type::embree_highquality)
     rtcSetSceneBuildQuality(escene, RTC_BUILD_QUALITY_HIGH);
-  for (auto instance_id = 0; instance_id < scene->instances.size();
+  for (auto instance_id = 0; instance_id < scene->num_instances;
        instance_id++) {
-    auto& instance  = scene->instances[instance_id];
-    auto& shape     = scene->shapes[instance->shape];
+    auto  instance  = scene->instance_cb(instance_id);
+    auto& shape     = scene->shapes[instance.shape];
     auto  egeometry = rtcNewGeometry(edevice, RTC_GEOMETRY_TYPE_INSTANCE);
     rtcSetGeometryInstancedScene(egeometry, shape->embree_bvh);
     rtcSetGeometryTransform(
-        egeometry, 0, RTC_FORMAT_FLOAT3X4_COLUMN_MAJOR, &instance->frame);
+        egeometry, 0, RTC_FORMAT_FLOAT3X4_COLUMN_MAJOR, &instance.frame);
     rtcCommitGeometry(egeometry);
     rtcAttachGeometryByID(escene, egeometry, instance_id);
   }
@@ -214,12 +214,12 @@ static void update_embree_bvh(
   // scene bvh
   auto escene = scene->embree_bvh;
   for (auto instance_id : updated_instances) {
-    auto& instance    = scene->instances[instance_id];
-    auto& shape       = scene->shapes[instance->shape];
+    auto  instance    = scene->instance_cb(instance_id);
+    auto& shape       = scene->shapes[instance.shape];
     auto  embree_geom = rtcGetGeometry(escene, instance_id);
     rtcSetGeometryInstancedScene(embree_geom, shape->embree_bvh);
     rtcSetGeometryTransform(
-        embree_geom, 0, RTC_FORMAT_FLOAT3X4_COLUMN_MAJOR, &instance->frame);
+        embree_geom, 0, RTC_FORMAT_FLOAT3X4_COLUMN_MAJOR, &instance.frame);
     rtcCommitGeometry(embree_geom);
   }
   rtcCommitScene(escene);
@@ -290,7 +290,6 @@ bvh_shape::~bvh_shape() {
 
 bvh_scene::~bvh_scene() {
   for (auto shape : shapes) delete shape;
-  for (auto instance : instances) delete instance;
 #ifdef YOCTO_EMBREE
   if (embree_bvh) rtcReleaseScene(embree_bvh);
 #endif
@@ -302,16 +301,13 @@ int add_shape(bvh_scene* scene) {
   return (int)scene->shapes.size() - 1;
 }
 int add_instance(bvh_scene* scene) {
-  scene->instances.push_back(new bvh_instance{});
-  return (int)scene->instances.size() - 1;
+  scene->instances_data.push_back(bvh_instance{});
+  return (int)scene->instances_data.size() - 1;
 }
 
 // get objects
 static bvh_shape* get_shape(bvh_scene* scene, int shape_id) {
   return scene->shapes[shape_id];
-}
-static bvh_instance* get_instance(bvh_scene* scene, int instance_id) {
-  return scene->instances[instance_id];
 }
 
 // set shape properties
@@ -354,14 +350,6 @@ void set_radius(
   shape->radius = as_view ? bvh_span{radius} : bvh_span{shape->radius_data};
 }
 
-// set instance properties
-void set_frame(bvh_scene* scene, int instance_id, const frame3f& frame) {
-  get_instance(scene, instance_id)->frame = frame;
-}
-void set_shape(bvh_scene* scene, int instance_id, int shape) {
-  get_instance(scene, instance_id)->shape = shape;
-}
-
 // Create BVH shortcuts
 int add_shape(bvh_scene* bvh, const vector<int>& points,
     const vector<vec2i>& lines, const vector<vec3i>& triangles,
@@ -384,13 +372,20 @@ int add_instance(bvh_scene* bvh, const frame3f& frame, int shape) {
 }
 
 // Set instances
-void set_instances(
-    bvh_scene* bvh, int num, bvh_instance_callback instance_cb, bool as_view) {
-  for (auto instance : bvh->instances) delete instance;
-  bvh->instances.clear();
-  for (auto idx = 0; idx < num; idx++) {
-    auto [frame, shape] = instance_cb(idx);
-    add_instance(bvh, frame, shape);
+void set_instances(bvh_scene* bvh, int num_instances,
+    bvh_instance_callback instance_cb, bool as_view) {
+  if (as_view) {
+    bvh->instances_data.clear();
+    bvh->num_instances = num_instances;
+    bvh->instance_cb   = instance_cb;
+  } else {
+    bvh->instances_data.resize(num_instances);
+    for (auto idx = 0; idx < num_instances; idx++) {
+      bvh->instances_data[idx] = instance_cb(idx);
+    }
+    bvh->num_instances = num_instances;
+    auto data          = bvh->instances_data.data();
+    bvh->instance_cb   = [data](int idx) { return data[idx]; };
   }
 }
 
@@ -812,12 +807,12 @@ void init_bvh(bvh_scene* scene, const bvh_params& params,
   if (progress_cb) progress_cb("build scene bvh", progress.x++, progress.y);
 
   // instance bboxes
-  auto bboxes = vector<bbox3f>(scene->instances.size());
+  auto bboxes = vector<bbox3f>(scene->num_instances);
   for (auto idx = 0; idx < bboxes.size(); idx++) {
-    auto& instance = scene->instances[idx];
-    auto& shape    = scene->shapes[instance->shape];
+    auto  instance = scene->instance_cb(idx);
+    auto& shape    = scene->shapes[instance.shape];
     bboxes[idx]    = shape->bvh.nodes.empty() ? invalidb3f
-                                           : transform_bbox(instance->frame,
+                                           : transform_bbox(instance.frame,
                                                  shape->bvh.nodes[0].bbox);
   }
 
@@ -882,11 +877,11 @@ void update_bvh(bvh_scene* scene, const vector<int>& updated_instances,
 #endif
 
   // build primitives
-  auto bboxes = vector<bbox3f>(scene->instances.size());
+  auto bboxes = vector<bbox3f>(scene->num_instances);
   for (auto idx = 0; idx < bboxes.size(); idx++) {
-    auto& instance = scene->instances[idx];
-    auto& sbvh     = scene->shapes[instance->shape]->bvh;
-    bboxes[idx]    = transform_bbox(instance->frame, sbvh.nodes[0].bbox);
+    auto  instance = scene->instance_cb(idx);
+    auto& sbvh     = scene->shapes[instance.shape]->bvh;
+    bboxes[idx]    = transform_bbox(instance.frame, sbvh.nodes[0].bbox);
   }
 
   // update nodes
@@ -1053,10 +1048,9 @@ static bool intersect_scene_bvh(const bvh_scene* scene, const ray3f& ray_,
       }
     } else {
       for (auto idx = node.start; idx < node.start + node.num; idx++) {
-        auto& instance_ = scene->instances[scene->bvh.primitives[idx]];
-        auto& shape     = scene->shapes[instance_->shape];
-        auto  inv_ray   = transform_ray(
-            inverse(instance_->frame, non_rigid_frames), ray);
+        auto [frame, shape_id] = scene->instance_cb(scene->bvh.primitives[idx]);
+        auto& shape            = scene->shapes[shape_id];
+        auto  inv_ray = transform_ray(inverse(frame, non_rigid_frames), ray);
         if (intersect_shape_bvh(
                 shape, inv_ray, element, uv, distance, find_any)) {
           hit      = true;
@@ -1077,10 +1071,9 @@ static bool intersect_scene_bvh(const bvh_scene* scene, const ray3f& ray_,
 static bool intersect_instance_bvh(const bvh_scene* scene, int instance,
     const ray3f& ray, int& element, vec2f& uv, float& distance, bool find_any,
     bool non_rigid_frames) {
-  auto& instance_ = scene->instances[instance];
-  auto& shape     = scene->shapes[instance_->shape];
-  auto  inv_ray   = transform_ray(
-      inverse(instance_->frame, non_rigid_frames), ray);
+  auto [frame, shape_id] = scene->instance_cb(instance);
+  auto& shape            = scene->shapes[shape_id];
+  auto  inv_ray          = transform_ray(inverse(frame, non_rigid_frames), ray);
   return intersect_shape_bvh(shape, inv_ray, element, uv, distance, find_any);
 }
 
@@ -1209,11 +1202,10 @@ static bool overlap_scene_bvh(const bvh_scene* scene, const vec3f& pos,
       node_stack[node_cur++] = node.start + 1;
     } else {
       for (auto idx = 0; idx < node.num; idx++) {
-        auto primitive = scene->bvh.primitives[node.start + idx];
-        auto instance_ = scene->instances[primitive];
-        auto shape     = scene->shapes[instance_->shape];
-        auto inv_pos   = transform_point(
-            inverse(instance_->frame, non_rigid_frames), pos);
+        auto primitive         = scene->bvh.primitives[node.start + idx];
+        auto [frame, shape_id] = scene->instance_cb(primitive);
+        auto shape             = scene->shapes[shape_id];
+        auto inv_pos = transform_point(inverse(frame, non_rigid_frames), pos);
         if (overlap_shape_bvh(shape, inv_pos, max_distance, element, uv,
                 distance, find_any)) {
           hit          = true;

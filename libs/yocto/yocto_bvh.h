@@ -146,11 +146,16 @@ struct bvh_instance {
   int     shape = -1;
 };
 
+// Callback to get instance properties
+using bvh_instance_callback = function<bvh_instance(int)>;
+
 // BVH data for whole shapes. This interface makes copies of all the data.
 struct bvh_scene {
   // instances and shapes
-  vector<bvh_instance*> instances = {};
-  vector<bvh_shape*>    shapes    = {};
+  int                   num_instances  = 0;
+  bvh_instance_callback instance_cb    = {};
+  vector<bvh_instance>  instances_data = {};
+  vector<bvh_shape*>    shapes         = {};
 
   // nodes
   bvh_tree_ bvh = {};
@@ -190,9 +195,8 @@ int add_shape(bvh_scene* bvh, const vector<int>& points,
 int add_instance(bvh_scene* bvh, const frame3f& frame, int shape);
 
 // Set instances
-using bvh_instance_callback = function<bvh_instance(int)>;
-void set_instances(bvh_scene* bvh, int num, bvh_instance_callback instance_cb,
-    bool as_view = false);
+void set_instances(bvh_scene* bvh, int num_instances,
+    bvh_instance_callback instance_cb, bool as_view = false);
 
 // Strategy used to build the bvh
 enum struct bvh_build_type {
