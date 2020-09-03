@@ -677,7 +677,7 @@ void update_bvh(bvh_scene* scene, const vector<int>& updated_instances,
 
 #ifdef YOCTO_EMBREE
   if (scene->embree_bvh) {
-    update_scene_embree_bvh(scene, updated_instances);
+    update_embree_bvh(scene, updated_instances);
   }
 #endif
 
@@ -1676,23 +1676,6 @@ static void build_bvh_parallel(
 
 #endif
 
-// Update bvh
-static void update_bvh(trace_bvh* bvh, const vector<bbox3f>& bboxes) {
-  for (auto nodeid = (int)bvh->nodes.size() - 1; nodeid >= 0; nodeid--) {
-    auto& node = bvh->nodes[nodeid];
-    node.bbox  = invalidb3f;
-    if (node.internal) {
-      for (auto idx = 0; idx < 2; idx++) {
-        node.bbox = merge(node.bbox, bvh->nodes[node.start + idx].bbox);
-      }
-    } else {
-      for (auto idx = 0; idx < node.num; idx++) {
-        node.bbox = merge(node.bbox, bboxes[node.start + idx]);
-      }
-    }
-  }
-}
-
 static void init_bvh(trace_shape* shape, const trace_params& params) {
 #ifdef YOCTO_EMBREE
   // call Embree if needed
@@ -1804,70 +1787,6 @@ void init_bvh(trace_scene* scene, const trace_params& params,
 
   // handle progress
   if (progress_cb) progress_cb("build bvh", progress.x++, progress.y);
-}
-
-static void update_bvh(trace_shape* shape, const trace_params& params) {
-#ifdef YOCTO_EMBREE
-  if (shape->embree_bvh) {
-    throw std::runtime_error("embree shape update not implemented");
-  }
-#endif
-
-  // build primitives
-  auto bboxes = vector<bbox3f>(shape->bvh->primitives.size());
-  if (!shape->points.empty()) {
-    for (auto idx = 0; idx < bboxes.size(); idx++) {
-      auto& p     = shape->points[shape->bvh->primitives[idx]];
-      bboxes[idx] = point_bounds(shape->positions[p], shape->radius[p]);
-    }
-  } else if (!shape->lines.empty()) {
-    bboxes = vector<bbox3f>(shape->lines.size());
-    for (auto idx = 0; idx < bboxes.size(); idx++) {
-      auto& l     = shape->lines[shape->bvh->primitives[idx]];
-      bboxes[idx] = line_bounds(shape->positions[l.x], shape->positions[l.y],
-          shape->radius[l.x], shape->radius[l.y]);
-    }
-  } else if (!shape->triangles.empty()) {
-    bboxes = vector<bbox3f>(shape->triangles.size());
-    for (auto idx = 0; idx < bboxes.size(); idx++) {
-      auto& t     = shape->triangles[shape->bvh->primitives[idx]];
-      bboxes[idx] = triangle_bounds(
-          shape->positions[t.x], shape->positions[t.y], shape->positions[t.z]);
-    }
-  } else if (!shape->quads.empty()) {
-    bboxes = vector<bbox3f>(shape->quads.size());
-    for (auto idx = 0; idx < bboxes.size(); idx++) {
-      auto& q     = shape->quads[shape->bvh->primitives[idx]];
-      bboxes[idx] = quad_bounds(shape->positions[q.x], shape->positions[q.y],
-          shape->positions[q.z], shape->positions[q.w]);
-    }
-  }
-
-  // update nodes
-  update_bvh(shape->bvh, bboxes);
-}
-
-void update_bvh(trace_scene*       scene,
-    const vector<trace_instance*>& updated_objects,
-    const vector<trace_shape*>& updated_shapes, const trace_params& params) {
-  for (auto shape : updated_shapes) update_bvh(shape, params);
-
-#ifdef YOCTO_EMBREE
-  if (scene->embree_bvh) {
-    update_embree_bvh(scene, updated_objects, updated_shapes, params);
-  }
-#endif
-
-  // build primitives
-  auto bboxes = vector<bbox3f>(scene->bvh->primitives.size());
-  for (auto idx = 0; idx < bboxes.size(); idx++) {
-    auto instance = scene->instances[scene->bvh->primitives[idx]];
-    auto sbvh     = instance->shape->bvh;
-    bboxes[idx]   = transform_bbox(instance->frame, sbvh->nodes[0].bbox);
-  }
-
-  // update nodes
-  update_bvh(scene->bvh, bboxes);
 }
 
 // Intersect ray with a bvh->
