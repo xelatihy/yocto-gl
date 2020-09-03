@@ -43,6 +43,7 @@
 #include <utility>
 
 #include "yocto_geometry.h"
+#include "yocto_parallel.h"
 
 #ifdef YOCTO_EMBREE
 #include <embree3/rtcore.h>
@@ -508,8 +509,8 @@ static pair<int, int> split_nodes(vector<int>& primitives,
 }
 
 // Build BVH nodes
-static void build_bvh(
-    bvh_tree_& bvh, vector<bbox3f>& bboxes, const bvh_params& params) {
+static void build_bvh_serial(
+    bvh_tree_& bvh, const vector<bbox3f>& bboxes, const bvh_params& params) {
   // get values
   auto& nodes      = bvh.nodes;
   auto& primitives = bvh.primitives;
@@ -573,6 +574,104 @@ static void build_bvh(
   nodes.shrink_to_fit();
 }
 
+// Build BVH nodes
+static void build_bvh_parallel(
+    bvh_tree_& bvh, const vector<bbox3f>& bboxes, bvh_type type) {
+  // get values
+  auto& nodes      = bvh.nodes;
+  auto& primitives = bvh.primitives;
+
+  // prepare to build nodes
+  nodes.clear();
+  nodes.reserve(bboxes.size() * 2);
+
+  // prepare primitives
+  bvh.primitives.resize(bboxes.size());
+  for (auto idx = 0; idx < bboxes.size(); idx++) bvh.primitives[idx] = idx;
+
+  // prepare centers
+  auto centers = vector<vec3f>(bboxes.size());
+  for (auto idx = 0; idx < bboxes.size(); idx++)
+    centers[idx] = center(bboxes[idx]);
+
+  // queue up first node
+  auto queue = deque<vec3i>{{0, 0, (int)primitives.size()}};
+  nodes.emplace_back();
+
+  // synchronization
+  atomic<int>          num_processed_prims(0);
+  std::mutex           queue_mutex;
+  vector<future<void>> futures;
+  auto                 nthreads = std::thread::hardware_concurrency();
+
+  // create nodes until the queue is empty
+  for (auto thread_id = 0; thread_id < nthreads; thread_id++) {
+    futures.emplace_back(std::async(
+        std::launch::async, [&nodes, &primitives, &bboxes, &centers, &type,
+                                &num_processed_prims, &queue_mutex, &queue] {
+          while (true) {
+            // exit if needed
+            if (num_processed_prims >= primitives.size()) return;
+
+            // grab node to work on
+            auto next = zero3i;
+            {
+              std::lock_guard<std::mutex> lock{queue_mutex};
+              if (!queue.empty()) {
+                next = queue.front();
+                queue.pop_front();
+              }
+            }
+
+            // wait a bit if needed
+            if (next == zero3i) {
+              std::this_thread::sleep_for(std::chrono::microseconds(10));
+              continue;
+            }
+
+            // grab node
+            auto  nodeid = next.x, start = next.y, end = next.z;
+            auto& node = nodes[nodeid];
+
+            // compute bounds
+            node.bbox = invalidb3f;
+            for (auto i = start; i < end; i++)
+              node.bbox = merge(node.bbox, bboxes[primitives[i]]);
+
+            // split into two children
+            if (end - start > bvh_max_prims) {
+              // get split
+              auto [mid, axis] = split_nodes(
+                  primitives, bboxes, centers, start, end, type);
+
+              // make an internal node
+              {
+                std::lock_guard<std::mutex> lock{queue_mutex};
+                node.internal = true;
+                node.axis     = axis;
+                node.num      = 2;
+                node.start    = (int)nodes.size();
+                nodes.emplace_back();
+                nodes.emplace_back();
+                queue.push_back({node.start + 0, start, mid});
+                queue.push_back({node.start + 1, mid, end});
+              }
+            } else {
+              // Make a leaf node
+              node.internal = false;
+              node.num      = end - start;
+              node.start    = start;
+              num_processed_prims += node.num;
+            }
+          }
+        }));
+  }
+  for (auto& f : futures) f.get();
+
+  // cleanup
+  nodes.shrink_to_fit();
+}
+
 // Update bvh
 static void update_bvh(bvh_tree_& bvh, const vector<bbox3f>& bboxes) {
   for (auto nodeid = (int)bvh.nodes.size() - 1; nodeid >= 0; nodeid--) {
@@ -631,7 +730,7 @@ void init_bvh(bvh_shape* shape, const bvh_params& params) {
   }
 
   // build nodes
-  build_bvh(shape->bvh, bboxes, params);
+  build_bvh_serial(shape->bvh, bboxes, params);
 }
 
 void init_bvh(bvh_scene* scene, const bvh_params& params,
@@ -668,7 +767,7 @@ void init_bvh(bvh_scene* scene, const bvh_params& params,
   }
 
   // build nodes
-  build_bvh(scene->bvh, bboxes, params);
+  build_bvh_serial(scene->bvh, bboxes, params);
 
   // handle progress
   if (progress_cb) progress_cb("build bvh", progress.x++, progress.y);
@@ -1619,108 +1718,6 @@ static void build_bvh_serial(vector<trace_bvh_node>& nodes,
   // cleanup
   nodes.shrink_to_fit();
 }
-
-#if 0
-
-// Build BVH nodes
-static void build_bvh_parallel(
-    const shared_ptr<bvh_tree>& bvh, vector<bbox3f>& bboxes, bvh_type type) {
-  // get values
-  auto& nodes      = bvh->nodes;
-  auto& primitives = bvh->primitives;
-
-  // prepare to build nodes
-  nodes.clear();
-  nodes.reserve(bboxes.size() * 2);
-
-  // prepare primitives
-  bvh->primitives.resize(bboxes.size());
-  for (auto idx = 0; idx < bboxes.size(); idx++) bvh->primitives[idx] = idx;
-
-  // prepare centers
-  auto centers = vector<vec3f>(bboxes.size());
-  for (auto idx = 0; idx < bboxes.size(); idx++)
-    centers[idx] = center(bboxes[idx]);
-
-  // queue up first node
-  auto queue = deque<vec3i>{{0, 0, (int)primitives.size()}};
-  nodes.emplace_back();
-
-  // synchronization
-  atomic<int>          num_processed_prims(0);
-  std::mutex                queue_mutex;
-  vector<future<void>> futures;
-  auto                      nthreads = std::thread::hardware_concurrency();
-
-  // create nodes until the queue is empty
-  for (auto thread_id = 0; thread_id < nthreads; thread_id++) {
-    futures.emplace_back(std::async(
-        std::launch::async, [&nodes, &primitives, &bboxes, &centers, &type,
-                                &num_processed_prims, &queue_mutex, &queue] {
-          while (true) {
-            // exit if needed
-            if (num_processed_prims >= primitives.size()) return;
-
-            // grab node to work on
-            auto next = zero3i;
-            {
-              std::lock_guard<std::mutex> lock{queue_mutex};
-              if (!queue.empty()) {
-                next = queue.front();
-                queue.pop_front();
-              }
-            }
-
-            // wait a bit if needed
-            if (next == zero3i) {
-              std::this_thread::sleep_for(std::chrono::microseconds(10));
-              continue;
-            }
-
-            // grab node
-            auto  nodeid = next.x, start = next.y, end = next.z;
-            auto& node = nodes[nodeid];
-
-            // compute bounds
-            node.bbox = invalidb3f;
-            for (auto i = start; i < end; i++)
-              node.bbox = merge(node.bbox, bboxes[primitives[i]]);
-
-            // split into two children
-            if (end - start > bvh_max_prims) {
-              // get split
-              auto [mid, axis] = split_nodes(
-                  primitives, bboxes, centers, start, end, type);
-
-              // make an internal node
-              {
-                std::lock_guard<std::mutex> lock{queue_mutex};
-                node.internal = true;
-                node.axis     = axis;
-                node.num      = 2;
-                node.start    = (int)nodes.size();
-                nodes.emplace_back();
-                nodes.emplace_back();
-                queue.push_back({node.start + 0, start, mid});
-                queue.push_back({node.start + 1, mid, end});
-              }
-            } else {
-              // Make a leaf node
-              node.internal = false;
-              node.num      = end - start;
-              node.start    = start;
-              num_processed_prims += node.num;
-            }
-          }
-        }));
-  }
-  for (auto& f : futures) f.get();
-
-  // cleanup
-  nodes.shrink_to_fit();
-}
-
-#endif
 
 // Intersect ray with a bvh->
 static bool intersect_instance_bvh(const trace_instance* instance,
