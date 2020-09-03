@@ -628,7 +628,7 @@ void init_bvh(bvh_scene* scene, bool embree) {
   build_bvh(scene->bvh, bboxes);
 }
 
-void update_shape_bvh(bvh_shape* shape) {
+void update_bvh(bvh_shape* shape) {
 #ifdef YOCTO_EMBREE
   if (shape->embree_bvh) {
     throw std::runtime_error("embree shape refit not supported");
@@ -670,10 +670,10 @@ void update_shape_bvh(bvh_shape* shape) {
   update_bvh(shape->bvh, bboxes);
 }
 
-void update_scene_bvh(bvh_scene* scene, const vector<int>& updated_instances,
+void update_bvh(bvh_scene* scene, const vector<int>& updated_instances,
     const vector<int>& updated_shapes) {
   // update shapes
-  for (auto shape : updated_shapes) update_shape_bvh(scene->shapes[shape]);
+  for (auto shape : updated_shapes) update_bvh(scene->shapes[shape]);
 
 #ifdef YOCTO_EMBREE
   if (scene->embree_bvh) {

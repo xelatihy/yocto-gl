@@ -526,7 +526,7 @@ void init_bvh(trace_scene* scene, const trace_params& params,
 
 // Refit bvh data
 void update_bvh(trace_scene*       scene,
-    const vector<trace_instance*>& updated_objects,
+    const vector<trace_instance*>& updated_instances,
     const vector<trace_shape*>& updated_shapes, const trace_params& params);
 
 // Progressively computes an image.

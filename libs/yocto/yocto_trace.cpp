@@ -1005,6 +1005,26 @@ void init_bvh(trace_scene* scene, const trace_params& params,
   init_bvh(scene->bvh);
 }
 
+// Refit bvh data
+void update_bvh(trace_scene*       scene,
+    const vector<trace_instance*>& updated_instances,
+    const vector<trace_shape*>& updated_shapes, const trace_params& params) {
+  auto updated_instances_ids = vector<int>{};
+  auto updated_shapes_ids    = vector<int>{};
+  for (auto shape : updated_shapes) {
+    updated_shapes_ids.push_back(
+        (int)(std::find(scene->shapes.begin(), scene->shapes.end(), shape) -
+              scene->shapes.begin()));
+  }
+  for (auto instance : updated_instances) {
+    updated_instances_ids.push_back(
+        (int)(std::find(
+                  scene->instances.begin(), scene->instances.end(), instance) -
+              scene->instances.begin()));
+  }
+  update_bvh(scene->bvh, updated_instances_ids, updated_shapes_ids);
+}
+
 // Intersect ray with a bvh returning either the first or any intersection.
 trace_intersection intersect_scene_bvh(const trace_scene* scene,
     const ray3f& ray, bool find_any, bool non_rigid_frames) {
