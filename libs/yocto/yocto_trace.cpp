@@ -62,13 +62,6 @@ using namespace std::string_literals;
 // -----------------------------------------------------------------------------
 namespace yocto {
 
-trace_shape::~trace_shape() {
-  delete bvh;
-#ifdef YOCTO_EMBREE
-  if (embree_bvh) rtcReleaseScene(embree_bvh);
-#endif
-}
-
 trace_scene::~trace_scene() {
   for (auto camera : cameras) delete camera;
   for (auto shape : shapes) delete shape;
@@ -77,9 +70,6 @@ trace_scene::~trace_scene() {
   for (auto texture : textures) delete texture;
   for (auto environment : environments) delete environment;
   delete bvh;
-#ifdef YOCTO_EMBREE
-  if (embree_bvh) rtcReleaseScene(embree_bvh);
-#endif
 }
 
 trace_lights::~trace_lights() {}
@@ -983,6 +973,60 @@ static ray3f sample_camera(const trace_camera* camera, const vec2i& ij,
 }
 
 }  // namespace yocto
+
+// -----------------------------------------------------------------------------
+// IMPLEMENTATION OF RAY-SCENE INTERSECTION
+// -----------------------------------------------------------------------------
+namespace yocto {
+
+// Build the bvh acceleration structure.
+void init_bvh(trace_scene* scene, const trace_params& params,
+    const progress_callback& progress_cb) {
+  // cleanup
+  delete scene->bvh;
+  scene->bvh = new bvh_scene{};
+
+  // initialize bvh
+  for (auto shape : scene->shapes) {
+    shape->bvh            = add_shape(scene->bvh);
+    shape->bvh->points    = shape->points;
+    shape->bvh->lines     = shape->lines;
+    shape->bvh->triangles = shape->triangles;
+    shape->bvh->quads     = shape->quads;
+    shape->bvh->positions = shape->positions;
+    shape->bvh->radius    = shape->radius;
+  }
+  for (auto instance : scene->instances) {
+    add_instance(scene->bvh, instance->frame, instance->shape->bvh);
+  }
+
+  // build
+  // init_bvh(scene->bvh, progress_cb);
+  init_bvh(scene->bvh);
+}
+
+// Intersect ray with a bvh returning either the first or any intersection.
+trace_intersection intersect_scene_bvh(const trace_scene* scene,
+    const ray3f& ray, bool find_any, bool non_rigid_frames) {
+  return intersect_scene_bvh(scene->bvh, ray, find_any, non_rigid_frames);
+}
+trace_intersection intersect_instance_bvh(const trace_instance* instance,
+    const ray3f& ray, bool find_any, bool non_rigid_frames) {
+  auto inv_ray = transform_ray(inverse(instance->frame, non_rigid_frames), ray);
+  auto sintersection = intersect_shape_bvh(
+      instance->shape->bvh, inv_ray, find_any);
+  auto intersection     = bvh_scene_intersection{};
+  intersection.instance = -1;
+  intersection.element  = sintersection.element;
+  intersection.uv       = sintersection.uv;
+  intersection.distance = sintersection.distance;
+  intersection.hit      = sintersection.hit;
+  return intersection;
+}
+
+}  // namespace yocto
+
+#if 0
 
 // -----------------------------------------------------------------------------
 // IMPLEMENTATION OF RAY-SCENE INTERSECTION
@@ -1924,6 +1968,8 @@ trace_intersection intersect_instance_bvh(const trace_instance* instance,
 }
 
 }  // namespace yocto
+
+#endif
 
 // -----------------------------------------------------------------------------
 // IMPLEMENTATION FOR PATH TRACING

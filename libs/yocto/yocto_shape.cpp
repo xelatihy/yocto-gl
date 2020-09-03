@@ -728,6 +728,9 @@ static pair<int, int> split_middle(vector<int>& primitives,
 #pragma GCC diagnostic pop
 #endif
 
+// Maximum number of primitives per BVH node.
+const int bvh_max_prims = 4;
+
 // Build BVH nodes
 static void build_bvh(bvh_tree& bvh, vector<bbox3f>& bboxes) {
   // get values
