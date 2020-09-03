@@ -570,7 +570,7 @@ namespace yocto {
 // Results of intersect functions that include hit flag, the instance id,
 // the shape element id, the shape element uv and intersection distance.
 // Results values are set only if hit is true.
-using trace_intersection = bvh_scene_intersection;
+using trace_intersection = bvh_intersection;
 
 // Intersect ray with a bvh returning either the first or any intersection
 // depending on `find_any`. Returns the ray distance , the instance id,

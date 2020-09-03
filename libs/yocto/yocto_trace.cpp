@@ -1026,7 +1026,7 @@ trace_intersection intersect_instance_bvh(const trace_bvh* bvh,
     bool non_rigid_frames) {
   auto sintersection = intersect_instance_bvh(
       bvh, instance->instance_id, ray, find_any, non_rigid_frames);
-  auto intersection     = bvh_scene_intersection{};
+  auto intersection     = bvh_intersection{};
   intersection.instance = -1;
   intersection.element  = sintersection.element;
   intersection.uv       = sintersection.uv;

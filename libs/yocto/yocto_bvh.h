@@ -200,7 +200,7 @@ void update_bvh(bvh_scene* bvh, const vector<int>& updated_instances,
 // The values are all set for scene intersection. Shape intersection does not
 // set the instance id and element intersections do not set shape element id
 // and the instance id. Results values are set only if hit is true.
-struct bvh_scene_intersection {
+struct bvh_intersection {
   int   instance = -1;
   int   element  = -1;
   vec2f uv       = {0, 0};
@@ -211,21 +211,20 @@ struct bvh_scene_intersection {
 // Intersect ray with a bvh returning either the first or any intersection
 // depending on `find_any`. Returns the ray distance , the instance id,
 // the shape element index and the element barycentric coordinates.
-bvh_scene_intersection intersect_shape_bvh(
+bvh_intersection intersect_shape_bvh(
     const bvh_shape* bvh, const ray3f& ray, bool find_any = false);
-bvh_scene_intersection intersect_scene_bvh(const bvh_scene* bvh,
+bvh_intersection intersect_scene_bvh(const bvh_scene* bvh, const ray3f& ray,
+    bool find_any = false, bool non_rigid_frames = true);
+bvh_intersection intersect_instance_bvh(const bvh_scene* bvh, int instance,
     const ray3f& ray, bool find_any = false, bool non_rigid_frames = true);
-bvh_scene_intersection intersect_instance_bvh(const bvh_scene* bvh,
-    int instance, const ray3f& ray, bool find_any = false,
-    bool non_rigid_frames = true);
 
 // Find a shape element that overlaps a point within a given distance
 // max distance, returning either the closest or any overlap depending on
 // `find_any`. Returns the point distance, the instance id, the shape element
 // index and the element barycentric coordinates.
-bvh_scene_intersection overlap_shape_bvh(const bvh_shape* bvh, const vec3f& pos,
+bvh_intersection overlap_shape_bvh(const bvh_shape* bvh, const vec3f& pos,
     float max_distance, bool find_any = false);
-bvh_scene_intersection overlap_scene_bvh(const bvh_scene* bvh, const vec3f& pos,
+bvh_intersection overlap_scene_bvh(const bvh_scene* bvh, const vec3f& pos,
     float max_distance, bool find_any = false, bool non_rigid_frames = true);
 
 }  // namespace yocto
