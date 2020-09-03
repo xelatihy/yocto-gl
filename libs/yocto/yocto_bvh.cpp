@@ -70,6 +70,7 @@ using namespace std::string_literals;
 namespace yocto {
 
 #ifdef YOCTO_EMBREE
+
 // Get Embree device
 atomic<ssize_t>  bvh_embree_memory = 0;
 static RTCDevice bvh_embree_device() {
@@ -109,10 +110,14 @@ static RTCDevice bvh_embree_device() {
 }
 
 // Initialize Embree BVH
-void init_shape_embree_bvh(bvh_shape* shape) {
+static void init_embree_bvh(bvh_shape* shape, const bvh_params& params) {
   auto edevice      = bvh_embree_device();
   shape->embree_bvh = rtcNewScene(edevice);
   auto escene       = shape->embree_bvh;
+  if (params.bvh == bvh_type::embree_compact)
+    rtcSetSceneFlags(escene, RTC_SCENE_FLAG_COMPACT);
+  if (params.bvh == bvh_type::embree_highquality)
+    rtcSetSceneBuildQuality(escene, RTC_BUILD_QUALITY_HIGH);
   if (!shape->points.empty()) {
     throw std::runtime_error("embree does not support points");
   } else if (!shape->lines.empty()) {
@@ -180,15 +185,20 @@ void init_shape_embree_bvh(bvh_shape* shape) {
   }
   rtcCommitScene(escene);
 }
-void init_scene_embree_bvh(bvh_scene* scene) {
+
+static void init_embree_bvh(bvh_scene* scene, const bvh_params& params) {
   // scene bvh
   auto edevice      = bvh_embree_device();
   scene->embree_bvh = rtcNewScene(edevice);
   auto escene       = scene->embree_bvh;
+  if (params.bvh == bvh_type::embree_compact)
+    rtcSetSceneFlags(escene, RTC_SCENE_FLAG_COMPACT);
+  if (params.bvh == bvh_type::embree_highquality)
+    rtcSetSceneBuildQuality(escene, RTC_BUILD_QUALITY_HIGH);
   for (auto instance_id = 0; instance_id < scene->instances.size();
        instance_id++) {
     auto& instance  = scene->instances[instance_id];
-    auto& shape     = scene->shapes[instance->shape];
+    auto& shape     = instance->shape;
     auto  egeometry = rtcNewGeometry(edevice, RTC_GEOMETRY_TYPE_INSTANCE);
     rtcSetGeometryInstancedScene(egeometry, shape->embree_bvh);
     rtcSetGeometryTransform(
@@ -199,13 +209,13 @@ void init_scene_embree_bvh(bvh_scene* scene) {
   rtcCommitScene(escene);
 }
 
-void update_scene_embree_bvh(
+static void update_embree_bvh(
     bvh_scene* scene, const vector<int>& updated_instances) {
   // scene bvh
   auto escene = scene->embree_bvh;
   for (auto instance_id : updated_instances) {
     auto& instance    = scene->instances[instance_id];
-    auto& shape       = scene->shapes[instance->shape];
+    auto& shape       = instance->shape;
     auto  embree_geom = rtcGetGeometry(escene, instance_id);
     rtcSetGeometryInstancedScene(embree_geom, shape->embree_bvh);
     rtcSetGeometryTransform(
@@ -215,7 +225,7 @@ void update_scene_embree_bvh(
   rtcCommitScene(escene);
 }
 
-bool intersect_shape_embree_bvh(const bvh_shape* shape, const ray3f& ray,
+static bool intersect_embree_bvh(const bvh_shape* shape, const ray3f& ray,
     int& element, vec2f& uv, float& distance, bool find_any) {
   RTCRayHit embree_ray;
   embree_ray.ray.org_x     = ray.o.x;
@@ -238,7 +248,8 @@ bool intersect_shape_embree_bvh(const bvh_shape* shape, const ray3f& ray,
   distance = embree_ray.ray.tfar;
   return true;
 }
-bool intersect_scene_embree_bvh(const bvh_scene* scene, const ray3f& ray,
+
+static bool intersect_embree_bvh(const bvh_scene* scene, const ray3f& ray,
     int& instance, int& element, vec2f& uv, float& distance, bool find_any) {
   RTCRayHit embree_ray;
   embree_ray.ray.org_x     = ray.o.x;
@@ -698,7 +709,7 @@ void init_bvh(bvh_shape* shape, const bvh_params& params) {
   if (params.bvh == bvh_type::embree_default ||
       params.bvh == bvh_type::embree_highquality ||
       params.bvh == bvh_type::embree_compact) {
-    return init_embree_bvh(shape, type);
+    return init_embree_bvh(shape, params);
   }
 #endif
 
@@ -753,7 +764,7 @@ void init_bvh(bvh_scene* scene, const bvh_params& params,
   if (params.bvh == bvh_type::embree_default ||
       params.bvh == bvh_type::embree_highquality ||
       params.bvh == bvh_type::embree_compact) {
-    return init_embree_bvh(scene, type);
+    return init_embree_bvh(scene, params);
   }
 #endif
 
@@ -855,8 +866,7 @@ static bool intersect_shape_bvh(const bvh_shape* shape, const ray3f& ray_,
 #ifdef YOCTO_EMBREE
   // call Embree if needed
   if (shape->embree_bvh) {
-    return intersect_shape_embree_bvh(
-        shape, ray_, element, uv, distance, find_any);
+    return intersect_embree_bvh(shape, ray_, element, uv, distance, find_any);
   }
 #endif
 
@@ -956,7 +966,7 @@ static bool intersect_scene_bvh(const bvh_scene* scene, const ray3f& ray_,
 #ifdef YOCTO_EMBREE
   // call Embree if needed
   if (scene->embree_bvh) {
-    return intersect_scene_embree_bvh(
+    return intersect_embree_bvh(
         scene, ray_, instance, element, uv, distance, find_any);
   }
 #endif
@@ -1281,265 +1291,3 @@ bvh_scene_intersection overlap_scene_bvh(const bvh_scene* scene,
 }
 
 }  // namespace yocto
-
-#if 0
-
-// -----------------------------------------------------------------------------
-// IMPLEMENTATION OF RAY-SCENE INTERSECTION
-// -----------------------------------------------------------------------------
-namespace yocto {
-
-#ifdef YOCTO_EMBREE
-// Get Embree device
-static atomic<ssize_t> embree_memory = 0;
-static RTCDevice       embree_device() {
-  static RTCDevice device = nullptr;
-  if (!device) {
-    device = rtcNewDevice("");
-    rtcSetDeviceErrorFunction(
-        device,
-        [](void* ctx, RTCError code, const char* message) {
-          auto str = string{message};
-          switch (code) {
-            case RTC_ERROR_UNKNOWN:
-              throw std::runtime_error("RTC_ERROR_UNKNOWN: " + str);
-            case RTC_ERROR_INVALID_ARGUMENT:
-              throw std::runtime_error("RTC_ERROR_INVALID_ARGUMENT: " + str);
-            case RTC_ERROR_INVALID_OPERATION:
-              throw std::runtime_error("RTC_ERROR_INVALID_OPERATION: " + str);
-            case RTC_ERROR_OUT_OF_MEMORY:
-              throw std::runtime_error("RTC_ERROR_OUT_OF_MEMORY: " + str);
-            case RTC_ERROR_UNSUPPORTED_CPU:
-              throw std::runtime_error("RTC_ERROR_UNSUPPORTED_CPU: " + str);
-            case RTC_ERROR_CANCELLED:
-              throw std::runtime_error("RTC_ERROR_CANCELLED: " + str);
-            default: throw std::runtime_error("invalid error code");
-          }
-        },
-        nullptr);
-    rtcSetDeviceMemoryMonitorFunction(
-        device,
-        [](void* userPtr, ssize_t bytes, bool post) {
-          embree_memory += bytes;
-          return true;
-        },
-        nullptr);
-  }
-  return device;
-}
-
-// Initialize Embree BVH
-static void init_embree_bvh(trace_shape* shape, const trace_params& params) {
-  auto edevice = embree_device();
-  if (shape->embree_bvh) rtcReleaseScene(shape->embree_bvh);
-  shape->embree_bvh = rtcNewScene(edevice);
-  auto escene       = shape->embree_bvh;
-  if (params.bvh == trace_bvh_type::embree_compact)
-    rtcSetSceneFlags(escene, RTC_SCENE_FLAG_COMPACT);
-  if (params.bvh == trace_bvh_type::embree_highquality)
-    rtcSetSceneBuildQuality(escene, RTC_BUILD_QUALITY_HIGH);
-  if (!shape->points.empty()) {
-    throw std::runtime_error("embree does not support points");
-  } else if (!shape->lines.empty()) {
-    auto elines     = vector<int>{};
-    auto epositions = vector<vec4f>{};
-    auto last_index = -1;
-    for (auto& l : shape->lines) {
-      if (last_index == l.x) {
-        elines.push_back((int)epositions.size() - 1);
-        auto& posy = shape->positions[l.y];
-        auto& rady = shape->radius[l.y];
-        epositions.push_back({posy.x, posy.y, posy.z, rady});
-      } else {
-        elines.push_back((int)epositions.size());
-        auto& posx = shape->positions[l.x];
-        auto& radx = shape->radius[l.x];
-        epositions.push_back({posx.x, posx.y, posx.z, radx});
-        auto& posy = shape->positions[l.y];
-        auto& rady = shape->radius[l.y];
-        epositions.push_back({posy.x, posy.y, posy.z, rady});
-      }
-      last_index = l.y;
-    }
-    auto egeometry = rtcNewGeometry(
-        edevice, RTC_GEOMETRY_TYPE_FLAT_LINEAR_CURVE);
-    rtcSetGeometryVertexAttributeCount(egeometry, 1);
-    auto embree_positions = rtcSetNewGeometryBuffer(egeometry,
-        RTC_BUFFER_TYPE_VERTEX, 0, RTC_FORMAT_FLOAT4, 4 * 4, epositions.size());
-    auto embree_lines     = rtcSetNewGeometryBuffer(
-        egeometry, RTC_BUFFER_TYPE_INDEX, 0, RTC_FORMAT_UINT, 4, elines.size());
-    memcpy(embree_positions, epositions.data(), epositions.size() * 16);
-    memcpy(embree_lines, elines.data(), elines.size() * 4);
-    rtcCommitGeometry(egeometry);
-    rtcAttachGeometryByID(escene, egeometry, 0);
-  } else if (!shape->triangles.empty()) {
-    auto egeometry = rtcNewGeometry(edevice, RTC_GEOMETRY_TYPE_TRIANGLE);
-    rtcSetGeometryVertexAttributeCount(egeometry, 1);
-    if (params.bvh == trace_bvh_type::embree_compact) {
-      rtcSetSharedGeometryBuffer(egeometry, RTC_BUFFER_TYPE_VERTEX, 0,
-          RTC_FORMAT_FLOAT3, shape->positions.data(), 0, 3 * 4,
-          shape->positions.size());
-      rtcSetSharedGeometryBuffer(egeometry, RTC_BUFFER_TYPE_INDEX, 0,
-          RTC_FORMAT_UINT3, shape->triangles.data(), 0, 3 * 4,
-          shape->triangles.size());
-    } else {
-      auto embree_positions = rtcSetNewGeometryBuffer(egeometry,
-          RTC_BUFFER_TYPE_VERTEX, 0, RTC_FORMAT_FLOAT3, 3 * 4,
-          shape->positions.size());
-      auto embree_triangles = rtcSetNewGeometryBuffer(egeometry,
-          RTC_BUFFER_TYPE_INDEX, 0, RTC_FORMAT_UINT3, 3 * 4,
-          shape->triangles.size());
-      memcpy(embree_positions, shape->positions.data(),
-          shape->positions.size() * 12);
-      memcpy(embree_triangles, shape->triangles.data(),
-          shape->triangles.size() * 12);
-    }
-    rtcCommitGeometry(egeometry);
-    rtcAttachGeometryByID(escene, egeometry, 0);
-  } else if (!shape->quads.empty()) {
-    auto egeometry = rtcNewGeometry(edevice, RTC_GEOMETRY_TYPE_QUAD);
-    rtcSetGeometryVertexAttributeCount(egeometry, 1);
-    if (params.bvh == trace_bvh_type::embree_compact) {
-      rtcSetSharedGeometryBuffer(egeometry, RTC_BUFFER_TYPE_VERTEX, 0,
-          RTC_FORMAT_FLOAT3, shape->positions.data(), 0, 3 * 4,
-          shape->positions.size());
-      rtcSetSharedGeometryBuffer(egeometry, RTC_BUFFER_TYPE_INDEX, 0,
-          RTC_FORMAT_UINT4, shape->quads.data(), 0, 4 * 4, shape->quads.size());
-    } else {
-      auto embree_positions = rtcSetNewGeometryBuffer(egeometry,
-          RTC_BUFFER_TYPE_VERTEX, 0, RTC_FORMAT_FLOAT3, 3 * 4,
-          shape->positions.size());
-      auto embree_quads     = rtcSetNewGeometryBuffer(egeometry,
-          RTC_BUFFER_TYPE_INDEX, 0, RTC_FORMAT_UINT4, 4 * 4,
-          shape->quads.size());
-      memcpy(embree_positions, shape->positions.data(),
-          shape->positions.size() * 12);
-      memcpy(embree_quads, shape->quads.data(), shape->quads.size() * 16);
-    }
-    rtcCommitGeometry(egeometry);
-    rtcAttachGeometryByID(escene, egeometry, 0);
-  } else {
-    throw std::runtime_error("empty shapes not supported");
-  }
-  rtcCommitScene(escene);
-}
-
-static void init_embree_bvh(trace_scene* scene, const trace_params& params) {
-  // scene bvh
-  auto edevice = embree_device();
-  if (scene->embree_bvh) rtcReleaseScene(scene->embree_bvh);
-  scene->embree_bvh = rtcNewScene(edevice);
-  auto escene       = scene->embree_bvh;
-  if (params.bvh == trace_bvh_type::embree_compact)
-    rtcSetSceneFlags(escene, RTC_SCENE_FLAG_COMPACT);
-  if (params.bvh == trace_bvh_type::embree_highquality)
-    rtcSetSceneBuildQuality(escene, RTC_BUILD_QUALITY_HIGH);
-  auto object_id = 0;
-  for (auto instance : scene->instances) {
-    auto egeometry = rtcNewGeometry(edevice, RTC_GEOMETRY_TYPE_INSTANCE);
-    rtcSetGeometryInstancedScene(egeometry, instance->shape->embree_bvh);
-    rtcSetGeometryTransform(
-        egeometry, 0, RTC_FORMAT_FLOAT3X4_COLUMN_MAJOR, &instance->frame);
-    rtcCommitGeometry(egeometry);
-    rtcAttachGeometryByID(escene, egeometry, object_id++);
-  }
-  rtcCommitScene(escene);
-}
-
-static void update_embree_bvh(trace_scene* scene,
-    const vector<trace_instance*>&         updated_objects,
-    const vector<trace_shape*>& updated_shapes, const trace_params& params) {
-  throw std::runtime_error("not implemented yet");
-  // // scene bvh
-  // auto escene = scene->embree_bvh;
-  // for (auto& [object_id, instance_id] : scene->embree_instances) {
-  //   auto instance    = scene->objects[object_id];
-  //   auto frame     = scene->objects[instance_id]->frame * instance->frame;
-  //   auto egeometry = rtcGetGeometry(escene, instance_id);
-  //   rtcSetGeometryInstancedScene(egeometry, instance->shape->embree_bvh);
-  //   rtcSetGeometryTransform(
-  //       egeometry, 0, RTC_FORMAT_FLOAT3X4_COLUMN_MAJOR, &frame);
-  //   rtcCommitGeometry(egeometry);
-  // }
-  // rtcCommitScene(escene);
-}
-
-static bool intersect_shape_embree_bvh(trace_shape* shape, const ray3f& ray,
-    int& element, vec2f& uv, float& distance, bool find_any) {
-  RTCRayHit embree_ray;
-  embree_ray.ray.org_x     = ray.o.x;
-  embree_ray.ray.org_y     = ray.o.y;
-  embree_ray.ray.org_z     = ray.o.z;
-  embree_ray.ray.dir_x     = ray.d.x;
-  embree_ray.ray.dir_y     = ray.d.y;
-  embree_ray.ray.dir_z     = ray.d.z;
-  embree_ray.ray.tnear     = ray.tmin;
-  embree_ray.ray.tfar      = ray.tmax;
-  embree_ray.ray.flags     = 0;
-  embree_ray.hit.geomID    = RTC_INVALID_GEOMETRY_ID;
-  embree_ray.hit.instID[0] = RTC_INVALID_GEOMETRY_ID;
-  RTCIntersectContext embree_ctx;
-  rtcInitIntersectContext(&embree_ctx);
-  rtcIntersect1(shape->embree_bvh, &embree_ctx, &embree_ray);
-  if (embree_ray.hit.geomID == RTC_INVALID_GEOMETRY_ID) return false;
-  element  = (int)embree_ray.hit.primID;
-  uv       = {embree_ray.hit.u, embree_ray.hit.v};
-  distance = embree_ray.ray.tfar;
-  return true;
-}
-
-static bool intersect_scene_embree_bvh(const trace_scene* scene,
-    const ray3f& ray, int& instance, int& element, vec2f& uv, float& distance,
-    bool find_any) {
-  RTCRayHit embree_ray;
-  embree_ray.ray.org_x     = ray.o.x;
-  embree_ray.ray.org_y     = ray.o.y;
-  embree_ray.ray.org_z     = ray.o.z;
-  embree_ray.ray.dir_x     = ray.d.x;
-  embree_ray.ray.dir_y     = ray.d.y;
-  embree_ray.ray.dir_z     = ray.d.z;
-  embree_ray.ray.tnear     = ray.tmin;
-  embree_ray.ray.tfar      = ray.tmax;
-  embree_ray.ray.flags     = 0;
-  embree_ray.hit.geomID    = RTC_INVALID_GEOMETRY_ID;
-  embree_ray.hit.instID[0] = RTC_INVALID_GEOMETRY_ID;
-  RTCIntersectContext embree_ctx;
-  rtcInitIntersectContext(&embree_ctx);
-  rtcIntersect1(scene->embree_bvh, &embree_ctx, &embree_ray);
-  if (embree_ray.hit.geomID == RTC_INVALID_GEOMETRY_ID) return false;
-  instance = (int)embree_ray.hit.instID[0];
-  element  = (int)embree_ray.hit.primID;
-  uv       = {embree_ray.hit.u, embree_ray.hit.v};
-  distance = embree_ray.ray.tfar;
-  return true;
-}
-#endif
-
-// Intersect ray with a bvh->
-static bool intersect_instance_bvh(const trace_instance* instance,
-    const ray3f& ray, int& element, vec2f& uv, float& distance, bool find_any,
-    bool non_rigid_frames) {
-  auto inv_ray = transform_ray(inverse(instance->frame, non_rigid_frames), ray);
-  return intersect_shape_bvh(
-      instance->shape, inv_ray, element, uv, distance, find_any);
-}
-
-trace_intersection intersect_scene_bvh(const trace_scene* scene,
-    const ray3f& ray, bool find_any, bool non_rigid_frames) {
-  auto intersection = trace_intersection{};
-  intersection.hit  = intersect_scene_bvh(scene, ray, intersection.instance,
-      intersection.element, intersection.uv, intersection.distance, find_any,
-      non_rigid_frames);
-  return intersection;
-}
-trace_intersection intersect_instance_bvh(const trace_instance* instance,
-    const ray3f& ray, bool find_any, bool non_rigid_frames) {
-  auto intersection = trace_intersection{};
-  intersection.hit = intersect_instance_bvh(instance, ray, intersection.element,
-      intersection.uv, intersection.distance, find_any, non_rigid_frames);
-  return intersection;
-}
-
-}  // namespace yocto
-
-#endif
