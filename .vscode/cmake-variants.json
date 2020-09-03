@@ -18,5 +18,23 @@
         }
       }
     }
+  },
+  "useEmbree": {
+    "default": "yes",
+    "description": "Build with Embree",
+    "choices": {
+      "yes": {
+        "short": "Embree",
+        "settings": {
+          "YOCTO_EMBREE": "yes"
+        }
+      },
+      "no": {
+        "short": "NoEmbree",
+        "settings": {
+          "YOCTO_EMBREE": "no"
+        }
+      }
+    }
   }
 }

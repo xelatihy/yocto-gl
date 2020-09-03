@@ -40,6 +40,8 @@
 
 #include <array>
 #include <cstdint>
+#include <functional>
+#include <string>
 #include <vector>
 
 #include "yocto_math.h"
@@ -55,6 +57,8 @@ namespace yocto {
 
 // using directives
 using std::array;
+using std::function;
+using std::string;
 using std::vector;
 
 }  // namespace yocto
@@ -110,8 +114,8 @@ struct bvh_shape {
 
 // instance
 struct bvh_instance {
-  frame3f frame = identity3x4f;
-  int     shape = -1;
+  frame3f    frame = identity3x4f;
+  bvh_shape* shape = nullptr;
 };
 
 // BVH data for whole shapes. This interface makes copies of all the data.
@@ -128,9 +132,64 @@ struct bvh_scene {
   ~bvh_scene();
 };
 
+// Create BVH
+bvh_shape*    add_shape(bvh_scene* scene);
+bvh_instance* add_instance(bvh_scene* scene);
+
+// set shape properties
+void set_points(bvh_shape* shape, const vector<int>& points);
+void set_lines(bvh_shape* shape, const vector<vec2i>& lines);
+void set_triangles(bvh_shape* shape, const vector<vec3i>& triangles);
+void set_quads(bvh_shape* shape, const vector<vec4i>& quads);
+void set_positions(bvh_shape* shape, const vector<vec3f>& positions);
+void set_radius(bvh_shape* shape, const vector<float>& radius);
+
+// set instance properties
+void set_frame(bvh_instance* instance, const frame3f& frame);
+void set_shape(bvh_instance* instance, bvh_shape* shape);
+
+// Create BVH shortcuts
+bvh_shape*    add_shape(bvh_scene* bvh, const vector<int>& points,
+       const vector<vec2i>& lines, const vector<vec3i>& triangles,
+       const vector<vec4i>& quads, const vector<vec3f>& positions,
+       const vector<float>& radius);
+bvh_instance* add_instance(
+    bvh_scene* bvh, const frame3f& frame, bvh_shape* shape);
+
+// Strategy used to build the bvh
+enum struct bvh_build_type {
+  default_,
+  highquality,
+  middle,
+  balanced,
+#ifdef YOCTO_EMBREE
+  embree_default,
+  embree_highquality,
+  embree_compact  // only for copy interface
+#endif
+};
+
+const auto bvh_build_names = vector<string>{
+    "default", "highquality", "middle", "balanced",
+#ifdef YOCTO_EMBREE
+    "embree-default", "embree-highquality", "embree-compact"
+#endif
+};
+
+// Bvh parameters
+struct bvh_params {
+  bvh_build_type bvh        = bvh_build_type::default_;
+  bool           noparallel = false;  // only serial momentarily
+};
+
+// Progress report callback
+using progress_callback =
+    function<void(const string& message, int current, int total)>;
+
 // Build the bvh acceleration structure.
-void init_bvh(bvh_shape* bvh, bool embree = false);
-void init_bvh(bvh_scene* bvh, bool embree = false);
+void init_bvh(bvh_shape* bvh, const bvh_params& params);
+void init_bvh(bvh_scene* bvh, const bvh_params& params,
+    const progress_callback& progress_cb = {});
 
 // Refit bvh data
 void update_bvh(bvh_shape* bvh);

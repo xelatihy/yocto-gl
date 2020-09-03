@@ -2,6 +2,30 @@
 // Implementation for Yocto/Bvh
 //
 
+//
+// LICENSE:
+//
+// Copyright (c) 2016 -- 2020 Fabio Pellacini
+//
+// Permission is hereby granted, free of charge, to any person obtaining a copy
+// of this software and associated documentation files (the "Software"), to deal
+// in the Software without restriction, including without limitation the rights
+// to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+// copies of the Software, and to permit persons to whom the Software is
+// furnished to do so, subject to the following conditions:
+//
+// The above copyright notice and this permission notice shall be included in
+// all copies or substantial portions of the Software.
+//
+// THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+// IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+// FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+// AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+// LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+// OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+// SOFTWARE.
+//
+
 // -----------------------------------------------------------------------------
 // INCLUDES
 // -----------------------------------------------------------------------------
@@ -19,6 +43,7 @@
 #include <utility>
 
 #include "yocto_geometry.h"
+#include "yocto_parallel.h"
 
 #ifdef YOCTO_EMBREE
 #include <embree3/rtcore.h>
@@ -45,6 +70,7 @@ using namespace std::string_literals;
 namespace yocto {
 
 #ifdef YOCTO_EMBREE
+
 // Get Embree device
 atomic<ssize_t>  bvh_embree_memory = 0;
 static RTCDevice bvh_embree_device() {
@@ -84,10 +110,14 @@ static RTCDevice bvh_embree_device() {
 }
 
 // Initialize Embree BVH
-void init_shape_embree_bvh(bvh_shape* shape) {
+static void init_embree_bvh(bvh_shape* shape, const bvh_params& params) {
   auto edevice      = bvh_embree_device();
   shape->embree_bvh = rtcNewScene(edevice);
   auto escene       = shape->embree_bvh;
+  if (params.bvh == bvh_build_type::embree_compact)
+    rtcSetSceneFlags(escene, RTC_SCENE_FLAG_COMPACT);
+  if (params.bvh == bvh_build_type::embree_highquality)
+    rtcSetSceneBuildQuality(escene, RTC_BUILD_QUALITY_HIGH);
   if (!shape->points.empty()) {
     throw std::runtime_error("embree does not support points");
   } else if (!shape->lines.empty()) {
@@ -155,15 +185,20 @@ void init_shape_embree_bvh(bvh_shape* shape) {
   }
   rtcCommitScene(escene);
 }
-void init_scene_embree_bvh(bvh_scene* scene) {
+
+static void init_embree_bvh(bvh_scene* scene, const bvh_params& params) {
   // scene bvh
   auto edevice      = bvh_embree_device();
   scene->embree_bvh = rtcNewScene(edevice);
   auto escene       = scene->embree_bvh;
+  if (params.bvh == bvh_build_type::embree_compact)
+    rtcSetSceneFlags(escene, RTC_SCENE_FLAG_COMPACT);
+  if (params.bvh == bvh_build_type::embree_highquality)
+    rtcSetSceneBuildQuality(escene, RTC_BUILD_QUALITY_HIGH);
   for (auto instance_id = 0; instance_id < scene->instances.size();
        instance_id++) {
     auto& instance  = scene->instances[instance_id];
-    auto& shape     = scene->shapes[instance->shape];
+    auto& shape     = instance->shape;
     auto  egeometry = rtcNewGeometry(edevice, RTC_GEOMETRY_TYPE_INSTANCE);
     rtcSetGeometryInstancedScene(egeometry, shape->embree_bvh);
     rtcSetGeometryTransform(
@@ -174,13 +209,13 @@ void init_scene_embree_bvh(bvh_scene* scene) {
   rtcCommitScene(escene);
 }
 
-void update_scene_embree_bvh(
+static void update_embree_bvh(
     bvh_scene* scene, const vector<int>& updated_instances) {
   // scene bvh
   auto escene = scene->embree_bvh;
   for (auto instance_id : updated_instances) {
     auto& instance    = scene->instances[instance_id];
-    auto& shape       = scene->shapes[instance->shape];
+    auto& shape       = instance->shape;
     auto  embree_geom = rtcGetGeometry(escene, instance_id);
     rtcSetGeometryInstancedScene(embree_geom, shape->embree_bvh);
     rtcSetGeometryTransform(
@@ -190,7 +225,7 @@ void update_scene_embree_bvh(
   rtcCommitScene(escene);
 }
 
-bool intersect_shape_embree_bvh(const bvh_shape* shape, const ray3f& ray,
+static bool intersect_embree_bvh(const bvh_shape* shape, const ray3f& ray,
     int& element, vec2f& uv, float& distance, bool find_any) {
   RTCRayHit embree_ray;
   embree_ray.ray.org_x     = ray.o.x;
@@ -213,7 +248,8 @@ bool intersect_shape_embree_bvh(const bvh_shape* shape, const ray3f& ray,
   distance = embree_ray.ray.tfar;
   return true;
 }
-bool intersect_scene_embree_bvh(const bvh_scene* scene, const ray3f& ray,
+
+static bool intersect_embree_bvh(const bvh_scene* scene, const ray3f& ray,
     int& instance, int& element, vec2f& uv, float& distance, bool find_any) {
   RTCRayHit embree_ray;
   embree_ray.ray.org_x     = ray.o.x;
@@ -242,7 +278,7 @@ bool intersect_scene_embree_bvh(const bvh_scene* scene, const ray3f& ray,
 }  // namespace yocto
 
 // -----------------------------------------------------------------------------
-// IMPLEMENTATION FOR BVH
+// IMPLEMENTATION FOR BVH CREATION
 // -----------------------------------------------------------------------------
 namespace yocto {
 
@@ -260,14 +296,70 @@ bvh_scene::~bvh_scene() {
 #endif
 }
 
-#if !defined(_WIN32) && !defined(_WIN64)
-#pragma GCC diagnostic push
-#pragma GCC diagnostic ignored "-Wunused-function"
-#pragma GCC diagnostic ignored "-Wunused-variable"
-#ifndef __clang__
-#pragma GCC diagnostic ignored "-Wmaybe-uninitialized"
-#endif
-#endif
+// Create BVH
+bvh_shape* add_shape(bvh_scene* scene) {
+  return scene->shapes.emplace_back(new bvh_shape{});
+}
+bvh_instance* add_instance(bvh_scene* scene) {
+  return scene->instances.emplace_back(new bvh_instance{});
+}
+
+// set shape properties
+void set_points(bvh_shape* shape, const vector<int>& points) {
+  shape->points = points;
+}
+void set_lines(bvh_shape* shape, const vector<vec2i>& lines) {
+  shape->lines = lines;
+}
+void set_triangles(bvh_shape* shape, const vector<vec3i>& triangles) {
+  shape->triangles = triangles;
+}
+void set_quads(bvh_shape* shape, const vector<vec4i>& quads) {
+  shape->quads = quads;
+}
+void set_positions(bvh_shape* shape, const vector<vec3f>& positions) {
+  shape->positions = positions;
+}
+void set_radius(bvh_shape* shape, const vector<float>& radius) {
+  shape->radius = radius;
+}
+
+// set instance properties
+void set_frame(bvh_instance* instance, const frame3f& frame) {
+  instance->frame = frame;
+}
+void set_shape(bvh_instance* instance, bvh_shape* shape) {
+  instance->shape = shape;
+}
+
+// Create BVH shortcuts
+bvh_shape* add_shape(bvh_scene* bvh, const vector<int>& points,
+    const vector<vec2i>& lines, const vector<vec3i>& triangles,
+    const vector<vec4i>& quads, const vector<vec3f>& positions,
+    const vector<float>& radius) {
+  auto shape = add_shape(bvh);
+  set_points(shape, points);
+  set_lines(shape, lines);
+  set_triangles(shape, triangles);
+  set_quads(shape, quads);
+  set_positions(shape, positions);
+  set_radius(shape, radius);
+  return shape;
+}
+bvh_instance* add_instance(
+    bvh_scene* bvh, const frame3f& frame, bvh_shape* shape) {
+  auto instance   = add_instance(bvh);
+  instance->frame = frame;
+  instance->shape = shape;
+  return instance;
+}
+
+}  // namespace yocto
+
+// -----------------------------------------------------------------------------
+// IMPLEMENTATION FOR BVH BUILD
+// -----------------------------------------------------------------------------
+namespace yocto {
 
 // Splits a BVH node using the SAH heuristic. Returns split position and axis.
 static pair<int, int> split_sah(vector<int>& primitives,
@@ -410,12 +502,26 @@ static pair<int, int> split_middle(vector<int>& primitives,
   return {mid, axis};
 }
 
-#if !defined(_WIN32) && !defined(_WIN64)
-#pragma GCC diagnostic pop
-#endif
+// Split bvh nodes according to a type
+static pair<int, int> split_nodes(vector<int>& primitives,
+    const vector<bbox3f>& bboxes, const vector<vec3f>& centers, int start,
+    int end, bvh_build_type type) {
+  switch (type) {
+    case bvh_build_type::default_:
+      return split_middle(primitives, bboxes, centers, start, end);
+    case bvh_build_type::highquality:
+      return split_sah(primitives, bboxes, centers, start, end);
+    case bvh_build_type::middle:
+      return split_middle(primitives, bboxes, centers, start, end);
+    case bvh_build_type::balanced:
+      return split_balanced(primitives, bboxes, centers, start, end);
+    default: throw std::runtime_error("should not have gotten here");
+  }
+}
 
 // Build BVH nodes
-static void build_bvh(bvh_tree_& bvh, vector<bbox3f>& bboxes) {
+static void build_bvh_serial(
+    bvh_tree_& bvh, const vector<bbox3f>& bboxes, const bvh_params& params) {
   // get values
   auto& nodes      = bvh.nodes;
   auto& primitives = bvh.primitives;
@@ -455,7 +561,8 @@ static void build_bvh(bvh_tree_& bvh, vector<bbox3f>& bboxes) {
     // split into two children
     if (end - start > bvh_max_prims) {
       // get split
-      auto [mid, axis] = split_middle(primitives, bboxes, centers, start, end);
+      auto [mid, axis] = split_nodes(
+          primitives, bboxes, centers, start, end, params.bvh);
 
       // make an internal node
       node.internal = true;
@@ -478,6 +585,108 @@ static void build_bvh(bvh_tree_& bvh, vector<bbox3f>& bboxes) {
   nodes.shrink_to_fit();
 }
 
+#if 0
+
+// Build BVH nodes
+static void build_bvh_parallel(
+    bvh_tree_& bvh, const vector<bbox3f>& bboxes, bvh_build_type type) {
+  // get values
+  auto& nodes      = bvh.nodes;
+  auto& primitives = bvh.primitives;
+
+  // prepare to build nodes
+  nodes.clear();
+  nodes.reserve(bboxes.size() * 2);
+
+  // prepare primitives
+  bvh.primitives.resize(bboxes.size());
+  for (auto idx = 0; idx < bboxes.size(); idx++) bvh.primitives[idx] = idx;
+
+  // prepare centers
+  auto centers = vector<vec3f>(bboxes.size());
+  for (auto idx = 0; idx < bboxes.size(); idx++)
+    centers[idx] = center(bboxes[idx]);
+
+  // queue up first node
+  auto queue = deque<vec3i>{{0, 0, (int)primitives.size()}};
+  nodes.emplace_back();
+
+  // synchronization
+  atomic<int>          num_processed_prims(0);
+  std::mutex           queue_mutex;
+  vector<future<void>> futures;
+  auto                 nthreads = std::thread::hardware_concurrency();
+
+  // create nodes until the queue is empty
+  for (auto thread_id = 0; thread_id < nthreads; thread_id++) {
+    futures.emplace_back(std::async(
+        std::launch::async, [&nodes, &primitives, &bboxes, &centers, &type,
+                                &num_processed_prims, &queue_mutex, &queue] {
+          while (true) {
+            // exit if needed
+            if (num_processed_prims >= primitives.size()) return;
+
+            // grab node to work on
+            auto next = zero3i;
+            {
+              std::lock_guard<std::mutex> lock{queue_mutex};
+              if (!queue.empty()) {
+                next = queue.front();
+                queue.pop_front();
+              }
+            }
+
+            // wait a bit if needed
+            if (next == zero3i) {
+              std::this_thread::sleep_for(std::chrono::microseconds(10));
+              continue;
+            }
+
+            // grab node
+            auto  nodeid = next.x, start = next.y, end = next.z;
+            auto& node = nodes[nodeid];
+
+            // compute bounds
+            node.bbox = invalidb3f;
+            for (auto i = start; i < end; i++)
+              node.bbox = merge(node.bbox, bboxes[primitives[i]]);
+
+            // split into two children
+            if (end - start > bvh_max_prims) {
+              // get split
+              auto [mid, axis] = split_nodes(
+                  primitives, bboxes, centers, start, end, type);
+
+              // make an internal node
+              {
+                std::lock_guard<std::mutex> lock{queue_mutex};
+                node.internal = true;
+                node.axis     = (int8_t)axis;
+                node.num      = 2;
+                node.start    = (int)nodes.size();
+                nodes.emplace_back();
+                nodes.emplace_back();
+                queue.push_back({node.start + 0, start, mid});
+                queue.push_back({node.start + 1, mid, end});
+              }
+            } else {
+              // Make a leaf node
+              node.internal = false;
+              node.num      = (int16_t)(end - start);
+              node.start    = start;
+              num_processed_prims += node.num;
+            }
+          }
+        }));
+  }
+  for (auto& f : futures) f.get();
+
+  // cleanup
+  nodes.shrink_to_fit();
+}
+
+#endif
+
 // Update bvh
 static void update_bvh(bvh_tree_& bvh, const vector<bbox3f>& bboxes) {
   for (auto nodeid = (int)bvh.nodes.size() - 1; nodeid >= 0; nodeid--) {
@@ -495,18 +704,12 @@ static void update_bvh(bvh_tree_& bvh, const vector<bbox3f>& bboxes) {
   }
 }
 
-}  // namespace yocto
-
-// -----------------------------------------------------------------------------
-// IMPLEMENTATION FOR SHAPE/SCENE BVH
-// -----------------------------------------------------------------------------
-namespace yocto {
-
-void init_shape_bvh(bvh_shape* shape, bool embree) {
+void init_bvh(bvh_shape* shape, const bvh_params& params) {
 #ifdef YOCTO_EMBREE
-  // call Embree if needed
-  if (embree) {
-    return init_shape_embree_bvh(shape);
+  if (params.bvh == bvh_build_type::embree_default ||
+      params.bvh == bvh_build_type::embree_highquality ||
+      params.bvh == bvh_build_type::embree_compact) {
+    return init_embree_bvh(shape, params);
   }
 #endif
 
@@ -542,37 +745,50 @@ void init_shape_bvh(bvh_shape* shape, bool embree) {
   }
 
   // build nodes
-  build_bvh(shape->bvh, bboxes);
+  build_bvh_serial(shape->bvh, bboxes, params);
 }
 
-void init_scene_bvh(bvh_scene* scene, bool embree) {
+void init_bvh(bvh_scene* scene, const bvh_params& params,
+    const progress_callback& progress_cb) {
+  // handle progress
+  auto progress = vec2i{0, 1 + (int)scene->shapes.size()};
+
   // Make shape bvh
   for (auto shape : scene->shapes) {
-    init_shape_bvh(shape, embree);
+    if (progress_cb) progress_cb("build shape bvh", progress.x++, progress.y);
+    init_bvh(shape, params);
   }
 
   // embree
 #ifdef YOCTO_EMBREE
-  if (embree) {
-    return init_scene_embree_bvh(scene);
+  if (params.bvh == bvh_build_type::embree_default ||
+      params.bvh == bvh_build_type::embree_highquality ||
+      params.bvh == bvh_build_type::embree_compact) {
+    return init_embree_bvh(scene, params);
   }
 #endif
+
+  // handle progress
+  if (progress_cb) progress_cb("build scene bvh", progress.x++, progress.y);
 
   // instance bboxes
   auto bboxes = vector<bbox3f>(scene->instances.size());
   for (auto idx = 0; idx < bboxes.size(); idx++) {
     auto& instance = scene->instances[idx];
-    auto& shape    = scene->shapes[instance->shape];
+    auto& shape    = instance->shape;
     bboxes[idx]    = shape->bvh.nodes.empty() ? invalidb3f
                                            : transform_bbox(instance->frame,
                                                  shape->bvh.nodes[0].bbox);
   }
 
   // build nodes
-  build_bvh(scene->bvh, bboxes);
+  build_bvh_serial(scene->bvh, bboxes, params);
+
+  // handle progress
+  if (progress_cb) progress_cb("build bvh", progress.x++, progress.y);
 }
 
-void update_shape_bvh(bvh_shape* shape) {
+void update_bvh(bvh_shape* shape) {
 #ifdef YOCTO_EMBREE
   if (shape->embree_bvh) {
     throw std::runtime_error("embree shape refit not supported");
@@ -614,14 +830,14 @@ void update_shape_bvh(bvh_shape* shape) {
   update_bvh(shape->bvh, bboxes);
 }
 
-void update_scene_bvh(bvh_scene* scene, const vector<int>& updated_instances,
+void update_bvh(bvh_scene* scene, const vector<int>& updated_instances,
     const vector<int>& updated_shapes) {
   // update shapes
-  for (auto shape : updated_shapes) update_shape_bvh(scene->shapes[shape]);
+  for (auto shape : updated_shapes) update_bvh(scene->shapes[shape]);
 
 #ifdef YOCTO_EMBREE
   if (scene->embree_bvh) {
-    update_scene_embree_bvh(scene, updated_instances);
+    update_embree_bvh(scene, updated_instances);
   }
 #endif
 
@@ -629,7 +845,7 @@ void update_scene_bvh(bvh_scene* scene, const vector<int>& updated_instances,
   auto bboxes = vector<bbox3f>(scene->instances.size());
   for (auto idx = 0; idx < bboxes.size(); idx++) {
     auto& instance = scene->instances[idx];
-    auto& sbvh     = scene->shapes[instance->shape]->bvh;
+    auto& sbvh     = instance->shape->bvh;
     bboxes[idx]    = transform_bbox(instance->frame, sbvh.nodes[0].bbox);
   }
 
@@ -637,14 +853,20 @@ void update_scene_bvh(bvh_scene* scene, const vector<int>& updated_instances,
   update_bvh(scene->bvh, bboxes);
 }
 
+}  // namespace yocto
+
+// -----------------------------------------------------------------------------
+// IMPLEMENTATION FOR BVH INTERSECTION
+// -----------------------------------------------------------------------------
+namespace yocto {
+
 // Intersect ray with a bvh.
 static bool intersect_shape_bvh(const bvh_shape* shape, const ray3f& ray_,
     int& element, vec2f& uv, float& distance, bool find_any) {
 #ifdef YOCTO_EMBREE
   // call Embree if needed
   if (shape->embree_bvh) {
-    return intersect_shape_embree_bvh(
-        shape, ray_, element, uv, distance, find_any);
+    return intersect_embree_bvh(shape, ray_, element, uv, distance, find_any);
   }
 #endif
 
@@ -744,7 +966,7 @@ static bool intersect_scene_bvh(const bvh_scene* scene, const ray3f& ray_,
 #ifdef YOCTO_EMBREE
   // call Embree if needed
   if (scene->embree_bvh) {
-    return intersect_scene_embree_bvh(
+    return intersect_embree_bvh(
         scene, ray_, instance, element, uv, distance, find_any);
   }
 #endif
@@ -794,8 +1016,8 @@ static bool intersect_scene_bvh(const bvh_scene* scene, const ray3f& ray_,
         auto& instance_ = scene->instances[scene->bvh.primitives[idx]];
         auto  inv_ray   = transform_ray(
             inverse(instance_->frame, non_rigid_frames), ray);
-        if (intersect_shape_bvh(scene->shapes[instance_->shape], inv_ray,
-                element, uv, distance, find_any)) {
+        if (intersect_shape_bvh(
+                instance_->shape, inv_ray, element, uv, distance, find_any)) {
           hit      = true;
           instance = scene->bvh.primitives[idx];
           ray.tmax = distance;
@@ -817,9 +1039,16 @@ static bool intersect_instance_bvh(const bvh_scene* scene, int instance,
   auto& instance_ = scene->instances[instance];
   auto  inv_ray   = transform_ray(
       inverse(instance_->frame, non_rigid_frames), ray);
-  return intersect_shape_bvh(scene->shapes[instance_->shape], inv_ray, element,
-      uv, distance, find_any);
+  return intersect_shape_bvh(
+      instance_->shape, inv_ray, element, uv, distance, find_any);
 }
+
+}  // namespace yocto
+
+// -----------------------------------------------------------------------------
+// IMPLEMENTATION FOR BVH OVERLAP
+// -----------------------------------------------------------------------------
+namespace yocto {
 
 // Intersect ray with a bvh.
 static bool overlap_shape_bvh(const bvh_shape* shape, const vec3f& pos,
@@ -943,8 +1172,8 @@ static bool overlap_scene_bvh(const bvh_scene* scene, const vec3f& pos,
         auto instance_ = scene->instances[primitive];
         auto inv_pos   = transform_point(
             inverse(instance_->frame, non_rigid_frames), pos);
-        if (overlap_shape_bvh(scene->shapes[instance_->shape], inv_pos,
-                max_distance, element, uv, distance, find_any)) {
+        if (overlap_shape_bvh(instance_->shape, inv_pos, max_distance, element,
+                uv, distance, find_any)) {
           hit          = true;
           instance     = primitive;
           max_distance = distance;
