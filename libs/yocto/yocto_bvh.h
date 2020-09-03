@@ -87,7 +87,7 @@ struct bvh_node_ {
 // array indices. BVH nodes indices refer to either the node array,
 // for internal nodes, or the primitive arrays, for leaf nodes.
 // Application data is not stored explicitly.
-struct bvh_tree_ {
+struct bvh_tree {
   vector<bvh_node_> nodes      = {};
   vector<int>       primitives = {};
 };
@@ -133,7 +133,7 @@ struct bvh_shape {
   vector<float> radius_data    = {};
 
   // nodes
-  bvh_tree_ bvh = {};
+  bvh_tree bvh = {};
 #ifdef YOCTO_EMBREE
   RTCScene embree_bvh = nullptr;
 #endif
@@ -158,7 +158,7 @@ struct bvh_scene {
   vector<bvh_shape*>    shapes         = {};
 
   // nodes
-  bvh_tree_ bvh = {};
+  bvh_tree bvh = {};
 #ifdef YOCTO_EMBREE
   RTCScene embree_bvh = nullptr;
 #endif

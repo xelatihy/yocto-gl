@@ -511,7 +511,7 @@ static pair<int, int> split_nodes(vector<int>& primitives,
 
 // Build BVH nodes
 static void build_bvh_serial(
-    bvh_tree_& bvh, const vector<bbox3f>& bboxes, const bvh_params& params) {
+    bvh_tree& bvh, const vector<bbox3f>& bboxes, const bvh_params& params) {
   // get values
   auto& nodes      = bvh.nodes;
   auto& primitives = bvh.primitives;
@@ -678,7 +678,7 @@ static void build_bvh_parallel(
 #endif
 
 // Update bvh
-static void update_bvh(bvh_tree_& bvh, const vector<bbox3f>& bboxes) {
+static void update_bvh(bvh_tree& bvh, const vector<bbox3f>& bboxes) {
   for (auto nodeid = (int)bvh.nodes.size() - 1; nodeid >= 0; nodeid--) {
     auto& node = bvh.nodes[nodeid];
     node.bbox  = invalidb3f;
