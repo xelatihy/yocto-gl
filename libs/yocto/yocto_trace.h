@@ -562,26 +562,4 @@ void trace_stop(trace_state* state);
 
 }  // namespace yocto
 
-// -----------------------------------------------------------------------------
-// RAY-SCENE INTERSECTION
-// -----------------------------------------------------------------------------
-namespace yocto {
-
-// Results of intersect functions that include hit flag, the instance id,
-// the shape element id, the shape element uv and intersection distance.
-// Results values are set only if hit is true.
-using trace_intersection = bvh_intersection;
-
-// Intersect ray with a bvh returning either the first or any intersection
-// depending on `find_any`. Returns the ray distance , the instance id,
-// the shape element index and the element barycentric coordinates.
-trace_intersection intersect_scene_bvh(const trace_bvh* bvh,
-    const trace_scene* scene, const ray3f& ray, bool find_any = false,
-    bool non_rigid_frames = true);
-trace_intersection intersect_instance_bvh(const trace_bvh* bvh,
-    const trace_instance* instance, const ray3f& ray, bool find_any = false,
-    bool non_rigid_frames = true);
-
-}  // namespace yocto
-
 #endif
