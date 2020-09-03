@@ -114,8 +114,8 @@ struct bvh_shape {
 
 // instance
 struct bvh_instance {
-  frame3f    frame = identity3x4f;
-  bvh_shape* shape = nullptr;
+  frame3f frame = identity3x4f;
+  int     shape = -1;
 };
 
 // BVH data for whole shapes. This interface makes copies of all the data.
@@ -146,15 +146,14 @@ void set_radius(bvh_shape* shape, const vector<float>& radius);
 
 // set instance properties
 void set_frame(bvh_instance* instance, const frame3f& frame);
-void set_shape(bvh_instance* instance, bvh_shape* shape);
+void set_shape(bvh_instance* instance, int shape);
 
 // Create BVH shortcuts
 bvh_shape*    add_shape(bvh_scene* bvh, const vector<int>& points,
        const vector<vec2i>& lines, const vector<vec3i>& triangles,
        const vector<vec4i>& quads, const vector<vec3f>& positions,
        const vector<float>& radius);
-bvh_instance* add_instance(
-    bvh_scene* bvh, const frame3f& frame, bvh_shape* shape);
+bvh_instance* add_instance(bvh_scene* bvh, const frame3f& frame, int shape);
 
 // Strategy used to build the bvh
 enum struct bvh_build_type {

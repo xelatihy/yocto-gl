@@ -169,8 +169,8 @@ struct trace_shape {
   float          displacement     = 0;
   trace_texture* displacement_tex = nullptr;
 
-  // computed properties
-  bvh_shape* bvh = nullptr;  // non-owned reference
+  // shape is assigned at creation
+  int shape_id = -1;
 };
 
 // Object.
@@ -178,6 +178,9 @@ struct trace_instance {
   frame3f         frame    = identity3x4f;
   trace_shape*    shape    = nullptr;
   trace_material* material = nullptr;
+
+  // instance id assigned at creation
+  int instance_id = -1;
 };
 
 // Environment map.

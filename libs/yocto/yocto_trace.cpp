@@ -77,13 +77,17 @@ trace_environment* add_environment(trace_scene* scene) {
   return scene->environments.emplace_back(new trace_environment{});
 }
 trace_shape* add_shape(trace_scene* scene) {
-  return scene->shapes.emplace_back(new trace_shape{});
+  auto shape      = scene->shapes.emplace_back(new trace_shape{});
+  shape->shape_id = (int)scene->shapes.size() - 1;
+  return shape;
 }
 trace_texture* add_texture(trace_scene* scene) {
   return scene->textures.emplace_back(new trace_texture{});
 }
 trace_instance* add_instance(trace_scene* scene) {
-  return scene->instances.emplace_back(new trace_instance{});
+  auto instance         = scene->instances.emplace_back(new trace_instance{});
+  instance->instance_id = (int)scene->instances.size() - 1;
+  return instance;
 }
 trace_material* add_material(trace_scene* scene) {
   return scene->materials.emplace_back(new trace_material{});
@@ -979,11 +983,11 @@ void init_bvh(trace_bvh* bvh, const trace_scene* scene,
     const trace_params& params, const progress_callback& progress_cb) {
   // initialize bvh
   for (auto shape : scene->shapes) {
-    shape->bvh = add_shape(bvh, shape->points, shape->lines, shape->triangles,
-        shape->quads, shape->positions, shape->radius);
+    add_shape(bvh, shape->points, shape->lines, shape->triangles, shape->quads,
+        shape->positions, shape->radius);
   }
   for (auto instance : scene->instances) {
-    add_instance(bvh, instance->frame, instance->shape->bvh);
+    add_instance(bvh, instance->frame, instance->shape->shape_id);
   }
 
   // build
@@ -1020,9 +1024,8 @@ trace_intersection intersect_scene_bvh(const trace_bvh* bvh,
 trace_intersection intersect_instance_bvh(const trace_bvh* bvh,
     const trace_instance* instance, const ray3f& ray, bool find_any,
     bool non_rigid_frames) {
-  auto inv_ray = transform_ray(inverse(instance->frame, non_rigid_frames), ray);
-  auto sintersection = intersect_shape_bvh(
-      instance->shape->bvh, inv_ray, find_any);
+  auto sintersection = intersect_instance_bvh(
+      bvh, instance->instance_id, ray, find_any, non_rigid_frames);
   auto intersection     = bvh_scene_intersection{};
   intersection.instance = -1;
   intersection.element  = sintersection.element;
