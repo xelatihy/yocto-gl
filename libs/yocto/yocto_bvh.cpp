@@ -297,57 +297,71 @@ bvh_scene::~bvh_scene() {
 }
 
 // Create BVH
-bvh_shape* add_shape(bvh_scene* scene) {
-  return scene->shapes.emplace_back(new bvh_shape{});
+int add_shape(bvh_scene* scene) {
+  scene->shapes.push_back(new bvh_shape{});
+  return (int)scene->shapes.size() - 1;
 }
-bvh_instance* add_instance(bvh_scene* scene) {
-  return scene->instances.emplace_back(new bvh_instance{});
+int add_instance(bvh_scene* scene) {
+  scene->instances.push_back(new bvh_instance{});
+  return (int)scene->instances.size() - 1;
+}
+
+// get objects
+static bvh_shape* get_shape(bvh_scene* scene, int shape_id) {
+  return scene->shapes[shape_id];
+}
+static bvh_instance* get_instance(bvh_scene* scene, int instance_id) {
+  return scene->instances[instance_id];
 }
 
 // set shape properties
-void set_points(bvh_shape* shape, const vector<int>& points) {
-  shape->points = points;
+void set_points(bvh_scene* scene, int shape_id, const vector<int>& points) {
+  get_shape(scene, shape_id)->points = points;
 }
-void set_lines(bvh_shape* shape, const vector<vec2i>& lines) {
-  shape->lines = lines;
+void set_lines(bvh_scene* scene, int shape_id, const vector<vec2i>& lines) {
+  get_shape(scene, shape_id)->lines = lines;
 }
-void set_triangles(bvh_shape* shape, const vector<vec3i>& triangles) {
-  shape->triangles = triangles;
+void set_triangles(
+    bvh_scene* scene, int shape_id, const vector<vec3i>& triangles) {
+  get_shape(scene, shape_id)->triangles = triangles;
 }
-void set_quads(bvh_shape* shape, const vector<vec4i>& quads) {
-  shape->quads = quads;
+void set_quads(bvh_scene* scene, int shape_id, const vector<vec4i>& quads) {
+  get_shape(scene, shape_id)->quads = quads;
 }
-void set_positions(bvh_shape* shape, const vector<vec3f>& positions) {
-  shape->positions = positions;
+void set_positions(
+    bvh_scene* scene, int shape_id, const vector<vec3f>& positions) {
+  get_shape(scene, shape_id)->positions = positions;
 }
-void set_radius(bvh_shape* shape, const vector<float>& radius) {
-  shape->radius = radius;
+void set_radius(bvh_scene* scene, int shape_id, const vector<float>& radius) {
+  get_shape(scene, shape_id)->radius = radius;
 }
 
 // set instance properties
-void set_frame(bvh_instance* instance, const frame3f& frame) {
-  instance->frame = frame;
+void set_frame(bvh_scene* scene, int instance_id, const frame3f& frame) {
+  get_instance(scene, instance_id)->frame = frame;
 }
-void set_shape(bvh_instance* instance, int shape) { instance->shape = shape; }
+void set_shape(bvh_scene* scene, int instance_id, int shape) {
+  get_instance(scene, instance_id)->shape = shape;
+}
 
 // Create BVH shortcuts
-bvh_shape* add_shape(bvh_scene* bvh, const vector<int>& points,
+int add_shape(bvh_scene* bvh, const vector<int>& points,
     const vector<vec2i>& lines, const vector<vec3i>& triangles,
     const vector<vec4i>& quads, const vector<vec3f>& positions,
     const vector<float>& radius) {
   auto shape = add_shape(bvh);
-  set_points(shape, points);
-  set_lines(shape, lines);
-  set_triangles(shape, triangles);
-  set_quads(shape, quads);
-  set_positions(shape, positions);
-  set_radius(shape, radius);
+  set_points(bvh, shape, points);
+  set_lines(bvh, shape, lines);
+  set_triangles(bvh, shape, triangles);
+  set_quads(bvh, shape, quads);
+  set_positions(bvh, shape, positions);
+  set_radius(bvh, shape, radius);
   return shape;
 }
-bvh_instance* add_instance(bvh_scene* bvh, const frame3f& frame, int shape) {
-  auto instance   = add_instance(bvh);
-  instance->frame = frame;
-  instance->shape = shape;
+int add_instance(bvh_scene* bvh, const frame3f& frame, int shape) {
+  auto instance = add_instance(bvh);
+  set_frame(bvh, instance, frame);
+  set_shape(bvh, instance, shape);
   return instance;
 }
 

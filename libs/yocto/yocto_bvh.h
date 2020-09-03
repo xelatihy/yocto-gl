@@ -133,27 +133,29 @@ struct bvh_scene {
 };
 
 // Create BVH
-bvh_shape*    add_shape(bvh_scene* scene);
-bvh_instance* add_instance(bvh_scene* scene);
+int add_shape(bvh_scene* scene);
+int add_instance(bvh_scene* scene);
 
 // set shape properties
-void set_points(bvh_shape* shape, const vector<int>& points);
-void set_lines(bvh_shape* shape, const vector<vec2i>& lines);
-void set_triangles(bvh_shape* shape, const vector<vec3i>& triangles);
-void set_quads(bvh_shape* shape, const vector<vec4i>& quads);
-void set_positions(bvh_shape* shape, const vector<vec3f>& positions);
-void set_radius(bvh_shape* shape, const vector<float>& radius);
+void set_points(bvh_scene* scene, int shape_id, const vector<int>& points);
+void set_lines(bvh_scene* scene, int shape_id, const vector<vec2i>& lines);
+void set_triangles(
+    bvh_scene* scene, int shape_id, const vector<vec3i>& triangles);
+void set_quads(bvh_scene* scene, int shape_id, const vector<vec4i>& quads);
+void set_positions(
+    bvh_scene* scene, int shape_id, const vector<vec3f>& positions);
+void set_radius(bvh_scene* scene, int shape_id, const vector<float>& radius);
 
 // set instance properties
-void set_frame(bvh_instance* instance, const frame3f& frame);
-void set_shape(bvh_instance* instance, int shape);
+void set_frame(bvh_scene* scene, int instance_id, const frame3f& frame);
+void set_shape(bvh_scene* scene, int instance_id, int shape);
 
 // Create BVH shortcuts
-bvh_shape*    add_shape(bvh_scene* bvh, const vector<int>& points,
-       const vector<vec2i>& lines, const vector<vec3i>& triangles,
-       const vector<vec4i>& quads, const vector<vec3f>& positions,
-       const vector<float>& radius);
-bvh_instance* add_instance(bvh_scene* bvh, const frame3f& frame, int shape);
+int add_shape(bvh_scene* bvh, const vector<int>& points,
+    const vector<vec2i>& lines, const vector<vec3i>& triangles,
+    const vector<vec4i>& quads, const vector<vec3f>& positions,
+    const vector<float>& radius);
+int add_instance(bvh_scene* bvh, const frame3f& frame, int shape);
 
 // Strategy used to build the bvh
 enum struct bvh_build_type {
