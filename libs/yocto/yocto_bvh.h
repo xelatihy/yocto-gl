@@ -207,14 +207,13 @@ using progress_callback =
     function<void(const string& message, int current, int total)>;
 
 // Build the bvh acceleration structure.
-void init_bvh(bvh_shape* bvh, const bvh_params& params);
 void init_bvh(bvh_scene* bvh, const bvh_params& params,
     const progress_callback& progress_cb = {});
 
 // Refit bvh data
-void update_bvh(bvh_shape* bvh);
 void update_bvh(bvh_scene* bvh, const vector<int>& updated_instances,
-    const vector<int>& updated_shapes);
+    const vector<int>&       updated_shapes,
+    const progress_callback& progress_cb = {});
 
 // Results of intersect_xxx and overlap_xxx functions that include hit flag,
 // instance id, shape element id, shape element uv and intersection distance.

@@ -697,7 +697,7 @@ static void update_bvh(bvh_tree& bvh, const vector<bbox3f>& bboxes) {
   }
 }
 
-void init_bvh(bvh_shape* shape, const bvh_params& params) {
+static void init_bvh(bvh_shape* shape, const bvh_params& params) {
 #ifdef YOCTO_EMBREE
   if (params.bvh == bvh_build_type::embree_default ||
       params.bvh == bvh_build_type::embree_highquality ||
@@ -781,7 +781,7 @@ void init_bvh(bvh_scene* scene, const bvh_params& params,
   if (progress_cb) progress_cb("build bvh", progress.x++, progress.y);
 }
 
-void update_bvh(bvh_shape* shape) {
+static void update_bvh(bvh_shape* shape) {
 #ifdef YOCTO_EMBREE
   if (shape->embree_bvh) {
     throw std::runtime_error("embree shape refit not supported");
@@ -824,13 +824,22 @@ void update_bvh(bvh_shape* shape) {
 }
 
 void update_bvh(bvh_scene* scene, const vector<int>& updated_instances,
-    const vector<int>& updated_shapes) {
+    const vector<int>& updated_shapes, const progress_callback& progress_cb) {
+  // handle progress
+  auto progress = vec2i{0, 1 + (int)updated_shapes.size()};
+
   // update shapes
-  for (auto shape : updated_shapes) update_bvh(scene->shapes[shape]);
+  for (auto shape : updated_shapes) {
+    if (progress_cb) progress_cb("update shape bvh", progress.x++, progress.y);
+    update_bvh(scene->shapes[shape]);
+  }
+
+  // handle progress
+  if (progress_cb) progress_cb("update scene bvh", progress.x++, progress.y);
 
 #ifdef YOCTO_EMBREE
   if (scene->embree_bvh) {
-    update_embree_bvh(scene, updated_instances);
+    return update_embree_bvh(scene, updated_instances);
   }
 #endif
 
@@ -844,6 +853,9 @@ void update_bvh(bvh_scene* scene, const vector<int>& updated_instances,
 
   // update nodes
   update_bvh(scene->bvh, bboxes);
+
+  // handle progress
+  if (progress_cb) progress_cb("update bvh", progress.x++, progress.y);
 }
 
 }  // namespace yocto
