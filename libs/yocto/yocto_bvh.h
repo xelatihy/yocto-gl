@@ -207,14 +207,13 @@ using progress_callback =
     function<void(const string& message, int current, int total)>;
 
 // Build the bvh acceleration structure.
-void init_bvh(bvh_shape* bvh, const bvh_params& params);
 void init_bvh(bvh_scene* bvh, const bvh_params& params,
     const progress_callback& progress_cb = {});
 
 // Refit bvh data
-void update_bvh(bvh_shape* bvh);
 void update_bvh(bvh_scene* bvh, const vector<int>& updated_instances,
-    const vector<int>& updated_shapes);
+    const vector<int>&       updated_shapes,
+    const progress_callback& progress_cb = {});
 
 // Results of intersect_xxx and overlap_xxx functions that include hit flag,
 // instance id, shape element id, shape element uv and intersection distance.
@@ -232,11 +231,9 @@ struct bvh_intersection {
 // Intersect ray with a bvh returning either the first or any intersection
 // depending on `find_any`. Returns the ray distance , the instance id,
 // the shape element index and the element barycentric coordinates.
-bvh_intersection intersect_shape_bvh(
-    const bvh_scene* bvh, int shape, const ray3f& ray, bool find_any = false);
-bvh_intersection intersect_scene_bvh(const bvh_scene* bvh, const ray3f& ray,
+bvh_intersection intersect_bvh(const bvh_scene* bvh, const ray3f& ray,
     bool find_any = false, bool non_rigid_frames = true);
-bvh_intersection intersect_instance_bvh(const bvh_scene* bvh, int instance,
+bvh_intersection intersect_bvh(const bvh_scene* bvh, int instance,
     const ray3f& ray, bool find_any = false, bool non_rigid_frames = true);
 
 // Find a shape element that overlaps a point within a given distance
@@ -245,7 +242,7 @@ bvh_intersection intersect_instance_bvh(const bvh_scene* bvh, int instance,
 // index and the element barycentric coordinates.
 bvh_intersection overlap_shape_bvh(const bvh_shape* bvh, const vec3f& pos,
     float max_distance, bool find_any = false);
-bvh_intersection overlap_scene_bvh(const bvh_scene* bvh, const vec3f& pos,
+bvh_intersection overlap_bvh(const bvh_scene* bvh, const vec3f& pos,
     float max_distance, bool find_any = false, bool non_rigid_frames = true);
 
 }  // namespace yocto
