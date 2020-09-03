@@ -165,34 +165,15 @@ struct bvh_scene {
   ~bvh_scene();
 };
 
-// Create BVH
-int add_shape(bvh_scene* scene);
-int add_instance(bvh_scene* scene);
-
-// set shape properties
-void set_points(bvh_scene* scene, int shape, const vector<int>& points,
-    bool as_view = false);
-void set_lines(bvh_scene* scene, int shape, const vector<vec2i>& lines,
-    bool as_view = false);
-void set_triangles(bvh_scene* scene, int shape, const vector<vec3i>& triangles,
-    bool as_view = false);
-void set_quads(bvh_scene* scene, int shape, const vector<vec4i>& quads,
-    bool as_view = false);
-void set_positions(bvh_scene* scene, int shape, const vector<vec3f>& positions,
-    bool as_view = false);
-void set_radius(bvh_scene* scene, int shape, const vector<float>& radius,
-    bool as_view = false);
-
-// set instance properties
-void set_frame(bvh_scene* scene, int instance, const frame3f& frame);
-void set_shape(bvh_scene* scene, int instance, int shape);
-
-// Create BVH shortcuts
-int add_shape(bvh_scene* bvh, const vector<int>& points,
+// Set shapes
+int  add_shape(bvh_scene* bvh, const vector<int>& points,
+     const vector<vec2i>& lines, const vector<vec3i>& triangles,
+     const vector<vec4i>& quads, const vector<vec3f>& positions,
+     const vector<float>& radius, bool as_view = false);
+void set_shape(bvh_scene* bvh, int shape_id, const vector<int>& points,
     const vector<vec2i>& lines, const vector<vec3i>& triangles,
     const vector<vec4i>& quads, const vector<vec3f>& positions,
     const vector<float>& radius, bool as_view = false);
-int add_instance(bvh_scene* bvh, const frame3f& frame, int shape);
 
 // Set instances
 void set_instances(bvh_scene* bvh, int num_instances,
