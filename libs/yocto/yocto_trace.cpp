@@ -1001,8 +1001,8 @@ void init_bvh(trace_scene* scene, const trace_params& params,
   }
 
   // build
-  init_bvh(scene->bvh, bvh_params{(bvh_type)params.bvh, params.noparallel},
-      progress_cb);
+  init_bvh(scene->bvh,
+      bvh_params{(bvh_build_type)params.bvh, params.noparallel}, progress_cb);
 }
 
 // Refit bvh data

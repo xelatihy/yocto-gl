@@ -49,10 +49,6 @@
 #include "yocto_math.h"
 #include "yocto_sampling.h"
 
-#ifdef YOCTO_EMBREE
-#include <embree3/rtcore.h>
-#endif
-
 // -----------------------------------------------------------------------------
 // USING DIRECTIVES
 // -----------------------------------------------------------------------------

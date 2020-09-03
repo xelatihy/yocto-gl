@@ -157,7 +157,7 @@ bvh_instance* add_instance(
     bvh_scene* bvh, const frame3f& frame, bvh_shape* shape);
 
 // Strategy used to build the bvh
-enum struct bvh_type {
+enum struct bvh_build_type {
   default_,
   highquality,
   middle,
@@ -169,10 +169,17 @@ enum struct bvh_type {
 #endif
 };
 
+const auto bvh_build_names = vector<string>{
+    "default", "highquality", "middle", "balanced",
+#ifdef YOCTO_EMBREE
+    "embree-default", "embree-highquality", "embree-compact"
+#endif
+};
+
 // Bvh parameters
 struct bvh_params {
-  bvh_type bvh        = bvh_type::default_;
-  bool     noparallel = false;  // only serial momentarily
+  bvh_build_type bvh        = bvh_build_type::default_;
+  bool           noparallel = false;  // only serial momentarily
 };
 
 // Progress report callback
