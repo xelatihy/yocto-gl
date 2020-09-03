@@ -509,6 +509,9 @@ static pair<int, int> split_nodes(vector<int>& primitives,
   }
 }
 
+// Maximum number of primitives per BVH node.
+const int bvh_max_prims = 4;
+
 // Build BVH nodes
 static void build_bvh_serial(
     bvh_tree& bvh, const vector<bbox3f>& bboxes, const bvh_params& params) {
