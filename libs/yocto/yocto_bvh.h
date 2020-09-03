@@ -40,6 +40,8 @@
 
 #include <array>
 #include <cstdint>
+#include <functional>
+#include <string>
 #include <vector>
 
 #include "yocto_math.h"
@@ -55,6 +57,8 @@ namespace yocto {
 
 // using directives
 using std::array;
+using std::function;
+using std::string;
 using std::vector;
 
 }  // namespace yocto
@@ -152,9 +156,27 @@ bvh_shape*    add_shape(bvh_scene* bvh, const vector<int>& points,
 bvh_instance* add_instance(
     bvh_scene* bvh, const frame3f& frame, bvh_shape* shape);
 
+// Strategy used to build the bvh
+enum struct bvh_type {
+  default_,
+  highquality,
+  middle,
+  balanced,
+#ifdef YOCTO_EMBREE
+  embree_default,
+  embree_highquality,
+  embree_compact  // only for copy interface
+#endif
+};
+
+// Progress report callback
+using progress_callback =
+    function<void(const string& message, int current, int total)>;
+
 // Build the bvh acceleration structure.
-void init_bvh(bvh_shape* bvh, bool embree = false);
-void init_bvh(bvh_scene* bvh, bool embree = false);
+void init_bvh(bvh_shape* bvh, bvh_type type = bvh_type::default_);
+void init_bvh(bvh_scene* bvh, bvh_type type = bvh_type::default_,
+    const progress_callback& progress_cb = {});
 
 // Refit bvh data
 void update_bvh(bvh_shape* bvh);

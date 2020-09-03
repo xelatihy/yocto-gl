@@ -503,6 +503,23 @@ static pair<int, int> split_middle(vector<int>& primitives,
 #pragma GCC diagnostic pop
 #endif
 
+// Split bvh nodes according to a type
+static pair<int, int> split_nodes(vector<int>& primitives,
+    const vector<bbox3f>& bboxes, const vector<vec3f>& centers, int start,
+    int end, bvh_type type) {
+  switch (type) {
+    case bvh_type::default_:
+      return split_middle(primitives, bboxes, centers, start, end);
+    case bvh_type::highquality:
+      return split_sah(primitives, bboxes, centers, start, end);
+    case bvh_type::middle:
+      return split_middle(primitives, bboxes, centers, start, end);
+    case bvh_type::balanced:
+      return split_balanced(primitives, bboxes, centers, start, end);
+    default: throw std::runtime_error("should not have gotten here");
+  }
+}
+
 // Build BVH nodes
 static void build_bvh(bvh_tree_& bvh, vector<bbox3f>& bboxes) {
   // get values
@@ -584,11 +601,12 @@ static void update_bvh(bvh_tree_& bvh, const vector<bbox3f>& bboxes) {
   }
 }
 
-void init_bvh(bvh_shape* shape, bool embree) {
+void init_bvh(bvh_shape* shape, bvh_type type) {
 #ifdef YOCTO_EMBREE
-  // call Embree if needed
-  if (embree) {
-    return init_shape_embree_bvh(shape);
+  if (params.bvh == bvh_type::embree_default ||
+      params.bvh == bvh_type::embree_highquality ||
+      params.bvh == bvh_type::embree_compact) {
+    return init_embree_bvh(shape, type);
   }
 #endif
 
@@ -627,16 +645,28 @@ void init_bvh(bvh_shape* shape, bool embree) {
   build_bvh(shape->bvh, bboxes);
 }
 
-void init_bvh(bvh_scene* scene, bool embree) {
-  // Make shape bvh
-  for (auto shape : scene->shapes) init_bvh(shape, embree);
+void init_bvh(
+    bvh_scene* scene, bvh_type type, const progress_callback& progress_cb) {
+  // handle progress
+  auto progress = vec2i{0, 1 + (int)scene->shapes.size()};
 
-    // embree
+  // Make shape bvh
+  for (auto shape : scene->shapes) {
+    if (progress_cb) progress_cb("build shape bvh", progress.x++, progress.y);
+    init_bvh(shape, type);
+  }
+
+  // embree
 #ifdef YOCTO_EMBREE
-  if (embree) {
-    return init_scene_embree_bvh(scene);
+  if (params.bvh == bvh_type::embree_default ||
+      params.bvh == bvh_type::embree_highquality ||
+      params.bvh == bvh_type::embree_compact) {
+    return init_embree_bvh(scene, type);
   }
 #endif
+
+  // handle progress
+  if (progress_cb) progress_cb("build scene bvh", progress.x++, progress.y);
 
   // instance bboxes
   auto bboxes = vector<bbox3f>(scene->instances.size());
@@ -650,6 +680,9 @@ void init_bvh(bvh_scene* scene, bool embree) {
 
   // build nodes
   build_bvh(scene->bvh, bboxes);
+
+  // handle progress
+  if (progress_cb) progress_cb("build bvh", progress.x++, progress.y);
 }
 
 void update_bvh(bvh_shape* shape) {
@@ -1699,119 +1732,6 @@ static void build_bvh_parallel(
 }
 
 #endif
-
-static void init_bvh(trace_shape* shape, const trace_params& params) {
-#ifdef YOCTO_EMBREE
-  // call Embree if needed
-  if (params.bvh == trace_bvh_type::embree_default ||
-      params.bvh == trace_bvh_type::embree_highquality ||
-      params.bvh == trace_bvh_type::embree_compact) {
-    return init_embree_bvh(shape, params);
-  }
-#endif
-
-  // build primitives
-  auto primitives = vector<trace_bvh_primitive>{};
-  if (!shape->points.empty()) {
-    for (auto idx = 0; idx < shape->points.size(); idx++) {
-      auto& p             = shape->points[idx];
-      auto& primitive     = primitives.emplace_back();
-      primitive.bbox      = point_bounds(shape->positions[p], shape->radius[p]);
-      primitive.center    = center(primitive.bbox);
-      primitive.primitive = idx;
-    }
-  } else if (!shape->lines.empty()) {
-    for (auto idx = 0; idx < shape->lines.size(); idx++) {
-      auto& l         = shape->lines[idx];
-      auto& primitive = primitives.emplace_back();
-      primitive.bbox = line_bounds(shape->positions[l.x], shape->positions[l.y],
-          shape->radius[l.x], shape->radius[l.y]);
-      primitive.center    = center(primitive.bbox);
-      primitive.primitive = idx;
-    }
-  } else if (!shape->triangles.empty()) {
-    for (auto idx = 0; idx < shape->triangles.size(); idx++) {
-      auto& primitive = primitives.emplace_back();
-      auto& t         = shape->triangles[idx];
-      primitive.bbox  = triangle_bounds(
-          shape->positions[t.x], shape->positions[t.y], shape->positions[t.z]);
-      primitive.center    = center(primitive.bbox);
-      primitive.primitive = idx;
-    }
-  } else if (!shape->quads.empty()) {
-    for (auto idx = 0; idx < shape->quads.size(); idx++) {
-      auto& q         = shape->quads[idx];
-      auto& primitive = primitives.emplace_back();
-      primitive.bbox = quad_bounds(shape->positions[q.x], shape->positions[q.y],
-          shape->positions[q.z], shape->positions[q.w]);
-      primitive.center    = center(primitive.bbox);
-      primitive.primitive = idx;
-    }
-  }
-
-  // build nodes
-  delete shape->bvh;
-  shape->bvh = new trace_bvh{};
-  build_bvh_serial(shape->bvh->nodes, primitives, params.bvh);
-
-  // set bvh primitives
-  shape->bvh->primitives.reserve(primitives.size());
-  for (auto& primitive : primitives) {
-    shape->bvh->primitives.push_back(primitive.primitive);
-  }
-}
-
-void init_bvh(trace_scene* scene, const trace_params& params,
-    const progress_callback& progress_cb) {
-  // handle progress
-  auto progress = vec2i{0, 1 + (int)scene->shapes.size()};
-
-  // shapes
-  for (auto shape : scene->shapes) {
-    if (progress_cb) progress_cb("build shape bvh", progress.x++, progress.y);
-    init_bvh(shape, params);
-  }
-
-  // embree
-#ifdef YOCTO_EMBREE
-  if (params.bvh == trace_bvh_type::embree_default ||
-      params.bvh == trace_bvh_type::embree_highquality ||
-      params.bvh == trace_bvh_type::embree_compact) {
-    return init_embree_bvh(scene, params);
-  }
-#endif
-
-  // handle progress
-  if (progress_cb) progress_cb("build scene bvh", progress.x++, progress.y);
-
-  // instance bboxes
-  auto primitives            = vector<trace_bvh_primitive>{};
-  auto object_id             = 0;
-  auto empty_instance_frames = vector<frame3f>{identity3x4f};
-  for (auto instance : scene->instances) {
-    auto& primitive = primitives.emplace_back();
-    primitive.bbox  = instance->shape->bvh->nodes.empty()
-                         ? invalidb3f
-                         : transform_bbox(instance->frame,
-                               instance->shape->bvh->nodes[0].bbox);
-    primitive.center    = center(primitive.bbox);
-    primitive.primitive = object_id++;
-  }
-
-  // build nodes
-  delete scene->bvh;
-  scene->bvh = new trace_bvh{};
-  build_bvh_serial(scene->bvh->nodes, primitives, params.bvh);
-
-  // set bvh primitives
-  scene->bvh->primitives.reserve(primitives.size());
-  for (auto& primitive : primitives) {
-    scene->bvh->primitives.push_back(primitive.primitive);
-  }
-
-  // handle progress
-  if (progress_cb) progress_cb("build bvh", progress.x++, progress.y);
-}
 
 // Intersect ray with a bvh->
 static bool intersect_instance_bvh(const trace_instance* instance,
