@@ -203,9 +203,6 @@ struct trace_scene {
   vector<trace_texture*>     textures     = {};
   vector<trace_material*>    materials    = {};
 
-  // computed properties
-  bvh_scene* bvh = nullptr;
-
   // cleanup
   ~trace_scene();
 };
@@ -514,22 +511,25 @@ struct trace_lights {
 
 // Initialize lights.
 void init_lights(trace_lights* lights, const trace_scene* scene,
-    const progress_callback& progress_cb = {});
+    const trace_params& params, const progress_callback& progress_cb = {});
+
+// Define BVH
+using trace_bvh = bvh_scene;
 
 // Build the bvh acceleration structure.
-void init_bvh(trace_scene* scene, const trace_params& params,
-    const progress_callback& progress_cb = {});
+void init_bvh(trace_bvh* bvh, const trace_scene* scene,
+    const trace_params& params, const progress_callback& progress_cb = {});
 
 // Refit bvh data
-void update_bvh(trace_scene*       scene,
+void update_bvh(trace_bvh* bvh, const trace_scene* scene,
     const vector<trace_instance*>& updated_instances,
     const vector<trace_shape*>& updated_shapes, const trace_params& params);
 
 // Progressively computes an image.
 image<vec4f> trace_image(const trace_scene* scene, const trace_camera* camera,
-    const trace_lights* lights, const trace_params& params,
-    const progress_callback& progress_cb = {},
-    const image_callback&    image_cb    = {});
+    const trace_bvh* bvh, const trace_lights* lights,
+    const trace_params& params, const progress_callback& progress_cb = {},
+    const image_callback& image_cb = {});
 
 // Check is a sampler requires lights
 bool is_sampler_lit(const trace_params& params);
@@ -551,8 +551,9 @@ using async_callback = function<void(
 // [experimental] Asynchronous interface
 struct trace_state;
 void trace_start(trace_state* state, const trace_scene* scene,
-    const trace_camera* camera, const trace_lights* lights,
-    const trace_params& params, const progress_callback& progress_cb = {},
+    const trace_camera* camera, const trace_bvh* bvh,
+    const trace_lights* lights, const trace_params& params,
+    const progress_callback& progress_cb = {},
     const image_callback& image_cb = {}, const async_callback& async_cb = {});
 void trace_stop(trace_state* state);
 
@@ -571,10 +572,12 @@ using trace_intersection = bvh_scene_intersection;
 // Intersect ray with a bvh returning either the first or any intersection
 // depending on `find_any`. Returns the ray distance , the instance id,
 // the shape element index and the element barycentric coordinates.
-trace_intersection intersect_scene_bvh(const trace_scene* scene,
-    const ray3f& ray, bool find_any = false, bool non_rigid_frames = true);
-trace_intersection intersect_instance_bvh(const trace_instance* instance,
-    const ray3f& ray, bool find_any = false, bool non_rigid_frames = true);
+trace_intersection intersect_scene_bvh(const trace_bvh* bvh,
+    const trace_scene* scene, const ray3f& ray, bool find_any = false,
+    bool non_rigid_frames = true);
+trace_intersection intersect_instance_bvh(const trace_bvh* bvh,
+    const trace_instance* instance, const ray3f& ray, bool find_any = false,
+    bool non_rigid_frames = true);
 
 }  // namespace yocto
 

@@ -69,7 +69,6 @@ trace_scene::~trace_scene() {
   for (auto instance : instances) delete instance;
   for (auto texture : textures) delete texture;
   for (auto environment : environments) delete environment;
-  delete bvh;
 }
 
 trace_lights::~trace_lights() {}
@@ -980,33 +979,24 @@ static ray3f sample_camera(const trace_camera* camera, const vec2i& ij,
 namespace yocto {
 
 // Build the bvh acceleration structure.
-void init_bvh(trace_scene* scene, const trace_params& params,
-    const progress_callback& progress_cb) {
-  // cleanup
-  delete scene->bvh;
-  scene->bvh = new bvh_scene{};
-
+void init_bvh(trace_bvh* bvh, const trace_scene* scene,
+    const trace_params& params, const progress_callback& progress_cb) {
   // initialize bvh
   for (auto shape : scene->shapes) {
-    shape->bvh            = add_shape(scene->bvh);
-    shape->bvh->points    = shape->points;
-    shape->bvh->lines     = shape->lines;
-    shape->bvh->triangles = shape->triangles;
-    shape->bvh->quads     = shape->quads;
-    shape->bvh->positions = shape->positions;
-    shape->bvh->radius    = shape->radius;
+    shape->bvh = add_shape(bvh, shape->points, shape->lines, shape->triangles,
+        shape->quads, shape->positions, shape->radius);
   }
   for (auto instance : scene->instances) {
-    add_instance(scene->bvh, instance->frame, instance->shape->bvh);
+    add_instance(bvh, instance->frame, instance->shape->bvh);
   }
 
   // build
-  init_bvh(scene->bvh,
-      bvh_params{(bvh_build_type)params.bvh, params.noparallel}, progress_cb);
+  init_bvh(bvh, bvh_params{(bvh_build_type)params.bvh, params.noparallel},
+      progress_cb);
 }
 
 // Refit bvh data
-void update_bvh(trace_scene*       scene,
+void update_bvh(trace_bvh* bvh, const trace_scene* scene,
     const vector<trace_instance*>& updated_instances,
     const vector<trace_shape*>& updated_shapes, const trace_params& params) {
   auto updated_instances_ids = vector<int>{};
@@ -1022,16 +1012,18 @@ void update_bvh(trace_scene*       scene,
                   scene->instances.begin(), scene->instances.end(), instance) -
               scene->instances.begin()));
   }
-  update_bvh(scene->bvh, updated_instances_ids, updated_shapes_ids);
+  update_bvh(bvh, updated_instances_ids, updated_shapes_ids);
 }
 
 // Intersect ray with a bvh returning either the first or any intersection.
-trace_intersection intersect_scene_bvh(const trace_scene* scene,
-    const ray3f& ray, bool find_any, bool non_rigid_frames) {
-  return intersect_scene_bvh(scene->bvh, ray, find_any, non_rigid_frames);
+trace_intersection intersect_scene_bvh(const trace_bvh* bvh,
+    const trace_scene* scene, const ray3f& ray, bool find_any,
+    bool non_rigid_frames) {
+  return intersect_scene_bvh(bvh, ray, find_any, non_rigid_frames);
 }
-trace_intersection intersect_instance_bvh(const trace_instance* instance,
-    const ray3f& ray, bool find_any, bool non_rigid_frames) {
+trace_intersection intersect_instance_bvh(const trace_bvh* bvh,
+    const trace_instance* instance, const ray3f& ray, bool find_any,
+    bool non_rigid_frames) {
   auto inv_ray = transform_ray(inverse(instance->frame, non_rigid_frames), ray);
   auto sintersection = intersect_shape_bvh(
       instance->shape->bvh, inv_ray, find_any);
@@ -1355,7 +1347,7 @@ static vec3f sample_lights(const trace_scene* scene, const trace_lights* lights,
 }
 
 // Sample lights pdf
-static float sample_lights_pdf(const trace_scene* scene,
+static float sample_lights_pdf(const trace_scene* scene, const trace_bvh* bvh,
     const trace_lights* lights, const vec3f& position, const vec3f& direction) {
   auto pdf = 0.0f;
   for (auto light : lights->lights) {
@@ -1365,7 +1357,7 @@ static float sample_lights_pdf(const trace_scene* scene,
       auto next_position = position;
       for (auto bounce = 0; bounce < 100; bounce++) {
         auto intersection = intersect_instance_bvh(
-            light->instance, {next_position, direction});
+            bvh, light->instance, {next_position, direction});
         if (!intersection.hit) break;
         // accumulate pdf
         auto lposition = eval_position(
@@ -1407,8 +1399,9 @@ static float sample_lights_pdf(const trace_scene* scene,
 }
 
 // Recursive path tracing.
-static vec4f trace_path(const trace_scene* scene, const trace_lights* lights,
-    const ray3f& ray_, rng_state& rng, const trace_params& params) {
+static vec4f trace_path(const trace_scene* scene, const trace_bvh* bvh,
+    const trace_lights* lights, const ray3f& ray_, rng_state& rng,
+    const trace_params& params) {
   // initialize
   auto radiance      = zero3f;
   auto weight        = vec3f{1, 1, 1};
@@ -1420,7 +1413,7 @@ static vec4f trace_path(const trace_scene* scene, const trace_lights* lights,
   // trace  path
   for (auto bounce = 0; bounce < params.bounces; bounce++) {
     // intersect next point
-    auto intersection = intersect_scene_bvh(scene, ray);
+    auto intersection = intersect_scene_bvh(bvh, scene, ray);
     if (!intersection.hit) {
       if (bounce > 0 || !params.envhidden)
         radiance += weight * eval_environment(scene, ray.d);
@@ -1480,10 +1473,10 @@ static vec4f trace_path(const trace_scene* scene, const trace_lights* lights,
           incoming = sample_lights(
               scene, lights, position, rand1f(rng), rand1f(rng), rand2f(rng));
         }
-        weight *=
-            eval_bsdfcos(bsdf, normal, outgoing, incoming) /
-            (0.5f * sample_bsdfcos_pdf(bsdf, normal, outgoing, incoming) +
-                0.5f * sample_lights_pdf(scene, lights, position, incoming));
+        weight *= eval_bsdfcos(bsdf, normal, outgoing, incoming) /
+                  (0.5f * sample_bsdfcos_pdf(bsdf, normal, outgoing, incoming) +
+                      0.5f * sample_lights_pdf(
+                                 scene, bvh, lights, position, incoming));
       } else {
         incoming = sample_delta(bsdf, normal, outgoing, rand1f(rng));
         weight *= eval_delta(bsdf, normal, outgoing, incoming) /
@@ -1526,7 +1519,7 @@ static vec4f trace_path(const trace_scene* scene, const trace_lights* lights,
       weight *=
           eval_scattering(vsdf, outgoing, incoming) /
           (0.5f * sample_scattering_pdf(vsdf, outgoing, incoming) +
-              0.5f * sample_lights_pdf(scene, lights, position, incoming));
+              0.5f * sample_lights_pdf(scene, bvh, lights, position, incoming));
 
       // setup next iteration
       ray = {position, incoming};
@@ -1547,8 +1540,9 @@ static vec4f trace_path(const trace_scene* scene, const trace_lights* lights,
 }
 
 // Recursive path tracing.
-static vec4f trace_naive(const trace_scene* scene, const trace_lights* lights,
-    const ray3f& ray_, rng_state& rng, const trace_params& params) {
+static vec4f trace_naive(const trace_scene* scene, const trace_bvh* bvh,
+    const trace_lights* lights, const ray3f& ray_, rng_state& rng,
+    const trace_params& params) {
   // initialize
   auto radiance = zero3f;
   auto weight   = vec3f{1, 1, 1};
@@ -1558,7 +1552,7 @@ static vec4f trace_naive(const trace_scene* scene, const trace_lights* lights,
   // trace  path
   for (auto bounce = 0; bounce < params.bounces; bounce++) {
     // intersect next point
-    auto intersection = intersect_scene_bvh(scene, ray);
+    auto intersection = intersect_scene_bvh(bvh, scene, ray);
     if (!intersection.hit) {
       if (bounce > 0 || !params.envhidden)
         radiance += weight * eval_environment(scene, ray.d);
@@ -1618,7 +1612,7 @@ static vec4f trace_naive(const trace_scene* scene, const trace_lights* lights,
 }
 
 // Eyelight for quick previewing.
-static vec4f trace_eyelight(const trace_scene* scene,
+static vec4f trace_eyelight(const trace_scene* scene, const trace_bvh* bvh,
     const trace_lights* lights, const ray3f& ray_, rng_state& rng,
     const trace_params& params) {
   // initialize
@@ -1630,7 +1624,7 @@ static vec4f trace_eyelight(const trace_scene* scene,
   // trace  path
   for (auto bounce = 0; bounce < max(params.bounces, 4); bounce++) {
     // intersect next point
-    auto intersection = intersect_scene_bvh(scene, ray);
+    auto intersection = intersect_scene_bvh(bvh, scene, ray);
     if (!intersection.hit) {
       if (bounce > 0 || !params.envhidden)
         radiance += weight * eval_environment(scene, ray.d);
@@ -1678,11 +1672,11 @@ static vec4f trace_eyelight(const trace_scene* scene,
 }
 
 // False color rendering
-static vec4f trace_falsecolor(const trace_scene* scene,
+static vec4f trace_falsecolor(const trace_scene* scene, const trace_bvh* bvh,
     const trace_lights* lights, const ray3f& ray, rng_state& rng,
     const trace_params& params) {
   // intersect next point
-  auto intersection = intersect_scene_bvh(scene, ray);
+  auto intersection = intersect_scene_bvh(bvh, scene, ray);
   if (!intersection.hit) {
     return {0, 0, 0, 0};
   }
@@ -1754,9 +1748,10 @@ static vec4f trace_falsecolor(const trace_scene* scene,
   }
 }
 
-static vec4f trace_albedo(const trace_scene* scene, const trace_lights* lights,
-    const ray3f& ray, rng_state& rng, const trace_params& params, int bounce) {
-  auto intersection = intersect_scene_bvh(scene, ray);
+static vec4f trace_albedo(const trace_scene* scene, const trace_bvh* bvh,
+    const trace_lights* lights, const ray3f& ray, rng_state& rng,
+    const trace_params& params, int bounce) {
+  auto intersection = intersect_scene_bvh(bvh, scene, ray);
   if (!intersection.hit) {
     auto radiance = eval_environment(scene, ray.d);
     return {radiance.x, radiance.y, radiance.z, 1};
@@ -1785,7 +1780,7 @@ static vec4f trace_albedo(const trace_scene* scene, const trace_lights* lights,
 
   // handle opacity
   if (opacity < 1.0f) {
-    auto blend_albedo = trace_albedo(scene, lights,
+    auto blend_albedo = trace_albedo(scene, bvh, lights,
         ray3f{position + ray.d * 1e-2f, ray.d}, rng, params, bounce);
     return lerp(blend_albedo, vec4f{albedo.x, albedo.y, albedo.z, 1}, opacity);
   }
@@ -1793,20 +1788,20 @@ static vec4f trace_albedo(const trace_scene* scene, const trace_lights* lights,
   if (bsdf.roughness < 0.05 && bounce < 5) {
     if (bsdf.transmission != zero3f && material->thin) {
       auto incoming     = -outgoing;
-      auto trans_albedo = trace_albedo(
-          scene, lights, ray3f{position, incoming}, rng, params, bounce + 1);
+      auto trans_albedo = trace_albedo(scene, bvh, lights,
+          ray3f{position, incoming}, rng, params, bounce + 1);
 
       incoming         = reflect(outgoing, normal);
-      auto spec_albedo = trace_albedo(
-          scene, lights, ray3f{position, incoming}, rng, params, bounce + 1);
+      auto spec_albedo = trace_albedo(scene, bvh, lights,
+          ray3f{position, incoming}, rng, params, bounce + 1);
 
       auto fresnel = fresnel_dielectric(material->ior, outgoing, normal);
       auto dielectric_albedo = lerp(trans_albedo, spec_albedo, fresnel);
       return dielectric_albedo * vec4f{albedo.x, albedo.y, albedo.z, 1};
     } else if (bsdf.metal != zero3f) {
       auto incoming    = reflect(outgoing, normal);
-      auto refl_albedo = trace_albedo(
-          scene, lights, ray3f{position, incoming}, rng, params, bounce + 1);
+      auto refl_albedo = trace_albedo(scene, bvh, lights,
+          ray3f{position, incoming}, rng, params, bounce + 1);
       return refl_albedo * vec4f{albedo.x, albedo.y, albedo.z, 1};
     }
   }
@@ -1814,15 +1809,17 @@ static vec4f trace_albedo(const trace_scene* scene, const trace_lights* lights,
   return {albedo.x, albedo.y, albedo.z, 1};
 }
 
-static vec4f trace_albedo(const trace_scene* scene, const trace_lights* lights,
-    const ray3f& ray, rng_state& rng, const trace_params& params) {
-  auto albedo = trace_albedo(scene, lights, ray, rng, params, 0);
+static vec4f trace_albedo(const trace_scene* scene, const trace_bvh* bvh,
+    const trace_lights* lights, const ray3f& ray, rng_state& rng,
+    const trace_params& params) {
+  auto albedo = trace_albedo(scene, bvh, lights, ray, rng, params, 0);
   return clamp(albedo, 0.0, 1.0);
 }
 
-static vec4f trace_normal(const trace_scene* scene, const trace_lights* lights,
-    const ray3f& ray, rng_state& rng, const trace_params& params, int bounce) {
-  auto intersection = intersect_scene_bvh(scene, ray);
+static vec4f trace_normal(const trace_scene* scene, const trace_bvh* bvh,
+    const trace_lights* lights, const ray3f& ray, rng_state& rng,
+    const trace_params& params, int bounce) {
+  auto intersection = intersect_scene_bvh(bvh, scene, ray);
   if (!intersection.hit) {
     return {0, 0, 0, 1};
   }
@@ -1840,7 +1837,7 @@ static vec4f trace_normal(const trace_scene* scene, const trace_lights* lights,
 
   // handle opacity
   if (opacity < 1.0f) {
-    auto normal = trace_normal(scene, lights,
+    auto normal = trace_normal(scene, bvh, lights,
         ray3f{position + ray.d * 1e-2f, ray.d}, rng, params, bounce);
     return lerp(normal, normal, opacity);
   }
@@ -1848,32 +1845,33 @@ static vec4f trace_normal(const trace_scene* scene, const trace_lights* lights,
   if (bsdf.roughness < 0.05f && bounce < 5) {
     if (bsdf.transmission != zero3f && material->thin) {
       auto incoming   = -outgoing;
-      auto trans_norm = trace_normal(
-          scene, lights, ray3f{position, incoming}, rng, params, bounce + 1);
+      auto trans_norm = trace_normal(scene, bvh, lights,
+          ray3f{position, incoming}, rng, params, bounce + 1);
 
       incoming       = reflect(outgoing, normal);
-      auto spec_norm = trace_normal(
-          scene, lights, ray3f{position, incoming}, rng, params, bounce + 1);
+      auto spec_norm = trace_normal(scene, bvh, lights,
+          ray3f{position, incoming}, rng, params, bounce + 1);
 
       auto fresnel = fresnel_dielectric(material->ior, outgoing, normal);
       return lerp(trans_norm, spec_norm, fresnel);
     } else if (bsdf.metal != zero3f) {
       auto incoming = reflect(outgoing, normal);
-      return trace_normal(
-          scene, lights, ray3f{position, incoming}, rng, params, bounce + 1);
+      return trace_normal(scene, bvh, lights, ray3f{position, incoming}, rng,
+          params, bounce + 1);
     }
   }
 
   return {normal.x, normal.y, normal.z, 1};
 }
 
-static vec4f trace_normal(const trace_scene* scene, const trace_lights* lights,
-    const ray3f& ray, rng_state& rng, const trace_params& params) {
-  return trace_normal(scene, lights, ray, rng, params, 0);
+static vec4f trace_normal(const trace_scene* scene, const trace_bvh* bvh,
+    const trace_lights* lights, const ray3f& ray, rng_state& rng,
+    const trace_params& params) {
+  return trace_normal(scene, bvh, lights, ray, rng, params, 0);
 }
 
 // Trace a single ray from the camera using the given algorithm.
-using sampler_func = vec4f (*)(const trace_scene* scene,
+using sampler_func = vec4f (*)(const trace_scene* scene, const trace_bvh* bvh,
     const trace_lights* lights, const ray3f& ray, rng_state& rng,
     const trace_params& params);
 static sampler_func get_trace_sampler_func(const trace_params& params) {
@@ -1909,12 +1907,12 @@ bool is_sampler_lit(const trace_params& params) {
 
 // Trace a block of samples
 void trace_sample(trace_state* state, const trace_scene* scene,
-    const trace_camera* camera, const trace_lights* lights, const vec2i& ij,
-    const trace_params& params) {
+    const trace_camera* camera, const trace_bvh* bvh,
+    const trace_lights* lights, const vec2i& ij, const trace_params& params) {
   auto sampler = get_trace_sampler_func(params);
   auto ray     = sample_camera(camera, ij, state->render.imsize(),
       rand2f(state->rngs[ij]), rand2f(state->rngs[ij]), params.tentfilter);
-  auto sample  = sampler(scene, lights, ray, state->rngs[ij], params);
+  auto sample  = sampler(scene, bvh, lights, ray, state->rngs[ij], params);
   if (!isfinite(xyz(sample))) sample = {0, 0, 0, sample.w};
   if (max(sample) > params.clamp)
     sample = sample * (params.clamp / max(sample));
@@ -1952,7 +1950,7 @@ static trace_light* add_light(trace_lights* lights) {
 
 // Init trace lights
 void init_lights(trace_lights* lights, const trace_scene* scene,
-    const progress_callback& progress_cb) {
+    const trace_params& params, const progress_callback& progress_cb) {
   // handle progress
   auto progress = vec2i{0, 1};
   if (progress_cb) progress_cb("build light", progress.x++, progress.y);
@@ -2018,17 +2016,22 @@ void init_lights(trace_lights* lights, const trace_scene* scene,
 image<vec4f> trace_image(const trace_scene* scene, const trace_camera* camera,
     const trace_params& params, const progress_callback& progress_cb,
     const image_callback& image_cb) {
+  auto bvh_guard = std::make_unique<trace_bvh>();
+  auto bvh       = bvh_guard.get();
+  init_bvh(bvh, scene, params, progress_cb);
+
   auto lights_guard = std::make_unique<trace_lights>();
   auto lights       = lights_guard.get();
-  init_lights(lights, scene, progress_cb);
+  init_lights(lights, scene, params, progress_cb);
 
-  return trace_image(scene, camera, lights, params, progress_cb, image_cb);
+  return trace_image(scene, camera, bvh, lights, params, progress_cb, image_cb);
 }
 
 // Progressively compute an image by calling trace_samples multiple times.
 image<vec4f> trace_image(const trace_scene* scene, const trace_camera* camera,
-    const trace_lights* lights, const trace_params& params,
-    const progress_callback& progress_cb, const image_callback& image_cb) {
+    const trace_bvh* bvh, const trace_lights* lights,
+    const trace_params& params, const progress_callback& progress_cb,
+    const image_callback& image_cb) {
   auto state_guard = std::make_unique<trace_state>();
   auto state       = state_guard.get();
   init_state(state, scene, camera, params);
@@ -2038,13 +2041,13 @@ image<vec4f> trace_image(const trace_scene* scene, const trace_camera* camera,
     if (params.noparallel) {
       for (auto j = 0; j < state->render.height(); j++) {
         for (auto i = 0; i < state->render.width(); i++) {
-          trace_sample(state, scene, camera, lights, {i, j}, params);
+          trace_sample(state, scene, camera, bvh, lights, {i, j}, params);
         }
       }
     } else {
       parallel_for(state->render.width(), state->render.height(),
-          [state, scene, camera, lights, &params](int i, int j) {
-            trace_sample(state, scene, camera, lights, {i, j}, params);
+          [state, scene, camera, bvh, lights, &params](int i, int j) {
+            trace_sample(state, scene, camera, bvh, lights, {i, j}, params);
           });
     }
     if (image_cb) image_cb(state->render, sample + 1, params.samples);
@@ -2056,9 +2059,10 @@ image<vec4f> trace_image(const trace_scene* scene, const trace_camera* camera,
 
 // [experimental] Asynchronous interface
 void trace_start(trace_state* state, const trace_scene* scene,
-    const trace_camera* camera, const trace_lights* lights,
-    const trace_params& params, const progress_callback& progress_cb,
-    const image_callback& image_cb, const async_callback& async_cb) {
+    const trace_camera* camera, const trace_bvh* bvh,
+    const trace_lights* lights, const trace_params& params,
+    const progress_callback& progress_cb, const image_callback& image_cb,
+    const async_callback& async_cb) {
   init_state(state, scene, camera, params);
   state->worker = {};
   state->stop   = false;
@@ -2068,7 +2072,7 @@ void trace_start(trace_state* state, const trace_scene* scene,
   auto pprms = params;
   pprms.resolution /= params.pratio;
   pprms.samples = 1;
-  auto preview  = trace_image(scene, camera, lights, pprms);
+  auto preview  = trace_image(scene, camera, bvh, lights, pprms);
   for (auto j = 0; j < state->render.height(); j++) {
     for (auto i = 0; i < state->render.width(); i++) {
       auto pi               = clamp(i / params.pratio, 0, preview.width() - 1),
@@ -2086,7 +2090,7 @@ void trace_start(trace_state* state, const trace_scene* scene,
       parallel_for(
           state->render.width(), state->render.height(), [&](int i, int j) {
             if (state->stop) return;
-            trace_sample(state, scene, camera, lights, {i, j}, params);
+            trace_sample(state, scene, camera, bvh, lights, {i, j}, params);
             if (async_cb)
               async_cb(state->render, sample, params.samples, {i, j});
           });

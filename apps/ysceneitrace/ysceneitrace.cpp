@@ -58,6 +58,7 @@ struct app_state {
 
   // rendering objects
   trace_lights* lights = new trace_lights{};
+  trace_bvh*    bvh    = new trace_bvh{};
 
   // options
   trace_params params = {};
@@ -96,8 +97,9 @@ struct app_state {
   ~app_state() {
     if (render_state) trace_stop(render_state);
     delete render_state;
-    delete scene;
+    delete bvh;
     delete lights;
+    delete scene;
     delete ioscene;
     delete glimage;
   }
@@ -247,7 +249,8 @@ void reset_display(app_state* app) {
   app->status         = "render";
   app->render_counter = 0;
   trace_start(
-      app->render_state, app->scene, app->camera, app->lights, app->params,
+      app->render_state, app->scene, app->camera, app->bvh, app->lights,
+      app->params,
       [app](const string& message, int sample, int nsamples) {
         app->current = sample;
         app->total   = nsamples;
@@ -289,8 +292,8 @@ void load_scene_async(app_states* apps, const string& filename,
     init_scene(
         app->scene, app->ioscene, app->camera, app->iocamera, progress_cb);
     tesselate_shapes(app->scene, progress_cb);
-    init_bvh(app->scene, app->params);
-    init_lights(app->lights, app->scene);
+    init_bvh(app->bvh, app->scene, app->params);
+    init_lights(app->lights, app->scene, app->params);
     if (app->lights->lights.empty() && is_sampler_lit(app->params)) {
       app->params.sampler = trace_sampler_type::eyelight;
     }
@@ -336,7 +339,7 @@ bool draw_widgets(
   draw_label(win, "ldr",
       std::to_string(iotexture->ldr.width()) + " x " +
           std::to_string(iotexture->ldr.height()));
-  // TODO: load texture
+  // TODO(fabio): load texture
   return edited;
 }
 
@@ -590,7 +593,7 @@ void draw_widgets(gui_window* win, app_states* apps, const gui_input& input) {
       set_frame(environment, ioenvironment->frame);
       set_emission(environment, ioenvironment->emission,
           get_texture(ioenvironment->emission_tex));
-      init_lights(app->lights, app->scene);
+      init_lights(app->lights, app->scene, app->params);
       reset_display(app);
     }
     end_header(win);
@@ -609,7 +612,7 @@ void draw_widgets(gui_window* win, app_states* apps, const gui_input& input) {
       set_material(
           instance, get_element(ioinstance->material, app->ioscene->materials,
                         app->scene->materials));
-      update_bvh(app->scene, {instance}, {}, app->params);
+      update_bvh(app->bvh, app->scene, {instance}, {}, app->params);
       reset_display(app);
     }
     end_header(win);
@@ -632,7 +635,7 @@ void draw_widgets(gui_window* win, app_states* apps, const gui_input& input) {
       set_colors(shape, ioshape->colors);
       set_radius(shape, ioshape->radius);
       set_tangents(shape, ioshape->tangents);
-      update_bvh(app->scene, {}, {shape}, app->params);
+      update_bvh(app->bvh, app->scene, {}, {shape}, app->params);
       reset_display(app);
     }
     end_header(win);
@@ -666,7 +669,7 @@ void draw_widgets(gui_window* win, app_states* apps, const gui_input& input) {
       set_normalmap(material, get_texture(iomaterial->normal_tex));
       set_scattering(material, iomaterial->scattering, iomaterial->scanisotropy,
           get_texture(iomaterial->scattering_tex));
-      init_lights(app->lights, app->scene);
+      init_lights(app->lights, app->scene, app->params);
       reset_display(app);
     }
     end_header(win);
@@ -818,7 +821,8 @@ int main(int argc, const char* argv[]) {
             app->camera->lens, app->camera->film,
             vec2f{ij.x + 0.5f, ij.y + 0.5f} /
                 vec2f{(float)app->render.width(), (float)app->render.height()});
-        if (auto isec = intersect_scene_bvh(app->scene, ray); isec.hit) {
+        if (auto isec = intersect_scene_bvh(app->bvh, app->scene, ray);
+            isec.hit) {
           app->selected_instance = app->ioscene->instances[isec.instance];
         }
       }
