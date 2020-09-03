@@ -574,6 +574,8 @@ static void build_bvh_serial(
   nodes.shrink_to_fit();
 }
 
+#if 0
+
 // Build BVH nodes
 static void build_bvh_parallel(
     bvh_tree_& bvh, const vector<bbox3f>& bboxes, bvh_type type) {
@@ -671,6 +673,8 @@ static void build_bvh_parallel(
   // cleanup
   nodes.shrink_to_fit();
 }
+
+#endif
 
 // Update bvh
 static void update_bvh(bvh_tree_& bvh, const vector<bbox3f>& bboxes) {
