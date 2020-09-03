@@ -697,7 +697,7 @@ static void update_bvh(bvh_tree& bvh, const vector<bbox3f>& bboxes) {
   }
 }
 
-static void init_bvh(bvh_shape* shape, const bvh_params& params) {
+static void build_bvh(bvh_shape* shape, const bvh_params& params) {
 #ifdef YOCTO_EMBREE
   if (params.bvh == bvh_build_type::embree_default ||
       params.bvh == bvh_build_type::embree_highquality ||
@@ -741,17 +741,7 @@ static void init_bvh(bvh_shape* shape, const bvh_params& params) {
   build_bvh_serial(shape->bvh, bboxes, params);
 }
 
-void init_bvh(bvh_scene* scene, const bvh_params& params,
-    const progress_callback& progress_cb) {
-  // handle progress
-  auto progress = vec2i{0, 1 + (int)scene->shapes.size()};
-
-  // Make shape bvh
-  for (auto shape : scene->shapes) {
-    if (progress_cb) progress_cb("build shape bvh", progress.x++, progress.y);
-    init_bvh(shape, params);
-  }
-
+void build_bvh(bvh_scene* scene, const bvh_params& params) {
   // embree
 #ifdef YOCTO_EMBREE
   if (params.bvh == bvh_build_type::embree_default ||
@@ -760,9 +750,6 @@ void init_bvh(bvh_scene* scene, const bvh_params& params,
     return init_embree_bvh(scene, params);
   }
 #endif
-
-  // handle progress
-  if (progress_cb) progress_cb("build scene bvh", progress.x++, progress.y);
 
   // instance bboxes
   auto bboxes = vector<bbox3f>(scene->num_instances);
@@ -776,6 +763,22 @@ void init_bvh(bvh_scene* scene, const bvh_params& params,
 
   // build nodes
   build_bvh_serial(scene->bvh, bboxes, params);
+}
+
+void init_bvh(bvh_scene* scene, const bvh_params& params,
+    const progress_callback& progress_cb) {
+  // handle progress
+  auto progress = vec2i{0, 1 + (int)scene->shapes.size()};
+
+  // build shape bvh
+  for (auto shape : scene->shapes) {
+    if (progress_cb) progress_cb("build shape bvh", progress.x++, progress.y);
+    build_bvh(shape, params);
+  }
+
+  // build scene bvh
+  if (progress_cb) progress_cb("build scene bvh", progress.x++, progress.y);
+  build_bvh(scene, params);
 
   // handle progress
   if (progress_cb) progress_cb("build bvh", progress.x++, progress.y);
@@ -823,20 +826,7 @@ static void update_bvh(bvh_shape* shape) {
   update_bvh(shape->bvh, bboxes);
 }
 
-void update_bvh(bvh_scene* scene, const vector<int>& updated_instances,
-    const vector<int>& updated_shapes, const progress_callback& progress_cb) {
-  // handle progress
-  auto progress = vec2i{0, 1 + (int)updated_shapes.size()};
-
-  // update shapes
-  for (auto shape : updated_shapes) {
-    if (progress_cb) progress_cb("update shape bvh", progress.x++, progress.y);
-    update_bvh(scene->shapes[shape]);
-  }
-
-  // handle progress
-  if (progress_cb) progress_cb("update scene bvh", progress.x++, progress.y);
-
+void update_bvh(bvh_scene* scene, const vector<int>& updated_instances) {
 #ifdef YOCTO_EMBREE
   if (scene->embree_bvh) {
     return update_embree_bvh(scene, updated_instances);
@@ -853,6 +843,22 @@ void update_bvh(bvh_scene* scene, const vector<int>& updated_instances,
 
   // update nodes
   update_bvh(scene->bvh, bboxes);
+}
+
+void update_bvh(bvh_scene* scene, const vector<int>& updated_instances,
+    const vector<int>& updated_shapes, const progress_callback& progress_cb) {
+  // handle progress
+  auto progress = vec2i{0, 1 + (int)updated_shapes.size()};
+
+  // update shapes
+  for (auto shape : updated_shapes) {
+    if (progress_cb) progress_cb("update shape bvh", progress.x++, progress.y);
+    update_bvh(scene->shapes[shape]);
+  }
+
+  // handle instances
+  if (progress_cb) progress_cb("update scene bvh", progress.x++, progress.y);
+  update_bvh(scene, updated_instances);
 
   // handle progress
   if (progress_cb) progress_cb("update bvh", progress.x++, progress.y);
