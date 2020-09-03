@@ -508,7 +508,8 @@ static pair<int, int> split_nodes(vector<int>& primitives,
 }
 
 // Build BVH nodes
-static void build_bvh(bvh_tree_& bvh, vector<bbox3f>& bboxes, bvh_type type) {
+static void build_bvh(
+    bvh_tree_& bvh, vector<bbox3f>& bboxes, const bvh_params& params) {
   // get values
   auto& nodes      = bvh.nodes;
   auto& primitives = bvh.primitives;
@@ -549,7 +550,7 @@ static void build_bvh(bvh_tree_& bvh, vector<bbox3f>& bboxes, bvh_type type) {
     if (end - start > bvh_max_prims) {
       // get split
       auto [mid, axis] = split_nodes(
-          primitives, bboxes, centers, start, end, type);
+          primitives, bboxes, centers, start, end, params.bvh);
 
       // make an internal node
       node.internal = true;
@@ -589,7 +590,7 @@ static void update_bvh(bvh_tree_& bvh, const vector<bbox3f>& bboxes) {
   }
 }
 
-void init_bvh(bvh_shape* shape, bvh_type type) {
+void init_bvh(bvh_shape* shape, const bvh_params& params) {
 #ifdef YOCTO_EMBREE
   if (params.bvh == bvh_type::embree_default ||
       params.bvh == bvh_type::embree_highquality ||
@@ -630,18 +631,18 @@ void init_bvh(bvh_shape* shape, bvh_type type) {
   }
 
   // build nodes
-  build_bvh(shape->bvh, bboxes, type);
+  build_bvh(shape->bvh, bboxes, params);
 }
 
-void init_bvh(
-    bvh_scene* scene, bvh_type type, const progress_callback& progress_cb) {
+void init_bvh(bvh_scene* scene, const bvh_params& params,
+    const progress_callback& progress_cb) {
   // handle progress
   auto progress = vec2i{0, 1 + (int)scene->shapes.size()};
 
   // Make shape bvh
   for (auto shape : scene->shapes) {
     if (progress_cb) progress_cb("build shape bvh", progress.x++, progress.y);
-    init_bvh(shape, type);
+    init_bvh(shape, params);
   }
 
   // embree
@@ -667,7 +668,7 @@ void init_bvh(
   }
 
   // build nodes
-  build_bvh(scene->bvh, bboxes, type);
+  build_bvh(scene->bvh, bboxes, params);
 
   // handle progress
   if (progress_cb) progress_cb("build bvh", progress.x++, progress.y);

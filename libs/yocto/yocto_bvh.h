@@ -169,13 +169,19 @@ enum struct bvh_type {
 #endif
 };
 
+// Bvh parameters
+struct bvh_params {
+  bvh_type bvh        = bvh_type::default_;
+  bool     noparallel = false;  // only serial momentarily
+};
+
 // Progress report callback
 using progress_callback =
     function<void(const string& message, int current, int total)>;
 
 // Build the bvh acceleration structure.
-void init_bvh(bvh_shape* bvh, bvh_type type = bvh_type::default_);
-void init_bvh(bvh_scene* bvh, bvh_type type = bvh_type::default_,
+void init_bvh(bvh_shape* bvh, const bvh_params& params);
+void init_bvh(bvh_scene* bvh, const bvh_params& params,
     const progress_callback& progress_cb = {});
 
 // Refit bvh data
