@@ -349,15 +349,6 @@ bvh_instance* add_instance(
 // -----------------------------------------------------------------------------
 namespace yocto {
 
-#if !defined(_WIN32) && !defined(_WIN64)
-#pragma GCC diagnostic push
-#pragma GCC diagnostic ignored "-Wunused-function"
-#pragma GCC diagnostic ignored "-Wunused-variable"
-#ifndef __clang__
-#pragma GCC diagnostic ignored "-Wmaybe-uninitialized"
-#endif
-#endif
-
 // Splits a BVH node using the SAH heuristic. Returns split position and axis.
 static pair<int, int> split_sah(vector<int>& primitives,
     const vector<bbox3f>& bboxes, const vector<vec3f>& centers, int start,
@@ -499,10 +490,6 @@ static pair<int, int> split_middle(vector<int>& primitives,
   return {mid, axis};
 }
 
-#if !defined(_WIN32) && !defined(_WIN64)
-#pragma GCC diagnostic pop
-#endif
-
 // Split bvh nodes according to a type
 static pair<int, int> split_nodes(vector<int>& primitives,
     const vector<bbox3f>& bboxes, const vector<vec3f>& centers, int start,
@@ -521,7 +508,7 @@ static pair<int, int> split_nodes(vector<int>& primitives,
 }
 
 // Build BVH nodes
-static void build_bvh(bvh_tree_& bvh, vector<bbox3f>& bboxes) {
+static void build_bvh(bvh_tree_& bvh, vector<bbox3f>& bboxes, bvh_type type) {
   // get values
   auto& nodes      = bvh.nodes;
   auto& primitives = bvh.primitives;
@@ -561,7 +548,8 @@ static void build_bvh(bvh_tree_& bvh, vector<bbox3f>& bboxes) {
     // split into two children
     if (end - start > bvh_max_prims) {
       // get split
-      auto [mid, axis] = split_middle(primitives, bboxes, centers, start, end);
+      auto [mid, axis] = split_nodes(
+          primitives, bboxes, centers, start, end, type);
 
       // make an internal node
       node.internal = true;
@@ -642,7 +630,7 @@ void init_bvh(bvh_shape* shape, bvh_type type) {
   }
 
   // build nodes
-  build_bvh(shape->bvh, bboxes);
+  build_bvh(shape->bvh, bboxes, type);
 }
 
 void init_bvh(
@@ -679,7 +667,7 @@ void init_bvh(
   }
 
   // build nodes
-  build_bvh(scene->bvh, bboxes);
+  build_bvh(scene->bvh, bboxes, type);
 
   // handle progress
   if (progress_cb) progress_cb("build bvh", progress.x++, progress.y);
