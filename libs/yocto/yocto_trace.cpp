@@ -986,9 +986,13 @@ void init_bvh(trace_bvh* bvh, const trace_scene* scene,
     add_shape(bvh, shape->points, shape->lines, shape->triangles, shape->quads,
         shape->positions, shape->radius, true);
   }
-  for (auto instance : scene->instances) {
-    add_instance(bvh, instance->frame, instance->shape->shape_id);
-  }
+  set_instances(
+      bvh, (int)scene->instances.size(),
+      [scene](int idx) {
+        auto instance = scene->instances[idx];
+        return bvh_instance{instance->frame, instance->shape->shape_id};
+      },
+      true);
 
   // build
   init_bvh(bvh, bvh_params{(bvh_build_type)params.bvh, params.noparallel},

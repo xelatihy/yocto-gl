@@ -383,6 +383,17 @@ int add_instance(bvh_scene* bvh, const frame3f& frame, int shape) {
   return instance;
 }
 
+// Set instances
+void set_instances(
+    bvh_scene* bvh, int num, bvh_instance_callback instance_cb, bool as_view) {
+  for (auto instance : bvh->instances) delete instance;
+  bvh->instances.clear();
+  for (auto idx = 0; idx < num; idx++) {
+    auto [frame, shape] = instance_cb(idx);
+    add_instance(bvh, frame, shape);
+  }
+}
+
 }  // namespace yocto
 
 // -----------------------------------------------------------------------------

@@ -189,6 +189,11 @@ int add_shape(bvh_scene* bvh, const vector<int>& points,
     const vector<float>& radius, bool as_view = false);
 int add_instance(bvh_scene* bvh, const frame3f& frame, int shape);
 
+// Set instances
+using bvh_instance_callback = function<bvh_instance(int)>;
+void set_instances(bvh_scene* bvh, int num, bvh_instance_callback instance_cb,
+    bool as_view = false);
+
 // Strategy used to build the bvh
 enum struct bvh_build_type {
   default_,
