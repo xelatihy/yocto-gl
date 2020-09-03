@@ -42,10 +42,6 @@
 #include "yocto_shading.h"
 #include "yocto_shape.h"
 
-#ifdef YOCTO_EMBREE
-#include <embree3/rtcore.h>
-#endif
-
 // -----------------------------------------------------------------------------
 // USING DIRECTIVES
 // -----------------------------------------------------------------------------
