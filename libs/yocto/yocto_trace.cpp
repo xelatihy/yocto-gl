@@ -42,10 +42,6 @@
 #include "yocto_shading.h"
 #include "yocto_shape.h"
 
-#ifdef YOCTO_EMBREE
-#include <embree3/rtcore.h>
-#endif
-
 // -----------------------------------------------------------------------------
 // USING DIRECTIVES
 // -----------------------------------------------------------------------------
@@ -81,13 +77,17 @@ trace_environment* add_environment(trace_scene* scene) {
   return scene->environments.emplace_back(new trace_environment{});
 }
 trace_shape* add_shape(trace_scene* scene) {
-  return scene->shapes.emplace_back(new trace_shape{});
+  auto shape      = scene->shapes.emplace_back(new trace_shape{});
+  shape->shape_id = (int)scene->shapes.size() - 1;
+  return shape;
 }
 trace_texture* add_texture(trace_scene* scene) {
   return scene->textures.emplace_back(new trace_texture{});
 }
 trace_instance* add_instance(trace_scene* scene) {
-  return scene->instances.emplace_back(new trace_instance{});
+  auto instance         = scene->instances.emplace_back(new trace_instance{});
+  instance->instance_id = (int)scene->instances.size() - 1;
+  return instance;
 }
 trace_material* add_material(trace_scene* scene) {
   return scene->materials.emplace_back(new trace_material{});
@@ -983,12 +983,16 @@ void init_bvh(trace_bvh* bvh, const trace_scene* scene,
     const trace_params& params, const progress_callback& progress_cb) {
   // initialize bvh
   for (auto shape : scene->shapes) {
-    shape->bvh = add_shape(bvh, shape->points, shape->lines, shape->triangles,
-        shape->quads, shape->positions, shape->radius);
+    add_shape(bvh, shape->points, shape->lines, shape->triangles, shape->quads,
+        shape->positions, shape->radius, true);
   }
-  for (auto instance : scene->instances) {
-    add_instance(bvh, instance->frame, instance->shape->bvh);
-  }
+  set_instances(
+      bvh, (int)scene->instances.size(),
+      [scene](int idx) {
+        auto instance = scene->instances[idx];
+        return bvh_instance{instance->frame, instance->shape->shape_id};
+      },
+      true);
 
   // build
   init_bvh(bvh, bvh_params{(bvh_build_type)params.bvh, params.noparallel},
@@ -1013,27 +1017,6 @@ void update_bvh(trace_bvh* bvh, const trace_scene* scene,
               scene->instances.begin()));
   }
   update_bvh(bvh, updated_instances_ids, updated_shapes_ids);
-}
-
-// Intersect ray with a bvh returning either the first or any intersection.
-trace_intersection intersect_scene_bvh(const trace_bvh* bvh,
-    const trace_scene* scene, const ray3f& ray, bool find_any,
-    bool non_rigid_frames) {
-  return intersect_scene_bvh(bvh, ray, find_any, non_rigid_frames);
-}
-trace_intersection intersect_instance_bvh(const trace_bvh* bvh,
-    const trace_instance* instance, const ray3f& ray, bool find_any,
-    bool non_rigid_frames) {
-  auto inv_ray = transform_ray(inverse(instance->frame, non_rigid_frames), ray);
-  auto sintersection = intersect_shape_bvh(
-      instance->shape->bvh, inv_ray, find_any);
-  auto intersection     = bvh_scene_intersection{};
-  intersection.instance = -1;
-  intersection.element  = sintersection.element;
-  intersection.uv       = sintersection.uv;
-  intersection.distance = sintersection.distance;
-  intersection.hit      = sintersection.hit;
-  return intersection;
 }
 
 }  // namespace yocto
@@ -1357,7 +1340,7 @@ static float sample_lights_pdf(const trace_scene* scene, const trace_bvh* bvh,
       auto next_position = position;
       for (auto bounce = 0; bounce < 100; bounce++) {
         auto intersection = intersect_instance_bvh(
-            bvh, light->instance, {next_position, direction});
+            bvh, light->instance->instance_id, {next_position, direction});
         if (!intersection.hit) break;
         // accumulate pdf
         auto lposition = eval_position(
@@ -1413,7 +1396,7 @@ static vec4f trace_path(const trace_scene* scene, const trace_bvh* bvh,
   // trace  path
   for (auto bounce = 0; bounce < params.bounces; bounce++) {
     // intersect next point
-    auto intersection = intersect_scene_bvh(bvh, scene, ray);
+    auto intersection = intersect_scene_bvh(bvh, ray);
     if (!intersection.hit) {
       if (bounce > 0 || !params.envhidden)
         radiance += weight * eval_environment(scene, ray.d);
@@ -1552,7 +1535,7 @@ static vec4f trace_naive(const trace_scene* scene, const trace_bvh* bvh,
   // trace  path
   for (auto bounce = 0; bounce < params.bounces; bounce++) {
     // intersect next point
-    auto intersection = intersect_scene_bvh(bvh, scene, ray);
+    auto intersection = intersect_scene_bvh(bvh, ray);
     if (!intersection.hit) {
       if (bounce > 0 || !params.envhidden)
         radiance += weight * eval_environment(scene, ray.d);
@@ -1624,7 +1607,7 @@ static vec4f trace_eyelight(const trace_scene* scene, const trace_bvh* bvh,
   // trace  path
   for (auto bounce = 0; bounce < max(params.bounces, 4); bounce++) {
     // intersect next point
-    auto intersection = intersect_scene_bvh(bvh, scene, ray);
+    auto intersection = intersect_scene_bvh(bvh, ray);
     if (!intersection.hit) {
       if (bounce > 0 || !params.envhidden)
         radiance += weight * eval_environment(scene, ray.d);
@@ -1676,7 +1659,7 @@ static vec4f trace_falsecolor(const trace_scene* scene, const trace_bvh* bvh,
     const trace_lights* lights, const ray3f& ray, rng_state& rng,
     const trace_params& params) {
   // intersect next point
-  auto intersection = intersect_scene_bvh(bvh, scene, ray);
+  auto intersection = intersect_scene_bvh(bvh, ray);
   if (!intersection.hit) {
     return {0, 0, 0, 0};
   }
@@ -1751,7 +1734,7 @@ static vec4f trace_falsecolor(const trace_scene* scene, const trace_bvh* bvh,
 static vec4f trace_albedo(const trace_scene* scene, const trace_bvh* bvh,
     const trace_lights* lights, const ray3f& ray, rng_state& rng,
     const trace_params& params, int bounce) {
-  auto intersection = intersect_scene_bvh(bvh, scene, ray);
+  auto intersection = intersect_scene_bvh(bvh, ray);
   if (!intersection.hit) {
     auto radiance = eval_environment(scene, ray.d);
     return {radiance.x, radiance.y, radiance.z, 1};
@@ -1819,7 +1802,7 @@ static vec4f trace_albedo(const trace_scene* scene, const trace_bvh* bvh,
 static vec4f trace_normal(const trace_scene* scene, const trace_bvh* bvh,
     const trace_lights* lights, const ray3f& ray, rng_state& rng,
     const trace_params& params, int bounce) {
-  auto intersection = intersect_scene_bvh(bvh, scene, ray);
+  auto intersection = intersect_scene_bvh(bvh, ray);
   if (!intersection.hit) {
     return {0, 0, 0, 1};
   }

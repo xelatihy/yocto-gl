@@ -169,8 +169,8 @@ struct trace_shape {
   float          displacement     = 0;
   trace_texture* displacement_tex = nullptr;
 
-  // computed properties
-  bvh_shape* bvh = nullptr;  // non-owned reference
+  // shape is assigned at creation
+  int shape_id = -1;
 };
 
 // Object.
@@ -178,6 +178,9 @@ struct trace_instance {
   frame3f         frame    = identity3x4f;
   trace_shape*    shape    = nullptr;
   trace_material* material = nullptr;
+
+  // instance id assigned at creation
+  int instance_id = -1;
 };
 
 // Environment map.
@@ -556,28 +559,6 @@ void trace_start(trace_state* state, const trace_scene* scene,
     const progress_callback& progress_cb = {},
     const image_callback& image_cb = {}, const async_callback& async_cb = {});
 void trace_stop(trace_state* state);
-
-}  // namespace yocto
-
-// -----------------------------------------------------------------------------
-// RAY-SCENE INTERSECTION
-// -----------------------------------------------------------------------------
-namespace yocto {
-
-// Results of intersect functions that include hit flag, the instance id,
-// the shape element id, the shape element uv and intersection distance.
-// Results values are set only if hit is true.
-using trace_intersection = bvh_scene_intersection;
-
-// Intersect ray with a bvh returning either the first or any intersection
-// depending on `find_any`. Returns the ray distance , the instance id,
-// the shape element index and the element barycentric coordinates.
-trace_intersection intersect_scene_bvh(const trace_bvh* bvh,
-    const trace_scene* scene, const ray3f& ray, bool find_any = false,
-    bool non_rigid_frames = true);
-trace_intersection intersect_instance_bvh(const trace_bvh* bvh,
-    const trace_instance* instance, const ray3f& ray, bool find_any = false,
-    bool non_rigid_frames = true);
 
 }  // namespace yocto
 
