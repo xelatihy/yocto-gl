@@ -98,11 +98,24 @@ inline void skip_whitespace(string_view& str) {
   while (!str.empty() && is_space(str.front())) str.remove_prefix(1);
 }
 
-inline void remove_comment(string_view& str, char comment_char = '#') {
-  while (!str.empty() && is_newline(str.back())) str.remove_suffix(1);
-  auto cpy = str;
-  while (!cpy.empty() && cpy.front() != comment_char) cpy.remove_prefix(1);
-  str.remove_suffix(cpy.size());
+inline void remove_comment(
+    string_view& str, char comment_char = '#', bool handle_quotes = false) {
+  if (!handle_quotes) {
+    while (!str.empty() && is_newline(str.back())) str.remove_suffix(1);
+    auto cpy = str;
+    while (!cpy.empty() && cpy.front() != comment_char) cpy.remove_prefix(1);
+    str.remove_suffix(cpy.size());
+  } else {
+    while (!str.empty() && is_newline(str.back())) str.remove_suffix(1);
+    auto cpy       = str;
+    auto in_string = false;
+    while (!cpy.empty()) {
+      if (cpy.front() == '"') in_string = !in_string;
+      if (cpy.front() == comment_char && !in_string) break;
+      cpy.remove_prefix(1);
+    }
+    str.remove_suffix(cpy.size());
+  }
 }
 
 // Parse values from a string
@@ -2808,7 +2821,7 @@ inline bool read_pbrt_cmdline(file_stream& fs, string& cmd) {
   while (read_line(fs, buffer)) {
     // line
     auto line = string_view{buffer.data()};
-    remove_comment(line);
+    remove_comment(line, '#', true);
     skip_whitespace(line);
     if (line.empty()) continue;
 
@@ -4218,6 +4231,7 @@ inline bool load_pbrt(const string& filename, pbrt_scene* pbrt, string& error,
     } else if (cmd == "Texture") {
       auto command  = pbrt_command{};
       auto comptype = ""s;
+      auto str_     = string{str};
       if (!parse_param(str, command.name)) return parse_error();
       if (!parse_param(str, comptype)) return parse_error();
       if (!parse_param(str, command.type)) return parse_error();
