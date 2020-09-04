@@ -298,16 +298,16 @@ struct obj_material {
 
 // Obj shape
 struct obj_shape {
-  string                name      = "";
-  vector<vec3f>         positions = {};
-  vector<vec3f>         normals   = {};
-  vector<vec2f>         texcoords = {};
-  vector<obj_material*> materials = {};
-  vector<obj_vertex>    vertices  = {};
-  vector<obj_element>   faces     = {};
-  vector<obj_element>   lines     = {};
-  vector<obj_element>   points    = {};
-  vector<frame3f>       instances = {};
+  string              name      = "";
+  vector<vec3f>       positions = {};
+  vector<vec3f>       normals   = {};
+  vector<vec2f>       texcoords = {};
+  vector<string>      materials = {};
+  vector<obj_vertex>  vertices  = {};
+  vector<obj_element> faces     = {};
+  vector<obj_element> lines     = {};
+  vector<obj_element> points    = {};
+  vector<frame3f>     instances = {};
 };
 
 // Obj camera
@@ -352,24 +352,24 @@ bool save_obj(const string& filename, obj_scene* obj, string& error);
 // to position only if duplication occurs.
 void get_triangles(const obj_shape* shape, vector<vec3i>& triangles,
     vector<vec3f>& positions, vector<vec3f>& normals, vector<vec2f>& texcoords,
-    vector<obj_material*>& materials, vector<int>& ematerials,
+    vector<string>& materials, vector<int>& ematerials,
     bool flip_texcoord = false);
 void get_quads(const obj_shape* shape, vector<vec4i>& quads,
     vector<vec3f>& positions, vector<vec3f>& normals, vector<vec2f>& texcoords,
-    vector<obj_material*>& materials, vector<int>& ematerials,
+    vector<string>& materials, vector<int>& ematerials,
     bool flip_texcoord = false);
 void get_lines(const obj_shape* shape, vector<vec2i>& lines,
     vector<vec3f>& positions, vector<vec3f>& normals, vector<vec2f>& texcoords,
-    vector<obj_material*>& materials, vector<int>& ematerials,
+    vector<string>& materials, vector<int>& ematerials,
     bool flip_texcoord = false);
 void get_points(const obj_shape* shape, vector<int>& points,
     vector<vec3f>& positions, vector<vec3f>& normals, vector<vec2f>& texcoords,
-    vector<obj_material*>& materials, vector<int>& ematerials,
+    vector<string>& materials, vector<int>& ematerials,
     bool flip_texcoord = false);
 void get_fvquads(const obj_shape* shape, vector<vec4i>& quadspos,
     vector<vec4i>& quadsnorm, vector<vec4i>& quadstexcoord,
     vector<vec3f>& positions, vector<vec3f>& normals, vector<vec2f>& texcoords,
-    vector<obj_material*>& materials, vector<int>& ematerials,
+    vector<string>& materials, vector<int>& ematerials,
     bool flip_texcoord = false);
 bool has_quads(obj_shape* shape);
 
@@ -415,7 +415,7 @@ void set_fvquads(obj_shape* shape, const vector<vec4i>& quadspos,
     const vector<vec3f>& positions, const vector<vec3f>& normals,
     const vector<vec2f>& texcoords, const vector<int>& ematerials = {},
     bool flip_texcoord = false);
-void set_materials(obj_shape* shape, const vector<obj_material*>& materials);
+void set_materials(obj_shape* shape, const vector<string>& materials);
 void set_instances(obj_shape* shape, const vector<frame3f>& instances);
 
 }  // namespace yocto
@@ -492,7 +492,7 @@ struct pbrt_shape {
   vector<vec2f> texcoords = {};
   vector<vec3i> triangles = {};
   // material
-  pbrt_material* material = nullptr;
+  string material = "";
 };
 
 // Pbrt lights

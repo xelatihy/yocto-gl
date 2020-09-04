@@ -98,11 +98,24 @@ inline void skip_whitespace(string_view& str) {
   while (!str.empty() && is_space(str.front())) str.remove_prefix(1);
 }
 
-inline void remove_comment(string_view& str, char comment_char = '#') {
-  while (!str.empty() && is_newline(str.back())) str.remove_suffix(1);
-  auto cpy = str;
-  while (!cpy.empty() && cpy.front() != comment_char) cpy.remove_prefix(1);
-  str.remove_suffix(cpy.size());
+inline void remove_comment(
+    string_view& str, char comment_char = '#', bool handle_quotes = false) {
+  if (!handle_quotes) {
+    while (!str.empty() && is_newline(str.back())) str.remove_suffix(1);
+    auto cpy = str;
+    while (!cpy.empty() && cpy.front() != comment_char) cpy.remove_prefix(1);
+    str.remove_suffix(cpy.size());
+  } else {
+    while (!str.empty() && is_newline(str.back())) str.remove_suffix(1);
+    auto cpy       = str;
+    auto in_string = false;
+    while (!cpy.empty()) {
+      if (cpy.front() == '"') in_string = !in_string;
+      if (cpy.front() == comment_char && !in_string) break;
+      cpy.remove_prefix(1);
+    }
+    str.remove_suffix(cpy.size());
+  }
 }
 
 // Parse values from a string
@@ -1620,7 +1633,7 @@ bool load_obj(const string& filename, obj_scene* obj, string& error,
           !geom_only && split_materials && !shape->materials.empty()) {
         if (shape->materials.size() > 1)
           throw std::runtime_error("should not have happened");
-        if (shape->materials.back()->name != mname) {
+        if (shape->materials.back() != mname) {
           add_shape(obj);
           obj->shapes.back()->name = oname + gname;
         }
@@ -1639,9 +1652,9 @@ bool load_obj(const string& filename, obj_scene* obj, string& error,
         }
         auto mat_idx = -1;
         for (auto midx = 0; midx < shape->materials.size(); midx++)
-          if (shape->materials[midx]->name == mname) mat_idx = midx;
+          if (shape->materials[midx] == mname) mat_idx = midx;
         if (mat_idx < 0) {
-          shape->materials.push_back(material_map.at(mname));
+          shape->materials.push_back(mname);
           mat_idx = (int)shape->materials.size() - 1;
         }
         element.material = (uint8_t)mat_idx;
@@ -2060,7 +2073,7 @@ bool save_obj(const string& filename, obj_scene* obj, string& error) {
       for (auto& element : elements) {
         if (!shape->materials.empty() && cur_material != element.material) {
           if (!format_values(
-                  fs, "usemtl {}\n", shape->materials[element.material]->name))
+                  fs, "usemtl {}\n", shape->materials[element.material]))
             return write_error();
           cur_material = element.material;
         }
@@ -2135,7 +2148,7 @@ inline vector<vec2f> flip_obj_texcoord(const vector<vec2f>& texcoord) {
 // Get obj shape
 void get_triangles(const obj_shape* shape, vector<vec3i>& triangles,
     vector<vec3f>& positions, vector<vec3f>& normals, vector<vec2f>& texcoords,
-    vector<obj_material*>& materials, vector<int>& ematerials, bool flipv) {
+    vector<string>& materials, vector<int>& ematerials, bool flipv) {
   if (shape->faces.empty()) return;
   auto vindex = vector<int>{};
   get_vertices(shape, positions, normals, texcoords, vindex, flipv);
@@ -2154,7 +2167,7 @@ void get_triangles(const obj_shape* shape, vector<vec3i>& triangles,
 }
 void get_quads(const obj_shape* shape, vector<vec4i>& quads,
     vector<vec3f>& positions, vector<vec3f>& normals, vector<vec2f>& texcoords,
-    vector<obj_material*>& materials, vector<int>& ematerials, bool flipv) {
+    vector<string>& materials, vector<int>& ematerials, bool flipv) {
   if (shape->faces.empty()) return;
   auto vindex = vector<int>{};
   get_vertices(shape, positions, normals, texcoords, vindex, flipv);
@@ -2179,7 +2192,7 @@ void get_quads(const obj_shape* shape, vector<vec4i>& quads,
 }
 void get_lines(const obj_shape* shape, vector<vec2i>& lines,
     vector<vec3f>& positions, vector<vec3f>& normals, vector<vec2f>& texcoords,
-    vector<obj_material*>& materials, vector<int>& ematerials, bool flipv) {
+    vector<string>& materials, vector<int>& ematerials, bool flipv) {
   if (shape->lines.empty()) return;
   auto vindex = vector<int>{};
   get_vertices(shape, positions, normals, texcoords, vindex, flipv);
@@ -2197,7 +2210,7 @@ void get_lines(const obj_shape* shape, vector<vec2i>& lines,
 }
 void get_points(const obj_shape* shape, vector<int>& points,
     vector<vec3f>& positions, vector<vec3f>& normals, vector<vec2f>& texcoords,
-    vector<obj_material*>& materials, vector<int>& ematerials, bool flipv) {
+    vector<string>& materials, vector<int>& ematerials, bool flipv) {
   if (shape->points.empty()) return;
   auto vindex = vector<int>{};
   get_vertices(shape, positions, normals, texcoords, vindex, flipv);
@@ -2216,7 +2229,7 @@ void get_points(const obj_shape* shape, vector<int>& points,
 void get_fvquads(const obj_shape* shape, vector<vec4i>& quadspos,
     vector<vec4i>& quadsnorm, vector<vec4i>& quadstexcoord,
     vector<vec3f>& positions, vector<vec3f>& normals, vector<vec2f>& texcoords,
-    vector<obj_material*>& materials, vector<int>& ematerials, bool flipv) {
+    vector<string>& materials, vector<int>& ematerials, bool flipv) {
   if (shape->faces.empty()) return;
   positions = shape->positions;
   normals   = shape->normals;
@@ -2506,7 +2519,7 @@ void set_fvquads(obj_shape* shape, const vector<vec4i>& quadspos,
         ematerials.empty() ? (uint8_t)0 : (uint8_t)ematerials[idx]});
   }
 }
-void set_materials(obj_shape* shape, const vector<obj_material*>& materials) {
+void set_materials(obj_shape* shape, const vector<string>& materials) {
   shape->materials = materials;
 }
 void set_instances(obj_shape* shape, const vector<frame3f>& instances) {
@@ -2808,7 +2821,7 @@ inline bool read_pbrt_cmdline(file_stream& fs, string& cmd) {
   while (read_line(fs, buffer)) {
     // line
     auto line = string_view{buffer.data()};
-    remove_comment(line);
+    remove_comment(line, '#', true);
     skip_whitespace(line);
     if (line.empty()) continue;
 
@@ -4218,6 +4231,7 @@ inline bool load_pbrt(const string& filename, pbrt_scene* pbrt, string& error,
     } else if (cmd == "Texture") {
       auto command  = pbrt_command{};
       auto comptype = ""s;
+      auto str_     = string{str};
       if (!parse_param(str, command.name)) return parse_error();
       if (!parse_param(str, comptype)) return parse_error();
       if (!parse_param(str, command.type)) return parse_error();
@@ -4274,7 +4288,7 @@ inline bool load_pbrt(const string& filename, pbrt_scene* pbrt, string& error,
         material->alpha_tex  = alphamap;
         material_map[matkey] = material;
       }
-      shape->material = material_map.at(matkey);
+      shape->material = material_map.at(matkey)->name;
       if (!ctx.cur_object.empty()) {
         ctx.objects[ctx.cur_object].push_back(shape);
       }
@@ -4369,12 +4383,13 @@ bool load_pbrt(const string& filename, pbrt_scene* pbrt, string& error) {
     return false;
 
   // remove unused materials
-  auto used_materials = unordered_set<pbrt_material*>{};
+  auto used_materials = unordered_set<string>{};
   for (auto shape : pbrt->shapes) used_materials.insert(shape->material);
   pbrt->materials.erase(
       std::remove_if(pbrt->materials.begin(), pbrt->materials.end(),
           [&used_materials](auto material) {
-            auto found = used_materials.find(material) != used_materials.end();
+            auto found = used_materials.find(material->name) !=
+                         used_materials.end();
             if (!found) delete material;
             return !found;
           }),
@@ -4555,6 +4570,7 @@ bool save_pbrt(
     return (1 + sqrt(reflectivity)) / (1 - sqrt(reflectivity));
   };
 
+  auto material_map = unordered_map<string, pbrt_material*>{};
   for (auto material : pbrt->materials) {
     auto command = pbrt_command{};
     if (material->specular != 0 && material->transmission != 0 &&
@@ -4610,6 +4626,7 @@ bool save_pbrt(
 
   auto object_id = 0;
   for (auto shape : pbrt->shapes) {
+    auto material = material_map.at(shape->material);
     auto command  = pbrt_command{};
     command.frame = shape->frame;
     if (ply_meshes) {
@@ -4644,16 +4661,15 @@ bool save_pbrt(
     if (!format_values(fs, "AttributeBegin\n")) return write_error();
     if (!format_values(fs, "Transform {}\n", frame_to_mat(shape->frame)))
       return write_error();
-    if (shape->material->emission != zero3f) {
+    if (material->emission != zero3f) {
       auto acommand = pbrt_command{};
       acommand.type = "diffuse";
-      acommand.values.push_back(
-          make_pbrt_value("L", shape->material->emission));
+      acommand.values.push_back(make_pbrt_value("L", material->emission));
       if (!format_values(fs, "AreaLightSource \"{}\" {}\n", acommand.type,
               acommand.values))
         return write_error();
     }
-    if (!format_values(fs, "NamedMaterial \"{}\"\n", shape->material->name))
+    if (!format_values(fs, "NamedMaterial \"{}\"\n", material->name))
       return write_error();
     if (!format_values(fs, "Shape \"{}\" {}\n", command.type, command.values))
       return write_error();
