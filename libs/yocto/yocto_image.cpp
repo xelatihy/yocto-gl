@@ -1480,8 +1480,9 @@ static vector<byte> convert_components(
     throw std::invalid_argument{"components not supported"};
   if (components == components_to) return pixels;
 
-  auto cpixels = vector<byte>((size_t)components_to * pixels.size());
-  for (auto i = 0ull; i < pixels.size(); i++) {
+  auto npixels = pixels.size() / (size_t)components;
+  auto cpixels = vector<byte>((size_t)components_to * npixels);
+  for (auto i = 0ull; i < npixels; i++) {
     auto vp = pixels.data() + i * components;
     auto cp = cpixels.data() + i * components_to;
     if (components_to > 0) cp[0] = (components > 0) ? vp[0] : 0;
