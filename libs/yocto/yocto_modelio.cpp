@@ -4274,7 +4274,7 @@ inline bool load_pbrt(const string& filename, pbrt_scene* pbrt, string& error,
         material->alpha_tex  = alphamap;
         material_map[matkey] = material;
       }
-      shape->material = material_map.at(matkey);
+      shape->material = material_map.at(matkey)->name;
       if (!ctx.cur_object.empty()) {
         ctx.objects[ctx.cur_object].push_back(shape);
       }
@@ -4369,12 +4369,13 @@ bool load_pbrt(const string& filename, pbrt_scene* pbrt, string& error) {
     return false;
 
   // remove unused materials
-  auto used_materials = unordered_set<pbrt_material*>{};
+  auto used_materials = unordered_set<string>{};
   for (auto shape : pbrt->shapes) used_materials.insert(shape->material);
   pbrt->materials.erase(
       std::remove_if(pbrt->materials.begin(), pbrt->materials.end(),
           [&used_materials](auto material) {
-            auto found = used_materials.find(material) != used_materials.end();
+            auto found = used_materials.find(material->name) !=
+                         used_materials.end();
             if (!found) delete material;
             return !found;
           }),
@@ -4555,6 +4556,7 @@ bool save_pbrt(
     return (1 + sqrt(reflectivity)) / (1 - sqrt(reflectivity));
   };
 
+  auto material_map = unordered_map<string, pbrt_material*>{};
   for (auto material : pbrt->materials) {
     auto command = pbrt_command{};
     if (material->specular != 0 && material->transmission != 0 &&
@@ -4610,6 +4612,7 @@ bool save_pbrt(
 
   auto object_id = 0;
   for (auto shape : pbrt->shapes) {
+    auto material = material_map.at(shape->material);
     auto command  = pbrt_command{};
     command.frame = shape->frame;
     if (ply_meshes) {
@@ -4644,16 +4647,15 @@ bool save_pbrt(
     if (!format_values(fs, "AttributeBegin\n")) return write_error();
     if (!format_values(fs, "Transform {}\n", frame_to_mat(shape->frame)))
       return write_error();
-    if (shape->material->emission != zero3f) {
+    if (material->emission != zero3f) {
       auto acommand = pbrt_command{};
       acommand.type = "diffuse";
-      acommand.values.push_back(
-          make_pbrt_value("L", shape->material->emission));
+      acommand.values.push_back(make_pbrt_value("L", material->emission));
       if (!format_values(fs, "AreaLightSource \"{}\" {}\n", acommand.type,
               acommand.values))
         return write_error();
     }
-    if (!format_values(fs, "NamedMaterial \"{}\"\n", shape->material->name))
+    if (!format_values(fs, "NamedMaterial \"{}\"\n", material->name))
       return write_error();
     if (!format_values(fs, "Shape \"{}\" {}\n", command.type, command.values))
       return write_error();

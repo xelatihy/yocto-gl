@@ -2839,7 +2839,7 @@ static bool load_pbrt_scene(const string& filename, sceneio_scene* scene,
   };
 
   // convert material
-  auto material_map = unordered_map<pbrt_material*, sceneio_material*>{};
+  auto material_map = unordered_map<string, sceneio_material*>{};
   for (auto pmaterial : pbrt->materials) {
     auto material          = add_material(scene);
     material->emission     = pmaterial->emission;
@@ -2855,11 +2855,11 @@ static bool load_pbrt_scene(const string& filename, sceneio_scene* scene,
     material->opacity_tex  = get_stexture(pmaterial->opacity_tex);
     if (material->opacity_tex == nullptr)
       material->opacity_tex = get_atexture(pmaterial->alpha_tex);
-    material_map[pmaterial] = material;
+    material_map[pmaterial->name] = material;
   }
 
   // hack for pbrt empty material
-  material_map[nullptr] = add_material(scene);
+  material_map[""] = add_material(scene);
 
   // convert shapes
   for (auto pshape : pbrt->shapes) {
@@ -2986,7 +2986,7 @@ static bool save_pbrt_scene(const string& filename, const sceneio_scene* scene,
   };
 
   // convert materials
-  auto material_map = unordered_map<sceneio_material*, pbrt_material*>{};
+  auto material_map = unordered_map<sceneio_material*, string>{};
   for (auto material : scene->materials) {
     auto pmaterial          = add_material(pbrt);
     pmaterial->name         = path_basename(material->name);
@@ -3000,7 +3000,7 @@ static bool save_pbrt_scene(const string& filename, const sceneio_scene* scene,
     pmaterial->opacity      = material->opacity;
     pmaterial->color_tex    = get_texture(material->color_tex);
     pmaterial->opacity_tex  = get_texture(material->opacity_tex);
-    material_map[material]  = pmaterial;
+    material_map[material]  = pmaterial->name;
   }
 
   // convert instances
