@@ -4046,7 +4046,7 @@ struct pbrt_context {
 
 // load pbrt
 inline bool load_pbrt(const string& filename, pbrt_scene* pbrt, string& error,
-    pbrt_context& ctx, unordered_map<string, pbrt_material*>& material_map,
+    pbrt_context& ctx, unordered_map<string, string>& material_map,
     unordered_map<string, pbrt_material>& named_materials,
     unordered_map<string, pbrt_texture>&  named_textures,
     unordered_map<string, pbrt_medium>&   named_mediums,
@@ -4286,9 +4286,9 @@ inline bool load_pbrt(const string& filename, pbrt_scene* pbrt, string& error,
         material->name = "material" + std::to_string(pbrt->materials.size());
         material->emission   = ctx.stack.back().arealight.emission;
         material->alpha_tex  = alphamap;
-        material_map[matkey] = material;
+        material_map[matkey] = material->name;
       }
-      shape->material = material_map.at(matkey)->name;
+      shape->material = material_map.at(matkey);
       if (!ctx.cur_object.empty()) {
         ctx.objects[ctx.cur_object].push_back(shape);
       }
@@ -4374,7 +4374,7 @@ pbrt_light* add_light(pbrt_scene* pbrt) {
 // load pbrt
 bool load_pbrt(const string& filename, pbrt_scene* pbrt, string& error) {
   auto ctx             = pbrt_context{};
-  auto material_map    = unordered_map<string, pbrt_material*>{};
+  auto material_map    = unordered_map<string, string>{};
   auto named_materials = unordered_map<string, pbrt_material>{{"", {}}};
   auto named_mediums   = unordered_map<string, pbrt_medium>{{"", {}}};
   auto named_textures  = unordered_map<string, pbrt_texture>{{"", {}}};
