@@ -126,10 +126,10 @@ void init_scene(trace_scene* scene, sceneio_scene* ioscene,
     if (progress_cb)
       progress_cb("converting cameras", progress.x++, progress.y);
     auto camera = add_camera(scene);
-    set_frame(camera, iocamera->frame);
-    set_lens(camera, iocamera->lens, iocamera->aspect, iocamera->film,
+    set_camera_frame(camera, iocamera->frame);
+    set_camera_lens(camera, iocamera->lens, iocamera->aspect, iocamera->film,
         iocamera->orthographic);
-    set_focus(camera, iocamera->aperture, iocamera->focus);
+    set_camera_focus(camera, iocamera->aperture, iocamera->focus);
     camera_map[iocamera] = camera;
   }
 
@@ -140,9 +140,9 @@ void init_scene(trace_scene* scene, sceneio_scene* ioscene,
       progress_cb("converting textures", progress.x++, progress.y);
     auto texture = add_texture(scene);
     if (!iotexture->hdr.empty()) {
-      set_texture(texture, iotexture->hdr);
+      set_texture_image(texture, iotexture->hdr);
     } else if (!iotexture->ldr.empty()) {
-      set_texture(texture, iotexture->ldr);
+      set_texture_image(texture, iotexture->ldr);
     }
     texture_map[iotexture] = texture;
   }
@@ -153,27 +153,29 @@ void init_scene(trace_scene* scene, sceneio_scene* ioscene,
     if (progress_cb)
       progress_cb("converting materials", progress.x++, progress.y);
     auto material = add_material(scene);
-    set_emission(material, iomaterial->emission,
+    set_material_emission(material, iomaterial->emission,
         texture_map.at(iomaterial->emission_tex));
-    set_color(
+    set_material_color(
         material, iomaterial->color, texture_map.at(iomaterial->color_tex));
-    set_specular(material, iomaterial->specular,
+    set_material_specular(material, iomaterial->specular,
         texture_map.at(iomaterial->specular_tex));
-    set_ior(material, iomaterial->ior);
-    set_metallic(material, iomaterial->metallic,
+    set_material_ior(material, iomaterial->ior);
+    set_material_metallic(material, iomaterial->metallic,
         texture_map.at(iomaterial->metallic_tex));
-    set_transmission(material, iomaterial->transmission, iomaterial->thin,
-        iomaterial->trdepth, texture_map.at(iomaterial->transmission_tex));
-    set_translucency(material, iomaterial->translucency, iomaterial->thin,
-        iomaterial->trdepth, texture_map.at(iomaterial->translucency_tex));
-    set_roughness(material, iomaterial->roughness,
+    set_material_transmission(material, iomaterial->transmission,
+        iomaterial->thin, iomaterial->trdepth,
+        texture_map.at(iomaterial->transmission_tex));
+    set_material_translucency(material, iomaterial->translucency,
+        iomaterial->thin, iomaterial->trdepth,
+        texture_map.at(iomaterial->translucency_tex));
+    set_material_roughness(material, iomaterial->roughness,
         texture_map.at(iomaterial->roughness_tex));
-    set_opacity(
+    set_material_opacity(
         material, iomaterial->opacity, texture_map.at(iomaterial->opacity_tex));
-    set_thin(material, iomaterial->thin);
-    set_normalmap(material, texture_map.at(iomaterial->normal_tex));
-    set_scattering(material, iomaterial->scattering, iomaterial->scanisotropy,
-        texture_map.at(iomaterial->scattering_tex));
+    set_material_thin(material, iomaterial->thin);
+    set_material_normalmap(material, texture_map.at(iomaterial->normal_tex));
+    set_material_scattering(material, iomaterial->scattering,
+        iomaterial->scanisotropy, texture_map.at(iomaterial->scattering_tex));
     material_map[iomaterial] = material;
   }
 
@@ -182,19 +184,19 @@ void init_scene(trace_scene* scene, sceneio_scene* ioscene,
   for (auto ioshape : ioscene->shapes) {
     if (progress_cb) progress_cb("converting shapes", progress.x++, progress.y);
     auto shape = add_shape(scene);
-    set_points(shape, ioshape->points);
-    set_lines(shape, ioshape->lines);
-    set_triangles(shape, ioshape->triangles);
-    set_quads(shape, ioshape->quads);
-    set_fvquads(
+    set_shape_points(shape, ioshape->points);
+    set_shape_lines(shape, ioshape->lines);
+    set_shape_triangles(shape, ioshape->triangles);
+    set_shape_quads(shape, ioshape->quads);
+    set_shape_fvquads(
         shape, ioshape->quadspos, ioshape->quadsnorm, ioshape->quadstexcoord);
-    set_positions(shape, ioshape->positions);
-    set_normals(shape, ioshape->normals);
-    set_texcoords(shape, ioshape->texcoords);
-    set_colors(shape, ioshape->colors);
-    set_radius(shape, ioshape->radius);
-    set_tangents(shape, ioshape->tangents);
-    set_subdivision(
+    set_shape_positions(shape, ioshape->positions);
+    set_shape_normals(shape, ioshape->normals);
+    set_shape_texcoords(shape, ioshape->texcoords);
+    set_shape_colors(shape, ioshape->colors);
+    set_shape_radius(shape, ioshape->radius);
+    set_shape_tangents(shape, ioshape->tangents);
+    set_shape_subdivision(
         shape, ioshape->subdivisions, ioshape->catmullclark, ioshape->smooth);
     shape_map[ioshape] = shape;
   }
@@ -203,17 +205,17 @@ void init_scene(trace_scene* scene, sceneio_scene* ioscene,
     if (progress_cb)
       progress_cb("converting instances", progress.x++, progress.y);
     auto instance = add_instance(scene);
-    set_frame(instance, ioinstance->frame);
-    set_shape(instance, shape_map.at(ioinstance->shape));
-    set_material(instance, material_map.at(ioinstance->material));
+    set_instance_frame(instance, ioinstance->frame);
+    set_instance_shape(instance, shape_map.at(ioinstance->shape));
+    set_instance_material(instance, material_map.at(ioinstance->material));
   }
 
   for (auto ioenvironment : ioscene->environments) {
     if (progress_cb)
       progress_cb("converting environments", progress.x++, progress.y);
     auto environment = add_environment(scene);
-    set_frame(environment, ioenvironment->frame);
-    set_emission(environment, ioenvironment->emission,
+    set_environment_frame(environment, ioenvironment->frame);
+    set_environment_emission(environment, ioenvironment->emission,
         texture_map.at(ioenvironment->emission_tex));
   }
 
