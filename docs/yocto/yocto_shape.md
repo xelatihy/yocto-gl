@@ -56,7 +56,7 @@ auto triangles = vector<vec3i>{...};   // triangle indices
 auto positions = vector<vec3f>{...};   // vertex positions
 auto texcoords = vector<vec2f>{...};   // vertex uvs
 
-auto normals = compute_normals(triangles,positions);   // vertex normals
+auto normals = compute_normals(triangles, positions);   // vertex normals
 auto tangsp = compute_tangent_spaces(triangles, positions, normals, texcoords);
 
 auto weights = vector<vec4f>{...};   // skinning weights for 4 bones per vertex
@@ -71,7 +71,7 @@ auto [skinned_pos, skinned_norm] = compute_skinning(positions, normals,
 Yocto/Shape provides functions to correct shapes that have inconsistent
 orientations or normals. Use `flip_normals(normals)` to flip all mesh normals.
 Use `flip_triangles(triangles)` and `flip_quads(quads)` to change face
-orientations. Use `align_vertices(positions,alignment)` to align vertex
+orientations. Use `align_vertices(positions, alignment)` to align vertex
 positions to the main axes.
 
 ```cpp
@@ -132,10 +132,10 @@ primitives or internal nodes, node element type,
 and the split axis. Leaf and internal nodes are identical, except that
 indices refer to primitives for leaf nodes or other nodes for internal nodes.
 
-The BVH is initialized with `make_triangles_bvh(bvh,triangles,positions)` for
-triangles, `make_quads_bvh(bvh,quads,positions)` for quads,
-`make_lines_bvh(bvh,lines,positions,radius)` for lines, and
-`make_points_bvh(bvh,points,positions,radius)` for points.
+The BVH is initialized with `make_triangles_bvh(bvh, triangles, positions)` for
+triangles, `make_quads_bvh(bvh, quads, positions)` for quads,
+`make_lines_bvh(bvh, lines, positions, radius)` for lines, and
+`make_points_bvh(bvh, points, positions, radius)` for points.
 
 ```cpp
 auto triangles = vector<vec3i>{...};                 // mesh data
@@ -148,10 +148,10 @@ the intersection distance, the intersected element index and uvs,
 and a `hit` flag that signals whether an element was hit.
 
 `intersect_<element>_bvh(...)` computed intersections between rays and shapes.
-Use `intersect_triangles_bvh(bvh,triangles,positions, ray)` for
-triangles, `intersect_quads_bvh(bvh,quads,positions)` for quads,
-`intersect_lines_bvh(bvh,lines,positions,radius,ray)` for lines, and
-`intersect_points_bvh(bvh,points,positions,radius,ray)` for points.
+Use `intersect_triangles_bvh(bvh, triangles, positions, ray)` for
+triangles, `intersect_quads_bvh(bvh, quads, positions)` for quads,
+`intersect_lines_bvh(bvh, lines, positions, radius, ray)` for lines, and
+`intersect_points_bvh(bvh, points, positions, radius, ray)` for points.
 
 ```cpp
 auto ray = ray3f{...};
@@ -258,8 +258,8 @@ auto [mtriangles, mpositions] =       // remove duplicates
 
 Yocto/Shape supports splitting shapes that are tagged by ids. This is helpful
 for example when drawing meshes that have per-face materials using renders
-that do support one material per shape only. Use `ungroup_lines(lines,ids)`,
-`ungroud_triangles(triangles,ids)` and `ungroup_quads(quads,ids)` for lines,
+that do support one material per shape only. Use `ungroup_lines(lines, ids)`,
+`ungroud_triangles(triangles, ids)` and `ungroup_quads(quads, ids)` for lines,
 triangles and quads respectively.
 
 ```cpp

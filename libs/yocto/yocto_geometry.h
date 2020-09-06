@@ -62,6 +62,9 @@ struct bbox2f {
   vec2f min = {flt_max, flt_max};
   vec2f max = {flt_min, flt_min};
 
+  bbox2f();
+  bbox2f(const vec2f& min, const vec2f& max);
+
   vec2f&       operator[](int i);
   const vec2f& operator[](int i) const;
 };
@@ -70,6 +73,9 @@ struct bbox2f {
 struct bbox3f {
   vec3f min = {flt_max, flt_max, flt_max};
   vec3f max = {flt_min, flt_min, flt_min};
+
+  bbox3f();
+  bbox3f(const vec3f& min, const vec3f& max);
 
   vec3f&       operator[](int i);
   const vec3f& operator[](int i) const;
@@ -122,6 +128,10 @@ struct ray2f {
   vec2f d    = {0, 1};
   float tmin = ray_eps;
   float tmax = flt_max;
+
+  ray2f();
+  ray2f(const vec2f& o, const vec2f& d, float tmin = ray_eps,
+      float tmax = flt_max);
 };
 
 // Rays with origin, direction and min/max t value.
@@ -130,6 +140,10 @@ struct ray3f {
   vec3f d    = {0, 0, 1};
   float tmin = ray_eps;
   float tmax = flt_max;
+
+  ray3f();
+  ray3f(const vec3f& o, const vec3f& d, float tmin = ray_eps,
+      float tmax = flt_max);
 };
 
 // Computes a point on a ray
@@ -327,10 +341,17 @@ inline bool overlap_bbox(const bbox3f& bbox1, const bbox3f& bbox2);
 namespace yocto {
 
 // Axis aligned bounding box represented as a min/max vector pairs.
+inline bbox2f::bbox2f() : min{flt_max, flt_max}, max{flt_min, flt_min} {}
+inline bbox2f::bbox2f(const vec2f& min, const vec2f& max)
+    : min{min}, max{max} {}
 inline vec2f& bbox2f::operator[](int i) { return (&min)[i]; }
 inline const vec2f& bbox2f::operator[](int i) const { return (&min)[i]; }
 
 // Axis aligned bounding box represented as a min/max vector pairs.
+inline bbox3f::bbox3f()
+    : min{flt_max, flt_max, flt_max}, max{flt_min, flt_min, flt_min} {}
+inline bbox3f::bbox3f(const vec3f& min, const vec3f& max)
+    : min{min}, max{max} {}
 inline vec3f& bbox3f::operator[](int i) { return (&min)[i]; }
 inline const vec3f& bbox3f::operator[](int i) const { return (&min)[i]; }
 
@@ -384,6 +405,16 @@ inline void expand(bbox3f& a, const bbox3f& b) { a = merge(a, b); }
 // RAYS
 // -----------------------------------------------------------------------------
 namespace yocto {
+
+// Ray
+inline ray2f::ray2f() : o{0, 0}, d{0, 1}, tmin{ray_eps}, tmax{flt_max} {}
+inline ray2f::ray2f(const vec2f& o, const vec2f& d, float tmin, float tmax)
+    : o{o}, d{d}, tmin{tmin}, tmax{tmax} {}
+
+// Ray
+inline ray3f::ray3f() : o{0, 0, 0}, d{0, 0, 1}, tmin{ray_eps}, tmax{flt_max} {}
+inline ray3f::ray3f(const vec3f& o, const vec3f& d, float tmin, float tmax)
+    : o{o}, d{d}, tmin{tmin}, tmax{tmax} {}
 
 // Computes a point on a ray
 inline vec2f ray_point(const ray2f& ray, float t) { return ray.o + ray.d * t; }

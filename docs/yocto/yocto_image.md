@@ -33,7 +33,7 @@ img.assign({1024,512}, {0,1,0,1});  // re-initialize as green
 ```
 
 Image pixels are accessed via the bracket operator using image coordinates
-represented as `vec2i`, i.e. `img[{i,j}]`. Pixels can also be accessed with
+represented as `vec2i`, i.e. `img[{i, j}]`. Pixels can also be accessed with
 a sequential index as `img[idx]`. Pixels can iterated with a foreach or
 accessed directly by getting a pointer to the underlying data buffer
 with `img.data()`.
@@ -48,7 +48,7 @@ auto pixels = img.data();     // get pixel buffer
 
 ## Image sampling
 
-Images are sampled with `eval_image(img,uv)`. Yocto/Image supports sampling
+Images are sampled with `eval_image(img, uv)`. Yocto/Image supports sampling
 of 3 or 4 channel images with float or byte channels. All results are converted
 in float values for increased precision. For byte images, sampling can be
 performed in sRGB or linear color space. By default, images are sampled with
@@ -82,7 +82,7 @@ auto img_s = rgb_to_srgb(img);      // convert to sRGB
 
 ## Tone mapping
 
-HDR images can be tone mapped using `tonemap_image(hdr,e)` that applies
+HDR images can be tone mapped using `tonemap_image(hdr, e)` that applies
 an exposure correction followed by an optional filmic tone curve.
 Use `tonemap_image_mt(...)` to quickly tone map large images using
 multiple threads.
@@ -96,7 +96,7 @@ auto flm = tonemap_imahe(hdr, 0, true);  // filmic tone mapping
 ## Color grading
 
 Images can be color graded by applying a set of minimal color grading tools
-using `colorgrade_image(img,linear,params)`, in manner similar to
+using `colorgrade_image(img, linear, params)`, in manner similar to
 [Hable 2017](http://filmicworlds.com/blog/minimal-color-grading-tools/).
 Color grading corrections can be applied on images that are either linear HDR
 or non-linear LDR, i.e. sRGB encoded. The results is always an LDR image encoded
@@ -123,7 +123,7 @@ auto ldr = colorgrade_image(hdr, true, params); // color grading
 
 ## Image resizing
 
-Images are can resized with `resize_image(img,size)`. Just like all other
+Images are can resized with `resize_image(img, size)`. Just like all other
 functions, images are not resized in placed, but a new image is created.
 Resizing works for both linear and 8bit images. The size parameter can be
 used to perform aspect-preserving resizing by leaving one dimension as zero.
@@ -136,15 +136,15 @@ auto asp = resize_image(img, {512, 0});    // aspect-preserving
 
 ## Image diffing
 
-Image difference can be computed using `image_difference(a,b)`. This function
+Image difference can be computed using `image_difference(a, b)`. This function
 performs a simple per-pixel difference and returns the image so that one can
 use any metric to determine whether images where different within some threshold.
 Optionally, a difference image is returned that highlights the diff.
 
 ```cpp
 auto a = image<vec4f>{...}, b = image<vec4f>{...}; // init images
-auto diff = image_difference(a,b);                 // image difference
-auto display = image_difference(a,b, true);        // diff display
+auto diff = image_difference(a, b);                // image difference
+auto display = image_difference(a, b, true);       // diff display
 ```
 
 ## Image loading and saving
@@ -237,9 +237,9 @@ auto n4 = make_ridgemap(size, scale, noise, c0, c1); // ridge image
 Procedurals skies are generated with
 `make_sunsky(img, size, elevation, turbidity, sun)`.
 The function returns a procedural HDR sky.
-The sun position is controlled by its `elevation` that is an angle in `[0,pi/2\]`.
+The sun position is controlled by its `elevation` that is an angle in `[0, pi/2]`.
 The sky turbidity is controlled by the `turbidity` parameter that is defined in
-the range `[1.7,10]`. The `sun` flag determines whether the sun disk is present
+the range `[1.7, 10]`. The `sun` flag determines whether the sun disk is present
 in the image. The function support optional parameters to control sun size and
 intensity and ground albedo, mostly used for artistic effects.
 
@@ -257,7 +257,7 @@ auto bumps = make_bumps({512,512});   // procedural bump map
 auto normal = bump_to_normal(bumps);  // convert bump map to normal map
 ```
 
-Finally, borders can be added to images using `add_border(img,width,color)`.
+Finally, borders can be added to images using `add_border(img, width, color)`.
 
 ```cpp
 auto img = image<vec4f>{...};                     // image

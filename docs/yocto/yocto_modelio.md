@@ -43,9 +43,9 @@ from Ply files. Since Ply properties cane be stored with many different
 C types, the convenience functions convert the various underlying
 representations to the requested one.
 
-Use `has_property(ply,element,property)` to check whether the model has
+Use `has_property(ply, element, property)` to check whether the model has
 a property named `property` in an element named `element`. Use
-`get_property(ply,element,property)` to get that property.
+`get_property(ply, element, property)` to get that property.
 
 Use `get_value(ply, element, property, values)` to get the property values
 and stored them in the array `values`. The function returns whether or not
@@ -56,7 +56,7 @@ Use `get_values(ply, element, properties, values)` to read arrays of
 properties.
 
 For list properties, Yocto/ModelIO supports reading properties as
-arrays of arrays of dynamic size with `get_lists(ply,element,property,lists)`.
+arrays of arrays of dynamic size with `get_lists(ply, element, property, lists)`.
 A faster, but harder to use, method is to get lists sizes and values as
 separate arrays, where list values are packed together to avoid small memory
 allocations. Use `get_list_sizes(ply, element, property, sizes)` for sizes
@@ -143,13 +143,13 @@ Use `add_values(ply, element, properties, values)` to add arrays of
 properties.
 
 For list properties, Yocto/ModelIO supports adding list properties as
-arrays of arrays of dynamic size with `add_lists(ply,element,property,lists)`.
+arrays of arrays of dynamic size with `add_lists(ply, element, property, lists)`.
 A faster, but harder to use, method is to add lists sizes and values as
 separate arrays, where list values are packed together to avoid small memory
 allocations. Use `add_lists(ply, element, property, sizes, values)`.
 Finally, Yocto/ModelIO supports adding lists of fixed lengths, where the
 parameters are packed into `vecXi`,
-with `add_lists(ply,element,property,values)`.
+with `add_lists(ply, element, property, values)`.
 
 ```cpp
 auto ply = new ply_model{};             // ply model buffer

@@ -115,7 +115,7 @@ parametrization.
 
 ## Scene Creation
 
-Objects are added to the scene via `add_<object>(scene,name)` functions,
+Objects are added to the scene via `add_<object>(scene, name)` functions,
 where `<object>` is the object type name. In these functions,
 the name is optional and, if left blank, a unique name will be generated
 automatically. For each object type, properties can be set directly.
@@ -130,7 +130,7 @@ the camera aperture and focus distance.
 ```cpp
 auto scene = new sceneio_scene{};        // create a scene
 auto camera = add_camera(scene, "cam");  // create a camera named cam
-set_frame(camera,identity3x4f);          // set frame to identity
+set_frame(camera, identity3x4f);         // set frame to identity
 set_lens(camera,0.050,1.5,0.036);     // set as 50mm lens 3:2 aspect on 35mm
 set_aperture(camera,0.01,10);            // set 10mm aperture focused at 10m
 ```
@@ -144,12 +144,12 @@ material.
 
 ```cpp
 auto scene = new sceneio_scene{};             // create a scene
-auto instance = add_instance(scene, "ist"); // create an instance named ist
-set_frame(instance,identity3x4f);           // set frame to identity
+auto instance = add_instance(scene, "ist");   // create an instance named ist
+set_frame(instance, identity3x4f);            // set frame to identity
 auto shape = add_shape(scene, "shp");
-set_shape(instance,shape);                  // set shape pointer
+set_shape(instance, shape);                   // set shape pointer
 auto material = add_material(scene, "mat");
-set_material(instance,material);            // set material pointer
+set_material(instance, material);             // set material pointer
 auto instance1 = add_complete_instance(scene, "obj");  // create an instance
 print_info(instance1->shape);                          // with a new shape
 print_info(instance1->material);                       // and  a new material
@@ -161,9 +161,9 @@ one or three channels and with float or byte channel types.
 
 ```cpp
 auto scene = new sceneio_scene{};             // create a scene
-auto texture = add_texture(scene, "tex");   // create a texture named tex
-set_texture(texture,image<vec4f>{...});     // set as a HDR texture
-set_texture(texture,image<vec4b>{...});     // set as a LDR texture
+auto texture = add_texture(scene, "tex");     // create a texture named tex
+set_texture(texture, image<vec4f>{...});      // set as a HDR texture
+set_texture(texture, image<vec4b>{...});      // set as a LDR texture
 ```
 
 For materials, Yocto/SceneIO defines functions to set each material property.
@@ -176,7 +176,7 @@ Use `set_color(material, color, tex)` to set the surface color,
 for specular, metallic and transmission weights,
 `set_ior(material, ior)`, `set_roughness(material, roughness, tex)`,
 `set_opacity(material, opacity, tex)` for surface ior, roughness and opacity,
-`set_scattering(material, scattering,tex)` for volumetric scattering and
+`set_scattering(material, scattering, tex)` for volumetric scattering and
 `set_thin(material, thin)` for the thin flag.
 
 ```cpp
@@ -268,7 +268,7 @@ add a procedural sky environment map.
 auto scene = new sceneio_scene{};     // create a scene
 auto shape = add_shape(scene);        // add a shape
 auto instance = add_instance(scene);  // add a shape instance
-set_shape(instance,shape);
+set_shape(instance, shape);
 add_cameras(scene);                   // add default camera
 add_materials(scene);                 // add default materials to instances
 add_sky(scene);                       // add environment and procedural sky
