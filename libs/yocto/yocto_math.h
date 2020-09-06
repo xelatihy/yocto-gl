@@ -693,6 +693,9 @@ struct mat2f {
   vec2f x = {1, 0};
   vec2f y = {0, 1};
 
+  mat2f();
+  mat2f(const vec2f& x, const vec2f& y);
+
   vec2f&       operator[](int i);
   const vec2f& operator[](int i) const;
 };
@@ -702,6 +705,9 @@ struct mat3f {
   vec3f x = {1, 0, 0};
   vec3f y = {0, 1, 0};
   vec3f z = {0, 0, 1};
+
+  mat3f();
+  mat3f(const vec3f& x, const vec3f& y, const vec3f& z);
 
   vec3f&       operator[](int i);
   const vec3f& operator[](int i) const;
@@ -713,6 +719,9 @@ struct mat4f {
   vec4f y = {0, 1, 0, 0};
   vec4f z = {0, 0, 1, 0};
   vec4f w = {0, 0, 0, 1};
+
+  mat4f();
+  mat4f(const vec4f& x, const vec4f& y, const vec4f& z, const vec4f& w);
 
   vec4f&       operator[](int i);
   const vec4f& operator[](int i) const;
@@ -810,6 +819,9 @@ struct frame2f {
   vec2f y = {0, 1};
   vec2f o = {0, 0};
 
+  frame2f();
+  frame2f(const vec2f& x, const vec2f& y, const vec2f& o);
+
   vec2f&       operator[](int i);
   const vec2f& operator[](int i) const;
 };
@@ -820,6 +832,9 @@ struct frame3f {
   vec3f y = {0, 1, 0};
   vec3f z = {0, 0, 1};
   vec3f o = {0, 0, 0};
+
+  frame3f();
+  frame3f(const vec3f& x, const vec3f& y, const vec3f& z, const vec3f& o);
 
   vec3f&       operator[](int i);
   const vec3f& operator[](int i) const;
@@ -891,6 +906,12 @@ struct quat4f {
   float y = 0;
   float z = 0;
   float w = 1;
+
+  quat4f();
+  quat4f(float x, float y, float z, float w);
+
+  float&       operator[](int i);
+  const float& operator[](int i) const;
 };
 
 // Constants
@@ -1890,14 +1911,24 @@ inline void swap(vec4i& a, vec4i& b) { std::swap(a, b); }
 namespace yocto {
 
 // Small Fixed-size matrices stored in column major format.
+inline mat2f::mat2f() : x{1, 0}, y{0, 1} {}
+inline mat2f::mat2f(const vec2f& x, const vec2f& y) : x{x}, y{y} {}
 inline vec2f& mat2f::operator[](int i) { return (&x)[i]; }
 inline const vec2f& mat2f::operator[](int i) const { return (&x)[i]; }
 
 // Small Fixed-size matrices stored in column major format.
+inline mat3f::mat3f() : x{1, 0, 0}, y{0, 1, 0}, z{0, 0, 1} {}
+inline mat3f::mat3f(const vec3f& x, const vec3f& y, const vec3f& z)
+    : x{x}, y{y}, z{z} {}
 inline vec3f& mat3f::operator[](int i) { return (&x)[i]; }
 inline const vec3f& mat3f::operator[](int i) const { return (&x)[i]; }
 
 // Small Fixed-size matrices stored in column major format.
+inline mat4f::mat4f()
+    : x{1, 0, 0, 0}, y{0, 1, 0, 0}, z{0, 0, 1, 0}, w{0, 0, 0, 1} {}
+inline mat4f::mat4f(
+    const vec4f& x, const vec4f& y, const vec4f& z, const vec4f& w)
+    : x{x}, y{y}, z{z}, w{w} {}
 inline vec4f& mat4f::operator[](int i) { return (&x)[i]; }
 inline const vec4f& mat4f::operator[](int i) const { return (&x)[i]; }
 
@@ -2048,10 +2079,17 @@ inline mat4f transpose(const mat4f& a) {
 namespace yocto {
 
 // Rigid frames stored as a column-major affine transform matrix.
+inline frame2f::frame2f() : x{1, 0}, y{0, 1}, o{0, 0} {}
+inline frame2f::frame2f(const vec2f& x, const vec2f& y, const vec2f& o)
+    : x{x}, y{y}, o{o} {}
 inline vec2f& frame2f::operator[](int i) { return (&x)[i]; }
 inline const vec2f& frame2f::operator[](int i) const { return (&x)[i]; }
 
 // Rigid frames stored as a column-major affine transform matrix.
+inline frame3f::frame3f() : x{1, 0, 0}, y{0, 1, 0}, z{0, 0, 1}, o{0, 0, 0} {}
+inline frame3f::frame3f(
+    const vec3f& x, const vec3f& y, const vec3f& z, const vec3f& o)
+    : x{x}, y{y}, z{z}, o{o} {}
 inline vec3f& frame3f::operator[](int i) { return (&x)[i]; }
 inline const vec3f& frame3f::operator[](int i) const { return (&x)[i]; }
 
@@ -2161,6 +2199,13 @@ inline frame3f frame_fromzx(const vec3f& o, const vec3f& z_, const vec3f& x_) {
 // QUATERNIONS
 // -----------------------------------------------------------------------------
 namespace yocto {
+
+// Quaternion
+inline quat4f::quat4f() : x{0}, y{0}, z{0}, w{1} {}
+inline quat4f::quat4f(float x, float y, float z, float w)
+    : x{x}, y{y}, z{z}, w{w} {}
+inline float& quat4f::operator[](int i) { return (&x)[i]; }
+inline const float& quat4f::operator[](int i) const { return (&x)[i]; }
 
 // Quaternion operatons
 inline quat4f operator+(const quat4f& a, const quat4f& b) {
