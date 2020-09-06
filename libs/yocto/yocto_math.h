@@ -117,8 +117,8 @@ struct vec2f {
   float x = 0;
   float y = 0;
 
-  vec2f() : x{0}, y{0} {}
-  vec2f(float x, float y) : x{x}, y{y} {}
+  vec2f();
+  vec2f(float x, float y);
 
   float&       operator[](int i);
   const float& operator[](int i) const;
@@ -129,8 +129,8 @@ struct vec3f {
   float y = 0;
   float z = 0;
 
-  vec3f() : x{0}, y{0}, z{0} {}
-  vec3f(float x, float y, float z) : x{x}, y{y}, z{z} {}
+  vec3f();
+  vec3f(float x, float y, float z);
 
   float&       operator[](int i);
   const float& operator[](int i) const;
@@ -142,8 +142,8 @@ struct vec4f {
   float z = 0;
   float w = 0;
 
-  vec4f() : x{0}, y{0}, z{0}, w{0} {}
-  vec4f(float x, float y, float z, float w) : x{x}, y{y}, z{z}, w{w} {}
+  vec4f();
+  vec4f(float x, float y, float z, float w);
 
   float&       operator[](int i);
   const float& operator[](int i) const;
@@ -419,8 +419,8 @@ struct vec2i {
   int x = 0;
   int y = 0;
 
-  vec2i() : x{0}, y{0} {}
-  vec2i(int x, int y) : x{x}, y{y} {}
+  vec2i();
+  vec2i(int x, int y);
 
   int&       operator[](int i);
   const int& operator[](int i) const;
@@ -431,8 +431,8 @@ struct vec3i {
   int y = 0;
   int z = 0;
 
-  vec3i() : x{0}, y{0}, z{0} {}
-  vec3i(int x, int y, int z) : x{x}, y{y}, z{z} {}
+  vec3i();
+  vec3i(int x, int y, int z);
 
   int&       operator[](int i);
   const int& operator[](int i) const;
@@ -444,8 +444,8 @@ struct vec4i {
   int z = 0;
   int w = 0;
 
-  vec4i() : x{0}, y{0}, z{0}, w{0} {}
-  vec4i(int x, int y, int z, int w) : x{x}, y{y}, z{z}, w{w} {}
+  vec4i();
+  vec4i(int x, int y, int z, int w);
 
   int&       operator[](int i);
   const int& operator[](int i) const;
@@ -456,8 +456,8 @@ struct vec3b {
   byte y = 0;
   byte z = 0;
 
-  vec3b() : x{0}, y{0}, z{0} {}
-  vec3b(byte x, byte y, byte z) : x{x}, y{y}, z{z} {}
+  vec3b();
+  vec3b(byte x, byte y, byte z);
 
   byte&       operator[](int i);
   const byte& operator[](int i) const;
@@ -469,8 +469,8 @@ struct vec4b {
   byte z = 0;
   byte w = 0;
 
-  vec4b() : x{0}, y{0}, z{0}, w{0} {}
-  vec4b(byte x, byte y, byte z, byte w) : x{x}, y{y}, z{z}, w{w} {}
+  vec4b();
+  vec4b(byte x, byte y, byte z, byte w);
 
   byte&       operator[](int i);
   const byte& operator[](int i) const;
@@ -481,8 +481,8 @@ struct vec3s {
   ushort y = 0;
   ushort z = 0;
 
-  vec3s() : x{0}, y{0}, z{0} {}
-  vec3s(ushort x, ushort y, ushort z) : x{x}, y{y}, z{z} {}
+  vec3s();
+  vec3s(ushort x, ushort y, ushort z);
 
   ushort&       operator[](int i);
   const ushort& operator[](int i) const;
@@ -494,8 +494,8 @@ struct vec4s {
   ushort z = 0;
   ushort w = 0;
 
-  vec4s() : x{0}, y{0}, z{0}, w{0} {}
-  vec4s(ushort x, ushort y, ushort z, ushort w) : x{x}, y{y}, z{z}, w{w} {}
+  vec4s();
+  vec4s(ushort x, ushort y, ushort z, ushort w);
 
   ushort&       operator[](int i);
   const ushort& operator[](int i) const;
@@ -1094,14 +1094,21 @@ inline void swap(int& a, int& b) { std::swap(a, b); }
 namespace yocto {
 
 // Vec2
+inline vec2f::vec2f() : x{0}, y{0} {}
+inline vec2f::vec2f(float x, float y) : x{x}, y{y} {}
 inline float& vec2f::operator[](int i) { return (&x)[i]; }
 inline const float& vec2f::operator[](int i) const { return (&x)[i]; }
 
 // Vec3
+inline vec3f::vec3f() : x{0}, y{0}, z{0} {}
+inline vec3f::vec3f(float x, float y, float z) : x{x}, y{y}, z{z} {}
 inline float& vec3f::operator[](int i) { return (&x)[i]; }
 inline const float& vec3f::operator[](int i) const { return (&x)[i]; }
 
 // Vec4
+inline vec4f::vec4f() : x{0}, y{0}, z{0}, w{0} {}
+inline vec4f::vec4f(float x, float y, float z, float w)
+    : x{x}, y{y}, z{z}, w{w} {}
 inline float& vec4f::operator[](int i) { return (&x)[i]; }
 inline const float& vec4f::operator[](int i) const { return (&x)[i]; }
 
@@ -1565,30 +1572,45 @@ inline vec4f quat_inverse(const vec4f& a) {
 namespace yocto {
 
 // Vector data types
+inline vec2i::vec2i() : x{0}, y{0} {}
+inline vec2i::vec2i(int x, int y) : x{x}, y{y} {}
 inline int& vec2i::operator[](int i) { return (&x)[i]; }
 inline const int& vec2i::operator[](int i) const { return (&x)[i]; }
 
 // Vector data types
+inline vec3i::vec3i() : x{0}, y{0}, z{0} {}
+inline vec3i::vec3i(int x, int y, int z) : x{x}, y{y}, z{z} {}
 inline int& vec3i::operator[](int i) { return (&x)[i]; }
 inline const int& vec3i::operator[](int i) const { return (&x)[i]; }
 
 // Vector data types
+inline vec4i::vec4i() : x{0}, y{0}, z{0}, w{0} {}
+inline vec4i::vec4i(int x, int y, int z, int w) : x{x}, y{y}, z{z}, w{w} {}
 inline int& vec4i::operator[](int i) { return (&x)[i]; }
 inline const int& vec4i::operator[](int i) const { return (&x)[i]; }
 
 // Vector data types
+inline vec3b::vec3b() : x{0}, y{0}, z{0} {}
+inline vec3b::vec3b(byte x, byte y, byte z) : x{x}, y{y}, z{z} {}
 inline byte& vec3b::operator[](int i) { return (&x)[i]; }
 inline const byte& vec3b::operator[](int i) const { return (&x)[i]; }
 
 // Vector data types
+inline vec4b::vec4b() : x{0}, y{0}, z{0}, w{0} {}
+inline vec4b::vec4b(byte x, byte y, byte z, byte w) : x{x}, y{y}, z{z}, w{w} {}
 inline byte& vec4b::operator[](int i) { return (&x)[i]; }
 inline const byte& vec4b::operator[](int i) const { return (&x)[i]; }
 
 // Vector data types
+inline vec3s::vec3s() : x{0}, y{0}, z{0} {}
+inline vec3s::vec3s(ushort x, ushort y, ushort z) : x{x}, y{y}, z{z} {}
 inline ushort& vec3s::operator[](int i) { return (&x)[i]; }
 inline const ushort& vec3s::operator[](int i) const { return (&x)[i]; }
 
 // Vector data types
+inline vec4s::vec4s() : x{0}, y{0}, z{0}, w{0} {}
+inline vec4s::vec4s(ushort x, ushort y, ushort z, ushort w)
+    : x{x}, y{y}, z{z}, w{w} {}
 inline ushort& vec4s::operator[](int i) { return (&x)[i]; }
 inline const ushort& vec4s::operator[](int i) const { return (&x)[i]; }
 
