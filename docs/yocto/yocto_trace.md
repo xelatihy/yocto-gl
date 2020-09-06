@@ -306,145 +306,143 @@ parametrization.
 ## Scene Creation
 
 Objects are added to the scene via `add_<object>(scene)` functions,
-where `<object>` is the object type name. In these functions,
-the name is optional and, if left blank, a unique name will be generated
-automatically. For each object type, properties can be set directly.
+where `<object>` is the object type name.
+For each object type, properties can be set directly.
 As a convenience, Yocto/Trace defines several functions to set objects
-properties.
+properties named `add_<object>_<property>(object, <values>)`.
 
-For cameras, use `set_frame(camera, frame)` to set the local to world frame,
-`set_lens(camera, lens, aspect, film, ortho)` to set the camera projection using
-photographic lens parameters, and `set_focus(camera, aperture, focus)` to set
-the camera aperture and focus distance.
+For cameras, use
+`set_camera_frame(camera, frame)` to set the local to world frame,
+`set_camera_lens(camera, lens, aspect, film, ortho)` to set the camera
+projection using photographic lens parameters, and
+`set_camera_focus(camera, aperture, focus)` to set the camera aperture and
+focus distance.
 
 ```cpp
 auto scene = new trace_scene{};          // create a scene
 auto camera = add_camera(scene);         // create a camera named cam
-set_frame(camera, identity3x4f);         // set frame to identity
-set_lens(camera,0.050,1.5,0.036);     // set as 50mm lens 3:2 aspect on 35mm
-set_aperture(camera,0.01,10);            // set 10mm aperture focused at 10m
+set_camera_frame(camera, identity3x4f);  // set frame to identity
+set_camera_lens(camera,0.050,1.5,0.036); // set as 50mm lens 3:2 aspect on 35mm
+set_camera_aperture(camera,0.01,10);     // set 10mm aperture focused at 10m
 ```
 
-For instances, use `set_frame(instance, frame)` to set the local to world frame,
-`set_shape(instance, shape)` and `set_material(instance, material)`
-to set the shape and material pointers. Since adding instances of single
-shapes is common in simpler scenes, the function
-`add_complete_instance(scene, name)` adds an instance with a new shape and
-material.
+For instances, use
+`set_instance_frame(instance, frame)` to set the local to world frame,
+`set_instance_shape(instance, shape)` and
+`set_instance_material(instance, material)`
+to set the shape and material pointers.
 
 ```cpp
 auto scene = new trace_scene{};             // create a scene
 auto instance = add_instance(scene);        // create an instance named ist
-set_frame(instance, identity3x4f);          // set frame to identity
+set_instance_frame(instance, identity3x4f); // set frame to identity
 auto shape = add_shape(scene);
-set_shape(instance, shape);                 // set shape pointer
+set_instance_shape(instance, shape);        // set shape pointer
 auto material = add_material(scene);
-set_material(instance, material);           // set material pointer
-auto instance1 = add_complete_instance(scene);  // create an instance
-print_info(instance1->shape);                   // with a new shape
-print_info(instance1->material);                // and  a new material
+set_instance_material(instance, material);  // set material pointer
 ```
 
-For textures, use `set_texture(texture, img)` to set the texture
+For textures, use `set_texture_image(texture, img)` to set the texture
 to the specified image. The function has overloads for images with
 one or three channels and with float or byte channel types.
 
 ```cpp
 auto scene = new trace_scene{};             // create a scene
 auto texture = add_texture(scene);          // create a texture named tex
-set_texture(texture, image<vec4f>{...});    // set as a HDR texture
-set_texture(texture, image<vec4b>{...});    // set as a LDR texture
+set_texture_image(texture, image<vec4f>{...});    // set as a HDR texture
+set_texture_image(texture, image<vec4b>{...});    // set as a LDR texture
 ```
 
 For materials, Yocto/Trace defines functions to set each material property.
 Each functions take as input the parameter value and an optional texture.
-Use `set_emission(material, emission, tex)` to set material emission.
-Use `set_color(material, color, tex)` to set the surface color,
-`set_specular(material, specular, tex)`,
-`set_metallic(material, metallic, tex)`,
-`set_transmission(material, transmission, tex)`
+Use `set_material_emission(material, emission, tex)` to set material emission.
+Use `set_material_color(material, color, tex)` to set the surface color,
+`set_material_specular(material, specular, tex)`,
+`set_material_metallic(material, metallic, tex)`,
+`set_material_transmission(material, transmission, tex)`
 for specular, metallic and transmission weights,
-`set_ior(material, ior)`, `set_roughness(material, roughness, tex)`,
-`set_opacity(material, opacity, tex)` for surface ior, roughness and opacity,
-`set_scattering(material, scattering, tex)` for volumetric scattering and
-`set_thin(material, thin)` for the thin flag.
+`set_material_ior(material, ior)`, `set_material_roughness(material, roughness, tex)`,
+`set_material_opacity(material, opacity, tex)` for surface ior, roughness and opacity,
+`set_material_scattering(material, scattering, tex)` for volumetric scattering and
+`set_material_thin(material, thin)` for the thin flag.
 
 ```cpp
 auto scene = new trace_scene{};               // create a scene
-auto matte = add_texture(scene);              // create a matte material
-set_color(matte, {1,0.5,0.5}, add_texture(scene)); // textured albedo
-auto plastic = add_texture(scene); // create a plastic material
-set_color(plastic, {0.5,1,0.5});              // constant color
-set_specular(plastic, 1);                     // constant specular
-set_roughness(plastic, 0.1, add_texture(scene)); // textured roughness
-auto metal = add_texture(scene);              // create a metal material
-set_color(metal, {0.5,0.5,1});                // constant color
-set_specular(metal, 1);                       // constant specular
-set_roughness(metal, 0.1);                    // constant roughness
-auto tglass = add_texture(scene);             // create a thin glass material
-set_color(tglass, {1,1,1});                   // constant color
-set_specular(tglass, 1);                      // constant specular
-set_transmission(tglass, 1);                  // constant transmission
-auto glass = add_texture(scene);              // create a glass material
-set_color(glass, {1,1,1});                    // constant color
-set_specular(glass, 1);                       // constant specular
-set_transmission(glass, 1);                   // constant transmission
-set_thin(glass, false);                       // volumetric material
-auto subsurf = add_texture(scene);            // create a subsurface material
-set_color(subsurf, {1,1,1});                  // constant color
-set_specular(subsurf, 1);                     // constant specular
-set_transmission(subsurf, 1);                 // constant transmission
-set_thin(subsurf, false);                     // volumetric material
-set_scattering(subsurf, {0.5,1,0.5});         // volumetric scattering
+auto matte = add_material(scene);              // create a matte material
+set_material_color(matte, {1,0.5,0.5}, add_texture(scene)); // textured albedo
+auto plastic = add_material(scene); // create a plastic material
+set_material_color(plastic, {0.5,1,0.5});     // constant color
+set_material_specular(plastic, 1);            // constant specular
+set_material_roughness(plastic, 0.1, add_texture(scene)); // textured roughness
+auto metal = add_material(scene);             // create a metal material
+set_material_color(metal, {0.5,0.5,1});       // constant color
+set_material_specular(metal, 1);              // constant specular
+set_material_roughness(metal, 0.1);           // constant roughness
+auto tglass = add_material(scene);            // create a thin glass material
+set_material_color(tglass, {1,1,1});          // constant color
+set_material_specular(tglass, 1);             // constant specular
+set_material_transmission(tglass, 1);         // constant transmission
+auto glass = add_material(scene);             // create a glass material
+set_material_color(glass, {1,1,1});           // constant color
+set_material_specular(glass, 1);              // constant specular
+set_material_transmission(glass, 1);          // constant transmission
+set_material_thin(glass, false);              // volumetric material
+auto subsurf = add_material(scene);           // create a subsurface material
+set_material_color(subsurf, {1,1,1});         // constant color
+set_material_specular(subsurf, 1);            // constant specular
+set_material_transmission(subsurf, 1);        // constant transmission
+set_material_thin(subsurf, false);            // volumetric material
+set_material_scattering(subsurf, {0.5,1,0.5});// volumetric scattering
 ```
 
 For shapes, Yocto/Trace defines functions to set shape element indices
-and vertex properties. Use `set_points(shape, points)`,
-`set_lines(shape, lines)`, `set_triangles(shape, triangles)`, and
-`set_quads(shape, quads)` to set indexed meshes indices as points, lines,
+and vertex properties. Use `set_shape_points(shape, points)`,
+`set_shape_lines(shape, lines)`, `set_shape_triangles(shape, triangles)`, and
+`set_shape_quads(shape, quads)` to set indexed meshes indices as points, lines,
 triangles and quads respectively.
-Use `set_positions(shape, positions)`, `set_normals(shape, normals)`,
-`set_texcoords(shape, texcoords)`, `set_colors(shape, colors)`,
-`set_radius(shape, radius)`, and `set_tangents(shape, tangents)`
+Use `set_shape_positions(shape, positions)`, `set_shape_normals(shape, normals)`,
+`set_shape_texcoords(shape, texcoords)`, `set_shape_colors(shape, colors)`,
+`set_shape_radius(shape, radius)`, and `set_shape_tangents(shape, tangents)`
 to set positions, normals, texture coordinates, colors, radius and
 tangent spaces respectively.
 
 ```cpp
 auto scene = new trace_scene{};             // create a scene
 auto shape = add_shape(scene);              // create a shape named shp
-set_triangles(shape, vector<vec3i>{...});   // set triangle indices
-set_positions(shape, vector<vec3f>{...});   // set positions
-set_normals(shape, vector<vec3f>{...});     // set normals
-set_texcoords(shape, vector<vec2f>{...});   // set texture coordinates
+set_shape_triangles(shape, vector<vec3i>{...});   // set triangle indices
+set_shape_positions(shape, vector<vec3f>{...});   // set positions
+set_shape_normals(shape, vector<vec3f>{...});     // set normals
+set_shape_texcoords(shape, vector<vec2f>{...});   // set texture coordinates
 ```
 
-Use `set_fvquads(shape, quadspos, quadsnorm, quadsuv)` to set the shapes as
-a facce-varying quad mesh. Use `set_displacement(shape, disp, tex)` to
-set the displacement map and scale and `set_subdivision(shape, level, cc)`
+Use `set_shape_fvquads(shape, quadspos, quadsnorm, quadsuv)` to set the shapes as
+a facce-varying quad mesh. Use `set_shape_displacement(shape, disp, tex)` to
+set the displacement map and scale and `set_shape_subdivision(shape, level, cc)`
 to set the subdivision level and whether to use Catmull-Clark or linear
 subdivision.
 
 ```cpp
-auto scene = new trace_scene{};             // create a scene
-auto shape = add_shape(scene);              // create a shape named shp
-set_fvquads(shape, vector<vec4i>{...},      // set face-varying indices
-  {}, vector<vec4i>{...});                  // for positions and textures
-set_positions(shape, vector<vec3f>{...});   // set positions
-set_texcoords(shape, vector<vec2f>{...});   // set texture coordinates
-set_subdivision(shape, 2, true);            // set Catmull-Clark subdivision
-set_displacement(shape, 1, tex);            // sete displacement map tex
+auto scene = new trace_scene{};               // create a scene
+auto shape = add_shape(scene);                // create a shape named shp
+set_shape_fvquads(shape, vector<vec4i>{...},  // set face-varying indices
+  {}, vector<vec4i>{...});                    // for positions and textures
+set_shape_positions(shape, vector<vec3f>{...}); // set positions
+set_shape_texcoords(shape, vector<vec2f>{...}); // set texture coordinates
+set_shape_subdivision(shape, 2, true);        // set Catmull-Clark subdivision
+set_shape_displacement(shape, 1, tex);        // sete displacement map tex
 ```
 
-For environments, use `set_frame(environment, frame)` to set the local to
-world frame, `set_emission(instance, emission, emission_tex)` to set the
-environment emission and emission texture.
+For environments, use `set_environment_frame(environment, frame)` to set the
+local to world frame, `set_environment_emission(instance, emission, emission_tex)`
+to set the environment emission and emission texture.
 
 ```cpp
 auto scene = new trace_scene{};             // create a scene
 auto environment = add_environment(scene);  // create an environment
-set_frame(environment, identity3x4f);       // set identity transform
+set_environment_frame(environment, identity3x4f); // set identity transform
 auto tex = add_scene(scene, "sky");         // add hdr texture
-set_emission(environment, {1,1,1}, tex);    // add emission scale and texture
+set_environment_emission(environment, {1,1,1}, // add environment emission
+  tex);                                     // add texture
 ```
 
 ## Scene tesselation
@@ -537,9 +535,9 @@ auto envi = eval_environment(environment, dir);  // eval environment
 
 Yocto/Trace supports ray-scene intersection queries accelerated by a two-level
 BVH. We provide both our implementation and an Embree wrapper. To perform
-ray intersection queries, first initialize the BVH with
-`init_bvh(scene, params, progress)`. The function takes a scene as input and
-builds a BVH that is stored internally. The BVH build strategy,
+ray intersection queries, first create a BVH with
+`init_bvh(bvh, scene, params, progress)`. The function takes a scene as input and
+builds a BVH that is stored in `bvh`. The BVH build strategy,
 and whether or not Embree is used is determined by the `params` settings.
 The function takes also an optional progress callback that is called as
 the BVH is build to report build progress. After initialization,
@@ -553,14 +551,15 @@ auto progress = [](const string& message,        // progress callback
    int current, int total) {
   print_info(message, current, total);
 };
+auto bvh = new trace_bvh{};                      // create bvh
 init_bvh(scene, params, progress);               // build bvh
-params.type = scene_bvh_type::embree_default;    // set build type as Embree
+params.type = trace_bvh_type::embree_default;    // set build type as Embree
 init_bvh(scene, params);        // build Embree bvh with no progress report
 ```
 
-Use `intersect_scene_bvh(scene, ray)` to intersect a ray with a scene,
-and `intersect_instance_bvh(instance, ray)` to intersect a ray with an
-instance. Both functions return a `scene_intersection` that includes
+Use `intersect_bvh(bvh, ray)` to intersect a ray with a scene,
+and `intersect_bvh(instance, instance_id, ray)` to intersect a ray with an
+instance. Both functions return a `bvh_intersection` that includes
 a hit flag, the instance id, the shape element id, the shape element uv
 and intersection distance.
 
@@ -568,9 +567,8 @@ and intersection distance.
 auto scene = new trace_scene{...};          // create a complete scene
 init_bvh(scene, {});                        // build default bvh
 auto ray = ray3f{...};                      // ray
-auto isec = intersect_scene_bvh(scene, ray);// ray-scene intersection
+auto isec = intersect_bvh(scene, ray);      // ray-scene intersection
 if (isec.hit) print_info(isec);
-auto instance = scene->instances.first();   // get instance
-auto iisec = intersect_instance_bvh(instance, ray); // ray-instance int,
+auto iisec = intersect_bvh(bvh, 0, ray);    // ray-instance intersection
 if (iisec.hit) print_info(isec);
 ```
