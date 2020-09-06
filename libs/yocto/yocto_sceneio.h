@@ -46,6 +46,7 @@
 #include <utility>
 #include <vector>
 
+#include "yocto_geometry.h"
 #include "yocto_image.h"
 #include "yocto_math.h"
 

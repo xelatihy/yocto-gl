@@ -1,8 +1,8 @@
 # Yocto/Math: Math types
 
 Yocto/Math defines the basic math primitives used in graphics, including
-small-sized vectors, matrices, frames, quaternions, rays, bounding boxes
-and their transforms. Yocto/Math is implemented in `yocto_math.h`.
+small-sized vectors, matrices, frames and quaternions, and their transforms.
+Yocto/Math is implemented in `yocto_math.h`.
 
 ## Vectors
 
@@ -78,38 +78,6 @@ Yocto/Math also defines the quaternion inverse `inverse(q)` and several
 interpolation function including linear interpolation, normalized linear
 interpolation and spherical interpolation, respectively with `lerp(a,bt)`,
 `nlerp(a,b,t)` and `slerp(a,b,t)`.
-
-## Rays
-
-Yocto/Math defines rays in 2-3 dimensions as `ray2f` and `ray3f`.
-Rays are defined as an origin `o`, a direction `d` and minimum and maximum
-values for the distance along a ray, namely `tmin` and `tmax`.
-To compute a point in a ray, use `ray_point(ray,t)`.
-See [Yocto/Geometry](yocto_geometry.md) for ray-primitive intersection.
-
-```cpp
-auto ray = ray3f{origin, direction};
-auto p = ray_point(ray, 0.5);
-```
-
-## Bounding boxes
-
-Yocto/Math defines axies-aligned bounding boxes in 2 to 3 dimensions as
-`bbox2f` and `bbox3f`. Bounding boxes store the minimum and maximum coordinate
-values, that can be accessed with `b.min` and `b.max`. Bounding boxes are
-default-initialized to an invalid state that contains no points,
-or they are constructed by specifying the min and max values directly.
-
-To build bounds for complex primitives, bounding boxes are very initialized to
-empty bounds, that can be done by using the constants like `invalidabXf`,
-and then grown to encompass either points or other bounding boxes with
-`merge(b,p)`. See [Yocto/Geometry](yocto_geometry.md) for building bounding
-boxes for geometric primitives.
-
-```cpp
-auto bbox = invalidb3f;
-for(auto point : points) bbox = merge(bbox, point);
-```
 
 ## Transforms
 
