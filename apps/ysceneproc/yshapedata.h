@@ -29,10 +29,12 @@
 #include <yocto/yocto_math.h>
 using namespace yocto;
 
+#include <array>
 #include <vector>
+using std::array;
 using std::vector;
 
-extern vector<vec3f> bunny_positions;
-extern vector<vec3f> bunny_normals;
-extern vector<vec2f> bunny_texcoords;
-extern vector<vec3i> bunny_triangles;
+extern vector<array<float, 3>> bunny_positions;
+extern vector<array<float, 3>> bunny_normals;
+extern vector<array<float, 2>> bunny_texcoords;
+extern vector<array<int, 3>>   bunny_triangles;

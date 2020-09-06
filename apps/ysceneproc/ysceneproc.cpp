@@ -39,10 +39,14 @@ using namespace yocto;
 #include "yshapedata.h"
 triangles_shape make_bunny(float scale = 1, bool align_middle = true) {
   auto shape      = triangles_shape{};
-  shape.triangles = bunny_triangles;
-  shape.positions = bunny_positions;
-  shape.normals   = bunny_normals;
-  shape.texcoords = bunny_texcoords;
+  shape.triangles = {(const vec3i*)bunny_triangles.data(),
+      (const vec3i*)bunny_triangles.data() + bunny_triangles.size()};
+  shape.positions = {(const vec3f*)bunny_positions.data(),
+      (const vec3f*)bunny_positions.data() + bunny_positions.size()};
+  shape.normals   = {(const vec3f*)bunny_normals.data(),
+      (const vec3f*)bunny_normals.data() + bunny_normals.size()};
+  shape.texcoords = {(const vec2f*)bunny_texcoords.data(),
+      (const vec2f*)bunny_texcoords.data() + bunny_texcoords.size()};
   // scale to height 1
   auto bbox = invalidb3f;
   for (auto& t : shape.triangles) {

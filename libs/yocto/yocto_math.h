@@ -117,6 +117,9 @@ struct vec2f {
   float x = 0;
   float y = 0;
 
+  vec2f() : x{0}, y{0} {}
+  vec2f(float x, float y) : x{x}, y{y} {}
+
   float&       operator[](int i);
   const float& operator[](int i) const;
 };
@@ -125,6 +128,9 @@ struct vec3f {
   float x = 0;
   float y = 0;
   float z = 0;
+
+  vec3f() : x{0}, y{0}, z{0} {}
+  vec3f(float x, float y, float z) : x{x}, y{y}, z{z} {}
 
   float&       operator[](int i);
   const float& operator[](int i) const;
@@ -135,6 +141,9 @@ struct vec4f {
   float y = 0;
   float z = 0;
   float w = 0;
+
+  vec4f() : x{0}, y{0}, z{0}, w{0} {}
+  vec4f(float x, float y, float z, float w) : x{x}, y{y}, z{z}, w{w} {}
 
   float&       operator[](int i);
   const float& operator[](int i) const;
@@ -410,6 +419,9 @@ struct vec2i {
   int x = 0;
   int y = 0;
 
+  vec2i() : x{0}, y{0} {}
+  vec2i(int x, int y) : x{x}, y{y} {}
+
   int&       operator[](int i);
   const int& operator[](int i) const;
 };
@@ -418,6 +430,9 @@ struct vec3i {
   int x = 0;
   int y = 0;
   int z = 0;
+
+  vec3i() : x{0}, y{0}, z{0} {}
+  vec3i(int x, int y, int z) : x{x}, y{y}, z{z} {}
 
   int&       operator[](int i);
   const int& operator[](int i) const;
@@ -429,6 +444,9 @@ struct vec4i {
   int z = 0;
   int w = 0;
 
+  vec4i() : x{0}, y{0}, z{0}, w{0} {}
+  vec4i(int x, int y, int z, int w) : x{x}, y{y}, z{z}, w{w} {}
+
   int&       operator[](int i);
   const int& operator[](int i) const;
 };
@@ -437,6 +455,9 @@ struct vec3b {
   byte x = 0;
   byte y = 0;
   byte z = 0;
+
+  vec3b() : x{0}, y{0}, z{0} {}
+  vec3b(byte x, byte y, byte z) : x{x}, y{y}, z{z} {}
 
   byte&       operator[](int i);
   const byte& operator[](int i) const;
@@ -448,6 +469,9 @@ struct vec4b {
   byte z = 0;
   byte w = 0;
 
+  vec4b() : x{0}, y{0}, z{0}, w{0} {}
+  vec4b(byte x, byte y, byte z, byte w) : x{x}, y{y}, z{z}, w{w} {}
+
   byte&       operator[](int i);
   const byte& operator[](int i) const;
 };
@@ -456,6 +480,9 @@ struct vec3s {
   ushort x = 0;
   ushort y = 0;
   ushort z = 0;
+
+  vec3s() : x{0}, y{0}, z{0} {}
+  vec3s(ushort x, ushort y, ushort z) : x{x}, y{y}, z{z} {}
 
   ushort&       operator[](int i);
   const ushort& operator[](int i) const;
@@ -466,6 +493,9 @@ struct vec4s {
   ushort y = 0;
   ushort z = 0;
   ushort w = 0;
+
+  vec4s() : x{0}, y{0}, z{0}, w{0} {}
+  vec4s(ushort x, ushort y, ushort z, ushort w) : x{x}, y{y}, z{z}, w{w} {}
 
   ushort&       operator[](int i);
   const ushort& operator[](int i) const;
