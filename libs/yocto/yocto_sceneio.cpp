@@ -269,160 +269,168 @@ sceneio_instance* add_complete_instance(
 }
 
 // Set cameras
-void set_frame(sceneio_camera* camera, const frame3f& frame) {
+void set_camera_frame(sceneio_camera* camera, const frame3f& frame) {
   camera->frame = frame;
 }
-void set_lens(
+void set_camera_lens(
     sceneio_camera* camera, float lens, float aspect, float film, bool ortho) {
   camera->lens         = lens;
   camera->aspect       = aspect;
   camera->film         = film;
   camera->orthographic = ortho;
 }
-void set_focus(sceneio_camera* camera, float aperture, float focus) {
+void set_camera_focus(sceneio_camera* camera, float aperture, float focus) {
   camera->aperture = aperture;
   camera->focus    = focus;
 }
 
 // Add texture
-void set_texture(sceneio_texture* texture, const image<vec4b>& img) {
+void set_texture_image(sceneio_texture* texture, const image<vec4b>& img) {
   texture->ldr = img;
   texture->hdr = {};
 }
-void set_texture(sceneio_texture* texture, const image<vec4f>& img) {
+void set_texture_image(sceneio_texture* texture, const image<vec4f>& img) {
   texture->ldr = {};
   texture->hdr = img;
 }
 
 // Add shape
-void set_points(sceneio_shape* shape, const vector<int>& points) {
+void set_shape_points(sceneio_shape* shape, const vector<int>& points) {
   shape->points = points;
 }
-void set_lines(sceneio_shape* shape, const vector<vec2i>& lines) {
+void set_shape_lines(sceneio_shape* shape, const vector<vec2i>& lines) {
   shape->lines = lines;
 }
-void set_triangles(sceneio_shape* shape, const vector<vec3i>& triangles) {
+void set_shape_triangles(sceneio_shape* shape, const vector<vec3i>& triangles) {
   shape->triangles = triangles;
 }
-void set_quads(sceneio_shape* shape, const vector<vec4i>& quads) {
+void set_shape_quads(sceneio_shape* shape, const vector<vec4i>& quads) {
   shape->quads = quads;
 }
-void set_fvquads(sceneio_shape* shape, const vector<vec4i>& quadspos,
+void set_shape_fvquads(sceneio_shape* shape, const vector<vec4i>& quadspos,
     const vector<vec4i>& quadsnorm, const vector<vec4i>& quadstexcoord) {
   shape->quadspos      = quadspos;
   shape->quadsnorm     = quadsnorm;
   shape->quadstexcoord = quadstexcoord;
 }
-void set_positions(sceneio_shape* shape, const vector<vec3f>& positions) {
+void set_shape_positions(sceneio_shape* shape, const vector<vec3f>& positions) {
   shape->positions = positions;
 }
-void set_normals(sceneio_shape* shape, const vector<vec3f>& normals) {
+void set_shape_normals(sceneio_shape* shape, const vector<vec3f>& normals) {
   shape->normals = normals;
 }
-void set_texcoords(sceneio_shape* shape, const vector<vec2f>& texcoords) {
+void set_shape_texcoords(sceneio_shape* shape, const vector<vec2f>& texcoords) {
   shape->texcoords = texcoords;
 }
-void set_colors(sceneio_shape* shape, const vector<vec4f>& colors) {
+void set_shape_colors(sceneio_shape* shape, const vector<vec4f>& colors) {
   shape->colors = colors;
 }
-void set_radius(sceneio_shape* shape, const vector<float>& radius) {
+void set_shape_radius(sceneio_shape* shape, const vector<float>& radius) {
   shape->radius = radius;
 }
-void set_tangents(sceneio_shape* shape, const vector<vec4f>& tangents) {
+void set_shape_tangents(sceneio_shape* shape, const vector<vec4f>& tangents) {
   shape->tangents = tangents;
 }
-void set_subdivision(
+void set_shape_subdivision(
     sceneio_shape* shape, int subdivisions, bool catmullclark, bool smooth) {
   shape->subdivisions = subdivisions;
   shape->catmullclark = catmullclark;
   shape->smooth       = smooth;
 }
-void set_displacement(sceneio_shape* shape, float displacement,
+void set_shape_displacement(sceneio_shape* shape, float displacement,
     sceneio_texture* displacement_tex) {
   shape->displacement     = displacement;
   shape->displacement_tex = displacement_tex;
 }
 
 // Add instance
-void set_frame(sceneio_instance* instance, const frame3f& frame) {
+void set_instance_frame(sceneio_instance* instance, const frame3f& frame) {
   instance->frame = frame;
 }
-void set_shape(sceneio_instance* instance, sceneio_shape* shape) {
+void set_instance_shape(sceneio_instance* instance, sceneio_shape* shape) {
   instance->shape = shape;
 }
-void set_material(sceneio_instance* instance, sceneio_material* material) {
+void set_instance_material(
+    sceneio_instance* instance, sceneio_material* material) {
   instance->material = material;
 }
 
 // Add material
-void set_emission(sceneio_material* material, const vec3f& emission,
+void set_material_emission(sceneio_material* material, const vec3f& emission,
     sceneio_texture* emission_tex) {
   material->emission     = emission;
   material->emission_tex = emission_tex;
 }
-void set_color(sceneio_material* material, const vec3f& color,
+void set_material_color(sceneio_material* material, const vec3f& color,
     sceneio_texture* color_tex) {
   material->color     = color;
   material->color_tex = color_tex;
 }
-void set_specular(
+void set_material_specular(
     sceneio_material* material, float specular, sceneio_texture* specular_tex) {
   material->specular     = specular;
   material->specular_tex = specular_tex;
 }
-void set_metallic(
+void set_material_metallic(
     sceneio_material* material, float metallic, sceneio_texture* metallic_tex) {
   material->metallic     = metallic;
   material->metallic_tex = metallic_tex;
 }
-void set_ior(sceneio_material* material, float ior) { material->ior = ior; }
-void set_transmission(sceneio_material* material, float transmission, bool thin,
-    float trdepth, sceneio_texture* transmission_tex) {
+void set_material_ior(sceneio_material* material, float ior) {
+  material->ior = ior;
+}
+void set_material_transmission(sceneio_material* material, float transmission,
+    bool thin, float trdepth, sceneio_texture* transmission_tex) {
   material->transmission     = transmission;
   material->thin             = thin;
   material->trdepth          = trdepth;
   material->transmission_tex = transmission_tex;
 }
-void set_translucency(sceneio_material* material, float translucency, bool thin,
-    float trdepth, sceneio_texture* translucency_tex) {
+void set_material_translucency(sceneio_material* material, float translucency,
+    bool thin, float trdepth, sceneio_texture* translucency_tex) {
   material->translucency     = translucency;
   material->thin             = thin;
   material->trdepth          = trdepth;
   material->translucency_tex = translucency_tex;
 }
-void set_thin(sceneio_material* material, bool thin) { material->thin = thin; }
-void set_roughness(sceneio_material* material, float roughness,
+void set_material_thin(sceneio_material* material, bool thin) {
+  material->thin = thin;
+}
+void set_material_roughness(sceneio_material* material, float roughness,
     sceneio_texture* roughness_tex) {
   material->roughness     = roughness;
   material->roughness_tex = roughness_tex;
 }
-void set_opacity(
+void set_material_opacity(
     sceneio_material* material, float opacity, sceneio_texture* opacity_tex) {
   material->opacity     = opacity;
   material->opacity_tex = opacity_tex;
 }
-void set_scattering(sceneio_material* material, const vec3f& scattering,
-    float scanisotropy, sceneio_texture* scattering_tex) {
+void set_material_scattering(sceneio_material* material,
+    const vec3f& scattering, float scanisotropy,
+    sceneio_texture* scattering_tex) {
   material->scattering     = scattering;
   material->scanisotropy   = scanisotropy;
   material->scattering_tex = scattering_tex;
 }
-void set_normalmap(sceneio_material* material, sceneio_texture* normal_tex) {
+void set_material_normalmap(
+    sceneio_material* material, sceneio_texture* normal_tex) {
   material->normal_tex = normal_tex;
 }
 
 // Add environment
-void set_frame(sceneio_environment* environment, const frame3f& frame) {
+void set_environment_frame(
+    sceneio_environment* environment, const frame3f& frame) {
   environment->frame = frame;
 }
-void set_emission(sceneio_environment* environment, const vec3f& emission,
-    sceneio_texture* emission_tex) {
+void set_environment_emission(sceneio_environment* environment,
+    const vec3f& emission, sceneio_texture* emission_tex) {
   environment->emission     = emission;
   environment->emission_tex = emission_tex;
 }
 
 // Add missing cameras.
-void add_cameras(sceneio_scene* scene) {
+void add_missing_camera(sceneio_scene* scene) {
   if (!scene->cameras.empty()) return;
   auto camera          = add_camera(scene, "camera");
   camera->orthographic = false;
@@ -445,7 +453,7 @@ void add_cameras(sceneio_scene* scene) {
 }
 
 // Add missing radius.
-void add_radius(sceneio_scene* scene, float radius) {
+void add_missing_radius(sceneio_scene* scene, float radius) {
   for (auto shape : scene->shapes) {
     if (shape->points.empty() && shape->lines.empty()) continue;
     if (!shape->radius.empty()) continue;
@@ -454,7 +462,7 @@ void add_radius(sceneio_scene* scene, float radius) {
 }
 
 // Add missing materials.
-void add_materials(sceneio_scene* scene) {
+void add_missing_materials(sceneio_scene* scene) {
   auto default_material = (sceneio_material*)nullptr;
   for (auto& instance : scene->instances) {
     if (instance->material != nullptr) continue;
@@ -467,7 +475,7 @@ void add_materials(sceneio_scene* scene) {
 }
 
 // Add a sky environment
-void add_sky(sceneio_scene* scene, float sun_angle) {
+void add_missing_environment(sceneio_scene* scene, float sun_angle) {
   auto texture              = add_texture(scene, "sky");
   texture->hdr              = make_sunsky({1024, 512}, sun_angle);
   auto environment          = add_environment(scene, "sky");
@@ -1717,9 +1725,9 @@ static bool load_json_scene(const string& filename, sceneio_scene* scene,
 
   // fix scene
   if (scene->name.empty()) scene->name = path_basename(filename);
-  add_cameras(scene);
-  add_radius(scene);
-  add_materials(scene);
+  add_missing_camera(scene);
+  add_missing_radius(scene);
+  add_missing_materials(scene);
   trim_memory(scene);
 
   // done
@@ -2063,9 +2071,9 @@ static bool load_obj_scene(const string& filename, sceneio_scene* scene,
 
   // fix scene
   if (scene->name.empty()) scene->name = path_basename(filename);
-  add_cameras(scene);
-  add_radius(scene);
-  add_materials(scene);
+  add_missing_camera(scene);
+  add_missing_radius(scene);
+  add_missing_materials(scene);
 
   // done
   if (progress_cb) progress_cb("load scene", progress.x++, progress.y);
@@ -2238,9 +2246,9 @@ static bool load_ply_scene(const string& filename, sceneio_scene* scene,
   instance->shape = shape;
 
   // fix scene
-  add_cameras(scene);
-  add_radius(scene);
-  add_materials(scene);
+  add_missing_camera(scene);
+  add_missing_radius(scene);
+  add_missing_materials(scene);
 
   // done
   if (progress_cb) progress_cb("load scene", progress.x++, progress.y);
@@ -2752,9 +2760,9 @@ static bool load_gltf_scene(const string& filename, sceneio_scene* scene,
 
   // fix scene
   if (scene->name.empty()) scene->name = path_basename(filename);
-  add_cameras(scene);
-  add_radius(scene);
-  add_materials(scene);
+  add_missing_camera(scene);
+  add_missing_radius(scene);
+  add_missing_materials(scene);
 
   // fix cameras
   auto bbox = compute_bounds(scene);
@@ -2947,9 +2955,9 @@ static bool load_pbrt_scene(const string& filename, sceneio_scene* scene,
 
   // fix scene
   if (scene->name.empty()) scene->name = path_basename(filename);
-  add_cameras(scene);
-  add_radius(scene);
-  add_materials(scene);
+  add_missing_camera(scene);
+  add_missing_radius(scene);
+  add_missing_materials(scene);
 
   // done
   if (progress_cb) progress_cb("load scene", progress.x++, progress.y);

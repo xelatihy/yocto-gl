@@ -68,34 +68,34 @@ sceneio_camera* add_camera(sceneio_scene* scene, const string& name,
     const vec3f& from, const vec3f& to, const vec3f& up, float lens,
     float aspect, float aperture = 0, bool ortho = false, float film = 0.036) {
   auto camera = add_camera(scene, name);
-  set_frame(camera, lookat_frame(from, to, up));
-  set_lens(camera, lens, aspect, film, ortho);
-  set_focus(camera, aperture, length(from - to));
+  set_camera_frame(camera, lookat_frame(from, to, up));
+  set_camera_lens(camera, lens, aspect, film, ortho);
+  set_camera_focus(camera, aperture, length(from - to));
   return camera;
 }
 sceneio_camera* add_camera(sceneio_scene* scene, const string& name,
     const frame3f& frame, float lens, float aspect, float aperture = 0,
     float focus = 10, bool ortho = false, float film = 0.036) {
   auto camera = add_camera(scene, name);
-  set_frame(camera, frame);
-  set_lens(camera, lens, aspect, film, ortho);
-  set_focus(camera, aperture, focus);
+  set_camera_frame(camera, frame);
+  set_camera_lens(camera, lens, aspect, film, ortho);
+  set_camera_focus(camera, aperture, focus);
   return camera;
 }
 sceneio_instance* add_instance(sceneio_scene* scene, const string& name,
     const frame3f& frame, sceneio_shape* shape, sceneio_material* material) {
   auto instance = add_instance(scene, name);
-  set_frame(instance, frame);
-  set_shape(instance, shape);
-  set_material(instance, material);
+  set_instance_frame(instance, frame);
+  set_instance_shape(instance, shape);
+  set_instance_material(instance, material);
   return instance;
 }
 sceneio_environment* add_environment(sceneio_scene* scene, const string& name,
     const frame3f& frame, const vec3f& emission,
     sceneio_texture* emission_tex = nullptr) {
   auto environment = add_environment(scene, name);
-  set_frame(environment, frame);
-  set_emission(environment, emission, emission_tex);
+  set_environment_frame(environment, frame);
+  set_environment_emission(environment, emission, emission_tex);
   return environment;
 }
 sceneio_texture* add_texture(sceneio_scene* scene, const string& name,
@@ -103,9 +103,10 @@ sceneio_texture* add_texture(sceneio_scene* scene, const string& name,
     bool single_channel = false) {
   auto texture = add_texture(scene, name);
   if (hdr) {
-    set_texture(texture, img);
+    set_texture_image(texture, img);
   } else {
-    set_texture(texture, ldr_linear ? float_to_byte(img) : rgb_to_srgbb(img));
+    set_texture_image(
+        texture, ldr_linear ? float_to_byte(img) : rgb_to_srgbb(img));
   }
   return texture;
 }

@@ -289,7 +289,7 @@ void load_scene_async(app_states* apps, const string& filename,
       return;
     app->current = 1;
     app->total   = 1;
-    if (add_skyenv) add_sky(app->ioscene);
+    if (add_skyenv) add_missing_environment(app->ioscene);
     app->iocamera = get_camera(app->ioscene, camera_name);
     init_scene(
         app->scene, app->ioscene, app->camera, app->iocamera, progress_cb);

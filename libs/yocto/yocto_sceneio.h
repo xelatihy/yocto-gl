@@ -243,71 +243,75 @@ sceneio_instance* add_complete_instance(
     sceneio_scene* scene, const string& name = "");
 
 // set camera properties
-void set_frame(sceneio_camera* camera, const frame3f& frame);
-void set_lens(sceneio_camera* camera, float lens, float aspect, float film,
-    bool ortho = false);
-void set_focus(sceneio_camera* camera, float aperture, float focus);
+void set_camera_frame(sceneio_camera* camera, const frame3f& frame);
+void set_camera_lens(sceneio_camera* camera, float lens, float aspect,
+    float film, bool ortho = false);
+void set_camera_focus(sceneio_camera* camera, float aperture, float focus);
 
 // set instance properties
-void set_frame(sceneio_instance* instance, const frame3f& frame);
-void set_material(sceneio_instance* instance, sceneio_material* material);
-void set_shape(sceneio_instance* instance, sceneio_shape* shape);
+void set_instance_frame(sceneio_instance* instance, const frame3f& frame);
+void set_instance_material(
+    sceneio_instance* instance, sceneio_material* material);
+void set_instance_shape(sceneio_instance* instance, sceneio_shape* shape);
 
 // set texture properties
-void set_texture(sceneio_texture* texture, const image<vec4b>& img);
-void set_texture(sceneio_texture* texture, const image<vec4f>& img);
+void set_texture_image(sceneio_texture* texture, const image<vec4b>& img);
+void set_texture_image(sceneio_texture* texture, const image<vec4f>& img);
 
 // set material properties
-void set_emission(sceneio_material* material, const vec3f& emission,
+void set_material_emission(sceneio_material* material, const vec3f& emission,
     sceneio_texture* emission_tex = nullptr);
-void set_color(sceneio_material* material, const vec3f& color,
+void set_material_color(sceneio_material* material, const vec3f& color,
     sceneio_texture* color_tex = nullptr);
-void set_specular(sceneio_material* material, float specular = 1,
+void set_material_specular(sceneio_material* material, float specular = 1,
     sceneio_texture* specular_tex = nullptr);
-void set_ior(sceneio_material* material, float ior);
-void set_metallic(sceneio_material* material, float metallic,
+void set_material_ior(sceneio_material* material, float ior);
+void set_material_metallic(sceneio_material* material, float metallic,
     sceneio_texture* metallic_tex = nullptr);
-void set_transmission(sceneio_material* material, float transmission, bool thin,
-    float trdepth, sceneio_texture* transmission_tex = nullptr);
-void set_translucency(sceneio_material* material, float translucency, bool thin,
-    float trdepth, sceneio_texture* translucency_tex = nullptr);
-void set_roughness(sceneio_material* material, float roughness,
+void set_material_transmission(sceneio_material* material, float transmission,
+    bool thin, float trdepth, sceneio_texture* transmission_tex = nullptr);
+void set_material_translucency(sceneio_material* material, float translucency,
+    bool thin, float trdepth, sceneio_texture* translucency_tex = nullptr);
+void set_material_roughness(sceneio_material* material, float roughness,
     sceneio_texture* roughness_tex = nullptr);
-void set_opacity(sceneio_material* material, float opacity,
+void set_material_opacity(sceneio_material* material, float opacity,
     sceneio_texture* opacity_tex = nullptr);
-void set_thin(sceneio_material* material, bool thin);
-void set_scattering(sceneio_material* material, const vec3f& scattering,
-    float scanisotropy, sceneio_texture* scattering_tex = nullptr);
-void set_normalmap(sceneio_material* material, sceneio_texture* normal_tex);
+void set_material_thin(sceneio_material* material, bool thin);
+void set_material_scattering(sceneio_material* material,
+    const vec3f& scattering, float scanisotropy,
+    sceneio_texture* scattering_tex = nullptr);
+void set_material_normalmap(
+    sceneio_material* material, sceneio_texture* normal_tex);
 
 // set shape properties
-void set_points(sceneio_shape* shape, const vector<int>& points);
-void set_lines(sceneio_shape* shape, const vector<vec2i>& lines);
-void set_triangles(sceneio_shape* shape, const vector<vec3i>& triangles);
-void set_quads(sceneio_shape* shape, const vector<vec4i>& quads);
-void set_fvquads(sceneio_shape* shape, const vector<vec4i>& quadspos,
+void set_shape_points(sceneio_shape* shape, const vector<int>& points);
+void set_shape_lines(sceneio_shape* shape, const vector<vec2i>& lines);
+void set_shape_triangles(sceneio_shape* shape, const vector<vec3i>& triangles);
+void set_shape_quads(sceneio_shape* shape, const vector<vec4i>& quads);
+void set_shape_fvquads(sceneio_shape* shape, const vector<vec4i>& quadspos,
     const vector<vec4i>& quadsnorm, const vector<vec4i>& quadstexcoord);
-void set_positions(sceneio_shape* shape, const vector<vec3f>& positions);
-void set_normals(sceneio_shape* shape, const vector<vec3f>& normals);
-void set_texcoords(sceneio_shape* shape, const vector<vec2f>& texcoords);
-void set_colors(sceneio_shape* shape, const vector<vec4f>& colors);
-void set_radius(sceneio_shape* shape, const vector<float>& radius);
-void set_tangents(sceneio_shape* shape, const vector<vec4f>& tangents);
-void set_subdivision(sceneio_shape* shape, int subdivisions, bool catmullclark,
-    bool smooth = true);
-void set_displacement(sceneio_shape* shape, float displacement,
+void set_shape_positions(sceneio_shape* shape, const vector<vec3f>& positions);
+void set_shape_normals(sceneio_shape* shape, const vector<vec3f>& normals);
+void set_shape_texcoords(sceneio_shape* shape, const vector<vec2f>& texcoords);
+void set_shape_colors(sceneio_shape* shape, const vector<vec4f>& colors);
+void set_shape_radius(sceneio_shape* shape, const vector<float>& radius);
+void set_shape_tangents(sceneio_shape* shape, const vector<vec4f>& tangents);
+void set_shape_subdivision(sceneio_shape* shape, int subdivisions,
+    bool catmullclark, bool smooth = true);
+void set_shape_displacement(sceneio_shape* shape, float displacement,
     sceneio_texture* displacement_tex);
 
 // set environment properties
-void set_frame(sceneio_environment* environment, const frame3f& frame);
-void set_emission(sceneio_environment* environment, const vec3f& emission,
-    sceneio_texture* emission_tex = nullptr);
+void set_environment_frame(
+    sceneio_environment* environment, const frame3f& frame);
+void set_environment_emission(sceneio_environment* environment,
+    const vec3f& emission, sceneio_texture* emission_tex = nullptr);
 
 // add missing elements
-void add_cameras(sceneio_scene* scene);
-void add_radius(sceneio_scene* scene, float radius = 0.001f);
-void add_materials(sceneio_scene* scene);
-void add_sky(sceneio_scene* scene, float sun_angle = pif / 4);
+void add_missing_camera(sceneio_scene* scene);
+void add_missing_radius(sceneio_scene* scene, float radius = 0.001f);
+void add_missing_materials(sceneio_scene* scene);
+void add_missing_environment(sceneio_scene* scene, float sun_angle = pif / 4);
 
 // Trim all unused memory
 void trim_memory(sceneio_scene* scene);
