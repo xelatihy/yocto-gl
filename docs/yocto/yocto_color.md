@@ -50,21 +50,21 @@ auto c_8bit = float_to_byte(rgb_to_srgb(c_rgb)); // encode in 8-bit sRGB
 
 Yocto/Color provides minimal tonal adjustment functionality, mostly helpful
 when displaying images on screens. HDR images can be tone mapped with
-`tonemap(hdr,e,f)` that applies a simple exposure correction to the HDR colors
+`tonemap(hdr, e, f)` that applies a simple exposure correction to the HDR colors
 and optionally a filmic tone curve. This functions converts from linear
 RGB to sRGB by default, but the latter conversion can be disabled.
 
-Saturation adjustment are implemented in `sature(rgb,s)` that interpolates
+Saturation adjustment are implemented in `sature(rgb, s)` that interpolates
 to color with gray.
 
 Contrast adjustments are notoriously more complex since they depend on
 both the contrast function used and the color space it is applied with. To
 cater to most uses, Yocto/Color provides three contrast curves.
-`contrast(rgb,c)` generate smooth contrast variations by applying an S-shaped
+`contrast(rgb, c)` generate smooth contrast variations by applying an S-shaped
 curve that typically used in non-linear color spaces.
-`lincontrast(rgb,c,g)` has a harsher look due to clipped colors and is obtained
-by applying linear scaling around a gray level.
-`logcontrast(rgb,c,g)` is suitable to contrast manipulation in HDR since it
+`lincontrast(rgb, c, g)` has a harsher look due to clipped colors and is
+obtained by applying linear scaling around a gray level.
+`logcontrast(rgb, c, g)` is suitable to contrast manipulation in HDR since it
 does not clip colors. This is implemented by applying scaling in the
 logarithm domain. Both linear and logarithmic contrast can be used for HDR and
 LDR by adjusting the gray level to 0.18 and 0.5 respectively.
@@ -72,14 +72,14 @@ LDR by adjusting the gray level to 0.18 and 0.5 respectively.
 ```cpp
 auto exposure = 1; auto filomic = true;
 auto ldr = tonemap(hdr, exposure, filmic);        // HDR to LDR tone mapping
-ldr = contrast(saturate(ldr,0.7),0.7);            // contrast and saturation
+ldr = contrast(saturate(ldr, 0.7), 0.7);          // contrast and saturation
 auto hdr2 = logcontrast(hdr * tint, 0.7, 0.18);   // contrast and tint in HDR
 ```
 
 ## Color map
 
 Yocto/Color defines functions to apply standard color maps.
-Use `colormap(t, type)` to apply a color map from a value in [0,1]
+Use `colormap(t, type)` to apply a color map from a value in [0, 1]
 and for different color map types. The library currently supports fitted
 Matplotlib colormaps from [here](https://www.shadertoy.com/view/WlfXRN).
 

@@ -8,7 +8,7 @@ tracing algorithms. Yocto/Shading is implemented in `yocto_shading.h`.
 Yocto/Shading defines many functions to handle Fresnel effects, both
 approximate and correct ones.
 Use `fresnel_dielectric(eta, normal, outgoing)` or
-`fresnel_conductor(eta, etak, normal,outgoiong)`
+`fresnel_conductor(eta, etak, normal, outgoiong)`
 to evaluate the fresnel term for dielectrics and conductors,
 or use `fresnel_schlick(reflectivity, normal, outgoiong)`
 for the Schlick fresnel approximation.

@@ -10,14 +10,14 @@ Yocto/Sampling includes an implementation of the [PCG32](https://www.pcg-random.
 random number generator, that is a portable generator well suited for
 graphics applications. The state of the generator is stored in `rng_state`
 and uses only 16 bytes. The generator is default-initialized to be able to
-provide random numbers as is. You can use `make_rng(seed,seq)` to initialize
+provide random numbers as is. You can use `make_rng(seed, seq)` to initialize
 a generator with a given seed and byt selecting a specific random sequence.
 See [PCG32](https://www.pcg-random.org) for a discussion. If you do not need
 to select a sequence, just use the default value.
 
 Use `rand1f(rng)`, `rand2f(rng)`, `rand3f(rng)` and `rand4f(rng)` to
-generate random 1-4 dimensional float vectors with coordinates in [0,1).
-Use `rand1i(rng,n)` to generate a random integer in the [0,n) range.
+generate random 1-4 dimensional float vectors with coordinates in [0, 1).
+Use `rand1i(rng, n)` to generate a random integer in the [0, n) range.
 Use `shuffle(sequence, rng)` to randomly shuffle a sequence.
 
 ```cpp
@@ -33,7 +33,7 @@ shuffle(vec, rng);                             // random shuffle of a vector
 
 Yocto/Sampling defines several functions to generate random points and
 directions. Each of these functions is a warp that takes random numbers in the
-[0,1) domain and warps them to the desired distributions. The functions
+[0, 1) domain and warps them to the desired distributions. The functions
 are particularly useful in procedural modeling and path tracing. For each
 function, Yocto/Sampling provides both the warp as well as its pdf, that can
 be used in Monte Carlo integration.
@@ -58,10 +58,8 @@ auto rhc2 = sample_hemisphere_cos(normal,rand2f(rng)); // oriented hemisphere
 Yocto/Sampling supports generating points uniformly on geometric primitives.
 Use `sample_disk(uv)` to uniformly sample a disk and `sample_triangle(uv)`
 to uniformly sample a triangle. For triangles we also support direct
-sampling of triangle points with `sample_triangle(p0,p1,p2,ruv)`.
-by warping
-random numbers from the unit square to  
- uniformly over the unit hemisphere
+sampling of triangle points with `sample_triangle(p0, p1, p2, ruv)`.
+by warping random numbers from the unit square to uniformly over the unit hemisphere
 and sphere, or cosine distributed over the hemisphere, using respectively
 `sample_hemisphere(ruv)`, `sample_sphere(ruv)`, `sample_hemisphere_cos(ruv)`
 `sample_hemisphere_cos(ruv)` and `sample_hemisphere_cos(ruv)`.
@@ -79,14 +77,14 @@ auto stp = sample_triangle(p0,p1,p2,rand2f(rng));   // uniform triangle point
 
 Yocto/Sampling defines several functions to sample distributions.
 Each of these functions is a warp that takes a random number in the
-[0,1) domain and warps it to the desired distribution. For each
+[0, 1) domain and warps it to the desired distribution. For each
 function, Yocto/Sampling provides both the warp as well as its pdf, that can
 be used in Monte Carlo integration.
 
-Use `sample_uniform(n,r)` to randomly pick an index in the `[0,n)` range,
-`sample_uniform(elems,r)` to randomly pick an element from a sequence,
-`sample_discrete_cdf(cdf,r)` to pick an index from a discrete distribution
-that has CDF `cdf` and `sample_discrete_weights(w,r)` to pick an index from a
+Use `sample_uniform(n, r)` to randomly pick an index in the `[0, n)` range,
+`sample_uniform(elems, r)` to randomly pick an element from a sequence,
+`sample_discrete_cdf(cdf, r)` to pick an index from a discrete distribution
+that has CDF `cdf` and `sample_discrete_weights(w, r)` to pick an index from a
 discrete distribution with probability equal to the weights array. For
 discrete distribution, `sample_discrete_cdf()` is significantly faster when
 computing many samples.

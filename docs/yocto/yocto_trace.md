@@ -320,7 +320,7 @@ the camera aperture and focus distance.
 ```cpp
 auto scene = new trace_scene{};          // create a scene
 auto camera = add_camera(scene);         // create a camera named cam
-set_frame(camera,identity3x4f);          // set frame to identity
+set_frame(camera, identity3x4f);         // set frame to identity
 set_lens(camera,0.050,1.5,0.036);     // set as 50mm lens 3:2 aspect on 35mm
 set_aperture(camera,0.01,10);            // set 10mm aperture focused at 10m
 ```
@@ -335,11 +335,11 @@ material.
 ```cpp
 auto scene = new trace_scene{};             // create a scene
 auto instance = add_instance(scene);        // create an instance named ist
-set_frame(instance,identity3x4f);           // set frame to identity
+set_frame(instance, identity3x4f);          // set frame to identity
 auto shape = add_shape(scene);
-set_shape(instance,shape);                  // set shape pointer
+set_shape(instance, shape);                 // set shape pointer
 auto material = add_material(scene);
-set_material(instance,material);            // set material pointer
+set_material(instance, material);           // set material pointer
 auto instance1 = add_complete_instance(scene);  // create an instance
 print_info(instance1->shape);                   // with a new shape
 print_info(instance1->material);                // and  a new material
@@ -352,8 +352,8 @@ one or three channels and with float or byte channel types.
 ```cpp
 auto scene = new trace_scene{};             // create a scene
 auto texture = add_texture(scene);          // create a texture named tex
-set_texture(texture,image<vec4f>{...});     // set as a HDR texture
-set_texture(texture,image<vec4b>{...});     // set as a LDR texture
+set_texture(texture, image<vec4f>{...});    // set as a HDR texture
+set_texture(texture, image<vec4b>{...});    // set as a LDR texture
 ```
 
 For materials, Yocto/Trace defines functions to set each material property.
@@ -366,7 +366,7 @@ Use `set_color(material, color, tex)` to set the surface color,
 for specular, metallic and transmission weights,
 `set_ior(material, ior)`, `set_roughness(material, roughness, tex)`,
 `set_opacity(material, opacity, tex)` for surface ior, roughness and opacity,
-`set_scattering(material, scattering,tex)` for volumetric scattering and
+`set_scattering(material, scattering, tex)` for volumetric scattering and
 `set_thin(material, thin)` for the thin flag.
 
 ```cpp
