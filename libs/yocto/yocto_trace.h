@@ -224,7 +224,6 @@ trace_instance*    add_instance(trace_scene* scene);
 trace_material*    add_material(trace_scene* scene);
 trace_shape*       add_shape(trace_scene* scene);
 trace_texture*     add_texture(trace_scene* scene);
-trace_instance*    add_complete_instance(trace_scene* scene);
 
 // set camera properties
 void set_camera_frame(trace_camera* camera, const frame3f& frame);
