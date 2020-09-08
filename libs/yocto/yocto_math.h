@@ -886,92 +886,6 @@ inline quat4f slerp(const quat4f& a, const quat4f& b, float t);
 }  // namespace yocto
 
 // -----------------------------------------------------------------------------
-// AXIS ALIGNED BOUNDING BOXES
-// -----------------------------------------------------------------------------
-namespace yocto {
-
-// Axis aligned bounding box represented as a min/max vector pairs.
-struct bbox2f {
-  vec2f min = {flt_max, flt_max};
-  vec2f max = {flt_min, flt_min};
-
-  vec2f&       operator[](int i);
-  const vec2f& operator[](int i) const;
-};
-
-// Axis aligned bounding box represented as a min/max vector pairs.
-struct bbox3f {
-  vec3f min = {flt_max, flt_max, flt_max};
-  vec3f max = {flt_min, flt_min, flt_min};
-
-  vec3f&       operator[](int i);
-  const vec3f& operator[](int i) const;
-};
-
-// Empty bbox constant.
-inline const auto invalidb2f = bbox2f{};
-inline const auto invalidb3f = bbox3f{};
-
-// Bounding box properties
-inline vec2f center(const bbox2f& a);
-inline vec2f size(const bbox2f& a);
-
-// Bounding box comparisons.
-inline bool operator==(const bbox2f& a, const bbox2f& b);
-inline bool operator!=(const bbox2f& a, const bbox2f& b);
-
-// Bounding box expansions with points and other boxes.
-inline bbox2f merge(const bbox2f& a, const vec2f& b);
-inline bbox2f merge(const bbox2f& a, const bbox2f& b);
-inline void   expand(bbox2f& a, const vec2f& b);
-inline void   expand(bbox2f& a, const bbox2f& b);
-
-// Bounding box properties
-inline vec3f center(const bbox3f& a);
-inline vec3f size(const bbox3f& a);
-
-// Bounding box comparisons.
-inline bool operator==(const bbox3f& a, const bbox3f& b);
-inline bool operator!=(const bbox3f& a, const bbox3f& b);
-
-// Bounding box expansions with points and other boxes.
-inline bbox3f merge(const bbox3f& a, const vec3f& b);
-inline bbox3f merge(const bbox3f& a, const bbox3f& b);
-inline void   expand(bbox3f& a, const vec3f& b);
-inline void   expand(bbox3f& a, const bbox3f& b);
-
-}  // namespace yocto
-
-// -----------------------------------------------------------------------------
-// RAYS
-// -----------------------------------------------------------------------------
-namespace yocto {
-
-// Ray epsilon
-inline const auto ray_eps = 1e-4f;
-
-struct ray2f {
-  vec2f o    = {0, 0};
-  vec2f d    = {0, 1};
-  float tmin = ray_eps;
-  float tmax = flt_max;
-};
-
-// Rays with origin, direction and min/max t value.
-struct ray3f {
-  vec3f o    = {0, 0, 0};
-  vec3f d    = {0, 0, 1};
-  float tmin = ray_eps;
-  float tmax = flt_max;
-};
-
-// Computes a point on a ray
-inline vec2f ray_point(const ray2f& ray, float t);
-inline vec3f ray_point(const ray3f& ray, float t);
-
-}  // namespace yocto
-
-// -----------------------------------------------------------------------------
 // TRANSFORMS
 // -----------------------------------------------------------------------------
 namespace yocto {
@@ -1058,14 +972,6 @@ inline pair<frame3f, float> camera_turntable(const frame3f& frame, float focus,
 // FPS camera for UI navigation for a frame parametrization. Returns frame.
 inline frame3f camera_fpscam(
     const frame3f& frame, const vec3f& transl, const vec2f& rotate);
-
-// Generate a ray from a camera
-inline ray3f camera_ray(
-    const frame3f& frame, float lens, const vec2f& film, const vec2f& image_uv);
-
-// Generate a ray from a camera
-inline ray3f camera_ray(const frame3f& frame, float lens, float aspect,
-    float film, const vec2f& image_uv);
 
 // Computes the image uv coordinates corresponding to the view parameters.
 // Returns negative coordinates if out of the image.
@@ -2252,76 +2158,6 @@ inline quat4f slerp(const quat4f& a, const quat4f& b, float t) {
 }  // namespace yocto
 
 // -----------------------------------------------------------------------------
-// AXIS ALIGNED BOUNDING BOXES
-// -----------------------------------------------------------------------------
-namespace yocto {
-
-// Axis aligned bounding box represented as a min/max vector pairs.
-inline vec2f& bbox2f::operator[](int i) { return (&min)[i]; }
-inline const vec2f& bbox2f::operator[](int i) const { return (&min)[i]; }
-
-// Axis aligned bounding box represented as a min/max vector pairs.
-inline vec3f& bbox3f::operator[](int i) { return (&min)[i]; }
-inline const vec3f& bbox3f::operator[](int i) const { return (&min)[i]; }
-
-// Bounding box properties
-inline vec2f center(const bbox2f& a) { return (a.min + a.max) / 2; }
-inline vec2f size(const bbox2f& a) { return a.max - a.min; }
-
-// Bounding box comparisons.
-inline bool operator==(const bbox2f& a, const bbox2f& b) {
-  return a.min == b.min && a.max == b.max;
-}
-inline bool operator!=(const bbox2f& a, const bbox2f& b) {
-  return a.min != b.min || a.max != b.max;
-}
-
-// Bounding box expansions with points and other boxes.
-inline bbox2f merge(const bbox2f& a, const vec2f& b) {
-  return {min(a.min, b), max(a.max, b)};
-}
-inline bbox2f merge(const bbox2f& a, const bbox2f& b) {
-  return {min(a.min, b.min), max(a.max, b.max)};
-}
-inline void expand(bbox2f& a, const vec2f& b) { a = merge(a, b); }
-inline void expand(bbox2f& a, const bbox2f& b) { a = merge(a, b); }
-
-// Bounding box properties
-inline vec3f center(const bbox3f& a) { return (a.min + a.max) / 2; }
-inline vec3f size(const bbox3f& a) { return a.max - a.min; }
-
-// Bounding box comparisons.
-inline bool operator==(const bbox3f& a, const bbox3f& b) {
-  return a.min == b.min && a.max == b.max;
-}
-inline bool operator!=(const bbox3f& a, const bbox3f& b) {
-  return a.min != b.min || a.max != b.max;
-}
-
-// Bounding box expansions with points and other boxes.
-inline bbox3f merge(const bbox3f& a, const vec3f& b) {
-  return {min(a.min, b), max(a.max, b)};
-}
-inline bbox3f merge(const bbox3f& a, const bbox3f& b) {
-  return {min(a.min, b.min), max(a.max, b.max)};
-}
-inline void expand(bbox3f& a, const vec3f& b) { a = merge(a, b); }
-inline void expand(bbox3f& a, const bbox3f& b) { a = merge(a, b); }
-
-}  // namespace yocto
-
-// -----------------------------------------------------------------------------
-// RAYS
-// -----------------------------------------------------------------------------
-namespace yocto {
-
-// Computes a point on a ray
-inline vec2f ray_point(const ray2f& ray, float t) { return ray.o + ray.d * t; }
-inline vec3f ray_point(const ray3f& ray, float t) { return ray.o + ray.d * t; }
-
-}  // namespace yocto
-
-// -----------------------------------------------------------------------------
 // TRANSFORMS
 // -----------------------------------------------------------------------------
 namespace yocto {
@@ -2404,36 +2240,6 @@ inline vec3f transform_normal(
   } else {
     return normalize(transform_vector(a, b));
   }
-}
-
-// Transforms rays and bounding boxes by matrices.
-inline ray3f transform_ray(const mat4f& a, const ray3f& b) {
-  return {transform_point(a, b.o), transform_vector(a, b.d), b.tmin, b.tmax};
-}
-inline ray3f transform_ray(const frame3f& a, const ray3f& b) {
-  return {transform_point(a, b.o), transform_vector(a, b.d), b.tmin, b.tmax};
-}
-inline bbox3f transform_bbox(const mat4f& a, const bbox3f& b) {
-  auto corners = {vec3f{b.min.x, b.min.y, b.min.z},
-      vec3f{b.min.x, b.min.y, b.max.z}, vec3f{b.min.x, b.max.y, b.min.z},
-      vec3f{b.min.x, b.max.y, b.max.z}, vec3f{b.max.x, b.min.y, b.min.z},
-      vec3f{b.max.x, b.min.y, b.max.z}, vec3f{b.max.x, b.max.y, b.min.z},
-      vec3f{b.max.x, b.max.y, b.max.z}};
-  auto xformed = bbox3f();
-  for (auto& corner : corners)
-    xformed = merge(xformed, transform_point(a, corner));
-  return xformed;
-}
-inline bbox3f transform_bbox(const frame3f& a, const bbox3f& b) {
-  auto corners = {vec3f{b.min.x, b.min.y, b.min.z},
-      vec3f{b.min.x, b.min.y, b.max.z}, vec3f{b.min.x, b.max.y, b.min.z},
-      vec3f{b.min.x, b.max.y, b.max.z}, vec3f{b.max.x, b.min.y, b.min.z},
-      vec3f{b.max.x, b.min.y, b.max.z}, vec3f{b.max.x, b.max.y, b.min.z},
-      vec3f{b.max.x, b.max.y, b.max.z}};
-  auto xformed = bbox3f();
-  for (auto& corner : corners)
-    xformed = merge(xformed, transform_point(a, corner));
-  return xformed;
 }
 
 // Translation, scaling and rotations transforms.
@@ -2658,32 +2464,6 @@ inline frame3f camera_fpscam(
   auto pos = frame.o + transl.x * x + transl.y * y + transl.z * z;
 
   return {rot.x, rot.y, rot.z, pos};
-}
-
-// Generate a ray from a camera
-inline ray3f camera_ray(const frame3f& frame, float lens, const vec2f& film,
-    const vec2f& image_uv) {
-  auto e = zero3f;
-  auto q = vec3f{
-      film.x * (0.5f - image_uv.x), film.y * (image_uv.y - 0.5f), lens};
-  auto q1  = -q;
-  auto d   = normalize(q1 - e);
-  auto ray = ray3f{transform_point(frame, e), transform_direction(frame, d)};
-  return ray;
-}
-
-// Generate a ray from a camera
-inline ray3f camera_ray(const frame3f& frame, float lens, float aspect,
-    float film_, const vec2f& image_uv) {
-  auto film = aspect >= 1 ? vec2f{film_, film_ / aspect}
-                          : vec2f{film_ * aspect, film_};
-  auto e = zero3f;
-  auto q = vec3f{
-      film.x * (0.5f - image_uv.x), film.y * (image_uv.y - 0.5f), lens};
-  auto q1  = -q;
-  auto d   = normalize(q1 - e);
-  auto ray = ray3f{transform_point(frame, e), transform_direction(frame, d)};
-  return ray;
 }
 
 // Computes the image uv coordinates corresponding to the view parameters.

@@ -2582,7 +2582,7 @@ bool load_mesh(const string& filename, vector<vec3i>& triangles,
       return shape_error();
 
     // decide what to do and get properties
-    auto materials  = vector<obj_material*>{};
+    auto materials  = vector<string>{};
     auto ematerials = vector<int>{};
     if (!shape->faces.empty()) {
       get_triangles(shape, triangles, positions, normals, texcoords, materials,
@@ -2693,7 +2693,7 @@ bool load_lines(const string& filename, vector<vec2i>& lines,
       return shape_error();
 
     // decide what to do and get properties
-    auto materials  = vector<obj_material*>{};
+    auto materials  = vector<string>{};
     auto ematerials = vector<int>{};
     if (!shape->faces.empty()) {
       get_lines(shape, lines, positions, normals, texcoords, materials,

@@ -3,6 +3,7 @@
 Yocto/Geometry defines basic geometry operations, including computation of
 basic geometry quantities, ray-primitive intersection, point-primitive
 distance, primitive bounds, and several interpolation functions.
+Yocto/Geometry also defines rays, bounding boxes and their transforms.
 Yocto/Geometry is implemented in `yocto_geometry.h`.
 
 ## Primitive parametrization
@@ -69,6 +70,26 @@ auto lp = interpolate_line(p0,p1,0.3);               // line point
 auto bp = interpolate_bezier(p0,p1,p2,p3,0.3);       // bezier point
 ```
 
+## Bounding boxes
+
+Yocto/Math defines axies-aligned bounding boxes in 2 to 3 dimensions as
+`bbox2f` and `bbox3f`. Bounding boxes store the minimum and maximum coordinate
+values, that can be accessed with `b.min` and `b.max`. Bounding boxes are
+default-initialized to an invalid state that contains no points,
+or they are constructed by specifying the min and max values directly.
+
+To build bounds for complex primitives, bounding boxes are very initialized to
+empty bounds, that can be done by using the constants like `invalidabXf`,
+and then grown to encompass either points or other bounding boxes with
+`merge(b,p)`. To transform bounding boxes use `transform_bbox(frame, bbox)`.
+
+```cpp
+auto bbox = invalidb3f;
+for(auto point : points) bbox = merge(bbox, point);
+auto transform = frame3f{...};
+auto transformed = transform_bbox(tranform, bbox);
+```
+
 ## Primitive bounding boxes
 
 Yocto/Geometry provides functions to compute bounding boxes for all primitives
@@ -83,6 +104,21 @@ auto qb = quad_bounds(p0,p1,p2,p3);   // quad bounding box
 auto r0 = 0.01, r1 = 0.01;
 auto lb = line_bounds(p0,p1,r0,r1);   // line bounding box
 auto pb = point_bounds(p0,r0);        // point bounding box
+```
+
+## Rays
+
+Yocto/Math defines rays in 2-3 dimensions as `ray2f` and `ray3f`.
+Rays are defined as an origin `o`, a direction `d` and minimum and maximum
+values for the distance along a ray, namely `tmin` and `tmax`.
+To compute a point in a ray, use `ray_point(ray,t)`.
+To transform rays use `transform_ray(frame, ray)`.
+
+```cpp
+auto ray = ray3f{origin, direction};
+auto p = ray_point(ray, 0.5);
+auto transform = frame3f{...};
+auto transformed = transform_ray(tranform, ray);
 ```
 
 ## Ray-primitive intersections

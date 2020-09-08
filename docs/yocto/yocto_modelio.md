@@ -292,16 +292,16 @@ in `obj_shape`. Yocto/ModelIO provides easier accessed to Obj shape data,
 both as indexed meshes and as face-varying meshes.
 
 To get data as a standard indexed meshes, use
-`get_triangles(obj,triangles,<vertex>,<materials>)`,
-`get_quads(obj,quads,<vertex>,<materials>)`,
-`get_lines(obj,lines,<vertex>,<materials>)`, and
-`get_points(obj,points,<vertex>,<materials>)`,
+`get_triangles(obj, triangles, <vertex>, <materials>)`,
+`get_quads(obj, quads, <vertex>, <materials>)`,
+`get_lines(obj, lines, <vertex>, <materials>)`, and
+`get_points(obj, points, <vertex>, <materials>)`,
 to read triangles, quads, lines and points respectively.
 In these functions, vertex data is comprised of positions, normals and texture
 coordinated stored as separate arrays.
 Note that in these functions, vertices may end up being duplicated when
 going from the face-varying representation to an indexed mesh.
-Material data is comprised of a list of materials used in the shape and
+Material data is comprised of a list of material names used in the shape and
 the per-element indices to the material arrays.
 Since Obj stored faces as polygons, these functions are performing a tesselation
 when necessary that for now work only for convex shapes. You can check whether
@@ -325,26 +325,28 @@ auto quads     = vector<vec4i>{};
 auto positions = vector<vec3f>{};       // vertex properties
 auto normals   = vector<vec3f>{};
 auto texcoords = vector<vec2f>{};
-auto materials = vector<onj_material*>{}; // materials
-auto ematerials = vector<int>{};          // per-face material ids
+auto materials = vector<string>{};      // materials
+auto ematerials = vector<int>{};        // per-face material ids
 if(has_quads(shape)) {
-  get_triangles(shape, triangles,         // read as triangles
+  get_triangles(shape, triangles,       // read as triangles
     positions, normals, texcoords,
-    materials, ematerials, false);        // flip texcoords if desired
-else
-  get_quads(shape, quads,                 // read as quads
+    materials, ematerials, false);      // flip texcoords if desired
+} else {
+  get_quads(shape, quads,               // read as quads
     positions, normals, texcoords,
-    materials, ematerials, false);        // flip texcoords if desired
+    materials, ematerials, false);      // flip texcoords if desired
+}
 
 auto material_id = 0;                     // material kd to extract to
 if(has_quads(shape)) {
   get_triangles(shape, material_id,       // read as triangles for material id
     triangles, positions,
     normals, texcoords, false);           // flip texcoords if desired
-else
+} else {
   get_quads(shape, material_id,           // read as quads for material 0
     quads, positions,
     normals, texcoords, false);           // flip texcoords if desired
+}
 ```
 
 Yocto/ModelIO supports also reading Obj shapes as face-varying quads
@@ -362,12 +364,12 @@ auto quadsuv   = vector<vec4i>{};
 auto positions = vector<vec3f>{};       // vertex properties
 auto normals   = vector<vec3f>{};
 auto texcoords = vector<vec2f>{};
-auto materials = vector<onj_material*>{}; // materials
-auto ematerials = vector<int>{};          // per-face material ids
-get_fvquads(shape,                        // read as face-varying quads
+auto materials = vector<string>{};      // materials
+auto ematerials = vector<int>{};        // per-face material ids
+get_fvquads(shape,                      // read as face-varying quads
   quadspos, quadsnorm, quadsuv,
   positions, normals, texcoords,
-  materials, ematerials, false);          // flip texcoords if desired
+  materials, ematerials, false);        // flip texcoords if desired
 ```
 
 ## Obj writing
@@ -379,16 +381,17 @@ respectively. For all objects, set the objects' properties directly.
 
 For shapes, Yocto/ModelIO defines convenience functions that take either
 indexed mesh or face-varying meshes as input and create the appropriate
-Obj shape elements. Use `set_triangles(shape,triangles,<vertex>,<materials>)`,
-`set_quads(shape,quads,<vertex>,<materials>)`,
-`set_lines(shape,lines,<vertex>,<materials>)`,
-`set_points(shape,points,<vertex>,<materials>)` to set shapes as an indexed
+Obj shape elements.
+Use `set_triangles(shape, triangles, <vertex>, <materials>)`,
+`set_quads(shape, quads, <vertex>, <materials>)`,
+`set_lines(shape, lines, <vertex>, <materials>)`,
+`set_points(shape, points, <vertex>, <materials>)` to set shapes as an indexed
 mesh of triangles, quads, lines or points respectively.
 In these functions, vertex data is comprised of positions, normals and texture
 coordinated stored as separate arrays.
 Material data is only represented as tags and can be left
-empty if only one material is used. To set material points
-use `set_materials(shape,materials)`.
+empty if only one material is used. To set material names
+use `set_materials(shape, materials)`.
 
 ```cpp
 auto obj = new obj_scene{};             // obj model buffer

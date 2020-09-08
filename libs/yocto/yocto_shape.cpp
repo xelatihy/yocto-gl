@@ -3580,7 +3580,7 @@ bool load_shape(const string& filename, vector<int>& points,
 
     if (!facevarying) {
       // decide what to do and get properties
-      auto materials  = vector<obj_material*>{};
+      auto materials  = vector<string>{};
       auto ematerials = vector<int>{};
       auto has_quads_ = has_quads(shape);
       if (!shape->faces.empty() && !has_quads_) {
@@ -3600,7 +3600,7 @@ bool load_shape(const string& filename, vector<int>& points,
       }
     } else {
       if (shape->faces.empty()) return shape_error();
-      auto materials  = vector<obj_material*>{};
+      auto materials  = vector<string>{};
       auto ematerials = vector<int>{};
       get_fvquads(shape, quadspos, quadsnorm, quadstexcoord, positions, normals,
           texcoords, materials, ematerials, flip_texcoord);

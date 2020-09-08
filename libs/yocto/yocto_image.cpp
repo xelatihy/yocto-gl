@@ -1480,8 +1480,9 @@ static vector<byte> convert_components(
     throw std::invalid_argument{"components not supported"};
   if (components == components_to) return pixels;
 
-  auto cpixels = vector<byte>((size_t)components_to * pixels.size());
-  for (auto i = 0ull; i < pixels.size(); i++) {
+  auto npixels = pixels.size() / (size_t)components;
+  auto cpixels = vector<byte>((size_t)components_to * npixels);
+  for (auto i = 0ull; i < npixels; i++) {
     auto vp = pixels.data() + i * components;
     auto cp = cpixels.data() + i * components_to;
     if (components_to > 0) cp[0] = (components > 0) ? vp[0] : 0;
@@ -1826,13 +1827,12 @@ bool load_image(const string& filename, image<vec4f>& img, string& error) {
 
   auto ext = path_extension(filename);
   if (ext == ".exr" || ext == ".EXR") {
-    auto width = 0, height = 0;
-    auto pixels = (float*)nullptr;
-    if (LoadEXR(&pixels, &width, &height, filename.c_str(), nullptr) != 0)
-      return read_error();
-    if (pixels == nullptr) return read_error();
-    img = image{{width, height}, (const vec4f*)pixels};
-    free(pixels);
+    auto width = 0, height = 0, ncomp = 0;
+    auto pixels = vector<float>{};
+    if (!load_exr(filename, width, height, ncomp, pixels, error)) return false;
+    if (pixels.empty()) return read_error();
+    if (ncomp != 4) pixels = convert_components(pixels, ncomp, 4);
+    img = image{{width, height}, (const vec4f*)pixels.data()};
     return true;
   } else if (ext == ".pfm" || ext == ".PFM") {
     auto width = 0, height = 0, ncomp = 0;
@@ -1851,12 +1851,9 @@ bool load_image(const string& filename, image<vec4f>& img, string& error) {
     img = image{{width, height}, (const vec4f*)pixels.data()};
     return true;
   } else if (!is_hdr_filename(filename)) {
-    auto width = 0, height = 0, ncomp = 0;
-    auto pixels = vector<float>{};
-    if (!load_exr(filename, width, height, ncomp, pixels, error)) return false;
-    if (pixels.empty()) return read_error();
-    if (ncomp != 4) pixels = convert_components(pixels, ncomp, 4);
-    img = image{{width, height}, (const vec4f*)pixels.data()};
+    auto img8 = image<vec4b>{};
+    if (!load_image(filename, img8, error)) return false;
+    img = srgb_to_rgb(img8);
     return true;
   } else {
     return format_error();

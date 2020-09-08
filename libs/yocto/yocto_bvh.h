@@ -44,6 +44,7 @@
 #include <string>
 #include <vector>
 
+#include "yocto_geometry.h"
 #include "yocto_math.h"
 
 #ifdef YOCTO_EMBREE
