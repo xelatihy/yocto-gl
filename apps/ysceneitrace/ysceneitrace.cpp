@@ -137,11 +137,14 @@ void init_scene(trace_scene* scene, sceneio_scene* ioscene,
   for (auto iocamera : ioscene->cameras) {
     if (progress_cb)
       progress_cb("converting cameras", progress.x++, progress.y);
-    auto camera = add_camera(scene);
-    set_frame(camera, iocamera->frame);
-    set_lens(camera, iocamera->lens, iocamera->aspect, iocamera->film,
-        iocamera->orthographic);
-    set_focus(camera, iocamera->aperture, iocamera->focus);
+    auto camera          = add_camera(scene);
+    camera->frame        = iocamera->frame;
+    camera->lens         = iocamera->lens;
+    camera->aspect       = iocamera->aspect;
+    camera->film         = iocamera->film;
+    camera->orthographic = iocamera->orthographic;
+    camera->aperture     = iocamera->aperture;
+    camera->focus        = iocamera->focus;
     camera_map[iocamera] = camera;
   }
 
@@ -573,10 +576,13 @@ void draw_widgets(gui_window* win, app_states* apps, const gui_input& input) {
       auto iocamera = app->selected_camera;
       auto camera   = get_element(
           iocamera, app->ioscene->cameras, app->scene->cameras);
-      set_frame(camera, iocamera->frame);
-      set_lens(camera, iocamera->lens, iocamera->aspect, iocamera->film,
-          iocamera->orthographic);
-      set_focus(camera, iocamera->aperture, iocamera->focus);
+      camera->frame        = iocamera->frame;
+      camera->lens         = iocamera->lens;
+      camera->aspect       = iocamera->aspect;
+      camera->film         = iocamera->film;
+      camera->orthographic = iocamera->orthographic;
+      camera->aperture     = iocamera->aperture;
+      camera->focus        = iocamera->focus;
       reset_display(app);
     }
     end_header(win);
@@ -803,10 +809,8 @@ int main(int argc, const char* argv[]) {
       stop_display(app);
       std::tie(app->iocamera->frame, app->iocamera->focus) = camera_turntable(
           app->iocamera->frame, app->iocamera->focus, rotate, dolly, pan);
-      set_frame(app->camera, app->iocamera->frame);
-      set_lens(app->camera, app->iocamera->lens, app->iocamera->aspect,
-          app->iocamera->film, app->iocamera->orthographic);
-      set_focus(app->camera, app->iocamera->aperture, app->iocamera->focus);
+      app->camera->frame = app->iocamera->frame;
+      app->camera->focus = app->iocamera->focus;
       reset_display(app);
     }
 

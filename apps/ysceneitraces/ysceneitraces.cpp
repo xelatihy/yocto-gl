@@ -125,11 +125,14 @@ void init_scene(trace_scene* scene, sceneio_scene* ioscene,
   for (auto iocamera : ioscene->cameras) {
     if (progress_cb)
       progress_cb("converting cameras", progress.x++, progress.y);
-    auto camera = add_camera(scene);
-    set_frame(camera, iocamera->frame);
-    set_lens(camera, iocamera->lens, iocamera->aspect, iocamera->film,
-        iocamera->orthographic);
-    set_focus(camera, iocamera->aperture, iocamera->focus);
+    auto camera          = add_camera(scene);
+    camera->frame        = iocamera->frame;
+    camera->lens         = iocamera->lens;
+    camera->aspect       = iocamera->aspect;
+    camera->film         = iocamera->film;
+    camera->orthographic = iocamera->orthographic;
+    camera->aperture     = iocamera->aperture;
+    camera->focus        = iocamera->focus;
     camera_map[iocamera] = camera;
   }
 

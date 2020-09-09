@@ -226,12 +226,6 @@ trace_shape*       add_shape(trace_scene* scene);
 trace_texture*     add_texture(trace_scene* scene);
 trace_instance*    add_complete_instance(trace_scene* scene);
 
-// set camera properties
-void set_frame(trace_camera* camera, const frame3f& frame);
-void set_lens(trace_camera* camera, float lens, float aspect, float film,
-    bool ortho = false);
-void set_focus(trace_camera* camera, float aperture, float focus);
-
 // set instance properties
 void set_frame(trace_instance* instance, const frame3f& frame);
 void set_material(trace_instance* instance, trace_material* material);
