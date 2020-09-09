@@ -119,159 +119,203 @@ Objects are added to the scene via `add_<object>(scene,name)` functions,
 where `<object>` is the object type name. In these functions,
 the name is optional and, if left blank, a unique name will be generated
 automatically. For each object type, properties can be set directly.
-As a convenience, Yocto/SceneIO defines several functions to set objects
-properties.
 
-For cameras, use `set_frame(camera, frame)` to set the local to world frame,
-`set_lens(camera, lens, aspect, film, ortho)` to set the camera projection using
-photographic lens parameters, and `set_focus(camera, aperture, focus)` to set
-the camera aperture and focus distance.
+For camera, you should set the camera frame, the camera view,
+via lens, aspect and film, and optionally the camera aperture and focus.
 
 ```cpp
-auto scene = new sceneio_scene{};        // create a scene
-auto camera = add_camera(scene, "cam");  // create a camera named cam
-set_frame(camera,identity3x4f);          // set frame to identity
-set_lens(camera,0.050,1.5,0.036);     // set as 50mm lens 3:2 aspect on 35mm
-set_aperture(camera,0.01,10);            // set 10mm aperture focused at 10m
+auto scene = new trace_scene{};       // create a scene
+auto camera = add_camera(scene);      // create a camera named cam
+camera->frame = identity3x4f;         // set frame to identity
+camera->lens = 0.050;                 // set as 50mm lens
+camera->aspect = 1.5;                 // set 3:2 aspect ratio
+camera->film = 0.036;                 // set the film as 35mm
+camera->aperture = 0.01;              // set 10mm aperture
+camera->focus = 10;                   // set the focus at 10m
 ```
 
-For instances, use `set_frame(instance, frame)` to set the local to world frame,
-`set_shape(instance, shape)` and `set_material(instance, material)`
-to set the shape and material pointers. Since adding instances of single
-shapes is common in simpler scenes, the function
-`add_complete_instance(scene, name)` adds an instance with a new shape and
-material.
+For instances, you should set the instance frame, shape and material.
 
 ```cpp
-auto scene = new sceneio_scene{};             // create a scene
-auto instance = add_instance(scene, "ist"); // create an instance named ist
-set_frame(instance,identity3x4f);           // set frame to identity
-auto shape = add_shape(scene, "shp");
-set_shape(instance,shape);                  // set shape pointer
-auto material = add_material(scene, "mat");
-set_material(instance,material);            // set material pointer
-auto instance1 = add_complete_instance(scene, "obj");  // create an instance
-print_info(instance1->shape);                          // with a new shape
-print_info(instance1->material);                       // and  a new material
+auto scene = new trace_scene{};       // create a scene
+auto instance = add_instance(scene);  // create an instance named ist
+instance->frame = identity3x4f;       // set frame to identity
+auto shape = add_shape(scene);
+instance->shape = shape;              // set shape pointer
+auto material = add_material(scene);
+instance->material = material;        // set material pointer
 ```
 
-For textures, use `set_texture(texture, img)` to set the texture
-to the specified image. The function has overloads for images with
-one or three channels and with float or byte channel types.
+For textures, set _either_ the hdr or ldr image.
 
 ```cpp
-auto scene = new sceneio_scene{};             // create a scene
-auto texture = add_texture(scene, "tex");   // create a texture named tex
-set_texture(texture,image<vec4f>{...});     // set as a HDR texture
-set_texture(texture,image<vec4b>{...});     // set as a LDR texture
+auto scene = new trace_scene{};       // create a scene
+auto texture = add_texture(scene);    // create a texture named tex
+texture->hdr = image<vec4f>{...};     // set as a HDR texture
+texture->ldr = ,image<vec4b>{...};    // set as a LDR texture
 ```
 
-For materials, Yocto/SceneIO defines functions to set each material property.
-Each functions take as input the parameter value and an optional texture.
-Use `set_emission(material, emission, tex)` to set material emission.
-Use `set_color(material, color, tex)` to set the surface color,
-`set_specular(material, specular, tex)`,
-`set_metallic(material, metallic, tex)`,
-`set_transmission(material, transmission, tex)`
-for specular, metallic and transmission weights,
-`set_ior(material, ior)`, `set_roughness(material, roughness, tex)`,
-`set_opacity(material, opacity, tex)` for surface ior, roughness and opacity,
-`set_scattering(material, scattering,tex)` for volumetric scattering and
-`set_thin(material, thin)` for the thin flag.
+For materials, we adopt a Disney0like model that has many parameters,
+but can render a large varierty of looks. Here are some examples.
 
 ```cpp
-auto scene = new sceneio_scene{};             // create a scene
-auto matte = add_texture(scene, "matte");     // create a matte material
-set_color(matte, {1,0.5,0.5}, add_texture(scene)); // textured albedo
-auto plastic = add_texture(scene, "plastic"); // create a plastic material
-set_color(plastic, {0.5,1,0.5});              // constant color
-set_specular(plastic, 1);                     // constant specular
-set_roughness(plastic, 0.1, add_texture(scene)); // textured roughness
-auto metal = add_texture(scene, "metal");     // create a metal material
-set_color(metal, {0.5,0.5,1});                // constant color
-set_specular(metal, 1);                       // constant specular
-set_roughness(metal, 0.1);                    // constant roughness
-auto tglass = add_texture(scene, "tglass");   // create a thin glass material
-set_color(tglass, {1,1,1});                   // constant color
-set_specular(tglass, 1);                      // constant specular
-set_transmission(tglass, 1);                  // constant transmission
-auto glass = add_texture(scene, "glass");     // create a glass material
-set_color(glass, {1,1,1});                    // constant color
-set_specular(glass, 1);                       // constant specular
-set_transmission(glass, 1);                   // constant transmission
-set_thin(glass, false);                       // volumetric material
-auto subsurf = add_texture(scene, "subsurf"); // create a subsurface material
-set_color(subsurf, {1,1,1});                  // constant color
-set_specular(subsurf, 1);                     // constant specular
-set_transmission(subsurf, 1);                 // constant transmission
-set_thin(subsurf, false);                     // volumetric material
-set_scattering(subsurf, {0.5,1,0.5});         // volumetric scattering
+auto scene = new trace_scene{};               // create a scene
+auto matte = add_texture(scene);              // create a matte material
+matte->color = {1,0.5,0.5};                   // with baese color and
+matte->color_tex = add_texture(scene);        // textured albedo
+auto plastic = add_texture(scene);            // create a plastic material
+plastic->color = {0.5,1,0.5};                 // with constant color
+plastic->specular = 1;                        // constant specular
+plastic->roughness = 0.1;                     // base roughness and a
+plastic->roughness_tex = add_texture(scene);  // roughness texture
+auto metal = add_texture(scene);              // create a metal material
+metal->color = {0.5,0.5,1};                   // constant color
+metal->metallic = 1;                          // constant metallic
+metal->roughness = 0.1;                       // constant roughness
+auto tglass = add_texture(scene);             // create a thin glass material
+tglass->color = {1,1,1};                      // with constant color
+tglass->specular = 1;                         // constant specular
+tglass->transmission = 1;                     // constant transmission
+auto glass = add_texture(scene);              // create a glass material
+glass->color = {1,1,1};                       // constant color
+glass->specular, = 1;                         // constant specular
+glass->transmission = 1;                      // constant transmission
+glass->thin = false;                          // non-volumetric material
+auto subsurf = add_texture(scene);            // create a subsurface material
+subsurf->color = {1,1,1};                     // constant color
+subsurf->specular = 1;                        // constant specular
+subsurf->transmission = 1;                    // constant transmission
+subsurf->thin = false;                        // volumetric material
+subsurf->scattering = {0.5,1,0.5};            // volumetric scattering
 ```
 
-For shapes, Yocto/SceneIO defines functions to set shape element indices
-and vertex properties. Use `set_points(shape, points)`,
-`set_lines(shape, lines)`, `set_triangles(shape, triangles)`, and
-`set_quads(shape, quads)` to set indexed meshes indices as points, lines,
-triangles and quads respectively.
-Use `set_positions(shape, positions)`, `set_normals(shape, normals)`,
-`set_texcoords(shape, texcoords)`, `set_colors(shape, colors)`,
-`set_radius(shape, radius)`, and `set_tangents(shape, tangents)`
-to set positions, normals, texture coordinates, colors, radius and
-tangent spaces respectively.
+For shapes, you should set the shape elements, i.e. point, limes, triangles
+or quads, and the vertex properties, i.e. positions, normals, texture
+coordiantes, colors and radia. Shapes support only one element type.
 
 ```cpp
-auto scene = new sceneio_scene{};           // create a scene
-auto shape = add_shape(scene, "shp");       // create a shape named shp
-set_triangles(shape, vector<vec3i>{...});   // set triangle indices
-set_positions(shape, vector<vec3f>{...});   // set positions
-set_normals(shape, vector<vec3f>{...});     // set normals
-set_texcoords(shape, vector<vec2f>{...});   // set texture coordinates
+auto scene = new trace_scene{};             // create a scene
+auto shape = add_shape(scene);              // create a shape named shp
+shape->triangles = vector<vec3i>{...};      // set triangle indices
+shape->positions = vector<vec3f>{...};      // set positions
+shape->normals = vector<vec3f>{...};        // set normals
+shape->texcoords = vector<vec2f>{...};      // set texture coordinates
 ```
 
-Use `set_fvquads(shape, quadspos, quadsnorm, quadsuv)` to set the shapes as
-a facce-varying quad mesh. Use `set_displacement(shape, disp, tex)` to
-set the displacement map and scale and `set_subdivision(shape, level, cc)`
-to set the subdivision level and whether to use Catmull-Clark or linear
-subdivision.
+Shapes can also be face-varying. In this case, set the quads for positions,
+normals and texture coordinates. This is helpful when using subdivision
+surfaces, which are specified by settings the subdivision level, and whether
+to use Catmull-Clark or linear subdivision. Finally, displacement can also
+be applied by setting a displacement scale and texture.
 
 ```cpp
-auto scene = new sceneio_scene{};           // create a scene
-auto shape = add_shape(scene, "shp");       // create a shape named shp
-set_fvquads(shape, vector<vec4i>{...},      // set face-varying indices
-  {}, vector<vec4i>{...});                  // for positions and textures
-set_positions(shape, vector<vec3f>{...});   // set positions
-set_texcoords(shape, vector<vec2f>{...});   // set texture coordinates
-set_subdivision(shape, 2, true);            // set Catmull-Clark subdivision
-set_displacement(shape, 1, tex);            // sete displacement map tex
+auto scene = new trace_scene{};             // create a scene
+auto shape = add_shape(scene);              // create a shape named shp
+shape->quadspos = vector<vec4i>{...};       // set face-varying indices
+shape->quadstexcoord = vector<vec4i>{...};  // for positions and textures
+shape->positions = vector<vec3f>{...};      // set positions
+shape->texcoords = vector<vec2f>{...};      // set texture coordinates
+shape>subdivisions = 2;                     // set subdivision level
+shape->catmullclark = true;                 // set Catmull-Clark subdivision
+shape->displacement = 1;                    // set displacement scale
+shape->displacement_tex = tex;              // and displacement map
 ```
 
-For environments, use `set_frame(environment, frame)` to set the local to
-world frame, `set_emission(instance, emission, emission_tex)` to set the
-environment emission and emission texture.
+For environments, set the frame, emission and optionally the emission texture.
 
 ```cpp
-auto scene = new sceneio_scene{};           // create a scene
-auto environment = add_environment(scene, "env"); // create an environment
-set_frame(environment, identity3x4f);       // set identity transform
+auto scene = new trace_scene{};             // create a scene
+auto environment = add_environment(scene);  // create an environment
+environment->frame = identity3x4f;          // set identity transform
 auto tex = add_scene(scene, "sky");         // add hdr texture
-set_emission(environment, {1,1,1}, tex);    // add emission scale and texture
+environment->emission = {1,1,1};            // set emission scale
+environment->emission_tex = tex;            // add emission texture
 ```
 
-For quickly creating scenes, Yocto/SceneIO provides convenience functions
-that add missing elements to construct full scenes.
-Use `add_cameras(scene)` to add a default camera, `add_materials(scene)`
-to add default materials for instances that miss it, `add_radius(scene)`
-to add points and lines thickness for rendering, and `add_sky(scene)` to
-add a procedural sky environment map.
+## Scene tesselation
+
+The evaluation functions defined above and the ray intersection functions do
+not support subdivision surfaces or displaced shapes directly. Instead,
+shapes should be converted to indexed meshes using `tesselate_shape(shape)`
+for a specific shape, or `tesselate_shapes(scene, progress)` for the
+whole scene. Note that tesselations are destructive, meaning that the original
+shape data is lost. This is done to avoid copying whenever possible.
 
 ```cpp
-auto scene = new sceneio_scene{};     // create a scene
-auto shape = add_shape(scene);        // add a shape
-auto instance = add_instance(scene);  // add a shape instance
-set_shape(instance,shape);
-add_cameras(scene);                   // add default camera
-add_materials(scene);                 // add default materials to instances
-add_sky(scene);                       // add environment and procedural sky
+auto scene = new trace_scene{...};          // create a complete scene
+void tesselate_shapes(scene);               // tesselate shapes in the scene
+```
+
+## Evaluation of scene properties
+
+Yocto/Trace defines several function to evaluate scene properties.
+Use `compute_bounds(scene)` to compute the scene bounding boxes.
+Use `get_camera(scene, name)` to get a camera by name or the default camera
+is the name is not given. Use `eval_camera(camera, image_uv, lens_uv)`
+to get a camera ray from the normalized image coordinates `image_uv` and
+lens coordinates `lens_uv`.
+
+```cpp
+auto scene = new trace_scene{...};             // create a complete scene
+auto camera = get_camera(scene);               // get default camera
+auto ray = eval_camera(camera,{0.5,0.5},{0,0});// get ray though image center
+```
+
+Use `texture_size(texture)` to get the texture resolution, and
+`eval_texture(texture, uv)` to evaluate the texture at specific uvs.
+Textures evaluation returns a color in linear color space, regardless of
+the texture representation.
+
+```cpp
+auto scene = new trace_scene{...};           // create a complete scene
+auto texture = scene->textures.front();        // get first texture
+auto col = eval_texture(texture,{0.5,0.5});    // eval texture
+```
+
+Use `eval_material(material, texcoord)` to evaluate material textures and
+combine them with parameter values. The function returns a
+`scene_material_sample` that has the same parameters of a material but no
+textures defined.
+
+```cpp
+auto scene = new trace_scene{...};             // create a complete scene
+auto material = scene->materials.front();        // get first material
+auto mat = eval_material(material,{0.5,0.5});    // eval material
+```
+
+Several functions are defined to evaluate the geometric and material
+properties of points on instances, indicated by the shape element id
+and, when needed, the shape element barycentric coordinates.
+Use `eval_position(...)` to evaluate the point position,
+`eval_normal(...)` to evaluate the interpolate point normal,
+`eval_texcoord(...)` to evaluate the point texture coordinates,
+`eval_element_normal(...)` to evaluate the point geometric normal, and
+`eval_color(...)` to evaluate the interpolate point color.
+Use `eval_material(...)` as a convenience function to evaluate material
+properties of instance points.
+
+```cpp
+auto scene = new trace_scene{...};             // create a complete scene
+auto instance = scene->instances.front();      // get first instance
+auto eid = 0; auto euv = vec3f{0.5,0.5};       // element id and uvs
+auto pos  = eval_position(instance, eid, euv); // eval point position
+auto norm = eval_normal(instance, eid, euv);   // eval point normal
+auto st   = eval_texcoord(instance, eid, euv); // eval point texture coords
+auto col  = eval_color(instance, eid, euv);    // eval point color
+auto gn   = eval_element_normal(instance, eid, euv); // eval geometric normal
+auto mat  = eval_material(instance, eid, euv); // eval point material
+```
+
+Use `eval_environment(environment, direction)` to evaluate an environment
+map emission along a specific direction `direction`. Use
+`eval_environment(scene, direction)` to accumulate the lighting for all
+environment maps.
+
+```cpp
+auto scene = new trace_scene{...};               // create a complete scene
+auto enva = eval_environment(scene, dir);        // eval all environments
+auto environment = scene->environments.front();  // get first environment
+auto envi = eval_environment(environment, dir);  // eval environment
 ```
 
 ## Scene tesselation

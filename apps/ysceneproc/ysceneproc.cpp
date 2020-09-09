@@ -62,36 +62,46 @@ triangles_shape make_bunny(float scale = 1, bool align_middle = true) {
 
 sceneio_camera* add_camera(sceneio_scene* scene, const string& name,
     const vec3f& from, const vec3f& to, const vec3f& up, float lens,
-    float aspect, float aperture = 0, bool ortho = false, float film = 0.036) {
-  auto camera = add_camera(scene, name);
-  set_frame(camera, lookat_frame(from, to, up));
-  set_lens(camera, lens, aspect, film, ortho);
-  set_focus(camera, aperture, length(from - to));
+    float aspect, float aperture = 0, bool orthographic = false,
+    float film = 0.036) {
+  auto camera          = add_camera(scene, name);
+  camera->frame        = lookat_frame(from, to, up);
+  camera->lens         = lens;
+  camera->aspect       = aspect;
+  camera->film         = film;
+  camera->orthographic = orthographic;
+  camera->aperture     = aperture;
+  camera->focus        = length(from - to);
   return camera;
 }
 sceneio_camera* add_camera(sceneio_scene* scene, const string& name,
     const frame3f& frame, float lens, float aspect, float aperture = 0,
-    float focus = 10, bool ortho = false, float film = 0.036) {
-  auto camera = add_camera(scene, name);
-  set_frame(camera, frame);
-  set_lens(camera, lens, aspect, film, ortho);
-  set_focus(camera, aperture, focus);
+    float focus = 10, bool orthographic = false, float film = 0.036) {
+  auto camera          = add_camera(scene, name);
+  camera->frame        = frame;
+  camera->lens         = lens;
+  camera->aspect       = aspect;
+  camera->film         = film;
+  camera->orthographic = orthographic;
+  camera->aperture     = aperture;
+  camera->focus        = focus;
   return camera;
 }
 sceneio_instance* add_instance(sceneio_scene* scene, const string& name,
     const frame3f& frame, sceneio_shape* shape, sceneio_material* material) {
-  auto instance = add_instance(scene, name);
-  set_frame(instance, frame);
-  set_shape(instance, shape);
-  set_material(instance, material);
+  auto instance      = add_instance(scene, name);
+  instance->frame    = frame;
+  instance->shape    = shape;
+  instance->material = material;
   return instance;
 }
 sceneio_environment* add_environment(sceneio_scene* scene, const string& name,
     const frame3f& frame, const vec3f& emission,
     sceneio_texture* emission_tex = nullptr) {
-  auto environment = add_environment(scene, name);
-  set_frame(environment, frame);
-  set_emission(environment, emission, emission_tex);
+  auto environment          = add_environment(scene, name);
+  environment->frame        = frame;
+  environment->emission     = emission;
+  environment->emission_tex = emission_tex;
   return environment;
 }
 sceneio_texture* add_texture(sceneio_scene* scene, const string& name,
@@ -99,9 +109,9 @@ sceneio_texture* add_texture(sceneio_scene* scene, const string& name,
     bool single_channel = false) {
   auto texture = add_texture(scene, name);
   if (hdr) {
-    set_texture(texture, img);
+    texture->hdr = img;
   } else {
-    set_texture(texture, ldr_linear ? float_to_byte(img) : rgb_to_srgbb(img));
+    texture->ldr = ldr_linear ? float_to_byte(img) : rgb_to_srgbb(img);
   }
   return texture;
 }

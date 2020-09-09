@@ -226,67 +226,6 @@ trace_shape*       add_shape(trace_scene* scene);
 trace_texture*     add_texture(trace_scene* scene);
 trace_instance*    add_complete_instance(trace_scene* scene);
 
-// set camera properties
-void set_frame(trace_camera* camera, const frame3f& frame);
-void set_lens(trace_camera* camera, float lens, float aspect, float film,
-    bool ortho = false);
-void set_focus(trace_camera* camera, float aperture, float focus);
-
-// set instance properties
-void set_frame(trace_instance* instance, const frame3f& frame);
-void set_material(trace_instance* instance, trace_material* material);
-void set_shape(trace_instance* instance, trace_shape* shape);
-
-// set texture properties
-void set_texture(trace_texture* texture, const image<vec4b>& img);
-void set_texture(trace_texture* texture, const image<vec4f>& img);
-
-// set material properties
-void set_emission(trace_material* material, const vec3f& emission,
-    trace_texture* emission_tex = nullptr);
-void set_color(trace_material* material, const vec3f& color,
-    trace_texture* color_tex = nullptr);
-void set_specular(trace_material* material, float specular = 1,
-    trace_texture* specular_tex = nullptr);
-void set_ior(trace_material* material, float ior);
-void set_metallic(trace_material* material, float metallic,
-    trace_texture* metallic_tex = nullptr);
-void set_transmission(trace_material* material, float transmission, bool thin,
-    float trdepth, trace_texture* transmission_tex = nullptr);
-void set_translucency(trace_material* material, float translucency, bool thin,
-    float trdepth, trace_texture* translucency_tex = nullptr);
-void set_roughness(trace_material* material, float roughness,
-    trace_texture* roughness_tex = nullptr);
-void set_opacity(trace_material* material, float opacity,
-    trace_texture* opacity_tex = nullptr);
-void set_thin(trace_material* material, bool thin);
-void set_scattering(trace_material* material, const vec3f& scattering,
-    float scanisotropy, trace_texture* scattering_tex = nullptr);
-void set_normalmap(trace_material* material, trace_texture* normal_tex);
-
-// set shape properties
-void set_points(trace_shape* shape, const vector<int>& points);
-void set_lines(trace_shape* shape, const vector<vec2i>& lines);
-void set_triangles(trace_shape* shape, const vector<vec3i>& triangles);
-void set_quads(trace_shape* shape, const vector<vec4i>& quads);
-void set_fvquads(trace_shape* shape, const vector<vec4i>& quadspos,
-    const vector<vec4i>& quadsnorm, const vector<vec4i>& quadstexcoord);
-void set_positions(trace_shape* shape, const vector<vec3f>& positions);
-void set_normals(trace_shape* shape, const vector<vec3f>& normals);
-void set_texcoords(trace_shape* shape, const vector<vec2f>& texcoords);
-void set_colors(trace_shape* shape, const vector<vec4f>& colors);
-void set_radius(trace_shape* shape, const vector<float>& radius);
-void set_tangents(trace_shape* shape, const vector<vec4f>& tangents);
-void set_subdivision(trace_shape* shape, int subdivisions, bool catmullclark,
-    bool smooth = true);
-void set_displacement(
-    trace_shape* shape, float displacement, trace_texture* displacement_tex);
-
-// set environment properties
-void set_frame(trace_environment* environment, const frame3f& frame);
-void set_emission(trace_environment* environment, const vec3f& emission,
-    trace_texture* emission_tex = nullptr);
-
 }  // namespace yocto
 
 // -----------------------------------------------------------------------------
