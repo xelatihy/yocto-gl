@@ -217,10 +217,10 @@ void init_scene(trace_scene* scene, sceneio_scene* ioscene,
   for (auto ioinstance : ioscene->instances) {
     if (progress_cb)
       progress_cb("converting instances", progress.x++, progress.y);
-    auto instance = add_instance(scene);
-    set_frame(instance, ioinstance->frame);
-    set_shape(instance, shape_map.at(ioinstance->shape));
-    set_material(instance, material_map.at(ioinstance->material));
+    auto instance      = add_instance(scene);
+    instance->frame    = ioinstance->frame;
+    instance->shape    = shape_map.at(ioinstance->shape);
+    instance->material = material_map.at(ioinstance->material);
   }
 
   for (auto ioenvironment : ioscene->environments) {
@@ -612,12 +612,11 @@ void draw_widgets(gui_window* win, app_states* apps, const gui_input& input) {
       auto ioinstance = app->selected_instance;
       auto instance   = get_element(
           ioinstance, app->ioscene->instances, app->scene->instances);
-      set_frame(instance, ioinstance->frame);
-      set_shape(instance, get_element(ioinstance->shape, app->ioscene->shapes,
-                              app->scene->shapes));
-      set_material(
-          instance, get_element(ioinstance->material, app->ioscene->materials,
-                        app->scene->materials));
+      instance->frame = ioinstance->frame;
+      instance->shape = get_element(
+          ioinstance->shape, app->ioscene->shapes, app->scene->shapes);
+      instance->material = get_element(
+          ioinstance->material, app->ioscene->materials, app->scene->materials);
       update_bvh(app->bvh, app->scene, {instance}, {}, app->params);
       reset_display(app);
     }

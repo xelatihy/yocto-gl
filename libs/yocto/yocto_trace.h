@@ -226,11 +226,6 @@ trace_shape*       add_shape(trace_scene* scene);
 trace_texture*     add_texture(trace_scene* scene);
 trace_instance*    add_complete_instance(trace_scene* scene);
 
-// set instance properties
-void set_frame(trace_instance* instance, const frame3f& frame);
-void set_material(trace_instance* instance, trace_material* material);
-void set_shape(trace_instance* instance, trace_shape* shape);
-
 // set texture properties
 void set_texture(trace_texture* texture, const image<vec4b>& img);
 void set_texture(trace_texture* texture, const image<vec4f>& img);

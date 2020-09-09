@@ -205,10 +205,10 @@ void init_scene(trace_scene* scene, sceneio_scene* ioscene,
   for (auto ioinstance : ioscene->instances) {
     if (progress_cb)
       progress_cb("converting instances", progress.x++, progress.y);
-    auto instance = add_instance(scene);
-    set_frame(instance, ioinstance->frame);
-    set_shape(instance, shape_map.at(ioinstance->shape));
-    set_material(instance, material_map.at(ioinstance->material));
+    auto instance      = add_instance(scene);
+    instance->frame    = ioinstance->frame;
+    instance->shape    = shape_map.at(ioinstance->shape);
+    instance->material = material_map.at(ioinstance->material);
   }
 
   for (auto ioenvironment : ioscene->environments) {
