@@ -137,11 +137,14 @@ void init_scene(trace_scene* scene, sceneio_scene* ioscene,
   for (auto iocamera : ioscene->cameras) {
     if (progress_cb)
       progress_cb("converting cameras", progress.x++, progress.y);
-    auto camera = add_camera(scene);
-    set_frame(camera, iocamera->frame);
-    set_lens(camera, iocamera->lens, iocamera->aspect, iocamera->film,
-        iocamera->orthographic);
-    set_focus(camera, iocamera->aperture, iocamera->focus);
+    auto camera          = add_camera(scene);
+    camera->frame        = iocamera->frame;
+    camera->lens         = iocamera->lens;
+    camera->aspect       = iocamera->aspect;
+    camera->film         = iocamera->film;
+    camera->orthographic = iocamera->orthographic;
+    camera->aperture     = iocamera->aperture;
+    camera->focus        = iocamera->focus;
     camera_map[iocamera] = camera;
   }
 
@@ -150,12 +153,9 @@ void init_scene(trace_scene* scene, sceneio_scene* ioscene,
   for (auto iotexture : ioscene->textures) {
     if (progress_cb)
       progress_cb("converting textures", progress.x++, progress.y);
-    auto texture = add_texture(scene);
-    if (!iotexture->hdr.empty()) {
-      set_texture(texture, iotexture->hdr);
-    } else if (!iotexture->ldr.empty()) {
-      set_texture(texture, iotexture->ldr);
-    }
+    auto texture           = add_texture(scene);
+    texture->hdr           = iotexture->hdr;
+    texture->ldr           = iotexture->ldr;
     texture_map[iotexture] = texture;
   }
 
@@ -164,69 +164,79 @@ void init_scene(trace_scene* scene, sceneio_scene* ioscene,
   for (auto iomaterial : ioscene->materials) {
     if (progress_cb)
       progress_cb("converting materials", progress.x++, progress.y);
-    auto material = add_material(scene);
-    set_emission(material, iomaterial->emission,
-        texture_map.at(iomaterial->emission_tex));
-    set_color(
-        material, iomaterial->color, texture_map.at(iomaterial->color_tex));
-    set_specular(material, iomaterial->specular,
-        texture_map.at(iomaterial->specular_tex));
-    set_ior(material, iomaterial->ior);
-    set_metallic(material, iomaterial->metallic,
-        texture_map.at(iomaterial->metallic_tex));
-    set_transmission(material, iomaterial->transmission, iomaterial->thin,
-        iomaterial->trdepth, texture_map.at(iomaterial->transmission_tex));
-    set_translucency(material, iomaterial->translucency, iomaterial->thin,
-        iomaterial->trdepth, texture_map.at(iomaterial->translucency_tex));
-    set_roughness(material, iomaterial->roughness,
-        texture_map.at(iomaterial->roughness_tex));
-    set_opacity(
-        material, iomaterial->opacity, texture_map.at(iomaterial->opacity_tex));
-    set_thin(material, iomaterial->thin);
-    set_normalmap(material, texture_map.at(iomaterial->normal_tex));
-    set_scattering(material, iomaterial->scattering, iomaterial->scanisotropy,
-        texture_map.at(iomaterial->scattering_tex));
-    material_map[iomaterial] = material;
+    auto material              = add_material(scene);
+    material->emission         = iomaterial->emission;
+    material->color            = iomaterial->color;
+    material->specular         = iomaterial->specular;
+    material->roughness        = iomaterial->roughness;
+    material->metallic         = iomaterial->metallic;
+    material->ior              = iomaterial->ior;
+    material->spectint         = iomaterial->spectint;
+    material->coat             = iomaterial->coat;
+    material->transmission     = iomaterial->transmission;
+    material->translucency     = iomaterial->translucency;
+    material->scattering       = iomaterial->scattering;
+    material->scanisotropy     = iomaterial->scanisotropy;
+    material->trdepth          = iomaterial->trdepth;
+    material->opacity          = iomaterial->opacity;
+    material->thin             = iomaterial->thin;
+    material->emission_tex     = texture_map.at(iomaterial->emission_tex);
+    material->color_tex        = texture_map.at(iomaterial->color_tex);
+    material->specular_tex     = texture_map.at(iomaterial->specular_tex);
+    material->metallic_tex     = texture_map.at(iomaterial->metallic_tex);
+    material->roughness_tex    = texture_map.at(iomaterial->roughness_tex);
+    material->transmission_tex = texture_map.at(iomaterial->transmission_tex);
+    material->translucency_tex = texture_map.at(iomaterial->translucency_tex);
+    material->spectint_tex     = texture_map.at(iomaterial->spectint_tex);
+    material->scattering_tex   = texture_map.at(iomaterial->scattering_tex);
+    material->coat_tex         = texture_map.at(iomaterial->coat_tex);
+    material->opacity_tex      = texture_map.at(iomaterial->opacity_tex);
+    material->normal_tex       = texture_map.at(iomaterial->normal_tex);
+    material_map[iomaterial]   = material;
   }
 
   auto shape_map     = unordered_map<sceneio_shape*, trace_shape*>{};
   shape_map[nullptr] = nullptr;
   for (auto ioshape : ioscene->shapes) {
     if (progress_cb) progress_cb("converting shapes", progress.x++, progress.y);
-    auto shape = add_shape(scene);
-    set_points(shape, ioshape->points);
-    set_lines(shape, ioshape->lines);
-    set_triangles(shape, ioshape->triangles);
-    set_quads(shape, ioshape->quads);
-    set_fvquads(
-        shape, ioshape->quadspos, ioshape->quadsnorm, ioshape->quadstexcoord);
-    set_positions(shape, ioshape->positions);
-    set_normals(shape, ioshape->normals);
-    set_texcoords(shape, ioshape->texcoords);
-    set_colors(shape, ioshape->colors);
-    set_radius(shape, ioshape->radius);
-    set_tangents(shape, ioshape->tangents);
-    set_subdivision(
-        shape, ioshape->subdivisions, ioshape->catmullclark, ioshape->smooth);
-    shape_map[ioshape] = shape;
+    auto shape              = add_shape(scene);
+    shape->points           = ioshape->points;
+    shape->lines            = ioshape->lines;
+    shape->triangles        = ioshape->triangles;
+    shape->quads            = ioshape->quads;
+    shape->quadspos         = ioshape->quadspos;
+    shape->quadsnorm        = ioshape->quadsnorm;
+    shape->quadstexcoord    = ioshape->quadstexcoord;
+    shape->positions        = ioshape->positions;
+    shape->normals          = ioshape->normals;
+    shape->texcoords        = ioshape->texcoords;
+    shape->colors           = ioshape->colors;
+    shape->radius           = ioshape->radius;
+    shape->tangents         = ioshape->tangents;
+    shape->subdivisions     = ioshape->subdivisions;
+    shape->catmullclark     = ioshape->catmullclark;
+    shape->smooth           = ioshape->smooth;
+    shape->displacement     = ioshape->displacement;
+    shape->displacement_tex = texture_map.at(ioshape->displacement_tex);
+    shape_map[ioshape]      = shape;
   }
 
   for (auto ioinstance : ioscene->instances) {
     if (progress_cb)
       progress_cb("converting instances", progress.x++, progress.y);
-    auto instance = add_instance(scene);
-    set_frame(instance, ioinstance->frame);
-    set_shape(instance, shape_map.at(ioinstance->shape));
-    set_material(instance, material_map.at(ioinstance->material));
+    auto instance      = add_instance(scene);
+    instance->frame    = ioinstance->frame;
+    instance->shape    = shape_map.at(ioinstance->shape);
+    instance->material = material_map.at(ioinstance->material);
   }
 
   for (auto ioenvironment : ioscene->environments) {
     if (progress_cb)
       progress_cb("converting environments", progress.x++, progress.y);
-    auto environment = add_environment(scene);
-    set_frame(environment, ioenvironment->frame);
-    set_emission(environment, ioenvironment->emission,
-        texture_map.at(ioenvironment->emission_tex));
+    auto environment          = add_environment(scene);
+    environment->frame        = ioenvironment->frame;
+    environment->emission     = ioenvironment->emission;
+    environment->emission_tex = texture_map.at(ioenvironment->emission_tex);
   }
 
   // done
@@ -573,10 +583,13 @@ void draw_widgets(gui_window* win, app_states* apps, const gui_input& input) {
       auto iocamera = app->selected_camera;
       auto camera   = get_element(
           iocamera, app->ioscene->cameras, app->scene->cameras);
-      set_frame(camera, iocamera->frame);
-      set_lens(camera, iocamera->lens, iocamera->aspect, iocamera->film,
-          iocamera->orthographic);
-      set_focus(camera, iocamera->aperture, iocamera->focus);
+      camera->frame        = iocamera->frame;
+      camera->lens         = iocamera->lens;
+      camera->aspect       = iocamera->aspect;
+      camera->film         = iocamera->film;
+      camera->orthographic = iocamera->orthographic;
+      camera->aperture     = iocamera->aperture;
+      camera->focus        = iocamera->focus;
       reset_display(app);
     }
     end_header(win);
@@ -590,9 +603,9 @@ void draw_widgets(gui_window* win, app_states* apps, const gui_input& input) {
       auto ioenvironment = app->selected_environment;
       auto environment   = get_element(
           ioenvironment, app->ioscene->environments, app->scene->environments);
-      set_frame(environment, ioenvironment->frame);
-      set_emission(environment, ioenvironment->emission,
-          get_texture(ioenvironment->emission_tex));
+      environment->frame        = ioenvironment->frame;
+      environment->emission     = ioenvironment->emission;
+      environment->emission_tex = get_texture(ioenvironment->emission_tex);
       init_lights(app->lights, app->scene, app->params);
       reset_display(app);
     }
@@ -606,12 +619,11 @@ void draw_widgets(gui_window* win, app_states* apps, const gui_input& input) {
       auto ioinstance = app->selected_instance;
       auto instance   = get_element(
           ioinstance, app->ioscene->instances, app->scene->instances);
-      set_frame(instance, ioinstance->frame);
-      set_shape(instance, get_element(ioinstance->shape, app->ioscene->shapes,
-                              app->scene->shapes));
-      set_material(
-          instance, get_element(ioinstance->material, app->ioscene->materials,
-                        app->scene->materials));
+      instance->frame = ioinstance->frame;
+      instance->shape = get_element(
+          ioinstance->shape, app->ioscene->shapes, app->scene->shapes);
+      instance->material = get_element(
+          ioinstance->material, app->ioscene->materials, app->scene->materials);
       update_bvh(app->bvh, app->scene, {instance}, {}, app->params);
       reset_display(app);
     }
@@ -625,16 +637,16 @@ void draw_widgets(gui_window* win, app_states* apps, const gui_input& input) {
       auto ioshape = app->selected_shape;
       auto shape   = get_element(
           ioshape, app->ioscene->shapes, app->scene->shapes);
-      set_points(shape, ioshape->points);
-      set_lines(shape, ioshape->lines);
-      set_triangles(shape, ioshape->triangles);
-      set_quads(shape, ioshape->quads);
-      set_positions(shape, ioshape->positions);
-      set_normals(shape, ioshape->normals);
-      set_texcoords(shape, ioshape->texcoords);
-      set_colors(shape, ioshape->colors);
-      set_radius(shape, ioshape->radius);
-      set_tangents(shape, ioshape->tangents);
+      shape->points    = ioshape->points;
+      shape->lines     = ioshape->lines;
+      shape->triangles = ioshape->triangles;
+      shape->quads     = ioshape->quads;
+      shape->positions = ioshape->positions;
+      shape->normals   = ioshape->normals;
+      shape->texcoords = ioshape->texcoords;
+      shape->colors    = ioshape->colors;
+      shape->radius    = ioshape->radius;
+      shape->tangents  = ioshape->tangents;
       update_bvh(app->bvh, app->scene, {}, {shape}, app->params);
       reset_display(app);
     }
@@ -648,27 +660,33 @@ void draw_widgets(gui_window* win, app_states* apps, const gui_input& input) {
       auto iomaterial = app->selected_material;
       auto material   = get_element(
           iomaterial, app->ioscene->materials, app->scene->materials);
-      set_emission(material, iomaterial->emission,
-          get_texture(iomaterial->emission_tex));
-      set_color(
-          material, iomaterial->color, get_texture(iomaterial->color_tex));
-      set_specular(material, iomaterial->specular,
-          get_texture(iomaterial->specular_tex));
-      set_ior(material, iomaterial->ior);
-      set_metallic(material, iomaterial->metallic,
-          get_texture(iomaterial->metallic_tex));
-      set_transmission(material, iomaterial->transmission, iomaterial->thin,
-          iomaterial->trdepth, get_texture(iomaterial->transmission_tex));
-      set_translucency(material, iomaterial->translucency, iomaterial->thin,
-          iomaterial->trdepth, get_texture(iomaterial->translucency_tex));
-      set_roughness(material, iomaterial->roughness,
-          get_texture(iomaterial->roughness_tex));
-      set_opacity(
-          material, iomaterial->opacity, get_texture(iomaterial->opacity_tex));
-      set_thin(material, iomaterial->thin);
-      set_normalmap(material, get_texture(iomaterial->normal_tex));
-      set_scattering(material, iomaterial->scattering, iomaterial->scanisotropy,
-          get_texture(iomaterial->scattering_tex));
+      material->emission         = iomaterial->emission;
+      material->color            = iomaterial->color;
+      material->specular         = iomaterial->specular;
+      material->roughness        = iomaterial->roughness;
+      material->metallic         = iomaterial->metallic;
+      material->ior              = iomaterial->ior;
+      material->spectint         = iomaterial->spectint;
+      material->coat             = iomaterial->coat;
+      material->transmission     = iomaterial->transmission;
+      material->translucency     = iomaterial->translucency;
+      material->scattering       = iomaterial->scattering;
+      material->scanisotropy     = iomaterial->scanisotropy;
+      material->trdepth          = iomaterial->trdepth;
+      material->opacity          = iomaterial->opacity;
+      material->thin             = iomaterial->thin;
+      material->emission_tex     = get_texture(iomaterial->emission_tex);
+      material->color_tex        = get_texture(iomaterial->color_tex);
+      material->specular_tex     = get_texture(iomaterial->specular_tex);
+      material->metallic_tex     = get_texture(iomaterial->metallic_tex);
+      material->roughness_tex    = get_texture(iomaterial->roughness_tex);
+      material->transmission_tex = get_texture(iomaterial->transmission_tex);
+      material->translucency_tex = get_texture(iomaterial->translucency_tex);
+      material->spectint_tex     = get_texture(iomaterial->spectint_tex);
+      material->scattering_tex   = get_texture(iomaterial->scattering_tex);
+      material->coat_tex         = get_texture(iomaterial->coat_tex);
+      material->opacity_tex      = get_texture(iomaterial->opacity_tex);
+      material->normal_tex       = get_texture(iomaterial->normal_tex);
       init_lights(app->lights, app->scene, app->params);
       reset_display(app);
     }
@@ -682,11 +700,8 @@ void draw_widgets(gui_window* win, app_states* apps, const gui_input& input) {
       auto iotexture = app->selected_texture;
       auto texture   = get_element(
           iotexture, app->ioscene->textures, app->scene->textures);
-      if (!iotexture->hdr.empty()) {
-        set_texture(texture, iotexture->hdr);
-      } else if (!iotexture->ldr.empty()) {
-        set_texture(texture, iotexture->ldr);
-      }
+      texture->hdr = iotexture->hdr;
+      texture->ldr = iotexture->ldr;
       reset_display(app);
     }
     end_header(win);
@@ -803,10 +818,8 @@ int main(int argc, const char* argv[]) {
       stop_display(app);
       std::tie(app->iocamera->frame, app->iocamera->focus) = camera_turntable(
           app->iocamera->frame, app->iocamera->focus, rotate, dolly, pan);
-      set_frame(app->camera, app->iocamera->frame);
-      set_lens(app->camera, app->iocamera->lens, app->iocamera->aspect,
-          app->iocamera->film, app->iocamera->orthographic);
-      set_focus(app->camera, app->iocamera->aperture, app->iocamera->focus);
+      app->camera->frame = app->iocamera->frame;
+      app->camera->focus = app->iocamera->focus;
       reset_display(app);
     }
 
