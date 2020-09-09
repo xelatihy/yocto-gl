@@ -226,29 +226,6 @@ trace_shape*       add_shape(trace_scene* scene);
 trace_texture*     add_texture(trace_scene* scene);
 trace_instance*    add_complete_instance(trace_scene* scene);
 
-// set material properties
-void set_emission(trace_material* material, const vec3f& emission,
-    trace_texture* emission_tex = nullptr);
-void set_color(trace_material* material, const vec3f& color,
-    trace_texture* color_tex = nullptr);
-void set_specular(trace_material* material, float specular = 1,
-    trace_texture* specular_tex = nullptr);
-void set_ior(trace_material* material, float ior);
-void set_metallic(trace_material* material, float metallic,
-    trace_texture* metallic_tex = nullptr);
-void set_transmission(trace_material* material, float transmission, bool thin,
-    float trdepth, trace_texture* transmission_tex = nullptr);
-void set_translucency(trace_material* material, float translucency, bool thin,
-    float trdepth, trace_texture* translucency_tex = nullptr);
-void set_roughness(trace_material* material, float roughness,
-    trace_texture* roughness_tex = nullptr);
-void set_opacity(trace_material* material, float opacity,
-    trace_texture* opacity_tex = nullptr);
-void set_thin(trace_material* material, bool thin);
-void set_scattering(trace_material* material, const vec3f& scattering,
-    float scanisotropy, trace_texture* scattering_tex = nullptr);
-void set_normalmap(trace_material* material, trace_texture* normal_tex);
-
 }  // namespace yocto
 
 // -----------------------------------------------------------------------------

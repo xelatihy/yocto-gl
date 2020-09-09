@@ -80,29 +80,35 @@ void init_scene(trace_scene* scene, sceneio_scene* ioscene,
   for (auto iomaterial : ioscene->materials) {
     if (progress_cb)
       progress_cb("converting materials", progress.x++, progress.y);
-    auto material = add_material(scene);
-    set_emission(material, iomaterial->emission,
-        texture_map.at(iomaterial->emission_tex));
-    set_color(
-        material, iomaterial->color, texture_map.at(iomaterial->color_tex));
-    set_specular(material, iomaterial->specular,
-        texture_map.at(iomaterial->specular_tex));
-    set_ior(material, iomaterial->ior);
-    set_metallic(material, iomaterial->metallic,
-        texture_map.at(iomaterial->metallic_tex));
-    set_transmission(material, iomaterial->transmission, iomaterial->thin,
-        iomaterial->trdepth, texture_map.at(iomaterial->transmission_tex));
-    set_translucency(material, iomaterial->translucency, iomaterial->thin,
-        iomaterial->trdepth, texture_map.at(iomaterial->translucency_tex));
-    set_roughness(material, iomaterial->roughness,
-        texture_map.at(iomaterial->roughness_tex));
-    set_opacity(
-        material, iomaterial->opacity, texture_map.at(iomaterial->opacity_tex));
-    set_thin(material, iomaterial->thin);
-    set_normalmap(material, texture_map.at(iomaterial->normal_tex));
-    set_scattering(material, iomaterial->scattering, iomaterial->scanisotropy,
-        texture_map.at(iomaterial->scattering_tex));
-    material_map[iomaterial] = material;
+    auto material              = add_material(scene);
+    material->emission         = iomaterial->emission;
+    material->color            = iomaterial->color;
+    material->specular         = iomaterial->specular;
+    material->roughness        = iomaterial->roughness;
+    material->metallic         = iomaterial->metallic;
+    material->ior              = iomaterial->ior;
+    material->spectint         = iomaterial->spectint;
+    material->coat             = iomaterial->coat;
+    material->transmission     = iomaterial->transmission;
+    material->translucency     = iomaterial->translucency;
+    material->scattering       = iomaterial->scattering;
+    material->scanisotropy     = iomaterial->scanisotropy;
+    material->trdepth          = iomaterial->trdepth;
+    material->opacity          = iomaterial->opacity;
+    material->thin             = iomaterial->thin;
+    material->emission_tex     = texture_map.at(iomaterial->emission_tex);
+    material->color_tex        = texture_map.at(iomaterial->color_tex);
+    material->specular_tex     = texture_map.at(iomaterial->specular_tex);
+    material->metallic_tex     = texture_map.at(iomaterial->metallic_tex);
+    material->roughness_tex    = texture_map.at(iomaterial->roughness_tex);
+    material->transmission_tex = texture_map.at(iomaterial->transmission_tex);
+    material->translucency_tex = texture_map.at(iomaterial->translucency_tex);
+    material->spectint_tex     = texture_map.at(iomaterial->spectint_tex);
+    material->scattering_tex   = texture_map.at(iomaterial->scattering_tex);
+    material->coat_tex         = texture_map.at(iomaterial->coat_tex);
+    material->opacity_tex      = texture_map.at(iomaterial->opacity_tex);
+    material->normal_tex       = texture_map.at(iomaterial->normal_tex);
+    material_map[iomaterial]   = material;
   }
 
   auto shape_map     = unordered_map<sceneio_shape*, trace_shape*>{};
