@@ -117,7 +117,7 @@ progressive computation. Each object need to be initialized separately.
 
 To render a scene, first tesselate shapes for subdivs and displacement,
 with `tesselate_shapes(scene, params, progress)`, then initialize the scene
-bvh and lights, with `init_bvh(scene, params, progress)` and
+bvh and lights, with `init_bvh(bvh, scene, params, progress)` and
 `init_lights(lights, scene, params, progress)`, then initialize the state
 with `init_state(state, scene, params)` and then call
 `trace_image(state, scene, camera, lights, params, progress, image_progress)`.
@@ -135,20 +135,21 @@ auto progress = [](const string& message, // progress callback
   print_info(message, current, total);
 };
 tesselate_shapes(scene, params, progress);// tesselate shapes if needed
-init_bvh(scene, params, progress);            // init bvh
+auto bvh = new trace_bvh{};                   // trace bvh
+init_bvh(bvh, scene, params, progress);       // init bvh
 auto lights = new trace_lights{};             // trace lights
 init_lights(lights, scene, params, progress); // init lights
 auto state = new trace_state{};               // trace state
 init_state(state, scene, params, progress);   // init lights
-trace_image(state, scene, camera, lights,     // render image
-  params, progress);
+trace_image(state, scene, camera, bvh,       // render image
+  lights, params, progress);
 auto improgress = [](const image<vec4f>& render, // image progress
       int sample, int samples) {
   if(sample % 16 == 0)                        // every 16 samples
     save_image(filename, render);             // save image
 };
-trace_image(state, scene, camera, lights,     // render image
-  params, progress, improgress);
+trace_image(state, scene, camera, hvh,        // render image
+  lights, params, progress, improgress);
 ```
 
 ## Experimental async rendering
@@ -176,26 +177,30 @@ To update the BVH, use `update_bvh(scene, instances, shapes, params)` where
 `instances` and `shapes` are the list of modified ids.
 
 ```cpp
-auto scene = new trace_scene{...};        // initialize scene
-auto params = trace_params{};             // default params
-init_bvh(scene, params, progress);        // init bvh
-init_lights(scene, params, progress);     // init lights
+auto scene = new trace_scene{...};            // initialize scene
+auto params = trace_params{};                 // default params
+auto bvh = new trace_bvh{};                   // trace bvh
+init_bvh(bvh, scene, params, progress);       // init bvh
+auto lights = new trace_lights{};             // trace lights
+init_lights(light, scene, params, progress);  // init lights
 auto imgprogress = [](const image<vec4f>& render, // image progress
       int sample, int samples) {
-  display_image(render);                  // display image
+  display_image(render);                      // display image
 };
 auto pxlprogress = [](const image<vec4f>& render, // pixel progress
       int sample, int samples, const vec2i& ij) {
-  display_pixel(render, ij);              // display pixel
+  display_pixel(render, ij);                  // display pixel
 };
-auto state = new trace_state{};           // allocate state
-trace_start(state, scene, params, {},     // start async renderer
-  imgprogress, pxlprogress);              // function returns immediately
-run_app(...);                             // application runs normally here
-trace_stop(state);                        // stop async renderer
-modify_scene(...);                        // make scene changes
-trace_start(state, scene, params, {},     // re-start async renderer
-  imgprogress, pxlprogress);              // function returns immediately
+auto state = new trace_state{};               // allocate state
+trace_start(state, scene, camera, bvh,        // start async renderer
+  lights, params, {},                         // and return immediately
+  imgprogress, pxlprogress);                  // communicates via callbacks
+run_app(...);                                 // application continues
+trace_stop(state);                            // stop async renderer
+modify_scene(...);                            // make scene changes
+trace_start(state, scene, camera, bvh,        // re-start async renderer
+  lights, params, {},                         // return immediately
+  imgprogress, pxlprogress);                  // communicates via callbacks
 ```
 
 ## Scene representation
@@ -512,8 +517,8 @@ auto envi = eval_environment(environment, dir);  // eval environment
 Yocto/Trace supports ray-scene intersection queries accelerated by a two-level
 BVH. We provide both our implementation and an Embree wrapper. To perform
 ray intersection queries, first initialize the BVH with
-`init_bvh(scene, params, progress)`. The function takes a scene as input and
-builds a BVH that is stored internally. The BVH build strategy,
+`init_bvh(bvh, scene, params, progress)`. The function takes a scene as input
+and builds a BVH that is stored internally. The BVH build strategy,
 and whether or not Embree is used is determined by the `params` settings.
 The function takes also an optional progress callback that is called as
 the BVH is build to report build progress. After initialization,
@@ -522,29 +527,29 @@ if scene shapes and instances are modified, the BVH can be updated with
 
 ```cpp
 auto scene = new trace_scene{...};               // create a complete scene
-auto params = scene_bvh_params{};                // default params
+auto params = trace_params{};                    // default params
 auto progress = [](const string& message,        // progress callback
    int current, int total) {
   print_info(message, current, total);
 };
-init_bvh(scene, params, progress);               // build bvh
-params.type = scene_bvh_type::embree_default;    // set build type as Embree
-init_bvh(scene, params);        // build Embree bvh with no progress report
+init_bvh(bvh, scene, params, progress);          // build bvh
+params.type = trace_bvh_type::embree_default;    // set build type as Embree
+init_bvh(bvh, scene, params);        // build Embree bvh with no progress report
 ```
 
-Use `intersect_scene_bvh(scene, ray)` to intersect a ray with a scene,
-and `intersect_instance_bvh(instance, ray)` to intersect a ray with an
-instance. Both functions return a `scene_intersection` that includes
+Use `intersect_bvh(bvh, ray)` to intersect a ray with a scene,
+and `intersect_bvh(bvh, instance, ray)` to intersect a ray with an
+instance. Both functions return a `bvh_intersection` that includes
 a hit flag, the instance id, the shape element id, the shape element uv
 and intersection distance.
 
 ```cpp
 auto scene = new trace_scene{...};          // create a complete scene
-init_bvh(scene, {});                        // build default bvh
+auto bvh = new trace_bvh{};                 // trace bvh
+init_bvh(bvh, scene, {});                   // build default bvh
 auto ray = ray3f{...};                      // ray
-auto isec = intersect_scene_bvh(scene, ray);// ray-scene intersection
+auto isec = intersect_bvh(bvh, ray);        // ray-scene intersection
 if (isec.hit) print_info(isec);
-auto instance = scene->instances.first();   // get instance
-auto iisec = intersect_instance_bvh(instance, ray); // ray-instance int,
+auto iisec = intersect_bvh(scene, 0, ray);  // ray-instance intersection
 if (iisec.hit) print_info(isec);
 ```
