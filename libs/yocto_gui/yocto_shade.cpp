@@ -56,77 +56,90 @@ namespace yocto {
 #pragma GCC diagnostic pop
 #endif
 
+enum struct shape_buffers {
+  positions = 0,
+  normals,
+  texcoords,
+  colors,
+  tangents,
+  instances_from,
+  instances_to,
+  count
+};
+
 const ogl_arraybuffer* get_positions(const shade_shape* shape) {
-  if (shape->shape->vertex_buffers.size() <= 0) return nullptr;
-  return shape->shape->vertex_buffers[0];
+  return shape->shape->vertex_buffers[(int)shape_buffers::positions];
 }
 const ogl_arraybuffer* get_normals(const shade_shape* shape) {
-  if (shape->shape->vertex_buffers.size() <= 1) return nullptr;
-  return shape->shape->vertex_buffers[1];
+  return shape->shape->vertex_buffers[(int)shape_buffers::normals];
 }
 const ogl_arraybuffer* get_texcoords(const shade_shape* shape) {
-  if (shape->shape->vertex_buffers.size() <= 2) return nullptr;
-  return shape->shape->vertex_buffers[2];
+  return shape->shape->vertex_buffers[(int)shape_buffers::texcoords];
 }
 const ogl_arraybuffer* get_colors(const shade_shape* shape) {
-  if (shape->shape->vertex_buffers.size() <= 3) return nullptr;
-  return shape->shape->vertex_buffers[3];
+  return shape->shape->vertex_buffers[(int)shape_buffers::colors];
 }
 const ogl_arraybuffer* get_tangents(const shade_shape* shape) {
-  if (shape->shape->vertex_buffers.size() <= 4) return nullptr;
-  return shape->shape->vertex_buffers[4];
+  return shape->shape->vertex_buffers[(int)shape_buffers::tangents];
 }
 
 void set_positions(shade_shape* shape, const vector<vec3f>& positions) {
+  auto index = (int)shape_buffers::positions;
   if (positions.empty()) {
-    set_vertex_buffer(shape->shape, vec3f{0, 0, 0}, 0);
+    set_vertex_buffer(shape->shape, vec3f{0, 0, 0}, index);
   } else {
-    set_vertex_buffer(shape->shape, positions, 0);
+    set_vertex_buffer(shape->shape, positions, index);
   }
 }
 void set_normals(shade_shape* shape, const vector<vec3f>& normals) {
+  auto index = (int)shape_buffers::normals;
   if (normals.empty()) {
-    set_vertex_buffer(shape->shape, vec3f{0, 0, 1}, 1);
+    set_vertex_buffer(shape->shape, vec3f{0, 0, 1}, index);
   } else {
-    set_vertex_buffer(shape->shape, normals, 1);
+    set_vertex_buffer(shape->shape, normals, index);
   }
 }
 void set_texcoords(shade_shape* shape, const vector<vec2f>& texcoords) {
+  auto index = (int)shape_buffers::texcoords;
   if (texcoords.empty()) {
-    set_vertex_buffer(shape->shape, vec2f{0, 0}, 2);
+    set_vertex_buffer(shape->shape, vec2f{0, 0}, index);
   } else {
-    set_vertex_buffer(shape->shape, texcoords, 2);
+    set_vertex_buffer(shape->shape, texcoords, index);
   }
 }
 void set_colors(shade_shape* shape, const vector<vec4f>& colors) {
+  auto index = (int)shape_buffers::colors;
   if (colors.empty()) {
-    set_vertex_buffer(shape->shape, vec4f{1, 1, 1, 1}, 3);
+    set_vertex_buffer(shape->shape, vec4f{1, 1, 1, 1}, index);
   } else {
-    set_vertex_buffer(shape->shape, colors, 3);
+    set_vertex_buffer(shape->shape, colors, index);
   }
 }
 void set_tangents(shade_shape* shape, const vector<vec4f>& tangents) {
+  auto index = (int)shape_buffers::tangents;
   if (tangents.empty()) {
-    set_vertex_buffer(shape->shape, vec4f{0, 0, 1, 1}, 4);
+    set_vertex_buffer(shape->shape, vec4f{0, 0, 1, 1}, index);
   } else {
-    set_vertex_buffer(shape->shape, tangents, 4);
+    set_vertex_buffer(shape->shape, tangents, index);
   }
 }
 void set_instances(
     shade_shape* shape, const vector<vec3f>& froms, const vector<vec3f>& tos) {
+  auto index_from = (int)shape_buffers::instances_from;
   if (froms.empty()) {
-    set_vertex_buffer(shape->shape, vec3f{0, 0, 0}, 5);
-    set_instance_buffer(shape->shape, 5, false);
+    set_vertex_buffer(shape->shape, vec3f{0, 0, 0}, index_from);
+    set_instance_buffer(shape->shape, index_from, false);
   } else {
-    set_vertex_buffer(shape->shape, froms, 5);
-    set_instance_buffer(shape->shape, 5, true);
+    set_vertex_buffer(shape->shape, froms, index_from);
+    set_instance_buffer(shape->shape, index_from, true);
   }
+  auto index_to = (int)shape_buffers::instances_to;
   if (tos.empty()) {
-    set_vertex_buffer(shape->shape, vec3f{0, 0, 0}, 5);
-    set_instance_buffer(shape->shape, 6, false);
+    set_vertex_buffer(shape->shape, vec3f{0, 0, 0}, index_to);
+    set_instance_buffer(shape->shape, index_to, false);
   } else {
-    set_vertex_buffer(shape->shape, tos, 6);
-    set_instance_buffer(shape->shape, 6, true);
+    set_vertex_buffer(shape->shape, tos, index_to);
+    set_instance_buffer(shape->shape, index_to, true);
   }
 }
 
@@ -287,7 +300,12 @@ void clear_shape(shade_shape* shape) { clear_shape(shape->shape); }
 
 // add shape
 shade_shape* add_shape(shade_scene* scene) {
-  return scene->shapes.emplace_back(new shade_shape{});
+  auto shape = scene->shapes.emplace_back(new shade_shape{});
+  shape->shape->vertex_buffers.resize((int)shape_buffers::count);
+  for (auto& buffer : shape->shape->vertex_buffers) {
+    buffer = new ogl_arraybuffer{};
+  }
+  return shape;
 }
 
 // add instance
