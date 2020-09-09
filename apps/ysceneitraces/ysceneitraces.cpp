@@ -181,22 +181,26 @@ void init_scene(trace_scene* scene, sceneio_scene* ioscene,
   shape_map[nullptr] = nullptr;
   for (auto ioshape : ioscene->shapes) {
     if (progress_cb) progress_cb("converting shapes", progress.x++, progress.y);
-    auto shape = add_shape(scene);
-    set_points(shape, ioshape->points);
-    set_lines(shape, ioshape->lines);
-    set_triangles(shape, ioshape->triangles);
-    set_quads(shape, ioshape->quads);
-    set_fvquads(
-        shape, ioshape->quadspos, ioshape->quadsnorm, ioshape->quadstexcoord);
-    set_positions(shape, ioshape->positions);
-    set_normals(shape, ioshape->normals);
-    set_texcoords(shape, ioshape->texcoords);
-    set_colors(shape, ioshape->colors);
-    set_radius(shape, ioshape->radius);
-    set_tangents(shape, ioshape->tangents);
-    set_subdivision(
-        shape, ioshape->subdivisions, ioshape->catmullclark, ioshape->smooth);
-    shape_map[ioshape] = shape;
+    auto shape              = add_shape(scene);
+    shape->points           = ioshape->points;
+    shape->lines            = ioshape->lines;
+    shape->triangles        = ioshape->triangles;
+    shape->quads            = ioshape->quads;
+    shape->quadspos         = ioshape->quadspos;
+    shape->quadsnorm        = ioshape->quadsnorm;
+    shape->quadstexcoord    = ioshape->quadstexcoord;
+    shape->positions        = ioshape->positions;
+    shape->normals          = ioshape->normals;
+    shape->texcoords        = ioshape->texcoords;
+    shape->colors           = ioshape->colors;
+    shape->radius           = ioshape->radius;
+    shape->tangents         = ioshape->tangents;
+    shape->subdivisions     = ioshape->subdivisions;
+    shape->catmullclark     = ioshape->catmullclark;
+    shape->smooth           = ioshape->smooth;
+    shape->displacement     = ioshape->displacement;
+    shape->displacement_tex = texture_map.at(ioshape->displacement_tex);
+    shape_map[ioshape]      = shape;
   }
 
   for (auto ioinstance : ioscene->instances) {

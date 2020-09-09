@@ -249,24 +249,6 @@ void set_scattering(trace_material* material, const vec3f& scattering,
     float scanisotropy, trace_texture* scattering_tex = nullptr);
 void set_normalmap(trace_material* material, trace_texture* normal_tex);
 
-// set shape properties
-void set_points(trace_shape* shape, const vector<int>& points);
-void set_lines(trace_shape* shape, const vector<vec2i>& lines);
-void set_triangles(trace_shape* shape, const vector<vec3i>& triangles);
-void set_quads(trace_shape* shape, const vector<vec4i>& quads);
-void set_fvquads(trace_shape* shape, const vector<vec4i>& quadspos,
-    const vector<vec4i>& quadsnorm, const vector<vec4i>& quadstexcoord);
-void set_positions(trace_shape* shape, const vector<vec3f>& positions);
-void set_normals(trace_shape* shape, const vector<vec3f>& normals);
-void set_texcoords(trace_shape* shape, const vector<vec2f>& texcoords);
-void set_colors(trace_shape* shape, const vector<vec4f>& colors);
-void set_radius(trace_shape* shape, const vector<float>& radius);
-void set_tangents(trace_shape* shape, const vector<vec4f>& tangents);
-void set_subdivision(trace_shape* shape, int subdivisions, bool catmullclark,
-    bool smooth = true);
-void set_displacement(
-    trace_shape* shape, float displacement, trace_texture* displacement_tex);
-
 }  // namespace yocto
 
 // -----------------------------------------------------------------------------
