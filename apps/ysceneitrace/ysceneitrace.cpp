@@ -223,10 +223,10 @@ void init_scene(trace_scene* scene, sceneio_scene* ioscene,
   for (auto ioenvironment : ioscene->environments) {
     if (progress_cb)
       progress_cb("converting environments", progress.x++, progress.y);
-    auto environment = add_environment(scene);
-    set_frame(environment, ioenvironment->frame);
-    set_emission(environment, ioenvironment->emission,
-        texture_map.at(ioenvironment->emission_tex));
+    auto environment          = add_environment(scene);
+    environment->frame        = ioenvironment->frame;
+    environment->emission     = ioenvironment->emission;
+    environment->emission_tex = texture_map.at(ioenvironment->emission_tex);
   }
 
   // done
@@ -593,9 +593,9 @@ void draw_widgets(gui_window* win, app_states* apps, const gui_input& input) {
       auto ioenvironment = app->selected_environment;
       auto environment   = get_element(
           ioenvironment, app->ioscene->environments, app->scene->environments);
-      set_frame(environment, ioenvironment->frame);
-      set_emission(environment, ioenvironment->emission,
-          get_texture(ioenvironment->emission_tex));
+      environment->frame        = ioenvironment->frame;
+      environment->emission     = ioenvironment->emission;
+      environment->emission_tex = get_texture(ioenvironment->emission_tex);
       init_lights(app->lights, app->scene, app->params);
       reset_display(app);
     }

@@ -267,11 +267,6 @@ void set_subdivision(trace_shape* shape, int subdivisions, bool catmullclark,
 void set_displacement(
     trace_shape* shape, float displacement, trace_texture* displacement_tex);
 
-// set environment properties
-void set_frame(trace_environment* environment, const frame3f& frame);
-void set_emission(trace_environment* environment, const vec3f& emission,
-    trace_texture* emission_tex = nullptr);
-
 }  // namespace yocto
 
 // -----------------------------------------------------------------------------
