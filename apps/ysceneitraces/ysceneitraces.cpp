@@ -141,12 +141,9 @@ void init_scene(trace_scene* scene, sceneio_scene* ioscene,
   for (auto iotexture : ioscene->textures) {
     if (progress_cb)
       progress_cb("converting textures", progress.x++, progress.y);
-    auto texture = add_texture(scene);
-    if (!iotexture->hdr.empty()) {
-      set_texture(texture, iotexture->hdr);
-    } else if (!iotexture->ldr.empty()) {
-      set_texture(texture, iotexture->ldr);
-    }
+    auto texture           = add_texture(scene);
+    texture->hdr           = iotexture->hdr;
+    texture->ldr           = iotexture->ldr;
     texture_map[iotexture] = texture;
   }
 
