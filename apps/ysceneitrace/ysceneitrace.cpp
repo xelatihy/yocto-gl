@@ -460,6 +460,17 @@ T1* get_element(
   return nullptr;
 }
 
+template <typename T, typename T1>
+T1* get_element_ptr(
+    T* ioelement, const vector<T*>& ioelements, vector<T1>& elements) {
+  if (!ioelement) return nullptr;
+  for (auto pos = 0; pos < ioelements.size(); pos++) {
+    if (ioelements[pos] == ioelement) return &elements[pos];
+  }
+  print_fatal("element not found");
+  return nullptr;
+}
+
 template <typename T>
 int get_element_index(T* ioelement, const vector<T*>& ioelements) {
   if (!ioelement) return -1;
@@ -584,7 +595,7 @@ void draw_widgets(gui_window* win, app_states* apps, const gui_input& input) {
     if (draw_widgets(win, app->ioscene, app->selected_camera)) {
       stop_display(app);
       auto iocamera = app->selected_camera;
-      auto camera   = get_element(
+      auto camera   = get_element_ptr(
           iocamera, app->ioscene->cameras, app->scene->cameras);
       camera->frame        = iocamera->frame;
       camera->lens         = iocamera->lens;
@@ -808,7 +819,7 @@ int main(int argc, const char* argv[]) {
     if ((input.mouse_left || input.mouse_right) && !input.modifier_alt &&
         !input.widgets_active) {
       auto iocamera = app->ioscene->cameras[app->params.camera];
-      auto camera   = app->scene->cameras[app->params.camera];
+      auto camera   = &app->scene->cameras[app->params.camera];
       auto dolly    = 0.0f;
       auto pan      = zero2f;
       auto rotate   = zero2f;
@@ -834,7 +845,7 @@ int main(int argc, const char* argv[]) {
           app->glparams.scale, app->render.imsize());
       if (ij.x >= 0 && ij.x < app->render.width() && ij.y >= 0 &&
           ij.y < app->render.height()) {
-        auto camera = app->scene->cameras[app->params.camera];
+        auto camera = &app->scene->cameras[app->params.camera];
         auto ray    = camera_ray(camera->frame, camera->lens, camera->lens,
             camera->film,
             vec2f{ij.x + 0.5f, ij.y + 0.5f} /

@@ -370,7 +370,7 @@ int main(int argc, const char* argv[]) {
   callbacks.uiupdate_cb = [app](gui_window* win, const gui_input& input) {
     if ((input.mouse_left || input.mouse_right) && !input.modifier_alt &&
         !input.widgets_active) {
-      auto camera = app->scene->cameras[app->params.camera];
+      auto camera = &app->scene->cameras[app->params.camera];
       auto dolly  = 0.0f;
       auto pan    = zero2f;
       auto rotate = zero2f;

@@ -193,7 +193,7 @@ struct trace_environment {
 // updates node transformations only if defined.
 struct trace_scene {
   // scene elements
-  vector<trace_camera*>      cameras      = {};
+  vector<trace_camera>       cameras      = {};
   vector<trace_instance*>    instances    = {};
   vector<trace_environment*> environments = {};
   vector<trace_shape*>       shapes       = {};

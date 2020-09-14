@@ -59,7 +59,6 @@ using namespace std::string_literals;
 namespace yocto {
 
 trace_scene::~trace_scene() {
-  for (auto camera : cameras) delete camera;
   for (auto shape : shapes) delete shape;
   for (auto material : materials) delete material;
   for (auto instance : instances) delete instance;
@@ -74,7 +73,7 @@ inline bool valid(int handle) { return handle >= 0; }
 
 // getting elements
 inline trace_camera* get_camera(trace_scene* scene, int handle) {
-  return scene->cameras[handle];
+  return &scene->cameras[handle];
 }
 inline trace_texture* get_texture(trace_scene* scene, int handle) {
   return scene->textures[handle];
@@ -91,8 +90,8 @@ inline trace_instance* get_instance(trace_scene* scene, int handle) {
 inline trace_environment* get_environment(trace_scene* scene, int handle) {
   return scene->environments[handle];
 }
-inline trace_camera* get_camera(const trace_scene* scene, int handle) {
-  return scene->cameras[handle];
+inline const trace_camera* get_camera(const trace_scene* scene, int handle) {
+  return &scene->cameras[handle];
 }
 inline trace_texture* get_texture(const trace_scene* scene, int handle) {
   return scene->textures[handle];
@@ -113,7 +112,7 @@ inline trace_environment* get_environment(
 
 // add element
 trace_camera* add_camera(trace_scene* scene) {
-  return scene->cameras.emplace_back(new trace_camera{});
+  return &scene->cameras.emplace_back();
 }
 trace_environment* add_environment(trace_scene* scene) {
   return scene->environments.emplace_back(new trace_environment{});
