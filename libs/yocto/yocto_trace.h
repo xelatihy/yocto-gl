@@ -122,18 +122,18 @@ struct trace_material {
   bool  thin         = true;
 
   // textures
-  trace_texture* emission_tex     = nullptr;
-  trace_texture* color_tex        = nullptr;
-  trace_texture* specular_tex     = nullptr;
-  trace_texture* metallic_tex     = nullptr;
-  trace_texture* roughness_tex    = nullptr;
-  trace_texture* transmission_tex = nullptr;
-  trace_texture* translucency_tex = nullptr;
-  trace_texture* spectint_tex     = nullptr;
-  trace_texture* scattering_tex   = nullptr;
-  trace_texture* coat_tex         = nullptr;
-  trace_texture* opacity_tex      = nullptr;
-  trace_texture* normal_tex       = nullptr;
+  int emission_tex     = -1;
+  int color_tex        = -1;
+  int specular_tex     = -1;
+  int metallic_tex     = -1;
+  int roughness_tex    = -1;
+  int transmission_tex = -1;
+  int translucency_tex = -1;
+  int spectint_tex     = -1;
+  int scattering_tex   = -1;
+  int coat_tex         = -1;
+  int opacity_tex      = -1;
+  int normal_tex       = -1;
 };
 
 // Shape data represented as indexed meshes of elements.
@@ -166,28 +166,22 @@ struct trace_shape {
   bool smooth       = true;
 
   // displacement data [experimental]
-  float          displacement     = 0;
-  trace_texture* displacement_tex = nullptr;
-
-  // shape is assigned at creation
-  int shape_id = -1;
+  float displacement     = 0;
+  int   displacement_tex = -1;
 };
 
 // Object.
 struct trace_instance {
-  frame3f         frame    = identity3x4f;
-  trace_shape*    shape    = nullptr;
-  trace_material* material = nullptr;
-
-  // instance id assigned at creation
-  int instance_id = -1;
+  frame3f frame    = identity3x4f;
+  int     shape    = -1;
+  int     material = -1;
 };
 
 // Environment map.
 struct trace_environment {
-  frame3f        frame        = identity3x4f;
-  vec3f          emission     = {0, 0, 0};
-  trace_texture* emission_tex = nullptr;
+  frame3f frame        = identity3x4f;
+  vec3f   emission     = {0, 0, 0};
+  int     emission_tex = -1;
 };
 
 // Scene comprised an array of objects whose memory is owened by the scene.
@@ -199,15 +193,12 @@ struct trace_environment {
 // updates node transformations only if defined.
 struct trace_scene {
   // scene elements
-  vector<trace_camera*>      cameras      = {};
-  vector<trace_instance*>    instances    = {};
-  vector<trace_environment*> environments = {};
-  vector<trace_shape*>       shapes       = {};
-  vector<trace_texture*>     textures     = {};
-  vector<trace_material*>    materials    = {};
-
-  // cleanup
-  ~trace_scene();
+  vector<trace_camera>      cameras      = {};
+  vector<trace_instance>    instances    = {};
+  vector<trace_environment> environments = {};
+  vector<trace_shape>       shapes       = {};
+  vector<trace_texture>     textures     = {};
+  vector<trace_material>    materials    = {};
 };
 
 }  // namespace yocto
@@ -234,36 +225,38 @@ trace_instance*    add_complete_instance(trace_scene* scene);
 namespace yocto {
 
 // Generates a ray from a camera.
-ray3f eval_camera(
-    const trace_camera* camera, const vec2f& image_uv, const vec2f& lens_uv);
+ray3f eval_camera(const trace_scene* scene, int camera, const vec2f& image_uv,
+    const vec2f& lens_uv);
 
 // Evaluates a texture
-vec2i texture_size(const trace_texture* texture);
-vec4f lookup_texture(
-    const trace_texture* texture, const vec2i& ij, bool ldr_as_linear = false);
-vec4f eval_texture(const trace_texture* texture, const vec2f& uv,
+vec2i texture_size(const trace_scene* scene, int texture);
+vec4f lookup_texture(const trace_scene* scene, int texture, const vec2i& ij,
+    bool ldr_as_linear = false);
+vec4f eval_texture(const trace_scene* scene, int texture, const vec2f& uv,
     bool ldr_as_linear = false, bool no_interpolation = false,
     bool clamp_to_edge = false);
 
 // Evaluate instance properties
 vec3f eval_position(
-    const trace_instance* instance, int element, const vec2f& uv);
-vec3f eval_element_normal(const trace_instance* instance, int element);
-vec3f eval_normal(const trace_instance* instance, int element, const vec2f& uv);
+    const trace_scene* scene, int instance, int element, const vec2f& uv);
+vec3f eval_element_normal(const trace_scene* scene, int instance, int element);
+vec3f eval_normal(
+    const trace_scene* scene, int instance, int element, const vec2f& uv);
 vec2f eval_texcoord(
-    const trace_instance* instance, int element, const vec2f& uv);
+    const trace_scene* scene, int instance, int element, const vec2f& uv);
 pair<vec3f, vec3f> eval_element_tangents(
-    const trace_instance* instance, int element);
+    const trace_scene* scene, int instance, int element);
 vec3f eval_normalmap(
-    const trace_instance* instance, int element, const vec2f& uv);
-vec3f eval_shading_normal(const trace_instance* instance, int element,
+    const trace_scene* scene, int instance, int element, const vec2f& uv);
+vec3f eval_shading_normal(const trace_scene* scene, int instance, int element,
     const vec2f& uv, const vec3f& outgoing);
-vec4f eval_color(const trace_instance* instance, int element, const vec2f& uv);
+vec4f eval_color(
+    const trace_scene* scene, int instance, int element, const vec2f& uv);
 
 // Environment
 vec3f eval_environment(
-    const trace_environment* environment, const vec3f& direction);
-vec3f eval_environment(const trace_scene* scene, const vec3f& direction);
+    const trace_scene* scene, int environment, const vec3f& direction);
+vec3f eval_environments(const trace_scene* scene, const vec3f& direction);
 
 // Material sample
 struct trace_material_sample {
@@ -287,7 +280,7 @@ struct trace_material_sample {
 
 // Evaluates material and textures
 trace_material_sample eval_material(
-    const trace_material* material, const vec2f& texcoord);
+    const trace_scene* scene, int material, const vec2f& texcoord);
 
 // Material Bsdf parameters
 struct trace_bsdf {
@@ -314,13 +307,13 @@ struct trace_bsdf {
 };
 
 // Eval material to obtain emission, brdf and opacity.
-vec3f eval_emission(const trace_instance* instance, int element,
+vec3f eval_emission(const trace_scene* scene, int instance, int element,
     const vec2f& uv, const vec3f& normal, const vec3f& outgoing);
 // Eval material to obatain emission, brdf and opacity.
-trace_bsdf eval_bsdf(const trace_instance* instance, int element,
+trace_bsdf eval_bsdf(const trace_scene* scene, int instance, int element,
     const vec2f& uv, const vec3f& normal, const vec3f& outgoing);
-float eval_opacity(const trace_instance* instance, int element, const vec2f& uv,
-    const vec3f& normal, const vec3f& outgoing);
+float      eval_opacity(const trace_scene* scene, int instance, int element,
+         const vec2f& uv, const vec3f& normal, const vec3f& outgoing);
 // check if a brdf is a delta
 bool is_delta(const trace_bsdf& bsdf);
 
@@ -332,10 +325,10 @@ struct trace_vsdf {
 };
 
 // check if we have a volume
-bool has_volume(const trace_instance* instance);
+bool has_volume(const trace_scene* scene, int instance);
 // evaluate volume
 trace_vsdf eval_vsdf(
-    const trace_instance* instance, int element, const vec2f& uv);
+    const trace_scene* scene, int instance, int element, const vec2f& uv);
 
 }  // namespace yocto
 
@@ -380,6 +373,7 @@ const auto trace_default_seed = 961748941ull;
 
 // Options for trace functions
 struct trace_params {
+  int                   camera     = 0;
   int                   resolution = 1280;
   trace_sampler_type    sampler    = trace_sampler_type::path;
   trace_falsecolor_type falsecolor = trace_falsecolor_type::diffuse;
@@ -421,12 +415,12 @@ using image_callback =
 // Apply subdivision and displacement rules.
 void tesselate_shapes(
     trace_scene* scene, const progress_callback& progress_cb = {});
-void tesselate_shape(trace_scene* shape);
+void tesselate_shape(trace_scene* scene, int shape);
 
 // Progressively computes an image.
-image<vec4f> trace_image(const trace_scene* scene, const trace_camera* camera,
-    const trace_params& params, const progress_callback& progress_cb = {},
-    const image_callback& image_cb = {});
+image<vec4f> trace_image(const trace_scene* scene, const trace_params& params,
+    const progress_callback& progress_cb = {},
+    const image_callback&    image_cb    = {});
 
 }  // namespace yocto
 
@@ -437,18 +431,15 @@ namespace yocto {
 
 // Scene lights used during rendering. These are created automatically.
 struct trace_light {
-  trace_instance*    instance     = nullptr;
-  trace_environment* environment  = nullptr;
-  vector<float>      elements_cdf = {};
+  int           instance     = -1;
+  int           environment  = -1;
+  vector<float> elements_cdf = {};
 };
 
 // Scene lights
 struct trace_lights {
   // light elements
-  vector<trace_light*> lights = {};
-
-  // cleanup
-  ~trace_lights();
+  vector<trace_light> lights = {};
 };
 
 // Initialize lights.
@@ -464,14 +455,14 @@ void init_bvh(trace_bvh* bvh, const trace_scene* scene,
 
 // Refit bvh data
 void update_bvh(trace_bvh* bvh, const trace_scene* scene,
-    const vector<trace_instance*>& updated_instances,
-    const vector<trace_shape*>& updated_shapes, const trace_params& params);
+    const vector<int>& updated_instances, const vector<int>& updated_shapes,
+    const trace_params& params);
 
 // Progressively computes an image.
-image<vec4f> trace_image(const trace_scene* scene, const trace_camera* camera,
-    const trace_bvh* bvh, const trace_lights* lights,
-    const trace_params& params, const progress_callback& progress_cb = {},
-    const image_callback& image_cb = {});
+image<vec4f> trace_image(const trace_scene* scene, const trace_bvh* bvh,
+    const trace_lights* lights, const trace_params& params,
+    const progress_callback& progress_cb = {},
+    const image_callback&    image_cb    = {});
 
 // Check is a sampler requires lights
 bool is_sampler_lit(const trace_params& params);
@@ -493,9 +484,8 @@ using async_callback = function<void(
 // [experimental] Asynchronous interface
 struct trace_state;
 void trace_start(trace_state* state, const trace_scene* scene,
-    const trace_camera* camera, const trace_bvh* bvh,
-    const trace_lights* lights, const trace_params& params,
-    const progress_callback& progress_cb = {},
+    const trace_bvh* bvh, const trace_lights* lights,
+    const trace_params& params, const progress_callback& progress_cb = {},
     const image_callback& image_cb = {}, const async_callback& async_cb = {});
 void trace_stop(trace_state* state);
 
