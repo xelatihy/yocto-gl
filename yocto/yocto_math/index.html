@@ -13,7 +13,7 @@
         <meta name="author" content="Fabio Pellacini">
       
       <link rel="shortcut icon" href="../../assets/images/favicon.png">
-      <meta name="generator" content="mkdocs-1.1.2, mkdocs-material-5.2.2">
+      <meta name="generator" content="mkdocs-1.1.2, mkdocs-material-5.5.12">
     
     
       
@@ -21,7 +21,7 @@
       
     
     
-      <link rel="stylesheet" href="../../assets/stylesheets/main.a2408e81.min.css">
+      <link rel="stylesheet" href="../../assets/stylesheets/main.4dd2dd8d.min.css">
       
       
     
@@ -44,6 +44,7 @@
   
     <body dir="ltr">
   
+    
     <input class="md-toggle" data-md-toggle="drawer" type="checkbox" id="__drawer" autocomplete="off">
     <input class="md-toggle" data-md-toggle="search" type="checkbox" id="__search" autocomplete="off">
     <label class="md-overlay" for="__drawer"></label>
@@ -212,9 +213,7 @@
     
       <label class="md-nav__link md-nav__link--active" for="__toc">
         Math types
-        <span class="md-nav__icon md-icon">
-          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M3 9h14V7H3v2m0 4h14v-2H3v2m0 4h14v-2H3v2m16 0h2v-2h-2v2m0-10v2h2V7h-2m0 6h2v-2h-2v2z"/></svg>
-        </span>
+        <span class="md-nav__icon md-icon"></span>
       </label>
     
     <a href="./" title="Math types" class="md-nav__link md-nav__link--active">
@@ -229,9 +228,7 @@
   
   
     <label class="md-nav__title" for="__toc">
-      <span class="md-nav__icon md-icon">
-        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M20 11v2H8l5.5 5.5-1.42 1.42L4.16 12l7.92-7.92L13.5 5.5 8 11h12z"/></svg>
-      </span>
+      <span class="md-nav__icon md-icon"></span>
       Table of contents
     </label>
     <ul class="md-nav__list" data-md-scrollfix>
@@ -260,20 +257,6 @@
         <li class="md-nav__item">
   <a href="#quaternions" class="md-nav__link">
     Quaternions
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#rays" class="md-nav__link">
-    Rays
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#bounding-boxes" class="md-nav__link">
-    Bounding boxes
   </a>
   
 </li>
@@ -425,18 +408,6 @@
 
 
   <li class="md-nav__item">
-    <a href="../yocto_scene/" title="Scene representation" class="md-nav__link">
-      Scene representation
-    </a>
-  </li>
-
-    
-      
-      
-      
-
-
-  <li class="md-nav__item">
     <a href="../yocto_sceneio/" title="Scene serialization" class="md-nav__link">
       Scene serialization
     </a>
@@ -479,6 +450,18 @@
   </li>
 
     
+      
+      
+      
+
+
+  <li class="md-nav__item">
+    <a href="../yocto_parallel/" title="Concurrency utilities" class="md-nav__link">
+      Concurrency utilities
+    </a>
+  </li>
+
+    
   </ul>
 </nav>
                   </div>
@@ -497,9 +480,7 @@
   
   
     <label class="md-nav__title" for="__toc">
-      <span class="md-nav__icon md-icon">
-        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M20 11v2H8l5.5 5.5-1.42 1.42L4.16 12l7.92-7.92L13.5 5.5 8 11h12z"/></svg>
-      </span>
+      <span class="md-nav__icon md-icon"></span>
       Table of contents
     </label>
     <ul class="md-nav__list" data-md-scrollfix>
@@ -528,20 +509,6 @@
         <li class="md-nav__item">
   <a href="#quaternions" class="md-nav__link">
     Quaternions
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#rays" class="md-nav__link">
-    Rays
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#bounding-boxes" class="md-nav__link">
-    Bounding boxes
   </a>
   
 </li>
@@ -578,8 +545,8 @@
                 
                 <h1 id="yoctomath-math-types">Yocto/Math: Math types</h1>
 <p>Yocto/Math defines the basic math primitives used in graphics, including
-small-sized vectors, matrices, frames, quaternions, rays, bounding boxes
-and their transforms. Yocto/Math is implemented in <code>yocto_math.h</code>.</p>
+small-sized vectors, matrices, frames and quaternions, and their transforms.
+Yocto/Math is implemented in <code>yocto_math.h</code>.</p>
 <h2 id="vectors">Vectors</h2>
 <p>The most basic types defined in Yocto/Math are fixed-length vectors in
 1 to 4 dimensions with either <code>float</code> or <code>int</code> coordinates, namely <code>vec1f</code>,
@@ -642,33 +609,6 @@ Yocto/Math also defines the quaternion inverse <code>inverse(q)</code> and sever
 interpolation function including linear interpolation, normalized linear
 interpolation and spherical interpolation, respectively with <code>lerp(a,bt)</code>,
 <code>nlerp(a,b,t)</code> and <code>slerp(a,b,t)</code>.</p>
-<h2 id="rays">Rays</h2>
-<p>Yocto/Math defines rays in 2-3 dimensions as <code>ray2f</code> and <code>ray3f</code>.
-Rays are defined as an origin <code>o</code>, a direction <code>d</code> and minimum and maximum
-values for the distance along a ray, namely <code>tmin</code> and <code>tmax</code>.
-To compute a point in a ray, use <code>ray_point(ray,t)</code>.
-See <a href="../yocto_geometry/">Yocto/Geometry</a> for ray-primitive intersection.</p>
-<div class="codehilite"><pre><span></span><code><span class="k">auto</span> <span class="n">ray</span> <span class="o">=</span> <span class="n">ray3f</span><span class="p">{</span><span class="n">origin</span><span class="p">,</span> <span class="n">direction</span><span class="p">};</span>
-<span class="k">auto</span> <span class="n">p</span> <span class="o">=</span> <span class="n">ray_point</span><span class="p">(</span><span class="n">ray</span><span class="p">,</span> <span class="mf">0.5</span><span class="p">);</span>
-</code></pre></div>
-
-
-<h2 id="bounding-boxes">Bounding boxes</h2>
-<p>Yocto/Math defines axies-aligned bounding boxes in 2 to 3 dimensions as
-<code>bbox2f</code> and <code>bbox3f</code>. Bounding boxes store the minimum and maximum coordinate
-values, that can be accessed with <code>b.min</code> and <code>b.max</code>. Bounding boxes are
-default-initialized to an invalid state that contains no points,
-or they are constructed by specifying the min and max values directly.</p>
-<p>To build bounds for complex primitives, bounding boxes are very initialized to
-empty bounds, that can be done by using the constants like <code>invalidabXf</code>,
-and then grown to encompass either points or other bounding boxes with
-<code>merge(b,p)</code>. See <a href="../yocto_geometry/">Yocto/Geometry</a> for building bounding
-boxes for geometric primitives.</p>
-<div class="codehilite"><pre><span></span><code><span class="k">auto</span> <span class="n">bbox</span> <span class="o">=</span> <span class="n">invalidb3f</span><span class="p">;</span>
-<span class="k">for</span><span class="p">(</span><span class="k">auto</span> <span class="nl">point</span> <span class="p">:</span> <span class="n">points</span><span class="p">)</span> <span class="n">bbox</span> <span class="o">=</span> <span class="n">merge</span><span class="p">(</span><span class="n">bbox</span><span class="p">,</span> <span class="n">point</span><span class="p">);</span>
-</code></pre></div>
-
-
 <h2 id="transforms">Transforms</h2>
 <p>Yocto/Math uses linear algebra vectors for holding different geometric
 quantities, such as points, vectors, directions and normals. For this reason,
@@ -797,15 +737,15 @@ editors, with <code>update_turntable(...)</code>, and the camera's rays generati
       
     </div>
     
-      <script src="../../assets/javascripts/vendor.d710d30a.min.js"></script>
-      <script src="../../assets/javascripts/bundle.5f27aba8.min.js"></script><script id="__lang" type="application/json">{"clipboard.copy": "Copy to clipboard", "clipboard.copied": "Copied to clipboard", "search.config.lang": "en", "search.config.pipeline": "trimmer, stopWordFilter", "search.config.separator": "[\\s\\-]+", "search.result.placeholder": "Type to start searching", "search.result.none": "No matching documents", "search.result.one": "1 matching document", "search.result.other": "# matching documents"}</script>
+      <script src="../../assets/javascripts/vendor.3636a4ec.min.js"></script>
+      <script src="../../assets/javascripts/bundle.e9fe3281.min.js"></script><script id="__lang" type="application/json">{"clipboard.copy": "Copy to clipboard", "clipboard.copied": "Copied to clipboard", "search.config.lang": "en", "search.config.pipeline": "trimmer, stopWordFilter", "search.config.separator": "[\\s\\-]+", "search.result.placeholder": "Type to start searching", "search.result.none": "No matching documents", "search.result.one": "1 matching document", "search.result.other": "# matching documents"}</script>
       
       <script>
         app = initialize({
           base: "../..",
           features: [],
           search: Object.assign({
-            worker: "../../assets/javascripts/worker/search.27c6a5e6.min.js"
+            worker: "../../assets/javascripts/worker/search.5eca75d3.min.js"
           }, typeof search !== "undefined" && search)
         })
       </script>

@@ -13,7 +13,7 @@
         <meta name="author" content="Fabio Pellacini">
       
       <link rel="shortcut icon" href="../../assets/images/favicon.png">
-      <meta name="generator" content="mkdocs-1.1.2, mkdocs-material-5.2.2">
+      <meta name="generator" content="mkdocs-1.1.2, mkdocs-material-5.5.12">
     
     
       
@@ -21,7 +21,7 @@
       
     
     
-      <link rel="stylesheet" href="../../assets/stylesheets/main.a2408e81.min.css">
+      <link rel="stylesheet" href="../../assets/stylesheets/main.4dd2dd8d.min.css">
       
       
     
@@ -44,6 +44,7 @@
   
     <body dir="ltr">
   
+    
     <input class="md-toggle" data-md-toggle="drawer" type="checkbox" id="__drawer" autocomplete="off">
     <input class="md-toggle" data-md-toggle="search" type="checkbox" id="__search" autocomplete="off">
     <label class="md-overlay" for="__drawer"></label>
@@ -236,9 +237,7 @@
     
       <label class="md-nav__link md-nav__link--active" for="__toc">
         Geometry operations
-        <span class="md-nav__icon md-icon">
-          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M3 9h14V7H3v2m0 4h14v-2H3v2m0 4h14v-2H3v2m16 0h2v-2h-2v2m0-10v2h2V7h-2m0 6h2v-2h-2v2z"/></svg>
-        </span>
+        <span class="md-nav__icon md-icon"></span>
       </label>
     
     <a href="./" title="Geometry operations" class="md-nav__link md-nav__link--active">
@@ -253,9 +252,7 @@
   
   
     <label class="md-nav__title" for="__toc">
-      <span class="md-nav__icon md-icon">
-        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M20 11v2H8l5.5 5.5-1.42 1.42L4.16 12l7.92-7.92L13.5 5.5 8 11h12z"/></svg>
-      </span>
+      <span class="md-nav__icon md-icon"></span>
       Table of contents
     </label>
     <ul class="md-nav__list" data-md-scrollfix>
@@ -282,8 +279,22 @@
 </li>
       
         <li class="md-nav__item">
+  <a href="#bounding-boxes" class="md-nav__link">
+    Bounding boxes
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
   <a href="#primitive-bounding-boxes" class="md-nav__link">
     Primitive bounding boxes
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#rays" class="md-nav__link">
+    Rays
   </a>
   
 </li>
@@ -411,18 +422,6 @@
 
 
   <li class="md-nav__item">
-    <a href="../yocto_scene/" title="Scene representation" class="md-nav__link">
-      Scene representation
-    </a>
-  </li>
-
-    
-      
-      
-      
-
-
-  <li class="md-nav__item">
     <a href="../yocto_sceneio/" title="Scene serialization" class="md-nav__link">
       Scene serialization
     </a>
@@ -465,6 +464,18 @@
   </li>
 
     
+      
+      
+      
+
+
+  <li class="md-nav__item">
+    <a href="../yocto_parallel/" title="Concurrency utilities" class="md-nav__link">
+      Concurrency utilities
+    </a>
+  </li>
+
+    
   </ul>
 </nav>
                   </div>
@@ -483,9 +494,7 @@
   
   
     <label class="md-nav__title" for="__toc">
-      <span class="md-nav__icon md-icon">
-        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M20 11v2H8l5.5 5.5-1.42 1.42L4.16 12l7.92-7.92L13.5 5.5 8 11h12z"/></svg>
-      </span>
+      <span class="md-nav__icon md-icon"></span>
       Table of contents
     </label>
     <ul class="md-nav__list" data-md-scrollfix>
@@ -512,8 +521,22 @@
 </li>
       
         <li class="md-nav__item">
+  <a href="#bounding-boxes" class="md-nav__link">
+    Bounding boxes
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
   <a href="#primitive-bounding-boxes" class="md-nav__link">
     Primitive bounding boxes
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#rays" class="md-nav__link">
+    Rays
   </a>
   
 </li>
@@ -552,6 +575,7 @@
 <p>Yocto/Geometry defines basic geometry operations, including computation of
 basic geometry quantities, ray-primitive intersection, point-primitive
 distance, primitive bounds, and several interpolation functions.
+Yocto/Geometry also defines rays, bounding boxes and their transforms.
 Yocto/Geometry is implemented in <code>yocto_geometry.h</code>.</p>
 <h2 id="primitive-parametrization">Primitive parametrization</h2>
 <p>Yocto/Geometry supports operations on lines, triangles, quads and beziers.
@@ -608,6 +632,23 @@ whose derivatives can be computed with
 </code></pre></div>
 
 
+<h2 id="bounding-boxes">Bounding boxes</h2>
+<p>Yocto/Math defines axies-aligned bounding boxes in 2 to 3 dimensions as
+<code>bbox2f</code> and <code>bbox3f</code>. Bounding boxes store the minimum and maximum coordinate
+values, that can be accessed with <code>b.min</code> and <code>b.max</code>. Bounding boxes are
+default-initialized to an invalid state that contains no points,
+or they are constructed by specifying the min and max values directly.</p>
+<p>To build bounds for complex primitives, bounding boxes are very initialized to
+empty bounds, that can be done by using the constants like <code>invalidabXf</code>,
+and then grown to encompass either points or other bounding boxes with
+<code>merge(b,p)</code>. To transform bounding boxes use <code>transform_bbox(frame, bbox)</code>.</p>
+<div class="codehilite"><pre><span></span><code><span class="k">auto</span> <span class="n">bbox</span> <span class="o">=</span> <span class="n">invalidb3f</span><span class="p">;</span>
+<span class="k">for</span><span class="p">(</span><span class="k">auto</span> <span class="nl">point</span> <span class="p">:</span> <span class="n">points</span><span class="p">)</span> <span class="n">bbox</span> <span class="o">=</span> <span class="n">merge</span><span class="p">(</span><span class="n">bbox</span><span class="p">,</span> <span class="n">point</span><span class="p">);</span>
+<span class="k">auto</span> <span class="n">transform</span> <span class="o">=</span> <span class="n">frame3f</span><span class="p">{...};</span>
+<span class="k">auto</span> <span class="n">transformed</span> <span class="o">=</span> <span class="n">transform_bbox</span><span class="p">(</span><span class="n">tranform</span><span class="p">,</span> <span class="n">bbox</span><span class="p">);</span>
+</code></pre></div>
+
+
 <h2 id="primitive-bounding-boxes">Primitive bounding boxes</h2>
 <p>Yocto/Geometry provides functions to compute bounding boxes for all primitives
 types. For points and lines, vertices might have a thickness associate with them.
@@ -619,6 +660,19 @@ Use <code>point_bounds(p0,r0)</code> for points, <code>line_bounds(p0,p1,r0,r1)<
 <span class="k">auto</span> <span class="n">r0</span> <span class="o">=</span> <span class="mf">0.01</span><span class="p">,</span> <span class="n">r1</span> <span class="o">=</span> <span class="mf">0.01</span><span class="p">;</span>
 <span class="k">auto</span> <span class="n">lb</span> <span class="o">=</span> <span class="n">line_bounds</span><span class="p">(</span><span class="n">p0</span><span class="p">,</span><span class="n">p1</span><span class="p">,</span><span class="n">r0</span><span class="p">,</span><span class="n">r1</span><span class="p">);</span>   <span class="c1">// line bounding box</span>
 <span class="k">auto</span> <span class="n">pb</span> <span class="o">=</span> <span class="n">point_bounds</span><span class="p">(</span><span class="n">p0</span><span class="p">,</span><span class="n">r0</span><span class="p">);</span>        <span class="c1">// point bounding box</span>
+</code></pre></div>
+
+
+<h2 id="rays">Rays</h2>
+<p>Yocto/Math defines rays in 2-3 dimensions as <code>ray2f</code> and <code>ray3f</code>.
+Rays are defined as an origin <code>o</code>, a direction <code>d</code> and minimum and maximum
+values for the distance along a ray, namely <code>tmin</code> and <code>tmax</code>.
+To compute a point in a ray, use <code>ray_point(ray,t)</code>.
+To transform rays use <code>transform_ray(frame, ray)</code>.</p>
+<div class="codehilite"><pre><span></span><code><span class="k">auto</span> <span class="n">ray</span> <span class="o">=</span> <span class="n">ray3f</span><span class="p">{</span><span class="n">origin</span><span class="p">,</span> <span class="n">direction</span><span class="p">};</span>
+<span class="k">auto</span> <span class="n">p</span> <span class="o">=</span> <span class="n">ray_point</span><span class="p">(</span><span class="n">ray</span><span class="p">,</span> <span class="mf">0.5</span><span class="p">);</span>
+<span class="k">auto</span> <span class="n">transform</span> <span class="o">=</span> <span class="n">frame3f</span><span class="p">{...};</span>
+<span class="k">auto</span> <span class="n">transformed</span> <span class="o">=</span> <span class="n">transform_ray</span><span class="p">(</span><span class="n">tranform</span><span class="p">,</span> <span class="n">ray</span><span class="p">);</span>
 </code></pre></div>
 
 
@@ -637,7 +691,7 @@ Use <code>intersect_point(ray,p0,r0,uv,d)</code> for points,
 <code>intersect_quad(ray,p0,p1,p2,p3,uv,d)</code> for quads.</p>
 <div class="codehilite"><pre><span></span><code><span class="k">auto</span> <span class="n">p0</span> <span class="o">=</span> <span class="n">vec3f</span><span class="p">{</span><span class="mi">0</span><span class="p">,</span><span class="mi">0</span><span class="p">,</span><span class="mi">0</span><span class="p">},</span> <span class="n">p1</span> <span class="o">=</span> <span class="n">vec3f</span><span class="p">{</span><span class="mi">1</span><span class="p">,</span><span class="mi">0</span><span class="p">,</span><span class="mi">0</span><span class="p">},</span> <span class="n">p2</span> <span class="o">=</span> <span class="n">vec3f</span><span class="p">{</span><span class="mi">1</span><span class="p">,</span><span class="mi">1</span><span class="p">,</span><span class="mi">0</span><span class="p">},</span> <span class="n">p3</span><span class="o">=</span><span class="n">vec3f</span><span class="p">{</span><span class="mi">0</span><span class="p">,</span><span class="mi">1</span><span class="p">,</span><span class="mi">0</span><span class="p">};</span>
 <span class="k">auto</span> <span class="n">r0</span> <span class="o">=</span> <span class="mf">0.01</span><span class="p">,</span> <span class="n">r1</span> <span class="o">=</span> <span class="mf">0.01</span><span class="p">;</span>
-<span class="k">auto</span> <span class="n">ray</span> <span class="o">=</span> <span class="n">ray3f</span><span class="p">{{</span><span class="mi">0</span><span class="p">,</span><span class="mi">0</span><span class="p">,</span><span class="mf">0.5</span><span class="p">},{</span><span class="mi">0</span><span class="p">,</span><span class="mi">0</span><span class="p">,</span><span class="o">-</span><span class="mi">1</span><span class="p">}};</span>                 <span class="c1">// ray</span>
+<span class="k">auto</span> <span class="n">ray</span> <span class="o">=</span> <span class="n">ray3f</span><span class="p">{{</span><span class="mi">0</span><span class="p">,</span><span class="mi">0</span><span class="p">,</span><span class="mf">0.5</span><span class="p">},{</span><span class="mi">0</span><span class="p">,</span><span class="mi">0</span><span class="p">,</span><span class="mi">-1</span><span class="p">}};</span>                 <span class="c1">// ray</span>
 <span class="k">auto</span> <span class="n">uv</span> <span class="o">=</span> <span class="n">vec2f</span><span class="p">{</span><span class="mi">0</span><span class="p">,</span><span class="mi">0</span><span class="p">};</span> <span class="k">auto</span> <span class="n">dist</span> <span class="o">=</span> <span class="kt">float</span><span class="p">{</span><span class="mi">0</span><span class="p">};</span>           <span class="c1">// hit distance and uvs</span>
 <span class="k">auto</span> <span class="n">th</span> <span class="o">=</span> <span class="n">intersect_triangle</span><span class="p">(</span><span class="n">ray</span><span class="p">,</span><span class="n">p0</span><span class="p">,</span><span class="n">p1</span><span class="p">,</span><span class="n">p2</span><span class="p">,</span><span class="n">uv</span><span class="p">,</span><span class="n">dist</span><span class="p">));</span>  <span class="c1">// triangle intersection</span>
 <span class="k">auto</span> <span class="n">qh</span> <span class="o">=</span> <span class="n">intersect_quad</span><span class="p">(</span><span class="n">ray</span><span class="p">,</span><span class="n">p0</span><span class="p">,</span><span class="n">p1</span><span class="p">,</span><span class="n">p2</span><span class="p">,</span><span class="n">p3</span><span class="p">,</span><span class="n">uv</span><span class="p">,</span><span class="n">dist</span><span class="p">));</span>   <span class="c1">// quad intersection</span>
@@ -764,15 +818,15 @@ boxes overlap.</p>
       
     </div>
     
-      <script src="../../assets/javascripts/vendor.d710d30a.min.js"></script>
-      <script src="../../assets/javascripts/bundle.5f27aba8.min.js"></script><script id="__lang" type="application/json">{"clipboard.copy": "Copy to clipboard", "clipboard.copied": "Copied to clipboard", "search.config.lang": "en", "search.config.pipeline": "trimmer, stopWordFilter", "search.config.separator": "[\\s\\-]+", "search.result.placeholder": "Type to start searching", "search.result.none": "No matching documents", "search.result.one": "1 matching document", "search.result.other": "# matching documents"}</script>
+      <script src="../../assets/javascripts/vendor.3636a4ec.min.js"></script>
+      <script src="../../assets/javascripts/bundle.e9fe3281.min.js"></script><script id="__lang" type="application/json">{"clipboard.copy": "Copy to clipboard", "clipboard.copied": "Copied to clipboard", "search.config.lang": "en", "search.config.pipeline": "trimmer, stopWordFilter", "search.config.separator": "[\\s\\-]+", "search.result.placeholder": "Type to start searching", "search.result.none": "No matching documents", "search.result.one": "1 matching document", "search.result.other": "# matching documents"}</script>
       
       <script>
         app = initialize({
           base: "../..",
           features: [],
           search: Object.assign({
-            worker: "../../assets/javascripts/worker/search.27c6a5e6.min.js"
+            worker: "../../assets/javascripts/worker/search.5eca75d3.min.js"
           }, typeof search !== "undefined" && search)
         })
       </script>

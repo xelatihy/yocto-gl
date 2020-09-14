@@ -13,7 +13,7 @@
         <meta name="author" content="Fabio Pellacini">
       
       <link rel="shortcut icon" href="../../assets/images/favicon.png">
-      <meta name="generator" content="mkdocs-1.1.2, mkdocs-material-5.2.2">
+      <meta name="generator" content="mkdocs-1.1.2, mkdocs-material-5.5.12">
     
     
       
@@ -21,7 +21,7 @@
       
     
     
-      <link rel="stylesheet" href="../../assets/stylesheets/main.a2408e81.min.css">
+      <link rel="stylesheet" href="../../assets/stylesheets/main.4dd2dd8d.min.css">
       
       
     
@@ -44,6 +44,7 @@
   
     <body dir="ltr">
   
+    
     <input class="md-toggle" data-md-toggle="drawer" type="checkbox" id="__drawer" autocomplete="off">
     <input class="md-toggle" data-md-toggle="search" type="checkbox" id="__search" autocomplete="off">
     <label class="md-overlay" for="__drawer"></label>
@@ -284,9 +285,7 @@
     
       <label class="md-nav__link md-nav__link--active" for="__toc">
         Image utilities
-        <span class="md-nav__icon md-icon">
-          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M3 9h14V7H3v2m0 4h14v-2H3v2m0 4h14v-2H3v2m16 0h2v-2h-2v2m0-10v2h2V7h-2m0 6h2v-2h-2v2z"/></svg>
-        </span>
+        <span class="md-nav__icon md-icon"></span>
       </label>
     
     <a href="./" title="Image utilities" class="md-nav__link md-nav__link--active">
@@ -301,9 +300,7 @@
   
   
     <label class="md-nav__title" for="__toc">
-      <span class="md-nav__icon md-icon">
-        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M20 11v2H8l5.5 5.5-1.42 1.42L4.16 12l7.92-7.92L13.5 5.5 8 11h12z"/></svg>
-      </span>
+      <span class="md-nav__icon md-icon"></span>
       Table of contents
     </label>
     <ul class="md-nav__list" data-md-scrollfix>
@@ -432,18 +429,6 @@
 
 
   <li class="md-nav__item">
-    <a href="../yocto_scene/" title="Scene representation" class="md-nav__link">
-      Scene representation
-    </a>
-  </li>
-
-    
-      
-      
-      
-
-
-  <li class="md-nav__item">
     <a href="../yocto_sceneio/" title="Scene serialization" class="md-nav__link">
       Scene serialization
     </a>
@@ -486,6 +471,18 @@
   </li>
 
     
+      
+      
+      
+
+
+  <li class="md-nav__item">
+    <a href="../yocto_parallel/" title="Concurrency utilities" class="md-nav__link">
+      Concurrency utilities
+    </a>
+  </li>
+
+    
   </ul>
 </nav>
                   </div>
@@ -504,9 +501,7 @@
   
   
     <label class="md-nav__title" for="__toc">
-      <span class="md-nav__icon md-icon">
-        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M20 11v2H8l5.5 5.5-1.42 1.42L4.16 12l7.92-7.92L13.5 5.5 8 11h12z"/></svg>
-      </span>
+      <span class="md-nav__icon md-icon"></span>
       Table of contents
     </label>
     <ul class="md-nav__list" data-md-scrollfix>
@@ -721,15 +716,13 @@ Optionally, a difference image is returned that highlights the diff.</p>
 
 
 <h2 id="image-loading-and-saving">Image loading and saving</h2>
-<p>Images are loaded with <code>load_image(filename,img,error)</code> and saved with
+<p>Images are loaded with <code>load_image(filename, img, error)</code> and saved with
 <code>save_image(filename, img, error)</code>. Both loading and saving take a filename,
 an image buffer and return whether or not the image was loaded successfully.
 In the case of an error, the IO functions set the <code>error</code> string with a
 message suitable for displaying to a user.
-Yocto/Images supports loading and saving to JPG, PNG, TGA, BMP, HDR, EXR.
-Yocto/Image supports loading and saving of images that have 1-4 channels and
-have either float or byte channels. The number of channel and type is selected
-using overloads.</p>
+Yocto/Images supports loading and saving to JPG, PNG, TGA, BMP, HDR, EXR for
+images of either float or byte. The type is selected using overloads.</p>
 <p>When loading images, the desired number of channels is determined by the
 function overload. If the image content does not contain the same number of
 channels, these are automatically converted to the desired color format.
@@ -897,15 +890,15 @@ images stored in a linear color spaces.</p>
       
     </div>
     
-      <script src="../../assets/javascripts/vendor.d710d30a.min.js"></script>
-      <script src="../../assets/javascripts/bundle.5f27aba8.min.js"></script><script id="__lang" type="application/json">{"clipboard.copy": "Copy to clipboard", "clipboard.copied": "Copied to clipboard", "search.config.lang": "en", "search.config.pipeline": "trimmer, stopWordFilter", "search.config.separator": "[\\s\\-]+", "search.result.placeholder": "Type to start searching", "search.result.none": "No matching documents", "search.result.one": "1 matching document", "search.result.other": "# matching documents"}</script>
+      <script src="../../assets/javascripts/vendor.3636a4ec.min.js"></script>
+      <script src="../../assets/javascripts/bundle.e9fe3281.min.js"></script><script id="__lang" type="application/json">{"clipboard.copy": "Copy to clipboard", "clipboard.copied": "Copied to clipboard", "search.config.lang": "en", "search.config.pipeline": "trimmer, stopWordFilter", "search.config.separator": "[\\s\\-]+", "search.result.placeholder": "Type to start searching", "search.result.none": "No matching documents", "search.result.one": "1 matching document", "search.result.other": "# matching documents"}</script>
       
       <script>
         app = initialize({
           base: "../..",
           features: [],
           search: Object.assign({
-            worker: "../../assets/javascripts/worker/search.27c6a5e6.min.js"
+            worker: "../../assets/javascripts/worker/search.5eca75d3.min.js"
           }, typeof search !== "undefined" && search)
         })
       </script>
