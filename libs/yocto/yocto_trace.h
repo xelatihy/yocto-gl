@@ -168,9 +168,6 @@ struct trace_shape {
   // displacement data [experimental]
   float displacement     = 0;
   int   displacement_tex = -1;
-
-  // shape is assigned at creation
-  int shape_id = -1;
 };
 
 // Object.
@@ -178,9 +175,6 @@ struct trace_instance {
   frame3f frame    = identity3x4f;
   int     shape    = -1;
   int     material = -1;
-
-  // instance id assigned at creation
-  int instance_id = -1;
 };
 
 // Environment map.

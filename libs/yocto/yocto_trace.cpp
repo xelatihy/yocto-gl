@@ -119,17 +119,13 @@ trace_environment* add_environment(trace_scene* scene) {
   return scene->environments.emplace_back(new trace_environment{});
 }
 trace_shape* add_shape(trace_scene* scene) {
-  auto shape      = scene->shapes.emplace_back(new trace_shape{});
-  shape->shape_id = (int)scene->shapes.size() - 1;
-  return shape;
+  return scene->shapes.emplace_back(new trace_shape{});
 }
 trace_texture* add_texture(trace_scene* scene) {
   return scene->textures.emplace_back(new trace_texture{});
 }
 trace_instance* add_instance(trace_scene* scene) {
-  auto instance         = scene->instances.emplace_back(new trace_instance{});
-  instance->instance_id = (int)scene->instances.size() - 1;
-  return instance;
+  return scene->instances.emplace_back(new trace_instance{});
 }
 trace_material* add_material(trace_scene* scene) {
   return scene->materials.emplace_back(new trace_material{});
