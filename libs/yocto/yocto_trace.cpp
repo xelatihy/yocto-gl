@@ -418,50 +418,48 @@ ray3f eval_camera(const trace_scene* scene, int camera_id,
 
 // Eval position
 vec3f eval_position(
-    const trace_scene* scene, int instance_id, int element, const vec2f& uv) {
-  auto instance = get_instance(scene, instance_id);
-  auto shape    = get_shape(scene, instance->shape);
+    const trace_scene* scene, int instance, int element, const vec2f& uv) {
+  auto frame = get_instance(scene, instance)->frame;
+  auto shape = get_shape(scene, get_instance(scene, instance)->shape);
   if (!shape->triangles.empty()) {
     auto t = shape->triangles[element];
     return transform_point(
-        instance->frame, interpolate_triangle(shape->positions[t.x],
-                             shape->positions[t.y], shape->positions[t.z], uv));
+        frame, interpolate_triangle(shape->positions[t.x],
+                   shape->positions[t.y], shape->positions[t.z], uv));
   } else if (!shape->quads.empty()) {
     auto q = shape->quads[element];
-    return transform_point(instance->frame,
-        interpolate_quad(shape->positions[q.x], shape->positions[q.y],
-            shape->positions[q.z], shape->positions[q.w], uv));
+    return transform_point(
+        frame, interpolate_quad(shape->positions[q.x], shape->positions[q.y],
+                   shape->positions[q.z], shape->positions[q.w], uv));
   } else if (!shape->lines.empty()) {
     auto l = shape->lines[element];
-    return transform_point(instance->frame,
+    return transform_point(frame,
         interpolate_line(shape->positions[l.x], shape->positions[l.y], uv.x));
   } else if (!shape->points.empty()) {
-    return transform_point(
-        instance->frame, shape->positions[shape->points[element]]);
+    return transform_point(frame, shape->positions[shape->points[element]]);
   } else {
     return zero3f;
   }
 }
 
 // Shape element normal.
-vec3f eval_element_normal(
-    const trace_scene* scene, int instance_id, int element) {
-  auto instance = get_instance(scene, instance_id);
-  auto shape    = get_shape(scene, instance->shape);
+vec3f eval_element_normal(const trace_scene* scene, int instance, int element) {
+  auto frame = get_instance(scene, instance)->frame;
+  auto shape = get_shape(scene, get_instance(scene, instance)->shape);
   if (!shape->triangles.empty()) {
     auto t = shape->triangles[element];
     return transform_normal(
-        instance->frame, triangle_normal(shape->positions[t.x],
-                             shape->positions[t.y], shape->positions[t.z]));
+        frame, triangle_normal(shape->positions[t.x], shape->positions[t.y],
+                   shape->positions[t.z]));
   } else if (!shape->quads.empty()) {
     auto q = shape->quads[element];
-    return transform_normal(instance->frame,
-        quad_normal(shape->positions[q.x], shape->positions[q.y],
-            shape->positions[q.z], shape->positions[q.w]));
+    return transform_normal(
+        frame, quad_normal(shape->positions[q.x], shape->positions[q.y],
+                   shape->positions[q.z], shape->positions[q.w]));
   } else if (!shape->lines.empty()) {
     auto l = shape->lines[element];
-    return transform_normal(instance->frame,
-        line_tangent(shape->positions[l.x], shape->positions[l.y]));
+    return transform_normal(
+        frame, line_tangent(shape->positions[l.x], shape->positions[l.y]));
   } else if (!shape->points.empty()) {
     return {0, 0, 1};
   } else {
@@ -471,29 +469,29 @@ vec3f eval_element_normal(
 
 // Eval normal
 vec3f eval_normal(
-    const trace_scene* scene, int instance_id, int element, const vec2f& uv) {
-  auto instance = get_instance(scene, instance_id);
-  auto shape    = get_shape(scene, instance->shape);
+    const trace_scene* scene, int instance, int element, const vec2f& uv) {
+  auto frame = get_instance(scene, instance)->frame;
+  auto shape = get_shape(scene, get_instance(scene, instance)->shape);
   if (shape->normals.empty())
-    return eval_element_normal(scene, instance_id, element);
+    return eval_element_normal(scene, instance, element);
   if (!shape->triangles.empty()) {
     auto t = shape->triangles[element];
     return transform_normal(
-        instance->frame, normalize(interpolate_triangle(shape->normals[t.x],
-                             shape->normals[t.y], shape->normals[t.z], uv)));
+        frame, normalize(interpolate_triangle(shape->normals[t.x],
+                   shape->normals[t.y], shape->normals[t.z], uv)));
   } else if (!shape->quads.empty()) {
     auto q = shape->quads[element];
-    return transform_normal(instance->frame,
+    return transform_normal(frame,
         normalize(interpolate_quad(shape->normals[q.x], shape->normals[q.y],
             shape->normals[q.z], shape->normals[q.w], uv)));
   } else if (!shape->lines.empty()) {
     auto l = shape->lines[element];
-    return transform_normal(instance->frame,
+    return transform_normal(frame,
         normalize(
             interpolate_line(shape->normals[l.x], shape->normals[l.y], uv.x)));
   } else if (!shape->points.empty()) {
     return transform_normal(
-        instance->frame, normalize(shape->normals[shape->points[element]]));
+        frame, normalize(shape->normals[shape->points[element]]));
   } else {
     return zero3f;
   }
@@ -501,9 +499,8 @@ vec3f eval_normal(
 
 // Eval texcoord
 vec2f eval_texcoord(
-    const trace_scene* scene, int instance_id, int element, const vec2f& uv) {
-  auto instance = get_instance(scene, instance_id);
-  auto shape    = get_shape(scene, instance->shape);
+    const trace_scene* scene, int instance, int element, const vec2f& uv) {
+  auto shape = get_shape(scene, get_instance(scene, instance)->shape);
   if (shape->texcoords.empty()) return uv;
   if (!shape->triangles.empty()) {
     auto t = shape->triangles[element];
@@ -557,42 +554,39 @@ static pair<vec3f, vec3f> eval_tangents(
 
 // Shape element normal.
 pair<vec3f, vec3f> eval_element_tangents(
-    const trace_scene* scene, int instance_id, int element) {
-  auto instance = get_instance(scene, instance_id);
-  auto shape    = get_shape(scene, instance->shape);
+    const trace_scene* scene, int instance, int element) {
+  auto frame = get_instance(scene, instance)->frame;
+  auto shape = get_shape(scene, get_instance(scene, instance)->shape);
   if (!shape->triangles.empty() && !shape->texcoords.empty()) {
     auto t        = shape->triangles[element];
     auto [tu, tv] = triangle_tangents_fromuv(shape->positions[t.x],
         shape->positions[t.y], shape->positions[t.z], shape->texcoords[t.x],
         shape->texcoords[t.y], shape->texcoords[t.z]);
-    return {transform_direction(instance->frame, tu),
-        transform_direction(instance->frame, tv)};
+    return {transform_direction(frame, tu), transform_direction(frame, tv)};
   } else if (!shape->quads.empty() && !shape->texcoords.empty()) {
     auto q        = shape->quads[element];
     auto [tu, tv] = quad_tangents_fromuv(shape->positions[q.x],
         shape->positions[q.y], shape->positions[q.z], shape->positions[q.w],
         shape->texcoords[q.x], shape->texcoords[q.y], shape->texcoords[q.z],
         shape->texcoords[q.w], {0, 0});
-    return {transform_direction(instance->frame, tu),
-        transform_direction(instance->frame, tv)};
+    return {transform_direction(frame, tu), transform_direction(frame, tv)};
   } else {
     return {};
   }
 }
 
 vec3f eval_normalmap(
-    const trace_scene* scene, int instance_id, int element, const vec2f& uv) {
-  auto instance   = get_instance(scene, instance_id);
-  auto shape      = get_shape(scene, instance->shape);
-  auto normal_tex = get_material(scene, instance->material)->normal_tex;
+    const trace_scene* scene, int instance, int element, const vec2f& uv) {
+  auto shape    = get_shape(scene, get_instance(scene, instance)->shape);
+  auto material = get_material(scene, get_instance(scene, instance)->material);
   // apply normal mapping
-  auto normal   = eval_normal(scene, instance_id, element, uv);
-  auto texcoord = eval_texcoord(scene, instance_id, element, uv);
-  if (valid(normal_tex) &&
+  auto normal   = eval_normal(scene, instance, element, uv);
+  auto texcoord = eval_texcoord(scene, instance, element, uv);
+  if (valid(material->normal_tex) &&
       (!shape->triangles.empty() || !shape->quads.empty())) {
-    auto normalmap = -1 +
-                     2 * xyz(eval_texture(scene, normal_tex, texcoord, true));
-    auto [tu, tv] = eval_element_tangents(scene, instance_id, element);
+    auto normalmap =
+        -1 + 2 * xyz(eval_texture(scene, material->normal_tex, texcoord, true));
+    auto [tu, tv] = eval_element_tangents(scene, instance, element);
     auto frame    = frame3f{tu, tv, normal, zero3f};
     frame.x       = orthonormalize(frame.x, frame.z);
     frame.y       = normalize(cross(frame.z, frame.x));
@@ -604,20 +598,19 @@ vec3f eval_normalmap(
 }
 
 // Eval shading normal
-vec3f eval_shading_normal(const trace_scene* scene, int instance_id,
-    int element, const vec2f& uv, const vec3f& outgoing) {
-  auto instance = get_instance(scene, instance_id);
-  auto shape    = get_shape(scene, instance->shape);
-  auto material = get_material(scene, instance->material);
+vec3f eval_shading_normal(const trace_scene* scene, int instance, int element,
+    const vec2f& uv, const vec3f& outgoing) {
+  auto shape    = get_shape(scene, get_instance(scene, instance)->shape);
+  auto material = get_material(scene, get_instance(scene, instance)->material);
   if (!shape->triangles.empty() || !shape->quads.empty()) {
-    auto normal = eval_normal(scene, instance_id, element, uv);
+    auto normal = eval_normal(scene, instance, element, uv);
     if (valid(material->normal_tex)) {
-      normal = eval_normalmap(scene, instance_id, element, uv);
+      normal = eval_normalmap(scene, instance, element, uv);
     }
     if (!material->thin) return normal;
     return dot(normal, outgoing) >= 0 ? normal : -normal;
   } else if (!shape->lines.empty()) {
-    auto normal = eval_normal(scene, instance_id, element, uv);
+    auto normal = eval_normal(scene, instance, element, uv);
     return orthonormalize(outgoing, normal);
   } else if (!shape->points.empty()) {
     return -outgoing;
@@ -628,9 +621,8 @@ vec3f eval_shading_normal(const trace_scene* scene, int instance_id,
 
 // Eval color
 vec4f eval_color(
-    const trace_scene* scene, int instance_id, int element, const vec2f& uv) {
-  auto instance = get_instance(scene, instance_id);
-  auto shape    = get_shape(scene, instance->shape);
+    const trace_scene* scene, int instance, int element, const vec2f& uv) {
+  auto shape = get_shape(scene, get_instance(scene, instance)->shape);
   if (shape->colors.empty()) return {1, 1, 1, 1};
   if (!shape->triangles.empty()) {
     auto t = shape->triangles[element];
@@ -652,8 +644,8 @@ vec4f eval_color(
 
 // Evaluate environment color.
 vec3f eval_environment(
-    const trace_scene* scene, int environment_id, const vec3f& direction) {
-  auto environment = get_environment(scene, environment_id);
+    const trace_scene* scene, int environment_, const vec3f& direction) {
+  auto environment = get_environment(scene, environment_);
   auto wl       = transform_direction(inverse(environment->frame), direction);
   auto texcoord = vec2f{
       atan2(wl.z, wl.x) / (2 * pif), acos(clamp(wl.y, -1.0f, 1.0f)) / pif};
