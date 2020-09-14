@@ -431,10 +431,11 @@ namespace yocto {
 
 // Scene lights
 struct trace_lights {
-  // light elements
-  vector<int>           instances    = {};
+  // instance lights
+  vector<int>           instances  = {};
+  vector<vector<float>> shape_cdfs = {};
+  // environment lights
   vector<int>           environments = {};
-  vector<vector<float>> shape_cdfs   = {};
   vector<vector<float>> texture_cdfs = {};
 };
 
