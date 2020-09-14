@@ -299,7 +299,8 @@ void load_scene_async(app_states* apps, const string& filename,
     tesselate_shapes(app->scene, progress_cb);
     init_bvh(app->bvh, app->scene, app->params);
     init_lights(app->lights, app->scene, app->params);
-    if (app->lights->lights.empty() && is_sampler_lit(app->params)) {
+    if (app->lights->instances.empty() && app->lights->environments.empty() &&
+        is_sampler_lit(app->params)) {
       app->params.sampler = trace_sampler_type::eyelight;
     }
   });

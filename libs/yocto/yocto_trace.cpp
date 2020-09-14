@@ -1188,19 +1188,21 @@ static float sample_scattering_pdf(
 // Sample lights wrt solid angle
 static vec3f sample_lights(const trace_scene* scene, const trace_lights* lights,
     const vec3f& position, float rl, float rel, const vec2f& ruv) {
-  auto light_id = sample_uniform((int)lights->lights.size(), rl);
-  auto light    = &lights->lights[light_id];
-  if (valid(light->instance)) {
-    auto instance  = get_instance(scene, light->instance);
-    auto shape     = get_shape(scene, instance->shape);
-    auto element   = sample_discrete_cdf(light->elements_cdf, rel);
+  auto light_id = sample_uniform(
+      (int)lights->instances.size() + (int)lights->environments.size(), rl);
+  if (light_id < (int)lights->instances.size()) {
+    auto light     = light_id;
+    auto instance  = lights->instances[light];
+    auto shape     = get_shape(scene, get_instance(scene, instance)->shape);
+    auto element   = sample_discrete_cdf(lights->shape_cdfs[light], rel);
     auto uv        = (!shape->triangles.empty()) ? sample_triangle(ruv) : ruv;
-    auto lposition = eval_position(scene, light->instance, element, uv);
+    auto lposition = eval_position(scene, instance, element, uv);
     return normalize(lposition - position);
-  } else if (valid(light->environment)) {
-    auto environment = get_environment(scene, light->environment);
+  } else {
+    auto light       = light_id - (int)lights->instances.size();
+    auto environment = get_environment(scene, lights->environments[light]);
     if (valid(environment->emission_tex)) {
-      auto idx  = sample_discrete_cdf(light->elements_cdf, rel);
+      auto idx  = sample_discrete_cdf(lights->texture_cdfs[light], rel);
       auto size = texture_size(scene, environment->emission_tex);
       auto uv   = vec2f{
           ((idx % size.x) + 0.5f) / size.x, ((idx / size.x) + 0.5f) / size.y};
@@ -1210,8 +1212,6 @@ static vec3f sample_lights(const trace_scene* scene, const trace_lights* lights,
     } else {
       return sample_sphere(ruv);
     }
-  } else {
-    return zero3f;
   }
 }
 
@@ -1219,52 +1219,51 @@ static vec3f sample_lights(const trace_scene* scene, const trace_lights* lights,
 static float sample_lights_pdf(const trace_scene* scene, const trace_bvh* bvh,
     const trace_lights* lights, const vec3f& position, const vec3f& direction) {
   auto pdf = 0.0f;
-  for (auto light_id = 0; light_id < lights->lights.size(); light_id++) {
-    auto light = &lights->lights[light_id];
-    if (valid(light->instance)) {
-      // check all intersection
-      auto lpdf          = 0.0f;
-      auto next_position = position;
-      for (auto bounce = 0; bounce < 100; bounce++) {
-        auto intersection = intersect_bvh(
-            bvh, light->instance, {next_position, direction});
-        if (!intersection.hit) break;
-        // accumulate pdf
-        auto lposition = eval_position(
-            scene, light->instance, intersection.element, intersection.uv);
-        auto lnormal = eval_element_normal(
-            scene, light->instance, intersection.element);
-        // prob triangle * area triangle = area triangle mesh
-        auto area = light->elements_cdf.back();
-        lpdf += distance_squared(lposition, position) /
-                (abs(dot(lnormal, direction)) * area);
-        // continue
-        next_position = lposition + direction * 1e-3f;
-      }
-      pdf += lpdf;
-    } else if (valid(light->environment)) {
-      auto environment = get_environment(scene, light->environment);
-      if (valid(environment->emission_tex)) {
-        auto emission_tex = environment->emission_tex;
-        auto size         = texture_size(scene, emission_tex);
-        auto wl = transform_direction(inverse(environment->frame), direction);
-        auto texcoord = vec2f{atan2(wl.z, wl.x) / (2 * pif),
-            acos(clamp(wl.y, -1.0f, 1.0f)) / pif};
-        if (texcoord.x < 0) texcoord.x += 1;
-        auto i    = clamp((int)(texcoord.x * size.x), 0, size.x - 1);
-        auto j    = clamp((int)(texcoord.y * size.y), 0, size.y - 1);
-        auto prob = sample_discrete_cdf_pdf(
-                        light->elements_cdf, j * size.x + i) /
-                    light->elements_cdf.back();
-        auto angle = (2 * pif / size.x) * (pif / size.y) *
-                     sin(pif * (j + 0.5f) / size.y);
-        pdf += prob / angle;
-      } else {
-        pdf += 1 / (4 * pif);
-      }
+  for (auto light = 0; light < lights->instances.size(); light++) {
+    // check all intersection
+    auto instance      = lights->instances[light];
+    auto lpdf          = 0.0f;
+    auto next_position = position;
+    for (auto bounce = 0; bounce < 100; bounce++) {
+      auto intersection = intersect_bvh(
+          bvh, instance, {next_position, direction});
+      if (!intersection.hit) break;
+      // accumulate pdf
+      auto lposition = eval_position(
+          scene, instance, intersection.element, intersection.uv);
+      auto lnormal = eval_element_normal(scene, instance, intersection.element);
+      // prob triangle * area triangle = area triangle mesh
+      auto area = lights->shape_cdfs[light].back();
+      lpdf += distance_squared(lposition, position) /
+              (abs(dot(lnormal, direction)) * area);
+      // continue
+      next_position = lposition + direction * 1e-3f;
+    }
+    pdf += lpdf;
+  }
+  for (auto light = 0; light < lights->environments.size(); light++) {
+    auto environment = get_environment(scene, lights->environments[light]);
+    if (valid(environment->emission_tex)) {
+      auto emission_tex = environment->emission_tex;
+      auto size         = texture_size(scene, emission_tex);
+      auto wl = transform_direction(inverse(environment->frame), direction);
+      auto texcoord = vec2f{
+          atan2(wl.z, wl.x) / (2 * pif), acos(clamp(wl.y, -1.0f, 1.0f)) / pif};
+      if (texcoord.x < 0) texcoord.x += 1;
+      auto i    = clamp((int)(texcoord.x * size.x), 0, size.x - 1);
+      auto j    = clamp((int)(texcoord.y * size.y), 0, size.y - 1);
+      auto prob = sample_discrete_cdf_pdf(
+                      lights->texture_cdfs[light], j * size.x + i) /
+                  lights->texture_cdfs[environment->emission_tex].back();
+      auto angle = (2 * pif / size.x) * (pif / size.y) *
+                   sin(pif * (j + 0.5f) / size.y);
+      pdf += prob / angle;
+    } else {
+      pdf += 1 / (4 * pif);
     }
   }
-  pdf *= sample_uniform_pdf((int)lights->lights.size());
+  pdf *= sample_uniform_pdf(
+      (int)lights->instances.size() + (int)lights->environments.size());
   return pdf;
 }
 
@@ -1818,11 +1817,6 @@ void init_state(
   }
 }
 
-// Forward declaration
-static trace_light* add_light(trace_lights* lights) {
-  return &lights->lights.emplace_back();
-}
-
 // Init trace lights
 void init_lights(trace_lights* lights, const trace_scene* scene,
     const trace_params& params, const progress_callback& progress_cb) {
@@ -1830,7 +1824,10 @@ void init_lights(trace_lights* lights, const trace_scene* scene,
   auto progress = vec2i{0, 1};
   if (progress_cb) progress_cb("build light", progress.x++, progress.y);
 
-  lights->lights.clear();
+  lights->instances.clear();
+  lights->environments.clear();
+  lights->shape_cdfs.clear();
+  lights->texture_cdfs.clear();
 
   for (auto id = 0; id < scene->instances.size(); id++) {
     auto instance = get_instance(scene, id);
@@ -1839,50 +1836,50 @@ void init_lights(trace_lights* lights, const trace_scene* scene,
     auto shape = get_shape(scene, instance->shape);
     if (shape->triangles.empty() && shape->quads.empty()) continue;
     if (progress_cb) progress_cb("build light", progress.x++, ++progress.y);
-    auto light         = add_light(lights);
-    light->instance    = id;
-    light->environment = -1;
+    auto elements_cdf = vector<float>{};
     if (!shape->triangles.empty()) {
-      light->elements_cdf = vector<float>(shape->triangles.size());
-      for (auto idx = 0; idx < light->elements_cdf.size(); idx++) {
-        auto& t                  = shape->triangles[idx];
-        light->elements_cdf[idx] = triangle_area(shape->positions[t.x],
+      elements_cdf = vector<float>(shape->triangles.size());
+      for (auto idx = 0; idx < elements_cdf.size(); idx++) {
+        auto& t           = shape->triangles[idx];
+        elements_cdf[idx] = triangle_area(shape->positions[t.x],
             shape->positions[t.y], shape->positions[t.z]);
-        if (idx != 0) light->elements_cdf[idx] += light->elements_cdf[idx - 1];
+        if (idx != 0) elements_cdf[idx] += elements_cdf[idx - 1];
       }
     }
     if (!shape->quads.empty()) {
-      light->elements_cdf = vector<float>(shape->quads.size());
-      for (auto idx = 0; idx < light->elements_cdf.size(); idx++) {
-        auto& t                  = shape->quads[idx];
-        light->elements_cdf[idx] = quad_area(shape->positions[t.x],
+      elements_cdf = vector<float>(shape->quads.size());
+      for (auto idx = 0; idx < elements_cdf.size(); idx++) {
+        auto& t           = shape->quads[idx];
+        elements_cdf[idx] = quad_area(shape->positions[t.x],
             shape->positions[t.y], shape->positions[t.z],
             shape->positions[t.w]);
-        if (idx != 0) light->elements_cdf[idx] += light->elements_cdf[idx - 1];
+        if (idx != 0) elements_cdf[idx] += elements_cdf[idx - 1];
       }
     }
+    lights->instances.push_back(id);
+    lights->shape_cdfs.push_back(elements_cdf);
   }
   for (auto id = 0; id < scene->environments.size(); id++) {
     auto environment = get_environment(scene, id);
     if (environment->emission == zero3f) continue;
     if (progress_cb) progress_cb("build light", progress.x++, ++progress.y);
-    auto light         = add_light(lights);
-    light->instance    = -1;
-    light->environment = id;
+    auto elements_cdf = vector<float>{};
     if (valid(environment->emission_tex)) {
-      auto texture        = environment->emission_tex;
-      auto size           = texture_size(scene, texture);
-      light->elements_cdf = vector<float>(size.x * size.y);
+      auto texture = environment->emission_tex;
+      auto size    = texture_size(scene, texture);
+      elements_cdf = vector<float>(size.x * size.y);
       if (size != zero2i) {
-        for (auto i = 0; i < light->elements_cdf.size(); i++) {
-          auto ij                = vec2i{i % size.x, i / size.x};
-          auto th                = (ij.y + 0.5f) * pif / size.y;
-          auto value             = lookup_texture(scene, texture, ij);
-          light->elements_cdf[i] = max(value) * sin(th);
-          if (i != 0) light->elements_cdf[i] += light->elements_cdf[i - 1];
+        for (auto i = 0; i < elements_cdf.size(); i++) {
+          auto ij         = vec2i{i % size.x, i / size.x};
+          auto th         = (ij.y + 0.5f) * pif / size.y;
+          auto value      = lookup_texture(scene, texture, ij);
+          elements_cdf[i] = max(value) * sin(th);
+          if (i != 0) elements_cdf[i] += elements_cdf[i - 1];
         }
       }
     }
+    lights->environments.push_back(id);
+    lights->texture_cdfs.push_back(elements_cdf);
   }
 
   // handle progress
