@@ -615,7 +615,7 @@ void draw_widgets(gui_window* win, app_states* apps, const gui_input& input) {
     if (draw_widgets(win, app->ioscene, app->selected_environment)) {
       stop_display(app);
       auto ioenvironment = app->selected_environment;
-      auto environment   = get_element(
+      auto environment   = get_element_ptr(
           ioenvironment, app->ioscene->environments, app->scene->environments);
       environment->frame        = ioenvironment->frame;
       environment->emission     = ioenvironment->emission;
@@ -650,7 +650,7 @@ void draw_widgets(gui_window* win, app_states* apps, const gui_input& input) {
     if (draw_widgets(win, app->ioscene, app->selected_shape)) {
       stop_display(app);
       auto ioshape = app->selected_shape;
-      auto shape   = get_element(
+      auto shape   = get_element_ptr(
           ioshape, app->ioscene->shapes, app->scene->shapes);
       shape->points    = ioshape->points;
       shape->lines     = ioshape->lines;
@@ -674,7 +674,7 @@ void draw_widgets(gui_window* win, app_states* apps, const gui_input& input) {
     if (draw_widgets(win, app->ioscene, app->selected_material)) {
       stop_display(app);
       auto iomaterial = app->selected_material;
-      auto material   = get_element(
+      auto material   = get_element_ptr(
           iomaterial, app->ioscene->materials, app->scene->materials);
       material->emission         = iomaterial->emission;
       material->color            = iomaterial->color;
@@ -714,7 +714,7 @@ void draw_widgets(gui_window* win, app_states* apps, const gui_input& input) {
     if (draw_widgets(win, app->ioscene, app->selected_texture)) {
       stop_display(app);
       auto iotexture = app->selected_texture;
-      auto texture   = get_element(
+      auto texture   = get_element_ptr(
           iotexture, app->ioscene->textures, app->scene->textures);
       texture->hdr = iotexture->hdr;
       texture->ldr = iotexture->ldr;

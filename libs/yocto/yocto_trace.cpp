@@ -58,13 +58,6 @@ using namespace std::string_literals;
 // -----------------------------------------------------------------------------
 namespace yocto {
 
-trace_scene::~trace_scene() {
-  for (auto shape : shapes) delete shape;
-  for (auto material : materials) delete material;
-  for (auto texture : textures) delete texture;
-  for (auto environment : environments) delete environment;
-}
-
 trace_lights::~trace_lights() {}
 
 // handles
@@ -75,32 +68,32 @@ inline trace_camera* get_camera(trace_scene* scene, int handle) {
   return &scene->cameras[handle];
 }
 inline trace_texture* get_texture(trace_scene* scene, int handle) {
-  return scene->textures[handle];
+  return &scene->textures[handle];
 }
 inline trace_material* get_material(trace_scene* scene, int handle) {
-  return scene->materials[handle];
+  return &scene->materials[handle];
 }
 inline trace_shape* get_shape(trace_scene* scene, int handle) {
-  return scene->shapes[handle];
+  return &scene->shapes[handle];
 }
 inline trace_instance* get_instance(trace_scene* scene, int handle) {
   return &scene->instances[handle];
 }
 inline trace_environment* get_environment(trace_scene* scene, int handle) {
-  return scene->environments[handle];
+  return &scene->environments[handle];
 }
 inline const trace_camera* get_camera(const trace_scene* scene, int handle) {
   return &scene->cameras[handle];
 }
 inline const trace_texture* get_texture(const trace_scene* scene, int handle) {
-  return scene->textures[handle];
+  return &scene->textures[handle];
 }
 inline const trace_material* get_material(
     const trace_scene* scene, int handle) {
-  return scene->materials[handle];
+  return &scene->materials[handle];
 }
 inline const trace_shape* get_shape(const trace_scene* scene, int handle) {
-  return scene->shapes[handle];
+  return &scene->shapes[handle];
 }
 inline const trace_instance* get_instance(
     const trace_scene* scene, int handle) {
@@ -108,7 +101,7 @@ inline const trace_instance* get_instance(
 }
 inline const trace_environment* get_environment(
     const trace_scene* scene, int handle) {
-  return scene->environments[handle];
+  return &scene->environments[handle];
 }
 
 // add element
@@ -116,19 +109,19 @@ trace_camera* add_camera(trace_scene* scene) {
   return &scene->cameras.emplace_back();
 }
 trace_environment* add_environment(trace_scene* scene) {
-  return scene->environments.emplace_back(new trace_environment{});
+  return &scene->environments.emplace_back();
 }
 trace_shape* add_shape(trace_scene* scene) {
-  return scene->shapes.emplace_back(new trace_shape{});
+  return &scene->shapes.emplace_back();
 }
 trace_texture* add_texture(trace_scene* scene) {
-  return scene->textures.emplace_back(new trace_texture{});
+  return &scene->textures.emplace_back();
 }
 trace_instance* add_instance(trace_scene* scene) {
   return &scene->instances.emplace_back();
 }
 trace_material* add_material(trace_scene* scene) {
-  return scene->materials.emplace_back(new trace_material{});
+  return &scene->materials.emplace_back();
 }
 
 }  // namespace yocto
@@ -138,7 +131,8 @@ trace_material* add_material(trace_scene* scene) {
 // -----------------------------------------------------------------------------
 namespace yocto {
 
-void tesselate_shape(trace_scene* scene, trace_shape* shape) {
+void tesselate_shape(trace_scene* scene, int shape_) {
+  auto shape = get_shape(scene, shape_);
   if (shape->subdivisions > 0) {
     if (!shape->points.empty()) {
       throw std::runtime_error("cannot subdivide points");
@@ -293,7 +287,7 @@ void tesselate_shapes(
   auto progress = vec2i{0, (int)scene->shapes.size()};
 
   // tesselate shapes
-  for (auto shape : scene->shapes) {
+  for (auto shape = 0; shape < scene->shapes.size(); shape++) {
     if (progress_cb) progress_cb("tesselate shape", progress.x++, progress.y);
     tesselate_shape(scene, shape);
   }
@@ -889,7 +883,8 @@ namespace yocto {
 void init_bvh(trace_bvh* bvh, const trace_scene* scene,
     const trace_params& params, const progress_callback& progress_cb) {
   // initialize bvh
-  for (auto shape : scene->shapes) {
+  for (auto shape_ = 0; shape_ < scene->shapes.size(); shape_++) {
+    auto shape = get_shape(scene, shape_);
     add_shape(bvh, shape->points, shape->lines, shape->triangles, shape->quads,
         shape->positions, shape->radius, true);
   }

@@ -193,15 +193,12 @@ struct trace_environment {
 // updates node transformations only if defined.
 struct trace_scene {
   // scene elements
-  vector<trace_camera>       cameras      = {};
-  vector<trace_instance>     instances    = {};
-  vector<trace_environment*> environments = {};
-  vector<trace_shape*>       shapes       = {};
-  vector<trace_texture*>     textures     = {};
-  vector<trace_material*>    materials    = {};
-
-  // cleanup
-  ~trace_scene();
+  vector<trace_camera>      cameras      = {};
+  vector<trace_instance>    instances    = {};
+  vector<trace_environment> environments = {};
+  vector<trace_shape>       shapes       = {};
+  vector<trace_texture>     textures     = {};
+  vector<trace_material>    materials    = {};
 };
 
 }  // namespace yocto
@@ -418,7 +415,7 @@ using image_callback =
 // Apply subdivision and displacement rules.
 void tesselate_shapes(
     trace_scene* scene, const progress_callback& progress_cb = {});
-void tesselate_shape(trace_scene* scene, trace_scene* shape);
+void tesselate_shape(trace_scene* scene, int shape);
 
 // Progressively computes an image.
 image<vec4f> trace_image(const trace_scene* scene, const trace_params& params,
