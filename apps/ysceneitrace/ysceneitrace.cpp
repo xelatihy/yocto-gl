@@ -51,10 +51,8 @@ struct app_state {
   string name      = "";
 
   // scene
-  sceneio_scene*  ioscene  = new sceneio_scene{};
-  trace_scene*    scene    = new trace_scene{};
-  sceneio_camera* iocamera = nullptr;
-  trace_camera*   camera   = nullptr;
+  sceneio_scene* ioscene = new sceneio_scene{};
+  trace_scene*   scene   = new trace_scene{};
 
   // rendering objects
   trace_lights* lights = new trace_lights{};
@@ -123,17 +121,16 @@ struct app_states {
 };
 
 // Construct a scene from io
-void init_scene(trace_scene* scene, sceneio_scene* ioscene,
-    trace_camera*& camera, sceneio_camera* iocamera,
-    progress_callback progress_cb = {}) {
+void init_scene(trace_scene* scene, sceneio_scene* ioscene, int& camera,
+    sceneio_camera* iocamera, progress_callback progress_cb = {}) {
   // handle progress
   auto progress = vec2i{
       0, (int)ioscene->cameras.size() + (int)ioscene->environments.size() +
              (int)ioscene->materials.size() + (int)ioscene->textures.size() +
              (int)ioscene->shapes.size() + (int)ioscene->instances.size()};
 
-  auto camera_map     = unordered_map<sceneio_camera*, trace_camera*>{};
-  camera_map[nullptr] = nullptr;
+  auto camera_map     = unordered_map<sceneio_camera*, int>{};
+  camera_map[nullptr] = -1;
   for (auto iocamera : ioscene->cameras) {
     if (progress_cb)
       progress_cb("converting cameras", progress.x++, progress.y);
@@ -145,7 +142,7 @@ void init_scene(trace_scene* scene, sceneio_scene* ioscene,
     camera->orthographic = iocamera->orthographic;
     camera->aperture     = iocamera->aperture;
     camera->focus        = iocamera->focus;
-    camera_map[iocamera] = camera;
+    camera_map[iocamera] = (int)scene->cameras.size() - 1;
   }
 
   auto texture_map     = unordered_map<sceneio_texture*, int>{};
@@ -259,8 +256,7 @@ void reset_display(app_state* app) {
   app->status         = "render";
   app->render_counter = 0;
   trace_start(
-      app->render_state, app->scene, app->camera, app->bvh, app->lights,
-      app->params,
+      app->render_state, app->scene, app->bvh, app->lights, app->params,
       [app](const string& message, int sample, int nsamples) {
         app->current = sample;
         app->total   = nsamples;
@@ -298,9 +294,8 @@ void load_scene_async(app_states* apps, const string& filename,
     app->current = 1;
     app->total   = 1;
     if (add_skyenv) add_sky(app->ioscene);
-    app->iocamera = get_camera(app->ioscene, camera_name);
-    init_scene(
-        app->scene, app->ioscene, app->camera, app->iocamera, progress_cb);
+    init_scene(app->scene, app->ioscene, app->params.camera,
+        get_camera(app->ioscene, camera_name), progress_cb);
     tesselate_shapes(app->scene, progress_cb);
     init_bvh(app->bvh, app->scene, app->params);
     init_lights(app->lights, app->scene, app->params);
@@ -525,11 +520,9 @@ void draw_widgets(gui_window* win, app_states* apps, const gui_input& input) {
   auto app = apps->selected;
   if (begin_header(win, "trace")) {
     auto edited = 0;
-    if (draw_combobox(win, "camera", app->iocamera, app->ioscene->cameras)) {
-      app->camera = get_element(
-          app->iocamera, app->ioscene->cameras, app->scene->cameras);
-      edited += 1;
-    }
+    edited += draw_combobox(win, "camera", app->params.camera,
+        (int)app->ioscene->cameras.size(),
+        [app](int idx) { return app->ioscene->cameras[idx]->name; });
     auto& tparams = app->params;
     edited += draw_slider(win, "resolution", tparams.resolution, 180, 4096);
     edited += draw_slider(win, "nsamples", tparams.samples, 16, 4096);
@@ -814,22 +807,23 @@ int main(int argc, const char* argv[]) {
     // handle mouse and keyboard for navigation
     if ((input.mouse_left || input.mouse_right) && !input.modifier_alt &&
         !input.widgets_active) {
-      auto dolly  = 0.0f;
-      auto pan    = zero2f;
-      auto rotate = zero2f;
+      auto iocamera = app->ioscene->cameras[app->params.camera];
+      auto camera   = app->scene->cameras[app->params.camera];
+      auto dolly    = 0.0f;
+      auto pan      = zero2f;
+      auto rotate   = zero2f;
       if (input.mouse_left && !input.modifier_shift)
         rotate = (input.mouse_pos - input.mouse_last) / 100.0f;
       if (input.mouse_right)
         dolly = (input.mouse_pos.x - input.mouse_last.x) / 100.0f;
       if (input.mouse_left && input.modifier_shift)
-        pan = (input.mouse_pos - input.mouse_last) * app->iocamera->focus /
-              200.0f;
+        pan = (input.mouse_pos - input.mouse_last) * iocamera->focus / 200.0f;
       pan.x = -pan.x;
       stop_display(app);
-      std::tie(app->iocamera->frame, app->iocamera->focus) = camera_turntable(
-          app->iocamera->frame, app->iocamera->focus, rotate, dolly, pan);
-      app->camera->frame = app->iocamera->frame;
-      app->camera->focus = app->iocamera->focus;
+      std::tie(iocamera->frame, iocamera->focus) = camera_turntable(
+          iocamera->frame, iocamera->focus, rotate, dolly, pan);
+      camera->frame = iocamera->frame;
+      camera->focus = iocamera->focus;
       reset_display(app);
     }
 
@@ -840,8 +834,9 @@ int main(int argc, const char* argv[]) {
           app->glparams.scale, app->render.imsize());
       if (ij.x >= 0 && ij.x < app->render.width() && ij.y >= 0 &&
           ij.y < app->render.height()) {
-        auto ray = camera_ray(app->camera->frame, app->camera->lens,
-            app->camera->lens, app->camera->film,
+        auto camera = app->scene->cameras[app->params.camera];
+        auto ray    = camera_ray(camera->frame, camera->lens, camera->lens,
+            camera->film,
             vec2f{ij.x + 0.5f, ij.y + 0.5f} /
                 vec2f{(float)app->render.width(), (float)app->render.height()});
         if (auto isec = intersect_bvh(app->bvh, ray); isec.hit) {

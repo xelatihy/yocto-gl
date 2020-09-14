@@ -39,17 +39,16 @@ using namespace yocto;
 using std::unordered_map;
 
 // Construct a scene from io
-void init_scene(trace_scene* scene, sceneio_scene* ioscene,
-    trace_camera*& camera, sceneio_camera* iocamera,
-    progress_callback progress_cb = {}) {
+void init_scene(trace_scene* scene, sceneio_scene* ioscene, int& camera,
+    sceneio_camera* iocamera, progress_callback progress_cb = {}) {
   // handle progress
   auto progress = vec2i{
       0, (int)ioscene->cameras.size() + (int)ioscene->environments.size() +
              (int)ioscene->materials.size() + (int)ioscene->textures.size() +
              (int)ioscene->shapes.size() + (int)ioscene->instances.size()};
 
-  auto camera_map     = unordered_map<sceneio_camera*, trace_camera*>{};
-  camera_map[nullptr] = nullptr;
+  auto camera_map     = unordered_map<sceneio_camera*, int>{};
+  camera_map[nullptr] = -1;
   for (auto iocamera : ioscene->cameras) {
     if (progress_cb)
       progress_cb("converting cameras", progress.x++, progress.y);
@@ -61,7 +60,7 @@ void init_scene(trace_scene* scene, sceneio_scene* ioscene,
     camera->orthographic = iocamera->orthographic;
     camera->aperture     = iocamera->aperture;
     camera->focus        = iocamera->focus;
-    camera_map[iocamera] = camera;
+    camera_map[iocamera] = (int)scene->cameras.size() - 1;
   }
 
   auto texture_map     = unordered_map<sceneio_texture*, int>{};
@@ -211,8 +210,7 @@ int main(int argc, const char* argv[]) {
   // scene conversion
   auto scene_guard = std::make_unique<trace_scene>();
   auto scene       = scene_guard.get();
-  auto camera      = (trace_camera*)nullptr;
-  init_scene(scene, ioscene, camera, iocamera);
+  init_scene(scene, ioscene, params.camera, iocamera);
 
   // cleanup
   ioscene_guard.reset();
@@ -237,7 +235,7 @@ int main(int argc, const char* argv[]) {
   }
 
   // render
-  auto render = trace_image(scene, camera, bvh, lights, params, print_progress,
+  auto render = trace_image(scene, bvh, lights, params, print_progress,
       [save_batch, imfilename](
           const image<vec4f>& render, int sample, int samples) {
         if (!save_batch) return;
@@ -268,8 +266,7 @@ int main(int argc, const char* argv[]) {
 
     // render denoise albedo
     fparams.sampler = trace_sampler_type::albedo;
-    auto albedo     = trace_image(
-        scene, camera, bvh, lights, fparams, print_progress);
+    auto albedo     = trace_image(scene, bvh, lights, fparams, print_progress);
     auto albedo_filename = replace_extension(
         imfilename, "-albedo" + feature_ext);
 
@@ -279,8 +276,7 @@ int main(int argc, const char* argv[]) {
 
     // render denoise normals
     fparams.sampler = trace_sampler_type::normal;
-    auto normal     = trace_image(
-        scene, camera, bvh, lights, fparams, print_progress);
+    auto normal     = trace_image(scene, bvh, lights, fparams, print_progress);
     auto normal_filename = replace_extension(
         imfilename, "-normal" + feature_ext);
 

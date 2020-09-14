@@ -50,7 +50,6 @@ struct app_state {
 
   // scene
   trace_scene*   scene        = new trace_scene{};
-  trace_camera*  camera       = nullptr;
   vector<string> camera_names = {};
 
   // rendering objects
@@ -92,8 +91,7 @@ void reset_display(app_state* app) {
   // start render
   app->render_counter = 0;
   trace_start(
-      app->render_state, app->scene, app->camera, app->bvh, app->lights,
-      app->params,
+      app->render_state, app->scene, app->bvh, app->lights, app->params,
       [app](const string& message, int sample, int nsamples) {
         app->current = sample;
         app->total   = nsamples;
@@ -111,17 +109,16 @@ void reset_display(app_state* app) {
 }
 
 // Construct a scene from io
-void init_scene(trace_scene* scene, sceneio_scene* ioscene,
-    trace_camera*& camera, sceneio_camera* iocamera,
-    progress_callback progress_cb = {}) {
+void init_scene(trace_scene* scene, sceneio_scene* ioscene, int& camera,
+    sceneio_camera* iocamera, progress_callback progress_cb = {}) {
   // handle progress
   auto progress = vec2i{
       0, (int)ioscene->cameras.size() + (int)ioscene->environments.size() +
              (int)ioscene->materials.size() + (int)ioscene->textures.size() +
              (int)ioscene->shapes.size() + (int)ioscene->instances.size()};
 
-  auto camera_map     = unordered_map<sceneio_camera*, trace_camera*>{};
-  camera_map[nullptr] = nullptr;
+  auto camera_map     = unordered_map<sceneio_camera*, int>{};
+  camera_map[nullptr] = -1;
   for (auto iocamera : ioscene->cameras) {
     if (progress_cb)
       progress_cb("converting cameras", progress.x++, progress.y);
@@ -133,7 +130,7 @@ void init_scene(trace_scene* scene, sceneio_scene* ioscene,
     camera->orthographic = iocamera->orthographic;
     camera->aperture     = iocamera->aperture;
     camera->focus        = iocamera->focus;
-    camera_map[iocamera] = camera;
+    camera_map[iocamera] = (int)scene->cameras.size() - 1;
   }
 
   auto texture_map     = unordered_map<sceneio_texture*, int>{};
@@ -284,7 +281,7 @@ int main(int argc, const char* argv[]) {
     app->camera_names.push_back(iocamera->name);
 
   // trace scene initialization
-  init_scene(app->scene, ioscene, app->camera, iocamera);
+  init_scene(app->scene, ioscene, app->params.camera, iocamera);
 
   // cleanup
   ioscene_guard.reset();
@@ -330,7 +327,7 @@ int main(int argc, const char* argv[]) {
     auto& tparams = app->params;
     draw_progressbar(win, "render", app->current, app->total);
     edited += draw_combobox(
-        win, "camera", app->camera, app->scene->cameras, app->camera_names);
+        win, "camera", app->params.camera, app->camera_names);
     edited += draw_slider(win, "resolution", tparams.resolution, 180, 4096);
     edited += draw_slider(win, "nsamples", tparams.samples, 16, 4096);
     edited += draw_combobox(
@@ -350,14 +347,9 @@ int main(int argc, const char* argv[]) {
                           const gui_input& input) {
     switch (key) {
       case 'c': {
-        auto ncameras = (int)app->scene->cameras.size();
-        for (auto pos = 0; pos < ncameras; pos++) {
-          if (app->scene->cameras[pos] == app->camera) {
-            app->camera = app->scene->cameras[(pos + 1) % ncameras];
-            reset_display(app);
-            break;
-          }
-        }
+        app->params.camera = (app->params.camera + 1) %
+                             (int)app->scene->cameras.size();
+        reset_display(app);
       } break;
       case 'f':
         app->params.sampler = trace_sampler_type::falsecolor;
@@ -378,6 +370,7 @@ int main(int argc, const char* argv[]) {
   callbacks.uiupdate_cb = [app](gui_window* win, const gui_input& input) {
     if ((input.mouse_left || input.mouse_right) && !input.modifier_alt &&
         !input.widgets_active) {
+      auto camera = app->scene->cameras[app->params.camera];
       auto dolly  = 0.0f;
       auto pan    = zero2f;
       auto rotate = zero2f;
@@ -386,11 +379,10 @@ int main(int argc, const char* argv[]) {
       if (input.mouse_right)
         dolly = (input.mouse_pos.x - input.mouse_last.x) / 100.0f;
       if (input.mouse_left && input.modifier_shift)
-        pan = (input.mouse_pos - input.mouse_last) * app->camera->focus /
-              200.0f;
-      pan.x                                            = -pan.x;
-      std::tie(app->camera->frame, app->camera->focus) = camera_turntable(
-          app->camera->frame, app->camera->focus, rotate, dolly, pan);
+        pan = (input.mouse_pos - input.mouse_last) * camera->focus / 200.0f;
+      pan.x                                  = -pan.x;
+      std::tie(camera->frame, camera->focus) = camera_turntable(
+          camera->frame, camera->focus, rotate, dolly, pan);
       reset_display(app);
     }
   };
