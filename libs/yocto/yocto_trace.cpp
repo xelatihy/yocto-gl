@@ -58,8 +58,6 @@ using namespace std::string_literals;
 // -----------------------------------------------------------------------------
 namespace yocto {
 
-trace_lights::~trace_lights() {}
-
 // handles
 inline bool valid(int handle) { return handle >= 0; }
 
@@ -1191,7 +1189,7 @@ static float sample_scattering_pdf(
 static vec3f sample_lights(const trace_scene* scene, const trace_lights* lights,
     const vec3f& position, float rl, float rel, const vec2f& ruv) {
   auto light_id = sample_uniform((int)lights->lights.size(), rl);
-  auto light    = lights->lights[light_id];
+  auto light    = &lights->lights[light_id];
   if (valid(light->instance)) {
     auto instance  = get_instance(scene, light->instance);
     auto shape     = get_shape(scene, instance->shape);
@@ -1221,7 +1219,8 @@ static vec3f sample_lights(const trace_scene* scene, const trace_lights* lights,
 static float sample_lights_pdf(const trace_scene* scene, const trace_bvh* bvh,
     const trace_lights* lights, const vec3f& position, const vec3f& direction) {
   auto pdf = 0.0f;
-  for (auto light : lights->lights) {
+  for (auto light_id = 0; light_id < lights->lights.size(); light_id++) {
+    auto light = &lights->lights[light_id];
     if (valid(light->instance)) {
       // check all intersection
       auto lpdf          = 0.0f;
@@ -1821,7 +1820,7 @@ void init_state(
 
 // Forward declaration
 static trace_light* add_light(trace_lights* lights) {
-  return lights->lights.emplace_back(new trace_light{});
+  return &lights->lights.emplace_back();
 }
 
 // Init trace lights
@@ -1831,7 +1830,6 @@ void init_lights(trace_lights* lights, const trace_scene* scene,
   auto progress = vec2i{0, 1};
   if (progress_cb) progress_cb("build light", progress.x++, progress.y);
 
-  for (auto light : lights->lights) delete light;
   lights->lights.clear();
 
   for (auto id = 0; id < scene->instances.size(); id++) {

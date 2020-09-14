@@ -439,10 +439,7 @@ struct trace_light {
 // Scene lights
 struct trace_lights {
   // light elements
-  vector<trace_light*> lights = {};
-
-  // cleanup
-  ~trace_lights();
+  vector<trace_light> lights = {};
 };
 
 // Initialize lights.
