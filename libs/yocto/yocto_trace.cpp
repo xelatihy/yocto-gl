@@ -421,9 +421,10 @@ ray3f eval_camera(const trace_scene* scene, int camera_id,
 }
 
 // Eval position
-vec3f eval_position(const trace_scene* scene, const trace_instance* instance,
-    int element, const vec2f& uv) {
-  auto shape = get_shape(scene, instance->shape);
+vec3f eval_position(
+    const trace_scene* scene, int instance_id, int element, const vec2f& uv) {
+  auto instance = get_instance(scene, instance_id);
+  auto shape    = get_shape(scene, instance->shape);
   if (!shape->triangles.empty()) {
     auto t = shape->triangles[element];
     return transform_point(
@@ -448,8 +449,9 @@ vec3f eval_position(const trace_scene* scene, const trace_instance* instance,
 
 // Shape element normal.
 vec3f eval_element_normal(
-    const trace_scene* scene, const trace_instance* instance, int element) {
-  auto shape = get_shape(scene, instance->shape);
+    const trace_scene* scene, int instance_id, int element) {
+  auto instance = get_instance(scene, instance_id);
+  auto shape    = get_shape(scene, instance->shape);
   if (!shape->triangles.empty()) {
     auto t = shape->triangles[element];
     return transform_normal(
@@ -472,11 +474,12 @@ vec3f eval_element_normal(
 }
 
 // Eval normal
-vec3f eval_normal(const trace_scene* scene, const trace_instance* instance,
-    int element, const vec2f& uv) {
-  auto shape = get_shape(scene, instance->shape);
+vec3f eval_normal(
+    const trace_scene* scene, int instance_id, int element, const vec2f& uv) {
+  auto instance = get_instance(scene, instance_id);
+  auto shape    = get_shape(scene, instance->shape);
   if (shape->normals.empty())
-    return eval_element_normal(scene, instance, element);
+    return eval_element_normal(scene, instance_id, element);
   if (!shape->triangles.empty()) {
     auto t = shape->triangles[element];
     return transform_normal(
@@ -501,9 +504,10 @@ vec3f eval_normal(const trace_scene* scene, const trace_instance* instance,
 }
 
 // Eval texcoord
-vec2f eval_texcoord(const trace_scene* scene, const trace_instance* instance,
-    int element, const vec2f& uv) {
-  auto shape = get_shape(scene, instance->shape);
+vec2f eval_texcoord(
+    const trace_scene* scene, int instance_id, int element, const vec2f& uv) {
+  auto instance = get_instance(scene, instance_id);
+  auto shape    = get_shape(scene, instance->shape);
   if (shape->texcoords.empty()) return uv;
   if (!shape->triangles.empty()) {
     auto t = shape->triangles[element];
@@ -557,8 +561,9 @@ static pair<vec3f, vec3f> eval_tangents(
 
 // Shape element normal.
 pair<vec3f, vec3f> eval_element_tangents(
-    const trace_scene* scene, const trace_instance* instance, int element) {
-  auto shape = get_shape(scene, instance->shape);
+    const trace_scene* scene, int instance_id, int element) {
+  auto instance = get_instance(scene, instance_id);
+  auto shape    = get_shape(scene, instance->shape);
   if (!shape->triangles.empty() && !shape->texcoords.empty()) {
     auto t        = shape->triangles[element];
     auto [tu, tv] = triangle_tangents_fromuv(shape->positions[t.x],
@@ -579,18 +584,19 @@ pair<vec3f, vec3f> eval_element_tangents(
   }
 }
 
-vec3f eval_normalmap(const trace_scene* scene, const trace_instance* instance,
-    int element, const vec2f& uv) {
+vec3f eval_normalmap(
+    const trace_scene* scene, int instance_id, int element, const vec2f& uv) {
+  auto instance   = get_instance(scene, instance_id);
   auto shape      = get_shape(scene, instance->shape);
   auto normal_tex = get_material(scene, instance->material)->normal_tex;
   // apply normal mapping
-  auto normal   = eval_normal(scene, instance, element, uv);
-  auto texcoord = eval_texcoord(scene, instance, element, uv);
+  auto normal   = eval_normal(scene, instance_id, element, uv);
+  auto texcoord = eval_texcoord(scene, instance_id, element, uv);
   if (valid(normal_tex) &&
       (!shape->triangles.empty() || !shape->quads.empty())) {
     auto normalmap = -1 +
                      2 * xyz(eval_texture(scene, normal_tex, texcoord, true));
-    auto [tu, tv] = eval_element_tangents(scene, instance, element);
+    auto [tu, tv] = eval_element_tangents(scene, instance_id, element);
     auto frame    = frame3f{tu, tv, normal, zero3f};
     frame.x       = orthonormalize(frame.x, frame.z);
     frame.y       = normalize(cross(frame.z, frame.x));
@@ -602,20 +608,20 @@ vec3f eval_normalmap(const trace_scene* scene, const trace_instance* instance,
 }
 
 // Eval shading normal
-vec3f eval_shading_normal(const trace_scene* scene,
-    const trace_instance* instance, int element, const vec2f& uv,
-    const vec3f& outgoing) {
+vec3f eval_shading_normal(const trace_scene* scene, int instance_id,
+    int element, const vec2f& uv, const vec3f& outgoing) {
+  auto instance = get_instance(scene, instance_id);
   auto shape    = get_shape(scene, instance->shape);
   auto material = get_material(scene, instance->material);
   if (!shape->triangles.empty() || !shape->quads.empty()) {
-    auto normal = eval_normal(scene, instance, element, uv);
+    auto normal = eval_normal(scene, instance_id, element, uv);
     if (valid(material->normal_tex)) {
-      normal = eval_normalmap(scene, instance, element, uv);
+      normal = eval_normalmap(scene, instance_id, element, uv);
     }
     if (!material->thin) return normal;
     return dot(normal, outgoing) >= 0 ? normal : -normal;
   } else if (!shape->lines.empty()) {
-    auto normal = eval_normal(scene, instance, element, uv);
+    auto normal = eval_normal(scene, instance_id, element, uv);
     return orthonormalize(outgoing, normal);
   } else if (!shape->points.empty()) {
     return -outgoing;
@@ -625,9 +631,10 @@ vec3f eval_shading_normal(const trace_scene* scene,
 }
 
 // Eval color
-vec4f eval_color(const trace_scene* scene, const trace_instance* instance,
-    int element, const vec2f& uv) {
-  auto shape = get_shape(scene, instance->shape);
+vec4f eval_color(
+    const trace_scene* scene, int instance_id, int element, const vec2f& uv) {
+  auto instance = get_instance(scene, instance_id);
+  auto shape    = get_shape(scene, instance->shape);
   if (shape->colors.empty()) return {1, 1, 1, 1};
   if (!shape->triangles.empty()) {
     auto t = shape->triangles[element];
@@ -713,19 +720,21 @@ static const auto coat_ior       = 1.5f;
 static const auto coat_roughness = 0.03f * 0.03f;
 
 // Eval material to obtain emission, brdf and opacity.
-vec3f eval_emission(const trace_scene* scene, const trace_instance* instance,
-    int element, const vec2f& uv, const vec3f& normal, const vec3f& outgoing) {
+vec3f eval_emission(const trace_scene* scene, int instance_id, int element,
+    const vec2f& uv, const vec3f& normal, const vec3f& outgoing) {
+  auto instance = get_instance(scene, instance_id);
   auto material = get_material(scene, instance->material);
-  auto texcoord = eval_texcoord(scene, instance, element, uv);
+  auto texcoord = eval_texcoord(scene, instance_id, element, uv);
   return material->emission *
          xyz(eval_texture(scene, material->emission_tex, texcoord));
 }
 
 // Eval material to obtain emission, brdf and opacity.
-float eval_opacity(const trace_scene* scene, const trace_instance* instance,
-    int element, const vec2f& uv, const vec3f& normal, const vec3f& outgoing) {
+float eval_opacity(const trace_scene* scene, int instance_id, int element,
+    const vec2f& uv, const vec3f& normal, const vec3f& outgoing) {
+  auto instance = get_instance(scene, instance_id);
   auto material = get_material(scene, instance->material);
-  auto texcoord = eval_texcoord(scene, instance, element, uv);
+  auto texcoord = eval_texcoord(scene, instance_id, element, uv);
   auto opacity  = material->opacity *
                  eval_texture(scene, material->opacity_tex, texcoord, true).x;
   if (opacity > 0.999f) opacity = 1;
@@ -733,11 +742,13 @@ float eval_opacity(const trace_scene* scene, const trace_instance* instance,
 }
 
 // Evaluate bsdf
-trace_bsdf eval_bsdf(const trace_scene* scene, const trace_instance* instance,
-    int element, const vec2f& uv, const vec3f& normal, const vec3f& outgoing) {
+trace_bsdf eval_bsdf(const trace_scene* scene, int instance_id, int element,
+    const vec2f& uv, const vec3f& normal, const vec3f& outgoing) {
+  auto instance = get_instance(scene, instance_id);
   auto material = get_material(scene, instance->material);
-  auto texcoord = eval_texcoord(scene, instance, element, uv);
-  auto color = material->color * xyz(eval_color(scene, instance, element, uv)) *
+  auto texcoord = eval_texcoord(scene, instance_id, element, uv);
+  auto color    = material->color *
+               xyz(eval_color(scene, instance_id, element, uv)) *
                xyz(eval_texture(scene, material->color_tex, texcoord, false));
   auto specular = material->specular *
                   eval_texture(scene, material->specular_tex, texcoord, true).x;
@@ -819,12 +830,14 @@ trace_bsdf eval_bsdf(const trace_scene* scene, const trace_instance* instance,
 bool is_delta(const trace_bsdf& bsdf) { return bsdf.roughness == 0; }
 
 // evaluate volume
-trace_vsdf eval_vsdf(const trace_scene* scene, const trace_instance* instance,
-    int element, const vec2f& uv) {
+trace_vsdf eval_vsdf(
+    const trace_scene* scene, int instance_id, int element, const vec2f& uv) {
+  auto instance = get_instance(scene, instance_id);
   auto material = get_material(scene, instance->material);
   // initialize factors
-  auto texcoord = eval_texcoord(scene, instance, element, uv);
-  auto color = material->color * xyz(eval_color(scene, instance, element, uv)) *
+  auto texcoord = eval_texcoord(scene, instance_id, element, uv);
+  auto color    = material->color *
+               xyz(eval_color(scene, instance_id, element, uv)) *
                xyz(eval_texture(scene, material->color_tex, texcoord, false));
   auto transmission =
       material->transmission *
@@ -852,7 +865,8 @@ trace_vsdf eval_vsdf(const trace_scene* scene, const trace_instance* instance,
 }
 
 // check if we have a volume
-bool has_volume(const trace_scene* scene, const trace_instance* instance) {
+bool has_volume(const trace_scene* scene, int instance_id) {
+  auto instance = get_instance(scene, instance_id);
   auto material = get_material(scene, instance->material);
   return !material->thin && material->transmission != 0;
 }
@@ -1218,7 +1232,7 @@ static vec3f sample_lights(const trace_scene* scene, const trace_lights* lights,
     auto shape     = get_shape(scene, instance->shape);
     auto element   = sample_discrete_cdf(light->elements_cdf, rel);
     auto uv        = (!shape->triangles.empty()) ? sample_triangle(ruv) : ruv;
-    auto lposition = eval_position(scene, instance, element, uv);
+    auto lposition = eval_position(scene, light->instance, element, uv);
     return normalize(lposition - position);
   } else if (valid(light->environment)) {
     auto environment = get_environment(scene, light->environment);
@@ -1248,15 +1262,14 @@ static float sample_lights_pdf(const trace_scene* scene, const trace_bvh* bvh,
       auto lpdf          = 0.0f;
       auto next_position = position;
       for (auto bounce = 0; bounce < 100; bounce++) {
-        auto instance     = get_instance(scene, light->instance);
         auto intersection = intersect_bvh(
-            bvh, instance->instance_id, {next_position, direction});
+            bvh, light->instance, {next_position, direction});
         if (!intersection.hit) break;
         // accumulate pdf
         auto lposition = eval_position(
-            scene, instance, intersection.element, intersection.uv);
+            scene, light->instance, intersection.element, intersection.uv);
         auto lnormal = eval_element_normal(
-            scene, instance, intersection.element);
+            scene, light->instance, intersection.element);
         // prob triangle * area triangle = area triangle mesh
         auto area = light->elements_cdf.back();
         lpdf += distance_squared(lposition, position) /
@@ -1330,7 +1343,7 @@ static vec4f trace_path(const trace_scene* scene, const trace_bvh* bvh,
     if (!in_volume) {
       // prepare shading point
       auto outgoing = -ray.d;
-      auto instance = scene->instances[intersection.instance];
+      auto instance = intersection.instance;
       auto element  = intersection.element;
       auto uv       = intersection.uv;
       auto position = eval_position(scene, instance, element, uv);
@@ -1456,7 +1469,7 @@ static vec4f trace_naive(const trace_scene* scene, const trace_bvh* bvh,
 
     // prepare shading point
     auto outgoing = -ray.d;
-    auto instance = scene->instances[intersection.instance];
+    auto instance = intersection.instance;
     auto element  = intersection.element;
     auto uv       = intersection.uv;
     auto position = eval_position(scene, instance, element, uv);
@@ -1529,7 +1542,7 @@ static vec4f trace_eyelight(const trace_scene* scene, const trace_bvh* bvh,
 
     // prepare shading point
     auto outgoing = -ray.d;
-    auto instance = scene->instances[intersection.instance];
+    auto instance = intersection.instance;
     auto element  = intersection.element;
     auto uv       = intersection.uv;
     auto position = eval_position(scene, instance, element, uv);
@@ -1580,7 +1593,7 @@ static vec4f trace_falsecolor(const trace_scene* scene, const trace_bvh* bvh,
 
   // prepare shading point
   auto outgoing = -ray.d;
-  auto instance = scene->instances[intersection.instance];
+  auto instance = intersection.instance;
   auto element  = intersection.element;
   auto uv       = intersection.uv;
   auto position = eval_position(scene, instance, element, uv);
@@ -1656,10 +1669,10 @@ static vec4f trace_albedo(const trace_scene* scene, const trace_bvh* bvh,
 
   // prepare shading point
   auto outgoing = -ray.d;
-  auto instance = scene->instances[intersection.instance];
+  auto instance = intersection.instance;
   auto element  = intersection.element;
   auto uv       = intersection.uv;
-  auto material = get_material(scene, instance->material);
+  auto material = get_material(scene, get_instance(scene, instance)->material);
   auto position = eval_position(scene, instance, element, uv);
   auto normal   = eval_shading_normal(scene, instance, element, uv, outgoing);
   auto texcoord = eval_texcoord(scene, instance, element, uv);
@@ -1723,10 +1736,10 @@ static vec4f trace_normal(const trace_scene* scene, const trace_bvh* bvh,
 
   // prepare shading point
   auto outgoing = -ray.d;
-  auto instance = scene->instances[intersection.instance];
+  auto instance = intersection.instance;
   auto element  = intersection.element;
   auto uv       = intersection.uv;
-  auto material = get_material(scene, instance->material);
+  auto material = get_material(scene, get_instance(scene, instance)->material);
   auto position = eval_position(scene, instance, element, uv);
   auto normal   = eval_shading_normal(scene, instance, element, uv, outgoing);
   auto opacity  = eval_opacity(scene, instance, element, uv, normal, outgoing);
