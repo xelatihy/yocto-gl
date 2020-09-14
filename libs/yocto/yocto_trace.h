@@ -175,9 +175,9 @@ struct trace_shape {
 
 // Object.
 struct trace_instance {
-  frame3f      frame    = identity3x4f;
-  trace_shape* shape    = nullptr;
-  int          material = -1;
+  frame3f frame    = identity3x4f;
+  int     shape    = -1;
+  int     material = -1;
 
   // instance id assigned at creation
   int instance_id = -1;
@@ -246,23 +246,26 @@ vec4f eval_texture(const trace_texture* texture, const vec2f& uv,
     bool clamp_to_edge = false);
 
 // Evaluate instance properties
-vec3f eval_position(
-    const trace_instance* instance, int element, const vec2f& uv);
-vec3f eval_element_normal(const trace_instance* instance, int element);
-vec3f eval_normal(const trace_instance* instance, int element, const vec2f& uv);
-vec2f eval_texcoord(
-    const trace_instance* instance, int element, const vec2f& uv);
+vec3f eval_position(const trace_scene* scene, const trace_instance* instance,
+    int element, const vec2f& uv);
+vec3f eval_element_normal(
+    const trace_scene* scene, const trace_instance* instance, int element);
+vec3f eval_normal(const trace_scene* scene, const trace_instance* instance,
+    int element, const vec2f& uv);
+vec2f eval_texcoord(const trace_scene* scene, const trace_instance* instance,
+    int element, const vec2f& uv);
 pair<vec3f, vec3f> eval_element_tangents(
-    const trace_instance* instance, int element);
+    const trace_scene* scene, const trace_instance* instance, int element);
 vec3f eval_normalmap(const trace_scene* scene, const trace_instance* instance,
     int element, const vec2f& uv);
 vec3f eval_shading_normal(const trace_scene* scene,
     const trace_instance* instance, int element, const vec2f& uv,
     const vec3f& outgoing);
-vec4f eval_color(const trace_instance* instance, int element, const vec2f& uv);
+vec4f eval_color(const trace_scene* scene, const trace_instance* instance,
+    int element, const vec2f& uv);
 
 // Environment
-vec3f eval_environment(
+vec3f eval_environment(const trace_scene* scene,
     const trace_environment* environment, const vec3f& direction);
 vec3f eval_environment(const trace_scene* scene, const vec3f& direction);
 
@@ -287,7 +290,7 @@ struct trace_material_sample {
 };
 
 // Evaluates material and textures
-trace_material_sample eval_material(
+trace_material_sample eval_material(const trace_scene* scene,
     const trace_material* material, const vec2f& texcoord);
 
 // Material Bsdf parameters

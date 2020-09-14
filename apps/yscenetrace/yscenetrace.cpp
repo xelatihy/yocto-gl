@@ -111,8 +111,8 @@ void init_scene(trace_scene* scene, sceneio_scene* ioscene,
     material_map[iomaterial]   = (int)scene->materials.size() - 1;
   }
 
-  auto shape_map     = unordered_map<sceneio_shape*, trace_shape*>{};
-  shape_map[nullptr] = nullptr;
+  auto shape_map     = unordered_map<sceneio_shape*, int>{};
+  shape_map[nullptr] = -1;
   for (auto ioshape : ioscene->shapes) {
     if (progress_cb) progress_cb("converting shapes", progress.x++, progress.y);
     auto shape              = add_shape(scene);
@@ -134,7 +134,7 @@ void init_scene(trace_scene* scene, sceneio_scene* ioscene,
     shape->smooth           = ioshape->smooth;
     shape->displacement     = ioshape->displacement;
     shape->displacement_tex = texture_map.at(ioshape->displacement_tex);
-    shape_map[ioshape]      = shape;
+    shape_map[ioshape]      = (int)scene->shapes.size() - 1;
   }
 
   for (auto ioinstance : ioscene->instances) {

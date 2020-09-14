@@ -195,8 +195,8 @@ void init_scene(trace_scene* scene, sceneio_scene* ioscene,
     material_map[iomaterial]   = (int)scene->materials.size() - 1;
   }
 
-  auto shape_map     = unordered_map<sceneio_shape*, trace_shape*>{};
-  shape_map[nullptr] = nullptr;
+  auto shape_map     = unordered_map<sceneio_shape*, int>{};
+  shape_map[nullptr] = -1;
   for (auto ioshape : ioscene->shapes) {
     if (progress_cb) progress_cb("converting shapes", progress.x++, progress.y);
     auto shape              = add_shape(scene);
@@ -218,7 +218,7 @@ void init_scene(trace_scene* scene, sceneio_scene* ioscene,
     shape->smooth           = ioshape->smooth;
     shape->displacement     = ioshape->displacement;
     shape->displacement_tex = texture_map.at(ioshape->displacement_tex);
-    shape_map[ioshape]      = shape;
+    shape_map[ioshape]      = (int)scene->shapes.size() - 1;
   }
 
   for (auto ioinstance : ioscene->instances) {
@@ -630,8 +630,8 @@ void draw_widgets(gui_window* win, app_states* apps, const gui_input& input) {
       auto instance   = get_element(
           ioinstance, app->ioscene->instances, app->scene->instances);
       instance->frame = ioinstance->frame;
-      instance->shape = get_element(
-          ioinstance->shape, app->ioscene->shapes, app->scene->shapes);
+      instance->shape = get_element_index(
+          ioinstance->shape, app->ioscene->shapes);
       instance->material = get_element_index(
           ioinstance->material, app->ioscene->materials);
       update_bvh(app->bvh, app->scene, {instance}, {}, app->params);
