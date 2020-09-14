@@ -437,9 +437,9 @@ namespace yocto {
 
 // Scene lights used during rendering. These are created automatically.
 struct trace_light {
-  trace_instance*    instance     = nullptr;
-  trace_environment* environment  = nullptr;
-  vector<float>      elements_cdf = {};
+  int           instance     = -1;
+  int           environment  = -1;
+  vector<float> elements_cdf = {};
 };
 
 // Scene lights
