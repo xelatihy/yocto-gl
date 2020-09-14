@@ -26,5 +26,6 @@ if(GENERATOR_IS_MULTI_CONFIG)
   set(CMAKE_RUNTIME_OUTPUT_DIRECTORY_RELEASE ${CMAKE_BINARY_DIR})
 endif(GENERATOR_IS_MULTI_CONFIG)
 
+add_subdirectory(exts)
 add_subdirectory(libs)
 add_subdirectory(apps)
