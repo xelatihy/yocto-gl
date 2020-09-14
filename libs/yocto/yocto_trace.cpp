@@ -61,7 +61,6 @@ namespace yocto {
 trace_scene::~trace_scene() {
   for (auto shape : shapes) delete shape;
   for (auto material : materials) delete material;
-  for (auto instance : instances) delete instance;
   for (auto texture : textures) delete texture;
   for (auto environment : environments) delete environment;
 }
@@ -85,7 +84,7 @@ inline trace_shape* get_shape(trace_scene* scene, int handle) {
   return scene->shapes[handle];
 }
 inline trace_instance* get_instance(trace_scene* scene, int handle) {
-  return scene->instances[handle];
+  return &scene->instances[handle];
 }
 inline trace_environment* get_environment(trace_scene* scene, int handle) {
   return scene->environments[handle];
@@ -93,19 +92,21 @@ inline trace_environment* get_environment(trace_scene* scene, int handle) {
 inline const trace_camera* get_camera(const trace_scene* scene, int handle) {
   return &scene->cameras[handle];
 }
-inline trace_texture* get_texture(const trace_scene* scene, int handle) {
+inline const trace_texture* get_texture(const trace_scene* scene, int handle) {
   return scene->textures[handle];
 }
-inline trace_material* get_material(const trace_scene* scene, int handle) {
+inline const trace_material* get_material(
+    const trace_scene* scene, int handle) {
   return scene->materials[handle];
 }
-inline trace_shape* get_shape(const trace_scene* scene, int handle) {
+inline const trace_shape* get_shape(const trace_scene* scene, int handle) {
   return scene->shapes[handle];
 }
-inline trace_instance* get_instance(const trace_scene* scene, int handle) {
-  return scene->instances[handle];
+inline const trace_instance* get_instance(
+    const trace_scene* scene, int handle) {
+  return &scene->instances[handle];
 }
-inline trace_environment* get_environment(
+inline const trace_environment* get_environment(
     const trace_scene* scene, int handle) {
   return scene->environments[handle];
 }
@@ -124,7 +125,7 @@ trace_texture* add_texture(trace_scene* scene) {
   return scene->textures.emplace_back(new trace_texture{});
 }
 trace_instance* add_instance(trace_scene* scene) {
-  return scene->instances.emplace_back(new trace_instance{});
+  return &scene->instances.emplace_back();
 }
 trace_material* add_material(trace_scene* scene) {
   return scene->materials.emplace_back(new trace_material{});
@@ -907,22 +908,9 @@ void init_bvh(trace_bvh* bvh, const trace_scene* scene,
 
 // Refit bvh data
 void update_bvh(trace_bvh* bvh, const trace_scene* scene,
-    const vector<trace_instance*>& updated_instances,
-    const vector<trace_shape*>& updated_shapes, const trace_params& params) {
-  auto updated_instances_ids = vector<int>{};
-  auto updated_shapes_ids    = vector<int>{};
-  for (auto shape : updated_shapes) {
-    updated_shapes_ids.push_back(
-        (int)(std::find(scene->shapes.begin(), scene->shapes.end(), shape) -
-              scene->shapes.begin()));
-  }
-  for (auto instance : updated_instances) {
-    updated_instances_ids.push_back(
-        (int)(std::find(
-                  scene->instances.begin(), scene->instances.end(), instance) -
-              scene->instances.begin()));
-  }
-  update_bvh(bvh, updated_instances_ids, updated_shapes_ids);
+    const vector<int>& updated_instances, const vector<int>& updated_shapes,
+    const trace_params& params) {
+  update_bvh(bvh, updated_instances, updated_shapes);
 }
 
 }  // namespace yocto

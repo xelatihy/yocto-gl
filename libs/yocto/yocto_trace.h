@@ -194,7 +194,7 @@ struct trace_environment {
 struct trace_scene {
   // scene elements
   vector<trace_camera>       cameras      = {};
-  vector<trace_instance*>    instances    = {};
+  vector<trace_instance>     instances    = {};
   vector<trace_environment*> environments = {};
   vector<trace_shape*>       shapes       = {};
   vector<trace_texture*>     textures     = {};
@@ -461,8 +461,8 @@ void init_bvh(trace_bvh* bvh, const trace_scene* scene,
 
 // Refit bvh data
 void update_bvh(trace_bvh* bvh, const trace_scene* scene,
-    const vector<trace_instance*>& updated_instances,
-    const vector<trace_shape*>& updated_shapes, const trace_params& params);
+    const vector<int>& updated_instances, const vector<int>& updated_shapes,
+    const trace_params& params);
 
 // Progressively computes an image.
 image<vec4f> trace_image(const trace_scene* scene, const trace_bvh* bvh,

@@ -631,14 +631,15 @@ void draw_widgets(gui_window* win, app_states* apps, const gui_input& input) {
     if (draw_widgets(win, app->ioscene, app->selected_instance)) {
       stop_display(app);
       auto ioinstance = app->selected_instance;
-      auto instance   = get_element(
+      auto instance   = get_element_ptr(
           ioinstance, app->ioscene->instances, app->scene->instances);
       instance->frame = ioinstance->frame;
       instance->shape = get_element_index(
           ioinstance->shape, app->ioscene->shapes);
       instance->material = get_element_index(
           ioinstance->material, app->ioscene->materials);
-      update_bvh(app->bvh, app->scene, {instance}, {}, app->params);
+      auto instance_id = get_element_index(ioinstance, app->ioscene->instances);
+      update_bvh(app->bvh, app->scene, {instance_id}, {}, app->params);
       reset_display(app);
     }
     end_header(win);
@@ -661,7 +662,8 @@ void draw_widgets(gui_window* win, app_states* apps, const gui_input& input) {
       shape->colors    = ioshape->colors;
       shape->radius    = ioshape->radius;
       shape->tangents  = ioshape->tangents;
-      update_bvh(app->bvh, app->scene, {}, {shape}, app->params);
+      auto shape_id    = get_element_index(ioshape, app->ioscene->shapes);
+      update_bvh(app->bvh, app->scene, {}, {shape_id}, app->params);
       reset_display(app);
     }
     end_header(win);
