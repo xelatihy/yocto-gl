@@ -122,18 +122,18 @@ struct trace_material {
   bool  thin         = true;
 
   // textures
-  trace_texture* emission_tex     = nullptr;
-  trace_texture* color_tex        = nullptr;
-  trace_texture* specular_tex     = nullptr;
-  trace_texture* metallic_tex     = nullptr;
-  trace_texture* roughness_tex    = nullptr;
-  trace_texture* transmission_tex = nullptr;
-  trace_texture* translucency_tex = nullptr;
-  trace_texture* spectint_tex     = nullptr;
-  trace_texture* scattering_tex   = nullptr;
-  trace_texture* coat_tex         = nullptr;
-  trace_texture* opacity_tex      = nullptr;
-  trace_texture* normal_tex       = nullptr;
+  int emission_tex     = -1;
+  int color_tex        = -1;
+  int specular_tex     = -1;
+  int metallic_tex     = -1;
+  int roughness_tex    = -1;
+  int transmission_tex = -1;
+  int translucency_tex = -1;
+  int spectint_tex     = -1;
+  int scattering_tex   = -1;
+  int coat_tex         = -1;
+  int opacity_tex      = -1;
+  int normal_tex       = -1;
 };
 
 // Shape data represented as indexed meshes of elements.
@@ -166,8 +166,8 @@ struct trace_shape {
   bool smooth       = true;
 
   // displacement data [experimental]
-  float          displacement     = 0;
-  trace_texture* displacement_tex = nullptr;
+  float displacement     = 0;
+  int   displacement_tex = -1;
 
   // shape is assigned at creation
   int shape_id = -1;
@@ -185,9 +185,9 @@ struct trace_instance {
 
 // Environment map.
 struct trace_environment {
-  frame3f        frame        = identity3x4f;
-  vec3f          emission     = {0, 0, 0};
-  trace_texture* emission_tex = nullptr;
+  frame3f frame        = identity3x4f;
+  vec3f   emission     = {0, 0, 0};
+  int     emission_tex = -1;
 };
 
 // Scene comprised an array of objects whose memory is owened by the scene.
@@ -238,10 +238,10 @@ ray3f eval_camera(
     const trace_camera* camera, const vec2f& image_uv, const vec2f& lens_uv);
 
 // Evaluates a texture
-vec2i texture_size(const trace_texture* texture);
-vec4f lookup_texture(
-    const trace_texture* texture, const vec2i& ij, bool ldr_as_linear = false);
-vec4f eval_texture(const trace_texture* texture, const vec2f& uv,
+vec2i texture_size(const trace_scene* scene, int texture);
+vec4f lookup_texture(const trace_scene* scene, int texture, const vec2i& ij,
+    bool ldr_as_linear = false);
+vec4f eval_texture(const trace_scene* scene, int texture, const vec2f& uv,
     bool ldr_as_linear = false, bool no_interpolation = false,
     bool clamp_to_edge = false);
 
@@ -425,7 +425,7 @@ using image_callback =
 // Apply subdivision and displacement rules.
 void tesselate_shapes(
     trace_scene* scene, const progress_callback& progress_cb = {});
-void tesselate_shape(trace_scene* shape);
+void tesselate_shape(trace_scene* scene, trace_scene* shape);
 
 // Progressively computes an image.
 image<vec4f> trace_image(const trace_scene* scene, const trace_camera* camera,

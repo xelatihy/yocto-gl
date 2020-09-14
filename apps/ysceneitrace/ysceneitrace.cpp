@@ -148,15 +148,15 @@ void init_scene(trace_scene* scene, sceneio_scene* ioscene,
     camera_map[iocamera] = camera;
   }
 
-  auto texture_map     = unordered_map<sceneio_texture*, trace_texture*>{};
-  texture_map[nullptr] = nullptr;
+  auto texture_map     = unordered_map<sceneio_texture*, int>{};
+  texture_map[nullptr] = -1;
   for (auto iotexture : ioscene->textures) {
     if (progress_cb)
       progress_cb("converting textures", progress.x++, progress.y);
     auto texture           = add_texture(scene);
     texture->hdr           = iotexture->hdr;
     texture->ldr           = iotexture->ldr;
-    texture_map[iotexture] = texture;
+    texture_map[iotexture] = (int)scene->textures.size() - 1;
   }
 
   auto material_map     = unordered_map<sceneio_material*, int>{};
@@ -583,7 +583,7 @@ void draw_widgets(gui_window* win, app_states* apps, const gui_input& input) {
     end_header(win);
   }
   auto get_texture = [app](sceneio_texture* iotexture) {
-    return get_element(iotexture, app->ioscene->textures, app->scene->textures);
+    return get_element_index(iotexture, app->ioscene->textures);
   };
   if (!app->ioscene->cameras.empty() && begin_header(win, "cameras")) {
     draw_combobox(
