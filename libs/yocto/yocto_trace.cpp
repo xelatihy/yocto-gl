@@ -648,8 +648,9 @@ vec4f eval_color(const trace_scene* scene, const trace_instance* instance,
 }
 
 // Evaluate environment color.
-vec3f eval_environment(const trace_scene* scene,
-    const trace_environment* environment, const vec3f& direction) {
+vec3f eval_environment(
+    const trace_scene* scene, int environment_id, const vec3f& direction) {
+  auto environment = get_environment(scene, environment_id);
   auto wl       = transform_direction(inverse(environment->frame), direction);
   auto texcoord = vec2f{
       atan2(wl.z, wl.x) / (2 * pif), acos(clamp(wl.y, -1.0f, 1.0f)) / pif};
@@ -659,10 +660,10 @@ vec3f eval_environment(const trace_scene* scene,
 }
 
 // Evaluate all environment color.
-vec3f eval_environment(const trace_scene* scene, const vec3f& direction) {
+vec3f eval_environments(const trace_scene* scene, const vec3f& direction) {
   auto emission = zero3f;
-  for (auto environment : scene->environments) {
-    emission += eval_environment(scene, environment, direction);
+  for (auto id = 0; id < scene->environments.size(); id++) {
+    emission += eval_environment(scene, id, direction);
   }
   return emission;
 }
@@ -1308,7 +1309,7 @@ static vec4f trace_path(const trace_scene* scene, const trace_bvh* bvh,
     auto intersection = intersect_bvh(bvh, ray);
     if (!intersection.hit) {
       if (bounce > 0 || !params.envhidden)
-        radiance += weight * eval_environment(scene, ray.d);
+        radiance += weight * eval_environments(scene, ray.d);
       break;
     }
 
@@ -1449,7 +1450,7 @@ static vec4f trace_naive(const trace_scene* scene, const trace_bvh* bvh,
     auto intersection = intersect_bvh(bvh, ray);
     if (!intersection.hit) {
       if (bounce > 0 || !params.envhidden)
-        radiance += weight * eval_environment(scene, ray.d);
+        radiance += weight * eval_environments(scene, ray.d);
       break;
     }
 
@@ -1522,7 +1523,7 @@ static vec4f trace_eyelight(const trace_scene* scene, const trace_bvh* bvh,
     auto intersection = intersect_bvh(bvh, ray);
     if (!intersection.hit) {
       if (bounce > 0 || !params.envhidden)
-        radiance += weight * eval_environment(scene, ray.d);
+        radiance += weight * eval_environments(scene, ray.d);
       break;
     }
 
@@ -1649,7 +1650,7 @@ static vec4f trace_albedo(const trace_scene* scene, const trace_bvh* bvh,
     const trace_params& params, int bounce) {
   auto intersection = intersect_bvh(bvh, ray);
   if (!intersection.hit) {
-    auto radiance = eval_environment(scene, ray.d);
+    auto radiance = eval_environments(scene, ray.d);
     return {radiance.x, radiance.y, radiance.z, 1};
   }
 
