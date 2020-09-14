@@ -5,7 +5,6 @@ if(YOCTO_OPENGL)
   set(GLFW_BUILD_TESTS OFF CACHE BOOL " " FORCE)
   set(GLFW_BUILD_DOCS OFF CACHE BOOL " " FORCE)
   set(GLFW_INSTALL OFF CACHE BOOL " " FORCE)
-  add_subdirectory(ext/glfw glfw)
 
   add_library(yocto_gui 
     yocto_opengl.h 
@@ -26,6 +25,7 @@ if(YOCTO_OPENGL)
   target_compile_definitions(yocto_gui PRIVATE -DIMGUI_IMPL_OPENGL_LOADER_GLAD)
   set_target_properties(yocto_gui PROPERTIES CXX_STANDARD 17 CXX_STANDARD_REQUIRED YES)
   
+  target_include_directories(yocto_gui PRIVATE ${CMAKE_SOURCE_DIR}/exts/glfw/include)
   target_link_libraries(yocto_gui glfw ${OPENGL_gl_LIBRARY})
 
   if(UNIX AND NOT APPLE)
