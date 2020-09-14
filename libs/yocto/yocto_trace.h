@@ -279,8 +279,8 @@ struct trace_material_sample {
 };
 
 // Evaluates material and textures
-trace_material_sample eval_material(const trace_scene* scene,
-    const trace_material* material, const vec2f& texcoord);
+trace_material_sample eval_material(
+    const trace_scene* scene, int material, const vec2f& texcoord);
 
 // Material Bsdf parameters
 struct trace_bsdf {
