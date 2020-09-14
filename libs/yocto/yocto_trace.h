@@ -234,14 +234,14 @@ trace_instance*    add_complete_instance(trace_scene* scene);
 namespace yocto {
 
 // Generates a ray from a camera.
-ray3f eval_camera(
-    const trace_camera* camera, const vec2f& image_uv, const vec2f& lens_uv);
+ray3f eval_camera(const trace_scene* scene, int camera_id,
+    const vec2f& image_uv, const vec2f& lens_uv);
 
 // Evaluates a texture
-vec2i texture_size(const trace_scene* scene, int texture);
-vec4f lookup_texture(const trace_scene* scene, int texture, const vec2i& ij,
+vec2i texture_size(const trace_scene* scene, int texture_id);
+vec4f lookup_texture(const trace_scene* scene, int texture_id, const vec2i& ij,
     bool ldr_as_linear = false);
-vec4f eval_texture(const trace_scene* scene, int texture, const vec2f& uv,
+vec4f eval_texture(const trace_scene* scene, int texture_id, const vec2f& uv,
     bool ldr_as_linear = false, bool no_interpolation = false,
     bool clamp_to_edge = false);
 
@@ -265,9 +265,9 @@ vec4f eval_color(const trace_scene* scene, const trace_instance* instance,
     int element, const vec2f& uv);
 
 // Environment
-vec3f eval_environment(const trace_scene* scene,
-    const trace_environment* environment, const vec3f& direction);
-vec3f eval_environment(const trace_scene* scene, const vec3f& direction);
+vec3f eval_environment(
+    const trace_scene* scene, int environment_id, const vec3f& direction);
+vec3f eval_environments(const trace_scene* scene, const vec3f& direction);
 
 // Material sample
 struct trace_material_sample {

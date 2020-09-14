@@ -382,9 +382,10 @@ vec4f eval_texture(const trace_scene* scene, int texture_id, const vec2f& uv,
 
 // Generates a ray from a camera for yimg::image plane coordinate uv and
 // the lens coordinates luv.
-ray3f eval_camera(
-    const trace_camera* camera, const vec2f& image_uv, const vec2f& lens_uv) {
-  auto film = camera->aspect >= 1
+ray3f eval_camera(const trace_scene* scene, int camera_id,
+    const vec2f& image_uv, const vec2f& lens_uv) {
+  auto camera = get_camera(scene, camera_id);
+  auto film   = camera->aspect >= 1
                   ? vec2f{camera->film, camera->film / camera->aspect}
                   : vec2f{camera->film * camera->aspect, camera->film};
   if (!camera->orthographic) {
@@ -856,12 +857,13 @@ bool has_volume(const trace_scene* scene, const trace_instance* instance) {
 }
 
 // Sample camera
-static ray3f sample_camera(const trace_camera* camera, const vec2i& ij,
-    const vec2i& image_size, const vec2f& puv, const vec2f& luv, bool tent) {
+static ray3f sample_camera(const trace_scene* scene, int camera_id,
+    const vec2i& ij, const vec2i& image_size, const vec2f& puv,
+    const vec2f& luv, bool tent) {
   if (!tent) {
     auto uv = vec2f{
         (ij.x + puv.x) / image_size.x, (ij.y + puv.y) / image_size.y};
-    return eval_camera(camera, uv, sample_disk(luv));
+    return eval_camera(scene, camera_id, uv, sample_disk(luv));
   } else {
     const auto width  = 2.0f;
     const auto offset = 0.5f;
@@ -874,7 +876,7 @@ static ray3f sample_camera(const trace_camera* camera, const vec2i& ij,
         offset;
     auto uv = vec2f{
         (ij.x + fuv.x) / image_size.x, (ij.y + fuv.y) / image_size.y};
-    return eval_camera(camera, uv, sample_disk(luv));
+    return eval_camera(scene, camera_id, uv, sample_disk(luv));
   }
 }
 
@@ -1803,9 +1805,8 @@ bool is_sampler_lit(const trace_params& params) {
 void trace_sample(trace_state* state, const trace_scene* scene,
     const trace_bvh* bvh, const trace_lights* lights, const vec2i& ij,
     const trace_params& params) {
-  auto camera  = get_camera(scene, params.camera);
   auto sampler = get_trace_sampler_func(params);
-  auto ray     = sample_camera(camera, ij, state->render.imsize(),
+  auto ray     = sample_camera(scene, params.camera, ij, state->render.imsize(),
       rand2f(state->rngs[ij]), rand2f(state->rngs[ij]), params.tentfilter);
   auto sample  = sampler(scene, bvh, lights, ray, state->rngs[ij], params);
   if (!isfinite(xyz(sample))) sample = {0, 0, 0, sample.w};
