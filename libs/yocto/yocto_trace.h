@@ -175,9 +175,9 @@ struct trace_shape {
 
 // Object.
 struct trace_instance {
-  frame3f         frame    = identity3x4f;
-  trace_shape*    shape    = nullptr;
-  trace_material* material = nullptr;
+  frame3f      frame    = identity3x4f;
+  trace_shape* shape    = nullptr;
+  int          material = -1;
 
   // instance id assigned at creation
   int instance_id = -1;
@@ -254,10 +254,11 @@ vec2f eval_texcoord(
     const trace_instance* instance, int element, const vec2f& uv);
 pair<vec3f, vec3f> eval_element_tangents(
     const trace_instance* instance, int element);
-vec3f eval_normalmap(
-    const trace_instance* instance, int element, const vec2f& uv);
-vec3f eval_shading_normal(const trace_instance* instance, int element,
-    const vec2f& uv, const vec3f& outgoing);
+vec3f eval_normalmap(const trace_scene* scene, const trace_instance* instance,
+    int element, const vec2f& uv);
+vec3f eval_shading_normal(const trace_scene* scene,
+    const trace_instance* instance, int element, const vec2f& uv,
+    const vec3f& outgoing);
 vec4f eval_color(const trace_instance* instance, int element, const vec2f& uv);
 
 // Environment
@@ -314,13 +315,13 @@ struct trace_bsdf {
 };
 
 // Eval material to obtain emission, brdf and opacity.
-vec3f eval_emission(const trace_instance* instance, int element,
-    const vec2f& uv, const vec3f& normal, const vec3f& outgoing);
+vec3f eval_emission(const trace_scene* scene, const trace_instance* instance,
+    int element, const vec2f& uv, const vec3f& normal, const vec3f& outgoing);
 // Eval material to obatain emission, brdf and opacity.
-trace_bsdf eval_bsdf(const trace_instance* instance, int element,
-    const vec2f& uv, const vec3f& normal, const vec3f& outgoing);
-float eval_opacity(const trace_instance* instance, int element, const vec2f& uv,
-    const vec3f& normal, const vec3f& outgoing);
+trace_bsdf eval_bsdf(const trace_scene* scene, const trace_instance* instance,
+    int element, const vec2f& uv, const vec3f& normal, const vec3f& outgoing);
+float eval_opacity(const trace_scene* scene, const trace_instance* instance,
+    int element, const vec2f& uv, const vec3f& normal, const vec3f& outgoing);
 // check if a brdf is a delta
 bool is_delta(const trace_bsdf& bsdf);
 
@@ -332,10 +333,10 @@ struct trace_vsdf {
 };
 
 // check if we have a volume
-bool has_volume(const trace_instance* instance);
+bool has_volume(const trace_scene* scene, const trace_instance* instance);
 // evaluate volume
-trace_vsdf eval_vsdf(
-    const trace_instance* instance, int element, const vec2f& uv);
+trace_vsdf eval_vsdf(const trace_scene* scene, const trace_instance* instance,
+    int element, const vec2f& uv);
 
 }  // namespace yocto
 

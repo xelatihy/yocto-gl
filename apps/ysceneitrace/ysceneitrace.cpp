@@ -159,8 +159,8 @@ void init_scene(trace_scene* scene, sceneio_scene* ioscene,
     texture_map[iotexture] = texture;
   }
 
-  auto material_map     = unordered_map<sceneio_material*, trace_material*>{};
-  material_map[nullptr] = nullptr;
+  auto material_map     = unordered_map<sceneio_material*, int>{};
+  material_map[nullptr] = -1;
   for (auto iomaterial : ioscene->materials) {
     if (progress_cb)
       progress_cb("converting materials", progress.x++, progress.y);
@@ -192,7 +192,7 @@ void init_scene(trace_scene* scene, sceneio_scene* ioscene,
     material->coat_tex         = texture_map.at(iomaterial->coat_tex);
     material->opacity_tex      = texture_map.at(iomaterial->opacity_tex);
     material->normal_tex       = texture_map.at(iomaterial->normal_tex);
-    material_map[iomaterial]   = material;
+    material_map[iomaterial]   = (int)scene->materials.size() - 1;
   }
 
   auto shape_map     = unordered_map<sceneio_shape*, trace_shape*>{};
@@ -465,6 +465,16 @@ T1* get_element(
   return nullptr;
 }
 
+template <typename T>
+int get_element_index(T* ioelement, const vector<T*>& ioelements) {
+  if (!ioelement) return -1;
+  for (auto pos = 0; pos < ioelements.size(); pos++) {
+    if (ioelements[pos] == ioelement) return pos;
+  }
+  print_fatal("element not found");
+  return -1;
+}
+
 void draw_widgets(gui_window* win, app_states* apps, const gui_input& input) {
   static string load_path = "", save_path = "", error_message = "";
   if (draw_filedialog_button(win, "load", true, "load", load_path, false, "./",
@@ -622,8 +632,8 @@ void draw_widgets(gui_window* win, app_states* apps, const gui_input& input) {
       instance->frame = ioinstance->frame;
       instance->shape = get_element(
           ioinstance->shape, app->ioscene->shapes, app->scene->shapes);
-      instance->material = get_element(
-          ioinstance->material, app->ioscene->materials, app->scene->materials);
+      instance->material = get_element_index(
+          ioinstance->material, app->ioscene->materials);
       update_bvh(app->bvh, app->scene, {instance}, {}, app->params);
       reset_display(app);
     }

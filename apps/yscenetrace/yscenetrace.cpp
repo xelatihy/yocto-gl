@@ -75,8 +75,8 @@ void init_scene(trace_scene* scene, sceneio_scene* ioscene,
     texture_map[iotexture] = texture;
   }
 
-  auto material_map     = unordered_map<sceneio_material*, trace_material*>{};
-  material_map[nullptr] = nullptr;
+  auto material_map     = unordered_map<sceneio_material*, int>{};
+  material_map[nullptr] = -1;
   for (auto iomaterial : ioscene->materials) {
     if (progress_cb)
       progress_cb("converting materials", progress.x++, progress.y);
@@ -108,7 +108,7 @@ void init_scene(trace_scene* scene, sceneio_scene* ioscene,
     material->coat_tex         = texture_map.at(iomaterial->coat_tex);
     material->opacity_tex      = texture_map.at(iomaterial->opacity_tex);
     material->normal_tex       = texture_map.at(iomaterial->normal_tex);
-    material_map[iomaterial]   = material;
+    material_map[iomaterial]   = (int)scene->materials.size() - 1;
   }
 
   auto shape_map     = unordered_map<sceneio_shape*, trace_shape*>{};
