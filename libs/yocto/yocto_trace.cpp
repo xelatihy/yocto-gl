@@ -664,9 +664,10 @@ vec3f eval_environments(const trace_scene* scene, const vec3f& direction) {
 }
 
 // Evaluate point
-trace_material_sample eval_material(const trace_scene* scene,
-    const trace_material* material, const vec2f& texcoord) {
-  auto mat = trace_material_sample{};
+trace_material_sample eval_material(
+    const trace_scene* scene, int material_, const vec2f& texcoord) {
+  auto material = get_material(scene, material_);
+  auto mat      = trace_material_sample{};
   mat.emission =
       material->emission *
       xyz(eval_texture(scene, material->emission_tex, texcoord, false));
@@ -708,21 +709,19 @@ static const auto coat_ior       = 1.5f;
 static const auto coat_roughness = 0.03f * 0.03f;
 
 // Eval material to obtain emission, brdf and opacity.
-vec3f eval_emission(const trace_scene* scene, int instance_id, int element,
+vec3f eval_emission(const trace_scene* scene, int instance, int element,
     const vec2f& uv, const vec3f& normal, const vec3f& outgoing) {
-  auto instance = get_instance(scene, instance_id);
-  auto material = get_material(scene, instance->material);
-  auto texcoord = eval_texcoord(scene, instance_id, element, uv);
+  auto material = get_material(scene, get_instance(scene, instance)->material);
+  auto texcoord = eval_texcoord(scene, instance, element, uv);
   return material->emission *
          xyz(eval_texture(scene, material->emission_tex, texcoord));
 }
 
 // Eval material to obtain emission, brdf and opacity.
-float eval_opacity(const trace_scene* scene, int instance_id, int element,
+float eval_opacity(const trace_scene* scene, int instance, int element,
     const vec2f& uv, const vec3f& normal, const vec3f& outgoing) {
-  auto instance = get_instance(scene, instance_id);
-  auto material = get_material(scene, instance->material);
-  auto texcoord = eval_texcoord(scene, instance_id, element, uv);
+  auto material = get_material(scene, get_instance(scene, instance)->material);
+  auto texcoord = eval_texcoord(scene, instance, element, uv);
   auto opacity  = material->opacity *
                  eval_texture(scene, material->opacity_tex, texcoord, true).x;
   if (opacity > 0.999f) opacity = 1;
@@ -730,13 +729,11 @@ float eval_opacity(const trace_scene* scene, int instance_id, int element,
 }
 
 // Evaluate bsdf
-trace_bsdf eval_bsdf(const trace_scene* scene, int instance_id, int element,
+trace_bsdf eval_bsdf(const trace_scene* scene, int instance, int element,
     const vec2f& uv, const vec3f& normal, const vec3f& outgoing) {
-  auto instance = get_instance(scene, instance_id);
-  auto material = get_material(scene, instance->material);
-  auto texcoord = eval_texcoord(scene, instance_id, element, uv);
-  auto color    = material->color *
-               xyz(eval_color(scene, instance_id, element, uv)) *
+  auto material = get_material(scene, get_instance(scene, instance)->material);
+  auto texcoord = eval_texcoord(scene, instance, element, uv);
+  auto color = material->color * xyz(eval_color(scene, instance, element, uv)) *
                xyz(eval_texture(scene, material->color_tex, texcoord, false));
   auto specular = material->specular *
                   eval_texture(scene, material->specular_tex, texcoord, true).x;
@@ -819,13 +816,11 @@ bool is_delta(const trace_bsdf& bsdf) { return bsdf.roughness == 0; }
 
 // evaluate volume
 trace_vsdf eval_vsdf(
-    const trace_scene* scene, int instance_id, int element, const vec2f& uv) {
-  auto instance = get_instance(scene, instance_id);
-  auto material = get_material(scene, instance->material);
+    const trace_scene* scene, int instance, int element, const vec2f& uv) {
+  auto material = get_material(scene, get_instance(scene, instance)->material);
   // initialize factors
-  auto texcoord = eval_texcoord(scene, instance_id, element, uv);
-  auto color    = material->color *
-               xyz(eval_color(scene, instance_id, element, uv)) *
+  auto texcoord = eval_texcoord(scene, instance, element, uv);
+  auto color = material->color * xyz(eval_color(scene, instance, element, uv)) *
                xyz(eval_texture(scene, material->color_tex, texcoord, false));
   auto transmission =
       material->transmission *
@@ -860,13 +855,13 @@ bool has_volume(const trace_scene* scene, int instance_id) {
 }
 
 // Sample camera
-static ray3f sample_camera(const trace_scene* scene, int camera_id,
+static ray3f sample_camera(const trace_scene* scene, int camera,
     const vec2i& ij, const vec2i& image_size, const vec2f& puv,
     const vec2f& luv, bool tent) {
   if (!tent) {
     auto uv = vec2f{
         (ij.x + puv.x) / image_size.x, (ij.y + puv.y) / image_size.y};
-    return eval_camera(scene, camera_id, uv, sample_disk(luv));
+    return eval_camera(scene, camera, uv, sample_disk(luv));
   } else {
     const auto width  = 2.0f;
     const auto offset = 0.5f;
@@ -879,7 +874,7 @@ static ray3f sample_camera(const trace_scene* scene, int camera_id,
         offset;
     auto uv = vec2f{
         (ij.x + fuv.x) / image_size.x, (ij.y + fuv.y) / image_size.y};
-    return eval_camera(scene, camera_id, uv, sample_disk(luv));
+    return eval_camera(scene, camera, uv, sample_disk(luv));
   }
 }
 
