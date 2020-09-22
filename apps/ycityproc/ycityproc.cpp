@@ -1055,9 +1055,8 @@ bool check_valid_type(const city_object& building, const json& properties) {
   return valid;
 }
 
-std::pair<vector<city_object>, Coordinate> data_analysis(
-    const json& geojson_file, vector<city_object> all_buildings,
-    Coordinate class_coord) {
+void data_analysis(const json& geojson_file, vector<city_object>& all_buildings,
+    Coordinate& class_coord) {
   for (auto& feature : geojson_file.at("features")) {
     auto geometry   = feature.at("geometry");
     auto properties = feature.at("properties");
@@ -1232,20 +1231,14 @@ std::pair<vector<city_object>, Coordinate> data_analysis(
       }
     }
   }
-  return {all_buildings, class_coord};
 }
 
 vector<city_object> generate_new_coordinates(const json& geojson_file,
     vector<city_object> all_buildings, Coordinate class_coord) {
-  std::pair<vector<city_object>, Coordinate> gen_out;
-
-  gen_out       = data_analysis(geojson_file, all_buildings, class_coord);
-  all_buildings = gen_out.first;
-  class_coord   = gen_out.second;
-
-  vector<city_object> all_objects = {};
+  data_analysis(geojson_file, all_buildings, class_coord);
 
   // Scale the CityObject outer polygon in the scene
+  vector<city_object> all_objects = {};
   for (auto& building_geometry : all_buildings) {
     float height             = generate_height(building_geometry, scale);
     building_geometry.height = height;
