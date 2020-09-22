@@ -1055,10 +1055,31 @@ bool check_valid_type(const city_object& building, const json& properties) {
   return valid;
 }
 
-void generate_new_coordinates(const json& geojson_file,
-    vector<city_object>& all_buildings, Coordinate class_coord_) {
+// load/save json
+static bool load_json(const string& filename, json& js, string& error) {
+  // error helpers
+  auto parse_error = [filename, &error]() {
+    error = filename + ": parse error in json";
+    return false;
+  };
+  auto text = ""s;
+  if (!load_text(filename, text, error)) return false;
+  try {
+    js = json::parse(text);
+    return true;
+  } catch (std::exception&) {
+    return parse_error();
+  }
+}
+
+bool load_geojson(const string& filename, vector<city_object>& all_buildings,
+    string& ioerror) {
+  // load json
+  auto geojson = json{};
+  if (!load_json(filename, geojson, ioerror)) return false;
+
   // parse features
-  for (auto& feature : geojson_file.at("features")) {
+  for (auto& feature : geojson.at("features")) {
     auto geometry   = feature.at("geometry");
     auto properties = feature.at("properties");
     auto id         = properties.at("@id").get<string>();
@@ -1080,9 +1101,8 @@ void generate_new_coordinates(const json& geojson_file,
         if (count_list == 0) {  // outer polygon
           building.level = level;
           for (auto& coord : list_coords) {
-            double x = (double)coord[0];
-            double y = (double)coord[1];
-            // class_coord.update(x, y);
+            double           x   = (double)coord[0];
+            double           y   = (double)coord[1];
             array<double, 2> arr = {x, y};
             list_coordinates.push_back(arr);
           }
@@ -1122,10 +1142,8 @@ void generate_new_coordinates(const json& geojson_file,
           if (count_list == 0) {  // outer polygon
             building.level = level;
             for (auto& coord : list_coords) {
-              double x = (double)coord[0];
-              double y = (double)coord[1];
-              // class_coord.update(x, y);
-              // class_coord.update(x, y);
+              double           x   = (double)coord[0];
+              double           y   = (double)coord[1];
               array<double, 2> arr = {x, y};
               list_coordinates.push_back(arr);
             }
@@ -1181,11 +1199,6 @@ void generate_new_coordinates(const json& geojson_file,
         line.thickness = get_thickness(line.type);
         line.coords    = area;
         all_buildings.push_back(line);
-        // for (auto& coord : area) {
-        //   double x = (double)coord[0];
-        //   double y = (double)coord[1];
-        //   class_coord.update(x, y);
-        // }
       }
     } else if (geometry.at("type") == "MultiLineString") {
       int cont = 0;
@@ -1210,11 +1223,6 @@ void generate_new_coordinates(const json& geojson_file,
           line.thickness = line_thickness;
           line.coords    = area;
           all_buildings.push_back(line);
-          // for (auto& coord : area) {
-          //   double x = (double)coord[0];
-          //   double y = (double)coord[1];
-          //   class_coord.update(x, y);
-          // }
         }
       }
     } else if (geometry.at("type") == "Point") {
@@ -1225,11 +1233,6 @@ void generate_new_coordinates(const json& geojson_file,
       if (point.type == "null") continue;
       point.name   = "point_" + id;
       point.coords = points;
-      // for (auto& coord : points) {
-      //   double x = (double)coord[0];
-      //   double y = (double)coord[1];
-      //   class_coord.update(x, y);
-      // }
     }
   }
 
@@ -1265,23 +1268,6 @@ void generate_new_coordinates(const json& geojson_file,
   }
 }
 
-// load/save json
-static bool load_json(const string& filename, json& js, string& error) {
-  // error helpers
-  auto parse_error = [filename, &error]() {
-    error = filename + ": parse error in json";
-    return false;
-  };
-  auto text = ""s;
-  if (!load_text(filename, text, error)) return false;
-  try {
-    js = json::parse(text);
-    return true;
-  } catch (std::exception&) {
-    return parse_error();
-  }
-}
-
 int main(int argc, const char* argv[]) {
   // command line parameters
   auto validate   = false;
@@ -1301,15 +1287,13 @@ int main(int argc, const char* argv[]) {
   parse_cli(cli, argc, argv);
 
   // load data
-  auto buildings   = vector<city_object>{};
-  auto class_coord = Coordinate();
-  auto ioerror     = ""s;
+  auto buildings = vector<city_object>{};
+  auto ioerror   = ""s;
   print_progress("load geojsons", 0, 1);
   for (auto& filename : list_directory(path)) {
     if (path_extension(filename) != ".geojson") continue;
     auto geojson = json{};
-    if (!load_json(filename, geojson, ioerror)) print_fatal(ioerror);
-    generate_new_coordinates(geojson, buildings, class_coord);
+    if (!load_geojson(filename, buildings, ioerror)) print_fatal(ioerror);
   }
   print_progress("load geojsons", 1, 1);
 
