@@ -113,24 +113,19 @@ bool check_high(const json& properties) {
 }
 
 bool check_digit(const string& lev) {
-  bool digit = true;
   for (int i = 0; i < lev.size(); i++) {
-    // std::cout << typeid(lev[i]).name() << std::endl;
     if ((lev[i] >= 'a' && lev[i] <= 'z') || (lev[i] >= 'A' && lev[i] <= 'B') ||
         lev[i] == ';' || lev[i] == ',')
-      digit = false;
+      return false;
   }
-  return digit;
+  return true;
 }
 
 bool check_int(const string& lev) {
-  bool integer = true;
   for (int i = 0; i < lev.size(); i++) {
-    if (lev[i] == '.') {
-      integer = false;
-    }
+    if (lev[i] == '.') return false;
   }
-  return integer;
+  return false;
 }
 
 int generate_building_level(const string& footprint_type, json properties) {
@@ -140,7 +135,7 @@ int generate_building_level(const string& footprint_type, json properties) {
   string::size_type sz;
 
   if (properties.contains("building:levels")) {
-    auto lev = properties["building:levels"].get<string>();
+    auto lev = properties.at("building:levels").get<string>();
     /*std::cout << "level" << std::endl;
     std::cout << lev << std::endl;*/
     bool  digit      = check_digit(lev);
@@ -157,11 +152,8 @@ int generate_building_level(const string& footprint_type, json properties) {
         level      = (int)round(n_levels_f) + 1;
       }
     } else {
-      level = 1;  // floor level
+      level = 1;
     }
-
-    // std::cout << "level" << std::endl;
-    // std::cout << level << std::endl;
   }
 
   // Check if the building:height is given in the GeoJson file
@@ -174,122 +166,103 @@ int generate_building_level(const string& footprint_type, json properties) {
   }
 
   if (footprint_type == "building" && properties.contains("building:height")) {
-    auto h     = properties["building:height"].get<string>();
+    auto h     = properties.at("building:height").get<string>();
     bool digit = check_digit(h);
     if (digit) height = std::stof(h, &sz);
   }
 
-  if (height > -1.0) {
-    level = int(float(height) / 3.2);
-  }
+  if (height > -1.0) level = int(float(height) / 3.2);
 
   high_building = check_high(properties);
   if (footprint_type == "building" && properties.contains("building") &&
-      high_building) {
+      high_building)
     level = 3;
-  }
-  // std::cout << level << std::endl;
+
   return level;
 }
 
 float generate_height(const city_object& building, int scale) {
-  float             height = 0.0001f;
-  string::size_type sz;
-
   if (building.type == "building" && building.level > 0) {
-    height = (float)(building.level + (scale / 20.0)) /
-             20.0;  //(float) (level + (scale / 20.0)) / 20.0;
+    return (building.level + (scale / 20.0f)) / 20.0f;
   } else if (building.type == "water") {
-    height = (float)0.0001f;
+    return 0.0001f;
   } else if (building.type == "highway") {
-    height = (float)0.0005f;
+    return 0.0005f;
   } else if (building.type == "pedestrian") {
-    height = (float)0.0004f;
+    return 0.0004f;
+  } else {
+    return 0.0001f;
   }
-
-  return height;
 }
 
 float generate_roof_height(const string& roof_h, int scale) {
-  float             roof_height = 0.109f;
-  string::size_type sz;
-
   if (roof_h != "null") {
-    float roof_hei = (float)std::stof(roof_h, &sz);
-    roof_height    = (float)roof_hei / scale;
+    string::size_type sz;
+    return std::stof(roof_h, &sz) / scale;
+  } else {
+    return 0.109f;
   }
-
-  return roof_height;
 }
 
 bool check_grass_type(const string& building_type) {
-  bool grass_area = false;
-  if (building_type == "park" || building_type == "pitch" ||
-      building_type == "garden" || building_type == "playground" ||
-      building_type == "greenfield" || building_type == "scrub" ||
-      building_type == "heath" || building_type == "farmyard" ||
-      building_type == "grass" || building_type == "farmland" ||
-      building_type == "village_green" || building_type == "meadow" ||
-      building_type == "orchard" || building_type == "vineyard" ||
-      building_type == "recreation_ground" || building_type == "grassland") {
-    grass_area = true;
-  }
-  return grass_area;
+  return building_type == "park" || building_type == "pitch" ||
+         building_type == "garden" || building_type == "playground" ||
+         building_type == "greenfield" || building_type == "scrub" ||
+         building_type == "heath" || building_type == "farmyard" ||
+         building_type == "grass" || building_type == "farmland" ||
+         building_type == "village_green" || building_type == "meadow" ||
+         building_type == "orchard" || building_type == "vineyard" ||
+         building_type == "recreation_ground" || building_type == "grassland";
 }
 
-bool check_pedestrian(json properties) {
-  json highway_category = properties["highway"];
-  bool is_pedestrian    = false;
-
-  if ((highway_category == "footway") || (highway_category == "pedestrian") ||
-      (highway_category == "track") || (highway_category == "steps") ||
-      (highway_category == "path") || (highway_category == "living_street") ||
-      (highway_category == "pedestrian_area") ||
-      (highway_category == "pedestrian_line")) {
-    is_pedestrian = true;
-  }
-  return is_pedestrian;
+bool check_pedestrian(const json& properties) {
+  if (!properties.contains("highway")) return false;
+  auto highway_category = properties.at("highway").get<string>();
+  return highway_category == "footway" || highway_category == "pedestrian" ||
+         highway_category == "track" || highway_category == "steps" ||
+         highway_category == "path" || highway_category == "living_street" ||
+         highway_category == "pedestrian_area" ||
+         highway_category == "pedestrian_line";
 }
 
 vec3f get_color(const string& type, bool grass_type) {
-  vec3f color = {0.725, 0.71, 0.68};  // floor color
   if (type == "building") {
-    color = vec3f{0.79, 0.74, 0.62};
+    return vec3f{0.79, 0.74, 0.62};
   } else if (type == "highway") {
-    color = vec3f{0.26, 0.26, 0.28};
+    return vec3f{0.26, 0.26, 0.28};
   } else if (type == "pedestrian") {
-    color = vec3f{0.45, 0.4, 0.27};  // color = vec3f{0.82, 0.82, 0.82};
+    return vec3f{0.45, 0.4, 0.27};  // color = vec3f{0.82, 0.82, 0.82};
   } else if (type == "water") {
-    color = vec3f{0.72, 0.95, 1.0};
+    return vec3f{0.72, 0.95, 1.0};
   } else if (type == "sand") {
-    color = vec3f{0.69, 0.58, 0.43};
+    return vec3f{0.69, 0.58, 0.43};
   } else if (type == "forest") {
-    color = vec3f{0.004, 0.25, 0.16};
-  } else if (grass_type)
-    color = vec3f{0.337, 0.49, 0.274};
-  return color;
+    return vec3f{0.004, 0.25, 0.16};
+  } else if (grass_type) {
+    return vec3f{0.337, 0.49, 0.274};
+  } else {
+    return vec3f{0.725, 0.71, 0.68};  // floor
+  }
 }
 
 vec3f get_building_color(const string& building_color) {
-  vec3f color;
   if (building_color == "yellow") {
-    color = vec3f{0.882, 0.741, 0.294};
+    return vec3f{0.882, 0.741, 0.294};
   } else if (building_color == " light yellow") {
-    color = vec3f{0.922, 0.925, 0.498};
+    return vec3f{0.922, 0.925, 0.498};
   } else if (building_color == "brown") {
-    color = vec3f{0.808, 0.431, 0.271};
+    return vec3f{0.808, 0.431, 0.271};
   } else if (building_color == "light brown") {
-    color = vec3f{0.8, 0.749, 0.596};
+    return vec3f{0.8, 0.749, 0.596};
   } else if (building_color == "light orange") {
-    color = vec3f{0.933, 0.753, 0.416};
-  } else {                         // white
-    color = vec3f{1.0, 1.0, 1.0};  // white
+    return vec3f{0.933, 0.753, 0.416};
+  } else {
+    return vec3f{1.0, 1.0, 1.0};  // white
   }
-  return color;
 }
 
 bool create_city_from_json(sceneio_scene* scene,
-    vector<city_object> all_geometries, const string& dirname,
+    const vector<city_object>& all_geometries, const string& dirname,
     string& ioerror) {
   scene->name      = "cornellbox";
   auto camera      = add_camera(scene);
@@ -366,9 +339,9 @@ bool create_city_from_json(sceneio_scene* scene,
   // string texture_path = "./city/buildings_texture/";
 
   // buidling texture1
-  auto   texture_1       = add_texture(scene, "texture1");
-  string path_text_1     = path_join(dirname, "buildings_texture/1.jpg");
-  auto   build_texture_1 = load_image(path_text_1, texture_1->hdr, ioerror);
+  auto   texture_1   = add_texture(scene, "texture1");
+  string path_text_1 = path_join(dirname, "buildings_texture/1.jpg");
+  if (!load_image(path_text_1, texture_1->hdr, ioerror)) return false;
 
   // buidling texture2
   auto   texture_2       = add_texture(scene, "texture2");
@@ -1107,15 +1080,13 @@ vector<city_object> assign_tree_type(
   return all_buildings;
 }
 
-bool check_valid_type(city_object building, json properties) {
-  bool valid = false;
-
+bool check_valid_type(const city_object& building, json properties) {
+  bool valid      = false;
   bool grass_area = check_grass_type(building.type);
   if (building.type == "building" || building.type == "water" ||
       building.type == "sand" || grass_area || building.type == "highway" ||
       building.type == "pedestrian" || building.type == "forest")
     valid = true;
-
   return valid;
 }
 
