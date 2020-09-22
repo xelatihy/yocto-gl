@@ -33,6 +33,7 @@
 
 #include <atomic>
 #include <deque>
+#include <fstream>
 #include <future>
 #include <iostream>
 #include <string>
@@ -41,34 +42,31 @@
 #include <unordered_map>
 
 #include "ext/earcut.hpp"
-#include "ext/filesystem.hpp"
 #include "ext/json.hpp"
 
 using namespace yocto;
-namespace sfs = ghc::filesystem;
-
+using json = nlohmann::json;
 using namespace std::string_literals;
 using std::array;
-using json = nlohmann::json;
 
 int scale = 50;  // 10
 
 class CityObject {
  public:
-  std::string name;
-  std::string type;
-  std::string roof_shape;
-  std::string colour;
-  int         level;
-  float       height;
-  float       roof_height;
-  std::string historic;
-  float       thickness;
+  string name;
+  string type;
+  string roof_shape;
+  string colour;
+  int    level;
+  float  height;
+  float  roof_height;
+  string historic;
+  float  thickness;
 
-  std::vector<std::array<double, 2>>              coords;
-  std::vector<std::array<double, 2>>              new_coords;
-  std::vector<std::vector<std::array<double, 2>>> holes;
-  std::vector<std::vector<std::array<double, 2>>> new_holes;
+  vector<std::array<double, 2>>         coords;
+  vector<std::array<double, 2>>         new_coords;
+  vector<vector<std::array<double, 2>>> holes;
+  vector<vector<std::array<double, 2>>> new_holes;
 };
 
 class Coordinate {
@@ -105,25 +103,25 @@ class Coordinate {
 // Application state
 struct app_state {
   // loading options
-  std::string geojson_filename = "";
-  std::string filename_save    = "";
+  string geojson_filename = "";
+  string filename_save    = "";
 
   // options
   trace_params params     = {};
   bool         add_skyenv = false;
 
   // scene
-  trace_scene*             scene        = new trace_scene{};
-  trace_camera*            camera       = nullptr;
-  sceneio_scene*           ioscene      = new sceneio_scene{};
-  std::vector<std::string> camera_names = {};
+  trace_scene*   scene        = new trace_scene{};
+  trace_camera*  camera       = nullptr;
+  sceneio_scene* ioscene      = new sceneio_scene{};
+  vector<string> camera_names = {};
 
   // rendering objects
   trace_lights* lights = new trace_lights{};
   trace_bvh*    bvh    = new trace_bvh{};
 
   // additional
-  std::vector<CityObject> all_geometries;
+  vector<CityObject> all_geometries;
 
   // rendering state
   image<vec4f> render   = {};
@@ -157,9 +155,9 @@ struct app_state {
 
 //  --------------- FUNCTIONS --------------
 
-bool check_high(nlohmann::json properties) {
-  nlohmann::json building_category = properties["building"];
-  bool           high_building     = false;
+bool check_high(json properties) {
+  json building_category = properties["building"];
+  bool high_building     = false;
 
   if ((building_category == "apartments") ||
       (building_category == "residential") || (building_category == "tower") ||
@@ -169,7 +167,7 @@ bool check_high(nlohmann::json properties) {
   return high_building;
 }
 
-bool check_digit(std::string lev) {
+bool check_digit(string lev) {
   bool digit = true;
   for (int i = 0; i < lev.size(); i++) {
     // std::cout << typeid(lev[i]).name() << std::endl;
@@ -180,7 +178,7 @@ bool check_digit(std::string lev) {
   return digit;
 }
 
-bool check_int(std::string lev) {
+bool check_int(string lev) {
   bool integer = true;
   for (int i = 0; i < lev.size(); i++) {
     if (lev[i] == '.') {
@@ -190,15 +188,14 @@ bool check_int(std::string lev) {
   return integer;
 }
 
-int generate_building_level(
-    std::string footprint_type, nlohmann::json properties) {
-  int                    level         = 1;
-  float                  height        = -1.0f;
-  bool                   high_building = false;
-  std::string::size_type sz;
+int generate_building_level(string footprint_type, json properties) {
+  int               level         = 1;
+  float             height        = -1.0f;
+  bool              high_building = false;
+  string::size_type sz;
 
   if (!properties["building:levels"].empty()) {
-    std::string lev = properties["building:levels"];
+    string lev = properties["building:levels"];
     /*std::cout << "level" << std::endl;
     std::cout << lev << std::endl;*/
     bool  digit      = check_digit(lev);
@@ -224,16 +221,16 @@ int generate_building_level(
 
   // Check if the building:height is given in the GeoJson file
   if (footprint_type == "building" && !properties["height"].empty()) {
-    std::string h     = properties["height"];
-    bool        digit = check_digit(h);
+    string h     = properties["height"];
+    bool   digit = check_digit(h);
     if (digit) {
       height = std::stof(h, &sz);
     }
   }
 
   if (footprint_type == "building" && !properties["building:height"].empty()) {
-    std::string h     = properties["building:height"];
-    bool        digit = check_digit(h);
+    string h     = properties["building:height"];
+    bool   digit = check_digit(h);
     if (digit) {
       height = std::stof(h, &sz);
     }
@@ -253,8 +250,8 @@ int generate_building_level(
 }
 
 float generate_height(CityObject building, int scale) {
-  float                  height = 0.0001f;
-  std::string::size_type sz;
+  float             height = 0.0001f;
+  string::size_type sz;
 
   if (building.type == "building" && building.level > 0) {
     height = (float)(building.level + (scale / 20.0)) /
@@ -272,9 +269,9 @@ float generate_height(CityObject building, int scale) {
   return height;
 }
 
-float generate_roof_height(std::string roof_h, int scale) {
-  float                  roof_height = 0.109f;
-  std::string::size_type sz;
+float generate_roof_height(string roof_h, int scale) {
+  float             roof_height = 0.109f;
+  string::size_type sz;
 
   if (roof_h != "null") {
     float roof_hei = (float)std::stof(roof_h, &sz);
@@ -284,7 +281,7 @@ float generate_roof_height(std::string roof_h, int scale) {
   return roof_height;
 }
 
-bool check_grass_type(std::string building_type) {
+bool check_grass_type(string building_type) {
   bool grass_area = false;
   if (building_type == "park" || building_type == "pitch" ||
       building_type == "garden" || building_type == "playground" ||
@@ -299,9 +296,9 @@ bool check_grass_type(std::string building_type) {
   return grass_area;
 }
 
-bool check_pedestrian(nlohmann::json properties) {
-  nlohmann::json highway_category = properties["highway"];
-  bool           is_pedestrian    = false;
+bool check_pedestrian(json properties) {
+  json highway_category = properties["highway"];
+  bool is_pedestrian    = false;
 
   if ((highway_category == "footway") || (highway_category == "pedestrian") ||
       (highway_category == "track") || (highway_category == "steps") ||
@@ -313,7 +310,7 @@ bool check_pedestrian(nlohmann::json properties) {
   return is_pedestrian;
 }
 
-vec3f get_color(std::string type, bool grass_type) {
+vec3f get_color(string type, bool grass_type) {
   vec3f color = {0.725, 0.71, 0.68};  // floor color
   if (type == "building") {
     color = vec3f{0.79, 0.74, 0.62};
@@ -332,7 +329,7 @@ vec3f get_color(std::string type, bool grass_type) {
   return color;
 }
 
-vec3f get_building_color(std::string building_color) {
+vec3f get_building_color(string building_color) {
   vec3f color;
   if (building_color == "yellow") {
     color = vec3f{0.882, 0.741, 0.294};
@@ -350,8 +347,8 @@ vec3f get_building_color(std::string building_color) {
   return color;
 }
 
-bool create_city_from_json(
-    sceneio_scene* scene, vector<CityObject> all_geometries, const string& dirname) {
+bool create_city_from_json(sceneio_scene* scene,
+    vector<CityObject> all_geometries, const string& dirname) {
   scene->name      = "cornellbox";
   auto camera      = add_camera(scene);
   camera->frame    = frame3f{{-0.028f, 0.0f, 1.0f}, {0.764f, 0.645f, 0.022f},
@@ -371,14 +368,14 @@ bool create_city_from_json(
 
   add_sky(scene);
 
-  std::string error = ""s;
+  string error = ""s;
 
   // Load 3D models (trees)
-  // std::string models_path = "./city/tree_models/";
+  // string models_path = "./city/tree_models/";
 
   // standard tree
-  std::string path_standard  = path_join(dirname, "tree_models/standard.ply");
-  auto        shape_standard = add_shape(scene, "standard");
+  string path_standard  = path_join(dirname, "tree_models/standard.ply");
+  auto   shape_standard = add_shape(scene, "standard");
   if (!load_shape(path_standard, shape_standard->points, shape_standard->lines,
           shape_standard->triangles, shape_standard->quads,
           shape_standard->quadspos, shape_standard->quadsnorm,
@@ -388,8 +385,8 @@ bool create_city_from_json(
     return false;
 
   // palm tree
-  std::string path_palm  = path_join(dirname, "tree_models/palm.ply");
-  auto        shape_palm = add_shape(scene, "palm");
+  string path_palm  = path_join(dirname, "tree_models/palm.ply");
+  auto   shape_palm = add_shape(scene, "palm");
   if (!load_shape(path_palm, shape_palm->points, shape_palm->lines,
           shape_palm->triangles, shape_palm->quads, shape_palm->quadspos,
           shape_palm->quadsnorm, shape_palm->quadstexcoord,
@@ -398,8 +395,8 @@ bool create_city_from_json(
     return false;
 
   // pine tree
-  std::string path_pine  = path_join(dirname, "tree_models/pine.ply");
-  auto        shape_pine = add_shape(scene, "pine");
+  string path_pine  = path_join(dirname, "tree_models/pine.ply");
+  auto   shape_pine = add_shape(scene, "pine");
   if (!load_shape(path_pine, shape_pine->points, shape_pine->lines,
           shape_pine->triangles, shape_pine->quads, shape_pine->quadspos,
           shape_pine->quadsnorm, shape_pine->quadstexcoord,
@@ -408,8 +405,8 @@ bool create_city_from_json(
     return false;
 
   // cypress tree
-  std::string path_cypress  = path_join(dirname, "tree_models/cypress.ply");
-  auto        shape_cypress = add_shape(scene, "cypress");
+  string path_cypress  = path_join(dirname, "tree_models/cypress.ply");
+  auto   shape_cypress = add_shape(scene, "cypress");
   if (!load_shape(path_cypress, shape_cypress->points, shape_cypress->lines,
           shape_cypress->triangles, shape_cypress->quads,
           shape_cypress->quadspos, shape_cypress->quadsnorm,
@@ -419,8 +416,8 @@ bool create_city_from_json(
     return false;
 
   // oak tree
-  std::string path_oak  = path_join(dirname, "tree_models/oak.ply");
-  auto        shape_oak = add_shape(scene, "oak");
+  string path_oak  = path_join(dirname, "tree_models/oak.ply");
+  auto   shape_oak = add_shape(scene, "oak");
   if (!load_shape(path_oak, shape_oak->points, shape_oak->lines,
           shape_oak->triangles, shape_oak->quads, shape_oak->quadspos,
           shape_oak->quadsnorm, shape_oak->quadstexcoord, shape_oak->positions,
@@ -429,81 +426,83 @@ bool create_city_from_json(
     return false;
 
   // Load textures
-  // std::string texture_path = "./city/buildings_texture/";
+  // string texture_path = "./city/buildings_texture/";
 
   // buidling texture1
-  auto        texture_1       = add_texture(scene, "texture1");
-  std::string path_text_1     = path_join(dirname, "buildings_texture/1.jpg");
-  auto        build_texture_1 = load_image(path_text_1, texture_1->hdr, error);
+  auto   texture_1       = add_texture(scene, "texture1");
+  string path_text_1     = path_join(dirname, "buildings_texture/1.jpg");
+  auto   build_texture_1 = load_image(path_text_1, texture_1->hdr, error);
 
   // buidling texture2
-  auto        texture_2       = add_texture(scene, "texture2");
-  std::string path_text_2     = path_join(dirname, "buildings_texture/2.jpg");
-  auto        build_texture_2 = load_image(path_text_2, texture_2->hdr, error);
+  auto   texture_2       = add_texture(scene, "texture2");
+  string path_text_2     = path_join(dirname, "buildings_texture/2.jpg");
+  auto   build_texture_2 = load_image(path_text_2, texture_2->hdr, error);
 
   // buidling texture3
-  auto        texture_3       = add_texture(scene, "texture3");
-  std::string path_text_3     = path_join(dirname, "buildings_texture/3.jpg");
-  auto        build_texture_3 = load_image(path_text_3, texture_3->hdr, error);
+  auto   texture_3       = add_texture(scene, "texture3");
+  string path_text_3     = path_join(dirname, "buildings_texture/3.jpg");
+  auto   build_texture_3 = load_image(path_text_3, texture_3->hdr, error);
 
   // buidling texture4
-  auto        texture_4       = add_texture(scene, "texture4");
-  std::string path_text_4     = path_join(dirname, "buildings_texture/4.jpg");
-  auto        build_texture_4 = load_image(path_text_4, texture_4->hdr, error);
+  auto   texture_4       = add_texture(scene, "texture4");
+  string path_text_4     = path_join(dirname, "buildings_texture/4.jpg");
+  auto   build_texture_4 = load_image(path_text_4, texture_4->hdr, error);
 
   // buidling texture5
-  auto        texture_5       = add_texture(scene, "texture5");
-  std::string path_text_5     = path_join(dirname, "buildings_texture/5.jpg");
-  auto        build_texture_5 = load_image(path_text_5, texture_5->hdr, error);
+  auto   texture_5       = add_texture(scene, "texture5");
+  string path_text_5     = path_join(dirname, "buildings_texture/5.jpg");
+  auto   build_texture_5 = load_image(path_text_5, texture_5->hdr, error);
 
   // buidling texture6
-  auto        texture_6       = add_texture(scene, "texture6");
-  std::string path_text_6     = path_join(dirname, "buildings_texture/6.jpg");
-  auto        build_texture_6 = load_image(path_text_6, texture_6->hdr, error);
+  auto   texture_6       = add_texture(scene, "texture6");
+  string path_text_6     = path_join(dirname, "buildings_texture/6.jpg");
+  auto   build_texture_6 = load_image(path_text_6, texture_6->hdr, error);
 
   // buidling texture7
-  auto        texture_7       = add_texture(scene, "texture7");
-  std::string path_text_7     = path_join(dirname, "buildings_texture/7.jpg");
-  auto        build_texture_7 = load_image(path_text_7, texture_7->hdr, error);
+  auto   texture_7       = add_texture(scene, "texture7");
+  string path_text_7     = path_join(dirname, "buildings_texture/7.jpg");
+  auto   build_texture_7 = load_image(path_text_7, texture_7->hdr, error);
 
   // buidling texture8
-  auto        texture_8       = add_texture(scene, "texture8");
-  std::string path_text_8     = path_join(dirname, "buildings_texture/8.jpg");
-  auto        build_texture_8 = load_image(path_text_8, texture_8->hdr, error);
+  auto   texture_8       = add_texture(scene, "texture8");
+  string path_text_8     = path_join(dirname, "buildings_texture/8.jpg");
+  auto   build_texture_8 = load_image(path_text_8, texture_8->hdr, error);
 
   // buidling texture8_11
-  auto        texture_8_11       = add_texture(scene, "texture8_11");
-  std::string path_text_8_11     = path_join(dirname, "buildings_texture/8_11.jpg");
-  auto        build_texture_8_11 = load_image(
+  auto   texture_8_11       = add_texture(scene, "texture8_11");
+  string path_text_8_11     = path_join(dirname, "buildings_texture/8_11.jpg");
+  auto   build_texture_8_11 = load_image(
       path_text_8_11, texture_8_11->hdr, error);
 
   // buidling texture10_41
-  auto        texture_10_41       = add_texture(scene, "texture10_41");
-  std::string path_text_10_41     = path_join(dirname, "buildings_texture/10_41.jpg");
-  auto        build_texture_10_41 = load_image(
+  auto   texture_10_41   = add_texture(scene, "texture10_41");
+  string path_text_10_41 = path_join(dirname, "buildings_texture/10_41.jpg");
+  auto   build_texture_10_41 = load_image(
       path_text_10_41, texture_10_41->hdr, error);
 
   // buidling texture40_71
-  auto        texture_40_71       = add_texture(scene, "texture40_71");
-  std::string path_text_40_71     = path_join(dirname, "buildings_texture/40_71.jpg");
-  auto        build_texture_40_71 = load_image(
+  auto   texture_40_71   = add_texture(scene, "texture40_71");
+  string path_text_40_71 = path_join(dirname, "buildings_texture/40_71.jpg");
+  auto   build_texture_40_71 = load_image(
       path_text_40_71, texture_40_71->hdr, error);
 
   // buidling texture70_101
-  auto        texture_70_101       = add_texture(scene, "texture70_101");
-  std::string path_text_70_101     = path_join(dirname, "buildings_texture/70_101.jpg");
-  auto        build_texture_70_101 = load_image(
+  auto   texture_70_101   = add_texture(scene, "texture70_101");
+  string path_text_70_101 = path_join(dirname, "buildings_texture/70_101.jpg");
+  auto   build_texture_70_101 = load_image(
       path_text_70_101, texture_70_101->hdr, error);
 
   // buidling texturemore_101
-  auto        texture_more_101       = add_texture(scene, "texturemore_101");
-  std::string path_text_more_101     = path_join(dirname, "buildings_texture/more_101.jpg");
-  auto        build_texture_more_101 = load_image(
+  auto   texture_more_101   = add_texture(scene, "texturemore_101");
+  string path_text_more_101 = path_join(
+      dirname, "buildings_texture/more_101.jpg");
+  auto build_texture_more_101 = load_image(
       path_text_more_101, texture_more_101->hdr, error);
 
   // buidling texture_colosseo
-  auto        texture_colosseo   = add_texture(scene, "texture_colosseo");
-  std::string path_text_colosseo = path_join(dirname, "buildings_texture/colosseo.jpg");
+  auto   texture_colosseo   = add_texture(scene, "texture_colosseo");
+  string path_text_colosseo = path_join(
+      dirname, "buildings_texture/colosseo.jpg");
 
   // Check if exists the element of interest
   bool exist_element = false;
@@ -530,9 +529,9 @@ bool create_city_from_json(
     for (auto& element : all_geometries) {
       auto name = element.name;
 
-      std::string type_s    = element.type;
-      std::string type_roof = "null";
-      std::string historic  = "no";
+      string type_s    = element.type;
+      string type_roof = "null";
+      string historic  = "no";
 
       if (element.roof_shape != "null") type_roof = element.roof_shape;
 
@@ -637,20 +636,20 @@ bool create_city_from_json(
           continue;
         }
       } else {
-        std::vector<std::vector<Point>> polygon;
+        vector<vector<Point>> polygon;
 
-        auto               build = add_complete_instance(scene, name);
-        std::vector<vec3i> triangles;
-        std::vector<vec3f> positions;
+        auto          build = add_complete_instance(scene, name);
+        vector<vec3i> triangles;
+        vector<vec3f> positions;
 
-        std::vector<Point> vect_building;
-        vec3f              coord       = {};
-        float              height      = -1.0f;
-        float              roof_height = -1.0f;
-        int                level       = 0;
-        std::string        type        = "";
+        vector<Point> vect_building;
+        vec3f         coord       = {};
+        float         height      = -1.0f;
+        float         roof_height = -1.0f;
+        int           level       = 0;
+        string        type        = "";
 
-        std::string::size_type sz;
+        string::size_type sz;
 
         type = element.type;
 
@@ -673,7 +672,7 @@ bool create_city_from_json(
         }
         polygon.push_back(vect_building);
 
-        std::vector<Point> vect_hole;
+        vector<Point> vect_hole;
         coord = {};
 
         for (auto& list : element.new_holes) {
@@ -707,19 +706,19 @@ bool create_city_from_json(
           build->material->color = vec3f{
               0.538, 0.426, 0.347};  // vec3f{0.402,0.319,0.261}; // light brown
         } else if (historic == "yes" && color_given) {
-          std::string building_color = element.colour;
-          vec3f       build_color    = get_building_color(building_color);
-          build->material->color     = build_color;
+          string building_color  = element.colour;
+          vec3f  build_color     = get_building_color(building_color);
+          build->material->color = build_color;
         } else {
           build->material->color = color;
         }
 
-        std::vector<vec3f> _polygon;
+        vector<vec3f> _polygon;
         for (auto point : positions) {
           _polygon.push_back(point);
         }
 
-        std::vector<N> indices = mapbox::earcut<N>(polygon);
+        vector<N> indices = mapbox::earcut<N>(polygon);
 
         for (int k = 0; k < indices.size() - 2; k += 3) {
           triangles.push_back({indices[k], indices[k + 1], indices[k + 2]});
@@ -743,13 +742,13 @@ bool create_city_from_json(
         if (type == "building") {
           auto build2             = add_complete_instance(scene, name + "_1");
           build2->material->color = color;
-          std::vector<vec3f> _polygon2;
+          vector<vec3f> _polygon2;
           for (auto point : positions) {
             _polygon2.push_back(point);
           }
 
           // Quads on the building sides
-          std::vector<vec4i> quads;
+          vector<vec4i> quads;
           for (int i = 0; i < positions.size(); i++) {
             auto prev_index = i - 1;
             if (prev_index == -1) {
@@ -772,9 +771,9 @@ bool create_city_from_json(
                   path_text_colosseo, texture_colosseo->hdr, error);
               build2->material->color_tex = texture_colosseo;
             } else if (element.colour != "null") {
-              std::string building_color = element.colour;
-              vec3f       build_color    = get_building_color(building_color);
-              build2->material->color    = build_color;
+              string building_color   = element.colour;
+              vec3f  build_color      = get_building_color(building_color);
+              build2->material->color = build_color;
             } else {
               build2->material->color = color;
             }
@@ -816,16 +815,16 @@ bool create_city_from_json(
 
         // Gabled roof
         if (type_roof == "gabled") {
-          std::vector<std::vector<Point>> polygon_roof;
+          vector<vector<Point>> polygon_roof;
 
-          auto               roof = add_complete_instance(scene, name);
-          std::vector<vec3i> triangles_roof;
-          std::vector<vec3f> positions_roof;
+          auto          roof = add_complete_instance(scene, name);
+          vector<vec3i> triangles_roof;
+          vector<vec3f> positions_roof;
 
-          std::vector<Point> vect_roof;
-          float              roof_height = -1.0f;
-          vec3f              coord       = {};
-          float              height      = -1.0f;
+          vector<Point> vect_roof;
+          float         roof_height = -1.0f;
+          vec3f         coord       = {};
+          float         height      = -1.0f;
 
           height      = element.height;
           roof_height = element.roof_height;
@@ -859,12 +858,12 @@ bool create_city_from_json(
             auto roof_color       = vec3f{0.351, 0.096, 0.091};  // brown/red
             roof->material->color = roof_color;
 
-            std::vector<vec3f> _polygon_roof;
+            vector<vec3f> _polygon_roof;
             for (auto point : positions_roof) {
               _polygon_roof.push_back(point);
             }
 
-            std::vector<N> indices_roof = mapbox::earcut<N>(polygon_roof);
+            vector<N> indices_roof = mapbox::earcut<N>(polygon_roof);
 
             for (int k = 0; k < indices_roof.size() - 2; k += 3) {
               triangles_roof.push_back(
@@ -874,11 +873,11 @@ bool create_city_from_json(
             // Filling roofs
             auto roof2 = add_complete_instance(scene, name + "_roof");
             roof2->material->color = roof_color;
-            std::vector<vec3f> _polygon2_roof;
+            vector<vec3f> _polygon2_roof;
             for (auto point : positions_roof) {
               _polygon2_roof.push_back(point);
             }
-            std::vector<vec3i> triangles2_roof;
+            vector<vec3i> triangles2_roof;
             for (int i = 0; i < positions_roof.size(); i++) {
               auto prev_index = i - 1;
               if (prev_index == -1) {
@@ -906,24 +905,24 @@ bool create_city_from_json(
   return true;
 }
 
-std::vector<std::array<double, 2>> compute_area(
+vector<std::array<double, 2>> compute_area(
     double x, double next_x, double y, double next_y, double road_thickness) {
-  std::vector<std::array<double, 2>> line_1 = {
+  vector<std::array<double, 2>> line_1 = {
       {next_x + road_thickness, next_y + road_thickness},
       {next_x - road_thickness, next_y - road_thickness},
       {x - road_thickness, y - road_thickness},
       {x + road_thickness, y + road_thickness}};
 
-  std::vector<double> vec_x = {};
-  std::vector<double> vec_y = {};
+  vector<double> vec_x = {};
+  vector<double> vec_y = {};
 
   for (auto& couple : line_1) {
     vec_x.push_back(couple[0]);
     vec_y.push_back(couple[1]);
   }
 
-  std::vector<double> shifted_vec_x = vec_x;
-  std::vector<double> shifted_vec_y = vec_y;
+  vector<double> shifted_vec_x = vec_x;
+  vector<double> shifted_vec_y = vec_y;
 
   std::rotate(
       shifted_vec_x.begin(), shifted_vec_x.begin() + 3, shifted_vec_x.end());
@@ -945,20 +944,20 @@ std::vector<std::array<double, 2>> compute_area(
   float area_1 = (float)(0.5f * fabs(sum_first - sum_second));
 
   // -----------
-  std::vector<std::array<double, 2>> line_2 = {
-      {next_x + road_thickness, next_y}, {next_x - road_thickness, next_y},
-      {x - road_thickness, y}, {x + road_thickness, y}};
+  vector<std::array<double, 2>> line_2 = {{next_x + road_thickness, next_y},
+      {next_x - road_thickness, next_y}, {x - road_thickness, y},
+      {x + road_thickness, y}};
 
-  std::vector<double> vec_x_2 = {};
-  std::vector<double> vec_y_2 = {};
+  vector<double> vec_x_2 = {};
+  vector<double> vec_y_2 = {};
 
   for (auto& couple : line_2) {
     vec_x_2.push_back(couple[0]);
     vec_y_2.push_back(couple[1]);
   }
 
-  std::vector<double> shifted_vec_x_2 = vec_x_2;
-  std::vector<double> shifted_vec_y_2 = vec_y_2;
+  vector<double> shifted_vec_x_2 = vec_x_2;
+  vector<double> shifted_vec_y_2 = vec_y_2;
 
   std::rotate(shifted_vec_x_2.begin(), shifted_vec_x_2.begin() + 3,
       shifted_vec_x_2.end());
@@ -980,20 +979,20 @@ std::vector<std::array<double, 2>> compute_area(
   float area_2 = (float)(0.5f * fabs(sum_first_2 - sum_second_2));
 
   // -----------
-  std::vector<std::array<double, 2>> line_3 = {
-      {next_x, next_y + road_thickness}, {next_x, next_y - road_thickness},
-      {x, y - road_thickness}, {x, y + road_thickness}};
+  vector<std::array<double, 2>> line_3 = {{next_x, next_y + road_thickness},
+      {next_x, next_y - road_thickness}, {x, y - road_thickness},
+      {x, y + road_thickness}};
 
-  std::vector<double> vec_x_3 = {};
-  std::vector<double> vec_y_3 = {};
+  vector<double> vec_x_3 = {};
+  vector<double> vec_y_3 = {};
 
   for (auto& couple : line_3) {
     vec_x_3.push_back(couple[0]);
     vec_y_3.push_back(couple[1]);
   }
 
-  std::vector<double> shifted_vec_x_3 = vec_x_3;
-  std::vector<double> shifted_vec_y_3 = vec_y_3;
+  vector<double> shifted_vec_x_3 = vec_x_3;
+  vector<double> shifted_vec_y_3 = vec_y_3;
 
   std::rotate(shifted_vec_x_3.begin(), shifted_vec_x_3.begin() + 3,
       shifted_vec_x_3.end());
@@ -1032,7 +1031,7 @@ std::vector<std::array<double, 2>> compute_area(
   return line_1;
 }
 
-float get_thickness(std::string type) {
+float get_thickness(string type) {
   float thickness = 0.0001;
   if (type == "pedestrian") {
     thickness = 0.00005;
@@ -1042,11 +1041,11 @@ float get_thickness(std::string type) {
   return thickness;
 }
 
-CityObject assign_type(CityObject building, nlohmann::json properties) {
+CityObject assign_type(CityObject building, json properties) {
   if (!properties["building"].empty()) {
     building.type = "building";
     if (!properties["roof:shape"].empty()) {
-      std::string roof_shape = properties["roof:shape"];
+      string roof_shape = properties["roof:shape"];
       if (roof_shape == "gabled" || roof_shape == "onion" ||
           roof_shape == "pyramid")
         building.roof_shape = "gabled";
@@ -1055,26 +1054,26 @@ CityObject assign_type(CityObject building, nlohmann::json properties) {
     }
 
     if (!properties["roof:height"].empty()) {
-      std::string roof_h      = properties["roof:height"];
-      double      roof_height = generate_roof_height(roof_h, scale);
-      building.roof_height    = roof_height;
+      string roof_h        = properties["roof:height"];
+      double roof_height   = generate_roof_height(roof_h, scale);
+      building.roof_height = roof_height;
     }
 
     if (!properties["historic"].empty()) {
       building.historic = "yes";
       if (!properties["building:colour"].empty()) {
-        std::string build_colour = properties["building:colour"];
-        building.colour          = build_colour;
+        string build_colour = properties["building:colour"];
+        building.colour     = build_colour;
       }
     }
 
     if (!properties["tourism"].empty()) {
-      std::string tourism = properties["tourism"];
+      string tourism = properties["tourism"];
       if (tourism == "attraction") {
         building.historic = "yes";
         if (!properties["building:colour"].empty()) {
-          std::string build_colour = properties["building:colour"];
-          building.colour          = build_colour;
+          string build_colour = properties["building:colour"];
+          building.colour     = build_colour;
         }
       }
     }
@@ -1085,12 +1084,12 @@ CityObject assign_type(CityObject building, nlohmann::json properties) {
   }
 
   else if (!properties["landuse"].empty()) {
-    std::string landuse = properties["landuse"];
-    building.type       = landuse;
+    string landuse = properties["landuse"];
+    building.type  = landuse;
   }
 
   else if (!properties["natural"].empty()) {
-    std::string natural = properties["natural"];
+    string natural = properties["natural"];
     if (natural == "wood") {
       building.type = "forest";
     } else {
@@ -1099,8 +1098,8 @@ CityObject assign_type(CityObject building, nlohmann::json properties) {
   }
 
   else if (!properties["leisure"].empty()) {
-    std::string leisure = properties["leisure"];
-    building.type       = leisure;
+    string leisure = properties["leisure"];
+    building.type  = leisure;
   }
 
   else if (!properties["highway"].empty()) {
@@ -1119,13 +1118,13 @@ CityObject assign_type(CityObject building, nlohmann::json properties) {
   return building;
 }
 
-std::vector<CityObject> assign_tree_type(CityObject point,
-    nlohmann::json properties, std::vector<CityObject> all_buildings) {
+vector<CityObject> assign_tree_type(
+    CityObject point, json properties, vector<CityObject> all_buildings) {
   if (!properties["natural"].empty()) {
-    std::string point_type_nat = properties["natural"];
+    string point_type_nat = properties["natural"];
     if (point_type_nat == "tree") {
       if (!properties["type"].empty()) {
-        std::string type_tree = properties["type"];
+        string type_tree = properties["type"];
         if (type_tree == "palm") {
           point.type = "palm";
           all_buildings.push_back(point);
@@ -1143,7 +1142,7 @@ std::vector<CityObject> assign_tree_type(CityObject point,
         point.type = "standard";
         all_buildings.push_back(point);
       } else if (!properties["genus"].empty()) {
-        std::string genus_tree = properties["genus"];
+        string genus_tree = properties["genus"];
         if (genus_tree == "Quercus") {
           point.type = "oak";
           all_buildings.push_back(point);
@@ -1171,7 +1170,7 @@ std::vector<CityObject> assign_tree_type(CityObject point,
   return all_buildings;
 }
 
-bool check_valid_type(CityObject building, nlohmann::json properties) {
+bool check_valid_type(CityObject building, json properties) {
   bool valid = false;
 
   bool grass_area = check_grass_type(building.type);
@@ -1183,21 +1182,20 @@ bool check_valid_type(CityObject building, nlohmann::json properties) {
   return valid;
 }
 
-std::pair<std::vector<CityObject>, Coordinate> data_analysis(
-    nlohmann::json geojson_file, std::vector<CityObject> all_buildings,
-    Coordinate class_coord) {
+std::pair<vector<CityObject>, Coordinate> data_analysis(json geojson_file,
+    vector<CityObject> all_buildings, Coordinate class_coord) {
   for (auto& feature : geojson_file["features"]) {
-    auto        geometry   = feature["geometry"];
-    auto        properties = feature["properties"];
-    std::string id         = properties["@id"];
+    auto   geometry   = feature["geometry"];
+    auto   properties = feature["properties"];
+    string id         = properties["@id"];
     std::replace(id.begin(), id.end(), '/', '_');  // replace all '/' to '_'
     int count_list = 0;
 
     if (geometry["type"] == "Polygon") {
       auto building = CityObject();
 
-      building                   = assign_type(building, properties);
-      std::string footprint_type = building.type;
+      building              = assign_type(building, properties);
+      string footprint_type = building.type;
 
       if (footprint_type == "null") {
         continue;
@@ -1205,9 +1203,9 @@ std::pair<std::vector<CityObject>, Coordinate> data_analysis(
 
       int level = generate_building_level(footprint_type, properties);
 
-      std::vector<std::array<double, 2>>              couple;
-      std::vector<std::vector<std::array<double, 2>>> list_holes;
-      std::vector<std::array<double, 2>>              list_coordinates = {};
+      vector<std::array<double, 2>>         couple;
+      vector<vector<std::array<double, 2>>> list_holes;
+      vector<std::array<double, 2>>         list_coordinates = {};
 
       int num_lists = geometry["coordinates"].size();
       for (auto& list_coords : geometry["coordinates"]) {
@@ -1224,9 +1222,9 @@ std::pair<std::vector<CityObject>, Coordinate> data_analysis(
 
           building.coords = list_coordinates;
 
-          std::string name       = id;
-          std::string build_name = "building_" + name;
-          building.name          = build_name;
+          string name       = id;
+          string build_name = "building_" + name;
+          building.name     = build_name;
 
           count_list++;
         } else {  // analysis of building holes
@@ -1255,8 +1253,8 @@ std::pair<std::vector<CityObject>, Coordinate> data_analysis(
     } else if (geometry["type"] == "MultiPolygon") {
       auto building = CityObject();
 
-      building                   = assign_type(building, properties);
-      std::string footprint_type = building.type;
+      building              = assign_type(building, properties);
+      string footprint_type = building.type;
 
       if (footprint_type == "null") {
         continue;
@@ -1264,9 +1262,9 @@ std::pair<std::vector<CityObject>, Coordinate> data_analysis(
 
       int level = generate_building_level(footprint_type, properties);
 
-      std::vector<std::array<double, 2>>              couple;
-      std::vector<std::vector<std::array<double, 2>>> list_holes;
-      std::vector<std::array<double, 2>>              list_coordinates = {};
+      vector<std::array<double, 2>>         couple;
+      vector<vector<std::array<double, 2>>> list_holes;
+      vector<std::array<double, 2>>         list_coordinates = {};
 
       for (auto& multi_pol : geometry["coordinates"]) {
         int num_lists = multi_pol.size();
@@ -1287,8 +1285,8 @@ std::pair<std::vector<CityObject>, Coordinate> data_analysis(
 
             building.coords = list_coordinates;
 
-            std::string name = id;
-            building.name    = "building_" + name;
+            string name   = id;
+            building.name = "building_" + name;
 
             count_list++;
           } else {  // analysis of building holes
@@ -1329,8 +1327,8 @@ std::pair<std::vector<CityObject>, Coordinate> data_analysis(
 
         auto line = CityObject();
 
-        std::string name = id;
-        line.name        = "line_" + name + std::to_string(cont);
+        string name = id;
+        line.name   = "line_" + name + std::to_string(cont);
         cont++;
 
         if (!properties["highway"].empty()) {
@@ -1343,8 +1341,8 @@ std::pair<std::vector<CityObject>, Coordinate> data_analysis(
         }
 
         else if (!properties["natural"].empty()) {
-          std::string natural = properties["natural"];
-          line.type           = natural;
+          string natural = properties["natural"];
+          line.type      = natural;
         } else {
           continue;
         }
@@ -1377,8 +1375,8 @@ std::pair<std::vector<CityObject>, Coordinate> data_analysis(
 
           auto line = CityObject();
 
-          std::string name = id;
-          line.name        = "multiline_" + name + std::to_string(cont);
+          string name = id;
+          line.name   = "multiline_" + name + std::to_string(cont);
           cont++;
 
           if (!properties["waterway"].empty()) {
@@ -1400,14 +1398,14 @@ std::pair<std::vector<CityObject>, Coordinate> data_analysis(
       }
 
     } else if (geometry["type"] == "Point") {
-      std::vector<std::array<double, 2>> points;
+      vector<std::array<double, 2>> points;
       points.push_back(geometry["coordinates"]);
 
       auto point = CityObject();
 
-      std::string name = id;
-      point.name       = "point_" + name;
-      point.coords     = points;
+      string name  = id;
+      point.name   = "point_" + name;
+      point.coords = points;
 
       all_buildings = assign_tree_type(point, properties, all_buildings);
 
@@ -1426,23 +1424,23 @@ std::pair<std::vector<CityObject>, Coordinate> data_analysis(
   return {all_buildings, class_coord};
 }
 
-std::vector<CityObject> generate_new_coordinates(nlohmann::json geojson_file,
-    std::vector<CityObject> all_buildings, Coordinate class_coord) {
-  std::pair<std::vector<CityObject>, Coordinate> gen_out;
+vector<CityObject> generate_new_coordinates(json geojson_file,
+    vector<CityObject> all_buildings, Coordinate class_coord) {
+  std::pair<vector<CityObject>, Coordinate> gen_out;
 
   gen_out       = data_analysis(geojson_file, all_buildings, class_coord);
   all_buildings = gen_out.first;
   class_coord   = gen_out.second;
 
-  std::vector<CityObject> all_objects = {};
+  vector<CityObject> all_objects = {};
 
   // Scale the CityObject outer polygon in the scene
   for (auto& building_geometry : all_buildings) {
     float height             = generate_height(building_geometry, scale);
     building_geometry.height = height;
 
-    std::vector<std::array<double, 2>>              new_coords = {};
-    std::vector<std::vector<std::array<double, 2>>> new_holes  = {};
+    vector<std::array<double, 2>>         new_coords = {};
+    vector<vector<std::array<double, 2>>> new_holes  = {};
 
     for (auto& couple : building_geometry.coords) {
       double x = (double)couple[0];
@@ -1464,7 +1462,7 @@ std::vector<CityObject> generate_new_coordinates(nlohmann::json geojson_file,
 
     // Scale the CityObject holes in the scene
     for (auto& list_hole : building_geometry.holes) {
-      std::vector<std::array<double, 2>> new_hole_l = {};
+      vector<std::array<double, 2>> new_hole_l = {};
       for (auto& hole : list_hole) {
         double x = (double)hole[0];
         double y = (double)hole[1];
@@ -1524,20 +1522,19 @@ int main(int argc, const char* argv[]) {
   //------------ PREPARE DATA TO LOAD THE SCENE ----------------
 
   // Path to the GeoJson file
-  const std::string path = app->geojson_filename;  // "./geojson/";
+  const string path = app->geojson_filename;  // "./geojson/";
 
   // Read GeoJson files
-  nlohmann::json          geojson_file;
-  std::vector<CityObject> all_buildings = {};
-  auto                    class_coord   = Coordinate();
+  auto all_buildings = vector<CityObject>{};
+  auto class_coord   = Coordinate();
 
-  for (const auto& file : sfs::directory_iterator(path)) {
+  for (auto& filename : list_directory(path)) {
     // std::cout << file.path() << std::endl;
-    if (file.path().extension() == ".geojson") {
-      std::ifstream filename(file.path());
-      geojson_file  = json::parse(filename);
-      all_buildings = generate_new_coordinates(
-          geojson_file, all_buildings, class_coord);
+    if (path_extension(filename) == ".geojson") {
+      std::ifstream stream(filename.c_str());
+      auto          geojson = json::parse(stream);
+      all_buildings         = generate_new_coordinates(
+          geojson, all_buildings, class_coord);
     }
   }
 
@@ -1552,7 +1549,7 @@ int main(int argc, const char* argv[]) {
   if (add_skyenv) add_sky(app->ioscene);
 
   // Save the scene
-  std::string save_path = app->filename_save;  //"./scene/city.json";
+  string save_path = app->filename_save;  //"./scene/city.json";
   save_scene(save_path, app->ioscene, error);
   save_path = ""s;
 
