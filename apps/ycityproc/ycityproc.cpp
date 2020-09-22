@@ -67,39 +67,6 @@ struct city_object {
   vector<vector<double2>> new_holes   = {};
 };
 
-class Coordinate {
- public:
-  double x_minimum = __DBL_MAX__;
-  double y_minimum = __DBL_MAX__;
-  double x_maximum = __DBL_MIN__;
-  double y_maximum = __DBL_MIN__;
-
-  void set_x_min(double x_min) {
-    if (x_minimum > x_min) x_minimum = x_min;
-  }
-
-  void set_y_min(double y_min) {
-    if (y_minimum > y_min) y_minimum = y_min;
-  }
-
-  void set_y_max(double y_max) {
-    if (y_maximum < y_max) y_maximum = y_max;
-  }
-
-  void set_x_max(double x_max) {
-    if (x_maximum < x_max) x_maximum = x_max;
-  }
-
-  void update(double x, double y) {
-    set_x_max(x);
-    set_x_min(x);
-    set_y_max(y);
-    set_y_min(y);
-  }
-};
-
-//  --------------- FUNCTIONS --------------
-
 bool check_high(const json& properties) {
   if (!properties.contains("building")) return false;
   auto building_category = properties.at("building").get<string>();
@@ -1179,9 +1146,17 @@ bool load_geojson(const string& filename, vector<city_object>& all_buildings,
   }
 
   // compute bounds
-  auto bounds = Coordinate{};
+  auto bounds_min = double2{
+      std::numeric_limits<double>::max(), std::numeric_limits<double>::max()};
+  auto bounds_max = double2{std::numeric_limits<double>::lowest(),
+      std::numeric_limits<double>::lowest()};
   for (auto& element : all_buildings) {
-    for (auto [x, y] : element.coords) bounds.update(x, y);
+    for (auto coord : element.coords) {
+      bounds_min = {
+          std::min(coord[0], bounds_min[0]), std::min(coord[1], bounds_min[1])};
+      bounds_max = {
+          std::max(coord[0], bounds_max[0]), std::max(coord[1], bounds_max[1])};
+    }
   }
 
   // scale elements
@@ -1189,21 +1164,17 @@ bool load_geojson(const string& filename, vector<city_object>& all_buildings,
     element.height     = generate_height(element, scale);
     element.new_coords = element.coords;
     for (auto& [x, y] : element.new_coords) {
-      x = (x - bounds.x_minimum) / (bounds.x_maximum - bounds.x_minimum) *
-              scale -
+      x = (x - bounds_min[0]) / (bounds_max[0] - bounds_min[0]) * scale -
           (scale / 2);
-      y = (y - bounds.y_minimum) / (bounds.y_maximum - bounds.y_minimum) *
-              scale -
+      y = (y - bounds_min[1]) / (bounds_max[1] - bounds_min[1]) * scale -
           (scale / 2);
     }
     element.new_holes = element.holes;
     for (auto& hole : element.new_holes) {
       for (auto& [x, y] : hole) {
-        x = (x - bounds.x_minimum) / (bounds.x_maximum - bounds.x_minimum) *
-                scale -
+        x = (x - bounds_min[0]) / (bounds_max[0] - bounds_min[0]) * scale -
             (scale / 2);
-        y = (y - bounds.y_minimum) / (bounds.y_maximum - bounds.y_minimum) *
-                scale -
+        y = (y - bounds_min[1]) / (bounds_max[1] - bounds_min[1]) * scale -
             (scale / 2);
       }
     }
