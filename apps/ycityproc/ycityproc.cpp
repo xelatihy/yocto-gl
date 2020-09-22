@@ -112,7 +112,7 @@ bool check_high(json properties) {
   return high_building;
 }
 
-bool check_digit(string lev) {
+bool check_digit(const string& lev) {
   bool digit = true;
   for (int i = 0; i < lev.size(); i++) {
     // std::cout << typeid(lev[i]).name() << std::endl;
@@ -123,7 +123,7 @@ bool check_digit(string lev) {
   return digit;
 }
 
-bool check_int(string lev) {
+bool check_int(const string& lev) {
   bool integer = true;
   for (int i = 0; i < lev.size(); i++) {
     if (lev[i] == '.') {
@@ -133,7 +133,7 @@ bool check_int(string lev) {
   return integer;
 }
 
-int generate_building_level(string footprint_type, json properties) {
+int generate_building_level(const string& footprint_type, json properties) {
   int               level         = 1;
   float             height        = -1.0f;
   bool              high_building = false;
@@ -214,7 +214,7 @@ float generate_height(city_object building, int scale) {
   return height;
 }
 
-float generate_roof_height(string roof_h, int scale) {
+float generate_roof_height(const string& roof_h, int scale) {
   float             roof_height = 0.109f;
   string::size_type sz;
 
@@ -226,7 +226,7 @@ float generate_roof_height(string roof_h, int scale) {
   return roof_height;
 }
 
-bool check_grass_type(string building_type) {
+bool check_grass_type(const string& building_type) {
   bool grass_area = false;
   if (building_type == "park" || building_type == "pitch" ||
       building_type == "garden" || building_type == "playground" ||
@@ -255,7 +255,7 @@ bool check_pedestrian(json properties) {
   return is_pedestrian;
 }
 
-vec3f get_color(string type, bool grass_type) {
+vec3f get_color(const string& type, bool grass_type) {
   vec3f color = {0.725, 0.71, 0.68};  // floor color
   if (type == "building") {
     color = vec3f{0.79, 0.74, 0.62};
@@ -274,7 +274,7 @@ vec3f get_color(string type, bool grass_type) {
   return color;
 }
 
-vec3f get_building_color(string building_color) {
+vec3f get_building_color(const string& building_color) {
   vec3f color;
   if (building_color == "yellow") {
     color = vec3f{0.882, 0.741, 0.294};
