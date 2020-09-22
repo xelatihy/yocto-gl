@@ -165,7 +165,7 @@ int generate_building_level(string footprint_type, json properties) {
   }
 
   // Check if the building:height is given in the GeoJson file
-  if (footprint_type == "building" && !properties["height"].empty()) {
+  if (footprint_type == "building" && properties.contains("height")) {
     string h     = properties["height"];
     bool   digit = check_digit(h);
     if (digit) {
@@ -186,7 +186,7 @@ int generate_building_level(string footprint_type, json properties) {
   }
 
   high_building = check_high(properties);
-  if (footprint_type == "building" && !properties["building"].empty() &&
+  if (footprint_type == "building" && properties.contains("building") &&
       high_building) {
     level = 3;
   }
@@ -983,7 +983,7 @@ float get_thickness(string type) {
 }
 
 city_object assign_type(city_object building, json properties) {
-  if (!properties["building"].empty()) {
+  if (properties.contains("building")) {
     building.type = "building";
     if (!properties["roof:shape"].empty()) {
       string roof_shape = properties["roof:shape"];
@@ -1000,7 +1000,7 @@ city_object assign_type(city_object building, json properties) {
       building.roof_height = roof_height;
     }
 
-    if (!properties["historic"].empty()) {
+    if (properties.contains("historic")) {
       building.historic = "yes";
       if (!properties["building:colour"].empty()) {
         string build_colour = properties["building:colour"];
@@ -1008,7 +1008,7 @@ city_object assign_type(city_object building, json properties) {
       }
     }
 
-    if (!properties["tourism"].empty()) {
+    if (properties.contains("tourism")) {
       string tourism = properties["tourism"];
       if (tourism == "attraction") {
         building.historic = "yes";
@@ -1020,16 +1020,16 @@ city_object assign_type(city_object building, json properties) {
     }
   }
 
-  else if (!properties["water"].empty()) {
+  else if (properties.contains("water")) {
     building.type = "water";
   }
 
-  else if (!properties["landuse"].empty()) {
+  else if (properties.contains("landuse")) {
     string landuse = properties["landuse"];
     building.type  = landuse;
   }
 
-  else if (!properties["natural"].empty()) {
+  else if (properties.contains("natural")) {
     string natural = properties["natural"];
     if (natural == "wood") {
       building.type = "forest";
@@ -1038,12 +1038,12 @@ city_object assign_type(city_object building, json properties) {
     }
   }
 
-  else if (!properties["leisure"].empty()) {
+  else if (properties.contains("leisure")) {
     string leisure = properties["leisure"];
     building.type  = leisure;
   }
 
-  else if (!properties["highway"].empty()) {
+  else if (properties.contains("highway")) {
     bool pedestrian = check_pedestrian(properties);
     if (pedestrian) {
       building.type = "pedestrian";
@@ -1061,10 +1061,10 @@ city_object assign_type(city_object building, json properties) {
 
 vector<city_object> assign_tree_type(
     city_object point, json properties, vector<city_object> all_buildings) {
-  if (!properties["natural"].empty()) {
+  if (properties.contains("natural")) {
     string point_type_nat = properties["natural"];
     if (point_type_nat == "tree") {
-      if (!properties["type"].empty()) {
+      if (properties.contains("type")) {
         string type_tree = properties["type"];
         if (type_tree == "palm") {
           point.type = "palm";
@@ -1079,10 +1079,10 @@ vector<city_object> assign_tree_type(
           point.type = "standard";
           all_buildings.push_back(point);
         }
-      } else if (!properties["tree"].empty()) {
+      } else if (properties.contains("tree")) {
         point.type = "standard";
         all_buildings.push_back(point);
-      } else if (!properties["genus"].empty()) {
+      } else if (properties.contains("genus")) {
         string genus_tree = properties["genus"];
         if (genus_tree == "Quercus") {
           point.type = "oak";
@@ -1272,7 +1272,7 @@ std::pair<vector<city_object>, Coordinate> data_analysis(json geojson_file,
         line.name   = "line_" + name + std::to_string(cont);
         cont++;
 
-        if (!properties["highway"].empty()) {
+        if (properties.contains("highway")) {
           bool pedestrian = check_pedestrian(properties);
           if (pedestrian) {
             line.type = "pedestrian";
@@ -1281,7 +1281,7 @@ std::pair<vector<city_object>, Coordinate> data_analysis(json geojson_file,
           }
         }
 
-        else if (!properties["natural"].empty()) {
+        else if (properties.contains("natural")) {
           string natural = properties["natural"];
           line.type      = natural;
         } else {
@@ -1320,7 +1320,7 @@ std::pair<vector<city_object>, Coordinate> data_analysis(json geojson_file,
           line.name   = "multiline_" + name + std::to_string(cont);
           cont++;
 
-          if (!properties["waterway"].empty()) {
+          if (properties.contains("waterway")) {
             line.type = "water";
           } else {
             continue;
