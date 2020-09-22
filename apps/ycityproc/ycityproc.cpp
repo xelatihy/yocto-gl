@@ -1233,65 +1233,38 @@ void data_analysis(const json& geojson_file, vector<city_object>& all_buildings,
   }
 }
 
-vector<city_object> generate_new_coordinates(const json& geojson_file,
-    vector<city_object> all_buildings, Coordinate class_coord) {
+void generate_new_coordinates(const json& geojson_file,
+    vector<city_object>& all_buildings, Coordinate class_coord) {
   data_analysis(geojson_file, all_buildings, class_coord);
 
   // Scale the CityObject outer polygon in the scene
-  vector<city_object> all_objects = {};
-  for (auto& building_geometry : all_buildings) {
-    float height             = generate_height(building_geometry, scale);
-    building_geometry.height = height;
+  for (auto& element : all_buildings) {
+    element.height = generate_height(element, scale);
 
     vector<array<double, 2>>         new_coords = {};
     vector<vector<array<double, 2>>> new_holes  = {};
 
-    for (auto& couple : building_geometry.coords) {
-      double x = (double)couple[0];
-      double y = (double)couple[1];
-
-      double new_x = (x - class_coord.x_minimum) /
-                         (class_coord.x_maximum - class_coord.x_minimum) *
-                         scale -
-                     (scale / 2);
-      double new_y = (y - class_coord.y_minimum) /
-                         (class_coord.y_maximum - class_coord.y_minimum) *
-                         scale -
-                     (scale / 2);
-
-      array<double, 2> arr = {new_x, new_y};
-      new_coords.push_back(arr);
+    element.new_coords = element.coords;
+    for (auto& [x, y] : element.new_coords) {
+      x = (x - class_coord.x_minimum) /
+              (class_coord.x_maximum - class_coord.x_minimum) * scale -
+          (scale / 2);
+      y = (y - class_coord.y_minimum) /
+              (class_coord.y_maximum - class_coord.y_minimum) * scale -
+          (scale / 2);
     }
-    building_geometry.new_coords = new_coords;
-
-    // Scale the CityObject holes in the scene
-    for (auto& list_hole : building_geometry.holes) {
-      vector<array<double, 2>> new_hole_l = {};
-      for (auto& hole : list_hole) {
-        double x = (double)hole[0];
-        double y = (double)hole[1];
-
-        double new_hole_x =
-            (x - class_coord.x_minimum) /
+    element.new_holes = element.holes;
+    for (auto& hole : element.new_holes) {
+      for (auto& [x, y] : hole) {
+        x = (x - class_coord.x_minimum) /
                 (class_coord.x_maximum - class_coord.x_minimum) * scale -
             (scale / 2);
-        double new_hole_y =
-            (y - class_coord.y_minimum) /
+        y = (y - class_coord.y_minimum) /
                 (class_coord.y_maximum - class_coord.y_minimum) * scale -
             (scale / 2);
-        array<double, 2> new_hole_coords = {new_hole_x, new_hole_y};
-        new_hole_l.push_back(new_hole_coords);
       }
-      new_holes.push_back(new_hole_l);
     }
-    building_geometry.new_holes = new_holes;
-
-    // std::cout << "------" << std::endl;
-    // std::cout << building_geometry.at("new_holes") << std::endl;
-    all_objects.push_back(building_geometry);
   }
-  // std::cout << all_objects << std::endl;
-  return all_objects;
 }
 
 //  ---------------- MAIN FUNCTION --------------------------
@@ -1340,7 +1313,7 @@ int main(int argc, const char* argv[]) {
     if (path_extension(filename) != ".geojson") continue;
     auto geojson = json{};
     if (!load_json(filename, geojson, ioerror)) print_fatal(ioerror);
-    buildings = generate_new_coordinates(geojson, buildings, class_coord);
+    generate_new_coordinates(geojson, buildings, class_coord);
   }
   print_progress("load geojsons", 1, 1);
 
