@@ -1053,9 +1053,7 @@ vector<city_object> assign_tree_type(
         all_buildings.push_back(point);
       }
     }
-  }
-
-  else {
+  } else {
     point.type = "null";
   }
 
