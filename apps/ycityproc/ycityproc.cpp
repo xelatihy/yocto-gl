@@ -100,10 +100,10 @@ class Coordinate {
 
 //  --------------- FUNCTIONS --------------
 
-bool check_high(json properties) {
-  json building_category = properties["building"];
-  bool high_building     = false;
-
+bool check_high(const json& properties) {
+  if (!properties.contains("building")) return false;
+  auto building_category = properties["building"].get<string>();
+  auto high_building     = false;
   if ((building_category == "apartments") ||
       (building_category == "residential") || (building_category == "tower") ||
       (building_category == "hotel")) {
@@ -139,8 +139,8 @@ int generate_building_level(const string& footprint_type, json properties) {
   bool              high_building = false;
   string::size_type sz;
 
-  if (!properties["building:levels"].empty()) {
-    string lev = properties["building:levels"];
+  if (properties.contains("building:levels")) {
+    auto lev = properties["building:levels"].get<string>();
     /*std::cout << "level" << std::endl;
     std::cout << lev << std::endl;*/
     bool  digit      = check_digit(lev);
@@ -173,12 +173,10 @@ int generate_building_level(const string& footprint_type, json properties) {
     }
   }
 
-  if (footprint_type == "building" && !properties["building:height"].empty()) {
-    string h     = properties["building:height"];
-    bool   digit = check_digit(h);
-    if (digit) {
-      height = std::stof(h, &sz);
-    }
+  if (footprint_type == "building" && properties.contains("building:height")) {
+    auto h     = properties["building:height"].get<string>();
+    bool digit = check_digit(h);
+    if (digit) height = std::stof(h, &sz);
   }
 
   if (height > -1.0) {
@@ -194,14 +192,13 @@ int generate_building_level(const string& footprint_type, json properties) {
   return level;
 }
 
-float generate_height(city_object building, int scale) {
+float generate_height(const city_object& building, int scale) {
   float             height = 0.0001f;
   string::size_type sz;
 
   if (building.type == "building" && building.level > 0) {
     height = (float)(building.level + (scale / 20.0)) /
              20.0;  //(float) (level + (scale / 20.0)) / 20.0;
-
   } else if (building.type == "water") {
     height = (float)0.0001f;
   } else if (building.type == "highway") {
@@ -209,7 +206,6 @@ float generate_height(city_object building, int scale) {
   } else if (building.type == "pedestrian") {
     height = (float)0.0004f;
   }
-  // std::cout << height << std::endl;
 
   return height;
 }
