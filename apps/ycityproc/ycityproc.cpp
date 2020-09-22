@@ -351,7 +351,7 @@ vec3f get_building_color(std::string building_color) {
 }
 
 bool create_city_from_json(
-    sceneio_scene* scene, vector<CityObject> all_geometries) {
+    sceneio_scene* scene, vector<CityObject> all_geometries, const string& dirname) {
   scene->name      = "cornellbox";
   auto camera      = add_camera(scene);
   camera->frame    = frame3f{{-0.028f, 0.0f, 1.0f}, {0.764f, 0.645f, 0.022f},
@@ -361,7 +361,7 @@ bool create_city_from_json(
   camera->focus    = 3.9;
   camera->film     = 0.024;
   camera->aspect   = 1;
-  auto floor       = add_complete_object(scene, "floor");
+  auto floor       = add_complete_instance(scene, "floor");
   auto floor_size  = 60.0f;
   floor->shape->positions = {{-floor_size, 0, floor_size},
       {floor_size, 0, floor_size}, {floor_size, 0, -floor_size},
@@ -377,7 +377,7 @@ bool create_city_from_json(
   // std::string models_path = "./city/tree_models/";
 
   // standard tree
-  std::string path_standard  = "./city/tree_models/standard.ply";
+  std::string path_standard  = path_join(dirname, "tree_models/standard.ply");
   auto        shape_standard = add_shape(scene, "standard");
   if (!load_shape(path_standard, shape_standard->points, shape_standard->lines,
           shape_standard->triangles, shape_standard->quads,
@@ -388,7 +388,7 @@ bool create_city_from_json(
     return false;
 
   // palm tree
-  std::string path_palm  = "./city/tree_models/palm.ply";
+  std::string path_palm  = path_join(dirname, "tree_models/palm.ply");
   auto        shape_palm = add_shape(scene, "palm");
   if (!load_shape(path_palm, shape_palm->points, shape_palm->lines,
           shape_palm->triangles, shape_palm->quads, shape_palm->quadspos,
@@ -398,7 +398,7 @@ bool create_city_from_json(
     return false;
 
   // pine tree
-  std::string path_pine  = "./city/tree_models/pine.ply";
+  std::string path_pine  = path_join(dirname, "tree_models/pine.ply");
   auto        shape_pine = add_shape(scene, "pine");
   if (!load_shape(path_pine, shape_pine->points, shape_pine->lines,
           shape_pine->triangles, shape_pine->quads, shape_pine->quadspos,
@@ -408,7 +408,7 @@ bool create_city_from_json(
     return false;
 
   // cypress tree
-  std::string path_cypress  = "./city/tree_models/cypress.ply";
+  std::string path_cypress  = path_join(dirname, "tree_models/cypress.ply");
   auto        shape_cypress = add_shape(scene, "cypress");
   if (!load_shape(path_cypress, shape_cypress->points, shape_cypress->lines,
           shape_cypress->triangles, shape_cypress->quads,
@@ -419,7 +419,7 @@ bool create_city_from_json(
     return false;
 
   // oak tree
-  std::string path_oak  = "./city/tree_models/oak.ply";
+  std::string path_oak  = path_join(dirname, "tree_models/oak.ply");
   auto        shape_oak = add_shape(scene, "oak");
   if (!load_shape(path_oak, shape_oak->points, shape_oak->lines,
           shape_oak->triangles, shape_oak->quads, shape_oak->quadspos,
@@ -433,77 +433,77 @@ bool create_city_from_json(
 
   // buidling texture1
   auto        texture_1       = add_texture(scene, "texture1");
-  std::string path_text_1     = "./city/buildings_texture/1.jpg";
+  std::string path_text_1     = path_join(dirname, "buildings_texture/1.jpg");
   auto        build_texture_1 = load_image(path_text_1, texture_1->hdr, error);
 
   // buidling texture2
   auto        texture_2       = add_texture(scene, "texture2");
-  std::string path_text_2     = "./city/buildings_texture/2.jpg";
+  std::string path_text_2     = path_join(dirname, "buildings_texture/2.jpg");
   auto        build_texture_2 = load_image(path_text_2, texture_2->hdr, error);
 
   // buidling texture3
   auto        texture_3       = add_texture(scene, "texture3");
-  std::string path_text_3     = "./city/buildings_texture/3.jpg";
+  std::string path_text_3     = path_join(dirname, "buildings_texture/3.jpg");
   auto        build_texture_3 = load_image(path_text_3, texture_3->hdr, error);
 
   // buidling texture4
   auto        texture_4       = add_texture(scene, "texture4");
-  std::string path_text_4     = "./city/buildings_texture/4.jpg";
+  std::string path_text_4     = path_join(dirname, "buildings_texture/4.jpg");
   auto        build_texture_4 = load_image(path_text_4, texture_4->hdr, error);
 
   // buidling texture5
   auto        texture_5       = add_texture(scene, "texture5");
-  std::string path_text_5     = "./city/buildings_texture/5.jpg";
+  std::string path_text_5     = path_join(dirname, "buildings_texture/5.jpg");
   auto        build_texture_5 = load_image(path_text_5, texture_5->hdr, error);
 
   // buidling texture6
   auto        texture_6       = add_texture(scene, "texture6");
-  std::string path_text_6     = "./city/buildings_texture/6.jpg";
+  std::string path_text_6     = path_join(dirname, "buildings_texture/6.jpg");
   auto        build_texture_6 = load_image(path_text_6, texture_6->hdr, error);
 
   // buidling texture7
   auto        texture_7       = add_texture(scene, "texture7");
-  std::string path_text_7     = "./city/buildings_texture/7.jpg";
+  std::string path_text_7     = path_join(dirname, "buildings_texture/7.jpg");
   auto        build_texture_7 = load_image(path_text_7, texture_7->hdr, error);
 
   // buidling texture8
   auto        texture_8       = add_texture(scene, "texture8");
-  std::string path_text_8     = "./city/buildings_texture/8.jpg";
+  std::string path_text_8     = path_join(dirname, "buildings_texture/8.jpg");
   auto        build_texture_8 = load_image(path_text_8, texture_8->hdr, error);
 
   // buidling texture8_11
   auto        texture_8_11       = add_texture(scene, "texture8_11");
-  std::string path_text_8_11     = "./city/buildings_texture/8_11.jpg";
+  std::string path_text_8_11     = path_join(dirname, "buildings_texture/8_11.jpg");
   auto        build_texture_8_11 = load_image(
       path_text_8_11, texture_8_11->hdr, error);
 
   // buidling texture10_41
   auto        texture_10_41       = add_texture(scene, "texture10_41");
-  std::string path_text_10_41     = "./city/buildings_texture/10_41.jpg";
+  std::string path_text_10_41     = path_join(dirname, "buildings_texture/10_41.jpg");
   auto        build_texture_10_41 = load_image(
       path_text_10_41, texture_10_41->hdr, error);
 
   // buidling texture40_71
   auto        texture_40_71       = add_texture(scene, "texture40_71");
-  std::string path_text_40_71     = "./city/buildings_texture/40_71.jpg";
+  std::string path_text_40_71     = path_join(dirname, "buildings_texture/40_71.jpg");
   auto        build_texture_40_71 = load_image(
       path_text_40_71, texture_40_71->hdr, error);
 
   // buidling texture70_101
   auto        texture_70_101       = add_texture(scene, "texture70_101");
-  std::string path_text_70_101     = "./city/buildings_texture/70_101.jpg";
+  std::string path_text_70_101     = path_join(dirname, "buildings_texture/70_101.jpg");
   auto        build_texture_70_101 = load_image(
       path_text_70_101, texture_70_101->hdr, error);
 
   // buidling texturemore_101
   auto        texture_more_101       = add_texture(scene, "texturemore_101");
-  std::string path_text_more_101     = "./city/buildings_texture/more_101.jpg";
+  std::string path_text_more_101     = path_join(dirname, "buildings_texture/more_101.jpg");
   auto        build_texture_more_101 = load_image(
       path_text_more_101, texture_more_101->hdr, error);
 
   // buidling texture_colosseo
   auto        texture_colosseo   = add_texture(scene, "texture_colosseo");
-  std::string path_text_colosseo = "./city/buildings_texture/colosseo.jpg";
+  std::string path_text_colosseo = path_join(dirname, "buildings_texture/colosseo.jpg");
 
   // Check if exists the element of interest
   bool exist_element = false;
@@ -539,7 +539,7 @@ bool create_city_from_json(
       if (element.historic != "no") historic = element.historic;
 
       if (type_s == "standard") {
-        auto  tree  = add_complete_object(scene, name);
+        auto  tree  = add_complete_instance(scene, name);
         vec3f coord = {};
 
         for (auto& elem : element.new_coords) {
@@ -561,7 +561,7 @@ bool create_city_from_json(
         }
 
       } else if (type_s == "palm") {
-        auto  tree  = add_complete_object(scene, name);
+        auto  tree  = add_complete_instance(scene, name);
         vec3f coord = {};
 
         for (auto& elem : element.new_coords) {
@@ -580,7 +580,7 @@ bool create_city_from_json(
           continue;
         }
       } else if (type_s == "cypress") {
-        auto  tree  = add_complete_object(scene, name);
+        auto  tree  = add_complete_instance(scene, name);
         vec3f coord = {};
 
         for (auto& elem : element.new_coords) {
@@ -599,7 +599,7 @@ bool create_city_from_json(
           continue;
         }
       } else if (type_s == "oak") {
-        auto  tree  = add_complete_object(scene, name);
+        auto  tree  = add_complete_instance(scene, name);
         vec3f coord = {};
 
         for (auto& elem : element.new_coords) {
@@ -618,7 +618,7 @@ bool create_city_from_json(
           continue;
         }
       } else if (type_s == "pine") {
-        auto  tree  = add_complete_object(scene, name);
+        auto  tree  = add_complete_instance(scene, name);
         vec3f coord = {};
 
         for (auto& elem : element.new_coords) {
@@ -639,7 +639,7 @@ bool create_city_from_json(
       } else {
         std::vector<std::vector<Point>> polygon;
 
-        auto               build = add_complete_object(scene, name);
+        auto               build = add_complete_instance(scene, name);
         std::vector<vec3i> triangles;
         std::vector<vec3f> positions;
 
@@ -741,7 +741,7 @@ bool create_city_from_json(
 
         // Filling buildings
         if (type == "building") {
-          auto build2             = add_complete_object(scene, name + "_1");
+          auto build2             = add_complete_instance(scene, name + "_1");
           build2->material->color = color;
           std::vector<vec3f> _polygon2;
           for (auto point : positions) {
@@ -818,7 +818,7 @@ bool create_city_from_json(
         if (type_roof == "gabled") {
           std::vector<std::vector<Point>> polygon_roof;
 
-          auto               roof = add_complete_object(scene, name);
+          auto               roof = add_complete_instance(scene, name);
           std::vector<vec3i> triangles_roof;
           std::vector<vec3f> positions_roof;
 
@@ -872,7 +872,7 @@ bool create_city_from_json(
             }
 
             // Filling roofs
-            auto roof2             = add_complete_object(scene, name + "_roof");
+            auto roof2 = add_complete_instance(scene, name + "_roof");
             roof2->material->color = roof_color;
             std::vector<vec3f> _polygon2_roof;
             for (auto point : positions_roof) {
@@ -1545,7 +1545,7 @@ int main(int argc, const char* argv[]) {
 
   // Create city
   auto error = ""s;
-  if (!create_city_from_json(app->ioscene, app->all_geometries)) {
+  if (!create_city_from_json(app->ioscene, app->all_geometries, path)) {
     std::cout << " City not created! " << std::endl;
   }
 

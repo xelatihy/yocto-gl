@@ -10,6 +10,7 @@ out1
 tests/renderings/*.png
 tests/renderings/*.hdr
 tests1/
+tests2/
 .vs
 testsr/
 site/
