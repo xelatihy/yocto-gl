@@ -308,70 +308,66 @@ bool create_city_from_json(sceneio_scene* scene,
   if (!load_image(path_text_1, texture_1->hdr, ioerror)) return false;
 
   // buidling texture2
-  auto   texture_2       = add_texture(scene, "texture2");
-  string path_text_2     = path_join(dirname, "buildings_texture/2.jpg");
-  auto   build_texture_2 = load_image(path_text_2, texture_2->hdr, ioerror);
+  auto   texture_2   = add_texture(scene, "texture2");
+  string path_text_2 = path_join(dirname, "buildings_texture/2.jpg");
+  if (!load_image(path_text_2, texture_2->hdr, ioerror)) return false;
 
   // buidling texture3
-  auto   texture_3       = add_texture(scene, "texture3");
-  string path_text_3     = path_join(dirname, "buildings_texture/3.jpg");
-  auto   build_texture_3 = load_image(path_text_3, texture_3->hdr, ioerror);
+  auto   texture_3   = add_texture(scene, "texture3");
+  string path_text_3 = path_join(dirname, "buildings_texture/3.jpg");
+  if (!load_image(path_text_3, texture_3->hdr, ioerror)) return false;
 
   // buidling texture4
-  auto   texture_4       = add_texture(scene, "texture4");
-  string path_text_4     = path_join(dirname, "buildings_texture/4.jpg");
-  auto   build_texture_4 = load_image(path_text_4, texture_4->hdr, ioerror);
+  auto   texture_4   = add_texture(scene, "texture4");
+  string path_text_4 = path_join(dirname, "buildings_texture/4.jpg");
+  if (!load_image(path_text_4, texture_4->hdr, ioerror)) return false;
 
   // buidling texture5
-  auto   texture_5       = add_texture(scene, "texture5");
-  string path_text_5     = path_join(dirname, "buildings_texture/5.jpg");
-  auto   build_texture_5 = load_image(path_text_5, texture_5->hdr, ioerror);
+  auto   texture_5   = add_texture(scene, "texture5");
+  string path_text_5 = path_join(dirname, "buildings_texture/5.jpg");
+  if (!load_image(path_text_5, texture_5->hdr, ioerror)) return false;
 
   // buidling texture6
-  auto   texture_6       = add_texture(scene, "texture6");
-  string path_text_6     = path_join(dirname, "buildings_texture/6.jpg");
-  auto   build_texture_6 = load_image(path_text_6, texture_6->hdr, ioerror);
+  auto   texture_6   = add_texture(scene, "texture6");
+  string path_text_6 = path_join(dirname, "buildings_texture/6.jpg");
+  if (!load_image(path_text_6, texture_6->hdr, ioerror)) return false;
 
   // buidling texture7
-  auto   texture_7       = add_texture(scene, "texture7");
-  string path_text_7     = path_join(dirname, "buildings_texture/7.jpg");
-  auto   build_texture_7 = load_image(path_text_7, texture_7->hdr, ioerror);
+  auto   texture_7   = add_texture(scene, "texture7");
+  string path_text_7 = path_join(dirname, "buildings_texture/7.jpg");
+  if (!load_image(path_text_7, texture_7->hdr, ioerror)) return false;
 
   // buidling texture8
-  auto   texture_8       = add_texture(scene, "texture8");
-  string path_text_8     = path_join(dirname, "buildings_texture/8.jpg");
-  auto   build_texture_8 = load_image(path_text_8, texture_8->hdr, ioerror);
+  auto   texture_8   = add_texture(scene, "texture8");
+  string path_text_8 = path_join(dirname, "buildings_texture/8.jpg");
+  if (!load_image(path_text_8, texture_8->hdr, ioerror)) return false;
 
   // buidling texture8_11
-  auto   texture_8_11       = add_texture(scene, "texture8_11");
-  string path_text_8_11     = path_join(dirname, "buildings_texture/8_11.jpg");
-  auto   build_texture_8_11 = load_image(
-      path_text_8_11, texture_8_11->hdr, ioerror);
+  auto   texture_8_11   = add_texture(scene, "texture8_11");
+  string path_text_8_11 = path_join(dirname, "buildings_texture/8_11.jpg");
+  if (!load_image(path_text_8_11, texture_8_11->hdr, ioerror)) return false;
 
   // buidling texture10_41
   auto   texture_10_41   = add_texture(scene, "texture10_41");
   string path_text_10_41 = path_join(dirname, "buildings_texture/10_41.jpg");
-  auto   build_texture_10_41 = load_image(
-      path_text_10_41, texture_10_41->hdr, ioerror);
+  if (!load_image(path_text_10_41, texture_10_41->hdr, ioerror)) return false;
 
   // buidling texture40_71
   auto   texture_40_71   = add_texture(scene, "texture40_71");
   string path_text_40_71 = path_join(dirname, "buildings_texture/40_71.jpg");
-  auto   build_texture_40_71 = load_image(
-      path_text_40_71, texture_40_71->hdr, ioerror);
+  if (!load_image(path_text_40_71, texture_40_71->hdr, ioerror)) return false;
 
   // buidling texture70_101
   auto   texture_70_101   = add_texture(scene, "texture70_101");
   string path_text_70_101 = path_join(dirname, "buildings_texture/70_101.jpg");
-  auto   build_texture_70_101 = load_image(
-      path_text_70_101, texture_70_101->hdr, ioerror);
+  if (!load_image(path_text_70_101, texture_70_101->hdr, ioerror)) return false;
 
   // buidling texturemore_101
   auto   texture_more_101   = add_texture(scene, "texturemore_101");
   string path_text_more_101 = path_join(
       dirname, "buildings_texture/more_101.jpg");
-  auto build_texture_more_101 = load_image(
-      path_text_more_101, texture_more_101->hdr, ioerror);
+  if (!load_image(path_text_more_101, texture_more_101->hdr, ioerror))
+    return false;
 
   // buidling texture_colosseo
   auto   texture_colosseo   = add_texture(scene, "texture_colosseo");
@@ -517,13 +513,11 @@ bool create_city_from_json(sceneio_scene* scene,
         vector<vec3f> positions;
 
         vector<Point> vect_building;
-        vec3f         coord       = {};
-        float         height      = -1.0f;
-        float         roof_height = -1.0f;
-        int           level       = 0;
-        string        type        = "";
-
-        string::size_type sz;
+        auto          coord  = vec3f{0, 0, 0};
+        auto          height = -1.0f;
+        // auto          roof_height = -1.0f;
+        auto level = 0;
+        auto type  = ""s;
 
         type = element.type;
 
@@ -564,12 +558,12 @@ bool create_city_from_json(sceneio_scene* scene,
           vect_hole = {};
         }
 
-        int num_holes = element.new_holes.size();
+        auto num_holes = (int)element.new_holes.size();
 
-        bool color_given = false;
+        auto color_given = false;
         if (element.colour != "null") color_given = true;
 
-        bool grass_area = check_grass_type(element.type);
+        auto grass_area = check_grass_type(element.type);
         auto color = get_color(type, grass_area);  // vec3f{0.79, 0.74, 0.62};
 
         if (type_roof == "flat" && num_holes == 0) {
@@ -626,7 +620,7 @@ bool create_city_from_json(sceneio_scene* scene,
           for (int i = 0; i < positions.size(); i++) {
             auto prev_index = i - 1;
             if (prev_index == -1) {
-              prev_index = positions.size() - 1;
+              prev_index = (int)positions.size() - 1;
             }
             auto index = (int)_polygon2.size();
             _polygon2.push_back({positions[i].x, 0, positions[i].z});
@@ -641,8 +635,9 @@ bool create_city_from_json(sceneio_scene* scene,
 
           if (historic == "yes") {
             if (name == "building_relation_1834818") {  // colosseo
-              auto build_texture_colosseo = load_image(
-                  path_text_colosseo, texture_colosseo->hdr, ioerror);
+              if (!load_image(
+                      path_text_colosseo, texture_colosseo->hdr, ioerror))
+                return false;
               build2->material->color_tex = texture_colosseo;
             } else if (element.colour != "null") {
               string building_color   = element.colour;
@@ -696,17 +691,17 @@ bool create_city_from_json(sceneio_scene* scene,
           vector<vec3f> positions_roof;
 
           vector<Point> vect_roof;
-          float         roof_height = -1.0f;
-          vec3f         coord       = {};
-          float         height      = -1.0f;
+          auto          roof_height = -1.0f;
+          auto          coord       = vec3f{0, 0, 0};
+          auto          height      = -1.0f;
 
           height      = element.height;
           roof_height = element.roof_height;
 
-          float centroid_x = 0.0f;
-          float centroid_y = 0.0f;
-          int   num_vert   = (int)element.new_coords.size();
-          int   num_holes  = element.new_holes.size();
+          auto centroid_x = 0.0f;
+          auto centroid_y = 0.0f;
+          auto num_vert   = (int)element.new_coords.size();
+          auto num_holes  = (int)element.new_holes.size();
 
           if (num_holes == 0) {
             for (auto& elem : element.new_coords) {
@@ -755,7 +750,7 @@ bool create_city_from_json(sceneio_scene* scene,
             for (int i = 0; i < positions_roof.size(); i++) {
               auto prev_index = i - 1;
               if (prev_index == -1) {
-                prev_index = positions_roof.size() - 1;
+                prev_index = (int)positions_roof.size() - 1;
               }
               auto total_height = height + roof_height;
               auto index        = (int)_polygon2_roof.size();
@@ -776,6 +771,7 @@ bool create_city_from_json(sceneio_scene* scene,
       }
     }
   }
+
   return true;
 }
 
@@ -884,7 +880,7 @@ vector<double2> compute_area(
     sum_second_3 += second_prod_3;
   }
 
-  float area_3 = (float)(0.5f * fabs(sum_first_3 - sum_second_3));
+  // float area_3 = (float)(0.5f * fabs(sum_first_3 - sum_second_3));
 
   /*if (area_2 > area_1) {
     if (area_3 > area_2) {
@@ -1050,8 +1046,7 @@ bool load_geojson(const string& filename, vector<city_object>& all_buildings,
     auto properties = feature.at("properties");
     auto id         = properties.at("@id").get<string>();
     std::replace(id.begin(), id.end(), '/', '_');  // replace all '/' to '_'
-    auto type       = geometry.at("type").get<string>();
-    int  count_list = 0;
+    auto type = geometry.at("type").get<string>();
 
     if (type == "Polygon") {
       auto building = city_object{};
