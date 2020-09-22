@@ -102,7 +102,7 @@ class Coordinate {
 
 bool check_high(const json& properties) {
   if (!properties.contains("building")) return false;
-  auto building_category = properties["building"].get<string>();
+  auto building_category = properties.at("building").get<string>();
   auto high_building     = false;
   if ((building_category == "apartments") ||
       (building_category == "residential") || (building_category == "tower") ||
@@ -1013,10 +1013,10 @@ city_object assign_type(city_object building, const json& properties) {
 vector<city_object> assign_tree_type(
     city_object point, json properties, vector<city_object> all_buildings) {
   if (properties.contains("natural")) {
-    string point_type_nat = properties["natural"];
+    string point_type_nat = properties.at("natural");
     if (point_type_nat == "tree") {
       if (properties.contains("type")) {
-        string type_tree = properties["type"];
+        string type_tree = properties.at("type");
         if (type_tree == "palm") {
           point.type = "palm";
           all_buildings.push_back(point);
@@ -1034,7 +1034,7 @@ vector<city_object> assign_tree_type(
         point.type = "standard";
         all_buildings.push_back(point);
       } else if (properties.contains("genus")) {
-        string genus_tree = properties["genus"];
+        string genus_tree = properties.at("genus");
         if (genus_tree == "Quercus") {
           point.type = "oak";
           all_buildings.push_back(point);
@@ -1074,14 +1074,14 @@ bool check_valid_type(const city_object& building, json properties) {
 
 std::pair<vector<city_object>, Coordinate> data_analysis(json geojson_file,
     vector<city_object> all_buildings, Coordinate class_coord) {
-  for (auto& feature : geojson_file["features"]) {
-    auto   geometry   = feature["geometry"];
-    auto   properties = feature["properties"];
-    string id         = properties["@id"];
+  for (auto& feature : geojson_file.at("features")) {
+    auto   geometry   = feature.at("geometry");
+    auto   properties = feature.at("properties");
+    string id         = properties.at("@id");
     std::replace(id.begin(), id.end(), '/', '_');  // replace all '/' to '_'
     int count_list = 0;
 
-    if (geometry["type"] == "Polygon") {
+    if (geometry.at("type") == "Polygon") {
       auto building = city_object();
 
       building              = assign_type(building, properties);
@@ -1097,8 +1097,8 @@ std::pair<vector<city_object>, Coordinate> data_analysis(json geojson_file,
       vector<vector<array<double, 2>>> list_holes;
       vector<array<double, 2>>         list_coordinates = {};
 
-      int num_lists = geometry["coordinates"].size();
-      for (auto& list_coords : geometry["coordinates"]) {
+      int num_lists = geometry.at("coordinates").size();
+      for (auto& list_coords : geometry.at("coordinates")) {
         if (count_list == 0) {  // outer polygon
           building.level = level;
 
@@ -1140,7 +1140,7 @@ std::pair<vector<city_object>, Coordinate> data_analysis(json geojson_file,
       }
       count_list = 0;
 
-    } else if (geometry["type"] == "MultiPolygon") {
+    } else if (geometry.at("type") == "MultiPolygon") {
       auto building = city_object();
 
       building              = assign_type(building, properties);
@@ -1156,10 +1156,10 @@ std::pair<vector<city_object>, Coordinate> data_analysis(json geojson_file,
       vector<vector<array<double, 2>>> list_holes;
       vector<array<double, 2>>         list_coordinates = {};
 
-      for (auto& multi_pol : geometry["coordinates"]) {
+      for (auto& multi_pol : geometry.at("coordinates")) {
         int num_lists = multi_pol.size();
         for (auto& list_coords : multi_pol) {
-          // std::cout << geometry["coordinates"].size() << std::endl;
+          // std::cout << geometry.at("coordinates").size() << std::endl;
 
           if (count_list == 0) {  // outer polygon
             building.level = level;
@@ -1201,11 +1201,11 @@ std::pair<vector<city_object>, Coordinate> data_analysis(json geojson_file,
         count_list = 0;
       }
 
-    } else if (geometry["type"] == "LineString") {
+    } else if (geometry.at("type") == "LineString") {
       int cont = 0;
-      for (int i = 0; i < geometry["coordinates"].size() - 1; i++) {
-        auto coord_i      = geometry["coordinates"][i];
-        auto coord_i_next = geometry["coordinates"][i + 1];
+      for (int i = 0; i < geometry.at("coordinates").size() - 1; i++) {
+        auto coord_i      = geometry.at("coordinates")[i];
+        auto coord_i_next = geometry.at("coordinates")[i + 1];
 
         double x              = (double)coord_i[0];
         double y              = (double)coord_i[1];
@@ -1231,7 +1231,7 @@ std::pair<vector<city_object>, Coordinate> data_analysis(json geojson_file,
         }
 
         else if (properties.contains("natural")) {
-          string natural = properties["natural"];
+          string natural = properties.at("natural");
           line.type      = natural;
         } else {
           continue;
@@ -1248,9 +1248,9 @@ std::pair<vector<city_object>, Coordinate> data_analysis(json geojson_file,
         }
       }
 
-    } else if (geometry["type"] == "MultiLineString") {
+    } else if (geometry.at("type") == "MultiLineString") {
       int cont = 0;
-      for (auto& list_line : geometry["coordinates"]) {
+      for (auto& list_line : geometry.at("coordinates")) {
         for (int i = 0; i < list_line.size() - 1; i++) {
           auto coord_i      = list_line[i];
           auto coord_i_next = list_line[i + 1];
@@ -1287,9 +1287,9 @@ std::pair<vector<city_object>, Coordinate> data_analysis(json geojson_file,
         }
       }
 
-    } else if (geometry["type"] == "Point") {
+    } else if (geometry.at("type") == "Point") {
       vector<array<double, 2>> points;
-      points.push_back(geometry["coordinates"]);
+      points.push_back(geometry.at("coordinates"));
 
       auto point = city_object();
 
@@ -1373,7 +1373,7 @@ vector<city_object> generate_new_coordinates(json geojson_file,
     building_geometry.new_holes = new_holes;
 
     // std::cout << "------" << std::endl;
-    // std::cout << building_geometry["new_holes"] << std::endl;
+    // std::cout << building_geometry.at("new_holes") << std::endl;
     all_objects.push_back(building_geometry);
   }
   // std::cout << all_objects << std::endl;
