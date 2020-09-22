@@ -1067,7 +1067,7 @@ bool add_lists(ply_model* ply, const string& element, const string& property,
 }
 bool add_lists(ply_model* ply, const int* values, size_t count, int size,
     const string& element, const string& property) {
-  if (values != nullptr) return false;
+  if (values == nullptr) return false;
   if (add_property(ply, element, property, count, ply_type::i32, true) ==
       nullptr)
     return false;
