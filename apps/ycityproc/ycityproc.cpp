@@ -1056,7 +1056,7 @@ bool check_valid_type(const city_object& building, const json& properties) {
 }
 
 void generate_new_coordinates(const json& geojson_file,
-    vector<city_object>& all_buildings, Coordinate class_coord) {
+    vector<city_object>& all_buildings, Coordinate class_coord_) {
   // parse features
   for (auto& feature : geojson_file.at("features")) {
     auto geometry   = feature.at("geometry");
@@ -1082,7 +1082,7 @@ void generate_new_coordinates(const json& geojson_file,
           for (auto& coord : list_coords) {
             double x = (double)coord[0];
             double y = (double)coord[1];
-            class_coord.update(x, y);
+            // class_coord.update(x, y);
             array<double, 2> arr = {x, y};
             list_coordinates.push_back(arr);
           }
@@ -1124,8 +1124,8 @@ void generate_new_coordinates(const json& geojson_file,
             for (auto& coord : list_coords) {
               double x = (double)coord[0];
               double y = (double)coord[1];
-              class_coord.update(x, y);
-              class_coord.update(x, y);
+              // class_coord.update(x, y);
+              // class_coord.update(x, y);
               array<double, 2> arr = {x, y};
               list_coordinates.push_back(arr);
             }
@@ -1181,11 +1181,11 @@ void generate_new_coordinates(const json& geojson_file,
         line.thickness = get_thickness(line.type);
         line.coords    = area;
         all_buildings.push_back(line);
-        for (auto& coord : area) {
-          double x = (double)coord[0];
-          double y = (double)coord[1];
-          class_coord.update(x, y);
-        }
+        // for (auto& coord : area) {
+        //   double x = (double)coord[0];
+        //   double y = (double)coord[1];
+        //   class_coord.update(x, y);
+        // }
       }
     } else if (geometry.at("type") == "MultiLineString") {
       int cont = 0;
@@ -1210,11 +1210,11 @@ void generate_new_coordinates(const json& geojson_file,
           line.thickness = line_thickness;
           line.coords    = area;
           all_buildings.push_back(line);
-          for (auto& coord : area) {
-            double x = (double)coord[0];
-            double y = (double)coord[1];
-            class_coord.update(x, y);
-          }
+          // for (auto& coord : area) {
+          //   double x = (double)coord[0];
+          //   double y = (double)coord[1];
+          //   class_coord.update(x, y);
+          // }
         }
       }
     } else if (geometry.at("type") == "Point") {
@@ -1225,12 +1225,18 @@ void generate_new_coordinates(const json& geojson_file,
       if (point.type == "null") continue;
       point.name   = "point_" + id;
       point.coords = points;
-      for (auto& coord : points) {
-        double x = (double)coord[0];
-        double y = (double)coord[1];
-        class_coord.update(x, y);
-      }
+      // for (auto& coord : points) {
+      //   double x = (double)coord[0];
+      //   double y = (double)coord[1];
+      //   class_coord.update(x, y);
+      // }
     }
+  }
+
+  // compute bounds
+  auto bounds = Coordinate{};
+  for (auto& element : all_buildings) {
+    for (auto [x, y] : element.coords) bounds.update(x, y);
   }
 
   // scale elements
@@ -1238,21 +1244,21 @@ void generate_new_coordinates(const json& geojson_file,
     element.height     = generate_height(element, scale);
     element.new_coords = element.coords;
     for (auto& [x, y] : element.new_coords) {
-      x = (x - class_coord.x_minimum) /
-              (class_coord.x_maximum - class_coord.x_minimum) * scale -
+      x = (x - bounds.x_minimum) / (bounds.x_maximum - bounds.x_minimum) *
+              scale -
           (scale / 2);
-      y = (y - class_coord.y_minimum) /
-              (class_coord.y_maximum - class_coord.y_minimum) * scale -
+      y = (y - bounds.y_minimum) / (bounds.y_maximum - bounds.y_minimum) *
+              scale -
           (scale / 2);
     }
     element.new_holes = element.holes;
     for (auto& hole : element.new_holes) {
       for (auto& [x, y] : hole) {
-        x = (x - class_coord.x_minimum) /
-                (class_coord.x_maximum - class_coord.x_minimum) * scale -
+        x = (x - bounds.x_minimum) / (bounds.x_maximum - bounds.x_minimum) *
+                scale -
             (scale / 2);
-        y = (y - class_coord.y_minimum) /
-                (class_coord.y_maximum - class_coord.y_minimum) * scale -
+        y = (y - bounds.y_minimum) / (bounds.y_maximum - bounds.y_minimum) *
+                scale -
             (scale / 2);
       }
     }
