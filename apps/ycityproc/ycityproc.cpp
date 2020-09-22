@@ -1055,8 +1055,9 @@ bool check_valid_type(const city_object& building, const json& properties) {
   return valid;
 }
 
-void data_analysis(const json& geojson_file, vector<city_object>& all_buildings,
-    Coordinate& class_coord) {
+void generate_new_coordinates(const json& geojson_file,
+    vector<city_object>& all_buildings, Coordinate class_coord) {
+  // parse features
   for (auto& feature : geojson_file.at("features")) {
     auto geometry   = feature.at("geometry");
     auto properties = feature.at("properties");
@@ -1231,19 +1232,10 @@ void data_analysis(const json& geojson_file, vector<city_object>& all_buildings,
       }
     }
   }
-}
 
-void generate_new_coordinates(const json& geojson_file,
-    vector<city_object>& all_buildings, Coordinate class_coord) {
-  data_analysis(geojson_file, all_buildings, class_coord);
-
-  // Scale the CityObject outer polygon in the scene
+  // scale elements
   for (auto& element : all_buildings) {
-    element.height = generate_height(element, scale);
-
-    vector<array<double, 2>>         new_coords = {};
-    vector<vector<array<double, 2>>> new_holes  = {};
-
+    element.height     = generate_height(element, scale);
     element.new_coords = element.coords;
     for (auto& [x, y] : element.new_coords) {
       x = (x - class_coord.x_minimum) /
@@ -1266,8 +1258,6 @@ void generate_new_coordinates(const json& geojson_file,
     }
   }
 }
-
-//  ---------------- MAIN FUNCTION --------------------------
 
 // load/save json
 static bool load_json(const string& filename, json& js, string& error) {
