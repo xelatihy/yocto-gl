@@ -49,22 +49,22 @@ using json = nlohmann::json;
 using namespace std::string_literals;
 using std::array;
 
-int scale = 50;  // 10
+using double2 = array<double, 2>;
 
 struct city_object {
-  string                           name        = "";
-  string                           type        = "";
-  string                           roof_shape  = "";
-  string                           colour      = "";
-  int                              level       = 0;
-  float                            height      = 0;
-  float                            roof_height = 0;
-  string                           historic    = "";
-  float                            thickness   = 0;
-  vector<array<double, 2>>         coords      = {};
-  vector<array<double, 2>>         new_coords  = {};
-  vector<vector<array<double, 2>>> holes       = {};
-  vector<vector<array<double, 2>>> new_holes   = {};
+  string                  name        = "";
+  string                  type        = "";
+  string                  roof_shape  = "";
+  string                  colour      = "";
+  int                     level       = 0;
+  float                   height      = 0;
+  float                   roof_height = 0;
+  string                  historic    = "";
+  float                   thickness   = 0;
+  vector<double2>         coords      = {};
+  vector<double2>         new_coords  = {};
+  vector<vector<double2>> holes       = {};
+  vector<vector<double2>> new_holes   = {};
 };
 
 class Coordinate {
@@ -178,9 +178,9 @@ int generate_building_level(
   return level;
 }
 
-float generate_height(const city_object& building, int scale) {
+float generate_height(const city_object& building, float scale) {
   if (building.type == "building" && building.level > 0) {
-    return (building.level + (scale / 20.0f)) / 20.0f;
+    return (building.level + scale / 20) / 20;
   } else if (building.type == "water") {
     return 0.0001f;
   } else if (building.type == "highway") {
@@ -192,7 +192,7 @@ float generate_height(const city_object& building, int scale) {
   }
 }
 
-float generate_roof_height(const string& roof_h, int scale) {
+float generate_roof_height(const string& roof_h, float scale) {
   if (roof_h != "null") {
     string::size_type sz;
     return std::stof(roof_h, &sz) / scale;
@@ -812,10 +812,9 @@ bool create_city_from_json(sceneio_scene* scene,
   return true;
 }
 
-vector<array<double, 2>> compute_area(
+vector<double2> compute_area(
     double x, double next_x, double y, double next_y, double road_thickness) {
-  vector<array<double, 2>> line_1 = {
-      {next_x + road_thickness, next_y + road_thickness},
+  vector<double2> line_1 = {{next_x + road_thickness, next_y + road_thickness},
       {next_x - road_thickness, next_y - road_thickness},
       {x - road_thickness, y - road_thickness},
       {x + road_thickness, y + road_thickness}};
@@ -851,7 +850,7 @@ vector<array<double, 2>> compute_area(
   float area_1 = (float)(0.5f * fabs(sum_first - sum_second));
 
   // -----------
-  vector<array<double, 2>> line_2 = {{next_x + road_thickness, next_y},
+  vector<double2> line_2 = {{next_x + road_thickness, next_y},
       {next_x - road_thickness, next_y}, {x - road_thickness, y},
       {x + road_thickness, y}};
 
@@ -886,7 +885,7 @@ vector<array<double, 2>> compute_area(
   float area_2 = (float)(0.5f * fabs(sum_first_2 - sum_second_2));
 
   // -----------
-  vector<array<double, 2>> line_3 = {{next_x, next_y + road_thickness},
+  vector<double2> line_3 = {{next_x, next_y + road_thickness},
       {next_x, next_y - road_thickness}, {x, y - road_thickness},
       {x, y + road_thickness}};
 
@@ -948,7 +947,7 @@ float get_thickness(const string& type) {
   return thickness;
 }
 
-void assign_type(city_object& building, const json& properties) {
+void assign_type(city_object& building, const json& properties, float scale) {
   if (properties.contains("building")) {
     building.type = "building";
     if (properties.contains("roof:shape")) {
@@ -1073,7 +1072,7 @@ static bool load_json(const string& filename, json& js, string& error) {
 }
 
 bool load_geojson(const string& filename, vector<city_object>& all_buildings,
-    string& ioerror) {
+    string& ioerror, float scale = 50) {
   // load json
   auto geojson = json{};
   if (!load_json(filename, geojson, ioerror)) return false;
@@ -1089,21 +1088,21 @@ bool load_geojson(const string& filename, vector<city_object>& all_buildings,
 
     if (type == "Polygon") {
       auto building = city_object{};
-      assign_type(building, properties);
+      assign_type(building, properties, scale);
       auto footprint_type = building.type;
       if (footprint_type == "null") continue;
       auto level = generate_building_level(footprint_type, properties);
-      vector<array<double, 2>>         couple;
-      vector<vector<array<double, 2>>> list_holes;
-      vector<array<double, 2>>         list_coordinates = {};
+      vector<double2>         couple;
+      vector<vector<double2>> list_holes;
+      vector<double2>         list_coordinates = {};
       auto num_lists = (int)geometry.at("coordinates").size();
       for (auto& list_coords : geometry.at("coordinates")) {
         if (count_list == 0) {  // outer polygon
           building.level = level;
           for (auto& coord : list_coords) {
-            double           x   = (double)coord[0];
-            double           y   = (double)coord[1];
-            array<double, 2> arr = {x, y};
+            double  x   = (double)coord[0];
+            double  y   = (double)coord[1];
+            double2 arr = {x, y};
             list_coordinates.push_back(arr);
           }
           building.coords   = list_coordinates;
@@ -1130,21 +1129,21 @@ bool load_geojson(const string& filename, vector<city_object>& all_buildings,
       count_list = 0;
     } else if (type == "MultiPolygon") {
       auto building = city_object{};
-      assign_type(building, properties);
+      assign_type(building, properties, scale);
       if (building.type == "null") continue;
       auto level = generate_building_level(building.type, properties);
-      vector<array<double, 2>>         couple;
-      vector<vector<array<double, 2>>> list_holes;
-      vector<array<double, 2>>         list_coordinates = {};
+      vector<double2>         couple;
+      vector<vector<double2>> list_holes;
+      vector<double2>         list_coordinates = {};
       for (auto& multi_pol : geometry.at("coordinates")) {
         int num_lists = multi_pol.size();
         for (auto& list_coords : multi_pol) {
           if (count_list == 0) {  // outer polygon
             building.level = level;
             for (auto& coord : list_coords) {
-              double           x   = (double)coord[0];
-              double           y   = (double)coord[1];
-              array<double, 2> arr = {x, y};
+              double  x   = (double)coord[0];
+              double  y   = (double)coord[1];
+              double2 arr = {x, y};
               list_coordinates.push_back(arr);
             }
             building.coords = list_coordinates;
@@ -1226,7 +1225,7 @@ bool load_geojson(const string& filename, vector<city_object>& all_buildings,
         }
       }
     } else if (geometry.at("type") == "Point") {
-      vector<array<double, 2>> points;
+      vector<double2> points;
       points.push_back(geometry.at("coordinates"));
       auto point = city_object{};
       assign_tree_type(point, properties);
