@@ -128,7 +128,8 @@ bool check_int(const string& lev) {
   return false;
 }
 
-int generate_building_level(const string& footprint_type, json properties) {
+int generate_building_level(
+    const string& footprint_type, const json& properties) {
   int               level         = 1;
   float             height        = -1.0f;
   bool              high_building = false;
@@ -158,17 +159,13 @@ int generate_building_level(const string& footprint_type, json properties) {
 
   // Check if the building:height is given in the GeoJson file
   if (footprint_type == "building" && properties.contains("height")) {
-    string h     = properties["height"];
-    bool   digit = check_digit(h);
-    if (digit) {
-      height = std::stof(h, &sz);
-    }
+    auto h = properties.at("height").get<string>();
+    if (check_digit(h)) height = std::stof(h, &sz);
   }
 
   if (footprint_type == "building" && properties.contains("building:height")) {
-    auto h     = properties.at("building:height").get<string>();
-    bool digit = check_digit(h);
-    if (digit) height = std::stof(h, &sz);
+    auto h = properties.at("building:height").get<string>();
+    if (check_digit(h)) height = std::stof(h, &sz);
   }
 
   if (height > -1.0) level = int(float(height) / 3.2);
@@ -941,7 +938,7 @@ vector<array<double, 2>> compute_area(
   return line_1;
 }
 
-float get_thickness(string type) {
+float get_thickness(const string& type) {
   float thickness = 0.0001;
   if (type == "pedestrian") {
     thickness = 0.00005;
@@ -951,77 +948,62 @@ float get_thickness(string type) {
   return thickness;
 }
 
-city_object assign_type(city_object building, json properties) {
+city_object assign_type(city_object building, const json& properties) {
   if (properties.contains("building")) {
     building.type = "building";
-    if (!properties["roof:shape"].empty()) {
-      string roof_shape = properties["roof:shape"];
+    if (properties.contains("roof:shape")) {
+      string roof_shape = properties.at("roof:shape").get<string>();
       if (roof_shape == "gabled" || roof_shape == "onion" ||
-          roof_shape == "pyramid")
+          roof_shape == "pyramid") {
         building.roof_shape = "gabled";
-      else if (roof_shape == "flat")
+      } else if (roof_shape == "flat") {
         building.roof_shape = "flat";
-    }
-
-    if (!properties["roof:height"].empty()) {
-      string roof_h        = properties["roof:height"];
-      double roof_height   = generate_roof_height(roof_h, scale);
-      building.roof_height = roof_height;
-    }
-
-    if (properties.contains("historic")) {
-      building.historic = "yes";
-      if (!properties["building:colour"].empty()) {
-        string build_colour = properties["building:colour"];
-        building.colour     = build_colour;
       }
     }
-
+    if (properties.contains("roof:height")) {
+      auto roof_height     = properties.at("roof:height").get<string>();
+      building.roof_height = generate_roof_height(roof_height, scale);
+    }
+    if (properties.contains("historic")) {
+      building.historic = "yes";
+      if (properties.contains("building:colour")) {
+        auto color      = properties.at("building:colour").get<string>();
+        building.colour = color;
+      }
+    }
     if (properties.contains("tourism")) {
-      string tourism = properties["tourism"];
+      auto tourism = properties.at("tourism").get<string>();
       if (tourism == "attraction") {
         building.historic = "yes";
-        if (!properties["building:colour"].empty()) {
-          string build_colour = properties["building:colour"];
-          building.colour     = build_colour;
+        if (properties.contains("building:colour")) {
+          auto color      = properties.at("building:colour").get<string>();
+          building.colour = color;
         }
       }
     }
-  }
-
-  else if (properties.contains("water")) {
+  } else if (properties.contains("water")) {
     building.type = "water";
-  }
-
-  else if (properties.contains("landuse")) {
-    string landuse = properties["landuse"];
-    building.type  = landuse;
-  }
-
-  else if (properties.contains("natural")) {
-    string natural = properties["natural"];
+  } else if (properties.contains("landuse")) {
+    auto landuse  = properties.at("landuse").get<string>();
+    building.type = landuse;
+  } else if (properties.contains("natural")) {
+    auto natural = properties.at("natural").get<string>();
     if (natural == "wood") {
       building.type = "forest";
     } else {
       building.type = natural;
     }
-  }
-
-  else if (properties.contains("leisure")) {
-    string leisure = properties["leisure"];
-    building.type  = leisure;
-  }
-
-  else if (properties.contains("highway")) {
+  } else if (properties.contains("leisure")) {
+    auto leisure  = properties.at("leisure").get<string>();
+    building.type = leisure;
+  } else if (properties.contains("highway")) {
     bool pedestrian = check_pedestrian(properties);
     if (pedestrian) {
       building.type = "pedestrian";
     } else {
       building.type = "highway";
     }
-  }
-
-  else {
+  } else {
     building.type = "null";
   }
 
