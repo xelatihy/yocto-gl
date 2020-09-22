@@ -1045,7 +1045,7 @@ void assign_tree_type(city_object& point, const json& properties) {
   }
 }
 
-bool check_valid_type(const city_object& building, json properties) {
+bool check_valid_type(const city_object& building, const json& properties) {
   bool valid      = false;
   bool grass_area = check_grass_type(building.type);
   if (building.type == "building" || building.type == "water" ||
@@ -1055,8 +1055,9 @@ bool check_valid_type(const city_object& building, json properties) {
   return valid;
 }
 
-std::pair<vector<city_object>, Coordinate> data_analysis(json geojson_file,
-    vector<city_object> all_buildings, Coordinate class_coord) {
+std::pair<vector<city_object>, Coordinate> data_analysis(
+    const json& geojson_file, vector<city_object> all_buildings,
+    Coordinate class_coord) {
   for (auto& feature : geojson_file.at("features")) {
     auto geometry   = feature.at("geometry");
     auto properties = feature.at("properties");
@@ -1234,7 +1235,7 @@ std::pair<vector<city_object>, Coordinate> data_analysis(json geojson_file,
   return {all_buildings, class_coord};
 }
 
-vector<city_object> generate_new_coordinates(json geojson_file,
+vector<city_object> generate_new_coordinates(const json& geojson_file,
     vector<city_object> all_buildings, Coordinate class_coord) {
   std::pair<vector<city_object>, Coordinate> gen_out;
 
