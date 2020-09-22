@@ -1089,99 +1089,48 @@ bool load_geojson(const string& filename, vector<city_object>& all_buildings,
     if (type == "Polygon") {
       auto building = city_object{};
       assign_type(building, properties, scale);
-      auto footprint_type = building.type;
-      if (footprint_type == "null") continue;
-      auto level = generate_building_level(footprint_type, properties);
-      vector<double2>         couple;
-      vector<vector<double2>> list_holes;
-      vector<double2>         list_coordinates = {};
-      auto num_lists = (int)geometry.at("coordinates").size();
+      if (building.type == "null") continue;
+      building.name  = "building_" + id;
+      building.level = generate_building_level(building.type, properties);
+      auto first     = true;
       for (auto& list_coords : geometry.at("coordinates")) {
-        if (count_list == 0) {  // outer polygon
-          building.level = level;
-          for (auto& coord : list_coords) {
-            double  x   = (double)coord[0];
-            double  y   = (double)coord[1];
-            double2 arr = {x, y};
-            list_coordinates.push_back(arr);
-          }
-          building.coords   = list_coordinates;
-          string name       = id;
-          string build_name = "building_" + name;
-          building.name     = build_name;
-          count_list++;
+        if (first) {  // outer polygon
+          building.coords = list_coords.get<vector<double2>>();
+          first           = false;
         } else {  // analysis of building holes
-          for (auto& coord : list_coords) {
-            double x = (double)coord[0];
-            double y = (double)coord[1];
-            couple.push_back({x, y});
-          }
-          list_holes.push_back(couple);
-          couple = {};
-          count_list++;
-        }
-        if (count_list == num_lists) {
-          building.holes  = list_holes;
-          auto valid_type = check_valid_type(building, properties);
-          if (valid_type) all_buildings.push_back(building);
+          building.holes.push_back(list_coords.get<vector<double2>>());
         }
       }
-      count_list = 0;
+      if (!check_valid_type(building, properties)) continue;
+      all_buildings.push_back(building);
     } else if (type == "MultiPolygon") {
       auto building = city_object{};
       assign_type(building, properties, scale);
       if (building.type == "null") continue;
-      auto level = generate_building_level(building.type, properties);
-      vector<double2>         couple;
-      vector<vector<double2>> list_holes;
-      vector<double2>         list_coordinates = {};
+      building.name  = "building_" + id;
+      building.level = generate_building_level(building.type, properties);
+      auto first     = true;
       for (auto& multi_pol : geometry.at("coordinates")) {
-        int num_lists = multi_pol.size();
         for (auto& list_coords : multi_pol) {
-          if (count_list == 0) {  // outer polygon
-            building.level = level;
-            for (auto& coord : list_coords) {
-              double  x   = (double)coord[0];
-              double  y   = (double)coord[1];
-              double2 arr = {x, y};
-              list_coordinates.push_back(arr);
-            }
-            building.coords = list_coordinates;
-            building.name   = "building_" + id;
-            count_list++;
+          if (first) {  // outer polygon
+            building.coords = list_coords.get<vector<double2>>();
+            first           = false;
           } else {  // analysis of building holes
-            for (auto& coord : list_coords) {
-              double x = (double)coord[0];
-              double y = (double)coord[1];
-              couple.push_back({x, y});
-            }
-            list_holes.push_back(couple);
-            couple = {};
-            count_list++;
-          }
-          if (count_list == num_lists) {
-            building.holes  = list_holes;
-            bool valid_type = check_valid_type(building, properties);
-            if (valid_type) all_buildings.push_back(building);
+            building.holes.push_back(list_coords.get<vector<double2>>());
           }
         }
-        count_list = 0;
       }
+      if (!check_valid_type(building, properties)) continue;
+      all_buildings.push_back(building);
     } else if (geometry.at("type") == "LineString") {
-      int cont = 0;
+      auto count = 0;
       for (int i = 0; i < geometry.at("coordinates").size() - 1; i++) {
-        auto   coord_i        = geometry.at("coordinates")[i];
-        auto   coord_i_next   = geometry.at("coordinates")[i + 1];
-        double x              = (double)coord_i[0];
-        double y              = (double)coord_i[1];
-        double next_x         = (double)coord_i_next[0];
-        double next_y         = (double)coord_i_next[1];
-        double line_thickness = 0.00005f;
-        auto   area = compute_area(x, next_x, y, next_y, line_thickness);
-        auto   line = city_object{};
-        string name = id;
-        line.name   = "line_" + name + std::to_string(cont);
-        cont++;
+        auto [x0, y0]  = geometry.at("coordinates")[i + 0].get<double2>();
+        auto [x1, y1]  = geometry.at("coordinates")[i + 1].get<double2>();
+        auto thickness = 0.00005f;
+        auto area      = compute_area(x0, x1, y0, y1, thickness);
+        auto line      = city_object{};
+        line.name      = "line_" + id + std::to_string(count++);
         if (properties.contains("highway")) {
           bool pedestrian = check_pedestrian(properties);
           if (pedestrian) {
@@ -1200,38 +1149,32 @@ bool load_geojson(const string& filename, vector<city_object>& all_buildings,
         all_buildings.push_back(line);
       }
     } else if (geometry.at("type") == "MultiLineString") {
-      int cont = 0;
+      auto count = 0;
       for (auto& list_line : geometry.at("coordinates")) {
         for (int i = 0; i < list_line.size() - 1; i++) {
-          auto   coord_i        = list_line[i];
-          auto   coord_i_next   = list_line[i + 1];
-          double x              = (double)coord_i[0];
-          double y              = (double)coord_i[1];
-          double next_x         = (double)coord_i_next[0];
-          double next_y         = (double)coord_i_next[1];
-          double line_thickness = 0.0004f;
-          auto   area = compute_area(x, next_x, y, next_y, line_thickness);
-          auto   line = city_object{};
-          line.name   = "multiline_" + id + std::to_string(cont);
-          cont++;
+          auto [x0, y0]  = list_line[i + 0].get<double2>();
+          auto [x1, y1]  = list_line[i + 1].get<double2>();
+          auto thickness = 0.0004f;
+          auto area      = compute_area(x0, x1, y0, y1, thickness);
+          auto line      = city_object{};
+          line.name      = "multiline_" + id + std::to_string(count++);
           if (properties.contains("waterway")) {
             line.type = "water";
           } else {
             continue;
           }
-          line.thickness = line_thickness;
+          line.thickness = thickness;
           line.coords    = area;
           all_buildings.push_back(line);
         }
       }
     } else if (geometry.at("type") == "Point") {
-      vector<double2> points;
-      points.push_back(geometry.at("coordinates"));
       auto point = city_object{};
       assign_tree_type(point, properties);
       if (point.type == "null") continue;
       point.name   = "point_" + id;
-      point.coords = points;
+      point.coords = {geometry.at("coordinates").get<double2>()};
+      all_buildings.push_back(point);
     }
   }
 
@@ -1265,6 +1208,8 @@ bool load_geojson(const string& filename, vector<city_object>& all_buildings,
       }
     }
   }
+
+  return true;
 }
 
 int main(int argc, const char* argv[]) {
