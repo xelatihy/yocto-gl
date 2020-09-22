@@ -1493,41 +1493,29 @@ vector<CityObject> generate_new_coordinates(json geojson_file,
 //  ---------------- MAIN FUNCTION --------------------------
 
 int main(int argc, const char* argv[]) {
-  // application
-  auto app_guard = std::make_unique<app_state>();
-  auto app       = app_guard.get();
-
-  // command line options
-  auto camera_name = ""s;
-  auto add_skyenv  = false;
+  // command line parameters
+  auto validate   = false;
+  auto info       = false;
+  auto copyright  = ""s;
+  auto add_skyenv = false;
+  auto output     = "out.json"s;
+  auto path       = ""s;
 
   // parse command line
-  auto cli = make_cli("save_city", "save the scene");
-  add_option(cli, "--camera", camera_name, "Camera name.");
-  add_option(
-      cli, "--resolution,-r", app->params.resolution, "Image resolution.");
-  add_option(cli, "--samples,-s", app->params.samples, "Number of samples.");
-  add_option(cli, "--tracer,-t", app->params.sampler, "Tracer type.",
-      trace_sampler_names);
-  add_option(
-      cli, "--bounces,-b", app->params.bounces, "Maximum number of bounces.");
-  add_option(cli, "--clamp", app->params.clamp, "Final pixel clamping.");
-  add_option(cli, "--skyenv/--no-skyenv", add_skyenv, "Add sky envmap");
-  add_option(
-      cli, "--geojson,-g", app->geojson_filename, "Geojson filename", true);
-  add_option(cli, "--save,-fs", app->filename_save, "Save filename", true);
-
+  auto cli = make_cli("ycityproc", "Process scene");
+  add_option(cli, "--info,-i", info, "print scene info");
+  add_option(cli, "--copyright,-c", copyright, "copyright string");
+  add_option(cli, "--validate/--no-validate", validate, "Validate scene");
+  add_option(cli, "--output,-o", output, "output scene");
+  add_option(cli, "dirname", path, "input directory", true);
   parse_cli(cli, argc, argv);
 
-  //------------ PREPARE DATA TO LOAD THE SCENE ----------------
+  // load data
 
-  // Path to the GeoJson file
-  const string path = app->geojson_filename;  // "./geojson/";
-
-  // Read GeoJson files
+  // read GeoJson files
   auto all_buildings = vector<CityObject>{};
   auto class_coord   = Coordinate();
-
+  auto ioerror       = ""s;
   for (auto& filename : list_directory(path)) {
     // std::cout << file.path() << std::endl;
     if (path_extension(filename) == ".geojson") {
@@ -1538,20 +1526,35 @@ int main(int argc, const char* argv[]) {
     }
   }
 
-  app->all_geometries = all_buildings;
-
   // Create city
-  auto error = ""s;
-  if (!create_city_from_json(app->ioscene, app->all_geometries, path)) {
+  auto scene_guard = std::make_unique<sceneio_scene>();
+  auto scene       = scene_guard.get();
+  if (!create_city_from_json(scene, all_buildings, path)) {
     std::cout << " City not created! " << std::endl;
   }
 
-  if (add_skyenv) add_sky(app->ioscene);
+  // sky
+  if (add_skyenv) add_sky(scene);
 
-  // Save the scene
-  string save_path = app->filename_save;  //"./scene/city.json";
-  save_scene(save_path, app->ioscene, error);
-  save_path = ""s;
+  // print info
+  if (info) {
+    print_info("scene stats ------------");
+    for (auto stat : scene_stats(scene)) print_info(stat);
+  }
+
+  // make a directory if needed
+  if (!make_directory(path_dirname(output), ioerror)) print_fatal(ioerror);
+  if (!scene->shapes.empty()) {
+    if (!make_directory(path_join(path_dirname(output), "shapes"), ioerror))
+      print_fatal(ioerror);
+  }
+  if (!scene->textures.empty()) {
+    if (!make_directory(path_join(path_dirname(output), "textures"), ioerror))
+      print_fatal(ioerror);
+  }
+
+  // save scene
+  if (!save_scene(output, scene, ioerror, print_progress)) print_fatal(ioerror);
 
   // Done
   return 0;

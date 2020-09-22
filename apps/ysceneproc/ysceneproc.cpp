@@ -786,7 +786,7 @@ int main(int argc, const char* argv[]) {
   auto filename  = "scene.json"s;
 
   // parse command line
-  auto cli = make_cli("yscnproc", "Process scene");
+  auto cli = make_cli("ysceneproc", "Process scene");
   add_option(cli, "--info,-i", info, "print scene info");
   add_option(cli, "--copyright,-c", copyright, "copyright string");
   add_option(cli, "--validate/--no-validate", validate, "Validate scene");
