@@ -948,7 +948,7 @@ float get_thickness(const string& type) {
   return thickness;
 }
 
-city_object assign_type(city_object building, const json& properties) {
+void assign_type(city_object& building, const json& properties) {
   if (properties.contains("building")) {
     building.type = "building";
     if (properties.contains("roof:shape")) {
@@ -1006,58 +1006,43 @@ city_object assign_type(city_object building, const json& properties) {
   } else {
     building.type = "null";
   }
-
-  return building;
 }
 
-vector<city_object> assign_tree_type(
-    city_object point, json properties, vector<city_object> all_buildings) {
+void assign_tree_type(city_object& point, const json& properties) {
   if (properties.contains("natural")) {
-    string point_type_nat = properties.at("natural");
+    auto point_type_nat = properties.at("natural").get<string>();
     if (point_type_nat == "tree") {
       if (properties.contains("type")) {
-        string type_tree = properties.at("type");
+        auto type_tree = properties.at("type").get<string>();
         if (type_tree == "palm") {
           point.type = "palm";
-          all_buildings.push_back(point);
         } else if (type_tree == "pine") {
           point.type = "pine";
-          all_buildings.push_back(point);
         } else if (type_tree == "cypress") {
           point.type = "cypress";
-          all_buildings.push_back(point);
         } else {
           point.type = "standard";
-          all_buildings.push_back(point);
         }
       } else if (properties.contains("tree")) {
         point.type = "standard";
-        all_buildings.push_back(point);
       } else if (properties.contains("genus")) {
-        string genus_tree = properties.at("genus");
+        auto genus_tree = properties.at("genus").get<string>();
         if (genus_tree == "Quercus") {
           point.type = "oak";
-          all_buildings.push_back(point);
         } else if (genus_tree == "Cupressus") {
           point.type = "cypress";
-          all_buildings.push_back(point);
         } else if (genus_tree == "Pinus") {
           point.type = "pine";
-          all_buildings.push_back(point);
         } else {
           point.type = "standard";
-          all_buildings.push_back(point);
         }
       } else {
         point.type = "standard";
-        all_buildings.push_back(point);
       }
     }
   } else {
     point.type = "null";
   }
-
-  return all_buildings;
 }
 
 bool check_valid_type(const city_object& building, json properties) {
@@ -1073,33 +1058,26 @@ bool check_valid_type(const city_object& building, json properties) {
 std::pair<vector<city_object>, Coordinate> data_analysis(json geojson_file,
     vector<city_object> all_buildings, Coordinate class_coord) {
   for (auto& feature : geojson_file.at("features")) {
-    auto   geometry   = feature.at("geometry");
-    auto   properties = feature.at("properties");
-    string id         = properties.at("@id");
+    auto geometry   = feature.at("geometry");
+    auto properties = feature.at("properties");
+    auto id         = properties.at("@id").get<string>();
     std::replace(id.begin(), id.end(), '/', '_');  // replace all '/' to '_'
-    int count_list = 0;
+    auto type       = geometry.at("type").get<string>();
+    int  count_list = 0;
 
-    if (geometry.at("type") == "Polygon") {
-      auto building = city_object();
-
-      building              = assign_type(building, properties);
-      string footprint_type = building.type;
-
-      if (footprint_type == "null") {
-        continue;
-      }
-
-      int level = generate_building_level(footprint_type, properties);
-
+    if (type == "Polygon") {
+      auto building = city_object{};
+      assign_type(building, properties);
+      auto footprint_type = building.type;
+      if (footprint_type == "null") continue;
+      auto level = generate_building_level(footprint_type, properties);
       vector<array<double, 2>>         couple;
       vector<vector<array<double, 2>>> list_holes;
       vector<array<double, 2>>         list_coordinates = {};
-
-      int num_lists = geometry.at("coordinates").size();
+      auto num_lists = (int)geometry.at("coordinates").size();
       for (auto& list_coords : geometry.at("coordinates")) {
         if (count_list == 0) {  // outer polygon
           building.level = level;
-
           for (auto& coord : list_coords) {
             double x = (double)coord[0];
             double y = (double)coord[1];
@@ -1107,16 +1085,12 @@ std::pair<vector<city_object>, Coordinate> data_analysis(json geojson_file,
             array<double, 2> arr = {x, y};
             list_coordinates.push_back(arr);
           }
-
-          building.coords = list_coordinates;
-
+          building.coords   = list_coordinates;
           string name       = id;
           string build_name = "building_" + name;
           building.name     = build_name;
-
           count_list++;
         } else {  // analysis of building holes
-
           for (auto& coord : list_coords) {
             double x = (double)coord[0];
             double y = (double)coord[1];
@@ -1124,44 +1098,28 @@ std::pair<vector<city_object>, Coordinate> data_analysis(json geojson_file,
           }
           list_holes.push_back(couple);
           couple = {};
-
           count_list++;
         }
-        // std::cout << count << std::endl;
-
         if (count_list == num_lists) {
-          building.holes = list_holes;
-
-          bool valid_type = check_valid_type(building, properties);
+          building.holes  = list_holes;
+          auto valid_type = check_valid_type(building, properties);
           if (valid_type) all_buildings.push_back(building);
         }
       }
       count_list = 0;
-
-    } else if (geometry.at("type") == "MultiPolygon") {
-      auto building = city_object();
-
-      building              = assign_type(building, properties);
-      string footprint_type = building.type;
-
-      if (footprint_type == "null") {
-        continue;
-      }
-
-      int level = generate_building_level(footprint_type, properties);
-
+    } else if (type == "MultiPolygon") {
+      auto building = city_object{};
+      assign_type(building, properties);
+      if (building.type == "null") continue;
+      auto level = generate_building_level(building.type, properties);
       vector<array<double, 2>>         couple;
       vector<vector<array<double, 2>>> list_holes;
       vector<array<double, 2>>         list_coordinates = {};
-
       for (auto& multi_pol : geometry.at("coordinates")) {
         int num_lists = multi_pol.size();
         for (auto& list_coords : multi_pol) {
-          // std::cout << geometry.at("coordinates").size() << std::endl;
-
           if (count_list == 0) {  // outer polygon
             building.level = level;
-
             for (auto& coord : list_coords) {
               double x = (double)coord[0];
               double y = (double)coord[1];
@@ -1170,15 +1128,10 @@ std::pair<vector<city_object>, Coordinate> data_analysis(json geojson_file,
               array<double, 2> arr = {x, y};
               list_coordinates.push_back(arr);
             }
-
             building.coords = list_coordinates;
-
-            string name   = id;
-            building.name = "building_" + name;
-
+            building.name   = "building_" + id;
             count_list++;
           } else {  // analysis of building holes
-
             for (auto& coord : list_coords) {
               double x = (double)coord[0];
               double y = (double)coord[1];
@@ -1186,10 +1139,8 @@ std::pair<vector<city_object>, Coordinate> data_analysis(json geojson_file,
             }
             list_holes.push_back(couple);
             couple = {};
-
             count_list++;
           }
-
           if (count_list == num_lists) {
             building.holes  = list_holes;
             bool valid_type = check_valid_type(building, properties);
@@ -1198,27 +1149,21 @@ std::pair<vector<city_object>, Coordinate> data_analysis(json geojson_file,
         }
         count_list = 0;
       }
-
     } else if (geometry.at("type") == "LineString") {
       int cont = 0;
       for (int i = 0; i < geometry.at("coordinates").size() - 1; i++) {
-        auto coord_i      = geometry.at("coordinates")[i];
-        auto coord_i_next = geometry.at("coordinates")[i + 1];
-
+        auto   coord_i        = geometry.at("coordinates")[i];
+        auto   coord_i_next   = geometry.at("coordinates")[i + 1];
         double x              = (double)coord_i[0];
         double y              = (double)coord_i[1];
         double next_x         = (double)coord_i_next[0];
         double next_y         = (double)coord_i_next[1];
         double line_thickness = 0.00005f;
-
-        auto area = compute_area(x, next_x, y, next_y, line_thickness);
-
-        auto line = city_object();
-
+        auto   area = compute_area(x, next_x, y, next_y, line_thickness);
+        auto   line = city_object{};
         string name = id;
         line.name   = "line_" + name + std::to_string(cont);
         cont++;
-
         if (properties.contains("highway")) {
           bool pedestrian = check_pedestrian(properties);
           if (pedestrian) {
@@ -1226,57 +1171,44 @@ std::pair<vector<city_object>, Coordinate> data_analysis(json geojson_file,
           } else {
             line.type = "highway";
           }
-        }
-
-        else if (properties.contains("natural")) {
+        } else if (properties.contains("natural")) {
           string natural = properties.at("natural");
           line.type      = natural;
         } else {
           continue;
         }
-
         line.thickness = get_thickness(line.type);
         line.coords    = area;
         all_buildings.push_back(line);
-
         for (auto& coord : area) {
           double x = (double)coord[0];
           double y = (double)coord[1];
           class_coord.update(x, y);
         }
       }
-
     } else if (geometry.at("type") == "MultiLineString") {
       int cont = 0;
       for (auto& list_line : geometry.at("coordinates")) {
         for (int i = 0; i < list_line.size() - 1; i++) {
-          auto coord_i      = list_line[i];
-          auto coord_i_next = list_line[i + 1];
-
+          auto   coord_i        = list_line[i];
+          auto   coord_i_next   = list_line[i + 1];
           double x              = (double)coord_i[0];
           double y              = (double)coord_i[1];
           double next_x         = (double)coord_i_next[0];
           double next_y         = (double)coord_i_next[1];
           double line_thickness = 0.0004f;
-
-          auto area = compute_area(x, next_x, y, next_y, line_thickness);
-
-          auto line = city_object();
-
-          string name = id;
-          line.name   = "multiline_" + name + std::to_string(cont);
+          auto   area = compute_area(x, next_x, y, next_y, line_thickness);
+          auto   line = city_object{};
+          line.name   = "multiline_" + id + std::to_string(cont);
           cont++;
-
           if (properties.contains("waterway")) {
             line.type = "water";
           } else {
             continue;
           }
-
           line.thickness = line_thickness;
           line.coords    = area;
           all_buildings.push_back(line);
-
           for (auto& coord : area) {
             double x = (double)coord[0];
             double y = (double)coord[1];
@@ -1284,23 +1216,14 @@ std::pair<vector<city_object>, Coordinate> data_analysis(json geojson_file,
           }
         }
       }
-
     } else if (geometry.at("type") == "Point") {
       vector<array<double, 2>> points;
       points.push_back(geometry.at("coordinates"));
-
-      auto point = city_object();
-
-      string name  = id;
-      point.name   = "point_" + name;
+      auto point = city_object{};
+      assign_tree_type(point, properties);
+      if (point.type == "null") continue;
+      point.name   = "point_" + id;
       point.coords = points;
-
-      all_buildings = assign_tree_type(point, properties, all_buildings);
-
-      if (point.type == "null") {
-        continue;
-      }
-
       for (auto& coord : points) {
         double x = (double)coord[0];
         double y = (double)coord[1];
@@ -1308,7 +1231,6 @@ std::pair<vector<city_object>, Coordinate> data_analysis(json geojson_file,
       }
     }
   }
-  // std::cout << all_buildings << std::endl;
   return {all_buildings, class_coord};
 }
 
@@ -1416,8 +1338,6 @@ int main(int argc, const char* argv[]) {
   parse_cli(cli, argc, argv);
 
   // load data
-
-  // read GeoJson files
   auto buildings   = vector<city_object>{};
   auto class_coord = Coordinate();
   auto ioerror     = ""s;
