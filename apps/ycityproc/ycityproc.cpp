@@ -31,8 +31,6 @@
 #include <yocto/yocto_shape.h>
 #include <yocto/yocto_trace.h>
 
-#include <fstream>
-#include <iostream>
 #include <string>
 #include <tuple>
 #include <unordered_map>
