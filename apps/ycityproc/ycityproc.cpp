@@ -61,7 +61,7 @@ struct city_object {
   vector<vector<double2>> new_holes   = {};
 };
 
-bool check_high(const json& properties) {
+bool is_tall_building(const json& properties) {
   if (!properties.contains("building")) return false;
   auto building_category = properties.at("building").get<string>();
   auto high_building     = false;
@@ -73,7 +73,7 @@ bool check_high(const json& properties) {
   return high_building;
 }
 
-bool check_digit(const string& lev) {
+bool is_number(const string& lev) {
   for (int i = 0; i < lev.size(); i++) {
     if ((lev[i] >= 'a' && lev[i] <= 'z') || (lev[i] >= 'A' && lev[i] <= 'B') ||
         lev[i] == ';' || lev[i] == ',')
@@ -82,7 +82,7 @@ bool check_digit(const string& lev) {
   return true;
 }
 
-bool check_int(const string& lev) {
+bool is_integer(const string& lev) {
   for (int i = 0; i < lev.size(); i++) {
     if (lev[i] == '.') return false;
   }
@@ -96,20 +96,11 @@ int generate_building_level(
 
   if (properties.contains("building:levels")) {
     auto lev = properties.at("building:levels").get<string>();
-    /*std::cout << "level" << std::endl;
-    std::cout << lev << std::endl;*/
-    auto digit      = check_digit(lev);
-    auto n_levels_i = -1;
-    auto n_levels_f = -1.0f;
-
-    if (digit) {
-      bool integer = check_int(lev);
-      if (integer) {
-        n_levels_i = std::stoi(lev);
-        level      = (int)round(n_levels_i) + 1;
+    if (is_number(lev)) {
+      if (is_integer(lev)) {
+        level = (int)round(std::stoi(lev)) + 1;
       } else {
-        n_levels_f = std::stof(lev);
-        level      = (int)round(n_levels_f) + 1;
+        level = (int)round(std::stof(lev)) + 1;
       }
     } else {
       level = 1;
@@ -119,18 +110,18 @@ int generate_building_level(
   // Check if the building:height is given in the GeoJson file
   if (footprint_type == "building" && properties.contains("height")) {
     auto h = properties.at("height").get<string>();
-    if (check_digit(h)) height = std::stof(h);
+    if (is_number(h)) height = std::stof(h);
   }
 
   if (footprint_type == "building" && properties.contains("building:height")) {
     auto h = properties.at("building:height").get<string>();
-    if (check_digit(h)) height = std::stof(h);
+    if (is_number(h)) height = std::stof(h);
   }
 
   if (height > -1.0) level = int(float(height) / 3.2);
 
   if (footprint_type == "building" && properties.contains("building") &&
-      check_high(properties))
+      is_tall_building(properties))
     level = 3;
 
   return level;
