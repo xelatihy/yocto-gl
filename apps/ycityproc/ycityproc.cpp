@@ -97,18 +97,17 @@ bool check_int(const string& lev) {
 
 int generate_building_level(
     const string& footprint_type, const json& properties) {
-  int               level         = 1;
-  float             height        = -1.0f;
-  bool              high_building = false;
+  auto              level  = 1;
+  auto              height = -1.0f;
   string::size_type sz;
 
   if (properties.contains("building:levels")) {
     auto lev = properties.at("building:levels").get<string>();
     /*std::cout << "level" << std::endl;
     std::cout << lev << std::endl;*/
-    bool  digit      = check_digit(lev);
-    int   n_levels_i = -1;
-    float n_levels_f = -1.0f;
+    auto digit      = check_digit(lev);
+    auto n_levels_i = -1;
+    auto n_levels_f = -1.0f;
 
     if (digit) {
       bool integer = check_int(lev);
@@ -137,9 +136,8 @@ int generate_building_level(
 
   if (height > -1.0) level = int(float(height) / 3.2);
 
-  high_building = check_high(properties);
   if (footprint_type == "building" && properties.contains("building") &&
-      high_building)
+      check_high(properties))
     level = 3;
 
   return level;
@@ -248,8 +246,8 @@ bool create_city_from_json(sceneio_scene* scene,
   add_sky(scene);
 
   // standard tree
-  string path_standard  = path_join(dirname, "tree_models/standard.ply");
-  auto   shape_standard = add_shape(scene, "standard");
+  auto path_standard  = path_join(dirname, "tree_models/standard.ply");
+  auto shape_standard = add_shape(scene, "standard");
   if (!load_shape(path_standard, shape_standard->points, shape_standard->lines,
           shape_standard->triangles, shape_standard->quads,
           shape_standard->quadspos, shape_standard->quadsnorm,
@@ -259,8 +257,8 @@ bool create_city_from_json(sceneio_scene* scene,
     return false;
 
   // palm tree
-  string path_palm  = path_join(dirname, "tree_models/palm.ply");
-  auto   shape_palm = add_shape(scene, "palm");
+  auto path_palm  = path_join(dirname, "tree_models/palm.ply");
+  auto shape_palm = add_shape(scene, "palm");
   if (!load_shape(path_palm, shape_palm->points, shape_palm->lines,
           shape_palm->triangles, shape_palm->quads, shape_palm->quadspos,
           shape_palm->quadsnorm, shape_palm->quadstexcoord,
@@ -269,8 +267,8 @@ bool create_city_from_json(sceneio_scene* scene,
     return false;
 
   // pine tree
-  string path_pine  = path_join(dirname, "tree_models/pine.ply");
-  auto   shape_pine = add_shape(scene, "pine");
+  auto path_pine  = path_join(dirname, "tree_models/pine.ply");
+  auto shape_pine = add_shape(scene, "pine");
   if (!load_shape(path_pine, shape_pine->points, shape_pine->lines,
           shape_pine->triangles, shape_pine->quads, shape_pine->quadspos,
           shape_pine->quadsnorm, shape_pine->quadstexcoord,
@@ -279,8 +277,8 @@ bool create_city_from_json(sceneio_scene* scene,
     return false;
 
   // cypress tree
-  string path_cypress  = path_join(dirname, "tree_models/cypress.ply");
-  auto   shape_cypress = add_shape(scene, "cypress");
+  auto path_cypress  = path_join(dirname, "tree_models/cypress.ply");
+  auto shape_cypress = add_shape(scene, "cypress");
   if (!load_shape(path_cypress, shape_cypress->points, shape_cypress->lines,
           shape_cypress->triangles, shape_cypress->quads,
           shape_cypress->quadspos, shape_cypress->quadsnorm,
@@ -290,8 +288,8 @@ bool create_city_from_json(sceneio_scene* scene,
     return false;
 
   // oak tree
-  string path_oak  = path_join(dirname, "tree_models/oak.ply");
-  auto   shape_oak = add_shape(scene, "oak");
+  auto path_oak  = path_join(dirname, "tree_models/oak.ply");
+  auto shape_oak = add_shape(scene, "oak");
   if (!load_shape(path_oak, shape_oak->points, shape_oak->lines,
           shape_oak->triangles, shape_oak->quads, shape_oak->quadspos,
           shape_oak->quadsnorm, shape_oak->quadstexcoord, shape_oak->positions,
@@ -299,86 +297,83 @@ bool create_city_from_json(sceneio_scene* scene,
           shape_oak->radius, ioerror))
     return false;
 
-  // Load textures
-  // string texture_path = "./city/buildings_texture/";
-
   // buidling texture1
-  auto   texture_1   = add_texture(scene, "texture1");
-  string path_text_1 = path_join(dirname, "buildings_texture/1.jpg");
+  auto texture_1   = add_texture(scene, "texture1");
+  auto path_text_1 = path_join(dirname, "buildings_texture/1.jpg");
   if (!load_image(path_text_1, texture_1->hdr, ioerror)) return false;
 
   // buidling texture2
-  auto   texture_2   = add_texture(scene, "texture2");
-  string path_text_2 = path_join(dirname, "buildings_texture/2.jpg");
+  auto texture_2   = add_texture(scene, "texture2");
+  auto path_text_2 = path_join(dirname, "buildings_texture/2.jpg");
   if (!load_image(path_text_2, texture_2->hdr, ioerror)) return false;
 
   // buidling texture3
-  auto   texture_3   = add_texture(scene, "texture3");
-  string path_text_3 = path_join(dirname, "buildings_texture/3.jpg");
+  auto texture_3   = add_texture(scene, "texture3");
+  auto path_text_3 = path_join(dirname, "buildings_texture/3.jpg");
   if (!load_image(path_text_3, texture_3->hdr, ioerror)) return false;
 
   // buidling texture4
-  auto   texture_4   = add_texture(scene, "texture4");
-  string path_text_4 = path_join(dirname, "buildings_texture/4.jpg");
+  auto texture_4   = add_texture(scene, "texture4");
+  auto path_text_4 = path_join(dirname, "buildings_texture/4.jpg");
   if (!load_image(path_text_4, texture_4->hdr, ioerror)) return false;
 
   // buidling texture5
-  auto   texture_5   = add_texture(scene, "texture5");
-  string path_text_5 = path_join(dirname, "buildings_texture/5.jpg");
+  auto texture_5   = add_texture(scene, "texture5");
+  auto path_text_5 = path_join(dirname, "buildings_texture/5.jpg");
   if (!load_image(path_text_5, texture_5->hdr, ioerror)) return false;
 
   // buidling texture6
-  auto   texture_6   = add_texture(scene, "texture6");
-  string path_text_6 = path_join(dirname, "buildings_texture/6.jpg");
+  auto texture_6   = add_texture(scene, "texture6");
+  auto path_text_6 = path_join(dirname, "buildings_texture/6.jpg");
   if (!load_image(path_text_6, texture_6->hdr, ioerror)) return false;
 
   // buidling texture7
-  auto   texture_7   = add_texture(scene, "texture7");
-  string path_text_7 = path_join(dirname, "buildings_texture/7.jpg");
+  auto texture_7   = add_texture(scene, "texture7");
+  auto path_text_7 = path_join(dirname, "buildings_texture/7.jpg");
   if (!load_image(path_text_7, texture_7->hdr, ioerror)) return false;
 
   // buidling texture8
-  auto   texture_8   = add_texture(scene, "texture8");
-  string path_text_8 = path_join(dirname, "buildings_texture/8.jpg");
+  auto texture_8   = add_texture(scene, "texture8");
+  auto path_text_8 = path_join(dirname, "buildings_texture/8.jpg");
   if (!load_image(path_text_8, texture_8->hdr, ioerror)) return false;
 
   // buidling texture8_11
-  auto   texture_8_11   = add_texture(scene, "texture8_11");
-  string path_text_8_11 = path_join(dirname, "buildings_texture/8_11.jpg");
+  auto texture_8_11   = add_texture(scene, "texture8_11");
+  auto path_text_8_11 = path_join(dirname, "buildings_texture/8_11.jpg");
   if (!load_image(path_text_8_11, texture_8_11->hdr, ioerror)) return false;
 
   // buidling texture10_41
-  auto   texture_10_41   = add_texture(scene, "texture10_41");
-  string path_text_10_41 = path_join(dirname, "buildings_texture/10_41.jpg");
+  auto texture_10_41   = add_texture(scene, "texture10_41");
+  auto path_text_10_41 = path_join(dirname, "buildings_texture/10_41.jpg");
   if (!load_image(path_text_10_41, texture_10_41->hdr, ioerror)) return false;
 
   // buidling texture40_71
-  auto   texture_40_71   = add_texture(scene, "texture40_71");
-  string path_text_40_71 = path_join(dirname, "buildings_texture/40_71.jpg");
+  auto texture_40_71   = add_texture(scene, "texture40_71");
+  auto path_text_40_71 = path_join(dirname, "buildings_texture/40_71.jpg");
   if (!load_image(path_text_40_71, texture_40_71->hdr, ioerror)) return false;
 
   // buidling texture70_101
-  auto   texture_70_101   = add_texture(scene, "texture70_101");
-  string path_text_70_101 = path_join(dirname, "buildings_texture/70_101.jpg");
+  auto texture_70_101   = add_texture(scene, "texture70_101");
+  auto path_text_70_101 = path_join(dirname, "buildings_texture/70_101.jpg");
   if (!load_image(path_text_70_101, texture_70_101->hdr, ioerror)) return false;
 
   // buidling texturemore_101
-  auto   texture_more_101   = add_texture(scene, "texturemore_101");
-  string path_text_more_101 = path_join(
+  auto texture_more_101   = add_texture(scene, "texturemore_101");
+  auto path_text_more_101 = path_join(
       dirname, "buildings_texture/more_101.jpg");
   if (!load_image(path_text_more_101, texture_more_101->hdr, ioerror))
     return false;
 
   // buidling texture_colosseo
-  auto   texture_colosseo   = add_texture(scene, "texture_colosseo");
-  string path_text_colosseo = path_join(
+  auto texture_colosseo   = add_texture(scene, "texture_colosseo");
+  auto path_text_colosseo = path_join(
       dirname, "buildings_texture/colosseo.jpg");
 
   // Check if exists the element of interest
-  bool exist_element = false;
+  auto exist_element = false;
   for (auto& building_geometry : all_geometries) {
     auto building_type = building_geometry.type;
-    bool grass_area    = check_grass_type(building_type);
+    auto grass_area    = check_grass_type(building_type);
     if (building_geometry.type == "building" ||
         building_geometry.type == "water" ||
         building_geometry.type == "highway" ||
@@ -901,20 +896,20 @@ vector<double2> compute_area(
 }
 
 float get_thickness(const string& type) {
-  float thickness = 0.0001;
   if (type == "pedestrian") {
-    thickness = 0.00005;
+    return 0.00005f;
   } else if (type == "water") {  // MultiLineString
-    thickness = 1.0;
+    return 1.0f;
+  } else {
+    return 0.0001f;
   }
-  return thickness;
 }
 
 void assign_type(city_object& building, const json& properties, float scale) {
   if (properties.contains("building")) {
     building.type = "building";
     if (properties.contains("roof:shape")) {
-      string roof_shape = properties.at("roof:shape").get<string>();
+      auto roof_shape = properties.at("roof:shape").get<string>();
       if (roof_shape == "gabled" || roof_shape == "onion" ||
           roof_shape == "pyramid") {
         building.roof_shape = "gabled";
@@ -959,7 +954,7 @@ void assign_type(city_object& building, const json& properties, float scale) {
     auto leisure  = properties.at("leisure").get<string>();
     building.type = leisure;
   } else if (properties.contains("highway")) {
-    bool pedestrian = check_pedestrian(properties);
+    auto pedestrian = check_pedestrian(properties);
     if (pedestrian) {
       building.type = "pedestrian";
     } else {
@@ -1008,13 +1003,10 @@ void assign_tree_type(city_object& point, const json& properties) {
 }
 
 bool check_valid_type(const city_object& building, const json& properties) {
-  bool valid      = false;
-  bool grass_area = check_grass_type(building.type);
-  if (building.type == "building" || building.type == "water" ||
-      building.type == "sand" || grass_area || building.type == "highway" ||
-      building.type == "pedestrian" || building.type == "forest")
-    valid = true;
-  return valid;
+  auto grass_area = check_grass_type(building.type);
+  return building.type == "building" || building.type == "water" ||
+         building.type == "sand" || grass_area || building.type == "highway" ||
+         building.type == "pedestrian" || building.type == "forest";
 }
 
 // load/save json
