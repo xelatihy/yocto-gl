@@ -963,7 +963,7 @@ bool load_geojson(const string& filename, vector<city_object>& all_buildings,
       all_buildings.push_back(building);
     } else if (geometry.at("type") == "LineString") {
       auto count = 0;
-      for (int i = 0; i < geometry.at("coordinates").size() - 1; i++) {
+      for (auto i = 0; i < (int)geometry.at("coordinates").size() - 1; i++) {
         auto [x0, y0]  = geometry.at("coordinates")[i + 0].get<double2>();
         auto [x1, y1]  = geometry.at("coordinates")[i + 1].get<double2>();
         auto thickness = 0.00005f;
@@ -978,8 +978,8 @@ bool load_geojson(const string& filename, vector<city_object>& all_buildings,
             line.type = "highway";
           }
         } else if (properties.contains("natural")) {
-          string natural = properties.at("natural");
-          line.type      = natural;
+          auto natural = properties.at("natural").get<string>();
+          line.type    = natural;
         } else {
           continue;
         }
@@ -990,7 +990,7 @@ bool load_geojson(const string& filename, vector<city_object>& all_buildings,
     } else if (geometry.at("type") == "MultiLineString") {
       auto count = 0;
       for (auto& list_line : geometry.at("coordinates")) {
-        for (int i = 0; i < list_line.size() - 1; i++) {
+        for (auto i = 0; i < (int)list_line.size() - 1; i++) {
           auto [x0, y0]  = list_line[i + 0].get<double2>();
           auto [x1, y1]  = list_line[i + 1].get<double2>();
           auto thickness = 0.0004f;
