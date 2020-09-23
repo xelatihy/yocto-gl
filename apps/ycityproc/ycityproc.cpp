@@ -384,102 +384,57 @@ bool create_city_from_json(sceneio_scene* scene,
       if (element.historic != "no") historic = element.historic;
 
       if (type_s == "standard") {
-        auto  tree  = add_complete_instance(scene, name);
-        vec3f coord = {};
-
+        auto tree = add_complete_instance(scene, name);
         for (auto& elem : element.new_coords) {
-          coord.x = elem[0];
-          coord.y = 0.0;
-          coord.z = elem[1];
-
-          auto x = coord.x + 0.09f;
-          auto z = coord.z + 0.09f;
-
-          // create TREE object
+          auto coord            = vec3f{(float)elem[0], 0, (float)elem[1]};
+          auto x                = coord.x + 0.09f;
+          auto z                = coord.z + 0.09f;
           tree->shape           = shape_standard;
           tree->material->color = {0.002, 0.187, 0.008};
           tree->frame           = frame3f{vec3f{1.0f, 0.0f, 0.0f},
               vec3f{0.0f, 1.0f, 0.0f}, vec3f{0.0f, 0.0f, 1.0f},
               vec3f{x, coord.y, z}};
-          coord                 = {};
-          continue;
         }
 
       } else if (type_s == "palm") {
-        auto  tree  = add_complete_instance(scene, name);
-        vec3f coord = {};
-
+        auto tree = add_complete_instance(scene, name);
         for (auto& elem : element.new_coords) {
-          coord.x = elem[0];
-          coord.y = 0.0;
-          coord.z = elem[1];
-
-          // create TREE object
+          auto coord            = vec3f{(float)elem[0], 0, (float)elem[1]};
           tree->shape           = shape_palm;
           tree->material->color = {0.224, 0.5, 0.06};
           tree->frame           = frame3f{vec3f{1.0f, 0.0f, 0.0f},
               vec3f{0.0f, 1.0f, 0.0f}, vec3f{0.0f, 0.0f, 1.0f},
               vec3f{coord.x, coord.y, coord.z}};
-
-          coord = {};
-          continue;
         }
       } else if (type_s == "cypress") {
-        auto  tree  = add_complete_instance(scene, name);
-        vec3f coord = {};
-
+        auto tree = add_complete_instance(scene, name);
         for (auto& elem : element.new_coords) {
-          coord.x = elem[0];
-          coord.y = 0.0;
-          coord.z = elem[1];
-
-          // create TREE object
+          auto coord            = vec3f{(float)elem[0], 0, (float)elem[1]};
           tree->shape           = shape_cypress;
           tree->material->color = {0.019, 0.175, 0.039};
           tree->frame           = frame3f{vec3f{1.0f, 0.0f, 0.0f},
               vec3f{0.0f, 1.0f, 0.0f}, vec3f{0.0f, 0.0f, 1.0f},
               vec3f{coord.x, coord.y, coord.z}};
-
-          coord = {};
-          continue;
         }
       } else if (type_s == "oak") {
-        auto  tree  = add_complete_instance(scene, name);
-        vec3f coord = {};
-
+        auto tree = add_complete_instance(scene, name);
         for (auto& elem : element.new_coords) {
-          coord.x = elem[0];
-          coord.y = 0.0;
-          coord.z = elem[1];
-
-          // create TREE object OAK
+          auto coord            = vec3f{(float)elem[0], 0, (float)elem[1]};
           tree->shape           = shape_oak;
           tree->material->color = {0.084, 0.193, 0.005};
           tree->frame           = frame3f{vec3f{1.0f, 0.0f, 0.0f},
               vec3f{0.0f, 1.0f, 0.0f}, vec3f{0.0f, 0.0f, 1.0f},
               vec3f{coord.x, coord.y, coord.z}};
-
-          coord = {};
-          continue;
         }
       } else if (type_s == "pine") {
-        auto  tree  = add_complete_instance(scene, name);
-        vec3f coord = {};
-
+        auto tree = add_complete_instance(scene, name);
         for (auto& elem : element.new_coords) {
-          coord.x = elem[0];
-          coord.y = 0.0;
-          coord.z = elem[1];
-
-          // create TREE object
+          auto coord            = vec3f{(float)elem[0], 0, (float)elem[1]};
           tree->shape           = shape_pine;
           tree->material->color = {0.145, 0.182, 0.036};
           tree->frame           = frame3f{vec3f{1.0f, 0.0f, 0.0f},
               vec3f{0.0f, 1.0f, 0.0f}, vec3f{0.0f, 0.0f, 1.0f},
               vec3f{coord.x, coord.y, coord.z}};
-
-          coord = {};
-          continue;
         }
       } else {
         vector<vector<double2>> polygon;
@@ -489,7 +444,6 @@ bool create_city_from_json(sceneio_scene* scene,
         vector<vec3f> positions;
 
         vector<double2> vect_building;
-        auto            coord  = vec3f{0, 0, 0};
         auto            height = -1.0f;
         // auto          roof_height = -1.0f;
         auto level = 0;
@@ -504,44 +458,28 @@ bool create_city_from_json(sceneio_scene* scene,
         height = element.height;
 
         for (auto& elem : element.new_coords) {
-          coord.x = elem[0];
-          coord.y = height;
-          coord.z = elem[1];
-
+          auto coord = vec3f{(float)elem[0], height, (float)elem[1]};
           positions.push_back(coord);
           vect_building.push_back({coord.x, coord.z});
-
-          coord = {};
-          continue;
         }
         polygon.push_back(vect_building);
 
         vector<double2> vect_hole;
-        coord = {};
-
         for (auto& list : element.new_holes) {
           for (auto& h : list) {
-            coord.x = h[0];
-            coord.z = h[1];
-            coord.y = height;
-
+            auto coord = vec3f{(float)h[0], height, (float)h[1]};
             positions.push_back(coord);
             vect_hole.push_back({coord.x, coord.z});
-            coord = {};
           }
-
           polygon.push_back(vect_hole);
           vect_hole = {};
         }
 
-        auto num_holes = (int)element.new_holes.size();
-
+        auto num_holes   = (int)element.new_holes.size();
         auto color_given = false;
         if (element.colour != "null") color_given = true;
-
         auto grass_area = is_grass(element.type);
         auto color = get_color(type, grass_area);  // vec3f{0.79, 0.74, 0.62};
-
         if (type_roof == "flat" && num_holes == 0) {
           type_roof = "gabled";
         } else if (name == "building_relation_1834818") {  // colosseo
@@ -660,38 +598,24 @@ bool create_city_from_json(sceneio_scene* scene,
         // Gabled roof
         if (type_roof == "gabled") {
           vector<vector<double2>> polygon_roof;
-
-          auto          roof = add_complete_instance(scene, name);
-          vector<vec3i> triangles_roof;
-          vector<vec3f> positions_roof;
-
-          vector<double2> vect_roof;
-          auto            roof_height = -1.0f;
-          auto            coord       = vec3f{0, 0, 0};
-          auto            height      = -1.0f;
-
-          height      = element.height;
-          roof_height = element.roof_height;
-
-          auto centroid_x = 0.0f;
-          auto centroid_y = 0.0f;
-          auto num_vert   = (int)element.new_coords.size();
-          auto num_holes  = (int)element.new_holes.size();
+          auto                    roof = add_complete_instance(scene, name);
+          vector<vec3i>           triangles_roof;
+          vector<vec3f>           positions_roof;
+          vector<double2>         vect_roof;
+          auto                    coord       = vec3f{0, 0, 0};
+          auto                    height      = element.height;
+          auto                    roof_height = element.roof_height;
+          auto                    centroid_x = 0.0f, centroid_y = 0.0f;
+          auto                    num_vert  = (int)element.new_coords.size();
+          auto                    num_holes = (int)element.new_holes.size();
 
           if (num_holes == 0) {
             for (auto& elem : element.new_coords) {
-              coord.x = (double)elem[0];
-              coord.y = height;
-              coord.z = (double)elem[1];
-
+              auto coord = vec3f{(float)elem[0], height, (float)elem[1]};
               positions_roof.push_back(coord);
               vect_roof.push_back({coord.x, coord.z});
-
               centroid_x += coord.x;
               centroid_y += coord.z;
-
-              coord = {};
-              continue;
             }
 
             centroid_x = centroid_x / num_vert;
@@ -737,9 +661,8 @@ bool create_city_from_json(sceneio_scene* scene,
 
             roof2->shape->positions = _polygon2_roof;
             roof2->shape->triangles = triangles2_roof;
-
-            roof->shape->positions = _polygon_roof;
-            roof->shape->triangles = triangles_roof;
+            roof->shape->positions  = _polygon_roof;
+            roof->shape->triangles  = triangles_roof;
           }
         }
       }
@@ -756,107 +679,90 @@ vector<double2> compute_area(
       {x - road_thickness, y - road_thickness},
       {x + road_thickness, y + road_thickness}};
 
-  vector<double> vec_x = {};
-  vector<double> vec_y = {};
-
+  auto vec_x = vector<double>{}, vec_y = vector<double>{};
   for (auto& couple : line_1) {
     vec_x.push_back(couple[0]);
     vec_y.push_back(couple[1]);
   }
 
-  vector<double> shifted_vec_x = vec_x;
-  vector<double> shifted_vec_y = vec_y;
-
+  auto shifted_vec_x = vec_x, shifted_vec_y = vec_y;
   std::rotate(
       shifted_vec_x.begin(), shifted_vec_x.begin() + 3, shifted_vec_x.end());
   std::rotate(
       shifted_vec_y.begin(), shifted_vec_y.begin() + 3, shifted_vec_y.end());
 
-  double sum_first = 0.0f;
-  for (int i = 0; i < vec_x.size(); i++) {
-    double first_prod = vec_x[i] * shifted_vec_y[i];
+  auto sum_first = 0.0;
+  for (auto i = 0; i < vec_x.size(); i++) {
+    auto first_prod = vec_x[i] * shifted_vec_y[i];
     sum_first += first_prod;
   }
 
-  double sum_second = 0.0f;
-  for (int i = 0; i < vec_y.size(); i++) {
-    double second_prod = vec_y[i] * shifted_vec_x[i];
+  auto sum_second = 0.0;
+  for (auto i = 0; i < vec_y.size(); i++) {
+    auto second_prod = vec_y[i] * shifted_vec_x[i];
     sum_second += second_prod;
   }
 
-  float area_1 = (float)(0.5f * fabs(sum_first - sum_second));
-
-  // -----------
-  vector<double2> line_2 = {{next_x + road_thickness, next_y},
+  auto area_1 = fabs((float)sum_first - (float)sum_second) / 2;
+  auto line_2 = vector<double2>{{next_x + road_thickness, next_y},
       {next_x - road_thickness, next_y}, {x - road_thickness, y},
       {x + road_thickness, y}};
 
-  vector<double> vec_x_2 = {};
-  vector<double> vec_y_2 = {};
-
+  auto vec_x_2 = vector<double>{}, vec_y_2 = vector<double>{};
   for (auto& couple : line_2) {
     vec_x_2.push_back(couple[0]);
     vec_y_2.push_back(couple[1]);
   }
 
-  vector<double> shifted_vec_x_2 = vec_x_2;
-  vector<double> shifted_vec_y_2 = vec_y_2;
-
+  auto shifted_vec_x_2 = vec_x_2, shifted_vec_y_2 = vec_y_2;
   std::rotate(shifted_vec_x_2.begin(), shifted_vec_x_2.begin() + 3,
       shifted_vec_x_2.end());
   std::rotate(shifted_vec_y_2.begin(), shifted_vec_y_2.begin() + 3,
       shifted_vec_y_2.end());
 
-  double sum_first_2 = 0.0f;
-  for (int i = 0; i < vec_x_2.size(); i++) {
-    double first_prod_2 = vec_x_2[i] * shifted_vec_y_2[i];
+  auto sum_first_2 = 0.0;
+  for (auto i = 0; i < vec_x_2.size(); i++) {
+    auto first_prod_2 = vec_x_2[i] * shifted_vec_y_2[i];
     sum_first_2 += first_prod_2;
   }
 
-  double sum_second_2 = 0.0f;
-  for (int i = 0; i < vec_y_2.size(); i++) {
-    double second_prod_2 = vec_y_2[i] * shifted_vec_x_2[i];
+  auto sum_second_2 = 0.0;
+  for (auto i = 0; i < vec_y_2.size(); i++) {
+    auto second_prod_2 = vec_y_2[i] * shifted_vec_x_2[i];
     sum_second_2 += second_prod_2;
   }
 
-  float area_2 = (float)(0.5f * fabs(sum_first_2 - sum_second_2));
-
-  // -----------
-  vector<double2> line_3 = {{next_x, next_y + road_thickness},
+  auto area_2 = fabs((float)sum_first_2 - (float)sum_second_2) / 2;
+  auto line_3 = vector<double2>{{next_x, next_y + road_thickness},
       {next_x, next_y - road_thickness}, {x, y - road_thickness},
       {x, y + road_thickness}};
 
-  vector<double> vec_x_3 = {};
-  vector<double> vec_y_3 = {};
-
+  auto vec_x_3 = vector<double>{}, vec_y_3 = vector<double>{};
   for (auto& couple : line_3) {
     vec_x_3.push_back(couple[0]);
     vec_y_3.push_back(couple[1]);
   }
 
-  vector<double> shifted_vec_x_3 = vec_x_3;
-  vector<double> shifted_vec_y_3 = vec_y_3;
-
+  auto shifted_vec_x_3 = vec_x_3, shifted_vec_y_3 = vec_y_3;
   std::rotate(shifted_vec_x_3.begin(), shifted_vec_x_3.begin() + 3,
       shifted_vec_x_3.end());
   std::rotate(shifted_vec_y_3.begin(), shifted_vec_y_3.begin() + 3,
       shifted_vec_y_3.end());
 
-  double sum_first_3 = 0.0f;
-  for (int i = 0; i < vec_x_3.size(); i++) {
-    double first_prod_3 = vec_x_3[i] * shifted_vec_y_3[i];
+  auto sum_first_3 = 0.0;
+  for (auto i = 0; i < vec_x_3.size(); i++) {
+    auto first_prod_3 = vec_x_3[i] * shifted_vec_y_3[i];
     sum_first_3 += first_prod_3;
   }
 
-  double sum_second_3 = 0.0f;
-  for (int i = 0; i < vec_y_3.size(); i++) {
-    double second_prod_3 = vec_y_3[i] * shifted_vec_x_3[i];
+  auto sum_second_3 = 0.0;
+  for (auto i = 0; i < vec_y_3.size(); i++) {
+    auto second_prod_3 = vec_y_3[i] * shifted_vec_x_3[i];
     sum_second_3 += second_prod_3;
   }
 
-  // float area_3 = (float)(0.5f * fabs(sum_first_3 - sum_second_3));
-
-  /*if (area_2 > area_1) {
+  /* float area_3 = (float)(0.5f * fabs(sum_first_3 - sum_second_3));
+  if (area_2 > area_1) {
     if (area_3 > area_2) {
       return line_3;
     } else {
