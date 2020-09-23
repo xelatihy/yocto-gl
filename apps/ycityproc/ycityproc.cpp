@@ -135,6 +135,8 @@ float get_height(const city_object& building, float scale) {
     return 0.0005f;
   } else if (building.type == "pedestrian") {
     return 0.0004f;
+  } else if (building.type == "grass") {
+    return 0.0001f;
   } else {
     return 0.0001f;
   }
@@ -208,7 +210,7 @@ vec3f get_building_color(const string& building_color) {
 bool create_city_from_json(sceneio_scene* scene,
     const vector<city_object>& all_geometries, const string& dirname,
     string& ioerror) {
-  scene->name      = "cornellbox";
+  scene->name      = "city";
   auto camera      = add_camera(scene);
   camera->frame    = frame3f{{-0.028f, 0.0f, 1.0f}, {0.764f, 0.645f, 0.022f},
       {-0.645f, 0.764f, -0.018f}, {-13.032f, 16.750f, -1.409f}};
@@ -370,9 +372,6 @@ bool create_city_from_json(sceneio_scene* scene,
   }
 
   if (exist_element) {
-    using Coord = double;
-    using N     = int32_t;
-    using Point = array<Coord, 2>;
     for (auto& element : all_geometries) {
       auto name = element.name;
 
@@ -483,15 +482,15 @@ bool create_city_from_json(sceneio_scene* scene,
           continue;
         }
       } else {
-        vector<vector<Point>> polygon;
+        vector<vector<double2>> polygon;
 
         auto          build = add_complete_instance(scene, name);
         vector<vec3i> triangles;
         vector<vec3f> positions;
 
-        vector<Point> vect_building;
-        auto          coord  = vec3f{0, 0, 0};
-        auto          height = -1.0f;
+        vector<double2> vect_building;
+        auto            coord  = vec3f{0, 0, 0};
+        auto            height = -1.0f;
         // auto          roof_height = -1.0f;
         auto level = 0;
         auto type  = ""s;
@@ -517,7 +516,7 @@ bool create_city_from_json(sceneio_scene* scene,
         }
         polygon.push_back(vect_building);
 
-        vector<Point> vect_hole;
+        vector<double2> vect_hole;
         coord = {};
 
         for (auto& list : element.new_holes) {
@@ -563,8 +562,7 @@ bool create_city_from_json(sceneio_scene* scene,
           _polygon.push_back(point);
         }
 
-        vector<N> indices = mapbox::earcut<N>(polygon);
-
+        auto indices = mapbox::earcut<int>(polygon);
         for (int k = 0; k < indices.size() - 2; k += 3) {
           triangles.push_back({indices[k], indices[k + 1], indices[k + 2]});
         }
@@ -661,16 +659,16 @@ bool create_city_from_json(sceneio_scene* scene,
 
         // Gabled roof
         if (type_roof == "gabled") {
-          vector<vector<Point>> polygon_roof;
+          vector<vector<double2>> polygon_roof;
 
           auto          roof = add_complete_instance(scene, name);
           vector<vec3i> triangles_roof;
           vector<vec3f> positions_roof;
 
-          vector<Point> vect_roof;
-          auto          roof_height = -1.0f;
-          auto          coord       = vec3f{0, 0, 0};
-          auto          height      = -1.0f;
+          vector<double2> vect_roof;
+          auto            roof_height = -1.0f;
+          auto            coord       = vec3f{0, 0, 0};
+          auto            height      = -1.0f;
 
           height      = element.height;
           roof_height = element.roof_height;
@@ -709,8 +707,7 @@ bool create_city_from_json(sceneio_scene* scene,
               _polygon_roof.push_back(point);
             }
 
-            vector<N> indices_roof = mapbox::earcut<N>(polygon_roof);
-
+            auto indices_roof = mapbox::earcut<int>(polygon_roof);
             for (int k = 0; k < indices_roof.size() - 2; k += 3) {
               triangles_roof.push_back(
                   {indices_roof[k], indices_roof[k + 1], indices_roof[k + 2]});
