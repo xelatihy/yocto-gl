@@ -85,7 +85,7 @@ int get_building_level(const string& footprint_type, const json& properties) {
     return true;
   };
 
-  auto is_tall_building = [](const json& properties) -> bool {
+  auto is_tall = [](const json& properties) -> bool {
     if (!properties.contains("building")) return false;
     auto building = properties.at("building").get<string>();
     return building == "apartments" || building == "residential" ||
@@ -122,7 +122,7 @@ int get_building_level(const string& footprint_type, const json& properties) {
   if (height > -1.0) level = int(float(height) / 3.2);
 
   if (footprint_type == "building" && properties.contains("building") &&
-      is_tall_building(properties))
+      is_tall(properties))
     level = 3;
 
   return level;
