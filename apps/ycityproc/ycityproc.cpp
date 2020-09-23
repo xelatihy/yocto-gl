@@ -89,8 +89,7 @@ bool is_integer(const string& lev) {
   return false;
 }
 
-int generate_building_level(
-    const string& footprint_type, const json& properties) {
+int get_building_level(const string& footprint_type, const json& properties) {
   auto level  = 1;
   auto height = -1.0f;
 
@@ -127,7 +126,7 @@ int generate_building_level(
   return level;
 }
 
-float generate_height(const city_object& building, float scale) {
+float get_height(const city_object& building, float scale) {
   if (building.type == "building" && building.level > 0) {
     return (building.level + scale / 20) / 20;
   } else if (building.type == "water") {
@@ -141,7 +140,7 @@ float generate_height(const city_object& building, float scale) {
   }
 }
 
-float generate_roof_height(const string& roof_h, float scale) {
+float get_roof_height(const string& roof_h, float scale) {
   if (roof_h != "null") {
     return std::stof(roof_h) / scale;
   } else {
@@ -149,7 +148,7 @@ float generate_roof_height(const string& roof_h, float scale) {
   }
 }
 
-bool check_grass_type(const string& building_type) {
+bool is_grass(const string& building_type) {
   return building_type == "park" || building_type == "pitch" ||
          building_type == "garden" || building_type == "playground" ||
          building_type == "greenfield" || building_type == "scrub" ||
@@ -160,7 +159,7 @@ bool check_grass_type(const string& building_type) {
          building_type == "recreation_ground" || building_type == "grassland";
 }
 
-bool check_pedestrian(const json& properties) {
+bool is_pedestrian(const json& properties) {
   if (!properties.contains("highway")) return false;
   auto highway_category = properties.at("highway").get<string>();
   return highway_category == "footway" || highway_category == "pedestrian" ||
@@ -356,7 +355,7 @@ bool create_city_from_json(sceneio_scene* scene,
   auto exist_element = false;
   for (auto& building_geometry : all_geometries) {
     auto building_type = building_geometry.type;
-    auto grass_area    = check_grass_type(building_type);
+    auto grass_area    = is_grass(building_type);
     if (building_geometry.type == "building" ||
         building_geometry.type == "water" ||
         building_geometry.type == "highway" ||
@@ -541,7 +540,7 @@ bool create_city_from_json(sceneio_scene* scene,
         auto color_given = false;
         if (element.colour != "null") color_given = true;
 
-        auto grass_area = check_grass_type(element.type);
+        auto grass_area = is_grass(element.type);
         auto color = get_color(type, grass_area);  // vec3f{0.79, 0.74, 0.62};
 
         if (type_roof == "flat" && num_holes == 0) {
@@ -902,7 +901,7 @@ void assign_type(city_object& building, const json& properties, float scale) {
     }
     if (properties.contains("roof:height")) {
       auto roof_height     = properties.at("roof:height").get<string>();
-      building.roof_height = generate_roof_height(roof_height, scale);
+      building.roof_height = get_roof_height(roof_height, scale);
     }
     if (properties.contains("historic")) {
       building.historic = "yes";
@@ -937,7 +936,7 @@ void assign_type(city_object& building, const json& properties, float scale) {
     auto leisure  = properties.at("leisure").get<string>();
     building.type = leisure;
   } else if (properties.contains("highway")) {
-    auto pedestrian = check_pedestrian(properties);
+    auto pedestrian = is_pedestrian(properties);
     if (pedestrian) {
       building.type = "pedestrian";
     } else {
@@ -986,7 +985,7 @@ void assign_tree_type(city_object& point, const json& properties) {
 }
 
 bool check_valid_type(const city_object& building, const json& properties) {
-  auto grass_area = check_grass_type(building.type);
+  auto grass_area = is_grass(building.type);
   return building.type == "building" || building.type == "water" ||
          building.type == "sand" || grass_area || building.type == "highway" ||
          building.type == "pedestrian" || building.type == "forest";
@@ -1028,7 +1027,7 @@ bool load_geojson(const string& filename, vector<city_object>& all_buildings,
       assign_type(building, properties, scale);
       if (building.type == "null") continue;
       building.name  = "building_" + id;
-      building.level = generate_building_level(building.type, properties);
+      building.level = get_building_level(building.type, properties);
       auto first     = true;
       for (auto& list_coords : geometry.at("coordinates")) {
         if (first) {  // outer polygon
@@ -1045,7 +1044,7 @@ bool load_geojson(const string& filename, vector<city_object>& all_buildings,
       assign_type(building, properties, scale);
       if (building.type == "null") continue;
       building.name  = "building_" + id;
-      building.level = generate_building_level(building.type, properties);
+      building.level = get_building_level(building.type, properties);
       auto first     = true;
       for (auto& multi_pol : geometry.at("coordinates")) {
         for (auto& list_coords : multi_pol) {
@@ -1069,7 +1068,7 @@ bool load_geojson(const string& filename, vector<city_object>& all_buildings,
         auto line      = city_object{};
         line.name      = "line_" + id + std::to_string(count++);
         if (properties.contains("highway")) {
-          bool pedestrian = check_pedestrian(properties);
+          bool pedestrian = is_pedestrian(properties);
           if (pedestrian) {
             line.type = "pedestrian";
           } else {
@@ -1131,7 +1130,7 @@ bool load_geojson(const string& filename, vector<city_object>& all_buildings,
 
   // scale elements
   for (auto& element : all_buildings) {
-    element.height     = generate_height(element, scale);
+    element.height     = get_height(element, scale);
     element.new_coords = element.coords;
     for (auto& [x, y] : element.new_coords) {
       x = (x - bounds_min[0]) / (bounds_max[0] - bounds_min[0]) * scale -
