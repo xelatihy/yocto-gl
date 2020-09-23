@@ -45,11 +45,14 @@ using std::array;
 
 using double2 = array<double, 2>;
 
+enum struct geojson_tree_type { standard, palm, oak, pine, cypress };
+enum struct geojson_roof_type { missing, flat, gabled };
+
 struct geojson_element {
   string                  name        = "";
   string                  type        = "";
-  string                  roof_shape  = "";
-  string                  tree        = "";
+  geojson_roof_type       roof        = geojson_roof_type::missing;
+  geojson_tree_type       tree        = geojson_tree_type::standard;
   string                  colour      = "";
   int                     level       = 0;
   float                   height      = 0;
@@ -351,14 +354,13 @@ bool create_city_from_json(sceneio_scene* scene, const geojson_scene* geojson,
 
   if (exist_element) {
     for (auto& element : geojson->elements) {
-      auto name      = element.name;
-      auto type_s    = element.type;
-      auto type_roof = "null"s;
-      auto historic  = "no"s;
-      if (element.roof_shape != "null") type_roof = element.roof_shape;
+      auto name     = element.name;
+      auto type_s   = element.type;
+      auto historic = "no"s;
       if (element.historic != "no") historic = element.historic;
+      auto type_roof = element.roof;
 
-      if (type_s == "tree" && element.tree == "standard") {
+      if (type_s == "tree" && element.tree == geojson_tree_type::standard) {
         auto tree = add_complete_instance(scene, name);
         for (auto& elem : element.new_coords) {
           auto coord            = vec3f{(float)elem[0], 0, (float)elem[1]};
@@ -370,7 +372,7 @@ bool create_city_from_json(sceneio_scene* scene, const geojson_scene* geojson,
               vec3f{0.0f, 1.0f, 0.0f}, vec3f{0.0f, 0.0f, 1.0f},
               vec3f{x, coord.y, z}};
         }
-      } else if (type_s == "tree" && element.tree == "palm") {
+      } else if (type_s == "tree" && element.tree == geojson_tree_type::palm) {
         auto tree = add_complete_instance(scene, name);
         for (auto& elem : element.new_coords) {
           auto coord            = vec3f{(float)elem[0], 0, (float)elem[1]};
@@ -380,7 +382,8 @@ bool create_city_from_json(sceneio_scene* scene, const geojson_scene* geojson,
               vec3f{0.0f, 1.0f, 0.0f}, vec3f{0.0f, 0.0f, 1.0f},
               vec3f{coord.x, coord.y, coord.z}};
         }
-      } else if (type_s == "tree" && element.tree == "cypress") {
+      } else if (type_s == "tree" &&
+                 element.tree == geojson_tree_type::cypress) {
         auto tree = add_complete_instance(scene, name);
         for (auto& elem : element.new_coords) {
           auto coord            = vec3f{(float)elem[0], 0, (float)elem[1]};
@@ -390,7 +393,7 @@ bool create_city_from_json(sceneio_scene* scene, const geojson_scene* geojson,
               vec3f{0.0f, 1.0f, 0.0f}, vec3f{0.0f, 0.0f, 1.0f},
               vec3f{coord.x, coord.y, coord.z}};
         }
-      } else if (type_s == "tree" && element.tree == "oak") {
+      } else if (type_s == "tree" && element.tree == geojson_tree_type::oak) {
         auto tree = add_complete_instance(scene, name);
         for (auto& elem : element.new_coords) {
           auto coord            = vec3f{(float)elem[0], 0, (float)elem[1]};
@@ -400,7 +403,7 @@ bool create_city_from_json(sceneio_scene* scene, const geojson_scene* geojson,
               vec3f{0.0f, 1.0f, 0.0f}, vec3f{0.0f, 0.0f, 1.0f},
               vec3f{coord.x, coord.y, coord.z}};
         }
-      } else if (type_s == "tree" && element.tree == "pine") {
+      } else if (type_s == "tree" && element.tree == geojson_tree_type::pine) {
         auto tree = add_complete_instance(scene, name);
         for (auto& elem : element.new_coords) {
           auto coord            = vec3f{(float)elem[0], 0, (float)elem[1]};
@@ -442,8 +445,8 @@ bool create_city_from_json(sceneio_scene* scene, const geojson_scene* geojson,
         auto color_given = false;
         if (element.colour != "null") color_given = true;
         auto color = get_color(type);
-        if (type_roof == "flat" && num_holes == 0) {
-          type_roof = "gabled";
+        if (type_roof == geojson_roof_type::flat && num_holes == 0) {
+          type_roof = geojson_roof_type::gabled;
         } else if (name == "building_relation_1834818") {  // colosseo
           build->material->color = vec3f{0.725, 0.463, 0.361};
         } else if (type == "building" && level < 3 && historic != "no") {
@@ -550,7 +553,7 @@ bool create_city_from_json(sceneio_scene* scene, const geojson_scene* geojson,
         build->shape->triangles = triangles;
 
         // Gabled roof
-        if (type_roof == "gabled") {
+        if (type_roof == geojson_roof_type::gabled) {
           auto polygon_roof   = vector<vector<double2>>{};
           auto roof           = add_complete_instance(scene, name);
           auto triangles_roof = vector<vec3i>{};
@@ -764,9 +767,11 @@ void assign_polygon_type(
       auto roof_shape = properties.at("roof:shape").get<string>();
       if (roof_shape == "gabled" || roof_shape == "onion" ||
           roof_shape == "pyramid") {
-        element.roof_shape = "gabled";
+        element.roof = geojson_roof_type::gabled;
       } else if (roof_shape == "flat") {
-        element.roof_shape = "flat";
+        element.roof = geojson_roof_type::flat;
+      } else {
+        element.roof = geojson_roof_type::missing;
       }
     }
     if (properties.contains("roof:height")) {
@@ -871,32 +876,32 @@ void assign_tree_type(geojson_element& point, const json& properties) {
       if (properties.contains("type")) {
         auto type_tree = properties.at("type").get<string>();
         if (type_tree == "palm") {
-          point.tree = "palm";
+          point.tree = geojson_tree_type::palm;
         } else if (type_tree == "pine") {
-          point.tree = "pine";
+          point.tree = geojson_tree_type::pine;
         } else if (type_tree == "cypress") {
-          point.tree = "cypress";
+          point.tree = geojson_tree_type::cypress;
         } else {
-          point.tree = "standard";
+          point.tree = geojson_tree_type::standard;
         }
       } else if (properties.contains("tree")) {
         point.type = "tree";
-        point.tree = "standard";
+        point.tree = geojson_tree_type::standard;
       } else if (properties.contains("genus")) {
         point.type      = "tree";
         auto genus_tree = properties.at("genus").get<string>();
         if (genus_tree == "Quercus") {
-          point.tree = "oak";
+          point.tree = geojson_tree_type::oak;
         } else if (genus_tree == "Cupressus") {
-          point.tree = "cypress";
+          point.tree = geojson_tree_type::cypress;
         } else if (genus_tree == "Pinus") {
-          point.tree = "pine";
+          point.tree = geojson_tree_type::pine;
         } else {
-          point.tree = "standard";
+          point.tree = geojson_tree_type::standard;
         }
       } else {
         point.type = "tree";
-        point.tree = "standard";
+        point.tree = geojson_tree_type::standard;
       }
     }
   } else {
