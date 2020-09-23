@@ -152,28 +152,7 @@ float get_roof_height(const string& roof_h, float scale) {
   }
 }
 
-bool is_grass(const string& building_type) {
-  return building_type == "park" || building_type == "pitch" ||
-         building_type == "garden" || building_type == "playground" ||
-         building_type == "greenfield" || building_type == "scrub" ||
-         building_type == "heath" || building_type == "farmyard" ||
-         building_type == "grass" || building_type == "farmland" ||
-         building_type == "village_green" || building_type == "meadow" ||
-         building_type == "orchard" || building_type == "vineyard" ||
-         building_type == "recreation_ground" || building_type == "grassland";
-}
-
-bool is_pedestrian(const json& properties) {
-  if (!properties.contains("highway")) return false;
-  auto highway_category = properties.at("highway").get<string>();
-  return highway_category == "footway" || highway_category == "pedestrian" ||
-         highway_category == "track" || highway_category == "steps" ||
-         highway_category == "path" || highway_category == "living_street" ||
-         highway_category == "pedestrian_area" ||
-         highway_category == "pedestrian_line";
-}
-
-vec3f get_color(const string& type, bool grass_type) {
+vec3f get_color(const string& type) {
   if (type == "building") {
     return vec3f{0.79, 0.74, 0.62};
   } else if (type == "highway") {
@@ -188,7 +167,7 @@ vec3f get_color(const string& type, bool grass_type) {
     return vec3f{0.69, 0.58, 0.43};
   } else if (type == "forest") {
     return vec3f{0.004, 0.25, 0.16};
-  } else if (grass_type) {
+  } else if (type == "grass") {
     return vec3f{0.337, 0.49, 0.274};
   } else {
     return vec3f{0.725, 0.71, 0.68};  // floor
@@ -361,13 +340,13 @@ bool create_city_from_json(sceneio_scene* scene,
   auto exist_element = false;
   for (auto& building_geometry : all_geometries) {
     auto building_type = building_geometry.type;
-    auto grass_area    = is_grass(building_type);
     if (building_geometry.type == "building" ||
         building_geometry.type == "water" ||
         building_geometry.type == "waterway" ||
         building_geometry.type == "highway" ||
         building_geometry.type == "pedestrian" ||
-        building_geometry.type == "forest" || grass_area ||
+        building_geometry.type == "forest" ||
+        building_geometry.type == "grass" || building_geometry.type == "tree" ||
         building_geometry.type == "standard" ||
         building_geometry.type == "palm" || building_geometry.type == "pine" ||
         building_geometry.type == "oak" ||
@@ -378,14 +357,11 @@ bool create_city_from_json(sceneio_scene* scene,
 
   if (exist_element) {
     for (auto& element : all_geometries) {
-      auto name = element.name;
-
-      string type_s    = element.type;
-      string type_roof = "null";
-      string historic  = "no";
-
+      auto name      = element.name;
+      auto type_s    = element.type;
+      auto type_roof = "null"s;
+      auto historic  = "no"s;
       if (element.roof_shape != "null") type_roof = element.roof_shape;
-
       if (element.historic != "no") historic = element.historic;
 
       if (type_s == "standard") {
@@ -400,7 +376,6 @@ bool create_city_from_json(sceneio_scene* scene,
               vec3f{0.0f, 1.0f, 0.0f}, vec3f{0.0f, 0.0f, 1.0f},
               vec3f{x, coord.y, z}};
         }
-
       } else if (type_s == "palm") {
         auto tree = add_complete_instance(scene, name);
         for (auto& elem : element.new_coords) {
@@ -472,8 +447,7 @@ bool create_city_from_json(sceneio_scene* scene,
         auto num_holes   = (int)element.new_holes.size();
         auto color_given = false;
         if (element.colour != "null") color_given = true;
-        auto grass_area = is_grass(element.type);
-        auto color = get_color(type, grass_area);  // vec3f{0.79, 0.74, 0.62};
+        auto color = get_color(type);
         if (type_roof == "flat" && num_holes == 0) {
           type_roof = "gabled";
         } else if (name == "building_relation_1834818") {  // colosseo
@@ -527,7 +501,6 @@ bool create_city_from_json(sceneio_scene* scene,
             auto index_2 = (int)_polygon2.size();
             _polygon2.push_back(
                 {positions[prev_index].x, 0, positions[prev_index].z});
-
             quads.push_back({prev_index, i, index, index_2});
           }
 
@@ -770,7 +743,29 @@ float get_thickness(const string& type) {
   }
 }
 
-void assign_type(city_object& building, const json& properties, float scale) {
+void assign_polygon_type(
+    city_object& building, const json& properties, float scale) {
+  auto is_grass = [](const string& building_type) -> bool {
+    return building_type == "park" || building_type == "pitch" ||
+           building_type == "garden" || building_type == "playground" ||
+           building_type == "greenfield" || building_type == "scrub" ||
+           building_type == "heath" || building_type == "farmyard" ||
+           building_type == "grass" || building_type == "farmland" ||
+           building_type == "village_green" || building_type == "meadow" ||
+           building_type == "orchard" || building_type == "vineyard" ||
+           building_type == "recreation_ground" || building_type == "grassland";
+  };
+
+  auto is_pedestrian = [](const json& properties) {
+    if (!properties.contains("highway")) return false;
+    auto highway_category = properties.at("highway").get<string>();
+    return highway_category == "footway" || highway_category == "pedestrian" ||
+           highway_category == "track" || highway_category == "steps" ||
+           highway_category == "path" || highway_category == "living_street" ||
+           highway_category == "pedestrian_area" ||
+           highway_category == "pedestrian_line";
+  };
+
   if (properties.contains("building")) {
     building.type = "building";
     if (properties.contains("roof:shape")) {
@@ -808,27 +803,71 @@ void assign_type(city_object& building, const json& properties, float scale) {
   } else if (properties.contains("waterway")) {
     building.type = "waterway";
   } else if (properties.contains("landuse")) {
-    auto landuse  = properties.at("landuse").get<string>();
-    building.type = landuse;
+    auto landuse = properties.at("landuse").get<string>();
+    if (is_grass(landuse)) {
+      building.type = landuse;
+    } else {
+      building.type = "null";
+    }
   } else if (properties.contains("natural")) {
     auto natural = properties.at("natural").get<string>();
     if (natural == "wood") {
       building.type = "forest";
+    } else if (is_grass(natural)) {
+      building.type = "grass";
     } else {
-      building.type = natural;
+      building.type = "null";
     }
   } else if (properties.contains("leisure")) {
-    auto leisure  = properties.at("leisure").get<string>();
-    building.type = leisure;
+    auto leisure = properties.at("leisure").get<string>();
+    if (is_grass(leisure)) {
+      building.type = leisure;
+    } else {
+      building.type = "null";
+    }
   } else if (properties.contains("highway")) {
-    auto pedestrian = is_pedestrian(properties);
-    if (pedestrian) {
+    if (is_pedestrian(properties)) {
       building.type = "pedestrian";
     } else {
       building.type = "highway";
     }
   } else {
     building.type = "null";
+  }
+}
+
+void assign_line_type(city_object& line, const json& properties, float scale) {
+  auto is_pedestrian = [](const json& properties) {
+    if (!properties.contains("highway")) return false;
+    auto highway_category = properties.at("highway").get<string>();
+    return highway_category == "footway" || highway_category == "pedestrian" ||
+           highway_category == "track" || highway_category == "steps" ||
+           highway_category == "path" || highway_category == "living_street" ||
+           highway_category == "pedestrian_area" ||
+           highway_category == "pedestrian_line";
+  };
+
+  if (properties.contains("highway")) {
+    bool pedestrian = is_pedestrian(properties);
+    if (pedestrian) {
+      line.type = "pedestrian";
+    } else {
+      line.type = "highway";
+    }
+  } else if (properties.contains("natural")) {
+    auto natural = properties.at("natural").get<string>();
+    line.type    = natural;
+  } else {
+    line.type = "null";
+  }
+}
+
+void assign_multiline_type(
+    city_object& line, const json& properties, float scale) {
+  if (properties.contains("waterway")) {
+    line.type = "waterway";
+  } else {
+    line.type = "null";
   }
 }
 
@@ -869,12 +908,11 @@ void assign_tree_type(city_object& point, const json& properties) {
   }
 }
 
-bool check_valid_type(const city_object& building, const json& properties) {
-  auto grass_area = is_grass(building.type);
+bool check_valid_type(const city_object& building) {
   return building.type == "building" || building.type == "water" ||
-         building.type == "waterway" || building.type == "sand" || grass_area ||
-         building.type == "highway" || building.type == "pedestrian" ||
-         building.type == "forest";
+         building.type == "waterway" || building.type == "sand" ||
+         building.type == "grass" || building.type == "highway" ||
+         building.type == "pedestrian" || building.type == "forest";
 }
 
 // load/save json
@@ -910,7 +948,7 @@ bool load_geojson(const string& filename, vector<city_object>& all_buildings,
 
     if (type == "Polygon") {
       auto building = city_object{};
-      assign_type(building, properties, scale);
+      assign_polygon_type(building, properties, scale);
       if (building.type == "null") continue;
       building.name  = "building_" + id;
       building.level = get_building_level(building.type, properties);
@@ -923,11 +961,11 @@ bool load_geojson(const string& filename, vector<city_object>& all_buildings,
           building.holes.push_back(list_coords.get<vector<double2>>());
         }
       }
-      if (!check_valid_type(building, properties)) continue;
+      if (!check_valid_type(building)) continue;
       all_buildings.push_back(building);
     } else if (type == "MultiPolygon") {
       auto building = city_object{};
-      assign_type(building, properties, scale);
+      assign_polygon_type(building, properties, scale);
       if (building.type == "null") continue;
       building.name  = "building_" + id;
       building.level = get_building_level(building.type, properties);
@@ -942,7 +980,7 @@ bool load_geojson(const string& filename, vector<city_object>& all_buildings,
           }
         }
       }
-      if (!check_valid_type(building, properties)) continue;
+      if (!check_valid_type(building)) continue;
       all_buildings.push_back(building);
     } else if (geometry.at("type") == "LineString") {
       auto count = 0;
@@ -952,20 +990,9 @@ bool load_geojson(const string& filename, vector<city_object>& all_buildings,
         auto thickness = 0.00005f;
         auto area      = compute_area(x0, x1, y0, y1, thickness);
         auto line      = city_object{};
+        assign_line_type(line, properties, scale);
+        if (line.type == "null") continue;
         line.name      = "line_" + id + std::to_string(count++);
-        if (properties.contains("highway")) {
-          bool pedestrian = is_pedestrian(properties);
-          if (pedestrian) {
-            line.type = "pedestrian";
-          } else {
-            line.type = "highway";
-          }
-        } else if (properties.contains("natural")) {
-          auto natural = properties.at("natural").get<string>();
-          line.type    = natural;
-        } else {
-          continue;
-        }
         line.thickness = get_thickness(line.type);
         line.coords    = area;
         all_buildings.push_back(line);
@@ -979,12 +1006,9 @@ bool load_geojson(const string& filename, vector<city_object>& all_buildings,
           auto thickness = 0.0004f;
           auto area      = compute_area(x0, x1, y0, y1, thickness);
           auto line      = city_object{};
+          assign_multiline_type(line, properties, scale);
+          if (line.type == "null") continue;
           line.name      = "multiline_" + id + std::to_string(count++);
-          if (properties.contains("waterway")) {
-            line.type = "waterway";
-          } else {
-            continue;
-          }
           line.thickness = thickness;
           line.coords    = area;
           all_buildings.push_back(line);
