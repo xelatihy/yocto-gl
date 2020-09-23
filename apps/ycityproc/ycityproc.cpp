@@ -45,13 +45,19 @@ using std::array;
 
 using double2 = array<double, 2>;
 
+enum struct geojson_element_type {
+  // clang-format off
+  building, highway, pedestrian, water, waterway, grass, forest, sand, tree,
+  other
+  // clang-format on
+};
 enum struct geojson_tree_type { standard, palm, oak, pine, cypress };
 enum struct geojson_roof_type { missing, flat, gabled };
 enum struct geojson_building_type { standard, historic };
 
 struct geojson_element {
   string                  name        = "";
-  string                  type        = "";
+  geojson_element_type    type        = geojson_element_type::other;
   geojson_roof_type       roof        = geojson_roof_type::missing;
   geojson_tree_type       tree        = geojson_tree_type::standard;
   geojson_building_type   building    = geojson_building_type::standard;
@@ -72,7 +78,7 @@ struct geojson_scene {
   vector<geojson_element> elements  = {};
 };
 
-int get_building_level(const string& footprint_type, const json& properties) {
+int get_building_level(geojson_element_type type, const json& properties) {
   auto is_integer = [](const string& lev) -> bool {
     for (int i = 0; i < lev.size(); i++) {
       if (lev[i] == '.') return false;
@@ -113,37 +119,38 @@ int get_building_level(const string& footprint_type, const json& properties) {
   }
 
   // Check if the building:height is given in the GeoJson file
-  if (footprint_type == "building" && properties.contains("height")) {
+  if (type == geojson_element_type::building && properties.contains("height")) {
     auto h = properties.at("height").get<string>();
     if (is_number(h)) height = std::stof(h);
   }
 
-  if (footprint_type == "building" && properties.contains("building:height")) {
+  if (type == geojson_element_type::building &&
+      properties.contains("building:height")) {
     auto h = properties.at("building:height").get<string>();
     if (is_number(h)) height = std::stof(h);
   }
 
   if (height > -1.0) level = int(float(height) / 3.2);
 
-  if (footprint_type == "building" && properties.contains("building") &&
-      is_tall(properties))
+  if (type == geojson_element_type::building &&
+      properties.contains("building") && is_tall(properties))
     level = 3;
 
   return level;
 }
 
 float get_height(const geojson_element& element, float scale) {
-  if (element.type == "building" && element.level > 0) {
+  if (element.type == geojson_element_type::building && element.level > 0) {
     return (element.level + scale / 20) / 20;
-  } else if (element.type == "water") {
+  } else if (element.type == geojson_element_type::water) {
     return 0.0001f;
-  } else if (element.type == "waterway") {
+  } else if (element.type == geojson_element_type::waterway) {
     return 0.0001f;
-  } else if (element.type == "highway") {
+  } else if (element.type == geojson_element_type::highway) {
     return 0.0005f;
-  } else if (element.type == "pedestrian") {
+  } else if (element.type == geojson_element_type::pedestrian) {
     return 0.0004f;
-  } else if (element.type == "grass") {
+  } else if (element.type == geojson_element_type::grass) {
     return 0.0001f;
   } else {
     return 0.0001f;
@@ -158,22 +165,22 @@ float get_roof_height(const string& roof_h, float scale) {
   }
 }
 
-vec3f get_color(const string& type) {
-  if (type == "building") {
+vec3f get_color(geojson_element_type type) {
+  if (type == geojson_element_type::building) {
     return vec3f{0.79, 0.74, 0.62};
-  } else if (type == "highway") {
+  } else if (type == geojson_element_type::highway) {
     return vec3f{0.26, 0.26, 0.28};
-  } else if (type == "pedestrian") {
+  } else if (type == geojson_element_type::pedestrian) {
     return vec3f{0.45, 0.4, 0.27};  // color = vec3f{0.82, 0.82, 0.82};
-  } else if (type == "water") {
+  } else if (type == geojson_element_type::water) {
     return vec3f{0.72, 0.95, 1.0};
-  } else if (type == "waterway") {
+  } else if (type == geojson_element_type::waterway) {
     return vec3f{0.72, 0.95, 1.0};
-  } else if (type == "sand") {
+  } else if (type == geojson_element_type::sand) {
     return vec3f{0.69, 0.58, 0.43};
-  } else if (type == "forest") {
+  } else if (type == geojson_element_type::forest) {
     return vec3f{0.004, 0.25, 0.16};
-  } else if (type == "grass") {
+  } else if (type == geojson_element_type::grass) {
     return vec3f{0.337, 0.49, 0.274};
   } else {
     return vec3f{0.725, 0.71, 0.68};  // floor
@@ -344,11 +351,14 @@ bool create_city_from_json(sceneio_scene* scene, const geojson_scene* geojson,
   // Check if exists the element of interest
   auto exist_element = false;
   for (auto& element : geojson->elements) {
-    auto building_type = element.type;
-    if (element.type == "building" || element.type == "water" ||
-        element.type == "waterway" || element.type == "highway" ||
-        element.type == "pedestrian" || element.type == "forest" ||
-        element.type == "grass" || element.type == "tree") {
+    if (element.type == geojson_element_type::building ||
+        element.type == geojson_element_type::water ||
+        element.type == geojson_element_type::waterway ||
+        element.type == geojson_element_type::highway ||
+        element.type == geojson_element_type::pedestrian ||
+        element.type == geojson_element_type::forest ||
+        element.type == geojson_element_type::grass ||
+        element.type == geojson_element_type::tree) {
       exist_element = true;
     }
   }
@@ -359,7 +369,8 @@ bool create_city_from_json(sceneio_scene* scene, const geojson_scene* geojson,
       auto type_s    = element.type;
       auto type_roof = element.roof;
 
-      if (type_s == "tree" && element.tree == geojson_tree_type::standard) {
+      if (type_s == geojson_element_type::tree &&
+          element.tree == geojson_tree_type::standard) {
         auto tree = add_complete_instance(scene, name);
         for (auto& elem : element.new_coords) {
           auto coord            = vec3f{(float)elem[0], 0, (float)elem[1]};
@@ -371,7 +382,8 @@ bool create_city_from_json(sceneio_scene* scene, const geojson_scene* geojson,
               vec3f{0.0f, 1.0f, 0.0f}, vec3f{0.0f, 0.0f, 1.0f},
               vec3f{x, coord.y, z}};
         }
-      } else if (type_s == "tree" && element.tree == geojson_tree_type::palm) {
+      } else if (type_s == geojson_element_type::tree &&
+                 element.tree == geojson_tree_type::palm) {
         auto tree = add_complete_instance(scene, name);
         for (auto& elem : element.new_coords) {
           auto coord            = vec3f{(float)elem[0], 0, (float)elem[1]};
@@ -381,7 +393,7 @@ bool create_city_from_json(sceneio_scene* scene, const geojson_scene* geojson,
               vec3f{0.0f, 1.0f, 0.0f}, vec3f{0.0f, 0.0f, 1.0f},
               vec3f{coord.x, coord.y, coord.z}};
         }
-      } else if (type_s == "tree" &&
+      } else if (type_s == geojson_element_type::tree &&
                  element.tree == geojson_tree_type::cypress) {
         auto tree = add_complete_instance(scene, name);
         for (auto& elem : element.new_coords) {
@@ -392,7 +404,8 @@ bool create_city_from_json(sceneio_scene* scene, const geojson_scene* geojson,
               vec3f{0.0f, 1.0f, 0.0f}, vec3f{0.0f, 0.0f, 1.0f},
               vec3f{coord.x, coord.y, coord.z}};
         }
-      } else if (type_s == "tree" && element.tree == geojson_tree_type::oak) {
+      } else if (type_s == geojson_element_type::tree &&
+                 element.tree == geojson_tree_type::oak) {
         auto tree = add_complete_instance(scene, name);
         for (auto& elem : element.new_coords) {
           auto coord            = vec3f{(float)elem[0], 0, (float)elem[1]};
@@ -402,7 +415,8 @@ bool create_city_from_json(sceneio_scene* scene, const geojson_scene* geojson,
               vec3f{0.0f, 1.0f, 0.0f}, vec3f{0.0f, 0.0f, 1.0f},
               vec3f{coord.x, coord.y, coord.z}};
         }
-      } else if (type_s == "tree" && element.tree == geojson_tree_type::pine) {
+      } else if (type_s == geojson_element_type::tree &&
+                 element.tree == geojson_tree_type::pine) {
         auto tree = add_complete_instance(scene, name);
         for (auto& elem : element.new_coords) {
           auto coord            = vec3f{(float)elem[0], 0, (float)elem[1]};
@@ -448,7 +462,7 @@ bool create_city_from_json(sceneio_scene* scene, const geojson_scene* geojson,
           type_roof = geojson_roof_type::gabled;
         } else if (name == "building_relation_1834818") {  // colosseo
           build->material->color = vec3f{0.725, 0.463, 0.361};
-        } else if (type == "building" && level < 3 &&
+        } else if (type == geojson_element_type::building && level < 3 &&
                    element.building == geojson_building_type::historic) {
           build->material->color = vec3f{0.538, 0.426, 0.347};
         } else if (element.building == geojson_building_type::historic &&
@@ -467,7 +481,8 @@ bool create_city_from_json(sceneio_scene* scene, const geojson_scene* geojson,
         }
 
         // Water characteristics
-        if (type == "water" || type == "waterway") {
+        if (type == geojson_element_type::water ||
+            type == geojson_element_type::waterway) {
           build->material->specular     = 1.0f;
           build->material->transmission = 0.99f;
           build->material->metallic     = 0.8f;
@@ -475,13 +490,13 @@ bool create_city_from_json(sceneio_scene* scene, const geojson_scene* geojson,
         }
 
         // Road characteristics
-        if (type == "highway") {
+        if (type == geojson_element_type::highway) {
           build->material->roughness = 0.9f;
           build->material->specular  = 0.7f;
         }
 
         // Filling buildings
-        if (type == "building") {
+        if (type == geojson_element_type::building) {
           auto build2             = add_complete_instance(scene, name + "_1");
           build2->material->color = color;
           auto _polygon2          = positions;
@@ -730,10 +745,11 @@ vector<double2> compute_area(
   return line_1;
 }
 
-float get_thickness(const string& type) {
-  if (type == "pedestrian") {
+float get_thickness(geojson_element_type type) {
+  if (type == geojson_element_type::pedestrian) {
     return 0.00005f;
-  } else if (type == "water" || type == "waterway") {  // MultiLineString
+  } else if (type == geojson_element_type::water ||
+             type == geojson_element_type::waterway) {  // MultiLineString
     return 1.0f;
   } else {
     return 0.0001f;
@@ -762,7 +778,7 @@ void assign_polygon_type(
   };
 
   if (properties.contains("building")) {
-    element.type = "building";
+    element.type = geojson_element_type::building;
     if (properties.contains("roof:shape")) {
       auto roof_shape = properties.at("roof:shape").get<string>();
       if (roof_shape == "gabled" || roof_shape == "onion" ||
@@ -796,40 +812,40 @@ void assign_polygon_type(
       }
     }
   } else if (properties.contains("water")) {
-    element.type = "water";
+    element.type = geojson_element_type::water;
   } else if (properties.contains("waterway")) {
-    element.type = "waterway";
+    element.type = geojson_element_type::waterway;
   } else if (properties.contains("landuse")) {
     auto landuse = properties.at("landuse").get<string>();
     if (is_grass(landuse)) {
-      element.type = landuse;
+      element.type = geojson_element_type::grass;
     } else {
-      element.type = "null";
+      element.type = geojson_element_type::other;
     }
   } else if (properties.contains("natural")) {
     auto natural = properties.at("natural").get<string>();
     if (natural == "wood") {
-      element.type = "forest";
+      element.type = geojson_element_type::forest;
     } else if (is_grass(natural)) {
-      element.type = "grass";
+      element.type = geojson_element_type::grass;
     } else {
-      element.type = "null";
+      element.type = geojson_element_type::other;
     }
   } else if (properties.contains("leisure")) {
     auto leisure = properties.at("leisure").get<string>();
     if (is_grass(leisure)) {
-      element.type = leisure;
+      element.type = geojson_element_type::grass;
     } else {
-      element.type = "null";
+      element.type = geojson_element_type::other;
     }
   } else if (properties.contains("highway")) {
     if (is_pedestrian(properties)) {
-      element.type = "pedestrian";
+      element.type = geojson_element_type::pedestrian;
     } else {
-      element.type = "highway";
+      element.type = geojson_element_type::highway;
     }
   } else {
-    element.type = "null";
+    element.type = geojson_element_type::other;
   }
 }
 
@@ -847,24 +863,24 @@ void assign_line_type(
   if (properties.contains("highway")) {
     bool pedestrian = is_pedestrian(properties);
     if (pedestrian) {
-      line.type = "pedestrian";
+      line.type = geojson_element_type::pedestrian;
     } else {
-      line.type = "highway";
+      line.type = geojson_element_type::highway;
     }
   } else if (properties.contains("natural")) {
     auto natural = properties.at("natural").get<string>();
-    line.type    = natural;
+    line.type    = geojson_element_type::grass;
   } else {
-    line.type = "null";
+    line.type = geojson_element_type::other;
   }
 }
 
 void assign_multiline_type(
     geojson_element& line, const json& properties, float scale) {
   if (properties.contains("waterway")) {
-    line.type = "waterway";
+    line.type = geojson_element_type::waterway;
   } else {
-    line.type = "null";
+    line.type = geojson_element_type::other;
   }
 }
 
@@ -872,7 +888,7 @@ void assign_tree_type(geojson_element& point, const json& properties) {
   if (properties.contains("natural")) {
     auto point_type_nat = properties.at("natural").get<string>();
     if (point_type_nat == "tree") {
-      point.type = "tree";
+      point.type = geojson_element_type::tree;
       if (properties.contains("type")) {
         auto type_tree = properties.at("type").get<string>();
         if (type_tree == "palm") {
@@ -885,10 +901,10 @@ void assign_tree_type(geojson_element& point, const json& properties) {
           point.tree = geojson_tree_type::standard;
         }
       } else if (properties.contains("tree")) {
-        point.type = "tree";
+        point.type = geojson_element_type::tree;
         point.tree = geojson_tree_type::standard;
       } else if (properties.contains("genus")) {
-        point.type      = "tree";
+        point.type      = geojson_element_type::tree;
         auto genus_tree = properties.at("genus").get<string>();
         if (genus_tree == "Quercus") {
           point.tree = geojson_tree_type::oak;
@@ -900,20 +916,24 @@ void assign_tree_type(geojson_element& point, const json& properties) {
           point.tree = geojson_tree_type::standard;
         }
       } else {
-        point.type = "tree";
+        point.type = geojson_element_type::tree;
         point.tree = geojson_tree_type::standard;
       }
     }
   } else {
-    point.type = "null";
+    point.type = geojson_element_type::other;
   }
 }
 
 bool check_valid_type(const geojson_element& element) {
-  return element.type == "building" || element.type == "water" ||
-         element.type == "waterway" || element.type == "sand" ||
-         element.type == "grass" || element.type == "highway" ||
-         element.type == "pedestrian" || element.type == "forest";
+  return element.type == geojson_element_type::building ||
+         element.type == geojson_element_type::water ||
+         element.type == geojson_element_type::waterway ||
+         element.type == geojson_element_type::sand ||
+         element.type == geojson_element_type::grass ||
+         element.type == geojson_element_type::highway ||
+         element.type == geojson_element_type::pedestrian ||
+         element.type == geojson_element_type::forest;
 }
 
 // load/save json
@@ -950,7 +970,7 @@ bool load_geojson(const string& filename, geojson_scene* geojson,
     if (type == "Polygon") {
       auto element = geojson_element{};
       assign_polygon_type(element, properties, scale);
-      if (element.type == "null") continue;
+      if (element.type == geojson_element_type::other) continue;
       element.name  = "building_" + id;
       element.level = get_building_level(element.type, properties);
       auto first    = true;
@@ -967,7 +987,7 @@ bool load_geojson(const string& filename, geojson_scene* geojson,
     } else if (type == "MultiPolygon") {
       auto element = geojson_element{};
       assign_polygon_type(element, properties, scale);
-      if (element.type == "null") continue;
+      if (element.type == geojson_element_type::other) continue;
       element.name  = "building_" + id;
       element.level = get_building_level(element.type, properties);
       auto first    = true;
@@ -992,7 +1012,7 @@ bool load_geojson(const string& filename, geojson_scene* geojson,
         auto area      = compute_area(x0, x1, y0, y1, thickness);
         auto line      = geojson_element{};
         assign_line_type(line, properties, scale);
-        if (line.type == "null") continue;
+        if (line.type == geojson_element_type::other) continue;
         line.name      = "line_" + id + std::to_string(count++);
         line.thickness = get_thickness(line.type);
         line.coords    = area;
@@ -1008,7 +1028,7 @@ bool load_geojson(const string& filename, geojson_scene* geojson,
           auto area      = compute_area(x0, x1, y0, y1, thickness);
           auto line      = geojson_element{};
           assign_multiline_type(line, properties, scale);
-          if (line.type == "null") continue;
+          if (line.type == geojson_element_type::other) continue;
           line.name      = "multiline_" + id + std::to_string(count++);
           line.thickness = thickness;
           line.coords    = area;
@@ -1018,7 +1038,7 @@ bool load_geojson(const string& filename, geojson_scene* geojson,
     } else if (geometry.at("type") == "Point") {
       auto point = geojson_element{};
       assign_tree_type(point, properties);
-      if (point.type == "null") continue;
+      if (point.type == geojson_element_type::other) continue;
       point.name   = "point_" + id;
       point.coords = {geometry.at("coordinates").get<double2>()};
       geojson->elements.push_back(point);
