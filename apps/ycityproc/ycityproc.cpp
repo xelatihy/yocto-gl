@@ -31,14 +31,10 @@
 #include <yocto/yocto_shape.h>
 #include <yocto/yocto_trace.h>
 
-#include <atomic>
-#include <deque>
 #include <fstream>
-#include <future>
 #include <iostream>
 #include <string>
 #include <tuple>
-#include <typeinfo>
 #include <unordered_map>
 
 #include "ext/earcut.hpp"
