@@ -131,6 +131,8 @@ float get_height(const city_object& building, float scale) {
     return (building.level + scale / 20) / 20;
   } else if (building.type == "water") {
     return 0.0001f;
+  } else if (building.type == "waterway") {
+    return 0.0001f;
   } else if (building.type == "highway") {
     return 0.0005f;
   } else if (building.type == "pedestrian") {
@@ -179,6 +181,8 @@ vec3f get_color(const string& type, bool grass_type) {
   } else if (type == "pedestrian") {
     return vec3f{0.45, 0.4, 0.27};  // color = vec3f{0.82, 0.82, 0.82};
   } else if (type == "water") {
+    return vec3f{0.72, 0.95, 1.0};
+  } else if (type == "waterway") {
     return vec3f{0.72, 0.95, 1.0};
   } else if (type == "sand") {
     return vec3f{0.69, 0.58, 0.43};
@@ -360,6 +364,7 @@ bool create_city_from_json(sceneio_scene* scene,
     auto grass_area    = is_grass(building_type);
     if (building_geometry.type == "building" ||
         building_geometry.type == "water" ||
+        building_geometry.type == "waterway" ||
         building_geometry.type == "highway" ||
         building_geometry.type == "pedestrian" ||
         building_geometry.type == "forest" || grass_area ||
@@ -437,25 +442,14 @@ bool create_city_from_json(sceneio_scene* scene,
               vec3f{coord.x, coord.y, coord.z}};
         }
       } else {
-        vector<vector<double2>> polygon;
-
-        auto          build = add_complete_instance(scene, name);
-        vector<vec3i> triangles;
-        vector<vec3f> positions;
-
-        vector<double2> vect_building;
-        auto            height = -1.0f;
-        // auto          roof_height = -1.0f;
-        auto level = 0;
-        auto type  = ""s;
-
-        type = element.type;
-
-        if (element.level > 0) {
-          level = element.level;
-        }
-
-        height = element.height;
+        auto polygon       = vector<vector<double2>>{};
+        auto build         = add_complete_instance(scene, name);
+        auto triangles     = vector<vec3i>{};
+        auto positions     = vector<vec3f>{};
+        auto vect_building = vector<double2>{};
+        auto height        = element.height;
+        auto level         = element.level > 0 ? element.level : 0;
+        auto type          = element.type;
 
         for (auto& elem : element.new_coords) {
           auto coord = vec3f{(float)elem[0], height, (float)elem[1]};
@@ -464,7 +458,7 @@ bool create_city_from_json(sceneio_scene* scene,
         }
         polygon.push_back(vect_building);
 
-        vector<double2> vect_hole;
+        auto vect_hole = vector<double2>{};
         for (auto& list : element.new_holes) {
           for (auto& h : list) {
             auto coord = vec3f{(float)h[0], height, (float)h[1]};
@@ -495,18 +489,14 @@ bool create_city_from_json(sceneio_scene* scene,
           build->material->color = color;
         }
 
-        vector<vec3f> _polygon;
-        for (auto point : positions) {
-          _polygon.push_back(point);
-        }
-
-        auto indices = mapbox::earcut<int>(polygon);
-        for (int k = 0; k < indices.size() - 2; k += 3) {
+        auto _polygon = positions;
+        auto indices  = mapbox::earcut<int>(polygon);
+        for (auto k = 0; k < (int)indices.size() - 2; k += 3) {
           triangles.push_back({indices[k], indices[k + 1], indices[k + 2]});
         }
 
         // Water characteristics
-        if (type == "water") {
+        if (type == "water" || type == "waterway") {
           build->material->specular     = 1.0f;
           build->material->transmission = 0.99f;
           build->material->metallic     = 0.8f;
@@ -523,14 +513,11 @@ bool create_city_from_json(sceneio_scene* scene,
         if (type == "building") {
           auto build2             = add_complete_instance(scene, name + "_1");
           build2->material->color = color;
-          vector<vec3f> _polygon2;
-          for (auto point : positions) {
-            _polygon2.push_back(point);
-          }
+          auto _polygon2          = positions;
 
           // Quads on the building sides
-          vector<vec4i> quads;
-          for (int i = 0; i < positions.size(); i++) {
+          auto quads = vector<vec4i>{};
+          for (auto i = 0; i < (int)positions.size(); i++) {
             auto prev_index = i - 1;
             if (prev_index == -1) {
               prev_index = (int)positions.size() - 1;
@@ -597,17 +584,16 @@ bool create_city_from_json(sceneio_scene* scene,
 
         // Gabled roof
         if (type_roof == "gabled") {
-          vector<vector<double2>> polygon_roof;
-          auto                    roof = add_complete_instance(scene, name);
-          vector<vec3i>           triangles_roof;
-          vector<vec3f>           positions_roof;
-          vector<double2>         vect_roof;
-          auto                    coord       = vec3f{0, 0, 0};
-          auto                    height      = element.height;
-          auto                    roof_height = element.roof_height;
-          auto                    centroid_x = 0.0f, centroid_y = 0.0f;
-          auto                    num_vert  = (int)element.new_coords.size();
-          auto                    num_holes = (int)element.new_holes.size();
+          auto polygon_roof   = vector<vector<double2>>{};
+          auto roof           = add_complete_instance(scene, name);
+          auto triangles_roof = vector<vec3i>{};
+          auto positions_roof = vector<vec3f>{};
+          auto vect_roof      = vector<double2>{};
+          auto height         = element.height;
+          auto roof_height    = element.roof_height;
+          auto centroid_x = 0.0f, centroid_y = 0.0f;
+          auto num_vert  = (int)element.new_coords.size();
+          auto num_holes = (int)element.new_holes.size();
 
           if (num_holes == 0) {
             for (auto& elem : element.new_coords) {
@@ -626,12 +612,8 @@ bool create_city_from_json(sceneio_scene* scene,
             auto roof_color       = vec3f{0.351, 0.096, 0.091};  // brown/red
             roof->material->color = roof_color;
 
-            vector<vec3f> _polygon_roof;
-            for (auto point : positions_roof) {
-              _polygon_roof.push_back(point);
-            }
-
-            auto indices_roof = mapbox::earcut<int>(polygon_roof);
+            auto _polygon_roof = positions_roof;
+            auto indices_roof  = mapbox::earcut<int>(polygon_roof);
             for (int k = 0; k < indices_roof.size() - 2; k += 3) {
               triangles_roof.push_back(
                   {indices_roof[k], indices_roof[k + 1], indices_roof[k + 2]});
@@ -640,12 +622,9 @@ bool create_city_from_json(sceneio_scene* scene,
             // Filling roofs
             auto roof2 = add_complete_instance(scene, name + "_roof");
             roof2->material->color = roof_color;
-            vector<vec3f> _polygon2_roof;
-            for (auto point : positions_roof) {
-              _polygon2_roof.push_back(point);
-            }
-            vector<vec3i> triangles2_roof;
-            for (int i = 0; i < positions_roof.size(); i++) {
+            auto _polygon2_roof    = positions_roof;
+            auto triangles2_roof   = vector<vec3i>{};
+            for (auto i = 0; i < (int)positions_roof.size(); i++) {
               auto prev_index = i - 1;
               if (prev_index == -1) {
                 prev_index = (int)positions_roof.size() - 1;
@@ -674,7 +653,8 @@ bool create_city_from_json(sceneio_scene* scene,
 
 vector<double2> compute_area(
     double x, double next_x, double y, double next_y, double road_thickness) {
-  vector<double2> line_1 = {{next_x + road_thickness, next_y + road_thickness},
+  auto line_1 = vector<double2>{
+      {next_x + road_thickness, next_y + road_thickness},
       {next_x - road_thickness, next_y - road_thickness},
       {x - road_thickness, y - road_thickness},
       {x + road_thickness, y + road_thickness}};
@@ -783,7 +763,7 @@ vector<double2> compute_area(
 float get_thickness(const string& type) {
   if (type == "pedestrian") {
     return 0.00005f;
-  } else if (type == "water") {  // MultiLineString
+  } else if (type == "water" || type == "waterway") {  // MultiLineString
     return 1.0f;
   } else {
     return 0.0001f;
@@ -825,6 +805,8 @@ void assign_type(city_object& building, const json& properties, float scale) {
     }
   } else if (properties.contains("water")) {
     building.type = "water";
+  } else if (properties.contains("waterway")) {
+    building.type = "waterway";
   } else if (properties.contains("landuse")) {
     auto landuse  = properties.at("landuse").get<string>();
     building.type = landuse;
@@ -890,8 +872,9 @@ void assign_tree_type(city_object& point, const json& properties) {
 bool check_valid_type(const city_object& building, const json& properties) {
   auto grass_area = is_grass(building.type);
   return building.type == "building" || building.type == "water" ||
-         building.type == "sand" || grass_area || building.type == "highway" ||
-         building.type == "pedestrian" || building.type == "forest";
+         building.type == "waterway" || building.type == "sand" || grass_area ||
+         building.type == "highway" || building.type == "pedestrian" ||
+         building.type == "forest";
 }
 
 // load/save json
@@ -998,7 +981,7 @@ bool load_geojson(const string& filename, vector<city_object>& all_buildings,
           auto line      = city_object{};
           line.name      = "multiline_" + id + std::to_string(count++);
           if (properties.contains("waterway")) {
-            line.type = "water";
+            line.type = "waterway";
           } else {
             continue;
           }
