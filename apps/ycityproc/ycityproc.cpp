@@ -47,17 +47,18 @@ using double2 = array<double, 2>;
 
 enum struct geojson_tree_type { standard, palm, oak, pine, cypress };
 enum struct geojson_roof_type { missing, flat, gabled };
+enum struct geojson_building_type { standard, historic };
 
 struct geojson_element {
   string                  name        = "";
   string                  type        = "";
   geojson_roof_type       roof        = geojson_roof_type::missing;
   geojson_tree_type       tree        = geojson_tree_type::standard;
+  geojson_building_type   building    = geojson_building_type::standard;
   string                  colour      = "";
   int                     level       = 0;
   float                   height      = 0;
   float                   roof_height = 0;
-  string                  historic    = "";
   float                   thickness   = 0;
   vector<double2>         coords      = {};
   vector<double2>         new_coords  = {};
@@ -354,10 +355,8 @@ bool create_city_from_json(sceneio_scene* scene, const geojson_scene* geojson,
 
   if (exist_element) {
     for (auto& element : geojson->elements) {
-      auto name     = element.name;
-      auto type_s   = element.type;
-      auto historic = "no"s;
-      if (element.historic != "no") historic = element.historic;
+      auto name      = element.name;
+      auto type_s    = element.type;
       auto type_roof = element.roof;
 
       if (type_s == "tree" && element.tree == geojson_tree_type::standard) {
@@ -449,10 +448,11 @@ bool create_city_from_json(sceneio_scene* scene, const geojson_scene* geojson,
           type_roof = geojson_roof_type::gabled;
         } else if (name == "building_relation_1834818") {  // colosseo
           build->material->color = vec3f{0.725, 0.463, 0.361};
-        } else if (type == "building" && level < 3 && historic != "no") {
-          build->material->color = vec3f{
-              0.538, 0.426, 0.347};  // vec3f{0.402,0.319,0.261}; // light brown
-        } else if (historic == "yes" && color_given) {
+        } else if (type == "building" && level < 3 &&
+                   element.building == geojson_building_type::historic) {
+          build->material->color = vec3f{0.538, 0.426, 0.347};
+        } else if (element.building == geojson_building_type::historic &&
+                   color_given) {
           string building_color  = element.colour;
           vec3f  build_color     = get_building_color(building_color);
           build->material->color = build_color;
@@ -503,7 +503,7 @@ bool create_city_from_json(sceneio_scene* scene, const geojson_scene* geojson,
 
           build2->material->color = color;
 
-          if (historic == "yes") {
+          if (element.building == geojson_building_type::historic) {
             if (name == "building_relation_1834818") {  // colosseo
               if (!load_image(
                       path_text_colosseo, texture_colosseo->hdr, ioerror))
@@ -779,7 +779,7 @@ void assign_polygon_type(
       element.roof_height = get_roof_height(roof_height, scale);
     }
     if (properties.contains("historic")) {
-      element.historic = "yes";
+      element.building = geojson_building_type::historic;
       if (properties.contains("building:colour")) {
         auto color     = properties.at("building:colour").get<string>();
         element.colour = color;
@@ -788,7 +788,7 @@ void assign_polygon_type(
     if (properties.contains("tourism")) {
       auto tourism = properties.at("tourism").get<string>();
       if (tourism == "attraction") {
-        element.historic = "yes";
+        element.building = geojson_building_type::historic;
         if (properties.contains("building:colour")) {
           auto color     = properties.at("building:colour").get<string>();
           element.colour = color;
