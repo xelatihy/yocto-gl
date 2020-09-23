@@ -197,9 +197,9 @@ vec3f get_building_color(const string& building_color) {
   }
 }
 
-bool create_city_from_json(sceneio_scene* scene, const geojson_scene& geojson,
+bool create_city_from_json(sceneio_scene* scene, const geojson_scene* geojson,
     const string& dirname, string& ioerror) {
-  scene->name      = "city";
+  scene->name      = geojson->name;
   auto camera      = add_camera(scene);
   camera->frame    = frame3f{{-0.028f, 0.0f, 1.0f}, {0.764f, 0.645f, 0.022f},
       {-0.645f, 0.764f, -0.018f}, {-13.032f, 16.750f, -1.409f}};
@@ -344,7 +344,7 @@ bool create_city_from_json(sceneio_scene* scene, const geojson_scene& geojson,
 
   // Check if exists the element of interest
   auto exist_element = false;
-  for (auto& element : geojson.elements) {
+  for (auto& element : geojson->elements) {
     auto building_type = element.type;
     if (element.type == "building" || element.type == "water" ||
         element.type == "waterway" || element.type == "highway" ||
@@ -355,7 +355,7 @@ bool create_city_from_json(sceneio_scene* scene, const geojson_scene& geojson,
   }
 
   if (exist_element) {
-    for (auto& element : geojson.elements) {
+    for (auto& element : geojson->elements) {
       auto name      = element.name;
       auto type_s    = element.type;
       auto type_roof = "null"s;
@@ -933,7 +933,7 @@ static bool load_json(const string& filename, json& js, string& error) {
   }
 }
 
-bool load_geojson(const string& filename, geojson_scene& geojson,
+bool load_geojson(const string& filename, geojson_scene* geojson,
     string& ioerror, float scale = 50) {
   // load json
   auto js = json{};
@@ -963,7 +963,7 @@ bool load_geojson(const string& filename, geojson_scene& geojson,
         }
       }
       if (!check_valid_type(element)) continue;
-      geojson.elements.push_back(element);
+      geojson->elements.push_back(element);
     } else if (type == "MultiPolygon") {
       auto element = geojson_element{};
       assign_polygon_type(element, properties, scale);
@@ -982,7 +982,7 @@ bool load_geojson(const string& filename, geojson_scene& geojson,
         }
       }
       if (!check_valid_type(element)) continue;
-      geojson.elements.push_back(element);
+      geojson->elements.push_back(element);
     } else if (geometry.at("type") == "LineString") {
       auto count = 0;
       for (auto i = 0; i < (int)geometry.at("coordinates").size() - 1; i++) {
@@ -996,7 +996,7 @@ bool load_geojson(const string& filename, geojson_scene& geojson,
         line.name      = "line_" + id + std::to_string(count++);
         line.thickness = get_thickness(line.type);
         line.coords    = area;
-        geojson.elements.push_back(line);
+        geojson->elements.push_back(line);
       }
     } else if (geometry.at("type") == "MultiLineString") {
       auto count = 0;
@@ -1012,7 +1012,7 @@ bool load_geojson(const string& filename, geojson_scene& geojson,
           line.name      = "multiline_" + id + std::to_string(count++);
           line.thickness = thickness;
           line.coords    = area;
-          geojson.elements.push_back(line);
+          geojson->elements.push_back(line);
         }
       }
     } else if (geometry.at("type") == "Point") {
@@ -1021,7 +1021,7 @@ bool load_geojson(const string& filename, geojson_scene& geojson,
       if (point.type == "null") continue;
       point.name   = "point_" + id;
       point.coords = {geometry.at("coordinates").get<double2>()};
-      geojson.elements.push_back(point);
+      geojson->elements.push_back(point);
     }
   }
 
@@ -1030,7 +1030,7 @@ bool load_geojson(const string& filename, geojson_scene& geojson,
       std::numeric_limits<double>::max(), std::numeric_limits<double>::max()};
   auto bounds_max = double2{std::numeric_limits<double>::lowest(),
       std::numeric_limits<double>::lowest()};
-  for (auto& element : geojson.elements) {
+  for (auto& element : geojson->elements) {
     for (auto coord : element.coords) {
       bounds_min = {
           std::min(coord[0], bounds_min[0]), std::min(coord[1], bounds_min[1])};
@@ -1040,7 +1040,7 @@ bool load_geojson(const string& filename, geojson_scene& geojson,
   }
 
   // scale elements
-  for (auto& element : geojson.elements) {
+  for (auto& element : geojson->elements) {
     element.height     = get_height(element, scale);
     element.new_coords = element.coords;
     for (auto& [x, y] : element.new_coords) {
@@ -1082,8 +1082,9 @@ int main(int argc, const char* argv[]) {
   parse_cli(cli, argc, argv);
 
   // load data
-  auto geojson = geojson_scene{};
-  auto ioerror = ""s;
+  auto geojson_guard = std::make_unique<geojson_scene>();
+  auto geojson       = geojson_guard.get();
+  auto ioerror       = ""s;
   print_progress("load geojsons", 0, 1);
   for (auto& filename : list_directory(path)) {
     if (path_extension(filename) != ".geojson") continue;
