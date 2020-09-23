@@ -68,35 +68,30 @@ struct geojson_scene {
   vector<geojson_element> elements  = {};
 };
 
-bool is_tall_building(const json& properties) {
-  if (!properties.contains("building")) return false;
-  auto building_category = properties.at("building").get<string>();
-  auto high_building     = false;
-  if ((building_category == "apartments") ||
-      (building_category == "residential") || (building_category == "tower") ||
-      (building_category == "hotel")) {
-    high_building = true;
-  }
-  return high_building;
-}
-
-bool is_number(const string& lev) {
-  for (int i = 0; i < lev.size(); i++) {
-    if ((lev[i] >= 'a' && lev[i] <= 'z') || (lev[i] >= 'A' && lev[i] <= 'B') ||
-        lev[i] == ';' || lev[i] == ',')
-      return false;
-  }
-  return true;
-}
-
-bool is_integer(const string& lev) {
-  for (int i = 0; i < lev.size(); i++) {
-    if (lev[i] == '.') return false;
-  }
-  return false;
-}
-
 int get_building_level(const string& footprint_type, const json& properties) {
+  auto is_integer = [](const string& lev) -> bool {
+    for (int i = 0; i < lev.size(); i++) {
+      if (lev[i] == '.') return false;
+    }
+    return false;
+  };
+
+  auto is_number = [](const string& lev) -> bool {
+    for (int i = 0; i < lev.size(); i++) {
+      if ((lev[i] >= 'a' && lev[i] <= 'z') ||
+          (lev[i] >= 'A' && lev[i] <= 'B') || lev[i] == ';' || lev[i] == ',')
+        return false;
+    }
+    return true;
+  };
+
+  auto is_tall_building = [](const json& properties) -> bool {
+    if (!properties.contains("building")) return false;
+    auto building = properties.at("building").get<string>();
+    return building == "apartments" || building == "residential" ||
+           building == "tower" || building == "hotel";
+  };
+
   auto level  = 1;
   auto height = -1.0f;
 
