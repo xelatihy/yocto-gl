@@ -828,6 +828,8 @@ void assign_polygon_type(
       element.type = geojson_element_type::forest;
     } else if (is_grass(natural)) {
       element.type = geojson_element_type::grass;
+    } else if (natural == "water") {
+      element.type = geojson_element_type::water;
     } else {
       element.type = geojson_element_type::other;
     }
