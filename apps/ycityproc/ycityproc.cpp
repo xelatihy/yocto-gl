@@ -49,6 +49,7 @@ struct geojson_element {
   string                  name        = "";
   string                  type        = "";
   string                  roof_shape  = "";
+  string                  tree        = "";
   string                  colour      = "";
   int                     level       = 0;
   float                   height      = 0;
@@ -348,10 +349,7 @@ bool create_city_from_json(sceneio_scene* scene, const geojson_scene& geojson,
     if (element.type == "building" || element.type == "water" ||
         element.type == "waterway" || element.type == "highway" ||
         element.type == "pedestrian" || element.type == "forest" ||
-        element.type == "grass" || element.type == "tree" ||
-        element.type == "standard" || element.type == "palm" ||
-        element.type == "pine" || element.type == "oak" ||
-        element.type == "cypress") {
+        element.type == "grass" || element.type == "tree") {
       exist_element = true;
     }
   }
@@ -365,7 +363,7 @@ bool create_city_from_json(sceneio_scene* scene, const geojson_scene& geojson,
       if (element.roof_shape != "null") type_roof = element.roof_shape;
       if (element.historic != "no") historic = element.historic;
 
-      if (type_s == "standard") {
+      if (type_s == "tree" && element.tree == "standard") {
         auto tree = add_complete_instance(scene, name);
         for (auto& elem : element.new_coords) {
           auto coord            = vec3f{(float)elem[0], 0, (float)elem[1]};
@@ -377,7 +375,7 @@ bool create_city_from_json(sceneio_scene* scene, const geojson_scene& geojson,
               vec3f{0.0f, 1.0f, 0.0f}, vec3f{0.0f, 0.0f, 1.0f},
               vec3f{x, coord.y, z}};
         }
-      } else if (type_s == "palm") {
+      } else if (type_s == "tree" && element.tree == "palm") {
         auto tree = add_complete_instance(scene, name);
         for (auto& elem : element.new_coords) {
           auto coord            = vec3f{(float)elem[0], 0, (float)elem[1]};
@@ -387,7 +385,7 @@ bool create_city_from_json(sceneio_scene* scene, const geojson_scene& geojson,
               vec3f{0.0f, 1.0f, 0.0f}, vec3f{0.0f, 0.0f, 1.0f},
               vec3f{coord.x, coord.y, coord.z}};
         }
-      } else if (type_s == "cypress") {
+      } else if (type_s == "tree" && element.tree == "cypress") {
         auto tree = add_complete_instance(scene, name);
         for (auto& elem : element.new_coords) {
           auto coord            = vec3f{(float)elem[0], 0, (float)elem[1]};
@@ -397,7 +395,7 @@ bool create_city_from_json(sceneio_scene* scene, const geojson_scene& geojson,
               vec3f{0.0f, 1.0f, 0.0f}, vec3f{0.0f, 0.0f, 1.0f},
               vec3f{coord.x, coord.y, coord.z}};
         }
-      } else if (type_s == "oak") {
+      } else if (type_s == "tree" && element.tree == "oak") {
         auto tree = add_complete_instance(scene, name);
         for (auto& elem : element.new_coords) {
           auto coord            = vec3f{(float)elem[0], 0, (float)elem[1]};
@@ -407,7 +405,7 @@ bool create_city_from_json(sceneio_scene* scene, const geojson_scene& geojson,
               vec3f{0.0f, 1.0f, 0.0f}, vec3f{0.0f, 0.0f, 1.0f},
               vec3f{coord.x, coord.y, coord.z}};
         }
-      } else if (type_s == "pine") {
+      } else if (type_s == "tree" && element.tree == "pine") {
         auto tree = add_complete_instance(scene, name);
         for (auto& elem : element.new_coords) {
           auto coord            = vec3f{(float)elem[0], 0, (float)elem[1]};
@@ -874,32 +872,36 @@ void assign_tree_type(geojson_element& point, const json& properties) {
   if (properties.contains("natural")) {
     auto point_type_nat = properties.at("natural").get<string>();
     if (point_type_nat == "tree") {
+      point.type = "tree";
       if (properties.contains("type")) {
         auto type_tree = properties.at("type").get<string>();
         if (type_tree == "palm") {
-          point.type = "palm";
+          point.tree = "palm";
         } else if (type_tree == "pine") {
-          point.type = "pine";
+          point.tree = "pine";
         } else if (type_tree == "cypress") {
-          point.type = "cypress";
+          point.tree = "cypress";
         } else {
-          point.type = "standard";
+          point.tree = "standard";
         }
       } else if (properties.contains("tree")) {
-        point.type = "standard";
+        point.type = "tree";
+        point.tree = "standard";
       } else if (properties.contains("genus")) {
+        point.type      = "tree";
         auto genus_tree = properties.at("genus").get<string>();
         if (genus_tree == "Quercus") {
-          point.type = "oak";
+          point.tree = "oak";
         } else if (genus_tree == "Cupressus") {
-          point.type = "cypress";
+          point.tree = "cypress";
         } else if (genus_tree == "Pinus") {
-          point.type = "pine";
+          point.tree = "pine";
         } else {
-          point.type = "standard";
+          point.tree = "standard";
         }
       } else {
-        point.type = "standard";
+        point.type = "tree";
+        point.tree = "standard";
       }
     }
   } else {
