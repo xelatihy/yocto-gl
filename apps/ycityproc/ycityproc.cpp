@@ -97,9 +97,8 @@ bool check_int(const string& lev) {
 
 int generate_building_level(
     const string& footprint_type, const json& properties) {
-  auto              level  = 1;
-  auto              height = -1.0f;
-  string::size_type sz;
+  auto level  = 1;
+  auto height = -1.0f;
 
   if (properties.contains("building:levels")) {
     auto lev = properties.at("building:levels").get<string>();
@@ -112,10 +111,10 @@ int generate_building_level(
     if (digit) {
       bool integer = check_int(lev);
       if (integer) {
-        n_levels_i = std::stoi(lev, &sz);
+        n_levels_i = std::stoi(lev);
         level      = (int)round(n_levels_i) + 1;
       } else {
-        n_levels_f = std::stof(lev, &sz);
+        n_levels_f = std::stof(lev);
         level      = (int)round(n_levels_f) + 1;
       }
     } else {
@@ -126,12 +125,12 @@ int generate_building_level(
   // Check if the building:height is given in the GeoJson file
   if (footprint_type == "building" && properties.contains("height")) {
     auto h = properties.at("height").get<string>();
-    if (check_digit(h)) height = std::stof(h, &sz);
+    if (check_digit(h)) height = std::stof(h);
   }
 
   if (footprint_type == "building" && properties.contains("building:height")) {
     auto h = properties.at("building:height").get<string>();
-    if (check_digit(h)) height = std::stof(h, &sz);
+    if (check_digit(h)) height = std::stof(h);
   }
 
   if (height > -1.0) level = int(float(height) / 3.2);
@@ -159,8 +158,7 @@ float generate_height(const city_object& building, float scale) {
 
 float generate_roof_height(const string& roof_h, float scale) {
   if (roof_h != "null") {
-    string::size_type sz;
-    return std::stof(roof_h, &sz) / scale;
+    return std::stof(roof_h) / scale;
   } else {
     return 0.109f;
   }
