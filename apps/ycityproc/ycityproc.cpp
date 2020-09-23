@@ -839,12 +839,11 @@ void assign_line_type(
     geojson_element& line, const json& properties, float scale) {
   auto is_pedestrian = [](const json& properties) {
     if (!properties.contains("highway")) return false;
-    auto highway_category = properties.at("highway").get<string>();
-    return highway_category == "footway" || highway_category == "pedestrian" ||
-           highway_category == "track" || highway_category == "steps" ||
-           highway_category == "path" || highway_category == "living_street" ||
-           highway_category == "pedestrian_area" ||
-           highway_category == "pedestrian_line";
+    auto highway = properties.at("highway").get<string>();
+    return highway == "footway" || highway == "pedestrian" ||
+           highway == "track" || highway == "steps" || highway == "path" ||
+           highway == "living_street" || highway == "pedestrian_area" ||
+           highway == "pedestrian_line";
   };
 
   if (properties.contains("highway")) {
