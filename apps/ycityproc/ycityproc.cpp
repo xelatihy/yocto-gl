@@ -443,9 +443,6 @@ bool create_city_from_json(sceneio_scene* scene, const geojson_scene* geojson,
           auto coord = vec3f{(float)elem[0], height, (float)elem[1]};
           positions.push_back(coord);
           vect_building.push_back({coord.x, coord.z});
-
-          coord = {};
-          continue;
         }
         polygon.push_back(vect_building);
 
@@ -455,7 +452,6 @@ bool create_city_from_json(sceneio_scene* scene, const geojson_scene* geojson,
             auto coord = vec3f{(float)h[0], height, (float)h[1]};
             positions.push_back(coord);
             vect_hole.push_back({coord.x, coord.z});
-            coord = {};
           }
           polygon.push_back(vect_hole);
           vect_hole = {};
@@ -594,9 +590,6 @@ bool create_city_from_json(sceneio_scene* scene, const geojson_scene* geojson,
               vect_roof.push_back({coord.x, coord.z});
               centroid_x += coord.x;
               centroid_y += coord.z;
-
-              coord = {};
-              continue;
             }
 
             centroid_x = centroid_x / num_vert;
