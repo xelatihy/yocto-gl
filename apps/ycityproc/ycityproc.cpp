@@ -978,7 +978,6 @@ bool load_geojson(const string& filename, geojson_scene* geojson,
     if (type == "Polygon") {
       auto element             = geojson_element{};
       int  multi_polygon_count = 0;
-
       assign_polygon_type(element, properties, scale);
       if (element.type == geojson_element_type::other) continue;
       // element.name  = "building_" + id;
@@ -988,9 +987,8 @@ bool load_geojson(const string& filename, geojson_scene* geojson,
       // std::cout << num_lists << std::endl;
       for (auto& list_coords : geometry.at("coordinates")) {
         if (count == 0) {  // outer polygon
-          std::string num = std::to_string(multi_polygon_count);
-          element.name    = "building_" + id + num;
-          multi_polygon_count += 1;
+          element.name = "building_" + id +
+                         std::to_string(multi_polygon_count++);
           element.coords = list_coords.get<vector<double2>>();
           // first          = false;
           count++;
@@ -1001,24 +999,20 @@ bool load_geojson(const string& filename, geojson_scene* geojson,
         geojson->elements.push_back(element);
         count = 0;
       }
-
     } else if (type == "MultiPolygon") {
       auto element             = geojson_element{};
-      int  multi_polygon_count = 0;
-      int  count               = 0;
-
+      auto multi_polygon_count = 0;
+      auto count               = 0;
       assign_polygon_type(element, properties, scale);
       if (element.type == geojson_element_type::other) continue;
-
       element.level = get_building_level(element.type, properties);
       // auto first    = true;
       for (auto& multi_pol : geometry.at("coordinates")) {
         auto num_lists = multi_pol.size();
         for (auto& list_coords : multi_pol) {
           if (count == 0) {  // outer polygon
-            std::string num = std::to_string(multi_polygon_count);
-            element.name    = "building_" + id + num;
-            multi_polygon_count += 1;
+            element.name = "building_" + id +
+                           std::to_string(multi_polygon_count++);
             element.coords = list_coords.get<vector<double2>>();
             // first          = false;
             count++;
@@ -1033,7 +1027,6 @@ bool load_geojson(const string& filename, geojson_scene* geojson,
         }
         count = 0;
       }
-
     } else if (geometry.at("type") == "LineString") {
       auto cont = 0;
       for (auto i = 0; i < (int)geometry.at("coordinates").size() - 1; i++) {

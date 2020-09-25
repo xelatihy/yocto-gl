@@ -101,7 +101,8 @@
     "compare": "cpp",
     "concepts": "cpp",
     "stop_token": "cpp",
-    "charconv": "cpp"
+    "charconv": "cpp",
+    "variant": "cpp"
   },
   "json.schemas": [
     {
