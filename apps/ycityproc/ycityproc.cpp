@@ -972,11 +972,11 @@ bool load_geojson(const string& filename, geojson_scene* geojson,
     auto properties = feature.at("properties");
     auto id         = properties.at("@id").get<string>();
     std::replace(id.begin(), id.end(), '/', '_');  // replace all '/' to '_'
-    auto type  = geometry.at("type").get<string>();
-    int  count = 0;
+    auto type = geometry.at("type").get<string>();
 
     if (type == "Polygon") {
       auto element             = geojson_element{};
+      auto count               = 0;
       int  multi_polygon_count = 0;
       assign_polygon_type(element, properties, scale);
       if (element.type == geojson_element_type::other) continue;
