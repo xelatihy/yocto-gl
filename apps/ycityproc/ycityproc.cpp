@@ -1028,7 +1028,7 @@ bool load_geojson(const string& filename, geojson_scene* geojson,
         count = 0;
       }
     } else if (geometry.at("type") == "LineString") {
-      auto cont = 0;
+      auto count = 0;
       for (auto i = 0; i < (int)geometry.at("coordinates").size() - 1; i++) {
         auto [x0, y0]  = geometry.at("coordinates")[i + 0].get<double2>();
         auto [x1, y1]  = geometry.at("coordinates")[i + 1].get<double2>();
@@ -1037,13 +1037,13 @@ bool load_geojson(const string& filename, geojson_scene* geojson,
         auto line      = geojson_element{};
         assign_line_type(line, properties, scale);
         if (line.type == geojson_element_type::other) continue;
-        line.name      = "line_" + id + std::to_string(cont++);
+        line.name      = "line_" + id + std::to_string(count++);
         line.thickness = get_thickness(line.type);
         line.coords    = area;
         geojson->elements.push_back(line);
       }
     } else if (geometry.at("type") == "MultiLineString") {
-      auto cont = 0;
+      auto count = 0;
       for (auto& list_line : geometry.at("coordinates")) {
         for (auto i = 0; i < (int)list_line.size() - 1; i++) {
           auto [x0, y0]  = list_line[i + 0].get<double2>();
@@ -1053,7 +1053,7 @@ bool load_geojson(const string& filename, geojson_scene* geojson,
           auto line      = geojson_element{};
           assign_multiline_type(line, properties, scale);
           if (line.type == geojson_element_type::other) continue;
-          line.name      = "multiline_" + id + std::to_string(cont++);
+          line.name      = "multiline_" + id + std::to_string(count++);
           line.thickness = thickness;
           line.coords    = area;
           geojson->elements.push_back(line);
