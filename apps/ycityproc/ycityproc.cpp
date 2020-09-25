@@ -983,8 +983,6 @@ bool load_geojson(const string& filename, geojson_scene* geojson,
       // element.name  = "building_" + id;
       element.level = get_building_level(element.type, properties);
       // auto first    = true;
-      // int num_lists = (int)geometry.at("coordinates").size();
-      // std::cout << num_lists << std::endl;
       for (auto& list_coords : geometry.at("coordinates")) {
         if (count == 0) {  // outer polygon
           element.name = "building_" + id +
@@ -997,7 +995,7 @@ bool load_geojson(const string& filename, geojson_scene* geojson,
           count++;
         }
         geojson->elements.push_back(element);
-        // count = 0;
+        count = 0;
       }
     } else if (type == "MultiPolygon") {
       auto element             = geojson_element{};
