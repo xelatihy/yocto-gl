@@ -482,6 +482,7 @@ bool create_city_from_json(sceneio_scene* scene, const geojson_scene* geojson,
         for (auto k = 0; k < (int)indices.size() - 2; k += 3) {
           triangles.push_back({indices[k], indices[k + 1], indices[k + 2]});
         }
+        if (triangles.empty()) print_info("empty shape " + element.name);
 
         // Water characteristics
         if (type == geojson_element_type::water ||
@@ -528,39 +529,40 @@ bool create_city_from_json(sceneio_scene* scene, const geojson_scene* geojson,
                 return false;
               build2->material->color_tex = texture_colosseo;
             } else if (element.colour != "null") {
-              string building_color   = element.colour;
-              vec3f  build_color      = get_building_color(building_color);
+              auto building_color     = element.colour;
+              auto build_color        = get_building_color(building_color);
               build2->material->color = build_color;
             } else {
               build2->material->color = color;
             }
           } else {
-            if (level == 1)
+            if (level == 1) {
               build2->material->color_tex = texture_1;
-            else if (level == 2)
+            } else if (level == 2) {
               build2->material->color_tex = texture_2;
-            else if (level == 3)
+            } else if (level == 3) {
               build2->material->color_tex = texture_3;
-            else if (level == 4)
+            } else if (level == 4) {
               build2->material->color_tex = texture_4;
-            else if (level == 5)
+            } else if (level == 5) {
               build2->material->color_tex = texture_5;
-            else if (level == 6)
+            } else if (level == 6) {
               build2->material->color_tex = texture_6;
-            else if (level == 7)
+            } else if (level == 7) {
               build2->material->color_tex = texture_7;
-            else if (level == 8)
+            } else if (level == 8) {
               build2->material->color_tex = texture_8;
-            else if (level > 8 && level < 11)
+            } else if (level > 8 && level < 11) {
               build2->material->color_tex = texture_8_11;
-            else if (level > 10 && level < 41)
+            } else if (level > 10 && level < 41) {
               build2->material->color_tex = texture_10_41;
-            else if (level > 40 && level < 71)
+            } else if (level > 40 && level < 71) {
               build2->material->color_tex = texture_40_71;
-            else if (level > 70 && level < 101)
+            } else if (level > 70 && level < 101) {
               build2->material->color_tex = texture_70_101;
-            else if (level > 101)
+            } else if (level > 101) {
               build2->material->color_tex = texture_more_101;
+            }
           }
 
           build2->shape->positions = _polygon2;
@@ -614,9 +616,7 @@ bool create_city_from_json(sceneio_scene* scene, const geojson_scene* geojson,
             auto triangles2_roof   = vector<vec3i>{};
             for (auto i = 0; i < (int)positions_roof.size(); i++) {
               auto prev_index = i - 1;
-              if (prev_index == -1) {
-                prev_index = (int)positions_roof.size() - 1;
-              }
+              if (prev_index == -1) prev_index = (int)positions_roof.size() - 1;
               auto total_height = height + roof_height;
               auto index        = (int)_polygon2_roof.size();
               _polygon2_roof.push_back({centroid_x, total_height, centroid_y});
@@ -752,7 +752,7 @@ float get_thickness(geojson_element_type type) {
   if (type == geojson_element_type::pedestrian) {
     return 0.00005f;
   } else if (type == geojson_element_type::water ||
-             type == geojson_element_type::waterway) {  // MultiLineString
+             type == geojson_element_type::waterway) {
     return 1.0f;
   } else {
     return 0.0001f;
@@ -997,7 +997,7 @@ bool load_geojson(const string& filename, geojson_scene* geojson,
           count++;
         }
         geojson->elements.push_back(element);
-        count = 0;
+        // count = 0;
       }
     } else if (type == "MultiPolygon") {
       auto element             = geojson_element{};
@@ -1016,7 +1016,6 @@ bool load_geojson(const string& filename, geojson_scene* geojson,
             element.coords = list_coords.get<vector<double2>>();
             // first          = false;
             count++;
-
           } else {  // analysis of building holes
             element.holes.push_back(list_coords.get<vector<double2>>());
             count++;
