@@ -31,6 +31,7 @@
 #include <yocto/yocto_shape.h>
 #include <yocto/yocto_trace.h>
 
+#include <iostream>
 #include <string>
 #include <tuple>
 #include <unordered_map>
@@ -151,6 +152,8 @@ float get_height(const geojson_element& element, float scale) {
   } else if (element.type == geojson_element_type::pedestrian) {
     return 0.0004f;
   } else if (element.type == geojson_element_type::grass) {
+    return 0.0001f;
+  } else if (element.type == geojson_element_type::forest) {
     return 0.0001f;
   } else {
     return 0.0001f;
@@ -440,6 +443,9 @@ bool create_city_from_json(sceneio_scene* scene, const geojson_scene* geojson,
           auto coord = vec3f{(float)elem[0], height, (float)elem[1]};
           positions.push_back(coord);
           vect_building.push_back({coord.x, coord.z});
+
+          coord = {};
+          continue;
         }
         polygon.push_back(vect_building);
 
@@ -449,6 +455,7 @@ bool create_city_from_json(sceneio_scene* scene, const geojson_scene* geojson,
             auto coord = vec3f{(float)h[0], height, (float)h[1]};
             positions.push_back(coord);
             vect_hole.push_back({coord.x, coord.z});
+            coord = {};
           }
           polygon.push_back(vect_hole);
           vect_hole = {};
@@ -463,7 +470,7 @@ bool create_city_from_json(sceneio_scene* scene, const geojson_scene* geojson,
         } else if (name == "building_relation_1834818") {  // colosseo
           build->material->color = vec3f{0.725, 0.463, 0.361};
         } else if (type == geojson_element_type::building && level < 3 &&
-                   element.building == geojson_building_type::historic) {
+                   element.building != geojson_building_type::historic) {
           build->material->color = vec3f{0.538, 0.426, 0.347};
         } else if (element.building == geojson_building_type::historic &&
                    color_given) {
@@ -587,6 +594,9 @@ bool create_city_from_json(sceneio_scene* scene, const geojson_scene* geojson,
               vect_roof.push_back({coord.x, coord.z});
               centroid_x += coord.x;
               centroid_y += coord.z;
+
+              coord = {};
+              continue;
             }
 
             centroid_x = centroid_x / num_vert;
@@ -698,7 +708,7 @@ vector<double2> compute_area(
   }
 
   auto area_2 = fabs((float)sum_first_2 - (float)sum_second_2) / 2;
-  auto line_3 = vector<double2>{{next_x, next_y + road_thickness},
+  /*auto line_3 = vector<double2>{{next_x, next_y + road_thickness},
       {next_x, next_y - road_thickness}, {x, y - road_thickness},
       {x, y + road_thickness}};
 
@@ -726,7 +736,7 @@ vector<double2> compute_area(
     sum_second_3 += second_prod_3;
   }
 
-  /* float area_3 = (float)(0.5f * fabs(sum_first_3 - sum_second_3));
+  float area_3 = (float)(0.5f * fabs(sum_first_3 - sum_second_3));
   if (area_2 > area_1) {
     if (area_3 > area_2) {
       return line_3;
@@ -819,6 +829,8 @@ void assign_polygon_type(
     auto landuse = properties.at("landuse").get<string>();
     if (is_grass(landuse)) {
       element.type = geojson_element_type::grass;
+    } else if (landuse == "forest") {
+      element.type = geojson_element_type::forest;
     } else {
       element.type = geojson_element_type::other;
     }
@@ -967,46 +979,70 @@ bool load_geojson(const string& filename, geojson_scene* geojson,
     auto properties = feature.at("properties");
     auto id         = properties.at("@id").get<string>();
     std::replace(id.begin(), id.end(), '/', '_');  // replace all '/' to '_'
-    auto type = geometry.at("type").get<string>();
+    auto type  = geometry.at("type").get<string>();
+    int  count = 0;
 
     if (type == "Polygon") {
-      auto element = geojson_element{};
+      auto element             = geojson_element{};
+      int  multi_polygon_count = 0;
+
       assign_polygon_type(element, properties, scale);
       if (element.type == geojson_element_type::other) continue;
-      element.name  = "building_" + id;
+      // element.name  = "building_" + id;
       element.level = get_building_level(element.type, properties);
-      auto first    = true;
+      // auto first    = true;
+      // int num_lists = (int)geometry.at("coordinates").size();
+      // std::cout << num_lists << std::endl;
       for (auto& list_coords : geometry.at("coordinates")) {
-        if (first) {  // outer polygon
+        if (count == 0) {  // outer polygon
+          std::string num = std::to_string(multi_polygon_count);
+          element.name    = "building_" + id + num;
+          multi_polygon_count += 1;
           element.coords = list_coords.get<vector<double2>>();
-          first          = false;
+          // first          = false;
+          count++;
         } else {  // analysis of building holes
           element.holes.push_back(list_coords.get<vector<double2>>());
+          count++;
         }
+        geojson->elements.push_back(element);
+        count = 0;
       }
-      if (!check_valid_type(element)) continue;
-      geojson->elements.push_back(element);
+
     } else if (type == "MultiPolygon") {
-      auto element = geojson_element{};
+      auto element             = geojson_element{};
+      int  multi_polygon_count = 0;
+      int  count               = 0;
+
       assign_polygon_type(element, properties, scale);
       if (element.type == geojson_element_type::other) continue;
-      element.name  = "building_" + id;
+
       element.level = get_building_level(element.type, properties);
-      auto first    = true;
+      // auto first    = true;
       for (auto& multi_pol : geometry.at("coordinates")) {
+        auto num_lists = multi_pol.size();
         for (auto& list_coords : multi_pol) {
-          if (first) {  // outer polygon
+          if (count == 0) {  // outer polygon
+            std::string num = std::to_string(multi_polygon_count);
+            element.name    = "building_" + id + num;
+            multi_polygon_count += 1;
             element.coords = list_coords.get<vector<double2>>();
-            first          = false;
+            // first          = false;
+            count++;
+
           } else {  // analysis of building holes
             element.holes.push_back(list_coords.get<vector<double2>>());
+            count++;
+          }
+          if (count == num_lists) {
+            geojson->elements.push_back(element);
           }
         }
+        count = 0;
       }
-      if (!check_valid_type(element)) continue;
-      geojson->elements.push_back(element);
+
     } else if (geometry.at("type") == "LineString") {
-      auto count = 0;
+      auto cont = 0;
       for (auto i = 0; i < (int)geometry.at("coordinates").size() - 1; i++) {
         auto [x0, y0]  = geometry.at("coordinates")[i + 0].get<double2>();
         auto [x1, y1]  = geometry.at("coordinates")[i + 1].get<double2>();
@@ -1015,13 +1051,13 @@ bool load_geojson(const string& filename, geojson_scene* geojson,
         auto line      = geojson_element{};
         assign_line_type(line, properties, scale);
         if (line.type == geojson_element_type::other) continue;
-        line.name      = "line_" + id + std::to_string(count++);
+        line.name      = "line_" + id + std::to_string(cont++);
         line.thickness = get_thickness(line.type);
         line.coords    = area;
         geojson->elements.push_back(line);
       }
     } else if (geometry.at("type") == "MultiLineString") {
-      auto count = 0;
+      auto cont = 0;
       for (auto& list_line : geometry.at("coordinates")) {
         for (auto i = 0; i < (int)list_line.size() - 1; i++) {
           auto [x0, y0]  = list_line[i + 0].get<double2>();
@@ -1031,7 +1067,7 @@ bool load_geojson(const string& filename, geojson_scene* geojson,
           auto line      = geojson_element{};
           assign_multiline_type(line, properties, scale);
           if (line.type == geojson_element_type::other) continue;
-          line.name      = "multiline_" + id + std::to_string(count++);
+          line.name      = "multiline_" + id + std::to_string(cont++);
           line.thickness = thickness;
           line.coords    = area;
           geojson->elements.push_back(line);
