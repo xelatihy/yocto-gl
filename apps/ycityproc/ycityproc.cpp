@@ -73,10 +73,22 @@ struct geojson_element {
   vector<vector<double2>> new_holes   = {};
 };
 
+struct geojson_shape {
+  string        name  = "";
+  generic_shape shape = {};
+};
+
+struct geojson_texture {
+  string       name = "";
+  image<vec4b> img  = {};
+};
+
 struct geojson_scene {
   string                  name      = "";
   string                  copyright = "";
   vector<geojson_element> elements  = {};
+  vector<geojson_shape>   shapes    = {};
+  vector<geojson_texture> textures  = {};
 };
 
 int get_building_level(geojson_element_type type, const json& properties) {
@@ -1132,6 +1144,22 @@ int main(int argc, const char* argv[]) {
     if (!load_geojson(filename, geojson, ioerror)) print_fatal(ioerror);
   }
   print_progress("load geojsons", 1, 1);
+  print_progress("load shapes", 0, 1);
+  for (auto& filename : list_directory(path_join(path, "tree_models"))) {
+    if (path_extension(filename) != ".ply") continue;
+    auto& shape = geojson->shapes.emplace_back();
+    shape.name  = path_basename(filename);
+    if (!load_shape(filename, shape.shape, ioerror)) print_fatal(ioerror);
+  }
+  print_progress("load shapes", 1, 1);
+  print_progress("load textures", 0, 1);
+  for (auto& filename : list_directory(path_join(path, "buildings_texture"))) {
+    if (path_extension(filename) != ".jpg") continue;
+    auto& texture = geojson->textures.emplace_back();
+    texture.name  = path_basename(filename);
+    if (!load_image(filename, texture.img, ioerror)) print_fatal(ioerror);
+  }
+  print_progress("load textures", 1, 1);
 
   // Create city
   auto scene_guard = std::make_unique<sceneio_scene>();
