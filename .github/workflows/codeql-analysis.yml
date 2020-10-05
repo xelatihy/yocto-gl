@@ -63,11 +63,15 @@ jobs:
     #    and modify them (or add more) to build your code if your project
     #    uses a compiled language
 
-    - run: |
-       mkdir build
-       cd build
-       cmake .. -DYOCTO_OPENGL=OFF -DYOCTO_EMBREE=OFF
-       cmake --build . --parallel 8
+    - name: build
+      env:
+          CC: gcc-8
+          CXX: g++-8
+      run: |
+          mkdir build
+          cd build
+          cmake .. -DYOCTO_OPENGL=OFF -DYOCTO_EMBREE=OFF
+          cmake --build . --parallel 8
 
     - name: Perform CodeQL Analysis
       uses: github/codeql-action/analyze@v1
