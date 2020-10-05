@@ -84,11 +84,15 @@ struct geojson_texture {
 };
 
 struct geojson_scene {
-  string                  name      = "";
-  string                  copyright = "";
-  vector<geojson_element> elements  = {};
-  vector<geojson_shape>   shapes    = {};
-  vector<geojson_texture> textures  = {};
+  string                   name      = "";
+  string                   copyright = "";
+  vector<geojson_element>  elements  = {};
+  vector<geojson_shape*>   shapes    = {};
+  vector<geojson_texture*> textures  = {};
+  ~geojson_scene() {
+    for (auto shape : shapes) delete shape;
+    for (auto texture : textures) delete texture;
+  }
 };
 
 int get_building_level(geojson_element_type type, const json& properties) {
@@ -218,7 +222,7 @@ vec3f get_building_color(const string& building_color) {
   }
 }
 
-bool create_city_from_json(sceneio_scene* scene, const geojson_scene* geojson,
+bool geojson_to_scene(sceneio_scene* scene, const geojson_scene* geojson,
     const string& dirname, string& ioerror) {
   scene->name      = geojson->name;
   auto camera      = add_camera(scene);
@@ -239,129 +243,59 @@ bool create_city_from_json(sceneio_scene* scene, const geojson_scene* geojson,
 
   add_sky(scene);
 
+  // add a tree shape
+  auto add_tree_shape = [](sceneio_scene* scene, const geojson_scene* geojson,
+                            const string& name) -> sceneio_shape* {
+    auto shape_it = std::find_if(geojson->shapes.begin(), geojson->shapes.end(),
+        [name](auto shape) { return shape->name == name; });
+    if (shape_it == geojson->shapes.end()) return nullptr;
+    auto gshape      = *shape_it;
+    auto shape       = add_shape(scene, name);
+    shape->triangles = gshape->shape.triangles;
+    shape->quads     = gshape->shape.quads;
+    shape->positions = gshape->shape.positions;
+    shape->normals   = gshape->shape.normals;
+    shape->texcoords = gshape->shape.texcoords;
+    shape->colors    = gshape->shape.colors;
+    return shape;
+  };
+
+  // add building texture
+  auto add_building_texture = [](sceneio_scene*        scene,
+                                  const geojson_scene* geojson,
+                                  const string& name) -> sceneio_texture* {
+    auto texture_it = std::find_if(geojson->textures.begin(),
+        geojson->textures.end(),
+        [name](auto texture) { return texture->name == name; });
+    if (texture_it == geojson->textures.end()) return nullptr;
+    auto gtexture = *texture_it;
+    auto texture  = add_texture(scene, name);
+    texture->ldr  = gtexture->img;
+    return texture;
+  };
+
   // standard tree
-  auto path_standard  = path_join(dirname, "tree_models/standard.ply");
-  auto shape_standard = add_shape(scene, "standard");
-  if (!load_shape(path_standard, shape_standard->points, shape_standard->lines,
-          shape_standard->triangles, shape_standard->quads,
-          shape_standard->quadspos, shape_standard->quadsnorm,
-          shape_standard->quadstexcoord, shape_standard->positions,
-          shape_standard->normals, shape_standard->texcoords,
-          shape_standard->colors, shape_standard->radius, ioerror))
-    return false;
+  auto shape_standard = add_tree_shape(scene, geojson, "standard");
+  auto shape_palm     = add_tree_shape(scene, geojson, "palm");
+  auto shape_pine     = add_tree_shape(scene, geojson, "pine");
+  auto shape_cypress  = add_tree_shape(scene, geojson, "cypress");
+  auto shape_oak      = add_tree_shape(scene, geojson, "oak");
 
-  // palm tree
-  auto path_palm  = path_join(dirname, "tree_models/palm.ply");
-  auto shape_palm = add_shape(scene, "palm");
-  if (!load_shape(path_palm, shape_palm->points, shape_palm->lines,
-          shape_palm->triangles, shape_palm->quads, shape_palm->quadspos,
-          shape_palm->quadsnorm, shape_palm->quadstexcoord,
-          shape_palm->positions, shape_palm->normals, shape_palm->texcoords,
-          shape_palm->colors, shape_palm->radius, ioerror))
-    return false;
-
-  // pine tree
-  auto path_pine  = path_join(dirname, "tree_models/pine.ply");
-  auto shape_pine = add_shape(scene, "pine");
-  if (!load_shape(path_pine, shape_pine->points, shape_pine->lines,
-          shape_pine->triangles, shape_pine->quads, shape_pine->quadspos,
-          shape_pine->quadsnorm, shape_pine->quadstexcoord,
-          shape_pine->positions, shape_pine->normals, shape_pine->texcoords,
-          shape_pine->colors, shape_pine->radius, ioerror))
-    return false;
-
-  // cypress tree
-  auto path_cypress  = path_join(dirname, "tree_models/cypress.ply");
-  auto shape_cypress = add_shape(scene, "cypress");
-  if (!load_shape(path_cypress, shape_cypress->points, shape_cypress->lines,
-          shape_cypress->triangles, shape_cypress->quads,
-          shape_cypress->quadspos, shape_cypress->quadsnorm,
-          shape_cypress->quadstexcoord, shape_cypress->positions,
-          shape_cypress->normals, shape_cypress->texcoords,
-          shape_cypress->colors, shape_cypress->radius, ioerror))
-    return false;
-
-  // oak tree
-  auto path_oak  = path_join(dirname, "tree_models/oak.ply");
-  auto shape_oak = add_shape(scene, "oak");
-  if (!load_shape(path_oak, shape_oak->points, shape_oak->lines,
-          shape_oak->triangles, shape_oak->quads, shape_oak->quadspos,
-          shape_oak->quadsnorm, shape_oak->quadstexcoord, shape_oak->positions,
-          shape_oak->normals, shape_oak->texcoords, shape_oak->colors,
-          shape_oak->radius, ioerror))
-    return false;
-
-  // buidling texture1
-  auto texture_1   = add_texture(scene, "texture1");
-  auto path_text_1 = path_join(dirname, "buildings_texture/1.jpg");
-  if (!load_image(path_text_1, texture_1->hdr, ioerror)) return false;
-
-  // buidling texture2
-  auto texture_2   = add_texture(scene, "texture2");
-  auto path_text_2 = path_join(dirname, "buildings_texture/2.jpg");
-  if (!load_image(path_text_2, texture_2->hdr, ioerror)) return false;
-
-  // buidling texture3
-  auto texture_3   = add_texture(scene, "texture3");
-  auto path_text_3 = path_join(dirname, "buildings_texture/3.jpg");
-  if (!load_image(path_text_3, texture_3->hdr, ioerror)) return false;
-
-  // buidling texture4
-  auto texture_4   = add_texture(scene, "texture4");
-  auto path_text_4 = path_join(dirname, "buildings_texture/4.jpg");
-  if (!load_image(path_text_4, texture_4->hdr, ioerror)) return false;
-
-  // buidling texture5
-  auto texture_5   = add_texture(scene, "texture5");
-  auto path_text_5 = path_join(dirname, "buildings_texture/5.jpg");
-  if (!load_image(path_text_5, texture_5->hdr, ioerror)) return false;
-
-  // buidling texture6
-  auto texture_6   = add_texture(scene, "texture6");
-  auto path_text_6 = path_join(dirname, "buildings_texture/6.jpg");
-  if (!load_image(path_text_6, texture_6->hdr, ioerror)) return false;
-
-  // buidling texture7
-  auto texture_7   = add_texture(scene, "texture7");
-  auto path_text_7 = path_join(dirname, "buildings_texture/7.jpg");
-  if (!load_image(path_text_7, texture_7->hdr, ioerror)) return false;
-
-  // buidling texture8
-  auto texture_8   = add_texture(scene, "texture8");
-  auto path_text_8 = path_join(dirname, "buildings_texture/8.jpg");
-  if (!load_image(path_text_8, texture_8->hdr, ioerror)) return false;
-
-  // buidling texture8_11
-  auto texture_8_11   = add_texture(scene, "texture8_11");
-  auto path_text_8_11 = path_join(dirname, "buildings_texture/8_11.jpg");
-  if (!load_image(path_text_8_11, texture_8_11->hdr, ioerror)) return false;
-
-  // buidling texture10_41
-  auto texture_10_41   = add_texture(scene, "texture10_41");
-  auto path_text_10_41 = path_join(dirname, "buildings_texture/10_41.jpg");
-  if (!load_image(path_text_10_41, texture_10_41->hdr, ioerror)) return false;
-
-  // buidling texture40_71
-  auto texture_40_71   = add_texture(scene, "texture40_71");
-  auto path_text_40_71 = path_join(dirname, "buildings_texture/40_71.jpg");
-  if (!load_image(path_text_40_71, texture_40_71->hdr, ioerror)) return false;
-
-  // buidling texture70_101
-  auto texture_70_101   = add_texture(scene, "texture70_101");
-  auto path_text_70_101 = path_join(dirname, "buildings_texture/70_101.jpg");
-  if (!load_image(path_text_70_101, texture_70_101->hdr, ioerror)) return false;
-
-  // buidling texturemore_101
-  auto texture_more_101   = add_texture(scene, "texturemore_101");
-  auto path_text_more_101 = path_join(
-      dirname, "buildings_texture/more_101.jpg");
-  if (!load_image(path_text_more_101, texture_more_101->hdr, ioerror))
-    return false;
-
-  // buidling texture_colosseo
-  auto texture_colosseo   = add_texture(scene, "texture_colosseo");
-  auto path_text_colosseo = path_join(
-      dirname, "buildings_texture/colosseo.jpg");
+  // buidling textures
+  auto texture_1        = add_building_texture(scene, geojson, "1");
+  auto texture_2        = add_building_texture(scene, geojson, "2");
+  auto texture_3        = add_building_texture(scene, geojson, "3");
+  auto texture_4        = add_building_texture(scene, geojson, "4");
+  auto texture_5        = add_building_texture(scene, geojson, "5");
+  auto texture_6        = add_building_texture(scene, geojson, "6");
+  auto texture_7        = add_building_texture(scene, geojson, "7");
+  auto texture_8        = add_building_texture(scene, geojson, "8");
+  auto texture_8_11     = add_building_texture(scene, geojson, "8_11");
+  auto texture_10_41    = add_building_texture(scene, geojson, "10_41");
+  auto texture_40_71    = add_building_texture(scene, geojson, "40_71");
+  auto texture_70_101   = add_building_texture(scene, geojson, "70_101");
+  auto texture_more_101 = add_building_texture(scene, geojson, "more_101");
+  auto texture_colosseo = add_building_texture(scene, geojson, "colosseo");
 
   // Check if exists the element of interest
   auto exist_element = false;
@@ -536,9 +470,6 @@ bool create_city_from_json(sceneio_scene* scene, const geojson_scene* geojson,
 
           if (element.building == geojson_building_type::historic) {
             if (name == "building_relation_1834818") {  // colosseo
-              if (!load_image(
-                      path_text_colosseo, texture_colosseo->hdr, ioerror))
-                return false;
               build2->material->color_tex = texture_colosseo;
             } else if (element.colour != "null") {
               auto building_color     = element.colour;
@@ -1147,17 +1078,17 @@ int main(int argc, const char* argv[]) {
   print_progress("load shapes", 0, 1);
   for (auto& filename : list_directory(path_join(path, "tree_models"))) {
     if (path_extension(filename) != ".ply") continue;
-    auto& shape = geojson->shapes.emplace_back();
-    shape.name  = path_basename(filename);
-    if (!load_shape(filename, shape.shape, ioerror)) print_fatal(ioerror);
+    auto shape  = geojson->shapes.emplace_back(new geojson_shape{});
+    shape->name = path_basename(filename);
+    if (!load_shape(filename, shape->shape, ioerror)) print_fatal(ioerror);
   }
   print_progress("load shapes", 1, 1);
   print_progress("load textures", 0, 1);
   for (auto& filename : list_directory(path_join(path, "buildings_texture"))) {
     if (path_extension(filename) != ".jpg") continue;
-    auto& texture = geojson->textures.emplace_back();
-    texture.name  = path_basename(filename);
-    if (!load_image(filename, texture.img, ioerror)) print_fatal(ioerror);
+    auto texture  = geojson->textures.emplace_back(new geojson_texture{});
+    texture->name = path_basename(filename);
+    if (!load_image(filename, texture->img, ioerror)) print_fatal(ioerror);
   }
   print_progress("load textures", 1, 1);
 
@@ -1165,8 +1096,7 @@ int main(int argc, const char* argv[]) {
   auto scene_guard = std::make_unique<sceneio_scene>();
   auto scene       = scene_guard.get();
   print_progress("convert scene", 0, 1);
-  if (!create_city_from_json(scene, geojson, path, ioerror))
-    print_fatal(ioerror);
+  if (!geojson_to_scene(scene, geojson, path, ioerror)) print_fatal(ioerror);
   print_progress("convert scene", 1, 1);
 
   // sky
