@@ -26,6 +26,12 @@
 // POSSIBILITY OF SUCH DAMAGE.
 //
 
+//
+// This is  a quick demonsration on how to generate city geometry from geojson.
+// It is not efficient since it creates a shape for each building.
+// It shiould be rewritten to make it faster and probably reqrite roofs.
+//
+
 #include <yocto/yocto_commonio.h>
 #include <yocto/yocto_sceneio.h>
 #include <yocto/yocto_shape.h>
