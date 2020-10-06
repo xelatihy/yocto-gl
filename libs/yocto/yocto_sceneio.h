@@ -239,6 +239,8 @@ sceneio_instance* add_instance(sceneio_scene* scene, const string& name = "");
 sceneio_material* add_material(sceneio_scene* scene, const string& name = "");
 sceneio_shape*    add_shape(sceneio_scene* scene, const string& name = "");
 sceneio_texture*  add_texture(sceneio_scene* scene, const string& name = "");
+sceneio_instance* add_complete_instance(
+    sceneio_scene* scene, const string& name);
 
 // add missing elements
 void add_cameras(sceneio_scene* scene);

@@ -260,7 +260,7 @@ sceneio_instance* add_instance(sceneio_scene* scene, const string& name) {
 sceneio_material* add_material(sceneio_scene* scene, const string& name) {
   return add_element(scene->materials, name, "material");
 }
-static sceneio_instance* add_complete_instance(
+sceneio_instance* add_complete_instance(
     sceneio_scene* scene, const string& name) {
   auto instance      = add_instance(scene, name);
   instance->shape    = add_shape(scene, name);

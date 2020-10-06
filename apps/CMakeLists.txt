@@ -4,6 +4,7 @@ add_subdirectory(yimageproc)
 add_subdirectory(yshapeproc)
 add_subdirectory(ymeshproc)
 add_subdirectory(yheightfieldproc)
+add_subdirectory(ycityproc)
 
 if(YOCTO_OPENGL)
 add_subdirectory(ysceneview)
