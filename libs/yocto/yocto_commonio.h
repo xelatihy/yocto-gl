@@ -519,7 +519,7 @@ inline void add_option(cli_state& cli, const string& name, T& value,
   option.name          = name;
   option.type          = get_cli_type<T>();
   option.req           = req;
-  option.nargs         = 1;
+  option.nargs         = !std::is_same_v<T, bool> ? 1 : 0;
   option.usage         = usage;
   option.value         = def;
   option.def           = def;

@@ -754,7 +754,7 @@ int main(int argc, const char* argv[]) {
   auto camera_name = ""s;
 
   // parse command line
-  auto cli = make_cli("yscnitrace", "progressive path tracing");
+  auto cli = make_cli("ysceneitrace", "progressive path tracing");
   add_option(cli, "--camera", camera_name, "Camera name.");
   add_option(
       cli, "--resolution,-r", apps->params.resolution, "Image resolution.");
