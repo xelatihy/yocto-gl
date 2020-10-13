@@ -480,8 +480,9 @@ string get_usage(const cli_state& cli) {
       usage_positional += line;
     }
   }
-  message += "usage: " + cli.name + (has_optional ? "" : " [options]") +
-             (has_positional ? "" : " <arguments>") + cli.usage + "\n\n";
+  message += "usage: " + cli.name + (has_optional ? " [options]" : "") +
+             (has_positional ? " <arguments>" : "") + "\n";
+  message += cli.usage + "\n\n";
   if (has_optional) {
     message += "options:\n" + usage_optional + "\n";
   }

@@ -173,7 +173,7 @@ int main(int argc, const char* argv[]) {
   auto feature_images = false;
 
   // parse command line
-  auto cli = make_cli("yscntrace", "Offline path tracing");
+  auto cli = make_cli("yscenetrace", "Offline path tracing");
   add_option(cli, "--camera", camera_name, "Camera name.");
   add_option(cli, "--resolution,-r", params.resolution, "Image resolution.");
   add_option(cli, "--samples,-s", params.samples, "Number of samples.");

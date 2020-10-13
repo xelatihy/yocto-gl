@@ -244,7 +244,7 @@ int main(int argc, const char* argv[]) {
   auto add_skyenv  = false;
 
   // parse command line
-  auto cli = make_cli("yscnitraces", "progressive path tracing");
+  auto cli = make_cli("ysceneitraces", "progressive path tracing");
   add_option(cli, "--camera", camera_name, "Camera name.");
   add_option(
       cli, "--resolution,-r", app->params.resolution, "Image resolution.");
