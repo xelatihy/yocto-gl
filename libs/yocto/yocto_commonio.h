@@ -437,20 +437,20 @@ inline cli_type get_cli_type() {
       "unsupported type");
   if constexpr (std::is_same_v<T, string>) {
     return cli_type::string;
-  }
-  if constexpr (std::is_same_v<T, bool>) {
+  } else if constexpr (std::is_same_v<T, bool>) {
     return cli_type::boolean;
-  }
-  if constexpr (std::is_integral_v<T> && !std::is_unsigned_v<T>) {
+  } else if constexpr (std::is_enum_v<T>) {
     return cli_type::integer;
-  }
-  if constexpr (std::is_integral_v<T> && std::is_unsigned_v<T>) {
+  } else if constexpr (std::is_integral_v<T> && !std::is_unsigned_v<T>) {
+    return cli_type::integer;
+  } else if constexpr (std::is_integral_v<T> && std::is_unsigned_v<T>) {
     return cli_type::uinteger;
-  }
-  if constexpr (std::is_floating_point_v<T>) {
+  } else if constexpr (std::is_floating_point_v<T>) {
     return cli_type::number;
+  } else {
+    // probably should be an error
+    return cli_type::string;
   }
-  return cli_type::string;
 }
 
 template <typename T>
@@ -464,6 +464,8 @@ inline void set_value(cli_value& cvalue, const T& value) {
     cvalue.text = value;
   } else if constexpr (std::is_same_v<T, bool>) {
     cvalue.integer = value ? 1 : 0;
+  } else if constexpr (std::is_enum_v<T>) {
+    cvalue.integer = (int64_t)value;
   } else if constexpr (std::is_integral_v<T> && !std::is_unsigned_v<T>) {
     cvalue.integer = value;
   } else if constexpr (std::is_integral_v<T> && std::is_unsigned_v<T>) {
@@ -471,6 +473,7 @@ inline void set_value(cli_value& cvalue, const T& value) {
   } else if constexpr (std::is_floating_point_v<T>) {
     cvalue.number = value;
   } else {
+    // probably should be an error
     // pass
   }
 }
@@ -488,6 +491,10 @@ inline bool get_value(const cli_value& cvalue, T& value) {
   } else if constexpr (std::is_same_v<T, bool>) {
     if (cvalue.type != cli_type::boolean) return false;
     value = cvalue.integer != 0;
+    return true;
+  } else if constexpr (std::is_enum_v<T>) {
+    if (cvalue.type != cli_type::integer) return false;
+    value = (T)cvalue.integer;
     return true;
   } else if constexpr (std::is_integral_v<T> && !std::is_unsigned_v<T>) {
     if (cvalue.type != cli_type::integer) return false;
