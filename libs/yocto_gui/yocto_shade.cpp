@@ -530,8 +530,9 @@ void set_instance_uniforms(ogl_program* program, const frame3f& frame,
 
 static void draw_shape(shade_shape* shape) { draw_shape(shape->shape); }
 
-void draw_environments(
-    shade_scene* scene, const shade_view& view, const shade_params& params) {
+void draw_environments(const shade_scene* scene, const shade_view& view,
+    const shade_params& params) {
+  if (params.hide_environment) return;
   auto program = scene->environment_program;
   if (!is_initialized(program)) return;
   bind_program(program);
@@ -614,8 +615,8 @@ void set_lighting_uniforms(ogl_program* program, const shade_scene* scene,
   assert_ogl_error();
 }
 
-void draw_instances(
-    shade_scene* scene, const shade_view& view, const shade_params& params) {
+void draw_instances(const shade_scene* scene, const shade_view& view,
+    const shade_params& params) {
   // set program
   auto program = scene->instance_program;
   bind_program(program);
@@ -637,8 +638,8 @@ void draw_instances(
   unbind_program();
 }
 
-shade_view make_scene_view(
-    shade_camera* camera, const vec4i& viewport, const shade_params& params) {
+static shade_view make_scene_view(const shade_camera* camera,
+    const vec4i& viewport, const shade_params& params) {
   auto camera_aspect = (float)viewport.z / (float)viewport.w;
   auto camera_yfov =
       camera_aspect >= 0
@@ -655,8 +656,8 @@ shade_view make_scene_view(
   return view;
 }
 
-void draw_scene(shade_scene* scene, shade_camera* camera, const vec4i& viewport,
-    const shade_params& params) {
+void draw_scene(const shade_scene* scene, const shade_camera* camera,
+    const vec4i& viewport, const shade_params& params) {
   clear_ogl_framebuffer(params.background);
   set_ogl_viewport(viewport);
 

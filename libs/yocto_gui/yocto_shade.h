@@ -190,6 +190,7 @@ struct shade_params {
   bool                non_rigid_frames = true;
   float               near             = 0.01f;
   float               far              = 10000.0f;
+  bool                hide_environment = false;
   vec4f               background       = vec4f{0.15f, 0.15f, 0.15f, 1.0f};
 };
 
@@ -318,8 +319,8 @@ shade_environment* add_environment(shade_scene* scene, const frame3f& frame,
     const vec3f& emission, shade_texture* emission_tex = nullptr);
 
 // draw scene
-void draw_scene(shade_scene* scene, shade_camera* camera, const vec4i& viewport,
-    const shade_params& params);
+void draw_scene(const shade_scene* scene, const shade_camera* camera,
+    const vec4i& viewport, const shade_params& params);
 
 }  // namespace yocto
 

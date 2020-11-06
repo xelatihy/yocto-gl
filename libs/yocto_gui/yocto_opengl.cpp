@@ -140,6 +140,7 @@ void set_ogl_blending(bool enabled) {
 }
 
 void set_ogl_point_size(int size) { glPointSize(size); }
+void set_ogl_msaa() { glEnable(GL_MULTISAMPLE); }
 
 void set_texture(ogl_texture* texture, const vec2i& size, int num_channels,
     const byte* img, bool as_srgb, bool linear, bool mipmap, bool wrap_repeat) {
@@ -738,7 +739,7 @@ bool is_initialized(const ogl_program* program) {
 }
 
 // bind program
-void bind_program(ogl_program* program) {
+void bind_program(const ogl_program* program) {
   assert_ogl_error();
   glUseProgram(program->program_id);
   ogl_program::bound_program_id = program->program_id;

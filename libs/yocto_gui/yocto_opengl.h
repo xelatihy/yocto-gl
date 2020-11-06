@@ -71,6 +71,7 @@ void set_ogl_viewport(const vec2i& viewport);
 void set_ogl_wireframe(bool enabled);
 void set_ogl_blending(bool enabled);
 void set_ogl_point_size(int size);
+void set_ogl_msaa();
 
 // OpenGL texture
 struct ogl_texture {
@@ -289,7 +290,7 @@ bool is_initialized(const ogl_program* program);
 void clear_program(ogl_program* program);
 
 // bind program
-void bind_program(ogl_program* program);
+void bind_program(const ogl_program* program);
 
 // unbind program
 void unbind_program();
