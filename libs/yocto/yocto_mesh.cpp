@@ -306,6 +306,49 @@ vec2i get_edge(const vector<vec3i>& triangles, const vector<vec3f>& positions,
   return vec2i{tr[k], tr[mod3(k + 1)]};
 }
 
+// TODO: cleanup
+// "strip" must be such that strip.back()=p.face and strip[0] must share at
+// least one vertex with p.face.
+// Under this hypoteses, this function gives back the distance between the
+// opposite vertex to the edge between strip[0] and strip[1] and p handling
+// concave paths.
+// first_sample_pos is the position in the 2D-reference system defined in
+// "init_flat_triangle" where the path intersect the edge between strip[0] and
+// strip[1].
+float length_by_flattening(const vector<vec3i>& triangles,
+    const vector<vec3f>& positions, const vector<vec3i>& adjacencies,
+    const mesh_point& p, const vector<int>& strip) {
+  auto opp_pid = strip[0];
+  auto h       = find_in_vec(adjacencies[opp_pid], strip[1]);
+  auto coords  = vector<unfold_triangle>(strip.size());
+  coords[0]    = init_flat_triangle(positions, triangles[opp_pid]);
+  for (auto i = 1; i < strip.size(); i++) {
+    auto k = find_in_vec(adjacencies[strip[i - 1]], strip[i]);
+    assert(k != -1);
+    auto tr = unfold_face(
+        triangles, positions, adjacencies, coords[i - 1], strip[i - 1], k);
+    coords[i] = tr;
+  }
+
+  auto last  = coords.back();
+  auto pos2d = interpolate_triangle(last[0], last[1], last[2], p.uv);
+  auto v     = pos2d - coords[0][(h + 2) % 3];
+  auto w0    = coords[0][h] - coords[0][(h + 2) % 3];
+  auto w1    = coords[0][(h + 1) % 3] - coords[0][(h + 2) % 3];
+  auto phi = angle(w0, w1), theta0 = angle(v, w0), theta1 = angle(v, w1);
+
+  if (theta0 < phi && theta1 < phi) {
+    // first_sample_direction = pos2d;
+    return length(v);
+  } else if (theta1 > phi) {
+    // first_sample_direction = coords[0][h];
+    return length(w0) + length(coords[0][h] - pos2d);
+  } else {
+    // first_sample_direction = coords[0][(h + 1) % 3];
+    return length(w1) + length(coords[0][(h + 1) % 3] - pos2d);
+  }
+}
+
 }  // namespace yocto
 
 // -----------------------------------------------------------------------------

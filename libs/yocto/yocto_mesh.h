@@ -358,12 +358,12 @@ unfold_triangle unfold_face(const vector<vec3i>& triangles,
 // assign 2D coordinates to a strip of triangles. point start is at (0, 0)
 vector<unfold_triangle> unfold_strip(const vector<vec3i>& triangles,
     const vector<vec3f>& positions, const vector<int>& strip,
-    const mesh_point& start = {0, 0});
+    const mesh_point& start);
 
 // assign 2D coordinates to vertices of the triangle containing the mesh point,
 // putting the point at (0, 0)
 unfold_triangle triangle_coordinates(const vector<vec3i>& triangles,
-    const vector<vec3f>& positions, const mesh_point& point = {0, 0});
+    const vector<vec3f>& positions, const mesh_point& point);
 
 // generic utilities for paths
 vec2i get_edge(const vector<vec3i>& triangles, const vector<vec3f>& positions,
