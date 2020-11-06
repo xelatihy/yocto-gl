@@ -43,20 +43,13 @@ struct app_state {
   shade_params drawgl_prms = {};
 
   // scene
-  sceneio_scene * ioscene  = new sceneio_scene{};
-  sceneio_camera *iocamera = nullptr;
+  // sceneio_camera *iocamera = nullptr;
+  generic_shape *ioshape = new generic_shape{};
 
   // rendering state
-  shade_scene * glscene  = new shade_scene{};
-  shade_camera *glcamera = nullptr;
-
-  // editing
-  sceneio_camera *     selected_camera      = nullptr;
-  sceneio_instance *   selected_instance    = nullptr;
-  sceneio_shape *      selected_shape       = nullptr;
-  sceneio_material *   selected_material    = nullptr;
-  sceneio_environment *selected_environment = nullptr;
-  sceneio_texture *    selected_texture     = nullptr;
+  shade_scene * glscene   = new shade_scene{};
+  shade_camera *glcamera  = nullptr;
+  shade_shape * glpointer = new shade_shape{};
 
   // loading status
   std::atomic<bool> ok           = false;
@@ -68,7 +61,6 @@ struct app_state {
   string            loader_error = "";
 
   ~app_state() {
-    if (ioscene) delete ioscene;
     if (glscene) delete glscene;
     // pool->~ThreadPool();
   }
@@ -86,8 +78,9 @@ struct sculpt_params {
   brush_type type = brush_type::gaussian;
 
   // intersection
-  ray3f              camera_ray       = {};
-  sceneio_instance * shape_instance   = nullptr;
+  ray3f camera_ray = {};
+  // sceneio_instance * shape_instance   = nullptr;
+  generic_shape *    shape            = nullptr;
   shape_bvh          bvh_shape_tree   = {};
   shape_intersection bvh_intersection = {};
 
@@ -111,187 +104,183 @@ struct sculpt_params {
   vector<vector<int>> adjacencies = {};
 
   // stroke parameterization
-  vector<int>            stroke_sampling           = {};
-  vector<int>            symmetric_stroke_sampling = {};
-  yocto::geodesic_solver solver                    = {};
-  vector<vec2f>          coords                    = {};
-  yocto::image<vec3f>    tex_image                 = {};
-  vector<vec3f>          old_positions             = {};
-  vector<vec3f>          old_normals               = {};
+  vector<int>     stroke_sampling           = {};
+  vector<int>     symmetric_stroke_sampling = {};
+  geodesic_solver solver                    = {};
+  vector<vec2f>   coords                    = {};
+  image<vec3f>    tex_image                 = {};
+  vector<vec3f>   old_positions             = {};
+  vector<vec3f>   old_normals               = {};
 };
 
-void init_glscene(shade_scene *glscene, sceneio_scene *ioscene,
-    shade_camera *&glcamera, sceneio_camera *iocamera,
+vec3f eval_position(const generic_shape *shape, int element, const vec2f &uv) {
+  return eval_position(shape->triangles, shape->positions, {element, uv});
+}
+vec3f eval_normal(const generic_shape *shape, int element, const vec2f &uv) {
+  return eval_normal(shape->triangles, shape->normals, {element, uv});
+}
+
+// TODO(fabio): move this function to math
+frame3f camera_frame(float lens, float aspect, float film = 0.036) {
+  auto camera_dir  = normalize(vec3f{0, 0.5, 1});
+  auto bbox_radius = 2.0f;
+  auto camera_dist = bbox_radius * lens / (film / aspect);
+  return lookat_frame(camera_dir * camera_dist, {0, 0, 0}, {0, 1, 0});
+}
+
+void init_glscene(app_state *app, shade_scene *glscene, generic_shape *ioshape,
     progress_callback progress_cb) {
   // handle progress
-  auto progress = vec2i{
-      0, (int)ioscene->cameras.size() + (int)ioscene->materials.size() +
-             (int)ioscene->textures.size() + (int)ioscene->shapes.size() +
-             (int)ioscene->instances.size()};
+  auto progress = vec2i{0, 4};
 
-  // create scene
-  init_scene(glscene);
+  // init scene
+  init_scene(glscene, true);
+
+  // compute bounding box
+  auto bbox = invalidb3f;
+  for (auto &pos : ioshape->positions) bbox = merge(bbox, pos);
+  for (auto &pos : ioshape->positions) pos -= center(bbox);
+  for (auto &pos : ioshape->positions) pos /= max(size(bbox));
+  // TODO(fabio): this should be a math function
 
   // camera
-  auto camera_map     = unordered_map<sceneio_camera *, shade_camera *>{};
-  camera_map[nullptr] = nullptr;
-  for (auto iocamera : ioscene->cameras) {
-    if (progress_cb) progress_cb("convert camera", progress.x++, progress.y);
-    auto camera = add_camera(glscene);
-    set_frame(camera, iocamera->frame);
-    set_lens(camera, iocamera->lens, iocamera->aspect, iocamera->film);
-    set_nearfar(camera, 0.001, 10000);
-    camera_map[iocamera] = camera;
-  }
-
-  // textures
-  auto texture_map     = unordered_map<sceneio_texture *, shade_texture *>{};
-  texture_map[nullptr] = nullptr;
-  for (auto iotexture : ioscene->textures) {
-    if (progress_cb) progress_cb("convert texture", progress.x++, progress.y);
-    auto gltexture = add_texture(glscene);
-    if (!iotexture->hdr.empty()) {
-      set_texture(gltexture, iotexture->hdr);
-    } else if (!iotexture->ldr.empty()) {
-      set_texture(gltexture, iotexture->ldr);
-    }
-    texture_map[iotexture] = gltexture;
-  }
+  if (progress_cb) progress_cb("convert camera", progress.x++, progress.y);
+  auto glcamera = add_camera(glscene, camera_frame(0.050, 16.0f / 9.0f, 0.036),
+      0.050, 16.0f / 9.0f, 0.036);
+  glcamera->focus = length(glcamera->frame.o - center(bbox));
 
   // material
-  auto material_map     = unordered_map<sceneio_material *, shade_material *>{};
-  material_map[nullptr] = nullptr;
-  for (auto iomaterial : ioscene->materials) {
-    if (progress_cb) progress_cb("convert material", progress.x++, progress.y);
-    auto glmaterial = add_material(glscene);
-    set_emission(glmaterial, iomaterial->emission,
-        texture_map.at(iomaterial->emission_tex));
-    set_color(glmaterial, (1 - iomaterial->transmission) * iomaterial->color,
-        texture_map.at(iomaterial->color_tex));
-    set_specular(glmaterial,
-        (1 - iomaterial->transmission) * iomaterial->specular,
-        texture_map.at(iomaterial->specular_tex));
-    set_metallic(glmaterial,
-        (1 - iomaterial->transmission) * iomaterial->metallic,
-        texture_map.at(iomaterial->metallic_tex));
-    set_roughness(glmaterial, iomaterial->roughness,
-        texture_map.at(iomaterial->roughness_tex));
-    set_opacity(glmaterial, iomaterial->opacity,
-        texture_map.at(iomaterial->opacity_tex));
-    set_normalmap(glmaterial, texture_map.at(iomaterial->normal_tex));
-    material_map[iomaterial] = glmaterial;
-  }
+  if (progress_cb) progress_cb("convert material", progress.x++, progress.y);
+  auto glmaterial  = add_material(glscene, {0, 0, 0}, {0.5, 1, 0.5}, 1, 0, 0.2);
+  auto glmateriale = add_material(glscene, {0, 0, 0}, {0, 0, 0}, 0, 0, 1);
+  auto glmaterialv = add_material(glscene, {0, 0, 0}, {0, 0, 0}, 0, 0, 1);
+  set_unlit(glmateriale, true);
+  set_unlit(glmaterialv, true);
 
   // shapes
-  auto shape_map     = unordered_map<sceneio_shape *, shade_shape *>{};
-  shape_map[nullptr] = nullptr;
-  for (auto ioshape : ioscene->shapes) {
-    if (progress_cb) progress_cb("convert shape", progress.x++, progress.y);
-    auto glshape = add_shape(glscene);
-    set_positions(glshape, ioshape->positions);
-    set_normals(glshape, ioshape->normals);
-    set_texcoords(glshape, ioshape->texcoords);
-    set_colors(glshape, ioshape->colors);
-    set_points(glshape, ioshape->points);
-    set_lines(glshape, ioshape->lines);
-    set_triangles(glshape, ioshape->triangles);
-    set_quads(glshape, ioshape->quads);
-    shape_map[ioshape] = glshape;
+  if (progress_cb) progress_cb("convert shape", progress.x++, progress.y);
+  auto model_shape = add_shape(glscene, ioshape->points, ioshape->lines,
+      ioshape->triangles, ioshape->quads, ioshape->positions, ioshape->normals,
+      ioshape->texcoords, ioshape->colors, true);
+  if (!is_initialized(get_normals(model_shape))) {
+    app->drawgl_prms.faceted = true;
   }
+  set_instances(model_shape, {}, {});
+
+  // auto edges = get_edges(ioshape->triangles, ioshape->quads);
+  // auto froms = vector<vec3f>();
+  // auto tos   = vector<vec3f>();
+  // froms.reserve(edges.size());
+  // tos.reserve(edges.size());
+  // float avg_edge_length = 0;
+  // for (auto& edge : edges) {
+  //   auto from = ioshape->positions[edge.x];
+  //   auto to   = ioshape->positions[edge.y];
+  //   froms.push_back(from);
+  //   tos.push_back(to);
+  //   avg_edge_length += length(from - to);
+  // }
+  // avg_edge_length /= edges.size();
+  // auto cylinder_radius = 0.05f * avg_edge_length;
+  // auto cylinder        = make_uvcylinder({4, 1, 1}, {cylinder_radius, 1});
+  // for (auto& p : cylinder.positions) {
+  //   p.z = p.z * 0.5 + 0.5;
+  // }
+  // auto edges_shape = add_shape(glscene, {}, {}, {}, cylinder.quads,
+  //     cylinder.positions, cylinder.normals, cylinder.texcoords, {});
+  // set_instances(edges_shape, froms, tos);
+
+  // auto vertices_radius = 3.0f * cylinder_radius;
+  // auto vertices        = make_spheres(ioshape->positions, vertices_radius,
+  // 2); auto vertices_shape  = add_shape(glscene, {}, {}, {}, vertices.quads,
+  //     vertices.positions, vertices.normals, vertices.texcoords, {});
+  // set_instances(vertices_shape, {}, {});
 
   // shapes
-  for (auto ioobject : ioscene->instances) {
-    if (progress_cb) progress_cb("convert instance", progress.x++, progress.y);
-    auto globject = add_instance(glscene);
-    set_frame(globject, ioobject->frame);
-    set_shape(globject, shape_map.at(ioobject->shape));
-    set_material(globject, material_map.at(ioobject->material));
-  }
+  if (progress_cb) progress_cb("convert instance", progress.x++, progress.y);
+  add_instance(glscene, identity3x4f, model_shape, glmaterial);
+  // add_instance(glscene, identity3x4f, edges_shape, glmateriale, true);
+  // add_instance(glscene, identity3x4f, vertices_shape, glmaterialv, true);
 
   // done
   if (progress_cb) progress_cb("convert done", progress.x++, progress.y);
-
-  // get cmmera
-  glcamera = camera_map.at(iocamera);
 }
 
 // Initialize all sculpting parameters.
-sculpt_params *init_sculpt_tool(yocto::sceneio_scene *ioscene,
-    yocto::sceneio_camera *iocamera, std::string shapename,
-    std::string texture_name, sceneio_material *material = nullptr) {
-  sculpt_params *params = new sculpt_params();
+void *init_sculpt_tool(sculpt_params *params, generic_shape *shape,
+    std::string shapename, std::string texture_name,
+    sceneio_material *material = nullptr) {
+  // sculpt_params *params = new sculpt_params();
 
   // create sceneio_shape and sceneio_instance
-  sceneio_instance *shape_instance = add_instance(ioscene, "object");
-  sceneio_shape *   shape          = add_shape(ioscene, "object");
+  // sceneio_instance *shape_instance = add_instance(ioscene, "object");
+  // sceneio_shape *   shape          = add_shape(ioscene, "object");
 
   // loading shape
-  auto ioerror = ""s;
-  if (!load_shape(shapename, shape->points, shape->lines, shape->triangles,
-          shape->quads, shape->quadspos, shape->quadsnorm, shape->quadstexcoord,
-          shape->positions, shape->normals, shape->texcoords, shape->colors,
-          shape->radius, ioerror))
-    print_fatal(ioerror);
+  // auto ioerror = ""s;
+  // if (!load_shape(shapename, shape->points, shape->lines, shape->triangles,
+  //         shape->quads, shape->quadspos, shape->quadsnorm,
+  //         shape->quadstexcoord, shape->positions, shape->normals,
+  //         shape->texcoords, shape->colors, shape->radius, ioerror))
+  //   print_fatal(ioerror);
 
   // convert quads meshes to triangles meshes
   // (geodesic solver works only on triangles)
+  // auto shape = app->ioshape;
   if (!shape->quads.empty()) {
     shape->triangles = quads_to_triangles(shape->quads);
     shape->quads.clear();
   }
 
   // set shape instance
-  shape_instance->shape  = shape;
-  shape_instance->frame  = identity3x4f;
-  params->shape_instance = shape_instance;
+  // shape  = shape;
+  // shape_instance->frame  = identity3x4f;
+  // params->shape_instance = shape_instance;
 
   // save positions
-  params->old_positions = shape_instance->shape->positions;
+  params->old_positions = shape->positions;
 
   // set/create sceneio_material
-  if (material == nullptr) {
-    material                 = add_material(ioscene, "clay");
-    material->color          = {0.78f, 0.31f, 0.23f};
-    material->specular       = 0.0f;
-    shape_instance->material = material;
-  } else {
-    shape_instance->material = material;
-  }
-  shape_instance->shape->colors = vector<vec4f>(
-      shape->positions.size(), vec4f{1.0f, 1.0f, 1.0f, 1.0f});
+  // if (material == nullptr) {
+  //   material                 = add_material(ioscene, "clay");
+  //   material->color          = {0.78f, 0.31f, 0.23f};
+  //   material->specular       = 0.0f;
+  //   shape_instance->material = material;
+  // } else {
+  //   shape_instance->material = material;
+  // }
+  // shape->colors = vector<vec4f>(
+  //     shape->positions.size(), vec4f{1.0f, 1.0f, 1.0f, 1.0f});
   // sceneio_texture* tex = add_texture(app->ioscene);
 
   // create camera
-  add_cameras(ioscene);
+  // add_cameras(ioscene);
 
   // create bvh structure
-  params->bvh_shape_tree = make_triangles_bvh(shape_instance->shape->triangles,
-      shape_instance->shape->positions, shape_instance->shape->radius);
+  params->bvh_shape_tree = make_triangles_bvh(
+      shape->triangles, shape->positions, shape->radius);
 
   // create an hash grid
-  params->hash_grid = make_hash_grid(shape_instance->shape->positions, 0.05f);
+  params->hash_grid = make_hash_grid(shape->positions, 0.05f);
 
   // init saturation buffer
-  params->opacity = vector<float>(
-      shape_instance->shape->positions.size(), 0.0f);
+  params->opacity = vector<float>(shape->positions.size(), 0.0f);
 
   // create geodesic distance graph (ONLY TRIANGLES MESHES!)
-  auto adjacencies    = face_adjacencies(shape_instance->shape->triangles);
-  params->solver      = make_geodesic_solver(shape_instance->shape->triangles,
-      adjacencies, shape_instance->shape->positions);
-  params->adjacencies = vertex_adjacencies(
-      shape_instance->shape->triangles, adjacencies);
+  auto adjacencies = face_adjacencies(shape->triangles);
+  params->solver   = make_geodesic_solver(
+      shape->triangles, adjacencies, shape->positions);
+  params->adjacencies = vertex_adjacencies(shape->triangles, adjacencies);
 
   // init texture
   if (texture_name != "") {
-    auto img = image<vec4f>{};
+    auto   img = image<vec4f>{};
+    string ioerror;
     if (!load_image(texture_name, img, ioerror)) print_fatal(ioerror);
     params->tex_image.resize(img.imsize());
     for (auto idx = 0; idx < img.count(); idx++)
       params->tex_image[idx] = xyz(img[idx]);
   }
-
-  return params;
 }
 
 lines_shape make_circle(vec3f center, mat3f basis, float radius, int steps) {
@@ -340,22 +329,18 @@ lines_shape make_circle(vec3f center, mat3f basis, float radius, int steps) {
 }
 
 // To visualize mouse intersection on mesh
-void view_pointer(sceneio_instance *instance, shade_shape *glshape,
+void view_pointer(generic_shape *shape, shade_shape *glshape,
     shape_intersection intersection, float radius, int definition,
     brush_type &type) {
   if (intersection.hit) {
     if (type == brush_type::gaussian) radius *= 0.5f;
-    auto pos   = eval_position(instance, intersection.element, intersection.uv);
-    auto nor   = eval_normal(instance, intersection.element, intersection.uv);
-    auto basis = basis_fromz(nor);
-    auto circle    = make_circle(pos, basis, radius, definition);
-    auto positions = instance->shape->positions;
-    positions.insert(
-        positions.end(), circle.positions.begin(), circle.positions.end());
-    auto lines = instance->shape->lines;
-    for (auto &line : circle.lines)
-      line += int(instance->shape->positions.size());
-    lines.insert(lines.end(), circle.lines.begin(), circle.lines.end());
+    auto pos    = eval_position(shape, intersection.element, intersection.uv);
+    auto nor    = eval_normal(shape, intersection.element, intersection.uv);
+    auto basis  = basis_fromz(nor);
+    auto circle = make_circle(pos, basis, radius, definition);
+    auto positions        = vector<vec3f>();
+    positions             = circle.positions;
+    auto lines            = circle.lines;
     auto nor_line         = make_lines({1, 1});
     nor_line.positions[0] = pos;
     nor_line.positions[1] = pos + nor * 0.05f;
@@ -364,15 +349,12 @@ void view_pointer(sceneio_instance *instance, shade_shape *glshape,
     lines.push_back({int(positions.size() - 2), int(positions.size() - 1)});
     set_positions(glshape, positions);
     set_lines(glshape, lines);
-  } else {
-    set_positions(glshape, instance->shape->positions);
-    set_lines(glshape, instance->shape->lines);
   }
 }
 
 // Taking closest vertex of an intersection
-int closest_vertex(sceneio_shape *shape, vec2f uv, int element) {
-  auto tr = shape->triangles[element];
+int closest_vertex(const vector<vec3i> &triangles, vec2f uv, int element) {
+  auto tr = triangles[element];
   if (uv.x < 0.5f && uv.y < 0.5f) return tr.x;
   if (uv.x > uv.y) return tr.y;
   return tr.z;
@@ -382,10 +364,13 @@ int closest_vertex(sceneio_shape *shape, vec2f uv, int element) {
 vector<pair<vec3f, vec3f>> stroke(
     sculpt_params *params, vec2f mouse_uv, shade_camera *glcamera) {
   // eval current intersection
+  auto                       shape = params->shape;
   vector<pair<vec3f, vec3f>> pairs;
   auto &                     inter = params->bvh_intersection;
-  auto  pos = eval_position(params->shape_instance, inter.element, inter.uv);
-  auto  nor = eval_normal(params->shape_instance, inter.element, inter.uv);
+  auto                       pos   = eval_position(
+      shape->triangles, shape->positions, {inter.element, inter.uv});
+  auto nor = eval_normal(
+      shape->triangles, shape->normals, {inter.element, inter.uv});
   float delta_pos   = distance(pos, params->locked_position);
   float stroke_dist = params->radius * 0.2f;
 
@@ -396,7 +381,7 @@ vector<pair<vec3f, vec3f>> stroke(
     pair.second = nor;
     pairs.push_back(pair);
     params->stroke_sampling.push_back(
-        closest_vertex(params->shape_instance->shape, inter.uv, inter.element));
+        closest_vertex(shape->triangles, inter.uv, inter.element));
     return pairs;
   }
 
@@ -419,12 +404,11 @@ vector<pair<vec3f, vec3f>> stroke(
     auto ray = camera_ray(glcamera->frame, glcamera->lens, glcamera->aspect,
         glcamera->film, params->locked_uv);
     inter    = intersect_triangles_bvh(params->bvh_shape_tree,
-        params->shape_instance->shape->triangles,
-        params->shape_instance->shape->positions, ray, false);
-    pos      = eval_position(params->shape_instance, inter.element, inter.uv);
-    nor      = eval_normal(params->shape_instance, inter.element, inter.uv);
+        params->shape->triangles, params->shape->positions, ray, false);
+    pos      = eval_position(params->shape, inter.element, inter.uv);
+    nor      = eval_normal(params->shape, inter.element, inter.uv);
     params->stroke_sampling.push_back(
-        closest_vertex(params->shape_instance->shape, inter.uv, inter.element));
+        closest_vertex(params->shape->triangles, inter.uv, inter.element));
     auto pair               = std::pair<vec3f, vec3f>{pos, nor};
     params->locked_position = pos;
     pairs.push_back(pair);
@@ -434,7 +418,7 @@ vector<pair<vec3f, vec3f>> stroke(
 
 // To obtain symmetric from stroke result
 vector<pair<vec3f, vec3f>> symmetric_stroke(vector<pair<vec3f, vec3f>> &pairs,
-    sceneio_instance *instance, shape_bvh &tree,
+    generic_shape *shape, shape_bvh &tree,
     vector<int> &symmetric_stroke_sampling, axes &axis) {
   vector<pair<vec3f, vec3f>> symmetric_pairs;
   if (pairs.empty()) return symmetric_pairs;
@@ -461,13 +445,13 @@ vector<pair<vec3f, vec3f>> symmetric_stroke(vector<pair<vec3f, vec3f>> &pairs,
     }
 
     auto inter = intersect_triangles_bvh(
-        tree, instance->shape->triangles, instance->shape->positions, ray);
+        tree, shape->triangles, shape->positions, ray);
     if (!inter.hit) continue;
-    auto pos  = eval_position(instance, inter.element, inter.uv);
-    auto nor  = eval_normal(instance, inter.element, inter.uv);
+    auto pos  = eval_position(shape, inter.element, inter.uv);
+    auto nor  = eval_normal(shape, inter.element, inter.uv);
     auto pair = std::pair<vec3f, vec3f>{pos, nor};
     symmetric_stroke_sampling.push_back(
-        closest_vertex(instance->shape, inter.uv, inter.element));
+        closest_vertex(shape->triangles, inter.uv, inter.element));
     symmetric_pairs.push_back(pair);
   }
   return symmetric_pairs;
@@ -578,7 +562,7 @@ void compute_stroke_frames(vector<mat3f> &frames, vector<vec3f> &positions,
 }
 
 // To take shape positions indices associate with planar coordinates
-vector<int> stroke_parameterization(yocto::geodesic_solver &solver,
+vector<int> stroke_parameterization(geodesic_solver &solver,
     vector<vec2f> &coords, vector<int> &stroke_sampling,
     vector<vec3f> &positions, vector<vec3f> &normals, float radius) {
   if (stroke_sampling.empty()) return vector<int>{};
@@ -596,7 +580,7 @@ vector<int> stroke_parameterization(yocto::geodesic_solver &solver,
     auto edge = positions[stroke_sampling[i]] -
                 positions[stroke_sampling[i - 1]];
     coords[stroke_sampling[i]] = {
-        coords[stroke_sampling[i - 1]].x + yocto::length(edge), radius};
+        coords[stroke_sampling[i - 1]].x + length(edge), radius};
     vertices.insert(stroke_sampling[i]);
   }
 
@@ -633,8 +617,8 @@ void end_stroke(sculpt_params *params) {
   params->stroke_sampling.clear();
   params->coords.clear();
   params->symmetric_stroke_sampling.clear();
-  params->old_positions = params->shape_instance->shape->positions;
-  params->old_normals   = params->shape_instance->shape->normals;
+  params->old_positions = params->shape->positions;
+  params->old_normals   = params->shape->normals;
 }
 
 // Compute gaussian function
@@ -654,7 +638,7 @@ float gaussian_distribution(vec3f origin, vec3f position, float standard_dev,
 }
 
 // Change positions, normals, boundig volume hierarchy and hash grid
-void apply_brush(sceneio_shape *shape, vector<vec3f> &positions,
+void apply_brush(generic_shape *shape, vector<vec3f> &positions,
     shade_shape *glshape, shape_bvh &tree, hash_grid &grid) {
   shape->positions = positions;
   set_positions(glshape, positions);
@@ -668,7 +652,7 @@ void apply_brush(sceneio_shape *shape, vector<vec3f> &positions,
 void brush(sculpt_params *params, shade_shape *glshape,
     vector<pair<vec3f, vec3f>> &pairs) {
   if (pairs.empty()) return;
-  auto &positions = params->shape_instance->shape->positions;
+  auto &positions = params->shape->positions;
   auto  neighbors = vector<int>{};
 
   // for a correct gaussian distribution
@@ -708,12 +692,12 @@ void brush(sculpt_params *params, shade_shape *glshape,
     neighbors.clear();
   }
 
-  apply_brush(params->shape_instance->shape, positions, glshape,
-      params->bvh_shape_tree, params->hash_grid);
+  apply_brush(params->shape, positions, glshape, params->bvh_shape_tree,
+      params->hash_grid);
 }
 
 // Compute texture values through the parameterization
-void texture_brush(vector<int> &vertices, yocto::image<vec3f> &texture,
+void texture_brush(vector<int> &vertices, image<vec3f> &texture,
     vector<vec2f> &coords, sculpt_params *params, shade_shape *glshape,
     vector<vec3f> positions, vector<vec3f> normals) {
   if (vertices.empty()) return;
@@ -726,21 +710,19 @@ void texture_brush(vector<int> &vertices, yocto::image<vec3f> &texture,
   for (auto i : vertices) {
     auto uv     = coords[i];
     auto color  = eval_image(texture, uv);
-    auto height = yocto::length(color);
+    auto height = length(color);
     auto normal = normals[i];
     if (params->negative) normal = -normal;
     height *= max_height;
     positions[i] += normal * height;
   }
 
-  apply_brush(params->shape_instance->shape, positions, glshape,
-      params->bvh_shape_tree, params->hash_grid);
+  apply_brush(params->shape, positions, glshape, params->bvh_shape_tree,
+      params->hash_grid);
 }
 
 // Cotangent operator
-float cotan(vec3f &a, vec3f &b) {
-  return dot(a, b) / yocto::length(cross(a, b));
-}
+float cotan(vec3f &a, vec3f &b) { return dot(a, b) / length(cross(a, b)); }
 
 // Compute edge cotangents weights
 float laplacian_weight(vector<vec3f> &positions,
@@ -767,8 +749,8 @@ float laplacian_weight(vector<vec3f> &positions,
   float cot_beta  = cotan(v3, v4);
   float weight    = (cot_alpha + cot_beta) / 2;
 
-  float cotan_max = yocto::cos(flt_min) / yocto::sin(flt_min);
-  weight          = clamp(weight, cotan_max, -cotan_max);
+  // float cotan_max = yocto::cos(flt_min) / yocto::sin(flt_min);
+  // weight          = clamp(weight, cotan_max, -cotan_max);
   return weight;
 }
 
@@ -804,8 +786,8 @@ void smooth(geodesic_solver &solver, vector<int> &stroke_sampling,
   };
   dijkstra(solver, stroke_sampling, distances, params->radius, update);
 
-  apply_brush(params->shape_instance->shape, positions, glshape,
-      params->bvh_shape_tree, params->hash_grid);
+  apply_brush(params->shape, positions, glshape, params->bvh_shape_tree,
+      params->hash_grid);
 
   stroke_sampling.clear();
 }
@@ -829,97 +811,111 @@ int main(int argc, const char *argv[]) {
   auto ioerror              = ""s;
   app->drawgl_prms.lighting = shade_lighting_type::eyelight;
 
-  sculpt_params *sculpt_params = init_sculpt_tool(
-      app->ioscene, app->iocamera, app->shapename, app->imagename);
+  sculpt_params *params = nullptr;
 
-  app->iocamera = get_camera(app->ioscene);
+  // app->iocamera = get_camera(app->ioscene);
 
   // tesselation
-  tesselate_shapes(app->ioscene, print_progress);
+  // tesselate_shapes(app->ioscene, print_progress);
 
   // callbacks
   auto callbacks    = gui_callbacks{};
-  callbacks.init_cb = [app](gui_window *win, const gui_input &input) {
-    init_glscene(app->glscene, app->ioscene, app->glcamera, app->iocamera,
-        [app](const string &message, int current, int total) {
-          app->status  = "init scene";
-          app->current = current;
-          app->total   = total;
-        });
+  callbacks.init_cb = [app, &params](gui_window *win, const gui_input &input) {
+    if (!load_shape(app->shapename, *app->ioshape, app->loader_error)) {
+      printf("%s\n", app->loader_error.c_str());
+      return;
+    }
+    auto progress_cb = [app](const string &message, int current, int total) {
+      app->status  = "init scene";
+      app->current = current;
+      app->total   = total;
+    };
+    init_glscene(app, app->glscene, app->ioshape, progress_cb);
+    app->glcamera = app->glscene->cameras[0];
+    //    params->shape_instance           = new sceneio_instance{};
+    params        = new sculpt_params{};
+    params->shape = app->ioshape;
+    //    params->shape_instance->material = new sceneio_material{};
+    init_sculpt_tool(params, app->ioshape, app->shapename, app->imagename);
   };
   callbacks.clear_cb = [app](gui_window *win, const gui_input &input) {
+    if (!app->glcamera) return;
     clear_scene(app->glscene);
   };
   callbacks.draw_cb = [app](gui_window *win, const gui_input &input) {
+    if (!app->glcamera) return;
     draw_scene(app->glscene, app->glcamera, input.framebuffer_viewport,
         app->drawgl_prms);
+//    draw_shape(app->glpointer->shape);
   };
-  callbacks.widgets_cb = [app, &sculpt_params](
+  callbacks.widgets_cb = [app, &params](
                              gui_window *win, const gui_input &input) {
+    if (!app->glcamera) return;
     draw_progressbar(win, app->status.c_str(), app->current, app->total);
-    if (draw_combobox(win, "camera", app->iocamera, app->ioscene->cameras)) {
-      for (auto idx = 0; idx < app->ioscene->cameras.size(); idx++) {
-        if (app->ioscene->cameras[idx] == app->iocamera)
-          app->glcamera = app->glscene->cameras[idx];
-      }
-    }
-    auto &params = app->drawgl_prms;
+    // if (draw_combobox(win, "camera", app->iocamera, app->ioscene->cameras)) {
+    //   for (auto idx = 0; idx < app->ioscene->cameras.size(); idx++) {
+    //     if (app->ioscene->cameras[idx] == app->iocamera)
+    //       app->glcamera = app->glscene->cameras[idx];
+    //   }
+    // }
+    auto &glparams = app->drawgl_prms;
     // float mouse_x = input.mouse_pos.x;
     // float mouse_y = input.mouse_pos.y;
-    draw_slider(win, "resolution", params.resolution, 0, 4096);
-    draw_checkbox(win, "wireframe", params.wireframe);
+    draw_slider(win, "resolution", glparams.resolution, 0, 4096);
+    draw_checkbox(win, "wireframe", glparams.wireframe);
     draw_combobox(
-        win, "lighting", (int &)params.lighting, shade_lighting_names);
+        win, "lighting", (int &)glparams.lighting, shade_lighting_names);
     continue_line(win);
-    draw_checkbox(win, "double sided", params.double_sided);
-    draw_slider(win, "exposure", params.exposure, -10, 10);
-    draw_slider(win, "gamma", params.gamma, 0.1f, 4);
-    draw_slider(win, "near", params.near, 0.01f, 1.0f);
-    draw_slider(win, "far", params.far, 1000.0f, 10000.0f);
+    draw_checkbox(win, "double sided", glparams.double_sided);
+    draw_slider(win, "exposure", glparams.exposure, -10, 10);
+    draw_slider(win, "gamma", glparams.gamma, 0.1f, 4);
+    draw_slider(win, "near", glparams.near, 0.01f, 1.0f);
+    draw_slider(win, "far", glparams.far, 1000.0f, 10000.0f);
     draw_label(win, "", "");
     draw_label(win, "", "sculpt params");
-    draw_combobox(win, "brush type", (int &)sculpt_params->type, brushes_names);
-    if (sculpt_params->type == brush_type::gaussian) {
-      if (sculpt_params->strength < 0.8f || sculpt_params->strength > 1.5f)
-        sculpt_params->strength = 1.0f;
-      draw_slider(win, "radius", sculpt_params->radius, 0.1f, 0.8f);
-      draw_slider(win, "strength", sculpt_params->strength, 1.5f, 0.9f);
-      draw_checkbox(win, "negative", sculpt_params->negative);
-      draw_checkbox(win, "continuous", sculpt_params->continuous);
-      draw_checkbox(win, "saturation", sculpt_params->saturation);
-      draw_checkbox(win, "symmetric", sculpt_params->symmetric);
-      if (sculpt_params->symmetric)
-        draw_combobox(win, "symmetric axis",
-            (int &)sculpt_params->symmetric_axis, symmetric_axes);
-    } else if (sculpt_params->type == brush_type::texture) {
-      if (sculpt_params->strength < 0.8f || sculpt_params->strength > 1.5f)
-        sculpt_params->strength = 1.0f;
-      draw_slider(win, "radius", sculpt_params->radius, 0.1f, 0.8f);
-      draw_slider(win, "strength", sculpt_params->strength, 1.5f, 0.9f);
-      draw_checkbox(win, "negative", sculpt_params->negative);
-      draw_checkbox(win, "symmetric", sculpt_params->symmetric);
-      if (sculpt_params->symmetric)
-        draw_combobox(win, "symmetric axis",
-            (int &)sculpt_params->symmetric_axis, symmetric_axes);
+    draw_combobox(win, "brush type", (int &)params->type, brushes_names);
+    if (params->type == brush_type::gaussian) {
+      if (params->strength < 0.8f || params->strength > 1.5f)
+        params->strength = 1.0f;
+      draw_slider(win, "radius", params->radius, 0.1f, 0.8f);
+      draw_slider(win, "strength", params->strength, 1.5f, 0.9f);
+      draw_checkbox(win, "negative", params->negative);
+      draw_checkbox(win, "continuous", params->continuous);
+      draw_checkbox(win, "saturation", params->saturation);
+      draw_checkbox(win, "symmetric", params->symmetric);
+      if (params->symmetric)
+        draw_combobox(win, "symmetric axis", (int &)params->symmetric_axis,
+            symmetric_axes);
+    } else if (params->type == brush_type::texture) {
+      if (params->strength < 0.8f || params->strength > 1.5f)
+        params->strength = 1.0f;
+      draw_slider(win, "radius", params->radius, 0.1f, 0.8f);
+      draw_slider(win, "strength", params->strength, 1.5f, 0.9f);
+      draw_checkbox(win, "negative", params->negative);
+      draw_checkbox(win, "symmetric", params->symmetric);
+      if (params->symmetric)
+        draw_combobox(win, "symmetric axis", (int &)params->symmetric_axis,
+            symmetric_axes);
       /*
       capire come funziona
       draw_filedialog_button(win, "Load", true, "Load Texture", app->imagename,
           false, "./", "", "");
           */
-    } else if (sculpt_params->type == brush_type::smooth) {
-      draw_slider(win, "radius", sculpt_params->radius, 0.1f, 0.8f);
-      draw_slider(win, "strength", sculpt_params->strength, 0.1f, 1.0f);
-      draw_checkbox(win, "symmetric", sculpt_params->symmetric);
-      if (sculpt_params->symmetric)
-        draw_combobox(win, "symmetric axis",
-            (int &)sculpt_params->symmetric_axis, symmetric_axes);
+    } else if (params->type == brush_type::smooth) {
+      draw_slider(win, "radius", params->radius, 0.1f, 0.8f);
+      draw_slider(win, "strength", params->strength, 0.1f, 1.0f);
+      draw_checkbox(win, "symmetric", params->symmetric);
+      if (params->symmetric)
+        draw_combobox(win, "symmetric axis", (int &)params->symmetric_axis,
+            symmetric_axes);
     }
   };
   callbacks.update_cb = [](gui_window *win, const gui_input &input) {
     // update(win, apps);
   };
-  callbacks.uiupdate_cb = [app, &sculpt_params](
+  callbacks.uiupdate_cb = [app, &params](
                               gui_window *win, const gui_input &input) {
+    if (!app->glcamera) return;
     // handle mouse and keyboard for navigation
     // if (input.modifier_alt) printf("%s\n", app->imagename);
 
@@ -927,65 +923,53 @@ int main(int argc, const char *argv[]) {
     vec2f mouse_uv = vec2f{input.mouse_pos.x / float(input.window_size.x),
         input.mouse_pos.y / float(input.window_size.y)};
 
-    sculpt_params->camera_ray       = camera_ray(app->glcamera->frame,
-        app->glcamera->lens, app->glcamera->aspect, app->glcamera->film,
-        mouse_uv);
-    sculpt_params->bvh_intersection = intersect_triangles_bvh(
-        sculpt_params->bvh_shape_tree,
-        sculpt_params->shape_instance->shape->triangles,
-        sculpt_params->shape_instance->shape->positions,
-        sculpt_params->camera_ray, false);
-    view_pointer(sculpt_params->shape_instance,
-        app->glscene->instances[0]->shape, sculpt_params->bvh_intersection,
-        sculpt_params->radius, 20, sculpt_params->type);
+    params->camera_ray = camera_ray(app->glcamera->frame, app->glcamera->lens,
+        app->glcamera->aspect, app->glcamera->film, mouse_uv);
+    params->bvh_intersection = intersect_triangles_bvh(params->bvh_shape_tree,
+        params->shape->triangles, params->shape->positions, params->camera_ray,
+        false);
+    view_pointer(params->shape, app->glpointer, params->bvh_intersection,
+        params->radius, 20, params->type);
 
     // sculpting
-    if (input.mouse_left && sculpt_params->bvh_intersection.hit &&
+    if (input.mouse_left && params->bvh_intersection.hit &&
         !input.modifier_ctrl) {
-      auto        pairs = stroke(sculpt_params, mouse_uv, app->glcamera);
+      auto        pairs = stroke(params, mouse_uv, app->glcamera);
       vector<int> vertices;
-      if (sculpt_params->type == brush_type::gaussian) {
-        brush(sculpt_params, app->glscene->instances[0]->shape, pairs);
-      } else if (sculpt_params->type == brush_type::smooth) {
-        smooth(sculpt_params->solver, sculpt_params->stroke_sampling,
-            sculpt_params->shape_instance->shape->positions, sculpt_params,
+      if (params->type == brush_type::gaussian) {
+        brush(params, app->glscene->instances[0]->shape, pairs);
+      } else if (params->type == brush_type::smooth) {
+        smooth(params->solver, params->stroke_sampling,
+            params->shape->positions, params,
             app->glscene->instances[0]->shape);
-      } else if (sculpt_params->type == brush_type::texture && !pairs.empty()) {
-        vertices = stroke_parameterization(sculpt_params->solver,
-            sculpt_params->coords, sculpt_params->stroke_sampling,
-            sculpt_params->old_positions, sculpt_params->old_normals,
-            sculpt_params->radius);
-        texture_brush(vertices, sculpt_params->tex_image, sculpt_params->coords,
-            sculpt_params, app->glscene->instances[0]->shape,
-            sculpt_params->old_positions, sculpt_params->old_normals);
+      } else if (params->type == brush_type::texture && !pairs.empty()) {
+        vertices = stroke_parameterization(params->solver, params->coords,
+            params->stroke_sampling, params->old_positions, params->old_normals,
+            params->radius);
+        texture_brush(vertices, params->tex_image, params->coords, params,
+            app->glscene->instances[0]->shape, params->old_positions,
+            params->old_normals);
       }
-      if (sculpt_params->symmetric) {
-        pairs = symmetric_stroke(pairs, sculpt_params->shape_instance,
-            sculpt_params->bvh_shape_tree,
-            sculpt_params->symmetric_stroke_sampling,
-            sculpt_params->symmetric_axis);
-        if (sculpt_params->type == brush_type::gaussian) {
-          brush(sculpt_params, app->glscene->instances[0]->shape, pairs);
-        } else if (sculpt_params->type == brush_type::smooth) {
-          smooth(sculpt_params->solver,
-              sculpt_params->symmetric_stroke_sampling,
-              sculpt_params->shape_instance->shape->positions, sculpt_params,
+      if (params->symmetric) {
+        pairs = symmetric_stroke(pairs, params->shape, params->bvh_shape_tree,
+            params->symmetric_stroke_sampling, params->symmetric_axis);
+        if (params->type == brush_type::gaussian) {
+          brush(params, app->glscene->instances[0]->shape, pairs);
+        } else if (params->type == brush_type::smooth) {
+          smooth(params->solver, params->symmetric_stroke_sampling,
+              params->shape->positions, params,
               app->glscene->instances[0]->shape);
-        } else if (sculpt_params->type == brush_type::texture &&
-                   !pairs.empty()) {
-          vertices = stroke_parameterization(sculpt_params->solver,
-              sculpt_params->coords, sculpt_params->symmetric_stroke_sampling,
-              sculpt_params->old_positions, sculpt_params->old_normals,
-              sculpt_params->radius);
-          texture_brush(vertices, sculpt_params->tex_image,
-              sculpt_params->coords, sculpt_params,
-              app->glscene->instances[0]->shape,
-              sculpt_params->shape_instance->shape->positions,
-              sculpt_params->shape_instance->shape->normals);
+        } else if (params->type == brush_type::texture && !pairs.empty()) {
+          vertices = stroke_parameterization(params->solver, params->coords,
+              params->symmetric_stroke_sampling, params->old_positions,
+              params->old_normals, params->radius);
+          texture_brush(vertices, params->tex_image, params->coords, params,
+              app->glscene->instances[0]->shape, params->shape->positions,
+              params->shape->normals);
         }
       }
     } else {
-      end_stroke(sculpt_params);
+      end_stroke(params);
     }
     if (input.modifier_ctrl && !input.widgets_active) {
       // printf("%d\n", input.window_size.x);
@@ -999,8 +983,8 @@ int main(int argc, const char *argv[]) {
       if (input.mouse_left && input.modifier_shift)
         pan = (input.mouse_pos - input.mouse_last) / 100.0f;
       update_turntable(
-          app->iocamera->frame, app->iocamera->focus, rotate, dolly, -pan);
-      set_frame(app->glcamera, app->iocamera->frame);
+          app->glcamera->frame, app->glcamera->focus, rotate, dolly, -pan);
+      // set_frame(app->glcamera, app->glcamera->frame);
     }
   };
 
