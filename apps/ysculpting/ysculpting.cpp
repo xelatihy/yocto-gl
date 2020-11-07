@@ -6,7 +6,6 @@
 
 #include <set>
 
-#include "algorithms.h"
 
 using namespace yocto;
 
@@ -20,7 +19,10 @@ namespace sfs = ghc::filesystem;
 #ifdef _WIN32
 #undef near
 #undef far
+#undef max
 #endif
+
+#include "algorithms.h"
 
 namespace yocto::sceneio {
 void print_obj_camera(sceneio_camera *camera);
@@ -122,7 +124,7 @@ void init_glscene(app_state *app, shade_scene *glscene, generic_shape *ioshape,
   auto bbox = invalidb3f;
   for (auto &pos : ioshape->positions) bbox = merge(bbox, pos);
   for (auto &pos : ioshape->positions) pos -= center(bbox);
-  for (auto &pos : ioshape->positions) pos /= max(size(bbox));
+  for (auto &pos : ioshape->positions) pos /= yocto::max(size(bbox));
   // TODO(fabio): this should be a math function
 
   // camera
