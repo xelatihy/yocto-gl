@@ -82,6 +82,7 @@ static int find_in_vec(const vec3i& vec, int x) {
 // -----------------------------------------------------------------------------
 namespace yocto {
 
+// TODO: cleanup
 pair<bool, int> bary_is_vert(const vec3f& bary, float tol) {
   if (bary[0] > tol && bary[1] <= tol && bary[2] <= tol) return {true, 0};
   if (bary[1] > tol && bary[0] <= tol && bary[2] <= tol) return {true, 1};
@@ -89,6 +90,7 @@ pair<bool, int> bary_is_vert(const vec3f& bary, float tol) {
   return {false, -1};
 }
 
+// TODO: cleanup
 pair<bool, int> bary_is_edge(const vec3f& bary, float tol) {
   if (bary[0] > tol && bary[1] > tol && bary[2] <= tol) return {true, 0};
   if (bary[1] > tol && bary[2] > tol && bary[0] <= tol) return {true, 1};
@@ -96,6 +98,7 @@ pair<bool, int> bary_is_edge(const vec3f& bary, float tol) {
   return {false, -1};
 }
 
+// TODO: cleanup
 pair<bool, int> point_is_vert(const mesh_point& p, float tol) {
   auto bary = vec3f{1 - p.uv.x - p.uv.y, p.uv.x, p.uv.y};
   if (bary[0] > tol && bary[1] <= tol && bary[2] <= tol) return {true, 0};
@@ -104,6 +107,7 @@ pair<bool, int> point_is_vert(const mesh_point& p, float tol) {
   return {false, -1};
 }
 
+// TODO: cleanup
 pair<bool, int> point_is_edge(const mesh_point& p, float tol) {
   auto bary = vec3f{1 - p.uv.x - p.uv.y, p.uv.x, p.uv.y};
   if (bary[0] > tol && bary[1] > tol && bary[2] <= tol) return {true, 0};
@@ -112,6 +116,7 @@ pair<bool, int> point_is_edge(const mesh_point& p, float tol) {
   return {false, -1};
 }
 
+// TODO: cleanup
 pair<bool, vec2f> point_in_triangle(const vector<vec3i>& triangles,
     const vector<vec3f>& positions, int tid, const vec3f& point, float tol) {
   // http://www.r-5.org/files/books/computers/algo-list/realtime-3d/Christer_Ericson-Real-Time_Collision_Detection-EN.pdf
@@ -170,6 +175,7 @@ vec2f intersect_circles(const vec2f& c2, float R2, const vec2f& c1, float R1) {
   return result / 2;
 }
 
+// TODO: cleanup
 unfold_triangle init_flat_triangle(
     const vector<vec3f>& positions, const vec3i& tr) {
   auto tr2d = unfold_triangle{};
@@ -181,30 +187,58 @@ unfold_triangle init_flat_triangle(
   return tr2d;
 }
 
+inline int find_adjacent_triangle(
+    const vec3i& triangle, const vec3i& adjacent) {
+  for (int i = 0; i < 3; i++) {
+    auto k = find_in_vec(adjacent, triangle[i]);
+    if (k != -1) {
+      if (find_in_vec(adjacent, triangle[mod3(i + 1)]) != -1) {
+        return i;
+      } else {
+        return mod3(i + 2);
+      }
+    }
+  }
+  assert(0 && "input triangles are not adjacent");
+  return -1;
+}
+
+inline int find_adjacent_triangle(
+    const vector<vec3i>& triangles, int face, int neighbor) {
+  return find_adjacent_triangle(triangles[face], triangles[neighbor]);
+}
+
 // given the 2D coordinates in tanget space of a triangle, find the coordinates
 // of the k-th neighbor triangle
 unfold_triangle unfold_face(const vector<vec3i>& triangles,
-    const vector<vec3f>& positions, const vector<vec3i>& adjacencies,
-    const unfold_triangle& tr, int face, int k) {
-  auto v  = opposite_vertex(triangles, adjacencies, face, k);
+    const vector<vec3f>& positions, const unfold_triangle& tr, int face,
+    int neighbor) {
+  auto k = find_adjacent_triangle(triangles, face, neighbor);
+  auto j = find_adjacent_triangle(triangles, neighbor, face);
+  assert(j != -1);
+  assert(k != -1);
+  auto v  = triangles[neighbor][mod3(j + 2)];
   auto a  = triangles[face][k];
-  auto b  = triangles[face][(k + 1) % 3];
+  auto b  = triangles[face][mod3(k + 1)];
   auto r0 = length_squared(positions[v] - positions[a]);
   auto r1 = length_squared(positions[v] - positions[b]);
 
-  auto neighbor = adjacencies[face][k];
-  auto j        = find_in_vec(adjacencies[neighbor], face);
-  assert(j != -1);
-
   auto res         = unfold_triangle{};
-  res[j]           = tr[(k + 1) % 3];
-  res[(j + 1) % 3] = tr[k];
-  res[(j + 2) % 3] = intersect_circles(res[j], r1, res[(j + 1) % 3], r0);
+  res[j]           = tr[mod3(k + 1)];
+  res[mod3(j + 1)] = tr[k];
+  res[mod3(j + 2)] = intersect_circles(res[j], r1, res[mod3(j + 1)], r0);
   return res;
 }
 
-// assign 2D coordinates to vertices of the triangle containing the mesh point,
-// putting the point at (0, 0)
+// TODO: cleanup
+static unfold_triangle unfold_face(const vector<vec3i>& triangles,
+    const vector<vec3f>& positions, const vector<vec3i>& adjacencies,
+    const unfold_triangle& tr, int face, int k) {
+  return unfold_face(triangles, positions, tr, face, adjacencies[face][k]);
+}
+
+// assign 2D coordinates to vertices of the triangle containing the mesh
+// point, putting the point at (0, 0)
 unfold_triangle triangle_coordinates(const vector<vec3i>& triangles,
     const vector<vec3f>& positions, const mesh_point& point) {
   auto first = unfold_triangle{};
@@ -226,20 +260,42 @@ unfold_triangle triangle_coordinates(const vector<vec3i>& triangles,
 
 // assign 2D coordinates to a strip of triangles. point start is at (0, 0)
 vector<unfold_triangle> unfold_strip(const vector<vec3i>& triangles,
-    const vector<vec3f>& positions, const vector<vec3i>& adjacencies,
-    const vector<int>& strip, const mesh_point& start) {
+    const vector<vec3f>& positions, const vector<int>& strip,
+    const mesh_point& start) {
   auto coords = vector<unfold_triangle>(strip.size());
   assert(start.face == strip[0]);
   coords[0] = triangle_coordinates(triangles, positions, start);
 
   for (auto i = 1; i < strip.size(); i++) {
-    auto k = find_in_vec(adjacencies[strip[i - 1]], strip[i]);
-    assert(k != -1);
     coords[i] = unfold_face(
-        triangles, positions, adjacencies, coords[i - 1], strip[i - 1], k);
+        triangles, positions, coords[i - 1], strip[i - 1], strip[i]);
   }
 
   return coords;
+}
+
+// Create sequence of 2D segments (portals) needed for funneling.
+static vector<pair<vec2f, vec2f>> make_funnel_portals(
+    const vector<vec3i>& triangles, const vector<unfold_triangle>& coords,
+    const vector<int>& strip, const mesh_point& to) {
+  auto portals = vector<pair<vec2f, vec2f>>(strip.size());
+  for (auto i = 0; i < strip.size() - 1; i++) {
+    auto curr = strip[i], next = strip[i + 1];
+    auto k     = find_adjacent_triangle(triangles, curr, next);
+    auto tr    = coords[i];
+    portals[i] = {tr[k], tr[mod3(k + 1)]};
+  }
+  auto end = interpolate_triangle(
+      coords.back()[0], coords.back()[1], coords.back()[2], to.uv);
+  portals.back() = {end, end};
+  return portals;
+}
+
+inline vector<pair<vec2f, vec2f>> unfold_funnel_portals(
+    const vector<vec3i>& triangles, const vector<vec3f>& positions,
+    const vector<int>& strip, const mesh_point& start, const mesh_point& end) {
+  auto coords = unfold_strip(triangles, positions, strip, start);
+  return make_funnel_portals(triangles, coords, strip, end);
 }
 
 vec2i get_edge(const vector<vec3i>& triangles, const vector<vec3f>& positions,
@@ -247,9 +303,10 @@ vec2i get_edge(const vector<vec3i>& triangles, const vector<vec3f>& positions,
   auto k = find_in_vec(adjacencies[f0], f1);
   if (k == -1) return {-1, -1};
   auto tr = triangles[f0];
-  return vec2i{tr[k], tr[(k + 1) % 3]};
+  return vec2i{tr[k], tr[mod3(k + 1)]};
 }
 
+// TODO: cleanup
 // "strip" must be such that strip.back()=p.face and strip[0] must share at
 // least one vertex with p.face.
 // Under this hypoteses, this function gives back the distance between the
@@ -313,7 +370,7 @@ vector<int> triangle_fan(
     result.push_back(node);
     auto kk = find_in_vec(adjacencies[node], prev);
     assert(kk != -1);
-    kk   = (kk + offset) % 3;
+    kk   = mod3(kk + offset);
     prev = node;
     node = adjacencies[node][kk];
   }
@@ -330,7 +387,7 @@ vector<vector<int>> vertex_to_triangles(const vector<vec3i>& triangles,
       auto curr = triangles[i][j];
       if (v2t[curr].size() == 0) {
         offset    = find_in_vec(triangles[i], curr);
-        v2t[curr] = triangle_fan(adjacencies, i, (offset + 2) % 3);
+        v2t[curr] = triangle_fan(adjacencies, i, mod3(offset + 2));
       }
     }
   }
@@ -361,7 +418,7 @@ int opposite_vertex(const vector<vec3i>& triangles,
   int j        = find_in_vec(adjacencies[neighbor], face);
   assert(j != -1);
   auto tt = triangles[neighbor];
-  return tt[(j + 2) % 3];
+  return tt[mod3(j + 2)];
 }
 
 // Finds common edge between triangles
@@ -369,8 +426,8 @@ vec2i common_edge(const vec3i& triangle0, const vec3i& triangle1) {
   for (auto i = 0; i < 3; i++) {
     for (auto k = 0; k < 3; k++) {
       if (triangle0[i] == triangle1[k] &&
-          triangle0[(i + 1) % 3] == triangle1[(k + 2) % 3])
-        return {triangle0[i], triangle0[(i + 1) % 3]};
+          triangle0[mod3(i + 1)] == triangle1[mod3(k + 2)])
+        return {triangle0[i], triangle0[mod3(i + 1)]};
     }
   }
   return {-1, -1};
@@ -378,11 +435,12 @@ vec2i common_edge(const vec3i& triangle0, const vec3i& triangle1) {
 
 vec2i opposite_edge(const vec3i& t, int vid) {
   auto offset = find_in_vec(t, vid);
-  auto v0     = t[(offset + 1) % 3];
-  auto v1     = t[(offset + 2) % 3];
+  auto v0     = t[mod3(offset + 1)];
+  auto v1     = t[mod3(offset + 2)];
   return vec2i{v0, v1};
 }
 
+// TODO: cleanup
 vec2i common_edge(const vector<vec3i>& triangles, int pid0, int pid1) {
   auto& poly0 = triangles[pid0];
   auto& poly1 = triangles[pid1];
@@ -402,6 +460,7 @@ vec2i common_edge(const vector<vec3i>& triangles, int pid0, int pid1) {
   return {-1, -1};
 }
 
+// TODO: cleanup
 int common_vertex(const vector<vec3i>& triangles, int pid0, int pid1) {
   auto& poly0 = triangles[pid0];
   auto& poly1 = triangles[pid1];
@@ -452,8 +511,8 @@ void meandering_triangles(const vector<float>& field, float isoline,
     // Find which vertex has different tag, if any.
     int j = -1;
     for (auto k = 0; k < 3; k++) {
-      if (get_tag(tr[k]) != get_tag(tr[(k + 1) % 3]) &&
-          get_tag(tr[k]) != get_tag(tr[(k + 2) % 3])) {
+      if (get_tag(tr[k]) != get_tag(tr[mod3(k + 1)]) &&
+          get_tag(tr[k]) != get_tag(tr[mod3(k + 2)])) {
         j = k;
       }
     }
@@ -465,7 +524,7 @@ void meandering_triangles(const vector<float>& field, float isoline,
     }
 
     // Reorder the triangle such that vertex with different tag is always z
-    tr = {tr[(j + 2) % 3], tr[(j + 1) % 3], tr[j]};
+    tr = {tr[mod3(j + 2)], tr[mod3(j + 1)], tr[j]};
 
     auto values = vec3f{field[tr.x], field[tr.y], field[tr.z]};
     values -= isoline;
@@ -585,7 +644,7 @@ geodesic_solver make_geodesic_solver(const vector<vec3i>& triangles,
   for (auto face = 0; face < triangles.size(); face++) {
     for (auto k = 0; k < 3; k++) {
       auto a = triangles[face][k];
-      auto b = triangles[face][(k + 1) % 3];
+      auto b = triangles[face][mod3(k + 1)];
 
       // connect mesh edges
       auto len = length(positions[a] - positions[b]);
@@ -630,6 +689,7 @@ dual_geodesic_solver make_dual_geodesic_solver(const vector<vec3i>& triangles,
   return solver;
 }
 
+// TODO: cleanup
 // Builds a graph-based geodesic solver with arcs arranged in counterclockwise
 // order by using the vertex-to-face adjacencies
 geodesic_solver make_geodesic_solver(const vector<vec3i>& triangles,
@@ -664,6 +724,7 @@ geodesic_solver make_geodesic_solver(const vector<vec3i>& triangles,
   return solver;
 }
 
+// TODO: cleanup
 vector<vector<float>> compute_angles(const vector<vec3i>& triangles,
     const vector<vec3f>& positions, const vector<vec3i>& adjacencies,
     const vector<vector<int>>& v2t, vector<float>& total_angles,
@@ -999,7 +1060,22 @@ void visit_geodesic_graph(vector<float>& field,
 // IMPLEMENTATION OF INTEGRAL PATHS
 // -----------------------------------------------------------------------------
 namespace yocto {
+vec3f compute_gradient(const vec3i& triangle, const vector<vec3f>& positions,
+    const vector<float>& field) {
+  auto xy     = positions[triangle.y] - positions[triangle.x];
+  auto yz     = positions[triangle.z] - positions[triangle.y];
+  auto zx     = positions[triangle.x] - positions[triangle.z];
+  auto normal = normalize(cross(zx, xy));
+  auto result = zero3f;
+  result += field[triangle.x] * cross(normal, yz);
+  result += field[triangle.y] * cross(normal, zx);
+  result += field[triangle.z] * cross(normal, xy);
+  return result;
+}
 
+// TODO: cleanup
+// The functionalities under namespace `integral_paths` are now obsolete and can
+// be deleted.
 namespace integral_paths {
 
 static int adjacent_face(const vector<vec3i>& triangles,
@@ -1045,7 +1121,7 @@ static vector<int> get_face_ring(const vector<vec3i>& triangles,
     result.push_back(f);
 
     for (auto k = 0; k < 3; ++k) {
-      auto edge = vec2i{triangles[f][k], triangles[f][(k + 1) % 3]};
+      auto edge = vec2i{triangles[f][k], triangles[f][mod3(k + 1)]};
       if (edge.x == vertex || edge.y == vertex) {
         int neighbor_face = adjacency[f][k];
         if (neighbor_face == -1) continue;
@@ -1102,7 +1178,7 @@ static surface_path::vertex step_from_point(const vector<vec3i>& triangles,
     int start_face, int tag = -1, float epsilon = 0.0001f) {
   auto opposite_edge = [](int vertex, const vec3i& tr) -> vec2i {
     for (auto i = 0; i < 3; ++i) {
-      if (tr[i] == vertex) return {tr[(i + 1) % 3], tr[(i + 2) % 3]};
+      if (tr[i] == vertex) return {tr[mod3(i + 1)], tr[mod3(i + 2)]};
     }
     return {-1, -1};
   };
@@ -1193,7 +1269,7 @@ surface_path integrate_field(const vector<vec3i>& triangles,
 
     if (tags[face] != tag) {
       auto k  = find_index(triangles[face], old_edge.x);
-      auto to = triangles[face][(k + 1) % 3];
+      auto to = triangles[face][mod3(k + 1)];
 
       // @Hack!: We store the tag of the reached region in edge.x
       auto edge = vec2i{to, tags[face]};
@@ -1265,7 +1341,7 @@ surface_path integrate_field(const vector<vec3i>& triangles,
 
     if (contains(triangles[face], to)) {
       for (int k = 0; k < 3; ++k) {
-        auto edge = vec2i{triangles[face][k], triangles[face][(k + 1) % 3]};
+        auto edge = vec2i{triangles[face][k], triangles[face][mod3(k + 1)]};
         if (edge.x == to) {
           lerps.push_back({edge, face, 0});
           return {from, to, lerps};
@@ -1343,6 +1419,7 @@ vector<vec3f> make_positions_from_path(
 
 }  // namespace integral_paths
 
+// TODO: cleanup
 // Trace integral path following the gradient of a scalar field
 surface_path integrate_field(const vector<vec3i>& triangles,
     const vector<vec3f>& positions, const vector<vec3i>& adjacency,
@@ -1350,6 +1427,8 @@ surface_path integrate_field(const vector<vec3i>& triangles,
   return integral_paths::integrate_field(
       triangles, positions, adjacency, tags, tag, field, from);
 }
+
+// TODO: cleanup
 surface_path integrate_field(const vector<vec3i>& triangles,
     const vector<vec3f>& positions, const vector<vec3i>& adjacency,
     const vector<int>& tags, int tag, const vector<float>& field, int from,
@@ -1358,24 +1437,13 @@ surface_path integrate_field(const vector<vec3i>& triangles,
       triangles, positions, adjacency, tags, tag, field, from, to);
 }
 
+// TODO: cleanup
 vector<vec3f> make_positions_from_path(
     const surface_path& path, const vector<vec3f>& mesh_positions) {
   return integral_paths::make_positions_from_path(path, mesh_positions);
 }
 
-vec3f compute_gradient(const vec3i& triangle, const vector<vec3f>& positions,
-    const vector<float>& field) {
-  auto xy     = positions[triangle.y] - positions[triangle.x];
-  auto yz     = positions[triangle.z] - positions[triangle.y];
-  auto zx     = positions[triangle.x] - positions[triangle.z];
-  auto normal = normalize(cross(zx, xy));
-  auto result = zero3f;
-  result += field[triangle.x] * cross(normal, yz);
-  result += field[triangle.y] * cross(normal, zx);
-  result += field[triangle.z] * cross(normal, xy);
-  return result;
-}
-
+// TODO: cleanup
 // compute the distance between a point p and some vertices around him
 // handling concave path
 static vector<pair<int, float>> nodes_around_point(
@@ -1405,6 +1473,7 @@ static vector<pair<int, float>> nodes_around_point(
   return nodes;
 }
 
+// TODO: cleanup
 vector<float> solve_with_parents(const geodesic_solver& solver,
     const vector<pair<int, float>>&                     sources_and_dist,
     const vector<pair<int, float>>& targets, vector<int>& parents,
@@ -1438,6 +1507,7 @@ vector<float> solve_with_parents(const geodesic_solver& solver,
   return distances;
 }
 
+// TODO: cleanup
 // given a set of vertices and distances (nbr) computed with
 // "nodes_around_point" and a scalar field (f), returns the parent of the
 // point having nbr as neighborhood
@@ -1459,6 +1529,7 @@ int set_target_parent(const vector<pair<int, float>>& nbr,
   }
 }
 
+// TODO: cleanup
 // given a vector of parents(parents) and a starting vertex (target_parent),
 // return the vertex v such that parents[v]=-1; all the vertices visited
 // during the navigation are stored in "path"
@@ -1478,6 +1549,7 @@ int set_source_child(
   return prev;
 }
 
+// TODO: cleanup
 // utilities:nodes_around_point-->length_by_flattening
 // returns the shortest path starting from target to source as a list of
 // indices of nodes of the graph(solver). note: the list does not contains
@@ -1507,6 +1579,7 @@ vector<int> point_to_point_geodesic_path(const geodesic_solver& solver,
   return path;
 }
 
+// TODO: cleanup
 // same function of "compute_geodesic_paths" of yocto_mesh.cpp that makes
 // early exit when reaching end_vertex, the name is changed because the input
 // parameters are the same
@@ -1524,6 +1597,7 @@ vector<int> compute_pruned_geodesic_paths(
   return parents;
 }
 
+// TODO: cleanup
 // returns the shortest path starting from target to source as a list of
 // indices of nodes of the graph(solver). note: the list does not contains
 // source and target.
@@ -1538,6 +1612,7 @@ vector<int> point_to_point_geodesic_path(const geodesic_solver& solver,
   return path;
 }
 
+// TODO: cleanup
 static vector<pair<int, float>> check_nodes(vector<pair<int, float>>& nodes) {
   sort(nodes.begin(), nodes.end());
   auto new_nodes = vector<pair<int, float>>{};
@@ -1559,6 +1634,7 @@ static vector<pair<int, float>> check_nodes(vector<pair<int, float>>& nodes) {
   return nodes;
 }
 
+// TODO: cleanup
 // TODO(fabio): better name
 static vector<float> solve(const geodesic_solver& solver,
     const vector<pair<int, float>>&               sources_and_dist) {
@@ -1578,6 +1654,7 @@ static vector<float> solve(const geodesic_solver& solver,
   return distances;
 }
 
+// TODO: cleanup
 #if 0
 static vector<float> solve_with_parents(const geodesic_solver& solver,
     const vector<pair<int, float>>&                     sources_and_dist,
@@ -1614,6 +1691,7 @@ static vector<float> solve_with_parents(const geodesic_solver& solver,
 }
 #endif
 
+// TODO: cleanup
 vector<float> compute_geodesic_distances(const geodesic_solver& solver,
     const vector<vec3i>& triangles, const vector<vec3f>& positions,
     const vector<vec3i>& adjacencies, const vector<mesh_point>& sources) {
@@ -1833,6 +1911,7 @@ vector<int> strip_on_dual_graph(const dual_geodesic_solver& solver,
   return strip;
 }
 
+// TODO: cleanup
 static int node_is_neighboor(const geodesic_solver& solver, int vid, int node) {
   auto nbr = solver.graph[vid];
   for (auto i = 0; i < nbr.size(); ++i) {
@@ -1843,6 +1922,7 @@ static int node_is_neighboor(const geodesic_solver& solver, int vid, int node) {
   return -1;
 }
 
+// TODO: cleanup
 static bool set_ord(int s, int prev_entry, int next_entry, bool nei_is_dual) {
   auto ccw_count = -1, cw_count = -1;
   if (prev_entry < next_entry) {
@@ -1859,6 +1939,7 @@ static bool set_ord(int s, int prev_entry, int next_entry, bool nei_is_dual) {
     return false;
 }
 
+// TODO: cleanup
 // static bool set_ord(float theta_next, float theta_prev) {
 //   if (theta_next > theta_prev) {
 //     return theta_next - theta_prev < pif;
@@ -1866,6 +1947,8 @@ static bool set_ord(int s, int prev_entry, int next_entry, bool nei_is_dual) {
 //     return theta_prev - theta_next > pif;
 //   }
 // }
+
+// TODO: cleanup
 static void fill_strip(vector<int>& strip, const vector<vector<int>>& v2t,
     int vid, int first, int last, bool nei_is_dual, bool ccw) {
   auto  start = first, end = last;
@@ -1890,6 +1973,7 @@ static void fill_strip(vector<int>& strip, const vector<vector<int>>& v2t,
   }
 }
 
+// TODO: cleanup
 static int get_entry(vector<int>& strip, const geodesic_solver& solver,
     const vector<vec3i>& triangles, const vector<vec3f>& positions,
     const vector<vec3i>& adjacencies, const vector<vector<int>>& v2t,
@@ -1938,6 +2022,7 @@ static int get_entry(vector<int>& strip, const geodesic_solver& solver,
   return 0;  // TODO(fabio): cosa deve fare qui?
 }
 
+// TODO: cleanup
 void close_strip(vector<int>& strip, const vector<vector<int>>& v2t, int vid,
     int prev_tri, int last_tri) {
   auto star    = v2t[vid];
@@ -1952,6 +2037,7 @@ void close_strip(vector<int>& strip, const vector<vector<int>>& v2t, int vid,
   fill_strip(strip, v2t, vid, first, last, true, ccw);
 }
 
+// TODO: cleanup
 // particular case of "get strip" when one of the two point is the parent of
 // the other so the size of the strip is one or two
 static vector<int> short_strip(const geodesic_solver& solver,
@@ -1982,6 +2068,7 @@ static vector<int> short_strip(const geodesic_solver& solver,
   return strip;
 }
 
+// TODO: cleanup
 // returns a strip of triangles such target belongs to the first one and
 // source to the last one
 // TODO(fabio_): may be the names could change in order to get the call
@@ -2109,6 +2196,19 @@ float path_length(const vector<vec3f>& positions) {
   return len;
 }
 
+// Find barycentric coordinates of a point inside a triangle (a, b, c).
+vec2f barycentric_coordinates(
+    const vec2f& point, const vec2f& a, const vec2f& b, const vec2f& c) {
+  auto  v0 = b - a, v1 = c - a, v2 = point - a;
+  float d00   = dot(v0, v0);
+  float d01   = dot(v0, v1);
+  float d11   = dot(v1, v1);
+  float d20   = dot(v2, v0);
+  float d21   = dot(v2, v1);
+  float denom = d00 * d11 - d01 * d01;
+  return vec2f{d11 * d20 - d01 * d21, d00 * d21 - d01 * d20} / denom;
+};
+
 // given a direction expressed in tangent space of the face start,
 // continue the path as straight as possible.
 geodesic_path straightest_path(const vector<vec3i>& triangles,
@@ -2119,7 +2219,7 @@ geodesic_path straightest_path(const vector<vec3i>& triangles,
   path.strip.push_back(start.face);
 
   auto coords    = triangle_coordinates(triangles, positions, start);
-  auto prev_face = -1, face = start.face;
+  auto prev_face = -2, face = start.face;
   auto len = 0.0f;
 
   // https://rootllama.wordpress.com/2014/06/20/ray-line-segment-intersection-test-in-2d/
@@ -2136,9 +2236,10 @@ geodesic_path straightest_path(const vector<vec3i>& triangles,
   while (len < path_length) {
     // Given the triangle, find which edge is intersected by the line.
     for (auto k = 0; k < 3; ++k) {
-      if (adjacencies[face][k] == prev_face) continue;
+      auto neighbor = adjacencies[face][k];
+      if (neighbor == prev_face) continue;
       auto left     = coords[k];
-      auto right    = coords[(k + 1) % 3];
+      auto right    = coords[mod3(k + 1)];
       auto [t0, t1] = intersect(direction, left, right);
       if (t0 > 0 && t1 >= 0 && t1 <= 1) {
         len = t0;
@@ -2146,13 +2247,12 @@ geodesic_path straightest_path(const vector<vec3i>& triangles,
           path.lerps.push_back(t1);
           // Step to next face.
           prev_face = face;
-          if (adjacencies[face][k] == -1) {
+          if (neighbor == -1) {
             path_length = len;
             break;
           }
-          coords = unfold_face(
-              triangles, positions, adjacencies, coords, face, k);
-          face = adjacencies[face][k];
+          coords = unfold_face(triangles, positions, coords, face, neighbor);
+          face   = adjacencies[face][k];
           path.strip.push_back(face);
         }
         break;
@@ -2160,44 +2260,29 @@ geodesic_path straightest_path(const vector<vec3i>& triangles,
     }
   }
 
-  // Find barycentric coordinate of path end.
-  auto barycentric = [](const vec2f& p, const unfold_triangle& tr) -> vec2f {
-    auto [a, b, c] = tr;
-    auto  v0 = b - a, v1 = c - a, v2 = p - a;
-    float d00   = dot(v0, v0);
-    float d01   = dot(v0, v1);
-    float d11   = dot(v1, v1);
-    float d20   = dot(v2, v0);
-    float d21   = dot(v2, v1);
-    float denom = d00 * d11 - d01 * d01;
-    return vec2f{d11 * d20 - d01 * d21, d00 * d21 - d01 * d20} / denom;
-  };
-
   auto p   = direction * path_length;
-  auto uv  = barycentric(p, coords);
+  auto uv  = barycentric_coordinates(p, coords[0], coords[1], coords[2]);
   path.end = {face, uv};
   return path;
 }
 
-// Create sequence of 2D segments (portals) needed for funneling.
-static vector<pair<vec2f, vec2f>> get_portals(const vector<vec3i>& adjacencies,
-    const vector<unfold_triangle>& coords, const vector<int>& strip,
-    const mesh_point& to) {
-  auto portals = vector<pair<vec2f, vec2f>>(strip.size());
-  for (auto i = 0; i < strip.size() - 1; i++) {
-    auto curr = strip[i], next = strip[i + 1];
-    auto k = find_in_vec(adjacencies[curr], next);
-    assert(k != -1);
-    auto tr    = coords[i];
-    portals[i] = {tr[k], tr[(k + 1) % 3]};
-  }
-  auto end = interpolate_triangle(
-      coords.back()[0], coords.back()[1], coords.back()[2], to.uv);
-  portals.back() = {end, end};
-  return portals;
+mat2f parallel_transport_rotation(const vector<vec3i>& triangles,
+    const vector<vec3f>& positions, const vector<vec3i>& adjacencies,
+    const geodesic_path& path) {
+  if (path.start.face == path.end.face) return identity2x2f;
+
+  auto coords   = unfold_strip(triangles, positions, path.strip, path.start);
+  auto a        = coords.back()[0];
+  auto b        = coords.back()[1];
+  auto y_axis   = normalize(b - a);
+  auto rotation = mat2f{};
+  rotation.y    = y_axis;
+  rotation.x    = {y_axis.y, -y_axis.x};
+  rotation      = transpose(rotation);
+  return rotation;
 }
 
-static float intersect_segments(const vec2f& start1, const vec2f& end1,
+inline float intersect_segments(const vec2f& start1, const vec2f& end1,
     const vec2f& start2, const vec2f& end2) {
   if (end1 == start2) return 0;
   if (end2 == start1) return 1;
@@ -2371,7 +2456,7 @@ static vector<int> fix_strip(const vector<vec3i>& adjacencies,
   assert(path_check_strip(adjacencies, strip));
   assert(index < strip.size() - 1);
   auto face = strip[index];
-  if (!left) k = (k + 2) % 3;
+  if (!left) k = mod3(k + 2);
 
   // Create triangle fan that starts at face, walks backward along the strip for
   // a while, exits and then re-enters back.
@@ -2425,20 +2510,19 @@ static vector<int> fix_strip(const vector<vec3i>& adjacencies,
   return result;
 }
 
-static void optimize_path(geodesic_path& path, const vector<vec3i>& triangles,
+static void straighten_path(geodesic_path& path, const vector<vec3i>& triangles,
     const vector<vec3f>& positions, const vector<vec3i>& adjacencies) {
   auto index = -1, vertex = -1;
-  auto init_coords = unfold_strip(
-      triangles, positions, adjacencies, path.strip, path.start);
-  auto init_portals = get_portals(
-      adjacencies, init_coords, path.strip, path.end);
+  auto init_portals = unfold_funnel_portals(
+      triangles, positions, path.strip, path.start, path.end);
   path.lerps = funnel(init_portals, index);
 
   // while(true) { this may never break...
   for (auto i = 0; i < path.strip.size() * 2 && index != -1; i++) {
     auto new_vertex = -1;
-    auto face = path.strip[index], next = path.strip[index + 1];
-    auto edge       = get_edge(triangles, positions, adjacencies, face, next);
+    auto face       = path.strip[index];
+    auto next       = path.strip[index + 1];
+    auto edge       = common_edge(triangles[face], triangles[next]);
     auto flank_left = false;
     if (path.lerps[index] == 0) {
       new_vertex = edge.x;
@@ -2453,10 +2537,9 @@ static void optimize_path(geodesic_path& path, const vector<vec3i>& triangles,
     path.strip = fix_strip(adjacencies, path.strip, index,
         find_in_vec(triangles[face], vertex), flank_left);
 
-    auto coords = unfold_strip(
-        triangles, positions, adjacencies, path.strip, path.start);
-    auto portals = get_portals(adjacencies, coords, path.strip, path.end);
-    path.lerps   = funnel(portals, index);
+    auto portals = unfold_funnel_portals(
+        triangles, positions, path.strip, path.start, path.end);
+    path.lerps = funnel(portals, index);
   }
 }
 
@@ -2467,8 +2550,27 @@ geodesic_path shortest_path(const vector<vec3i>& triangles,
   path.start = start;
   path.end   = end;
   path.strip = strip;
-  optimize_path(path, triangles, positions, adjacencies);
+  straighten_path(path, triangles, positions, adjacencies);
   return path;
+}
+
+mesh_path convert_mesh_path(const vector<vec3i>& triangles,
+    const vector<vec3i>& adjacencies, const vector<int>& strip,
+    const vector<float>& lerps, const mesh_point& start,
+    const mesh_point& end) {
+  auto result = mesh_path{};
+  result.points.resize(lerps.size() + 2);
+  result.points[0] = start;
+  for (int i = 0; i < lerps.size(); ++i) {
+    auto  k              = find_in_vec(adjacencies[strip[i]], strip[i + 1]);
+    vec2f uvw[3]         = {{0, 0}, {1, 0}, {0, 1}};
+    auto  a              = uvw[k];
+    auto  b              = uvw[mod3(k + 1)];
+    auto  uv             = lerp(a, b, lerps[i]);
+    result.points[i + 1] = {strip[i], uv};
+  }
+  result.points.back() = end;
+  return result;
 }
 
 mesh_point eval_path_point(const geodesic_path& path,
@@ -2476,13 +2578,13 @@ mesh_point eval_path_point(const geodesic_path& path,
     const vector<vec3i>& adjacencies, float t) {
   // strip with 1 triangle are trivial, just average the uvs
   if (path.start.face == path.end.face) {
-    return mesh_point{path.start.face, (path.start.uv + path.end.uv) * t};
+    return mesh_point{path.start.face, lerp(path.start.uv, path.end.uv, t)};
   }
   // util function
   auto rotate = [](const vec3f& v, int k) {
-    if (k % 3 == 0)
+    if (mod3(k) == 0)
       return v;
-    else if (k % 3 == 1)
+    else if (mod3(k) == 1)
       return vec3f{v.z, v.x, v.y};
     else
       return vec3f{v.y, v.z, v.x};
@@ -2498,7 +2600,7 @@ mesh_point eval_path_point(const geodesic_path& path,
   }
   auto t_low = parameter_t[i], t_high = parameter_t[i + 1];
   auto alpha = (t - t_low) / (t_high - t_low);
-  // alpha == 0 -> t_low, alpha == 1 t_high
+  // alpha == 0 -> t_low, alpha == 1 -> t_high
   auto face   = path.strip[i];
   auto uv_low = vec2f{0, 0};
   if (i == 0) {

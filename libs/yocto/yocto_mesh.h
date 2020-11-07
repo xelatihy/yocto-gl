@@ -65,6 +65,8 @@ using std::vector;
 // -----------------------------------------------------------------------------
 namespace yocto {
 
+inline int mod3(int i) { return (i > 2) ? i - 3 : i; }
+
 // Returns the list of triangles incident at each vertex in CCW order.
 // Note: this works only if the mesh does not have a boundary.
 vector<vector<int>> vertex_to_triangles(const vector<vec3i>& triangles,
@@ -153,6 +155,10 @@ vector<vector<float>> compute_voronoi_fields(
 vector<vec3f> colors_from_field(const vector<float>& field, float scale = 1,
     const vec3f& c0 = {1, 1, 1}, const vec3f& c1 = {1, 0.1f, 0.1f});
 
+vec3f compute_gradient(const vec3i& triangle, const vector<vec3f>& positions,
+    const vector<float>& field);
+
+#if 1
 // Description of a discrete path along the surface of a triangle mesh.
 struct surface_path {
   struct vertex {
@@ -175,9 +181,7 @@ surface_path integrate_field(const vector<vec3i>& triangles,
 
 vector<vec3f> make_positions_from_path(
     const surface_path& path, const vector<vec3f>& mesh_positions);
-
-vec3f compute_gradient(const vec3i& triangle, const vector<vec3f>& positions,
-    const vector<float>& field);
+#endif
 
 struct mesh_point {
   int   face = -1;
@@ -225,6 +229,20 @@ struct geodesic_path {
   vector<float> lerps = {};
 };
 
+struct mesh_path {
+  vector<mesh_point> points;
+};
+
+mesh_path convert_mesh_path(const vector<vec3i>& triangles,
+    const vector<vec3i>& adjacencies, const vector<int>& strip,
+    const vector<float>& lerps, const mesh_point& start, const mesh_point& end);
+
+inline mesh_path convert_mesh_path(const vector<vec3i>& triangles,
+    const vector<vec3i>& adjacencies, const geodesic_path& path) {
+  return convert_mesh_path(
+      triangles, adjacencies, path.strip, path.lerps, path.start, path.end);
+}
+
 // compute the shortest path connecting two surface points
 // initial guess of the connecting strip must be given
 geodesic_path shortest_path(const vector<vec3i>& triangles,
@@ -235,6 +253,12 @@ geodesic_path shortest_path(const vector<vec3i>& triangles,
 geodesic_path straightest_path(const vector<vec3i>& triangles,
     const vector<vec3f>& positions, const vector<vec3i>& adjacencies,
     const mesh_point& start, const vec2f& direction, float path_length);
+
+// compute the 2d rotation in tangent space that tansport directions from
+// the staring point of the path to its ending point.
+mat2f parallel_transport_rotation(const vector<vec3i>& triangles,
+    const vector<vec3f>& positions, const vector<vec3i>& adjacencies,
+    const geodesic_path& path);
 
 vector<vec3f> path_positions(const geodesic_path& path,
     const vector<vec3i>& triangles, const vector<vec3f>& positions,
@@ -291,22 +315,33 @@ namespace yocto {
 
 using unfold_triangle = std::array<vec2f, 3>;
 
+// Find barycentric coordinates of a point inside a triangle (a, b, c).
+vec2f barycentric_coordinates(
+    const vec2f& point, const vec2f& a, const vec2f& b, const vec2f& c);
+
 vec3f eval_position(const vector<vec3i>& triangles,
     const vector<vec3f>& positions, const mesh_point& sample);
 vec3f eval_normal(const vector<vec3i>& triangles, const vector<vec3f>& normals,
     const mesh_point& point);
 
-pair<bool, int>   bary_is_edge(const vec3f& bary, float tol = 1e-2f);
-pair<bool, int>   bary_is_vert(const vec3f& bary, float tol = 1e-2f);
-pair<bool, int>   point_is_vert(const mesh_point& p, float tol = 1e-2f);
-pair<bool, int>   point_is_edge(const mesh_point& p, float tol = 5e-3f);
+// TODO: cleanup
+pair<bool, int> bary_is_edge(const vec3f& bary, float tol = 1e-2f);
+// TODO: cleanup
+pair<bool, int> bary_is_vert(const vec3f& bary, float tol = 1e-2f);
+// TODO: cleanup
+pair<bool, int> point_is_vert(const mesh_point& p, float tol = 1e-2f);
+// TODO: cleanup
+pair<bool, int> point_is_edge(const mesh_point& p, float tol = 5e-3f);
+// TODO: cleanup
 pair<bool, vec2f> point_in_triangle(const vector<vec3i>& triangles,
     const vector<vec3f>& positions, int tid, const vec3f& point,
     float tol = 5e-3f);
 
+// TODO: cleanup
 std::array<vec2f, 3> init_flat_triangle(
     const vector<vec3f>& positions, const vec3i& tr);
 
+// TODO: cleanup
 float length_by_flattening(const vector<vec3i>& triangles,
     const vector<vec3f>& positions, const vector<vec3i>& adjacencies,
     const mesh_point& p, const vector<int>& strip);
@@ -317,13 +352,13 @@ vec2f intersect_circles(const vec2f& c2, float R2, const vec2f& c1, float R1);
 // given the 2D coordinates in tanget space of a triangle, find the coordinates
 // of the k-th neighbor triangle
 unfold_triangle unfold_face(const vector<vec3i>& triangles,
-    const vector<vec3f>& positions, const vector<vec3i>& adjacencies,
-    const unfold_triangle& tr, int face, int k);
+    const vector<vec3f>& positions, const unfold_triangle& tr, int face,
+    int neighbor);
 
 // assign 2D coordinates to a strip of triangles. point start is at (0, 0)
 vector<unfold_triangle> unfold_strip(const vector<vec3i>& triangles,
-    const vector<vec3f>& positions, const vector<vec3i>& adjacencies,
-    const vector<int>& strip, const mesh_point& start);
+    const vector<vec3f>& positions, const vector<int>& strip,
+    const mesh_point& start);
 
 // assign 2D coordinates to vertices of the triangle containing the mesh point,
 // putting the point at (0, 0)
