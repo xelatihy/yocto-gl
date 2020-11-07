@@ -1,3 +1,4 @@
+#pragma once
 #include <yocto/yocto_geometry.h>
 #include <yocto/yocto_mesh.h>
 #include <yocto/yocto_shape.h>
