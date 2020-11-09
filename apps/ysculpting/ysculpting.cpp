@@ -6,7 +6,6 @@
 
 #include <set>
 
-
 using namespace yocto;
 
 #include <atomic>
@@ -381,8 +380,9 @@ vector<pair<vec3f, vec3f>> stroke(
         glcamera->film, params->locked_uv);
     inter    = intersect_triangles_bvh(params->bvh_shape_tree,
         params->shape->triangles, params->shape->positions, ray, false);
-    pos      = eval_position(params->shape, inter.element, inter.uv);
-    nor      = eval_normal(params->shape, inter.element, inter.uv);
+    if (!inter.hit) continue;
+    pos = eval_position(params->shape, inter.element, inter.uv);
+    nor = eval_normal(params->shape, inter.element, inter.uv);
     params->stroke_sampling.push_back(
         closest_vertex(params->shape->triangles, inter.uv, inter.element));
     auto pair               = std::pair<vec3f, vec3f>{pos, nor};
@@ -531,8 +531,8 @@ float laplacian_weight(vector<vec3f> &positions,
   float cot_beta  = cotan(v3, v4);
   float weight    = (cot_alpha + cot_beta) / 2;
 
-  // float cotan_max = yocto::cos(flt_min) / yocto::sin(flt_min);
-  // weight          = clamp(weight, cotan_max, -cotan_max);
+  float cotan_max = yocto::cos(flt_min) / yocto::sin(flt_min);
+  weight          = clamp(weight, cotan_max, -cotan_max);
   return weight;
 }
 
@@ -713,9 +713,11 @@ int main(int argc, const char *argv[]) {
     view_pointer(params->shape, app->glpointer, params->bvh_intersection,
         params->radius, 20, params->type);
 
+    auto isec = params->bvh_intersection;
     // sculpting
-    if (input.mouse_left && params->bvh_intersection.hit &&
-        !input.modifier_ctrl) {
+    if (input.mouse_left && isec.hit && !input.modifier_ctrl &&
+        (isec.uv.x >= 0 && isec.uv.x < 1) &&
+        (isec.uv.y >= 0 && isec.uv.y < 1)) {
       auto        pairs = stroke(params, mouse_uv, app->glcamera);
       vector<int> vertices;
       if (params->type == brush_type::gaussian) {
