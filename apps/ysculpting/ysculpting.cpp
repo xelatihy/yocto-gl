@@ -134,11 +134,14 @@ void init_glscene(app_state *app, shade_scene *glscene, generic_shape *ioshape,
 
   // material
   if (progress_cb) progress_cb("convert material", progress.x++, progress.y);
-  auto glmaterial  = add_material(glscene, {0, 0, 0}, {0.5, 1, 0.5}, 1, 0, 0.2);
-  auto glmateriale = add_material(glscene, {0, 0, 0}, {0, 0, 0}, 0, 0, 1);
-  auto glmaterialv = add_material(glscene, {0, 0, 0}, {0, 0, 0}, 0, 0, 1);
-  set_unlit(glmateriale, true);
-  set_unlit(glmaterialv, true);
+
+  auto emission   = vec3f{0, 0, 0};
+  auto color      = vec3f{0.78f, 0.31f, 0.23f};
+  auto specular   = 0.0f;
+  auto metallic   = 0.0f;
+  auto roughness  = 0.0f;
+  auto glmaterial = add_material(
+      glscene, emission, color, specular, metallic, roughness);
 
   // shapes
   if (progress_cb) progress_cb("convert shape", progress.x++, progress.y);
