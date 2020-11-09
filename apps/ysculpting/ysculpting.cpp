@@ -185,6 +185,13 @@ void init_glscene(app_state *app, shade_scene *glscene, generic_shape *ioshape,
   // shapes
   if (progress_cb) progress_cb("convert instance", progress.x++, progress.y);
   add_instance(glscene, identity3x4f, model_shape, glmaterial);
+
+  auto pointer_shape      = add_shape(glscene);
+  auto pointer_material   = add_material(glscene);
+  pointer_material->color = {1, 1, 1};
+  set_unlit(pointer_material, true);
+  add_instance(glscene, identity3x4f, pointer_shape, pointer_material);
+
   // add_instance(glscene, identity3x4f, edges_shape, glmateriale, true);
   // add_instance(glscene, identity3x4f, vertices_shape, glmaterialv, true);
 
@@ -631,7 +638,6 @@ int main(int argc, const char *argv[]) {
     if (!app->glcamera) return;
     draw_scene(app->glscene, app->glcamera, input.framebuffer_viewport,
         app->drawgl_prms);
-    //    draw_shape(app->glpointer->shape);
   };
   callbacks.widgets_cb = [app, &params](
                              gui_window *win, const gui_input &input) {
@@ -713,8 +719,8 @@ int main(int argc, const char *argv[]) {
     params->bvh_intersection = intersect_triangles_bvh(params->bvh_shape_tree,
         params->shape->triangles, params->shape->positions, params->camera_ray,
         false);
-    view_pointer(params->shape, app->glpointer, params->bvh_intersection,
-        params->radius, 20, params->type);
+    view_pointer(params->shape, app->glscene->shapes.back(),
+        params->bvh_intersection, params->radius, 20, params->type);
 
     auto isec = params->bvh_intersection;
     // sculpting
