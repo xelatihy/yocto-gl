@@ -719,8 +719,13 @@ int main(int argc, const char *argv[]) {
     params->bvh_intersection = intersect_triangles_bvh(params->bvh_shape_tree,
         params->shape->triangles, params->shape->positions, params->camera_ray,
         false);
-    view_pointer(params->shape, app->glscene->shapes.back(),
-        params->bvh_intersection, params->radius, 20, params->type);
+    if (params->bvh_intersection.hit) {
+      app->glscene->instances.back()->hidden = false;
+      view_pointer(params->shape, app->glscene->shapes.back(),
+          params->bvh_intersection, params->radius, 20, params->type);
+    } else {
+      app->glscene->instances.back()->hidden = true;
+    }
 
     auto isec = params->bvh_intersection;
     // sculpting
