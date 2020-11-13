@@ -34,6 +34,7 @@
 #include <yocto/yocto_shape.h>
 #include <yocto_gui/yocto_imgui.h>
 #include <yocto_gui/yocto_shade.h>
+#include <yocto_gui/yocto_window.h>
 using namespace yocto;
 
 #include <deque>
@@ -98,6 +99,9 @@ struct app_states {
 
   // default options
   shade_params drawgl_prms = {};
+
+  // imgui
+  gui_widgets widgets = {};
 
   // cleanup
   ~app_states() {
@@ -230,23 +234,23 @@ void init_glscene(shade_scene* glscene, sceneio_scene* ioscene,
 }
 
 bool draw_widgets(
-    gui_window* win, sceneio_scene* ioscene, sceneio_camera* iocamera) {
+    gui_widgets* widgets, sceneio_scene* ioscene, sceneio_camera* iocamera) {
   if (!iocamera) return false;
   auto edited = 0;
-  draw_label(win, "name", iocamera->name);
-  edited += draw_slider(win, "frame.x", iocamera->frame.x, -1, 1);
-  edited += draw_slider(win, "frame.y", iocamera->frame.y, -1, 1);
-  edited += draw_slider(win, "frame.z", iocamera->frame.z, -1, 1);
-  edited += draw_slider(win, "frame.o", iocamera->frame.o, -10, 10);
-  edited += draw_checkbox(win, "ortho", iocamera->orthographic);
-  edited += draw_slider(win, "lens", iocamera->lens, 0.01f, 1);
-  edited += draw_slider(win, "film", iocamera->film, 0.01f, 0.1f);
-  edited += draw_slider(win, "focus", iocamera->focus, 0.01f, 1000);
-  edited += draw_slider(win, "aperture", iocamera->aperture, 0, 5);
+  draw_label(widgets, "name", iocamera->name);
+  edited += draw_slider(widgets, "frame.x", iocamera->frame.x, -1, 1);
+  edited += draw_slider(widgets, "frame.y", iocamera->frame.y, -1, 1);
+  edited += draw_slider(widgets, "frame.z", iocamera->frame.z, -1, 1);
+  edited += draw_slider(widgets, "frame.o", iocamera->frame.o, -10, 10);
+  edited += draw_checkbox(widgets, "ortho", iocamera->orthographic);
+  edited += draw_slider(widgets, "lens", iocamera->lens, 0.01f, 1);
+  edited += draw_slider(widgets, "film", iocamera->film, 0.01f, 0.1f);
+  edited += draw_slider(widgets, "focus", iocamera->focus, 0.01f, 1000);
+  edited += draw_slider(widgets, "aperture", iocamera->aperture, 0, 5);
   auto from         = iocamera->frame.o,
        to           = iocamera->frame.o - iocamera->focus * iocamera->frame.z;
-  auto from_changed = draw_slider(win, "!!from", from, -10, 10);
-  auto to_changed   = draw_slider(win, "!!to", to, -10, 10);
+  auto from_changed = draw_slider(widgets, "!!from", from, -10, 10);
+  auto to_changed   = draw_slider(widgets, "!!to", to, -10, 10);
   if (from_changed || to_changed) {
     iocamera->frame = lookat_frame(from, to, {0, 1, 0});
     iocamera->focus = length(from - to);
@@ -257,113 +261,115 @@ bool draw_widgets(
 
 /// Visit struct elements.
 bool draw_widgets(
-    gui_window* win, sceneio_scene* ioscene, sceneio_texture* iotexture) {
+    gui_widgets* widgets, sceneio_scene* ioscene, sceneio_texture* iotexture) {
   if (!iotexture) return false;
-  draw_label(win, "name", iotexture->name);
-  draw_label(win, "hdr",
+  draw_label(widgets, "name", iotexture->name);
+  draw_label(widgets, "hdr",
       std::to_string(iotexture->hdr.width()) + " x " +
           std::to_string(iotexture->hdr.height()));
-  draw_label(win, "ldr",
+  draw_label(widgets, "ldr",
       std::to_string(iotexture->ldr.width()) + " x " +
           std::to_string(iotexture->ldr.height()));
   return false;
 }
 
-bool draw_widgets(
-    gui_window* win, sceneio_scene* ioscene, sceneio_material* iomaterial) {
+bool draw_widgets(gui_widgets* widgets, sceneio_scene* ioscene,
+    sceneio_material* iomaterial) {
   if (!iomaterial) return false;
   auto edited = 0;
-  draw_label(win, "name", iomaterial->name);
-  edited += draw_hdrcoloredit(win, "emission", iomaterial->emission);
-  edited += draw_coloredit(win, "color", iomaterial->color);
-  edited += draw_slider(win, "opacity", iomaterial->opacity, 0, 1);
-  edited += draw_slider(win, "metallic", iomaterial->metallic, 0, 1);
-  edited += draw_slider(win, "roughness", iomaterial->roughness, 0, 1);
-  edited += draw_slider(win, "specular", iomaterial->specular, 0, 1);
-  edited += draw_slider(win, "coat", iomaterial->coat, 0, 1);
-  edited += draw_slider(win, "transmission", iomaterial->transmission, 0, 1);
-  edited += draw_coloredit(win, "spectint", iomaterial->spectint);
-  edited += draw_checkbox(win, "thin", iomaterial->thin);
-  edited += draw_coloredit(win, "scattering", iomaterial->scattering);
-  edited += draw_slider(win, "trdepth", iomaterial->trdepth, 0, 1);
-  edited += draw_slider(win, "scanisotropy", iomaterial->scanisotropy, -1, 1);
-  edited += draw_combobox(
-      win, "emission_tex", iomaterial->emission_tex, ioscene->textures, true);
-  edited += draw_combobox(
-      win, "color_tex", iomaterial->color_tex, ioscene->textures, true);
-  edited += draw_combobox(
-      win, "opacity_tex", iomaterial->opacity_tex, ioscene->textures, true);
-  edited += draw_combobox(
-      win, "metallic_tex", iomaterial->metallic_tex, ioscene->textures, true);
-  edited += draw_combobox(
-      win, "roughness_tex", iomaterial->roughness_tex, ioscene->textures, true);
-  edited += draw_combobox(
-      win, "specular_tex", iomaterial->specular_tex, ioscene->textures, true);
-  edited += draw_combobox(win, "transmission_tex", iomaterial->transmission_tex,
-      ioscene->textures, true);
-  edited += draw_combobox(win, "scattering_tex", iomaterial->scattering_tex,
+  draw_label(widgets, "name", iomaterial->name);
+  edited += draw_hdrcoloredit(widgets, "emission", iomaterial->emission);
+  edited += draw_coloredit(widgets, "color", iomaterial->color);
+  edited += draw_slider(widgets, "opacity", iomaterial->opacity, 0, 1);
+  edited += draw_slider(widgets, "metallic", iomaterial->metallic, 0, 1);
+  edited += draw_slider(widgets, "roughness", iomaterial->roughness, 0, 1);
+  edited += draw_slider(widgets, "specular", iomaterial->specular, 0, 1);
+  edited += draw_slider(widgets, "coat", iomaterial->coat, 0, 1);
+  edited += draw_slider(
+      widgets, "transmission", iomaterial->transmission, 0, 1);
+  edited += draw_coloredit(widgets, "spectint", iomaterial->spectint);
+  edited += draw_checkbox(widgets, "thin", iomaterial->thin);
+  edited += draw_coloredit(widgets, "scattering", iomaterial->scattering);
+  edited += draw_slider(widgets, "trdepth", iomaterial->trdepth, 0, 1);
+  edited += draw_slider(
+      widgets, "scanisotropy", iomaterial->scanisotropy, -1, 1);
+  edited += draw_combobox(widgets, "emission_tex", iomaterial->emission_tex,
       ioscene->textures, true);
   edited += draw_combobox(
-      win, "spectint_tex", iomaterial->spectint_tex, ioscene->textures, true);
+      widgets, "color_tex", iomaterial->color_tex, ioscene->textures, true);
   edited += draw_combobox(
-      win, "normal_tex", iomaterial->normal_tex, ioscene->textures, true);
+      widgets, "opacity_tex", iomaterial->opacity_tex, ioscene->textures, true);
+  edited += draw_combobox(widgets, "metallic_tex", iomaterial->metallic_tex,
+      ioscene->textures, true);
+  edited += draw_combobox(widgets, "roughness_tex", iomaterial->roughness_tex,
+      ioscene->textures, true);
+  edited += draw_combobox(widgets, "specular_tex", iomaterial->specular_tex,
+      ioscene->textures, true);
+  edited += draw_combobox(widgets, "transmission_tex",
+      iomaterial->transmission_tex, ioscene->textures, true);
+  edited += draw_combobox(widgets, "scattering_tex", iomaterial->scattering_tex,
+      ioscene->textures, true);
+  edited += draw_combobox(widgets, "spectint_tex", iomaterial->spectint_tex,
+      ioscene->textures, true);
+  edited += draw_combobox(
+      widgets, "normal_tex", iomaterial->normal_tex, ioscene->textures, true);
   return edited;
 }
 
 bool draw_widgets(
-    gui_window* win, sceneio_scene* ioscene, sceneio_shape* ioshape) {
+    gui_widgets* widgets, sceneio_scene* ioscene, sceneio_shape* ioshape) {
   if (!ioshape) return false;
   auto edited = 0;
-  draw_label(win, "name", ioshape->name);
-  draw_label(win, "points", std::to_string(ioshape->points.size()));
-  draw_label(win, "lines", std::to_string(ioshape->lines.size()));
-  draw_label(win, "triangles", std::to_string(ioshape->triangles.size()));
-  draw_label(win, "quads", std::to_string(ioshape->quads.size()));
-  draw_label(win, "positions", std::to_string(ioshape->positions.size()));
-  draw_label(win, "normals", std::to_string(ioshape->normals.size()));
-  draw_label(win, "texcoords", std::to_string(ioshape->texcoords.size()));
-  draw_label(win, "colors", std::to_string(ioshape->colors.size()));
-  draw_label(win, "radius", std::to_string(ioshape->radius.size()));
-  draw_label(win, "tangents", std::to_string(ioshape->tangents.size()));
-  draw_label(win, "quads pos", std::to_string(ioshape->quadspos.size()));
-  draw_label(win, "quads norm", std::to_string(ioshape->quadsnorm.size()));
+  draw_label(widgets, "name", ioshape->name);
+  draw_label(widgets, "points", std::to_string(ioshape->points.size()));
+  draw_label(widgets, "lines", std::to_string(ioshape->lines.size()));
+  draw_label(widgets, "triangles", std::to_string(ioshape->triangles.size()));
+  draw_label(widgets, "quads", std::to_string(ioshape->quads.size()));
+  draw_label(widgets, "positions", std::to_string(ioshape->positions.size()));
+  draw_label(widgets, "normals", std::to_string(ioshape->normals.size()));
+  draw_label(widgets, "texcoords", std::to_string(ioshape->texcoords.size()));
+  draw_label(widgets, "colors", std::to_string(ioshape->colors.size()));
+  draw_label(widgets, "radius", std::to_string(ioshape->radius.size()));
+  draw_label(widgets, "tangents", std::to_string(ioshape->tangents.size()));
+  draw_label(widgets, "quads pos", std::to_string(ioshape->quadspos.size()));
+  draw_label(widgets, "quads norm", std::to_string(ioshape->quadsnorm.size()));
   draw_label(
-      win, "quads texcoord", std::to_string(ioshape->quadstexcoord.size()));
-  edited += draw_slider(win, "subdivisions", ioshape->subdivisions, 0, 5);
-  edited += draw_checkbox(win, "catmull-clark", ioshape->catmullclark);
-  edited += draw_slider(win, "displacement", ioshape->displacement, 0, 1);
-  edited += draw_combobox(win, "displacement_tex", ioshape->displacement_tex,
-      ioscene->textures, true);
+      widgets, "quads texcoord", std::to_string(ioshape->quadstexcoord.size()));
+  edited += draw_slider(widgets, "subdivisions", ioshape->subdivisions, 0, 5);
+  edited += draw_checkbox(widgets, "catmull-clark", ioshape->catmullclark);
+  edited += draw_slider(widgets, "displacement", ioshape->displacement, 0, 1);
+  edited += draw_combobox(widgets, "displacement_tex",
+      ioshape->displacement_tex, ioscene->textures, true);
   return edited;
 }
 
 bool draw_widgets(
-    gui_window* win, sceneio_scene* ioscene, sceneio_instance* ioobject) {
+    gui_widgets* widgets, sceneio_scene* ioscene, sceneio_instance* ioobject) {
   if (!ioobject) return false;
   auto edited = 0;
-  draw_label(win, "name", ioobject->name);
-  edited += draw_slider(win, "frame.x", ioobject->frame.x, -1, 1);
-  edited += draw_slider(win, "frame.y", ioobject->frame.y, -1, 1);
-  edited += draw_slider(win, "frame.z", ioobject->frame.z, -1, 1);
-  edited += draw_slider(win, "frame.o", ioobject->frame.o, -10, 10);
-  edited += draw_combobox(win, "shape", ioobject->shape, ioscene->shapes);
+  draw_label(widgets, "name", ioobject->name);
+  edited += draw_slider(widgets, "frame.x", ioobject->frame.x, -1, 1);
+  edited += draw_slider(widgets, "frame.y", ioobject->frame.y, -1, 1);
+  edited += draw_slider(widgets, "frame.z", ioobject->frame.z, -1, 1);
+  edited += draw_slider(widgets, "frame.o", ioobject->frame.o, -10, 10);
+  edited += draw_combobox(widgets, "shape", ioobject->shape, ioscene->shapes);
   edited += draw_combobox(
-      win, "material", ioobject->material, ioscene->materials);
+      widgets, "material", ioobject->material, ioscene->materials);
   return edited;
 }
 
-bool draw_widgets(gui_window* win, sceneio_scene* ioscene,
+bool draw_widgets(gui_widgets* widgets, sceneio_scene* ioscene,
     sceneio_environment* ioenvironment) {
   if (!ioenvironment) return false;
   auto edited = 0;
-  edited += draw_textinput(win, "name", ioenvironment->name);
-  edited += draw_slider(win, "frame.x", ioenvironment->frame.x, -1, 1);
-  edited += draw_slider(win, "frame.y", ioenvironment->frame.y, -1, 1);
-  edited += draw_slider(win, "frame.z", ioenvironment->frame.z, -1, 1);
-  edited += draw_slider(win, "frame.o", ioenvironment->frame.o, -10, 10);
-  edited += draw_hdrcoloredit(win, "emission", ioenvironment->emission);
-  edited += draw_combobox(win, "emission texture", ioenvironment->emission_tex,
-      ioscene->textures, true);
+  edited += draw_textinput(widgets, "name", ioenvironment->name);
+  edited += draw_slider(widgets, "frame.x", ioenvironment->frame.x, -1, 1);
+  edited += draw_slider(widgets, "frame.y", ioenvironment->frame.y, -1, 1);
+  edited += draw_slider(widgets, "frame.z", ioenvironment->frame.z, -1, 1);
+  edited += draw_slider(widgets, "frame.o", ioenvironment->frame.o, -10, 10);
+  edited += draw_hdrcoloredit(widgets, "emission", ioenvironment->emission);
+  edited += draw_combobox(widgets, "emission texture",
+      ioenvironment->emission_tex, ioscene->textures, true);
   return edited;
 }
 
@@ -379,89 +385,108 @@ T1* get_element(
 }
 
 // draw with shading
-void draw_widgets(gui_window* win, app_states* apps, const gui_input& input) {
+void draw_widgets(app_states* apps, const gui_input& input) {
+  auto widgets = &apps->widgets;
+  begin_imgui(widgets, "ysceneview");
+
   static auto load_path = ""s, save_path = ""s, error_message = ""s;
-  if (draw_filedialog_button(win, "load", true, "load", load_path, false, "./",
-          "", "*.json;*.obj;*.pbrt")) {
+  if (draw_filedialog_button(widgets, "load", true, "load", load_path, false,
+          "./", "", "*.json;*.obj;*.pbrt")) {
     load_scene_async(apps, load_path);
     load_path = "";
   }
-  continue_line(win);
-  if (draw_filedialog_button(win, "save", apps->selected && apps->selected->ok,
-          "save", save_path, true, path_dirname(save_path),
-          path_filename(save_path), "*.json;*.obj;*.pbrt")) {
+  continue_line(widgets);
+  if (draw_filedialog_button(widgets, "save",
+          apps->selected && apps->selected->ok, "save", save_path, true,
+          path_dirname(save_path), path_filename(save_path),
+          "*.json;*.obj;*.pbrt")) {
     auto app     = apps->selected;
     app->outname = save_path;
     save_scene(app->outname, app->ioscene, app->error);
     save_path = "";
   }
-  continue_line(win);
-  if (draw_button(win, "close", (bool)apps->selected)) {
-    if (apps->selected->loader.valid()) return;
+  continue_line(widgets);
+  if (draw_button(widgets, "close", (bool)apps->selected)) {
+    if (apps->selected->loader.valid()) {
+      end_imgui(widgets);
+      return;
+    }
     delete apps->selected;
     apps->states.erase(
         std::find(apps->states.begin(), apps->states.end(), apps->selected));
     apps->selected = apps->states.empty() ? nullptr : apps->states.front();
   }
-  continue_line(win);
-  if (draw_button(win, "quit")) {
-    set_close(win, true);
+  continue_line(widgets);
+  if (draw_button(widgets, "quit")) {
+    set_close(widgets->window, true);
   }
-  if (apps->states.empty()) return;
-  draw_combobox(win, "scene", apps->selected, apps->states, false);
-  if (!apps->selected) return;
-  draw_progressbar(win, apps->selected->status.c_str(), apps->selected->current,
-      apps->selected->total);
-  if (apps->selected->error != "") {
-    draw_label(win, "error", apps->selected->error);
+  if (apps->states.empty()) {
+    end_imgui(widgets);
     return;
   }
-  if (!apps->selected->ok) return;
+  draw_combobox(widgets, "scene", apps->selected, apps->states, false);
+  if (!apps->selected) {
+    end_imgui(widgets);
+    return;
+  }
+  draw_progressbar(widgets, apps->selected->status.c_str(),
+      apps->selected->current, apps->selected->total);
+  if (apps->selected->error != "") {
+    draw_label(widgets, "error", apps->selected->error);
+    end_imgui(widgets);
+    return;
+  }
+  if (!apps->selected->ok) {
+    end_imgui(widgets);
+    return;
+  }
   auto app = apps->selected;
-  if (begin_header(win, "view")) {
-    if (draw_combobox(win, "camera", app->iocamera, app->ioscene->cameras)) {
+  if (begin_header(widgets, "view")) {
+    if (draw_combobox(
+            widgets, "camera", app->iocamera, app->ioscene->cameras)) {
       app->glcamera = get_element(
           app->iocamera, app->ioscene->cameras, app->glscene->cameras);
     }
     auto& params = app->drawgl_prms;
-    draw_slider(win, "resolution", params.resolution, 0, 4096);
-    draw_combobox(win, "lighting", (int&)params.lighting, shade_lighting_names);
-    draw_checkbox(win, "wireframe", params.wireframe);
-    continue_line(win);
-    draw_checkbox(win, "faceted", params.faceted);
-    continue_line(win);
-    draw_checkbox(win, "double sided", params.double_sided);
-    draw_slider(win, "exposure", params.exposure, -10, 10);
-    draw_slider(win, "gamma", params.gamma, 0.1f, 4);
-    draw_slider(win, "near", params.near, 0.01f, 1.0f);
-    draw_slider(win, "far", params.far, 1000.0f, 10000.0f);
-    end_header(win);
+    draw_slider(widgets, "resolution", params.resolution, 0, 4096);
+    draw_combobox(
+        widgets, "lighting", (int&)params.lighting, shade_lighting_names);
+    draw_checkbox(widgets, "wireframe", params.wireframe);
+    continue_line(widgets);
+    draw_checkbox(widgets, "faceted", params.faceted);
+    continue_line(widgets);
+    draw_checkbox(widgets, "double sided", params.double_sided);
+    draw_slider(widgets, "exposure", params.exposure, -10, 10);
+    draw_slider(widgets, "gamma", params.gamma, 0.1f, 4);
+    draw_slider(widgets, "near", params.near, 0.01f, 1.0f);
+    draw_slider(widgets, "far", params.far, 1000.0f, 10000.0f);
+    end_header(widgets);
   }
-  if (begin_header(win, "inspect")) {
-    draw_label(win, "scene", path_filename(app->filename));
-    draw_label(win, "filename", app->filename);
-    draw_label(win, "outname", app->outname);
-    draw_label(win, "imagename", app->imagename);
-    continue_line(win);
-    if (draw_button(win, "print cams")) {
+  if (begin_header(widgets, "inspect")) {
+    draw_label(widgets, "scene", path_filename(app->filename));
+    draw_label(widgets, "filename", app->filename);
+    draw_label(widgets, "outname", app->outname);
+    draw_label(widgets, "imagename", app->imagename);
+    continue_line(widgets);
+    if (draw_button(widgets, "print cams")) {
       for (auto iocamera : app->ioscene->cameras) {
         print_obj_camera(iocamera);
       }
     }
-    continue_line(win);
-    if (draw_button(win, "print stats")) {
+    continue_line(widgets);
+    if (draw_button(widgets, "print stats")) {
       for (auto stat : scene_stats(app->ioscene)) print_info(stat);
     }
-    end_header(win);
+    end_header(widgets);
   }
   auto get_texture = [app](sceneio_texture* iotexture) {
     return get_element(
         iotexture, app->ioscene->textures, app->glscene->textures);
   };
-  if (!app->ioscene->cameras.empty() && begin_header(win, "cameras")) {
+  if (!app->ioscene->cameras.empty() && begin_header(widgets, "cameras")) {
     draw_combobox(
-        win, "camera##2", app->selected_camera, app->ioscene->cameras);
-    if (draw_widgets(win, app->ioscene, app->selected_camera)) {
+        widgets, "camera##2", app->selected_camera, app->ioscene->cameras);
+    if (draw_widgets(widgets, app->ioscene, app->selected_camera)) {
       auto iocamera = app->selected_camera;
       auto glcamera = get_element(
           iocamera, app->ioscene->cameras, app->glscene->cameras);
@@ -469,24 +494,24 @@ void draw_widgets(gui_window* win, app_states* apps, const gui_input& input) {
       set_lens(glcamera, iocamera->lens, iocamera->aspect, iocamera->film);
       set_nearfar(glcamera, 0.001, 10000);
     }
-    end_header(win);
+    end_header(widgets);
   }
   if (!app->ioscene->environments.empty() &&
-      begin_header(win, "environments")) {
-    draw_combobox(win, "environments##2", app->selected_environment,
+      begin_header(widgets, "environments")) {
+    draw_combobox(widgets, "environments##2", app->selected_environment,
         app->ioscene->environments);
-    if (draw_widgets(win, app->ioscene, app->selected_environment)) {
+    if (draw_widgets(widgets, app->ioscene, app->selected_environment)) {
       auto ioenvironment = app->selected_environment;
       auto glenvironment = get_element(ioenvironment,
           app->ioscene->environments, app->glscene->environments);
       set_emission(glenvironment, ioenvironment->emission);
     }
-    end_header(win);
+    end_header(widgets);
   }
-  if (!app->ioscene->instances.empty() && begin_header(win, "instances")) {
-    draw_combobox(
-        win, "instance##2", app->selected_instance, app->ioscene->instances);
-    if (draw_widgets(win, app->ioscene, app->selected_instance)) {
+  if (!app->ioscene->instances.empty() && begin_header(widgets, "instances")) {
+    draw_combobox(widgets, "instance##2", app->selected_instance,
+        app->ioscene->instances);
+    if (draw_widgets(widgets, app->ioscene, app->selected_instance)) {
       auto ioobject = app->selected_instance;
       auto globject = get_element(
           ioobject, app->ioscene->instances, app->glscene->instances);
@@ -497,11 +522,12 @@ void draw_widgets(gui_window* win, app_states* apps, const gui_input& input) {
           globject, get_element(ioobject->material, app->ioscene->materials,
                         app->glscene->materials));
     }
-    end_header(win);
+    end_header(widgets);
   }
-  if (!app->ioscene->shapes.empty() && begin_header(win, "shapes")) {
-    draw_combobox(win, "shape##2", app->selected_shape, app->ioscene->shapes);
-    if (!draw_widgets(win, app->ioscene, app->selected_shape)) {
+  if (!app->ioscene->shapes.empty() && begin_header(widgets, "shapes")) {
+    draw_combobox(
+        widgets, "shape##2", app->selected_shape, app->ioscene->shapes);
+    if (!draw_widgets(widgets, app->ioscene, app->selected_shape)) {
       auto ioshape = app->selected_shape;
       auto glshape = get_element(
           ioshape, app->ioscene->shapes, app->glscene->shapes);
@@ -514,12 +540,12 @@ void draw_widgets(gui_window* win, app_states* apps, const gui_input& input) {
       set_triangles(glshape, ioshape->triangles);
       set_quads(glshape, ioshape->quads);
     }
-    end_header(win);
+    end_header(widgets);
   }
-  if (!app->ioscene->materials.empty() && begin_header(win, "materials")) {
-    draw_combobox(
-        win, "material##2", app->selected_material, app->ioscene->materials);
-    if (draw_widgets(win, app->ioscene, app->selected_material)) {
+  if (!app->ioscene->materials.empty() && begin_header(widgets, "materials")) {
+    draw_combobox(widgets, "material##2", app->selected_material,
+        app->ioscene->materials);
+    if (draw_widgets(widgets, app->ioscene, app->selected_material)) {
       auto iomaterial = app->selected_material;
       auto glmaterial = get_element(
           iomaterial, app->ioscene->materials, app->glscene->materials);
@@ -539,12 +565,12 @@ void draw_widgets(gui_window* win, app_states* apps, const gui_input& input) {
           get_texture(iomaterial->opacity_tex));
       set_normalmap(glmaterial, get_texture(iomaterial->normal_tex));
     }
-    end_header(win);
+    end_header(widgets);
   }
-  if (!app->ioscene->textures.empty() && begin_header(win, "textures")) {
+  if (!app->ioscene->textures.empty() && begin_header(widgets, "textures")) {
     draw_combobox(
-        win, "texture##2", app->selected_texture, app->ioscene->textures);
-    if (draw_widgets(win, app->ioscene, app->selected_texture)) {
+        widgets, "texture##2", app->selected_texture, app->ioscene->textures);
+    if (draw_widgets(widgets, app->ioscene, app->selected_texture)) {
       auto iotexture = app->selected_texture;
       auto gltexture = get_element(
           iotexture, app->ioscene->textures, app->glscene->textures);
@@ -554,12 +580,19 @@ void draw_widgets(gui_window* win, app_states* apps, const gui_input& input) {
         set_texture(gltexture, iotexture->ldr);
       }
     }
-    end_header(win);
+    end_header(widgets);
+  }
+  end_imgui(widgets);
+}
+
+void drop(app_states* apps, const gui_input& input) {
+  if (input.dropped.size()) {
+    for (auto& path : input.dropped) load_scene_async(apps, path);
   }
 }
 
 // draw with shading
-void draw(gui_window* win, app_states* apps, const gui_input& input) {
+void draw(app_states* apps, const gui_input& input) {
   if (!apps->selected || !apps->selected->ok) return;
   auto app = apps->selected;
   draw_scene(app->glscene, app->glcamera, input.framebuffer_viewport,
@@ -567,7 +600,7 @@ void draw(gui_window* win, app_states* apps, const gui_input& input) {
 }
 
 // update
-void update(gui_window* win, app_states* apps) {
+void update(app_states* apps) {
   auto is_ready = [](const std::future<void>& result) -> bool {
     return result.valid() && result.wait_for(std::chrono::microseconds(0)) ==
                                  std::future_status::ready;
@@ -594,6 +627,40 @@ void update(gui_window* win, app_states* apps) {
   }
 }
 
+void update_camera(app_states* apps, const gui_input& input) {
+  if (is_active(&apps->widgets)) return;
+
+  if (!apps->selected || !apps->selected->ok) return;
+  auto app = apps->selected;
+
+  // handle mouse and keyboard for navigation
+  if ((input.mouse_left || input.mouse_right) && !input.modifier_alt) {
+    auto dolly  = 0.0f;
+    auto pan    = zero2f;
+    auto rotate = zero2f;
+    if (input.mouse_left && !input.modifier_shift)
+      rotate = (input.mouse_pos - input.mouse_last) / 100.0f;
+    if (input.mouse_right)
+      dolly = (input.mouse_pos.x - input.mouse_last.x) / 100.0f;
+    if (input.mouse_left && input.modifier_shift)
+      pan = (input.mouse_pos - input.mouse_last) / 100.0f;
+    std::tie(app->iocamera->frame, app->iocamera->focus) = camera_turntable(
+        app->iocamera->frame, app->iocamera->focus, rotate, dolly, pan);
+    set_frame(app->glcamera, app->iocamera->frame);
+  }
+};
+
+void update_app(const gui_input& input, void* data) {
+  auto apps = (app_states*)data;
+
+  update_camera(apps, input);
+  drop(apps, input);
+  update(apps);
+
+  draw(apps, input);
+  draw_widgets(apps, input);
+}
+
 int main(int argc, const char* argv[]) {
   // initialize app
   auto apps_guard  = std::make_unique<app_states>();
@@ -614,48 +681,14 @@ int main(int argc, const char* argv[]) {
   // loading images
   for (auto filename : filenames) load_scene_async(apps, filename, camera_name);
 
-  // callbacks
-  auto callbacks     = gui_callbacks{};
-  callbacks.clear_cb = [apps](gui_window* win, const gui_input& input) {
-    for (auto app : apps->states) clear_scene(app->glscene);
-  };
-  callbacks.draw_cb = [apps](gui_window* win, const gui_input& input) {
-    draw(win, apps, input);
-  };
-  callbacks.widgets_cb = [apps](gui_window* win, const gui_input& input) {
-    draw_widgets(win, apps, input);
-  };
-  callbacks.drop_cb = [apps](gui_window* win, const vector<string>& paths,
-                          const gui_input& input) {
-    for (auto& path : paths) load_scene_async(apps, path);
-  };
-  callbacks.update_cb = [apps](gui_window* win, const gui_input& input) {
-    update(win, apps);
-  };
-  callbacks.uiupdate_cb = [apps](gui_window* win, const gui_input& input) {
-    if (!apps->selected || !apps->selected->ok) return;
-    auto app = apps->selected;
-
-    // handle mouse and keyboard for navigation
-    if ((input.mouse_left || input.mouse_right) && !input.modifier_alt &&
-        !input.widgets_active) {
-      auto dolly  = 0.0f;
-      auto pan    = zero2f;
-      auto rotate = zero2f;
-      if (input.mouse_left && !input.modifier_shift)
-        rotate = (input.mouse_pos - input.mouse_last) / 100.0f;
-      if (input.mouse_right)
-        dolly = (input.mouse_pos.x - input.mouse_last.x) / 100.0f;
-      if (input.mouse_left && input.modifier_shift)
-        pan = (input.mouse_pos - input.mouse_last) / 100.0f;
-      std::tie(app->iocamera->frame, app->iocamera->focus) = camera_turntable(
-          app->iocamera->frame, app->iocamera->focus, rotate, dolly, pan);
-      set_frame(app->glcamera, app->iocamera->frame);
-    }
-  };
+  auto window = new gui_window{};
+  init_window(window, {1280 + 320, 720}, "ysceneviews", true);
+  window->user_data = apps;
+  apps->widgets     = create_imgui(window);
 
   // run ui
-  run_ui({1280 + 320, 720}, "ysceneview", callbacks);
+  run_ui(window, update_app);
+  for (auto app : apps->states) clear_scene(app->glscene);
 
   // done
   return 0;

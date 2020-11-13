@@ -34,6 +34,7 @@
 #include <yocto/yocto_shape.h>
 #include <yocto_gui/yocto_imgui.h>
 #include <yocto_gui/yocto_shade.h>
+#include <yocto_gui/yocto_window.h>
 using namespace yocto;
 
 #include <deque>
@@ -83,6 +84,9 @@ struct app_state {
   std::atomic<int>  current      = 0;
   std::atomic<int>  total        = 0;
   string            loader_error = "";
+
+  // imgui
+  gui_widgets widgets = {};
 
   ~app_state() {
     if (ioscene) delete ioscene;
@@ -190,6 +194,66 @@ void init_glscene(shade_scene* glscene, sceneio_scene* ioscene,
   glcamera = camera_map.at(iocamera);
 }
 
+void draw(app_state* app, const gui_input& input) {
+  draw_scene(app->glscene, app->glcamera, input.framebuffer_viewport,
+      app->drawgl_prms);
+}
+
+auto draw_widgets(app_state* app, const gui_input& input) {
+  auto widgets = &app->widgets;
+  begin_imgui(widgets, "ysceneviews");
+  draw_progressbar(widgets, app->status.c_str(), app->current, app->total);
+  if (draw_combobox(widgets, "camera", app->iocamera, app->ioscene->cameras)) {
+    for (auto idx = 0; idx < app->ioscene->cameras.size(); idx++) {
+      if (app->ioscene->cameras[idx] == app->iocamera)
+        app->glcamera = app->glscene->cameras[idx];
+    }
+  }
+  auto& params = app->drawgl_prms;
+  draw_slider(widgets, "resolution", params.resolution, 0, 4096);
+  draw_checkbox(widgets, "wireframe", params.wireframe);
+  continue_line(widgets);
+  draw_checkbox(widgets, "faceted", params.faceted);
+  continue_line(widgets);
+  draw_checkbox(widgets, "double sided", params.double_sided);
+  draw_combobox(
+      widgets, "lighting", (int&)params.lighting, shade_lighting_names);
+  // draw_checkbox(widgets, "edges", params.edges);
+  draw_slider(widgets, "exposure", params.exposure, -10, 10);
+  draw_slider(widgets, "gamma", params.gamma, 0.1f, 4);
+  draw_slider(widgets, "near", params.near, 0.01f, 1.0f);
+  draw_slider(widgets, "far", params.far, 1000.0f, 10000.0f);
+  end_imgui(widgets);
+}
+
+void update_camera(app_state* app, const gui_input& input) {
+  if (is_active(&app->widgets)) return;
+
+  // handle mouse and keyboard for navigation
+  if ((input.mouse_left || input.mouse_right) && !input.modifier_alt) {
+    auto dolly  = 0.0f;
+    auto pan    = zero2f;
+    auto rotate = zero2f;
+    if (input.mouse_left && !input.modifier_shift)
+      rotate = (input.mouse_pos - input.mouse_last) / 100.0f;
+    if (input.mouse_right)
+      dolly = (input.mouse_pos.x - input.mouse_last.x) / 100.0f;
+    if (input.mouse_left && input.modifier_shift)
+      pan = (input.mouse_pos - input.mouse_last) / 100.0f;
+    std::tie(app->iocamera->frame, app->iocamera->focus) = camera_turntable(
+        app->iocamera->frame, app->iocamera->focus, rotate, dolly, pan);
+    set_frame(app->glcamera, app->iocamera->frame);
+  }
+}
+
+void update_app(const gui_input& input, void* data) {
+  auto app = (app_state*)data;
+
+  update_camera(app, input);
+  draw(app, input);
+  draw_widgets(app, input);
+}
+
 int main(int argc, const char* argv[]) {
   // initialize app
   auto app_guard   = std::make_unique<app_state>();
@@ -217,69 +281,21 @@ int main(int argc, const char* argv[]) {
   // tesselation
   tesselate_shapes(app->ioscene, print_progress);
 
-  // callbacks
-  auto callbacks    = gui_callbacks{};
-  callbacks.init_cb = [app](gui_window* win, const gui_input& input) {
-    init_glscene(app->glscene, app->ioscene, app->glcamera, app->iocamera,
-        [app](const string& message, int current, int total) {
-          app->status  = "init scene";
-          app->current = current;
-          app->total   = total;
-        });
-  };
-  callbacks.clear_cb = [app](gui_window* win, const gui_input& input) {
-    clear_scene(app->glscene);
-  };
-  callbacks.draw_cb = [app](gui_window* win, const gui_input& input) {
-    draw_scene(app->glscene, app->glcamera, input.framebuffer_viewport,
-        app->drawgl_prms);
-  };
-  callbacks.widgets_cb = [app](gui_window* win, const gui_input& input) {
-    draw_progressbar(win, app->status.c_str(), app->current, app->total);
-    if (draw_combobox(win, "camera", app->iocamera, app->ioscene->cameras)) {
-      for (auto idx = 0; idx < app->ioscene->cameras.size(); idx++) {
-        if (app->ioscene->cameras[idx] == app->iocamera)
-          app->glcamera = app->glscene->cameras[idx];
-      }
-    }
-    auto& params = app->drawgl_prms;
-    draw_slider(win, "resolution", params.resolution, 0, 4096);
-    draw_checkbox(win, "wireframe", params.wireframe);
-    continue_line(win);
-    draw_checkbox(win, "faceted", params.faceted);
-    continue_line(win);
-    draw_checkbox(win, "double sided", params.double_sided);
-    draw_combobox(win, "lighting", (int&)params.lighting, shade_lighting_names);
-    // draw_checkbox(win, "edges", params.edges);
-    draw_slider(win, "exposure", params.exposure, -10, 10);
-    draw_slider(win, "gamma", params.gamma, 0.1f, 4);
-    draw_slider(win, "near", params.near, 0.01f, 1.0f);
-    draw_slider(win, "far", params.far, 1000.0f, 10000.0f);
-  };
-  callbacks.update_cb = [](gui_window* win, const gui_input& input) {
-    // update(win, apps);
-  };
-  callbacks.uiupdate_cb = [app](gui_window* win, const gui_input& input) {
-    // handle mouse and keyboard for navigation
-    if ((input.mouse_left || input.mouse_right) && !input.modifier_alt &&
-        !input.widgets_active) {
-      auto dolly  = 0.0f;
-      auto pan    = zero2f;
-      auto rotate = zero2f;
-      if (input.mouse_left && !input.modifier_shift)
-        rotate = (input.mouse_pos - input.mouse_last) / 100.0f;
-      if (input.mouse_right)
-        dolly = (input.mouse_pos.x - input.mouse_last.x) / 100.0f;
-      if (input.mouse_left && input.modifier_shift)
-        pan = (input.mouse_pos - input.mouse_last) / 100.0f;
-      std::tie(app->iocamera->frame, app->iocamera->focus) = camera_turntable(
-          app->iocamera->frame, app->iocamera->focus, rotate, dolly, pan);
-      set_frame(app->glcamera, app->iocamera->frame);
-    }
-  };
+  auto window = new gui_window{};
+  init_window(window, {1280 + 320, 720}, "ysceneviews", true);
+  window->user_data = app;
 
-  // run ui
-  run_ui({1280 + 320, 720}, "ysceneviews", callbacks);
+  init_glscene(app->glscene, app->ioscene, app->glcamera, app->iocamera,
+      [app](const string& message, int current, int total) {
+        app->status  = "init scene";
+        app->current = current;
+        app->total   = total;
+      });
+  app->glcamera = app->glscene->cameras.front();
+  app->widgets  = create_imgui(window);
+
+  run_ui(window, update_app);
+  clear_scene(app->glscene);
 
   // done
   return 0;

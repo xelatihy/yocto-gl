@@ -7,6 +7,8 @@ if(YOCTO_OPENGL)
     yocto_opengl.cpp 
     yocto_shade.h 
     yocto_shade.cpp 
+    yocto_window.h 
+    yocto_window.cpp 
     yocto_imgui.h 
     yocto_imgui.cpp 
     ext/imgui/imgui.cpp 

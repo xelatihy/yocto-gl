@@ -30,6 +30,8 @@
 #include <yocto/yocto_image.h>
 #include <yocto_gui/yocto_imgui.h>
 #include <yocto_gui/yocto_opengl.h>
+#include <yocto_gui/yocto_window.h>
+
 using namespace yocto;
 
 #include <future>
@@ -53,6 +55,9 @@ struct app_state {
   ogl_image*       glimage  = new ogl_image{};
   ogl_image_params glparams = {};
 
+  // imgui
+  gui_widgets widgets = {};
+
   ~app_state() {
     if (glimage) delete glimage;
   }
@@ -65,6 +70,94 @@ void update_display(app_state* app) {
   } else {
     tonemap_image_mt(app->display, app->source, app->exposure, app->filmic);
   }
+}
+
+void draw_image(app_state* app, const gui_input& input) {
+  app->glparams.window      = input.window_size;
+  app->glparams.framebuffer = input.framebuffer_viewport;
+  if (!is_initialized(app->glimage)) {
+    init_image(app->glimage);
+    set_image(app->glimage, app->display, false, false);
+  }
+  std::tie(app->glparams.center, app->glparams.scale) = camera_imview(
+      app->glparams.center, app->glparams.scale, app->display.imsize(),
+      app->glparams.window, app->glparams.fit);
+  draw_image(app->glimage, app->glparams);
+}
+
+auto draw_widgets(app_state* app, const gui_input& input) {
+  auto widgets = &app->widgets;
+  begin_imgui(widgets, "yimageviews");
+
+  auto edited = 0;
+  if (begin_header(widgets, "tonemap")) {
+    edited += draw_slider(widgets, "exposure", app->exposure, -5, 5);
+    edited += draw_checkbox(widgets, "filmic", app->filmic);
+    end_header(widgets);
+  }
+  if (begin_header(widgets, "colorgrade")) {
+    auto& params = app->params;
+    edited += draw_checkbox(widgets, "apply colorgrade", app->colorgrade);
+    edited += draw_slider(widgets, "exposure", params.exposure, -5, 5);
+    edited += draw_coloredit(widgets, "tint", params.tint);
+    edited += draw_slider(widgets, "lincontrast", params.lincontrast, 0, 1);
+    edited += draw_slider(widgets, "logcontrast", params.logcontrast, 0, 1);
+    edited += draw_slider(widgets, "linsaturation", params.linsaturation, 0, 1);
+    edited += draw_checkbox(widgets, "filmic", params.filmic);
+    continue_line(widgets);
+    edited += draw_checkbox(widgets, "srgb", params.srgb);
+    edited += draw_slider(widgets, "contrast", params.contrast, 0, 1);
+    edited += draw_slider(widgets, "saturation", params.saturation, 0, 1);
+    edited += draw_slider(widgets, "shadows", params.shadows, 0, 1);
+    edited += draw_slider(widgets, "midtones", params.midtones, 0, 1);
+    edited += draw_slider(widgets, "highlights", params.highlights, 0, 1);
+    edited += draw_coloredit(widgets, "shadows color", params.shadows_color);
+    edited += draw_coloredit(widgets, "midtones color", params.midtones_color);
+    edited += draw_coloredit(
+        widgets, "highlights color", params.highlights_color);
+    end_header(widgets);
+  }
+  if (begin_header(widgets, "inspect")) {
+    draw_slider(widgets, "zoom", app->glparams.scale, 0.1, 10);
+    draw_checkbox(widgets, "fit", app->glparams.fit);
+    auto ij = image_coords(input.mouse_pos, app->glparams.center,
+        app->glparams.scale, app->source.imsize());
+    draw_dragger(widgets, "mouse", ij);
+    auto img_pixel = zero4f, display_pixel = zero4f;
+    if (ij.x >= 0 && ij.x < app->source.width() && ij.y >= 0 &&
+        ij.y < app->source.height()) {
+      img_pixel     = app->source[{ij.x, ij.y}];
+      display_pixel = app->display[{ij.x, ij.y}];
+    }
+    draw_coloredit(widgets, "image", img_pixel);
+    draw_dragger(widgets, "display", display_pixel);
+    end_header(widgets);
+  }
+  if (edited) {
+    update_display(app);
+    if (!is_initialized(app->glimage)) init_image(app->glimage);
+    set_image(app->glimage, app->display, false, false);
+  }
+  end_imgui(widgets);
+};
+
+auto update_view(app_state* app, const gui_input& input) {
+  if (is_active(&app->widgets)) return;
+  // handle mouse
+  if (input.mouse_left) {
+    app->glparams.center += input.mouse_pos - input.mouse_last;
+  }
+  if (input.mouse_right) {
+    app->glparams.scale *= powf(
+        2, (input.mouse_pos.x - input.mouse_last.x) * 0.001f);
+  }
+};
+
+void update_app(const gui_input& input, void* data) {
+  auto app = (app_state*)data;
+  update_view(app, input);
+  draw_image(app, input);
+  draw_widgets(app, input);
 }
 
 int main(int argc, const char* argv[]) {
@@ -89,87 +182,16 @@ int main(int argc, const char* argv[]) {
   // update display
   update_display(app);
 
-  // callbacks
-  auto callbacks     = gui_callbacks{};
-  callbacks.clear_cb = [app](gui_window* win, const gui_input& input) {
-    clear_image(app->glimage);
-  };
-  callbacks.draw_cb = [app](gui_window* win, const gui_input& input) {
-    app->glparams.window      = input.window_size;
-    app->glparams.framebuffer = input.framebuffer_viewport;
-    if (!is_initialized(app->glimage)) {
-      init_image(app->glimage);
-      set_image(app->glimage, app->display, false, false);
-    }
-    std::tie(app->glparams.center, app->glparams.scale) = camera_imview(
-        app->glparams.center, app->glparams.scale, app->display.imsize(),
-        app->glparams.window, app->glparams.fit);
-    draw_image(app->glimage, app->glparams);
-  };
-  callbacks.widgets_cb = [app](gui_window* win, const gui_input& input) {
-    auto edited = 0;
-    if (begin_header(win, "tonemap")) {
-      edited += draw_slider(win, "exposure", app->exposure, -5, 5);
-      edited += draw_checkbox(win, "filmic", app->filmic);
-      end_header(win);
-    }
-    if (begin_header(win, "colorgrade")) {
-      auto& params = app->params;
-      edited += draw_checkbox(win, "apply colorgrade", app->colorgrade);
-      edited += draw_slider(win, "exposure", params.exposure, -5, 5);
-      edited += draw_coloredit(win, "tint", params.tint);
-      edited += draw_slider(win, "lincontrast", params.lincontrast, 0, 1);
-      edited += draw_slider(win, "logcontrast", params.logcontrast, 0, 1);
-      edited += draw_slider(win, "linsaturation", params.linsaturation, 0, 1);
-      edited += draw_checkbox(win, "filmic", params.filmic);
-      continue_line(win);
-      edited += draw_checkbox(win, "srgb", params.srgb);
-      edited += draw_slider(win, "contrast", params.contrast, 0, 1);
-      edited += draw_slider(win, "saturation", params.saturation, 0, 1);
-      edited += draw_slider(win, "shadows", params.shadows, 0, 1);
-      edited += draw_slider(win, "midtones", params.midtones, 0, 1);
-      edited += draw_slider(win, "highlights", params.highlights, 0, 1);
-      edited += draw_coloredit(win, "shadows color", params.shadows_color);
-      edited += draw_coloredit(win, "midtones color", params.midtones_color);
-      edited += draw_coloredit(
-          win, "highlights color", params.highlights_color);
-      end_header(win);
-    }
-    if (begin_header(win, "inspect")) {
-      draw_slider(win, "zoom", app->glparams.scale, 0.1, 10);
-      draw_checkbox(win, "fit", app->glparams.fit);
-      auto ij = image_coords(input.mouse_pos, app->glparams.center,
-          app->glparams.scale, app->source.imsize());
-      draw_dragger(win, "mouse", ij);
-      auto img_pixel = zero4f, display_pixel = zero4f;
-      if (ij.x >= 0 && ij.x < app->source.width() && ij.y >= 0 &&
-          ij.y < app->source.height()) {
-        img_pixel     = app->source[{ij.x, ij.y}];
-        display_pixel = app->display[{ij.x, ij.y}];
-      }
-      draw_coloredit(win, "image", img_pixel);
-      draw_dragger(win, "display", display_pixel);
-      end_header(win);
-    }
-    if (edited) {
-      update_display(app);
-      if (!is_initialized(app->glimage)) init_image(app->glimage);
-      set_image(app->glimage, app->display, false, false);
-    }
-  };
-  callbacks.uiupdate_cb = [app](gui_window* win, const gui_input& input) {
-    // handle mouse
-    if (input.mouse_left && !input.widgets_active) {
-      app->glparams.center += input.mouse_pos - input.mouse_last;
-    }
-    if (input.mouse_right && !input.widgets_active) {
-      app->glparams.scale *= powf(
-          2, (input.mouse_pos.x - input.mouse_last.x) * 0.001f);
-    }
-  };
+  auto window = new gui_window{};
+  init_window(window, {1280 + 320, 720}, "yimageviews", true);
+  window->user_data = app;
+  app->widgets      = create_imgui(window);
 
   // run ui
-  run_ui({1280, 720}, "yimgviews", callbacks);
+  run_ui(window, update_app);
+
+  // clear
+  clear_image(app->glimage);
 
   // done
   return 0;

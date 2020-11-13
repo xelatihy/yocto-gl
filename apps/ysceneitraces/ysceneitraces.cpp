@@ -33,6 +33,7 @@
 #include <yocto/yocto_trace.h>
 #include <yocto_gui/yocto_imgui.h>
 #include <yocto_gui/yocto_opengl.h>
+#include <yocto_gui/yocto_window.h>
 using namespace yocto;
 
 #include <future>
@@ -74,6 +75,9 @@ struct app_state {
   // status
   std::atomic<int> current = 0;
   std::atomic<int> total   = 0;
+
+  // imgui
+  gui_widgets widgets = {};
 
   ~app_state() {
     if (render_state) trace_stop(render_state);
@@ -234,6 +238,105 @@ void init_scene(trace_scene* scene, sceneio_scene* ioscene,
   camera = camera_map.at(iocamera);
 }
 
+void draw_scene(app_state* app, const gui_input& input) {
+  if (!is_initialized(app->glimage)) init_image(app->glimage);
+  if (!app->render_counter) set_image(app->glimage, app->display, false, false);
+  app->glparams.window      = input.window_size;
+  app->glparams.framebuffer = input.framebuffer_viewport;
+  std::tie(app->glparams.center, app->glparams.scale) = camera_imview(
+      app->glparams.center, app->glparams.scale, app->display.imsize(),
+      app->glparams.window, app->glparams.fit);
+  draw_image(app->glimage, app->glparams);
+  app->render_counter++;
+  if (app->render_counter > 10) app->render_counter = 0;
+}
+
+void draw_widgets(app_state* app, const gui_input& input) {
+  auto widgets = &app->widgets;
+  begin_imgui(widgets, "ysceneitraces");
+  auto  edited  = 0;
+  auto& tparams = app->params;
+  draw_progressbar(widgets, "render", app->current, app->total);
+  edited += draw_combobox(
+      widgets, "camera", app->camera, app->scene->cameras, app->camera_names);
+  edited += draw_slider(widgets, "resolution", tparams.resolution, 180, 4096);
+  edited += draw_slider(widgets, "nsamples", tparams.samples, 16, 4096);
+  edited += draw_combobox(
+      widgets, "tracer", (int&)tparams.sampler, trace_sampler_names);
+  edited += draw_combobox(
+      widgets, "false color", (int&)tparams.falsecolor, trace_falsecolor_names);
+  edited += draw_slider(widgets, "nbounces", tparams.bounces, 1, 128);
+  edited += draw_checkbox(widgets, "envhidden", tparams.envhidden);
+  continue_line(widgets);
+  edited += draw_checkbox(widgets, "filter", tparams.tentfilter);
+  edited += draw_slider(widgets, "seed", (int&)tparams.seed, 0, 1000000);
+  edited += draw_slider(widgets, "pratio", tparams.pratio, 1, 64);
+  edited += draw_slider(widgets, "exposure", app->exposure, -5, 5);
+  if (edited) reset_display(app);
+  end_imgui(widgets);
+}
+
+void key_input(app_state* app, const gui_input& input) {
+  for (auto& gkey : input.key_buttons) {
+    if (gkey.state != gui_button::state::pressing) continue;
+    auto key = (unsigned int)gkey;
+
+    switch (key) {
+      case 'c': {
+        auto ncameras = (int)app->scene->cameras.size();
+        for (auto pos = 0; pos < ncameras; pos++) {
+          if (app->scene->cameras[pos] == app->camera) {
+            app->camera = app->scene->cameras[(pos + 1) % ncameras];
+            reset_display(app);
+            break;
+          }
+        }
+      } break;
+      case 'f':
+        app->params.sampler = trace_sampler_type::falsecolor;
+        reset_display(app);
+        break;
+      case 'p':
+        app->params.sampler = trace_sampler_type::path;
+        reset_display(app);
+        break;
+      case 'F':
+        app->params.falsecolor = (trace_falsecolor_type)(
+            ((int)app->params.falsecolor + 1) %
+            (int)trace_sampler_names.size());
+        reset_display(app);
+        break;
+    }
+  }
+}
+
+void mouse_input(app_state* app, const gui_input& input) {
+  if (is_active(&app->widgets)) return;
+  if ((input.mouse_left || input.mouse_right) && !input.modifier_alt) {
+    auto dolly  = 0.0f;
+    auto pan    = zero2f;
+    auto rotate = zero2f;
+    if (input.mouse_left && !input.modifier_shift)
+      rotate = (input.mouse_pos - input.mouse_last) / 100.0f;
+    if (input.mouse_right)
+      dolly = (input.mouse_pos.x - input.mouse_last.x) / 100.0f;
+    if (input.mouse_left && input.modifier_shift)
+      pan = (input.mouse_pos - input.mouse_last) * app->camera->focus / 200.0f;
+    pan.x                                            = -pan.x;
+    std::tie(app->camera->frame, app->camera->focus) = camera_turntable(
+        app->camera->frame, app->camera->focus, rotate, dolly, pan);
+    reset_display(app);
+  }
+}
+
+void update_app(const gui_input& input, void* user_data) {
+  auto app = (app_state*)user_data;
+  mouse_input(app, input);
+  key_input(app, input);
+  draw_scene(app, input);
+  draw_widgets(app, input);
+}
+
 int main(int argc, const char* argv[]) {
   // application
   auto app_guard = std::make_unique<app_state>();
@@ -307,96 +410,14 @@ int main(int argc, const char* argv[]) {
   // allocate buffers
   reset_display(app);
 
-  // callbacks
-  auto callbacks     = gui_callbacks{};
-  callbacks.clear_cb = [app](gui_window* win, const gui_input& input) {
-    clear_image(app->glimage);
-  };
-  callbacks.draw_cb = [app](gui_window* win, const gui_input& input) {
-    if (!is_initialized(app->glimage)) init_image(app->glimage);
-    if (!app->render_counter)
-      set_image(app->glimage, app->display, false, false);
-    app->glparams.window      = input.window_size;
-    app->glparams.framebuffer = input.framebuffer_viewport;
-    std::tie(app->glparams.center, app->glparams.scale) = camera_imview(
-        app->glparams.center, app->glparams.scale, app->display.imsize(),
-        app->glparams.window, app->glparams.fit);
-    draw_image(app->glimage, app->glparams);
-    app->render_counter++;
-    if (app->render_counter > 10) app->render_counter = 0;
-  };
-  callbacks.widgets_cb = [app](gui_window* win, const gui_input& input) {
-    auto  edited  = 0;
-    auto& tparams = app->params;
-    draw_progressbar(win, "render", app->current, app->total);
-    edited += draw_combobox(
-        win, "camera", app->camera, app->scene->cameras, app->camera_names);
-    edited += draw_slider(win, "resolution", tparams.resolution, 180, 4096);
-    edited += draw_slider(win, "nsamples", tparams.samples, 16, 4096);
-    edited += draw_combobox(
-        win, "tracer", (int&)tparams.sampler, trace_sampler_names);
-    edited += draw_combobox(
-        win, "false color", (int&)tparams.falsecolor, trace_falsecolor_names);
-    edited += draw_slider(win, "nbounces", tparams.bounces, 1, 128);
-    edited += draw_checkbox(win, "envhidden", tparams.envhidden);
-    continue_line(win);
-    edited += draw_checkbox(win, "filter", tparams.tentfilter);
-    edited += draw_slider(win, "seed", (int&)tparams.seed, 0, 1000000);
-    edited += draw_slider(win, "pratio", tparams.pratio, 1, 64);
-    edited += draw_slider(win, "exposure", app->exposure, -5, 5);
-    if (edited) reset_display(app);
-  };
-  callbacks.char_cb = [app](gui_window* win, unsigned int key,
-                          const gui_input& input) {
-    switch (key) {
-      case 'c': {
-        auto ncameras = (int)app->scene->cameras.size();
-        for (auto pos = 0; pos < ncameras; pos++) {
-          if (app->scene->cameras[pos] == app->camera) {
-            app->camera = app->scene->cameras[(pos + 1) % ncameras];
-            reset_display(app);
-            break;
-          }
-        }
-      } break;
-      case 'f':
-        app->params.sampler = trace_sampler_type::falsecolor;
-        reset_display(app);
-        break;
-      case 'p':
-        app->params.sampler = trace_sampler_type::path;
-        reset_display(app);
-        break;
-      case 'F':
-        app->params.falsecolor = (trace_falsecolor_type)(
-            ((int)app->params.falsecolor + 1) %
-            (int)trace_sampler_names.size());
-        reset_display(app);
-        break;
-    }
-  };
-  callbacks.uiupdate_cb = [app](gui_window* win, const gui_input& input) {
-    if ((input.mouse_left || input.mouse_right) && !input.modifier_alt &&
-        !input.widgets_active) {
-      auto dolly  = 0.0f;
-      auto pan    = zero2f;
-      auto rotate = zero2f;
-      if (input.mouse_left && !input.modifier_shift)
-        rotate = (input.mouse_pos - input.mouse_last) / 100.0f;
-      if (input.mouse_right)
-        dolly = (input.mouse_pos.x - input.mouse_last.x) / 100.0f;
-      if (input.mouse_left && input.modifier_shift)
-        pan = (input.mouse_pos - input.mouse_last) * app->camera->focus /
-              200.0f;
-      pan.x                                            = -pan.x;
-      std::tie(app->camera->frame, app->camera->focus) = camera_turntable(
-          app->camera->frame, app->camera->focus, rotate, dolly, pan);
-      reset_display(app);
-    }
-  };
+  auto window = new gui_window{};
+  init_window(window, {1280 + 320, 720}, "yscenetraces", true);
+  window->user_data = app;
+  app->widgets      = create_imgui(window);
 
-  // run ui
-  run_ui({1280 + 320, 720}, "yscnitraces", callbacks);
+  run_ui(window, update_app);
+
+  clear_image(app->glimage);
 
   // done
   return 0;
