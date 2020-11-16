@@ -39,6 +39,14 @@ def xcode():
 
 
 @cli.command()
+def vs():
+    os.makedirs('build/vs', exist_ok=True)
+    os.chdir('build/vs')
+    os.system('cmake ../.. -G  "Visual Studio 15 2017" -DYOCTO_EMBREE=ON')
+    os.system('yocto_gl.sln')
+
+
+@cli.command()
 def clean():
     os.system('rm -rf bin && rm -rf build')
 
