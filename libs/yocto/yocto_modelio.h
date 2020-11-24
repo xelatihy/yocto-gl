@@ -1,8 +1,8 @@
 //
-// # Yocto/ModelIO: Serialization for Obj, Ply and Pbrt models
+// # Yocto/ModelIO: Serialization for Obj, Ply, Stl and Pbrt models
 //
 // Yocto/ModelIO is a collection of utilities for loading and saving scenes
-// and meshes in Ply, Obj and Pbrt formats.
+// and meshes in Ply, Obj, Stl and Pbrt formats.
 // Yocto/ModelIO is implemented in `yocto_modelio.h` and `yocto_modelio.cpp`.
 //
 
@@ -115,7 +115,7 @@ struct ply_model {
 
 // Load and save ply
 bool load_ply(const string& filename, ply_model* ply, string& error);
-bool save_ply(const string& filename, ply_model* ply, string& error);
+bool save_ply(const string& filename, const ply_model* ply, string& error);
 
 // Get ply properties
 bool has_property(
@@ -344,7 +344,7 @@ struct obj_scene {
 bool load_obj(const string& filename, obj_scene* obj, string& error,
     bool geom_only = false, bool split_elements = true,
     bool split_materials = false);
-bool save_obj(const string& filename, obj_scene* obj, string& error);
+bool save_obj(const string& filename, const obj_scene* obj, string& error);
 
 // Get obj shape. Obj is a facevarying format, so vertices might be duplicated.
 // to ensure that no duplication occurs, either use the facevarying interface,
@@ -445,6 +445,36 @@ struct hash<yocto::obj_vertex> {
 // -----------------------------------------------------------------------------
 namespace yocto {
 
+struct stl_shape {
+  vector<vec3f> positions = {};
+  vector<vec3i> triangles = {};
+  vector<vec3f> fnormals  = {};
+};
+
+struct stl_model {
+  vector<stl_shape*> shapes = {};
+  ~stl_model();
+};
+
+// Load/save stl
+bool load_stl(const string& filename, stl_model* stl, string& error,
+    bool unique_vertices = true);
+bool save_stl(const string& filename, const stl_model* stl, string& error,
+    bool ascii = false);
+
+// Get/set data
+bool get_triangles(const stl_model* stl, int shape_id, vector<vec3i>& triangles,
+    vector<vec3f>& positions, vector<vec3f>& fnormals);
+void add_triangles(stl_model* stl, const vector<vec3i>& triangles,
+    const vector<vec3f>& positions, const vector<vec3f>& fnormals);
+
+}  // namespace yocto
+
+// -----------------------------------------------------------------------------
+// PBRT LOADER AND WRITER
+// -----------------------------------------------------------------------------
+namespace yocto {
+
 // Pbrt camera
 struct pbrt_camera {
   // camera parameters
@@ -536,7 +566,7 @@ struct pbrt_scene {
 
 // Load/save pbrt
 bool load_pbrt(const string& filename, pbrt_scene* pbrt, string& error);
-bool save_pbrt(const string& filename, pbrt_scene* pbrt, string& error,
+bool save_pbrt(const string& filename, const pbrt_scene* pbrt, string& error,
     bool ply_meshes = false);
 
 // Create pbrt

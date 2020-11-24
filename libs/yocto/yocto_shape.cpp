@@ -3608,6 +3608,19 @@ bool load_shape(const string& filename, vector<int>& points,
 
     if (positions.empty()) return shape_error();
     return true;
+  } else if (ext == ".stl" || ext == ".STL") {
+    // load obj
+    auto stl_guard = std::make_unique<stl_model>();
+    auto stl       = stl_guard.get();
+    if (!load_stl(filename, stl, error, true)) return false;
+
+    // get shape
+    if (stl->shapes.empty()) return shape_error();
+    if (stl->shapes.size() > 1) return shape_error();
+    auto fnormals = vector<vec3f>{};
+    if (!get_triangles(stl, 0, triangles, positions, fnormals))
+      return shape_error();
+    return true;
   } else {
     return format_error();
   }
@@ -3628,6 +3641,14 @@ bool save_shape(const string& filename, const vector<int>& points,
   };
   auto shape_error = [filename, &error]() {
     error = filename + ": empty shape";
+    return false;
+  };
+  auto line_error = [filename, &error]() {
+    error = filename + ": unsupported lines";
+    return false;
+  };
+  auto point_error = [filename, &error]() {
+    error = filename + ": unsupported points";
     return false;
   };
 
@@ -3680,6 +3701,26 @@ bool save_shape(const string& filename, const vector<int>& points,
     }
     auto err = ""s;
     return save_obj(filename, obj, error);
+  } else if (ext == ".stl" || ext == ".STL") {
+    // create ply
+    auto stl_guard = std::make_unique<stl_model>();
+    auto stl       = stl_guard.get();
+    if (!lines.empty()) return line_error();
+    if (!points.empty()) return point_error();
+    if (!triangles.empty()) {
+      add_triangles(stl, triangles, positions, {});
+    } else if (!quads.empty()) {
+      add_triangles(stl, quads_to_triangles(quads), positions, {});
+    } else if (!quadspos.empty()) {
+      // split data
+      auto [split_quads, split_positions, split_normals, split_texcoords] =
+          split_facevarying(quadspos, quadsnorm, quadstexcoord, positions,
+              normals, texcoords);
+      add_triangles(stl, quads_to_triangles(split_quads), split_positions, {});
+    } else {
+      return shape_error();
+    }
+    return save_stl(filename, stl, error);
   } else if (ext == ".cpp" || ext == ".CPP") {
     auto to_cpp = [](const string& name, const string& vname,
                       const auto& values) -> string {

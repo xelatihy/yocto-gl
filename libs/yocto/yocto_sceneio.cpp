@@ -1032,6 +1032,12 @@ static bool load_ply_scene(const string& filename, sceneio_scene* scene,
 static bool save_ply_scene(const string& filename, const sceneio_scene* scene,
     string& error, const progress_callback& progress_cb, bool noparallel);
 
+// Load/save a scene from/to STL. Loads/saves only one mesh with no other data.
+static bool load_stl_scene(const string& filename, sceneio_scene* scene,
+    string& error, const progress_callback& progress_cb, bool noparallel);
+static bool save_stl_scene(const string& filename, const sceneio_scene* scene,
+    string& error, const progress_callback& progress_cb, bool noparallel);
+
 // Load/save a scene from/to glTF.
 static bool load_gltf_scene(const string& filename, sceneio_scene* scene,
     string& error, const progress_callback& progress_cb, bool noparallel);
@@ -1063,6 +1069,8 @@ bool load_scene(const string& filename, sceneio_scene* scene, string& error,
     return load_pbrt_scene(filename, scene, error, progress_cb, noparallel);
   } else if (ext == ".ply" || ext == ".PLY") {
     return load_ply_scene(filename, scene, error, progress_cb, noparallel);
+  } else if (ext == ".stl" || ext == ".STL") {
+    return load_stl_scene(filename, scene, error, progress_cb, noparallel);
   } else {
     return format_error();
   }
@@ -1085,6 +1093,8 @@ bool save_scene(const string& filename, const sceneio_scene* scene,
     return save_pbrt_scene(filename, scene, error, progress_cb, noparallel);
   } else if (ext == ".ply" || ext == ".PLY") {
     return save_ply_scene(filename, scene, error, progress_cb, noparallel);
+  } else if (ext == ".stl" || ext == ".STL") {
+    return save_stl_scene(filename, scene, error, progress_cb, noparallel);
   } else {
     return format_error();
   }
@@ -2095,6 +2105,67 @@ static bool load_ply_scene(const string& filename, sceneio_scene* scene,
 }
 
 static bool save_ply_scene(const string& filename, const sceneio_scene* scene,
+    string& error, const progress_callback& progress_cb, bool noparallel) {
+  auto shape_error = [filename, &error]() {
+    error = filename + ": empty shape";
+    return false;
+  };
+
+  if (scene->shapes.empty()) return shape_error();
+
+  // handle progress
+  auto progress = vec2i{0, 1};
+  if (progress_cb) progress_cb("save scene", progress.x++, progress.y);
+
+  // save shape
+  auto shape = scene->shapes.front();
+  if (!save_shape(filename, shape->points, shape->lines, shape->triangles,
+          shape->quads, shape->quadspos, shape->quadsnorm, shape->quadstexcoord,
+          shape->positions, shape->normals, shape->texcoords, shape->colors,
+          shape->radius, error))
+    return false;
+
+  // done
+  if (progress_cb) progress_cb("save done", progress.x++, progress.y);
+  return true;
+}
+
+}  // namespace yocto
+
+// -----------------------------------------------------------------------------
+// STL CONVERSION
+// -----------------------------------------------------------------------------
+namespace yocto {
+
+static bool load_stl_scene(const string& filename, sceneio_scene* scene,
+    string& error, const progress_callback& progress_cb, bool noparallel) {
+  // handle progress
+  auto progress = vec2i{0, 1};
+  if (progress_cb) progress_cb("load scene", progress.x++, progress.y);
+
+  // load stl mesh
+  auto shape = add_shape(scene);
+  if (!load_shape(filename, shape->points, shape->lines, shape->triangles,
+          shape->quads, shape->quadspos, shape->quadsnorm, shape->quadstexcoord,
+          shape->positions, shape->normals, shape->texcoords, shape->colors,
+          shape->radius, error))
+    return false;
+
+  // create instance
+  auto instance   = add_instance(scene);
+  instance->shape = shape;
+
+  // fix scene
+  add_cameras(scene);
+  add_radius(scene);
+  add_materials(scene);
+
+  // done
+  if (progress_cb) progress_cb("load scene", progress.x++, progress.y);
+  return true;
+}
+
+static bool save_stl_scene(const string& filename, const sceneio_scene* scene,
     string& error, const progress_callback& progress_cb, bool noparallel) {
   auto shape_error = [filename, &error]() {
     error = filename + ": empty shape";
