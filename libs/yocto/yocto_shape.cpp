@@ -3615,8 +3615,8 @@ bool load_shape(const string& filename, vector<int>& points,
     if (!load_stl(filename, stl, error, true)) return false;
 
     // get shape
-    if (stl->solids.empty()) return shape_error();
-    if (stl->solids.size() > 1) return shape_error();
+    if (stl->shapes.empty()) return shape_error();
+    if (stl->shapes.size() > 1) return shape_error();
     auto fnormals = vector<vec3f>{};
     if (!get_triangles(stl, 0, triangles, positions, fnormals))
       return shape_error();
