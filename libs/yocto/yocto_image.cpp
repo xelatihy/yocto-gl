@@ -1588,17 +1588,23 @@ static bool save_pfm(const string& filename, int width, int height,
     return false;
   if (!write_text(fs, "-1\n")) return write_error();
   if (components == 1 || components == 3) {
-    if (!write_values(fs, pixels.data(), pixels.size())) return write_error();
+    for (auto j = height - 1; j >= 0; j--) {
+      if (!write_values(
+              fs, pixels.data() + j * width * components, width * components))
+        return write_error();
+    }
   } else {
-    for (auto i = 0; i < width * height; i++) {
-      auto vz = 0.0f;
-      auto v  = pixels.data() + i * components;
-      if (!write_value(fs, v + 0)) return write_error();
-      if (!write_value(fs, v + 1)) return write_error();
-      if (components == 2) {
-        if (!write_value(fs, &vz)) return write_error();
-      } else {
-        if (!write_value(fs, v + 2)) return write_error();
+    for (auto j = height - 1; j >= 0; j--) {
+      for (auto i = 0; i < width; i++) {
+        auto vz = 0.0f;
+        auto v  = pixels.data() + (j * width + i) * components;
+        if (!write_value(fs, v[0])) return write_error();
+        if (!write_value(fs, v[1])) return write_error();
+        if (components == 2) {
+          if (!write_value(fs, vz)) return write_error();
+        } else {
+          if (!write_value(fs, v[2])) return write_error();
+        }
       }
     }
   }
