@@ -149,6 +149,11 @@ void set_quads(shade_shape* shape, const vector<vec4i>& quads) {
   set_index_buffer(shape->shape, triangles);
 }
 
+// set point size
+void set_point_size(shade_shape* shape, float point_size) {
+  set_point_size(shape->shape, point_size);
+}
+
 shade_scene::~shade_scene() {
   for (auto camera : cameras) delete camera;
   for (auto shape : shapes) delete shape;

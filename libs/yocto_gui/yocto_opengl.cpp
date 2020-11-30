@@ -1096,6 +1096,11 @@ void set_index_buffer(ogl_shape* shape, const vector<vec3i>& indices) {
   shape->elements = ogl_element_type::triangles;
 }
 
+// set point size
+void set_point_size(ogl_shape* shape, float point_size) {
+  shape->point_size = point_size;
+}
+
 void draw_shape(const ogl_shape* shape) {
   if (shape->shape_id == 0) return;
   bind_shape(shape);
@@ -1107,6 +1112,10 @@ void draw_shape(const ogl_shape* shape) {
     case ogl_element_type::triangles: type = GL_TRIANGLES; break;
     case ogl_element_type::triangle_strip: type = GL_TRIANGLE_STRIP; break;
     case ogl_element_type::triangle_fan: type = GL_TRIANGLE_FAN; break;
+  }
+
+  if (shape->elements == ogl_element_type::points) {
+    glPointSize(shape->point_size);
   }
 
   auto indices = shape->index_buffer;
@@ -1125,6 +1134,11 @@ void draw_shape(const ogl_shape* shape) {
     auto vertices = shape->vertex_buffers[0];
     glDrawArrays(type, 0, (int)vertices->num_elements);
   }
+
+  if (shape->elements == ogl_element_type::points) {
+    glPointSize(shape->point_size);
+  }
+
   assert_ogl_error();
 }
 

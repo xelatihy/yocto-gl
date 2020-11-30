@@ -402,6 +402,7 @@ struct ogl_shape {
   ogl_elementbuffer*       index_buffer   = new ogl_elementbuffer{};
   ogl_element_type         elements       = ogl_element_type::triangles;
   size_t                   num_instances  = 0;
+  float                    point_size     = 1;
 
   // OpenGl state
   uint shape_id = 0;
@@ -438,6 +439,9 @@ void set_instance_buffer(ogl_shape* shape, int location, bool is_instance);
 void set_index_buffer(ogl_shape* shape, const vector<int>& indices);
 void set_index_buffer(ogl_shape* shape, const vector<vec2i>& indices);
 void set_index_buffer(ogl_shape* shape, const vector<vec3i>& indices);
+
+// set point size
+void set_point_size(ogl_shape* shape, float point_size);
 
 // check if shape is initialized
 bool is_initialized(const ogl_shape* shape);
