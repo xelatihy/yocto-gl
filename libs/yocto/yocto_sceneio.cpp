@@ -2430,7 +2430,7 @@ static bool load_gltf_scene(const string& filename, sceneio_scene* scene,
           for (auto i = 0; i < gacc->count; i++)
             cgltf_accessor_read_float(gacc, i, &shape->tangents[i].x, 4);
           for (auto& t : shape->tangents) t.w = -t.w;
-        } else if (semantic == "RADIUS") {
+        } else if (semantic == "_RADIUS") {
           shape->radius.resize(gacc->count);
           for (auto i = 0; i < gacc->count; i++)
             cgltf_accessor_read_float(gacc, i, &shape->radius[i], 1);
