@@ -2752,6 +2752,7 @@ static bool save_gltf_scene(const string& filename, const sceneio_scene* scene,
     for (auto material : scene->materials) {
       auto& mjs              = js["materials"].emplace_back();
       mjs["name"]            = material->name;
+      mjs["emissiveFactor"]  = material->emission;
       auto& pjs              = mjs["pbrMetallicRoughness"];
       pjs["baseColorFactor"] = vec4f{material->color.x, material->color.y,
           material->color.z, material->opacity};
@@ -2763,7 +2764,7 @@ static bool save_gltf_scene(const string& filename, const sceneio_scene* scene,
           textures.emplace_back(tname, material->emission_tex->ldr);
           texture_map[tname] = (int)textures.size() - 1;
         }
-        pjs["emissiveTexture"]["index"] = texture_map.at(tname);
+        mjs["emissiveTexture"]["index"] = texture_map.at(tname);
       }
       if (material->normal_tex) {
         auto tname = material->normal_tex->name;  // TODO(fabio): ldr
@@ -2771,7 +2772,7 @@ static bool save_gltf_scene(const string& filename, const sceneio_scene* scene,
           textures.emplace_back(tname, material->normal_tex->ldr);
           texture_map[tname] = (int)textures.size() - 1;
         }
-        pjs["normalTexture"]["index"] = texture_map.at(tname);
+        mjs["normalTexture"]["index"] = texture_map.at(tname);
       }
       if (material->color_tex) {                 // TODO(fabio): opacity
         auto tname = material->color_tex->name;  // TODO(fabio): ldr
@@ -2906,8 +2907,6 @@ static bool save_gltf_scene(const string& filename, const sceneio_scene* scene,
 
   // nodes
   js["nodes"] = json::array();
-  auto& rjs   = js["nodes"].emplace_back();
-  rjs["name"] = "root";
   if (!scene->cameras.empty()) {
     auto camera_id = 0;
     for (auto camera : scene->cameras) {
@@ -2960,12 +2959,22 @@ static bool save_gltf_scene(const string& filename, const sceneio_scene* scene,
     }
   }
 
+  // root children
+  {
+    auto& rjs       = js["nodes"].emplace_back();
+    rjs["name"]     = "root";
+    rjs["children"] = json::array();
+    for (auto idx = 0; idx < (int)js["nodes"].size() - 1; idx++)
+      rjs["children"].push_back(idx);
+  }
+
   // scene
   {
     js["scenes"] = json::array();
     auto& sjs    = js["scenes"].emplace_back();
     sjs["nodes"] = json::array();
-    sjs["nodes"].push_back(1);
+    sjs["nodes"].push_back((int)js["nodes"].size() - 1);
+    js["scene"] = 0;
   }
 
   // save json
