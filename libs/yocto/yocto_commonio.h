@@ -80,7 +80,7 @@ struct print_timer {
 };
 // Print traces for timing and program debugging
 print_timer print_timed(const string& msg);
-void        print_elapsed(print_timer& timer);
+int64_t     print_elapsed(print_timer& timer);
 
 // Print progress
 void print_progress(const string& message, int current, int total);
