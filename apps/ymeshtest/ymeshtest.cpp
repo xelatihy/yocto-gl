@@ -572,6 +572,7 @@ int main(int argc, const char* argv[]) {
 
   // check if valid
   if (validate) {
+    // TODO(fabio): validation code here
   } else {
     stats["mesh"]["valid"] = true;
   }
