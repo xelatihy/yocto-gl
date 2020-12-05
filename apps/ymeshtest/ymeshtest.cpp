@@ -370,28 +370,28 @@ points_shape path_to_points(const vector<vec3i>& triangles,
 
 void make_scene(sceneio_scene* scene, const vector<vec3i>& triangles,
     const vector<vec3f>& positions, const vector<mesh_point>& points,
-    const vector<mesh_point>& path, float point_thickness = 0.05f,
-    float line_thickness = 0.01f) {
+    const vector<mesh_point>& path, float point_thickness = 0.01f,
+    float line_thickness = 0.002f) {
   scene->name = "name";
   // camera
   // TODO(fabio): default camera? camera used to sample?
 
   // mesh
   // TODO(fabio): normals?
-  add_instance(scene, "mesh", identity3x4f,
-      add_shape(scene, "mesh", triangles, positions, {}, {}, {}),
-      add_specular_material(scene, "mesh", {0.6, 0.6, 0.6}, nullptr, 0));
+  // add_instance(scene, "mesh", identity3x4f,
+  //     add_shape(scene, "mesh", triangles, positions, {}, {}, {}),
+  //     add_specular_material(scene, "mesh", {0.6, 0.6, 0.6}, nullptr, 0));
 
   // curve
-  add_instance(scene, "path", identity3x4f,
-      add_shape(scene, "path",
-          path_to_lines(triangles, positions, path, line_thickness)),
-      add_matte_material(scene, "path", {0.8, 0.1, 0.1}, nullptr));
+  // add_instance(scene, "path", identity3x4f,
+  //     add_shape(scene, "path",
+  //         path_to_lines(triangles, positions, path, line_thickness)),
+  //     add_matte_material(scene, "path", {0.8, 0.1, 0.1}, nullptr));
 
   // points
   add_instance(scene, "points", identity3x4f,
       add_shape(scene, "points",
-          path_to_points(triangles, positions, path, point_thickness)),
+          path_to_points(triangles, positions, points, point_thickness)),
       add_matte_material(scene, "points", {0.1, 0.8, 0.1}, nullptr));
 
   // environment
@@ -418,7 +418,7 @@ void make_scene(sceneio_scene* scene, const vector<vec3i>& triangles,
   // TODO(fabio): floor material
   // floor_frame.o.y = -0.5;
   add_instance(scene, "floor", identity3x4f,
-      add_shape(scene, "floor", make_floor({1, 1}, {1000, 1000})),
+      add_shape(scene, "floor", make_floor({1, 1}, {10, 10})),
       add_matte_material(scene, "floor", {1, 1, 1}, nullptr));
 }
 
