@@ -77,10 +77,8 @@ inline void to_json(json& j, const mesh_point& value) {
   nlohmann::to_json(j, pair{value.face, value.uv});
 }
 
-}  // namespace yocto
-
 // load/save json
-static bool load_json(const string& filename, json& js, string& error) {
+bool load_json(const string& filename, json& js, string& error) {
   // error helpers
   auto parse_error = [filename, &error]() {
     error = filename + ": parse error in json";
@@ -96,10 +94,176 @@ static bool load_json(const string& filename, json& js, string& error) {
   }
 }
 
-static bool save_json(const string& filename, const json& js, string& error) {
+bool save_json(const string& filename, const json& js, string& error) {
   return save_text(filename, js.dump(2), error);
 }
 
+}  // namespace yocto
+
+// -----------------------------------------------------------------------------
+// SCENE CREATION SUPPORT
+// -----------------------------------------------------------------------------
+namespace yocto {
+
+sceneio_instance* add_instance(sceneio_scene* scene, const string& name,
+    const frame3f& frame, sceneio_shape* shape, sceneio_material* material) {
+  auto instance      = add_instance(scene, name);
+  instance->frame    = frame;
+  instance->shape    = shape;
+  instance->material = material;
+  return instance;
+}
+
+sceneio_shape* add_shape(sceneio_scene* scene, const string& name,
+    const quads_shape& shape_data, int subdivisions = 0, float displacement = 0,
+    sceneio_texture* displacement_tex = nullptr) {
+  auto shape              = add_shape(scene, name);
+  shape->quads            = shape_data.quads;
+  shape->positions        = shape_data.positions;
+  shape->normals          = shape_data.normals;
+  shape->texcoords        = shape_data.texcoords;
+  shape->subdivisions     = subdivisions;
+  shape->smooth           = subdivisions > 0 || displacement_tex;
+  shape->displacement     = displacement;
+  shape->displacement_tex = displacement_tex;
+  return shape;
+}
+
+sceneio_shape* add_shape(sceneio_scene* scene, const string& name,
+    const quads_fvshape& shape_data, int subdivisions = 0,
+    float displacement = 0, sceneio_texture* displacement_tex = nullptr) {
+  auto shape              = add_shape(scene, name);
+  shape->quadspos         = shape_data.quadspos;
+  shape->quadsnorm        = shape_data.quadsnorm;
+  shape->quadstexcoord    = shape_data.quadstexcoord;
+  shape->positions        = shape_data.positions;
+  shape->normals          = shape_data.normals;
+  shape->texcoords        = shape_data.texcoords;
+  shape->subdivisions     = subdivisions;
+  shape->smooth           = subdivisions > 0 || displacement_tex;
+  shape->displacement     = displacement;
+  shape->displacement_tex = displacement_tex;
+  return shape;
+}
+
+sceneio_shape* add_shape(sceneio_scene* scene, const string& name,
+    const triangles_shape& shape_data, int subdivisions = 0,
+    float displacement = 0, sceneio_texture* displacement_tex = nullptr) {
+  auto shape              = add_shape(scene, name);
+  shape->triangles        = shape_data.triangles;
+  shape->positions        = shape_data.positions;
+  shape->normals          = shape_data.normals;
+  shape->texcoords        = shape_data.texcoords;
+  shape->subdivisions     = subdivisions;
+  shape->smooth           = subdivisions > 0 || displacement_tex;
+  shape->displacement     = displacement;
+  shape->displacement_tex = displacement_tex;
+  return shape;
+}
+
+sceneio_shape* add_shape(sceneio_scene* scene, const string& name,
+    const vector<vec3i>& triangles, const vector<vec3f>& positions,
+    const vector<vec3f>& normals, const vector<vec2f>& texcoords,
+    int subdivisions = 0, float displacement = 0,
+    sceneio_texture* displacement_tex = nullptr) {
+  auto shape              = add_shape(scene, name);
+  shape->triangles        = triangles;
+  shape->positions        = positions;
+  shape->normals          = normals;
+  shape->texcoords        = texcoords;
+  shape->subdivisions     = subdivisions;
+  shape->smooth           = subdivisions > 0 || displacement_tex;
+  shape->displacement     = displacement;
+  shape->displacement_tex = displacement_tex;
+  return shape;
+}
+
+sceneio_shape* add_shape(sceneio_scene* scene, const string& name,
+    const lines_shape& shape_data, int subdivisions = 0, float displacement = 0,
+    sceneio_texture* displacement_tex = nullptr) {
+  auto shape              = add_shape(scene, name);
+  shape->lines            = shape_data.lines;
+  shape->positions        = shape_data.positions;
+  shape->normals          = shape_data.normals;
+  shape->texcoords        = shape_data.texcoords;
+  shape->radius           = shape_data.radius;
+  shape->subdivisions     = subdivisions;
+  shape->smooth           = subdivisions > 0 || displacement_tex;
+  shape->displacement     = displacement;
+  shape->displacement_tex = displacement_tex;
+  return shape;
+}
+
+sceneio_shape* add_shape(sceneio_scene* scene, const string& name,
+    const points_shape& shape_data, int subdivisions = 0,
+    float displacement = 0, sceneio_texture* displacement_tex = nullptr) {
+  auto shape              = add_shape(scene, name);
+  shape->points           = shape_data.points;
+  shape->positions        = shape_data.positions;
+  shape->normals          = shape_data.normals;
+  shape->texcoords        = shape_data.texcoords;
+  shape->radius           = shape_data.radius;
+  shape->subdivisions     = subdivisions;
+  shape->smooth           = subdivisions > 0 || displacement_tex;
+  shape->displacement     = displacement;
+  shape->displacement_tex = displacement_tex;
+  return shape;
+}
+
+sceneio_material* add_emission_material(sceneio_scene* scene,
+    const string& name, const vec3f& emission, sceneio_texture* emission_tex) {
+  auto material          = add_material(scene, name);
+  material->emission     = emission;
+  material->emission_tex = emission_tex;
+  return material;
+}
+
+sceneio_material* add_matte_material(sceneio_scene* scene, const string& name,
+    const vec3f& color, sceneio_texture* color_tex,
+    sceneio_texture* normal_tex = nullptr) {
+  auto material        = add_material(scene, name);
+  material->color      = color;
+  material->color_tex  = color_tex;
+  material->roughness  = 1;
+  material->normal_tex = normal_tex;
+  return material;
+}
+
+sceneio_material* add_specular_material(sceneio_scene* scene,
+    const string& name, const vec3f& color, sceneio_texture* color_tex,
+    float roughness, sceneio_texture* roughness_tex = nullptr,
+    sceneio_texture* normal_tex = nullptr, float ior = 1.5, float specular = 1,
+    sceneio_texture* specular_tex = nullptr, const vec3f& spectint = {1, 1, 1},
+    sceneio_texture* spectint_tex = nullptr) {
+  auto material           = add_material(scene, name);
+  material->color         = color;
+  material->color_tex     = color_tex;
+  material->specular      = specular;
+  material->specular_tex  = specular_tex;
+  material->spectint      = spectint;
+  material->spectint_tex  = spectint_tex;
+  material->roughness     = roughness;
+  material->roughness_tex = roughness_tex;
+  material->ior           = ior;
+  material->normal_tex    = normal_tex;
+  return material;
+}
+
+sceneio_environment* add_environment(sceneio_scene* scene, const string& name,
+    const frame3f& frame, const vec3f& emission,
+    sceneio_texture* emission_tex = nullptr) {
+  auto environment          = add_environment(scene, name);
+  environment->frame        = frame;
+  environment->emission     = emission;
+  environment->emission_tex = emission_tex;
+  return environment;
+}
+
+}  // namespace yocto
+
+// -----------------------------------------------------------------------------
+// TEST CREATION  SUPPORT
+// -----------------------------------------------------------------------------
 vector<mesh_point> sample_points(const vector<vec3i>& triangles,
     const vector<vec3f>& positions, const shape_bvh& bvh, int num_points = 4) {
   // pick based on area
@@ -113,6 +277,154 @@ vector<mesh_point> sample_points(const vector<vec3i>& triangles,
   return points;
 }
 
+#if 0
+  ​ ​ void update_path_shape(shade_shape * shape, const bool_mesh& mesh,
+      const geodesic_path& path, float radius, bool thin_lines = false) {
+    auto positions = path_positions(
+        path, mesh.triangles, mesh.positions, mesh.adjacencies);
+    ​ if (thin_lines) {
+      set_positions(shape, positions);
+      shape->shape->elements = ogl_element_type::line_strip;
+      set_instances(shape, {}, {});
+      return;
+    }
+    ​ auto froms = vector<vec3f>();
+    auto     tos   = vector<vec3f>();
+    froms.reserve(positions.size() - 1);
+    tos.reserve(positions.size() - 1);
+    for (int i = 0; i < positions.size() - 1; i++) {
+      auto from = positions[i];
+      auto to   = positions[i + 1];
+      if (from == to) continue;
+      froms.push_back(from);
+      tos.push_back(to);
+    }
+    ​ auto cylinder = make_uvcylinder({4, 1, 1}, {radius, 1});
+    for (auto& p : cylinder.positions) {
+      p.z = p.z * 0.5 + 0.5;
+    }
+    ​ set_quads(shape, cylinder.quads);
+    set_positions(shape, cylinder.positions);
+    set_normals(shape, cylinder.normals);
+    set_texcoords(shape, cylinder.texcoords);
+    set_instances(shape, froms, tos);
+  }
+#endif
+
+vector<mesh_point> eval_path(const dual_geodesic_solver& graph,
+    const vector<vec3i>& triangles, const vector<vec3f>& positions,
+    const vector<vec3i>& adjacencies, const vector<mesh_point>& points) {
+  // geodesic path
+  auto start = points.front(), end = points.back();
+  auto path = geodesic_path{};
+  if (start.face == end.face) {
+    path.start = start;
+    path.end   = end;
+    path.strip = {start.face};
+  } else {
+    auto strip = strip_on_dual_graph(
+        graph, triangles, positions, end.face, start.face);
+    path = shortest_path(triangles, positions, adjacencies, start, end, strip);
+  }
+  // get mesh points
+  return convert_mesh_path(
+      triangles, adjacencies, path.strip, path.lerps, path.start, path.end)
+      .points;
+}
+
+vector<vec3f> path_positions(const vector<vec3i>& triangles,
+    const vector<vec3f>& positions, const vector<mesh_point>& path) {
+  auto ppositions = vector<vec3f>{};
+  ppositions.reserve(path.size());
+  for (auto& point : path) {
+    auto& triangle = triangles[point.face];
+    ppositions.push_back(interpolate_triangle(positions[triangle.x],
+        positions[triangle.y], positions[triangle.z], point.uv));
+  }
+  return ppositions;
+}
+
+lines_shape path_to_lines(const vector<vec3i>& triangles,
+    const vector<vec3f>& positions, const vector<mesh_point>& path,
+    float radius) {
+  auto shape      = lines_shape{};
+  shape.positions = path_positions(triangles, positions, path);
+  // shape.normals   = ...;  // TODO(fabio): tangents
+  shape.radius = vector<float>(shape.positions.size(), radius);
+  shape.lines  = vector<vec2i>(shape.positions.size() - 1);
+  for (auto k = 0; k < shape.lines.size(); k++) shape.lines[k] = {k, k + 1};
+  return shape;
+}
+
+points_shape path_to_points(const vector<vec3i>& triangles,
+    const vector<vec3f>& positions, const vector<mesh_point>& path,
+    float radius) {
+  auto shape      = points_shape{};
+  shape.positions = path_positions(triangles, positions, path);
+  // shape.normals   = ...;  // TODO(fabio): tangents
+  shape.radius = vector<float>(shape.positions.size(), radius);
+  shape.points = vector<int>(shape.positions.size());
+  for (auto k = 0; k < shape.points.size(); k++) shape.points[k] = k;
+  return shape;
+}
+
+void make_scene(sceneio_scene* scene, const vector<vec3i>& triangles,
+    const vector<vec3f>& positions, const vector<mesh_point>& points,
+    const vector<mesh_point>& path, float point_thickness = 0.05f,
+    float line_thickness = 0.01f) {
+  scene->name = "name";
+  // camera
+  // TODO(fabio): default camera? camera used to sample?
+
+  // mesh
+  // TODO(fabio): normals?
+  add_instance(scene, "mesh", identity3x4f,
+      add_shape(scene, "mesh", triangles, positions, {}, {}, {}),
+      add_specular_material(scene, "mesh", {0.6, 0.6, 0.6}, nullptr, 0));
+
+  // curve
+  add_instance(scene, "path", identity3x4f,
+      add_shape(scene, "path",
+          path_to_lines(triangles, positions, path, line_thickness)),
+      add_matte_material(scene, "path", {0.8, 0.1, 0.1}, nullptr));
+
+  // points
+  add_instance(scene, "points", identity3x4f,
+      add_shape(scene, "points",
+          path_to_points(triangles, positions, path, point_thickness)),
+      add_matte_material(scene, "points", {0.1, 0.8, 0.1}, nullptr));
+
+  // environment
+  // TODO(fabio): environment
+  add_environment(scene, "env", identity3x4f, {0, 0, 0}, nullptr);
+  // environment->emission_tex = add_texture(scene, "env");
+  //   load_image("data/env.png", environment_tex->hdr, error);
+
+  // lights
+  add_instance(scene, "arealight1",
+      lookat_frame({-1, 1, 1}, {0, 0.1, 0}, {0, 1, 0}, true),
+      add_shape(scene, "arealight1", make_rect({1, 1}, {0.2, 0.2})),
+      add_emission_material(scene, "arealight1", {10, 10, 10}, nullptr));
+  add_instance(scene, "arealight2",
+      lookat_frame({1, 1, 0.5}, {0, 0.1, 0}, {0, 1, 0}, true),
+      add_shape(scene, "arealight2", make_rect({1, 1}, {0.2, 0.2})),
+      add_emission_material(scene, "arealight2", {10, 10, 10}, nullptr));
+  add_instance(scene, "arealight3",
+      lookat_frame({0, 1, -1}, {0, 0.1, 0}, {0, 1, 0}, true),
+      add_shape(scene, "arealight3", make_rect({1, 1}, {0.2, 0.2})),
+      add_emission_material(scene, "arealight3", {10, 10, 10}, nullptr));
+
+  // add floor
+  // TODO(fabio): floor material
+  // floor_frame.o.y = -0.5;
+  add_instance(scene, "floor", identity3x4f,
+      add_shape(scene, "floor", make_floor({1, 1}, {1000, 1000})),
+      add_matte_material(scene, "floor", {1, 1, 1}, nullptr));
+}
+
+// -----------------------------------------------------------------------------
+// MAIN FUNCTION
+// -----------------------------------------------------------------------------
 int main(int argc, const char* argv[]) {
   // command line parameters
   auto smooth    = false;
@@ -186,8 +498,9 @@ int main(int argc, const char* argv[]) {
   stats["points"]["positions"] = points;
 
   // build graph
-  auto graph_timer       = print_timed("graph bvh");
-  auto graph             = make_triangles_bvh(triangles, positions, {});
+  auto graph_timer = print_timed("graph bvh");
+  auto adjacencies = face_adjacencies(triangles);
+  auto graph = make_dual_geodesic_solver(triangles, positions, adjacencies);
   stats["time"]["graph"] = print_elapsed(graph_timer);
 
   // trace path
