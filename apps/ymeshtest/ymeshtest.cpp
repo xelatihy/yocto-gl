@@ -416,18 +416,18 @@ quads_shape path_to_quads(const vector<vec3i>& triangles,
   auto ppositions = path_positions(triangles, positions, path);
   auto shape      = quads_shape{};
   for (auto idx = 0; idx < ppositions.size(); idx++) {
-    if (point_thickness) {
+    if (point_thickness > 0) {
       auto sphere = make_sphere(4, point_thickness);
       for (auto& p : sphere.positions) p += ppositions[idx];
       merge_quads(shape.quads, shape.positions, shape.normals, shape.texcoords,
           sphere.quads, sphere.positions, sphere.normals, sphere.texcoords);
     }
-    if (line_thickness && idx < (int)ppositions.size() - 1 &&
+    if (line_thickness > 0 && idx < (int)ppositions.size() - 1 &&
         length(ppositions[idx] - ppositions[idx + 1]) > point_thickness) {
       auto cylinder = make_uvcylinder({32, 1, 1},
-          {line_thickness, length(ppositions[idx] - ppositions[idx + 1])});
-      auto frame    = frame_fromz(
-          ppositions[idx], ppositions[idx + 1] - ppositions[idx]);
+          {line_thickness, length(ppositions[idx] - ppositions[idx + 1]) / 2});
+      auto frame    = frame_fromz((ppositions[idx] + ppositions[idx + 1]) / 2,
+          normalize(ppositions[idx + 1] - ppositions[idx]));
       for (auto& p : cylinder.positions) p = transform_point(frame, p);
       merge_quads(shape.quads, shape.positions, shape.normals, shape.texcoords,
           cylinder.quads, cylinder.positions, cylinder.normals,
