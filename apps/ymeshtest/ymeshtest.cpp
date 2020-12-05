@@ -383,10 +383,10 @@ void make_scene(sceneio_scene* scene, const vector<vec3i>& triangles,
   //     add_specular_material(scene, "mesh", {0.6, 0.6, 0.6}, nullptr, 0));
 
   // curve
-  // add_instance(scene, "path", identity3x4f,
-  //     add_shape(scene, "path",
-  //         path_to_lines(triangles, positions, path, line_thickness)),
-  //     add_matte_material(scene, "path", {0.8, 0.1, 0.1}, nullptr));
+  add_instance(scene, "path", identity3x4f,
+      add_shape(scene, "path",
+          path_to_lines(triangles, positions, path, line_thickness)),
+      add_matte_material(scene, "path", {0.8, 0.1, 0.1}, nullptr));
 
   // points
   add_instance(scene, "points", identity3x4f,
