@@ -343,22 +343,34 @@ vector<mesh_point> sample_points(const vector<vec3i>& triangles,
 vector<mesh_point> trace_path(const dual_geodesic_solver& graph,
     const vector<vec3i>& triangles, const vector<vec3f>& positions,
     const vector<vec3i>& adjacencies, const vector<mesh_point>& points) {
+  auto trace_line =
+      [](const dual_geodesic_solver& graph, const vector<vec3i>& triangles,
+          const vector<vec3f>& positions, const vector<vec3i>& adjacencies,
+          const mesh_point& start, const mesh_point& end) {
+        auto path = geodesic_path{};
+        if (start.face == end.face) {
+          path.start = start;
+          path.end   = end;
+          path.strip = {start.face};
+        } else {
+          auto strip = strip_on_dual_graph(
+              graph, triangles, positions, end.face, start.face);
+          path = shortest_path(
+              triangles, positions, adjacencies, start, end, strip);
+        }
+        // get mesh points
+        return convert_mesh_path(triangles, adjacencies, path.strip, path.lerps,
+            path.start, path.end)
+            .points;
+      };
   // geodesic path
-  auto start = points.front(), end = points.back();
-  auto path = geodesic_path{};
-  if (start.face == end.face) {
-    path.start = start;
-    path.end   = end;
-    path.strip = {start.face};
-  } else {
-    auto strip = strip_on_dual_graph(
-        graph, triangles, positions, end.face, start.face);
-    path = shortest_path(triangles, positions, adjacencies, start, end, strip);
+  auto path = vector<mesh_point>{};
+  for (auto idx = 0; idx < (int)points.size() - 1; idx++) {
+    auto segment = trace_line(
+        graph, triangles, positions, adjacencies, points[idx], points[idx + 1]);
+    path.insert(path.end(), segment.begin(), segment.end());
   }
-  // get mesh points
-  return convert_mesh_path(
-      triangles, adjacencies, path.strip, path.lerps, path.start, path.end)
-      .points;
+  return path;
 }
 
 vector<vec3f> path_positions(const vector<vec3i>& triangles,
@@ -399,7 +411,7 @@ points_shape path_to_points(const vector<vec3i>& triangles,
 
 quads_shape path_to_quads(const vector<vec3i>& triangles,
     const vector<vec3f>& positions, const vector<mesh_point>& path,
-    float point_thickness, float line_thickness) {
+    float point_thickness) {
   auto ppositions = path_positions(triangles, positions, path);
   auto shape      = quads_shape{};
   for (auto idx = 0; idx < ppositions.size(); idx++) {
@@ -431,7 +443,7 @@ void make_scene(sceneio_scene* scene, const vec3f& camera_from,
   if (points_as_meshes) {
     add_instance(scene, "path", identity3x4f,
         add_shape(scene, "path",
-            path_to_quads(triangles, positions, path, line_thickness, 0)),
+            path_to_quads(triangles, positions, path, line_thickness)),
         add_matte_material(scene, "path", {0.8, 0.1, 0.1}, nullptr));
   } else {
     add_instance(scene, "path", identity3x4f,
@@ -444,7 +456,7 @@ void make_scene(sceneio_scene* scene, const vec3f& camera_from,
   if (points_as_meshes) {
     add_instance(scene, "points", identity3x4f,
         add_shape(scene, "points",
-            path_to_quads(triangles, positions, points, point_thickness, 0)),
+            path_to_quads(triangles, positions, points, point_thickness)),
         add_matte_material(scene, "points", {0.1, 0.8, 0.1}, nullptr));
   } else {
     add_instance(scene, "points", identity3x4f,
