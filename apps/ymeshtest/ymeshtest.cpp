@@ -105,6 +105,20 @@ bool save_json(const string& filename, const json& js, string& error) {
 // -----------------------------------------------------------------------------
 namespace yocto {
 
+sceneio_camera* add_camera(sceneio_scene* scene, const string& name,
+    const frame3f& frame, float lens, float aspect, float aperture = 0,
+    float focus = 10, bool orthographic = false, float film = 0.036) {
+  auto camera          = add_camera(scene, name);
+  camera->frame        = frame;
+  camera->lens         = lens;
+  camera->aspect       = aspect;
+  camera->film         = film;
+  camera->orthographic = orthographic;
+  camera->aperture     = aperture;
+  camera->focus        = focus;
+  return camera;
+}
+
 sceneio_instance* add_instance(sceneio_scene* scene, const string& name,
     const frame3f& frame, sceneio_shape* shape, sceneio_material* material) {
   auto instance      = add_instance(scene, name);
@@ -368,13 +382,14 @@ points_shape path_to_points(const vector<vec3i>& triangles,
   return shape;
 }
 
-void make_scene(sceneio_scene* scene, const vector<vec3i>& triangles,
+void make_scene(sceneio_scene* scene, const frame3f& camera_frame,
+    float camera_lens, const vector<vec3i>& triangles,
     const vector<vec3f>& positions, const vector<mesh_point>& points,
     const vector<mesh_point>& path, float point_thickness = 0.01f,
     float line_thickness = 0.002f) {
   scene->name = "name";
   // camera
-  // TODO(fabio): default camera? camera used to sample?
+  add_camera(scene, "camera", camera_frame, camera_lens, 1);
 
   // mesh
   // TODO(fabio): normals?
@@ -485,6 +500,10 @@ int main(int argc, const char* argv[]) {
   }
   stats["mesh"]["rescale_time"] = print_elapsed(rescale_timer);
 
+  // default camera
+  auto camera_frame = lookat_frame({0, 1, 2}, {0, 0.5, 0}, {0, 1, 0});
+  auto camera_lens  = 0.050f;
+
   // build bvh
   auto bvh_timer       = print_timed("build bvh");
   auto bvh             = make_triangles_bvh(triangles, positions, {});
@@ -526,7 +545,8 @@ int main(int argc, const char* argv[]) {
   auto scene_timer = print_timed("save scene");
   auto scene_guard = std::make_unique<sceneio_scene>();
   auto scene       = scene_guard.get();
-  make_scene(scene, triangles, positions, points, path);
+  make_scene(
+      scene, camera_frame, camera_lens, triangles, positions, points, path);
   if (!save_scene(scenename, scene, ioerror)) print_fatal(ioerror);
   stats["scene"]["time"]     = print_elapsed(scene_timer);
   stats["scene"]["filename"] = scenename;
