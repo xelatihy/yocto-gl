@@ -279,13 +279,27 @@ sceneio_environment* add_environment(sceneio_scene* scene, const string& name,
 // TEST CREATION  SUPPORT
 // -----------------------------------------------------------------------------
 vector<mesh_point> sample_points(const vector<vec3i>& triangles,
-    const vector<vec3f>& positions, const shape_bvh& bvh, int num_points = 4) {
+    const vector<vec3f>& positions, const shape_bvh& bvh,
+    const frame3f& camera_frame, float camera_lns, int ray_trials = 10000,
+    int num_points = 4) {
+  // init data
+  auto points  = vector<mesh_point>{};
+  auto rng_ray = make_rng(9867198237913);
+  // try to pick in the camera
+  auto ray_trial = 0;
+  while (points.size() < num_points) {
+    if (ray_trial++ >= ray_trials) break;
+    auto ray = camera_ray(
+        camera_frame, camera_lns, {0.036f, 0.036f}, rand2f(rng_ray));
+    auto isec = intersect_triangles_bvh(bvh, triangles, positions, ray);
+    if (isec.hit) points.push_back({isec.element, isec.uv});
+  }
   // pick based on area
-  auto points = vector<mesh_point>{};
-  auto rng    = make_rng(9867198237913);
-  auto cdf    = sample_triangles_cdf(triangles, positions);
-  for (auto idx = 0; idx < num_points; idx++) {
-    auto [triangle, uv] = sample_triangles(cdf, rand1f(rng), rand2f(rng));
+  auto rng_area = make_rng(9867198237913);
+  auto cdf      = sample_triangles_cdf(triangles, positions);
+  while (points.size() < num_points) {
+    auto [triangle, uv] = sample_triangles(
+        cdf, rand1f(rng_area), rand2f(rng_area));
     points.push_back({mesh_point{triangle, uv}});
   }
   return points;
@@ -385,8 +399,8 @@ points_shape path_to_points(const vector<vec3i>& triangles,
 void make_scene(sceneio_scene* scene, const frame3f& camera_frame,
     float camera_lens, const vector<vec3i>& triangles,
     const vector<vec3f>& positions, const vector<mesh_point>& points,
-    const vector<mesh_point>& path, float point_thickness = 0.01f,
-    float line_thickness = 0.002f) {
+    const vector<mesh_point>& path, float point_thickness = 0.02f,
+    float line_thickness = 0.01f) {
   scene->name = "name";
   // camera
   add_camera(scene, "camera", camera_frame, camera_lens, 1);
@@ -510,8 +524,9 @@ int main(int argc, const char* argv[]) {
   stats["bvh"]["time"] = print_elapsed(bvh_timer);
 
   // pick points
-  auto points_timer            = print_timed("sample points");
-  auto points                  = sample_points(triangles, positions, bvh);
+  auto points_timer = print_timed("sample points");
+  auto points       = sample_points(
+      triangles, positions, bvh, camera_frame, camera_lens);
   stats["points"]["time"]      = print_elapsed(points_timer);
   stats["points"]["vertices"]  = points.size();
   stats["points"]["positions"] = points;
