@@ -1636,7 +1636,7 @@ static bool save_json_scene(const string& filename, const sceneio_scene* scene,
   if (!scene->cameras.empty()) js["cameras"] = json::object();
   for (auto& camera : scene->cameras) {
     auto& ejs = js["cameras"][camera->name];
-      ejs = json::object();
+    ejs       = json::object();
     add_opt(ejs, "frame", camera->frame, def_cam.frame);
     add_opt(ejs, "ortho", camera->orthographic, def_cam.orthographic);
     add_opt(ejs, "lens", camera->lens, def_cam.lens);
@@ -1650,7 +1650,7 @@ static bool save_json_scene(const string& filename, const sceneio_scene* scene,
   if (!scene->environments.empty()) js["environments"] = json::object();
   for (auto environment : scene->environments) {
     auto& ejs = js["environments"][environment->name];
-      ejs = json::object();
+    ejs       = json::object();
     add_opt(ejs, "frame", environment->frame, def_env.frame);
     add_opt(ejs, "emission", environment->emission, def_env.emission);
     add_tex(ejs, "emission_tex", environment->emission_tex);
@@ -1660,7 +1660,7 @@ static bool save_json_scene(const string& filename, const sceneio_scene* scene,
   if (!scene->materials.empty()) js["materials"] = json::object();
   for (auto material : scene->materials) {
     auto& ejs = js["materials"][material->name];
-      ejs = json::object();
+    ejs       = json::object();
     add_opt(ejs, "emission", material->emission, def_material.emission);
     add_opt(ejs, "color", material->color, def_material.color);
     add_opt(ejs, "specular", material->specular, def_material.specular);
@@ -1696,7 +1696,7 @@ static bool save_json_scene(const string& filename, const sceneio_scene* scene,
   if (!scene->instances.empty()) js["instances"] = json::object();
   for (auto instance : scene->instances) {
     auto& ejs = js["instances"][instance->name];
-      ejs = json::object();
+    ejs       = json::object();
     add_opt(ejs, "frame", instance->frame, def_object.frame);
     add_ref(ejs, "shape", instance->shape);
     add_ref(ejs, "material", instance->material);
@@ -1978,13 +1978,13 @@ static bool save_obj_scene(const string& filename, const sceneio_scene* scene,
   auto get_texture = [](sceneio_texture* texture) {
     if (texture == nullptr) return obj_texture{};
     auto tinfo = obj_texture{};
-    tinfo.path = texture->name;
+    tinfo.path = "textures/" + texture->name +
+                 (!texture->hdr.empty() ? ".hdr"s : ".png"s);
     return tinfo;
   };
 
   // convert materials and textures
-  auto material_map = unordered_map<sceneio_material*, string>{
-      {nullptr, nullptr}};
+  auto material_map = unordered_map<sceneio_material*, string>{{nullptr, ""s}};
   for (auto material : scene->materials) {
     auto omaterial                  = add_material(obj);
     omaterial->name                 = path_basename(material->name);
