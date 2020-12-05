@@ -402,17 +402,17 @@ void make_scene(sceneio_scene* scene, const vector<vec3i>& triangles,
 
   // lights
   add_instance(scene, "arealight1",
-      lookat_frame({-1, 1, 1}, {0, 0.1, 0}, {0, 1, 0}, true),
+      lookat_frame({-2, 2, 2}, {0, 0.5, 0}, {0, 1, 0}, true),
       add_shape(scene, "arealight1", make_rect({1, 1}, {0.2, 0.2})),
-      add_emission_material(scene, "arealight1", {10, 10, 10}, nullptr));
+      add_emission_material(scene, "arealight1", {40, 40, 40}, nullptr));
   add_instance(scene, "arealight2",
-      lookat_frame({1, 1, 0.5}, {0, 0.1, 0}, {0, 1, 0}, true),
+      lookat_frame({2, 2, 1}, {0, 0.5, 0}, {0, 1, 0}, true),
       add_shape(scene, "arealight2", make_rect({1, 1}, {0.2, 0.2})),
-      add_emission_material(scene, "arealight2", {10, 10, 10}, nullptr));
+      add_emission_material(scene, "arealight2", {40, 40, 40}, nullptr));
   add_instance(scene, "arealight3",
-      lookat_frame({0, 1, -1}, {0, 0.1, 0}, {0, 1, 0}, true),
+      lookat_frame({0, 2, -2}, {0, 0.5, 0}, {0, 1, 0}, true),
       add_shape(scene, "arealight3", make_rect({1, 1}, {0.2, 0.2})),
-      add_emission_material(scene, "arealight3", {10, 10, 10}, nullptr));
+      add_emission_material(scene, "arealight3", {40, 40, 40}, nullptr));
 
   // add floor
   // TODO(fabio): floor material
@@ -478,7 +478,11 @@ int main(int argc, const char* argv[]) {
   auto rescale_timer = print_timed("rescale bbox");
   auto bbox          = invalidb3f;
   for (auto& position : positions) bbox = merge(bbox, position);
-  for (auto& position : positions) position /= max(size(bbox));
+  for (auto& position : positions) {  // shift to center, scale, shift to base
+    position -= center(bbox);
+    position /= max(size(bbox));
+    position.y += center(bbox).y / size(bbox).y;
+  }
   stats["mesh"]["rescale_time"] = print_elapsed(rescale_timer);
 
   // build bvh
