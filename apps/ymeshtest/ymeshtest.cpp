@@ -363,6 +363,7 @@ vector<mesh_point> trace_path(const dual_geodesic_solver& graph,
             path.start, path.end)
             .points;
       };
+
   // geodesic path
   auto path = vector<mesh_point>{};
   for (auto idx = 0; idx < (int)points.size() - 1; idx++) {
