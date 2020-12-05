@@ -280,8 +280,8 @@ sceneio_environment* add_environment(sceneio_scene* scene, const string& name,
 // -----------------------------------------------------------------------------
 vector<mesh_point> sample_points(const vector<vec3i>& triangles,
     const vector<vec3f>& positions, const shape_bvh& bvh,
-    const frame3f& camera_frame, float camera_lns, int ray_trials = 10000,
-    int num_points = 4) {
+    const vec3f& camera_from, const vec3f& camera_to, float camera_lens,
+    int ray_trials = 10000, int num_points = 4) {
   // init data
   auto points  = vector<mesh_point>{};
   auto rng_ray = make_rng(9867198237913);
@@ -289,8 +289,8 @@ vector<mesh_point> sample_points(const vector<vec3i>& triangles,
   auto ray_trial = 0;
   while (points.size() < num_points) {
     if (ray_trial++ >= ray_trials) break;
-    auto ray = camera_ray(
-        camera_frame, camera_lns, {0.036f, 0.036f}, rand2f(rng_ray));
+    auto ray  = camera_ray(lookat_frame(camera_from, camera_to, {0, 1, 0}),
+        camera_lens, {0.036f, 0.036f}, rand2f(rng_ray));
     auto isec = intersect_triangles_bvh(bvh, triangles, positions, ray);
     if (isec.hit) points.push_back({isec.element, isec.uv});
   }
@@ -396,14 +396,15 @@ points_shape path_to_points(const vector<vec3i>& triangles,
   return shape;
 }
 
-void make_scene(sceneio_scene* scene, const frame3f& camera_frame,
-    float camera_lens, const vector<vec3i>& triangles,
+void make_scene(sceneio_scene* scene, const vec3f& camera_from,
+    const vec3f& camera_to, float camera_lens, const vector<vec3i>& triangles,
     const vector<vec3f>& positions, const vector<mesh_point>& points,
     const vector<mesh_point>& path, float point_thickness = 0.02f,
     float line_thickness = 0.01f) {
   scene->name = "name";
   // camera
-  add_camera(scene, "camera", camera_frame, camera_lens, 1);
+  add_camera(scene, "camera", lookat_frame(camera_from, camera_to, {0, 1, 0}),
+      camera_lens, 1, 0, length(camera_from - camera_to));
 
   // mesh
   // TODO(fabio): normals?
@@ -515,8 +516,9 @@ int main(int argc, const char* argv[]) {
   stats["mesh"]["rescale_time"] = print_elapsed(rescale_timer);
 
   // default camera
-  auto camera_frame = lookat_frame({0, 1, 2}, {0, 0.5, 0}, {0, 1, 0});
-  auto camera_lens  = 0.050f;
+  auto camera_from = vec3f{0, 1, 2};
+  auto camera_to   = vec3f{0, 0.5, 0};
+  auto camera_lens = 0.050f;
 
   // build bvh
   auto bvh_timer       = print_timed("build bvh");
@@ -526,7 +528,7 @@ int main(int argc, const char* argv[]) {
   // pick points
   auto points_timer = print_timed("sample points");
   auto points       = sample_points(
-      triangles, positions, bvh, camera_frame, camera_lens);
+      triangles, positions, bvh, camera_from, camera_to, camera_lens);
   stats["points"]["time"]      = print_elapsed(points_timer);
   stats["points"]["vertices"]  = points.size();
   stats["points"]["positions"] = points;
@@ -560,8 +562,8 @@ int main(int argc, const char* argv[]) {
   auto scene_timer = print_timed("save scene");
   auto scene_guard = std::make_unique<sceneio_scene>();
   auto scene       = scene_guard.get();
-  make_scene(
-      scene, camera_frame, camera_lens, triangles, positions, points, path);
+  make_scene(scene, camera_from, camera_to, camera_lens, triangles, positions,
+      points, path);
   if (!save_scene(scenename, scene, ioerror)) print_fatal(ioerror);
   stats["scene"]["time"]     = print_elapsed(scene_timer);
   stats["scene"]["filename"] = scenename;
