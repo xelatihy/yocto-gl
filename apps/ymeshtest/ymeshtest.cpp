@@ -412,14 +412,27 @@ points_shape path_to_points(const vector<vec3i>& triangles,
 
 quads_shape path_to_quads(const vector<vec3i>& triangles,
     const vector<vec3f>& positions, const vector<mesh_point>& path,
-    float point_thickness) {
+    float point_thickness, float line_thickness) {
   auto ppositions = path_positions(triangles, positions, path);
   auto shape      = quads_shape{};
   for (auto idx = 0; idx < ppositions.size(); idx++) {
-    auto sphere = make_sphere(4, point_thickness);
-    for (auto& p : sphere.positions) p += ppositions[idx];
-    merge_quads(shape.quads, shape.positions, shape.normals, shape.texcoords,
-        sphere.quads, sphere.positions, sphere.normals, sphere.texcoords);
+    if (point_thickness) {
+      auto sphere = make_sphere(4, point_thickness);
+      for (auto& p : sphere.positions) p += ppositions[idx];
+      merge_quads(shape.quads, shape.positions, shape.normals, shape.texcoords,
+          sphere.quads, sphere.positions, sphere.normals, sphere.texcoords);
+    }
+    if (line_thickness && idx < (int)ppositions.size() - 1 &&
+        length(ppositions[idx] - ppositions[idx + 1]) > point_thickness) {
+      auto cylinder = make_uvcylinder({32, 1, 1},
+          {line_thickness, length(ppositions[idx] - ppositions[idx + 1])});
+      auto frame    = frame_fromz(
+          ppositions[idx], ppositions[idx + 1] - ppositions[idx]);
+      for (auto& p : cylinder.positions) p = transform_point(frame, p);
+      merge_quads(shape.quads, shape.positions, shape.normals, shape.texcoords,
+          cylinder.quads, cylinder.positions, cylinder.normals,
+          cylinder.texcoords);
+    }
   }
   return shape;
 }
@@ -445,7 +458,8 @@ void make_scene_floor(sceneio_scene* scene, const vec3f& camera_from,
   if (points_as_meshes) {
     add_instance(scene, "path", identity3x4f,
         add_shape(scene, "path",
-            path_to_quads(triangles, positions, path, line_thickness)),
+            path_to_quads(
+                triangles, positions, path, line_thickness, line_thickness)),
         add_matte_material(scene, "path", {0.8, 0.1, 0.1}, nullptr));
   } else {
     add_instance(scene, "path", identity3x4f,
@@ -458,7 +472,7 @@ void make_scene_floor(sceneio_scene* scene, const vec3f& camera_from,
   if (points_as_meshes) {
     add_instance(scene, "points", identity3x4f,
         add_shape(scene, "points",
-            path_to_quads(triangles, positions, points, point_thickness)),
+            path_to_quads(triangles, positions, points, point_thickness, 0)),
         add_matte_material(scene, "points", {0.1, 0.8, 0.1}, nullptr));
   } else {
     add_instance(scene, "points", identity3x4f,
@@ -516,7 +530,8 @@ void make_scene_floating(sceneio_scene* scene, const vec3f& camera_from,
   if (points_as_meshes) {
     add_instance(scene, "path", identity3x4f,
         add_shape(scene, "path",
-            path_to_quads(triangles, positions, path, line_thickness)),
+            path_to_quads(
+                triangles, positions, path, line_thickness, line_thickness)),
         add_matte_material(scene, "path", {0.8, 0.1, 0.1}, nullptr));
   } else {
     add_instance(scene, "path", identity3x4f,
@@ -529,7 +544,7 @@ void make_scene_floating(sceneio_scene* scene, const vec3f& camera_from,
   if (points_as_meshes) {
     add_instance(scene, "points", identity3x4f,
         add_shape(scene, "points",
-            path_to_quads(triangles, positions, points, point_thickness)),
+            path_to_quads(triangles, positions, points, point_thickness, 0)),
         add_matte_material(scene, "points", {0.1, 0.8, 0.1}, nullptr));
   } else {
     add_instance(scene, "points", identity3x4f,
