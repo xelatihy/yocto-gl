@@ -422,8 +422,9 @@ quads_shape path_to_quads(const vector<vec3i>& triangles,
       merge_quads(shape.quads, shape.positions, shape.normals, shape.texcoords,
           sphere.quads, sphere.positions, sphere.normals, sphere.texcoords);
     }
-    if (line_thickness > 0 && idx < (int)ppositions.size() - 1 &&
-        length(ppositions[idx] - ppositions[idx + 1]) > point_thickness) {
+    // if (line_thickness > 0 && idx < (int)ppositions.size() - 1 &&
+    //     length(ppositions[idx] - ppositions[idx + 1]) > point_thickness) {
+    if (line_thickness > 0 && idx < (int)ppositions.size() - 1) {
       auto cylinder = make_uvcylinder({32, 1, 1},
           {line_thickness, length(ppositions[idx] - ppositions[idx + 1]) / 2});
       auto frame    = frame_fromz((ppositions[idx] + ppositions[idx + 1]) / 2,
