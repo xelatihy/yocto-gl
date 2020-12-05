@@ -100,10 +100,12 @@ print_timer print_timed(const string& msg) {
   // print_info(fmt + " [started]", args...);
   return print_timer{get_time_()};
 }
-void print_elapsed(print_timer& timer) {
-  if (timer.start_time < 0) return;
-  printf(" in %s\n", format_duration(get_time_() - timer.start_time).c_str());
+int64_t print_elapsed(print_timer& timer) {
+  if (timer.start_time < 0) return -1;
+  auto elapsed = get_time_() - timer.start_time;
+  printf(" in %s\n", format_duration(elapsed).c_str());
   timer.start_time = -1;
+  return elapsed;
 }
 print_timer::~print_timer() { print_elapsed(*this); }
 

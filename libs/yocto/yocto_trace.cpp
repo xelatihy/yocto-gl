@@ -561,7 +561,7 @@ vec3f eval_shading_normal(const trace_instance* instance, int element,
     auto normal = eval_normal(instance, element, uv);
     return orthonormalize(outgoing, normal);
   } else if (!shape->points.empty()) {
-    return -outgoing;
+    return outgoing;
   } else {
     return zero3f;
   }

@@ -165,6 +165,15 @@ bool add_values(ply_model* ply, const string& element,
 bool add_values(ply_model* ply, const string& element,
     const array<string, 12>& properties, const vector<frame3f>& values);
 
+bool add_value(ply_model* ply, const string& element, const string& property,
+    const vector<int>& values);
+bool add_values(ply_model* ply, const string& element,
+    const array<string, 2>& properties, const vector<vec2i>& values);
+bool add_values(ply_model* ply, const string& element,
+    const array<string, 3>& properties, const vector<vec3i>& values);
+bool add_values(ply_model* ply, const string& element,
+    const array<string, 4>& properties, const vector<vec4i>& values);
+
 bool add_lists(ply_model* ply, const string& element, const string& property,
     const vector<vector<int>>& values);
 bool add_lists(ply_model* ply, const string& element, const string& property,

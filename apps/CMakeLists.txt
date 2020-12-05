@@ -20,3 +20,5 @@ endif(YOCTO_OPENGL)
 if(YOCTO_DENOISE)
 add_subdirectory(yimagedenoise)
 endif(YOCTO_DENOISE)
+
+add_subdirectory(ymeshtest)

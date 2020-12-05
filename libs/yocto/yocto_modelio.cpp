@@ -1007,6 +1007,20 @@ inline bool add_values(ply_model* ply, const float* values, size_t count,
   return true;
 }
 
+inline bool add_values(ply_model* ply, const int* values, size_t count,
+    const string& element, const string* properties, int nprops) {
+  if (values == nullptr) return false;
+  for (auto p = 0; p < nprops; p++) {
+    if (add_property(ply, element, properties[p], count, ply_type::i32,
+            false) == nullptr)
+      return false;
+    auto prop = get_property(ply, element, properties[p]);
+    prop->data_i32.resize(count);
+    for (auto i = 0; i < count; i++) prop->data_i32[i] = values[p + i * nprops];
+  }
+  return true;
+}
+
 bool add_value(ply_model* ply, const string& element, const string& property,
     const vector<float>& values) {
   if (values.empty()) return false;
@@ -1037,6 +1051,32 @@ bool add_values(ply_model* ply, const string& element,
   if (values.empty()) return false;
   return add_values(ply, &values.front().x.x, values.size(), element,
       properties.data(), (int)properties.size());
+}
+
+bool add_value(ply_model* ply, const string& element, const string& property,
+    const vector<int>& values) {
+  if (values.empty()) return false;
+  auto properties = vector{property};
+  return add_values(
+      ply, values.data(), values.size(), element, properties.data(), 1);
+}
+bool add_values(ply_model* ply, const string& element,
+    const array<string, 2>& properties, const vector<vec2i>& values) {
+  if (values.empty()) return false;
+  return add_values(
+      ply, &values.front().x, values.size(), element, properties.data(), 2);
+}
+bool add_values(ply_model* ply, const string& element,
+    const array<string, 3>& properties, const vector<vec3i>& values) {
+  if (values.empty()) return false;
+  return add_values(
+      ply, &values.front().x, values.size(), element, properties.data(), 3);
+}
+bool add_values(ply_model* ply, const string& element,
+    const array<string, 4>& properties, const vector<vec4i>& values) {
+  if (values.empty()) return false;
+  return add_values(
+      ply, &values.front().x, values.size(), element, properties.data(), 4);
 }
 
 bool add_lists(ply_model* ply, const string& element, const string& property,
