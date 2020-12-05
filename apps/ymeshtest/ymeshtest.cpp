@@ -282,7 +282,7 @@ sceneio_environment* add_environment(sceneio_scene* scene, const string& name,
 vector<mesh_point> sample_points(const vector<vec3i>& triangles,
     const vector<vec3f>& positions, const shape_bvh& bvh,
     const vec3f& camera_from, const vec3f& camera_to, float camera_lens,
-    int ray_trials = 10000, int num_points = 4) {
+    float camera_aspect, int ray_trials = 10000, int num_points = 4) {
   // init data
   auto points  = vector<mesh_point>{};
   auto rng_ray = make_rng(9867198237913);
@@ -291,7 +291,7 @@ vector<mesh_point> sample_points(const vector<vec3i>& triangles,
   while (points.size() < num_points) {
     if (ray_trial++ >= ray_trials) break;
     auto ray  = camera_ray(lookat_frame(camera_from, camera_to, {0, 1, 0}),
-        camera_lens, {0.036f, 0.036f}, rand2f(rng_ray));
+        camera_lens, camera_aspect, 0.036f, rand2f(rng_ray));
     auto isec = intersect_triangles_bvh(bvh, triangles, positions, ray);
     if (isec.hit) points.push_back({isec.element, isec.uv});
   }
@@ -412,27 +412,42 @@ points_shape path_to_points(const vector<vec3i>& triangles,
 
 quads_shape path_to_quads(const vector<vec3i>& triangles,
     const vector<vec3f>& positions, const vector<mesh_point>& path,
-    float point_thickness) {
+    float point_thickness, float line_thickness) {
   auto ppositions = path_positions(triangles, positions, path);
   auto shape      = quads_shape{};
   for (auto idx = 0; idx < ppositions.size(); idx++) {
-    auto sphere = make_sphere(4, point_thickness);
-    for (auto& p : sphere.positions) p += ppositions[idx];
-    merge_quads(shape.quads, shape.positions, shape.normals, shape.texcoords,
-        sphere.quads, sphere.positions, sphere.normals, sphere.texcoords);
+    if (point_thickness > 0) {
+      auto sphere = make_sphere(4, point_thickness);
+      for (auto& p : sphere.positions) p += ppositions[idx];
+      merge_quads(shape.quads, shape.positions, shape.normals, shape.texcoords,
+          sphere.quads, sphere.positions, sphere.normals, sphere.texcoords);
+    }
+    // if (line_thickness > 0 && idx < (int)ppositions.size() - 1 &&
+    //     length(ppositions[idx] - ppositions[idx + 1]) > point_thickness) {
+    if (line_thickness > 0 && idx < (int)ppositions.size() - 1) {
+      auto cylinder = make_uvcylinder({32, 1, 1},
+          {line_thickness, length(ppositions[idx] - ppositions[idx + 1]) / 2});
+      auto frame    = frame_fromz((ppositions[idx] + ppositions[idx + 1]) / 2,
+          normalize(ppositions[idx + 1] - ppositions[idx]));
+      for (auto& p : cylinder.positions) p = transform_point(frame, p);
+      merge_quads(shape.quads, shape.positions, shape.normals, shape.texcoords,
+          cylinder.quads, cylinder.positions, cylinder.normals,
+          cylinder.texcoords);
+    }
   }
   return shape;
 }
 
-void make_scene(sceneio_scene* scene, const vec3f& camera_from,
-    const vec3f& camera_to, float camera_lens, const vector<vec3i>& triangles,
-    const vector<vec3f>& positions, const vector<mesh_point>& points,
-    const vector<mesh_point>& path, bool points_as_meshes = true,
-    float point_thickness = 0.02f, float line_thickness = 0.01f) {
+void make_scene_floor(sceneio_scene* scene, const vec3f& camera_from,
+    const vec3f& camera_to, float camera_lens, float camera_aspect,
+    const vector<vec3i>& triangles, const vector<vec3f>& positions,
+    const vector<mesh_point>& points, const vector<mesh_point>& path,
+    bool points_as_meshes = true, float point_thickness = 0.02f,
+    float line_thickness = 0.01f) {
   scene->name = "name";
   // camera
   add_camera(scene, "camera", lookat_frame(camera_from, camera_to, {0, 1, 0}),
-      camera_lens, 1, 0, length(camera_from - camera_to));
+      camera_lens, camera_aspect, 0, length(camera_from - camera_to));
 
   // mesh
   // TODO(fabio): normals?
@@ -444,7 +459,8 @@ void make_scene(sceneio_scene* scene, const vec3f& camera_from,
   if (points_as_meshes) {
     add_instance(scene, "path", identity3x4f,
         add_shape(scene, "path",
-            path_to_quads(triangles, positions, path, line_thickness)),
+            path_to_quads(
+                triangles, positions, path, line_thickness, line_thickness)),
         add_matte_material(scene, "path", {0.8, 0.1, 0.1}, nullptr));
   } else {
     add_instance(scene, "path", identity3x4f,
@@ -457,7 +473,7 @@ void make_scene(sceneio_scene* scene, const vec3f& camera_from,
   if (points_as_meshes) {
     add_instance(scene, "points", identity3x4f,
         add_shape(scene, "points",
-            path_to_quads(triangles, positions, points, point_thickness)),
+            path_to_quads(triangles, positions, points, point_thickness, 0)),
         add_matte_material(scene, "points", {0.1, 0.8, 0.1}, nullptr));
   } else {
     add_instance(scene, "points", identity3x4f,
@@ -492,6 +508,55 @@ void make_scene(sceneio_scene* scene, const vec3f& camera_from,
   add_instance(scene, "floor", identity3x4f,
       add_shape(scene, "floor", make_floor({1, 1}, {10, 10})),
       add_matte_material(scene, "floor", {1, 1, 1}, nullptr));
+}
+
+void make_scene_floating(sceneio_scene* scene, const vec3f& camera_from,
+    const vec3f& camera_to, float camera_lens, float camera_aspect,
+    const vector<vec3i>& triangles, const vector<vec3f>& positions,
+    const vector<mesh_point>& points, const vector<mesh_point>& path,
+    bool points_as_meshes = true, float point_thickness = 0.02f,
+    float line_thickness = 0.01f) {
+  scene->name = "name";
+  // camera
+  add_camera(scene, "camera", lookat_frame(camera_from, camera_to, {0, 1, 0}),
+      camera_lens, camera_aspect, 0, length(camera_from - camera_to));
+
+  // mesh
+  // TODO(fabio): normals?
+  add_instance(scene, "mesh", identity3x4f,
+      add_shape(scene, "mesh", triangles, positions, {}, {}, {}),
+      add_specular_material(scene, "mesh", {0.6, 0.6, 0.6}, nullptr, 0));
+
+  // curve
+  if (points_as_meshes) {
+    add_instance(scene, "path", identity3x4f,
+        add_shape(scene, "path",
+            path_to_quads(
+                triangles, positions, path, line_thickness, line_thickness)),
+        add_matte_material(scene, "path", {0.8, 0.1, 0.1}, nullptr));
+  } else {
+    add_instance(scene, "path", identity3x4f,
+        add_shape(scene, "path",
+            path_to_lines(triangles, positions, path, line_thickness)),
+        add_matte_material(scene, "path", {0.8, 0.1, 0.1}, nullptr));
+  }
+
+  // points
+  if (points_as_meshes) {
+    add_instance(scene, "points", identity3x4f,
+        add_shape(scene, "points",
+            path_to_quads(triangles, positions, points, point_thickness, 0)),
+        add_matte_material(scene, "points", {0.1, 0.8, 0.1}, nullptr));
+  } else {
+    add_instance(scene, "points", identity3x4f,
+        add_shape(scene, "points",
+            path_to_points(triangles, positions, points, point_thickness)),
+        add_matte_material(scene, "points", {0.1, 0.8, 0.1}, nullptr));
+  }
+
+  // environment
+  // TODO(fabio): environment
+  add_environment(scene, "environment", identity3x4f, {1, 1, 1}, nullptr);
 }
 
 // Save a path
@@ -581,17 +646,15 @@ int main(int argc, const char* argv[]) {
   auto rescale_timer = print_timed("rescale bbox");
   auto bbox          = invalidb3f;
   for (auto& position : positions) bbox = merge(bbox, position);
-  for (auto& position : positions) {  // shift to center, scale, shift to base
-    position -= center(bbox);
-    position /= max(size(bbox));
-    position.y += center(bbox).y / size(bbox).y;
-  }
+  for (auto& position : positions)
+    position = (position - center(bbox)) / max(size(bbox));
   stats["mesh"]["rescale_time"] = print_elapsed(rescale_timer);
 
   // default camera
-  auto camera_from = vec3f{0, 1, 2};
-  auto camera_to   = vec3f{0, 0.5, 0};
-  auto camera_lens = 0.050f;
+  auto camera_from   = vec3f{0, 0, 3};
+  auto camera_to     = vec3f{0, 0, 0};
+  auto camera_lens   = 0.100f;
+  auto camera_aspect = size(bbox).x / size(bbox).y;
 
   // build bvh
   auto bvh_timer       = print_timed("build bvh");
@@ -600,8 +663,8 @@ int main(int argc, const char* argv[]) {
 
   // pick points
   auto points_timer = print_timed("sample points");
-  auto points       = sample_points(
-      triangles, positions, bvh, camera_from, camera_to, camera_lens);
+  auto points = sample_points(triangles, positions, bvh, camera_from, camera_to,
+      camera_lens, camera_aspect);
   stats["points"]["time"]      = print_elapsed(points_timer);
   stats["points"]["vertices"]  = points.size();
   stats["points"]["positions"] = points;
@@ -635,8 +698,8 @@ int main(int argc, const char* argv[]) {
   auto scene_timer = print_timed("save scene");
   auto scene_guard = std::make_unique<sceneio_scene>();
   auto scene       = scene_guard.get();
-  make_scene(scene, camera_from, camera_to, camera_lens, triangles, positions,
-      points, path);
+  make_scene_floating(scene, camera_from, camera_to, camera_lens, camera_aspect,
+      triangles, positions, points, path);
   if (!save_scene(scenename, scene, ioerror)) print_fatal(ioerror);
   stats["scene"]["time"]     = print_elapsed(scene_timer);
   stats["scene"]["filename"] = scenename;
