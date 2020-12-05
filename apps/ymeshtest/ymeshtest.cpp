@@ -584,7 +584,7 @@ int main(int argc, const char* argv[]) {
   for (auto& position : positions) {  // shift to center, scale, shift to base
     position -= center(bbox);
     position /= max(size(bbox));
-    position.y += center(bbox).y / size(bbox).y;
+    position.y += size(bbox).y * 0.5f / max(size(bbox));
   }
   stats["mesh"]["rescale_time"] = print_elapsed(rescale_timer);
 
