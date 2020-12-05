@@ -29,6 +29,7 @@
 #include <yocto/yocto_commonio.h>
 #include <yocto/yocto_math.h>
 #include <yocto/yocto_mesh.h>
+#include <yocto/yocto_modelio.h>
 #include <yocto/yocto_sampling.h>
 #include <yocto/yocto_sceneio.h>
 #include <yocto/yocto_shape.h>
@@ -452,6 +453,36 @@ void make_scene(sceneio_scene* scene, const vec3f& camera_from,
       add_matte_material(scene, "floor", {1, 1, 1}, nullptr));
 }
 
+// Save a path
+bool save_mesh_points(
+    const string& filename, const vector<mesh_point>& path, string& error) {
+  auto format_error = [filename, &error]() {
+    error = filename + ": unknown format";
+    return false;
+  };
+
+  auto ext = path_extension(filename);
+  if (ext == ".json" || ext == ".JSON") {
+    auto js    = json{};
+    js["path"] = path;
+    return save_json(filename, js, error);
+  } else if (ext == ".ply" || ext == ".PLY") {
+    auto ply_guard = std::make_unique<ply_model>();
+    auto ply       = ply_guard.get();
+    auto ids       = vector<int>(path.size());
+    auto uvs       = vector<vec2f>(path.size());
+    for (auto idx = 0; idx < path.size(); idx++) {
+      ids[idx] = path[idx].face;
+      uvs[idx] = path[idx].uv;
+    }
+    add_value(ply, "mesh_points", "face", ids);
+    add_values(ply, "mesh_points", {"u", "v"}, uvs);
+    return save_ply(filename, ply, error);
+  } else {
+    return format_error();
+  }
+}
+
 // -----------------------------------------------------------------------------
 // MAIN FUNCTION
 // -----------------------------------------------------------------------------
@@ -556,7 +587,7 @@ int main(int argc, const char* argv[]) {
     print_fatal(ioerror);
 
   // save path
-  // if (!save_path(pathname, path, ioerror)) return log_error(ioerror);
+  if (!save_mesh_points(pathname, path, ioerror)) print_fatal(ioerror);
 
   // save scene
   auto scene_timer = print_timed("save scene");
