@@ -311,7 +311,7 @@ vector<mesh_point> sample_points(const vector<vec3i>& triangles,
   }
 #endif
 
-vector<mesh_point> eval_path(const dual_geodesic_solver& graph,
+vector<mesh_point> trace_path(const dual_geodesic_solver& graph,
     const vector<vec3i>& triangles, const vector<vec3f>& positions,
     const vector<vec3i>& adjacencies, const vector<mesh_point>& points) {
   // geodesic path
@@ -396,7 +396,7 @@ void make_scene(sceneio_scene* scene, const vector<vec3i>& triangles,
 
   // environment
   // TODO(fabio): environment
-  add_environment(scene, "env", identity3x4f, {0, 0, 0}, nullptr);
+  add_environment(scene, "environment", identity3x4f, {0, 0, 0}, nullptr);
   // environment->emission_tex = add_texture(scene, "env");
   //   load_image("data/env.png", environment_tex->hdr, error);
 
@@ -430,7 +430,6 @@ int main(int argc, const char* argv[]) {
   auto smooth    = false;
   auto faceted   = false;
   auto validate  = false;
-  auto info      = false;
   auto pathname  = "path.ply"s;
   auto statsname = "stats.json"s;
   auto scenename = "scene.json"s;
@@ -441,7 +440,6 @@ int main(int argc, const char* argv[]) {
   add_option(cli, "--smooth", smooth, "Compute smooth normals");
   add_option(cli, "--faceted", faceted, "Remove normals");
   add_option(cli, "--validate,-v", validate, "validate mesh");
-  add_option(cli, "--info,-i", info, "print mesh info");
   add_option(cli, "--path,-p", pathname, "output path");
   add_option(cli, "--stats,-s", statsname, "output stats");
   add_option(cli, "--scene,-S", scenename, "output scene");
@@ -456,9 +454,7 @@ int main(int argc, const char* argv[]) {
   auto triangles = vector<vec3i>{};
 
   // stats
-  auto stats                = json{};
-  stats["mesh"]["filename"] = meshname;
-  stats["mesh"]["valid"]    = false;
+  auto stats = json{};
 
   // load mesh
   auto ioerror    = ""s;
@@ -466,7 +462,11 @@ int main(int argc, const char* argv[]) {
   if (!load_mesh(
           meshname, triangles, positions, normals, texcoords, colors, ioerror))
     print_fatal(ioerror);
-  stats["time"]["load"] = print_elapsed(load_timer);
+  stats["mesh"]["load_time"] = print_elapsed(load_timer);
+  stats["mesh"]["filename"]  = meshname;
+  stats["mesh"]["valid"]     = false;
+  stats["mesh"]["triangles"] = triangles.size();
+  stats["mesh"]["vertices"]  = positions.size();
 
   // check if valid
   if (validate) {
@@ -474,60 +474,63 @@ int main(int argc, const char* argv[]) {
     stats["mesh"]["valid"] = true;
   }
 
-  // print info
-  stats["mesh"]["triangles"] = triangles.size();
-  stats["mesh"]["vertices"]  = positions.size();
-
   // transform
   auto rescale_timer = print_timed("rescale bbox");
   auto bbox          = invalidb3f;
   for (auto& position : positions) bbox = merge(bbox, position);
-  stats["time"]["rescale"] = print_elapsed(rescale_timer);
+  for (auto& position : positions) position /= max(size(bbox));
+  stats["mesh"]["rescale_time"] = print_elapsed(rescale_timer);
 
   // build bvh
   auto bvh_timer       = print_timed("build bvh");
   auto bvh             = make_triangles_bvh(triangles, positions, {});
-  stats["time"]["bvh"] = print_elapsed(bvh_timer);
+  stats["bvh"]["time"] = print_elapsed(bvh_timer);
 
   // pick points
-  auto points_timer       = print_timed("sample points");
-  auto points             = sample_points(triangles, positions, bvh);
-  stats["time"]["points"] = print_elapsed(points_timer);
-
-  // stats
+  auto points_timer            = print_timed("sample points");
+  auto points                  = sample_points(triangles, positions, bvh);
+  stats["points"]["time"]      = print_elapsed(points_timer);
+  stats["points"]["vertices"]  = points.size();
   stats["points"]["positions"] = points;
 
   // build graph
   auto graph_timer = print_timed("graph bvh");
   auto adjacencies = face_adjacencies(triangles);
   auto graph = make_dual_geodesic_solver(triangles, positions, adjacencies);
-  stats["time"]["graph"] = print_elapsed(graph_timer);
+  stats["solver"]["time"] = print_elapsed(graph_timer);
 
   // trace path
   auto path_timer = print_timed("trace path");
-  // auto path             = trace_path(graph, triangles, positions, points);
-  stats["time"]["path"] = print_elapsed(path_timer);
+  auto path = trace_path(graph, triangles, positions, adjacencies, points);
+  stats["path"]["time"]     = print_elapsed(path_timer);
+  stats["path"]["filename"] = pathname;
+  stats["path"]["vertices"] = path.size();
+
+  // create output directories
+  if (!make_directory(path_dirname(statsname), ioerror)) print_fatal(ioerror);
+  if (!make_directory(path_dirname(pathname), ioerror)) print_fatal(ioerror);
+  if (!make_directory(path_dirname(scenename), ioerror)) print_fatal(ioerror);
+  if (!make_directory(path_join(path_dirname(scenename), "shapes"), ioerror))
+    print_fatal(ioerror);
+  if (!make_directory(path_join(path_dirname(scenename), "textures"), ioerror))
+    print_fatal(ioerror);
 
   // save path
-  stats["path"]["name"] = pathname;
   // if (!save_path(pathname, path, ioerror)) return log_error(ioerror);
 
   // save scene
+  auto scene_timer = print_timed("save scene");
   auto scene_guard = std::make_unique<sceneio_scene>();
   auto scene       = scene_guard.get();
-  // if (!path_to_scene(scene, triangles, positions, path, ioerror))
-  //   return log_error(ioerror);
-  stats["scene"]["name"] = scenename;
+  make_scene(scene, triangles, positions, points, path);
   if (!save_scene(scenename, scene, ioerror)) print_fatal(ioerror);
+  stats["scene"]["time"]     = print_elapsed(scene_timer);
+  stats["scene"]["filename"] = scenename;
 
   // save stats
+  auto stats_timer = print_timed("save stats");
   if (!save_json(statsname, stats, ioerror)) print_fatal(ioerror);
-
-  if (info) {
-    print_info("mesh stats ------------");
-    auto stats = mesh_stats(triangles, positions, normals, texcoords, colors);
-    for (auto& stat : stats) print_info(stat);
-  }
+  stats["stats"]["time"] = print_elapsed(stats_timer);
 
   // done
   return 0;
