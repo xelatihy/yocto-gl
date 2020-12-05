@@ -378,9 +378,9 @@ void make_scene(sceneio_scene* scene, const vector<vec3i>& triangles,
 
   // mesh
   // TODO(fabio): normals?
-  // add_instance(scene, "mesh", identity3x4f,
-  //     add_shape(scene, "mesh", triangles, positions, {}, {}, {}),
-  //     add_specular_material(scene, "mesh", {0.6, 0.6, 0.6}, nullptr, 0));
+  add_instance(scene, "mesh", identity3x4f,
+      add_shape(scene, "mesh", triangles, positions, {}, {}, {}),
+      add_specular_material(scene, "mesh", {0.6, 0.6, 0.6}, nullptr, 0));
 
   // curve
   add_instance(scene, "path", identity3x4f,
