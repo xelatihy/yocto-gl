@@ -20,13 +20,17 @@ def run():
 @run.command()
 @click.option('--dirname', '-d')
 def trace(dirname):
-    def handle_error(err, stats_name):
+    def handle_error(err, result, mesh_name, stats_name):
         msg = 'error: ' + err
         print(msg + ' ' * max(0, 78-len(msg)))
+        if err not in result:
+            result[err] = []
+        result[err] += [mesh_name]
         stats = {'error': err}
         with open(stats_name, 'wt') as f:
-            json.dump(stats, f)
+            json.dump(stats, f, indent=2)
 
+    result = {'ok': []}
     mesh_names = glob.glob(f'{dirname}/{mesh_dir}/*.obj')
     mesh_num = len(mesh_names)
     for mesh_id, mesh_name in enumerate(mesh_names):
@@ -42,22 +46,30 @@ def trace(dirname):
         try:
             retcode = subprocess.run(cmd, timeout=5, shell=True).returncode
             if retcode < 0:
-                handle_error('app_terminated', stats_name)
+                handle_error('app_terminated', result, mesh_name, stats_name)
             elif retcode > 0:
-                handle_error('app_error', stats_name)
+                handle_error('app_error', result, mesh_name, stats_name)
+            else:
+                result['ok'] += [mesh_name]
         except OSError:
-            handle_error('os_error', stats_name)
+            handle_error('os_error', result, mesh_name, stats_name)
         except subprocess.TimeoutExpired:
-            handle_error('app_timeout', stats_name)
+            handle_error('app_timeout', result, mesh_name, stats_name)
+    with open(f'{dirname}/result.json') as f:
+        json.dump(result, f, indent=2)
 
 
 @run.command()
 @click.option('--dirname', '-d')
 def draw(dirname):
-    def handle_error(err):
+    def handle_error(err, result, scene_name):
         msg = 'error: ' + err
         print(msg + ' ' * max(0, 78-len(msg)))
+        if err not in result:
+            result[err] = []
+        result[err] += [scene_name]
 
+    result = {'ok': []}
     scene_names = glob.glob(f'{dirname}/{scene_dir}/*.json')
     scene_num = len(scene_names)
     for scene_id, scene_name in enumerate(scene_names):
@@ -69,13 +81,17 @@ def draw(dirname):
         try:
             retcode = subprocess.run(cmd, timeout=5, shell=True).returncode
             if retcode < 0:
-                handle_error('app_terminated')
+                handle_error('app_terminated', result, scene_name)
             elif retcode > 0:
-                handle_error('app_error')
+                handle_error('app_error', result, scene_name)
+            else:
+                result['ok'] += [scene_name]
         except OSError:
-            handle_error('os_error')
+            handle_error('os_error', result, scene_name)
         except subprocess.TimeoutExpired:
-            handle_error('app_timeout')
+            handle_error('app_timeout', result, scene_name)
+    with open(f'{dirname}/result.json') as f:
+        json.dump(result, f, indent=2)
 
 
 @run.command()
