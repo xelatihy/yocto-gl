@@ -52,9 +52,30 @@ def trace(dirname):
 
 
 @run.command()
-@click.argument('--dirname')
+@click.option('--dirname', '-d')
 def draw(dirname):
-    pass
+    def handle_error(err):
+        msg = 'error: ' + err
+        print(msg + ' ' * max(0, 78-len(msg)))
+
+    scene_names = glob.glob(f'{dirname}/{scene_dir}/*.json')
+    scene_num = len(scene_names)
+    for scene_id, scene_name in enumerate(scene_names):
+        image_name = scene_name.replace(
+            'scenes/', 'images/').replace('.json', '.jpg')
+        msg = f'[{scene_id}/{scene_num}] {scene_name}'
+        print(msg + ' ' * max(0, 78-len(msg)))
+        cmd = f'../yocto-gl/bin/yscenetrace {scene_name} -o {image_name} -t eyelight -r 640 -s 16'
+        try:
+            retcode = subprocess.run(cmd, timeout=5, shell=True).returncode
+            if retcode < 0:
+                handle_error('app_terminated')
+            elif retcode > 0:
+                handle_error('app_error')
+        except OSError:
+            handle_error('os_error')
+        except subprocess.TimeoutExpired:
+            handle_error('app_timeout')
 
 
 @run.command()
