@@ -55,7 +55,7 @@ def trace(dirname):
             handle_error('os_error', result, mesh_name, stats_name)
         except subprocess.TimeoutExpired:
             handle_error('app_timeout', result, mesh_name, stats_name)
-    with open(f'{dirname}/result.json') as f:
+    with open(f'{dirname}/result.json', 'wt') as f:
         json.dump(result, f, indent=2)
 
 
@@ -90,7 +90,7 @@ def draw(dirname):
             handle_error('os_error', result, scene_name)
         except subprocess.TimeoutExpired:
             handle_error('app_timeout', result, scene_name)
-    with open(f'{dirname}/result.json') as f:
+    with open(f'{dirname}/result.json', 'wt') as f:
         json.dump(result, f, indent=2)
 
 

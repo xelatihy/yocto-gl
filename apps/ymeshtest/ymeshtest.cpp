@@ -443,8 +443,9 @@ void make_scene_floor(sceneio_scene* scene, const string& meshname,
     const vec3f& camera_from, const vec3f& camera_to, float camera_lens,
     float camera_aspect, const vector<vec3i>& triangles,
     const vector<vec3f>& positions, const vector<mesh_point>& points,
-    const vector<mesh_point>& path, bool points_as_meshes = true,
-    float point_thickness = 0.02f, float line_thickness = 0.01f) {
+    const vector<mesh_point>& path, bool use_environment = false,
+    bool points_as_meshes = true, float point_thickness = 0.02f,
+    float line_thickness = 0.01f) {
   auto pathname   = meshname + "-path";
   auto pointsname = meshname + "-points";
   scene->name     = meshname;
@@ -488,9 +489,11 @@ void make_scene_floor(sceneio_scene* scene, const string& meshname,
 
   // environment
   // TODO(fabio): environment
-  add_environment(scene, "environment", identity3x4f, {0, 0, 0}, nullptr);
-  // environment->emission_tex = add_texture(scene, "env");
-  //   load_image("data/env.png", environment_tex->hdr, error);
+  if (use_environment) {
+    add_environment(scene, "environment", identity3x4f, {0, 0, 0}, nullptr);
+    // environment->emission_tex = add_texture(scene, "env");
+    //   load_image("data/env.png", environment_tex->hdr, error);
+  }
 
   // lights
   add_instance(scene, "arealight1",
@@ -518,8 +521,9 @@ void make_scene_floating(sceneio_scene* scene, const string& meshname,
     const vec3f& camera_from, const vec3f& camera_to, float camera_lens,
     float camera_aspect, const vector<vec3i>& triangles,
     const vector<vec3f>& positions, const vector<mesh_point>& points,
-    const vector<mesh_point>& path, bool points_as_meshes = true,
-    float point_thickness = 0.02f, float line_thickness = 0.01f) {
+    const vector<mesh_point>& path, bool use_environment = false,
+    bool points_as_meshes = true, float point_thickness = 0.02f,
+    float line_thickness = 0.01f) {
   auto pathname   = meshname + "-path";
   auto pointsname = meshname + "-points";
   scene->name     = meshname;
@@ -563,7 +567,9 @@ void make_scene_floating(sceneio_scene* scene, const string& meshname,
 
   // environment
   // TODO(fabio): environment
-  add_environment(scene, "environment", identity3x4f, {1, 1, 1}, nullptr);
+  if (use_environment) {
+    add_environment(scene, "environment", identity3x4f, {1, 1, 1}, nullptr);
+  }
 }
 
 // Save a path
