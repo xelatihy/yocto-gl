@@ -142,6 +142,35 @@ void print_progress(const string& message, int current, int total) {
 }  // namespace yocto
 
 // -----------------------------------------------------------------------------
+// SIMPLE TIMER
+// -----------------------------------------------------------------------------
+namespace yocto {
+
+// Simple timer
+simple_timer::simple_timer() {
+  start = get_time_();
+  stop  = -1;
+}
+
+// Timer opreations
+void start_timer(simple_timer& timer) {
+  timer.start = get_time_();
+  timer.stop  = -1;
+}
+void    stop_timer(simple_timer& timer) { timer.stop = get_time_(); }
+int64_t elapsed_nanoseconds(simple_timer& timer) {
+  return get_time_() - timer.start;
+}
+double elapsed_seconds(simple_timer& timer) {
+  return (double)(get_time_() - timer.start) * 1e-9;
+}
+string elapsed_formatted(simple_timer& timer) {
+  return format_duration(get_time_() - timer.start);
+}
+
+}  // namespace yocto
+
+// -----------------------------------------------------------------------------
 // FILE IO
 // -----------------------------------------------------------------------------
 namespace yocto {

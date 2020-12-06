@@ -93,6 +93,26 @@ string format_num(uint64_t num);
 }  // namespace yocto
 
 // -----------------------------------------------------------------------------
+// SIMPLE TIMER
+// -----------------------------------------------------------------------------
+namespace yocto {
+
+// Simple timer
+struct simple_timer {
+  int64_t start = -1, stop = -1;
+  simple_timer();
+};
+
+// Timer opreations
+void    start_timer(simple_timer& timer);
+void    stop_timer(simple_timer& timer);
+int64_t elapsed_nanoseconds(simple_timer& timer);
+double  elapsed_seconds(simple_timer& timer);
+string  elapsed_formatted(simple_timer& timer);
+
+}  // namespace yocto
+
+// -----------------------------------------------------------------------------
 // COMMAND LINE PARSING
 // -----------------------------------------------------------------------------
 namespace yocto {

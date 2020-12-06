@@ -430,6 +430,7 @@ quads_shape path_to_quads(const vector<vec3i>& triangles,
       auto frame    = frame_fromz((ppositions[idx] + ppositions[idx + 1]) / 2,
           normalize(ppositions[idx + 1] - ppositions[idx]));
       for (auto& p : cylinder.positions) p = transform_point(frame, p);
+      for (auto& n : cylinder.normals) n = transform_direction(frame, n);
       merge_quads(shape.quads, shape.positions, shape.normals, shape.texcoords,
           cylinder.quads, cylinder.positions, cylinder.normals,
           cylinder.texcoords);
@@ -438,55 +439,61 @@ quads_shape path_to_quads(const vector<vec3i>& triangles,
   return shape;
 }
 
-void make_scene_floor(sceneio_scene* scene, const vec3f& camera_from,
-    const vec3f& camera_to, float camera_lens, float camera_aspect,
-    const vector<vec3i>& triangles, const vector<vec3f>& positions,
-    const vector<mesh_point>& points, const vector<mesh_point>& path,
+void make_scene_floor(sceneio_scene* scene, const string& meshname,
+    const vec3f& camera_from, const vec3f& camera_to, float camera_lens,
+    float camera_aspect, const vector<vec3i>& triangles,
+    const vector<vec3f>& positions, const vector<mesh_point>& points,
+    const vector<mesh_point>& path, bool use_environment = false,
     bool points_as_meshes = true, float point_thickness = 0.02f,
     float line_thickness = 0.01f) {
-  scene->name = "name";
+  auto pathname   = meshname + "-path";
+  auto pointsname = meshname + "-points";
+  scene->name     = meshname;
   // camera
-  add_camera(scene, "camera", lookat_frame(camera_from, camera_to, {0, 1, 0}),
-      camera_lens, camera_aspect, 0, length(camera_from - camera_to));
+  add_camera(scene, meshname + "-cam",
+      lookat_frame(camera_from, camera_to, {0, 1, 0}), camera_lens,
+      camera_aspect, 0, length(camera_from - camera_to));
 
   // mesh
   // TODO(fabio): normals?
-  add_instance(scene, "mesh", identity3x4f,
-      add_shape(scene, "mesh", triangles, positions, {}, {}, {}),
-      add_specular_material(scene, "mesh", {0.6, 0.6, 0.6}, nullptr, 0));
+  add_instance(scene, meshname, identity3x4f,
+      add_shape(scene, meshname, triangles, positions, {}, {}, {}),
+      add_specular_material(scene, meshname, {0.6, 0.6, 0.6}, nullptr, 0));
 
   // curve
   if (points_as_meshes) {
-    add_instance(scene, "path", identity3x4f,
-        add_shape(scene, "path",
+    add_instance(scene, pathname, identity3x4f,
+        add_shape(scene, pathname,
             path_to_quads(
                 triangles, positions, path, line_thickness, line_thickness)),
-        add_matte_material(scene, "path", {0.8, 0.1, 0.1}, nullptr));
+        add_matte_material(scene, pathname, {0.8, 0.1, 0.1}, nullptr));
   } else {
-    add_instance(scene, "path", identity3x4f,
-        add_shape(scene, "path",
+    add_instance(scene, pathname, identity3x4f,
+        add_shape(scene, pathname,
             path_to_lines(triangles, positions, path, line_thickness)),
-        add_matte_material(scene, "path", {0.8, 0.1, 0.1}, nullptr));
+        add_matte_material(scene, pathname, {0.8, 0.1, 0.1}, nullptr));
   }
 
   // points
   if (points_as_meshes) {
-    add_instance(scene, "points", identity3x4f,
-        add_shape(scene, "points",
+    add_instance(scene, pointsname, identity3x4f,
+        add_shape(scene, pointsname,
             path_to_quads(triangles, positions, points, point_thickness, 0)),
-        add_matte_material(scene, "points", {0.1, 0.8, 0.1}, nullptr));
+        add_matte_material(scene, pointsname, {0.1, 0.8, 0.1}, nullptr));
   } else {
-    add_instance(scene, "points", identity3x4f,
-        add_shape(scene, "points",
+    add_instance(scene, pointsname, identity3x4f,
+        add_shape(scene, pointsname,
             path_to_points(triangles, positions, points, point_thickness)),
-        add_matte_material(scene, "points", {0.1, 0.8, 0.1}, nullptr));
+        add_matte_material(scene, pointsname, {0.1, 0.8, 0.1}, nullptr));
   }
 
   // environment
   // TODO(fabio): environment
-  add_environment(scene, "environment", identity3x4f, {0, 0, 0}, nullptr);
-  // environment->emission_tex = add_texture(scene, "env");
-  //   load_image("data/env.png", environment_tex->hdr, error);
+  if (use_environment) {
+    add_environment(scene, "environment", identity3x4f, {0, 0, 0}, nullptr);
+    // environment->emission_tex = add_texture(scene, "env");
+    //   load_image("data/env.png", environment_tex->hdr, error);
+  }
 
   // lights
   add_instance(scene, "arealight1",
@@ -510,53 +517,59 @@ void make_scene_floor(sceneio_scene* scene, const vec3f& camera_from,
       add_matte_material(scene, "floor", {1, 1, 1}, nullptr));
 }
 
-void make_scene_floating(sceneio_scene* scene, const vec3f& camera_from,
-    const vec3f& camera_to, float camera_lens, float camera_aspect,
-    const vector<vec3i>& triangles, const vector<vec3f>& positions,
-    const vector<mesh_point>& points, const vector<mesh_point>& path,
+void make_scene_floating(sceneio_scene* scene, const string& meshname,
+    const vec3f& camera_from, const vec3f& camera_to, float camera_lens,
+    float camera_aspect, const vector<vec3i>& triangles,
+    const vector<vec3f>& positions, const vector<mesh_point>& points,
+    const vector<mesh_point>& path, bool use_environment = false,
     bool points_as_meshes = true, float point_thickness = 0.02f,
     float line_thickness = 0.01f) {
-  scene->name = "name";
+  auto pathname   = meshname + "-path";
+  auto pointsname = meshname + "-points";
+  scene->name     = meshname;
   // camera
-  add_camera(scene, "camera", lookat_frame(camera_from, camera_to, {0, 1, 0}),
-      camera_lens, camera_aspect, 0, length(camera_from - camera_to));
+  add_camera(scene, meshname + "-cam",
+      lookat_frame(camera_from, camera_to, {0, 1, 0}), camera_lens,
+      camera_aspect, 0, length(camera_from - camera_to));
 
   // mesh
   // TODO(fabio): normals?
-  add_instance(scene, "mesh", identity3x4f,
-      add_shape(scene, "mesh", triangles, positions, {}, {}, {}),
-      add_specular_material(scene, "mesh", {0.6, 0.6, 0.6}, nullptr, 0));
+  add_instance(scene, meshname, identity3x4f,
+      add_shape(scene, meshname, triangles, positions, {}, {}, {}),
+      add_specular_material(scene, meshname, {0.6, 0.6, 0.6}, nullptr, 0));
 
   // curve
   if (points_as_meshes) {
-    add_instance(scene, "path", identity3x4f,
-        add_shape(scene, "path",
+    add_instance(scene, pathname, identity3x4f,
+        add_shape(scene, pathname,
             path_to_quads(
                 triangles, positions, path, line_thickness, line_thickness)),
-        add_matte_material(scene, "path", {0.8, 0.1, 0.1}, nullptr));
+        add_matte_material(scene, pathname, {0.8, 0.1, 0.1}, nullptr));
   } else {
-    add_instance(scene, "path", identity3x4f,
-        add_shape(scene, "path",
+    add_instance(scene, pathname, identity3x4f,
+        add_shape(scene, pathname,
             path_to_lines(triangles, positions, path, line_thickness)),
-        add_matte_material(scene, "path", {0.8, 0.1, 0.1}, nullptr));
+        add_matte_material(scene, pathname, {0.8, 0.1, 0.1}, nullptr));
   }
 
   // points
   if (points_as_meshes) {
-    add_instance(scene, "points", identity3x4f,
-        add_shape(scene, "points",
+    add_instance(scene, pointsname, identity3x4f,
+        add_shape(scene, pointsname,
             path_to_quads(triangles, positions, points, point_thickness, 0)),
-        add_matte_material(scene, "points", {0.1, 0.8, 0.1}, nullptr));
+        add_matte_material(scene, pointsname, {0.1, 0.8, 0.1}, nullptr));
   } else {
-    add_instance(scene, "points", identity3x4f,
-        add_shape(scene, "points",
+    add_instance(scene, pointsname, identity3x4f,
+        add_shape(scene, pointsname,
             path_to_points(triangles, positions, points, point_thickness)),
-        add_matte_material(scene, "points", {0.1, 0.8, 0.1}, nullptr));
+        add_matte_material(scene, pointsname, {0.1, 0.8, 0.1}, nullptr));
   }
 
   // environment
   // TODO(fabio): environment
-  add_environment(scene, "environment", identity3x4f, {1, 1, 1}, nullptr);
+  if (use_environment) {
+    add_environment(scene, "environment", identity3x4f, {1, 1, 1}, nullptr);
+  }
 }
 
 // Save a path
@@ -620,16 +633,18 @@ int main(int argc, const char* argv[]) {
   auto colors    = vector<vec3f>{};
   auto triangles = vector<vec3i>{};
 
-  // stats
-  auto stats = json{};
+  // stats, progress
+  auto stats    = json{};
+  auto progress = vec2i{0, 10};
 
   // load mesh
+  print_progress("load mesh", progress.x++, progress.y);
   auto ioerror    = ""s;
-  auto load_timer = print_timed("load mesh");
+  auto load_timer = simple_timer{};
   if (!load_mesh(
           meshname, triangles, positions, normals, texcoords, colors, ioerror))
     print_fatal(ioerror);
-  stats["mesh"]["load_time"] = print_elapsed(load_timer);
+  stats["mesh"]["load_time"] = elapsed_nanoseconds(load_timer);
   stats["mesh"]["filename"]  = meshname;
   stats["mesh"]["valid"]     = false;
   stats["mesh"]["triangles"] = triangles.size();
@@ -643,12 +658,13 @@ int main(int argc, const char* argv[]) {
   }
 
   // transform
-  auto rescale_timer = print_timed("rescale bbox");
+  print_progress("rescale mesh", progress.x++, progress.y);
+  auto rescale_timer = simple_timer{};
   auto bbox          = invalidb3f;
   for (auto& position : positions) bbox = merge(bbox, position);
   for (auto& position : positions)
     position = (position - center(bbox)) / max(size(bbox));
-  stats["mesh"]["rescale_time"] = print_elapsed(rescale_timer);
+  stats["mesh"]["rescale_time"] = elapsed_nanoseconds(rescale_timer);
 
   // default camera
   auto camera_from   = vec3f{0, 0, 3};
@@ -657,28 +673,32 @@ int main(int argc, const char* argv[]) {
   auto camera_aspect = size(bbox).x / size(bbox).y;
 
   // build bvh
-  auto bvh_timer       = print_timed("build bvh");
+  print_progress("build bvh", progress.x++, progress.y);
+  auto bvh_timer       = simple_timer{};
   auto bvh             = make_triangles_bvh(triangles, positions, {});
-  stats["bvh"]["time"] = print_elapsed(bvh_timer);
+  stats["bvh"]["time"] = elapsed_nanoseconds(bvh_timer);
 
   // pick points
-  auto points_timer = print_timed("sample points");
+  print_progress("sample points", progress.x++, progress.y);
+  auto points_timer = simple_timer{};
   auto points = sample_points(triangles, positions, bvh, camera_from, camera_to,
       camera_lens, camera_aspect);
-  stats["points"]["time"]      = print_elapsed(points_timer);
+  stats["points"]["time"]      = elapsed_nanoseconds(points_timer);
   stats["points"]["vertices"]  = points.size();
   stats["points"]["positions"] = points;
 
   // build graph
-  auto graph_timer = print_timed("graph bvh");
+  print_progress("build graph", progress.x++, progress.y);
+  auto graph_timer = simple_timer{};
   auto adjacencies = face_adjacencies(triangles);
   auto graph = make_dual_geodesic_solver(triangles, positions, adjacencies);
-  stats["solver"]["time"] = print_elapsed(graph_timer);
+  stats["solver"]["time"] = elapsed_nanoseconds(graph_timer);
 
   // trace path
-  auto path_timer = print_timed("trace path");
+  print_progress("trace path", progress.x++, progress.y);
+  auto path_timer = simple_timer{};
   auto path = trace_path(graph, triangles, positions, adjacencies, points);
-  stats["path"]["time"]     = print_elapsed(path_timer);
+  stats["path"]["time"]     = elapsed_nanoseconds(path_timer);
   stats["path"]["filename"] = pathname;
   stats["path"]["vertices"] = path.size();
 
@@ -692,23 +712,27 @@ int main(int argc, const char* argv[]) {
     print_fatal(ioerror);
 
   // save path
+  print_progress("save path", progress.x++, progress.y);
   if (!save_mesh_points(pathname, path, ioerror)) print_fatal(ioerror);
 
   // save scene
-  auto scene_timer = print_timed("save scene");
+  print_progress("save scene", progress.x++, progress.y);
+  auto scene_timer = simple_timer{};
   auto scene_guard = std::make_unique<sceneio_scene>();
   auto scene       = scene_guard.get();
-  make_scene_floating(scene, camera_from, camera_to, camera_lens, camera_aspect,
-      triangles, positions, points, path);
+  make_scene_floating(scene, path_basename(meshname), camera_from, camera_to,
+      camera_lens, camera_aspect, triangles, positions, points, path);
   if (!save_scene(scenename, scene, ioerror)) print_fatal(ioerror);
-  stats["scene"]["time"]     = print_elapsed(scene_timer);
+  stats["scene"]["time"]     = elapsed_nanoseconds(scene_timer);
   stats["scene"]["filename"] = scenename;
 
   // save stats
-  auto stats_timer = print_timed("save stats");
+  print_progress("save stats", progress.x++, progress.y);
+  auto stats_timer = simple_timer{};
   if (!save_json(statsname, stats, ioerror)) print_fatal(ioerror);
-  stats["stats"]["time"] = print_elapsed(stats_timer);
+  stats["stats"]["time"] = elapsed_nanoseconds(stats_timer);
 
   // done
+  print_progress("done", progress.x++, progress.y);
   return 0;
 }
