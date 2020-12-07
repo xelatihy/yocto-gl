@@ -35,72 +35,6 @@
 #include <yocto/yocto_shape.h>
 using namespace yocto;
 
-#include "ext/json.hpp"
-
-using json = nlohmann::json;
-
-// -----------------------------------------------------------------------------
-// JSON SUPPORT
-// -----------------------------------------------------------------------------
-namespace yocto {
-
-using json = nlohmann::json;
-using std::array;
-
-// support for json conversions
-inline void to_json(json& j, const vec2f& value) {
-  nlohmann::to_json(j, (const array<float, 2>&)value);
-}
-inline void to_json(json& j, const vec3f& value) {
-  nlohmann::to_json(j, (const array<float, 3>&)value);
-}
-inline void to_json(json& j, const vec4f& value) {
-  nlohmann::to_json(j, (const array<float, 4>&)value);
-}
-inline void to_json(json& j, const frame3f& value) {
-  nlohmann::to_json(j, (const array<float, 12>&)value);
-}
-inline void to_json(json& j, const mat4f& value) {
-  nlohmann::to_json(j, (const array<float, 16>&)value);
-}
-
-inline void from_json(const json& j, vec3f& value) {
-  nlohmann::from_json(j, (array<float, 3>&)value);
-}
-inline void from_json(const json& j, mat3f& value) {
-  nlohmann::from_json(j, (array<float, 9>&)value);
-}
-inline void from_json(const json& j, frame3f& value) {
-  nlohmann::from_json(j, (array<float, 12>&)value);
-}
-
-inline void to_json(json& j, const mesh_point& value) {
-  nlohmann::to_json(j, pair{value.face, value.uv});
-}
-
-// load/save json
-bool load_json(const string& filename, json& js, string& error) {
-  // error helpers
-  auto parse_error = [filename, &error]() {
-    error = filename + ": parse error in json";
-    return false;
-  };
-  auto text = ""s;
-  if (!load_text(filename, text, error)) return false;
-  try {
-    js = json::parse(text);
-    return true;
-  } catch (std::exception&) {
-    return parse_error();
-  }
-}
-
-bool save_json(const string& filename, const json& js, string& error) {
-  return save_text(filename, js.dump(2), error);
-}
-
-}  // namespace yocto
-
 // -----------------------------------------------------------------------------
 // SCENE CREATION SUPPORT
 // -----------------------------------------------------------------------------
@@ -572,6 +506,16 @@ void make_scene_floating(sceneio_scene* scene, const string& meshname,
   }
 }
 
+namespace yocto {
+
+void to_json(json_value& js, const mesh_point& value) {
+  js                = json_value::array();
+  js.emplace_back() = value.face;
+  js.emplace_back() = (array<float, 2>&)value.uv;
+}
+
+}  // namespace yocto
+
 // Save a path
 bool save_mesh_points(
     const string& filename, const vector<mesh_point>& path, string& error) {
@@ -582,8 +526,9 @@ bool save_mesh_points(
 
   auto ext = path_extension(filename);
   if (ext == ".json" || ext == ".JSON") {
-    auto js    = json{};
-    js["path"] = path;
+    auto js    = json_value{};
+    js         = json_value::object();
+    js["path"] = to_json(path);
     return save_json(filename, js, error);
   } else if (ext == ".ply" || ext == ".PLY") {
     auto ply_guard = std::make_unique<ply_model>();
@@ -634,7 +579,8 @@ int main(int argc, const char* argv[]) {
   auto triangles = vector<vec3i>{};
 
   // stats, progress
-  auto stats    = json{};
+  auto stats    = json_value{};
+  stats         = json_value::object();
   auto progress = vec2i{0, 10};
 
   // load mesh
@@ -644,6 +590,7 @@ int main(int argc, const char* argv[]) {
   if (!load_mesh(
           meshname, triangles, positions, normals, texcoords, colors, ioerror))
     print_fatal(ioerror);
+  stats["mesh"]              = json_value::object();
   stats["mesh"]["load_time"] = elapsed_nanoseconds(load_timer);
   stats["mesh"]["filename"]  = meshname;
   stats["mesh"]["valid"]     = false;
@@ -676,6 +623,7 @@ int main(int argc, const char* argv[]) {
   print_progress("build bvh", progress.x++, progress.y);
   auto bvh_timer       = simple_timer{};
   auto bvh             = make_triangles_bvh(triangles, positions, {});
+  stats["bvh"]         = json_value::object();
   stats["bvh"]["time"] = elapsed_nanoseconds(bvh_timer);
 
   // pick points
@@ -683,21 +631,24 @@ int main(int argc, const char* argv[]) {
   auto points_timer = simple_timer{};
   auto points = sample_points(triangles, positions, bvh, camera_from, camera_to,
       camera_lens, camera_aspect);
+  stats["points"]              = json_value::object();
   stats["points"]["time"]      = elapsed_nanoseconds(points_timer);
   stats["points"]["vertices"]  = points.size();
-  stats["points"]["positions"] = points;
+  stats["points"]["positions"] = to_json(points);
 
   // build graph
   print_progress("build graph", progress.x++, progress.y);
   auto graph_timer = simple_timer{};
   auto adjacencies = face_adjacencies(triangles);
   auto graph = make_dual_geodesic_solver(triangles, positions, adjacencies);
+  stats["solver"]         = json_value::object();
   stats["solver"]["time"] = elapsed_nanoseconds(graph_timer);
 
   // trace path
   print_progress("trace path", progress.x++, progress.y);
   auto path_timer = simple_timer{};
-  auto path = trace_path(graph, triangles, positions, adjacencies, points);
+  auto path     = trace_path(graph, triangles, positions, adjacencies, points);
+  stats["path"] = json_value::object();
   stats["path"]["time"]     = elapsed_nanoseconds(path_timer);
   stats["path"]["filename"] = pathname;
   stats["path"]["vertices"] = path.size();
@@ -723,6 +674,7 @@ int main(int argc, const char* argv[]) {
   make_scene_floating(scene, path_basename(meshname), camera_from, camera_to,
       camera_lens, camera_aspect, triangles, positions, points, path);
   if (!save_scene(scenename, scene, ioerror)) print_fatal(ioerror);
+  stats["scene"]             = json_value::object();
   stats["scene"]["time"]     = elapsed_nanoseconds(scene_timer);
   stats["scene"]["filename"] = scenename;
 
@@ -730,6 +682,7 @@ int main(int argc, const char* argv[]) {
   print_progress("save stats", progress.x++, progress.y);
   auto stats_timer = simple_timer{};
   if (!save_json(statsname, stats, ioerror)) print_fatal(ioerror);
+  stats["stats"]         = json_value::object();
   stats["stats"]["time"] = elapsed_nanoseconds(stats_timer);
 
   // done
