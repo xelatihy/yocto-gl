@@ -291,7 +291,7 @@ struct json_value {
   explicit json_value(const json_binary& value)
       : _type{json_type::binary}, _binary{new json_binary{value}} {}
   template <typename T, size_t N>
-  explicit json_value(const array<T, N>& value)
+  explicit json_value(const std::array<T, N>& value)
       : _type{json_type::array}, _array{new json_array(value.size())} {
     for (auto idx = 0; idx < size(); idx++) at(idx) = value[idx];
   }
@@ -318,7 +318,7 @@ struct json_value {
   json_value& operator=(const json_object& value) { return _set(value); }
   json_value& operator=(const json_binary& value) { return _set(value); }
   template <typename T, size_t N>
-  json_value& operator=(const array<T, N>& value) {
+  json_value& operator=(const std::array<T, N>& value) {
     return _set(value);
   }
   template <typename T>
@@ -366,7 +366,7 @@ struct json_value {
   explicit operator json_object() const { return get_object(); }
   explicit operator json_binary() const { return get_binary(); }
   template <typename T, size_t N>
-  explicit operator array<T, N>() {
+  explicit operator std::array<T, N>() {
     if (size() != N) throw std::out_of_range{"wrong size"};
     auto ret = std::array<T, N>{};
     for (auto idx = 0; idx < size(); idx++) ret[idx] = (T)at(idx);

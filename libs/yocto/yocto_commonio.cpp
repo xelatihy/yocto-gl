@@ -391,6 +391,89 @@ string path_current() { return std::filesystem::current_path().u8string(); }
 
 }  // namespace yocto
 
+// setup outside namespace to avoid compilation problems
+// sax handler
+struct sax_handler {
+  // stack
+  yocto::json_value*              root  = nullptr;
+  std::vector<yocto::json_value*> stack = {};
+  std::string                     current_key;
+  explicit sax_handler(yocto::json_value* root_) {
+    *root_ = yocto::json_value{};
+    root   = root_;
+    stack.push_back(root);
+  }
+
+  // get current value
+  yocto::json_value& next_value() {
+    if (stack.size() == 1) return *root;
+    if (stack.back()->is_array()) return (*stack.back()).emplace_back();
+    if (stack.back()->is_object()) return (*stack.back())[current_key];
+    throw yocto::json_type_error{"bad json type"};
+  }
+
+  // values
+  bool null() {
+    next_value() = yocto::json_value{};
+    return true;
+  }
+  bool boolean(bool value) {
+    next_value() = value;
+    return true;
+  }
+  bool number_integer(int64_t value) {
+    next_value() = value;
+    return true;
+  }
+  bool number_unsigned(uint64_t value) {
+    next_value() = value;
+    return true;
+  }
+  bool number_float(double value, const std::string&) {
+    next_value() = value;
+    return true;
+  }
+  bool string(std::string& value) {
+    next_value() = value;
+    return true;
+  }
+  bool binary(std::vector<uint8_t>& value) {
+    next_value() = value;
+    return true;
+  }
+
+  // objects
+  bool start_object(size_t elements) {
+    next_value() = yocto::json_object{};
+    stack.push_back(&next_value());
+    return true;
+  }
+  bool end_object() {
+    stack.pop_back();
+    return true;
+  }
+  bool key(std::string& value) {
+    current_key = value;
+    return true;
+  }
+
+  // arrays
+  bool start_array(size_t elements) {
+    next_value() = yocto::json_array{};
+    stack.push_back(&next_value());
+    return true;
+  }
+  bool end_array() {
+    stack.pop_back();
+    return true;
+  }
+
+  bool parse_error(size_t position, const std::string& last_token,
+      const nlohmann::detail::exception&) {
+    return false;
+  }
+};
+
 // -----------------------------------------------------------------------------
 // IMPLEMENTATION OF JSON SUPPORT
 // -----------------------------------------------------------------------------
@@ -478,88 +561,6 @@ bool load_json(const string& filename, json_value& js, string& error) {
   auto parse_error = [filename, &error]() {
     error = filename + ": parse error in json";
     return false;
-  };
-
-  // sax handler
-  struct sax_handler {
-    // stack
-    json_value*         root  = nullptr;
-    vector<json_value*> stack = {};
-    string              current_key;
-    explicit sax_handler(json_value* root_) {
-      *root_ = json_value{};
-      root   = root_;
-      stack.push_back(root);
-    }
-
-    // get current value
-    json_value& next_value() {
-      if (stack.size() == 1) return *root;
-      if (stack.back()->is_array()) return (*stack.back()).emplace_back();
-      if (stack.back()->is_object()) return (*stack.back())[current_key];
-      throw json_type_error{"bad json type"};
-    }
-
-    // values
-    bool null() {
-      next_value() = json_value{};
-      return true;
-    }
-    bool boolean(bool value) {
-      next_value() = value;
-      return true;
-    }
-    bool number_integer(int64_t value) {
-      next_value() = value;
-      return true;
-    }
-    bool number_unsigned(uint64_t value) {
-      next_value() = value;
-      return true;
-    }
-    bool number_float(double value, const std::string&) {
-      next_value() = value;
-      return true;
-    }
-    bool string(std::string& value) {
-      next_value() = value;
-      return true;
-    }
-    bool binary(vector<byte>& value) {
-      next_value() = value;
-      return true;
-    }
-
-    // objects
-    bool start_object(size_t elements) {
-      next_value() = json_object{};
-      stack.push_back(&next_value());
-      return true;
-    }
-    bool end_object() {
-      stack.pop_back();
-      return true;
-    }
-    bool key(std::string& value) {
-      current_key = value;
-      return true;
-    }
-
-    // arrays
-    bool start_array(size_t elements) {
-      next_value() = json_array{};
-      stack.push_back(&next_value());
-      return true;
-    }
-    bool end_array() {
-      stack.pop_back();
-      return true;
-    }
-
-    bool parse_error(size_t position, const std::string& last_token,
-        const nlohmann::detail::exception&) {
-      return false;
-    }
   };
 
   // set up parsing
