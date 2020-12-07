@@ -2828,10 +2828,10 @@ static bool save_gltf_scene(const string& filename, const sceneio_scene* scene,
     auto& ajs = js["materials"];
     ajs       = json::array();
     for (auto material : scene->materials) {
-      auto& mjs             = ajs.emplace_back();
-      mjs                   = json::object();
-      mjs["name"]           = material->name;
-      mjs["emissiveFactor"] = to_json(array<float, 3>{
+      auto& mjs              = ajs.emplace_back();
+      mjs                    = json::object();
+      mjs["name"]            = material->name;
+      mjs["emissiveFactor"]  = to_json(array<float, 3>{
           material->emission.x, material->emission.y, material->emission.z});
       auto& pjs              = mjs["pbrMetallicRoughness"];
       pjs                    = json::object();

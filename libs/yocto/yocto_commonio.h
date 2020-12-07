@@ -503,35 +503,69 @@ inline json_value& json_value::operator=(json_value&& other) {
   return _copy(std::move(other));
 }
 inline json_value& json_value::operator=(std::nullptr_t) {
-  return _set(nullptr);
+  auto js = json_value{nullptr};
+  swap(js);
+  return *this;
 }
-inline json_value& json_value::operator=(int64_t value) { return _set(value); }
+inline json_value& json_value::operator=(int64_t value) {
+  auto js = json_value{value};
+  swap(js);
+  return *this;
+}
 inline json_value& json_value::operator=(int32_t value) {
-  return _set((int64_t)value);
+  auto js = json_value{value};
+  swap(js);
+  return *this;
 }
-inline json_value& json_value::operator=(uint64_t value) { return _set(value); }
+inline json_value& json_value::operator=(uint64_t value) {
+  auto js = json_value{value};
+  swap(js);
+  return *this;
+}
 inline json_value& json_value::operator=(uint32_t value) {
-  return _set((uint64_t)value);
+  auto js = json_value{value};
+  swap(js);
+  return *this;
 }
-inline json_value& json_value::operator=(double value) { return _set(value); }
+inline json_value& json_value::operator=(double value) {
+  auto js = json_value{value};
+  swap(js);
+  return *this;
+}
 inline json_value& json_value::operator=(float value) {
-  return _set((double)value);
+  auto js = json_value{value};
+  swap(js);
+  return *this;
 }
-inline json_value& json_value::operator=(bool value) { return _set(value); }
+inline json_value& json_value::operator=(bool value) {
+  auto js = json_value{value};
+  swap(js);
+  return *this;
+}
 inline json_value& json_value::operator=(const string& value) {
-  return _set(value);
+  auto js = json_value{value};
+  swap(js);
+  return *this;
 }
 inline json_value& json_value::operator=(const char* value) {
-  return _set(value);
+  auto js = json_value{value};
+  swap(js);
+  return *this;
 }
 inline json_value& json_value::operator=(const json_array& value) {
-  return _set(value);
+  auto js = json_value{value};
+  swap(js);
+  return *this;
 }
 inline json_value& json_value::operator=(const json_object& value) {
-  return _set(value);
+  auto js = json_value{value};
+  swap(js);
+  return *this;
 }
 inline json_value& json_value::operator=(const json_binary& value) {
-  return _set(value);
+  auto js = json_value{value};
+  swap(js);
+  return *this;
 }
 
 // type
@@ -577,12 +611,8 @@ inline json_value::operator float() const {
 inline json_value::operator bool() const { return get_boolean(); }
 inline json_value::operator string() const { return get_string(); }
 inline json_value::operator json_array() const { return get_array(); }
-inline json_value::operator json_object() const {
-  return get_object();
-}
-inline json_value::operator json_binary() const {
-  return get_binary();
-}
+inline json_value::operator json_object() const { return get_object(); }
+inline json_value::operator json_binary() const { return get_binary(); }
 
 // size_t fix
 #ifdef __APPLE__
@@ -591,7 +621,11 @@ inline json_value::json_value(size_t value)
 inline json_value::operator size_t() const {
   return is_integer() ? (uint64_t)get_integer() : get_unsigned();
 }
-inline json_value& json_value::operator=(size_t value) { return _set(value); }
+inline json_value& json_value::operator=(size_t value) {
+  auto js = json_value{value};
+  swap(js);
+  return *this;
+}
 #endif
 
 // access
@@ -662,29 +696,32 @@ inline json_binary& json_value::get_binary() {
 
 // structure support
 inline bool   json_value::empty() const { return size() == 0; }
-inline size_t json_value::size() const {   switch (_type) {
+inline size_t json_value::size() const {
+  switch (_type) {
     case json_type::string_: return get_string().size();
     case json_type::array: return get_array().size();
     case json_type::object: return get_object().size();
     case json_type::binary: return get_binary().size();
     default: throw json_type_error{"bad json type"};
   }
- }
-inline void   json_value::resize(size_t size) {   switch (_type) {
+}
+inline void json_value::resize(size_t size) {
+  switch (_type) {
     case json_type::string_: return get_string().resize(size);
     case json_type::array: return get_array().resize(size);
     case json_type::binary: return get_binary().resize(size, 0);
     default: throw json_type_error{"bad json type"};
   }
- }
-inline void   json_value::reserve(size_t size) {   switch (_type) {
+}
+inline void json_value::reserve(size_t size) {
+  switch (_type) {
     case json_type::string_: return get_string().reserve(size);
     case json_type::array: return get_array().reserve(size);
     case json_type::object: return get_object().reserve(size);
     case json_type::binary: return get_binary().reserve(size);
     default: throw json_type_error{"bad json type"};
   }
- }
+}
 
 // array support
 inline json_value  json_value::array() { return json_value{json_array{}}; }
@@ -852,12 +889,6 @@ inline json_value& json_value::_copy(const json_value& other) {
 }
 inline json_value& json_value::_copy(json_value&& other) {
   _swap(other);
-  return *this;
-}
-template <typename T>
-inline json_value& json_value::_set(const T& value) {
-  auto js = json_value{value};
-  _swap(js);
   return *this;
 }
 
