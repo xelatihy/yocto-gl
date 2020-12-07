@@ -511,7 +511,7 @@ namespace yocto {
 void to_json(json_value& js, const mesh_point& value) {
   js                = json_value::array();
   js.emplace_back() = value.face;
-  js.emplace_back() = (array<float, 2>&)value.uv;
+  js.emplace_back() = to_json((array<float, 2>&)value.uv);
 }
 
 }  // namespace yocto
