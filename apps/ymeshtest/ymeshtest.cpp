@@ -506,6 +506,16 @@ void make_scene_floating(sceneio_scene* scene, const string& meshname,
   }
 }
 
+namespace yocto {
+
+void to_json(json_value& js, const mesh_point& value) {
+  js                = json_value::array();
+  js.emplace_back() = value.face;
+  js.emplace_back() = (array<float, 2>&)value.uv;
+}
+
+}
+
 // Save a path
 bool save_mesh_points(
     const string& filename, const vector<mesh_point>& path, string& error) {
@@ -518,7 +528,7 @@ bool save_mesh_points(
   if (ext == ".json" || ext == ".JSON") {
     auto js    = json_value{};
     js         = json_value::object();
-    js["path"] = path;
+    js["path"] = to_json(path);
     return save_json(filename, js, error);
   } else if (ext == ".ply" || ext == ".PLY") {
     auto ply_guard = std::make_unique<ply_model>();
@@ -535,12 +545,6 @@ bool save_mesh_points(
   } else {
     return format_error();
   }
-}
-
-void to_json(json_value& js, const mesh_point& value) {
-  js                = json_value::array();
-  js.emplace_back() = value.face;
-  js.emplace_back() = (array<float, 2>&)value.uv;
 }
 
 // -----------------------------------------------------------------------------

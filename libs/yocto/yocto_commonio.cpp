@@ -472,9 +472,108 @@ void from_json(const json_value& js, njson& njs) {
 
 #if YOCTO_JSON_SAX == 1
 
-#else
+// load json
+bool load_json(const string& filename, json_value& js, string& error) {
+  // error helpers
+  auto parse_error = [filename, &error]() {
+    error = filename + ": parse error in json";
+    return false;
+  };
 
-#endif
+  // sax handler
+  struct sax_handler {
+    // stack
+    json_value*         root  = nullptr;
+    vector<json_value*> stack = {};
+    string              current_key;
+    explicit sax_handler(json_value* root_) {
+      *root_ = json_value{};
+      root   = root_;
+      stack.push_back(root);
+    }
+
+    // values
+    json_value& next_value() {
+      if (stack.size() == 0) return *root;
+      if (stack.back()->is_array()) return (*stack.back()).emplace_back();
+      if (stack.back()->is_object()) return (*stack.back())[current_key];
+      throw json_type_error{"bad json type"};
+    }
+    bool null() {
+      next_value() = json_value{};
+      return true;
+    }
+    bool boolean(bool value) {
+      next_value() = value;
+      return true;
+    }
+    bool number_integer(int64_t value) {
+      next_value() = value;
+      return true;
+    }
+    bool number_unsigned(uint64_t value) {
+      next_value() = value;
+      return true;
+    }
+    bool number_float(double value, const std::string&) {
+      next_value() = value;
+      return true;
+    }
+    bool string(std::string& value) {
+      next_value() = value;
+      return true;
+    }
+    bool binary(vector<byte>& value) {
+      next_value() = value;
+      return true;
+    }
+
+    // objects
+    bool start_object(std::size_t elements) {
+      next_value() = json_object{};
+      stack.push_back(&next_value());
+      return true;
+    }
+    bool end_object() {
+      stack.pop_back();
+      return true;
+    }
+    bool key(std::string& value) {
+      current_key = value;
+      return true;
+    }
+
+    // arrays
+    bool start_array(std::size_t elements) {
+      next_value() = json_array{};
+      stack.push_back(&next_value());
+      return true;
+    }
+    bool end_array() {
+      stack.pop_back();
+      return true;
+    }
+
+    bool parse_error(size_t position, const std::string& last_token,
+        const nlohmann::detail::exception&) {
+      return false;
+    }
+  };
+
+  // set up parsing
+  js           = json_value{};
+  auto handler = sax_handler{&js};
+
+  // load text
+  auto text = ""s;
+  if (!load_text(filename, text, error)) return false;
+
+  // parse json
+  if (!njson::sax_parse(text, &handler)) return parse_error();
+  return true;
+}
+
+#else
 
 // load json
 bool load_json(const string& filename, json_value& js, string& error) {
@@ -486,6 +585,8 @@ bool load_json(const string& filename, json_value& js, string& error) {
   to_json(js, njs);
   return true;
 }
+
+#endif
 
 // save json
 bool save_json(const string& filename, const json_value& js, string& error) {
