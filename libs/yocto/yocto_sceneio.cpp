@@ -1187,6 +1187,27 @@ inline void from_json(const njson& j, frame3f& value) {
   nlohmann::from_json(j, (array<float, 12>&)value);
 }
 
+// load/save json
+static bool load_json(const string& filename, njson& js, string& error) {
+  // error helpers
+  auto parse_error = [filename, &error]() {
+    error = filename + ": parse error in json";
+    return false;
+  };
+  auto text = ""s;
+  if (!load_text(filename, text, error)) return false;
+  try {
+    js = njson::parse(text);
+    return true;
+  } catch (std::exception&) {
+    return parse_error();
+  }
+}
+
+static bool save_json(const string& filename, const njson& js, string& error) {
+  return save_text(filename, js.dump(2), error);
+}
+
 // support for json conversions
 inline void to_json(json_value& js, const vec3f& value) {
   to_json(js, (const array<float, 3>&)value);
@@ -1217,29 +1238,6 @@ inline void from_json(const json_value& js, frame3f& value) {
 // JSON IO
 // -----------------------------------------------------------------------------
 namespace yocto {
-
-using json = nlohmann::json;
-
-// load/save json
-static bool load_json(const string& filename, json& js, string& error) {
-  // error helpers
-  auto parse_error = [filename, &error]() {
-    error = filename + ": parse error in json";
-    return false;
-  };
-  auto text = ""s;
-  if (!load_text(filename, text, error)) return false;
-  try {
-    js = json::parse(text);
-    return true;
-  } catch (std::exception&) {
-    return parse_error();
-  }
-}
-
-static bool save_json(const string& filename, const json& js, string& error) {
-  return save_text(filename, js.dump(2), error);
-}
 
 // Save a scene in the builtin JSON format.
 static bool load_json_scene(const string& filename, sceneio_scene* scene,
@@ -1657,19 +1655,37 @@ static bool save_json_scene(const string& filename, const sceneio_scene* scene,
     return false;
   };
 
+  // setting json
+  using json = json_value;
+
   // helper
   auto add_opt = [](json& ejs, const string& name, const auto& value,
                      const auto& def) {
-    if (value == def) return;
-    ejs[name] = value;
+    if (value == def) return true;
+    try {
+      to_json(ejs[name], value);
+      return true;
+    } catch (...) {
+      return false;
+    }
   };
   auto add_tex = [](json& ejs, const string& name, sceneio_texture* texture) {
-    if (texture == nullptr) return;
-    ejs[name] = texture->name;
+    if (texture == nullptr) return true;
+    try {
+      to_json(ejs[name], texture->name);
+      return true;
+    } catch (...) {
+      return false;
+    }
   };
   auto add_ref = [](json& ejs, const string& name, auto ref) {
-    if (ref == nullptr) return;
-    ejs[name] = ref->name;
+    if (ref == nullptr) return true;
+    try {
+      to_json(ejs[name], ref->name);
+      return true;
+    } catch (...) {
+      return false;
+    }
   };
 
   // handle progress
@@ -1678,92 +1694,106 @@ static bool save_json_scene(const string& filename, const sceneio_scene* scene,
   if (progress_cb) progress_cb("save scene", progress.x++, progress.y);
 
   // save json file
-  auto js = json::object();
+  auto js = json{};
+  js      = json::object();
 
   // asset
   {
     auto& ejs        = js["asset"];
+    ejs              = json::object();
     ejs["generator"] = "Yocto/GL - https://github.com/xelatihy/yocto-gl";
     add_opt(ejs, "copyright", scene->copyright, ""s);
   }
 
   auto def_cam = sceneio_camera{};
-  if (!scene->cameras.empty()) js["cameras"] = json::object();
-  for (auto& camera : scene->cameras) {
-    auto& ejs = js["cameras"][camera->name];
-    ejs       = json::object();
-    add_opt(ejs, "frame", camera->frame, def_cam.frame);
-    add_opt(ejs, "ortho", camera->orthographic, def_cam.orthographic);
-    add_opt(ejs, "lens", camera->lens, def_cam.lens);
-    add_opt(ejs, "aspect", camera->aspect, def_cam.aspect);
-    add_opt(ejs, "film", camera->film, def_cam.film);
-    add_opt(ejs, "focus", camera->focus, def_cam.focus);
-    add_opt(ejs, "aperture", camera->aperture, def_cam.aperture);
+  if (!scene->cameras.empty()) {
+    auto& mjs = js["cameras"];
+    mjs       = json::object();
+    for (auto& camera : scene->cameras) {
+      auto& ejs = mjs[camera->name];
+      ejs       = json::object();
+      add_opt(ejs, "frame", camera->frame, def_cam.frame);
+      add_opt(ejs, "ortho", camera->orthographic, def_cam.orthographic);
+      add_opt(ejs, "lens", camera->lens, def_cam.lens);
+      add_opt(ejs, "aspect", camera->aspect, def_cam.aspect);
+      add_opt(ejs, "film", camera->film, def_cam.film);
+      add_opt(ejs, "focus", camera->focus, def_cam.focus);
+      add_opt(ejs, "aperture", camera->aperture, def_cam.aperture);
+    }
   }
 
   auto def_env = sceneio_environment{};
-  if (!scene->environments.empty()) js["environments"] = json::object();
-  for (auto environment : scene->environments) {
-    auto& ejs = js["environments"][environment->name];
-    ejs       = json::object();
-    add_opt(ejs, "frame", environment->frame, def_env.frame);
-    add_opt(ejs, "emission", environment->emission, def_env.emission);
-    add_tex(ejs, "emission_tex", environment->emission_tex);
+  if (!scene->environments.empty()) {
+    auto& mjs = js["environments"];
+    mjs       = json::object();
+    for (auto environment : scene->environments) {
+      auto& ejs = mjs[environment->name];
+      ejs       = json::object();
+      add_opt(ejs, "frame", environment->frame, def_env.frame);
+      add_opt(ejs, "emission", environment->emission, def_env.emission);
+      add_tex(ejs, "emission_tex", environment->emission_tex);
+    }
   }
 
   auto def_material = sceneio_material{};
-  if (!scene->materials.empty()) js["materials"] = json::object();
-  for (auto material : scene->materials) {
-    auto& ejs = js["materials"][material->name];
-    ejs       = json::object();
-    add_opt(ejs, "emission", material->emission, def_material.emission);
-    add_opt(ejs, "color", material->color, def_material.color);
-    add_opt(ejs, "specular", material->specular, def_material.specular);
-    add_opt(ejs, "metallic", material->metallic, def_material.metallic);
-    add_opt(ejs, "coat", material->coat, def_material.coat);
-    add_opt(ejs, "roughness", material->roughness, def_material.roughness);
-    add_opt(ejs, "ior", material->ior, def_material.ior);
-    add_opt(
-        ejs, "transmission", material->transmission, def_material.transmission);
-    add_opt(
-        ejs, "translucency", material->translucency, def_material.translucency);
-    add_opt(ejs, "trdepth", material->trdepth, def_material.trdepth);
-    add_opt(ejs, "scattering", material->scattering, def_material.scattering);
-    add_opt(
-        ejs, "scanisotropy", material->scanisotropy, def_material.scanisotropy);
-    add_opt(ejs, "opacity", material->opacity, def_material.opacity);
-    add_opt(ejs, "thin", material->thin, def_material.thin);
-    add_tex(ejs, "emission_tex", material->emission_tex);
-    add_tex(ejs, "color_tex", material->color_tex);
-    add_tex(ejs, "metallic_tex", material->metallic_tex);
-    add_tex(ejs, "specular_tex", material->specular_tex);
-    add_tex(ejs, "roughness_tex", material->roughness_tex);
-    add_tex(ejs, "transmission_tex", material->transmission_tex);
-    add_tex(ejs, "translucency_tex", material->translucency_tex);
-    add_tex(ejs, "scattering_tex", material->scattering_tex);
-    add_tex(ejs, "coat_tex", material->coat_tex);
-    add_tex(ejs, "opacity_tex", material->opacity_tex);
-    add_tex(ejs, "normal_tex", material->normal_tex);
+  if (!scene->materials.empty()) {
+    auto& mjs = js["materials"];
+    mjs       = json::object();
+    for (auto material : scene->materials) {
+      auto& ejs = mjs[material->name];
+      ejs       = json::object();
+      add_opt(ejs, "emission", material->emission, def_material.emission);
+      add_opt(ejs, "color", material->color, def_material.color);
+      add_opt(ejs, "specular", material->specular, def_material.specular);
+      add_opt(ejs, "metallic", material->metallic, def_material.metallic);
+      add_opt(ejs, "coat", material->coat, def_material.coat);
+      add_opt(ejs, "roughness", material->roughness, def_material.roughness);
+      add_opt(ejs, "ior", material->ior, def_material.ior);
+      add_opt(ejs, "transmission", material->transmission,
+          def_material.transmission);
+      add_opt(ejs, "translucency", material->translucency,
+          def_material.translucency);
+      add_opt(ejs, "trdepth", material->trdepth, def_material.trdepth);
+      add_opt(ejs, "scattering", material->scattering, def_material.scattering);
+      add_opt(ejs, "scanisotropy", material->scanisotropy,
+          def_material.scanisotropy);
+      add_opt(ejs, "opacity", material->opacity, def_material.opacity);
+      add_opt(ejs, "thin", material->thin, def_material.thin);
+      add_tex(ejs, "emission_tex", material->emission_tex);
+      add_tex(ejs, "color_tex", material->color_tex);
+      add_tex(ejs, "metallic_tex", material->metallic_tex);
+      add_tex(ejs, "specular_tex", material->specular_tex);
+      add_tex(ejs, "roughness_tex", material->roughness_tex);
+      add_tex(ejs, "transmission_tex", material->transmission_tex);
+      add_tex(ejs, "translucency_tex", material->translucency_tex);
+      add_tex(ejs, "scattering_tex", material->scattering_tex);
+      add_tex(ejs, "coat_tex", material->coat_tex);
+      add_tex(ejs, "opacity_tex", material->opacity_tex);
+      add_tex(ejs, "normal_tex", material->normal_tex);
+    }
   }
 
   auto def_object = sceneio_instance{};
   auto def_shape  = sceneio_shape{};
-  if (!scene->instances.empty()) js["instances"] = json::object();
-  for (auto instance : scene->instances) {
-    auto& ejs = js["instances"][instance->name];
-    ejs       = json::object();
-    add_opt(ejs, "frame", instance->frame, def_object.frame);
-    add_ref(ejs, "shape", instance->shape);
-    add_ref(ejs, "material", instance->material);
-    if (instance->shape != nullptr) {
-      add_opt(ejs, "subdivisions", instance->shape->subdivisions,
-          def_shape.subdivisions);
-      add_opt(ejs, "catmullclark", instance->shape->catmullclark,
-          def_shape.catmullclark);
-      add_opt(ejs, "smooth", instance->shape->smooth, def_shape.smooth);
-      add_opt(ejs, "displacement", instance->shape->displacement,
-          def_shape.displacement);
-      add_tex(ejs, "displacement_tex", instance->shape->displacement_tex);
+  if (!scene->instances.empty()) {
+    auto& mjs = js["instances"];
+    mjs       = json::object();
+    for (auto instance : scene->instances) {
+      auto& ejs = mjs[instance->name];
+      ejs       = json::object();
+      add_opt(ejs, "frame", instance->frame, def_object.frame);
+      add_ref(ejs, "shape", instance->shape);
+      add_ref(ejs, "material", instance->material);
+      if (instance->shape != nullptr) {
+        add_opt(ejs, "subdivisions", instance->shape->subdivisions,
+            def_shape.subdivisions);
+        add_opt(ejs, "catmullclark", instance->shape->catmullclark,
+            def_shape.catmullclark);
+        add_opt(ejs, "smooth", instance->shape->smooth, def_shape.smooth);
+        add_opt(ejs, "displacement", instance->shape->displacement,
+            def_shape.displacement);
+        add_tex(ejs, "displacement_tex", instance->shape->displacement_tex);
+      }
     }
   }
 
@@ -2775,6 +2805,9 @@ static bool save_gltf_scene(const string& filename, const sceneio_scene* scene,
   // handle progress
   auto progress = vec2i{0, 3};
   if (progress_cb) progress_cb("save scene", progress.x++, progress.y);
+
+  // setup json
+  using json = njson;
 
   // convert scene to json
   auto js = json{};
