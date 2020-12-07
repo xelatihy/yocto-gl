@@ -397,9 +397,6 @@ struct json_value {
   template <typename T>
   json_value& _set(const T& value);               // assignment
   void        _check_type(json_type type) const;  // type checking
-  size_t      _size() const;                      // size
-  void        _resize(size_t size);               // resize
-  void        _reserve(size_t size);              // reserve
 };
 
 // Load/save a json file
@@ -665,9 +662,29 @@ inline json_binary& json_value::get_binary() {
 
 // structure support
 inline bool   json_value::empty() const { return size() == 0; }
-inline size_t json_value::size() const { return _size(); }
-inline void   json_value::resize(size_t size) { return _resize(size); }
-inline void   json_value::reserve(size_t size) { return _reserve(size); }
+inline size_t json_value::size() const {   switch (_type) {
+    case json_type::string_: return get_string().size();
+    case json_type::array: return get_array().size();
+    case json_type::object: return get_object().size();
+    case json_type::binary: return get_binary().size();
+    default: throw json_type_error{"bad json type"};
+  }
+ }
+inline void   json_value::resize(size_t size) {   switch (_type) {
+    case json_type::string_: return get_string().resize(size);
+    case json_type::array: return get_array().resize(size);
+    case json_type::binary: return get_binary().resize(size, 0);
+    default: throw json_type_error{"bad json type"};
+  }
+ }
+inline void   json_value::reserve(size_t size) {   switch (_type) {
+    case json_type::string_: return get_string().reserve(size);
+    case json_type::array: return get_array().reserve(size);
+    case json_type::object: return get_object().reserve(size);
+    case json_type::binary: return get_binary().reserve(size);
+    default: throw json_type_error{"bad json type"};
+  }
+ }
 
 // array support
 inline json_value  json_value::array() { return json_value{json_array{}}; }
@@ -846,35 +863,6 @@ inline json_value& json_value::_set(const T& value) {
 
 inline void json_value::_check_type(json_type type) const {
   if (_type != type) throw json_type_error{"bad json type"};
-}
-
-inline size_t json_value::_size() const {
-  switch (_type) {
-    case json_type::string_: return get_string().size();
-    case json_type::array: return get_array().size();
-    case json_type::object: return get_object().size();
-    case json_type::binary: return get_binary().size();
-    default: throw json_type_error{"bad json type"};
-  }
-}
-
-inline void json_value::_resize(size_t size) {
-  switch (_type) {
-    case json_type::string_: return get_string().resize(size);
-    case json_type::array: return get_array().resize(size);
-    case json_type::binary: return get_binary().resize(size, 0);
-    default: throw json_type_error{"bad json type"};
-  }
-}
-
-inline void json_value::_reserve(size_t size) {
-  switch (_type) {
-    case json_type::string_: return get_string().reserve(size);
-    case json_type::array: return get_array().reserve(size);
-    case json_type::object: return get_object().reserve(size);
-    case json_type::binary: return get_binary().reserve(size);
-    default: throw json_type_error{"bad json type"};
-  }
 }
 
 // Load/save a json file

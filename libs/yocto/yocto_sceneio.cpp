@@ -2930,8 +2930,8 @@ static bool save_gltf_scene(const string& filename, const sceneio_scene* scene,
           max_[channel] = max(max_[channel], *value);
         }
       }
-      ajs["min"] = min_;
-      ajs["max"] = max_;
+      ajs["min"] = to_json(min_);
+      ajs["max"] = to_json(max_);
     }
     buffers.back().second.insert(
         buffers.back().second.end(), (byte*)data, (byte*)data + length);
@@ -3007,7 +3007,7 @@ static bool save_gltf_scene(const string& filename, const sceneio_scene* scene,
       njs         = json::object();
       njs["name"] = camera->name;
       auto matrix = frame_to_mat(camera->frame);  // TODO(fabio): do this better
-      njs["matrix"] = (array<float, 16>&)matrix;
+      njs["matrix"] = to_json((array<float, 16>&)matrix);
       njs["camera"] = camera_id++;
     }
   }
@@ -3030,7 +3030,7 @@ static bool save_gltf_scene(const string& filename, const sceneio_scene* scene,
       njs["name"] = instance->name;
       auto matrix = frame_to_mat(
           instance->frame);  // TODO(fabio): do this better
-      njs["matrix"] = (array<float, 16>&)matrix;
+      njs["matrix"] = to_json((array<float, 16>&)matrix);
       if (mesh_map.find(mesh_key{instance->shape, instance->material}) ==
           mesh_map.end()) {
         auto& mjs   = js["meshes"].emplace_back();
