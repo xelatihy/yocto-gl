@@ -389,14 +389,8 @@ struct json_value {
   };
 
   // helpers
-  void        _set_type(json_type type);       // set type
-  void        _destroy();                      // destroy value
-  json_value& _swap(json_value& other);        // swap operation
-  json_value& _copy(const json_value& other);  // copy
-  json_value& _copy(json_value&& other);       // move
-  template <typename T>
-  json_value& _set(const T& value);               // assignment
-  void        _check_type(json_type type) const;  // type checking
+  void _set_type(json_type type);          // set type
+  void _check_type(json_type type) const;  // type checking
 };
 
 // Load/save a json file
@@ -465,9 +459,52 @@ inline string format(const string& fmt, Args&&... args);
 namespace yocto {
 
 // constructors
-inline json_value::json_value() {}
-inline json_value::json_value(const json_value& other) { _copy(other); }
-inline json_value::json_value(json_value&& other) { _copy(std::move(other)); }
+inline json_value::json_value() : _type{json_type::null}, _unsigned{0} {}
+inline json_value::json_value(const json_value& other)
+    : _type{json_type::null}, _unsigned{0} {
+  switch (other._type) {
+    case json_type::null:
+      _type    = json_type::null;
+      _integer = other._integer;
+      break;
+    case json_type::integer:
+      _type    = json_type::integer;
+      _integer = other._integer;
+      break;
+    case json_type::unsigned_:
+      _type     = json_type::unsigned_;
+      _unsigned = other._unsigned;
+      break;
+    case json_type::real:
+      _type = json_type::real;
+      _real = other._real;
+      break;
+    case json_type::boolean:
+      _type    = json_type::boolean;
+      _boolean = other._boolean;
+      break;
+    case json_type::string_:
+      _type    = json_type::string_;
+      _string_ = new string{*other._string_};
+      break;
+    case json_type::array:
+      _type  = json_type::array;
+      _array = new json_array{*other._array};
+      break;
+    case json_type::object:
+      _type   = json_type::object;
+      _object = new json_object{*other._object};
+      break;
+    case json_type::binary:
+      _type   = json_type::binary;
+      _binary = new json_binary{*other._binary};
+      break;
+  }
+}
+inline json_value::json_value(json_value&& other)
+    : _type{json_type::null}, _unsigned{0} {
+  swap(other); 
+}
 inline json_value::json_value(std::nullptr_t)
     : _type{json_type::null}, _unsigned{0} {}
 inline json_value::json_value(int64_t value)
@@ -496,11 +533,14 @@ inline json_value::json_value(const json_binary& value)
     : _type{json_type::binary}, _binary{new json_binary{value}} {}
 
 // assignments
-inline json_value& json_value::operator=(const json_value& other) {
-  return _copy(other);
+inline json_value& json_value::operator=(const json_value& value) {
+  auto js = json_value{value};
+  swap(js);
+  return *this;
 }
-inline json_value& json_value::operator=(json_value&& other) {
-  return _copy(std::move(other));
+inline json_value& json_value::operator=(json_value&& value) {
+  swap(value);
+  return *this;
 }
 inline json_value& json_value::operator=(std::nullptr_t) {
   auto js = json_value{nullptr};
@@ -823,7 +863,10 @@ inline bool json_value::contains(const string& key) const {
 inline json_value json_value::binary() { return json_value{json_binary{}}; }
 
 // swap
-inline void json_value::swap(json_value& other) { _swap(other); }
+inline void json_value::swap(json_value& other) {
+  std::swap(_type, other._type);
+  std::swap(_unsigned, other._unsigned);  // hask to swap bits
+}
 
 // destructor
 inline json_value::~json_value() { _set_type(json_type::null); }
@@ -849,47 +892,6 @@ inline void json_value::_set_type(json_type type) {
     case json_type::object: _object = new json_object{}; break;
     case json_type::binary: _binary = new json_binary{}; break;
   }
-}
-
-// destroy value
-inline void json_value::_destroy() {
-  switch (_type) {
-    case json_type::string_: delete _string_; break;
-    case json_type::array: delete _array; break;
-    case json_type::object: delete _object; break;
-    case json_type::binary: delete _binary; break;
-    default: break;
-  }
-  _type     = json_type::null;
-  _unsigned = 0;
-}
-
-// swap operation
-inline json_value& json_value::_swap(json_value& other) {
-  std::swap(_type, other._type);
-  std::swap(_unsigned, other._unsigned);  // hask to swap bits
-  return *this;
-}
-
-// assignment
-inline json_value& json_value::_copy(const json_value& other) {
-  _set_type(other._type);
-  switch (_type) {
-    case json_type::null: _integer = other._integer; break;
-    case json_type::integer: _integer = other._integer; break;
-    case json_type::unsigned_: _unsigned = other._unsigned; break;
-    case json_type::real: _real = other._real; break;
-    case json_type::boolean: _boolean = other._boolean; break;
-    case json_type::string_: _string_ = new string{*other._string_}; break;
-    case json_type::array: _array = new json_array{*other._array}; break;
-    case json_type::object: _object = new json_object{*other._object}; break;
-    case json_type::binary: _binary = new json_binary{*other._binary}; break;
-  }
-  return *this;
-}
-inline json_value& json_value::_copy(json_value&& other) {
-  _swap(other);
-  return *this;
 }
 
 inline void json_value::_check_type(json_type type) const {
