@@ -379,6 +379,16 @@ struct json_value {
     return ret;
   }
 
+// size_t fix
+#ifdef __APPLE__
+  explicit json_value(size_t value)
+      : _type{json_type::unsigned_}, _unsigned{value} {}
+  explicit operator size_t() const {
+    return is_integer() ? (uint64_t)get_integer() : get_unsigned();
+  }
+  json_value& operator=(size_t value) { return _set(value); }
+#endif
+
   // access
   const int64_t& get_integer() const {
     _check_type(json_type::integer);
