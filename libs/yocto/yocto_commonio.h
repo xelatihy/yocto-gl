@@ -46,6 +46,7 @@
 #include <stdexcept>
 #include <string>
 #include <type_traits>
+#include <utility>
 #include <vector>
 
 // -----------------------------------------------------------------------------
@@ -56,6 +57,7 @@ namespace yocto {
 // using directives
 using std::array;
 using std::function;
+using std::pair;
 using std::string;
 using std::vector;
 using namespace std::string_literals;
@@ -233,6 +235,371 @@ namespace yocto {
 // available on all platforms.
 template <typename... Args>
 inline string format(const string& fmt, Args&&... args);
+
+}  // namespace yocto
+
+// -----------------------------------------------------------------------------
+// JSON SUPPORT
+// -----------------------------------------------------------------------------
+namespace yocto {
+
+// Json type
+enum struct json_type {
+  // clang-format off
+  null, integer, unsigned_, real, boolean, string_, array, object, binary
+  // clang-format on
+};
+
+// Json forward declarations
+struct json_value;
+using json_array  = vector<json_value>;
+using json_object = vector<pair<string, json_value>>;
+using json_binary = vector<uint8_t>;
+
+// Json type error
+struct json_type_error : std::runtime_error {
+  using std::runtime_error::runtime_error;
+};
+
+// Json value
+struct json_value {
+  // constructors
+  json_value() {}
+  json_value(const json_value& other) { _copy(other); }
+  json_value(json_value&& other) { _copy(std::move(other)); }
+  explicit json_value(std::nullptr_t) : _type{json_type::null}, _unsigned{0} {}
+  explicit json_value(int64_t value)
+      : _type{json_type::integer}, _integer{value} {}
+  explicit json_value(int32_t value)
+      : _type{json_type::integer}, _integer{value} {}
+  explicit json_value(uint64_t value)
+      : _type{json_type::unsigned_}, _unsigned{value} {}
+  explicit json_value(uint32_t value)
+      : _type{json_type::unsigned_}, _unsigned{value} {}
+  explicit json_value(double value) : _type{json_type::real}, _real{value} {}
+  explicit json_value(float value) : _type{json_type::real}, _real{value} {}
+  explicit json_value(bool value)
+      : _type{json_type::boolean}, _boolean{value} {}
+  explicit json_value(const string& value)
+      : _type{json_type::string_}, _string_{new string{value}} {}
+  explicit json_value(const char* value)
+      : _type{json_type::string_}, _string_{new string{value}} {}
+  explicit json_value(const json_array& value)
+      : _type{json_type::array}, _array{new json_array{value}} {}
+  explicit json_value(const json_object& value)
+      : _type{json_type::object}, _object{new json_object{value}} {}
+  explicit json_value(const json_binary& value)
+      : _type{json_type::binary}, _binary{new json_binary{value}} {}
+
+  // assignments
+  json_value& operator=(const json_value& other) { return _copy(other); }
+  json_value& operator=(json_value&& other) { return _copy(std::move(other)); }
+  json_value& operator=(std::nullptr_t) { return _set(nullptr); }
+  json_value& operator=(int64_t value) { return _set(value); }
+  json_value& operator=(int32_t value) { return _set((int64_t)value); }
+  json_value& operator=(uint64_t value) { return _set(value); }
+  json_value& operator=(uint32_t value) { return _set((uint64_t)value); }
+  json_value& operator=(double value) { return _set(value); }
+  json_value& operator=(float value) { return _set((double)value); }
+  json_value& operator=(bool value) { return _set(value); }
+  json_value& operator=(const string& value) { return _set(value); }
+  json_value& operator=(const char* value) { return _set(value); }
+  json_value& operator=(const json_array& value) { return _set(value); }
+  json_value& operator=(const json_object& value) { return _set(value); }
+  json_value& operator=(const json_binary& value) { return _set(value); }
+
+  // type
+  json_type type() const { return _type; }
+  bool      is_null() const { return _type == json_type::null; }
+  bool      is_integer() const { return _type == json_type::integer; }
+  bool      is_unsigned() const { return _type == json_type::unsigned_; }
+  bool      is_real() const { return _type == json_type::real; }
+  bool      is_bool() const { return _type == json_type::boolean; }
+  bool      is_string() const { return _type == json_type::string_; }
+  bool      is_array() const { return _type == json_type::array; }
+  bool      is_object() const { return _type == json_type::object; }
+  bool      is_binary() const { return _type == json_type::binary; }
+
+  // conversions
+  explicit operator int64_t() const {
+    return is_unsigned() ? (int64_t)get_unsigned() : get_integer();
+  }
+  explicit operator int32_t() const {
+    return is_unsigned() ? (int32_t)get_unsigned() : (int32_t)get_integer();
+  }
+  explicit operator uint64_t() const {
+    return is_integer() ? (uint64_t)get_integer() : get_unsigned();
+  }
+  explicit operator uint32_t() const {
+    return is_integer() ? (uint32_t)get_integer() : (uint32_t)get_unsigned();
+  }
+  explicit operator double() const {
+    return is_integer() ? (double)get_integer()
+                        : is_unsigned() ? (double)get_unsigned() : get_real();
+  }
+  explicit operator float() const {
+    return is_integer()
+               ? (float)get_integer()
+               : is_unsigned() ? (float)get_unsigned() : (float)get_real();
+  }
+  explicit operator bool() const { return get_boolean(); }
+  explicit operator string() const { return get_string(); }
+  explicit operator json_array() const { return get_array(); }
+  explicit operator json_object() const { return get_object(); }
+  explicit operator json_binary() const { return get_binary(); }
+
+  // access
+  const int64_t& get_integer() const {
+    _check_type(json_type::integer);
+    return _integer;
+  }
+  const uint64_t& get_unsigned() const {
+    _check_type(json_type::unsigned_);
+    return _unsigned;
+  }
+  const double& get_real() const {
+    _check_type(json_type::real);
+    return _real;
+  }
+  const bool& get_boolean() const {
+    _check_type(json_type::boolean);
+    return _boolean;
+  }
+  const string& get_string() const {
+    _check_type(json_type::string_);
+    return *_string_;
+  }
+  const json_array& get_array() const {
+    _check_type(json_type::array);
+    return *_array;
+  }
+  const json_object& get_object() const {
+    _check_type(json_type::object);
+    return *_object;
+  }
+  const json_binary& get_binary() const {
+    _check_type(json_type::binary);
+    return *_binary;
+  }
+  int64_t& get_integer() {
+    _check_type(json_type::integer);
+    return _integer;
+  }
+  uint64_t& get_unsigned() {
+    _check_type(json_type::unsigned_);
+    return _unsigned;
+  }
+  double& get_real() {
+    _check_type(json_type::real);
+    return _real;
+  }
+  bool& get_boolean() {
+    _check_type(json_type::boolean);
+    return _boolean;
+  }
+  string& get_string() {
+    _check_type(json_type::string_);
+    return *_string_;
+  }
+  json_array& get_array() {
+    _check_type(json_type::array);
+    return *_array;
+  }
+  json_object& get_object() {
+    _check_type(json_type::object);
+    return *_object;
+  }
+  json_binary& get_binary() {
+    _check_type(json_type::binary);
+    return *_binary;
+  }
+
+  // structuree support
+  bool   empty() const { return size() == 0; }
+  size_t size() const { return _size(); }
+
+  // array support
+  json_value&       operator[](size_t idx) { return get_array().at(idx); }
+  const json_value& operator[](size_t idx) const { return get_array().at(idx); }
+  json_value&       at(size_t idx) { return get_array().at(idx); }
+  const json_value& at(size_t idx) const { return get_array().at(idx); }
+  void              push_back(const json_value& value) {
+    return get_array().push_back(value);
+  }
+  void push_back(json_value&& value) {
+    return get_array().push_back(std::move(value));
+  }
+  template <typename... Args>
+  json_value& emplace_back(Args&&... args) {
+    return get_array().emplace_back(std::forward(args)...);
+  }
+  json_value*       begin() { return get_array().data(); }
+  const json_value* begin() const { return get_array().data(); }
+  json_value*       end() { return get_array().data() + get_array().size(); }
+  const json_value* end() const {
+    return get_array().data() + get_array().size();
+  }
+
+  // object support
+  json_value& operator[](const string& key) {
+    if (auto ptr = find(key); ptr) {
+      return *ptr;
+    } else {
+      return get_object().emplace_back(key, json_value{}).second;
+    }
+  }
+  json_value& at(const string& key) {
+    if (auto ptr = find(key); ptr) {
+      return *ptr;
+    } else {
+      throw std::out_of_range{"missing key " + key};
+    }
+  }
+  const json_value& at(const string& key) const {
+    if (auto ptr = find(key); ptr) {
+      return *ptr;
+    } else {
+      throw std::out_of_range{"missing key " + key};
+    }
+  }
+  struct json_object_it {
+    pair<string, json_value>* _begin;
+    pair<string, json_value>* _end;
+    pair<string, json_value>* begin() { return _begin; }
+    pair<string, json_value>* end() { return _end; }
+  };
+  struct json_object_cit {
+    const pair<string, json_value>* _begin;
+    const pair<string, json_value>* _end;
+    const pair<string, json_value>* begin() { return _begin; }
+    const pair<string, json_value>* end() { return _end; }
+  };
+  json_object_it items() {
+    return {get_object().data(), get_object().data() + get_object().size()};
+  }
+  json_object_cit items() const {
+    return {get_object().data(), get_object().data() + get_object().size()};
+  }
+  json_value* find(const string& key) {
+    for (auto& [key_, value] : get_object()) {
+      if (key_ == key) return &value;
+    }
+    return nullptr;
+  }
+  const json_value* find(const string& key) const {
+    for (auto& [key_, value] : get_object()) {
+      if (key_ == key) return &value;
+    }
+    return nullptr;
+  }
+
+  // swap
+  void swap(json_value& other) { _swap(other); }
+
+  // destructor
+  ~json_value() { _set_type(json_type::null); }
+
+ private:
+  json_type _type = json_type::null;
+  union {
+    int64_t      _integer;
+    uint64_t     _unsigned;
+    double       _real;
+    bool         _boolean;
+    string*      _string_;
+    json_array*  _array;
+    json_object* _object;
+    json_binary* _binary;
+  };
+
+  // set type
+  void _set_type(json_type type) {
+    switch (_type) {
+      case json_type::string_: delete _string_; break;
+      case json_type::array: delete _array; break;
+      case json_type::object: delete _object; break;
+      case json_type::binary: delete _binary; break;
+      default: break;
+    }
+    _type = type;
+    switch (type) {
+      case json_type::null: _unsigned = 0; break;
+      case json_type::integer: _integer = 0; break;
+      case json_type::unsigned_: _unsigned = 0; break;
+      case json_type::real: _real = 0; break;
+      case json_type::boolean: _boolean = false; break;
+      case json_type::string_: _string_ = new string{}; break;
+      case json_type::array: _array = new json_array{}; break;
+      case json_type::object: _object = new json_object{}; break;
+      case json_type::binary: _binary = new json_binary{}; break;
+    }
+  }
+
+  // destroy value
+  void _destroy() {
+    switch (_type) {
+      case json_type::string_: delete _string_; break;
+      case json_type::array: delete _array; break;
+      case json_type::object: delete _object; break;
+      case json_type::binary: delete _binary; break;
+      default: break;
+    }
+    _type     = json_type::null;
+    _unsigned = 0;
+  }
+
+  // swap operation
+  json_value& _swap(json_value& other) {
+    std::swap(_type, other._type);
+    std::swap(_unsigned, other._unsigned);  // hask to swap bits
+    return *this;
+  }
+
+  // assignment
+  json_value& _copy(const json_value& other) {
+    _set_type(other._type);
+    switch (_type) {
+      case json_type::null: _integer = other._integer; break;
+      case json_type::integer: _integer = other._integer; break;
+      case json_type::unsigned_: _unsigned = other._unsigned; break;
+      case json_type::real: _real = other._real; break;
+      case json_type::boolean: _boolean = other._boolean; break;
+      case json_type::string_: _string_ = new string{*other._string_}; break;
+      case json_type::array: _array = new json_array{*other._array}; break;
+      case json_type::object: _object = new json_object{*other._object}; break;
+      case json_type::binary: _binary = new json_binary{*other._binary}; break;
+    }
+    return *this;
+  }
+  json_value& _copy(json_value&& other) {
+    _swap(other);
+    return *this;
+  }
+  template <typename T>
+  json_value& _set(const T& value) {
+    auto js = json_value{value};
+    _swap(js);
+    return *this;
+  }
+
+  void _check_type(json_type type) const {
+    if (_type != type) throw json_type_error{"bad json type"};
+  }
+
+  size_t _size() const {
+    switch (_type) {
+      case json_type::string_: return get_string().size();
+      case json_type::array: return get_array().size();
+      case json_type::object: return get_object().size();
+      case json_type::binary: return get_binary().size();
+      default: throw json_type_error{"bad json type"};
+    }
+  }
+};
+
+// Load/save a json file
+bool load_json(const string& filename, json_value& js, string& error);
+bool save_json(const string& filename, const json_value& js, string& error);
 
 }  // namespace yocto
 
