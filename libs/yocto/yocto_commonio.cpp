@@ -531,7 +531,7 @@ bool load_json(const string& filename, json_value& js, string& error) {
     }
 
     // objects
-    bool start_object(std::size_t elements) {
+    bool start_object(size_t elements) {
       next_value() = json_object{};
       stack.push_back(&next_value());
       return true;
@@ -546,7 +546,7 @@ bool load_json(const string& filename, json_value& js, string& error) {
     }
 
     // arrays
-    bool start_array(std::size_t elements) {
+    bool start_array(size_t elements) {
       next_value() = json_array{};
       stack.push_back(&next_value());
       return true;
