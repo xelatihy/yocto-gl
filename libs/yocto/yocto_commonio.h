@@ -674,13 +674,13 @@ bool load_json(const string& filename, json_value& js, string& error);
 bool save_json(const string& filename, const json_value& js, string& error);
 
 // Conversion shortcuts
-template<typename T>
+template <typename T>
 inline T& from_json(const json_value& js) {
   auto value = T{};
   from_json(js, value);
   return value;
 }
-template<typename T>
+template <typename T>
 inline json_value to_json(const T& value) {
   auto js = json_value();
   to_json(js, value);

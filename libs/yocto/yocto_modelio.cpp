@@ -2090,8 +2090,8 @@ bool save_obj(const string& filename, const obj_scene* obj, string& error) {
 
   // save material library
   if (!obj->materials.empty()) {
-    if (!format_values(
-            fs, "mtllib {}\n\n", replace_extension(path_filename(filename), ".mtl")))
+    if (!format_values(fs, "mtllib {}\n\n",
+            replace_extension(path_filename(filename), ".mtl")))
       return write_error();
   }
 

@@ -514,7 +514,7 @@ void to_json(json_value& js, const mesh_point& value) {
   js.emplace_back() = (array<float, 2>&)value.uv;
 }
 
-}
+}  // namespace yocto
 
 // Save a path
 bool save_mesh_points(
