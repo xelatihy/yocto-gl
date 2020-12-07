@@ -430,7 +430,7 @@ static void to_json(json_value& js, const njson& njs) {
     case njson::value_t::string: js = (string)njs; break;
     case njson::value_t::array:
       js = json_array();
-      for (auto& ejs : js) to_json(js.emplace_back(), ejs);
+      for (auto& ejs : njs) to_json(js.emplace_back(), ejs);
       break;
     case njson::value_t::object:
       js = json_object();

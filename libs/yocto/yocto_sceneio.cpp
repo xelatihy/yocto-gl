@@ -1160,31 +1160,55 @@ bool save_instance(const string& filename, const vector<frame3f>& frames,
 // -----------------------------------------------------------------------------
 namespace yocto {
 
-using json = nlohmann::json;
+using njson = nlohmann::json;
 using std::array;
 
 // support for json conversions
-inline void to_json(json& j, const vec3f& value) {
+inline void to_json(njson& j, const vec3f& value) {
   nlohmann::to_json(j, (const array<float, 3>&)value);
 }
-inline void to_json(json& j, const vec4f& value) {
+inline void to_json(njson& j, const vec4f& value) {
   nlohmann::to_json(j, (const array<float, 4>&)value);
 }
-inline void to_json(json& j, const frame3f& value) {
+inline void to_json(njson& j, const frame3f& value) {
   nlohmann::to_json(j, (const array<float, 12>&)value);
 }
-inline void to_json(json& j, const mat4f& value) {
+inline void to_json(njson& j, const mat4f& value) {
   nlohmann::to_json(j, (const array<float, 16>&)value);
 }
 
-inline void from_json(const json& j, vec3f& value) {
+inline void from_json(const njson& j, vec3f& value) {
   nlohmann::from_json(j, (array<float, 3>&)value);
 }
-inline void from_json(const json& j, mat3f& value) {
+inline void from_json(const njson& j, mat3f& value) {
   nlohmann::from_json(j, (array<float, 9>&)value);
 }
-inline void from_json(const json& j, frame3f& value) {
+inline void from_json(const njson& j, frame3f& value) {
   nlohmann::from_json(j, (array<float, 12>&)value);
+}
+
+// support for json conversions
+inline void to_json(json_value& js, const vec3f& value) {
+  to_json(js, (const array<float, 3>&)value);
+}
+inline void to_json(json_value& js, const vec4f& value) {
+  to_json(js, (const array<float, 4>&)value);
+}
+inline void to_json(json_value& js, const frame3f& value) {
+  to_json(js, (const array<float, 12>&)value);
+}
+inline void to_json(json_value& js, const mat4f& value) {
+  to_json(js, (const array<float, 16>&)value);
+}
+
+inline void from_json(const json_value& js, vec3f& value) {
+  from_json(js, (array<float, 3>&)value);
+}
+inline void from_json(const json_value& js, mat3f& value) {
+  from_json(js, (array<float, 9>&)value);
+}
+inline void from_json(const json_value& js, frame3f& value) {
+  from_json(js, (array<float, 12>&)value);
 }
 
 }  // namespace yocto
@@ -1233,6 +1257,9 @@ static bool load_json_scene(const string& filename, sceneio_scene* scene,
     return false;
   };
 
+  // switch json
+  using json = json_value;
+
   // handle progress
   auto progress = vec2i{0, 2};
   if (progress_cb) progress_cb("load scene", progress.x++, progress.y);
@@ -1246,7 +1273,7 @@ static bool load_json_scene(const string& filename, sceneio_scene* scene,
                        auto& value) -> bool {
     if (!ejs.contains(name)) return true;
     try {
-      ejs.at(name).get_to(value);
+      from_json(ejs.at(name), value);
       return true;
     } catch (...) {
       return false;
@@ -1365,138 +1392,166 @@ static bool load_json_scene(const string& filename, sceneio_scene* scene,
   // asset
   if (js.contains("asset")) {
     auto& ejs = js.at("asset");
-    if (!get_value(ejs, "copyright", scene->copyright)) return false;
+    if (!ejs.is_object()) return parse_error();
+    if (!get_value(ejs, "copyright", scene->copyright)) return parse_error();
   }
 
   // cameras
   if (js.contains("cameras")) {
-    for (auto& [name, ejs] : js.at("cameras").items()) {
+    auto& mjs = js.at("cameras");
+    if (!mjs.is_object()) return parse_error();
+    for (auto& [name, ejs] : mjs.items()) {
+      if (!ejs.is_object()) return parse_error();
       auto camera  = add_camera(scene);
       camera->name = name;
-      if (!get_value(ejs, "frame", camera->frame)) return false;
-      if (!get_value(ejs, "orthographic", camera->orthographic)) return false;
-      if (!get_value(ejs, "lens", camera->lens)) return false;
-      if (!get_value(ejs, "aspect", camera->aspect)) return false;
-      if (!get_value(ejs, "film", camera->film)) return false;
-      if (!get_value(ejs, "focus", camera->focus)) return false;
-      if (!get_value(ejs, "aperture", camera->aperture)) return false;
+      if (!get_value(ejs, "frame", camera->frame)) return parse_error();
+      if (!get_value(ejs, "orthographic", camera->orthographic))
+        return parse_error();
+      if (!get_value(ejs, "lens", camera->lens)) return parse_error();
+      if (!get_value(ejs, "aspect", camera->aspect)) return parse_error();
+      if (!get_value(ejs, "film", camera->film)) return parse_error();
+      if (!get_value(ejs, "focus", camera->focus)) return parse_error();
+      if (!get_value(ejs, "aperture", camera->aperture)) return parse_error();
       if (ejs.contains("lookat")) {
         auto lookat = identity3x3f;
-        if (!get_value(ejs, "lookat", lookat)) return false;
+        if (!get_value(ejs, "lookat", lookat)) return parse_error();
         camera->frame = lookat_frame(lookat.x, lookat.y, lookat.z);
         camera->focus = length(lookat.x - lookat.y);
       }
     }
   }
   if (js.contains("environments")) {
-    for (auto& [name, ejs] : js.at("environments").items()) {
+    auto& mjs = js.at("environments");
+    if (!mjs.is_object()) return parse_error();
+    for (auto& [name, ejs] : mjs.items()) {
+      if (!ejs.is_object()) return parse_error();
       auto environment  = add_environment(scene);
       environment->name = name;
-      if (!get_value(ejs, "frame", environment->frame)) return false;
-      if (!get_value(ejs, "emission", environment->emission)) return false;
+      if (!get_value(ejs, "frame", environment->frame)) return parse_error();
+      if (!get_value(ejs, "emission", environment->emission))
+        return parse_error();
       if (!get_ctexture(
               ejs, "emission_tex", environment->emission_tex, "environments/"))
         return false;
       if (ejs.contains("lookat")) {
         auto lookat = identity3x3f;
-        if (!get_value(ejs, "lookat", lookat)) return false;
+        if (!get_value(ejs, "lookat", lookat)) return parse_error();
         environment->frame = lookat_frame(lookat.x, lookat.y, lookat.z, true);
       }
     }
   }
   if (js.contains("materials")) {
-    for (auto& [name, ejs] : js.at("materials").items()) {
+    auto& mjs = js.at("materials");
+    if (!mjs.is_object()) return parse_error();
+    for (auto& [name, ejs] : mjs.items()) {
+      if (!ejs.is_object()) return parse_error();
       auto material  = add_material(scene);
       material->name = name;
-      if (!get_value(ejs, "emission", material->emission)) return false;
-      if (!get_value(ejs, "color", material->color)) return false;
-      if (!get_value(ejs, "metallic", material->metallic)) return false;
-      if (!get_value(ejs, "specular", material->specular)) return false;
-      if (!get_value(ejs, "roughness", material->roughness)) return false;
-      if (!get_value(ejs, "coat", material->coat)) return false;
-      if (!get_value(ejs, "transmission", material->transmission)) return false;
-      if (!get_value(ejs, "translucency", material->translucency)) return false;
-      if (!get_value(ejs, "thin", material->thin)) return false;
-      if (!get_value(ejs, "ior", material->ior)) return false;
-      if (!get_value(ejs, "trdepth", material->trdepth)) return false;
-      if (!get_value(ejs, "scattering", material->scattering)) return false;
-      if (!get_value(ejs, "scanisotropy", material->scanisotropy)) return false;
-      if (!get_value(ejs, "opacity", material->opacity)) return false;
-      if (!get_value(ejs, "coat", material->coat)) return false;
+      if (!get_value(ejs, "emission", material->emission)) return parse_error();
+      if (!get_value(ejs, "color", material->color)) return parse_error();
+      if (!get_value(ejs, "metallic", material->metallic)) return parse_error();
+      if (!get_value(ejs, "specular", material->specular)) return parse_error();
+      if (!get_value(ejs, "roughness", material->roughness))
+        return parse_error();
+      if (!get_value(ejs, "coat", material->coat)) return parse_error();
+      if (!get_value(ejs, "transmission", material->transmission))
+        return parse_error();
+      if (!get_value(ejs, "translucency", material->translucency))
+        return parse_error();
+      if (!get_value(ejs, "thin", material->thin)) return parse_error();
+      if (!get_value(ejs, "ior", material->ior)) return parse_error();
+      if (!get_value(ejs, "trdepth", material->trdepth)) return parse_error();
+      if (!get_value(ejs, "scattering", material->scattering))
+        return parse_error();
+      if (!get_value(ejs, "scanisotropy", material->scanisotropy))
+        return parse_error();
+      if (!get_value(ejs, "opacity", material->opacity)) return parse_error();
+      if (!get_value(ejs, "coat", material->coat)) return parse_error();
       if (!get_ctexture(ejs, "emission_tex", material->emission_tex))
-        return false;
-      if (!get_ctexture(ejs, "color_tex", material->color_tex)) return false;
+        return parse_error();
+      if (!get_ctexture(ejs, "color_tex", material->color_tex))
+        return parse_error();
       if (!get_stexture(ejs, "metallic_tex", material->metallic_tex))
-        return false;
+        return parse_error();
       if (!get_stexture(ejs, "specular_tex", material->specular_tex))
-        return false;
+        return parse_error();
       if (!get_stexture(ejs, "transmission_tex", material->transmission_tex))
-        return false;
+        return parse_error();
       if (!get_stexture(ejs, "translucency_tex", material->translucency_tex))
-        return false;
+        return parse_error();
       if (!get_stexture(ejs, "roughness_tex", material->roughness_tex))
-        return false;
+        return parse_error();
       if (!get_ctexture(ejs, "scattering_tex", material->scattering_tex))
-        return false;
+        return parse_error();
       if (!get_stexture(ejs, "opacity_tex", material->opacity_tex))
-        return false;
-      if (!get_ctexture(ejs, "normal_tex", material->normal_tex)) return false;
+        return parse_error();
+      if (!get_ctexture(ejs, "normal_tex", material->normal_tex))
+        return parse_error();
       material_map[material->name] = material;
     }
   }
   if (js.contains("instances")) {
-    for (auto& [name, ejs] : js.at("instances").items()) {
+    auto& mjs = js.at("instances");
+    if (!mjs.is_object()) return parse_error();
+    for (auto& [name, ejs] : mjs.items()) {
+      if (!ejs.is_object()) return parse_error();
       auto instance  = add_instance(scene);
       instance->name = name;
-      if (!get_value(ejs, "frame", instance->frame)) return false;
+      if (!get_value(ejs, "frame", instance->frame)) return parse_error();
       if (ejs.contains("lookat")) {
         auto lookat = identity3x3f;
-        if (!get_value(ejs, "lookat", lookat)) return false;
-        instance->frame = lookat_frame(lookat.x, lookat.y, lookat.z, true);
+        if (!get_value(ejs, "lookat", lookat)) return parse_error();
+        instance->frame = lookat_frame(
+            lookat.x, lookat.y, lookat.z, parse_error());
       }
       if (!get_ref(ejs, "material", instance->material, material_map))
-        return false;
-      if (!get_shape(ejs, "shape", instance->shape)) return false;
-      if (!get_ply_instances(ejs, "instance", instance)) return false;
+        return parse_error();
+      if (!get_shape(ejs, "shape", instance->shape)) return parse_error();
+      if (!get_ply_instances(ejs, "instance", instance)) return parse_error();
       if (instance->shape != nullptr) {
         if (!get_value(ejs, "subdivisions", instance->shape->subdivisions))
-          return false;
+          return parse_error();
         if (!get_value(ejs, "catmullcark", instance->shape->catmullclark))
-          return false;
-        if (!get_value(ejs, "smooth", instance->shape->smooth)) return false;
+          return parse_error();
+        if (!get_value(ejs, "smooth", instance->shape->smooth))
+          return parse_error();
         if (!get_value(ejs, "displacement", instance->shape->displacement))
-          return false;
+          return parse_error();
         if (!get_stexture(
                 ejs, "displacement_tex", instance->shape->displacement_tex))
-          return false;
+          return parse_error();
       }
     }
   }
   if (js.contains("objects")) {
-    for (auto& [name, ejs] : js.at("objects").items()) {
+    auto& mjs = js.at("objects");
+    if (!mjs.is_object()) return parse_error();
+    for (auto& [name, ejs] : mjs.items()) {
+      if (!ejs.is_object()) return parse_error();
       auto instance  = add_instance(scene);
       instance->name = name;
-      if (!get_value(ejs, "frame", instance->frame)) return false;
+      if (!get_value(ejs, "frame", instance->frame)) return parse_error();
       if (ejs.contains("lookat")) {
         auto lookat = identity3x3f;
-        if (!get_value(ejs, "lookat", lookat)) return false;
+        if (!get_value(ejs, "lookat", lookat)) return parse_error();
         instance->frame = lookat_frame(lookat.x, lookat.y, lookat.z, true);
       }
       if (!get_ref(ejs, "material", instance->material, material_map))
-        return false;
-      if (!get_shape(ejs, "shape", instance->shape)) return false;
-      if (!get_ply_instances(ejs, "instance", instance)) return false;
+        return parse_error();
+      if (!get_shape(ejs, "shape", instance->shape)) return parse_error();
+      if (!get_ply_instances(ejs, "instance", instance)) return parse_error();
       if (instance->shape != nullptr) {
         if (!get_value(ejs, "subdivisions", instance->shape->subdivisions))
-          return false;
+          return parse_error();
         if (!get_value(ejs, "catmullcark", instance->shape->catmullclark))
-          return false;
-        if (!get_value(ejs, "smooth", instance->shape->smooth)) return false;
+          return parse_error();
+        if (!get_value(ejs, "smooth", instance->shape->smooth))
+          return parse_error();
         if (!get_value(ejs, "displacement", instance->shape->displacement))
-          return false;
+          return parse_error();
         if (!get_stexture(
                 ejs, "displacement_tex", instance->shape->displacement_tex))
-          return false;
+          return parse_error();
       }
     }
   }
