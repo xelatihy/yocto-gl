@@ -39,7 +39,6 @@
 #include <unordered_map>
 
 #include "ext/cgltf.h"
-#include "ext/json.hpp"
 #include "yocto_color.h"
 #include "yocto_commonio.h"
 #include "yocto_geometry.h"
@@ -1160,6 +1159,7 @@ bool save_instance(const string& filename, const vector<frame3f>& frames,
 // -----------------------------------------------------------------------------
 namespace yocto {
 
+#if 0
 using njson = nlohmann::json;
 using std::array;
 
@@ -1186,27 +1186,7 @@ inline void from_json(const njson& j, mat3f& value) {
 inline void from_json(const njson& j, frame3f& value) {
   nlohmann::from_json(j, (array<float, 12>&)value);
 }
-
-// load/save json
-static bool load_json(const string& filename, njson& js, string& error) {
-  // error helpers
-  auto parse_error = [filename, &error]() {
-    error = filename + ": parse error in json";
-    return false;
-  };
-  auto text = ""s;
-  if (!load_text(filename, text, error)) return false;
-  try {
-    js = njson::parse(text);
-    return true;
-  } catch (std::exception&) {
-    return parse_error();
-  }
-}
-
-static bool save_json(const string& filename, const njson& js, string& error) {
-  return save_text(filename, js.dump(2), error);
-}
+#endif
 
 // support for json conversions
 inline void to_json(json_value& js, const vec3f& value) {
@@ -2816,7 +2796,7 @@ static bool save_gltf_scene(const string& filename, const sceneio_scene* scene,
   // asset
   {
     auto& ajs      = js["asset"];
-      ajs = json::object();
+    ajs            = json::object();
     ajs["version"] = "2.0";
     ajs["generator"] =
         "Saved with Yocto/GL --- https://github.com/xelatihy/yocto-gl";
