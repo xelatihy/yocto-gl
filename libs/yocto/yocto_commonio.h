@@ -496,6 +496,7 @@ struct json_value {
     }
     return nullptr;
   }
+  bool contains(const string& key) const { return find(key) != nullptr; }
 
   // binary support
   static json_value binary() { return json_value{json_binary{}}; }
