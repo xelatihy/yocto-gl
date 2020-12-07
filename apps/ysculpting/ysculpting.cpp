@@ -780,7 +780,7 @@ int main(int argc, const char *argv[]) {
         dolly = (input.mouse_pos.x - input.mouse_last.x) / 100.0f;
       if (input.mouse_left && input.modifier_shift)
         pan = (input.mouse_pos - input.mouse_last) / 100.0f;
-      update_turntable(
+      std::tie(app->glcamera->frame, app->glcamera->focus) = camera_turntable(
           app->glcamera->frame, app->glcamera->focus, rotate, dolly, -pan);
       // set_frame(app->glcamera, app->glcamera->frame);
     }
