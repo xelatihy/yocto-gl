@@ -2807,14 +2807,16 @@ static bool save_gltf_scene(const string& filename, const sceneio_scene* scene,
   if (progress_cb) progress_cb("save scene", progress.x++, progress.y);
 
   // setup json
-  using json = njson;
+  using json = json_value;
 
   // convert scene to json
   auto js = json{};
+  js      = json::object();
 
   // asset
   {
     auto& ajs      = js["asset"];
+      ajs = json::object();
     ajs["version"] = "2.0";
     ajs["generator"] =
         "Saved with Yocto/GL --- https://github.com/xelatihy/yocto-gl";
@@ -2823,12 +2825,15 @@ static bool save_gltf_scene(const string& filename, const sceneio_scene* scene,
 
   // cameras
   if (!scene->cameras.empty()) {
-    js["cameras"] = json::array();
+    auto& ajs = js["cameras"];
+    ajs       = json::array();
     for (auto camera : scene->cameras) {
-      auto& cjs          = js["cameras"].emplace_back();
+      auto& cjs          = ajs.emplace_back();
+      cjs                = json::object();
       cjs["name"]        = camera->name;
       cjs["type"]        = "perspective";
       auto& pjs          = cjs["perspective"];
+      pjs                = json::object();
       pjs["aspectRatio"] = camera->aspect;
       pjs["yfov"]        = 0.660593;  // TODO(fabio): yfov
       pjs["znear"]       = 0.001;     // TODO(fabio): configurable?
@@ -2840,14 +2845,18 @@ static bool save_gltf_scene(const string& filename, const sceneio_scene* scene,
   auto texture_map  = unordered_map<string, int>{};
   auto material_map = unordered_map<const sceneio_material*, int>{};
   if (!scene->materials.empty()) {
-    js["materials"] = json::array();
+    auto& ajs = js["materials"];
+    ajs       = json::array();
     for (auto material : scene->materials) {
-      auto& mjs              = js["materials"].emplace_back();
-      mjs["name"]            = material->name;
-      mjs["emissiveFactor"]  = material->emission;
+      auto& mjs             = ajs.emplace_back();
+      mjs                   = json::object();
+      mjs["name"]           = material->name;
+      mjs["emissiveFactor"] = array<float, 3>{
+          material->emission.x, material->emission.y, material->emission.z};
       auto& pjs              = mjs["pbrMetallicRoughness"];
-      pjs["baseColorFactor"] = vec4f{material->color.x, material->color.y,
-          material->color.z, material->opacity};
+      pjs                    = json::object();
+      pjs["baseColorFactor"] = array<float, 4>{material->color.x,
+          material->color.y, material->color.z, material->opacity};
       pjs["metallicFactor"]  = material->metallic;
       pjs["roughnessFactor"] = material->roughness;
       if (material->emission_tex) {
@@ -2856,6 +2865,7 @@ static bool save_gltf_scene(const string& filename, const sceneio_scene* scene,
           textures.emplace_back(tname, material->emission_tex->ldr);
           texture_map[tname] = (int)textures.size() - 1;
         }
+        mjs["emissiveTexture"]          = json::object();
         mjs["emissiveTexture"]["index"] = texture_map.at(tname);
       }
       if (material->normal_tex) {
@@ -2864,6 +2874,7 @@ static bool save_gltf_scene(const string& filename, const sceneio_scene* scene,
           textures.emplace_back(tname, material->normal_tex->ldr);
           texture_map[tname] = (int)textures.size() - 1;
         }
+        mjs["normalTexture"]          = json::object();
         mjs["normalTexture"]["index"] = texture_map.at(tname);
       }
       if (material->color_tex) {                 // TODO(fabio): opacity
@@ -2872,6 +2883,7 @@ static bool save_gltf_scene(const string& filename, const sceneio_scene* scene,
           textures.emplace_back(tname, material->color_tex->ldr);
           texture_map[tname] = (int)textures.size() - 1;
         }
+        pjs["baseColorTexture"]          = json::object();
         pjs["baseColorTexture"]["index"] = texture_map.at(tname);
       }
       if (material->roughness_tex) {                 // TODO(fabio): roughness
@@ -2880,6 +2892,7 @@ static bool save_gltf_scene(const string& filename, const sceneio_scene* scene,
           textures.emplace_back(tname, material->roughness_tex->ldr);
           texture_map[tname] = (int)textures.size() - 1;
         }
+        pjs["metallicRoughnessTexture"]          = json::object();
         pjs["metallicRoughnessTexture"]["index"] = texture_map.at(tname);
       }
       material_map[material] = (int)js["materials"].size() - 1;
@@ -2892,12 +2905,15 @@ static bool save_gltf_scene(const string& filename, const sceneio_scene* scene,
     js["samplers"] = json::array();
     js["images"]   = json::array();
     auto& sjs      = js["samplers"].emplace_back();
+    sjs            = json::object();
     sjs["name"]    = "sampler";
     for (auto& [name, img] : textures) {
       auto& ijs      = js["images"].emplace_back();
+      ijs            = json::object();
       ijs["name"]    = name;
       ijs["uri"]     = "textures/" + name + ".png";
       auto& tjs      = js["textures"].emplace_back();
+      tjs            = json::object();
       tjs["name"]    = name;
       tjs["sampler"] = 0;
       tjs["source"]  = (int)js["images"].size() - 1;
@@ -2912,15 +2928,17 @@ static bool save_gltf_scene(const string& filename, const sceneio_scene* scene,
         {1, "SCALAR"}, {2, "VEC2"}, {3, "VEC3"}, {4, "VEC4"}};
     auto  length         = count * size * 4;
     auto& vjs            = js["bufferViews"].emplace_back();
+    vjs                  = json::object();
     vjs["buffer"]        = (int)buffers.size() - 1;
-    vjs["byteLength"]    = length;
-    vjs["byteOffset"]    = buffers.back().second.size();
+    vjs["byteLength"]    = (uint64_t)length;
+    vjs["byteOffset"]    = (uint64_t)buffers.back().second.size();
     vjs["target"]        = is_index ? 34963 : 34962;
     auto& ajs            = js["accessors"].emplace_back();
+    ajs                  = json::object();
     ajs["bufferView"]    = (int)js["bufferViews"].size() - 1;
     ajs["byteOffset"]    = 0;
     ajs["componentType"] = is_index ? 5125 : 5126;
-    ajs["count"]         = count;
+    ajs["count"]         = (uint64_t)count;
     ajs["type"]          = types.at(size);
     if (!is_index) {
       auto min_ = vector<float>(size, flt_max);
@@ -2950,7 +2968,9 @@ static bool save_gltf_scene(const string& filename, const sceneio_scene* scene,
     for (auto shape : scene->shapes) {
       auto& buffer = buffers.emplace_back(shape->name, vector<byte>{}).second;
       auto& pjs    = primitives_map[shape];
+      pjs          = json::object();
       auto& ajs    = pjs["attributes"];
+      ajs          = json::object();
       if (!shape->positions.empty()) {
         ajs["POSITION"] = add_accessor(
             js, buffers, shape->positions.data(), shape->positions.size(), 3);
@@ -2992,7 +3012,8 @@ static bool save_gltf_scene(const string& filename, const sceneio_scene* scene,
         return fvshape_error();
       }
       auto& bjs         = js["buffers"].emplace_back();
-      bjs["byteLength"] = buffer.size();
+      bjs               = json::object();
+      bjs["byteLength"] = (uint64_t)buffer.size();
       bjs["uri"]        = "shapes/" + shape->name + ".bin";
     }
   }
@@ -3002,9 +3023,11 @@ static bool save_gltf_scene(const string& filename, const sceneio_scene* scene,
   if (!scene->cameras.empty()) {
     auto camera_id = 0;
     for (auto camera : scene->cameras) {
-      auto& njs     = js["nodes"].emplace_back();
-      njs["name"]   = camera->name;
-      njs["matrix"] = frame_to_mat(camera->frame);
+      auto& njs   = js["nodes"].emplace_back();
+      njs         = json::object();
+      njs["name"] = camera->name;
+      auto matrix = frame_to_mat(camera->frame);  // TODO(fabio): do this better
+      njs["matrix"] = (array<float, 16>&)matrix;
       njs["camera"] = camera_id++;
     }
   }
@@ -3022,12 +3045,16 @@ static bool save_gltf_scene(const string& filename, const sceneio_scene* scene,
     };
     auto mesh_map = unordered_map<mesh_key, int, mesh_key_hash>{};
     for (auto instance : scene->instances) {
-      auto& njs     = js["nodes"].emplace_back();
-      njs["name"]   = instance->name;
-      njs["matrix"] = frame_to_mat(instance->frame);
+      auto& njs   = js["nodes"].emplace_back();
+      njs         = json::object();
+      njs["name"] = instance->name;
+      auto matrix = frame_to_mat(
+          instance->frame);  // TODO(fabio): do this better
+      njs["matrix"] = (array<float, 16>&)matrix;
       if (mesh_map.find(mesh_key{instance->shape, instance->material}) ==
           mesh_map.end()) {
         auto& mjs   = js["meshes"].emplace_back();
+        mjs         = json::object();
         mjs["name"] = instance->shape->name + "_" + instance->material->name;
         mjs["primitives"] = json::array();
         mjs["primitives"].push_back(primitives_map.at(instance->shape));
@@ -3042,10 +3069,12 @@ static bool save_gltf_scene(const string& filename, const sceneio_scene* scene,
     js["meshes"] = json::array();
     for (auto& [shape, pjs] : primitives_map) {
       auto& mjs         = js["meshes"].emplace_back();
+      mjs               = json::object();
       mjs["name"]       = shape->name;
       mjs["primitives"] = json::array();
       mjs["primitives"].push_back(pjs);
       auto& njs   = js["nodes"].emplace_back();
+      njs         = json::object();
       njs["name"] = shape->name;
       njs["mesh"] = (int)js["meshes"].size() - 1;
     }
@@ -3054,18 +3083,20 @@ static bool save_gltf_scene(const string& filename, const sceneio_scene* scene,
   // root children
   {
     auto& rjs       = js["nodes"].emplace_back();
+    rjs             = json::object();
     rjs["name"]     = "root";
     rjs["children"] = json::array();
     for (auto idx = 0; idx < (int)js["nodes"].size() - 1; idx++)
-      rjs["children"].push_back(idx);
+      rjs["children"].push_back(json{idx});
   }
 
   // scene
   {
     js["scenes"] = json::array();
     auto& sjs    = js["scenes"].emplace_back();
+    sjs          = json::object();
     sjs["nodes"] = json::array();
-    sjs["nodes"].push_back((int)js["nodes"].size() - 1);
+    sjs["nodes"].push_back(json{(int)js["nodes"].size() - 1});
     js["scene"] = 0;
   }
 

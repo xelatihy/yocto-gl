@@ -290,6 +290,16 @@ struct json_value {
       : _type{json_type::object}, _object{new json_object{value}} {}
   explicit json_value(const json_binary& value)
       : _type{json_type::binary}, _binary{new json_binary{value}} {}
+  template <typename T, size_t N>
+  explicit json_value(const array<T, N>& value)
+      : _type{json_type::array}, _array{new json_array(value.size())} {
+    for (auto idx = 0; idx < size(); idx++) at(idx) = value[idx];
+  }
+  template <typename T>
+  explicit json_value(const vector<T>& value)
+      : _type{json_type::array}, _array{new json_array(value.size())} {
+    for (auto idx = 0; idx < size(); idx++) at(idx) = value[idx];
+  }
 
   // assignments
   json_value& operator=(const json_value& other) { return _copy(other); }
@@ -307,6 +317,14 @@ struct json_value {
   json_value& operator=(const json_array& value) { return _set(value); }
   json_value& operator=(const json_object& value) { return _set(value); }
   json_value& operator=(const json_binary& value) { return _set(value); }
+  template <typename T, size_t N>
+  json_value& operator=(const array<T, N>& value) {
+    return _set(value);
+  }
+  template <typename T>
+  json_value& operator=(const vector<T>& value) {
+    return _set(value);
+  }
 
   // type
   json_type type() const { return _type; }
@@ -347,6 +365,19 @@ struct json_value {
   explicit operator json_array() const { return get_array(); }
   explicit operator json_object() const { return get_object(); }
   explicit operator json_binary() const { return get_binary(); }
+  template <typename T, size_t N>
+  explicit operator array<T, N>() {
+    if (size() != N) throw std::out_of_range{"wrong size"};
+    auto ret = std::array<T, N>{};
+    for (auto idx = 0; idx < size(); idx++) ret[idx] = (T)at(idx);
+    return ret;
+  }
+  template <typename T>
+  explicit operator vector<T>() {
+    auto ret = vector<T>(size());
+    for (auto idx = 0; idx < size(); idx++) ret[idx] = (T)at(idx);
+    return ret;
+  }
 
   // access
   const int64_t& get_integer() const {
@@ -426,6 +457,10 @@ struct json_value {
   const json_value& operator[](size_t idx) const { return get_array().at(idx); }
   json_value&       at(size_t idx) { return get_array().at(idx); }
   const json_value& at(size_t idx) const { return get_array().at(idx); }
+  json_value&       front() { return get_array().front(); }
+  const json_value& front() const { return get_array().front(); }
+  json_value&       back() { return get_array().back(); }
+  const json_value& back() const { return get_array().back(); }
   void              push_back(const json_value& value) {
     return get_array().push_back(value);
   }
