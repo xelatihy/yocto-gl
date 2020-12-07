@@ -2831,12 +2831,12 @@ static bool save_gltf_scene(const string& filename, const sceneio_scene* scene,
       auto& mjs             = ajs.emplace_back();
       mjs                   = json::object();
       mjs["name"]           = material->name;
-      mjs["emissiveFactor"] = array<float, 3>{
-          material->emission.x, material->emission.y, material->emission.z};
+      mjs["emissiveFactor"] = to_json(array<float, 3>{
+          material->emission.x, material->emission.y, material->emission.z});
       auto& pjs              = mjs["pbrMetallicRoughness"];
       pjs                    = json::object();
-      pjs["baseColorFactor"] = array<float, 4>{material->color.x,
-          material->color.y, material->color.z, material->opacity};
+      pjs["baseColorFactor"] = to_json(array<float, 4>{material->color.x,
+          material->color.y, material->color.z, material->opacity});
       pjs["metallicFactor"]  = material->metallic;
       pjs["roughnessFactor"] = material->roughness;
       if (material->emission_tex) {

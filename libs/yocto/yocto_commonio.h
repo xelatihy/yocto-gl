@@ -260,10 +260,6 @@ struct json_value {
   explicit json_value(const json_array& value);
   explicit json_value(const json_object& value);
   explicit json_value(const json_binary& value);
-  template <typename T, size_t N>
-  explicit json_value(const std::array<T, N>& value);
-  template <typename T>
-  explicit json_value(const vector<T>& value);
 
   // assignments
   json_value& operator=(const json_value& other);
@@ -281,10 +277,6 @@ struct json_value {
   json_value& operator=(const json_array& value);
   json_value& operator=(const json_object& value);
   json_value& operator=(const json_binary& value);
-  template <typename T, size_t N>
-  json_value& operator=(const std::array<T, N>& value);
-  template <typename T>
-  json_value& operator=(const vector<T>& value);
 
   // type
   json_type type() const;
@@ -310,10 +302,6 @@ struct json_value {
   explicit operator json_array() const;
   explicit operator json_object() const;
   explicit operator json_binary() const;
-  template <typename T, size_t N>
-  explicit operator std::array<T, N>();
-  template <typename T>
-  explicit operator vector<T>();
 
 // size_t fix
 #ifdef __APPLE__
@@ -509,16 +497,6 @@ inline json_value::json_value(const json_object& value)
     : _type{json_type::object}, _object{new json_object{value}} {}
 inline json_value::json_value(const json_binary& value)
     : _type{json_type::binary}, _binary{new json_binary{value}} {}
-template <typename T, size_t N>
-inline json_value::json_value(const std::array<T, N>& value)
-    : _type{json_type::array}, _array{new json_array(value.size())} {
-  for (auto idx = 0; idx < size(); idx++) at(idx) = value[idx];
-}
-template <typename T>
-inline json_value::json_value(const vector<T>& value)
-    : _type{json_type::array}, _array{new json_array(value.size())} {
-  for (auto idx = 0; idx < size(); idx++) at(idx) = value[idx];
-}
 
 // assignments
 inline json_value& json_value::operator=(const json_value& other) {
@@ -556,14 +534,6 @@ inline json_value& json_value::operator=(const json_object& value) {
   return _set(value);
 }
 inline json_value& json_value::operator=(const json_binary& value) {
-  return _set(value);
-}
-template <typename T, size_t N>
-inline json_value& json_value::operator=(const std::array<T, N>& value) {
-  return _set(value);
-}
-template <typename T>
-inline json_value& json_value::operator=(const vector<T>& value) {
   return _set(value);
 }
 
@@ -615,19 +585,6 @@ inline json_value::operator json_object() const {
 }
 inline json_value::operator json_binary() const {
   return get_binary();
-}
-template <typename T, size_t N>
-inline json_value::operator std::array<T, N>() {
-  if (size() != N) throw std::out_of_range{"wrong size"};
-  auto ret = std::array<T, N>{};
-  for (auto idx = 0; idx < size(); idx++) ret[idx] = (T)at(idx);
-  return ret;
-}
-template <typename T>
-inline json_value::operator vector<T>() {
-  auto ret = vector<T>(size());
-  for (auto idx = 0; idx < size(); idx++) ret[idx] = (T)at(idx);
-  return ret;
 }
 
 // size_t fix
