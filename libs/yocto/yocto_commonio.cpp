@@ -41,6 +41,8 @@
 #include <unordered_set>
 #include <vector>
 
+#include "ext/json.hpp"
+
 // -----------------------------------------------------------------------------
 // USING DIRECTIVES
 // -----------------------------------------------------------------------------
@@ -386,6 +388,106 @@ bool make_directory(const string& dirname, string& error) {
 
 // Get the current directory
 string path_current() { return std::filesystem::current_path().u8string(); }
+
+}  // namespace yocto
+
+// -----------------------------------------------------------------------------
+// IMPLEMENTATION OF JSON SUPPORT
+// -----------------------------------------------------------------------------
+namespace yocto {
+
+using njson = nlohmann::ordered_json;
+
+// load/save json
+static bool load_json(const string& filename, njson& js, string& error) {
+  // error helpers
+  auto parse_error = [filename, &error]() {
+    error = filename + ": parse error in json";
+    return false;
+  };
+  auto text = ""s;
+  if (!load_text(filename, text, error)) return false;
+  try {
+    js = njson::parse(text);
+    return true;
+  } catch (std::exception&) {
+    return parse_error();
+  }
+}
+
+static bool save_json(const string& filename, const njson& js, string& error) {
+  return save_text(filename, js.dump(2), error);
+}
+
+// convert json
+static void to_json(json_value& js, const njson& njs) {
+  switch (njs.type()) {
+    case njson::value_t::null: js = json_value{}; break;
+    case njson::value_t::number_integer: js = (int64_t)njs; break;
+    case njson::value_t::number_unsigned: js = (uint64_t)njs; break;
+    case njson::value_t::number_float: js = (double)njs; break;
+    case njson::value_t::boolean: js = (bool)njs; break;
+    case njson::value_t::string: js = (string)njs; break;
+    case njson::value_t::array:
+      js = json_array();
+      for (auto& ejs : js) to_json(js.emplace_back(), ejs);
+      break;
+    case njson::value_t::object:
+      js = json_object();
+      for (auto& [key, ejs] : njs.items()) to_json(js[key], ejs);
+      break;
+    case njson::value_t::binary:
+      js              = json_binary();
+      js.get_binary() = njs.get_binary();
+      break;
+    case njson::value_t::discarded: js = json_value{}; break;
+  }
+}
+
+// convert json
+static void from_json(const json_value& js, njson& njs) {
+  switch (js.type()) {
+    case json_type::null: njs = {}; break;
+    case json_type::integer: njs = js.get_integer(); break;
+    case json_type::unsigned_: njs = js.get_unsigned(); break;
+    case json_type::real: njs = js.get_real(); break;
+    case json_type::boolean: njs = js.get_boolean(); break;
+    case json_type::string_: njs = js.get_string(); break;
+    case json_type::array:
+      njs = njson::array();
+      for (auto& ejs : js) from_json(ejs, njs.emplace_back());
+      break;
+    case json_type::object:
+      njs = njson::object();
+      for (auto& [key, ejs] : js.items()) from_json(ejs, njs[key]);
+      break;
+    case json_type::binary:
+      njs              = njson::binary({});
+      njs.get_binary() = js.get_binary();
+      break;
+  }
+}
+
+// load json
+bool load_json(const string& filename, json_value& js, string& error) {
+  // parse json
+  auto njs = njson{};
+  if (!load_json(filename, njs, error)) return false;
+
+  // convert
+  to_json(js, njs);
+  return true;
+}
+
+// save json
+bool save_json(const string& filename, const json_value& js, string& error) {
+  // convert
+  auto njs = njson{};
+  from_json(js, njs);
+
+  // save
+  return save_json(filename, njs, error);
+}
 
 }  // namespace yocto
 
