@@ -492,13 +492,15 @@ bool load_json(const string& filename, json_value& js, string& error) {
       stack.push_back(root);
     }
 
-    // values
+    // get current value
     json_value& next_value() {
-      if (stack.size() == 0) return *root;
+      if (stack.size() == 1) return *root;
       if (stack.back()->is_array()) return (*stack.back()).emplace_back();
       if (stack.back()->is_object()) return (*stack.back())[current_key];
       throw json_type_error{"bad json type"};
     }
+
+    // values
     bool null() {
       next_value() = json_value{};
       return true;
