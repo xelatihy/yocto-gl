@@ -673,6 +673,20 @@ struct json_value {
 bool load_json(const string& filename, json_value& js, string& error);
 bool save_json(const string& filename, const json_value& js, string& error);
 
+// Conversion shortcuts
+template<typename T>
+inline T& from_json(const json_value& js) {
+  auto value = T{};
+  from_json(js, value);
+  return value;
+}
+template<typename T>
+inline json_value to_json(const T& value) {
+  auto js = json_value();
+  to_json(js, value);
+  return js;
+}
+
 // Conversion from json to types
 inline void from_json(const json_value& js, int64_t& value) {
   value = (int64_t)js;

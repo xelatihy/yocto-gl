@@ -396,10 +396,12 @@ string path_current() { return std::filesystem::current_path().u8string(); }
 // -----------------------------------------------------------------------------
 namespace yocto {
 
+#define YOCTO_JSON_SAX 1
+
 using njson = nlohmann::ordered_json;
 
 // load/save json
-static bool load_json(const string& filename, njson& js, string& error) {
+bool load_json(const string& filename, njson& js, string& error) {
   // error helpers
   auto parse_error = [filename, &error]() {
     error = filename + ": parse error in json";
@@ -415,12 +417,12 @@ static bool load_json(const string& filename, njson& js, string& error) {
   }
 }
 
-static bool save_json(const string& filename, const njson& js, string& error) {
+bool save_json(const string& filename, const njson& js, string& error) {
   return save_text(filename, js.dump(2), error);
 }
 
 // convert json
-static void to_json(json_value& js, const njson& njs) {
+void to_json(json_value& js, const njson& njs) {
   switch (njs.type()) {
     case njson::value_t::null: js = json_value{}; break;
     case njson::value_t::number_integer: js = (int64_t)njs; break;
@@ -445,7 +447,7 @@ static void to_json(json_value& js, const njson& njs) {
 }
 
 // convert json
-static void from_json(const json_value& js, njson& njs) {
+void from_json(const json_value& js, njson& njs) {
   switch (js.type()) {
     case json_type::null: njs = {}; break;
     case json_type::integer: njs = js.get_integer(); break;
@@ -467,6 +469,12 @@ static void from_json(const json_value& js, njson& njs) {
       break;
   }
 }
+
+#if YOCTO_JSON_SAX == 1
+
+#else
+
+#endif
 
 // load json
 bool load_json(const string& filename, json_value& js, string& error) {

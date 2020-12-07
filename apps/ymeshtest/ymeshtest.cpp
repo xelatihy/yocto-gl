@@ -537,6 +537,12 @@ bool save_mesh_points(
   }
 }
 
+void to_json(json_value& js, const mesh_point& value) {
+  js                = json_value::array();
+  js.emplace_back() = value.face;
+  js.emplace_back() = (array<float, 2>&)value.uv;
+}
+
 // -----------------------------------------------------------------------------
 // MAIN FUNCTION
 // -----------------------------------------------------------------------------
@@ -624,7 +630,7 @@ int main(int argc, const char* argv[]) {
   stats["points"]              = json_value::object();
   stats["points"]["time"]      = elapsed_nanoseconds(points_timer);
   stats["points"]["vertices"]  = points.size();
-  stats["points"]["positions"] = points;
+  stats["points"]["positions"] = to_json(points);
 
   // build graph
   print_progress("build graph", progress.x++, progress.y);
