@@ -414,11 +414,14 @@ struct json_value {
     return *_binary;
   }
 
-  // structuree support
+  // structure support
   bool   empty() const { return size() == 0; }
   size_t size() const { return _size(); }
+  void   resize(size_t size) { return _resize(size); }
+  void   reserve(size_t size) { return _reserve(size); }
 
   // array support
+  static json_value array() { return json_value{json_array{}}; }
   json_value&       operator[](size_t idx) { return get_array().at(idx); }
   const json_value& operator[](size_t idx) const { return get_array().at(idx); }
   json_value&       at(size_t idx) { return get_array().at(idx); }
@@ -441,7 +444,8 @@ struct json_value {
   }
 
   // object support
-  json_value& operator[](const string& key) {
+  static json_value object() { return json_value{json_object{}}; }
+  json_value&       operator[](const string& key) {
     if (auto ptr = find(key); ptr) {
       return *ptr;
     } else {
@@ -492,6 +496,9 @@ struct json_value {
     }
     return nullptr;
   }
+
+  // binary support
+  static json_value binary() { return json_value{json_binary{}}; }
 
   // swap
   void swap(json_value& other) { _swap(other); }
@@ -595,11 +602,83 @@ struct json_value {
       default: throw json_type_error{"bad json type"};
     }
   }
+
+  void _resize(size_t size) {
+    switch (_type) {
+      case json_type::string_: return get_string().resize(size);
+      case json_type::array: return get_array().resize(size);
+      case json_type::binary: return get_binary().resize(size, 0);
+      default: throw json_type_error{"bad json type"};
+    }
+  }
+
+  void _reserve(size_t size) {
+    switch (_type) {
+      case json_type::string_: return get_string().reserve(size);
+      case json_type::array: return get_array().reserve(size);
+      case json_type::object: return get_object().reserve(size);
+      case json_type::binary: return get_binary().reserve(size);
+      default: throw json_type_error{"bad json type"};
+    }
+  }
 };
 
 // Load/save a json file
 bool load_json(const string& filename, json_value& js, string& error);
 bool save_json(const string& filename, const json_value& js, string& error);
+
+// Conversion from json to types
+inline void from_json(const json_value& js, int64_t& value) {
+  value = (int64_t)js;
+}
+inline void from_json(const json_value& js, int32_t& value) {
+  value = (int32_t)js;
+}
+inline void from_json(const json_value& js, uint64_t& value) {
+  value = (uint64_t)js;
+}
+inline void from_json(const json_value& js, uint32_t& value) {
+  value = (uint32_t)js;
+}
+inline void from_json(const json_value& js, double& value) {
+  value = (double)js;
+}
+inline void from_json(const json_value& js, float& value) { value = (float)js; }
+inline void from_json(const json_value& js, bool& value) { value = (bool)js; }
+inline void from_json(const json_value& js, string& value) {
+  value = (string)js;
+}
+template <typename T>
+inline void from_json(const json_value& js, vector<T>& value) {
+  value.clear();
+  for (auto& ejs : js) from_json(ejs, value.emplace_back());
+}
+template <typename T, size_t N>
+inline void from_json(const json_value& js, array<T, N>& value) {
+  if (js.size() != N) throw std::out_of_range{"invalid size"};
+  for (auto idx = 0; idx < N; idx++) from_json(js.at(idx), value.at(idx));
+}
+
+// Conversion from types to json
+inline void to_json(json_value& js, int64_t value) { js = value; }
+inline void to_json(json_value& js, int32_t value) { js = value; }
+inline void to_json(json_value& js, uint64_t value) { js = value; }
+inline void to_json(json_value& js, uint32_t value) { js = value; }
+inline void to_json(json_value& js, double value) { js = value; }
+inline void to_json(json_value& js, float value) { js = value; }
+inline void to_json(json_value& js, bool value) { js = value; }
+inline void to_json(json_value& js, const string& value) { js = value; }
+template <typename T>
+inline void to_json(json_value& js, const vector<T>& value) {
+  js = json_array{};
+  for (auto& v : value) to_json(js.emplace_back(), v);
+}
+template <typename T, size_t N>
+inline void to_json(json_value& js, const array<T, N>& value) {
+  js = json_array{};
+  js.resize(N);
+  for (auto idx = 0; idx < N; idx++) to_json(js.at(idx), value.at(idx));
+}
 
 }  // namespace yocto
 
