@@ -670,67 +670,67 @@ inline json_value& json_value::operator=(size_t value) {
 
 // access
 inline const int64_t& json_value::get_integer() const {
-  _check_type(json_type::integer);
+  if(_type != json_type::integer) throw json_type_error{"integer expected"};
   return _integer;
 }
 inline const uint64_t& json_value::get_unsigned() const {
-  _check_type(json_type::unsigned_);
+  if(_type != json_type::unsigned_) throw json_type_error{"unsigned expected"};
   return _unsigned;
 }
 inline const double& json_value::get_real() const {
-  _check_type(json_type::real);
+  if(_type != json_type::real) throw json_type_error{"real expected"};
   return _real;
 }
 inline const bool& json_value::get_boolean() const {
-  _check_type(json_type::boolean);
+  if(_type != json_type::boolean) throw json_type_error{"boolean expected"};
   return _boolean;
 }
 inline const string& json_value::get_string() const {
-  _check_type(json_type::string_);
+  if(_type != json_type::string_) throw json_type_error{"string expected"};
   return *_string_;
 }
 inline const json_array& json_value::get_array() const {
-  _check_type(json_type::array);
+  if(_type != json_type::array) throw json_type_error{"array expected"};
   return *_array;
 }
 inline const json_object& json_value::get_object() const {
-  _check_type(json_type::object);
+  if(_type != json_type::object) throw json_type_error{"object expected"};
   return *_object;
 }
 inline const json_binary& json_value::get_binary() const {
-  _check_type(json_type::binary);
+  if(_type != json_type::binary) throw json_type_error{"binary expected"};
   return *_binary;
 }
 inline int64_t& json_value::get_integer() {
-  _check_type(json_type::integer);
+  if(_type != json_type::integer) throw json_type_error{"integer expected"};
   return _integer;
 }
 inline uint64_t& json_value::get_unsigned() {
-  _check_type(json_type::unsigned_);
+  if(_type != json_type::unsigned_) throw json_type_error{"unsigned expected"};
   return _unsigned;
 }
 inline double& json_value::get_real() {
-  _check_type(json_type::real);
+  if(_type != json_type::real) throw json_type_error{"real expected"};
   return _real;
 }
 inline bool& json_value::get_boolean() {
-  _check_type(json_type::boolean);
+  if(_type != json_type::boolean) throw json_type_error{"boolean expected"};
   return _boolean;
 }
 inline string& json_value::get_string() {
-  _check_type(json_type::string_);
+  if(_type != json_type::string_) throw json_type_error{"string expected"};
   return *_string_;
 }
 inline json_array& json_value::get_array() {
-  _check_type(json_type::array);
+  if(_type != json_type::array) throw json_type_error{"array expected"};
   return *_array;
 }
 inline json_object& json_value::get_object() {
-  _check_type(json_type::object);
+  if(_type != json_type::object) throw json_type_error{"object expected"};
   return *_object;
 }
 inline json_binary& json_value::get_binary() {
-  _check_type(json_type::binary);
+  if(_type != json_type::binary) throw json_type_error{"binary expected"};
   return *_binary;
 }
 
