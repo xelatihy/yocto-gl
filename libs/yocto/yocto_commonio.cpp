@@ -63,7 +63,7 @@ namespace yocto {
 void print_info(const string& msg) { printf("%s\n", msg.c_str()); }
 // Prints a messgae to the console and exit with an error.
 void print_fatal(const string& msg) {
-  printf("%s\n", msg.c_str());
+  printf("\n%s\n", msg.c_str());
   exit(1);
 }
 

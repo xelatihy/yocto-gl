@@ -547,6 +547,30 @@ bool save_mesh_points(
   }
 }
 
+pair<bool, string> validate_mesh(const vector<vec3i>& triangles,
+    const vector<vec3f>& positions, const vector<vec3i>& adjacencies) {
+  // check for connected components
+  auto visited     = vector<bool>(triangles.size(), false);
+  auto num_visited = 0;
+  auto stack       = vector<int>{0};
+  while (!stack.empty()) {
+    auto triangle = stack.back();
+    stack.pop_back();
+    if (visited[triangle]) continue;
+    visited[triangle] = true;
+    num_visited += 1;
+    for (auto neighbor : adjacencies[triangle]) {
+      if (neighbor < 0 || visited[neighbor]) continue;
+      stack.push_back(neighbor);
+    }
+  }
+  if (num_visited != triangles.size()) {
+    return {false, "not connectd"};
+  } else {
+    return {true, ""};
+  }
+}
+
 // -----------------------------------------------------------------------------
 // MAIN FUNCTION
 // -----------------------------------------------------------------------------
@@ -590,6 +614,7 @@ int main(int argc, const char* argv[]) {
   if (!load_mesh(
           meshname, triangles, positions, normals, texcoords, colors, ioerror))
     print_fatal(ioerror);
+  auto adjacencies           = face_adjacencies(triangles);
   stats["mesh"]              = json_value::object();
   stats["mesh"]["load_time"] = elapsed_nanoseconds(load_timer);
   stats["mesh"]["filename"]  = meshname;
@@ -600,6 +625,13 @@ int main(int argc, const char* argv[]) {
   // check if valid
   if (validate) {
     // TODO(fabio): validation code here
+    auto [ok, validation]  = validate_mesh(triangles, positions, adjacencies);
+    stats["mesh"]["valid"] = ok;
+    if (!ok) {
+      stats["mesh"]["validation"] = validation;
+      if (!save_json(statsname, stats, ioerror)) print_fatal(ioerror);
+      print_fatal("validation error: " + validation);
+    }
   } else {
     stats["mesh"]["valid"] = true;
   }
@@ -639,7 +671,6 @@ int main(int argc, const char* argv[]) {
   // build graph
   print_progress("build graph", progress.x++, progress.y);
   auto graph_timer = simple_timer{};
-  auto adjacencies = face_adjacencies(triangles);
   auto graph = make_dual_geodesic_solver(triangles, positions, adjacencies);
   stats["solver"]         = json_value::object();
   stats["solver"]["time"] = elapsed_nanoseconds(graph_timer);
