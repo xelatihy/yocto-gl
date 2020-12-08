@@ -260,10 +260,6 @@ struct json_value {
   explicit json_value(const json_array& value);
   explicit json_value(const json_object& value);
   explicit json_value(const json_binary& value);
-  template <typename T, size_t N>
-  explicit json_value(const std::array<T, N>& value);
-  template <typename T>
-  explicit json_value(const vector<T>& value);
 
   // assignments
   json_value& operator=(const json_value& other);
@@ -281,12 +277,9 @@ struct json_value {
   json_value& operator=(const json_array& value);
   json_value& operator=(const json_object& value);
   json_value& operator=(const json_binary& value);
-  template <typename T, size_t N>
-  json_value& operator=(const std::array<T, N>& value);
-  template <typename T>
-  json_value& operator=(const vector<T>& value);
 
   // type
+  void      set_type(json_type type);
   json_type type() const;
   bool      is_null() const;
   bool      is_integer() const;
@@ -310,10 +303,6 @@ struct json_value {
   explicit operator json_array() const;
   explicit operator json_object() const;
   explicit operator json_binary() const;
-  template <typename T, size_t N>
-  explicit operator std::array<T, N>();
-  template <typename T>
-  explicit operator vector<T>();
 
 // size_t fix
 #ifdef __APPLE__
@@ -399,19 +388,6 @@ struct json_value {
     json_object* _object;
     json_binary* _binary;
   };
-
-  // helpers
-  void        _set_type(json_type type);       // set type
-  void        _destroy();                      // destroy value
-  json_value& _swap(json_value& other);        // swap operation
-  json_value& _copy(const json_value& other);  // copy
-  json_value& _copy(json_value&& other);       // move
-  template <typename T>
-  json_value& _set(const T& value);               // assignment
-  void        _check_type(json_type type) const;  // type checking
-  size_t      _size() const;                      // size
-  void        _resize(size_t size);               // resize
-  void        _reserve(size_t size);              // reserve
 };
 
 // Load/save a json file
@@ -480,9 +456,52 @@ inline string format(const string& fmt, Args&&... args);
 namespace yocto {
 
 // constructors
-inline json_value::json_value() {}
-inline json_value::json_value(const json_value& other) { _copy(other); }
-inline json_value::json_value(json_value&& other) { _copy(std::move(other)); }
+inline json_value::json_value() : _type{json_type::null}, _unsigned{0} {}
+inline json_value::json_value(const json_value& other)
+    : _type{json_type::null}, _unsigned{0} {
+  switch (other._type) {
+    case json_type::null:
+      _type    = json_type::null;
+      _integer = other._integer;
+      break;
+    case json_type::integer:
+      _type    = json_type::integer;
+      _integer = other._integer;
+      break;
+    case json_type::unsigned_:
+      _type     = json_type::unsigned_;
+      _unsigned = other._unsigned;
+      break;
+    case json_type::real:
+      _type = json_type::real;
+      _real = other._real;
+      break;
+    case json_type::boolean:
+      _type    = json_type::boolean;
+      _boolean = other._boolean;
+      break;
+    case json_type::string_:
+      _type    = json_type::string_;
+      _string_ = new string{*other._string_};
+      break;
+    case json_type::array:
+      _type  = json_type::array;
+      _array = new json_array{*other._array};
+      break;
+    case json_type::object:
+      _type   = json_type::object;
+      _object = new json_object{*other._object};
+      break;
+    case json_type::binary:
+      _type   = json_type::binary;
+      _binary = new json_binary{*other._binary};
+      break;
+  }
+}
+inline json_value::json_value(json_value&& other)
+    : _type{json_type::null}, _unsigned{0} {
+  swap(other);
+}
 inline json_value::json_value(std::nullptr_t)
     : _type{json_type::null}, _unsigned{0} {}
 inline json_value::json_value(int64_t value)
@@ -509,62 +528,81 @@ inline json_value::json_value(const json_object& value)
     : _type{json_type::object}, _object{new json_object{value}} {}
 inline json_value::json_value(const json_binary& value)
     : _type{json_type::binary}, _binary{new json_binary{value}} {}
-template <typename T, size_t N>
-inline json_value::json_value(const std::array<T, N>& value)
-    : _type{json_type::array}, _array{new json_array(value.size())} {
-  for (auto idx = 0; idx < size(); idx++) at(idx) = value[idx];
-}
-template <typename T>
-inline json_value::json_value(const vector<T>& value)
-    : _type{json_type::array}, _array{new json_array(value.size())} {
-  for (auto idx = 0; idx < size(); idx++) at(idx) = value[idx];
-}
 
 // assignments
-inline json_value& json_value::operator=(const json_value& other) {
-  return _copy(other);
+inline json_value& json_value::operator=(const json_value& value) {
+  auto js = json_value{value};
+  swap(js);
+  return *this;
 }
-inline json_value& json_value::operator=(json_value&& other) {
-  return _copy(std::move(other));
+inline json_value& json_value::operator=(json_value&& value) {
+  swap(value);
+  return *this;
 }
 inline json_value& json_value::operator=(std::nullptr_t) {
-  return _set(nullptr);
+  auto js = json_value{nullptr};
+  swap(js);
+  return *this;
 }
-inline json_value& json_value::operator=(int64_t value) { return _set(value); }
+inline json_value& json_value::operator=(int64_t value) {
+  auto js = json_value{value};
+  swap(js);
+  return *this;
+}
 inline json_value& json_value::operator=(int32_t value) {
-  return _set((int64_t)value);
+  auto js = json_value{value};
+  swap(js);
+  return *this;
 }
-inline json_value& json_value::operator=(uint64_t value) { return _set(value); }
+inline json_value& json_value::operator=(uint64_t value) {
+  auto js = json_value{value};
+  swap(js);
+  return *this;
+}
 inline json_value& json_value::operator=(uint32_t value) {
-  return _set((uint64_t)value);
+  auto js = json_value{value};
+  swap(js);
+  return *this;
 }
-inline json_value& json_value::operator=(double value) { return _set(value); }
+inline json_value& json_value::operator=(double value) {
+  auto js = json_value{value};
+  swap(js);
+  return *this;
+}
 inline json_value& json_value::operator=(float value) {
-  return _set((double)value);
+  auto js = json_value{value};
+  swap(js);
+  return *this;
 }
-inline json_value& json_value::operator=(bool value) { return _set(value); }
+inline json_value& json_value::operator=(bool value) {
+  auto js = json_value{value};
+  swap(js);
+  return *this;
+}
 inline json_value& json_value::operator=(const string& value) {
-  return _set(value);
+  auto js = json_value{value};
+  swap(js);
+  return *this;
 }
 inline json_value& json_value::operator=(const char* value) {
-  return _set(value);
+  auto js = json_value{value};
+  swap(js);
+  return *this;
 }
 inline json_value& json_value::operator=(const json_array& value) {
-  return _set(value);
+  auto js = json_value{value};
+  swap(js);
+  return *this;
 }
 inline json_value& json_value::operator=(const json_object& value) {
-  return _set(value);
+  auto js = json_value{value};
+  swap(js);
+  return *this;
 }
 inline json_value& json_value::operator=(const json_binary& value) {
-  return _set(value);
-}
-template <typename T, size_t N>
-inline json_value& json_value::operator=(const std::array<T, N>& value) {
-  return _set(value);
-}
-template <typename T>
-inline json_value& json_value::operator=(const vector<T>& value) {
-  return _set(value);
+  auto js = json_value{value};
+  swap(js);
+  return *this;
 }
 
 // type
@@ -610,25 +648,8 @@ inline json_value::operator float() const {
 inline json_value::operator bool() const { return get_boolean(); }
 inline json_value::operator string() const { return get_string(); }
 inline json_value::operator json_array() const { return get_array(); }
-inline json_value::operator json_object() const {
-  return get_object();
-}
-inline json_value::operator json_binary() const {
-  return get_binary();
-}
-template <typename T, size_t N>
-inline json_value::operator std::array<T, N>() {
-  if (size() != N) throw std::out_of_range{"wrong size"};
-  auto ret = std::array<T, N>{};
-  for (auto idx = 0; idx < size(); idx++) ret[idx] = (T)at(idx);
-  return ret;
-}
-template <typename T>
-inline json_value::operator vector<T>() {
-  auto ret = vector<T>(size());
-  for (auto idx = 0; idx < size(); idx++) ret[idx] = (T)at(idx);
-  return ret;
-}
+inline json_value::operator json_object() const { return get_object(); }
+inline json_value::operator json_binary() const { return get_binary(); }
 
 // size_t fix
 #ifdef __APPLE__
@@ -637,80 +658,107 @@ inline json_value::json_value(size_t value)
 inline json_value::operator size_t() const {
   return is_integer() ? (uint64_t)get_integer() : get_unsigned();
 }
-inline json_value& json_value::operator=(size_t value) { return _set(value); }
+inline json_value& json_value::operator=(size_t value) {
+  auto js = json_value{value};
+  swap(js);
+  return *this;
+}
 #endif
 
 // access
 inline const int64_t& json_value::get_integer() const {
-  _check_type(json_type::integer);
+  if (_type != json_type::integer) throw json_type_error{"integer expected"};
   return _integer;
 }
 inline const uint64_t& json_value::get_unsigned() const {
-  _check_type(json_type::unsigned_);
+  if (_type != json_type::unsigned_) throw json_type_error{"unsigned expected"};
   return _unsigned;
 }
 inline const double& json_value::get_real() const {
-  _check_type(json_type::real);
+  if (_type != json_type::real) throw json_type_error{"real expected"};
   return _real;
 }
 inline const bool& json_value::get_boolean() const {
-  _check_type(json_type::boolean);
+  if (_type != json_type::boolean) throw json_type_error{"boolean expected"};
   return _boolean;
 }
 inline const string& json_value::get_string() const {
-  _check_type(json_type::string_);
+  if (_type != json_type::string_) throw json_type_error{"string expected"};
   return *_string_;
 }
 inline const json_array& json_value::get_array() const {
-  _check_type(json_type::array);
+  if (_type != json_type::array) throw json_type_error{"array expected"};
   return *_array;
 }
 inline const json_object& json_value::get_object() const {
-  _check_type(json_type::object);
+  if (_type != json_type::object) throw json_type_error{"object expected"};
   return *_object;
 }
 inline const json_binary& json_value::get_binary() const {
-  _check_type(json_type::binary);
+  if (_type != json_type::binary) throw json_type_error{"binary expected"};
   return *_binary;
 }
 inline int64_t& json_value::get_integer() {
-  _check_type(json_type::integer);
+  if (_type != json_type::integer) throw json_type_error{"integer expected"};
   return _integer;
 }
 inline uint64_t& json_value::get_unsigned() {
-  _check_type(json_type::unsigned_);
+  if (_type != json_type::unsigned_) throw json_type_error{"unsigned expected"};
   return _unsigned;
 }
 inline double& json_value::get_real() {
-  _check_type(json_type::real);
+  if (_type != json_type::real) throw json_type_error{"real expected"};
   return _real;
 }
 inline bool& json_value::get_boolean() {
-  _check_type(json_type::boolean);
+  if (_type != json_type::boolean) throw json_type_error{"boolean expected"};
   return _boolean;
 }
 inline string& json_value::get_string() {
-  _check_type(json_type::string_);
+  if (_type != json_type::string_) throw json_type_error{"string expected"};
   return *_string_;
 }
 inline json_array& json_value::get_array() {
-  _check_type(json_type::array);
+  if (_type != json_type::array) throw json_type_error{"array expected"};
   return *_array;
 }
 inline json_object& json_value::get_object() {
-  _check_type(json_type::object);
+  if (_type != json_type::object) throw json_type_error{"object expected"};
   return *_object;
 }
 inline json_binary& json_value::get_binary() {
-  _check_type(json_type::binary);
+  if (_type != json_type::binary) throw json_type_error{"binary expected"};
   return *_binary;
 }
 
 // structure support
 inline bool   json_value::empty() const { return size() == 0; }
-inline size_t json_value::size() const { return _size(); }
-inline void   json_value::resize(size_t size) { return _resize(size); }
-inline void   json_value::reserve(size_t size) { return _reserve(size); }
+inline size_t json_value::size() const {
+  switch (_type) {
+    case json_type::string_: return get_string().size();
+    case json_type::array: return get_array().size();
+    case json_type::object: return get_object().size();
+    case json_type::binary: return get_binary().size();
+    default: throw json_type_error{"bad json type"};
+  }
+}
+inline void json_value::resize(size_t size) {
+  switch (_type) {
+    case json_type::string_: return get_string().resize(size);
+    case json_type::array: return get_array().resize(size);
+    case json_type::binary: return get_binary().resize(size, 0);
+    default: throw json_type_error{"bad json type"};
+  }
+}
+inline void json_value::reserve(size_t size) {
+  switch (_type) {
+    case json_type::string_: return get_string().reserve(size);
+    case json_type::array: return get_array().reserve(size);
+    case json_type::object: return get_object().reserve(size);
+    case json_type::binary: return get_binary().reserve(size);
+    default: throw json_type_error{"bad json type"};
+  }
+}
 
 // array support
 inline json_value  json_value::array() { return json_value{json_array{}}; }
@@ -812,13 +860,26 @@ inline bool json_value::contains(const string& key) const {
 inline json_value json_value::binary() { return json_value{json_binary{}}; }
 
 // swap
-inline void json_value::swap(json_value& other) { _swap(other); }
+inline void json_value::swap(json_value& other) {
+  std::swap(_type, other._type);
+  std::swap(_unsigned, other._unsigned);  // hask to swap bits
+}
 
 // destructor
-inline json_value::~json_value() { _set_type(json_type::null); }
+inline json_value::~json_value() {
+  switch (_type) {
+    case json_type::string_: delete _string_; break;
+    case json_type::array: delete _array; break;
+    case json_type::object: delete _object; break;
+    case json_type::binary: delete _binary; break;
+    default: break;
+  }
+  _type     = json_type::null;
+  _unsigned = 0;
+}
 
 // set type
-inline void json_value::_set_type(json_type type) {
+inline void json_value::set_type(json_type type) {
   switch (_type) {
     case json_type::string_: delete _string_; break;
     case json_type::array: delete _array; break;
@@ -837,86 +898,6 @@ inline void json_value::_set_type(json_type type) {
     case json_type::array: _array = new json_array{}; break;
     case json_type::object: _object = new json_object{}; break;
     case json_type::binary: _binary = new json_binary{}; break;
-  }
-}
-
-// destroy value
-inline void json_value::_destroy() {
-  switch (_type) {
-    case json_type::string_: delete _string_; break;
-    case json_type::array: delete _array; break;
-    case json_type::object: delete _object; break;
-    case json_type::binary: delete _binary; break;
-    default: break;
-  }
-  _type     = json_type::null;
-  _unsigned = 0;
-}
-
-// swap operation
-inline json_value& json_value::_swap(json_value& other) {
-  std::swap(_type, other._type);
-  std::swap(_unsigned, other._unsigned);  // hask to swap bits
-  return *this;
-}
-
-// assignment
-inline json_value& json_value::_copy(const json_value& other) {
-  _set_type(other._type);
-  switch (_type) {
-    case json_type::null: _integer = other._integer; break;
-    case json_type::integer: _integer = other._integer; break;
-    case json_type::unsigned_: _unsigned = other._unsigned; break;
-    case json_type::real: _real = other._real; break;
-    case json_type::boolean: _boolean = other._boolean; break;
-    case json_type::string_: _string_ = new string{*other._string_}; break;
-    case json_type::array: _array = new json_array{*other._array}; break;
-    case json_type::object: _object = new json_object{*other._object}; break;
-    case json_type::binary: _binary = new json_binary{*other._binary}; break;
-  }
-  return *this;
-}
-inline json_value& json_value::_copy(json_value&& other) {
-  _swap(other);
-  return *this;
-}
-template <typename T>
-inline json_value& json_value::_set(const T& value) {
-  auto js = json_value{value};
-  _swap(js);
-  return *this;
-}
-
-inline void json_value::_check_type(json_type type) const {
-  if (_type != type) throw json_type_error{"bad json type"};
-}
-
-inline size_t json_value::_size() const {
-  switch (_type) {
-    case json_type::string_: return get_string().size();
-    case json_type::array: return get_array().size();
-    case json_type::object: return get_object().size();
-    case json_type::binary: return get_binary().size();
-    default: throw json_type_error{"bad json type"};
-  }
-}
-
-inline void json_value::_resize(size_t size) {
-  switch (_type) {
-    case json_type::string_: return get_string().resize(size);
-    case json_type::array: return get_array().resize(size);
-    case json_type::binary: return get_binary().resize(size, 0);
-    default: throw json_type_error{"bad json type"};
-  }
-}
-
-inline void json_value::_reserve(size_t size) {
-  switch (_type) {
-    case json_type::string_: return get_string().reserve(size);
-    case json_type::array: return get_array().reserve(size);
-    case json_type::object: return get_object().reserve(size);
-    case json_type::binary: return get_binary().reserve(size);
-    default: throw json_type_error{"bad json type"};
   }
 }
 
