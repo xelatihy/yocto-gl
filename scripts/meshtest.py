@@ -42,7 +42,7 @@ def trace(dirname):
             'meshes/', 'scenes/').replace('.obj', '.json')
         msg = f'[{mesh_id}/{mesh_num}] {mesh_name}'
         print(msg + ' ' * max(0, 78-len(msg)))
-        cmd = f'../yocto-gl/bin/ymeshtest {mesh_name} -s {stats_name} -S {scene_name} -p {curve_name}'
+        cmd = f'../yocto-gl/bin/ymeshtest -v {mesh_name} -s {stats_name} -S {scene_name} -p {curve_name}'
         try:
             retcode = subprocess.run(cmd, timeout=5, shell=True).returncode
             if retcode < 0:
