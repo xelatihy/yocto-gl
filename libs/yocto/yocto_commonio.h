@@ -242,9 +242,6 @@ using json_binary = vector<uint8_t>;
 struct json_error : std::runtime_error {
   using std::runtime_error::runtime_error;
 };
-struct json_type_error : std::runtime_error {
-  using std::runtime_error::runtime_error;
-};
 
 // Json value
 struct json_value {
@@ -802,67 +799,67 @@ inline json_value& json_value::operator=(size_t value) {
 
 // access
 inline const int64_t& json_value::get_integer() const {
-  if (_type != json_type::integer) throw json_type_error{"integer expected"};
+  if (_type != json_type::integer) throw json_error{"integer expected"};
   return _integer;
 }
 inline const uint64_t& json_value::get_unsigned() const {
-  if (_type != json_type::unsigned_) throw json_type_error{"unsigned expected"};
+  if (_type != json_type::unsigned_) throw json_error{"unsigned expected"};
   return _unsigned;
 }
 inline const double& json_value::get_real() const {
-  if (_type != json_type::real) throw json_type_error{"real expected"};
+  if (_type != json_type::real) throw json_error{"real expected"};
   return _real;
 }
 inline const bool& json_value::get_boolean() const {
-  if (_type != json_type::boolean) throw json_type_error{"boolean expected"};
+  if (_type != json_type::boolean) throw json_error{"boolean expected"};
   return _boolean;
 }
 inline const string& json_value::get_string() const {
-  if (_type != json_type::string_) throw json_type_error{"string expected"};
+  if (_type != json_type::string_) throw json_error{"string expected"};
   return *_string_;
 }
 inline const json_array& json_value::get_array() const {
-  if (_type != json_type::array) throw json_type_error{"array expected"};
+  if (_type != json_type::array) throw json_error{"array expected"};
   return *_array;
 }
 inline const json_object& json_value::get_object() const {
-  if (_type != json_type::object) throw json_type_error{"object expected"};
+  if (_type != json_type::object) throw json_error{"object expected"};
   return *_object;
 }
 inline const json_binary& json_value::get_binary() const {
-  if (_type != json_type::binary) throw json_type_error{"binary expected"};
+  if (_type != json_type::binary) throw json_error{"binary expected"};
   return *_binary;
 }
 inline int64_t& json_value::get_integer() {
-  if (_type != json_type::integer) throw json_type_error{"integer expected"};
+  if (_type != json_type::integer) throw json_error{"integer expected"};
   return _integer;
 }
 inline uint64_t& json_value::get_unsigned() {
-  if (_type != json_type::unsigned_) throw json_type_error{"unsigned expected"};
+  if (_type != json_type::unsigned_) throw json_error{"unsigned expected"};
   return _unsigned;
 }
 inline double& json_value::get_real() {
-  if (_type != json_type::real) throw json_type_error{"real expected"};
+  if (_type != json_type::real) throw json_error{"real expected"};
   return _real;
 }
 inline bool& json_value::get_boolean() {
-  if (_type != json_type::boolean) throw json_type_error{"boolean expected"};
+  if (_type != json_type::boolean) throw json_error{"boolean expected"};
   return _boolean;
 }
 inline string& json_value::get_string() {
-  if (_type != json_type::string_) throw json_type_error{"string expected"};
+  if (_type != json_type::string_) throw json_error{"string expected"};
   return *_string_;
 }
 inline json_array& json_value::get_array() {
-  if (_type != json_type::array) throw json_type_error{"array expected"};
+  if (_type != json_type::array) throw json_error{"array expected"};
   return *_array;
 }
 inline json_object& json_value::get_object() {
-  if (_type != json_type::object) throw json_type_error{"object expected"};
+  if (_type != json_type::object) throw json_error{"object expected"};
   return *_object;
 }
 inline json_binary& json_value::get_binary() {
-  if (_type != json_type::binary) throw json_type_error{"binary expected"};
+  if (_type != json_type::binary) throw json_error{"binary expected"};
   return *_binary;
 }
 
@@ -874,7 +871,7 @@ inline size_t json_value::size() const {
     case json_type::array: return get_array().size();
     case json_type::object: return get_object().size();
     case json_type::binary: return get_binary().size();
-    default: throw json_type_error{"bad json type"};
+    default: throw json_error{"bad json type"};
   }
 }
 inline void json_value::resize(size_t size) {
@@ -882,7 +879,7 @@ inline void json_value::resize(size_t size) {
     case json_type::string_: return get_string().resize(size);
     case json_type::array: return get_array().resize(size);
     case json_type::binary: return get_binary().resize(size, 0);
-    default: throw json_type_error{"bad json type"};
+    default: throw json_error{"bad json type"};
   }
 }
 inline void json_value::reserve(size_t size) {
@@ -891,7 +888,7 @@ inline void json_value::reserve(size_t size) {
     case json_type::array: return get_array().reserve(size);
     case json_type::object: return get_object().reserve(size);
     case json_type::binary: return get_binary().reserve(size);
-    default: throw json_type_error{"bad json type"};
+    default: throw json_error{"bad json type"};
   }
 }
 
@@ -1552,12 +1549,17 @@ inline bool get_value(json_cview js, T& value) {
   return get_value(js, value, error);
 }
 
+// Error formatting for conversion
+inline string format_error(json_cview js, string_view message) {
+  return string{message};
+}
+
 // Conversion from json to values
 inline bool get_value(json_cview js, int64_t& value, string& error) {
   if (get_integral(js, value)) {
     return true;
   } else {
-    error = "integer expected";
+    error = format_error(js, "integer expected");
     return false;
   }
 }
@@ -1571,7 +1573,7 @@ inline bool get_value(json_cview js, uint64_t& value, string& error) {
   if (get_integral(js, value)) {
     return true;
   } else {
-    error = "integer expected";
+    error = format_error(js, "integer expected");
     return false;
   }
 }
@@ -1585,7 +1587,7 @@ inline bool get_value(json_cview js, double& value, string& error) {
   if (get_number(js, value)) {
     return true;
   } else {
-    error = "number expected";
+    error = format_error(js, "number expected");
     return false;
   }
 }
@@ -1599,7 +1601,7 @@ inline bool get_value(json_cview js, bool& value, string& error) {
   if (get_boolean(js, value)) {
     return true;
   } else {
-    error = "boolean expected";
+    error = format_error(js, "boolean expected");
     return false;
   }
 }
@@ -1607,7 +1609,7 @@ inline bool get_value(json_cview js, string& value, string& error) {
   if (get_string(js, value)) {
     return true;
   } else {
-    error = "string expected";
+    error = format_error(js, "string expected");
     return false;
   }
 }
@@ -1621,7 +1623,7 @@ inline bool get_value(json_cview js, vector<T>& value, string& error) {
     }
     return true;
   } else {
-    error = "array expected";
+    error = format_error(js, "array expected");
     return false;
   }
 }
@@ -1633,7 +1635,7 @@ inline bool get_value(json_cview js, array<T, N>& value, string& error) {
     }
     return true;
   } else {
-    error = !is_array(js) ? "array expected" : "array size mismatched";
+    error = format_error(js, !is_array(js) ? "array expected" : "array size mismatched");
     return false;
   }
 }
@@ -1645,7 +1647,7 @@ inline bool get_value_at(
   if (auto element = get_element(js, key); is_valid(element)) {
     return get_value(element, value, error);
   } else {
-    error = "missing key " + string{key};
+    error = format_error(js, "missing key " + string{key});
     return false;
   }
 }
@@ -1654,7 +1656,7 @@ inline bool get_value_at(json_cview js, size_t idx, T& value, string& error) {
   if (auto element = get_element(js, idx); is_valid(element)) {
     return get_value(element, value, error);
   } else {
-    error = "index out of range " + std::to_string(idx);
+    error = format_error(js, "index out of range " + std::to_string(idx));
     return false;
   }
 }
@@ -1666,10 +1668,10 @@ inline bool get_value_or(
   if (auto ejs = get_element(js, key); is_valid(ejs)) {
     return get_value(ejs, value, error);
   } else if (is_object(js)) {
-    error = "missing key " + string{key};
+    error = format_error(js, "missing key " + string{key});
     return true;
   } else {
-    error = "object expected";
+    error = format_error(js, "object expected");
     return false;
   }
 }
@@ -1686,7 +1688,7 @@ inline bool set_value(json_view js, int64_t value, string& error) {
   if (set_integer(js, value)) {
     return true;
   } else {
-    error = "integer expected";
+    error = format_error(js, "integer expected");
     return false;
   }
 }
@@ -1697,7 +1699,7 @@ inline bool set_value(json_view js, uint64_t value, string& error) {
   if (set_unsigned(js, value)) {
     return true;
   } else {
-    error = "unsigned expected";
+    error = format_error(js, "unsigned expected");
     return false;
   }
 }
@@ -1708,7 +1710,7 @@ inline bool set_value(json_view js, double value, string& error) {
   if (set_real(js, value)) {
     return true;
   } else {
-    error = "real expected";
+    error = format_error(js, "real expected");
     return false;
   }
 }
@@ -1719,7 +1721,7 @@ inline bool set_value(json_view js, bool value, string& error) {
   if (set_boolean(js, value)) {
     return true;
   } else {
-    error = "boolean expected";
+    error = format_error(js, "boolean expected");
     return false;
   }
 }
@@ -1727,7 +1729,7 @@ inline bool set_value(json_view js, const string& value, string& error) {
   if (set_string(js, value)) {
     return true;
   } else {
-    error = "string expected";
+    error = format_error(js, "string expected");
     return false;
   }
 }
@@ -1740,7 +1742,7 @@ inline bool set_value(json_view js, const vector<T>& value, string& error) {
     }
     return true;
   } else {
-    error = "array expected";
+    error = format_error(js, "array expected");
     return false;
   }
 }
@@ -1753,7 +1755,7 @@ inline bool set_value(json_view js, const array<T, N>& value, string& error) {
     }
     return true;
   } else {
-    error = "array expected";
+    error = format_error(js, "array expected");
     return false;
   }
 }
@@ -1763,7 +1765,7 @@ inline bool check_array(json_cview js, string& error) {
   if (is_array(js)) {
     return true;
   } else {
-    error = "array expected";
+    error = format_error(js, "array expected");
     return false;
   }
 }
@@ -1772,11 +1774,11 @@ inline bool check_array(json_cview js, size_t size_, string& error) {
     if (array_size(js) == size_) {
       return true;
     } else {
-      error = "mismatchd array size";
+      error = format_error(js, "mismatchd array size");
       return false;
     }
   } else {
-    error = "array expected";
+    error = format_error(js, "array expected");
     return false;
   }
 }
@@ -1784,7 +1786,7 @@ inline bool check_object(json_cview js, string& error) {
   if (is_object(js)) {
     return true;
   } else {
-    error = "object expected";
+    error = format_error(js, "object expected");
     return false;
   }
 }
@@ -1795,7 +1797,7 @@ inline bool append_value(json_view js, const T& value, string& error) {
   if (auto ejs = append_element(js); is_valid(ejs)) {
     return set_value(ejs, value, error);
   } else {
-    error = "array expected";
+    error = format_error(js, "array expected");
     return false;
   }
 }

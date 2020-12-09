@@ -497,7 +497,7 @@ bool load_json(const string& filename, json_value& js, string& error) {
       if (stack.size() == 1) return *root;
       if (stack.back()->is_array()) return (*stack.back()).emplace_back();
       if (stack.back()->is_object()) return (*stack.back())[current_key];
-      throw yocto::json_type_error{"bad json type"};
+      throw yocto::json_error{"bad json type"};
     }
 
     // values
