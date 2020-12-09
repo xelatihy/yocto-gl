@@ -533,7 +533,7 @@ inline bool get_value_at(json_cview js, size_t idx, T& value, string& error);
 
 // Get value at a key or nothing is key is not preesent
 template <typename T>
-inline bool get_value_or(
+inline bool get_value_if(
     json_cview js, string_view key, T& value, string& error);
 
 // Conversion to json from values
@@ -1730,7 +1730,7 @@ inline bool get_value_at(json_cview js, size_t idx, T& value, string& error) {
 
 // Get value at a key or nothing is key is not preesent
 template <typename T>
-inline bool get_value_or(
+inline bool get_value_if(
     json_cview js, string_view key, T& value, string& error) {
   if (auto ejs = get_element(js, key); is_valid(ejs)) {
     return get_value(ejs, value, error);
