@@ -1549,9 +1549,44 @@ inline bool get_value(json_cview js, T& value) {
   return get_value(js, value, error);
 }
 
+// Get the path of a json view
+inline string compute_path(json_cview js) {
+  if (!js.value || !js.root) {
+    return "";
+  } else if (js.value == js.root) {
+    return "/";
+  } else if (is_array(js)) {
+    auto idx = 0;
+    for (auto ejs : iterate_array(js)) {
+      auto sub_path = compute_path(ejs);
+      if (!sub_path.empty()) {
+        if (sub_path.back() == '/') sub_path.pop_back();
+        return "/"s + std::to_string(idx) + sub_path;
+      }
+    }
+    return "";
+  } else if (is_object(js)) {
+    for (auto [key, ejs] : iterate_object(js)) {
+      auto sub_path = compute_path(ejs);
+      if (!sub_path.empty()) {
+        if (sub_path.back() == '/') sub_path.pop_back();
+        return "/" + string{key} + sub_path;
+      }
+    }
+    return "";
+  } else {
+    return "";
+  }
+}
+
 // Error formatting for conversion
 inline string format_error(json_cview js, string_view message) {
-  return string{message};
+  auto path = compute_path(js);
+  if (path.empty()) {
+    return string{message} + " in json";
+  } else {
+    return string{message} + " at " + path;
+  }
 }
 
 // Conversion from json to values
@@ -1635,7 +1670,8 @@ inline bool get_value(json_cview js, array<T, N>& value, string& error) {
     }
     return true;
   } else {
-    error = format_error(js, !is_array(js) ? "array expected" : "array size mismatched");
+    error = format_error(
+        js, !is_array(js) ? "array expected" : "array size mismatched");
     return false;
   }
 }

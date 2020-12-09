@@ -1222,8 +1222,12 @@ namespace yocto {
 // Save a scene in the builtin JSON format.
 static bool load_json_scene(const string& filename, sceneio_scene* scene,
     string& error, const progress_callback& progress_cb, bool noparallel) {
+  auto json_error = [filename, &error]() {
+    // error does not need setting
+    return false;
+  };
   auto parse_error = [filename, &error]() {
-    error = filename + ": parse error";
+    error = filename + ": parse error (" + error + ")";
     return false;
   };
   auto material_error = [filename, &error](string_view name) {
@@ -1244,11 +1248,11 @@ static bool load_json_scene(const string& filename, sceneio_scene* scene,
 
   // open file
   auto js_tree = json{};
-  if (!load_json(filename, js_tree, error)) return false;
+  if (!load_json(filename, js_tree, error)) return json_error();
   auto js = get_root(js_tree);
 
   // parse json reference
-  auto get_material_or = [&material_error](json_cview ejs, string_view name,
+  auto get_material_or = [](json_cview ejs, string_view name,
                              sceneio_material*& value, auto& refs,
                              string& error) -> bool {
     auto ref = ""s;
@@ -1256,7 +1260,11 @@ static bool load_json_scene(const string& filename, sceneio_scene* scene,
     if (ref.empty()) {
       value = nullptr;
     } else {
-      if (refs.find(ref) == refs.end()) return material_error(name);
+      if (refs.find(ref) == refs.end()) {
+        error = format_error(get_element(ejs, name), 
+          "missing reference " + string{name});
+        return false;
+      }
       value = refs.at(ref);
     }
     return true;
