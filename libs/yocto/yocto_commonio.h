@@ -1165,6 +1165,13 @@ inline auto iterate_array(const json_value& js) {
 }
 
 // Conversion from json to values
+template <typename T>
+inline bool get_value(const json_value& js, T& value) {
+  auto error = string{};
+  return get_value(js, value, error);
+}
+
+// Conversion from json to values
 inline bool get_value(const json_value& js, int64_t& value, string& error) {
   if (auto integer = get_integer(js); integer) {
     value = (int64_t)*integer;
@@ -1271,9 +1278,16 @@ inline bool get_value(const json_value& js, array<T, N>& value, string& error,
 }
 
 // Conversion to json from values
+template <typename T>
+inline bool set_value(json_value& js, const T& value) {
+  auto error = string{};
+  return set_value(js, value, error);
+}
+
+// Conversion to json from values
 inline bool set_value(json_value& js, int64_t value, string& error) {
   set_type(js, json_type::integer);
-  if(auto integer = get_integer(js); integer) {
+  if (auto integer = get_integer(js); integer) {
     *integer = value;
     return true;
   } else {
@@ -1286,7 +1300,7 @@ inline bool set_value(json_value& js, int32_t value, string& error) {
 }
 inline bool set_value(json_value& js, uint64_t value, string& error) {
   set_type(js, json_type::unsigned_);
-  if(auto unsigned_ = get_unsigned(js); unsigned_) {
+  if (auto unsigned_ = get_unsigned(js); unsigned_) {
     *unsigned_ = value;
     return true;
   } else {
@@ -1299,7 +1313,7 @@ inline bool set_value(json_value& js, uint32_t value, string& error) {
 }
 inline bool set_value(json_value& js, double value, string& error) {
   set_type(js, json_type::real);
-  if(auto real = get_real(js); real) {
+  if (auto real = get_real(js); real) {
     *real = value;
     return true;
   } else {
@@ -1312,7 +1326,7 @@ inline bool set_value(json_value& js, float value, string& error) {
 }
 inline bool set_value(json_value& js, bool value, string& error) {
   set_type(js, json_type::boolean);
-  if(auto boolean = get_boolean(js); boolean) {
+  if (auto boolean = get_boolean(js); boolean) {
     *boolean = value;
     return true;
   } else {
@@ -1323,7 +1337,7 @@ inline bool set_value(json_value& js, bool value, string& error) {
 inline bool set_value(json_value& js, const string& value, string& error,
     const json_value& root) {
   set_type(js, json_type::string_);
-  if(auto string_ = get_string(js); string_) {
+  if (auto string_ = get_string(js); string_) {
     *string_ = value;
     return true;
   } else {
