@@ -1135,13 +1135,13 @@ inline bool get_value(const json_value& js, uint32_t& value, string& error) {
 }
 inline bool get_value(const json_value& js, double& value, string& error) {
   if (auto real = get_real(js); real) {
-    value = (int64_t)*real;
+    value = (double)*real;
     return true;
   } else if (auto integer = get_integer(js); integer) {
-    value = (int64_t)*integer;
+    value = (double)*integer;
     return true;
   } else if (auto unsigned_ = get_unsigned(js); unsigned_) {
-    value = (int64_t)*unsigned_;
+    value = (double)*unsigned_;
     return true;
   } else {
     error = "number expected";
