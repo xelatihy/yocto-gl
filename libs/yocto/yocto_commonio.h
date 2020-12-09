@@ -237,6 +237,9 @@ using json_object = vector<pair<string, json_value>>;
 using json_binary = vector<uint8_t>;
 
 // Json type error
+struct json_error : std::runtime_error {
+  using std::runtime_error::runtime_error;
+};
 struct json_type_error : std::runtime_error {
   using std::runtime_error::runtime_error;
 };
@@ -396,57 +399,13 @@ bool save_json(const string& filename, const json_value& js, string& error);
 
 // Conversion shortcuts
 template <typename T>
-inline T& from_json(const json_value& js);
+inline T from_json(const json_value& js);
 template <typename T>
 inline json_value to_json(const T& value);
-
-// Conversion from json to types
-inline void from_json(const json_value& js, int64_t& value);
-inline void from_json(const json_value& js, int32_t& value);
-inline void from_json(const json_value& js, uint64_t& value);
-inline void from_json(const json_value& js, uint32_t& value);
-inline void from_json(const json_value& js, double& value);
-inline void from_json(const json_value& js, float& value);
-inline void from_json(const json_value& js, bool& value);
-inline void from_json(const json_value& js, string& value);
 template <typename T>
-inline void from_json(const json_value& js, vector<T>& value);
-template <typename T, size_t N>
-inline void from_json(const json_value& js, array<T, N>& value);
-
-// Conversion from types to json
-inline void to_json(json_value& js, int64_t value);
-inline void to_json(json_value& js, int32_t value);
-inline void to_json(json_value& js, uint64_t value);
-inline void to_json(json_value& js, uint32_t value);
-inline void to_json(json_value& js, double value);
-inline void to_json(json_value& js, float value);
-inline void to_json(json_value& js, bool value);
-inline void to_json(json_value& js, const string& value);
+inline void from_json(const json_value& js, T& value);
 template <typename T>
-inline void to_json(json_value& js, const vector<T>& value);
-template <typename T, size_t N>
-inline void to_json(json_value& js, const array<T, N>& value);
-
-// Conversion from json to types
-inline void from_json(const json_value& js, int64_t& value, string& error,
-    const json_value& root);
-inline void from_json(const json_value& js, int32_t& value, string& error,
-    const json_value& root);
-inline void from_json(const json_value& js, uint64_t& value, string& error,
-    const json_value& root);
-inline void from_json(const json_value& js, uint32_t& value, string& error,
-    const json_value& root);
-inline void from_json(const json_value& js, double& value, string& error);
-inline void from_json(const json_value& js, float& value, string& error);
-inline void from_json(const json_value& js, bool& value, string& error);
-inline void from_json(const json_value& js, string& value, string& error);
-template <typename T>
-inline void from_json(const json_value& js, vector<T>& value, string& error,
-    const json_value& root);
-template <typename T, size_t N>
-inline void from_json(const json_value& js, array<T, N>& value, string& error,
-    const json_value& root);
+inline void to_json(json_value&, const T& value);
 
 }  // namespace yocto
 
@@ -927,69 +886,28 @@ bool save_json(const string& filename, const json_value& js, string& error);
 
 // Conversion shortcuts
 template <typename T>
-inline T& from_json(const json_value& js) {
+inline T from_json(const json_value& js) {
+  auto error = string{};
   auto value = T{};
-  from_json(js, value);
+  if (!get_value(js, value, error)) throw json_error{error};
   return value;
 }
 template <typename T>
 inline json_value to_json(const T& value) {
-  auto js = json_value();
-  to_json(js, value);
+  auto error = string{};
+  auto js    = json_value();
+  if (!set_value(js, value, error)) throw json_error{error};
   return js;
 }
-
-// Conversion from json to types
-inline void from_json(const json_value& js, int64_t& value) {
-  value = (int64_t)js;
-}
-inline void from_json(const json_value& js, int32_t& value) {
-  value = (int32_t)js;
-}
-inline void from_json(const json_value& js, uint64_t& value) {
-  value = (uint64_t)js;
-}
-inline void from_json(const json_value& js, uint32_t& value) {
-  value = (uint32_t)js;
-}
-inline void from_json(const json_value& js, double& value) {
-  value = (double)js;
-}
-inline void from_json(const json_value& js, float& value) { value = (float)js; }
-inline void from_json(const json_value& js, bool& value) { value = (bool)js; }
-inline void from_json(const json_value& js, string& value) {
-  value = (string)js;
+template <typename T>
+inline void from_json(const json_value& js, T& value) {
+  auto error = string{};
+  if (!get_value(js, value, error)) throw json_error{error};
 }
 template <typename T>
-inline void from_json(const json_value& js, vector<T>& value) {
-  value.clear();
-  for (auto& ejs : js) from_json(ejs, value.emplace_back());
-}
-template <typename T, size_t N>
-inline void from_json(const json_value& js, array<T, N>& value) {
-  if (js.size() != N) throw std::out_of_range{"invalid size"};
-  for (auto idx = 0; idx < N; idx++) from_json(js.at(idx), value.at(idx));
-}
-
-// Conversion from types to json
-inline void to_json(json_value& js, int64_t value) { js = value; }
-inline void to_json(json_value& js, int32_t value) { js = value; }
-inline void to_json(json_value& js, uint64_t value) { js = value; }
-inline void to_json(json_value& js, uint32_t value) { js = value; }
-inline void to_json(json_value& js, double value) { js = value; }
-inline void to_json(json_value& js, float value) { js = value; }
-inline void to_json(json_value& js, bool value) { js = value; }
-inline void to_json(json_value& js, const string& value) { js = value; }
-template <typename T>
-inline void to_json(json_value& js, const vector<T>& value) {
-  js = json_array{};
-  for (auto& v : value) to_json(js.emplace_back(), v);
-}
-template <typename T, size_t N>
-inline void to_json(json_value& js, const array<T, N>& value) {
-  js = json_array{};
-  js.resize(N);
-  for (auto idx = 0; idx < N; idx++) to_json(js.at(idx), value.at(idx));
+inline void to_json(json_value& js, const T& value) {
+  auto error = string{};
+  if (!set_value(js, value, error)) throw json_error{error};
 }
 
 // Type
@@ -1137,6 +1055,13 @@ inline const json_value* get_element(const json_value& js, size_t idx) {
     return nullptr;
   }
 }
+inline json_value* append_element(json_value& js) {
+  if (auto array = get_array(js); array) {
+    return &array->emplace_back();
+  } else {
+    return nullptr;
+  }
+}
 inline auto iterate_array(json_value& js) {
   struct iterator_wrapper {
     json_value* begin_;
@@ -1248,8 +1173,7 @@ inline bool get_value(const json_value& js, string& value, string& error) {
   }
 }
 template <typename T>
-inline bool get_value(const json_value& js, vector<T>& value, string& error,
-    const json_value& root) {
+inline bool get_value(const json_value& js, vector<T>& value, string& error) {
   if (get_type(js) == json_type::array) {
     value.clear();
     value.reserve(size(js));
@@ -1263,8 +1187,7 @@ inline bool get_value(const json_value& js, vector<T>& value, string& error,
   }
 }
 template <typename T, size_t N>
-inline bool get_value(const json_value& js, array<T, N>& value, string& error,
-    const json_value& root) {
+inline bool get_value(const json_value& js, array<T, N>& value, string& error) {
   if (get_type(js) == json_type::array && N == size(js)) {
     for (auto idx = (size_t)0; idx < size(js); idx++) {
       if (!get_value(*get_element(js, idx), value.at(idx))) return false;
@@ -1334,8 +1257,7 @@ inline bool set_value(json_value& js, bool value, string& error) {
     return false;
   }
 }
-inline bool set_value(json_value& js, const string& value, string& error,
-    const json_value& root) {
+inline bool set_value(json_value& js, const string& value, string& error) {
   set_type(js, json_type::string_);
   if (auto string_ = get_string(js); string_) {
     *string_ = value;
@@ -1346,13 +1268,12 @@ inline bool set_value(json_value& js, const string& value, string& error,
   }
 }
 template <typename T>
-inline bool set_value(json_value& js, const vector<T>& value, string& error,
-    const json_value& root) {
+inline bool set_value(json_value& js, const vector<T>& value, string& error) {
   if (!set_array(js)) return false;
   if (!resize_array(js, value.size())) return false;
   auto idx = (size_t)0;
   for (auto& v : value) {
-    if (!set_value(get_element(js, idx++), v)) return false;
+    if (!set_value(*get_element(js, idx++), v)) return false;
   }
   return true;
 }
@@ -1362,7 +1283,7 @@ inline bool set_value(json_value& js, const array<T, N>& value, string& error) {
   if (!resize_array(js, value.size())) return false;
   auto idx = (size_t)0;
   for (auto& v : value) {
-    if (!set_value(get_element(js, idx++), v, error)) return false;
+    if (!set_value(*get_element(js, idx++), v, error)) return false;
   }
   return true;
 }
@@ -1394,6 +1315,17 @@ inline bool check_object(const json_value& js, string& error) {
     return true;
   } else {
     error = "object expected";
+    return false;
+  }
+}
+
+// Helpers for user-defined types
+template <typename T>
+inline bool append_value(json_value& js, const T& value, string& error) {
+  if (auto ejs = append_element(js); ejs) {
+    return set_value(*ejs, value, error);
+  } else {
+    error = "array expected";
     return false;
   }
 }
