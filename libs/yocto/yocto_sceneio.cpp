@@ -1222,7 +1222,7 @@ namespace yocto {
 // Save a scene in the builtin JSON format.
 static bool load_json_scene(const string& filename, sceneio_scene* scene,
     string& error, const progress_callback& progress_cb, bool noparallel) {
-  auto json_error = [filename, &error]() {
+  auto json_error = [filename]() {
     // error does not need setting
     return false;
   };

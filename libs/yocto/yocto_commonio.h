@@ -503,6 +503,9 @@ inline bool set_binary(json_view js, const json_binary& value);
 inline bool get_binary(json_cview js, json_binary& value);
 inline pair<json_binary, bool> get_binary(json_cview js);
 
+// Get the path of a json view
+inline string compute_path(json_cview js);
+
 // Conversion from json to values
 template <typename T>
 inline bool get_value(json_cview js, T& value);
@@ -559,6 +562,9 @@ inline bool check_object(json_cview js, string& error);
 // Helpers for user-defined types
 template <typename T>
 inline bool append_value(json_view js, const T& value, string& error);
+
+// Helper to format errors for conversions
+inline string format_error(json_cview js, string_view message);
 
 }  // namespace yocto
 
@@ -1550,7 +1556,7 @@ inline bool get_value(json_cview js, T& value) {
 }
 
 // Get the path of a json view
-inline bool compute_path(json_cview js, json_cview jsv, string& path) {
+inline bool _compute_path(json_cview js, json_cview jsv, string& path) {
   if (!js.value || !js.root || !jsv.value || !jsv.root) {
     return false;
   } else if (js.value == jsv.value) {
@@ -1559,7 +1565,7 @@ inline bool compute_path(json_cview js, json_cview jsv, string& path) {
   } else if (is_array(js)) {
     auto idx = 0;
     for (auto ejs : iterate_array(js)) {
-      if (!compute_path(ejs, jsv, path)) continue;
+      if (!_compute_path(ejs, jsv, path)) continue;
       if (path.back() == '/') path.pop_back();
       path = "/"s + std::to_string(idx) + path;
       return true;
@@ -1567,7 +1573,7 @@ inline bool compute_path(json_cview js, json_cview jsv, string& path) {
     return false;
   } else if (is_object(js)) {
     for (auto [key, ejs] : iterate_object(js)) {
-      if (!compute_path(ejs, jsv, path)) continue;
+      if (!_compute_path(ejs, jsv, path)) continue;
       if (path.back() == '/') path.pop_back();
       path = "/" + string{key} + path;
       return true;
@@ -1579,7 +1585,7 @@ inline bool compute_path(json_cview js, json_cview jsv, string& path) {
 }
 inline string compute_path(json_cview js) {
   auto path = string{};
-  if (compute_path({js.root, js.root}, js, path)) {
+  if (_compute_path({js.root, js.root}, js, path)) {
     return path;
   } else {
     return "";
