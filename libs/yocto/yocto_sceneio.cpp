@@ -1261,8 +1261,8 @@ static bool load_json_scene(const string& filename, sceneio_scene* scene,
       value = nullptr;
     } else {
       if (refs.find(ref) == refs.end()) {
-        error = format_error(get_element(ejs, name), 
-          "missing reference " + string{name});
+        error = format_error(
+            get_element(ejs, name), "missing reference " + string{name});
         return false;
       }
       value = refs.at(ref);

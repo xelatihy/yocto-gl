@@ -1550,30 +1550,37 @@ inline bool get_value(json_cview js, T& value) {
 }
 
 // Get the path of a json view
-inline string compute_path(json_cview js) {
-  if (!js.value || !js.root) {
-    return "";
-  } else if (js.value == js.root) {
-    return "/";
+inline bool compute_path(json_cview js, json_cview jsv, string& path) {
+  if (!js.value || !js.root || !jsv.value || !jsv.root) {
+    return false;
+  } else if (js.value == jsv.value) {
+    path = "/";
+    return true;
   } else if (is_array(js)) {
     auto idx = 0;
     for (auto ejs : iterate_array(js)) {
-      auto sub_path = compute_path(ejs);
-      if (!sub_path.empty()) {
-        if (sub_path.back() == '/') sub_path.pop_back();
-        return "/"s + std::to_string(idx) + sub_path;
-      }
+      if (!compute_path(ejs, jsv, path)) continue;
+      if (path.back() == '/') path.pop_back();
+      path = "/"s + std::to_string(idx) + path;
+      return true;
     }
-    return "";
+    return false;
   } else if (is_object(js)) {
     for (auto [key, ejs] : iterate_object(js)) {
-      auto sub_path = compute_path(ejs);
-      if (!sub_path.empty()) {
-        if (sub_path.back() == '/') sub_path.pop_back();
-        return "/" + string{key} + sub_path;
-      }
+      if (!compute_path(ejs, jsv, path)) continue;
+      if (path.back() == '/') path.pop_back();
+      path = "/" + string{key} + path;
+      return true;
     }
-    return "";
+    return false;
+  } else {
+    return false;
+  }
+}
+inline string compute_path(json_cview js) {
+  auto path = string{};
+  if (compute_path({js.root, js.root}, js, path)) {
+    return path;
   } else {
     return "";
   }
