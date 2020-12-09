@@ -503,6 +503,19 @@ inline bool get_value(const json_value& js, vector<T>& value, string& error);
 template <typename T, size_t N>
 inline bool get_value(const json_value& js, array<T, N>& value, string& error);
 
+// Get value at a key or index
+template <typename T>
+inline bool get_value_at(
+    const json_value& js, const string& key, T& value, string& error);
+template <typename T>
+inline bool get_value_at(
+    const json_value& js, size_t idx, T& value, string& error);
+
+// Get value at a key or nothing is key is not preesent
+template <typename T>
+inline bool get_value_or(
+    const json_value& js, const string& key, T& value, string& error);
+
 // Conversion to json from values
 template <typename T>
 inline bool set_value(json_value& js, const T& value);
@@ -1435,7 +1448,7 @@ inline bool get_binary(const json_value& js, json_binary& value) {
 }
 inline pair<json_binary, bool> get_binary(const json_value& js) {
   auto binary = json_binary{};
-  auto ok = get_binary(js, binary);
+  auto ok     = get_binary(js, binary);
   return {binary, ok};
 }
 
@@ -1528,6 +1541,43 @@ inline bool get_value(const json_value& js, array<T, N>& value, string& error) {
     return true;
   } else {
     error = !is_array(js) ? "array expected" : "array size mismatched";
+    return false;
+  }
+}
+
+// Get value at a key or index
+template <typename T>
+inline bool get_value_at(
+    const json_value& js, const string& key, T& value, string& error) {
+  if (auto element = get_element(js, key); element) {
+    return get_value(*element, value, error);
+  } else {
+    error = "missing key " + key;
+    return false;
+  }
+}
+template <typename T>
+inline bool get_value_at(
+    const json_value& js, size_t idx, T& value, string& error) {
+  if (auto element = get_element(js, idx); element) {
+    return get_value(*element, value, error);
+  } else {
+    error = "index out of range " + std::to_string(idx);
+    return false;
+  }
+}
+
+// Get value at a key or nothing is key is not preesent
+template <typename T>
+inline bool get_value_or(
+    const json_value& js, const string& key, T& value, string& error) {
+  if (auto ejs = get_element(js, key); ejs) {
+    return get_value(*ejs, value, error);
+  } else if (is_object(js)) {
+    error = "missing key " + key;
+    return true;
+  } else {
+    error = "object expected";
     return false;
   }
 }

@@ -1189,27 +1189,27 @@ inline void from_json(const njson& j, frame3f& value) {
 #endif
 
 // support for json conversions
-inline void to_json(json_value& js, const vec3f& value) {
-  to_json(js, (const array<float, 3>&)value);
+inline bool set_value(json_value& js, const vec3f& value, string& error) {
+  return set_value(js, (const array<float, 3>&)value, error);
 }
-inline void to_json(json_value& js, const vec4f& value) {
-  to_json(js, (const array<float, 4>&)value);
+inline bool set_value(json_value& js, const vec4f& value, string& error) {
+  return set_value(js, (const array<float, 4>&)value, error);
 }
-inline void to_json(json_value& js, const frame3f& value) {
-  to_json(js, (const array<float, 12>&)value);
+inline bool set_value(json_value& js, const frame3f& value, string& error) {
+  return set_value(js, (const array<float, 12>&)value, error);
 }
-inline void to_json(json_value& js, const mat4f& value) {
-  to_json(js, (const array<float, 16>&)value);
+inline bool set_value(json_value& js, const mat4f& value, string& error) {
+  return set_value(js, (const array<float, 16>&)value, error);
 }
 
-inline void from_json(const json_value& js, vec3f& value) {
-  from_json(js, (array<float, 3>&)value);
+inline bool get_value(const json_value& js, vec3f& value, string& error) {
+  return get_value(js, (array<float, 3>&)value, error);
 }
-inline void from_json(const json_value& js, mat3f& value) {
-  from_json(js, (array<float, 9>&)value);
+inline bool get_value(const json_value& js, mat3f& value, string& error) {
+  return get_value(js, (array<float, 9>&)value, error);
 }
-inline void from_json(const json_value& js, frame3f& value) {
-  from_json(js, (array<float, 12>&)value);
+inline bool get_value(const json_value& js, frame3f& value, string& error) {
+  return get_value(js, (array<float, 12>&)value, error);
 }
 
 }  // namespace yocto
@@ -1246,42 +1246,29 @@ static bool load_json_scene(const string& filename, sceneio_scene* scene,
   auto js = json{};
   if (!load_json(filename, js, error)) return false;
 
-  // gets a json value
-  auto get_value = [](const json& ejs, const string& name,
-                       auto& value) -> bool {
-    if (!ejs.contains(name)) return true;
-    try {
-      from_json(ejs.at(name), value);
-      return true;
-    } catch (...) {
-      return false;
-    }
-  };
-
   // parse json reference
-  auto get_ref = [&material_error, &get_value](const json& ejs,
-                     const string& name, auto& value,
-                     const auto& refs) -> bool {
-    if (!ejs.contains(name)) return true;
+  auto get_material_or = [&material_error](const json& ejs, const string& name,
+                             sceneio_material*& value, auto& refs,
+                             string& error) -> bool {
     auto ref = ""s;
-    if (!get_value(ejs, name, ref)) return false;
+    if (!get_value_or(ejs, name, ref, error)) return false;
     if (ref.empty()) {
       value = nullptr;
     } else {
-      if (refs.find(ref) == refs.end()) return material_error(ref);
+      if (refs.find(ref) == refs.end()) return material_error(name);
       value = refs.at(ref);
     }
     return true;
   };
 
   // parse json reference
-  auto ctexture_map = unordered_map<string, sceneio_texture*>{{"", nullptr}};
-  auto get_ctexture = [scene, &ctexture_map, &get_value](const json& ejs,
-                          const string& name, sceneio_texture*& value,
-                          const string& dirname = "textures/") -> bool {
-    if (!ejs.contains(name)) return true;
+  auto ctexture_map    = unordered_map<string, sceneio_texture*>{{"", nullptr}};
+  auto get_ctexture_or = [scene, &ctexture_map](const json& ejs,
+                             const string& name, sceneio_texture*& value,
+                             string&       error,
+                             const string& dirname = "textures/") -> bool {
     auto path = ""s;
-    if (!get_value(ejs, name, path)) return false;
+    if (!get_value_or(ejs, name, path, error)) return false;
     if (path.empty()) return true;
     auto it = ctexture_map.find(path);
     if (it != ctexture_map.end()) {
@@ -1295,13 +1282,13 @@ static bool load_json_scene(const string& filename, sceneio_scene* scene,
   };
 
   // parse json reference
-  auto stexture_map = unordered_map<string, sceneio_texture*>{{"", nullptr}};
-  auto get_stexture = [scene, &stexture_map, &get_value](const json& ejs,
-                          const string& name, sceneio_texture*& value,
-                          const string& dirname = "textures/") -> bool {
-    if (!ejs.contains(name)) return true;
+  auto stexture_map    = unordered_map<string, sceneio_texture*>{{"", nullptr}};
+  auto get_stexture_or = [scene, &stexture_map](const json& ejs,
+                             const string& name, sceneio_texture*& value,
+                             string&       error,
+                             const string& dirname = "textures/") -> bool {
     auto path = ""s;
-    if (!get_value(ejs, name, path)) return false;
+    if (!get_value_or(ejs, name, path, error)) return false;
     if (path.empty()) return true;
     auto it = stexture_map.find(path);
     if (it != stexture_map.end()) {
@@ -1315,13 +1302,12 @@ static bool load_json_scene(const string& filename, sceneio_scene* scene,
   };
 
   // parse json reference
-  auto shape_map = unordered_map<string, sceneio_shape*>{{"", nullptr}};
-  auto get_shape = [scene, &shape_map, &get_value](const json& ejs,
-                       const string& name, sceneio_shape*& value,
-                       const string& dirname = "shapes/") -> bool {
-    if (!ejs.contains(name)) return true;
+  auto shape_map    = unordered_map<string, sceneio_shape*>{{"", nullptr}};
+  auto get_shape_or = [scene, &shape_map](const json& ejs, const string& name,
+                          sceneio_shape*& value, string& error,
+                          const string& dirname = "shapes/") -> bool {
     auto path = ""s;
-    if (!get_value(ejs, name, path)) return false;
+    if (!get_value_or(ejs, name, path, error)) return false;
     if (path.empty()) return true;
     auto it = shape_map.find(path);
     if (it != shape_map.end()) {
@@ -1339,16 +1325,15 @@ static bool load_json_scene(const string& filename, sceneio_scene* scene,
   };
 
   // load json instance
-  auto ply_instances     = vector<unique_ptr<ply_instance>>{};
-  auto ply_instance_map  = unordered_map<string, ply_instance*>{{"", nullptr}};
-  auto instance_ply      = unordered_map<sceneio_instance*, ply_instance*>{};
-  auto get_ply_instances = [&ply_instances, &ply_instance_map, &instance_ply,
-                               &get_value](const json& ejs, const string& name,
-                               sceneio_instance* instance,
-                               const string& dirname = "instances/") -> bool {
-    if (!ejs.contains(name)) return true;
+  auto ply_instances    = vector<unique_ptr<ply_instance>>{};
+  auto ply_instance_map = unordered_map<string, ply_instance*>{{"", nullptr}};
+  auto instance_ply     = unordered_map<sceneio_instance*, ply_instance*>{};
+  auto get_ply_instances_or =
+      [&ply_instances, &ply_instance_map, &instance_ply](const json& ejs,
+          const string& name, sceneio_instance* instance, string& error,
+          const string& dirname = "instances/") -> bool {
     auto path = ""s;
-    if (!get_value(ejs, name, path)) return false;
+    if (!get_value_or(ejs, name, path, error)) return false;
     if (path.empty()) return true;
     auto it = ply_instance_map.find(path);
     if (it != ply_instance_map.end()) {
@@ -1371,7 +1356,8 @@ static bool load_json_scene(const string& filename, sceneio_scene* scene,
   if (js.contains("asset")) {
     auto& ejs = js.at("asset");
     if (!ejs.is_object()) return parse_error();
-    if (!get_value(ejs, "copyright", scene->copyright)) return parse_error();
+    if (!get_value_or(ejs, "copyright", scene->copyright, error))
+      return parse_error();
   }
 
   // cameras
@@ -1382,17 +1368,21 @@ static bool load_json_scene(const string& filename, sceneio_scene* scene,
       if (!ejs.is_object()) return parse_error();
       auto camera  = add_camera(scene);
       camera->name = name;
-      if (!get_value(ejs, "frame", camera->frame)) return parse_error();
-      if (!get_value(ejs, "orthographic", camera->orthographic))
+      if (!get_value_or(ejs, "frame", camera->frame, error))
         return parse_error();
-      if (!get_value(ejs, "lens", camera->lens)) return parse_error();
-      if (!get_value(ejs, "aspect", camera->aspect)) return parse_error();
-      if (!get_value(ejs, "film", camera->film)) return parse_error();
-      if (!get_value(ejs, "focus", camera->focus)) return parse_error();
-      if (!get_value(ejs, "aperture", camera->aperture)) return parse_error();
+      if (!get_value_or(ejs, "orthographic", camera->orthographic, error))
+        return parse_error();
+      if (!get_value_or(ejs, "lens", camera->lens, error)) return parse_error();
+      if (!get_value_or(ejs, "aspect", camera->aspect, error))
+        return parse_error();
+      if (!get_value_or(ejs, "film", camera->film, error)) return parse_error();
+      if (!get_value_or(ejs, "focus", camera->focus, error))
+        return parse_error();
+      if (!get_value_or(ejs, "aperture", camera->aperture, error))
+        return parse_error();
       if (ejs.contains("lookat")) {
         auto lookat = identity3x3f;
-        if (!get_value(ejs, "lookat", lookat)) return parse_error();
+        if (!get_value_or(ejs, "lookat", lookat, error)) return parse_error();
         camera->frame = lookat_frame(lookat.x, lookat.y, lookat.z);
         camera->focus = length(lookat.x - lookat.y);
       }
@@ -1405,15 +1395,16 @@ static bool load_json_scene(const string& filename, sceneio_scene* scene,
       if (!ejs.is_object()) return parse_error();
       auto environment  = add_environment(scene);
       environment->name = name;
-      if (!get_value(ejs, "frame", environment->frame)) return parse_error();
-      if (!get_value(ejs, "emission", environment->emission))
+      if (!get_value_or(ejs, "frame", environment->frame, error))
         return parse_error();
-      if (!get_ctexture(
-              ejs, "emission_tex", environment->emission_tex, "environments/"))
+      if (!get_value_or(ejs, "emission", environment->emission, error))
+        return parse_error();
+      if (!get_ctexture_or(ejs, "emission_tex", environment->emission_tex,
+              error, "environments/"))
         return false;
       if (ejs.contains("lookat")) {
         auto lookat = identity3x3f;
-        if (!get_value(ejs, "lookat", lookat)) return parse_error();
+        if (!get_value_or(ejs, "lookat", lookat, error)) return parse_error();
         environment->frame = lookat_frame(lookat.x, lookat.y, lookat.z, true);
       }
     }
@@ -1425,45 +1416,58 @@ static bool load_json_scene(const string& filename, sceneio_scene* scene,
       if (!ejs.is_object()) return parse_error();
       auto material  = add_material(scene);
       material->name = name;
-      if (!get_value(ejs, "emission", material->emission)) return parse_error();
-      if (!get_value(ejs, "color", material->color)) return parse_error();
-      if (!get_value(ejs, "metallic", material->metallic)) return parse_error();
-      if (!get_value(ejs, "specular", material->specular)) return parse_error();
-      if (!get_value(ejs, "roughness", material->roughness))
+      if (!get_value_or(ejs, "emission", material->emission, error))
         return parse_error();
-      if (!get_value(ejs, "coat", material->coat)) return parse_error();
-      if (!get_value(ejs, "transmission", material->transmission))
+      if (!get_value_or(ejs, "color", material->color, error))
         return parse_error();
-      if (!get_value(ejs, "translucency", material->translucency))
+      if (!get_value_or(ejs, "metallic", material->metallic, error))
         return parse_error();
-      if (!get_value(ejs, "thin", material->thin)) return parse_error();
-      if (!get_value(ejs, "ior", material->ior)) return parse_error();
-      if (!get_value(ejs, "trdepth", material->trdepth)) return parse_error();
-      if (!get_value(ejs, "scattering", material->scattering))
+      if (!get_value_or(ejs, "specular", material->specular, error))
         return parse_error();
-      if (!get_value(ejs, "scanisotropy", material->scanisotropy))
+      if (!get_value_or(ejs, "roughness", material->roughness, error))
         return parse_error();
-      if (!get_value(ejs, "opacity", material->opacity)) return parse_error();
-      if (!get_value(ejs, "coat", material->coat)) return parse_error();
-      if (!get_ctexture(ejs, "emission_tex", material->emission_tex))
+      if (!get_value_or(ejs, "coat", material->coat, error))
         return parse_error();
-      if (!get_ctexture(ejs, "color_tex", material->color_tex))
+      if (!get_value_or(ejs, "transmission", material->transmission, error))
         return parse_error();
-      if (!get_stexture(ejs, "metallic_tex", material->metallic_tex))
+      if (!get_value_or(ejs, "translucency", material->translucency, error))
         return parse_error();
-      if (!get_stexture(ejs, "specular_tex", material->specular_tex))
+      if (!get_value_or(ejs, "thin", material->thin, error))
         return parse_error();
-      if (!get_stexture(ejs, "transmission_tex", material->transmission_tex))
+      if (!get_value_or(ejs, "ior", material->ior, error)) return parse_error();
+      if (!get_value_or(ejs, "trdepth", material->trdepth, error))
         return parse_error();
-      if (!get_stexture(ejs, "translucency_tex", material->translucency_tex))
+      if (!get_value_or(ejs, "scattering", material->scattering, error))
         return parse_error();
-      if (!get_stexture(ejs, "roughness_tex", material->roughness_tex))
+      if (!get_value_or(ejs, "scanisotropy", material->scanisotropy, error))
         return parse_error();
-      if (!get_ctexture(ejs, "scattering_tex", material->scattering_tex))
+      if (!get_value_or(ejs, "opacity", material->opacity, error))
         return parse_error();
-      if (!get_stexture(ejs, "opacity_tex", material->opacity_tex))
+      if (!get_value_or(ejs, "coat", material->coat, error))
         return parse_error();
-      if (!get_ctexture(ejs, "normal_tex", material->normal_tex))
+      if (!get_ctexture_or(ejs, "emission_tex", material->emission_tex, error))
+        return parse_error();
+      if (!get_ctexture_or(ejs, "color_tex", material->color_tex, error))
+        return parse_error();
+      if (!get_stexture_or(ejs, "metallic_tex", material->metallic_tex, error))
+        return parse_error();
+      if (!get_stexture_or(ejs, "specular_tex", material->specular_tex, error))
+        return parse_error();
+      if (!get_stexture_or(
+              ejs, "transmission_tex", material->transmission_tex, error))
+        return parse_error();
+      if (!get_stexture_or(
+              ejs, "translucency_tex", material->translucency_tex, error))
+        return parse_error();
+      if (!get_stexture_or(
+              ejs, "roughness_tex", material->roughness_tex, error))
+        return parse_error();
+      if (!get_ctexture_or(
+              ejs, "scattering_tex", material->scattering_tex, error))
+        return parse_error();
+      if (!get_stexture_or(ejs, "opacity_tex", material->opacity_tex, error))
+        return parse_error();
+      if (!get_ctexture_or(ejs, "normal_tex", material->normal_tex, error))
         return parse_error();
       material_map[material->name] = material;
     }
@@ -1475,28 +1479,35 @@ static bool load_json_scene(const string& filename, sceneio_scene* scene,
       if (!ejs.is_object()) return parse_error();
       auto instance  = add_instance(scene);
       instance->name = name;
-      if (!get_value(ejs, "frame", instance->frame)) return parse_error();
+      if (!get_value_or(ejs, "frame", instance->frame, error))
+        return parse_error();
       if (ejs.contains("lookat")) {
         auto lookat = identity3x3f;
-        if (!get_value(ejs, "lookat", lookat)) return parse_error();
+        if (!get_value_or(ejs, "lookat", lookat, error)) return parse_error();
         instance->frame = lookat_frame(
             lookat.x, lookat.y, lookat.z, parse_error());
       }
-      if (!get_ref(ejs, "material", instance->material, material_map))
+      if (!get_material_or(
+              ejs, "material", instance->material, material_map, error))
         return parse_error();
-      if (!get_shape(ejs, "shape", instance->shape)) return parse_error();
-      if (!get_ply_instances(ejs, "instance", instance)) return parse_error();
+      if (!get_shape_or(ejs, "shape", instance->shape, error))
+        return parse_error();
+      if (!get_ply_instances_or(ejs, "instance", instance, error))
+        return parse_error();
       if (instance->shape != nullptr) {
-        if (!get_value(ejs, "subdivisions", instance->shape->subdivisions))
+        if (!get_value_or(
+                ejs, "subdivisions", instance->shape->subdivisions, error))
           return parse_error();
-        if (!get_value(ejs, "catmullcark", instance->shape->catmullclark))
+        if (!get_value_or(
+                ejs, "catmullcark", instance->shape->catmullclark, error))
           return parse_error();
-        if (!get_value(ejs, "smooth", instance->shape->smooth))
+        if (!get_value_or(ejs, "smooth", instance->shape->smooth, error))
           return parse_error();
-        if (!get_value(ejs, "displacement", instance->shape->displacement))
+        if (!get_value_or(
+                ejs, "displacement", instance->shape->displacement, error))
           return parse_error();
-        if (!get_stexture(
-                ejs, "displacement_tex", instance->shape->displacement_tex))
+        if (!get_stexture_or(ejs, "displacement_tex",
+                instance->shape->displacement_tex, error))
           return parse_error();
       }
     }
@@ -1508,27 +1519,34 @@ static bool load_json_scene(const string& filename, sceneio_scene* scene,
       if (!ejs.is_object()) return parse_error();
       auto instance  = add_instance(scene);
       instance->name = name;
-      if (!get_value(ejs, "frame", instance->frame)) return parse_error();
+      if (!get_value_or(ejs, "frame", instance->frame, error))
+        return parse_error();
       if (ejs.contains("lookat")) {
         auto lookat = identity3x3f;
-        if (!get_value(ejs, "lookat", lookat)) return parse_error();
+        if (!get_value_or(ejs, "lookat", lookat, error)) return parse_error();
         instance->frame = lookat_frame(lookat.x, lookat.y, lookat.z, true);
       }
-      if (!get_ref(ejs, "material", instance->material, material_map))
+      if (!get_material_or(
+              ejs, "material", instance->material, material_map, error))
         return parse_error();
-      if (!get_shape(ejs, "shape", instance->shape)) return parse_error();
-      if (!get_ply_instances(ejs, "instance", instance)) return parse_error();
+      if (!get_shape_or(ejs, "shape", instance->shape, error))
+        return parse_error();
+      if (!get_ply_instances_or(ejs, "instance", instance, error))
+        return parse_error();
       if (instance->shape != nullptr) {
-        if (!get_value(ejs, "subdivisions", instance->shape->subdivisions))
+        if (!get_value_or(
+                ejs, "subdivisions", instance->shape->subdivisions, error))
           return parse_error();
-        if (!get_value(ejs, "catmullcark", instance->shape->catmullclark))
+        if (!get_value_or(
+                ejs, "catmullcark", instance->shape->catmullclark, error))
           return parse_error();
-        if (!get_value(ejs, "smooth", instance->shape->smooth))
+        if (!get_value_or(ejs, "smooth", instance->shape->smooth, error))
           return parse_error();
-        if (!get_value(ejs, "displacement", instance->shape->displacement))
+        if (!get_value_or(
+                ejs, "displacement", instance->shape->displacement, error))
           return parse_error();
-        if (!get_stexture(
-                ejs, "displacement_tex", instance->shape->displacement_tex))
+        if (!get_stexture_or(ejs, "displacement_tex",
+                instance->shape->displacement_tex, error))
           return parse_error();
       }
     }
@@ -1625,7 +1643,7 @@ static bool load_json_scene(const string& filename, sceneio_scene* scene,
   // done
   if (progress_cb) progress_cb("load scene", progress.x++, progress.y);
   return true;
-}
+}  // namespace yocto
 
 // Save a scene in the builtin JSON format.
 static bool save_json_scene(const string& filename, const sceneio_scene* scene,
