@@ -462,11 +462,23 @@ inline bool              set_array(json_value& js, size_t size);
 inline bool              array_empty(const json_value& js);
 inline size_t            array_size(const json_value& js);
 inline bool              resize_array(json_value& js, size_t size);
+inline bool              has_element(json_value& js, size_t idx);
 inline json_value*       get_element(json_value& js, size_t idx);
 inline const json_value* get_element(const json_value& js, size_t idx);
 inline json_value*       append_element(json_value& js);
 inline auto              iterate_array(json_value& js);
 inline auto              iterate_array(const json_value& js);
+
+// Object
+inline bool              set_object(json_value& js);
+inline bool              object_empty(const json_value& js);
+inline size_t            object_size(const json_value& js);
+inline bool              has_element(json_value& js, const string& key);
+inline json_value*       get_element(json_value& js, const string& key);
+inline const json_value* get_element(const json_value& js, const string& key);
+inline json_value*       insert_element(json_value& js, const string& key);
+inline auto              iterate_object(json_value& js);
+inline auto              iterate_object(const json_value& js);
 
 // Binary
 inline bool set_binary(json_value& js, const json_binary& value);
@@ -1335,11 +1347,96 @@ inline auto iterate_array(const json_value& js) {
   }
 }
 
+// Object
+inline bool set_object(json_value& js) {
+  return set_type(js, json_type::object);
+}
+inline bool object_empty(const json_value& js) {
+  return is_object(js) ? js._object->empty() : true;
+}
+inline size_t object_size(const json_value& js) {
+  return is_object(js) ? js._object->size() : 0;
+}
+inline bool has_element(json_value& js, const string& key) {
+  return get_element(js, key) != nullptr;
+}
+inline json_value* get_element(json_value& js, const string& key) {
+  if (is_object(js)) {
+    for (auto& [key_, value] : *js._object) {
+      if (key_ == key) return &value;
+    }
+    return nullptr;
+  } else {
+    return nullptr;
+  }
+}
+inline const json_value* get_element(const json_value& js, const string& key) {
+  if (is_object(js)) {
+    for (auto& [key_, value] : *js._object) {
+      if (key_ == key) return &value;
+    }
+    return nullptr;
+  } else {
+    return nullptr;
+  }
+}
+inline json_value* insert_element(json_value& js, const string& key) {
+  if (is_object(js)) {
+    for (auto& [key_, value] : *js._object) {
+      if (key_ == key) return &value;
+    }
+    return &js._object->emplace_back(key, json_value{}).second;
+  } else {
+    return nullptr;
+  }
+}
+inline auto iterate_object(json_value& js) {
+  struct iterator_wrapper {
+    pair<string, json_value>* begin_;
+    pair<string, json_value>* end_;
+    pair<string, json_value>* begin() { return begin_; }
+    pair<string, json_value>* end() { return end_; }
+  };
+  if (is_array(js)) {
+    return iterator_wrapper{
+        js._object->data(), js._object->data() + js._object->size()};
+  } else {
+    return iterator_wrapper{nullptr, nullptr};
+  }
+}
+inline auto iterate_object(const json_value& js) {
+  struct iterator_wrapper {
+    const pair<string, json_value>* begin_;
+    const pair<string, json_value>* end_;
+    const pair<string, json_value>* begin() { return begin_; }
+    const pair<string, json_value>* end() { return end_; }
+  };
+  if (is_array(js)) {
+    return iterator_wrapper{
+        js._object->data(), js._object->data() + js._object->size()};
+  } else {
+    return iterator_wrapper{nullptr, nullptr};
+  }
+}
+
 // Binary
 inline bool set_binary(json_value& js, const json_binary& value) {
   if (!set_type(js, json_type::binary)) return false;
   *js._binary = value;
   return true;
+}
+inline bool get_binary(const json_value& js, json_binary& value) {
+  if (is_binary(js)) {
+    value = *js._binary;
+    return true;
+  } else {
+    return false;
+  }
+}
+inline pair<json_binary, bool> get_binary(const json_value& js) {
+  auto binary = json_binary{};
+  auto ok = get_binary(js, binary);
+  return {binary, ok};
 }
 
 // Conversion from json to values
