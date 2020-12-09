@@ -407,6 +407,98 @@ inline void from_json(const json_value& js, T& value);
 template <typename T>
 inline void to_json(json_value&, const T& value);
 
+// Type
+inline json_type get_type(const json_value& js);
+inline bool      set_type(json_value& js, json_type type);
+
+// Access to internal representation
+inline const int64_t*     get_integer(const json_value& js);
+inline const uint64_t*    get_unsigned(const json_value& js);
+inline const double*      get_real(const json_value& js);
+inline const bool*        get_boolean(const json_value& js);
+inline const string*      get_string(const json_value& js);
+inline const json_array*  get_array(const json_value& js);
+inline const json_object* get_object(const json_value& js);
+inline const json_binary* get_binary(const json_value& js);
+
+// Access to internal representation
+inline int64_t*     get_integer(json_value& js);
+inline uint64_t*    get_unsigned(json_value& js);
+inline double*      get_real(json_value& js);
+inline bool*        get_boolean(json_value& js);
+inline string*      get_string(json_value& js);
+inline json_array*  get_array(json_value& js);
+inline json_object* get_object(json_value& js);
+inline json_binary* get_binary(json_value& js);
+
+// Initialization to basic types
+inline bool set_integer(json_value& js, int64_t value);
+inline bool set_unsigned(json_value& js, uint64_t value);
+inline bool set_real(json_value& js, double value);
+inline bool set_boolean(json_value& js, bool value);
+inline bool set_string(json_value& js, const string& value);
+inline bool set_array(json_value& js, const json_array& value);
+inline bool set_object(json_value& js, const json_object& value);
+inline bool set_binary(json_value& js, const json_binary& value);
+
+// Compound type
+inline bool   empty(const json_value& js);
+inline size_t size(const json_value& js);
+
+// Array
+inline bool              set_array(json_value& js);
+inline bool              resize_array(json_value& js, size_t size);
+inline json_value*       get_element(json_value& js, size_t idx);
+inline const json_value* get_element(const json_value& js, size_t idx);
+inline json_value*       append_element(json_value& js);
+inline auto              iterate_array(json_value& js);
+inline auto              iterate_array(const json_value& js);
+
+// Conversion from json to values
+template <typename T>
+inline bool get_value(const json_value& js, T& value);
+
+// Conversion from json to values
+inline bool get_value(const json_value& js, int64_t& value, string& error);
+inline bool get_value(const json_value& js, int32_t& value, string& error);
+inline bool get_value(const json_value& js, uint64_t& value, string& error);
+inline bool get_value(const json_value& js, uint32_t& value, string& error);
+inline bool get_value(const json_value& js, double& value, string& error);
+inline bool get_value(const json_value& js, float& value, string& error);
+inline bool get_value(const json_value& js, bool& value, string& error);
+inline bool get_value(const json_value& js, string& value, string& error);
+template <typename T>
+inline bool get_value(const json_value& js, vector<T>& value, string& error);
+template <typename T, size_t N>
+inline bool get_value(const json_value& js, array<T, N>& value, string& error);
+
+// Conversion to json from values
+template <typename T>
+inline bool set_value(json_value& js, const T& value);
+
+// Conversion to json from values
+inline bool set_value(json_value& js, int64_t value, string& error);
+inline bool set_value(json_value& js, int32_t value, string& error);
+inline bool set_value(json_value& js, uint64_t value, string& error);
+inline bool set_value(json_value& js, uint32_t value, string& error);
+inline bool set_value(json_value& js, double value, string& error);
+inline bool set_value(json_value& js, float value, string& error);
+inline bool set_value(json_value& js, bool value, string& error);
+inline bool set_value(json_value& js, const string& value, string& error);
+template <typename T>
+inline bool set_value(json_value& js, const vector<T>& value, string& error);
+template <typename T, size_t N>
+inline bool set_value(json_value& js, const array<T, N>& value, string& error);
+
+// Helpers for user-defined types
+inline bool check_array(const json_value& js, string& error);
+inline bool check_array(const json_value& js, size_t size_, string& error);
+inline bool check_object(const json_value& js, string& error);
+
+// Helpers for user-defined types
+template <typename T>
+inline bool append_value(json_value& js, const T& value, string& error);
+
 }  // namespace yocto
 
 // -----------------------------------------------------------------------------
