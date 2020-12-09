@@ -1859,6 +1859,24 @@ inline bool check_object(json_cview js, string& error) {
 }
 
 // Helpers for user-defined types
+inline bool set_array(json_view js, string& error) {
+  if (set_array(js)) {
+    return true;
+  } else {
+    error = format_error(js, "array expected");
+    return false;
+  }
+}
+template <typename T>
+inline bool set_value_at(
+    json_view js, size_t idx, const T& value, string& error) {
+  if (auto ejs = get_element(js, idx); is_valid(ejs)) {
+    return set_value(ejs, value, error);
+  } else {
+    error = format_error(js, "array expected");
+    return false;
+  }
+}
 template <typename T>
 inline bool append_value(json_view js, const T& value, string& error) {
   if (auto ejs = append_element(js); is_valid(ejs)) {
@@ -1866,6 +1884,99 @@ inline bool append_value(json_view js, const T& value, string& error) {
   } else {
     error = format_error(js, "array expected");
     return false;
+  }
+}
+inline json_view append_array(json_view js, string& error) {
+  if (auto ejs = append_element(js); is_valid(ejs)) {
+    if (set_array(ejs)) {
+      return ejs;
+    } else {
+      error = format_error(ejs, "array expected");
+      return {nullptr, js.root};
+    }
+  } else {
+    error = format_error(js, "array expected");
+    return {nullptr, js.root};
+  }
+}
+inline json_view append_object(json_view js, string& error) {
+  if (auto ejs = append_element(js); is_valid(ejs)) {
+    if (set_object(ejs)) {
+      return ejs;
+    } else {
+      error = format_error(ejs, "object expected");
+      return {nullptr, js.root};
+    }
+  } else {
+    error = format_error(js, "array expected");
+    return {nullptr, js.root};
+  }
+}
+
+// Helpers for user-defined types
+inline bool set_object(json_view js, string& error) {
+  if (set_object(js)) {
+    return true;
+  } else {
+    error = format_error(js, "object expected");
+    return false;
+  }
+}
+template <typename T>
+inline bool set_value_at(
+    json_view js, string_view key, const T& value, string& error) {
+  if (auto ejs = get_element(js, key); is_valid(ejs)) {
+    return set_value(ejs, value, error);
+  } else {
+    error = format_error(js, "object expected");
+    return false;
+  }
+}
+template <typename T>
+inline bool insert_value(
+    json_view js, string_view key, const T& value, string& error) {
+  if (auto ejs = insert_element(js, key); is_valid(ejs)) {
+    return set_value(ejs, value, error);
+  } else {
+    error = format_error(js, "object expected");
+    return false;
+  }
+}
+template <typename T>
+inline bool insert_value_if(json_view js, string_view key, const T& value,
+    const T& default_, string& error) {
+  if (value == default_) return true;
+  if (auto ejs = insert_element(js, key); is_valid(ejs)) {
+    return set_value(ejs, value, error);
+  } else {
+    error = format_error(js, "object expected");
+    return false;
+  }
+}
+inline json_view insert_array(json_view js, string_view key, string& error) {
+  if (auto ejs = insert_element(js, key); is_valid(ejs)) {
+    if (set_array(ejs)) {
+      return ejs;
+    } else {
+      error = format_error(ejs, "array expected");
+      return {nullptr, js.root};
+    }
+  } else {
+    error = format_error(js, "object expected");
+    return {nullptr, js.root};
+  }
+}
+inline json_view insert_object(json_view js, string_view key, string& error) {
+  if (auto ejs = insert_element(js, key); is_valid(ejs)) {
+    if (set_object(ejs)) {
+      return ejs;
+    } else {
+      error = format_error(ejs, "object expected");
+      return {nullptr, js.root};
+    }
+  } else {
+    error = format_error(js, "object expected");
+    return {nullptr, js.root};
   }
 }
 

@@ -1239,15 +1239,12 @@ static bool load_json_scene(const string& filename, sceneio_scene* scene,
     return false;
   };
 
-  // switch json
-  using json = json_value;
-
   // handle progress
   auto progress = vec2i{0, 2};
   if (progress_cb) progress_cb("load scene", progress.x++, progress.y);
 
   // open file
-  auto js_tree = json{};
+  auto js_tree = json_value{};
   if (!load_json(filename, js_tree, error)) return json_error();
   auto js = get_root(js_tree);
 
@@ -1652,47 +1649,31 @@ static bool load_json_scene(const string& filename, sceneio_scene* scene,
   // done
   if (progress_cb) progress_cb("load scene", progress.x++, progress.y);
   return true;
-}  // namespace yocto
+}
 
 // Save a scene in the builtin JSON format.
 static bool save_json_scene(const string& filename, const sceneio_scene* scene,
     string& error, const progress_callback& progress_cb, bool noparallel) {
+  auto conversion_error = [filename, &error]() {
+    // should never happen
+    throw std::runtime_error{"programmer error"};
+    error = filename + ": conversion error (" + error + ")";
+    return false;
+  };
   auto dependent_error = [filename, &error]() {
     error = filename + ": error in " + error;
     return false;
   };
 
-  // setting json
-  using json = json_value;
-
-  // helper
-  auto add_opt = [](json& ejs, const string& name, const auto& value,
-                     const auto& def) {
-    if (value == def) return true;
-    try {
-      to_json(ejs[name], value);
-      return true;
-    } catch (...) {
-      return false;
-    }
-  };
-  auto add_tex = [](json& ejs, const string& name, sceneio_texture* texture) {
+  auto insert_texture_if = [](json_view ejs, const string& name,
+                               sceneio_texture* texture, string& error) {
     if (texture == nullptr) return true;
-    try {
-      to_json(ejs[name], texture->name);
-      return true;
-    } catch (...) {
-      return false;
-    }
+    return insert_value(ejs, name, texture->name, error);
   };
-  auto add_ref = [](json& ejs, const string& name, auto ref) {
-    if (ref == nullptr) return true;
-    try {
-      to_json(ejs[name], ref->name);
-      return true;
-    } catch (...) {
-      return false;
-    }
+  auto insert_reference_if = [](json_view ejs, const string& name,
+                                 auto reference, string& error) {
+    if (reference == nullptr) return true;
+    return insert_value(ejs, name, reference->name, error);
   };
 
   // handle progress
@@ -1701,105 +1682,178 @@ static bool save_json_scene(const string& filename, const sceneio_scene* scene,
   if (progress_cb) progress_cb("save scene", progress.x++, progress.y);
 
   // save json file
-  auto js = json{};
-  js      = json::object();
+  auto js_tree = json_value{};
+  auto js      = get_root(js_tree);
+  if (!set_object(js, error)) return conversion_error();
 
   // asset
   {
-    auto& ejs        = js["asset"];
-    ejs              = json::object();
-    ejs["generator"] = "Yocto/GL - https://github.com/xelatihy/yocto-gl";
-    add_opt(ejs, "copyright", scene->copyright, ""s);
+    auto ejs = insert_object(js, "asset", error);
+    if (!check_object(ejs, error)) return conversion_error();
+    if (!insert_value(ejs, "generator",
+            "Yocto/GL - https://github.com/xelatihy/yocto-gl", error))
+      return conversion_error();
+    if (!insert_value_if(ejs, "copyright", scene->copyright, ""s, error))
+      return conversion_error();
   }
 
   auto def_cam = sceneio_camera{};
   if (!scene->cameras.empty()) {
-    auto& mjs = js["cameras"];
-    mjs       = json::object();
+    auto mjs = insert_object(js, "cameras", error);
+    if (!check_object(mjs, error)) return conversion_error();
     for (auto& camera : scene->cameras) {
-      auto& ejs = mjs[camera->name];
-      ejs       = json::object();
-      add_opt(ejs, "frame", camera->frame, def_cam.frame);
-      add_opt(ejs, "ortho", camera->orthographic, def_cam.orthographic);
-      add_opt(ejs, "lens", camera->lens, def_cam.lens);
-      add_opt(ejs, "aspect", camera->aspect, def_cam.aspect);
-      add_opt(ejs, "film", camera->film, def_cam.film);
-      add_opt(ejs, "focus", camera->focus, def_cam.focus);
-      add_opt(ejs, "aperture", camera->aperture, def_cam.aperture);
+      auto ejs = insert_object(mjs, camera->name, error);
+      if (!check_object(ejs, error)) return conversion_error();
+      if (!insert_value_if(ejs, "frame", camera->frame, def_cam.frame, error))
+        return conversion_error();
+      if (!insert_value_if(
+              ejs, "ortho", camera->orthographic, def_cam.orthographic, error))
+        return conversion_error();
+      if (!insert_value_if(ejs, "lens", camera->lens, def_cam.lens, error))
+        return conversion_error();
+      if (!insert_value_if(
+              ejs, "aspect", camera->aspect, def_cam.aspect, error))
+        return conversion_error();
+      if (!insert_value_if(ejs, "film", camera->film, def_cam.film, error))
+        return conversion_error();
+      if (!insert_value_if(ejs, "focus", camera->focus, def_cam.focus, error))
+        return conversion_error();
+      if (!insert_value_if(
+              ejs, "aperture", camera->aperture, def_cam.aperture, error))
+        return conversion_error();
     }
   }
 
   auto def_env = sceneio_environment{};
   if (!scene->environments.empty()) {
-    auto& mjs = js["environments"];
-    mjs       = json::object();
+    auto mjs = insert_object(js, "environments", error);
+    if (!check_object(mjs, error)) return conversion_error();
     for (auto environment : scene->environments) {
-      auto& ejs = mjs[environment->name];
-      ejs       = json::object();
-      add_opt(ejs, "frame", environment->frame, def_env.frame);
-      add_opt(ejs, "emission", environment->emission, def_env.emission);
-      add_tex(ejs, "emission_tex", environment->emission_tex);
+      auto ejs = insert_object(mjs, environment->name, error);
+      if (!check_object(ejs, error)) return conversion_error();
+      if (!insert_value_if(
+              ejs, "frame", environment->frame, def_env.frame, error))
+        return conversion_error();
+      if (!insert_value_if(
+              ejs, "emission", environment->emission, def_env.emission, error))
+        return conversion_error();
+      if (!insert_texture_if(
+              ejs, "emission_tex", environment->emission_tex, error))
+        return conversion_error();
     }
   }
 
   auto def_material = sceneio_material{};
   if (!scene->materials.empty()) {
-    auto& mjs = js["materials"];
-    mjs       = json::object();
+    auto mjs = insert_object(js, "materials", error);
+    if (!check_object(mjs, error)) return conversion_error();
     for (auto material : scene->materials) {
-      auto& ejs = mjs[material->name];
-      ejs       = json::object();
-      add_opt(ejs, "emission", material->emission, def_material.emission);
-      add_opt(ejs, "color", material->color, def_material.color);
-      add_opt(ejs, "specular", material->specular, def_material.specular);
-      add_opt(ejs, "metallic", material->metallic, def_material.metallic);
-      add_opt(ejs, "coat", material->coat, def_material.coat);
-      add_opt(ejs, "roughness", material->roughness, def_material.roughness);
-      add_opt(ejs, "ior", material->ior, def_material.ior);
-      add_opt(ejs, "transmission", material->transmission,
-          def_material.transmission);
-      add_opt(ejs, "translucency", material->translucency,
-          def_material.translucency);
-      add_opt(ejs, "trdepth", material->trdepth, def_material.trdepth);
-      add_opt(ejs, "scattering", material->scattering, def_material.scattering);
-      add_opt(ejs, "scanisotropy", material->scanisotropy,
-          def_material.scanisotropy);
-      add_opt(ejs, "opacity", material->opacity, def_material.opacity);
-      add_opt(ejs, "thin", material->thin, def_material.thin);
-      add_tex(ejs, "emission_tex", material->emission_tex);
-      add_tex(ejs, "color_tex", material->color_tex);
-      add_tex(ejs, "metallic_tex", material->metallic_tex);
-      add_tex(ejs, "specular_tex", material->specular_tex);
-      add_tex(ejs, "roughness_tex", material->roughness_tex);
-      add_tex(ejs, "transmission_tex", material->transmission_tex);
-      add_tex(ejs, "translucency_tex", material->translucency_tex);
-      add_tex(ejs, "scattering_tex", material->scattering_tex);
-      add_tex(ejs, "coat_tex", material->coat_tex);
-      add_tex(ejs, "opacity_tex", material->opacity_tex);
-      add_tex(ejs, "normal_tex", material->normal_tex);
+      auto ejs = insert_object(mjs, material->name, error);
+      if (!check_object(ejs, error)) return conversion_error();
+      if (!insert_value_if(ejs, "emission", material->emission,
+              def_material.emission, error))
+        return conversion_error();
+      if (!insert_value_if(
+              ejs, "color", material->color, def_material.color, error))
+        return conversion_error();
+      if (!insert_value_if(ejs, "specular", material->specular,
+              def_material.specular, error))
+        return conversion_error();
+      if (!insert_value_if(ejs, "metallic", material->metallic,
+              def_material.metallic, error))
+        return conversion_error();
+      if (!insert_value_if(
+              ejs, "coat", material->coat, def_material.coat, error))
+        return conversion_error();
+      if (!insert_value_if(ejs, "roughness", material->roughness,
+              def_material.roughness, error))
+        return conversion_error();
+      if (!insert_value_if(ejs, "ior", material->ior, def_material.ior, error))
+        return conversion_error();
+      if (!insert_value_if(ejs, "transmission", material->transmission,
+              def_material.transmission, error))
+        return conversion_error();
+      if (!insert_value_if(ejs, "translucency", material->translucency,
+              def_material.translucency, error))
+        return conversion_error();
+      if (!insert_value_if(
+              ejs, "trdepth", material->trdepth, def_material.trdepth, error))
+        return conversion_error();
+      if (!insert_value_if(ejs, "scattering", material->scattering,
+              def_material.scattering, error))
+        return conversion_error();
+      if (!insert_value_if(ejs, "scanisotropy", material->scanisotropy,
+              def_material.scanisotropy, error))
+        return conversion_error();
+      if (!insert_value_if(
+              ejs, "opacity", material->opacity, def_material.opacity, error))
+        return conversion_error();
+      if (!insert_value_if(
+              ejs, "thin", material->thin, def_material.thin, error))
+        return conversion_error();
+      if (!insert_texture_if(
+              ejs, "emission_tex", material->emission_tex, error))
+        return conversion_error();
+      if (!insert_texture_if(ejs, "color_tex", material->color_tex, error))
+        return conversion_error();
+      if (!insert_texture_if(
+              ejs, "metallic_tex", material->metallic_tex, error))
+        return conversion_error();
+      if (!insert_texture_if(
+              ejs, "specular_tex", material->specular_tex, error))
+        return conversion_error();
+      if (!insert_texture_if(
+              ejs, "roughness_tex", material->roughness_tex, error))
+        return conversion_error();
+      if (!insert_texture_if(
+              ejs, "transmission_tex", material->transmission_tex, error))
+        return conversion_error();
+      if (!insert_texture_if(
+              ejs, "translucency_tex", material->translucency_tex, error))
+        return conversion_error();
+      if (!insert_texture_if(
+              ejs, "scattering_tex", material->scattering_tex, error))
+        return conversion_error();
+      if (!insert_texture_if(ejs, "coat_tex", material->coat_tex, error))
+        return conversion_error();
+      if (!insert_texture_if(ejs, "opacity_tex", material->opacity_tex, error))
+        return conversion_error();
+      if (!insert_texture_if(ejs, "normal_tex", material->normal_tex, error))
+        return conversion_error();
     }
   }
 
   auto def_object = sceneio_instance{};
   auto def_shape  = sceneio_shape{};
   if (!scene->instances.empty()) {
-    auto& mjs = js["instances"];
-    mjs       = json::object();
+    auto mjs = insert_object(js, "instances", error);
+    if (!check_object(mjs, error)) return conversion_error();
     for (auto instance : scene->instances) {
-      auto& ejs = mjs[instance->name];
-      ejs       = json::object();
-      add_opt(ejs, "frame", instance->frame, def_object.frame);
-      add_ref(ejs, "shape", instance->shape);
-      add_ref(ejs, "material", instance->material);
+      auto ejs = insert_object(mjs, instance->name, error);
+      if (!check_object(ejs, error)) return conversion_error();
+      if (!insert_value_if(
+              ejs, "frame", instance->frame, def_object.frame, error))
+        return conversion_error();
+      if (!insert_reference_if(ejs, "shape", instance->shape, error))
+        return conversion_error();
+      if (!insert_reference_if(ejs, "material", instance->material, error))
+        return conversion_error();
       if (instance->shape != nullptr) {
-        add_opt(ejs, "subdivisions", instance->shape->subdivisions,
-            def_shape.subdivisions);
-        add_opt(ejs, "catmullclark", instance->shape->catmullclark,
-            def_shape.catmullclark);
-        add_opt(ejs, "smooth", instance->shape->smooth, def_shape.smooth);
-        add_opt(ejs, "displacement", instance->shape->displacement,
-            def_shape.displacement);
-        add_tex(ejs, "displacement_tex", instance->shape->displacement_tex);
+        if (!insert_value_if(ejs, "subdivisions", instance->shape->subdivisions,
+                def_shape.subdivisions, error))
+          return conversion_error();
+        if (!insert_value_if(ejs, "catmullclark", instance->shape->catmullclark,
+                def_shape.catmullclark, error))
+          return conversion_error();
+        if (!insert_value_if(ejs, "smooth", instance->shape->smooth,
+                def_shape.smooth, error))
+          return conversion_error();
+        if (!insert_value_if(ejs, "displacement", instance->shape->displacement,
+                def_shape.displacement, error))
+          return conversion_error();
+        if (!insert_texture_if(ejs, "displacement_tex",
+                instance->shape->displacement_tex, error))
+          return conversion_error();
       }
     }
   }
@@ -1808,7 +1862,7 @@ static bool save_json_scene(const string& filename, const sceneio_scene* scene,
   if (progress_cb) progress_cb("save scene", progress.x++, progress.y);
 
   // save json
-  if (!save_json(filename, js, error)) return false;
+  if (!save_json(filename, js_tree, error)) return false;
 
   // get filename from name
   auto make_filename = [filename](const string& name, const string& group,
