@@ -1353,7 +1353,7 @@ static bool load_json_scene(const string& filename, sceneio_scene* scene,
   if (progress_cb) progress_cb("load scene", progress.x++, progress.y);
 
   // asset
-  if (js.contains("asset")) {
+  if (has_element(js, "asset")) {
     auto& ejs = js.at("asset");
     if (!ejs.is_object()) return parse_error();
     if (!get_value_or(ejs, "copyright", scene->copyright, error))
@@ -1361,7 +1361,7 @@ static bool load_json_scene(const string& filename, sceneio_scene* scene,
   }
 
   // cameras
-  if (js.contains("cameras")) {
+  if (has_element(js, "cameras")) {
     auto& mjs = js.at("cameras");
     if (!mjs.is_object()) return parse_error();
     for (auto& [name, ejs] : mjs.items()) {
@@ -1380,7 +1380,7 @@ static bool load_json_scene(const string& filename, sceneio_scene* scene,
         return parse_error();
       if (!get_value_or(ejs, "aperture", camera->aperture, error))
         return parse_error();
-      if (ejs.contains("lookat")) {
+      if (has_element(ejs, "lookat")) {
         auto lookat = identity3x3f;
         if (!get_value_or(ejs, "lookat", lookat, error)) return parse_error();
         camera->frame = lookat_frame(lookat.x, lookat.y, lookat.z);
@@ -1388,7 +1388,7 @@ static bool load_json_scene(const string& filename, sceneio_scene* scene,
       }
     }
   }
-  if (js.contains("environments")) {
+  if (has_element(js, "environments")) {
     auto& mjs = js.at("environments");
     if (!mjs.is_object()) return parse_error();
     for (auto& [name, ejs] : mjs.items()) {
@@ -1402,14 +1402,14 @@ static bool load_json_scene(const string& filename, sceneio_scene* scene,
       if (!get_ctexture_or(ejs, "emission_tex", environment->emission_tex,
               error, "environments/"))
         return false;
-      if (ejs.contains("lookat")) {
+      if (has_element(ejs, "lookat")) {
         auto lookat = identity3x3f;
         if (!get_value_or(ejs, "lookat", lookat, error)) return parse_error();
         environment->frame = lookat_frame(lookat.x, lookat.y, lookat.z, true);
       }
     }
   }
-  if (js.contains("materials")) {
+  if (has_element(js, "materials")) {
     auto& mjs = js.at("materials");
     if (!mjs.is_object()) return parse_error();
     for (auto& [name, ejs] : mjs.items()) {
@@ -1472,7 +1472,7 @@ static bool load_json_scene(const string& filename, sceneio_scene* scene,
       material_map[material->name] = material;
     }
   }
-  if (js.contains("instances")) {
+  if (has_element(js, "instances")) {
     auto& mjs = js.at("instances");
     if (!mjs.is_object()) return parse_error();
     for (auto& [name, ejs] : mjs.items()) {
@@ -1481,7 +1481,7 @@ static bool load_json_scene(const string& filename, sceneio_scene* scene,
       instance->name = name;
       if (!get_value_or(ejs, "frame", instance->frame, error))
         return parse_error();
-      if (ejs.contains("lookat")) {
+      if (has_element(ejs, "lookat")) {
         auto lookat = identity3x3f;
         if (!get_value_or(ejs, "lookat", lookat, error)) return parse_error();
         instance->frame = lookat_frame(
@@ -1512,7 +1512,7 @@ static bool load_json_scene(const string& filename, sceneio_scene* scene,
       }
     }
   }
-  if (js.contains("objects")) {
+  if (has_element(js, "objects")) {
     auto& mjs = js.at("objects");
     if (!mjs.is_object()) return parse_error();
     for (auto& [name, ejs] : mjs.items()) {
@@ -1521,7 +1521,7 @@ static bool load_json_scene(const string& filename, sceneio_scene* scene,
       instance->name = name;
       if (!get_value_or(ejs, "frame", instance->frame, error))
         return parse_error();
-      if (ejs.contains("lookat")) {
+      if (has_element(ejs, "lookat")) {
         auto lookat = identity3x3f;
         if (!get_value_or(ejs, "lookat", lookat, error)) return parse_error();
         instance->frame = lookat_frame(lookat.x, lookat.y, lookat.z, true);
