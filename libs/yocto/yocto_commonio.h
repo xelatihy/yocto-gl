@@ -560,8 +560,28 @@ inline bool check_array(json_cview js, size_t size_, string& error);
 inline bool check_object(json_cview js, string& error);
 
 // Helpers for user-defined types
+inline bool set_array(json_view js, string& error);
 template <typename T>
-inline bool append_value(json_view js, const T& value, string& error);
+inline bool set_value_at(
+    json_view js, size_t idx, const T& value, string& error);
+template <typename T>
+inline bool      append_value(json_view js, const T& value, string& error);
+inline json_view append_array(json_view js, string& error);
+inline json_view append_object(json_view js, string& error);
+
+// Helpers for user-defined types
+inline bool set_object(json_view js, string& error);
+template <typename T>
+inline bool set_value_at(
+    json_view js, string_view key, const T& value, string& error);
+template <typename T>
+inline bool insert_value(
+    json_view js, string_view key, const T& value, string& error);
+template <typename T>
+inline bool      insert_value_if(json_view js, string_view key, const T& value,
+         const T& default_, string& error);
+inline json_view insert_array(json_view js, string_view key, string& error);
+inline json_view insert_object(json_view js, string_view key, string& error);
 
 // Helper to format errors for conversions
 inline string format_error(json_cview js, string_view message);
