@@ -1189,26 +1189,26 @@ inline void from_json(const njson& j, frame3f& value) {
 #endif
 
 // support for json conversions
-inline bool set_value(json_value& js, const vec3f& value, string& error) {
+inline bool set_value(json_view js, const vec3f& value, string& error) {
   return set_value(js, (const array<float, 3>&)value, error);
 }
-inline bool set_value(json_value& js, const vec4f& value, string& error) {
+inline bool set_value(json_view js, const vec4f& value, string& error) {
   return set_value(js, (const array<float, 4>&)value, error);
 }
-inline bool set_value(json_value& js, const frame3f& value, string& error) {
+inline bool set_value(json_view js, const frame3f& value, string& error) {
   return set_value(js, (const array<float, 12>&)value, error);
 }
-inline bool set_value(json_value& js, const mat4f& value, string& error) {
+inline bool set_value(json_view js, const mat4f& value, string& error) {
   return set_value(js, (const array<float, 16>&)value, error);
 }
 
-inline bool get_value(const json_value& js, vec3f& value, string& error) {
+inline bool get_value(json_cview js, vec3f& value, string& error) {
   return get_value(js, (array<float, 3>&)value, error);
 }
-inline bool get_value(const json_value& js, mat3f& value, string& error) {
+inline bool get_value(json_cview js, mat3f& value, string& error) {
   return get_value(js, (array<float, 9>&)value, error);
 }
-inline bool get_value(const json_value& js, frame3f& value, string& error) {
+inline bool get_value(json_cview js, frame3f& value, string& error) {
   return get_value(js, (array<float, 12>&)value, error);
 }
 
@@ -1226,8 +1226,8 @@ static bool load_json_scene(const string& filename, sceneio_scene* scene,
     error = filename + ": parse error";
     return false;
   };
-  auto material_error = [filename, &error](const string& name) {
-    error = filename + ": missing material " + name;
+  auto material_error = [filename, &error](string_view name) {
+    error = filename + ": missing material " + string{name};
     return false;
   };
   auto dependent_error = [filename, &error]() {
@@ -1243,11 +1243,12 @@ static bool load_json_scene(const string& filename, sceneio_scene* scene,
   if (progress_cb) progress_cb("load scene", progress.x++, progress.y);
 
   // open file
-  auto js = json{};
-  if (!load_json(filename, js, error)) return false;
+  auto js_tree = json{};
+  if (!load_json(filename, js_tree, error)) return false;
+  auto js = get_root(js_tree);
 
   // parse json reference
-  auto get_material_or = [&material_error](const json& ejs, const string& name,
+  auto get_material_or = [&material_error](json_cview ejs, string_view name,
                              sceneio_material*& value, auto& refs,
                              string& error) -> bool {
     auto ref = ""s;
@@ -1263,8 +1264,8 @@ static bool load_json_scene(const string& filename, sceneio_scene* scene,
 
   // parse json reference
   auto ctexture_map    = unordered_map<string, sceneio_texture*>{{"", nullptr}};
-  auto get_ctexture_or = [scene, &ctexture_map](const json& ejs,
-                             const string& name, sceneio_texture*& value,
+  auto get_ctexture_or = [scene, &ctexture_map](json_cview ejs,
+                             string_view name, sceneio_texture*& value,
                              string&       error,
                              const string& dirname = "textures/") -> bool {
     auto path = ""s;
@@ -1283,8 +1284,8 @@ static bool load_json_scene(const string& filename, sceneio_scene* scene,
 
   // parse json reference
   auto stexture_map    = unordered_map<string, sceneio_texture*>{{"", nullptr}};
-  auto get_stexture_or = [scene, &stexture_map](const json& ejs,
-                             const string& name, sceneio_texture*& value,
+  auto get_stexture_or = [scene, &stexture_map](json_cview ejs,
+                             string_view name, sceneio_texture*& value,
                              string&       error,
                              const string& dirname = "textures/") -> bool {
     auto path = ""s;
@@ -1303,7 +1304,7 @@ static bool load_json_scene(const string& filename, sceneio_scene* scene,
 
   // parse json reference
   auto shape_map    = unordered_map<string, sceneio_shape*>{{"", nullptr}};
-  auto get_shape_or = [scene, &shape_map](const json& ejs, const string& name,
+  auto get_shape_or = [scene, &shape_map](json_cview ejs, string_view name,
                           sceneio_shape*& value, string& error,
                           const string& dirname = "shapes/") -> bool {
     auto path = ""s;
@@ -1329,7 +1330,7 @@ static bool load_json_scene(const string& filename, sceneio_scene* scene,
   auto ply_instance_map = unordered_map<string, ply_instance*>{{"", nullptr}};
   auto instance_ply     = unordered_map<sceneio_instance*, ply_instance*>{};
   auto get_ply_instances_or =
-      [&ply_instances, &ply_instance_map, &instance_ply](const json& ejs,
+      [&ply_instances, &ply_instance_map, &instance_ply](json_cview ejs,
           const string& name, sceneio_instance* instance, string& error,
           const string& dirname = "instances/") -> bool {
     auto path = ""s;
@@ -1354,7 +1355,7 @@ static bool load_json_scene(const string& filename, sceneio_scene* scene,
 
   // asset
   if (has_element(js, "asset")) {
-    auto& ejs = *get_element(js, "asset");
+    auto ejs = get_element(js, "asset");
     if (!check_object(ejs, error)) return parse_error();
     if (!get_value_or(ejs, "copyright", scene->copyright, error))
       return parse_error();
@@ -1362,9 +1363,9 @@ static bool load_json_scene(const string& filename, sceneio_scene* scene,
 
   // cameras
   if (has_element(js, "cameras")) {
-    auto& mjs = *get_element(js, "cameras");
+    auto mjs = get_element(js, "cameras");
     if (!check_object(mjs, error)) return parse_error();
-    for (auto& [name, ejs] : mjs.items()) {
+    for (auto [name, ejs] : iterate_object(mjs)) {
       if (!check_object(ejs, error)) return parse_error();
       auto camera  = add_camera(scene);
       camera->name = name;
@@ -1389,9 +1390,9 @@ static bool load_json_scene(const string& filename, sceneio_scene* scene,
     }
   }
   if (has_element(js, "environments")) {
-    auto& mjs = *get_element(js, "environments");
+    auto mjs = get_element(js, "environments");
     if (!check_object(mjs, error)) return parse_error();
-    for (auto& [name, ejs] : mjs.items()) {
+    for (auto [name, ejs] : iterate_object(mjs)) {
       if (!check_object(ejs, error)) return parse_error();
       auto environment  = add_environment(scene);
       environment->name = name;
@@ -1410,9 +1411,9 @@ static bool load_json_scene(const string& filename, sceneio_scene* scene,
     }
   }
   if (has_element(js, "materials")) {
-    auto& mjs = *get_element(js, "materials");
+    auto mjs = get_element(js, "materials");
     if (!check_object(mjs, error)) return parse_error();
-    for (auto& [name, ejs] : mjs.items()) {
+    for (auto [name, ejs] : iterate_object(mjs)) {
       if (!check_object(ejs, error)) return parse_error();
       auto material  = add_material(scene);
       material->name = name;
@@ -1473,9 +1474,9 @@ static bool load_json_scene(const string& filename, sceneio_scene* scene,
     }
   }
   if (has_element(js, "instances")) {
-    auto& mjs = *get_element(js, "instances");
+    auto mjs = get_element(js, "instances");
     if (!check_object(mjs, error)) return parse_error();
-    for (auto& [name, ejs] : mjs.items()) {
+    for (auto [name, ejs] : iterate_object(mjs)) {
       if (!check_object(ejs, error)) return parse_error();
       auto instance  = add_instance(scene);
       instance->name = name;
@@ -1513,9 +1514,9 @@ static bool load_json_scene(const string& filename, sceneio_scene* scene,
     }
   }
   if (has_element(js, "objects")) {
-    auto& mjs = *get_element(js, "objects");
+    auto mjs = get_element(js, "objects");
     if (!check_object(mjs, error)) return parse_error();
-    for (auto& [name, ejs] : mjs.items()) {
+    for (auto [name, ejs] : iterate_object(mjs)) {
       if (!check_object(ejs, error)) return parse_error();
       auto instance  = add_instance(scene);
       instance->name = name;
