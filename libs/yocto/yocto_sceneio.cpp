@@ -1354,18 +1354,18 @@ static bool load_json_scene(const string& filename, sceneio_scene* scene,
 
   // asset
   if (has_element(js, "asset")) {
-    auto& ejs = js.at("asset");
-    if (!ejs.is_object()) return parse_error();
+    auto& ejs = *get_element(js, "asset");
+    if (!check_object(ejs, error)) return parse_error();
     if (!get_value_or(ejs, "copyright", scene->copyright, error))
       return parse_error();
   }
 
   // cameras
   if (has_element(js, "cameras")) {
-    auto& mjs = js.at("cameras");
-    if (!mjs.is_object()) return parse_error();
+    auto& mjs = *get_element(js, "cameras");
+    if (!check_object(mjs, error)) return parse_error();
     for (auto& [name, ejs] : mjs.items()) {
-      if (!ejs.is_object()) return parse_error();
+      if (!check_object(ejs, error)) return parse_error();
       auto camera  = add_camera(scene);
       camera->name = name;
       if (!get_value_or(ejs, "frame", camera->frame, error))
@@ -1389,10 +1389,10 @@ static bool load_json_scene(const string& filename, sceneio_scene* scene,
     }
   }
   if (has_element(js, "environments")) {
-    auto& mjs = js.at("environments");
-    if (!mjs.is_object()) return parse_error();
+    auto& mjs = *get_element(js, "environments");
+    if (!check_object(mjs, error)) return parse_error();
     for (auto& [name, ejs] : mjs.items()) {
-      if (!ejs.is_object()) return parse_error();
+      if (!check_object(ejs, error)) return parse_error();
       auto environment  = add_environment(scene);
       environment->name = name;
       if (!get_value_or(ejs, "frame", environment->frame, error))
@@ -1410,10 +1410,10 @@ static bool load_json_scene(const string& filename, sceneio_scene* scene,
     }
   }
   if (has_element(js, "materials")) {
-    auto& mjs = js.at("materials");
-    if (!mjs.is_object()) return parse_error();
+    auto& mjs = *get_element(js, "materials");
+    if (!check_object(mjs, error)) return parse_error();
     for (auto& [name, ejs] : mjs.items()) {
-      if (!ejs.is_object()) return parse_error();
+      if (!check_object(ejs, error)) return parse_error();
       auto material  = add_material(scene);
       material->name = name;
       if (!get_value_or(ejs, "emission", material->emission, error))
@@ -1473,10 +1473,10 @@ static bool load_json_scene(const string& filename, sceneio_scene* scene,
     }
   }
   if (has_element(js, "instances")) {
-    auto& mjs = js.at("instances");
-    if (!mjs.is_object()) return parse_error();
+    auto& mjs = *get_element(js, "instances");
+    if (!check_object(mjs, error)) return parse_error();
     for (auto& [name, ejs] : mjs.items()) {
-      if (!ejs.is_object()) return parse_error();
+      if (!check_object(ejs, error)) return parse_error();
       auto instance  = add_instance(scene);
       instance->name = name;
       if (!get_value_or(ejs, "frame", instance->frame, error))
@@ -1513,10 +1513,10 @@ static bool load_json_scene(const string& filename, sceneio_scene* scene,
     }
   }
   if (has_element(js, "objects")) {
-    auto& mjs = js.at("objects");
-    if (!mjs.is_object()) return parse_error();
+    auto& mjs = *get_element(js, "objects");
+    if (!check_object(mjs, error)) return parse_error();
     for (auto& [name, ejs] : mjs.items()) {
-      if (!ejs.is_object()) return parse_error();
+      if (!check_object(ejs, error)) return parse_error();
       auto instance  = add_instance(scene);
       instance->name = name;
       if (!get_value_or(ejs, "frame", instance->frame, error))
