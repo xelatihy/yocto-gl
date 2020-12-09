@@ -1097,29 +1097,44 @@ inline bool set_string(json_value& js, const string& value) {
 
 // Get basic values
 inline bool get_integer(const json_value& js, int64_t& value) {
-  if (!is_integer(js)) return false;
-  value = js._integer;
-  return true;
+  if (is_integer(js)) {
+    value = js._integer;
+    return true;
+  } else {
+    return false;
+  }
 }
 inline bool get_unsigned(const json_value& js, uint64_t& value) {
-  if (!is_unsigned(js)) return false;
-  value = js._unsigned;
-  return true;
+  if (is_unsigned(js)) {
+    value = js._unsigned;
+    return true;
+  } else {
+    return false;
+  }
 }
 inline bool get_real(const json_value& js, double& value) {
-  if (!is_real(js)) return false;
-  value = js._real;
-  return true;
+  if (is_real(js)) {
+    value = js._real;
+    return true;
+  } else {
+    return false;
+  }
 }
 inline bool get_boolean(const json_value& js, bool& value) {
-  if (is_boolean(js)) return false;
-  value = js._boolean;
-  return true;
+  if (is_boolean(js)) {
+    value = js._boolean;
+    return true;
+  } else {
+    return false;
+  }
 }
 inline bool get_string(const json_value& js, string& value) {
-  if (is_string(js)) return false;
-  value = *js._string_;
-  return true;
+  if (is_string(js)) {
+    value = *js._string_;
+    return true;
+  } else {
+    return false;
+  }
 }
 
 // Get basic values
