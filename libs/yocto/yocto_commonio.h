@@ -437,14 +437,10 @@ inline void from_json(const json_value& js, uint64_t& value, string& error,
     const json_value& root);
 inline void from_json(const json_value& js, uint32_t& value, string& error,
     const json_value& root);
-inline void from_json(
-    const json_value& js, double& value, string& error, const json_value& root);
-inline void from_json(
-    const json_value& js, float& value, string& error, const json_value& root);
-inline void from_json(
-    const json_value& js, bool& value, string& error, const json_value& root);
-inline void from_json(
-    const json_value& js, string& value, string& error, const json_value& root);
+inline void from_json(const json_value& js, double& value, string& error);
+inline void from_json(const json_value& js, float& value, string& error);
+inline void from_json(const json_value& js, bool& value, string& error);
+inline void from_json(const json_value& js, string& value, string& error);
 template <typename T>
 inline void from_json(const json_value& js, vector<T>& value, string& error,
     const json_value& root);
@@ -1168,12 +1164,6 @@ inline auto iterate_array(const json_value& js) {
   }
 }
 
-// Sst conversion error
-inline bool set_conversion_error(const string& message, const json_value& js,
-    string& error, const json_value& root) {
-  error = message;
-}
-
 // Conversion from json to values
 inline bool get_value(const json_value& js, int64_t& value, string& error,
     const json_value& root) {
@@ -1184,13 +1174,14 @@ inline bool get_value(const json_value& js, int64_t& value, string& error,
     value = (int64_t)*unsigned_;
     return true;
   } else {
-    return set_conversion_error("integer expected", js, error, root);
+    error = "integer expected";
+    return false;
   }
 }
 inline bool get_value(const json_value& js, int32_t& value, string& error,
     const json_value& root) {
   auto value64 = (int64_t)0;
-  if (!get_value(js, value, error, root)) return false;
+  if (!get_value(js, value, error)) return false;
   value = (int32_t)value64;
 }
 inline bool get_value(const json_value& js, uint64_t& value, string& error,
@@ -1202,13 +1193,14 @@ inline bool get_value(const json_value& js, uint64_t& value, string& error,
     value = (uint64_t)*unsigned_;
     return true;
   } else {
-    return set_conversion_error("integer expected", js, error, root);
+    error = "integer expected";
+    return false;
   }
 }
 inline bool get_value(const json_value& js, uint32_t& value, string& error,
     const json_value& root) {
   auto value64 = (uint64_t)0;
-  if (!get_value(js, value, error, root)) return false;
+  if (!get_value(js, value, error)) return false;
   value = (uint32_t)value64;
 }
 inline bool get_value(const json_value& js, double& value, string& error,
@@ -1223,22 +1215,22 @@ inline bool get_value(const json_value& js, double& value, string& error,
     value = (int64_t)*unsigned_;
     return true;
   } else {
-    return set_conversion_error("number expected", js, error, root);
+    error = "number expected";
+    return false;
   }
 }
-inline bool get_value(
-    const json_value& js, float& value, string& error, const json_value& root) {
+inline bool get_value(const json_value& js, float& value, string& error) {
   auto value64 = (double)0;
-  if (!get_value(js, value, error, root)) return false;
+  if (!get_value(js, value, error)) return false;
   value = (float)value64;
 }
-inline bool get_value(
-    const json_value& js, bool& value, string& error, const json_value& root) {
+inline bool get_value(const json_value& js, bool& value, string& error) {
   if (auto boolean = get_boolean(js); boolean) {
     value = *boolean;
     return true;
   } else {
-    return set_conversion_error("boolean expected", js, error, root);
+    error = "boolean expected";
+    return false;
   }
 }
 inline bool get_value(const json_value& js, string& value, string& error,
@@ -1247,89 +1239,82 @@ inline bool get_value(const json_value& js, string& value, string& error,
     value = *string_;
     return true;
   } else {
-    return set_conversion_error("string expected", js, error, root);
+    error = "string expected";
+    return false;
   }
 }
 template <typename T>
 inline bool get_value(const json_value& js, vector<T>& value, string& error,
     const json_value& root) {
-  if (get_type(js) != json_type::array)
-    return set_conversion_error("array expected", js, error, root);
-  value.clear();
-  value.reserve(size(js));
-  for (auto& ejs : iterate_array(js)) {
-    if (!get_value(ejs, value.emplace_back())) return false;
+  if (get_type(js) == json_type::array) {
+    value.clear();
+    value.reserve(size(js));
+    for (auto& ejs : iterate_array(js)) {
+      if (!get_value(ejs, value.emplace_back())) return false;
+    }
+    return true;
+  } else {
+    error = "array expected";
+    return false;
   }
-  return true;
 }
 template <typename T, size_t N>
 inline bool get_value(const json_value& js, array<T, N>& value, string& error,
     const json_value& root) {
-  if (get_type(js) != json_type::array)
-    return set_conversion_error("array expected", js, error, root);
-  if (size(js) != N)
-    return set_conversion_error("wrong array length", js, error, root);
-  for (auto idx = (size_t)0; idx < size(js); idx++) {
-    if (!get_value(*get_element(js, idx), value.at(idx))) return false;
+  if (get_type(js) == json_type::array && N == size(js)) {
+    for (auto idx = (size_t)0; idx < size(js); idx++) {
+      if (!get_value(*get_element(js, idx), value.at(idx))) return false;
+    }
+    return true;
+  } else {
+    error = get_type(js) == json_type::array ? "array expected"
+                                             : "array size mismatched";
+    return false;
   }
-  return true;
 }
 
 // Conversion to json from values
-inline bool set_value(
-    json_value& js, int64_t value, string& error, const json_value& root) {
-  if (!set_type(js, json_type::integer))
-    return set_conversion_error("integer expected", js, error, root);
+inline bool set_value(json_value& js, int64_t value, string& error) {
+  if (!set_type(js, json_type::integer)) return false;
   *get_integer(js) = value;
   return true;
 }
-inline bool set_value(
-    json_value& js, int32_t value, string& error, const json_value& root) {
-  return set_value(js, (int64_t)value, error, root);
+inline bool set_value(json_value& js, int32_t value, string& error) {
+  return set_value(js, (int64_t)value, error);
 }
-inline bool set_value(
-    json_value& js, uint64_t value, string& error, const json_value& root) {
-  if (!set_type(js, json_type::unsigned_))
-    return set_conversion_error("unsigned expected", js, error, root);
+inline bool set_value(json_value& js, uint64_t value, string& error) {
+  if (!set_type(js, json_type::unsigned_)) return false;
   *get_unsigned(js) = value;
   return true;
 }
-inline bool set_value(
-    json_value& js, uint32_t value, string& error, const json_value& root) {
-  return set_value(js, (uint64_t)value, error, root);
+inline bool set_value(json_value& js, uint32_t value, string& error) {
+  return set_value(js, (uint64_t)value, error);
 }
-inline bool set_value(
-    json_value& js, double value, string& error, const json_value& root) {
-  if (!set_type(js, json_type::real))
-    return set_conversion_error("real expected", js, error, root);
+inline bool set_value(json_value& js, double value, string& error) {
+  if (!set_type(js, json_type::real)) return false;
   *get_real(js) = value;
   return true;
 }
-inline bool set_value(
-    json_value& js, float value, string& error, const json_value& root) {
-  return set_value(js, (double)value, error, root);
+inline bool set_value(json_value& js, float value, string& error) {
+  return set_value(js, (double)value, error);
 }
-inline bool set_value(
-    json_value& js, bool value, string& error, const json_value& root) {
-  if (!set_type(js, json_type::boolean))
-    return set_conversion_error("boolean expected", js, error, root);
+inline bool set_value(json_value& js, bool value, string& error) {
+  if (!set_type(js, json_type::boolean)) return false;
   *get_boolean(js) = value;
   return true;
 }
 inline bool set_value(json_value& js, const string& value, string& error,
     const json_value& root) {
-  if (!set_type(js, json_type::string_))
-    return set_conversion_error("string expected", js, error, root);
+  if (!set_type(js, json_type::string_)) return false;
+  return set_conversion_error("string expected", js, error);
   *get_string(js) = value;
   return true;
 }
 template <typename T>
 inline bool set_value(json_value& js, const vector<T>& value, string& error,
     const json_value& root) {
-  if (!set_array(js))
-    return set_conversion_error("array expected", js, error, root);
-  if (!resize_array(js, value.size()))
-    return set_conversion_error("wrong array size", js, error, root);
+  if (!set_array(js)) return false;
+  if (!resize_array(js, value.size())) return false;
   auto idx = (size_t)0;
   for (auto& v : value) {
     if (!set_value(get_element(js, idx++), v)) return false;
@@ -1337,36 +1322,45 @@ inline bool set_value(json_value& js, const vector<T>& value, string& error,
   return true;
 }
 template <typename T, size_t N>
-inline bool set_value(json_value& js, const array<T, N>& value, string& error,
-    const json_value& root) {
-  if (!set_array(js))
-    return set_conversion_error("array expected", js, error, root);
-  if (!resize_array(js, value.size()))
-    return set_conversion_error("wrong array size", js, error, root);
+inline bool set_value(json_value& js, const array<T, N>& value, string& error) {
+  if (!set_array(js)) return false;
+  if (!resize_array(js, value.size())) return false;
   auto idx = (size_t)0;
   for (auto& v : value) {
-    if (!set_value(get_element(js, idx++), v)) return false;
+    if (!set_value(get_element(js, idx++), v, error)) return false;
   }
   return true;
 }
 
 // Helpers for user-defined types
-inline bool check_array(
-    const json_value& js, string& error, const json_value& root) {
-  if (get_type(js) == json_type::array) return true;
-  return set_conversion_error("array expected", js, error, root);
+inline bool check_array(const json_value& js, string& error) {
+  if (auto array = get_array(js); array) {
+    return true;
+  } else {
+    error = "array expected";
+    return false;
+  }
 }
-inline bool check_array(
-    const json_value& js, size_t size_, string& error, const json_value& root) {
-  if (get_type(js) == json_type::array && size(js) == size_) return true;
-  return set_conversion_error(
-      get_type(js) == json_type::array ? "wrong array size" : "array expected",
-      js, error, root);
+inline bool check_array(const json_value& js, size_t size_, string& error) {
+  if (auto array = get_array(js); array) {
+    if (size_ == array->size()) {
+      return true;
+    } else {
+      error = "mismatchd array size";
+      return false;
+    }
+  } else {
+    error = "array expected";
+    return false;
+  }
 }
-inline bool check_object(
-    const json_value& js, string& error, const json_value& root) {
-  if (get_type(js) == json_type::object) return true;
-  return set_conversion_error("object expected", js, error, root);
+inline bool check_object(const json_value& js, string& error) {
+  if (auto array = get_array(js); array) {
+    return true;
+  } else {
+    error = "object expected";
+    return false;
+  }
 }
 
 }  // namespace yocto
