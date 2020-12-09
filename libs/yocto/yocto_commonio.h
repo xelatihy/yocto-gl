@@ -384,7 +384,7 @@ struct json_value {
     uint64_t     _unsigned;
     double       _real;
     bool         _boolean;
-    string*      _string_;
+    string*      _string;
     json_array*  _array;
     json_object* _object;
     json_binary* _binary;
@@ -619,8 +619,8 @@ inline json_value::json_value(const json_value& other)
       _boolean = other._boolean;
       break;
     case json_type::string_:
-      _type    = json_type::string_;
-      _string_ = new string{*other._string_};
+      _type   = json_type::string_;
+      _string = new string{*other._string};
       break;
     case json_type::array:
       _type  = json_type::array;
@@ -657,9 +657,9 @@ inline json_value::json_value(float value)
 inline json_value::json_value(bool value)
     : _type{json_type::boolean}, _boolean{value} {}
 inline json_value::json_value(const string& value)
-    : _type{json_type::string_}, _string_{new string{value}} {}
+    : _type{json_type::string_}, _string{new string{value}} {}
 inline json_value::json_value(const char* value)
-    : _type{json_type::string_}, _string_{new string{value}} {}
+    : _type{json_type::string_}, _string{new string{value}} {}
 inline json_value::json_value(const json_array& value)
     : _type{json_type::array}, _array{new json_array{value}} {}
 inline json_value::json_value(const json_object& value)
@@ -822,7 +822,7 @@ inline const bool& json_value::get_boolean() const {
 }
 inline const string& json_value::get_string() const {
   if (_type != json_type::string_) throw json_error{"string expected"};
-  return *_string_;
+  return *_string;
 }
 inline const json_array& json_value::get_array() const {
   if (_type != json_type::array) throw json_error{"array expected"};
@@ -854,7 +854,7 @@ inline bool& json_value::get_boolean() {
 }
 inline string& json_value::get_string() {
   if (_type != json_type::string_) throw json_error{"string expected"};
-  return *_string_;
+  return *_string;
 }
 inline json_array& json_value::get_array() {
   if (_type != json_type::array) throw json_error{"array expected"};
@@ -1006,7 +1006,7 @@ inline void json_value::swap(json_value& other) {
 // destructor
 inline json_value::~json_value() {
   switch (_type) {
-    case json_type::string_: delete _string_; break;
+    case json_type::string_: delete _string; break;
     case json_type::array: delete _array; break;
     case json_type::object: delete _object; break;
     case json_type::binary: delete _binary; break;
@@ -1019,7 +1019,7 @@ inline json_value::~json_value() {
 // set type
 inline void json_value::set_type(json_type type) {
   switch (_type) {
-    case json_type::string_: delete _string_; break;
+    case json_type::string_: delete _string; break;
     case json_type::array: delete _array; break;
     case json_type::object: delete _object; break;
     case json_type::binary: delete _binary; break;
@@ -1032,7 +1032,7 @@ inline void json_value::set_type(json_type type) {
     case json_type::unsigned_: _unsigned = 0; break;
     case json_type::real: _real = 0; break;
     case json_type::boolean: _boolean = false; break;
-    case json_type::string_: _string_ = new string{}; break;
+    case json_type::string_: _string = new string{}; break;
     case json_type::array: _array = new json_array{}; break;
     case json_type::object: _object = new json_object{}; break;
     case json_type::binary: _binary = new json_binary{}; break;
@@ -1079,7 +1079,25 @@ inline json_type get_type(json_cview js) {
 }
 inline bool set_type(json_view js, json_type type) {
   if (js.value) {
-    js.value->set_type(type);
+    switch (js.value->_type) {
+      case json_type::string_: delete js.value->_string; break;
+      case json_type::array: delete js.value->_array; break;
+      case json_type::object: delete js.value->_object; break;
+      case json_type::binary: delete js.value->_binary; break;
+      default: break;
+    }
+    js.value->_type = type;
+    switch (type) {
+      case json_type::null: js.value->_unsigned = 0; break;
+      case json_type::integer: js.value->_integer = 0; break;
+      case json_type::unsigned_: js.value->_unsigned = 0; break;
+      case json_type::real: js.value->_real = 0; break;
+      case json_type::boolean: js.value->_boolean = false; break;
+      case json_type::string_: js.value->_string = new string{}; break;
+      case json_type::array: js.value->_array = new json_array{}; break;
+      case json_type::object: js.value->_object = new json_object{}; break;
+      case json_type::binary: js.value->_binary = new json_binary{}; break;
+    }
     return true;
   } else {
     return false;
@@ -1158,7 +1176,7 @@ inline bool set_boolean(json_view js, bool value) {
 }
 inline bool set_string(json_view js, const string& value) {
   if (set_type(js, json_type::string_)) {
-    *js.value->_string_ = value;
+    *js.value->_string = value;
     return true;
   } else {
     return false;
@@ -1200,7 +1218,7 @@ inline bool get_boolean(json_cview js, bool& value) {
 }
 inline bool get_string(json_cview js, string& value) {
   if (is_string(js)) {
-    value = *js.value->_string_;
+    value = *js.value->_string;
     return true;
   } else {
     return false;
@@ -1286,14 +1304,14 @@ inline pair<double, bool> get_number(json_cview js) {
 inline bool empty(json_cview js) {
   if (is_array(js)) return js.value->_array->empty();
   if (is_object(js)) return js.value->_object->empty();
-  if (is_string(js)) return js.value->_string_->empty();
+  if (is_string(js)) return js.value->_string->empty();
   if (is_binary(js)) return js.value->_binary->empty();
   return true;
 }
 inline size_t size(json_cview js) {
   if (is_array(js)) return js.value->_array->size();
   if (is_object(js)) return js.value->_object->size();
-  if (is_string(js)) return js.value->_string_->size();
+  if (is_string(js)) return js.value->_string->size();
   if (is_binary(js)) return js.value->_binary->size();
   return true;
 }
@@ -1302,7 +1320,7 @@ inline bool resize(json_view js, size_t size) {
     js.value->_array->resize(size);
     return true;
   } else if (is_string(js)) {
-    js.value->_string_->resize(size);
+    js.value->_string->resize(size);
     return true;
   } else if (is_binary(js)) {
     js.value->_binary->resize(size);
@@ -1319,7 +1337,7 @@ inline bool reserve(json_view js, size_t size) {
     js.value->_object->reserve(size);
     return true;
   } else if (is_string(js)) {
-    js.value->_string_->reserve(size);
+    js.value->_string->reserve(size);
     return true;
   } else if (is_binary(js)) {
     js.value->_binary->reserve(size);
