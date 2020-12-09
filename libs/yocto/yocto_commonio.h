@@ -379,7 +379,6 @@ struct json_value {
   // destructor
   ~json_value();
 
- private:
   json_type _type = json_type::null;
   union {
     int64_t      _integer;
@@ -410,36 +409,48 @@ inline void to_json(json_value&, const T& value);
 // Type
 inline json_type get_type(const json_value& js);
 inline bool      set_type(json_value& js, json_type type);
-
-// Access to internal representation
-inline const int64_t*     get_integer(const json_value& js);
-inline const uint64_t*    get_unsigned(const json_value& js);
-inline const double*      get_real(const json_value& js);
-inline const bool*        get_boolean(const json_value& js);
-inline const string*      get_string(const json_value& js);
-inline const json_array*  get_array(const json_value& js);
-inline const json_object* get_object(const json_value& js);
-inline const json_binary* get_binary(const json_value& js);
-
-// Access to internal representation
-inline int64_t*     get_integer(json_value& js);
-inline uint64_t*    get_unsigned(json_value& js);
-inline double*      get_real(json_value& js);
-inline bool*        get_boolean(json_value& js);
-inline string*      get_string(json_value& js);
-inline json_array*  get_array(json_value& js);
-inline json_object* get_object(json_value& js);
-inline json_binary* get_binary(json_value& js);
+inline bool      is_null(const json_value& js);
+inline bool      is_integer(const json_value& js);
+inline bool      is_unsigned(const json_value& js);
+inline bool      is_real(const json_value& js);
+inline bool      is_integral(const json_value& js);
+inline bool      is_number(const json_value& js);
+inline bool      is_boolean(const json_value& js);
+inline bool      is_string(const json_value& js);
+inline bool      is_array(const json_value& js);
+inline bool      is_object(const json_value& js);
+inline bool      is_binary(const json_value& js);
 
 // Initialization to basic types
+inline bool set_null(json_value& js);
 inline bool set_integer(json_value& js, int64_t value);
 inline bool set_unsigned(json_value& js, uint64_t value);
 inline bool set_real(json_value& js, double value);
 inline bool set_boolean(json_value& js, bool value);
 inline bool set_string(json_value& js, const string& value);
-inline bool set_array(json_value& js, const json_array& value);
-inline bool set_object(json_value& js, const json_object& value);
-inline bool set_binary(json_value& js, const json_binary& value);
+
+// Get basic values
+inline bool get_integer(const json_value& js, int64_t& value);
+inline bool get_unsigned(const json_value& js, uint64_t& value);
+inline bool get_number(const json_value& js, double& value);
+inline bool get_boolean(const json_value& js, bool& value);
+inline bool get_string(const json_value& js, string& value);
+
+// Get basic values
+inline pair<int64_t, bool>  get_integer(json_value& js);
+inline pair<uint64_t, bool> get_unsigned(json_value& js);
+inline pair<double, bool>   get_real(json_value& js);
+inline pair<bool, bool>     get_boolean(json_value& js);
+inline pair<string, bool>   get_string(json_value& js);
+
+// Get numbers with casts
+inline bool get_integral(const json_value& js, int64_t& value);
+inline bool get_integral(const json_value& js, uint64_t& value);
+inline bool get_number(const json_value& js, double& value);
+
+// Get numbers with casts
+inline pair<int64_t, bool> get_integral(const json_value& js);
+inline pair<double, bool>  get_number(const json_value& js);
 
 // Compound type
 inline bool   empty(const json_value& js);
@@ -447,12 +458,20 @@ inline size_t size(const json_value& js);
 
 // Array
 inline bool              set_array(json_value& js);
+inline bool              set_array(json_value& js, size_t size);
+inline bool              array_empty(const json_value& js);
+inline size_t            array_size(const json_value& js);
 inline bool              resize_array(json_value& js, size_t size);
 inline json_value*       get_element(json_value& js, size_t idx);
 inline const json_value* get_element(const json_value& js, size_t idx);
 inline json_value*       append_element(json_value& js);
 inline auto              iterate_array(json_value& js);
 inline auto              iterate_array(const json_value& js);
+
+// Binary
+inline bool set_binary(json_value& js, const json_binary& value);
+inline bool get_binary(const json_value& js, json_binary& value);
+inline pair<json_binary, bool> get_binary(const json_value& js);
 
 // Conversion from json to values
 template <typename T>
@@ -1003,153 +1022,271 @@ inline void to_json(json_value& js, const T& value) {
 }
 
 // Type
-inline json_type get_type(const json_value& js) { return js.type(); }
+inline json_type get_type(const json_value& js) { return js._type; }
 inline bool      set_type(json_value& js, json_type type) {
   js.set_type(type);
   return true;
 }
-
-// Access to internal representation
-inline const int64_t* get_integer(const json_value& js) {
-  return get_type(js) == json_type::integer ? &js.get_integer() : nullptr;
+inline bool is_null(const json_value& js) {
+  return get_type(js) == json_type::null;
 }
-inline const uint64_t* get_unsigned(const json_value& js) {
-  return get_type(js) == json_type::unsigned_ ? &js.get_unsigned() : nullptr;
+inline bool is_integer(const json_value& js) {
+  return get_type(js) == json_type::integer;
 }
-inline const double* get_real(const json_value& js) {
-  return get_type(js) == json_type::real ? &js.get_real() : nullptr;
+inline bool is_unsigned(const json_value& js) {
+  return get_type(js) == json_type::unsigned_;
 }
-inline const bool* get_boolean(const json_value& js) {
-  return get_type(js) == json_type::boolean ? &js.get_boolean() : nullptr;
+inline bool is_real(const json_value& js) {
+  return get_type(js) == json_type::real;
 }
-inline const string* get_string(const json_value& js) {
-  return get_type(js) == json_type::string_ ? &js.get_string() : nullptr;
+inline bool is_integral(const json_value& js) {
+  return get_type(js) == json_type::integer ||
+         get_type(js) == json_type::unsigned_;
 }
-inline const json_array* get_array(const json_value& js) {
-  return get_type(js) == json_type::array ? &js.get_array() : nullptr;
+inline bool is_number(const json_value& js) {
+  return get_type(js) == json_type::integer ||
+         get_type(js) == json_type::unsigned_ ||
+         get_type(js) == json_type::real;
 }
-inline const json_object* get_object(const json_value& js) {
-  return get_type(js) == json_type::object ? &js.get_object() : nullptr;
+inline bool is_boolean(const json_value& js) {
+  return get_type(js) == json_type::boolean;
 }
-inline const json_binary* get_binary(const json_value& js) {
-  return get_type(js) == json_type::binary ? &js.get_binary() : nullptr;
+inline bool is_string(const json_value& js) {
+  return get_type(js) == json_type::string_;
 }
-
-// Access to internal representation
-inline int64_t* get_integer(json_value& js) {
-  return get_type(js) == json_type::integer ? &js.get_integer() : nullptr;
+inline bool is_array(const json_value& js) {
+  return get_type(js) == json_type::array;
 }
-inline uint64_t* get_unsigned(json_value& js) {
-  return get_type(js) == json_type::unsigned_ ? &js.get_unsigned() : nullptr;
+inline bool is_object(const json_value& js) {
+  return get_type(js) == json_type::object;
 }
-inline double* get_real(json_value& js) {
-  return get_type(js) == json_type::real ? &js.get_real() : nullptr;
-}
-inline bool* get_boolean(json_value& js) {
-  return get_type(js) == json_type::boolean ? &js.get_boolean() : nullptr;
-}
-inline string* get_string(json_value& js) {
-  return get_type(js) == json_type::string_ ? &js.get_string() : nullptr;
-}
-inline json_array* get_array(json_value& js) {
-  return get_type(js) == json_type::array ? &js.get_array() : nullptr;
-}
-inline json_object* get_object(json_value& js) {
-  return get_type(js) == json_type::object ? &js.get_object() : nullptr;
-}
-inline json_binary* get_binary(json_value& js) {
-  return get_type(js) == json_type::binary ? &js.get_binary() : nullptr;
+inline bool is_binary(const json_value& js) {
+  return get_type(js) == json_type::binary;
 }
 
 // Initialization to basic types
+inline bool set_null(json_value& js) {
+  if (!set_type(js, json_type::null)) return false;
+  return true;
+}
 inline bool set_integer(json_value& js, int64_t value) {
   if (!set_type(js, json_type::integer)) return false;
-  *get_integer(js) = value;
+  js._integer = value;
   return true;
 }
 inline bool set_unsigned(json_value& js, uint64_t value) {
   if (!set_type(js, json_type::unsigned_)) return false;
-  *get_unsigned(js) = value;
+  js._unsigned = value;
   return true;
 }
 inline bool set_real(json_value& js, double value) {
   if (!set_type(js, json_type::real)) return false;
-  *get_real(js) = value;
+  js._real = value;
   return true;
 }
 inline bool set_boolean(json_value& js, bool value) {
   if (!set_type(js, json_type::boolean)) return false;
-  *get_boolean(js) = value;
+  js._boolean = value;
   return true;
 }
 inline bool set_string(json_value& js, const string& value) {
   if (!set_type(js, json_type::string_)) return false;
-  *get_string(js) = value;
-  return true;
-}
-inline bool set_array(json_value& js, const json_array& value) {
-  if (!set_type(js, json_type::array)) return false;
-  *get_array(js) = value;
-  return true;
-}
-inline bool set_object(json_value& js, const json_object& value) {
-  if (!set_type(js, json_type::object)) return false;
-  *get_object(js) = value;
-  return true;
-}
-inline bool set_binary(json_value& js, const json_binary& value) {
-  if (!set_type(js, json_type::binary)) return false;
-  *get_binary(js) = value;
+  *js._string_ = value;
   return true;
 }
 
-// Compound type
-inline bool empty(const json_value& js) {
-  switch (get_type(js)) {
-    case json_type::string_: return get_string(js)->empty();
-    case json_type::array: return get_array(js)->empty();
-    case json_type::object: return get_object(js)->empty();
-    case json_type::binary: return get_binary(js)->empty();
-    default: return true;
-  }
+// Get basic values
+inline bool get_integer(const json_value& js, int64_t& value) {
+  if (!is_integer(js)) return false;
+  value = js._integer;
+  return true;
 }
-inline size_t size(const json_value& js) {
-  switch (get_type(js)) {
-    case json_type::string_: return get_string(js)->size();
-    case json_type::array: return get_array(js)->size();
-    case json_type::object: return get_object(js)->size();
-    case json_type::binary: return get_binary(js)->size();
-    default: return 0;
-  }
+inline bool get_unsigned(const json_value& js, uint64_t& value) {
+  if (!is_unsigned(js)) return false;
+  value = js._unsigned;
+  return true;
+}
+inline bool get_real(const json_value& js, double& value) {
+  if (!is_real(js)) return false;
+  value = js._real;
+  return true;
+}
+inline bool get_boolean(const json_value& js, bool& value) {
+  if (is_boolean(js)) return false;
+  value = js._boolean;
+  return true;
+}
+inline bool get_string(const json_value& js, string& value) {
+  if (is_string(js)) return false;
+  value = *js._string_;
+  return true;
 }
 
-// Array
-inline bool set_array(json_value& js) { return set_type(js, json_type::array); }
-inline bool resize_array(json_value& js, size_t size) {
-  if (auto array = get_array(js); array) {
-    array->resize(size);
+// Get basic values
+inline pair<int64_t, bool> get_integer(json_value& js) {
+  auto value = (int64_t)0;
+  auto ok    = get_integer(js, value);
+  return {value, ok};
+}
+inline pair<uint64_t, bool> get_unsigned(json_value& js) {
+  auto value = (uint64_t)0;
+  auto ok    = get_unsigned(js, value);
+  return {value, ok};
+}
+inline pair<double, bool> get_real(json_value& js) {
+  auto value = (double)0;
+  auto ok    = get_real(js, value);
+  return {value, ok};
+}
+inline pair<bool, bool> get_boolean(json_value& js) {
+  auto value = false;
+  auto ok    = get_boolean(js, value);
+  return {value, ok};
+}
+inline pair<string, bool> get_string(json_value& js) {
+  auto value = string{};
+  auto ok    = get_string(js, value);
+  return {value, ok};
+}
+
+// Get numbers with casts
+inline bool get_integral(const json_value& js, int64_t& value) {
+  if (is_integer(js)) {
+    value = (int64_t)js._integer;
+    return true;
+  } else if (is_unsigned(js)) {
+    value = (int64_t)js._unsigned;
     return true;
   } else {
     return false;
   }
 }
+inline bool get_integral(const json_value& js, uint64_t& value) {
+  if (is_integer(js)) {
+    value = (uint64_t)js._integer;
+    return true;
+  } else if (is_unsigned(js)) {
+    value = (uint64_t)js._unsigned;
+    return true;
+  } else {
+    return false;
+  }
+}
+inline bool get_number(const json_value& js, double& value) {
+  if (is_real(js)) {
+    value = js._real;
+    return true;
+  } else if (is_integer(js)) {
+    value = (double)js._integer;
+    return true;
+  } else if (is_unsigned(js)) {
+    value = (double)js._unsigned;
+    return true;
+  } else {
+    return false;
+  }
+}
+inline pair<int64_t, bool> get_integral(const json_value& js) {
+  auto value = (int64_t)0;
+  auto ok    = get_integral(js, value);
+  return {value, ok};
+}
+inline pair<double, bool> get_number(const json_value& js) {
+  auto value = (double)0;
+  auto ok    = get_number(js, value);
+  return {value, ok};
+}
+
+// Compound type
+inline bool empty(const json_value& js) {
+  if (is_array(js)) return js._array->empty();
+  if (is_object(js)) return js._object->empty();
+  if (is_string(js)) return js._string_->empty();
+  if (is_binary(js)) return js._binary->empty();
+  return true;
+}
+inline size_t size(const json_value& js) {
+  if (is_array(js)) return js._array->size();
+  if (is_object(js)) return js._object->size();
+  if (is_string(js)) return js._string_->size();
+  if (is_binary(js)) return js._binary->size();
+  return true;
+}
+inline bool resize(json_value& js, size_t size) {
+  if (is_array(js)) {
+    js._array->resize(size);
+    return true;
+  } else if (is_string(js)) {
+    js._string_->resize(size);
+    return true;
+  } else if (is_binary(js)) {
+    js._binary->resize(size);
+    return true;
+  } else {
+    return false;
+  }
+}
+inline bool reserve(json_value& js, size_t size) {
+  if (is_array(js)) {
+    js._array->reserve(size);
+    return true;
+  } else if (is_object(js)) {
+    js._object->reserve(size);
+    return true;
+  } else if (is_string(js)) {
+    js._string_->reserve(size);
+    return true;
+  } else if (is_binary(js)) {
+    js._binary->reserve(size);
+    return true;
+  } else {
+    return false;
+  }
+}
+
+// Array
+inline bool set_array(json_value& js) { return set_type(js, json_type::array); }
+inline bool set_array(json_value& js, size_t size) {
+  return set_type(js, json_type::array) && resize_array(js, size);
+}
+inline bool array_empty(const json_value& js) {
+  return is_array(js) ? js._array->empty() : false;
+}
+inline size_t array_size(const json_value& js) {
+  return is_array(js) ? js._array->size() : 0;
+}
+inline bool resize_array(json_value& js, size_t size) {
+  if (is_array(js)) {
+    js._array->resize(size);
+    return true;
+  } else {
+    return false;
+  }
+}
+inline bool has_index(json_value& js, size_t idx) {
+  if (is_array(js)) {
+    return idx < js._array->size();
+  } else {
+    return false;
+  }
+}
 inline json_value* get_element(json_value& js, size_t idx) {
-  if (auto array = get_array(js); array) {
-    return idx < array->size() ? &array->at(idx) : nullptr;
+  if (is_array(js)) {
+    return idx < js._array->size() ? &js._array->at(idx) : nullptr;
   } else {
     return nullptr;
   }
 }
 inline const json_value* get_element(const json_value& js, size_t idx) {
-  if (auto array = get_array(js); array) {
-    return idx < array->size() ? &array->at(idx) : nullptr;
+  if (is_array(js)) {
+    return idx < js._array->size() ? &js._array->at(idx) : nullptr;
   } else {
     return nullptr;
   }
 }
 inline json_value* append_element(json_value& js) {
-  if (auto array = get_array(js); array) {
-    return &array->emplace_back();
+  if (is_array(js)) {
+    return &js._array->emplace_back();
   } else {
     return nullptr;
   }
@@ -1161,8 +1298,9 @@ inline auto iterate_array(json_value& js) {
     json_value* begin() { return begin_; }
     json_value* end() { return end_; }
   };
-  if (auto array = get_array(js); array) {
-    return iterator_wrapper{array->data(), array->data() + array->size()};
+  if (is_array(js)) {
+    return iterator_wrapper{
+        js._array->data(), js._array->data() + js._array->size()};
   } else {
     return iterator_wrapper{nullptr, nullptr};
   }
@@ -1174,11 +1312,19 @@ inline auto iterate_array(const json_value& js) {
     const json_value* begin() { return begin_; }
     const json_value* end() { return end_; }
   };
-  if (auto array = get_array(js); array) {
-    return iterator_wrapper{array->data(), array->data() + array->size()};
+  if (is_array(js)) {
+    return iterator_wrapper{
+        js._array->data(), js._array->data() + js._array->size()};
   } else {
     return iterator_wrapper{nullptr, nullptr};
   }
+}
+
+// Binary
+inline bool set_binary(json_value& js, const json_binary& value) {
+  if (!set_type(js, json_type::binary)) return false;
+  *js._binary = value;
+  return true;
 }
 
 // Conversion from json to values
@@ -1190,11 +1336,7 @@ inline bool get_value(const json_value& js, T& value) {
 
 // Conversion from json to values
 inline bool get_value(const json_value& js, int64_t& value, string& error) {
-  if (auto integer = get_integer(js); integer) {
-    value = (int64_t)*integer;
-    return true;
-  } else if (auto unsigned_ = get_unsigned(js); unsigned_) {
-    value = (int64_t)*unsigned_;
+  if (get_integral(js, value)) {
     return true;
   } else {
     error = "integer expected";
@@ -1208,11 +1350,7 @@ inline bool get_value(const json_value& js, int32_t& value, string& error) {
   return true;
 }
 inline bool get_value(const json_value& js, uint64_t& value, string& error) {
-  if (auto integer = get_integer(js); integer) {
-    value = (uint64_t)*integer;
-    return true;
-  } else if (auto unsigned_ = get_unsigned(js); unsigned_) {
-    value = (uint64_t)*unsigned_;
+  if (get_integral(js, value)) {
     return true;
   } else {
     error = "integer expected";
@@ -1226,14 +1364,7 @@ inline bool get_value(const json_value& js, uint32_t& value, string& error) {
   return true;
 }
 inline bool get_value(const json_value& js, double& value, string& error) {
-  if (auto real = get_real(js); real) {
-    value = (double)*real;
-    return true;
-  } else if (auto integer = get_integer(js); integer) {
-    value = (double)*integer;
-    return true;
-  } else if (auto unsigned_ = get_unsigned(js); unsigned_) {
-    value = (double)*unsigned_;
+  if (get_number(js, value)) {
     return true;
   } else {
     error = "number expected";
@@ -1247,8 +1378,7 @@ inline bool get_value(const json_value& js, float& value, string& error) {
   return true;
 }
 inline bool get_value(const json_value& js, bool& value, string& error) {
-  if (auto boolean = get_boolean(js); boolean) {
-    value = *boolean;
+  if (get_boolean(js, value)) {
     return true;
   } else {
     error = "boolean expected";
@@ -1256,8 +1386,7 @@ inline bool get_value(const json_value& js, bool& value, string& error) {
   }
 }
 inline bool get_value(const json_value& js, string& value, string& error) {
-  if (auto string_ = get_string(js); string_) {
-    value = *string_;
+  if (get_string(js, value)) {
     return true;
   } else {
     error = "string expected";
@@ -1266,9 +1395,9 @@ inline bool get_value(const json_value& js, string& value, string& error) {
 }
 template <typename T>
 inline bool get_value(const json_value& js, vector<T>& value, string& error) {
-  if (get_type(js) == json_type::array) {
+  if (is_array(js)) {
     value.clear();
-    value.reserve(size(js));
+    value.reserve(array_size(js));
     for (auto& ejs : iterate_array(js)) {
       if (!get_value(ejs, value.emplace_back())) return false;
     }
@@ -1280,14 +1409,13 @@ inline bool get_value(const json_value& js, vector<T>& value, string& error) {
 }
 template <typename T, size_t N>
 inline bool get_value(const json_value& js, array<T, N>& value, string& error) {
-  if (get_type(js) == json_type::array && N == size(js)) {
+  if (is_array(js) && array_size(js) == N) {
     for (auto idx = (size_t)0; idx < size(js); idx++) {
       if (!get_value(*get_element(js, idx), value.at(idx))) return false;
     }
     return true;
   } else {
-    error = get_type(js) == json_type::array ? "array expected"
-                                             : "array size mismatched";
+    error = !is_array(js) ? "array expected" : "array size mismatched";
     return false;
   }
 }
@@ -1301,9 +1429,7 @@ inline bool set_value(json_value& js, const T& value) {
 
 // Conversion to json from values
 inline bool set_value(json_value& js, int64_t value, string& error) {
-  set_type(js, json_type::integer);
-  if (auto integer = get_integer(js); integer) {
-    *integer = value;
+  if (set_integer(js, value)) {
     return true;
   } else {
     error = "integer expected";
@@ -1314,9 +1440,7 @@ inline bool set_value(json_value& js, int32_t value, string& error) {
   return set_value(js, (int64_t)value, error);
 }
 inline bool set_value(json_value& js, uint64_t value, string& error) {
-  set_type(js, json_type::unsigned_);
-  if (auto unsigned_ = get_unsigned(js); unsigned_) {
-    *unsigned_ = value;
+  if (set_unsigned(js, value)) {
     return true;
   } else {
     error = "unsigned expected";
@@ -1327,9 +1451,7 @@ inline bool set_value(json_value& js, uint32_t value, string& error) {
   return set_value(js, (uint64_t)value, error);
 }
 inline bool set_value(json_value& js, double value, string& error) {
-  set_type(js, json_type::real);
-  if (auto real = get_real(js); real) {
-    *real = value;
+  if (set_real(js, value)) {
     return true;
   } else {
     error = "real expected";
@@ -1340,9 +1462,7 @@ inline bool set_value(json_value& js, float value, string& error) {
   return set_value(js, (double)value, error);
 }
 inline bool set_value(json_value& js, bool value, string& error) {
-  set_type(js, json_type::boolean);
-  if (auto boolean = get_boolean(js); boolean) {
-    *boolean = value;
+  if (set_boolean(js, value)) {
     return true;
   } else {
     error = "boolean expected";
@@ -1350,9 +1470,7 @@ inline bool set_value(json_value& js, bool value, string& error) {
   }
 }
 inline bool set_value(json_value& js, const string& value, string& error) {
-  set_type(js, json_type::string_);
-  if (auto string_ = get_string(js); string_) {
-    *string_ = value;
+  if (set_string(js, value)) {
     return true;
   } else {
     error = "string expected";
@@ -1361,28 +1479,34 @@ inline bool set_value(json_value& js, const string& value, string& error) {
 }
 template <typename T>
 inline bool set_value(json_value& js, const vector<T>& value, string& error) {
-  if (!set_array(js)) return false;
-  if (!resize_array(js, value.size())) return false;
-  auto idx = (size_t)0;
-  for (auto& v : value) {
-    if (!set_value(*get_element(js, idx++), v)) return false;
+  if (set_array(js, value.size())) {
+    auto idx = (size_t)0;
+    for (auto& v : value) {
+      if (!set_value(*get_element(js, idx++), v)) return false;
+    }
+    return true;
+  } else {
+    error = "array expected";
+    return false;
   }
-  return true;
 }
 template <typename T, size_t N>
 inline bool set_value(json_value& js, const array<T, N>& value, string& error) {
-  if (!set_array(js)) return false;
-  if (!resize_array(js, value.size())) return false;
-  auto idx = (size_t)0;
-  for (auto& v : value) {
-    if (!set_value(*get_element(js, idx++), v, error)) return false;
+  if (set_array(js, value.size())) {
+    auto idx = (size_t)0;
+    for (auto& v : value) {
+      if (!set_value(*get_element(js, idx++), v, error)) return false;
+    }
+    return true;
+  } else {
+    error = "array expected";
+    return false;
   }
-  return true;
 }
 
 // Helpers for user-defined types
 inline bool check_array(const json_value& js, string& error) {
-  if (auto array = get_array(js); array) {
+  if (is_array(js)) {
     return true;
   } else {
     error = "array expected";
@@ -1390,8 +1514,8 @@ inline bool check_array(const json_value& js, string& error) {
   }
 }
 inline bool check_array(const json_value& js, size_t size_, string& error) {
-  if (auto array = get_array(js); array) {
-    if (size_ == array->size()) {
+  if (is_array(js)) {
+    if (array_size(js) == size_) {
       return true;
     } else {
       error = "mismatchd array size";
@@ -1403,7 +1527,7 @@ inline bool check_array(const json_value& js, size_t size_, string& error) {
   }
 }
 inline bool check_object(const json_value& js, string& error) {
-  if (auto array = get_array(js); array) {
+  if (is_object(js)) {
     return true;
   } else {
     error = "object expected";
