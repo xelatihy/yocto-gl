@@ -1489,9 +1489,10 @@ static bool load_json_scene(const string& filename, sceneio_scene* scene,
         return parse_error();
       if (has_element(ejs, "lookat")) {
         auto lookat = identity3x3f;
-        if (!get_value_if(ejs, "lookat", lookat, error)) return parse_error();
+        if (!get_value_if(ejs, "lookat", lookat, error))
+            return parse_error();
         instance->frame = lookat_frame(
-            lookat.x, lookat.y, lookat.z, parse_error());
+            lookat.x, lookat.y, lookat.z, true);
       }
       if (!get_reference_if(
               ejs, "material", instance->material, material_map, error))

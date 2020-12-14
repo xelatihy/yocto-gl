@@ -999,13 +999,13 @@ inline json_value::json_object_cit json_value::items() const {
   return {get_object().data(), get_object().data() + get_object().size()};
 }
 inline json_value* json_value::find(const string& key) {
-  for (auto& [key_, value] : json_value::get_object()) {
+  for (auto& [key_, value] : get_object()) {
     if (key_ == key) return &value;
   }
   return nullptr;
 }
 inline const json_value* json_value::find(const string& key) const {
-  for (auto& [key_, value] : json_value::get_object()) {
+  for (auto& [key_, value] : get_object()) {
     if (key_ == key) return &value;
   }
   return nullptr;
@@ -1755,7 +1755,6 @@ inline bool get_value_if(
   if (auto ejs = get_element(js, key); is_valid(ejs)) {
     return get_value(ejs, value, error);
   } else if (is_object(js)) {
-    error = format_error(js, "missing key " + string{key});
     return true;
   } else {
     error = format_error(js, "object expected");
