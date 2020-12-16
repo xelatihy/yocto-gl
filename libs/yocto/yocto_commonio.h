@@ -590,6 +590,10 @@ inline json_view insert_object(json_view js, string_view key, string& error);
 // Helper to format errors for conversions
 inline string format_error(json_cview js, string_view message);
 
+// Declarations
+struct json_tview;
+struct json_ctview;
+
 // Json tree
 struct json_tree {
   struct json_value {
@@ -614,6 +618,16 @@ struct json_tree {
   vector<string>      strings  = {};
 };
 
+// Load/save a json file
+bool load_json(const string& filename, json_tree& js, string& error);
+bool save_json(const string& filename, const json_tree& js, string& error);
+
+// Get view from value
+inline json_tview  get_root(json_tree& js);
+inline json_ctview get_root(const json_tree& js);
+inline json_ctview  get_croot(json_tree& js);
+inline json_ctview get_croot(const json_tree& js);
+
 // Json view
 struct json_tview {
   json_tree* root  = nullptr;
@@ -636,10 +650,6 @@ struct json_ctview {
       const json_tree* root_, int64_t group_, int64_t index_, bool array_)
       : root{root_}, group{group_}, index{index_}, array{array_} {}
 };
-
-// Get view from value
-inline json_tview  get_root(json_tree& js);
-inline json_ctview get_root(const json_tree& js);
 
 // Error check
 inline bool is_valid(json_ctview js);
@@ -678,16 +688,17 @@ inline bool get_integral(json_ctview js, int64_t& value);
 inline bool get_integral(json_ctview js, uint64_t& value);
 inline bool get_number(json_ctview js, double& value);
 
+
 // Compound type
-inline bool   empty(json_ctview js);
-inline size_t size(json_ctview js);
+inline bool   is_empty(json_ctview js);
+inline size_t get_size(json_ctview js);
 
 // Array
 inline bool        set_array(json_tview js);
 inline bool        set_array(json_tview js, size_t size);
-inline bool        array_empty(json_ctview js);
 inline bool        array_size(json_ctview js, size_t& size);
 inline bool        has_element(json_tview js, size_t idx);
+inline bool        has_element(json_ctview js, size_t idx);
 inline json_tview  get_element(json_tview js, size_t idx);
 inline json_ctview get_element(json_ctview js, size_t idx);
 inline json_tview  append_element(json_tview js);
@@ -696,9 +707,9 @@ inline auto        iterate_array(json_ctview js);
 
 // Object
 inline bool        set_object(json_tview js);
-inline bool        object_empty(json_ctview js);
 inline bool        object_size(json_ctview js, size_t& size);
 inline bool        has_element(json_tview js, string_view key);
+inline bool        has_element(json_ctview js, string_view key);
 inline json_tview  get_element(json_tview js, string_view key);
 inline json_ctview get_element(json_ctview js, string_view key);
 inline json_tview  insert_element(json_tview js, string_view key);
@@ -2276,6 +2287,8 @@ inline json_view insert_object(json_view js, string_view key, string& error) {
 // Get view from value
 inline json_tview  get_root(json_tree& js) { return {&js, 0, 0, true}; }
 inline json_ctview get_root(const json_tree& js) { return {&js, 0, 0, true}; }
+inline json_ctview  get_croot(json_tree& js) { return {&js, 0, 0, true}; }
+inline json_ctview get_croot(const json_tree& js) { return {&js, 0, 0, true}; }
 
 // Helpers
 inline json_tree::json_value* _get_value(json_tview js) {
@@ -2568,6 +2581,10 @@ inline bool get_number(json_ctview js, double& value) {
   }
 }
 
+// Compound type
+inline bool   is_empty(json_ctview js);
+inline size_t get_size(json_ctview js);
+
 // Array
 inline bool set_array(json_tview js) {
   if (auto jsv = _get_value(js); jsv) {
@@ -2783,6 +2800,12 @@ inline json_ctview get_element(json_ctview js, string_view key) {
   } else {
     return json_ctview{js.root};
   }
+}
+inline bool has_element(json_tview js, string_view key) {
+  return is_valid(get_element(js, key));
+}
+inline bool has_element(json_ctview js, string_view key) {
+  return is_valid(get_element(js, key));
 }
 inline json_tview insert_element(json_tview js, string_view key) {
   if (auto jsv = _get_value(js); jsv) {
@@ -3041,7 +3064,7 @@ inline bool get_value(json_ctview js, vector<T>& value, string& error) {
     if (array_size(js, size)) {
       value.reserve(size);
       for (auto ejs : iterate_array(js)) {
-        if (!get_value(ejs, value.emplace_back())) return false;
+        if (!get_value(ejs, value.emplace_back(), error)) return false;
       }
       return true;
     } else {
@@ -3059,7 +3082,7 @@ inline bool get_value(json_ctview js, array<T, N>& value, string& error) {
     auto size = (size_t)0;
     if (array_size(js, size) && size == N) {
       for (auto idx = (size_t)0; idx < N; idx++) {
-        if (!get_value(get_element(js, idx), value.at(idx)), error) return false;
+        if (!get_value(get_element(js, idx), value.at(idx), error)) return false;
       }
       return true;
   } else {

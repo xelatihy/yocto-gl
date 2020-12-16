@@ -1212,6 +1212,30 @@ inline bool get_value(json_cview js, frame3f& value, string& error) {
   return get_value(js, (array<float, 12>&)value, error);
 }
 
+// support for json conversions
+inline bool set_value(json_tview js, const vec3f& value, string& error) {
+  return set_value(js, (const array<float, 3>&)value, error);
+}
+inline bool set_value(json_tview js, const vec4f& value, string& error) {
+  return set_value(js, (const array<float, 4>&)value, error);
+}
+inline bool set_value(json_tview js, const frame3f& value, string& error) {
+  return set_value(js, (const array<float, 12>&)value, error);
+}
+inline bool set_value(json_tview js, const mat4f& value, string& error) {
+  return set_value(js, (const array<float, 16>&)value, error);
+}
+
+inline bool get_value(json_ctview js, vec3f& value, string& error) {
+  return get_value(js, (array<float, 3>&)value, error);
+}
+inline bool get_value(json_ctview js, mat3f& value, string& error) {
+  return get_value(js, (array<float, 9>&)value, error);
+}
+inline bool get_value(json_ctview js, frame3f& value, string& error) {
+  return get_value(js, (array<float, 12>&)value, error);
+}
+
 }  // namespace yocto
 
 // -----------------------------------------------------------------------------
@@ -1244,12 +1268,12 @@ static bool load_json_scene(const string& filename, sceneio_scene* scene,
   if (progress_cb) progress_cb("load scene", progress.x++, progress.y);
 
   // open file
-  auto js_tree = json_value{};
+  auto js_tree = json_tree{};
   if (!load_json(filename, js_tree, error)) return json_error();
-  auto js = get_root(js_tree);
+  auto js = get_croot(js_tree);
 
   // parse json reference
-  auto get_reference_if = [](json_cview ejs, string_view name,
+  auto get_reference_if = [](json_ctview ejs, string_view name,
                               sceneio_material*& value, auto& refs,
                               string& error) -> bool {
     auto ref = ""s;
@@ -1269,7 +1293,7 @@ static bool load_json_scene(const string& filename, sceneio_scene* scene,
 
   // parse json reference
   auto ctexture_map    = unordered_map<string, sceneio_texture*>{{"", nullptr}};
-  auto get_ctexture_if = [scene, &ctexture_map](json_cview ejs,
+  auto get_ctexture_if = [scene, &ctexture_map](json_ctview ejs,
                              string_view name, sceneio_texture*& value,
                              string&       error,
                              const string& dirname = "textures/") -> bool {
@@ -1289,7 +1313,7 @@ static bool load_json_scene(const string& filename, sceneio_scene* scene,
 
   // parse json reference
   auto stexture_map    = unordered_map<string, sceneio_texture*>{{"", nullptr}};
-  auto get_stexture_if = [scene, &stexture_map](json_cview ejs,
+  auto get_stexture_if = [scene, &stexture_map](json_ctview ejs,
                              string_view name, sceneio_texture*& value,
                              string&       error,
                              const string& dirname = "textures/") -> bool {
@@ -1309,7 +1333,7 @@ static bool load_json_scene(const string& filename, sceneio_scene* scene,
 
   // parse json reference
   auto shape_map    = unordered_map<string, sceneio_shape*>{{"", nullptr}};
-  auto get_shape_if = [scene, &shape_map](json_cview ejs, string_view name,
+  auto get_shape_if = [scene, &shape_map](json_ctview ejs, string_view name,
                           sceneio_shape*& value, string& error,
                           const string& dirname = "shapes/") -> bool {
     auto path = ""s;
@@ -1335,7 +1359,7 @@ static bool load_json_scene(const string& filename, sceneio_scene* scene,
   auto ply_instance_map = unordered_map<string, ply_instance*>{{"", nullptr}};
   auto instance_ply     = unordered_map<sceneio_instance*, ply_instance*>{};
   auto get_ply_instances_if =
-      [&ply_instances, &ply_instance_map, &instance_ply](json_cview ejs,
+      [&ply_instances, &ply_instance_map, &instance_ply](json_ctview ejs,
           const string& name, sceneio_instance* instance, string& error,
           const string& dirname = "instances/") -> bool {
     auto path = ""s;
