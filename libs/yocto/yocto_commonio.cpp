@@ -605,7 +605,9 @@ void to_json(njson& njs, json_ctview js) {
   switch (get_type(js)) {
     case json_type::null: njs = {}; break;
     case json_type::integer: get_integer(js, njs.get_ref<int64_t&>()); break;
-    case json_type::unsigned_: get_unsigned(js, njs.get_ref<uint64_t&>()); break;
+    case json_type::unsigned_:
+      get_unsigned(js, njs.get_ref<uint64_t&>());
+      break;
     case json_type::real: get_real(js, njs.get_ref<double&>()); break;
     case json_type::boolean: get_boolean(js, njs.get_ref<bool&>()); break;
     case json_type::string_: get_string(js, njs.get_ref<string&>()); break;
@@ -618,7 +620,7 @@ void to_json(njson& njs, json_ctview js) {
       for (auto [key, ejs] : iterate_object(js)) to_json(njs[string{key}], ejs);
       break;
     case json_type::binary:
-      njs              = njson::binary({});
+      njs = njson::binary({});
       get_binary(js, njs.get_binary());
       break;
   }
@@ -639,11 +641,10 @@ void from_json(const njson& njs, json_tview js) {
       break;
     case njson::value_t::object:
       set_object(js);
-      for (auto& [key, ejs] : njs.items()) from_json(ejs, insert_element(js, key));
+      for (auto& [key, ejs] : njs.items())
+        from_json(ejs, insert_element(js, key));
       break;
-    case njson::value_t::binary:
-      set_binary(js, njs.get_binary());
-      break;
+    case njson::value_t::binary: set_binary(js, njs.get_binary()); break;
     case njson::value_t::discarded: set_null(js); break;
   }
 }

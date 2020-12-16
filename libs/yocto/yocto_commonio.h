@@ -625,7 +625,7 @@ bool save_json(const string& filename, const json_tree& js, string& error);
 // Get view from value
 inline json_tview  get_root(json_tree& js);
 inline json_ctview get_root(const json_tree& js);
-inline json_ctview  get_croot(json_tree& js);
+inline json_ctview get_croot(json_tree& js);
 inline json_ctview get_croot(const json_tree& js);
 
 // Json view
@@ -687,7 +687,6 @@ inline bool get_string(json_ctview js, string& value);
 inline bool get_integral(json_ctview js, int64_t& value);
 inline bool get_integral(json_ctview js, uint64_t& value);
 inline bool get_number(json_ctview js, double& value);
-
 
 // Compound type
 inline bool   is_empty(json_ctview js);
@@ -2287,7 +2286,7 @@ inline json_view insert_object(json_view js, string_view key, string& error) {
 // Get view from value
 inline json_tview  get_root(json_tree& js) { return {&js, 0, 0, true}; }
 inline json_ctview get_root(const json_tree& js) { return {&js, 0, 0, true}; }
-inline json_ctview  get_croot(json_tree& js) { return {&js, 0, 0, true}; }
+inline json_ctview get_croot(json_tree& js) { return {&js, 0, 0, true}; }
 inline json_ctview get_croot(const json_tree& js) { return {&js, 0, 0, true}; }
 
 // Helpers
@@ -3082,17 +3081,16 @@ inline bool get_value(json_ctview js, array<T, N>& value, string& error) {
     auto size = (size_t)0;
     if (array_size(js, size) && size == N) {
       for (auto idx = (size_t)0; idx < N; idx++) {
-        if (!get_value(get_element(js, idx), value.at(idx), error)) return false;
+        if (!get_value(get_element(js, idx), value.at(idx), error))
+          return false;
       }
       return true;
-  } else {
-    error = format_error(
-        js, "array size mismatched");
-    return false;
+    } else {
+      error = format_error(js, "array size mismatched");
+      return false;
     }
   } else {
-    error = format_error(js,
-        "array expected");
+    error = format_error(js, "array expected");
     return false;
   }
 }
