@@ -686,8 +686,7 @@ inline size_t size(json_ctview js);
 inline bool        set_array(json_tview js);
 inline bool        set_array(json_tview js, size_t size);
 inline bool        array_empty(json_ctview js);
-inline size_t      array_size(json_ctview js);
-inline bool        resize_array(json_tview js, size_t size);
+inline bool        array_size(json_ctview js, size_t& size);
 inline bool        has_element(json_tview js, size_t idx);
 inline json_tview  get_element(json_tview js, size_t idx);
 inline json_ctview get_element(json_ctview js, size_t idx);
@@ -698,7 +697,7 @@ inline auto        iterate_array(json_ctview js);
 // Object
 inline bool        set_object(json_tview js);
 inline bool        object_empty(json_ctview js);
-inline size_t      object_size(json_ctview js);
+inline bool        object_size(json_ctview js, size_t& size);
 inline bool        has_element(json_tview js, string_view key);
 inline json_tview  get_element(json_tview js, string_view key);
 inline json_ctview get_element(json_ctview js, string_view key);
@@ -792,6 +791,7 @@ inline json_tview insert_object(json_tview js, string_view key, string& error);
 
 // Helper to format errors for conversions
 inline string format_error(json_ctview js, string_view message);
+inline string format_error(json_tview js, string_view message);
 
 // Json iterator
 struct json_iterator {
@@ -2449,8 +2449,8 @@ inline bool set_string(json_tview js, const string& value) {
       return true;
     } else {
       js.root->strings.emplace_back(value);
-      jsv->_type    = json_type::string_;
-      jsv->_integer = (int64_t)js.root->strings.size() - 1;
+      jsv->_type   = json_type::string_;
+      jsv->_string = (int64_t)js.root->strings.size() - 1;
       return true;
     }
   } else {
@@ -2738,7 +2738,7 @@ inline bool set_object(json_tview js) {
     return false;
   }
 }
-inline size_t object_size(json_ctview js, size_t& size) {
+inline bool object_size(json_ctview js, size_t& size) {
   if (auto jsv = _get_value(js); jsv) {
     if (jsv->_type == json_type::object) {
       size = js.root->objects[jsv->_object].size();
@@ -2844,9 +2844,9 @@ inline auto iterate_object(json_tview js) {
 inline auto iterate_object(json_ctview js) {
   struct iterator {
     const json_tree* root  = nullptr;
-    int64_t    group = 0;
-    int64_t    index = 0;
-    bool       array = true;
+    int64_t          group = 0;
+    int64_t          index = 0;
+    bool             array = true;
     bool      operator!=(const iterator& other) { return index != other.index; }
     iterator& operator++() {
       index += 1;
@@ -2883,91 +2883,469 @@ inline auto iterate_object(json_ctview js) {
 }
 
 // Binary
-inline bool set_binary(json_tview js, const json_binary& value);
-inline bool get_binary(json_ctview js, json_binary& value);
+inline bool set_binary(json_tview js, const json_binary& value) {
+  if (auto jsv = _get_value(js); jsv) {
+    if (jsv->_type == json_type::binary) {
+      js.root->binaries[jsv->_string] = value;
+      return true;
+    } else {
+      js.root->binaries.emplace_back(value);
+      jsv->_type   = json_type::binary;
+      jsv->_binary = (int64_t)js.root->binaries.size() - 1;
+      return true;
+    }
+  } else {
+    return false;
+  }
+}
+inline bool get_binary(json_ctview js, json_binary& value) {
+  if (auto jsv = _get_value(js); jsv) {
+    if (jsv->_type == json_type::binary) {
+      value = js.root->binaries[jsv->_binary];
+      return true;
+    } else {
+      return false;
+    }
+  } else {
+    return false;
+  }
+}
+
+// Conversion from json to values
+template <typename T>
+inline bool get_value(json_ctview js, T& value) {
+  auto error = string{};
+  return get_value(js, value, error);
+}
 
 // Get the path of a json view
-inline string compute_path(json_ctview js);
+inline bool _compute_path(json_ctview js, json_ctview jsv, string& path) {
+  if (!is_valid(js) || !is_valid(jsv)) {
+    return false;
+  } else if (js.group == jsv.group && js.index == jsv.index &&
+             js.array == jsv.array) {
+    path = "/";
+    return true;
+  } else if (is_array(js)) {
+    auto idx = 0;
+    for (auto ejs : iterate_array(js)) {
+      if (!_compute_path(ejs, jsv, path)) continue;
+      if (path.back() == '/') path.pop_back();
+      path = "/"s + std::to_string(idx) + path;
+      return true;
+    }
+    return false;
+  } else if (is_object(js)) {
+    for (auto [key, ejs] : iterate_object(js)) {
+      if (!_compute_path(ejs, jsv, path)) continue;
+      if (path.back() == '/') path.pop_back();
+      path = "/" + string{key} + path;
+      return true;
+    }
+    return false;
+  } else {
+    return false;
+  }
+}
+inline string compute_path(json_ctview js) {
+  auto path = string{};
+  if (_compute_path({js.root, 0, 0, true}, js, path)) {
+    return path;
+  } else {
+    return "";
+  }
+}
+
+// Error formatting for conversion
+inline string format_error(json_ctview js, string_view message) {
+  auto path = compute_path(js);
+  if (path.empty()) {
+    return string{message} + " in json";
+  } else {
+    return string{message} + " at " + path;
+  }
+}
+inline string format_error(json_tview js, string_view message) {
+  auto path = compute_path({js.root, js.group, js.index, js.array});
+  if (path.empty()) {
+    return string{message} + " in json";
+  } else {
+    return string{message} + " at " + path;
+  }
+}
 
 // Conversion from json to values
+inline bool get_value(json_ctview js, int64_t& value, string& error) {
+  if (get_integral(js, value)) {
+    return true;
+  } else {
+    error = format_error(js, "integer expected");
+    return false;
+  }
+}
+inline bool get_value(json_ctview js, int32_t& value, string& error) {
+  auto value64 = (int64_t)0;
+  if (!get_value(js, value64, error)) return false;
+  value = (int32_t)value64;
+  return true;
+}
+inline bool get_value(json_ctview js, uint64_t& value, string& error) {
+  if (get_integral(js, value)) {
+    return true;
+  } else {
+    error = format_error(js, "integer expected");
+    return false;
+  }
+}
+inline bool get_value(json_ctview js, uint32_t& value, string& error) {
+  auto value64 = (uint64_t)0;
+  if (!get_value(js, value64, error)) return false;
+  value = (uint32_t)value64;
+  return true;
+}
+inline bool get_value(json_ctview js, double& value, string& error) {
+  if (get_number(js, value)) {
+    return true;
+  } else {
+    error = format_error(js, "number expected");
+    return false;
+  }
+}
+inline bool get_value(json_ctview js, float& value, string& error) {
+  auto value64 = (double)0;
+  if (!get_value(js, value64, error)) return false;
+  value = (float)value64;
+  return true;
+}
+inline bool get_value(json_ctview js, bool& value, string& error) {
+  if (get_boolean(js, value)) {
+    return true;
+  } else {
+    error = format_error(js, "boolean expected");
+    return false;
+  }
+}
+inline bool get_value(json_ctview js, string& value, string& error) {
+  if (get_string(js, value)) {
+    return true;
+  } else {
+    error = format_error(js, "string expected");
+    return false;
+  }
+}
 template <typename T>
-inline bool get_value(json_ctview js, T& value);
-
-// Conversion from json to values
-inline bool get_value(json_ctview js, int64_t& value, string& error);
-inline bool get_value(json_ctview js, int32_t& value, string& error);
-inline bool get_value(json_ctview js, uint64_t& value, string& error);
-inline bool get_value(json_ctview js, uint32_t& value, string& error);
-inline bool get_value(json_ctview js, double& value, string& error);
-inline bool get_value(json_ctview js, float& value, string& error);
-inline bool get_value(json_ctview js, bool& value, string& error);
-inline bool get_value(json_ctview js, string& value, string& error);
-template <typename T>
-inline bool get_value(json_ctview js, vector<T>& value, string& error);
+inline bool get_value(json_ctview js, vector<T>& value, string& error) {
+  if (is_array(js)) {
+    value.clear();
+    auto size = (size_t)0;
+    if (array_size(js, size)) {
+      value.reserve(size);
+      for (auto ejs : iterate_array(js)) {
+        if (!get_value(ejs, value.emplace_back())) return false;
+      }
+      return true;
+    } else {
+      error = format_error(js, "array expected");
+      return false;
+    }
+  } else {
+    error = format_error(js, "array expected");
+    return false;
+  }
+}
 template <typename T, size_t N>
-inline bool get_value(json_ctview js, array<T, N>& value, string& error);
+inline bool get_value(json_ctview js, array<T, N>& value, string& error) {
+  if (is_array(js)) {
+    auto size = (size_t)0;
+    if (array_size(js, size) && size == N) {
+      for (auto idx = (size_t)0; idx < N; idx++) {
+        if (!get_value(get_element(js, idx), value.at(idx)), error) return false;
+      }
+      return true;
+  } else {
+    error = format_error(
+        js, "array size mismatched");
+    return false;
+    }
+  } else {
+    error = format_error(js,
+        "array expected");
+    return false;
+  }
+}
 
 // Get value at a key or index
 template <typename T>
 inline bool get_value_at(
-    json_ctview js, string_view key, T& value, string& error);
+    json_ctview js, string_view key, T& value, string& error) {
+  if (auto element = get_element(js, key); is_valid(element)) {
+    return get_value(element, value, error);
+  } else {
+    error = format_error(js, "missing key " + string{key});
+    return false;
+  }
+}
 template <typename T>
-inline bool get_value_at(json_ctview js, size_t idx, T& value, string& error);
+inline bool get_value_at(json_ctview js, size_t idx, T& value, string& error) {
+  if (auto element = get_element(js, idx); is_valid(element)) {
+    return get_value(element, value, error);
+  } else {
+    error = format_error(js, "index out of range " + std::to_string(idx));
+    return false;
+  }
+}
 
 // Get value at a key or nothing is key is not preesent
 template <typename T>
 inline bool get_value_if(
-    json_ctview js, string_view key, T& value, string& error);
+    json_ctview js, string_view key, T& value, string& error) {
+  if (auto ejs = get_element(js, key); is_valid(ejs)) {
+    return get_value(ejs, value, error);
+  } else if (is_object(js)) {
+    return true;
+  } else {
+    error = format_error(js, "object expected");
+    return false;
+  }
+}
 
 // Conversion to json from values
 template <typename T>
-inline bool set_value(json_tview js, const T& value);
+inline bool set_value(json_tview js, const T& value) {
+  auto error = string{};
+  return set_value(js, value, error);
+}
 
 // Conversion to json from values
-inline bool set_value(json_tview js, int64_t value, string& error);
-inline bool set_value(json_tview js, int32_t value, string& error);
-inline bool set_value(json_tview js, uint64_t value, string& error);
-inline bool set_value(json_tview js, uint32_t value, string& error);
-inline bool set_value(json_tview js, double value, string& error);
-inline bool set_value(json_tview js, float value, string& error);
-inline bool set_value(json_tview js, bool value, string& error);
-inline bool set_value(json_tview js, const string& value, string& error);
+inline bool set_value(json_tview js, int64_t value, string& error) {
+  if (set_integer(js, value)) {
+    return true;
+  } else {
+    error = format_error(js, "integer expected");
+    return false;
+  }
+}
+inline bool set_value(json_tview js, int32_t value, string& error) {
+  return set_value(js, (int64_t)value, error);
+}
+inline bool set_value(json_tview js, uint64_t value, string& error) {
+  if (set_unsigned(js, value)) {
+    return true;
+  } else {
+    error = format_error(js, "unsigned expected");
+    return false;
+  }
+}
+inline bool set_value(json_tview js, uint32_t value, string& error) {
+  return set_value(js, (uint64_t)value, error);
+}
+inline bool set_value(json_tview js, double value, string& error) {
+  if (set_real(js, value)) {
+    return true;
+  } else {
+    error = format_error(js, "real expected");
+    return false;
+  }
+}
+inline bool set_value(json_tview js, float value, string& error) {
+  return set_value(js, (double)value, error);
+}
+inline bool set_value(json_tview js, bool value, string& error) {
+  if (set_boolean(js, value)) {
+    return true;
+  } else {
+    error = format_error(js, "boolean expected");
+    return false;
+  }
+}
+inline bool set_value(json_tview js, const string& value, string& error) {
+  if (set_string(js, value)) {
+    return true;
+  } else {
+    error = format_error(js, "string expected");
+    return false;
+  }
+}
 template <typename T>
-inline bool set_value(json_tview js, const vector<T>& value, string& error);
+inline bool set_value(json_tview js, const vector<T>& value, string& error) {
+  if (set_array(js, value.size())) {
+    auto idx = (size_t)0;
+    for (auto& v : value) {
+      if (!set_value(get_element(js, idx++), v)) return false;
+    }
+    return true;
+  } else {
+    error = format_error(js, "array expected");
+    return false;
+  }
+}
 template <typename T, size_t N>
-inline bool set_value(json_tview js, const array<T, N>& value, string& error);
+inline bool set_value(json_tview js, const array<T, N>& value, string& error) {
+  if (set_array(js, value.size())) {
+    auto idx = (size_t)0;
+    for (auto& v : value) {
+      if (!set_value(get_element(js, idx++), v, error)) return false;
+    }
+    return true;
+  } else {
+    error = format_error(js, "array expected");
+    return false;
+  }
+}
 
 // Helpers for user-defined types
-inline bool check_array(json_ctview js, string& error);
-inline bool check_array(json_ctview js, size_t size_, string& error);
-inline bool check_object(json_ctview js, string& error);
+inline bool check_array(json_ctview js, string& error) {
+  if (is_array(js)) {
+    return true;
+  } else {
+    error = format_error(js, "array expected");
+    return false;
+  }
+}
+inline bool check_array(json_ctview js, size_t size_, string& error) {
+  if (is_array(js)) {
+    auto size = (size_t)0;
+    if (array_size(js, size) && size == size_) {
+      return true;
+    } else {
+      error = format_error(js, "mismatchd array size");
+      return false;
+    }
+  } else {
+    error = format_error(js, "array expected");
+    return false;
+  }
+}
+inline bool check_object(json_ctview js, string& error) {
+  if (is_object(js)) {
+    return true;
+  } else {
+    error = format_error(js, "object expected");
+    return false;
+  }
+}
 
 // Helpers for user-defined types
-inline bool set_array(json_tview js, string& error);
+inline bool set_array(json_tview js, string& error) {
+  if (set_array(js)) {
+    return true;
+  } else {
+    error = format_error(js, "array expected");
+    return false;
+  }
+}
 template <typename T>
 inline bool set_value_at(
-    json_tview js, size_t idx, const T& value, string& error);
+    json_tview js, size_t idx, const T& value, string& error) {
+  if (auto ejs = get_element(js, idx); is_valid(ejs)) {
+    return set_value(ejs, value, error);
+  } else {
+    error = format_error(js, "array expected");
+    return false;
+  }
+}
 template <typename T>
-inline bool       append_value(json_tview js, const T& value, string& error);
-inline json_tview append_array(json_tview js, string& error);
-inline json_tview append_object(json_tview js, string& error);
+inline bool append_value(json_tview js, const T& value, string& error) {
+  if (auto ejs = append_element(js); is_valid(ejs)) {
+    return set_value(ejs, value, error);
+  } else {
+    error = format_error(js, "array expected");
+    return false;
+  }
+}
+inline json_tview append_array(json_tview js, string& error) {
+  if (auto ejs = append_element(js); is_valid(ejs)) {
+    if (set_array(ejs)) {
+      return ejs;
+    } else {
+      error = format_error(ejs, "array expected");
+      return {js.root};
+    }
+  } else {
+    error = format_error(js, "array expected");
+    return {js.root};
+  }
+}
+inline json_tview append_object(json_tview js, string& error) {
+  if (auto ejs = append_element(js); is_valid(ejs)) {
+    if (set_object(ejs)) {
+      return ejs;
+    } else {
+      error = format_error(ejs, "object expected");
+      return {js.root};
+    }
+  } else {
+    error = format_error(js, "array expected");
+    return {js.root};
+  }
+}
 
 // Helpers for user-defined types
-inline bool set_object(json_tview js, string& error);
+inline bool set_object(json_tview js, string& error) {
+  if (set_object(js)) {
+    return true;
+  } else {
+    error = format_error(js, "object expected");
+    return false;
+  }
+}
 template <typename T>
 inline bool set_value_at(
-    json_tview js, string_view key, const T& value, string& error);
+    json_tview js, string_view key, const T& value, string& error) {
+  if (auto ejs = get_element(js, key); is_valid(ejs)) {
+    return set_value(ejs, value, error);
+  } else {
+    error = format_error(js, "object expected");
+    return false;
+  }
+}
 template <typename T>
 inline bool insert_value(
-    json_tview js, string_view key, const T& value, string& error);
+    json_tview js, string_view key, const T& value, string& error) {
+  if (auto ejs = insert_element(js, key); is_valid(ejs)) {
+    return set_value(ejs, value, error);
+  } else {
+    error = format_error(js, "object expected");
+    return false;
+  }
+}
 template <typename T>
 inline bool insert_value_if(json_tview js, string_view key, const T& value,
-    const T& default_, string& error);
-inline json_tview insert_array(json_tview js, string_view key, string& error);
-inline json_tview insert_object(json_tview js, string_view key, string& error);
-
-// Helper to format errors for conversions
-inline string format_error(json_ctview js, string_view message);
+    const T& default_, string& error) {
+  if (value == default_) return true;
+  if (auto ejs = insert_element(js, key); is_valid(ejs)) {
+    return set_value(ejs, value, error);
+  } else {
+    error = format_error(js, "object expected");
+    return false;
+  }
+}
+inline json_tview insert_array(json_tview js, string_view key, string& error) {
+  if (auto ejs = insert_element(js, key); is_valid(ejs)) {
+    if (set_array(ejs)) {
+      return ejs;
+    } else {
+      error = format_error(ejs, "array expected");
+      return {js.root};
+    }
+  } else {
+    error = format_error(js, "object expected");
+    return {js.root};
+  }
+}
+inline json_tview insert_object(json_tview js, string_view key, string& error) {
+  if (auto ejs = insert_element(js, key); is_valid(ejs)) {
+    if (set_object(ejs)) {
+      return ejs;
+    } else {
+      error = format_error(ejs, "object expected");
+      return {js.root};
+    }
+  } else {
+    error = format_error(js, "object expected");
+    return {js.root};
+  }
+}
 
 // Helpers
 inline json_tree::json_value* _get_value(json_iterator& js) {
