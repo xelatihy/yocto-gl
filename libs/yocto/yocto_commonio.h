@@ -2591,7 +2591,7 @@ inline bool set_array(json_tview js) {
       js.root->arrays[jsv->_array].clear();
       return true;
     } else {
-      js.root->arrays[jsv->_array].emplace_back();
+      js.root->arrays.emplace_back();
       jsv->_type  = json_type::array;
       jsv->_array = (int64_t)js.root->arrays.size() - 1;
       return true;
@@ -2606,7 +2606,7 @@ inline bool set_array(json_tview js, size_t size) {
       js.root->arrays[jsv->_array].assign(size, json_tree::json_value{});
       return true;
     } else {
-      js.root->arrays[jsv->_array].emplace_back();
+      js.root->arrays.emplace_back();
       jsv->_type  = json_type::array;
       jsv->_array = (int64_t)js.root->arrays.size() - 1;
       js.root->arrays[jsv->_array].assign(size, json_tree::json_value{});
@@ -2745,7 +2745,7 @@ inline bool set_object(json_tview js) {
       js.root->objects[jsv->_object].clear();
       return true;
     } else {
-      js.root->objects[jsv->_object].emplace_back();
+      js.root->objects.emplace_back();
       jsv->_type   = json_type::object;
       jsv->_object = (int64_t)js.root->objects.size() - 1;
       return true;
@@ -2809,13 +2809,14 @@ inline bool has_element(json_ctview js, string_view key) {
 inline json_tview insert_element(json_tview js, string_view key) {
   if (auto jsv = _get_value(js); jsv) {
     if (jsv->_type == json_type::object) {
-      for (auto idx = (int64_t)0;
-           idx < (int64_t)js.root->objects[jsv->_object].size(); idx++) {
-        if (js.root->objects[jsv->_object][idx].first == key) {
-          return {js.root, jsv->_object, idx, false};
+      auto jse = get_element(js, key);
+        if(is_valid(jse)) {
+            return jse;
+        } else {
+            js.root->objects[jsv->_object].emplace_back(key, json_tree::json_value{});
+            auto index = (int64_t)js.root->objects[jsv->_object].size()-1;
+            return {js.root, jsv->_object, index, false};
         }
-      }
-      return json_tview{js.root};
     } else {
       return json_tview{js.root};
     }
@@ -2852,9 +2853,9 @@ inline auto iterate_object(json_tview js) {
   if (auto jsv = _get_value(js); jsv) {
     if (jsv->_type == json_type::object) {
       return iterator_wrapper{
-          iterator{js.root, jsv->_array, 0, false},
-          iterator{js.root, jsv->_array,
-              (int64_t)js.root->arrays[jsv->_array].size(), false},
+          iterator{js.root, jsv->_object, 0, false},
+          iterator{js.root, jsv->_object,
+              (int64_t)js.root->objects[jsv->_object].size(), false},
       };
     } else {
       return iterator_wrapper{iterator{js.root}, iterator{js.root}};
@@ -2892,9 +2893,9 @@ inline auto iterate_object(json_ctview js) {
   if (auto jsv = _get_value(js); jsv) {
     if (jsv->_type == json_type::object) {
       return iterator_wrapper{
-          iterator{js.root, jsv->_array, 0, false},
-          iterator{js.root, jsv->_array,
-              (int64_t)js.root->arrays[jsv->_array].size(), false},
+          iterator{js.root, jsv->_object, 0, false},
+          iterator{js.root, jsv->_object,
+              (int64_t)js.root->objects[jsv->_object].size(), false},
       };
     } else {
       return iterator_wrapper{iterator{js.root}, iterator{js.root}};
