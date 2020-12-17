@@ -1688,12 +1688,12 @@ static bool save_json_scene(const string& filename, const sceneio_scene* scene,
     return false;
   };
 
-  auto insert_texture_if = [](json_view ejs, const string& name,
+  auto insert_texture_if = [](json_tview ejs, const string& name,
                                sceneio_texture* texture, string& error) {
     if (texture == nullptr) return true;
     return insert_value(ejs, name, texture->name, error);
   };
-  auto insert_reference_if = [](json_view ejs, const string& name,
+  auto insert_reference_if = [](json_tview ejs, const string& name,
                                  auto reference, string& error) {
     if (reference == nullptr) return true;
     return insert_value(ejs, name, reference->name, error);
@@ -1705,7 +1705,7 @@ static bool save_json_scene(const string& filename, const sceneio_scene* scene,
   if (progress_cb) progress_cb("save scene", progress.x++, progress.y);
 
   // save json file
-  auto js_tree = json_value{};
+  auto js_tree = json_tree{};
   auto js      = get_root(js_tree);
   if (!set_object(js, error)) return conversion_error();
 

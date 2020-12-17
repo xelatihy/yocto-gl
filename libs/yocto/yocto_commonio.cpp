@@ -603,14 +603,12 @@ bool save_json(const string& filename, const json_value& js, string& error) {
 // convert json
 void to_json(njson& njs, json_ctview js) {
   switch (get_type(js)) {
-    case json_type::null: njs = {}; break;
-    case json_type::integer: get_integer(js, njs.get_ref<int64_t&>()); break;
-    case json_type::unsigned_:
-      get_unsigned(js, njs.get_ref<uint64_t&>());
-      break;
-    case json_type::real: get_real(js, njs.get_ref<double&>()); break;
-    case json_type::boolean: get_boolean(js, njs.get_ref<bool&>()); break;
-    case json_type::string_: get_string(js, njs.get_ref<string&>()); break;
+    case json_type::null: njs = nullptr; break;
+    case json_type::integer: njs = get_integer(js); break;
+    case json_type::unsigned_: njs = get_unsigned(js); break;
+    case json_type::real: njs = get_real(js); break;
+    case json_type::boolean: njs = get_boolean(js); break;
+    case json_type::string_: njs = get_string(js); break;
     case json_type::array:
       njs = njson::array();
       for (auto ejs : iterate_array(js)) to_json(njs.emplace_back(), ejs);

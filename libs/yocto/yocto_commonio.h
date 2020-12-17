@@ -649,6 +649,11 @@ struct json_ctview {
   json_ctview(
       const json_tree* root_, int64_t group_, int64_t index_, bool array_)
       : root{root_}, group{group_}, index{index_}, array{array_} {}
+  json_ctview(json_tview other)
+      : root{other.root}
+      , group{other.group}
+      , index{other.index}
+      , array{other.array} {}
 };
 
 // Error check
@@ -687,6 +692,16 @@ inline bool get_string(json_ctview js, string& value);
 inline bool get_integral(json_ctview js, int64_t& value);
 inline bool get_integral(json_ctview js, uint64_t& value);
 inline bool get_number(json_ctview js, double& value);
+
+// Get basic values - ignore errors if present
+inline int64_t  get_integer(json_ctview js);
+inline uint64_t get_unsigned(json_ctview js);
+inline double   get_real(json_ctview js);
+inline bool     get_boolean(json_ctview js);
+inline string   get_string(json_ctview js);
+inline int64_t  get_integral(json_ctview js);
+inline uint64_t get_uintegral(json_ctview js);
+inline double   get_number(json_ctview js);
 
 // Compound type
 inline bool   is_empty(json_ctview js);
@@ -2580,6 +2595,36 @@ inline bool get_number(json_ctview js, double& value) {
   }
 }
 
+// Get basic values
+inline int64_t get_integer(json_ctview js) {
+  auto value = (int64_t)0;
+  return get_integer(js, value) ? value : 0;
+}
+inline uint64_t get_unsigned(json_ctview js) {
+  auto value = (uint64_t)0;
+  return get_unsigned(js, value) ? value : 0;
+}
+inline double get_real(json_ctview js) {
+  auto value = (double)0;
+  return get_real(js, value) ? value : 0;
+}
+inline bool get_boolean(json_ctview js) {
+  auto value = false;
+  return get_boolean(js, value) ? value : false;
+}
+inline string get_string(json_ctview js) {
+  auto value = string{};
+  return get_string(js, value) ? value : string{};
+}
+inline int64_t get_integral(json_ctview js) {
+  auto value = (int64_t)0;
+  return get_integral(js, value) ? value : 0;
+}
+inline double get_number(json_ctview js) {
+  auto value = (double)0;
+  return get_number(js, value) ? value : 0;
+}
+
 // Compound type
 inline bool   is_empty(json_ctview js);
 inline size_t get_size(json_ctview js);
@@ -2810,13 +2855,14 @@ inline json_tview insert_element(json_tview js, string_view key) {
   if (auto jsv = _get_value(js); jsv) {
     if (jsv->_type == json_type::object) {
       auto jse = get_element(js, key);
-        if(is_valid(jse)) {
-            return jse;
-        } else {
-            js.root->objects[jsv->_object].emplace_back(key, json_tree::json_value{});
-            auto index = (int64_t)js.root->objects[jsv->_object].size()-1;
-            return {js.root, jsv->_object, index, false};
-        }
+      if (is_valid(jse)) {
+        return jse;
+      } else {
+        js.root->objects[jsv->_object].emplace_back(
+            key, json_tree::json_value{});
+        auto index = (int64_t)js.root->objects[jsv->_object].size() - 1;
+        return {js.root, jsv->_object, index, false};
+      }
     } else {
       return json_tview{js.root};
     }
