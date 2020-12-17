@@ -1189,26 +1189,26 @@ inline void from_json(const njson& j, frame3f& value) {
 #endif
 
 // support for json conversions
-inline bool set_value(json_view js, const vec3f& value, string& error) {
+inline bool set_value(json_tview js, const vec3f& value, string& error) {
   return set_value(js, (const array<float, 3>&)value, error);
 }
-inline bool set_value(json_view js, const vec4f& value, string& error) {
+inline bool set_value(json_tview js, const vec4f& value, string& error) {
   return set_value(js, (const array<float, 4>&)value, error);
 }
-inline bool set_value(json_view js, const frame3f& value, string& error) {
+inline bool set_value(json_tview js, const frame3f& value, string& error) {
   return set_value(js, (const array<float, 12>&)value, error);
 }
-inline bool set_value(json_view js, const mat4f& value, string& error) {
+inline bool set_value(json_tview js, const mat4f& value, string& error) {
   return set_value(js, (const array<float, 16>&)value, error);
 }
 
-inline bool get_value(json_cview js, vec3f& value, string& error) {
+inline bool get_value(json_ctview js, vec3f& value, string& error) {
   return get_value(js, (array<float, 3>&)value, error);
 }
-inline bool get_value(json_cview js, mat3f& value, string& error) {
+inline bool get_value(json_ctview js, mat3f& value, string& error) {
   return get_value(js, (array<float, 9>&)value, error);
 }
-inline bool get_value(json_cview js, frame3f& value, string& error) {
+inline bool get_value(json_ctview js, frame3f& value, string& error) {
   return get_value(js, (array<float, 12>&)value, error);
 }
 
@@ -1244,12 +1244,12 @@ static bool load_json_scene(const string& filename, sceneio_scene* scene,
   if (progress_cb) progress_cb("load scene", progress.x++, progress.y);
 
   // open file
-  auto js_tree = json_value{};
+  auto js_tree = json_tree{};
   if (!load_json(filename, js_tree, error)) return json_error();
-  auto js = get_root(js_tree);
+  auto js = get_croot(js_tree);
 
   // parse json reference
-  auto get_reference_if = [](json_cview ejs, string_view name,
+  auto get_reference_if = [](json_ctview ejs, string_view name,
                               sceneio_material*& value, auto& refs,
                               string& error) -> bool {
     auto ref = ""s;
@@ -1269,7 +1269,7 @@ static bool load_json_scene(const string& filename, sceneio_scene* scene,
 
   // parse json reference
   auto ctexture_map    = unordered_map<string, sceneio_texture*>{{"", nullptr}};
-  auto get_ctexture_if = [scene, &ctexture_map](json_cview ejs,
+  auto get_ctexture_if = [scene, &ctexture_map](json_ctview ejs,
                              string_view name, sceneio_texture*& value,
                              string&       error,
                              const string& dirname = "textures/") -> bool {
@@ -1289,7 +1289,7 @@ static bool load_json_scene(const string& filename, sceneio_scene* scene,
 
   // parse json reference
   auto stexture_map    = unordered_map<string, sceneio_texture*>{{"", nullptr}};
-  auto get_stexture_if = [scene, &stexture_map](json_cview ejs,
+  auto get_stexture_if = [scene, &stexture_map](json_ctview ejs,
                              string_view name, sceneio_texture*& value,
                              string&       error,
                              const string& dirname = "textures/") -> bool {
@@ -1309,7 +1309,7 @@ static bool load_json_scene(const string& filename, sceneio_scene* scene,
 
   // parse json reference
   auto shape_map    = unordered_map<string, sceneio_shape*>{{"", nullptr}};
-  auto get_shape_if = [scene, &shape_map](json_cview ejs, string_view name,
+  auto get_shape_if = [scene, &shape_map](json_ctview ejs, string_view name,
                           sceneio_shape*& value, string& error,
                           const string& dirname = "shapes/") -> bool {
     auto path = ""s;
@@ -1335,7 +1335,7 @@ static bool load_json_scene(const string& filename, sceneio_scene* scene,
   auto ply_instance_map = unordered_map<string, ply_instance*>{{"", nullptr}};
   auto instance_ply     = unordered_map<sceneio_instance*, ply_instance*>{};
   auto get_ply_instances_if =
-      [&ply_instances, &ply_instance_map, &instance_ply](json_cview ejs,
+      [&ply_instances, &ply_instance_map, &instance_ply](json_ctview ejs,
           const string& name, sceneio_instance* instance, string& error,
           const string& dirname = "instances/") -> bool {
     auto path = ""s;
@@ -1489,10 +1489,8 @@ static bool load_json_scene(const string& filename, sceneio_scene* scene,
         return parse_error();
       if (has_element(ejs, "lookat")) {
         auto lookat = identity3x3f;
-        if (!get_value_if(ejs, "lookat", lookat, error))
-            return parse_error();
-        instance->frame = lookat_frame(
-            lookat.x, lookat.y, lookat.z, true);
+        if (!get_value_if(ejs, "lookat", lookat, error)) return parse_error();
+        instance->frame = lookat_frame(lookat.x, lookat.y, lookat.z, true);
       }
       if (!get_reference_if(
               ejs, "material", instance->material, material_map, error))
@@ -1666,12 +1664,12 @@ static bool save_json_scene(const string& filename, const sceneio_scene* scene,
     return false;
   };
 
-  auto insert_texture_if = [](json_view ejs, const string& name,
+  auto insert_texture_if = [](json_tview ejs, const string& name,
                                sceneio_texture* texture, string& error) {
     if (texture == nullptr) return true;
     return insert_value(ejs, name, texture->name, error);
   };
-  auto insert_reference_if = [](json_view ejs, const string& name,
+  auto insert_reference_if = [](json_tview ejs, const string& name,
                                  auto reference, string& error) {
     if (reference == nullptr) return true;
     return insert_value(ejs, name, reference->name, error);
@@ -1683,7 +1681,7 @@ static bool save_json_scene(const string& filename, const sceneio_scene* scene,
   if (progress_cb) progress_cb("save scene", progress.x++, progress.y);
 
   // save json file
-  auto js_tree = json_value{};
+  auto js_tree = json_tree{};
   auto js      = get_root(js_tree);
   if (!set_object(js, error)) return conversion_error();
 
