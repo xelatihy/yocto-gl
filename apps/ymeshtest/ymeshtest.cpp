@@ -508,12 +508,11 @@ void make_scene_floating(sceneio_scene* scene, const string& meshname,
 
 namespace yocto {
 
-bool set_value(json_view js, const mesh_point& value, string& error) {
-  if (!set_array(js)) return false;
-  if (!check_array(js, error)) return false;
-  if (!append_value(js, value.face, error)) return false;
-  if (!append_value(js, (array<float, 2>&)value.uv, error)) return false;
-  return true;
+void to_json(json_value& js, const mesh_point& value) {
+  js = json_array{};
+  js.push_back(json_value{value.face});
+  js.push_back(
+      json_value{json_array{json_value{value.uv.x}, json_value{value.uv.y}}});
 }
 
 }  // namespace yocto

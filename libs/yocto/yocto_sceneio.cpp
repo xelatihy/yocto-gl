@@ -1189,30 +1189,6 @@ inline void from_json(const njson& j, frame3f& value) {
 #endif
 
 // support for json conversions
-inline bool set_value(json_view js, const vec3f& value, string& error) {
-  return set_value(js, (const array<float, 3>&)value, error);
-}
-inline bool set_value(json_view js, const vec4f& value, string& error) {
-  return set_value(js, (const array<float, 4>&)value, error);
-}
-inline bool set_value(json_view js, const frame3f& value, string& error) {
-  return set_value(js, (const array<float, 12>&)value, error);
-}
-inline bool set_value(json_view js, const mat4f& value, string& error) {
-  return set_value(js, (const array<float, 16>&)value, error);
-}
-
-inline bool get_value(json_cview js, vec3f& value, string& error) {
-  return get_value(js, (array<float, 3>&)value, error);
-}
-inline bool get_value(json_cview js, mat3f& value, string& error) {
-  return get_value(js, (array<float, 9>&)value, error);
-}
-inline bool get_value(json_cview js, frame3f& value, string& error) {
-  return get_value(js, (array<float, 12>&)value, error);
-}
-
-// support for json conversions
 inline bool set_value(json_tview js, const vec3f& value, string& error) {
   return set_value(js, (const array<float, 3>&)value, error);
 }
