@@ -449,12 +449,13 @@ struct json_tree {
     };
   };
   using json_array             = vector<json_value>;
-  using json_object            = vector<pair<string, json_value>>;
+  using json_object            = vector<pair<int32_t, json_value>>;
   using json_binary            = vector<uint8_t>;
   vector<json_array>  arrays   = {json_array{json_value{}}};
   vector<json_object> objects  = {};
   vector<json_binary> binaries = {};
   vector<string>      strings  = {};
+  vector<string>      keys     = {};
 };
 
 // Load/save a json file
@@ -1788,7 +1789,8 @@ inline json_tview get_element(json_tview js, string_view key) {
     if (jsv->_type == json_type::object) {
       for (auto idx = (int64_t)0;
            idx < (int64_t)js.root->objects[jsv->_object].size(); idx++) {
-        if (js.root->objects[jsv->_object][idx].first == key) {
+        auto& okey = js.root->keys[js.root->objects[jsv->_object][idx].first];
+        if (okey == key) {
           return {js.root, jsv->_object, idx, false};
         }
       }
@@ -1805,7 +1807,8 @@ inline json_ctview get_element(json_ctview js, string_view key) {
     if (jsv->_type == json_type::object) {
       for (auto idx = (int64_t)0;
            idx < (int64_t)js.root->objects[jsv->_object].size(); idx++) {
-        if (js.root->objects[jsv->_object][idx].first == key) {
+        auto& okey = js.root->keys[js.root->objects[jsv->_object][idx].first];
+        if (okey == key) {
           return {js.root, jsv->_object, idx, false};
         }
       }
@@ -1830,8 +1833,19 @@ inline json_tview insert_element(json_tview js, string_view key) {
       if (is_valid(jse)) {
         return jse;
       } else {
+        auto key_pos = (int32_t)-1;
+        for (auto idx = 0; idx < js.root->keys.size(); idx++) {
+          if (js.root->keys[idx] == key) {
+            key_pos = idx;
+            break;
+          }
+        }
+        if (key_pos < 0) {
+          js.root->keys.emplace_back(key);
+          key_pos = (int32_t)js.root->keys.size() - 1;
+        }
         js.root->objects[jsv->_object].emplace_back(
-            key, json_tree::json_value{});
+            key_pos, json_tree::json_value{});
         auto index = (int64_t)js.root->objects[jsv->_object].size() - 1;
         return {js.root, jsv->_object, index, false};
       }
@@ -1857,7 +1871,7 @@ inline auto iterate_object(json_tview js) {
       if (array) {
         return {string_view{}, json_tview{root, group, index, array}};
       } else {
-        return {string_view{root->objects[group][index].first},
+        return {string_view{root->keys[root->objects[group][index].first]},
             json_tview{root, group, index, array}};
       }
     }
@@ -1897,7 +1911,7 @@ inline auto iterate_object(json_ctview js) {
       if (array) {
         return {string_view{}, json_ctview{root, group, index, array}};
       } else {
-        return {string_view{root->objects[group][index].first},
+        return {string_view{root->keys[root->objects[group][index].first]},
             json_ctview{root, group, index, array}};
       }
     }
@@ -2581,8 +2595,19 @@ inline bool append_item(json_iterator& js, const string& key) {
     js.stack.pop_back();
     if (auto jsa = _get_value(js); jsa) {
       if (jsa->_type == json_type::object) {
+        auto key_pos = (int32_t)-1;
+        for (auto idx = 0; idx < key_pos; idx++) {
+          if (js.root->keys[key_pos] == key) {
+            key_pos = idx;
+            break;
+          }
+        }
+        if (key_pos < 0) {
+          js.root->keys.emplace_back(key);
+          key_pos = (int32_t)js.root->keys.size() - 1;
+        }
         js.root->objects[jsa->_object].emplace_back(
-            key, json_tree::json_value{});
+            key_pos, json_tree::json_value{});
         auto idx = (int)js.root->objects[jsa->_object].size() - 1;
         js.stack.push_back({jsa->_object, idx, false});
         return true;
@@ -2774,7 +2799,8 @@ inline bool next_item(json_citerator& js, string& key) {
       if (jsa->_type == json_type::object) {
         if (last.index < js.root->objects[jsa->_object].size()) {
           js.stack.push_back({jsa->_object, last.index + 1, true});
-          key = js.root->objects[jsa->_object][last.index + 1].first;
+          auto key_idx = js.root->objects[jsa->_object][last.index + 1].first;
+          key          = js.root->keys[key_idx];
           return true;
         } else {
           js.stack.push_back({jsa->_object, -1, true});
