@@ -1219,6 +1219,479 @@ inline bool get_value(json_ctview js, frame3f& value, string& error) {
 // -----------------------------------------------------------------------------
 namespace yocto {
 
+#define YOCTO_JSON_STREAM 1
+
+#if YOCTO_JSON_STREAM == 1
+
+// Save a scene in the builtin JSON format.
+static bool load_json_scene(const string& filename, sceneio_scene* scene,
+    string& error, const progress_callback& progress_cb, bool noparallel) {
+  auto json_error = [filename]() {
+    // error does not need setting
+    return false;
+  };
+  auto parse_error = [filename, &error]() {
+    error = filename + ": parse error (" + error + ")";
+    return false;
+  };
+  auto material_error = [filename, &error](string_view name) {
+    error = filename + ": missing material " + string{name};
+    return false;
+  };
+  auto dependent_error = [filename, &error]() {
+    error = filename + ": error in " + error;
+    return false;
+  };
+  auto key_error = [filename, &error](json_ctview js, string_view key) {
+    error = filename + ": parse error (" +
+            format_error(js, "unknown key " + string{key}) + ")";
+    return false;
+  };
+
+  // handle progress
+  auto progress = vec2i{0, 2};
+  if (progress_cb) progress_cb("load scene", progress.x++, progress.y);
+
+  // open file
+  auto js_tree = json_tree{};
+  if (!load_json(filename, js_tree, error)) return json_error();
+  auto js = get_croot(js_tree);
+
+  // reference disctionaries
+  auto texture_map = unordered_map<string, pair<sceneio_texture*, bool>>{
+      {"", {nullptr, true}}};
+  auto shape_map = unordered_map<string, pair<sceneio_shape*, bool>>{
+      {"", {nullptr, true}}};
+  auto material_map = unordered_map<string, pair<sceneio_material*, bool>>{
+      {"", {nullptr, true}}};
+
+  // parse json reference
+  auto get_shape = [scene, &shape_map](json_ctview js, sceneio_shape*& value,
+                       string& error) -> bool {
+    auto name = ""s;
+    if (!get_value(js, name, error)) return false;
+    auto it = shape_map.find(name);
+    if (it != shape_map.end()) {
+      value = it->second.first;
+      return it->second.first != nullptr;
+    }
+    auto shape      = add_shape(scene, name);
+    shape_map[name] = {shape, false};
+    value           = shape;
+    return true;
+  };
+
+  // parse json reference
+  auto get_material = [scene, &material_map](json_ctview js,
+                          sceneio_material*& value, string& error) -> bool {
+    auto name = ""s;
+    if (!get_value(js, name, error)) return false;
+    auto it = material_map.find(name);
+    if (it != material_map.end()) {
+      value = it->second.first;
+      return it->second.first != nullptr;
+    }
+    auto material      = add_material(scene, name);
+    material_map[name] = {material, false};
+    value              = material;
+    return true;
+  };
+
+  // parse json reference
+  auto get_texture = [scene, &texture_map](json_ctview js,
+                         sceneio_texture*& value, string& error) -> bool {
+    auto name = ""s;
+    if (!get_value(js, name, error)) return false;
+    auto it = texture_map.find(name);
+    if (it != texture_map.end()) {
+      value = it->second.first;
+      return it->second.first != nullptr;
+    }
+    auto texture      = add_texture(scene, name);
+    texture_map[name] = {texture, false};
+    value             = texture;
+    return true;
+  };
+
+  struct ply_instance {
+    vector<frame3f> frames = {};
+  };
+
+  // load json instance
+  auto ply_instances     = vector<unique_ptr<ply_instance>>{};
+  auto ply_instance_map  = unordered_map<string, ply_instance*>{{"", nullptr}};
+  auto instance_ply      = unordered_map<sceneio_instance*, ply_instance*>{};
+  auto get_ply_instances = [&ply_instances, &ply_instance_map, &instance_ply](
+                               json_ctview vjs, sceneio_instance* instance,
+                               string& error) -> bool {
+    auto name = ""s;
+    if (!get_value(vjs, name, error)) return false;
+    if (name.empty()) return true;
+    auto it = ply_instance_map.find(name);
+    if (it != ply_instance_map.end()) {
+      instance_ply[instance] = it->second;
+      return true;
+    }
+    auto ply_instance_ = ply_instances.emplace_back(new ply_instance()).get();
+    ply_instance_map[name] = ply_instance_;
+    instance_ply[instance] = ply_instance_;
+    return true;
+  };
+
+  // handle progress
+  if (progress_cb) progress_cb("load scene", progress.x++, progress.y);
+
+  // loop over external dictioaries
+  for (auto [mkey, mjs] : iterate_object(js)) {
+    if (mkey == "asset") {
+      if (!check_object(mjs, error)) return parse_error();
+      for (auto [vkey, vjs] : iterate_object(mjs)) {
+        if (vkey == "copyright") {
+          if (!get_value(vjs, scene->copyright, error)) return parse_error();
+        } else if (vkey == "generator") {
+          auto generator = string{};
+          if (!get_value(vjs, generator, error)) return parse_error();
+        } else {
+          return key_error(vjs, vkey);
+        }
+      }
+    } else if (mkey == "cameras") {
+      if (!check_object(mjs, error)) return parse_error();
+      for (auto [ekey, ejs] : iterate_object(mjs)) {
+        if (!check_object(ejs, error)) return parse_error();
+        auto camera  = add_camera(scene);
+        camera->name = ekey;
+        for (auto [vkey, vjs] : iterate_object(ejs)) {
+          if (vkey == "frame") {
+            if (!get_value(vjs, camera->frame, error)) return parse_error();
+          } else if (vkey == "orthographic") {
+            if (!get_value(vjs, camera->orthographic, error))
+              return parse_error();
+          } else if (vkey == "lens") {
+            if (!get_value(vjs, camera->lens, error)) return parse_error();
+          } else if (vkey == "aspect") {
+            if (!get_value(vjs, camera->aspect, error)) return parse_error();
+          } else if (vkey == "film") {
+            if (!get_value(vjs, camera->film, error)) return parse_error();
+          } else if (vkey == "focus") {
+            if (!get_value(vjs, camera->focus, error)) return parse_error();
+          } else if (vkey == "aperture") {
+            if (!get_value(vjs, camera->aperture, error)) return parse_error();
+          } else if (vkey == "lookat") {
+            if (!get_value(vjs, (mat3f&)camera->frame, error))
+              return parse_error();
+            camera->focus = length(camera->frame.x - camera->frame.y);
+            camera->frame = lookat_frame(
+                camera->frame.x, camera->frame.y, camera->frame.z);
+          } else {
+            return key_error(vjs, vkey);
+          }
+        }
+      }
+    } else if (mkey == "environments") {
+      if (!check_object(mjs, error)) return parse_error();
+      for (auto [ekey, ejs] : iterate_object(mjs)) {
+        if (!check_object(ejs, error)) return parse_error();
+        auto environment  = add_environment(scene);
+        environment->name = ekey;
+        for (auto [vkey, vjs] : iterate_object(ejs)) {
+          if (vkey == "frame") {
+            if (!get_value(vjs, environment->frame, error))
+              return parse_error();
+          } else if (vkey == "emission") {
+            if (!get_value(vjs, environment->emission, error))
+              return parse_error();
+          } else if (vkey == "emission_tex") {
+            if (!get_texture(vjs, environment->emission_tex, error))
+              return parse_error();
+          } else if (vkey == "lookat") {
+            if (!get_value(vjs, (mat3f&)environment->frame, error))
+              return parse_error();
+            environment->frame = lookat_frame(environment->frame.x,
+                environment->frame.y, environment->frame.z, true);
+          } else {
+            return key_error(vjs, vkey);
+          }
+        }
+      }
+    } else if (mkey == "materials") {
+      if (!check_object(mjs, error)) return parse_error();
+      for (auto [name, ejs] : iterate_object(mjs)) {
+        if (!check_object(ejs, error)) return parse_error();
+        auto material_it = material_map.find(string{name});
+        auto material    = (material_it == material_map.end())
+                            ? add_material(scene)
+                            : material_it->second.first;
+        material->name = name;
+        for (auto [vkey, vjs] : iterate_object(ejs)) {
+          if (vkey == "emission") {
+            if (!get_value(vjs, material->emission, error))
+              return parse_error();
+          } else if (vkey == "color") {
+            if (!get_value(vjs, material->color, error)) return parse_error();
+          } else if (vkey == "metallic") {
+            if (!get_value(vjs, material->metallic, error))
+              return parse_error();
+          } else if (vkey == "specular") {
+            if (!get_value(vjs, material->specular, error))
+              return parse_error();
+          } else if (vkey == "roughness") {
+            if (!get_value(vjs, material->roughness, error))
+              return parse_error();
+          } else if (vkey == "coat") {
+            if (!get_value(vjs, material->coat, error)) return parse_error();
+          } else if (vkey == "transmission") {
+            if (!get_value(vjs, material->transmission, error))
+              return parse_error();
+          } else if (vkey == "translucency") {
+            if (!get_value(vjs, material->translucency, error))
+              return parse_error();
+          } else if (vkey == "thin") {
+            if (!get_value(vjs, material->thin, error)) return parse_error();
+          } else if (vkey == "ior") {
+            if (!get_value(vjs, material->ior, error)) return parse_error();
+          } else if (vkey == "trdepth") {
+            if (!get_value(vjs, material->trdepth, error)) return parse_error();
+          } else if (vkey == "scattering") {
+            if (!get_value(vjs, material->scattering, error))
+              return parse_error();
+          } else if (vkey == "scanisotropy") {
+            if (!get_value(vjs, material->scanisotropy, error))
+              return parse_error();
+          } else if (vkey == "opacity") {
+            if (!get_value(vjs, material->opacity, error)) return parse_error();
+          } else if (vkey == "coat") {
+            if (!get_value(vjs, material->coat, error)) return parse_error();
+          } else if (vkey == "emission_tex") {
+            if (!get_texture(vjs, material->emission_tex, error))
+              return parse_error();
+          } else if (vkey == "color_tex") {
+            if (!get_texture(vjs, material->color_tex, error))
+              return parse_error();
+          } else if (vkey == "metallic_tex") {
+            if (!get_texture(vjs, material->metallic_tex, error))
+              return parse_error();
+          } else if (vkey == "specular_tex") {
+            if (!get_texture(vjs, material->specular_tex, error))
+              return parse_error();
+          } else if (vkey == "transmission_tex") {
+            if (!get_texture(vjs, material->transmission_tex, error))
+              return parse_error();
+          } else if (vkey == "translucency_tex") {
+            if (!get_texture(vjs, material->translucency_tex, error))
+              return parse_error();
+          } else if (vkey == "roughness_tex") {
+            if (!get_texture(vjs, material->roughness_tex, error))
+              return parse_error();
+          } else if (vkey == "scattering_tex") {
+            if (!get_texture(vjs, material->scattering_tex, error))
+              return parse_error();
+          } else if (vkey == "opacity_tex") {
+            if (!get_texture(vjs, material->opacity_tex, error))
+              return parse_error();
+          } else if (vkey == "normal_tex") {
+            if (!get_texture(vjs, material->normal_tex, error))
+              return parse_error();
+          } else {
+            return key_error(vjs, vkey);
+          }
+        }
+        material_map[material->name] = {material, true};
+      }
+    } else if (mkey == "instances") {
+      if (!check_object(mjs, error)) return parse_error();
+      for (auto [ekey, ejs] : iterate_object(mjs)) {
+        if (!check_object(ejs, error)) return parse_error();
+        auto instance  = add_instance(scene);
+        instance->name = ekey;
+        for (auto [vkey, vjs] : iterate_object(ejs)) {
+          if (vkey == "frame") {
+            if (!get_value(vjs, instance->frame, error)) return parse_error();
+          } else if (vkey == "lookat") {
+            if (!get_value(vjs, (mat3f&)instance->frame, error))
+              return parse_error();
+            instance->frame = lookat_frame(
+                instance->frame.x, instance->frame.y, instance->frame.z, true);
+          } else if (vkey == "material") {
+            if (!get_material(vjs, instance->material, error))
+              return parse_error();
+          } else if (vkey == "shape") {
+            if (!get_shape(vjs, instance->shape, error)) return parse_error();
+          } else if (vkey == "instance") {
+            if (!get_ply_instances(vjs, instance, error)) return parse_error();
+          } else if (vkey == "subdivisions") {
+            if (instance->shape) {
+              if (!get_value(vjs, instance->shape->subdivisions, error))
+                return parse_error();
+            }
+          } else if (vkey == "catmullcark") {
+            if (instance->shape) {
+              if (!get_value(vjs, instance->shape->catmullclark, error))
+                return parse_error();
+            }
+          } else if (vkey == "smooth") {
+            if (instance->shape) {
+              if (!get_value(vjs, instance->shape->smooth, error))
+                return parse_error();
+            }
+          } else if (vkey == "displacement") {
+            if (instance->shape) {
+              if (!get_value_if(ejs, "displacement",
+                      instance->shape->displacement, error))
+                return parse_error();
+            }
+          } else if (vkey == "displacement_tex") {
+            if (instance->shape) {
+              if (!get_texture(vjs, instance->shape->displacement_tex, error))
+                return parse_error();
+            }
+          } else {
+            return key_error(vjs, vkey);
+          }
+        }
+      }
+#if 0
+    } else if (mkey == "objects") {
+      auto mjs = get_element(js, "objects");
+      if (!check_object(mjs, error)) return parse_error();
+      for (auto [name, ejs] : iterate_object(mjs)) {
+        if (!check_object(ejs, error)) return parse_error();
+        auto instance  = add_instance(scene);
+        instance->name = name;
+      if (vkey == "frame") {
+        if (!get_value(vjs, instance->frame, error)) return parse_error();
+        if (has_element(ejs, "lookat")) {
+          auto lookat = identity3x3f;
+        } else if (vkey == "lookat") {
+          if (!get_value(vjs, lookat, error)) return parse_error();
+          instance->frame = lookat_frame(lookat.x, lookat.y, lookat.z, true);
+        }
+        if (!get_reference_if(
+                ejs, "material", instance->material, material_map, error))
+          return parse_error();
+        if (!get_shape_if(ejs, "shape", instance->shape, error))
+          return parse_error();
+        if (!get_ply_instances_if(ejs, "instance", instance, error))
+          return parse_error();
+        if (instance->shape != nullptr) {
+          if (!get_value_if(
+                  ejs, "subdivisions", instance->shape->subdivisions, error))
+            return parse_error();
+          if (!get_value_if(
+                  ejs, "catmullcark", instance->shape->catmullclark, error))
+            return parse_error();
+        } else if (vkey == "smooth") {
+          if (!get_value(vjs, instance->shape->smooth, error))
+            return parse_error();
+          if (!get_value_if(
+                  ejs, "displacement", instance->shape->displacement, error))
+            return parse_error();
+        } else if (vkey == "displacement_tex") {
+          if (!get_texture(vjs, instance->shape->displacement_tex, error))
+            return parse_error();
+        } else {
+          return key_error(vjs, vkey);
+        }
+      }
+#endif
+    } else {
+      return key_error(mjs, mkey);
+    }
+  }
+
+  // check materials
+  for (auto& [key, value] : material_map) {
+    if (!value.second) return material_error(key);
+  }
+
+  // handle progress
+  progress.y += scene->shapes.size();
+  progress.y += scene->textures.size();
+  progress.y += ply_instances.size();
+
+  // get filename from name
+  auto make_filename = [filename](const string& name, const string& group,
+                           const vector<string>& extensions) {
+    for (auto& extension : extensions) {
+      auto filepath = path_join(
+          path_dirname(filename), group, name + extension);
+      if (path_exists(filepath)) return filepath;
+    }
+    return path_join(path_dirname(filename), group, name + extensions.front());
+  };
+
+  // load shapes
+  shape_map.erase("");
+  for (auto [name, value] : shape_map) {
+    auto shape = value.first;
+    if (progress_cb) progress_cb("load shape", progress.x++, progress.y);
+    auto path = make_filename(name, "shapes", {".ply", ".obj"});
+    if (!load_shape(path, shape->points, shape->lines, shape->triangles,
+            shape->quads, shape->quadspos, shape->quadsnorm,
+            shape->quadstexcoord, shape->positions, shape->normals,
+            shape->texcoords, shape->colors, shape->radius, error,
+            shape->catmullclark && shape->subdivisions > 0))
+      return dependent_error();
+  }
+  // load textures
+  texture_map.erase("");
+  for (auto [name, value] : texture_map) {
+    auto texture = value.first;
+    if (progress_cb) progress_cb("load texture", progress.x++, progress.y);
+    auto path = make_filename(
+        name, "textures", {".hdr", ".exr", ".png", ".jpg"});
+    if (!load_image(path, texture->hdr, texture->ldr, error))
+      return dependent_error();
+  }
+
+  // load instances
+  ply_instance_map.erase("");
+  for (auto [name, instance] : ply_instance_map) {
+    if (progress_cb) progress_cb("load instance", progress.x++, progress.y);
+    auto path = make_filename(name, "instances", {".ply"});
+    if (!load_instance(path, instance->frames, error)) return dependent_error();
+  }
+
+  // apply instances
+  if (!ply_instances.empty()) {
+    if (progress_cb)
+      progress_cb("flatten instances", progress.x++, progress.y++);
+    auto instances = scene->instances;
+    scene->instances.clear();
+    for (auto instance : instances) {
+      auto it = instance_ply.find(instance);
+      if (it == instance_ply.end()) {
+        auto ninstance      = add_instance(scene, instance->name);
+        ninstance->frame    = instance->frame;
+        ninstance->shape    = instance->shape;
+        ninstance->material = instance->material;
+      } else {
+        auto ply_instance = it->second;
+        for (auto& frame : ply_instance->frames) {
+          auto ninstance      = add_instance(scene, instance->name);
+          ninstance->frame    = frame * instance->frame;
+          ninstance->shape    = instance->shape;
+          ninstance->material = instance->material;
+        }
+      }
+    }
+    for (auto instance : instances) delete instance;
+  }
+
+  // fix scene
+  if (scene->name.empty()) scene->name = path_basename(filename);
+  add_cameras(scene);
+  add_radius(scene);
+  add_materials(scene);
+  trim_memory(scene);
+
+  // done
+  if (progress_cb) progress_cb("load scene", progress.x++, progress.y);
+  return true;
+}
+
+#else
+
 // Save a scene in the builtin JSON format.
 static bool load_json_scene(const string& filename, sceneio_scene* scene,
     string& error, const progress_callback& progress_cb, bool noparallel) {
@@ -1649,6 +2122,8 @@ static bool load_json_scene(const string& filename, sceneio_scene* scene,
   if (progress_cb) progress_cb("load scene", progress.x++, progress.y);
   return true;
 }
+
+#endif
 
 // Save a scene in the builtin JSON format.
 static bool save_json_scene(const string& filename, const sceneio_scene* scene,
