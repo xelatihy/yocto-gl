@@ -1381,6 +1381,9 @@ static bool load_json_scene(const string& filename, sceneio_scene* scene,
             get_value(js, camera->frame);
           } else if (key == "orthographic") {
             get_value(js, camera->orthographic);
+          } else if (key == "ortho") {
+            // backward compatibility
+            get_value(js, camera->orthographic);
           } else if (key == "lens") {
             get_value(js, camera->lens);
           } else if (key == "aspect") {
@@ -2107,7 +2110,7 @@ static bool save_json_scene(const string& filename, const sceneio_scene* scene,
         append_value(js, "frame", camera->frame);
       }
       if (camera->orthographic != def_cam.orthographic) {
-        append_value(js, "ortho", camera->orthographic);
+        append_value(js, "orthographic", camera->orthographic);
       }
       if (camera->lens != def_cam.lens) {
         append_value(js, "lens", camera->lens);

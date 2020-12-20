@@ -2500,6 +2500,14 @@ inline const json_tree::json_value* _get_value(json_citerator& js) {
     return nullptr;
   }
 }
+inline bool _set_error(json_iterator& js, string_view error) {
+  set_error(js, error);
+  return false;
+}
+inline bool _set_error(json_citerator& js, string_view error) {
+  set_error(js, error);
+  return false;
+}
 
 // Error handling
 inline bool   is_valid(json_iterator& js) { return js.valid; }
@@ -2526,7 +2534,10 @@ inline string get_path(json_iterator& js) {
     auto path  = string{};
     auto first = true;
     for (auto elem : js.stack) {
-      if (first) { first = false; continue; }
+      if (first) {
+        first = false;
+        continue;
+      }
       if (elem.array) {
         path += "/" + std::to_string(elem.index);
       } else {
@@ -2551,7 +2562,10 @@ inline string get_path(json_citerator& js) {
     auto path  = string{};
     auto first = true;
     for (auto elem : js.stack) {
-      if (first) { first = false; continue; }
+      if (first) {
+        first = false;
+        continue;
+      }
       if (elem.array) {
         path += "/" + std::to_string(elem.index);
       } else {
@@ -2569,106 +2583,86 @@ inline string get_path(json_citerator& js) {
 
 // Setting values
 inline bool set_null(json_iterator& js) {
-  if (auto jsv = _get_value(js); jsv) {
-    jsv->_type = json_type::null;
-    return true;
-  } else {
-    return false;
-  }
+  if (!is_valid(js)) return false;
+  auto jsv   = _get_value(js);
+  jsv->_type = json_type::null;
+  return true;
 }
 inline bool set_integer(json_iterator& js, int64_t value) {
-  if (auto jsv = _get_value(js); jsv) {
-    jsv->_type    = json_type::integer;
-    jsv->_integer = value;
-    return true;
-  } else {
-    return false;
-  }
+  if (!is_valid(js)) return false;
+  auto jsv      = _get_value(js);
+  jsv->_type    = json_type::integer;
+  jsv->_integer = value;
+  return true;
 }
 inline bool set_unsigned(json_iterator& js, uint64_t value) {
-  if (auto jsv = _get_value(js); jsv) {
-    jsv->_type     = json_type::unsigned_;
-    jsv->_unsigned = value;
-    return true;
-  } else {
-    return false;
-  }
+  if (!is_valid(js)) return false;
+  auto jsv       = _get_value(js);
+  jsv->_type     = json_type::unsigned_;
+  jsv->_unsigned = value;
+  return true;
 }
 inline bool set_real(json_iterator& js, double value) {
-  if (auto jsv = _get_value(js); jsv) {
-    jsv->_type = json_type::real;
-    jsv->_real = value;
-    return true;
-  } else {
-    return false;
-  }
+  if (!is_valid(js)) return false;
+  auto jsv   = _get_value(js);
+  jsv->_type = json_type::real;
+  jsv->_real = value;
+  return true;
 }
 inline bool set_boolean(json_iterator& js, bool value) {
-  if (auto jsv = _get_value(js); jsv) {
-    jsv->_type    = json_type::boolean;
-    jsv->_boolean = value;
-    return true;
-  } else {
-    return false;
-  }
+  if (!is_valid(js)) return false;
+  auto jsv      = _get_value(js);
+  jsv->_type    = json_type::boolean;
+  jsv->_boolean = value;
+  return true;
 }
 inline bool set_string(json_iterator& js, const string& value) {
-  if (auto jsv = _get_value(js); jsv) {
-    if (jsv->_type == json_type::string_) {
-      js.root->strings[jsv->_string] = value;
-    } else {
-      jsv->_type = json_type::string_;
-      js.root->strings.push_back(value);
-      jsv->_string = (int)js.root->strings.size() - 1;
-    }
-    return true;
+  if (!is_valid(js)) return false;
+  auto jsv = _get_value(js);
+  if (jsv->_type == json_type::string_) {
+    js.root->strings[jsv->_string] = value;
   } else {
-    return false;
+    jsv->_type = json_type::string_;
+    js.root->strings.push_back(value);
+    jsv->_string = (int)js.root->strings.size() - 1;
   }
+  return true;
 }
 inline bool set_integral(json_iterator& js, int64_t value) {
-  if (auto jsv = _get_value(js); jsv) {
-    jsv->_type    = json_type::integer;
-    jsv->_integer = value;
-    return true;
-  } else {
-    return false;
-  }
+  if (!is_valid(js)) return false;
+  auto jsv      = _get_value(js);
+  jsv->_type    = json_type::integer;
+  jsv->_integer = value;
+  return true;
 }
 inline bool set_integral(json_iterator& js, uint64_t value) {
-  if (auto jsv = _get_value(js); jsv) {
-    jsv->_type     = json_type::unsigned_;
-    jsv->_unsigned = value;
-    return true;
-  } else {
-    return false;
-  }
+  if (!is_valid(js)) return false;
+  auto jsv       = _get_value(js);
+  jsv->_type     = json_type::unsigned_;
+  jsv->_unsigned = value;
+  return true;
 }
 inline bool set_number(json_iterator& js, double value) {
-  if (auto jsv = _get_value(js); jsv) {
-    jsv->_type = json_type::real;
-    jsv->_real = value;
-    return true;
-  } else {
-    return false;
-  }
+  if (!is_valid(js)) return false;
+  auto jsv   = _get_value(js);
+  jsv->_type = json_type::real;
+  jsv->_real = value;
+  return true;
 }
 
 // Setting arrays
 inline bool begin_array(json_iterator& js) {
-  if (auto jsv = _get_value(js); jsv) {
-    if (jsv->_type == json_type::array) {
-      js.root->arrays[jsv->_array].clear();
-    } else {
-      jsv->_type = json_type::array;
-      js.root->arrays.emplace_back();
-      jsv->_array = (int)js.root->arrays.size() - 1;
-    }
-    js.stack.push_back({(int32_t)jsv->_array, -1, true});
-    return true;
+  if (!is_valid(js)) return false;
+  auto jsv = _get_value(js);
+  if (jsv->_type == json_type::array) {
+    js.root->arrays[jsv->_array].clear();
   } else {
-    return false;
+    jsv->_type = json_type::array;
+    js.root->arrays.emplace_back();
+    jsv->_array = (int)js.root->arrays.size() - 1;
   }
+  js.stack.push_back({(int32_t)jsv->_array, -1, true});
+  return true;
 }
 inline bool end_array(json_iterator& js) {
   if (auto jsv = _get_value(js); jsv) {
@@ -2705,64 +2699,41 @@ inline auto set_array(json_iterator& js) {
 }
 inline bool append_item(json_iterator& js) {
   // handle first element as an exceeption
-  if (is_valid(js)) {
-    if (js.stack.size() >= 2) {
-      js.stack.pop_back();
-      if (auto jsv = _get_value(js); jsv) {
-        if (jsv->_type == json_type::array) {
-          js.root->arrays[jsv->_array].emplace_back();
-          auto idx = (int)js.root->arrays[jsv->_array].size() - 1;
-          js.stack.push_back({jsv->_array, idx, true});
-          return true;
-        } else {
-          set_error(js, "bad stack - array expected");
-          return false;
-        }
-      } else {
-        set_error(js, "bad stack - array expected");
-        return false;
-      }
-    } else {
-      set_error(js, "bad stack - array expected");
-      return false;
-    }
-  } else {
-    return false;
-  }
+  if (!is_valid(js)) return false;
+  if (js.stack.size() < 2) return _set_error(js, "bad stack - array expected");
+  js.stack.pop_back();
+  auto jsv = _get_value(js);
+  if (jsv->_type != json_type::array)
+    return _set_error(js, "bad stack - array expected");
+  js.root->arrays[jsv->_array].emplace_back();
+  auto idx = (int)js.root->arrays[jsv->_array].size() - 1;
+  js.stack.push_back({jsv->_array, idx, true});
+  return true;
 }
 
 // Setting objects
 inline bool begin_object(json_iterator& js) {
-  if (auto jsv = _get_value(js); jsv) {
-    if (jsv->_type == json_type::object) {
-      js.root->objects[jsv->_object].clear();
-    } else {
-      jsv->_type = json_type::object;
-      js.root->objects.emplace_back();
-      jsv->_object = (int)js.root->objects.size() - 1;
-    }
-    js.stack.push_back({jsv->_object, -1, false});
-    return true;
+  if (!is_valid(js)) return false;
+  auto jsv = _get_value(js);
+  if (jsv->_type == json_type::object) {
+    js.root->objects[jsv->_object].clear();
   } else {
-    return false;
+    jsv->_type = json_type::object;
+    js.root->objects.emplace_back();
+    jsv->_object = (int)js.root->objects.size() - 1;
   }
+  js.stack.push_back({jsv->_object, -1, false});
+  return true;
 }
 inline bool end_object(json_iterator& js) {
-  if (auto jsv = _get_value(js); jsv) {
-    js.stack.pop_back();
-    if (auto jsa = _get_value(js); jsa) {
-      if (jsa->_type == json_type::object) {
-        return true;
-      } else {
-        set_error(js, "bad stack - object expected");
-        return false;
-      }
-    } else {
-      return false;
-    }
-  } else {
-    return false;
-  }
+  // handle first element as an exceeption
+  if (!is_valid(js)) return false;
+  if (js.stack.size() < 2) return _set_error(js, "bad stack - object expected");
+  js.stack.pop_back();
+  auto jsv = _get_value(js);
+  if (jsv->_type != json_type::object)
+    return _set_error(js, "bad stack - object expected");
+  return true;
 }
 inline auto set_object(json_iterator& js) {
   struct riia_wrapper {
@@ -2782,42 +2753,24 @@ inline auto set_object(json_iterator& js) {
 }
 inline bool append_item(json_iterator& js, const string& key) {
   // handle first element as an exceeption
-  if (is_valid(js)) {
-    if (js.stack.size() >= 2) {
-      js.stack.pop_back();
-      if (auto jsv = _get_value(js); jsv) {
-        if (jsv->_type == json_type::object) {
-          auto key_pos = (int32_t)-1;
-          for (auto idx = 0; idx < js.root->keys.size(); idx++) {
-            if (js.root->keys[key_pos] == key) {
-              key_pos = idx;
-              break;
-            }
-          }
-          if (key_pos < 0) {
-            js.root->keys.emplace_back(key);
-            key_pos = (int32_t)js.root->keys.size() - 1;
-          }
-          js.root->objects[jsv->_object].emplace_back(
-              key_pos, json_tree::json_value{});
-          auto idx = (int)js.root->objects[jsv->_object].size() - 1;
-          js.stack.push_back({jsv->_object, idx, false});
-          return true;
-        } else {
-          set_error(js, "bad stack - object expected");
-          return false;
-        }
-      } else {
-        set_error(js, "bad stack - object expected");
-        return false;
-      }
-    } else {
-      set_error(js, "bad stack - object expected");
-      return false;
-    }
-  } else {
-    return true;
+  if (!is_valid(js)) return false;
+  if (js.stack.size() < 2) return _set_error(js, "bad stack - object expected");
+  js.stack.pop_back();
+  auto jsv = _get_value(js);
+  if (jsv->_type != json_type::object)
+    return _set_error(js, "bad stack - object expected");
+  auto key_pos = (int32_t)-1;
+  for (auto idx = 0; idx < js.root->keys.size() && key_pos < 0; idx++) {
+    if (js.root->keys[key_pos] == key) key_pos = idx;
   }
+  if (key_pos < 0) {
+    js.root->keys.emplace_back(key);
+    key_pos = (int32_t)js.root->keys.size() - 1;
+  }
+  js.root->objects[jsv->_object].emplace_back(key_pos, json_tree::json_value{});
+  auto idx = (int)js.root->objects[jsv->_object].size() - 1;
+  js.stack.push_back({jsv->_object, idx, false});
+  return true;
 }
 
 // Setting values
@@ -2872,234 +2825,141 @@ inline bool set_value(json_iterator& js, const array<T, N>& value) {
 // Helpers for arrays
 template <typename T>
 inline bool append_value(json_iterator& js, const T& value) {
-  if (append_item(js)) {
-    return set_value(js, value);
-  } else {
-    return false;
-  }
+  if (!append_item(js)) return false;
+  return set_value(js, value);
 }
 inline auto append_object(json_iterator& js) {
-  if (append_item(js)) {
-    return set_object(js);
-  } else {
-    return set_object(js);  // FIXME
-  }
+  if (!append_item(js)) return set_object(js);  // FIXME
+  return set_object(js);
 }
 inline auto append_array(json_iterator& js) {
-  if (append_item(js)) {
-    return set_array(js);
-  } else {
-    return set_array(js);  // FIXME
-  }
+  if (append_item(js)) return set_array(js);  // FIXME
+  return set_array(js);
 }
 
 // Helpers for objects
 template <typename T>
 inline bool append_value(json_iterator& js, const string& key, const T& value) {
-  if (append_item(js, key)) {
-    return set_value(js, value);
-  } else {
-    return false;
-  }
+  if (!append_item(js, key)) return false;
+  return set_value(js, value);
 }
 inline auto append_object(json_iterator& js, const string& key) {
-  if (append_item(js, key)) {
-    return set_object(js);
-  } else {
-    return set_object(js);  // FIXME
-  }
+  if (append_item(js, key)) return set_object(js);  // FIXME
+  return set_object(js);
 }
 inline auto append_array(json_iterator& js, const string& key) {
-  if (append_item(js, key)) {
-    return set_array(js);
-  } else {
-    return set_array(js);  // FIXME
-  }
+  if (append_item(js, key)) return set_array(js);  // FIXME
+  return set_array(js);
 }
 
 // Getting values
 inline bool get_null(json_citerator& js) {
-  if (auto jsv = _get_value(js); jsv) {
-    if (jsv->_type == json_type::null) {
-      return true;
-    } else {
-      set_error(js, "null expected");
-      return false;
-    }
-  } else {
-    return false;
-  }
+  if (!is_valid(js)) return false;
+  auto jsv = _get_value(js);
+  if (jsv->_type != json_type::null) return _set_error(js, "null expected");
+  return true;
 }
 inline bool get_integer(json_citerator& js, int64_t& value) {
-  if (auto jsv = _get_value(js); jsv) {
-    if (jsv->_type == json_type::integer) {
-      value = jsv->_integer;
-      return true;
-    } else {
-      set_error(js, "integer expected");
-      return false;
-    }
-  } else {
-    return false;
-  }
+  if (!is_valid(js)) return false;
+  auto jsv = _get_value(js);
+  if (jsv->_type != json_type::integer)
+    return _set_error(js, "integer expected");
+  value = jsv->_integer;
+  return true;
 }
 inline bool get_unsigned(json_citerator& js, uint64_t& value) {
-  if (auto jsv = _get_value(js); jsv) {
-    if (jsv->_type == json_type::unsigned_) {
-      value = jsv->_unsigned;
-      return true;
-    } else {
-      set_error(js, "unsigned expected");
-      return false;
-    }
-  } else {
-    return false;
-  }
+  if (!is_valid(js)) return false;
+  auto jsv = _get_value(js);
+  if (jsv->_type != json_type::unsigned_)
+    return _set_error(js, "unsigned expected");
+  value = jsv->_unsigned;
+  return true;
 }
 inline bool get_real(json_citerator& js, double& value) {
-  if (auto jsv = _get_value(js); jsv) {
-    if (jsv->_type == json_type::real) {
-      value = jsv->_real;
-      return true;
-    } else {
-      set_error(js, "real expected");
-      return false;
-    }
-  } else {
-    return false;
-  }
+  if (!is_valid(js)) return false;
+  auto jsv = _get_value(js);
+  if (jsv->_type != json_type::real) return _set_error(js, "real expected");
+  value = jsv->_real;
+  return true;
 }
 inline bool get_boolean(json_citerator& js, bool& value) {
-  if (auto jsv = _get_value(js); jsv) {
-    if (jsv->_type == json_type::boolean) {
-      value = jsv->_boolean;
-      return true;
-    } else {
-      set_error(js, "null expected");
-      return false;
-    }
-  } else {
-    return false;
-  }
+  if (!is_valid(js)) return false;
+  auto jsv = _get_value(js);
+  if (jsv->_type != json_type::boolean)
+    return _set_error(js, "boolean expected");
+  value = jsv->_boolean;
+  return true;
 }
 inline bool get_string(json_citerator& js, string& value) {
-  if (auto jsv = _get_value(js); jsv) {
-    if (jsv->_type == json_type::string_) {
-      value = js.root->strings[jsv->_string];
-      return true;
-    } else {
-      set_error(js, "null expected");
-      return false;
-    }
-  } else {
-    return false;
-  }
+  if (!is_valid(js)) return false;
+  auto jsv = _get_value(js);
+  if (jsv->_type != json_type::string_)
+    return _set_error(js, "string expected");
+  value = js.root->strings[jsv->_string];
+  return true;
 }
 inline bool get_integral(json_citerator& js, int64_t& value) {
-  if (auto jsv = _get_value(js); jsv) {
-    if (jsv->_type == json_type::integer) {
-      value = (int64_t)jsv->_integer;
-      return true;
-    } else if (jsv->_type == json_type::unsigned_) {
-      value = (int64_t)jsv->_unsigned;
-      return true;
-    } else {
-      set_error(js, "integer expected");
-      return false;
-    }
-  } else {
-    return false;
-  }
+  if (!is_valid(js)) return false;
+  auto jsv = _get_value(js);
+  if (jsv->_type != json_type::integer && jsv->_type != json_type::unsigned_)
+    return _set_error(js, "integral expected");
+  value = (jsv->_type == json_type::integer) ? (int64_t)jsv->_integer
+                                             : (int64_t)jsv->_unsigned;
+  return true;
 }
 inline bool get_integral(json_citerator& js, uint64_t& value) {
-  if (auto jsv = _get_value(js); jsv) {
-    if (jsv->_type == json_type::unsigned_) {
-      value = (uint64_t)jsv->_unsigned;
-      return true;
-    } else if (jsv->_type == json_type::integer) {
-      value = (uint64_t)jsv->_integer;
-      return true;
-    } else {
-      set_error(js, "unsigned expected");
-      return false;
-    }
-  } else {
-    return false;
-  }
+  if (!is_valid(js)) return false;
+  auto jsv = _get_value(js);
+  if (jsv->_type != json_type::integer && jsv->_type != json_type::unsigned_)
+    return _set_error(js, "integral expected");
+  value = (jsv->_type == json_type::integer) ? (uint64_t)jsv->_integer
+                                             : (uint64_t)jsv->_unsigned;
+  return true;
 }
 inline bool get_number(json_citerator& js, double& value) {
-  if (auto jsv = _get_value(js); jsv) {
-    if (jsv->_type == json_type::real) {
-      value = (double)jsv->_real;
-      return true;
-    } else if (jsv->_type == json_type::integer) {
-      value = (double)jsv->_integer;
-      return true;
-    } else if (jsv->_type == json_type::unsigned_) {
-      value = (double)jsv->_unsigned;
-      return true;
-    } else {
-      set_error(js, "real expected");
-      return false;
-    }
-  } else {
-    return false;
-  }
+  if (!is_valid(js)) return false;
+  auto jsv = _get_value(js);
+  if (jsv->_type != json_type::real && jsv->_type != json_type::integer &&
+      jsv->_type != json_type::unsigned_)
+    return _set_error(js, "number expected");
+  value = (jsv->_type == json_type::real)
+              ? (double)jsv->_real
+              : (jsv->_type == json_type::integer) ? (double)jsv->_integer
+                                                   : (double)jsv->_unsigned;
+  return true;
 }
 // Getting arrays
 inline bool begin_array(json_citerator& js) {
-  if (auto jsv = _get_value(js); jsv) {
-    if (jsv->_type == json_type::array) {
-      js.stack.push_back({(int32_t)jsv->_array, -1, true});
-      return true;
-    } else {
-      set_error(js, "array expected");
-      return false;
-    }
-  } else {
-    return false;
-  }
+  if (!is_valid(js)) return false;
+  auto jsv = _get_value(js);
+  if (jsv->_type != json_type::array) return _set_error(js, "array expected");
+  js.stack.push_back({(int32_t)jsv->_array, -1, true});
+  return true;
 }
 inline bool end_array(json_citerator& js) {
-  if (auto jsv = _get_value(js); jsv) {
-    js.stack.pop_back();
-    if (auto jsa = _get_value(js); jsa) {
-      if (jsa->_type == json_type::array) {
-        return true;
-      } else {
-        set_error(js, "bad stack - array expected");
-        return false;
-      }
-    } else {
-      return false;
-    }
-  } else {
-    return false;
-  }
+  // handle first element of the stack
+  if (!is_valid(js)) return false;
+  if (js.stack.size() < 2) return _set_error(js, "bad stack - array expected");
+  js.stack.pop_back();
+  auto jsv = _get_value(js);
+  if (jsv->_type != json_type::array) return _set_error(js, "array expected");
+  return true;
 }
 inline bool next_element(json_citerator& js, int64_t& idx) {
-  if (auto jsv = _get_value(js); jsv) {
-    auto last = js.stack.back();
-    js.stack.pop_back();
-    if (auto jsa = _get_value(js); jsa) {
-      if (jsa->_type == json_type::array) {
-        if (last.index < js.root->arrays[jsa->_array].size()) {
-          js.stack.push_back({jsa->_array, last.index + 1, true});
-          idx = last.index + 1;
-          return true;
-        } else {
-          js.stack.push_back({jsa->_array, -1, true});
-          idx = -1;
-          return false;
-        }
-      } else {
-        set_error(js, "bad stack - array expected");
-        return false;
-      }
-    } else {
-      return false;
-    }
+  // handle first element of the stack
+  if (!is_valid(js)) return false;
+  if (js.stack.size() < 2) return _set_error(js, "bad stack - array expected");
+  auto last = js.stack.back();
+  js.stack.pop_back();
+  auto jsv = _get_value(js);
+  if (jsv->_type != json_type::array) return _set_error(js, "array expected");
+  if (last.index < js.root->arrays[jsv->_array].size()) {
+    js.stack.push_back({jsv->_array, last.index + 1, true});
+    idx = last.index + 1;
+    return true;
   } else {
+    js.stack.push_back({jsv->_array, -1, true});
+    idx = -1;
     return false;
   }
 }
@@ -3136,74 +2996,48 @@ inline auto iterate_array(json_citerator& js) {
     iterator        begin() { return {js, begin_}; }
     iterator        end() { return {js, end_}; }
   };
-  if (auto jsv = _get_value(js); jsv) {
-    if (jsv->_type == json_type::array) {
-      return iterator_wrapper{
-          &js, 0, (int64_t)js.root->arrays[jsv->_array].size()};
-    } else {
-      set_error(js, "array expected");
-      return iterator_wrapper{nullptr, 0, 0};
-    }
-  } else {
+  if (!is_valid(js)) return iterator_wrapper{nullptr, 0, 0};
+  auto jsv = _get_value(js);
+  if (jsv->_type != json_type::array) {
+    _set_error(js, "array expected");
     return iterator_wrapper{nullptr, 0, 0};
   }
+  return iterator_wrapper{&js, 0, (int64_t)js.root->arrays[jsv->_array].size()};
 }
 
 // Getting objects
 inline bool begin_object(json_citerator& js) {
-  if (auto jsv = _get_value(js); jsv) {
-    if (jsv->_type == json_type::object) {
-      js.stack.push_back({jsv->_object, -1, true});
-      return true;
-    } else {
-      set_error(js, "object expected");
-      return false;
-    }
-  } else {
-    return false;
-  }
+  if (!is_valid(js)) return false;
+  auto jsv = _get_value(js);
+  if (jsv->_type != json_type::array) return _set_error(js, "object expected");
+  js.stack.push_back({jsv->_object, -1, true});
+  return true;
 }
 inline bool end_object(json_citerator& js) {
-  if (auto jsv = _get_value(js); jsv) {
-    js.stack.pop_back();
-    if (auto jsa = _get_value(js); jsa) {
-      if (jsa->_type == json_type::object) {
-        return true;
-      } else {
-        set_error(js, "bad stack - object expected");
-        return false;
-      }
-    } else {
-      return false;
-    }
-  } else {
-    return false;
-  }
+  // handle first element of the stack
+  if (!is_valid(js)) return false;
+  if (js.stack.size() < 2) return _set_error(js, "bad stack - object expected");
+  js.stack.pop_back();
+  auto jsv = _get_value(js);
+  if (jsv->_type != json_type::object) return _set_error(js, "object expected");
+  return true;
 }
 inline bool next_item(json_citerator& js, string& key) {
-  if (auto jsv = _get_value(js); jsv) {
-    auto last = js.stack.back();
-    js.stack.pop_back();
-    if (auto jsa = _get_value(js); jsa) {
-      if (jsa->_type == json_type::object) {
-        if (last.index < js.root->objects[jsa->_object].size()) {
-          js.stack.push_back({jsa->_object, last.index + 1, true});
-          auto key_idx = js.root->objects[jsa->_object][last.index + 1].first;
-          key          = js.root->keys[key_idx];
-          return true;
-        } else {
-          js.stack.push_back({jsa->_object, -1, true});
-          key = "";
-          return false;
-        }
-      } else {
-        set_error(js, "bad stack - object expected");
-        return false;
-      }
-    } else {
-      return false;
-    }
+  // handle first element of the stack
+  if (!is_valid(js)) return false;
+  if (js.stack.size() < 2) return _set_error(js, "bad stack - object expected");
+  auto last = js.stack.back();
+  js.stack.pop_back();
+  auto jsv = _get_value(js);
+  if (jsv->_type != json_type::object) return _set_error(js, "object expected");
+  if (last.index < js.root->objects[jsv->_object].size()) {
+    js.stack.push_back({jsv->_object, last.index + 1, true});
+    auto key_idx = js.root->objects[jsv->_object][last.index + 1].first;
+    key          = js.root->keys[key_idx];
+    return true;
   } else {
+    js.stack.push_back({jsv->_object, -1, true});
+    key = "";
     return false;
   }
 }
@@ -3241,17 +3075,14 @@ inline auto iterate_object(json_citerator& js) {
     iterator        begin() { return {js, begin_}; }
     iterator        end() { return {js, end_}; }
   };
-  if (auto jsv = _get_value(js); jsv) {
-    if (jsv->_type == json_type::object) {
-      return iterator_wrapper{
-          &js, 0, (int64_t)js.root->objects[jsv->_object].size()};
-    } else {
-      set_error(js, "object expected");
-      return iterator_wrapper{nullptr, 0, 0};
-    }
-  } else {
+  if (!is_valid(js)) return iterator_wrapper{nullptr, 0, 0};
+  auto jsv = _get_value(js);
+  if (jsv->_type != json_type::object) {
+    _set_error(js, "object expected");
     return iterator_wrapper{nullptr, 0, 0};
   }
+  return iterator_wrapper{
+      &js, 0, (int64_t)js.root->objects[jsv->_object].size()};
 }
 
 // Getting values
