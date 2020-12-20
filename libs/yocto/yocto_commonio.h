@@ -2508,13 +2508,13 @@ inline string get_error(json_iterator& js) { return js.error; }
 inline string get_error(json_citerator& js) { return js.error; }
 inline void   set_error(json_iterator& js, string_view error) {
   if (!js.valid) return;
-  js.valid = true;
-  js.error = string{error};
+  js.valid = false;
+  js.error = string{error} + " at " + get_path(js);
 }
 inline void set_error(json_citerator& js, string_view error) {
   if (!js.valid) return;
-  js.valid = true;
-  js.error = string{error};
+  js.valid = false;
+  js.error = string{error} + " at " + get_path(js);
 }
 inline string get_path(json_iterator& js) {
   if (js.stack.size() == 0) {
@@ -2526,13 +2526,16 @@ inline string get_path(json_iterator& js) {
     auto path  = string{};
     auto first = true;
     for (auto elem : js.stack) {
-      if (first) continue;
-      first = false;
+      if (first) { first = false; continue; }
       if (elem.array) {
         path += "/" + std::to_string(elem.index);
       } else {
-        path += "/" +
-                js.root->keys[js.root->objects[elem.group][elem.index].first];
+        if (elem.index >= 0) {
+          path += "/" +
+                  js.root->keys[js.root->objects[elem.group][elem.index].first];
+        } else {
+          path += "/<unknown>";
+        }
       }
     }
     return path;
@@ -2548,13 +2551,16 @@ inline string get_path(json_citerator& js) {
     auto path  = string{};
     auto first = true;
     for (auto elem : js.stack) {
-      if (first) continue;
-      first = false;
+      if (first) { first = false; continue; }
       if (elem.array) {
         path += "/" + std::to_string(elem.index);
       } else {
-        path += "/" +
-                js.root->keys[js.root->objects[elem.group][elem.index].first];
+        if (elem.index >= 0) {
+          path += "/" +
+                  js.root->keys[js.root->objects[elem.group][elem.index].first];
+        } else {
+          path += "/<unknown>";
+        }
       }
     }
     return path;
@@ -3102,6 +3108,7 @@ inline auto iterate_array(json_citerator& js) {
     json_citerator* js    = nullptr;
     int64_t         index = 0;
     bool            operator!=(const iterator& other) {
+      if (js == nullptr || !is_valid(*js)) return false;
       auto exit = index == other.index;
       if (exit) {  // exit
         if (other.index != 0) js->stack.pop_back();
@@ -3113,7 +3120,7 @@ inline auto iterate_array(json_citerator& js) {
       return *this;
     }
     uint64_t operator*() const {
-      if (!js) return 0;
+      if (js == nullptr || !is_valid(*js)) return 0;
       if (index == 0) {
         js->stack.push_back({_get_value(*js)->_array, 0, true});
       } else {
@@ -3205,6 +3212,7 @@ inline auto iterate_object(json_citerator& js) {
     json_citerator* js    = nullptr;
     int64_t         index = 0;
     bool            operator!=(const iterator& other) {
+      if (js == nullptr || !is_valid(*js)) return false;
       auto exit = index == other.index;
       if (exit) {  // exit
         if (other.index != 0) js->stack.pop_back();
@@ -3216,7 +3224,7 @@ inline auto iterate_object(json_citerator& js) {
       return *this;
     }
     string_view operator*() const {
-      if (!js) return 0;
+      if (js == nullptr || !is_valid(*js)) return string_view{};
       if (index == 0) {
         js->stack.push_back({_get_value(*js)->_object, 0, false});
       } else {
