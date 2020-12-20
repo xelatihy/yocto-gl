@@ -601,7 +601,7 @@ bool save_json(const string& filename, const json_value& js, string& error) {
 }
 
 // convert json
-void to_json(njson& njs, json_ctview js) {
+void to_json(njson& njs, json_cview js) {
   switch (get_type(js)) {
     case json_type::null: njs = nullptr; break;
     case json_type::integer: njs = get_integer(js); break;
@@ -625,7 +625,7 @@ void to_json(njson& njs, json_ctview js) {
 }
 
 // convert json
-void from_json(const njson& njs, json_tview js) {
+void from_json(const njson& njs, json_view js) {
   switch (njs.type()) {
     case njson::value_t::null: set_null(js); break;
     case njson::value_t::number_integer: set_integer(js, (int64_t)njs); break;
