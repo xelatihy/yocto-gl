@@ -1189,27 +1189,51 @@ inline void from_json(const njson& j, frame3f& value) {
 #endif
 
 // support for json conversions
-inline bool set_value(json_tview js, const vec3f& value, string& error) {
+inline bool set_value(json_view js, const vec3f& value, string& error) {
   return set_value(js, (const array<float, 3>&)value, error);
 }
-inline bool set_value(json_tview js, const vec4f& value, string& error) {
+inline bool set_value(json_view js, const vec4f& value, string& error) {
   return set_value(js, (const array<float, 4>&)value, error);
 }
-inline bool set_value(json_tview js, const frame3f& value, string& error) {
+inline bool set_value(json_view js, const frame3f& value, string& error) {
   return set_value(js, (const array<float, 12>&)value, error);
 }
-inline bool set_value(json_tview js, const mat4f& value, string& error) {
+inline bool set_value(json_view js, const mat4f& value, string& error) {
   return set_value(js, (const array<float, 16>&)value, error);
 }
 
-inline bool get_value(json_ctview js, vec3f& value, string& error) {
+inline bool get_value(json_cview js, vec3f& value, string& error) {
   return get_value(js, (array<float, 3>&)value, error);
 }
-inline bool get_value(json_ctview js, mat3f& value, string& error) {
+inline bool get_value(json_cview js, mat3f& value, string& error) {
   return get_value(js, (array<float, 9>&)value, error);
 }
-inline bool get_value(json_ctview js, frame3f& value, string& error) {
+inline bool get_value(json_cview js, frame3f& value, string& error) {
   return get_value(js, (array<float, 12>&)value, error);
+}
+
+// support for json conversions
+inline bool set_value(json_iterator& js, const vec3f& value) {
+  return set_value(js, (const array<float, 3>&)value);
+}
+inline bool set_value(json_iterator& js, const vec4f& value) {
+  return set_value(js, (const array<float, 4>&)value);
+}
+inline bool set_value(json_iterator& js, const frame3f& value) {
+  return set_value(js, (const array<float, 12>&)value);
+}
+inline bool set_value(json_iterator& js, const mat4f& value) {
+  return set_value(js, (const array<float, 16>&)value);
+}
+
+inline bool get_value(json_citerator& js, vec3f& value) {
+  return get_value(js, (array<float, 3>&)value);
+}
+inline bool get_value(json_citerator& js, mat3f& value) {
+  return get_value(js, (array<float, 9>&)value);
+}
+inline bool get_value(json_citerator& js, frame3f& value) {
+  return get_value(js, (array<float, 12>&)value);
 }
 
 }  // namespace yocto
@@ -1218,6 +1242,393 @@ inline bool get_value(json_ctview js, frame3f& value, string& error) {
 // JSON IO
 // -----------------------------------------------------------------------------
 namespace yocto {
+
+#define YOCTO_JSON_STREAM 1
+
+#if YOCTO_JSON_STREAM == 1
+
+// Save a scene in the builtin JSON format.
+static bool load_json_scene(const string& filename, sceneio_scene* scene,
+    string& error, const progress_callback& progress_cb, bool noparallel) {
+  auto json_error = [filename]() {
+    // error does not need setting
+    return false;
+  };
+  auto parse_error = [filename, &error](string_view message) {
+    error = filename + ": parse error (" + string{message} + ")";
+    return false;
+  };
+  auto material_error = [filename, &error](string_view name) {
+    error = filename + ": missing material " + string{name};
+    return false;
+  };
+  auto dependent_error = [filename, &error]() {
+    error = filename + ": error in " + error;
+    return false;
+  };
+
+  // handle progress
+  auto progress = vec2i{0, 2};
+  if (progress_cb) progress_cb("load scene", progress.x++, progress.y);
+
+  // open file
+  auto js_tree = json_tree{};
+  if (!load_json(filename, js_tree, error)) return json_error();
+  auto js = get_citerator(js_tree);
+
+  // reference disctionaries
+  auto texture_map = unordered_map<string, pair<sceneio_texture*, bool>>{
+      {"", {nullptr, true}}};
+  auto shape_map = unordered_map<string, pair<sceneio_shape*, bool>>{
+      {"", {nullptr, true}}};
+  auto material_map = unordered_map<string, pair<sceneio_material*, bool>>{
+      {"", {nullptr, true}}};
+
+  // parse json reference
+  auto get_shape = [scene, &shape_map](
+                       json_citerator& js, sceneio_shape*& value) -> bool {
+    auto name = ""s;
+    if (!get_value(js, name)) return false;
+    auto it = shape_map.find(name);
+    if (it != shape_map.end()) {
+      value = it->second.first;
+      return it->second.first != nullptr;
+    }
+    auto shape      = add_shape(scene, name);
+    shape_map[name] = {shape, false};
+    value           = shape;
+    return true;
+  };
+
+  // parse json reference
+  auto get_material = [scene, &material_map](json_citerator& js,
+                          sceneio_material*&                 value) -> bool {
+    auto name = ""s;
+    if (!get_value(js, name)) return false;
+    auto it = material_map.find(name);
+    if (it != material_map.end()) {
+      value = it->second.first;
+      return it->second.first != nullptr;
+    }
+    auto material      = add_material(scene, name);
+    material_map[name] = {material, false};
+    value              = material;
+    return true;
+  };
+
+  // parse json reference
+  auto get_texture = [scene, &texture_map](
+                         json_citerator& js, sceneio_texture*& value) -> bool {
+    auto name = ""s;
+    if (!get_value(js, name)) return false;
+    auto it = texture_map.find(name);
+    if (it != texture_map.end()) {
+      value = it->second.first;
+      return it->second.first != nullptr;
+    }
+    auto texture      = add_texture(scene, name);
+    texture_map[name] = {texture, false};
+    value             = texture;
+    return true;
+  };
+
+  struct ply_instance {
+    vector<frame3f> frames = {};
+  };
+
+  // load json instance
+  auto ply_instances     = vector<unique_ptr<ply_instance>>{};
+  auto ply_instance_map  = unordered_map<string, ply_instance*>{{"", nullptr}};
+  auto instance_ply      = unordered_map<sceneio_instance*, ply_instance*>{};
+  auto get_ply_instances = [&ply_instances, &ply_instance_map, &instance_ply](
+                               json_citerator&   js,
+                               sceneio_instance* instance) -> bool {
+    auto name = ""s;
+    if (!get_value(js, name)) return false;
+    if (name.empty()) return true;
+    auto it = ply_instance_map.find(name);
+    if (it != ply_instance_map.end()) {
+      instance_ply[instance] = it->second;
+      return true;
+    }
+    auto ply_instance_ = ply_instances.emplace_back(new ply_instance()).get();
+    ply_instance_map[name] = ply_instance_;
+    instance_ply[instance] = ply_instance_;
+    return true;
+  };
+
+  // handle progress
+  if (progress_cb) progress_cb("load scene", progress.x++, progress.y);
+
+  // loop over external dictioaries
+  for (auto group : iterate_object(js)) {
+    if (group == "asset") {
+      for (auto key : iterate_object(js)) {
+        if (key == "copyright") {
+          get_value(js, scene->copyright);
+        } else if (key == "generator") {
+          auto generator = string{};
+          get_value(js, generator);
+        } else {
+          set_error(js, "unknown key " + string{key});
+        }
+      }
+    } else if (group == "cameras") {
+      for (auto name : iterate_object(js)) {
+        auto camera = add_camera(scene, string{name});
+        for (auto key : iterate_object(js)) {
+          if (key == "frame") {
+            get_value(js, camera->frame);
+          } else if (key == "orthographic") {
+            get_value(js, camera->orthographic);
+          } else if (key == "ortho") {
+            // backward compatibility
+            get_value(js, camera->orthographic);
+          } else if (key == "lens") {
+            get_value(js, camera->lens);
+          } else if (key == "aspect") {
+            get_value(js, camera->aspect);
+          } else if (key == "film") {
+            get_value(js, camera->film);
+          } else if (key == "focus") {
+            get_value(js, camera->focus);
+          } else if (key == "aperture") {
+            get_value(js, camera->aperture);
+          } else if (key == "lookat") {
+            get_value(js, (mat3f&)camera->frame);
+            camera->focus = length(camera->frame.x - camera->frame.y);
+            camera->frame = lookat_frame(
+                camera->frame.x, camera->frame.y, camera->frame.z);
+          } else {
+            set_error(js, "unknown key " + string{key});
+          }
+        }
+      }
+    } else if (group == "environments") {
+      for (auto name : iterate_object(js)) {
+        auto environment = add_environment(scene, string{name});
+        for (auto key : iterate_object(js)) {
+          if (key == "frame") {
+            get_value(js, environment->frame);
+          } else if (key == "emission") {
+            get_value(js, environment->emission);
+          } else if (key == "emission_tex") {
+            get_texture(js, environment->emission_tex);
+          } else if (key == "lookat") {
+            get_value(js, (mat3f&)environment->frame);
+            environment->frame = lookat_frame(environment->frame.x,
+                environment->frame.y, environment->frame.z, true);
+          } else {
+            set_error(js, "unknown key " + string{key});
+          }
+        }
+      }
+    } else if (group == "materials") {
+      for (auto name : iterate_object(js)) {
+        auto material_it = material_map.find(string{name});
+        auto material    = (material_it == material_map.end())
+                            ? add_material(scene, string{name})
+                            : material_it->second.first;
+        for (auto key : iterate_object(js)) {
+          if (key == "emission") {
+            get_value(js, material->emission);
+          } else if (key == "color") {
+            get_value(js, material->color);
+          } else if (key == "metallic") {
+            get_value(js, material->metallic);
+          } else if (key == "specular") {
+            get_value(js, material->specular);
+          } else if (key == "roughness") {
+            get_value(js, material->roughness);
+          } else if (key == "coat") {
+            get_value(js, material->coat);
+          } else if (key == "transmission") {
+            get_value(js, material->transmission);
+          } else if (key == "translucency") {
+            get_value(js, material->translucency);
+          } else if (key == "thin") {
+            get_value(js, material->thin);
+          } else if (key == "ior") {
+            get_value(js, material->ior);
+          } else if (key == "trdepth") {
+            get_value(js, material->trdepth);
+          } else if (key == "scattering") {
+            get_value(js, material->scattering);
+          } else if (key == "scanisotropy") {
+            get_value(js, material->scanisotropy);
+          } else if (key == "opacity") {
+            get_value(js, material->opacity);
+          } else if (key == "coat") {
+            get_value(js, material->coat);
+          } else if (key == "emission_tex") {
+            get_texture(js, material->emission_tex);
+          } else if (key == "color_tex") {
+            get_texture(js, material->color_tex);
+          } else if (key == "metallic_tex") {
+            get_texture(js, material->metallic_tex);
+          } else if (key == "specular_tex") {
+            get_texture(js, material->specular_tex);
+          } else if (key == "transmission_tex") {
+            get_texture(js, material->transmission_tex);
+          } else if (key == "translucency_tex") {
+            get_texture(js, material->translucency_tex);
+          } else if (key == "roughness_tex") {
+            get_texture(js, material->roughness_tex);
+          } else if (key == "scattering_tex") {
+            get_texture(js, material->scattering_tex);
+          } else if (key == "opacity_tex") {
+            get_texture(js, material->opacity_tex);
+          } else if (key == "normal_tex") {
+            get_texture(js, material->normal_tex);
+          } else {
+            set_error(js, "unknown key " + string{key});
+          }
+        }
+        material_map[material->name] = {material, true};
+      }
+    } else if (group == "instances" || group == "objects") {
+      for (auto name : iterate_object(js)) {
+        auto instance = add_instance(scene, string{name});
+        for (auto key : iterate_object(js)) {
+          if (key == "frame") {
+            get_value(js, instance->frame);
+          } else if (key == "lookat") {
+            get_value(js, (mat3f&)instance->frame);
+            instance->frame = lookat_frame(
+                instance->frame.x, instance->frame.y, instance->frame.z, true);
+          } else if (key == "material") {
+            get_material(js, instance->material);
+          } else if (key == "shape") {
+            get_shape(js, instance->shape);
+          } else if (key == "instance") {
+            get_ply_instances(js, instance);
+          } else if (key == "subdivisions") {
+            if (instance->shape) {
+              get_value(js, instance->shape->subdivisions);
+            }
+          } else if (key == "catmullcark") {
+            if (instance->shape) {
+              get_value(js, instance->shape->catmullclark);
+            }
+          } else if (key == "smooth") {
+            if (instance->shape) {
+              get_value(js, instance->shape->smooth);
+            }
+          } else if (key == "displacement") {
+            if (instance->shape) {
+              get_value(js, instance->shape->displacement);
+            }
+          } else if (key == "displacement_tex") {
+            if (instance->shape) {
+              get_texture(js, instance->shape->displacement_tex);
+            }
+          } else if (key == "instance") {
+            get_ply_instances(js, instance);
+          } else {
+            set_error(js, "unknown key " + string{key});
+          }
+        }
+      }
+    } else {
+      set_error(js, "unknown key " + string{group});
+    }
+  }
+
+  // check for parsing errors
+  if (!is_valid(js)) return parse_error(get_error(js));
+
+  // check materials
+  for (auto& [key, value] : material_map) {
+    if (!value.second) return material_error(key);
+  }
+
+  // handle progress
+  progress.y += scene->shapes.size();
+  progress.y += scene->textures.size();
+  progress.y += ply_instances.size();
+
+  // get filename from name
+  auto make_filename = [filename](const string& name, const string& group,
+                           const vector<string>& extensions) {
+    for (auto& extension : extensions) {
+      auto filepath = path_join(
+          path_dirname(filename), group, name + extension);
+      if (path_exists(filepath)) return filepath;
+    }
+    return path_join(path_dirname(filename), group, name + extensions.front());
+  };
+
+  // load shapes
+  shape_map.erase("");
+  for (auto [name, value] : shape_map) {
+    auto shape = value.first;
+    if (progress_cb) progress_cb("load shape", progress.x++, progress.y);
+    auto path = make_filename(name, "shapes", {".ply", ".obj"});
+    if (!load_shape(path, shape->points, shape->lines, shape->triangles,
+            shape->quads, shape->quadspos, shape->quadsnorm,
+            shape->quadstexcoord, shape->positions, shape->normals,
+            shape->texcoords, shape->colors, shape->radius, error,
+            shape->catmullclark && shape->subdivisions > 0))
+      return dependent_error();
+  }
+  // load textures
+  texture_map.erase("");
+  for (auto [name, value] : texture_map) {
+    auto texture = value.first;
+    if (progress_cb) progress_cb("load texture", progress.x++, progress.y);
+    auto path = make_filename(
+        name, "textures", {".hdr", ".exr", ".png", ".jpg"});
+    if (!load_image(path, texture->hdr, texture->ldr, error))
+      return dependent_error();
+  }
+
+  // load instances
+  ply_instance_map.erase("");
+  for (auto [name, instance] : ply_instance_map) {
+    if (progress_cb) progress_cb("load instance", progress.x++, progress.y);
+    auto path = make_filename(name, "instances", {".ply"});
+    if (!load_instance(path, instance->frames, error)) return dependent_error();
+  }
+
+  // apply instances
+  if (!ply_instances.empty()) {
+    if (progress_cb)
+      progress_cb("flatten instances", progress.x++, progress.y++);
+    auto instances = scene->instances;
+    scene->instances.clear();
+    for (auto instance : instances) {
+      auto it = instance_ply.find(instance);
+      if (it == instance_ply.end()) {
+        auto ninstance      = add_instance(scene, instance->name);
+        ninstance->frame    = instance->frame;
+        ninstance->shape    = instance->shape;
+        ninstance->material = instance->material;
+      } else {
+        auto ply_instance = it->second;
+        for (auto& frame : ply_instance->frames) {
+          auto ninstance      = add_instance(scene, instance->name);
+          ninstance->frame    = frame * instance->frame;
+          ninstance->shape    = instance->shape;
+          ninstance->material = instance->material;
+        }
+      }
+    }
+    for (auto instance : instances) delete instance;
+  }
+
+  // fix scene
+  if (scene->name.empty()) scene->name = path_basename(filename);
+  add_cameras(scene);
+  add_radius(scene);
+  add_materials(scene);
+  trim_memory(scene);
+
+  // done
+  if (progress_cb) progress_cb("load scene", progress.x++, progress.y);
+  return true;
+}
+
+#else
 
 // Save a scene in the builtin JSON format.
 static bool load_json_scene(const string& filename, sceneio_scene* scene,
@@ -1249,7 +1660,7 @@ static bool load_json_scene(const string& filename, sceneio_scene* scene,
   auto js = get_croot(js_tree);
 
   // parse json reference
-  auto get_reference_if = [](json_ctview ejs, string_view name,
+  auto get_reference_if = [](json_cview ejs, string_view name,
                               sceneio_material*& value, auto& refs,
                               string& error) -> bool {
     auto ref = ""s;
@@ -1269,7 +1680,7 @@ static bool load_json_scene(const string& filename, sceneio_scene* scene,
 
   // parse json reference
   auto ctexture_map    = unordered_map<string, sceneio_texture*>{{"", nullptr}};
-  auto get_ctexture_if = [scene, &ctexture_map](json_ctview ejs,
+  auto get_ctexture_if = [scene, &ctexture_map](json_cview ejs,
                              string_view name, sceneio_texture*& value,
                              string&       error,
                              const string& dirname = "textures/") -> bool {
@@ -1289,7 +1700,7 @@ static bool load_json_scene(const string& filename, sceneio_scene* scene,
 
   // parse json reference
   auto stexture_map    = unordered_map<string, sceneio_texture*>{{"", nullptr}};
-  auto get_stexture_if = [scene, &stexture_map](json_ctview ejs,
+  auto get_stexture_if = [scene, &stexture_map](json_cview ejs,
                              string_view name, sceneio_texture*& value,
                              string&       error,
                              const string& dirname = "textures/") -> bool {
@@ -1309,7 +1720,7 @@ static bool load_json_scene(const string& filename, sceneio_scene* scene,
 
   // parse json reference
   auto shape_map    = unordered_map<string, sceneio_shape*>{{"", nullptr}};
-  auto get_shape_if = [scene, &shape_map](json_ctview ejs, string_view name,
+  auto get_shape_if = [scene, &shape_map](json_cview ejs, string_view name,
                           sceneio_shape*& value, string& error,
                           const string& dirname = "shapes/") -> bool {
     auto path = ""s;
@@ -1335,7 +1746,7 @@ static bool load_json_scene(const string& filename, sceneio_scene* scene,
   auto ply_instance_map = unordered_map<string, ply_instance*>{{"", nullptr}};
   auto instance_ply     = unordered_map<sceneio_instance*, ply_instance*>{};
   auto get_ply_instances_if =
-      [&ply_instances, &ply_instance_map, &instance_ply](json_ctview ejs,
+      [&ply_instances, &ply_instance_map, &instance_ply](json_cview ejs,
           const string& name, sceneio_instance* instance, string& error,
           const string& dirname = "instances/") -> bool {
     auto path = ""s;
@@ -1650,29 +2061,20 @@ static bool load_json_scene(const string& filename, sceneio_scene* scene,
   return true;
 }
 
+#endif
+
 // Save a scene in the builtin JSON format.
 static bool save_json_scene(const string& filename, const sceneio_scene* scene,
     string& error, const progress_callback& progress_cb, bool noparallel) {
-  auto conversion_error = [filename, &error]() {
+  auto conversion_error = [filename, &error](const string& message) {
     // should never happen
     throw std::runtime_error{"programmer error"};
-    error = filename + ": conversion error (" + error + ")";
+    error = filename + ": conversion error (" + message + ")";
     return false;
   };
   auto dependent_error = [filename, &error]() {
     error = filename + ": error in " + error;
     return false;
-  };
-
-  auto insert_texture_if = [](json_tview ejs, const string& name,
-                               sceneio_texture* texture, string& error) {
-    if (texture == nullptr) return true;
-    return insert_value(ejs, name, texture->name, error);
-  };
-  auto insert_reference_if = [](json_tview ejs, const string& name,
-                                 auto reference, string& error) {
-    if (reference == nullptr) return true;
-    return insert_value(ejs, name, reference->name, error);
   };
 
   // handle progress
@@ -1682,180 +2084,195 @@ static bool save_json_scene(const string& filename, const sceneio_scene* scene,
 
   // save json file
   auto js_tree = json_tree{};
-  auto js      = get_root(js_tree);
-  if (!set_object(js, error)) return conversion_error();
+  auto js      = get_iterator(js_tree);
+  begin_object(js);
 
   // asset
   {
-    auto ejs = insert_object(js, "asset", error);
-    if (!check_object(ejs, error)) return conversion_error();
-    if (!insert_value(ejs, "generator",
-            "Yocto/GL - https://github.com/xelatihy/yocto-gl", error))
-      return conversion_error();
-    if (!insert_value_if(ejs, "copyright", scene->copyright, ""s, error))
-      return conversion_error();
+    auto _ = append_object(js, "asset");
+    append_value(
+        js, "generator", "Yocto/GL - https://github.com/xelatihy/yocto-gl");
+    if (!scene->copyright.empty()) {
+      append_value(js, "copyright", scene->copyright);
+    }
   }
 
   auto def_cam = sceneio_camera{};
   if (!scene->cameras.empty()) {
-    auto mjs = insert_object(js, "cameras", error);
-    if (!check_object(mjs, error)) return conversion_error();
+    // auto _ = append_object(js, "cameras");
+    append_item(js, "cameras");
+    begin_object(js);
     for (auto& camera : scene->cameras) {
-      auto ejs = insert_object(mjs, camera->name, error);
-      if (!check_object(ejs, error)) return conversion_error();
-      if (!insert_value_if(ejs, "frame", camera->frame, def_cam.frame, error))
-        return conversion_error();
-      if (!insert_value_if(
-              ejs, "ortho", camera->orthographic, def_cam.orthographic, error))
-        return conversion_error();
-      if (!insert_value_if(ejs, "lens", camera->lens, def_cam.lens, error))
-        return conversion_error();
-      if (!insert_value_if(
-              ejs, "aspect", camera->aspect, def_cam.aspect, error))
-        return conversion_error();
-      if (!insert_value_if(ejs, "film", camera->film, def_cam.film, error))
-        return conversion_error();
-      if (!insert_value_if(ejs, "focus", camera->focus, def_cam.focus, error))
-        return conversion_error();
-      if (!insert_value_if(
-              ejs, "aperture", camera->aperture, def_cam.aperture, error))
-        return conversion_error();
+      // auto _ = append_object(js, camera->name);
+      append_item(js, camera->name);
+      begin_object(js);
+      if (camera->frame != def_cam.frame) {
+        append_value(js, "frame", camera->frame);
+      }
+      if (camera->orthographic != def_cam.orthographic) {
+        append_value(js, "orthographic", camera->orthographic);
+      }
+      if (camera->lens != def_cam.lens) {
+        append_value(js, "lens", camera->lens);
+      }
+      if (camera->aspect != def_cam.aspect) {
+        append_value(js, "aspect", camera->aspect);
+      }
+      if (camera->film != def_cam.film) {
+        append_value(js, "film", camera->film);
+      }
+      if (camera->focus != def_cam.focus) {
+        append_value(js, "focus", camera->focus);
+      }
+      if (camera->aperture != def_cam.aperture) {
+        append_value(js, "aperture", camera->aperture);
+      }
+      end_object(js);
     }
+    end_object(js);
   }
 
   auto def_env = sceneio_environment{};
   if (!scene->environments.empty()) {
-    auto mjs = insert_object(js, "environments", error);
-    if (!check_object(mjs, error)) return conversion_error();
+    auto _ = append_object(js, "environments");
     for (auto environment : scene->environments) {
-      auto ejs = insert_object(mjs, environment->name, error);
-      if (!check_object(ejs, error)) return conversion_error();
-      if (!insert_value_if(
-              ejs, "frame", environment->frame, def_env.frame, error))
-        return conversion_error();
-      if (!insert_value_if(
-              ejs, "emission", environment->emission, def_env.emission, error))
-        return conversion_error();
-      if (!insert_texture_if(
-              ejs, "emission_tex", environment->emission_tex, error))
-        return conversion_error();
+      auto _ = append_object(js, environment->name);
+      if (environment->frame != def_env.frame) {
+        append_value(js, "frame", environment->frame);
+      }
+      if (environment->emission != def_env.emission) {
+        append_value(js, "emission", environment->emission);
+      }
+      if (environment->emission_tex != nullptr) {
+        append_value(js, "emission_tex", environment->emission_tex->name);
+      }
     }
   }
 
   auto def_material = sceneio_material{};
   if (!scene->materials.empty()) {
-    auto mjs = insert_object(js, "materials", error);
-    if (!check_object(mjs, error)) return conversion_error();
+    auto _ = append_object(js, "materials");
     for (auto material : scene->materials) {
-      auto ejs = insert_object(mjs, material->name, error);
-      if (!check_object(ejs, error)) return conversion_error();
-      if (!insert_value_if(ejs, "emission", material->emission,
-              def_material.emission, error))
-        return conversion_error();
-      if (!insert_value_if(
-              ejs, "color", material->color, def_material.color, error))
-        return conversion_error();
-      if (!insert_value_if(ejs, "specular", material->specular,
-              def_material.specular, error))
-        return conversion_error();
-      if (!insert_value_if(ejs, "metallic", material->metallic,
-              def_material.metallic, error))
-        return conversion_error();
-      if (!insert_value_if(
-              ejs, "coat", material->coat, def_material.coat, error))
-        return conversion_error();
-      if (!insert_value_if(ejs, "roughness", material->roughness,
-              def_material.roughness, error))
-        return conversion_error();
-      if (!insert_value_if(ejs, "ior", material->ior, def_material.ior, error))
-        return conversion_error();
-      if (!insert_value_if(ejs, "transmission", material->transmission,
-              def_material.transmission, error))
-        return conversion_error();
-      if (!insert_value_if(ejs, "translucency", material->translucency,
-              def_material.translucency, error))
-        return conversion_error();
-      if (!insert_value_if(
-              ejs, "trdepth", material->trdepth, def_material.trdepth, error))
-        return conversion_error();
-      if (!insert_value_if(ejs, "scattering", material->scattering,
-              def_material.scattering, error))
-        return conversion_error();
-      if (!insert_value_if(ejs, "scanisotropy", material->scanisotropy,
-              def_material.scanisotropy, error))
-        return conversion_error();
-      if (!insert_value_if(
-              ejs, "opacity", material->opacity, def_material.opacity, error))
-        return conversion_error();
-      if (!insert_value_if(
-              ejs, "thin", material->thin, def_material.thin, error))
-        return conversion_error();
-      if (!insert_texture_if(
-              ejs, "emission_tex", material->emission_tex, error))
-        return conversion_error();
-      if (!insert_texture_if(ejs, "color_tex", material->color_tex, error))
-        return conversion_error();
-      if (!insert_texture_if(
-              ejs, "metallic_tex", material->metallic_tex, error))
-        return conversion_error();
-      if (!insert_texture_if(
-              ejs, "specular_tex", material->specular_tex, error))
-        return conversion_error();
-      if (!insert_texture_if(
-              ejs, "roughness_tex", material->roughness_tex, error))
-        return conversion_error();
-      if (!insert_texture_if(
-              ejs, "transmission_tex", material->transmission_tex, error))
-        return conversion_error();
-      if (!insert_texture_if(
-              ejs, "translucency_tex", material->translucency_tex, error))
-        return conversion_error();
-      if (!insert_texture_if(
-              ejs, "scattering_tex", material->scattering_tex, error))
-        return conversion_error();
-      if (!insert_texture_if(ejs, "coat_tex", material->coat_tex, error))
-        return conversion_error();
-      if (!insert_texture_if(ejs, "opacity_tex", material->opacity_tex, error))
-        return conversion_error();
-      if (!insert_texture_if(ejs, "normal_tex", material->normal_tex, error))
-        return conversion_error();
-    }
-  }
-
-  auto def_object = sceneio_instance{};
-  auto def_shape  = sceneio_shape{};
-  if (!scene->instances.empty()) {
-    auto mjs = insert_object(js, "instances", error);
-    if (!check_object(mjs, error)) return conversion_error();
-    for (auto instance : scene->instances) {
-      auto ejs = insert_object(mjs, instance->name, error);
-      if (!check_object(ejs, error)) return conversion_error();
-      if (!insert_value_if(
-              ejs, "frame", instance->frame, def_object.frame, error))
-        return conversion_error();
-      if (!insert_reference_if(ejs, "shape", instance->shape, error))
-        return conversion_error();
-      if (!insert_reference_if(ejs, "material", instance->material, error))
-        return conversion_error();
-      if (instance->shape != nullptr) {
-        if (!insert_value_if(ejs, "subdivisions", instance->shape->subdivisions,
-                def_shape.subdivisions, error))
-          return conversion_error();
-        if (!insert_value_if(ejs, "catmullclark", instance->shape->catmullclark,
-                def_shape.catmullclark, error))
-          return conversion_error();
-        if (!insert_value_if(ejs, "smooth", instance->shape->smooth,
-                def_shape.smooth, error))
-          return conversion_error();
-        if (!insert_value_if(ejs, "displacement", instance->shape->displacement,
-                def_shape.displacement, error))
-          return conversion_error();
-        if (!insert_texture_if(ejs, "displacement_tex",
-                instance->shape->displacement_tex, error))
-          return conversion_error();
+      auto _ = append_object(js, material->name);
+      if (material->emission != def_material.emission) {
+        append_value(js, "emission", material->emission);
+      }
+      if (material->color != def_material.color) {
+        append_value(js, "color", material->color);
+      }
+      if (material->specular != def_material.specular) {
+        append_value(js, "specular", material->specular);
+      }
+      if (material->metallic != def_material.metallic) {
+        append_value(js, "metallic", material->metallic);
+      }
+      if (material->coat != def_material.coat) {
+        append_value(js, "coat", material->coat);
+      }
+      if (material->roughness != def_material.roughness) {
+        append_value(js, "roughness", material->roughness);
+      }
+      if (material->ior != def_material.ior) {
+        append_value(js, "ior", material->ior);
+      }
+      if (material->transmission != def_material.transmission) {
+        append_value(js, "transmission", material->transmission);
+      }
+      if (material->translucency != def_material.translucency) {
+        append_value(js, "translucency", material->translucency);
+      }
+      if (material->trdepth != def_material.trdepth) {
+        append_value(js, "trdepth", material->trdepth);
+      }
+      if (material->scattering != def_material.scattering) {
+        append_value(js, "scattering", material->scattering);
+      }
+      if (material->scanisotropy != def_material.scanisotropy) {
+        append_value(js, "scanisotropy", material->scanisotropy);
+      }
+      if (material->opacity != def_material.opacity) {
+        append_value(js, "opacity", material->opacity);
+      }
+      if (material->thin != def_material.thin) {
+        append_value(js, "thin", material->thin);
+      }
+      if (material->emission_tex != nullptr) {
+        append_value(js, "emission_tex", material->emission_tex->name);
+      }
+      if (material->color_tex != nullptr) {
+        append_value(js, "color_tex", material->color_tex->name);
+      }
+      if (material->metallic_tex != nullptr) {
+        append_value(js, "metallic_tex", material->metallic_tex->name);
+      }
+      if (material->specular_tex != nullptr) {
+        append_value(js, "specular_tex", material->specular_tex->name);
+      }
+      if (material->roughness_tex != nullptr) {
+        append_value(js, "roughness_tex", material->roughness_tex->name);
+      }
+      if (material->transmission_tex != nullptr) {
+        append_value(js, "transmission_tex", material->transmission_tex->name);
+      }
+      if (material->translucency_tex != nullptr) {
+        append_value(js, "translucency_tex", material->translucency_tex->name);
+      }
+      if (material->scattering_tex != nullptr) {
+        append_value(js, "scattering_tex", material->scattering_tex->name);
+      }
+      if (material->coat_tex != nullptr) {
+        append_value(js, "coat_tex", material->coat_tex->name);
+      }
+      if (material->opacity_tex != nullptr) {
+        append_value(js, "opacity_tex", material->opacity_tex->name);
+      }
+      if (material->normal_tex != nullptr) {
+        append_value(js, "normal_tex", material->normal_tex->name);
       }
     }
   }
+
+  auto def_instance = sceneio_instance{};
+  auto def_shape    = sceneio_shape{};
+  if (!scene->instances.empty()) {
+    auto _ = append_object(js, "instances");
+    for (auto instance : scene->instances) {
+      auto _ = append_object(js, instance->name);
+      if (instance->frame != def_instance.frame) {
+        append_value(js, "frame", instance->frame);
+      }
+      if (instance->shape != nullptr) {
+        append_value(js, "shape", instance->shape->name);
+      }
+      if (instance->material != nullptr) {
+        append_value(js, "material", instance->material->name);
+      }
+      if (instance->shape != nullptr) {
+        if (instance->shape->subdivisions != def_shape.subdivisions) {
+          append_value(js, "subdivisions", instance->shape->subdivisions);
+        }
+        if (instance->shape->catmullclark != def_shape.catmullclark) {
+          append_value(js, "catmullclark", instance->shape->catmullclark);
+        }
+        if (instance->shape->smooth != def_shape.smooth) {
+          append_value(js, "smooth", instance->shape->smooth);
+        }
+        if (instance->shape->displacement != def_shape.displacement) {
+          append_value(js, "displacement", instance->shape->displacement);
+        }
+        if (instance->shape->displacement_tex != nullptr) {
+          append_value(
+              js, "displacement_tex", instance->shape->displacement_tex->name);
+        }
+      }
+    }
+  }
+
+  // close object
+  end_object(js);
+
+  // chck for errors
+  if (!is_valid(js)) return conversion_error(get_error(js));
 
   // handle progress
   if (progress_cb) progress_cb("save scene", progress.x++, progress.y);

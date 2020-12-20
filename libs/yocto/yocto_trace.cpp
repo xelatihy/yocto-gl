@@ -250,7 +250,8 @@ void tesselate_shape(trace_shape* shape) {
 void tesselate_shapes(
     trace_scene* scene, const progress_callback& progress_cb) {
   // handle progress
-  auto progress = vec2i{0, (int)scene->shapes.size()};
+  auto progress = vec2i{0, (int)scene->shapes.size() + 1};
+  if (progress_cb) progress_cb("tesselate shape", progress.x++, progress.y);
 
   // tesselate shapes
   for (auto shape : scene->shapes) {

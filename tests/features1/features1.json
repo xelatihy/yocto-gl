@@ -126,7 +126,6 @@
       "roughness": 0,
       "specular": 1,
       "transmission": 1,
-      "radius": 0.02,
       "thin": false
     },
     "sphere-plastic-rough-bumped": {
