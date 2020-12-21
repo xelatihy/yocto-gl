@@ -463,6 +463,7 @@ struct json_tree {
   vector<json_value> values   = {{json_type::null}};
   vector<char>       strings  = {};
   vector<char>       keys     = {};
+  vector<json_value> key_list = {};
   vector<uint8_t>    binaries = {};
   bool               valid    = true;
   string             error    = "";
@@ -1750,10 +1751,22 @@ inline json_view insert_element(json_view js, string_view key) {
   // TOFO(fabio): implement key reuse
   auto jsk            = &js.root->values[index];
   jsk->_type          = json_type::string_;
-  jsk->_string.start  = (uint32_t)js.root->keys.size();
-  jsk->_string.length = (uint32_t)key.size();
-  js.root->keys.insert(js.root->keys.end(), key.begin(), key.end());
-  js.root->keys.push_back(0);
+  auto key_found = false;
+  for (auto& kv : js.root->key_list) {
+    auto okey = string_view{js.root->keys.data() + kv._string.start, 
+      kv._string.length};
+    if (okey == key) {
+      jsk->_string = kv._string;
+      key_found = true;
+    }
+  }
+  if (!key_found) {
+    jsk->_string.start  = (uint32_t)js.root->keys.size();
+    jsk->_string.length = (uint32_t)key.size();
+    js.root->key_list.emplace_back()._string = jsk->_string;
+    js.root->keys.insert(js.root->keys.end(), key.begin(), key.end());
+    js.root->keys.push_back(0);
+  }
   js.root->values[index + 1] = {};
   return {js.root, index + 1};
 }
