@@ -817,7 +817,7 @@ struct json_tree_ {
       } _binary;
     };
   };
-  vector<json_value> values   = {};
+  vector<json_value> values   = {{json_type::null}};
   vector<char>       strings  = {};
   vector<char>       keys     = {};
   vector<uint8_t>    binaries = {};
@@ -3485,7 +3485,7 @@ inline bool set_binary(json_iterator_& js, const vector<uint8_t>& value) {
 // Setting arrays
 inline bool begin_array(json_iterator_& js) {
   if (!is_valid(js)) return false;
-  if (js.stack.back().index != js.root->values.size())
+  if (js.stack.back().index != js.root->values.size() - 1)
     throw std::out_of_range{"can only concatenate"};
   auto jsv    = _get_value(js);
   jsv->_type  = json_type::array;
@@ -3527,6 +3527,8 @@ inline bool append_item(json_iterator_& js) {
   auto jsv = _get_value(js);
   if (jsv->_type != json_type::array)
     return _set_error(js, "bad stack - array expected");
+  // update length
+  jsv->_object.length += 1;
   // add an element at the end
   auto jsl       = &js.root->values.emplace_back();
   jsl->_type     = json_type::null;
@@ -3535,8 +3537,8 @@ inline bool append_item(json_iterator_& js) {
   jsv->_array.length += 1;
   jsv->_array.skip += 1;
   // update all groups in the stack
-  for (auto idx = (int32_t)js.stack.size() - 2; idx >= 0; idx--) {
-    auto jsg = &js.root->values.at(idx);
+  for (auto [index, _] : js.stack) {
+    auto jsg = &js.root->values.at(index);
     if (jsg->_type == json_type::array) {
       jsg->_array.skip += 1;
     } else if (jsg->_type == json_type::object) {
@@ -3554,7 +3556,7 @@ inline bool append_item(json_iterator_& js) {
 // Setting objects
 inline bool begin_object(json_iterator_& js) {
   if (!is_valid(js)) return false;
-  if (js.stack.back().index != js.root->values.size())
+  if (js.stack.back().index != js.root->values.size() - 1)
     throw std::out_of_range{"can only concatenate"};
   auto jsv    = _get_value(js);
   jsv->_type  = json_type::object;
@@ -3596,6 +3598,8 @@ inline bool append_item(json_iterator_& js, const string& key) {
   auto jsv = _get_value(js);
   if (jsv->_type != json_type::object)
     return _set_error(js, "bad stack - object expected");
+  // update length
+  jsv->_object.length += 1;
   // add a key at the end
   // TODO: key reuse
   auto jsk            = &js.root->values.emplace_back();
@@ -3608,12 +3612,9 @@ inline bool append_item(json_iterator_& js, const string& key) {
   auto jsl       = &js.root->values.emplace_back();
   jsl->_type     = json_type::null;
   jsl->_unsigned = 0;
-  // update current array
-  jsv->_object.length += 1;
-  jsv->_object.skip += 2;
   // update all groups in the stack
-  for (auto idx = (int32_t)js.stack.size() - 2; idx >= 0; idx--) {
-    auto jsg = &js.root->values.at(idx);
+  for (auto [index, _] : js.stack) {
+    auto jsg = &js.root->values.at(index);
     if (jsg->_type == json_type::array) {
       jsg->_array.skip += 2;
     } else if (jsg->_type == json_type::object) {
@@ -4033,10 +4034,9 @@ inline bool get_value(json_citerator_& js, vector<T>& value) {
 template <typename T, size_t N>
 inline bool get_value(json_citerator_& js, array<T, N>& value) {
   auto len = 0;
-  for (auto idx : iterate_array(js)) {
-    if (idx >= value.size()) break;
-    if (!get_value(js, value[idx])) return false;
-    len++;
+    for ([[maybe_unused]] auto idx : iterate_array(js)) {
+    if (len++ >= value.size()) continue;
+    if (!get_value(js, value[len])) return false;
   }
   if (len != value.size()) {
     set_error(js, "wrong array size");
