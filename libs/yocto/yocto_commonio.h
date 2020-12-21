@@ -49,6 +49,7 @@
 #include <type_traits>
 #include <utility>
 #include <vector>
+#include <unordered_map>
 
 // -----------------------------------------------------------------------------
 // USING DIRECTIVES
@@ -62,6 +63,7 @@ using std::pair;
 using std::string;
 using std::string_view;
 using std::vector;
+using std::unordered_map;
 using namespace std::string_literals;
 
 }  // namespace yocto
@@ -465,6 +467,7 @@ struct json_tree {
   vector<char>       keys     = {};
   vector<json_value> key_list = {};
   vector<uint8_t>    binaries = {};
+  unordered_map<uint32_t, vector<uint32_t>> holes = {};
   bool               valid    = true;
   string             error    = "";
 };
@@ -1585,13 +1588,25 @@ inline json_view append_element(json_view js) {
   auto new_capacity = _get_capacity(jsv->_array.length);
   if (new_length > last_capacity) {
     // TODO: implement reuse!!!
-    // allocate at the end
-    jsv->_array.start = (uint32_t)js.root->values.size();
-    new_start         = jsv->_array.start;
-    js.root->values.insert(
-        js.root->values.end(), new_capacity, json_tree::json_value{});
-    for (auto idx = 0; idx < last_length; idx++)
+    // look for an alternative
+    if (!js.root->holes[new_capacity].empty()) {
+      jsv->_array.start = js.root->holes[new_capacity].back();
+      new_start         = jsv->_array.start;
+      js.root->holes[new_capacity].pop_back();
+    } else {
+      // allocate at the end
+      jsv->_array.start = (uint32_t)js.root->values.size();
+      new_start         = jsv->_array.start;
+      js.root->values.insert(
+          js.root->values.end(), new_capacity, json_tree::json_value{});
+    }
+    if (last_capacity != 0) {
+      js.root->holes[last_capacity].push_back(last_start);
+    }
+    for (auto idx = 0; idx < last_length; idx++) {
       js.root->values[new_start + idx] = js.root->values[last_start + idx];
+      js.root->values[last_start + idx] = {};
+    }
   }
   auto index             = new_start + new_length - 1;
   js.root->values[index] = {};
