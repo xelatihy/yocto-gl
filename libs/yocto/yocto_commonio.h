@@ -437,9 +437,7 @@ struct json_cview;
 
 // Json tree
 struct json_tree {
-  struct json_value {
-    json_type _type = json_type::null;
-    union {
+  union json_value {
       int64_t  _integer = 0;
       uint64_t _unsigned;
       double   _real;
@@ -460,9 +458,9 @@ struct json_tree {
         uint32_t start;
         uint32_t length;
       } _binary;
-    };
   };
-  vector<json_value> values   = {{json_type::null}};
+  vector<json_type> types   = {json_type::null};
+  vector<json_value> values   = {json_value{}};
   vector<char>       strings  = {};
   vector<char>       keys     = {};
   vector<json_value> key_list = {};
@@ -1235,13 +1233,21 @@ inline void clear_error(json_tree& js) {
 }
 
 // Helpers
-inline json_tree::json_value* _get_value(json_view js) {
-  if (!is_valid(js)) return nullptr;
-  return &js.root->values[js.index];
+inline json_type& _get_type(json_view js) {
+  if (!is_valid(js)) throw std::invalid_argument{"bad json"};
+  return js.root->types[js.index];
 }
-inline const json_tree::json_value* _get_value(json_cview js) {
-  if (!is_valid(js)) return nullptr;
-  return &js.root->values[js.index];
+inline const json_type& _get_type(json_cview js) {
+  if (!is_valid(js)) throw std::invalid_argument{"bad json"};
+  return js.root->types[js.index];
+}
+inline json_tree::json_value& _get_value(json_view js) {
+  if (!is_valid(js)) throw std::invalid_argument{"bad json"};
+  return js.root->values[js.index];
+}
+inline const json_tree::json_value& _get_value(json_cview js) {
+  if (!is_valid(js)) throw std::invalid_argument{"bad json"};
+  return js.root->values[js.index];
 }
 inline uint32_t _get_capacity(uint32_t length) {
   if (length == 0) return 0;
@@ -1253,9 +1259,10 @@ inline uint32_t _get_capacity(uint32_t length) {
 }
 inline string_view _get_key(json_cview js) {
   if (!is_valid(js)) throw std::invalid_argument{"bad tree"};
-  auto jsv = _get_value(js);
-  if (jsv->_type != json_type::string_) throw std::invalid_argument{"bad key"};
-  return {js.root->keys.data() + jsv->_string.start, jsv->_string.length};
+  auto& jst = _get_type(js);
+  auto& jsv = _get_value(js);
+  if (jst != json_type::string_) throw std::invalid_argument{"bad key"};
+  return {js.root->keys.data() + jsv._string.start, jsv._string.length};
 }
 
 // Error check
@@ -1279,107 +1286,111 @@ inline string get_error(json_view js) {
 // Type
 inline json_type get_type(json_cview js) {
   if (!is_valid(js)) return json_type::null;
-  auto jsv = _get_value(js);
-  return jsv->_type;
+  return _get_type(js);
 }
 inline bool is_null(json_cview js) {
   if (!is_valid(js)) return false;
-  auto jsv = _get_value(js);
-  return jsv->_type == json_type::null;
+  auto& jst = _get_type(js);
+  return jst == json_type::null;
 }
 inline bool is_integer(json_cview js) {
   if (!is_valid(js)) return false;
-  auto jsv = _get_value(js);
-  return jsv->_type == json_type::integer;
+  auto& jst = _get_type(js);
+  return jst == json_type::integer;
 }
 inline bool is_unsigned(json_cview js) {
   if (!is_valid(js)) return false;
-  auto jsv = _get_value(js);
-  return jsv->_type == json_type::unsigned_;
+  auto& jst = _get_type(js);
+  return jst == json_type::unsigned_;
 }
 inline bool is_real(json_cview js) {
   if (!is_valid(js)) return false;
-  auto jsv = _get_value(js);
-  return jsv->_type == json_type::real;
+  auto& jst = _get_type(js);
+  return jst == json_type::real;
 }
 inline bool is_integral(json_cview js) {
   if (!is_valid(js)) return false;
-  auto jsv = _get_value(js);
-  return jsv->_type == json_type::integer || jsv->_type == json_type::unsigned_;
+  auto& jst = _get_type(js);
+  return jst == json_type::integer || jst == json_type::unsigned_;
 }
 inline bool is_number(json_cview js) {
   if (!is_valid(js)) return false;
-  auto jsv = _get_value(js);
-  return jsv->_type == json_type::integer ||
-         jsv->_type == json_type::unsigned_ || jsv->_type == json_type::real;
+  auto& jst = _get_type(js);
+  return jst == json_type::integer ||
+         jst == json_type::unsigned_ || jst == json_type::real;
 }
 inline bool is_boolean(json_cview js) {
   if (!is_valid(js)) return false;
-  auto jsv = _get_value(js);
-  return jsv->_type == json_type::boolean;
+  auto& jst = _get_type(js);
+  return jst == json_type::boolean;
 }
 inline bool is_string(json_cview js) {
   if (!is_valid(js)) return false;
-  auto jsv = _get_value(js);
-  return jsv->_type == json_type::string_;
+  auto& jst = _get_type(js);
+  return jst == json_type::string_;
 }
 inline bool is_array(json_cview js) {
   if (!is_valid(js)) return false;
-  auto jsv = _get_value(js);
-  return jsv->_type == json_type::array;
+  auto& jst = _get_type(js);
+  return jst == json_type::array;
 }
 inline bool is_object(json_cview js) {
   if (!is_valid(js)) return false;
-  auto jsv = _get_value(js);
-  return jsv->_type == json_type::object;
+  auto& jst = _get_type(js);
+  return jst == json_type::object;
 }
 inline bool is_binary(json_cview js) {
   if (!is_valid(js)) return false;
-  auto jsv = _get_value(js);
-  return jsv->_type == json_type::binary;
+  auto& jst = _get_type(js);
+  return jst == json_type::binary;
 }
 
 // Initialization to basic types
 inline bool set_null(json_view js) {
   if (!is_valid(js)) return false;
-  auto jsv   = _get_value(js);
-  jsv->_type = json_type::null;
+  auto& jst = _get_type(js);
+  jst = json_type::null;
   return true;
 }
 inline bool set_integer(json_view js, int64_t value) {
   if (!is_valid(js)) return false;
-  auto jsv      = _get_value(js);
-  jsv->_type    = json_type::integer;
-  jsv->_integer = value;
+  auto& jst = _get_type(js);
+  auto& jsv   = _get_value(js);
+  jst    = json_type::integer;
+  jsv._integer = value;
   return true;
 }
 inline bool set_unsigned(json_view js, uint64_t value) {
   if (!is_valid(js)) return false;
-  auto jsv       = _get_value(js);
-  jsv->_type     = json_type::unsigned_;
-  jsv->_unsigned = value;
+  auto& jst = _get_type(js);
+  auto& jsv   = _get_value(js);
+  jst     = json_type::unsigned_;
+  jsv._unsigned = value;
   return true;
 }
 inline bool set_real(json_view js, double value) {
   if (!is_valid(js)) return false;
-  auto jsv   = _get_value(js);
-  jsv->_type = json_type::real;
-  jsv->_real = value;
+  auto& jst = _get_type(js);
+  auto& jsv   = _get_value(js);
+  jst = json_type::real;
+  jsv._real = value;
   return true;
 }
 inline bool set_boolean(json_view js, bool value) {
   if (!is_valid(js)) return false;
-  auto jsv      = _get_value(js);
-  jsv->_type    = json_type::boolean;
-  jsv->_boolean = value;
+  auto& jst = _get_type(js);
+  auto& jsv   = _get_value(js);
+  jst    = json_type::boolean;
+  jsv._boolean = value;
   return true;
 }
 inline bool set_string(json_view js, const string& value) {
   if (!is_valid(js)) return false;
-  auto jsv = _get_value(js);
-  jsv->_type          = json_type::string_;
-  jsv->_string.start  = (uint32_t)js.root->strings.size();
-  jsv->_string.length = (uint32_t)value.size();
+  auto& jst = _get_type(js);
+  auto& jsv = _get_value(js);
+  jst          = json_type::string_;
+  jsv._string.start  = (uint32_t)js.root->strings.size();
+  jsv._string.length = (uint32_t)value.size();
   js.root->strings.insert(js.root->strings.end(), value.begin(), value.end());
   js.root->strings.push_back(0);
   return true;
@@ -1406,101 +1417,112 @@ inline bool set_number(json_view js, float value) {
 // Get basic values
 inline bool get_integer(json_cview js, int64_t& value) {
   if (!is_valid(js)) return false;
-  auto jsv = _get_value(js);
-  if (jsv->_type != json_type::integer)
+  auto& jst = _get_type(js);
+  auto& jsv = _get_value(js);
+  if (jst != json_type::integer)
     return set_error(js, "integer expected");
-  value = jsv->_integer;
+  value = jsv._integer;
   return true;
 }
 inline bool get_unsigned(json_cview js, uint64_t& value) {
   if (!is_valid(js)) return false;
-  auto jsv = _get_value(js);
-  if (jsv->_type != json_type::unsigned_)
+  auto& jst = _get_type(js);
+  auto& jsv = _get_value(js);
+  if (jst != json_type::unsigned_)
     return set_error(js, "unsigned expected");
-  value = jsv->_unsigned;
+  value = jsv._unsigned;
   return true;
 }
 inline bool get_real(json_cview js, double& value) {
   if (!is_valid(js)) return false;
-  auto jsv = _get_value(js);
-  if (jsv->_type != json_type::real) return set_error(js, "real expected");
-  value = jsv->_real;
+  auto& jst = _get_type(js);
+  auto& jsv = _get_value(js);
+  if (jst != json_type::real) return set_error(js, "real expected");
+  value = jsv._real;
   return true;
 }
 inline bool get_boolean(json_cview js, bool& value) {
   if (!is_valid(js)) return false;
-  auto jsv = _get_value(js);
-  if (jsv->_type != json_type::boolean)
+  auto& jst = _get_type(js);
+  auto& jsv = _get_value(js);
+  if (jst != json_type::boolean)
     return set_error(js, "boolean expected");
-  value = jsv->_boolean;
+  value = jsv._boolean;
   return true;
 }
 inline bool get_string(json_cview js, string& value) {
   if (!is_valid(js)) return false;
-  auto jsv = _get_value(js);
-  if (jsv->_type != json_type::string_) return set_error(js, "string expected");
-  value = string{js.root->strings.data() + jsv->_string.start,
-      js.root->strings.data() + jsv->_string.start + jsv->_string.length};
+  auto& jst = _get_type(js);
+  auto& jsv = _get_value(js);
+  if (jst != json_type::string_) return set_error(js, "string expected");
+  value = string{js.root->strings.data() + jsv._string.start,
+      js.root->strings.data() + jsv._string.start + jsv._string.length};
   return true;
 }
 inline bool get_integral(json_cview js, int64_t& value) {
   if (!is_valid(js)) return false;
-  auto jsv = _get_value(js);
-  if (jsv->_type != json_type::integer && jsv->_type != json_type::unsigned_)
+  auto& jst = _get_type(js);
+  auto& jsv = _get_value(js);
+  if (jst != json_type::integer && jst != json_type::unsigned_)
     return set_error(js, "integer expected");
-  value = (jsv->_type == json_type::integer) ? (int64_t)jsv->_integer
-                                             : (int64_t)jsv->_unsigned;
+  value = (jst == json_type::integer) ? (int64_t)jsv._integer
+                                             : (int64_t)jsv._unsigned;
   return true;
 }
 inline bool get_integral(json_cview js, uint64_t& value) {
   if (!is_valid(js)) return false;
-  auto jsv = _get_value(js);
-  if (jsv->_type != json_type::integer && jsv->_type != json_type::unsigned_)
+  auto& jst = _get_type(js);
+  auto& jsv = _get_value(js);
+  if (jst != json_type::integer && jst != json_type::unsigned_)
     return set_error(js, "integer expected");
-  value = (jsv->_type == json_type::integer) ? (uint64_t)jsv->_integer
-                                             : (uint64_t)jsv->_unsigned;
+  value = (jst == json_type::integer) ? (uint64_t)jsv._integer
+                                             : (uint64_t)jsv._unsigned;
   return true;
 }
 inline bool get_number(json_cview js, double& value) {
   if (!is_valid(js)) return false;
-  auto jsv = _get_value(js);
-  if (jsv->_type != json_type::real && jsv->_type != json_type::integer &&
-      jsv->_type != json_type::unsigned_)
+  auto& jst = _get_type(js);
+  auto& jsv = _get_value(js);
+  if (jst != json_type::real && jst != json_type::integer &&
+      jst != json_type::unsigned_)
     return set_error(js, "number expected");
-  value = (jsv->_type == json_type::real)
-              ? (double)jsv->_real
-              : (jsv->_type == json_type::integer) ? (double)jsv->_integer
-                                                   : (double)jsv->_unsigned;
+  value = (jst == json_type::real)
+              ? (double)jsv._real
+              : (jst == json_type::integer) ? (double)jsv._integer
+                                                   : (double)jsv._unsigned;
   return true;
 }
 inline bool get_integral(json_cview js, int32_t& value) {
   if (!is_valid(js)) return false;
-  auto jsv = _get_value(js);
-  if (jsv->_type != json_type::integer && jsv->_type != json_type::unsigned_)
+  auto& jst = _get_type(js);
+  auto& jsv = _get_value(js);
+  if (jst != json_type::integer && jst != json_type::unsigned_)
     return set_error(js, "integer expected");
-  value = (jsv->_type == json_type::integer) ? (int32_t)jsv->_integer
-                                             : (int32_t)jsv->_unsigned;
+  value = (jst == json_type::integer) ? (int32_t)jsv._integer
+                                             : (int32_t)jsv._unsigned;
   return true;
 }
 inline bool get_integral(json_cview js, uint32_t& value) {
   if (!is_valid(js)) return false;
-  auto jsv = _get_value(js);
-  if (jsv->_type != json_type::integer && jsv->_type != json_type::unsigned_)
+  auto& jst = _get_type(js);
+  auto& jsv = _get_value(js);
+  if (jst != json_type::integer && jst != json_type::unsigned_)
     return set_error(js, "integer expected");
-  value = (jsv->_type == json_type::integer) ? (uint32_t)jsv->_integer
-                                             : (uint32_t)jsv->_unsigned;
+  value = (jst == json_type::integer) ? (uint32_t)jsv._integer
+                                             : (uint32_t)jsv._unsigned;
   return true;
 }
 inline bool get_number(json_cview js, float& value) {
   if (!is_valid(js)) return false;
-  auto jsv = _get_value(js);
-  if (jsv->_type != json_type::real && jsv->_type != json_type::integer &&
-      jsv->_type != json_type::unsigned_)
+  auto& jst = _get_type(js);
+  auto& jsv = _get_value(js);
+  if (jst != json_type::real && jst != json_type::integer &&
+      jst != json_type::unsigned_)
     return set_error(js, "number expected");
-  value = (jsv->_type == json_type::real)
-              ? (float)jsv->_real
-              : (jsv->_type == json_type::integer) ? (float)jsv->_integer
-                                                   : (float)jsv->_unsigned;
+  value = (jst == json_type::real)
+              ? (float)jsv._real
+              : (jst == json_type::integer) ? (float)jsv._integer
+                                                   : (float)jsv._unsigned;
   return true;
 }
 
@@ -1541,59 +1563,66 @@ inline size_t get_size(json_cview js);
 // Array
 inline bool set_array(json_view js) {
   if (!is_valid(js)) return false;
-  auto jsv           = _get_value(js);
-  jsv->_type         = json_type::array;
-  jsv->_array.start  = js.index;
-  jsv->_array.length = 0;
+  auto& jst = _get_type(js);
+  auto& jsv   = _get_value(js);
+  jst         = json_type::array;
+  jsv._array.start  = js.index;
+  jsv._array.length = 0;
   return true;
 }
 inline bool array_size(json_cview js, size_t& size) {
   if (!is_valid(js)) return false;
-  auto jsv = _get_value(js);
-  if (jsv->_type != json_type::array) return set_error(js, "array expected");
-  size = (size_t)jsv->_array.length;
+  auto& jst = _get_type(js);
+  auto& jsv = _get_value(js);
+  if (jst != json_type::array) return set_error(js, "array expected");
+  size = (size_t)jsv._array.length;
   return true;
 }
 inline json_view get_element(json_view js, size_t idx) {
   if (!is_valid(js)) return {js.root};
-  auto jsv = _get_value(js);
-  if (jsv->_type != json_type::array)
+  auto& jst = _get_type(js);
+  auto& jsv = _get_value(js);
+  if (jst != json_type::array)
     return set_error_view(js, "array expected");
-  if (idx >= jsv->_array.length)
+  if (idx >= jsv._array.length)
     return set_error_view(js, "index out of bounds");
-  return {js.root, jsv->_array.start + (uint32_t)idx};
+  return {js.root, jsv._array.start + (uint32_t)idx};
 }
 inline json_cview get_element(json_cview js, size_t idx) {
   if (!is_valid(js)) return {js.root};
-  auto jsv = _get_value(js);
-  if (jsv->_type != json_type::array)
+  auto& jst = _get_type(js);
+  auto& jsv = _get_value(js);
+  if (jst != json_type::array)
     return set_error_view(js, "array expected");
-  if (idx >= jsv->_array.length)
+  if (idx >= jsv._array.length)
     return set_error_view(js, "index out of bounds");
-  return {js.root, jsv->_array.start + (uint32_t)idx};
+  return {js.root, jsv._array.start + (uint32_t)idx};
 }
 inline json_view append_element(json_view js) {
   if (!is_valid(js)) return {js.root};
-  auto jsv = _get_value(js);
-  if (jsv->_type != json_type::array)
+  auto& jst = _get_type(js);
+  auto& jsv = _get_value(js);
+  if (jst != json_type::array)
     return set_error_view(js, "array expected");
-  auto last_start    = jsv->_array.start;
-  auto last_length   = jsv->_array.length;
-  auto last_capacity = _get_capacity(jsv->_array.length);
-  jsv->_array.length += 1;
-  auto new_start    = jsv->_array.start;
-  auto new_length   = jsv->_array.length;
-  auto new_capacity = _get_capacity(jsv->_array.length);
+  auto last_start    = jsv._array.start;
+  auto last_length   = jsv._array.length;
+  auto last_capacity = _get_capacity(jsv._array.length);
+  jsv._array.length += 1;
+  auto new_start    = jsv._array.start;
+  auto new_length   = jsv._array.length;
+  auto new_capacity = _get_capacity(jsv._array.length);
   if (new_length > last_capacity) {
     // look for an alternative
     if (!js.root->holes[new_capacity].empty()) {
-      jsv->_array.start = js.root->holes[new_capacity].back();
-      new_start         = jsv->_array.start;
+      jsv._array.start = js.root->holes[new_capacity].back();
+      new_start         = jsv._array.start;
       js.root->holes[new_capacity].pop_back();
     } else {
       // allocate at the end
-      jsv->_array.start = (uint32_t)js.root->values.size();
-      new_start         = jsv->_array.start;
+      jsv._array.start = (uint32_t)js.root->values.size();
+      new_start         = jsv._array.start;
+      js.root->types.insert(
+          js.root->types.end(), new_capacity, json_type::null);
       js.root->values.insert(
           js.root->values.end(), new_capacity, json_tree::json_value{});
     }
@@ -1601,6 +1630,8 @@ inline json_view append_element(json_view js) {
       js.root->holes[last_capacity].push_back(last_start);
     }
     for (auto idx = 0; idx < last_length; idx++) {
+      js.root->types[new_start + idx] = js.root->types[last_start + idx];
+      js.root->types[last_start + idx] = json_type::null;
       js.root->values[new_start + idx] = js.root->values[last_start + idx];
       js.root->values[last_start + idx] = {};
     }
@@ -1628,14 +1659,15 @@ inline auto iterate_array(json_view js) {
     iterator  end() { return {end_}; }
   };
   if (!is_valid(js)) return iterator_wrapper{{js.root}, {js.root}};
-  auto jsv = _get_value(js);
-  if (jsv->_type != json_type::array) {
+  auto& jst = _get_type(js);
+  auto& jsv = _get_value(js);
+  if (jst != json_type::array) {
     set_error_view(js, "array expected");
     return iterator_wrapper{{js.root}, {js.root}};
   }
   return iterator_wrapper{
-      {js.root, jsv->_array.start},
-      {js.root, jsv->_array.start + jsv->_array.length},
+      {js.root, jsv._array.start},
+      {js.root, jsv._array.start + jsv._array.length},
   };
 }
 inline auto iterate_array(json_cview js) {
@@ -1657,14 +1689,15 @@ inline auto iterate_array(json_cview js) {
     iterator  end() { return {end_}; }
   };
   if (!is_valid(js)) return iterator_wrapper{{js.root}, {js.root}};
-  auto jsv = _get_value(js);
-  if (jsv->_type != json_type::array) {
+  auto& jst = _get_type(js);
+  auto& jsv = _get_value(js);
+  if (jst != json_type::array) {
     set_error_view(js, "array expected");
     return iterator_wrapper{{js.root}, {js.root}};
   }
   return iterator_wrapper{
-      {js.root, jsv->_array.start},
-      {js.root, jsv->_array.start + jsv->_array.length},
+      {js.root, jsv._array.start},
+      {js.root, jsv._array.start + jsv._array.length},
   };
 }
 
@@ -1672,93 +1705,102 @@ inline auto iterate_array(json_cview js) {
 inline bool set_object(json_view js) {
   if (!is_valid(js)) return false;
   // TODO: implement reuse
-  auto jsv           = _get_value(js);
-  jsv->_type         = json_type::object;
-  jsv->_array.start  = js.index;
-  jsv->_array.length = 0;
+  auto& jst = _get_type(js);
+  auto& jsv   = _get_value(js);
+  jst         = json_type::object;
+  jsv._array.start  = js.index;
+  jsv._array.length = 0;
   return true;
 }
 inline bool object_size(json_cview js, size_t& size) {
   if (!is_valid(js)) return false;
-  auto jsv = _get_value(js);
-  if (jsv->_type != json_type::object) return set_error(js, "object expected");
-  size = (size_t)jsv->_object.length;
+  auto& jst = _get_type(js);
+  auto& jsv = _get_value(js);
+  if (jst != json_type::object) return set_error(js, "object expected");
+  size = (size_t)jsv._object.length;
   return true;
 }
 inline json_view get_element(json_view js, string_view key) {
   if (!is_valid(js)) return {js.root};
-  auto jsv = _get_value(js);
-  if (jsv->_type != json_type::object)
+  auto& jst = _get_type(js);
+  auto& jsv = _get_value(js);
+  if (jst != json_type::object)
     return set_error_view(js, "object expected");
-  for (auto idx = (uint32_t)0; idx < jsv->_object.length; idx++) {
-    auto jsk = json_view{js.root, jsv->_object.start + idx * 2};
+  for (auto idx = (uint32_t)0; idx < jsv._object.length; idx++) {
+    auto jsk = json_view{js.root, jsv._object.start + idx * 2};
     if (_get_key(jsk) == key) {
-      return {js.root, jsv->_object.start + idx * 2 + 1};
+      return {js.root, jsv._object.start + idx * 2 + 1};
     }
   }
   return set_error_view(js, "missing key " + string{key});
 }
 inline json_cview get_element(json_cview js, string_view key) {
   if (!is_valid(js)) return {js.root};
-  auto jsv = _get_value(js);
-  if (jsv->_type != json_type::object)
+  auto& jst = _get_type(js);
+  auto& jsv = _get_value(js);
+  if (jst != json_type::object)
     return set_error_view(js, "object expected");
-  for (auto idx = (uint32_t)0; idx < jsv->_object.length; idx++) {
-    auto jsk = json_view{js.root, jsv->_object.start + idx * 2};
+  for (auto idx = (uint32_t)0; idx < jsv._object.length; idx++) {
+    auto jsk = json_view{js.root, jsv._object.start + idx * 2};
     if (_get_key(jsk) == key) {
-      return {js.root, jsv->_object.start + idx * 2 + 1};
+      return {js.root, jsv._object.start + idx * 2 + 1};
     }
   }
   return set_error_view(js, "missing key " + string{key});
 }
 inline bool has_element(json_view js, string_view key) {
   if (!is_valid(js)) return false;
-  auto jsv = _get_value(js);
-  if (jsv->_type != json_type::object) return set_error(js, "object expected");
-  for (auto idx = (uint32_t)0; idx < jsv->_object.length; idx++) {
-    auto jsk = json_cview{js.root, jsv->_object.start + idx * 2};
+  auto& jst = _get_type(js);
+  auto& jsv = _get_value(js);
+  if (jst != json_type::object) return set_error(js, "object expected");
+  for (auto idx = (uint32_t)0; idx < jsv._object.length; idx++) {
+    auto jsk = json_cview{js.root, jsv._object.start + idx * 2};
     if (_get_key(jsk) == key) return true;
   }
   return false;
 }
 inline bool has_element(json_cview js, string_view key) {
   if (!is_valid(js)) return false;
-  auto jsv = _get_value(js);
-  if (jsv->_type != json_type::object) return set_error(js, "object expected");
-  for (auto idx = (uint32_t)0; idx < jsv->_object.length; idx++) {
-    auto jsk = json_view{js.root, jsv->_object.start + idx * 2};
+  auto& jst = _get_type(js);
+  auto& jsv = _get_value(js);
+  if (jst != json_type::object) return set_error(js, "object expected");
+  for (auto idx = (uint32_t)0; idx < jsv._object.length; idx++) {
+    auto jsk = json_view{js.root, jsv._object.start + idx * 2};
     if (_get_key(jsk) == key) return true;
   }
   return false;
 }
 inline json_view insert_element(json_view js, string_view key) {
   if (!is_valid(js)) return {js.root};
-  auto jsv = _get_value(js);
-  if (jsv->_type != json_type::object)
+  auto& jst = _get_type(js);
+  auto& jsv = _get_value(js);
+  if (jst != json_type::object)
     return set_error_view(js, "object expected");
-  for (auto idx = (uint32_t)0; idx < jsv->_object.length; idx++) {
-    auto jsk = json_view{js.root, jsv->_object.start + idx * 2};
+  for (auto idx = (uint32_t)0; idx < jsv._object.length; idx++) {
+    auto jsk = json_view{js.root, jsv._object.start + idx * 2};
     if (_get_key(jsk) == key) {
-      return {js.root, jsv->_object.start + idx * 2 + 1};
+      return {js.root, jsv._object.start + idx * 2 + 1};
     }
   }
-  auto last_start    = jsv->_object.start;
-  auto last_length   = jsv->_object.length * 2;
+  auto last_start    = jsv._object.start;
+  auto last_length   = jsv._object.length * 2;
   auto last_capacity = _get_capacity(last_length);
-  jsv->_object.length += 1;
-  auto new_start    = jsv->_object.start;
-  auto new_length   = jsv->_object.length * 2;
+  jsv._object.length += 1;
+  auto new_start    = jsv._object.start;
+  auto new_length   = jsv._object.length * 2;
   auto new_capacity = _get_capacity(new_length);
   if (new_length > last_capacity) {
     // look for an alternative
     if (!js.root->holes[new_capacity].empty()) {
-      jsv->_object.start = js.root->holes[new_capacity].back();
-      new_start         = jsv->_object.start;
+      jsv._object.start = js.root->holes[new_capacity].back();
+      new_start         = jsv._object.start;
       js.root->holes[new_capacity].pop_back();
     } else {
       // allocate at the end
-      jsv->_object.start = (uint32_t)js.root->values.size();
-      new_start         = jsv->_object.start;
+      jsv._object.start = (uint32_t)js.root->values.size();
+      new_start         = jsv._object.start;
+      js.root->types.insert(
+          js.root->types.end(), new_capacity, json_type::null);
       js.root->values.insert(
           js.root->values.end(), new_capacity, json_tree::json_value{});
     }
@@ -1766,27 +1808,28 @@ inline json_view insert_element(json_view js, string_view key) {
       js.root->holes[last_capacity].push_back(last_start);
     }
     for (auto idx = 0; idx < last_length; idx++) {
+      js.root->types[new_start + idx] = js.root->types[last_start + idx];
+      js.root->types[last_start + idx] = json_type::null;
       js.root->values[new_start + idx] = js.root->values[last_start + idx];
       js.root->values[last_start + idx] = {};
     }
   }
   auto index = new_start + new_length - 2;
   // TOFO(fabio): implement key reuse
-  auto jsk            = &js.root->values[index];
-  jsk->_type          = json_type::string_;
+  js.root->types[index] = json_type::string_;
+  auto& jsk            = js.root->values[index];
   auto key_found = false;
   for (auto& kv : js.root->key_list) {
     auto okey = string_view{js.root->keys.data() + kv._string.start, 
       kv._string.length};
     if (okey == key) {
-      jsk->_string = kv._string;
+      jsk._string = kv._string;
       key_found = true;
     }
   }
   if (!key_found) {
-    jsk->_string.start  = (uint32_t)js.root->keys.size();
-    jsk->_string.length = (uint32_t)key.size();
-    js.root->key_list.emplace_back()._string = jsk->_string;
+    jsk._string  = {(uint32_t)js.root->keys.size(), (uint32_t)key.size()};
+    js.root->key_list.emplace_back()._string = jsk._string;
     js.root->keys.insert(js.root->keys.end(), key.begin(), key.end());
     js.root->keys.push_back(0);
   }
@@ -1814,13 +1857,14 @@ inline auto iterate_object(json_view js) {
     iterator  end() { return {end_}; }
   };
   if (!is_valid(js)) return iterator_wrapper{{js.root}, {js.root}};
-  auto jsv = _get_value(js);
-  if (jsv->_type != json_type::object) {
+  auto& jst = _get_type(js);
+  auto& jsv = _get_value(js);
+  if (jst != json_type::object) {
     set_error_view(js, "object expected");
     return iterator_wrapper{{js.root}, {js.root}};
   }
-  return iterator_wrapper{{js.root, jsv->_object.start},
-      {js.root, jsv->_object.start + jsv->_object.length * 2}};
+  return iterator_wrapper{{js.root, jsv._object.start},
+      {js.root, jsv._object.start + jsv._object.length * 2}};
 }
 inline auto iterate_object(json_cview js) {
   struct iterator {
@@ -1843,32 +1887,35 @@ inline auto iterate_object(json_cview js) {
     iterator   end() { return {end_}; }
   };
   if (!is_valid(js)) return iterator_wrapper{{js.root}, {js.root}};
-  auto jsv = _get_value(js);
-  if (jsv->_type != json_type::object) {
+  auto& jst = _get_type(js);
+  auto& jsv = _get_value(js);
+  if (jst != json_type::object) {
     set_error_view(js, "object expected");
     return iterator_wrapper{{js.root}, {js.root}};
   }
-  return iterator_wrapper{{js.root, jsv->_object.start},
-      {js.root, jsv->_object.start + jsv->_object.length * 2}};
+  return iterator_wrapper{{js.root, jsv._object.start},
+      {js.root, jsv._object.start + jsv._object.length * 2}};
 }
 
 // Binary
 inline bool set_binary(json_view js, const json_binary& value) {
   if (!is_valid(js)) return false;
-  auto jsv = _get_value(js);
+  auto& jst = _get_type(js);
+  auto& jsv = _get_value(js);
   // TODO(fabio): implement reuse
-  jsv->_type          = json_type::binary;
-  jsv->_binary.start  = (uint32_t)js.root->binaries.size();
-  jsv->_binary.length = (uint32_t)value.size();
+  jst          = json_type::binary;
+  jsv._binary.start  = (uint32_t)js.root->binaries.size();
+  jsv._binary.length = (uint32_t)value.size();
   js.root->binaries.insert(js.root->binaries.end(), value.begin(), value.end());
   return true;
 }
 inline bool get_binary(json_cview js, json_binary& value) {
   if (!is_valid(js)) return false;
-  auto jsv = _get_value(js);
-  if (jsv->_type != json_type::binary) return set_error(js, "binary expected");
-  value = json_binary{js.root->binaries.data() + jsv->_binary.start,
-      js.root->binaries.data() + jsv->_binary.start + jsv->_binary.length};
+  auto& jst = _get_type(js);
+  auto& jsv = _get_value(js);
+  if (jst != json_type::binary) return set_error(js, "binary expected");
+  value = json_binary{js.root->binaries.data() + jsv._binary.start,
+      js.root->binaries.data() + jsv._binary.start + jsv._binary.length};
   return true;
 }
 
