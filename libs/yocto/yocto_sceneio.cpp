@@ -1189,30 +1189,6 @@ inline void from_json(const njson& j, frame3f& value) {
 #endif
 
 // support for json conversions
-inline bool set_value(json_view js, const vec3f& value) {
-  return set_value(js, (const array<float, 3>&)value);
-}
-inline bool set_value(json_view js, const vec4f& value) {
-  return set_value(js, (const array<float, 4>&)value);
-}
-inline bool set_value(json_view js, const frame3f& value) {
-  return set_value(js, (const array<float, 12>&)value);
-}
-inline bool set_value(json_view js, const mat4f& value) {
-  return set_value(js, (const array<float, 16>&)value);
-}
-
-inline bool get_value(json_cview js, vec3f& value) {
-  return get_value(js, (array<float, 3>&)value);
-}
-inline bool get_value(json_cview js, mat3f& value) {
-  return get_value(js, (array<float, 9>&)value);
-}
-inline bool get_value(json_cview js, frame3f& value) {
-  return get_value(js, (array<float, 12>&)value);
-}
-
-// support for json conversions
 inline bool set_value(json_view_ js, const vec3f& value) {
   return set_value(js, (const array<float, 3>&)value);
 }
@@ -1644,7 +1620,7 @@ static bool save_json_scene(const string& filename, const sceneio_scene* scene,
   if (progress_cb) progress_cb("save scene", progress.x++, progress.y);
 
   // save json file
-  auto js_tree = json_tree{};
+  auto js_tree = json_tree_{};
   auto js      = get_root(js_tree);
   set_object(js);
 
