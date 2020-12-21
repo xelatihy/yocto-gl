@@ -668,63 +668,6 @@ bool save_json(const string& filename, const json_tree& js, string& error) {
   return save_json(filename, njs, error);
 }
 
-// convert json
-void to_json(njson& njs, json_citerator_& js) {
-  switch (get_type(js)) {
-    case json_type::null: njs = nullptr; break;
-    case json_type::integer: get_integer(js, njs.get_ref<int64_t&>()); break;
-    case json_type::unsigned_:
-      get_unsigned(js, njs.get_ref<uint64_t&>());
-      break;
-    case json_type::real: get_real(js, njs.get_ref<double&>()); break;
-    case json_type::boolean: get_boolean(js, njs.get_ref<bool&>()); break;
-    case json_type::string_: get_string(js, njs.get_ref<string&>()); break;
-    case json_type::array:
-      njs = njson::array();
-      for ([[maybe_unused]] auto _ : iterate_array(js))
-        to_json(njs.emplace_back(), js);
-      break;
-    case json_type::object:
-      njs = njson::object();
-      for (auto key : iterate_object(js)) to_json(njs[string{key}], js);
-      break;
-    case json_type::binary:
-      njs = njson::binary({});
-      get_binary(js, njs.get_binary());
-      break;
-  }
-}
-
-// convert json
-void from_json(const njson& njs, json_iterator_& js) {
-  switch (njs.type()) {
-    case njson::value_t::null: set_null(js); break;
-    case njson::value_t::number_integer: set_integer(js, (int64_t)njs); break;
-    case njson::value_t::number_unsigned: set_unsigned(js, njs); break;
-    case njson::value_t::number_float: set_real(js, njs); break;
-    case njson::value_t::boolean: set_boolean(js, (bool)njs); break;
-    case njson::value_t::string: set_string(js, (string)njs); break;
-    case njson::value_t::array:
-      begin_array(js);
-      for (auto& ejs : njs) {
-        append_item(js);
-        from_json(ejs, js);
-      }
-      end_array(js);
-      break;
-    case njson::value_t::object:
-      begin_object(js);
-      for (auto& [key, ejs] : njs.items()) {
-        append_item(js, key);
-        from_json(ejs, js);
-      }
-      end_object(js);
-      break;
-    case njson::value_t::binary: set_binary(js, njs.get_binary()); break;
-    case njson::value_t::discarded: set_null(js); break;
-  }
-}
-
 // load json
 bool load_json(const string& filename, json_tree_& js, string& error) {
   // parse json
@@ -732,17 +675,19 @@ bool load_json(const string& filename, json_tree_& js, string& error) {
   if (!load_json(filename, njs, error)) return false;
 
   // convert
-  auto js_it = get_iterator(js);
-  from_json(njs, js_it);
+  // TODO: implement this
+  // auto js_it = get_iterator(js);
+  // from_json(njs, js_it);
   return true;
 }
 
 // save json
 bool save_json(const string& filename, const json_tree_& js, string& error) {
   // convert
-  auto njs   = njson{};
-  auto js_it = get_citerator(js);
-  to_json(njs, js_it);
+  auto njs = njson{};
+  // TODO: implement this
+  // auto js_it = get_citerator(js);
+  // to_json(njs, js_it);
 
   // save
   return save_json(filename, njs, error);

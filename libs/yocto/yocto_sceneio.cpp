@@ -1212,54 +1212,6 @@ inline bool get_value(json_cview js, frame3f& value) {
   return get_value(js, (array<float, 12>&)value);
 }
 
-// support for json conversions
-inline bool set_value(json_iterator& js, const vec3f& value) {
-  return set_value(js, (const array<float, 3>&)value);
-}
-inline bool set_value(json_iterator& js, const vec4f& value) {
-  return set_value(js, (const array<float, 4>&)value);
-}
-inline bool set_value(json_iterator& js, const frame3f& value) {
-  return set_value(js, (const array<float, 12>&)value);
-}
-inline bool set_value(json_iterator& js, const mat4f& value) {
-  return set_value(js, (const array<float, 16>&)value);
-}
-
-inline bool get_value(json_citerator& js, vec3f& value) {
-  return get_value(js, (array<float, 3>&)value);
-}
-inline bool get_value(json_citerator& js, mat3f& value) {
-  return get_value(js, (array<float, 9>&)value);
-}
-inline bool get_value(json_citerator& js, frame3f& value) {
-  return get_value(js, (array<float, 12>&)value);
-}
-
-// support for json conversions
-inline bool set_value(json_iterator_& js, const vec3f& value) {
-  return set_value(js, (const array<float, 3>&)value);
-}
-inline bool set_value(json_iterator_& js, const vec4f& value) {
-  return set_value(js, (const array<float, 4>&)value);
-}
-inline bool set_value(json_iterator_& js, const frame3f& value) {
-  return set_value(js, (const array<float, 12>&)value);
-}
-inline bool set_value(json_iterator_& js, const mat4f& value) {
-  return set_value(js, (const array<float, 16>&)value);
-}
-
-inline bool get_value(json_citerator_& js, vec3f& value) {
-  return get_value(js, (array<float, 3>&)value);
-}
-inline bool get_value(json_citerator_& js, mat3f& value) {
-  return get_value(js, (array<float, 9>&)value);
-}
-inline bool get_value(json_citerator_& js, frame3f& value) {
-  return get_value(js, (array<float, 12>&)value);
-}
-
 }  // namespace yocto
 
 // -----------------------------------------------------------------------------
