@@ -1390,7 +1390,7 @@ static bool load_json_scene(const string& filename, sceneio_scene* scene,
           auto generator = string{};
           get_value(value, generator);
         } else {
-          // set_error(group, "unknown key " + string{key});
+          set_error(group, "unknown key " + string{key});
         }
       }
     } else if (gname == "cameras") {
@@ -1420,7 +1420,7 @@ static bool load_json_scene(const string& filename, sceneio_scene* scene,
             camera->frame = lookat_frame(
                 camera->frame.x, camera->frame.y, camera->frame.z);
           } else {
-            // set_error(js, "unknown key " + string{key});
+            set_error(js, "unknown key " + string{key});
           }
         }
       }
@@ -1439,7 +1439,7 @@ static bool load_json_scene(const string& filename, sceneio_scene* scene,
             environment->frame = lookat_frame(environment->frame.x,
                 environment->frame.y, environment->frame.z, true);
           } else {
-            // set_error(js, "unknown key " + string{key});
+            set_error(js, "unknown key " + string{key});
           }
         }
       }
@@ -1501,7 +1501,7 @@ static bool load_json_scene(const string& filename, sceneio_scene* scene,
           } else if (key == "normal_tex") {
             get_texture(value, material->normal_tex);
           } else {
-            // set_error(element, "unknown key " + string{key});
+            set_error(element, "unknown key " + string{key});
           }
         }
         material_map[material->name] = {material, true};
@@ -1550,7 +1550,7 @@ static bool load_json_scene(const string& filename, sceneio_scene* scene,
         }
       }
     } else {
-      // set_error(js, "unknown key " + string{gname});
+      set_error(js, "unknown key " + string{gname});
     }
   }
 
