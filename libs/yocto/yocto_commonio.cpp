@@ -647,6 +647,111 @@ void from_json(const njson& njs, json_view js) {
   }
 }
 
+#if YOCTO_JSON_SAX == 1
+
+// load json
+bool load_json(const string& filename, json_tree& js, string& error) {
+  // error helpers
+  auto parse_error = [filename, &error]() {
+    error = filename + ": parse error in json";
+    return false;
+  };
+
+  // sax handler
+  struct sax_handler {
+    // stack
+    json_view root;
+    std::vector<json_view> stack = {};
+    std::string                     current_key;
+    explicit sax_handler(json_view root_) : root{root_}, stack{root_} {
+    }
+
+    // get current value
+    json_view next_value() {
+      if (stack.size() == 1) return root;
+      auto& jst = _get_type(stack.back());
+      if (jst == json_type::array) return append_element(stack.back());
+      if (jst == json_type::object) return insert_element(stack.back(), current_key);
+      throw yocto::json_error{"bad json type"};
+    }
+
+    // values
+    bool null() {
+      set_null(next_value());
+      return true;
+    }
+    bool boolean(bool value) {
+      set_boolean(next_value(), value);
+      return true;
+    }
+    bool number_integer(int64_t value) {
+      set_integer(next_value(), value);
+      return true;
+    }
+    bool number_unsigned(uint64_t value) {
+      set_unsigned(next_value(), value);
+      return true;
+    }
+    bool number_float(double value, const std::string&) {
+      set_real(next_value(), value);
+      return true;
+    }
+    bool string(std::string& value) {
+      set_string(next_value(), value);
+      return true;
+    }
+    bool binary(std::vector<uint8_t>& value) {
+      set_binary(next_value(), value);
+      return true;
+    }
+
+    // objects
+    bool start_object(size_t elements) {
+      set_object(next_value());
+      stack.push_back(next_value());
+      return true;
+    }
+    bool end_object() {
+      stack.pop_back();
+      return true;
+    }
+    bool key(std::string& value) {
+      current_key = value;
+      return true;
+    }
+
+    // arrays
+    bool start_array(size_t elements) {
+      set_array(next_value());
+      stack.push_back(next_value());
+      return true;
+    }
+    bool end_array() {
+      stack.pop_back();
+      return true;
+    }
+
+    bool parse_error(size_t position, const std::string& last_token,
+        const nlohmann::detail::exception&) {
+      return false;
+    }
+  };
+
+  // set up parsing
+  js           = json_tree{};
+  auto handler = sax_handler{get_root(js)};
+
+  // load text
+  auto text = ""s;
+  if (!load_text(filename, text, error)) return false;
+
+  // parse json
+  if (!njson::sax_parse(text, &handler)) return parse_error();
+  return true;
+}
+
+#else
+
 // load json
 bool load_json(const string& filename, json_tree& js, string& error) {
   // parse json
@@ -657,6 +762,8 @@ bool load_json(const string& filename, json_tree& js, string& error) {
   from_json(njs, get_root(js));
   return true;
 }
+
+#endif
 
 // save json
 bool save_json(const string& filename, const json_tree& js, string& error) {
