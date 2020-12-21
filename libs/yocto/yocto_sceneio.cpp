@@ -1212,6 +1212,30 @@ inline bool get_value(json_cview js, frame3f& value) {
   return get_value(js, (array<float, 12>&)value);
 }
 
+// support for json conversions
+inline bool set_value(json_view_ js, const vec3f& value) {
+  return set_value(js, (const array<float, 3>&)value);
+}
+inline bool set_value(json_view_ js, const vec4f& value) {
+  return set_value(js, (const array<float, 4>&)value);
+}
+inline bool set_value(json_view_ js, const frame3f& value) {
+  return set_value(js, (const array<float, 12>&)value);
+}
+inline bool set_value(json_view_ js, const mat4f& value) {
+  return set_value(js, (const array<float, 16>&)value);
+}
+
+inline bool get_value(json_cview_ js, vec3f& value) {
+  return get_value(js, (array<float, 3>&)value);
+}
+inline bool get_value(json_cview_ js, mat3f& value) {
+  return get_value(js, (array<float, 9>&)value);
+}
+inline bool get_value(json_cview_ js, frame3f& value) {
+  return get_value(js, (array<float, 12>&)value);
+}
+
 }  // namespace yocto
 
 // -----------------------------------------------------------------------------
@@ -1244,7 +1268,7 @@ static bool load_json_scene(const string& filename, sceneio_scene* scene,
   if (progress_cb) progress_cb("load scene", progress.x++, progress.y);
 
   // open file
-  auto js_tree = json_tree{};
+  auto js_tree = json_tree_{};
   if (!load_json(filename, js_tree, error)) return json_error();
   auto js = get_croot(js_tree);
 
@@ -1258,7 +1282,7 @@ static bool load_json_scene(const string& filename, sceneio_scene* scene,
 
   // parse json reference
   auto get_shape = [scene, &shape_map](
-                       json_cview js, sceneio_shape*& value) -> bool {
+                       json_cview_ js, sceneio_shape*& value) -> bool {
     auto name = ""s;
     if (!get_value(js, name)) return false;
     auto it = shape_map.find(name);
@@ -1274,7 +1298,7 @@ static bool load_json_scene(const string& filename, sceneio_scene* scene,
 
   // parse json reference
   auto get_material = [scene, &material_map](
-                          json_cview js, sceneio_material*& value) -> bool {
+                          json_cview_ js, sceneio_material*& value) -> bool {
     auto name = ""s;
     if (!get_value(js, name)) return false;
     auto it = material_map.find(name);
@@ -1290,7 +1314,7 @@ static bool load_json_scene(const string& filename, sceneio_scene* scene,
 
   // parse json reference
   auto get_texture = [scene, &texture_map](
-                         json_cview js, sceneio_texture*& value) -> bool {
+                         json_cview_ js, sceneio_texture*& value) -> bool {
     auto name = ""s;
     if (!get_value(js, name)) return false;
     auto it = texture_map.find(name);
@@ -1313,7 +1337,7 @@ static bool load_json_scene(const string& filename, sceneio_scene* scene,
   auto ply_instance_map  = unordered_map<string, ply_instance*>{{"", nullptr}};
   auto instance_ply      = unordered_map<sceneio_instance*, ply_instance*>{};
   auto get_ply_instances = [&ply_instances, &ply_instance_map, &instance_ply](
-                               json_cview        js,
+                               json_cview_        js,
                                sceneio_instance* instance) -> bool {
     auto name = ""s;
     if (!get_value(js, name)) return false;

@@ -668,6 +668,53 @@ bool save_json(const string& filename, const json_tree& js, string& error) {
   return save_json(filename, njs, error);
 }
 
+// convert json
+void to_json(njson& njs, json_cview_ js) {
+  switch (get_type(js)) {
+    case json_type::null: njs = nullptr; break;
+    case json_type::integer: njs = get_integer(js); break;
+    case json_type::unsigned_: njs = get_unsigned(js); break;
+    case json_type::real: njs = get_real(js); break;
+    case json_type::boolean: njs = get_boolean(js); break;
+    case json_type::string_: njs = get_string(js); break;
+    case json_type::array:
+      njs = njson::array();
+      for (auto ejs : iterate_array(js)) to_json(njs.emplace_back(), ejs);
+      break;
+    case json_type::object:
+      njs = njson::object();
+      for (auto [key, ejs] : iterate_object(js)) to_json(njs[string{key}], ejs);
+      break;
+    case json_type::binary:
+      njs = njson::binary({});
+      get_binary(js, njs.get_binary());
+      break;
+  }
+}
+
+// convert json
+void from_json(const njson& njs, json_view_ js) {
+  switch (njs.type()) {
+    case njson::value_t::null: set_null(js); break;
+    case njson::value_t::number_integer: set_integer(js, (int64_t)njs); break;
+    case njson::value_t::number_unsigned: set_unsigned(js, njs); break;
+    case njson::value_t::number_float: set_real(js, njs); break;
+    case njson::value_t::boolean: set_boolean(js, (bool)njs); break;
+    case njson::value_t::string: set_string(js, (string)njs); break;
+    case njson::value_t::array:
+      set_array(js);
+      for (auto& ejs : njs) from_json(ejs, append_element(js));
+      break;
+    case njson::value_t::object:
+      set_object(js);
+      for (auto& [key, ejs] : njs.items())
+        from_json(ejs, insert_element(js, key));
+      break;
+    case njson::value_t::binary: set_binary(js, njs.get_binary()); break;
+    case njson::value_t::discarded: set_null(js); break;
+  }
+}
+
 // load json
 bool load_json(const string& filename, json_tree_& js, string& error) {
   // parse json
@@ -675,9 +722,7 @@ bool load_json(const string& filename, json_tree_& js, string& error) {
   if (!load_json(filename, njs, error)) return false;
 
   // convert
-  // TODO: implement this
-  // auto js_it = get_iterator(js);
-  // from_json(njs, js_it);
+  from_json(njs, get_root(js));
   return true;
 }
 
@@ -685,9 +730,7 @@ bool load_json(const string& filename, json_tree_& js, string& error) {
 bool save_json(const string& filename, const json_tree_& js, string& error) {
   // convert
   auto njs = njson{};
-  // TODO: implement this
-  // auto js_it = get_citerator(js);
-  // to_json(njs, js_it);
+  to_json(njs, get_root((json_tree&)js));
 
   // save
   return save_json(filename, njs, error);

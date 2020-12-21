@@ -2394,7 +2394,7 @@ inline uint32_t _get_capacity(uint32_t length) {
   if (length == 0) return 0;
   if (length <= 4) return 4;
   // TODO(fabio): faster pow2
-  auto capacity = (uint32_t)0;
+  auto capacity = (uint32_t)4;
   while (capacity < length) capacity *= 2;
   return capacity;
 }
