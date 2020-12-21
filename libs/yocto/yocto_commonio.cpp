@@ -662,7 +662,7 @@ bool load_json(const string& filename, json_tree& js, string& error) {
 bool save_json(const string& filename, const json_tree& js, string& error) {
   // convert
   auto njs = njson{};
-  to_json(njs, get_root(js));
+  to_json(njs, get_root((json_tree&)js));
 
   // save
   return save_json(filename, njs, error);
