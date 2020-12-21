@@ -1555,7 +1555,7 @@ static bool load_json_scene(const string& filename, sceneio_scene* scene,
   }
 
   // check for parsing errors
-  // if (!is_valid(js)) return parse_error(get_error(js));
+  if (!is_valid(js)) return parse_error(get_error(js));
 
   // check materials
   for (auto& [key, value] : material_map) {
@@ -1851,7 +1851,7 @@ static bool save_json_scene(const string& filename, const sceneio_scene* scene,
   }
 
   // chck for errors
-  // if (!is_valid(js)) return conversion_error(get_error(js));
+  if (!is_valid(js)) return conversion_error(get_error(js));
 
   // handle progress
   if (progress_cb) progress_cb("save scene", progress.x++, progress.y);

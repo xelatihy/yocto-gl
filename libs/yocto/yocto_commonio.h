@@ -504,8 +504,11 @@ struct json_cview {
 };
 
 // Error check
-inline bool is_valid(json_cview js);
-inline bool is_valid(json_view js);
+inline bool   is_valid(json_cview js);
+inline bool   is_valid(json_view js);
+inline string get_error(json_cview js);
+inline string get_error(json_view js);
+inline string compute_path(json_cview js);
 
 // Type
 inline json_type get_type(json_cview js);
@@ -1552,23 +1555,23 @@ inline const json_tree::json_value* _get_value(json_cview js) {
   }
 }
 inline bool _set_error(json_view js, string_view error) {
-  if (is_valid(js)) return false;
-  set_error(*js.root, error);
+  if (!is_valid(js)) return false;
+  set_error(*js.root, string{error} + " at " + compute_path(js));
   return false;
 }
 inline bool _set_error(json_cview js, string_view error) {
-  if (is_valid(js)) return false;
-  set_error(*js.root, error);
+  if (!is_valid(js)) return false;
+  set_error(*js.root, string{error} + " at " + compute_path(js));
   return false;
 }
 inline json_view _set_error_view(json_view js, string_view error) {
-  if (is_valid(js)) return {js.root};
-  set_error(*js.root, error);
+  if (!is_valid(js)) return {js.root};
+  set_error(*js.root, string{error} + " at " + compute_path(js));
   return {js.root};
 }
 inline json_cview _set_error_view(json_cview js, string_view error) {
-  if (is_valid(js)) return {js.root};
-  set_error(*js.root, error);
+  if (!is_valid(js)) return {js.root};
+  set_error(*js.root, string{error} + " at " + compute_path(js));
   return {js.root};
 }
 
@@ -1578,6 +1581,16 @@ inline bool is_valid(json_cview js) {
 }
 inline bool is_valid(json_view js) {
   return js.root != nullptr && js.root->valid && js.group >= 0;
+}
+inline string get_error(json_cview js) {
+  if (js.root == nullptr) return "bad root";
+  if (js.root->valid) return "";
+  return js.root->error;
+}
+inline string get_error(json_view js) {
+  if (js.root == nullptr) return "bad root";
+  if (js.root->valid) return "";
+  return js.root->error;
 }
 
 // Type
@@ -1770,7 +1783,8 @@ inline bool get_integral(json_cview js, uint64_t& value) {
 inline bool get_number(json_cview js, double& value) {
   if (!is_valid(js)) return false;
   auto jsv = _get_value(js);
-  if (jsv->_type != json_type::real && jsv->_type != json_type::integer && jsv->_type != json_type::unsigned_)
+  if (jsv->_type != json_type::real && jsv->_type != json_type::integer &&
+      jsv->_type != json_type::unsigned_)
     return _set_error(js, "number expected");
   value = (jsv->_type == json_type::real)
               ? (double)jsv->_real
@@ -1799,7 +1813,8 @@ inline bool get_integral(json_cview js, uint32_t& value) {
 inline bool get_number(json_cview js, float& value) {
   if (!is_valid(js)) return false;
   auto jsv = _get_value(js);
-  if (jsv->_type != json_type::real && jsv->_type != json_type::integer && jsv->_type != json_type::unsigned_)
+  if (jsv->_type != json_type::real && jsv->_type != json_type::integer &&
+      jsv->_type != json_type::unsigned_)
     return _set_error(js, "number expected");
   value = (jsv->_type == json_type::real)
               ? (float)jsv->_real
@@ -2175,13 +2190,6 @@ inline bool get_binary(json_cview js, json_binary& value) {
   if (jsv->_type != json_type::binary) return _set_error(js, "binary expected");
   value = js.root->binaries[jsv->_binary];
   return true;
-}
-
-// Conversion from json to values
-template <typename T>
-inline bool get_value(json_cview js, T& value) {
-  auto error = string{};
-  return get_value(js, value, error);
 }
 
 // Get the path of a json view
