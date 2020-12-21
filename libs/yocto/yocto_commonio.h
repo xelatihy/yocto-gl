@@ -786,6 +786,10 @@ inline bool get_value(json_citerator& js, vector<T>& value);
 template <typename T, size_t N>
 inline bool get_value(json_citerator& js, array<T, N>& value);
 
+// Forward declarations
+struct json_iterator_;
+struct json_citerator_;
+
 // Json tree
 struct json_tree_ {
   struct json_value {
@@ -800,24 +804,32 @@ struct json_tree_ {
         uint32_t length;
       } _string;
       struct {
-        uint32_t lenth;
+        uint32_t length;
         uint32_t skip;
       } _array;
       struct {
-        uint32_t lenth;
+        uint32_t length;
         uint32_t skip;
       } _object;
-      uint64_t _binary;
+      struct {
+        uint32_t start;
+        uint32_t length;
+      } _binary;
     };
   };
-  vector<json_value> values  = {};
-  vector<char>       strings = {};
-  vector<char>       keys    = {};
+  vector<json_value> values   = {};
+  vector<char>       strings  = {};
+  vector<char>       keys     = {};
+  vector<uint8_t>    binaries = {};
 };
 
 // Load/save a json file
 bool load_json(const string& filename, json_tree_& js, string& error);
 bool save_json(const string& filename, const json_tree_& js, string& error);
+
+// Get view from value
+inline json_iterator_  get_iterator(json_tree_& js);
+inline json_citerator_ get_citerator(const json_tree_& js);
 
 // Json iterator
 struct json_iterator_ {
@@ -876,6 +888,9 @@ inline bool end_object(json_iterator_& js);
 inline auto set_object(json_iterator_& js);
 inline bool append_item(json_iterator_& js, const string& key);
 
+// Getting binary
+inline bool get_binary(json_iterator_& js, const vector<uint8_t>& binary);
+
 // Setting values
 inline bool set_value(json_iterator_& js, int64_t value);
 inline bool set_value(json_iterator_& js, int32_t value);
@@ -904,15 +919,16 @@ inline auto append_object(json_iterator_& js, const string& key);
 inline auto append_array(json_iterator_& js, const string& key);
 
 // Getting values
-inline bool get_null(json_citerator_& js);
-inline bool get_integer(json_citerator_& js, int64_t& value);
-inline bool get_unsigned(json_citerator_& js, uint64_t& value);
-inline bool get_real(json_citerator_& js, double& value);
-inline bool get_boolean(json_citerator_& js, bool& value);
-inline bool get_string(json_citerator_& js, string& key);
-inline bool get_integral(json_citerator_& js, int64_t& value);
-inline bool get_integral(json_citerator_& js, uint64_t& value);
-inline bool get_number(json_citerator_& js, double& value);
+inline json_type get_type(json_citerator_& js);
+inline bool      get_null(json_citerator_& js);
+inline bool      get_integer(json_citerator_& js, int64_t& value);
+inline bool      get_unsigned(json_citerator_& js, uint64_t& value);
+inline bool      get_real(json_citerator_& js, double& value);
+inline bool      get_boolean(json_citerator_& js, bool& value);
+inline bool      get_string(json_citerator_& js, string& key);
+inline bool      get_integral(json_citerator_& js, int64_t& value);
+inline bool      get_integral(json_citerator_& js, uint64_t& value);
+inline bool      get_number(json_citerator_& js, double& value);
 
 // Getting arrays
 inline bool begin_array(json_citerator_& js);
@@ -925,6 +941,9 @@ inline bool begin_object(json_citerator_& js);
 inline bool end_object(json_citerator_& js);
 inline bool next_item(json_citerator_& js, string& key);
 inline auto iterate_object(json_citerator_& js);
+
+// Getting binary
+inline bool get_binary(json_citerator_& js, vector<uint8_t>& binary);
 
 // Getting values
 inline bool get_value(json_citerator_& js, int64_t& value);
@@ -1412,10 +1431,6 @@ inline void json_value::set_type(json_type type) {
     case json_type::binary: _binary = new json_binary{}; break;
   }
 }
-
-// Load/save a json file
-bool load_json(const string& filename, json_value& js, string& error);
-bool save_json(const string& filename, const json_value& js, string& error);
 
 // Conversion shortcuts
 template <typename T>
@@ -3289,6 +3304,14 @@ inline bool get_value(json_citerator& js, array<T, N>& value) {
   return true;
 }
 
+// Get view from value
+inline json_iterator_ get_iterator(json_tree_& js) {
+  return json_iterator_{&js};
+}
+inline json_citerator_ get_citerator(const json_tree_& js) {
+  return json_citerator_{&js};
+}
+
 // Helpers
 inline json_tree_::json_value* _get_value(json_iterator_& js) {
   if (!is_valid(js)) return nullptr;
@@ -3448,6 +3471,16 @@ inline bool set_number(json_iterator_& js, double value) {
   jsv->_real = value;
   return true;
 }
+inline bool set_binary(json_iterator_& js, const vector<uint8_t>& value) {
+  if (!is_valid(js)) return false;
+  auto jsv = _get_value(js);
+  // TODO: optimize for old strings
+  jsv->_type          = json_type::binary;
+  jsv->_binary.start  = (uint32_t)js.root->binaries.size();
+  jsv->_binary.length = (uint32_t)value.size();
+  js.root->binaries.insert(js.root->binaries.end(), value.begin(), value.end());
+  return true;
+}
 
 // Setting arrays
 inline bool begin_array(json_iterator_& js) {
@@ -3499,7 +3532,7 @@ inline bool append_item(json_iterator_& js) {
   jsl->_type     = json_type::null;
   jsl->_unsigned = 0;
   // update current array
-  jsv->_array.lenth += 1;
+  jsv->_array.length += 1;
   jsv->_array.skip += 1;
   // update all groups in the stack
   for (auto idx = (int32_t)js.stack.size() - 2; idx >= 0; idx--) {
@@ -3514,7 +3547,7 @@ inline bool append_item(json_iterator_& js) {
   }
   // update stack
   js.stack.push_back(
-      {(uint32_t)js.root->values.size() - 1, jsv->_array.lenth - 1});
+      {(uint32_t)js.root->values.size() - 1, jsv->_array.length - 1});
   return true;
 }
 
@@ -3576,7 +3609,7 @@ inline bool append_item(json_iterator_& js, const string& key) {
   jsl->_type     = json_type::null;
   jsl->_unsigned = 0;
   // update current array
-  jsv->_object.lenth += 1;
+  jsv->_object.length += 1;
   jsv->_object.skip += 2;
   // update all groups in the stack
   for (auto idx = (int32_t)js.stack.size() - 2; idx >= 0; idx--) {
@@ -3591,7 +3624,7 @@ inline bool append_item(json_iterator_& js, const string& key) {
   }
   // update stack
   js.stack.push_back(
-      {(uint32_t)js.root->values.size() - 1, jsv->_object.lenth - 1});
+      {(uint32_t)js.root->values.size() - 1, jsv->_object.length - 1});
   return true;
 }
 
@@ -3676,6 +3709,11 @@ inline auto append_array(json_iterator_& js, const string& key) {
 }
 
 // Getting values
+inline json_type get_type(json_citerator_& js) {
+  if (!is_valid(js)) return json_type::null;
+  auto jsv = _get_value(js);
+  return jsv->_type;
+}
 inline bool get_null(json_citerator_& js) {
   if (!is_valid(js)) return false;
   auto jsv = _get_value(js);
@@ -3752,6 +3790,15 @@ inline bool get_number(json_citerator_& js, double& value) {
                                                    : (double)jsv->_unsigned;
   return true;
 }
+inline bool get_binary(json_citerator_& js, vector<uint8_t>& value) {
+  if (!is_valid(js)) return false;
+  auto jsv = _get_value(js);
+  if (jsv->_type != json_type::binary) return _set_error(js, "binary expected");
+  value = {js.root->binaries.data() + jsv->_binary.start,
+      js.root->binaries.data() + jsv->_binary.start + jsv->_binary.length};
+  return true;
+}
+
 // Getting arrays
 inline bool begin_array(json_citerator_& js) {
   if (!is_valid(js)) return false;
@@ -3781,8 +3828,8 @@ inline bool next_element(json_citerator_& js, int64_t& idx) {
   auto next = last;
   if (last.relative == (uint32_t)-1) {
     next.relative = 0;
-    next.index    = (jsv->_array.lenth >= 0) ? js.stack.back().index + 1
-                                          : (uint32_t)-1;
+    next.index    = (jsv->_array.length >= 0) ? js.stack.back().index + 1
+                                           : (uint32_t)-1;
   } else {
     next.relative += 1;
     next.index += 1;
@@ -3792,7 +3839,7 @@ inline bool next_element(json_citerator_& js, int64_t& idx) {
   }
   idx = next.relative;
   js.stack.push_back(next);
-  return next.relative < jsv->_array.lenth;
+  return next.relative < jsv->_array.length;
 }
 inline auto iterate_array(json_citerator_& js) {
   struct iterator {
@@ -3839,7 +3886,7 @@ inline auto iterate_array(json_citerator_& js) {
     _set_error(js, "array expected");
     return iterator_wrapper{js, 0, 0};
   }
-  return iterator_wrapper{js, 0, jsv->_array.lenth};
+  return iterator_wrapper{js, 0, jsv->_array.length};
 }
 
 // Getting objects
@@ -3871,8 +3918,8 @@ inline bool next_item(json_citerator_& js, string& key) {
   auto next = last;
   if (last.relative == (uint32_t)-1) {
     next.relative = 0;
-    next.index    = (jsv->_object.lenth >= 0) ? js.stack.back().index + 1
-                                           : (uint32_t)-1;
+    next.index    = (jsv->_object.length >= 0) ? js.stack.back().index + 1
+                                            : (uint32_t)-1;
   } else {
     next.relative += 1;
     next.index += 2;
@@ -3880,7 +3927,7 @@ inline bool next_item(json_citerator_& js, string& key) {
     if (jsl->_type == json_type::array) next.index += jsl->_array.skip;
     if (jsl->_type == json_type::object) next.index += jsl->_object.skip;
   }
-  if (next.relative < jsv->_array.lenth) {
+  if (next.relative < jsv->_array.length) {
     auto jsk = &js.root->values.at(next.index - 1);
     key      = string{js.root->keys.data() + jsk->_string.start,
         js.root->keys.data() + jsk->_string.start + jsk->_string.length};
@@ -3888,7 +3935,7 @@ inline bool next_item(json_citerator_& js, string& key) {
     key = "";
   }
   js.stack.push_back(next);
-  return next.relative < jsv->_array.lenth;
+  return next.relative < jsv->_array.length;
 }
 inline auto iterate_object(json_citerator_& js) {
   struct iterator {
@@ -3920,8 +3967,8 @@ inline auto iterate_object(json_citerator_& js) {
         js.stack.back().relative += 1;
       }
       auto jsk = &js.root->values.at(js.stack.back().index - 1);
-      auto key = string_view{js.root->keys.data() + jsk->_string.start,
-          jsk->_string.length};
+      auto key = string_view{
+          js.root->keys.data() + jsk->_string.start, jsk->_string.length};
       return key;
     }
   };
@@ -3938,7 +3985,7 @@ inline auto iterate_object(json_citerator_& js) {
     _set_error(js, "object expected");
     return iterator_wrapper{js, 0, 0};
   }
-  return iterator_wrapper{js, 0, jsv->_object.lenth};
+  return iterator_wrapper{js, 0, jsv->_object.length};
 }
 
 // Getting values
