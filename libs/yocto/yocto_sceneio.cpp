@@ -1272,9 +1272,9 @@ static bool load_json_scene(const string& filename, sceneio_scene* scene,
   if (progress_cb) progress_cb("load scene", progress.x++, progress.y);
 
   // open file
-  auto js_tree = json_tree{};
-  if (!load_json(filename, js_tree, error)) return json_error();
-  auto js = get_citerator(js_tree);
+  auto js_tree_ = json_tree{};
+  if (!load_json(filename, js_tree_, error)) return json_error();
+  auto js = get_citerator(js_tree_);
 
   // reference disctionaries
   auto texture_map = unordered_map<string, pair<sceneio_texture*, bool>>{
