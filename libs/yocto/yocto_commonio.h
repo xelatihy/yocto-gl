@@ -1377,7 +1377,6 @@ inline bool set_boolean(json_view js, bool value) {
 inline bool set_string(json_view js, const string& value) {
   if (!is_valid(js)) return false;
   auto jsv = _get_value(js);
-  // TODO: implement reuse
   jsv->_type          = json_type::string_;
   jsv->_string.start  = (uint32_t)js.root->strings.size();
   jsv->_string.length = (uint32_t)value.size();
@@ -1542,7 +1541,6 @@ inline size_t get_size(json_cview js);
 // Array
 inline bool set_array(json_view js) {
   if (!is_valid(js)) return false;
-  // TODO: implement reuse
   auto jsv           = _get_value(js);
   jsv->_type         = json_type::array;
   jsv->_array.start  = js.index;
@@ -1587,7 +1585,6 @@ inline json_view append_element(json_view js) {
   auto new_length   = jsv->_array.length;
   auto new_capacity = _get_capacity(jsv->_array.length);
   if (new_length > last_capacity) {
-    // TODO: implement reuse!!!
     // look for an alternative
     if (!js.root->holes[new_capacity].empty()) {
       jsv->_array.start = js.root->holes[new_capacity].back();
@@ -1753,14 +1750,25 @@ inline json_view insert_element(json_view js, string_view key) {
   auto new_length   = jsv->_object.length * 2;
   auto new_capacity = _get_capacity(new_length);
   if (new_length > last_capacity) {
-    // TODO(fabio): implement reuse!!!
-    // allocate at the end
-    jsv->_array.start = (uint32_t)js.root->values.size();
-    new_start         = jsv->_array.start;
-    js.root->values.insert(
-        js.root->values.end(), new_capacity, json_tree::json_value{});
-    for (auto idx = 0; idx < last_length; idx++)
+    // look for an alternative
+    if (!js.root->holes[new_capacity].empty()) {
+      jsv->_object.start = js.root->holes[new_capacity].back();
+      new_start         = jsv->_object.start;
+      js.root->holes[new_capacity].pop_back();
+    } else {
+      // allocate at the end
+      jsv->_object.start = (uint32_t)js.root->values.size();
+      new_start         = jsv->_object.start;
+      js.root->values.insert(
+          js.root->values.end(), new_capacity, json_tree::json_value{});
+    }
+    if (last_capacity != 0) {
+      js.root->holes[last_capacity].push_back(last_start);
+    }
+    for (auto idx = 0; idx < last_length; idx++) {
       js.root->values[new_start + idx] = js.root->values[last_start + idx];
+      js.root->values[last_start + idx] = {};
+    }
   }
   auto index = new_start + new_length - 2;
   // TOFO(fabio): implement key reuse
