@@ -254,6 +254,7 @@ struct json_value {
   explicit json_value(std::nullptr_t);
   template <typename T>
   explicit json_value(const T& value);
+  explicit json_value(const char* value);
 
   // assignments
   json_value& operator=(const json_value& other);
@@ -751,6 +752,8 @@ inline json_value::json_value(const T& value) {
     to_json(*this, value);
   }
 }
+inline json_value::json_value(const char* value)
+    : _type{json_type::string_}, _string{new string{value}} {}
 
 // assignments
 inline json_value& json_value::operator=(const json_value& value) {
