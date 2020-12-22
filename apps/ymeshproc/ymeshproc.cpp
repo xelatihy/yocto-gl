@@ -34,7 +34,7 @@ using namespace yocto;
 
 // Shape presets used ofr testing.
 bool make_mesh_preset(vector<vec3i>& triangles, vector<vec3f>& positions,
-    vector<vec3f>& normals, vector<vec2f>& texcoords, vector<vec3f>& colors,
+    vector<vec3f>& normals, vector<vec2f>& texcoords, vector<vec4f>& colors,
     const string& type, string& error) {
   auto set_quads = [&](quads_shape&& shape) {
     triangles = quads_to_triangles(shape.quads);
@@ -157,7 +157,7 @@ int main(int argc, const char* argv[]) {
   auto positions = vector<vec3f>{};
   auto normals   = vector<vec3f>{};
   auto texcoords = vector<vec2f>{};
-  auto colors    = vector<vec3f>{};
+  auto colors    = vector<vec4f>{};
   auto triangles = vector<vec3i>{};
   auto lines     = vector<vec2i>{};  // for line output
 
@@ -231,10 +231,10 @@ int main(int argc, const char* argv[]) {
         if (tags[i] == 1) triangles[i] = {-1, -1, -1};
       }
     } else {
-      colors = vector<vec3f>(positions.size());
+      colors = vector<vec4f>(positions.size());
       for (int i = 0; i < colors.size(); ++i) {
         auto c    = sinf(geodesic_scale * field[i]);
-        colors[i] = vec3f{c, c, c};
+        colors[i] = vec4f{c, c, c, 1};
       }
       // distance_to_color(shape.colors, field, geodesic_scale);
     }

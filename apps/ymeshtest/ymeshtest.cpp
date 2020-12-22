@@ -600,7 +600,7 @@ int main(int argc, const char* argv[]) {
   auto positions = vector<vec3f>{};
   auto normals   = vector<vec3f>{};
   auto texcoords = vector<vec2f>{};
-  auto colors    = vector<vec3f>{};
+  auto colors    = vector<vec4f>{};
   auto triangles = vector<vec3i>{};
 
   // stats, progress
