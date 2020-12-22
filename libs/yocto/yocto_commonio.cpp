@@ -396,7 +396,7 @@ string path_current() { return std::filesystem::current_path().u8string(); }
 // -----------------------------------------------------------------------------
 namespace yocto {
 
-#define YOCTO_JSON_SAX 1
+#define YOCTO_JSON_SAX 0
 
 using njson = nlohmann::ordered_json;
 
@@ -635,7 +635,8 @@ void from_json(const njson& njs, json_view js) {
     case njson::value_t::string: set_string(js, (string)njs); break;
     case njson::value_t::array:
       set_array(js);
-      for (auto& ejs : njs) from_json(ejs, append_element(js));
+      for (auto& ejs : njs)
+          from_json(ejs, append_element(js));
       break;
     case njson::value_t::object:
       set_object(js);
