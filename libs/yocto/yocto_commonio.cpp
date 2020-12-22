@@ -439,8 +439,8 @@ void to_json(json_value& js, const njson& njs) {
       for (auto& [key, ejs] : njs.items()) to_json(js[key], ejs);
       break;
     case njson::value_t::binary:
-      js              = json_binary();
-      js.get_binary() = njs.get_binary();
+      js                        = json_binary();
+      js.get_ref<json_binary>() = njs.get_binary();
       break;
     case njson::value_t::discarded: js = json_value{}; break;
   }
@@ -450,11 +450,11 @@ void to_json(json_value& js, const njson& njs) {
 void from_json(const json_value& js, njson& njs) {
   switch (js.type()) {
     case json_type::null: njs = {}; break;
-    case json_type::integer: njs = js.get_integer(); break;
-    case json_type::unsigned_: njs = js.get_unsigned(); break;
-    case json_type::real: njs = js.get_real(); break;
-    case json_type::boolean: njs = js.get_boolean(); break;
-    case json_type::string_: njs = js.get_string(); break;
+    case json_type::integer: njs = js.get_ref<int64_t>(); break;
+    case json_type::unsigned_: njs = js.get_ref<uint64_t>(); break;
+    case json_type::real: njs = js.get_ref<double>(); break;
+    case json_type::boolean: njs = js.get_ref<bool>(); break;
+    case json_type::string_: njs = js.get_ref<string>(); break;
     case json_type::array:
       njs = njson::array();
       for (auto& ejs : js) from_json(ejs, njs.emplace_back());
@@ -465,7 +465,7 @@ void from_json(const json_value& js, njson& njs) {
       break;
     case json_type::binary:
       njs              = njson::binary({});
-      njs.get_binary() = js.get_binary();
+      njs.get_binary() = js.get_ref<json_binary>();
       break;
   }
 }
