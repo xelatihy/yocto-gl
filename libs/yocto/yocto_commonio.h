@@ -1566,6 +1566,7 @@ inline auto iterate_array(json_view js) {
       return is_valid(js) && js.index != other.js.index;
     }
     iterator& operator++() {
+        if (!is_valid(js)) return *this;
       auto& jst = _get_type(js);
       auto& jsv = _get_value(js);
       js.index += 1;
@@ -1598,6 +1599,7 @@ inline auto iterate_array(json_cview js) {
       return is_valid(js) && js.index != other.js.index;
     }
     iterator& operator++() {
+        if (!is_valid(js)) return *this;
       auto& jst = _get_type(js);
       auto& jsv = _get_value(js);
       js.index += 1;
@@ -1714,6 +1716,7 @@ inline auto iterate_object(json_view js) {
       return is_valid(js) && js.index != other.js.index;
     }
     iterator& operator++() {
+        if (!is_valid(js)) return *this;
         auto& jst = _get_type(json_view{js.root, js.index + 1});
         auto& jsv = _get_value(json_view{js.root, js.index + 1});
       js.index += 2;
@@ -1748,6 +1751,7 @@ inline auto iterate_object(json_cview js) {
       return is_valid(js) && js.index != other.js.index;
     }
     iterator& operator++() {
+      if (!is_valid(js)) return *this;
       auto& jst = _get_type(json_cview{js.root, js.index + 1});
       auto& jsv = _get_value(json_cview{js.root, js.index + 1});
       js.index += 2;
