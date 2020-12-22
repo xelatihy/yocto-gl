@@ -660,18 +660,18 @@ bool load_json(const string& filename, json_tree& js, string& error) {
   // sax handler
   struct sax_handler {
     // stack
-    json_view root;
+    json_view              root;
     std::vector<json_view> stack = {};
-    std::string                     current_key;
-    explicit sax_handler(json_view root_) : root{root_}, stack{root_} {
-    }
+    std::string            current_key;
+    explicit sax_handler(json_view root_) : root{root_}, stack{root_} {}
 
     // get current value
     json_view next_value() {
       if (stack.size() == 1) return root;
       auto& jst = _get_type(stack.back());
       if (jst == json_type::array) return append_element(stack.back());
-      if (jst == json_type::object) return insert_element(stack.back(), current_key);
+      if (jst == json_type::object)
+        return insert_element(stack.back(), current_key);
       throw yocto::json_error{"bad json type"};
     }
 

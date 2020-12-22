@@ -47,9 +47,9 @@
 #include <string>
 #include <string_view>
 #include <type_traits>
+#include <unordered_map>
 #include <utility>
 #include <vector>
-#include <unordered_map>
 
 // -----------------------------------------------------------------------------
 // USING DIRECTIVES
@@ -62,8 +62,8 @@ using std::function;
 using std::pair;
 using std::string;
 using std::string_view;
-using std::vector;
 using std::unordered_map;
+using std::vector;
 using namespace std::string_literals;
 
 }  // namespace yocto
@@ -438,36 +438,36 @@ struct json_cview;
 // Json tree
 struct json_tree {
   union json_value {
-      int64_t  _integer = 0;
-      uint64_t _unsigned;
-      double   _real;
-      bool     _boolean;
-      struct {
-        uint32_t start;
-        uint32_t length;
-      } _string;
-      struct {
-        uint32_t start;
-        uint32_t length;
-      } _array;
-      struct {
-        uint32_t start;
-        uint32_t length;
-      } _object;
-      struct {
-        uint32_t start;
-        uint32_t length;
-      } _binary;
+    int64_t  _integer = 0;
+    uint64_t _unsigned;
+    double   _real;
+    bool     _boolean;
+    struct {
+      uint32_t start;
+      uint32_t length;
+    } _string;
+    struct {
+      uint32_t length;
+      uint32_t skip;
+    } _array;
+    struct {
+      uint32_t length;
+      uint32_t skip;
+    } _object;
+    struct {
+      uint32_t start;
+      uint32_t length;
+    } _binary;
   };
-  vector<json_type> types   = {json_type::null};
-  vector<json_value> values   = {json_value{}};
-  vector<char>       strings  = {};
-  vector<char>       keys     = {};
-  vector<json_value> key_list = {};
-  vector<uint8_t>    binaries = {};
-  unordered_map<uint32_t, vector<uint32_t>> holes = {};
-  bool               valid    = true;
-  string             error    = "";
+  vector<json_type>  types            = {json_type::null};
+  vector<json_value> values           = {json_value{}};
+  vector<char>       strings          = {};
+  vector<char>       keys             = {};
+  vector<json_value> key_list         = {};
+  vector<uint8_t>    binaries         = {};
+  vector<uint32_t>   build_skip_stack = {};
+  bool               valid            = true;
+  string             error            = "";
 };
 
 // Load/save a json file
@@ -1264,6 +1264,7 @@ inline string_view _get_key(json_cview js) {
   if (jst != json_type::string_) throw std::invalid_argument{"bad key"};
   return {js.root->keys.data() + jsv._string.start, jsv._string.length};
 }
+inline void _find_path(json_view js, vector<json_view>& path);
 
 // Error check
 inline bool is_valid(json_cview js) {
@@ -1316,8 +1317,8 @@ inline bool is_integral(json_cview js) {
 inline bool is_number(json_cview js) {
   if (!is_valid(js)) return false;
   auto& jst = _get_type(js);
-  return jst == json_type::integer ||
-         jst == json_type::unsigned_ || jst == json_type::real;
+  return jst == json_type::integer || jst == json_type::unsigned_ ||
+         jst == json_type::real;
 }
 inline bool is_boolean(json_cview js) {
   if (!is_valid(js)) return false;
@@ -1349,46 +1350,46 @@ inline bool is_binary(json_cview js) {
 inline bool set_null(json_view js) {
   if (!is_valid(js)) return false;
   auto& jst = _get_type(js);
-  jst = json_type::null;
+  jst       = json_type::null;
   return true;
 }
 inline bool set_integer(json_view js, int64_t value) {
   if (!is_valid(js)) return false;
-  auto& jst = _get_type(js);
-  auto& jsv   = _get_value(js);
-  jst    = json_type::integer;
+  auto& jst    = _get_type(js);
+  auto& jsv    = _get_value(js);
+  jst          = json_type::integer;
   jsv._integer = value;
   return true;
 }
 inline bool set_unsigned(json_view js, uint64_t value) {
   if (!is_valid(js)) return false;
-  auto& jst = _get_type(js);
-  auto& jsv   = _get_value(js);
-  jst     = json_type::unsigned_;
+  auto& jst     = _get_type(js);
+  auto& jsv     = _get_value(js);
+  jst           = json_type::unsigned_;
   jsv._unsigned = value;
   return true;
 }
 inline bool set_real(json_view js, double value) {
   if (!is_valid(js)) return false;
   auto& jst = _get_type(js);
-  auto& jsv   = _get_value(js);
-  jst = json_type::real;
+  auto& jsv = _get_value(js);
+  jst       = json_type::real;
   jsv._real = value;
   return true;
 }
 inline bool set_boolean(json_view js, bool value) {
   if (!is_valid(js)) return false;
-  auto& jst = _get_type(js);
-  auto& jsv   = _get_value(js);
-  jst    = json_type::boolean;
+  auto& jst    = _get_type(js);
+  auto& jsv    = _get_value(js);
+  jst          = json_type::boolean;
   jsv._boolean = value;
   return true;
 }
 inline bool set_string(json_view js, const string& value) {
   if (!is_valid(js)) return false;
-  auto& jst = _get_type(js);
-  auto& jsv = _get_value(js);
-  jst          = json_type::string_;
+  auto& jst          = _get_type(js);
+  auto& jsv          = _get_value(js);
+  jst                = json_type::string_;
   jsv._string.start  = (uint32_t)js.root->strings.size();
   jsv._string.length = (uint32_t)value.size();
   js.root->strings.insert(js.root->strings.end(), value.begin(), value.end());
@@ -1419,8 +1420,7 @@ inline bool get_integer(json_cview js, int64_t& value) {
   if (!is_valid(js)) return false;
   auto& jst = _get_type(js);
   auto& jsv = _get_value(js);
-  if (jst != json_type::integer)
-    return set_error(js, "integer expected");
+  if (jst != json_type::integer) return set_error(js, "integer expected");
   value = jsv._integer;
   return true;
 }
@@ -1428,8 +1428,7 @@ inline bool get_unsigned(json_cview js, uint64_t& value) {
   if (!is_valid(js)) return false;
   auto& jst = _get_type(js);
   auto& jsv = _get_value(js);
-  if (jst != json_type::unsigned_)
-    return set_error(js, "unsigned expected");
+  if (jst != json_type::unsigned_) return set_error(js, "unsigned expected");
   value = jsv._unsigned;
   return true;
 }
@@ -1445,8 +1444,7 @@ inline bool get_boolean(json_cview js, bool& value) {
   if (!is_valid(js)) return false;
   auto& jst = _get_type(js);
   auto& jsv = _get_value(js);
-  if (jst != json_type::boolean)
-    return set_error(js, "boolean expected");
+  if (jst != json_type::boolean) return set_error(js, "boolean expected");
   value = jsv._boolean;
   return true;
 }
@@ -1466,7 +1464,7 @@ inline bool get_integral(json_cview js, int64_t& value) {
   if (jst != json_type::integer && jst != json_type::unsigned_)
     return set_error(js, "integer expected");
   value = (jst == json_type::integer) ? (int64_t)jsv._integer
-                                             : (int64_t)jsv._unsigned;
+                                      : (int64_t)jsv._unsigned;
   return true;
 }
 inline bool get_integral(json_cview js, uint64_t& value) {
@@ -1476,7 +1474,7 @@ inline bool get_integral(json_cview js, uint64_t& value) {
   if (jst != json_type::integer && jst != json_type::unsigned_)
     return set_error(js, "integer expected");
   value = (jst == json_type::integer) ? (uint64_t)jsv._integer
-                                             : (uint64_t)jsv._unsigned;
+                                      : (uint64_t)jsv._unsigned;
   return true;
 }
 inline bool get_number(json_cview js, double& value) {
@@ -1489,7 +1487,7 @@ inline bool get_number(json_cview js, double& value) {
   value = (jst == json_type::real)
               ? (double)jsv._real
               : (jst == json_type::integer) ? (double)jsv._integer
-                                                   : (double)jsv._unsigned;
+                                            : (double)jsv._unsigned;
   return true;
 }
 inline bool get_integral(json_cview js, int32_t& value) {
@@ -1499,7 +1497,7 @@ inline bool get_integral(json_cview js, int32_t& value) {
   if (jst != json_type::integer && jst != json_type::unsigned_)
     return set_error(js, "integer expected");
   value = (jst == json_type::integer) ? (int32_t)jsv._integer
-                                             : (int32_t)jsv._unsigned;
+                                      : (int32_t)jsv._unsigned;
   return true;
 }
 inline bool get_integral(json_cview js, uint32_t& value) {
@@ -1509,7 +1507,7 @@ inline bool get_integral(json_cview js, uint32_t& value) {
   if (jst != json_type::integer && jst != json_type::unsigned_)
     return set_error(js, "integer expected");
   value = (jst == json_type::integer) ? (uint32_t)jsv._integer
-                                             : (uint32_t)jsv._unsigned;
+                                      : (uint32_t)jsv._unsigned;
   return true;
 }
 inline bool get_number(json_cview js, float& value) {
@@ -1522,7 +1520,7 @@ inline bool get_number(json_cview js, float& value) {
   value = (jst == json_type::real)
               ? (float)jsv._real
               : (jst == json_type::integer) ? (float)jsv._integer
-                                                   : (float)jsv._unsigned;
+                                            : (float)jsv._unsigned;
   return true;
 }
 
@@ -1560,14 +1558,85 @@ inline double get_number(json_cview js) {
 inline bool   is_empty(json_cview js);
 inline size_t get_size(json_cview js);
 
+// Array iteeration
+inline auto iterate_array(json_view js) {
+  struct iterator {
+    json_view js;
+    bool      operator!=(const iterator& other) {
+      return is_valid(js) && js.index != other.js.index;
+    }
+    iterator& operator++() {
+      if (!is_valid(js)) return *this;
+      auto& jst = _get_type(js);
+      auto& jsv = _get_value(js);
+      js.index += 1;
+      if (jst == json_type::array) js.index += jsv._array.skip;
+      if (jst == json_type::object) js.index += jsv._object.skip;
+      return *this;
+    }
+    json_view operator*() const { return js; }
+  };
+  struct iterator_wrapper {
+    json_view begin_;
+    json_view end_;
+    iterator  begin() { return {begin_}; }
+    iterator  end() { return {end_}; }
+  };
+  if (!is_valid(js)) return iterator_wrapper{{js.root}, {js.root}};
+  auto& jst = _get_type(js);
+  auto& jsv = _get_value(js);
+  if (jst != json_type::array) {
+    set_error_view(js, "array expected");
+    return iterator_wrapper{{js.root}, {js.root}};
+  }
+  return iterator_wrapper{
+      {js.root, js.index + 1}, {js.root, js.index + 1 + jsv._array.skip}};
+}
+inline auto iterate_array(json_cview js) {
+  struct iterator {
+    json_cview js;
+    bool       operator!=(const iterator& other) {
+      return is_valid(js) && js.index != other.js.index;
+    }
+    iterator& operator++() {
+      if (!is_valid(js)) return *this;
+      auto& jst = _get_type(js);
+      auto& jsv = _get_value(js);
+      js.index += 1;
+      if (jst == json_type::array) js.index += jsv._array.skip;
+      if (jst == json_type::object) js.index += jsv._object.skip;
+      return *this;
+    }
+    json_cview operator*() const { return js; }
+  };
+  struct iterator_wrapper {
+    json_cview begin_;
+    json_cview end_;
+    iterator   begin() { return {begin_}; }
+    iterator   end() { return {end_}; }
+  };
+  if (!is_valid(js)) return iterator_wrapper{{js.root}, {js.root}};
+  auto& jst = _get_type(js);
+  auto& jsv = _get_value(js);
+  if (jst != json_type::array) {
+    set_error_view(js, "array expected");
+    return iterator_wrapper{{js.root}, {js.root}};
+  }
+  return iterator_wrapper{
+      {js.root, js.index + 1},
+      {js.root, js.index + 1 + jsv._array.skip},
+  };
+}
+
 // Array
 inline bool set_array(json_view js) {
   if (!is_valid(js)) return false;
-  auto& jst = _get_type(js);
-  auto& jsv   = _get_value(js);
-  jst         = json_type::array;
-  jsv._array.start  = js.index;
-  jsv._array.length = 0;
+  if (js.index != js.root->values.size() - 1)
+    throw std::out_of_range{"can only add at the end"};
+  auto& jst  = _get_type(js);
+  auto& jsv  = _get_value(js);
+  jst        = json_type::array;
+  jsv._array = {0, 0};
   return true;
 }
 inline bool array_size(json_cview js, size_t& size) {
@@ -1582,260 +1651,64 @@ inline json_view get_element(json_view js, size_t idx) {
   if (!is_valid(js)) return {js.root};
   auto& jst = _get_type(js);
   auto& jsv = _get_value(js);
-  if (jst != json_type::array)
-    return set_error_view(js, "array expected");
+  if (jst != json_type::array) return set_error_view(js, "array expected");
   if (idx >= jsv._array.length)
     return set_error_view(js, "index out of bounds");
-  return {js.root, jsv._array.start + (uint32_t)idx};
+  if (jsv._array.length == jsv._array.skip) {
+    return {js.root, js.index + 1 + (uint32_t)idx};
+  } else {
+    auto count = 0;
+    for (auto ejs : iterate_array(js)) {
+      if (count++ == idx) return ejs;
+    }
+    return set_error_view(js, "index out of bounds");
+  }
 }
 inline json_cview get_element(json_cview js, size_t idx) {
   if (!is_valid(js)) return {js.root};
   auto& jst = _get_type(js);
   auto& jsv = _get_value(js);
-  if (jst != json_type::array)
-    return set_error_view(js, "array expected");
+  if (jst != json_type::array) return set_error_view(js, "array expected");
   if (idx >= jsv._array.length)
     return set_error_view(js, "index out of bounds");
-  return {js.root, jsv._array.start + (uint32_t)idx};
+  if (jsv._array.length == jsv._array.skip) {
+    return {js.root, js.index + 1 + (uint32_t)idx};
+  } else {
+    auto count = 0;
+    for (auto ejs : iterate_array(js)) {
+      if (count++ == idx) return ejs;
+    }
+    return set_error_view(js, "index out of bounds");
+  }
 }
 inline json_view append_element(json_view js) {
   if (!is_valid(js)) return {js.root};
   auto& jst = _get_type(js);
   auto& jsv = _get_value(js);
-  if (jst != json_type::array)
-    return set_error_view(js, "array expected");
-  auto last_start    = jsv._array.start;
-  auto last_length   = jsv._array.length;
-  auto last_capacity = _get_capacity(jsv._array.length);
+  if (jst != json_type::array) return set_error_view(js, "array expected");
+  if (js.index + 1 + jsv._array.skip != js.root->values.size())
+    throw std::out_of_range{"can only add at the end"};
   jsv._array.length += 1;
-  auto new_start    = jsv._array.start;
-  auto new_length   = jsv._array.length;
-  auto new_capacity = _get_capacity(jsv._array.length);
-  if (new_length > last_capacity) {
-    // look for an alternative
-    if (!js.root->holes[new_capacity].empty()) {
-      jsv._array.start = js.root->holes[new_capacity].back();
-      new_start         = jsv._array.start;
-      js.root->holes[new_capacity].pop_back();
+  auto index = (uint32_t)js.root->values.size();
+  js.root->types.emplace_back(json_type::null);
+  js.root->values.emplace_back();
+  auto stack = vector<json_view>{};
+  _find_path(js, stack);
+  for (auto jss : stack) {
+    auto& jsst = _get_type(jss);
+    auto& jssv = _get_value(jss);
+    if (jsst == json_type::array) {
+      jssv._array.skip += 1;
+    } else if (jsst == json_type::object) {
+      jssv._object.skip += 1;
     } else {
-      // allocate at the end
-      jsv._array.start = (uint32_t)js.root->values.size();
-      new_start         = jsv._array.start;
-      js.root->types.insert(
-          js.root->types.end(), new_capacity, json_type::null);
-      js.root->values.insert(
-          js.root->values.end(), new_capacity, json_tree::json_value{});
-    }
-    if (last_capacity != 0) {
-      js.root->holes[last_capacity].push_back(last_start);
-    }
-    for (auto idx = 0; idx < last_length; idx++) {
-      js.root->types[new_start + idx] = js.root->types[last_start + idx];
-      js.root->types[last_start + idx] = json_type::null;
-      js.root->values[new_start + idx] = js.root->values[last_start + idx];
-      js.root->values[last_start + idx] = {};
+      throw std::runtime_error{"bad stack"};
     }
   }
-  auto index             = new_start + new_length - 1;
-  js.root->values[index] = {};
   return {js.root, index};
 }
-inline auto iterate_array(json_view js) {
-  struct iterator {
-    json_view js;
-    bool      operator!=(const iterator& other) {
-      return is_valid(js) && js.index != other.js.index;
-    }
-    iterator& operator++() {
-      js.index += 1;
-      return *this;
-    }
-    json_view operator*() const { return js; }
-  };
-  struct iterator_wrapper {
-    json_view begin_;
-    json_view end_;
-    iterator  begin() { return {begin_}; }
-    iterator  end() { return {end_}; }
-  };
-  if (!is_valid(js)) return iterator_wrapper{{js.root}, {js.root}};
-  auto& jst = _get_type(js);
-  auto& jsv = _get_value(js);
-  if (jst != json_type::array) {
-    set_error_view(js, "array expected");
-    return iterator_wrapper{{js.root}, {js.root}};
-  }
-  return iterator_wrapper{
-      {js.root, jsv._array.start},
-      {js.root, jsv._array.start + jsv._array.length},
-  };
-}
-inline auto iterate_array(json_cview js) {
-  struct iterator {
-    json_view js;
-    bool      operator!=(const iterator& other) {
-      return is_valid(js) && js.index != other.js.index;
-    }
-    iterator& operator++() {
-      js.index += 1;
-      return *this;
-    }
-    json_view operator*() const { return js; }
-  };
-  struct iterator_wrapper {
-    json_view begin_;
-    json_view end_;
-    iterator  begin() { return {begin_}; }
-    iterator  end() { return {end_}; }
-  };
-  if (!is_valid(js)) return iterator_wrapper{{js.root}, {js.root}};
-  auto& jst = _get_type(js);
-  auto& jsv = _get_value(js);
-  if (jst != json_type::array) {
-    set_error_view(js, "array expected");
-    return iterator_wrapper{{js.root}, {js.root}};
-  }
-  return iterator_wrapper{
-      {js.root, jsv._array.start},
-      {js.root, jsv._array.start + jsv._array.length},
-  };
-}
 
-// Object
-inline bool set_object(json_view js) {
-  if (!is_valid(js)) return false;
-  // TODO: implement reuse
-  auto& jst = _get_type(js);
-  auto& jsv   = _get_value(js);
-  jst         = json_type::object;
-  jsv._array.start  = js.index;
-  jsv._array.length = 0;
-  return true;
-}
-inline bool object_size(json_cview js, size_t& size) {
-  if (!is_valid(js)) return false;
-  auto& jst = _get_type(js);
-  auto& jsv = _get_value(js);
-  if (jst != json_type::object) return set_error(js, "object expected");
-  size = (size_t)jsv._object.length;
-  return true;
-}
-inline json_view get_element(json_view js, string_view key) {
-  if (!is_valid(js)) return {js.root};
-  auto& jst = _get_type(js);
-  auto& jsv = _get_value(js);
-  if (jst != json_type::object)
-    return set_error_view(js, "object expected");
-  for (auto idx = (uint32_t)0; idx < jsv._object.length; idx++) {
-    auto jsk = json_view{js.root, jsv._object.start + idx * 2};
-    if (_get_key(jsk) == key) {
-      return {js.root, jsv._object.start + idx * 2 + 1};
-    }
-  }
-  return set_error_view(js, "missing key " + string{key});
-}
-inline json_cview get_element(json_cview js, string_view key) {
-  if (!is_valid(js)) return {js.root};
-  auto& jst = _get_type(js);
-  auto& jsv = _get_value(js);
-  if (jst != json_type::object)
-    return set_error_view(js, "object expected");
-  for (auto idx = (uint32_t)0; idx < jsv._object.length; idx++) {
-    auto jsk = json_view{js.root, jsv._object.start + idx * 2};
-    if (_get_key(jsk) == key) {
-      return {js.root, jsv._object.start + idx * 2 + 1};
-    }
-  }
-  return set_error_view(js, "missing key " + string{key});
-}
-inline bool has_element(json_view js, string_view key) {
-  if (!is_valid(js)) return false;
-  auto& jst = _get_type(js);
-  auto& jsv = _get_value(js);
-  if (jst != json_type::object) return set_error(js, "object expected");
-  for (auto idx = (uint32_t)0; idx < jsv._object.length; idx++) {
-    auto jsk = json_cview{js.root, jsv._object.start + idx * 2};
-    if (_get_key(jsk) == key) return true;
-  }
-  return false;
-}
-inline bool has_element(json_cview js, string_view key) {
-  if (!is_valid(js)) return false;
-  auto& jst = _get_type(js);
-  auto& jsv = _get_value(js);
-  if (jst != json_type::object) return set_error(js, "object expected");
-  for (auto idx = (uint32_t)0; idx < jsv._object.length; idx++) {
-    auto jsk = json_view{js.root, jsv._object.start + idx * 2};
-    if (_get_key(jsk) == key) return true;
-  }
-  return false;
-}
-inline json_view insert_element(json_view js, string_view key) {
-  if (!is_valid(js)) return {js.root};
-  auto& jst = _get_type(js);
-  auto& jsv = _get_value(js);
-  if (jst != json_type::object)
-    return set_error_view(js, "object expected");
-  for (auto idx = (uint32_t)0; idx < jsv._object.length; idx++) {
-    auto jsk = json_view{js.root, jsv._object.start + idx * 2};
-    if (_get_key(jsk) == key) {
-      return {js.root, jsv._object.start + idx * 2 + 1};
-    }
-  }
-  auto last_start    = jsv._object.start;
-  auto last_length   = jsv._object.length * 2;
-  auto last_capacity = _get_capacity(last_length);
-  jsv._object.length += 1;
-  auto new_start    = jsv._object.start;
-  auto new_length   = jsv._object.length * 2;
-  auto new_capacity = _get_capacity(new_length);
-  if (new_length > last_capacity) {
-    // look for an alternative
-    if (!js.root->holes[new_capacity].empty()) {
-      jsv._object.start = js.root->holes[new_capacity].back();
-      new_start         = jsv._object.start;
-      js.root->holes[new_capacity].pop_back();
-    } else {
-      // allocate at the end
-      jsv._object.start = (uint32_t)js.root->values.size();
-      new_start         = jsv._object.start;
-      js.root->types.insert(
-          js.root->types.end(), new_capacity, json_type::null);
-      js.root->values.insert(
-          js.root->values.end(), new_capacity, json_tree::json_value{});
-    }
-    if (last_capacity != 0) {
-      js.root->holes[last_capacity].push_back(last_start);
-    }
-    for (auto idx = 0; idx < last_length; idx++) {
-      js.root->types[new_start + idx] = js.root->types[last_start + idx];
-      js.root->types[last_start + idx] = json_type::null;
-      js.root->values[new_start + idx] = js.root->values[last_start + idx];
-      js.root->values[last_start + idx] = {};
-    }
-  }
-  auto index = new_start + new_length - 2;
-  // TOFO(fabio): implement key reuse
-  js.root->types[index] = json_type::string_;
-  auto& jsk            = js.root->values[index];
-  auto key_found = false;
-  for (auto& kv : js.root->key_list) {
-    auto okey = string_view{js.root->keys.data() + kv._string.start, 
-      kv._string.length};
-    if (okey == key) {
-      jsk._string = kv._string;
-      key_found = true;
-    }
-  }
-  if (!key_found) {
-    jsk._string  = {(uint32_t)js.root->keys.size(), (uint32_t)key.size()};
-    js.root->key_list.emplace_back()._string = jsk._string;
-    js.root->keys.insert(js.root->keys.end(), key.begin(), key.end());
-    js.root->keys.push_back(0);
-  }
-  js.root->values[index + 1] = {};
-  return {js.root, index + 1};
-}
+// Object iteration
 inline auto iterate_object(json_view js) {
   struct iterator {
     json_view js;
@@ -1843,7 +1716,12 @@ inline auto iterate_object(json_view js) {
       return is_valid(js) && js.index != other.js.index;
     }
     iterator& operator++() {
+      if (!is_valid(js)) return *this;
+      auto& jst = _get_type(json_view{js.root, js.index + 1});
+      auto& jsv = _get_value(json_view{js.root, js.index + 1});
       js.index += 2;
+      if (jst == json_type::array) js.index += jsv._array.skip;
+      if (jst == json_type::object) js.index += jsv._object.skip;
       return *this;
     }
     pair<string_view, json_view> operator*() const {
@@ -1863,8 +1741,8 @@ inline auto iterate_object(json_view js) {
     set_error_view(js, "object expected");
     return iterator_wrapper{{js.root}, {js.root}};
   }
-  return iterator_wrapper{{js.root, jsv._object.start},
-      {js.root, jsv._object.start + jsv._object.length * 2}};
+  return iterator_wrapper{
+      {js.root, js.index + 1}, {js.root, js.index + 1 + jsv._object.skip}};
 }
 inline auto iterate_object(json_cview js) {
   struct iterator {
@@ -1873,7 +1751,12 @@ inline auto iterate_object(json_cview js) {
       return is_valid(js) && js.index != other.js.index;
     }
     iterator& operator++() {
+      if (!is_valid(js)) return *this;
+      auto& jst = _get_type(json_cview{js.root, js.index + 1});
+      auto& jsv = _get_value(json_cview{js.root, js.index + 1});
       js.index += 2;
+      if (jst == json_type::array) js.index += jsv._array.skip;
+      if (jst == json_type::object) js.index += jsv._object.skip;
       return *this;
     }
     pair<string_view, json_cview> operator*() const {
@@ -1893,8 +1776,107 @@ inline auto iterate_object(json_cview js) {
     set_error_view(js, "object expected");
     return iterator_wrapper{{js.root}, {js.root}};
   }
-  return iterator_wrapper{{js.root, jsv._object.start},
-      {js.root, jsv._object.start + jsv._object.length * 2}};
+  return iterator_wrapper{
+      {js.root, js.index + 1}, {js.root, js.index + 1 + jsv._object.skip}};
+}
+
+// Object
+inline bool set_object(json_view js) {
+  if (!is_valid(js)) return false;
+  if (js.index != js.root->values.size() - 1)
+    throw std::out_of_range{"can only add at the end"};
+  auto& jst  = _get_type(js);
+  auto& jsv  = _get_value(js);
+  jst        = json_type::object;
+  jsv._array = {0, 0};
+  return true;
+}
+inline bool object_size(json_cview js, size_t& size) {
+  if (!is_valid(js)) return false;
+  auto& jst = _get_type(js);
+  auto& jsv = _get_value(js);
+  if (jst != json_type::object) return set_error(js, "object expected");
+  size = (size_t)jsv._object.length;
+  return true;
+}
+inline json_view get_element(json_view js, string_view key) {
+  if (!is_valid(js)) return {js.root};
+  auto& jst = _get_type(js);
+  if (jst != json_type::object) return set_error_view(js, "object expected");
+  for (auto [okey, ejs] : iterate_object(js)) {
+    if (okey == key) return ejs;
+  }
+  return set_error_view(js, "missing key " + string{key});
+}
+inline json_cview get_element(json_cview js, string_view key) {
+  if (!is_valid(js)) return {js.root};
+  auto& jst = _get_type(js);
+  if (jst != json_type::object) return set_error_view(js, "object expected");
+  for (auto [okey, value] : iterate_object(js)) {
+    if (okey == key) return value;
+  }
+  return set_error_view(js, "missing key " + string{key});
+}
+inline bool has_element(json_view js, string_view key) {
+  if (!is_valid(js)) return false;
+  auto& jst = _get_type(js);
+  if (jst != json_type::object) return set_error(js, "object expected");
+  for (auto [okey, value] : iterate_object(js)) {
+    if (okey == key) return true;
+  }
+  return false;
+}
+inline bool has_element(json_cview js, string_view key) {
+  if (!is_valid(js)) return false;
+  auto& jst = _get_type(js);
+  if (jst != json_type::object) return set_error(js, "object expected");
+  for (auto [okey, value] : iterate_object(js)) {
+    if (okey == key) return true;
+  }
+  return false;
+}
+inline json_view insert_element(json_view js, string_view key) {
+  if (!is_valid(js)) return {js.root};
+  auto& jst = _get_type(js);
+  auto& jsv = _get_value(js);
+  if (jst != json_type::object) return set_error_view(js, "object expected");
+  if (js.index + 1 + jsv._object.skip != js.root->values.size())
+    throw std::out_of_range{"can only add at the end"};
+  for (auto [okey, ejs] : iterate_object(js)) {
+    if (okey == key) return ejs;
+  }
+  jsv._object.length += 1;
+  auto& jkt = js.root->types.emplace_back();
+  auto& jkv = js.root->values.emplace_back();
+  jkt       = json_type::string_;
+  for (auto kv : js.root->key_list) {
+    auto okey = string_view{
+        js.root->keys.data() + kv._string.start, kv._string.length};
+    if (okey == key) jkv = kv;
+  }
+  if (jkv._string.length == 0) {
+    jkv._string.start  = (uint32_t)js.root->keys.size();
+    jkv._string.length = (uint32_t)key.size();
+    js.root->keys.insert(js.root->keys.end(), key.begin(), key.end());
+    js.root->keys.push_back(0);
+  }
+  auto index = (uint32_t)js.root->values.size();
+  js.root->types.emplace_back(json_type::null);
+  js.root->values.emplace_back();
+  auto stack = vector<json_view>{};
+  _find_path(js, stack);
+  for (auto jss : stack) {
+    auto& jsst = _get_type(jss);
+    auto& jssv = _get_value(jss);
+    if (jsst == json_type::array) {
+      jssv._array.skip += 2;
+    } else if (jsst == json_type::object) {
+      jssv._object.skip += 2;
+    } else {
+      throw std::runtime_error{"bad stack"};
+    }
+  }
+  return {js.root, index};
 }
 
 // Binary
@@ -1903,7 +1885,7 @@ inline bool set_binary(json_view js, const json_binary& value) {
   auto& jst = _get_type(js);
   auto& jsv = _get_value(js);
   // TODO(fabio): implement reuse
-  jst          = json_type::binary;
+  jst                = json_type::binary;
   jsv._binary.start  = (uint32_t)js.root->binaries.size();
   jsv._binary.length = (uint32_t)value.size();
   js.root->binaries.insert(js.root->binaries.end(), value.begin(), value.end());
@@ -2165,6 +2147,49 @@ inline json_view insert_object(json_view js, string_view key) {
   if (!is_valid(ejs)) return {js.root};
   if (!set_object(ejs)) return {js.root};
   return ejs;
+}
+
+// Helpers that need to be declared here
+inline bool _find_anchestors(
+    json_view js, uint32_t index, vector<json_view>& path) {
+  auto& jst = _get_type(js);
+  if (jst == json_type::array) {
+    if (js.index == index) {
+      path.push_back(js);
+      return true;
+    }
+    //    if (index <= js.index || index >= js.index + 1 + jsv._array.skip)
+    //      return false;
+    //    path.push_back(js.index);
+    for (auto ejs : iterate_array(js)) {
+      if (_find_anchestors(ejs, index, path)) {
+        path.push_back(ejs);
+        return true;
+      }
+    }
+    return false;
+  } else if (jst == json_type::object) {
+    if (js.index == index) {
+      path.push_back(js);
+      return true;
+    }
+    //    if (index <= js.index || index >= js.index + 1 + jsv._object.skip)
+    //      return false;
+    //    path.push_back(js.index);
+    for (auto [okey, ejs] : iterate_object(js)) {
+      if (_find_anchestors(ejs, index, path)) {
+        path.push_back(js);
+        return true;
+      }
+    }
+    return false;
+  } else {
+    return false;
+  }
+}
+inline void _find_path(json_view js, vector<json_view>& path) {
+  path.clear();
+  _find_anchestors({js.root, 0}, js.index, path);
 }
 
 }  // namespace yocto
