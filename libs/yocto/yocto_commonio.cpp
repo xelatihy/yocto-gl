@@ -396,7 +396,7 @@ string path_current() { return std::filesystem::current_path().u8string(); }
 // -----------------------------------------------------------------------------
 namespace yocto {
 
-#define YOCTO_JSON_SAX 0
+#define YOCTO_JSON_SAX 1
 
 using njson = nlohmann::ordered_json;
 
