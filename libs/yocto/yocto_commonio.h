@@ -134,12 +134,14 @@ bool parse_cli(cli_state& cli, int argc, const char** argv, string& error);
 string get_usage(const cli_state& cli);
 // gets whether help was invoked
 bool get_help(const cli_state& cli);
+// gets the set command
+string get_command(const cli_state& cli);
 
 // Add a subcommand
 struct cli_command;
-inline cli_command& add_command(
+cli_command& add_command(
     cli_state& cli, const string& name, const string& usage);
-inline cli_command& add_command(
+cli_command& add_command(
     cli_command& cmd, const string& name, const string& usage);
 
 // Parses an optional or positional argument. Optional arguments' names start

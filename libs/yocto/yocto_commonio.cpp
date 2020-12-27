@@ -788,8 +788,27 @@ cli_state make_cli(const string& name, const string& usage) {
   auto& cmd = cli.command;
   cmd.name  = name;
   cmd.usage = usage;
-  add_option(cli, "--help/--no-help", cmd.help, "Print usage.");
+  add_option(cmd, "--help/--no-help", cmd.help, "Print usage.");
   return cli;
+}
+
+// add command
+cli_command& add_command(
+    cli_command& cli, const string& name, const string& usage) {
+  for (auto& cmd : cli.commands) {
+    if (cmd.name == name) {
+      throw std::invalid_argument{"cannot add two commands with the same name"};
+    }
+  }
+  auto& cmd = cli.commands.emplace_back();
+  cmd.name  = name;
+  cmd.usage = usage;
+  add_option(cmd, "--help/--no-help", cmd.help, "Print usage.");
+  return cmd;
+}
+cli_command& add_command(
+    cli_state& cli, const string& name, const string& usage) {
+  return add_command(cli.command, name, usage);
 }
 
 static vector<string> split_cli_names(const string& name_) {
@@ -918,6 +937,7 @@ static string get_usage(const cli_state& cli, const cli_command& cmd) {
     auto line    = "  " + scmd.name;
     while (line.size() < 32) line += " ";
     line += scmd.usage + "\n";
+    usage_command += line;
   }
   auto is_command = &cmd == &cli.command;
   message += "usage: " + cli.command.name + (is_command ? " " + cmd.name : "") +
@@ -937,6 +957,8 @@ static string get_usage(const cli_state& cli, const cli_command& cmd) {
   return message;
 }
 string get_usage(const cli_state& cli) { return get_usage(cli, cli.command); }
+
+string get_command(const cli_state& cli) { return cli.command.command; }
 
 static bool parse_value(
     cli_value& value, const string& arg, const vector<string>& choices) {
