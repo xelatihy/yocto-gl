@@ -600,6 +600,217 @@ bool save_json(const string& filename, const json_value& js, string& error) {
   return save_json(filename, njs, error);
 }
 
+// Validate a value against a schema
+static bool validate_json(const json_value& value, const string& path,
+    const json_value& schema, vector<string>& errors, size_t max_error) {
+  // error handling
+  auto emit_error = [&errors, max_error, &path](const string& message) {
+    errors.push_back(message + (path.empty() ? ""s : ("at " + path)));
+    return errors.size() >= max_error;
+  };
+
+  // early exit
+  if (schema.is_boolean() && schema.get<bool>()) return true;
+  if (schema.is_object() && schema.empty()) return true;
+
+  // validate type
+  if (schema.contains("type") && schema.at("type").is_string()) {
+    auto& type    = schema.at("type").get_ref<string>();
+    auto  type_ok = (type == "null" && value.is_null()) ||
+                   (type == "integer" && value.is_integral()) ||
+                   (type == "number" && value.is_number()) ||
+                   (type == "boolean" && value.is_boolean()) ||
+                   (type == "string" && value.is_string()) ||
+                   (type == "array" && value.is_array()) ||
+                   (type == "object" && value.is_object());
+    if (!type_ok) {
+      if (!emit_error(type + " expected")) return false;
+    }
+  }
+  if (schema.contains("type") && schema.at("type").is_array()) {
+    auto type_ok = false;
+    for (auto& tschema : schema) {
+      if (type_ok) break;
+      auto& type = tschema.get_ref<string>();
+      type_ok    = (type == "null" && value.is_null()) ||
+                (type == "integer" && value.is_integral()) ||
+                (type == "number" && value.is_number()) ||
+                (type == "boolean" && value.is_boolean()) ||
+                (type == "string" && value.is_string()) ||
+                (type == "array" && value.is_array()) ||
+                (type == "object" && value.is_object());
+    }
+    if (!type_ok) {
+      auto types = ""s;
+      for (auto& tschema : schema)
+        types += (types.empty() ? "" : " or") + tschema.get_ref<string>();
+      if (!emit_error(types + " expected")) return false;
+    }
+  }
+
+  // check range
+  // TODO(fabio): fix number precision
+  if (schema.contains("minimum") && value.is_number()) {
+    if (schema.at("minimum").get<double>() > value.get<double>()) {
+      if (!emit_error("value out of range")) return false;
+    }
+  }
+  if (schema.contains("maximum") && value.is_number()) {
+    if (schema.at("maximum").get<double>() > value.get<double>()) {
+      if (!emit_error("value out of range")) return false;
+    }
+  }
+  if (schema.contains("exclusiveMinimum") && value.is_number()) {
+    if (schema.at("exclusiveMinimum").get<double>() >= value.get<double>()) {
+      if (!emit_error("value out of range")) return false;
+    }
+  }
+  if (schema.contains("exclusiveMaximum") && value.is_number()) {
+    if (schema.at("exclusiveMaximum").get<double>() <= value.get<double>()) {
+      if (!emit_error("value out of range")) return false;
+    }
+  }
+
+  // enum checks
+  if (schema.contains("enum") && schema.at("enum").is_array()) {
+    auto found = false;
+    for (auto& item : schema.at("enum")) {
+      if (found) break;
+      if (item.is_string() && value.is_string() &&
+          item.get_ref<string>() == value.get_ref<string>())
+        found = true;
+      if (item.is_integral() && value.is_integral() &&
+          item.get<int64_t>() == value.get<int64_t>())
+        found = true;
+      if (item.is_number() && value.is_number() &&
+          item.get<double>() == value.get<double>())
+        found = true;
+    }
+    if (!found) {
+      if (!emit_error("invalid enum")) return false;
+    }
+  }
+
+  // size checks
+  if (schema.contains("minLength") && value.is_string()) {
+    if (schema.at("minLength").get<size_t>() > value.get_ref<string>().size()) {
+      if (!emit_error("size out of range")) return false;
+    }
+  }
+  if (schema.contains("maxLength") && value.is_string()) {
+    if (schema.at("maxLength").get<size_t>() < value.get_ref<string>().size()) {
+      if (!emit_error("size out of range")) return false;
+    }
+  }
+  if (schema.contains("minItems") && value.is_array()) {
+    if (schema.at("minItems").get<size_t>() >
+        value.get_ref<json_array>().size()) {
+      if (!emit_error("size out of range")) return false;
+    }
+  }
+  if (schema.contains("maxItems") && value.is_array()) {
+    if (schema.at("maxItems").get<size_t>() <
+        value.get_ref<json_array>().size()) {
+      if (!emit_error("size out of range")) return false;
+    }
+  }
+  if (schema.contains("minProperties") && value.is_object()) {
+    if (schema.at("minProperties").get<size_t>() >
+        value.get_ref<json_object>().size()) {
+      if (!emit_error("size out of range")) return false;
+    }
+  }
+  if (schema.contains("maxProperties") && value.is_object()) {
+    if (schema.at("maxProperties").get<size_t>() <
+        value.get_ref<json_object>().size()) {
+      if (!emit_error("size out of range")) return false;
+    }
+  }
+
+  // check array items
+  if (schema.contains("items") && value.is_object() &&
+      schema.at("items").is_object()) {
+    auto& items = schema.at("items");
+    for (auto idx = (size_t)0; idx < value.size(); idx++) {
+      if (!validate_json(value.at(idx), path + "/" + std::to_string(idx), items,
+              errors, max_error)) {
+        if (errors.size() > max_error) break;
+      }
+    }
+  }
+  if (schema.contains("items") && value.is_array() &&
+      schema.at("items").is_array()) {
+    auto& items = schema.at("items").get_ref<json_array>();
+    for (auto idx = (size_t)0; idx < std::min(items.size(), value.size());
+         idx++) {
+      if (!validate_json(value.at(idx), path + "/" + std::to_string(idx),
+              items.at(idx), errors, max_error)) {
+        if (errors.size() > max_error) break;
+      }
+    }
+  }
+
+  // check object properties
+  if (schema.contains("properties") && value.is_object() &&
+      schema.at("properties").is_object()) {
+    auto& properties = schema.at("properties").get_ref<json_object>();
+    for (auto& [name, property] : properties) {
+      if (!value.contains(name)) continue;
+      if (!validate_json(
+              value.at(name), path + "/" + name, property, errors, max_error)) {
+        if (errors.size() > max_error) break;
+      }
+    }
+  }
+  if (schema.contains("additionalProperties") && value.is_object() &&
+      schema.contains("properties") &&
+      schema.at("additionalProperties").is_boolean() &&
+      schema.at("additionalProperties").get<bool>() == false) {
+    auto& properties = schema.at("properties");
+    for (auto& [name, item] : value.get_ref<json_object>()) {
+      if (properties.contains(name)) {
+        if (!emit_error("unknown property " + name)) return false;
+      }
+    }
+  }
+  if (schema.contains("additionalProperties") && value.is_object() &&
+      schema.contains("properties") &&
+      schema.at("additionalProperties").is_object()) {
+    auto& properties = schema.at("properties");
+    for (auto& [name, item] : value.get_ref<json_object>()) {
+      if (properties.contains(name)) continue;
+      if (!validate_json(
+              item, path + "/" + name, properties, errors, max_error)) {
+        if (errors.size() > max_error) break;
+      }
+    }
+  }
+  if (schema.contains("required") && value.is_object() &&
+      schema.at("required").is_array()) {
+    auto& required = schema.at("required").get_ref<json_array>();
+    for (auto& name_ : required) {
+      auto& name = name_.get_ref<string>();
+      if (!value.contains(name)) {
+        if (emit_error("missing value for " + name)) return false;
+      }
+    }
+  }
+
+  // done
+  return false;
+}
+bool validate_json(
+    const json_value& value, const json_value& schema, string& error) {
+  auto errors = vector<string>{};
+  if (validate_json(value, "", schema, errors, 1)) return true;
+  error = errors.at(0);
+  return false;
+}
+bool validate_json(const json_value& value, const json_value& schema,
+    vector<string>& errors, size_t max_errors) {
+  return validate_json(value, "", schema, errors, max_errors);
+}
+
 // convert json
 void to_json(njson& njs, json_cview js) {
   switch (get_type(js)) {

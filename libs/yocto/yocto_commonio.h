@@ -411,6 +411,12 @@ inline void to_json(json_value& js, const vector<T>& value);
 template <typename T, size_t N>
 inline void to_json(json_value& js, const array<T, N>& value);
 
+// Validate a value against a schema
+bool validate_json(
+    const json_value& value, const json_value& schema, string& error);
+bool validate_json(const json_value& value, const json_value& schema,
+    vector<string>& errors, size_t max_errors = 100);
+
 // Declarations
 struct json_view;
 struct json_cview;
