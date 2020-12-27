@@ -134,6 +134,15 @@ bool parse_cli(cli_state& cli, int argc, const char** argv, string& error);
 string get_usage(const cli_state& cli);
 // gets whether help was invoked
 bool get_help(const cli_state& cli);
+// gets the set command
+string get_command(const cli_state& cli);
+
+// Add a subcommand
+struct cli_command;
+cli_command& add_command(
+    cli_state& cli, const string& name, const string& usage);
+cli_command& add_command(
+    cli_command& cmd, const string& name, const string& usage);
 
 // Parses an optional or positional argument. Optional arguments' names start
 // with "--" or "-", otherwise they are arguments. Supports strings, numbers,
@@ -144,14 +153,23 @@ bool get_help(const cli_state& cli);
 template <typename T>
 inline void add_option(cli_state& cli, const string& name, T& value,
     const string& usage, bool req = false);
+template <typename T>
+inline void add_option(cli_command& cmd, const string& name, T& value,
+    const string& usage, bool req = false);
 // Parses an optional or positional argument where values can only be within a
 // set of choices. Supports strings, integers and enums.
 template <typename T>
 inline void add_option(cli_state& cli, const string& name, T& value,
     const string& usage, const vector<string>& choices, bool req = false);
+template <typename T>
+inline void add_option(cli_command& cmd, const string& name, T& value,
+    const string& usage, const vector<string>& choices, bool req = false);
 // Parse all arguments left on the command line. Can only be used as argument.
 template <typename T>
 inline void add_option(cli_state& cli, const string& name, vector<T>& value,
+    const string& usage, bool req = false);
+template <typename T>
+inline void add_option(cli_command& cmd, const string& name, vector<T>& value,
     const string& usage, bool req = false);
 
 }  // namespace yocto
@@ -2381,14 +2399,20 @@ struct cli_option {
   bool                                            set     = false;
   function<void(const vector<cli_value>& values)> set_reference = {};
 };
+// Command line command. All data should be considered private.
+struct cli_command {
+  string              name            = "";
+  string              usage           = "";
+  vector<cli_command> commands        = {};
+  vector<cli_option>  options         = {};
+  string              usage_options   = "";
+  string              usage_arguments = "";
+  bool                help            = false;
+  string              command         = "";
+};
 // Command line parser. All data should be considered private.
 struct cli_state {
-  string             name            = "";
-  string             usage           = "";
-  vector<cli_option> options         = {};
-  string             usage_options   = "";
-  string             usage_arguments = "";
-  bool               help            = false;
+  cli_command command = {};
 };
 
 template <typename T>
@@ -2476,7 +2500,7 @@ inline bool get_value(const cli_value& cvalue, T& value) {
 }
 
 template <typename T>
-inline void add_option(cli_state& cli, const string& name, T& value,
+inline void add_option(cli_command& cli, const string& name, T& value,
     const string& usage, bool req) {
   static_assert(std::is_same_v<T, string> || std::is_same_v<T, bool> ||
                     std::is_integral_v<T> || std::is_floating_point_v<T> ||
@@ -2498,9 +2522,14 @@ inline void add_option(cli_state& cli, const string& name, T& value,
     return get_value(cvalues.front(), value);
   };
 }
-
 template <typename T>
 inline void add_option(cli_state& cli, const string& name, T& value,
+    const string& usage, bool req) {
+  return add_option(cli.command, name, value, usage, req);
+}
+
+template <typename T>
+inline void add_option(cli_command& cli, const string& name, T& value,
     const string& usage, const vector<string>& choices, bool req) {
   static_assert(
       std::is_same_v<T, string> || std::is_integral_v<T> || std::is_enum_v<T>,
@@ -2521,9 +2550,14 @@ inline void add_option(cli_state& cli, const string& name, T& value,
     return get_value(cvalues.front(), value);
   };
 }
+template <typename T>
+inline void add_option(cli_state& cli, const string& name, T& value,
+    const string& usage, const vector<string>& choices, bool req) {
+  return add_option(cli.command, name, value, usage, choices, req);
+}
 
 template <typename T>
-inline void add_option(cli_state& cli, const string& name, vector<T>& values,
+inline void add_option(cli_command& cli, const string& name, vector<T>& values,
     const string& usage, bool req) {
   static_assert(std::is_same_v<T, string> || std::is_same_v<T, bool> ||
                     std::is_integral_v<T> || std::is_floating_point_v<T> ||
@@ -2547,6 +2581,11 @@ inline void add_option(cli_state& cli, const string& name, vector<T>& values,
     }
     return true;
   };
+}
+template <typename T>
+inline void add_option(cli_state& cli, const string& name, vector<T>& values,
+    const string& usage, bool req) {
+  return add_option(cli.command, name, values, usage, req);
 }
 
 }  // namespace yocto

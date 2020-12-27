@@ -783,12 +783,32 @@ bool save_json(const string& filename, const json_tree& js, string& error) {
 namespace yocto {
 
 // initialize a command line parser
-cli_state make_cli(const string& cmd, const string& usage) {
-  auto cli  = cli_state{};
-  cli.name  = cmd;
-  cli.usage = usage;
-  add_option(cli, "--help/--no-help", cli.help, "Print usage.");
+cli_state make_cli(const string& name, const string& usage) {
+  auto  cli = cli_state{};
+  auto& cmd = cli.command;
+  cmd.name  = name;
+  cmd.usage = usage;
+  add_option(cmd, "--help/--no-help", cmd.help, "Print usage.");
   return cli;
+}
+
+// add command
+cli_command& add_command(
+    cli_command& cli, const string& name, const string& usage) {
+  for (auto& cmd : cli.commands) {
+    if (cmd.name == name) {
+      throw std::invalid_argument{"cannot add two commands with the same name"};
+    }
+  }
+  auto& cmd = cli.commands.emplace_back();
+  cmd.name  = name;
+  cmd.usage = usage;
+  add_option(cmd, "--help/--no-help", cmd.help, "Print usage.");
+  return cmd;
+}
+cli_command& add_command(
+    cli_state& cli, const string& name, const string& usage) {
+  return add_command(cli.command, name, usage);
 }
 
 static vector<string> split_cli_names(const string& name_) {
@@ -810,10 +830,10 @@ static vector<string> split_cli_names(const string& name_) {
   return split;
 }
 
-static void validate_names(const cli_state& cli) {
+static void validate_names(const cli_command& cmd) {
   // check for errors
   auto used = unordered_set<string>{};
-  for (auto& option : cli.options) {
+  for (auto& option : cmd.options) {
     if (option.name.empty())
       throw std::invalid_argument("name cannot be empty");
     auto names = split_cli_names(option.name);
@@ -826,11 +846,17 @@ static void validate_names(const cli_state& cli) {
         throw std::invalid_argument("inconsistent option type for " + name);
     }
   }
+  for (auto& scmd : cmd.commands) validate_names(scmd);
 }
 
-bool get_help(const cli_state& cli) { return cli.help; }
+static bool get_help(const cli_command& cli) {
+  if (cli.help) return true;
+  for (auto& cmd : cli.commands) return get_help(cmd);
+  return false;
+}
+bool get_help(const cli_state& cli) { return get_help(cli.command); }
 
-string get_usage(const cli_state& cli) {
+static string get_usage(const cli_state& cli, const cli_command& cmd) {
   auto type_name = [](const cli_option& option) -> string {
     auto str = string{};
     str += "<";
@@ -869,10 +895,17 @@ string get_usage(const cli_state& cli) {
     str += "]";
     return str;
   };
+
+  if (!cmd.command.empty()) {
+    for (auto& subcommand : cmd.commands)
+      if (cmd.command == subcommand.name) return get_usage(cli, subcommand);
+  }
+
   auto message      = string{};
-  auto has_optional = false, has_positional = false;
-  auto usage_optional = string{}, usage_positional = string{};
-  for (auto& option : cli.options) {
+  auto has_optional = false, has_positional = false, has_commands = false;
+  auto usage_optional = string{}, usage_positional = string{},
+       usage_command = string{};
+  for (auto& option : cmd.options) {
     auto line = "  " + option.name + " " + type_name(option);
     while (line.size() < 32) line += " ";
     line += option.usage;
@@ -899,9 +932,22 @@ string get_usage(const cli_state& cli) {
       usage_positional += line;
     }
   }
-  message += "usage: " + cli.name + (has_optional ? " [options]" : "") +
+  for (auto& scmd : cmd.commands) {
+    has_commands = true;
+    auto line    = "  " + scmd.name;
+    while (line.size() < 32) line += " ";
+    line += scmd.usage + "\n";
+    usage_command += line;
+  }
+  auto is_command = &cmd == &cli.command;
+  message += "usage: " + cli.command.name + (is_command ? " " + cmd.name : "") +
+             (has_commands ? " command" : "") +
+             (has_optional ? " [options]" : "") +
              (has_positional ? " <arguments>" : "") + "\n";
-  message += cli.usage + "\n\n";
+  message += cmd.usage + "\n\n";
+  if (has_commands) {
+    message += "commands:\n" + usage_command + "\n";
+  }
   if (has_optional) {
     message += "options:\n" + usage_optional + "\n";
   }
@@ -910,6 +956,9 @@ string get_usage(const cli_state& cli) {
   }
   return message;
 }
+string get_usage(const cli_state& cli) { return get_usage(cli, cli.command); }
+
+string get_command(const cli_state& cli) { return cli.command.command; }
 
 static bool parse_value(
     cli_value& value, const string& arg, const vector<string>& choices) {
@@ -965,17 +1014,24 @@ static bool parse_value(
   return false;
 }
 
-bool parse_cli(cli_state& cli, int argc, const char** argv, string& error) {
+bool parse_cli(cli_command& cli, vector<string>& args, string& error) {
   auto cli_error = [&error](const string& message) {
     error = message;
     return false;
   };
 
-  // validate names
-  validate_names(cli);
+  // parse command
+  for (auto& subcommand : cli.commands) {
+    if (args.empty()) return cli_error("missing value for command");
+    if (args.at(0).find("-") == 0)
+      return cli_error("missing value for command");
+    if (subcommand.name == args.at(0)) {
+      cli.command = args.at(0);
+      args.erase(args.begin());
+      return parse_cli(subcommand, args, error);
+    }
+  }
 
-  // prepare args
-  auto args = vector<string>{argv + 1, argv + argc};
   // parse options
   for (auto& option : cli.options) {
     if (option.name[0] != '-') continue;
@@ -1056,6 +1112,15 @@ bool parse_cli(cli_state& cli, int argc, const char** argv, string& error) {
   return true;
 }
 
+bool parse_cli(cli_state& cli, int argc, const char** argv, string& error) {
+  // validate names
+  validate_names(cli.command);
+  // prepare args
+  auto args = vector<string>{argv + 1, argv + argc};
+  // parse
+  return parse_cli(cli.command, args, error);
+}
+
 void parse_cli(cli_state& cli, int argc, const char** argv) {
   auto error = string{};
   if (!parse_cli(cli, argc, argv, error)) {
@@ -1063,7 +1128,7 @@ void parse_cli(cli_state& cli, int argc, const char** argv) {
     print_info("");
     print_info(get_usage(cli));
     exit(1);
-  } else if (cli.help) {
+  } else if (get_help(cli)) {
     print_info(get_usage(cli));
     exit(0);
   }
