@@ -528,9 +528,8 @@ int main(int argc, const char* argv[]) {
   add_optional(cli_convert, "output", convert.output, "Output image", "o");
   add_positional(cli_convert, "image", convert.image, "Input image");
   auto& cli_tonemap = add_command(cli, "tonemap", "Tonemap images");
-  add_optional(cli_tonemap, "--exposure,-e", tonemap.exposure, "Exposure");
-  add_optional(
-      cli_tonemap, "--filmic/--no-filmic", tonemap.filmic, "Filmic curve");
+  add_optional(cli_tonemap, "exposure", tonemap.exposure, "Exposure", "e");
+  add_optional(cli_tonemap, "filmic", tonemap.filmic, "Filmic curve", "f");
   add_optional(cli_tonemap, "srgb", tonemap.srgb, "Srgb curve");
   add_optional(cli_tonemap, "logo", tonemap.logo, "Add logo");
   add_optional(cli_tonemap, "output", tonemap.output, "Output image", "o");
