@@ -1218,103 +1218,107 @@ static bool parse_value(
   return false;
 }
 
-bool parse_cli(cli_command& cli, vector<string>& args, string& error) {
+bool parse_cli(
+    cli_command& cli, vector<string>& args, size_t start, string& error) {
   auto cli_error = [&error](const string& message) {
     error = message;
     return false;
   };
 
-  // parse command
-  for (auto& subcommand : cli.commands) {
-    if (args.empty()) return cli_error("missing value for command");
-    if (args.at(0).find("-") == 0)
-      return cli_error("missing value for command");
-    if (subcommand.name == args.at(0)) {
-      cli.command = args.at(0);
-      args.erase(args.begin());
-      return parse_cli(subcommand, args, error);
+  // parse the command line
+  for (auto idx = start; idx < args.size(); idx++) {
+    auto arg        = args.at(idx);
+    auto positional = arg.find('-') != 0;
+    if (positional && !cli.commands.empty() && cli.command.empty()) {
+      for (auto& subcommand : cli.commands) {
+        if (!positional) continue;
+        if (subcommand.name != arg) continue;
+        cli.command = arg;
+        if (!parse_cli(subcommand, args, idx + 1, error)) return false;
+      }
+      if (cli.command.empty()) return cli_error("missing value for command");
+    } else if (positional) {
+      auto position = -1;
+      for (auto pos = 0; pos < cli.options.size(); pos++) {
+        auto& option = cli.options.at(pos);
+        if (!option.positional) continue;
+        if (option.set) continue;
+        position = (int)pos;
+        break;
+      }
+      if (position < 0) return cli_error("too many positional arguments");
+      auto& option = cli.options.at(position);
+      if (option.nargs > 0 && option.nargs > args.size() - idx)
+        return cli_error("missing value for " + option.name_);
+      option.set = true;
+      option.value.clear();
+      if (option.nargs < 0) {
+        for (auto pos = idx; args.size(); pos++) {
+          auto& value = option.value.emplace_back();
+          value.type  = option.type;
+          if (!parse_value(value, args[pos], option.choices))
+            return cli_error("bad value for " + option.name_);
+        }
+        idx = args.size();
+      } else if (option.nargs > 0) {
+        for (auto pos = idx; pos < idx + option.nargs; pos++) {
+          auto& value = option.value.emplace_back();
+          value.type  = option.type;
+          if (!parse_value(value, args[pos], option.choices))
+            return cli_error("bad value for " + option.name_);
+        }
+        idx += option.nargs - 1;
+      }
+      option.set_reference(option.value);
+    } else {
+      arg = arg.substr(1);
+      if (arg.find('-') == 0) arg = arg.substr(1);
+      auto position = -1;
+      for (auto pos = 0; pos < cli.options.size(); pos++) {
+        auto& option = cli.options.at(pos);
+        if (option.positional) continue;
+        if (option.name_ != arg && option.alt != arg &&
+            option.name_ != "no-" + arg)  // TODO(fabio): fix boolean
+          continue;
+        if (cli.options.at(pos).set)
+          return cli_error("option already set " + option.name_);
+        position = (int)pos;
+        break;
+      }
+      if (position < 0) return cli_error("unknown option " + args[idx]);
+      auto& option = cli.options.at(position);
+      if (option.nargs > 0 &&
+          option.nargs > args.size() - idx)  // TODO(fabio): fix indices
+        return cli_error("missing value for " + option.name_);
+      option.set = true;
+      option.value.clear();
+      if (option.nargs == 0) {
+        auto& value = option.value.emplace_back();
+        value.type  = option.type;
+        if (!parse_value(
+                value, arg.find("no-") != 0 ? "true" : "false", option.choices))
+          return cli_error("bad value for " + option.name_);
+      } else {
+        for (auto pos = idx + 1; pos < idx + 1 + option.nargs; pos++) {
+          auto& value = option.value.emplace_back();
+          value.type  = option.type;
+          if (!parse_value(value, args[pos], option.choices))
+            return cli_error("bad value for " + option.name_);
+        }
+        idx += option.nargs;
+      }
+      option.set_reference(option.value);
     }
   }
 
-  // parse options
+  // check for required
+  if (!cli.commands.empty() && cli.command.empty())
+    return cli_error("missing command");
   for (auto& option : cli.options) {
-    if (option.positional) continue;
-    auto names = vector<string>{"--" + option.name_};
-    if (option.nargs == 0) names.push_back("--no-" + option.name_);
-    if (!option.alt.empty()) names.push_back("-" + option.alt);
-    option.value = option.def;
-    option.set   = false;
-    auto values  = vector<string>{};
-    for (auto& name : names) {
-      if (std::find(args.begin(), args.end(), name) == args.end()) continue;
-      auto pos = std::find(args.begin(), args.end(), name) - args.begin();
-      args.erase(args.begin() + pos);
-      if (option.nargs == 0) {
-        values     = {name.find("--no-") == string::npos ? "true" : "false"};
-        option.set = true;
-      } else if (option.nargs > 0) {
-        if (pos + option.nargs > args.size())
-          return cli_error("missing value for " + name);
-        values     = {args.begin() + pos, args.begin() + pos + option.nargs};
-        option.set = true;
-        args.erase(args.begin() + pos, args.begin() + pos + option.nargs);
-      } else {
-        throw std::invalid_argument{"unsupported number of arguments"};
-      }
-    }
-    if (option.set) {
-      option.value.clear();
-      for (auto& value : values) {
-        option.value.emplace_back();
-        option.value.back().type = option.type;
-        if (!parse_value(option.value.back(), value, option.choices))
-          return cli_error("bad value for " + option.name_);
-      }
-      option.set_reference(option.value);
-    } else {
-      if (option.req) return cli_error("missing value for " + option.name_);
-    }
+    if (option.req && !option.set)
+      return cli_error("missing value for " + option.name_);
   }
-  // check unknown options
-  for (auto& arg : args) {
-    if (arg.find("-") == 0) return cli_error("unknown option " + arg);
-  }
-  // parse positional
-  for (auto& option : cli.options) {
-    if (!option.positional) continue;
-    option.value = option.def;
-    option.set   = false;
-    auto values  = vector<string>{};
-    if (args.empty()) {
-      if (option.req) return cli_error("missing value for " + option.name_);
-    } else if (option.nargs < 0) {
-      values     = args;
-      option.set = true;
-      args.clear();
-    } else if (option.nargs > 0) {
-      if (option.nargs > args.size())
-        return cli_error("missing value for " + option.name_);
-      values = {args.begin(), args.begin() + option.nargs};
-      args.erase(args.begin(), args.begin() + option.nargs);
-      option.set = true;
-    } else {
-      throw std::invalid_argument{"unsupported number of arguments"};
-    }
-    if (option.set) {
-      option.value.clear();
-      for (auto& value : values) {
-        option.value.emplace_back();
-        option.value.back().type = option.type;
-        if (!parse_value(option.value.back(), value, option.choices))
-          return cli_error("bad value for " + option.name_);
-      }
-      option.set_reference(option.value);
-    } else {
-      if (option.req) return cli_error("missing value for " + option.name_);
-    }
-  }
-  // check remaining
-  if (!args.empty()) return cli_error("mismatched value for " + args.front());
+
   // done
   return true;
 }
@@ -1325,7 +1329,7 @@ bool parse_cli(cli_state& cli, int argc, const char** argv, string& error) {
   // prepare args
   auto args = vector<string>{argv + 1, argv + argc};
   // parse
-  return parse_cli(cli.command, args, error);
+  return parse_cli(cli.command, args, 0, error);
 }
 
 void parse_cli(cli_state& cli, int argc, const char** argv) {
