@@ -2481,8 +2481,8 @@ struct cli_state {
 template <typename T>
 inline cli_type get_cli_type() {
   static_assert(std::is_same_v<T, string> || std::is_same_v<T, bool> ||
-                    std::is_integral_v<T> || std::is_floating_point_v<T> ||
-                    std::is_enum_v<T>,
+                    std::is_integral_v<T> || std::is_same_v<T, float> ||
+                    std::is_same_v<T, double> || std::is_enum_v<T>,
       "unsupported type");
   if constexpr (std::is_same_v<T, string>) {
     return cli_type::string;
@@ -2494,7 +2494,7 @@ inline cli_type get_cli_type() {
     return cli_type::integer;
   } else if constexpr (std::is_integral_v<T> && std::is_unsigned_v<T>) {
     return cli_type::uinteger;
-  } else if constexpr (std::is_floating_point_v<T>) {
+  } else if constexpr (std::is_same_v<T, float> || std::is_same_v<T, double>) {
     return cli_type::number;
   } else {
     // probably should be an error
@@ -2505,8 +2505,8 @@ inline cli_type get_cli_type() {
 template <typename T>
 inline void set_value(cli_value& cvalue, const T& value) {
   static_assert(std::is_same_v<T, string> || std::is_same_v<T, bool> ||
-                    std::is_integral_v<T> || std::is_floating_point_v<T> ||
-                    std::is_enum_v<T>,
+                    std::is_integral_v<T> || std::is_same_v<T, float> ||
+                    std::is_same_v<T, double> || std::is_enum_v<T>,
       "unsupported type");
   cvalue.type = get_cli_type<T>();
   if constexpr (std::is_same_v<T, string>) {
@@ -2519,7 +2519,7 @@ inline void set_value(cli_value& cvalue, const T& value) {
     cvalue.integer = value;
   } else if constexpr (std::is_integral_v<T> && std::is_unsigned_v<T>) {
     cvalue.uinteger = value;
-  } else if constexpr (std::is_floating_point_v<T>) {
+  } else if constexpr (std::is_same_v<T, float> || std::is_same_v<T, double>) {
     cvalue.number = value;
   } else {
     // probably should be an error
@@ -2530,8 +2530,8 @@ inline void set_value(cli_value& cvalue, const T& value) {
 template <typename T>
 inline bool get_value(const cli_value& cvalue, T& value) {
   static_assert(std::is_same_v<T, string> || std::is_same_v<T, bool> ||
-                    std::is_integral_v<T> || std::is_floating_point_v<T> ||
-                    std::is_enum_v<T>,
+                    std::is_integral_v<T> || std::is_same_v<T, float> ||
+                    std::is_same_v<T, double> || std::is_enum_v<T>,
       "unsupported type");
   if constexpr (std::is_same_v<T, string>) {
     if (cvalue.type != cli_type::string) return false;
@@ -2553,7 +2553,7 @@ inline bool get_value(const cli_value& cvalue, T& value) {
     if (cvalue.type != cli_type::uinteger) return false;
     value = (T)cvalue.uinteger;
     return true;
-  } else if constexpr (std::is_floating_point_v<T>) {
+  } else if constexpr (std::is_same_v<T, float> || std::is_same_v<T, double>) {
     if (cvalue.type != cli_type::number) return false;
     value = (T)cvalue.number;
     return true;
@@ -2574,8 +2574,8 @@ inline void add_optional(cli_command& cmd, const string& name, T& value,
     const string& usage, const string& alt, const vector<T>& choices,
     bool req) {
   static_assert(std::is_same_v<T, string> || std::is_same_v<T, bool> ||
-                    std::is_integral_v<T> || std::is_floating_point_v<T> ||
-                    std::is_enum_v<T>,
+                    std::is_integral_v<T> || std::is_same_v<T, float> ||
+                    std::is_same_v<T, double> || std::is_enum_v<T>,
       "unsupported type");
   auto def = vector<cli_value>{};
   set_value(def.emplace_back(), value);
@@ -2611,8 +2611,8 @@ template <typename T>
 inline void add_positional(cli_command& cmd, const string& name, T& value,
     const string& usage, const vector<T>& choices, bool req) {
   static_assert(std::is_same_v<T, string> || std::is_same_v<T, bool> ||
-                    std::is_integral_v<T> || std::is_floating_point_v<T> ||
-                    std::is_enum_v<T>,
+                    std::is_integral_v<T> || std::is_same_v<T, float> ||
+                    std::is_same_v<T, double> || std::is_enum_v<T>,
       "unsupported type");
   auto def = vector<cli_value>{};
   set_value(def.emplace_back(), value);
@@ -2648,8 +2648,8 @@ inline void add_optional(cli_command& cmd, const string& name, T& value,
     const string& usage, const vector<pair<T, string>>& choices,
     const string& alt, bool req) {
   static_assert(std::is_same_v<T, string> || std::is_same_v<T, bool> ||
-                    std::is_integral_v<T> || std::is_floating_point_v<T> ||
-                    std::is_enum_v<T>,
+                    std::is_integral_v<T> || std::is_same_v<T, float> ||
+                    std::is_same_v<T, double> || std::is_enum_v<T>,
       "unsupported type");
   auto def = vector<cli_value>{};
   set_value(def.emplace_back(), value);
@@ -2689,8 +2689,8 @@ template <typename T>
 inline void add_positional(cli_command& cmd, const string& name, T& value,
     const string& usage, const vector<pair<T, string>>& choices, bool req) {
   static_assert(std::is_same_v<T, string> || std::is_same_v<T, bool> ||
-                    std::is_integral_v<T> || std::is_floating_point_v<T> ||
-                    std::is_enum_v<T>,
+                    std::is_integral_v<T> || std::is_same_v<T, float> ||
+                    std::is_same_v<T, double> || std::is_enum_v<T>,
       "unsupported type");
   auto def = vector<cli_value>{};
   set_value(def.emplace_back(), value);
@@ -2730,8 +2730,8 @@ inline void add_positional(cli_command& cmd, const string& name,
     vector<T>& values, const string& usage, const vector<T>& choices,
     bool req) {
   static_assert(std::is_same_v<T, string> || std::is_same_v<T, bool> ||
-                    std::is_integral_v<T> || std::is_floating_point_v<T> ||
-                    std::is_enum_v<T>,
+                    std::is_integral_v<T> || std::is_same_v<T, float> ||
+                    std::is_same_v<T, double> || std::is_enum_v<T>,
       "unsupported type");
   auto def = vector<cli_value>{};
   for (auto& value : values) set_value(def.emplace_back(), value);
@@ -2763,8 +2763,8 @@ template <typename T>
 inline void add_option(cli_command& cli, const string& name, T& value,
     const string& usage, bool req) {
   static_assert(std::is_same_v<T, string> || std::is_same_v<T, bool> ||
-                    std::is_integral_v<T> || std::is_floating_point_v<T> ||
-                    std::is_enum_v<T>,
+                    std::is_integral_v<T> || std::is_same_v<T, float> ||
+                    std::is_same_v<T, double> || std::is_enum_v<T>,
       "unsupported type");
   auto def = vector<cli_value>{};
   set_value(def.emplace_back(), value);
@@ -2820,8 +2820,8 @@ template <typename T>
 inline void add_option(cli_command& cli, const string& name, vector<T>& values,
     const string& usage, bool req) {
   static_assert(std::is_same_v<T, string> || std::is_same_v<T, bool> ||
-                    std::is_integral_v<T> || std::is_floating_point_v<T> ||
-                    std::is_enum_v<T>,
+                    std::is_integral_v<T> || std::is_same_v<T, float> ||
+                    std::is_same_v<T, double> || std::is_enum_v<T>,
       "unsupported type");
   auto def = vector<cli_value>{};
   for (auto& value : values) set_value(def.emplace_back(), value);
