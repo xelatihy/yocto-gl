@@ -2493,14 +2493,10 @@ inline cli_type get_cli_type() {
   } else if constexpr (std::is_enum_v<T>) {
     return cli_type::integer;
   } else if constexpr (std::is_same_v<T, int64_t> ||
-                       std::is_same_v<T, int32_t> ||
-                       std::is_same_v<T, uint64_t> ||
-                       std::is_same_v<T, uint32_t> && !std::is_unsigned_v<T>) {
+                       std::is_same_v<T, int32_t>) {
     return cli_type::integer;
-  } else if constexpr (std::is_same_v<T, int64_t> ||
-                       std::is_same_v<T, int32_t> ||
-                       std::is_same_v<T, uint64_t> ||
-                       std::is_same_v<T, uint32_t> && std::is_unsigned_v<T>) {
+  } else if constexpr (std::is_same_v<T, uint64_t> ||
+                       std::is_same_v<T, uint32_t>) {
     return cli_type::uinteger;
   } else if constexpr (std::is_same_v<T, float> || std::is_same_v<T, double>) {
     return cli_type::number;
@@ -2526,14 +2522,10 @@ inline void set_value(cli_value& cvalue, const T& value) {
   } else if constexpr (std::is_enum_v<T>) {
     cvalue.integer = (int64_t)value;
   } else if constexpr (std::is_same_v<T, int64_t> ||
-                       std::is_same_v<T, int32_t> ||
-                       std::is_same_v<T, uint64_t> ||
-                       std::is_same_v<T, uint32_t> && !std::is_unsigned_v<T>) {
+                       std::is_same_v<T, int32_t>) {
     cvalue.integer = value;
-  } else if constexpr (std::is_same_v<T, int64_t> ||
-                       std::is_same_v<T, int32_t> ||
-                       std::is_same_v<T, uint64_t> ||
-                       std::is_same_v<T, uint32_t> && std::is_unsigned_v<T>) {
+  } else if constexpr (std::is_same_v<T, uint64_t> ||
+                       std::is_same_v<T, uint32_t>) {
     cvalue.uinteger = value;
   } else if constexpr (std::is_same_v<T, float> || std::is_same_v<T, double>) {
     cvalue.number = value;
@@ -2564,16 +2556,12 @@ inline bool get_value(const cli_value& cvalue, T& value) {
     value = (T)cvalue.integer;
     return true;
   } else if constexpr (std::is_same_v<T, int64_t> ||
-                       std::is_same_v<T, int32_t> ||
-                       std::is_same_v<T, uint64_t> ||
-                       std::is_same_v<T, uint32_t> && !std::is_unsigned_v<T>) {
+                       std::is_same_v<T, int32_t>) {
     if (cvalue.type != cli_type::integer) return false;
     value = (T)cvalue.integer;
     return true;
-  } else if constexpr (std::is_same_v<T, int64_t> ||
-                       std::is_same_v<T, int32_t> ||
-                       std::is_same_v<T, uint64_t> ||
-                       std::is_same_v<T, uint32_t> && std::is_unsigned_v<T>) {
+  } else if constexpr (std::is_same_v<T, uint64_t> ||
+                       std::is_same_v<T, uint32_t>) {
     if (cvalue.type != cli_type::uinteger) return false;
     value = (T)cvalue.uinteger;
     return true;
