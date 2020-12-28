@@ -2544,11 +2544,19 @@ inline string cli_gettype() {
 }
 
 // Get a path
-inline json_value& get_clipath(json_value& js, const string& path) {
+inline json_value& get_clischema(json_value& schema, const string& path) {
+  if (path.empty()) return schema;
+  return schema.at("properties").at(path);  // TODO(fabio): fix for recursion
+}
+inline const json_value& get_clischema(const json_value& schema, const string& path) {
+  if (path.empty()) return schema;
+  return schema.at("properties").at(path);  // TODO(fabio): fix for recursion
+}
+inline json_value& get_clivalue(json_value& js, const string& path) {
   if (path.empty()) return js;
   return js.at(path);  // TODO(fabio): fix for recursion
 }
-inline const json_value& get_clipath(const json_value& js, const string& path) {
+inline const json_value& get_clivalue(const json_value& js, const string& path) {
   if (path.empty()) return js;
   return js.at(path);  // TODO(fabio): fix for recursion
 }
@@ -2576,7 +2584,7 @@ inline void add_optional(const cli_command& cmd, const string& name, T& value,
                     std::is_same_v<T, uint32_t> || std::is_same_v<T, float> ||
                     std::is_same_v<T, double> || std::is_enum_v<T>,
       "unsupported type");
-  auto& schema      = get_clipath(cmd.cli.schema, cmd.path);
+  auto& schema      = get_clischema(cmd.cli.schema, cmd.path);
   if (!alt.empty()) schema["cli_alternate"][alt] = name;
   if (req) schema["required"].push_back(name);
   auto& property    = schema["properties"][name];
@@ -2607,7 +2615,7 @@ inline void add_positional(const cli_command& cmd, const string& name, T& value,
                     std::is_same_v<T, uint32_t> || std::is_same_v<T, float> ||
                     std::is_same_v<T, double> || std::is_enum_v<T>,
       "unsupported type");
-  auto& schema      = get_clipath(cmd.cli.schema, cmd.path);
+  auto& schema      = get_clischema(cmd.cli.schema, cmd.path);
   if (req) schema["required"].push_back(to_json(name));
   schema["cli_positional"].push_back(name);
   auto& property    = schema["properties"][name];
@@ -2643,7 +2651,7 @@ inline void add_optional(const cli_command& cmd, const string& name, T& value,
   auto def = string{};
   for (auto& [item, choice] : choices)
     if (item == value) def = choice;
-  auto& schema      = get_clipath(cmd.cli.schema, cmd.path);
+  auto& schema      = get_clischema(cmd.cli.schema, cmd.path);
   if (!alt.empty()) schema["cli_alternate"][alt] = name;
   if (req) schema["required"].push_back(to_json(name));
   auto& property    = schema["properties"][name];
@@ -2682,7 +2690,7 @@ inline void add_positional(const cli_command& cmd, const string& name, T& value,
                     std::is_same_v<T, uint32_t> || std::is_same_v<T, float> ||
                     std::is_same_v<T, double> || std::is_enum_v<T>,
       "unsupported type");
-  auto& schema      = get_clipath(cmd.cli.schema, cmd.path);
+  auto& schema      = get_clischema(cmd.cli.schema, cmd.path);
   if (req) schema["required"].push_back(name);
   schema["cli_positional"].push_back(name);
   auto& property    = schema["properties"][name];
@@ -2722,7 +2730,7 @@ inline void add_positional(const cli_command& cmd, const string& name,
                     std::is_same_v<T, uint32_t> || std::is_same_v<T, float> ||
                     std::is_same_v<T, double> || std::is_enum_v<T>,
       "unsupported type");
-  auto& schema      = get_clipath(cmd.cli.schema, cmd.path);
+  auto& schema      = get_clischema(cmd.cli.schema, cmd.path);
   schema["cli_positional"].push_back(name);
   if (req) schema["required"].push_back(name);
   auto& property    = schema["properties"][name];
