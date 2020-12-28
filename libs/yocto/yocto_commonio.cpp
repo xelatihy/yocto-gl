@@ -1057,11 +1057,27 @@ static bool get_help(const json_value& js) {
 bool get_help(const cli_state& cli) { return get_help(cli.value); }
 
 string get_usage(const cli_state& cli) {
-  // TODO(fabio): get from command
-  auto& value  = cli.value;
-  auto  schema = fix_cli_schema(cli.schema);
+  // helper
+  auto is_positional = [](const json_value& schema,
+                           const string&    name) -> bool {
+    if (!schema.contains("cli_positional")) return false;
+    if (!schema.at("cli_positional").is_array()) return false;
+    for (auto& pname : schema.at("cli_positional")) {
+      if (pname.is_string() && pname.get_ref<string>() == name) return true;
+    }
+    return false;
+  };
+  auto is_required = [](const json_value& schema, const string& name) -> bool {
+    if (!schema.contains("required")) return false;
+    if (!schema.at("required").is_array()) return false;
+    for (auto& pname : schema.at("required")) {
+      if (pname.is_string() && pname.get_ref<string>() == name) return true;
+    }
+    return false;
+  };
 
-  auto app = cli.schema.value("title", "");
+  // TODO(fabio): get from command
+  auto schema = fix_cli_schema(cli.schema);
 
   auto message      = string{};
   auto has_optional = false, has_positional = false, has_commands = false;
@@ -1069,7 +1085,7 @@ string get_usage(const cli_state& cli) {
        usage_command = string{};
   for (auto& [name, property] : schema.at("properties").items()) {
     auto decorated_name = name;
-    auto positional     = property.value("cli_ispositional", false);
+    auto positional     = is_positional(schema, name);
     if (!positional) {
       decorated_name = "--" + name;
       if (property.value("type", "") == "boolean")
@@ -1077,12 +1093,19 @@ string get_usage(const cli_state& cli) {
       if (property.contains("cli_alt"))
         decorated_name += ", -" + property.value("cli_alt", "");
     }
-    auto line = "  " + decorated_name + " " + property.value("type", "");
+    auto line = "  " + decorated_name;
+    if (property.value("type", "") != "boolean") {
+      line += " " + property.value("type", "");
+    }
     while (line.size() < 32) line += " ";
     line += property.value("description", "");
-    line += (property.contains("default"))
-                ? " " + format_json(property.at("default")) + "\n"
-                : string{"\n"};
+    if (is_required(schema, name)) {
+      line += " [req]\n";
+    } else if (property.contains("default")) {
+      line += " [" + format_json(property.at("default")) + "]\n";
+    } else {
+      line += "\n";
+    }
     if (property.contains("enum")) {
       line += "    with choices: ";
       auto len = 16;
@@ -1230,6 +1253,10 @@ bool parse_cli(cli_state& cli, vector<string>& args, string& error) {
     if (!schema.at("cli_command").is_string()) return "";
     return schema.at("cli_command").get<string>();
   };
+  auto iterate_path = [](const string& command) -> vector<string> {
+    if (command.empty()) return {""};
+    return {command};
+  };
 
   // initialize parsing
   cli.schema           = fix_cli_schema(cli.schema);
@@ -1313,21 +1340,20 @@ bool parse_cli(cli_state& cli, vector<string>& args, string& error) {
   }
 
   // check for required and apply defaults
-  // TODO(fabio): do this
-  // for (auto path : iterate_path(command)) {
-  //   auto& schema  = get_clipath(path);
-  //   auto& value   = get_clipath(path);
-  //   auto  command = get_command(schema);
-  //   if (!command.empty() && !value.contains(name))
-  //     return cli_error("missing value for " + command);
-  //   for (auto& [name, property] : schema.at("properties").items()) {
-  //     if (property.value("type", "string") == "object") continue;
-  //     if (is_required(schema, name) && !value.contains(name))
-  //       return cli_error("missing value for " + name);
-  //     if (property.contains("default") && !value.contains(name))
-  //       value[name] == property.at("default");
-  //   }
-  // }
+  for (auto path : iterate_path(command)) {
+    auto& schema  = get_clipath(cli.schema, path);
+    auto& value   = get_clipath(cli.value, path);
+    auto  command = get_command(schema);
+    if (!command.empty() && !value.contains(command))
+      return cli_error("missing value for " + command);
+    for (auto& [name, property] : schema.at("properties").items()) {
+      if (property.value("type", "string") == "object") continue;
+      if (is_required(schema, name) && !value.contains(name))
+        return cli_error("missing value for " + name);
+      if (property.contains("default") && !value.contains(name))
+        value[name] = property.at("default");
+    }
+  }
 
   // done
   return true;
