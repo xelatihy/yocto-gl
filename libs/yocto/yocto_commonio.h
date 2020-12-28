@@ -2544,21 +2544,50 @@ inline string cli_gettype() {
 }
 
 // Get a path
-inline json_value& get_clischema(json_value& schema, const string& path) {
-  if (path.empty()) return schema;
-  return schema.at("properties").at(path);  // TODO(fabio): fix for recursion
+inline vector<string> split_clipath(const string& path) {
+  if (path.empty()) return {};
+  auto splits  = vector<string>{};
+  auto current = string{};
+  for (auto c : path) {
+    if (c == '/') {
+      splits.push_back(current);
+      current = {};
+    } else {
+      current += c;
+    }
+  }
+  if (!current.empty()) splits.push_back(current);
+  return splits;
 }
-inline const json_value& get_clischema(const json_value& schema, const string& path) {
-  if (path.empty()) return schema;
-  return schema.at("properties").at(path);  // TODO(fabio): fix for recursion
+inline json_value& get_clischema(json_value& schema, const string& path) {
+  auto current = &schema;
+  for (auto& name : split_clipath(path)) {
+    current = &(current->at("properties").at(name));
+  }
+  return *current;
+}
+inline const json_value& get_clischema(
+    const json_value& schema, const string& path) {
+  auto current = &schema;
+  for (auto& name : split_clipath(path)) {
+    current = &(current->at("properties").at(name));
+  }
+  return *current;
 }
 inline json_value& get_clivalue(json_value& js, const string& path) {
-  if (path.empty()) return js;
-  return js.at(path);  // TODO(fabio): fix for recursion
+  auto current = &js;
+  for (auto& name : split_clipath(path)) {
+    current = &(current->at(name));
+  }
+  return *current;
 }
-inline const json_value& get_clivalue(const json_value& js, const string& path) {
-  if (path.empty()) return js;
-  return js.at(path);  // TODO(fabio): fix for recursion
+inline const json_value& get_clivalue(
+    const json_value& js, const string& path) {
+  auto current = &js;
+  for (auto& name : split_clipath(path)) {
+    current = &(current->at(name));
+  }
+  return *current;
 }
 
 // Jsons paths
@@ -2584,12 +2613,12 @@ inline void add_optional(const cli_command& cmd, const string& name, T& value,
                     std::is_same_v<T, uint32_t> || std::is_same_v<T, float> ||
                     std::is_same_v<T, double> || std::is_enum_v<T>,
       "unsupported type");
-  auto& schema      = get_clischema(cmd.cli.schema, cmd.path);
+  auto& schema = get_clischema(cmd.cli.schema, cmd.path);
   if (!alt.empty()) schema["cli_alternate"][alt] = name;
   if (req) schema["required"].push_back(name);
-  auto& property    = schema["properties"][name];
-  property["title"] = name;
-  property["type"]  = cli_gettype<T>();
+  auto& property          = schema["properties"][name];
+  property["title"]       = name;
+  property["type"]        = cli_gettype<T>();
   property["description"] = usage;
   property["default"]     = value;
   for (auto choice : choices) {
@@ -2615,12 +2644,12 @@ inline void add_positional(const cli_command& cmd, const string& name, T& value,
                     std::is_same_v<T, uint32_t> || std::is_same_v<T, float> ||
                     std::is_same_v<T, double> || std::is_enum_v<T>,
       "unsupported type");
-  auto& schema      = get_clischema(cmd.cli.schema, cmd.path);
+  auto& schema = get_clischema(cmd.cli.schema, cmd.path);
   if (req) schema["required"].push_back(to_json(name));
   schema["cli_positional"].push_back(name);
-  auto& property    = schema["properties"][name];
-  property["title"] = name;
-  property["type"]  = cli_gettype<T>();
+  auto& property          = schema["properties"][name];
+  property["title"]       = name;
+  property["type"]        = cli_gettype<T>();
   property["description"] = usage;
   property["default"]     = to_json(value);
   for (auto& choice : choices) {
@@ -2651,12 +2680,12 @@ inline void add_optional(const cli_command& cmd, const string& name, T& value,
   auto def = string{};
   for (auto& [item, choice] : choices)
     if (item == value) def = choice;
-  auto& schema      = get_clischema(cmd.cli.schema, cmd.path);
+  auto& schema = get_clischema(cmd.cli.schema, cmd.path);
   if (!alt.empty()) schema["cli_alternate"][alt] = name;
   if (req) schema["required"].push_back(to_json(name));
-  auto& property    = schema["properties"][name];
-  property["title"] = name;
-  property["type"]  = "string";
+  auto& property          = schema["properties"][name];
+  property["title"]       = name;
+  property["type"]        = "string";
   property["description"] = usage;
   property["default"]     = def;
   for (auto& [_, choice] : choices) {
@@ -2690,12 +2719,12 @@ inline void add_positional(const cli_command& cmd, const string& name, T& value,
                     std::is_same_v<T, uint32_t> || std::is_same_v<T, float> ||
                     std::is_same_v<T, double> || std::is_enum_v<T>,
       "unsupported type");
-  auto& schema      = get_clischema(cmd.cli.schema, cmd.path);
+  auto& schema = get_clischema(cmd.cli.schema, cmd.path);
   if (req) schema["required"].push_back(name);
   schema["cli_positional"].push_back(name);
-  auto& property    = schema["properties"][name];
-  property["title"] = name;
-  property["type"]  = "string";
+  auto& property          = schema["properties"][name];
+  property["title"]       = name;
+  property["type"]        = "string";
   property["description"] = usage;
   property["default"]     = to_json(value);
   for (auto& choice : choices) {
@@ -2730,12 +2759,12 @@ inline void add_positional(const cli_command& cmd, const string& name,
                     std::is_same_v<T, uint32_t> || std::is_same_v<T, float> ||
                     std::is_same_v<T, double> || std::is_enum_v<T>,
       "unsupported type");
-  auto& schema      = get_clischema(cmd.cli.schema, cmd.path);
+  auto& schema = get_clischema(cmd.cli.schema, cmd.path);
   schema["cli_positional"].push_back(name);
   if (req) schema["required"].push_back(name);
-  auto& property    = schema["properties"][name];
-  property["title"] = name;
-  property["type"]  = cli_gettype<T>();
+  auto& property          = schema["properties"][name];
+  property["title"]       = name;
+  property["type"]        = cli_gettype<T>();
   property["description"] = usage;
   property["default"]     = to_json(value);
   for (auto& choice : choices) {
