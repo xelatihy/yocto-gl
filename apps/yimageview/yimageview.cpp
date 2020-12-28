@@ -303,7 +303,7 @@ int main(int argc, const char* argv[]) {
 
   // command line options
   auto cli = make_cli("yimgview", "view images");
-  add_option(cli, "images", filenames, "image filenames", true);
+  add_positional(cli, "images", filenames, "image filenames");
   parse_cli(cli, argc, argv);
 
   // loading images

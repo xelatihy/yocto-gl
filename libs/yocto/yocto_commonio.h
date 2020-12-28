@@ -163,7 +163,7 @@ inline void add_positional(cli_state& cli, const string& name, T& value,
 // Supports strings and enums.
 template <typename T>
 inline void add_positional(cli_state& cli, const string& name, vector<T>& value,
-    const string& usage, const vector<T>& choices, bool req = true);
+    const string& usage, const vector<T>& choices = {}, bool req = true);
 
 // Add a subcommand
 struct cli_command;
@@ -198,7 +198,7 @@ inline void add_positional(cli_command& cmd, const string& name, T& value,
 // Supports strings and enums.
 template <typename T>
 inline void add_positional(cli_command& cmd, const string& name,
-    vector<T>& value, const string& usage, const vector<T>& choices,
+    vector<T>& value, const string& usage, const vector<T>& choices = {},
     bool req = true);
 
 // Parses an optional or positional argument. Optional arguments' names start
@@ -2641,7 +2641,7 @@ template <typename T>
 inline void add_optional(cli_state& cli, const string& name, T& value,
     const string& usage, const vector<pair<T, string>>& choices,
     const string& alt, bool req) {
-  return add_optional(cli.command, name, value, usage, alt, choices, req);
+  return add_optional(cli.command, name, value, usage, choices, alt, req);
 }
 template <typename T>
 inline void add_optional(cli_command& cmd, const string& name, T& value,
@@ -2657,22 +2657,26 @@ inline void add_optional(cli_command& cmd, const string& name, T& value,
   auto& option  = cmd.options.emplace_back();
   option.name   = "--" + name + (is_flag ? "/--no-" + name : ""s) +
                 (alt.empty() ? ""s : (",-" + alt));
-  option.type  = get_cli_type<T>();
-  option.req   = req;
-  option.nargs = 1;
-  option.usage = usage;
-  option.value = def;
-  option.def   = def;
-  if constexpr (std::is_same_v<T, string>) {
-    option.choices = choices;
-  } else {
-    option.choices = {};
-    for (auto choice : choices)
-      option.choices.push_back(std::to_string(choice));
-  }
-  option.set_reference = [&value](const vector<cli_value>& cvalues) -> bool {
+  option.type    = cli_type::string;
+  option.req     = req;
+  option.nargs   = 1;
+  option.usage   = usage;
+  option.value   = def;
+  option.def     = def;
+  option.choices = {};
+  for (auto [_, choice] : choices) option.choices.push_back(choice);
+  option.set_reference = [&value, &choices](
+                             const vector<cli_value>& cvalues) -> bool {
     if (cvalues.size() != 1) throw std::out_of_range{"invalid number of args"};
-    return get_value(cvalues.front(), value);
+    auto svalue = ""s;
+    if (!get_value(cvalues.front(), svalue)) return false;
+    for (auto& [value_, choice] : choices) {
+      if (svalue == choice) {
+        value = value_;
+        return true;
+      }
+    }
+    return false;
   };
 }
 // Add a positional argument with values as labels. Supports integers and enums.
@@ -2693,22 +2697,25 @@ inline void add_positional(cli_command& cmd, const string& name, T& value,
   auto  is_flag = std::is_same_v<T, bool>;
   auto& option  = cmd.options.emplace_back();
   option.name   = name;
-  option.type   = get_cli_type<T>();
+  option.type   = cli_type::string;
   option.req    = req;
   option.nargs  = 1;
   option.usage  = usage;
   option.value  = def;
   option.def    = def;
-  if constexpr (std::is_same_v<T, string>) {
-    option.choices = choices;
-  } else {
-    option.choices = {};
-    for (auto choice : choices)
-      option.choices.push_back(std::to_string(choice));
-  }
-  option.set_reference = [&value](const vector<cli_value>& cvalues) -> bool {
+  for (auto [_, choice] : choices) option.choices.push_back(choice);
+  option.set_reference = [&value, &choices](
+                             const vector<cli_value>& cvalues) -> bool {
     if (cvalues.size() != 1) throw std::out_of_range{"invalid number of args"};
-    return get_value(cvalues.front(), value);
+    auto svalue = ""s;
+    if (!get_value(cvalues.front(), svalue)) return false;
+    for (auto& [value_, choice] : choices) {
+      if (svalue == choice) {
+        value = value_;
+        return true;
+      }
+    }
+    return false;
   };
 }
 // Add a positional argument that consumes all arguments left.

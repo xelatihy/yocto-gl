@@ -373,12 +373,12 @@ int main(int argc, const char* argv[]) {
 
   // parse command line
   auto cli = make_cli("yshapeview", "views shapes inteactively");
-  add_option(cli, "--camera", camera_name, "Camera name.");
-  add_option(cli, "--resolution,-r", apps->drawgl_prms.resolution,
-      "Image resolution.");
-  add_option(cli, "--lighting", apps->drawgl_prms.lighting, "Lighting type.",
-      shade_lighting_names);
-  add_option(cli, "shapes", filenames, "Shape filenames", true);
+  add_optional(cli, "camera", camera_name, "Camera name.");
+  add_optional(cli, "resolution", apps->drawgl_prms.resolution,
+      "Image resolution.", "r");
+  add_optional(cli, "lighting", apps->drawgl_prms.lighting, "Lighting type.",
+      shade_lighting_labels);
+  add_positional(cli, "shapes", filenames, "Shape filenames");
   parse_cli(cli, argc, argv);
 
   // loading images

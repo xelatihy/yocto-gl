@@ -75,8 +75,8 @@ int main(int argc, const char* argv[]) {
 
   // command line options
   auto cli = make_cli("yimgviews", "view images");
-  add_option(cli, "--output,-o", app->outname, "image output");
-  add_option(cli, "image", app->filename, "image filename", true);
+  add_optional(cli, "output", app->outname, "image output", "o");
+  add_positional(cli, "image", app->filename, "image filename");
   parse_cli(cli, argc, argv);
 
   // load image
