@@ -1022,40 +1022,27 @@ cli_command& add_command(
   return add_command(cli.command, name, usage);
 }
 
-static vector<string> split_cli_names(const string& name_) {
-  auto name  = name_;
-  auto split = vector<string>{};
-  if (name.empty()) throw std::invalid_argument("option name cannot be empty");
-  if (name.find_first_of(" \t\r\n") != string::npos)
-    throw std::invalid_argument("option name cannot contain whitespaces");
-  while (name.find_first_of(",/") != string::npos) {
-    auto pos = name.find_first_of(",/");
-    if (pos > 0) split.push_back(name.substr(0, pos));
-    name = name.substr(pos + 1);
-  }
-  if (!name.empty()) split.push_back(name);
-  if (split.empty()) throw std::invalid_argument("option name cannot be empty");
-  for (auto& name : split)
-    if ((split[0][0] == '-') != (name[0] == '-'))
-      throw std::invalid_argument("inconsistent option names for " + name);
-  return split;
-}
-
 static void validate_names(const cli_command& cmd) {
   // check for errors
   auto used = unordered_set<string>{};
+  for (auto& scmd : cmd.commands) {
+    if (scmd.name.empty()) throw std::invalid_argument("name cannot be empty");
+    if (!std::isalpha((int)scmd.name.front()))
+      throw std::invalid_argument(
+          "name should start with a letter " + scmd.name);
+    if (used.find(scmd.name) != used.end())
+      throw std::invalid_argument("name already in use " + scmd.name);
+    used.insert(scmd.name);
+  }
   for (auto& option : cmd.options) {
-    if (option.name.empty())
+    if (option.name_.empty())
       throw std::invalid_argument("name cannot be empty");
-    auto names = split_cli_names(option.name);
-    if (names.empty()) throw std::invalid_argument("name cannot be empty");
-    for (auto& name : names) {
-      if (used.find(name) != used.end())
-        throw std::invalid_argument("option name " + name + " already in use");
-      used.insert(name);
-      if ((name[0] == '-') != (option.name[0] == '-'))
-        throw std::invalid_argument("inconsistent option type for " + name);
-    }
+    if (!std::isalpha((int)option.name_.front()))
+      throw std::invalid_argument(
+          "name should start with a letter " + option.name_);
+    if (used.find(option.name_) != used.end())
+      throw std::invalid_argument("name already in use " + option.name_);
+    used.insert(option.name_);
   }
   for (auto& scmd : cmd.commands) validate_names(scmd);
 }
@@ -1117,7 +1104,13 @@ static string get_usage(const cli_state& cli, const cli_command& cmd) {
   auto usage_optional = string{}, usage_positional = string{},
        usage_command = string{};
   for (auto& option : cmd.options) {
-    auto line = "  " + option.name + " " + type_name(option);
+    auto name = option.name_;
+    if (!option.positional) {
+      name = "--" + option.name_;
+      if (option.nargs == 0) name += "/--no-" + option.name_;
+      if (!option.alt.empty()) name += ", -" + option.alt;
+    }
+    auto line = "  " + name + " " + type_name(option);
     while (line.size() < 32) line += " ";
     line += option.usage;
     line += " " + def_string(option) + "\n";
@@ -1135,12 +1128,12 @@ static string get_usage(const cli_state& cli, const cli_command& cmd) {
       line = line.substr(0, line.size() - 2);
       line += "\n";
     }
-    if (option.name.find("-") == 0) {
-      has_optional = true;
-      usage_optional += line;
-    } else {
+    if (option.positional) {
       has_positional = true;
       usage_positional += line;
+    } else {
+      has_optional = true;
+      usage_optional += line;
     }
   }
   for (auto& scmd : cmd.commands) {
@@ -1245,11 +1238,14 @@ bool parse_cli(cli_command& cli, vector<string>& args, string& error) {
 
   // parse options
   for (auto& option : cli.options) {
-    if (option.name[0] != '-') continue;
+    if (option.positional) continue;
+    auto names = vector<string>{"--" + option.name_};
+    if (option.nargs == 0) names.push_back("--no-" + option.name_);
+    if (!option.alt.empty()) names.push_back("-" + option.alt);
     option.value = option.def;
     option.set   = false;
     auto values  = vector<string>{};
-    for (auto& name : split_cli_names(option.name)) {
+    for (auto& name : names) {
       if (std::find(args.begin(), args.end(), name) == args.end()) continue;
       auto pos = std::find(args.begin(), args.end(), name) - args.begin();
       args.erase(args.begin() + pos);
@@ -1272,11 +1268,11 @@ bool parse_cli(cli_command& cli, vector<string>& args, string& error) {
         option.value.emplace_back();
         option.value.back().type = option.type;
         if (!parse_value(option.value.back(), value, option.choices))
-          return cli_error("bad value for " + option.name);
+          return cli_error("bad value for " + option.name_);
       }
       option.set_reference(option.value);
     } else {
-      if (option.req) return cli_error("missing value for " + option.name);
+      if (option.req) return cli_error("missing value for " + option.name_);
     }
   }
   // check unknown options
@@ -1285,19 +1281,19 @@ bool parse_cli(cli_command& cli, vector<string>& args, string& error) {
   }
   // parse positional
   for (auto& option : cli.options) {
-    if (option.name[0] == '-') continue;
+    if (!option.positional) continue;
     option.value = option.def;
     option.set   = false;
     auto values  = vector<string>{};
     if (args.empty()) {
-      if (option.req) return cli_error("missing value for " + option.name);
+      if (option.req) return cli_error("missing value for " + option.name_);
     } else if (option.nargs < 0) {
       values     = args;
       option.set = true;
       args.clear();
     } else if (option.nargs > 0) {
       if (option.nargs > args.size())
-        return cli_error("missing value for " + option.name);
+        return cli_error("missing value for " + option.name_);
       values = {args.begin(), args.begin() + option.nargs};
       args.erase(args.begin(), args.begin() + option.nargs);
       option.set = true;
@@ -1310,11 +1306,11 @@ bool parse_cli(cli_command& cli, vector<string>& args, string& error) {
         option.value.emplace_back();
         option.value.back().type = option.type;
         if (!parse_value(option.value.back(), value, option.choices))
-          return cli_error("bad value for " + option.name);
+          return cli_error("bad value for " + option.name_);
       }
       option.set_reference(option.value);
     } else {
-      if (option.req) return cli_error("missing value for " + option.name);
+      if (option.req) return cli_error("missing value for " + option.name_);
     }
   }
   // check remaining

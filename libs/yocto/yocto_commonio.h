@@ -2451,15 +2451,17 @@ struct cli_value {
 };
 // Command line option. All data should be considered private.
 struct cli_option {
-  string                                          name    = "";
-  cli_type                                        type    = cli_type::string;
-  bool                                            req     = false;
-  int                                             nargs   = 0;
-  string                                          usage   = "";
-  vector<cli_value>                               value   = {};
-  vector<cli_value>                               def     = {};
-  vector<string>                                  choices = {};
-  bool                                            set     = false;
+  string                                          name_      = "";
+  string                                          alt        = "";
+  cli_type                                        type       = cli_type::string;
+  bool                                            req        = false;
+  int                                             nargs      = 0;
+  bool                                            positional = false;
+  string                                          usage      = "";
+  vector<cli_value>                               value      = {};
+  vector<cli_value>                               def        = {};
+  vector<string>                                  choices    = {};
+  bool                                            set        = false;
   function<void(const vector<cli_value>& values)> set_reference = {};
 };
 // Command line command. All data should be considered private.
@@ -2593,16 +2595,16 @@ inline void add_optional(cli_command& cmd, const string& name, T& value,
       "unsupported type");
   auto def = vector<cli_value>{};
   set_value(def.emplace_back(), value);
-  auto  is_flag = std::is_same_v<T, bool>;
-  auto& option  = cmd.options.emplace_back();
-  option.name   = "--" + name + (is_flag ? "/--no-" + name : ""s) +
-                (alt.empty() ? ""s : (",-" + alt));
-  option.type  = get_cli_type<T>();
-  option.req   = req;
-  option.nargs = !std::is_same_v<T, bool> ? 1 : 0;
-  option.usage = usage;
-  option.value = def;
-  option.def   = def;
+  auto& option      = cmd.options.emplace_back();
+  option.name_      = name;
+  option.alt        = alt;
+  option.positional = false;
+  option.type       = get_cli_type<T>();
+  option.req        = req;
+  option.nargs      = !std::is_same_v<T, bool> ? 1 : 0;
+  option.usage      = usage;
+  option.value      = def;
+  option.def        = def;
   if constexpr (std::is_same_v<T, string>) {
     option.choices = choices;
   } else {
@@ -2632,14 +2634,16 @@ inline void add_positional(cli_command& cmd, const string& name, T& value,
       "unsupported type");
   auto def = vector<cli_value>{};
   set_value(def.emplace_back(), value);
-  auto& option = cmd.options.emplace_back();
-  option.name  = name;
-  option.type  = get_cli_type<T>();
-  option.req   = req;
-  option.nargs = 1;
-  option.usage = usage;
-  option.value = def;
-  option.def   = def;
+  auto& option      = cmd.options.emplace_back();
+  option.name_      = name;
+  option.alt        = "";
+  option.positional = true;
+  option.type       = get_cli_type<T>();
+  option.req        = req;
+  option.nargs      = 1;
+  option.usage      = usage;
+  option.value      = def;
+  option.def        = def;
   if constexpr (std::is_same_v<T, string>) {
     option.choices = choices;
   } else {
@@ -2671,17 +2675,18 @@ inline void add_optional(cli_command& cmd, const string& name, T& value,
       "unsupported type");
   auto def = vector<cli_value>{};
   set_value(def.emplace_back(), value);
-  auto  is_flag = std::is_same_v<T, bool>;
-  auto& option  = cmd.options.emplace_back();
-  option.name   = "--" + name + (is_flag ? "/--no-" + name : ""s) +
-                (alt.empty() ? ""s : (",-" + alt));
-  option.type    = cli_type::string;
-  option.req     = req;
-  option.nargs   = 1;
-  option.usage   = usage;
-  option.value   = def;
-  option.def     = def;
-  option.choices = {};
+  auto  is_flag     = std::is_same_v<T, bool>;
+  auto& option      = cmd.options.emplace_back();
+  option.name_      = name;
+  option.alt        = alt;
+  option.positional = false;
+  option.type       = cli_type::string;
+  option.req        = req;
+  option.nargs      = 1;
+  option.usage      = usage;
+  option.value      = def;
+  option.def        = def;
+  option.choices    = {};
   for (auto [_, choice] : choices) option.choices.push_back(choice);
   option.set_reference = [&value, &choices](
                              const vector<cli_value>& cvalues) -> bool {
@@ -2714,15 +2719,17 @@ inline void add_positional(cli_command& cmd, const string& name, T& value,
       "unsupported type");
   auto def = vector<cli_value>{};
   set_value(def.emplace_back(), value);
-  auto  is_flag = std::is_same_v<T, bool>;
-  auto& option  = cmd.options.emplace_back();
-  option.name   = name;
-  option.type   = cli_type::string;
-  option.req    = req;
-  option.nargs  = 1;
-  option.usage  = usage;
-  option.value  = def;
-  option.def    = def;
+  auto  is_flag     = std::is_same_v<T, bool>;
+  auto& option      = cmd.options.emplace_back();
+  option.name_      = name;
+  option.alt        = "";
+  option.positional = true;
+  option.type       = cli_type::string;
+  option.req        = req;
+  option.nargs      = 1;
+  option.usage      = usage;
+  option.value      = def;
+  option.def        = def;
   for (auto [_, choice] : choices) option.choices.push_back(choice);
   option.set_reference = [&value, &choices](
                              const vector<cli_value>& cvalues) -> bool {
@@ -2757,14 +2764,16 @@ inline void add_positional(cli_command& cmd, const string& name,
       "unsupported type");
   auto def = vector<cli_value>{};
   for (auto& value : values) set_value(def.emplace_back(), value);
-  auto& option = cmd.options.emplace_back();
-  option.name  = name;
-  option.type  = get_cli_type<T>();
-  option.req   = req;
-  option.nargs = -1;
-  option.usage = usage;
-  option.value = def;
-  option.def   = def;
+  auto& option      = cmd.options.emplace_back();
+  option.name_      = name;
+  option.alt        = "";
+  option.positional = true;
+  option.type       = get_cli_type<T>();
+  option.req        = req;
+  option.nargs      = -1;
+  option.usage      = usage;
+  option.value      = def;
+  option.def        = def;
   if constexpr (std::is_same_v<T, string>) {
     option.choices = choices;
   } else {
@@ -2781,6 +2790,25 @@ inline void add_positional(cli_command& cmd, const string& name,
   };
 }
 
+inline vector<string> split_cli_names(const string& name_) {
+  auto name  = name_;
+  auto split = vector<string>{};
+  if (name.empty()) throw std::invalid_argument("option name cannot be empty");
+  if (name.find_first_of(" \t\r\n") != string::npos)
+    throw std::invalid_argument("option name cannot contain whitespaces");
+  while (name.find_first_of(",/") != string::npos) {
+    auto pos = name.find_first_of(",/");
+    if (pos > 0) split.push_back(name.substr(0, pos));
+    name = name.substr(pos + 1);
+  }
+  if (!name.empty()) split.push_back(name);
+  if (split.empty()) throw std::invalid_argument("option name cannot be empty");
+  for (auto& name : split)
+    if ((split[0][0] == '-') != (name[0] == '-'))
+      throw std::invalid_argument("inconsistent option names for " + name);
+  return split;
+}
+
 template <typename T>
 inline void add_option(cli_command& cli, const string& name, T& value,
     const string& usage, bool req) {
@@ -2792,8 +2820,22 @@ inline void add_option(cli_command& cli, const string& name, T& value,
       "unsupported type");
   auto def = vector<cli_value>{};
   set_value(def.emplace_back(), value);
-  auto& option         = cli.options.emplace_back();
-  option.name          = name;
+  auto& option = cli.options.emplace_back();
+  auto  names  = split_cli_names(name);
+  if (names.at(0).find("--") == 0) {
+    option.name_ = names.at(0).substr(2);
+    for (auto& alt : names) {
+      if (alt.at(0) == '-' && std::isalpha((int)alt.at(1)))
+        option.alt = alt.substr(1);
+    }
+    option.positional = false;
+  } else if (std::isalpha((int)names.at(0).front())) {
+    option.name_      = names.at(0);
+    option.alt        = "";
+    option.positional = true;
+  } else {
+    throw std::invalid_argument{"bad name"};
+  }
   option.type          = get_cli_type<T>();
   option.req           = req;
   option.nargs         = !std::is_same_v<T, bool> ? 1 : 0;
@@ -2821,8 +2863,22 @@ inline void add_option(cli_command& cli, const string& name, T& value,
       "unsupported type");
   auto def = vector<cli_value>{};
   set_value(def.emplace_back(), value);
-  auto& option         = cli.options.emplace_back();
-  option.name          = name;
+  auto& option = cli.options.emplace_back();
+  auto  names  = split_cli_names(name);
+  if (names.at(0).find("--") == 0) {
+    option.name_ = names.at(0).substr(2);
+    for (auto& alt : names) {
+      if (alt.at(0) == '-' && std::isalpha((int)alt.at(1)))
+        option.alt = alt.substr(1);
+    }
+    option.positional = false;
+  } else if (std::isalpha((int)names.at(0).front())) {
+    option.name_      = names.at(0);
+    option.alt        = "";
+    option.positional = true;
+  } else {
+    throw std::invalid_argument{"bad name"};
+  }
   option.type          = get_cli_type<T>();
   option.req           = req;
   option.nargs         = 1;
@@ -2852,8 +2908,22 @@ inline void add_option(cli_command& cli, const string& name, vector<T>& values,
       "unsupported type");
   auto def = vector<cli_value>{};
   for (auto& value : values) set_value(def.emplace_back(), value);
-  auto& option         = cli.options.emplace_back();
-  option.name          = name;
+  auto& option = cli.options.emplace_back();
+  auto  names  = split_cli_names(name);
+  if (names.at(0).find("--") == 0) {
+    option.name_ = names.at(0).substr(2);
+    for (auto& alt : names) {
+      if (alt.at(0) == '-' && std::isalpha((int)alt.at(1)))
+        option.alt = alt.substr(1);
+    }
+    option.positional = false;
+  } else if (std::isalpha((int)names.at(0).front())) {
+    option.name_      = names.at(0);
+    option.alt        = "";
+    option.positional = true;
+  } else {
+    throw std::invalid_argument{"bad name"};
+  }
   option.type          = get_cli_type<T>();
   option.req           = req;
   option.nargs         = -1;
