@@ -1023,10 +1023,9 @@ cli_state make_cli(const string& name, const string& usage) {
 // add command
 cli_command add_command(
     const cli_command& cli, const string& name, const string& usage) {
-  if(!cli.path.empty()) throw std::invalid_argument{"supports two levels now"};
-  auto& schema                = get_clischema(cli.cli.schema, cli.path);
-  schema["cli_command"] = "command";
-  auto& property = schema["properties"][name];
+  auto& schema            = get_clischema(cli.cli.schema, cli.path);
+  schema["cli_command"]   = "command";
+  auto& property          = schema["properties"][name];
   property["title"]       = name;
   property["description"] = usage;
   property["type"]        = "object";
@@ -1035,7 +1034,7 @@ cli_command add_command(
 }
 cli_command add_command(
     cli_state& cli, const string& name, const string& usage) {
-  return add_command({cli, ""}, name, usage);
+  return add_command({cli, {}}, name, usage);
 }
 
 static json_value fix_cli_schema(const json_value& schema) { return schema; }
@@ -1069,12 +1068,12 @@ string get_usage(const cli_state& cli) {
     }
     return false;
   };
-    auto has_commands = [](const json_value& schema) -> bool {
-      for(auto& [name, property] : schema.at("properties").items()) {
-        if (property.value("type", "") == "object") return true;
-      }
-      return false;
-    };
+  auto has_commands = [](const json_value& schema) -> bool {
+    for (auto& [name, property] : schema.at("properties").items()) {
+      if (property.value("type", "") == "object") return true;
+    }
+    return false;
+  };
 
   // TODO(fabio): get from command
   auto schema = fix_cli_schema(cli.schema);
@@ -1084,7 +1083,7 @@ string get_usage(const cli_state& cli) {
   auto usage_optional = string{}, usage_positional = string{},
        usage_command = string{};
   for (auto& [name, property] : schema.at("properties").items()) {
-      if (property.value("type","") == "object") continue;
+    if (property.value("type", "") == "object") continue;
     auto decorated_name = name;
     auto positional     = is_positional(schema, name);
     if (!positional) {
@@ -1131,16 +1130,16 @@ string get_usage(const cli_state& cli) {
     }
   }
   // TODO(fabio): fix commands
-    if (has_commands(schema)) {
-         has_command = true;
-        for(auto& [name, property] : schema.at("properties").items()) {
-            if (property.value("type","") != "object") continue;
-            auto line    = "  " + name;
-            while (line.size() < 32) line += " ";
-            line += property.value("description", "") + "\n";
-            usage_command += line;
-        }
+  if (has_commands(schema)) {
+    has_command = true;
+    for (auto& [name, property] : schema.at("properties").items()) {
+      if (property.value("type", "") != "object") continue;
+      auto line = "  " + name;
+      while (line.size() < 32) line += " ";
+      line += property.value("description", "") + "\n";
+      usage_command += line;
     }
+  }
   // for (auto& scmd : cmd.commands) {
   // }
   auto is_command = false;
@@ -1238,13 +1237,10 @@ bool parse_cli(cli_state& cli, vector<string>& args, string& error) {
     }
     return false;
   };
-  auto set_reference = [](cli_state& cli, const string& path, const json_value& value) -> bool {
+  auto set_reference = [](cli_setter& setter, const json_value& value) -> bool {
     auto jerror = json_error{""};
-    for (auto& [spath, setter] : cli.setters) {
-      if (spath != path) continue;
-      return setter(value, jerror);
-    }
-    throw std::invalid_argument{"missing setter"};
+    if (!setter.setter) return false;
+    return setter.setter(value, jerror);
   };
   auto get_alternate = [](const json_value& schema,
                            const string&    alt) -> string {
@@ -1260,28 +1256,31 @@ bool parse_cli(cli_state& cli, vector<string>& args, string& error) {
     return schema.at("cli_command").get<string>();
   };
   auto has_commands = [](const json_value& schema) -> bool {
-    for(auto& [name, property] : schema.at("properties").items()) {
+    for (auto& [name, property] : schema.at("properties").items()) {
       if (property.value("type", "") == "object") return true;
     }
     return false;
   };
-  auto iterate_path = [](const string& command) -> vector<string> {
-    if (command.empty()) return {""};
-    return {command};
+
+  // parsing stack
+  struct stack_elem {
+    string      name = "";
+    json_value& schema;
+    json_value& value;
+    cli_setter& setter;
+    size_t      positional = 0;
   };
 
   // initialize parsing
-  cli.schema           = fix_cli_schema(cli.schema);
-  cli.value            = json_object{};
-  auto command         = string{};
-  auto last_positional = (size_t)0;
+  cli.schema = fix_cli_schema(cli.schema);
+  cli.value  = json_object{};
+  auto stack = vector<stack_elem>{{"", cli.schema, cli.value, cli.setter, 0}};
 
   // parse the command line
   for (auto idx = (size_t)0; idx < args.size(); idx++) {
-    auto& schema     = get_clischema(cli.schema, command);
-    auto& value      = get_clivalue(cli.value, command);
-    auto  arg        = args.at(idx);
-    auto  positional = arg.find('-') != 0;
+    auto& [_, schema, value, setter, cpositional] = stack.back();
+    auto arg                                      = args.at(idx);
+    auto positional                               = arg.find('-') != 0;
     if (positional && has_commands(schema)) {
       auto name = string{};
       for (auto& [pname, property] : schema.at("properties").items()) {
@@ -1291,13 +1290,13 @@ bool parse_cli(cli_state& cli, vector<string>& args, string& error) {
       }
       if (name.empty()) return cli_error("missing value for command");
       value[get_command(schema)] = name;
-      value[name]      = json_object{};
-      command          = join_clipath(command, name);
-      last_positional  = 0;
+      value[name]                = json_object{};
+      stack.push_back(
+          {name, schema.at(name), value.at(name), setter.at(name), 0});
       continue;
     } else if (positional) {
       auto name            = string{};
-      auto next_positional = advance_positional(schema, last_positional);
+      auto next_positional = advance_positional(schema, cpositional);
       for (auto& [pname, property] : schema.at("properties").items()) {
         if (property.value("type", "string") == "object") continue;
         if (pname != next_positional) continue;
@@ -1315,7 +1314,7 @@ bool parse_cli(cli_state& cli, vector<string>& args, string& error) {
         if (!parse_clivalue(value[name], args[idx], property))
           return cli_error("bad value for " + name);
       }
-      if (!set_reference(cli, join_clipath(command, name), value.at(name)))
+      if (!set_reference(setter.at(name), value.at(name)))
         return cli_error("bad value for " + name);
     } else {
       if (arg == "--help" || arg == "-?") {
@@ -1349,32 +1348,26 @@ bool parse_cli(cli_state& cli, vector<string>& args, string& error) {
           return cli_error("bad value for " + name);
         idx += 1;
       }
-      if (!set_reference(cli, join_clipath(command, name), value.at(name)))
+      if (!set_reference(setter.at(name), value.at(name)))
         return cli_error("bad value for " + name);
     }
   }
 
   // check for required and apply defaults
-  for (auto path : iterate_path(command)) {
-    auto& schema  = get_clischema(cli.schema, path);
-    auto& value   = get_clivalue(cli.value, path);
-    auto  command = get_command(schema);
-    if (!command.empty() && !value.contains(command))
-      return cli_error("missing value for " + command);
+  for (auto& [_, schema, value, setter, __] : stack) {
+    if (has_commands(schema) && !value.contains(get_command(schema)))
+      return cli_error("missing value for " + get_command(schema));
     for (auto& [name, property] : schema.at("properties").items()) {
       if (property.value("type", "string") == "object") continue;
       if (is_required(schema, name) && !value.contains(name))
         return cli_error("missing value for " + name);
       if (property.contains("default") && !value.contains(name)) {
         value[name] = property.at("default");
-        if (!set_reference(cli, join_clipath(path, name), value.at(name)))
+        if (!set_reference(setter.at(name), value.at(name)))
           return cli_error("bad value for " + name);
       }
     }
   }
-      
-  // set all values
-  
 
   // done
   return true;
