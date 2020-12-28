@@ -600,6 +600,23 @@ bool save_json(const string& filename, const json_value& js, string& error) {
   return save_json(filename, njs, error);
 }
 
+// Formats a Json to string
+bool format_json(string& text, const json_value& js, string& error) {
+  // convert
+  auto njs = njson{};
+  from_json(js, njs);
+
+  // save
+  text = njs.dump(2);
+  return true;
+}
+string format_json(const json_value& js) {
+  auto text  = string{};
+  auto error = string{};
+  if (!format_json(text, js, error)) return "";
+  return text;
+}
+
 // Validate a value against a schema
 static bool validate_json(const json_value& value, const string& path,
     const json_value& schema, vector<string>& errors, size_t max_error) {
@@ -1005,7 +1022,7 @@ cli_state make_cli(const string& name, const string& usage) {
 
 // add command
 cli_command add_command(
-    cli_command& cli, const string& name, const string& usage) {
+    const cli_command& cli, const string& name, const string& usage) {
   auto& schema                = get_clipath(cli.cli.schema, cli.path);
   schema[name]["title"]       = name;
   schema[name]["description"] = usage;

@@ -2501,8 +2501,11 @@ struct cli_command {
 };
 // Command line setting function
 struct cli_setter {
-  string                                                        path   = {};
-  function<bool(const json_value& js, const json_error& error)> setter = {};
+  using setter_func  = function<bool(const json_value&, json_error&)>;
+  string      path   = {};
+  setter_func setter = {};
+  cli_setter(const string& path_, const setter_func& setter_)
+      : path{path_}, setter{setter_} {}
 };
 // Command line parser. All data should be considered private.
 struct cli_state {
@@ -2574,20 +2577,20 @@ inline void add_optional(const cli_command& cmd, const string& name, T& value,
                     std::is_same_v<T, double> || std::is_enum_v<T>,
       "unsupported type");
   auto& schema      = get_clipath(cmd.cli.schema, cmd.path);
+  if (!alt.empty()) schema["cli_alternate"][alt] = name;
+  if (req) schema["required"].push_back(name);
   auto& property    = schema["properties"][name];
   property["title"] = name;
   property["type"]  = cli_gettype<T>();
-  if (!alt.empty()) property["cli_alternate"][alt] = name;
-  if (req) schema["required"].push_back(name);
   property["description"] = usage;
   property["default"]     = value;
   for (auto choice : choices) {
     property["enum"].push_back(choice);
   }
-  cmd.cli.setters.emplace_back(join_clipath(cmd.path, name),
+  cmd.cli.setters.push_back(cli_setter{join_clipath(cmd.path, name),
       [&value](const json_value& js, json_error& error) -> bool {
         return from_json(js, value, error);
-      });
+      }});
 }
 // Add an optional argument. Supports strings, numbers, and boolean flags.
 template <typename T>
@@ -2605,20 +2608,20 @@ inline void add_positional(const cli_command& cmd, const string& name, T& value,
                     std::is_same_v<T, double> || std::is_enum_v<T>,
       "unsupported type");
   auto& schema      = get_clipath(cmd.cli.schema, cmd.path);
+  if (req) schema["required"].push_back(to_json(name));
+  schema["cli_positional"].push_back(name);
   auto& property    = schema["properties"][name];
   property["title"] = name;
   property["type"]  = cli_gettype<T>();
-  property["cli_positional"].push_back(name);
-  if (req) schema["required"].push_back(to_json(name));
   property["description"] = usage;
   property["default"]     = to_json(value);
   for (auto& choice : choices) {
     property["enum"].push_back(to_json(choice));
   }
-  cmd.cli.setters.emplace_back(join_clipath(cmd.path, name),
+  cmd.cli.setters.push_back(cli_setter{join_clipath(cmd.path, name),
       [&value](const json_value& js, json_error& error) -> bool {
         return from_json(js, value, error);
-      });
+      }});
 }
 // Add an optional argument with values as labels. Supports integers and enums.
 template <typename T>
@@ -2641,17 +2644,17 @@ inline void add_optional(const cli_command& cmd, const string& name, T& value,
   for (auto& [item, choice] : choices)
     if (item == value) def = choice;
   auto& schema      = get_clipath(cmd.cli.schema, cmd.path);
+  if (!alt.empty()) schema["cli_alternate"][alt] = name;
+  if (req) schema["required"].push_back(to_json(name));
   auto& property    = schema["properties"][name];
   property["title"] = name;
   property["type"]  = "string";
-  if (!alt.empty()) property["cli_alternate"][alt] = name;
-  if (req) schema["required"].push_back(to_json(name));
   property["description"] = usage;
   property["default"]     = def;
   for (auto& [_, choice] : choices) {
     property["enum"].push_back(to_json(choice));
   }
-  cmd.cli.setters.emplace_back(join_clipath(cmd.path, name),
+  cmd.cli.setters.push_back(cli_setter{join_clipath(cmd.path, name),
       [&value, &choices](const json_value& js, json_error& error) -> bool {
         auto& svalue = js.get_ref<string>();
         for (auto& [value_, choice] : choices) {
@@ -2662,7 +2665,7 @@ inline void add_optional(const cli_command& cmd, const string& name, T& value,
         }
         error = json_error{"bad value"};
         return false;
-      });
+      }});
 }
 // Add a positional argument with values as labels. Supports integers and enums.
 template <typename T>
@@ -2680,17 +2683,17 @@ inline void add_positional(const cli_command& cmd, const string& name, T& value,
                     std::is_same_v<T, double> || std::is_enum_v<T>,
       "unsupported type");
   auto& schema      = get_clipath(cmd.cli.schema, cmd.path);
+  if (req) schema["required"].push_back(name);
+  schema["cli_positional"].push_back(name);
   auto& property    = schema["properties"][name];
   property["title"] = name;
   property["type"]  = "string";
-  schema["cli_positional"].push_back(name);
-  if (req) schema["required"].push_back(name);
   property["description"] = usage;
   property["default"]     = to_json(value);
   for (auto& choice : choices) {
     property["enum"].push_back(to_json(choice));
   }
-  cmd.cli.setters.emplace_back(join_clipath(cmd.path, name),
+  cmd.cli.setters.push_back(cli_setter{join_clipath(cmd.path, name),
       [&value, &choices](const json_value& js, json_error& error) -> bool {
         auto& svalue = js.get_ref<string>();
         for (auto& [value_, choice] : choices) {
@@ -2701,7 +2704,7 @@ inline void add_positional(const cli_command& cmd, const string& name, T& value,
         }
         error = json_error{"bad value"};
         return false;
-      });
+      }});
 }
 // Add a positional argument that consumes all arguments left.
 // Supports strings and enums.
@@ -2720,20 +2723,20 @@ inline void add_positional(const cli_command& cmd, const string& name,
                     std::is_same_v<T, double> || std::is_enum_v<T>,
       "unsupported type");
   auto& schema      = get_clipath(cmd.cli.schema, cmd.path);
+  schema["cli_positional"].push_back(name);
+  if (req) schema["required"].push_back(name);
   auto& property    = schema["properties"][name];
   property["title"] = name;
   property["type"]  = cli_gettype<T>();
-  schema["cli_positional"].push_back(name);
-  if (req) schema["required"].push_back(name);
   property["description"] = usage;
   property["default"]     = to_json(value);
   for (auto& choice : choices) {
     property["enum"].push_back(to_json(choice));
   }
-  cmd.cli.setters.emplace_back(join_clipath(cmd.path, name),
+  cmd.cli.setters.emplace_back(cli_setter{join_clipath(cmd.path, name),
       [&value](const json_value& js, json_error& error) -> bool {
         return from_json(js, value, error);
-      });
+      }});
 }
 
 inline vector<string> split_cli_names(const string& name_) {
