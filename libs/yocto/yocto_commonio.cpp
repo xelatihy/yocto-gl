@@ -1238,11 +1238,11 @@ bool parse_cli(cli_state& cli, vector<string>& args, string& error) {
     }
     return false;
   };
-  auto set_reference = [](cli_state& cli, const string& path) -> bool {
+  auto set_reference = [](cli_state& cli, const string& path, const json_value& value) -> bool {
     auto jerror = json_error{""};
     for (auto& [spath, setter] : cli.setters) {
       if (spath != path) continue;
-      return setter(get_clivalue(cli.value, path), jerror);
+      return setter(value, jerror);
     }
     throw std::invalid_argument{"missing setter"};
   };
@@ -1315,7 +1315,7 @@ bool parse_cli(cli_state& cli, vector<string>& args, string& error) {
         if (!parse_clivalue(value[name], args[idx], property))
           return cli_error("bad value for " + name);
       }
-      if (!set_reference(cli, join_clipath(command, name)))
+      if (!set_reference(cli, join_clipath(command, name), value.at(name)))
         return cli_error("bad value for " + name);
     } else {
       if (arg == "--help" || arg == "-?") {
@@ -1349,7 +1349,7 @@ bool parse_cli(cli_state& cli, vector<string>& args, string& error) {
           return cli_error("bad value for " + name);
         idx += 1;
       }
-      if (!set_reference(cli, join_clipath(command, name)))
+      if (!set_reference(cli, join_clipath(command, name), value.at(name)))
         return cli_error("bad value for " + name);
     }
   }
@@ -1365,10 +1365,16 @@ bool parse_cli(cli_state& cli, vector<string>& args, string& error) {
       if (property.value("type", "string") == "object") continue;
       if (is_required(schema, name) && !value.contains(name))
         return cli_error("missing value for " + name);
-      if (property.contains("default") && !value.contains(name))
+      if (property.contains("default") && !value.contains(name)) {
         value[name] = property.at("default");
+        if (!set_reference(cli, join_clipath(path, name), value.at(name)))
+          return cli_error("bad value for " + name);
+      }
     }
   }
+      
+  // set all values
+  
 
   // done
   return true;
