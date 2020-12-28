@@ -1313,7 +1313,7 @@ bool parse_cli(cli_state& cli, vector<string>& args, string& error) {
     } else {
       if (arg == "--help" || arg == "-?") {
         value["help"] = true;
-        return cli_help();
+        continue;
       }
       arg = arg.substr(1);
       if (arg.find('-') == 0) arg = arg.substr(1);
