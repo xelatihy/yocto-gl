@@ -1295,7 +1295,7 @@ bool parse_cli(cli_state& cli, vector<string>& args, string& error) {
       }
       if (name.empty()) return cli_error("unknown option " + args[idx]);
       if (value.contains(name)) return cli_error("option already set " + name);
-      auto& property = schema.at("propeties").at(name);
+      auto& property = schema.at("properties").at(name);
       if (property.value("type", "string") == "boolean") {
         if (!parse_clivalue(
                 value[name], arg.find("no-") != 0 ? "true" : "false", property))
