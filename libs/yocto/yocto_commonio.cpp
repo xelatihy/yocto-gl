@@ -1204,6 +1204,10 @@ bool parse_cli(cli_state& cli, vector<string>& args, string& error) {
     error = message;
     return false;
   };
+  auto cli_help = [&error] {
+    error = "Help invoked";
+    return false;
+  };
 
   // helpers
   auto advance_positional = [](const json_value& schema,
@@ -1307,6 +1311,10 @@ bool parse_cli(cli_state& cli, vector<string>& args, string& error) {
       if (!set_reference(cli, join_clipath(command, name)))
         return cli_error("bad value for " + name);
     } else {
+      if (arg == "--help" || arg == "-?") {
+        value["help"] = true;
+        return cli_help();
+      }
       arg = arg.substr(1);
       if (arg.find('-') == 0) arg = arg.substr(1);
       auto name = string{};
