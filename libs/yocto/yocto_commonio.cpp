@@ -995,129 +995,82 @@ namespace yocto {
 
 // initialize a command line parser
 cli_state make_cli(const string& name, const string& usage) {
-  auto  cli = cli_state{};
-  auto& cmd = cli.command;
-  cmd.name  = name;
-  cmd.usage = usage;
-  add_option(cmd, "--help/--no-help", cmd.help, "Print usage.");
+  auto  cli             = cli_state{};
+  auto& schema          = cli.schema;
+  schema["title"]       = name;
+  schema["description"] = usage;
+  schema["type"]        = "object";
   return cli;
 }
 
 // add command
-cli_command& add_command(
+cli_command add_command(
     cli_command& cli, const string& name, const string& usage) {
-  for (auto& cmd : cli.commands) {
-    if (cmd.name == name) {
-      throw std::invalid_argument{"cannot add two commands with the same name"};
-    }
+  auto& schema                = get_clipath(cli.cli.schema, cli.path);
+  schema[name]["title"]       = name;
+  schema[name]["description"] = usage;
+  schema[name]["type"]        = "object";
+  if (!schema.contains("command")) {
+    schema["command"]["title"]          = "command";
+    schema["command"]["description"]    = "Select command";
+    schema["command"]["type"]           = "string";
+    schema["command"]["cli_iscommand"]  = true;
+    schema["command"]["cli_isrequired"] = true;
+    // TODO(fabio): support positionals
+    schema["cli_positional"][0] = "command";
+    schema["required"].push_back("command");  // TODO(fabio): fix repetitions
   }
-  auto& cmd = cli.commands.emplace_back();
-  cmd.name  = name;
-  cmd.usage = usage;
-  add_option(cmd, "--help/--no-help", cmd.help, "Print usage.");
-  return cmd;
+  return {cli.cli, join_clipath(cli.path, name)};
 }
-cli_command& add_command(
+cli_command add_command(
     cli_state& cli, const string& name, const string& usage) {
-  return add_command(cli.command, name, usage);
+  return add_command({cli, ""}, name, usage);
 }
 
-static void validate_names(const cli_command& cmd) {
-  // check for errors
-  auto used = unordered_set<string>{};
-  for (auto& scmd : cmd.commands) {
-    if (scmd.name.empty()) throw std::invalid_argument("name cannot be empty");
-    if (!std::isalpha((int)scmd.name.front()))
-      throw std::invalid_argument(
-          "name should start with a letter " + scmd.name);
-    if (used.find(scmd.name) != used.end())
-      throw std::invalid_argument("name already in use " + scmd.name);
-    used.insert(scmd.name);
-  }
-  for (auto& option : cmd.options) {
-    if (option.name_.empty())
-      throw std::invalid_argument("name cannot be empty");
-    if (!std::isalpha((int)option.name_.front()))
-      throw std::invalid_argument(
-          "name should start with a letter " + option.name_);
-    if (used.find(option.name_) != used.end())
-      throw std::invalid_argument("name already in use " + option.name_);
-    used.insert(option.name_);
-  }
-  for (auto& scmd : cmd.commands) validate_names(scmd);
-}
+static json_value fix_cli_schema(const json_value& schema) { return schema; }
 
-static bool get_help(const cli_command& cli) {
-  if (cli.help) return true;
-  for (auto& cmd : cli.commands) return get_help(cmd);
+static bool get_help(const json_value& js) {
+  if (js.contains("help")) return true;
+  for (auto& [_, ejs] : js.items()) {
+    if (ejs.is_object() && get_help(ejs)) return true;
+  }
   return false;
 }
-bool get_help(const cli_state& cli) { return get_help(cli.command); }
 
-static string get_usage(const cli_state& cli, const cli_command& cmd) {
-  auto type_name = [](const cli_option& option) -> string {
-    auto str = string{};
-    str += "<";
-    if (option.nargs < 0) str += "[";
-    if (!option.choices.empty()) str += "string";
-    switch (option.type) {
-      case cli_type::integer: str += "integer"; break;
-      case cli_type::uinteger: str += "uinteger"; break;
-      case cli_type::number: str += "number"; break;
-      case cli_type::string: str += "string"; break;
-      case cli_type::boolean: str += "boolean"; break;
-    }
-    if (option.nargs < 0) str += "]";
-    str += ">";
-    return str;
-  };
-  auto def_string = [](const cli_option& option) -> string {
-    if (option.req) return string{"[required]"};
-    auto str = string{};
-    str += "[";
-    for (auto& value : option.def) {
-      switch (value.type) {
-        case cli_type::integer:
-          str += option.choices.empty() ? std::to_string(value.number)
-                                        : option.choices[value.integer];
-          break;
-        case cli_type::uinteger:
-          str += option.choices.empty() ? std::to_string(value.number)
-                                        : option.choices[value.uinteger];
-          break;
-        case cli_type::number: str += std::to_string(value.number); break;
-        case cli_type::string: str += value.text; break;
-        case cli_type::boolean: str += value.integer ? "true" : "false"; break;
-      }
-    }
-    str += "]";
-    return str;
-  };
+bool get_help(const cli_state& cli) { return get_help(cli.value); }
 
-  if (!cmd.command.empty()) {
-    for (auto& subcommand : cmd.commands)
-      if (cmd.command == subcommand.name) return get_usage(cli, subcommand);
-  }
+string get_usage(const cli_state& cli) {
+  // TODO(fabio): get from command
+  auto& value  = cli.value;
+  auto  schema = fix_cli_schema(cli.schema);
+
+  auto app = cli.schema.value("title", "");
 
   auto message      = string{};
   auto has_optional = false, has_positional = false, has_commands = false;
   auto usage_optional = string{}, usage_positional = string{},
        usage_command = string{};
-  for (auto& option : cmd.options) {
-    auto name = option.name_;
-    if (!option.positional) {
-      name = "--" + option.name_;
-      if (option.nargs == 0) name += "/--no-" + option.name_;
-      if (!option.alt.empty()) name += ", -" + option.alt;
+  for (auto& [name, property] : schema.at("properties").items()) {
+    auto decorated_name = name;
+    auto positional     = property.value("cli_ispositional", false);
+    if (!positional) {
+      decorated_name = "--" + name;
+      if (property.value("type", "") == "boolean")
+        decorated_name += "/--no-" + name;
+      if (property.contains("cli_alt"))
+        decorated_name += ", -" + property.value("cli_alt", "");
     }
-    auto line = "  " + name + " " + type_name(option);
+    auto line = "  " + decorated_name + " " + property.value("type", "");
     while (line.size() < 32) line += " ";
-    line += option.usage;
-    line += " " + def_string(option) + "\n";
-    if (!option.choices.empty()) {
+    line += property.value("description", "");
+    line += (property.contains("default"))
+                ? " " + format_json(property.at("default")) + "\n"
+                : string{"\n"};
+    if (!property.contains("enum")) {
       line += "    with choices: ";
       auto len = 16;
-      for (auto& choice : option.choices) {
+      for (auto& choice_ : property.at("enum")) {
+        auto choice = format_json(choice_);
         if (len + choice.size() + 2 > 78) {
           line += "\n                 ";
           len = 16;
@@ -1128,7 +1081,7 @@ static string get_usage(const cli_state& cli, const cli_command& cmd) {
       line = line.substr(0, line.size() - 2);
       line += "\n";
     }
-    if (option.positional) {
+    if (positional) {
       has_positional = true;
       usage_positional += line;
     } else {
@@ -1136,19 +1089,21 @@ static string get_usage(const cli_state& cli, const cli_command& cmd) {
       usage_optional += line;
     }
   }
-  for (auto& scmd : cmd.commands) {
-    has_commands = true;
-    auto line    = "  " + scmd.name;
-    while (line.size() < 32) line += " ";
-    line += scmd.usage + "\n";
-    usage_command += line;
-  }
-  auto is_command = &cmd == &cli.command;
-  message += "usage: " + cli.command.name + (is_command ? " " + cmd.name : "") +
+  // TODO(fabio): fix commands
+  // for (auto& scmd : cmd.commands) {
+  // has_commands = true;
+  // auto line    = "  " + scmd.name;
+  // while (line.size() < 32) line += " ";
+  // line += scmd.usage + "\n";
+  // usage_command += line;
+  // }
+  auto is_command = false;
+  message += "usage: " + cli.schema.value("title", "") +
+             (is_command ? " " + schema.value("title", "") : "") +
              (has_commands ? " command" : "") +
              (has_optional ? " [options]" : "") +
              (has_positional ? " <arguments>" : "") + "\n";
-  message += cmd.usage + "\n\n";
+  message += cli.schema.value("description", "") + "\n\n";
   if (has_commands) {
     message += "commands:\n" + usage_command + "\n";
   }
@@ -1160,176 +1115,210 @@ static string get_usage(const cli_state& cli, const cli_command& cmd) {
   }
   return message;
 }
-string get_usage(const cli_state& cli) { return get_usage(cli, cli.command); }
 
-string get_command(const cli_state& cli) { return cli.command.command; }
+string get_command(const cli_state& cli) {
+  // TODO(fabio): fix me
+  // return cli.command.command;
+  return "";
+}
 
-static bool parse_value(
-    cli_value& value, const string& arg, const vector<string>& choices) {
-  if (!choices.empty()) {
-    if (std::find(choices.begin(), choices.end(), arg) == choices.end())
+static bool parse_clivalue(
+    json_value& value, const string& arg, const json_value& schema) {
+  // if (!choices.empty()) {
+  //   if (std::find(choices.begin(), choices.end(), arg) == choices.end())
+  //     return false;
+  // }
+  auto type = schema.value("type", "string");
+  if (type == "string") {
+    value = arg;
+    return true;
+  } else if (type == "integer") {
+    auto end = (char*)nullptr;
+    if (arg.find('-') == 0) {
+      value = (int64_t)strtol(arg.c_str(), &end, 10);
+    } else {
+      value = (uint64_t)strtoul(arg.c_str(), &end, 10);
+    }
+    return end != nullptr;
+  } else if (type == "number") {
+    auto end = (char*)nullptr;
+    value    = strtod(arg.c_str(), &end);
+    return end != nullptr;
+    return true;
+  } else if (type == "boolean") {
+    if (arg == "true" || arg == "1") {
+      value = true;
+      return true;
+    } else if (arg == "false" || arg == "0") {
+      value = false;
+      return true;
+    } else {
       return false;
-  }
-  switch (value.type) {
-    case cli_type::string: {
-      value.text = arg;
-      return true;
-    } break;
-    case cli_type::boolean: {
-      if (arg == "true" || arg == "1") {
-        value.integer = 1;
-        return true;
-      } else if (arg == "false" || arg == "0") {
-        value.integer = 0;
-        return true;
-      } else {
-        return false;
-      }
-    } break;
-    case cli_type::integer: {
-      if (choices.empty()) {
-        auto end      = (char*)nullptr;
-        value.integer = (int)strtol(arg.c_str(), &end, 10);
-        return end != nullptr;
-      } else {
-        value.integer = (int64_t)(
-            std::find(choices.begin(), choices.end(), arg) - choices.begin());
-        return true;
-      }
-    } break;
-    case cli_type::uinteger: {
-      if (choices.empty()) {
-        auto end       = (char*)nullptr;
-        value.uinteger = (int)strtoul(arg.c_str(), &end, 10);
-        return end != nullptr;
-      } else {
-        value.uinteger = (uint64_t)(
-            std::find(choices.begin(), choices.end(), arg) - choices.begin());
-        return true;
-      }
-    } break;
-    case cli_type::number: {
-      auto end     = (char*)nullptr;
-      value.number = strtod(arg.c_str(), &end);
-      return end != nullptr;
-      return true;
-    } break;
+    }
   }
   return false;
 }
 
-bool parse_cli(
-    cli_command& cli, vector<string>& args, size_t start, string& error) {
+bool parse_cli(cli_state& cli, vector<string>& args, string& error) {
   auto cli_error = [&error](const string& message) {
     error = message;
     return false;
   };
 
+  // helpers
+  auto advance_positional = [](const json_value& schema,
+                                size_t&          last_positional) -> string {
+    if (!schema.contains("cli_positional")) return "";
+    auto& positionals = schema.at("cli_positional");
+    if (!positionals.is_array()) return "";
+    if (positionals.size() == last_positional) return "";
+    if (!positionals.at(last_positional).is_string()) return "";
+    return positionals.at(last_positional++).get<string>();
+  };
+  auto is_positional = [](const json_value& schema,
+                           const string&    name) -> bool {
+    if (!schema.contains("cli_positional")) return false;
+    if (!schema.at("cli_positional").is_array()) return false;
+    for (auto& pname : schema.at("cli_positional")) {
+      if (pname.is_string() && pname.get_ref<string>() == name) return true;
+    }
+    return false;
+  };
+  auto is_required = [](const json_value& schema, const string& name) -> bool {
+    if (!schema.contains("required")) return false;
+    if (!schema.at("required").is_array()) return false;
+    for (auto& pname : schema.at("required")) {
+      if (pname.is_string() && pname.get_ref<string>() == name) return true;
+    }
+    return false;
+  };
+  auto set_reference = [](cli_state& cli, const string& path) -> bool {
+    auto jerror = json_error{""};
+    for (auto& [spath, setter] : cli.setters) {
+      if (spath != path) continue;
+      return setter(get_clipath(cli.value, path), jerror);
+    }
+    throw std::invalid_argument{"missing setter"};
+  };
+  auto get_alternate = [](const json_value& schema,
+                           const string&    alt) -> string {
+    if (!schema.contains("cli_alternate")) return "";
+    if (!schema.at("cli_alternate").is_object()) return "";
+    if (!schema.at("cli_alternate").contains(alt)) return "";
+    if (!schema.at("cli_alternate").at(alt).is_string()) return "";
+    return schema.at("cli_alternate").at(alt).get<string>();
+  };
+  auto get_command = [](const json_value& schema) -> string {
+    if (!schema.contains("cli_command")) return "";
+    if (!schema.at("cli_command").is_string()) return "";
+    return schema.at("cli_command").get<string>();
+  };
+
+  // initialize parsing
+  cli.schema           = fix_cli_schema(cli.schema);
+  cli.value            = json_object{};
+  auto command         = string{};
+  auto last_positional = (size_t)0;
+
   // parse the command line
-  for (auto idx = start; idx < args.size(); idx++) {
-    auto arg        = args.at(idx);
-    auto positional = arg.find('-') != 0;
-    if (positional && !cli.commands.empty() && cli.command.empty()) {
-      for (auto& subcommand : cli.commands) {
-        if (!positional) continue;
-        if (subcommand.name != arg) continue;
-        cli.command = arg;
-        if (!parse_cli(subcommand, args, idx + 1, error)) return false;
+  for (auto idx = (size_t)0; idx < args.size(); idx++) {
+    auto& schema     = get_clipath(cli.schema, command);
+    auto& value      = get_clipath(cli.value, command);
+    auto  arg        = args.at(idx);
+    auto  positional = arg.find('-') != 0;
+    if (positional && schema.contains("command") &&
+        !value.contains("command")) {
+      auto name = string{};
+      for (auto& [pname, property] : schema.at("properties").items()) {
+        if (property.value("type", "string") != "object") continue;
+        if (pname != arg) continue;
+        name = arg;
       }
-      if (cli.command.empty()) return cli_error("missing value for command");
+      if (name.empty()) return cli_error("missing value for command");
+      value["command"] = name;
+      value[name]      = json_object{};
+      command          = join_clipath(command, name);
+      last_positional  = 0;
+      continue;
     } else if (positional) {
-      auto position = -1;
-      for (auto pos = 0; pos < cli.options.size(); pos++) {
-        auto& option = cli.options.at(pos);
-        if (!option.positional) continue;
-        if (option.set) continue;
-        position = (int)pos;
-        break;
+      auto name            = string{};
+      auto next_positional = advance_positional(schema, last_positional);
+      for (auto& [pname, property] : schema.at("properties").items()) {
+        if (property.value("type", "string") == "object") continue;
+        if (pname != next_positional) continue;
+        name = pname;
       }
-      if (position < 0) return cli_error("too many positional arguments");
-      auto& option = cli.options.at(position);
-      if (option.nargs > 0 && option.nargs > args.size() - idx)
-        return cli_error("missing value for " + option.name_);
-      option.set = true;
-      option.value.clear();
-      if (option.nargs < 0) {
+      if (name.empty()) return cli_error("too many positional arguments");
+      auto& property = schema.at("properties").at(name);
+      if (property.value("type", "string") == "array") {
         for (auto pos = idx; args.size(); pos++) {
-          auto& value = option.value.emplace_back();
-          value.type  = option.type;
-          if (!parse_value(value, args[pos], option.choices))
-            return cli_error("bad value for " + option.name_);
+          if (!parse_clivalue(value[name].emplace_back(), args[pos], property))
+            return cli_error("bad value for " + name);
         }
         idx = args.size();
-      } else if (option.nargs > 0) {
-        for (auto pos = idx; pos < idx + option.nargs; pos++) {
-          auto& value = option.value.emplace_back();
-          value.type  = option.type;
-          if (!parse_value(value, args[pos], option.choices))
-            return cli_error("bad value for " + option.name_);
-        }
-        idx += option.nargs - 1;
+      } else if (property.value("type", "string") != "object") {
+        if (!parse_clivalue(value[name], args[idx], property))
+          return cli_error("bad value for " + name);
       }
-      option.set_reference(option.value);
+      if (!set_reference(cli, join_clipath(command, name)))
+        return cli_error("bad value for " + name);
     } else {
       arg = arg.substr(1);
       if (arg.find('-') == 0) arg = arg.substr(1);
-      auto position = -1;
-      for (auto pos = 0; pos < cli.options.size(); pos++) {
-        auto& option = cli.options.at(pos);
-        if (option.positional) continue;
-        if (option.name_ != arg && option.alt != arg &&
-            option.name_ != "no-" + arg)  // TODO(fabio): fix boolean
+      auto name = string{};
+      for (auto& [pname, property] : schema.at("properties").items()) {
+        if (property.value("type", "string") == "object") continue;
+        if (property.value("type", "string") == "array") continue;
+        if (is_positional(schema, pname)) continue;
+        if (pname != arg && get_alternate(schema, pname) != arg &&
+            pname != "no-" + arg)  // TODO(fabio): fix boolean
           continue;
-        if (cli.options.at(pos).set)
-          return cli_error("option already set " + option.name_);
-        position = (int)pos;
+        name = pname;
         break;
       }
-      if (position < 0) return cli_error("unknown option " + args[idx]);
-      auto& option = cli.options.at(position);
-      if (option.nargs > 0 &&
-          option.nargs > args.size() - idx)  // TODO(fabio): fix indices
-        return cli_error("missing value for " + option.name_);
-      option.set = true;
-      option.value.clear();
-      if (option.nargs == 0) {
-        auto& value = option.value.emplace_back();
-        value.type  = option.type;
-        if (!parse_value(
-                value, arg.find("no-") != 0 ? "true" : "false", option.choices))
-          return cli_error("bad value for " + option.name_);
+      if (name.empty()) return cli_error("unknown option " + args[idx]);
+      if (value.contains(name)) return cli_error("option already set " + name);
+      auto& property = schema.at("propeties").at(name);
+      if (property.value("type", "string") == "boolean") {
+        if (!parse_clivalue(
+                value[name], arg.find("no-") != 0 ? "true" : "false", property))
+          return cli_error("bad value for " + name);
       } else {
-        for (auto pos = idx + 1; pos < idx + 1 + option.nargs; pos++) {
-          auto& value = option.value.emplace_back();
-          value.type  = option.type;
-          if (!parse_value(value, args[pos], option.choices))
-            return cli_error("bad value for " + option.name_);
-        }
-        idx += option.nargs;
+        if (idx + 1 >= args.size())
+          return cli_error("missing value for " + name);
+        if (!parse_clivalue(value[name], args[idx + 1], property))
+          return cli_error("bad value for " + name);
+        idx += 1;
       }
-      option.set_reference(option.value);
+      if (!set_reference(cli, join_clipath(command, name)))
+        return cli_error("bad value for " + name);
     }
   }
 
-  // check for required
-  if (!cli.commands.empty() && cli.command.empty())
-    return cli_error("missing command");
-  for (auto& option : cli.options) {
-    if (option.req && !option.set)
-      return cli_error("missing value for " + option.name_);
-  }
+  // check for required and apply defaults
+  // TODO(fabio): do this
+  // for (auto path : iterate_path(command)) {
+  //   auto& schema  = get_clipath(path);
+  //   auto& value   = get_clipath(path);
+  //   auto  command = get_command(schema);
+  //   if (!command.empty() && !value.contains(name))
+  //     return cli_error("missing value for " + command);
+  //   for (auto& [name, property] : schema.at("properties").items()) {
+  //     if (property.value("type", "string") == "object") continue;
+  //     if (is_required(schema, name) && !value.contains(name))
+  //       return cli_error("missing value for " + name);
+  //     if (property.contains("default") && !value.contains(name))
+  //       value[name] == property.at("default");
+  //   }
+  // }
 
   // done
   return true;
 }
 
 bool parse_cli(cli_state& cli, int argc, const char** argv, string& error) {
-  // validate names
-  validate_names(cli.command);
-  // prepare args
   auto args = vector<string>{argv + 1, argv + argc};
-  // parse
-  return parse_cli(cli.command, args, 0, error);
+  return parse_cli(cli, args, error);
 }
 
 void parse_cli(cli_state& cli, int argc, const char** argv) {
