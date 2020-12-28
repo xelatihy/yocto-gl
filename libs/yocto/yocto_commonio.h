@@ -2505,6 +2505,9 @@ struct cli_setter {
   setter_func                      setter  = {};
   vector<pair<string, cli_setter>> setters = {};
 
+  bool is_object() const { return !setter; }
+  bool is_value() const { return (bool)setter; }
+
   auto begin() { return setters.begin(); }
   auto end() { return setters.end(); }
   auto begin() const { return setters.begin(); }
@@ -2521,6 +2524,12 @@ struct cli_setter {
     setters.emplace_back();
     setters.back().first = key;
     return setters.back().second;
+  }
+
+  bool set(const json_value& value) {
+    auto error = json_error{""};
+    if (!setter || !setter(value, error)) return false;
+    return true;
   }
 };
 // Command line parser. All data should be considered private.

@@ -1204,6 +1204,24 @@ static bool parse_clivalue(
   return false;
 }
 
+bool set_clivalues(const json_value& js, cli_setter& value, string& error) {
+  auto cli_error = [&error](const string& message) {
+    error = message;
+    return false;
+  };
+
+  if (!value.is_object()) return cli_error("bad value");
+  for (auto& [name, item] : value) {
+    if (!js.contains(name)) continue;
+    if (item.is_object()) {
+      if (!set_clivalues(js.at(name), item, error)) return false;
+    } else {
+      if (!item.set(js.at(name))) return cli_error("bad value for " + name);
+    }
+  }
+  return true;
+}
+
 bool parse_cli(cli_state& cli, vector<string>& args, string& error) {
   auto cli_error = [&error](const string& message) {
     error = message;
@@ -1236,11 +1254,6 @@ bool parse_cli(cli_state& cli, vector<string>& args, string& error) {
       if (pname.is_string() && pname.get_ref<string>() == name) return true;
     }
     return false;
-  };
-  auto set_reference = [](cli_setter& setter, const json_value& value) -> bool {
-    auto jerror = json_error{""};
-    if (!setter.setter) return false;
-    return setter.setter(value, jerror);
   };
   auto get_alternate = [](const json_value& schema,
                            const string&    alt) -> string {
@@ -1314,8 +1327,6 @@ bool parse_cli(cli_state& cli, vector<string>& args, string& error) {
         if (!parse_clivalue(value[name], args[idx], property))
           return cli_error("bad value for " + name);
       }
-      if (!set_reference(setter.at(name), value.at(name)))
-        return cli_error("bad value for " + name);
     } else {
       if (arg == "--help" || arg == "-?") {
         value["help"] = true;
@@ -1348,8 +1359,6 @@ bool parse_cli(cli_state& cli, vector<string>& args, string& error) {
           return cli_error("bad value for " + name);
         idx += 1;
       }
-      if (!set_reference(setter.at(name), value.at(name)))
-        return cli_error("bad value for " + name);
     }
   }
 
@@ -1361,13 +1370,13 @@ bool parse_cli(cli_state& cli, vector<string>& args, string& error) {
       if (property.value("type", "string") == "object") continue;
       if (is_required(schema, name) && !value.contains(name))
         return cli_error("missing value for " + name);
-      if (property.contains("default") && !value.contains(name)) {
+      if (property.contains("default") && !value.contains(name))
         value[name] = property.at("default");
-        if (!set_reference(setter.at(name), value.at(name)))
-          return cli_error("bad value for " + name);
-      }
     }
   }
+
+  // set values
+  if (!set_clivalues(cli.value, cli.setter, error)) return false;
 
   // done
   return true;
