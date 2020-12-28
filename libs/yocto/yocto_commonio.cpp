@@ -1083,7 +1083,7 @@ string get_usage(const cli_state& cli) {
     line += (property.contains("default"))
                 ? " " + format_json(property.at("default")) + "\n"
                 : string{"\n"};
-    if (!property.contains("enum")) {
+    if (property.contains("enum")) {
       line += "    with choices: ";
       auto len = 16;
       for (auto& choice_ : property.at("enum")) {
