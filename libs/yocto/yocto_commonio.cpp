@@ -1167,15 +1167,16 @@ static bool parse_clivalue(
 
 static bool parse_clivalue(
     json_value& value, const vector<string>& args, const json_value& schema) {
-    auto type = schema.value("type", "string");
-    if (type == "array") {
-      value = json_array{};
-      for(auto& arg : args) {
-        if(!parse_clivalue(value.emplace_back(), arg, schema.at("items"))) return false;
-      }
-      return true;
+  auto type = schema.value("type", "string");
+  if (type == "array") {
+    value = json_array{};
+    for (auto& arg : args) {
+      if (!parse_clivalue(value.emplace_back(), arg, schema.at("items")))
+        return false;
     }
-    return false;
+    return true;
+  }
+  return false;
 }
 
 static bool set_clivalues(

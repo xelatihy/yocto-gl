@@ -37,9 +37,9 @@
 #include <yocto/yocto_math.h>
 
 #include <functional>
+#include <memory>
 #include <string>
 #include <vector>
-#include <memory>
 
 // forward declaration
 struct GLFWwindow;
@@ -52,8 +52,8 @@ namespace yocto {
 // using directives
 using std::function;
 using std::string;
-using std::vector;
 using std::unique_ptr;
+using std::vector;
 
 }  // namespace yocto
 

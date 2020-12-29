@@ -70,10 +70,10 @@ void close_view(imageview_state* state) {
 }
 
 // Set image
-void set_image(
-    imageview_state* state, const string& name, const image<vec4f>& img, float exposure, bool filmic) {
-  state->queue.push(
-      imageview_command{imageview_command_type::set, name, img, {}, exposure, filmic});
+void set_image(imageview_state* state, const string& name,
+    const image<vec4f>& img, float exposure, bool filmic) {
+  state->queue.push(imageview_command{
+      imageview_command_type::set, name, img, {}, exposure, filmic});
 }
 void set_image(
     imageview_state* state, const string& name, const image<vec4b>& img) {
@@ -85,8 +85,10 @@ void close_image(imageview_state* state, const string& name) {
 }
 
 // Update image
-void tonemap_image(imageview_state* state, const string& name, float exposure, bool filmic) {
-  state->queue.push(imageview_command{imageview_command_type::tonemap, name, {}, {}, exposure, filmic});
+void tonemap_image(
+    imageview_state* state, const string& name, float exposure, bool filmic) {
+  state->queue.push(imageview_command{
+      imageview_command_type::tonemap, name, {}, {}, exposure, filmic});
 }
 
 }  // namespace yocto
@@ -98,10 +100,10 @@ namespace yocto {
 
 static void update_display(imageview_image* img) {
   if (!img->hdr.empty()) {
-    if (img->display.imsize() != img->hdr.imsize()) 
+    if (img->display.imsize() != img->hdr.imsize())
       img->display.resize(img->hdr.imsize());
     tonemap_image_mt(img->display, img->hdr, img->exposure, img->filmic);
-  } else if(!img->ldr.empty()) {
+  } else if (!img->ldr.empty()) {
     img->display = img->ldr;
   } else {
     // TODO(fabio): decide about empty images
@@ -178,8 +180,8 @@ void draw_widgets(
     auto ij = image_coords(input.mouse_pos, img->glparams.center,
         img->glparams.scale, img->display.imsize());
     draw_dragger(win, "mouse", ij);
-    auto hdr_pixel = zero4f;
-    auto ldr_pixel = zero4b;
+    auto hdr_pixel     = zero4f;
+    auto ldr_pixel     = zero4b;
     auto display_pixel = zero4b;
     if (ij.x >= 0 && ij.x < img->display.width() && ij.y >= 0 &&
         ij.y < img->display.height()) {
@@ -187,7 +189,7 @@ void draw_widgets(
       ldr_pixel     = !img->ldr.empty() ? img->ldr[{ij.x, ij.y}] : zero4b;
       display_pixel = img->display[{ij.x, ij.y}];
     }
-    if(!img->hdr.empty()) {
+    if (!img->hdr.empty()) {
       draw_coloredit(win, "source", hdr_pixel);
     } else {
       draw_coloredit(win, "source", ldr_pixel);
@@ -197,7 +199,7 @@ void draw_widgets(
   }
   if (!state->selected->hdr.empty()) {
     if (begin_header(win, "tonemap")) {
-      auto img = state->selected;
+      auto img    = state->selected;
       auto edited = 0;
       edited += draw_slider(win, "exposure", img->exposure, -5, 5);
       edited += draw_checkbox(win, "filmic", img->filmic);
@@ -237,14 +239,14 @@ void update(gui_window* win, imageview_state* state, const gui_input& input) {
         }
         if (img == nullptr) {
           state->images.emplace_back(make_unique<imageview_image>());
-          img  = state->images.back().get();
+          img       = state->images.back().get();
           img->name = command.name;
           if (state->selected == nullptr) state->selected = img;
         }
-        img->hdr = command.hdr;
-        img->ldr = command.ldr;
+        img->hdr      = command.hdr;
+        img->ldr      = command.ldr;
         img->exposure = command.exposure;
-        img->filmic = command.filmic;
+        img->filmic   = command.filmic;
         update_display(img);
         if (!is_initialized(img->glimage)) init_image(img->glimage);
         set_image(img->glimage, img->display, false, false);
@@ -272,7 +274,7 @@ void update(gui_window* win, imageview_state* state, const gui_input& input) {
         }
         if (img != nullptr) {
           img->exposure = command.exposure;
-          img->filmic = command.filmic;
+          img->filmic   = command.filmic;
           update_display(img);
           if (!is_initialized(img->glimage)) init_image(img->glimage);
           set_image(img->glimage, img->display, false, false);

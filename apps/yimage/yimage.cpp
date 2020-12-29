@@ -296,7 +296,7 @@ bool convert_images(const convert_params& params, string& error) {
   if (!hdr.empty() && !is_hdr_filename(params.output)) {
     ldr = tonemap_imageb(hdr, params.exposure, params.filmic);
     hdr = {};
-  }   
+  }
   if (!ldr.empty() && is_hdr_filename(params.output)) {
     hdr = srgb_to_rgb(ldr);
     ldr = {};
@@ -324,9 +324,9 @@ bool convert_images(const convert_params& params, string& error) {
 
 // convert params
 struct view_params {
-  vector<string> images  = {"image.png"};
-  string output = "out.png";
-  bool   logo   = false;
+  vector<string> images = {"image.png"};
+  string         output = "out.png";
+  bool           logo   = false;
 };
 
 #ifndef YOCTO_OPENGL
@@ -345,7 +345,7 @@ bool view_images(const view_params& params, string& error) {
   auto viewer       = viewer_guard.get();
 
   // set image
-  for(auto& filename : params.images) {
+  for (auto& filename : params.images) {
     // load
     auto hdr = image<vec4f>{};
     auto ldr = image<vec4b>{};
@@ -364,7 +364,7 @@ bool view_images(const view_params& params, string& error) {
     }
 
     // push image to the viewer
-    if(!hdr.empty()) {
+    if (!hdr.empty()) {
       set_image(viewer, filename, hdr);
     } else {
       set_image(viewer, filename, ldr);

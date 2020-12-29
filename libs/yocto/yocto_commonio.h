@@ -2781,10 +2781,10 @@ inline void add_positional(const cli_command& cmd, const string& name,
   property["type"]        = "array";
   property["description"] = usage;
   property["default"]     = to_json(value);
-  auto& item          = property["items"];
-  item["title"]       = name;
-  item["type"]        = cli_gettype<T>();
-  item["description"] = usage;
+  auto& item              = property["items"];
+  item["title"]           = name;
+  item["type"]            = cli_gettype<T>();
+  item["description"]     = usage;
   for (auto& choice : choices) {
     property["enum"].push_back(to_json(choice));
   }
