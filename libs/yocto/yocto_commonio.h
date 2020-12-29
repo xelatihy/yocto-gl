@@ -128,18 +128,12 @@ namespace yocto {
 struct json_value;
 void parse_cli(
     json_value& value, const json_value& schema, int argc, const char** argv);
-void parse_cli(json_value& value, const json_value& schema, const string& args);
+void parse_cli(json_value& value, const json_value& schema, const vector<string>& args);
 // Parse the command line described by a schema.
 bool parse_cli(json_value& value, const json_value& schema,
-    const string& args, string& error);
+    const vector<string>& args, string& error, string& usage);
 bool parse_cli(json_value& value, const json_value& schema,
-    int argc, const char** argv, string& error);
-// Gets usage message.
-string get_usage(const json_value& value, const json_value& schema);
-// Gets whether help was invoked.
-bool get_help(const json_value& value);
-// Gets the set command.
-string get_command(const json_value& value);
+    int argc, const char** argv, string& error, string& usage);
 
 // Initialize a command line parser.
 struct cli_state;
@@ -2555,6 +2549,9 @@ struct cli_state {
   json_value value  = {};
   json_value schema = {};
   cli_setter setter = {};
+  string command = "";
+  string usage = "";
+  bool help = false;
 };
 
 template <typename T>

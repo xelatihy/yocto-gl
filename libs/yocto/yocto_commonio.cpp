@@ -1041,41 +1041,8 @@ cli_command add_command(
 
 static json_value fix_cli_schema(const json_value& schema) { return schema; }
 
-static bool get_clihelp(const json_value& value) {
-  if (value.contains("help")) return true;
-  for (auto& [_, item] : value.items()) {
-    if (item.is_object() && get_clihelp(item)) return true;
-  }
-  return false;
-}
-
-static string get_clicommand(const json_value& value) {
-  if (!value.is_object()) return "";
-  for (auto& [name, item] : value.items()) {
-    if (!item.is_object()) continue;
-    auto subcommand = get_clicommand(item);
-    if (subcommand.empty()) {
-      return name;
-    } else {
-      return name + "/" + subcommand;
-    }
-  }
-  return "";
-}
-
-static vector<string> get_clicommandp(const json_value& value) {
-  if (!value.is_object()) return {};
-  for (auto& [name, item] : value.items()) {
-    if (!item.is_object()) continue;
-    auto path       = vector<string>{name};
-    auto subcommand = get_clicommandp(item);
-    path.insert(path.end(), subcommand.begin(), subcommand.end());
-    return path;
-  }
-  return {};
-}
-
-static string get_cliusage(const json_value& value, const json_value& schema_) {
+static string get_cliusage(const json_value& schema, const string& app_name, 
+  const string& command) {
   // helper
   auto is_positional = [](const json_value& schema,
                            const string&    name) -> bool {
@@ -1101,17 +1068,10 @@ static string get_cliusage(const json_value& value, const json_value& schema_) {
     return false;
   };
 
-  // TODO(fabio): get from command
-  auto schema   = fix_cli_schema(schema_);
-  auto commandp = get_clicommandp(value);
-  auto pschema  = &schema;
-  for (auto& name : commandp) pschema = &pschema->at("properties").at(name);
-  auto& cschema = *pschema;
-
   auto message        = string{};
   auto usage_optional = string{}, usage_positional = string{},
        usage_command = string{};
-  for (auto& [name, property] : cschema.at("properties").items()) {
+  for (auto& [name, property] : schema.at("properties").items()) {
     if (property.value("type", "") == "object") continue;
     auto decorated_name = name;
     auto positional     = is_positional(schema, name);
@@ -1156,8 +1116,8 @@ static string get_cliusage(const json_value& value, const json_value& schema_) {
       usage_optional += line;
     }
   }
-  if (has_commands(cschema)) {
-    for (auto& [name, property] : cschema.at("properties").items()) {
+  if (has_commands(schema)) {
+    for (auto& [name, property] : schema.at("properties").items()) {
       if (property.value("type", "") != "object") continue;
       auto line = "  " + name;
       while (line.size() < 32) line += " ";
@@ -1174,13 +1134,13 @@ static string get_cliusage(const json_value& value, const json_value& schema_) {
     usage_optional += line;
   }
 
-  message += "usage: " + schema.value("title", "");
-  for (auto& name : commandp) message += " " + name;
+  message += "usage: " + path_basename(app_name);
+  if (!command.empty()) message += " " + command;
   if (!usage_command.empty()) message += " command";
   if (!usage_optional.empty()) message += " [options]";
   if (!usage_positional.empty()) message += " <arguments>";
   message += "\n";
-  message += cschema.value("description", "") + "\n\n";
+  message += schema.value("description", "") + "\n\n";
   if (!usage_command.empty()) {
     message += "commands:\n" + usage_command + "\n";
   }
@@ -1193,14 +1153,9 @@ static string get_cliusage(const json_value& value, const json_value& schema_) {
   return message;
 }
 
-vector<string> get_commandp(const cli_state& cli) {
-  return get_clicommandp(cli.value);
-}
-string get_command(const cli_state& cli) { return get_clicommand(cli.value); }
-bool   get_help(const cli_state& cli) { return get_clihelp(cli.value); }
-string get_usage(const cli_state& cli) {
-  return get_cliusage(cli.value, cli.schema);
-}
+string get_command(const cli_state& cli) { return cli.command; }
+bool   get_help(const cli_state& cli) { return cli.help; }
+string get_usage(const cli_state& cli) { return cli.usage; }
 
 static bool parse_clivalue(
     json_value& value, const string& arg, const json_value& schema) {
@@ -1239,7 +1194,7 @@ static bool parse_clivalue(
   return false;
 }
 
-bool set_clivalues(const json_value& js, cli_setter& value, string& error) {
+static bool set_clivalues(const json_value& js, cli_setter& value, string& error) {
   auto cli_error = [&error](const string& message) {
     error = message;
     return false;
@@ -1257,8 +1212,10 @@ bool set_clivalues(const json_value& js, cli_setter& value, string& error) {
   return true;
 }
 
-bool parse_cli(json_value& value, const json_value& schema_,
-    vector<string>& args, string& error) {
+static const char* cli_help_message = "Help invoked";
+
+static bool parse_cli(json_value& value, const json_value& schema_,
+    const vector<string>& args, string& error, string& usage, string& command) {
   auto cli_error = [&error](const string& message) {
     error = message;
     return false;
@@ -1323,9 +1280,11 @@ bool parse_cli(json_value& value, const json_value& schema_,
   auto schema = fix_cli_schema(schema_);
   value       = json_object{};
   auto stack  = vector<stack_elem>{{"", schema, value, 0}};
+  command = "";
+  usage = get_cliusage(schema, args[0], command);
 
   // parse the command line
-  for (auto idx = (size_t)0; idx < args.size(); idx++) {
+  for (auto idx = (size_t)1; idx < args.size(); idx++) {
     auto& [_, schema, value, cpositional] = stack.back();
     auto arg                              = args.at(idx);
     auto positional                       = arg.find('-') != 0;
@@ -1341,6 +1300,8 @@ bool parse_cli(json_value& value, const json_value& schema_,
       value[name]                = json_object{};
       stack.push_back(
           {name, schema.at("properties").at(name), value.at(name), 0});
+      command += " " + name;
+      usage = get_cliusage(stack.back().schema, args[0], command);
       continue;
     } else if (positional) {
       auto name            = string{};
@@ -1364,8 +1325,7 @@ bool parse_cli(json_value& value, const json_value& schema_,
       }
     } else {
       if (arg == "--help" || arg == "-?") {
-        value["help"] = true;
-        continue;
+        return cli_error(cli_help_message);
       }
       arg = arg.substr(1);
       if (arg.find('-') == 0) arg = arg.substr(1);
@@ -1414,43 +1374,65 @@ bool parse_cli(json_value& value, const json_value& schema_,
   return true;
 }
 
+bool parse_cli(json_value& value, const json_value& schema, 
+  const vector<string>& args, string& error, string& usage) {
+  auto command = string{};
+  return parse_cli(value, schema, args, error, usage, command);
+}
+
 bool parse_cli(json_value& value, const json_value& schema, int argc,
-    const char** argv, string& error) {
-  auto args = vector<string>{argv + 1, argv + argc};
-  return parse_cli(value, schema, args, error);
+    const char** argv, string& error, string& usage) {
+  return parse_cli(value, schema, {argv, argv + argc}, error, usage);
+}
+
+void parse_cli(
+    json_value& value, const json_value& schema, const vector<string>& args) {
+  auto error = string{};
+  auto usage = string{};
+  if (!parse_cli(value, schema, args, error, usage)) {
+    if (error != cli_help_message) {
+      print_info("error: " + error);
+      print_info("");
+    }
+    print_info(usage);
+    exit(error != cli_help_message ? 1 : 0);
+  }
 }
 
 void parse_cli(
     json_value& value, const json_value& schema, int argc, const char** argv) {
-  auto error = string{};
-  if (!parse_cli(value, schema, argc, argv, error)) {
-    print_info("error: " + error);
-    print_info("");
-    print_info(get_cliusage(value, schema));
-    exit(1);
-  } else if (get_clihelp(value)) {
-    print_info(get_cliusage(value, schema));
-    exit(0);
-  }
+  return parse_cli(value, schema, {argv, argv+argc});
 }
 
-bool parse_cli(cli_state& cli, int argc, const char** argv, string& error) {
-  if (!parse_cli(cli.value, cli.schema, argc, argv, error)) return false;
+bool parse_cli(cli_state& cli, const vector<string>& args, string& error) {
+  auto usage = string{};
+  auto command = string{};
+  if (!parse_cli(cli.value, cli.schema, args, error, usage, command)) return false;
+  cli.usage = usage;
+  cli.command = command;
+  cli.help = error == cli_help_message;
   if (!set_clivalues(cli.value, cli.setter, error)) return false;
   return true;
 }
 
-void parse_cli(cli_state& cli, int argc, const char** argv) {
+void parse_cli(cli_state& cli, const vector<string>& args) {
   auto error = string{};
-  if (!parse_cli(cli, argc, argv, error)) {
-    print_info("error: " + error);
-    print_info("");
-    print_info(get_cliusage(cli.value, cli.schema));
-    exit(1);
-  } else if (get_clihelp(cli.value)) {
-    print_info(get_cliusage(cli.value, cli.schema));
-    exit(0);
+  if (!parse_cli(cli, args, error)) {
+    if (error != cli_help_message) {
+      print_info("error: " + error);
+      print_info("");
+    }
+    print_info(get_usage(cli));
+    exit(error != cli_help_message ? 1 : 0);
   }
+}
+
+bool parse_cli(cli_state& cli, int argc, const char** argv, string& error) {
+  return parse_cli(cli, {argv, argv+argc}, error);
+}
+
+void parse_cli(cli_state& cli, int argc, const char** argv) {
+  return parse_cli(cli, {argv, argv+argc});
 }
 
 }  // namespace yocto
