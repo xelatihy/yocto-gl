@@ -29,6 +29,7 @@
 
 #include "yocto_imgui.h"
 
+#include <yocto/yocto_color.h>
 #include <yocto/yocto_commonio.h>
 
 #include <algorithm>
@@ -720,6 +721,26 @@ bool draw_hdrcoloredit(gui_window* win, const char* lbl, vec4f& value) {
     value.y = color.y * exp2(exposure);
     value.z = color.z * exp2(exposure);
     value.w = color.w;
+    return true;
+  } else {
+    return false;
+  }
+}
+
+bool draw_coloredit(gui_window* win, const char* lbl, vec3b& value) {
+  auto valuef = byte_to_float(value);
+  if (ImGui::ColorEdit3(lbl, &valuef.x)) {
+    value = float_to_byte(valuef);
+    return true;
+  } else {
+    return false;
+  }
+}
+
+bool draw_coloredit(gui_window* win, const char* lbl, vec4b& value) {
+  auto valuef = byte_to_float(value);
+  if (ImGui::ColorEdit4(lbl, &valuef.x)) {
+    value = float_to_byte(valuef);
     return true;
   } else {
     return false;

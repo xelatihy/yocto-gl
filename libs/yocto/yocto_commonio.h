@@ -2770,7 +2770,7 @@ inline void add_positional(const cli_command& cmd, const string& name,
                     std::is_same_v<T, int64_t> || std::is_same_v<T, int32_t> ||
                     std::is_same_v<T, uint64_t> ||
                     std::is_same_v<T, uint32_t> || std::is_same_v<T, float> ||
-                    std::is_same_v<T, double> || std::is_enum_v<T>,
+                    std::is_same_v<T, double>,
       "unsupported type");
   auto& schema = get_clischema(cmd.cli.schema, cmd.path);
   auto& setter = get_clisetter(cmd.cli.setter, cmd.path);
@@ -2778,9 +2778,13 @@ inline void add_positional(const cli_command& cmd, const string& name,
   if (req) schema["required"].push_back(name);
   auto& property          = schema["properties"][name];
   property["title"]       = name;
-  property["type"]        = cli_gettype<T>();
+  property["type"]        = "array";
   property["description"] = usage;
   property["default"]     = to_json(value);
+  auto& item              = property["items"];
+  item["title"]           = name;
+  item["type"]            = cli_gettype<T>();
+  item["description"]     = usage;
   for (auto& choice : choices) {
     property["enum"].push_back(to_json(choice));
   }

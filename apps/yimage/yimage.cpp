@@ -30,8 +30,7 @@
 #include <yocto/yocto_image.h>
 #include <yocto/yocto_math.h>
 #if YOCTO_OPENGL == 1
-#include <yocto_gui/yocto_imgui.h>
-#include <yocto_gui/yocto_opengl.h>
+#include <yocto_gui/yocto_imageviewer.h>
 #endif
 using namespace yocto;
 
@@ -102,7 +101,7 @@ image<vec4f> filter_bilateral(
   return filtered;
 }
 
-bool make_image_preset(const string& type, image<vec4f>& img, string& error) {
+bool make_image_preset(const string& type_, image<vec4f>& img, string& error) {
   auto set_region = [](image<vec4f>& img, const image<vec4f>& region,
                         const vec2i& offset) {
     for (auto j = 0; j < region.height(); j++) {
@@ -112,6 +111,8 @@ bool make_image_preset(const string& type, image<vec4f>& img, string& error) {
       }
     }
   };
+
+  auto type = path_basename(type_);
 
   auto size = vec2i{1024, 1024};
   if (type.find("sky") != type.npos) size = {2048, 1024};
@@ -241,7 +242,12 @@ bool make_image_preset(const string& type, image<vec4b>& img, string& error) {
   return true;
 }
 
-bool is_image_preset_hdr(const string& type) {
+bool is_preset_filename(const string& filename) {
+  return path_extension(filename) == ".ypreset";
+}
+
+bool is_preset_hdr(const string& type_) {
+  auto type = path_basename(type_);
   return type.find("sky") != string::npos && type.find("sun") != string::npos;
 }
 
@@ -260,23 +266,18 @@ struct convert_params {
 
 // convert images
 bool convert_images(const convert_params& params, string& error) {
-  // determine image type
-  auto is_hdr_image = is_hdr_filename(params.image) ||
-                      (path_extension(params.image) == ".ypreset" &&
-                          is_image_preset_hdr(path_basename(params.image)));
-  auto is_hdr_output = is_hdr_filename(params.output);
-
   // load
   auto hdr = image<vec4f>{};
   auto ldr = image<vec4b>{};
-  if (path_extension(params.image) == ".ypreset") {
-    if (!make_image_preset(path_basename(params.image), hdr, error))
-      return false;
-    if (!is_hdr_image) {
-      ldr = rgb_to_srgbb(hdr);
-      hdr = {};
+  if (is_preset_filename(params.image)) {
+    if (is_preset_hdr(params.image)) {
+      if (!make_image_preset(path_basename(params.image), hdr, error))
+        return false;
+    } else {
+      if (!make_image_preset(path_basename(params.image), ldr, error))
+        return false;
     }
-  } else if (is_hdr_image) {
+  } else if (is_hdr_filename(params.image)) {
     if (!load_image(params.image, hdr, error)) return false;
   } else {
     if (!load_image(params.image, ldr, error)) return false;
@@ -284,7 +285,7 @@ bool convert_images(const convert_params& params, string& error) {
 
   // resize if needed
   if (params.width != 0 || params.height != 0) {
-    if (is_hdr_image) {
+    if (!hdr.empty()) {
       hdr = resize_image(hdr, params.width, params.height);
     } else {
       ldr = resize_image(ldr, params.width, params.height);
@@ -292,20 +293,18 @@ bool convert_images(const convert_params& params, string& error) {
   }
 
   // tonemap if needed
-  if (is_hdr_image != is_hdr_output) {
-    if (is_hdr_image) {
-      ldr = tonemap_imageb(hdr, params.exposure, params.filmic);
-      hdr = {};
-    } else {
-      hdr = srgb_to_rgb(ldr);
-      ldr = {};
-    }
-    is_hdr_image = !is_hdr_image;
+  if (!hdr.empty() && !is_hdr_filename(params.output)) {
+    ldr = tonemap_imageb(hdr, params.exposure, params.filmic);
+    hdr = {};
+  }
+  if (!ldr.empty() && is_hdr_filename(params.output)) {
+    hdr = srgb_to_rgb(ldr);
+    ldr = {};
   }
 
   // apply logo
   if (params.logo) {
-    if (is_hdr_image) {
+    if (!hdr.empty()) {
       hdr = add_logo(hdr);
     } else {
       ldr = add_logo(ldr);
@@ -313,7 +312,7 @@ bool convert_images(const convert_params& params, string& error) {
   }
 
   // save
-  if (is_hdr_image) {
+  if (!hdr.empty()) {
     if (!save_image(params.output, hdr, error)) return false;
   } else {
     if (!save_image(params.output, ldr, error)) return false;
@@ -325,9 +324,9 @@ bool convert_images(const convert_params& params, string& error) {
 
 // convert params
 struct view_params {
-  string image  = "image.png";
-  string output = "out.png";
-  bool   logo   = false;
+  vector<string> images = {"image.png"};
+  string         output = "out.png";
+  bool           logo   = false;
 };
 
 #ifndef YOCTO_OPENGL
@@ -339,143 +338,41 @@ bool view_images(const view_params& params, string& error) {
 
 #else
 
-struct view_state {
-  // original data
-  string filename = "image.png";
-  string outname  = "out.png";
-
-  // image data
-  image<vec4f> source = {};
-
-  // diplay data
-  image<vec4f>      display    = {};
-  float             exposure   = 0;
-  bool              filmic     = false;
-  colorgrade_params params     = {};
-  bool              colorgrade = false;
-
-  // viewing properties
-  ogl_image*       glimage  = new ogl_image{};
-  ogl_image_params glparams = {};
-
-  ~view_state() {
-    if (glimage) delete glimage;
-  }
-};
-
 // convert images
 bool view_images(const view_params& params, string& error) {
-  // load
-  auto img = image<vec4f>{};
-  if (path_extension(params.image) == ".ypreset") {
-    if (!make_image_preset(path_basename(params.image), img, error))
-      return false;
-  } else {
-    if (!load_image(params.image, img, error)) return false;
+  // open viewer
+  auto viewer_guard = make_imageview("yimage");
+  auto viewer       = viewer_guard.get();
+
+  // set image
+  for (auto& filename : params.images) {
+    // load
+    auto hdr = image<vec4f>{};
+    auto ldr = image<vec4b>{};
+    if (is_preset_filename(filename)) {
+      if (is_preset_hdr(filename)) {
+        if (!make_image_preset(path_basename(filename), hdr, error))
+          return false;
+      } else {
+        if (!make_image_preset(path_basename(filename), ldr, error))
+          return false;
+      }
+    } else if (is_hdr_filename(filename)) {
+      if (!load_image(filename, hdr, error)) return false;
+    } else {
+      if (!load_image(filename, ldr, error)) return false;
+    }
+
+    // push image to the viewer
+    if (!hdr.empty()) {
+      set_image(viewer, filename, hdr);
+    } else {
+      set_image(viewer, filename, ldr);
+    }
   }
 
-  auto update_display = [](view_state* app) {
-    if (app->display.imsize() != app->source.imsize())
-      app->display = app->source;
-    if (app->colorgrade) {
-      colorgrade_image_mt(app->display, app->source, true, app->params);
-    } else {
-      tonemap_image_mt(app->display, app->source, app->exposure, app->filmic);
-    }
-  };
-
-  // preparing display
-  auto app_guard = std::make_unique<view_state>();
-  auto app       = app_guard.get();
-  app->filename  = params.image;
-  app->outname   = params.output;
-  app->source    = img;
-
-  // update display
-  update_display(app);
-
-  // callbacks
-  auto callbacks     = gui_callbacks{};
-  callbacks.clear_cb = [app](gui_window* win, const gui_input& input) {
-    clear_image(app->glimage);
-  };
-  callbacks.draw_cb = [app](gui_window* win, const gui_input& input) {
-    app->glparams.window      = input.window_size;
-    app->glparams.framebuffer = input.framebuffer_viewport;
-    if (!is_initialized(app->glimage)) {
-      init_image(app->glimage);
-      set_image(app->glimage, app->display, false, false);
-    }
-    std::tie(app->glparams.center, app->glparams.scale) = camera_imview(
-        app->glparams.center, app->glparams.scale, app->display.imsize(),
-        app->glparams.window, app->glparams.fit);
-    draw_image(app->glimage, app->glparams);
-  };
-  callbacks.widgets_cb = [app, &update_display](
-                             gui_window* win, const gui_input& input) {
-    auto edited = 0;
-    if (begin_header(win, "tonemap")) {
-      edited += draw_slider(win, "exposure", app->exposure, -5, 5);
-      edited += draw_checkbox(win, "filmic", app->filmic);
-      end_header(win);
-    }
-    if (begin_header(win, "colorgrade")) {
-      auto& params = app->params;
-      edited += draw_checkbox(win, "apply colorgrade", app->colorgrade);
-      edited += draw_slider(win, "exposure", params.exposure, -5, 5);
-      edited += draw_coloredit(win, "tint", params.tint);
-      edited += draw_slider(win, "lincontrast", params.lincontrast, 0, 1);
-      edited += draw_slider(win, "logcontrast", params.logcontrast, 0, 1);
-      edited += draw_slider(win, "linsaturation", params.linsaturation, 0, 1);
-      edited += draw_checkbox(win, "filmic", params.filmic);
-      continue_line(win);
-      edited += draw_checkbox(win, "srgb", params.srgb);
-      edited += draw_slider(win, "contrast", params.contrast, 0, 1);
-      edited += draw_slider(win, "saturation", params.saturation, 0, 1);
-      edited += draw_slider(win, "shadows", params.shadows, 0, 1);
-      edited += draw_slider(win, "midtones", params.midtones, 0, 1);
-      edited += draw_slider(win, "highlights", params.highlights, 0, 1);
-      edited += draw_coloredit(win, "shadows color", params.shadows_color);
-      edited += draw_coloredit(win, "midtones color", params.midtones_color);
-      edited += draw_coloredit(
-          win, "highlights color", params.highlights_color);
-      end_header(win);
-    }
-    if (begin_header(win, "inspect")) {
-      draw_slider(win, "zoom", app->glparams.scale, 0.1, 10);
-      draw_checkbox(win, "fit", app->glparams.fit);
-      auto ij = image_coords(input.mouse_pos, app->glparams.center,
-          app->glparams.scale, app->source.imsize());
-      draw_dragger(win, "mouse", ij);
-      auto img_pixel = zero4f, display_pixel = zero4f;
-      if (ij.x >= 0 && ij.x < app->source.width() && ij.y >= 0 &&
-          ij.y < app->source.height()) {
-        img_pixel     = app->source[{ij.x, ij.y}];
-        display_pixel = app->display[{ij.x, ij.y}];
-      }
-      draw_coloredit(win, "image", img_pixel);
-      draw_dragger(win, "display", display_pixel);
-      end_header(win);
-    }
-    if (edited) {
-      update_display(app);
-      if (!is_initialized(app->glimage)) init_image(app->glimage);
-      set_image(app->glimage, app->display, false, false);
-    }
-  };
-  callbacks.uiupdate_cb = [app](gui_window* win, const gui_input& input) {
-    // handle mouse
-    if (input.mouse_left && !input.widgets_active) {
-      app->glparams.center += input.mouse_pos - input.mouse_last;
-    }
-    if (input.mouse_right && !input.widgets_active) {
-      app->glparams.scale *= powf(
-          2, (input.mouse_pos.x - input.mouse_last.x) * 0.001f);
-    }
-  };
-
-  // run ui
-  run_ui({1280, 720}, "yimage", callbacks);
+  // run view
+  run_view(viewer);
 
   // done
   return true;
@@ -623,7 +520,7 @@ int main(int argc, const char* argv[]) {
 
   auto cli_view = add_command(cli, "view", "View images");
   add_optional(cli_view, "output", view.output, "Output image", "o");
-  add_positional(cli_view, "image", view.image, "Input image");
+  add_positional(cli_view, "images", view.images, "Input images");
 
   auto cli_diff = add_command(cli, "diff", "Diff two images");
   add_optional(cli_diff, "signal", diff.signal, "Signal a diff as error");

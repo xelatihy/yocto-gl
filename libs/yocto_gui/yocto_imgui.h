@@ -37,6 +37,7 @@
 #include <yocto/yocto_math.h>
 
 #include <functional>
+#include <memory>
 #include <string>
 #include <vector>
 
@@ -51,6 +52,7 @@ namespace yocto {
 // using directives
 using std::function;
 using std::string;
+using std::unique_ptr;
 using std::vector;
 
 }  // namespace yocto
@@ -248,6 +250,9 @@ bool draw_coloredit(gui_window* win, const char* lbl, vec4f& value);
 bool draw_hdrcoloredit(gui_window* win, const char* lbl, vec3f& value);
 bool draw_hdrcoloredit(gui_window* win, const char* lbl, vec4f& value);
 
+bool draw_coloredit(gui_window* win, const char* lbl, vec3b& value);
+bool draw_coloredit(gui_window* win, const char* lbl, vec4b& value);
+
 bool draw_combobox(
     gui_window* win, const char* lbl, int& idx, const vector<string>& labels);
 bool draw_combobox(gui_window* win, const char* lbl, string& value,
@@ -266,6 +271,21 @@ inline bool draw_combobox(gui_window* win, const char* lbl, T*& value,
       include_null);
   if (edited) {
     value = idx >= 0 ? vals[idx] : nullptr;
+  }
+  return edited;
+}
+
+template <typename T>
+inline bool draw_combobox(gui_window* win, const char* lbl, T*& value,
+    const vector<unique_ptr<T>>& vals, bool include_null = false) {
+  auto idx = -1;
+  for (auto pos = 0; pos < vals.size(); pos++)
+    if (vals[pos].get() == value) idx = pos;
+  auto edited = draw_combobox(
+      win, lbl, idx, (int)vals.size(), [&](int idx) { return vals[idx]->name; },
+      include_null);
+  if (edited) {
+    value = idx >= 0 ? vals[idx].get() : nullptr;
   }
   return edited;
 }

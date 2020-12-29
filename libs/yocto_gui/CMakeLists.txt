@@ -7,7 +7,9 @@ if(YOCTO_OPENGL)
     yocto_shade.h 
     yocto_shade.cpp 
     yocto_imgui.h 
-    yocto_imgui.cpp 
+    yocto_imgui.cpp
+    yocto_imageviewer.h 
+    yocto_imageviewer.cpp 
     ext/imgui/imgui.cpp 
     ext/imgui/imgui_draw.cpp 
     ext/imgui/imgui_widgets.cpp

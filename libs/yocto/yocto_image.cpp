@@ -724,6 +724,13 @@ void tonemap_image_mt(image<vec4f>& ldr, const image<vec4f>& hdr,
     ldr[{i, j}] = tonemap(hdr[{i, j}], exposure, filmic, srgb);
   });
 }
+void tonemap_image_mt(image<vec4b>& ldr, const image<vec4f>& hdr,
+    float exposure, bool filmic, bool srgb) {
+  parallel_for(hdr.width(), hdr.height(), [&](int i, int j) {
+    ldr[{i, j}] = float_to_byte(tonemap(hdr[{i, j}], exposure, filmic, srgb));
+  });
+}
+
 vec3f colorgrade(
     const vec3f& rgb_, bool linear, const colorgrade_params& params) {
   auto rgb = rgb_;

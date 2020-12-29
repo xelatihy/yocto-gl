@@ -1165,6 +1165,20 @@ static bool parse_clivalue(
   return false;
 }
 
+static bool parse_clivalue(
+    json_value& value, const vector<string>& args, const json_value& schema) {
+  auto type = schema.value("type", "string");
+  if (type == "array") {
+    value = json_array{};
+    for (auto& arg : args) {
+      if (!parse_clivalue(value.emplace_back(), arg, schema.at("items")))
+        return false;
+    }
+    return true;
+  }
+  return false;
+}
+
 static bool set_clivalues(
     const json_value& js, cli_setter& value, string& error) {
   auto cli_error = [&error](const string& message) {
@@ -1286,10 +1300,9 @@ static bool parse_cli(json_value& value, const json_value& schema_,
       if (name.empty()) return cli_error("too many positional arguments");
       auto& property = schema.at("properties").at(name);
       if (property.value("type", "string") == "array") {
-        for (auto pos = idx; args.size(); pos++) {
-          if (!parse_clivalue(value[name].emplace_back(), args[pos], property))
-            return cli_error("bad value for " + name);
-        }
+        auto array_args = vector<string>(args.begin() + idx, args.end());
+        if (!parse_clivalue(value[name], array_args, property))
+          return cli_error("bad value for " + name);
         idx = args.size();
       } else if (property.value("type", "string") != "object") {
         if (!parse_clivalue(value[name], args[idx], property))
