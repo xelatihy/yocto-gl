@@ -221,25 +221,25 @@ inline void add_positional(const cli_command& cmd, const string& name,
 // Boolean flags are indicated with a pair of names "--name/--no-name", so that
 // both options are explicitly specified.
 template <typename T>
-inline void add_option(cli_state& cli, const string& name, T& value,
+[[deprecated]] inline void add_option(cli_state& cli, const string& name, T& value,
     const string& usage, bool req = false);
 template <typename T>
-inline void add_option(const cli_command& cmd, const string& name, T& value,
+[[deprecated]] inline void add_option(const cli_command& cmd, const string& name, T& value,
     const string& usage, bool req = false);
 // Parses an optional or positional argument where values can only be within a
 // set of choices. Supports strings, integers and enums.
 template <typename T>
-inline void add_option(cli_state& cli, const string& name, T& value,
+[[deprecated]] inline void add_option(cli_state& cli, const string& name, T& value,
     const string& usage, const vector<string>& choices, bool req = false);
 template <typename T>
-inline void add_option(const cli_command& cmd, const string& name, T& value,
+[[deprecated]] inline void add_option(const cli_command& cmd, const string& name, T& value,
     const string& usage, const vector<string>& choices, bool req = false);
 // Parse all arguments left on the command line. Can only be used as argument.
 template <typename T>
-inline void add_option(cli_state& cli, const string& name, vector<T>& value,
+[[deprecated]] inline void add_option(cli_state& cli, const string& name, vector<T>& value,
     const string& usage, bool req = false);
 template <typename T>
-inline void add_option(const cli_command& cmd, const string& name,
+[[deprecated]] inline void add_option(const cli_command& cmd, const string& name,
     vector<T>& value, const string& usage, bool req = false);
 
 }  // namespace yocto
