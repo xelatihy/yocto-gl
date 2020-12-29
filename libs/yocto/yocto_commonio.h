@@ -2634,7 +2634,7 @@ inline void add_optional(const cli_command& cmd, const string& name, T& value,
       "unsupported type");
   auto& schema = get_clischema(cmd.cli.schema, cmd.path);
   auto& setter = get_clisetter(cmd.cli.setter, cmd.path);
-  if (!alt.empty()) schema["cli_alternate"][alt] = name;
+  if (!alt.empty()) schema["cli_alternate"][name] = alt;
   if (req) schema["required"].push_back(name);
   auto& property          = schema["properties"][name];
   property["title"]       = name;
@@ -2703,7 +2703,7 @@ inline void add_optional(const cli_command& cmd, const string& name, T& value,
     if (item == value) def = choice;
   auto& schema = get_clischema(cmd.cli.schema, cmd.path);
   auto& setter = get_clisetter(cmd.cli.setter, cmd.path);
-  if (!alt.empty()) schema["cli_alternate"][alt] = name;
+  if (!alt.empty()) schema["cli_alternate"][name] = alt;
   if (req) schema["required"].push_back(to_json(name));
   auto& property          = schema["properties"][name];
   property["title"]       = name;

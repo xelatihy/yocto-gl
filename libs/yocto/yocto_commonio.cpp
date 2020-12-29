@@ -1108,8 +1108,7 @@ static string get_cliusage(const json_value& value, const json_value& schema_) {
   for (auto& name : commandp) pschema = &pschema->at("properties").at(name);
   auto& cschema = *pschema;
 
-  auto message      = string{};
-  auto has_optional = false, has_positional = false, has_command = false;
+  auto message        = string{};
   auto usage_optional = string{}, usage_positional = string{},
        usage_command = string{};
   for (auto& [name, property] : cschema.at("properties").items()) {
@@ -1152,15 +1151,12 @@ static string get_cliusage(const json_value& value, const json_value& schema_) {
       line += "\n";
     }
     if (positional) {
-      has_positional = true;
       usage_positional += line;
     } else {
-      has_optional = true;
       usage_optional += line;
     }
   }
   if (has_commands(cschema)) {
-    has_command = true;
     for (auto& [name, property] : cschema.at("properties").items()) {
       if (property.value("type", "") != "object") continue;
       auto line = "  " + name;
@@ -1170,20 +1166,28 @@ static string get_cliusage(const json_value& value, const json_value& schema_) {
     }
   }
 
+  {
+    auto line = string{};
+    line += "  --help";
+    while (line.size() < 32) line += " ";
+    line += "Prints an help message\n";
+    usage_optional += line;
+  }
+
   message += "usage: " + schema.value("title", "");
   for (auto& name : commandp) message += " " + name;
-  if (has_command) message += " command";
-  if (has_optional) message += " [options]";
-  if (has_positional) message += " <arguments>";
+  if (!usage_command.empty()) message += " command";
+  if (!usage_optional.empty()) message += " [options]";
+  if (!usage_positional.empty()) message += " <arguments>";
   message += "\n";
   message += cschema.value("description", "") + "\n\n";
-  if (has_command) {
+  if (!usage_command.empty()) {
     message += "commands:\n" + usage_command + "\n";
   }
-  if (has_optional) {
+  if (!usage_optional.empty()) {
     message += "options:\n" + usage_optional + "\n";
   }
-  if (has_positional) {
+  if (!usage_positional.empty()) {
     message += "arguments:\n" + usage_positional + "\n";
   }
   return message;
