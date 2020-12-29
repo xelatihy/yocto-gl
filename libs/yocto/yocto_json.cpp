@@ -47,7 +47,7 @@ namespace yocto {
 using njson = nlohmann::ordered_json;
 
 // load/save json
-bool load_json(const string& filename, njson& js, string& error) {
+bool load_json(const string& filename, njson& json, string& error) {
   // error helpers
   auto parse_error = [filename, &error]() {
     error = filename + ": parse error in json";
@@ -56,62 +56,62 @@ bool load_json(const string& filename, njson& js, string& error) {
   auto text = ""s;
   if (!load_text(filename, text, error)) return false;
   try {
-    js = njson::parse(text);
+    json = njson::parse(text);
     return true;
   } catch (std::exception&) {
     return parse_error();
   }
 }
 
-bool save_json(const string& filename, const njson& js, string& error) {
-  return save_text(filename, js.dump(2), error);
+bool save_json(const string& filename, const njson& json, string& error) {
+  return save_text(filename, json.dump(2), error);
 }
 
 // convert json
-void to_json(json_value& js, const njson& njs) {
+void to_json(json_value& json, const njson& njs) {
   switch (njs.type()) {
-    case njson::value_t::null: js = json_value{}; break;
-    case njson::value_t::number_integer: js = (int64_t)njs; break;
-    case njson::value_t::number_unsigned: js = (uint64_t)njs; break;
-    case njson::value_t::number_float: js = (double)njs; break;
-    case njson::value_t::boolean: js = (bool)njs; break;
-    case njson::value_t::string: js = (string)njs; break;
+    case njson::value_t::null: json = json_value{}; break;
+    case njson::value_t::number_integer: json = (int64_t)njs; break;
+    case njson::value_t::number_unsigned: json = (uint64_t)njs; break;
+    case njson::value_t::number_float: json = (double)njs; break;
+    case njson::value_t::boolean: json = (bool)njs; break;
+    case njson::value_t::string: json = (string)njs; break;
     case njson::value_t::array:
-      js = json_array();
-      for (auto& ejs : njs) to_json(js.emplace_back(), ejs);
+      json = json_array();
+      for (auto& ejs : njs) to_json(json.emplace_back(), ejs);
       break;
     case njson::value_t::object:
-      js = json_object();
-      for (auto& [key, ejs] : njs.items()) to_json(js[key], ejs);
+      json = json_object();
+      for (auto& [key, ejs] : njs.items()) to_json(json[key], ejs);
       break;
     case njson::value_t::binary:
-      js                        = json_binary();
-      js.get_ref<json_binary>() = njs.get_binary();
+      json                        = json_binary();
+      json.get_ref<json_binary>() = njs.get_binary();
       break;
-    case njson::value_t::discarded: js = json_value{}; break;
+    case njson::value_t::discarded: json = json_value{}; break;
   }
 }
 
 // convert json
-void from_json(const json_value& js, njson& njs) {
-  switch (js.type()) {
+void from_json(const json_value& json, njson& njs) {
+  switch (json.type()) {
     case json_type::null: njs = {}; break;
-    case json_type::integer: njs = js.get_ref<int64_t>(); break;
-    case json_type::unsigned_: njs = js.get_ref<uint64_t>(); break;
-    case json_type::real: njs = js.get_ref<double>(); break;
-    case json_type::boolean: njs = js.get_ref<bool>(); break;
-    case json_type::string_: njs = js.get_ref<string>(); break;
+    case json_type::integer: njs = json.get_ref<int64_t>(); break;
+    case json_type::unsigned_: njs = json.get_ref<uint64_t>(); break;
+    case json_type::real: njs = json.get_ref<double>(); break;
+    case json_type::boolean: njs = json.get_ref<bool>(); break;
+    case json_type::string_: njs = json.get_ref<string>(); break;
     case json_type::array:
       njs = njson::array();
-      for (auto& ejs : js) from_json(ejs, njs.emplace_back());
+      for (auto& ejs : json) from_json(ejs, njs.emplace_back());
       break;
     case json_type::object:
       njs = njson::object();
-      for (auto& [key, ejs] : js.items()) from_json(ejs, njs[key]);
+      for (auto& [key, ejs] : json.items()) from_json(ejs, njs[key]);
       break;
     case json_type::binary:
       njs              = njson::binary({});
-      njs.get_binary() = js.get_ref<json_binary>();
+      njs.get_binary() = json.get_ref<json_binary>();
       break;
   }
 }
@@ -119,7 +119,7 @@ void from_json(const json_value& js, njson& njs) {
 #if YOCTO_JSON_SAX == 1
 
 // load json
-bool load_json(const string& filename, json_value& js, string& error) {
+bool load_json(const string& filename, json_value& json, string& error) {
   // error helpers
   auto parse_error = [filename, &error]() {
     error = filename + ": parse error in json";
@@ -209,8 +209,8 @@ bool load_json(const string& filename, json_value& js, string& error) {
   };
 
   // set up parsing
-  js           = json_value{};
-  auto handler = sax_handler{&js};
+  json         = json_value{};
+  auto handler = sax_handler{&json};
 
   // load text
   auto text = ""s;
@@ -224,42 +224,42 @@ bool load_json(const string& filename, json_value& js, string& error) {
 #else
 
 // load json
-bool load_json(const string& filename, json_value& js, string& error) {
+bool load_json(const string& filename, json_value& json, string& error) {
   // parse json
   auto njs = njson{};
   if (!load_json(filename, njs, error)) return false;
 
   // convert
-  to_json(js, njs);
+  to_json(json, njs);
   return true;
 }
 
 #endif
 
 // save json
-bool save_json(const string& filename, const json_value& js, string& error) {
+bool save_json(const string& filename, const json_value& json, string& error) {
   // convert
   auto njs = njson{};
-  from_json(js, njs);
+  from_json(json, njs);
 
   // save
   return save_json(filename, njs, error);
 }
 
 // Formats a Json to string
-bool format_json(string& text, const json_value& js, string& error) {
+bool format_json(string& text, const json_value& json, string& error) {
   // convert
   auto njs = njson{};
-  from_json(js, njs);
+  from_json(json, njs);
 
   // save
   text = njs.dump(2);
   return true;
 }
-string format_json(const json_value& js) {
+string format_json(const json_value& json) {
   auto text  = string{};
   auto error = string{};
-  if (!format_json(text, js, error)) return "";
+  if (!format_json(text, json, error)) return "";
   return text;
 }
 
@@ -856,56 +856,57 @@ void parse_cli(
 namespace yocto {
 
 // convert json
-void to_json(njson& njs, json_cview js) {
-  switch (get_type(js)) {
+void to_json(njson& njs, json_cview json) {
+  switch (get_type(json)) {
     case json_type::null: njs = nullptr; break;
-    case json_type::integer: njs = get_integer(js); break;
-    case json_type::unsigned_: njs = get_unsigned(js); break;
-    case json_type::real: njs = get_real(js); break;
-    case json_type::boolean: njs = get_boolean(js); break;
-    case json_type::string_: njs = get_string(js); break;
+    case json_type::integer: njs = get_integer(json); break;
+    case json_type::unsigned_: njs = get_unsigned(json); break;
+    case json_type::real: njs = get_real(json); break;
+    case json_type::boolean: njs = get_boolean(json); break;
+    case json_type::string_: njs = get_string(json); break;
     case json_type::array:
       njs = njson::array();
-      for (auto ejs : iterate_array(js)) to_json(njs.emplace_back(), ejs);
+      for (auto ejs : iterate_array(json)) to_json(njs.emplace_back(), ejs);
       break;
     case json_type::object:
       njs = njson::object();
-      for (auto [key, ejs] : iterate_object(js)) to_json(njs[string{key}], ejs);
+      for (auto [key, ejs] : iterate_object(json))
+        to_json(njs[string{key}], ejs);
       break;
     case json_type::binary:
       njs = njson::binary({});
-      get_binary(js, njs.get_binary());
+      get_binary(json, njs.get_binary());
       break;
   }
 }
 
 // convert json
-void from_json(const njson& njs, json_view js) {
+void from_json(const njson& njs, json_view json) {
   switch (njs.type()) {
-    case njson::value_t::null: set_null(js); break;
-    case njson::value_t::number_integer: set_integer(js, (int64_t)njs); break;
-    case njson::value_t::number_unsigned: set_unsigned(js, njs); break;
-    case njson::value_t::number_float: set_real(js, njs); break;
-    case njson::value_t::boolean: set_boolean(js, (bool)njs); break;
-    case njson::value_t::string: set_string(js, (string)njs); break;
+    case njson::value_t::null: set_null(json); break;
+    case njson::value_t::number_integer: set_integer(json, (int64_t)njs); break;
+    case njson::value_t::number_unsigned: set_unsigned(json, njs); break;
+    case njson::value_t::number_float: set_real(json, njs); break;
+    case njson::value_t::boolean: set_boolean(json, (bool)njs); break;
+    case njson::value_t::string: set_string(json, (string)njs); break;
     case njson::value_t::array:
-      set_array(js);
-      for (auto& ejs : njs) from_json(ejs, append_element(js));
+      set_array(json);
+      for (auto& ejs : njs) from_json(ejs, append_element(json));
       break;
     case njson::value_t::object:
-      set_object(js);
+      set_object(json);
       for (auto& [key, ejs] : njs.items())
-        from_json(ejs, insert_element(js, key));
+        from_json(ejs, insert_element(json, key));
       break;
-    case njson::value_t::binary: set_binary(js, njs.get_binary()); break;
-    case njson::value_t::discarded: set_null(js); break;
+    case njson::value_t::binary: set_binary(json, njs.get_binary()); break;
+    case njson::value_t::discarded: set_null(json); break;
   }
 }
 
 #if YOCTO_JSON_SAX == 1
 
 // load json
-bool load_json(const string& filename, json_tree& js, string& error) {
+bool load_json(const string& filename, json_tree& json, string& error) {
   // error helpers
   auto parse_error = [filename, &error]() {
     error = filename + ": parse error in json";
@@ -993,8 +994,8 @@ bool load_json(const string& filename, json_tree& js, string& error) {
   };
 
   // set up parsing
-  js           = json_tree{};
-  auto handler = sax_handler{get_root(js)};
+  json         = json_tree{};
+  auto handler = sax_handler{get_root(json)};
 
   // load text
   auto text = ""s;
@@ -1008,23 +1009,23 @@ bool load_json(const string& filename, json_tree& js, string& error) {
 #else
 
 // load json
-bool load_json(const string& filename, json_tree& js, string& error) {
+bool load_json(const string& filename, json_tree& json, string& error) {
   // parse json
   auto njs = njson{};
   if (!load_json(filename, njs, error)) return false;
 
   // convert
-  from_json(njs, get_root(js));
+  from_json(njs, get_root(json));
   return true;
 }
 
 #endif
 
 // save json
-bool save_json(const string& filename, const json_tree& js, string& error) {
+bool save_json(const string& filename, const json_tree& json, string& error) {
   // convert
   auto njs = njson{};
-  to_json(njs, get_root((json_tree&)js));
+  to_json(njs, get_root((json_tree&)json));
 
   // save
   return save_json(filename, njs, error);
