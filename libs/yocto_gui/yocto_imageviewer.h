@@ -34,10 +34,12 @@
 // INCLUDES
 // -----------------------------------------------------------------------------
 
-#include <yocto_gui/yocto_opengl.h>
+#include <yocto/yocto_parallel.h>
 #include <yocto_gui/yocto_imgui.h>
+#include <yocto_gui/yocto_opengl.h>
 
 #include <array>
+#include <memory>
 #include <string>
 #include <vector>
 
@@ -49,6 +51,7 @@ namespace yocto {
 // using directives
 using std::array;
 using std::string;
+using std::unique_ptr;
 using std::vector;
 
 }  // namespace yocto
@@ -58,8 +61,81 @@ using std::vector;
 // -----------------------------------------------------------------------------
 namespace yocto {
 
+// Open and image viewer
+struct imageview_state;
+unique_ptr<imageview_state> open_viewer(const string& title);
+// Wait for the viewer to close
+void wait_viewer(imageview_state* viewer);
+// Close viewer
+void close_viewer(imageview_state* viewer);
 
+// Set image
+void set_image(
+    imageview_state* viewer, const string& name, const image<vec4f>& img);
+void set_image(
+    imageview_state* viewer, const string& name, const image<vec4b>& img);
 
-}
+}  // namespace yocto
+
+// -----------------------------------------------------------------------------
+//
+//
+// IMPLEMENTATION
+//
+//
+// -----------------------------------------------------------------------------
+
+// -----------------------------------------------------------------------------
+// IMPLEMENTATION OF IMAGE VIEWER
+// -----------------------------------------------------------------------------
+namespace yocto {
+
+// Image viewer commands
+enum imageview_command_type { quit, setimage };
+struct imageview_command {
+  imageview_command_type type = imageview_command_type::quit;
+  string                 name = "";
+  image<vec4f>           hdr  = {};
+  image<vec4b>           ldr  = {};
+};
+
+// Image view command queue and runner
+using imageview_queue  = concurrent_queue<imageview_command>;
+using imageview_runner = future<void>;
+
+// An image visualized
+struct imageview_image {
+  // original data
+  string name = "image.png";
+
+  // image data
+  image<vec4f> source = {};
+
+  // diplay data
+  image<vec4f> display  = {};
+  float        exposure = 0;
+  bool         filmic   = false;
+
+  // viewing properties
+  ogl_image*       glimage  = new ogl_image{};
+  ogl_image_params glparams = {};
+
+  ~imageview_image() {
+    if (glimage) delete glimage;
+  }
+};
+
+// Image pointer
+using imageview_imageptr = unique_ptr<imageview_image>;
+
+// Simple image viewer
+struct imageview_state {
+  imageview_runner           runner;              // running thread
+  imageview_queue            queue;               // command queue
+  vector<imageview_imageptr> images   = {};       // images
+  imageview_image*           selected = nullptr;  // selected
+};
+
+}  // namespace yocto
 
 #endif

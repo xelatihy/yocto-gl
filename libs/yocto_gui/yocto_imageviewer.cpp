@@ -32,13 +32,29 @@
 // -----------------------------------------------------------------------------
 // USING DIRECTIVES
 // -----------------------------------------------------------------------------
-namespace yocto {
-
-}  // namespace yocto
+namespace yocto {}  // namespace yocto
 
 // -----------------------------------------------------------------------------
 // IMAGE VIEWER
 // -----------------------------------------------------------------------------
 namespace yocto {
+
+// Open and image viewer
+unique_ptr<imageview_state> open_viewer(const string& title) {}
+
+// Wait for the viewer to close
+void wait_viewer(imageview_state* viewer) {}
+
+// Close viewer
+void close_viewer(imageview_state* viewer) {}
+
+// Set image
+void set_image(
+    imageview_state* viewer, const string& name, const image<vec4f>& img) {}
+void set_image(
+    imageview_state* viewer, const string& name, const image<vec4b>& img) {}
+
+// Run application
+void run_app(imageview_state* state) {}
 
 }  // namespace yocto
