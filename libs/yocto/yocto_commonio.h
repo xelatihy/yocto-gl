@@ -75,8 +75,8 @@ namespace yocto {
 
 // Print a message to the console
 void print_info(const string& msg);
-// Prints a message to the console and exit with an error.
-void print_fatal(const string& msg);
+// Prints a message to the console and exit with an error. Returns error code.
+int print_fatal(const string& msg);
 
 // Timer that prints as scope end. Create with `print_timed` and print with
 // `print_elapsed`.

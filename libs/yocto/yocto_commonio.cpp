@@ -62,9 +62,10 @@ namespace yocto {
 // Print a message to the console
 void print_info(const string& msg) { printf("%s\n", msg.c_str()); }
 // Prints a messgae to the console and exit with an error.
-void print_fatal(const string& msg) {
+int print_fatal(const string& msg) {
   printf("\n%s\n", msg.c_str());
   exit(1);
+  return 1;
 }
 
 // get time in nanoseconds - useful only to compute difference of times

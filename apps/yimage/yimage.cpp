@@ -265,22 +265,23 @@ struct convert_params {
 };
 
 // convert images
-bool convert_images(const convert_params& params, string& error) {
+int run_convert(const convert_params& params) {
   // load
-  auto hdr = image<vec4f>{};
-  auto ldr = image<vec4b>{};
+  auto hdr     = image<vec4f>{};
+  auto ldr     = image<vec4b>{};
+  auto ioerror = string{};
   if (is_preset_filename(params.image)) {
     if (is_preset_hdr(params.image)) {
-      if (!make_image_preset(path_basename(params.image), hdr, error))
-        return false;
+      if (!make_image_preset(path_basename(params.image), hdr, ioerror))
+        return print_fatal(ioerror);
     } else {
-      if (!make_image_preset(path_basename(params.image), ldr, error))
-        return false;
+      if (!make_image_preset(path_basename(params.image), ldr, ioerror))
+        return print_fatal(ioerror);
     }
   } else if (is_hdr_filename(params.image)) {
-    if (!load_image(params.image, hdr, error)) return false;
+    if (!load_image(params.image, hdr, ioerror)) return print_fatal(ioerror);
   } else {
-    if (!load_image(params.image, ldr, error)) return false;
+    if (!load_image(params.image, ldr, ioerror)) return print_fatal(ioerror);
   }
 
   // resize if needed
@@ -313,13 +314,13 @@ bool convert_images(const convert_params& params, string& error) {
 
   // save
   if (!hdr.empty()) {
-    if (!save_image(params.output, hdr, error)) return false;
+    if (!save_image(params.output, hdr, ioerror)) return print_fatal(ioerror);
   } else {
-    if (!save_image(params.output, ldr, error)) return false;
+    if (!save_image(params.output, ldr, ioerror)) return print_fatal(ioerror);
   }
 
   // done
-  return true;
+  return 0;
 }
 
 // convert params
@@ -332,14 +333,14 @@ struct view_params {
 #ifndef YOCTO_OPENGL
 
 // convert images
-bool view_images(const view_params& params, string& error) {
-  print_fatal("Opengl not compiled");
+int run_view(const view_params& params) {
+  return print_fatal("Opengl not compiled");
 }
 
 #else
 
 // convert images
-bool view_images(const view_params& params, string& error) {
+int run_view(const view_params& params) {
   // open viewer
   auto viewer_guard = make_imageview("yimage");
   auto viewer       = viewer_guard.get();
@@ -347,20 +348,21 @@ bool view_images(const view_params& params, string& error) {
   // set image
   for (auto& filename : params.images) {
     // load
-    auto hdr = image<vec4f>{};
-    auto ldr = image<vec4b>{};
+    auto hdr     = image<vec4f>{};
+    auto ldr     = image<vec4b>{};
+    auto ioerror = string{};
     if (is_preset_filename(filename)) {
       if (is_preset_hdr(filename)) {
-        if (!make_image_preset(path_basename(filename), hdr, error))
-          return false;
+        if (!make_image_preset(path_basename(filename), hdr, ioerror))
+          return print_fatal(ioerror);
       } else {
-        if (!make_image_preset(path_basename(filename), ldr, error))
-          return false;
+        if (!make_image_preset(path_basename(filename), ldr, ioerror))
+          return print_fatal(ioerror);
       }
     } else if (is_hdr_filename(filename)) {
-      if (!load_image(filename, hdr, error)) return false;
+      if (!load_image(filename, hdr, ioerror)) return print_fatal(ioerror);
     } else {
-      if (!load_image(filename, ldr, error)) return false;
+      if (!load_image(filename, ldr, ioerror)) return print_fatal(ioerror);
     }
 
     // push image to the viewer
@@ -375,7 +377,7 @@ bool view_images(const view_params& params, string& error) {
   run_view(viewer);
 
   // done
-  return true;
+  return 0;
 }
 
 #endif
@@ -391,26 +393,27 @@ struct diff_params {
 };
 
 // resize images
-bool diff_images(const diff_params& params, string& error) {
+int run_diff(const diff_params& params) {
   // load
+  auto ioerror = string{};
   auto img1 = image<vec4f>{}, img2 = image<vec4f>{};
   if (path_extension(params.image1) == ".ypreset") {
-    if (!make_image_preset(path_basename(params.image1), img1, error))
+    if (!make_image_preset(path_basename(params.image1), img1, ioerror))
       return false;
   } else {
-    if (!load_image(params.image1, img1, error)) return false;
+    if (!load_image(params.image1, img1, ioerror)) return false;
   }
   if (path_extension(params.image2) == ".ypreset") {
-    if (!make_image_preset(path_basename(params.image2), img2, error))
+    if (!make_image_preset(path_basename(params.image2), img2, ioerror))
       return false;
   } else {
-    if (!load_image(params.image2, img2, error)) return false;
+    if (!load_image(params.image2, img2, ioerror)) return false;
   }
 
   // check sizes
   if (img1.imsize() != img2.imsize()) {
-    error = "image sizes are different";
-    return false;
+    ioerror = "image sizes are different";
+    return print_fatal(ioerror);
   }
 
   // compute diff
@@ -418,22 +421,23 @@ bool diff_images(const diff_params& params, string& error) {
 
   // save
   if (params.output != "") {
-    if (!save_image(params.output, params.logo ? add_logo(diff) : diff, error))
-      return false;
+    if (!save_image(
+            params.output, params.logo ? add_logo(diff) : diff, ioerror))
+      return print_fatal(ioerror);
   }
 
   // check diff
   if (params.signal) {
     for (auto& c : diff) {
       if (max(xyz(c)) > params.threshold) {
-        error = "image content differs";
-        return false;
+        ioerror = "image content differs";
+        return print_fatal(ioerror);
       }
     }
   }
 
   // done
-  return true;
+  return 0;
 }
 
 // setalpha params
@@ -447,20 +451,21 @@ struct setalpha_params {
 };
 
 // setalpha images
-bool setalpha_images(const setalpha_params& params, string& error) {
+int run_setalpha(const setalpha_params& params) {
   // load
+  auto ioerror = string{};
   auto img = image<vec4f>{}, alpha = image<vec4f>{};
   if (path_extension(params.image) == ".ypreset") {
-    if (!make_image_preset(path_basename(params.image), img, error))
-      return false;
+    if (!make_image_preset(path_basename(params.image), img, ioerror))
+      return print_fatal(ioerror);
   } else {
-    if (!load_image(params.image, img, error)) return false;
+    if (!load_image(params.image, img, ioerror)) return print_fatal(ioerror);
   }
   if (path_extension(params.alpha) == ".ypreset") {
-    if (!make_image_preset(path_basename(params.alpha), alpha, error))
-      return false;
+    if (!make_image_preset(path_basename(params.alpha), alpha, ioerror))
+      return print_fatal(ioerror);
   } else {
-    if (!load_image(params.alpha, alpha, error)) return false;
+    if (!load_image(params.alpha, alpha, ioerror)) return print_fatal(ioerror);
   }
 
   // set alpha
@@ -492,11 +497,11 @@ bool setalpha_images(const setalpha_params& params, string& error) {
   }
 
   // save
-  if (!save_image(params.output, params.logo ? add_logo(out) : out, error))
-    return false;
+  if (!save_image(params.output, params.logo ? add_logo(out) : out, ioerror))
+    return print_fatal(ioerror);
 
   // done
-  return true;
+  return 0;
 }
 
 int main(int argc, const char* argv[]) {
@@ -546,17 +551,14 @@ int main(int argc, const char* argv[]) {
   auto command = get_command(cli);
   auto error   = string{};
   if (command == "convert") {
-    if (!convert_images(convert, error)) print_fatal(error);
+    return run_convert(convert);
   } else if (command == "view") {
-    if (!view_images(view, error)) print_fatal(error);
+    return run_view(view);
   } else if (command == "diff") {
-    if (!diff_images(diff, error)) print_fatal(error);
+    return run_diff(diff);
   } else if (command == "setalpha") {
-    if (!setalpha_images(setalpha, error)) print_fatal(error);
+    return run_setalpha(setalpha);
   } else {
-    print_fatal("unknown command " + command);
+    return print_fatal("unknown command " + command);
   }
-
-  // done
-  return 0;
 }
