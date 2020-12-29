@@ -73,7 +73,8 @@ void close_view(imageview_state* viewer);
 
 // Set image
 void set_image(
-    imageview_state* viewer, const string& name, const image<vec4f>& img);
+    imageview_state* viewer, const string& name, const image<vec4f>& img, 
+    float exposure = 0, bool filmic = false);
 void set_image(
     imageview_state* viewer, const string& name, const image<vec4b>& img);
 void close_image(imageview_state* viewer, const string& name);
@@ -100,12 +101,14 @@ void wait_view(imageview_state* viewer);
 namespace yocto {
 
 // Image viewer commands
-enum imageview_command_type { quit, set, close };
+enum imageview_command_type { quit, set, tonemap, close };
 struct imageview_command {
   imageview_command_type type = imageview_command_type::quit;
   string                 name = "";
   image<vec4f>           hdr  = {};
   image<vec4b>           ldr  = {};
+  float exposure = 0;
+  bool filmic;
 };
 
 // Image view command queue and runner

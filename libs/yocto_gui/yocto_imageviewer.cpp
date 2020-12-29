@@ -71,9 +71,9 @@ void close_view(imageview_state* state) {
 
 // Set image
 void set_image(
-    imageview_state* state, const string& name, const image<vec4f>& img) {
+    imageview_state* state, const string& name, const image<vec4f>& img, float exposure, bool filmic) {
   state->queue.push(
-      imageview_command{imageview_command_type::set, name, img, {}});
+      imageview_command{imageview_command_type::set, name, img, {}, exposure, filmic});
 }
 void set_image(
     imageview_state* state, const string& name, const image<vec4b>& img) {
@@ -82,6 +82,11 @@ void set_image(
 }
 void close_image(imageview_state* state, const string& name) {
   state->queue.push(imageview_command{imageview_command_type::close, name});
+}
+
+// Update image
+void tonemap_image(imageview_state* state, const string& name, float exposure, bool filmic) {
+  state->queue.push(imageview_command{imageview_command_type::tonemap, name, {}, {}, exposure, filmic});
 }
 
 }  // namespace yocto
@@ -94,7 +99,7 @@ namespace yocto {
 static void update_display(imageview_image* img) {
   if (!img->hdr.empty()) {
     if (img->display.imsize() != img->hdr.imsize()) 
-      img->display.resize(img->ldr.imsize());
+      img->display.resize(img->hdr.imsize());
     tonemap_image_mt(img->display, img->hdr, img->exposure, img->filmic);
   } else if(!img->ldr.empty()) {
     img->display = img->ldr;
@@ -134,13 +139,6 @@ void draw_widgets(
   }
   draw_combobox(win, "image", state->selected, state->images, false);
   if (!state->selected) return;
-  // if (begin_header(win, "tonemap")) {
-  //   auto edited = 0;
-  //   edited += draw_slider(win, "exposure", app->exposure, -5, 5);
-  //   edited += draw_checkbox(win, "filmic", app->filmic);
-  //   if (edited) update_display(app);
-  //   end_header(win);
-  // }
   // if (begin_header(win, "colorgrade")) {
   //   auto& params = app->params;
   //   auto  edited = 0;
@@ -197,6 +195,16 @@ void draw_widgets(
     draw_coloredit(win, "display", display_pixel);
     end_header(win);
   }
+  if (!state->selected->hdr.empty()) {
+    if (begin_header(win, "tonemap")) {
+      auto img = state->selected;
+      auto edited = 0;
+      edited += draw_slider(win, "exposure", img->exposure, -5, 5);
+      edited += draw_checkbox(win, "filmic", img->filmic);
+      if (edited) tonemap_image(state, img->name, img->exposure, img->filmic);
+      end_header(win);
+    }
+  }
 }
 
 void draw(gui_window* win, imageview_state* state, const gui_input& input) {
@@ -235,6 +243,8 @@ void update(gui_window* win, imageview_state* state, const gui_input& input) {
         }
         img->hdr = command.hdr;
         img->ldr = command.ldr;
+        img->exposure = command.exposure;
+        img->filmic = command.filmic;
         update_display(img);
         if (!is_initialized(img->glimage)) init_image(img->glimage);
         set_image(img->glimage, img->display, false, false);
@@ -250,6 +260,22 @@ void update(gui_window* win, imageview_state* state, const gui_input& input) {
           if (fix_selected)
             state->selected =
                 state->images.empty() ? nullptr : state->images.front().get();
+        }
+      } break;
+      case imageview_command_type::tonemap: {
+        auto img = (imageview_image*)nullptr;
+        for (auto& image : state->images) {
+          if (image->name == command.name) {
+            img = image.get();
+            break;
+          }
+        }
+        if (img != nullptr) {
+          img->exposure = command.exposure;
+          img->filmic = command.filmic;
+          update_display(img);
+          if (!is_initialized(img->glimage)) init_image(img->glimage);
+          set_image(img->glimage, img->display, false, false);
         }
       } break;
       case imageview_command_type::quit: {
