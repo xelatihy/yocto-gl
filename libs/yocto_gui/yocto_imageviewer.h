@@ -76,6 +76,7 @@ void set_image(
     imageview_state* viewer, const string& name, const image<vec4f>& img);
 void set_image(
     imageview_state* viewer, const string& name, const image<vec4b>& img);
+void close_image(imageview_state* viewer, const string& name);
 
 // Open and asycn viewer
 struct imageview_state;
@@ -99,7 +100,7 @@ void wait_view(imageview_state* viewer);
 namespace yocto {
 
 // Image viewer commands
-enum imageview_command_type { quit, setimage };
+enum imageview_command_type { quit, set, close };
 struct imageview_command {
   imageview_command_type type = imageview_command_type::quit;
   string                 name = "";

@@ -73,12 +73,15 @@ void close_view(imageview_state* state) {
 void set_image(
     imageview_state* state, const string& name, const image<vec4f>& img) {
   state->queue.push(
-      imageview_command{imageview_command_type::setimage, name, img, {}});
+      imageview_command{imageview_command_type::set, name, img, {}});
 }
 void set_image(
     imageview_state* state, const string& name, const image<vec4b>& img) {
   state->queue.push(
-      imageview_command{imageview_command_type::setimage, name, {}, img});
+      imageview_command{imageview_command_type::set, name, {}, img});
+}
+void close_image(imageview_state* state, const string& name) {
+  state->queue.push(imageview_command{imageview_command_type::close, name});
 }
 
 }  // namespace yocto
@@ -116,15 +119,11 @@ void draw_widgets(
   }
   continue_line(win);
   if (draw_button(win, "close", (bool)state->selected)) {
-    // state->images.erase(
-    //     std::find(state->images.begin(), state->images.end(),
-    //     state->selected));
-    // state->selected = state->images.empty() ? nullptr :
-    // state->images.front();
+    close_image(state, state->selected->name);
   }
   continue_line(win);
   if (draw_button(win, "quit")) {
-    set_close(win, true);
+    close_view(state);
   }
   // draw_combobox(win, "image", state->selected, state->images, false);
   if (!state->selected) return;
@@ -216,15 +215,40 @@ void update(gui_window* win, imageview_state* state, const gui_input& input) {
   auto has_command = state->queue.try_pop(command);
   if (has_command) {
     switch (command.type) {
-      case imageview_command_type::setimage: {
-        state->images.emplace_back(make_unique<imageview_image>());
-        auto img    = state->images.back().get();
-        img->name   = command.name;
+      case imageview_command_type::set: {
+        auto img = (imageview_image*)nullptr;
+        for (auto& image : state->images) {
+          if (image->name == command.name) {
+            img = image.get();
+            break;
+          }
+        }
+        if (img == nullptr) {
+          state->images.emplace_back(make_unique<imageview_image>());
+          img  = state->images.back().get();
+          img->name = command.name;
+          if (state->selected == nullptr) state->selected = img;
+        }
         img->source = command.hdr;
         update_display(img);
         if (!is_initialized(img->glimage)) init_image(img->glimage);
         set_image(img->glimage, img->display, false, false);
-        if (state->selected == nullptr) state->selected = img;
+      } break;
+      case imageview_command_type::close: {
+        auto position = -1;
+        for (auto pos = (size_t)0; pos < state->images.size(); pos++) {
+          if (state->images[pos]->name == command.name) position = (int)pos;
+        }
+        if (position >= 0) {
+          auto fix_selected = state->selected == state->images[position].get();
+          state->images.erase(state->images.begin() + position);
+          if (fix_selected)
+            state->selected =
+                state->images.empty() ? nullptr : state->images.front().get();
+        }
+      } break;
+      case imageview_command_type::quit: {
+        set_close(win, true);
       } break;
     }
   }
