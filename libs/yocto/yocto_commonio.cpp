@@ -1257,7 +1257,8 @@ bool set_clivalues(const json_value& js, cli_setter& value, string& error) {
   return true;
 }
 
-bool parse_cli(cli_state& cli, vector<string>& args, string& error) {
+bool parse_cli(json_value& value, const json_value& schema_,
+    vector<string>& args, string& error) {
   auto cli_error = [&error](const string& message) {
     error = message;
     return false;
@@ -1315,20 +1316,19 @@ bool parse_cli(cli_state& cli, vector<string>& args, string& error) {
     string      name = "";
     json_value& schema;
     json_value& value;
-    cli_setter& setter;
     size_t      positional = 0;
   };
 
   // initialize parsing
-  cli.schema = fix_cli_schema(cli.schema);
-  cli.value  = json_object{};
-  auto stack = vector<stack_elem>{{"", cli.schema, cli.value, cli.setter, 0}};
+  auto schema = fix_cli_schema(schema_);
+  value       = json_object{};
+  auto stack  = vector<stack_elem>{{"", schema, value, 0}};
 
   // parse the command line
   for (auto idx = (size_t)0; idx < args.size(); idx++) {
-    auto& [_, schema, value, setter, cpositional] = stack.back();
-    auto arg                                      = args.at(idx);
-    auto positional                               = arg.find('-') != 0;
+    auto& [_, schema, value, cpositional] = stack.back();
+    auto arg                              = args.at(idx);
+    auto positional                       = arg.find('-') != 0;
     if (positional && has_commands(schema)) {
       auto name = string{};
       for (auto& [pname, property] : schema.at("properties").items()) {
@@ -1339,8 +1339,8 @@ bool parse_cli(cli_state& cli, vector<string>& args, string& error) {
       if (name.empty()) return cli_error("missing value for command");
       value[get_command(schema)] = name;
       value[name]                = json_object{};
-      stack.push_back({name, schema.at("properties").at(name), value.at(name),
-          setter.at(name), 0});
+      stack.push_back(
+          {name, schema.at("properties").at(name), value.at(name), 0});
       continue;
     } else if (positional) {
       auto name            = string{};
@@ -1398,7 +1398,7 @@ bool parse_cli(cli_state& cli, vector<string>& args, string& error) {
   }
 
   // check for required and apply defaults
-  for (auto& [_, schema, value, setter, __] : stack) {
+  for (auto& [_, schema, value, __] : stack) {
     if (has_commands(schema) && !value.contains(get_command(schema)))
       return cli_error("missing value for " + get_command(schema));
     for (auto& [name, property] : schema.at("properties").items()) {
@@ -1410,16 +1410,34 @@ bool parse_cli(cli_state& cli, vector<string>& args, string& error) {
     }
   }
 
-  // set values
-  if (!set_clivalues(cli.value, cli.setter, error)) return false;
-
   // done
   return true;
 }
 
-bool parse_cli(cli_state& cli, int argc, const char** argv, string& error) {
+bool parse_cli(json_value& value, const json_value& schema, int argc,
+    const char** argv, string& error) {
   auto args = vector<string>{argv + 1, argv + argc};
-  return parse_cli(cli, args, error);
+  return parse_cli(value, schema, args, error);
+}
+
+void parse_cli(
+    json_value& value, const json_value& schema, int argc, const char** argv) {
+  auto error = string{};
+  if (!parse_cli(value, schema, argc, argv, error)) {
+    print_info("error: " + error);
+    print_info("");
+    print_info(get_cliusage(value, schema));
+    exit(1);
+  } else if (get_clihelp(value)) {
+    print_info(get_cliusage(value, schema));
+    exit(0);
+  }
+}
+
+bool parse_cli(cli_state& cli, int argc, const char** argv, string& error) {
+  if (!parse_cli(cli.value, cli.schema, argc, argv, error)) return false;
+  if (!set_clivalues(cli.value, cli.setter, error)) return false;
+  return true;
 }
 
 void parse_cli(cli_state& cli, int argc, const char** argv) {
@@ -1427,10 +1445,10 @@ void parse_cli(cli_state& cli, int argc, const char** argv) {
   if (!parse_cli(cli, argc, argv, error)) {
     print_info("error: " + error);
     print_info("");
-    print_info(get_usage(cli));
+    print_info(get_cliusage(cli.value, cli.schema));
     exit(1);
-  } else if (get_help(cli)) {
-    print_info(get_usage(cli));
+  } else if (get_clihelp(cli.value)) {
+    print_info(get_cliusage(cli.value, cli.schema));
     exit(0);
   }
 }
