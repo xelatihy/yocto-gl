@@ -1012,8 +1012,8 @@ namespace yocto {
 
 static json_value fix_cli_schema(const json_value& schema) { return schema; }
 
-static string get_cliusage(const json_value& schema, const string& app_name, 
-  const string& command) {
+static string get_cliusage(
+    const json_value& schema, const string& app_name, const string& command) {
   // helper
   auto is_positional = [](const json_value& schema,
                            const string&    name) -> bool {
@@ -1165,7 +1165,8 @@ static bool parse_clivalue(
   return false;
 }
 
-static bool set_clivalues(const json_value& js, cli_setter& value, string& error) {
+static bool set_clivalues(
+    const json_value& js, cli_setter& value, string& error) {
   auto cli_error = [&error](const string& message) {
     error = message;
     return false;
@@ -1251,8 +1252,8 @@ static bool parse_cli(json_value& value, const json_value& schema_,
   auto schema = fix_cli_schema(schema_);
   value       = json_object{};
   auto stack  = vector<stack_elem>{{"", schema, value, 0}};
-  command = "";
-  usage = get_cliusage(schema, args[0], command);
+  command     = "";
+  usage       = get_cliusage(schema, args[0], command);
 
   // parse the command line
   for (auto idx = (size_t)1; idx < args.size(); idx++) {
@@ -1345,8 +1346,8 @@ static bool parse_cli(json_value& value, const json_value& schema_,
   return true;
 }
 
-bool parse_cli(json_value& value, const json_value& schema, 
-  const vector<string>& args, string& error, string& usage) {
+bool parse_cli(json_value& value, const json_value& schema,
+    const vector<string>& args, string& error, string& usage) {
   auto command = string{};
   return parse_cli(value, schema, args, error, usage, command);
 }
@@ -1372,7 +1373,7 @@ void parse_cli(
 
 void parse_cli(
     json_value& value, const json_value& schema, int argc, const char** argv) {
-  return parse_cli(value, schema, {argv, argv+argc});
+  return parse_cli(value, schema, {argv, argv + argc});
 }
 
 // initialize a command line parser
@@ -1405,12 +1406,13 @@ cli_command add_command(
 }
 
 bool parse_cli(cli_state& cli, const vector<string>& args, string& error) {
-  auto usage = string{};
+  auto usage   = string{};
   auto command = string{};
-  if (!parse_cli(cli.value, cli.schema, args, error, usage, command)) return false;
-  cli.usage = usage;
+  if (!parse_cli(cli.value, cli.schema, args, error, usage, command))
+    return false;
+  cli.usage   = usage;
   cli.command = command;
-  cli.help = error == cli_help_message;
+  cli.help    = error == cli_help_message;
   if (!set_clivalues(cli.value, cli.setter, error)) return false;
   return true;
 }
@@ -1428,11 +1430,11 @@ void parse_cli(cli_state& cli, const vector<string>& args) {
 }
 
 bool parse_cli(cli_state& cli, int argc, const char** argv, string& error) {
-  return parse_cli(cli, {argv, argv+argc}, error);
+  return parse_cli(cli, {argv, argv + argc}, error);
 }
 
 void parse_cli(cli_state& cli, int argc, const char** argv) {
-  return parse_cli(cli, {argv, argv+argc});
+  return parse_cli(cli, {argv, argv + argc});
 }
 
 }  // namespace yocto
