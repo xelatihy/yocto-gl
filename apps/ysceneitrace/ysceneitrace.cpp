@@ -755,24 +755,23 @@ int main(int argc, const char* argv[]) {
 
   // parse command line
   auto cli = make_cli("ysceneitrace", "progressive path tracing");
-  add_option(cli, "--camera", camera_name, "Camera name.");
-  add_option(
-      cli, "--resolution,-r", apps->params.resolution, "Image resolution.");
-  add_option(cli, "--samples,-s", apps->params.samples, "Number of samples.");
-  add_option(cli, "--tracer,-t", apps->params.sampler, "Tracer type.",
-      trace_sampler_names);
-  add_option(cli, "--falsecolor,-F", apps->params.falsecolor,
-      "Tracer false color type.", trace_falsecolor_names);
-  add_option(
-      cli, "--bounces,-b", apps->params.bounces, "Maximum number of bounces.");
-  add_option(cli, "--clamp", apps->params.clamp, "Final pixel clamping.");
-  add_option(
-      cli, "--filter/--no-filter", apps->params.tentfilter, "Filter image.");
-  add_option(cli, "--env-hidden/--no-env-hidden", apps->params.envhidden,
+  add_optional(cli, "camera", camera_name, "Camera name.");
+  add_optional(
+      cli, "resolution", apps->params.resolution, "Image resolution.", "r");
+  add_optional(cli, "samples", apps->params.samples, "Number of samples.", "s");
+  add_optional(cli, "tracer", apps->params.sampler, "Tracer type.",
+      trace_sampler_labels, "t");
+  add_optional(cli, "falsecolor", apps->params.falsecolor,
+      "Tracer false color type.", trace_falsecolor_labels, "F");
+  add_optional(
+      cli, "bounces", apps->params.bounces, "Maximum number of bounces.", "b");
+  add_optional(cli, "-clamp", apps->params.clamp, "Final pixel clamping.");
+  add_optional(cli, "filter", apps->params.tentfilter, "Filter image.");
+  add_optional(cli, "env-hidden", apps->params.envhidden,
       "Environments are hidden in renderer");
-  add_option(cli, "--bvh", apps->params.bvh, "Bvh type", trace_bvh_names);
-  add_option(cli, "--skyenv/--no-skyenv", add_skyenv, "Add sky envmap");
-  add_option(cli, "scenes", filenames, "Scene filenames", true);
+  add_optional(cli, "bvh", apps->params.bvh, "Bvh type", trace_bvh_labels);
+  add_optional(cli, "skyenv", add_skyenv, "Add sky envmap");
+  add_positional(cli, "scenes", filenames, "Scene filenames");
   parse_cli(cli, argc, argv);
 
   // loading images

@@ -592,12 +592,12 @@ int main(int argc, const char *argv[]) {
 
   // parse command line
   auto cli = make_cli("ysculpting", " sculpt a mesh interactively");
-  add_option(
-      cli, "--resolution,-r", app->drawgl_prms.resolution, "Image resolution.");
-  add_option(cli, "--lighting", app->drawgl_prms.lighting, "Lighting mode.",
-      shade_lighting_names);
-  add_option(cli, "shape", app->shapename, "Shape filename.", true);
-  add_option(cli, "texture", app->imagename, "Texture filename.");
+  add_optional(
+      cli, "resolution", app->drawgl_prms.resolution, "Image resolution.", "r");
+  add_optional(cli, "lighting", app->drawgl_prms.lighting, "Lighting mode.",
+      shade_lighting_labels);
+  add_optional(cli, "texture", app->imagename, "Texture filename.");
+  add_positional(cli, "shape", app->shapename, "Shape filename.");
   parse_cli(cli, argc, argv);
 
   auto ioerror              = ""s;

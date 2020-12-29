@@ -46,21 +46,21 @@ int main(int argc, const char* argv[]) {
 
   // parse command line
   auto cli = make_cli("yheightfieldproc", "Makes a mesh from a heightfield");
-  add_option(cli, "--height,-h", height, "Height scale");
-  add_option(cli, "--smooth", smooth, "Compute smooth normals");
-  add_option(cli, "--rotatey,-ry", rotate.y, "Rotate around y axis");
-  add_option(cli, "--rotatex,-rx", rotate.x, "Rotate around x axis");
-  add_option(cli, "--rotatez,-rz", rotate.z, "Rotate around z axis");
-  add_option(cli, "--translatey,-ty", translate.y, "Translate along y axis");
-  add_option(cli, "--translatex,-tx", translate.x, "Translate along x axis");
-  add_option(cli, "--translatez,-tz", translate.z, "Translate along z axis");
-  add_option(cli, "--scale,-s", uscale, "Scale along xyz axes");
-  add_option(cli, "--scaley,-sy", scale.y, "Scale along y axis");
-  add_option(cli, "--scalex,-sx", scale.x, "Scale along x axis");
-  add_option(cli, "--scalez,-sz", scale.z, "Scale along z axis");
-  add_option(cli, "--info,-i", info, "print mesh info");
-  add_option(cli, "--output,-o", output, "output mesh");
-  add_option(cli, "mesh", filename, "input heightfield", true);
+  add_optional(cli, "height", height, "Height scale", "h");
+  add_optional(cli, "smooth", smooth, "Compute smooth normals");
+  add_optional(cli, "rotatey", rotate.y, "Rotate around y axis", "ry");
+  add_optional(cli, "rotatex", rotate.x, "Rotate around x axis", "rx");
+  add_optional(cli, "rotatez", rotate.z, "Rotate around z axis", "rz");
+  add_optional(cli, "translatey", translate.y, "Translate along y axis", "ty");
+  add_optional(cli, "translatex", translate.x, "Translate along x axis", "tx");
+  add_optional(cli, "translatez", translate.z, "Translate along z axis", "tz");
+  add_optional(cli, "scale", uscale, "Scale along xyz axes", "s");
+  add_optional(cli, "scaley", scale.y, "Scale along y axis", "sy");
+  add_optional(cli, "scalex", scale.x, "Scale along x axis", "sx");
+  add_optional(cli, "scalez", scale.z, "Scale along z axis", "sz");
+  add_optional(cli, "info", info, "print mesh info", "i");
+  add_optional(cli, "output", output, "output mesh", "o");
+  add_positional(cli, "mesh", filename, "input heightfield");
   parse_cli(cli, argc, argv);
 
   // mesh data

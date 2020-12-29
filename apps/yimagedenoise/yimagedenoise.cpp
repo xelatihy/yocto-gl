@@ -120,10 +120,10 @@ int main(int argc, const char* argv[]) {
   // parse cli arguments and assure their correctness
   auto cli = make_cli(
       "yimagedenoise", "Denoise images using Intel Open Image Denoise");
-  add_option(cli, "--alb,-a", albedo_name, "albedo feature image filename");
-  add_option(cli, "--nrm,-n", normal_name, "normal feature image filename");
-  add_option(cli, "--output,-o", outname, "output image filename");
-  add_option(cli, "filename", filename, "input image filename", true);
+  add_optional(cli, "alb", albedo_name, "albedo feature image filename", "a");
+  add_optional(cli, "nrm", normal_name, "normal feature image filename", "n");
+  add_optional(cli, "output", outname, "output image filename", "o");
+  add_positional(cli, "filename", filename, "input image filename", true);
   parse_cli(cli, argc, argv);
 
   if (normal_name != "" && albedo_name == "")

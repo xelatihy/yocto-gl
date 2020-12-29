@@ -174,25 +174,25 @@ int main(int argc, const char* argv[]) {
 
   // parse command line
   auto cli = make_cli("yscenetrace", "Offline path tracing");
-  add_option(cli, "--camera", camera_name, "Camera name.");
-  add_option(cli, "--resolution,-r", params.resolution, "Image resolution.");
-  add_option(cli, "--samples,-s", params.samples, "Number of samples.");
-  add_option(
-      cli, "--tracer,-t", params.sampler, "Trace type.", trace_sampler_names);
-  add_option(cli, "--falsecolor,-F", params.falsecolor,
-      "Tracer false color type.", trace_falsecolor_names);
-  add_option(cli, "--bounces,-b", params.bounces, "Maximum number of bounces.");
-  add_option(cli, "--clamp", params.clamp, "Final pixel clamping.");
-  add_option(cli, "--filter/--no-filter", params.tentfilter, "Filter image.");
-  add_option(cli, "--env-hidden/--no-env-hidden", params.envhidden,
-      "Environments are hidden in renderer");
-  add_option(cli, "--save-batch", save_batch, "Save images progressively");
-  add_option(cli, "--bvh", params.bvh, "Bvh type", trace_bvh_names);
-  add_option(cli, "--skyenv/--no-skyenv", add_skyenv, "Add sky envmap");
-  add_option(cli, "--output-image,-o", imfilename, "Image filename");
-  add_option(cli, "scene", filename, "Scene filename", true);
-  add_option(cli, "--denoise-features,-d", feature_images,
-      "Generate denoise feature images");
+  add_optional(cli, "camera", camera_name, "Camera name.");
+  add_optional(cli, "resolution", params.resolution, "Image resolution.", "r");
+  add_optional(cli, "samples", params.samples, "Number of samples.", "s");
+  add_optional(
+      cli, "tracer", params.sampler, "Trace type.", trace_sampler_labels, "t");
+  add_optional(cli, "falsecolor", params.falsecolor, "Tracer false color type.",
+      trace_falsecolor_labels, "F");
+  add_optional(
+      cli, "bounces", params.bounces, "Maximum number of bounces.", "b");
+  add_optional(cli, "clamp", params.clamp, "Final pixel clamping.");
+  add_optional(cli, "filter", params.tentfilter, "Filter image.");
+  add_optional(cli, "env-hidden", params.envhidden, "Environments are hidden.");
+  add_optional(cli, "save-batch", save_batch, "Save images progressively");
+  add_optional(cli, "bvh", params.bvh, "Bvh type", trace_bvh_labels);
+  add_optional(cli, "skyenv", add_skyenv, "Add sky envmap");
+  add_optional(cli, "output", imfilename, "Image filename", "o");
+  add_optional(cli, "denoise-features", feature_images,
+      "Generate denoise feature images", "d");
+  add_positional(cli, "scene", filename, "Scene filename");
   parse_cli(cli, argc, argv);
 
   // scene loading

@@ -587,13 +587,13 @@ int main(int argc, const char* argv[]) {
 
   // parse command line
   auto cli = make_cli("ymshproc", "Applies operations on a triangle mesh");
-  add_option(cli, "--smooth", smooth, "Compute smooth normals");
-  add_option(cli, "--faceted", faceted, "Remove normals");
-  add_option(cli, "--validate,-v", validate, "validate mesh");
-  add_option(cli, "--path,-p", pathname, "output path");
-  add_option(cli, "--stats,-s", statsname, "output stats");
-  add_option(cli, "--scene,-S", scenename, "output scene");
-  add_option(cli, "mesh", meshname, "input mesh", true);
+  add_optional(cli, "smooth", smooth, "Compute smooth normals");
+  add_optional(cli, "faceted", faceted, "Remove normals");
+  add_optional(cli, "validate", validate, "validate mesh", "v");
+  add_optional(cli, "path", pathname, "output path", "p");
+  add_optional(cli, "stats", statsname, "output stats", "s");
+  add_optional(cli, "scene", scenename, "output scene", "S");
+  add_positional(cli, "mesh", meshname, "input mesh");
   parse_cli(cli, argc, argv);
 
   // mesh data

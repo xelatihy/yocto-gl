@@ -35,6 +35,7 @@
 // -----------------------------------------------------------------------------
 
 #include <string>
+#include <utility>
 #include <vector>
 
 #include "yocto_opengl.h"
@@ -45,6 +46,7 @@
 namespace yocto {
 
 // using directives
+using std::pair;
 using std::string;
 using std::vector;
 
@@ -173,6 +175,12 @@ struct shade_scene {
 
 // Shading type
 enum struct shade_lighting_type { envlight, camlight, eyelight };
+
+// Shading labels
+const auto shade_lighting_labels = vector<pair<shade_lighting_type, string>>{
+    {shade_lighting_type::envlight, "envlight"},
+    {shade_lighting_type::camlight, "camlight"},
+    {shade_lighting_type::eyelight, "eyelight"}};
 
 // Shading name
 const auto shade_lighting_names = vector<string>{

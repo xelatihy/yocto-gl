@@ -787,11 +787,11 @@ int main(int argc, const char* argv[]) {
 
   // parse command line
   auto cli = make_cli("ysceneproc", "Process scene");
-  add_option(cli, "--info,-i", info, "print scene info");
-  add_option(cli, "--copyright,-c", copyright, "copyright string");
-  add_option(cli, "--validate/--no-validate", validate, "Validate scene");
-  add_option(cli, "--output,-o", output, "output scene");
-  add_option(cli, "scene", filename, "input scene", true);
+  add_optional(cli, "info", info, "print scene info", "i");
+  add_optional(cli, "copyright", copyright, "copyright string", "c");
+  add_optional(cli, "validate", validate, "Validate scene");
+  add_optional(cli, "output", output, "output scene", "o");
+  add_positional(cli, "scene", filename, "input scene");
   parse_cli(cli, argc, argv);
 
   // load scene

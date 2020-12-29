@@ -198,12 +198,12 @@ int main(int argc, const char* argv[]) {
 
   // parse command line
   auto cli = make_cli("ysceneviews", "views scene inteactively");
-  add_option(cli, "--camera", camera_name, "Camera name.");
-  add_option(
-      cli, "--resolution,-r", app->drawgl_prms.resolution, "Image resolution.");
-  add_option(cli, "--lighting", app->drawgl_prms.lighting, "Lighting type.",
-      shade_lighting_names);
-  add_option(cli, "scene", app->filename, "Scene filename", true);
+  add_optional(cli, "camera", camera_name, "Camera name.");
+  add_optional(
+      cli, "resolution", app->drawgl_prms.resolution, "Image resolution.", "r");
+  add_optional(cli, "lighting", app->drawgl_prms.lighting, "Lighting type.",
+      shade_lighting_labels);
+  add_positional(cli, "scene", app->filename, "Scene filename");
   parse_cli(cli, argc, argv);
 
   // loading scene

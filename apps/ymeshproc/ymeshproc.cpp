@@ -128,29 +128,29 @@ int main(int argc, const char* argv[]) {
 
   // parse command line
   auto cli = make_cli("ymshproc", "Applies operations on a triangle mesh");
-  add_option(cli, "--smooth", smooth, "Compute smooth normals");
-  add_option(cli, "--faceted", faceted, "Remove normals");
-  add_option(cli, "--rotatey,-ry", rotate.y, "Rotate around y axis");
-  add_option(cli, "--rotatex,-rx", rotate.x, "Rotate around x axis");
-  add_option(cli, "--rotatez,-rz", rotate.z, "Rotate around z axis");
-  add_option(cli, "--translatey,-ty", translate.y, "Translate along y axis");
-  add_option(cli, "--translatex,-tx", translate.x, "Translate along x axis");
-  add_option(cli, "--translatez,-tz", translate.z, "Translate along z axis");
-  add_option(cli, "--scale,-s", uscale, "Scale along xyz axes");
-  add_option(cli, "--scaley,-sy", scale.y, "Scale along y axis");
-  add_option(cli, "--scalex,-sx", scale.x, "Scale along x axis");
-  add_option(cli, "--scalez,-sz", scale.z, "Scale along z axis");
-  add_option(cli, "--info,-i", info, "print mesh info");
-  add_option(cli, "--geodesic-source,-g", geodesic_source, "Geodesic source");
-  add_option(cli, "--path-vertex0,-p0", p0, "Path vertex 0");
-  add_option(cli, "--path-vertex1,-p1", p1, "Path vertex 1");
-  add_option(cli, "--path-vertex2,-p2", p2, "Path vertex 2");
-  add_option(cli, "--num-geodesic-samples", num_geodesic_samples,
+  add_optional(cli, "smooth", smooth, "Compute smooth normals");
+  add_optional(cli, "faceted", faceted, "Remove normals");
+  add_optional(cli, "rotatey", rotate.y, "Rotate around y axis", "ry");
+  add_optional(cli, "rotatex", rotate.x, "Rotate around x axis", "rx");
+  add_optional(cli, "rotatez", rotate.z, "Rotate around z axis", "rz");
+  add_optional(cli, "translatey", translate.y, "Translate along y axis", "ty");
+  add_optional(cli, "translatex", translate.x, "Translate along x axis", "tx");
+  add_optional(cli, "translatez", translate.z, "Translate along z axis", "tz");
+  add_optional(cli, "scale", uscale, "Scale along xyz axes", "s");
+  add_optional(cli, "scaley", scale.y, "Scale along y axis", "sy");
+  add_optional(cli, "scalex", scale.x, "Scale along x axis", "sx");
+  add_optional(cli, "scalez", scale.z, "Scale along z axis", "sz");
+  add_optional(cli, "info", info, "print mesh info", "i");
+  add_optional(cli, "geodesic-source", geodesic_source, "Geodesic source");
+  add_optional(cli, "path-vertex0", p0, "Path vertex 0", "p0");
+  add_optional(cli, "path-vertex1", p1, "Path vertex 1", "p1");
+  add_optional(cli, "path-vertex2", p2, "Path vertex 2", "p2");
+  add_optional(cli, "num-geodesic-samples", num_geodesic_samples,
       "Number of sampled geodesic sources");
-  add_option(cli, "--geodesic-scale", geodesic_scale, "Geodesic scale");
-  add_option(cli, "--slice", slice, "Slice mesh along field isolines");
-  add_option(cli, "--output,-o", output, "output mesh");
-  add_option(cli, "mesh", filename, "input mesh", true);
+  add_optional(cli, "geodesic-scale", geodesic_scale, "Geodesic scale");
+  add_optional(cli, "slice", slice, "Slice mesh along field isolines");
+  add_optional(cli, "output", output, "output mesh", "o");
+  add_positional(cli, "mesh", filename, "input mesh");
   parse_cli(cli, argc, argv);
 
   // mesh data

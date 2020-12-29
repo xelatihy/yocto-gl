@@ -522,52 +522,48 @@ int main(int argc, const char* argv[]) {
   auto bilateral = bilateral_params{};
 
   // parse command line
-  auto  cli         = make_cli("yimage", "Transform images");
-  auto& cli_convert = add_command(cli, "convert", "Convert images");
-  add_option(cli_convert, "--logo/--no-logo", convert.logo, "Add logo");
-  add_option(cli_convert, "--output,-o", convert.output, "Output image");
-  add_option(cli_convert, "image", convert.image, "Input image", true);
-  auto& cli_tonemap = add_command(cli, "tonemap", "Tonemap images");
-  add_option(cli_tonemap, "--exposure,-e", tonemap.exposure, "Exposure");
-  add_option(
-      cli_tonemap, "--filmic/--no-filmic", tonemap.filmic, "Filmic curve");
-  add_option(cli_tonemap, "--srgb/--no-srgb", tonemap.srgb, "Srgb curve");
-  add_option(cli_tonemap, "--logo/--no-logo", tonemap.logo, "Add logo");
-  add_option(cli_tonemap, "--output,-o", tonemap.output, "Output image");
-  add_option(cli_tonemap, "image", tonemap.image, "Input image", true);
-  auto& cli_resize = add_command(cli, "resize", "Resize images");
-  add_option(cli_resize, "--width", resize.width,
-      "resize size (0 to maintain aspect)");
-  add_option(cli_resize, "--height", resize.height,
-      "resize size (0 to maintain aspect)");
-  add_option(cli_resize, "--logo/--no-logo", resize.logo, "Add logo");
-  add_option(cli_resize, "--output,-o", resize.output, "Output image");
-  add_option(cli_resize, "image", resize.image, "Input image", true);
-  auto& cli_diff = add_command(cli, "diff", "Diff two images");
-  add_option(cli_diff, "--signal", diff.signal, "Signal a diff as error");
-  add_option(cli_diff, "--threshold,", diff.threshold, "Diff threshold");
-  add_option(cli_diff, "--logo/--no-logo", diff.logo, "Add logo");
-  add_option(cli_diff, "--output,-o", diff.output, "Output image");
-  add_option(cli_diff, "image1", diff.image1, "Input image", true);
-  add_option(cli_diff, "image2", diff.image2, "Input image", true);
-  auto& cli_setalpha = add_command(cli, "setalpha", "Set alpha in images");
-  add_option(cli_setalpha, "--alpha", setalpha.alpha, "Alpha filename", true);
-  add_option(cli_setalpha, "--from-color/--no-from-color", setalpha.from_color,
-      "Get alpha from color");
-  add_option(cli_setalpha, "--to-color/--no-to-color", setalpha.to_color,
-      "Set color as alpha");
-  add_option(cli_setalpha, "--logo/--no-logo", tonemap.logo, "Add logo");
-  add_option(cli_setalpha, "--output,-o", tonemap.output, "Output image");
-  add_option(cli_setalpha, "image", tonemap.image, "Input image", true);
-  auto& cli_bilateral = add_command(
+  auto cli         = make_cli("yimage", "Transform images");
+  auto cli_convert = add_command(cli, "convert", "Convert images");
+  add_optional(cli_convert, "logo", convert.logo, "Add logo");
+  add_optional(cli_convert, "output", convert.output, "Output image", "o");
+  add_positional(cli_convert, "image", convert.image, "Input image");
+  auto cli_tonemap = add_command(cli, "tonemap", "Tonemap images");
+  add_optional(cli_tonemap, "exposure", tonemap.exposure, "Exposure", "e");
+  add_optional(cli_tonemap, "filmic", tonemap.filmic, "Filmic curve", "f");
+  add_optional(cli_tonemap, "srgb", tonemap.srgb, "Srgb curve");
+  add_optional(cli_tonemap, "logo", tonemap.logo, "Add logo");
+  add_optional(cli_tonemap, "output", tonemap.output, "Output image", "o");
+  add_positional(cli_tonemap, "image", tonemap.image, "Input image");
+  auto cli_resize = add_command(cli, "resize", "Resize images");
+  add_optional(cli_resize, "width", resize.width, "resize width");
+  add_optional(cli_resize, "height", resize.height, "resize height");
+  add_optional(cli_resize, "logo", resize.logo, "Add logo");
+  add_optional(cli_resize, "output", resize.output, "Output image", "o");
+  add_positional(cli_resize, "image", resize.image, "Input image");
+  auto cli_diff = add_command(cli, "diff", "Diff two images");
+  add_optional(cli_diff, "signal", diff.signal, "Signal a diff as error");
+  add_optional(cli_diff, "threshold,", diff.threshold, "Diff threshold");
+  add_optional(cli_diff, "logo", diff.logo, "Add logo", "o");
+  add_optional(cli_diff, "output", diff.output, "Output image");
+  add_positional(cli_diff, "image1", diff.image1, "Input image");
+  add_positional(cli_diff, "image2", diff.image2, "Input image");
+  auto cli_setalpha = add_command(cli, "setalpha", "Set alpha in images");
+  add_optional(
+      cli_setalpha, "from-color", setalpha.from_color, "Alpha from color");
+  add_optional(cli_setalpha, "to-color", setalpha.to_color, "Color from alpha");
+  add_optional(cli_setalpha, "logo", tonemap.logo, "Add logo");
+  add_optional(cli_setalpha, "output", tonemap.output, "Output image", "o");
+  add_positional(cli_setalpha, "image", tonemap.image, "Input image");
+  add_positional(cli_setalpha, "alpha", setalpha.alpha, "Alpha filename");
+  auto cli_bilateral = add_command(
       cli, "bilateral", "Apply bilateral filtering to images");
-  add_option(cli_bilateral, "--spatial-sigma", bilateral.spatial_sigma,
+  add_optional(cli_bilateral, "spatial-sigma", bilateral.spatial_sigma,
       "blur spatial sigma");
-  add_option(cli_bilateral, "--range-sigma", bilateral.range_sigma,
+  add_optional(cli_bilateral, "range-sigma", bilateral.range_sigma,
       "bilateral blur range sigma");
-  add_option(cli_bilateral, "--logo/--no-logo", resize.logo, "Add logo");
-  add_option(cli_bilateral, "--output,-o", resize.output, "Output image");
-  add_option(cli_bilateral, "image", resize.image, "Input image", true);
+  add_optional(cli_bilateral, "logo", resize.logo, "Add logo");
+  add_optional(cli_bilateral, "output", resize.output, "Output image", "o");
+  add_positional(cli_bilateral, "image", resize.image, "Input image");
 
   // parse cli
   parse_cli(cli, argc, argv);

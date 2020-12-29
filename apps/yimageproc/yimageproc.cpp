@@ -253,28 +253,24 @@ int main(int argc, const char* argv[]) {
 
   // parse command line
   auto cli = make_cli("yimgproc", "Transform images");
-  add_option(cli, "--tonemap/--no-tonemap", tonemap_on, "Tonemap image");
-  add_option(cli, "--exposure,-e", tonemap_exposure, "Tonemap exposure");
-  add_option(
-      cli, "--filmic/--no-filmic", tonemap_filmic, "Tonemap uses filmic curve");
-  add_option(cli, "--resize-width", resize_width,
-      "resize size (0 to maintain aspect)");
-  add_option(cli, "--resize-height", resize_height,
-      "resize size (0 to maintain aspect)");
-  add_option(cli, "--spatial-sigma", spatial_sigma, "blur spatial sigma");
-  add_option(cli, "--range-sigma", range_sigma, "bilateral blur range sigma");
-  add_option(
-      cli, "--set-alpha", alpha_filename, "set alpha as this image alpha");
-  add_option(cli, "--set-color-as-alpha", coloralpha_filename,
+  add_optional(cli, "tonemap", tonemap_on, "Tonemap image");
+  add_optional(cli, "exposure", tonemap_exposure, "Tonemap exposure", "e");
+  add_optional(cli, "filmic", tonemap_filmic, "Tonemap uses filmic curve");
+  add_optional(cli, "resize-width", resize_width, "resize width");
+  add_optional(cli, "resize-height", resize_height, "resize height");
+  add_optional(cli, "spatial-sigma", spatial_sigma, "blur spatial sigma");
+  add_optional(cli, "range-sigma", range_sigma, "bilateral blur range sigma");
+  add_optional(
+      cli, "set-alpha", alpha_filename, "set alpha as this image alpha");
+  add_optional(cli, "set-color-as-alpha", coloralpha_filename,
       "set alpha as this image color");
-  add_option(cli, "--alpha-to-color/--no-alpha-to-color", alpha_to_color,
-      "Set color as alpha");
-  add_option(cli, "--logo/--no-logo", logo, "Add logo");
-  add_option(cli, "--diff", diff_filename, "compute the diff between images");
-  add_option(cli, "--diff-signal", diff_signal, "signal a diff as error");
-  add_option(cli, "--diff-threshold,", diff_threshold, "diff threshold");
-  add_option(cli, "--output,-o", output, "output image filename");
-  add_option(cli, "filename", filename, "input image filename", true);
+  add_optional(cli, "alpha-to-color", alpha_to_color, "Set color as alpha");
+  add_optional(cli, "logo", logo, "Add logo");
+  add_optional(cli, "diff", diff_filename, "compute the diff between images");
+  add_optional(cli, "diff-signal", diff_signal, "signal a diff as error");
+  add_optional(cli, "diff-threshold,", diff_threshold, "diff threshold");
+  add_optional(cli, "output", output, "output image filename", "o");
+  add_positional(cli, "filename", filename, "input image filename");
   parse_cli(cli, argc, argv);
 
   // error string buffer
