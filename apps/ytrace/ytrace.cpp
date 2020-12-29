@@ -339,23 +339,10 @@ int run_view(const view_params& params) {
 
 #endif
 
-// denoise params
-struct denoise_params {
-  string image  = "image.png";
-  string output = "out.png";
-};
-
-// convert images
-int run_denoise(const denoise_params& params) {
-  // done
-  return 0;
-}
-
 int main(int argc, const char* argv[]) {
   // command line parameters
-  auto render  = render_params{};
-  auto view    = view_params{};
-  auto denoise = denoise_params{};
+  auto render = render_params{};
+  auto view   = view_params{};
 
   // parse command line
   auto cli = make_cli("ytrace", "render images from scenes");
@@ -417,8 +404,6 @@ int main(int argc, const char* argv[]) {
     return run_render(render);
   } else if (command == "view") {
     return run_view(view);
-  } else if (command == "denoise") {
-    return run_denoise(denoise);
   } else {
     print_fatal("unknown command");
     return 1;
