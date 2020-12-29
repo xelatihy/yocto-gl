@@ -193,6 +193,8 @@ image<vec4b> tonemap_imageb(const image<vec4f>& hdr, float exposure,
 // Apply tone mapping using multithreading for speed
 void tonemap_image_mt(image<vec4f>& ldr, const image<vec4f>& hdr,
     float exposure, bool filmic = false, bool srgb = true);
+void tonemap_image_mt(image<vec4b>& ldr, const image<vec4f>& hdr,
+    float exposure, bool filmic = false, bool srgb = true);
 
 // minimal color grading
 struct colorgrade_params {

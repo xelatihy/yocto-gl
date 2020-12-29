@@ -92,8 +92,15 @@ void close_image(imageview_state* state, const string& name) {
 namespace yocto {
 
 static void update_display(imageview_image* img) {
-  if (img->display.imsize() != img->source.imsize()) img->display = img->source;
-  tonemap_image_mt(img->display, img->source, img->exposure, img->filmic);
+  if (!img->hdr.empty()) {
+    if (img->display.imsize() != img->hdr.imsize()) 
+      img->display.resize(img->ldr.imsize());
+    tonemap_image_mt(img->display, img->hdr, img->exposure, img->filmic);
+  } else if(!img->ldr.empty()) {
+    img->display = img->ldr;
+  } else {
+    // TODO(fabio): decide about empty images
+  }
   // if (app->colorgrade) {
   //   colorgrade_image_mt(app->display, app->source, true, app->params);
   // } else {
@@ -229,7 +236,8 @@ void update(gui_window* win, imageview_state* state, const gui_input& input) {
           img->name = command.name;
           if (state->selected == nullptr) state->selected = img;
         }
-        img->source = command.hdr;
+        img->hdr = command.hdr;
+        img->ldr = command.ldr;
         update_display(img);
         if (!is_initialized(img->glimage)) init_image(img->glimage);
         set_image(img->glimage, img->display, false, false);

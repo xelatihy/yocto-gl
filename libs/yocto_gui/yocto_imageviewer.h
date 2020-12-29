@@ -118,10 +118,11 @@ struct imageview_image {
   string name = "image.png";
 
   // image data
-  image<vec4f> source = {};
+  image<vec4f> hdr = {};
+  image<vec4b> ldr = {};
 
   // diplay data
-  image<vec4f> display  = {};
+  image<vec4b> display  = {};
   float        exposure = 0;
   bool         filmic   = false;
 
