@@ -221,26 +221,29 @@ inline void add_positional(const cli_command& cmd, const string& name,
 // Boolean flags are indicated with a pair of names "--name/--no-name", so that
 // both options are explicitly specified.
 template <typename T>
-[[deprecated]] inline void add_option(cli_state& cli, const string& name, T& value,
-    const string& usage, bool req = false);
+[[deprecated]] inline void add_option(cli_state& cli, const string& name,
+    T& value, const string& usage, bool req = false);
 template <typename T>
-[[deprecated]] inline void add_option(const cli_command& cmd, const string& name, T& value,
-    const string& usage, bool req = false);
+[[deprecated]] inline void add_option(const cli_command& cmd,
+    const string& name, T& value, const string& usage, bool req = false);
 // Parses an optional or positional argument where values can only be within a
 // set of choices. Supports strings, integers and enums.
 template <typename T>
-[[deprecated]] inline void add_option(cli_state& cli, const string& name, T& value,
-    const string& usage, const vector<string>& choices, bool req = false);
+[[deprecated]] inline void add_option(cli_state& cli, const string& name,
+    T& value, const string& usage, const vector<string>& choices,
+    bool req = false);
 template <typename T>
-[[deprecated]] inline void add_option(const cli_command& cmd, const string& name, T& value,
-    const string& usage, const vector<string>& choices, bool req = false);
+[[deprecated]] inline void add_option(const cli_command& cmd,
+    const string& name, T& value, const string& usage,
+    const vector<string>& choices, bool req = false);
 // Parse all arguments left on the command line. Can only be used as argument.
 template <typename T>
-[[deprecated]] inline void add_option(cli_state& cli, const string& name, vector<T>& value,
-    const string& usage, bool req = false);
-template <typename T>
-[[deprecated]] inline void add_option(const cli_command& cmd, const string& name,
+[[deprecated]] inline void add_option(cli_state& cli, const string& name,
     vector<T>& value, const string& usage, bool req = false);
+template <typename T>
+[[deprecated]] inline void add_option(const cli_command& cmd,
+    const string& name, vector<T>& value, const string& usage,
+    bool req = false);
 
 }  // namespace yocto
 
@@ -344,9 +347,21 @@ struct json_value {
   json_value(const json_value& other);
   json_value(json_value&& other);
   explicit json_value(std::nullptr_t);
+  explicit json_value(int32_t);
+  explicit json_value(int64_t);
+  explicit json_value(uint32_t);
+  explicit json_value(uint64_t);
+  explicit json_value(float);
+  explicit json_value(double);
+  explicit json_value(bool);
+  explicit json_value(const string&);
+  explicit json_value(string_view);
+  explicit json_value(const char* value);
+  explicit json_value(const json_array&);
+  explicit json_value(const json_object&);
+  explicit json_value(const json_binary&);
   template <typename T>
   explicit json_value(const T& value);
-  explicit json_value(const char* value);
 
   // assignments
   json_value& operator=(const json_value& other);
@@ -369,6 +384,15 @@ struct json_value {
   bool      is_binary() const;
 
   // conversions (see get)
+  explicit operator int32_t() const;
+  explicit operator int64_t() const;
+  explicit operator uint32_t() const;
+  explicit operator uint64_t() const;
+  explicit operator float() const;
+  explicit operator double() const;
+  explicit operator bool() const;
+  explicit operator string() const;
+  explicit operator string_view() const;
   template <typename T>
   explicit operator T() const;
 
@@ -437,6 +461,11 @@ struct json_value {
 
   // swap
   void swap(json_value& other);
+
+#ifdef __APPLE__
+  explicit json_value(size_t);
+  explicit operator size_t() const;
+#endif
 
   // destructor
   ~json_value();
@@ -816,58 +845,40 @@ inline json_value::json_value(json_value&& other)
 }
 inline json_value::json_value(std::nullptr_t)
     : _type{json_type::null}, _unsigned{0} {}
-template <typename T>
-inline json_value::json_value(const T& value) {
-  if constexpr (std::is_same_v<T, int64_t>) {
-    _type    = json_type::integer;
-    _integer = value;
-  } else if constexpr (std::is_same_v<T, int32_t>) {
-    _type    = json_type::integer;
-    _integer = value;
-  } else if constexpr (std::is_same_v<T, uint64_t>) {
-    _type     = json_type::unsigned_;
-    _unsigned = value;
-  } else if constexpr (std::is_same_v<T, uint32_t>) {
-    _type     = json_type::unsigned_;
-    _unsigned = value;
-#ifdef __APPLE__
-  } else if constexpr (std::is_same_v<T, size_t>) {
-    _type     = json_type::unsigned_;
-    _unsigned = (uint64_t)value;
-#endif
-  } else if constexpr (std::is_same_v<T, double>) {
-    _type = json_type::real;
-    _real = value;
-  } else if constexpr (std::is_same_v<T, float>) {
-    _type = json_type::real;
-    _real = value;
-  } else if constexpr (std::is_same_v<T, bool>) {
-    _type    = json_type::boolean;
-    _boolean = value;
-  } else if constexpr (std::is_same_v<T, string>) {
-    _type   = json_type::string_;
-    _string = new string{value};
-  } else if constexpr (std::is_same_v<T, char*>) {
-    _type   = json_type::string_;
-    _string = new string{value};
-  } else if constexpr (std::is_same_v<T, string_view>) {
-    _type   = json_type::string_;
-    _string = new string{value};
-  } else if constexpr (std::is_same_v<T, json_array>) {
-    _type  = json_type::array;
-    _array = new json_array{value};
-  } else if constexpr (std::is_same_v<T, json_object>) {
-    _type   = json_type::object;
-    _object = new json_object{value};
-  } else if constexpr (std::is_same_v<T, json_binary>) {
-    _type   = json_type::binary;
-    _binary = new json_binary{value};
-  } else {
-    to_json(*this, value);
-  }
-}
+inline json_value::json_value(int64_t value)
+    : _type{json_type::integer}, _integer{value} {}
+inline json_value::json_value(int32_t value)
+    : _type{json_type::integer}, _integer{value} {}
+inline json_value::json_value(uint64_t value)
+    : _type{json_type::unsigned_}, _unsigned{value} {}
+inline json_value::json_value(uint32_t value)
+    : _type{json_type::unsigned_}, _unsigned{value} {}
+inline json_value::json_value(double value)
+    : _type{json_type::real}, _real{value} {}
+inline json_value::json_value(float value)
+    : _type{json_type::real}, _real{value} {}
+inline json_value::json_value(bool value)
+    : _type{json_type::boolean}, _boolean{value} {}
+inline json_value::json_value(const string& value)
+    : _type{json_type::string_}, _string{new string{value}} {}
+inline json_value::json_value(string_view value)
+    : _type{json_type::string_}, _string{new string{value}} {}
 inline json_value::json_value(const char* value)
     : _type{json_type::string_}, _string{new string{value}} {}
+inline json_value::json_value(const json_array& value)
+    : _type{json_type::array}, _array{new json_array{value}} {}
+inline json_value::json_value(const json_object& value)
+    : _type{json_type::object}, _object{new json_object{value}} {}
+inline json_value::json_value(const json_binary& value)
+    : _type{json_type::binary}, _binary{new json_binary{value}} {}
+template <typename T>
+inline json_value::json_value(const T& value) {
+  to_json(*this, value);
+}
+#ifdef __APPLE__
+inline json_value::json_value(size_t value)
+    : _type{json_type::unsigned_}, _unsigned{(uint64_t)value} {}
+#endif
 
 // assignments
 inline json_value& json_value::operator=(const json_value& value) {
@@ -914,72 +925,66 @@ inline bool json_value::is_object() const { return _type == json_type::object; }
 inline bool json_value::is_binary() const { return _type == json_type::binary; }
 
 // conversions
+inline json_value::operator int64_t() const {
+  if (_type != json_type::integer && _type != json_type::unsigned_)
+    throw json_error{"integer expected"};
+  return _type == json_type::integer ? (int64_t)_integer : (int64_t)_unsigned;
+}
+inline json_value::operator int32_t() const {
+  if (_type != json_type::integer && _type != json_type::unsigned_)
+    throw json_error{"integer expected"};
+  return _type == json_type::integer ? (int32_t)_integer : (int32_t)_unsigned;
+}
+inline json_value::operator uint64_t() const {
+  if (_type != json_type::integer && _type != json_type::unsigned_)
+    throw json_error{"integer expected"};
+  return _type == json_type::integer ? (uint64_t)_integer : (uint64_t)_unsigned;
+}
+inline json_value::operator uint32_t() const {
+  if (_type != json_type::integer && _type != json_type::unsigned_)
+    throw json_error{"integer expected"};
+  return _type == json_type::integer ? (uint32_t)_integer : (uint32_t)_unsigned;
+}
+inline json_value::operator double() const {
+  if (_type != json_type::real && _type != json_type::integer &&
+      _type != json_type::unsigned_)
+    throw json_error{"number expected"};
+  return _type == json_type::real
+             ? (double)_real
+             : _type == json_type::integer ? (double)_integer
+                                           : (double)_unsigned;
+}
+inline json_value::operator float() const {
+  if (_type != json_type::real && _type != json_type::integer &&
+      _type != json_type::unsigned_)
+    throw json_error{"number expected"};
+  return _type == json_type::real
+             ? (float)_real
+             : _type == json_type::integer ? (float)_integer : (float)_unsigned;
+}
+inline json_value::operator bool() const {
+  if (_type != json_type::boolean) throw json_error{"boolean expected"};
+  return _boolean;
+}
+inline json_value::operator string() const {
+  if (_type != json_type::string_) throw json_error{"string expected"};
+  return *_string;
+}
+inline json_value::operator string_view() const {
+  if (_type != json_type::string_) throw json_error{"string expected"};
+  return *_string;
+}
 template <typename T>
 inline json_value::operator T() const {
-  if constexpr (std::is_same_v<T, int64_t>) {
-    if (_type != json_type::integer && _type != json_type::unsigned_)
-      throw json_error{"integer expected"};
-    return _type == json_type::integer ? (int64_t)_integer : (int64_t)_unsigned;
-  } else if constexpr (std::is_same_v<T, int32_t>) {
-    if (_type != json_type::integer && _type != json_type::unsigned_)
-      throw json_error{"integer expected"};
-    return _type == json_type::integer ? (int32_t)_integer : (int32_t)_unsigned;
-  } else if constexpr (std::is_same_v<T, uint64_t>) {
-    if (_type != json_type::integer && _type != json_type::unsigned_)
-      throw json_error{"integer expected"};
-    return _type == json_type::integer ? (uint64_t)_integer
-                                       : (uint64_t)_unsigned;
-  } else if constexpr (std::is_same_v<T, uint32_t>) {
-    if (_type != json_type::integer && _type != json_type::unsigned_)
-      throw json_error{"integer expected"};
-    return _type == json_type::integer ? (uint32_t)_integer
-                                       : (uint32_t)_unsigned;
-#ifdef __APPLE__
-  } else if constexpr (std::is_same_v<T, size_t>) {
-    if (_type != json_type::integer && _type != json_type::unsigned_)
-      throw json_error{"integer expected"};
-    return _type == json_type::integer ? (size_t)_integer : (size_t)_unsigned;
-#endif
-  } else if constexpr (std::is_same_v<T, double>) {
-    if (_type != json_type::real && _type != json_type::integer &&
-        _type != json_type::unsigned_)
-      throw json_error{"number expected"};
-    return _type == json_type::real
-               ? (double)_real
-               : _type == json_type::integer ? (double)_integer
-                                             : (double)_unsigned;
-  } else if constexpr (std::is_same_v<T, float>) {
-    if (_type != json_type::real && _type != json_type::integer &&
-        _type != json_type::unsigned_)
-      throw json_error{"number expected"};
-    return _type == json_type::real
-               ? (float)_real
-               : _type == json_type::integer ? (float)_integer
-                                             : (float)_unsigned;
-  } else if constexpr (std::is_same_v<T, bool>) {
-    if (_type != json_type::boolean) throw json_error{"boolean expected"};
-    return _boolean;
-  } else if constexpr (std::is_same_v<T, string>) {
-    if (_type != json_type::string_) throw json_error{"string expected"};
-    return *_string;
-  } else if constexpr (std::is_same_v<T, string_view>) {
-    if (_type != json_type::string_) throw json_error{"string expected"};
-    return *_string;
-  } else if constexpr (std::is_same_v<T, json_array>) {
-    if (_type != json_type::array) throw json_error{"array expected"};
-    return *_array;
-  } else if constexpr (std::is_same_v<T, json_object>) {
-    if (_type != json_type::object) throw json_error{"object expected"};
-    return *_object;
-  } else if constexpr (std::is_same_v<T, json_binary>) {
-    if (_type != json_type::binary) throw json_error{"binary expected"};
-    return *_binary;
-  } else {
-    auto value = T{};
-    from_json(*this, value);
-    return value;
-  }
+  auto value = T{};
+  from_json(*this, value);
+  return value;
 }
+#ifdef __APPLE__
+inline json_value::operator size_t() const {
+  return (size_t) operator uint64_t();
+}
+#endif
 
 // conversions
 template <typename T>

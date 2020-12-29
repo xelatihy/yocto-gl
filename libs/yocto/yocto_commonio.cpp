@@ -1398,7 +1398,7 @@ cli_command add_command(
   property["properties"]  = json_object{};
   auto& setter            = get_clisetter(cli.cli.setter, cli.path);
   setter[name]            = cli_setter{};
-  auto subcommand = cli;
+  auto subcommand         = cli;
   subcommand.path.push_back(name);
   return subcommand;
 }
