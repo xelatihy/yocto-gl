@@ -213,8 +213,18 @@ int run_render(const render_params& params) {
   }
 
   // render
-  auto render = trace_image(
-      scene, camera, bvh, lights, params.params, print_progress);
+  auto render = trace_image(scene, camera, bvh, lights, params.params,
+      print_progress,
+      [savebatch = params.savebatch, output = params.output](
+          const image<vec4f>& render, int sample, int samples) {
+        if (!savebatch) return;
+        auto ext = "-s" + std::to_string(sample + samples) +
+                   path_extension(output);
+        auto outfilename = replace_extension(output, ext);
+        auto ioerror     = ""s;
+        print_progress("save image", sample, samples);
+        if (!save_image(outfilename, render, ioerror)) print_fatal(ioerror);
+      });
 
   // save image
   print_progress("save image", 0, 1);
