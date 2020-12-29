@@ -170,36 +170,33 @@ void draw_widgets(
   //   params.highlights_color); if (edited) update_display(app);
   //   end_header(win);
   // }
-  // if (begin_header(win, "inspect")) {
-  //   draw_label(win, "image", app->name);
-  //   draw_label(win, "filename", app->filename);
-  //   draw_label(win, "outname", app->outname);
-  //   draw_label(win, "image",
-  //       std::to_string(app->source.width()) + " x " +
-  //           std::to_string(app->source.height()));
-  //   draw_slider(win, "zoom", app->glparams.scale, 0.1, 10);
-  //   draw_checkbox(win, "fit", app->glparams.fit);
-  //   auto ij = image_coords(input.mouse_pos, app->glparams.center,
-  //       app->glparams.scale, app->source.imsize());
-  //   draw_dragger(win, "mouse", ij);
-  //   auto img_pixel = zero4f, display_pixel = zero4f;
-  //   if (ij.x >= 0 && ij.x < app->source.width() && ij.y >= 0 &&
-  //       ij.y < app->source.height()) {
-  //     img_pixel     = app->source[{ij.x, ij.y}];
-  //     display_pixel = app->display[{ij.x, ij.y}];
-  //   }
-  //   draw_coloredit(win, "image", img_pixel);
-  //   draw_dragger(win, "display", display_pixel);
-  //   draw_dragger(win, "image min", app->source_stats.min);
-  //   draw_dragger(win, "image max", app->source_stats.max);
-  //   draw_dragger(win, "image avg", app->source_stats.average);
-  //   draw_histogram(win, "image histo", app->source_stats.histogram);
-  //   draw_dragger(win, "display min", app->display_stats.min);
-  //   draw_dragger(win, "display max", app->display_stats.max);
-  //   draw_dragger(win, "display avg", app->display_stats.average);
-  //   draw_histogram(win, "display histo", app->display_stats.histogram);
-  //   end_header(win);
-  // }
+  if (begin_header(win, "inspect")) {
+    auto img = state->selected;
+    draw_label(win, "name", img->name);
+    auto size = img->display.imsize();
+    draw_dragger(win, "size", size);
+    draw_slider(win, "zoom", img->glparams.scale, 0.1, 10);
+    draw_checkbox(win, "fit", img->glparams.fit);
+    auto ij = image_coords(input.mouse_pos, img->glparams.center,
+        img->glparams.scale, img->display.imsize());
+    draw_dragger(win, "mouse", ij);
+    auto hdr_pixel = zero4f;
+    auto ldr_pixel = zero4b;
+    auto display_pixel = zero4b;
+    if (ij.x >= 0 && ij.x < img->display.width() && ij.y >= 0 &&
+        ij.y < img->display.height()) {
+      hdr_pixel     = !img->hdr.empty() ? img->hdr[{ij.x, ij.y}] : zero4f;
+      ldr_pixel     = !img->ldr.empty() ? img->ldr[{ij.x, ij.y}] : zero4b;
+      display_pixel = img->display[{ij.x, ij.y}];
+    }
+    if(!img->hdr.empty()) {
+      draw_coloredit(win, "source", hdr_pixel);
+    } else {
+      draw_coloredit(win, "source", ldr_pixel);
+    }
+    draw_coloredit(win, "display", display_pixel);
+    end_header(win);
+  }
 }
 
 void draw(gui_window* win, imageview_state* state, const gui_input& input) {
