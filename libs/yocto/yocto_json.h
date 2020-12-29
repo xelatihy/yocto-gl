@@ -1,5 +1,5 @@
 //
-// # Yocto/JSON: Simple JSON implementation
+// # Yocto/JSON: Utilities for manipulating JSON data
 //
 // Yocto/JSON is an implementation of a utilities for hanlding JSON data,
 // including a Json variant data type, loading, saving and formatting JSON,
