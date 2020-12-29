@@ -132,7 +132,7 @@ void draw_widgets(
   if (draw_button(win, "quit")) {
     close_view(state);
   }
-  // draw_combobox(win, "image", state->selected, state->images, false);
+  draw_combobox(win, "image", state->selected, state->images, false);
   if (!state->selected) return;
   // if (begin_header(win, "tonemap")) {
   //   auto edited = 0;

@@ -39,6 +39,7 @@
 #include <functional>
 #include <string>
 #include <vector>
+#include <memory>
 
 // forward declaration
 struct GLFWwindow;
@@ -52,6 +53,7 @@ namespace yocto {
 using std::function;
 using std::string;
 using std::vector;
+using std::unique_ptr;
 
 }  // namespace yocto
 
@@ -266,6 +268,21 @@ inline bool draw_combobox(gui_window* win, const char* lbl, T*& value,
       include_null);
   if (edited) {
     value = idx >= 0 ? vals[idx] : nullptr;
+  }
+  return edited;
+}
+
+template <typename T>
+inline bool draw_combobox(gui_window* win, const char* lbl, T*& value,
+    const vector<unique_ptr<T>>& vals, bool include_null = false) {
+  auto idx = -1;
+  for (auto pos = 0; pos < vals.size(); pos++)
+    if (vals[pos].get() == value) idx = pos;
+  auto edited = draw_combobox(
+      win, lbl, idx, (int)vals.size(), [&](int idx) { return vals[idx]->name; },
+      include_null);
+  if (edited) {
+    value = idx >= 0 ? vals[idx].get() : nullptr;
   }
   return edited;
 }
