@@ -46,21 +46,26 @@ using std::make_unique;
 // -----------------------------------------------------------------------------
 namespace yocto {
 
-// Forwared declarations
-static void run_app(imageview_state* state);
+// make an image viewer
+unique_ptr<imageview_state> make_imageview(const string& title) {
+  auto state = make_unique<imageview_state>();
+  // state->name = title;
+  return state;
+}
 
 // Open and image viewer
-unique_ptr<imageview_state> open_viewer(const string& title) {
-  auto state    = make_unique<imageview_state>();
-  state->runner = std::async(std::launch::async, run_app, state.get());
+unique_ptr<imageview_state> open_imageview(const string& title) {
+  auto state = make_unique<imageview_state>();
+  // state->name   = title;
+  state->runner = std::async(std::launch::async, run_view, state.get());
   return state;
 }
 
 // Wait for the viewer to close
-void wait_viewer(imageview_state* state) { state->runner.wait(); }
+void wait_view(imageview_state* state) { state->runner.wait(); }
 
 // Close viewer
-void close_viewer(imageview_state* state) {
+void close_view(imageview_state* state) {
   state->queue.push(imageview_command{imageview_command_type::quit});
 }
 
@@ -226,7 +231,7 @@ void update(gui_window* win, imageview_state* state, const gui_input& input) {
 }
 
 // Run application
-void run_app(imageview_state* state) {
+void run_view(imageview_state* state) {
   // callbacks
   auto callbacks     = gui_callbacks{};
   callbacks.clear_cb = [state](gui_window* win, const gui_input& input) {

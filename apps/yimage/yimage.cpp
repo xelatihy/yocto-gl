@@ -30,8 +30,7 @@
 #include <yocto/yocto_image.h>
 #include <yocto/yocto_math.h>
 #if YOCTO_OPENGL == 1
-#include <yocto_gui/yocto_imgui.h>
-#include <yocto_gui/yocto_opengl.h>
+#include <yocto_gui/yocto_imageviewer.h>
 #endif
 using namespace yocto;
 
@@ -339,30 +338,6 @@ bool view_images(const view_params& params, string& error) {
 
 #else
 
-struct view_state {
-  // original data
-  string filename = "image.png";
-  string outname  = "out.png";
-
-  // image data
-  image<vec4f> source = {};
-
-  // diplay data
-  image<vec4f>      display    = {};
-  float             exposure   = 0;
-  bool              filmic     = false;
-  colorgrade_params params     = {};
-  bool              colorgrade = false;
-
-  // viewing properties
-  ogl_image*       glimage  = new ogl_image{};
-  ogl_image_params glparams = {};
-
-  ~view_state() {
-    if (glimage) delete glimage;
-  }
-};
-
 // convert images
 bool view_images(const view_params& params, string& error) {
   // load
@@ -374,108 +349,15 @@ bool view_images(const view_params& params, string& error) {
     if (!load_image(params.image, img, error)) return false;
   }
 
-  auto update_display = [](view_state* app) {
-    if (app->display.imsize() != app->source.imsize())
-      app->display = app->source;
-    if (app->colorgrade) {
-      colorgrade_image_mt(app->display, app->source, true, app->params);
-    } else {
-      tonemap_image_mt(app->display, app->source, app->exposure, app->filmic);
-    }
-  };
+  // open viewer
+  auto viewer_guard = make_imageview("yimage");
+  auto viewer       = viewer_guard.get();
 
-  // preparing display
-  auto app_guard = std::make_unique<view_state>();
-  auto app       = app_guard.get();
-  app->filename  = params.image;
-  app->outname   = params.output;
-  app->source    = img;
+  // set image
+  set_image(viewer, params.image, img);
 
-  // update display
-  update_display(app);
-
-  // callbacks
-  auto callbacks     = gui_callbacks{};
-  callbacks.clear_cb = [app](gui_window* win, const gui_input& input) {
-    clear_image(app->glimage);
-  };
-  callbacks.draw_cb = [app](gui_window* win, const gui_input& input) {
-    app->glparams.window      = input.window_size;
-    app->glparams.framebuffer = input.framebuffer_viewport;
-    if (!is_initialized(app->glimage)) {
-      init_image(app->glimage);
-      set_image(app->glimage, app->display, false, false);
-    }
-    std::tie(app->glparams.center, app->glparams.scale) = camera_imview(
-        app->glparams.center, app->glparams.scale, app->display.imsize(),
-        app->glparams.window, app->glparams.fit);
-    draw_image(app->glimage, app->glparams);
-  };
-  callbacks.widgets_cb = [app, &update_display](
-                             gui_window* win, const gui_input& input) {
-    auto edited = 0;
-    if (begin_header(win, "tonemap")) {
-      edited += draw_slider(win, "exposure", app->exposure, -5, 5);
-      edited += draw_checkbox(win, "filmic", app->filmic);
-      end_header(win);
-    }
-    if (begin_header(win, "colorgrade")) {
-      auto& params = app->params;
-      edited += draw_checkbox(win, "apply colorgrade", app->colorgrade);
-      edited += draw_slider(win, "exposure", params.exposure, -5, 5);
-      edited += draw_coloredit(win, "tint", params.tint);
-      edited += draw_slider(win, "lincontrast", params.lincontrast, 0, 1);
-      edited += draw_slider(win, "logcontrast", params.logcontrast, 0, 1);
-      edited += draw_slider(win, "linsaturation", params.linsaturation, 0, 1);
-      edited += draw_checkbox(win, "filmic", params.filmic);
-      continue_line(win);
-      edited += draw_checkbox(win, "srgb", params.srgb);
-      edited += draw_slider(win, "contrast", params.contrast, 0, 1);
-      edited += draw_slider(win, "saturation", params.saturation, 0, 1);
-      edited += draw_slider(win, "shadows", params.shadows, 0, 1);
-      edited += draw_slider(win, "midtones", params.midtones, 0, 1);
-      edited += draw_slider(win, "highlights", params.highlights, 0, 1);
-      edited += draw_coloredit(win, "shadows color", params.shadows_color);
-      edited += draw_coloredit(win, "midtones color", params.midtones_color);
-      edited += draw_coloredit(
-          win, "highlights color", params.highlights_color);
-      end_header(win);
-    }
-    if (begin_header(win, "inspect")) {
-      draw_slider(win, "zoom", app->glparams.scale, 0.1, 10);
-      draw_checkbox(win, "fit", app->glparams.fit);
-      auto ij = image_coords(input.mouse_pos, app->glparams.center,
-          app->glparams.scale, app->source.imsize());
-      draw_dragger(win, "mouse", ij);
-      auto img_pixel = zero4f, display_pixel = zero4f;
-      if (ij.x >= 0 && ij.x < app->source.width() && ij.y >= 0 &&
-          ij.y < app->source.height()) {
-        img_pixel     = app->source[{ij.x, ij.y}];
-        display_pixel = app->display[{ij.x, ij.y}];
-      }
-      draw_coloredit(win, "image", img_pixel);
-      draw_dragger(win, "display", display_pixel);
-      end_header(win);
-    }
-    if (edited) {
-      update_display(app);
-      if (!is_initialized(app->glimage)) init_image(app->glimage);
-      set_image(app->glimage, app->display, false, false);
-    }
-  };
-  callbacks.uiupdate_cb = [app](gui_window* win, const gui_input& input) {
-    // handle mouse
-    if (input.mouse_left && !input.widgets_active) {
-      app->glparams.center += input.mouse_pos - input.mouse_last;
-    }
-    if (input.mouse_right && !input.widgets_active) {
-      app->glparams.scale *= powf(
-          2, (input.mouse_pos.x - input.mouse_last.x) * 0.001f);
-    }
-  };
-
-  // run ui
-  run_ui({1280, 720}, "yimage", callbacks);
+  // run view
+  run_view(viewer);
 
   // done
   return true;

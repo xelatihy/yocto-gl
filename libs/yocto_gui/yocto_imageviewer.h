@@ -61,19 +61,27 @@ using std::vector;
 // -----------------------------------------------------------------------------
 namespace yocto {
 
-// Open and image viewer
+// Make an image view
 struct imageview_state;
-unique_ptr<imageview_state> open_viewer(const string& title);
-// Wait for the viewer to close
-void wait_viewer(imageview_state* viewer);
+unique_ptr<imageview_state> make_imageview(const string& title);
+
+// Run view
+void run_view(imageview_state* viewer);
+
 // Close viewer
-void close_viewer(imageview_state* viewer);
+void close_view(imageview_state* viewer);
 
 // Set image
 void set_image(
     imageview_state* viewer, const string& name, const image<vec4f>& img);
 void set_image(
     imageview_state* viewer, const string& name, const image<vec4b>& img);
+
+// Open and asycn viewer
+struct imageview_state;
+unique_ptr<imageview_state> open_imageview(const string& title);
+// Wait for the viewer to close
+void wait_view(imageview_state* viewer);
 
 }  // namespace yocto
 
