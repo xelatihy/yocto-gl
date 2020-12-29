@@ -101,7 +101,7 @@ image<vec4f> filter_bilateral(
   return filtered;
 }
 
-bool make_image_preset(const string& type, image<vec4f>& img, string& error) {
+bool make_image_preset(const string& type_, image<vec4f>& img, string& error) {
   auto set_region = [](image<vec4f>& img, const image<vec4f>& region,
                         const vec2i& offset) {
     for (auto j = 0; j < region.height(); j++) {
@@ -111,6 +111,8 @@ bool make_image_preset(const string& type, image<vec4f>& img, string& error) {
       }
     }
   };
+
+  auto type = path_basename(type_);
 
   auto size = vec2i{1024, 1024};
   if (type.find("sky") != type.npos) size = {2048, 1024};
@@ -240,7 +242,12 @@ bool make_image_preset(const string& type, image<vec4b>& img, string& error) {
   return true;
 }
 
-bool is_image_preset_hdr(const string& type) {
+bool is_preset_filename(const string& filename) {
+  return path_extension(filename) == ".ypreset";
+}
+
+bool is_preset_hdr(const string& type_) {
+  auto type = path_basename(type_);
   return type.find("sky") != string::npos && type.find("sun") != string::npos;
 }
 
@@ -259,23 +266,18 @@ struct convert_params {
 
 // convert images
 bool convert_images(const convert_params& params, string& error) {
-  // determine image type
-  auto is_hdr_image = is_hdr_filename(params.image) ||
-                      (path_extension(params.image) == ".ypreset" &&
-                          is_image_preset_hdr(path_basename(params.image)));
-  auto is_hdr_output = is_hdr_filename(params.output);
-
   // load
   auto hdr = image<vec4f>{};
   auto ldr = image<vec4b>{};
-  if (path_extension(params.image) == ".ypreset") {
-    if (!make_image_preset(path_basename(params.image), hdr, error))
-      return false;
-    if (!is_hdr_image) {
-      ldr = rgb_to_srgbb(hdr);
-      hdr = {};
+  if (is_preset_filename(params.image)) {
+    if (is_preset_hdr(params.image)) {
+      if (!make_image_preset(path_basename(params.image), hdr, error))
+        return false;
+    } else {
+      if (!make_image_preset(path_basename(params.image), ldr, error))
+        return false;
     }
-  } else if (is_hdr_image) {
+  } else if (is_hdr_filename(params.image)) {
     if (!load_image(params.image, hdr, error)) return false;
   } else {
     if (!load_image(params.image, ldr, error)) return false;
@@ -283,7 +285,7 @@ bool convert_images(const convert_params& params, string& error) {
 
   // resize if needed
   if (params.width != 0 || params.height != 0) {
-    if (is_hdr_image) {
+    if (!hdr.empty()) {
       hdr = resize_image(hdr, params.width, params.height);
     } else {
       ldr = resize_image(ldr, params.width, params.height);
@@ -291,20 +293,18 @@ bool convert_images(const convert_params& params, string& error) {
   }
 
   // tonemap if needed
-  if (is_hdr_image != is_hdr_output) {
-    if (is_hdr_image) {
-      ldr = tonemap_imageb(hdr, params.exposure, params.filmic);
-      hdr = {};
-    } else {
-      hdr = srgb_to_rgb(ldr);
-      ldr = {};
-    }
-    is_hdr_image = !is_hdr_image;
+  if (!hdr.empty() && !is_hdr_filename(params.output)) {
+    ldr = tonemap_imageb(hdr, params.exposure, params.filmic);
+    hdr = {};
+  }   
+  if (!ldr.empty() && is_hdr_filename(params.output)) {
+    hdr = srgb_to_rgb(ldr);
+    ldr = {};
   }
 
   // apply logo
   if (params.logo) {
-    if (is_hdr_image) {
+    if (!hdr.empty()) {
       hdr = add_logo(hdr);
     } else {
       ldr = add_logo(ldr);
@@ -312,7 +312,7 @@ bool convert_images(const convert_params& params, string& error) {
   }
 
   // save
-  if (is_hdr_image) {
+  if (!hdr.empty()) {
     if (!save_image(params.output, hdr, error)) return false;
   } else {
     if (!save_image(params.output, ldr, error)) return false;
