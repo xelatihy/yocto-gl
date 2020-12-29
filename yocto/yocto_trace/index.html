@@ -1,6 +1,4 @@
 
-
-
 <!doctype html>
 <html lang="en" class="no-js">
   <head>
@@ -12,8 +10,9 @@
       
         <meta name="author" content="Fabio Pellacini">
       
+      
       <link rel="shortcut icon" href="../../assets/images/favicon.png">
-      <meta name="generator" content="mkdocs-1.1.2, mkdocs-material-5.5.12">
+      <meta name="generator" content="mkdocs-1.1.2, mkdocs-material-6.2.2">
     
     
       
@@ -21,14 +20,18 @@
       
     
     
-      <link rel="stylesheet" href="../../assets/stylesheets/main.4dd2dd8d.min.css">
+      <link rel="stylesheet" href="../../assets/stylesheets/main.73f7c429.min.css">
       
+        
+        <link rel="stylesheet" href="../../assets/stylesheets/palette.39b8e14a.min.css">
+        
       
     
     
     
       
-        <link href="https://fonts.gstatic.com" rel="preconnect" crossorigin>
+        
+        <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
         <link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Roboto:300,400,400i,700%7CRoboto+Mono&display=fallback">
         <style>body,input{font-family:"Roboto",-apple-system,BlinkMacSystemFont,Helvetica,Arial,sans-serif}code,kbd,pre{font-family:"Roboto Mono",SFMono-Regular,Consolas,Menlo,monospace}</style>
       
@@ -42,7 +45,13 @@
   </head>
   
   
-    <body dir="ltr">
+    
+    
+    
+    
+    
+    <body dir="ltr" data-md-color-scheme="" data-md-color-primary="none" data-md-color-accent="none">
+      
   
     
     <input class="md-toggle" data-md-toggle="drawer" type="checkbox" id="__drawer" autocomplete="off">
@@ -60,7 +69,9 @@
       
     </div>
     
-      <header class="md-header" data-md-component="header">
+      
+
+<header class="md-header" data-md-component="header">
   <nav class="md-header-nav md-grid" aria-label="Header">
     <a href="../.." title="Yocto/GL" class="md-header-nav__button md-logo" aria-label="Yocto/GL">
       
@@ -72,18 +83,20 @@
       <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M3 6h18v2H3V6m0 5h18v2H3v-2m0 5h18v2H3v-2z"/></svg>
     </label>
     <div class="md-header-nav__title" data-md-component="header-title">
-      
-        <div class="md-header-nav__ellipsis">
-          <span class="md-header-nav__topic md-ellipsis">
+      <div class="md-header-nav__ellipsis">
+        <div class="md-header-nav__topic">
+          <span class="md-ellipsis">
             Yocto/GL
           </span>
-          <span class="md-header-nav__topic md-ellipsis">
+        </div>
+        <div class="md-header-nav__topic">
+          <span class="md-ellipsis">
             
               Path tracing
             
           </span>
         </div>
-      
+      </div>
     </div>
     
       <label class="md-header-nav__button md-icon" for="__search">
@@ -94,7 +107,7 @@
   <label class="md-search__overlay" for="__search"></label>
   <div class="md-search__inner" role="search">
     <form class="md-search__form" name="search">
-      <input type="text" class="md-search__input" name="query" aria-label="Search" placeholder="Search" autocapitalize="off" autocorrect="off" autocomplete="off" spellcheck="false" data-md-component="search-query" data-md-state="active">
+      <input type="text" class="md-search__input" name="query" aria-label="Search" placeholder="Search" autocapitalize="off" autocorrect="off" autocomplete="off" spellcheck="false" data-md-component="search-query" data-md-state="active" required>
       <label class="md-search__icon md-icon" for="__search">
         <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M9.5 3A6.5 6.5 0 0116 9.5c0 1.61-.59 3.09-1.56 4.23l.27.27h.79l5 5-1.5 1.5-5-5v-.79l-.27-.27A6.516 6.516 0 019.5 16 6.5 6.5 0 013 9.5 6.5 6.5 0 019.5 3m0 2C7 5 5 7 5 9.5S7 14 9.5 14 14 12 14 9.5 12 5 9.5 5z"/></svg>
         <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M20 11v2H8l5.5 5.5-1.42 1.42L4.16 12l7.92-7.92L13.5 5.5 8 11h12z"/></svg>
@@ -135,8 +148,6 @@
     
     <div class="md-container" data-md-component="container">
       
-        
-      
       
         
       
@@ -144,10 +155,16 @@
         <div class="md-main__inner md-grid">
           
             
-              <div class="md-sidebar md-sidebar--primary" data-md-component="navigation">
+              
+              <div class="md-sidebar md-sidebar--primary" data-md-component="navigation" >
                 <div class="md-sidebar__scrollwrap">
                   <div class="md-sidebar__inner">
-                    <nav class="md-nav md-nav--primary" aria-label="Navigation" data-md-level="0">
+                    
+
+
+
+
+<nav class="md-nav md-nav--primary" aria-label="Navigation" data-md-level="0">
   <label class="md-nav__title" for="__drawer">
     <a href="../.." title="Yocto/GL" class="md-nav__button md-logo" aria-label="Yocto/GL">
       
@@ -178,8 +195,9 @@
       
 
 
+
   <li class="md-nav__item">
-    <a href="../.." title="About" class="md-nav__link">
+    <a href="../.." class="md-nav__link">
       About
     </a>
   </li>
@@ -190,8 +208,9 @@
       
 
 
+
   <li class="md-nav__item">
-    <a href="../../gallery/" title="Gallery" class="md-nav__link">
+    <a href="../../gallery/" class="md-nav__link">
       Gallery
     </a>
   </li>
@@ -202,8 +221,9 @@
       
 
 
+
   <li class="md-nav__item">
-    <a href="../yocto_math/" title="Math types" class="md-nav__link">
+    <a href="../yocto_math/" class="md-nav__link">
       Math types
     </a>
   </li>
@@ -214,8 +234,9 @@
       
 
 
+
   <li class="md-nav__item">
-    <a href="../yocto_color/" title="Color operations" class="md-nav__link">
+    <a href="../yocto_color/" class="md-nav__link">
       Color operations
     </a>
   </li>
@@ -226,8 +247,9 @@
       
 
 
+
   <li class="md-nav__item">
-    <a href="../yocto_geometry/" title="Geometry operations" class="md-nav__link">
+    <a href="../yocto_geometry/" class="md-nav__link">
       Geometry operations
     </a>
   </li>
@@ -238,8 +260,9 @@
       
 
 
+
   <li class="md-nav__item">
-    <a href="../yocto_sampling/" title="Sampling routines" class="md-nav__link">
+    <a href="../yocto_sampling/" class="md-nav__link">
       Sampling routines
     </a>
   </li>
@@ -250,8 +273,9 @@
       
 
 
+
   <li class="md-nav__item">
-    <a href="../yocto_noise/" title="Noise functions" class="md-nav__link">
+    <a href="../yocto_noise/" class="md-nav__link">
       Noise functions
     </a>
   </li>
@@ -262,8 +286,9 @@
       
 
 
+
   <li class="md-nav__item">
-    <a href="../yocto_shading/" title="Shading routines" class="md-nav__link">
+    <a href="../yocto_shading/" class="md-nav__link">
       Shading routines
     </a>
   </li>
@@ -274,8 +299,9 @@
       
 
 
+
   <li class="md-nav__item">
-    <a href="../yocto_image/" title="Image utilities" class="md-nav__link">
+    <a href="../yocto_image/" class="md-nav__link">
       Image utilities
     </a>
   </li>
@@ -286,8 +312,9 @@
       
 
 
+
   <li class="md-nav__item">
-    <a href="../yocto_shape/" title="Shape utilities" class="md-nav__link">
+    <a href="../yocto_shape/" class="md-nav__link">
       Shape utilities
     </a>
   </li>
@@ -298,8 +325,9 @@
       
 
 
+
   <li class="md-nav__item">
-    <a href="../yocto_mesh/" title="Mesh processing" class="md-nav__link">
+    <a href="../yocto_mesh/" class="md-nav__link">
       Mesh processing
     </a>
   </li>
@@ -310,8 +338,9 @@
       
 
 
+
   <li class="md-nav__item">
-    <a href="../yocto_bvh/" title="Ray-scene intersection" class="md-nav__link">
+    <a href="../yocto_bvh/" class="md-nav__link">
       Ray-scene intersection
     </a>
   </li>
@@ -322,8 +351,9 @@
       
 
 
+
   <li class="md-nav__item">
-    <a href="../yocto_modelio/" title="Model serialization" class="md-nav__link">
+    <a href="../yocto_modelio/" class="md-nav__link">
       Model serialization
     </a>
   </li>
@@ -334,8 +364,9 @@
       
 
 
+
   <li class="md-nav__item">
-    <a href="../yocto_sceneio/" title="Scene serialization" class="md-nav__link">
+    <a href="../yocto_sceneio/" class="md-nav__link">
       Scene serialization
     </a>
   </li>
@@ -344,6 +375,7 @@
       
       
       
+
 
   
 
@@ -360,7 +392,7 @@
         <span class="md-nav__icon md-icon"></span>
       </label>
     
-    <a href="./" title="Path tracing" class="md-nav__link md-nav__link--active">
+    <a href="./" class="md-nav__link md-nav__link--active">
       Path tracing
     </a>
     
@@ -459,8 +491,22 @@
       
 
 
+
   <li class="md-nav__item">
-    <a href="../yocto_commonio/" title="Command-line utilities" class="md-nav__link">
+    <a href="../yocto_json/" class="md-nav__link">
+      JSON utilities
+    </a>
+  </li>
+
+    
+      
+      
+      
+
+
+
+  <li class="md-nav__item">
+    <a href="../yocto_commonio/" class="md-nav__link">
       Command-line utilities
     </a>
   </li>
@@ -471,8 +517,9 @@
       
 
 
+
   <li class="md-nav__item">
-    <a href="../yocto_common/" title="Generic utilities" class="md-nav__link">
+    <a href="../yocto_common/" class="md-nav__link">
       Generic utilities
     </a>
   </li>
@@ -483,8 +530,9 @@
       
 
 
+
   <li class="md-nav__item">
-    <a href="../yocto_parallel/" title="Concurrency utilities" class="md-nav__link">
+    <a href="../yocto_parallel/" class="md-nav__link">
       Concurrency utilities
     </a>
   </li>
@@ -497,7 +545,8 @@
               </div>
             
             
-              <div class="md-sidebar md-sidebar--secondary" data-md-component="toc">
+              
+              <div class="md-sidebar md-sidebar--secondary" data-md-component="toc" >
                 <div class="md-sidebar__scrollwrap">
                   <div class="md-sidebar__inner">
                     
@@ -596,9 +645,6 @@
               
                 
                 
-                  
-                
-                
                 <h1 id="yoctotrace-path-tracing">Yocto/Trace: Path tracing</h1>
 <p>Yocto/Trace is a simple path tracer written on the Yocto/Scene model.
 Yocto/Trace is implemented in <code>yocto_trace.h</code> and <code>yocto_trace.cpp</code>.</p>
@@ -648,7 +694,6 @@ Both callback functions are optional.</p>
 <span class="n">trace_image</span><span class="p">(</span><span class="n">scene</span><span class="p">,</span> <span class="n">params</span><span class="p">,</span> <span class="n">progress</span><span class="p">,</span> <span class="n">improgress</span><span class="p">);</span> <span class="c1">// render image</span>
 </code></pre></div>
 
-
 <h2 id="rendering-options">Rendering options</h2>
 <p>The rendering process is configured with the <code>trace_params</code> settings.
 <code>sampler</code> determines the algorithm used for rendering: <code>path</code> is the default
@@ -689,7 +734,6 @@ define string names for various enum values that can used for UIs or CLIs.</p>
 <span class="n">db_params</span><span class="p">.</span><span class="n">resolution</span> <span class="o">=</span> <span class="mi">720</span><span class="p">;</span>                  <span class="c1">// medium-res render</span>
 <span class="n">db_params</span><span class="p">.</span><span class="n">samples</span>    <span class="o">=</span> <span class="mi">16</span><span class="p">;</span>                   <span class="c1">// low-sample count</span>
 </code></pre></div>
-
 
 <h2 id="low-level-rendering-api">Low-Level Rendering API</h2>
 <p>Yocto/Trace supports a low-level rendering API that is more flexible for
@@ -733,7 +777,6 @@ Both callback functions are optional.</p>
 <span class="n">trace_image</span><span class="p">(</span><span class="n">state</span><span class="p">,</span> <span class="n">scene</span><span class="p">,</span> <span class="n">camera</span><span class="p">,</span> <span class="n">hvh</span><span class="p">,</span>        <span class="c1">// render image</span>
   <span class="n">lights</span><span class="p">,</span> <span class="n">params</span><span class="p">,</span> <span class="n">progress</span><span class="p">,</span> <span class="n">improgress</span><span class="p">);</span>
 </code></pre></div>
-
 
 <h2 id="experimental-async-rendering">Experimental async rendering</h2>
 <p>The render can run in asynchronous mode where the rendering process is
@@ -780,7 +823,6 @@ To update the BVH, use <code>update_bvh(scene, instances, shapes, params)</code>
   <span class="n">lights</span><span class="p">,</span> <span class="n">params</span><span class="p">,</span> <span class="p">{},</span>                         <span class="c1">// return immediately</span>
   <span class="n">imgprogress</span><span class="p">,</span> <span class="n">pxlprogress</span><span class="p">);</span>                  <span class="c1">// communicates via callbacks</span>
 </code></pre></div>
-
 
 <h2 id="scene-representation">Scene representation</h2>
 <p>Scenes are stored in <code>trace_scene</code> structs and are comprised of array
@@ -889,7 +931,6 @@ via lens, aspect and film, and optionally the camera aperture and focus.</p>
 <span class="n">camera</span><span class="o">-&gt;</span><span class="n">focus</span> <span class="o">=</span> <span class="mi">10</span><span class="p">;</span>                   <span class="c1">// set the focus at 10m</span>
 </code></pre></div>
 
-
 <p>For instances, you should set the instance frame, shape and material.</p>
 <div class="codehilite"><pre><span></span><code><span class="k">auto</span> <span class="n">scene</span> <span class="o">=</span> <span class="k">new</span> <span class="n">trace_scene</span><span class="p">{};</span>       <span class="c1">// create a scene</span>
 <span class="k">auto</span> <span class="n">instance</span> <span class="o">=</span> <span class="n">add_instance</span><span class="p">(</span><span class="n">scene</span><span class="p">);</span>  <span class="c1">// create an instance named ist</span>
@@ -900,14 +941,12 @@ via lens, aspect and film, and optionally the camera aperture and focus.</p>
 <span class="n">instance</span><span class="o">-&gt;</span><span class="n">material</span> <span class="o">=</span> <span class="n">material</span><span class="p">;</span>        <span class="c1">// set material pointer</span>
 </code></pre></div>
 
-
 <p>For textures, set <em>either</em> the hdr or ldr image.</p>
 <div class="codehilite"><pre><span></span><code><span class="k">auto</span> <span class="n">scene</span> <span class="o">=</span> <span class="k">new</span> <span class="n">trace_scene</span><span class="p">{};</span>       <span class="c1">// create a scene</span>
 <span class="k">auto</span> <span class="n">texture</span> <span class="o">=</span> <span class="n">add_texture</span><span class="p">(</span><span class="n">scene</span><span class="p">);</span>    <span class="c1">// create a texture named tex</span>
 <span class="n">texture</span><span class="o">-&gt;</span><span class="n">hdr</span> <span class="o">=</span> <span class="n">image</span><span class="o">&lt;</span><span class="n">vec4f</span><span class="o">&gt;</span><span class="p">{...};</span>     <span class="c1">// set as a HDR texture</span>
 <span class="n">texture</span><span class="o">-&gt;</span><span class="n">ldr</span> <span class="o">=</span> <span class="p">,</span><span class="n">image</span><span class="o">&lt;</span><span class="n">vec4b</span><span class="o">&gt;</span><span class="p">{...};</span>    <span class="c1">// set as a LDR texture</span>
 </code></pre></div>
-
 
 <p>For materials, we adopt a Disney0like model that has many parameters,
 but can render a large varierty of looks. Here are some examples.</p>
@@ -941,7 +980,6 @@ but can render a large varierty of looks. Here are some examples.</p>
 <span class="n">subsurf</span><span class="o">-&gt;</span><span class="n">scattering</span> <span class="o">=</span> <span class="p">{</span><span class="mf">0.5</span><span class="p">,</span><span class="mi">1</span><span class="p">,</span><span class="mf">0.5</span><span class="p">};</span>            <span class="c1">// volumetric scattering</span>
 </code></pre></div>
 
-
 <p>For shapes, you should set the shape elements, i.e. point, limes, triangles
 or quads, and the vertex properties, i.e. positions, normals, texture
 coordiantes, colors and radia. Shapes support only one element type.</p>
@@ -952,7 +990,6 @@ coordiantes, colors and radia. Shapes support only one element type.</p>
 <span class="n">shape</span><span class="o">-&gt;</span><span class="n">normals</span> <span class="o">=</span> <span class="n">vector</span><span class="o">&lt;</span><span class="n">vec3f</span><span class="o">&gt;</span><span class="p">{...};</span>        <span class="c1">// set normals</span>
 <span class="n">shape</span><span class="o">-&gt;</span><span class="n">texcoords</span> <span class="o">=</span> <span class="n">vector</span><span class="o">&lt;</span><span class="n">vec2f</span><span class="o">&gt;</span><span class="p">{...};</span>      <span class="c1">// set texture coordinates</span>
 </code></pre></div>
-
 
 <p>Shapes can also be face-varying. In this case, set the quads for positions,
 normals and texture coordinates. This is helpful when using subdivision
@@ -971,7 +1008,6 @@ be applied by setting a displacement scale and texture.</p>
 <span class="n">shape</span><span class="o">-&gt;</span><span class="n">displacement_tex</span> <span class="o">=</span> <span class="n">tex</span><span class="p">;</span>              <span class="c1">// and displacement map</span>
 </code></pre></div>
 
-
 <p>For environments, set the frame, emission and optionally the emission texture.</p>
 <div class="codehilite"><pre><span></span><code><span class="k">auto</span> <span class="n">scene</span> <span class="o">=</span> <span class="k">new</span> <span class="n">trace_scene</span><span class="p">{};</span>             <span class="c1">// create a scene</span>
 <span class="k">auto</span> <span class="n">environment</span> <span class="o">=</span> <span class="n">add_environment</span><span class="p">(</span><span class="n">scene</span><span class="p">);</span>  <span class="c1">// create an environment</span>
@@ -980,7 +1016,6 @@ be applied by setting a displacement scale and texture.</p>
 <span class="n">environment</span><span class="o">-&gt;</span><span class="n">emission</span> <span class="o">=</span> <span class="p">{</span><span class="mi">1</span><span class="p">,</span><span class="mi">1</span><span class="p">,</span><span class="mi">1</span><span class="p">};</span>            <span class="c1">// set emission scale</span>
 <span class="n">environment</span><span class="o">-&gt;</span><span class="n">emission_tex</span> <span class="o">=</span> <span class="n">tex</span><span class="p">;</span>            <span class="c1">// add emission texture</span>
 </code></pre></div>
-
 
 <h2 id="scene-tesselation">Scene tesselation</h2>
 <p>The evaluation functions defined above and the ray intersection functions do
@@ -992,7 +1027,6 @@ shape data is lost. This is done to avoid copying whenever possible.</p>
 <div class="codehilite"><pre><span></span><code><span class="k">auto</span> <span class="n">scene</span> <span class="o">=</span> <span class="k">new</span> <span class="n">trace_scene</span><span class="p">{...};</span>          <span class="c1">// create a complete scene</span>
 <span class="kt">void</span> <span class="nf">tesselate_shapes</span><span class="p">(</span><span class="n">scene</span><span class="p">);</span>               <span class="c1">// tesselate shapes in the scene</span>
 </code></pre></div>
-
 
 <h2 id="evaluation-of-scene-properties">Evaluation of scene properties</h2>
 <p>Yocto/Trace defines several function to evaluate scene properties.
@@ -1006,7 +1040,6 @@ lens coordinates <code>lens_uv</code>.</p>
 <span class="k">auto</span> <span class="n">ray</span> <span class="o">=</span> <span class="n">eval_camera</span><span class="p">(</span><span class="n">camera</span><span class="p">,{</span><span class="mf">0.5</span><span class="p">,</span><span class="mf">0.5</span><span class="p">},{</span><span class="mi">0</span><span class="p">,</span><span class="mi">0</span><span class="p">});</span><span class="c1">// get ray though image center</span>
 </code></pre></div>
 
-
 <p>Use <code>texture_size(texture)</code> to get the texture resolution, and
 <code>eval_texture(texture, uv)</code> to evaluate the texture at specific uvs.
 Textures evaluation returns a color in linear color space, regardless of
@@ -1016,7 +1049,6 @@ the texture representation.</p>
 <span class="k">auto</span> <span class="n">col</span> <span class="o">=</span> <span class="n">eval_texture</span><span class="p">(</span><span class="n">texture</span><span class="p">,{</span><span class="mf">0.5</span><span class="p">,</span><span class="mf">0.5</span><span class="p">});</span>    <span class="c1">// eval texture</span>
 </code></pre></div>
 
-
 <p>Use <code>eval_material(material, texcoord)</code> to evaluate material textures and
 combine them with parameter values. The function returns a
 <code>scene_material_sample</code> that has the same parameters of a material but no
@@ -1025,7 +1057,6 @@ textures defined.</p>
 <span class="k">auto</span> <span class="n">material</span> <span class="o">=</span> <span class="n">scene</span><span class="o">-&gt;</span><span class="n">materials</span><span class="p">.</span><span class="n">front</span><span class="p">();</span>        <span class="c1">// get first material</span>
 <span class="k">auto</span> <span class="n">mat</span> <span class="o">=</span> <span class="n">eval_material</span><span class="p">(</span><span class="n">material</span><span class="p">,{</span><span class="mf">0.5</span><span class="p">,</span><span class="mf">0.5</span><span class="p">});</span>    <span class="c1">// eval material</span>
 </code></pre></div>
-
 
 <p>Several functions are defined to evaluate the geometric and material
 properties of points on instances, indicated by the shape element id
@@ -1048,7 +1079,6 @@ properties of instance points.</p>
 <span class="k">auto</span> <span class="n">mat</span>  <span class="o">=</span> <span class="n">eval_material</span><span class="p">(</span><span class="n">instance</span><span class="p">,</span> <span class="n">eid</span><span class="p">,</span> <span class="n">euv</span><span class="p">);</span> <span class="c1">// eval point material</span>
 </code></pre></div>
 
-
 <p>Use <code>eval_environment(environment, direction)</code> to evaluate an environment
 map emission along a specific direction <code>direction</code>. Use
 <code>eval_environment(scene, direction)</code> to accumulate the lighting for all
@@ -1058,7 +1088,6 @@ environment maps.</p>
 <span class="k">auto</span> <span class="n">environment</span> <span class="o">=</span> <span class="n">scene</span><span class="o">-&gt;</span><span class="n">environments</span><span class="p">.</span><span class="n">front</span><span class="p">();</span>  <span class="c1">// get first environment</span>
 <span class="k">auto</span> <span class="n">envi</span> <span class="o">=</span> <span class="n">eval_environment</span><span class="p">(</span><span class="n">environment</span><span class="p">,</span> <span class="n">dir</span><span class="p">);</span>  <span class="c1">// eval environment</span>
 </code></pre></div>
-
 
 <h2 id="ray-scene-intersection">Ray-scene intersection</h2>
 <p>Yocto/Trace supports ray-scene intersection queries accelerated by a two-level
@@ -1081,7 +1110,6 @@ if scene shapes and instances are modified, the BVH can be updated with
 <span class="n">params</span><span class="p">.</span><span class="n">type</span> <span class="o">=</span> <span class="n">trace_bvh_type</span><span class="o">::</span><span class="n">embree_default</span><span class="p">;</span>    <span class="c1">// set build type as Embree</span>
 <span class="n">init_bvh</span><span class="p">(</span><span class="n">bvh</span><span class="p">,</span> <span class="n">scene</span><span class="p">,</span> <span class="n">params</span><span class="p">);</span>        <span class="c1">// build Embree bvh with no progress report</span>
 </code></pre></div>
-
 
 <p>Use <code>intersect_bvh(bvh, ray)</code> to intersect a ray with a scene,
 and <code>intersect_bvh(bvh, instance, ray)</code> to intersect a ray with an
@@ -1115,7 +1143,7 @@ and intersection distance.</p>
     <div class="md-footer-nav">
       <nav class="md-footer-nav__inner md-grid" aria-label="Footer">
         
-          <a href="../yocto_sceneio/" title="Scene serialization" class="md-footer-nav__link md-footer-nav__link--prev" rel="prev">
+          <a href="../yocto_sceneio/" class="md-footer-nav__link md-footer-nav__link--prev" rel="prev">
             <div class="md-footer-nav__button md-icon">
               <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M20 11v2H8l5.5 5.5-1.42 1.42L4.16 12l7.92-7.92L13.5 5.5 8 11h12z"/></svg>
             </div>
@@ -1130,13 +1158,13 @@ and intersection distance.</p>
           </a>
         
         
-          <a href="../yocto_commonio/" title="Command-line utilities" class="md-footer-nav__link md-footer-nav__link--next" rel="next">
+          <a href="../yocto_json/" class="md-footer-nav__link md-footer-nav__link--next" rel="next">
             <div class="md-footer-nav__title">
               <div class="md-ellipsis">
                 <span class="md-footer-nav__direction">
                   Next
                 </span>
-                Command-line utilities
+                JSON utilities
               </div>
             </div>
             <div class="md-footer-nav__button md-icon">
@@ -1167,15 +1195,15 @@ and intersection distance.</p>
       
     </div>
     
-      <script src="../../assets/javascripts/vendor.3636a4ec.min.js"></script>
-      <script src="../../assets/javascripts/bundle.e9fe3281.min.js"></script><script id="__lang" type="application/json">{"clipboard.copy": "Copy to clipboard", "clipboard.copied": "Copied to clipboard", "search.config.lang": "en", "search.config.pipeline": "trimmer, stopWordFilter", "search.config.separator": "[\\s\\-]+", "search.result.placeholder": "Type to start searching", "search.result.none": "No matching documents", "search.result.one": "1 matching document", "search.result.other": "# matching documents"}</script>
+      <script src="../../assets/javascripts/vendor.08c56446.min.js"></script>
+      <script src="../../assets/javascripts/bundle.6ced434e.min.js"></script><script id="__lang" type="application/json">{"clipboard.copy": "Copy to clipboard", "clipboard.copied": "Copied to clipboard", "search.config.lang": "en", "search.config.pipeline": "trimmer, stopWordFilter", "search.config.separator": "[\\s\\-]+", "search.placeholder": "Search", "search.result.placeholder": "Type to start searching", "search.result.none": "No matching documents", "search.result.one": "1 matching document", "search.result.other": "# matching documents", "search.result.more.one": "1 more on this page", "search.result.more.other": "# more on this page", "search.result.term.missing": "Missing"}</script>
       
       <script>
         app = initialize({
           base: "../..",
           features: [],
           search: Object.assign({
-            worker: "../../assets/javascripts/worker/search.5eca75d3.min.js"
+            worker: "../../assets/javascripts/worker/search.8c7e0a7e.min.js"
           }, typeof search !== "undefined" && search)
         })
       </script>

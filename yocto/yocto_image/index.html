@@ -1,6 +1,4 @@
 
-
-
 <!doctype html>
 <html lang="en" class="no-js">
   <head>
@@ -12,8 +10,9 @@
       
         <meta name="author" content="Fabio Pellacini">
       
+      
       <link rel="shortcut icon" href="../../assets/images/favicon.png">
-      <meta name="generator" content="mkdocs-1.1.2, mkdocs-material-5.5.12">
+      <meta name="generator" content="mkdocs-1.1.2, mkdocs-material-6.2.2">
     
     
       
@@ -21,14 +20,18 @@
       
     
     
-      <link rel="stylesheet" href="../../assets/stylesheets/main.4dd2dd8d.min.css">
+      <link rel="stylesheet" href="../../assets/stylesheets/main.73f7c429.min.css">
       
+        
+        <link rel="stylesheet" href="../../assets/stylesheets/palette.39b8e14a.min.css">
+        
       
     
     
     
       
-        <link href="https://fonts.gstatic.com" rel="preconnect" crossorigin>
+        
+        <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
         <link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Roboto:300,400,400i,700%7CRoboto+Mono&display=fallback">
         <style>body,input{font-family:"Roboto",-apple-system,BlinkMacSystemFont,Helvetica,Arial,sans-serif}code,kbd,pre{font-family:"Roboto Mono",SFMono-Regular,Consolas,Menlo,monospace}</style>
       
@@ -42,7 +45,13 @@
   </head>
   
   
-    <body dir="ltr">
+    
+    
+    
+    
+    
+    <body dir="ltr" data-md-color-scheme="" data-md-color-primary="none" data-md-color-accent="none">
+      
   
     
     <input class="md-toggle" data-md-toggle="drawer" type="checkbox" id="__drawer" autocomplete="off">
@@ -60,7 +69,9 @@
       
     </div>
     
-      <header class="md-header" data-md-component="header">
+      
+
+<header class="md-header" data-md-component="header">
   <nav class="md-header-nav md-grid" aria-label="Header">
     <a href="../.." title="Yocto/GL" class="md-header-nav__button md-logo" aria-label="Yocto/GL">
       
@@ -72,18 +83,20 @@
       <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M3 6h18v2H3V6m0 5h18v2H3v-2m0 5h18v2H3v-2z"/></svg>
     </label>
     <div class="md-header-nav__title" data-md-component="header-title">
-      
-        <div class="md-header-nav__ellipsis">
-          <span class="md-header-nav__topic md-ellipsis">
+      <div class="md-header-nav__ellipsis">
+        <div class="md-header-nav__topic">
+          <span class="md-ellipsis">
             Yocto/GL
           </span>
-          <span class="md-header-nav__topic md-ellipsis">
+        </div>
+        <div class="md-header-nav__topic">
+          <span class="md-ellipsis">
             
               Image utilities
             
           </span>
         </div>
-      
+      </div>
     </div>
     
       <label class="md-header-nav__button md-icon" for="__search">
@@ -94,7 +107,7 @@
   <label class="md-search__overlay" for="__search"></label>
   <div class="md-search__inner" role="search">
     <form class="md-search__form" name="search">
-      <input type="text" class="md-search__input" name="query" aria-label="Search" placeholder="Search" autocapitalize="off" autocorrect="off" autocomplete="off" spellcheck="false" data-md-component="search-query" data-md-state="active">
+      <input type="text" class="md-search__input" name="query" aria-label="Search" placeholder="Search" autocapitalize="off" autocorrect="off" autocomplete="off" spellcheck="false" data-md-component="search-query" data-md-state="active" required>
       <label class="md-search__icon md-icon" for="__search">
         <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M9.5 3A6.5 6.5 0 0116 9.5c0 1.61-.59 3.09-1.56 4.23l.27.27h.79l5 5-1.5 1.5-5-5v-.79l-.27-.27A6.516 6.516 0 019.5 16 6.5 6.5 0 013 9.5 6.5 6.5 0 019.5 3m0 2C7 5 5 7 5 9.5S7 14 9.5 14 14 12 14 9.5 12 5 9.5 5z"/></svg>
         <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M20 11v2H8l5.5 5.5-1.42 1.42L4.16 12l7.92-7.92L13.5 5.5 8 11h12z"/></svg>
@@ -135,8 +148,6 @@
     
     <div class="md-container" data-md-component="container">
       
-        
-      
       
         
       
@@ -144,10 +155,16 @@
         <div class="md-main__inner md-grid">
           
             
-              <div class="md-sidebar md-sidebar--primary" data-md-component="navigation">
+              
+              <div class="md-sidebar md-sidebar--primary" data-md-component="navigation" >
                 <div class="md-sidebar__scrollwrap">
                   <div class="md-sidebar__inner">
-                    <nav class="md-nav md-nav--primary" aria-label="Navigation" data-md-level="0">
+                    
+
+
+
+
+<nav class="md-nav md-nav--primary" aria-label="Navigation" data-md-level="0">
   <label class="md-nav__title" for="__drawer">
     <a href="../.." title="Yocto/GL" class="md-nav__button md-logo" aria-label="Yocto/GL">
       
@@ -178,8 +195,9 @@
       
 
 
+
   <li class="md-nav__item">
-    <a href="../.." title="About" class="md-nav__link">
+    <a href="../.." class="md-nav__link">
       About
     </a>
   </li>
@@ -190,8 +208,9 @@
       
 
 
+
   <li class="md-nav__item">
-    <a href="../../gallery/" title="Gallery" class="md-nav__link">
+    <a href="../../gallery/" class="md-nav__link">
       Gallery
     </a>
   </li>
@@ -202,8 +221,9 @@
       
 
 
+
   <li class="md-nav__item">
-    <a href="../yocto_math/" title="Math types" class="md-nav__link">
+    <a href="../yocto_math/" class="md-nav__link">
       Math types
     </a>
   </li>
@@ -214,8 +234,9 @@
       
 
 
+
   <li class="md-nav__item">
-    <a href="../yocto_color/" title="Color operations" class="md-nav__link">
+    <a href="../yocto_color/" class="md-nav__link">
       Color operations
     </a>
   </li>
@@ -226,8 +247,9 @@
       
 
 
+
   <li class="md-nav__item">
-    <a href="../yocto_geometry/" title="Geometry operations" class="md-nav__link">
+    <a href="../yocto_geometry/" class="md-nav__link">
       Geometry operations
     </a>
   </li>
@@ -238,8 +260,9 @@
       
 
 
+
   <li class="md-nav__item">
-    <a href="../yocto_sampling/" title="Sampling routines" class="md-nav__link">
+    <a href="../yocto_sampling/" class="md-nav__link">
       Sampling routines
     </a>
   </li>
@@ -250,8 +273,9 @@
       
 
 
+
   <li class="md-nav__item">
-    <a href="../yocto_noise/" title="Noise functions" class="md-nav__link">
+    <a href="../yocto_noise/" class="md-nav__link">
       Noise functions
     </a>
   </li>
@@ -262,8 +286,9 @@
       
 
 
+
   <li class="md-nav__item">
-    <a href="../yocto_shading/" title="Shading routines" class="md-nav__link">
+    <a href="../yocto_shading/" class="md-nav__link">
       Shading routines
     </a>
   </li>
@@ -272,6 +297,7 @@
       
       
       
+
 
   
 
@@ -288,7 +314,7 @@
         <span class="md-nav__icon md-icon"></span>
       </label>
     
-    <a href="./" title="Image utilities" class="md-nav__link md-nav__link--active">
+    <a href="./" class="md-nav__link md-nav__link--active">
       Image utilities
     </a>
     
@@ -380,8 +406,9 @@
       
 
 
+
   <li class="md-nav__item">
-    <a href="../yocto_shape/" title="Shape utilities" class="md-nav__link">
+    <a href="../yocto_shape/" class="md-nav__link">
       Shape utilities
     </a>
   </li>
@@ -392,8 +419,9 @@
       
 
 
+
   <li class="md-nav__item">
-    <a href="../yocto_mesh/" title="Mesh processing" class="md-nav__link">
+    <a href="../yocto_mesh/" class="md-nav__link">
       Mesh processing
     </a>
   </li>
@@ -404,8 +432,9 @@
       
 
 
+
   <li class="md-nav__item">
-    <a href="../yocto_bvh/" title="Ray-scene intersection" class="md-nav__link">
+    <a href="../yocto_bvh/" class="md-nav__link">
       Ray-scene intersection
     </a>
   </li>
@@ -416,8 +445,9 @@
       
 
 
+
   <li class="md-nav__item">
-    <a href="../yocto_modelio/" title="Model serialization" class="md-nav__link">
+    <a href="../yocto_modelio/" class="md-nav__link">
       Model serialization
     </a>
   </li>
@@ -428,8 +458,9 @@
       
 
 
+
   <li class="md-nav__item">
-    <a href="../yocto_sceneio/" title="Scene serialization" class="md-nav__link">
+    <a href="../yocto_sceneio/" class="md-nav__link">
       Scene serialization
     </a>
   </li>
@@ -440,8 +471,9 @@
       
 
 
+
   <li class="md-nav__item">
-    <a href="../yocto_trace/" title="Path tracing" class="md-nav__link">
+    <a href="../yocto_trace/" class="md-nav__link">
       Path tracing
     </a>
   </li>
@@ -452,8 +484,22 @@
       
 
 
+
   <li class="md-nav__item">
-    <a href="../yocto_commonio/" title="Command-line utilities" class="md-nav__link">
+    <a href="../yocto_json/" class="md-nav__link">
+      JSON utilities
+    </a>
+  </li>
+
+    
+      
+      
+      
+
+
+
+  <li class="md-nav__item">
+    <a href="../yocto_commonio/" class="md-nav__link">
       Command-line utilities
     </a>
   </li>
@@ -464,8 +510,9 @@
       
 
 
+
   <li class="md-nav__item">
-    <a href="../yocto_common/" title="Generic utilities" class="md-nav__link">
+    <a href="../yocto_common/" class="md-nav__link">
       Generic utilities
     </a>
   </li>
@@ -476,8 +523,9 @@
       
 
 
+
   <li class="md-nav__item">
-    <a href="../yocto_parallel/" title="Concurrency utilities" class="md-nav__link">
+    <a href="../yocto_parallel/" class="md-nav__link">
       Concurrency utilities
     </a>
   </li>
@@ -490,7 +538,8 @@
               </div>
             
             
-              <div class="md-sidebar md-sidebar--secondary" data-md-component="toc">
+              
+              <div class="md-sidebar md-sidebar--secondary" data-md-component="toc" >
                 <div class="md-sidebar__scrollwrap">
                   <div class="md-sidebar__inner">
                     
@@ -582,9 +631,6 @@
               
                 
                 
-                  
-                
-                
                 <h1 id="yoctoimage-image-utilities">Yocto/Image: Image utilities</h1>
 <p>Yocto/Image is a collection of image utilities useful when writing rendering
 algorithms. These include a simple image data structure, color conversion
@@ -613,7 +659,6 @@ re-initialized with <code>img.assign(size, value)</code> and cleared with <code>
 <span class="n">img</span><span class="p">.</span><span class="n">assign</span><span class="p">({</span><span class="mi">1024</span><span class="p">,</span><span class="mi">512</span><span class="p">},</span> <span class="p">{</span><span class="mi">0</span><span class="p">,</span><span class="mi">1</span><span class="p">,</span><span class="mi">0</span><span class="p">,</span><span class="mi">1</span><span class="p">});</span>  <span class="c1">// re-initialize as green</span>
 </code></pre></div>
 
-
 <p>Image pixels are accessed via the bracket operator using image coordinates
 represented as <code>vec2i</code>, i.e. <code>img[{i,j}]</code>. Pixels can also be accessed with
 a sequential index as <code>img[idx]</code>. Pixels can iterated with a foreach or
@@ -625,7 +670,6 @@ with <code>img.data()</code>.</p>
 <span class="n">print</span><span class="p">(</span><span class="n">img</span><span class="p">[</span><span class="mi">1000</span><span class="p">]);</span>             <span class="c1">// sequential access</span>
 <span class="k">auto</span> <span class="n">pixels</span> <span class="o">=</span> <span class="n">img</span><span class="p">.</span><span class="n">data</span><span class="p">();</span>     <span class="c1">// get pixel buffer</span>
 </code></pre></div>
-
 
 <h2 id="image-sampling">Image sampling</h2>
 <p>Images are sampled with <code>eval_image(img,uv)</code>. Yocto/Image supports sampling
@@ -643,7 +687,6 @@ and edge-clamp behavior available as overrides.</p>
 <span class="k">auto</span> <span class="n">ch1</span> <span class="o">=</span> <span class="n">eval_image</span><span class="p">(</span><span class="n">ldr</span><span class="p">,</span> <span class="p">{</span><span class="mf">0.5</span><span class="p">,</span><span class="mf">0.5</span><span class="p">},</span> <span class="nb">true</span><span class="p">);</span>  <span class="c1">// treats 8bit values as linear</span>
 </code></pre></div>
 
-
 <h2 id="color-conversions">Color conversions</h2>
 <p>For convenience, Yocto/Image define functions that convert images between
 float and byte channels, and between linear RGB and sRGB representations,
@@ -656,7 +699,6 @@ linear and sRGB color spaces.</p>
 <span class="k">auto</span> <span class="n">img_s</span> <span class="o">=</span> <span class="n">rgb_to_srgb</span><span class="p">(</span><span class="n">img</span><span class="p">);</span>      <span class="c1">// convert to sRGB</span>
 </code></pre></div>
 
-
 <h2 id="tone-mapping">Tone mapping</h2>
 <p>HDR images can be tone mapped using <code>tonemap_image(hdr,e)</code> that applies
 an exposure correction followed by an optional filmic tone curve.
@@ -666,7 +708,6 @@ multiple threads.</p>
 <span class="k">auto</span> <span class="n">ldr</span> <span class="o">=</span> <span class="n">tonemap_imahe</span><span class="p">(</span><span class="n">hdr</span><span class="p">,</span> <span class="mi">0</span><span class="p">);</span>        <span class="c1">// tone mapping</span>
 <span class="k">auto</span> <span class="n">flm</span> <span class="o">=</span> <span class="n">tonemap_imahe</span><span class="p">(</span><span class="n">hdr</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="nb">true</span><span class="p">);</span>  <span class="c1">// filmic tone mapping</span>
 </code></pre></div>
-
 
 <h2 id="color-grading">Color grading</h2>
 <p>Images can be color graded by applying a set of minimal color grading tools
@@ -692,7 +733,6 @@ Color tinting can be used to apply white balance by using
 <span class="k">auto</span> <span class="n">ldr</span> <span class="o">=</span> <span class="n">colorgrade_image</span><span class="p">(</span><span class="n">hdr</span><span class="p">,</span> <span class="nb">true</span><span class="p">,</span> <span class="n">params</span><span class="p">);</span> <span class="c1">// color grading</span>
 </code></pre></div>
 
-
 <h2 id="image-resizing">Image resizing</h2>
 <p>Images are can resized with <code>resize_image(img,size)</code>. Just like all other
 functions, images are not resized in placed, but a new image is created.
@@ -703,7 +743,6 @@ used to perform aspect-preserving resizing by leaving one dimension as zero.</p>
 <span class="k">auto</span> <span class="n">asp</span> <span class="o">=</span> <span class="n">resize_image</span><span class="p">(</span><span class="n">img</span><span class="p">,</span> <span class="p">{</span><span class="mi">512</span><span class="p">,</span> <span class="mi">0</span><span class="p">});</span>    <span class="c1">// aspect-preserving</span>
 </code></pre></div>
 
-
 <h2 id="image-diffing">Image diffing</h2>
 <p>Image difference can be computed using <code>image_difference(a,b)</code>. This function
 performs a simple per-pixel difference and returns the image so that one can
@@ -713,7 +752,6 @@ Optionally, a difference image is returned that highlights the diff.</p>
 <span class="k">auto</span> <span class="n">diff</span> <span class="o">=</span> <span class="n">image_difference</span><span class="p">(</span><span class="n">a</span><span class="p">,</span><span class="n">b</span><span class="p">);</span>                 <span class="c1">// image difference</span>
 <span class="k">auto</span> <span class="n">display</span> <span class="o">=</span> <span class="n">image_difference</span><span class="p">(</span><span class="n">a</span><span class="p">,</span><span class="n">b</span><span class="p">,</span> <span class="nb">true</span><span class="p">);</span>        <span class="c1">// diff display</span>
 </code></pre></div>
-
 
 <h2 id="image-loading-and-saving">Image loading and saving</h2>
 <p>Images are loaded with <code>load_image(filename, img, error)</code> and saved with
@@ -756,7 +794,6 @@ linear RGB for saving to floating point file formats.</p>
   <span class="n">print_error</span><span class="p">(</span><span class="n">error</span><span class="p">);</span>                   <span class="c1">// check and print error</span>
 </code></pre></div>
 
-
 <h2 id="procedural-images">Procedural images</h2>
 <p>Yocto/Image defines several procedural images used for both testing and to
 quickly create textures for procedural scenes. Testing patterns take as input
@@ -794,7 +831,6 @@ fractal variations. See <a href="../yocto_noise/">Yocto/Noise</a> for a descript
 <span class="k">auto</span> <span class="n">n4</span> <span class="o">=</span> <span class="n">make_ridgemap</span><span class="p">(</span><span class="n">size</span><span class="p">,</span> <span class="n">scale</span><span class="p">,</span> <span class="n">noise</span><span class="p">,</span> <span class="n">c0</span><span class="p">,</span> <span class="n">c1</span><span class="p">);</span> <span class="c1">// ridge image</span>
 </code></pre></div>
 
-
 <p>Procedurals skies are generated with
 <code>make_sunsky(img, size, elevation, turbidity, sun)</code>.
 The function returns a procedural HDR sky.
@@ -808,13 +844,11 @@ intensity and ground albedo, mostly used for artistic effects.</p>
 <span class="k">auto</span> <span class="n">tur</span> <span class="o">=</span> <span class="n">make_sunsky</span><span class="p">({</span><span class="mi">1024</span><span class="p">,</span><span class="mi">512</span><span class="p">},</span> <span class="n">pi</span><span class="o">/</span><span class="mi">2</span><span class="p">,</span> <span class="mi">10</span><span class="p">);</span>       <span class="c1">// sky with turbidity</span>
 </code></pre></div>
 
-
 <p>Use <code>bump_to_normal(bumps)</code> to convert a bump map to a normal map, with both
 images stored in a linear color spaces.</p>
 <div class="codehilite"><pre><span></span><code><span class="k">auto</span> <span class="n">bumps</span> <span class="o">=</span> <span class="n">make_bumps</span><span class="p">({</span><span class="mi">512</span><span class="p">,</span><span class="mi">512</span><span class="p">});</span>   <span class="c1">// procedural bump map</span>
 <span class="k">auto</span> <span class="n">normal</span> <span class="o">=</span> <span class="n">bump_to_normal</span><span class="p">(</span><span class="n">bumps</span><span class="p">);</span>  <span class="c1">// convert bump map to normal map</span>
 </code></pre></div>
-
 
 <p>Finally, borders can be added to images using <code>add_border(img,width,color)</code>.</p>
 <div class="codehilite"><pre><span></span><code><span class="k">auto</span> <span class="n">img</span> <span class="o">=</span> <span class="n">image</span><span class="o">&lt;</span><span class="n">vec4f</span><span class="o">&gt;</span><span class="p">{...};</span>                     <span class="c1">// image</span>
@@ -838,7 +872,7 @@ images stored in a linear color spaces.</p>
     <div class="md-footer-nav">
       <nav class="md-footer-nav__inner md-grid" aria-label="Footer">
         
-          <a href="../yocto_shading/" title="Shading routines" class="md-footer-nav__link md-footer-nav__link--prev" rel="prev">
+          <a href="../yocto_shading/" class="md-footer-nav__link md-footer-nav__link--prev" rel="prev">
             <div class="md-footer-nav__button md-icon">
               <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M20 11v2H8l5.5 5.5-1.42 1.42L4.16 12l7.92-7.92L13.5 5.5 8 11h12z"/></svg>
             </div>
@@ -853,7 +887,7 @@ images stored in a linear color spaces.</p>
           </a>
         
         
-          <a href="../yocto_shape/" title="Shape utilities" class="md-footer-nav__link md-footer-nav__link--next" rel="next">
+          <a href="../yocto_shape/" class="md-footer-nav__link md-footer-nav__link--next" rel="next">
             <div class="md-footer-nav__title">
               <div class="md-ellipsis">
                 <span class="md-footer-nav__direction">
@@ -890,15 +924,15 @@ images stored in a linear color spaces.</p>
       
     </div>
     
-      <script src="../../assets/javascripts/vendor.3636a4ec.min.js"></script>
-      <script src="../../assets/javascripts/bundle.e9fe3281.min.js"></script><script id="__lang" type="application/json">{"clipboard.copy": "Copy to clipboard", "clipboard.copied": "Copied to clipboard", "search.config.lang": "en", "search.config.pipeline": "trimmer, stopWordFilter", "search.config.separator": "[\\s\\-]+", "search.result.placeholder": "Type to start searching", "search.result.none": "No matching documents", "search.result.one": "1 matching document", "search.result.other": "# matching documents"}</script>
+      <script src="../../assets/javascripts/vendor.08c56446.min.js"></script>
+      <script src="../../assets/javascripts/bundle.6ced434e.min.js"></script><script id="__lang" type="application/json">{"clipboard.copy": "Copy to clipboard", "clipboard.copied": "Copied to clipboard", "search.config.lang": "en", "search.config.pipeline": "trimmer, stopWordFilter", "search.config.separator": "[\\s\\-]+", "search.placeholder": "Search", "search.result.placeholder": "Type to start searching", "search.result.none": "No matching documents", "search.result.one": "1 matching document", "search.result.other": "# matching documents", "search.result.more.one": "1 more on this page", "search.result.more.other": "# more on this page", "search.result.term.missing": "Missing"}</script>
       
       <script>
         app = initialize({
           base: "../..",
           features: [],
           search: Object.assign({
-            worker: "../../assets/javascripts/worker/search.5eca75d3.min.js"
+            worker: "../../assets/javascripts/worker/search.8c7e0a7e.min.js"
           }, typeof search !== "undefined" && search)
         })
       </script>

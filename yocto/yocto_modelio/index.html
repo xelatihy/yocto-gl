@@ -1,6 +1,4 @@
 
-
-
 <!doctype html>
 <html lang="en" class="no-js">
   <head>
@@ -12,8 +10,9 @@
       
         <meta name="author" content="Fabio Pellacini">
       
+      
       <link rel="shortcut icon" href="../../assets/images/favicon.png">
-      <meta name="generator" content="mkdocs-1.1.2, mkdocs-material-5.5.12">
+      <meta name="generator" content="mkdocs-1.1.2, mkdocs-material-6.2.2">
     
     
       
@@ -21,14 +20,18 @@
       
     
     
-      <link rel="stylesheet" href="../../assets/stylesheets/main.4dd2dd8d.min.css">
+      <link rel="stylesheet" href="../../assets/stylesheets/main.73f7c429.min.css">
       
+        
+        <link rel="stylesheet" href="../../assets/stylesheets/palette.39b8e14a.min.css">
+        
       
     
     
     
       
-        <link href="https://fonts.gstatic.com" rel="preconnect" crossorigin>
+        
+        <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
         <link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Roboto:300,400,400i,700%7CRoboto+Mono&display=fallback">
         <style>body,input{font-family:"Roboto",-apple-system,BlinkMacSystemFont,Helvetica,Arial,sans-serif}code,kbd,pre{font-family:"Roboto Mono",SFMono-Regular,Consolas,Menlo,monospace}</style>
       
@@ -42,7 +45,13 @@
   </head>
   
   
-    <body dir="ltr">
+    
+    
+    
+    
+    
+    <body dir="ltr" data-md-color-scheme="" data-md-color-primary="none" data-md-color-accent="none">
+      
   
     
     <input class="md-toggle" data-md-toggle="drawer" type="checkbox" id="__drawer" autocomplete="off">
@@ -60,7 +69,9 @@
       
     </div>
     
-      <header class="md-header" data-md-component="header">
+      
+
+<header class="md-header" data-md-component="header">
   <nav class="md-header-nav md-grid" aria-label="Header">
     <a href="../.." title="Yocto/GL" class="md-header-nav__button md-logo" aria-label="Yocto/GL">
       
@@ -72,18 +83,20 @@
       <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M3 6h18v2H3V6m0 5h18v2H3v-2m0 5h18v2H3v-2z"/></svg>
     </label>
     <div class="md-header-nav__title" data-md-component="header-title">
-      
-        <div class="md-header-nav__ellipsis">
-          <span class="md-header-nav__topic md-ellipsis">
+      <div class="md-header-nav__ellipsis">
+        <div class="md-header-nav__topic">
+          <span class="md-ellipsis">
             Yocto/GL
           </span>
-          <span class="md-header-nav__topic md-ellipsis">
+        </div>
+        <div class="md-header-nav__topic">
+          <span class="md-ellipsis">
             
               Model serialization
             
           </span>
         </div>
-      
+      </div>
     </div>
     
       <label class="md-header-nav__button md-icon" for="__search">
@@ -94,7 +107,7 @@
   <label class="md-search__overlay" for="__search"></label>
   <div class="md-search__inner" role="search">
     <form class="md-search__form" name="search">
-      <input type="text" class="md-search__input" name="query" aria-label="Search" placeholder="Search" autocapitalize="off" autocorrect="off" autocomplete="off" spellcheck="false" data-md-component="search-query" data-md-state="active">
+      <input type="text" class="md-search__input" name="query" aria-label="Search" placeholder="Search" autocapitalize="off" autocorrect="off" autocomplete="off" spellcheck="false" data-md-component="search-query" data-md-state="active" required>
       <label class="md-search__icon md-icon" for="__search">
         <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M9.5 3A6.5 6.5 0 0116 9.5c0 1.61-.59 3.09-1.56 4.23l.27.27h.79l5 5-1.5 1.5-5-5v-.79l-.27-.27A6.516 6.516 0 019.5 16 6.5 6.5 0 013 9.5 6.5 6.5 0 019.5 3m0 2C7 5 5 7 5 9.5S7 14 9.5 14 14 12 14 9.5 12 5 9.5 5z"/></svg>
         <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M20 11v2H8l5.5 5.5-1.42 1.42L4.16 12l7.92-7.92L13.5 5.5 8 11h12z"/></svg>
@@ -135,8 +148,6 @@
     
     <div class="md-container" data-md-component="container">
       
-        
-      
       
         
       
@@ -144,10 +155,16 @@
         <div class="md-main__inner md-grid">
           
             
-              <div class="md-sidebar md-sidebar--primary" data-md-component="navigation">
+              
+              <div class="md-sidebar md-sidebar--primary" data-md-component="navigation" >
                 <div class="md-sidebar__scrollwrap">
                   <div class="md-sidebar__inner">
-                    <nav class="md-nav md-nav--primary" aria-label="Navigation" data-md-level="0">
+                    
+
+
+
+
+<nav class="md-nav md-nav--primary" aria-label="Navigation" data-md-level="0">
   <label class="md-nav__title" for="__drawer">
     <a href="../.." title="Yocto/GL" class="md-nav__button md-logo" aria-label="Yocto/GL">
       
@@ -178,8 +195,9 @@
       
 
 
+
   <li class="md-nav__item">
-    <a href="../.." title="About" class="md-nav__link">
+    <a href="../.." class="md-nav__link">
       About
     </a>
   </li>
@@ -190,8 +208,9 @@
       
 
 
+
   <li class="md-nav__item">
-    <a href="../../gallery/" title="Gallery" class="md-nav__link">
+    <a href="../../gallery/" class="md-nav__link">
       Gallery
     </a>
   </li>
@@ -202,8 +221,9 @@
       
 
 
+
   <li class="md-nav__item">
-    <a href="../yocto_math/" title="Math types" class="md-nav__link">
+    <a href="../yocto_math/" class="md-nav__link">
       Math types
     </a>
   </li>
@@ -214,8 +234,9 @@
       
 
 
+
   <li class="md-nav__item">
-    <a href="../yocto_color/" title="Color operations" class="md-nav__link">
+    <a href="../yocto_color/" class="md-nav__link">
       Color operations
     </a>
   </li>
@@ -226,8 +247,9 @@
       
 
 
+
   <li class="md-nav__item">
-    <a href="../yocto_geometry/" title="Geometry operations" class="md-nav__link">
+    <a href="../yocto_geometry/" class="md-nav__link">
       Geometry operations
     </a>
   </li>
@@ -238,8 +260,9 @@
       
 
 
+
   <li class="md-nav__item">
-    <a href="../yocto_sampling/" title="Sampling routines" class="md-nav__link">
+    <a href="../yocto_sampling/" class="md-nav__link">
       Sampling routines
     </a>
   </li>
@@ -250,8 +273,9 @@
       
 
 
+
   <li class="md-nav__item">
-    <a href="../yocto_noise/" title="Noise functions" class="md-nav__link">
+    <a href="../yocto_noise/" class="md-nav__link">
       Noise functions
     </a>
   </li>
@@ -262,8 +286,9 @@
       
 
 
+
   <li class="md-nav__item">
-    <a href="../yocto_shading/" title="Shading routines" class="md-nav__link">
+    <a href="../yocto_shading/" class="md-nav__link">
       Shading routines
     </a>
   </li>
@@ -274,8 +299,9 @@
       
 
 
+
   <li class="md-nav__item">
-    <a href="../yocto_image/" title="Image utilities" class="md-nav__link">
+    <a href="../yocto_image/" class="md-nav__link">
       Image utilities
     </a>
   </li>
@@ -286,8 +312,9 @@
       
 
 
+
   <li class="md-nav__item">
-    <a href="../yocto_shape/" title="Shape utilities" class="md-nav__link">
+    <a href="../yocto_shape/" class="md-nav__link">
       Shape utilities
     </a>
   </li>
@@ -298,8 +325,9 @@
       
 
 
+
   <li class="md-nav__item">
-    <a href="../yocto_mesh/" title="Mesh processing" class="md-nav__link">
+    <a href="../yocto_mesh/" class="md-nav__link">
       Mesh processing
     </a>
   </li>
@@ -310,8 +338,9 @@
       
 
 
+
   <li class="md-nav__item">
-    <a href="../yocto_bvh/" title="Ray-scene intersection" class="md-nav__link">
+    <a href="../yocto_bvh/" class="md-nav__link">
       Ray-scene intersection
     </a>
   </li>
@@ -320,6 +349,7 @@
       
       
       
+
 
   
 
@@ -336,7 +366,7 @@
         <span class="md-nav__icon md-icon"></span>
       </label>
     
-    <a href="./" title="Model serialization" class="md-nav__link md-nav__link--active">
+    <a href="./" class="md-nav__link md-nav__link--active">
       Model serialization
     </a>
     
@@ -414,8 +444,9 @@
       
 
 
+
   <li class="md-nav__item">
-    <a href="../yocto_sceneio/" title="Scene serialization" class="md-nav__link">
+    <a href="../yocto_sceneio/" class="md-nav__link">
       Scene serialization
     </a>
   </li>
@@ -426,8 +457,9 @@
       
 
 
+
   <li class="md-nav__item">
-    <a href="../yocto_trace/" title="Path tracing" class="md-nav__link">
+    <a href="../yocto_trace/" class="md-nav__link">
       Path tracing
     </a>
   </li>
@@ -438,8 +470,22 @@
       
 
 
+
   <li class="md-nav__item">
-    <a href="../yocto_commonio/" title="Command-line utilities" class="md-nav__link">
+    <a href="../yocto_json/" class="md-nav__link">
+      JSON utilities
+    </a>
+  </li>
+
+    
+      
+      
+      
+
+
+
+  <li class="md-nav__item">
+    <a href="../yocto_commonio/" class="md-nav__link">
       Command-line utilities
     </a>
   </li>
@@ -450,8 +496,9 @@
       
 
 
+
   <li class="md-nav__item">
-    <a href="../yocto_common/" title="Generic utilities" class="md-nav__link">
+    <a href="../yocto_common/" class="md-nav__link">
       Generic utilities
     </a>
   </li>
@@ -462,8 +509,9 @@
       
 
 
+
   <li class="md-nav__item">
-    <a href="../yocto_parallel/" title="Concurrency utilities" class="md-nav__link">
+    <a href="../yocto_parallel/" class="md-nav__link">
       Concurrency utilities
     </a>
   </li>
@@ -476,7 +524,8 @@
               </div>
             
             
-              <div class="md-sidebar md-sidebar--secondary" data-md-component="toc">
+              
+              <div class="md-sidebar md-sidebar--secondary" data-md-component="toc" >
                 <div class="md-sidebar__scrollwrap">
                   <div class="md-sidebar__inner">
                     
@@ -554,9 +603,6 @@
               
                 
                 
-                  
-                
-                
                 <h1 id="yoctomodelio-serialization-for-obj-ply-and-pbrt-models">Yocto/ModelIO: Serialization for Obj, Ply and Pbrt models</h1>
 <p>Yocto/ModelIO is a collection of utilities for loading and saving scenes
 and meshes in Ply, Obj and Pbrt formats.
@@ -587,7 +633,6 @@ message suitable for displaying to a user.</p>
 <span class="k">if</span><span class="p">(</span><span class="o">!</span><span class="n">save_ply</span><span class="p">(</span><span class="n">filename</span><span class="p">,</span> <span class="n">ply</span><span class="p">,</span> <span class="n">error</span><span class="p">))</span>     <span class="c1">// save ply</span>
   <span class="n">print_error</span><span class="p">(</span><span class="n">error</span><span class="p">);</span>                   <span class="c1">// check and print error</span>
 </code></pre></div>
-
 
 <h2 id="ply-reading">Ply reading</h2>
 <p>Yocto/ModelIO defines several functions to make it easy to extract data
@@ -633,7 +678,6 @@ and <code>get_list_values(ply, element, property, values)</code> for values.</p>
   <span class="n">print_error</span><span class="p">(</span><span class="s">&quot;missing faces&quot;</span><span class="p">);</span>                  <span class="c1">// error if missing</span>
 </code></pre></div>
 
-
 <p>Yocto/Shape defines convenience functions to read the most used properties
 of meshes, using standard element and property names.
 For vertex properties, use <code>get_positions(ply, positions)</code>,
@@ -672,7 +716,6 @@ the Ply data has quads.</p>
 <span class="k">if</span><span class="p">(</span><span class="n">has_quads</span><span class="p">(</span><span class="n">ply</span><span class="p">))</span> <span class="n">get_quads</span><span class="p">(</span><span class="n">ply</span><span class="p">,</span> <span class="n">quads</span><span class="p">);</span>
 <span class="k">else</span> <span class="nf">get_triangles</span><span class="p">(</span><span class="n">ply</span><span class="p">,</span> <span class="n">triangles</span><span class="p">);</span>
 </code></pre></div>
-
 
 <h2 id="ply-writing">Ply writing</h2>
 <p>Yocto/ModelIO defines several functions to make it easy to fill Ply data
@@ -720,7 +763,6 @@ with <code>add_lists(ply,element,property,values)</code>.</p>
 <span class="n">save_ply</span><span class="p">(</span><span class="n">filename</span><span class="p">,</span> <span class="n">ply</span><span class="p">,</span> <span class="n">error</span><span class="p">);</span>         <span class="c1">// save ply</span>
 </code></pre></div>
 
-
 <p>Yocto/ModelIO defines convenience functions to add the most used properties
 of meshes, using standard element and property names.
 For vertex properties, use <code>add_positions(ply, positions)</code>,
@@ -757,7 +799,6 @@ arbitrary polygonal faces.</p>
 <span class="k">auto</span> <span class="n">error</span> <span class="o">=</span> <span class="n">string</span><span class="p">{};</span>                  <span class="c1">// error buffer</span>
 <span class="n">save_ply</span><span class="p">(</span><span class="n">filename</span><span class="p">,</span> <span class="n">ply</span><span class="p">,</span> <span class="n">error</span><span class="p">);</span>         <span class="c1">// save ply</span>
 </code></pre></div>
-
 
 <h2 id="obj-models">Obj models</h2>
 <p>The Obj file format is a file format used to serialize meshes and materials.
@@ -804,7 +845,6 @@ shapes, with a simpler interface than accessing data directly.</p>
   <span class="n">print_info</span><span class="p">(</span><span class="n">environment</span><span class="o">-&gt;</span><span class="n">emission</span><span class="p">);</span>       <span class="c1">// access environment properties</span>
 </code></pre></div>
 
-
 <p>Use <code>load_obj(filename, obj, error)</code> to load Obj files and
 <code>save_obj(filename, obj, error)</code> to save them.<br />
 Both loading and saving take a filename, a pointer to a Obj model,
@@ -818,7 +858,6 @@ message suitable for displaying to a user.</p>
 <span class="k">if</span><span class="p">(</span><span class="o">!</span><span class="n">save_obj</span><span class="p">(</span><span class="n">filename</span><span class="p">,</span> <span class="n">obj</span><span class="p">,</span> <span class="n">error</span><span class="p">))</span>     <span class="c1">// save obj</span>
   <span class="n">print_error</span><span class="p">(</span><span class="n">error</span><span class="p">);</span>                   <span class="c1">// check and print error</span>
 </code></pre></div>
-
 
 <h2 id="obj-reading">Obj reading</h2>
 <p>Obj is a face-varying format and that geometry representation is maintained
@@ -879,7 +918,6 @@ materials tags.</p>
 <span class="p">}</span>
 </code></pre></div>
 
-
 <p>Yocto/ModelIO supports also reading Obj shapes as face-varying quads
 with <code>get_fvquads(...)</code>.</p>
 <div class="codehilite"><pre><span></span><code><span class="k">auto</span> <span class="n">obj</span> <span class="o">=</span> <span class="k">new</span> <span class="n">obj_scene</span><span class="p">{};</span>             <span class="c1">// obj model buffer</span>
@@ -900,7 +938,6 @@ with <code>get_fvquads(...)</code>.</p>
   <span class="n">positions</span><span class="p">,</span> <span class="n">normals</span><span class="p">,</span> <span class="n">texcoords</span><span class="p">,</span>
   <span class="n">materials</span><span class="p">,</span> <span class="n">ematerials</span><span class="p">,</span> <span class="nb">false</span><span class="p">);</span>        <span class="c1">// flip texcoords if desired</span>
 </code></pre></div>
-
 
 <h2 id="obj-writing">Obj writing</h2>
 <p>To save an Obj, create a scene and add objects to it using
@@ -947,7 +984,6 @@ use <code>set_materials(shape, materials)</code>.</p>
 <span class="n">save_obj</span><span class="p">(</span><span class="n">filename</span><span class="p">,</span> <span class="n">obj</span><span class="p">,</span> <span class="n">error</span><span class="p">);</span>         <span class="c1">// save obj</span>
 </code></pre></div>
 
-
 <p>Yocto/ModelIO supports also writing of face-varying shapes with
 <code>set_fvquads(...)</code> with an API similar to above.</p>
 <div class="codehilite"><pre><span></span><code><span class="k">auto</span> <span class="n">obj</span> <span class="o">=</span> <span class="k">new</span> <span class="n">obj_scene</span><span class="p">{};</span>             <span class="c1">// obj model buffer</span>
@@ -969,7 +1005,6 @@ use <code>set_materials(shape, materials)</code>.</p>
 <span class="k">auto</span> <span class="n">error</span> <span class="o">=</span> <span class="n">string</span><span class="p">{};</span>                  <span class="c1">// error buffer</span>
 <span class="n">save_obj</span><span class="p">(</span><span class="n">filename</span><span class="p">,</span> <span class="n">obj</span><span class="p">,</span> <span class="n">error</span><span class="p">);</span>         <span class="c1">// save obj</span>
 </code></pre></div>
-
 
 <h2 id="pbrt-models">Pbrt models</h2>
 <p>The Pbrt file format is a scene representation suitable for realistic rendering
@@ -1012,7 +1047,6 @@ stored in the header file.</p>
   <span class="n">print_info</span><span class="p">(</span><span class="n">environment</span><span class="o">-&gt;</span><span class="n">emission</span><span class="p">);</span>        <span class="c1">// access environment properties</span>
 </code></pre></div>
 
-
 <p>Use <code>load_pbrt(filename, pbrt, error)</code> to load Pbrt files and
 <code>save_pbrt(filename, pbrt, error)</code> to save them.<br />
 Both loading and saving take a filename, a pointer to a Pbrt model,
@@ -1044,7 +1078,7 @@ message suitable for displaying to a user.</p>
     <div class="md-footer-nav">
       <nav class="md-footer-nav__inner md-grid" aria-label="Footer">
         
-          <a href="../yocto_bvh/" title="Ray-scene intersection" class="md-footer-nav__link md-footer-nav__link--prev" rel="prev">
+          <a href="../yocto_bvh/" class="md-footer-nav__link md-footer-nav__link--prev" rel="prev">
             <div class="md-footer-nav__button md-icon">
               <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M20 11v2H8l5.5 5.5-1.42 1.42L4.16 12l7.92-7.92L13.5 5.5 8 11h12z"/></svg>
             </div>
@@ -1059,7 +1093,7 @@ message suitable for displaying to a user.</p>
           </a>
         
         
-          <a href="../yocto_sceneio/" title="Scene serialization" class="md-footer-nav__link md-footer-nav__link--next" rel="next">
+          <a href="../yocto_sceneio/" class="md-footer-nav__link md-footer-nav__link--next" rel="next">
             <div class="md-footer-nav__title">
               <div class="md-ellipsis">
                 <span class="md-footer-nav__direction">
@@ -1096,15 +1130,15 @@ message suitable for displaying to a user.</p>
       
     </div>
     
-      <script src="../../assets/javascripts/vendor.3636a4ec.min.js"></script>
-      <script src="../../assets/javascripts/bundle.e9fe3281.min.js"></script><script id="__lang" type="application/json">{"clipboard.copy": "Copy to clipboard", "clipboard.copied": "Copied to clipboard", "search.config.lang": "en", "search.config.pipeline": "trimmer, stopWordFilter", "search.config.separator": "[\\s\\-]+", "search.result.placeholder": "Type to start searching", "search.result.none": "No matching documents", "search.result.one": "1 matching document", "search.result.other": "# matching documents"}</script>
+      <script src="../../assets/javascripts/vendor.08c56446.min.js"></script>
+      <script src="../../assets/javascripts/bundle.6ced434e.min.js"></script><script id="__lang" type="application/json">{"clipboard.copy": "Copy to clipboard", "clipboard.copied": "Copied to clipboard", "search.config.lang": "en", "search.config.pipeline": "trimmer, stopWordFilter", "search.config.separator": "[\\s\\-]+", "search.placeholder": "Search", "search.result.placeholder": "Type to start searching", "search.result.none": "No matching documents", "search.result.one": "1 matching document", "search.result.other": "# matching documents", "search.result.more.one": "1 more on this page", "search.result.more.other": "# more on this page", "search.result.term.missing": "Missing"}</script>
       
       <script>
         app = initialize({
           base: "../..",
           features: [],
           search: Object.assign({
-            worker: "../../assets/javascripts/worker/search.5eca75d3.min.js"
+            worker: "../../assets/javascripts/worker/search.8c7e0a7e.min.js"
           }, typeof search !== "undefined" && search)
         })
       </script>

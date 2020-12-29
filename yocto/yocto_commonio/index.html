@@ -1,6 +1,4 @@
 
-
-
 <!doctype html>
 <html lang="en" class="no-js">
   <head>
@@ -12,8 +10,9 @@
       
         <meta name="author" content="Fabio Pellacini">
       
+      
       <link rel="shortcut icon" href="../../assets/images/favicon.png">
-      <meta name="generator" content="mkdocs-1.1.2, mkdocs-material-5.5.12">
+      <meta name="generator" content="mkdocs-1.1.2, mkdocs-material-6.2.2">
     
     
       
@@ -21,14 +20,18 @@
       
     
     
-      <link rel="stylesheet" href="../../assets/stylesheets/main.4dd2dd8d.min.css">
+      <link rel="stylesheet" href="../../assets/stylesheets/main.73f7c429.min.css">
       
+        
+        <link rel="stylesheet" href="../../assets/stylesheets/palette.39b8e14a.min.css">
+        
       
     
     
     
       
-        <link href="https://fonts.gstatic.com" rel="preconnect" crossorigin>
+        
+        <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
         <link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Roboto:300,400,400i,700%7CRoboto+Mono&display=fallback">
         <style>body,input{font-family:"Roboto",-apple-system,BlinkMacSystemFont,Helvetica,Arial,sans-serif}code,kbd,pre{font-family:"Roboto Mono",SFMono-Regular,Consolas,Menlo,monospace}</style>
       
@@ -42,7 +45,13 @@
   </head>
   
   
-    <body dir="ltr">
+    
+    
+    
+    
+    
+    <body dir="ltr" data-md-color-scheme="" data-md-color-primary="none" data-md-color-accent="none">
+      
   
     
     <input class="md-toggle" data-md-toggle="drawer" type="checkbox" id="__drawer" autocomplete="off">
@@ -60,7 +69,9 @@
       
     </div>
     
-      <header class="md-header" data-md-component="header">
+      
+
+<header class="md-header" data-md-component="header">
   <nav class="md-header-nav md-grid" aria-label="Header">
     <a href="../.." title="Yocto/GL" class="md-header-nav__button md-logo" aria-label="Yocto/GL">
       
@@ -72,18 +83,20 @@
       <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M3 6h18v2H3V6m0 5h18v2H3v-2m0 5h18v2H3v-2z"/></svg>
     </label>
     <div class="md-header-nav__title" data-md-component="header-title">
-      
-        <div class="md-header-nav__ellipsis">
-          <span class="md-header-nav__topic md-ellipsis">
+      <div class="md-header-nav__ellipsis">
+        <div class="md-header-nav__topic">
+          <span class="md-ellipsis">
             Yocto/GL
           </span>
-          <span class="md-header-nav__topic md-ellipsis">
+        </div>
+        <div class="md-header-nav__topic">
+          <span class="md-ellipsis">
             
               Command-line utilities
             
           </span>
         </div>
-      
+      </div>
     </div>
     
       <label class="md-header-nav__button md-icon" for="__search">
@@ -94,7 +107,7 @@
   <label class="md-search__overlay" for="__search"></label>
   <div class="md-search__inner" role="search">
     <form class="md-search__form" name="search">
-      <input type="text" class="md-search__input" name="query" aria-label="Search" placeholder="Search" autocapitalize="off" autocorrect="off" autocomplete="off" spellcheck="false" data-md-component="search-query" data-md-state="active">
+      <input type="text" class="md-search__input" name="query" aria-label="Search" placeholder="Search" autocapitalize="off" autocorrect="off" autocomplete="off" spellcheck="false" data-md-component="search-query" data-md-state="active" required>
       <label class="md-search__icon md-icon" for="__search">
         <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M9.5 3A6.5 6.5 0 0116 9.5c0 1.61-.59 3.09-1.56 4.23l.27.27h.79l5 5-1.5 1.5-5-5v-.79l-.27-.27A6.516 6.516 0 019.5 16 6.5 6.5 0 013 9.5 6.5 6.5 0 019.5 3m0 2C7 5 5 7 5 9.5S7 14 9.5 14 14 12 14 9.5 12 5 9.5 5z"/></svg>
         <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M20 11v2H8l5.5 5.5-1.42 1.42L4.16 12l7.92-7.92L13.5 5.5 8 11h12z"/></svg>
@@ -135,8 +148,6 @@
     
     <div class="md-container" data-md-component="container">
       
-        
-      
       
         
       
@@ -144,10 +155,16 @@
         <div class="md-main__inner md-grid">
           
             
-              <div class="md-sidebar md-sidebar--primary" data-md-component="navigation">
+              
+              <div class="md-sidebar md-sidebar--primary" data-md-component="navigation" >
                 <div class="md-sidebar__scrollwrap">
                   <div class="md-sidebar__inner">
-                    <nav class="md-nav md-nav--primary" aria-label="Navigation" data-md-level="0">
+                    
+
+
+
+
+<nav class="md-nav md-nav--primary" aria-label="Navigation" data-md-level="0">
   <label class="md-nav__title" for="__drawer">
     <a href="../.." title="Yocto/GL" class="md-nav__button md-logo" aria-label="Yocto/GL">
       
@@ -178,8 +195,9 @@
       
 
 
+
   <li class="md-nav__item">
-    <a href="../.." title="About" class="md-nav__link">
+    <a href="../.." class="md-nav__link">
       About
     </a>
   </li>
@@ -190,8 +208,9 @@
       
 
 
+
   <li class="md-nav__item">
-    <a href="../../gallery/" title="Gallery" class="md-nav__link">
+    <a href="../../gallery/" class="md-nav__link">
       Gallery
     </a>
   </li>
@@ -202,8 +221,9 @@
       
 
 
+
   <li class="md-nav__item">
-    <a href="../yocto_math/" title="Math types" class="md-nav__link">
+    <a href="../yocto_math/" class="md-nav__link">
       Math types
     </a>
   </li>
@@ -214,8 +234,9 @@
       
 
 
+
   <li class="md-nav__item">
-    <a href="../yocto_color/" title="Color operations" class="md-nav__link">
+    <a href="../yocto_color/" class="md-nav__link">
       Color operations
     </a>
   </li>
@@ -226,8 +247,9 @@
       
 
 
+
   <li class="md-nav__item">
-    <a href="../yocto_geometry/" title="Geometry operations" class="md-nav__link">
+    <a href="../yocto_geometry/" class="md-nav__link">
       Geometry operations
     </a>
   </li>
@@ -238,8 +260,9 @@
       
 
 
+
   <li class="md-nav__item">
-    <a href="../yocto_sampling/" title="Sampling routines" class="md-nav__link">
+    <a href="../yocto_sampling/" class="md-nav__link">
       Sampling routines
     </a>
   </li>
@@ -250,8 +273,9 @@
       
 
 
+
   <li class="md-nav__item">
-    <a href="../yocto_noise/" title="Noise functions" class="md-nav__link">
+    <a href="../yocto_noise/" class="md-nav__link">
       Noise functions
     </a>
   </li>
@@ -262,8 +286,9 @@
       
 
 
+
   <li class="md-nav__item">
-    <a href="../yocto_shading/" title="Shading routines" class="md-nav__link">
+    <a href="../yocto_shading/" class="md-nav__link">
       Shading routines
     </a>
   </li>
@@ -274,8 +299,9 @@
       
 
 
+
   <li class="md-nav__item">
-    <a href="../yocto_image/" title="Image utilities" class="md-nav__link">
+    <a href="../yocto_image/" class="md-nav__link">
       Image utilities
     </a>
   </li>
@@ -286,8 +312,9 @@
       
 
 
+
   <li class="md-nav__item">
-    <a href="../yocto_shape/" title="Shape utilities" class="md-nav__link">
+    <a href="../yocto_shape/" class="md-nav__link">
       Shape utilities
     </a>
   </li>
@@ -298,8 +325,9 @@
       
 
 
+
   <li class="md-nav__item">
-    <a href="../yocto_mesh/" title="Mesh processing" class="md-nav__link">
+    <a href="../yocto_mesh/" class="md-nav__link">
       Mesh processing
     </a>
   </li>
@@ -310,8 +338,9 @@
       
 
 
+
   <li class="md-nav__item">
-    <a href="../yocto_bvh/" title="Ray-scene intersection" class="md-nav__link">
+    <a href="../yocto_bvh/" class="md-nav__link">
       Ray-scene intersection
     </a>
   </li>
@@ -322,8 +351,9 @@
       
 
 
+
   <li class="md-nav__item">
-    <a href="../yocto_modelio/" title="Model serialization" class="md-nav__link">
+    <a href="../yocto_modelio/" class="md-nav__link">
       Model serialization
     </a>
   </li>
@@ -334,8 +364,9 @@
       
 
 
+
   <li class="md-nav__item">
-    <a href="../yocto_sceneio/" title="Scene serialization" class="md-nav__link">
+    <a href="../yocto_sceneio/" class="md-nav__link">
       Scene serialization
     </a>
   </li>
@@ -346,8 +377,9 @@
       
 
 
+
   <li class="md-nav__item">
-    <a href="../yocto_trace/" title="Path tracing" class="md-nav__link">
+    <a href="../yocto_trace/" class="md-nav__link">
       Path tracing
     </a>
   </li>
@@ -356,6 +388,20 @@
       
       
       
+
+
+
+  <li class="md-nav__item">
+    <a href="../yocto_json/" class="md-nav__link">
+      JSON utilities
+    </a>
+  </li>
+
+    
+      
+      
+      
+
 
   
 
@@ -372,7 +418,7 @@
         <span class="md-nav__icon md-icon"></span>
       </label>
     
-    <a href="./" title="Command-line utilities" class="md-nav__link md-nav__link--active">
+    <a href="./" class="md-nav__link md-nav__link--active">
       Command-line utilities
     </a>
     
@@ -422,8 +468,9 @@
       
 
 
+
   <li class="md-nav__item">
-    <a href="../yocto_common/" title="Generic utilities" class="md-nav__link">
+    <a href="../yocto_common/" class="md-nav__link">
       Generic utilities
     </a>
   </li>
@@ -434,8 +481,9 @@
       
 
 
+
   <li class="md-nav__item">
-    <a href="../yocto_parallel/" title="Concurrency utilities" class="md-nav__link">
+    <a href="../yocto_parallel/" class="md-nav__link">
       Concurrency utilities
     </a>
   </li>
@@ -448,7 +496,8 @@
               </div>
             
             
-              <div class="md-sidebar md-sidebar--secondary" data-md-component="toc">
+              
+              <div class="md-sidebar md-sidebar--secondary" data-md-component="toc" >
                 <div class="md-sidebar__scrollwrap">
                   <div class="md-sidebar__inner">
                     
@@ -498,9 +547,6 @@
               
                 
                 
-                  
-                
-                
                 <h1 id="yoctocommonio-utilities-for-writing-command-line-apps">Yocto/CommonIO: Utilities for writing command-line apps</h1>
 <p>Yocto/CommonIO is a collection of utilities used in writing command-line
 applications, including parsing command line arguments, simple path
@@ -521,7 +567,6 @@ a progress bar with a message for a given current and total number of tasks.</p>
 <span class="k">for</span><span class="p">(</span><span class="k">auto</span> <span class="nl">task</span> <span class="p">:</span> <span class="n">range</span><span class="p">(</span><span class="mi">10</span><span class="p">))</span>                  <span class="c1">// iterate over tasks</span>
   <span class="n">print_progress</span><span class="p">(</span><span class="s">&quot;Progress bar&quot;</span><span class="p">,</span> <span class="n">task</span><span class="p">,</span> <span class="mi">10</span><span class="p">);</span> <span class="c1">// print progress bar</span>
 </code></pre></div>
-
 
 <h2 id="command-line-parsing">Command-Line Parsing</h2>
 <p>Yocto/CommonIO includes a simple command-line parser that supports optional
@@ -552,7 +597,6 @@ and arrays of strings. Boolean flags are indicated with a pair of names
 <span class="n">add_option</span><span class="p">(</span><span class="n">cli</span><span class="p">,</span> <span class="s">&quot;names&quot;</span><span class="p">,</span> <span class="n">names</span><span class="p">,</span> <span class="s">&quot;names&quot;</span><span class="p">);</span>            <span class="c1">// positional arguments</span>
 <span class="n">parse_cli</span><span class="p">(</span><span class="n">cli</span><span class="p">);</span>
 </code></pre></div>
-
 
 <h2 id="text-and-binary-serialization">Text and binary serialization</h2>
 <p>Text files are loaded with <code>load_text(filename, text, error)</code> and saved with
@@ -593,7 +637,7 @@ message suitable for displaying to a user.</p>
     <div class="md-footer-nav">
       <nav class="md-footer-nav__inner md-grid" aria-label="Footer">
         
-          <a href="../yocto_trace/" title="Path tracing" class="md-footer-nav__link md-footer-nav__link--prev" rel="prev">
+          <a href="../yocto_json/" class="md-footer-nav__link md-footer-nav__link--prev" rel="prev">
             <div class="md-footer-nav__button md-icon">
               <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M20 11v2H8l5.5 5.5-1.42 1.42L4.16 12l7.92-7.92L13.5 5.5 8 11h12z"/></svg>
             </div>
@@ -602,13 +646,13 @@ message suitable for displaying to a user.</p>
                 <span class="md-footer-nav__direction">
                   Previous
                 </span>
-                Path tracing
+                JSON utilities
               </div>
             </div>
           </a>
         
         
-          <a href="../yocto_common/" title="Generic utilities" class="md-footer-nav__link md-footer-nav__link--next" rel="next">
+          <a href="../yocto_common/" class="md-footer-nav__link md-footer-nav__link--next" rel="next">
             <div class="md-footer-nav__title">
               <div class="md-ellipsis">
                 <span class="md-footer-nav__direction">
@@ -645,15 +689,15 @@ message suitable for displaying to a user.</p>
       
     </div>
     
-      <script src="../../assets/javascripts/vendor.3636a4ec.min.js"></script>
-      <script src="../../assets/javascripts/bundle.e9fe3281.min.js"></script><script id="__lang" type="application/json">{"clipboard.copy": "Copy to clipboard", "clipboard.copied": "Copied to clipboard", "search.config.lang": "en", "search.config.pipeline": "trimmer, stopWordFilter", "search.config.separator": "[\\s\\-]+", "search.result.placeholder": "Type to start searching", "search.result.none": "No matching documents", "search.result.one": "1 matching document", "search.result.other": "# matching documents"}</script>
+      <script src="../../assets/javascripts/vendor.08c56446.min.js"></script>
+      <script src="../../assets/javascripts/bundle.6ced434e.min.js"></script><script id="__lang" type="application/json">{"clipboard.copy": "Copy to clipboard", "clipboard.copied": "Copied to clipboard", "search.config.lang": "en", "search.config.pipeline": "trimmer, stopWordFilter", "search.config.separator": "[\\s\\-]+", "search.placeholder": "Search", "search.result.placeholder": "Type to start searching", "search.result.none": "No matching documents", "search.result.one": "1 matching document", "search.result.other": "# matching documents", "search.result.more.one": "1 more on this page", "search.result.more.other": "# more on this page", "search.result.term.missing": "Missing"}</script>
       
       <script>
         app = initialize({
           base: "../..",
           features: [],
           search: Object.assign({
-            worker: "../../assets/javascripts/worker/search.5eca75d3.min.js"
+            worker: "../../assets/javascripts/worker/search.8c7e0a7e.min.js"
           }, typeof search !== "undefined" && search)
         })
       </script>

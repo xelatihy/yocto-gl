@@ -1,6 +1,4 @@
 
-
-
 <!doctype html>
 <html lang="en" class="no-js">
   <head>
@@ -12,8 +10,9 @@
       
         <meta name="author" content="Fabio Pellacini">
       
+      
       <link rel="shortcut icon" href="../../assets/images/favicon.png">
-      <meta name="generator" content="mkdocs-1.1.2, mkdocs-material-5.5.12">
+      <meta name="generator" content="mkdocs-1.1.2, mkdocs-material-6.2.2">
     
     
       
@@ -21,14 +20,18 @@
       
     
     
-      <link rel="stylesheet" href="../../assets/stylesheets/main.4dd2dd8d.min.css">
+      <link rel="stylesheet" href="../../assets/stylesheets/main.73f7c429.min.css">
       
+        
+        <link rel="stylesheet" href="../../assets/stylesheets/palette.39b8e14a.min.css">
+        
       
     
     
     
       
-        <link href="https://fonts.gstatic.com" rel="preconnect" crossorigin>
+        
+        <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
         <link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Roboto:300,400,400i,700%7CRoboto+Mono&display=fallback">
         <style>body,input{font-family:"Roboto",-apple-system,BlinkMacSystemFont,Helvetica,Arial,sans-serif}code,kbd,pre{font-family:"Roboto Mono",SFMono-Regular,Consolas,Menlo,monospace}</style>
       
@@ -42,7 +45,13 @@
   </head>
   
   
-    <body dir="ltr">
+    
+    
+    
+    
+    
+    <body dir="ltr" data-md-color-scheme="" data-md-color-primary="none" data-md-color-accent="none">
+      
   
     
     <input class="md-toggle" data-md-toggle="drawer" type="checkbox" id="__drawer" autocomplete="off">
@@ -60,7 +69,9 @@
       
     </div>
     
-      <header class="md-header" data-md-component="header">
+      
+
+<header class="md-header" data-md-component="header">
   <nav class="md-header-nav md-grid" aria-label="Header">
     <a href="../.." title="Yocto/GL" class="md-header-nav__button md-logo" aria-label="Yocto/GL">
       
@@ -72,18 +83,20 @@
       <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M3 6h18v2H3V6m0 5h18v2H3v-2m0 5h18v2H3v-2z"/></svg>
     </label>
     <div class="md-header-nav__title" data-md-component="header-title">
-      
-        <div class="md-header-nav__ellipsis">
-          <span class="md-header-nav__topic md-ellipsis">
+      <div class="md-header-nav__ellipsis">
+        <div class="md-header-nav__topic">
+          <span class="md-ellipsis">
             Yocto/GL
           </span>
-          <span class="md-header-nav__topic md-ellipsis">
+        </div>
+        <div class="md-header-nav__topic">
+          <span class="md-ellipsis">
             
               Shape utilities
             
           </span>
         </div>
-      
+      </div>
     </div>
     
       <label class="md-header-nav__button md-icon" for="__search">
@@ -94,7 +107,7 @@
   <label class="md-search__overlay" for="__search"></label>
   <div class="md-search__inner" role="search">
     <form class="md-search__form" name="search">
-      <input type="text" class="md-search__input" name="query" aria-label="Search" placeholder="Search" autocapitalize="off" autocorrect="off" autocomplete="off" spellcheck="false" data-md-component="search-query" data-md-state="active">
+      <input type="text" class="md-search__input" name="query" aria-label="Search" placeholder="Search" autocapitalize="off" autocorrect="off" autocomplete="off" spellcheck="false" data-md-component="search-query" data-md-state="active" required>
       <label class="md-search__icon md-icon" for="__search">
         <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M9.5 3A6.5 6.5 0 0116 9.5c0 1.61-.59 3.09-1.56 4.23l.27.27h.79l5 5-1.5 1.5-5-5v-.79l-.27-.27A6.516 6.516 0 019.5 16 6.5 6.5 0 013 9.5 6.5 6.5 0 019.5 3m0 2C7 5 5 7 5 9.5S7 14 9.5 14 14 12 14 9.5 12 5 9.5 5z"/></svg>
         <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M20 11v2H8l5.5 5.5-1.42 1.42L4.16 12l7.92-7.92L13.5 5.5 8 11h12z"/></svg>
@@ -135,8 +148,6 @@
     
     <div class="md-container" data-md-component="container">
       
-        
-      
       
         
       
@@ -144,10 +155,16 @@
         <div class="md-main__inner md-grid">
           
             
-              <div class="md-sidebar md-sidebar--primary" data-md-component="navigation">
+              
+              <div class="md-sidebar md-sidebar--primary" data-md-component="navigation" >
                 <div class="md-sidebar__scrollwrap">
                   <div class="md-sidebar__inner">
-                    <nav class="md-nav md-nav--primary" aria-label="Navigation" data-md-level="0">
+                    
+
+
+
+
+<nav class="md-nav md-nav--primary" aria-label="Navigation" data-md-level="0">
   <label class="md-nav__title" for="__drawer">
     <a href="../.." title="Yocto/GL" class="md-nav__button md-logo" aria-label="Yocto/GL">
       
@@ -178,8 +195,9 @@
       
 
 
+
   <li class="md-nav__item">
-    <a href="../.." title="About" class="md-nav__link">
+    <a href="../.." class="md-nav__link">
       About
     </a>
   </li>
@@ -190,8 +208,9 @@
       
 
 
+
   <li class="md-nav__item">
-    <a href="../../gallery/" title="Gallery" class="md-nav__link">
+    <a href="../../gallery/" class="md-nav__link">
       Gallery
     </a>
   </li>
@@ -202,8 +221,9 @@
       
 
 
+
   <li class="md-nav__item">
-    <a href="../yocto_math/" title="Math types" class="md-nav__link">
+    <a href="../yocto_math/" class="md-nav__link">
       Math types
     </a>
   </li>
@@ -214,8 +234,9 @@
       
 
 
+
   <li class="md-nav__item">
-    <a href="../yocto_color/" title="Color operations" class="md-nav__link">
+    <a href="../yocto_color/" class="md-nav__link">
       Color operations
     </a>
   </li>
@@ -226,8 +247,9 @@
       
 
 
+
   <li class="md-nav__item">
-    <a href="../yocto_geometry/" title="Geometry operations" class="md-nav__link">
+    <a href="../yocto_geometry/" class="md-nav__link">
       Geometry operations
     </a>
   </li>
@@ -238,8 +260,9 @@
       
 
 
+
   <li class="md-nav__item">
-    <a href="../yocto_sampling/" title="Sampling routines" class="md-nav__link">
+    <a href="../yocto_sampling/" class="md-nav__link">
       Sampling routines
     </a>
   </li>
@@ -250,8 +273,9 @@
       
 
 
+
   <li class="md-nav__item">
-    <a href="../yocto_noise/" title="Noise functions" class="md-nav__link">
+    <a href="../yocto_noise/" class="md-nav__link">
       Noise functions
     </a>
   </li>
@@ -262,8 +286,9 @@
       
 
 
+
   <li class="md-nav__item">
-    <a href="../yocto_shading/" title="Shading routines" class="md-nav__link">
+    <a href="../yocto_shading/" class="md-nav__link">
       Shading routines
     </a>
   </li>
@@ -274,8 +299,9 @@
       
 
 
+
   <li class="md-nav__item">
-    <a href="../yocto_image/" title="Image utilities" class="md-nav__link">
+    <a href="../yocto_image/" class="md-nav__link">
       Image utilities
     </a>
   </li>
@@ -284,6 +310,7 @@
       
       
       
+
 
   
 
@@ -300,7 +327,7 @@
         <span class="md-nav__icon md-icon"></span>
       </label>
     
-    <a href="./" title="Shape utilities" class="md-nav__link md-nav__link--active">
+    <a href="./" class="md-nav__link md-nav__link--active">
       Shape utilities
     </a>
     
@@ -406,8 +433,9 @@
       
 
 
+
   <li class="md-nav__item">
-    <a href="../yocto_mesh/" title="Mesh processing" class="md-nav__link">
+    <a href="../yocto_mesh/" class="md-nav__link">
       Mesh processing
     </a>
   </li>
@@ -418,8 +446,9 @@
       
 
 
+
   <li class="md-nav__item">
-    <a href="../yocto_bvh/" title="Ray-scene intersection" class="md-nav__link">
+    <a href="../yocto_bvh/" class="md-nav__link">
       Ray-scene intersection
     </a>
   </li>
@@ -430,8 +459,9 @@
       
 
 
+
   <li class="md-nav__item">
-    <a href="../yocto_modelio/" title="Model serialization" class="md-nav__link">
+    <a href="../yocto_modelio/" class="md-nav__link">
       Model serialization
     </a>
   </li>
@@ -442,8 +472,9 @@
       
 
 
+
   <li class="md-nav__item">
-    <a href="../yocto_sceneio/" title="Scene serialization" class="md-nav__link">
+    <a href="../yocto_sceneio/" class="md-nav__link">
       Scene serialization
     </a>
   </li>
@@ -454,8 +485,9 @@
       
 
 
+
   <li class="md-nav__item">
-    <a href="../yocto_trace/" title="Path tracing" class="md-nav__link">
+    <a href="../yocto_trace/" class="md-nav__link">
       Path tracing
     </a>
   </li>
@@ -466,8 +498,22 @@
       
 
 
+
   <li class="md-nav__item">
-    <a href="../yocto_commonio/" title="Command-line utilities" class="md-nav__link">
+    <a href="../yocto_json/" class="md-nav__link">
+      JSON utilities
+    </a>
+  </li>
+
+    
+      
+      
+      
+
+
+
+  <li class="md-nav__item">
+    <a href="../yocto_commonio/" class="md-nav__link">
       Command-line utilities
     </a>
   </li>
@@ -478,8 +524,9 @@
       
 
 
+
   <li class="md-nav__item">
-    <a href="../yocto_common/" title="Generic utilities" class="md-nav__link">
+    <a href="../yocto_common/" class="md-nav__link">
       Generic utilities
     </a>
   </li>
@@ -490,8 +537,9 @@
       
 
 
+
   <li class="md-nav__item">
-    <a href="../yocto_parallel/" title="Concurrency utilities" class="md-nav__link">
+    <a href="../yocto_parallel/" class="md-nav__link">
       Concurrency utilities
     </a>
   </li>
@@ -504,7 +552,8 @@
               </div>
             
             
-              <div class="md-sidebar md-sidebar--secondary" data-md-component="toc">
+              
+              <div class="md-sidebar md-sidebar--secondary" data-md-component="toc" >
                 <div class="md-sidebar__scrollwrap">
                   <div class="md-sidebar__inner">
                     
@@ -610,9 +659,6 @@
               
                 
                 
-                  
-                
-                
                 <h1 id="yoctoshape-shape-utilities">Yocto/Shape: Shape utilities</h1>
 <p>Yocto/Shape is a collection of utilities for manipulating shapes in 3D
 graphics, with a focus on triangle and quad meshes.
@@ -633,7 +679,6 @@ for triangle meshes, quad meshes, line sets and point sets respectively.</p>
 <span class="k">auto</span> <span class="n">texcoords</span> <span class="o">=</span> <span class="n">vector</span><span class="o">&lt;</span><span class="n">vec2f</span><span class="o">&gt;</span><span class="p">{...};</span>   <span class="c1">// vertex uvs</span>
 </code></pre></div>
 
-
 <p>Face-varying shapes are also supported by specifying separate element indices
 for each vertex property, with arrays of vertex properties possibly of different
 length. This makes sure that any topology can be represented. For now, only
@@ -643,7 +688,6 @@ face-varying quads are supported.</p>
 <span class="k">auto</span> <span class="n">quadstexcoords</span> <span class="o">=</span> <span class="n">vector</span><span class="o">&lt;</span><span class="n">vec4i</span><span class="o">&gt;</span><span class="p">{...};</span>  <span class="c1">// quads indices for uvs</span>
 <span class="k">auto</span> <span class="n">texcoords</span> <span class="o">=</span> <span class="n">vector</span><span class="o">&lt;</span><span class="n">vec2f</span><span class="o">&gt;</span><span class="p">{...};</span>       <span class="c1">// vertex uvs</span>
 </code></pre></div>
-
 
 <p>Throughout the library, functions may either take index and vertex arrays
 directly as input and output, or may pack these array in structs if deemed
@@ -670,7 +714,6 @@ meshes.</p>
    <span class="n">weights</span><span class="p">,</span> <span class="n">joints</span><span class="p">,</span> <span class="n">frames</span><span class="p">);</span>       <span class="c1">// skinned positions ans normals</span>
 </code></pre></div>
 
-
 <h2 id="flipping-and-aligning">Flipping and aligning</h2>
 <p>Yocto/Shape provides functions to correct shapes that have inconsistent
 orientations or normals. Use <code>flip_normals(normals)</code> to flip all mesh normals.
@@ -688,14 +731,12 @@ positions to the main axes.</p>
 <span class="n">positions</span> <span class="o">=</span> <span class="n">align_vertices</span><span class="p">(</span><span class="n">positions</span><span class="p">,</span> <span class="p">{</span><span class="mi">0</span><span class="p">,</span><span class="mi">1</span><span class="p">,</span><span class="mi">0</span><span class="p">});</span>
 </code></pre></div>
 
-
 <h2 id="edges-and-adjacencies">Edges and adjacencies</h2>
 <p>Use <code>get_edges(triangles)</code> amd <code>get_edges(quads)</code> to get a list of unique edges
 for a triangle or quads mesh.</p>
 <div class="codehilite"><pre><span></span><code><span class="k">auto</span> <span class="n">triangles</span> <span class="o">=</span> <span class="n">vector</span><span class="o">&lt;</span><span class="n">vec3i</span><span class="o">&gt;</span><span class="p">{...};</span>  <span class="c1">// triangle indices</span>
 <span class="k">auto</span> <span class="n">edges</span> <span class="o">=</span> <span class="n">get_edges</span><span class="p">(</span><span class="n">triangles</span><span class="p">);</span>    <span class="c1">// edge indices</span>
 </code></pre></div>
-
 
 <p>Internally, these functions use an <code>edge_map</code>, that is a dictionary that has
 pairs of vertex ids as keys and an edge index as value.
@@ -710,7 +751,6 @@ so that we can determine which edges belong to the boundary.</p>
    <span class="n">print</span><span class="p">(</span><span class="n">edge_index</span><span class="p">(</span><span class="n">emap</span><span class="p">,</span> <span class="n">edge</span><span class="p">));</span>     <span class="c1">// get edge indices</span>
 <span class="k">auto</span> <span class="n">boundary</span> <span class="o">=</span> <span class="n">get_boundary</span><span class="p">(</span><span class="n">emap</span><span class="p">);</span>   <span class="c1">// get unsorted boundary edges</span>
 </code></pre></div>
-
 
 <h2 id="ray-intersection-and-point-overlap">Ray-intersection and point-overlap</h2>
 <p>Yocto/Shape provides ray-scene intersection for points, lines, triangles and
@@ -737,7 +777,6 @@ triangles, <code>make_quads_bvh(bvh,quads,positions)</code> for quads,
 <span class="k">auto</span> <span class="n">bvh</span> <span class="o">=</span> <span class="n">make_triangles_bvh</span><span class="p">(</span><span class="n">triangles</span><span class="p">,</span> <span class="n">positions</span><span class="p">);</span> <span class="c1">// BVH construction</span>
 </code></pre></div>
 
-
 <p>Intersect and overlap functions return a <code>bvh_intersection</code> that bundles
 the intersection distance, the intersected element index and uvs,
 and a <code>hit</code> flag that signals whether an element was hit.</p>
@@ -753,7 +792,6 @@ triangles, <code>intersect_quads_bvh(bvh,quads,positions)</code> for quads,
 <span class="k">else</span> <span class="nf">print_info</span><span class="p">(</span><span class="s">&quot;no hit&quot;</span><span class="p">);</span>
 </code></pre></div>
 
-
 <p><code>overlap_&lt;element&gt;_bvh(...)</code> checks whether a shape overlaps a point within a
 given maximum distance and returns the distance, element and uv of the
 closest element.
@@ -768,7 +806,6 @@ triangles, <code>overlap_quads_bvh(bvh, quads, positions)</code> for quads,
 <span class="k">else</span> <span class="nf">print_info</span><span class="p">(</span><span class="s">&quot;no overlap&quot;</span><span class="p">);</span>
 </code></pre></div>
 
-
 <p>If vertices have moved little, BVHs can be updated instead of fully rebuild.
 Use <code>update_triangles_bvh(bvh, triangles, positions)</code> for
 triangles, <code>update_quads_bvh(bvh, quads, positions)</code> for quads,
@@ -777,7 +814,6 @@ triangles, <code>update_quads_bvh(bvh, quads, positions)</code> for quads,
 <div class="codehilite"><pre><span></span><code><span class="n">positions</span><span class="p">[...]</span> <span class="o">=</span> <span class="p">{...};</span>                           <span class="c1">// update positions</span>
 <span class="n">update_triangles_bvh</span><span class="p">(</span><span class="n">bvh</span><span class="p">,</span> <span class="n">triangles</span><span class="p">,</span> <span class="n">positions</span><span class="p">);</span>  <span class="c1">// update BVH</span>
 </code></pre></div>
-
 
 <h2 id="nearest-neighbors">Nearest neighbors</h2>
 <p>Nearest neighbors queries are computed by building a sparse hash grid
@@ -796,7 +832,6 @@ nearest neighbors.</p>
 <span class="n">find_neighbors</span><span class="p">(</span><span class="n">grid</span><span class="p">,</span> <span class="n">neighbors</span><span class="p">,</span> <span class="n">id</span><span class="p">,</span> <span class="n">max_dist</span><span class="p">);</span>     <span class="c1">// find neighbors by id</span>
 </code></pre></div>
 
-
 <h2 id="element-conversions-and-grouping">Element conversions and grouping</h2>
 <p>Yocto/Shape support conversion between shape elements.
 Use <code>quads_to_triangles(quads)</code> to convert quads to triangles and
@@ -806,7 +841,6 @@ lines for each Bézier segment.</p>
 <div class="codehilite"><pre><span></span><code><span class="k">auto</span> <span class="n">quads</span> <span class="o">=</span> <span class="n">vector</span><span class="o">&lt;</span><span class="n">vec4i</span><span class="o">&gt;</span><span class="p">{...};</span>
 <span class="k">auto</span> <span class="n">triangles</span> <span class="o">=</span> <span class="n">quads_to_triangles</span><span class="p">(</span><span class="n">quads</span><span class="p">);</span>  <span class="c1">// convert quads to triangles</span>
 </code></pre></div>
-
 
 <p>Face-varying meshes are stored by having different face indices for each
 vertex propeerty. This way, every vertex property has its own topology.
@@ -824,7 +858,6 @@ properties.</p>
    <span class="n">fvpositions</span><span class="p">,</span> <span class="n">fvnormals</span><span class="p">,</span> <span class="n">fvtexcoords</span><span class="p">);</span>
 </code></pre></div>
 
-
 <p>Yocto/Shape supports eliminating duplicate vertices in triangle and quad meshes.
 All vertices within a threshold are merged in a greedy fashion, which works well
 when duplicated vertices are near other while other vertices are further away.
@@ -839,7 +872,6 @@ duplicated quad vertices. For lower-level algorithms, use
    <span class="n">weld_triangles</span><span class="p">(</span><span class="n">triangles</span><span class="p">,</span> <span class="n">positions</span><span class="p">,</span> <span class="n">tolerance</span><span class="p">);</span>
 </code></pre></div>
 
-
 <p>Yocto/Shape supports splitting shapes that are tagged by ids. This is helpful
 for example when drawing meshes that have per-face materials using renders
 that do support one material per shape only. Use <code>ungroup_lines(lines,ids)</code>,
@@ -849,7 +881,6 @@ triangles and quads respectively.</p>
 <span class="k">auto</span> <span class="n">ids</span>       <span class="o">=</span> <span class="n">vector</span><span class="o">&lt;</span><span class="kt">int</span><span class="o">&gt;</span><span class="p">{...};</span>
 <span class="k">auto</span> <span class="n">split</span> <span class="o">=</span> <span class="n">ungroup_triangles</span><span class="p">(</span><span class="n">triangles</span><span class="p">,</span> <span class="n">ids</span><span class="p">);</span> <span class="c1">// returns list of meshes</span>
 </code></pre></div>
-
 
 <p>Yocto/Shape supports merging shape elements. This is useful, for example, when
 building up shapes from parts. The merged shapes are just concatenation of
@@ -867,7 +898,6 @@ the individual shape without vertex merging. Use <code>merge_lines(...)</code> f
 <span class="n">merge_triangles</span><span class="p">(</span><span class="n">triangles</span><span class="p">,</span> <span class="n">positions</span><span class="p">,</span> <span class="n">normals</span><span class="p">,</span> <span class="n">texcoords</span><span class="p">,</span>
   <span class="n">mtriangles</span><span class="p">,</span> <span class="n">mpositions</span><span class="p">,</span> <span class="n">mnormals</span><span class="p">,</span> <span class="n">mtexcoords</span><span class="p">);</span>
 </code></pre></div>
-
 
 <p>You can also merge triangles and quads together in other to have one
 primitive only. Use <code>merge_triangles_and_quads(triangles, quads, force_triangles)</code>
@@ -893,7 +923,6 @@ and act on a single vertex property at a time for maximum flexibility.</p>
 <span class="k">auto</span> <span class="p">[</span><span class="n">striangles</span><span class="p">,</span> <span class="n">spositions</span><span class="p">]</span> <span class="o">=</span> <span class="n">subdivide_triangles</span><span class="p">(</span><span class="n">triangles</span><span class="p">,</span> <span class="n">positions</span><span class="p">,</span> <span class="mi">2</span><span class="p">);</span>
 </code></pre></div>
 
-
 <p>Yocto/Shape also supports Catmull-Clark subdivision surfaces with
 <code>subdivide_catmullclark(quads, vert, level, creased)</code>. In this case,
 Catmull-Clark subdivision rules are used to smooth the mesh after
@@ -909,7 +938,6 @@ which is necessary when subdividing texture coordinates.</p>
 <span class="c1">// subdivide the triangle mesh recursively two times</span>
 <span class="k">auto</span> <span class="p">[</span><span class="n">stquads</span><span class="p">,</span> <span class="n">stexcoords</span><span class="p">]</span> <span class="o">=</span> <span class="n">subdivide_catmullclark</span><span class="p">(</span><span class="n">tquads</span><span class="p">,</span> <span class="n">texcoords</span><span class="p">,</span> <span class="mi">2</span><span class="p">,</span> <span class="nb">true</span><span class="p">);</span>
 </code></pre></div>
-
 
 <h2 id="shape-sampling">Shape sampling</h2>
 <p>Yocto/Shape supports sampling meshes uniformly. All sampling require to first
@@ -930,7 +958,6 @@ and <code>sample_quads_dcf(quads, positions)</code>.</p>
 <span class="p">}</span>
 </code></pre></div>
 
-
 <p>For triangles and quads, Yocto/Shape defines convenience functions that
 generate a set of points on the shape surface. Use <code>sample_triangles(...)</code>
 and <code>sample_quads(...)</code> for triangles and quads respectively.</p>
@@ -946,7 +973,6 @@ and <code>sample_quads(...)</code> for triangles and quads respectively.</p>
 <span class="n">sample_triangles</span><span class="p">(</span><span class="n">sampled_positions</span><span class="p">,</span> <span class="n">sampled_normals</span><span class="p">,</span> <span class="n">sampled_texcoords</span><span class="p">,</span>
                  <span class="n">triangles</span><span class="p">,</span> <span class="n">positions</span><span class="p">,</span> <span class="n">normals</span><span class="p">,</span> <span class="n">texcoords</span><span class="p">,</span> <span class="n">npoints</span><span class="p">);</span>
 </code></pre></div>
-
 
 <h2 id="shape-loading-and-saving">Shape loading and saving</h2>
 <p>Shapes are loaded with <code>load_shape(filename, &lt;shape data&gt;, error, facevarying, flipv)</code>
@@ -999,7 +1025,6 @@ by setting the <code>flipv</code> flag.</p>
    <span class="n">print_error</span><span class="p">(</span><span class="n">error</span><span class="p">);</span>                               <span class="c1">// check and print error</span>
 </code></pre></div>
 
-
 <h2 id="procedural-shapes">Procedural shapes</h2>
 <p>Yocto/Shape defines several procedural shapes used for both testing and
 to quickly create shapes for procedural scenes. Procedural shapes as input the
@@ -1043,7 +1068,6 @@ Use <code>make_rect(...)</code> for a rectangle in the XY plane,
 <span class="k">auto</span> <span class="n">shape_15</span> <span class="o">=</span> <span class="n">make_rounded_uvcylinder</span><span class="p">({</span><span class="mi">32</span><span class="p">,</span><span class="mi">32</span><span class="p">,</span><span class="mi">32</span><span class="p">},</span> <span class="p">{</span><span class="mi">1</span><span class="p">,</span><span class="mi">1</span><span class="p">});</span>
 </code></pre></div>
 
-
 <p>Yocto/Shape defines a few procedural face-varying shapes with similar interfaces
 to the above functions. In this case, the functions return face indices and
 vertex data for positions, normals and texture coordinates packed in a
@@ -1059,7 +1083,6 @@ Use <code>make_fvrect(...)</code> for a rectangle in the XY plane,
 <span class="k">auto</span> <span class="n">fvshape_02</span> <span class="o">=</span> <span class="n">make_fvbox</span><span class="p">({</span><span class="mi">32</span><span class="p">,</span><span class="mi">32</span><span class="p">,</span><span class="mi">32</span><span class="p">},</span> <span class="p">{</span><span class="mi">1</span><span class="p">,</span><span class="mi">1</span><span class="p">,</span><span class="mi">1</span><span class="p">});</span>
 <span class="k">auto</span> <span class="n">fvshape_03</span> <span class="o">=</span> <span class="n">make_fvsphere</span><span class="p">(</span><span class="mi">32</span><span class="p">,</span> <span class="mi">1</span><span class="p">);</span>
 </code></pre></div>
-
 
 <p>Yocto/Shape provides functions to create predefined shapes helpful in testing.
 These functions take only a scale and often provide only the positions as
@@ -1078,7 +1101,6 @@ Use <code>make_monkey(...)</code> for the Blender monkey as quads and positions 
 <span class="k">auto</span> <span class="n">geosph</span> <span class="o">=</span> <span class="n">make_geosphere</span><span class="p">(</span><span class="mi">1</span><span class="p">);</span>
 <span class="k">auto</span> <span class="n">fvcube</span> <span class="o">=</span> <span class="n">make_fvcube</span><span class="p">(</span><span class="mi">1</span><span class="p">);</span>
 </code></pre></div>
-
 
 <p>Yocto/Shape supports the generation of points and lines sets.
 Use <code>make_lines(...)</code> to create a line set in the XY plane,
@@ -1103,7 +1125,6 @@ or <code>points_shape</code> struct.</p>
                              <span class="mf">0.001</span><span class="p">);</span>       <span class="c1">// point radius</span>
 </code></pre></div>
 
-
 <p>Yocto/Shape also defines a simple function to generate randomized hairs
 on a triangle or quad mesh. Use <code>make_hair(...)</code> to create a hair shape
 from a triangle and quad mesh, and return a line set.</p>
@@ -1117,7 +1138,6 @@ from a triangle and quad mesh, and return a line set.</p>
   <span class="p">{</span><span class="mi">0</span><span class="p">,</span> <span class="mi">128</span><span class="p">},</span>       <span class="c1">// clump: clump added to hair (strength/number)</span>
   <span class="p">{</span><span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">});</span>        <span class="c1">// rotation: rotation added to hair (angle/strength)</span>
 </code></pre></div>
-
 
 <p>Finally, Yocto/Shape defines a function to create a quad mesh from a heighfield.
 Use <code>make_heightfield(...)</code> to create a heightfield meshes.</p>
@@ -1148,7 +1168,7 @@ Use <code>make_heightfield(...)</code> to create a heightfield meshes.</p>
     <div class="md-footer-nav">
       <nav class="md-footer-nav__inner md-grid" aria-label="Footer">
         
-          <a href="../yocto_image/" title="Image utilities" class="md-footer-nav__link md-footer-nav__link--prev" rel="prev">
+          <a href="../yocto_image/" class="md-footer-nav__link md-footer-nav__link--prev" rel="prev">
             <div class="md-footer-nav__button md-icon">
               <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M20 11v2H8l5.5 5.5-1.42 1.42L4.16 12l7.92-7.92L13.5 5.5 8 11h12z"/></svg>
             </div>
@@ -1163,7 +1183,7 @@ Use <code>make_heightfield(...)</code> to create a heightfield meshes.</p>
           </a>
         
         
-          <a href="../yocto_mesh/" title="Mesh processing" class="md-footer-nav__link md-footer-nav__link--next" rel="next">
+          <a href="../yocto_mesh/" class="md-footer-nav__link md-footer-nav__link--next" rel="next">
             <div class="md-footer-nav__title">
               <div class="md-ellipsis">
                 <span class="md-footer-nav__direction">
@@ -1200,15 +1220,15 @@ Use <code>make_heightfield(...)</code> to create a heightfield meshes.</p>
       
     </div>
     
-      <script src="../../assets/javascripts/vendor.3636a4ec.min.js"></script>
-      <script src="../../assets/javascripts/bundle.e9fe3281.min.js"></script><script id="__lang" type="application/json">{"clipboard.copy": "Copy to clipboard", "clipboard.copied": "Copied to clipboard", "search.config.lang": "en", "search.config.pipeline": "trimmer, stopWordFilter", "search.config.separator": "[\\s\\-]+", "search.result.placeholder": "Type to start searching", "search.result.none": "No matching documents", "search.result.one": "1 matching document", "search.result.other": "# matching documents"}</script>
+      <script src="../../assets/javascripts/vendor.08c56446.min.js"></script>
+      <script src="../../assets/javascripts/bundle.6ced434e.min.js"></script><script id="__lang" type="application/json">{"clipboard.copy": "Copy to clipboard", "clipboard.copied": "Copied to clipboard", "search.config.lang": "en", "search.config.pipeline": "trimmer, stopWordFilter", "search.config.separator": "[\\s\\-]+", "search.placeholder": "Search", "search.result.placeholder": "Type to start searching", "search.result.none": "No matching documents", "search.result.one": "1 matching document", "search.result.other": "# matching documents", "search.result.more.one": "1 more on this page", "search.result.more.other": "# more on this page", "search.result.term.missing": "Missing"}</script>
       
       <script>
         app = initialize({
           base: "../..",
           features: [],
           search: Object.assign({
-            worker: "../../assets/javascripts/worker/search.5eca75d3.min.js"
+            worker: "../../assets/javascripts/worker/search.8c7e0a7e.min.js"
           }, typeof search !== "undefined" && search)
         })
       </script>
