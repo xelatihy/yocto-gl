@@ -1041,17 +1041,41 @@ cli_command add_command(
 
 static json_value fix_cli_schema(const json_value& schema) { return schema; }
 
-static bool get_help(const json_value& js) {
-  if (js.contains("help")) return true;
-  for (auto& [_, ejs] : js.items()) {
-    if (ejs.is_object() && get_help(ejs)) return true;
+static bool get_clihelp(const json_value& value) {
+  if (value.contains("help")) return true;
+  for (auto& [_, item] : value.items()) {
+    if (item.is_object() && get_clihelp(item)) return true;
   }
   return false;
 }
 
-bool get_help(const cli_state& cli) { return get_help(cli.value); }
+static string get_clicommand(const json_value& value) {
+  if (!value.is_object()) return "";
+  for (auto& [name, item] : value.items()) {
+    if (!item.is_object()) continue;
+    auto subcommand = get_clicommand(item);
+    if (subcommand.empty()) {
+      return name;
+    } else {
+      return name + "/" + subcommand;
+    }
+  }
+  return "";
+}
 
-string get_usage(const cli_state& cli) {
+static vector<string> get_clicommandp(const json_value& value) {
+  if (!value.is_object()) return {};
+  for (auto& [name, item] : value.items()) {
+    if (!item.is_object()) continue;
+    auto path       = vector<string>{name};
+    auto subcommand = get_clicommandp(item);
+    path.insert(path.end(), subcommand.begin(), subcommand.end());
+    return path;
+  }
+  return {};
+}
+
+static string get_cliusage(const json_value& value, const json_value& schema_) {
   // helper
   auto is_positional = [](const json_value& schema,
                            const string&    name) -> bool {
@@ -1078,13 +1102,17 @@ string get_usage(const cli_state& cli) {
   };
 
   // TODO(fabio): get from command
-  auto schema = fix_cli_schema(cli.schema);
+  auto schema   = fix_cli_schema(schema_);
+  auto commandp = get_clicommandp(value);
+  auto pschema  = &schema;
+  for (auto& name : commandp) pschema = &pschema->at("properties").at(name);
+  auto& cschema = *pschema;
 
   auto message      = string{};
   auto has_optional = false, has_positional = false, has_command = false;
   auto usage_optional = string{}, usage_positional = string{},
        usage_command = string{};
-  for (auto& [name, property] : schema.at("properties").items()) {
+  for (auto& [name, property] : cschema.at("properties").items()) {
     if (property.value("type", "") == "object") continue;
     auto decorated_name = name;
     auto positional     = is_positional(schema, name);
@@ -1131,10 +1159,9 @@ string get_usage(const cli_state& cli) {
       usage_optional += line;
     }
   }
-  // TODO(fabio): fix commands
-  if (has_commands(schema)) {
+  if (has_commands(cschema)) {
     has_command = true;
-    for (auto& [name, property] : schema.at("properties").items()) {
+    for (auto& [name, property] : cschema.at("properties").items()) {
       if (property.value("type", "") != "object") continue;
       auto line = "  " + name;
       while (line.size() < 32) line += " ";
@@ -1142,16 +1169,15 @@ string get_usage(const cli_state& cli) {
       usage_command += line;
     }
   }
-  // for (auto& scmd : cmd.commands) {
-  // }
-  auto is_command = false;
-  message += "usage: " + cli.schema.value("title", "") +
-             (is_command ? " " + schema.value("title", "") : "") +
-             (has_commands ? " command" : "") +
-             (has_optional ? " [options]" : "") +
-             (has_positional ? " <arguments>" : "") + "\n";
-  message += cli.schema.value("description", "") + "\n\n";
-  if (has_commands) {
+
+  message += "usage: " + schema.value("title", "");
+  for (auto& name : commandp) message += " " + name;
+  if (has_command) message += " command";
+  if (has_optional) message += " [options]";
+  if (has_positional) message += " <arguments>";
+  message += "\n";
+  message += cschema.value("description", "") + "\n\n";
+  if (has_command) {
     message += "commands:\n" + usage_command + "\n";
   }
   if (has_optional) {
@@ -1163,21 +1189,14 @@ string get_usage(const cli_state& cli) {
   return message;
 }
 
-static string get_command(const json_value& value) {
-  if (!value.is_object()) return "";
-  for (auto& [name, item] : value.items()) {
-    if (!item.is_object()) continue;
-    auto subcommand = get_command(item);
-    if (subcommand.empty()) {
-      return name;
-    } else {
-      return name + "/" + subcommand;
-    }
-  }
-  return "";
+vector<string> get_commandp(const cli_state& cli) {
+  return get_clicommandp(cli.value);
 }
-
-string get_command(const cli_state& cli) { return get_command(cli.value); }
+string get_command(const cli_state& cli) { return get_clicommand(cli.value); }
+bool   get_help(const cli_state& cli) { return get_clihelp(cli.value); }
+string get_usage(const cli_state& cli) {
+  return get_cliusage(cli.value, cli.schema);
+}
 
 static bool parse_clivalue(
     json_value& value, const string& arg, const json_value& schema) {
