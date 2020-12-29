@@ -36,5 +36,23 @@
         }
       }
     }
+  },
+  "useOpenGL": {
+    "default": "yes",
+    "description": "Build with OpenGL",
+    "choices": {
+      "yes": {
+        "short": "OpenGL",
+        "settings": {
+          "YOCTO_OPENGL": "yes"
+        }
+      },
+      "no": {
+        "short": "NoOpenGL",
+        "settings": {
+          "YOCTO_OPENGL": "no"
+        }
+      }
+    }
   }
 }
