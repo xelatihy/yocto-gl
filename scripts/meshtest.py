@@ -6,6 +6,7 @@ import os
 import subprocess
 import json
 
+orig_dir = 'original'
 mesh_dir = 'meshes'
 scene_dir = 'scenes'
 curve_dir = 'curves'
@@ -91,6 +92,42 @@ def draw(dirname):
         except subprocess.TimeoutExpired:
             handle_error('app_timeout', result, scene_name)
     with open(f'{dirname}/result.json', 'wt') as f:
+        json.dump(result, f, indent=2)
+
+
+@run.command()
+@click.option('--dirname', '-d')
+def convert(dirname):
+    def handle_error(err, result, scene_name):
+        msg = 'error: ' + err
+        print(msg + ' ' * max(0, 78-len(msg)))
+        if err not in result:
+            result[err] = []
+        result[err] += [scene_name]
+
+    result = {'ok': []}
+    mesh_names = (glob.glob(f'{dirname}/{orig_dir}/*.obj') +
+                  glob.glob(f'{dirname}/{orig_dir}/*.stl'))
+    mesh_num = len(mesh_names)
+    for mesh_id, mesh_name in enumerate(mesh_names):
+        out_name = mesh_name.replace(
+            f'{orig_dir}/', f'{mesh_dir}/').replace('.obj', '.ply').replace('.stl', '.ply')
+        msg = f'[{mesh_id}/{mesh_num}] {mesh_name}'
+        print(msg + ' ' * max(0, 78-len(msg)))
+        cmd = f'../yocto-gl/bin/ymeshproc {mesh_name} -o {out_name} -P'
+        try:
+            retcode = subprocess.run(cmd, timeout=30, shell=True).returncode
+            if retcode < 0:
+                handle_error('app_terminated', result, mesh_name)
+            elif retcode > 0:
+                handle_error('app_error', result, mesh_name)
+            else:
+                result['ok'] += [mesh_name]
+        except OSError:
+            handle_error('os_error', result, mesh_name)
+        except subprocess.TimeoutExpired:
+            handle_error('app_timeout', result, mesh_name)
+    with open(f'{dirname}/convert.json', 'wt') as f:
         json.dump(result, f, indent=2)
 
 

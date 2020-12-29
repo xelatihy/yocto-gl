@@ -116,6 +116,7 @@ int main(int argc, const char* argv[]) {
   auto uscale               = 1.0f;
   auto translate            = zero3f;
   auto info                 = false;
+  auto position_only        = false;
   auto geodesic_source      = -1;
   int  p0                   = -1;
   int  p1                   = -1;
@@ -141,6 +142,7 @@ int main(int argc, const char* argv[]) {
   add_optional(cli, "scalex", scale.x, "Scale along x axis", "sx");
   add_optional(cli, "scalez", scale.z, "Scale along z axis", "sz");
   add_optional(cli, "info", info, "print mesh info", "i");
+  add_optional(cli, "position-only", position_only, "load positions only", "P");
   add_optional(cli, "geodesic-source", geodesic_source, "Geodesic source");
   add_optional(cli, "path-vertex0", p0, "Path vertex 0", "p0");
   add_optional(cli, "path-vertex1", p1, "Path vertex 1", "p1");
@@ -167,6 +169,9 @@ int main(int argc, const char* argv[]) {
   if (path_extension(filename) == ".ypreset") {
     if (!make_mesh_preset(triangles, positions, normals, texcoords, colors,
             path_basename(filename), ioerror))
+      print_fatal(ioerror);
+  } else if (position_only) {
+    if (!load_mesh(filename, triangles, positions, ioerror))
       print_fatal(ioerror);
   } else {
     if (!load_mesh(filename, triangles, positions, normals, texcoords, colors,

@@ -2632,8 +2632,31 @@ bool load_stl(const string& filename, stl_model* stl, string& error,
   auto binary = header[0] != 's' || header[1] != 'o' || header[2] != 'l' ||
                 header[3] != 'i' || header[4] != 'd';
 
+  // check size in case the binary had a bad header
+  if (!binary) {
+    auto ntriangles = (uint32_t)0;
+    if (!read_value(fs, ntriangles)) return read_error();
+    fseek(fs.fs, 0, SEEK_SET);
+    fseek(fs.fs, 0, SEEK_END);
+    auto length = ftell(fs.fs);
+    fseek(fs.fs, 0, SEEK_SET);
+    auto size = 80 + 4 + (4 * 12 + 2) * (size_t)ntriangles;
+    binary    = length == size;
+  }
+
+  // close file
+  close_file(fs);
+
   // switch on type
   if (binary) {
+      // open file
+      auto fs = open_file(filename, "rb");
+      if (!fs) return open_error();
+      
+    // skip header
+    auto header = array<char, 80>{};
+    if (!read_value(fs, header)) return read_error();
+
     // read shapes until the end
     auto ntriangles = (uint32_t)0;
     while (read_value(fs, ntriangles)) {
@@ -2668,15 +2691,14 @@ bool load_stl(const string& filename, stl_model* stl, string& error,
     if (stl->shapes.empty()) return read_error();
   } else {
     // if ascii, re-open the file as text
-    close_file(fs);
-    auto fsa = open_file(filename, "rb");
-    if (!fsa) return open_error();
+    auto fs = open_file(filename, "rt");
+    if (!fs) return open_error();
 
     // parse state
     auto in_solid = false, in_facet = false, in_loop = false;
     // raed all lines
     auto buffer = array<char, 4096>{};
-    while (read_line(fsa, buffer)) {
+    while (read_line(fs, buffer)) {
       // str
       auto str = string_view{buffer.data()};
       remove_comment(str);
@@ -2689,7 +2711,7 @@ bool load_stl(const string& filename, stl_model* stl, string& error,
       if (cmd.empty()) continue;
 
       // switch over command
-      if (cmd == "shape") {
+      if (cmd == "solid") {
         if (in_solid) return parse_error();
         in_solid = true;
         stl->shapes.emplace_back(new stl_shape{});
@@ -2703,14 +2725,16 @@ bool load_stl(const string& filename, stl_model* stl, string& error,
         if (!parse_value(str, cmd)) return parse_error();
         if (cmd != "normal") return parse_error();
         // vertex normal
-        if (parse_value(str, stl->shapes.back()->fnormals.emplace_back()))
+        if (!parse_value(str, stl->shapes.back()->fnormals.emplace_back()))
           return parse_error();
       } else if (cmd == "endfacet") {
         if (!in_solid || !in_facet || in_loop) return parse_error();
         in_facet = false;
         // check that it was a triangle
         auto last_pos = (int)stl->shapes.back()->positions.size() - 3;
-        if (last_pos != stl->shapes.back()->triangles.back().z + 3)
+        if (stl->shapes.back()->triangles.empty() && last_pos != 0)
+            return parse_error();
+        if (!stl->shapes.back()->triangles.empty() && last_pos != stl->shapes.back()->triangles.back().z + 1)
           return parse_error();
         // add triangle
         stl->shapes.back()->triangles.push_back(
@@ -2726,7 +2750,7 @@ bool load_stl(const string& filename, stl_model* stl, string& error,
         in_loop = false;
       } else if (cmd == "vertex") {
         // vertex position
-        if (parse_value(str, stl->shapes.back()->positions.emplace_back()))
+        if (!parse_value(str, stl->shapes.back()->positions.emplace_back()))
           return parse_error();
       } else {
         return parse_error();
@@ -2814,7 +2838,7 @@ bool save_stl(
     }
   } else {
     for (auto& shape : stl->shapes) {
-      if (!format_values(fs, "shape \n")) return write_error();
+      if (!format_values(fs, "solid \n")) return write_error();
       for (auto triangle_idx = 0; triangle_idx < shape->triangles.size();
            triangle_idx++) {
         auto& triangle = shape->triangles[triangle_idx];
@@ -2835,6 +2859,7 @@ bool save_stl(
         if (!format_values(fs, "endloop\n")) return write_error();
         if (!format_values(fs, "endfacet\n")) return write_error();
       }
+      if (!format_values(fs, "endsolid \n")) return write_error();
     }
   }
 
