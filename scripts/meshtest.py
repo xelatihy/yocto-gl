@@ -106,16 +106,17 @@ def convert(dirname):
         result[err] += [scene_name]
 
     result = {'ok': []}
-    mesh_names = glob.glob(f'{dirname}/{mesh_dir}/*.obj')
+    mesh_names = (glob.glob(f'{dirname}/{orig_dir}/*.obj') +
+                  glob.glob(f'{dirname}/{orig_dir}/*.stl'))
     mesh_num = len(mesh_names)
     for mesh_id, mesh_name in enumerate(mesh_names):
         out_name = mesh_name.replace(
-            f'{orig_dir}/', '{mesh_dir}/').replace('.obj', '.ply').replace('.stl', '.ply')
+            f'{orig_dir}/', f'{mesh_dir}/').replace('.obj', '.ply').replace('.stl', '.ply')
         msg = f'[{mesh_id}/{mesh_num}] {mesh_name}'
         print(msg + ' ' * max(0, 78-len(msg)))
-        cmd = f'../yocto-gl/bin/ymeshproc {mesh_name} -o {out_name}'
+        cmd = f'../yocto-gl/bin/ymeshproc {mesh_name} -o {out_name} -P'
         try:
-            retcode = subprocess.run(cmd, timeout=10, shell=True).returncode
+            retcode = subprocess.run(cmd, timeout=30, shell=True).returncode
             if retcode < 0:
                 handle_error('app_terminated', result, mesh_name)
             elif retcode > 0:
