@@ -619,8 +619,8 @@ int main(int argc, const char* argv[]) {
   add_positional(cli_convert, "image", convert.image, "Input image");
 
   auto cli_view = add_command(cli, "view", "View images");
-  add_optional(cli_view, "output", convert.output, "Output image", "o");
-  add_positional(cli_view, "image", convert.image, "Input image");
+  add_optional(cli_view, "output", view.output, "Output image", "o");
+  add_positional(cli_view, "image", view.image, "Input image");
 
   auto cli_diff = add_command(cli, "diff", "Diff two images");
   add_optional(cli_diff, "signal", diff.signal, "Signal a diff as error");
