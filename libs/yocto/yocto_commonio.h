@@ -2591,29 +2591,6 @@ inline json_value& get_clischema(
   }
   return *current;
 }
-inline const json_value& get_clischema(
-    const json_value& schema, const vector<string>& path) {
-  auto current = &schema;
-  for (auto& name : path) {
-    current = &(current->at("properties").at(name));
-  }
-  return *current;
-}
-inline json_value& get_clivalue(json_value& js, const vector<string>& path) {
-  auto current = &js;
-  for (auto& name : path) {
-    current = &(current->at(name));
-  }
-  return *current;
-}
-inline const json_value& get_clivalue(
-    const json_value& js, const string& path) {
-  auto current = &js;
-  for (auto& name : path) {
-    current = &(current->at(name));
-  }
-  return *current;
-}
 inline cli_setter& get_clisetter(
     cli_setter& setter, const vector<string>& path) {
   auto current = &setter;
@@ -2621,14 +2598,6 @@ inline cli_setter& get_clisetter(
     current = &(current->at(name));
   }
   return *current;
-}
-
-// Jsons paths
-inline vector<string> join_clipath(
-    const vector<string>& path, const string& name) {
-  auto joined = path;
-  joined.push_back(name);
-  return joined;
 }
 
 // Add an optional argument. Supports strings, numbers, and boolean flags.
