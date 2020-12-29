@@ -1,4 +1,5 @@
 add_subdirectory(yimage)
+add_subdirectory(ytrace)
 add_subdirectory(yscenetrace)
 add_subdirectory(ysceneproc)
 add_subdirectory(yimageproc)
