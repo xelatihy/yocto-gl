@@ -801,6 +801,12 @@ static vec2i resize_size(const vec2i& img_size, const vec2i& size_) {
   return size;
 }
 
+image<vec4f> resize_image(const image<vec4f>& img, int width, int height) {
+  return resize_image(img, {width, height});
+}
+image<vec4b> resize_image(const image<vec4b>& img, int width, int height) {
+  return resize_image(img, {width, height});
+}
 image<vec4f> resize_image(const image<vec4f>& img, const vec2i& size_) {
   auto size    = resize_size(img.imsize(), size_);
   auto res_img = image<vec4f>{size};

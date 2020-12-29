@@ -232,6 +232,8 @@ void colorgrade_image_mt(image<vec4f>& corrected, const image<vec4f>& img,
 vec3f compute_white_balance(const image<vec4f>& img);
 
 // Resize an image.
+image<vec4f> resize_image(const image<vec4f>& img, int width, int height);
+image<vec4b> resize_image(const image<vec4b>& img, int width, int height);
 image<vec4f> resize_image(const image<vec4f>& img, const vec2i& size);
 image<vec4b> resize_image(const image<vec4b>& img, const vec2i& size);
 

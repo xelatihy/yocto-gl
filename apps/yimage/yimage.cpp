@@ -241,29 +241,83 @@ bool make_image_preset(const string& type, image<vec4b>& img, string& error) {
   return true;
 }
 
+bool is_image_preset_hdr(const string& type) {
+  return type.find("sky") != string::npos && type.find("sun") != string::npos;
+}
+
 }  // namespace yocto
 
 // convert params
 struct convert_params {
-  string image  = "image.png";
-  string output = "out.png";
-  bool   logo   = false;
+  string image    = "image.png";
+  string output   = "out.png";
+  bool   logo     = false;
+  float  exposure = 0;
+  bool   filmic   = false;
+  int    width    = 0;
+  int    height   = 0;
 };
 
 // convert images
 bool convert_images(const convert_params& params, string& error) {
+  // determine image type
+  auto is_hdr_image = is_hdr_filename(params.image) ||
+                      (path_extension(params.image) == ".ypreset" &&
+                          is_image_preset_hdr(path_basename(params.image)));
+  auto is_hdr_output = is_hdr_filename(params.output);
+
   // load
-  auto img = image<vec4f>{};
+  auto hdr = image<vec4f>{};
+  auto ldr = image<vec4b>{};
   if (path_extension(params.image) == ".ypreset") {
-    if (!make_image_preset(path_basename(params.image), img, error))
+    if (!make_image_preset(path_basename(params.image), hdr, error))
       return false;
+    if (!is_hdr_image) {
+      ldr = rgb_to_srgbb(hdr);
+      hdr = {};
+    }
+  } else if (is_hdr_image) {
+    if (!load_image(params.image, hdr, error)) return false;
   } else {
-    if (!load_image(params.image, img, error)) return false;
+    if (!load_image(params.image, ldr, error)) return false;
+  }
+
+  // resize if needed
+  if (params.width != 0 || params.height != 0) {
+    if (is_hdr_image) {
+      hdr = resize_image(hdr, params.width, params.height);
+    } else {
+      ldr = resize_image(ldr, params.width, params.height);
+    }
+  }
+
+  // tonemap if needed
+  if (is_hdr_image != is_hdr_output) {
+    if (is_hdr_image) {
+      ldr = tonemap_imageb(hdr, params.exposure, params.filmic);
+      hdr = {};
+    } else {
+      hdr = srgb_to_rgb(ldr);
+      ldr = {};
+    }
+    is_hdr_image = !is_hdr_image;
+  }
+
+  // apply logo
+  if (params.logo) {
+    if (is_hdr_image) {
+      hdr = add_logo(hdr);
+    } else {
+      ldr = add_logo(ldr);
+    }
   }
 
   // save
-  if (!save_image(params.output, params.logo ? add_logo(img) : img, error))
-    return false;
+  if (is_hdr_image) {
+    if (!save_image(params.output, hdr, error)) return false;
+  } else {
+    if (!save_image(params.output, ldr, error)) return false;
+  }
 
   // done
   return true;
@@ -333,6 +387,9 @@ bool view_images(const view_params& params, string& error) {
   // preparing display
   auto app_guard = std::make_unique<view_state>();
   auto app       = app_guard.get();
+  app->filename  = params.image;
+  app->outname   = params.output;
+  app->source    = img;
 
   // update display
   update_display(app);
@@ -426,111 +483,12 @@ bool view_images(const view_params& params, string& error) {
 
 #endif
 
-// tonemap params
-struct tonemap_params {
-  string image    = "image.png";
-  string output   = "out.png";
-  bool   logo     = false;
-  float  exposure = 0;
-  bool   filmic   = false;
-  bool   srgb     = true;
-};
-
-// tonemap images
-bool tonemap_images(const tonemap_params& params, string& error) {
-  // load
-  auto img = image<vec4f>{};
-  if (path_extension(params.image) == ".ypreset") {
-    if (!make_image_preset(path_basename(params.image), img, error))
-      return false;
-  } else {
-    if (!load_image(params.image, img, error)) return false;
-  }
-
-  // tonemap
-  auto out = tonemap_imageb(img, params.exposure, params.filmic, params.srgb);
-
-  // save
-  if (!save_image(params.output, params.logo ? add_logo(out) : out, error))
-    return false;
-
-  // done
-  return true;
-}
-
-// resize params
-struct resize_params {
-  string image  = "image.png";
-  string output = "out.png";
-  bool   logo   = false;
-  int    width  = 0;
-  int    height = 0;
-};
-
-// resize images
-bool resize_images(const resize_params& params, string& error) {
-  // check for hdr values
-  if (is_hdr_filename(params.image) != is_hdr_filename(params.output)) {
-    error = "image and output should be both hdr or ldr";
-    return false;
-  }
-
-  // check for hdr values
-  if (params.width == 0 && params.height == 0) {
-    error = "set width or height";
-    return false;
-  }
-
-  // deterime whether is hdr
-  if (is_hdr_filename(params.image)) {
-    // load
-    auto img = image<vec4f>{};
-    if (path_extension(params.image) == ".ypreset") {
-      if (!make_image_preset(path_basename(params.image), img, error))
-        return false;
-    } else {
-      if (!load_image(params.image, img, error)) return false;
-    }
-
-    // resize
-    auto out = resize_image(img, {params.width, params.height});
-
-    // save
-    if (!save_image(params.output, params.logo ? add_logo(out) : out, error))
-      return false;
-
-    // done
-    return true;
-  } else {
-    // load
-    auto img = image<vec4b>{};
-    if (path_extension(params.image) == ".ypreset") {
-      if (!make_image_preset(path_basename(params.image), img, error))
-        return false;
-    } else {
-      if (!load_image(params.image, img, error)) return false;
-    }
-
-    // resize
-    auto out = resize_image(img, {params.width, params.height});
-
-    // save
-    if (!save_image(params.output, params.logo ? add_logo(out) : out, error))
-      return false;
-
-    // done
-    return true;
-  }
-}
-
 // resize params
 struct diff_params {
   string image1    = "image1.png";
   string image2    = "image2.png";
-  string output    = "out.png";
+  string output    = "";
   bool   logo      = false;
-  int    width     = 0;
-  int    height    = 0;
   bool   signal    = false;
   float  threshold = 0;
 };
@@ -562,8 +520,10 @@ bool diff_images(const diff_params& params, string& error) {
   auto diff = image_difference(img1, img2, true);
 
   // save
-  if (!save_image(params.output, params.logo ? add_logo(diff) : diff, error))
-    return false;
+  if (params.output != "") {
+    if (!save_image(params.output, params.logo ? add_logo(diff) : diff, error))
+      return false;
+  }
 
   // check diff
   if (params.signal) {
@@ -642,73 +602,28 @@ bool setalpha_images(const setalpha_params& params, string& error) {
   return true;
 }
 
-// bilateral params
-struct bilateral_params {
-  string image         = "image.png";
-  string output        = "out.png";
-  bool   logo          = false;
-  float  spatial_sigma = 0.0f;
-  float  range_sigma   = 0.0f;
-};
-
-// bilateral images
-bool bilateral_images(const bilateral_params& params, string& error) {
-  // load
-  auto img = image<vec4f>{};
-  if (path_extension(params.image) == ".ypreset") {
-    if (!make_image_preset(path_basename(params.image), img, error))
-      return false;
-  } else {
-    if (!load_image(params.image, img, error)) return false;
-  }
-
-  // edit alpha
-  auto out = filter_bilateral(img, params.spatial_sigma, params.range_sigma);
-
-  // save
-  if (!save_image(params.output, params.logo ? add_logo(out) : out, error))
-    return false;
-
-  // done
-  return true;
-}
-
 int main(int argc, const char* argv[]) {
   // command line parameters
-  auto convert   = convert_params{};
-  auto view      = view_params{};
-  auto tonemap   = tonemap_params{};
-  auto resize    = resize_params{};
-  auto diff      = diff_params{};
-  auto setalpha  = setalpha_params{};
-  auto bilateral = bilateral_params{};
+  auto convert  = convert_params{};
+  auto view     = view_params{};
+  auto diff     = diff_params{};
+  auto setalpha = setalpha_params{};
 
   // parse command line
   auto cli = make_cli("yimage", "Transform images");
 
   auto cli_convert = add_command(cli, "convert", "Convert images");
-  add_optional(cli_convert, "logo", convert.logo, "Add logo");
   add_optional(cli_convert, "output", convert.output, "Output image", "o");
+  add_optional(cli_convert, "exposure", convert.exposure, "Exposure", "e");
+  add_optional(cli_convert, "filmic", convert.filmic, "Filmic curve", "f");
+  add_optional(cli_convert, "width", convert.width, "resize width", "w");
+  add_optional(cli_convert, "height", convert.height, "resize height", "h");
+  add_optional(cli_convert, "logo", convert.logo, "Add logo", "L");
   add_positional(cli_convert, "image", convert.image, "Input image");
 
   auto cli_view = add_command(cli, "view", "View images");
-  add_optional(cli_view, "output", convert.output, "Output image", "o");
-  add_positional(cli_view, "image", convert.image, "Input image");
-
-  auto cli_tonemap = add_command(cli, "tonemap", "Tonemap images");
-  add_optional(cli_tonemap, "exposure", tonemap.exposure, "Exposure", "e");
-  add_optional(cli_tonemap, "filmic", tonemap.filmic, "Filmic curve", "f");
-  add_optional(cli_tonemap, "srgb", tonemap.srgb, "Srgb curve");
-  add_optional(cli_tonemap, "logo", tonemap.logo, "Add logo");
-  add_optional(cli_tonemap, "output", tonemap.output, "Output image", "o");
-  add_positional(cli_tonemap, "image", tonemap.image, "Input image");
-
-  auto cli_resize = add_command(cli, "resize", "Resize images");
-  add_optional(cli_resize, "width", resize.width, "resize width");
-  add_optional(cli_resize, "height", resize.height, "resize height");
-  add_optional(cli_resize, "logo", resize.logo, "Add logo");
-  add_optional(cli_resize, "output", resize.output, "Output image", "o");
-  add_positional(cli_resize, "image", resize.image, "Input image");
+  add_optional(cli_view, "output", view.output, "Output image", "o");
+  add_positional(cli_view, "image", view.image, "Input image");
 
   auto cli_diff = add_command(cli, "diff", "Diff two images");
   add_optional(cli_diff, "signal", diff.signal, "Signal a diff as error");
@@ -722,20 +637,10 @@ int main(int argc, const char* argv[]) {
   add_optional(
       cli_setalpha, "from-color", setalpha.from_color, "Alpha from color");
   add_optional(cli_setalpha, "to-color", setalpha.to_color, "Color from alpha");
-  add_optional(cli_setalpha, "logo", tonemap.logo, "Add logo");
-  add_optional(cli_setalpha, "output", tonemap.output, "Output image", "o");
-  add_positional(cli_setalpha, "image", tonemap.image, "Input image");
+  add_optional(cli_setalpha, "logo", setalpha.logo, "Add logo");
+  add_optional(cli_setalpha, "output", setalpha.output, "Output image", "o");
+  add_positional(cli_setalpha, "image", setalpha.image, "Input image");
   add_positional(cli_setalpha, "alpha", setalpha.alpha, "Alpha filename");
-
-  auto cli_bilateral = add_command(
-      cli, "bilateral", "Apply bilateral filtering to images");
-  add_optional(cli_bilateral, "spatial-sigma", bilateral.spatial_sigma,
-      "blur spatial sigma");
-  add_optional(cli_bilateral, "range-sigma", bilateral.range_sigma,
-      "bilateral blur range sigma");
-  add_optional(cli_bilateral, "logo", resize.logo, "Add logo");
-  add_optional(cli_bilateral, "output", resize.output, "Output image", "o");
-  add_positional(cli_bilateral, "image", resize.image, "Input image");
 
   // parse cli
   parse_cli(cli, argc, argv);
@@ -745,16 +650,12 @@ int main(int argc, const char* argv[]) {
   auto error   = string{};
   if (command == "convert") {
     if (!convert_images(convert, error)) print_fatal(error);
-  } else if (command == "tonemap") {
-    if (!tonemap_images(tonemap, error)) print_fatal(error);
-  } else if (command == "resize") {
-    if (!resize_images(resize, error)) print_fatal(error);
+  } else if (command == "view") {
+    if (!view_images(view, error)) print_fatal(error);
   } else if (command == "diff") {
     if (!diff_images(diff, error)) print_fatal(error);
   } else if (command == "setalpha") {
     if (!setalpha_images(setalpha, error)) print_fatal(error);
-  } else if (command == "bilateral") {
-    if (!bilateral_images(bilateral, error)) print_fatal(error);
   } else {
     print_fatal("unknown command " + command);
   }
