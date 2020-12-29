@@ -168,6 +168,9 @@ int main(int argc, const char* argv[]) {
     if (!make_mesh_preset(triangles, positions, normals, texcoords, colors,
             path_basename(filename), ioerror))
       print_fatal(ioerror);
+  } else if(positionsonly) {
+    if (!load_mesh(filename, triangles, positions, ioerror))
+      print_fatal(ioerror);
   } else {
     if (!load_mesh(filename, triangles, positions, normals, texcoords, colors,
             ioerror))
