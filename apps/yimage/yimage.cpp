@@ -387,6 +387,9 @@ bool view_images(const view_params& params, string& error) {
   // preparing display
   auto app_guard = std::make_unique<view_state>();
   auto app       = app_guard.get();
+  app->filename  = params.image;
+  app->outname   = params.output;
+  app->source    = img;
 
   // update display
   update_display(app);
