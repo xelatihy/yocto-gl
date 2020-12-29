@@ -42,6 +42,8 @@ See each header file for documentation.
 - `yocto/yocto_modelio.{h,cpp}`: parsing and writing for Ply/Obj/Pbrt formats
 - `yocto/yocto_commonio.h`: printing utilities, file io utilities,
   command line parsing
+- `yocto/yocto_json.h`: JSON data type, json io utilities,
+  command line parsing
 - `yocto/yocto_common.h`: container and iterator utilities
 - `yocto/yocto_parallel.h`: concurrency utilities
 

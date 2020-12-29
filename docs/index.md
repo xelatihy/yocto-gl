@@ -40,7 +40,9 @@ See each header file for documentation.
   scattering, multiple importance sampling
 - [Yocto/ModelIO](yocto/yocto_modelio.md): parsing and writing for Ply/Obj/Pbrt
   formats
-- [Yocto/CommonIO](yocto/yocto_commonio.md): printing utilities, file io utilities,
+- [Yocto/CommonIO](yocto/yocto_commonio.md): JSON data type, json io utilities,
+  command line parsing
+- [Yocto/JSON](yocto/yocto_json.md): printing utilities, file io utilities,
   command line parsing
 - [Yocto/Common](yocto/yocto_common.md): container and iterator utilities
 - [Yocto/Parallel](yocto/yocto_parallel.md): concurrency utilities
