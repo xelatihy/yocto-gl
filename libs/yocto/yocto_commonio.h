@@ -123,6 +123,24 @@ string  elapsed_formatted(simple_timer& timer);
 // -----------------------------------------------------------------------------
 namespace yocto {
 
+// Parse the command line described by a JSON schema.
+// Checks for errors, and exits on error or help.
+struct json_value;
+void parse_cli(
+    json_value& value, const json_value& schema, int argc, const char** argv);
+void parse_cli(json_value& value, const json_value& schema, const string& args);
+// Parse the command line described by a schema.
+bool parse_cli(json_value& value, const json_value& schema,
+    const string& args, string& error);
+bool parse_cli(json_value& value, const json_value& schema,
+    int argc, const char** argv, string& error);
+// Gets usage message.
+string get_usage(const json_value& value, const json_value& schema);
+// Gets whether help was invoked.
+bool get_help(const json_value& value);
+// Gets the set command.
+string get_command(const json_value& value);
+
 // Initialize a command line parser.
 struct cli_state;
 cli_state make_cli(const string& cmd, const string& usage);
