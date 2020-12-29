@@ -1,20 +1,20 @@
 {
   "buildType": {
-    "default": "x64-Debug",
+    "default": "x64-Release",
     "description": "Build type",
     "choices": {
-      "x64-Debug": {
-        "short": "x64-Debug",
-        "buildType": "Debug",
-        "settings": {
-          "CMAKE_INSTALL_PREFIX": "${workspaceFolder}/bin/debug"
-        }
-      },
       "x64-Release": {
         "short": "x64-Release",
         "buildType": "RelWithDebInfo",
         "settings": {
           "CMAKE_INSTALL_PREFIX": "${workspaceFolder}/bin"
+        }
+      },
+      "x64-Debug": {
+        "short": "x64-Debug",
+        "buildType": "Debug",
+        "settings": {
+          "CMAKE_INSTALL_PREFIX": "${workspaceFolder}/bin/debug"
         }
       }
     }
@@ -33,6 +33,24 @@
         "short": "NoEmbree",
         "settings": {
           "YOCTO_EMBREE": "no"
+        }
+      }
+    }
+  },
+  "useOpenGL": {
+    "default": "yes",
+    "description": "Build with OpenGL",
+    "choices": {
+      "yes": {
+        "short": "OpenGL",
+        "settings": {
+          "YOCTO_OPENGL": "yes"
+        }
+      },
+      "no": {
+        "short": "NoOpenGL",
+        "settings": {
+          "YOCTO_OPENGL": "no"
         }
       }
     }

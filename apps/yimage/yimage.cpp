@@ -29,6 +29,10 @@
 #include <yocto/yocto_commonio.h>
 #include <yocto/yocto_image.h>
 #include <yocto/yocto_math.h>
+#if YOCTO_OPENGL == 1
+#include <yocto_gui/yocto_imgui.h>
+#include <yocto_gui/yocto_opengl.h>
+#endif
 using namespace yocto;
 
 namespace yocto {
@@ -241,8 +245,8 @@ bool make_image_preset(const string& type, image<vec4b>& img, string& error) {
 
 // convert params
 struct convert_params {
-  string image  = "";
-  string output = "";
+  string image  = "image.png";
+  string output = "out.png";
   bool   logo   = false;
 };
 
@@ -265,10 +269,167 @@ bool convert_images(const convert_params& params, string& error) {
   return true;
 }
 
+// convert params
+struct view_params {
+  string image  = "image.png";
+  string output = "out.png";
+  bool   logo   = false;
+};
+
+#ifndef YOCTO_OPENGL
+
+// convert images
+bool view_images(const view_params& params, string& error) {
+  print_fatal("Opengl not compiled");
+}
+
+#else
+
+struct view_state {
+  // original data
+  string filename = "image.png";
+  string outname  = "out.png";
+
+  // image data
+  image<vec4f> source = {};
+
+  // diplay data
+  image<vec4f>      display    = {};
+  float             exposure   = 0;
+  bool              filmic     = false;
+  colorgrade_params params     = {};
+  bool              colorgrade = false;
+
+  // viewing properties
+  ogl_image*       glimage  = new ogl_image{};
+  ogl_image_params glparams = {};
+
+  ~view_state() {
+    if (glimage) delete glimage;
+  }
+};
+
+// convert images
+bool view_images(const view_params& params, string& error) {
+  // load
+  auto img = image<vec4f>{};
+  if (path_extension(params.image) == ".ypreset") {
+    if (!make_image_preset(path_basename(params.image), img, error))
+      return false;
+  } else {
+    if (!load_image(params.image, img, error)) return false;
+  }
+
+  auto update_display = [](view_state* app) {
+    if (app->display.imsize() != app->source.imsize())
+      app->display = app->source;
+    if (app->colorgrade) {
+      colorgrade_image_mt(app->display, app->source, true, app->params);
+    } else {
+      tonemap_image_mt(app->display, app->source, app->exposure, app->filmic);
+    }
+  };
+
+  // preparing display
+  auto app_guard = std::make_unique<view_state>();
+  auto app       = app_guard.get();
+
+  // update display
+  update_display(app);
+
+  // callbacks
+  auto callbacks     = gui_callbacks{};
+  callbacks.clear_cb = [app](gui_window* win, const gui_input& input) {
+    clear_image(app->glimage);
+  };
+  callbacks.draw_cb = [app](gui_window* win, const gui_input& input) {
+    app->glparams.window      = input.window_size;
+    app->glparams.framebuffer = input.framebuffer_viewport;
+    if (!is_initialized(app->glimage)) {
+      init_image(app->glimage);
+      set_image(app->glimage, app->display, false, false);
+    }
+    std::tie(app->glparams.center, app->glparams.scale) = camera_imview(
+        app->glparams.center, app->glparams.scale, app->display.imsize(),
+        app->glparams.window, app->glparams.fit);
+    draw_image(app->glimage, app->glparams);
+  };
+  callbacks.widgets_cb = [app, &update_display](
+                             gui_window* win, const gui_input& input) {
+    auto edited = 0;
+    if (begin_header(win, "tonemap")) {
+      edited += draw_slider(win, "exposure", app->exposure, -5, 5);
+      edited += draw_checkbox(win, "filmic", app->filmic);
+      end_header(win);
+    }
+    if (begin_header(win, "colorgrade")) {
+      auto& params = app->params;
+      edited += draw_checkbox(win, "apply colorgrade", app->colorgrade);
+      edited += draw_slider(win, "exposure", params.exposure, -5, 5);
+      edited += draw_coloredit(win, "tint", params.tint);
+      edited += draw_slider(win, "lincontrast", params.lincontrast, 0, 1);
+      edited += draw_slider(win, "logcontrast", params.logcontrast, 0, 1);
+      edited += draw_slider(win, "linsaturation", params.linsaturation, 0, 1);
+      edited += draw_checkbox(win, "filmic", params.filmic);
+      continue_line(win);
+      edited += draw_checkbox(win, "srgb", params.srgb);
+      edited += draw_slider(win, "contrast", params.contrast, 0, 1);
+      edited += draw_slider(win, "saturation", params.saturation, 0, 1);
+      edited += draw_slider(win, "shadows", params.shadows, 0, 1);
+      edited += draw_slider(win, "midtones", params.midtones, 0, 1);
+      edited += draw_slider(win, "highlights", params.highlights, 0, 1);
+      edited += draw_coloredit(win, "shadows color", params.shadows_color);
+      edited += draw_coloredit(win, "midtones color", params.midtones_color);
+      edited += draw_coloredit(
+          win, "highlights color", params.highlights_color);
+      end_header(win);
+    }
+    if (begin_header(win, "inspect")) {
+      draw_slider(win, "zoom", app->glparams.scale, 0.1, 10);
+      draw_checkbox(win, "fit", app->glparams.fit);
+      auto ij = image_coords(input.mouse_pos, app->glparams.center,
+          app->glparams.scale, app->source.imsize());
+      draw_dragger(win, "mouse", ij);
+      auto img_pixel = zero4f, display_pixel = zero4f;
+      if (ij.x >= 0 && ij.x < app->source.width() && ij.y >= 0 &&
+          ij.y < app->source.height()) {
+        img_pixel     = app->source[{ij.x, ij.y}];
+        display_pixel = app->display[{ij.x, ij.y}];
+      }
+      draw_coloredit(win, "image", img_pixel);
+      draw_dragger(win, "display", display_pixel);
+      end_header(win);
+    }
+    if (edited) {
+      update_display(app);
+      if (!is_initialized(app->glimage)) init_image(app->glimage);
+      set_image(app->glimage, app->display, false, false);
+    }
+  };
+  callbacks.uiupdate_cb = [app](gui_window* win, const gui_input& input) {
+    // handle mouse
+    if (input.mouse_left && !input.widgets_active) {
+      app->glparams.center += input.mouse_pos - input.mouse_last;
+    }
+    if (input.mouse_right && !input.widgets_active) {
+      app->glparams.scale *= powf(
+          2, (input.mouse_pos.x - input.mouse_last.x) * 0.001f);
+    }
+  };
+
+  // run ui
+  run_ui({1280, 720}, "yimage", callbacks);
+
+  // done
+  return true;
+}
+
+#endif
+
 // tonemap params
 struct tonemap_params {
-  string image    = "";
-  string output   = "";
+  string image    = "image.png";
+  string output   = "out.png";
   bool   logo     = false;
   float  exposure = 0;
   bool   filmic   = false;
@@ -299,8 +460,8 @@ bool tonemap_images(const tonemap_params& params, string& error) {
 
 // resize params
 struct resize_params {
-  string image  = "";
-  string output = "";
+  string image  = "image.png";
+  string output = "out.png";
   bool   logo   = false;
   int    width  = 0;
   int    height = 0;
@@ -364,9 +525,9 @@ bool resize_images(const resize_params& params, string& error) {
 
 // resize params
 struct diff_params {
-  string image1    = "";
-  string image2    = "";
-  string output    = "";
+  string image1    = "image1.png";
+  string image2    = "image2.png";
+  string output    = "out.png";
   bool   logo      = false;
   int    width     = 0;
   int    height    = 0;
@@ -420,9 +581,9 @@ bool diff_images(const diff_params& params, string& error) {
 
 // setalpha params
 struct setalpha_params {
-  string image      = "";
-  string alpha      = "";
-  string output     = "";
+  string image      = "image.png";
+  string alpha      = "alpha.png";
+  string output     = "out.png";
   bool   logo       = false;
   bool   from_color = false;
   bool   to_color   = false;
@@ -483,8 +644,8 @@ bool setalpha_images(const setalpha_params& params, string& error) {
 
 // bilateral params
 struct bilateral_params {
-  string image         = "";
-  string output        = "";
+  string image         = "image.png";
+  string output        = "out.png";
   bool   logo          = false;
   float  spatial_sigma = 0.0f;
   float  range_sigma   = 0.0f;
@@ -515,6 +676,7 @@ bool bilateral_images(const bilateral_params& params, string& error) {
 int main(int argc, const char* argv[]) {
   // command line parameters
   auto convert   = convert_params{};
+  auto view      = view_params{};
   auto tonemap   = tonemap_params{};
   auto resize    = resize_params{};
   auto diff      = diff_params{};
@@ -522,11 +684,17 @@ int main(int argc, const char* argv[]) {
   auto bilateral = bilateral_params{};
 
   // parse command line
-  auto cli         = make_cli("yimage", "Transform images");
+  auto cli = make_cli("yimage", "Transform images");
+
   auto cli_convert = add_command(cli, "convert", "Convert images");
   add_optional(cli_convert, "logo", convert.logo, "Add logo");
   add_optional(cli_convert, "output", convert.output, "Output image", "o");
   add_positional(cli_convert, "image", convert.image, "Input image");
+
+  auto cli_view = add_command(cli, "view", "View images");
+  add_optional(cli_view, "output", convert.output, "Output image", "o");
+  add_positional(cli_view, "image", convert.image, "Input image");
+
   auto cli_tonemap = add_command(cli, "tonemap", "Tonemap images");
   add_optional(cli_tonemap, "exposure", tonemap.exposure, "Exposure", "e");
   add_optional(cli_tonemap, "filmic", tonemap.filmic, "Filmic curve", "f");
@@ -534,12 +702,14 @@ int main(int argc, const char* argv[]) {
   add_optional(cli_tonemap, "logo", tonemap.logo, "Add logo");
   add_optional(cli_tonemap, "output", tonemap.output, "Output image", "o");
   add_positional(cli_tonemap, "image", tonemap.image, "Input image");
+
   auto cli_resize = add_command(cli, "resize", "Resize images");
   add_optional(cli_resize, "width", resize.width, "resize width");
   add_optional(cli_resize, "height", resize.height, "resize height");
   add_optional(cli_resize, "logo", resize.logo, "Add logo");
   add_optional(cli_resize, "output", resize.output, "Output image", "o");
   add_positional(cli_resize, "image", resize.image, "Input image");
+
   auto cli_diff = add_command(cli, "diff", "Diff two images");
   add_optional(cli_diff, "signal", diff.signal, "Signal a diff as error");
   add_optional(cli_diff, "threshold,", diff.threshold, "Diff threshold");
@@ -547,6 +717,7 @@ int main(int argc, const char* argv[]) {
   add_optional(cli_diff, "output", diff.output, "Output image");
   add_positional(cli_diff, "image1", diff.image1, "Input image");
   add_positional(cli_diff, "image2", diff.image2, "Input image");
+
   auto cli_setalpha = add_command(cli, "setalpha", "Set alpha in images");
   add_optional(
       cli_setalpha, "from-color", setalpha.from_color, "Alpha from color");
@@ -555,6 +726,7 @@ int main(int argc, const char* argv[]) {
   add_optional(cli_setalpha, "output", tonemap.output, "Output image", "o");
   add_positional(cli_setalpha, "image", tonemap.image, "Input image");
   add_positional(cli_setalpha, "alpha", setalpha.alpha, "Alpha filename");
+
   auto cli_bilateral = add_command(
       cli, "bilateral", "Apply bilateral filtering to images");
   add_optional(cli_bilateral, "spatial-sigma", bilateral.spatial_sigma,

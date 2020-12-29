@@ -6,6 +6,7 @@ out1
 /*.hdr
 /*.exr
 /*.png
+/*.jpg
 .vscode/ipch/
 tests/renderings/*.png
 tests/renderings/*.hdr
