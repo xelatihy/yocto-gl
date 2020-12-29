@@ -237,9 +237,12 @@ int run_render(const render_params& params) {
 
 // convert params
 struct view_params {
-  string       scene  = "scene.json";
-  string       output = "out.png";
-  trace_params params = {};
+  string       scene     = "scene.json";
+  string       output    = "out.png";
+  trace_params params    = {};
+  string       camera    = "";
+  bool         addsky    = false;
+  bool         savebatch = false;
 };
 
 #ifndef YOCTO_OPENGL
@@ -257,11 +260,78 @@ int run_view(const view_params& params) {
   auto viewer_guard = make_imageview("yimage");
   auto viewer       = viewer_guard.get();
 
-  // start rendering
-  // TODO(fabio): implement this
+  // scene loading
+  auto ioscene_guard = std::make_unique<sceneio_scene>();
+  auto ioscene       = ioscene_guard.get();
+  auto ioerror       = string{};
+  if (!load_scene(params.scene, ioscene, ioerror, print_progress))
+    return print_fatal(ioerror);
+
+  // add sky
+  if (params.addsky) add_sky(ioscene);
+
+  // get camera
+  auto iocamera = get_camera(ioscene, params.camera);
+
+  // scene conversion
+  auto scene_guard = std::make_unique<trace_scene>();
+  auto scene       = scene_guard.get();
+  auto camera      = (trace_camera*)nullptr;
+  init_scene(scene, ioscene, camera, iocamera);
+
+  // cleanup
+  ioscene_guard.reset();
+
+  // tesselation
+  tesselate_shapes(scene, print_progress);
+
+  // build bvh
+  auto bvh_guard = std::make_unique<trace_bvh>();
+  auto bvh       = bvh_guard.get();
+  init_bvh(bvh, scene, params.params, print_progress);
+
+  // init renderer
+  auto lights_guard = std::make_unique<trace_lights>();
+  auto lights       = lights_guard.get();
+  init_lights(lights, scene, params.params, print_progress);
+
+  // fix renderer type if no lights
+  if (lights->lights.empty() && is_sampler_lit(params.params)) {
+    print_info("no lights presents, image will be black");
+  }
+
+  // init state
+  auto state_guard = std::make_unique<trace_state>();
+  auto state       = state_guard.get();
+
+  // render start
+  trace_start(
+      state, scene, camera, bvh, lights, params.params,
+      [](const string& message, int sample, int nsamples) {
+        // app->current = sample;
+        // app->total   = nsamples;
+      },
+      [viewer](const image<vec4f>& render, int current, int total) {
+        set_image(viewer, "render", render);
+        // if (current > 0) return;
+        // app->render  = render;
+        // app->display = tonemap_image(app->render, app->exposure);
+      },
+      [](const image<vec4f>& render, int current, int total, const vec2i& ij) {
+        // app->render[ij]  = render[ij];
+        // app->display[ij] = tonemap(app->render[ij], app->exposure);
+      });
 
   // run view
   run_view(viewer);
+
+  // stop
+  trace_stop(state);
+
+  // // save image
+  // print_progress("save image", 0, 1);
+  // if (!save_image(params.output, render, ioerror)) return
+  // print_fatal(ioerror); print_progress("save image", 1, 1);
 
   // done
   return 0;
@@ -314,6 +384,29 @@ int main(int argc, const char* argv[]) {
   add_optional(cli_render, "skyenv", render.addsky, "add sky envmap");
   add_optional(cli_render, "output", render.output, "image filename", "o");
   add_positional(cli_render, "scene", render.scene, "scene filename");
+
+  auto cli_view = add_command(cli, "view", "render images interactively");
+  add_optional(cli_view, "camera", view.camera, "camera name");
+  add_optional(
+      cli_view, "resolution", view.params.resolution, "image resolution", "r");
+  add_optional(
+      cli_view, "samples", view.params.samples, "number of samples", "s");
+  add_optional(cli_view, "tracer", view.params.sampler, "trace type",
+      trace_sampler_labels, "t");
+  add_optional(cli_view, "falsecolor", view.params.falsecolor,
+      "tracer false color type", trace_falsecolor_labels, "F");
+  add_optional(cli_view, "bounces", view.params.bounces,
+      "maximum number of bounces", "b");
+  add_optional(cli_view, "clamp", view.params.clamp, "final pixel clamping");
+  add_optional(cli_view, "filter", view.params.tentfilter, "filter image");
+  add_optional(
+      cli_view, "envhidden", view.params.envhidden, "environments are hidden");
+  add_optional(
+      cli_view, "savebatch", view.savebatch, "save images progressively");
+  add_optional(cli_view, "bvh", view.params.bvh, "bvh type", trace_bvh_labels);
+  add_optional(cli_view, "skyenv", view.addsky, "add sky envmap");
+  add_optional(cli_view, "output", view.output, "image filename", "o");
+  add_positional(cli_view, "scene", view.scene, "scene filename");
 
   // parse cli
   parse_cli(cli, argc, argv);
