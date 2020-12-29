@@ -1272,7 +1272,7 @@ static bool parse_cli(json_value& value, const json_value& schema_,
       value[name]                = json_object{};
       stack.push_back(
           {name, schema.at("properties").at(name), value.at(name), 0});
-      command += " " + name;
+      command += (command.empty() ? "" : " ") + name;
       usage = get_cliusage(stack.back().schema, args[0], command);
       continue;
     } else if (positional) {
@@ -1410,11 +1410,11 @@ cli_command add_command(
 bool parse_cli(cli_state& cli, const vector<string>& args, string& error) {
   auto usage   = string{};
   auto command = string{};
-  if (!parse_cli(cli.value, cli.schema, args, error, usage, command))
-    return false;
-  cli.usage   = usage;
-  cli.command = command;
-  cli.help    = error == cli_help_message;
+  auto ok      = parse_cli(cli.value, cli.schema, args, error, usage, command);
+  cli.usage    = usage;
+  cli.command  = command;
+  cli.help     = error == cli_help_message;
+  if (!ok) return false;
   if (!set_clivalues(cli.value, cli.setter, error)) return false;
   return true;
 }
