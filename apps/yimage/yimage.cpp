@@ -324,7 +324,7 @@ bool convert_images(const convert_params& params, string& error) {
 
 // convert params
 struct view_params {
-  string image  = "image.png";
+  vector<string> images  = {"image.png"};
   string output = "out.png";
   bool   logo   = false;
 };
@@ -340,21 +340,36 @@ bool view_images(const view_params& params, string& error) {
 
 // convert images
 bool view_images(const view_params& params, string& error) {
-  // load
-  auto img = image<vec4f>{};
-  if (path_extension(params.image) == ".ypreset") {
-    if (!make_image_preset(path_basename(params.image), img, error))
-      return false;
-  } else {
-    if (!load_image(params.image, img, error)) return false;
-  }
-
   // open viewer
   auto viewer_guard = make_imageview("yimage");
   auto viewer       = viewer_guard.get();
 
   // set image
-  set_image(viewer, params.image, img);
+  for(auto& filename : params.images) {
+    // load
+    auto hdr = image<vec4f>{};
+    auto ldr = image<vec4b>{};
+    if (is_preset_filename(filename)) {
+      if (is_preset_hdr(filename)) {
+        if (!make_image_preset(path_basename(filename), hdr, error))
+          return false;
+      } else {
+        if (!make_image_preset(path_basename(filename), ldr, error))
+          return false;
+      }
+    } else if (is_hdr_filename(filename)) {
+      if (!load_image(filename, hdr, error)) return false;
+    } else {
+      if (!load_image(filename, ldr, error)) return false;
+    }
+
+    // push image to the viewer
+    if(!hdr.empty()) {
+      set_image(viewer, filename, hdr);
+    } else {
+      set_image(viewer, filename, ldr);
+    }
+  }
 
   // run view
   run_view(viewer);
@@ -505,7 +520,7 @@ int main(int argc, const char* argv[]) {
 
   auto cli_view = add_command(cli, "view", "View images");
   add_optional(cli_view, "output", view.output, "Output image", "o");
-  add_positional(cli_view, "image", view.image, "Input image");
+  add_positional(cli_view, "images", view.images, "Input images");
 
   auto cli_diff = add_command(cli, "diff", "Diff two images");
   add_optional(cli_diff, "signal", diff.signal, "Signal a diff as error");
