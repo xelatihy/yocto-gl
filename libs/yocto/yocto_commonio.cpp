@@ -1010,35 +1010,6 @@ bool save_json(const string& filename, const json_tree& js, string& error) {
 // -----------------------------------------------------------------------------
 namespace yocto {
 
-// initialize a command line parser
-cli_state make_cli(const string& name, const string& usage) {
-  auto  cli             = cli_state{};
-  auto& schema          = cli.schema;
-  schema["title"]       = name;
-  schema["description"] = usage;
-  schema["type"]        = "object";
-  return cli;
-}
-
-// add command
-cli_command add_command(
-    const cli_command& cli, const string& name, const string& usage) {
-  auto& schema            = get_clischema(cli.cli.schema, cli.path);
-  schema["cli_command"]   = "command";
-  auto& property          = schema["properties"][name];
-  property["title"]       = name;
-  property["description"] = usage;
-  property["type"]        = "object";
-  property["properties"]  = json_object{};
-  auto& setter            = get_clisetter(cli.cli.setter, cli.path);
-  setter[name]            = cli_setter{};
-  return {cli.cli, join_clipath(cli.path, name)};
-}
-cli_command add_command(
-    cli_state& cli, const string& name, const string& usage) {
-  return add_command({cli, {}}, name, usage);
-}
-
 static json_value fix_cli_schema(const json_value& schema) { return schema; }
 
 static string get_cliusage(const json_value& schema, const string& app_name, 
@@ -1402,6 +1373,35 @@ void parse_cli(
 void parse_cli(
     json_value& value, const json_value& schema, int argc, const char** argv) {
   return parse_cli(value, schema, {argv, argv+argc});
+}
+
+// initialize a command line parser
+cli_state make_cli(const string& name, const string& usage) {
+  auto  cli             = cli_state{};
+  auto& schema          = cli.schema;
+  schema["title"]       = name;
+  schema["description"] = usage;
+  schema["type"]        = "object";
+  return cli;
+}
+
+// add command
+cli_command add_command(
+    const cli_command& cli, const string& name, const string& usage) {
+  auto& schema            = get_clischema(cli.cli.schema, cli.path);
+  schema["cli_command"]   = "command";
+  auto& property          = schema["properties"][name];
+  property["title"]       = name;
+  property["description"] = usage;
+  property["type"]        = "object";
+  property["properties"]  = json_object{};
+  auto& setter            = get_clisetter(cli.cli.setter, cli.path);
+  setter[name]            = cli_setter{};
+  return {cli.cli, join_clipath(cli.path, name)};
+}
+cli_command add_command(
+    cli_state& cli, const string& name, const string& usage) {
+  return add_command({cli, {}}, name, usage);
 }
 
 bool parse_cli(cli_state& cli, const vector<string>& args, string& error) {
