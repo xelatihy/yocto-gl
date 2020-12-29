@@ -1030,6 +1030,8 @@ cli_command add_command(
   property["description"] = usage;
   property["type"]        = "object";
   property["properties"]  = json_object{};
+  auto& setter            = get_clisetter(cli.cli.setter, cli.path);
+  setter[name]            = cli_setter{};
   return {cli.cli, join_clipath(cli.path, name)};
 }
 cli_command add_command(
@@ -1161,11 +1163,21 @@ string get_usage(const cli_state& cli) {
   return message;
 }
 
-string get_command(const cli_state& cli) {
-  // TODO(fabio): fix me
-  // return cli.command.command;
+static string get_command(const json_value& value) {
+  if (!value.is_object()) return "";
+  for (auto& [name, item] : value.items()) {
+    if (!item.is_object()) continue;
+    auto subcommand = get_command(item);
+    if (subcommand.empty()) {
+      return name;
+    } else {
+      return name + "/" + subcommand;
+    }
+  }
   return "";
 }
+
+string get_command(const cli_state& cli) { return get_command(cli.value); }
 
 static bool parse_clivalue(
     json_value& value, const string& arg, const json_value& schema) {
@@ -1304,8 +1316,8 @@ bool parse_cli(cli_state& cli, vector<string>& args, string& error) {
       if (name.empty()) return cli_error("missing value for command");
       value[get_command(schema)] = name;
       value[name]                = json_object{};
-      stack.push_back(
-          {name, schema.at(name), value.at(name), setter.at(name), 0});
+      stack.push_back({name, schema.at("properties").at(name), value.at(name),
+          setter.at(name), 0});
       continue;
     } else if (positional) {
       auto name            = string{};
