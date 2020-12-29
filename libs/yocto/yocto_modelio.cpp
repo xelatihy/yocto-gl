@@ -2649,10 +2649,10 @@ bool load_stl(const string& filename, stl_model* stl, string& error,
 
   // switch on type
   if (binary) {
-      // open file
-      auto fs = open_file(filename, "rb");
-      if (!fs) return open_error();
-      
+    // open file
+    auto fs = open_file(filename, "rb");
+    if (!fs) return open_error();
+
     // skip header
     auto header = array<char, 80>{};
     if (!read_value(fs, header)) return read_error();
@@ -2733,8 +2733,9 @@ bool load_stl(const string& filename, stl_model* stl, string& error,
         // check that it was a triangle
         auto last_pos = (int)stl->shapes.back()->positions.size() - 3;
         if (stl->shapes.back()->triangles.empty() && last_pos != 0)
-            return parse_error();
-        if (!stl->shapes.back()->triangles.empty() && last_pos != stl->shapes.back()->triangles.back().z + 1)
+          return parse_error();
+        if (!stl->shapes.back()->triangles.empty() &&
+            last_pos != stl->shapes.back()->triangles.back().z + 1)
           return parse_error();
         // add triangle
         stl->shapes.back()->triangles.push_back(

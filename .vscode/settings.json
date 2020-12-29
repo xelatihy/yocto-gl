@@ -154,5 +154,6 @@
     "modernize-*",
     "-modernize-use-nodiscard",
     "-modernize-use-trailing-return-type"
-  ]
+  ],
+  "python.pythonPath": "/usr/local/bin/python3"
 }
