@@ -50,6 +50,7 @@ struct GLFWwindow;
 namespace yocto {
 
 // using directives
+using std::array;
 using std::function;
 using std::string;
 using std::unique_ptr;
@@ -193,6 +194,9 @@ void set_close(gui_window* win, bool close);
 // -----------------------------------------------------------------------------
 namespace yocto {
 
+struct json_value;
+bool draw_params(gui_window* win, const char* title, json_value& value);
+
 bool begin_header(gui_window* win, const char* title);
 void end_header(gui_window* win);
 
@@ -328,6 +332,21 @@ void log_info(gui_window* win, const string& msg);
 void log_error(gui_window* win, const string& msg);
 void clear_log(gui_window* win);
 void draw_log(gui_window* win);
+
+// Convenience funcion for params
+bool draw_dragger(gui_window* win, const char* lbl, array<float, 2>& value,
+    float speed = 1.0f, float min = 0.0f, float max = 0.0f);
+bool draw_dragger(gui_window* win, const char* lbl, array<float, 3>& value,
+    float speed = 1.0f, float min = 0.0f, float max = 0.0f);
+bool draw_dragger(gui_window* win, const char* lbl, array<float, 4>& value,
+    float speed = 1.0f, float min = 0.0f, float max = 0.0f);
+
+bool draw_dragger(gui_window* win, const char* lbl, array<int, 2>& value,
+    float speed = 1, int min = 0, int max = 0);
+bool draw_dragger(gui_window* win, const char* lbl, array<int, 3>& value,
+    float speed = 1, int min = 0, int max = 0);
+bool draw_dragger(gui_window* win, const char* lbl, array<int, 4>& value,
+    float speed = 1, int min = 0, int max = 0);
 
 }  // namespace yocto
 

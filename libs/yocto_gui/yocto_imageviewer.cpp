@@ -66,29 +66,68 @@ void wait_view(imageview_state* state) { state->runner.wait(); }
 
 // Close viewer
 void close_view(imageview_state* state) {
-  state->queue.push(imageview_command{imageview_command_type::quit});
+  auto command = imageview_command{};
+  command.type = imageview_command_type::quit;
+  state->queue.push(command);
 }
 
 // Set image
 void set_image(imageview_state* state, const string& name,
     const image<vec4f>& img, float exposure, bool filmic) {
-  state->queue.push(imageview_command{
-      imageview_command_type::set, name, img, {}, exposure, filmic});
+  auto command     = imageview_command{};
+  command.type     = imageview_command_type::set;
+  command.name     = name;
+  command.hdr      = img;
+  command.exposure = exposure;
+  command.filmic   = filmic;
+  state->queue.push(command);
 }
 void set_image(
     imageview_state* state, const string& name, const image<vec4b>& img) {
-  state->queue.push(
-      imageview_command{imageview_command_type::set, name, {}, img});
+  auto command     = imageview_command{};
+  command.type     = imageview_command_type::set;
+  command.name     = name;
+  command.ldr      = img;
+  command.exposure = 0;
+  command.filmic   = false;
+  state->queue.push(command);
 }
 void close_image(imageview_state* state, const string& name) {
-  state->queue.push(imageview_command{imageview_command_type::close, name});
+  auto command = imageview_command{};
+  command.type = imageview_command_type::close;
+  command.name = name;
+  state->queue.push(command);
 }
 
 // Update image
 void tonemap_image(
     imageview_state* state, const string& name, float exposure, bool filmic) {
-  state->queue.push(imageview_command{
-      imageview_command_type::tonemap, name, {}, {}, exposure, filmic});
+  auto command     = imageview_command{};
+  command.type     = imageview_command_type::tonemap;
+  command.name     = name;
+  command.exposure = exposure;
+  command.filmic   = filmic;
+  state->queue.push(command);
+}
+
+// Set params
+void set_param(imageview_state* state, const string& name, const string& pname,
+    const json_value& param) {
+  auto command   = imageview_command{};
+  command.type   = imageview_command_type::param;
+  command.name   = name;
+  auto params    = json_value::object();
+  params[pname]  = param;
+  command.params = params;
+  state->queue.push(command);
+}
+void set_params(
+    imageview_state* state, const string& name, const json_value& params) {
+  auto command   = imageview_command{};
+  command.type   = imageview_command_type::params;
+  command.name   = name;
+  command.params = params;
+  state->queue.push(command);
 }
 
 }  // namespace yocto
@@ -207,6 +246,9 @@ void draw_widgets(
       end_header(win);
     }
   }
+  if (!state->selected->params.empty()) {
+    draw_params(win, "params", state->selected->params);
+  }
 }
 
 void draw(gui_window* win, imageview_state* state, const gui_input& input) {
@@ -278,6 +320,30 @@ void update(gui_window* win, imageview_state* state, const gui_input& input) {
           update_display(img);
           if (!is_initialized(img->glimage)) init_image(img->glimage);
           set_image(img->glimage, img->display, false, false);
+        }
+      } break;
+      case imageview_command_type::param: {
+        auto img = (imageview_image*)nullptr;
+        for (auto& image : state->images) {
+          if (image->name == command.name) {
+            img = image.get();
+            break;
+          }
+        }
+        if (img != nullptr) {
+          img->params.update(command.params);
+        }
+      } break;
+      case imageview_command_type::params: {
+        auto img = (imageview_image*)nullptr;
+        for (auto& image : state->images) {
+          if (image->name == command.name) {
+            img = image.get();
+            break;
+          }
+        }
+        if (img != nullptr) {
+          img->params = command.params;
         }
       } break;
       case imageview_command_type::quit: {

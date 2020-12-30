@@ -28,6 +28,7 @@
 
 #include <yocto/yocto_commonio.h>
 #include <yocto/yocto_image.h>
+#include <yocto/yocto_json.h>
 #include <yocto/yocto_math.h>
 #include <yocto/yocto_sceneio.h>
 #include <yocto/yocto_trace.h>
@@ -307,9 +308,9 @@ int run_view(const view_params& params) {
   // render start
   trace_start(
       state, scene, camera, bvh, lights, params.params,
-      [](const string& message, int sample, int nsamples) {
-        // app->current = sample;
-        // app->total   = nsamples;
+      [viewer](const string& message, int sample, int nsamples) {
+        set_param(viewer, "render", "sample", to_json(sample));
+        print_progress(message, sample, nsamples);
       },
       [viewer](const image<vec4f>& render, int current, int total) {
         set_image(viewer, "render", render);

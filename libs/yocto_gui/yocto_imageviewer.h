@@ -34,6 +34,7 @@
 // INCLUDES
 // -----------------------------------------------------------------------------
 
+#include <yocto/yocto_json.h>
 #include <yocto/yocto_parallel.h>
 #include <yocto_gui/yocto_imgui.h>
 #include <yocto_gui/yocto_opengl.h>
@@ -78,6 +79,12 @@ void set_image(
     imageview_state* viewer, const string& name, const image<vec4b>& img);
 void close_image(imageview_state* viewer, const string& name);
 
+// Set params
+void set_param(imageview_state* viewer, const string& name, const string& pname,
+    const json_value& param);
+void set_params(
+    imageview_state* viewer, const string& name, const json_value& params);
+
 // Open and asycn viewer
 struct imageview_state;
 unique_ptr<imageview_state> open_imageview(const string& title);
@@ -100,7 +107,7 @@ void wait_view(imageview_state* viewer);
 namespace yocto {
 
 // Image viewer commands
-enum imageview_command_type { quit, set, tonemap, close };
+enum imageview_command_type { quit, set, tonemap, close, param, params };
 struct imageview_command {
   imageview_command_type type     = imageview_command_type::quit;
   string                 name     = "";
@@ -108,6 +115,7 @@ struct imageview_command {
   image<vec4b>           ldr      = {};
   float                  exposure = 0;
   bool                   filmic;
+  json_value             params = {};
 };
 
 // Image view command queue and runner
@@ -131,6 +139,9 @@ struct imageview_image {
   // viewing properties
   ogl_image*       glimage  = new ogl_image{};
   ogl_image_params glparams = {};
+
+  // user params
+  json_value params = json_value::object();
 
   ~imageview_image() {
     if (glimage) delete glimage;

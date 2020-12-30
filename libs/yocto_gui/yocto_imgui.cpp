@@ -31,6 +31,7 @@
 
 #include <yocto/yocto_color.h>
 #include <yocto/yocto_commonio.h>
+#include <yocto/yocto_json.h>
 
 #include <algorithm>
 #include <array>
@@ -661,6 +662,32 @@ bool draw_dragger(gui_window* win, const char* lbl, vec4i& value, float speed,
   return ImGui::DragInt4(lbl, &value.x, speed, min, max);
 }
 
+bool draw_dragger(gui_window* win, const char* lbl, array<float, 2>& value,
+    float speed, float min, float max) {
+  return ImGui::DragFloat2(lbl, value.data(), speed, min, max);
+}
+bool draw_dragger(gui_window* win, const char* lbl, array<float, 3>& value,
+    float speed, float min, float max) {
+  return ImGui::DragFloat3(lbl, value.data(), speed, min, max);
+}
+bool draw_dragger(gui_window* win, const char* lbl, array<float, 4>& value,
+    float speed, float min, float max) {
+  return ImGui::DragFloat4(lbl, value.data(), speed, min, max);
+}
+
+bool draw_dragger(gui_window* win, const char* lbl, array<int, 2>& value,
+    float speed, int min, int max) {
+  return ImGui::DragInt2(lbl, value.data(), speed, min, max);
+}
+bool draw_dragger(gui_window* win, const char* lbl, array<int, 3>& value,
+    float speed, int min, int max) {
+  return ImGui::DragInt3(lbl, value.data(), speed, min, max);
+}
+bool draw_dragger(gui_window* win, const char* lbl, array<int, 4>& value,
+    float speed, int min, int max) {
+  return ImGui::DragInt4(lbl, value.data(), speed, min, max);
+}
+
 bool draw_checkbox(gui_window* win, const char* lbl, bool& value) {
   return ImGui::Checkbox(lbl, &value);
 }
@@ -934,6 +961,92 @@ void draw_log(gui_window* win) {
   _log_mutex.lock();
   _log_widget.Draw();
   _log_mutex.unlock();
+}
+
+template <typename T>
+static bool draw_dragger_params(
+    gui_window* win, const char* lbl, json_value& value) {
+  auto gvalue = value.get<T>();
+  if (draw_dragger(win, lbl, gvalue)) {
+    value = gvalue;
+    return true;
+  } else {
+    return false;
+  }
+}
+
+static bool draw_checkbox_params(
+    gui_window* win, const char* lbl, json_value& value) {
+  auto gvalue = value.get<bool>();
+  if (draw_checkbox(win, lbl, gvalue)) {
+    value = gvalue;
+    return true;
+  } else {
+    return false;
+  }
+}
+
+static bool draw_textinput_params(
+    gui_window* win, const char* lbl, json_value& value) {
+  auto gvalue = value.get<string>();
+  if (draw_textinput(win, lbl, gvalue)) {
+    value = gvalue;
+    return true;
+  } else {
+    return false;
+  }
+}
+
+bool draw_params(gui_window* win, const char* lbl, json_value& value) {
+  if (value.is_integral()) {
+    return draw_dragger_params<int>(win, lbl, value);
+  } else if (value.is_number()) {
+    return draw_dragger_params<float>(win, lbl, value);
+  } else if (value.is_boolean()) {
+    return draw_checkbox_params(win, lbl, value);
+  } else if (value.is_string()) {
+    return draw_textinput_params(win, lbl, value);
+  } else if (value.is_array()) {
+    if (value.size() > 4) return false;  // skip
+    auto is_integer_array = true, is_number_array = true;
+    for (auto& item : value) {
+      if (!item.is_integral()) is_integer_array = false;
+      if (!item.is_number()) is_number_array = false;
+    }
+    if (!is_integer_array && !is_number_array) return false;  // skip
+    if (is_integer_array) {
+      if (value.size() == 2)
+        return draw_dragger_params<array<int, 2>>(win, lbl, value);
+      if (value.size() == 3)
+        return draw_dragger_params<array<int, 3>>(win, lbl, value);
+      if (value.size() == 4)
+        return draw_dragger_params<array<int, 4>>(win, lbl, value);
+      return false;  // skip
+    } else if (is_number_array) {
+      if (value.size() == 2)
+        return draw_dragger_params<array<float, 2>>(win, lbl, value);
+      if (value.size() == 3)
+        return draw_dragger_params<array<float, 2>>(win, lbl, value);
+      if (value.size() == 4)
+        return draw_dragger_params<array<float, 2>>(win, lbl, value);
+      return false;  // skip
+    } else {
+      return false;  // skip
+    }
+  } else if (value.is_object()) {
+    if (begin_header(win, lbl)) {
+      auto edited = 0;
+      for (auto& [name, item] : value.items()) {
+        edited += (int)draw_params(win, name.c_str(), item);
+      }
+      end_header(win);
+      return (bool)edited;
+    } else {
+      return false;
+    }
+  } else {
+    return false;  // skip
+  }
 }
 
 }  // namespace yocto
