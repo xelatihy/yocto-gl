@@ -297,6 +297,7 @@ inline void to_json(json_value& json, uint32_t value);
 inline void to_json(json_value& json, double value);
 inline void to_json(json_value& json, float value);
 inline void to_json(json_value& json, bool value);
+inline void to_json(json_value& json, const char* value);
 inline void to_json(json_value& json, const string& value);
 template <typename T>
 inline void to_json(json_value& json, const vector<T>& value);
@@ -313,7 +314,7 @@ inline void to_json(json_value& json, T value);
 namespace yocto {
 
 // Convenience function
-template<typename T>
+template <typename T>
 inline json_value to_schema(const T& value, const string& descr);
 
 // Conversion to json schema from values
@@ -324,19 +325,29 @@ inline void to_schema(json_value& schema, uint32_t value, const string& descr);
 inline void to_schema(json_value& schema, double value, const string& descr);
 inline void to_schema(json_value& schema, float value, const string& descr);
 inline void to_schema(json_value& schema, bool value, const string& descr);
-inline void to_schema(json_value& schema, const string& value, const string& descr);
+inline void to_schema(json_value& schema, const char* value, const string& descr);
+inline void to_schema(
+    json_value& schema, const string& value, const string& descr);
 template <typename T>
-inline void to_schema(json_value& schema, const vector<T>& value, const string& descr);
+inline void to_schema(
+    json_value& schema, const vector<T>& value, const string& descr);
 template <typename T, size_t N>
-inline void to_schema(json_value& schema, const array<T, N>& value, const string& descr);
+inline void to_schema(
+    json_value& schema, const array<T, N>& value, const string& descr);
 template <typename T, typename = std::enable_if_t<std::is_enum_v<T>>>
 inline void to_schema(json_value& schema, T value, const string& descr);
 
 // Schema for objects
-inline json_value to_schema_object(const string& descr);
-inline void to_schema_object(json_value& schema, const string& descr);
+inline json_value  to_schema_object(const string& descr);
+inline void        to_schema_object(json_value& schema, const string& descr);
 inline json_value& get_schema_properties(json_value& schema);
 inline const json_value& get_schema_properties(const json_value& schema);
+inline json_value&       get_schema_required(json_value& schema);
+inline const json_value& get_schema_required(const json_value& schema);
+inline json_value&       get_schema_positional(json_value& schema);
+inline const json_value& get_schema_positional(const json_value& schema);
+inline json_value&       get_schema_command(json_value& schema);
+inline const json_value& get_schema_command(const json_value& schema);
 
 // Validate a value against a schema
 bool validate_json(
@@ -363,6 +374,14 @@ bool parse_cli(json_value& value, const json_value& schema,
     const vector<string>& args, string& error, string& usage);
 bool parse_cli(json_value& value, const json_value& schema, int argc,
     const char** argv, string& error, string& usage);
+
+// Parse the command line for a type that supports it
+template <typename T>
+inline void parse_cli(
+    T& value, const string& usage, int argc, const char** argv);
+template <typename T>
+inline void parse_cli(
+    T& value, const string& usage, const vector<string>& args);
 
 // Low-level parsing routine
 bool parse_cli(json_value& value, const json_value& schema,
@@ -506,27 +525,27 @@ inline bool   is_empty(json_ctview json);
 inline size_t get_size(json_ctview json);
 
 // Array
-inline bool       set_array(json_tview json);
-inline bool       set_array(json_tview json, size_t size);
-inline bool       array_size(json_ctview json, size_t& size);
-inline bool       has_element(json_tview json, size_t idx);
-inline bool       has_element(json_ctview json, size_t idx);
+inline bool        set_array(json_tview json);
+inline bool        set_array(json_tview json, size_t size);
+inline bool        array_size(json_ctview json, size_t& size);
+inline bool        has_element(json_tview json, size_t idx);
+inline bool        has_element(json_ctview json, size_t idx);
 inline json_tview  get_element(json_tview json, size_t idx);
 inline json_ctview get_element(json_ctview json, size_t idx);
 inline json_tview  append_element(json_tview json);
-inline auto       iterate_array(json_tview json);
-inline auto       iterate_array(json_ctview json);
+inline auto        iterate_array(json_tview json);
+inline auto        iterate_array(json_ctview json);
 
 // Object
-inline bool       set_object(json_tview json);
-inline bool       object_size(json_ctview json, size_t& size);
-inline bool       has_element(json_tview json, string_view key);
-inline bool       has_element(json_ctview json, string_view key);
+inline bool        set_object(json_tview json);
+inline bool        object_size(json_ctview json, size_t& size);
+inline bool        has_element(json_tview json, string_view key);
+inline bool        has_element(json_ctview json, string_view key);
 inline json_tview  get_element(json_tview json, string_view key);
 inline json_ctview get_element(json_ctview json, string_view key);
 inline json_tview  insert_element(json_tview json, string_view key);
-inline auto       iterate_object(json_tview json);
-inline auto       iterate_object(json_ctview json);
+inline auto        iterate_object(json_tview json);
+inline auto        iterate_object(json_ctview json);
 
 // Binary
 inline bool set_binary(json_tview json, const json_binary& value);
@@ -592,7 +611,7 @@ inline bool set_array(json_tview json);
 template <typename T>
 inline bool set_value_at(json_tview json, size_t idx, const T& value);
 template <typename T>
-inline bool      append_value(json_tview json, const T& value);
+inline bool       append_value(json_tview json, const T& value);
 inline json_tview append_array(json_tview json);
 inline json_tview append_object(json_tview json);
 
@@ -733,7 +752,9 @@ inline bool json_value::is_number_integer() const {
 inline bool json_value::is_number_unsigned() const {
   return _type == json_type::nunsigned;
 }
-inline bool json_value::is_number_float() const { return _type == json_type::nfloat; }
+inline bool json_value::is_number_float() const {
+  return _type == json_type::nfloat;
+}
 inline bool json_value::is_integer() const {
   return _type == json_type::ninteger || _type == json_type::nunsigned;
 }
@@ -744,9 +765,7 @@ inline bool json_value::is_number() const {
 inline bool json_value::is_boolean() const {
   return _type == json_type::boolean;
 }
-inline bool json_value::is_string() const {
-  return _type == json_type::string;
-}
+inline bool json_value::is_string() const { return _type == json_type::string; }
 inline bool json_value::is_array() const { return _type == json_type::array; }
 inline bool json_value::is_object() const { return _type == json_type::object; }
 inline bool json_value::is_binary() const { return _type == json_type::binary; }
@@ -765,12 +784,14 @@ inline json_value::operator int32_t() const {
 inline json_value::operator uint64_t() const {
   if (_type != json_type::ninteger && _type != json_type::nunsigned)
     throw json_error{"integer expected"};
-  return _type == json_type::ninteger ? (uint64_t)_integer : (uint64_t)_unsigned;
+  return _type == json_type::ninteger ? (uint64_t)_integer
+                                      : (uint64_t)_unsigned;
 }
 inline json_value::operator uint32_t() const {
   if (_type != json_type::ninteger && _type != json_type::nunsigned)
     throw json_error{"integer expected"};
-  return _type == json_type::ninteger ? (uint32_t)_integer : (uint32_t)_unsigned;
+  return _type == json_type::ninteger ? (uint32_t)_integer
+                                      : (uint32_t)_unsigned;
 }
 inline json_value::operator double() const {
   if (_type != json_type::nfloat && _type != json_type::ninteger &&
@@ -779,7 +800,7 @@ inline json_value::operator double() const {
   return _type == json_type::nfloat
              ? (double)_real
              : _type == json_type::ninteger ? (double)_integer
-                                           : (double)_unsigned;
+                                            : (double)_unsigned;
 }
 inline json_value::operator float() const {
   if (_type != json_type::nfloat && _type != json_type::ninteger &&
@@ -787,7 +808,8 @@ inline json_value::operator float() const {
     throw json_error{"number expected"};
   return _type == json_type::nfloat
              ? (float)_real
-             : _type == json_type::ninteger ? (float)_integer : (float)_unsigned;
+             : _type == json_type::ninteger ? (float)_integer
+                                            : (float)_unsigned;
 }
 inline json_value::operator bool() const {
   if (_type != json_type::boolean) throw json_error{"boolean expected"};
@@ -1181,6 +1203,7 @@ inline void to_json(json_value& json, uint32_t value) { json = value; }
 inline void to_json(json_value& json, double value) { json = value; }
 inline void to_json(json_value& json, float value) { json = value; }
 inline void to_json(json_value& json, bool value) { json = value; }
+inline void to_json(json_value& json, const char* value) { json = string{value}; }
 inline void to_json(json_value& json, const string& value) { json = value; }
 template <typename T>
 inline void to_json(json_value& json, const vector<T>& value) {
@@ -1214,7 +1237,7 @@ inline void to_json(json_value& json, T value) {
 namespace yocto {
 
 // Convenience function
-template<typename T>
+template <typename T>
 inline json_value to_schema(const T& value, const string& descr) {
   auto schema = json_value{};
   to_schema(schema, value, descr);
@@ -1223,68 +1246,77 @@ inline json_value to_schema(const T& value, const string& descr) {
 
 // Conversion to json schema from values
 inline void to_schema(json_value& schema, int64_t value, const string& descr) {
-  schema["type"] = "integer";
+  schema["type"]        = "integer";
   schema["description"] = descr;
-  schema["default"] = value;
+  schema["default"]     = value;
 }
 inline void to_schema(json_value& schema, int32_t value, const string& descr) {
-  schema["type"] = "integer";
+  schema["type"]        = "integer";
   schema["description"] = descr;
-  schema["default"] = value;
+  schema["default"]     = value;
 }
 inline void to_schema(json_value& schema, uint64_t value, const string& descr) {
-  schema["type"] = "integer";
+  schema["type"]        = "integer";
   schema["description"] = descr;
-  schema["default"] = value;
+  schema["default"]     = value;
 }
 inline void to_schema(json_value& schema, uint32_t value, const string& descr) {
-  schema["type"] = "integer";
+  schema["type"]        = "integer";
   schema["description"] = descr;
-  schema["default"] = value;
+  schema["default"]     = value;
 }
 inline void to_schema(json_value& schema, double value, const string& descr) {
-  schema["type"] = "number";
+  schema["type"]        = "number";
   schema["description"] = descr;
-  schema["default"] = value;
+  schema["default"]     = value;
 }
 inline void to_schema(json_value& schema, float value, const string& descr) {
-  schema["type"] = "number";
+  schema["type"]        = "number";
   schema["description"] = descr;
-  schema["default"] = value;
+  schema["default"]     = value;
 }
 inline void to_schema(json_value& schema, bool value, const string& descr) {
-  schema["type"] = "number";
+  schema["type"]        = "boolean";
   schema["description"] = descr;
-  schema["default"] = value;
+  schema["default"]     = value;
 }
-inline void to_schema(json_value& schema, const string& value, const string& descr) {
-  schema["type"] = "string";
+inline void to_schema(
+    json_value& schema, const char* value, const string& descr) {
+  schema["type"]        = "string";
   schema["description"] = descr;
-  schema["default"] = value;
+  schema["default"]     = value;
+}
+inline void to_schema(
+    json_value& schema, const string& value, const string& descr) {
+  schema["type"]        = "string";
+  schema["description"] = descr;
+  schema["default"]     = value;
 }
 template <typename T>
-inline void to_schema(json_value& schema, const vector<T>& value, const string& descr) {
-  schema["type"] = "array";
+inline void to_schema(
+    json_value& schema, const vector<T>& value, const string& descr) {
+  schema["type"]        = "array";
   schema["description"] = descr;
-  schema["default"] = value;
-  if(value.empty()) schema["items"] = to_schema(T{}, descr);
+  schema["default"]     = value;
+  if (value.empty()) schema["items"] = to_schema(T{}, descr);
 }
 template <typename T, size_t N>
-inline void to_schema(json_value& schema, const array<T, N>& value, const string& descr) {
-  schema["type"] = "array";
+inline void to_schema(
+    json_value& schema, const array<T, N>& value, const string& descr) {
+  schema["type"]        = "array";
   schema["description"] = descr;
-  schema["default"] = value;
-  schema["minSize"] = N;
-  schema["maxSize"] = N;
-  for(auto& item : value) schema["items"].push_back(to_schema(item, descr));
+  schema["default"]     = value;
+  schema["minSize"]     = N;
+  schema["maxSize"]     = N;
+  for (auto& item : value) schema["items"].push_back(to_schema(item, descr));
 }
 template <typename T, typename>
 inline void to_schema(json_value& schema, T value, const string& descr) {
-  schema["type"] = "string";
+  schema["type"]        = "string";
   schema["description"] = descr;
-  auto& labels = json_enum_labels(value);
-  for(auto& [value_, label] : labels) {
-    if(value == value_) schema["default"] = label;
+  auto& labels          = json_enum_labels(value);
+  for (auto& [value_, label] : labels) {
+    if (value == value_) schema["default"] = label;
     schema["enum"].push_back(label);
   }
 }
@@ -1296,17 +1328,65 @@ inline json_value to_schema_object(const string& descr) {
   return schema;
 }
 inline void to_schema_object(json_value& schema, const string& descr) {
-  schema["type"] = "object";
+  schema["type"]        = "object";
   schema["description"] = descr;
-  schema["properties"] = json_value::object();
+  schema["properties"]  = json_value::object();
 }
 inline json_value& get_schema_properties(json_value& schema) {
   if (schema.is_null()) to_schema_object(schema, "");
-  if (schema.contains("properties")) schema["properties"] = json_value::object();
+  if (!schema.contains("properties"))
+    schema["properties"] = json_value::object();
   return schema.at("properties");
 }
 inline const json_value& get_schema_properties(const json_value& schema) {
   return schema.at("properties");
+}
+inline json_value& get_schema_required(json_value& schema) {
+  if (schema.is_null()) to_schema_object(schema, "");
+  if (!schema.contains("required")) schema["required"] = json_value::array();
+  return schema.at("required");
+}
+inline const json_value& get_schema_required(const json_value& schema) {
+  return schema.at("required");
+}
+inline json_value& get_schema_positional(json_value& schema) {
+  if (schema.is_null()) to_schema_object(schema, "");
+  if (!schema.contains("cli_positional"))
+    schema["cli_positional"] = json_value::array();
+  return schema.at("cli_positional");
+}
+inline const json_value& get_schema_positional(const json_value& schema) {
+  return schema.at("cli_positional");
+}
+inline json_value& get_schema_command(json_value& schema) {
+  if (schema.is_null()) to_schema_object(schema, "");
+  if (!schema.contains("cli_command")) schema["cli_command"] = string{};
+  return schema.at("cli_command");
+}
+inline const json_value& get_schema_command(const json_value& schema) {
+  return schema.at("cli_command");
+}
+
+}  // namespace yocto
+
+// -----------------------------------------------------------------------------
+// COMMAND LINE INTERFACE
+// -----------------------------------------------------------------------------
+namespace yocto {
+
+// Parse the command line for a type that supports it
+template <typename T>
+inline void parse_cli(
+    T& value, const string& usage, const vector<string>& args) {
+  auto json   = to_json(value);
+  auto schema = to_schema(value, usage);
+  parse_cli(json, schema, args);
+  value = from_json<T>(json);
+}
+template <typename T>
+inline void parse_cli(
+    T& value, const string& usage, int argc, const char** argv) {
+  return parse_cli(value, usage, vector<string>{argv, argv + argc});
 }
 
 }  // namespace yocto
@@ -1319,7 +1399,7 @@ namespace yocto {
 // Get view from value
 inline json_tview  get_root(json_tree& json) { return {&json, 0}; }
 inline json_ctview get_croot(json_tree& json) { return {&json, 0}; }
-inline bool       set_error(json_ctview json, string_view error) {
+inline bool        set_error(json_ctview json, string_view error) {
   if (!is_valid(json)) return false;
   set_error(*json.root, string{error} + " at " + compute_path(json));
   return false;
@@ -1574,7 +1654,7 @@ inline bool get_integer(json_ctview json, int64_t& value) {
   if (jst != json_type::ninteger && jst != json_type::nunsigned)
     return set_error(json, "integer expected");
   value = (jst == json_type::ninteger) ? (int64_t)jsv._integer
-                                      : (int64_t)jsv._unsigned;
+                                       : (int64_t)jsv._unsigned;
   return true;
 }
 inline bool get_integer(json_ctview json, uint64_t& value) {
@@ -1584,7 +1664,7 @@ inline bool get_integer(json_ctview json, uint64_t& value) {
   if (jst != json_type::ninteger && jst != json_type::nunsigned)
     return set_error(json, "integer expected");
   value = (jst == json_type::ninteger) ? (uint64_t)jsv._integer
-                                      : (uint64_t)jsv._unsigned;
+                                       : (uint64_t)jsv._unsigned;
   return true;
 }
 inline bool get_number(json_ctview json, double& value) {
@@ -1597,7 +1677,7 @@ inline bool get_number(json_ctview json, double& value) {
   value = (jst == json_type::nfloat)
               ? (double)jsv._real
               : (jst == json_type::ninteger) ? (double)jsv._integer
-                                            : (double)jsv._unsigned;
+                                             : (double)jsv._unsigned;
   return true;
 }
 inline bool get_integer(json_ctview json, int32_t& value) {
@@ -1607,7 +1687,7 @@ inline bool get_integer(json_ctview json, int32_t& value) {
   if (jst != json_type::ninteger && jst != json_type::nunsigned)
     return set_error(json, "integer expected");
   value = (jst == json_type::ninteger) ? (int32_t)jsv._integer
-                                      : (int32_t)jsv._unsigned;
+                                       : (int32_t)jsv._unsigned;
   return true;
 }
 inline bool get_integer(json_ctview json, uint32_t& value) {
@@ -1617,7 +1697,7 @@ inline bool get_integer(json_ctview json, uint32_t& value) {
   if (jst != json_type::ninteger && jst != json_type::nunsigned)
     return set_error(json, "integer expected");
   value = (jst == json_type::ninteger) ? (uint32_t)jsv._integer
-                                      : (uint32_t)jsv._unsigned;
+                                       : (uint32_t)jsv._unsigned;
   return true;
 }
 inline bool get_number(json_ctview json, float& value) {
@@ -1630,7 +1710,7 @@ inline bool get_number(json_ctview json, float& value) {
   value = (jst == json_type::nfloat)
               ? (float)jsv._real
               : (jst == json_type::ninteger) ? (float)jsv._integer
-                                            : (float)jsv._unsigned;
+                                             : (float)jsv._unsigned;
   return true;
 }
 
@@ -1672,7 +1752,7 @@ inline size_t get_size(json_ctview json);
 inline auto iterate_array(json_tview json) {
   struct iterator {
     json_tview json;
-    bool      operator!=(const iterator& other) {
+    bool       operator!=(const iterator& other) {
       return is_valid(json) && json.index != other.json.index;
     }
     iterator& operator++() {
@@ -1689,8 +1769,8 @@ inline auto iterate_array(json_tview json) {
   struct iterator_wrapper {
     json_tview begin_;
     json_tview end_;
-    iterator  begin() { return {begin_}; }
-    iterator  end() { return {end_}; }
+    iterator   begin() { return {begin_}; }
+    iterator   end() { return {end_}; }
   };
   if (!is_valid(json)) return iterator_wrapper{{json.root}, {json.root}};
   auto& jst = _get_type(json);
@@ -1705,7 +1785,7 @@ inline auto iterate_array(json_tview json) {
 inline auto iterate_array(json_ctview json) {
   struct iterator {
     json_ctview json;
-    bool       operator!=(const iterator& other) {
+    bool        operator!=(const iterator& other) {
       return is_valid(json) && json.index != other.json.index;
     }
     iterator& operator++() {
@@ -1722,8 +1802,8 @@ inline auto iterate_array(json_ctview json) {
   struct iterator_wrapper {
     json_ctview begin_;
     json_ctview end_;
-    iterator   begin() { return {begin_}; }
-    iterator   end() { return {end_}; }
+    iterator    begin() { return {begin_}; }
+    iterator    end() { return {end_}; }
   };
   if (!is_valid(json)) return iterator_wrapper{{json.root}, {json.root}};
   auto& jst = _get_type(json);
@@ -1822,7 +1902,7 @@ inline json_tview append_element(json_tview json) {
 inline auto iterate_object(json_tview json) {
   struct iterator {
     json_tview json;
-    bool      operator!=(const iterator& other) {
+    bool       operator!=(const iterator& other) {
       return is_valid(json) && json.index != other.json.index;
     }
     iterator& operator++() {
@@ -1841,8 +1921,8 @@ inline auto iterate_object(json_tview json) {
   struct iterator_wrapper {
     json_tview begin_;
     json_tview end_;
-    iterator  begin() { return {begin_}; }
-    iterator  end() { return {end_}; }
+    iterator   begin() { return {begin_}; }
+    iterator   end() { return {end_}; }
   };
   if (!is_valid(json)) return iterator_wrapper{{json.root}, {json.root}};
   auto& jst = _get_type(json);
@@ -1857,7 +1937,7 @@ inline auto iterate_object(json_tview json) {
 inline auto iterate_object(json_ctview json) {
   struct iterator {
     json_ctview json;
-    bool       operator!=(const iterator& other) {
+    bool        operator!=(const iterator& other) {
       return is_valid(json) && json.index != other.json.index;
     }
     iterator& operator++() {
@@ -1876,8 +1956,8 @@ inline auto iterate_object(json_ctview json) {
   struct iterator_wrapper {
     json_ctview begin_;
     json_ctview end_;
-    iterator   begin() { return {begin_}; }
-    iterator   end() { return {end_}; }
+    iterator    begin() { return {begin_}; }
+    iterator    end() { return {end_}; }
   };
   if (!is_valid(json)) return iterator_wrapper{{json.root}, {json.root}};
   auto& jst = _get_type(json);
