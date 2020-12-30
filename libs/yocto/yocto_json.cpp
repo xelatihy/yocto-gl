@@ -918,7 +918,7 @@ bool load_json(const string& filename, json_tree& json, string& error) {
     // stack
     json_tview              root;
     std::vector<json_tview> stack = {};
-    std::string            current_key;
+    std::string             current_key;
     explicit sax_handler(json_tview root_) : root{root_}, stack{root_} {}
 
     // get current value

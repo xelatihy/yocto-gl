@@ -325,7 +325,8 @@ inline void to_schema(json_value& schema, uint32_t value, const string& descr);
 inline void to_schema(json_value& schema, double value, const string& descr);
 inline void to_schema(json_value& schema, float value, const string& descr);
 inline void to_schema(json_value& schema, bool value, const string& descr);
-inline void to_schema(json_value& schema, const char* value, const string& descr);
+inline void to_schema(
+    json_value& schema, const char* value, const string& descr);
 inline void to_schema(
     json_value& schema, const string& value, const string& descr);
 template <typename T>
@@ -1203,7 +1204,9 @@ inline void to_json(json_value& json, uint32_t value) { json = value; }
 inline void to_json(json_value& json, double value) { json = value; }
 inline void to_json(json_value& json, float value) { json = value; }
 inline void to_json(json_value& json, bool value) { json = value; }
-inline void to_json(json_value& json, const char* value) { json = string{value}; }
+inline void to_json(json_value& json, const char* value) {
+  json = string{value};
+}
 inline void to_json(json_value& json, const string& value) { json = value; }
 template <typename T>
 inline void to_json(json_value& json, const vector<T>& value) {

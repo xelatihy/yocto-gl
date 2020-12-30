@@ -1313,7 +1313,7 @@ static bool load_json_scene(const string& filename, sceneio_scene* scene,
   auto ply_instance_map  = unordered_map<string, ply_instance*>{{"", nullptr}};
   auto instance_ply      = unordered_map<sceneio_instance*, ply_instance*>{};
   auto get_ply_instances = [&ply_instances, &ply_instance_map, &instance_ply](
-                               json_ctview        js,
+                               json_ctview       js,
                                sceneio_instance* instance) -> bool {
     auto name = ""s;
     if (!get_value(js, name)) return false;

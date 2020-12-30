@@ -553,7 +553,8 @@ namespace yocto {
 struct json_value;
 void to_json(json_value& json, const trace_params& value);
 void from_json(const json_value& json, trace_params& value);
-void to_schema(json_value& json, const trace_params& value, const string& descr);
+void to_schema(
+    json_value& json, const trace_params& value, const string& descr);
 
 // Json enum conventions
 const vector<pair<trace_bvh_type, string>>& json_enum_labels(trace_bvh_type);
