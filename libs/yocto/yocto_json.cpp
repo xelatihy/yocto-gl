@@ -856,7 +856,7 @@ void parse_cli(
 namespace yocto {
 
 // convert json
-void to_json(njson& njs, json_cview json) {
+void to_json(njson& njs, json_ctview json) {
   switch (get_type(json)) {
     case json_type::null: njs = nullptr; break;
     case json_type::ninteger: njs = get_number_integer(json); break;
@@ -881,7 +881,7 @@ void to_json(njson& njs, json_cview json) {
 }
 
 // convert json
-void from_json(const njson& njs, json_view json) {
+void from_json(const njson& njs, json_tview json) {
   switch (njs.type()) {
     case njson::value_t::null: set_null(json); break;
     case njson::value_t::number_integer: set_integer(json, (int64_t)njs); break;
@@ -916,13 +916,13 @@ bool load_json(const string& filename, json_tree& json, string& error) {
   // sax handler
   struct sax_handler {
     // stack
-    json_view              root;
-    std::vector<json_view> stack = {};
+    json_tview              root;
+    std::vector<json_tview> stack = {};
     std::string            current_key;
-    explicit sax_handler(json_view root_) : root{root_}, stack{root_} {}
+    explicit sax_handler(json_tview root_) : root{root_}, stack{root_} {}
 
     // get current value
-    json_view next_value() {
+    json_tview next_value() {
       if (stack.size() == 1) return root;
       auto& jst = _get_type(stack.back());
       if (jst == json_type::array) return append_element(stack.back());

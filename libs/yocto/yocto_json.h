@@ -376,8 +376,8 @@ bool parse_cli(json_value& value, const json_value& schema,
 namespace yocto {
 
 // Declarations
-struct json_view;
-struct json_cview;
+struct json_tview;
+struct json_ctview;
 
 // Json tree
 struct json_tree {
@@ -419,194 +419,194 @@ bool load_json(const string& filename, json_tree& json, string& error);
 bool save_json(const string& filename, const json_tree& json, string& error);
 
 // Get view from value
-inline json_view  get_root(json_tree& json);
-inline json_cview get_croot(json_tree& json);
+inline json_tview  get_root(json_tree& json);
+inline json_ctview get_croot(json_tree& json);
 
 // Error handling
 inline void set_error(json_tree& json, string_view error);
 inline void clear_error(json_tree& json);
 
 // Json view
-struct json_view {
+struct json_tview {
   json_tree* root  = nullptr;
   uint32_t   index = 0;
-  json_view(json_tree* root_) : root{root_}, index{(uint32_t)-1} {}
-  json_view(json_tree* root_, uint32_t index_) : root{root_}, index{index_} {}
+  json_tview(json_tree* root_) : root{root_}, index{(uint32_t)-1} {}
+  json_tview(json_tree* root_, uint32_t index_) : root{root_}, index{index_} {}
 };
-struct json_cview {
+struct json_ctview {
   json_tree* root  = nullptr;
   uint32_t   index = 0;
-  json_cview(json_tree* root_) : root{root_}, index{(uint32_t)-1} {}
-  json_cview(json_tree* root_, uint32_t index_) : root{root_}, index{index_} {}
-  json_cview(json_view other) : root{other.root}, index{other.index} {}
+  json_ctview(json_tree* root_) : root{root_}, index{(uint32_t)-1} {}
+  json_ctview(json_tree* root_, uint32_t index_) : root{root_}, index{index_} {}
+  json_ctview(json_tview other) : root{other.root}, index{other.index} {}
 };
 
 // Error check
-inline bool   is_valid(json_cview json);
-inline bool   is_valid(json_view json);
-inline string get_error(json_cview json);
-inline string get_error(json_view json);
-inline string compute_path(json_cview json);
-inline bool   set_error(json_cview json, string_view error);
+inline bool   is_valid(json_ctview json);
+inline bool   is_valid(json_tview json);
+inline string get_error(json_ctview json);
+inline string get_error(json_tview json);
+inline string compute_path(json_ctview json);
+inline bool   set_error(json_ctview json, string_view error);
 
 // Type
-inline json_type get_type(json_cview json);
+inline json_type get_type(json_ctview json);
 // Type
-inline bool is_null(json_cview json);
-inline bool is_integer(json_cview json);
-inline bool is_number(json_cview json);
-inline bool is_boolean(json_cview json);
-inline bool is_string(json_cview json);
-inline bool is_array(json_cview json);
-inline bool is_object(json_cview json);
-inline bool is_binary(json_cview json);
-inline bool is_number_integer(json_cview json);
-inline bool is_number_unsigned(json_cview json);
-inline bool is_number_float(json_cview json);
+inline bool is_null(json_ctview json);
+inline bool is_integer(json_ctview json);
+inline bool is_number(json_ctview json);
+inline bool is_boolean(json_ctview json);
+inline bool is_string(json_ctview json);
+inline bool is_array(json_ctview json);
+inline bool is_object(json_ctview json);
+inline bool is_binary(json_ctview json);
+inline bool is_number_integer(json_ctview json);
+inline bool is_number_unsigned(json_ctview json);
+inline bool is_number_float(json_ctview json);
 
 // Initialization to basic types
-inline bool set_null(json_view json);
-inline bool set_integer(json_view json, int64_t value);
-inline bool set_unsigned(json_view json, uint64_t value);
-inline bool set_real(json_view json, double value);
-inline bool set_boolean(json_view json, bool value);
-inline bool set_string(json_view json, const string& value);
-inline bool set_integral(json_view json, int64_t value);
-inline bool set_integral(json_view json, int32_t value);
-inline bool set_integral(json_view json, uint64_t value);
-inline bool set_integral(json_view json, uint32_t value);
-inline bool set_number(json_view json, double value);
-inline bool set_number(json_view json, float value);
+inline bool set_null(json_tview json);
+inline bool set_integer(json_tview json, int64_t value);
+inline bool set_unsigned(json_tview json, uint64_t value);
+inline bool set_real(json_tview json, double value);
+inline bool set_boolean(json_tview json, bool value);
+inline bool set_string(json_tview json, const string& value);
+inline bool set_integral(json_tview json, int64_t value);
+inline bool set_integral(json_tview json, int32_t value);
+inline bool set_integral(json_tview json, uint64_t value);
+inline bool set_integral(json_tview json, uint32_t value);
+inline bool set_number(json_tview json, double value);
+inline bool set_number(json_tview json, float value);
 
 // Get basic values
-inline bool get_boolean(json_cview json, bool& value);
-inline bool get_string(json_cview json, string& value);
-inline bool get_integer(json_cview json, int64_t& value);
-inline bool get_integer(json_cview json, uint64_t& value);
-inline bool get_number(json_cview json, double& value);
-inline bool get_integer(json_cview json, int32_t& value);
-inline bool get_integer(json_cview json, uint32_t& value);
-inline bool get_number(json_cview json, float& value);
-inline bool get_number_integer(json_cview json, int64_t& value);
-inline bool get_number_unsigned(json_cview json, uint64_t& value);
-inline bool get_number_float(json_cview json, double& value);
+inline bool get_boolean(json_ctview json, bool& value);
+inline bool get_string(json_ctview json, string& value);
+inline bool get_integer(json_ctview json, int64_t& value);
+inline bool get_integer(json_ctview json, uint64_t& value);
+inline bool get_number(json_ctview json, double& value);
+inline bool get_integer(json_ctview json, int32_t& value);
+inline bool get_integer(json_ctview json, uint32_t& value);
+inline bool get_number(json_ctview json, float& value);
+inline bool get_number_integer(json_ctview json, int64_t& value);
+inline bool get_number_unsigned(json_ctview json, uint64_t& value);
+inline bool get_number_float(json_ctview json, double& value);
 
 // Get basic values - ignore errors if present
-inline bool     get_boolean(json_cview json);
-inline string   get_string(json_cview json);
-inline int64_t  get_integer(json_cview json);
-inline uint64_t get_integeru(json_cview json);
-inline double   get_number(json_cview json);
-inline int64_t  get_number_integer(json_cview json);
-inline uint64_t get_number_unsigned(json_cview json);
-inline double   get_number_real(json_cview json);
+inline bool     get_boolean(json_ctview json);
+inline string   get_string(json_ctview json);
+inline int64_t  get_integer(json_ctview json);
+inline uint64_t get_integeru(json_ctview json);
+inline double   get_number(json_ctview json);
+inline int64_t  get_number_integer(json_ctview json);
+inline uint64_t get_number_unsigned(json_ctview json);
+inline double   get_number_real(json_ctview json);
 
 // Compound type
-inline bool   is_empty(json_cview json);
-inline size_t get_size(json_cview json);
+inline bool   is_empty(json_ctview json);
+inline size_t get_size(json_ctview json);
 
 // Array
-inline bool       set_array(json_view json);
-inline bool       set_array(json_view json, size_t size);
-inline bool       array_size(json_cview json, size_t& size);
-inline bool       has_element(json_view json, size_t idx);
-inline bool       has_element(json_cview json, size_t idx);
-inline json_view  get_element(json_view json, size_t idx);
-inline json_cview get_element(json_cview json, size_t idx);
-inline json_view  append_element(json_view json);
-inline auto       iterate_array(json_view json);
-inline auto       iterate_array(json_cview json);
+inline bool       set_array(json_tview json);
+inline bool       set_array(json_tview json, size_t size);
+inline bool       array_size(json_ctview json, size_t& size);
+inline bool       has_element(json_tview json, size_t idx);
+inline bool       has_element(json_ctview json, size_t idx);
+inline json_tview  get_element(json_tview json, size_t idx);
+inline json_ctview get_element(json_ctview json, size_t idx);
+inline json_tview  append_element(json_tview json);
+inline auto       iterate_array(json_tview json);
+inline auto       iterate_array(json_ctview json);
 
 // Object
-inline bool       set_object(json_view json);
-inline bool       object_size(json_cview json, size_t& size);
-inline bool       has_element(json_view json, string_view key);
-inline bool       has_element(json_cview json, string_view key);
-inline json_view  get_element(json_view json, string_view key);
-inline json_cview get_element(json_cview json, string_view key);
-inline json_view  insert_element(json_view json, string_view key);
-inline auto       iterate_object(json_view json);
-inline auto       iterate_object(json_cview json);
+inline bool       set_object(json_tview json);
+inline bool       object_size(json_ctview json, size_t& size);
+inline bool       has_element(json_tview json, string_view key);
+inline bool       has_element(json_ctview json, string_view key);
+inline json_tview  get_element(json_tview json, string_view key);
+inline json_ctview get_element(json_ctview json, string_view key);
+inline json_tview  insert_element(json_tview json, string_view key);
+inline auto       iterate_object(json_tview json);
+inline auto       iterate_object(json_ctview json);
 
 // Binary
-inline bool set_binary(json_view json, const json_binary& value);
-inline bool get_binary(json_cview json, json_binary& value);
+inline bool set_binary(json_tview json, const json_binary& value);
+inline bool get_binary(json_ctview json, json_binary& value);
 
 // Get the path of a json view
-inline string compute_path(json_cview json);
+inline string compute_path(json_ctview json);
 
 // Conversion from json to values
 template <typename T>
-inline bool get_value(json_cview json, T& value);
+inline bool get_value(json_ctview json, T& value);
 
 // Conversion from json to values
-inline bool get_value(json_cview json, int64_t& value);
-inline bool get_value(json_cview json, int32_t& value);
-inline bool get_value(json_cview json, uint64_t& value);
-inline bool get_value(json_cview json, uint32_t& value);
-inline bool get_value(json_cview json, double& value);
-inline bool get_value(json_cview json, float& value);
-inline bool get_value(json_cview json, bool& value);
-inline bool get_value(json_cview json, string& value);
+inline bool get_value(json_ctview json, int64_t& value);
+inline bool get_value(json_ctview json, int32_t& value);
+inline bool get_value(json_ctview json, uint64_t& value);
+inline bool get_value(json_ctview json, uint32_t& value);
+inline bool get_value(json_ctview json, double& value);
+inline bool get_value(json_ctview json, float& value);
+inline bool get_value(json_ctview json, bool& value);
+inline bool get_value(json_ctview json, string& value);
 template <typename T>
-inline bool get_value(json_cview json, vector<T>& value);
+inline bool get_value(json_ctview json, vector<T>& value);
 template <typename T, size_t N>
-inline bool get_value(json_cview json, array<T, N>& value);
+inline bool get_value(json_ctview json, array<T, N>& value);
 
 // Get value at a key or index
 template <typename T>
-inline bool get_value_at(json_cview json, string_view key, T& value);
+inline bool get_value_at(json_ctview json, string_view key, T& value);
 template <typename T>
-inline bool get_value_at(json_cview json, size_t idx, T& value);
+inline bool get_value_at(json_ctview json, size_t idx, T& value);
 
 // Get value at a key or nothing is key is not preesent
 template <typename T>
-inline bool get_value_if(json_cview json, string_view key, T& value);
+inline bool get_value_if(json_ctview json, string_view key, T& value);
 
 // Conversion to json from values
 template <typename T>
-inline bool set_value(json_view json, const T& value);
+inline bool set_value(json_tview json, const T& value);
 
 // Conversion to json from values
-inline bool set_value(json_view json, int64_t value);
-inline bool set_value(json_view json, int32_t value);
-inline bool set_value(json_view json, uint64_t value);
-inline bool set_value(json_view json, uint32_t value);
-inline bool set_value(json_view json, double value);
-inline bool set_value(json_view json, float value);
-inline bool set_value(json_view json, bool value);
-inline bool set_value(json_view json, const string& value);
-inline bool set_value(json_view json, const char* value);
+inline bool set_value(json_tview json, int64_t value);
+inline bool set_value(json_tview json, int32_t value);
+inline bool set_value(json_tview json, uint64_t value);
+inline bool set_value(json_tview json, uint32_t value);
+inline bool set_value(json_tview json, double value);
+inline bool set_value(json_tview json, float value);
+inline bool set_value(json_tview json, bool value);
+inline bool set_value(json_tview json, const string& value);
+inline bool set_value(json_tview json, const char* value);
 template <typename T>
-inline bool set_value(json_view json, const vector<T>& value);
+inline bool set_value(json_tview json, const vector<T>& value);
 template <typename T, size_t N>
-inline bool set_value(json_view json, const array<T, N>& value);
+inline bool set_value(json_tview json, const array<T, N>& value);
 
 // Helpers for user-defined types
-inline bool check_array(json_cview json);
-inline bool check_array(json_cview json, size_t size_);
-inline bool check_object(json_cview json);
+inline bool check_array(json_ctview json);
+inline bool check_array(json_ctview json, size_t size_);
+inline bool check_object(json_ctview json);
 
 // Helpers for user-defined types
-inline bool set_array(json_view json);
+inline bool set_array(json_tview json);
 template <typename T>
-inline bool set_value_at(json_view json, size_t idx, const T& value);
+inline bool set_value_at(json_tview json, size_t idx, const T& value);
 template <typename T>
-inline bool      append_value(json_view json, const T& value);
-inline json_view append_array(json_view json);
-inline json_view append_object(json_view json);
+inline bool      append_value(json_tview json, const T& value);
+inline json_tview append_array(json_tview json);
+inline json_tview append_object(json_tview json);
 
 // Helpers for user-defined types
-inline bool set_object(json_view json);
+inline bool set_object(json_tview json);
 template <typename T>
-inline bool set_value_at(json_view json, string_view key, const T& value);
+inline bool set_value_at(json_tview json, string_view key, const T& value);
 template <typename T>
-inline bool insert_value(json_view json, string_view key, const T& value);
+inline bool insert_value(json_tview json, string_view key, const T& value);
 template <typename T>
 inline bool insert_value_if(
-    json_view json, string_view key, const T& value, const T& default_);
-inline json_view insert_array(json_view json, string_view key);
-inline json_view insert_object(json_view json, string_view key);
+    json_tview json, string_view key, const T& value, const T& default_);
+inline json_tview insert_array(json_tview json, string_view key);
+inline json_tview insert_object(json_tview json, string_view key);
 
 }  // namespace yocto
 
@@ -1317,14 +1317,14 @@ inline const json_value& get_schema_properties(const json_value& schema) {
 namespace yocto {
 
 // Get view from value
-inline json_view  get_root(json_tree& json) { return {&json, 0}; }
-inline json_cview get_croot(json_tree& json) { return {&json, 0}; }
-inline bool       set_error(json_cview json, string_view error) {
+inline json_tview  get_root(json_tree& json) { return {&json, 0}; }
+inline json_ctview get_croot(json_tree& json) { return {&json, 0}; }
+inline bool       set_error(json_ctview json, string_view error) {
   if (!is_valid(json)) return false;
   set_error(*json.root, string{error} + " at " + compute_path(json));
   return false;
 }
-inline json_view set_error_view(json_cview json, string_view error) {
+inline json_tview set_error_view(json_ctview json, string_view error) {
   if (!is_valid(json)) return {json.root};
   set_error(*json.root, string{error} + " at " + compute_path(json));
   return {json.root};
@@ -1342,19 +1342,19 @@ inline void clear_error(json_tree& json) {
 }
 
 // Helpers
-inline json_type& _get_type(json_view json) {
+inline json_type& _get_type(json_tview json) {
   if (!is_valid(json)) throw std::invalid_argument{"bad json"};
   return json.root->types[json.index];
 }
-inline const json_type& _get_type(json_cview json) {
+inline const json_type& _get_type(json_ctview json) {
   if (!is_valid(json)) throw std::invalid_argument{"bad json"};
   return json.root->types[json.index];
 }
-inline json_tree::json_value& _get_value(json_view json) {
+inline json_tree::json_value& _get_value(json_tview json) {
   if (!is_valid(json)) throw std::invalid_argument{"bad json"};
   return json.root->values[json.index];
 }
-inline const json_tree::json_value& _get_value(json_cview json) {
+inline const json_tree::json_value& _get_value(json_ctview json) {
   if (!is_valid(json)) throw std::invalid_argument{"bad json"};
   return json.root->values[json.index];
 }
@@ -1366,103 +1366,103 @@ inline uint32_t _get_capacity(uint32_t length) {
   while (capacity < length) capacity *= 2;
   return capacity;
 }
-inline string_view _get_key(json_cview json) {
+inline string_view _get_key(json_ctview json) {
   if (!is_valid(json)) throw std::invalid_argument{"bad tree"};
   auto& jst = _get_type(json);
   auto& jsv = _get_value(json);
   if (jst != json_type::string) throw std::invalid_argument{"bad key"};
   return {json.root->keys.data() + jsv._string.start, jsv._string.length};
 }
-inline void _find_path(json_view json, vector<json_view>& path);
+inline void _find_path(json_tview json, vector<json_tview>& path);
 
 // Error check
-inline bool is_valid(json_cview json) {
+inline bool is_valid(json_ctview json) {
   return json.root != nullptr && json.root->valid && json.index != (uint32_t)-1;
 }
-inline bool is_valid(json_view json) {
+inline bool is_valid(json_tview json) {
   return json.root != nullptr && json.root->valid && json.index != (uint32_t)-1;
 }
-inline string get_error(json_cview json) {
+inline string get_error(json_ctview json) {
   if (json.root == nullptr) return "bad root";
   if (json.root->valid) return "";
   return json.root->error;
 }
-inline string get_error(json_view json) {
+inline string get_error(json_tview json) {
   if (json.root == nullptr) return "bad root";
   if (json.root->valid) return "";
   return json.root->error;
 }
 
 // Type
-inline json_type get_type(json_cview json) {
+inline json_type get_type(json_ctview json) {
   if (!is_valid(json)) return json_type::null;
   return _get_type(json);
 }
-inline bool is_null(json_cview json) {
+inline bool is_null(json_ctview json) {
   if (!is_valid(json)) return false;
   auto& jst = _get_type(json);
   return jst == json_type::null;
 }
-inline bool is_number_integer(json_cview json) {
+inline bool is_number_integer(json_ctview json) {
   if (!is_valid(json)) return false;
   auto& jst = _get_type(json);
   return jst == json_type::ninteger;
 }
-inline bool is_number_unsigned(json_cview json) {
+inline bool is_number_unsigned(json_ctview json) {
   if (!is_valid(json)) return false;
   auto& jst = _get_type(json);
   return jst == json_type::nunsigned;
 }
-inline bool is_number_float(json_cview json) {
+inline bool is_number_float(json_ctview json) {
   if (!is_valid(json)) return false;
   auto& jst = _get_type(json);
   return jst == json_type::nfloat;
 }
-inline bool is_integer(json_cview json) {
+inline bool is_integer(json_ctview json) {
   if (!is_valid(json)) return false;
   auto& jst = _get_type(json);
   return jst == json_type::ninteger || jst == json_type::nunsigned;
 }
-inline bool is_number(json_cview json) {
+inline bool is_number(json_ctview json) {
   if (!is_valid(json)) return false;
   auto& jst = _get_type(json);
   return jst == json_type::ninteger || jst == json_type::nunsigned ||
          jst == json_type::nfloat;
 }
-inline bool is_boolean(json_cview json) {
+inline bool is_boolean(json_ctview json) {
   if (!is_valid(json)) return false;
   auto& jst = _get_type(json);
   return jst == json_type::boolean;
 }
-inline bool is_string(json_cview json) {
+inline bool is_string(json_ctview json) {
   if (!is_valid(json)) return false;
   auto& jst = _get_type(json);
   return jst == json_type::string;
 }
-inline bool is_array(json_cview json) {
+inline bool is_array(json_ctview json) {
   if (!is_valid(json)) return false;
   auto& jst = _get_type(json);
   return jst == json_type::array;
 }
-inline bool is_object(json_cview json) {
+inline bool is_object(json_ctview json) {
   if (!is_valid(json)) return false;
   auto& jst = _get_type(json);
   return jst == json_type::object;
 }
-inline bool is_binary(json_cview json) {
+inline bool is_binary(json_ctview json) {
   if (!is_valid(json)) return false;
   auto& jst = _get_type(json);
   return jst == json_type::binary;
 }
 
 // Initialization to basic types
-inline bool set_null(json_view json) {
+inline bool set_null(json_tview json) {
   if (!is_valid(json)) return false;
   auto& jst = _get_type(json);
   jst       = json_type::null;
   return true;
 }
-inline bool set_integer(json_view json, int64_t value) {
+inline bool set_integer(json_tview json, int64_t value) {
   if (!is_valid(json)) return false;
   auto& jst    = _get_type(json);
   auto& jsv    = _get_value(json);
@@ -1470,7 +1470,7 @@ inline bool set_integer(json_view json, int64_t value) {
   jsv._integer = value;
   return true;
 }
-inline bool set_unsigned(json_view json, uint64_t value) {
+inline bool set_unsigned(json_tview json, uint64_t value) {
   if (!is_valid(json)) return false;
   auto& jst     = _get_type(json);
   auto& jsv     = _get_value(json);
@@ -1478,7 +1478,7 @@ inline bool set_unsigned(json_view json, uint64_t value) {
   jsv._unsigned = value;
   return true;
 }
-inline bool set_real(json_view json, double value) {
+inline bool set_real(json_tview json, double value) {
   if (!is_valid(json)) return false;
   auto& jst = _get_type(json);
   auto& jsv = _get_value(json);
@@ -1486,7 +1486,7 @@ inline bool set_real(json_view json, double value) {
   jsv._real = value;
   return true;
 }
-inline bool set_boolean(json_view json, bool value) {
+inline bool set_boolean(json_tview json, bool value) {
   if (!is_valid(json)) return false;
   auto& jst    = _get_type(json);
   auto& jsv    = _get_value(json);
@@ -1494,7 +1494,7 @@ inline bool set_boolean(json_view json, bool value) {
   jsv._boolean = value;
   return true;
 }
-inline bool set_string(json_view json, const string& value) {
+inline bool set_string(json_tview json, const string& value) {
   if (!is_valid(json)) return false;
   auto& jst          = _get_type(json);
   auto& jsv          = _get_value(json);
@@ -1506,27 +1506,27 @@ inline bool set_string(json_view json, const string& value) {
   json.root->strings.push_back(0);
   return true;
 }
-inline bool set_integral(json_view json, int64_t value) {
+inline bool set_integral(json_tview json, int64_t value) {
   return set_integer(json, value);
 }
-inline bool set_integral(json_view json, int32_t value) {
+inline bool set_integral(json_tview json, int32_t value) {
   return set_integer(json, value);
 }
-inline bool set_integral(json_view json, uint64_t value) {
+inline bool set_integral(json_tview json, uint64_t value) {
   return set_unsigned(json, value);
 }
-inline bool set_integral(json_view json, uint32_t value) {
+inline bool set_integral(json_tview json, uint32_t value) {
   return set_unsigned(json, value);
 }
-inline bool set_number(json_view json, double value) {
+inline bool set_number(json_tview json, double value) {
   return set_real(json, value);
 }
-inline bool set_number(json_view json, float value) {
+inline bool set_number(json_tview json, float value) {
   return set_real(json, value);
 }
 
 // Get basic values
-inline bool get_number_integer(json_cview json, int64_t& value) {
+inline bool get_number_integer(json_ctview json, int64_t& value) {
   if (!is_valid(json)) return false;
   auto& jst = _get_type(json);
   auto& jsv = _get_value(json);
@@ -1534,7 +1534,7 @@ inline bool get_number_integer(json_cview json, int64_t& value) {
   value = jsv._integer;
   return true;
 }
-inline bool get_number_unsigned(json_cview json, uint64_t& value) {
+inline bool get_number_unsigned(json_ctview json, uint64_t& value) {
   if (!is_valid(json)) return false;
   auto& jst = _get_type(json);
   auto& jsv = _get_value(json);
@@ -1542,7 +1542,7 @@ inline bool get_number_unsigned(json_cview json, uint64_t& value) {
   value = jsv._unsigned;
   return true;
 }
-inline bool get_number_float(json_cview json, double& value) {
+inline bool get_number_float(json_ctview json, double& value) {
   if (!is_valid(json)) return false;
   auto& jst = _get_type(json);
   auto& jsv = _get_value(json);
@@ -1550,7 +1550,7 @@ inline bool get_number_float(json_cview json, double& value) {
   value = jsv._real;
   return true;
 }
-inline bool get_boolean(json_cview json, bool& value) {
+inline bool get_boolean(json_ctview json, bool& value) {
   if (!is_valid(json)) return false;
   auto& jst = _get_type(json);
   auto& jsv = _get_value(json);
@@ -1558,7 +1558,7 @@ inline bool get_boolean(json_cview json, bool& value) {
   value = jsv._boolean;
   return true;
 }
-inline bool get_string(json_cview json, string& value) {
+inline bool get_string(json_ctview json, string& value) {
   if (!is_valid(json)) return false;
   auto& jst = _get_type(json);
   auto& jsv = _get_value(json);
@@ -1567,7 +1567,7 @@ inline bool get_string(json_cview json, string& value) {
       json.root->strings.data() + jsv._string.start + jsv._string.length};
   return true;
 }
-inline bool get_integer(json_cview json, int64_t& value) {
+inline bool get_integer(json_ctview json, int64_t& value) {
   if (!is_valid(json)) return false;
   auto& jst = _get_type(json);
   auto& jsv = _get_value(json);
@@ -1577,7 +1577,7 @@ inline bool get_integer(json_cview json, int64_t& value) {
                                       : (int64_t)jsv._unsigned;
   return true;
 }
-inline bool get_integer(json_cview json, uint64_t& value) {
+inline bool get_integer(json_ctview json, uint64_t& value) {
   if (!is_valid(json)) return false;
   auto& jst = _get_type(json);
   auto& jsv = _get_value(json);
@@ -1587,7 +1587,7 @@ inline bool get_integer(json_cview json, uint64_t& value) {
                                       : (uint64_t)jsv._unsigned;
   return true;
 }
-inline bool get_number(json_cview json, double& value) {
+inline bool get_number(json_ctview json, double& value) {
   if (!is_valid(json)) return false;
   auto& jst = _get_type(json);
   auto& jsv = _get_value(json);
@@ -1600,7 +1600,7 @@ inline bool get_number(json_cview json, double& value) {
                                             : (double)jsv._unsigned;
   return true;
 }
-inline bool get_integer(json_cview json, int32_t& value) {
+inline bool get_integer(json_ctview json, int32_t& value) {
   if (!is_valid(json)) return false;
   auto& jst = _get_type(json);
   auto& jsv = _get_value(json);
@@ -1610,7 +1610,7 @@ inline bool get_integer(json_cview json, int32_t& value) {
                                       : (int32_t)jsv._unsigned;
   return true;
 }
-inline bool get_integer(json_cview json, uint32_t& value) {
+inline bool get_integer(json_ctview json, uint32_t& value) {
   if (!is_valid(json)) return false;
   auto& jst = _get_type(json);
   auto& jsv = _get_value(json);
@@ -1620,7 +1620,7 @@ inline bool get_integer(json_cview json, uint32_t& value) {
                                       : (uint32_t)jsv._unsigned;
   return true;
 }
-inline bool get_number(json_cview json, float& value) {
+inline bool get_number(json_ctview json, float& value) {
   if (!is_valid(json)) return false;
   auto& jst = _get_type(json);
   auto& jsv = _get_value(json);
@@ -1635,43 +1635,43 @@ inline bool get_number(json_cview json, float& value) {
 }
 
 // Get basic values
-inline int64_t get_number_integer(json_cview json) {
+inline int64_t get_number_integer(json_ctview json) {
   auto value = (int64_t)0;
   return get_number_integer(json, value) ? value : 0;
 }
-inline uint64_t get_number_unsigned(json_cview json) {
+inline uint64_t get_number_unsigned(json_ctview json) {
   auto value = (uint64_t)0;
   return get_number_unsigned(json, value) ? value : 0;
 }
-inline double get_number_real(json_cview json) {
+inline double get_number_real(json_ctview json) {
   auto value = (double)0;
   return get_number_float(json, value) ? value : 0;
 }
-inline bool get_boolean(json_cview json) {
+inline bool get_boolean(json_ctview json) {
   auto value = false;
   return get_boolean(json, value) ? value : false;
 }
-inline string get_string(json_cview json) {
+inline string get_string(json_ctview json) {
   auto value = string{};
   return get_string(json, value) ? value : string{};
 }
-inline int64_t get_integer(json_cview json) {
+inline int64_t get_integer(json_ctview json) {
   auto value = (int64_t)0;
   return get_integer(json, value) ? value : 0;
 }
-inline double get_number(json_cview json) {
+inline double get_number(json_ctview json) {
   auto value = (double)0;
   return get_number(json, value) ? value : 0;
 }
 
 // Compound type
-inline bool   is_empty(json_cview json);
-inline size_t get_size(json_cview json);
+inline bool   is_empty(json_ctview json);
+inline size_t get_size(json_ctview json);
 
 // Array iteeration
-inline auto iterate_array(json_view json) {
+inline auto iterate_array(json_tview json) {
   struct iterator {
-    json_view json;
+    json_tview json;
     bool      operator!=(const iterator& other) {
       return is_valid(json) && json.index != other.json.index;
     }
@@ -1684,11 +1684,11 @@ inline auto iterate_array(json_view json) {
       if (jst == json_type::object) json.index += jsv._object.skip;
       return *this;
     }
-    json_view operator*() const { return json; }
+    json_tview operator*() const { return json; }
   };
   struct iterator_wrapper {
-    json_view begin_;
-    json_view end_;
+    json_tview begin_;
+    json_tview end_;
     iterator  begin() { return {begin_}; }
     iterator  end() { return {end_}; }
   };
@@ -1702,9 +1702,9 @@ inline auto iterate_array(json_view json) {
   return iterator_wrapper{{json.root, json.index + 1},
       {json.root, json.index + 1 + jsv._array.skip}};
 }
-inline auto iterate_array(json_cview json) {
+inline auto iterate_array(json_ctview json) {
   struct iterator {
-    json_cview json;
+    json_ctview json;
     bool       operator!=(const iterator& other) {
       return is_valid(json) && json.index != other.json.index;
     }
@@ -1717,11 +1717,11 @@ inline auto iterate_array(json_cview json) {
       if (jst == json_type::object) json.index += jsv._object.skip;
       return *this;
     }
-    json_cview operator*() const { return json; }
+    json_ctview operator*() const { return json; }
   };
   struct iterator_wrapper {
-    json_cview begin_;
-    json_cview end_;
+    json_ctview begin_;
+    json_ctview end_;
     iterator   begin() { return {begin_}; }
     iterator   end() { return {end_}; }
   };
@@ -1739,7 +1739,7 @@ inline auto iterate_array(json_cview json) {
 }
 
 // Array
-inline bool set_array(json_view json) {
+inline bool set_array(json_tview json) {
   if (!is_valid(json)) return false;
   if (json.index != json.root->values.size() - 1)
     throw std::out_of_range{"can only add at the end"};
@@ -1749,7 +1749,7 @@ inline bool set_array(json_view json) {
   jsv._array = {0, 0};
   return true;
 }
-inline bool array_size(json_cview json, size_t& size) {
+inline bool array_size(json_ctview json, size_t& size) {
   if (!is_valid(json)) return false;
   auto& jst = _get_type(json);
   auto& jsv = _get_value(json);
@@ -1757,7 +1757,7 @@ inline bool array_size(json_cview json, size_t& size) {
   size = (size_t)jsv._array.length;
   return true;
 }
-inline json_view get_element(json_view json, size_t idx) {
+inline json_tview get_element(json_tview json, size_t idx) {
   if (!is_valid(json)) return {json.root};
   auto& jst = _get_type(json);
   auto& jsv = _get_value(json);
@@ -1774,7 +1774,7 @@ inline json_view get_element(json_view json, size_t idx) {
     return set_error_view(json, "index out of bounds");
   }
 }
-inline json_cview get_element(json_cview json, size_t idx) {
+inline json_ctview get_element(json_ctview json, size_t idx) {
   if (!is_valid(json)) return {json.root};
   auto& jst = _get_type(json);
   auto& jsv = _get_value(json);
@@ -1791,7 +1791,7 @@ inline json_cview get_element(json_cview json, size_t idx) {
     return set_error_view(json, "index out of bounds");
   }
 }
-inline json_view append_element(json_view json) {
+inline json_tview append_element(json_tview json) {
   if (!is_valid(json)) return {json.root};
   auto& jst = _get_type(json);
   auto& jsv = _get_value(json);
@@ -1802,7 +1802,7 @@ inline json_view append_element(json_view json) {
   auto index = (uint32_t)json.root->values.size();
   json.root->types.emplace_back(json_type::null);
   json.root->values.emplace_back();
-  auto stack = vector<json_view>{};
+  auto stack = vector<json_tview>{};
   _find_path(json, stack);
   for (auto jss : stack) {
     auto& jsst = _get_type(jss);
@@ -1819,28 +1819,28 @@ inline json_view append_element(json_view json) {
 }
 
 // Object iteration
-inline auto iterate_object(json_view json) {
+inline auto iterate_object(json_tview json) {
   struct iterator {
-    json_view json;
+    json_tview json;
     bool      operator!=(const iterator& other) {
       return is_valid(json) && json.index != other.json.index;
     }
     iterator& operator++() {
       if (!is_valid(json)) return *this;
-      auto& jst = _get_type(json_view{json.root, json.index + 1});
-      auto& jsv = _get_value(json_view{json.root, json.index + 1});
+      auto& jst = _get_type(json_tview{json.root, json.index + 1});
+      auto& jsv = _get_value(json_tview{json.root, json.index + 1});
       json.index += 2;
       if (jst == json_type::array) json.index += jsv._array.skip;
       if (jst == json_type::object) json.index += jsv._object.skip;
       return *this;
     }
-    pair<string_view, json_view> operator*() const {
-      return {_get_key(json), json_view{json.root, json.index + 1}};
+    pair<string_view, json_tview> operator*() const {
+      return {_get_key(json), json_tview{json.root, json.index + 1}};
     }
   };
   struct iterator_wrapper {
-    json_view begin_;
-    json_view end_;
+    json_tview begin_;
+    json_tview end_;
     iterator  begin() { return {begin_}; }
     iterator  end() { return {end_}; }
   };
@@ -1854,28 +1854,28 @@ inline auto iterate_object(json_view json) {
   return iterator_wrapper{{json.root, json.index + 1},
       {json.root, json.index + 1 + jsv._object.skip}};
 }
-inline auto iterate_object(json_cview json) {
+inline auto iterate_object(json_ctview json) {
   struct iterator {
-    json_cview json;
+    json_ctview json;
     bool       operator!=(const iterator& other) {
       return is_valid(json) && json.index != other.json.index;
     }
     iterator& operator++() {
       if (!is_valid(json)) return *this;
-      auto& jst = _get_type(json_cview{json.root, json.index + 1});
-      auto& jsv = _get_value(json_cview{json.root, json.index + 1});
+      auto& jst = _get_type(json_ctview{json.root, json.index + 1});
+      auto& jsv = _get_value(json_ctview{json.root, json.index + 1});
       json.index += 2;
       if (jst == json_type::array) json.index += jsv._array.skip;
       if (jst == json_type::object) json.index += jsv._object.skip;
       return *this;
     }
-    pair<string_view, json_cview> operator*() const {
-      return {_get_key(json), json_cview{json.root, json.index + 1}};
+    pair<string_view, json_ctview> operator*() const {
+      return {_get_key(json), json_ctview{json.root, json.index + 1}};
     }
   };
   struct iterator_wrapper {
-    json_cview begin_;
-    json_cview end_;
+    json_ctview begin_;
+    json_ctview end_;
     iterator   begin() { return {begin_}; }
     iterator   end() { return {end_}; }
   };
@@ -1891,7 +1891,7 @@ inline auto iterate_object(json_cview json) {
 }
 
 // Object
-inline bool set_object(json_view json) {
+inline bool set_object(json_tview json) {
   if (!is_valid(json)) return false;
   if (json.index != json.root->values.size() - 1)
     throw std::out_of_range{"can only add at the end"};
@@ -1901,7 +1901,7 @@ inline bool set_object(json_view json) {
   jsv._array = {0, 0};
   return true;
 }
-inline bool object_size(json_cview json, size_t& size) {
+inline bool object_size(json_ctview json, size_t& size) {
   if (!is_valid(json)) return false;
   auto& jst = _get_type(json);
   auto& jsv = _get_value(json);
@@ -1909,7 +1909,7 @@ inline bool object_size(json_cview json, size_t& size) {
   size = (size_t)jsv._object.length;
   return true;
 }
-inline json_view get_element(json_view json, string_view key) {
+inline json_tview get_element(json_tview json, string_view key) {
   if (!is_valid(json)) return {json.root};
   auto& jst = _get_type(json);
   if (jst != json_type::object) return set_error_view(json, "object expected");
@@ -1918,7 +1918,7 @@ inline json_view get_element(json_view json, string_view key) {
   }
   return set_error_view(json, "missing key " + string{key});
 }
-inline json_cview get_element(json_cview json, string_view key) {
+inline json_ctview get_element(json_ctview json, string_view key) {
   if (!is_valid(json)) return {json.root};
   auto& jst = _get_type(json);
   if (jst != json_type::object) return set_error_view(json, "object expected");
@@ -1927,7 +1927,7 @@ inline json_cview get_element(json_cview json, string_view key) {
   }
   return set_error_view(json, "missing key " + string{key});
 }
-inline bool has_element(json_view json, string_view key) {
+inline bool has_element(json_tview json, string_view key) {
   if (!is_valid(json)) return false;
   auto& jst = _get_type(json);
   if (jst != json_type::object) return set_error(json, "object expected");
@@ -1936,7 +1936,7 @@ inline bool has_element(json_view json, string_view key) {
   }
   return false;
 }
-inline bool has_element(json_cview json, string_view key) {
+inline bool has_element(json_ctview json, string_view key) {
   if (!is_valid(json)) return false;
   auto& jst = _get_type(json);
   if (jst != json_type::object) return set_error(json, "object expected");
@@ -1945,7 +1945,7 @@ inline bool has_element(json_cview json, string_view key) {
   }
   return false;
 }
-inline json_view insert_element(json_view json, string_view key) {
+inline json_tview insert_element(json_tview json, string_view key) {
   if (!is_valid(json)) return {json.root};
   auto& jst = _get_type(json);
   auto& jsv = _get_value(json);
@@ -1973,7 +1973,7 @@ inline json_view insert_element(json_view json, string_view key) {
   auto index = (uint32_t)json.root->values.size();
   json.root->types.emplace_back(json_type::null);
   json.root->values.emplace_back();
-  auto stack = vector<json_view>{};
+  auto stack = vector<json_tview>{};
   _find_path(json, stack);
   for (auto jss : stack) {
     auto& jsst = _get_type(jss);
@@ -1990,7 +1990,7 @@ inline json_view insert_element(json_view json, string_view key) {
 }
 
 // Binary
-inline bool set_binary(json_view json, const json_binary& value) {
+inline bool set_binary(json_tview json, const json_binary& value) {
   if (!is_valid(json)) return false;
   auto& jst = _get_type(json);
   auto& jsv = _get_value(json);
@@ -2002,7 +2002,7 @@ inline bool set_binary(json_view json, const json_binary& value) {
       json.root->binaries.end(), value.begin(), value.end());
   return true;
 }
-inline bool get_binary(json_cview json, json_binary& value) {
+inline bool get_binary(json_ctview json, json_binary& value) {
   if (!is_valid(json)) return false;
   auto& jst = _get_type(json);
   auto& jsv = _get_value(json);
@@ -2013,7 +2013,7 @@ inline bool get_binary(json_cview json, json_binary& value) {
 }
 
 // Get the path of a json view
-inline bool _compute_path(json_cview json, json_cview jsv, string& path) {
+inline bool _compute_path(json_ctview json, json_ctview jsv, string& path) {
   if (!is_valid(json) || !is_valid(jsv)) {
     return false;
   } else if (json.index == jsv.index) {
@@ -2040,7 +2040,7 @@ inline bool _compute_path(json_cview json, json_cview jsv, string& path) {
     return false;
   }
 }
-inline string compute_path(json_cview json) {
+inline string compute_path(json_ctview json) {
   auto path = string{};
   if (_compute_path({json.root, 0}, json, path)) {
     return path;
@@ -2050,32 +2050,32 @@ inline string compute_path(json_cview json) {
 }
 
 // Conversion from json to values
-inline bool get_value(json_cview json, int64_t& value) {
+inline bool get_value(json_ctview json, int64_t& value) {
   return get_integer(json, value);
 }
-inline bool get_value(json_cview json, int32_t& value) {
+inline bool get_value(json_ctview json, int32_t& value) {
   return get_integer(json, value);
 }
-inline bool get_value(json_cview json, uint64_t& value) {
+inline bool get_value(json_ctview json, uint64_t& value) {
   return get_integer(json, value);
 }
-inline bool get_value(json_cview json, uint32_t& value) {
+inline bool get_value(json_ctview json, uint32_t& value) {
   return get_integer(json, value);
 }
-inline bool get_value(json_cview json, double& value) {
+inline bool get_value(json_ctview json, double& value) {
   return get_number(json, value);
 }
-inline bool get_value(json_cview json, float& value) {
+inline bool get_value(json_ctview json, float& value) {
   return get_number(json, value);
 }
-inline bool get_value(json_cview json, bool& value) {
+inline bool get_value(json_ctview json, bool& value) {
   return get_boolean(json, value);
 }
-inline bool get_value(json_cview json, string& value) {
+inline bool get_value(json_ctview json, string& value) {
   return get_string(json, value);
 }
 template <typename T>
-inline bool get_value(json_cview json, vector<T>& value) {
+inline bool get_value(json_ctview json, vector<T>& value) {
   if (!is_valid(json)) return false;
   if (!is_array(json)) return set_error(json, "array expected");
   value.clear();
@@ -2088,7 +2088,7 @@ inline bool get_value(json_cview json, vector<T>& value) {
   return true;
 }
 template <typename T, size_t N>
-inline bool get_value(json_cview json, array<T, N>& value) {
+inline bool get_value(json_ctview json, array<T, N>& value) {
   if (!is_valid(json)) return false;
   if (!is_array(json)) return set_error(json, "array expected");
   auto size = (size_t)0;
@@ -2103,13 +2103,13 @@ inline bool get_value(json_cview json, array<T, N>& value) {
 
 // Get value at a key or index
 template <typename T>
-inline bool get_value_at(json_cview json, string_view key, T& value) {
+inline bool get_value_at(json_ctview json, string_view key, T& value) {
   if (!is_valid(json)) return false;
   auto element = get_element(json, key);
   return get_value(element, value);
 }
 template <typename T>
-inline bool get_value_at(json_cview json, size_t idx, T& value) {
+inline bool get_value_at(json_ctview json, size_t idx, T& value) {
   if (!is_valid(json)) return false;
   auto element = get_element(json, idx);
   if (!is_valid(element)) return false;
@@ -2118,7 +2118,7 @@ inline bool get_value_at(json_cview json, size_t idx, T& value) {
 
 // Get value at a key or nothing is key is not preesent
 template <typename T>
-inline bool get_value_if(json_cview json, string_view key, T& value) {
+inline bool get_value_if(json_ctview json, string_view key, T& value) {
   if (!is_valid(json)) return false;
   if (!has_element(json, key)) return true;
   auto element = get_element(json, key);
@@ -2127,35 +2127,35 @@ inline bool get_value_if(json_cview json, string_view key, T& value) {
 }
 
 // Conversion to json from values
-inline bool set_value(json_view json, int64_t value) {
+inline bool set_value(json_tview json, int64_t value) {
   return set_integral(json, value);
 }
-inline bool set_value(json_view json, int32_t value) {
+inline bool set_value(json_tview json, int32_t value) {
   return set_integral(json, value);
 }
-inline bool set_value(json_view json, uint64_t value) {
+inline bool set_value(json_tview json, uint64_t value) {
   return set_integral(json, value);
 }
-inline bool set_value(json_view json, uint32_t value) {
+inline bool set_value(json_tview json, uint32_t value) {
   return set_integral(json, value);
 }
-inline bool set_value(json_view json, double value) {
+inline bool set_value(json_tview json, double value) {
   return set_number(json, value);
 }
-inline bool set_value(json_view json, float value) {
+inline bool set_value(json_tview json, float value) {
   return set_number(json, value);
 }
-inline bool set_value(json_view json, bool value) {
+inline bool set_value(json_tview json, bool value) {
   return set_boolean(json, value);
 }
-inline bool set_value(json_view json, const string& value) {
+inline bool set_value(json_tview json, const string& value) {
   return set_string(json, value);
 }
-inline bool set_value(json_view json, const char* value) {
+inline bool set_value(json_tview json, const char* value) {
   return set_string(json, value);
 }
 template <typename T>
-inline bool set_value(json_view json, const vector<T>& value) {
+inline bool set_value(json_tview json, const vector<T>& value) {
   if (!set_array(json)) return false;
   for (auto& v : value) {
     if (!set_value(append_element(json), v)) return false;
@@ -2163,7 +2163,7 @@ inline bool set_value(json_view json, const vector<T>& value) {
   return true;
 }
 template <typename T, size_t N>
-inline bool set_value(json_view json, const array<T, N>& value) {
+inline bool set_value(json_tview json, const array<T, N>& value) {
   if (!set_array(json)) return false;
   for (auto& v : value) {
     if (!set_value(append_element(json), v)) return false;
@@ -2172,12 +2172,12 @@ inline bool set_value(json_view json, const array<T, N>& value) {
 }
 
 // Helpers for user-defined types
-inline bool check_array(json_cview json) {
+inline bool check_array(json_ctview json) {
   if (!is_valid(json)) return false;
   if (!is_array(json)) return set_error(json, "array expected");
   return true;
 }
-inline bool check_array(json_cview json, size_t size_) {
+inline bool check_array(json_ctview json, size_t size_) {
   if (!is_valid(json)) return false;
   if (!is_array(json)) return set_error(json, "array expected");
   auto size = (size_t)0;
@@ -2185,7 +2185,7 @@ inline bool check_array(json_cview json, size_t size_) {
     return set_error(json, "mismatched size");
   return true;
 }
-inline bool check_object(json_cview json) {
+inline bool check_object(json_ctview json) {
   if (!is_valid(json)) return false;
   if (!is_object(json)) return set_error(json, "array expected");
   return true;
@@ -2193,27 +2193,27 @@ inline bool check_object(json_cview json) {
 
 // Helpers for user-defined types
 template <typename T>
-inline bool set_value_at(json_view json, size_t idx, const T& value) {
+inline bool set_value_at(json_tview json, size_t idx, const T& value) {
   if (!is_valid(json)) return false;
   auto ejs = get_element(json, idx);
   if (!is_valid(ejs)) return false;
   return set_value(ejs, value);
 }
 template <typename T>
-inline bool append_value(json_view json, const T& value) {
+inline bool append_value(json_tview json, const T& value) {
   if (!is_valid(json)) return false;
   auto ejs = append_element(json);
   if (!is_valid(ejs)) return false;
   return set_value(ejs, value);
 }
-inline json_view append_array(json_view json) {
+inline json_tview append_array(json_tview json) {
   if (!is_valid(json)) return {json.root};
   auto ejs = append_element(json);
   if (!is_valid(ejs)) return {json.root};
   if (!set_array(ejs)) return {json.root};
   return ejs;
 }
-inline json_view append_object(json_view json) {
+inline json_tview append_object(json_tview json) {
   if (!is_valid(json)) return {json.root};
   auto ejs = append_element(json);
   if (!is_valid(ejs)) return {json.root};
@@ -2223,14 +2223,14 @@ inline json_view append_object(json_view json) {
 
 // Helpers for user-defined types
 template <typename T>
-inline bool set_value_at(json_view json, string_view key, const T& value) {
+inline bool set_value_at(json_tview json, string_view key, const T& value) {
   if (!is_valid(json)) return false;
   auto ejs = get_element(json, key);
   if (!is_valid(ejs)) return false;
   return set_value(ejs, value);
 }
 template <typename T>
-inline bool insert_value(json_view json, string_view key, const T& value) {
+inline bool insert_value(json_tview json, string_view key, const T& value) {
   if (!is_valid(json)) return false;
   auto ejs = insert_element(json, key);
   if (!is_valid(ejs)) return false;
@@ -2238,21 +2238,21 @@ inline bool insert_value(json_view json, string_view key, const T& value) {
 }
 template <typename T>
 inline bool insert_value_if(
-    json_view json, string_view key, const T& value, const T& default_) {
+    json_tview json, string_view key, const T& value, const T& default_) {
   if (!is_valid(json)) return false;
   if (value == default_) return true;
   auto ejs = insert_element(json, key);
   if (!is_valid(ejs)) return false;
   return set_value(ejs, value);
 }
-inline json_view insert_array(json_view json, string_view key) {
+inline json_tview insert_array(json_tview json, string_view key) {
   if (!is_valid(json)) return {json.root};
   auto ejs = insert_element(json, key);
   if (!is_valid(ejs)) return {json.root};
   if (!set_array(ejs)) return {json.root};
   return ejs;
 }
-inline json_view insert_object(json_view json, string_view key) {
+inline json_tview insert_object(json_tview json, string_view key) {
   if (!is_valid(json)) return {json.root};
   auto ejs = insert_element(json, key);
   if (!is_valid(ejs)) return {json.root};
@@ -2262,7 +2262,7 @@ inline json_view insert_object(json_view json, string_view key) {
 
 // Helpers that need to be declared here
 inline bool _find_anchestors(
-    json_view json, uint32_t index, vector<json_view>& path) {
+    json_tview json, uint32_t index, vector<json_tview>& path) {
   auto& jst = _get_type(json);
   if (jst == json_type::array) {
     if (json.index == index) {
@@ -2298,7 +2298,7 @@ inline bool _find_anchestors(
     return false;
   }
 }
-inline void _find_path(json_view json, vector<json_view>& path) {
+inline void _find_path(json_tview json, vector<json_tview>& path) {
   path.clear();
   _find_anchestors({json.root, 0}, json.index, path);
 }
