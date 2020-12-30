@@ -119,6 +119,7 @@ template <typename T,
     typename Iterator = decltype(std::begin(std::declval<T>())),
     typename          = decltype(std::end(std::declval<T>()))>
 constexpr auto enumerate(T&& iterable) {
+  // maybe we should avoid tuples here
   struct iterator {
     std::size_t index;
     Iterator    iter;
