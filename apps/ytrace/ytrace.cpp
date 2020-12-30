@@ -372,7 +372,8 @@ int run_view(const view_params& params) {
   trace_start(
       state, scene, camera, bvh, lights, params,
       [viewer](const string& message, int sample, int nsamples) {
-        set_param(viewer, "render", "sample", to_json(sample));
+        set_param(viewer, "render", "sample", to_json(sample),
+            to_schema(sample, "Current sample"));
         print_progress(message, sample, nsamples);
       },
       [viewer](const image<vec4f>& render, int current, int total) {
@@ -387,7 +388,8 @@ int run_view(const view_params& params) {
       });
 
   // show rendering params
-  set_params(viewer, "render", to_json(params));
+  set_params(
+      viewer, "render", to_json(params), to_schema(params, "Render params"));
 
   // run view
   run_view(viewer);

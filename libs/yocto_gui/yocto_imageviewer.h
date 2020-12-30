@@ -81,9 +81,9 @@ void close_image(imageview_state* viewer, const string& name);
 
 // Set params
 void set_param(imageview_state* viewer, const string& name, const string& pname,
-    const json_value& param);
-void set_params(
-    imageview_state* viewer, const string& name, const json_value& params);
+    const json_value& param, const json_value& schema);
+void set_params(imageview_state* viewer, const string& name,
+    const json_value& params, const json_value& schema);
 
 // Open and asycn viewer
 struct imageview_state;
@@ -114,8 +114,9 @@ struct imageview_command {
   image<vec4f>           hdr      = {};
   image<vec4b>           ldr      = {};
   float                  exposure = 0;
-  bool                   filmic;
-  json_value             params = {};
+  bool                   filmic   = false;
+  json_value             params   = {};
+  json_value             schema   = {};
 };
 
 // Image view command queue and runner
@@ -142,6 +143,7 @@ struct imageview_image {
 
   // user params
   json_value params = json_value::object();
+  json_value schema = to_schema_object("User params.");
 
   ~imageview_image() {
     if (glimage) delete glimage;
