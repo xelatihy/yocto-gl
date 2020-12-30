@@ -171,40 +171,18 @@ struct render_params : trace_params {
 };
 
 // Json IO
-void to_json(json_value& json, const render_params& value) {
-  json["scene"]     = value.scene;
-  json["output"]    = value.output;
-  json["camera"]    = value.camera;
-  json["addsky"]    = value.addsky;
-  json["savebatch"] = value.savebatch;
-  to_json(json, (const trace_params&)value);
-}
-void from_json(const json_value& json, render_params& value) {
-  auto default_   = render_params{};
-  value.scene     = json.value("scene", default_.scene);
-  value.output    = json.value("output", default_.output);
-  value.camera    = json.value("camera", default_.camera);
-  value.addsky    = json.value("addsky", default_.addsky);
-  value.savebatch = json.value("savebatch", default_.savebatch);
-  from_json(json, (trace_params&)value);
-}
-void to_schema(
-    json_value& schema, const render_params& value, const string& descr) {
-  schema                  = to_schema_object(descr);
-  auto& properties        = get_schema_properties(schema);
-  properties["scene"]     = to_schema(value.scene, "Scene filename.");
-  properties["output"]    = to_schema(value.output, "Output filename.");
-  properties["camera"]    = to_schema(value.camera, "Camera name.");
-  properties["addsky"]    = to_schema(value.addsky, "Add sky.");
-  properties["savebatch"] = to_schema(value.savebatch, "Save batch.");
-  properties.update(
-      get_schema_properties(to_schema((const trace_params&)value, "")));
-  get_schema_required(schema).push_back("scene");
-  get_schema_positional(schema).push_back("scene");
-  get_schema_alternate(schema)["samples"] = "s";
-  get_schema_alternate(schema)["bounces"] = "b";
-  get_schema_alternate(schema)["output"]  = "o";
-  get_schema_alternate(schema)["tracer"]  = "t";
+void serialize_value(json_mode mode, json_value& json, render_params& value,
+    const string& description) {
+  serialize_object(mode, json, value, description);
+  serialize_property(mode, json, value.scene, "scene", "Scene filename.", true);
+  serialize_property(mode, json, value.output, "output", "Output filename.");
+  serialize_property(mode, json, value.camera, "camera", "Camera name.");
+  serialize_property(mode, json, value.addsky, "addsky", "Add sky.");
+  serialize_property(mode, json, value.savebatch, "savebatch", "Save batch.");
+  serialize_value(mode, json, (trace_params&)value, description);
+  serialize_clipositionals(mode, json, {"scene"});
+  serialize_clialternates(mode, json,
+      {{"samples", "s"}, {"bounces", "b"}, {"output", "o"}, {"tracer", "t"}});
 }
 
 // convert images
@@ -281,40 +259,18 @@ struct view_params : trace_params {
 };
 
 // Json IO
-void to_json(json_value& json, const view_params& value) {
-  json["scene"]     = value.scene;
-  json["output"]    = value.output;
-  json["camera"]    = value.camera;
-  json["addsky"]    = value.addsky;
-  json["savebatch"] = value.savebatch;
-  to_json(json, (const trace_params&)value);
-}
-void from_json(const json_value& json, view_params& value) {
-  auto default_   = view_params{};
-  value.scene     = json.value("scene", default_.scene);
-  value.output    = json.value("output", default_.output);
-  value.camera    = json.value("camera", default_.camera);
-  value.addsky    = json.value("addsky", default_.addsky);
-  value.savebatch = json.value("savebatch", default_.savebatch);
-  from_json(json, (trace_params&)value);
-}
-void to_schema(
-    json_value& schema, const view_params& value, const string& descr) {
-  schema                  = to_schema_object(descr);
-  auto& properties        = get_schema_properties(schema);
-  properties["scene"]     = to_schema(value.scene, "Scene filename.");
-  properties["output"]    = to_schema(value.output, "Output filename.");
-  properties["camera"]    = to_schema(value.camera, "Camera name.");
-  properties["addsky"]    = to_schema(value.addsky, "Add sky.");
-  properties["savebatch"] = to_schema(value.savebatch, "Save batch.");
-  properties.update(
-      get_schema_properties(to_schema((const trace_params&)value, "")));
-  get_schema_required(schema).push_back("scene");
-  get_schema_positional(schema).push_back("scene");
-  get_schema_alternate(schema)["samples"] = "s";
-  get_schema_alternate(schema)["bounces"] = "b";
-  get_schema_alternate(schema)["output"]  = "o";
-  get_schema_alternate(schema)["tracer"]  = "t";
+void serialize_value(json_mode mode, json_value& json, view_params& value,
+    const string& description) {
+  serialize_object(mode, json, value, description);
+  serialize_property(mode, json, value.scene, "scene", "Scene filename.", true);
+  serialize_property(mode, json, value.output, "output", "Output filename.");
+  serialize_property(mode, json, value.camera, "camera", "Camera name.");
+  serialize_property(mode, json, value.addsky, "addsky", "Add sky.");
+  serialize_property(mode, json, value.savebatch, "savebatch", "Save batch.");
+  serialize_value(mode, json, (trace_params&)value, description);
+  serialize_clipositionals(mode, json, {"scene"});
+  serialize_clialternates(mode, json,
+      {{"samples", "s"}, {"bounces", "b"}, {"output", "o"}, {"tracer", "t"}});
 }
 
 #ifndef YOCTO_OPENGL
@@ -423,26 +379,12 @@ struct app_params {
 };
 
 // Json IO
-void to_json(json_value& json, const app_params& value) {
-  json["command"] = value.command;
-  json["render"]  = value.render;
-  json["view"]    = value.view;
-}
-void from_json(const json_value& json, app_params& value) {
-  auto default_ = app_params{};
-  value.command = json.value("command", default_.command);
-  value.render  = json.value("render", default_.render);
-  value.view    = json.value("view", default_.view);
-}
-void to_schema(
-    json_value& schema, const app_params& value, const string& descr) {
-  schema                = to_schema_object(descr);
-  auto& properties      = get_schema_properties(schema);
-  properties["command"] = to_schema(value.command, "Command.");
-  properties["render"]  = to_schema(value.render, "Render final images.");
-  properties["view"]    = to_schema(value.view, "Render interactively.");
-  get_schema_required(schema).push_back("command");
-  get_schema_command(schema) = "command";
+void serialize_value(json_mode mode, json_value& json, app_params& value,
+    const string& description) {
+  serialize_object(mode, json, value, description);
+  serialize_command(mode, json, value.command, "command", "Command.");
+  serialize_property(mode, json, value.render, "render", "Render offline.");
+  serialize_property(mode, json, value.view, "view", "Render interactively.");
 }
 
 int main(int argc, const char* argv[]) {

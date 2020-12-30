@@ -365,6 +365,15 @@ template <typename T>
 inline void serialize_property(json_mode mode, json_value& json, T& value,
     const string& name, const string& description, bool required = false);
 
+// Support for CLI
+template <typename T>
+inline void serialize_command(json_mode mode, json_value& json, T& value,
+    const string& name, const string& description, bool required = true);
+inline void serialize_clipositionals(
+    json_mode mode, json_value& json, const vector<string>& positionals);
+inline void serialize_clialternates(json_mode mode, json_value& json,
+    const vector<pair<string, string>>& alternates);
+
 }  // namespace yocto
 
 // -----------------------------------------------------------------------------
@@ -1421,9 +1430,10 @@ inline void serialize_object(
   } else if (mode == json_mode::to_json) {
     if (!json.is_object()) json = json_value::object();
   } else if (mode == json_mode::to_schema) {
+    if (!json.is_object()) json = json_value::object();
     json["type"]        = "object";
     json["description"] = description;
-    json["properties"]  = json_value::object();
+    if (!json.contains("properties")) json["properties"] = json_value::object();
   } else {
     // pass
   }
@@ -1444,6 +1454,43 @@ inline void serialize_property(json_mode mode, json_value& json, T& value,
     if (required) json["required"].push_back(name);
   } else {
     // pass
+  }
+}
+
+template <typename T>
+inline void serialize_command(json_mode mode, json_value& json, T& value,
+    const string& name, const string& description, bool required) {
+  if (mode == json_mode::from_json) {
+    if (required) {
+      from_json(json.at(name), value);
+    } else {
+      if (json.contains(name)) from_json(json.at(name), value);
+    }
+  } else if (mode == json_mode::to_json) {
+    to_json(json[name], value);
+  } else if (mode == json_mode::to_schema) {
+    to_schema(json["properties"][name], value, description);
+    if (required) json["required"].push_back(name);
+    json["cli_command"] = name;
+  } else {
+    // pass
+  }
+}
+
+inline void serialize_clipositionals(
+    json_mode mode, json_value& json, const vector<string>& positionals) {
+  if (mode == json_mode::to_schema) {
+    for (auto& name : positionals) {
+      json["cli_positional"].push_back(name);
+    }
+  }
+}
+inline void serialize_clialternates(json_mode mode, json_value& json,
+    const vector<pair<string, string>>& alternates) {
+  if (mode == json_mode::to_schema) {
+    for (auto& [name, alt] : alternates) {
+      json["cli_alternate"][name] = alt;
+    }
   }
 }
 
