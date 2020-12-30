@@ -111,13 +111,13 @@ void tonemap_image(
 }
 
 // Set params
-void set_param(
-    imageview_state* state, const string& name, const string& pname, const json_value& param) {
+void set_param(imageview_state* state, const string& name, const string& pname,
+    const json_value& param) {
   auto command   = imageview_command{};
   command.type   = imageview_command_type::param;
   command.name   = name;
-  auto params = json_value::object();
-  params[pname] = param;
+  auto params    = json_value::object();
+  params[pname]  = param;
   command.params = params;
   state->queue.push(command);
 }
@@ -331,7 +331,7 @@ void update(gui_window* win, imageview_state* state, const gui_input& input) {
           }
         }
         if (img != nullptr) {
-          img->params[command.name] = params;
+          img->params.update(command.params);
         }
       } break;
       case imageview_command_type::params: {
@@ -343,7 +343,7 @@ void update(gui_window* win, imageview_state* state, const gui_input& input) {
           }
         }
         if (img != nullptr) {
-          img->params = params;
+          img->params = command.params;
         }
       } break;
       case imageview_command_type::quit: {
