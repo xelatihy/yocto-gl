@@ -964,10 +964,10 @@ void draw_log(gui_window* win) {
 }
 
 template <typename T>
-static bool draw_dragger_params(
-    gui_window* win, const char* lbl, json_value& value) {
+static bool draw_number_param(
+    gui_window* win, const char* lbl, json_value& value, bool readonly) {
   auto gvalue = value.get<T>();
-  if (draw_dragger(win, lbl, gvalue)) {
+  if (draw_dragger(win, lbl, gvalue) && !readonly) {
     value = gvalue;
     return true;
   } else {
@@ -975,10 +975,10 @@ static bool draw_dragger_params(
   }
 }
 
-static bool draw_checkbox_params(
-    gui_window* win, const char* lbl, json_value& value) {
+static bool draw_boolean_param(
+    gui_window* win, const char* lbl, json_value& value, bool readonly) {
   auto gvalue = value.get<bool>();
-  if (draw_checkbox(win, lbl, gvalue)) {
+  if (draw_checkbox(win, lbl, gvalue) && !readonly) {
     value = gvalue;
     return true;
   } else {
@@ -986,10 +986,10 @@ static bool draw_checkbox_params(
   }
 }
 
-static bool draw_textinput_params(
-    gui_window* win, const char* lbl, json_value& value) {
+static bool draw_string_param(
+    gui_window* win, const char* lbl, json_value& value, bool readonly) {
   auto gvalue = value.get<string>();
-  if (draw_textinput(win, lbl, gvalue)) {
+  if (draw_textinput(win, lbl, gvalue) && !readonly) {
     value = gvalue;
     return true;
   } else {
@@ -997,15 +997,16 @@ static bool draw_textinput_params(
   }
 }
 
-bool draw_params(gui_window* win, const char* lbl, json_value& value) {
+bool draw_params(
+    gui_window* win, const char* lbl, json_value& value, bool readonly) {
   if (value.is_integer()) {
-    return draw_dragger_params<int>(win, lbl, value);
+    return draw_number_param<int>(win, lbl, value, readonly);
   } else if (value.is_number()) {
-    return draw_dragger_params<float>(win, lbl, value);
+    return draw_number_param<float>(win, lbl, value, readonly);
   } else if (value.is_boolean()) {
-    return draw_checkbox_params(win, lbl, value);
+    return draw_boolean_param(win, lbl, value, readonly);
   } else if (value.is_string()) {
-    return draw_textinput_params(win, lbl, value);
+    return draw_string_param(win, lbl, value, readonly);
   } else if (value.is_array()) {
     if (value.size() > 4) return false;  // skip
     auto is_integer_array = true, is_number_array = true;
@@ -1016,19 +1017,19 @@ bool draw_params(gui_window* win, const char* lbl, json_value& value) {
     if (!is_integer_array && !is_number_array) return false;  // skip
     if (is_integer_array) {
       if (value.size() == 2)
-        return draw_dragger_params<array<int, 2>>(win, lbl, value);
+        return draw_number_param<array<int, 2>>(win, lbl, value, readonly);
       if (value.size() == 3)
-        return draw_dragger_params<array<int, 3>>(win, lbl, value);
+        return draw_number_param<array<int, 3>>(win, lbl, value, readonly);
       if (value.size() == 4)
-        return draw_dragger_params<array<int, 4>>(win, lbl, value);
+        return draw_number_param<array<int, 4>>(win, lbl, value, readonly);
       return false;  // skip
     } else if (is_number_array) {
       if (value.size() == 2)
-        return draw_dragger_params<array<float, 2>>(win, lbl, value);
+        return draw_number_param<array<float, 2>>(win, lbl, value, readonly);
       if (value.size() == 3)
-        return draw_dragger_params<array<float, 2>>(win, lbl, value);
+        return draw_number_param<array<float, 2>>(win, lbl, value, readonly);
       if (value.size() == 4)
-        return draw_dragger_params<array<float, 2>>(win, lbl, value);
+        return draw_number_param<array<float, 2>>(win, lbl, value, readonly);
       return false;  // skip
     } else {
       return false;  // skip
@@ -1037,7 +1038,67 @@ bool draw_params(gui_window* win, const char* lbl, json_value& value) {
     if (begin_header(win, lbl)) {
       auto edited = 0;
       for (auto& [name, item] : value.items()) {
-        edited += (int)draw_params(win, name.c_str(), item);
+        edited += (int)draw_params(win, name.c_str(), item, readonly);
+      }
+      end_header(win);
+      return (bool)edited;
+    } else {
+      return false;
+    }
+  } else {
+    return false;  // skip
+  }
+}
+
+bool draw_params(gui_window* win, const char* lbl, json_value& value,
+    const json_value& schema, bool readonly) {
+  if (value.is_integer()) {
+    return draw_number_param<int>(win, lbl, value, readonly);
+  } else if (value.is_number()) {
+    return draw_number_param<float>(win, lbl, value, readonly);
+  } else if (value.is_boolean()) {
+    return draw_boolean_param(win, lbl, value, readonly);
+  } else if (value.is_string()) {
+    return draw_string_param(win, lbl, value, readonly);
+  } else if (value.is_array()) {
+    if (value.size() > 4) return false;  // skip
+    auto is_integer_array = true, is_number_array = true;
+    for (auto& item : value) {
+      if (!item.is_integer()) is_integer_array = false;
+      if (!item.is_number()) is_number_array = false;
+    }
+    if (!is_integer_array && !is_number_array) return false;  // skip
+    if (is_integer_array) {
+      if (value.size() == 2)
+        return draw_number_param<array<int, 2>>(win, lbl, value, readonly);
+      if (value.size() == 3)
+        return draw_number_param<array<int, 3>>(win, lbl, value, readonly);
+      if (value.size() == 4)
+        return draw_number_param<array<int, 4>>(win, lbl, value, readonly);
+      return false;  // skip
+    } else if (is_number_array) {
+      if (value.size() == 2)
+        return draw_number_param<array<float, 2>>(win, lbl, value, readonly);
+      if (value.size() == 3)
+        return draw_number_param<array<float, 2>>(win, lbl, value, readonly);
+      if (value.size() == 4)
+        return draw_number_param<array<float, 2>>(win, lbl, value, readonly);
+      return false;  // skip
+    } else {
+      return false;  // skip
+    }
+  } else if (value.is_object()) {
+    if (begin_header(win, lbl)) {
+      auto edited = 0;
+      for (auto& [name, item] : value.items()) {
+        auto item_readonly = false;
+        if (!readonly && schema.contains("gui_readonly")) {
+          for (auto& readonly_name : schema.at("gui_readonly")) {
+            if (name == readonly_name.get<string>()) item_readonly = true;
+          }
+        }
+        edited += (int)draw_params(
+            win, name.c_str(), item, readonly || item_readonly);
       }
       end_header(win);
       return (bool)edited;

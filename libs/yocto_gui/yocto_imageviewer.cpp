@@ -247,7 +247,7 @@ void draw_widgets(
     }
   }
   if (!state->selected->params.empty()) {
-    draw_params(win, "params", state->selected->params);
+    draw_params(win, "params", state->selected->params, true);
   }
 }
 

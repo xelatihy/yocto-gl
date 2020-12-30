@@ -195,7 +195,10 @@ void set_close(gui_window* win, bool close);
 namespace yocto {
 
 struct json_value;
-bool draw_params(gui_window* win, const char* title, json_value& value);
+bool draw_params(
+    gui_window* win, const char* title, json_value& value, bool readonly);
+bool draw_params(gui_window* win, const char* title, json_value& value,
+    const json_value& schema, bool readonly);
 
 bool begin_header(gui_window* win, const char* title);
 void end_header(gui_window* win);
