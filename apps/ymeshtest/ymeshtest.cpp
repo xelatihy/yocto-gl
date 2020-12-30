@@ -515,6 +515,17 @@ void to_json(json_value& js, const mesh_point& value) {
       json_value{json_array{json_value{value.uv.x}, json_value{value.uv.y}}});
 }
 
+void from_json(const json_value& js, mesh_point& value) {
+  value.face = js.at(0).get<int>();
+  value.uv.x = js.at(0).at(0).get<float>();
+  value.uv.y = js.at(0).at(1).get<float>();
+}
+
+void to_schema(
+    json_value& schema, const mesh_point& value, const string& description) {
+  example_to_schema(schema, to_json(value), description);
+}
+
 }  // namespace yocto
 
 // Save a path

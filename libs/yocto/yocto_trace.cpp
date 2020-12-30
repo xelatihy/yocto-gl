@@ -1939,62 +1939,30 @@ void trace_stop(trace_state* state) {
 // -----------------------------------------------------------------------------
 namespace yocto {
 
-// Json conversion
-void to_json(json_value& json, const trace_params& value) {
-  json["resolution"] = value.resolution;
-  json["sampler"]    = value.sampler;
-  json["falsecolor"] = value.falsecolor;
-  json["samples"]    = value.samples;
-  json["bounces"]    = value.bounces;
-  json["clamp"]      = value.clamp;
-  json["nocaustics"] = value.nocaustics;
-  json["envhidden"]  = value.envhidden;
-  json["tentfilter"] = value.tentfilter;
-  json["seed"]       = value.seed;
-  json["bvh"]        = value.bvh;
-  json["noparallel"] = value.noparallel;
-  json["pratio"]     = value.pratio;
-  json["exposure"]   = value.exposure;
-}
-void from_json(const json_value& json, trace_params& value) {
-  static auto default_ = trace_params{};
-  value.resolution     = json.value("resolution", default_.resolution);
-  value.sampler        = json.value("sampler", default_.sampler);
-  value.falsecolor     = json.value("falsecolor", default_.falsecolor);
-  value.samples        = json.value("samples", default_.samples);
-  value.bounces        = json.value("bounces", default_.bounces);
-  value.clamp          = json.value("clamp", default_.clamp);
-  value.nocaustics     = json.value("nocaustics", default_.nocaustics);
-  value.envhidden      = json.value("envhidden", default_.envhidden);
-  value.tentfilter     = json.value("tentfilter", default_.tentfilter);
-  value.seed           = json.value("seed", default_.seed);
-  value.bvh            = json.value("bvh", default_.bvh);
-  value.noparallel     = json.value("noparallel", default_.noparallel);
-  value.pratio         = json.value("pratio", default_.pratio);
-  value.exposure       = json.value("exposure", default_.exposure);
-}
-void to_schema(
-    json_value& schema, const trace_params& value, const string& descr) {
-  schema                   = to_schema_object(descr);
-  auto& properties         = get_schema_properties(schema);
-  properties["resolution"] = to_schema(value.resolution, "Image resolution.");
-  properties["sampler"]    = to_schema(value.sampler, "Sampler type.");
-  properties["falsecolor"] = to_schema(value.falsecolor, "False color type.");
-  properties["samples"]    = to_schema(value.samples, "Number of samples.");
-  properties["bounces"]    = to_schema(value.bounces, "Number of bounces.");
-  properties["clamp"]      = to_schema(value.clamp, "Clamp value.");
-  properties["nocaustics"] = to_schema(value.nocaustics, "Disable caustics.");
-  properties["envhidden"]  = to_schema(value.envhidden, "Hide environment.");
-  properties["tentfilter"] = to_schema(value.tentfilter, "Filter image.");
-  properties["seed"]       = to_schema(value.seed, "Random seed.");
-  properties["bvh"]        = to_schema(value.bvh, "Bvh type.");
-  properties["noparallel"] = to_schema(value.noparallel, "Disable threading.");
-  properties["pratio"]     = to_schema(value.pratio, "Preview ratio.");
-  properties["exposure"]   = to_schema(value.exposure, "Image exposure.");
+// clang-format off
+    
+ void serialize_value(json_mode mode,
+    json_value& json, trace_params& value, const string& description) {
+  serialize_object(mode, json, value, description);
+  serialize_property(mode, json, value.resolution, "resolution", "Image resolution.");
+  serialize_property(mode, json, value.sampler, "sampler", "Sampler type.");
+  serialize_property(mode, json, value.falsecolor, "falsecolor", "False color type.");
+  serialize_property(mode, json, value.samples, "samples", "Number of samples.");
+  serialize_property(mode, json, value.bounces, "bounces", "Number of bounces.");
+  serialize_property(mode, json, value.clamp, "clamp", "Clamp value.");
+  serialize_property(mode, json, value.nocaustics, "nocaustics", "Disable caustics.");
+  serialize_property(mode, json, value.envhidden, "envhidden", "Hide environment.");
+  serialize_property(mode, json, value.tentfilter, "tentfilter", "Filter image.");
+  serialize_property(mode, json, value.seed, "seed", "Random seed.");
+  serialize_property(mode, json, value.bvh, "bvh", "Bvh type.");
+  serialize_property(mode, json, value.noparallel, "noparallel", "Disable threading.");
+  serialize_property(mode, json, value.pratio, "pratio", "Preview ratio.");
+  serialize_property(mode, json, value.exposure, "exposure", "Image exposure.");
 }
 
 // Json enum conventions
-const vector<pair<trace_bvh_type, string>>& json_enum_labels(trace_bvh_type) {
+ const vector<pair<trace_bvh_type, string>>& json_enum_labels(
+    trace_bvh_type) {
   static const auto trace_bvh_labels = vector<pair<trace_bvh_type, string>>{
       {trace_bvh_type::default_, "default"},
       {trace_bvh_type::highquality, "highquality"},
@@ -2009,7 +1977,7 @@ const vector<pair<trace_bvh_type, string>>& json_enum_labels(trace_bvh_type) {
   return trace_bvh_labels;
 }
 
-const vector<pair<trace_falsecolor_type, string>>& json_enum_labels(
+ const vector<pair<trace_falsecolor_type, string>>& json_enum_labels(
     trace_falsecolor_type) {
   static const auto trace_falsecolor_labels =
       vector<pair<trace_falsecolor_type, string>>{
@@ -2049,5 +2017,7 @@ const vector<pair<trace_sampler_type, string>>& json_enum_labels(
           {trace_sampler_type::normal, "normal"}};
   return trace_sampler_labels;
 }
+
+// clang-format on
 
 }  // namespace yocto

@@ -549,14 +549,13 @@ void trace_stop(trace_state* state);
 // -----------------------------------------------------------------------------
 namespace yocto {
 
-// Json conversion
+// Serialize value to json
+enum struct json_mode;
 struct json_value;
-void to_json(json_value& json, const trace_params& value);
-void from_json(const json_value& json, trace_params& value);
-void to_schema(
-    json_value& json, const trace_params& value, const string& descr);
+void serialize_value(json_mode mode, json_value& json, trace_params& value,
+    const string& description);
 
-// Json enum conventions
+// Serialize enum to json
 const vector<pair<trace_bvh_type, string>>& json_enum_labels(trace_bvh_type);
 const vector<pair<trace_falsecolor_type, string>>& json_enum_labels(
     trace_falsecolor_type);
