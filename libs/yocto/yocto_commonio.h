@@ -621,8 +621,10 @@ inline void add_optional(const cli_command& cmd, const string& name, T& value,
   property["type"]        = cli_gettype<T>();
   property["description"] = usage;
   property["default"]     = value;
-  for (auto choice : choices) {
-    property["enum"].push_back(choice);
+  if constexpr (!std::is_same_v<T, bool>) {
+    for (auto& choice : choices) {
+      property["enum"].push_back(choice);
+    }
   }
   setter[name].setter = [&value](
                             const json_value& js, json_error& error) -> bool {

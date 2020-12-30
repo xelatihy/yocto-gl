@@ -268,43 +268,18 @@ template <typename T>
 inline T from_json(const json_value& json);
 template <typename T>
 inline json_value to_json(const T& value);
+
+// Conversion between json and values
+template <typename T>
+inline void from_json(const json_value& json, T& value);
+template <typename T>
+inline void to_json(json_value& json, const T& value);
+
+// Checked conversions
 template <typename T>
 inline bool from_json(const json_value& json, T& value, json_error& error);
 template <typename T>
 inline bool to_json(const json_value& json, T& value, json_error& error);
-
-// Conversion from json to values
-inline void from_json(const json_value& json, int64_t& value);
-inline void from_json(const json_value& json, int32_t& value);
-inline void from_json(const json_value& json, uint64_t& value);
-inline void from_json(const json_value& json, uint32_t& value);
-inline void from_json(const json_value& json, double& value);
-inline void from_json(const json_value& json, float& value);
-inline void from_json(const json_value& json, bool& value);
-inline void from_json(const json_value& json, string& value);
-template <typename T>
-inline void from_json(const json_value& json, vector<T>& value);
-template <typename T, size_t N>
-inline void from_json(const json_value& json, array<T, N>& value);
-template <typename T, typename = std::enable_if_t<std::is_enum_v<T>>>
-inline void from_json(const json_value& json, T& value);
-
-// Conversion to json from values
-inline void to_json(json_value& json, int64_t value);
-inline void to_json(json_value& json, int32_t value);
-inline void to_json(json_value& json, uint64_t value);
-inline void to_json(json_value& json, uint32_t value);
-inline void to_json(json_value& json, double value);
-inline void to_json(json_value& json, float value);
-inline void to_json(json_value& json, bool value);
-inline void to_json(json_value& json, const char* value);
-inline void to_json(json_value& json, const string& value);
-template <typename T>
-inline void to_json(json_value& json, const vector<T>& value);
-template <typename T, size_t N>
-inline void to_json(json_value& json, const array<T, N>& value);
-template <typename T, typename = std::enable_if_t<std::is_enum_v<T>>>
-inline void to_json(json_value& json, T value);
 
 }  // namespace yocto
 
@@ -315,28 +290,11 @@ namespace yocto {
 
 // Convenience function
 template <typename T>
-inline json_value to_schema(const T& value, const string& descr);
+inline json_value to_schema(const T& value, const string& description);
 
-// Conversion to json schema from values
-inline void to_schema(json_value& schema, int64_t value, const string& descr);
-inline void to_schema(json_value& schema, int32_t value, const string& descr);
-inline void to_schema(json_value& schema, uint64_t value, const string& descr);
-inline void to_schema(json_value& schema, uint32_t value, const string& descr);
-inline void to_schema(json_value& schema, double value, const string& descr);
-inline void to_schema(json_value& schema, float value, const string& descr);
-inline void to_schema(json_value& schema, bool value, const string& descr);
-inline void to_schema(
-    json_value& schema, const char* value, const string& descr);
-inline void to_schema(
-    json_value& schema, const string& value, const string& descr);
 template <typename T>
 inline void to_schema(
-    json_value& schema, const vector<T>& value, const string& descr);
-template <typename T, size_t N>
-inline void to_schema(
-    json_value& schema, const array<T, N>& value, const string& descr);
-template <typename T, typename = std::enable_if_t<std::is_enum_v<T>>>
-inline void to_schema(json_value& schema, T value, const string& descr);
+    json_value& schema, const T& value, const string& description);
 
 // Schema for objects
 inline json_value  to_schema_object(const string& descr);
@@ -357,6 +315,51 @@ bool validate_json(
     const json_value& value, const json_value& schema, string& error);
 bool validate_json(const json_value& value, const json_value& schema,
     vector<string>& errors, size_t max_errors = 100);
+
+}  // namespace yocto
+
+// -----------------------------------------------------------------------------
+// JSON SERIALIZATION
+// -----------------------------------------------------------------------------
+namespace yocto {
+
+enum struct json_mode { from_json, to_json, to_schema };
+
+// Conversion from json to values
+template <json_mode Mode>
+inline void serialize_json(
+    json_value& json, int64_t& value, const string& description);
+template <json_mode Mode>
+inline void serialize_json(
+    json_value& json, int32_t& value, const string& description);
+template <json_mode Mode>
+inline void serialize_json(
+    json_value& json, uint64_t& value, const string& description);
+template <json_mode Mode>
+inline void serialize_json(
+    json_value& json, uint32_t& value, const string& description);
+template <json_mode Mode>
+inline void serialize_json(
+    json_value& json, double& value, const string& description);
+template <json_mode Mode>
+inline void serialize_json(
+    json_value& json, float& value, const string& description);
+template <json_mode Mode>
+inline void serialize_json(
+    json_value& json, bool& value, const string& description);
+template <json_mode Mode>
+inline void serialize_json(
+    json_value& json, string& value, const string& description);
+template <json_mode Mode, typename T>
+inline void serialize_json(
+    json_value& json, vector<T>& value, const string& description);
+template <json_mode Mode, typename T, size_t N>
+inline void serialize_json(
+    json_value& json, array<T, N>& value, const string& description);
+template <json_mode Mode, typename T,
+    typename = std::enable_if_t<std::is_enum_v<T>>>
+inline void serialize_json(
+    json_value& json, T& value, const string& description);
 
 }  // namespace yocto
 
@@ -1127,6 +1130,19 @@ inline json_value to_json(const T& value) {
   to_json(json, value);
   return json;
 }
+
+// Conversion between json and values
+template <typename T>
+inline void from_json(const json_value& json, T& value) {
+  serialize_json<json_mode::from_json>(
+      const_cast<json_value&>(json), value, "");
+}
+template <typename T>
+inline void to_json(json_value& json, const T& value) {
+  serialize_json<json_mode::to_json>(json, const_cast<T&>(value), "");
+}
+
+// Checked conversions
 template <typename T>
 inline bool from_json(const json_value& json, T& value, json_error& error) {
   try {
@@ -1148,92 +1164,6 @@ inline bool to_json(const json_value& json, T& value, json_error& error) {
   }
 }
 
-// Conversion from json to values
-inline void from_json(const json_value& json, int64_t& value) {
-  value = (int64_t)json;
-}
-inline void from_json(const json_value& json, int32_t& value) {
-  value = (int32_t)json;
-}
-inline void from_json(const json_value& json, uint64_t& value) {
-  value = (uint64_t)json;
-}
-inline void from_json(const json_value& json, uint32_t& value) {
-  value = (uint32_t)json;
-}
-inline void from_json(const json_value& json, double& value) {
-  value = (double)json;
-}
-inline void from_json(const json_value& json, float& value) {
-  value = (float)json;
-}
-inline void from_json(const json_value& json, bool& value) {
-  value = (bool)json;
-}
-inline void from_json(const json_value& json, string& value) {
-  value = (string)json;
-}
-template <typename T>
-inline void from_json(const json_value& json, vector<T>& value) {
-  value.clear();
-  value.reserve(json.size());
-  for (auto& ejs : json) from_json(ejs, value.emplace_back());
-}
-template <typename T, size_t N>
-inline void from_json(const json_value& json, array<T, N>& value) {
-  if (json.size() != value.size()) throw json_error{"wrong array size"};
-  for (auto idx = (size_t)0; idx < value.size(); idx++)
-    from_json(json.at(idx), value.at(idx));
-}
-template <typename T, typename>
-inline void from_json(const json_value& json, T& value) {
-  auto  label  = json.get<string>();
-  auto& labels = json_enum_labels(value);
-  for (auto& [value_, label_] : labels) {
-    if (label_ == label) {
-      value = value_;
-      return;
-    }
-  }
-  throw json_error{"unknown enum label " + label};
-}
-
-// Conversion to json from values
-inline void to_json(json_value& json, int64_t value) { json = value; }
-inline void to_json(json_value& json, int32_t value) { json = value; }
-inline void to_json(json_value& json, uint64_t value) { json = value; }
-inline void to_json(json_value& json, uint32_t value) { json = value; }
-inline void to_json(json_value& json, double value) { json = value; }
-inline void to_json(json_value& json, float value) { json = value; }
-inline void to_json(json_value& json, bool value) { json = value; }
-inline void to_json(json_value& json, const char* value) {
-  json = string{value};
-}
-inline void to_json(json_value& json, const string& value) { json = value; }
-template <typename T>
-inline void to_json(json_value& json, const vector<T>& value) {
-  json = json_array{};
-  for (auto& v : value) to_json(json.emplace_back(), v);
-}
-template <typename T, size_t N>
-inline void to_json(json_value& json, const array<T, N>& value) {
-  json = json_array{};
-  json.resize(value.size());
-  for (auto idx = (size_t)0; idx < value.size(); idx++)
-    to_json(json.at(idx), value.at(idx));
-}
-template <typename T, typename>
-inline void to_json(json_value& json, T value) {
-  auto& labels = json_enum_labels(value);
-  for (auto& [value_, label] : labels) {
-    if (value_ == value) {
-      json = label;
-      return;
-    }
-  }
-  throw json_error{"unknown enum label"};
-}
-
 }  // namespace yocto
 
 // -----------------------------------------------------------------------------
@@ -1243,87 +1173,18 @@ namespace yocto {
 
 // Convenience function
 template <typename T>
-inline json_value to_schema(const T& value, const string& descr) {
+inline json_value to_schema(const T& value, const string& description) {
   auto schema = json_value{};
-  to_schema(schema, value, descr);
+  to_schema(schema, value, description);
   return schema;
 }
 
 // Conversion to json schema from values
-inline void to_schema(json_value& schema, int64_t value, const string& descr) {
-  schema["type"]        = "integer";
-  schema["description"] = descr;
-  schema["default"]     = value;
-}
-inline void to_schema(json_value& schema, int32_t value, const string& descr) {
-  schema["type"]        = "integer";
-  schema["description"] = descr;
-  schema["default"]     = value;
-}
-inline void to_schema(json_value& schema, uint64_t value, const string& descr) {
-  schema["type"]        = "integer";
-  schema["description"] = descr;
-  schema["default"]     = value;
-}
-inline void to_schema(json_value& schema, uint32_t value, const string& descr) {
-  schema["type"]        = "integer";
-  schema["description"] = descr;
-  schema["default"]     = value;
-}
-inline void to_schema(json_value& schema, double value, const string& descr) {
-  schema["type"]        = "number";
-  schema["description"] = descr;
-  schema["default"]     = value;
-}
-inline void to_schema(json_value& schema, float value, const string& descr) {
-  schema["type"]        = "number";
-  schema["description"] = descr;
-  schema["default"]     = value;
-}
-inline void to_schema(json_value& schema, bool value, const string& descr) {
-  schema["type"]        = "boolean";
-  schema["description"] = descr;
-  schema["default"]     = value;
-}
-inline void to_schema(
-    json_value& schema, const char* value, const string& descr) {
-  schema["type"]        = "string";
-  schema["description"] = descr;
-  schema["default"]     = value;
-}
-inline void to_schema(
-    json_value& schema, const string& value, const string& descr) {
-  schema["type"]        = "string";
-  schema["description"] = descr;
-  schema["default"]     = value;
-}
 template <typename T>
 inline void to_schema(
-    json_value& schema, const vector<T>& value, const string& descr) {
-  schema["type"]        = "array";
-  schema["description"] = descr;
-  schema["default"]     = value;
-  if (value.empty()) schema["items"] = to_schema(T{}, descr);
-}
-template <typename T, size_t N>
-inline void to_schema(
-    json_value& schema, const array<T, N>& value, const string& descr) {
-  schema["type"]        = "array";
-  schema["description"] = descr;
-  schema["default"]     = value;
-  schema["minSize"]     = N;
-  schema["maxSize"]     = N;
-  for (auto& item : value) schema["items"].push_back(to_schema(item, descr));
-}
-template <typename T, typename>
-inline void to_schema(json_value& schema, T value, const string& descr) {
-  schema["type"]        = "string";
-  schema["description"] = descr;
-  auto& labels          = json_enum_labels(value);
-  for (auto& [value_, label] : labels) {
-    if (value == value_) schema["default"] = label;
-    schema["enum"].push_back(label);
-  }
+    json_value& schema, const T& value, const string& description) {
+  serialize_json<json_mode::to_schema>(
+      schema, const_cast<T&>(value), description);
 }
 
 // Schema for objects
@@ -1379,6 +1240,155 @@ inline json_value& get_schema_alternate(json_value& schema) {
 }
 inline const json_value& get_schema_alternate(const json_value& schema) {
   return schema.at("cli_alternate");
+}
+
+}  // namespace yocto
+
+// -----------------------------------------------------------------------------
+// JSON SERIALIZATION
+// -----------------------------------------------------------------------------
+namespace yocto {
+
+// Conversion for basic types
+template <json_mode Mode, typename T>
+inline void serialize_json_base(
+    json_value& json, T& value, const string& description) {
+  if constexpr (Mode == json_mode::from_json) {
+    value = (T)json;
+  } else if constexpr (Mode == json_mode::to_json) {
+    json = value;
+  } else if constexpr (Mode == json_mode::to_schema) {
+    if constexpr (std::is_same_v<T, int32_t> || std::is_same_v<T, int64_t>)
+      json["type"] = "integer";
+    if constexpr (std::is_same_v<T, uint32_t> || std::is_same_v<T, uint64_t>)
+      json["type"] = "integer";
+    if constexpr (std::is_same_v<T, float> || std::is_same_v<T, double>)
+      json["type"] = "number";
+    if constexpr (std::is_same_v<T, bool>) json["type"] = "boolean";
+    if constexpr (std::is_same_v<T, string>) json["type"] = "string";
+    json["description"] = description;
+    json["default"]     = value;
+  } else {
+    // pass
+  }
+}
+
+// Conversion from json to values
+template <json_mode Mode>
+inline void serialize_json(
+    json_value& json, int64_t& value, const string& description) {
+  return serialize_json_base<Mode>(json, value, description);
+}
+template <json_mode Mode>
+inline void serialize_json(
+    json_value& json, int32_t& value, const string& description) {
+  return serialize_json_base<Mode>(json, value, description);
+}
+template <json_mode Mode>
+inline void serialize_json(
+    json_value& json, uint64_t& value, const string& description) {
+  return serialize_json_base<Mode>(json, value, description);
+}
+template <json_mode Mode>
+inline void serialize_json(
+    json_value& json, uint32_t& value, const string& description) {
+  return serialize_json_base<Mode>(json, value, description);
+}
+template <json_mode Mode>
+inline void serialize_json(
+    json_value& json, double& value, const string& description) {
+  return serialize_json_base<Mode>(json, value, description);
+}
+template <json_mode Mode>
+inline void serialize_json(
+    json_value& json, float& value, const string& description) {
+  return serialize_json_base<Mode>(json, value, description);
+}
+template <json_mode Mode>
+inline void serialize_json(
+    json_value& json, bool& value, const string& description) {
+  return serialize_json_base<Mode>(json, value, description);
+}
+template <json_mode Mode>
+inline void serialize_json(
+    json_value& json, string& value, const string& description) {
+  return serialize_json_base<Mode>(json, value, description);
+}
+template <json_mode Mode, typename T>
+inline void serialize_json(
+    json_value& json, vector<T>& value, const string& description) {
+  if constexpr (Mode == json_mode::from_json) {
+    value.clear();
+    value.reserve(json.size());
+    for (auto& ejs : json) from_json(ejs, value.emplace_back());
+  } else if constexpr (Mode == json_mode::to_json) {
+    json = json_array{};
+    for (auto& v : value) to_json(json.emplace_back(), v);
+  } else if constexpr (Mode == json_mode::to_schema) {
+    json["type"]        = "array";
+    json["description"] = description;
+    json["default"]     = value;
+    to_schema(json["items"], T{}, description);
+  } else {
+    // pass
+  }
+}
+template <json_mode Mode, typename T, size_t N>
+inline void serialize_json(
+    json_value& json, array<T, N>& value, const string& description) {
+  if constexpr (Mode == json_mode::from_json) {
+    if (json.size() != value.size()) throw json_error{"wrong array size"};
+    for (auto idx = (size_t)0; idx < value.size(); idx++)
+      from_json(json.at(idx), value.at(idx));
+  } else if constexpr (Mode == json_mode::to_json) {
+    json = json_array{};
+    json.resize(value.size());
+    for (auto idx = (size_t)0; idx < value.size(); idx++)
+      to_json(json.at(idx), value.at(idx));
+  } else if constexpr (Mode == json_mode::to_schema) {
+    json["type"]        = "array";
+    json["description"] = description;
+    json["default"]     = value;
+    json["minItems"]    = N;
+    json["maxItems"]    = N;
+    to_schema(json["items"], value[0], description);
+  } else {
+    // pass
+  }
+}
+template <json_mode Mode, typename T, typename>
+inline void serialize_json(
+    json_value& json, T& value, const string& description) {
+  if constexpr (Mode == json_mode::from_json) {
+    auto  label  = json.get<string>();
+    auto& labels = json_enum_labels(value);
+    for (auto& [value_, label_] : labels) {
+      if (label_ == label) {
+        value = value_;
+        return;
+      }
+    }
+    throw json_error{"unknown enum label " + label};
+  } else if constexpr (Mode == json_mode::to_json) {
+    auto& labels = json_enum_labels(value);
+    for (auto& [value_, label] : labels) {
+      if (value_ == value) {
+        json = label;
+        return;
+      }
+    }
+    throw json_error{"unknown enum label"};
+  } else if constexpr (Mode == json_mode::to_schema) {
+    json["type"]        = "string";
+    json["description"] = description;
+    auto& labels        = json_enum_labels(value);
+    for (auto& [value_, label] : labels) {
+      if (value == value_) json["default"] = label;
+      json["enum"].push_back(label);
+    }
+  } else {
+    // pass
+  }
 }
 
 }  // namespace yocto
