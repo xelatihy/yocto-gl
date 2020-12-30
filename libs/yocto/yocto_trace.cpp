@@ -37,6 +37,7 @@
 
 #include "yocto_color.h"
 #include "yocto_geometry.h"
+#include "yocto_json.h"
 #include "yocto_parallel.h"
 #include "yocto_sampling.h"
 #include "yocto_shading.h"
@@ -1929,6 +1930,124 @@ void trace_stop(trace_state* state) {
   if (state == nullptr) return;
   state->stop = true;
   if (state->worker.valid()) state->worker.get();
+}
+
+}  // namespace yocto
+
+// -----------------------------------------------------------------------------
+// TRACE IO
+// -----------------------------------------------------------------------------
+namespace yocto {
+
+// Json conversion
+void to_json(json_value& json, const trace_params& value) {
+  json["resolution"] = value.resolution;
+  json["sampler"]    = value.sampler;
+  json["falsecolor"] = value.falsecolor;
+  json["samples"]    = value.samples;
+  json["bounces"]    = value.bounces;
+  json["clamp"]      = value.clamp;
+  json["nocaustics"] = value.nocaustics;
+  json["envhidden"]  = value.envhidden;
+  json["tentfilter"] = value.tentfilter;
+  json["seed"]       = value.seed;
+  json["bvh"]        = value.bvh;
+  json["noparallel"] = value.noparallel;
+  json["pratio"]     = value.pratio;
+  json["exposure"]   = value.exposure;
+}
+void from_json(const json_value& json, trace_params& value) {
+  static auto default_ = trace_params{};
+  value.resolution     = json.value("resolution", default_.resolution);
+  value.sampler        = json.value("sampler", default_.sampler);
+  value.falsecolor     = json.value("falsecolor", default_.falsecolor);
+  value.samples        = json.value("samples", default_.samples);
+  value.bounces        = json.value("bounces", default_.bounces);
+  value.clamp          = json.value("clamp", default_.clamp);
+  value.nocaustics     = json.value("nocaustics", default_.nocaustics);
+  value.envhidden      = json.value("envhidden", default_.envhidden);
+  value.tentfilter     = json.value("tentfilter", default_.tentfilter);
+  value.seed           = json.value("seed", default_.seed);
+  value.bvh            = json.value("bvh", default_.bvh);
+  value.noparallel     = json.value("noparallel", default_.noparallel);
+  value.pratio         = json.value("pratio", default_.pratio);
+  value.exposure       = json.value("exposure", default_.exposure);
+}
+void to_schema(
+    json_value& schema, const trace_params& value, const string& descr) {
+  schema                   = to_schema_object(descr);
+  auto& properties         = get_schema_properties(schema);
+  properties["resolution"] = to_schema(value.resolution, "Image resolution.");
+  properties["sampler"]    = to_schema(value.sampler, "Sampler type.");
+  properties["falsecolor"] = to_schema(value.falsecolor, "False color type.");
+  properties["samples"]    = to_schema(value.samples, "Number of samples.");
+  properties["bounces"]    = to_schema(value.bounces, "Number of bounces.");
+  properties["clamp"]      = to_schema(value.clamp, "Clamp value.");
+  properties["nocaustics"] = to_schema(value.nocaustics, "Disable caustics.");
+  properties["envhidden"]  = to_schema(value.envhidden, "Hide environment.");
+  properties["tentfilter"] = to_schema(value.tentfilter, "Filter image.");
+  properties["seed"]       = to_schema(value.seed, "Random seed.");
+  properties["bvh"]        = to_schema(value.bvh, "Bvh type.");
+  properties["noparallel"] = to_schema(value.noparallel, "Disable threading.");
+  properties["pratio"]     = to_schema(value.pratio, "Preview ratio.");
+  properties["exposure"]   = to_schema(value.exposure, "Image exposure.");
+}
+
+// Json enum conventions
+const vector<pair<trace_bvh_type, string>>& json_enum_labels(trace_bvh_type) {
+  static const auto trace_bvh_labels = vector<pair<trace_bvh_type, string>>{
+      {trace_bvh_type::default_, "default"},
+      {trace_bvh_type::highquality, "highquality"},
+      {trace_bvh_type::middle, "middle"},
+      {trace_bvh_type::balanced, "balanced"},
+#ifdef YOCTO_EMBREE
+      {trace_bvh_type::embree_default, "embree-default"},
+      {trace_bvh_type::embree_highquality, "embree-highquality"},
+      {trace_bvh_type::embree_compact, "embree-compact"},
+#endif
+  };
+  return trace_bvh_labels;
+}
+
+const vector<pair<trace_falsecolor_type, string>>& json_enum_labels(
+    trace_falsecolor_type) {
+  static const auto trace_falsecolor_labels =
+      vector<pair<trace_falsecolor_type, string>>{
+          {trace_falsecolor_type::position, "position"},
+          {trace_falsecolor_type::normal, "normal"},
+          {trace_falsecolor_type::frontfacing, "frontfacing"},
+          {trace_falsecolor_type::gnormal, "gnormal"},
+          {trace_falsecolor_type::gfrontfacing, "gfrontfacing"},
+          {trace_falsecolor_type::texcoord, "texcoord"},
+          {trace_falsecolor_type::color, "color"},
+          {trace_falsecolor_type::emission, "emission"},
+          {trace_falsecolor_type::diffuse, "diffuse"},
+          {trace_falsecolor_type::specular, "specular"},
+          {trace_falsecolor_type::coat, "coat"},
+          {trace_falsecolor_type::metal, "metal"},
+          {trace_falsecolor_type::transmission, "transmission"},
+          {trace_falsecolor_type::translucency, "translucency"},
+          {trace_falsecolor_type::refraction, "refraction"},
+          {trace_falsecolor_type::roughness, "roughness"},
+          {trace_falsecolor_type::opacity, "opacity"},
+          {trace_falsecolor_type::ior, "ior"},
+          {trace_falsecolor_type::instance, "instance"},
+          {trace_falsecolor_type::element, "element"},
+          {trace_falsecolor_type::highlight, "highlight"}};
+  return trace_falsecolor_labels;
+}
+
+const vector<pair<trace_sampler_type, string>>& json_enum_labels(
+    trace_sampler_type) {
+  static const auto trace_sampler_labels =
+      vector<pair<trace_sampler_type, string>>{
+          {trace_sampler_type::path, "path"},
+          {trace_sampler_type::naive, "naive"},
+          {trace_sampler_type::eyelight, "eyelight"},
+          {trace_sampler_type::falsecolor, "falsecolor"},
+          {trace_sampler_type::albedo, "albedo"},
+          {trace_sampler_type::normal, "normal"}};
+  return trace_sampler_labels;
 }
 
 }  // namespace yocto

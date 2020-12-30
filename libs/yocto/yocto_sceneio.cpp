@@ -1189,26 +1189,26 @@ inline void from_json(const njson& j, frame3f& value) {
 #endif
 
 // support for json conversions
-inline bool set_value(json_view js, const vec3f& value) {
+inline bool set_value(json_tview js, const vec3f& value) {
   return set_value(js, (const array<float, 3>&)value);
 }
-inline bool set_value(json_view js, const vec4f& value) {
+inline bool set_value(json_tview js, const vec4f& value) {
   return set_value(js, (const array<float, 4>&)value);
 }
-inline bool set_value(json_view js, const frame3f& value) {
+inline bool set_value(json_tview js, const frame3f& value) {
   return set_value(js, (const array<float, 12>&)value);
 }
-inline bool set_value(json_view js, const mat4f& value) {
+inline bool set_value(json_tview js, const mat4f& value) {
   return set_value(js, (const array<float, 16>&)value);
 }
 
-inline bool get_value(json_cview js, vec3f& value) {
+inline bool get_value(json_ctview js, vec3f& value) {
   return get_value(js, (array<float, 3>&)value);
 }
-inline bool get_value(json_cview js, mat3f& value) {
+inline bool get_value(json_ctview js, mat3f& value) {
   return get_value(js, (array<float, 9>&)value);
 }
-inline bool get_value(json_cview js, frame3f& value) {
+inline bool get_value(json_ctview js, frame3f& value) {
   return get_value(js, (array<float, 12>&)value);
 }
 
@@ -1258,7 +1258,7 @@ static bool load_json_scene(const string& filename, sceneio_scene* scene,
 
   // parse json reference
   auto get_shape = [scene, &shape_map](
-                       json_cview js, sceneio_shape*& value) -> bool {
+                       json_ctview js, sceneio_shape*& value) -> bool {
     auto name = ""s;
     if (!get_value(js, name)) return false;
     auto it = shape_map.find(name);
@@ -1274,7 +1274,7 @@ static bool load_json_scene(const string& filename, sceneio_scene* scene,
 
   // parse json reference
   auto get_material = [scene, &material_map](
-                          json_cview js, sceneio_material*& value) -> bool {
+                          json_ctview js, sceneio_material*& value) -> bool {
     auto name = ""s;
     if (!get_value(js, name)) return false;
     auto it = material_map.find(name);
@@ -1290,7 +1290,7 @@ static bool load_json_scene(const string& filename, sceneio_scene* scene,
 
   // parse json reference
   auto get_texture = [scene, &texture_map](
-                         json_cview js, sceneio_texture*& value) -> bool {
+                         json_ctview js, sceneio_texture*& value) -> bool {
     auto name = ""s;
     if (!get_value(js, name)) return false;
     auto it = texture_map.find(name);
@@ -1313,7 +1313,7 @@ static bool load_json_scene(const string& filename, sceneio_scene* scene,
   auto ply_instance_map  = unordered_map<string, ply_instance*>{{"", nullptr}};
   auto instance_ply      = unordered_map<sceneio_instance*, ply_instance*>{};
   auto get_ply_instances = [&ply_instances, &ply_instance_map, &instance_ply](
-                               json_cview        js,
+                               json_ctview       js,
                                sceneio_instance* instance) -> bool {
     auto name = ""s;
     if (!get_value(js, name)) return false;

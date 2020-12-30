@@ -96,11 +96,11 @@ void to_json(json_value& json, const njson& njs) {
 void from_json(const json_value& json, njson& njs) {
   switch (json.type()) {
     case json_type::null: njs = {}; break;
-    case json_type::integer: njs = json.get_ref<int64_t>(); break;
-    case json_type::unsigned_: njs = json.get_ref<uint64_t>(); break;
-    case json_type::real: njs = json.get_ref<double>(); break;
+    case json_type::ninteger: njs = json.get_ref<int64_t>(); break;
+    case json_type::nunsigned: njs = json.get_ref<uint64_t>(); break;
+    case json_type::nfloat: njs = json.get_ref<double>(); break;
     case json_type::boolean: njs = json.get_ref<bool>(); break;
-    case json_type::string_: njs = json.get_ref<string>(); break;
+    case json_type::string: njs = json.get_ref<string>(); break;
     case json_type::array:
       njs = njson::array();
       for (auto& ejs : json) from_json(ejs, njs.emplace_back());
@@ -287,7 +287,7 @@ static bool validate_json(const json_value& value, const string& path,
   if (schema.contains("type") && schema.at("type").is_string()) {
     auto& type    = schema.at("type").get_ref<string>();
     auto  type_ok = (type == "null" && value.is_null()) ||
-                   (type == "integer" && value.is_integral()) ||
+                   (type == "integer" && value.is_integer()) ||
                    (type == "number" && value.is_number()) ||
                    (type == "boolean" && value.is_boolean()) ||
                    (type == "string" && value.is_string()) ||
@@ -303,7 +303,7 @@ static bool validate_json(const json_value& value, const string& path,
       if (type_ok) break;
       auto& type = tschema.get_ref<string>();
       type_ok    = (type == "null" && value.is_null()) ||
-                (type == "integer" && value.is_integral()) ||
+                (type == "integer" && value.is_integer()) ||
                 (type == "number" && value.is_number()) ||
                 (type == "boolean" && value.is_boolean()) ||
                 (type == "string" && value.is_string()) ||
@@ -349,7 +349,7 @@ static bool validate_json(const json_value& value, const string& path,
       if (item.is_string() && value.is_string() &&
           item.get_ref<string>() == value.get_ref<string>())
         found = true;
-      if (item.is_integral() && value.is_integral() &&
+      if (item.is_integer() && value.is_integer() &&
           item.get<int64_t>() == value.get<int64_t>())
         found = true;
       if (item.is_number() && value.is_number() &&
@@ -516,6 +516,14 @@ static string get_cliusage(
     }
     return false;
   };
+  auto get_alternate = [](const json_value& schema,
+                           const string&    alt) -> string {
+    if (!schema.contains("cli_alternate")) return "";
+    if (!schema.at("cli_alternate").is_object()) return "";
+    if (!schema.at("cli_alternate").contains(alt)) return "";
+    if (!schema.at("cli_alternate").at(alt).is_string()) return "";
+    return schema.at("cli_alternate").at(alt).get<string>();
+  };
 
   auto message        = string{};
   auto usage_optional = string{}, usage_positional = string{},
@@ -528,8 +536,8 @@ static string get_cliusage(
       decorated_name = "--" + name;
       if (property.value("type", "") == "boolean")
         decorated_name += "/--no-" + name;
-      if (property.contains("cli_alt"))
-        decorated_name += ", -" + property.value("cli_alt", "");
+      if (auto alt = get_alternate(schema, name); !alt.empty())
+        decorated_name += ", -" + alt;
     }
     auto line = "  " + decorated_name;
     if (property.value("type", "") != "boolean") {
@@ -856,14 +864,14 @@ void parse_cli(
 namespace yocto {
 
 // convert json
-void to_json(njson& njs, json_cview json) {
+void to_json(njson& njs, json_ctview json) {
   switch (get_type(json)) {
     case json_type::null: njs = nullptr; break;
-    case json_type::integer: njs = get_integer(json); break;
-    case json_type::unsigned_: njs = get_unsigned(json); break;
-    case json_type::real: njs = get_real(json); break;
+    case json_type::ninteger: njs = get_number_integer(json); break;
+    case json_type::nunsigned: njs = get_number_unsigned(json); break;
+    case json_type::nfloat: njs = get_number_real(json); break;
     case json_type::boolean: njs = get_boolean(json); break;
-    case json_type::string_: njs = get_string(json); break;
+    case json_type::string: njs = get_string(json); break;
     case json_type::array:
       njs = njson::array();
       for (auto ejs : iterate_array(json)) to_json(njs.emplace_back(), ejs);
@@ -881,7 +889,7 @@ void to_json(njson& njs, json_cview json) {
 }
 
 // convert json
-void from_json(const njson& njs, json_view json) {
+void from_json(const njson& njs, json_tview json) {
   switch (njs.type()) {
     case njson::value_t::null: set_null(json); break;
     case njson::value_t::number_integer: set_integer(json, (int64_t)njs); break;
@@ -916,13 +924,13 @@ bool load_json(const string& filename, json_tree& json, string& error) {
   // sax handler
   struct sax_handler {
     // stack
-    json_view              root;
-    std::vector<json_view> stack = {};
-    std::string            current_key;
-    explicit sax_handler(json_view root_) : root{root_}, stack{root_} {}
+    json_tview              root;
+    std::vector<json_tview> stack = {};
+    std::string             current_key;
+    explicit sax_handler(json_tview root_) : root{root_}, stack{root_} {}
 
     // get current value
-    json_view next_value() {
+    json_tview next_value() {
       if (stack.size() == 1) return root;
       auto& jst = _get_type(stack.back());
       if (jst == json_type::array) return append_element(stack.back());

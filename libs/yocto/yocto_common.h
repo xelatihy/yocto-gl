@@ -37,31 +37,15 @@
 // INCLUDES
 // -----------------------------------------------------------------------------
 
-#include <chrono>
-#include <cstdint>
-#include <string>
+#include <tuple>
 #include <utility>
-#include <vector>
 
 // -----------------------------------------------------------------------------
 // USING DIRECTIVES
 // -----------------------------------------------------------------------------
 namespace yocto {
 
-// using directives
-using std::pair;
-using std::string;
-using std::vector;
-
-}  // namespace yocto
-
-// -----------------------------------------------------------------------------
-// TIMING UTILITIES
-// -----------------------------------------------------------------------------
-namespace yocto {
-
-// get time in nanoseconds - useful only to compute difference of times
-inline int64_t get_time();
+// No using directives yet
 
 }  // namespace yocto
 
@@ -70,29 +54,21 @@ inline int64_t get_time();
 // -----------------------------------------------------------------------------
 namespace yocto {
 
-// Python `range()` equivalent. Construct an object that c over an
+// Python `range()` equivalent. Construct an object that iterates over an
 // integer sequence.
 template <typename T>
-inline auto range(T min, T max);
+constexpr auto range(T max);
 template <typename T>
-inline auto range(T max);
+constexpr auto range(T min, T max);
+template <typename T>
+constexpr auto range(T min, T max, T step);
 
 // Python `enumerate()` equivalent. Construct an object that iterates over a
 // sequence of elements and numbers them.
-template <typename T>
-inline auto enumerate(const vector<T>& vals);
-template <typename T>
-inline auto enumerate(vector<T>& vals);
-
-// Vector append and concatenation
-template <typename T>
-inline vector<T>& append(vector<T>& a, const vector<T>& b);
-template <typename T>
-inline vector<T>& append(vector<T>& a, const T& b);
-template <typename T>
-inline vector<T> join(const vector<T>& a, const vector<T>& b);
-template <typename T>
-inline vector<T> join(const vector<T>& a, const T& b);
+template <typename T,
+    typename Iterator = decltype(std::begin(std::declval<T>())),
+    typename          = decltype(std::end(std::declval<T>()))>
+constexpr auto enumerate(T&& iterable);
 
 }  // namespace yocto
 
@@ -105,99 +81,61 @@ inline vector<T> join(const vector<T>& a, const T& b);
 // -----------------------------------------------------------------------------
 
 // -----------------------------------------------------------------------------
-// TIMING UTILITIES
-// -----------------------------------------------------------------------------
-namespace yocto {
-
-// get time in nanoseconds - useful only to compute difference of times
-inline int64_t get_time() {
-  return std::chrono::high_resolution_clock::now().time_since_epoch().count();
-}
-
-}  // namespace yocto
-
-// -----------------------------------------------------------------------------
 // PYTHON-LIKE ITERATORS
 // -----------------------------------------------------------------------------
 namespace yocto {
 
-// Range object to support Python-like iteration. Use with `range()`.
-template <typename T>
-struct range_helper {
-  struct iterator {
-    T         pos = 0;
-    iterator& operator++() {
-      pos++;
-      return *this;
-    }
-    bool operator!=(const iterator& other) const { return pos != other.pos; }
-    T    operator*() const { return pos; }
-  };
-  T        begin_ = 0, end_ = 0;
-  iterator begin() const { return {begin_}; }
-  iterator end() const { return {end_}; }
-};
-
 // Python `range()` equivalent. Construct an object to iterate over a sequence.
 template <typename T>
-inline auto range(T min, T max) {
+constexpr auto range(T max) {
+  return range((T)0, max, (T)1);
+}
+template <typename T>
+constexpr auto range(T min, T max) {
+  return range(min, max, (T)1);
+}
+template <typename T>
+constexpr auto range(T min, T max, T step) {
+  struct iterator {
+    T    index;
+    void operator++() { ++index; }
+    bool operator!=(const iterator& other) const {
+      return index != other.index;
+    }
+    T operator*() const { return index; }
+  };
+  struct range_helper {
+    T        begin_ = 0, end_ = 0;
+    iterator begin() const { return {begin_}; }
+    iterator end() const { return {end_}; }
+  };
   return range_helper{min, max};
 }
-template <typename T>
-inline auto range(T max) {
-  return range((T)0, max);
-}
-
-// Enumerate object to support Python-like enumeration. Use with `enumerate()`.
-template <typename T>
-struct enumerate_helper {
-  struct iterator {
-    T*        data = nullptr;
-    int64_t   pos  = 0;
-    iterator& operator++() {
-      pos++;
-      return *this;
-    }
-    bool operator!=(const iterator& other) const { return pos != other.pos; }
-    pair<int64_t&, T&> operator*() const { return {pos, *(data + pos)}; }
-  };
-  T*       data = nullptr;
-  int64_t  size = 0;
-  iterator begin() const { return {data, 0}; }
-  iterator end() const { return {data, size}; }
-};
 
 // Python `enumerate()` equivalent. Construct an object that iteraterates over a
 // sequence of elements and numbers them.
-template <typename T>
-inline auto enumerate(const vector<T>& vals) {
-  return enumerate_helper<const T>{vals.data(), (int64_t)vals.size()};
-}
-template <typename T>
-inline auto enumerate(vector<T>& vals) {
-  return enumerate_helper<T>{vals.data(), (int64_t)vals.size()};
-}
-
-// Vector append and concatenation
-template <typename T>
-inline vector<T>& append(vector<T>& a, const vector<T>& b) {
-  a.insert(a.end(), b.begin(), b.end());
-  return a;
-}
-template <typename T>
-inline vector<T>& append(vector<T>& a, const T& b) {
-  a.push_back(b);
-  return a;
-}
-template <typename T>
-inline vector<T> join(const vector<T>& a, const vector<T>& b) {
-  auto c = a;
-  return append(b);
-}
-template <typename T>
-inline vector<T> join(const vector<T>& a, const T& b) {
-  auto c = a;
-  return append(b);
+// Implementation from http://reedbeta.com/blog/python-like-enumerate-in-cpp17/
+template <typename T,
+    typename Iterator = decltype(std::begin(std::declval<T>())),
+    typename          = decltype(std::end(std::declval<T>()))>
+constexpr auto enumerate(T&& iterable) {
+  // maybe we should avoid tuples here
+  struct iterator {
+    std::size_t index;
+    Iterator    iter;
+    bool operator!=(const iterator& other) const { return iter != other.iter; }
+    void operator++() {
+      ++index;
+      ++iter;
+    }
+    auto operator*() const { return std::tie(index, *iter); }
+  };
+  struct iterable_wrapper {
+    T    iterable;
+    auto begin() { return iterator{0, std::begin(iterable)}; }
+    auto end() { return iterator{0, std::end(iterable)}; }
+  };
+  return iterable_wrapper{std::forward<T>(iterable)};
 }
 
 }  // namespace yocto

@@ -112,21 +112,26 @@ void tonemap_image(
 
 // Set params
 void set_param(imageview_state* state, const string& name, const string& pname,
-    const json_value& param) {
-  auto command   = imageview_command{};
-  command.type   = imageview_command_type::param;
-  command.name   = name;
-  auto params    = json_value::object();
-  params[pname]  = param;
-  command.params = params;
+    const json_value& param, const json_value& schema) {
+  auto command      = imageview_command{};
+  command.type      = imageview_command_type::param;
+  command.name      = name;
+  auto params       = json_value::object();
+  params[pname]     = param;
+  command.params    = params;
+  auto  pschema     = json_value::object();
+  auto& properties  = pschema["properties"];
+  properties[pname] = schema;
+  command.schema    = pschema;
   state->queue.push(command);
 }
-void set_params(
-    imageview_state* state, const string& name, const json_value& params) {
+void set_params(imageview_state* state, const string& name,
+    const json_value& params, const json_value& schema) {
   auto command   = imageview_command{};
   command.type   = imageview_command_type::params;
   command.name   = name;
   command.params = params;
+  command.schema = schema;
   state->queue.push(command);
 }
 
@@ -247,7 +252,8 @@ void draw_widgets(
     }
   }
   if (!state->selected->params.empty()) {
-    draw_params(win, "params", state->selected->params);
+    draw_params(
+        win, "params", state->selected->params, state->selected->schema, true);
   }
 }
 
@@ -332,6 +338,7 @@ void update(gui_window* win, imageview_state* state, const gui_input& input) {
         }
         if (img != nullptr) {
           img->params.update(command.params);
+          img->schema.at("properties").update(command.schema.at("properties"));
         }
       } break;
       case imageview_command_type::params: {
@@ -344,6 +351,7 @@ void update(gui_window* win, imageview_state* state, const gui_input& input) {
         }
         if (img != nullptr) {
           img->params = command.params;
+          img->schema = command.schema;
         }
       } break;
       case imageview_command_type::quit: {

@@ -162,14 +162,50 @@ void init_scene(trace_scene* scene, sceneio_scene* ioscene,
 }
 
 // render params
-struct render_params {
-  string       scene     = "scene.json";
-  string       output    = "out.png";
-  trace_params params    = {};
-  string       camera    = "";
-  bool         addsky    = false;
-  bool         savebatch = false;
+struct render_params : trace_params {
+  string scene     = "scene.json";
+  string output    = "out.png";
+  string camera    = "";
+  bool   addsky    = false;
+  bool   savebatch = false;
 };
+
+// Json IO
+void to_json(json_value& json, const render_params& value) {
+  json["scene"]     = value.scene;
+  json["output"]    = value.output;
+  json["camera"]    = value.camera;
+  json["addsky"]    = value.addsky;
+  json["savebatch"] = value.savebatch;
+  to_json(json, (const trace_params&)value);
+}
+void from_json(const json_value& json, render_params& value) {
+  auto default_   = render_params{};
+  value.scene     = json.value("scene", default_.scene);
+  value.output    = json.value("output", default_.output);
+  value.camera    = json.value("camera", default_.camera);
+  value.addsky    = json.value("addsky", default_.addsky);
+  value.savebatch = json.value("savebatch", default_.savebatch);
+  from_json(json, (trace_params&)value);
+}
+void to_schema(
+    json_value& schema, const render_params& value, const string& descr) {
+  schema                  = to_schema_object(descr);
+  auto& properties        = get_schema_properties(schema);
+  properties["scene"]     = to_schema(value.scene, "Scene filename.");
+  properties["output"]    = to_schema(value.output, "Output filename.");
+  properties["camera"]    = to_schema(value.camera, "Camera name.");
+  properties["addsky"]    = to_schema(value.addsky, "Add sky.");
+  properties["savebatch"] = to_schema(value.savebatch, "Save batch.");
+  properties.update(
+      get_schema_properties(to_schema((const trace_params&)value, "")));
+  get_schema_required(schema).push_back("scene");
+  get_schema_positional(schema).push_back("scene");
+  get_schema_alternate(schema)["samples"] = "s";
+  get_schema_alternate(schema)["bounces"] = "b";
+  get_schema_alternate(schema)["output"]  = "o";
+  get_schema_alternate(schema)["tracer"]  = "t";
+}
 
 // convert images
 int run_render(const render_params& params) {
@@ -201,21 +237,20 @@ int run_render(const render_params& params) {
   // build bvh
   auto bvh_guard = std::make_unique<trace_bvh>();
   auto bvh       = bvh_guard.get();
-  init_bvh(bvh, scene, params.params, print_progress);
+  init_bvh(bvh, scene, params, print_progress);
 
   // init renderer
   auto lights_guard = std::make_unique<trace_lights>();
   auto lights       = lights_guard.get();
-  init_lights(lights, scene, params.params, print_progress);
+  init_lights(lights, scene, params, print_progress);
 
   // fix renderer type if no lights
-  if (lights->lights.empty() && is_sampler_lit(params.params)) {
+  if (lights->lights.empty() && is_sampler_lit(params)) {
     print_info("no lights presents, image will be black");
   }
 
   // render
-  auto render = trace_image(scene, camera, bvh, lights, params.params,
-      print_progress,
+  auto render = trace_image(scene, camera, bvh, lights, params, print_progress,
       [savebatch = params.savebatch, output = params.output](
           const image<vec4f>& render, int sample, int samples) {
         if (!savebatch) return;
@@ -237,14 +272,50 @@ int run_render(const render_params& params) {
 }
 
 // convert params
-struct view_params {
-  string       scene     = "scene.json";
-  string       output    = "out.png";
-  trace_params params    = {};
-  string       camera    = "";
-  bool         addsky    = false;
-  bool         savebatch = false;
+struct view_params : trace_params {
+  string scene     = "scene.json";
+  string output    = "out.png";
+  string camera    = "";
+  bool   addsky    = false;
+  bool   savebatch = false;
 };
+
+// Json IO
+void to_json(json_value& json, const view_params& value) {
+  json["scene"]     = value.scene;
+  json["output"]    = value.output;
+  json["camera"]    = value.camera;
+  json["addsky"]    = value.addsky;
+  json["savebatch"] = value.savebatch;
+  to_json(json, (const trace_params&)value);
+}
+void from_json(const json_value& json, view_params& value) {
+  auto default_   = view_params{};
+  value.scene     = json.value("scene", default_.scene);
+  value.output    = json.value("output", default_.output);
+  value.camera    = json.value("camera", default_.camera);
+  value.addsky    = json.value("addsky", default_.addsky);
+  value.savebatch = json.value("savebatch", default_.savebatch);
+  from_json(json, (trace_params&)value);
+}
+void to_schema(
+    json_value& schema, const view_params& value, const string& descr) {
+  schema                  = to_schema_object(descr);
+  auto& properties        = get_schema_properties(schema);
+  properties["scene"]     = to_schema(value.scene, "Scene filename.");
+  properties["output"]    = to_schema(value.output, "Output filename.");
+  properties["camera"]    = to_schema(value.camera, "Camera name.");
+  properties["addsky"]    = to_schema(value.addsky, "Add sky.");
+  properties["savebatch"] = to_schema(value.savebatch, "Save batch.");
+  properties.update(
+      get_schema_properties(to_schema((const trace_params&)value, "")));
+  get_schema_required(schema).push_back("scene");
+  get_schema_positional(schema).push_back("scene");
+  get_schema_alternate(schema)["samples"] = "s";
+  get_schema_alternate(schema)["bounces"] = "b";
+  get_schema_alternate(schema)["output"]  = "o";
+  get_schema_alternate(schema)["tracer"]  = "t";
+}
 
 #ifndef YOCTO_OPENGL
 
@@ -289,15 +360,15 @@ int run_view(const view_params& params) {
   // build bvh
   auto bvh_guard = std::make_unique<trace_bvh>();
   auto bvh       = bvh_guard.get();
-  init_bvh(bvh, scene, params.params, print_progress);
+  init_bvh(bvh, scene, params, print_progress);
 
   // init renderer
   auto lights_guard = std::make_unique<trace_lights>();
   auto lights       = lights_guard.get();
-  init_lights(lights, scene, params.params, print_progress);
+  init_lights(lights, scene, params, print_progress);
 
   // fix renderer type if no lights
-  if (lights->lights.empty() && is_sampler_lit(params.params)) {
+  if (lights->lights.empty() && is_sampler_lit(params)) {
     print_info("no lights presents, image will be black");
   }
 
@@ -307,9 +378,10 @@ int run_view(const view_params& params) {
 
   // render start
   trace_start(
-      state, scene, camera, bvh, lights, params.params,
+      state, scene, camera, bvh, lights, params,
       [viewer](const string& message, int sample, int nsamples) {
-        set_param(viewer, "render", "sample", to_json(sample));
+        set_param(viewer, "render", "sample", to_json(sample),
+            to_schema(sample, "Current sample"));
         print_progress(message, sample, nsamples);
       },
       [viewer](const image<vec4f>& render, int current, int total) {
@@ -322,6 +394,10 @@ int run_view(const view_params& params) {
         // app->render[ij]  = render[ij];
         // app->display[ij] = tonemap(app->render[ij], app->exposure);
       });
+
+  // show rendering params
+  set_params(
+      viewer, "render", to_json(params), to_schema(params, "Render params"));
 
   // run view
   run_view(viewer);
@@ -340,71 +416,45 @@ int run_view(const view_params& params) {
 
 #endif
 
+struct app_params {
+  string        command = "render";
+  render_params render  = {};
+  view_params   view    = {};
+};
+
+// Json IO
+void to_json(json_value& json, const app_params& value) {
+  json["command"] = value.command;
+  json["render"]  = value.render;
+  json["view"]    = value.view;
+}
+void from_json(const json_value& json, app_params& value) {
+  auto default_ = app_params{};
+  value.command = json.value("command", default_.command);
+  value.render  = json.value("render", default_.render);
+  value.view    = json.value("view", default_.view);
+}
+void to_schema(
+    json_value& schema, const app_params& value, const string& descr) {
+  schema                = to_schema_object(descr);
+  auto& properties      = get_schema_properties(schema);
+  properties["command"] = to_schema(value.command, "Command.");
+  properties["render"]  = to_schema(value.render, "Render final images.");
+  properties["view"]    = to_schema(value.view, "Render interactively.");
+  get_schema_required(schema).push_back("command");
+  get_schema_command(schema) = "command";
+}
+
 int main(int argc, const char* argv[]) {
-  // command line parameters
-  auto render = render_params{};
-  auto view   = view_params{};
-
-  // parse command line
-  auto cli = make_cli("ytrace", "render images from scenes");
-
-  auto cli_render = add_command(cli, "render", "render images");
-  add_optional(cli_render, "camera", render.camera, "camera name");
-  add_optional(cli_render, "resolution", render.params.resolution,
-      "image resolution", "r");
-  add_optional(
-      cli_render, "samples", render.params.samples, "number of samples", "s");
-  add_optional(cli_render, "tracer", render.params.sampler, "trace type",
-      trace_sampler_labels, "t");
-  add_optional(cli_render, "falsecolor", render.params.falsecolor,
-      "tracer false color type", trace_falsecolor_labels, "F");
-  add_optional(cli_render, "bounces", render.params.bounces,
-      "maximum number of bounces", "b");
-  add_optional(
-      cli_render, "clamp", render.params.clamp, "final pixel clamping");
-  add_optional(cli_render, "filter", render.params.tentfilter, "filter image");
-  add_optional(cli_render, "envhidden", render.params.envhidden,
-      "environments are hidden");
-  add_optional(
-      cli_render, "savebatch", render.savebatch, "save images progressively");
-  add_optional(
-      cli_render, "bvh", render.params.bvh, "bvh type", trace_bvh_labels);
-  add_optional(cli_render, "skyenv", render.addsky, "add sky envmap");
-  add_optional(cli_render, "output", render.output, "image filename", "o");
-  add_positional(cli_render, "scene", render.scene, "scene filename");
-
-  auto cli_view = add_command(cli, "view", "render images interactively");
-  add_optional(cli_view, "camera", view.camera, "camera name");
-  add_optional(
-      cli_view, "resolution", view.params.resolution, "image resolution", "r");
-  add_optional(
-      cli_view, "samples", view.params.samples, "number of samples", "s");
-  add_optional(cli_view, "tracer", view.params.sampler, "trace type",
-      trace_sampler_labels, "t");
-  add_optional(cli_view, "falsecolor", view.params.falsecolor,
-      "tracer false color type", trace_falsecolor_labels, "F");
-  add_optional(cli_view, "bounces", view.params.bounces,
-      "maximum number of bounces", "b");
-  add_optional(cli_view, "clamp", view.params.clamp, "final pixel clamping");
-  add_optional(cli_view, "filter", view.params.tentfilter, "filter image");
-  add_optional(
-      cli_view, "envhidden", view.params.envhidden, "environments are hidden");
-  add_optional(
-      cli_view, "savebatch", view.savebatch, "save images progressively");
-  add_optional(cli_view, "bvh", view.params.bvh, "bvh type", trace_bvh_labels);
-  add_optional(cli_view, "skyenv", view.addsky, "add sky envmap");
-  add_optional(cli_view, "output", view.output, "image filename", "o");
-  add_positional(cli_view, "scene", view.scene, "scene filename");
-
   // parse cli
-  parse_cli(cli, argc, argv);
+  auto params = app_params{};
+  parse_cli(params, "Render images from scenes", argc, argv);
 
   // dispatch commands
-  auto command = get_command(cli);
-  if (command == "render") {
-    return run_render(render);
-  } else if (command == "view") {
-    return run_view(view);
+  if (params.command == "render") {
+    return run_render(params.render);
+  } else if (params.command == "view") {
+    return run_view(params.view);
   } else {
     print_fatal("unknown command");
     return 1;
