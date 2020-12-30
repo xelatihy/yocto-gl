@@ -264,6 +264,24 @@ struct convert_params {
   int    height   = 0;
 };
 
+// Json IO
+void serialize_value(json_mode mode, json_value& json, convert_params& value,
+    const string& description) {
+  serialize_object(mode, json, value, description);
+  serialize_property(mode, json, value.image, "image", "Input image.", true);
+  serialize_property(mode, json, value.output, "output", "Output image.");
+  serialize_property(
+      mode, json, value.exposure, "exposure", "Tonemap exposure.");
+  serialize_property(mode, json, value.filmic, "filmic", "Tonemap filmic.");
+  serialize_property(mode, json, value.width, "width", "Resize width.");
+  serialize_property(mode, json, value.height, "height", "Resize height.");
+  serialize_property(mode, json, value.logo, "logo", "Add logo.");
+  serialize_clipositionals(mode, json, {"image"});
+  serialize_clialternates(mode, json,
+      {{"output", "o"}, {"exposure", "e"}, {"filmic", "f"}, {"width", "w"},
+          {"height", "h"}, {"logo", "L"}});
+}
+
 // convert images
 int run_convert(const convert_params& params) {
   // load
@@ -330,6 +348,16 @@ struct view_params {
   bool           logo   = false;
 };
 
+// Json IO
+void serialize_value(json_mode mode, json_value& json, view_params& value,
+    const string& description) {
+  serialize_object(mode, json, value, description);
+  serialize_property(mode, json, value.images, "images", "Input images.", true);
+  serialize_property(mode, json, value.output, "output", "Output image.");
+  serialize_clipositionals(mode, json, {"images"});
+  serialize_clialternates(mode, json, {{"output", "o"}});
+}
+
 #ifndef YOCTO_OPENGL
 
 // convert images
@@ -392,6 +420,23 @@ struct diff_params {
   float  threshold = 0;
 };
 
+// Json IO
+void serialize_value(json_mode mode, json_value& json, diff_params& value,
+    const string& description) {
+  serialize_object(mode, json, value, description);
+  serialize_property(
+      mode, json, value.image1, "image1", "Input image 1.", true);
+  serialize_property(
+      mode, json, value.image2, "image2", "Input image 2.", true);
+  serialize_property(mode, json, value.output, "output", "Output image.");
+  serialize_property(mode, json, value.signal, "signal", "Error on diff.");
+  serialize_property(
+      mode, json, value.threshold, "threshold", "Diff threshold.");
+  serialize_property(mode, json, value.logo, "logo", "Add logo.");
+  serialize_clipositionals(mode, json, {"image1", "image2"});
+  serialize_clialternates(mode, json, {{"output", "o"}});
+}
+
 // resize images
 int run_diff(const diff_params& params) {
   // load
@@ -450,6 +495,22 @@ struct setalpha_params {
   bool   to_color   = false;
 };
 
+// Json IO
+void serialize_value(json_mode mode, json_value& json, setalpha_params& value,
+    const string& description) {
+  serialize_object(mode, json, value, description);
+  serialize_property(mode, json, value.image, "image", "Input image.", true);
+  serialize_property(mode, json, value.alpha, "alpha", "Alpha image.", true);
+  serialize_property(mode, json, value.output, "output", "Output image.");
+  serialize_property(
+      mode, json, value.from_color, "from-color", "Alpha from color.");
+  serialize_property(
+      mode, json, value.to_color, "to-color", "Color from alpha.");
+  serialize_property(mode, json, value.logo, "logo", "Add logo.");
+  serialize_clipositionals(mode, json, {"image", "alpha"});
+  serialize_clialternates(mode, json, {{"output", "o"}});
+}
+
 // setalpha images
 int run_setalpha(const setalpha_params& params) {
   // load
@@ -504,61 +565,41 @@ int run_setalpha(const setalpha_params& params) {
   return 0;
 }
 
+struct app_params {
+  string          command  = "convert";
+  convert_params  convert  = {};
+  view_params     view     = {};
+  diff_params     diff     = {};
+  setalpha_params setalpha = {};
+};
+
+// Json IO
+void serialize_value(json_mode mode, json_value& json, app_params& value,
+    const string& description) {
+  serialize_object(mode, json, value, description);
+  serialize_command(mode, json, value.command, "command", "Command.");
+  serialize_property(mode, json, value.convert, "convert", "Convert images.");
+  serialize_property(mode, json, value.view, "view", "View images.");
+  serialize_property(mode, json, value.diff, "diff", "Diff two images.");
+  serialize_property(
+      mode, json, value.setalpha, "setalpha", "Set alpha in images.");
+}
+
 int main(int argc, const char* argv[]) {
   // command line parameters
-  auto convert  = convert_params{};
-  auto view     = view_params{};
-  auto diff     = diff_params{};
-  auto setalpha = setalpha_params{};
-
-  // parse command line
-  auto cli = make_cli("yimage", "Transform images");
-
-  auto cli_convert = add_command(cli, "convert", "Convert images");
-  add_optional(cli_convert, "output", convert.output, "Output image", "o");
-  add_optional(cli_convert, "exposure", convert.exposure, "Exposure", "e");
-  add_optional(cli_convert, "filmic", convert.filmic, "Filmic curve", "f");
-  add_optional(cli_convert, "width", convert.width, "resize width", "w");
-  add_optional(cli_convert, "height", convert.height, "resize height", "h");
-  add_optional(cli_convert, "logo", convert.logo, "Add logo", "L");
-  add_positional(cli_convert, "image", convert.image, "Input image");
-
-  auto cli_view = add_command(cli, "view", "View images");
-  add_optional(cli_view, "output", view.output, "Output image", "o");
-  add_positional(cli_view, "images", view.images, "Input images");
-
-  auto cli_diff = add_command(cli, "diff", "Diff two images");
-  add_optional(cli_diff, "signal", diff.signal, "Signal a diff as error");
-  add_optional(cli_diff, "threshold,", diff.threshold, "Diff threshold");
-  add_optional(cli_diff, "logo", diff.logo, "Add logo", "o");
-  add_optional(cli_diff, "output", diff.output, "Output image");
-  add_positional(cli_diff, "image1", diff.image1, "Input image");
-  add_positional(cli_diff, "image2", diff.image2, "Input image");
-
-  auto cli_setalpha = add_command(cli, "setalpha", "Set alpha in images");
-  add_optional(
-      cli_setalpha, "from-color", setalpha.from_color, "Alpha from color");
-  add_optional(cli_setalpha, "to-color", setalpha.to_color, "Color from alpha");
-  add_optional(cli_setalpha, "logo", setalpha.logo, "Add logo");
-  add_optional(cli_setalpha, "output", setalpha.output, "Output image", "o");
-  add_positional(cli_setalpha, "image", setalpha.image, "Input image");
-  add_positional(cli_setalpha, "alpha", setalpha.alpha, "Alpha filename");
-
-  // parse cli
-  parse_cli(cli, argc, argv);
+  auto params = app_params{};
+  parse_cli(params, "Process and view images", argc, argv);
 
   // dispatch commands
-  auto command = get_command(cli);
-  auto error   = string{};
-  if (command == "convert") {
-    return run_convert(convert);
-  } else if (command == "view") {
-    return run_view(view);
-  } else if (command == "diff") {
-    return run_diff(diff);
-  } else if (command == "setalpha") {
-    return run_setalpha(setalpha);
+  if (params.command == "convert") {
+    return run_convert(params.convert);
+  } else if (params.command == "view") {
+    return run_view(params.view);
+  } else if (params.command == "diff") {
+    return run_diff(params.diff);
+  } else if (params.command == "setalpha") {
+    return run_setalpha(params.setalpha);
   } else {
-    return print_fatal("unknown command " + command);
+    return print_fatal("unknown command " + params.command);
   }
 }
