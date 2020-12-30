@@ -1113,8 +1113,8 @@ bool draw_params(gui_window* win, const char* lbl, json_value& value,
             if (name == readonly_name.get<string>()) item_readonly = true;
           }
         }
-        edited += (int)draw_params(
-            win, name.c_str(), item, readonly || item_readonly);
+        edited += (int)draw_params(win, name.c_str(), item,
+            schema.at("properties").at(name), readonly || item_readonly);
       }
       end_header(win);
       return (bool)edited;
