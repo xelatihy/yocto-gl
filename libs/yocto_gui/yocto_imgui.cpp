@@ -997,6 +997,18 @@ static bool draw_string_param(
   }
 }
 
+static bool draw_enum_param(gui_window* win, const char* lbl, json_value& value,
+    bool readonly, const json_value& labels) {
+  auto gvalue  = value.get<string>();
+  auto glabels = labels.get<vector<string>>();
+  if (draw_combobox(win, lbl, gvalue, glabels) && !readonly) {
+    value = gvalue;
+    return true;
+  } else {
+    return false;
+  }
+}
+
 bool draw_params(
     gui_window* win, const char* lbl, json_value& value, bool readonly) {
   if (value.is_integer()) {
@@ -1059,7 +1071,11 @@ bool draw_params(gui_window* win, const char* lbl, json_value& value,
   } else if (value.is_boolean()) {
     return draw_boolean_param(win, lbl, value, readonly);
   } else if (value.is_string()) {
-    return draw_string_param(win, lbl, value, readonly);
+    if (schema.contains("enum")) {
+      return draw_enum_param(win, lbl, value, readonly, schema.at("enum"));
+    } else {
+      return draw_string_param(win, lbl, value, readonly);
+    }
   } else if (value.is_array()) {
     if (value.size() > 4) return false;  // skip
     auto is_integer_array = true, is_number_array = true;
