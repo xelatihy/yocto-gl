@@ -80,9 +80,10 @@ void set_image(
 void close_image(imageview_state* viewer, const string& name);
 
 // Set params
-void set_param(
-    imageview_state* viewer, const string& name, const string& pname, const json_value& param);
-void set_params(imageview_state* viewer, const string& name, const json_value& params);
+void set_param(imageview_state* viewer, const string& name, const string& pname,
+    const json_value& param);
+void set_params(
+    imageview_state* viewer, const string& name, const json_value& params);
 
 // Open and asycn viewer
 struct imageview_state;
