@@ -349,6 +349,8 @@ inline json_value&       get_schema_positional(json_value& schema);
 inline const json_value& get_schema_positional(const json_value& schema);
 inline json_value&       get_schema_command(json_value& schema);
 inline const json_value& get_schema_command(const json_value& schema);
+inline json_value&       get_schema_alternate(json_value& schema);
+inline const json_value& get_schema_alternate(const json_value& schema);
 
 // Validate a value against a schema
 bool validate_json(
@@ -1368,6 +1370,15 @@ inline json_value& get_schema_command(json_value& schema) {
 }
 inline const json_value& get_schema_command(const json_value& schema) {
   return schema.at("cli_command");
+}
+inline json_value& get_schema_alternate(json_value& schema) {
+  if (schema.is_null()) to_schema_object(schema, "");
+  if (!schema.contains("cli_alternate"))
+    schema["cli_alternate"] = json_value::object();
+  return schema.at("cli_alternate");
+}
+inline const json_value& get_schema_alternate(const json_value& schema) {
+  return schema.at("cli_alternate");
 }
 
 }  // namespace yocto

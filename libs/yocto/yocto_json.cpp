@@ -516,6 +516,14 @@ static string get_cliusage(
     }
     return false;
   };
+  auto get_alternate = [](const json_value& schema,
+                           const string&    alt) -> string {
+    if (!schema.contains("cli_alternate")) return "";
+    if (!schema.at("cli_alternate").is_object()) return "";
+    if (!schema.at("cli_alternate").contains(alt)) return "";
+    if (!schema.at("cli_alternate").at(alt).is_string()) return "";
+    return schema.at("cli_alternate").at(alt).get<string>();
+  };
 
   auto message        = string{};
   auto usage_optional = string{}, usage_positional = string{},
@@ -528,8 +536,8 @@ static string get_cliusage(
       decorated_name = "--" + name;
       if (property.value("type", "") == "boolean")
         decorated_name += "/--no-" + name;
-      if (property.contains("cli_alt"))
-        decorated_name += ", -" + property.value("cli_alt", "");
+      if (auto alt = get_alternate(schema, name); !alt.empty())
+        decorated_name += ", -" + alt;
     }
     auto line = "  " + decorated_name;
     if (property.value("type", "") != "boolean") {

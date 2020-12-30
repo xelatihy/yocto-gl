@@ -201,6 +201,10 @@ void to_schema(
       get_schema_properties(to_schema((const trace_params&)value, "")));
   get_schema_required(schema).push_back("scene");
   get_schema_positional(schema).push_back("scene");
+  get_schema_alternate(schema)["samples"] = "s";
+  get_schema_alternate(schema)["bounces"] = "b";
+  get_schema_alternate(schema)["output"]  = "o";
+  get_schema_alternate(schema)["tracer"]  = "t";
 }
 
 // convert images
@@ -307,6 +311,10 @@ void to_schema(
       get_schema_properties(to_schema((const trace_params&)value, "")));
   get_schema_required(schema).push_back("scene");
   get_schema_positional(schema).push_back("scene");
+  get_schema_alternate(schema)["samples"] = "s";
+  get_schema_alternate(schema)["bounces"] = "b";
+  get_schema_alternate(schema)["output"]  = "o";
+  get_schema_alternate(schema)["tracer"]  = "t";
 }
 
 #ifndef YOCTO_OPENGL
