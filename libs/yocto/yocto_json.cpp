@@ -96,11 +96,11 @@ void to_json(json_value& json, const njson& njs) {
 void from_json(const json_value& json, njson& njs) {
   switch (json.type()) {
     case json_type::null: njs = {}; break;
-    case json_type::integer: njs = json.get_ref<int64_t>(); break;
-    case json_type::unsigned_: njs = json.get_ref<uint64_t>(); break;
-    case json_type::real: njs = json.get_ref<double>(); break;
+    case json_type::ninteger: njs = json.get_ref<int64_t>(); break;
+    case json_type::nunsigned: njs = json.get_ref<uint64_t>(); break;
+    case json_type::nfloat: njs = json.get_ref<double>(); break;
     case json_type::boolean: njs = json.get_ref<bool>(); break;
-    case json_type::string_: njs = json.get_ref<string>(); break;
+    case json_type::string: njs = json.get_ref<string>(); break;
     case json_type::array:
       njs = njson::array();
       for (auto& ejs : json) from_json(ejs, njs.emplace_back());
@@ -287,7 +287,7 @@ static bool validate_json(const json_value& value, const string& path,
   if (schema.contains("type") && schema.at("type").is_string()) {
     auto& type    = schema.at("type").get_ref<string>();
     auto  type_ok = (type == "null" && value.is_null()) ||
-                   (type == "integer" && value.is_integral()) ||
+                   (type == "integer" && value.is_integer()) ||
                    (type == "number" && value.is_number()) ||
                    (type == "boolean" && value.is_boolean()) ||
                    (type == "string" && value.is_string()) ||
@@ -303,7 +303,7 @@ static bool validate_json(const json_value& value, const string& path,
       if (type_ok) break;
       auto& type = tschema.get_ref<string>();
       type_ok    = (type == "null" && value.is_null()) ||
-                (type == "integer" && value.is_integral()) ||
+                (type == "integer" && value.is_integer()) ||
                 (type == "number" && value.is_number()) ||
                 (type == "boolean" && value.is_boolean()) ||
                 (type == "string" && value.is_string()) ||
@@ -349,7 +349,7 @@ static bool validate_json(const json_value& value, const string& path,
       if (item.is_string() && value.is_string() &&
           item.get_ref<string>() == value.get_ref<string>())
         found = true;
-      if (item.is_integral() && value.is_integral() &&
+      if (item.is_integer() && value.is_integer() &&
           item.get<int64_t>() == value.get<int64_t>())
         found = true;
       if (item.is_number() && value.is_number() &&
@@ -859,11 +859,11 @@ namespace yocto {
 void to_json(njson& njs, json_cview json) {
   switch (get_type(json)) {
     case json_type::null: njs = nullptr; break;
-    case json_type::integer: njs = get_integer(json); break;
-    case json_type::unsigned_: njs = get_unsigned(json); break;
-    case json_type::real: njs = get_real(json); break;
+    case json_type::ninteger: njs = get_number_integer(json); break;
+    case json_type::nunsigned: njs = get_number_unsigned(json); break;
+    case json_type::nfloat: njs = get_number_real(json); break;
     case json_type::boolean: njs = get_boolean(json); break;
-    case json_type::string_: njs = get_string(json); break;
+    case json_type::string: njs = get_string(json); break;
     case json_type::array:
       njs = njson::array();
       for (auto ejs : iterate_array(json)) to_json(njs.emplace_back(), ejs);

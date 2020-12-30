@@ -998,7 +998,7 @@ static bool draw_textinput_params(
 }
 
 bool draw_params(gui_window* win, const char* lbl, json_value& value) {
-  if (value.is_integral()) {
+  if (value.is_integer()) {
     return draw_dragger_params<int>(win, lbl, value);
   } else if (value.is_number()) {
     return draw_dragger_params<float>(win, lbl, value);
@@ -1010,7 +1010,7 @@ bool draw_params(gui_window* win, const char* lbl, json_value& value) {
     if (value.size() > 4) return false;  // skip
     auto is_integer_array = true, is_number_array = true;
     for (auto& item : value) {
-      if (!item.is_integral()) is_integer_array = false;
+      if (!item.is_integer()) is_integer_array = false;
       if (!item.is_number()) is_number_array = false;
     }
     if (!is_integer_array && !is_number_array) return false;  // skip
