@@ -386,6 +386,9 @@ int run_view(const view_params& params) {
         // app->display[ij] = tonemap(app->render[ij], app->exposure);
       });
 
+  // show rendering params
+  set_params(viewer, "render", to_json(params));
+
   // run view
   run_view(viewer);
 
