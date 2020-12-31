@@ -229,6 +229,8 @@ image<vec4f> colorgrade_image(
 // Uses multithreading for speed.
 void colorgrade_image_mt(image<vec4f>& corrected, const image<vec4f>& img,
     bool linear, const colorgrade_params& params);
+void colorgrade_image_mt(image<vec4b>& corrected, const image<vec4f>& img,
+    bool linear, const colorgrade_params& params);
 
 // determine white balance colors
 vec3f compute_white_balance(const image<vec4f>& img);

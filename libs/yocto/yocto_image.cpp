@@ -786,6 +786,12 @@ void colorgrade_image_mt(image<vec4f>& corrected, const image<vec4f>& img,
     corrected[{i, j}] = colorgrade(img[{i, j}], linear, params);
   });
 }
+void colorgrade_image_mt(image<vec4b>& corrected, const image<vec4f>& img,
+    bool linear, const colorgrade_params& params) {
+  parallel_for(img.width(), img.height(), [&](int i, int j) {
+    corrected[{i, j}] = float_to_byte(colorgrade(img[{i, j}], linear, params));
+  });
+}
 
 // compute white balance
 vec3f compute_white_balance(const image<vec4f>& img) {
