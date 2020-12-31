@@ -999,8 +999,12 @@ static bool draw_string_param(
 
 static bool draw_enum_param(gui_window* win, const char* lbl, json_value& value,
     bool readonly, const json_value& labels) {
-  auto gvalue  = value.get<string>();
-  auto glabels = labels.get<vector<string>>();
+  auto gvalue = value.get<string>();
+  // this code should work by break windows
+  // auto glabels = labels.get<vector<string>>();
+  // windows fix
+  auto glabels = vector<string>();
+  for (auto& label : labels) glabels.push_back(label.get<string>());
   if (draw_combobox(win, lbl, gvalue, glabels) && !readonly) {
     value = gvalue;
     return true;
