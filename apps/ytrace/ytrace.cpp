@@ -342,18 +342,32 @@ int run_view(const view_params& params) {
       },
       [viewer](const image<vec4f>& render, int current, int total) {
         set_image(viewer, "render", render);
-        // if (current > 0) return;
-        // app->render  = render;
-        // app->display = tonemap_image(app->render, app->exposure);
-      },
-      [](const image<vec4f>& render, int current, int total, const vec2i& ij) {
-        // app->render[ij]  = render[ij];
-        // app->display[ij] = tonemap(app->render[ij], app->exposure);
       });
 
   // show rendering params
   set_params(
       viewer, "render", to_json(params), to_schema(params, "Render params"));
+
+  // set callback
+  set_callback(viewer, [state, scene, camera, bvh, lights, viewer](
+                           const string& name, const json_value& value) {
+    if (name != "render") return;
+    trace_stop(state);
+    auto params = from_json<view_params>(value);
+    trace_start(
+        state, scene, camera, bvh, lights, params,
+        [viewer](const string& message, int sample, int nsamples) {
+          set_param(viewer, "render", "sample", to_json(sample),
+              to_schema(sample, "Current sample"));
+          print_progress(message, sample, nsamples);
+        },
+        [viewer](const image<vec4f>& render, int current, int total) {
+          set_image(viewer, "render", render);
+        });
+    // show rendering params
+    set_params(
+        viewer, "render", to_json(params), to_schema(params, "Render params"));
+  });
 
   // run view
   run_view(viewer);
