@@ -226,7 +226,7 @@ void draw_widgets(
     if (draw_params(win, "params", state->selected->params,
             state->selected->schema, false)) {
       if (state->callback)
-        state->callback(state->selected->name, state->selected->params);
+        state->callback(state->selected->name, state->selected->params, {});
     }
   }
 }
@@ -353,15 +353,20 @@ void run_view(imageview_state* state) {
   };
   callbacks.uiupdate_cb = [state](gui_window* win, const gui_input& input) {
     if (!state->selected) return;
-    // auto app = state->selected;
-    // // handle mouse
-    // if (input.mouse_left && !input.widgets_active) {
-    //   app->glparams.center += input.mouse_pos - input.mouse_last;
-    // }
-    // if (input.mouse_right && !input.widgets_active) {
-    //   app->glparams.scale *= powf(
-    //       2, (input.mouse_pos.x - input.mouse_last.x) * 0.001f);
-    // }
+    if (input.widgets_active) return;
+    auto img = state->selected;
+    // handle mouse
+    if (input.modifier_alt) {
+      if (input.mouse_left) {
+        img->glparams.center += input.mouse_pos - input.mouse_last;
+      }
+      if (input.mouse_right) {
+        img->glparams.scale *= powf(
+            2, (input.mouse_pos.x - input.mouse_last.x) * 0.001f);
+      }
+    } else {
+      if (state->callback) state->callback(state->selected->name, {}, input);
+    }
   };
 
   // run ui
