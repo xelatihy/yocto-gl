@@ -47,7 +47,8 @@ using std::make_unique;
 namespace yocto {
 
 // grab input
-static imageview_image* get_image(imageview_state* state, const string& name);
+// static imageview_image* get_image(imageview_state* state, const string&
+// name);
 static imageview_input* get_input(imageview_state* state, const string& name);
 
 // make an image viewer
@@ -102,15 +103,18 @@ void set_param(imageview_state* state, const string& name, const string& pname,
   auto lock  = std::lock_guard{state->input_mutex};
   auto input = get_input(state, name);
   if (!input) return;
-  // TODO(fabio): implement this
+  input->params[pname]               = param;
+  input->schema["properties"][pname] = schema;
+  input->pchanged                    = true;
 }
 void set_params(imageview_state* state, const string& name,
     const json_value& params, const json_value& schema) {
   auto lock  = std::lock_guard{state->input_mutex};
   auto input = get_input(state, name);
   if (!input) return;
-  input->params = params;
-  input->schema = schema;
+  input->params   = params;
+  input->schema   = schema;
+  input->pchanged = true;
 }
 
 // Callback
@@ -126,11 +130,12 @@ void set_callback(imageview_state* state, const imageview_callback& callback) {
 namespace yocto {
 
 // grab input
-static imageview_image* get_image(imageview_state* state, const string& name) {
-  for (auto& img : state->images)
-    if (img->name == name) return img.get();
-  return nullptr;
-}
+// static imageview_image* get_image(imageview_state* state, const string& name)
+// {
+//   for (auto& img : state->images)
+//     if (img->name == name) return img.get();
+//   return nullptr;
+// }
 static imageview_input* get_input(imageview_state* state, const string& name) {
   for (auto& img : state->inputs)
     if (img->name == name) return img.get();
