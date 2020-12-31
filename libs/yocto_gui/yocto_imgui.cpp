@@ -966,7 +966,9 @@ void draw_log(gui_window* win) {
 template <typename T>
 static bool draw_number_param(
     gui_window* win, const char* lbl, json_value& value, bool readonly) {
-  auto gvalue = value.get<T>();
+  // This should work but breaks on windows
+  // auto gvalue = value.get<T>();
+  auto gvalue = from_json<T>(value);  // windows fix
   if (draw_dragger(win, lbl, gvalue) && !readonly) {
     value = gvalue;
     return true;
@@ -1003,8 +1005,9 @@ static bool draw_enum_param(gui_window* win, const char* lbl, json_value& value,
   // this code should work by break windows
   // auto glabels = labels.get<vector<string>>();
   // windows fix
-  auto glabels = vector<string>();
-  for (auto& label : labels) glabels.push_back(label.get<string>());
+  // auto glabels = vector<string>();
+  // for (auto& label : labels) glabels.push_back(label.get<string>());
+  auto glabels = from_json<vector<string>>(labels);
   if (draw_combobox(win, lbl, gvalue, glabels) && !readonly) {
     value = gvalue;
     return true;
