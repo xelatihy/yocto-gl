@@ -541,14 +541,26 @@ static string get_cliusage(
     }
     auto line = "  " + decorated_name;
     if (property.value("type", "") != "boolean") {
-      line += " " + property.value("type", "");
+      line += " <" + property.value("type", "") + ">";
     }
     while (line.size() < 32) line += " ";
     line += property.value("description", "");
     if (is_required(schema, name)) {
       line += " [req]\n";
     } else if (property.contains("default")) {
-      line += " [" + format_json(property.at("default")) + "]\n";
+      auto& default_ = property.at("default");
+      if (default_.is_array()) {
+        line += " [";
+        for (auto& item : default_) {
+          if (&item != &default_.at(0)) line += ", ";
+          line += format_json(item);
+        }
+        line += "]\n";
+      } else if (default_.is_object()) {
+        line += " [object]\n";
+      } else {
+        line += " [" + format_json(property.at("default")) + "]\n";
+      }
     } else {
       line += "\n";
     }
@@ -784,7 +796,6 @@ bool parse_cli(json_value& value, const json_value& schema_,
       auto name = string{};
       for (auto& [pname, property] : schema.at("properties").items()) {
         if (property.value("type", "string") == "object") continue;
-        if (property.value("type", "string") == "array") continue;
         if (is_positional(schema, pname)) continue;
         if (pname != arg && get_alternate(schema, pname) != arg &&
             pname != "no-" + arg)  // TODO(fabio): fix boolean
@@ -799,6 +810,18 @@ bool parse_cli(json_value& value, const json_value& schema_,
         if (!parse_clivalue(
                 value[name], arg.find("no-") != 0 ? "true" : "false", property))
           return cli_error("bad value for " + name);
+      } else if (property.value("type", "string") == "array") {
+        auto min_items = (int)property.value("minItems", 0);
+        auto max_items = (int)property.value("maxItems", 0);
+        if (min_items != max_items || max_items == 0)
+          return cli_error("bad array for " + name);
+        if (idx + max_items >= args.size())
+          return cli_error("missing value for " + name);
+        auto array_args = vector<string>(
+            args.begin() + idx + 1, args.begin() + idx + 1 + max_items);
+        if (!parse_clivalue(value[name], array_args, property))
+          return cli_error("bad value for " + name);
+        idx += 1 + max_items;
       } else {
         if (idx + 1 >= args.size())
           return cli_error("missing value for " + name);
