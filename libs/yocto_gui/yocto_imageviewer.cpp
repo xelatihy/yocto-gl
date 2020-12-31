@@ -46,6 +46,10 @@ using std::make_unique;
 // -----------------------------------------------------------------------------
 namespace yocto {
 
+// grab input
+static imageview_image* get_image(imageview_state* state, const string& name);
+static imageview_input* get_input(imageview_state* state, const string& name);
+
 // make an image viewer
 unique_ptr<imageview_state> make_imageview(const string& title) {
   auto state = make_unique<imageview_state>();
@@ -53,86 +57,60 @@ unique_ptr<imageview_state> make_imageview(const string& title) {
   return state;
 }
 
-// Open and image viewer
-unique_ptr<imageview_state> open_imageview(const string& title) {
-  auto state = make_unique<imageview_state>();
-  // state->name   = title;
-  state->runner = std::async(std::launch::async, run_view, state.get());
-  return state;
-}
-
-// Wait for the viewer to close
-void wait_view(imageview_state* state) { state->runner.wait(); }
-
-// Close viewer
-void close_view(imageview_state* state) {
-  auto command = imageview_command{};
-  command.type = imageview_command_type::quit;
-  state->queue.push(command);
-}
-
 // Set image
 void set_image(imageview_state* state, const string& name,
     const image<vec4f>& img, float exposure, bool filmic) {
-  auto command     = imageview_command{};
-  command.type     = imageview_command_type::set;
-  command.name     = name;
-  command.hdr      = img;
-  command.exposure = exposure;
-  command.filmic   = filmic;
-  state->queue.push(command);
+  auto lock  = std::lock_guard{state->input_mutex};
+  auto input = get_input(state, name);
+  if (!input) {
+    input =
+        state->inputs.emplace_back(std::make_unique<imageview_input>()).get();
+  }
+  input->name     = name;
+  input->hdr      = img;
+  input->ldr      = {};
+  input->exposure = exposure;
+  input->filmic   = filmic;
+  input->ichanged = true;
 }
 void set_image(
     imageview_state* state, const string& name, const image<vec4b>& img) {
-  auto command     = imageview_command{};
-  command.type     = imageview_command_type::set;
-  command.name     = name;
-  command.ldr      = img;
-  command.exposure = 0;
-  command.filmic   = false;
-  state->queue.push(command);
+  auto lock  = std::lock_guard{state->input_mutex};
+  auto input = get_input(state, name);
+  if (!input) {
+    input =
+        state->inputs.emplace_back(std::make_unique<imageview_input>()).get();
+  }
+  input->name     = name;
+  input->hdr      = {};
+  input->ldr      = img;
+  input->exposure = 0;
+  input->filmic   = false;
+  input->ichanged = true;
 }
+// Close image
 void close_image(imageview_state* state, const string& name) {
-  auto command = imageview_command{};
-  command.type = imageview_command_type::close;
-  command.name = name;
-  state->queue.push(command);
-}
-
-// Update image
-void tonemap_image(
-    imageview_state* state, const string& name, float exposure, bool filmic) {
-  auto command     = imageview_command{};
-  command.type     = imageview_command_type::tonemap;
-  command.name     = name;
-  command.exposure = exposure;
-  command.filmic   = filmic;
-  state->queue.push(command);
+  auto lock  = std::lock_guard{state->input_mutex};
+  auto input = get_input(state, name);
+  if (!input) return;
+  input->close = true;
 }
 
 // Set params
 void set_param(imageview_state* state, const string& name, const string& pname,
     const json_value& param, const json_value& schema) {
-  auto command      = imageview_command{};
-  command.type      = imageview_command_type::param;
-  command.name      = name;
-  auto params       = json_value::object();
-  params[pname]     = param;
-  command.params    = params;
-  auto  pschema     = json_value::object();
-  auto& properties  = pschema["properties"];
-  properties[pname] = schema;
-  command.schema    = pschema;
-  state->queue.push(command);
+  auto lock  = std::lock_guard{state->input_mutex};
+  auto input = get_input(state, name);
+  if (!input) return;
+  // TODO(fabio): implement this
 }
 void set_params(imageview_state* state, const string& name,
     const json_value& params, const json_value& schema) {
-  auto command   = imageview_command{};
-  command.type   = imageview_command_type::params;
-  command.name   = name;
-  command.params = params;
-  command.schema = schema;
-  state->queue.push(command);
+  auto lock  = std::lock_guard{state->input_mutex};
+  auto input = get_input(state, name);
+  if (!input) return;
+  input->params = params;
+  input->schema = schema;
 }
 
 // Callback
@@ -147,6 +125,18 @@ void set_callback(imageview_state* state, const imageview_callback& callback) {
 // -----------------------------------------------------------------------------
 namespace yocto {
 
+// grab input
+static imageview_image* get_image(imageview_state* state, const string& name) {
+  for (auto& img : state->images)
+    if (img->name == name) return img.get();
+  return nullptr;
+}
+static imageview_input* get_input(imageview_state* state, const string& name) {
+  for (auto& img : state->inputs)
+    if (img->name == name) return img.get();
+  return nullptr;
+}
+
 static void update_display(imageview_image* img) {
   if (!img->hdr.empty()) {
     if (img->display.imsize() != img->hdr.imsize())
@@ -157,6 +147,8 @@ static void update_display(imageview_image* img) {
   } else {
     // TODO(fabio): decide about empty images
   }
+  if (!is_initialized(img->glimage)) init_image(img->glimage);
+  set_image(img->glimage, img->display, false, false);
 }
 
 void draw_widgets(
@@ -181,7 +173,7 @@ void draw_widgets(
   }
   continue_line(win);
   if (draw_button(win, "quit")) {
-    close_view(state);
+    set_close(win, true);
   }
   draw_combobox(win, "image", state->selected, state->images, false);
   if (!state->selected) return;
@@ -218,7 +210,7 @@ void draw_widgets(
       auto edited = 0;
       edited += draw_slider(win, "exposure", img->exposure, -5, 5);
       edited += draw_checkbox(win, "filmic", img->filmic);
-      if (edited) tonemap_image(state, img->name, img->exposure, img->filmic);
+      if (edited) update_display(img);
       end_header(win);
     }
   }
@@ -247,92 +239,44 @@ void draw(gui_window* win, imageview_state* state, const gui_input& input) {
 }
 
 void update(gui_window* win, imageview_state* state, const gui_input& input) {
-  while (!state->queue.empty()) {
-    auto command = imageview_command{};
-    if (!state->queue.try_pop(command)) break;
-    switch (command.type) {
-      case imageview_command_type::set: {
-        auto img = (imageview_image*)nullptr;
-        for (auto& image : state->images) {
-          if (image->name == command.name) {
-            img = image.get();
-            break;
-          }
-        }
-        if (img == nullptr) {
-          state->images.emplace_back(make_unique<imageview_image>());
-          img       = state->images.back().get();
-          img->name = command.name;
-          if (state->selected == nullptr) state->selected = img;
-        }
-        img->hdr      = command.hdr;
-        img->ldr      = command.ldr;
-        img->exposure = command.exposure;
-        img->filmic   = command.filmic;
-        update_display(img);
-        if (!is_initialized(img->glimage)) init_image(img->glimage);
-        set_image(img->glimage, img->display, false, false);
-      } break;
-      case imageview_command_type::close: {
-        auto position = -1;
-        for (auto pos = (size_t)0; pos < state->images.size(); pos++) {
-          if (state->images[pos]->name == command.name) position = (int)pos;
-        }
-        if (position >= 0) {
-          auto fix_selected = state->selected == state->images[position].get();
-          state->images.erase(state->images.begin() + position);
-          if (fix_selected)
-            state->selected =
-                state->images.empty() ? nullptr : state->images.front().get();
-        }
-      } break;
-      case imageview_command_type::tonemap: {
-        auto img = (imageview_image*)nullptr;
-        for (auto& image : state->images) {
-          if (image->name == command.name) {
-            img = image.get();
-            break;
-          }
-        }
-        if (img != nullptr) {
-          img->exposure = command.exposure;
-          img->filmic   = command.filmic;
-          update_display(img);
-          if (!is_initialized(img->glimage)) init_image(img->glimage);
-          set_image(img->glimage, img->display, false, false);
-        }
-      } break;
-      case imageview_command_type::param: {
-        auto img = (imageview_image*)nullptr;
-        for (auto& image : state->images) {
-          if (image->name == command.name) {
-            img = image.get();
-            break;
-          }
-        }
-        if (img != nullptr) {
-          img->params.update(command.params);
-          img->schema.at("properties").update(command.schema.at("properties"));
-        }
-      } break;
-      case imageview_command_type::params: {
-        auto img = (imageview_image*)nullptr;
-        for (auto& image : state->images) {
-          if (image->name == command.name) {
-            img = image.get();
-            break;
-          }
-        }
-        if (img != nullptr) {
-          img->params = command.params;
-          img->schema = command.schema;
-        }
-      } break;
-      case imageview_command_type::quit: {
-        set_close(win, true);
-      } break;
+  // process inputs
+  auto lock = std::lock_guard{state->input_mutex};
+
+  // close images
+  for (auto idx = (size_t)0; idx < state->inputs.size(); idx++) {
+    if (!state->inputs[idx]->close) continue;
+    if (state->selected == state->images[idx].get()) state->selected = nullptr;
+    state->inputs.erase(state->inputs.begin() + idx);
+    state->images.erase(state->images.begin() + idx);
+    idx--;
+  }
+
+  // add images
+  for (auto idx = (size_t)0; idx < state->inputs.size(); idx++) {
+    if (idx >= state->images.size()) {
+      state->images.emplace_back(std::make_unique<imageview_image>());
+      state->images[idx]->name = state->inputs[idx]->name;
     }
   }
+
+  // update images
+  for (auto idx = (size_t)0; idx < state->inputs.size(); idx++) {
+    if (state->inputs[idx]->ichanged) {
+      state->images[idx]->hdr      = state->inputs[idx]->hdr;
+      state->images[idx]->ldr      = state->inputs[idx]->ldr;
+      state->inputs[idx]->ichanged = false;
+      update_display(state->images[idx].get());
+    }
+    if (state->inputs[idx]->pchanged) {
+      state->images[idx]->params   = state->inputs[idx]->params;
+      state->images[idx]->schema   = state->inputs[idx]->schema;
+      state->inputs[idx]->pchanged = false;
+    }
+  }
+
+  // selected
+  if (state->selected == nullptr && !state->images.empty())
+    state->selected = state->images[0].get();
 }
 
 // Run application
