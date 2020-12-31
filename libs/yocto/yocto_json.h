@@ -118,7 +118,9 @@ struct json_value {
   explicit json_value(const json_object&);
   explicit json_value(const json_binary&);
   template <typename T>
-  explicit json_value(const T& value);
+  explicit json_value(const vector<T>& value);
+  template <typename T, size_t N>
+  explicit json_value(const array<T, N>& value);
 
   // assignments
   json_value& operator=(const json_value& other);
@@ -151,7 +153,9 @@ struct json_value {
   explicit operator string() const;
   explicit operator string_view() const;
   template <typename T>
-  explicit operator T() const;
+  explicit operator vector<T>() const;
+  template <typename T, size_t N>
+  explicit operator array<T, N>() const;
 
   // get values via conversion
   template <typename T>
@@ -737,9 +741,13 @@ inline json_value::json_value(const json_object& value)
 inline json_value::json_value(const json_binary& value)
     : _type{json_type::binary}, _binary{new json_binary{value}} {}
 template <typename T>
-inline json_value::json_value(const T& value) {
-  to_json(*this, value);
-}
+inline json_value::json_value(const vector<T>& value)
+    : _type{json_type::array}
+    , _array{new json_array{value.begin(), value.end()}} {}
+template <typename T, size_t N>
+inline json_value::json_value(const std::array<T, N>& value)
+    : _type{json_type::array}
+    , _array{new json_array{value.begin(), value.end()}} {}
 #ifdef __APPLE__
 inline json_value::json_value(size_t value)
     : _type{json_type::nunsigned}, _unsigned{(uint64_t)value} {}
@@ -843,9 +851,16 @@ inline json_value::operator string_view() const {
   return *_string;
 }
 template <typename T>
-inline json_value::operator T() const {
-  auto value = T{};
-  from_json(*this, value);
+inline json_value::operator vector<T>() const {
+  if (_type != json_type::array) throw json_error{"array expected"};
+  return vector<T>{_array->begin(), _array->end()};
+}
+template <typename T, size_t N>
+inline json_value::operator std::array<T, N>() const {
+  if (_type != json_type::array) throw json_error{"array expected"};
+  if (N != _array->size()) throw json_error{"array size mismatch"};
+  auto value = std::array<T, N>{};
+  for (auto idx = (size_t)0; idx < N; idx++) value[idx] = (T)(*_array)[idx];
   return value;
 }
 #ifdef __APPLE__
@@ -1357,7 +1372,7 @@ inline void serialize_value(json_mode mode, json_value& json, vector<T>& value,
   } else if (mode == json_mode::to_schema) {
     json["type"]        = "array";
     json["description"] = description;
-    json["default"]     = value;
+    json["default"]     = to_json(value);
     to_schema(json["items"], T{}, description);
   } else {
     // pass
