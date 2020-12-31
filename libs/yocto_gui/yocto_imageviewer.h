@@ -85,6 +85,11 @@ void set_param(imageview_state* viewer, const string& name, const string& pname,
 void set_params(imageview_state* viewer, const string& name,
     const json_value& params, const json_value& schema);
 
+// Set ui callback
+using imageview_callback =
+    function<void(const string&, const json_value&, const gui_input&)>;
+void set_callback(imageview_state* viewer, const imageview_callback& callback);
+
 // Open and asycn viewer
 struct imageview_state;
 unique_ptr<imageview_state> open_imageview(const string& title);
@@ -159,6 +164,7 @@ struct imageview_state {
   imageview_queue            queue;               // command queue
   vector<imageview_imageptr> images   = {};       // images
   imageview_image*           selected = nullptr;  // selected
+  imageview_callback         callback = {};       // params and ui callback
 };
 
 }  // namespace yocto

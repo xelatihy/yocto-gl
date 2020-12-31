@@ -135,6 +135,11 @@ void set_params(imageview_state* state, const string& name,
   state->queue.push(command);
 }
 
+// Callback
+void set_callback(imageview_state* state, const imageview_callback& callback) {
+  state->callback = callback;
+}
+
 }  // namespace yocto
 
 // -----------------------------------------------------------------------------
@@ -152,11 +157,6 @@ static void update_display(imageview_image* img) {
   } else {
     // TODO(fabio): decide about empty images
   }
-  // if (app->colorgrade) {
-  //   colorgrade_image_mt(app->display, app->source, true, app->params);
-  // } else {
-  //   tonemap_image_mt(app->display, app->source, app->exposure, app->filmic);
-  // }
 }
 
 void draw_widgets(
@@ -185,35 +185,6 @@ void draw_widgets(
   }
   draw_combobox(win, "image", state->selected, state->images, false);
   if (!state->selected) return;
-  // if (begin_header(win, "colorgrade")) {
-  //   auto& params = app->params;
-  //   auto  edited = 0;
-  //   edited += draw_checkbox(win, "apply colorgrade", app->colorgrade);
-  //   edited += draw_slider(win, "exposure", params.exposure, -5, 5);
-  //   edited += draw_coloredit(win, "tint", params.tint);
-  //   edited += draw_slider(win, "lincontrast", params.lincontrast, 0, 1);
-  //   edited += draw_slider(win, "logcontrast", params.logcontrast, 0, 1);
-  //   edited += draw_slider(win, "linsaturation", params.linsaturation, 0, 1);
-  //   edited += draw_checkbox(win, "filmic", params.filmic);
-  //   continue_line(win);
-  //   edited += draw_checkbox(win, "srgb", params.srgb);
-  //   continue_line(win);
-  //   if (draw_button(win, "auto wb")) {
-  //     auto wb     = 1 / xyz(app->source_stats.average);
-  //     params.tint = wb / max(wb);
-  //     edited += 1;
-  //   }
-  //   edited += draw_slider(win, "contrast", params.contrast, 0, 1);
-  //   edited += draw_slider(win, "saturation", params.saturation, 0, 1);
-  //   edited += draw_slider(win, "shadows", params.shadows, 0, 1);
-  //   edited += draw_slider(win, "midtones", params.midtones, 0, 1);
-  //   edited += draw_slider(win, "highlights", params.highlights, 0, 1);
-  //   edited += draw_coloredit(win, "shadows color", params.shadows_color);
-  //   edited += draw_coloredit(win, "midtones color", params.midtones_color);
-  //   edited += draw_coloredit(win, "highlights color",
-  //   params.highlights_color); if (edited) update_display(app);
-  //   end_header(win);
-  // }
   if (begin_header(win, "inspect")) {
     auto img = state->selected;
     draw_label(win, "name", img->name);
@@ -252,8 +223,11 @@ void draw_widgets(
     }
   }
   if (!state->selected->params.empty()) {
-    draw_params(
-        win, "params", state->selected->params, state->selected->schema, true);
+    if (draw_params(win, "params", state->selected->params,
+            state->selected->schema, false)) {
+      if (state->callback)
+        state->callback(state->selected->name, state->selected->params, {});
+    }
   }
 }
 
@@ -273,9 +247,9 @@ void draw(gui_window* win, imageview_state* state, const gui_input& input) {
 }
 
 void update(gui_window* win, imageview_state* state, const gui_input& input) {
-  auto command     = imageview_command{};
-  auto has_command = state->queue.try_pop(command);
-  if (has_command) {
+  while (!state->queue.empty()) {
+    auto command = imageview_command{};
+    if (!state->queue.try_pop(command)) break;
     switch (command.type) {
       case imageview_command_type::set: {
         auto img = (imageview_image*)nullptr;
@@ -379,15 +353,20 @@ void run_view(imageview_state* state) {
   };
   callbacks.uiupdate_cb = [state](gui_window* win, const gui_input& input) {
     if (!state->selected) return;
-    // auto app = state->selected;
-    // // handle mouse
-    // if (input.mouse_left && !input.widgets_active) {
-    //   app->glparams.center += input.mouse_pos - input.mouse_last;
-    // }
-    // if (input.mouse_right && !input.widgets_active) {
-    //   app->glparams.scale *= powf(
-    //       2, (input.mouse_pos.x - input.mouse_last.x) * 0.001f);
-    // }
+    if (input.widgets_active) return;
+    auto img = state->selected;
+    // handle mouse
+    if (input.modifier_alt) {
+      if (input.mouse_left) {
+        img->glparams.center += input.mouse_pos - input.mouse_last;
+      }
+      if (input.mouse_right) {
+        img->glparams.scale *= powf(
+            2, (input.mouse_pos.x - input.mouse_last.x) * 0.001f);
+      }
+    } else {
+      if (state->callback) state->callback(state->selected->name, {}, input);
+    }
   };
 
   // run ui
