@@ -369,7 +369,8 @@ int run_view(const view_params& params) {
               [viewer](const image<vec4f>& render, int current, int total) {
                 set_image(viewer, "render", render);
               });
-        } else if (input.mouse_left || input.mouse_right) {
+        } else if ((input.mouse_left || input.mouse_right) &&
+                   input.mouse_pos != input.mouse_last) {
           trace_stop(state);
           auto dolly  = 0.0f;
           auto pan    = zero2f;

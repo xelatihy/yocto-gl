@@ -247,9 +247,9 @@ void draw(gui_window* win, imageview_state* state, const gui_input& input) {
 }
 
 void update(gui_window* win, imageview_state* state, const gui_input& input) {
-  auto command     = imageview_command{};
-  auto has_command = state->queue.try_pop(command);
-  if (has_command) {
+  while (!state->queue.empty()) {
+    auto command = imageview_command{};
+    if (!state->queue.try_pop(command)) break;
     switch (command.type) {
       case imageview_command_type::set: {
         auto img = (imageview_image*)nullptr;
