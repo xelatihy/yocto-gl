@@ -69,9 +69,6 @@ unique_ptr<imageview_state> make_imageview(const string& title);
 // Run view
 void run_view(imageview_state* viewer);
 
-// Close viewer
-void close_view(imageview_state* viewer);
-
 // Set image
 void set_image(imageview_state* viewer, const string& name,
     const image<vec4f>& img, float exposure = 0, bool filmic = false);
@@ -90,12 +87,6 @@ using imageview_callback =
     function<void(const string&, const json_value&, const gui_input&)>;
 void set_callback(imageview_state* viewer, const imageview_callback& callback);
 
-// Open and asycn viewer
-struct imageview_state;
-unique_ptr<imageview_state> open_imageview(const string& title);
-// Wait for the viewer to close
-void wait_view(imageview_state* viewer);
-
 }  // namespace yocto
 
 // -----------------------------------------------------------------------------
@@ -111,22 +102,22 @@ void wait_view(imageview_state* viewer);
 // -----------------------------------------------------------------------------
 namespace yocto {
 
-// Image viewer commands
-enum imageview_command_type { quit, set, tonemap, close, param, params };
-struct imageview_command {
-  imageview_command_type type     = imageview_command_type::quit;
-  string                 name     = "";
-  image<vec4f>           hdr      = {};
-  image<vec4b>           ldr      = {};
-  float                  exposure = 0;
-  bool                   filmic   = false;
-  json_value             params   = {};
-  json_value             schema   = {};
-};
+// Input image
+struct imageview_input {
+  string name = "";
 
-// Image view command queue and runner
-using imageview_queue  = concurrent_queue<imageview_command>;
-using imageview_runner = future<void>;
+  bool close = false;
+
+  bool         ichanged = true;
+  image<vec4f> hdr      = {};
+  image<vec4b> ldr      = {};
+  float        exposure = 0;
+  bool         filmic   = false;
+
+  bool       pchanged = true;
+  json_value params   = {};
+  json_value schema   = {};
+};
 
 // An image visualized
 struct imageview_image {
@@ -157,14 +148,15 @@ struct imageview_image {
 
 // Image pointer
 using imageview_imageptr = unique_ptr<imageview_image>;
+using imageview_inputptr = unique_ptr<imageview_input>;
 
 // Simple image viewer
 struct imageview_state {
-  imageview_runner           runner;              // running thread
-  imageview_queue            queue;               // command queue
-  vector<imageview_imageptr> images   = {};       // images
-  imageview_image*           selected = nullptr;  // selected
-  imageview_callback         callback = {};       // params and ui callback
+  vector<imageview_imageptr> images      = {};       // images
+  imageview_image*           selected    = nullptr;  // selected
+  std::mutex                 input_mutex = {};
+  vector<imageview_inputptr> inputs      = {};  // input images
+  imageview_callback         callback    = {};  // params and ui callback
 };
 
 }  // namespace yocto
