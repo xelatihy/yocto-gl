@@ -7,6 +7,9 @@ out1
 /*.exr
 /*.png
 /*.jpg
+/*.ply
+/*.obj
+/*.stl
 .vscode/ipch/
 tests/renderings/*.png
 tests/renderings/*.hdr
