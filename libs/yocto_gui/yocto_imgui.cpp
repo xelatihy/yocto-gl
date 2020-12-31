@@ -1004,10 +1004,7 @@ static bool draw_enum_param(gui_window* win, const char* lbl, json_value& value,
   auto gvalue = value.get<string>();
   // this code should work by break windows
   // auto glabels = labels.get<vector<string>>();
-  // windows fix
-  // auto glabels = vector<string>();
-  // for (auto& label : labels) glabels.push_back(label.get<string>());
-  auto glabels = from_json<vector<string>>(labels);
+  auto glabels = from_json<vector<string>>(labels);  // windows fix
   if (draw_combobox(win, lbl, gvalue, glabels) && !readonly) {
     value = gvalue;
     return true;
