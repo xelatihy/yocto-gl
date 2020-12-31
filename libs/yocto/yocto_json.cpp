@@ -534,8 +534,6 @@ static string get_cliusage(
     auto positional     = is_positional(schema, name);
     if (!positional) {
       decorated_name = "--" + name;
-      if (property.value("type", "") == "boolean")
-        decorated_name += "/--no-" + name;
       if (auto alt = get_alternate(schema, name); !alt.empty())
         decorated_name += ", -" + alt;
     }
@@ -797,9 +795,7 @@ bool parse_cli(json_value& value, const json_value& schema_,
       for (auto& [pname, property] : schema.at("properties").items()) {
         if (property.value("type", "string") == "object") continue;
         if (is_positional(schema, pname)) continue;
-        if (pname != arg && get_alternate(schema, pname) != arg &&
-            pname != "no-" + arg)  // TODO(fabio): fix boolean
-          continue;
+        if (pname != arg && get_alternate(schema, pname) != arg) continue;
         name = pname;
         break;
       }
@@ -807,8 +803,7 @@ bool parse_cli(json_value& value, const json_value& schema_,
       if (value.contains(name)) return cli_error("option already set " + name);
       auto& property = schema.at("properties").at(name);
       if (property.value("type", "string") == "boolean") {
-        if (!parse_clivalue(
-                value[name], arg.find("no-") != 0 ? "true" : "false", property))
+        if (!parse_clivalue(value[name], "true", property))
           return cli_error("bad value for " + name);
       } else if (property.value("type", "string") == "array") {
         auto min_items = (int)property.value("minItems", 0);

@@ -231,16 +231,16 @@ bool make_shape_preset(
 
 // convert params
 struct convert_params {
-  string shape        = "shape.ply";
-  string output       = "out.ply";
-  bool   info         = false;
-  bool   smooth       = false;
-  bool   facet        = false;
+  string shape       = "shape.ply";
+  string output      = "out.ply";
+  bool   info        = false;
+  bool   smooth      = false;
+  bool   facet       = false;
   bool   aspositions = false;
   bool   astriangles = false;
-  vec3f  translate    = {0, 0, 0};
-  vec3f  rotate       = {0, 0, 0};
-  vec3f  scale        = {1, 1, 1};
+  vec3f  translate   = {0, 0, 0};
+  vec3f  rotate      = {0, 0, 0};
+  vec3f  scale       = {1, 1, 1};
 };
 
 // Json IO
@@ -255,10 +255,12 @@ void serialize_value(json_mode mode, json_value& json, convert_params& value,
       "Remove all but positions.");
   serialize_property(
       mode, json, value.astriangles, "astriangles", "Convert to triangles.");
+  serialize_property(mode, json, (array<float, 3>&)value.translate, "translate",
+      "Translate shape.");
   serialize_property(
-      mode, json, (array<float, 3>&)value.translate, "translate", "Translate shape.");
-  serialize_property(mode, json, (array<float, 3>&)value.scale, "scale", "Scale shape.");
-  serialize_property(mode, json, (array<float, 3>&)value.rotate, "rotate", "Rotate shape.");
+      mode, json, (array<float, 3>&)value.scale, "scale", "Scale shape.");
+  serialize_property(
+      mode, json, (array<float, 3>&)value.rotate, "rotate", "Rotate shape.");
   serialize_clipositionals(mode, json, {"shape"});
   serialize_clialternates(mode, json, {{"output", "o"}});
 }
@@ -303,12 +305,12 @@ int run_convert(const convert_params& params) {
   }
 
   // transform
-  if (params.translate != vec3f{0,0,0} || params.rotate != vec3f{0, 0, 0} || params.scale != vec3f{1, 1, 1}) {
+  if (params.translate != vec3f{0, 0, 0} || params.rotate != vec3f{0, 0, 0} ||
+      params.scale != vec3f{1, 1, 1}) {
     print_progress("transform shape", 0, 1);
-    auto translation = translation_frame(
-        params.translate);
-    auto scaling  = scaling_frame(params.scale);
-    auto rotation = rotation_frame({1, 0, 0}, radians(params.rotate.x)) *
+    auto translation = translation_frame(params.translate);
+    auto scaling     = scaling_frame(params.scale);
+    auto rotation    = rotation_frame({1, 0, 0}, radians(params.rotate.x)) *
                     rotation_frame({0, 0, 1}, radians(params.rotate.z)) *
                     rotation_frame({0, 1, 0}, radians(params.rotate.y));
     auto xform = translation * scaling * rotation;
@@ -358,16 +360,15 @@ int run_convert(const convert_params& params) {
 
 // fvconvert params
 struct fvconvert_params {
-  string shape        = "shape.obj";
-  string output       = "out.obj";
-  bool   info         = false;
-  bool   smooth       = false;
-  bool   facet        = false;
-  bool   to_positions = false;
-  float  translate_x = 0, translate_y = 0, translate_z = 0;
-  float  rotate_x = 0, rotate_y = 0, rotate_z = 0;
-  float  scale_x = 1, scale_y = 1, scale_z = 1;
-  float  scale_u = 1;
+  string shape       = "shape.obj";
+  string output      = "out.obj";
+  bool   info        = false;
+  bool   smooth      = false;
+  bool   facet       = false;
+  bool   aspositions = false;
+  vec3f  translate   = {0, 0, 0};
+  vec3f  rotate      = {0, 0, 0};
+  vec3f  scale       = {1, 1, 1};
 };
 
 // Json IO
@@ -376,6 +377,16 @@ void serialize_value(json_mode mode, json_value& json, fvconvert_params& value,
   serialize_object(mode, json, value, description);
   serialize_property(mode, json, value.shape, "shape", "Input shape.", true);
   serialize_property(mode, json, value.output, "output", "Output shape.");
+  serialize_property(mode, json, value.smooth, "smooth", "Smooth normals.");
+  serialize_property(mode, json, value.facet, "facet", "Facet normals.");
+  serialize_property(mode, json, value.aspositions, "aspositions",
+      "Remove all but positions.");
+  serialize_property(mode, json, (array<float, 3>&)value.translate, "translate",
+      "Translate shape.");
+  serialize_property(
+      mode, json, (array<float, 3>&)value.scale, "scale", "Scale shape.");
+  serialize_property(
+      mode, json, (array<float, 3>&)value.rotate, "rotate", "Rotate shape.");
   serialize_clipositionals(mode, json, {"shape"});
   serialize_clialternates(mode, json, {{"output", "o"}});
 }
@@ -397,7 +408,7 @@ int run_fvconvert(const fvconvert_params& params) {
   print_progress("load shape", 1, 1);
 
   // remove data
-  if (params.to_positions) {
+  if (params.aspositions) {
     shape.normals       = {};
     shape.texcoords     = {};
     shape.quadsnorm     = {};
@@ -412,23 +423,17 @@ int run_fvconvert(const fvconvert_params& params) {
   }
 
   // transform
-  if (params.translate_x != 0 || params.translate_y != 0 ||
-      params.translate_z != 0 || params.rotate_x != 0 || params.rotate_y != 0 ||
-      params.rotate_z != 0 || params.scale_x != 1 || params.scale_y != 1 ||
-      params.scale_z != 1 || params.scale_u != 1) {
+  if (params.translate != vec3f{0, 0, 0} || params.rotate != vec3f{0, 0, 0} ||
+      params.scale != vec3f{1, 1, 1}) {
     print_progress("transform shape", 0, 1);
-    auto translation = translation_frame(
-        {params.translate_x, params.translate_y, params.translate_z});
-    auto scaling  = scaling_frame({params.scale_x * params.scale_u,
-        params.scale_y * params.scale_u, params.scale_z * params.scale_u});
-    auto rotation = rotation_frame({1, 0, 0}, radians(params.rotate_x)) *
-                    rotation_frame({0, 0, 1}, radians(params.rotate_z)) *
-                    rotation_frame({0, 1, 0}, radians(params.rotate_y));
+    auto translation = translation_frame(params.translate);
+    auto scaling     = scaling_frame(params.scale);
+    auto rotation    = rotation_frame({1, 0, 0}, radians(params.rotate.x)) *
+                    rotation_frame({0, 0, 1}, radians(params.rotate.z)) *
+                    rotation_frame({0, 1, 0}, radians(params.rotate.y));
     auto xform = translation * scaling * rotation;
     for (auto& p : shape.positions) p = transform_point(xform, p);
-    auto nonuniform_scaling = params.scale_x != params.scale_y ||
-                              params.scale_y != params.scale_z ||
-                              params.scale_x != params.scale_z;
+    auto nonuniform_scaling = min(params.scale) != max(params.scale);
     for (auto& n : shape.normals)
       n = transform_normal(xform, n, nonuniform_scaling);
     print_progress("transform shape", 1, 1);
