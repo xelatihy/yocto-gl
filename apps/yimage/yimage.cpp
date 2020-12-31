@@ -341,7 +341,7 @@ int run_convert(const convert_params& params) {
   return 0;
 }
 
-// convert params
+// view params
 struct view_params {
   vector<string> images = {"image.png"};
   string         output = "out.png";
@@ -360,14 +360,14 @@ void serialize_value(json_mode mode, json_value& json, view_params& value,
 
 #ifndef YOCTO_OPENGL
 
-// convert images
+// view images
 int run_view(const view_params& params) {
   return print_fatal("Opengl not compiled");
 }
 
 #else
 
-// convert images
+// view images
 int run_view(const view_params& params) {
   // open viewer
   auto viewer_guard = make_imageview("yimage");
@@ -400,6 +400,107 @@ int run_view(const view_params& params) {
       set_image(viewer, filename, ldr);
     }
   }
+
+  // run view
+  run_view(viewer);
+
+  // done
+  return 0;
+}
+
+#endif
+
+// grade params
+struct grade_params : colorgrade_params {
+  string image  = "image.png";
+  string output = "out.png";
+  bool   logo   = false;
+};
+
+// Json IO
+void serialize_value(json_mode mode, json_value& json, colorgrade_params& value,
+    const string& description) {
+  serialize_object(mode, json, value, description);
+  serialize_property(mode, json, value.exposure, "exposure", "Hdr exposure");
+  serialize_property(
+      mode, json, (array<float, 3>&)value.tint, "tint", "Hdr tint");
+  serialize_property(
+      mode, json, value.lincontrast, "lincontrast", "Hdr lin contrast");
+  serialize_property(
+      mode, json, value.logcontrast, "logcontrast", "Hdr log contrast");
+  serialize_property(
+      mode, json, value.linsaturation, "linsaturation", "Hdr saturation");
+  serialize_property(mode, json, value.filmic, "filmic", "Hdr filmic curve");
+  serialize_property(mode, json, value.srgb, "srgb", "sRGB coversion");
+  serialize_property(mode, json, value.contrast, "contrast", "Ldr contrast");
+  serialize_property(
+      mode, json, value.saturation, "saturation", "Ldr saturation");
+  serialize_property(mode, json, value.shadows, "shadows", "Ldr shadows");
+  serialize_property(mode, json, value.midtones, "midtones", "Ldr midtones");
+  serialize_property(
+      mode, json, value.highlights, "highlights", "Ldr highlights");
+  serialize_property(mode, json, (array<float, 3>&)value.shadows_color,
+      "shadows_color", "Ldr shadows color");
+  serialize_property(mode, json, (array<float, 3>&)value.midtones_color,
+      "midtones_color", "Ldr sidtones color");
+  serialize_property(mode, json, (array<float, 3>&)value.highlights_color,
+      "highlights_color", "Ldr sighlights color");
+}
+
+// Json IO
+void serialize_value(json_mode mode, json_value& json, grade_params& value,
+    const string& description) {
+  serialize_object(mode, json, value, description);
+  serialize_property(mode, json, value.image, "image", "Input image.", true);
+  serialize_property(mode, json, value.output, "output", "Output image.");
+  serialize_value(mode, json, (colorgrade_params&)value, description);
+  serialize_clipositionals(mode, json, {"image"});
+  serialize_clialternates(mode, json, {{"output", "o"}});
+}
+
+#ifndef YOCTO_OPENGL
+
+// grade images
+int run_grade(const grade_params& params) {
+  return print_fatal("Opengl not compiled");
+}
+
+#else
+
+// grade images
+int run_grade(const grade_params& params) {
+  // open viewer
+  auto viewer_guard = make_imageview("yimage");
+  auto viewer       = viewer_guard.get();
+
+  // load image
+  auto img     = image<vec4f>{};
+  auto ioerror = string{};
+  if (is_preset_filename(params.image)) {
+    if (!make_image_preset(path_basename(params.image), img, ioerror))
+      return print_fatal(ioerror);
+  } else {
+    if (!load_image(params.image, img, ioerror)) return print_fatal(ioerror);
+  }
+
+  // grade image
+  auto graded = image<vec4b>{img.imsize()};
+  colorgrade_image_mt(graded, img, true, params);
+
+  // set view
+  set_image(viewer, params.image, graded);
+  set_params(
+      viewer, params.image, to_json(params), to_schema(params, "Color grade"));
+
+  // set callback
+  set_callback(viewer, [&params, &graded, &img, viewer](const string& name,
+                           const json_value& uiparams, const gui_input&) {
+    if (uiparams.is_null()) return;
+    serialize_value(json_mode::from_json, (json_value&)uiparams,
+        (colorgrade_params&)params, "");
+    colorgrade_image_mt(graded, img, true, params);
+    set_image(viewer, name, graded);
+  });
 
   // run view
   run_view(viewer);
@@ -569,6 +670,7 @@ struct app_params {
   string          command  = "convert";
   convert_params  convert  = {};
   view_params     view     = {};
+  grade_params    grade    = {};
   diff_params     diff     = {};
   setalpha_params setalpha = {};
 };
@@ -580,6 +682,7 @@ void serialize_value(json_mode mode, json_value& json, app_params& value,
   serialize_command(mode, json, value.command, "command", "Command.");
   serialize_property(mode, json, value.convert, "convert", "Convert images.");
   serialize_property(mode, json, value.view, "view", "View images.");
+  serialize_property(mode, json, value.grade, "grade", "Grade images.");
   serialize_property(mode, json, value.diff, "diff", "Diff two images.");
   serialize_property(
       mode, json, value.setalpha, "setalpha", "Set alpha in images.");
@@ -595,6 +698,8 @@ int main(int argc, const char* argv[]) {
     return run_convert(params.convert);
   } else if (params.command == "view") {
     return run_view(params.view);
+  } else if (params.command == "grade") {
+    return run_grade(params.grade);
   } else if (params.command == "diff") {
     return run_diff(params.diff);
   } else if (params.command == "setalpha") {

@@ -316,13 +316,13 @@ void set_shape(bvh_scene* bvh, int shape_id, const vector<int>& points,
   shape->lines      = as_view ? bvh_span{lines} : bvh_span{shape->lines_data};
   shape->triangles_data = as_view ? vector<vec3i>{} : triangles;
   shape->triangles      = as_view ? bvh_span{triangles}
-                             : bvh_span{shape->triangles_data};
-  shape->quads_data = as_view ? vector<vec4i>{} : quads;
-  shape->quads      = as_view ? bvh_span{quads} : bvh_span{shape->quads_data};
+                                  : bvh_span{shape->triangles_data};
+  shape->quads_data     = as_view ? vector<vec4i>{} : quads;
+  shape->quads = as_view ? bvh_span{quads} : bvh_span{shape->quads_data};
   shape->positions_data = as_view ? vector<vec3f>{} : positions;
   shape->positions      = as_view ? bvh_span{positions}
-                             : bvh_span{shape->positions_data};
-  shape->radius_data = as_view ? vector<float>{} : radius;
+                                  : bvh_span{shape->positions_data};
+  shape->radius_data    = as_view ? vector<float>{} : radius;
   shape->radius = as_view ? bvh_span{radius} : bvh_span{shape->radius_data};
 }
 
@@ -757,7 +757,7 @@ void build_bvh(bvh_scene* scene, const bvh_params& params) {
     auto  instance = scene->instance_cb(idx);
     auto& shape    = scene->shapes[instance.shape];
     bboxes[idx]    = shape->bvh.nodes.empty() ? invalidb3f
-                                           : transform_bbox(instance.frame,
+                                              : transform_bbox(instance.frame,
                                                  shape->bvh.nodes[0].bbox);
   }
 

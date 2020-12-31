@@ -776,10 +776,10 @@ trace_vsdf eval_vsdf(
   auto trdepth      = material->trdepth;
 
   // factors
-  auto vsdf    = trace_vsdf{};
-  vsdf.density = ((transmission != 0 || translucency != 0) && !thin)
-                     ? -log(clamp(color, 0.0001f, 1.0f)) / trdepth
-                     : zero3f;
+  auto vsdf       = trace_vsdf{};
+  vsdf.density    = ((transmission != 0 || translucency != 0) && !thin)
+                        ? -log(clamp(color, 0.0001f, 1.0f)) / trdepth
+                        : zero3f;
   vsdf.scatter    = scattering;
   vsdf.anisotropy = scanisotropy;
 
@@ -1150,7 +1150,7 @@ static vec3f sample_lights(const trace_scene* scene, const trace_lights* lights,
     auto instance = light->instance;
     auto element  = sample_discrete_cdf(light->elements_cdf, rel);
     auto uv       = (!instance->shape->triangles.empty()) ? sample_triangle(ruv)
-                                                    : ruv;
+                                                          : ruv;
     auto lposition = eval_position(light->instance, element, uv);
     return normalize(lposition - position);
   } else if (light->environment != nullptr) {
@@ -1744,9 +1744,9 @@ void trace_sample(trace_state* state, const trace_scene* scene,
     sample = sample * (params.clamp / max(sample));
   state->accumulation[ij] += sample;
   state->samples[ij] += 1;
-  auto radiance = state->accumulation[ij].w != 0
-                      ? xyz(state->accumulation[ij]) / state->accumulation[ij].w
-                      : zero3f;
+  auto radiance     = state->accumulation[ij].w != 0
+                          ? xyz(state->accumulation[ij]) / state->accumulation[ij].w
+                          : zero3f;
   auto coverage     = state->accumulation[ij].w / state->samples[ij];
   state->render[ij] = {radiance.x, radiance.y, radiance.z, coverage};
 }

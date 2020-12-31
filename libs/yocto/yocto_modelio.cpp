@@ -1680,10 +1680,9 @@ bool load_obj(const string& filename, obj_scene* obj, string& error,
       }
       // grab shape and add element
       auto  shape   = obj->shapes.back();
-      auto& element = (cmd == "f")
-                          ? shape->faces.emplace_back()
-                          : (cmd == "l") ? shape->lines.emplace_back()
-                                         : shape->points.emplace_back();
+      auto& element = (cmd == "f")   ? shape->faces.emplace_back()
+                      : (cmd == "l") ? shape->lines.emplace_back()
+                                     : shape->points.emplace_back();
       // get element material or add if needed
       if (!geom_only) {
         if (mname.empty() && empty_material == nullptr) {
@@ -2822,8 +2821,8 @@ bool save_stl(
            triangle_idx++) {
         auto& triangle = shape->triangles[triangle_idx];
         auto  fnormal  = !shape->fnormals.empty()
-                           ? shape->fnormals[triangle_idx]
-                           : triangle_normal(shape->positions[triangle.x],
+                             ? shape->fnormals[triangle_idx]
+                             : triangle_normal(shape->positions[triangle.x],
                                  shape->positions[triangle.y],
                                  shape->positions[triangle.z]);
         if (!write_value(fs, fnormal)) return write_error();
@@ -2844,8 +2843,8 @@ bool save_stl(
            triangle_idx++) {
         auto& triangle = shape->triangles[triangle_idx];
         auto  fnormal  = !shape->fnormals.empty()
-                           ? shape->fnormals[triangle_idx]
-                           : triangle_normal(shape->positions[triangle.x],
+                             ? shape->fnormals[triangle_idx]
+                             : triangle_normal(shape->positions[triangle.x],
                                  shape->positions[triangle.y],
                                  shape->positions[triangle.z]);
         if (!format_values(fs, "facet normal {}\n", fnormal))

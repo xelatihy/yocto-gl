@@ -1100,9 +1100,9 @@ bool draw_params(gui_window* win, const char* lbl, json_value& value,
       if (value.size() == 2)
         return draw_number_param<array<float, 2>>(win, lbl, value, readonly);
       if (value.size() == 3)
-        return draw_number_param<array<float, 2>>(win, lbl, value, readonly);
+        return draw_number_param<array<float, 3>>(win, lbl, value, readonly);
       if (value.size() == 4)
-        return draw_number_param<array<float, 2>>(win, lbl, value, readonly);
+        return draw_number_param<array<float, 4>>(win, lbl, value, readonly);
       return false;  // skip
     } else {
       return false;  // skip

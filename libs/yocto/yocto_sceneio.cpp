@@ -1399,8 +1399,8 @@ static bool load_json_scene(const string& filename, sceneio_scene* scene,
       for (auto [name, element] : iterate_object(group)) {
         auto material_it = material_map.find(string{name});
         auto material    = (material_it == material_map.end())
-                            ? add_material(scene, string{name})
-                            : material_it->second.first;
+                               ? add_material(scene, string{name})
+                               : material_it->second.first;
         for (auto [key, value] : iterate_object(element)) {
           if (key == "emission") {
             get_value(value, material->emission);
