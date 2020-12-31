@@ -52,7 +52,7 @@ bool make_mesh_preset(vector<vec3i>& triangles, vector<vec3f>& positions,
     triangles = quads_to_triangles(shape.quadspos);
     positions = shape.positions;
     normals   = (shape.quadspos == shape.quadsnorm) ? shape.normals
-                                                  : vector<vec3f>{};
+                                                    : vector<vec3f>{};
     texcoords = (shape.quadspos == shape.quadstexcoord) ? shape.texcoords
                                                         : vector<vec2f>{};
   };

@@ -824,19 +824,17 @@ inline json_value::operator double() const {
   if (_type != json_type::nfloat && _type != json_type::ninteger &&
       _type != json_type::nunsigned)
     throw json_error{"number expected"};
-  return _type == json_type::nfloat
-             ? (double)_real
-             : _type == json_type::ninteger ? (double)_integer
-                                            : (double)_unsigned;
+  return _type == json_type::nfloat     ? (double)_real
+         : _type == json_type::ninteger ? (double)_integer
+                                        : (double)_unsigned;
 }
 inline json_value::operator float() const {
   if (_type != json_type::nfloat && _type != json_type::ninteger &&
       _type != json_type::nunsigned)
     throw json_error{"number expected"};
-  return _type == json_type::nfloat
-             ? (float)_real
-             : _type == json_type::ninteger ? (float)_integer
-                                            : (float)_unsigned;
+  return _type == json_type::nfloat     ? (float)_real
+         : _type == json_type::ninteger ? (float)_integer
+                                        : (float)_unsigned;
 }
 inline json_value::operator bool() const {
   if (_type != json_type::boolean) throw json_error{"boolean expected"};
@@ -1816,10 +1814,9 @@ inline bool get_number(json_ctview json, double& value) {
   if (jst != json_type::nfloat && jst != json_type::ninteger &&
       jst != json_type::nunsigned)
     return set_error(json, "number expected");
-  value = (jst == json_type::nfloat)
-              ? (double)jsv._real
-              : (jst == json_type::ninteger) ? (double)jsv._integer
-                                             : (double)jsv._unsigned;
+  value = (jst == json_type::nfloat)     ? (double)jsv._real
+          : (jst == json_type::ninteger) ? (double)jsv._integer
+                                         : (double)jsv._unsigned;
   return true;
 }
 inline bool get_integer(json_ctview json, int32_t& value) {
@@ -1849,10 +1846,9 @@ inline bool get_number(json_ctview json, float& value) {
   if (jst != json_type::nfloat && jst != json_type::ninteger &&
       jst != json_type::nunsigned)
     return set_error(json, "number expected");
-  value = (jst == json_type::nfloat)
-              ? (float)jsv._real
-              : (jst == json_type::ninteger) ? (float)jsv._integer
-                                             : (float)jsv._unsigned;
+  value = (jst == json_type::nfloat)     ? (float)jsv._real
+          : (jst == json_type::ninteger) ? (float)jsv._integer
+                                         : (float)jsv._unsigned;
   return true;
 }
 

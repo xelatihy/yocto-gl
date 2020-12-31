@@ -4804,8 +4804,8 @@ inline vec<T, 3> sample_microfacet(T roughness, const vec<T, 3>& normal,
     // zero)
     auto lensq = Vh.x * Vh.x + Vh.y * Vh.y;
     auto T1    = lensq > 0 ? vec<T, 3>{-Vh.y, Vh.x, 0} * (1 / sqrt(lensq))
-                        : vec<T, 3>{1, 0, 0};
-    auto T2 = cross(Vh, T1);
+                           : vec<T, 3>{1, 0, 0};
+    auto T2    = cross(Vh, T1);
     // Section 4.2: parameterization of the projected area
     auto r   = sqrt(rn.y);
     auto phi = 2 * (T)pi * rn.x;

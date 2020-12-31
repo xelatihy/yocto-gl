@@ -937,7 +937,7 @@ image<vec4f> make_bumps(
     };
     auto dist = clamp(length(uv - center), 0.0f, thick) / thick;
     auto val  = uv.x <= 0.5f != uv.y <= 0.5f ? (1 + sqrt(1 - dist)) / 2
-                                            : (dist * dist) / 2;
+                                             : (dist * dist) / 2;
     return lerp(color0, color1, val);
   });
 }
