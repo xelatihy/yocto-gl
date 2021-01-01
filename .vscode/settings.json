@@ -110,7 +110,6 @@
       "url": "./scripts/scene.schema.json"
     }
   ],
-  "editor.formatOnSave": true,
   "cpplint.filters": [
     "-runtime/references",
     "-legal/copyright",
