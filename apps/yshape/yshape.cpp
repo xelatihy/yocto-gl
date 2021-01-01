@@ -565,7 +565,7 @@ void serialize_value(json_mode mode, json_value& json, app_params& value,
   serialize_command(mode, json, value.command, "command", "Command.");
   serialize_property(mode, json, value.convert, "convert", "Convert shapes.");
   serialize_property(
-      mode, json, value.convert, "convert", "Convert face-varying shapes.");
+      mode, json, value.fvconvert, "fvconvert", "Convert face-varying shapes.");
   serialize_property(mode, json, value.view, "view", "View shapes.");
 }
 
