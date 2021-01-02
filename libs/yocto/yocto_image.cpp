@@ -63,12 +63,6 @@ image_data make_ldr(size_t width, size_t height) {
 bool is_hdr(const image_data& image) { return !image.hdr.empty(); }
 bool is_ldr(const image_data& image) { return !image.ldr.empty(); }
 
-// Evaluates an image at a point `uv`.
-vec4f eval_image(const image_data& image, const vec2f& uv, bool as_linear,
-    bool no_interpolation, bool clamp_to_edge) {
-  // TODO(fabio): implement this
-}
-
 // Apply tone mapping returning a float or byte image.
 image_data tonemap_image(const image_data& image, float exposure, bool filmic) {
   if (is_ldr(image)) return image;
