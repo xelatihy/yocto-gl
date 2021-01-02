@@ -73,6 +73,171 @@ void view_image(
   run_viewer(viewer);
 }
 
+// Open a window and show a shape via path tracing
+void view_shape(const string& title, const string& name,
+    const generic_shape& shape, bool addsky,
+    const progress_callback& progress_cb) {
+  // initialize path tracer scene
+  auto scene_guard = std::make_unique<sceneio_scene>();
+  auto scene       = scene_guard.get();
+  print_progress("create scene", 0, 1);
+  auto ioshape       = add_shape(scene, "shape");
+  ioshape->points    = shape.points;
+  ioshape->lines     = shape.lines;
+  ioshape->triangles = shape.triangles;
+  ioshape->quads     = shape.quads;
+  ioshape->positions = shape.positions;
+  ioshape->normals   = shape.normals;
+  ioshape->texcoords = shape.texcoords;
+  ioshape->colors    = shape.colors;
+  ioshape->radius    = shape.radius;
+  add_camera(scene);
+  add_materials(scene);
+  if (addsky) add_sky(scene);
+  print_progress("create scene", 0, 1);
+
+  // run view
+  view_scene(title, name, scene, scene->cameras[0]->name, progress_cb);
+}
+
+// Construct a scene from io
+static void init_scene(trace_scene* scene, const sceneio_scene* ioscene,
+    trace_camera*& camera, const sceneio_camera* iocamera,
+    progress_callback progress_cb = {}) {
+  // handle progress
+  auto progress = vec2i{
+      0, (int)ioscene->cameras.size() + (int)ioscene->environments.size() +
+             (int)ioscene->materials.size() + (int)ioscene->textures.size() +
+             (int)ioscene->shapes.size() + (int)ioscene->instances.size()};
+
+  auto camera_map     = unordered_map<const sceneio_camera*, trace_camera*>{};
+  camera_map[nullptr] = nullptr;
+  for (auto iocamera : ioscene->cameras) {
+    if (progress_cb)
+      progress_cb("converting cameras", progress.x++, progress.y);
+    auto camera          = add_camera(scene);
+    camera->frame        = iocamera->frame;
+    camera->lens         = iocamera->lens;
+    camera->aspect       = iocamera->aspect;
+    camera->film         = iocamera->film;
+    camera->orthographic = iocamera->orthographic;
+    camera->aperture     = iocamera->aperture;
+    camera->focus        = iocamera->focus;
+    camera_map[iocamera] = camera;
+  }
+
+  auto texture_map = unordered_map<const sceneio_texture*, trace_texture*>{};
+  texture_map[nullptr] = nullptr;
+  for (auto iotexture : ioscene->textures) {
+    if (progress_cb)
+      progress_cb("converting textures", progress.x++, progress.y);
+    auto texture           = add_texture(scene);
+    texture->hdr           = iotexture->hdr;
+    texture->ldr           = iotexture->ldr;
+    texture_map[iotexture] = texture;
+  }
+
+  auto material_map = unordered_map<const sceneio_material*, trace_material*>{};
+  material_map[nullptr] = nullptr;
+  for (auto iomaterial : ioscene->materials) {
+    if (progress_cb)
+      progress_cb("converting materials", progress.x++, progress.y);
+    auto material              = add_material(scene);
+    material->emission         = iomaterial->emission;
+    material->color            = iomaterial->color;
+    material->specular         = iomaterial->specular;
+    material->roughness        = iomaterial->roughness;
+    material->metallic         = iomaterial->metallic;
+    material->ior              = iomaterial->ior;
+    material->spectint         = iomaterial->spectint;
+    material->coat             = iomaterial->coat;
+    material->transmission     = iomaterial->transmission;
+    material->translucency     = iomaterial->translucency;
+    material->scattering       = iomaterial->scattering;
+    material->scanisotropy     = iomaterial->scanisotropy;
+    material->trdepth          = iomaterial->trdepth;
+    material->opacity          = iomaterial->opacity;
+    material->thin             = iomaterial->thin;
+    material->emission_tex     = texture_map.at(iomaterial->emission_tex);
+    material->color_tex        = texture_map.at(iomaterial->color_tex);
+    material->specular_tex     = texture_map.at(iomaterial->specular_tex);
+    material->metallic_tex     = texture_map.at(iomaterial->metallic_tex);
+    material->roughness_tex    = texture_map.at(iomaterial->roughness_tex);
+    material->transmission_tex = texture_map.at(iomaterial->transmission_tex);
+    material->translucency_tex = texture_map.at(iomaterial->translucency_tex);
+    material->spectint_tex     = texture_map.at(iomaterial->spectint_tex);
+    material->scattering_tex   = texture_map.at(iomaterial->scattering_tex);
+    material->coat_tex         = texture_map.at(iomaterial->coat_tex);
+    material->opacity_tex      = texture_map.at(iomaterial->opacity_tex);
+    material->normal_tex       = texture_map.at(iomaterial->normal_tex);
+    material_map[iomaterial]   = material;
+  }
+
+  auto shape_map     = unordered_map<const sceneio_shape*, trace_shape*>{};
+  shape_map[nullptr] = nullptr;
+  for (auto ioshape : ioscene->shapes) {
+    if (progress_cb) progress_cb("converting shapes", progress.x++, progress.y);
+    auto shape              = add_shape(scene);
+    shape->points           = ioshape->points;
+    shape->lines            = ioshape->lines;
+    shape->triangles        = ioshape->triangles;
+    shape->quads            = ioshape->quads;
+    shape->quadspos         = ioshape->quadspos;
+    shape->quadsnorm        = ioshape->quadsnorm;
+    shape->quadstexcoord    = ioshape->quadstexcoord;
+    shape->positions        = ioshape->positions;
+    shape->normals          = ioshape->normals;
+    shape->texcoords        = ioshape->texcoords;
+    shape->colors           = ioshape->colors;
+    shape->radius           = ioshape->radius;
+    shape->tangents         = ioshape->tangents;
+    shape->subdivisions     = ioshape->subdivisions;
+    shape->catmullclark     = ioshape->catmullclark;
+    shape->smooth           = ioshape->smooth;
+    shape->displacement     = ioshape->displacement;
+    shape->displacement_tex = texture_map.at(ioshape->displacement_tex);
+    shape_map[ioshape]      = shape;
+  }
+
+  for (auto ioinstance : ioscene->instances) {
+    if (progress_cb)
+      progress_cb("converting instances", progress.x++, progress.y);
+    auto instance      = add_instance(scene);
+    instance->frame    = ioinstance->frame;
+    instance->shape    = shape_map.at(ioinstance->shape);
+    instance->material = material_map.at(ioinstance->material);
+  }
+
+  for (auto ioenvironment : ioscene->environments) {
+    if (progress_cb)
+      progress_cb("converting environments", progress.x++, progress.y);
+    auto environment          = add_environment(scene);
+    environment->frame        = ioenvironment->frame;
+    environment->emission     = ioenvironment->emission;
+    environment->emission_tex = texture_map.at(ioenvironment->emission_tex);
+  }
+
+  // done
+  if (progress_cb) progress_cb("converting done", progress.x++, progress.y);
+
+  // get camera
+  camera = camera_map.at(iocamera);
+}
+
+// Open a window and show an scene via path tracing
+void view_scene(const string& title, const string& name,
+    const sceneio_scene* scene, const string& camera_,
+    const progress_callback& progress_cb) {
+  // get camera
+  auto camera = get_camera(scene, camera_);
+
+  // scene conversion
+  auto ptscene_guard = std::make_unique<trace_scene>();
+  auto ptscene       = ptscene_guard.get();
+  auto ptcamera      = (trace_camera*)nullptr;
+  init_scene(ptscene, scene, ptcamera, camera, progress_cb);
+}
+
 // Open a window and show an scene via path tracing
 void view_scene(const string& title, const string& name,
     const trace_scene* scene, const trace_camera* camera_,

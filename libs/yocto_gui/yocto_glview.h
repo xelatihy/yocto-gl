@@ -37,6 +37,8 @@
 #include <yocto/yocto_image.h>
 #include <yocto/yocto_json.h>
 #include <yocto/yocto_parallel.h>
+#include <yocto/yocto_sceneio.h>
+#include <yocto/yocto_shape.h>
 #include <yocto/yocto_trace.h>
 #include <yocto_gui/yocto_imgui.h>
 #include <yocto_gui/yocto_opengl.h>
@@ -67,6 +69,16 @@ namespace yocto {
 // Open a window and show an image
 void view_image(const image<vec4f>& img);
 void view_image(const image<vec4b>& img);
+
+// Open a window and show a shape via path tracing
+void view_shape(const string& title, const string& name,
+    const generic_shape& shape, bool addsky = false,
+    const progress_callback& progress_cb = {});
+
+// Open a window and show an scene via path tracing
+void view_scene(const string& title, const string& name,
+    const sceneio_scene* scene, const string& camera = "",
+    const progress_callback& progress_cb = {});
 
 // Open a window and show an scene via path tracing
 void view_scene(const string& title, const string& name,
@@ -103,7 +115,8 @@ void set_widgets(ogl_imageviewer* viewer, const string& name,
 // Set ui callback
 using ogl_imageviewer_callback =
     function<void(const string&, const json_value&, const gui_input&)>;
-void set_callback(ogl_imageviewer* viewer, const ogl_imageviewer_callback& callback);
+void set_callback(
+    ogl_imageviewer* viewer, const ogl_imageviewer_callback& callback);
 
 }  // namespace yocto
 
@@ -171,10 +184,10 @@ using ogl_imageinput_ptr = unique_ptr<ogl_imageinput>;
 // Simple image viewer
 struct ogl_imageviewer {
   vector<ogl_imageview_ptr>  views       = {};       // views
-  ogl_imageview*            selected    = nullptr;  // selected
+  ogl_imageview*             selected    = nullptr;  // selected
   std::mutex                 input_mutex = {};
   vector<ogl_imageinput_ptr> inputs      = {};  // input images
-  ogl_imageviewer_callback         callback    = {};  // params and ui callback
+  ogl_imageviewer_callback   callback    = {};  // params and ui callback
 };
 
 }  // namespace yocto

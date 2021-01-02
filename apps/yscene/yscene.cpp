@@ -30,7 +30,6 @@
 #include <yocto/yocto_math.h>
 #include <yocto/yocto_sceneio.h>
 #include <yocto/yocto_shape.h>
-#include <yocto/yocto_trace.h>
 #if YOCTO_OPENGL == 1
 #include <yocto_gui/yocto_glview.h>
 #endif
@@ -778,130 +777,6 @@ bool make_preset(sceneio_scene* scene, const string& type, string& error) {
   return true;
 }
 
-// Construct a scene from io
-void init_scene(trace_scene* scene, sceneio_scene* ioscene,
-    trace_camera*& camera, sceneio_camera* iocamera,
-    progress_callback progress_cb = {}) {
-  // handle progress
-  auto progress = vec2i{
-      0, (int)ioscene->cameras.size() + (int)ioscene->environments.size() +
-             (int)ioscene->materials.size() + (int)ioscene->textures.size() +
-             (int)ioscene->shapes.size() + (int)ioscene->instances.size()};
-
-  auto camera_map     = unordered_map<sceneio_camera*, trace_camera*>{};
-  camera_map[nullptr] = nullptr;
-  for (auto iocamera : ioscene->cameras) {
-    if (progress_cb)
-      progress_cb("converting cameras", progress.x++, progress.y);
-    auto camera          = add_camera(scene);
-    camera->frame        = iocamera->frame;
-    camera->lens         = iocamera->lens;
-    camera->aspect       = iocamera->aspect;
-    camera->film         = iocamera->film;
-    camera->orthographic = iocamera->orthographic;
-    camera->aperture     = iocamera->aperture;
-    camera->focus        = iocamera->focus;
-    camera_map[iocamera] = camera;
-  }
-
-  auto texture_map     = unordered_map<sceneio_texture*, trace_texture*>{};
-  texture_map[nullptr] = nullptr;
-  for (auto iotexture : ioscene->textures) {
-    if (progress_cb)
-      progress_cb("converting textures", progress.x++, progress.y);
-    auto texture           = add_texture(scene);
-    texture->hdr           = iotexture->hdr;
-    texture->ldr           = iotexture->ldr;
-    texture_map[iotexture] = texture;
-  }
-
-  auto material_map     = unordered_map<sceneio_material*, trace_material*>{};
-  material_map[nullptr] = nullptr;
-  for (auto iomaterial : ioscene->materials) {
-    if (progress_cb)
-      progress_cb("converting materials", progress.x++, progress.y);
-    auto material              = add_material(scene);
-    material->emission         = iomaterial->emission;
-    material->color            = iomaterial->color;
-    material->specular         = iomaterial->specular;
-    material->roughness        = iomaterial->roughness;
-    material->metallic         = iomaterial->metallic;
-    material->ior              = iomaterial->ior;
-    material->spectint         = iomaterial->spectint;
-    material->coat             = iomaterial->coat;
-    material->transmission     = iomaterial->transmission;
-    material->translucency     = iomaterial->translucency;
-    material->scattering       = iomaterial->scattering;
-    material->scanisotropy     = iomaterial->scanisotropy;
-    material->trdepth          = iomaterial->trdepth;
-    material->opacity          = iomaterial->opacity;
-    material->thin             = iomaterial->thin;
-    material->emission_tex     = texture_map.at(iomaterial->emission_tex);
-    material->color_tex        = texture_map.at(iomaterial->color_tex);
-    material->specular_tex     = texture_map.at(iomaterial->specular_tex);
-    material->metallic_tex     = texture_map.at(iomaterial->metallic_tex);
-    material->roughness_tex    = texture_map.at(iomaterial->roughness_tex);
-    material->transmission_tex = texture_map.at(iomaterial->transmission_tex);
-    material->translucency_tex = texture_map.at(iomaterial->translucency_tex);
-    material->spectint_tex     = texture_map.at(iomaterial->spectint_tex);
-    material->scattering_tex   = texture_map.at(iomaterial->scattering_tex);
-    material->coat_tex         = texture_map.at(iomaterial->coat_tex);
-    material->opacity_tex      = texture_map.at(iomaterial->opacity_tex);
-    material->normal_tex       = texture_map.at(iomaterial->normal_tex);
-    material_map[iomaterial]   = material;
-  }
-
-  auto shape_map     = unordered_map<sceneio_shape*, trace_shape*>{};
-  shape_map[nullptr] = nullptr;
-  for (auto ioshape : ioscene->shapes) {
-    if (progress_cb) progress_cb("converting shapes", progress.x++, progress.y);
-    auto shape              = add_shape(scene);
-    shape->points           = ioshape->points;
-    shape->lines            = ioshape->lines;
-    shape->triangles        = ioshape->triangles;
-    shape->quads            = ioshape->quads;
-    shape->quadspos         = ioshape->quadspos;
-    shape->quadsnorm        = ioshape->quadsnorm;
-    shape->quadstexcoord    = ioshape->quadstexcoord;
-    shape->positions        = ioshape->positions;
-    shape->normals          = ioshape->normals;
-    shape->texcoords        = ioshape->texcoords;
-    shape->colors           = ioshape->colors;
-    shape->radius           = ioshape->radius;
-    shape->tangents         = ioshape->tangents;
-    shape->subdivisions     = ioshape->subdivisions;
-    shape->catmullclark     = ioshape->catmullclark;
-    shape->smooth           = ioshape->smooth;
-    shape->displacement     = ioshape->displacement;
-    shape->displacement_tex = texture_map.at(ioshape->displacement_tex);
-    shape_map[ioshape]      = shape;
-  }
-
-  for (auto ioinstance : ioscene->instances) {
-    if (progress_cb)
-      progress_cb("converting instances", progress.x++, progress.y);
-    auto instance      = add_instance(scene);
-    instance->frame    = ioinstance->frame;
-    instance->shape    = shape_map.at(ioinstance->shape);
-    instance->material = material_map.at(ioinstance->material);
-  }
-
-  for (auto ioenvironment : ioscene->environments) {
-    if (progress_cb)
-      progress_cb("converting environments", progress.x++, progress.y);
-    auto environment          = add_environment(scene);
-    environment->frame        = ioenvironment->frame;
-    environment->emission     = ioenvironment->emission;
-    environment->emission_tex = texture_map.at(ioenvironment->emission_tex);
-  }
-
-  // done
-  if (progress_cb) progress_cb("converting done", progress.x++, progress.y);
-
-  // get camera
-  camera = camera_map.at(iocamera);
-}
-
 // convert params
 struct convert_params {
   string scene     = "scene.ply";
@@ -985,7 +860,7 @@ int run_convert(const convert_params& params) {
 }
 
 // convert params
-struct view_params : trace_params {
+struct view_params {
   string scene  = "scene.json";
   string output = "out.png";
   string camera = "";
@@ -1000,50 +875,43 @@ void serialize_value(json_mode mode, json_value& json, view_params& value,
   serialize_property(mode, json, value.output, "output", "Output filename.");
   serialize_property(mode, json, value.camera, "camera", "Camera name.");
   serialize_property(mode, json, value.addsky, "addsky", "Add sky.");
-  serialize_value(mode, json, (trace_params&)value, description);
   serialize_clipositionals(mode, json, {"scene"});
-  serialize_clialternates(mode, json,
-      {{"samples", "s"}, {"bounces", "b"}, {"output", "o"}, {"tracer", "t"}});
+  serialize_clialternates(mode, json, {{"output", "o"}});
 }
 
 #ifndef YOCTO_OPENGL
 
-// view shapes
+// view scene
 int run_view(const view_params& params) {
   return print_fatal("Opengl not compiled");
 }
 
 #else
 
-// view shapes
+// view scene
 int run_view(const view_params& params) {
-  // scene loading
-  auto ioscene_guard = std::make_unique<sceneio_scene>();
-  auto ioscene       = ioscene_guard.get();
-  auto ioerror       = string{};
-  if (!load_scene(params.scene, ioscene, ioerror, print_progress))
-    return print_fatal(ioerror);
+  // load scene
+  auto scene_guard = std::make_unique<sceneio_scene>();
+  auto scene       = scene_guard.get();
+  auto ioerror     = ""s;
+  if (path_extension(params.scene) == ".ypreset") {
+    print_progress("make preset", 0, 1);
+    if (!make_preset(scene, path_basename(params.scene), ioerror))
+      print_fatal(ioerror);
+    print_progress("make preset", 1, 1);
+  } else {
+    if (!load_scene(params.scene, scene, ioerror, print_progress))
+      print_fatal(ioerror);
+  }
 
   // add sky
-  if (params.addsky) add_sky(ioscene);
-
-  // get camera
-  auto iocamera = get_camera(ioscene, params.camera);
-
-  // scene conversion
-  auto scene_guard = std::make_unique<trace_scene>();
-  auto scene       = scene_guard.get();
-  auto camera      = (trace_camera*)nullptr;
-  init_scene(scene, ioscene, camera, iocamera);
-
-  // cleanup
-  ioscene_guard.reset();
+  if (params.addsky) add_sky(scene);
 
   // tesselation
   tesselate_shapes(scene, print_progress);
 
   // run view
-  view_scene("yscene", params.scene, scene, camera, params, print_progress);
+  view_scene("yscene", params.scene, scene, params.camera, print_progress);
 
   // done
   return 0;
