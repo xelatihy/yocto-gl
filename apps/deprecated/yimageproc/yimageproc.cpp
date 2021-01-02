@@ -35,68 +35,10 @@ namespace yocto {
 
 image<vec4f> filter_bilateral(const image<vec4f>& img, float spatial_sigma,
     float range_sigma, const vector<image<vec4f>>& features,
-    const vector<float>& features_sigma) {
-  auto filtered     = image{img.imsize(), zero4f};
-  auto filter_width = (int)ceil(2.57f * spatial_sigma);
-  auto sw           = 1 / (2.0f * spatial_sigma * spatial_sigma);
-  auto rw           = 1 / (2.0f * range_sigma * range_sigma);
-  auto fw           = vector<float>();
-  for (auto feature_sigma : features_sigma)
-    fw.push_back(1 / (2.0f * feature_sigma * feature_sigma));
-  for (auto j = 0; j < img.height(); j++) {
-    for (auto i = 0; i < img.width(); i++) {
-      auto av = zero4f;
-      auto aw = 0.0f;
-      for (auto fj = -filter_width; fj <= filter_width; fj++) {
-        for (auto fi = -filter_width; fi <= filter_width; fi++) {
-          auto ii = i + fi, jj = j + fj;
-          if (ii < 0 || jj < 0) continue;
-          if (ii >= img.width() || jj >= img.height()) continue;
-          auto uv  = vec2f{float(i - ii), float(j - jj)};
-          auto rgb = img[{i, j}] - img[{i, j}];
-          auto w   = (float)exp(-dot(uv, uv) * sw) *
-                   (float)exp(-dot(rgb, rgb) * rw);
-          for (auto fi = 0; fi < features.size(); fi++) {
-            auto feat = features[fi][{i, j}] - features[fi][{i, j}];
-            w *= exp(-dot(feat, feat) * fw[fi]);
-          }
-          av += w * img[{ii, jj}];
-          aw += w;
-        }
-      }
-      filtered[{i, j}] = av / aw;
-    }
-  }
-  return filtered;
-}
+    const vector<float>& features_sigma);
 
 image<vec4f> filter_bilateral(
-    const image<vec4f>& img, float spatial_sigma, float range_sigma) {
-  auto filtered = image{img.imsize(), zero4f};
-  auto fwidth   = (int)ceil(2.57f * spatial_sigma);
-  auto sw       = 1 / (2.0f * spatial_sigma * spatial_sigma);
-  auto rw       = 1 / (2.0f * range_sigma * range_sigma);
-  for (auto j = 0; j < img.height(); j++) {
-    for (auto i = 0; i < img.width(); i++) {
-      auto av = zero4f;
-      auto aw = 0.0f;
-      for (auto fj = -fwidth; fj <= fwidth; fj++) {
-        for (auto fi = -fwidth; fi <= fwidth; fi++) {
-          auto ii = i + fi, jj = j + fj;
-          if (ii < 0 || jj < 0) continue;
-          if (ii >= img.width() || jj >= img.height()) continue;
-          auto uv  = vec2f{float(i - ii), float(j - jj)};
-          auto rgb = img[{i, j}] - img[{ii, jj}];
-          auto w   = exp(-dot(uv, uv) * sw) * exp(-dot(rgb, rgb) * rw);
-          av += w * img[{ii, jj}];
-          aw += w;
-        }
-      }
-      filtered[{i, j}] = av / aw;
-    }
-  }
-  return filtered;
-}
+    const image<vec4f>& img, float spatial_sigma, float range_sigma);
 
 bool make_image_preset(const string& type, image<vec4f>& img, string& error) {
   auto set_region = [](image<vec4f>& img, const image<vec4f>& region,

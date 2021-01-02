@@ -106,6 +106,9 @@ inline int  sign(int a);
 inline int  pow2(int a);
 inline void swap(int& a, int& b);
 
+inline size_t min(size_t a, size_t b);
+inline size_t max(size_t a, size_t b);
+
 }  // namespace yocto
 
 // -----------------------------------------------------------------------------
@@ -1055,6 +1058,9 @@ inline int  clamp(int a, int min_, int max_) { return min(max(a, min_), max_); }
 inline int  sign(int a) { return a < 0 ? -1 : 1; }
 inline int  pow2(int a) { return 1 << a; }
 inline void swap(int& a, int& b) { std::swap(a, b); }
+
+inline size_t min(size_t a, size_t b) { return (a < b) ? a : b; }
+inline size_t max(size_t a, size_t b) { return (a > b) ? a : b; }
 
 }  // namespace yocto
 

@@ -493,6 +493,8 @@ void set_image(ogl_image* oimg, const image<vec4f>& img, bool linear = false,
     bool mipmap = false);
 void set_image(ogl_image* oimg, const image<vec4b>& img, bool linear = false,
     bool mipmap = false);
+void set_image(ogl_image* oimg, const image_data& img, bool linear = false,
+    bool mipmap = false);
 
 // OpenGL image drawing params
 struct ogl_image_params {
