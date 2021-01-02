@@ -98,12 +98,12 @@ void close_image(imageview_state* viewer, const string& name) {
 }
 
 // Set params
-void set_widget(imageview_state* viewer, const string& name, const string& pname,
-    const json_value& param, const json_value& schema) {
+void set_widget(imageview_state* viewer, const string& name,
+    const string& pname, const json_value& param, const json_value& schema) {
   auto lock  = std::lock_guard{viewer->input_mutex};
   auto input = get_input(viewer, name);
   if (!input) return;
-  input->widgets[pname]               = param;
+  input->widgets[pname]              = param;
   input->schema["properties"][pname] = schema;
   input->wchanged                    = true;
 }
@@ -112,7 +112,7 @@ void set_widgets(imageview_state* viewer, const string& name,
   auto lock  = std::lock_guard{viewer->input_mutex};
   auto input = get_input(viewer, name);
   if (!input) return;
-  input->widgets   = params;
+  input->widgets  = params;
   input->schema   = schema;
   input->wchanged = true;
 }
@@ -130,7 +130,8 @@ void set_callback(imageview_state* viewer, const imageview_callback& callback) {
 namespace yocto {
 
 // grab input
-// static imageview_image* get_image(imageview_state* viewer, const string& name)
+// static imageview_image* get_image(imageview_state* viewer, const string&
+// name)
 // {
 //   for (auto& img : viewer->images)
 //     if (view->name == name) return img.get();
@@ -211,7 +212,7 @@ void draw_widgets(
   }
   if (!viewer->selected->hdr.empty()) {
     if (begin_header(win, "tonemap")) {
-      auto view    = viewer->selected;
+      auto view   = viewer->selected;
       auto edited = 0;
       edited += draw_slider(win, "exposure", view->exposure, -5, 5);
       edited += draw_checkbox(win, "filmic", view->filmic);
@@ -250,7 +251,8 @@ void update(gui_window* win, imageview_state* viewer, const gui_input& input) {
   // close images
   for (auto idx = (size_t)0; idx < viewer->inputs.size(); idx++) {
     if (!viewer->inputs[idx]->close) continue;
-    if (viewer->selected == viewer->views[idx].get()) viewer->selected = nullptr;
+    if (viewer->selected == viewer->views[idx].get())
+      viewer->selected = nullptr;
     viewer->inputs.erase(viewer->inputs.begin() + idx);
     viewer->views.erase(viewer->views.begin() + idx);
     idx--;
@@ -267,14 +269,14 @@ void update(gui_window* win, imageview_state* viewer, const gui_input& input) {
   // update images
   for (auto idx = (size_t)0; idx < viewer->inputs.size(); idx++) {
     if (viewer->inputs[idx]->ichanged) {
-      viewer->views[idx]->hdr      = viewer->inputs[idx]->hdr;
-      viewer->views[idx]->ldr      = viewer->inputs[idx]->ldr;
+      viewer->views[idx]->hdr       = viewer->inputs[idx]->hdr;
+      viewer->views[idx]->ldr       = viewer->inputs[idx]->ldr;
       viewer->inputs[idx]->ichanged = false;
       update_display(viewer->views[idx].get());
     }
     if (viewer->inputs[idx]->wchanged) {
       viewer->views[idx]->widgets   = viewer->inputs[idx]->widgets;
-      viewer->views[idx]->schema   = viewer->inputs[idx]->schema;
+      viewer->views[idx]->schema    = viewer->inputs[idx]->schema;
       viewer->inputs[idx]->wchanged = false;
     }
   }

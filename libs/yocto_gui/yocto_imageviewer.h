@@ -35,10 +35,9 @@
 // -----------------------------------------------------------------------------
 
 #include <yocto/yocto_image.h>
-#include <yocto/yocto_trace.h>
-
 #include <yocto/yocto_json.h>
 #include <yocto/yocto_parallel.h>
+#include <yocto/yocto_trace.h>
 #include <yocto_gui/yocto_imgui.h>
 #include <yocto_gui/yocto_opengl.h>
 
@@ -80,8 +79,8 @@ void set_image(
 void close_image(imageview_state* viewer, const string& name);
 
 // Set params
-void set_widget(imageview_state* viewer, const string& name, const string& pname,
-    const json_value& param, const json_value& schema);
+void set_widget(imageview_state* viewer, const string& name,
+    const string& pname, const json_value& param, const json_value& schema);
 void set_widgets(imageview_state* viewer, const string& name,
     const json_value& params, const json_value& schema);
 
@@ -105,9 +104,12 @@ unique_ptr<traceview_state> make_traceview(const string& title);
 void run_view(traceview_state* viewer);
 
 // Set scene and tracee params
-void set_scene(imageview_state* viewer, const string& name, const trace_scene* scene);
-void set_camera(imageview_state* viewer, const string& name, const trace_camera* camera);
-void set_params(imageview_state* viewer, const string& name, const trace_params& params);
+void set_scene(
+    imageview_state* viewer, const string& name, const trace_scene* scene);
+void set_camera(
+    imageview_state* viewer, const string& name, const trace_camera* camera);
+void set_params(
+    imageview_state* viewer, const string& name, const trace_params& params);
 void close_scene(imageview_state* viewer, const string& name);
 
 // Set ui callback
@@ -143,7 +145,7 @@ struct imageview_input {
   bool         filmic   = false;
 
   bool       wchanged = true;
-  json_value widgets   = {};
+  json_value widgets  = {};
   json_value schema   = {};
 };
 
@@ -167,7 +169,7 @@ struct imageview_view {
 
   // user params
   json_value widgets = json_value::object();
-  json_value schema = to_schema_object("User params.");
+  json_value schema  = to_schema_object("User params.");
 
   ~imageview_view() {
     if (glimage) delete glimage;
@@ -175,13 +177,13 @@ struct imageview_view {
 };
 
 // Image pointer
-using imageview_viewptr = unique_ptr<imageview_view>;
+using imageview_viewptr  = unique_ptr<imageview_view>;
 using imageview_inputptr = unique_ptr<imageview_input>;
 
 // Simple image viewer
 struct imageview_state {
-  vector<imageview_viewptr> views      = {};       // views
-  imageview_view*           selected    = nullptr;  // selected
+  vector<imageview_viewptr>  views       = {};       // views
+  imageview_view*            selected    = nullptr;  // selected
   std::mutex                 input_mutex = {};
   vector<imageview_inputptr> inputs      = {};  // input images
   imageview_callback         callback    = {};  // params and ui callback
@@ -200,15 +202,15 @@ struct traceview_input {
 
   bool close = false;
 
-  bool         schanged = true;
-  const trace_scene* scene = nullptr;
+  bool               schanged = true;
+  const trace_scene* scene    = nullptr;
 
-  bool       pchanged = true;
-  const trace_camera* camera = nullptr;
-  trace_params params = {};
+  bool                pchanged = true;
+  const trace_camera* camera   = nullptr;
+  trace_params        params   = {};
 
   bool       wchanged = true;
-  json_value widgets   = {};
+  json_value widgets  = {};
   json_value schema   = {};
 };
 
@@ -240,19 +242,18 @@ struct traceview_view {
 };
 
 // Image pointer
-using traceview_viewptr = unique_ptr<traceview_view>;
+using traceview_viewptr  = unique_ptr<traceview_view>;
 using traceview_inputptr = unique_ptr<traceview_input>;
 
 // Simple image viewer
 struct traceview_state {
-  vector<traceview_viewptr> images      = {};       // images
-  traceview_view*           selected    = nullptr;  // selected
+  vector<traceview_viewptr>  images      = {};       // images
+  traceview_view*            selected    = nullptr;  // selected
   std::mutex                 input_mutex = {};
   vector<traceview_inputptr> inputs      = {};  // input images
   imageview_callback         callback    = {};  // params and ui callback
 };
 
 }  // namespace yocto
-
 
 #endif
