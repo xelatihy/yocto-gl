@@ -34,6 +34,9 @@
 // INCLUDES
 // -----------------------------------------------------------------------------
 
+#include <yocto/yocto_image.h>
+#include <yocto/yocto_trace.h>
+
 #include <yocto/yocto_json.h>
 #include <yocto/yocto_parallel.h>
 #include <yocto_gui/yocto_imgui.h>
@@ -77,15 +80,45 @@ void set_image(
 void close_image(imageview_state* viewer, const string& name);
 
 // Set params
-void set_param(imageview_state* viewer, const string& name, const string& pname,
+void set_widget(imageview_state* viewer, const string& name, const string& pname,
     const json_value& param, const json_value& schema);
-void set_params(imageview_state* viewer, const string& name,
+void set_widgets(imageview_state* viewer, const string& name,
     const json_value& params, const json_value& schema);
 
 // Set ui callback
 using imageview_callback =
     function<void(const string&, const json_value&, const gui_input&)>;
 void set_callback(imageview_state* viewer, const imageview_callback& callback);
+
+}  // namespace yocto
+
+// -----------------------------------------------------------------------------
+// TRACE VIEWER
+// -----------------------------------------------------------------------------
+namespace yocto {
+
+// Make a scene view
+struct traceview_state;
+unique_ptr<traceview_state> make_traceview(const string& title);
+
+// Run view
+void run_view(traceview_state* viewer);
+
+// Set scene and tracee params
+void set_scene(imageview_state* viewer, const string& name, const trace_scene* scene);
+void set_params(imageview_state* viewer, const string& name, const trace_params& params);
+void close_scene(imageview_state* viewer, const string& name);
+
+// Set params
+void set_widget(imageview_state* viewer, const string& name, const string& pname,
+    const json_value& param, const json_value& schema);
+void set_widgets(imageview_state* viewer, const string& name,
+    const json_value& params, const json_value& schema);
+
+// Set ui callback
+using traceview_callback =
+    function<void(const string&, const json_value&, const gui_input&)>;
+void set_callback(traceview_state* viewer, const traceview_callback& callback);
 
 }  // namespace yocto
 

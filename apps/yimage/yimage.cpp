@@ -489,7 +489,7 @@ int run_grade(const grade_params& params) {
 
   // set view
   set_image(viewer, params.image, graded);
-  set_params(
+  set_widgets(
       viewer, params.image, to_json(params), to_schema(params, "Color grade"));
 
   // set callback

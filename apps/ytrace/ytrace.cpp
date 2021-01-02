@@ -336,7 +336,7 @@ int run_view(const view_params& params) {
   trace_start(
       state, scene, camera, bvh, lights, params,
       [viewer](const string& message, int sample, int nsamples) {
-        set_param(viewer, "render", "sample", to_json(sample),
+        set_widget(viewer, "render", "sample", to_json(sample),
             to_schema(sample, "Current sample"));
         print_progress(message, sample, nsamples);
       },
@@ -345,7 +345,7 @@ int run_view(const view_params& params) {
       });
 
   // show rendering params
-  set_params(
+  set_widgets(
       viewer, "render", to_json(params), to_schema(params, "Render params"));
 
   // set callback
@@ -357,12 +357,12 @@ int run_view(const view_params& params) {
           trace_stop(state);
           (view_params&)params = from_json<view_params>(uiparams);
           // show rendering params
-          set_params(viewer, "render", to_json(params),
+          set_widgets(viewer, "render", to_json(params),
               to_schema(params, "Render params"));
           trace_start(
               state, scene, camera, bvh, lights, params,
               [viewer](const string& message, int sample, int nsamples) {
-                set_param(viewer, "render", "sample", to_json(sample),
+                set_widget(viewer, "render", "sample", to_json(sample),
                     to_schema(sample, "Current sample"));
                 print_progress(message, sample, nsamples);
               },
@@ -387,7 +387,7 @@ int run_view(const view_params& params) {
           trace_start(
               state, scene, camera, bvh, lights, params,
               [viewer](const string& message, int sample, int nsamples) {
-                set_param(viewer, "render", "sample", to_json(sample),
+                set_widget(viewer, "render", "sample", to_json(sample),
                     to_schema(sample, "Current sample"));
                 print_progress(message, sample, nsamples);
               },

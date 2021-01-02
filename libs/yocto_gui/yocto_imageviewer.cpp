@@ -98,7 +98,7 @@ void close_image(imageview_state* state, const string& name) {
 }
 
 // Set params
-void set_param(imageview_state* state, const string& name, const string& pname,
+void set_widget(imageview_state* state, const string& name, const string& pname,
     const json_value& param, const json_value& schema) {
   auto lock  = std::lock_guard{state->input_mutex};
   auto input = get_input(state, name);
@@ -107,7 +107,7 @@ void set_param(imageview_state* state, const string& name, const string& pname,
   input->schema["properties"][pname] = schema;
   input->pchanged                    = true;
 }
-void set_params(imageview_state* state, const string& name,
+void set_widgets(imageview_state* state, const string& name,
     const json_value& params, const json_value& schema) {
   auto lock  = std::lock_guard{state->input_mutex};
   auto input = get_input(state, name);
