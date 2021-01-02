@@ -79,7 +79,6 @@ namespace yocto {
 // To compute good apertures, one can use the F-stop number from photography
 // and set the aperture to focal length over f-stop.
 struct scene_camera {
-  string  name         = "";
   frame3f frame        = identity3x4f;
   bool    orthographic = false;
   float   lens         = 0.050;
@@ -221,6 +220,9 @@ struct scene_scene {
   vector<scene_shape*>       shapes       = {};
   vector<scene_texture*>     textures     = {};
   vector<scene_material*>    materials    = {};
+
+  // names
+  vector<string> camera_names = {};
 
   // cleanup
   ~scene_scene();

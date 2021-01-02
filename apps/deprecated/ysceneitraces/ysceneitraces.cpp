@@ -279,8 +279,7 @@ int main(int argc, const char* argv[]) {
   auto iocamera = get_camera(ioscene, camera_name);
 
   // camera names
-  for (auto iocamera : ioscene->cameras)
-    app->camera_names.push_back(iocamera->name);
+  app->camera_names = ioscene->camera_names;
 
   // trace scene initialization
   init_scene(app->scene, ioscene, app->camera, iocamera);

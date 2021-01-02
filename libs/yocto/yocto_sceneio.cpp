@@ -61,6 +61,41 @@ using namespace std::string_literals;
 }  // namespace yocto
 
 // -----------------------------------------------------------------------------
+// UTILITIES
+// -----------------------------------------------------------------------------
+namespace yocto {
+
+// Enumerate
+template <typename T>
+auto enumerate(const vector<T>& elements) {
+  struct item {
+    const size_t& idx;
+    const T&      element;
+  };
+  struct iterator {
+    size_t    idx;
+    const T*  element;
+    bool      operator!=(const iterator& other) { return idx != other.idx; }
+    iterator& operator++() {
+      ++element;
+      ++idx;
+      return *this;
+    }
+    item operator*() { return {idx, *element}; }
+  };
+  struct wrapper {
+    const vector<T>& elements;
+    iterator         begin() { return {0, elements.data()}; }
+    iterator         end() {
+      return {elements.size(), elements.data() + elements.size()};
+    }
+  };
+  return wrapper{elements};
+}
+
+}  // namespace yocto
+
+// -----------------------------------------------------------------------------
 // GENERIC SCENE LOADING
 // -----------------------------------------------------------------------------
 namespace yocto {
@@ -690,8 +725,9 @@ static bool save_json_scene(const string& filename, const sceneio_scene* scene,
   if (!scene->cameras.empty()) {
     // auto _ = append_object(js, "cameras");
     auto group = insert_object(js, "cameras");
-    for (auto& camera : scene->cameras) {
-      auto elemnt = insert_object(group, camera->name);
+    for (auto idx = 0; idx < (int)scene->cameras.size(); idx++) {
+      auto& camera = scene->cameras[idx];
+      auto  elemnt = insert_object(group, scene->camera_names[idx]);
       if (camera->frame != def_cam.frame) {
         insert_value(elemnt, "frame", camera->frame);
       }
@@ -1107,9 +1143,10 @@ static bool save_obj_scene(const string& filename, const sceneio_scene* scene,
   auto obj       = obj_guard.get();
 
   // convert cameras
-  for (auto camera : scene->cameras) {
-    auto ocamera      = add_camera(obj);
-    ocamera->name     = path_basename(camera->name);
+  for (auto idx = 0; idx < (int)scene->cameras.size(); idx++) {
+    auto& camera      = scene->cameras[idx];
+    auto  ocamera     = add_camera(obj);
+    ocamera->name     = path_basename(scene->camera_names[idx]);
     ocamera->frame    = camera->frame;
     ocamera->ortho    = camera->orthographic;
     ocamera->width    = camera->film;
@@ -1219,13 +1256,15 @@ static bool save_obj_scene(const string& filename, const sceneio_scene* scene,
 }
 
 void print_obj_camera(sceneio_camera* camera) {
-  printf("c %s %d %g %g %g %g %g %g %g %g %g %g%g %g %g %g %g %g %g\n",
-      camera->name.c_str(), (int)camera->orthographic, camera->film,
-      camera->film / camera->aspect, camera->lens, camera->focus,
-      camera->aperture, camera->frame.x.x, camera->frame.x.y, camera->frame.x.z,
-      camera->frame.y.x, camera->frame.y.y, camera->frame.y.z,
-      camera->frame.z.x, camera->frame.z.y, camera->frame.z.z,
-      camera->frame.o.x, camera->frame.o.y, camera->frame.o.z);
+  printf("cannot work now\n");
+  // printf("c %s %d %g %g %g %g %g %g %g %g %g %g%g %g %g %g %g %g %g\n",
+  //     camera->name.c_str(), (int)camera->orthographic, camera->film,
+  //     camera->film / camera->aspect, camera->lens, camera->focus,
+  //     camera->aperture, camera->frame.x.x, camera->frame.x.y,
+  //     camera->frame.x.z, camera->frame.y.x, camera->frame.y.y,
+  //     camera->frame.y.z, camera->frame.z.x, camera->frame.z.y,
+  //     camera->frame.z.z, camera->frame.o.x, camera->frame.o.y,
+  //     camera->frame.o.z);
 }
 
 }  // namespace yocto
@@ -1887,10 +1926,11 @@ static bool save_gltf_scene(const string& filename, const sceneio_scene* scene,
   if (!scene->cameras.empty()) {
     auto& ajs = js["cameras"];
     ajs       = json::array();
-    for (auto camera : scene->cameras) {
+    for (auto idx = 0; idx < (int)scene->cameras.size(); idx++) {
+      auto& camera       = scene->cameras[idx];
       auto& cjs          = ajs.emplace_back();
       cjs                = json::object();
-      cjs["name"]        = camera->name;
+      cjs["name"]        = scene->camera_names[idx];
       cjs["type"]        = "perspective";
       auto& pjs          = cjs["perspective"];
       pjs                = json::object();
@@ -2081,14 +2121,14 @@ static bool save_gltf_scene(const string& filename, const sceneio_scene* scene,
   // nodes
   js["nodes"] = json::array();
   if (!scene->cameras.empty()) {
-    auto camera_id = 0;
-    for (auto camera : scene->cameras) {
-      auto& njs   = js["nodes"].emplace_back();
-      njs         = json::object();
-      njs["name"] = camera->name;
+    for (auto idx = 0; idx < (int)scene->cameras.size(); idx++) {
+      auto& camera = scene->cameras[idx];
+      auto& njs    = js["nodes"].emplace_back();
+      njs          = json::object();
+      njs["name"]  = scene->camera_names[idx];
       auto matrix = frame_to_mat(camera->frame);  // TODO(fabio): do this better
       njs["matrix"] = to_json((array<float, 16>&)matrix);
-      njs["camera"] = camera_id++;
+      njs["camera"] = idx;
     }
   }
   if (!scene->instances.empty()) {

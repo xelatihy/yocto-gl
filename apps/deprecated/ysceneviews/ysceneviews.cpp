@@ -68,12 +68,12 @@ struct app_state {
   shade_camera* glcamera = nullptr;
 
   // editing
-  sceneio_camera*      selected_camera      = nullptr;
-  sceneio_instance*    selected_instance    = nullptr;
-  sceneio_shape*       selected_shape       = nullptr;
-  sceneio_material*    selected_material    = nullptr;
-  sceneio_environment* selected_environment = nullptr;
-  sceneio_texture*     selected_texture     = nullptr;
+  int selected_camera      = -1;
+  int selected_instance    = -1;
+  int selected_shape       = -1;
+  int selected_material    = -1;
+  int selected_environment = -1;
+  int selected_texture     = -1;
 
   // loading status
   std::atomic<bool> ok           = false;
@@ -236,12 +236,13 @@ int main(int argc, const char* argv[]) {
   };
   callbacks.widgets_cb = [app](gui_window* win, const gui_input& input) {
     draw_progressbar(win, app->status.c_str(), app->current, app->total);
-    if (draw_combobox(win, "camera", app->iocamera, app->ioscene->cameras)) {
-      for (auto idx = 0; idx < app->ioscene->cameras.size(); idx++) {
-        if (app->ioscene->cameras[idx] == app->iocamera)
-          app->glcamera = app->glscene->cameras[idx];
-      }
-    }
+    // if (draw_combobox(
+    //         win, "camera", app->iocamera, app->ioscene->camera_names)) {
+    //   for (auto idx = 0; idx < app->ioscene->cameras.size(); idx++) {
+    //     if (app->ioscene->cameras[idx] == app->iocamera)
+    //       app->glcamera = app->glscene->cameras[idx];
+    //   }
+    // }
     auto& params = app->drawgl_prms;
     draw_slider(win, "resolution", params.resolution, 0, 4096);
     draw_checkbox(win, "wireframe", params.wireframe);

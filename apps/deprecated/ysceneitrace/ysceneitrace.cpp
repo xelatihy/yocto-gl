@@ -316,7 +316,6 @@ bool draw_widgets(
     gui_window* win, sceneio_scene* ioscene, sceneio_camera* iocamera) {
   if (!iocamera) return false;
   auto edited = 0;
-  draw_label(win, "name", iocamera->name);
   edited += draw_slider(win, "frame.x", iocamera->frame.x, -1, 1);
   edited += draw_slider(win, "frame.y", iocamera->frame.y, -1, 1);
   edited += draw_slider(win, "frame.z", iocamera->frame.z, -1, 1);
@@ -515,11 +514,11 @@ void draw_widgets(gui_window* win, app_states* apps, const gui_input& input) {
   auto app = apps->selected;
   if (begin_header(win, "trace")) {
     auto edited = 0;
-    if (draw_combobox(win, "camera", app->iocamera, app->ioscene->cameras)) {
-      app->camera = get_element(
-          app->iocamera, app->ioscene->cameras, app->scene->cameras);
-      edited += 1;
-    }
+    // if (draw_combobox(win, "camera", app->iocamera, app->ioscene->cameras)) {
+    //   app->camera = get_element(
+    //       app->iocamera, app->ioscene->cameras, app->scene->cameras);
+    //   edited += 1;
+    // }
     auto& tparams = app->params;
     edited += draw_slider(win, "resolution", tparams.resolution, 180, 4096);
     edited += draw_slider(win, "nsamples", tparams.samples, 16, 4096);
@@ -577,7 +576,7 @@ void draw_widgets(gui_window* win, app_states* apps, const gui_input& input) {
   };
   if (!app->ioscene->cameras.empty() && begin_header(win, "cameras")) {
     draw_combobox(
-        win, "camera##2", app->selected_camera, app->ioscene->cameras, true);
+        win, "camera##2", app->selected_camera, app->ioscene->camera_names);
     auto iocamera = app->ioscene->cameras[app->selected_camera];
     if (draw_widgets(win, app->ioscene, iocamera)) {
       stop_display(app);

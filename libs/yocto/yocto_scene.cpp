@@ -195,6 +195,18 @@ vector<string> scene_validation(const scene_scene* scene, bool notextures) {
       }
     }
   };
+  auto check_names_ = [&errs](const vector<string>& names, const string& base) {
+    auto used = unordered_map<string, int>();
+    used.reserve(names.size());
+    for (auto& name : names) used[name] += 1;
+    for (auto& [name, used] : used) {
+      if (name.empty()) {
+        errs.push_back("empty " + base + " name");
+      } else if (used > 1) {
+        errs.push_back("duplicated " + base + " name " + name);
+      }
+    }
+  };
   auto check_empty_textures = [&errs](const vector<scene_texture*>& vals) {
     for (auto value : vals) {
       if (value->hdr.empty() && value->ldr.empty()) {
@@ -203,7 +215,7 @@ vector<string> scene_validation(const scene_scene* scene, bool notextures) {
     }
   };
 
-  check_names(scene->cameras, "camera");
+  check_names_(scene->camera_names, "camera");
   check_names(scene->shapes, "shape");
   check_names(scene->instances, "instance");
   check_names(scene->textures, "texture");
@@ -238,10 +250,17 @@ static T* add_element(
                                 : (base + std::to_string(elements.size()));
   return element;
 }
+template <typename T>
+static T* add_element(vector<T*>& elements, vector<string>& names,
+    const string& name, const string& base) {
+  names.push_back(
+      !name.empty() ? name : (base + std::to_string(elements.size())));
+  return elements.emplace_back(new T{});
+}
 
 // add element
 scene_camera* add_camera(scene_scene* scene, const string& name) {
-  return add_element(scene->cameras, name, "camera");
+  return add_element(scene->cameras, scene->camera_names, name, "camera");
 }
 scene_environment* add_environment(scene_scene* scene, const string& name) {
   return add_element(scene->environments, name, "environment");
@@ -322,17 +341,17 @@ void add_sky(scene_scene* scene, float sun_angle) {
 // get named camera or default if camera is empty
 scene_camera* get_camera(const scene_scene* scene, const string& name) {
   if (scene->cameras.empty()) return nullptr;
-  for (auto camera : scene->cameras) {
-    if (camera->name == name) return camera;
+  for (auto idx = 0; idx < (int)scene->camera_names.size(); idx++) {
+    if (scene->camera_names[idx] == name) return scene->cameras[idx];
   }
-  for (auto camera : scene->cameras) {
-    if (camera->name == "default") return camera;
+  for (auto idx = 0; idx < (int)scene->camera_names.size(); idx++) {
+    if (scene->camera_names[idx] == "default") return scene->cameras[idx];
   }
-  for (auto camera : scene->cameras) {
-    if (camera->name == "camera") return camera;
+  for (auto idx = 0; idx < (int)scene->camera_names.size(); idx++) {
+    if (scene->camera_names[idx] == "camera") return scene->cameras[idx];
   }
-  for (auto camera : scene->cameras) {
-    if (camera->name == "camera1") return camera;
+  for (auto idx = 0; idx < (int)scene->camera_names.size(); idx++) {
+    if (scene->camera_names[idx] == "camera1") return scene->cameras[idx];
   }
   return scene->cameras.front();
 }
