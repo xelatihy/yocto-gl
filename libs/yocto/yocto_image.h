@@ -98,8 +98,7 @@ void tonemap_image_mt(image_data& ldr, const image_data& hdr, float exposure,
     bool filmic = false, bool srgb = true);
 
 // Resize an image.
-image_data resize_image(const image_data& img, int width, int height);
-image_data resize_image(const image_data& img, const vec2i& size);
+image_data resize_image(const image_data& img, size_t width, size_t height);
 
 // Compute the difference between two images.
 image_data image_difference(
@@ -112,8 +111,9 @@ image_data image_difference(
 // -----------------------------------------------------------------------------
 namespace yocto {
 
-// Check if an image is HDR based on filename.
+// Check if an image is HDR or LDR based on filename.
 bool is_hdr_filename(const string& filename);
+bool is_ldr_filename(const string& filename);
 
 // Loads/saves a 4 channels float/byte image in linear/srgb color space.
 bool load_image(const string& filename, image_data& img, string& error);
@@ -160,6 +160,9 @@ void colorgrade_image_mt(image_data& result, const image_data& image,
 
 // determine white balance colors
 vec4f compute_white_balance(const image_data& image);
+
+// add a logo to an image
+image_data add_logo(const image_data& image);
 
 }  // namespace yocto
 
@@ -337,9 +340,6 @@ image<vec4f> image_difference(
 // IMAGE IO
 // -----------------------------------------------------------------------------
 namespace yocto {
-
-// Check if an image is HDR based on filename.
-bool is_hdr_filename(const string& filename);
 
 // Loads/saves a 4 channels float/byte image in linear/srgb color space.
 bool load_image(const string& filename, image<vec4f>& img, string& error);

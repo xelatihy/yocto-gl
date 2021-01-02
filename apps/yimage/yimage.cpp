@@ -251,6 +251,10 @@ bool is_preset_hdr(const string& type_) {
   return type.find("sky") != string::npos && type.find("sun") != string::npos;
 }
 
+bool make_image_preset(const string& type, image_data& image, string& error) {
+  throw std::invalid_argument{"not implemented"};
+}
+
 }  // namespace yocto
 
 // convert params
@@ -285,57 +289,32 @@ void serialize_value(json_mode mode, json_value& json, convert_params& value,
 // convert images
 int run_convert(const convert_params& params) {
   // load
-  auto hdr     = image<vec4f>{};
-  auto ldr     = image<vec4b>{};
+  auto image   = image_data{};
   auto ioerror = string{};
   if (is_preset_filename(params.image)) {
-    if (is_preset_hdr(params.image)) {
-      if (!make_image_preset(path_basename(params.image), hdr, ioerror))
-        return print_fatal(ioerror);
-    } else {
-      if (!make_image_preset(path_basename(params.image), ldr, ioerror))
-        return print_fatal(ioerror);
-    }
-  } else if (is_hdr_filename(params.image)) {
-    if (!load_image(params.image, hdr, ioerror)) return print_fatal(ioerror);
+    if (!make_image_preset(path_basename(params.image), image, ioerror))
+      return print_fatal(ioerror);
   } else {
-    if (!load_image(params.image, ldr, ioerror)) return print_fatal(ioerror);
+    if (!load_image(params.image, image, ioerror)) return print_fatal(ioerror);
   }
 
   // resize if needed
   if (params.width != 0 || params.height != 0) {
-    if (!hdr.empty()) {
-      hdr = resize_image(hdr, params.width, params.height);
-    } else {
-      ldr = resize_image(ldr, params.width, params.height);
-    }
+    image = resize_image(image, params.width, params.height);
   }
 
   // tonemap if needed
-  if (!hdr.empty() && !is_hdr_filename(params.output)) {
-    ldr = tonemap_imageb(hdr, params.exposure, params.filmic);
-    hdr = {};
-  }
-  if (!ldr.empty() && is_hdr_filename(params.output)) {
-    hdr = srgb_to_rgb(ldr);
-    ldr = {};
+  if (is_hdr(image) && is_ldr_filename(params.output)) {
+    image = tonemap_image(image, params.exposure, params.filmic);
   }
 
   // apply logo
   if (params.logo) {
-    if (!hdr.empty()) {
-      hdr = add_logo(hdr);
-    } else {
-      ldr = add_logo(ldr);
-    }
+    image = add_logo(image);
   }
 
   // save
-  if (!hdr.empty()) {
-    if (!save_image(params.output, hdr, ioerror)) return print_fatal(ioerror);
-  } else {
-    if (!save_image(params.output, ldr, ioerror)) return print_fatal(ioerror);
-  }
+  if (!save_image(params.output, image, ioerror)) return print_fatal(ioerror);
 
   // done
   return 0;

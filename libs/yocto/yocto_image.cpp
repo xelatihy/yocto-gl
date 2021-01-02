@@ -254,11 +254,159 @@ vec4f compute_white_balance(const image_data& image) {
 namespace yocto {
 
 // Check if an image is HDR based on filename.
-bool is_hdr_filename(const string& filename);
+bool is_hdr_filename(const string& filename) {
+  auto ext = path_extension(filename);
+  return ext == ".hdr" || ext == ".exr" || ext == ".pfm";
+}
+bool is_ldr_filename(const string& filename) {
+  auto ext = path_extension(filename);
+  return ext == ".png" || ext == ".jpg" || ext == ".jpeg" || ext == ".bmp" ||
+         ext == ".tga";
+}
 
-// Loads/saves a 4 channels float/byte image in linear/srgb color space.
-bool load_image(const string& filename, image_data& img, string& error);
-bool save_image(const string& filename, const image_data& img, string& error);
+// Loads/saves an image. Chooses hdr or ldr based on file name.
+bool load_image(const string& filename, image_data& image, string& error) {
+  auto format_error = [filename, &error]() {
+    error = filename + ": unknown format";
+    return false;
+  };
+  auto read_error = [filename, &error]() {
+    error = filename + ": read error";
+    return false;
+  };
+
+  auto ext = path_extension(filename);
+  if (ext == ".exr" || ext == ".EXR") {
+    auto width = 0, height = 0;
+    auto pixels = (float*)nullptr;
+    if (LoadEXR(&pixels, &width, &height, filename.c_str(), nullptr) != 0)
+      return read_error();
+    auto result = make_hdr(width, height);
+    result.hdr = vector<vec4f>{(vec4f*)pixels, (vec4f*)pixels + width * height};
+    free(pixels);
+    return true;
+  } else if (ext == ".pfm" || ext == ".PFM") {
+    // TODO(fabio): implement PFM
+    throw std::invalid_argument{"pfm not support"};
+    return false;
+  } else if (ext == ".hdr" || ext == ".HDR") {
+    auto width = 0, height = 0, ncomp = 0;
+    auto pixels = stbi_loadf(filename.c_str(), &width, &height, &ncomp, 4);
+    if (!pixels) return read_error();
+    auto result = make_hdr(width, height);
+    result.hdr = vector<vec4f>{(vec4f*)pixels, (vec4f*)pixels + width * height};
+    free(pixels);
+    return true;
+  } else if (ext == ".png" || ext == ".PNG") {
+    auto width = 0, height = 0, ncomp = 0;
+    auto pixels = stbi_load(filename.c_str(), &width, &height, &ncomp, 4);
+    if (!pixels) return read_error();
+    auto result = make_ldr(width, height);
+    result.ldr = vector<vec4b>{(vec4b*)pixels, (vec4b*)pixels + width * height};
+    free(pixels);
+    return true;
+  } else if (ext == ".jpg" || ext == ".JPG") {
+    auto width = 0, height = 0, ncomp = 0;
+    auto pixels = stbi_load(filename.c_str(), &width, &height, &ncomp, 4);
+    if (!pixels) return read_error();
+    auto result = make_ldr(width, height);
+    result.ldr = vector<vec4b>{(vec4b*)pixels, (vec4b*)pixels + width * height};
+    free(pixels);
+    return true;
+  } else if (ext == ".tga" || ext == ".TGA") {
+    auto width = 0, height = 0, ncomp = 0;
+    auto pixels = stbi_load(filename.c_str(), &width, &height, &ncomp, 4);
+    if (!pixels) return read_error();
+    auto result = make_ldr(width, height);
+    result.ldr = vector<vec4b>{(vec4b*)pixels, (vec4b*)pixels + width * height};
+    free(pixels);
+    return true;
+  } else if (ext == ".bmp" || ext == ".BMP") {
+    auto width = 0, height = 0, ncomp = 0;
+    auto pixels = stbi_load(filename.c_str(), &width, &height, &ncomp, 4);
+    if (!pixels) return read_error();
+    auto result = make_ldr(width, height);
+    result.ldr = vector<vec4b>{(vec4b*)pixels, (vec4b*)pixels + width * height};
+    free(pixels);
+    return true;
+  } else {
+    return format_error();
+  }
+}
+
+// Saves an hdr image.
+bool save_image(
+    const string& filename, const image_data& image_, string& error) {
+  auto format_error = [filename, &error]() {
+    error = filename + ": unknown format";
+    return false;
+  };
+  auto write_error = [filename, &error]() {
+    error = filename + ": write error";
+    return false;
+  };
+
+  // handlle conversions if needed
+  auto image_ptr = (const image_data*)nullptr;
+  auto converted = image_data{};
+  if (is_hdr_filename(filename) && is_ldr(image_)) {
+    converted = make_hdr(image_.width, image_.height);
+    for (auto idx = (size_t)0; idx < converted.width * converted.height;
+         idx++) {
+      converted.hdr[idx] = srgb_to_rgb(byte_to_float(image_.ldr[idx]));
+    }
+    image_ptr = &converted;
+  } else if (is_ldr_filename(filename) && is_hdr(image_)) {
+    converted = make_ldr(image_.width, image_.height);
+    for (auto idx = (size_t)0; idx < converted.width * converted.height;
+         idx++) {
+      converted.ldr[idx] = float_to_byte(rgb_to_srgb(image_.hdr[idx]));
+    }
+    image_ptr = &converted;
+  } else {
+    image_ptr = &image_;
+  }
+  auto& image = *image_ptr;
+
+  auto ext = path_extension(filename);
+  if (ext == ".hdr" || ext == ".HDR") {
+    if (!stbi_write_hdr(filename.c_str(), (int)image.width, (int)image.height,
+            4, (const float*)image.hdr.data()))
+      return write_error();
+    return true;
+  } else if (ext == ".pfm" || ext == ".PFM") {
+    // TODO(fabio): implement PFM
+    throw std::invalid_argument{"pfm not support"};
+    return false;
+  } else if (ext == ".exr" || ext == ".EXR") {
+    if (SaveEXR((const float*)image.hdr.data(), (int)image.width,
+            (int)image.height, 4, 1, filename.c_str(), nullptr) < 0)
+      return write_error();
+    return true;
+  } else if (ext == ".png" || ext == ".PNG") {
+    if (!stbi_write_png(filename.c_str(), (int)image.width, (int)image.height,
+            4, (const byte*)image.ldr.data(), (int)image.width * 4))
+      return write_error();
+    return true;
+  } else if (ext == ".jpg" || ext == ".JPG") {
+    if (!stbi_write_jpg(filename.c_str(), (int)image.width, (int)image.height,
+            4, (const byte*)image.ldr.data(), 75))
+      return write_error();
+    return true;
+  } else if (ext == ".tga" || ext == ".TGA") {
+    if (!stbi_write_tga(filename.c_str(), (int)image.width, (int)image.height,
+            4, (const byte*)image.ldr.data()))
+      return write_error();
+    return true;
+  } else if (ext == ".bmp" || ext == ".BMP") {
+    if (!stbi_write_bmp(filename.c_str(), (int)image.width, (int)image.height,
+            4, (const byte*)image.ldr.data()))
+      return write_error();
+    return true;
+  } else {
+    return format_error();
+  }
+}
 
 }  // namespace yocto
 
@@ -2049,12 +2197,6 @@ static bool save_exr(const string& filename, int width, int height,
           nullptr) < 0)
     return write_error();
   return true;
-}
-
-// Check if an image is HDR based on filename.
-bool is_hdr_filename(const string& filename) {
-  auto ext = path_extension(filename);
-  return ext == ".hdr" || ext == ".exr" || ext == ".pfm";
 }
 
 // Loads an hdr image.
