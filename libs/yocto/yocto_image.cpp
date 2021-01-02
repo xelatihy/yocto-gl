@@ -281,8 +281,8 @@ bool load_image(const string& filename, image_data& image, string& error) {
     auto pixels = (float*)nullptr;
     if (LoadEXR(&pixels, &width, &height, filename.c_str(), nullptr) != 0)
       return read_error();
-    auto result = make_hdr(width, height);
-    result.hdr = vector<vec4f>{(vec4f*)pixels, (vec4f*)pixels + width * height};
+    image = make_hdr(width, height);
+    image.hdr = vector<vec4f>{(vec4f*)pixels, (vec4f*)pixels + width * height};
     free(pixels);
     return true;
   } else if (ext == ".pfm" || ext == ".PFM") {
@@ -293,40 +293,40 @@ bool load_image(const string& filename, image_data& image, string& error) {
     auto width = 0, height = 0, ncomp = 0;
     auto pixels = stbi_loadf(filename.c_str(), &width, &height, &ncomp, 4);
     if (!pixels) return read_error();
-    auto result = make_hdr(width, height);
-    result.hdr = vector<vec4f>{(vec4f*)pixels, (vec4f*)pixels + width * height};
+    image = make_hdr(width, height);
+    image.hdr = vector<vec4f>{(vec4f*)pixels, (vec4f*)pixels + width * height};
     free(pixels);
     return true;
   } else if (ext == ".png" || ext == ".PNG") {
     auto width = 0, height = 0, ncomp = 0;
     auto pixels = stbi_load(filename.c_str(), &width, &height, &ncomp, 4);
     if (!pixels) return read_error();
-    auto result = make_ldr(width, height);
-    result.ldr = vector<vec4b>{(vec4b*)pixels, (vec4b*)pixels + width * height};
+    image = make_ldr(width, height);
+    image.ldr = vector<vec4b>{(vec4b*)pixels, (vec4b*)pixels + width * height};
     free(pixels);
     return true;
   } else if (ext == ".jpg" || ext == ".JPG") {
     auto width = 0, height = 0, ncomp = 0;
     auto pixels = stbi_load(filename.c_str(), &width, &height, &ncomp, 4);
     if (!pixels) return read_error();
-    auto result = make_ldr(width, height);
-    result.ldr = vector<vec4b>{(vec4b*)pixels, (vec4b*)pixels + width * height};
+    image = make_ldr(width, height);
+    image.ldr = vector<vec4b>{(vec4b*)pixels, (vec4b*)pixels + width * height};
     free(pixels);
     return true;
   } else if (ext == ".tga" || ext == ".TGA") {
     auto width = 0, height = 0, ncomp = 0;
     auto pixels = stbi_load(filename.c_str(), &width, &height, &ncomp, 4);
     if (!pixels) return read_error();
-    auto result = make_ldr(width, height);
-    result.ldr = vector<vec4b>{(vec4b*)pixels, (vec4b*)pixels + width * height};
+    image = make_ldr(width, height);
+    image.ldr = vector<vec4b>{(vec4b*)pixels, (vec4b*)pixels + width * height};
     free(pixels);
     return true;
   } else if (ext == ".bmp" || ext == ".BMP") {
     auto width = 0, height = 0, ncomp = 0;
     auto pixels = stbi_load(filename.c_str(), &width, &height, &ncomp, 4);
     if (!pixels) return read_error();
-    auto result = make_ldr(width, height);
-    result.ldr = vector<vec4b>{(vec4b*)pixels, (vec4b*)pixels + width * height};
+    image = make_ldr(width, height);
+    image.ldr = vector<vec4b>{(vec4b*)pixels, (vec4b*)pixels + width * height};
     free(pixels);
     return true;
   } else {
@@ -406,6 +406,11 @@ bool save_image(
   } else {
     return format_error();
   }
+}
+
+image_data add_logo(const image_data& image) {
+  // TODO(fabio): implement logo
+  throw std::invalid_argument{"logo not implemented"};
 }
 
 }  // namespace yocto

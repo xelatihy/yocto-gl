@@ -85,24 +85,24 @@ vec4f eval_image(const image_data& image, const vec2f& uv,
     bool clamp_to_edge = false);
 
 // Apply tone mapping returning a float or byte image.
-image_data tonemap_image(const image_data& hdr, float exposure,
-    bool filmic = false, bool srgb = true);
-image_data tonemap_imageb(const image_data& hdr, float exposure,
-    bool filmic = false, bool srgb = true);
+image_data tonemap_image(
+    const image_data& image, float exposure, bool filmic = false);
+image_data tonemap_imageb(
+    const image_data& image, float exposure, bool filmic = false);
 
 // Apply tone mapping. If the input image is an ldr, does nothing.
-void tonemap_image(image_data& ldr, const image_data& hdr, float exposure,
-    bool filmic = false, bool srgb = true);
+void tonemap_image(image_data& ldr, const image_data& image, float exposure,
+    bool filmic = false);
 // Apply tone mapping using multithreading for speed.
-void tonemap_image_mt(image_data& ldr, const image_data& hdr, float exposure,
-    bool filmic = false, bool srgb = true);
+void tonemap_image_mt(image_data& ldr, const image_data& image, float exposure,
+    bool filmic = false);
 
 // Resize an image.
-image_data resize_image(const image_data& img, size_t width, size_t height);
+image_data resize_image(const image_data& image, size_t width, size_t height);
 
 // Compute the difference between two images.
 image_data image_difference(
-    const image_data& a, const image_data& b, bool display_diff);
+    const image_data& image_a, const image_data& image_b, bool display_diff);
 
 }  // namespace yocto
 
