@@ -128,10 +128,23 @@ bool save_shape(const string& filename, const shape_data& shape, string& error,
     bool flip_texcoords = true, bool ascii = false);
 
 // Load/save a subdiv
-bool load_shape(const string& filename, fvshape_data& shape, string& error,
+bool load_fvshape(const string& filename, fvshape_data& shape, string& error,
     bool flip_texcoords = true);
-bool save_shape(const string& filename, const fvshape_data& shape,
+bool save_fvshape(const string& filename, const fvshape_data& shape,
     string& error, bool flip_texcoords = true, bool ascii = false);
+
+}  // namespace yocto
+
+// -----------------------------------------------------------------------------
+// SHAPE STATS AND VALIDATION
+// -----------------------------------------------------------------------------
+namespace yocto {
+
+// Get mesh statistics for printing
+vector<string> shape_stats(const shape_data& shape, bool verbose = false);
+
+// Get mesh statistics for printing
+vector<string> fvshape_stats(const fvshape_data& shape, bool verbose = false);
 
 }  // namespace yocto
 

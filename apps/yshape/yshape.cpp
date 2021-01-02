@@ -618,7 +618,7 @@ void serialize_value(json_mode mode, json_value& json, convert_params& value,
 // convert images
 int run_convert(const convert_params& params) {
   // shape data
-  auto shape = generic_shape{};
+  auto shape = shape_data{};
 
   // load mesh
   auto ioerror = ""s;
@@ -744,16 +744,16 @@ void serialize_value(json_mode mode, json_value& json, fvconvert_params& value,
 // convert images
 int run_fvconvert(const fvconvert_params& params) {
   // mesh data
-  auto shape = generic_shape{};
+  auto shape = fvshape_data{};
 
   // load mesh
   auto ioerror = ""s;
   print_progress("load shape", 0, 1);
   if (path_filename(params.shape) == ".ypreset") {
-    if (!make_shape_preset(shape, path_basename(params.shape), ioerror))
+    if (!make_fvshape_preset(shape, path_basename(params.shape), ioerror))
       print_fatal(ioerror);
   } else {
-    if (!load_shape(params.shape, shape, ioerror, true)) print_fatal(ioerror);
+    if (!load_fvshape(params.shape, shape, ioerror)) print_fatal(ioerror);
   }
   print_progress("load shape", 1, 1);
 
@@ -768,7 +768,7 @@ int run_fvconvert(const fvconvert_params& params) {
   // print info
   if (params.info) {
     print_info("shape stats ------------");
-    auto stats = shape_stats(shape);
+    auto stats = fvshape_stats(shape);
     for (auto& stat : stats) print_info(stat);
   }
 
@@ -809,13 +809,13 @@ int run_fvconvert(const fvconvert_params& params) {
 
   if (params.info) {
     print_info("shape stats ------------");
-    auto stats = shape_stats(shape);
+    auto stats = fvshape_stats(shape);
     for (auto& stat : stats) print_info(stat);
   }
 
   // save mesh
   print_progress("save shape", 0, 1);
-  if (!save_shape(params.output, shape, ioerror, true)) print_fatal(ioerror);
+  if (!save_fvshape(params.output, shape, ioerror, true)) print_fatal(ioerror);
   print_progress("save shape", 1, 1);
 
   // done
