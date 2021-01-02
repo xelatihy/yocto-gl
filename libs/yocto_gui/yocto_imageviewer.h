@@ -106,14 +106,9 @@ void run_view(traceview_state* viewer);
 
 // Set scene and tracee params
 void set_scene(imageview_state* viewer, const string& name, const trace_scene* scene);
+void set_camera(imageview_state* viewer, const string& name, const trace_camera* camera);
 void set_params(imageview_state* viewer, const string& name, const trace_params& params);
 void close_scene(imageview_state* viewer, const string& name);
-
-// Set params
-void set_widget(imageview_state* viewer, const string& name, const string& pname,
-    const json_value& param, const json_value& schema);
-void set_widgets(imageview_state* viewer, const string& name,
-    const json_value& params, const json_value& schema);
 
 // Set ui callback
 using traceview_callback =
@@ -147,13 +142,13 @@ struct imageview_input {
   float        exposure = 0;
   bool         filmic   = false;
 
-  bool       pchanged = true;
-  json_value params   = {};
+  bool       wchanged = true;
+  json_value widgets   = {};
   json_value schema   = {};
 };
 
 // An image visualized
-struct imageview_image {
+struct imageview_view {
   // original data
   string name = "image.png";
 
@@ -171,27 +166,93 @@ struct imageview_image {
   ogl_image_params glparams = {};
 
   // user params
-  json_value params = json_value::object();
+  json_value widgets = json_value::object();
   json_value schema = to_schema_object("User params.");
 
-  ~imageview_image() {
+  ~imageview_view() {
     if (glimage) delete glimage;
   }
 };
 
 // Image pointer
-using imageview_imageptr = unique_ptr<imageview_image>;
+using imageview_viewptr = unique_ptr<imageview_view>;
 using imageview_inputptr = unique_ptr<imageview_input>;
 
 // Simple image viewer
 struct imageview_state {
-  vector<imageview_imageptr> images      = {};       // images
-  imageview_image*           selected    = nullptr;  // selected
+  vector<imageview_viewptr> views      = {};       // views
+  imageview_view*           selected    = nullptr;  // selected
   std::mutex                 input_mutex = {};
   vector<imageview_inputptr> inputs      = {};  // input images
   imageview_callback         callback    = {};  // params and ui callback
 };
 
 }  // namespace yocto
+
+// -----------------------------------------------------------------------------
+// TRACE VIEWER
+// -----------------------------------------------------------------------------
+namespace yocto {
+
+// Input image
+struct traceview_input {
+  string name = "";
+
+  bool close = false;
+
+  bool         schanged = true;
+  const trace_scene* scene = nullptr;
+
+  bool       pchanged = true;
+  const trace_camera* camera = nullptr;
+  trace_params params = {};
+
+  bool       wchanged = true;
+  json_value widgets   = {};
+  json_value schema   = {};
+};
+
+// An image visualized
+struct traceview_view {
+  // original data
+  string name = "scene.json";
+
+  // trace data
+  image<vec4f> hdr = {};
+  image<vec4b> ldr = {};
+
+  // diplay data
+  image<vec4b> display  = {};
+  float        exposure = 0;
+  bool         filmic   = false;
+
+  // viewing properties
+  ogl_image*       glimage  = new ogl_image{};
+  ogl_image_params glparams = {};
+
+  // user params
+  json_value params = json_value::object();
+  json_value schema = to_schema_object("User params.");
+
+  ~traceview_view() {
+    if (glimage) delete glimage;
+  }
+};
+
+// Image pointer
+using traceview_viewptr = unique_ptr<traceview_view>;
+using traceview_inputptr = unique_ptr<traceview_input>;
+
+// Simple image viewer
+struct traceview_state {
+  vector<traceview_viewptr> images      = {};       // images
+  traceview_view*           selected    = nullptr;  // selected
+  std::mutex                 input_mutex = {};
+  vector<traceview_inputptr> inputs      = {};  // input images
+  imageview_callback         callback    = {};  // params and ui callback
+};
+
+}  // namespace yocto
+
 
 #endif

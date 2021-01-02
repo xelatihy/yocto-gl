@@ -47,25 +47,25 @@ using std::make_unique;
 namespace yocto {
 
 // grab input
-// static imageview_image* get_image(imageview_state* state, const string&
+// static imageview_image* get_image(imageview_state* viewer, const string&
 // name);
-static imageview_input* get_input(imageview_state* state, const string& name);
+static imageview_input* get_input(imageview_state* viewer, const string& name);
 
 // make an image viewer
 unique_ptr<imageview_state> make_imageview(const string& title) {
-  auto state = make_unique<imageview_state>();
-  // state->name = title;
-  return state;
+  auto viewer = make_unique<imageview_state>();
+  // viewer->name = title;
+  return viewer;
 }
 
 // Set image
-void set_image(imageview_state* state, const string& name,
+void set_image(imageview_state* viewer, const string& name,
     const image<vec4f>& img, float exposure, bool filmic) {
-  auto lock  = std::lock_guard{state->input_mutex};
-  auto input = get_input(state, name);
+  auto lock  = std::lock_guard{viewer->input_mutex};
+  auto input = get_input(viewer, name);
   if (!input) {
     input =
-        state->inputs.emplace_back(std::make_unique<imageview_input>()).get();
+        viewer->inputs.emplace_back(std::make_unique<imageview_input>()).get();
   }
   input->name     = name;
   input->hdr      = img;
@@ -75,12 +75,12 @@ void set_image(imageview_state* state, const string& name,
   input->ichanged = true;
 }
 void set_image(
-    imageview_state* state, const string& name, const image<vec4b>& img) {
-  auto lock  = std::lock_guard{state->input_mutex};
-  auto input = get_input(state, name);
+    imageview_state* viewer, const string& name, const image<vec4b>& img) {
+  auto lock  = std::lock_guard{viewer->input_mutex};
+  auto input = get_input(viewer, name);
   if (!input) {
     input =
-        state->inputs.emplace_back(std::make_unique<imageview_input>()).get();
+        viewer->inputs.emplace_back(std::make_unique<imageview_input>()).get();
   }
   input->name     = name;
   input->hdr      = {};
@@ -90,36 +90,36 @@ void set_image(
   input->ichanged = true;
 }
 // Close image
-void close_image(imageview_state* state, const string& name) {
-  auto lock  = std::lock_guard{state->input_mutex};
-  auto input = get_input(state, name);
+void close_image(imageview_state* viewer, const string& name) {
+  auto lock  = std::lock_guard{viewer->input_mutex};
+  auto input = get_input(viewer, name);
   if (!input) return;
   input->close = true;
 }
 
 // Set params
-void set_widget(imageview_state* state, const string& name, const string& pname,
+void set_widget(imageview_state* viewer, const string& name, const string& pname,
     const json_value& param, const json_value& schema) {
-  auto lock  = std::lock_guard{state->input_mutex};
-  auto input = get_input(state, name);
+  auto lock  = std::lock_guard{viewer->input_mutex};
+  auto input = get_input(viewer, name);
   if (!input) return;
-  input->params[pname]               = param;
+  input->widgets[pname]               = param;
   input->schema["properties"][pname] = schema;
-  input->pchanged                    = true;
+  input->wchanged                    = true;
 }
-void set_widgets(imageview_state* state, const string& name,
+void set_widgets(imageview_state* viewer, const string& name,
     const json_value& params, const json_value& schema) {
-  auto lock  = std::lock_guard{state->input_mutex};
-  auto input = get_input(state, name);
+  auto lock  = std::lock_guard{viewer->input_mutex};
+  auto input = get_input(viewer, name);
   if (!input) return;
-  input->params   = params;
+  input->widgets   = params;
   input->schema   = schema;
-  input->pchanged = true;
+  input->wchanged = true;
 }
 
 // Callback
-void set_callback(imageview_state* state, const imageview_callback& callback) {
-  state->callback = callback;
+void set_callback(imageview_state* viewer, const imageview_callback& callback) {
+  viewer->callback = callback;
 }
 
 }  // namespace yocto
@@ -130,78 +130,78 @@ void set_callback(imageview_state* state, const imageview_callback& callback) {
 namespace yocto {
 
 // grab input
-// static imageview_image* get_image(imageview_state* state, const string& name)
+// static imageview_image* get_image(imageview_state* viewer, const string& name)
 // {
-//   for (auto& img : state->images)
-//     if (img->name == name) return img.get();
+//   for (auto& img : viewer->images)
+//     if (view->name == name) return img.get();
 //   return nullptr;
 // }
-static imageview_input* get_input(imageview_state* state, const string& name) {
-  for (auto& img : state->inputs)
-    if (img->name == name) return img.get();
+static imageview_input* get_input(imageview_state* viewer, const string& name) {
+  for (auto& input : viewer->inputs)
+    if (input->name == name) return input.get();
   return nullptr;
 }
 
-static void update_display(imageview_image* img) {
-  if (!img->hdr.empty()) {
-    if (img->display.imsize() != img->hdr.imsize())
-      img->display.resize(img->hdr.imsize());
-    tonemap_image_mt(img->display, img->hdr, img->exposure, img->filmic);
-  } else if (!img->ldr.empty()) {
-    img->display = img->ldr;
+static void update_display(imageview_view* view) {
+  if (!view->hdr.empty()) {
+    if (view->display.imsize() != view->hdr.imsize())
+      view->display.resize(view->hdr.imsize());
+    tonemap_image_mt(view->display, view->hdr, view->exposure, view->filmic);
+  } else if (!view->ldr.empty()) {
+    view->display = view->ldr;
   } else {
     // TODO(fabio): decide about empty images
   }
-  if (!is_initialized(img->glimage)) init_image(img->glimage);
-  set_image(img->glimage, img->display, false, false);
+  if (!is_initialized(view->glimage)) init_image(view->glimage);
+  set_image(view->glimage, view->display, false, false);
 }
 
 void draw_widgets(
-    gui_window* win, imageview_state* state, const gui_input& input) {
+    gui_window* win, imageview_state* viewer, const gui_input& input) {
   static string load_path = "", save_path = "", error_message = "";
   if (draw_filedialog_button(win, "load", true, "load image", load_path, false,
           "./", "", "*.png;*.jpg;*.tga;*.bmp;*.hdr;*.exr")) {
-    // load_image_async(state, load_path);
+    // load_image_async(viewer, load_path);
     load_path = "";
   }
   continue_line(win);
-  if (draw_filedialog_button(win, "save", state->selected, "save image",
+  if (draw_filedialog_button(win, "save", viewer->selected, "save image",
           save_path, true, path_dirname(save_path), path_filename(save_path),
           "*.png;*.jpg;*.tga;*.bmp;*.hdr;*.exr")) {
-    // state->selected->outname = save_path;
-    // save_image(img->outname, img->display, img->error);
+    // viewer->selected->outname = save_path;
+    // save_image(view->outname, view->display, view->error);
     save_path = "";
   }
   continue_line(win);
-  if (draw_button(win, "close", (bool)state->selected)) {
-    close_image(state, state->selected->name);
+  if (draw_button(win, "close", (bool)viewer->selected)) {
+    close_image(viewer, viewer->selected->name);
   }
   continue_line(win);
   if (draw_button(win, "quit")) {
     set_close(win, true);
   }
-  draw_combobox(win, "image", state->selected, state->images, false);
-  if (!state->selected) return;
+  draw_combobox(win, "image", viewer->selected, viewer->views, false);
+  if (!viewer->selected) return;
   if (begin_header(win, "inspect")) {
-    auto img = state->selected;
-    draw_label(win, "name", img->name);
-    auto size = img->display.imsize();
+    auto view = viewer->selected;
+    draw_label(win, "name", view->name);
+    auto size = view->display.imsize();
     draw_dragger(win, "size", size);
-    draw_slider(win, "zoom", img->glparams.scale, 0.1, 10);
-    draw_checkbox(win, "fit", img->glparams.fit);
-    auto ij = image_coords(input.mouse_pos, img->glparams.center,
-        img->glparams.scale, img->display.imsize());
+    draw_slider(win, "zoom", view->glparams.scale, 0.1, 10);
+    draw_checkbox(win, "fit", view->glparams.fit);
+    auto ij = image_coords(input.mouse_pos, view->glparams.center,
+        view->glparams.scale, view->display.imsize());
     draw_dragger(win, "mouse", ij);
     auto hdr_pixel     = zero4f;
     auto ldr_pixel     = zero4b;
     auto display_pixel = zero4b;
-    if (ij.x >= 0 && ij.x < img->display.width() && ij.y >= 0 &&
-        ij.y < img->display.height()) {
-      hdr_pixel     = !img->hdr.empty() ? img->hdr[{ij.x, ij.y}] : zero4f;
-      ldr_pixel     = !img->ldr.empty() ? img->ldr[{ij.x, ij.y}] : zero4b;
-      display_pixel = img->display[{ij.x, ij.y}];
+    if (ij.x >= 0 && ij.x < view->display.width() && ij.y >= 0 &&
+        ij.y < view->display.height()) {
+      hdr_pixel     = !view->hdr.empty() ? view->hdr[{ij.x, ij.y}] : zero4f;
+      ldr_pixel     = !view->ldr.empty() ? view->ldr[{ij.x, ij.y}] : zero4b;
+      display_pixel = view->display[{ij.x, ij.y}];
     }
-    if (!img->hdr.empty()) {
+    if (!view->hdr.empty()) {
       draw_coloredit(win, "source", hdr_pixel);
     } else {
       draw_coloredit(win, "source", ldr_pixel);
@@ -209,112 +209,112 @@ void draw_widgets(
     draw_coloredit(win, "display", display_pixel);
     end_header(win);
   }
-  if (!state->selected->hdr.empty()) {
+  if (!viewer->selected->hdr.empty()) {
     if (begin_header(win, "tonemap")) {
-      auto img    = state->selected;
+      auto view    = viewer->selected;
       auto edited = 0;
-      edited += draw_slider(win, "exposure", img->exposure, -5, 5);
-      edited += draw_checkbox(win, "filmic", img->filmic);
-      if (edited) update_display(img);
+      edited += draw_slider(win, "exposure", view->exposure, -5, 5);
+      edited += draw_checkbox(win, "filmic", view->filmic);
+      if (edited) update_display(view);
       end_header(win);
     }
   }
-  if (!state->selected->params.empty()) {
-    if (draw_params(win, "params", state->selected->params,
-            state->selected->schema, false)) {
-      if (state->callback)
-        state->callback(state->selected->name, state->selected->params, {});
+  if (!viewer->selected->widgets.empty()) {
+    if (draw_params(win, "params", viewer->selected->widgets,
+            viewer->selected->schema, false)) {
+      if (viewer->callback)
+        viewer->callback(viewer->selected->name, viewer->selected->widgets, {});
     }
   }
 }
 
-void draw(gui_window* win, imageview_state* state, const gui_input& input) {
-  if (!state->selected) {
+void draw(gui_window* win, imageview_state* viewer, const gui_input& input) {
+  if (!viewer->selected) {
     clear_ogl_framebuffer(ogl_image_params{}.background);
     return;
   }
-  auto img                  = state->selected;
-  img->glparams.window      = input.window_size;
-  img->glparams.framebuffer = input.framebuffer_viewport;
-  if (!is_initialized(img->glimage)) init_image(img->glimage);
-  std::tie(img->glparams.center, img->glparams.scale) = camera_imview(
-      img->glparams.center, img->glparams.scale, img->display.imsize(),
-      img->glparams.window, img->glparams.fit);
-  draw_image(img->glimage, img->glparams);
+  auto view                  = viewer->selected;
+  view->glparams.window      = input.window_size;
+  view->glparams.framebuffer = input.framebuffer_viewport;
+  if (!is_initialized(view->glimage)) init_image(view->glimage);
+  std::tie(view->glparams.center, view->glparams.scale) = camera_imview(
+      view->glparams.center, view->glparams.scale, view->display.imsize(),
+      view->glparams.window, view->glparams.fit);
+  draw_image(view->glimage, view->glparams);
 }
 
-void update(gui_window* win, imageview_state* state, const gui_input& input) {
+void update(gui_window* win, imageview_state* viewer, const gui_input& input) {
   // process inputs
-  auto lock = std::lock_guard{state->input_mutex};
+  auto lock = std::lock_guard{viewer->input_mutex};
 
   // close images
-  for (auto idx = (size_t)0; idx < state->inputs.size(); idx++) {
-    if (!state->inputs[idx]->close) continue;
-    if (state->selected == state->images[idx].get()) state->selected = nullptr;
-    state->inputs.erase(state->inputs.begin() + idx);
-    state->images.erase(state->images.begin() + idx);
+  for (auto idx = (size_t)0; idx < viewer->inputs.size(); idx++) {
+    if (!viewer->inputs[idx]->close) continue;
+    if (viewer->selected == viewer->views[idx].get()) viewer->selected = nullptr;
+    viewer->inputs.erase(viewer->inputs.begin() + idx);
+    viewer->views.erase(viewer->views.begin() + idx);
     idx--;
   }
 
   // add images
-  for (auto idx = (size_t)0; idx < state->inputs.size(); idx++) {
-    if (idx >= state->images.size()) {
-      state->images.emplace_back(std::make_unique<imageview_image>());
-      state->images[idx]->name = state->inputs[idx]->name;
+  for (auto idx = (size_t)0; idx < viewer->inputs.size(); idx++) {
+    if (idx >= viewer->views.size()) {
+      viewer->views.emplace_back(std::make_unique<imageview_view>());
+      viewer->views[idx]->name = viewer->inputs[idx]->name;
     }
   }
 
   // update images
-  for (auto idx = (size_t)0; idx < state->inputs.size(); idx++) {
-    if (state->inputs[idx]->ichanged) {
-      state->images[idx]->hdr      = state->inputs[idx]->hdr;
-      state->images[idx]->ldr      = state->inputs[idx]->ldr;
-      state->inputs[idx]->ichanged = false;
-      update_display(state->images[idx].get());
+  for (auto idx = (size_t)0; idx < viewer->inputs.size(); idx++) {
+    if (viewer->inputs[idx]->ichanged) {
+      viewer->views[idx]->hdr      = viewer->inputs[idx]->hdr;
+      viewer->views[idx]->ldr      = viewer->inputs[idx]->ldr;
+      viewer->inputs[idx]->ichanged = false;
+      update_display(viewer->views[idx].get());
     }
-    if (state->inputs[idx]->pchanged) {
-      state->images[idx]->params   = state->inputs[idx]->params;
-      state->images[idx]->schema   = state->inputs[idx]->schema;
-      state->inputs[idx]->pchanged = false;
+    if (viewer->inputs[idx]->wchanged) {
+      viewer->views[idx]->widgets   = viewer->inputs[idx]->widgets;
+      viewer->views[idx]->schema   = viewer->inputs[idx]->schema;
+      viewer->inputs[idx]->wchanged = false;
     }
   }
 
   // selected
-  if (state->selected == nullptr && !state->images.empty())
-    state->selected = state->images[0].get();
+  if (viewer->selected == nullptr && !viewer->views.empty())
+    viewer->selected = viewer->views[0].get();
 }
 
 // Run application
-void run_view(imageview_state* state) {
+void run_view(imageview_state* viewer) {
   // callbacks
   auto callbacks     = gui_callbacks{};
-  callbacks.clear_cb = [state](gui_window* win, const gui_input& input) {
-    for (auto& image : state->images) clear_image(image->glimage);
+  callbacks.clear_cb = [viewer](gui_window* win, const gui_input& input) {
+    for (auto& image : viewer->views) clear_image(image->glimage);
   };
-  callbacks.update_cb = [state](gui_window* win, const gui_input& input) {
-    update(win, state, input);
+  callbacks.update_cb = [viewer](gui_window* win, const gui_input& input) {
+    update(win, viewer, input);
   };
-  callbacks.draw_cb = [state](gui_window* win, const gui_input& input) {
-    draw(win, state, input);
+  callbacks.draw_cb = [viewer](gui_window* win, const gui_input& input) {
+    draw(win, viewer, input);
   };
-  callbacks.widgets_cb = [state](gui_window* win, const gui_input& input) {
-    draw_widgets(win, state, input);
+  callbacks.widgets_cb = [viewer](gui_window* win, const gui_input& input) {
+    draw_widgets(win, viewer, input);
   };
-  callbacks.uiupdate_cb = [state](gui_window* win, const gui_input& input) {
-    if (!state->selected) return;
+  callbacks.uiupdate_cb = [viewer](gui_window* win, const gui_input& input) {
+    if (!viewer->selected) return;
     if (input.widgets_active) return;
-    auto img = state->selected;
+    auto view = viewer->selected;
     // handle mouse
     if (input.modifier_alt) {
       if (input.mouse_left) {
-        img->glparams.center += input.mouse_pos - input.mouse_last;
+        view->glparams.center += input.mouse_pos - input.mouse_last;
       }
       if (input.mouse_right) {
-        img->glparams.scale *= powf(
+        view->glparams.scale *= powf(
             2, (input.mouse_pos.x - input.mouse_last.x) * 0.001f);
       }
     } else {
-      if (state->callback) state->callback(state->selected->name, {}, input);
+      if (viewer->callback) viewer->callback(viewer->selected->name, {}, input);
     }
   };
 
