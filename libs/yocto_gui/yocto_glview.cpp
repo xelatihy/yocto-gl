@@ -72,6 +72,18 @@ void view_image(
   // run view
   run_viewer(viewer);
 }
+void view_image(
+    const string& title, const string& name, const image_data& img) {
+  // open viewer
+  auto viewer_guard = make_imageviewer(title);
+  auto viewer       = viewer_guard.get();
+
+  // set view
+  set_image(viewer, name, img);
+
+  // run view
+  run_viewer(viewer);
+}
 
 // Open a window and show a shape via path tracing
 void view_shape(const string& title, const string& name,
@@ -388,8 +400,7 @@ void set_image(ogl_imageviewer* viewer, const string& name,
         viewer->inputs.emplace_back(std::make_unique<ogl_imageinput>()).get();
   }
   input->name     = name;
-  input->hdr      = img;
-  input->ldr      = {};
+  input->image    = make_image(img.width(), img.height(), img.data());
   input->exposure = exposure;
   input->filmic   = filmic;
   input->ichanged = true;
@@ -403,8 +414,21 @@ void set_image(
         viewer->inputs.emplace_back(std::make_unique<ogl_imageinput>()).get();
   }
   input->name     = name;
-  input->hdr      = {};
-  input->ldr      = img;
+  input->image    = make_image(img.width(), img.height(), img.data());
+  input->exposure = 0;
+  input->filmic   = false;
+  input->ichanged = true;
+}
+void set_image(
+    ogl_imageviewer* viewer, const string& name, const image_data& image) {
+  auto lock  = std::lock_guard{viewer->input_mutex};
+  auto input = get_input(viewer, name);
+  if (!input) {
+    input =
+        viewer->inputs.emplace_back(std::make_unique<ogl_imageinput>()).get();
+  }
+  input->name     = name;
+  input->image    = image;
   input->exposure = 0;
   input->filmic   = false;
   input->ichanged = true;
@@ -465,12 +489,14 @@ static ogl_imageinput* get_input(ogl_imageviewer* viewer, const string& name) {
 }
 
 static void update_display(ogl_imageview* view) {
-  if (!view->hdr.empty()) {
-    if (view->display.imsize() != view->hdr.imsize())
-      view->display.resize(view->hdr.imsize());
-    tonemap_image_mt(view->display, view->hdr, view->exposure, view->filmic);
-  } else if (!view->ldr.empty()) {
-    view->display = view->ldr;
+  if (view->display.width != view->image.width ||
+      view->display.height != view->image.height) {
+    view->display = make_image(view->image.width, view->image.height, false);
+  }
+  if (!view->image.hdr.empty()) {
+    tonemap_image_mt(view->display, view->image, view->exposure, view->filmic);
+  } else if (!view->image.ldr.empty()) {
+    view->display.ldr = view->image.ldr;
   } else {
     // TODO(fabio): decide about empty images
   }
@@ -507,23 +533,26 @@ void draw_widgets(
   if (begin_header(win, "inspect")) {
     auto view = viewer->selected;
     draw_label(win, "name", view->name);
-    auto size = view->display.imsize();
+    auto size = vec2i{view->display.width, view->display.height};
     draw_dragger(win, "size", size);
     draw_slider(win, "zoom", view->glparams.scale, 0.1, 10);
     draw_checkbox(win, "fit", view->glparams.fit);
-    auto ij = image_coords(input.mouse_pos, view->glparams.center,
-        view->glparams.scale, view->display.imsize());
+    auto [i, j] = image_coords(input.mouse_pos, view->glparams.center,
+        view->glparams.scale, vec2i{view->display.width, view->display.height});
+    auto ij     = vec2i{i, j};
     draw_dragger(win, "mouse", ij);
     auto hdr_pixel     = zero4f;
     auto ldr_pixel     = zero4b;
     auto display_pixel = zero4b;
-    if (ij.x >= 0 && ij.x < view->display.width() && ij.y >= 0 &&
-        ij.y < view->display.height()) {
-      hdr_pixel     = !view->hdr.empty() ? view->hdr[{ij.x, ij.y}] : zero4f;
-      ldr_pixel     = !view->ldr.empty() ? view->ldr[{ij.x, ij.y}] : zero4b;
-      display_pixel = view->display[{ij.x, ij.y}];
+    auto width = view->display.width, height = view->display.height;
+    if (i >= 0 && j < width && i >= 0 && j < height) {
+      hdr_pixel     = !view->image.hdr.empty() ? view->image.hdr[j * width + i]
+                                               : zero4f;
+      ldr_pixel     = !view->image.ldr.empty() ? view->image.ldr[j * width + i]
+                                               : zero4b;
+      display_pixel = view->display.ldr[j * width + i];
     }
-    if (!view->hdr.empty()) {
+    if (!view->image.hdr.empty()) {
       draw_coloredit(win, "source", hdr_pixel);
     } else {
       draw_coloredit(win, "source", ldr_pixel);
@@ -531,7 +560,7 @@ void draw_widgets(
     draw_coloredit(win, "display", display_pixel);
     end_header(win);
   }
-  if (!viewer->selected->hdr.empty()) {
+  if (!viewer->selected->image.hdr.empty()) {
     if (begin_header(win, "tonemap")) {
       auto view   = viewer->selected;
       auto edited = 0;
@@ -560,8 +589,9 @@ void draw(gui_window* win, ogl_imageviewer* viewer, const gui_input& input) {
   view->glparams.framebuffer = input.framebuffer_viewport;
   if (!is_initialized(view->glimage)) init_image(view->glimage);
   std::tie(view->glparams.center, view->glparams.scale) = camera_imview(
-      view->glparams.center, view->glparams.scale, view->display.imsize(),
-      view->glparams.window, view->glparams.fit);
+      view->glparams.center, view->glparams.scale,
+      {view->display.width, view->display.height}, view->glparams.window,
+      view->glparams.fit);
   draw_image(view->glimage, view->glparams);
 }
 
@@ -590,8 +620,7 @@ void update(gui_window* win, ogl_imageviewer* viewer, const gui_input& input) {
   // update images
   for (auto idx = (size_t)0; idx < viewer->inputs.size(); idx++) {
     if (viewer->inputs[idx]->ichanged) {
-      viewer->views[idx]->hdr       = viewer->inputs[idx]->hdr;
-      viewer->views[idx]->ldr       = viewer->inputs[idx]->ldr;
+      viewer->views[idx]->image     = viewer->inputs[idx]->image;
       viewer->inputs[idx]->ichanged = false;
       update_display(viewer->views[idx].get());
     }

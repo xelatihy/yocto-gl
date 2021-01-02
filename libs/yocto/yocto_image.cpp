@@ -67,6 +67,14 @@ image_data make_image(int width, int height, bool hdr) {
         width, height, {}, vector<vec4b>(width * height, vec4b{0, 0, 0, 0})};
   }
 }
+image_data make_image(int width, int height, const vec4f* data) {
+  return image_data{
+      width, height, vector<vec4f>(data, data + width * height), {}};
+}
+image_data make_image(int width, int height, const vec4b* data) {
+  return image_data{
+      width, height, {}, vector<vec4b>(data, data + width * height)};
+}
 
 // queries
 bool is_hdr(const image_data& image) { return !image.hdr.empty(); }

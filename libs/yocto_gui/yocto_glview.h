@@ -69,6 +69,7 @@ namespace yocto {
 // Open a window and show an image
 void view_image(const image<vec4f>& img);
 void view_image(const image<vec4b>& img);
+void view_image(const image_data& img);
 
 // Open a window and show a shape via path tracing
 void view_shape(const string& title, const string& name,
@@ -104,6 +105,8 @@ void set_image(ogl_imageviewer* viewer, const string& name,
     const image<vec4f>& img, float exposure = 0, bool filmic = false);
 void set_image(
     ogl_imageviewer* viewer, const string& name, const image<vec4b>& img);
+void set_image(
+    ogl_imageviewer* viewer, const string& name, const image_data& image);
 void close_image(ogl_imageviewer* viewer, const string& name);
 
 // Set params
@@ -139,11 +142,10 @@ struct ogl_imageinput {
 
   bool close = false;
 
-  bool         ichanged = true;
-  image<vec4f> hdr      = {};
-  image<vec4b> ldr      = {};
-  float        exposure = 0;
-  bool         filmic   = false;
+  bool       ichanged = true;
+  image_data image    = {};
+  float      exposure = 0;
+  bool       filmic   = false;
 
   bool       wchanged = true;
   json_value widgets  = {};
@@ -156,13 +158,12 @@ struct ogl_imageview {
   string name = "image.png";
 
   // image data
-  image<vec4f> hdr = {};
-  image<vec4b> ldr = {};
+  image_data image = {};
 
   // diplay data
-  image<vec4b> display  = {};
-  float        exposure = 0;
-  bool         filmic   = false;
+  image_data display  = {};
+  float      exposure = 0;
+  bool       filmic   = false;
 
   // viewing properties
   ogl_image*       glimage  = new ogl_image{};

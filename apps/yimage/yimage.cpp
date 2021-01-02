@@ -482,29 +482,17 @@ int run_view(const view_params& params) {
   // set image
   for (auto& filename : params.images) {
     // load
-    auto hdr     = image<vec4f>{};
-    auto ldr     = image<vec4b>{};
+    auto image   = image_data{};
     auto ioerror = string{};
     if (is_preset_filename(filename)) {
-      if (is_preset_hdr(filename)) {
-        if (!make_image_preset(path_basename(filename), hdr, ioerror))
-          return print_fatal(ioerror);
-      } else {
-        if (!make_image_preset(path_basename(filename), ldr, ioerror))
-          return print_fatal(ioerror);
-      }
-    } else if (is_hdr_filename(filename)) {
-      if (!load_image(filename, hdr, ioerror)) return print_fatal(ioerror);
+      if (!make_image_preset(path_basename(filename), image, ioerror))
+        return print_fatal(ioerror);
     } else {
-      if (!load_image(filename, ldr, ioerror)) return print_fatal(ioerror);
+      if (!load_image(filename, image, ioerror)) return print_fatal(ioerror);
     }
 
     // push image to the viewer
-    if (!hdr.empty()) {
-      set_image(viewer, filename, hdr);
-    } else {
-      set_image(viewer, filename, ldr);
-    }
+    set_image(viewer, filename, image);
   }
 
   // run view

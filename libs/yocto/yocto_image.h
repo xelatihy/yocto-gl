@@ -75,6 +75,8 @@ struct image_data {
 image_data make_hdr(int width, int height);
 image_data make_ldr(int width, int height);
 image_data make_image(int width, int height, bool hdr);
+image_data make_image(int width, int height, const vec4f* data);
+image_data make_image(int width, int height, const vec4b& data);
 
 // queries
 bool is_hdr(const image_data& image);

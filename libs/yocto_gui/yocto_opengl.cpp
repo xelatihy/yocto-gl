@@ -1272,6 +1272,17 @@ void set_image(
   set_texture(oimg->texture, img, false, linear, mipmap);
 }
 
+void set_image(
+    ogl_image* oimg, const image_data& img, bool linear, bool mipmap) {
+  if (is_hdr(img)) {
+    set_texture(oimg->texture, {img.width, img.height}, 4,
+        (const float*)img.hdr.data(), false, linear, mipmap);
+  } else {
+    set_texture(oimg->texture, {img.width, img.height}, 4,
+        (const byte*)img.ldr.data(), false, linear, mipmap);
+  }
+}
+
 // draw image
 void draw_image(ogl_image* image, const ogl_image_params& params) {
   assert_ogl_error();
