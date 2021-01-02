@@ -36,45 +36,38 @@
 using namespace yocto;
 
 // Shape presets used ofr testing.
-bool make_shape_preset(vector<int>& points, vector<vec2i>& lines,
-    vector<vec3i>& triangles, vector<vec4i>& quads, vector<vec4i>& quadspos,
-    vector<vec4i>& quadsnorm, vector<vec4i>& quadstexcoord,
-    vector<vec3f>& positions, vector<vec3f>& normals, vector<vec2f>& texcoords,
-    vector<vec4f>& colors, vector<float>& radius, const string& type,
-    string& error) {
-  auto set_quads = [&](quads_shape&& shape) {
-    quads     = shape.quads;
-    positions = shape.positions;
-    normals   = shape.normals;
-    texcoords = shape.texcoords;
+bool make_shape_preset(shape_data& shape, const string& type, string& error) {
+  auto set_quads = [&](quads_shape&& shape_) {
+    shape.quads     = shape_.quads;
+    shape.positions = shape_.positions;
+    shape.normals   = shape_.normals;
+    shape.texcoords = shape_.texcoords;
   };
-  auto set_triangles = [&](triangles_shape&& shape) {
-    triangles = shape.triangles;
-    positions = shape.positions;
-    normals   = shape.normals;
-    texcoords = shape.texcoords;
+  auto set_triangles = [&](triangles_shape&& shape_) {
+    shape.triangles = shape_.triangles;
+    shape.positions = shape_.positions;
+    shape.normals   = shape_.normals;
+    shape.texcoords = shape_.texcoords;
   };
-  auto set_lines = [&](lines_shape&& shape) {
-    lines     = shape.lines;
-    positions = shape.positions;
-    normals   = shape.normals;
-    texcoords = shape.texcoords;
-    radius    = shape.radius;
+  auto set_lines = [&](lines_shape&& shape_) {
+    shape.lines     = shape_.lines;
+    shape.positions = shape_.positions;
+    shape.normals   = shape_.normals;
+    shape.texcoords = shape_.texcoords;
+    shape.radius    = shape_.radius;
   };
-  auto set_points = [&](points_shape&& shape) {
-    points    = shape.points;
-    positions = shape.positions;
-    normals   = shape.normals;
-    texcoords = shape.texcoords;
-    radius    = shape.radius;
+  auto set_points = [&](points_shape&& shape_) {
+    shape.points    = shape_.points;
+    shape.positions = shape_.positions;
+    shape.normals   = shape_.normals;
+    shape.texcoords = shape_.texcoords;
+    shape.radius    = shape_.radius;
   };
-  auto set_fvquads = [&](quads_fvshape&& shape) {
-    quadspos      = shape.quadspos;
-    quadsnorm     = shape.quadsnorm;
-    quadstexcoord = shape.quadstexcoord;
-    positions     = shape.positions;
-    normals       = shape.normals;
-    texcoords     = shape.texcoords;
+  auto set_fvquads = [&](quads_fvshape&& shape_) {
+    shape.quads     = shape_.quadspos;
+    shape.positions = shape_.positions;
+    shape.normals   = shape_.normals;
+    shape.texcoords = shape_.texcoords;
   };
 
   if (type == "default-quad") {
@@ -129,26 +122,26 @@ bool make_shape_preset(vector<int>& points, vector<vec2i>& lines,
   } else if (type == "test-cube") {
     set_quads(make_rounded_box(
         {32, 32, 32}, {0.075f, 0.075f, 0.075f}, {1, 1, 1}, 0.3 * 0.075f));
-    for (auto& p : positions) p += {0, 0.075, 0};
+    for (auto& p : shape.positions) p += {0, 0.075, 0};
   } else if (type == "test-uvsphere") {
     set_quads(make_uvsphere({32, 32}, 0.075));
-    for (auto& p : positions) p += {0, 0.075, 0};
+    for (auto& p : shape.positions) p += {0, 0.075, 0};
   } else if (type == "test-uvsphere-flipcap") {
     set_quads(make_capped_uvsphere({32, 32}, 0.075, {1, 1}, 0.3 * 0.075));
-    for (auto& p : positions) p += {0, 0.075, 0};
+    for (auto& p : shape.positions) p += {0, 0.075, 0};
   } else if (type == "test-sphere") {
     set_quads(make_sphere(32, 0.075f, 1));
-    for (auto& p : positions) p += {0, 0.075, 0};
+    for (auto& p : shape.positions) p += {0, 0.075, 0};
   } else if (type == "test-sphere-displaced") {
     set_quads(make_sphere(128, 0.075f, 1));
-    for (auto& p : positions) p += {0, 0.075, 0};
+    for (auto& p : shape.positions) p += {0, 0.075, 0};
   } else if (type == "test-disk") {
     set_quads(make_disk(32, 0.075f, 1));
-    for (auto& p : positions) p += {0, 0.075, 0};
+    for (auto& p : shape.positions) p += {0, 0.075, 0};
   } else if (type == "test-uvcylinder") {
     set_quads(make_rounded_uvcylinder(
         {32, 32, 32}, {0.075, 0.075}, {1, 1, 1}, 0.3 * 0.075));
-    for (auto& p : positions) p += {0, 0.075, 0};
+    for (auto& p : shape.positions) p += {0, 0.075, 0};
   } else if (type == "test-floor") {
     set_quads(make_floor({1, 1}, {2, 2}, {20, 20}));
   } else if (type == "test-quad") {
@@ -161,7 +154,7 @@ bool make_shape_preset(vector<int>& points, vector<vec2i>& lines,
     set_quads(make_recty({256, 256}, {0.075, 0.075}, {1, 1}));
   } else if (type == "test-matball") {
     set_quads(make_sphere(32, 0.075));
-    for (auto& p : positions) p += {0, 0.075, 0};
+    for (auto& p : shape.positions) p += {0, 0.075, 0};
   } else if (type == "test-hairball1") {
     auto base = make_sphere(32, 0.075f * 0.8f, 1);
     for (auto& p : base.positions) p += {0, 0.075, 0};
@@ -179,16 +172,16 @@ bool make_shape_preset(vector<int>& points, vector<vec2i>& lines,
         {0.001f * 0.15f, 0.0005f * 0.15f}, {0, 0}, {0.5, 128}));
   } else if (type == "test-hairball-interior") {
     set_quads(make_sphere(32, 0.075f * 0.8f, 1));
-    for (auto& p : positions) p += {0, 0.075, 0};
+    for (auto& p : shape.positions) p += {0, 0.075, 0};
   } else if (type == "test-suzanne-subdiv") {
     set_quads(make_monkey(0.075f * 0.8f));
-    for (auto& p : positions) p += {0, 0.075, 0};
+    for (auto& p : shape.positions) p += {0, 0.075, 0};
   } else if (type == "test-cube-subdiv") {
     // set_quads(make_cube( 0.075f);
     set_fvquads(make_fvcube(0.075f));
     // make_fvbox(quadspos, quadsnorm, quadstexcoord, positions, normals,
     //      texcoords, {1, 1, 1}, {0.075f, 0.075f, 0.075f});
-    for (auto& p : positions) p += {0, 0.075, 0};
+    for (auto& p : shape.positions) p += {0, 0.075, 0};
   } else if (type == "test-arealight1") {
     set_quads(make_rect({1, 1}, {0.2, 0.2}));
   } else if (type == "test-arealight2") {
@@ -221,12 +214,175 @@ bool make_shape_preset(vector<int>& points, vector<vec2i>& lines,
 }
 
 // Shape presets used ofr testing.
-bool make_shape_preset(
-    generic_shape& shape, const string& type, string& error) {
-  return make_shape_preset(shape.points, shape.lines, shape.triangles,
-      shape.quads, shape.quadspos, shape.quadsnorm, shape.quadstexcoord,
-      shape.positions, shape.normals, shape.texcoords, shape.colors,
-      shape.radius, type, error);
+bool make_fvshape_preset(
+    fvshape_data& shape, const string& type, string& error) {
+  auto set_quads = [&](quads_shape&& shape_) {
+    shape.quadspos  = shape_.quads;
+    shape.positions = shape_.positions;
+    if (!shape_.normals.empty()) shape.quadsnorm = shape_.quads;
+    shape.normals = shape_.normals;
+    if (!shape_.texcoords.empty()) shape.quadstexcoord = shape_.quads;
+    shape.texcoords = shape_.texcoords;
+  };
+  auto set_triangles = [&](triangles_shape&& shape) {
+    throw std::invalid_argument{"bad shape type"};
+  };
+  auto set_lines = [&](lines_shape&& shape) {
+    throw std::invalid_argument{"bad shape type"};
+  };
+  auto set_points = [&](points_shape&& shape) {
+    throw std::invalid_argument{"bad shape type"};
+  };
+  auto set_fvquads = [&](quads_fvshape&& shape_) {
+    shape.quadspos      = shape_.quadspos;
+    shape.quadsnorm     = shape_.quadsnorm;
+    shape.quadstexcoord = shape_.quadstexcoord;
+    shape.positions     = shape_.positions;
+    shape.normals       = shape_.normals;
+    shape.texcoords     = shape_.texcoords;
+  };
+
+  if (type == "default-quad") {
+    set_quads(make_rect());
+  } else if (type == "default-quady") {
+    set_quads(make_recty());
+  } else if (type == "default-cube") {
+    set_quads(make_box());
+  } else if (type == "default-cube-rounded") {
+    set_quads(make_rounded_box());
+  } else if (type == "default-sphere") {
+    set_quads(make_sphere());
+  } else if (type == "default-disk") {
+    set_quads(make_disk());
+  } else if (type == "default-disk-bulged") {
+    set_quads(make_bulged_disk());
+  } else if (type == "default-quad-bulged") {
+    set_quads(make_bulged_rect());
+  } else if (type == "default-uvsphere") {
+    set_quads(make_uvsphere());
+  } else if (type == "default-uvsphere-flipcap") {
+    set_quads(make_capped_uvsphere());
+  } else if (type == "default-uvdisk") {
+    set_quads(make_uvdisk());
+  } else if (type == "default-uvcylinder") {
+    set_quads(make_uvcylinder());
+  } else if (type == "default-uvcylinder-rounded") {
+    set_quads(make_rounded_uvcylinder({32, 32, 32}));
+  } else if (type == "default-geosphere") {
+    set_triangles(make_geosphere());
+  } else if (type == "default-floor") {
+    set_quads(make_floor());
+  } else if (type == "default-floor-bent") {
+    set_quads(make_bent_floor());
+  } else if (type == "default-matball") {
+    set_quads(make_sphere());
+  } else if (type == "default-hairball") {
+    auto base = make_sphere(pow2(5), 0.8);
+    set_lines(make_hair(base, {4, 65536}, {0.2, 0.2}, {0.002, 0.001}));
+  } else if (type == "default-hairball-interior") {
+    set_quads(make_sphere(pow2(5), 0.8));
+  } else if (type == "default-suzanne") {
+    set_quads(make_monkey());
+  } else if (type == "default-cube-facevarying") {
+    set_fvquads(make_fvbox());
+  } else if (type == "default-sphere-facevarying") {
+    set_fvquads(make_fvsphere());
+  } else if (type == "default-quady-displaced") {
+    set_quads(make_recty({256, 256}));
+  } else if (type == "default-sphere-displaced") {
+    set_quads(make_sphere(128));
+  } else if (type == "test-cube") {
+    set_quads(make_rounded_box(
+        {32, 32, 32}, {0.075f, 0.075f, 0.075f}, {1, 1, 1}, 0.3 * 0.075f));
+    for (auto& p : shape.positions) p += {0, 0.075, 0};
+  } else if (type == "test-uvsphere") {
+    set_quads(make_uvsphere({32, 32}, 0.075));
+    for (auto& p : shape.positions) p += {0, 0.075, 0};
+  } else if (type == "test-uvsphere-flipcap") {
+    set_quads(make_capped_uvsphere({32, 32}, 0.075, {1, 1}, 0.3 * 0.075));
+    for (auto& p : shape.positions) p += {0, 0.075, 0};
+  } else if (type == "test-sphere") {
+    set_quads(make_sphere(32, 0.075f, 1));
+    for (auto& p : shape.positions) p += {0, 0.075, 0};
+  } else if (type == "test-sphere-displaced") {
+    set_quads(make_sphere(128, 0.075f, 1));
+    for (auto& p : shape.positions) p += {0, 0.075, 0};
+  } else if (type == "test-disk") {
+    set_quads(make_disk(32, 0.075f, 1));
+    for (auto& p : shape.positions) p += {0, 0.075, 0};
+  } else if (type == "test-uvcylinder") {
+    set_quads(make_rounded_uvcylinder(
+        {32, 32, 32}, {0.075, 0.075}, {1, 1, 1}, 0.3 * 0.075));
+    for (auto& p : shape.positions) p += {0, 0.075, 0};
+  } else if (type == "test-floor") {
+    set_quads(make_floor({1, 1}, {2, 2}, {20, 20}));
+  } else if (type == "test-quad") {
+    set_quads(make_rect({1, 1}, {0.075, 0.075}, {1, 1}));
+  } else if (type == "test-quady") {
+    set_quads(make_recty({1, 1}, {0.075, 0.075}, {1, 1}));
+  } else if (type == "test-quad-displaced") {
+    set_quads(make_rect({256, 256}, {0.075, 0.075}, {1, 1}));
+  } else if (type == "test-quady-displaced") {
+    set_quads(make_recty({256, 256}, {0.075, 0.075}, {1, 1}));
+  } else if (type == "test-matball") {
+    set_quads(make_sphere(32, 0.075));
+    for (auto& p : shape.positions) p += {0, 0.075, 0};
+  } else if (type == "test-hairball1") {
+    auto base = make_sphere(32, 0.075f * 0.8f, 1);
+    for (auto& p : base.positions) p += {0, 0.075, 0};
+    set_lines(make_hair(base, {4, 65536}, {0.1f * 0.15f, 0.1f * 0.15f},
+        {0.001f * 0.15f, 0.0005f * 0.15f}, {0.03, 100}));
+  } else if (type == "test-hairball2") {
+    auto base = make_sphere(32, 0.075f * 0.8f, 1);
+    for (auto& p : base.positions) p += {0, 0.075, 0};
+    set_lines(make_hair(base, {4, 65536}, {0.1f * 0.15f, 0.1f * 0.15f},
+        {0.001f * 0.15f, 0.0005f * 0.15f}));
+  } else if (type == "test-hairball3") {
+    auto base = make_sphere(32, 0.075f * 0.8f, 1);
+    for (auto& p : base.positions) p += {0, 0.075, 0};
+    set_lines(make_hair(base, {4, 65536}, {0.1f * 0.15f, 0.1f * 0.15f},
+        {0.001f * 0.15f, 0.0005f * 0.15f}, {0, 0}, {0.5, 128}));
+  } else if (type == "test-hairball-interior") {
+    set_quads(make_sphere(32, 0.075f * 0.8f, 1));
+    for (auto& p : shape.positions) p += {0, 0.075, 0};
+  } else if (type == "test-suzanne-subdiv") {
+    set_quads(make_monkey(0.075f * 0.8f));
+    for (auto& p : shape.positions) p += {0, 0.075, 0};
+  } else if (type == "test-cube-subdiv") {
+    // set_quads(make_cube( 0.075f);
+    set_fvquads(make_fvcube(0.075f));
+    // make_fvbox(quadspos, quadsnorm, quadstexcoord, positions, normals,
+    //      texcoords, {1, 1, 1}, {0.075f, 0.075f, 0.075f});
+    for (auto& p : shape.positions) p += {0, 0.075, 0};
+  } else if (type == "test-arealight1") {
+    set_quads(make_rect({1, 1}, {0.2, 0.2}));
+  } else if (type == "test-arealight2") {
+    set_quads(make_rect({1, 1}, {0.2, 0.2}));
+  } else if (type == "test-largearealight1") {
+    set_quads(make_rect({1, 1}, {0.4, 0.4}));
+  } else if (type == "test-largearealight2") {
+    set_quads(make_rect({1, 1}, {0.4, 0.4}));
+  } else if (type == "test-pointlight1") {
+    set_points(make_point(0));
+  } else if (type == "test-pointlight2") {
+    set_points(make_point(0));
+  } else if (type == "test-point") {
+    set_points(make_points(1));
+  } else if (type == "test-points") {
+    set_points(make_points(4096));
+  } else if (type == "test-points-random") {
+    set_points(make_random_points(4096, {0.2, 0.2, 0.2}));
+  } else if (type == "test-particles") {
+    set_points(make_points(4096));
+  } else if (type == "test-cloth") {
+    set_quads(make_rect({64, 64}, {0.2, 0.2}));
+  } else if (type == "test-clothy") {
+    set_quads(make_recty({64, 64}, {0.2, 0.2}));
+  } else {
+    error = "unknown preset";
+    return false;
+  }
+  return true;
 }
 
 // convert params
@@ -268,7 +424,7 @@ void serialize_value(json_mode mode, json_value& json, convert_params& value,
 // convert images
 int run_convert(const convert_params& params) {
   // shape data
-  auto shape = generic_shape{};
+  auto shape = shape_data{};
 
   // load mesh
   auto ioerror = ""s;
@@ -327,11 +483,11 @@ int run_convert(const convert_params& params) {
     if (!shape.points.empty()) {
       shape.normals = vector<vec3f>{shape.positions.size(), {0, 0, 1}};
     } else if (!shape.lines.empty()) {
-      shape.normals = compute_tangents(shape.lines, shape.positions);
+      shape.normals = lines_tangents(shape.lines, shape.positions);
     } else if (!shape.triangles.empty()) {
-      shape.normals = compute_normals(shape.triangles, shape.positions);
+      shape.normals = triangles_normals(shape.triangles, shape.positions);
     } else if (!shape.quads.empty()) {
-      shape.normals = compute_normals(shape.quads, shape.positions);
+      shape.normals = quads_normals(shape.quads, shape.positions);
     }
     print_progress("smooth shape", 1, 1);
   }
@@ -394,16 +550,16 @@ void serialize_value(json_mode mode, json_value& json, fvconvert_params& value,
 // convert images
 int run_fvconvert(const fvconvert_params& params) {
   // mesh data
-  auto shape = generic_shape{};
+  auto shape = fvshape_data{};
 
   // load mesh
   auto ioerror = ""s;
   print_progress("load shape", 0, 1);
   if (path_filename(params.shape) == ".ypreset") {
-    if (!make_shape_preset(shape, path_basename(params.shape), ioerror))
+    if (!make_fvshape_preset(shape, path_basename(params.shape), ioerror))
       print_fatal(ioerror);
   } else {
-    if (!load_shape(params.shape, shape, ioerror, true)) print_fatal(ioerror);
+    if (!load_fvshape(params.shape, shape, ioerror)) print_fatal(ioerror);
   }
   print_progress("load shape", 1, 1);
 
@@ -418,7 +574,7 @@ int run_fvconvert(const fvconvert_params& params) {
   // print info
   if (params.info) {
     print_info("shape stats ------------");
-    auto stats = shape_stats(shape);
+    auto stats = fvshape_stats(shape);
     for (auto& stat : stats) print_info(stat);
   }
 
@@ -443,7 +599,7 @@ int run_fvconvert(const fvconvert_params& params) {
   if (params.smooth) {
     print_progress("smooth shape", 0, 1);
     if (!shape.quadspos.empty()) {
-      shape.normals = compute_normals(shape.quadspos, shape.positions);
+      shape.normals = quads_normals(shape.quadspos, shape.positions);
       if (!shape.quadspos.empty()) shape.quadsnorm = shape.quadspos;
     }
     print_progress("smooth shape", 1, 1);
@@ -459,13 +615,13 @@ int run_fvconvert(const fvconvert_params& params) {
 
   if (params.info) {
     print_info("shape stats ------------");
-    auto stats = shape_stats(shape);
+    auto stats = fvshape_stats(shape);
     for (auto& stat : stats) print_info(stat);
   }
 
   // save mesh
   print_progress("save shape", 0, 1);
-  if (!save_shape(params.output, shape, ioerror, true)) print_fatal(ioerror);
+  if (!save_fvshape(params.output, shape, ioerror, true)) print_fatal(ioerror);
   print_progress("save shape", 1, 1);
 
   // done
@@ -502,7 +658,7 @@ int run_view(const view_params& params) {
 // view shapes
 int run_view(const view_params& params) {
   // shape data
-  auto shape = generic_shape{};
+  auto shape = shape_data{};
 
   // load mesh
   auto ioerror = ""s;

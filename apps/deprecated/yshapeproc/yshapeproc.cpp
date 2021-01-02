@@ -327,13 +327,13 @@ int main(int argc, const char* argv[]) {
     if (!shape.points.empty()) {
       shape.normals = vector<vec3f>{shape.positions.size(), {0, 0, 1}};
     } else if (!shape.lines.empty()) {
-      shape.normals = compute_tangents(shape.lines, shape.positions);
+      shape.normals = lines_tangents(shape.lines, shape.positions);
     } else if (!shape.triangles.empty()) {
-      shape.normals = compute_normals(shape.triangles, shape.positions);
+      shape.normals = triangles_normals(shape.triangles, shape.positions);
     } else if (!shape.quads.empty()) {
-      shape.normals = compute_normals(shape.quads, shape.positions);
+      shape.normals = quads_normals(shape.quads, shape.positions);
     } else if (!shape.quadspos.empty()) {
-      shape.normals = compute_normals(shape.quadspos, shape.positions);
+      shape.normals = quads_normals(shape.quadspos, shape.positions);
       if (!shape.quadspos.empty()) shape.quadsnorm = shape.quadspos;
     }
     print_progress("smooth shape", 1, 1);

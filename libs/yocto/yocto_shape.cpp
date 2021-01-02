@@ -56,12 +56,493 @@ using namespace std::string_literals;
 }  // namespace yocto
 
 // -----------------------------------------------------------------------------
+// IMPLEMENTATION OF SHAPE IO
+// -----------------------------------------------------------------------------
+namespace yocto {
+
+// Load ply mesh
+bool load_shape(const string& filename, shape_data& shape, string& error,
+    bool flip_texcoord) {
+  auto format_error = [filename, &error]() {
+    error = filename + ": unknown format";
+    return false;
+  };
+  auto shape_error = [filename, &error]() {
+    error = filename + ": empty shape";
+    return false;
+  };
+
+  shape = {};
+
+  auto ext = path_extension(filename);
+  if (ext == ".ply" || ext == ".PLY") {
+    // open ply
+    auto ply_guard = std::make_unique<ply_model>();
+    auto ply       = ply_guard.get();
+    if (!load_ply(filename, ply, error)) return false;
+
+    // gets vertex
+    get_positions(ply, shape.positions);
+    get_normals(ply, shape.normals);
+    get_texcoords(ply, shape.texcoords, flip_texcoord);
+    get_colors(ply, shape.colors);
+    get_radius(ply, shape.radius);
+
+    // get faces
+    if (has_quads(ply)) {
+      get_quads(ply, shape.quads);
+    } else {
+      get_triangles(ply, shape.triangles);
+    }
+    get_lines(ply, shape.lines);
+    get_points(ply, shape.points);
+
+    if (shape.positions.empty()) return shape_error();
+    return true;
+  } else if (ext == ".obj" || ext == ".OBJ") {
+    // load obj
+    auto obj_guard = std::make_unique<obj_scene>();
+    auto obj       = obj_guard.get();
+    if (!load_obj(filename, obj, error, true)) return false;
+
+    // get shape
+    if (obj->shapes.empty()) return shape_error();
+    if (obj->shapes.size() > 1) return shape_error();
+    auto oshape = obj->shapes.front();
+    if (oshape->points.empty() && oshape->lines.empty() &&
+        oshape->faces.empty())
+      return shape_error();
+
+    // decide what to do and get properties
+    auto materials  = vector<string>{};
+    auto ematerials = vector<int>{};
+    auto has_quads_ = has_quads(oshape);
+    if (!oshape->faces.empty() && !has_quads_) {
+      get_triangles(oshape, shape.triangles, shape.positions, shape.normals,
+          shape.texcoords, materials, ematerials, flip_texcoord);
+    } else if (!oshape->faces.empty() && has_quads_) {
+      get_quads(oshape, shape.quads, shape.positions, shape.normals,
+          shape.texcoords, materials, ematerials, flip_texcoord);
+    } else if (!oshape->lines.empty()) {
+      get_lines(oshape, shape.lines, shape.positions, shape.normals,
+          shape.texcoords, materials, ematerials, flip_texcoord);
+    } else if (!oshape->points.empty()) {
+      get_points(oshape, shape.points, shape.positions, shape.normals,
+          shape.texcoords, materials, ematerials, flip_texcoord);
+    } else {
+      return shape_error();
+    }
+
+    if (shape.positions.empty()) return shape_error();
+    return true;
+  } else if (ext == ".stl" || ext == ".STL") {
+    // load obj
+    auto stl_guard = std::make_unique<stl_model>();
+    auto stl       = stl_guard.get();
+    if (!load_stl(filename, stl, error, true)) return false;
+
+    // get shape
+    if (stl->shapes.empty()) return shape_error();
+    if (stl->shapes.size() > 1) return shape_error();
+    auto fnormals = vector<vec3f>{};
+    if (!get_triangles(stl, 0, shape.triangles, shape.positions, fnormals))
+      return shape_error();
+    return true;
+  } else {
+    return format_error();
+  }
+}
+
+// Save ply mesh
+bool save_shape(const string& filename, const shape_data& shape, string& error,
+    bool flip_texcoord, bool ascii) {
+  auto format_error = [filename, &error]() {
+    error = filename + ": unknown format";
+    return false;
+  };
+  auto shape_error = [filename, &error]() {
+    error = filename + ": empty shape";
+    return false;
+  };
+  auto line_error = [filename, &error]() {
+    error = filename + ": unsupported lines";
+    return false;
+  };
+  auto point_error = [filename, &error]() {
+    error = filename + ": unsupported points";
+    return false;
+  };
+
+  auto ext = path_extension(filename);
+  if (ext == ".ply" || ext == ".PLY") {
+    // create ply
+    auto ply_guard = std::make_unique<ply_model>();
+    auto ply       = ply_guard.get();
+    add_positions(ply, shape.positions);
+    add_normals(ply, shape.normals);
+    add_texcoords(ply, shape.texcoords, flip_texcoord);
+    add_colors(ply, shape.colors);
+    add_radius(ply, shape.radius);
+    add_faces(ply, shape.triangles, shape.quads);
+    add_lines(ply, shape.lines);
+    add_points(ply, shape.points);
+    return save_ply(filename, ply, error);
+  } else if (ext == ".obj" || ext == ".OBJ") {
+    auto obj_guard = std::make_unique<obj_scene>();
+    auto obj       = obj_guard.get();
+    auto oshape    = add_shape(obj);
+    if (!shape.triangles.empty()) {
+      set_triangles(oshape, shape.triangles, shape.positions, shape.normals,
+          shape.texcoords, {}, flip_texcoord);
+    } else if (!shape.quads.empty()) {
+      set_quads(oshape, shape.quads, shape.positions, shape.normals,
+          shape.texcoords, {}, flip_texcoord);
+    } else if (!shape.lines.empty()) {
+      set_lines(oshape, shape.lines, shape.positions, shape.normals,
+          shape.texcoords, {}, flip_texcoord);
+    } else if (!shape.points.empty()) {
+      set_points(oshape, shape.points, shape.positions, shape.normals,
+          shape.texcoords, {}, flip_texcoord);
+    } else {
+      return shape_error();
+    }
+    auto err = ""s;
+    return save_obj(filename, obj, error);
+  } else if (ext == ".stl" || ext == ".STL") {
+    // create ply
+    auto stl_guard = std::make_unique<stl_model>();
+    auto stl       = stl_guard.get();
+    if (!shape.lines.empty()) return line_error();
+    if (!shape.points.empty()) return point_error();
+    if (!shape.triangles.empty()) {
+      add_triangles(stl, shape.triangles, shape.positions, {});
+    } else if (!shape.quads.empty()) {
+      add_triangles(stl, quads_to_triangles(shape.quads), shape.positions, {});
+    } else {
+      return shape_error();
+    }
+    return save_stl(filename, stl, error);
+  } else if (ext == ".cpp" || ext == ".CPP") {
+    auto to_cpp = [](const string& name, const string& vname,
+                      const auto& values) -> string {
+      using T = typename std::remove_const_t<
+          std::remove_reference_t<decltype(values)>>::value_type;
+      if (values.empty()) return ""s;
+      auto str = "auto " + name + "_" + vname + " = ";
+      if constexpr (std::is_same_v<int, T>) str += "vector<int>{\n";
+      if constexpr (std::is_same_v<float, T>) str += "vector<float>{\n";
+      if constexpr (std::is_same_v<vec2i, T>) str += "vector<vec2i>{\n";
+      if constexpr (std::is_same_v<vec2f, T>) str += "vector<vec2f>{\n";
+      if constexpr (std::is_same_v<vec3i, T>) str += "vector<vec3i>{\n";
+      if constexpr (std::is_same_v<vec3f, T>) str += "vector<vec3f>{\n";
+      if constexpr (std::is_same_v<vec4i, T>) str += "vector<vec4i>{\n";
+      if constexpr (std::is_same_v<vec4f, T>) str += "vector<vec4f>{\n";
+      for (auto& value : values) {
+        if constexpr (std::is_same_v<int, T> || std::is_same_v<float, T>) {
+          str += std::to_string(value) + ",\n";
+        } else if constexpr (std::is_same_v<vec2i, T> ||
+                             std::is_same_v<vec2f, T>) {
+          str += "{" + std::to_string(value.x) + "," + std::to_string(value.y) +
+                 "},\n";
+        } else if constexpr (std::is_same_v<vec3i, T> ||
+                             std::is_same_v<vec3f, T>) {
+          str += "{" + std::to_string(value.x) + "," + std::to_string(value.y) +
+                 "," + std::to_string(value.z) + "},\n";
+        } else if constexpr (std::is_same_v<vec4i, T> ||
+                             std::is_same_v<vec4f, T>) {
+          str += "{" + std::to_string(value.x) + "," + std::to_string(value.y) +
+                 "," + std::to_string(value.z) + "," + std::to_string(value.w) +
+                 "},\n";
+        } else {
+          throw std::invalid_argument{"cannot print this"};
+        }
+      }
+      str += "};\n\n";
+      return str;
+    };
+
+    auto name = string{"shape"};
+    auto str  = ""s;
+    str += to_cpp(name, "positions", shape.positions);
+    str += to_cpp(name, "normals", shape.normals);
+    str += to_cpp(name, "texcoords", shape.texcoords);
+    str += to_cpp(name, "colors", shape.colors);
+    str += to_cpp(name, "radius", shape.radius);
+    str += to_cpp(name, "points", shape.points);
+    str += to_cpp(name, "lines", shape.lines);
+    str += to_cpp(name, "triangles", shape.triangles);
+    str += to_cpp(name, "quads", shape.quads);
+    return save_text(filename, str, error);
+  } else {
+    return format_error();
+  }
+}
+
+// Load ply mesh
+bool load_fvshape(const string& filename, fvshape_data& shape, string& error,
+    bool flip_texcoord) {
+  auto format_error = [filename, &error]() {
+    error = filename + ": unknown format";
+    return false;
+  };
+  auto shape_error = [filename, &error]() {
+    error = filename + ": empty shape";
+    return false;
+  };
+
+  shape = {};
+
+  auto ext = path_extension(filename);
+  if (ext == ".ply" || ext == ".PLY") {
+    // open ply
+    auto ply_guard = std::make_unique<ply_model>();
+    auto ply       = ply_guard.get();
+    if (!load_ply(filename, ply, error)) return false;
+
+    get_positions(ply, shape.positions);
+    get_normals(ply, shape.normals);
+    get_texcoords(ply, shape.texcoords, flip_texcoord);
+    get_quads(ply, shape.quadspos);
+    if (!shape.normals.empty()) shape.quadsnorm = shape.quadspos;
+    if (!shape.texcoords.empty()) shape.quadstexcoord = shape.quadspos;
+
+    if (shape.positions.empty()) return shape_error();
+    return true;
+  } else if (ext == ".obj" || ext == ".OBJ") {
+    // load obj
+    auto obj_guard = std::make_unique<obj_scene>();
+    auto obj       = obj_guard.get();
+    if (!load_obj(filename, obj, error, true)) return false;
+
+    // get shape
+    if (obj->shapes.empty()) return shape_error();
+    if (obj->shapes.size() > 1) return shape_error();
+    auto oshape = obj->shapes.front();
+    if (oshape->points.empty() && oshape->lines.empty() &&
+        oshape->faces.empty())
+      return shape_error();
+
+    if (oshape->faces.empty()) return shape_error();
+    auto materials  = vector<string>{};
+    auto ematerials = vector<int>{};
+    get_fvquads(oshape, shape.quadspos, shape.quadsnorm, shape.quadstexcoord,
+        shape.positions, shape.normals, shape.texcoords, materials, ematerials,
+        flip_texcoord);
+
+    if (shape.positions.empty()) return shape_error();
+    return true;
+  } else if (ext == ".stl" || ext == ".STL") {
+    // load obj
+    auto stl_guard = std::make_unique<stl_model>();
+    auto stl       = stl_guard.get();
+    if (!load_stl(filename, stl, error, true)) return false;
+
+    // get shape
+    if (stl->shapes.empty()) return shape_error();
+    if (stl->shapes.size() > 1) return shape_error();
+    auto fnormals  = vector<vec3f>{};
+    auto triangles = vector<vec3i>{};
+    if (!get_triangles(stl, 0, triangles, shape.positions, fnormals))
+      return shape_error();
+    shape.quadspos = triangles_to_quads(triangles);
+    return true;
+  } else {
+    return format_error();
+  }
+}
+
+// Save ply mesh
+bool save_fvshape(const string& filename, const fvshape_data& shape,
+    string& error, bool flip_texcoord, bool ascii) {
+  auto format_error = [filename, &error]() {
+    error = filename + ": unknown format";
+    return false;
+  };
+  auto shape_error = [filename, &error]() {
+    error = filename + ": empty shape";
+    return false;
+  };
+  auto line_error = [filename, &error]() {
+    error = filename + ": unsupported lines";
+    return false;
+  };
+  auto point_error = [filename, &error]() {
+    error = filename + ": unsupported points";
+    return false;
+  };
+
+  auto ext = path_extension(filename);
+  if (ext == ".ply" || ext == ".PLY") {
+    // create ply
+    auto ply_guard = std::make_unique<ply_model>();
+    auto ply       = ply_guard.get();
+    // split data
+    auto [split_quads, split_positions, split_normals, split_texcoords] =
+        split_facevarying(shape.quadspos, shape.quadsnorm, shape.quadstexcoord,
+            shape.positions, shape.normals, shape.texcoords);
+    add_positions(ply, split_positions);
+    add_normals(ply, split_normals);
+    add_texcoords(ply, split_texcoords, flip_texcoord);
+    add_faces(ply, {}, split_quads);
+    return save_ply(filename, ply, error);
+  } else if (ext == ".obj" || ext == ".OBJ") {
+    auto obj_guard = std::make_unique<obj_scene>();
+    auto obj       = obj_guard.get();
+    auto oshape    = add_shape(obj);
+    if (!shape.quadspos.empty()) {
+      set_fvquads(oshape, shape.quadspos, shape.quadsnorm, shape.quadstexcoord,
+          shape.positions, shape.normals, shape.texcoords, {}, flip_texcoord);
+    } else {
+      return shape_error();
+    }
+    auto err = ""s;
+    return save_obj(filename, obj, error);
+  } else if (ext == ".stl" || ext == ".STL") {
+    // create ply
+    auto stl_guard = std::make_unique<stl_model>();
+    auto stl       = stl_guard.get();
+    if (!shape.quadspos.empty()) {
+      // split data
+      auto [split_quads, split_positions, split_normals,
+          split_texcoords] = split_facevarying(shape.quadspos, shape.quadsnorm,
+          shape.quadstexcoord, shape.positions, shape.normals, shape.texcoords);
+      add_triangles(stl, quads_to_triangles(split_quads), split_positions, {});
+    } else {
+      return shape_error();
+    }
+    return save_stl(filename, stl, error);
+  } else if (ext == ".cpp" || ext == ".CPP") {
+    auto to_cpp = [](const string& name, const string& vname,
+                      const auto& values) -> string {
+      using T = typename std::remove_const_t<
+          std::remove_reference_t<decltype(values)>>::value_type;
+      if (values.empty()) return ""s;
+      auto str = "auto " + name + "_" + vname + " = ";
+      if constexpr (std::is_same_v<int, T>) str += "vector<int>{\n";
+      if constexpr (std::is_same_v<float, T>) str += "vector<float>{\n";
+      if constexpr (std::is_same_v<vec2i, T>) str += "vector<vec2i>{\n";
+      if constexpr (std::is_same_v<vec2f, T>) str += "vector<vec2f>{\n";
+      if constexpr (std::is_same_v<vec3i, T>) str += "vector<vec3i>{\n";
+      if constexpr (std::is_same_v<vec3f, T>) str += "vector<vec3f>{\n";
+      if constexpr (std::is_same_v<vec4i, T>) str += "vector<vec4i>{\n";
+      if constexpr (std::is_same_v<vec4f, T>) str += "vector<vec4f>{\n";
+      for (auto& value : values) {
+        if constexpr (std::is_same_v<int, T> || std::is_same_v<float, T>) {
+          str += std::to_string(value) + ",\n";
+        } else if constexpr (std::is_same_v<vec2i, T> ||
+                             std::is_same_v<vec2f, T>) {
+          str += "{" + std::to_string(value.x) + "," + std::to_string(value.y) +
+                 "},\n";
+        } else if constexpr (std::is_same_v<vec3i, T> ||
+                             std::is_same_v<vec3f, T>) {
+          str += "{" + std::to_string(value.x) + "," + std::to_string(value.y) +
+                 "," + std::to_string(value.z) + "},\n";
+        } else if constexpr (std::is_same_v<vec4i, T> ||
+                             std::is_same_v<vec4f, T>) {
+          str += "{" + std::to_string(value.x) + "," + std::to_string(value.y) +
+                 "," + std::to_string(value.z) + "," + std::to_string(value.w) +
+                 "},\n";
+        } else {
+          throw std::invalid_argument{"cannot print this"};
+        }
+      }
+      str += "};\n\n";
+      return str;
+    };
+
+    auto name = string{"shape"};
+    auto str  = ""s;
+    str += to_cpp(name, "positions", shape.positions);
+    str += to_cpp(name, "normals", shape.normals);
+    str += to_cpp(name, "texcoords", shape.texcoords);
+    str += to_cpp(name, "quadspos", shape.quadspos);
+    str += to_cpp(name, "quadsnorm", shape.quadsnorm);
+    str += to_cpp(name, "quadstexcoord", shape.quadstexcoord);
+    return save_text(filename, str, error);
+  } else {
+    return format_error();
+  }
+}
+
+}  // namespace yocto
+
+// -----------------------------------------------------------------------------
+// IMPLEMENTATION OF SHAPE STATS AND VALIDATION
+// -----------------------------------------------------------------------------
+namespace yocto {
+
+vector<string> shape_stats(const shape_data& shape, bool verbose) {
+  auto format = [](auto num) {
+    auto str = std::to_string(num);
+    while (str.size() < 13) str = " " + str;
+    return str;
+  };
+  auto format3 = [](auto num) {
+    auto str = std::to_string(num.x) + " " + std::to_string(num.y) + " " +
+               std::to_string(num.z);
+    while (str.size() < 13) str = " " + str;
+    return str;
+  };
+
+  auto bbox = invalidb3f;
+  for (auto& pos : shape.positions) bbox = merge(bbox, pos);
+
+  auto stats = vector<string>{};
+  stats.push_back("points:       " + format(shape.points.size()));
+  stats.push_back("lines:        " + format(shape.lines.size()));
+  stats.push_back("triangles:    " + format(shape.triangles.size()));
+  stats.push_back("quads:        " + format(shape.quads.size()));
+  stats.push_back("positions:    " + format(shape.positions.size()));
+  stats.push_back("normals:      " + format(shape.normals.size()));
+  stats.push_back("texcoords:    " + format(shape.texcoords.size()));
+  stats.push_back("colors:       " + format(shape.colors.size()));
+  stats.push_back("radius:       " + format(shape.radius.size()));
+  stats.push_back("center:       " + format3(center(bbox)));
+  stats.push_back("size:         " + format3(size(bbox)));
+  stats.push_back("min:          " + format3(bbox.min));
+  stats.push_back("max:          " + format3(bbox.max));
+
+  return stats;
+}
+
+vector<string> fvshape_stats(const fvshape_data& shape, bool verbose) {
+  auto format = [](auto num) {
+    auto str = std::to_string(num);
+    while (str.size() < 13) str = " " + str;
+    return str;
+  };
+  auto format3 = [](auto num) {
+    auto str = std::to_string(num.x) + " " + std::to_string(num.y) + " " +
+               std::to_string(num.z);
+    while (str.size() < 13) str = " " + str;
+    return str;
+  };
+
+  auto bbox = invalidb3f;
+  for (auto& pos : shape.positions) bbox = merge(bbox, pos);
+
+  auto stats = vector<string>{};
+  stats.push_back("fvquads:      " + format(shape.quadspos.size()));
+  stats.push_back("positions:    " + format(shape.positions.size()));
+  stats.push_back("normals:      " + format(shape.normals.size()));
+  stats.push_back("texcoords:    " + format(shape.texcoords.size()));
+  stats.push_back("center:       " + format3(center(bbox)));
+  stats.push_back("size:         " + format3(size(bbox)));
+  stats.push_back("min:          " + format3(bbox.min));
+  stats.push_back("max:          " + format3(bbox.max));
+
+  return stats;
+}
+
+}  // namespace yocto
+
+// -----------------------------------------------------------------------------
 // IMPLEMENTATION OF COMPUTATION OF PER-VERTEX PROPERTIES
 // -----------------------------------------------------------------------------
 namespace yocto {
 
 // Compute per-vertex tangents for lines.
-vector<vec3f> compute_tangents(
+vector<vec3f> lines_tangents(
     const vector<vec2i>& lines, const vector<vec3f>& positions) {
   auto tangents = vector<vec3f>{positions.size()};
   for (auto& tangent : tangents) tangent = zero3f;
@@ -76,7 +557,7 @@ vector<vec3f> compute_tangents(
 }
 
 // Compute per-vertex normals for triangles.
-vector<vec3f> compute_normals(
+vector<vec3f> triangles_normals(
     const vector<vec3i>& triangles, const vector<vec3f>& positions) {
   auto normals = vector<vec3f>{positions.size()};
   for (auto& normal : normals) normal = zero3f;
@@ -93,7 +574,7 @@ vector<vec3f> compute_normals(
 }
 
 // Compute per-vertex normals for quads.
-vector<vec3f> compute_normals(
+vector<vec3f> quads_normals(
     const vector<vec4i>& quads, const vector<vec3f>& positions) {
   auto normals = vector<vec3f>{positions.size()};
   for (auto& normal : normals) normal = zero3f;
@@ -112,7 +593,7 @@ vector<vec3f> compute_normals(
 }
 
 // Compute per-vertex tangents for lines.
-void update_tangents(vector<vec3f>& tangents, const vector<vec2i>& lines,
+void lines_tangents(vector<vec3f>& tangents, const vector<vec2i>& lines,
     const vector<vec3f>& positions) {
   if (tangents.size() != positions.size()) {
     throw std::out_of_range("array should be the same length");
@@ -128,7 +609,7 @@ void update_tangents(vector<vec3f>& tangents, const vector<vec2i>& lines,
 }
 
 // Compute per-vertex normals for triangles.
-void update_normals(vector<vec3f>& normals, const vector<vec3i>& triangles,
+void triangles_normals(vector<vec3f>& normals, const vector<vec3i>& triangles,
     const vector<vec3f>& positions) {
   if (normals.size() != positions.size()) {
     throw std::out_of_range("array should be the same length");
@@ -146,7 +627,7 @@ void update_normals(vector<vec3f>& normals, const vector<vec3i>& triangles,
 }
 
 // Compute per-vertex normals for quads.
-void update_normals(vector<vec3f>& normals, const vector<vec4i>& quads,
+void quads_normals(vector<vec3f>& normals, const vector<vec4i>& quads,
     const vector<vec3f>& positions) {
   if (normals.size() != positions.size()) {
     throw std::out_of_range("array should be the same length");
@@ -170,7 +651,7 @@ void update_normals(vector<vec3f>& normals, const vector<vec4i>& quads,
 // The first three components are the tangent with respect to the U texcoord.
 // The fourth component is the sign of the tangent wrt the V texcoord.
 // Tangent frame is useful in normal mapping.
-vector<vec4f> compute_tangent_spaces(const vector<vec3i>& triangles,
+vector<vec4f> triangles_tangent_spaces(const vector<vec3i>& triangles,
     const vector<vec3f>& positions, const vector<vec3f>& normals,
     const vector<vec2f>& texcoords) {
   auto tangu = vector<vec3f>(positions.size(), zero3f);
@@ -195,10 +676,9 @@ vector<vec4f> compute_tangent_spaces(const vector<vec3i>& triangles,
 }
 
 // Apply skinning
-pair<vector<vec3f>, vector<vec3f>> compute_skinning(
-    const vector<vec3f>& positions, const vector<vec3f>& normals,
-    const vector<vec4f>& weights, const vector<vec4i>& joints,
-    const vector<frame3f>& xforms) {
+pair<vector<vec3f>, vector<vec3f>> skin_vertices(const vector<vec3f>& positions,
+    const vector<vec3f>& normals, const vector<vec4f>& weights,
+    const vector<vec4i>& joints, const vector<frame3f>& xforms) {
   auto skinned_positions = vector<vec3f>{positions.size()};
   auto skinned_normals   = vector<vec3f>{positions.size()};
   for (auto i = 0; i < positions.size(); i++) {
@@ -219,10 +699,9 @@ pair<vector<vec3f>, vector<vec3f>> compute_skinning(
 }
 
 // Apply skinning as specified in Khronos glTF
-pair<vector<vec3f>, vector<vec3f>> compute_matrix_skinning(
-    const vector<vec3f>& positions, const vector<vec3f>& normals,
-    const vector<vec4f>& weights, const vector<vec4i>& joints,
-    const vector<mat4f>& xforms) {
+pair<vector<vec3f>, vector<vec3f>> skin_matrices(const vector<vec3f>& positions,
+    const vector<vec3f>& normals, const vector<vec4f>& weights,
+    const vector<vec4i>& joints, const vector<mat4f>& xforms) {
   auto skinned_positions = vector<vec3f>{positions.size()};
   auto skinned_normals   = vector<vec3f>{positions.size()};
   for (auto i = 0; i < positions.size(); i++) {
@@ -237,7 +716,7 @@ pair<vector<vec3f>, vector<vec3f>> compute_matrix_skinning(
 }
 
 // Apply skinning
-void update_skinning(vector<vec3f>& skinned_positions,
+void skin_vertices(vector<vec3f>& skinned_positions,
     vector<vec3f>& skinned_normals, const vector<vec3f>& positions,
     const vector<vec3f>& normals, const vector<vec4f>& weights,
     const vector<vec4i>& joints, const vector<frame3f>& xforms) {
@@ -262,7 +741,7 @@ void update_skinning(vector<vec3f>& skinned_positions,
 }
 
 // Apply skinning as specified in Khronos glTF
-void update_matrix_skinning(vector<vec3f>& skinned_positions,
+void skin_matrices(vector<vec3f>& skinned_positions,
     vector<vec3f>& skinned_normals, const vector<vec3f>& positions,
     const vector<vec3f>& normals, const vector<vec4f>& weights,
     const vector<vec4i>& joints, const vector<mat4f>& xforms) {
@@ -280,10 +759,78 @@ void update_matrix_skinning(vector<vec3f>& skinned_positions,
   }
 }
 
+// Compute per-vertex normals/tangents for lines/triangles/quads.
+vector<vec3f> compute_tangents(
+    const vector<vec2i>& lines, const vector<vec3f>& positions) {
+  return lines_tangents(lines, positions);
+}
+vector<vec3f> compute_normals(
+    const vector<vec3i>& triangles, const vector<vec3f>& positions) {
+  return triangles_normals(triangles, positions);
+}
+vector<vec3f> compute_normals(
+    const vector<vec4i>& quads, const vector<vec3f>& positions) {
+  return quads_normals(quads, positions);
+}
+// Update normals and tangents
+void update_tangents(vector<vec3f>& tangents, const vector<vec2i>& lines,
+    const vector<vec3f>& positions) {
+  return lines_tangents(tangents, lines, positions);
+}
+void update_normals(vector<vec3f>& normals, const vector<vec3i>& triangles,
+    const vector<vec3f>& positions) {
+  return triangles_normals(normals, triangles, positions);
+}
+void update_normals(vector<vec3f>& normals, const vector<vec4i>& quads,
+    const vector<vec3f>& positions) {
+  return quads_normals(normals, quads, positions);
+}
+
+// Compute per-vertex tangent space for triangle meshes.
+// Tangent space is defined by a four component vector.
+// The first three components are the tangent with respect to the u texcoord.
+// The fourth component is the sign of the tangent wrt the v texcoord.
+// Tangent frame is useful in normal mapping.
+vector<vec4f> compute_tangent_spaces(const vector<vec3i>& triangles,
+    const vector<vec3f>& positions, const vector<vec3f>& normals,
+    const vector<vec2f>& texcoords) {
+  return triangles_tangent_spaces(triangles, positions, normals, texcoords);
+}
+
+// Apply skinning to vertex position and normals.
+pair<vector<vec3f>, vector<vec3f>> compute_skinning(
+    const vector<vec3f>& positions, const vector<vec3f>& normals,
+    const vector<vec4f>& weights, const vector<vec4i>& joints,
+    const vector<frame3f>& xforms) {
+  return skin_vertices(positions, normals, weights, joints, xforms);
+}
+// Apply skinning as specified in Khronos glTF.
+pair<vector<vec3f>, vector<vec3f>> compute_matrix_skinning(
+    const vector<vec3f>& positions, const vector<vec3f>& normals,
+    const vector<vec4f>& weights, const vector<vec4i>& joints,
+    const vector<mat4f>& xforms) {
+  return skin_matrices(positions, normals, weights, joints, xforms);
+}
+// Update skinning
+void udpate_skinning(vector<vec3f>& skinned_positions,
+    vector<vec3f>& skinned_normals, const vector<vec3f>& positions,
+    const vector<vec3f>& normals, const vector<vec4f>& weights,
+    const vector<vec4i>& joints, const vector<frame3f>& xforms) {
+  return skin_vertices(skinned_positions, skinned_normals, positions, normals,
+      weights, joints, xforms);
+}
+void update_matrix_skinning(vector<vec3f>& skinned_positions,
+    vector<vec3f>& skinned_normals, const vector<vec3f>& positions,
+    const vector<vec3f>& normals, const vector<vec4f>& weights,
+    const vector<vec4i>& joints, const vector<mat4f>& xforms) {
+  return skin_matrices(skinned_positions, skinned_normals, positions, normals,
+      weights, joints, xforms);
+}
+
 }  // namespace yocto
 
 // -----------------------------------------------------------------------------
-// COMPUTATION OF PER_VERTEX PROPETIES
+// COMPUTATION OF PER VERTEX PROPETIES
 // -----------------------------------------------------------------------------
 namespace yocto {
 
@@ -2491,14 +3038,14 @@ void make_rounded_uvcylinder(vector<vec4i>& quads, vector<vec3f>& positions,
 }
 
 // Make a plane.
-quads_shape make_rect(
+shape_data make_rect(
     const vec2i& steps, const vec2f& scale, const vec2f& uvscale) {
   auto shape = quads_shape{};
   make_rect(shape.quads, shape.positions, shape.normals, shape.texcoords, steps,
       scale, uvscale);
   return shape;
 }
-quads_shape make_bulged_rect(const vec2i& steps, const vec2f& scale,
+shape_data make_bulged_rect(const vec2i& steps, const vec2f& scale,
     const vec2f& uvscale, float radius) {
   auto shape = quads_shape{};
   make_bulged_rect(shape.quads, shape.positions, shape.normals, shape.texcoords,
@@ -2507,14 +3054,14 @@ quads_shape make_bulged_rect(const vec2i& steps, const vec2f& scale,
 }
 
 // Make a plane in the xz plane.
-quads_shape make_recty(
+shape_data make_recty(
     const vec2i& steps, const vec2f& scale, const vec2f& uvscale) {
   auto shape = quads_shape{};
   make_recty(shape.quads, shape.positions, shape.normals, shape.texcoords,
       steps, scale, uvscale);
   return shape;
 }
-quads_shape make_bulged_recty(const vec2i& steps, const vec2f& scale,
+shape_data make_bulged_recty(const vec2i& steps, const vec2f& scale,
     const vec2f& uvscale, float radius) {
   auto shape = quads_shape{};
   make_bulged_recty(shape.quads, shape.positions, shape.normals,
@@ -2523,14 +3070,14 @@ quads_shape make_bulged_recty(const vec2i& steps, const vec2f& scale,
 }
 
 // Make a box.
-quads_shape make_box(
+shape_data make_box(
     const vec3i& steps, const vec3f& scale, const vec3f& uvscale) {
   auto shape = quads_shape{};
   make_box(shape.quads, shape.positions, shape.normals, shape.texcoords, steps,
       scale, uvscale);
   return shape;
 }
-quads_shape make_rounded_box(const vec3i& steps, const vec3f& scale,
+shape_data make_rounded_box(const vec3i& steps, const vec3f& scale,
     const vec3f& uvscale, float radius) {
   auto shape = quads_shape{};
   make_rounded_box(shape.quads, shape.positions, shape.normals, shape.texcoords,
@@ -2539,7 +3086,7 @@ quads_shape make_rounded_box(const vec3i& steps, const vec3f& scale,
 }
 
 // Make a quad stack
-quads_shape make_rect_stack(
+shape_data make_rect_stack(
     const vec3i& steps, const vec3f& scale, const vec2f& uvscale) {
   auto shape = quads_shape{};
   make_rect_stack(shape.quads, shape.positions, shape.normals, shape.texcoords,
@@ -2548,14 +3095,14 @@ quads_shape make_rect_stack(
 }
 
 // Make a floor.
-quads_shape make_floor(
+shape_data make_floor(
     const vec2i& steps, const vec2f& scale, const vec2f& uvscale) {
   auto shape = quads_shape{};
   make_floor(shape.quads, shape.positions, shape.normals, shape.texcoords,
       steps, scale, uvscale);
   return shape;
 }
-quads_shape make_bent_floor(
+shape_data make_bent_floor(
     const vec2i& steps, const vec2f& scale, const vec2f& uvscale, float bent) {
   auto shape = quads_shape{};
   make_bent_floor(shape.quads, shape.positions, shape.normals, shape.texcoords,
@@ -2564,7 +3111,7 @@ quads_shape make_bent_floor(
 }
 
 // Make a sphere.
-quads_shape make_sphere(int steps, float scale, float uvscale) {
+shape_data make_sphere(int steps, float scale, float uvscale) {
   auto shape = quads_shape{};
   make_sphere(shape.quads, shape.positions, shape.normals, shape.texcoords,
       steps, scale, uvscale);
@@ -2572,7 +3119,7 @@ quads_shape make_sphere(int steps, float scale, float uvscale) {
 }
 
 // Make a sphere.
-quads_shape make_uvsphere(
+shape_data make_uvsphere(
     const vec2i& steps, float scale, const vec2f& uvscale) {
   auto shape = quads_shape{};
   make_uvsphere(shape.quads, shape.positions, shape.normals, shape.texcoords,
@@ -2581,7 +3128,7 @@ quads_shape make_uvsphere(
 }
 
 // Make a sphere with slipped caps.
-quads_shape make_capped_uvsphere(
+shape_data make_capped_uvsphere(
     const vec2i& steps, float scale, const vec2f& uvscale, float height) {
   auto shape = quads_shape{};
   make_capped_uvsphere(shape.quads, shape.positions, shape.normals,
@@ -2589,7 +3136,7 @@ quads_shape make_capped_uvsphere(
   return shape;
 }
 // Make a disk
-quads_shape make_disk(int steps, float scale, float uvscale) {
+shape_data make_disk(int steps, float scale, float uvscale) {
   auto shape = quads_shape{};
   make_disk(shape.quads, shape.positions, shape.normals, shape.texcoords, steps,
       scale, uvscale);
@@ -2597,7 +3144,7 @@ quads_shape make_disk(int steps, float scale, float uvscale) {
 }
 
 // Make a bulged disk
-quads_shape make_bulged_disk(
+shape_data make_bulged_disk(
     int steps, float scale, float uvscale, float height) {
   auto shape = quads_shape{};
   make_bulged_disk(shape.quads, shape.positions, shape.normals, shape.texcoords,
@@ -2606,7 +3153,7 @@ quads_shape make_bulged_disk(
 }
 
 // Make a uv disk
-quads_shape make_uvdisk(const vec2i& steps, float scale, const vec2f& uvscale) {
+shape_data make_uvdisk(const vec2i& steps, float scale, const vec2f& uvscale) {
   auto shape = quads_shape{};
   make_uvdisk(shape.quads, shape.positions, shape.normals, shape.texcoords,
       steps, scale, uvscale);
@@ -2614,7 +3161,7 @@ quads_shape make_uvdisk(const vec2i& steps, float scale, const vec2f& uvscale) {
 }
 
 // Make a uv cylinder
-quads_shape make_uvcylinder(
+shape_data make_uvcylinder(
     const vec3i& steps, const vec2f& scale, const vec3f& uvscale) {
   auto shape = quads_shape{};
   make_uvcylinder(shape.quads, shape.positions, shape.normals, shape.texcoords,
@@ -2623,7 +3170,7 @@ quads_shape make_uvcylinder(
 }
 
 // Make a rounded uv cylinder
-quads_shape make_rounded_uvcylinder(const vec3i& steps, const vec2f& scale,
+shape_data make_rounded_uvcylinder(const vec3i& steps, const vec2f& scale,
     const vec3f& uvscale, float radius) {
   auto shape = quads_shape{};
   make_rounded_uvcylinder(shape.quads, shape.positions, shape.normals,
@@ -2674,7 +3221,7 @@ void make_lines(vector<vec2i>& lines, vector<vec3f>& positions,
 }
 
 // Generate lines set along a quad. Returns lines, pos, norm, texcoord, radius.
-lines_shape make_lines(const vec2i& steps, const vec2f& scale,
+shape_data make_lines(const vec2i& steps, const vec2f& scale,
     const vec2f& uvscale, const vec2f& rad) {
   auto shape = lines_shape{};
   make_lines(shape.lines, shape.positions, shape.normals, shape.texcoords,
@@ -2722,21 +3269,21 @@ void make_random_points(vector<int>& points, vector<vec3f>& positions,
 }
 
 // Make point primitives. Returns points, pos, norm, texcoord, radius.
-points_shape make_point(float radius) {
+shape_data make_point(float radius) {
   auto shape = points_shape{};
   make_point(shape.points, shape.positions, shape.normals, shape.texcoords,
       shape.radius, radius);
   return shape;
 }
 
-points_shape make_points(int num, float uvscale, float radius) {
+shape_data make_points(int num, float uvscale, float radius) {
   auto shape = points_shape{};
   make_points(shape.points, shape.positions, shape.normals, shape.texcoords,
       shape.radius, num, uvscale, radius);
   return shape;
 }
 
-points_shape make_random_points(
+shape_data make_random_points(
     int num, const vec3f& size, float uvscale, float radius, uint64_t seed) {
   auto shape = points_shape{};
   make_random_points(shape.points, shape.positions, shape.normals,
@@ -2790,7 +3337,7 @@ void make_fvsphere(vector<vec4i>& quadspos, vector<vec4i>& quadsnorm,
 }
 
 // Make a facevarying rect
-quads_fvshape make_fvrect(
+fvshape_data make_fvrect(
     const vec2i& steps, const vec2f& scale, const vec2f& uvscale) {
   auto shape = quads_fvshape{};
   make_fvrect(shape.quadspos, shape.quadsnorm, shape.quadstexcoord,
@@ -2799,7 +3346,7 @@ quads_fvshape make_fvrect(
 }
 
 // Make a facevarying box
-quads_fvshape make_fvbox(
+fvshape_data make_fvbox(
     const vec3i& steps, const vec3f& scale, const vec3f& uvscale) {
   auto shape = quads_fvshape{};
   make_fvbox(shape.quadspos, shape.quadsnorm, shape.quadstexcoord,
@@ -2808,7 +3355,7 @@ quads_fvshape make_fvbox(
 }
 
 // Make a facevarying sphere
-quads_fvshape make_fvsphere(int steps, float scale, float uvscale) {
+fvshape_data make_fvsphere(int steps, float scale, float uvscale) {
   auto shape = quads_fvshape{};
   make_fvsphere(shape.quadspos, shape.quadsnorm, shape.quadstexcoord,
       shape.positions, shape.normals, shape.texcoords, steps, scale, uvscale);
@@ -3359,36 +3906,36 @@ void make_geosphere(
 }
 
 // Predefined meshes
-quads_shape make_monkey(float scale) {
+shape_data make_monkey(float scale) {
   auto shape = quads_shape{};
   make_monkey(shape.quads, shape.positions, scale);
   return shape;
 }
-quads_shape make_quad(float scale) {
+shape_data make_quad(float scale) {
   auto shape = quads_shape{};
   make_quad(
       shape.quads, shape.positions, shape.normals, shape.texcoords, scale);
   return shape;
 }
-quads_shape make_quady(float scale) {
+shape_data make_quady(float scale) {
   auto shape = quads_shape{};
   make_quady(
       shape.quads, shape.positions, shape.normals, shape.texcoords, scale);
   return shape;
 }
-quads_shape make_cube(float scale) {
+shape_data make_cube(float scale) {
   auto shape = quads_shape{};
   make_cube(
       shape.quads, shape.positions, shape.normals, shape.texcoords, scale);
   return shape;
 }
-quads_fvshape make_fvcube(float scale) {
+fvshape_data make_fvcube(float scale) {
   auto shape = quads_fvshape{};
   make_fvcube(shape.quadspos, shape.quadsnorm, shape.quadstexcoord,
       shape.positions, shape.normals, shape.texcoords, scale);
   return shape;
 }
-triangles_shape make_geosphere(float scale) {
+shape_data make_geosphere(float scale) {
   auto shape = triangles_shape{};
   make_geosphere(shape.triangles, shape.positions, scale);
   return shape;
@@ -3462,7 +4009,7 @@ void make_hair(vector<vec2i>& lines, vector<vec3f>& positions,
   }
 
   if (clump.x > 0 || noise.x > 0 || rotation.x > 0) {
-    normals = compute_tangents(lines, positions);
+    normals = lines_tangents(lines, positions);
   }
 }
 
@@ -3472,18 +4019,7 @@ lines_shape make_hair(const triangles_shape& base, const vec2i& steps,
     const vec2f& rotation, int seed) {
   auto shape = lines_shape{};
   make_hair(shape.lines, shape.positions, shape.normals, shape.texcoords,
-      shape.radius, base.triangles, {}, base.positions, base.normals,
-      base.texcoords, steps, len, rad, noise, clump, rotation, seed);
-  return shape;
-}
-
-// Make a hair ball around a shape
-lines_shape make_hair(const quads_shape& base, const vec2i& steps,
-    const vec2f& len, const vec2f& rad, const vec2f& noise, const vec2f& clump,
-    const vec2f& rotation, int seed) {
-  auto shape = lines_shape{};
-  make_hair(shape.lines, shape.positions, shape.normals, shape.texcoords,
-      shape.radius, {}, base.quads, base.positions, base.normals,
+      shape.radius, base.triangles, base.quads, base.positions, base.normals,
       base.texcoords, steps, len, rad, noise, clump, rotation, seed);
   return shape;
 }
@@ -3515,7 +4051,7 @@ void make_heightfield(vector<vec4i>& quads, vector<vec3f>& positions,
   for (auto j = 0; j < size.y; j++)
     for (auto i = 0; i < size.x; i++)
       positions[j * size.x + i].y = height[j * size.x + i];
-  normals = compute_normals(quads, positions);
+  normals = quads_normals(quads, positions);
 }
 
 }  // namespace yocto

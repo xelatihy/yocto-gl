@@ -434,7 +434,7 @@ void apply_brush(generic_shape *shape, vector<vec3f> &positions,
     shade_shape *glshape, shape_bvh &tree, hash_grid &grid) {
   shape->positions = positions;
   set_positions(glshape, positions);
-  update_normals(shape->normals, shape->triangles, shape->positions);
+  triangles_normals(shape->normals, shape->triangles, shape->positions);
   set_normals(glshape, shape->normals);
   update_triangles_bvh(tree, shape->triangles, shape->positions);
   grid = make_hash_grid(positions, grid.cell_size);
