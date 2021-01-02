@@ -125,13 +125,13 @@ vector<vec3f> compute_normals(const generic_shape& shape) {
   if (!shape.points.empty()) {
     return {};
   } else if (!shape.lines.empty()) {
-    return compute_tangents(shape.lines, shape.positions);
+    return lines_tangents(shape.lines, shape.positions);
   } else if (!shape.triangles.empty()) {
-    return compute_normals(shape.triangles, shape.positions);
+    return triangles_normals(shape.triangles, shape.positions);
   } else if (!shape.quads.empty()) {
-    return compute_normals(shape.quads, shape.positions);
+    return quads_normals(shape.quads, shape.positions);
   } else if (!shape.quadspos.empty()) {
-    return compute_normals(shape.quadspos, shape.positions);
+    return quads_normals(shape.quadspos, shape.positions);
   } else {
     return {};
   }

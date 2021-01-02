@@ -85,8 +85,16 @@ struct shape_data {
   vector<float> radius    = {};
 };
 
-// Shape ddata stored as a face-varying mesh
-struct subdiv_data {
+// Compute per-vertex normals/tangents for lines/triangles/quads.
+vector<vec3f> shape_normals(const shape_data& shape);
+void          shape_normals(vector<vec3f>& normals, const shape_data& shape);
+
+// Update normals in place
+void smooth_normals(shape_data& shape);
+void remove_normals(shape_data& shape);
+
+// Shape data stored as a face-varying mesh
+struct fvshape_data {
   // element data
   vector<vec4i> quadspos      = {};
   vector<vec4i> quadsnorm     = {};
@@ -96,22 +104,15 @@ struct subdiv_data {
   vector<vec3f> positions = {};
   vector<vec3f> normals   = {};
   vector<vec2f> texcoords = {};
-
-  // subdivision data
-  int  subdivisions = 0;
-  bool catmullclark = true;
-  bool smooth       = true;
-  //   // displacement data
-  //   float            displacement     = 0;
-  //   sceneio_texture* displacement_tex = nullptr;
 };
 
 // Compute per-vertex normals/tangents for lines/triangles/quads.
-void update_normals(shape_data& shape);
-void update_normals(subdiv_data& subdiv);
+vector<vec3f> fvshape_normals(const fvshape_data& shape);
+void fvshape_normals(vector<vec3f>& normals, const fvshape_data& shape);
 
-// Compute per-vertex tangent space for triangle meshes.
-void update_tangent_spaces(shape_data& shape);
+// Update normals in place
+void smooth_normals(fvshape_data& subdiv);
+void remove_normals(fvshape_data& subdiv);
 
 }  // namespace yocto
 
@@ -127,9 +128,9 @@ bool save_shape(const string& filename, const shape_data& shape, string& error,
     bool flip_texcoords = true, bool ascii = false);
 
 // Load/save a subdiv
-bool load_shape(const string& filename, subdiv_data& subdiv, string& error,
+bool load_shape(const string& filename, fvshape_data& shape, string& error,
     bool flip_texcoords = true);
-bool save_shape(const string& filename, const subdiv_data& subdiv,
+bool save_shape(const string& filename, const fvshape_data& shape,
     string& error, bool flip_texcoords = true, bool ascii = false);
 
 }  // namespace yocto
@@ -140,18 +141,18 @@ bool save_shape(const string& filename, const subdiv_data& subdiv,
 namespace yocto {
 
 // Compute per-vertex normals/tangents for lines/triangles/quads.
-vector<vec3f> compute_tangents(
+vector<vec3f> lines_tangents(
     const vector<vec2i>& lines, const vector<vec3f>& positions);
-vector<vec3f> compute_normals(
+vector<vec3f> triangles_normals(
     const vector<vec3i>& triangles, const vector<vec3f>& positions);
-vector<vec3f> compute_normals(
+vector<vec3f> quads_normals(
     const vector<vec4i>& quads, const vector<vec3f>& positions);
 // Update normals and tangents
-void update_tangents(vector<vec3f>& tangents, const vector<vec2i>& lines,
+void lines_tangents(vector<vec3f>& tangents, const vector<vec2i>& lines,
     const vector<vec3f>& positions);
-void update_normals(vector<vec3f>& normals, const vector<vec3i>& triangles,
+void triangles_normals(vector<vec3f>& normals, const vector<vec3i>& triangles,
     const vector<vec3f>& positions);
-void update_normals(vector<vec3f>& normals, const vector<vec4i>& quads,
+void quads_normals(vector<vec3f>& normals, const vector<vec4i>& quads,
     const vector<vec3f>& positions);
 
 // Compute per-vertex tangent space for triangle meshes.
@@ -159,26 +160,68 @@ void update_normals(vector<vec3f>& normals, const vector<vec4i>& quads,
 // The first three components are the tangent with respect to the u texcoord.
 // The fourth component is the sign of the tangent wrt the v texcoord.
 // Tangent frame is useful in normal mapping.
-vector<vec4f> compute_tangent_spaces(const vector<vec3i>& triangles,
+vector<vec4f> triangle_tangent_spaces(const vector<vec3i>& triangles,
     const vector<vec3f>& positions, const vector<vec3f>& normals,
     const vector<vec2f>& texcoords);
 
 // Apply skinning to vertex position and normals.
-pair<vector<vec3f>, vector<vec3f>> compute_skinning(
+pair<vector<vec3f>, vector<vec3f>> skin_vertices(const vector<vec3f>& positions,
+    const vector<vec3f>& normals, const vector<vec4f>& weights,
+    const vector<vec4i>& joints, const vector<frame3f>& xforms);
+// Apply skinning as specified in Khronos glTF.
+pair<vector<vec3f>, vector<vec3f>> skin_matrices(const vector<vec3f>& positions,
+    const vector<vec3f>& normals, const vector<vec4f>& weights,
+    const vector<vec4i>& joints, const vector<mat4f>& xforms);
+// Update skinning
+void skin_vertices(vector<vec3f>& skinned_positions,
+    vector<vec3f>& skinned_normals, const vector<vec3f>& positions,
+    const vector<vec3f>& normals, const vector<vec4f>& weights,
+    const vector<vec4i>& joints, const vector<frame3f>& xforms);
+void skin_matrices(vector<vec3f>& skinned_positions,
+    vector<vec3f>& skinned_normals, const vector<vec3f>& positions,
+    const vector<vec3f>& normals, const vector<vec4f>& weights,
+    const vector<vec4i>& joints, const vector<mat4f>& xforms);
+
+// Compute per-vertex normals/tangents for lines/triangles/quads.
+[[deprecated]] vector<vec3f> compute_tangents(
+    const vector<vec2i>& lines, const vector<vec3f>& positions);
+[[deprecated]] vector<vec3f> compute_normals(
+    const vector<vec3i>& triangles, const vector<vec3f>& positions);
+[[deprecated]] vector<vec3f> compute_normals(
+    const vector<vec4i>& quads, const vector<vec3f>& positions);
+// Update normals and tangents
+[[deprecated]] void update_tangents(vector<vec3f>& tangents,
+    const vector<vec2i>& lines, const vector<vec3f>& positions);
+[[deprecated]] void update_normals(vector<vec3f>& normals,
+    const vector<vec3i>& triangles, const vector<vec3f>& positions);
+[[deprecated]] void update_normals(vector<vec3f>& normals,
+    const vector<vec4i>& quads, const vector<vec3f>& positions);
+
+// Compute per-vertex tangent space for triangle meshes.
+// Tangent space is defined by a four component vector.
+// The first three components are the tangent with respect to the u texcoord.
+// The fourth component is the sign of the tangent wrt the v texcoord.
+// Tangent frame is useful in normal mapping.
+[[deprecated]] vector<vec4f> compute_tangent_spaces(
+    const vector<vec3i>& triangles, const vector<vec3f>& positions,
+    const vector<vec3f>& normals, const vector<vec2f>& texcoords);
+
+// Apply skinning to vertex position and normals.
+[[deprecated]] pair<vector<vec3f>, vector<vec3f>> compute_skinning(
     const vector<vec3f>& positions, const vector<vec3f>& normals,
     const vector<vec4f>& weights, const vector<vec4i>& joints,
     const vector<frame3f>& xforms);
 // Apply skinning as specified in Khronos glTF.
-pair<vector<vec3f>, vector<vec3f>> compute_matrix_skinning(
+[[deprecated]] pair<vector<vec3f>, vector<vec3f>> compute_matrix_skinning(
     const vector<vec3f>& positions, const vector<vec3f>& normals,
     const vector<vec4f>& weights, const vector<vec4i>& joints,
     const vector<mat4f>& xforms);
 // Update skinning
-void udpate_skinning(vector<vec3f>& skinned_positions,
+[[deprecated]] void udpate_skinning(vector<vec3f>& skinned_positions,
     vector<vec3f>& skinned_normals, const vector<vec3f>& positions,
     const vector<vec3f>& normals, const vector<vec4f>& weights,
     const vector<vec4i>& joints, const vector<frame3f>& xforms);
-void update_matrix_skinning(vector<vec3f>& skinned_positions,
+[[deprecated]] void update_matrix_skinning(vector<vec3f>& skinned_positions,
     vector<vec3f>& skinned_normals, const vector<vec3f>& positions,
     const vector<vec3f>& normals, const vector<vec4f>& weights,
     const vector<vec4i>& joints, const vector<mat4f>& xforms);

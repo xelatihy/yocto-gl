@@ -204,7 +204,7 @@ int main(int argc, const char* argv[]) {
   // compute normals
   if (smooth) {
     print_progress("smooth shape", 0, 1);
-    normals = compute_normals(triangles, positions);
+    normals = triangles_normals(triangles, positions);
     print_progress("smooth shape", 1, 1);
   }
 
