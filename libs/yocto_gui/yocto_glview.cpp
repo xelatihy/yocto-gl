@@ -87,7 +87,7 @@ void view_image(
 
 // Open a window and show a shape via path tracing
 void view_shape(const string& title, const string& name,
-    const generic_shape& shape, bool addsky,
+    const shape_data& shape, bool addsky,
     const progress_callback& progress_cb) {
   // initialize path tracer scene
   auto scene_guard = std::make_unique<sceneio_scene>();

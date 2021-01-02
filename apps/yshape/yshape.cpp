@@ -852,7 +852,7 @@ int run_view(const view_params& params) {
 // view shapes
 int run_view(const view_params& params) {
   // shape data
-  auto shape = generic_shape{};
+  auto shape = shape_data{};
 
   // load mesh
   auto ioerror = ""s;

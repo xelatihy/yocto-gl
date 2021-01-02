@@ -73,7 +73,7 @@ void view_image(const image_data& img);
 
 // Open a window and show a shape via path tracing
 void view_shape(const string& title, const string& name,
-    const generic_shape& shape, bool addsky = false,
+    const shape_data& shape, bool addsky = false,
     const progress_callback& progress_cb = {});
 
 // Open a window and show an scene via path tracing
