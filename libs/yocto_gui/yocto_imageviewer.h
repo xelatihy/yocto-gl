@@ -60,6 +60,22 @@ using std::vector;
 }  // namespace yocto
 
 // -----------------------------------------------------------------------------
+// IMAGE AND TRACE VIEW
+// -----------------------------------------------------------------------------
+namespace yocto {
+
+// Open a window and show an image
+void view_image(const image<vec4f>& img);
+void view_image(const image<vec4b>& img);
+
+// Open a window and show an scene via path tracing
+void view_scene(const string& title, const string& name,
+    const trace_scene* scene, const trace_camera* camera,
+    const trace_params& params, const progress_callback& progress_cb = {});
+
+}  // namespace yocto
+
+// -----------------------------------------------------------------------------
 // IMAGE VIEWER
 // -----------------------------------------------------------------------------
 namespace yocto {
@@ -88,34 +104,6 @@ void set_widgets(imageview_state* viewer, const string& name,
 using imageview_callback =
     function<void(const string&, const json_value&, const gui_input&)>;
 void set_callback(imageview_state* viewer, const imageview_callback& callback);
-
-}  // namespace yocto
-
-// -----------------------------------------------------------------------------
-// TRACE VIEWER
-// -----------------------------------------------------------------------------
-namespace yocto {
-
-// Make a scene view
-struct traceview_state;
-unique_ptr<traceview_state> make_traceview(const string& title);
-
-// Run view
-void run_view(traceview_state* viewer);
-
-// Set scene and tracee params
-void set_scene(
-    imageview_state* viewer, const string& name, const trace_scene* scene);
-void set_camera(
-    imageview_state* viewer, const string& name, const trace_camera* camera);
-void set_params(
-    imageview_state* viewer, const string& name, const trace_params& params);
-void close_scene(imageview_state* viewer, const string& name);
-
-// Set ui callback
-using traceview_callback =
-    function<void(const string&, const json_value&, const gui_input&)>;
-void set_callback(traceview_state* viewer, const traceview_callback& callback);
 
 }  // namespace yocto
 
@@ -186,71 +174,6 @@ struct imageview_state {
   imageview_view*            selected    = nullptr;  // selected
   std::mutex                 input_mutex = {};
   vector<imageview_inputptr> inputs      = {};  // input images
-  imageview_callback         callback    = {};  // params and ui callback
-};
-
-}  // namespace yocto
-
-// -----------------------------------------------------------------------------
-// TRACE VIEWER
-// -----------------------------------------------------------------------------
-namespace yocto {
-
-// Input image
-struct traceview_input {
-  string name = "";
-
-  bool close = false;
-
-  bool               schanged = true;
-  const trace_scene* scene    = nullptr;
-
-  bool                pchanged = true;
-  const trace_camera* camera   = nullptr;
-  trace_params        params   = {};
-
-  bool       wchanged = true;
-  json_value widgets  = {};
-  json_value schema   = {};
-};
-
-// An image visualized
-struct traceview_view {
-  // original data
-  string name = "scene.json";
-
-  // trace data
-  image<vec4f> hdr = {};
-  image<vec4b> ldr = {};
-
-  // diplay data
-  image<vec4b> display  = {};
-  float        exposure = 0;
-  bool         filmic   = false;
-
-  // viewing properties
-  ogl_image*       glimage  = new ogl_image{};
-  ogl_image_params glparams = {};
-
-  // user params
-  json_value params = json_value::object();
-  json_value schema = to_schema_object("User params.");
-
-  ~traceview_view() {
-    if (glimage) delete glimage;
-  }
-};
-
-// Image pointer
-using traceview_viewptr  = unique_ptr<traceview_view>;
-using traceview_inputptr = unique_ptr<traceview_input>;
-
-// Simple image viewer
-struct traceview_state {
-  vector<traceview_viewptr>  images      = {};       // images
-  traceview_view*            selected    = nullptr;  // selected
-  std::mutex                 input_mutex = {};
-  vector<traceview_inputptr> inputs      = {};  // input images
   imageview_callback         callback    = {};  // params and ui callback
 };
 

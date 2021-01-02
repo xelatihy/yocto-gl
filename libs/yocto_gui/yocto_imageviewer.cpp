@@ -30,6 +30,7 @@
 #include "yocto_imageviewer.h"
 
 #include <yocto/yocto_commonio.h>
+#include <yocto/yocto_geometry.h>
 
 // -----------------------------------------------------------------------------
 // USING DIRECTIVES
@@ -38,6 +39,142 @@ namespace yocto {
 
 // using directives
 using std::make_unique;
+
+}  // namespace yocto
+
+// -----------------------------------------------------------------------------
+// IMAGE AND TRACE VIEW
+// -----------------------------------------------------------------------------
+namespace yocto {
+
+// Open a window and show an image
+void view_image(
+    const string& title, const string& name, const image<vec4f>& img) {
+  // open viewer
+  auto viewer_guard = make_imageview(title);
+  auto viewer       = viewer_guard.get();
+
+  // set view
+  set_image(viewer, name, img);
+
+  // run view
+  run_view(viewer);
+}
+void view_image(
+    const string& title, const string& name, const image<vec4b>& img) {
+  // open viewer
+  auto viewer_guard = make_imageview(title);
+  auto viewer       = viewer_guard.get();
+
+  // set view
+  set_image(viewer, name, img);
+
+  // run view
+  run_view(viewer);
+}
+
+// Open a window and show an scene via path tracing
+void view_scene(const string& title, const string& name,
+    const trace_scene* scene, const trace_camera* camera_,
+    const trace_params& params_, const progress_callback& progress_cb) {
+  // open viewer
+  auto viewer_guard = make_imageview(title);
+  auto viewer       = viewer_guard.get();
+
+  // copy params and camera
+  auto params       = params_;
+  auto camera_guard = make_unique<trace_camera>();
+  auto camera       = camera_guard.get();
+  *camera           = *camera_;
+
+  // build bvh
+  auto bvh_guard = std::make_unique<trace_bvh>();
+  auto bvh       = bvh_guard.get();
+  init_bvh(bvh, scene, params, print_progress);
+
+  // init renderer
+  auto lights_guard = std::make_unique<trace_lights>();
+  auto lights       = lights_guard.get();
+  init_lights(lights, scene, params, print_progress);
+
+  // fix renderer type if no lights
+  if (lights->lights.empty() && is_sampler_lit(params)) {
+    print_info("no lights presents, image will be black");
+  }
+
+  // init state
+  auto state_guard = std::make_unique<trace_state>();
+  auto state       = state_guard.get();
+
+  // render start
+  trace_start(
+      state, scene, camera, bvh, lights, params,
+      [viewer, name](const string& message, int sample, int nsamples) {
+        set_widget(viewer, name, "sample", to_json(sample),
+            to_schema(sample, "Current sample"));
+        print_progress(message, sample, nsamples);
+      },
+      [viewer, name](const image<vec4f>& render, int current, int total) {
+        set_image(viewer, name, render);
+      });
+
+  // show rendering params
+  set_widgets(
+      viewer, name, to_json(params), to_schema(params, "Render params"));
+
+  // set callback
+  set_callback(viewer,
+      [state, scene, camera, bvh, lights, viewer, &params](const string& name,
+          const json_value& uiparams, const gui_input& input) {
+        if (name != name) return;
+        if (!uiparams.is_null()) {
+          trace_stop(state);
+          params = from_json<trace_params>(uiparams);
+          // show rendering params
+          set_widgets(viewer, name, to_json(params),
+              to_schema(params, "Render params"));
+          trace_start(
+              state, scene, camera, bvh, lights, params,
+              [viewer, name](const string& message, int sample, int nsamples) {
+                set_widget(viewer, name, "sample", to_json(sample),
+                    to_schema(sample, "Current sample"));
+                print_progress(message, sample, nsamples);
+              },
+              [viewer, name](const image<vec4f>& render, int current,
+                  int total) { set_image(viewer, name, render); });
+        } else if ((input.mouse_left || input.mouse_right) &&
+                   input.mouse_pos != input.mouse_last) {
+          trace_stop(state);
+          auto dolly  = 0.0f;
+          auto pan    = zero2f;
+          auto rotate = zero2f;
+          if (input.mouse_left && !input.modifier_shift)
+            rotate = (input.mouse_pos - input.mouse_last) / 100.0f;
+          if (input.mouse_right)
+            dolly = (input.mouse_pos.x - input.mouse_last.x) / 100.0f;
+          if (input.mouse_left && input.modifier_shift)
+            pan = (input.mouse_pos - input.mouse_last) * camera->focus / 200.0f;
+          pan.x                                  = -pan.x;
+          std::tie(camera->frame, camera->focus) = camera_turntable(
+              camera->frame, camera->focus, rotate, dolly, pan);
+          trace_start(
+              state, scene, camera, bvh, lights, params,
+              [viewer, name](const string& message, int sample, int nsamples) {
+                set_widget(viewer, name, "sample", to_json(sample),
+                    to_schema(sample, "Current sample"));
+                print_progress(message, sample, nsamples);
+              },
+              [viewer, name](const image<vec4f>& render, int current,
+                  int total) { set_image(viewer, name, render); });
+        }
+      });
+
+  // run view
+  run_view(viewer);
+
+  // stop
+  trace_stop(state);
+}
 
 }  // namespace yocto
 
