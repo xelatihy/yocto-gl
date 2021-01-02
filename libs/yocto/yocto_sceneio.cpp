@@ -457,7 +457,7 @@ void tesselate_shape(sceneio_shape* shape) {
             shape->quadspos, shape->positions, shape->subdivisions);
       }
       if (shape->smooth) {
-        shape->normals   = compute_normals(shape->quadspos, shape->positions);
+        shape->normals   = quads_normals(shape->quadspos, shape->positions);
         shape->quadsnorm = shape->quadspos;
       } else {
         shape->normals   = {};
@@ -477,9 +477,9 @@ void tesselate_shape(sceneio_shape* shape) {
       auto no_normals = shape->normals.empty();
       if (shape->normals.empty())
         shape->normals = !shape->triangles.empty()
-                             ? compute_normals(
+                             ? triangles_normals(
                                    shape->triangles, shape->positions)
-                             : compute_normals(shape->quads, shape->positions);
+                             : quads_normals(shape->quads, shape->positions);
       for (auto idx = 0; idx < shape->positions.size(); idx++) {
         auto disp = mean(
             eval_texture(shape->displacement_tex, shape->texcoords[idx], true));
@@ -489,9 +489,9 @@ void tesselate_shape(sceneio_shape* shape) {
       }
       if (shape->smooth) {
         shape->normals = !shape->triangles.empty()
-                             ? compute_normals(
+                             ? triangles_normals(
                                    shape->triangles, shape->positions)
-                             : compute_normals(shape->quads, shape->positions);
+                             : quads_normals(shape->quads, shape->positions);
       } else if (no_normals) {
         shape->normals = {};
       }
@@ -510,13 +510,13 @@ void tesselate_shape(sceneio_shape* shape) {
           count[qpos[i]] += 1;
         }
       }
-      auto normals = compute_normals(shape->quadspos, shape->positions);
+      auto normals = quads_normals(shape->quadspos, shape->positions);
       for (auto vid = 0; vid < shape->positions.size(); vid++) {
         shape->positions[vid] += normals[vid] * offset[vid] / count[vid];
       }
       if (shape->smooth || !shape->normals.empty()) {
         shape->quadsnorm = shape->quadspos;
-        shape->normals   = compute_normals(shape->quadspos, shape->positions);
+        shape->normals   = quads_normals(shape->quadspos, shape->positions);
       }
     }
 

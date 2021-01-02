@@ -443,7 +443,7 @@ int run_fvconvert(const fvconvert_params& params) {
   if (params.smooth) {
     print_progress("smooth shape", 0, 1);
     if (!shape.quadspos.empty()) {
-      shape.normals = compute_normals(shape.quadspos, shape.positions);
+      shape.normals = quads_normals(shape.quadspos, shape.positions);
       if (!shape.quadspos.empty()) shape.quadsnorm = shape.quadspos;
     }
     print_progress("smooth shape", 1, 1);

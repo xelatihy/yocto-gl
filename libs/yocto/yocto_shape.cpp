@@ -321,31 +321,29 @@ pair<vector<vec3f>, vector<vec3f>> compute_skinning(
     const vector<vec3f>& positions, const vector<vec3f>& normals,
     const vector<vec4f>& weights, const vector<vec4i>& joints,
     const vector<frame3f>& xforms) {
-  return skin_vertices(positions, normals, weights, joints,
-    xforms);
+  return skin_vertices(positions, normals, weights, joints, xforms);
 }
 // Apply skinning as specified in Khronos glTF.
 pair<vector<vec3f>, vector<vec3f>> compute_matrix_skinning(
     const vector<vec3f>& positions, const vector<vec3f>& normals,
     const vector<vec4f>& weights, const vector<vec4i>& joints,
     const vector<mat4f>& xforms) {
-  return skin_matrices(positions, normals, weights, joints,
-    xforms);
+  return skin_matrices(positions, normals, weights, joints, xforms);
 }
 // Update skinning
 void udpate_skinning(vector<vec3f>& skinned_positions,
     vector<vec3f>& skinned_normals, const vector<vec3f>& positions,
     const vector<vec3f>& normals, const vector<vec4f>& weights,
     const vector<vec4i>& joints, const vector<frame3f>& xforms) {
-  return skin_vertices(skinned_positions, skinned_normals, positions, normals, weights, joints,
-    xforms);
+  return skin_vertices(skinned_positions, skinned_normals, positions, normals,
+      weights, joints, xforms);
 }
 void update_matrix_skinning(vector<vec3f>& skinned_positions,
     vector<vec3f>& skinned_normals, const vector<vec3f>& positions,
     const vector<vec3f>& normals, const vector<vec4f>& weights,
-    const vector<vec4i>& joints, const vector<mat4f>& xforms){
-  return skin_matrices(skinned_positions, skinned_normals, positions, normals, weights, joints,
-    xforms);
+    const vector<vec4i>& joints, const vector<mat4f>& xforms) {
+  return skin_matrices(skinned_positions, skinned_normals, positions, normals,
+      weights, joints, xforms);
 }
 
 }  // namespace yocto
@@ -3530,7 +3528,7 @@ void make_hair(vector<vec2i>& lines, vector<vec3f>& positions,
   }
 
   if (clump.x > 0 || noise.x > 0 || rotation.x > 0) {
-    normals = compute_tangents(lines, positions);
+    normals = lines_tangents(lines, positions);
   }
 }
 
@@ -3583,7 +3581,7 @@ void make_heightfield(vector<vec4i>& quads, vector<vec3f>& positions,
   for (auto j = 0; j < size.y; j++)
     for (auto i = 0; i < size.x; i++)
       positions[j * size.x + i].y = height[j * size.x + i];
-  normals = compute_normals(quads, positions);
+  normals = quads_normals(quads, positions);
 }
 
 }  // namespace yocto
