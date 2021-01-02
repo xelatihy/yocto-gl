@@ -67,12 +67,12 @@ struct app_state {
   shade_camera* glcamera = nullptr;
 
   // editing
-  sceneio_camera*      selected_camera      = nullptr;
-  sceneio_instance*    selected_instance    = nullptr;
-  sceneio_shape*       selected_shape       = nullptr;
-  sceneio_material*    selected_material    = nullptr;
-  sceneio_environment* selected_environment = nullptr;
-  sceneio_texture*     selected_texture     = nullptr;
+  int selected_camera      = -1;
+  int selected_instance    = -1;
+  int selected_shape       = -1;
+  int selected_material    = -1;
+  int selected_environment = -1;
+  int selected_texture     = -1;
 
   // loading status
   std::atomic<bool> ok           = false;
@@ -461,10 +461,9 @@ void draw_widgets(gui_window* win, app_states* apps, const gui_input& input) {
   if (!app->ioscene->cameras.empty() && begin_header(win, "cameras")) {
     draw_combobox(
         win, "camera##2", app->selected_camera, app->ioscene->cameras);
-    if (draw_widgets(win, app->ioscene, app->selected_camera)) {
-      auto iocamera = app->selected_camera;
-      auto glcamera = get_element(
-          iocamera, app->ioscene->cameras, app->glscene->cameras);
+    auto iocamera = app->ioscene->cameras[app->selected_camera];
+    if (draw_widgets(win, app->ioscene, iocamera)) {
+      auto glcamera = app->glscene->cameras[app->selected_camera];
       set_frame(glcamera, iocamera->frame);
       set_lens(glcamera, iocamera->lens, iocamera->aspect, iocamera->film);
       set_nearfar(glcamera, 0.001, 10000);
@@ -475,10 +474,10 @@ void draw_widgets(gui_window* win, app_states* apps, const gui_input& input) {
       begin_header(win, "environments")) {
     draw_combobox(win, "environments##2", app->selected_environment,
         app->ioscene->environments);
-    if (draw_widgets(win, app->ioscene, app->selected_environment)) {
-      auto ioenvironment = app->selected_environment;
-      auto glenvironment = get_element(ioenvironment,
-          app->ioscene->environments, app->glscene->environments);
+    auto ioenvironment = app->ioscene->environments[app->selected_environment];
+    if (draw_widgets(win, app->ioscene, ioenvironment)) {
+      auto glenvironment =
+          app->glscene->environments[app->selected_environment];
       set_emission(glenvironment, ioenvironment->emission);
     }
     end_header(win);
@@ -486,25 +485,23 @@ void draw_widgets(gui_window* win, app_states* apps, const gui_input& input) {
   if (!app->ioscene->instances.empty() && begin_header(win, "instances")) {
     draw_combobox(
         win, "instance##2", app->selected_instance, app->ioscene->instances);
-    if (draw_widgets(win, app->ioscene, app->selected_instance)) {
-      auto ioobject = app->selected_instance;
-      auto globject = get_element(
-          ioobject, app->ioscene->instances, app->glscene->instances);
-      set_frame(globject, ioobject->frame);
-      set_shape(globject, get_element(ioobject->shape, app->ioscene->shapes,
-                              app->glscene->shapes));
+    auto ioinstance = app->ioscene->instances[app->selected_instance];
+    if (draw_widgets(win, app->ioscene, ioinstance)) {
+      auto glinstance = app->glscene->instances[app->selected_instance];
+      set_frame(glinstance, ioinstance->frame);
+      set_shape(glinstance, get_element(ioinstance->shape, app->ioscene->shapes,
+                                app->glscene->shapes));
       set_material(
-          globject, get_element(ioobject->material, app->ioscene->materials,
-                        app->glscene->materials));
+          glinstance, get_element(ioinstance->material, app->ioscene->materials,
+                          app->glscene->materials));
     }
     end_header(win);
   }
   if (!app->ioscene->shapes.empty() && begin_header(win, "shapes")) {
     draw_combobox(win, "shape##2", app->selected_shape, app->ioscene->shapes);
-    if (!draw_widgets(win, app->ioscene, app->selected_shape)) {
-      auto ioshape = app->selected_shape;
-      auto glshape = get_element(
-          ioshape, app->ioscene->shapes, app->glscene->shapes);
+    auto ioshape = app->ioscene->shapes[app->selected_shape];
+    if (!draw_widgets(win, app->ioscene, ioshape)) {
+      auto glshape = app->glscene->shapes[app->selected_shape];
       set_positions(glshape, ioshape->positions);
       set_normals(glshape, ioshape->normals);
       set_texcoords(glshape, ioshape->texcoords);
@@ -519,10 +516,9 @@ void draw_widgets(gui_window* win, app_states* apps, const gui_input& input) {
   if (!app->ioscene->materials.empty() && begin_header(win, "materials")) {
     draw_combobox(
         win, "material##2", app->selected_material, app->ioscene->materials);
-    if (draw_widgets(win, app->ioscene, app->selected_material)) {
-      auto iomaterial = app->selected_material;
-      auto glmaterial = get_element(
-          iomaterial, app->ioscene->materials, app->glscene->materials);
+    auto iomaterial = app->ioscene->materials[app->selected_material];
+    if (draw_widgets(win, app->ioscene, iomaterial)) {
+      auto glmaterial = app->glscene->materials[app->selected_material];
       set_emission(glmaterial, iomaterial->emission,
           get_texture(iomaterial->emission_tex));
       set_color(glmaterial, (1 - iomaterial->transmission) * iomaterial->color,
@@ -544,10 +540,9 @@ void draw_widgets(gui_window* win, app_states* apps, const gui_input& input) {
   if (!app->ioscene->textures.empty() && begin_header(win, "textures")) {
     draw_combobox(
         win, "texture##2", app->selected_texture, app->ioscene->textures);
-    if (draw_widgets(win, app->ioscene, app->selected_texture)) {
-      auto iotexture = app->selected_texture;
-      auto gltexture = get_element(
-          iotexture, app->ioscene->textures, app->glscene->textures);
+    auto iotexture = app->ioscene->textures[app->selected_texture];
+    if (draw_widgets(win, app->ioscene, iotexture)) {
+      auto gltexture = app->glscene->textures[app->selected_texture];
       if (!iotexture->hdr.empty()) {
         set_texture(gltexture, iotexture->hdr);
       } else if (!iotexture->ldr.empty()) {
