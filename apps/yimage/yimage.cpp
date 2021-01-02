@@ -370,7 +370,7 @@ int run_view(const view_params& params) {
 // view images
 int run_view(const view_params& params) {
   // open viewer
-  auto viewer_guard = make_imageview("yimage");
+  auto viewer_guard = make_imageviewer("yimage");
   auto viewer       = viewer_guard.get();
 
   // set image
@@ -402,7 +402,7 @@ int run_view(const view_params& params) {
   }
 
   // run view
-  run_view(viewer);
+  run_viewer(viewer);
 
   // done
   return 0;
@@ -470,7 +470,7 @@ int run_grade(const grade_params& params) {
 // grade images
 int run_grade(const grade_params& params) {
   // open viewer
-  auto viewer_guard = make_imageview("yimage");
+  auto viewer_guard = make_imageviewer("yimage");
   auto viewer       = viewer_guard.get();
 
   // load image
@@ -503,7 +503,7 @@ int run_grade(const grade_params& params) {
   });
 
   // run view
-  run_view(viewer);
+  run_viewer(viewer);
 
   // done
   return 0;

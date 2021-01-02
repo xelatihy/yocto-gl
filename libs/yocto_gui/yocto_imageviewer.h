@@ -81,29 +81,29 @@ void view_scene(const string& title, const string& name,
 namespace yocto {
 
 // Make an image view
-struct imageview_state;
-unique_ptr<imageview_state> make_imageview(const string& title);
+struct ogl_imageviewer;
+unique_ptr<ogl_imageviewer> make_imageviewer(const string& title);
 
 // Run view
-void run_view(imageview_state* viewer);
+void run_viewer(ogl_imageviewer* viewer);
 
 // Set image
-void set_image(imageview_state* viewer, const string& name,
+void set_image(ogl_imageviewer* viewer, const string& name,
     const image<vec4f>& img, float exposure = 0, bool filmic = false);
 void set_image(
-    imageview_state* viewer, const string& name, const image<vec4b>& img);
-void close_image(imageview_state* viewer, const string& name);
+    ogl_imageviewer* viewer, const string& name, const image<vec4b>& img);
+void close_image(ogl_imageviewer* viewer, const string& name);
 
 // Set params
-void set_widget(imageview_state* viewer, const string& name,
+void set_widget(ogl_imageviewer* viewer, const string& name,
     const string& pname, const json_value& param, const json_value& schema);
-void set_widgets(imageview_state* viewer, const string& name,
+void set_widgets(ogl_imageviewer* viewer, const string& name,
     const json_value& params, const json_value& schema);
 
 // Set ui callback
-using imageview_callback =
+using ogl_imageviewer_callback =
     function<void(const string&, const json_value&, const gui_input&)>;
-void set_callback(imageview_state* viewer, const imageview_callback& callback);
+void set_callback(ogl_imageviewer* viewer, const ogl_imageviewer_callback& callback);
 
 }  // namespace yocto
 
@@ -121,7 +121,7 @@ void set_callback(imageview_state* viewer, const imageview_callback& callback);
 namespace yocto {
 
 // Input image
-struct imageview_input {
+struct ogl_imageinput {
   string name = "";
 
   bool close = false;
@@ -138,7 +138,7 @@ struct imageview_input {
 };
 
 // An image visualized
-struct imageview_view {
+struct ogl_imageview {
   // original data
   string name = "image.png";
 
@@ -159,22 +159,22 @@ struct imageview_view {
   json_value widgets = json_value::object();
   json_value schema  = to_schema_object("User params.");
 
-  ~imageview_view() {
+  ~ogl_imageview() {
     if (glimage) delete glimage;
   }
 };
 
 // Image pointer
-using imageview_viewptr  = unique_ptr<imageview_view>;
-using imageview_inputptr = unique_ptr<imageview_input>;
+using ogl_imageview_ptr  = unique_ptr<ogl_imageview>;
+using ogl_imageinput_ptr = unique_ptr<ogl_imageinput>;
 
 // Simple image viewer
-struct imageview_state {
-  vector<imageview_viewptr>  views       = {};       // views
-  imageview_view*            selected    = nullptr;  // selected
+struct ogl_imageviewer {
+  vector<ogl_imageview_ptr>  views       = {};       // views
+  ogl_imageview*            selected    = nullptr;  // selected
   std::mutex                 input_mutex = {};
-  vector<imageview_inputptr> inputs      = {};  // input images
-  imageview_callback         callback    = {};  // params and ui callback
+  vector<ogl_imageinput_ptr> inputs      = {};  // input images
+  ogl_imageviewer_callback         callback    = {};  // params and ui callback
 };
 
 }  // namespace yocto

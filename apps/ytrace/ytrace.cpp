@@ -285,7 +285,7 @@ int run_view(const view_params& params) {
 // interactive render
 int run_view(const view_params& params) {
   // open viewer
-  auto viewer_guard = make_imageview("yimage");
+  auto viewer_guard = make_imageviewer("yimage");
   auto viewer       = viewer_guard.get();
 
   // scene loading
@@ -398,7 +398,7 @@ int run_view(const view_params& params) {
       });
 
   // run view
-  run_view(viewer);
+  run_viewer(viewer);
 
   // stop
   trace_stop(state);

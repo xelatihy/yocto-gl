@@ -51,26 +51,26 @@ namespace yocto {
 void view_image(
     const string& title, const string& name, const image<vec4f>& img) {
   // open viewer
-  auto viewer_guard = make_imageview(title);
+  auto viewer_guard = make_imageviewer(title);
   auto viewer       = viewer_guard.get();
 
   // set view
   set_image(viewer, name, img);
 
   // run view
-  run_view(viewer);
+  run_viewer(viewer);
 }
 void view_image(
     const string& title, const string& name, const image<vec4b>& img) {
   // open viewer
-  auto viewer_guard = make_imageview(title);
+  auto viewer_guard = make_imageviewer(title);
   auto viewer       = viewer_guard.get();
 
   // set view
   set_image(viewer, name, img);
 
   // run view
-  run_view(viewer);
+  run_viewer(viewer);
 }
 
 // Open a window and show an scene via path tracing
@@ -78,7 +78,7 @@ void view_scene(const string& title, const string& name,
     const trace_scene* scene, const trace_camera* camera_,
     const trace_params& params_, const progress_callback& progress_cb) {
   // open viewer
-  auto viewer_guard = make_imageview(title);
+  auto viewer_guard = make_imageviewer(title);
   auto viewer       = viewer_guard.get();
 
   // copy params and camera
@@ -170,7 +170,7 @@ void view_scene(const string& title, const string& name,
       });
 
   // run view
-  run_view(viewer);
+  run_viewer(viewer);
 
   // stop
   trace_stop(state);
@@ -186,23 +186,23 @@ namespace yocto {
 // grab input
 // static imageview_image* get_image(imageview_state* viewer, const string&
 // name);
-static imageview_input* get_input(imageview_state* viewer, const string& name);
+static ogl_imageinput* get_input(ogl_imageviewer* viewer, const string& name);
 
 // make an image viewer
-unique_ptr<imageview_state> make_imageview(const string& title) {
-  auto viewer = make_unique<imageview_state>();
+unique_ptr<ogl_imageviewer> make_imageviewer(const string& title) {
+  auto viewer = make_unique<ogl_imageviewer>();
   // viewer->name = title;
   return viewer;
 }
 
 // Set image
-void set_image(imageview_state* viewer, const string& name,
+void set_image(ogl_imageviewer* viewer, const string& name,
     const image<vec4f>& img, float exposure, bool filmic) {
   auto lock  = std::lock_guard{viewer->input_mutex};
   auto input = get_input(viewer, name);
   if (!input) {
     input =
-        viewer->inputs.emplace_back(std::make_unique<imageview_input>()).get();
+        viewer->inputs.emplace_back(std::make_unique<ogl_imageinput>()).get();
   }
   input->name     = name;
   input->hdr      = img;
@@ -212,12 +212,12 @@ void set_image(imageview_state* viewer, const string& name,
   input->ichanged = true;
 }
 void set_image(
-    imageview_state* viewer, const string& name, const image<vec4b>& img) {
+    ogl_imageviewer* viewer, const string& name, const image<vec4b>& img) {
   auto lock  = std::lock_guard{viewer->input_mutex};
   auto input = get_input(viewer, name);
   if (!input) {
     input =
-        viewer->inputs.emplace_back(std::make_unique<imageview_input>()).get();
+        viewer->inputs.emplace_back(std::make_unique<ogl_imageinput>()).get();
   }
   input->name     = name;
   input->hdr      = {};
@@ -227,7 +227,7 @@ void set_image(
   input->ichanged = true;
 }
 // Close image
-void close_image(imageview_state* viewer, const string& name) {
+void close_image(ogl_imageviewer* viewer, const string& name) {
   auto lock  = std::lock_guard{viewer->input_mutex};
   auto input = get_input(viewer, name);
   if (!input) return;
@@ -235,7 +235,7 @@ void close_image(imageview_state* viewer, const string& name) {
 }
 
 // Set params
-void set_widget(imageview_state* viewer, const string& name,
+void set_widget(ogl_imageviewer* viewer, const string& name,
     const string& pname, const json_value& param, const json_value& schema) {
   auto lock  = std::lock_guard{viewer->input_mutex};
   auto input = get_input(viewer, name);
@@ -244,7 +244,7 @@ void set_widget(imageview_state* viewer, const string& name,
   input->schema["properties"][pname] = schema;
   input->wchanged                    = true;
 }
-void set_widgets(imageview_state* viewer, const string& name,
+void set_widgets(ogl_imageviewer* viewer, const string& name,
     const json_value& params, const json_value& schema) {
   auto lock  = std::lock_guard{viewer->input_mutex};
   auto input = get_input(viewer, name);
@@ -255,7 +255,7 @@ void set_widgets(imageview_state* viewer, const string& name,
 }
 
 // Callback
-void set_callback(imageview_state* viewer, const imageview_callback& callback) {
+void set_callback(ogl_imageviewer* viewer, const ogl_imageviewer_callback& callback) {
   viewer->callback = callback;
 }
 
@@ -274,13 +274,13 @@ namespace yocto {
 //     if (view->name == name) return img.get();
 //   return nullptr;
 // }
-static imageview_input* get_input(imageview_state* viewer, const string& name) {
+static ogl_imageinput* get_input(ogl_imageviewer* viewer, const string& name) {
   for (auto& input : viewer->inputs)
     if (input->name == name) return input.get();
   return nullptr;
 }
 
-static void update_display(imageview_view* view) {
+static void update_display(ogl_imageview* view) {
   if (!view->hdr.empty()) {
     if (view->display.imsize() != view->hdr.imsize())
       view->display.resize(view->hdr.imsize());
@@ -295,7 +295,7 @@ static void update_display(imageview_view* view) {
 }
 
 void draw_widgets(
-    gui_window* win, imageview_state* viewer, const gui_input& input) {
+    gui_window* win, ogl_imageviewer* viewer, const gui_input& input) {
   static string load_path = "", save_path = "", error_message = "";
   if (draw_filedialog_button(win, "load", true, "load image", load_path, false,
           "./", "", "*.png;*.jpg;*.tga;*.bmp;*.hdr;*.exr")) {
@@ -366,7 +366,7 @@ void draw_widgets(
   }
 }
 
-void draw(gui_window* win, imageview_state* viewer, const gui_input& input) {
+void draw(gui_window* win, ogl_imageviewer* viewer, const gui_input& input) {
   if (!viewer->selected) {
     clear_ogl_framebuffer(ogl_image_params{}.background);
     return;
@@ -381,7 +381,7 @@ void draw(gui_window* win, imageview_state* viewer, const gui_input& input) {
   draw_image(view->glimage, view->glparams);
 }
 
-void update(gui_window* win, imageview_state* viewer, const gui_input& input) {
+void update(gui_window* win, ogl_imageviewer* viewer, const gui_input& input) {
   // process inputs
   auto lock = std::lock_guard{viewer->input_mutex};
 
@@ -398,7 +398,7 @@ void update(gui_window* win, imageview_state* viewer, const gui_input& input) {
   // add images
   for (auto idx = (size_t)0; idx < viewer->inputs.size(); idx++) {
     if (idx >= viewer->views.size()) {
-      viewer->views.emplace_back(std::make_unique<imageview_view>());
+      viewer->views.emplace_back(std::make_unique<ogl_imageview>());
       viewer->views[idx]->name = viewer->inputs[idx]->name;
     }
   }
@@ -424,7 +424,7 @@ void update(gui_window* win, imageview_state* viewer, const gui_input& input) {
 }
 
 // Run application
-void run_view(imageview_state* viewer) {
+void run_viewer(ogl_imageviewer* viewer) {
   // callbacks
   auto callbacks     = gui_callbacks{};
   callbacks.clear_cb = [viewer](gui_window* win, const gui_input& input) {
