@@ -568,18 +568,18 @@ int run_grade(const grade_params& params) {
   auto viewer       = viewer_guard.get();
 
   // load image
-  auto img     = image<vec4f>{};
+  auto image   = image_data{};
   auto ioerror = string{};
   if (is_preset_filename(params.image)) {
-    if (!make_image_preset(path_basename(params.image), img, ioerror))
+    if (!make_image_preset(path_basename(params.image), image, ioerror))
       return print_fatal(ioerror);
   } else {
-    if (!load_image(params.image, img, ioerror)) return print_fatal(ioerror);
+    if (!load_image(params.image, image, ioerror)) return print_fatal(ioerror);
   }
 
   // grade image
-  auto graded = image<vec4b>{img.imsize()};
-  colorgrade_image_mt(graded, img, true, params);
+  auto graded = make_image(image.width, image.height, false);
+  colorgrade_image_mt(graded, image, params);
 
   // set view
   set_image(viewer, params.image, graded);
@@ -587,12 +587,12 @@ int run_grade(const grade_params& params) {
       viewer, params.image, to_json(params), to_schema(params, "Color grade"));
 
   // set callback
-  set_callback(viewer, [&params, &graded, &img, viewer](const string& name,
+  set_callback(viewer, [&params, &graded, &image, viewer](const string& name,
                            const json_value& uiparams, const gui_input&) {
     if (uiparams.is_null()) return;
     serialize_value(json_mode::from_json, (json_value&)uiparams,
         (colorgrade_params&)params, "");
-    colorgrade_image_mt(graded, img, true, params);
+    colorgrade_image_mt(graded, image, params);
     set_image(viewer, name, graded);
   });
 
