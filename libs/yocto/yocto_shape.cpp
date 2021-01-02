@@ -4019,18 +4019,7 @@ lines_shape make_hair(const triangles_shape& base, const vec2i& steps,
     const vec2f& rotation, int seed) {
   auto shape = lines_shape{};
   make_hair(shape.lines, shape.positions, shape.normals, shape.texcoords,
-      shape.radius, base.triangles, {}, base.positions, base.normals,
-      base.texcoords, steps, len, rad, noise, clump, rotation, seed);
-  return shape;
-}
-
-// Make a hair ball around a shape
-lines_shape make_hair(const quads_shape& base, const vec2i& steps,
-    const vec2f& len, const vec2f& rad, const vec2f& noise, const vec2f& clump,
-    const vec2f& rotation, int seed) {
-  auto shape = lines_shape{};
-  make_hair(shape.lines, shape.positions, shape.normals, shape.texcoords,
-      shape.radius, {}, base.quads, base.positions, base.normals,
+      shape.radius, base.triangles, base.quads, base.positions, base.normals,
       base.texcoords, steps, len, rad, noise, clump, rotation, seed);
   return shape;
 }

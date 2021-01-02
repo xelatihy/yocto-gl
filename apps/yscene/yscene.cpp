@@ -119,10 +119,15 @@ sceneio_shape* add_shape(sceneio_scene* scene, const string& name,
     const quads_shape& shape_data, int subdivisions = 0, float displacement = 0,
     sceneio_texture* displacement_tex = nullptr) {
   auto shape              = add_shape(scene, name);
+  shape->points           = shape_data.points;
+  shape->lines            = shape_data.lines;
+  shape->triangles        = shape_data.triangles;
   shape->quads            = shape_data.quads;
   shape->positions        = shape_data.positions;
   shape->normals          = shape_data.normals;
   shape->texcoords        = shape_data.texcoords;
+  shape->colors           = shape_data.colors;
+  shape->radius           = shape_data.radius;
   shape->subdivisions     = subdivisions;
   shape->smooth           = subdivisions > 0 || displacement_tex;
   shape->displacement     = displacement;
@@ -139,50 +144,6 @@ sceneio_shape* add_shape(sceneio_scene* scene, const string& name,
   shape->positions        = shape_data.positions;
   shape->normals          = shape_data.normals;
   shape->texcoords        = shape_data.texcoords;
-  shape->subdivisions     = subdivisions;
-  shape->smooth           = subdivisions > 0 || displacement_tex;
-  shape->displacement     = displacement;
-  shape->displacement_tex = displacement_tex;
-  return shape;
-}
-sceneio_shape* add_shape(sceneio_scene* scene, const string& name,
-    const triangles_shape& shape_data, int subdivisions = 0,
-    float displacement = 0, sceneio_texture* displacement_tex = nullptr) {
-  auto shape              = add_shape(scene, name);
-  shape->triangles        = shape_data.triangles;
-  shape->positions        = shape_data.positions;
-  shape->normals          = shape_data.normals;
-  shape->texcoords        = shape_data.texcoords;
-  shape->subdivisions     = subdivisions;
-  shape->smooth           = subdivisions > 0 || displacement_tex;
-  shape->displacement     = displacement;
-  shape->displacement_tex = displacement_tex;
-  return shape;
-}
-sceneio_shape* add_shape(sceneio_scene* scene, const string& name,
-    const lines_shape& shape_data, int subdivisions = 0, float displacement = 0,
-    sceneio_texture* displacement_tex = nullptr) {
-  auto shape              = add_shape(scene, name);
-  shape->lines            = shape_data.lines;
-  shape->positions        = shape_data.positions;
-  shape->normals          = shape_data.normals;
-  shape->texcoords        = shape_data.texcoords;
-  shape->radius           = shape_data.radius;
-  shape->subdivisions     = subdivisions;
-  shape->smooth           = subdivisions > 0 || displacement_tex;
-  shape->displacement     = displacement;
-  shape->displacement_tex = displacement_tex;
-  return shape;
-}
-sceneio_shape* add_shape(sceneio_scene* scene, const string& name,
-    const points_shape& shape_data, int subdivisions = 0,
-    float displacement = 0, sceneio_texture* displacement_tex = nullptr) {
-  auto shape              = add_shape(scene, name);
-  shape->points           = shape_data.points;
-  shape->positions        = shape_data.positions;
-  shape->normals          = shape_data.normals;
-  shape->texcoords        = shape_data.texcoords;
-  shape->radius           = shape_data.radius;
   shape->subdivisions     = subdivisions;
   shape->smooth           = subdivisions > 0 || displacement_tex;
   shape->displacement     = displacement;
