@@ -833,7 +833,7 @@ int main(int argc, const char* argv[]) {
             app->camera->lens, app->camera->film,
             vec2f{ij.x + 0.5f, ij.y + 0.5f} /
                 vec2f{(float)app->render.width(), (float)app->render.height()});
-        if (auto isec = intersect_bvh(app->bvh, ray); isec.hit) {
+        if (auto isec = intersect_bvh(app->bvh, app->scene, ray); isec.hit) {
           app->selected_instance = app->ioscene->instances[isec.instance];
         }
       }
