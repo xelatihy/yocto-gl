@@ -93,7 +93,7 @@ void view_shape(const string& title, const string& name,
   ioshape->radius    = shape.radius;
   auto instance      = add_instance(scene, "instance");
   instance->shape    = ioshape;
-  add_camera(scene);
+  add_cameras(scene);
   add_materials(scene);
   if (addsky) add_sky(scene);
   print_progress("create scene", 0, 1);
