@@ -48,6 +48,7 @@
 #include "yocto_image.h"
 #include "yocto_math.h"
 #include "yocto_sampling.h"
+#include "yocto_scene.h"
 
 // -----------------------------------------------------------------------------
 // USING DIRECTIVES
@@ -82,113 +83,29 @@ namespace yocto {
 // 2.4:1  on 35 mm:  0.036 x 0.015   or 0.05760 x 0.024 (approx. 2.39 : 1)
 // To compute good apertures, one can use the F-stop number from photography
 // and set the aperture to focal length over f-stop.
-struct trace_camera {
-  frame3f frame        = identity3x4f;
-  bool    orthographic = false;
-  float   lens         = 0.050;
-  float   film         = 0.036;
-  float   aspect       = 1.500;
-  float   focus        = 10000;
-  float   aperture     = 0;
-};
+using trace_camera = scene_camera;
 
 // Texture containing either an LDR or HDR image. HdR images are encoded
 // in linear color space, while LDRs are encoded as sRGB.
-struct trace_texture {
-  image<vec4f> hdr = {};
-  image<vec4b> ldr = {};
-};
+using trace_texture = scene_texture;
 
 // Material for surfaces, lines and triangles.
 // For surfaces, uses a microfacet model with thin sheet transmission.
 // The model is based on OBJ, but contains glTF compatibility.
 // For the documentation on the values, please see the OBJ format.
-struct trace_material {
-  // material
-  vec3f emission     = {0, 0, 0};
-  vec3f color        = {0, 0, 0};
-  float specular     = 0;
-  float roughness    = 0;
-  float metallic     = 0;
-  float ior          = 1.5;
-  vec3f spectint     = {1, 1, 1};
-  float coat         = 0;
-  float transmission = 0;
-  float translucency = 0;
-  vec3f scattering   = {0, 0, 0};
-  float scanisotropy = 0;
-  float trdepth      = 0.01;
-  float opacity      = 1;
-  bool  thin         = true;
-
-  // textures
-  trace_texture* emission_tex     = nullptr;
-  trace_texture* color_tex        = nullptr;
-  trace_texture* specular_tex     = nullptr;
-  trace_texture* metallic_tex     = nullptr;
-  trace_texture* roughness_tex    = nullptr;
-  trace_texture* transmission_tex = nullptr;
-  trace_texture* translucency_tex = nullptr;
-  trace_texture* spectint_tex     = nullptr;
-  trace_texture* scattering_tex   = nullptr;
-  trace_texture* coat_tex         = nullptr;
-  trace_texture* opacity_tex      = nullptr;
-  trace_texture* normal_tex       = nullptr;
-};
+using trace_material = scene_material;
 
 // Shape data represented as indexed meshes of elements.
 // May contain either points, lines, triangles and quads.
 // Additionally, we support face-varying primitives where
 // each vertex data has its own topology.
-struct trace_shape {
-  // primitives
-  vector<int>   points    = {};
-  vector<vec2i> lines     = {};
-  vector<vec3i> triangles = {};
-  vector<vec4i> quads     = {};
-
-  // face-varying primitives
-  vector<vec4i> quadspos      = {};
-  vector<vec4i> quadsnorm     = {};
-  vector<vec4i> quadstexcoord = {};
-
-  // vertex data
-  vector<vec3f> positions = {};
-  vector<vec3f> normals   = {};
-  vector<vec2f> texcoords = {};
-  vector<vec4f> colors    = {};
-  vector<float> radius    = {};
-  vector<vec4f> tangents  = {};
-
-  // subdivision data [experimental]
-  int  subdivisions = 0;
-  bool catmullclark = true;
-  bool smooth       = true;
-
-  // displacement data [experimental]
-  float          displacement     = 0;
-  trace_texture* displacement_tex = nullptr;
-
-  // shape is assigned at creation
-  int shape_id = -1;
-};
+using trace_shape = scene_shape;
 
 // Object.
-struct trace_instance {
-  frame3f         frame    = identity3x4f;
-  trace_shape*    shape    = nullptr;
-  trace_material* material = nullptr;
-
-  // instance id assigned at creation
-  int instance_id = -1;
-};
+using trace_instance = scene_instance;
 
 // Environment map.
-struct trace_environment {
-  frame3f        frame        = identity3x4f;
-  vec3f          emission     = {0, 0, 0};
-  trace_texture* emission_tex = nullptr;
-};
+using trace_environment = scene_environment;
 
 // Scene comprised an array of objects whose memory is owened by the scene.
 // All members are optional,Scene objects (camera, instances, environments)
@@ -197,34 +114,7 @@ struct trace_environment {
 // environment. In that case, the element transforms are computed from
 // the hierarchy. Animation is also optional, with keyframe data that
 // updates node transformations only if defined.
-struct trace_scene {
-  // scene elements
-  vector<trace_camera*>      cameras      = {};
-  vector<trace_instance*>    instances    = {};
-  vector<trace_environment*> environments = {};
-  vector<trace_shape*>       shapes       = {};
-  vector<trace_texture*>     textures     = {};
-  vector<trace_material*>    materials    = {};
-
-  // cleanup
-  ~trace_scene();
-};
-
-}  // namespace yocto
-
-// -----------------------------------------------------------------------------
-// SCENE CREATION
-// -----------------------------------------------------------------------------
-namespace yocto {
-
-// add element to a scene
-trace_camera*      add_camera(trace_scene* scene);
-trace_environment* add_environment(trace_scene* scene);
-trace_instance*    add_instance(trace_scene* scene);
-trace_material*    add_material(trace_scene* scene);
-trace_shape*       add_shape(trace_scene* scene);
-trace_texture*     add_texture(trace_scene* scene);
-trace_instance*    add_complete_instance(trace_scene* scene);
+using trace_scene = scene_scene;
 
 }  // namespace yocto
 
@@ -232,62 +122,6 @@ trace_instance*    add_complete_instance(trace_scene* scene);
 // EVALUATION OF SCENE PROPERTIES
 // -----------------------------------------------------------------------------
 namespace yocto {
-
-// Generates a ray from a camera.
-ray3f eval_camera(
-    const trace_camera* camera, const vec2f& image_uv, const vec2f& lens_uv);
-
-// Evaluates a texture
-vec2i texture_size(const trace_texture* texture);
-vec4f lookup_texture(
-    const trace_texture* texture, const vec2i& ij, bool ldr_as_linear = false);
-vec4f eval_texture(const trace_texture* texture, const vec2f& uv,
-    bool ldr_as_linear = false, bool no_interpolation = false,
-    bool clamp_to_edge = false);
-
-// Evaluate instance properties
-vec3f eval_position(
-    const trace_instance* instance, int element, const vec2f& uv);
-vec3f eval_element_normal(const trace_instance* instance, int element);
-vec3f eval_normal(const trace_instance* instance, int element, const vec2f& uv);
-vec2f eval_texcoord(
-    const trace_instance* instance, int element, const vec2f& uv);
-pair<vec3f, vec3f> eval_element_tangents(
-    const trace_instance* instance, int element);
-vec3f eval_normalmap(
-    const trace_instance* instance, int element, const vec2f& uv);
-vec3f eval_shading_normal(const trace_instance* instance, int element,
-    const vec2f& uv, const vec3f& outgoing);
-vec4f eval_color(const trace_instance* instance, int element, const vec2f& uv);
-
-// Environment
-vec3f eval_environment(
-    const trace_environment* environment, const vec3f& direction);
-vec3f eval_environment(const trace_scene* scene, const vec3f& direction);
-
-// Material sample
-struct trace_material_sample {
-  vec3f emission     = {0, 0, 0};
-  vec3f color        = {0, 0, 0};
-  float specular     = 0;
-  float roughness    = 0;
-  float metallic     = 0;
-  float ior          = 1.5;
-  vec3f spectint     = {1, 1, 1};
-  float coat         = 0;
-  float transmission = 0;
-  float translucency = 0;
-  vec3f scattering   = {0, 0, 0};
-  float scanisotropy = 0;
-  float trdepth      = 0.01;
-  float opacity      = 1;
-  bool  thin         = true;
-  vec3f normalmap    = {0, 0, 1};
-};
-
-// Evaluates material and textures
-trace_material_sample eval_material(
-    const trace_material* material, const vec2f& texcoord);
 
 // Material Bsdf parameters
 struct trace_bsdf {
@@ -460,11 +294,6 @@ using progress_callback =
 // Callback used to report partially computed image
 using image_callback =
     function<void(const image<vec4f>& render, int current, int total)>;
-
-// Apply subdivision and displacement rules.
-void tesselate_shapes(
-    trace_scene* scene, const progress_callback& progress_cb = {});
-void tesselate_shape(trace_scene* shape);
 
 // Progressively computes an image.
 image<vec4f> trace_image(const trace_scene* scene, const trace_camera* camera,
