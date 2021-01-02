@@ -268,6 +268,14 @@ bool draw_combobox(gui_window* win, const char* lbl, int& idx, int num,
     const function<string(int)>& labels, bool include_null = false);
 
 template <typename T>
+inline bool draw_combobox(gui_window* win, const char* lbl, int& idx,
+    const vector<T*>& vals, bool include_null = false) {
+  return draw_combobox(
+      win, lbl, idx, (int)vals.size(), [&](int idx) { return vals[idx]->name; },
+      include_null);
+}
+
+template <typename T>
 inline bool draw_combobox(gui_window* win, const char* lbl, T*& value,
     const vector<T*>& vals, bool include_null = false) {
   auto idx = -1;
