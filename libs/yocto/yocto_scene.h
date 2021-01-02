@@ -91,9 +91,8 @@ struct scene_camera {
 // Texture containing either an LDR or HDR image. HdR images are encoded
 // in linear color space, while LDRs are encoded as sRGB.
 struct scene_texture {
-  string       name = "";
-  image<vec4f> hdr  = {};
-  image<vec4b> ldr  = {};
+  image<vec4f> hdr = {};
+  image<vec4b> ldr = {};
 };
 
 // Material for surfaces, lines and triangles.
@@ -222,7 +221,8 @@ struct scene_scene {
   vector<scene_material*>    materials    = {};
 
   // names
-  vector<string> camera_names = {};
+  vector<string> camera_names  = {};
+  vector<string> texture_names = {};
 
   // cleanup
   ~scene_scene();

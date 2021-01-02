@@ -207,20 +207,22 @@ vector<string> scene_validation(const scene_scene* scene, bool notextures) {
       }
     }
   };
-  auto check_empty_textures = [&errs](const vector<scene_texture*>& vals) {
-    for (auto value : vals) {
-      if (value->hdr.empty() && value->ldr.empty()) {
-        errs.push_back("empty texture " + value->name);
+  auto check_empty_textures = [&errs](const scene_scene* scene) {
+    for (auto idx = 0; idx < (int)scene->textures.size(); idx++) {
+      auto& texture = scene->textures[idx];
+      if (texture->hdr.empty() && texture->ldr.empty()) {
+        errs.push_back("empty texture " + scene->texture_names[idx]);
       }
     }
   };
 
   check_names_(scene->camera_names, "camera");
   check_names(scene->shapes, "shape");
+  check_names(scene->materials, "material");
   check_names(scene->instances, "instance");
-  check_names(scene->textures, "texture");
+  check_names_(scene->texture_names, "texture");
   check_names(scene->environments, "environment");
-  if (!notextures) check_empty_textures(scene->textures);
+  if (!notextures) check_empty_textures(scene);
 
   return errs;
 }
@@ -269,7 +271,7 @@ scene_shape* add_shape(scene_scene* scene, const string& name) {
   return add_element(scene->shapes, name, "shape");
 }
 scene_texture* add_texture(scene_scene* scene, const string& name) {
-  return add_element(scene->textures, name, "texture");
+  return add_element(scene->textures, scene->texture_names, name, "texture");
 }
 scene_instance* add_instance(scene_scene* scene, const string& name) {
   return add_element(scene->instances, name, "instance");

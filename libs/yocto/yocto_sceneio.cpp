@@ -701,6 +701,16 @@ static bool save_json_scene(const string& filename, const sceneio_scene* scene,
     return false;
   };
 
+  // texture name lookups
+  auto texture_map  = unordered_map<const scene_texture*, int>{};
+  auto texture_name = [&](const scene_texture* texture) -> string {
+    if (texture == nullptr) return "";
+    return scene->texture_names.at(texture_map.at(texture));
+  };
+  for (auto idx = 0; idx < (int)scene->textures.size(); idx++) {
+    texture_map[scene->textures[idx]] = idx;
+  }
+
   // handle progress
   auto progress = vec2i{
       0, 2 + (int)scene->shapes.size() + (int)scene->textures.size()};
@@ -764,7 +774,8 @@ static bool save_json_scene(const string& filename, const sceneio_scene* scene,
         insert_value(elemnt, "emission", environment->emission);
       }
       if (environment->emission_tex != nullptr) {
-        insert_value(elemnt, "emission_tex", environment->emission_tex->name);
+        insert_value(
+            elemnt, "emission_tex", texture_name(environment->emission_tex));
       }
     }
   }
@@ -817,39 +828,45 @@ static bool save_json_scene(const string& filename, const sceneio_scene* scene,
         insert_value(elment, "thin", material->thin);
       }
       if (material->emission_tex != nullptr) {
-        insert_value(elment, "emission_tex", material->emission_tex->name);
+        insert_value(
+            elment, "emission_tex", texture_name(material->emission_tex));
       }
       if (material->color_tex != nullptr) {
-        insert_value(elment, "color_tex", material->color_tex->name);
+        insert_value(elment, "color_tex", texture_name(material->color_tex));
       }
       if (material->metallic_tex != nullptr) {
-        insert_value(elment, "metallic_tex", material->metallic_tex->name);
+        insert_value(
+            elment, "metallic_tex", texture_name(material->metallic_tex));
       }
       if (material->specular_tex != nullptr) {
-        insert_value(elment, "specular_tex", material->specular_tex->name);
+        insert_value(
+            elment, "specular_tex", texture_name(material->specular_tex));
       }
       if (material->roughness_tex != nullptr) {
-        insert_value(elment, "roughness_tex", material->roughness_tex->name);
+        insert_value(
+            elment, "roughness_tex", texture_name(material->roughness_tex));
       }
       if (material->transmission_tex != nullptr) {
-        insert_value(
-            elment, "transmission_tex", material->transmission_tex->name);
+        insert_value(elment, "transmission_tex",
+            texture_name(material->transmission_tex));
       }
       if (material->translucency_tex != nullptr) {
-        insert_value(
-            elment, "translucency_tex", material->translucency_tex->name);
+        insert_value(elment, "translucency_tex",
+            texture_name(material->translucency_tex));
       }
       if (material->scattering_tex != nullptr) {
-        insert_value(elment, "scattering_tex", material->scattering_tex->name);
+        insert_value(
+            elment, "scattering_tex", texture_name(material->scattering_tex));
       }
       if (material->coat_tex != nullptr) {
-        insert_value(elment, "coat_tex", material->coat_tex->name);
+        insert_value(elment, "coat_tex", texture_name(material->coat_tex));
       }
       if (material->opacity_tex != nullptr) {
-        insert_value(elment, "opacity_tex", material->opacity_tex->name);
+        insert_value(
+            elment, "opacity_tex", texture_name(material->opacity_tex));
       }
       if (material->normal_tex != nullptr) {
-        insert_value(elment, "normal_tex", material->normal_tex->name);
+        insert_value(elment, "normal_tex", texture_name(material->normal_tex));
       }
     }
   }
@@ -884,7 +901,7 @@ static bool save_json_scene(const string& filename, const sceneio_scene* scene,
         }
         if (instance->shape->displacement_tex != nullptr) {
           insert_value(elment, "displacement_tex",
-              instance->shape->displacement_tex->name);
+              texture_name(instance->shape->displacement_tex));
         }
       }
     }
@@ -921,8 +938,8 @@ static bool save_json_scene(const string& filename, const sceneio_scene* scene,
   // save textures
   for (auto texture : scene->textures) {
     if (progress_cb) progress_cb("save texture", progress.x++, progress.y);
-    auto path = make_filename(
-        texture->name, "textures", (!texture->hdr.empty()) ? ".hdr"s : ".png"s);
+    auto path = make_filename(scene->texture_names.at(texture_map.at(texture)),
+        "textures", (!texture->hdr.empty()) ? ".hdr"s : ".png"s);
     if (!save_image(path, texture->hdr, texture->ldr, error))
       return dependent_error();
   }
@@ -1157,13 +1174,18 @@ static bool save_obj_scene(const string& filename, const sceneio_scene* scene,
   }
 
   // textures
-  auto get_texture = [](sceneio_texture* texture) {
+  auto texture_map = unordered_map<const scene_texture*, int>{};
+  auto get_texture = [&](sceneio_texture* texture) {
     if (texture == nullptr) return obj_texture{};
     auto tinfo = obj_texture{};
-    tinfo.path = "textures/" + texture->name +
+    tinfo.path = "textures/" +
+                 scene->texture_names.at(texture_map.at(texture)) +
                  (!texture->hdr.empty() ? ".hdr"s : ".png"s);
     return tinfo;
   };
+  for (auto idx = 0; idx < (int)scene->textures.size(); idx++) {
+    texture_map[scene->textures[idx]] = idx;
+  }
 
   // convert materials and textures
   auto material_map = unordered_map<sceneio_material*, string>{{nullptr, ""s}};
@@ -1244,8 +1266,8 @@ static bool save_obj_scene(const string& filename, const sceneio_scene* scene,
   // save textures
   for (auto texture : scene->textures) {
     if (progress_cb) progress_cb("save texture", progress.x++, progress.y);
-    auto path = make_filename(
-        texture->name, "textures", (!texture->hdr.empty()) ? ".hdr"s : ".png"s);
+    auto path = make_filename(scene->texture_names.at(texture_map.at(texture)),
+        "textures", (!texture->hdr.empty()) ? ".hdr"s : ".png"s);
     if (!save_image(path, texture->hdr, texture->ldr, error))
       return dependent_error();
   }
@@ -1942,7 +1964,7 @@ static bool save_gltf_scene(const string& filename, const sceneio_scene* scene,
 
   // materials
   auto textures     = vector<pair<string, image<vec4b>>>{};
-  auto texture_map  = unordered_map<string, int>{};
+  auto texture_map  = unordered_map<sceneio_texture*, int>{};
   auto material_map = unordered_map<const sceneio_material*, int>{};
   if (!scene->materials.empty()) {
     auto& ajs = js["materials"];
@@ -1960,40 +1982,41 @@ static bool save_gltf_scene(const string& filename, const sceneio_scene* scene,
       pjs["metallicFactor"]  = material->metallic;
       pjs["roughnessFactor"] = material->roughness;
       if (material->emission_tex) {
-        auto tname = material->emission_tex->name;  // TODO(fabio): ldr
-        if (texture_map.find(tname) == texture_map.end()) {
-          textures.emplace_back(tname, material->emission_tex->ldr);
-          texture_map[tname] = (int)textures.size() - 1;
-        }
-        mjs["emissiveTexture"]          = json::object();
-        mjs["emissiveTexture"]["index"] = texture_map.at(tname);
+        // auto tkey  = material->emission_tex;
+        // auto tname = material->emission_tex->name;  // TODO(fabio): ldr
+        // if (texture_map.find(tkey) == texture_map.end()) {
+        //   textures.emplace_back(tname, material->emission_tex->ldr);
+        //   texture_map[tname] = (int)textures.size() - 1;
+        // }
+        // mjs["emissiveTexture"]          = json::object();
+        // mjs["emissiveTexture"]["index"] = texture_map.at(tname);
       }
       if (material->normal_tex) {
-        auto tname = material->normal_tex->name;  // TODO(fabio): ldr
-        if (texture_map.find(tname) == texture_map.end()) {
-          textures.emplace_back(tname, material->normal_tex->ldr);
-          texture_map[tname] = (int)textures.size() - 1;
-        }
-        mjs["normalTexture"]          = json::object();
-        mjs["normalTexture"]["index"] = texture_map.at(tname);
+        // auto tname = material->normal_tex->name;  // TODO(fabio): ldr
+        // if (texture_map.find(tname) == texture_map.end()) {
+        //   textures.emplace_back(tname, material->normal_tex->ldr);
+        //   texture_map[tname] = (int)textures.size() - 1;
+        // }
+        // mjs["normalTexture"]          = json::object();
+        // mjs["normalTexture"]["index"] = texture_map.at(tname);
       }
-      if (material->color_tex) {                 // TODO(fabio): opacity
-        auto tname = material->color_tex->name;  // TODO(fabio): ldr
-        if (texture_map.find(tname) == texture_map.end()) {
-          textures.emplace_back(tname, material->color_tex->ldr);
-          texture_map[tname] = (int)textures.size() - 1;
-        }
-        pjs["baseColorTexture"]          = json::object();
-        pjs["baseColorTexture"]["index"] = texture_map.at(tname);
+      if (material->color_tex) {  // TODO(fabio): opacity
+        // auto tname = material->color_tex->name;  // TODO(fabio): ldr
+        // if (texture_map.find(tname) == texture_map.end()) {
+        //   textures.emplace_back(tname, material->color_tex->ldr);
+        //   texture_map[tname] = (int)textures.size() - 1;
+        // }
+        // pjs["baseColorTexture"]          = json::object();
+        // pjs["baseColorTexture"]["index"] = texture_map.at(tname);
       }
-      if (material->roughness_tex) {                 // TODO(fabio): roughness
-        auto tname = material->roughness_tex->name;  // TODO(fabio): ldr
-        if (texture_map.find(tname) == texture_map.end()) {
-          textures.emplace_back(tname, material->roughness_tex->ldr);
-          texture_map[tname] = (int)textures.size() - 1;
-        }
-        pjs["metallicRoughnessTexture"]          = json::object();
-        pjs["metallicRoughnessTexture"]["index"] = texture_map.at(tname);
+      if (material->roughness_tex) {  // TODO(fabio): roughness
+        // auto tname = material->roughness_tex->name;  // TODO(fabio): ldr
+        // if (texture_map.find(tname) == texture_map.end()) {
+        //   textures.emplace_back(tname, material->roughness_tex->ldr);
+        //   texture_map[tname] = (int)textures.size() - 1;
+        // }
+        // pjs["metallicRoughnessTexture"]          = json::object();
+        // pjs["metallicRoughnessTexture"]["index"] = texture_map.at(tname);
       }
       material_map[material] = (int)js["materials"].size() - 1;
     }
@@ -2445,9 +2468,14 @@ static bool save_pbrt_scene(const string& filename, const sceneio_scene* scene,
   pcamera->resolution = {1280, (int)(1280 / pcamera->aspect)};
 
   // get texture name
-  auto get_texture = [](const sceneio_texture* texture) {
-    return texture != nullptr ? texture->name : "";
+  auto texture_map = unordered_map<const scene_texture*, int>{};
+  auto get_texture = [&](const sceneio_texture* texture) -> string {
+    return texture != nullptr ? scene->texture_names.at(texture_map.at(texture))
+                              : "";
   };
+  for (auto idx = 0; idx < (int)scene->textures.size(); idx++) {
+    texture_map[scene->textures[idx]] = idx;
+  }
 
   // convert materials
   auto material_map = unordered_map<sceneio_material*, string>{};
@@ -2501,8 +2529,8 @@ static bool save_pbrt_scene(const string& filename, const sceneio_scene* scene,
   // save textures
   for (auto texture : scene->textures) {
     if (progress_cb) progress_cb("save texture", progress.x++, progress.y);
-    auto path = make_filename(
-        texture->name, "textures", (!texture->hdr.empty()) ? ".hdr"s : ".png"s);
+    auto path = make_filename(scene->texture_names.at(texture_map.at(texture)),
+        "textures", (!texture->hdr.empty()) ? ".hdr"s : ".png"s);
     if (!save_image(path, texture->hdr, texture->ldr, error))
       return dependent_error();
   }

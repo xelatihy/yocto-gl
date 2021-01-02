@@ -260,10 +260,10 @@ bool draw_hdrcoloredit(gui_window* win, const char* lbl, vec4f& value);
 bool draw_coloredit(gui_window* win, const char* lbl, vec3b& value);
 bool draw_coloredit(gui_window* win, const char* lbl, vec4b& value);
 
-bool draw_combobox(
-    gui_window* win, const char* lbl, int& idx, const vector<string>& labels);
+bool draw_combobox(gui_window* win, const char* lbl, int& idx,
+    const vector<string>& labels, bool include_null = false);
 bool draw_combobox(gui_window* win, const char* lbl, string& value,
-    const vector<string>& labels);
+    const vector<string>& labels, bool include_null = false);
 bool draw_combobox(gui_window* win, const char* lbl, int& idx, int num,
     const function<string(int)>& labels, bool include_null = false);
 

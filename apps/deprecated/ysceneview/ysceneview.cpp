@@ -258,7 +258,6 @@ bool draw_widgets(
 bool draw_widgets(
     gui_window* win, sceneio_scene* ioscene, sceneio_texture* iotexture) {
   if (!iotexture) return false;
-  draw_label(win, "name", iotexture->name);
   draw_label(win, "hdr",
       std::to_string(iotexture->hdr.width()) + " x " +
           std::to_string(iotexture->hdr.height()));
@@ -286,26 +285,28 @@ bool draw_widgets(
   edited += draw_coloredit(win, "scattering", iomaterial->scattering);
   edited += draw_slider(win, "trdepth", iomaterial->trdepth, 0, 1);
   edited += draw_slider(win, "scanisotropy", iomaterial->scanisotropy, -1, 1);
-  edited += draw_combobox(
-      win, "emission_tex", iomaterial->emission_tex, ioscene->textures, true);
-  edited += draw_combobox(
-      win, "color_tex", iomaterial->color_tex, ioscene->textures, true);
-  edited += draw_combobox(
-      win, "opacity_tex", iomaterial->opacity_tex, ioscene->textures, true);
-  edited += draw_combobox(
-      win, "metallic_tex", iomaterial->metallic_tex, ioscene->textures, true);
-  edited += draw_combobox(
-      win, "roughness_tex", iomaterial->roughness_tex, ioscene->textures, true);
-  edited += draw_combobox(
-      win, "specular_tex", iomaterial->specular_tex, ioscene->textures, true);
-  edited += draw_combobox(win, "transmission_tex", iomaterial->transmission_tex,
-      ioscene->textures, true);
-  edited += draw_combobox(win, "scattering_tex", iomaterial->scattering_tex,
-      ioscene->textures, true);
-  edited += draw_combobox(
-      win, "spectint_tex", iomaterial->spectint_tex, ioscene->textures, true);
-  edited += draw_combobox(
-      win, "normal_tex", iomaterial->normal_tex, ioscene->textures, true);
+  // edited += draw_combobox(win, "emission_tex", iomaterial->emission_tex,
+  //     ioscene->texture_names, true);
+  // edited += draw_combobox(
+  //     win, "color_tex", iomaterial->color_tex, ioscene->texture_names, true);
+  // edited += draw_combobox(win, "opacity_tex", iomaterial->opacity_tex,
+  //     ioscene->texture_names, true);
+  // edited += draw_combobox(win, "metallic_tex", iomaterial->metallic_tex,
+  //     ioscene->texture_names, true);
+  // edited += draw_combobox(win, "roughness_tex", iomaterial->roughness_tex,
+  //     ioscene->texture_names, true);
+  // edited += draw_combobox(win, "specular_tex", iomaterial->specular_tex,
+  //     ioscene->texture_names, true);
+  // edited += draw_combobox(win, "transmission_tex",
+  // iomaterial->transmission_tex,
+  //     ioscene->texture_names, true);
+  // edited += draw_combobox(win, "scattering_tex", iomaterial->scattering_tex,
+  //     ioscene->texture_names, true);
+  // edited += draw_combobox(win, "spectint_tex", iomaterial->spectint_tex,
+  //     ioscene->texture_names, true);
+  // edited += draw_combobox(
+  //     win, "normal_tex", iomaterial->normal_tex, ioscene->texture_names,
+  //     true);
   return edited;
 }
 
@@ -331,8 +332,8 @@ bool draw_widgets(
   edited += draw_slider(win, "subdivisions", ioshape->subdivisions, 0, 5);
   edited += draw_checkbox(win, "catmull-clark", ioshape->catmullclark);
   edited += draw_slider(win, "displacement", ioshape->displacement, 0, 1);
-  edited += draw_combobox(win, "displacement_tex", ioshape->displacement_tex,
-      ioscene->textures, true);
+  // edited += draw_combobox(win, "displacement_tex", ioshape->displacement_tex,
+  //     ioscene->textures, true);
   return edited;
 }
 
@@ -361,8 +362,9 @@ bool draw_widgets(gui_window* win, sceneio_scene* ioscene,
   edited += draw_slider(win, "frame.z", ioenvironment->frame.z, -1, 1);
   edited += draw_slider(win, "frame.o", ioenvironment->frame.o, -10, 10);
   edited += draw_hdrcoloredit(win, "emission", ioenvironment->emission);
-  edited += draw_combobox(win, "emission texture", ioenvironment->emission_tex,
-      ioscene->textures, true);
+  // edited += draw_combobox(win, "emission texture",
+  // ioenvironment->emission_tex,
+  //     ioscene->textures, true);
   return edited;
 }
 
@@ -538,7 +540,7 @@ void draw_widgets(gui_window* win, app_states* apps, const gui_input& input) {
   }
   if (!app->ioscene->textures.empty() && begin_header(win, "textures")) {
     draw_combobox(
-        win, "texture##2", app->selected_texture, app->ioscene->textures);
+        win, "texture##2", app->selected_texture, app->ioscene->texture_names);
     auto iotexture = app->ioscene->textures[app->selected_texture];
     if (draw_widgets(win, app->ioscene, iotexture)) {
       auto gltexture = app->glscene->textures[app->selected_texture];
