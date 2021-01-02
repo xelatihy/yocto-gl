@@ -26,6 +26,7 @@
 // POSSIBILITY OF SUCH DAMAGE.
 //
 
+#include <yocto/yocto_color.h>
 #include <yocto/yocto_commonio.h>
 #include <yocto/yocto_image.h>
 #include <yocto/yocto_math.h>
@@ -716,12 +717,12 @@ void serialize_value(json_mode mode, json_value& json, setalpha_params& value,
 int run_setalpha(const setalpha_params& params) {
   // load
   auto ioerror = string{};
-  auto img = image<vec4f>{}, alpha = image<vec4f>{};
+  auto image = image_data{}, alpha = image_data{};
   if (path_extension(params.image) == ".ypreset") {
-    if (!make_image_preset(path_basename(params.image), img, ioerror))
+    if (!make_image_preset(path_basename(params.image), image, ioerror))
       return print_fatal(ioerror);
   } else {
-    if (!load_image(params.image, img, ioerror)) return print_fatal(ioerror);
+    if (!load_image(params.image, image, ioerror)) return print_fatal(ioerror);
   }
   if (path_extension(params.alpha) == ".ypreset") {
     if (!make_image_preset(path_basename(params.alpha), alpha, ioerror))
@@ -730,31 +731,37 @@ int run_setalpha(const setalpha_params& params) {
     if (!load_image(params.alpha, alpha, ioerror)) return print_fatal(ioerror);
   }
 
-  // set alpha
-  if (params.from_color) {
-    if (img.imsize() != alpha.imsize()) print_fatal("bad image size");
-    for (auto j = 0; j < img.height(); j++)
-      for (auto i = 0; i < img.width(); i++)
-        img[{i, j}].w = mean(xyz(alpha[{i, j}]));
-  } else {
-    if (img.imsize() != alpha.imsize()) print_fatal("bad image size");
-    for (auto j = 0; j < img.height(); j++)
-      for (auto i = 0; i < img.width(); i++) img[{i, j}].w = alpha[{i, j}].w;
+  // check sizes
+  if (image.width != alpha.width || image.height != alpha.height) {
+    ioerror = "image sizes are different";
+    return print_fatal(ioerror);
   }
 
-  // set color from alpha
-  if (params.to_color) {
-    for (auto& c : img) c = vec4f{c.w, c.w, c.w, c.w};
+  // check types
+  if (is_hdr(image) != is_hdr(alpha) || is_ldr(image) != is_ldr(alpha)) {
+    ioerror = "image types are different";
+    return print_fatal(ioerror);
   }
 
   // edit alpha
-  auto out = image<vec4f>{img.imsize()};
-  for (auto idx = (size_t)0; idx < out.count(); idx++) {
-    auto a = params.from_color ? mean(xyz(img[idx])) : img[idx].w;
-    if (params.to_color) {
-      out[idx] = {a, a, a, a};
+  auto out = make_image(image.width, image.height, is_hdr(image));
+  for (auto idx = 0; idx < image.width * image.height; idx++) {
+    if (is_hdr(image)) {
+      auto a = params.from_color ? mean(xyz(image.hdr[idx])) : image.hdr[idx].w;
+      if (params.to_color) {
+        out.hdr[idx] = {a, a, a, a};
+      } else {
+        out.hdr[idx].w = a;
+      }
     } else {
-      out[idx].w = a;
+      auto a = params.from_color
+                   ? float_to_byte(mean(xyz(byte_to_float(image.ldr[idx]))))
+                   : image.ldr[idx].w;
+      if (params.to_color) {
+        out.ldr[idx] = {a, a, a, a};
+      } else {
+        out.ldr[idx].w = a;
+      }
     }
   }
 
