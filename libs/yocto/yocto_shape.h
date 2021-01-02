@@ -65,6 +65,57 @@ using std::vector;
 }  // namespace yocto
 
 // -----------------------------------------------------------------------------
+// SHAPE DATA AND UTILITIES
+// -----------------------------------------------------------------------------
+namespace yocto {
+
+// Shape ddata stored as an indexed mesh
+struct shape_data {
+  // element data
+  vector<int>   points    = {};
+  vector<vec2i> lines     = {};
+  vector<vec3i> triangles = {};
+  vector<vec4i> quads     = {};
+
+  // vertex data
+  vector<vec3f> positions = {};
+  vector<vec3f> normals   = {};
+  vector<vec2f> texcoords = {};
+  vector<vec4f> colors    = {};
+  vector<float> radius    = {};
+};
+
+// Shape ddata stored as a face-varying mesh
+struct subdiv_data {
+  // element data
+  vector<vec4i> quadspos      = {};
+  vector<vec4i> quadsnorm     = {};
+  vector<vec4i> quadstexcoord = {};
+
+  // vertex data
+  vector<vec3f> positions = {};
+  vector<vec3f> normals   = {};
+  vector<vec2f> texcoords = {};
+
+  // subdivision data
+  int  subdivisions = 0;
+  bool catmullclark = true;
+  bool smooth       = true;
+  //   // displacement data
+  //   float            displacement     = 0;
+  //   sceneio_texture* displacement_tex = nullptr;
+};
+
+// Compute per-vertex normals/tangents for lines/triangles/quads.
+void update_normals(shape_data& shape);
+void update_normals(subdiv_data& subdiv);
+
+// Compute per-vertex tangent space for triangle meshes.
+void update_tangent_spaces(shape_data& shape);
+
+}  // namespace yocto
+
+// -----------------------------------------------------------------------------
 // COMPUTATION OF PER_VERTEX PROPERTIES
 // -----------------------------------------------------------------------------
 namespace yocto {
