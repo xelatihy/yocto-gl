@@ -45,6 +45,141 @@
 #include "yocto_parallel.h"
 
 // -----------------------------------------------------------------------------
+// IMPLEMENTATION OF IMAGE DATA AND UTILITIES
+// -----------------------------------------------------------------------------
+namespace yocto {
+
+// image creation
+image_data make_hdr(size_t width, size_t height) {
+  return image_data{
+      width, height, vector<vec4f>(width * height, vec4f{0, 0, 0, 0}), {}};
+}
+image_data make_ldr(size_t width, size_t height) {
+  return image_data{
+      width, height, {}, vector<vec4b>(width * height, vec4b{0, 0, 0, 0})};
+}
+
+// queries
+bool is_hdr(const image_data& image) { return !image.hdr.empty(); }
+bool is_ldr(const image_data& image) { return !image.ldr.empty(); }
+
+// Evaluates an image at a point `uv`.
+vec4f eval_image(const image_data& image, const vec2f& uv, bool as_linear,
+    bool no_interpolation, bool clamp_to_edge) {
+  // TODO(fabio): implement this
+}
+
+// Apply tone mapping returning a float or byte image.
+image_data tonemap_image(const image_data& image, float exposure, bool filmic) {
+  if (is_ldr(image)) return image;
+  auto result = make_ldr(image.width, image.height);
+  for (auto idx = (size_t)0; image.width * image.height; idx++) {
+    result.ldr[idx] = tonemapb(image.hdr[idx], exposure, filmic, true);
+  }
+  return result;
+}
+
+// Apply tone mapping. If the input image is an ldr, does nothing.
+void tonemap_image(
+    image_data& result, const image_data& image, float exposure, bool filmic) {
+  if (image.width != result.width || image.height != result.height)
+    throw std::invalid_argument{"image should be the same size"};
+  if (!is_ldr(result)) throw std::invalid_argument{"ldr expected"};
+  if (!is_hdr(image)) throw std::invalid_argument{"hdr expected"};
+  for (auto idx = (size_t)0; image.width * image.height; idx++) {
+    result.ldr[idx] = tonemapb(image.hdr[idx], exposure, filmic);
+  }
+}
+// Apply tone mapping using multithreading for speed.
+void tonemap_image_mt(
+    image_data& result, const image_data& image, float exposure, bool filmic) {
+  if (image.width != result.width || image.height != result.height)
+    throw std::invalid_argument{"image should be the same size"};
+  if (!is_ldr(result)) throw std::invalid_argument{"ldr expected"};
+  if (!is_hdr(image)) throw std::invalid_argument{"hdr expected"};
+  parallel_for(image.width * image.height,
+      [&result, &image, exposure, filmic](size_t idx) {
+        result.ldr[idx] = tonemapb(image.hdr[idx], exposure, filmic);
+      });
+}
+
+// Resize an image.
+image_data resize_image(const image_data& image, size_t width, size_t height) {
+  if (width == 0 && height == 0) {
+    throw std::invalid_argument{"bad image size in resize"};
+  }
+  if (height == 0) {
+    height = (size_t)round(width * (double)height / (double)width);
+  } else if (width == 0) {
+    width = (size_t)round(height * (double)width / (double)height);
+  }
+  if (is_ldr(image)) {
+    auto result = make_ldr(width, height);
+    stbir_resize_uint8_generic((byte*)image.ldr.data(), (int)image.width,
+        (int)image.height, (int)(sizeof(vec4b) * image.width),
+        (byte*)result.ldr.data(), (int)result.width, (int)result.height,
+        (int)(sizeof(vec4b) * result.width), 4, 3, 0, STBIR_EDGE_CLAMP,
+        STBIR_FILTER_DEFAULT, STBIR_COLORSPACE_LINEAR, nullptr);
+    return result;
+  } else {
+    auto result = make_hdr(width, height);
+    stbir_resize_float_generic((float*)image.hdr.data(), (int)image.width,
+        (int)image.height, (int)(sizeof(vec4f) * image.width),
+        (float*)result.hdr.data(), (int)result.width, (int)result.height,
+        (int)(sizeof(vec4f) * result.width), 4, 3, 0, STBIR_EDGE_CLAMP,
+        STBIR_FILTER_DEFAULT, STBIR_COLORSPACE_LINEAR, nullptr);
+    return result;
+  }
+}
+
+// Compute the difference between two images.
+image_data image_difference(
+    const image_data& a, const image_data& b, bool display_diff);
+
+}  // namespace yocto
+
+// -----------------------------------------------------------------------------
+// IMPLEMENTATION OF IMAGE IO
+// -----------------------------------------------------------------------------
+namespace yocto {
+
+// Check if an image is HDR based on filename.
+bool is_hdr_filename(const string& filename);
+
+// Loads/saves a 4 channels float/byte image in linear/srgb color space.
+bool load_image(const string& filename, image_data& img, string& error);
+bool save_image(const string& filename, const image_data& img, string& error);
+
+}  // namespace yocto
+
+// -----------------------------------------------------------------------------
+// IMPLEMENTATION OF COLOR GRADING
+// -----------------------------------------------------------------------------
+namespace yocto {
+
+// Apply color grading from a linear or srgb color to an srgb color.
+vec3f colorgrade(
+    const vec3f& rgb, bool linear, const colorgrade_params& params);
+vec4f colorgrade(
+    const vec4f& rgb, bool linear, const colorgrade_params& params);
+
+// Color grade a linear or srgb image to an srgb image.
+image_data colorgrade_image(
+    const image_data& image, bool linear, const colorgrade_params& params);
+
+// Color grade a linear or srgb image to an srgb image.
+// Uses multithreading for speed.
+void colorgrade_image_mt(image_data& corrected, const image_data& img,
+    bool linear, const colorgrade_params& params);
+void colorgrade_image_mt(image_data& corrected, const image_data& img,
+    bool linear, const colorgrade_params& params);
+
+// determine white balance colors
+vec3f compute_white_balance(const image_data& img);
+
+}  // namespace yocto
+
+// -----------------------------------------------------------------------------
 // IMPLEMENTATION FOR COLOR UTILITIES
 // -----------------------------------------------------------------------------
 namespace yocto {

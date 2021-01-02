@@ -63,6 +63,115 @@ using std::vector;
 // -----------------------------------------------------------------------------
 namespace yocto {
 
+// Image contains
+struct image_data {
+  size_t        width  = 0;
+  size_t        height = 0;
+  vector<vec4f> hdr    = {};
+  vector<vec4b> ldr    = {};
+};
+
+// image creation
+image_data make_hdr(size_t width, size_t height);
+image_data make_ldr(size_t width, size_t height);
+
+// queries
+bool is_hdr(const image_data& image);
+bool is_ldr(const image_data& image);
+
+// Evaluates an image at a point `uv`.
+vec4f eval_image(const image_data& image, const vec2f& uv,
+    bool as_linear = false, bool no_interpolation = false,
+    bool clamp_to_edge = false);
+
+// Apply tone mapping returning a float or byte image.
+image_data tonemap_image(const image_data& hdr, float exposure,
+    bool filmic = false, bool srgb = true);
+image_data tonemap_imageb(const image_data& hdr, float exposure,
+    bool filmic = false, bool srgb = true);
+
+// Apply tone mapping. If the input image is an ldr, does nothing.
+void tonemap_image(image_data& ldr, const image_data& hdr, float exposure,
+    bool filmic = false, bool srgb = true);
+// Apply tone mapping using multithreading for speed.
+void tonemap_image_mt(image_data& ldr, const image_data& hdr, float exposure,
+    bool filmic = false, bool srgb = true);
+
+// Resize an image.
+image_data resize_image(const image_data& img, int width, int height);
+image_data resize_image(const image_data& img, const vec2i& size);
+
+// Compute the difference between two images.
+image_data image_difference(
+    const image_data& a, const image_data& b, bool display_diff);
+
+}  // namespace yocto
+
+// -----------------------------------------------------------------------------
+// IMAGE IO
+// -----------------------------------------------------------------------------
+namespace yocto {
+
+// Check if an image is HDR based on filename.
+bool is_hdr_filename(const string& filename);
+
+// Loads/saves a 4 channels float/byte image in linear/srgb color space.
+bool load_image(const string& filename, image_data& img, string& error);
+bool save_image(const string& filename, const image_data& img, string& error);
+
+}  // namespace yocto
+
+// -----------------------------------------------------------------------------
+// COLOR GRADING
+// -----------------------------------------------------------------------------
+namespace yocto {
+
+// minimal color grading
+struct colorgrade_params {
+  float exposure         = 0;
+  vec3f tint             = {1, 1, 1};
+  float lincontrast      = 0.5;
+  float logcontrast      = 0.5;
+  float linsaturation    = 0.5;
+  bool  filmic           = false;
+  bool  srgb             = true;
+  float contrast         = 0.5;
+  float saturation       = 0.5;
+  float shadows          = 0.5;
+  float midtones         = 0.5;
+  float highlights       = 0.5;
+  vec3f shadows_color    = {1, 1, 1};
+  vec3f midtones_color   = {1, 1, 1};
+  vec3f highlights_color = {1, 1, 1};
+};
+
+// Apply color grading from a linear or srgb color to an srgb color.
+vec3f colorgrade(
+    const vec3f& rgb, bool linear, const colorgrade_params& params);
+vec4f colorgrade(
+    const vec4f& rgb, bool linear, const colorgrade_params& params);
+
+// Color grade a linear or srgb image to an srgb image.
+image_data colorgrade_image(
+    const image_data& image, bool linear, const colorgrade_params& params);
+
+// Color grade a linear or srgb image to an srgb image.
+// Uses multithreading for speed.
+void colorgrade_image_mt(image_data& corrected, const image_data& img,
+    bool linear, const colorgrade_params& params);
+void colorgrade_image_mt(image_data& corrected, const image_data& img,
+    bool linear, const colorgrade_params& params);
+
+// determine white balance colors
+vec3f compute_white_balance(const image_data& img);
+
+}  // namespace yocto
+
+// -----------------------------------------------------------------------------
+// IMAGE DATA AND UTILITIES
+// -----------------------------------------------------------------------------
+namespace yocto {
+
 // Image container.
 template <typename T>
 struct image {
@@ -195,25 +304,6 @@ void tonemap_image_mt(image<vec4f>& ldr, const image<vec4f>& hdr,
     float exposure, bool filmic = false, bool srgb = true);
 void tonemap_image_mt(image<vec4b>& ldr, const image<vec4f>& hdr,
     float exposure, bool filmic = false, bool srgb = true);
-
-// minimal color grading
-struct colorgrade_params {
-  float exposure         = 0;
-  vec3f tint             = {1, 1, 1};
-  float lincontrast      = 0.5;
-  float logcontrast      = 0.5;
-  float linsaturation    = 0.5;
-  bool  filmic           = false;
-  bool  srgb             = true;
-  float contrast         = 0.5;
-  float saturation       = 0.5;
-  float shadows          = 0.5;
-  float midtones         = 0.5;
-  float highlights       = 0.5;
-  vec3f shadows_color    = {1, 1, 1};
-  vec3f midtones_color   = {1, 1, 1};
-  vec3f highlights_color = {1, 1, 1};
-};
 
 // Apply color grading from a linear or srgb color to an srgb color.
 vec3f colorgrade(
