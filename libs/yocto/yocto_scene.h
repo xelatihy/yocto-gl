@@ -175,6 +175,8 @@ struct scene_shape {
 
   // element cdf for sampling
   vector<float> elements_cdf = {};
+  // shape is assigned at creation
+  int shape_id = -1;
 };
 
 // Object.
@@ -184,6 +186,9 @@ struct scene_instance {
   frame3f         frame    = identity3x4f;
   scene_shape*    shape    = nullptr;
   scene_material* material = nullptr;
+
+  // instance id assigned at creation
+  int instance_id = -1;
 };
 
 // Environment map.
