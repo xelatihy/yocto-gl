@@ -30,7 +30,7 @@
 #include <yocto/yocto_image.h>
 #include <yocto/yocto_math.h>
 #if YOCTO_OPENGL == 1
-#include <yocto_gui/yocto_imageviewer.h>
+#include <yocto_gui/yocto_glview.h>
 #endif
 using namespace yocto;
 

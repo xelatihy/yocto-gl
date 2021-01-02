@@ -27,7 +27,7 @@
 //
 //
 
-#include "yocto_imageviewer.h"
+#include "yocto_glview.h"
 
 #include <yocto/yocto_commonio.h>
 #include <yocto/yocto_geometry.h>
@@ -255,7 +255,8 @@ void set_widgets(ogl_imageviewer* viewer, const string& name,
 }
 
 // Callback
-void set_callback(ogl_imageviewer* viewer, const ogl_imageviewer_callback& callback) {
+void set_callback(
+    ogl_imageviewer* viewer, const ogl_imageviewer_callback& callback) {
   viewer->callback = callback;
 }
 
