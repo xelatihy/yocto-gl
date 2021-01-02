@@ -91,6 +91,8 @@ void view_shape(const string& title, const string& name,
   ioshape->texcoords = shape.texcoords;
   ioshape->colors    = shape.colors;
   ioshape->radius    = shape.radius;
+  auto instance      = add_instance(scene, "instance");
+  instance->shape    = ioshape;
   add_camera(scene);
   add_materials(scene);
   if (addsky) add_sky(scene);
@@ -239,6 +241,16 @@ void view_scene(const string& title, const string& name,
 
   // rendering params
   auto params = trace_params{};
+  auto has_lights =
+      std::any_of(scene->instances.begin(), scene->instances.end(),
+          [](sceneio_instance* instance) {
+            return instance->material->emission != zero3f;
+          }) ||
+      std::any_of(scene->environments.begin(), scene->environments.end(),
+          [](sceneio_environment* environment) {
+            return environment->emission != zero3f;
+          });
+  if (!has_lights) params.sampler = trace_sampler_type::eyelight;
 
   // run viewer
   view_scene(title, name, ptscene, ptcamera, params, progress_cb);

@@ -486,7 +486,7 @@ void serialize_value(json_mode mode, json_value& json, view_params& value,
   serialize_property(mode, json, value.shape, "shape", "Input shape.", true);
   serialize_property(mode, json, value.output, "output", "Output shape.");
   serialize_property(mode, json, value.addsky, "addsky", "Add sky.");
-  serialize_clipositionals(mode, json, {"shapes"});
+  serialize_clipositionals(mode, json, {"shape"});
   serialize_clialternates(mode, json, {{"output", "o"}});
 }
 
