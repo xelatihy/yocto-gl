@@ -146,24 +146,20 @@ struct colorgrade_params {
 };
 
 // Apply color grading from a linear or srgb color to an srgb color.
-vec3f colorgrade(
-    const vec3f& rgb, bool linear, const colorgrade_params& params);
-vec4f colorgrade(
-    const vec4f& rgb, bool linear, const colorgrade_params& params);
+vec4b colorgradeb(const vec4f& hdr_color, const colorgrade_params& params);
+vec4b colorgradeb(const vec4b& ldr_color, const colorgrade_params& params);
 
-// Color grade a linear or srgb image to an srgb image.
+// Color grade an hsr or ldr image to an ldr image.
 image_data colorgrade_image(
-    const image_data& image, bool linear, const colorgrade_params& params);
+    const image_data& image, const colorgrade_params& params);
 
-// Color grade a linear or srgb image to an srgb image.
+// Color grade an hsr or ldr image to an ldr image.
 // Uses multithreading for speed.
-void colorgrade_image_mt(image_data& corrected, const image_data& img,
-    bool linear, const colorgrade_params& params);
-void colorgrade_image_mt(image_data& corrected, const image_data& img,
-    bool linear, const colorgrade_params& params);
+void colorgrade_image_mt(image_data& result, const image_data& image,
+    const colorgrade_params& params);
 
 // determine white balance colors
-vec3f compute_white_balance(const image_data& img);
+vec4f compute_white_balance(const image_data& image);
 
 }  // namespace yocto
 

@@ -139,6 +139,122 @@ image_data image_difference(
 }  // namespace yocto
 
 // -----------------------------------------------------------------------------
+// IMPLEMENTATION OF COLOR GRADING
+// -----------------------------------------------------------------------------
+namespace yocto {
+
+// Apply color grading from a linear or srgb color to an srgb color.
+vec4b colorgradeb(const vec4f& hdr_color, const colorgrade_params& params) {
+  auto rgb   = xyz(hdr_color);
+  auto alpha = hdr_color.w;
+  if (params.exposure != 0) rgb *= exp2(params.exposure);
+  if (params.tint != vec3f{1, 1, 1}) rgb *= params.tint;
+  if (params.lincontrast != 0.5f)
+    rgb = lincontrast(rgb, params.lincontrast, 0.18f);
+  if (params.logcontrast != 0.5f)
+    rgb = logcontrast(rgb, params.logcontrast, 0.18f);
+  if (params.linsaturation != 0.5f) rgb = saturate(rgb, params.linsaturation);
+  if (params.filmic) rgb = tonemap_filmic(rgb);
+  if (params.srgb) rgb = rgb_to_srgb(rgb);
+  if (params.contrast != 0.5f) rgb = contrast(rgb, params.contrast);
+  if (params.saturation != 0.5f) rgb = saturate(rgb, params.saturation);
+  if (params.shadows != 0.5f || params.midtones != 0.5f ||
+      params.highlights != 0.5f || params.shadows_color != vec3f{1, 1, 1} ||
+      params.midtones_color != vec3f{1, 1, 1} ||
+      params.highlights_color != vec3f{1, 1, 1}) {
+    auto lift  = params.shadows_color;
+    auto gamma = params.midtones_color;
+    auto gain  = params.highlights_color;
+    lift       = lift - mean(lift) + params.shadows - (float)0.5;
+    gain       = gain - mean(gain) + params.highlights + (float)0.5;
+    auto grey  = gamma - mean(gamma) + params.midtones;
+    gamma      = log(((float)0.5 - lift) / (gain - lift)) / log(grey);
+    // apply_image
+    auto lerp_value = clamp(pow(rgb, 1 / gamma), 0, 1);
+    rgb             = gain * lerp_value + lift * (1 - lerp_value);
+  }
+  return float_to_byte(vec4f{rgb.x, rgb.y, rgb.z, alpha});
+}
+vec4b colorgradeb(const vec4b& ldr_color, const colorgrade_params& params) {
+  auto rgb   = byte_to_float(xyz(ldr_color));
+  auto alpha = byte_to_float(ldr_color.w);
+  if (params.contrast != 0.5f) rgb = contrast(rgb, params.contrast);
+  if (params.saturation != 0.5f) rgb = saturate(rgb, params.saturation);
+  if (params.shadows != 0.5f || params.midtones != 0.5f ||
+      params.highlights != 0.5f || params.shadows_color != vec3f{1, 1, 1} ||
+      params.midtones_color != vec3f{1, 1, 1} ||
+      params.highlights_color != vec3f{1, 1, 1}) {
+    auto lift  = params.shadows_color;
+    auto gamma = params.midtones_color;
+    auto gain  = params.highlights_color;
+
+    lift      = lift - mean(lift) + params.shadows - (float)0.5;
+    gain      = gain - mean(gain) + params.highlights + (float)0.5;
+    auto grey = gamma - mean(gamma) + params.midtones;
+    gamma     = log(((float)0.5 - lift) / (gain - lift)) / log(grey);
+
+    // apply_image
+    auto lerp_value = clamp(pow(rgb, 1 / gamma), 0, 1);
+    rgb             = gain * lerp_value + lift * (1 - lerp_value);
+  }
+  return float_to_byte(vec4f{rgb.x, rgb.y, rgb.z, alpha});
+}
+
+// Color grade an hsr or ldr image to an ldr image.
+image_data colorgrade_image(
+    const image_data& image, const colorgrade_params& params) {
+  auto result = make_ldr(image.width, image.height);
+  if (is_ldr(image)) {
+    for (auto idx = (size_t)0; image.width * image.height; idx++) {
+      result.ldr[idx] = colorgradeb(image.ldr[idx], params);
+    }
+  } else {
+    for (auto idx = (size_t)0; image.width * image.height; idx++) {
+      result.ldr[idx] = colorgradeb(image.hdr[idx], params);
+    }
+  }
+  return result;
+}
+
+// Color grade an hsr or ldr image to an ldr image.
+// Uses multithreading for speed.
+void colorgrade_image_mt(image_data& result, const image_data& image,
+    const colorgrade_params& params) {
+  if (image.width != result.width || image.height != result.height)
+    throw std::invalid_argument{"image should be the same size"};
+  if (!is_ldr(result)) throw std::invalid_argument{"ldr expected"};
+  if (is_ldr(image)) {
+    parallel_for(
+        image.width * image.height, [&result, &image, &params](size_t idx) {
+          result.ldr[idx] = colorgradeb(image.ldr[idx], params);
+        });
+  } else {
+    parallel_for(
+        image.width * image.height, [&result, &image, &params](size_t idx) {
+          result.ldr[idx] = colorgradeb(image.hdr[idx], params);
+        });
+  }
+}
+
+// determine white balance colors
+vec4f compute_white_balance(const image_data& image) {
+  if (is_hdr(image)) {
+    auto rgb = vec3f{0, 0, 0};
+    for (auto& p : image.hdr) rgb += xyz(p);
+    if (rgb == vec3f{0, 0, 0}) return {0, 0, 0, 1};
+    rgb /= max(rgb);
+    return {rgb.x, rgb.y, rgb.z, 1};
+  } else {
+    auto rgb = vec3f{0, 0, 0};
+    for (auto& p : image.ldr) rgb += xyz(byte_to_float(p));
+    if (rgb == vec3f{0, 0, 0}) return {0, 0, 0, 1};
+    return {rgb.x, rgb.y, rgb.z, 1};
+  }
+}
+
+}  // namespace yocto
+
+// -----------------------------------------------------------------------------
 // IMPLEMENTATION OF IMAGE IO
 // -----------------------------------------------------------------------------
 namespace yocto {
@@ -149,33 +265,6 @@ bool is_hdr_filename(const string& filename);
 // Loads/saves a 4 channels float/byte image in linear/srgb color space.
 bool load_image(const string& filename, image_data& img, string& error);
 bool save_image(const string& filename, const image_data& img, string& error);
-
-}  // namespace yocto
-
-// -----------------------------------------------------------------------------
-// IMPLEMENTATION OF COLOR GRADING
-// -----------------------------------------------------------------------------
-namespace yocto {
-
-// Apply color grading from a linear or srgb color to an srgb color.
-vec3f colorgrade(
-    const vec3f& rgb, bool linear, const colorgrade_params& params);
-vec4f colorgrade(
-    const vec4f& rgb, bool linear, const colorgrade_params& params);
-
-// Color grade a linear or srgb image to an srgb image.
-image_data colorgrade_image(
-    const image_data& image, bool linear, const colorgrade_params& params);
-
-// Color grade a linear or srgb image to an srgb image.
-// Uses multithreading for speed.
-void colorgrade_image_mt(image_data& corrected, const image_data& img,
-    bool linear, const colorgrade_params& params);
-void colorgrade_image_mt(image_data& corrected, const image_data& img,
-    bool linear, const colorgrade_params& params);
-
-// determine white balance colors
-vec3f compute_white_balance(const image_data& img);
 
 }  // namespace yocto
 
