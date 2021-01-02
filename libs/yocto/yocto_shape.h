@@ -116,6 +116,25 @@ void update_tangent_spaces(shape_data& shape);
 }  // namespace yocto
 
 // -----------------------------------------------------------------------------
+// SHAPE IO FUNCTIONS
+// -----------------------------------------------------------------------------
+namespace yocto {
+
+// Load/save a shape
+bool load_shape(const string& filename, shape_data& shape, string& error,
+    bool flip_texcoords = true);
+bool save_shape(const string& filename, const shape_data& shape, string& error,
+    bool flip_texcoords = true, bool ascii = false);
+
+// Load/save a subdiv
+bool load_shape(const string& filename, subdiv_data& subdiv, string& error,
+    bool flip_texcoords = true);
+bool save_shape(const string& filename, const subdiv_data& subdiv,
+    string& error, bool flip_texcoords = true, bool ascii = false);
+
+}  // namespace yocto
+
+// -----------------------------------------------------------------------------
 // COMPUTATION OF PER_VERTEX PROPERTIES
 // -----------------------------------------------------------------------------
 namespace yocto {
