@@ -56,7 +56,7 @@ def format():
     filenames = sorted(glob.glob('libs/*/y*.h') +
                        glob.glob('libs/*/y*.cpp') + glob.glob('apps/*/y*.cpp'))
     for filename in filenames:
-        if 'yshapedata' in filename:
+        if 'yshapedata' in filename or 'yshape_data' in filename or 'yscene_data' in filename:
             continue
         print(f'formatting {filename}')
         os.system(f'clang-format -i -style=file {filename}')
