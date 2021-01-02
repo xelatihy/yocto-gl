@@ -161,7 +161,32 @@ image_data resize_image(const image_data& image, int width, int height) {
 
 // Compute the difference between two images.
 image_data image_difference(
-    const image_data& a, const image_data& b, bool display_diff);
+    const image_data& image1, const image_data& image2, bool display) {
+  // check sizes
+  if (image1.width != image2.width || image1.height != image2.height) {
+    throw std::invalid_argument{"image sizes are different"};
+  }
+
+  // check types
+  if (is_hdr(image1) != is_hdr(image2) || is_ldr(image1) != is_ldr(image2)) {
+    throw std::invalid_argument{"image types are different"};
+  }
+
+  // compute diff
+  auto difference = make_image(image1.width, image1.height, false);
+  for (auto j = 0; j < image1.height; j++) {
+    for (auto i = 0; i < image1.width; i++) {
+      auto diff = abs(get_pixel(image1, i, j) - get_pixel(image2, i, j));
+      if (display) {
+        auto d = max(diff);
+        set_pixel(difference, i, j, {d, d, d, 1});
+      } else {
+        set_pixel(difference, i, j, diff);
+      }
+    }
+  }
+  return difference;
+}
 
 void set_region(image_data& image, const image_data& region, int x, int y) {
   // TODO(fabio): implement this

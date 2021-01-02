@@ -636,28 +636,34 @@ void serialize_value(json_mode mode, json_value& json, diff_params& value,
 int run_diff(const diff_params& params) {
   // load
   auto ioerror = string{};
-  auto img1 = image<vec4f>{}, img2 = image<vec4f>{};
+  auto image1 = image_data{}, image2 = image_data{};
   if (path_extension(params.image1) == ".ypreset") {
-    if (!make_image_preset(path_basename(params.image1), img1, ioerror))
+    if (!make_image_preset(path_basename(params.image1), image1, ioerror))
       return false;
   } else {
-    if (!load_image(params.image1, img1, ioerror)) return false;
+    if (!load_image(params.image1, image1, ioerror)) return false;
   }
   if (path_extension(params.image2) == ".ypreset") {
-    if (!make_image_preset(path_basename(params.image2), img2, ioerror))
+    if (!make_image_preset(path_basename(params.image2), image2, ioerror))
       return false;
   } else {
-    if (!load_image(params.image2, img2, ioerror)) return false;
+    if (!load_image(params.image2, image2, ioerror)) return false;
   }
 
   // check sizes
-  if (img1.imsize() != img2.imsize()) {
+  if (image1.width != image2.width || image1.height != image2.height) {
     ioerror = "image sizes are different";
     return print_fatal(ioerror);
   }
 
+  // check types
+  if (is_hdr(image1) != is_hdr(image2) || is_ldr(image1) != is_ldr(image2)) {
+    ioerror = "image types are different";
+    return print_fatal(ioerror);
+  }
+
   // compute diff
-  auto diff = image_difference(img1, img2, true);
+  auto diff = image_difference(image1, image2, true);
 
   // save
   if (params.output != "") {
@@ -668,7 +674,7 @@ int run_diff(const diff_params& params) {
 
   // check diff
   if (params.signal) {
-    for (auto& c : diff) {
+    for (auto& c : diff.hdr) {
       if (max(xyz(c)) > params.threshold) {
         ioerror = "image content differs";
         return print_fatal(ioerror);
