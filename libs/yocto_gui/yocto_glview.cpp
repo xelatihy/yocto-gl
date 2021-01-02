@@ -236,6 +236,12 @@ void view_scene(const string& title, const string& name,
   auto ptscene       = ptscene_guard.get();
   auto ptcamera      = (trace_camera*)nullptr;
   init_scene(ptscene, scene, ptcamera, camera, progress_cb);
+
+  // rendering params
+  auto params = trace_params{};
+
+  // run viewer
+  view_scene(title, name, ptscene, ptcamera, params, progress_cb);
 }
 
 // Open a window and show an scene via path tracing
