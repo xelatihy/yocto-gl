@@ -31,7 +31,7 @@
 #include <yocto/yocto_math.h>
 #include <yocto/yocto_shape.h>
 #if YOCTO_OPENGL == 1
-// include vieweer later
+#include <yocto_gui/yocto_glview.h>
 #endif
 using namespace yocto;
 
@@ -474,17 +474,19 @@ int run_fvconvert(const fvconvert_params& params) {
 
 // view params
 struct view_params {
-  vector<string> shapes = {"shape.ply"};
-  string         output = "out.ply";
+  string shape  = "shape.ply";
+  string output = "out.ply";
+  bool   addsky = false;
 };
 
 // Json IO
 void serialize_value(json_mode mode, json_value& json, view_params& value,
     const string& description) {
   serialize_object(mode, json, value, description);
-  serialize_property(mode, json, value.shapes, "shapes", "Input shapes.", true);
+  serialize_property(mode, json, value.shape, "shape", "Input shape.", true);
   serialize_property(mode, json, value.output, "output", "Output shape.");
-  serialize_clipositionals(mode, json, {"shapes"});
+  serialize_property(mode, json, value.addsky, "addsky", "Add sky.");
+  serialize_clipositionals(mode, json, {"shape"});
   serialize_clialternates(mode, json, {{"output", "o"}});
 }
 
@@ -497,57 +499,28 @@ int run_view(const view_params& params) {
 
 #else
 
-#if 1
-
 // view shapes
 int run_view(const view_params& params) {
-  return print_fatal("Not implemented yet");
-}
+  // shape data
+  auto shape = generic_shape{};
 
-#else
-
-// view shapes
-int run_view(const view_params& params) {
-  // open viewer
-  auto viewer_guard = make_sceneview("yshape");
-  auto viewer       = viewer_guard.get();
-
-  // set image
-  for (auto& filename : params.shapes) {
-    // load
-    auto hdr     = image<vec4f>{};
-    auto ldr     = image<vec4b>{};
-    auto ioerror = string{};
-    if (is_preset_filename(filename)) {
-      if (is_preset_hdr(filename)) {
-        if (!make_image_preset(path_basename(filename), hdr, ioerror))
-          return print_fatal(ioerror);
-      } else {
-        if (!make_image_preset(path_basename(filename), ldr, ioerror))
-          return print_fatal(ioerror);
-      }
-    } else if (is_hdr_filename(filename)) {
-      if (!load_image(filename, hdr, ioerror)) return print_fatal(ioerror);
-    } else {
-      if (!load_image(filename, ldr, ioerror)) return print_fatal(ioerror);
-    }
-
-    // push image to the viewer
-    if (!hdr.empty()) {
-      set_image(viewer, filename, hdr);
-    } else {
-      set_image(viewer, filename, ldr);
-    }
+  // load mesh
+  auto ioerror = ""s;
+  print_progress("load shape", 0, 1);
+  if (path_filename(params.shape) == ".ypreset") {
+    if (!make_shape_preset(shape, path_basename(params.shape), ioerror))
+      print_fatal(ioerror);
+  } else {
+    if (!load_shape(params.shape, shape, ioerror, false)) print_fatal(ioerror);
   }
+  print_progress("load shape", 1, 1);
 
   // run view
-  run_view(viewer);
+  view_shape("yshape", params.shape, shape, params.addsky, print_progress);
 
   // done
   return 0;
 }
-
-#endif
 
 #endif
 

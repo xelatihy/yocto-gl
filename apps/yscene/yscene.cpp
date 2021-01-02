@@ -31,7 +31,7 @@
 #include <yocto/yocto_sceneio.h>
 #include <yocto/yocto_shape.h>
 #if YOCTO_OPENGL == 1
-// include vieweer later
+#include <yocto_gui/yocto_glview.h>
 #endif
 using namespace yocto;
 
@@ -779,11 +779,11 @@ bool make_preset(sceneio_scene* scene, const string& type, string& error) {
 
 // convert params
 struct convert_params {
-  string scene       = "scene.ply";
-  string output      = "out.ply";
-  bool   info        = false;
-  bool   validate    = false;
-  string copyright       = "";
+  string scene     = "scene.ply";
+  string output    = "out.ply";
+  bool   info      = false;
+  bool   validate  = false;
+  string copyright = "";
 };
 
 // Json IO
@@ -794,8 +794,8 @@ void serialize_value(json_mode mode, json_value& json, convert_params& value,
   serialize_property(mode, json, value.output, "output", "Output scene.");
   serialize_property(mode, json, value.info, "info", "Print info.");
   serialize_property(mode, json, value.validate, "validate", "Validate scene.");
-  serialize_property(mode, json, value.copyright, "copyright",
-      "Set scene copyright.");
+  serialize_property(
+      mode, json, value.copyright, "copyright", "Set scene copyright.");
   serialize_clipositionals(mode, json, {"scene"});
   serialize_clialternates(mode, json, {{"output", "o"}});
 }
@@ -838,93 +838,80 @@ int run_convert(const convert_params& params) {
   }
 
   // make a directory if needed
-  if (!make_directory(path_dirname(params.output), ioerror)) print_fatal(ioerror);
+  if (!make_directory(path_dirname(params.output), ioerror))
+    print_fatal(ioerror);
   if (!scene->shapes.empty()) {
-    if (!make_directory(path_join(path_dirname(params.output), "shapes"), ioerror))
+    if (!make_directory(
+            path_join(path_dirname(params.output), "shapes"), ioerror))
       print_fatal(ioerror);
   }
   if (!scene->textures.empty()) {
-    if (!make_directory(path_join(path_dirname(params.output), "textures"), ioerror))
+    if (!make_directory(
+            path_join(path_dirname(params.output), "textures"), ioerror))
       print_fatal(ioerror);
   }
 
   // save scene
-  if (!save_scene(params.output, scene, ioerror, print_progress)) print_fatal(ioerror);
+  if (!save_scene(params.output, scene, ioerror, print_progress))
+    print_fatal(ioerror);
 
   // done
   return 0;
 }
 
-// view params
+// convert params
 struct view_params {
-  vector<string> shapes = {"shape.ply"};
-  string         output = "out.ply";
+  string scene  = "scene.json";
+  string output = "out.png";
+  string camera = "";
+  bool   addsky = false;
 };
 
 // Json IO
 void serialize_value(json_mode mode, json_value& json, view_params& value,
     const string& description) {
   serialize_object(mode, json, value, description);
-  serialize_property(mode, json, value.shapes, "shapes", "Input shapes.", true);
-  serialize_property(mode, json, value.output, "output", "Output shape.");
-  serialize_clipositionals(mode, json, {"shapes"});
+  serialize_property(mode, json, value.scene, "scene", "Scene filename.", true);
+  serialize_property(mode, json, value.output, "output", "Output filename.");
+  serialize_property(mode, json, value.camera, "camera", "Camera name.");
+  serialize_property(mode, json, value.addsky, "addsky", "Add sky.");
+  serialize_clipositionals(mode, json, {"scene"});
   serialize_clialternates(mode, json, {{"output", "o"}});
 }
 
 #ifndef YOCTO_OPENGL
 
-// view shapes
+// view scene
 int run_view(const view_params& params) {
   return print_fatal("Opengl not compiled");
 }
 
 #else
 
-#if 1
-
-// view shapes
+// view scene
 int run_view(const view_params& params) {
-  return print_fatal("Not implemented yet");
-}
-
-#else
-
-// view shapes
-int run_view(const view_params& params) {
-  // open viewer
-  auto viewer_guard = make_sceneview("yshape");
-  auto viewer       = viewer_guard.get();
-
-  // set image
-  for (auto& filename : params.shapes) {
-    // load
-    auto hdr     = image<vec4f>{};
-    auto ldr     = image<vec4b>{};
-    auto ioerror = string{};
-    if (is_preset_filename(filename)) {
-      if (is_preset_hdr(filename)) {
-        if (!make_image_preset(path_basename(filename), hdr, ioerror))
-          return print_fatal(ioerror);
-      } else {
-        if (!make_image_preset(path_basename(filename), ldr, ioerror))
-          return print_fatal(ioerror);
-      }
-    } else if (is_hdr_filename(filename)) {
-      if (!load_image(filename, hdr, ioerror)) return print_fatal(ioerror);
-    } else {
-      if (!load_image(filename, ldr, ioerror)) return print_fatal(ioerror);
-    }
-
-    // push image to the viewer
-    if (!hdr.empty()) {
-      set_image(viewer, filename, hdr);
-    } else {
-      set_image(viewer, filename, ldr);
-    }
+  // load scene
+  auto scene_guard = std::make_unique<sceneio_scene>();
+  auto scene       = scene_guard.get();
+  auto ioerror     = ""s;
+  if (path_extension(params.scene) == ".ypreset") {
+    print_progress("make preset", 0, 1);
+    if (!make_preset(scene, path_basename(params.scene), ioerror))
+      print_fatal(ioerror);
+    print_progress("make preset", 1, 1);
+  } else {
+    if (!load_scene(params.scene, scene, ioerror, print_progress))
+      print_fatal(ioerror);
   }
 
+  // add sky
+  if (params.addsky) add_sky(scene);
+
+  // tesselation
+  tesselate_shapes(scene, print_progress);
+
   // run view
-  run_view(viewer);
+  view_scene("yscene", params.scene, scene, params.camera, print_progress);
 
   // done
   return 0;
@@ -932,12 +919,10 @@ int run_view(const view_params& params) {
 
 #endif
 
-#endif
-
 struct app_params {
-  string           command   = "convert";
-  convert_params   convert   = {};
-  view_params      view      = {};
+  string         command = "convert";
+  convert_params convert = {};
+  view_params    view    = {};
 };
 
 // Json IO
