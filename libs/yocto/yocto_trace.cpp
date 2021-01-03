@@ -530,7 +530,7 @@ static vec3f sample_lights(const trace_scene* scene, const trace_lights* lights,
   } else if (light->environment != invalid_handle) {
     auto& environment = get_environment(scene, light->environment);
     if (environment.emission_tex != invalid_handle) {
-      auto emission_tex = get_texture(scene, environment.emission_tex);
+      auto& emission_tex = get_texture(scene, environment.emission_tex);
       auto idx          = sample_discrete_cdf(light->elements_cdf, rel);
       auto size         = texture_size(emission_tex);
       auto uv           = vec2f{
@@ -576,7 +576,7 @@ static float sample_lights_pdf(const trace_scene* scene, const trace_bvh* bvh,
     } else if (light->environment != invalid_handle) {
       auto& environment = get_environment(scene, light->environment);
       if (environment.emission_tex != invalid_handle) {
-        auto emission_tex = get_texture(scene, environment.emission_tex);
+        auto& emission_tex = get_texture(scene, environment.emission_tex);
         auto size         = texture_size(emission_tex);
         auto wl = transform_direction(inverse(environment.frame), direction);
         auto texcoord = vec2f{atan2(wl.z, wl.x) / (2 * pif),

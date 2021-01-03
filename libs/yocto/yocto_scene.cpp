@@ -167,12 +167,12 @@ vector<string> scene_stats(const scene_scene* scene, bool verbose) {
                   format(accumulate(scene->shapes,
                       [](auto& shape) { return shape.quadspos.size(); })));
   stats.push_back(
-      "texels4b:     " + format(accumulate(scene->textures, [](auto texture) {
-        return (size_t)texture->ldr.width() * (size_t)texture->ldr.width();
+      "texels4b:     " + format(accumulate(scene->textures, [](auto& texture) {
+        return (size_t)texture.ldr.width() * (size_t)texture.ldr.width();
       })));
   stats.push_back(
-      "texels4f:     " + format(accumulate(scene->textures, [](auto texture) {
-        return (size_t)texture->hdr.width() * (size_t)texture->hdr.height();
+      "texels4f:     " + format(accumulate(scene->textures, [](auto& texture) {
+        return (size_t)texture.hdr.width() * (size_t)texture.hdr.height();
       })));
   stats.push_back("center:       " + format3(center(bbox)));
   stats.push_back("size:         " + format3(size(bbox)));
@@ -198,7 +198,7 @@ vector<string> scene_validation(const scene_scene* scene, bool notextures) {
   auto check_empty_textures = [&errs](const scene_scene* scene) {
     for (auto idx = 0; idx < (int)scene->textures.size(); idx++) {
       auto& texture = scene->textures[idx];
-      if (texture->hdr.empty() && texture->ldr.empty()) {
+      if (texture.hdr.empty() && texture.ldr.empty()) {
         errs.push_back("empty texture " + scene->texture_names[idx]);
       }
     }
@@ -221,10 +221,6 @@ vector<string> scene_validation(const scene_scene* scene, bool notextures) {
 // SCENE UTILITIES
 // -----------------------------------------------------------------------------
 namespace yocto {
-
-scene_scene::~scene_scene() {
-  for (auto texture : textures) delete texture;
-}
 
 // add an element
 template <typename T>
@@ -258,8 +254,7 @@ shape_handle add_shape(scene_scene* scene, const string& name) {
   return add_element(scene->shapes, scene->shape_names, name, "shape");
 }
 texture_handle add_texture(scene_scene* scene, const string& name) {
-  return add_element(scene->textures, scene->texture_names, scene->texture_map,
-      name, "texture");
+  return add_element(scene->textures, scene->texture_names, name, "texture");
 }
 instance_handle add_instance(scene_scene* scene, const string& name) {
   return add_element(scene->instances, scene->instance_names, name, "instance");
@@ -292,7 +287,7 @@ scene_material& get_material(scene_scene* scene, material_handle handle) {
 scene_shape& get_shape(scene_scene* scene, shape_handle handle) {
   return scene->shapes.at(handle);
 }
-scene_texture* get_texture(scene_scene* scene, texture_handle handle) {
+scene_texture& get_texture(scene_scene* scene, texture_handle handle) {
   return scene->textures.at(handle);
 }
 scene_instance& get_complete_instance(
@@ -319,7 +314,7 @@ const scene_material& get_material(
 const scene_shape& get_shape(const scene_scene* scene, shape_handle handle) {
   return scene->shapes.at(handle);
 }
-const scene_texture* get_texture(
+const scene_texture& get_texture(
     const scene_scene* scene, texture_handle handle) {
   return scene->textures.at(handle);
 }
@@ -359,8 +354,8 @@ string get_shape_name(const scene_scene* scene, const scene_shape& shape) {
   return scene->shape_names.at(&shape - scene->shapes.data());
 }
 string get_texture_name(
-    const scene_scene* scene, const scene_texture* texture) {
-  return scene->texture_map.at(texture);
+    const scene_scene* scene, const scene_texture& texture) {
+  return scene->texture_names.at(&texture - scene->textures.data());
 }
 string get_instance_name(
     const scene_scene* scene, const scene_instance& instance) {
@@ -418,9 +413,9 @@ void add_materials(scene_scene* scene) {
 
 // Add a sky environment
 void add_sky(scene_scene* scene, float sun_angle) {
-  auto thandle         = add_texture(scene, "sky");
-  auto texture         = get_texture(scene, thandle);
-  texture->hdr         = make_sunsky({1024, 512}, sun_angle);
+  auto  thandle        = add_texture(scene, "sky");
+  auto& texture        = get_texture(scene, thandle);
+  texture.hdr          = make_sunsky({1024, 512}, sun_angle);
   auto& environment    = get_environment(scene, add_environment(scene, "sky"));
   environment.emission = {1, 1, 1};
   environment.emission_tex = thandle;
@@ -489,9 +484,9 @@ void trim_memory(scene_scene* scene) {
     shape.quadsnorm.shrink_to_fit();
     shape.quadstexcoord.shrink_to_fit();
   }
-  for (auto texture : scene->textures) {
-    texture->hdr.shrink_to_fit();
-    texture->ldr.shrink_to_fit();
+  for (auto& texture : scene->textures) {
+    texture.hdr.shrink_to_fit();
+    texture.ldr.shrink_to_fit();
   }
   scene->cameras.shrink_to_fit();
   scene->shapes.shrink_to_fit();
@@ -597,10 +592,10 @@ void tesselate_shape(scene_scene* scene, scene_shape& shape) {
                                   shape.triangles, shape.positions)
                             : quads_normals(shape.quads, shape.positions);
       for (auto idx = 0; idx < shape.positions.size(); idx++) {
-        auto diplacement_tex = get_texture(scene, shape.displacement_tex);
-        auto disp            = mean(
+        auto& diplacement_tex = get_texture(scene, shape.displacement_tex);
+        auto  disp            = mean(
             eval_texture(diplacement_tex, shape.texcoords[idx], true));
-        if (!diplacement_tex->ldr.empty()) disp -= 0.5f;
+        if (!diplacement_tex.ldr.empty()) disp -= 0.5f;
         shape.positions[idx] += shape.normals[idx] * shape.displacement * disp;
       }
       if (shape.smooth) {
@@ -619,10 +614,10 @@ void tesselate_shape(scene_scene* scene, scene_shape& shape) {
         auto qpos = shape.quadspos[fid];
         auto qtxt = shape.quadstexcoord[fid];
         for (auto i = 0; i < 4; i++) {
-          auto displacement_tex = get_texture(scene, shape.displacement_tex);
-          auto disp             = mean(
+          auto& displacement_tex = get_texture(scene, shape.displacement_tex);
+          auto  disp             = mean(
               eval_texture(displacement_tex, shape.texcoords[qtxt[i]], true));
-          if (!displacement_tex->ldr.empty()) disp -= 0.5f;
+          if (!displacement_tex.ldr.empty()) disp -= 0.5f;
           offset[qpos[i]] += shape.displacement * disp;
           count[qpos[i]] += 1;
         }
@@ -676,11 +671,11 @@ void tesselate_shapes(
 namespace yocto {
 
 // Check texture size
-vec2i texture_size(const scene_texture* texture) {
-  if (!texture->hdr.empty()) {
-    return texture->hdr.imsize();
-  } else if (!texture->ldr.empty()) {
-    return texture->ldr.imsize();
+vec2i texture_size(const scene_texture& texture) {
+  if (!texture.hdr.empty()) {
+    return texture.hdr.imsize();
+  } else if (!texture.ldr.empty()) {
+    return texture.ldr.imsize();
   } else {
     return zero2i;
   }
@@ -688,23 +683,20 @@ vec2i texture_size(const scene_texture* texture) {
 
 // Evaluate a texture
 vec4f lookup_texture(
-    const scene_texture* texture, const vec2i& ij, bool ldr_as_linear) {
-  if (!texture->hdr.empty()) {
-    return texture->hdr[ij];
-  } else if (!texture->ldr.empty()) {
-    return ldr_as_linear ? byte_to_float(texture->ldr[ij])
-                         : srgb_to_rgb(byte_to_float(texture->ldr[ij]));
+    const scene_texture& texture, const vec2i& ij, bool ldr_as_linear) {
+  if (!texture.hdr.empty()) {
+    return texture.hdr[ij];
+  } else if (!texture.ldr.empty()) {
+    return ldr_as_linear ? byte_to_float(texture.ldr[ij])
+                         : srgb_to_rgb(byte_to_float(texture.ldr[ij]));
   } else {
     return {1, 1, 1, 1};
   }
 }
 
 // Evaluate a texture
-vec4f eval_texture(const scene_texture* texture, const vec2f& uv,
+vec4f eval_texture(const scene_texture& texture, const vec2f& uv,
     bool ldr_as_linear, bool no_interpolation, bool clamp_to_edge) {
-  // get texture
-  if (texture == nullptr) return {1, 1, 1, 1};
-
   // get image width/height
   auto size = texture_size(texture);
 

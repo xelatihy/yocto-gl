@@ -215,7 +215,7 @@ struct scene_scene {
   vector<scene_instance>    instances    = {};
   vector<scene_environment> environments = {};
   vector<scene_shape>       shapes       = {};
-  vector<scene_texture*>    textures     = {};
+  vector<scene_texture>     textures     = {};
   vector<scene_material>    materials    = {};
 
   // names (this will be cleanup significantly later)
@@ -225,11 +225,6 @@ struct scene_scene {
   vector<string> shape_names       = {};
   vector<string> instance_names    = {};
   vector<string> environment_names = {};
-  // names (this will be cleanup significantly later)
-  unordered_map<const scene_texture*, string> texture_map = {};
-
-  // cleanup
-  ~scene_scene();
 };
 
 }  // namespace yocto
@@ -255,7 +250,7 @@ scene_environment& get_environment(
 scene_instance& get_instance(scene_scene* scene, instance_handle handle);
 scene_material& get_material(scene_scene* scene, material_handle handle);
 scene_shape&    get_shape(scene_scene* scene, shape_handle handle);
-scene_texture*  get_texture(scene_scene* scene, texture_handle handle);
+scene_texture&  get_texture(scene_scene* scene, texture_handle handle);
 scene_instance& get_complete_instance(
     scene_scene* scene, instance_handle handle);
 
@@ -268,7 +263,7 @@ const scene_instance& get_instance(
 const scene_material& get_material(
     const scene_scene* scene, material_handle handle);
 const scene_shape&   get_shape(const scene_scene* scene, shape_handle handle);
-const scene_texture* get_texture(
+const scene_texture& get_texture(
     const scene_scene* scene, texture_handle handle);
 const scene_instance& get_complete_instance(
     const scene_scene* scene, instance_handle handle);
@@ -302,7 +297,7 @@ string get_camera_name(const scene_scene* scene, const scene_camera& camera);
 string get_environment_name(
     const scene_scene* scene, const scene_environment& environment);
 string get_shape_name(const scene_scene* scene, const scene_shape& shape);
-string get_texture_name(const scene_scene* scene, const scene_texture* texture);
+string get_texture_name(const scene_scene* scene, const scene_texture& texture);
 string get_instance_name(
     const scene_scene* scene, const scene_instance& instance);
 string get_material_name(
@@ -336,10 +331,10 @@ ray3f eval_camera(
     const scene_camera& camera, const vec2f& image_uv, const vec2f& lens_uv);
 
 // Evaluates a texture
-vec2i texture_size(const scene_texture* texture);
+vec2i texture_size(const scene_texture& texture);
 vec4f lookup_texture(
-    const scene_texture* texture, const vec2i& ij, bool ldr_as_linear = false);
-vec4f eval_texture(const scene_texture* texture, const vec2f& uv,
+    const scene_texture& texture, const vec2i& ij, bool ldr_as_linear = false);
+vec4f eval_texture(const scene_texture& texture, const vec2f& uv,
     bool ldr_as_linear = false, bool no_interpolation = false,
     bool clamp_to_edge = false);
 vec4f eval_texture(const scene_scene* scene, texture_handle texture,

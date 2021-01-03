@@ -111,12 +111,12 @@ environment_handle add_environment(sceneio_scene* scene, const string& name,
 texture_handle add_texture(sceneio_scene* scene, const string& name,
     const image<vec4f>& img, bool hdr = false, bool ldr_linear = false,
     bool single_channel = false) {
-  auto handle  = add_texture(scene, name);
-  auto texture = get_texture(scene, handle);
+  auto  handle  = add_texture(scene, name);
+  auto& texture = get_texture(scene, handle);
   if (hdr) {
-    texture->hdr = img;
+    texture.hdr = img;
   } else {
-    texture->ldr = ldr_linear ? float_to_byte(img) : rgb_to_srgbb(img);
+    texture.ldr = ldr_linear ? float_to_byte(img) : rgb_to_srgbb(img);
   }
   return handle;
 }
