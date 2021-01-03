@@ -331,18 +331,18 @@ void init_lights(trace_lights* lights, const trace_scene* scene,
 using trace_bvh = bvh_scene;
 
 // Build the bvh acceleration structure.
-void init_bvh(trace_bvh* bvh, const trace_scene* scene,
+void init_bvh(trace_bvh& bvh, const trace_scene* scene,
     const trace_params& params, const progress_callback& progress_cb = {});
 
 // Refit bvh data
-void update_bvh(trace_bvh* bvh, const trace_scene* scene,
+void update_bvh(trace_bvh& bvh, const trace_scene* scene,
     const vector<trace_instance*>& updated_instances,
     const vector<trace_shape*>& updated_shapes, const trace_params& params,
     const progress_callback& progress_cb = {});
 
 // Progressively computes an image.
 image<vec4f> trace_image(const trace_scene* scene, const scene_camera& camera,
-    const trace_bvh* bvh, const trace_lights* lights,
+    const trace_bvh& bvh, const trace_lights* lights,
     const trace_params& params, const progress_callback& progress_cb = {},
     const image_callback& image_cb = {});
 
@@ -366,7 +366,7 @@ using async_callback = function<void(
 // [experimental] Asynchronous interface
 struct trace_state;
 void trace_start(trace_state* state, const trace_scene* scene,
-    const scene_camera& camera, const trace_bvh* bvh,
+    const scene_camera& camera, const trace_bvh& bvh,
     const trace_lights* lights, const trace_params& params,
     const progress_callback& progress_cb = {},
     const image_callback& image_cb = {}, const async_callback& async_cb = {});

@@ -80,8 +80,7 @@ int run_render(const render_params& params) {
   tesselate_shapes(scene, print_progress);
 
   // build bvh
-  auto bvh_guard = std::make_unique<trace_bvh>();
-  auto bvh       = bvh_guard.get();
+  auto bvh = trace_bvh{};
   init_bvh(bvh, scene, params, print_progress);
 
   // init renderer
@@ -173,8 +172,7 @@ int run_view(const view_params& params) {
   tesselate_shapes(scene, print_progress);
 
   // build bvh
-  auto bvh_guard = std::make_unique<trace_bvh>();
-  auto bvh       = bvh_guard.get();
+  auto bvh = trace_bvh{};
   init_bvh(bvh, scene, params, print_progress);
 
   // init renderer
@@ -210,7 +208,7 @@ int run_view(const view_params& params) {
 
   // set callback
   set_callback(viewer,
-      [state, scene, &camera, bvh, lights, viewer, &params](const string& name,
+      [state, scene, &camera, &bvh, lights, viewer, &params](const string& name,
           const json_value& uiparams, const gui_input& input) {
         if (name != "render") return;
         if (!uiparams.is_null()) {

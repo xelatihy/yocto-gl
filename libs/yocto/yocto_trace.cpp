@@ -71,7 +71,7 @@ trace_lights::~trace_lights() {
 namespace yocto {
 
 // Build the bvh acceleration structure.
-void init_bvh(trace_bvh* bvh, const trace_scene* scene,
+void init_bvh(trace_bvh& bvh, const trace_scene* scene,
     const trace_params& params, const progress_callback& progress_cb) {
   init_bvh(bvh, scene,
       bvh_params{(bvh_build_type)params.bvh, params.noparallel}, progress_cb);
@@ -547,7 +547,7 @@ static vec3f sample_lights(const trace_scene* scene, const trace_lights* lights,
 }
 
 // Sample lights pdf
-static float sample_lights_pdf(const trace_scene* scene, const trace_bvh* bvh,
+static float sample_lights_pdf(const trace_scene* scene, const trace_bvh& bvh,
     const trace_lights* lights, const vec3f& position, const vec3f& direction) {
   auto pdf = 0.0f;
   for (auto light : lights->lights) {
@@ -600,7 +600,7 @@ static float sample_lights_pdf(const trace_scene* scene, const trace_bvh* bvh,
 }
 
 // Recursive path tracing.
-static vec4f trace_path(const trace_scene* scene, const trace_bvh* bvh,
+static vec4f trace_path(const trace_scene* scene, const trace_bvh& bvh,
     const trace_lights* lights, const ray3f& ray_, rng_state& rng,
     const trace_params& params) {
   // initialize
@@ -743,7 +743,7 @@ static vec4f trace_path(const trace_scene* scene, const trace_bvh* bvh,
 }
 
 // Recursive path tracing.
-static vec4f trace_naive(const trace_scene* scene, const trace_bvh* bvh,
+static vec4f trace_naive(const trace_scene* scene, const trace_bvh& bvh,
     const trace_lights* lights, const ray3f& ray_, rng_state& rng,
     const trace_params& params) {
   // initialize
@@ -816,7 +816,7 @@ static vec4f trace_naive(const trace_scene* scene, const trace_bvh* bvh,
 }
 
 // Eyelight for quick previewing.
-static vec4f trace_eyelight(const trace_scene* scene, const trace_bvh* bvh,
+static vec4f trace_eyelight(const trace_scene* scene, const trace_bvh& bvh,
     const trace_lights* lights, const ray3f& ray_, rng_state& rng,
     const trace_params& params) {
   // initialize
@@ -877,7 +877,7 @@ static vec4f trace_eyelight(const trace_scene* scene, const trace_bvh* bvh,
 }
 
 // False color rendering
-static vec4f trace_falsecolor(const trace_scene* scene, const trace_bvh* bvh,
+static vec4f trace_falsecolor(const trace_scene* scene, const trace_bvh& bvh,
     const trace_lights* lights, const ray3f& ray, rng_state& rng,
     const trace_params& params) {
   // intersect next point
@@ -953,7 +953,7 @@ static vec4f trace_falsecolor(const trace_scene* scene, const trace_bvh* bvh,
   }
 }
 
-static vec4f trace_albedo(const trace_scene* scene, const trace_bvh* bvh,
+static vec4f trace_albedo(const trace_scene* scene, const trace_bvh& bvh,
     const trace_lights* lights, const ray3f& ray, rng_state& rng,
     const trace_params& params, int bounce) {
   auto intersection = intersect_bvh(bvh, scene, ray);
@@ -1014,14 +1014,14 @@ static vec4f trace_albedo(const trace_scene* scene, const trace_bvh* bvh,
   return {albedo.x, albedo.y, albedo.z, 1};
 }
 
-static vec4f trace_albedo(const trace_scene* scene, const trace_bvh* bvh,
+static vec4f trace_albedo(const trace_scene* scene, const trace_bvh& bvh,
     const trace_lights* lights, const ray3f& ray, rng_state& rng,
     const trace_params& params) {
   auto albedo = trace_albedo(scene, bvh, lights, ray, rng, params, 0);
   return clamp(albedo, 0.0, 1.0);
 }
 
-static vec4f trace_normal(const trace_scene* scene, const trace_bvh* bvh,
+static vec4f trace_normal(const trace_scene* scene, const trace_bvh& bvh,
     const trace_lights* lights, const ray3f& ray, rng_state& rng,
     const trace_params& params, int bounce) {
   auto intersection = intersect_bvh(bvh, scene, ray);
@@ -1069,14 +1069,14 @@ static vec4f trace_normal(const trace_scene* scene, const trace_bvh* bvh,
   return {normal.x, normal.y, normal.z, 1};
 }
 
-static vec4f trace_normal(const trace_scene* scene, const trace_bvh* bvh,
+static vec4f trace_normal(const trace_scene* scene, const trace_bvh& bvh,
     const trace_lights* lights, const ray3f& ray, rng_state& rng,
     const trace_params& params) {
   return trace_normal(scene, bvh, lights, ray, rng, params, 0);
 }
 
 // Trace a single ray from the camera using the given algorithm.
-using sampler_func = vec4f (*)(const trace_scene* scene, const trace_bvh* bvh,
+using sampler_func = vec4f (*)(const trace_scene* scene, const trace_bvh& bvh,
     const trace_lights* lights, const ray3f& ray, rng_state& rng,
     const trace_params& params);
 static sampler_func get_trace_sampler_func(const trace_params& params) {
@@ -1112,7 +1112,7 @@ bool is_sampler_lit(const trace_params& params) {
 
 // Trace a block of samples
 void trace_sample(trace_state* state, const trace_scene* scene,
-    const scene_camera& camera, const trace_bvh* bvh,
+    const scene_camera& camera, const trace_bvh& bvh,
     const trace_lights* lights, const vec2i& ij, const trace_params& params) {
   auto sampler = get_trace_sampler_func(params);
   auto ray     = sample_camera(camera, ij, state->render.imsize(),
@@ -1223,8 +1223,7 @@ void init_lights(trace_lights* lights, const trace_scene* scene,
 image<vec4f> trace_image(const trace_scene* scene, const scene_camera& camera,
     const trace_params& params, const progress_callback& progress_cb,
     const image_callback& image_cb) {
-  auto bvh_guard = std::make_unique<trace_bvh>();
-  auto bvh       = bvh_guard.get();
+  auto bvh = trace_bvh{};
   init_bvh(bvh, scene, params, progress_cb);
 
   auto lights_guard = std::make_unique<trace_lights>();
@@ -1236,7 +1235,7 @@ image<vec4f> trace_image(const trace_scene* scene, const scene_camera& camera,
 
 // Progressively compute an image by calling trace_samples multiple times.
 image<vec4f> trace_image(const trace_scene* scene, const scene_camera& camera,
-    const trace_bvh* bvh, const trace_lights* lights,
+    const trace_bvh& bvh, const trace_lights* lights,
     const trace_params& params, const progress_callback& progress_cb,
     const image_callback& image_cb) {
   auto state_guard = std::make_unique<trace_state>();
@@ -1253,7 +1252,7 @@ image<vec4f> trace_image(const trace_scene* scene, const scene_camera& camera,
       }
     } else {
       parallel_for(state->render.width(), state->render.height(),
-          [state, scene, camera, bvh, lights, &params](int i, int j) {
+          [state, scene, camera, &bvh, lights, &params](int i, int j) {
             trace_sample(state, scene, camera, bvh, lights, {i, j}, params);
           });
     }
@@ -1266,7 +1265,7 @@ image<vec4f> trace_image(const trace_scene* scene, const scene_camera& camera,
 
 // [experimental] Asynchronous interface
 void trace_start(trace_state* state, const trace_scene* scene,
-    const scene_camera& camera, const trace_bvh* bvh,
+    const scene_camera& camera, const trace_bvh& bvh,
     const trace_lights* lights, const trace_params& params,
     const progress_callback& progress_cb, const image_callback& image_cb,
     const async_callback& async_cb) {
@@ -1290,7 +1289,7 @@ void trace_start(trace_state* state, const trace_scene* scene,
   if (image_cb) image_cb(state->render, 0, params.samples);
 
   // start renderer
-  state->worker = std::async(std::launch::async, [=]() {
+  state->worker = std::async(std::launch::async, [=, &bvh]() {
     for (auto sample = 0; sample < params.samples; sample++) {
       if (state->stop) return;
       if (progress_cb) progress_cb("trace image", sample, params.samples);
