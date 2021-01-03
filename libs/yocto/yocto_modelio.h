@@ -91,12 +91,9 @@ struct ply_property {
 // Ply elements
 struct ply_element {
   // element content
-  string                name       = "";
-  size_t                count      = 0;
-  vector<ply_property*> properties = {};
-
-  // cleanup
-  ~ply_element();
+  string               name       = "";
+  size_t               count      = 0;
+  vector<ply_property> properties = {};
 };
 
 // Ply format
@@ -105,103 +102,100 @@ enum struct ply_format { ascii, binary_little_endian, binary_big_endian };
 // Ply model
 struct ply_model {
   // ply content
-  ply_format           format   = ply_format::binary_little_endian;
-  vector<string>       comments = {};
-  vector<ply_element*> elements = {};
-
-  // cleanup
-  ~ply_model();
+  ply_format          format   = ply_format::binary_little_endian;
+  vector<string>      comments = {};
+  vector<ply_element> elements = {};
 };
 
 // Load and save ply
-bool load_ply(const string& filename, ply_model* ply, string& error);
-bool save_ply(const string& filename, const ply_model* ply, string& error);
+bool load_ply(const string& filename, ply_model& ply, string& error);
+bool save_ply(const string& filename, const ply_model& ply, string& error);
 
 // Get ply properties
 bool has_property(
-    ply_model* ply, const string& element, const string& property);
+    ply_model& ply, const string& element, const string& property);
 
-bool get_value(ply_model* ply, const string& element, const string& property,
+bool get_value(ply_model& ply, const string& element, const string& property,
     vector<float>& values);
-bool get_values(ply_model* ply, const string& element,
+bool get_values(ply_model& ply, const string& element,
     const array<string, 2>& properties, vector<vec4f>& values);
-bool get_values(ply_model* ply, const string& element,
+bool get_values(ply_model& ply, const string& element,
     const array<string, 3>& properties, vector<vec3f>& values);
-bool get_values(ply_model* ply, const string& element,
+bool get_values(ply_model& ply, const string& element,
     const array<string, 4>& properties, vector<vec4f>& values);
-bool get_values(ply_model* ply, const string& element,
+bool get_values(ply_model& ply, const string& element,
     const array<string, 12>& properties, vector<frame3f>& values);
 
-bool get_lists(ply_model* ply, const string& element, const string& property,
+bool get_lists(ply_model& ply, const string& element, const string& property,
     vector<vector<int>>& lists);
-bool get_list_sizes(ply_model* ply, const string& element,
+bool get_list_sizes(ply_model& ply, const string& element,
     const string& property, vector<byte>& sizes);
-bool get_list_values(ply_model* ply, const string& element,
+bool get_list_values(ply_model& ply, const string& element,
     const string& property, vector<int>& values);
 
 // Get ply properties for meshes
-bool get_positions(ply_model* ply, vector<vec3f>& values);
-bool get_normals(ply_model* ply, vector<vec3f>& values);
-bool get_texcoords(ply_model* ply, vector<vec2f>& values, bool flipv = false);
-bool get_colors(ply_model* ply, vector<vec3f>& values);
-bool get_colors(ply_model* ply, vector<vec4f>& values);
-bool get_radius(ply_model* ply, vector<float>& values);
-bool get_faces(ply_model* ply, vector<vector<int>>*& values);
-bool get_lines(ply_model* ply, vector<vec2i>& values);
-bool get_points(ply_model* ply, vector<int>& values);
-bool get_triangles(ply_model* ply, vector<vec3i>& values);
-bool get_quads(ply_model* ply, vector<vec4i>& values);
-bool has_quads(ply_model* ply);
+bool get_positions(ply_model& ply, vector<vec3f>& values);
+bool get_normals(ply_model& ply, vector<vec3f>& values);
+bool get_texcoords(ply_model& ply, vector<vec2f>& values, bool flipv = false);
+bool get_colors(ply_model& ply, vector<vec3f>& values);
+bool get_colors(ply_model& ply, vector<vec4f>& values);
+bool get_radius(ply_model& ply, vector<float>& values);
+bool get_faces(ply_model& ply, vector<vector<int>>*& values);
+bool get_lines(ply_model& ply, vector<vec2i>& values);
+bool get_points(ply_model& ply, vector<int>& values);
+bool get_triangles(ply_model& ply, vector<vec3i>& values);
+bool get_quads(ply_model& ply, vector<vec4i>& values);
+bool has_quads(ply_model& ply);
 
 // Add ply properties
-bool add_value(ply_model* ply, const string& element, const string& property,
+bool add_value(ply_model& ply, const string& element, const string& property,
     const vector<float>& values);
-bool add_values(ply_model* ply, const string& element,
+bool add_values(ply_model& ply, const string& element,
     const array<string, 2>& properties, const vector<vec2f>& values);
-bool add_values(ply_model* ply, const string& element,
+bool add_values(ply_model& ply, const string& element,
     const array<string, 3>& properties, const vector<vec3f>& values);
-bool add_values(ply_model* ply, const string& element,
+bool add_values(ply_model& ply, const string& element,
     const array<string, 4>& properties, const vector<vec4f>& values);
-bool add_values(ply_model* ply, const string& element,
+bool add_values(ply_model& ply, const string& element,
     const array<string, 12>& properties, const vector<frame3f>& values);
 
-bool add_value(ply_model* ply, const string& element, const string& property,
+bool add_value(ply_model& ply, const string& element, const string& property,
     const vector<int>& values);
-bool add_values(ply_model* ply, const string& element,
+bool add_values(ply_model& ply, const string& element,
     const array<string, 2>& properties, const vector<vec2i>& values);
-bool add_values(ply_model* ply, const string& element,
+bool add_values(ply_model& ply, const string& element,
     const array<string, 3>& properties, const vector<vec3i>& values);
-bool add_values(ply_model* ply, const string& element,
+bool add_values(ply_model& ply, const string& element,
     const array<string, 4>& properties, const vector<vec4i>& values);
 
-bool add_lists(ply_model* ply, const string& element, const string& property,
+bool add_lists(ply_model& ply, const string& element, const string& property,
     const vector<vector<int>>& values);
-bool add_lists(ply_model* ply, const string& element, const string& property,
+bool add_lists(ply_model& ply, const string& element, const string& property,
     const vector<byte>& sizes, const vector<int>& values);
-bool add_lists(ply_model* ply, const string& element, const string& property,
+bool add_lists(ply_model& ply, const string& element, const string& property,
     const vector<int>& values);
-bool add_lists(ply_model* ply, const string& element, const string& property,
+bool add_lists(ply_model& ply, const string& element, const string& property,
     const vector<vec2i>& values);
-bool add_lists(ply_model* ply, const string& element, const string& property,
+bool add_lists(ply_model& ply, const string& element, const string& property,
     const vector<vec3i>& values);
-bool add_lists(ply_model* ply, const string& element, const string& property,
+bool add_lists(ply_model& ply, const string& element, const string& property,
     const vector<vec4i>& values);
 
 // Add ply properties for meshes
-bool add_positions(ply_model* ply, const vector<vec3f>& values);
-bool add_normals(ply_model* ply, const vector<vec3f>& values);
+bool add_positions(ply_model& ply, const vector<vec3f>& values);
+bool add_normals(ply_model& ply, const vector<vec3f>& values);
 bool add_texcoords(
-    ply_model* ply, const vector<vec2f>& values, bool flipv = false);
-bool add_colors(ply_model* ply, const vector<vec3f>& values);
-bool add_colors(ply_model* ply, const vector<vec4f>& values);
-bool add_radius(ply_model* ply, const vector<float>& values);
-bool add_faces(ply_model* ply, const vector<vector<int>>& values);
+    ply_model& ply, const vector<vec2f>& values, bool flipv = false);
+bool add_colors(ply_model& ply, const vector<vec3f>& values);
+bool add_colors(ply_model& ply, const vector<vec4f>& values);
+bool add_radius(ply_model& ply, const vector<float>& values);
+bool add_faces(ply_model& ply, const vector<vector<int>>& values);
 bool add_faces(
-    ply_model* ply, const vector<vec3i>& tvalues, const vector<vec4i>& qvalues);
-bool add_triangles(ply_model* ply, const vector<vec3i>& values);
-bool add_quads(ply_model* ply, const vector<vec4i>& values);
-bool add_lines(ply_model* ply, const vector<vec2i>& values);
-bool add_points(ply_model* ply, const vector<int>& values);
+    ply_model& ply, const vector<vec3i>& tvalues, const vector<vec4i>& qvalues);
+bool add_triangles(ply_model& ply, const vector<vec3i>& values);
+bool add_quads(ply_model& ply, const vector<vec4i>& values);
+bool add_lines(ply_model& ply, const vector<vec2i>& values);
+bool add_points(ply_model& ply, const vector<int>& values);
 
 }  // namespace yocto
 
@@ -341,91 +335,90 @@ struct obj_environment {
 
 // Obj model
 struct obj_scene {
-  vector<string>           comments     = {};
-  vector<obj_shape*>       shapes       = {};
-  vector<obj_material*>    materials    = {};
-  vector<obj_camera*>      cameras      = {};
-  vector<obj_environment*> environments = {};
-  ~obj_scene();
+  vector<string>          comments     = {};
+  vector<obj_shape>       shapes       = {};
+  vector<obj_material>    materials    = {};
+  vector<obj_camera>      cameras      = {};
+  vector<obj_environment> environments = {};
 };
 
 // Load and save obj
-bool load_obj(const string& filename, obj_scene* obj, string& error,
+bool load_obj(const string& filename, obj_scene& obj, string& error,
     bool geom_only = false, bool split_elements = true,
     bool split_materials = false);
-bool save_obj(const string& filename, const obj_scene* obj, string& error);
+bool save_obj(const string& filename, const obj_scene& obj, string& error);
 
 // Get obj shape. Obj is a facevarying format, so vertices might be duplicated.
 // to ensure that no duplication occurs, either use the facevarying interface,
 // or set `no_vertex_duplication`. In the latter case, the code will fallback
 // to position only if duplication occurs.
-void get_triangles(const obj_shape* shape, vector<vec3i>& triangles,
+void get_triangles(const obj_shape& shape, vector<vec3i>& triangles,
     vector<vec3f>& positions, vector<vec3f>& normals, vector<vec2f>& texcoords,
     vector<string>& materials, vector<int>& ematerials,
     bool flip_texcoord = false);
-void get_quads(const obj_shape* shape, vector<vec4i>& quads,
+void get_quads(const obj_shape& shape, vector<vec4i>& quads,
     vector<vec3f>& positions, vector<vec3f>& normals, vector<vec2f>& texcoords,
     vector<string>& materials, vector<int>& ematerials,
     bool flip_texcoord = false);
-void get_lines(const obj_shape* shape, vector<vec2i>& lines,
+void get_lines(const obj_shape& shape, vector<vec2i>& lines,
     vector<vec3f>& positions, vector<vec3f>& normals, vector<vec2f>& texcoords,
     vector<string>& materials, vector<int>& ematerials,
     bool flip_texcoord = false);
-void get_points(const obj_shape* shape, vector<int>& points,
+void get_points(const obj_shape& shape, vector<int>& points,
     vector<vec3f>& positions, vector<vec3f>& normals, vector<vec2f>& texcoords,
     vector<string>& materials, vector<int>& ematerials,
     bool flip_texcoord = false);
-void get_fvquads(const obj_shape* shape, vector<vec4i>& quadspos,
+void get_fvquads(const obj_shape& shape, vector<vec4i>& quadspos,
     vector<vec4i>& quadsnorm, vector<vec4i>& quadstexcoord,
     vector<vec3f>& positions, vector<vec3f>& normals, vector<vec2f>& texcoords,
     vector<string>& materials, vector<int>& ematerials,
     bool flip_texcoord = false);
-bool has_quads(obj_shape* shape);
+bool has_quads(obj_shape& shape);
 
 // Get obj shape by extracting the elements beloing to only one material.
-void get_triangles(const obj_shape* shape, int material,
+void get_triangles(const obj_shape& shape, int material,
     vector<vec3i>& triangles, vector<vec3f>& positions, vector<vec3f>& normals,
     vector<vec2f>& texcoords, bool flip_texcoord = false);
-void get_quads(const obj_shape* shape, int material, vector<vec4i>& quads,
+void get_quads(const obj_shape& shape, int material, vector<vec4i>& quads,
     vector<vec3f>& positions, vector<vec3f>& normals, vector<vec2f>& texcoords,
     bool flip_texcoord = false);
-void get_lines(const obj_shape* shape, int material, vector<vec2i>& lines,
+void get_lines(const obj_shape& shape, int material, vector<vec2i>& lines,
     vector<vec3f>& positions, vector<vec3f>& normals, vector<vec2f>& texcoords,
     bool flip_texcoord = false);
-void get_points(const obj_shape* shape, int material, vector<int>& points,
+void get_points(const obj_shape& shape, int material, vector<int>& points,
     vector<vec3f>& positions, vector<vec3f>& normals, vector<vec2f>& texcoords,
     bool flip_texcoord = false);
 
 // Create OBJ
-obj_camera*      add_camera(obj_scene* obj);
-obj_material*    add_material(obj_scene* obj);
-obj_environment* add_environment(obj_scene* obj);
-obj_shape*       add_shape(obj_scene* obj);
+obj_camera&      add_camera(obj_scene& obj);
+obj_material&    add_material(obj_scene& obj);
+obj_environment& add_environment(obj_scene& obj);
+obj_shape&       add_shape(obj_scene& obj);
 
 // Add obj shape
-void set_triangles(obj_shape* shape, const vector<vec3i>& triangles,
+void set_triangles(obj_shape& shape, const vector<vec3i>& triangles,
     const vector<vec3f>& positions, const vector<vec3f>& normals,
     const vector<vec2f>& texcoords, const vector<int>& ematerials = {},
     bool flip_texcoord = false);
-void set_quads(obj_shape* shape, const vector<vec4i>& quads,
+void set_quads(obj_shape& shape, const vector<vec4i>& quads,
     const vector<vec3f>& positions, const vector<vec3f>& normals,
     const vector<vec2f>& texcoords, const vector<int>& ematerials = {},
     bool flip_texcoord = false);
-void set_lines(obj_shape* shape, const vector<vec2i>& lines,
+void set_lines(obj_shape& shape, const vector<vec2i>& lines,
     const vector<vec3f>& positions, const vector<vec3f>& normals,
     const vector<vec2f>& texcoords, const vector<int>& ematerials = {},
     bool flip_texcoord = false);
-void set_points(obj_shape* shape, const vector<int>& points,
+void set_points(obj_shape& shape, const vector<int>& points,
     const vector<vec3f>& positions, const vector<vec3f>& normals,
     const vector<vec2f>& texcoords, const vector<int>& ematerials = {},
     bool flip_texcoord = false);
-void set_fvquads(obj_shape* shape, const vector<vec4i>& quadspos,
+void set_fvquads(obj_shape& shape, const vector<vec4i>& quadspos,
     const vector<vec4i>& quadsnorm, const vector<vec4i>& quadstexcoord,
     const vector<vec3f>& positions, const vector<vec3f>& normals,
     const vector<vec2f>& texcoords, const vector<int>& ematerials = {},
     bool flip_texcoord = false);
-void set_materials(obj_shape* shape, const vector<string>& materials);
-void set_instances(obj_shape* shape, const vector<frame3f>& instances);
+void set_materials(obj_shape& shape, const vector<string>& materials);
+void set_instances(obj_shape& shape, const vector<frame3f>& instances);
 
 }  // namespace yocto
 
@@ -461,20 +454,19 @@ struct stl_shape {
 };
 
 struct stl_model {
-  vector<stl_shape*> shapes = {};
-  ~stl_model();
+  vector<stl_shape> shapes = {};
 };
 
 // Load/save stl
-bool load_stl(const string& filename, stl_model* stl, string& error,
+bool load_stl(const string& filename, stl_model& stl, string& error,
     bool unique_vertices = true);
-bool save_stl(const string& filename, const stl_model* stl, string& error,
+bool save_stl(const string& filename, const stl_model& stl, string& error,
     bool ascii = false);
 
 // Get/set data
-bool get_triangles(const stl_model* stl, int shape_id, vector<vec3i>& triangles,
+bool get_triangles(const stl_model& stl, int shape_id, vector<vec3i>& triangles,
     vector<vec3f>& positions, vector<vec3f>& fnormals);
-void add_triangles(stl_model* stl, const vector<vec3i>& triangles,
+void add_triangles(stl_model& stl, const vector<vec3i>& triangles,
     const vector<vec3f>& positions, const vector<vec3f>& fnormals);
 
 }  // namespace yocto
@@ -562,28 +554,25 @@ struct pbrt_environment {
 // Pbrt model
 struct pbrt_scene {
   // pbrt data
-  vector<string>            comments     = {};
-  vector<pbrt_camera*>      cameras      = {};
-  vector<pbrt_shape*>       shapes       = {};
-  vector<pbrt_environment*> environments = {};
-  vector<pbrt_light*>       lights       = {};
-  vector<pbrt_material*>    materials    = {};
-
-  // cleanup
-  ~pbrt_scene();
+  vector<string>           comments     = {};
+  vector<pbrt_camera>      cameras      = {};
+  vector<pbrt_shape>       shapes       = {};
+  vector<pbrt_environment> environments = {};
+  vector<pbrt_light>       lights       = {};
+  vector<pbrt_material>    materials    = {};
 };
 
 // Load/save pbrt
-bool load_pbrt(const string& filename, pbrt_scene* pbrt, string& error);
-bool save_pbrt(const string& filename, const pbrt_scene* pbrt, string& error,
+bool load_pbrt(const string& filename, pbrt_scene& pbrt, string& error);
+bool save_pbrt(const string& filename, const pbrt_scene& pbrt, string& error,
     bool ply_meshes = false);
 
 // Create pbrt
-pbrt_camera*      add_camera(pbrt_scene* pbrt);
-pbrt_shape*       add_shape(pbrt_scene* pbrt);
-pbrt_material*    add_material(pbrt_scene* pbrt);
-pbrt_environment* add_environment(pbrt_scene* pbrt);
-pbrt_light*       add_light(pbrt_scene* pbrt);
+pbrt_camera&      add_camera(pbrt_scene& pbrt);
+pbrt_shape&       add_shape(pbrt_scene& pbrt);
+pbrt_material&    add_material(pbrt_scene& pbrt);
+pbrt_environment& add_environment(pbrt_scene& pbrt);
+pbrt_light&       add_light(pbrt_scene& pbrt);
 
 }  // namespace yocto
 
