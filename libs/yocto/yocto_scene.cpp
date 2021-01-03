@@ -183,10 +183,10 @@ vector<string> scene_stats(const scene_scene* scene, bool verbose) {
 // Checks for validity of the scene->
 vector<string> scene_validation(const scene_scene* scene, bool notextures) {
   auto errs        = vector<string>();
-  auto check_names = [&errs](const auto& vals, const string& base) {
+  auto check_names = [&errs](const vector<string>& names, const string& base) {
     auto used = unordered_map<string, int>();
-    used.reserve(vals.size());
-    for (auto& value : vals) used[value->name] += 1;
+    used.reserve(names.size());
+    for (auto& name : names) used[name] += 1;
     for (auto& [name, used] : used) {
       if (name.empty()) {
         errs.push_back("empty " + base + " name");
@@ -195,20 +195,22 @@ vector<string> scene_validation(const scene_scene* scene, bool notextures) {
       }
     }
   };
-  auto check_empty_textures = [&errs](const vector<scene_texture*>& vals) {
-    for (auto value : vals) {
-      if (value->hdr.empty() && value->ldr.empty()) {
-        errs.push_back("empty texture " + value->name);
+  auto check_empty_textures = [&errs](const scene_scene* scene) {
+    for (auto idx = 0; idx < (int)scene->textures.size(); idx++) {
+      auto& texture = scene->textures[idx];
+      if (texture->hdr.empty() && texture->ldr.empty()) {
+        errs.push_back("empty texture " + scene->texture_names[idx]);
       }
     }
   };
 
-  check_names(scene->cameras, "camera");
-  check_names(scene->shapes, "shape");
-  check_names(scene->instances, "instance");
-  check_names(scene->textures, "texture");
-  check_names(scene->environments, "environment");
-  if (!notextures) check_empty_textures(scene->textures);
+  check_names(scene->camera_names, "camera");
+  check_names(scene->shape_names, "shape");
+  check_names(scene->material_names, "material");
+  check_names(scene->instance_names, "instance");
+  check_names(scene->texture_names, "texture");
+  check_names(scene->environment_names, "environment");
+  if (!notextures) check_empty_textures(scene);
 
   return errs;
 }
@@ -231,38 +233,89 @@ scene_scene::~scene_scene() {
 
 // add an element
 template <typename T>
-static T* add_element(
-    vector<T*>& elements, const string& name, const string& base) {
-  auto element  = elements.emplace_back(new T{});
-  element->name = !name.empty() ? name
-                                : (base + std::to_string(elements.size()));
+static T* add_element(vector<T*>& elements, vector<string>& names,
+    unordered_map<const T*, string>& name_map, const string& name,
+    const string& base) {
+  names.push_back(
+      !name.empty() ? name : (base + std::to_string(elements.size())));
+  auto element      = elements.emplace_back(new T{});
+  name_map[element] = name;
   return element;
 }
 
 // add element
 scene_camera* add_camera(scene_scene* scene, const string& name) {
-  return add_element(scene->cameras, name, "camera");
+  return add_element(
+      scene->cameras, scene->camera_names, scene->camera_map, name, "camera");
 }
 scene_environment* add_environment(scene_scene* scene, const string& name) {
-  return add_element(scene->environments, name, "environment");
+  return add_element(scene->environments, scene->environment_names,
+      scene->environment_map, name, "environment");
 }
 scene_shape* add_shape(scene_scene* scene, const string& name) {
-  return add_element(scene->shapes, name, "shape");
+  return add_element(
+      scene->shapes, scene->shape_names, scene->shape_map, name, "shape");
 }
 scene_texture* add_texture(scene_scene* scene, const string& name) {
-  return add_element(scene->textures, name, "texture");
+  return add_element(scene->textures, scene->texture_names, scene->texture_map,
+      name, "texture");
 }
 scene_instance* add_instance(scene_scene* scene, const string& name) {
-  return add_element(scene->instances, name, "instance");
+  return add_element(scene->instances, scene->instance_names,
+      scene->instance_map, name, "instance");
 }
 scene_material* add_material(scene_scene* scene, const string& name) {
-  return add_element(scene->materials, name, "material");
+  return add_element(scene->materials, scene->material_names,
+      scene->material_map, name, "material");
 }
 scene_instance* add_complete_instance(scene_scene* scene, const string& name) {
   auto instance      = add_instance(scene, name);
   instance->shape    = add_shape(scene, name);
   instance->material = add_material(scene, name);
   return instance;
+}
+
+// get name
+string get_camera_name(const scene_scene* scene, int idx) {
+  return scene->camera_names[idx];
+}
+string get_environment_name(const scene_scene* scene, int idx) {
+  return scene->environment_names[idx];
+}
+string get_shape_name(const scene_scene* scene, int idx) {
+  return scene->shape_names[idx];
+}
+string get_texture_name(const scene_scene* scene, int idx) {
+  return scene->texture_names[idx];
+}
+string get_instance_name(const scene_scene* scene, int idx) {
+  return scene->instance_names[idx];
+}
+string get_material_name(const scene_scene* scene, int idx) {
+  return scene->material_names[idx];
+}
+
+string get_camera_name(const scene_scene* scene, const scene_camera* camera) {
+  return scene->camera_map.at(camera);
+}
+string get_environment_name(
+    const scene_scene* scene, const scene_environment* environment) {
+  return scene->environment_map.at(environment);
+}
+string get_shape_name(const scene_scene* scene, const scene_shape* shape) {
+  return scene->shape_map.at(shape);
+}
+string get_texture_name(
+    const scene_scene* scene, const scene_texture* texture) {
+  return scene->texture_map.at(texture);
+}
+string get_instance_name(
+    const scene_scene* scene, const scene_instance* instance) {
+  return scene->instance_map.at(instance);
+}
+string get_material_name(
+    const scene_scene* scene, const scene_material* material) {
+  return scene->material_map.at(material);
 }
 
 // Add missing cameras.
@@ -322,17 +375,17 @@ void add_sky(scene_scene* scene, float sun_angle) {
 // get named camera or default if camera is empty
 scene_camera* get_camera(const scene_scene* scene, const string& name) {
   if (scene->cameras.empty()) return nullptr;
-  for (auto camera : scene->cameras) {
-    if (camera->name == name) return camera;
+  for (auto idx = 0; idx < (int)scene->camera_names.size(); idx++) {
+    if (get_camera_name(scene, idx) == name) return scene->cameras[idx];
   }
-  for (auto camera : scene->cameras) {
-    if (camera->name == "default") return camera;
+  for (auto idx = 0; idx < (int)scene->camera_names.size(); idx++) {
+    if (get_camera_name(scene, idx) == "default") return scene->cameras[idx];
   }
-  for (auto camera : scene->cameras) {
-    if (camera->name == "camera") return camera;
+  for (auto idx = 0; idx < (int)scene->camera_names.size(); idx++) {
+    if (get_camera_name(scene, idx) == "camera") return scene->cameras[idx];
   }
-  for (auto camera : scene->cameras) {
-    if (camera->name == "camera1") return camera;
+  for (auto idx = 0; idx < (int)scene->camera_names.size(); idx++) {
+    if (get_camera_name(scene, idx) == "camera1") return scene->cameras[idx];
   }
   return scene->cameras.front();
 }

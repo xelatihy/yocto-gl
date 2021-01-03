@@ -775,9 +775,16 @@ bool draw_coloredit(gui_window* win, const char* lbl, vec4b& value) {
 }
 
 bool draw_combobox(gui_window* win, const char* lbl, int& value,
-    const vector<string>& labels) {
-  if (!ImGui::BeginCombo(lbl, labels[value].c_str())) return false;
+    const vector<string>& labels, bool include_null) {
+  if (!ImGui::BeginCombo(lbl, value >= 0 ? labels.at(value).c_str() : "<none>"))
+    return false;
   auto old_val = value;
+  if (include_null) {
+    ImGui::PushID(100000);
+    if (ImGui::Selectable("<none>", value < 0)) value = -1;
+    if (value < 0) ImGui::SetItemDefaultFocus();
+    ImGui::PopID();
+  }
   for (auto i = 0; i < labels.size(); i++) {
     ImGui::PushID(i);
     if (ImGui::Selectable(labels[i].c_str(), value == i)) value = i;
@@ -789,9 +796,15 @@ bool draw_combobox(gui_window* win, const char* lbl, int& value,
 }
 
 bool draw_combobox(gui_window* win, const char* lbl, string& value,
-    const vector<string>& labels) {
+    const vector<string>& labels, bool include_null) {
   if (!ImGui::BeginCombo(lbl, value.c_str())) return false;
   auto old_val = value;
+  if (include_null) {
+    ImGui::PushID(100000);
+    if (ImGui::Selectable("<none>", value.empty())) value = "";
+    if (value.empty()) ImGui::SetItemDefaultFocus();
+    ImGui::PopID();
+  }
   for (auto i = 0; i < labels.size(); i++) {
     ImGui::PushID(i);
     if (ImGui::Selectable(labels[i].c_str(), value == labels[i]))

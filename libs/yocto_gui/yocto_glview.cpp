@@ -111,7 +111,7 @@ void view_shape(const string& title, const string& name,
   print_progress("create scene", 0, 1);
 
   // run view
-  view_scene(title, name, scene, scene->cameras[0]->name, progress_cb);
+  view_scene(title, name, scene, scene->camera_names[0], progress_cb);
 }
 
 // Construct a scene from io
