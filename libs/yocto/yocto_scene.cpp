@@ -659,7 +659,7 @@ void tesselate_shapes(
   if (progress_cb) progress_cb("tesselate shape", progress.x++, progress.y);
 
   // tesselate shapes
-  for (auto shape : scene->shapes) {
+  for (auto& shape : scene->shapes) {
     if (progress_cb) progress_cb("tesselate shape", progress.x++, progress.y);
     tesselate_shape(scene, shape);
   }
