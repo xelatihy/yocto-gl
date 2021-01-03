@@ -2703,14 +2703,13 @@ bool load_mesh(const string& filename, vector<vec3i>& triangles,
     return true;
   } else if (ext == ".obj" || ext == ".OBJ") {
     // load obj
-    auto obj_guard = std::make_unique<obj_scene>();
-    auto obj       = obj_guard.get();
+    auto obj = obj_scene{};
     if (!load_obj(filename, obj, error, true)) return false;
     // get shape
-    if (obj->shapes.empty()) return shape_error();
-    if (obj->shapes.size() > 1) return shape_error();
-    auto shape = obj->shapes.front();
-    if (shape->faces.empty()) return shape_error();
+    if (obj.shapes.empty()) return shape_error();
+    if (obj.shapes.size() > 1) return shape_error();
+    auto& shape = obj.shapes.front();
+    if (shape.faces.empty()) return shape_error();
     // decide what to do and get properties
     auto materials  = vector<string>{};
     auto ematerials = vector<int>{};
@@ -2749,9 +2748,8 @@ bool save_mesh(const string& filename, const vector<vec3i>& triangles,
     if (!save_ply(filename, ply, error)) return false;
     return true;
   } else if (ext == ".obj" || ext == ".OBJ") {
-    auto obj_guard = std::make_unique<obj_scene>();
-    auto obj       = obj_guard.get();
-    auto oshape    = add_shape(obj);
+    auto  obj    = obj_scene{};
+    auto& oshape = add_shape(obj);
     if (triangles.empty()) return shape_error();
     set_triangles(
         oshape, triangles, positions, normals, texcoords, {}, flip_texcoord);
@@ -2794,14 +2792,13 @@ bool load_mesh(const string& filename, vector<vec3i>& triangles,
     return true;
   } else if (ext == ".obj" || ext == ".OBJ") {
     // load obj
-    auto obj_guard = std::make_unique<obj_scene>();
-    auto obj       = obj_guard.get();
+    auto obj = obj_scene{};
     if (!load_obj(filename, obj, error, true)) return false;
     // get shape
-    if (obj->shapes.empty()) return shape_error();
-    if (obj->shapes.size() > 1) return shape_error();
-    auto shape = obj->shapes.front();
-    if (shape->faces.empty()) return shape_error();
+    if (obj.shapes.empty()) return shape_error();
+    if (obj.shapes.size() > 1) return shape_error();
+    auto& shape = obj.shapes.front();
+    if (shape.faces.empty()) return shape_error();
     // decide what to do and get properties
     auto materials     = vector<string>{};
     auto ematerials    = vector<int>{};
@@ -2853,9 +2850,8 @@ bool save_mesh(const string& filename, const vector<vec3i>& triangles,
     if (!save_ply(filename, ply, error)) return false;
     return true;
   } else if (ext == ".obj" || ext == ".OBJ") {
-    auto obj_guard = std::make_unique<obj_scene>();
-    auto obj       = obj_guard.get();
-    auto oshape    = add_shape(obj);
+    auto  obj    = obj_scene{};
+    auto& oshape = add_shape(obj);
     if (triangles.empty()) return shape_error();
     set_triangles(oshape, triangles, positions, {}, {}, {});
     auto err = ""s;
@@ -2907,14 +2903,13 @@ bool load_lines(const string& filename, vector<vec2i>& lines,
     return true;
   } else if (ext == ".obj" || ext == ".OBJ") {
     // load obj
-    auto obj_guard = std::make_unique<obj_scene>();
-    auto obj       = obj_guard.get();
+    auto obj = obj_scene{};
     if (!load_obj(filename, obj, error, true)) return false;
     // get shape
-    if (obj->shapes.empty()) return shape_error();
-    if (obj->shapes.size() > 1) return shape_error();
-    auto shape = obj->shapes.front();
-    if (shape->lines.empty()) return shape_error();
+    if (obj.shapes.empty()) return shape_error();
+    if (obj.shapes.size() > 1) return shape_error();
+    auto& shape = obj.shapes.front();
+    if (shape.lines.empty()) return shape_error();
     // decide what to do and get properties
     auto materials  = vector<string>{};
     auto ematerials = vector<int>{};
@@ -2953,9 +2948,8 @@ bool save_lines(const string& filename, const vector<vec2i>& lines,
     if (!save_ply(filename, ply, error)) return false;
     return true;
   } else if (ext == ".obj" || ext == ".OBJ") {
-    auto obj_guard = std::make_unique<obj_scene>();
-    auto obj       = obj_guard.get();
-    auto oshape    = add_shape(obj);
+    auto  obj    = obj_scene{};
+    auto& oshape = add_shape(obj);
     if (lines.empty()) return shape_error();
     set_lines(oshape, lines, positions, normals, texcoords, {}, flip_texcoord);
     if (!save_obj(filename, obj, error)) return false;

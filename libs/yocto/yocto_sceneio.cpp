@@ -1018,24 +1018,23 @@ static bool load_obj_scene(const string& filename, scene_scene& scene,
   if (progress_cb) progress_cb("load scene", progress.x++, progress.y);
 
   // load obj
-  auto obj_guard = std::make_unique<obj_scene>();
-  auto obj       = obj_guard.get();
+  auto obj = obj_scene{};
   if (!load_obj(filename, obj, error, false, true, false)) return false;
 
   // handle progress
   if (progress_cb) progress_cb("load scene", progress.x++, progress.y);
 
   // convert cameras
-  for (auto ocam : obj->cameras) {
+  for (auto& ocamera : obj.cameras) {
     auto& camera = get_camera(scene, add_camera(scene));
-    // camera.name         = make_safe_name("camera", ocam->name);
-    camera.frame        = ocam->frame;
-    camera.orthographic = ocam->ortho;
-    camera.film         = max(ocam->width, ocam->height);
-    camera.aspect       = ocam->width / ocam->height;
-    camera.focus        = ocam->focus;
-    camera.lens         = ocam->lens;
-    camera.aperture     = ocam->aperture;
+    // camera.name         = make_safe_name("camera", ocamera.name);
+    camera.frame        = ocamera.frame;
+    camera.orthographic = ocamera.ortho;
+    camera.film         = max(ocamera.width, ocamera.height);
+    camera.aspect       = ocamera.width / ocamera.height;
+    camera.focus        = ocamera.focus;
+    camera.lens         = ocamera.lens;
+    camera.aperture     = ocamera.aperture;
   }
 
   // helper to create texture maps
@@ -1068,42 +1067,42 @@ static bool load_obj_scene(const string& filename, scene_scene& scene,
 
   // handler for materials
   auto material_map = unordered_map<string, material_handle>{};
-  for (auto omat : obj->materials) {
+  for (auto& omaterial : obj.materials) {
     auto  handle   = add_material(scene);
     auto& material = get_material(scene, handle);
-    // material.name             = make_safe_name("material", omat->name);
-    material.emission         = omat->pbr_emission;
-    material.color            = omat->pbr_base;
-    material.specular         = omat->pbr_specular;
-    material.roughness        = omat->pbr_roughness;
-    material.ior              = omat->pbr_ior;
-    material.metallic         = omat->pbr_metallic;
-    material.coat             = omat->pbr_coat;
-    material.transmission     = omat->pbr_transmission;
-    material.translucency     = omat->pbr_translucency;
-    material.scattering       = omat->pbr_volscattering;
-    material.scanisotropy     = omat->pbr_volanisotropy;
-    material.trdepth          = omat->pbr_volscale;
-    material.opacity          = omat->pbr_opacity;
-    material.thin             = omat->pbr_thin;
-    material.emission_tex     = get_ctexture(omat->pbr_emission_tex);
-    material.color_tex        = get_ctexture(omat->pbr_base_tex);
-    material.specular_tex     = get_stexture(omat->pbr_specular_tex);
-    material.metallic_tex     = get_stexture(omat->pbr_metallic_tex);
-    material.roughness_tex    = get_stexture(omat->pbr_roughness_tex);
-    material.transmission_tex = get_stexture(omat->pbr_transmission_tex);
-    material.translucency_tex = get_stexture(omat->pbr_translucency_tex);
-    material.coat_tex         = get_stexture(omat->pbr_coat_tex);
-    material.opacity_tex      = get_stexture(omat->pbr_opacity_tex);
-    material.normal_tex       = get_ctexture(omat->normal_tex);
-    material.scattering_tex   = get_ctexture(omat->pbr_volscattering_tex);
-    material_map[omat->name]  = handle;
+    // material.name             = make_safe_name("material", omaterial.name);
+    material.emission         = omaterial.pbr_emission;
+    material.color            = omaterial.pbr_base;
+    material.specular         = omaterial.pbr_specular;
+    material.roughness        = omaterial.pbr_roughness;
+    material.ior              = omaterial.pbr_ior;
+    material.metallic         = omaterial.pbr_metallic;
+    material.coat             = omaterial.pbr_coat;
+    material.transmission     = omaterial.pbr_transmission;
+    material.translucency     = omaterial.pbr_translucency;
+    material.scattering       = omaterial.pbr_volscattering;
+    material.scanisotropy     = omaterial.pbr_volanisotropy;
+    material.trdepth          = omaterial.pbr_volscale;
+    material.opacity          = omaterial.pbr_opacity;
+    material.thin             = omaterial.pbr_thin;
+    material.emission_tex     = get_ctexture(omaterial.pbr_emission_tex);
+    material.color_tex        = get_ctexture(omaterial.pbr_base_tex);
+    material.specular_tex     = get_stexture(omaterial.pbr_specular_tex);
+    material.metallic_tex     = get_stexture(omaterial.pbr_metallic_tex);
+    material.roughness_tex    = get_stexture(omaterial.pbr_roughness_tex);
+    material.transmission_tex = get_stexture(omaterial.pbr_transmission_tex);
+    material.translucency_tex = get_stexture(omaterial.pbr_translucency_tex);
+    material.coat_tex         = get_stexture(omaterial.pbr_coat_tex);
+    material.opacity_tex      = get_stexture(omaterial.pbr_opacity_tex);
+    material.normal_tex       = get_ctexture(omaterial.normal_tex);
+    material.scattering_tex   = get_ctexture(omaterial.pbr_volscattering_tex);
+    material_map[omaterial.name] = handle;
   }
 
   // convert shapes
   auto shape_name_counts = unordered_map<string, int>{};
-  for (auto oshape : obj->shapes) {
-    auto& materials = oshape->materials;
+  for (auto& oshape : obj.shapes) {
+    auto& materials = oshape.materials;
     if (materials.empty()) materials.push_back(nullptr);
     for (auto material_idx = 0; material_idx < materials.size();
          material_idx++) {
@@ -1113,27 +1112,27 @@ static bool load_obj_scene(const string& filename, scene_scene& scene,
         return material_error(materials[material_idx]);
       auto material   = material_map.at(materials[material_idx]);
       auto has_quads_ = has_quads(oshape);
-      if (!oshape->faces.empty() && !has_quads_) {
+      if (!oshape.faces.empty() && !has_quads_) {
         get_triangles(oshape, material_idx, shape.triangles, shape.positions,
             shape.normals, shape.texcoords, true);
-      } else if (!oshape->faces.empty() && has_quads_) {
+      } else if (!oshape.faces.empty() && has_quads_) {
         get_quads(oshape, material_idx, shape.quads, shape.positions,
             shape.normals, shape.texcoords, true);
-      } else if (!oshape->lines.empty()) {
+      } else if (!oshape.lines.empty()) {
         get_lines(oshape, material_idx, shape.lines, shape.positions,
             shape.normals, shape.texcoords, true);
-      } else if (!oshape->points.empty()) {
+      } else if (!oshape.points.empty()) {
         get_points(oshape, material_idx, shape.points, shape.positions,
             shape.normals, shape.texcoords, true);
       } else {
         return shape_error();
       }
-      if (oshape->instances.empty()) {
+      if (oshape.instances.empty()) {
         auto& instance    = get_instance(scene, add_instance(scene));
         instance.shape    = shape_handle;
         instance.material = material;
       } else {
-        for (auto& frame : oshape->instances) {
+        for (auto& frame : oshape.instances) {
           auto instance     = get_instance(scene, add_instance(scene));
           instance.frame    = frame;
           instance.shape    = shape_handle;
@@ -1144,11 +1143,11 @@ static bool load_obj_scene(const string& filename, scene_scene& scene,
   }
 
   // convert environments
-  for (auto oenvironment : obj->environments) {
+  for (auto& oenvironment : obj.environments) {
     auto& environment        = get_environment(scene, add_environment(scene));
-    environment.frame        = oenvironment->frame;
-    environment.emission     = oenvironment->emission;
-    environment.emission_tex = get_ctexture(oenvironment->emission_tex);
+    environment.frame        = oenvironment.frame;
+    environment.emission     = oenvironment.emission;
+    environment.emission_tex = get_ctexture(oenvironment.emission_tex);
   }
 
   // handle progress
@@ -1203,20 +1202,20 @@ static bool save_obj_scene(const string& filename, const scene_scene& scene,
   auto progress = vec2i{0, 2 + (int)scene.textures.size()};
   if (progress_cb) progress_cb("save scene", progress.x++, progress.y);
 
-  auto obj_guard = std::make_unique<obj_scene>();
-  auto obj       = obj_guard.get();
+  // build obj
+  auto obj = obj_scene{};
 
   // convert cameras
   for (auto& camera : scene.cameras) {
-    auto ocamera      = add_camera(obj);
-    ocamera->name     = get_camera_name(scene, camera);
-    ocamera->frame    = camera.frame;
-    ocamera->ortho    = camera.orthographic;
-    ocamera->width    = camera.film;
-    ocamera->height   = camera.film / camera.aspect;
-    ocamera->focus    = camera.focus;
-    ocamera->lens     = camera.lens;
-    ocamera->aperture = camera.aperture;
+    auto& ocamera     = add_camera(obj);
+    ocamera.name     = get_camera_name(scene, camera);
+    ocamera.frame    = camera.frame;
+    ocamera.ortho    = camera.orthographic;
+    ocamera.width    = camera.film;
+    ocamera.height   = camera.film / camera.aspect;
+    ocamera.focus    = camera.focus;
+    ocamera.lens     = camera.lens;
+    ocamera.aperture = camera.aperture;
   }
 
   // textures
@@ -1231,29 +1230,29 @@ static bool save_obj_scene(const string& filename, const scene_scene& scene,
 
   // convert materials and textures
   for (auto& material : scene.materials) {
-    auto omaterial                  = add_material(obj);
-    omaterial->name                 = get_material_name(scene, material);
-    omaterial->illum                = 2;
-    omaterial->as_pbr               = true;
-    omaterial->pbr_emission         = material.emission;
-    omaterial->pbr_base             = material.color;
-    omaterial->pbr_specular         = material.specular;
-    omaterial->pbr_roughness        = material.roughness;
-    omaterial->pbr_metallic         = material.metallic;
-    omaterial->pbr_coat             = material.coat;
-    omaterial->pbr_transmission     = material.transmission;
-    omaterial->pbr_translucency     = material.translucency;
-    omaterial->pbr_opacity          = material.opacity;
-    omaterial->pbr_emission_tex     = get_texture(material.emission_tex);
-    omaterial->pbr_base_tex         = get_texture(material.color_tex);
-    omaterial->pbr_specular_tex     = get_texture(material.specular_tex);
-    omaterial->pbr_metallic_tex     = get_texture(material.metallic_tex);
-    omaterial->pbr_roughness_tex    = get_texture(material.roughness_tex);
-    omaterial->pbr_transmission_tex = get_texture(material.transmission_tex);
-    omaterial->pbr_translucency_tex = get_texture(material.translucency_tex);
-    omaterial->pbr_coat_tex         = get_texture(material.coat_tex);
-    omaterial->pbr_opacity_tex      = get_texture(material.opacity_tex);
-    omaterial->pbr_normal_tex       = get_texture(material.normal_tex);
+    auto& omaterial                = add_material(obj);
+    omaterial.name                 = get_material_name(scene, material);
+    omaterial.illum                = 2;
+    omaterial.as_pbr               = true;
+    omaterial.pbr_emission         = material.emission;
+    omaterial.pbr_base             = material.color;
+    omaterial.pbr_specular         = material.specular;
+    omaterial.pbr_roughness        = material.roughness;
+    omaterial.pbr_metallic         = material.metallic;
+    omaterial.pbr_coat             = material.coat;
+    omaterial.pbr_transmission     = material.transmission;
+    omaterial.pbr_translucency     = material.translucency;
+    omaterial.pbr_opacity          = material.opacity;
+    omaterial.pbr_emission_tex     = get_texture(material.emission_tex);
+    omaterial.pbr_base_tex         = get_texture(material.color_tex);
+    omaterial.pbr_specular_tex     = get_texture(material.specular_tex);
+    omaterial.pbr_metallic_tex     = get_texture(material.metallic_tex);
+    omaterial.pbr_roughness_tex    = get_texture(material.roughness_tex);
+    omaterial.pbr_transmission_tex = get_texture(material.transmission_tex);
+    omaterial.pbr_translucency_tex = get_texture(material.translucency_tex);
+    omaterial.pbr_coat_tex         = get_texture(material.coat_tex);
+    omaterial.pbr_opacity_tex      = get_texture(material.opacity_tex);
+    omaterial.pbr_normal_tex       = get_texture(material.normal_tex);
   }
 
   // convert objects
@@ -1262,9 +1261,9 @@ static bool save_obj_scene(const string& filename, const scene_scene& scene,
     auto  positions = shape.positions, normals = shape.normals;
     for (auto& p : positions) p = transform_point(instance.frame, p);
     for (auto& n : normals) n = transform_normal(instance.frame, n);
-    auto oshape       = add_shape(obj);
-    oshape->name      = get_shape_name(scene, shape);
-    oshape->materials = {get_material_name(scene, instance.material)};
+    auto& oshape     = add_shape(obj);
+    oshape.name      = get_shape_name(scene, shape);
+    oshape.materials = {get_material_name(scene, instance.material)};
     if (!shape.triangles.empty()) {
       set_triangles(oshape, shape.triangles, positions, normals,
           shape.texcoords, {}, true);
@@ -1284,11 +1283,11 @@ static bool save_obj_scene(const string& filename, const scene_scene& scene,
 
   // convert environments
   for (auto& environment : scene.environments) {
-    auto oenvironment          = add_environment(obj);
-    oenvironment->name         = get_environment_name(scene, environment);
-    oenvironment->frame        = environment.frame;
-    oenvironment->emission     = environment.emission;
-    oenvironment->emission_tex = get_texture(environment.emission_tex);
+    auto& oenvironment        = add_environment(obj);
+    oenvironment.name         = get_environment_name(scene, environment);
+    oenvironment.frame        = environment.frame;
+    oenvironment.emission     = environment.emission;
+    oenvironment.emission_tex = get_texture(environment.emission_tex);
   }
 
   // handle progress

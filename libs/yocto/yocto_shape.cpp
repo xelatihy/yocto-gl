@@ -100,32 +100,30 @@ bool load_shape(const string& filename, shape_data& shape, string& error,
     return true;
   } else if (ext == ".obj" || ext == ".OBJ") {
     // load obj
-    auto obj_guard = std::make_unique<obj_scene>();
-    auto obj       = obj_guard.get();
+    auto obj = obj_scene{};
     if (!load_obj(filename, obj, error, true)) return false;
 
     // get shape
-    if (obj->shapes.empty()) return shape_error();
-    if (obj->shapes.size() > 1) return shape_error();
-    auto oshape = obj->shapes.front();
-    if (oshape->points.empty() && oshape->lines.empty() &&
-        oshape->faces.empty())
+    if (obj.shapes.empty()) return shape_error();
+    if (obj.shapes.size() > 1) return shape_error();
+    auto& oshape = obj.shapes.front();
+    if (oshape.points.empty() && oshape.lines.empty() && oshape.faces.empty())
       return shape_error();
 
     // decide what to do and get properties
     auto materials  = vector<string>{};
     auto ematerials = vector<int>{};
     auto has_quads_ = has_quads(oshape);
-    if (!oshape->faces.empty() && !has_quads_) {
+    if (!oshape.faces.empty() && !has_quads_) {
       get_triangles(oshape, shape.triangles, shape.positions, shape.normals,
           shape.texcoords, materials, ematerials, flip_texcoord);
-    } else if (!oshape->faces.empty() && has_quads_) {
+    } else if (!oshape.faces.empty() && has_quads_) {
       get_quads(oshape, shape.quads, shape.positions, shape.normals,
           shape.texcoords, materials, ematerials, flip_texcoord);
-    } else if (!oshape->lines.empty()) {
+    } else if (!oshape.lines.empty()) {
       get_lines(oshape, shape.lines, shape.positions, shape.normals,
           shape.texcoords, materials, ematerials, flip_texcoord);
-    } else if (!oshape->points.empty()) {
+    } else if (!oshape.points.empty()) {
       get_points(oshape, shape.points, shape.positions, shape.normals,
           shape.texcoords, materials, ematerials, flip_texcoord);
     } else {
@@ -185,9 +183,8 @@ bool save_shape(const string& filename, const shape_data& shape, string& error,
     add_points(ply, shape.points);
     return save_ply(filename, ply, error);
   } else if (ext == ".obj" || ext == ".OBJ") {
-    auto obj_guard = std::make_unique<obj_scene>();
-    auto obj       = obj_guard.get();
-    auto oshape    = add_shape(obj);
+    auto  obj    = obj_scene{};
+    auto& oshape = add_shape(obj);
     if (!shape.triangles.empty()) {
       set_triangles(oshape, shape.triangles, shape.positions, shape.normals,
           shape.texcoords, {}, flip_texcoord);
@@ -305,19 +302,17 @@ bool load_fvshape(const string& filename, fvshape_data& shape, string& error,
     return true;
   } else if (ext == ".obj" || ext == ".OBJ") {
     // load obj
-    auto obj_guard = std::make_unique<obj_scene>();
-    auto obj       = obj_guard.get();
+    auto obj = obj_scene{};
     if (!load_obj(filename, obj, error, true)) return false;
 
     // get shape
-    if (obj->shapes.empty()) return shape_error();
-    if (obj->shapes.size() > 1) return shape_error();
-    auto oshape = obj->shapes.front();
-    if (oshape->points.empty() && oshape->lines.empty() &&
-        oshape->faces.empty())
+    if (obj.shapes.empty()) return shape_error();
+    if (obj.shapes.size() > 1) return shape_error();
+    auto& oshape = obj.shapes.front();
+    if (oshape.points.empty() && oshape.lines.empty() && oshape.faces.empty())
       return shape_error();
 
-    if (oshape->faces.empty()) return shape_error();
+    if (oshape.faces.empty()) return shape_error();
     auto materials  = vector<string>{};
     auto ematerials = vector<int>{};
     get_fvquads(oshape, shape.quadspos, shape.quadsnorm, shape.quadstexcoord,
@@ -379,9 +374,8 @@ bool save_fvshape(const string& filename, const fvshape_data& shape,
     add_faces(ply, {}, split_quads);
     return save_ply(filename, ply, error);
   } else if (ext == ".obj" || ext == ".OBJ") {
-    auto obj_guard = std::make_unique<obj_scene>();
-    auto obj       = obj_guard.get();
-    auto oshape    = add_shape(obj);
+    auto  obj    = obj_scene{};
+    auto& oshape = add_shape(obj);
     if (!shape.quadspos.empty()) {
       set_fvquads(oshape, shape.quadspos, shape.quadsnorm, shape.quadstexcoord,
           shape.positions, shape.normals, shape.texcoords, {}, flip_texcoord);
@@ -4118,43 +4112,42 @@ bool load_shape(const string& filename, vector<int>& points,
     return true;
   } else if (ext == ".obj" || ext == ".OBJ") {
     // load obj
-    auto obj_guard = std::make_unique<obj_scene>();
-    auto obj       = obj_guard.get();
+    auto obj = obj_scene{};
     if (!load_obj(filename, obj, error, true)) return false;
 
     // get shape
-    if (obj->shapes.empty()) return shape_error();
-    if (obj->shapes.size() > 1) return shape_error();
-    auto shape = obj->shapes.front();
-    if (shape->points.empty() && shape->lines.empty() && shape->faces.empty())
+    if (obj.shapes.empty()) return shape_error();
+    if (obj.shapes.size() > 1) return shape_error();
+    auto& oshape = obj.shapes.front();
+    if (oshape.points.empty() && oshape.lines.empty() && oshape.faces.empty())
       return shape_error();
 
     if (!facevarying) {
       // decide what to do and get properties
       auto materials  = vector<string>{};
       auto ematerials = vector<int>{};
-      auto has_quads_ = has_quads(shape);
-      if (!shape->faces.empty() && !has_quads_) {
-        get_triangles(shape, triangles, positions, normals, texcoords,
+      auto has_quads_ = has_quads(oshape);
+      if (!oshape.faces.empty() && !has_quads_) {
+        get_triangles(oshape, triangles, positions, normals, texcoords,
             materials, ematerials, flip_texcoord);
-      } else if (!shape->faces.empty() && has_quads_) {
-        get_quads(shape, quads, positions, normals, texcoords, materials,
+      } else if (!oshape.faces.empty() && has_quads_) {
+        get_quads(oshape, quads, positions, normals, texcoords, materials,
             ematerials, flip_texcoord);
-      } else if (!shape->lines.empty()) {
-        get_lines(shape, lines, positions, normals, texcoords, materials,
+      } else if (!oshape.lines.empty()) {
+        get_lines(oshape, lines, positions, normals, texcoords, materials,
             ematerials, flip_texcoord);
-      } else if (!shape->points.empty()) {
-        get_points(shape, points, positions, normals, texcoords, materials,
+      } else if (!oshape.points.empty()) {
+        get_points(oshape, points, positions, normals, texcoords, materials,
             ematerials, flip_texcoord);
       } else {
         return shape_error();
       }
     } else {
-      if (shape->faces.empty()) return shape_error();
+      if (oshape.faces.empty()) return shape_error();
       auto materials  = vector<string>{};
       auto ematerials = vector<int>{};
-      get_fvquads(shape, quadspos, quadsnorm, quadstexcoord, positions, normals,
-          texcoords, materials, ematerials, flip_texcoord);
+      get_fvquads(oshape, quadspos, quadsnorm, quadstexcoord, positions,
+          normals, texcoords, materials, ematerials, flip_texcoord);
     }
 
     if (positions.empty()) return shape_error();
@@ -4227,9 +4220,8 @@ bool save_shape(const string& filename, const vector<int>& points,
     }
     return save_ply(filename, ply, error);
   } else if (ext == ".obj" || ext == ".OBJ") {
-    auto obj_guard = std::make_unique<obj_scene>();
-    auto obj       = obj_guard.get();
-    auto oshape    = add_shape(obj);
+    auto  obj    = obj_scene{};
+    auto& oshape = add_shape(obj);
     if (!triangles.empty()) {
       set_triangles(
           oshape, triangles, positions, normals, texcoords, {}, flip_texcoord);

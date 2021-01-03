@@ -1238,7 +1238,7 @@ inline bool parse_value(string_view& str, obj_texture& info) {
 }
 
 // Read obj
-inline bool load_mtl(const string& filename, obj_scene* obj, string& error) {
+inline bool load_mtl(const string& filename, obj_scene& obj, string& error) {
   // error helpers
   auto open_error = [filename, &error]() {
     error = filename + ": file not found";
@@ -1275,154 +1275,153 @@ inline bool load_mtl(const string& filename, obj_scene* obj, string& error) {
     if (cmd.empty()) continue;
 
     // grab material
-    auto material = obj->materials.back();
+    auto& material = obj.materials.back();
 
     // possible token values
     if (cmd == "newmtl") {
-      auto material = add_material(obj);
-      if (!parse_value(str, material->name)) return parse_error();
+      auto& material = add_material(obj);
+      if (!parse_value(str, material.name)) return parse_error();
     } else if (cmd == "illum") {
-      if (!parse_value(str, material->illum)) return parse_error();
+      if (!parse_value(str, material.illum)) return parse_error();
     } else if (cmd == "Ke") {
-      if (!parse_value(str, material->emission)) return parse_error();
+      if (!parse_value(str, material.emission)) return parse_error();
     } else if (cmd == "Ka") {
-      if (!parse_value(str, material->ambient)) return parse_error();
+      if (!parse_value(str, material.ambient)) return parse_error();
     } else if (cmd == "Kd") {
-      if (!parse_value(str, material->diffuse)) return parse_error();
+      if (!parse_value(str, material.diffuse)) return parse_error();
     } else if (cmd == "Ks") {
-      if (!parse_value(str, material->specular)) return parse_error();
+      if (!parse_value(str, material.specular)) return parse_error();
     } else if (cmd == "Kt") {
-      if (!parse_value(str, material->transmission)) return parse_error();
+      if (!parse_value(str, material.transmission)) return parse_error();
     } else if (cmd == "Tf") {
-      if (!parse_value(str, material->transmission)) return parse_error();
-      material->transmission = max(1 - material->transmission, 0.0f);
-      if (max(material->transmission) < 0.001)
-        material->transmission = {0, 0, 0};
+      if (!parse_value(str, material.transmission)) return parse_error();
+      material.transmission = max(1 - material.transmission, 0.0f);
+      if (max(material.transmission) < 0.001) material.transmission = {0, 0, 0};
     } else if (cmd == "Tr") {
-      if (!parse_value(str, material->opacity)) return parse_error();
-      material->opacity = 1 - material->opacity;
+      if (!parse_value(str, material.opacity)) return parse_error();
+      material.opacity = 1 - material.opacity;
     } else if (cmd == "Ns") {
-      if (!parse_value(str, material->exponent)) return parse_error();
+      if (!parse_value(str, material.exponent)) return parse_error();
     } else if (cmd == "d") {
-      if (!parse_value(str, material->opacity)) return parse_error();
+      if (!parse_value(str, material.opacity)) return parse_error();
     } else if (cmd == "map_Ke") {
-      if (!parse_value(str, material->emission_tex)) return parse_error();
+      if (!parse_value(str, material.emission_tex)) return parse_error();
     } else if (cmd == "map_Ka") {
-      if (!parse_value(str, material->ambient_tex)) return parse_error();
+      if (!parse_value(str, material.ambient_tex)) return parse_error();
     } else if (cmd == "map_Kd") {
-      if (!parse_value(str, material->diffuse_tex)) return parse_error();
+      if (!parse_value(str, material.diffuse_tex)) return parse_error();
     } else if (cmd == "map_Ks") {
-      if (!parse_value(str, material->specular_tex)) return parse_error();
+      if (!parse_value(str, material.specular_tex)) return parse_error();
     } else if (cmd == "map_Tr") {
-      if (!parse_value(str, material->transmission_tex)) return parse_error();
+      if (!parse_value(str, material.transmission_tex)) return parse_error();
     } else if (cmd == "map_d" || cmd == "map_Tr") {
-      if (!parse_value(str, material->opacity_tex)) return parse_error();
+      if (!parse_value(str, material.opacity_tex)) return parse_error();
     } else if (cmd == "map_bump" || cmd == "bump") {
-      if (!parse_value(str, material->bump_tex)) return parse_error();
+      if (!parse_value(str, material.bump_tex)) return parse_error();
     } else if (cmd == "map_disp" || cmd == "disp") {
-      if (!parse_value(str, material->displacement_tex)) return parse_error();
+      if (!parse_value(str, material.displacement_tex)) return parse_error();
     } else if (cmd == "map_norm" || cmd == "norm") {
-      if (!parse_value(str, material->normal_tex)) return parse_error();
+      if (!parse_value(str, material.normal_tex)) return parse_error();
     } else if (cmd == "Pe") {
-      if (!parse_value(str, material->pbr_emission)) return parse_error();
-      material->as_pbr = true;
+      if (!parse_value(str, material.pbr_emission)) return parse_error();
+      material.as_pbr = true;
     } else if (cmd == "Pb") {
-      if (!parse_value(str, material->pbr_base)) return parse_error();
-      material->as_pbr = true;
+      if (!parse_value(str, material.pbr_base)) return parse_error();
+      material.as_pbr = true;
     } else if (cmd == "Ps") {
-      if (!parse_value(str, material->pbr_specular)) return parse_error();
-      material->as_pbr = true;
+      if (!parse_value(str, material.pbr_specular)) return parse_error();
+      material.as_pbr = true;
     } else if (cmd == "Pm") {
-      if (!parse_value(str, material->pbr_metallic)) return parse_error();
-      material->as_pbr = true;
+      if (!parse_value(str, material.pbr_metallic)) return parse_error();
+      material.as_pbr = true;
     } else if (cmd == "Pr") {
-      if (!parse_value(str, material->pbr_roughness)) return parse_error();
-      material->as_pbr = true;
+      if (!parse_value(str, material.pbr_roughness)) return parse_error();
+      material.as_pbr = true;
     } else if (cmd == "Psh") {
-      if (!parse_value(str, material->pbr_sheen)) return parse_error();
-      material->as_pbr = true;
+      if (!parse_value(str, material.pbr_sheen)) return parse_error();
+      material.as_pbr = true;
     } else if (cmd == "Pc") {
-      if (!parse_value(str, material->pbr_coat)) return parse_error();
-      material->as_pbr = true;
+      if (!parse_value(str, material.pbr_coat)) return parse_error();
+      material.as_pbr = true;
     } else if (cmd == "Pcr") {
-      if (!parse_value(str, material->pbr_coatroughness)) return parse_error();
-      material->as_pbr = true;
+      if (!parse_value(str, material.pbr_coatroughness)) return parse_error();
+      material.as_pbr = true;
     } else if (cmd == "Pt") {
-      if (!parse_value(str, material->pbr_transmission)) return parse_error();
-      material->as_pbr = true;
+      if (!parse_value(str, material.pbr_transmission)) return parse_error();
+      material.as_pbr = true;
     } else if (cmd == "Pss") {
-      if (!parse_value(str, material->pbr_translucency)) return parse_error();
-      material->as_pbr = true;
+      if (!parse_value(str, material.pbr_translucency)) return parse_error();
+      material.as_pbr = true;
     } else if (cmd == "Pn") {
-      if (!parse_value(str, material->pbr_ior)) return parse_error();
-      material->as_pbr = true;
+      if (!parse_value(str, material.pbr_ior)) return parse_error();
+      material.as_pbr = true;
     } else if (cmd == "Po") {
-      if (!parse_value(str, material->pbr_opacity)) return parse_error();
-      material->as_pbr = true;
+      if (!parse_value(str, material.pbr_opacity)) return parse_error();
+      material.as_pbr = true;
     } else if (cmd == "Pvs") {
-      if (!parse_value(str, material->pbr_volscattering)) return parse_error();
-      material->as_pbr = true;
+      if (!parse_value(str, material.pbr_volscattering)) return parse_error();
+      material.as_pbr = true;
     } else if (cmd == "Pvg") {
-      if (!parse_value(str, material->pbr_volanisotropy)) return parse_error();
-      material->as_pbr = true;
+      if (!parse_value(str, material.pbr_volanisotropy)) return parse_error();
+      material.as_pbr = true;
     } else if (cmd == "Pvr") {
-      if (!parse_value(str, material->pbr_volscale)) return parse_error();
-      material->as_pbr = true;
+      if (!parse_value(str, material.pbr_volscale)) return parse_error();
+      material.as_pbr = true;
     } else if (cmd == "Pthin") {
-      if (!parse_value(str, material->pbr_thin)) return parse_error();
-      material->as_pbr = true;
+      if (!parse_value(str, material.pbr_thin)) return parse_error();
+      material.as_pbr = true;
     } else if (cmd == "map_Pe") {
-      if (!parse_value(str, material->pbr_emission_tex)) return parse_error();
-      material->as_pbr = true;
+      if (!parse_value(str, material.pbr_emission_tex)) return parse_error();
+      material.as_pbr = true;
     } else if (cmd == "map_Pb") {
-      if (!parse_value(str, material->pbr_base_tex)) return parse_error();
-      material->as_pbr = true;
+      if (!parse_value(str, material.pbr_base_tex)) return parse_error();
+      material.as_pbr = true;
     } else if (cmd == "map_Ps") {
-      if (!parse_value(str, material->pbr_specular_tex)) return parse_error();
-      material->as_pbr = true;
+      if (!parse_value(str, material.pbr_specular_tex)) return parse_error();
+      material.as_pbr = true;
     } else if (cmd == "map_Pm") {
-      if (!parse_value(str, material->pbr_metallic_tex)) return parse_error();
-      material->as_pbr = true;
+      if (!parse_value(str, material.pbr_metallic_tex)) return parse_error();
+      material.as_pbr = true;
     } else if (cmd == "map_Pr") {
-      if (!parse_value(str, material->pbr_roughness_tex)) return parse_error();
-      material->as_pbr = true;
+      if (!parse_value(str, material.pbr_roughness_tex)) return parse_error();
+      material.as_pbr = true;
     } else if (cmd == "map_Psh") {
-      if (!parse_value(str, material->pbr_sheen_tex)) return parse_error();
-      material->as_pbr = true;
+      if (!parse_value(str, material.pbr_sheen_tex)) return parse_error();
+      material.as_pbr = true;
     } else if (cmd == "map_Pc") {
-      if (!parse_value(str, material->pbr_coat_tex)) return parse_error();
-      material->as_pbr = true;
+      if (!parse_value(str, material.pbr_coat_tex)) return parse_error();
+      material.as_pbr = true;
     } else if (cmd == "map_Pcr") {
-      if (!parse_value(str, material->pbr_coatroughness_tex))
+      if (!parse_value(str, material.pbr_coatroughness_tex))
         return parse_error();
-      material->as_pbr = true;
+      material.as_pbr = true;
     } else if (cmd == "map_Po") {
-      if (!parse_value(str, material->pbr_opacity_tex)) return parse_error();
-      material->as_pbr = true;
+      if (!parse_value(str, material.pbr_opacity_tex)) return parse_error();
+      material.as_pbr = true;
     } else if (cmd == "map_Pt") {
-      if (!parse_value(str, material->pbr_transmission_tex))
+      if (!parse_value(str, material.pbr_transmission_tex))
         return parse_error();
-      material->as_pbr = true;
+      material.as_pbr = true;
     } else if (cmd == "map_Pss") {
-      if (!parse_value(str, material->pbr_translucency_tex))
+      if (!parse_value(str, material.pbr_translucency_tex))
         return parse_error();
-      material->as_pbr = true;
+      material.as_pbr = true;
     } else if (cmd == "map_Pvs") {
-      if (!parse_value(str, material->pbr_volscattering_tex))
+      if (!parse_value(str, material.pbr_volscattering_tex))
         return parse_error();
-      material->as_pbr = true;
+      material.as_pbr = true;
     } else if (cmd == "map_Pdisp") {
-      if (!parse_value(str, material->pbr_displacement_tex))
+      if (!parse_value(str, material.pbr_displacement_tex))
         return parse_error();
     } else if (cmd == "map_Pnorm") {
-      if (!parse_value(str, material->pbr_normal_tex)) return parse_error();
+      if (!parse_value(str, material.pbr_normal_tex)) return parse_error();
     } else {
       continue;
     }
   }
 
   // remove placeholder material
-  obj->materials.erase(obj->materials.begin());
+  obj.materials.erase(obj.materials.begin());
 
   // convert between roughness and exponent
   auto exponent_to_roughness = [](float exponent) {
@@ -1434,37 +1433,37 @@ inline bool load_mtl(const string& filename, obj_scene* obj, string& error) {
   };
 
   // convert values when possible
-  for (auto material : obj->materials) {
-    if (material->as_pbr) continue;
-    material->pbr_emission     = material->emission;
-    material->pbr_emission_tex = material->emission_tex;
-    material->pbr_roughness    = exponent_to_roughness(material->exponent);
-    material->pbr_ior          = material->ior;
-    material->pbr_opacity      = material->opacity;
-    material->pbr_opacity_tex  = material->opacity_tex;
-    if (max(material->transmission) > 0.1) {
-      material->pbr_base         = material->transmission;
-      material->pbr_transmission = 1;
-      material->pbr_specular     = 1;
-    } else if (max(material->specular) > 0.2) {
-      material->pbr_base     = material->specular;
-      material->pbr_base_tex = material->specular_tex;
-      material->pbr_metallic = 1;
+  for (auto& material : obj.materials) {
+    if (material.as_pbr) continue;
+    material.pbr_emission     = material.emission;
+    material.pbr_emission_tex = material.emission_tex;
+    material.pbr_roughness    = exponent_to_roughness(material.exponent);
+    material.pbr_ior          = material.ior;
+    material.pbr_opacity      = material.opacity;
+    material.pbr_opacity_tex  = material.opacity_tex;
+    if (max(material.transmission) > 0.1) {
+      material.pbr_base         = material.transmission;
+      material.pbr_transmission = 1;
+      material.pbr_specular     = 1;
+    } else if (max(material.specular) > 0.2) {
+      material.pbr_base     = material.specular;
+      material.pbr_base_tex = material.specular_tex;
+      material.pbr_metallic = 1;
     } else {
-      material->pbr_base     = material->diffuse;
-      material->pbr_base_tex = material->diffuse_tex;
-      material->pbr_specular = max(material->specular) != 0 ? 1 : 0;
+      material.pbr_base     = material.diffuse;
+      material.pbr_base_tex = material.diffuse_tex;
+      material.pbr_specular = max(material.specular) != 0 ? 1 : 0;
     }
-    material->pbr_bump_tex         = material->bump_tex;
-    material->pbr_normal_tex       = material->normal_tex;
-    material->pbr_displacement_tex = material->displacement_tex;
+    material.pbr_bump_tex         = material.bump_tex;
+    material.pbr_normal_tex       = material.normal_tex;
+    material.pbr_displacement_tex = material.displacement_tex;
   }
 
   return true;
 }
 
 // Read obj
-inline bool load_objx(const string& filename, obj_scene* obj, string& error) {
+inline bool load_objx(const string& filename, obj_scene& obj, string& error) {
   // error helpers
   auto open_error = [filename, &error]() {
     error = filename + ": file not found";
@@ -1484,9 +1483,10 @@ inline bool load_objx(const string& filename, obj_scene* obj, string& error) {
   if (!fs) return open_error();
 
   // shape map for instances
-  auto shape_map = unordered_map<string, vector<obj_shape*>>{};
-  for (auto shape : obj->shapes) {
-    shape_map[shape->name].push_back(shape);
+  auto shape_map = unordered_map<string, vector<int>>{};
+  auto shape_id  = 0;
+  for (auto& shape : obj.shapes) {
+    shape_map[shape.name].push_back(shape_id++);
   }
 
   // read the file str by str
@@ -1505,24 +1505,24 @@ inline bool load_objx(const string& filename, obj_scene* obj, string& error) {
 
     // read values
     if (cmd == "c") {
-      auto camera = add_camera(obj);
-      if (!parse_value(str, camera->name)) return parse_error();
-      if (!parse_value(str, camera->ortho)) return parse_error();
-      if (!parse_value(str, camera->width)) return parse_error();
-      if (!parse_value(str, camera->height)) return parse_error();
-      if (!parse_value(str, camera->lens)) return parse_error();
-      if (!parse_value(str, camera->focus)) return parse_error();
-      if (!parse_value(str, camera->aperture)) return parse_error();
-      if (!parse_value(str, camera->frame)) return parse_error();
+      auto& camera = add_camera(obj);
+      if (!parse_value(str, camera.name)) return parse_error();
+      if (!parse_value(str, camera.ortho)) return parse_error();
+      if (!parse_value(str, camera.width)) return parse_error();
+      if (!parse_value(str, camera.height)) return parse_error();
+      if (!parse_value(str, camera.lens)) return parse_error();
+      if (!parse_value(str, camera.focus)) return parse_error();
+      if (!parse_value(str, camera.aperture)) return parse_error();
+      if (!parse_value(str, camera.frame)) return parse_error();
     } else if (cmd == "e") {
-      auto environment = add_environment(obj);
-      if (!parse_value(str, environment->name)) return parse_error();
-      if (!parse_value(str, environment->emission)) return parse_error();
+      auto& environment = add_environment(obj);
+      if (!parse_value(str, environment.name)) return parse_error();
+      if (!parse_value(str, environment.emission)) return parse_error();
       auto emission_path = ""s;
       if (!parse_value(str, emission_path)) return parse_error();
       if (emission_path == "\"\"") emission_path = "";
-      environment->emission_tex.path = emission_path;
-      if (!parse_value(str, environment->frame)) return parse_error();
+      environment.emission_tex.path = emission_path;
+      if (!parse_value(str, environment.frame)) return parse_error();
     } else if (cmd == "i") {
       auto object = ""s;
       auto frame  = identity3x4f;
@@ -1531,8 +1531,8 @@ inline bool load_objx(const string& filename, obj_scene* obj, string& error) {
       if (shape_map.find(object) == shape_map.end()) {
         return parse_error();
       }
-      for (auto shape : shape_map.at(object)) {
-        shape->instances.push_back(frame);
+      for (auto shape_id : shape_map.at(object)) {
+        obj.shapes[shape_id].instances.push_back(frame);
       }
     } else {
       // unused
@@ -1542,29 +1542,18 @@ inline bool load_objx(const string& filename, obj_scene* obj, string& error) {
   return true;
 }
 
-obj_scene::~obj_scene() {
-  for (auto shape : shapes) delete shape;
-  for (auto material : materials) delete material;
-  for (auto camera : cameras) delete camera;
-  for (auto environment : environments) delete environment;
-}
-
 // Make obj
-obj_camera* add_camera(obj_scene* obj) {
-  return obj->cameras.emplace_back(new obj_camera{});
+obj_camera&   add_camera(obj_scene& obj) { return obj.cameras.emplace_back(); }
+obj_material& add_material(obj_scene& obj) {
+  return obj.materials.emplace_back();
 }
-obj_material* add_material(obj_scene* obj) {
-  return obj->materials.emplace_back(new obj_material{});
+obj_environment& add_environment(obj_scene& obj) {
+  return obj.environments.emplace_back();
 }
-obj_environment* add_environment(obj_scene* obj) {
-  return obj->environments.emplace_back(new obj_environment{});
-}
-obj_shape* add_shape(obj_scene* obj) {
-  return obj->shapes.emplace_back(new obj_shape{});
-}
+obj_shape& add_shape(obj_scene& obj) { return obj.shapes.emplace_back(); }
 
 // Read obj
-bool load_obj(const string& filename, obj_scene* obj, string& error,
+bool load_obj(const string& filename, obj_scene& obj, string& error,
     bool geom_only, bool split_elements, bool split_materials) {
   // error helpers
   auto open_error = [filename, &error]() {
@@ -1597,18 +1586,14 @@ bool load_obj(const string& filename, obj_scene* obj, string& error,
   auto gname        = ""s;
   auto mname        = ""s;
   auto mtllibs      = vector<string>{};
-  auto material_map = unordered_map<string, obj_material*>{};
+  auto material_map = unordered_map<string, int>{};
 
   // initialize obj
-  obj->~obj_scene();
-  obj->cameras.clear();
-  obj->environments.clear();
-  obj->shapes.clear();
-  obj->materials.clear();
+  obj = {};
 
   // initialize load
-  obj->shapes.emplace_back(new obj_shape{});
-  auto empty_material = (obj_material*)nullptr;
+  obj.shapes.emplace_back();
+  auto has_empty_material = false;
 
   // read the file str by str
   auto buffer = array<char, 4096>{};
@@ -1636,42 +1621,45 @@ bool load_obj(const string& filename, obj_scene* obj, string& error,
       vert_size.texcoord += 1;
     } else if (cmd == "f" || cmd == "l" || cmd == "p") {
       // split if split_elements and different primitives
-      if (auto shape = obj->shapes.back();
-          split_elements && !shape->vertices.empty()) {
-        if ((cmd == "f" && (!shape->lines.empty() || !shape->points.empty())) ||
-            (cmd == "l" && (!shape->faces.empty() || !shape->points.empty())) ||
-            (cmd == "p" && (!shape->faces.empty() || !shape->lines.empty()))) {
+      if (auto& shape = obj.shapes.back();
+          split_elements && !shape.vertices.empty()) {
+        if ((cmd == "f" && (!shape.lines.empty() || !shape.points.empty())) ||
+            (cmd == "l" && (!shape.faces.empty() || !shape.points.empty())) ||
+            (cmd == "p" && (!shape.faces.empty() || !shape.lines.empty()))) {
           add_shape(obj);
-          obj->shapes.back()->name = oname + gname;
+          obj.shapes.back().name = oname + gname;
         }
       }
       // split if splt_material and different materials
-      if (auto shape = obj->shapes.back();
-          !geom_only && split_materials && !shape->materials.empty()) {
-        if (shape->materials.size() > 1)
+      if (auto& shape = obj.shapes.back();
+          !geom_only && split_materials && !shape.materials.empty()) {
+        if (shape.materials.size() > 1)
           throw std::runtime_error("should not have happened");
-        if (shape->materials.back() != mname) {
+        if (shape.materials.back() != mname) {
           add_shape(obj);
-          obj->shapes.back()->name = oname + gname;
+          obj.shapes.back().name = oname + gname;
         }
       }
       // grab shape and add element
-      auto  shape   = obj->shapes.back();
-      auto& element = (cmd == "f")   ? shape->faces.emplace_back()
-                      : (cmd == "l") ? shape->lines.emplace_back()
-                                     : shape->points.emplace_back();
+      auto& shape   = obj.shapes.back();
+      auto& element = (cmd == "f")   ? shape.faces.emplace_back()
+                      : (cmd == "l") ? shape.lines.emplace_back()
+                                     : shape.points.emplace_back();
       // get element material or add if needed
       if (!geom_only) {
-        if (mname.empty() && empty_material == nullptr) {
-          empty_material   = obj->materials.emplace_back(new obj_material{});
-          material_map[""] = empty_material;
+        if (mname.empty() && has_empty_material == false) {
+          auto& material    = obj.materials.emplace_back();
+          material.name     = "empty_material";
+          material.diffuse  = {0.8, 0.8, 0.8};
+          material.pbr_base = {0.8, 0.8, 0.8};
+          material_map[""]  = (int)obj.materials.size() - 1;
         }
         auto mat_idx = -1;
-        for (auto midx = 0; midx < shape->materials.size(); midx++)
-          if (shape->materials[midx] == mname) mat_idx = midx;
+        for (auto midx = 0; midx < shape.materials.size(); midx++)
+          if (shape.materials[midx] == mname) mat_idx = midx;
         if (mat_idx < 0) {
-          shape->materials.push_back(mname);
-          mat_idx = (int)shape->materials.size() - 1;
+          shape.materials.push_back(mname);
+          mat_idx = (int)shape.materials.size() - 1;
         }
         element.material = (uint8_t)mat_idx;
       }
@@ -1686,7 +1674,7 @@ bool load_obj(const string& filename, obj_scene* obj, string& error,
         if (vert.texcoord < 0)
           vert.texcoord = vert_size.texcoord + vert.texcoord + 1;
         if (vert.normal < 0) vert.normal = vert_size.normal + vert.normal + 1;
-        shape->vertices.push_back(vert);
+        shape.vertices.push_back(vert);
         element.size += 1;
         skip_whitespace(str);
       }
@@ -1706,11 +1694,11 @@ bool load_obj(const string& filename, obj_scene* obj, string& error,
           if (!parse_value(str, gname)) return parse_error();
         }
       }
-      if (!obj->shapes.back()->vertices.empty()) {
-        obj->shapes.emplace_back(new obj_shape{});
-        obj->shapes.back()->name = oname + gname;
+      if (!obj.shapes.back().vertices.empty()) {
+        obj.shapes.emplace_back();
+        obj.shapes.back().name = oname + gname;
       } else {
-        obj->shapes.back()->name = oname + gname;
+        obj.shapes.back().name = oname + gname;
       }
     } else if (cmd == "usemtl") {
       if (geom_only) continue;
@@ -1725,41 +1713,35 @@ bool load_obj(const string& filename, obj_scene* obj, string& error,
         mtllibs.push_back(mtllib);
         if (!load_mtl(path_join(path_dirname(filename), mtllib), obj, error))
           return dependent_error();
-        for (auto material : obj->materials)
-          material_map[material->name] = material;
+        auto material_id = 0;
+        for (auto& material : obj.materials)
+          material_map[material.name] = material_id++;
       }
     } else {
       // unused
     }
   }
 
-  // fix empty material
-  if (empty_material != nullptr) {
-    empty_material->name     = "empty_material";
-    empty_material->diffuse  = {0.8, 0.8, 0.8};
-    empty_material->pbr_base = {0.8, 0.8, 0.8};
-  }
-
   // convert vertex data
   auto ipositions = vector<int>{};
   auto inormals   = vector<int>{};
   auto itexcoords = vector<int>{};
-  for (auto shape : obj->shapes) {
+  for (auto& shape : obj.shapes) {
     ipositions.assign(opositions.size() + 1, 0);
     inormals.assign(onormals.size() + 1, 0);
     itexcoords.assign(otexcoords.size() + 1, 0);
-    for (auto& vertex : shape->vertices) {
+    for (auto& vertex : shape.vertices) {
       if (vertex.position != 0 && ipositions[vertex.position] == 0) {
-        shape->positions.push_back(opositions[vertex.position - 1]);
-        ipositions[vertex.position] = (int)shape->positions.size();
+        shape.positions.push_back(opositions[vertex.position - 1]);
+        ipositions[vertex.position] = (int)shape.positions.size();
       }
       if (vertex.normal != 0 && inormals[vertex.normal] == 0) {
-        shape->normals.push_back(onormals[vertex.normal - 1]);
-        inormals[vertex.normal] = (int)shape->normals.size();
+        shape.normals.push_back(onormals[vertex.normal - 1]);
+        inormals[vertex.normal] = (int)shape.normals.size();
       }
       if (vertex.texcoord != 0 && itexcoords[vertex.texcoord] == 0) {
-        shape->texcoords.push_back(otexcoords[vertex.texcoord - 1]);
-        itexcoords[vertex.texcoord] = (int)shape->texcoords.size();
+        shape.texcoords.push_back(otexcoords[vertex.texcoord - 1]);
+        itexcoords[vertex.texcoord] = (int)shape.texcoords.size();
       }
       vertex.position = ipositions[vertex.position];
       vertex.normal   = inormals[vertex.normal];
@@ -1800,7 +1782,7 @@ inline void format_value(string& str, const obj_vertex& value) {
 
 // Save obj
 inline bool save_mtl(
-    const string& filename, const obj_scene* obj, string& error) {
+    const string& filename, const obj_scene& obj, string& error) {
   // throw helpers
   // error helpers
   auto open_error = [filename, &error]() {
@@ -1822,151 +1804,149 @@ inline bool save_mtl(
   if (!format_values(fs, "# https://github.com/xelatihy/yocto-gl\n"))
     return write_error();
   if (!format_values(fs, "#\n\n")) return write_error();
-  for (auto& comment : obj->comments) {
+  for (auto& comment : obj.comments) {
     if (!format_values(fs, "# {}\n", comment)) return write_error();
   }
   if (!format_values(fs, "\n")) return write_error();
 
   // write material
-  for (auto material : obj->materials) {
-    if (!format_values(fs, "newmtl {}\n", material->name)) return write_error();
-    if (!material->as_pbr) {
-      if (!format_values(fs, "illum {}\n", material->illum))
+  for (auto& material : obj.materials) {
+    if (!format_values(fs, "newmtl {}\n", material.name)) return write_error();
+    if (!material.as_pbr) {
+      if (!format_values(fs, "illum {}\n", material.illum))
         return write_error();
-      if (material->emission != zero3f)
-        if (!format_values(fs, "Ke {}\n", material->emission))
+      if (material.emission != zero3f)
+        if (!format_values(fs, "Ke {}\n", material.emission))
           return write_error();
-      if (material->ambient != zero3f)
-        if (!format_values(fs, "Ka {}\n", material->ambient))
+      if (material.ambient != zero3f)
+        if (!format_values(fs, "Ka {}\n", material.ambient))
           return write_error();
-      if (!format_values(fs, "Kd {}\n", material->diffuse))
+      if (!format_values(fs, "Kd {}\n", material.diffuse)) return write_error();
+      if (!format_values(fs, "Ks {}\n", material.specular))
         return write_error();
-      if (!format_values(fs, "Ks {}\n", material->specular))
+      if (material.reflection != zero3f)
+        if (!format_values(fs, "Kr {}\n", material.reflection))
+          return write_error();
+      if (material.transmission != zero3f)
+        if (!format_values(fs, "Kt {}\n", material.transmission))
+          return write_error();
+      if (!format_values(fs, "Ns {}\n", (int)material.exponent))
         return write_error();
-      if (material->reflection != zero3f)
-        if (!format_values(fs, "Kr {}\n", material->reflection))
+      if (material.opacity != 1)
+        if (!format_values(fs, "d {}\n", material.opacity))
           return write_error();
-      if (material->transmission != zero3f)
-        if (!format_values(fs, "Kt {}\n", material->transmission))
+      if (!material.emission_tex.path.empty())
+        if (!format_values(fs, "map_Ke {}\n", material.emission_tex))
           return write_error();
-      if (!format_values(fs, "Ns {}\n", (int)material->exponent))
-        return write_error();
-      if (material->opacity != 1)
-        if (!format_values(fs, "d {}\n", material->opacity))
+      if (!material.diffuse_tex.path.empty())
+        if (!format_values(fs, "map_Kd {}\n", material.diffuse_tex))
           return write_error();
-      if (!material->emission_tex.path.empty())
-        if (!format_values(fs, "map_Ke {}\n", material->emission_tex))
+      if (!material.specular_tex.path.empty())
+        if (!format_values(fs, "map_Ks {}\n", material.specular_tex))
           return write_error();
-      if (!material->diffuse_tex.path.empty())
-        if (!format_values(fs, "map_Kd {}\n", material->diffuse_tex))
+      if (!material.transmission_tex.path.empty())
+        if (!format_values(fs, "map_Kt {}\n", material.transmission_tex))
           return write_error();
-      if (!material->specular_tex.path.empty())
-        if (!format_values(fs, "map_Ks {}\n", material->specular_tex))
+      if (!material.reflection_tex.path.empty())
+        if (!format_values(fs, "map_Kr {}\n", material.reflection_tex))
           return write_error();
-      if (!material->transmission_tex.path.empty())
-        if (!format_values(fs, "map_Kt {}\n", material->transmission_tex))
+      if (!material.exponent_tex.path.empty())
+        if (!format_values(fs, "map_Ns {}\n", material.exponent_tex))
           return write_error();
-      if (!material->reflection_tex.path.empty())
-        if (!format_values(fs, "map_Kr {}\n", material->reflection_tex))
+      if (!material.opacity_tex.path.empty())
+        if (!format_values(fs, "map_d {}\n", material.opacity_tex))
           return write_error();
-      if (!material->exponent_tex.path.empty())
-        if (!format_values(fs, "map_Ns {}\n", material->exponent_tex))
+      if (!material.bump_tex.path.empty())
+        if (!format_values(fs, "map_bump {}\n", material.bump_tex))
           return write_error();
-      if (!material->opacity_tex.path.empty())
-        if (!format_values(fs, "map_d {}\n", material->opacity_tex))
+      if (!material.displacement_tex.path.empty())
+        if (!format_values(fs, "map_disp {}\n", material.displacement_tex))
           return write_error();
-      if (!material->bump_tex.path.empty())
-        if (!format_values(fs, "map_bump {}\n", material->bump_tex))
-          return write_error();
-      if (!material->displacement_tex.path.empty())
-        if (!format_values(fs, "map_disp {}\n", material->displacement_tex))
-          return write_error();
-      if (!material->normal_tex.path.empty())
-        if (!format_values(fs, "map_norm {}\n", material->normal_tex))
+      if (!material.normal_tex.path.empty())
+        if (!format_values(fs, "map_norm {}\n", material.normal_tex))
           return write_error();
     } else {
       if (!format_values(fs, "illum 2\n")) return write_error();
-      if (material->pbr_emission != zero3f)
-        if (!format_values(fs, "Pe {}\n", material->pbr_emission))
+      if (material.pbr_emission != zero3f)
+        if (!format_values(fs, "Pe {}\n", material.pbr_emission))
           return write_error();
-      if (material->pbr_base != zero3f)
-        if (!format_values(fs, "Pb {}\n", material->pbr_base))
+      if (material.pbr_base != zero3f)
+        if (!format_values(fs, "Pb {}\n", material.pbr_base))
           return write_error();
-      if (material->pbr_specular != 0)
-        if (!format_values(fs, "Ps {}\n", material->pbr_specular))
+      if (material.pbr_specular != 0)
+        if (!format_values(fs, "Ps {}\n", material.pbr_specular))
           return write_error();
-      if (material->pbr_roughness != 0)
-        if (!format_values(fs, "Pr {}\n", material->pbr_roughness))
+      if (material.pbr_roughness != 0)
+        if (!format_values(fs, "Pr {}\n", material.pbr_roughness))
           return write_error();
-      if (material->pbr_metallic != 0)
-        if (!format_values(fs, "Pm {}\n", material->pbr_metallic))
+      if (material.pbr_metallic != 0)
+        if (!format_values(fs, "Pm {}\n", material.pbr_metallic))
           return write_error();
-      if (material->pbr_sheen != 0)
-        if (!format_values(fs, "Psh {}\n", material->pbr_sheen))
+      if (material.pbr_sheen != 0)
+        if (!format_values(fs, "Psh {}\n", material.pbr_sheen))
           return write_error();
-      if (material->pbr_transmission != 0)
-        if (!format_values(fs, "Pt {}\n", material->pbr_transmission))
+      if (material.pbr_transmission != 0)
+        if (!format_values(fs, "Pt {}\n", material.pbr_transmission))
           return write_error();
-      if (material->pbr_translucency != 0)
-        if (!format_values(fs, "Pss {}\n", material->pbr_translucency))
+      if (material.pbr_translucency != 0)
+        if (!format_values(fs, "Pss {}\n", material.pbr_translucency))
           return write_error();
-      if (material->pbr_coat != 0)
-        if (!format_values(fs, "Pc {}\n", material->pbr_coat))
+      if (material.pbr_coat != 0)
+        if (!format_values(fs, "Pc {}\n", material.pbr_coat))
           return write_error();
-      if (material->pbr_coatroughness != 0)
-        if (!format_values(fs, "Pcr {}\n", material->pbr_coatroughness))
+      if (material.pbr_coatroughness != 0)
+        if (!format_values(fs, "Pcr {}\n", material.pbr_coatroughness))
           return write_error();
-      if (material->pbr_volscattering != zero3f)
-        if (!format_values(fs, "Pvs {}\n", material->pbr_volscattering))
+      if (material.pbr_volscattering != zero3f)
+        if (!format_values(fs, "Pvs {}\n", material.pbr_volscattering))
           return write_error();
-      if (material->pbr_volanisotropy != 0)
-        if (!format_values(fs, "Pvg {}\n", material->pbr_volanisotropy))
+      if (material.pbr_volanisotropy != 0)
+        if (!format_values(fs, "Pvg {}\n", material.pbr_volanisotropy))
           return write_error();
-      if (material->pbr_volscale != 0)
-        if (!format_values(fs, "Pvr {}\n", material->pbr_volscale))
+      if (material.pbr_volscale != 0)
+        if (!format_values(fs, "Pvr {}\n", material.pbr_volscale))
           return write_error();
-      if (!material->pbr_emission_tex.path.empty())
-        if (!format_values(fs, "map_Pe {}\n", material->pbr_emission_tex))
+      if (!material.pbr_emission_tex.path.empty())
+        if (!format_values(fs, "map_Pe {}\n", material.pbr_emission_tex))
           return write_error();
-      if (!material->pbr_base_tex.path.empty())
-        if (!format_values(fs, "map_Pb {}\n", material->pbr_base_tex))
+      if (!material.pbr_base_tex.path.empty())
+        if (!format_values(fs, "map_Pb {}\n", material.pbr_base_tex))
           return write_error();
-      if (!material->pbr_specular_tex.path.empty())
-        if (!format_values(fs, "map_Ps {}\n", material->pbr_specular_tex))
+      if (!material.pbr_specular_tex.path.empty())
+        if (!format_values(fs, "map_Ps {}\n", material.pbr_specular_tex))
           return write_error();
-      if (!material->pbr_roughness_tex.path.empty())
-        if (!format_values(fs, "map_Pr {}\n", material->pbr_roughness_tex))
+      if (!material.pbr_roughness_tex.path.empty())
+        if (!format_values(fs, "map_Pr {}\n", material.pbr_roughness_tex))
           return write_error();
-      if (!material->pbr_metallic_tex.path.empty())
-        if (!format_values(fs, "map_Pm {}\n", material->pbr_metallic_tex))
+      if (!material.pbr_metallic_tex.path.empty())
+        if (!format_values(fs, "map_Pm {}\n", material.pbr_metallic_tex))
           return write_error();
-      if (!material->pbr_sheen_tex.path.empty())
-        if (!format_values(fs, "map_Psh {}\n", material->pbr_sheen_tex))
+      if (!material.pbr_sheen_tex.path.empty())
+        if (!format_values(fs, "map_Psh {}\n", material.pbr_sheen_tex))
           return write_error();
-      if (!material->pbr_transmission_tex.path.empty())
-        if (!format_values(fs, "map_Pt {}\n", material->pbr_transmission_tex))
+      if (!material.pbr_transmission_tex.path.empty())
+        if (!format_values(fs, "map_Pt {}\n", material.pbr_transmission_tex))
           return write_error();
-      if (!material->pbr_translucency_tex.path.empty())
-        if (!format_values(fs, "map_Pss {}\n", material->pbr_translucency_tex))
+      if (!material.pbr_translucency_tex.path.empty())
+        if (!format_values(fs, "map_Pss {}\n", material.pbr_translucency_tex))
           return write_error();
-      if (!material->pbr_coat_tex.path.empty())
-        if (!format_values(fs, "map_Pc {}\n", material->pbr_coat_tex))
+      if (!material.pbr_coat_tex.path.empty())
+        if (!format_values(fs, "map_Pc {}\n", material.pbr_coat_tex))
           return write_error();
-      if (!material->pbr_coatroughness_tex.path.empty())
-        if (!format_values(fs, "map_Pcr {}\n", material->pbr_coatroughness_tex))
+      if (!material.pbr_coatroughness_tex.path.empty())
+        if (!format_values(fs, "map_Pcr {}\n", material.pbr_coatroughness_tex))
           return write_error();
-      if (!material->pbr_volscattering_tex.path.empty())
-        if (!format_values(fs, "map_Pvs {}\n", material->pbr_volscattering_tex))
+      if (!material.pbr_volscattering_tex.path.empty())
+        if (!format_values(fs, "map_Pvs {}\n", material.pbr_volscattering_tex))
           return write_error();
-      if (!material->bump_tex.path.empty())
-        if (!format_values(fs, "map_Pbump {}\n", material->pbr_bump_tex))
+      if (!material.bump_tex.path.empty())
+        if (!format_values(fs, "map_Pbump {}\n", material.pbr_bump_tex))
           return write_error();
-      if (!material->displacement_tex.path.empty())
-        if (!format_values(
-                fs, "map_Pdisp {}\n", material->pbr_displacement_tex))
+      if (!material.displacement_tex.path.empty())
+        if (!format_values(fs, "map_Pdisp {}\n", material.pbr_displacement_tex))
           return write_error();
-      if (!material->normal_tex.path.empty())
-        if (!format_values(fs, "map_Pnorm {}\n", material->pbr_normal_tex))
+      if (!material.normal_tex.path.empty())
+        if (!format_values(fs, "map_Pnorm {}\n", material.pbr_normal_tex))
           return write_error();
     }
     if (!format_values(fs, "\n")) return write_error();
@@ -1976,7 +1956,7 @@ inline bool save_mtl(
 
 // Save obj
 inline bool save_objx(
-    const string& filename, const obj_scene* obj, string& error) {
+    const string& filename, const obj_scene& obj, string& error) {
   // error helpers
   auto open_error = [filename, &error]() {
     error = filename + ": file not found";
@@ -1997,34 +1977,34 @@ inline bool save_objx(
   if (!format_values(fs, "# https://github.com/xelatihy/yocto-gl\n"))
     return write_error();
   if (!format_values(fs, "#\n\n")) return write_error();
-  for (auto& comment : obj->comments) {
+  for (auto& comment : obj.comments) {
     if (!format_values(fs, "# {}\n", comment)) return write_error();
   }
   if (!format_values(fs, "\n")) return write_error();
 
   // cameras
-  for (auto camera : obj->cameras) {
-    if (!format_values(fs, "c {} {} {} {} {} {} {} {}\n", camera->name,
-            camera->ortho, camera->width, camera->height, camera->lens,
-            camera->focus, camera->aperture, camera->frame))
+  for (auto& camera : obj.cameras) {
+    if (!format_values(fs, "c {} {} {} {} {} {} {} {}\n", camera.name,
+            camera.ortho, camera.width, camera.height, camera.lens,
+            camera.focus, camera.aperture, camera.frame))
       return write_error();
   }
 
   // environments
-  for (auto environment : obj->environments) {
-    if (!format_values(fs, "e {} {} {} {}\n", environment->name,
-            environment->emission,
-            environment->emission_tex.path.empty()
+  for (auto& environment : obj.environments) {
+    if (!format_values(fs, "e {} {} {} {}\n", environment.name,
+            environment.emission,
+            environment.emission_tex.path.empty()
                 ? "\"\""s
-                : environment->emission_tex.path,
-            environment->frame))
+                : environment.emission_tex.path,
+            environment.frame))
       return write_error();
   }
 
   // instances
-  for (auto shape : obj->shapes) {
-    for (auto& frame : shape->instances) {
-      if (!format_values(fs, "i {} {}\n", shape->name, frame))
+  for (auto& shape : obj.shapes) {
+    for (auto& frame : shape.instances) {
+      if (!format_values(fs, "i {} {}\n", shape.name, frame))
         return write_error();
     }
   }
@@ -2034,7 +2014,7 @@ inline bool save_objx(
 }
 
 // Save obj
-bool save_obj(const string& filename, const obj_scene* obj, string& error) {
+bool save_obj(const string& filename, const obj_scene& obj, string& error) {
   // error helpers
   auto open_error = [filename, &error]() {
     error = filename + ": file not found";
@@ -2059,13 +2039,13 @@ bool save_obj(const string& filename, const obj_scene* obj, string& error) {
   if (!format_values(fs, "# https://github.com/xelatihy/yocto-gl\n"))
     return write_error();
   if (!format_values(fs, "#\n\n")) return write_error();
-  for (auto& comment : obj->comments) {
+  for (auto& comment : obj.comments) {
     if (!format_values(fs, "# {}\n", comment)) return write_error();
   }
   if (!format_values(fs, "\n")) return write_error();
 
   // save material library
-  if (!obj->materials.empty()) {
+  if (!obj.materials.empty()) {
     if (!format_values(fs, "mtllib {}\n\n",
             replace_extension(path_filename(filename), ".mtl")))
       return write_error();
@@ -2073,31 +2053,31 @@ bool save_obj(const string& filename, const obj_scene* obj, string& error) {
 
   // save objects
   auto vert_size = obj_vertex{0, 0, 0};
-  for (auto shape : obj->shapes) {
-    if (!format_values(fs, "o {}\n", shape->name)) return write_error();
-    for (auto& p : shape->positions)
+  for (auto& shape : obj.shapes) {
+    if (!format_values(fs, "o {}\n", shape.name)) return write_error();
+    for (auto& p : shape.positions)
       if (!format_values(fs, "v {}\n", p)) return write_error();
-    for (auto& n : shape->normals)
+    for (auto& n : shape.normals)
       if (!format_values(fs, "vn {}\n", n)) return write_error();
-    for (auto& t : shape->texcoords)
+    for (auto& t : shape.texcoords)
       if (!format_values(fs, "vt {}\n", t)) return write_error();
     auto element_labels = vector<string>{"f", "l", "p"};
     auto element_groups = vector<const vector<obj_element>*>{
-        &shape->faces, &shape->lines, &shape->points};
+        &shape.faces, &shape.lines, &shape.points};
     for (auto element_idx = 0; element_idx < 3; element_idx++) {
       auto& label        = element_labels[element_idx];
       auto& elements     = *element_groups[element_idx];
       auto  cur_material = -1, cur_vertex = 0;
       for (auto& element : elements) {
-        if (!shape->materials.empty() && cur_material != element.material) {
+        if (!shape.materials.empty() && cur_material != element.material) {
           if (!format_values(
-                  fs, "usemtl {}\n", shape->materials[element.material]))
+                  fs, "usemtl {}\n", shape.materials[element.material]))
             return write_error();
           cur_material = element.material;
         }
         if (!format_values(fs, "{}", label)) return write_error();
         for (auto c = 0; c < element.size; c++) {
-          auto vert = shape->vertices[cur_vertex++];
+          auto vert = shape.vertices[cur_vertex++];
           if (vert.position != 0) vert.position += vert_size.position;
           if (vert.normal != 0) vert.normal += vert_size.normal;
           if (vert.texcoord != 0) vert.texcoord += vert_size.texcoord;
@@ -2107,21 +2087,21 @@ bool save_obj(const string& filename, const obj_scene* obj, string& error) {
       }
     }
     if (!format_values(fs, "\n")) return write_error();
-    vert_size.position += (int)shape->positions.size();
-    vert_size.normal += (int)shape->normals.size();
-    vert_size.texcoord += (int)shape->texcoords.size();
+    vert_size.position += (int)shape.positions.size();
+    vert_size.normal += (int)shape.normals.size();
+    vert_size.texcoord += (int)shape.texcoords.size();
   }
 
   // save mtl
-  if (!obj->materials.empty()) {
+  if (!obj.materials.empty()) {
     if (!save_mtl(replace_extension(filename, ".mtl"), obj, error))
       return dependent_error();
   }
 
   // save objx
-  if (!obj->cameras.empty() || !obj->environments.empty() ||
-      std::any_of(obj->shapes.begin(), obj->shapes.end(),
-          [](auto shape) { return !shape->instances.empty(); })) {
+  if (!obj.cameras.empty() || !obj.environments.empty() ||
+      std::any_of(obj.shapes.begin(), obj.shapes.end(),
+          [](auto shape) { return !shape.instances.empty(); })) {
     if (!save_objx(replace_extension(filename, ".objx"), obj, error))
       return dependent_error();
   }
@@ -2131,13 +2111,13 @@ bool save_obj(const string& filename, const obj_scene* obj, string& error) {
 }
 
 // Get obj vertices
-void get_vertices(const obj_shape* shape, vector<vec3f>& positions,
+void get_vertices(const obj_shape& shape, vector<vec3f>& positions,
     vector<vec3f>& normals, vector<vec2f>& texcoords, vector<int>& vindex,
     bool flipv) {
   auto vmap = unordered_map<obj_vertex, int>{};
-  vmap.reserve(shape->vertices.size());
-  vindex.reserve(shape->vertices.size());
-  for (auto& vert : shape->vertices) {
+  vmap.reserve(shape.vertices.size());
+  vindex.reserve(shape.vertices.size());
+  for (auto& vert : shape.vertices) {
     auto it = vmap.find(vert);
     if (it != vmap.end()) {
       vindex.push_back(it->second);
@@ -2146,12 +2126,12 @@ void get_vertices(const obj_shape* shape, vector<vec3f>& positions,
     auto nverts = (int)positions.size();
     vindex.push_back(nverts);
     vmap.insert(it, {vert, nverts});
-    if (!shape->positions.empty() && vert.position != 0)
-      positions.push_back(shape->positions[vert.position - 1]);
-    if (!shape->normals.empty() && vert.normal != 0)
-      normals.push_back(shape->normals[vert.normal - 1]);
-    if (!shape->texcoords.empty() && vert.texcoord != 0)
-      texcoords.push_back(shape->texcoords[vert.texcoord - 1]);
+    if (!shape.positions.empty() && vert.position != 0)
+      positions.push_back(shape.positions[vert.position - 1]);
+    if (!shape.normals.empty() && vert.normal != 0)
+      normals.push_back(shape.normals[vert.normal - 1]);
+    if (!shape.texcoords.empty() && vert.texcoord != 0)
+      texcoords.push_back(shape.texcoords[vert.texcoord - 1]);
   }
   if (flipv) {
     for (auto& texcoord : texcoords) texcoord.y = 1 - texcoord.y;
@@ -2164,17 +2144,17 @@ inline vector<vec2f> flip_obj_texcoord(const vector<vec2f>& texcoord) {
 }
 
 // Get obj shape
-void get_triangles(const obj_shape* shape, vector<vec3i>& triangles,
+void get_triangles(const obj_shape& shape, vector<vec3i>& triangles,
     vector<vec3f>& positions, vector<vec3f>& normals, vector<vec2f>& texcoords,
     vector<string>& materials, vector<int>& ematerials, bool flipv) {
-  if (shape->faces.empty()) return;
+  if (shape.faces.empty()) return;
   auto vindex = vector<int>{};
   get_vertices(shape, positions, normals, texcoords, vindex, flipv);
-  materials = shape->materials;
-  triangles.reserve(shape->faces.size());
-  if (!materials.empty()) ematerials.reserve(shape->faces.size());
+  materials = shape.materials;
+  triangles.reserve(shape.faces.size());
+  if (!materials.empty()) ematerials.reserve(shape.faces.size());
   auto cur = 0;
-  for (auto& face : shape->faces) {
+  for (auto& face : shape.faces) {
     for (auto c = 2; c < face.size; c++) {
       triangles.push_back(
           {vindex[cur + 0], vindex[cur + c - 1], vindex[cur + c]});
@@ -2183,17 +2163,17 @@ void get_triangles(const obj_shape* shape, vector<vec3i>& triangles,
     cur += face.size;
   }
 }
-void get_quads(const obj_shape* shape, vector<vec4i>& quads,
+void get_quads(const obj_shape& shape, vector<vec4i>& quads,
     vector<vec3f>& positions, vector<vec3f>& normals, vector<vec2f>& texcoords,
     vector<string>& materials, vector<int>& ematerials, bool flipv) {
-  if (shape->faces.empty()) return;
+  if (shape.faces.empty()) return;
   auto vindex = vector<int>{};
   get_vertices(shape, positions, normals, texcoords, vindex, flipv);
-  materials = shape->materials;
-  quads.reserve(shape->faces.size());
-  if (!materials.empty()) ematerials.reserve(shape->faces.size());
+  materials = shape.materials;
+  quads.reserve(shape.faces.size());
+  if (!materials.empty()) ematerials.reserve(shape.faces.size());
   auto cur = 0;
-  for (auto& face : shape->faces) {
+  for (auto& face : shape.faces) {
     if (face.size == 4) {
       quads.push_back(
           {vindex[cur + 0], vindex[cur + 1], vindex[cur + 2], vindex[cur + 3]});
@@ -2208,17 +2188,17 @@ void get_quads(const obj_shape* shape, vector<vec4i>& quads,
     cur += face.size;
   }
 }
-void get_lines(const obj_shape* shape, vector<vec2i>& lines,
+void get_lines(const obj_shape& shape, vector<vec2i>& lines,
     vector<vec3f>& positions, vector<vec3f>& normals, vector<vec2f>& texcoords,
     vector<string>& materials, vector<int>& ematerials, bool flipv) {
-  if (shape->lines.empty()) return;
+  if (shape.lines.empty()) return;
   auto vindex = vector<int>{};
   get_vertices(shape, positions, normals, texcoords, vindex, flipv);
-  materials = shape->materials;
-  lines.reserve(shape->lines.size());
-  if (!materials.empty()) ematerials.reserve(shape->faces.size());
+  materials = shape.materials;
+  lines.reserve(shape.lines.size());
+  if (!materials.empty()) ematerials.reserve(shape.faces.size());
   auto cur = 0;
-  for (auto& str : shape->lines) {
+  for (auto& str : shape.lines) {
     for (auto c = 1; c < str.size; c++) {
       lines.push_back({vindex[cur + c - 1], vindex[cur + c]});
       if (!materials.empty()) ematerials.push_back(str.material);
@@ -2226,17 +2206,17 @@ void get_lines(const obj_shape* shape, vector<vec2i>& lines,
     cur += str.size;
   }
 }
-void get_points(const obj_shape* shape, vector<int>& points,
+void get_points(const obj_shape& shape, vector<int>& points,
     vector<vec3f>& positions, vector<vec3f>& normals, vector<vec2f>& texcoords,
     vector<string>& materials, vector<int>& ematerials, bool flipv) {
-  if (shape->points.empty()) return;
+  if (shape.points.empty()) return;
   auto vindex = vector<int>{};
   get_vertices(shape, positions, normals, texcoords, vindex, flipv);
-  materials = shape->materials;
-  points.reserve(shape->points.size());
-  if (!materials.empty()) ematerials.reserve(shape->faces.size());
+  materials = shape.materials;
+  points.reserve(shape.points.size());
+  if (!materials.empty()) ematerials.reserve(shape.faces.size());
   auto cur = 0;
-  for (auto& point : shape->points) {
+  for (auto& point : shape.points) {
     for (auto c = 0; c < point.size; c++) {
       points.push_back({vindex[cur + 0]});
       if (!materials.empty()) ematerials.push_back(point.material);
@@ -2244,56 +2224,56 @@ void get_points(const obj_shape* shape, vector<int>& points,
     cur += point.size;
   }
 }
-void get_fvquads(const obj_shape* shape, vector<vec4i>& quadspos,
+void get_fvquads(const obj_shape& shape, vector<vec4i>& quadspos,
     vector<vec4i>& quadsnorm, vector<vec4i>& quadstexcoord,
     vector<vec3f>& positions, vector<vec3f>& normals, vector<vec2f>& texcoords,
     vector<string>& materials, vector<int>& ematerials, bool flipv) {
-  if (shape->faces.empty()) return;
-  positions = shape->positions;
-  normals   = shape->normals;
-  texcoords = flipv ? flip_obj_texcoord(shape->texcoords) : shape->texcoords;
-  materials = shape->materials;
-  if (shape->vertices[0].position != 0) quadspos.reserve(shape->faces.size());
-  if (shape->vertices[0].normal != 0) quadsnorm.reserve(shape->faces.size());
-  if (shape->vertices[0].texcoord != 0)
-    quadstexcoord.reserve(shape->faces.size());
-  if (!materials.empty()) ematerials.reserve(shape->faces.size());
+  if (shape.faces.empty()) return;
+  positions = shape.positions;
+  normals   = shape.normals;
+  texcoords = flipv ? flip_obj_texcoord(shape.texcoords) : shape.texcoords;
+  materials = shape.materials;
+  if (shape.vertices[0].position != 0) quadspos.reserve(shape.faces.size());
+  if (shape.vertices[0].normal != 0) quadsnorm.reserve(shape.faces.size());
+  if (shape.vertices[0].texcoord != 0)
+    quadstexcoord.reserve(shape.faces.size());
+  if (!materials.empty()) ematerials.reserve(shape.faces.size());
   auto cur = 0;
-  for (auto& face : shape->faces) {
+  for (auto& face : shape.faces) {
     if (face.size == 4) {
-      if (shape->vertices[0].position != 0)
-        quadspos.push_back({shape->vertices[cur + 0].position - 1,
-            shape->vertices[cur + 1].position - 1,
-            shape->vertices[cur + 2].position - 1,
-            shape->vertices[cur + 3].position - 1});
-      if (shape->vertices[0].normal != 0)
-        quadsnorm.push_back({shape->vertices[cur + 0].normal - 1,
-            shape->vertices[cur + 1].normal - 1,
-            shape->vertices[cur + 2].normal - 1,
-            shape->vertices[cur + 3].normal - 1});
-      if (shape->vertices[0].texcoord != 0)
-        quadstexcoord.push_back({shape->vertices[cur + 0].texcoord - 1,
-            shape->vertices[cur + 1].texcoord - 1,
-            shape->vertices[cur + 2].texcoord - 1,
-            shape->vertices[cur + 3].texcoord - 1});
+      if (shape.vertices[0].position != 0)
+        quadspos.push_back({shape.vertices[cur + 0].position - 1,
+            shape.vertices[cur + 1].position - 1,
+            shape.vertices[cur + 2].position - 1,
+            shape.vertices[cur + 3].position - 1});
+      if (shape.vertices[0].normal != 0)
+        quadsnorm.push_back({shape.vertices[cur + 0].normal - 1,
+            shape.vertices[cur + 1].normal - 1,
+            shape.vertices[cur + 2].normal - 1,
+            shape.vertices[cur + 3].normal - 1});
+      if (shape.vertices[0].texcoord != 0)
+        quadstexcoord.push_back({shape.vertices[cur + 0].texcoord - 1,
+            shape.vertices[cur + 1].texcoord - 1,
+            shape.vertices[cur + 2].texcoord - 1,
+            shape.vertices[cur + 3].texcoord - 1});
       if (!materials.empty()) ematerials.push_back(face.material);
     } else {
       for (auto c = 2; c < face.size; c++) {
-        if (shape->vertices[0].position != 0)
-          quadspos.push_back({shape->vertices[cur + 0].position - 1,
-              shape->vertices[cur + c - 1].position - 1,
-              shape->vertices[cur + c].position - 1,
-              shape->vertices[cur + c].position - 1});
-        if (shape->vertices[0].normal != 0)
-          quadsnorm.push_back({shape->vertices[cur + 0].normal - 1,
-              shape->vertices[cur + c - 1].normal - 1,
-              shape->vertices[cur + c].normal - 1,
-              shape->vertices[cur + c].normal - 1});
-        if (shape->vertices[0].texcoord != 0)
-          quadstexcoord.push_back({shape->vertices[cur + 0].texcoord - 1,
-              shape->vertices[cur + c - 1].texcoord - 1,
-              shape->vertices[cur + c].texcoord - 1,
-              shape->vertices[cur + c].texcoord - 1});
+        if (shape.vertices[0].position != 0)
+          quadspos.push_back({shape.vertices[cur + 0].position - 1,
+              shape.vertices[cur + c - 1].position - 1,
+              shape.vertices[cur + c].position - 1,
+              shape.vertices[cur + c].position - 1});
+        if (shape.vertices[0].normal != 0)
+          quadsnorm.push_back({shape.vertices[cur + 0].normal - 1,
+              shape.vertices[cur + c - 1].normal - 1,
+              shape.vertices[cur + c].normal - 1,
+              shape.vertices[cur + c].normal - 1});
+        if (shape.vertices[0].texcoord != 0)
+          quadstexcoord.push_back({shape.vertices[cur + 0].texcoord - 1,
+              shape.vertices[cur + c - 1].texcoord - 1,
+              shape.vertices[cur + c].texcoord - 1,
+              shape.vertices[cur + c].texcoord - 1});
         if (!materials.empty()) ematerials.push_back(face.material);
       }
     }
@@ -2301,26 +2281,26 @@ void get_fvquads(const obj_shape* shape, vector<vec4i>& quadspos,
   }
 }
 
-bool has_quads(obj_shape* shape) {
-  for (auto& face : shape->faces)
+bool has_quads(obj_shape& shape) {
+  for (auto& face : shape.faces)
     if (face.size == 4) return true;
   return false;
 }
 
 // Get obj vertices
-void get_vertices(const obj_shape* shape, int material,
+void get_vertices(const obj_shape& shape, int material,
     vector<vec3f>& positions, vector<vec3f>& normals, vector<vec2f>& texcoords,
     vector<int>& vindex, bool flipv) {
-  auto used_vertices = vector<bool>(shape->vertices.size(), false);
+  auto used_vertices = vector<bool>(shape.vertices.size(), false);
   auto count         = 0;
-  for (auto& elem : shape->faces) {
+  for (auto& elem : shape.faces) {
     if (elem.material == material) {
       for (auto vid = count; vid < count + elem.size; vid++)
         used_vertices[vid] = true;
     }
     count += elem.size;
   }
-  for (auto& elem : shape->lines) {
+  for (auto& elem : shape.lines) {
     if (elem.material == material) {
       for (auto vid = count; vid < count + elem.size; vid++)
         used_vertices[vid] = true;
@@ -2328,14 +2308,14 @@ void get_vertices(const obj_shape* shape, int material,
     count += elem.size;
   }
   auto vmap = unordered_map<obj_vertex, int>{};
-  vmap.reserve(shape->vertices.size());
-  vindex.resize(shape->vertices.size());
-  for (auto vid = 0; vid < shape->vertices.size(); vid++) {
+  vmap.reserve(shape.vertices.size());
+  vindex.resize(shape.vertices.size());
+  for (auto vid = 0; vid < shape.vertices.size(); vid++) {
     if (!used_vertices[vid]) {
       vindex[vid] = -1;
       continue;
     }
-    auto& vert = shape->vertices[vid];
+    auto& vert = shape.vertices[vid];
     auto  it   = vmap.find(vert);
     if (it != vmap.end()) {
       vindex[vid] = it->second;
@@ -2344,12 +2324,12 @@ void get_vertices(const obj_shape* shape, int material,
     auto nverts = (int)positions.size();
     vindex[vid] = nverts;
     vmap.insert(it, {vert, nverts});
-    if (!shape->positions.empty() && vert.position != 0)
-      positions.push_back(shape->positions[vert.position - 1]);
-    if (!shape->normals.empty() && vert.normal != 0)
-      normals.push_back(shape->normals[vert.normal - 1]);
-    if (!shape->texcoords.empty() && vert.texcoord != 0)
-      texcoords.push_back(shape->texcoords[vert.texcoord - 1]);
+    if (!shape.positions.empty() && vert.position != 0)
+      positions.push_back(shape.positions[vert.position - 1]);
+    if (!shape.normals.empty() && vert.normal != 0)
+      normals.push_back(shape.normals[vert.normal - 1]);
+    if (!shape.texcoords.empty() && vert.texcoord != 0)
+      texcoords.push_back(shape.texcoords[vert.texcoord - 1]);
   }
   if (flipv) {
     for (auto& texcoord : texcoords) texcoord.y = 1 - texcoord.y;
@@ -2357,15 +2337,15 @@ void get_vertices(const obj_shape* shape, int material,
 }
 
 // Get obj shape
-void get_triangles(const obj_shape* shape, int material,
+void get_triangles(const obj_shape& shape, int material,
     vector<vec3i>& triangles, vector<vec3f>& positions, vector<vec3f>& normals,
     vector<vec2f>& texcoords, bool flipv) {
-  if (shape->faces.empty()) return;
+  if (shape.faces.empty()) return;
   auto vindex = vector<int>{};
   get_vertices(shape, material, positions, normals, texcoords, vindex, flipv);
-  triangles.reserve(shape->faces.size());
+  triangles.reserve(shape.faces.size());
   auto cur = 0;
-  for (auto& elem : shape->faces) {
+  for (auto& elem : shape.faces) {
     if (elem.material == material) {
       for (auto c = 2; c < elem.size; c++) {
         triangles.push_back(
@@ -2376,15 +2356,15 @@ void get_triangles(const obj_shape* shape, int material,
   }
   triangles.shrink_to_fit();
 }
-void get_quads(const obj_shape* shape, int material, vector<vec4i>& quads,
+void get_quads(const obj_shape& shape, int material, vector<vec4i>& quads,
     vector<vec3f>& positions, vector<vec3f>& normals, vector<vec2f>& texcoords,
     bool flipv) {
-  if (shape->faces.empty()) return;
+  if (shape.faces.empty()) return;
   auto vindex = vector<int>{};
   get_vertices(shape, material, positions, normals, texcoords, vindex, flipv);
-  quads.reserve(shape->faces.size());
+  quads.reserve(shape.faces.size());
   auto cur = 0;
-  for (auto& elem : shape->faces) {
+  for (auto& elem : shape.faces) {
     if (elem.material == material) {
       if (elem.size == 4) {
         quads.push_back({vindex[cur + 0], vindex[cur + 1], vindex[cur + 2],
@@ -2400,15 +2380,15 @@ void get_quads(const obj_shape* shape, int material, vector<vec4i>& quads,
   }
   quads.shrink_to_fit();
 }
-void get_lines(const obj_shape* shape, int material, vector<vec2i>& lines,
+void get_lines(const obj_shape& shape, int material, vector<vec2i>& lines,
     vector<vec3f>& positions, vector<vec3f>& normals, vector<vec2f>& texcoords,
     bool flipv) {
-  if (shape->lines.empty()) return;
+  if (shape.lines.empty()) return;
   auto vindex = vector<int>{};
   get_vertices(shape, material, positions, normals, texcoords, vindex, flipv);
-  lines.reserve(shape->lines.size());
+  lines.reserve(shape.lines.size());
   auto cur = 0;
-  for (auto& elem : shape->lines) {
+  for (auto& elem : shape.lines) {
     if (elem.material == material) {
       for (auto c = 1; c < elem.size; c++) {
         lines.push_back({vindex[cur + c - 1], vindex[cur + c]});
@@ -2418,15 +2398,15 @@ void get_lines(const obj_shape* shape, int material, vector<vec2i>& lines,
   }
   lines.shrink_to_fit();
 }
-void get_points(const obj_shape* shape, int material, vector<int>& points,
+void get_points(const obj_shape& shape, int material, vector<int>& points,
     vector<vec3f>& positions, vector<vec3f>& normals, vector<vec2f>& texcoords,
     bool flipv) {
-  if (shape->points.empty()) return;
+  if (shape.points.empty()) return;
   auto vindex = vector<int>{};
   get_vertices(shape, material, positions, normals, texcoords, vindex, flipv);
-  points.reserve(shape->points.size());
+  points.reserve(shape.points.size());
   auto cur = 0;
-  for (auto& elem : shape->points) {
+  for (auto& elem : shape.points) {
     if (elem.material == material) {
       for (auto c = 0; c < elem.size; c++) {
         points.push_back({vindex[cur + 0]});
@@ -2437,111 +2417,111 @@ void get_points(const obj_shape* shape, int material, vector<int>& points,
 }
 
 // Add obj shape
-void set_triangles(obj_shape* shape, const vector<vec3i>& triangles,
+void set_triangles(obj_shape& shape, const vector<vec3i>& triangles,
     const vector<vec3f>& positions, const vector<vec3f>& normals,
     const vector<vec2f>& texcoords, const vector<int>& ematerials, bool flipv) {
-  shape->positions = positions;
-  shape->normals   = normals;
-  shape->texcoords = flipv ? flip_obj_texcoord(texcoords) : texcoords;
-  shape->vertices.reserve(triangles.size() * 3);
+  shape.positions = positions;
+  shape.normals   = normals;
+  shape.texcoords = flipv ? flip_obj_texcoord(texcoords) : texcoords;
+  shape.vertices.reserve(triangles.size() * 3);
   for (auto idx = 0; idx < triangles.size(); idx++) {
     auto& triangle = triangles[idx];
     for (auto c = 0; c < 3; c++) {
-      shape->vertices.push_back({
+      shape.vertices.push_back({
           positions.empty() ? 0 : triangle[c] + 1,
           texcoords.empty() ? 0 : triangle[c] + 1,
           normals.empty() ? 0 : triangle[c] + 1,
       });
     }
-    shape->faces.push_back(
+    shape.faces.push_back(
         {3, ematerials.empty() ? (uint8_t)0 : (uint8_t)ematerials[idx]});
   }
 }
-void set_quads(obj_shape* shape, const vector<vec4i>& quads,
+void set_quads(obj_shape& shape, const vector<vec4i>& quads,
     const vector<vec3f>& positions, const vector<vec3f>& normals,
     const vector<vec2f>& texcoords, const vector<int>& ematerials, bool flipv) {
-  shape->positions = positions;
-  shape->normals   = normals;
-  shape->texcoords = flipv ? flip_obj_texcoord(texcoords) : texcoords;
-  shape->vertices.reserve(quads.size() * 4);
+  shape.positions = positions;
+  shape.normals   = normals;
+  shape.texcoords = flipv ? flip_obj_texcoord(texcoords) : texcoords;
+  shape.vertices.reserve(quads.size() * 4);
   for (auto idx = 0; idx < quads.size(); idx++) {
     auto& quad = quads[idx];
     auto  nv   = quad.z == quad.w ? 3 : 4;
     for (auto c = 0; c < nv; c++) {
-      shape->vertices.push_back({
+      shape.vertices.push_back({
           positions.empty() ? 0 : quad[c] + 1,
           texcoords.empty() ? 0 : quad[c] + 1,
           normals.empty() ? 0 : quad[c] + 1,
       });
     }
-    shape->faces.push_back({(uint8_t)nv,
+    shape.faces.push_back({(uint8_t)nv,
         ematerials.empty() ? (uint8_t)0 : (uint8_t)ematerials[idx]});
   }
 }
-void set_lines(obj_shape* shape, const vector<vec2i>& lines,
+void set_lines(obj_shape& shape, const vector<vec2i>& lines,
     const vector<vec3f>& positions, const vector<vec3f>& normals,
     const vector<vec2f>& texcoords, const vector<int>& ematerials, bool flipv) {
-  shape->positions = positions;
-  shape->normals   = normals;
-  shape->texcoords = flipv ? flip_obj_texcoord(texcoords) : texcoords;
-  shape->vertices.reserve(lines.size() * 2);
+  shape.positions = positions;
+  shape.normals   = normals;
+  shape.texcoords = flipv ? flip_obj_texcoord(texcoords) : texcoords;
+  shape.vertices.reserve(lines.size() * 2);
   for (auto idx = 0; idx < lines.size(); idx++) {
     auto& str = lines[idx];
     for (auto c = 0; c < 2; c++) {
-      shape->vertices.push_back({
+      shape.vertices.push_back({
           positions.empty() ? 0 : str[c] + 1,
           texcoords.empty() ? 0 : str[c] + 1,
           normals.empty() ? 0 : str[c] + 1,
       });
     }
-    shape->lines.push_back(
+    shape.lines.push_back(
         {2, ematerials.empty() ? (uint8_t)0 : (uint8_t)ematerials[idx]});
   }
 }
-void set_points(obj_shape* shape, const vector<int>& points,
+void set_points(obj_shape& shape, const vector<int>& points,
     const vector<vec3f>& positions, const vector<vec3f>& normals,
     const vector<vec2f>& texcoords, const vector<int>& ematerials, bool flipv) {
-  shape->positions = positions;
-  shape->normals   = normals;
-  shape->texcoords = flipv ? flip_obj_texcoord(texcoords) : texcoords;
-  shape->vertices.reserve(points.size());
+  shape.positions = positions;
+  shape.normals   = normals;
+  shape.texcoords = flipv ? flip_obj_texcoord(texcoords) : texcoords;
+  shape.vertices.reserve(points.size());
   for (auto idx = 0; idx < points.size(); idx++) {
     auto& point = points[idx];
-    shape->vertices.push_back({
+    shape.vertices.push_back({
         positions.empty() ? 0 : point + 1,
         texcoords.empty() ? 0 : point + 1,
         normals.empty() ? 0 : point + 1,
     });
-    shape->faces.push_back(
+    shape.faces.push_back(
         {1, ematerials.empty() ? (uint8_t)0 : (uint8_t)ematerials[idx]});
   }
 }
-void set_fvquads(obj_shape* shape, const vector<vec4i>& quadspos,
+void set_fvquads(obj_shape& shape, const vector<vec4i>& quadspos,
     const vector<vec4i>& quadsnorm, const vector<vec4i>& quadstexcoord,
     const vector<vec3f>& positions, const vector<vec3f>& normals,
     const vector<vec2f>& texcoords, const vector<int>& ematerials, bool flipv) {
-  shape->positions = positions;
-  shape->normals   = normals;
-  shape->texcoords = flipv ? flip_obj_texcoord(texcoords) : texcoords;
-  shape->vertices.reserve(quadspos.size() * 4);
+  shape.positions = positions;
+  shape.normals   = normals;
+  shape.texcoords = flipv ? flip_obj_texcoord(texcoords) : texcoords;
+  shape.vertices.reserve(quadspos.size() * 4);
   for (auto idx = 0; idx < quadspos.size(); idx++) {
     auto nv = quadspos[idx].z == quadspos[idx].w ? 3 : 4;
     for (auto c = 0; c < nv; c++) {
-      shape->vertices.push_back({
+      shape.vertices.push_back({
           quadspos.empty() ? 0 : quadspos[idx][c] + 1,
           quadstexcoord.empty() ? 0 : quadstexcoord[idx][c] + 1,
           quadsnorm.empty() ? 0 : quadsnorm[idx][c] + 1,
       });
     }
-    shape->faces.push_back({(uint8_t)nv,
+    shape.faces.push_back({(uint8_t)nv,
         ematerials.empty() ? (uint8_t)0 : (uint8_t)ematerials[idx]});
   }
 }
-void set_materials(obj_shape* shape, const vector<string>& materials) {
-  shape->materials = materials;
+void set_materials(obj_shape& shape, const vector<string>& materials) {
+  shape.materials = materials;
 }
-void set_instances(obj_shape* shape, const vector<frame3f>& instances) {
-  shape->instances = instances;
+void set_instances(obj_shape& shape, const vector<frame3f>& instances) {
+  shape.instances = instances;
 }
 
 }  // namespace yocto
