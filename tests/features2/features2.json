@@ -76,8 +76,6 @@
     },
     "suzanne-subdiv-plastic-rough": {
       "shape": "suzanne-subdiv",
-      "subdivisions": 2,
-      "smooth": true,
       "frame": [1, 0, 0, 0, 1, 0, 0, 0, 1, -0.2, 0, 0],
       "material": "suzanne-subdiv-plastic-rough"
     },
@@ -88,10 +86,6 @@
     },
     "sphere-displaced-plastic-rough": {
       "shape": "sphere-displaced",
-      "displacement": 0.025,
-      "displacement_tex": "bumps-displacement",
-      "subdivisions": 0,
-      "smooth": true,
       "frame": [1, 0, 0, 0, 1, 0, 0, 0, 1, 0.2, 0, 0],
       "material": "sphere-displaced-plastic-rough"
     },
@@ -104,6 +98,20 @@
       "shape": "hairballi",
       "frame": [1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0],
       "material": "hairballi-hair"
+    }
+  },
+  "subdivs": {
+    "suzanne-subdiv": {
+      "shape": "suzanne-subdiv",
+      "subdivisions": 2,
+      "smooth": true
+    },
+    "sphere-displaced": {
+      "shape": "sphere-displaced",
+      "displacement": 0.025,
+      "displacement_tex": "bumps-displacement",
+      "subdivisions": 0,
+      "smooth": true
     }
   },
   "materials": {

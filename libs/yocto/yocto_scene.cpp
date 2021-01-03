@@ -164,8 +164,8 @@ vector<string> scene_stats(const scene_scene& scene, bool verbose) {
       "quads:        " + format(accumulate(scene.shapes,
                              [](auto& shape) { return shape.quads.size(); })));
   stats.push_back("fvquads:     " +
-                  format(accumulate(scene.shapes,
-                      [](auto& shape) { return shape.quadspos.size(); })));
+                  format(accumulate(scene.subdivs,
+                      [](auto& subdiv) { return subdiv.quadspos.size(); })));
   stats.push_back(
       "texels4b:     " + format(accumulate(scene.textures, [](auto& texture) {
         return (size_t)texture.ldr.width() * (size_t)texture.ldr.width();
@@ -262,6 +262,9 @@ instance_handle add_instance(scene_scene& scene, const string& name) {
 material_handle add_material(scene_scene& scene, const string& name) {
   return add_element(scene.materials, scene.material_names, name, "material");
 }
+subdiv_handle add_subdiv(scene_scene& scene, const string& name) {
+  return add_element(scene.subdivs, scene.subdiv_names, name, "subdiv");
+}
 instance_handle add_complete_instance(scene_scene& scene, const string& name) {
   auto  handle      = add_instance(scene, name);
   auto& instance    = get_instance(scene, handle);
@@ -289,6 +292,9 @@ scene_shape& get_shape(scene_scene& scene, shape_handle handle) {
 }
 scene_texture& get_texture(scene_scene& scene, texture_handle handle) {
   return scene.textures.at(handle);
+}
+scene_subdiv& get_subdiv(scene_scene& scene, subdiv_handle handle) {
+  return scene.subdivs.at(handle);
 }
 scene_instance& get_complete_instance(
     scene_scene& scene, instance_handle handle) {
@@ -318,6 +324,9 @@ const scene_texture& get_texture(
     const scene_scene& scene, texture_handle handle) {
   return scene.textures.at(handle);
 }
+const scene_subdiv& get_subdiv(const scene_scene& scene, subdiv_handle handle) {
+  return scene.subdivs.at(handle);
+}
 const scene_instance& get_complete_instance(
     const scene_scene& scene, instance_handle handle) {
   return scene.instances.at(handle);
@@ -342,6 +351,9 @@ string get_instance_name(const scene_scene& scene, int idx) {
 string get_material_name(const scene_scene& scene, int idx) {
   return scene.material_names[idx];
 }
+string get_subdiv_name(const scene_scene& scene, int idx) {
+  return scene.subdiv_names[idx];
+}
 
 string get_camera_name(const scene_scene& scene, const scene_camera& camera) {
   return scene.camera_names.at(&camera - scene.cameras.data());
@@ -364,6 +376,9 @@ string get_instance_name(
 string get_material_name(
     const scene_scene& scene, const scene_material& material) {
   return scene.material_names.at(&material - scene.materials.data());
+}
+string get_subdiv_name(const scene_scene& scene, const scene_subdiv& subdiv) {
+  return scene.subdiv_names.at(&subdiv - scene.subdivs.data());
 }
 
 // Add missing cameras.
@@ -480,9 +495,14 @@ void trim_memory(scene_scene& scene) {
     shape.colors.shrink_to_fit();
     shape.radius.shrink_to_fit();
     shape.tangents.shrink_to_fit();
-    shape.quadspos.shrink_to_fit();
-    shape.quadsnorm.shrink_to_fit();
-    shape.quadstexcoord.shrink_to_fit();
+  }
+  for (auto& subdiv : scene.subdivs) {
+    subdiv.positions.shrink_to_fit();
+    subdiv.normals.shrink_to_fit();
+    subdiv.texcoords.shrink_to_fit();
+    subdiv.quadspos.shrink_to_fit();
+    subdiv.quadsnorm.shrink_to_fit();
+    subdiv.quadstexcoord.shrink_to_fit();
   }
   for (auto& texture : scene.textures) {
     texture.hdr.shrink_to_fit();
@@ -490,6 +510,9 @@ void trim_memory(scene_scene& scene) {
   }
   scene.cameras.shrink_to_fit();
   scene.shapes.shrink_to_fit();
+  scene.subdivs.shrink_to_fit();
+  scene.instances.shrink_to_fit();
+  scene.materials.shrink_to_fit();
   scene.textures.shrink_to_fit();
   scene.environments.shrink_to_fit();
 }
@@ -501,166 +524,84 @@ void trim_memory(scene_scene& scene) {
 // -----------------------------------------------------------------------------
 namespace yocto {
 
-void tesselate_shape(scene_scene& scene, scene_shape& shape) {
-  if (shape.subdivisions > 0) {
-    if (!shape.points.empty()) {
-      throw std::runtime_error("cannot subdivide points");
-    } else if (!shape.lines.empty()) {
-      std::tie(std::ignore, shape.texcoords) = subdivide_lines(
-          shape.lines, shape.texcoords, shape.subdivisions);
-      std::tie(std::ignore, shape.normals) = subdivide_lines(
-          shape.lines, shape.normals, shape.subdivisions);
-      std::tie(std::ignore, shape.colors) = subdivide_lines(
-          shape.lines, shape.colors, shape.subdivisions);
-      std::tie(std::ignore, shape.radius) = subdivide_lines(
-          shape.lines, shape.radius, shape.subdivisions);
-      std::tie(shape.lines, shape.positions) = subdivide_lines(
-          shape.lines, shape.positions, shape.subdivisions);
-    } else if (!shape.triangles.empty()) {
-      std::tie(std::ignore, shape.texcoords) = subdivide_triangles(
-          shape.triangles, shape.texcoords, shape.subdivisions);
-      std::tie(std::ignore, shape.normals) = subdivide_triangles(
-          shape.triangles, shape.normals, shape.subdivisions);
-      std::tie(std::ignore, shape.colors) = subdivide_triangles(
-          shape.triangles, shape.colors, shape.subdivisions);
-      std::tie(std::ignore, shape.radius) = subdivide_triangles(
-          shape.triangles, shape.radius, shape.subdivisions);
-      std::tie(shape.triangles, shape.positions) = subdivide_triangles(
-          shape.triangles, shape.positions, shape.subdivisions);
-    } else if (!shape.quads.empty()) {
-      if (shape.catmullclark) {
-        std::tie(std::ignore, shape.texcoords) = subdivide_catmullclark(
-            shape.quads, shape.texcoords, shape.subdivisions, true);
-        std::tie(std::ignore, shape.normals) = subdivide_catmullclark(
-            shape.quads, shape.normals, shape.subdivisions, true);
-        std::tie(std::ignore, shape.colors) = subdivide_catmullclark(
-            shape.quads, shape.colors, shape.subdivisions);
-        std::tie(std::ignore, shape.radius) = subdivide_catmullclark(
-            shape.quads, shape.radius, shape.subdivisions);
-        std::tie(std::ignore, shape.positions) = subdivide_catmullclark(
-            shape.quads, shape.positions, shape.subdivisions);
-      } else {
-        std::tie(std::ignore, shape.texcoords) = subdivide_quads(
-            shape.quads, shape.texcoords, shape.subdivisions);
-        std::tie(std::ignore, shape.normals) = subdivide_quads(
-            shape.quads, shape.normals, shape.subdivisions);
-        std::tie(std::ignore, shape.colors) = subdivide_quads(
-            shape.quads, shape.colors, shape.subdivisions);
-        std::tie(std::ignore, shape.radius) = subdivide_quads(
-            shape.quads, shape.radius, shape.subdivisions);
-        std::tie(shape.quads, shape.positions) = subdivide_quads(
-            shape.quads, shape.positions, shape.subdivisions);
-      }
-    } else if (!shape.quadspos.empty()) {
-      if (shape.catmullclark) {
-        std::tie(shape.quadstexcoord, shape.texcoords) = subdivide_catmullclark(
-            shape.quadstexcoord, shape.texcoords, shape.subdivisions, true);
-        std::tie(shape.quadsnorm, shape.normals) = subdivide_catmullclark(
-            shape.quadsnorm, shape.normals, shape.subdivisions, true);
-        std::tie(shape.quadspos, shape.positions) = subdivide_catmullclark(
-            shape.quadspos, shape.positions, shape.subdivisions);
-      } else {
-        std::tie(shape.quadstexcoord, shape.texcoords) = subdivide_quads(
-            shape.quadstexcoord, shape.texcoords, shape.subdivisions);
-        std::tie(shape.quadsnorm, shape.normals) = subdivide_quads(
-            shape.quadsnorm, shape.normals, shape.subdivisions);
-        std::tie(shape.quadspos, shape.positions) = subdivide_quads(
-            shape.quadspos, shape.positions, shape.subdivisions);
-      }
-      if (shape.smooth) {
-        shape.normals   = quads_normals(shape.quadspos, shape.positions);
-        shape.quadsnorm = shape.quadspos;
-      } else {
-        shape.normals   = {};
-        shape.quadsnorm = {};
-      }
+void tesselate_subdiv(
+    scene_shape& shape, scene_subdiv& subdiv_, const scene_scene& scene) {
+  auto subdiv = subdiv_;
+
+  if (subdiv.subdivisions > 0) {
+    if (subdiv.catmullclark) {
+      std::tie(subdiv.quadstexcoord, subdiv.texcoords) = subdivide_catmullclark(
+          subdiv.quadstexcoord, subdiv.texcoords, subdiv.subdivisions, true);
+      std::tie(subdiv.quadsnorm, subdiv.normals) = subdivide_catmullclark(
+          subdiv.quadsnorm, subdiv.normals, subdiv.subdivisions, true);
+      std::tie(subdiv.quadspos, subdiv.positions) = subdivide_catmullclark(
+          subdiv.quadspos, subdiv.positions, subdiv.subdivisions);
     } else {
-      throw std::runtime_error("not supported yet");
+      std::tie(subdiv.quadstexcoord, subdiv.texcoords) = subdivide_quads(
+          subdiv.quadstexcoord, subdiv.texcoords, subdiv.subdivisions);
+      std::tie(subdiv.quadsnorm, subdiv.normals) = subdivide_quads(
+          subdiv.quadsnorm, subdiv.normals, subdiv.subdivisions);
+      std::tie(subdiv.quadspos, subdiv.positions) = subdivide_quads(
+          subdiv.quadspos, subdiv.positions, subdiv.subdivisions);
     }
-    shape.subdivisions = 0;
+    if (subdiv.smooth) {
+      subdiv.normals   = quads_normals(subdiv.quadspos, subdiv.positions);
+      subdiv.quadsnorm = subdiv.quadspos;
+    } else {
+      subdiv.normals   = {};
+      subdiv.quadsnorm = {};
+    }
   }
 
-  if (shape.displacement != 0 && shape.displacement_tex != invalid_handle) {
-    if (shape.texcoords.empty())
+  if (subdiv.displacement != 0 && subdiv.displacement_tex != invalid_handle) {
+    if (subdiv.texcoords.empty())
       throw std::runtime_error("missing texture coordinates");
 
-    if (!shape.triangles.empty() || !shape.quads.empty()) {
-      auto no_normals = shape.normals.empty();
-      if (shape.normals.empty())
-        shape.normals = !shape.triangles.empty()
-                            ? triangles_normals(
-                                  shape.triangles, shape.positions)
-                            : quads_normals(shape.quads, shape.positions);
-      for (auto idx = 0; idx < shape.positions.size(); idx++) {
-        auto& diplacement_tex = get_texture(scene, shape.displacement_tex);
-        auto  disp            = mean(
-            eval_texture(diplacement_tex, shape.texcoords[idx], true));
-        if (!diplacement_tex.ldr.empty()) disp -= 0.5f;
-        shape.positions[idx] += shape.normals[idx] * shape.displacement * disp;
-      }
-      if (shape.smooth) {
-        shape.normals = !shape.triangles.empty()
-                            ? triangles_normals(
-                                  shape.triangles, shape.positions)
-                            : quads_normals(shape.quads, shape.positions);
-      } else if (no_normals) {
-        shape.normals = {};
-      }
-    } else if (!shape.quadspos.empty()) {
-      // facevarying case
-      auto offset = vector<float>(shape.positions.size(), 0);
-      auto count  = vector<int>(shape.positions.size(), 0);
-      for (auto fid = 0; fid < shape.quadspos.size(); fid++) {
-        auto qpos = shape.quadspos[fid];
-        auto qtxt = shape.quadstexcoord[fid];
-        for (auto i = 0; i < 4; i++) {
-          auto& displacement_tex = get_texture(scene, shape.displacement_tex);
-          auto  disp             = mean(
-              eval_texture(displacement_tex, shape.texcoords[qtxt[i]], true));
-          if (!displacement_tex.ldr.empty()) disp -= 0.5f;
-          offset[qpos[i]] += shape.displacement * disp;
-          count[qpos[i]] += 1;
-        }
-      }
-      auto normals = quads_normals(shape.quadspos, shape.positions);
-      for (auto vid = 0; vid < shape.positions.size(); vid++) {
-        shape.positions[vid] += normals[vid] * offset[vid] / count[vid];
-      }
-      if (shape.smooth || !shape.normals.empty()) {
-        shape.quadsnorm = shape.quadspos;
-        shape.normals   = quads_normals(shape.quadspos, shape.positions);
+    // facevarying case
+    auto offset = vector<float>(subdiv.positions.size(), 0);
+    auto count  = vector<int>(subdiv.positions.size(), 0);
+    for (auto fid = 0; fid < subdiv.quadspos.size(); fid++) {
+      auto qpos = subdiv.quadspos[fid];
+      auto qtxt = subdiv.quadstexcoord[fid];
+      for (auto i = 0; i < 4; i++) {
+        auto& displacement_tex = get_texture(scene, subdiv.displacement_tex);
+        auto  disp             = mean(
+            eval_texture(displacement_tex, subdiv.texcoords[qtxt[i]], true));
+        if (!displacement_tex.ldr.empty()) disp -= 0.5f;
+        offset[qpos[i]] += subdiv.displacement * disp;
+        count[qpos[i]] += 1;
       }
     }
+    auto normals = quads_normals(subdiv.quadspos, subdiv.positions);
+    for (auto vid = 0; vid < subdiv.positions.size(); vid++) {
+      subdiv.positions[vid] += normals[vid] * offset[vid] / count[vid];
+    }
+    if (subdiv.smooth || !subdiv.normals.empty()) {
+      subdiv.quadsnorm = subdiv.quadspos;
+      subdiv.normals   = quads_normals(subdiv.quadspos, subdiv.positions);
+    }
+  }
 
-    shape.displacement     = 0;
-    shape.displacement_tex = invalid_handle;
-  }
-  if (!shape.quadspos.empty()) {
-    std::tie(shape.quads, shape.positions, shape.normals, shape.texcoords) =
-        split_facevarying(shape.quadspos, shape.quadsnorm, shape.quadstexcoord,
-            shape.positions, shape.normals, shape.texcoords);
-    shape.points    = {};
-    shape.lines     = {};
-    shape.triangles = {};
-    shape.colors    = {};
-    shape.radius    = {};
-  }
+  shape = {};
+  std::tie(shape.quads, shape.positions, shape.normals, shape.texcoords) =
+      split_facevarying(subdiv.quadspos, subdiv.quadsnorm, subdiv.quadstexcoord,
+          subdiv.positions, subdiv.normals, subdiv.texcoords);
 }
 
 void tesselate_shapes(
     scene_scene& scene, const progress_callback& progress_cb) {
   // handle progress
-  auto progress = vec2i{0, (int)scene.shapes.size() + 1};
-  if (progress_cb) progress_cb("tesselate shape", progress.x++, progress.y);
+  auto progress = vec2i{0, (int)scene.subdivs.size() + 1};
+  if (progress_cb) progress_cb("tesselate subdivs", progress.x++, progress.y);
 
   // tesselate shapes
-  for (auto& shape : scene.shapes) {
-    if (progress_cb) progress_cb("tesselate shape", progress.x++, progress.y);
-    tesselate_shape(scene, shape);
+  for (auto& subdiv : scene.subdivs) {
+    if (progress_cb) progress_cb("tesselate subdiv", progress.x++, progress.y);
+    tesselate_subdiv(get_shape(scene, subdiv.shape), subdiv, scene);
   }
 
   // done
-  if (progress_cb) progress_cb("tesselate shape", progress.x++, progress.y);
+  if (progress_cb) progress_cb("tesselate subdivs", progress.x++, progress.y);
 }
 
 }  // namespace yocto

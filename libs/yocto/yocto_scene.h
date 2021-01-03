@@ -76,6 +76,7 @@ using material_handle           = int;
 using shape_handle              = int;
 using instance_handle           = int;
 using environment_handle        = int;
+using subdiv_handle             = int;
 
 // Camera based on a simple lens model. The camera is placed using a frame.
 // Camera projection is described in photographic terms. In particular,
@@ -146,19 +147,12 @@ struct scene_material {
 
 // Shape data represented as indexed meshes of elements.
 // May contain either points, lines, triangles and quads.
-// Additionally, we support face-varying primitives where
-// each vertex data has its own topology.
 struct scene_shape {
   // primitives
   vector<int>   points    = {};
   vector<vec2i> lines     = {};
   vector<vec3i> triangles = {};
   vector<vec4i> quads     = {};
-
-  // face-varying primitives
-  vector<vec4i> quadspos      = {};
-  vector<vec4i> quadsnorm     = {};
-  vector<vec4i> quadstexcoord = {};
 
   // vertex data
   vector<vec3f> positions = {};
@@ -167,23 +161,9 @@ struct scene_shape {
   vector<vec4f> colors    = {};
   vector<float> radius    = {};
   vector<vec4f> tangents  = {};
-
-  // subdivision data [experimental]
-  int  subdivisions = 0;
-  bool catmullclark = true;
-  bool smooth       = true;
-
-  // displacement data [experimental]
-  float          displacement     = 0;
-  texture_handle displacement_tex = invalid_handle;
-
-  // element cdf for sampling
-  vector<float> elements_cdf = {};
-  // shape is assigned at creation
-  int shape_id = -1;
 };
 
-// Object.
+// Instance.
 struct scene_instance {
   // instance data
   frame3f         frame    = identity3x4f;
@@ -193,9 +173,36 @@ struct scene_instance {
 
 // Environment map.
 struct scene_environment {
+  // environment data
   frame3f        frame        = identity3x4f;
   vec3f          emission     = {0, 0, 0};
   texture_handle emission_tex = invalid_handle;
+};
+
+// Subdiv data represented as face-varying primitives where
+// each vertex data has its own topology.
+struct scene_subdiv {
+  // face-varying primitives
+  vector<vec4i> quadspos      = {};
+  vector<vec4i> quadsnorm     = {};
+  vector<vec4i> quadstexcoord = {};
+
+  // vertex data
+  vector<vec3f> positions = {};
+  vector<vec3f> normals   = {};
+  vector<vec2f> texcoords = {};
+
+  // subdivision data
+  int  subdivisions = 0;
+  bool catmullclark = true;
+  bool smooth       = true;
+
+  // displacement data
+  float          displacement     = 0;
+  texture_handle displacement_tex = invalid_handle;
+
+  // shape reference
+  shape_handle shape = invalid_handle;
 };
 
 // Scene comprised an array of objects whose memory is owened by the scene.
@@ -217,6 +224,7 @@ struct scene_scene {
   vector<scene_shape>       shapes       = {};
   vector<scene_texture>     textures     = {};
   vector<scene_material>    materials    = {};
+  vector<scene_subdiv>      subdivs      = {};
 
   // names (this will be cleanup significantly later)
   vector<string> camera_names      = {};
@@ -225,6 +233,7 @@ struct scene_scene {
   vector<string> shape_names       = {};
   vector<string> instance_names    = {};
   vector<string> environment_names = {};
+  vector<string> subdiv_names      = {};
 };
 
 }  // namespace yocto
@@ -241,6 +250,7 @@ instance_handle    add_instance(scene_scene& scene, const string& name = "");
 material_handle    add_material(scene_scene& scene, const string& name = "");
 material_handle    add_shape(scene_scene& scene, const string& name = "");
 texture_handle     add_texture(scene_scene& scene, const string& name = "");
+subdiv_handle      add_subdiv(scene_scene& scene, const string& name = "");
 instance_handle add_complete_instance(scene_scene& scene, const string& name);
 
 // get element from a scene
@@ -251,8 +261,7 @@ scene_instance& get_instance(scene_scene& scene, instance_handle handle);
 scene_material& get_material(scene_scene& scene, material_handle handle);
 scene_shape&    get_shape(scene_scene& scene, shape_handle handle);
 scene_texture&  get_texture(scene_scene& scene, texture_handle handle);
-scene_instance& get_complete_instance(
-    scene_scene& scene, instance_handle handle);
+scene_subdiv&   get_subdiv(scene_scene& scene, subdiv_handle handle);
 
 // get element from a scene
 const scene_camera& get_camera(const scene_scene& scene, camera_handle handle);
@@ -265,8 +274,7 @@ const scene_material& get_material(
 const scene_shape&   get_shape(const scene_scene& scene, shape_handle handle);
 const scene_texture& get_texture(
     const scene_scene& scene, texture_handle handle);
-const scene_instance& get_complete_instance(
-    const scene_scene& scene, instance_handle handle);
+const scene_subdiv& get_subdiv(const scene_scene& scene, subdiv_handle handle);
 
 // add missing elements
 void add_cameras(scene_scene& scene);
@@ -292,6 +300,7 @@ string get_shape_name(const scene_scene& scene, int idx);
 string get_texture_name(const scene_scene& scene, int idx);
 string get_instance_name(const scene_scene& scene, int idx);
 string get_material_name(const scene_scene& scene, int idx);
+string get_subdiv_name(const scene_scene& scene, int idx);
 
 string get_camera_name(const scene_scene& scene, const scene_camera& camera);
 string get_environment_name(
@@ -302,6 +311,7 @@ string get_instance_name(
     const scene_scene& scene, const scene_instance& instance);
 string get_material_name(
     const scene_scene& scene, const scene_material& material);
+string get_subdiv_name(const scene_scene& scene, const scene_subdiv& subdiv);
 
 }  // namespace yocto
 

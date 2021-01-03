@@ -120,41 +120,68 @@ texture_handle add_texture(scene_scene& scene, const string& name,
   }
   return handle;
 }
-shape_handle add_shape(scene_scene& scene, const string& name,
-    const quads_shape& shape_data, int subdivisions = 0, float displacement = 0,
-    texture_handle displacement_tex = invalid_handle) {
-  auto  handle           = add_shape(scene, name);
-  auto& shape            = get_shape(scene, handle);
-  shape.points           = shape_data.points;
-  shape.lines            = shape_data.lines;
-  shape.triangles        = shape_data.triangles;
-  shape.quads            = shape_data.quads;
-  shape.positions        = shape_data.positions;
-  shape.normals          = shape_data.normals;
-  shape.texcoords        = shape_data.texcoords;
-  shape.colors           = shape_data.colors;
-  shape.radius           = shape_data.radius;
-  shape.subdivisions     = subdivisions;
-  shape.smooth           = subdivisions > 0 || displacement_tex;
-  shape.displacement     = displacement;
-  shape.displacement_tex = displacement_tex;
+shape_handle add_shape(
+    scene_scene& scene, const string& name, const quads_shape& shape_data) {
+  auto  handle    = add_shape(scene, name);
+  auto& shape     = get_shape(scene, handle);
+  shape.points    = shape_data.points;
+  shape.lines     = shape_data.lines;
+  shape.triangles = shape_data.triangles;
+  shape.quads     = shape_data.quads;
+  shape.positions = shape_data.positions;
+  shape.normals   = shape_data.normals;
+  shape.texcoords = shape_data.texcoords;
+  shape.colors    = shape_data.colors;
+  shape.radius    = shape_data.radius;
   return handle;
 }
-shape_handle add_shape(scene_scene& scene, const string& name,
-    const quads_fvshape& shape_data, int subdivisions = 0,
+shape_handle add_shape(
+    scene_scene& scene, const string& name, const fvshape_data& shape_data) {
+  auto  handle = add_shape(scene, name);
+  auto& shape  = get_shape(scene, handle);
+  std::tie(shape.quads, shape.positions, shape.normals, shape.texcoords) =
+      split_facevarying(shape_data.quadspos, shape_data.quadsnorm,
+          shape_data.quadstexcoord, shape_data.positions, shape_data.normals,
+          shape_data.texcoords);
+  return handle;
+}
+subdiv_handle add_subdiv(scene_scene& scene, const string& name,
+    const quads_shape& shape_data, shape_handle shape, int subdivisions = 0,
     float displacement = 0, texture_handle displacement_tex = invalid_handle) {
-  auto  handle           = add_shape(scene, name);
-  auto& shape            = get_shape(scene, handle);
-  shape.quadspos         = shape_data.quadspos;
-  shape.quadsnorm        = shape_data.quadsnorm;
-  shape.quadstexcoord    = shape_data.quadstexcoord;
-  shape.positions        = shape_data.positions;
-  shape.normals          = shape_data.normals;
-  shape.texcoords        = shape_data.texcoords;
-  shape.subdivisions     = subdivisions;
-  shape.smooth           = subdivisions > 0 || displacement_tex;
-  shape.displacement     = displacement;
-  shape.displacement_tex = displacement_tex;
+  auto  handle    = add_subdiv(scene, name);
+  auto& subdiv    = get_subdiv(scene, handle);
+  auto& quads     = (!shape_data.quads.empty())
+                        ? shape_data.quads
+                        : triangles_to_quads(shape_data.triangles);
+  subdiv.quadspos = quads;
+  if (!shape_data.normals.empty()) subdiv.quadsnorm = quads;
+  if (!shape_data.texcoords.empty()) subdiv.quadstexcoord = quads;
+  subdiv.positions        = shape_data.positions;
+  subdiv.normals          = shape_data.normals;
+  subdiv.texcoords        = shape_data.texcoords;
+  subdiv.shape            = shape;
+  subdiv.subdivisions     = subdivisions;
+  subdiv.smooth           = subdivisions > 0 || displacement_tex;
+  subdiv.displacement     = displacement;
+  subdiv.displacement_tex = displacement_tex;
+  return handle;
+}
+subdiv_handle add_subdiv(scene_scene& scene, const string& name,
+    const quads_fvshape& subdiv_data, shape_handle shape, int subdivisions = 0,
+    float displacement = 0, texture_handle displacement_tex = invalid_handle) {
+  auto  handle            = add_subdiv(scene, name);
+  auto& subdiv            = get_subdiv(scene, handle);
+  subdiv.quadspos         = subdiv_data.quadspos;
+  subdiv.quadsnorm        = subdiv_data.quadsnorm;
+  subdiv.quadstexcoord    = subdiv_data.quadstexcoord;
+  subdiv.positions        = subdiv_data.positions;
+  subdiv.normals          = subdiv_data.normals;
+  subdiv.texcoords        = subdiv_data.texcoords;
+  subdiv.shape            = shape;
+  subdiv.subdivisions     = subdivisions;
+  subdiv.smooth           = subdivisions > 0 || displacement_tex;
+  subdiv.displacement     = displacement;
+  subdiv.displacement_tex = displacement_tex;
   return handle;
 }
 material_handle add_emission_material(scene_scene& scene, const string& name,
@@ -439,6 +466,7 @@ void make_test(scene_scene& scene, const test_params& params) {
     } break;
   }
   auto shapes = vector<shape_handle>{}, shapesi = vector<shape_handle>{};
+  auto subdivs   = vector<subdiv_handle>{};
   auto materials = vector<material_handle>{};
   switch (params.shapes) {
     case test_shapes_type::features1: {
@@ -448,20 +476,24 @@ void make_test(scene_scene& scene, const test_params& params) {
     } break;
     case test_shapes_type::features2: {
       shapes  = {add_shape(scene, "sphere", make_sphere(32, 0.075, 1)),
-          add_shape(scene, "suzanne", make_monkey(0.075f * 0.8f), 2),
+          add_shape(scene, "suzanne", make_monkey(0.075f * 0.8f)),
           add_shape(scene, "hair",
               make_hair(make_sphere(32, 0.075f * 0.8f, 1), {4, 65536},
                   {0.1f * 0.15f, 0.1f * 0.15f},
                   {0.001f * 0.15f, 0.0005f * 0.15f}, {0.03, 100})),
-          add_shape(scene, "displaced", make_sphere(128, 0.075f, 1), 0, 0.025,
-              add_texture(scene, "bumps-displacement", make_bumps({1024, 1024}),
-                  false, true)),
+          add_shape(scene, "displaced", make_sphere(128, 0.075f, 1)),
           add_shape(scene, "cube",
               make_rounded_box({32, 32, 32}, {0.075, 0.075, 0.075}, {1, 1, 1},
                   0.3 * 0.075f))};
       shapesi = {invalid_handle, invalid_handle,
           add_shape(scene, "hairi", make_sphere(32, 0.075f * 0.8f, 1)),
           invalid_handle, invalid_handle};
+      subdivs = {add_subdiv(scene, "suzanne", make_monkey(0.075f * 0.8f),
+                     shapes[1], 2),
+          add_subdiv(scene, "displaced", make_sphere(128, 0.075f, 1), shapes[3],
+              0, 0.025,
+              add_texture(scene, "bumps-displacement", make_bumps({1024, 1024}),
+                  false, true))};
     } break;
     case test_shapes_type::rows: {
       auto bunny  = add_shape(scene, "bunny", make_bunny(0.075));
@@ -490,14 +522,19 @@ void make_test(scene_scene& scene, const test_params& params) {
     } break;
     case test_shapes_type::shapes2: {
       shapes = {
-          add_shape(scene, "cube-subdiv", make_fvcube(0.075), 4),
-          add_shape(scene, "suzanne-subdiv", make_monkey(0.075), 2),
-          add_shape(scene, "displaced", make_sphere(128, 0.075f, 1), 0, 0.025,
-              add_texture(scene, "bumps-displacement", make_bumps({1024, 1024}),
-                  false, true)),
+          add_shape(scene, "cube-subdiv", make_fvcube(0.075)),
+          add_shape(scene, "suzanne-subdiv", make_monkey(0.075)),
+          add_shape(scene, "displaced", make_sphere(128, 0.075f, 1)),
           add_shape(scene, "bunny", make_bunny(0.075)),
           add_shape(scene, "teapot", make_sphere(32, 0.075, 1)),
       };
+      subdivs = {
+          add_subdiv(scene, "cube-subdiv", make_fvcube(0.075), shapes[0], 4),
+          add_subdiv(scene, "suzanne-subdiv", make_monkey(0.075), shapes[1], 2),
+          add_subdiv(scene, "displaced", make_sphere(128, 0.075f, 1), shapes[2],
+              0, 0.025,
+              add_texture(scene, "bumps-displacement", make_bumps({1024, 1024}),
+                  false, true))};
     } break;
     case test_shapes_type::shapes3: {
       shapes = {
