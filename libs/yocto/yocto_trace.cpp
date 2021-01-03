@@ -116,21 +116,23 @@ trace_bsdf eval_bsdf(const scene_scene* scene, const scene_instance* instance,
   auto material = get_material(scene, instance->material);
   auto texcoord = eval_texcoord(scene, instance, element, uv);
   auto color = material->color * xyz(eval_color(scene, instance, element, uv)) *
-               xyz(eval_texture(material->color_tex, texcoord, false));
+               xyz(eval_texture(scene, material->color_tex, texcoord, false));
   auto specular = material->specular *
-                  eval_texture(material->specular_tex, texcoord, true).x;
+                  eval_texture(scene, material->specular_tex, texcoord, true).x;
   auto metallic = material->metallic *
-                  eval_texture(material->metallic_tex, texcoord, true).x;
-  auto roughness = material->roughness *
-                   eval_texture(material->roughness_tex, texcoord, true).x;
+                  eval_texture(scene, material->metallic_tex, texcoord, true).x;
+  auto roughness =
+      material->roughness *
+      eval_texture(scene, material->roughness_tex, texcoord, true).x;
   auto ior  = material->ior;
   auto coat = material->coat *
-              eval_texture(material->coat_tex, texcoord, true).x;
-  auto transmission = material->transmission *
-                      eval_texture(material->emission_tex, texcoord, true).x;
+              eval_texture(scene, material->coat_tex, texcoord, true).x;
+  auto transmission =
+      material->transmission *
+      eval_texture(scene, material->emission_tex, texcoord, true).x;
   auto translucency =
       material->translucency *
-      eval_texture(material->translucency_tex, texcoord, true).x;
+      eval_texture(scene, material->translucency_tex, texcoord, true).x;
   auto thin = material->thin || material->transmission == 0;
 
   // factors
@@ -201,17 +203,18 @@ trace_vsdf eval_vsdf(const scene_scene* scene, const scene_instance* instance,
   // initialize factors
   auto texcoord = eval_texcoord(scene, instance, element, uv);
   auto color = material->color * xyz(eval_color(scene, instance, element, uv)) *
-               xyz(eval_texture(material->color_tex, texcoord, false));
-  auto transmission = material->transmission *
-                      eval_texture(material->emission_tex, texcoord, true).x;
+               xyz(eval_texture(scene, material->color_tex, texcoord, false));
+  auto transmission =
+      material->transmission *
+      eval_texture(scene, material->emission_tex, texcoord, true).x;
   auto translucency =
       material->translucency *
-      eval_texture(material->translucency_tex, texcoord, true).x;
+      eval_texture(scene, material->translucency_tex, texcoord, true).x;
   auto thin = material->thin ||
               (material->transmission == 0 && material->translucency == 0);
   auto scattering =
       material->scattering *
-      xyz(eval_texture(material->scattering_tex, texcoord, false));
+      xyz(eval_texture(scene, material->scattering_tex, texcoord, false));
   auto scanisotropy = material->scanisotropy;
   auto trdepth      = material->trdepth;
 
@@ -548,8 +551,8 @@ static vec3f sample_lights(const trace_scene* scene, const trace_lights* lights,
     return normalize(lposition - position);
   } else if (light->environment != nullptr) {
     auto environment = light->environment;
-    if (environment->emission_tex != nullptr) {
-      auto emission_tex = environment->emission_tex;
+    if (environment->emission_tex != invalid_handle) {
+      auto emission_tex = get_texture(scene, environment->emission_tex);
       auto idx          = sample_discrete_cdf(light->elements_cdf, rel);
       auto size         = texture_size(emission_tex);
       auto uv           = vec2f{
@@ -593,8 +596,8 @@ static float sample_lights_pdf(const trace_scene* scene, const trace_bvh* bvh,
       pdf += lpdf;
     } else if (light->environment != nullptr) {
       auto environment = light->environment;
-      if (environment->emission_tex != nullptr) {
-        auto emission_tex = environment->emission_tex;
+      if (environment->emission_tex != invalid_handle) {
+        auto emission_tex = get_texture(scene, environment->emission_tex);
         auto size         = texture_size(emission_tex);
         auto wl = transform_direction(inverse(environment->frame), direction);
         auto texcoord = vec2f{atan2(wl.z, wl.x) / (2 * pif),
@@ -999,7 +1002,7 @@ static vec4f trace_albedo(const trace_scene* scene, const trace_bvh* bvh,
   }
 
   auto albedo = material->color * xyz(color) *
-                xyz(eval_texture(material->color_tex, texcoord, false));
+                xyz(eval_texture(scene, material->color_tex, texcoord, false));
 
   // handle opacity
   if (opacity < 1.0f) {
@@ -1216,8 +1219,8 @@ void init_lights(trace_lights* lights, const trace_scene* scene,
     auto light         = add_light(lights);
     light->instance    = nullptr;
     light->environment = environment;
-    if (environment->emission_tex != nullptr) {
-      auto texture        = environment->emission_tex;
+    if (environment->emission_tex != invalid_handle) {
+      auto texture        = get_texture(scene, environment->emission_tex);
       auto size           = texture_size(texture);
       light->elements_cdf = vector<float>(size.x * size.y);
       if (size != zero2i) {

@@ -420,11 +420,12 @@ void add_materials(scene_scene* scene) {
 
 // Add a sky environment
 void add_sky(scene_scene* scene, float sun_angle) {
-  auto texture          = get_texture(scene, add_texture(scene, "sky"));
+  auto thandle          = add_texture(scene, "sky");
+  auto texture          = get_texture(scene, thandle);
   texture->hdr          = make_sunsky({1024, 512}, sun_angle);
   auto environment      = get_environment(scene, add_environment(scene, "sky"));
   environment->emission = {1, 1, 1};
-  environment->emission_tex = texture;
+  environment->emission_tex = thandle;
 }
 
 // get named camera or default if camera is empty
@@ -521,7 +522,7 @@ namespace yocto {
 
 #if 1
 
-void tesselate_shape(scene_shape* shape) {
+void tesselate_shape(scene_scene* scene, scene_shape* shape) {
   if (shape->subdivisions > 0) {
     if (!shape->points.empty()) {
       throw std::runtime_error("cannot subdivide points");
@@ -601,7 +602,7 @@ void tesselate_shape(scene_shape* shape) {
     shape->subdivisions = 0;
   }
 
-  if (shape->displacement != 0 && shape->displacement_tex != nullptr) {
+  if (shape->displacement != 0 && shape->displacement_tex != invalid_handle) {
     if (shape->texcoords.empty())
       throw std::runtime_error("missing texture coordinates");
 
@@ -613,9 +614,10 @@ void tesselate_shape(scene_shape* shape) {
                                    shape->triangles, shape->positions)
                              : quads_normals(shape->quads, shape->positions);
       for (auto idx = 0; idx < shape->positions.size(); idx++) {
-        auto disp = mean(
-            eval_texture(shape->displacement_tex, shape->texcoords[idx], true));
-        if (!shape->displacement_tex->ldr.empty()) disp -= 0.5f;
+        auto diplacement_tex = get_texture(scene, shape->displacement_tex);
+        auto disp            = mean(
+            eval_texture(diplacement_tex, shape->texcoords[idx], true));
+        if (!diplacement_tex->ldr.empty()) disp -= 0.5f;
         shape->positions[idx] += shape->normals[idx] * shape->displacement *
                                  disp;
       }
@@ -635,9 +637,10 @@ void tesselate_shape(scene_shape* shape) {
         auto qpos = shape->quadspos[fid];
         auto qtxt = shape->quadstexcoord[fid];
         for (auto i = 0; i < 4; i++) {
-          auto disp = mean(eval_texture(
-              shape->displacement_tex, shape->texcoords[qtxt[i]], true));
-          if (!shape->displacement_tex->ldr.empty()) disp -= 0.5f;
+          auto displacement_tex = get_texture(scene, shape->displacement_tex);
+          auto disp             = mean(
+              eval_texture(displacement_tex, shape->texcoords[qtxt[i]], true));
+          if (!displacement_tex->ldr.empty()) disp -= 0.5f;
           offset[qpos[i]] += shape->displacement * disp;
           count[qpos[i]] += 1;
         }
@@ -653,7 +656,7 @@ void tesselate_shape(scene_shape* shape) {
     }
 
     shape->displacement     = 0;
-    shape->displacement_tex = nullptr;
+    shape->displacement_tex = invalid_handle;
   }
   if (!shape->quadspos.empty()) {
     std::tie(shape->quads, shape->positions, shape->normals, shape->texcoords) =
@@ -828,7 +831,7 @@ void tesselate_shapes(
   // tesselate shapes
   for (auto shape : scene->shapes) {
     if (progress_cb) progress_cb("tesselate shape", progress.x++, progress.y);
-    tesselate_shape(shape);
+    tesselate_shape(scene, shape);
   }
 
   // done
@@ -899,6 +902,15 @@ vec4f eval_texture(const scene_texture* texture, const vec2f& uv,
          lookup_texture(texture, {i, jj}, ldr_as_linear) * (1 - u) * v +
          lookup_texture(texture, {ii, j}, ldr_as_linear) * u * (1 - v) +
          lookup_texture(texture, {ii, jj}, ldr_as_linear) * u * v;
+}
+
+// Helpers
+vec4f eval_texture(const scene_scene* scene, texture_handle texture,
+    const vec2f& uv, bool ldr_as_linear, bool no_interpolation,
+    bool clamp_to_edge) {
+  if (texture == invalid_handle) return {1, 1, 1, 1};
+  return eval_texture(
+      get_texture(scene, texture), uv, ldr_as_linear, no_interpolation);
 }
 
 // Generates a ray from a camera for yimg::image plane coordinate uv and
@@ -1101,20 +1113,20 @@ pair<vec3f, vec3f> eval_element_tangents(
 
 vec3f eval_normalmap(const scene_scene* scene, const scene_instance* instance,
     int element, const vec2f& uv) {
-  auto shape      = get_shape(scene, instance->shape);
-  auto material   = get_material(scene, instance->material);
-  auto normal_tex = material->normal_tex;
+  auto shape    = get_shape(scene, instance->shape);
+  auto material = get_material(scene, instance->material);
   // apply normal mapping
   auto normal   = eval_normal(scene, instance, element, uv);
   auto texcoord = eval_texcoord(scene, instance, element, uv);
-  if (normal_tex != nullptr &&
+  if (material->normal_tex != invalid_handle &&
       (!shape->triangles.empty() || !shape->quads.empty())) {
-    auto normalmap = -1 + 2 * xyz(eval_texture(normal_tex, texcoord, true));
-    auto [tu, tv]  = eval_element_tangents(scene, instance, element);
-    auto frame     = frame3f{tu, tv, normal, zero3f};
-    frame.x        = orthonormalize(frame.x, frame.z);
-    frame.y        = normalize(cross(frame.z, frame.x));
-    auto flip_v    = dot(frame.y, tv) < 0;
+    auto normal_tex = get_texture(scene, material->normal_tex);
+    auto normalmap  = -1 + 2 * xyz(eval_texture(normal_tex, texcoord, true));
+    auto [tu, tv]   = eval_element_tangents(scene, instance, element);
+    auto frame      = frame3f{tu, tv, normal, zero3f};
+    frame.x         = orthonormalize(frame.x, frame.z);
+    frame.y         = normalize(cross(frame.z, frame.x));
+    auto flip_v     = dot(frame.y, tv) < 0;
     normalmap.y *= flip_v ? 1 : -1;  // flip vertical axis
     normal = transform_normal(frame, normalmap);
   }
@@ -1129,7 +1141,7 @@ vec3f eval_shading_normal(const scene_scene* scene,
   auto material = get_material(scene, instance->shape);
   if (!shape->triangles.empty() || !shape->quads.empty()) {
     auto normal = eval_normal(scene, instance, element, uv);
-    if (material->normal_tex != nullptr) {
+    if (material->normal_tex != invalid_handle) {
       normal = eval_normalmap(scene, instance, element, uv);
     }
     if (!material->thin) return normal;
@@ -1175,7 +1187,7 @@ vec3f eval_environment(const scene_scene* scene,
       atan2(wl.z, wl.x) / (2 * pif), acos(clamp(wl.y, -1.0f, 1.0f)) / pif};
   if (texcoord.x < 0) texcoord.x += 1;
   return environment->emission *
-         xyz(eval_texture(environment->emission_tex, texcoord));
+         xyz(eval_texture(scene, environment->emission_tex, texcoord));
 }
 
 // Evaluate all environment color.
@@ -1188,37 +1200,42 @@ vec3f eval_environment(const scene_scene* scene, const vec3f& direction) {
 }
 
 // Evaluate point
-scene_material_sample eval_material(
+scene_material_sample eval_material(const scene_scene* scene,
     const scene_material* material, const vec2f& texcoord) {
-  auto mat     = scene_material_sample{};
-  mat.emission = material->emission *
-                 xyz(eval_texture(material->emission_tex, texcoord, false));
+  auto mat = scene_material_sample{};
+  mat.emission =
+      material->emission *
+      xyz(eval_texture(scene, material->emission_tex, texcoord, false));
   mat.color = material->color *
-              xyz(eval_texture(material->color_tex, texcoord, false));
+              xyz(eval_texture(scene, material->color_tex, texcoord, false));
   mat.specular = material->specular *
-                 eval_texture(material->specular_tex, texcoord, true).x;
+                 eval_texture(scene, material->specular_tex, texcoord, true).x;
   mat.metallic = material->metallic *
-                 eval_texture(material->metallic_tex, texcoord, true).x;
-  mat.roughness = material->roughness *
-                  eval_texture(material->roughness_tex, texcoord, true).x;
+                 eval_texture(scene, material->metallic_tex, texcoord, true).x;
+  mat.roughness =
+      material->roughness *
+      eval_texture(scene, material->roughness_tex, texcoord, true).x;
   mat.ior  = material->ior;
   mat.coat = material->coat *
-             eval_texture(material->coat_tex, texcoord, true).x;
-  mat.transmission = material->transmission *
-                     eval_texture(material->emission_tex, texcoord, true).x;
-  mat.translucency = material->translucency *
-                     eval_texture(material->translucency_tex, texcoord, true).x;
+             eval_texture(scene, material->coat_tex, texcoord, true).x;
+  mat.transmission =
+      material->transmission *
+      eval_texture(scene, material->emission_tex, texcoord, true).x;
+  mat.translucency =
+      material->translucency *
+      eval_texture(scene, material->translucency_tex, texcoord, true).x;
   mat.opacity = material->opacity *
-                eval_texture(material->opacity_tex, texcoord, true).x;
-  mat.thin       = material->thin || material->transmission == 0;
-  mat.scattering = material->scattering *
-                   xyz(eval_texture(material->scattering_tex, texcoord, false));
+                eval_texture(scene, material->opacity_tex, texcoord, true).x;
+  mat.thin = material->thin || material->transmission == 0;
+  mat.scattering =
+      material->scattering *
+      xyz(eval_texture(scene, material->scattering_tex, texcoord, false));
   mat.scanisotropy = material->scanisotropy;
   mat.trdepth      = material->trdepth;
-  mat.normalmap =
-      material->normal_tex != nullptr
-          ? -1 + 2 * xyz(eval_texture(material->normal_tex, texcoord, true))
-          : vec3f{0, 0, 1};
+  mat.normalmap    = material->normal_tex != invalid_handle
+                         ? -1 + 2 * xyz(eval_texture(scene, material->normal_tex,
+                                     texcoord, true))
+                         : vec3f{0, 0, 1};
   return mat;
 }
 
@@ -1232,7 +1249,7 @@ vec3f eval_emission(const scene_scene* scene, const scene_instance* instance,
   auto material = get_material(scene, instance->material);
   auto texcoord = eval_texcoord(scene, instance, element, uv);
   return material->emission *
-         xyz(eval_texture(material->emission_tex, texcoord));
+         xyz(eval_texture(scene, material->emission_tex, texcoord));
 }
 
 // Eval material to obtain emission, brdf and opacity.
@@ -1241,7 +1258,7 @@ float eval_opacity(const scene_scene* scene, const scene_instance* instance,
   auto material = get_material(scene, instance->material);
   auto texcoord = eval_texcoord(scene, instance, element, uv);
   auto opacity  = material->opacity *
-                 eval_texture(material->opacity_tex, texcoord, true).x;
+                 eval_texture(scene, material->opacity_tex, texcoord, true).x;
   if (opacity > 0.999f) opacity = 1;
   return opacity;
 }

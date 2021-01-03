@@ -130,18 +130,18 @@ struct scene_material {
   bool  thin         = true;
 
   // textures
-  scene_texture* emission_tex     = nullptr;
-  scene_texture* color_tex        = nullptr;
-  scene_texture* specular_tex     = nullptr;
-  scene_texture* metallic_tex     = nullptr;
-  scene_texture* roughness_tex    = nullptr;
-  scene_texture* transmission_tex = nullptr;
-  scene_texture* translucency_tex = nullptr;
-  scene_texture* spectint_tex     = nullptr;
-  scene_texture* scattering_tex   = nullptr;
-  scene_texture* coat_tex         = nullptr;
-  scene_texture* opacity_tex      = nullptr;
-  scene_texture* normal_tex       = nullptr;
+  texture_handle emission_tex     = invalid_handle;
+  texture_handle color_tex        = invalid_handle;
+  texture_handle specular_tex     = invalid_handle;
+  texture_handle metallic_tex     = invalid_handle;
+  texture_handle roughness_tex    = invalid_handle;
+  texture_handle transmission_tex = invalid_handle;
+  texture_handle translucency_tex = invalid_handle;
+  texture_handle spectint_tex     = invalid_handle;
+  texture_handle scattering_tex   = invalid_handle;
+  texture_handle coat_tex         = invalid_handle;
+  texture_handle opacity_tex      = invalid_handle;
+  texture_handle normal_tex       = invalid_handle;
 };
 
 // Shape data represented as indexed meshes of elements.
@@ -175,7 +175,7 @@ struct scene_shape {
 
   // displacement data [experimental]
   float          displacement     = 0;
-  scene_texture* displacement_tex = nullptr;
+  texture_handle displacement_tex = invalid_handle;
 
   // element cdf for sampling
   vector<float> elements_cdf = {};
@@ -198,7 +198,7 @@ struct scene_instance {
 struct scene_environment {
   frame3f        frame        = identity3x4f;
   vec3f          emission     = {0, 0, 0};
-  scene_texture* emission_tex = nullptr;
+  texture_handle emission_tex = invalid_handle;
 };
 
 // Scene comprised an array of objects whose memory is owened by the scene.
@@ -330,7 +330,7 @@ using progress_callback =
 // Apply subdivision and displacement rules.
 void tesselate_shapes(
     scene_scene* scene, const progress_callback& progress_cb = {});
-void tesselate_shape(scene_shape* shape);
+void tesselate_shape(scene_scene* scene, scene_shape* shape);
 
 }  // namespace yocto
 
@@ -349,6 +349,9 @@ vec4f lookup_texture(
     const scene_texture* texture, const vec2i& ij, bool ldr_as_linear = false);
 vec4f eval_texture(const scene_texture* texture, const vec2f& uv,
     bool ldr_as_linear = false, bool no_interpolation = false,
+    bool clamp_to_edge = false);
+vec4f eval_texture(const scene_scene* scene, texture_handle texture,
+    const vec2f& uv, bool ldr_as_linear = false, bool no_interpolation = false,
     bool clamp_to_edge = false);
 
 // Evaluate instance properties

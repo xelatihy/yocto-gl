@@ -365,8 +365,8 @@ static bool load_json_scene(const string& filename, sceneio_scene* scene,
   auto js = get_croot(js_tree);
 
   // reference disctionaries
-  auto texture_map = unordered_map<string, pair<sceneio_texture*, bool>>{
-      {"", {nullptr, true}}};
+  auto texture_map = unordered_map<string, pair<texture_handle, bool>>{
+      {"", {invalid_handle, true}}};
   auto shape_map = unordered_map<string, pair<shape_handle, bool>>{
       {"", {invalid_handle, true}}};
   auto material_map = unordered_map<string, pair<material_handle, bool>>{
@@ -406,15 +406,15 @@ static bool load_json_scene(const string& filename, sceneio_scene* scene,
 
   // parse json reference
   auto get_texture = [scene, &texture_map](
-                         json_ctview js, sceneio_texture*& value) -> bool {
+                         json_ctview js, texture_handle& value) -> bool {
     auto name = ""s;
     if (!get_value(js, name)) return false;
     auto it = texture_map.find(name);
     if (it != texture_map.end()) {
       value = it->second.first;
-      return it->second.first != nullptr;
+      return it->second.first != invalid_handle;
     }
-    auto texture      = yocto::get_texture(scene, add_texture(scene, name));
+    auto texture      = add_texture(scene, name);
     texture_map[name] = {texture, false};
     value             = texture;
     return true;
@@ -669,7 +669,7 @@ static bool load_json_scene(const string& filename, sceneio_scene* scene,
   // load textures
   texture_map.erase("");
   for (auto [name, value] : texture_map) {
-    auto texture = value.first;
+    auto texture = yocto::get_texture(scene, value.first);
     if (progress_cb) progress_cb("load texture", progress.x++, progress.y);
     auto path = make_filename(
         name, "textures", {".hdr", ".exr", ".png", ".jpg"});
@@ -800,7 +800,7 @@ static bool save_json_scene(const string& filename, const sceneio_scene* scene,
       if (environment->emission != def_env.emission) {
         insert_value(elemnt, "emission", environment->emission);
       }
-      if (environment->emission_tex != nullptr) {
+      if (environment->emission_tex != invalid_handle) {
         insert_value(elemnt, "emission_tex",
             get_texture_name(scene, environment->emission_tex));
       }
@@ -854,47 +854,47 @@ static bool save_json_scene(const string& filename, const sceneio_scene* scene,
       if (material->thin != def_material.thin) {
         insert_value(elment, "thin", material->thin);
       }
-      if (material->emission_tex != nullptr) {
+      if (material->emission_tex != invalid_handle) {
         insert_value(elment, "emission_tex",
             get_texture_name(scene, material->emission_tex));
       }
-      if (material->color_tex != nullptr) {
+      if (material->color_tex != invalid_handle) {
         insert_value(
             elment, "color_tex", get_texture_name(scene, material->color_tex));
       }
-      if (material->metallic_tex != nullptr) {
+      if (material->metallic_tex != invalid_handle) {
         insert_value(elment, "metallic_tex",
             get_texture_name(scene, material->metallic_tex));
       }
-      if (material->specular_tex != nullptr) {
+      if (material->specular_tex != invalid_handle) {
         insert_value(elment, "specular_tex",
             get_texture_name(scene, material->specular_tex));
       }
-      if (material->roughness_tex != nullptr) {
+      if (material->roughness_tex != invalid_handle) {
         insert_value(elment, "roughness_tex",
             get_texture_name(scene, material->roughness_tex));
       }
-      if (material->transmission_tex != nullptr) {
+      if (material->transmission_tex != invalid_handle) {
         insert_value(elment, "transmission_tex",
             get_texture_name(scene, material->transmission_tex));
       }
-      if (material->translucency_tex != nullptr) {
+      if (material->translucency_tex != invalid_handle) {
         insert_value(elment, "translucency_tex",
             get_texture_name(scene, material->translucency_tex));
       }
-      if (material->scattering_tex != nullptr) {
+      if (material->scattering_tex != invalid_handle) {
         insert_value(elment, "scattering_tex",
             get_texture_name(scene, material->scattering_tex));
       }
-      if (material->coat_tex != nullptr) {
+      if (material->coat_tex != invalid_handle) {
         insert_value(
             elment, "coat_tex", get_texture_name(scene, material->coat_tex));
       }
-      if (material->opacity_tex != nullptr) {
+      if (material->opacity_tex != invalid_handle) {
         insert_value(elment, "opacity_tex",
             get_texture_name(scene, material->opacity_tex));
       }
-      if (material->normal_tex != nullptr) {
+      if (material->normal_tex != invalid_handle) {
         insert_value(elment, "normal_tex",
             get_texture_name(scene, material->normal_tex));
       }
@@ -931,7 +931,7 @@ static bool save_json_scene(const string& filename, const sceneio_scene* scene,
         if (shape->displacement != def_shape.displacement) {
           insert_value(elment, "displacement", shape->displacement);
         }
-        if (shape->displacement_tex != nullptr) {
+        if (shape->displacement_tex != invalid_handle) {
           insert_value(elment, "displacement_tex",
               get_texture_name(scene, shape->displacement_tex));
         }
@@ -1030,27 +1030,29 @@ static bool load_obj_scene(const string& filename, sceneio_scene* scene,
   }
 
   // helper to create texture maps
-  auto ctexture_map = unordered_map<string, sceneio_texture*>{{"", nullptr}};
+  auto ctexture_map = unordered_map<string, texture_handle>{
+      {"", invalid_handle}};
   auto get_ctexture = [&ctexture_map, scene](
-                          const obj_texture& tinfo) -> sceneio_texture* {
+                          const obj_texture& tinfo) -> texture_handle {
     auto path = tinfo.path;
-    if (path.empty()) return nullptr;
+    if (path.empty()) return invalid_handle;
     auto it = ctexture_map.find(path);
     if (it != ctexture_map.end()) return it->second;
-    auto texture       = get_texture(scene, add_texture(scene));
+    auto texture       = add_texture(scene);
     ctexture_map[path] = texture;
     return texture;
   };
 
   // helper to create texture maps
-  auto stexture_map = unordered_map<string, sceneio_texture*>{{"", nullptr}};
+  auto stexture_map = unordered_map<string, texture_handle>{
+      {"", invalid_handle}};
   auto get_stexture = [&stexture_map, scene](
-                          const obj_texture& tinfo) -> sceneio_texture* {
+                          const obj_texture& tinfo) -> texture_handle {
     auto path = tinfo.path;
-    if (path.empty()) return nullptr;
+    if (path.empty()) return invalid_handle;
     auto it = stexture_map.find(path);
     if (it != stexture_map.end()) return it->second;
-    auto texture       = get_texture(scene, add_texture(scene));
+    auto texture       = add_texture(scene);
     stexture_map[path] = texture;
     return texture;
   };
@@ -1150,7 +1152,8 @@ static bool load_obj_scene(const string& filename, sceneio_scene* scene,
 
   // load textures
   ctexture_map.erase("");
-  for (auto [name, texture] : ctexture_map) {
+  for (auto [name, thandle] : ctexture_map) {
+    auto texture = get_texture(scene, thandle);
     if (progress_cb) progress_cb("load texture", progress.x++, progress.y);
     if (!load_image(make_filename(name), texture->hdr, texture->ldr, error))
       return dependent_error();
@@ -1158,7 +1161,8 @@ static bool load_obj_scene(const string& filename, sceneio_scene* scene,
 
   // load textures
   stexture_map.erase("");
-  for (auto [name, texture] : stexture_map) {
+  for (auto [name, thandle] : stexture_map) {
+    auto texture = get_texture(scene, thandle);
     if (progress_cb) progress_cb("load texture", progress.x++, progress.y);
     if (!load_image(make_filename(name), texture->hdr, texture->ldr, error))
       return dependent_error();
@@ -1207,18 +1211,14 @@ static bool save_obj_scene(const string& filename, const sceneio_scene* scene,
   }
 
   // textures
-  auto texture_map = unordered_map<const scene_texture*, int>{};
-  auto get_texture = [&](sceneio_texture* texture) {
-    if (texture == nullptr) return obj_texture{};
-    auto tinfo = obj_texture{};
-    tinfo.path = "textures/" +
-                 scene->texture_names.at(texture_map.at(texture)) +
-                 (!texture->hdr.empty() ? ".hdr"s : ".png"s);
+  auto get_texture = [&](texture_handle texture) {
+    if (texture == invalid_handle) return obj_texture{};
+    auto tinfo  = obj_texture{};
+    auto is_hdr = !yocto::get_texture(scene, texture)->hdr.empty();
+    tinfo.path  = "textures/" + get_texture_name(scene, texture) +
+                 (is_hdr ? ".hdr"s : ".png"s);
     return tinfo;
   };
-  for (auto idx = 0; idx < (int)scene->textures.size(); idx++) {
-    texture_map[scene->textures[idx]] = idx;
-  }
 
   // convert materials and textures
   for (auto material : scene->materials) {
@@ -1295,10 +1295,11 @@ static bool save_obj_scene(const string& filename, const sceneio_scene* scene,
   };
 
   // save textures
+  auto texture_id = 0;
   for (auto texture : scene->textures) {
     if (progress_cb) progress_cb("save texture", progress.x++, progress.y);
-    auto path = make_filename(scene->texture_names.at(texture_map.at(texture)),
-        "textures", (!texture->hdr.empty()) ? ".hdr"s : ".png"s);
+    auto path = make_filename(get_texture_name(scene, texture_id++), "textures",
+        (!texture->hdr.empty()) ? ".hdr"s : ".png"s);
     if (!save_image(path, texture->hdr, texture->ldr, error))
       return dependent_error();
   }
@@ -1553,50 +1554,51 @@ static bool load_gltf_scene(const string& filename, sceneio_scene* scene,
   }
 
   // convert color textures
-  auto ctexture_map = unordered_map<string, sceneio_texture*>{{"", nullptr}};
+  auto ctexture_map = unordered_map<string, texture_handle>{
+      {"", invalid_handle}};
   auto get_ctexture = [&scene, &ctexture_map](
-                          const cgltf_texture_view& ginfo) -> sceneio_texture* {
+                          const cgltf_texture_view& ginfo) -> texture_handle {
     if (ginfo.texture == nullptr || ginfo.texture->image == nullptr)
-      return nullptr;
+      return invalid_handle;
     auto path = string{ginfo.texture->image->uri};
-    if (path.empty()) return nullptr;
+    if (path.empty()) return invalid_handle;
     auto it = ctexture_map.find(path);
     if (it != ctexture_map.end()) return it->second;
-    auto texture       = get_texture(scene, add_texture(scene));
+    auto texture       = add_texture(scene);
     ctexture_map[path] = texture;
     return texture;
   };
   // convert color opacity textures
   auto cotexture_map =
-      unordered_map<string, pair<sceneio_texture*, sceneio_texture*>>{
-          {"", {nullptr, nullptr}}};
+      unordered_map<string, pair<texture_handle, texture_handle>>{
+          {"", {invalid_handle, invalid_handle}}};
   auto get_cotexture = [&scene, &cotexture_map](const cgltf_texture_view& ginfo)
-      -> pair<sceneio_texture*, sceneio_texture*> {
+      -> pair<texture_handle, texture_handle> {
     if (ginfo.texture == nullptr || ginfo.texture->image == nullptr)
-      return {nullptr, nullptr};
+      return {invalid_handle, invalid_handle};
     auto path = string{ginfo.texture->image->uri};
-    if (path.empty()) return {nullptr, nullptr};
+    if (path.empty()) return {invalid_handle, invalid_handle};
     auto it = cotexture_map.find(path);
     if (it != cotexture_map.end()) return it->second;
-    auto color_texture   = get_texture(scene, add_texture(scene));
-    auto opacity_texture = get_texture(scene, add_texture(scene));
+    auto color_texture   = add_texture(scene);
+    auto opacity_texture = add_texture(scene);
     cotexture_map[path]  = {color_texture, opacity_texture};
     return {color_texture, opacity_texture};
   };
   // convert textures
   auto mrtexture_map =
-      unordered_map<string, pair<sceneio_texture*, sceneio_texture*>>{
-          {"", {nullptr, nullptr}}};
+      unordered_map<string, pair<texture_handle, texture_handle>>{
+          {"", {invalid_handle, invalid_handle}}};
   auto get_mrtexture = [&scene, &mrtexture_map](const cgltf_texture_view& ginfo)
-      -> pair<sceneio_texture*, sceneio_texture*> {
+      -> pair<texture_handle, texture_handle> {
     if (ginfo.texture == nullptr || ginfo.texture->image == nullptr)
-      return {nullptr, nullptr};
+      return {invalid_handle, invalid_handle};
     auto path = string{ginfo.texture->image->uri};
-    if (path.empty()) return {nullptr, nullptr};
+    if (path.empty()) return {invalid_handle, invalid_handle};
     auto it = mrtexture_map.find(path);
     if (it != mrtexture_map.end()) return it->second;
-    auto metallic_texture  = get_texture(scene, add_texture(scene));
-    auto roughness_texture = get_texture(scene, add_texture(scene));
+    auto metallic_texture  = add_texture(scene);
+    auto roughness_texture = add_texture(scene);
     mrtexture_map[path]    = {metallic_texture, roughness_texture};
     return {metallic_texture, roughness_texture};
   };
@@ -1606,7 +1608,7 @@ static bool load_gltf_scene(const string& filename, sceneio_scene* scene,
       {nullptr, invalid_handle}};
   for (auto mid = 0; mid < gltf->materials_count; mid++) {
     auto gmaterial         = &gltf->materials[mid];
-    auto mhandle          = add_material(scene);
+    auto mhandle           = add_material(scene);
     auto material          = get_material(scene, mhandle);
     material->emission     = {gmaterial->emissive_factor[0],
         gmaterial->emissive_factor[1], gmaterial->emissive_factor[2]};
@@ -1820,7 +1822,8 @@ static bool load_gltf_scene(const string& filename, sceneio_scene* scene,
 
   // load texture
   ctexture_map.erase("");
-  for (auto [tpath, texture] : ctexture_map) {
+  for (auto [tpath, thandle] : ctexture_map) {
+    auto texture = get_texture(scene, thandle);
     if (progress_cb) progress_cb("load texture", progress.x++, progress.y);
     if (!load_image(path_join(path_dirname(filename), tpath), texture->hdr,
             texture->ldr, error))
@@ -1829,7 +1832,7 @@ static bool load_gltf_scene(const string& filename, sceneio_scene* scene,
 
   // load texture
   cotexture_map.erase("");
-  for (auto [tpath, textures] : cotexture_map) {
+  for (auto [tpath, thandles] : cotexture_map) {
     if (progress_cb) progress_cb("load texture", progress.x++, progress.y);
     auto color_opacityf = image<vec4f>{};
     auto color_opacityb = image<vec4b>{};
@@ -1837,7 +1840,8 @@ static bool load_gltf_scene(const string& filename, sceneio_scene* scene,
             color_opacityb, error))
       return dependent_error();
     if (!color_opacityf.empty()) {
-      auto [ctexture, otexture] = textures;
+      auto ctexture = get_texture(scene, thandles.first);
+      auto otexture = get_texture(scene, thandles.second);
       ctexture->hdr.resize(color_opacityf.imsize());
       otexture->hdr.resize(color_opacityf.imsize());
       auto oempty = true;
@@ -1853,7 +1857,8 @@ static bool load_gltf_scene(const string& filename, sceneio_scene* scene,
       if (oempty) otexture->hdr.clear();
     }
     if (!color_opacityb.empty()) {
-      auto [ctexture, otexture] = textures;
+      auto ctexture = get_texture(scene, thandles.first);
+      auto otexture = get_texture(scene, thandles.second);
       ctexture->ldr.resize(color_opacityb.imsize());
       otexture->ldr.resize(color_opacityb.imsize());
       auto oempty = true;
@@ -1872,7 +1877,7 @@ static bool load_gltf_scene(const string& filename, sceneio_scene* scene,
 
   // load texture
   mrtexture_map.erase("");
-  for (auto [tpath, textures] : mrtexture_map) {
+  for (auto [tpath, thandles] : mrtexture_map) {
     if (progress_cb) progress_cb("load texture", progress.x++, progress.y);
     auto metallic_roughnessf = image<vec4f>{};
     auto metallic_roughnessb = image<vec4b>{};
@@ -1880,7 +1885,8 @@ static bool load_gltf_scene(const string& filename, sceneio_scene* scene,
             metallic_roughnessf, metallic_roughnessb, error))
       return dependent_error();
     if (!metallic_roughnessf.empty()) {
-      auto [mtexture, rtexture] = textures;
+      auto mtexture = get_texture(scene, thandles.first);
+      auto rtexture = get_texture(scene, thandles.second);
       mtexture->hdr.resize(metallic_roughnessf.imsize());
       rtexture->hdr.resize(metallic_roughnessf.imsize());
       for (auto j = 0; j < metallic_roughnessf.height(); j++) {
@@ -1893,7 +1899,8 @@ static bool load_gltf_scene(const string& filename, sceneio_scene* scene,
       }
     }
     if (!metallic_roughnessb.empty()) {
-      auto [mtexture, rtexture] = textures;
+      auto mtexture = get_texture(scene, thandles.first);
+      auto rtexture = get_texture(scene, thandles.second);
       mtexture->ldr.resize(metallic_roughnessb.imsize());
       rtexture->ldr.resize(metallic_roughnessb.imsize());
       for (auto j = 0; j < metallic_roughnessb.height(); j++) {
@@ -1909,10 +1916,10 @@ static bool load_gltf_scene(const string& filename, sceneio_scene* scene,
 
   // remove empty textures
   for (auto material : scene->materials) {
-    if (material->opacity_tex != nullptr) {
-      if (material->opacity_tex->hdr.empty() &&
-          material->opacity_tex->ldr.empty())
-        material->opacity_tex = nullptr;
+    if (material->opacity_tex != invalid_handle) {
+      if (get_texture(scene, material->opacity_tex)->hdr.empty() &&
+          get_texture(scene, material->opacity_tex)->ldr.empty())
+        material->opacity_tex = invalid_handle;
     }
   }
   for (auto& texture : scene->textures) {
@@ -1999,8 +2006,8 @@ static bool save_gltf_scene(const string& filename, const sceneio_scene* scene,
   }
 
   // materials
-  auto textures     = vector<pair<string, image<vec4b>>>{};
-  auto texture_map  = unordered_map<string, int>{};
+  auto textures    = vector<pair<string, image<vec4b>>>{};
+  auto texture_map = unordered_map<string, int>{};
   if (!scene->materials.empty()) {
     auto& ajs = js["materials"];
     ajs       = json::array();
@@ -2016,41 +2023,46 @@ static bool save_gltf_scene(const string& filename, const sceneio_scene* scene,
           material->color.y, material->color.z, material->opacity});
       pjs["metallicFactor"]  = material->metallic;
       pjs["roughnessFactor"] = material->roughness;
-      if (material->emission_tex) {
+      if (material->emission_tex != invalid_handle) {
         auto tname = get_texture_name(
             scene, material->emission_tex);  // TODO(fabio): ldr
         if (texture_map.find(tname) == texture_map.end()) {
-          textures.emplace_back(tname, material->emission_tex->ldr);
+          auto texture = get_texture(scene, material->emission_tex);
+          textures.emplace_back(tname, texture->ldr);
           texture_map[tname] = (int)textures.size() - 1;
         }
         mjs["emissiveTexture"]          = json::object();
         mjs["emissiveTexture"]["index"] = texture_map.at(tname);
       }
-      if (material->normal_tex) {
+      if (material->normal_tex != invalid_handle) {
         auto tname = get_texture_name(
             scene, material->normal_tex);  // TODO(fabio): ldr
         if (texture_map.find(tname) == texture_map.end()) {
-          textures.emplace_back(tname, material->normal_tex->ldr);
+          auto texture = get_texture(scene, material->normal_tex);
+          textures.emplace_back(tname, texture->ldr);
           texture_map[tname] = (int)textures.size() - 1;
         }
         mjs["normalTexture"]          = json::object();
         mjs["normalTexture"]["index"] = texture_map.at(tname);
       }
-      if (material->color_tex) {  // TODO(fabio): opacity
+      if (material->color_tex != invalid_handle) {  // TODO(fabio): opacity
         auto tname = get_texture_name(
             scene, material->color_tex);  // TODO(fabio): ldr
         if (texture_map.find(tname) == texture_map.end()) {
-          textures.emplace_back(tname, material->color_tex->ldr);
+          auto texture = get_texture(scene, material->color_tex);
+          textures.emplace_back(tname, texture->ldr);
           texture_map[tname] = (int)textures.size() - 1;
         }
         pjs["baseColorTexture"]          = json::object();
         pjs["baseColorTexture"]["index"] = texture_map.at(tname);
       }
-      if (material->roughness_tex) {  // TODO(fabio): roughness
+      if (material->roughness_tex !=
+          invalid_handle) {  // TODO(fabio): roughness
         auto tname = get_texture_name(
             scene, material->roughness_tex);  // TODO(fabio): ldr
         if (texture_map.find(tname) == texture_map.end()) {
-          textures.emplace_back(tname, material->roughness_tex->ldr);
+          auto texture = get_texture(scene, material->roughness_tex);
+          textures.emplace_back(tname, texture->ldr);
           texture_map[tname] = (int)textures.size() - 1;
         }
         pjs["metallicRoughnessTexture"]          = json::object();
@@ -2125,7 +2137,7 @@ static bool save_gltf_scene(const string& filename, const sceneio_scene* scene,
     js["accessors"]   = json::array();
     js["bufferViews"] = json::array();
     js["buffers"]     = json::array();
-    auto shape_id = 0;
+    auto shape_id     = 0;
     for (auto shape : scene->shapes) {
       auto& buffer =
           buffers.emplace_back(get_shape_name(scene, shape), vector<byte>{})
@@ -2200,7 +2212,7 @@ static bool save_gltf_scene(const string& filename, const sceneio_scene* scene,
     struct mesh_key_hash {
       size_t operator()(const mesh_key& v) const {
         const std::hash<element_handle> hasher = std::hash<element_handle>();
-        auto                         h      = (size_t)0;
+        auto                            h      = (size_t)0;
         h ^= hasher(v.first) + 0x9e3779b9 + (h << 6) + (h >> 2);
         h ^= hasher(v.second) + 0x9e3779b9 + (h << 6) + (h >> 2);
         return h;
@@ -2222,8 +2234,7 @@ static bool save_gltf_scene(const string& filename, const sceneio_scene* scene,
                       get_material_name(scene, instance->material);
         mjs["primitives"] = json::array();
         mjs["primitives"].push_back(primitives_map.at(instance->shape));
-        mjs["primitives"].back()["material"] =
-            instance->material;
+        mjs["primitives"].back()["material"] = instance->material;
         mesh_map[mesh_key{instance->shape, instance->material}] =
             (int)js["meshes"].size() - 1;
       }
@@ -2335,33 +2346,36 @@ static bool load_pbrt_scene(const string& filename, sceneio_scene* scene,
   }
 
   // convert materials
-  auto ctexture_map = unordered_map<string, sceneio_texture*>{{"", nullptr}};
+  auto ctexture_map = unordered_map<string, texture_handle>{
+      {"", invalid_handle}};
   auto get_ctexture = [&scene, &ctexture_map](
-                          const string& path) -> sceneio_texture* {
-    if (path.empty()) return nullptr;
+                          const string& path) -> texture_handle {
+    if (path.empty()) return invalid_handle;
     auto it = ctexture_map.find(path);
     if (it != ctexture_map.end()) return it->second;
-    auto texture       = get_texture(scene, add_texture(scene));
+    auto texture       = add_texture(scene);
     ctexture_map[path] = texture;
     return texture;
   };
-  auto stexture_map = unordered_map<string, sceneio_texture*>{{"", nullptr}};
+  auto stexture_map = unordered_map<string, texture_handle>{
+      {"", invalid_handle}};
   auto get_stexture = [&scene, &stexture_map](
-                          const string& path) -> sceneio_texture* {
-    if (path.empty()) return nullptr;
+                          const string& path) -> texture_handle {
+    if (path.empty()) return invalid_handle;
     auto it = stexture_map.find(path);
     if (it != stexture_map.end()) return it->second;
-    auto texture       = get_texture(scene, add_texture(scene));
+    auto texture       = add_texture(scene);
     stexture_map[path] = texture;
     return texture;
   };
-  auto atexture_map = unordered_map<string, sceneio_texture*>{{"", nullptr}};
+  auto atexture_map = unordered_map<string, texture_handle>{
+      {"", invalid_handle}};
   auto get_atexture = [&scene, &atexture_map](
-                          const string& path) -> sceneio_texture* {
-    if (path.empty()) return nullptr;
+                          const string& path) -> texture_handle {
+    if (path.empty()) return invalid_handle;
     auto it = atexture_map.find(path);
     if (it != atexture_map.end()) return it->second;
-    auto texture       = get_texture(scene, add_texture(scene));
+    auto texture       = add_texture(scene);
     atexture_map[path] = texture;
     return texture;
   };
@@ -2382,7 +2396,7 @@ static bool load_pbrt_scene(const string& filename, sceneio_scene* scene,
     material->thin         = pmaterial->thin;
     material->color_tex    = get_ctexture(pmaterial->color_tex);
     material->opacity_tex  = get_stexture(pmaterial->opacity_tex);
-    if (material->opacity_tex == nullptr)
+    if (material->opacity_tex == invalid_handle)
       material->opacity_tex = get_atexture(pmaterial->alpha_tex);
     material_map[pmaterial->name] = mhandle;
   }
@@ -2392,7 +2406,7 @@ static bool load_pbrt_scene(const string& filename, sceneio_scene* scene,
 
   // convert shapes
   for (auto pshape : pbrt->shapes) {
-    auto shandle       = add_shape(scene);
+    auto shandle     = add_shape(scene);
     auto shape       = get_shape(scene, shandle);
     shape->positions = pshape->positions;
     shape->normals   = pshape->normals;
@@ -2425,15 +2439,15 @@ static bool load_pbrt_scene(const string& filename, sceneio_scene* scene,
 
   // lights
   for (auto plight : pbrt->lights) {
-    auto instance                = get_instance(scene, add_instance(scene));
-    instance->shape              = add_shape(scene);
-    instance->material           = add_material(scene);
-    instance->frame              = plight->area_frame;
-    auto shape = get_shape(scene, instance->shape);
+    auto instance      = get_instance(scene, add_instance(scene));
+    instance->shape    = add_shape(scene);
+    instance->material = add_material(scene);
+    instance->frame    = plight->area_frame;
+    auto shape         = get_shape(scene, instance->shape);
     shape->triangles   = plight->area_triangles;
     shape->positions   = plight->area_positions;
     shape->normals     = plight->area_normals;
-    auto material = get_material(scene, instance->material);
+    auto material      = get_material(scene, instance->material);
     material->emission = plight->area_emission;
   }
 
@@ -2447,7 +2461,8 @@ static bool load_pbrt_scene(const string& filename, sceneio_scene* scene,
 
   // load texture
   ctexture_map.erase("");
-  for (auto [name, texture] : ctexture_map) {
+  for (auto [name, thandle] : ctexture_map) {
+    auto texture = yocto::get_texture(scene, thandle);
     if (progress_cb) progress_cb("load texture", progress.x++, progress.y);
     if (!load_image(make_filename(name), texture->hdr, texture->ldr, error))
       return dependent_error();
@@ -2455,7 +2470,8 @@ static bool load_pbrt_scene(const string& filename, sceneio_scene* scene,
 
   // load texture
   stexture_map.erase("");
-  for (auto [name, texture] : stexture_map) {
+  for (auto [name, thandle] : stexture_map) {
+    auto texture = yocto::get_texture(scene, thandle);
     if (progress_cb) progress_cb("load texture", progress.x++, progress.y);
     if (!load_image(make_filename(name), texture->hdr, texture->ldr, error))
       return dependent_error();
@@ -2463,7 +2479,8 @@ static bool load_pbrt_scene(const string& filename, sceneio_scene* scene,
 
   // load alpha
   atexture_map.erase("");
-  for (auto [name, texture] : atexture_map) {
+  for (auto [name, thandle] : atexture_map) {
+    auto texture = yocto::get_texture(scene, thandle);
     if (progress_cb) progress_cb("load texture", progress.x++, progress.y);
     if (!load_image(make_filename(name), texture->hdr, texture->ldr, error))
       return dependent_error();
@@ -2513,32 +2530,27 @@ static bool save_pbrt_scene(const string& filename, const sceneio_scene* scene,
   pcamera->resolution = {1280, (int)(1280 / pcamera->aspect)};
 
   // get texture name
-  auto texture_map = unordered_map<const scene_texture*, int>{};
-  auto get_texture = [&](const sceneio_texture* texture) -> string {
-    return texture != nullptr ? scene->texture_names.at(texture_map.at(texture))
-                              : "";
+  auto get_texture = [&](texture_handle texture) -> string {
+    return texture != invalid_handle ? get_texture_name(scene, texture) : "";
   };
-  for (auto idx = 0; idx < (int)scene->textures.size(); idx++) {
-    texture_map[scene->textures[idx]] = idx;
-  }
 
   // convert materials
   auto material_map = unordered_map<material_handle, string>{};
-  auto material_id = 0;
+  auto material_id  = 0;
   for (auto material : scene->materials) {
-    auto pmaterial          = add_material(pbrt);
-    pmaterial->name         = get_material_name(scene, material);
-    pmaterial->emission     = material->emission;
-    pmaterial->color        = material->color;
-    pmaterial->metallic     = material->metallic;
-    pmaterial->specular     = material->specular;
-    pmaterial->transmission = material->transmission;
-    pmaterial->roughness    = material->roughness;
-    pmaterial->ior          = material->ior;
-    pmaterial->opacity      = material->opacity;
-    pmaterial->color_tex    = get_texture(material->color_tex);
-    pmaterial->opacity_tex  = get_texture(material->opacity_tex);
-    material_map[material_id++]  = pmaterial->name;
+    auto pmaterial              = add_material(pbrt);
+    pmaterial->name             = get_material_name(scene, material);
+    pmaterial->emission         = material->emission;
+    pmaterial->color            = material->color;
+    pmaterial->metallic         = material->metallic;
+    pmaterial->specular         = material->specular;
+    pmaterial->transmission     = material->transmission;
+    pmaterial->roughness        = material->roughness;
+    pmaterial->ior              = material->ior;
+    pmaterial->opacity          = material->opacity;
+    pmaterial->color_tex        = get_texture(material->color_tex);
+    pmaterial->opacity_tex      = get_texture(material->opacity_tex);
+    material_map[material_id++] = pmaterial->name;
   }
 
   // convert instances
@@ -2573,10 +2585,11 @@ static bool save_pbrt_scene(const string& filename, const sceneio_scene* scene,
   };
 
   // save textures
+  auto texture_id = 0;
   for (auto texture : scene->textures) {
     if (progress_cb) progress_cb("save texture", progress.x++, progress.y);
-    auto path = make_filename(scene->texture_names.at(texture_map.at(texture)),
-        "textures", (!texture->hdr.empty()) ? ".hdr"s : ".png"s);
+    auto path = make_filename(get_texture_name(scene, texture_id++), "textures",
+        (!texture->hdr.empty()) ? ".hdr"s : ".png"s);
     if (!save_image(path, texture->hdr, texture->ldr, error))
       return dependent_error();
   }
