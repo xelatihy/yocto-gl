@@ -214,9 +214,9 @@ struct scene_scene {
   vector<scene_camera>      cameras      = {};
   vector<scene_instance>    instances    = {};
   vector<scene_environment> environments = {};
-  vector<scene_shape*>      shapes       = {};
+  vector<scene_shape>       shapes       = {};
   vector<scene_texture*>    textures     = {};
-  vector<scene_material*>   materials    = {};
+  vector<scene_material>    materials    = {};
 
   // names (this will be cleanup significantly later)
   vector<string> camera_names      = {};
@@ -226,9 +226,7 @@ struct scene_scene {
   vector<string> instance_names    = {};
   vector<string> environment_names = {};
   // names (this will be cleanup significantly later)
-  unordered_map<const scene_texture*, string>  texture_map  = {};
-  unordered_map<const scene_material*, string> material_map = {};
-  unordered_map<const scene_shape*, string>    shape_map    = {};
+  unordered_map<const scene_texture*, string> texture_map = {};
 
   // cleanup
   ~scene_scene();
@@ -255,8 +253,8 @@ scene_camera&      get_camera(scene_scene* scene, camera_handle handle);
 scene_environment& get_environment(
     scene_scene* scene, environment_handle handle);
 scene_instance& get_instance(scene_scene* scene, instance_handle handle);
-scene_material* get_material(scene_scene* scene, material_handle handle);
-scene_shape*    get_shape(scene_scene* scene, shape_handle handle);
+scene_material& get_material(scene_scene* scene, material_handle handle);
+scene_shape&    get_shape(scene_scene* scene, shape_handle handle);
 scene_texture*  get_texture(scene_scene* scene, texture_handle handle);
 scene_instance& get_complete_instance(
     scene_scene* scene, instance_handle handle);
@@ -267,9 +265,9 @@ const scene_environment& get_environment(
     const scene_scene* scene, environment_handle handle);
 const scene_instance& get_instance(
     const scene_scene* scene, instance_handle handle);
-const scene_material* get_material(
+const scene_material& get_material(
     const scene_scene* scene, material_handle handle);
-const scene_shape*   get_shape(const scene_scene* scene, shape_handle handle);
+const scene_shape&   get_shape(const scene_scene* scene, shape_handle handle);
 const scene_texture* get_texture(
     const scene_scene* scene, texture_handle handle);
 const scene_instance& get_complete_instance(
@@ -303,12 +301,12 @@ string get_material_name(const scene_scene* scene, int idx);
 string get_camera_name(const scene_scene* scene, const scene_camera& camera);
 string get_environment_name(
     const scene_scene* scene, const scene_environment& environment);
-string get_shape_name(const scene_scene* scene, const scene_shape* shape);
+string get_shape_name(const scene_scene* scene, const scene_shape& shape);
 string get_texture_name(const scene_scene* scene, const scene_texture* texture);
 string get_instance_name(
     const scene_scene* scene, const scene_instance& instance);
 string get_material_name(
-    const scene_scene* scene, const scene_material* material);
+    const scene_scene* scene, const scene_material& material);
 
 }  // namespace yocto
 
@@ -324,7 +322,7 @@ using progress_callback =
 // Apply subdivision and displacement rules.
 void tesselate_shapes(
     scene_scene* scene, const progress_callback& progress_cb = {});
-void tesselate_shape(scene_scene* scene, scene_shape* shape);
+void tesselate_shape(scene_scene* scene, scene_shape& shape);
 
 }  // namespace yocto
 
@@ -394,7 +392,7 @@ struct scene_material_sample {
 
 // Evaluates material and textures
 scene_material_sample eval_material(const scene_scene* scene,
-    const scene_material* material, const vec2f& texcoord);
+    const scene_material& material, const vec2f& texcoord);
 
 }  // namespace yocto
 

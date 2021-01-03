@@ -153,19 +153,19 @@ vector<string> scene_stats(const scene_scene* scene, bool verbose) {
   stats.push_back("textures:     " + format(scene->textures.size()));
   stats.push_back(
       "points:       " + format(accumulate(scene->shapes,
-                             [](auto shape) { return shape->points.size(); })));
+                             [](auto& shape) { return shape.points.size(); })));
   stats.push_back(
       "lines:        " + format(accumulate(scene->shapes,
-                             [](auto shape) { return shape->lines.size(); })));
+                             [](auto& shape) { return shape.lines.size(); })));
   stats.push_back("triangles:    " +
                   format(accumulate(scene->shapes,
-                      [](auto shape) { return shape->triangles.size(); })));
+                      [](auto& shape) { return shape.triangles.size(); })));
   stats.push_back(
       "quads:        " + format(accumulate(scene->shapes,
-                             [](auto shape) { return shape->quads.size(); })));
+                             [](auto& shape) { return shape.quads.size(); })));
   stats.push_back("fvquads:     " +
                   format(accumulate(scene->shapes,
-                      [](auto shape) { return shape->quadspos.size(); })));
+                      [](auto& shape) { return shape.quadspos.size(); })));
   stats.push_back(
       "texels4b:     " + format(accumulate(scene->textures, [](auto texture) {
         return (size_t)texture->ldr.width() * (size_t)texture->ldr.width();
@@ -223,8 +223,6 @@ vector<string> scene_validation(const scene_scene* scene, bool notextures) {
 namespace yocto {
 
 scene_scene::~scene_scene() {
-  for (auto shape : shapes) delete shape;
-  for (auto material : materials) delete material;
   for (auto texture : textures) delete texture;
 }
 
@@ -257,8 +255,7 @@ environment_handle add_environment(scene_scene* scene, const string& name) {
       scene->environments, scene->environment_names, name, "environment");
 }
 shape_handle add_shape(scene_scene* scene, const string& name) {
-  return add_element(
-      scene->shapes, scene->shape_names, scene->shape_map, name, "shape");
+  return add_element(scene->shapes, scene->shape_names, name, "shape");
 }
 texture_handle add_texture(scene_scene* scene, const string& name) {
   return add_element(scene->textures, scene->texture_names, scene->texture_map,
@@ -268,8 +265,7 @@ instance_handle add_instance(scene_scene* scene, const string& name) {
   return add_element(scene->instances, scene->instance_names, name, "instance");
 }
 material_handle add_material(scene_scene* scene, const string& name) {
-  return add_element(scene->materials, scene->material_names,
-      scene->material_map, name, "material");
+  return add_element(scene->materials, scene->material_names, name, "material");
 }
 instance_handle add_complete_instance(scene_scene* scene, const string& name) {
   auto  handle      = add_instance(scene, name);
@@ -290,10 +286,10 @@ scene_environment& get_environment(
 scene_instance& get_instance(scene_scene* scene, instance_handle handle) {
   return scene->instances.at(handle);
 }
-scene_material* get_material(scene_scene* scene, material_handle handle) {
+scene_material& get_material(scene_scene* scene, material_handle handle) {
   return scene->materials.at(handle);
 }
-scene_shape* get_shape(scene_scene* scene, shape_handle handle) {
+scene_shape& get_shape(scene_scene* scene, shape_handle handle) {
   return scene->shapes.at(handle);
 }
 scene_texture* get_texture(scene_scene* scene, texture_handle handle) {
@@ -316,11 +312,11 @@ const scene_instance& get_instance(
     const scene_scene* scene, instance_handle handle) {
   return scene->instances.at(handle);
 }
-const scene_material* get_material(
+const scene_material& get_material(
     const scene_scene* scene, material_handle handle) {
   return scene->materials.at(handle);
 }
-const scene_shape* get_shape(const scene_scene* scene, shape_handle handle) {
+const scene_shape& get_shape(const scene_scene* scene, shape_handle handle) {
   return scene->shapes.at(handle);
 }
 const scene_texture* get_texture(
@@ -359,8 +355,8 @@ string get_environment_name(
     const scene_scene* scene, const scene_environment& environment) {
   return scene->environment_names.at(&environment - scene->environments.data());
 }
-string get_shape_name(const scene_scene* scene, const scene_shape* shape) {
-  return scene->shape_map.at(shape);
+string get_shape_name(const scene_scene* scene, const scene_shape& shape) {
+  return scene->shape_names.at(&shape - scene->shapes.data());
 }
 string get_texture_name(
     const scene_scene* scene, const scene_texture* texture) {
@@ -371,8 +367,8 @@ string get_instance_name(
   return scene->instance_names.at(&instance - scene->instances.data());
 }
 string get_material_name(
-    const scene_scene* scene, const scene_material* material) {
-  return scene->material_map.at(material);
+    const scene_scene* scene, const scene_material& material) {
+  return scene->material_names.at(&material - scene->materials.data());
 }
 
 // Add missing cameras.
@@ -399,10 +395,10 @@ void add_cameras(scene_scene* scene) {
 
 // Add missing radius.
 void add_radius(scene_scene* scene, float radius) {
-  for (auto shape : scene->shapes) {
-    if (shape->points.empty() && shape->lines.empty()) continue;
-    if (!shape->radius.empty()) continue;
-    shape->radius.assign(shape->positions.size(), radius);
+  for (auto& shape : scene->shapes) {
+    if (shape.points.empty() && shape.lines.empty()) continue;
+    if (!shape.radius.empty()) continue;
+    shape.radius.assign(shape.positions.size(), radius);
   }
 }
 
@@ -413,8 +409,8 @@ void add_materials(scene_scene* scene) {
     if (instance.material != invalid_handle) continue;
     if (default_material == invalid_handle) {
       default_material = add_material(scene);
-      auto material    = get_material(scene, default_material);
-      material->color  = {0.8, 0.8, 0.8};
+      auto& material   = get_material(scene, default_material);
+      material.color   = {0.8, 0.8, 0.8};
     }
     instance.material = default_material;
   }
@@ -458,9 +454,9 @@ camera_handle get_camera_handle(const scene_scene* scene, const string& name) {
 bbox3f compute_bounds(const scene_scene* scene) {
   auto shape_bbox = vector<bbox3f>{};
   auto bbox       = invalidb3f;
-  for (auto shape : scene->shapes) {
+  for (auto& shape : scene->shapes) {
     auto sbvh = shape_bbox.emplace_back();
-    for (auto p : shape->positions) sbvh = merge(sbvh, p);
+    for (auto p : shape.positions) sbvh = merge(sbvh, p);
   }
   for (auto& instance : scene->instances) {
     auto& sbvh = shape_bbox[instance.shape];
@@ -478,20 +474,20 @@ void clone_scene(scene_scene* dest, const scene_scene* scene) {
 
 // Reduce memory usage
 void trim_memory(scene_scene* scene) {
-  for (auto shape : scene->shapes) {
-    shape->points.shrink_to_fit();
-    shape->lines.shrink_to_fit();
-    shape->triangles.shrink_to_fit();
-    shape->quads.shrink_to_fit();
-    shape->positions.shrink_to_fit();
-    shape->normals.shrink_to_fit();
-    shape->texcoords.shrink_to_fit();
-    shape->colors.shrink_to_fit();
-    shape->radius.shrink_to_fit();
-    shape->tangents.shrink_to_fit();
-    shape->quadspos.shrink_to_fit();
-    shape->quadsnorm.shrink_to_fit();
-    shape->quadstexcoord.shrink_to_fit();
+  for (auto& shape : scene->shapes) {
+    shape.points.shrink_to_fit();
+    shape.lines.shrink_to_fit();
+    shape.triangles.shrink_to_fit();
+    shape.quads.shrink_to_fit();
+    shape.positions.shrink_to_fit();
+    shape.normals.shrink_to_fit();
+    shape.texcoords.shrink_to_fit();
+    shape.colors.shrink_to_fit();
+    shape.radius.shrink_to_fit();
+    shape.tangents.shrink_to_fit();
+    shape.quadspos.shrink_to_fit();
+    shape.quadsnorm.shrink_to_fit();
+    shape.quadstexcoord.shrink_to_fit();
   }
   for (auto texture : scene->textures) {
     texture->hdr.shrink_to_fit();
@@ -510,307 +506,151 @@ void trim_memory(scene_scene* scene) {
 // -----------------------------------------------------------------------------
 namespace yocto {
 
-#if 1
-
-void tesselate_shape(scene_scene* scene, scene_shape* shape) {
-  if (shape->subdivisions > 0) {
-    if (!shape->points.empty()) {
+void tesselate_shape(scene_scene* scene, scene_shape& shape) {
+  if (shape.subdivisions > 0) {
+    if (!shape.points.empty()) {
       throw std::runtime_error("cannot subdivide points");
-    } else if (!shape->lines.empty()) {
-      std::tie(std::ignore, shape->texcoords) = subdivide_lines(
-          shape->lines, shape->texcoords, shape->subdivisions);
-      std::tie(std::ignore, shape->normals) = subdivide_lines(
-          shape->lines, shape->normals, shape->subdivisions);
-      std::tie(std::ignore, shape->colors) = subdivide_lines(
-          shape->lines, shape->colors, shape->subdivisions);
-      std::tie(std::ignore, shape->radius) = subdivide_lines(
-          shape->lines, shape->radius, shape->subdivisions);
-      std::tie(shape->lines, shape->positions) = subdivide_lines(
-          shape->lines, shape->positions, shape->subdivisions);
-    } else if (!shape->triangles.empty()) {
-      std::tie(std::ignore, shape->texcoords) = subdivide_triangles(
-          shape->triangles, shape->texcoords, shape->subdivisions);
-      std::tie(std::ignore, shape->normals) = subdivide_triangles(
-          shape->triangles, shape->normals, shape->subdivisions);
-      std::tie(std::ignore, shape->colors) = subdivide_triangles(
-          shape->triangles, shape->colors, shape->subdivisions);
-      std::tie(std::ignore, shape->radius) = subdivide_triangles(
-          shape->triangles, shape->radius, shape->subdivisions);
-      std::tie(shape->triangles, shape->positions) = subdivide_triangles(
-          shape->triangles, shape->positions, shape->subdivisions);
-    } else if (!shape->quads.empty()) {
-      if (shape->catmullclark) {
-        std::tie(std::ignore, shape->texcoords) = subdivide_catmullclark(
-            shape->quads, shape->texcoords, shape->subdivisions, true);
-        std::tie(std::ignore, shape->normals) = subdivide_catmullclark(
-            shape->quads, shape->normals, shape->subdivisions, true);
-        std::tie(std::ignore, shape->colors) = subdivide_catmullclark(
-            shape->quads, shape->colors, shape->subdivisions);
-        std::tie(std::ignore, shape->radius) = subdivide_catmullclark(
-            shape->quads, shape->radius, shape->subdivisions);
-        std::tie(std::ignore, shape->positions) = subdivide_catmullclark(
-            shape->quads, shape->positions, shape->subdivisions);
+    } else if (!shape.lines.empty()) {
+      std::tie(std::ignore, shape.texcoords) = subdivide_lines(
+          shape.lines, shape.texcoords, shape.subdivisions);
+      std::tie(std::ignore, shape.normals) = subdivide_lines(
+          shape.lines, shape.normals, shape.subdivisions);
+      std::tie(std::ignore, shape.colors) = subdivide_lines(
+          shape.lines, shape.colors, shape.subdivisions);
+      std::tie(std::ignore, shape.radius) = subdivide_lines(
+          shape.lines, shape.radius, shape.subdivisions);
+      std::tie(shape.lines, shape.positions) = subdivide_lines(
+          shape.lines, shape.positions, shape.subdivisions);
+    } else if (!shape.triangles.empty()) {
+      std::tie(std::ignore, shape.texcoords) = subdivide_triangles(
+          shape.triangles, shape.texcoords, shape.subdivisions);
+      std::tie(std::ignore, shape.normals) = subdivide_triangles(
+          shape.triangles, shape.normals, shape.subdivisions);
+      std::tie(std::ignore, shape.colors) = subdivide_triangles(
+          shape.triangles, shape.colors, shape.subdivisions);
+      std::tie(std::ignore, shape.radius) = subdivide_triangles(
+          shape.triangles, shape.radius, shape.subdivisions);
+      std::tie(shape.triangles, shape.positions) = subdivide_triangles(
+          shape.triangles, shape.positions, shape.subdivisions);
+    } else if (!shape.quads.empty()) {
+      if (shape.catmullclark) {
+        std::tie(std::ignore, shape.texcoords) = subdivide_catmullclark(
+            shape.quads, shape.texcoords, shape.subdivisions, true);
+        std::tie(std::ignore, shape.normals) = subdivide_catmullclark(
+            shape.quads, shape.normals, shape.subdivisions, true);
+        std::tie(std::ignore, shape.colors) = subdivide_catmullclark(
+            shape.quads, shape.colors, shape.subdivisions);
+        std::tie(std::ignore, shape.radius) = subdivide_catmullclark(
+            shape.quads, shape.radius, shape.subdivisions);
+        std::tie(std::ignore, shape.positions) = subdivide_catmullclark(
+            shape.quads, shape.positions, shape.subdivisions);
       } else {
-        std::tie(std::ignore, shape->texcoords) = subdivide_quads(
-            shape->quads, shape->texcoords, shape->subdivisions);
-        std::tie(std::ignore, shape->normals) = subdivide_quads(
-            shape->quads, shape->normals, shape->subdivisions);
-        std::tie(std::ignore, shape->colors) = subdivide_quads(
-            shape->quads, shape->colors, shape->subdivisions);
-        std::tie(std::ignore, shape->radius) = subdivide_quads(
-            shape->quads, shape->radius, shape->subdivisions);
-        std::tie(shape->quads, shape->positions) = subdivide_quads(
-            shape->quads, shape->positions, shape->subdivisions);
+        std::tie(std::ignore, shape.texcoords) = subdivide_quads(
+            shape.quads, shape.texcoords, shape.subdivisions);
+        std::tie(std::ignore, shape.normals) = subdivide_quads(
+            shape.quads, shape.normals, shape.subdivisions);
+        std::tie(std::ignore, shape.colors) = subdivide_quads(
+            shape.quads, shape.colors, shape.subdivisions);
+        std::tie(std::ignore, shape.radius) = subdivide_quads(
+            shape.quads, shape.radius, shape.subdivisions);
+        std::tie(shape.quads, shape.positions) = subdivide_quads(
+            shape.quads, shape.positions, shape.subdivisions);
       }
-    } else if (!shape->quadspos.empty()) {
-      if (shape->catmullclark) {
-        std::tie(shape->quadstexcoord, shape->texcoords) =
-            subdivide_catmullclark(shape->quadstexcoord, shape->texcoords,
-                shape->subdivisions, true);
-        std::tie(shape->quadsnorm, shape->normals) = subdivide_catmullclark(
-            shape->quadsnorm, shape->normals, shape->subdivisions, true);
-        std::tie(shape->quadspos, shape->positions) = subdivide_catmullclark(
-            shape->quadspos, shape->positions, shape->subdivisions);
+    } else if (!shape.quadspos.empty()) {
+      if (shape.catmullclark) {
+        std::tie(shape.quadstexcoord, shape.texcoords) = subdivide_catmullclark(
+            shape.quadstexcoord, shape.texcoords, shape.subdivisions, true);
+        std::tie(shape.quadsnorm, shape.normals) = subdivide_catmullclark(
+            shape.quadsnorm, shape.normals, shape.subdivisions, true);
+        std::tie(shape.quadspos, shape.positions) = subdivide_catmullclark(
+            shape.quadspos, shape.positions, shape.subdivisions);
       } else {
-        std::tie(shape->quadstexcoord, shape->texcoords) = subdivide_quads(
-            shape->quadstexcoord, shape->texcoords, shape->subdivisions);
-        std::tie(shape->quadsnorm, shape->normals) = subdivide_quads(
-            shape->quadsnorm, shape->normals, shape->subdivisions);
-        std::tie(shape->quadspos, shape->positions) = subdivide_quads(
-            shape->quadspos, shape->positions, shape->subdivisions);
+        std::tie(shape.quadstexcoord, shape.texcoords) = subdivide_quads(
+            shape.quadstexcoord, shape.texcoords, shape.subdivisions);
+        std::tie(shape.quadsnorm, shape.normals) = subdivide_quads(
+            shape.quadsnorm, shape.normals, shape.subdivisions);
+        std::tie(shape.quadspos, shape.positions) = subdivide_quads(
+            shape.quadspos, shape.positions, shape.subdivisions);
       }
-      if (shape->smooth) {
-        shape->normals   = quads_normals(shape->quadspos, shape->positions);
-        shape->quadsnorm = shape->quadspos;
+      if (shape.smooth) {
+        shape.normals   = quads_normals(shape.quadspos, shape.positions);
+        shape.quadsnorm = shape.quadspos;
       } else {
-        shape->normals   = {};
-        shape->quadsnorm = {};
+        shape.normals   = {};
+        shape.quadsnorm = {};
       }
     } else {
       throw std::runtime_error("not supported yet");
     }
-    shape->subdivisions = 0;
+    shape.subdivisions = 0;
   }
 
-  if (shape->displacement != 0 && shape->displacement_tex != invalid_handle) {
-    if (shape->texcoords.empty())
+  if (shape.displacement != 0 && shape.displacement_tex != invalid_handle) {
+    if (shape.texcoords.empty())
       throw std::runtime_error("missing texture coordinates");
 
-    if (!shape->triangles.empty() || !shape->quads.empty()) {
-      auto no_normals = shape->normals.empty();
-      if (shape->normals.empty())
-        shape->normals = !shape->triangles.empty()
-                             ? triangles_normals(
-                                   shape->triangles, shape->positions)
-                             : quads_normals(shape->quads, shape->positions);
-      for (auto idx = 0; idx < shape->positions.size(); idx++) {
-        auto diplacement_tex = get_texture(scene, shape->displacement_tex);
+    if (!shape.triangles.empty() || !shape.quads.empty()) {
+      auto no_normals = shape.normals.empty();
+      if (shape.normals.empty())
+        shape.normals = !shape.triangles.empty()
+                            ? triangles_normals(
+                                  shape.triangles, shape.positions)
+                            : quads_normals(shape.quads, shape.positions);
+      for (auto idx = 0; idx < shape.positions.size(); idx++) {
+        auto diplacement_tex = get_texture(scene, shape.displacement_tex);
         auto disp            = mean(
-            eval_texture(diplacement_tex, shape->texcoords[idx], true));
+            eval_texture(diplacement_tex, shape.texcoords[idx], true));
         if (!diplacement_tex->ldr.empty()) disp -= 0.5f;
-        shape->positions[idx] += shape->normals[idx] * shape->displacement *
-                                 disp;
+        shape.positions[idx] += shape.normals[idx] * shape.displacement * disp;
       }
-      if (shape->smooth) {
-        shape->normals = !shape->triangles.empty()
-                             ? triangles_normals(
-                                   shape->triangles, shape->positions)
-                             : quads_normals(shape->quads, shape->positions);
+      if (shape.smooth) {
+        shape.normals = !shape.triangles.empty()
+                            ? triangles_normals(
+                                  shape.triangles, shape.positions)
+                            : quads_normals(shape.quads, shape.positions);
       } else if (no_normals) {
-        shape->normals = {};
+        shape.normals = {};
       }
-    } else if (!shape->quadspos.empty()) {
+    } else if (!shape.quadspos.empty()) {
       // facevarying case
-      auto offset = vector<float>(shape->positions.size(), 0);
-      auto count  = vector<int>(shape->positions.size(), 0);
-      for (auto fid = 0; fid < shape->quadspos.size(); fid++) {
-        auto qpos = shape->quadspos[fid];
-        auto qtxt = shape->quadstexcoord[fid];
+      auto offset = vector<float>(shape.positions.size(), 0);
+      auto count  = vector<int>(shape.positions.size(), 0);
+      for (auto fid = 0; fid < shape.quadspos.size(); fid++) {
+        auto qpos = shape.quadspos[fid];
+        auto qtxt = shape.quadstexcoord[fid];
         for (auto i = 0; i < 4; i++) {
-          auto displacement_tex = get_texture(scene, shape->displacement_tex);
+          auto displacement_tex = get_texture(scene, shape.displacement_tex);
           auto disp             = mean(
-              eval_texture(displacement_tex, shape->texcoords[qtxt[i]], true));
+              eval_texture(displacement_tex, shape.texcoords[qtxt[i]], true));
           if (!displacement_tex->ldr.empty()) disp -= 0.5f;
-          offset[qpos[i]] += shape->displacement * disp;
+          offset[qpos[i]] += shape.displacement * disp;
           count[qpos[i]] += 1;
         }
       }
-      auto normals = quads_normals(shape->quadspos, shape->positions);
-      for (auto vid = 0; vid < shape->positions.size(); vid++) {
-        shape->positions[vid] += normals[vid] * offset[vid] / count[vid];
+      auto normals = quads_normals(shape.quadspos, shape.positions);
+      for (auto vid = 0; vid < shape.positions.size(); vid++) {
+        shape.positions[vid] += normals[vid] * offset[vid] / count[vid];
       }
-      if (shape->smooth || !shape->normals.empty()) {
-        shape->quadsnorm = shape->quadspos;
-        shape->normals   = quads_normals(shape->quadspos, shape->positions);
+      if (shape.smooth || !shape.normals.empty()) {
+        shape.quadsnorm = shape.quadspos;
+        shape.normals   = quads_normals(shape.quadspos, shape.positions);
       }
     }
 
-    shape->displacement     = 0;
-    shape->displacement_tex = invalid_handle;
+    shape.displacement     = 0;
+    shape.displacement_tex = invalid_handle;
   }
-  if (!shape->quadspos.empty()) {
-    std::tie(shape->quads, shape->positions, shape->normals, shape->texcoords) =
-        split_facevarying(shape->quadspos, shape->quadsnorm,
-            shape->quadstexcoord, shape->positions, shape->normals,
-            shape->texcoords);
-    shape->points    = {};
-    shape->lines     = {};
-    shape->triangles = {};
-    shape->colors    = {};
-    shape->radius    = {};
+  if (!shape.quadspos.empty()) {
+    std::tie(shape.quads, shape.positions, shape.normals, shape.texcoords) =
+        split_facevarying(shape.quadspos, shape.quadsnorm, shape.quadstexcoord,
+            shape.positions, shape.normals, shape.texcoords);
+    shape.points    = {};
+    shape.lines     = {};
+    shape.triangles = {};
+    shape.colors    = {};
+    shape.radius    = {};
   }
 }
-
-#else
-
-void tesselate_shape(scene_shape* shape) {
-  if (shape->subdivisions != 0) {
-    if (!shape->points.empty()) {
-      throw std::runtime_error("cannot subdivide points");
-    } else if (!shape->lines.empty()) {
-      std::tie(std::ignore, shape->texcoords) = subdivide_lines(
-          shape->lines, shape->texcoords, shape->subdivisions);
-      std::tie(std::ignore, shape->normals) = subdivide_lines(
-          shape->lines, shape->normals, shape->subdivisions);
-      std::tie(std::ignore, shape->colors) = subdivide_lines(
-          shape->lines, shape->colors, shape->subdivisions);
-      std::tie(std::ignore, shape->radius) = subdivide_lines(
-          shape->lines, shape->radius, shape->subdivisions);
-      std::tie(shape->lines, shape->positions) = subdivide_lines(
-          shape->lines, shape->positions, shape->subdivisions);
-    } else if (!shape->triangles.empty()) {
-      std::tie(std::ignore, shape->texcoords) = subdivide_triangles(
-          shape->triangles, shape->texcoords, shape->subdivisions);
-      std::tie(std::ignore, shape->normals) = subdivide_triangles(
-          shape->triangles, shape->normals, shape->subdivisions);
-      std::tie(std::ignore, shape->colors) = subdivide_triangles(
-          shape->triangles, shape->colors, shape->subdivisions);
-      std::tie(std::ignore, shape->radius) = subdivide_triangles(
-          shape->triangles, shape->radius, shape->subdivisions);
-      std::tie(shape->triangles, shape->positions) = subdivide_triangles(
-          shape->triangles, shape->positions, shape->subdivisions);
-    } else if (!shape->quads.empty()) {
-      if (shape->catmullclark) {
-        std::tie(std::ignore, shape->texcoords) = subdivide_catmullclark(
-            shape->quads, shape->texcoords, shape->subdivisions, true);
-        std::tie(std::ignore, shape->normals) = subdivide_catmullclark(
-            shape->quads, shape->normals, shape->subdivisions, true);
-        std::tie(std::ignore, shape->colors) = subdivide_catmullclark(
-            shape->quads, shape->colors, shape->subdivisions);
-        std::tie(std::ignore, shape->radius) = subdivide_catmullclark(
-            shape->quads, shape->radius, shape->subdivisions);
-        std::tie(std::ignore, shape->positions) = subdivide_catmullclark(
-            shape->quads, shape->positions, shape->subdivisions);
-      } else {
-        std::tie(std::ignore, shape->texcoords) = subdivide_quads(
-            shape->quads, shape->texcoords, shape->subdivisions);
-        std::tie(std::ignore, shape->normals) = subdivide_quads(
-            shape->quads, shape->normals, shape->subdivisions);
-        std::tie(std::ignore, shape->colors) = subdivide_quads(
-            shape->quads, shape->colors, shape->subdivisions);
-        std::tie(std::ignore, shape->radius) = subdivide_quads(
-            shape->quads, shape->radius, shape->subdivisions);
-        std::tie(shape->quads, shape->positions) = subdivide_quads(
-            shape->quads, shape->positions, shape->subdivisions);
-      }
-    } else if (!shape->quadspos.empty()) {
-      if (shape->catmullclark) {
-        std::tie(shape->quadstexcoord, shape->texcoords) =
-            subdivide_catmullclark(shape->quadstexcoord, shape->texcoords,
-                shape->subdivisions, true);
-        std::tie(shape->quadsnorm, shape->normals) = subdivide_catmullclark(
-            shape->quadsnorm, shape->normals, shape->subdivisions, true);
-        std::tie(shape->quadspos, shape->positions) = subdivide_catmullclark(
-            shape->quadspos, shape->positions, shape->subdivisions);
-      } else {
-        std::tie(shape->quadstexcoord, shape->texcoords) = subdivide_quads(
-            shape->quadstexcoord, shape->texcoords, shape->subdivisions);
-        std::tie(shape->quadsnorm, shape->normals) = subdivide_quads(
-            shape->quadsnorm, shape->normals, shape->subdivisions);
-        std::tie(shape->quadspos, shape->positions) = subdivide_quads(
-            shape->quadspos, shape->positions, shape->subdivisions);
-      }
-      if (shape->smooth) {
-        shape->normals   = quads_normals(shape->quadspos, shape->positions);
-        shape->quadsnorm = shape->quadspos;
-      } else {
-        shape->normals   = {};
-        shape->quadsnorm = {};
-      }
-    } else {
-      throw std::runtime_error("not supported yet");
-    }
-    shape->subdivisions = 0;
-  }
-
-  if (shape->displacement != 0 && shape->displacement_tex != nullptr) {
-    if (shape->texcoords.empty())
-      throw std::runtime_error("missing texture coordinates");
-
-    if (!shape->triangles.empty() || !shape->quads.empty()) {
-      auto no_normals = shape->normals.empty();
-      if (shape->normals.empty())
-        shape->normals = !shape->triangles.empty()
-                             ? triangles_normals(
-                                   shape->triangles, shape->positions)
-                             : quads_normals(shape->quads, shape->positions);
-      for (auto idx = 0; idx < shape->positions.size(); idx++) {
-        auto disp = mean(
-            eval_texture(shape->displacement_tex, shape->texcoords[idx], true));
-        if (!shape->displacement_tex->ldr.empty()) disp -= 0.5f;
-        shape->positions[idx] += shape->normals[idx] * shape->displacement *
-                                 disp;
-      }
-      if (shape->smooth) {
-        shape->normals = !shape->triangles.empty()
-                             ? triangles_normals(
-                                   shape->triangles, shape->positions)
-                             : quads_normals(shape->quads, shape->positions);
-      } else if (no_normals) {
-        shape->normals = {};
-      }
-    } else if (!shape->quadspos.empty()) {
-      // facevarying case
-      auto offset = vector<float>(shape->positions.size(), 0);
-      auto count  = vector<int>(shape->positions.size(), 0);
-      for (auto fid = 0; fid < shape->quadspos.size(); fid++) {
-        auto qpos = shape->quadspos[fid];
-        auto qtxt = shape->quadstexcoord[fid];
-        for (auto i = 0; i < 4; i++) {
-          auto disp = mean(eval_texture(
-              shape->displacement_tex, shape->texcoords[qtxt[i]], true));
-          if (!shape->displacement_tex->ldr.empty()) disp -= 0.5f;
-          offset[qpos[i]] += shape->displacement * disp;
-          count[qpos[i]] += 1;
-        }
-      }
-      auto normals = quads_normals(shape->quadspos, shape->positions);
-      for (auto vid = 0; vid < shape->positions.size(); vid++) {
-        shape->positions[vid] += normals[vid] * offset[vid] / count[vid];
-      }
-      if (shape->smooth || !shape->normals.empty()) {
-        shape->quadsnorm = shape->quadspos;
-        shape->normals   = quads_normals(shape->quadspos, shape->positions);
-      }
-    }
-
-    shape->displacement     = 0;
-    shape->displacement_tex = nullptr;
-  }
-  if (!shape->quadspos.empty()) {
-    std::tie(shape->quads, shape->positions, shape->normals, shape->texcoords) =
-        split_facevarying(shape->quadspos, shape->quadsnorm,
-            shape->quadstexcoord, shape->positions, shape->normals,
-            shape->texcoords);
-    shape->points    = {};
-    shape->lines     = {};
-    shape->triangles = {};
-    shape->colors    = {};
-    shape->radius    = {};
-  }
-}
-
-#endif
 
 void tesselate_shapes(
     scene_scene* scene, const progress_callback& progress_cb) {
@@ -945,24 +785,24 @@ ray3f eval_camera(
 // Eval position
 vec3f eval_position(const scene_scene* scene, const scene_instance& instance,
     int element, const vec2f& uv) {
-  auto shape = get_shape(scene, instance.shape);
-  if (!shape->triangles.empty()) {
-    auto t = shape->triangles[element];
+  auto& shape = get_shape(scene, instance.shape);
+  if (!shape.triangles.empty()) {
+    auto t = shape.triangles[element];
     return transform_point(
-        instance.frame, interpolate_triangle(shape->positions[t.x],
-                            shape->positions[t.y], shape->positions[t.z], uv));
-  } else if (!shape->quads.empty()) {
-    auto q = shape->quads[element];
+        instance.frame, interpolate_triangle(shape.positions[t.x],
+                            shape.positions[t.y], shape.positions[t.z], uv));
+  } else if (!shape.quads.empty()) {
+    auto q = shape.quads[element];
     return transform_point(instance.frame,
-        interpolate_quad(shape->positions[q.x], shape->positions[q.y],
-            shape->positions[q.z], shape->positions[q.w], uv));
-  } else if (!shape->lines.empty()) {
-    auto l = shape->lines[element];
+        interpolate_quad(shape.positions[q.x], shape.positions[q.y],
+            shape.positions[q.z], shape.positions[q.w], uv));
+  } else if (!shape.lines.empty()) {
+    auto l = shape.lines[element];
     return transform_point(instance.frame,
-        interpolate_line(shape->positions[l.x], shape->positions[l.y], uv.x));
-  } else if (!shape->points.empty()) {
+        interpolate_line(shape.positions[l.x], shape.positions[l.y], uv.x));
+  } else if (!shape.points.empty()) {
     return transform_point(
-        instance.frame, shape->positions[shape->points[element]]);
+        instance.frame, shape.positions[shape.points[element]]);
   } else {
     return zero3f;
   }
@@ -971,22 +811,22 @@ vec3f eval_position(const scene_scene* scene, const scene_instance& instance,
 // Shape element normal.
 vec3f eval_element_normal(
     const scene_scene* scene, const scene_instance& instance, int element) {
-  auto shape = get_shape(scene, instance.shape);
-  if (!shape->triangles.empty()) {
-    auto t = shape->triangles[element];
+  auto& shape = get_shape(scene, instance.shape);
+  if (!shape.triangles.empty()) {
+    auto t = shape.triangles[element];
     return transform_normal(
-        instance.frame, triangle_normal(shape->positions[t.x],
-                            shape->positions[t.y], shape->positions[t.z]));
-  } else if (!shape->quads.empty()) {
-    auto q = shape->quads[element];
+        instance.frame, triangle_normal(shape.positions[t.x],
+                            shape.positions[t.y], shape.positions[t.z]));
+  } else if (!shape.quads.empty()) {
+    auto q = shape.quads[element];
+    return transform_normal(
+        instance.frame, quad_normal(shape.positions[q.x], shape.positions[q.y],
+                            shape.positions[q.z], shape.positions[q.w]));
+  } else if (!shape.lines.empty()) {
+    auto l = shape.lines[element];
     return transform_normal(instance.frame,
-        quad_normal(shape->positions[q.x], shape->positions[q.y],
-            shape->positions[q.z], shape->positions[q.w]));
-  } else if (!shape->lines.empty()) {
-    auto l = shape->lines[element];
-    return transform_normal(instance.frame,
-        line_tangent(shape->positions[l.x], shape->positions[l.y]));
-  } else if (!shape->points.empty()) {
+        line_tangent(shape.positions[l.x], shape.positions[l.y]));
+  } else if (!shape.points.empty()) {
     return {0, 0, 1};
   } else {
     return {0, 0, 0};
@@ -996,27 +836,27 @@ vec3f eval_element_normal(
 // Eval normal
 vec3f eval_normal(const scene_scene* scene, const scene_instance& instance,
     int element, const vec2f& uv) {
-  auto shape = get_shape(scene, instance.shape);
-  if (shape->normals.empty())
+  auto& shape = get_shape(scene, instance.shape);
+  if (shape.normals.empty())
     return eval_element_normal(scene, instance, element);
-  if (!shape->triangles.empty()) {
-    auto t = shape->triangles[element];
+  if (!shape.triangles.empty()) {
+    auto t = shape.triangles[element];
     return transform_normal(
-        instance.frame, normalize(interpolate_triangle(shape->normals[t.x],
-                            shape->normals[t.y], shape->normals[t.z], uv)));
-  } else if (!shape->quads.empty()) {
-    auto q = shape->quads[element];
+        instance.frame, normalize(interpolate_triangle(shape.normals[t.x],
+                            shape.normals[t.y], shape.normals[t.z], uv)));
+  } else if (!shape.quads.empty()) {
+    auto q = shape.quads[element];
     return transform_normal(instance.frame,
-        normalize(interpolate_quad(shape->normals[q.x], shape->normals[q.y],
-            shape->normals[q.z], shape->normals[q.w], uv)));
-  } else if (!shape->lines.empty()) {
-    auto l = shape->lines[element];
+        normalize(interpolate_quad(shape.normals[q.x], shape.normals[q.y],
+            shape.normals[q.z], shape.normals[q.w], uv)));
+  } else if (!shape.lines.empty()) {
+    auto l = shape.lines[element];
     return transform_normal(instance.frame,
         normalize(
-            interpolate_line(shape->normals[l.x], shape->normals[l.y], uv.x)));
-  } else if (!shape->points.empty()) {
+            interpolate_line(shape.normals[l.x], shape.normals[l.y], uv.x)));
+  } else if (!shape.points.empty()) {
     return transform_normal(
-        instance.frame, normalize(shape->normals[shape->points[element]]));
+        instance.frame, normalize(shape.normals[shape.points[element]]));
   } else {
     return zero3f;
   }
@@ -1025,21 +865,21 @@ vec3f eval_normal(const scene_scene* scene, const scene_instance& instance,
 // Eval texcoord
 vec2f eval_texcoord(const scene_scene* scene, const scene_instance& instance,
     int element, const vec2f& uv) {
-  auto shape = get_shape(scene, instance.shape);
-  if (shape->texcoords.empty()) return uv;
-  if (!shape->triangles.empty()) {
-    auto t = shape->triangles[element];
-    return interpolate_triangle(shape->texcoords[t.x], shape->texcoords[t.y],
-        shape->texcoords[t.z], uv);
-  } else if (!shape->quads.empty()) {
-    auto q = shape->quads[element];
-    return interpolate_quad(shape->texcoords[q.x], shape->texcoords[q.y],
-        shape->texcoords[q.z], shape->texcoords[q.w], uv);
-  } else if (!shape->lines.empty()) {
-    auto l = shape->lines[element];
-    return interpolate_line(shape->texcoords[l.x], shape->texcoords[l.y], uv.x);
-  } else if (!shape->points.empty()) {
-    return shape->texcoords[shape->points[element]];
+  auto& shape = get_shape(scene, instance.shape);
+  if (shape.texcoords.empty()) return uv;
+  if (!shape.triangles.empty()) {
+    auto t = shape.triangles[element];
+    return interpolate_triangle(
+        shape.texcoords[t.x], shape.texcoords[t.y], shape.texcoords[t.z], uv);
+  } else if (!shape.quads.empty()) {
+    auto q = shape.quads[element];
+    return interpolate_quad(shape.texcoords[q.x], shape.texcoords[q.y],
+        shape.texcoords[q.z], shape.texcoords[q.w], uv);
+  } else if (!shape.lines.empty()) {
+    auto l = shape.lines[element];
+    return interpolate_line(shape.texcoords[l.x], shape.texcoords[l.y], uv.x);
+  } else if (!shape.points.empty()) {
+    return shape.texcoords[shape.points[element]];
   } else {
     return zero2f;
   }
@@ -1048,27 +888,27 @@ vec2f eval_texcoord(const scene_scene* scene, const scene_instance& instance,
 #if 0
 // Shape element normal.
 static pair<vec3f, vec3f> eval_tangents(
-    const trace_shape* shape, int element, const vec2f& uv) {
-  if (!shape->triangles.empty()) {
-    auto t = shape->triangles[element];
-    if (shape->texcoords.empty()) {
-      return triangle_tangents_fromuv(shape->positions[t.x],
-          shape->positions[t.y], shape->positions[t.z], {0, 0}, {1, 0}, {0, 1});
+    const trace_shape& shape, int element, const vec2f& uv) {
+  if (!shape.triangles.empty()) {
+    auto t = shape.triangles[element];
+    if (shape.texcoords.empty()) {
+      return triangle_tangents_fromuv(shape.positions[t.x],
+          shape.positions[t.y], shape.positions[t.z], {0, 0}, {1, 0}, {0, 1});
     } else {
-      return triangle_tangents_fromuv(shape->positions[t.x],
-          shape->positions[t.y], shape->positions[t.z], shape->texcoords[t.x],
-          shape->texcoords[t.y], shape->texcoords[t.z]);
+      return triangle_tangents_fromuv(shape.positions[t.x],
+          shape.positions[t.y], shape.positions[t.z], shape.texcoords[t.x],
+          shape.texcoords[t.y], shape.texcoords[t.z]);
     }
-  } else if (!shape->quads.empty()) {
-    auto q = shape->quads[element];
-    if (shape->texcoords.empty()) {
-      return quad_tangents_fromuv(shape->positions[q.x], shape->positions[q.y],
-          shape->positions[q.z], shape->positions[q.w], {0, 0}, {1, 0}, {0, 1},
+  } else if (!shape.quads.empty()) {
+    auto q = shape.quads[element];
+    if (shape.texcoords.empty()) {
+      return quad_tangents_fromuv(shape.positions[q.x], shape.positions[q.y],
+          shape.positions[q.z], shape.positions[q.w], {0, 0}, {1, 0}, {0, 1},
           {1, 1}, uv);
     } else {
-      return quad_tangents_fromuv(shape->positions[q.x], shape->positions[q.y],
-          shape->positions[q.z], shape->positions[q.w], shape->texcoords[q.x],
-          shape->texcoords[q.y], shape->texcoords[q.z], shape->texcoords[q.w],
+      return quad_tangents_fromuv(shape.positions[q.x], shape.positions[q.y],
+          shape.positions[q.z], shape.positions[q.w], shape.texcoords[q.x],
+          shape.texcoords[q.y], shape.texcoords[q.z], shape.texcoords[q.w],
           uv);
     }
   } else {
@@ -1080,20 +920,20 @@ static pair<vec3f, vec3f> eval_tangents(
 // Shape element normal.
 pair<vec3f, vec3f> eval_element_tangents(
     const scene_scene* scene, const scene_instance& instance, int element) {
-  auto shape = get_shape(scene, instance.shape);
-  if (!shape->triangles.empty() && !shape->texcoords.empty()) {
-    auto t        = shape->triangles[element];
-    auto [tu, tv] = triangle_tangents_fromuv(shape->positions[t.x],
-        shape->positions[t.y], shape->positions[t.z], shape->texcoords[t.x],
-        shape->texcoords[t.y], shape->texcoords[t.z]);
+  auto& shape = get_shape(scene, instance.shape);
+  if (!shape.triangles.empty() && !shape.texcoords.empty()) {
+    auto t        = shape.triangles[element];
+    auto [tu, tv] = triangle_tangents_fromuv(shape.positions[t.x],
+        shape.positions[t.y], shape.positions[t.z], shape.texcoords[t.x],
+        shape.texcoords[t.y], shape.texcoords[t.z]);
     return {transform_direction(instance.frame, tu),
         transform_direction(instance.frame, tv)};
-  } else if (!shape->quads.empty() && !shape->texcoords.empty()) {
-    auto q        = shape->quads[element];
-    auto [tu, tv] = quad_tangents_fromuv(shape->positions[q.x],
-        shape->positions[q.y], shape->positions[q.z], shape->positions[q.w],
-        shape->texcoords[q.x], shape->texcoords[q.y], shape->texcoords[q.z],
-        shape->texcoords[q.w], {0, 0});
+  } else if (!shape.quads.empty() && !shape.texcoords.empty()) {
+    auto q        = shape.quads[element];
+    auto [tu, tv] = quad_tangents_fromuv(shape.positions[q.x],
+        shape.positions[q.y], shape.positions[q.z], shape.positions[q.w],
+        shape.texcoords[q.x], shape.texcoords[q.y], shape.texcoords[q.z],
+        shape.texcoords[q.w], {0, 0});
     return {transform_direction(instance.frame, tu),
         transform_direction(instance.frame, tv)};
   } else {
@@ -1103,14 +943,14 @@ pair<vec3f, vec3f> eval_element_tangents(
 
 vec3f eval_normalmap(const scene_scene* scene, const scene_instance& instance,
     int element, const vec2f& uv) {
-  auto shape    = get_shape(scene, instance.shape);
-  auto material = get_material(scene, instance.material);
+  auto& shape    = get_shape(scene, instance.shape);
+  auto& material = get_material(scene, instance.material);
   // apply normal mapping
   auto normal   = eval_normal(scene, instance, element, uv);
   auto texcoord = eval_texcoord(scene, instance, element, uv);
-  if (material->normal_tex != invalid_handle &&
-      (!shape->triangles.empty() || !shape->quads.empty())) {
-    auto normal_tex = get_texture(scene, material->normal_tex);
+  if (material.normal_tex != invalid_handle &&
+      (!shape.triangles.empty() || !shape.quads.empty())) {
+    auto normal_tex = get_texture(scene, material.normal_tex);
     auto normalmap  = -1 + 2 * xyz(eval_texture(normal_tex, texcoord, true));
     auto [tu, tv]   = eval_element_tangents(scene, instance, element);
     auto frame      = frame3f{tu, tv, normal, zero3f};
@@ -1127,19 +967,19 @@ vec3f eval_normalmap(const scene_scene* scene, const scene_instance& instance,
 vec3f eval_shading_normal(const scene_scene* scene,
     const scene_instance& instance, int element, const vec2f& uv,
     const vec3f& outgoing) {
-  auto shape    = get_shape(scene, instance.shape);
-  auto material = get_material(scene, instance.shape);
-  if (!shape->triangles.empty() || !shape->quads.empty()) {
+  auto& shape    = get_shape(scene, instance.shape);
+  auto& material = get_material(scene, instance.shape);
+  if (!shape.triangles.empty() || !shape.quads.empty()) {
     auto normal = eval_normal(scene, instance, element, uv);
-    if (material->normal_tex != invalid_handle) {
+    if (material.normal_tex != invalid_handle) {
       normal = eval_normalmap(scene, instance, element, uv);
     }
-    if (!material->thin) return normal;
+    if (!material.thin) return normal;
     return dot(normal, outgoing) >= 0 ? normal : -normal;
-  } else if (!shape->lines.empty()) {
+  } else if (!shape.lines.empty()) {
     auto normal = eval_normal(scene, instance, element, uv);
     return orthonormalize(outgoing, normal);
-  } else if (!shape->points.empty()) {
+  } else if (!shape.points.empty()) {
     return outgoing;
   } else {
     return zero3f;
@@ -1149,21 +989,21 @@ vec3f eval_shading_normal(const scene_scene* scene,
 // Eval color
 vec4f eval_color(const scene_scene* scene, const scene_instance& instance,
     int element, const vec2f& uv) {
-  auto shape = get_shape(scene, instance.shape);
-  if (shape->colors.empty()) return {1, 1, 1, 1};
-  if (!shape->triangles.empty()) {
-    auto t = shape->triangles[element];
+  auto& shape = get_shape(scene, instance.shape);
+  if (shape.colors.empty()) return {1, 1, 1, 1};
+  if (!shape.triangles.empty()) {
+    auto t = shape.triangles[element];
     return interpolate_triangle(
-        shape->colors[t.x], shape->colors[t.y], shape->colors[t.z], uv);
-  } else if (!shape->quads.empty()) {
-    auto q = shape->quads[element];
-    return interpolate_quad(shape->colors[q.x], shape->colors[q.y],
-        shape->colors[q.z], shape->colors[q.w], uv);
-  } else if (!shape->lines.empty()) {
-    auto l = shape->lines[element];
-    return interpolate_line(shape->colors[l.x], shape->colors[l.y], uv.x);
-  } else if (!shape->points.empty()) {
-    return shape->colors[shape->points[element]];
+        shape.colors[t.x], shape.colors[t.y], shape.colors[t.z], uv);
+  } else if (!shape.quads.empty()) {
+    auto q = shape.quads[element];
+    return interpolate_quad(shape.colors[q.x], shape.colors[q.y],
+        shape.colors[q.z], shape.colors[q.w], uv);
+  } else if (!shape.lines.empty()) {
+    auto l = shape.lines[element];
+    return interpolate_line(shape.colors[l.x], shape.colors[l.y], uv.x);
+  } else if (!shape.points.empty()) {
+    return shape.colors[shape.points[element]];
   } else {
     return {0, 0, 0, 0};
   }
@@ -1191,39 +1031,38 @@ vec3f eval_environment(const scene_scene* scene, const vec3f& direction) {
 
 // Evaluate point
 scene_material_sample eval_material(const scene_scene* scene,
-    const scene_material* material, const vec2f& texcoord) {
+    const scene_material& material, const vec2f& texcoord) {
   auto mat = scene_material_sample{};
   mat.emission =
-      material->emission *
-      xyz(eval_texture(scene, material->emission_tex, texcoord, false));
-  mat.color = material->color *
-              xyz(eval_texture(scene, material->color_tex, texcoord, false));
-  mat.specular = material->specular *
-                 eval_texture(scene, material->specular_tex, texcoord, true).x;
-  mat.metallic = material->metallic *
-                 eval_texture(scene, material->metallic_tex, texcoord, true).x;
-  mat.roughness =
-      material->roughness *
-      eval_texture(scene, material->roughness_tex, texcoord, true).x;
-  mat.ior  = material->ior;
-  mat.coat = material->coat *
-             eval_texture(scene, material->coat_tex, texcoord, true).x;
+      material.emission *
+      xyz(eval_texture(scene, material.emission_tex, texcoord, false));
+  mat.color = material.color *
+              xyz(eval_texture(scene, material.color_tex, texcoord, false));
+  mat.specular = material.specular *
+                 eval_texture(scene, material.specular_tex, texcoord, true).x;
+  mat.metallic = material.metallic *
+                 eval_texture(scene, material.metallic_tex, texcoord, true).x;
+  mat.roughness = material.roughness *
+                  eval_texture(scene, material.roughness_tex, texcoord, true).x;
+  mat.ior  = material.ior;
+  mat.coat = material.coat *
+             eval_texture(scene, material.coat_tex, texcoord, true).x;
   mat.transmission =
-      material->transmission *
-      eval_texture(scene, material->emission_tex, texcoord, true).x;
+      material.transmission *
+      eval_texture(scene, material.emission_tex, texcoord, true).x;
   mat.translucency =
-      material->translucency *
-      eval_texture(scene, material->translucency_tex, texcoord, true).x;
-  mat.opacity = material->opacity *
-                eval_texture(scene, material->opacity_tex, texcoord, true).x;
-  mat.thin = material->thin || material->transmission == 0;
+      material.translucency *
+      eval_texture(scene, material.translucency_tex, texcoord, true).x;
+  mat.opacity = material.opacity *
+                eval_texture(scene, material.opacity_tex, texcoord, true).x;
+  mat.thin = material.thin || material.transmission == 0;
   mat.scattering =
-      material->scattering *
-      xyz(eval_texture(scene, material->scattering_tex, texcoord, false));
-  mat.scanisotropy = material->scanisotropy;
-  mat.trdepth      = material->trdepth;
-  mat.normalmap    = material->normal_tex != invalid_handle
-                         ? -1 + 2 * xyz(eval_texture(scene, material->normal_tex,
+      material.scattering *
+      xyz(eval_texture(scene, material.scattering_tex, texcoord, false));
+  mat.scanisotropy = material.scanisotropy;
+  mat.trdepth      = material.trdepth;
+  mat.normalmap    = material.normal_tex != invalid_handle
+                         ? -1 + 2 * xyz(eval_texture(scene, material.normal_tex,
                                      texcoord, true))
                          : vec3f{0, 0, 1};
   return mat;
@@ -1236,19 +1075,19 @@ static const auto coat_roughness = 0.03f * 0.03f;
 // Eval material to obtain emission, brdf and opacity.
 vec3f eval_emission(const scene_scene* scene, const scene_instance& instance,
     int element, const vec2f& uv, const vec3f& normal, const vec3f& outgoing) {
-  auto material = get_material(scene, instance.material);
-  auto texcoord = eval_texcoord(scene, instance, element, uv);
-  return material->emission *
-         xyz(eval_texture(scene, material->emission_tex, texcoord));
+  auto& material = get_material(scene, instance.material);
+  auto  texcoord = eval_texcoord(scene, instance, element, uv);
+  return material.emission *
+         xyz(eval_texture(scene, material.emission_tex, texcoord));
 }
 
 // Eval material to obtain emission, brdf and opacity.
 float eval_opacity(const scene_scene* scene, const scene_instance& instance,
     int element, const vec2f& uv, const vec3f& normal, const vec3f& outgoing) {
-  auto material = get_material(scene, instance.material);
-  auto texcoord = eval_texcoord(scene, instance, element, uv);
-  auto opacity  = material->opacity *
-                 eval_texture(scene, material->opacity_tex, texcoord, true).x;
+  auto& material = get_material(scene, instance.material);
+  auto  texcoord = eval_texcoord(scene, instance, element, uv);
+  auto  opacity  = material.opacity *
+                 eval_texture(scene, material.opacity_tex, texcoord, true).x;
   if (opacity > 0.999f) opacity = 1;
   return opacity;
 }
@@ -1270,36 +1109,36 @@ void make_cornellbox(scene_scene* scene) {
   camera.film     = 0.024;
   camera.aspect   = 1;
   auto& floor     = get_instance(scene, add_complete_instance(scene, "floor"));
-  get_shape(scene, floor.shape)->positions = {
+  get_shape(scene, floor.shape).positions = {
       {-1, 0, 1}, {1, 0, 1}, {1, 0, -1}, {-1, 0, -1}};
-  get_shape(scene, floor.shape)->triangles   = {{0, 1, 2}, {2, 3, 0}};
-  get_material(scene, floor.material)->color = {0.725, 0.71, 0.68};
+  get_shape(scene, floor.shape).triangles   = {{0, 1, 2}, {2, 3, 0}};
+  get_material(scene, floor.material).color = {0.725, 0.71, 0.68};
   auto& ceiling = get_instance(scene, add_complete_instance(scene, "ceiling"));
-  get_shape(scene, ceiling.shape)->positions = {
+  get_shape(scene, ceiling.shape).positions = {
       {-1, 2, 1}, {-1, 2, -1}, {1, 2, -1}, {1, 2, 1}};
-  get_shape(scene, ceiling.shape)->triangles   = {{0, 1, 2}, {2, 3, 0}};
-  get_material(scene, ceiling.material)->color = {0.725, 0.71, 0.68};
-  auto& backwall                               = get_instance(
+  get_shape(scene, ceiling.shape).triangles   = {{0, 1, 2}, {2, 3, 0}};
+  get_material(scene, ceiling.material).color = {0.725, 0.71, 0.68};
+  auto& backwall                              = get_instance(
       scene, add_complete_instance(scene, "backwall"));
-  get_shape(scene, backwall.shape)->positions = {
+  get_shape(scene, backwall.shape).positions = {
       {-1, 0, -1}, {1, 0, -1}, {1, 2, -1}, {-1, 2, -1}};
-  get_shape(scene, backwall.shape)->triangles   = {{0, 1, 2}, {2, 3, 0}};
-  get_material(scene, backwall.material)->color = {0.725, 0.71, 0.68};
-  auto& rightwall                               = get_instance(
+  get_shape(scene, backwall.shape).triangles   = {{0, 1, 2}, {2, 3, 0}};
+  get_material(scene, backwall.material).color = {0.725, 0.71, 0.68};
+  auto& rightwall                              = get_instance(
       scene, add_complete_instance(scene, "rightwall"));
-  get_shape(scene, rightwall.shape)->positions = {
+  get_shape(scene, rightwall.shape).positions = {
       {1, 0, -1}, {1, 0, 1}, {1, 2, 1}, {1, 2, -1}};
-  get_shape(scene, rightwall.shape)->triangles   = {{0, 1, 2}, {2, 3, 0}};
-  get_material(scene, rightwall.material)->color = {0.14, 0.45, 0.091};
-  auto& leftwall                                 = get_instance(
+  get_shape(scene, rightwall.shape).triangles   = {{0, 1, 2}, {2, 3, 0}};
+  get_material(scene, rightwall.material).color = {0.14, 0.45, 0.091};
+  auto& leftwall                                = get_instance(
       scene, add_complete_instance(scene, "leftwall"));
-  get_shape(scene, leftwall.shape)->positions = {
+  get_shape(scene, leftwall.shape).positions = {
       {-1, 0, 1}, {-1, 0, -1}, {-1, 2, -1}, {-1, 2, 1}};
-  get_shape(scene, leftwall.shape)->triangles   = {{0, 1, 2}, {2, 3, 0}};
-  get_material(scene, leftwall.material)->color = {0.63, 0.065, 0.05};
-  auto& shortbox                                = get_instance(
+  get_shape(scene, leftwall.shape).triangles   = {{0, 1, 2}, {2, 3, 0}};
+  get_material(scene, leftwall.material).color = {0.63, 0.065, 0.05};
+  auto& shortbox                               = get_instance(
       scene, add_complete_instance(scene, "shortbox"));
-  get_shape(scene, shortbox.shape)->positions   = {{0.53, 0.6, 0.75},
+  get_shape(scene, shortbox.shape).positions = {{0.53, 0.6, 0.75},
       {0.7, 0.6, 0.17}, {0.13, 0.6, 0.0}, {-0.05, 0.6, 0.57},
       {-0.05, 0.0, 0.57}, {-0.05, 0.6, 0.57}, {0.13, 0.6, 0.0},
       {0.13, 0.0, 0.0}, {0.53, 0.0, 0.75}, {0.53, 0.6, 0.75},
@@ -1307,12 +1146,12 @@ void make_cornellbox(scene_scene* scene) {
       {0.7, 0.6, 0.17}, {0.53, 0.6, 0.75}, {0.53, 0.0, 0.75}, {0.13, 0.0, 0.0},
       {0.13, 0.6, 0.0}, {0.7, 0.6, 0.17}, {0.7, 0.0, 0.17}, {0.53, 0.0, 0.75},
       {0.7, 0.0, 0.17}, {0.13, 0.0, 0.0}, {-0.05, 0.0, 0.57}};
-  get_shape(scene, shortbox.shape)->triangles   = {{0, 1, 2}, {2, 3, 0},
-      {4, 5, 6}, {6, 7, 4}, {8, 9, 10}, {10, 11, 8}, {12, 13, 14}, {14, 15, 12},
+  get_shape(scene, shortbox.shape).triangles = {{0, 1, 2}, {2, 3, 0}, {4, 5, 6},
+      {6, 7, 4}, {8, 9, 10}, {10, 11, 8}, {12, 13, 14}, {14, 15, 12},
       {16, 17, 18}, {18, 19, 16}, {20, 21, 22}, {22, 23, 20}};
-  get_material(scene, shortbox.material)->color = {0.725, 0.71, 0.68};
+  get_material(scene, shortbox.material).color = {0.725, 0.71, 0.68};
   auto& tallbox = get_instance(scene, add_complete_instance(scene, "tallbox"));
-  get_shape(scene, tallbox.shape)->positions = {{-0.53, 1.2, 0.09},
+  get_shape(scene, tallbox.shape).positions = {{-0.53, 1.2, 0.09},
       {0.04, 1.2, -0.09}, {-0.14, 1.2, -0.67}, {-0.71, 1.2, -0.49},
       {-0.53, 0.0, 0.09}, {-0.53, 1.2, 0.09}, {-0.71, 1.2, -0.49},
       {-0.71, 0.0, -0.49}, {-0.71, 0.0, -0.49}, {-0.71, 1.2, -0.49},
@@ -1321,15 +1160,15 @@ void make_cornellbox(scene_scene* scene) {
       {0.04, 0.0, -0.09}, {0.04, 1.2, -0.09}, {-0.53, 1.2, 0.09},
       {-0.53, 0.0, 0.09}, {-0.53, 0.0, 0.09}, {0.04, 0.0, -0.09},
       {-0.14, 0.0, -0.67}, {-0.71, 0.0, -0.49}};
-  get_shape(scene, tallbox.shape)->triangles = {{0, 1, 2}, {2, 3, 0}, {4, 5, 6},
+  get_shape(scene, tallbox.shape).triangles = {{0, 1, 2}, {2, 3, 0}, {4, 5, 6},
       {6, 7, 4}, {8, 9, 10}, {10, 11, 8}, {12, 13, 14}, {14, 15, 12},
       {16, 17, 18}, {18, 19, 16}, {20, 21, 22}, {22, 23, 20}};
-  get_material(scene, tallbox.material)->color = {0.725, 0.71, 0.68};
+  get_material(scene, tallbox.material).color = {0.725, 0.71, 0.68};
   auto& light = get_instance(scene, add_complete_instance(scene, "light"));
-  get_shape(scene, light.shape)->positions      = {{-0.25, 1.99, 0.25},
+  get_shape(scene, light.shape).positions      = {{-0.25, 1.99, 0.25},
       {-0.25, 1.99, -0.25}, {0.25, 1.99, -0.25}, {0.25, 1.99, 0.25}};
-  get_shape(scene, light.shape)->triangles      = {{0, 1, 2}, {2, 3, 0}};
-  get_material(scene, light.material)->emission = {17, 12, 4};
+  get_shape(scene, light.shape).triangles      = {{0, 1, 2}, {2, 3, 0}};
+  get_material(scene, light.material).emission = {17, 12, 4};
 }
 
 }  // namespace yocto

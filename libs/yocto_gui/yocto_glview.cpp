@@ -93,20 +93,20 @@ void view_shape(const string& title, const string& name,
   auto scene_guard = std::make_unique<sceneio_scene>();
   auto scene       = scene_guard.get();
   print_progress("create scene", 0, 1);
-  auto shandle       = add_shape(scene, "shape");
-  auto ioshape       = get_shape(scene, shandle);
-  ioshape->points    = shape.points;
-  ioshape->lines     = shape.lines;
-  ioshape->triangles = shape.triangles;
-  ioshape->quads     = shape.quads;
-  ioshape->positions = shape.positions;
-  ioshape->normals   = shape.normals;
-  ioshape->texcoords = shape.texcoords;
-  ioshape->colors    = shape.colors;
-  ioshape->radius    = shape.radius;
-  auto  ihandle      = add_instance(scene, "instance");
-  auto& instance     = get_instance(scene, ihandle);
-  instance.shape     = shandle;
+  auto  shandle     = add_shape(scene, "shape");
+  auto& ioshape     = get_shape(scene, shandle);
+  ioshape.points    = shape.points;
+  ioshape.lines     = shape.lines;
+  ioshape.triangles = shape.triangles;
+  ioshape.quads     = shape.quads;
+  ioshape.positions = shape.positions;
+  ioshape.normals   = shape.normals;
+  ioshape.texcoords = shape.texcoords;
+  ioshape.colors    = shape.colors;
+  ioshape.radius    = shape.radius;
+  auto  ihandle     = add_instance(scene, "instance");
+  auto& instance    = get_instance(scene, ihandle);
+  instance.shape    = shandle;
   add_cameras(scene);
   add_materials(scene);
   if (addsky) add_sky(scene);
@@ -127,8 +127,8 @@ void view_scene(const string& title, const string& name, scene_scene* scene,
   auto has_lights =
       std::any_of(scene->instances.begin(), scene->instances.end(),
           [&scene](sceneio_instance& instance) {
-            auto material = get_material(scene, instance.material);
-            return material->emission != zero3f;
+            auto& material = get_material(scene, instance.material);
+            return material.emission != zero3f;
           }) ||
       std::any_of(scene->environments.begin(), scene->environments.end(),
           [](const sceneio_environment& environment) {
