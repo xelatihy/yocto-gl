@@ -164,8 +164,8 @@ vector<string> scene_stats(const scene_scene& scene, bool verbose) {
       "quads:        " + format(accumulate(scene.shapes,
                              [](auto& shape) { return shape.quads.size(); })));
   stats.push_back("fvquads:     " +
-                  format(accumulate(scene.shapes,
-                      [](auto& shape) { return shape.quadspos.size(); })));
+                  format(accumulate(scene.subdivs,
+                      [](auto& subdiv) { return subdiv.quadspos.size(); })));
   stats.push_back(
       "texels4b:     " + format(accumulate(scene.textures, [](auto& texture) {
         return (size_t)texture.ldr.width() * (size_t)texture.ldr.width();
@@ -495,9 +495,14 @@ void trim_memory(scene_scene& scene) {
     shape.colors.shrink_to_fit();
     shape.radius.shrink_to_fit();
     shape.tangents.shrink_to_fit();
-    shape.quadspos.shrink_to_fit();
-    shape.quadsnorm.shrink_to_fit();
-    shape.quadstexcoord.shrink_to_fit();
+  }
+  for (auto& subdiv : scene.subdivs) {
+    subdiv.positions.shrink_to_fit();
+    subdiv.normals.shrink_to_fit();
+    subdiv.texcoords.shrink_to_fit();
+    subdiv.quadspos.shrink_to_fit();
+    subdiv.quadsnorm.shrink_to_fit();
+    subdiv.quadstexcoord.shrink_to_fit();
   }
   for (auto& texture : scene.textures) {
     texture.hdr.shrink_to_fit();
@@ -505,6 +510,9 @@ void trim_memory(scene_scene& scene) {
   }
   scene.cameras.shrink_to_fit();
   scene.shapes.shrink_to_fit();
+  scene.subdivs.shrink_to_fit();
+  scene.instances.shrink_to_fit();
+  scene.materials.shrink_to_fit();
   scene.textures.shrink_to_fit();
   scene.environments.shrink_to_fit();
 }

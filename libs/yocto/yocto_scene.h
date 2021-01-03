@@ -147,19 +147,12 @@ struct scene_material {
 
 // Shape data represented as indexed meshes of elements.
 // May contain either points, lines, triangles and quads.
-// Additionally, we support face-varying primitives where
-// each vertex data has its own topology.
 struct scene_shape {
   // primitives
   vector<int>   points    = {};
   vector<vec2i> lines     = {};
   vector<vec3i> triangles = {};
   vector<vec4i> quads     = {};
-
-  // face-varying primitives
-  vector<vec4i> quadspos      = {};
-  vector<vec4i> quadsnorm     = {};
-  vector<vec4i> quadstexcoord = {};
 
   // vertex data
   vector<vec3f> positions = {};
@@ -168,20 +161,6 @@ struct scene_shape {
   vector<vec4f> colors    = {};
   vector<float> radius    = {};
   vector<vec4f> tangents  = {};
-
-  // subdivision data [experimental]
-  int  subdivisions = 0;
-  bool catmullclark = true;
-  bool smooth       = true;
-
-  // displacement data [experimental]
-  float          displacement     = 0;
-  texture_handle displacement_tex = invalid_handle;
-
-  // element cdf for sampling
-  vector<float> elements_cdf = {};
-  // shape is assigned at creation
-  int shape_id = -1;
 };
 
 // Instance.
@@ -194,6 +173,7 @@ struct scene_instance {
 
 // Environment map.
 struct scene_environment {
+  // environment data
   frame3f        frame        = identity3x4f;
   vec3f          emission     = {0, 0, 0};
   texture_handle emission_tex = invalid_handle;

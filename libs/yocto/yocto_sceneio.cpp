@@ -600,33 +600,6 @@ static bool load_json_scene(const string& filename, scene_scene& scene,
           } else if (key == "shape") {
             get_shape(value, instance.shape);
           } else if (key == "instance") {
-            get_ply_instances(value, get_instance_handle(scene, instance));
-          } else if (key == "subdivisions") {
-            if (instance.shape != invalid_handle) {
-              auto& shape = yocto::get_shape(scene, instance.shape);
-              get_value(value, shape.subdivisions);
-            }
-          } else if (key == "catmullcark") {
-            if (instance.shape != invalid_handle) {
-              auto& shape = yocto::get_shape(scene, instance.shape);
-              get_value(value, shape.catmullclark);
-            }
-          } else if (key == "smooth") {
-            if (instance.shape != invalid_handle) {
-              auto& shape = yocto::get_shape(scene, instance.shape);
-              get_value(value, shape.smooth);
-            }
-          } else if (key == "displacement") {
-            if (instance.shape != invalid_handle) {
-              auto& shape = yocto::get_shape(scene, instance.shape);
-              get_value(value, shape.displacement);
-            }
-          } else if (key == "displacement_tex") {
-            if (instance.shape != invalid_handle) {
-              auto& shape = yocto::get_shape(scene, instance.shape);
-              get_texture(value, shape.displacement_tex);
-            }
-          } else if (key == "instance") {
             throw std::invalid_argument{"instances not suppotyed yet"};
             // get_ply_instances(value, instance);
           } else {
@@ -691,11 +664,14 @@ static bool load_json_scene(const string& filename, scene_scene& scene,
   for (auto [name, value] : shape_map) {
     auto& shape = yocto::get_shape(scene, value.first);
     if (progress_cb) progress_cb("load shape", progress.x++, progress.y);
-    auto path = make_filename(name, "shapes", {".ply", ".obj"});
+    auto path          = make_filename(name, "shapes", {".ply", ".obj"});
+    auto quadspos      = vector<vec4i>{};
+    auto quadsnorm     = vector<vec4i>{};
+    auto quadstexcoord = vector<vec4i>{};
     if (!load_shape(path, shape.points, shape.lines, shape.triangles,
-            shape.quads, shape.quadspos, shape.quadsnorm, shape.quadstexcoord,
-            shape.positions, shape.normals, shape.texcoords, shape.colors,
-            shape.radius, error, shape.catmullclark && shape.subdivisions > 0))
+            shape.quads, quadspos, quadsnorm, quadstexcoord, shape.positions,
+            shape.normals, shape.texcoords, shape.colors, shape.radius, error,
+            false))
       return dependent_error();
   }
 
@@ -956,7 +932,6 @@ static bool save_json_scene(const string& filename, const scene_scene& scene,
   }
 
   auto def_instance = sceneio_instance{};
-  auto def_shape    = sceneio_shape{};
   if (!scene.instances.empty()) {
     auto group = insert_object(js, "instances");
     for (auto& instance : scene.instances) {
@@ -971,25 +946,6 @@ static bool save_json_scene(const string& filename, const scene_scene& scene,
         insert_value(
             elment, "material", get_material_name(scene, instance.material));
       }
-      if (instance.shape != invalid_handle) {
-        auto& shape = get_shape(scene, instance.shape);
-        if (shape.subdivisions != def_shape.subdivisions) {
-          insert_value(elment, "subdivisions", shape.subdivisions);
-        }
-        if (shape.catmullclark != def_shape.catmullclark) {
-          insert_value(elment, "catmullclark", shape.catmullclark);
-        }
-        if (shape.smooth != def_shape.smooth) {
-          insert_value(elment, "smooth", shape.smooth);
-        }
-        if (shape.displacement != def_shape.displacement) {
-          insert_value(elment, "displacement", shape.displacement);
-        }
-        if (shape.displacement_tex != invalid_handle) {
-          insert_value(elment, "displacement_tex",
-              get_texture_name(scene, shape.displacement_tex));
-        }
-      }
     }
   }
 
@@ -1001,16 +957,16 @@ static bool save_json_scene(const string& filename, const scene_scene& scene,
       if (subdiv.shape != invalid_handle) {
         insert_value(elment, "shape", get_shape_name(scene, subdiv.shape));
       }
-      if (subdiv.subdivisions != def_shape.subdivisions) {
+      if (subdiv.subdivisions != def_subdiv.subdivisions) {
         insert_value(elment, "subdivisions", subdiv.subdivisions);
       }
-      if (subdiv.catmullclark != def_shape.catmullclark) {
+      if (subdiv.catmullclark != def_subdiv.catmullclark) {
         insert_value(elment, "catmullclark", subdiv.catmullclark);
       }
-      if (subdiv.smooth != def_shape.smooth) {
+      if (subdiv.smooth != def_subdiv.smooth) {
         insert_value(elment, "smooth", subdiv.smooth);
       }
-      if (subdiv.displacement != def_shape.displacement) {
+      if (subdiv.displacement != def_subdiv.displacement) {
         insert_value(elment, "displacement", subdiv.displacement);
       }
       if (subdiv.displacement_tex != invalid_handle) {
@@ -1038,12 +994,10 @@ static bool save_json_scene(const string& filename, const scene_scene& scene,
   // save shapes
   for (auto& shape : scene.shapes) {
     if (progress_cb) progress_cb("save shape", progress.x++, progress.y);
-    auto path = make_filename(get_shape_name(scene, shape), "shapes",
-        (shape.catmullclark && shape.subdivisions > 0) ? ".obj"s : ".ply"s);
+    auto path = make_filename(get_shape_name(scene, shape), "shapes", ".ply"s);
     if (!save_shape(path, shape.points, shape.lines, shape.triangles,
-            shape.quads, shape.quadspos, shape.quadsnorm, shape.quadstexcoord,
-            shape.positions, shape.normals, shape.texcoords, shape.colors,
-            shape.radius, error, shape.catmullclark && shape.subdivisions > 0))
+            shape.quads, {}, {}, {}, shape.positions, shape.normals,
+            shape.texcoords, shape.colors, shape.radius, error, false))
       return dependent_error();
   }
 
@@ -1413,12 +1367,15 @@ static bool load_ply_scene(const string& filename, scene_scene& scene,
   if (progress_cb) progress_cb("load scene", progress.x++, progress.y);
 
   // load ply mesh
-  auto  handle = add_shape(scene);
-  auto& shape  = get_shape(scene, handle);
+  auto  handle        = add_shape(scene);
+  auto& shape         = get_shape(scene, handle);
+  auto  quadspos      = vector<vec4i>{};
+  auto  quadsnorm     = vector<vec4i>{};
+  auto  quadstexcoord = vector<vec4i>{};
   if (!load_shape(filename, shape.points, shape.lines, shape.triangles,
-          shape.quads, shape.quadspos, shape.quadsnorm, shape.quadstexcoord,
-          shape.positions, shape.normals, shape.texcoords, shape.colors,
-          shape.radius, error))
+          shape.quads, quadspos, quadsnorm, quadstexcoord, shape.positions,
+          shape.normals, shape.texcoords, shape.colors, shape.radius, error,
+          false))
     return false;
 
   // create instance
@@ -1451,9 +1408,8 @@ static bool save_ply_scene(const string& filename, const scene_scene& scene,
   // save shape
   auto& shape = scene.shapes.front();
   if (!save_shape(filename, shape.points, shape.lines, shape.triangles,
-          shape.quads, shape.quadspos, shape.quadsnorm, shape.quadstexcoord,
-          shape.positions, shape.normals, shape.texcoords, shape.colors,
-          shape.radius, error))
+          shape.quads, {}, {}, {}, shape.positions, shape.normals,
+          shape.texcoords, shape.colors, shape.radius, error))
     return false;
 
   // done
@@ -1475,12 +1431,15 @@ static bool load_stl_scene(const string& filename, scene_scene& scene,
   if (progress_cb) progress_cb("load scene", progress.x++, progress.y);
 
   // load stl mesh
-  auto  handle = add_shape(scene);
-  auto& shape  = get_shape(scene, handle);
+  auto  handle        = add_shape(scene);
+  auto& shape         = get_shape(scene, handle);
+  auto  quadspos      = vector<vec4i>{};
+  auto  quadsnorm     = vector<vec4i>{};
+  auto  quadstexcoord = vector<vec4i>{};
   if (!load_shape(filename, shape.points, shape.lines, shape.triangles,
-          shape.quads, shape.quadspos, shape.quadsnorm, shape.quadstexcoord,
-          shape.positions, shape.normals, shape.texcoords, shape.colors,
-          shape.radius, error))
+          shape.quads, quadspos, quadsnorm, quadstexcoord, shape.positions,
+          shape.normals, shape.texcoords, shape.colors, shape.radius, error,
+          false))
     return false;
 
   // create instance
@@ -1513,9 +1472,8 @@ static bool save_stl_scene(const string& filename, const scene_scene& scene,
   // save shape
   auto& shape = scene.shapes.front();
   if (!save_shape(filename, shape.points, shape.lines, shape.triangles,
-          shape.quads, shape.quadspos, shape.quadsnorm, shape.quadstexcoord,
-          shape.positions, shape.normals, shape.texcoords, shape.colors,
-          shape.radius, error))
+          shape.quads, {}, {}, {}, shape.positions, shape.normals,
+          shape.texcoords, shape.colors, shape.radius, error, false))
     return false;
 
   // done
@@ -2237,8 +2195,6 @@ static bool save_gltf_scene(const string& filename, const scene_scene& scene,
         pjs["indices"] = add_accessor(
             js, buffers, triangles.data(), triangles.size() * 3, 1, true);
         pjs["mode"] = 4;
-      } else if (!shape.quadspos.empty()) {
-        return fvshape_error();
       }
       auto& bjs         = js["buffers"].emplace_back();
       bjs               = json::object();
