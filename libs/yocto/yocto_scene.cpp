@@ -233,46 +233,72 @@ scene_scene::~scene_scene() {
 
 // add an element
 template <typename T>
-static T* add_element(vector<T*>& elements, vector<string>& names,
+static element_handle add_element(vector<T*>& elements, vector<string>& names,
     unordered_map<const T*, string>& name_map, const string& name,
     const string& base) {
   names.push_back(
       !name.empty() ? name : (base + std::to_string(elements.size())));
   auto element      = elements.emplace_back(new T{});
   name_map[element] = name;
-  return element;
+  return (int)elements.size() - 1;
 }
 
 // add element
-scene_camera* add_camera(scene_scene* scene, const string& name) {
+camera_handle add_camera(scene_scene* scene, const string& name) {
   return add_element(
       scene->cameras, scene->camera_names, scene->camera_map, name, "camera");
 }
-scene_environment* add_environment(scene_scene* scene, const string& name) {
+environment_handle add_environment(scene_scene* scene, const string& name) {
   return add_element(scene->environments, scene->environment_names,
       scene->environment_map, name, "environment");
 }
-scene_shape* add_shape(scene_scene* scene, const string& name) {
+shape_handle add_shape(scene_scene* scene, const string& name) {
   return add_element(
       scene->shapes, scene->shape_names, scene->shape_map, name, "shape");
 }
-scene_texture* add_texture(scene_scene* scene, const string& name) {
+texture_handle add_texture(scene_scene* scene, const string& name) {
   return add_element(scene->textures, scene->texture_names, scene->texture_map,
       name, "texture");
 }
-scene_instance* add_instance(scene_scene* scene, const string& name) {
+instance_handle add_instance(scene_scene* scene, const string& name) {
   return add_element(scene->instances, scene->instance_names,
       scene->instance_map, name, "instance");
 }
-scene_material* add_material(scene_scene* scene, const string& name) {
+material_handle add_material(scene_scene* scene, const string& name) {
   return add_element(scene->materials, scene->material_names,
       scene->material_map, name, "material");
 }
-scene_instance* add_complete_instance(scene_scene* scene, const string& name) {
-  auto instance      = add_instance(scene, name);
-  instance->shape    = add_shape(scene, name);
-  instance->material = add_material(scene, name);
-  return instance;
+instance_handle add_complete_instance(scene_scene* scene, const string& name) {
+  auto handle        = add_instance(scene, name);
+  auto instance      = get_instance(scene, handle);
+  instance->shape    = get_shape(scene, add_shape(scene, name));
+  instance->material = get_material(scene, add_material(scene, name));
+  return handle;
+}
+
+// get element from a scene
+scene_camera* get_camera(scene_scene* scene, camera_handle handle) {
+  return scene->cameras.at(handle);
+}
+scene_environment* get_environment(
+    scene_scene* scene, environment_handle handle) {
+  return scene->environments.at(handle);
+}
+scene_instance* get_instance(scene_scene* scene, instance_handle handle) {
+  return scene->instances.at(handle);
+}
+scene_material* get_material(scene_scene* scene, material_handle handle) {
+  return scene->materials.at(handle);
+}
+scene_shape* get_shape(scene_scene* scene, shape_handle handle) {
+  return scene->shapes.at(handle);
+}
+scene_texture* get_texture(scene_scene* scene, texture_handle handle) {
+  return scene->textures.at(handle);
+}
+scene_instance* get_complete_instance(
+    scene_scene* scene, instance_handle handle) {
+  return scene->instances.at(handle);
 }
 
 // get name
@@ -321,7 +347,7 @@ string get_material_name(
 // Add missing cameras.
 void add_cameras(scene_scene* scene) {
   if (!scene->cameras.empty()) return;
-  auto camera          = add_camera(scene, "camera");
+  auto camera          = get_camera(scene, add_camera(scene, "camera"));
   camera->orthographic = false;
   camera->film         = 0.036;
   camera->aspect       = (float)16 / (float)9;
@@ -356,7 +382,7 @@ void add_materials(scene_scene* scene) {
   for (auto& instance : scene->instances) {
     if (instance->material != nullptr) continue;
     if (default_material == nullptr) {
-      default_material        = add_material(scene);
+      default_material        = get_material(scene, add_material(scene));
       default_material->color = {0.8, 0.8, 0.8};
     }
     instance->material = default_material;
@@ -365,10 +391,10 @@ void add_materials(scene_scene* scene) {
 
 // Add a sky environment
 void add_sky(scene_scene* scene, float sun_angle) {
-  auto texture              = add_texture(scene, "sky");
-  texture->hdr              = make_sunsky({1024, 512}, sun_angle);
-  auto environment          = add_environment(scene, "sky");
-  environment->emission     = {1, 1, 1};
+  auto texture          = get_texture(scene, add_texture(scene, "sky"));
+  texture->hdr          = make_sunsky({1024, 512}, sun_angle);
+  auto environment      = get_environment(scene, add_environment(scene, "sky"));
+  environment->emission = {1, 1, 1};
   environment->emission_tex = texture;
 }
 
@@ -388,6 +414,24 @@ scene_camera* get_camera(const scene_scene* scene, const string& name) {
     if (get_camera_name(scene, idx) == "camera1") return scene->cameras[idx];
   }
   return scene->cameras.front();
+}
+
+// get named camera or default if camera is empty
+camera_handle get_camera_handle(const scene_scene* scene, const string& name) {
+  if (scene->cameras.empty()) return invalid_handle;
+  for (auto idx = 0; idx < (int)scene->camera_names.size(); idx++) {
+    if (get_camera_name(scene, idx) == name) return idx;
+  }
+  for (auto idx = 0; idx < (int)scene->camera_names.size(); idx++) {
+    if (get_camera_name(scene, idx) == "default") return idx;
+  }
+  for (auto idx = 0; idx < (int)scene->camera_names.size(); idx++) {
+    if (get_camera_name(scene, idx) == "camera") return idx;
+  }
+  for (auto idx = 0; idx < (int)scene->camera_names.size(); idx++) {
+    if (get_camera_name(scene, idx) == "camera1") return idx;
+  }
+  return 0;
 }
 
 // Updates the scene and scene's instances bounding boxes
@@ -1178,36 +1222,37 @@ namespace yocto {
 
 void make_cornellbox(scene_scene* scene) {
   scene->name      = "cornellbox";
-  auto camera      = add_camera(scene);
+  auto camera      = get_camera(scene, add_camera(scene));
   camera->frame    = frame3f{{1, 0, 0}, {0, 1, 0}, {0, 0, 1}, {0, 1, 3.9}};
   camera->lens     = 0.035;
   camera->aperture = 0.0;
   camera->focus    = 3.9;
   camera->film     = 0.024;
   camera->aspect   = 1;
-  auto floor       = add_complete_instance(scene, "floor");
-  floor->shape->positions    = {{-1, 0, 1}, {1, 0, 1}, {1, 0, -1}, {-1, 0, -1}};
-  floor->shape->triangles    = {{0, 1, 2}, {2, 3, 0}};
-  floor->material->color     = {0.725, 0.71, 0.68};
-  auto ceiling               = add_complete_instance(scene, "ceiling");
-  ceiling->shape->positions  = {{-1, 2, 1}, {-1, 2, -1}, {1, 2, -1}, {1, 2, 1}};
-  ceiling->shape->triangles  = {{0, 1, 2}, {2, 3, 0}};
-  ceiling->material->color   = {0.725, 0.71, 0.68};
-  auto backwall              = add_complete_instance(scene, "backwall");
+  auto floor       = get_instance(scene, add_complete_instance(scene, "floor"));
+  floor->shape->positions = {{-1, 0, 1}, {1, 0, 1}, {1, 0, -1}, {-1, 0, -1}};
+  floor->shape->triangles = {{0, 1, 2}, {2, 3, 0}};
+  floor->material->color  = {0.725, 0.71, 0.68};
+  auto ceiling = get_instance(scene, add_complete_instance(scene, "ceiling"));
+  ceiling->shape->positions = {{-1, 2, 1}, {-1, 2, -1}, {1, 2, -1}, {1, 2, 1}};
+  ceiling->shape->triangles = {{0, 1, 2}, {2, 3, 0}};
+  ceiling->material->color  = {0.725, 0.71, 0.68};
+  auto backwall = get_instance(scene, add_complete_instance(scene, "backwall"));
   backwall->shape->positions = {
       {-1, 0, -1}, {1, 0, -1}, {1, 2, -1}, {-1, 2, -1}};
-  backwall->shape->triangles  = {{0, 1, 2}, {2, 3, 0}};
-  backwall->material->color   = {0.725, 0.71, 0.68};
-  auto rightwall              = add_complete_instance(scene, "rightwall");
+  backwall->shape->triangles = {{0, 1, 2}, {2, 3, 0}};
+  backwall->material->color  = {0.725, 0.71, 0.68};
+  auto rightwall             = get_instance(
+      scene, add_complete_instance(scene, "rightwall"));
   rightwall->shape->positions = {{1, 0, -1}, {1, 0, 1}, {1, 2, 1}, {1, 2, -1}};
   rightwall->shape->triangles = {{0, 1, 2}, {2, 3, 0}};
   rightwall->material->color  = {0.14, 0.45, 0.091};
-  auto leftwall               = add_complete_instance(scene, "leftwall");
-  leftwall->shape->positions  = {
+  auto leftwall = get_instance(scene, add_complete_instance(scene, "leftwall"));
+  leftwall->shape->positions = {
       {-1, 0, 1}, {-1, 0, -1}, {-1, 2, -1}, {-1, 2, 1}};
   leftwall->shape->triangles = {{0, 1, 2}, {2, 3, 0}};
   leftwall->material->color  = {0.63, 0.065, 0.05};
-  auto shortbox              = add_complete_instance(scene, "shortbox");
+  auto shortbox = get_instance(scene, add_complete_instance(scene, "shortbox"));
   shortbox->shape->positions = {{0.53, 0.6, 0.75}, {0.7, 0.6, 0.17},
       {0.13, 0.6, 0.0}, {-0.05, 0.6, 0.57}, {-0.05, 0.0, 0.57},
       {-0.05, 0.6, 0.57}, {0.13, 0.6, 0.0}, {0.13, 0.0, 0.0}, {0.53, 0.0, 0.75},
@@ -1220,8 +1265,8 @@ void make_cornellbox(scene_scene* scene) {
       {8, 9, 10}, {10, 11, 8}, {12, 13, 14}, {14, 15, 12}, {16, 17, 18},
       {18, 19, 16}, {20, 21, 22}, {22, 23, 20}};
   shortbox->material->color  = {0.725, 0.71, 0.68};
-  auto tallbox               = add_complete_instance(scene, "tallbox");
-  tallbox->shape->positions  = {{-0.53, 1.2, 0.09}, {0.04, 1.2, -0.09},
+  auto tallbox = get_instance(scene, add_complete_instance(scene, "tallbox"));
+  tallbox->shape->positions = {{-0.53, 1.2, 0.09}, {0.04, 1.2, -0.09},
       {-0.14, 1.2, -0.67}, {-0.71, 1.2, -0.49}, {-0.53, 0.0, 0.09},
       {-0.53, 1.2, 0.09}, {-0.71, 1.2, -0.49}, {-0.71, 0.0, -0.49},
       {-0.71, 0.0, -0.49}, {-0.71, 1.2, -0.49}, {-0.14, 1.2, -0.67},
@@ -1230,15 +1275,15 @@ void make_cornellbox(scene_scene* scene) {
       {0.04, 1.2, -0.09}, {-0.53, 1.2, 0.09}, {-0.53, 0.0, 0.09},
       {-0.53, 0.0, 0.09}, {0.04, 0.0, -0.09}, {-0.14, 0.0, -0.67},
       {-0.71, 0.0, -0.49}};
-  tallbox->shape->triangles  = {{0, 1, 2}, {2, 3, 0}, {4, 5, 6}, {6, 7, 4},
+  tallbox->shape->triangles = {{0, 1, 2}, {2, 3, 0}, {4, 5, 6}, {6, 7, 4},
       {8, 9, 10}, {10, 11, 8}, {12, 13, 14}, {14, 15, 12}, {16, 17, 18},
       {18, 19, 16}, {20, 21, 22}, {22, 23, 20}};
-  tallbox->material->color   = {0.725, 0.71, 0.68};
-  auto light                 = add_complete_instance(scene, "light");
-  light->shape->positions    = {{-0.25, 1.99, 0.25}, {-0.25, 1.99, -0.25},
+  tallbox->material->color  = {0.725, 0.71, 0.68};
+  auto light = get_instance(scene, add_complete_instance(scene, "light"));
+  light->shape->positions   = {{-0.25, 1.99, 0.25}, {-0.25, 1.99, -0.25},
       {0.25, 1.99, -0.25}, {0.25, 1.99, 0.25}};
-  light->shape->triangles    = {{0, 1, 2}, {2, 3, 0}};
-  light->material->emission  = {17, 12, 4};
+  light->shape->triangles   = {{0, 1, 2}, {2, 3, 0}};
+  light->material->emission = {17, 12, 4};
 }
 
 }  // namespace yocto

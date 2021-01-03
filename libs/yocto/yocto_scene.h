@@ -67,6 +67,16 @@ using std::vector;
 // -----------------------------------------------------------------------------
 namespace yocto {
 
+// Handles to refer to scene elements
+inline const int invalid_handle = -1;
+using element_handle            = int;
+using camera_handle             = int;
+using texture_handle            = int;
+using material_handle           = int;
+using shape_handle              = int;
+using instance_handle           = int;
+using environment_handle        = int;
+
 // Camera based on a simple lens model. The camera is placed using a frame.
 // Camera projection is described in photographic terms. In particular,
 // we specify film size (35mm by default), film aspect ration,
@@ -238,13 +248,24 @@ struct scene_scene {
 namespace yocto {
 
 // add element to a scene
-scene_camera*      add_camera(scene_scene* scene, const string& name = "");
-scene_environment* add_environment(scene_scene* scene, const string& name = "");
-scene_instance*    add_instance(scene_scene* scene, const string& name = "");
-scene_material*    add_material(scene_scene* scene, const string& name = "");
-scene_shape*       add_shape(scene_scene* scene, const string& name = "");
-scene_texture*     add_texture(scene_scene* scene, const string& name = "");
-scene_instance* add_complete_instance(scene_scene* scene, const string& name);
+camera_handle      add_camera(scene_scene* scene, const string& name = "");
+environment_handle add_environment(scene_scene* scene, const string& name = "");
+instance_handle    add_instance(scene_scene* scene, const string& name = "");
+material_handle    add_material(scene_scene* scene, const string& name = "");
+material_handle    add_shape(scene_scene* scene, const string& name = "");
+texture_handle     add_texture(scene_scene* scene, const string& name = "");
+instance_handle add_complete_instance(scene_scene* scene, const string& name);
+
+// get element from a scene
+scene_camera*      get_camera(scene_scene* scene, camera_handle handle);
+scene_environment* get_environment(
+    scene_scene* scene, environment_handle handle);
+scene_instance* get_instance(scene_scene* scene, instance_handle handle);
+scene_material* get_material(scene_scene* scene, material_handle handle);
+scene_shape*    get_shape(scene_scene* scene, shape_handle handle);
+scene_texture*  get_texture(scene_scene* scene, texture_handle handle);
+scene_instance* get_complete_instance(
+    scene_scene* scene, instance_handle handle);
 
 // add missing elements
 void add_cameras(scene_scene* scene);
@@ -260,6 +281,8 @@ bbox3f compute_bounds(const scene_scene* scene);
 
 // get named camera or default if name is empty
 scene_camera* get_camera(const scene_scene* scene, const string& name = "");
+camera_handle get_camera_handle(
+    const scene_scene* scene, const string& name = "");
 
 // get name
 string get_camera_name(const scene_scene* scene, int idx);
