@@ -236,8 +236,8 @@ static bool load_instance(
   auto ext = path_extension(filename);
   if (ext == ".ply" || ext == ".PLY") {
     auto ply = ply_model{};
-    if (!load_ply(filename, &ply, error)) return false;
-    get_values(&ply, "instance",
+    if (!load_ply(filename, ply, error)) return false;
+    get_values(ply, "instance",
         {"xx", "xy", "xz", "yx", "yy", "yz", "zx", "zy", "zz", "ox", "oy",
             "oz"},
         frames);
@@ -258,11 +258,11 @@ bool save_instance(const string& filename, const vector<frame3f>& frames,
   auto ext = path_extension(filename);
   if (ext == ".ply" || ext == ".PLY") {
     auto ply = ply_model{};
-    add_values(&ply, "instance",
+    add_values(ply, "instance",
         {"xx", "xy", "xz", "yx", "yy", "yz", "zx", "zy", "zz", "ox", "oy",
             "oz"},
         frames);
-    return save_ply(filename, &ply, error);
+    return save_ply(filename, ply, error);
   } else {
     return format_error();
   }

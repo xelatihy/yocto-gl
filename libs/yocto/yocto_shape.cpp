@@ -77,8 +77,7 @@ bool load_shape(const string& filename, shape_data& shape, string& error,
   auto ext = path_extension(filename);
   if (ext == ".ply" || ext == ".PLY") {
     // open ply
-    auto ply_guard = std::make_unique<ply_model>();
-    auto ply       = ply_guard.get();
+    auto ply = ply_model{};
     if (!load_ply(filename, ply, error)) return false;
 
     // gets vertex
@@ -176,8 +175,7 @@ bool save_shape(const string& filename, const shape_data& shape, string& error,
   auto ext = path_extension(filename);
   if (ext == ".ply" || ext == ".PLY") {
     // create ply
-    auto ply_guard = std::make_unique<ply_model>();
-    auto ply       = ply_guard.get();
+    auto ply = ply_model{};
     add_positions(ply, shape.positions);
     add_normals(ply, shape.normals);
     add_texcoords(ply, shape.texcoords, flip_texcoord);
@@ -295,8 +293,7 @@ bool load_fvshape(const string& filename, fvshape_data& shape, string& error,
   auto ext = path_extension(filename);
   if (ext == ".ply" || ext == ".PLY") {
     // open ply
-    auto ply_guard = std::make_unique<ply_model>();
-    auto ply       = ply_guard.get();
+    auto ply = ply_model{};
     if (!load_ply(filename, ply, error)) return false;
 
     get_positions(ply, shape.positions);
@@ -374,8 +371,7 @@ bool save_fvshape(const string& filename, const fvshape_data& shape,
   auto ext = path_extension(filename);
   if (ext == ".ply" || ext == ".PLY") {
     // create ply
-    auto ply_guard = std::make_unique<ply_model>();
-    auto ply       = ply_guard.get();
+    auto ply = ply_model{};
     // split data
     auto [split_quads, split_positions, split_normals, split_texcoords] =
         split_facevarying(shape.quadspos, shape.quadsnorm, shape.quadstexcoord,
@@ -4094,8 +4090,7 @@ bool load_shape(const string& filename, vector<int>& points,
   auto ext = path_extension(filename);
   if (ext == ".ply" || ext == ".PLY") {
     // open ply
-    auto ply_guard = std::make_unique<ply_model>();
-    auto ply       = ply_guard.get();
+    auto ply = ply_model{};
     if (!load_ply(filename, ply, error)) return false;
 
     if (!facevarying) {
@@ -4215,8 +4210,7 @@ bool save_shape(const string& filename, const vector<int>& points,
   auto ext = path_extension(filename);
   if (ext == ".ply" || ext == ".PLY") {
     // create ply
-    auto ply_guard = std::make_unique<ply_model>();
-    auto ply       = ply_guard.get();
+    auto ply = ply_model{};
     if (quadspos.empty()) {
       add_positions(ply, positions);
       add_normals(ply, normals);

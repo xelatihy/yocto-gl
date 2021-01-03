@@ -91,12 +91,9 @@ struct ply_property {
 // Ply elements
 struct ply_element {
   // element content
-  string                name       = "";
-  size_t                count      = 0;
-  vector<ply_property*> properties = {};
-
-  // cleanup
-  ~ply_element();
+  string               name       = "";
+  size_t               count      = 0;
+  vector<ply_property> properties = {};
 };
 
 // Ply format
@@ -105,103 +102,100 @@ enum struct ply_format { ascii, binary_little_endian, binary_big_endian };
 // Ply model
 struct ply_model {
   // ply content
-  ply_format           format   = ply_format::binary_little_endian;
-  vector<string>       comments = {};
-  vector<ply_element*> elements = {};
-
-  // cleanup
-  ~ply_model();
+  ply_format          format   = ply_format::binary_little_endian;
+  vector<string>      comments = {};
+  vector<ply_element> elements = {};
 };
 
 // Load and save ply
-bool load_ply(const string& filename, ply_model* ply, string& error);
-bool save_ply(const string& filename, const ply_model* ply, string& error);
+bool load_ply(const string& filename, ply_model& ply, string& error);
+bool save_ply(const string& filename, const ply_model& ply, string& error);
 
 // Get ply properties
 bool has_property(
-    ply_model* ply, const string& element, const string& property);
+    ply_model& ply, const string& element, const string& property);
 
-bool get_value(ply_model* ply, const string& element, const string& property,
+bool get_value(ply_model& ply, const string& element, const string& property,
     vector<float>& values);
-bool get_values(ply_model* ply, const string& element,
+bool get_values(ply_model& ply, const string& element,
     const array<string, 2>& properties, vector<vec4f>& values);
-bool get_values(ply_model* ply, const string& element,
+bool get_values(ply_model& ply, const string& element,
     const array<string, 3>& properties, vector<vec3f>& values);
-bool get_values(ply_model* ply, const string& element,
+bool get_values(ply_model& ply, const string& element,
     const array<string, 4>& properties, vector<vec4f>& values);
-bool get_values(ply_model* ply, const string& element,
+bool get_values(ply_model& ply, const string& element,
     const array<string, 12>& properties, vector<frame3f>& values);
 
-bool get_lists(ply_model* ply, const string& element, const string& property,
+bool get_lists(ply_model& ply, const string& element, const string& property,
     vector<vector<int>>& lists);
-bool get_list_sizes(ply_model* ply, const string& element,
+bool get_list_sizes(ply_model& ply, const string& element,
     const string& property, vector<byte>& sizes);
-bool get_list_values(ply_model* ply, const string& element,
+bool get_list_values(ply_model& ply, const string& element,
     const string& property, vector<int>& values);
 
 // Get ply properties for meshes
-bool get_positions(ply_model* ply, vector<vec3f>& values);
-bool get_normals(ply_model* ply, vector<vec3f>& values);
-bool get_texcoords(ply_model* ply, vector<vec2f>& values, bool flipv = false);
-bool get_colors(ply_model* ply, vector<vec3f>& values);
-bool get_colors(ply_model* ply, vector<vec4f>& values);
-bool get_radius(ply_model* ply, vector<float>& values);
-bool get_faces(ply_model* ply, vector<vector<int>>*& values);
-bool get_lines(ply_model* ply, vector<vec2i>& values);
-bool get_points(ply_model* ply, vector<int>& values);
-bool get_triangles(ply_model* ply, vector<vec3i>& values);
-bool get_quads(ply_model* ply, vector<vec4i>& values);
-bool has_quads(ply_model* ply);
+bool get_positions(ply_model& ply, vector<vec3f>& values);
+bool get_normals(ply_model& ply, vector<vec3f>& values);
+bool get_texcoords(ply_model& ply, vector<vec2f>& values, bool flipv = false);
+bool get_colors(ply_model& ply, vector<vec3f>& values);
+bool get_colors(ply_model& ply, vector<vec4f>& values);
+bool get_radius(ply_model& ply, vector<float>& values);
+bool get_faces(ply_model& ply, vector<vector<int>>*& values);
+bool get_lines(ply_model& ply, vector<vec2i>& values);
+bool get_points(ply_model& ply, vector<int>& values);
+bool get_triangles(ply_model& ply, vector<vec3i>& values);
+bool get_quads(ply_model& ply, vector<vec4i>& values);
+bool has_quads(ply_model& ply);
 
 // Add ply properties
-bool add_value(ply_model* ply, const string& element, const string& property,
+bool add_value(ply_model& ply, const string& element, const string& property,
     const vector<float>& values);
-bool add_values(ply_model* ply, const string& element,
+bool add_values(ply_model& ply, const string& element,
     const array<string, 2>& properties, const vector<vec2f>& values);
-bool add_values(ply_model* ply, const string& element,
+bool add_values(ply_model& ply, const string& element,
     const array<string, 3>& properties, const vector<vec3f>& values);
-bool add_values(ply_model* ply, const string& element,
+bool add_values(ply_model& ply, const string& element,
     const array<string, 4>& properties, const vector<vec4f>& values);
-bool add_values(ply_model* ply, const string& element,
+bool add_values(ply_model& ply, const string& element,
     const array<string, 12>& properties, const vector<frame3f>& values);
 
-bool add_value(ply_model* ply, const string& element, const string& property,
+bool add_value(ply_model& ply, const string& element, const string& property,
     const vector<int>& values);
-bool add_values(ply_model* ply, const string& element,
+bool add_values(ply_model& ply, const string& element,
     const array<string, 2>& properties, const vector<vec2i>& values);
-bool add_values(ply_model* ply, const string& element,
+bool add_values(ply_model& ply, const string& element,
     const array<string, 3>& properties, const vector<vec3i>& values);
-bool add_values(ply_model* ply, const string& element,
+bool add_values(ply_model& ply, const string& element,
     const array<string, 4>& properties, const vector<vec4i>& values);
 
-bool add_lists(ply_model* ply, const string& element, const string& property,
+bool add_lists(ply_model& ply, const string& element, const string& property,
     const vector<vector<int>>& values);
-bool add_lists(ply_model* ply, const string& element, const string& property,
+bool add_lists(ply_model& ply, const string& element, const string& property,
     const vector<byte>& sizes, const vector<int>& values);
-bool add_lists(ply_model* ply, const string& element, const string& property,
+bool add_lists(ply_model& ply, const string& element, const string& property,
     const vector<int>& values);
-bool add_lists(ply_model* ply, const string& element, const string& property,
+bool add_lists(ply_model& ply, const string& element, const string& property,
     const vector<vec2i>& values);
-bool add_lists(ply_model* ply, const string& element, const string& property,
+bool add_lists(ply_model& ply, const string& element, const string& property,
     const vector<vec3i>& values);
-bool add_lists(ply_model* ply, const string& element, const string& property,
+bool add_lists(ply_model& ply, const string& element, const string& property,
     const vector<vec4i>& values);
 
 // Add ply properties for meshes
-bool add_positions(ply_model* ply, const vector<vec3f>& values);
-bool add_normals(ply_model* ply, const vector<vec3f>& values);
+bool add_positions(ply_model& ply, const vector<vec3f>& values);
+bool add_normals(ply_model& ply, const vector<vec3f>& values);
 bool add_texcoords(
-    ply_model* ply, const vector<vec2f>& values, bool flipv = false);
-bool add_colors(ply_model* ply, const vector<vec3f>& values);
-bool add_colors(ply_model* ply, const vector<vec4f>& values);
-bool add_radius(ply_model* ply, const vector<float>& values);
-bool add_faces(ply_model* ply, const vector<vector<int>>& values);
+    ply_model& ply, const vector<vec2f>& values, bool flipv = false);
+bool add_colors(ply_model& ply, const vector<vec3f>& values);
+bool add_colors(ply_model& ply, const vector<vec4f>& values);
+bool add_radius(ply_model& ply, const vector<float>& values);
+bool add_faces(ply_model& ply, const vector<vector<int>>& values);
 bool add_faces(
-    ply_model* ply, const vector<vec3i>& tvalues, const vector<vec4i>& qvalues);
-bool add_triangles(ply_model* ply, const vector<vec3i>& values);
-bool add_quads(ply_model* ply, const vector<vec4i>& values);
-bool add_lines(ply_model* ply, const vector<vec2i>& values);
-bool add_points(ply_model* ply, const vector<int>& values);
+    ply_model& ply, const vector<vec3i>& tvalues, const vector<vec4i>& qvalues);
+bool add_triangles(ply_model& ply, const vector<vec3i>& values);
+bool add_quads(ply_model& ply, const vector<vec4i>& values);
+bool add_lines(ply_model& ply, const vector<vec2i>& values);
+bool add_points(ply_model& ply, const vector<int>& values);
 
 }  // namespace yocto
 

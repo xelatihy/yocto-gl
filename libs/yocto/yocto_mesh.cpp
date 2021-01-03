@@ -2690,8 +2690,7 @@ bool load_mesh(const string& filename, vector<vec3i>& triangles,
   auto ext = path_extension(filename);
   if (ext == ".ply" || ext == ".PLY") {
     // open ply
-    auto ply_guard = std::make_unique<ply_model>();
-    auto ply       = ply_guard.get();
+    auto ply = ply_model{};
     if (!load_ply(filename, ply, error)) return false;
     // gets vertex
     get_positions(ply, positions);
@@ -2741,8 +2740,7 @@ bool save_mesh(const string& filename, const vector<vec3i>& triangles,
   auto ext = path_extension(filename);
   if (ext == ".ply" || ext == ".PLY") {
     // create ply
-    auto ply_guard = std::make_unique<ply_model>();
-    auto ply       = ply_guard.get();
+    auto ply = ply_model{};
     add_positions(ply, positions);
     add_normals(ply, normals);
     add_texcoords(ply, texcoords, flip_texcoord);
@@ -2789,8 +2787,7 @@ bool load_mesh(const string& filename, vector<vec3i>& triangles,
   auto ext = path_extension(filename);
   if (ext == ".ply" || ext == ".PLY") {
     // open ply
-    auto ply_guard = std::make_unique<ply_model>();
-    auto ply       = ply_guard.get();
+    auto ply = ply_model{};
     if (!load_ply(filename, ply, error)) return false;
     get_positions(ply, positions);
     get_triangles(ply, triangles);
@@ -2851,8 +2848,7 @@ bool save_mesh(const string& filename, const vector<vec3i>& triangles,
   auto ext = path_extension(filename);
   if (ext == ".ply" || ext == ".PLY") {
     // create ply
-    auto ply_guard = std::make_unique<ply_model>();
-    auto ply       = ply_guard.get();
+    auto ply = ply_model{};
     if (triangles.empty()) return shape_error();
     add_positions(ply, positions);
     add_triangles(ply, triangles);
@@ -2901,8 +2897,7 @@ bool load_lines(const string& filename, vector<vec2i>& lines,
   auto ext = path_extension(filename);
   if (ext == ".ply" || ext == ".PLY") {
     // open ply
-    auto ply_guard = std::make_unique<ply_model>();
-    auto ply       = ply_guard.get();
+    auto ply = ply_model{};
     if (!load_ply(filename, ply, error)) return false;
     // gets vertex
     get_positions(ply, positions);
@@ -2952,8 +2947,7 @@ bool save_lines(const string& filename, const vector<vec2i>& lines,
   auto ext = path_extension(filename);
   if (ext == ".ply" || ext == ".PLY") {
     // create ply
-    auto ply_guard = std::make_unique<ply_model>();
-    auto ply       = ply_guard.get();
+    auto ply = ply_model{};
     add_positions(ply, positions);
     add_normals(ply, normals);
     add_texcoords(ply, texcoords, flip_texcoord);
