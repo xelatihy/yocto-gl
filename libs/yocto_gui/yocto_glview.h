@@ -94,31 +94,31 @@ namespace yocto {
 
 // Make an image view
 struct ogl_imageviewer;
-unique_ptr<ogl_imageviewer> make_imageviewer(const string& title);
+ogl_imageviewer make_imageviewer(const string& title);
 
 // Run view
-void run_viewer(ogl_imageviewer* viewer);
+void run_viewer(ogl_imageviewer& viewer);
 
 // Set image
-void set_image(ogl_imageviewer* viewer, const string& name,
+void set_image(ogl_imageviewer& viewer, const string& name,
     const image<vec4f>& img, float exposure = 0, bool filmic = false);
 void set_image(
-    ogl_imageviewer* viewer, const string& name, const image<vec4b>& img);
+    ogl_imageviewer& viewer, const string& name, const image<vec4b>& img);
 void set_image(
-    ogl_imageviewer* viewer, const string& name, const image_data& image);
-void close_image(ogl_imageviewer* viewer, const string& name);
+    ogl_imageviewer& viewer, const string& name, const image_data& image);
+void close_image(ogl_imageviewer& viewer, const string& name);
 
 // Set params
-void set_widget(ogl_imageviewer* viewer, const string& name,
+void set_widget(ogl_imageviewer& viewer, const string& name,
     const string& pname, const json_value& param, const json_value& schema);
-void set_widgets(ogl_imageviewer* viewer, const string& name,
+void set_widgets(ogl_imageviewer& viewer, const string& name,
     const json_value& params, const json_value& schema);
 
 // Set ui callback
 using ogl_imageviewer_callback =
     function<void(const string&, const json_value&, const gui_input&)>;
 void set_callback(
-    ogl_imageviewer* viewer, const ogl_imageviewer_callback& callback);
+    ogl_imageviewer& viewer, const ogl_imageviewer_callback& callback);
 
 }  // namespace yocto
 

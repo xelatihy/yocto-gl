@@ -150,8 +150,7 @@ int run_view(const view_params& params) {
 // interactive render
 int run_view(const view_params& params) {
   // open viewer
-  auto viewer_guard = make_imageviewer("yimage");
-  auto viewer       = viewer_guard.get();
+  auto viewer = make_imageviewer("yimage");
 
   // scene loading
   auto scene   = scene_scene{};
@@ -188,12 +187,12 @@ int run_view(const view_params& params) {
   auto& camera = get_camera(scene, camera_handle);
   trace_start(
       state, scene, camera, bvh, lights, params,
-      [viewer](const string& message, int sample, int nsamples) {
+      [&](const string& message, int sample, int nsamples) {
         set_widget(viewer, "render", "sample", to_json(sample),
             to_schema(sample, "Current sample"));
         print_progress(message, sample, nsamples);
       },
-      [viewer](const image<vec4f>& render, int current, int total) {
+      [&](const image<vec4f>& render, int current, int total) {
         set_image(viewer, "render", render);
       });
 
@@ -213,12 +212,12 @@ int run_view(const view_params& params) {
           to_schema(params, "Render params"));
       trace_start(
           state, scene, camera, bvh, lights, params,
-          [viewer](const string& message, int sample, int nsamples) {
+          [&](const string& message, int sample, int nsamples) {
             set_widget(viewer, "render", "sample", to_json(sample),
                 to_schema(sample, "Current sample"));
             print_progress(message, sample, nsamples);
           },
-          [viewer](const image<vec4f>& render, int current, int total) {
+          [&](const image<vec4f>& render, int current, int total) {
             set_image(viewer, "render", render);
           });
     } else if ((input.mouse_left || input.mouse_right) &&
@@ -238,12 +237,12 @@ int run_view(const view_params& params) {
           camera.frame, camera.focus, rotate, dolly, pan);
       trace_start(
           state, scene, camera, bvh, lights, params,
-          [viewer](const string& message, int sample, int nsamples) {
+          [&](const string& message, int sample, int nsamples) {
             set_widget(viewer, "render", "sample", to_json(sample),
                 to_schema(sample, "Current sample"));
             print_progress(message, sample, nsamples);
           },
-          [viewer](const image<vec4f>& render, int current, int total) {
+          [&](const image<vec4f>& render, int current, int total) {
             set_image(viewer, "render", render);
           });
     }
