@@ -40,6 +40,7 @@
 #include <functional>
 #include <memory>
 #include <string>
+#include <unordered_map>
 #include <utility>
 #include <vector>
 
@@ -56,6 +57,7 @@ namespace yocto {
 using std::function;
 using std::pair;
 using std::string;
+using std::unordered_map;
 using std::vector;
 
 }  // namespace yocto
@@ -100,9 +102,6 @@ struct scene_texture {
 // The model is based on OBJ, but contains glTF compatibility.
 // For the documentation on the values, please see the OBJ format.
 struct scene_material {
-  // material data
-  string name = "";
-
   // material
   vec3f emission     = {0, 0, 0};
   vec3f color        = {0, 0, 0};
@@ -140,9 +139,6 @@ struct scene_material {
 // Additionally, we support face-varying primitives where
 // each vertex data has its own topology.
 struct scene_shape {
-  // shape data
-  string name = "";
-
   // primitives
   vector<int>   points    = {};
   vector<vec2i> lines     = {};
@@ -180,7 +176,6 @@ struct scene_shape {
 // Object.
 struct scene_instance {
   // instance data
-  string          name     = "";
   frame3f         frame    = identity3x4f;
   scene_shape*    shape    = nullptr;
   scene_material* material = nullptr;
@@ -191,13 +186,9 @@ struct scene_instance {
 
 // Environment map.
 struct scene_environment {
-  string         name         = "";
   frame3f        frame        = identity3x4f;
   vec3f          emission     = {0, 0, 0};
   scene_texture* emission_tex = nullptr;
-
-  // computed properties
-  vector<float> texels_cdf = {};
 };
 
 // Scene comprised an array of objects whose memory is owened by the scene.
@@ -220,9 +211,20 @@ struct scene_scene {
   vector<scene_texture*>     textures     = {};
   vector<scene_material*>    materials    = {};
 
-  // names
-  vector<string> camera_names  = {};
-  vector<string> texture_names = {};
+  // names (this will be cleanup significantly later)
+  vector<string> camera_names      = {};
+  vector<string> texture_names     = {};
+  vector<string> material_names    = {};
+  vector<string> shape_names       = {};
+  vector<string> instance_names    = {};
+  vector<string> environment_names = {};
+  // names (this will be cleanup significantly later)
+  unordered_map<const scene_camera*, string>      camera_map      = {};
+  unordered_map<const scene_texture*, string>     texture_map     = {};
+  unordered_map<const scene_material*, string>    material_map    = {};
+  unordered_map<const scene_shape*, string>       shape_map       = {};
+  unordered_map<const scene_instance*, string>    instance_map    = {};
+  unordered_map<const scene_environment*, string> environment_map = {};
 
   // cleanup
   ~scene_scene();
@@ -258,6 +260,24 @@ bbox3f compute_bounds(const scene_scene* scene);
 
 // get named camera or default if name is empty
 scene_camera* get_camera(const scene_scene* scene, const string& name = "");
+
+// get name
+string get_camera_name(const scene_scene* scene, int idx);
+string get_environment_name(const scene_scene* scene, int idx);
+string get_shape_name(const scene_scene* scene, int idx);
+string get_texture_name(const scene_scene* scene, int idx);
+string get_instance_name(const scene_scene* scene, int idx);
+string get_material_name(const scene_scene* scene, int idx);
+
+string get_camera_name(const scene_scene* scene, const scene_camera* camera);
+string get_environment_name(
+    const scene_scene* scene, const scene_environment* environment);
+string get_shape_name(const scene_scene* scene, const scene_shape* shape);
+string get_texture_name(const scene_scene* scene, const scene_texture* texture);
+string get_instance_name(
+    const scene_scene* scene, const scene_instance* instance);
+string get_material_name(
+    const scene_scene* scene, const scene_material* material);
 
 }  // namespace yocto
 

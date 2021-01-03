@@ -271,7 +271,7 @@ bool draw_widgets(
     gui_window* win, sceneio_scene* ioscene, sceneio_material* iomaterial) {
   if (!iomaterial) return false;
   auto edited = 0;
-  draw_label(win, "name", iomaterial->name);
+  // draw_label(win, "name", iomaterial->name);
   edited += draw_hdrcoloredit(win, "emission", iomaterial->emission);
   edited += draw_coloredit(win, "color", iomaterial->color);
   edited += draw_slider(win, "opacity", iomaterial->opacity, 0, 1);
@@ -314,7 +314,7 @@ bool draw_widgets(
     gui_window* win, sceneio_scene* ioscene, sceneio_shape* ioshape) {
   if (!ioshape) return false;
   auto edited = 0;
-  draw_label(win, "name", ioshape->name);
+  // draw_label(win, "name", ioshape->name);
   draw_label(win, "points", std::to_string(ioshape->points.size()));
   draw_label(win, "lines", std::to_string(ioshape->lines.size()));
   draw_label(win, "triangles", std::to_string(ioshape->triangles.size()));
@@ -341,14 +341,14 @@ bool draw_widgets(
     gui_window* win, sceneio_scene* ioscene, sceneio_instance* ioobject) {
   if (!ioobject) return false;
   auto edited = 0;
-  draw_label(win, "name", ioobject->name);
+  // draw_label(win, "name", ioobject->name);
   edited += draw_slider(win, "frame.x", ioobject->frame.x, -1, 1);
   edited += draw_slider(win, "frame.y", ioobject->frame.y, -1, 1);
   edited += draw_slider(win, "frame.z", ioobject->frame.z, -1, 1);
   edited += draw_slider(win, "frame.o", ioobject->frame.o, -10, 10);
-  edited += draw_combobox(win, "shape", ioobject->shape, ioscene->shapes);
-  edited += draw_combobox(
-      win, "material", ioobject->material, ioscene->materials);
+  // edited += draw_combobox(win, "shape", ioobject->shape, ioscene->shapes);
+  // edited += draw_combobox(
+  //     win, "material", ioobject->material, ioscene->materials);
   return edited;
 }
 
@@ -356,7 +356,7 @@ bool draw_widgets(gui_window* win, sceneio_scene* ioscene,
     sceneio_environment* ioenvironment) {
   if (!ioenvironment) return false;
   auto edited = 0;
-  edited += draw_textinput(win, "name", ioenvironment->name);
+  // edited += draw_textinput(win, "name", ioenvironment->name);
   edited += draw_slider(win, "frame.x", ioenvironment->frame.x, -1, 1);
   edited += draw_slider(win, "frame.y", ioenvironment->frame.y, -1, 1);
   edited += draw_slider(win, "frame.z", ioenvironment->frame.z, -1, 1);
@@ -474,7 +474,7 @@ void draw_widgets(gui_window* win, app_states* apps, const gui_input& input) {
   if (!app->ioscene->environments.empty() &&
       begin_header(win, "environments")) {
     draw_combobox(win, "environments##2", app->selected_environment,
-        app->ioscene->environments);
+        app->ioscene->environment_names);
     auto ioenvironment = app->ioscene->environments[app->selected_environment];
     if (draw_widgets(win, app->ioscene, ioenvironment)) {
       auto glenvironment =
@@ -484,8 +484,8 @@ void draw_widgets(gui_window* win, app_states* apps, const gui_input& input) {
     end_header(win);
   }
   if (!app->ioscene->instances.empty() && begin_header(win, "instances")) {
-    draw_combobox(
-        win, "instance##2", app->selected_instance, app->ioscene->instances);
+    draw_combobox(win, "instance##2", app->selected_instance,
+        app->ioscene->instance_names);
     auto ioinstance = app->ioscene->instances[app->selected_instance];
     if (draw_widgets(win, app->ioscene, ioinstance)) {
       auto glinstance = app->glscene->instances[app->selected_instance];
@@ -499,7 +499,8 @@ void draw_widgets(gui_window* win, app_states* apps, const gui_input& input) {
     end_header(win);
   }
   if (!app->ioscene->shapes.empty() && begin_header(win, "shapes")) {
-    draw_combobox(win, "shape##2", app->selected_shape, app->ioscene->shapes);
+    draw_combobox(
+        win, "shape##2", app->selected_shape, app->ioscene->shape_names);
     auto ioshape = app->ioscene->shapes[app->selected_shape];
     if (!draw_widgets(win, app->ioscene, ioshape)) {
       auto glshape = app->glscene->shapes[app->selected_shape];
@@ -515,8 +516,8 @@ void draw_widgets(gui_window* win, app_states* apps, const gui_input& input) {
     end_header(win);
   }
   if (!app->ioscene->materials.empty() && begin_header(win, "materials")) {
-    draw_combobox(
-        win, "material##2", app->selected_material, app->ioscene->materials);
+    draw_combobox(win, "material##2", app->selected_material,
+        app->ioscene->material_names);
     auto iomaterial = app->ioscene->materials[app->selected_material];
     if (draw_widgets(win, app->ioscene, iomaterial)) {
       auto glmaterial = app->glscene->materials[app->selected_material];

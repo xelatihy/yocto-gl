@@ -618,20 +618,22 @@ void make_test(sceneio_scene* scene, const test_params& params) {
   for (auto idx = 0; idx < shapes.size(); idx++) {
     if (!shapes[idx]) continue;
     if (shapes.size() > 5) {
-      add_instance(scene, shapes[idx]->name + "-" + materials[idx % 5]->name,
+      add_instance(scene,
+          get_shape_name(scene, idx) + "-" + get_material_name(scene, idx % 5),
           {{1, 0, 0}, {0, 1, 0}, {0, 0, 1},
               {0.2f * (idx % 5 - 2), 0.075, -0.4f * (idx / 5)}},
           shapes[idx], materials[idx % 5]);
     } else {
       auto name = params.instance_name == test_instance_name_type::material
-                      ? materials[idx]->name
-                      : shapes[idx]->name;
+                      ? get_material_name(scene, idx)
+                      : get_shape_name(scene, idx);
       add_instance(scene, name,
           {{1, 0, 0}, {0, 1, 0}, {0, 0, 1}, {0.2f * (idx % 5 - 2), 0.075, 0}},
           shapes[idx], materials[idx]);
     }
     if (!shapesi.empty() && shapesi[idx]) {
-      add_instance(scene, shapesi[idx]->name,
+      // TODO(fabio): fix name
+      add_instance(scene, "",
           {{1, 0, 0}, {0, 1, 0}, {0, 0, 1}, {0.2f * (idx - 2), 0.075, 0}},
           shapesi[idx], materials[idx]);
     }
