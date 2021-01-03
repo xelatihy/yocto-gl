@@ -338,22 +338,26 @@ vec4f eval_texture(const scene_texture* texture, const vec2f& uv,
     bool clamp_to_edge = false);
 
 // Evaluate instance properties
-vec3f eval_position(
-    const scene_instance* instance, int element, const vec2f& uv);
-vec3f eval_element_normal(const scene_instance* instance, int element);
-vec3f eval_normal(const scene_instance* instance, int element, const vec2f& uv);
-vec2f eval_texcoord(
-    const scene_instance* instance, int element, const vec2f& uv);
+vec3f eval_position(const scene_scene* scene, const scene_instance* instance,
+    int element, const vec2f& uv);
+vec3f eval_element_normal(
+    const scene_scene* scene, const scene_instance* instance, int element);
+vec3f eval_normal(const scene_scene* scene, const scene_instance* instance,
+    int element, const vec2f& uv);
+vec2f eval_texcoord(const scene_scene* scene, const scene_instance* instance,
+    int element, const vec2f& uv);
 pair<vec3f, vec3f> eval_element_tangents(
-    const scene_instance* instance, int element);
-vec3f eval_normalmap(
-    const scene_instance* instance, int element, const vec2f& uv);
-vec3f eval_shading_normal(const scene_instance* instance, int element,
-    const vec2f& uv, const vec3f& outgoing);
-vec4f eval_color(const scene_instance* instance, int element, const vec2f& uv);
+    const scene_scene* scene, const scene_instance* instance, int element);
+vec3f eval_normalmap(const scene_scene* scene, const scene_instance* instance,
+    int element, const vec2f& uv);
+vec3f eval_shading_normal(const scene_scene* scene,
+    const scene_instance* instance, int element, const vec2f& uv,
+    const vec3f& outgoing);
+vec4f eval_color(const scene_scene* scene, const scene_instance* instance,
+    int element, const vec2f& uv);
 
 // Environment
-vec3f eval_environment(
+vec3f eval_environment(const scene_scene* scene,
     const scene_environment* environment, const vec3f& direction);
 vec3f eval_environment(const scene_scene* scene, const vec3f& direction);
 
@@ -378,7 +382,7 @@ struct scene_material_sample {
 };
 
 // Evaluates material and textures
-scene_material_sample eval_material(
+scene_material_sample eval_material(const scene_scene* scene,
     const scene_material* material, const vec2f& texcoord);
 
 }  // namespace yocto

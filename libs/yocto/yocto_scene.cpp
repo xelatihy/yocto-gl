@@ -913,8 +913,8 @@ ray3f eval_camera(
 }
 
 // Eval position
-vec3f eval_position(
-    const scene_instance* instance, int element, const vec2f& uv) {
+vec3f eval_position(const scene_scene* scene, const scene_instance* instance,
+    int element, const vec2f& uv) {
   auto shape = instance->shape;
   if (!shape->triangles.empty()) {
     auto t = shape->triangles[element];
@@ -939,7 +939,8 @@ vec3f eval_position(
 }
 
 // Shape element normal.
-vec3f eval_element_normal(const scene_instance* instance, int element) {
+vec3f eval_element_normal(
+    const scene_scene* scene, const scene_instance* instance, int element) {
   auto shape = instance->shape;
   if (!shape->triangles.empty()) {
     auto t = shape->triangles[element];
@@ -963,10 +964,11 @@ vec3f eval_element_normal(const scene_instance* instance, int element) {
 }
 
 // Eval normal
-vec3f eval_normal(
-    const scene_instance* instance, int element, const vec2f& uv) {
+vec3f eval_normal(const scene_scene* scene, const scene_instance* instance,
+    int element, const vec2f& uv) {
   auto shape = instance->shape;
-  if (shape->normals.empty()) return eval_element_normal(instance, element);
+  if (shape->normals.empty())
+    return eval_element_normal(scene, instance, element);
   if (!shape->triangles.empty()) {
     auto t = shape->triangles[element];
     return transform_normal(
@@ -991,8 +993,8 @@ vec3f eval_normal(
 }
 
 // Eval texcoord
-vec2f eval_texcoord(
-    const scene_instance* instance, int element, const vec2f& uv) {
+vec2f eval_texcoord(const scene_scene* scene, const scene_instance* instance,
+    int element, const vec2f& uv) {
   auto shape = instance->shape;
   if (shape->texcoords.empty()) return uv;
   if (!shape->triangles.empty()) {
@@ -1069,13 +1071,13 @@ pair<vec3f, vec3f> eval_element_tangents(
   }
 }
 
-vec3f eval_normalmap(
-    const scene_instance* instance, int element, const vec2f& uv) {
+vec3f eval_normalmap(const scene_scene* scene, const scene_instance* instance,
+    int element, const vec2f& uv) {
   auto shape      = instance->shape;
   auto normal_tex = instance->material->normal_tex;
   // apply normal mapping
-  auto normal   = eval_normal(instance, element, uv);
-  auto texcoord = eval_texcoord(instance, element, uv);
+  auto normal   = eval_normal(scene, instance, element, uv);
+  auto texcoord = eval_texcoord(scene, instance, element, uv);
   if (normal_tex != nullptr &&
       (!shape->triangles.empty() || !shape->quads.empty())) {
     auto normalmap = -1 + 2 * xyz(eval_texture(normal_tex, texcoord, true));
@@ -1091,19 +1093,20 @@ vec3f eval_normalmap(
 }
 
 // Eval shading normal
-vec3f eval_shading_normal(const scene_instance* instance, int element,
-    const vec2f& uv, const vec3f& outgoing) {
+vec3f eval_shading_normal(const scene_scene* scene,
+    const scene_instance* instance, int element, const vec2f& uv,
+    const vec3f& outgoing) {
   auto shape    = instance->shape;
   auto material = instance->material;
   if (!shape->triangles.empty() || !shape->quads.empty()) {
-    auto normal = eval_normal(instance, element, uv);
+    auto normal = eval_normal(scene, instance, element, uv);
     if (material->normal_tex != nullptr) {
-      normal = eval_normalmap(instance, element, uv);
+      normal = eval_normalmap(scene, instance, element, uv);
     }
     if (!material->thin) return normal;
     return dot(normal, outgoing) >= 0 ? normal : -normal;
   } else if (!shape->lines.empty()) {
-    auto normal = eval_normal(instance, element, uv);
+    auto normal = eval_normal(scene, instance, element, uv);
     return orthonormalize(outgoing, normal);
   } else if (!shape->points.empty()) {
     return outgoing;
@@ -1113,7 +1116,8 @@ vec3f eval_shading_normal(const scene_instance* instance, int element,
 }
 
 // Eval color
-vec4f eval_color(const scene_instance* instance, int element, const vec2f& uv) {
+vec4f eval_color(const scene_scene* scene, const scene_instance* instance,
+    int element, const vec2f& uv) {
   auto shape = instance->shape;
   if (shape->colors.empty()) return {1, 1, 1, 1};
   if (!shape->triangles.empty()) {
@@ -1135,7 +1139,7 @@ vec4f eval_color(const scene_instance* instance, int element, const vec2f& uv) {
 }
 
 // Evaluate environment color.
-vec3f eval_environment(
+vec3f eval_environment(const scene_scene* scene,
     const scene_environment* environment, const vec3f& direction) {
   auto wl       = transform_direction(inverse(environment->frame), direction);
   auto texcoord = vec2f{
@@ -1149,7 +1153,7 @@ vec3f eval_environment(
 vec3f eval_environment(const scene_scene* scene, const vec3f& direction) {
   auto emission = zero3f;
   for (auto environment : scene->environments) {
-    emission += eval_environment(environment, direction);
+    emission += eval_environment(scene, environment, direction);
   }
   return emission;
 }
@@ -1194,19 +1198,19 @@ static const auto coat_ior       = 1.5f;
 static const auto coat_roughness = 0.03f * 0.03f;
 
 // Eval material to obtain emission, brdf and opacity.
-vec3f eval_emission(const scene_instance* instance, int element,
-    const vec2f& uv, const vec3f& normal, const vec3f& outgoing) {
+vec3f eval_emission(const scene_scene* scene, const scene_instance* instance,
+    int element, const vec2f& uv, const vec3f& normal, const vec3f& outgoing) {
   auto material = instance->material;
-  auto texcoord = eval_texcoord(instance, element, uv);
+  auto texcoord = eval_texcoord(scene, instance, element, uv);
   return material->emission *
          xyz(eval_texture(material->emission_tex, texcoord));
 }
 
 // Eval material to obtain emission, brdf and opacity.
-float eval_opacity(const scene_instance* instance, int element, const vec2f& uv,
-    const vec3f& normal, const vec3f& outgoing) {
+float eval_opacity(const scene_scene* scene, const scene_instance* instance,
+    int element, const vec2f& uv, const vec3f& normal, const vec3f& outgoing) {
   auto material = instance->material;
-  auto texcoord = eval_texcoord(instance, element, uv);
+  auto texcoord = eval_texcoord(scene, instance, element, uv);
   auto opacity  = material->opacity *
                  eval_texture(material->opacity_tex, texcoord, true).x;
   if (opacity > 0.999f) opacity = 1;
