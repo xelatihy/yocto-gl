@@ -131,8 +131,8 @@ void view_scene(const string& title, const string& name, scene_scene* scene,
             return material->emission != zero3f;
           }) ||
       std::any_of(scene->environments.begin(), scene->environments.end(),
-          [](sceneio_environment* environment) {
-            return environment->emission != zero3f;
+          [](const sceneio_environment& environment) {
+            return environment.emission != zero3f;
           });
   if (!has_lights) params.sampler = trace_sampler_type::eyelight;
 

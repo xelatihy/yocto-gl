@@ -102,10 +102,10 @@ environment_handle add_environment(sceneio_scene* scene, const string& name,
     const frame3f& frame, const vec3f& emission,
     texture_handle emission_tex = invalid_handle) {
   auto handle               = add_environment(scene, name);
-  auto environment          = get_environment(scene, handle);
-  environment->frame        = frame;
-  environment->emission     = emission;
-  environment->emission_tex = emission_tex;
+  auto& environment          = get_environment(scene, handle);
+  environment.frame        = frame;
+  environment.emission     = emission;
+  environment.emission_tex = emission_tex;
   return handle;
 }
 texture_handle add_texture(sceneio_scene* scene, const string& name,

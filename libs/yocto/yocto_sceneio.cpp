@@ -494,19 +494,19 @@ static bool load_json_scene(const string& filename, sceneio_scene* scene,
       }
     } else if (gname == "environments") {
       for (auto [name, element] : iterate_object(group)) {
-        auto environment = get_environment(
+        auto& environment = get_environment(
             scene, add_environment(scene, string{name}));
         for (auto [key, value] : iterate_object(element)) {
           if (key == "frame") {
-            get_value(value, environment->frame);
+            get_value(value, environment.frame);
           } else if (key == "emission") {
-            get_value(value, environment->emission);
+            get_value(value, environment.emission);
           } else if (key == "emission_tex") {
-            get_texture(value, environment->emission_tex);
+            get_texture(value, environment.emission_tex);
           } else if (key == "lookat") {
-            get_value(value, (mat3f&)environment->frame);
-            environment->frame = lookat_frame(environment->frame.x,
-                environment->frame.y, environment->frame.z, true);
+            get_value(value, (mat3f&)environment.frame);
+            environment.frame = lookat_frame(environment.frame.x,
+                environment.frame.y, environment.frame.z, true);
           } else {
             set_error(js, "unknown key " + string{key});
           }
@@ -791,18 +791,18 @@ static bool save_json_scene(const string& filename, const sceneio_scene* scene,
   auto def_env = sceneio_environment{};
   if (!scene->environments.empty()) {
     auto group = insert_object(js, "environments");
-    for (auto environment : scene->environments) {
+    for (auto& environment : scene->environments) {
       auto elemnt = insert_object(
           group, get_environment_name(scene, environment));
-      if (environment->frame != def_env.frame) {
-        insert_value(elemnt, "frame", environment->frame);
+      if (environment.frame != def_env.frame) {
+        insert_value(elemnt, "frame", environment.frame);
       }
-      if (environment->emission != def_env.emission) {
-        insert_value(elemnt, "emission", environment->emission);
+      if (environment.emission != def_env.emission) {
+        insert_value(elemnt, "emission", environment.emission);
       }
-      if (environment->emission_tex != invalid_handle) {
+      if (environment.emission_tex != invalid_handle) {
         insert_value(elemnt, "emission_tex",
-            get_texture_name(scene, environment->emission_tex));
+            get_texture_name(scene, environment.emission_tex));
       }
     }
   }
@@ -1136,10 +1136,10 @@ static bool load_obj_scene(const string& filename, sceneio_scene* scene,
 
   // convert environments
   for (auto oenvironment : obj->environments) {
-    auto environment          = get_environment(scene, add_environment(scene));
-    environment->frame        = oenvironment->frame;
-    environment->emission     = oenvironment->emission;
-    environment->emission_tex = get_ctexture(oenvironment->emission_tex);
+    auto& environment        = get_environment(scene, add_environment(scene));
+    environment.frame        = oenvironment->frame;
+    environment.emission     = oenvironment->emission;
+    environment.emission_tex = get_ctexture(oenvironment->emission_tex);
   }
 
   // handle progress
@@ -1274,12 +1274,12 @@ static bool save_obj_scene(const string& filename, const sceneio_scene* scene,
   }
 
   // convert environments
-  for (auto environment : scene->environments) {
+  for (auto& environment : scene->environments) {
     auto oenvironment          = add_environment(obj);
     oenvironment->name         = get_environment_name(scene, environment);
-    oenvironment->frame        = environment->frame;
-    oenvironment->emission     = environment->emission;
-    oenvironment->emission_tex = get_texture(environment->emission_tex);
+    oenvironment->frame        = environment.frame;
+    oenvironment->emission     = environment.emission;
+    oenvironment->emission_tex = get_texture(environment.emission_tex);
   }
 
   // handle progress
@@ -2419,10 +2419,10 @@ static bool load_pbrt_scene(const string& filename, sceneio_scene* scene,
 
   // convert environments
   for (auto penvironment : pbrt->environments) {
-    auto environment          = get_environment(scene, add_environment(scene));
-    environment->frame        = penvironment->frame;
-    environment->emission     = penvironment->emission;
-    environment->emission_tex = get_ctexture(penvironment->emission_tex);
+    auto& environment        = get_environment(scene, add_environment(scene));
+    environment.frame        = penvironment->frame;
+    environment.emission     = penvironment->emission;
+    environment.emission_tex = get_ctexture(penvironment->emission_tex);
   }
 
   // lights
@@ -2551,10 +2551,10 @@ static bool save_pbrt_scene(const string& filename, const sceneio_scene* scene,
   }
 
   // convert environments
-  for (auto environment : scene->environments) {
+  for (auto& environment : scene->environments) {
     auto penvironment          = add_environment(pbrt);
-    penvironment->emission     = environment->emission;
-    penvironment->emission_tex = get_texture(environment->emission_tex);
+    penvironment->emission     = environment.emission;
+    penvironment->emission_tex = get_texture(environment.emission_tex);
   }
 
   // handle progress

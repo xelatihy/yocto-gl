@@ -549,15 +549,15 @@ static vec3f sample_lights(const trace_scene* scene, const trace_lights* lights,
     auto uv        = (!shape->triangles.empty()) ? sample_triangle(ruv) : ruv;
     auto lposition = eval_position(scene, light->instance, element, uv);
     return normalize(lposition - position);
-  } else if (light->environment != nullptr) {
-    auto environment = light->environment;
-    if (environment->emission_tex != invalid_handle) {
-      auto emission_tex = get_texture(scene, environment->emission_tex);
+  } else if (light->environment != invalid_handle) {
+    auto& environment = get_environment(scene, light->environment);
+    if (environment.emission_tex != invalid_handle) {
+      auto emission_tex = get_texture(scene, environment.emission_tex);
       auto idx          = sample_discrete_cdf(light->elements_cdf, rel);
       auto size         = texture_size(emission_tex);
       auto uv           = vec2f{
           ((idx % size.x) + 0.5f) / size.x, ((idx / size.x) + 0.5f) / size.y};
-      return transform_direction(environment->frame,
+      return transform_direction(environment.frame,
           {cos(uv.x * 2 * pif) * sin(uv.y * pif), cos(uv.y * pif),
               sin(uv.x * 2 * pif) * sin(uv.y * pif)});
     } else {
@@ -594,12 +594,12 @@ static float sample_lights_pdf(const trace_scene* scene, const trace_bvh* bvh,
         next_position = lposition + direction * 1e-3f;
       }
       pdf += lpdf;
-    } else if (light->environment != nullptr) {
-      auto environment = light->environment;
-      if (environment->emission_tex != invalid_handle) {
-        auto emission_tex = get_texture(scene, environment->emission_tex);
+    } else if (light->environment != invalid_handle) {
+      auto& environment = get_environment(scene, light->environment);
+      if (environment.emission_tex != invalid_handle) {
+        auto emission_tex = get_texture(scene, environment.emission_tex);
         auto size         = texture_size(emission_tex);
-        auto wl = transform_direction(inverse(environment->frame), direction);
+        auto wl = transform_direction(inverse(environment.frame), direction);
         auto texcoord = vec2f{atan2(wl.z, wl.x) / (2 * pif),
             acos(clamp(wl.y, -1.0f, 1.0f)) / pif};
         if (texcoord.x < 0) texcoord.x += 1;
@@ -1192,7 +1192,7 @@ void init_lights(trace_lights* lights, const trace_scene* scene,
     if (progress_cb) progress_cb("build light", progress.x++, ++progress.y);
     auto light         = add_light(lights);
     light->instance    = instance;
-    light->environment = nullptr;
+    light->environment = invalid_handle;
     if (!shape->triangles.empty()) {
       light->elements_cdf = vector<float>(shape->triangles.size());
       for (auto idx = 0; idx < light->elements_cdf.size(); idx++) {
@@ -1213,14 +1213,15 @@ void init_lights(trace_lights* lights, const trace_scene* scene,
       }
     }
   }
-  for (auto environment : scene->environments) {
-    if (environment->emission == zero3f) continue;
+  for (auto handle = 0; handle < scene->environments.size(); handle++) {
+    auto& environment = get_environment(scene, handle);
+    if (environment.emission == zero3f) continue;
     if (progress_cb) progress_cb("build light", progress.x++, ++progress.y);
     auto light         = add_light(lights);
     light->instance    = nullptr;
-    light->environment = environment;
-    if (environment->emission_tex != invalid_handle) {
-      auto texture        = get_texture(scene, environment->emission_tex);
+    light->environment = handle;
+    if (environment.emission_tex != invalid_handle) {
+      auto texture        = get_texture(scene, environment.emission_tex);
       auto size           = texture_size(texture);
       light->elements_cdf = vector<float>(size.x * size.y);
       if (size != zero2i) {

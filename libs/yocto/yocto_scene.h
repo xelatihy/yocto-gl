@@ -214,12 +214,12 @@ struct scene_scene {
   string copyright = "";
 
   // scene elements
-  vector<scene_camera>       cameras      = {};
-  vector<scene_instance*>    instances    = {};
-  vector<scene_environment*> environments = {};
-  vector<scene_shape*>       shapes       = {};
-  vector<scene_texture*>     textures     = {};
-  vector<scene_material*>    materials    = {};
+  vector<scene_camera>      cameras      = {};
+  vector<scene_instance*>   instances    = {};
+  vector<scene_environment> environments = {};
+  vector<scene_shape*>      shapes       = {};
+  vector<scene_texture*>    textures     = {};
+  vector<scene_material*>   materials    = {};
 
   // names (this will be cleanup significantly later)
   vector<string> camera_names      = {};
@@ -229,11 +229,10 @@ struct scene_scene {
   vector<string> instance_names    = {};
   vector<string> environment_names = {};
   // names (this will be cleanup significantly later)
-  unordered_map<const scene_texture*, string>     texture_map     = {};
-  unordered_map<const scene_material*, string>    material_map    = {};
-  unordered_map<const scene_shape*, string>       shape_map       = {};
-  unordered_map<const scene_instance*, string>    instance_map    = {};
-  unordered_map<const scene_environment*, string> environment_map = {};
+  unordered_map<const scene_texture*, string>  texture_map  = {};
+  unordered_map<const scene_material*, string> material_map = {};
+  unordered_map<const scene_shape*, string>    shape_map    = {};
+  unordered_map<const scene_instance*, string> instance_map = {};
 
   // cleanup
   ~scene_scene();
@@ -257,7 +256,7 @@ instance_handle add_complete_instance(scene_scene* scene, const string& name);
 
 // get element from a scene
 scene_camera&      get_camera(scene_scene* scene, camera_handle handle);
-scene_environment* get_environment(
+scene_environment& get_environment(
     scene_scene* scene, environment_handle handle);
 scene_instance* get_instance(scene_scene* scene, instance_handle handle);
 scene_material* get_material(scene_scene* scene, material_handle handle);
@@ -268,7 +267,7 @@ scene_instance* get_complete_instance(
 
 // get element from a scene
 const scene_camera& get_camera(const scene_scene* scene, camera_handle handle);
-const scene_environment* get_environment(
+const scene_environment& get_environment(
     const scene_scene* scene, environment_handle handle);
 const scene_instance* get_instance(
     const scene_scene* scene, instance_handle handle);
@@ -307,7 +306,7 @@ string get_material_name(const scene_scene* scene, int idx);
 
 string get_camera_name(const scene_scene* scene, const scene_camera& camera);
 string get_environment_name(
-    const scene_scene* scene, const scene_environment* environment);
+    const scene_scene* scene, const scene_environment& environment);
 string get_shape_name(const scene_scene* scene, const scene_shape* shape);
 string get_texture_name(const scene_scene* scene, const scene_texture* texture);
 string get_instance_name(
@@ -374,7 +373,7 @@ vec4f eval_color(const scene_scene* scene, const scene_instance* instance,
 
 // Environment
 vec3f eval_environment(const scene_scene* scene,
-    const scene_environment* environment, const vec3f& direction);
+    const scene_environment& environment, const vec3f& direction);
 vec3f eval_environment(const scene_scene* scene, const vec3f& direction);
 
 // Material sample

@@ -227,7 +227,6 @@ scene_scene::~scene_scene() {
   for (auto material : materials) delete material;
   for (auto instance : instances) delete instance;
   for (auto texture : textures) delete texture;
-  for (auto environment : environments) delete environment;
 }
 
 // add an element
@@ -255,8 +254,8 @@ camera_handle add_camera(scene_scene* scene, const string& name) {
   return add_element(scene->cameras, scene->camera_names, name, "camera");
 }
 environment_handle add_environment(scene_scene* scene, const string& name) {
-  return add_element(scene->environments, scene->environment_names,
-      scene->environment_map, name, "environment");
+  return add_element(
+      scene->environments, scene->environment_names, name, "environment");
 }
 shape_handle add_shape(scene_scene* scene, const string& name) {
   return add_element(
@@ -286,7 +285,7 @@ instance_handle add_complete_instance(scene_scene* scene, const string& name) {
 scene_camera& get_camera(scene_scene* scene, camera_handle handle) {
   return scene->cameras.at(handle);
 }
-scene_environment* get_environment(
+scene_environment& get_environment(
     scene_scene* scene, environment_handle handle) {
   return scene->environments.at(handle);
 }
@@ -311,7 +310,7 @@ scene_instance* get_complete_instance(
 const scene_camera& get_camera(const scene_scene* scene, camera_handle handle) {
   return scene->cameras.at(handle);
 }
-const scene_environment* get_environment(
+const scene_environment& get_environment(
     const scene_scene* scene, environment_handle handle) {
   return scene->environments.at(handle);
 }
@@ -359,8 +358,8 @@ string get_camera_name(const scene_scene* scene, const scene_camera& camera) {
   return scene->camera_names.at(&camera - scene->cameras.data());
 }
 string get_environment_name(
-    const scene_scene* scene, const scene_environment* environment) {
-  return scene->environment_map.at(environment);
+    const scene_scene* scene, const scene_environment& environment) {
+  return scene->environment_names.at(&environment - scene->environments.data());
 }
 string get_shape_name(const scene_scene* scene, const scene_shape* shape) {
   return scene->shape_map.at(shape);
@@ -425,12 +424,12 @@ void add_materials(scene_scene* scene) {
 
 // Add a sky environment
 void add_sky(scene_scene* scene, float sun_angle) {
-  auto thandle          = add_texture(scene, "sky");
-  auto texture          = get_texture(scene, thandle);
-  texture->hdr          = make_sunsky({1024, 512}, sun_angle);
-  auto environment      = get_environment(scene, add_environment(scene, "sky"));
-  environment->emission = {1, 1, 1};
-  environment->emission_tex = thandle;
+  auto thandle         = add_texture(scene, "sky");
+  auto texture         = get_texture(scene, thandle);
+  texture->hdr         = make_sunsky({1024, 512}, sun_angle);
+  auto& environment    = get_environment(scene, add_environment(scene, "sky"));
+  environment.emission = {1, 1, 1};
+  environment.emission_tex = thandle;
 }
 
 // get named camera or default if camera is empty
@@ -1174,13 +1173,13 @@ vec4f eval_color(const scene_scene* scene, const scene_instance* instance,
 
 // Evaluate environment color.
 vec3f eval_environment(const scene_scene* scene,
-    const scene_environment* environment, const vec3f& direction) {
-  auto wl       = transform_direction(inverse(environment->frame), direction);
+    const scene_environment& environment, const vec3f& direction) {
+  auto wl       = transform_direction(inverse(environment.frame), direction);
   auto texcoord = vec2f{
       atan2(wl.z, wl.x) / (2 * pif), acos(clamp(wl.y, -1.0f, 1.0f)) / pif};
   if (texcoord.x < 0) texcoord.x += 1;
-  return environment->emission *
-         xyz(eval_texture(scene, environment->emission_tex, texcoord));
+  return environment.emission *
+         xyz(eval_texture(scene, environment.emission_tex, texcoord));
 }
 
 // Evaluate all environment color.
