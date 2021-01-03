@@ -117,11 +117,10 @@ void view_shape(const string& title, const string& name,
 }
 
 // Open a window and show an scene via path tracing
-void view_scene(const string& title, const string& name,
-    const sceneio_scene* scene, const string& camera_,
-    const progress_callback& progress_cb) {
+void view_scene(const string& title, const string& name, scene_scene* scene,
+    const string& camera_, const progress_callback& progress_cb) {
   // get camera
-  auto camera = get_camera(scene, camera_);
+  auto& camera = get_camera(scene, camera_);
 
   // rendering params
   auto params = trace_params{};
@@ -138,23 +137,19 @@ void view_scene(const string& title, const string& name,
   if (!has_lights) params.sampler = trace_sampler_type::eyelight;
 
   // run viewer
-
   view_scene(title, name, scene, camera, params, progress_cb);
 }
 
 // Open a window and show an scene via path tracing
-void view_scene(const string& title, const string& name,
-    const trace_scene* scene, const trace_camera* camera_,
-    const trace_params& params_, const progress_callback& progress_cb) {
+void view_scene(const string& title, const string& name, trace_scene* scene,
+    trace_camera& camera, const trace_params& params_,
+    const progress_callback& progress_cb) {
   // open viewer
   auto viewer_guard = make_imageviewer(title);
   auto viewer       = viewer_guard.get();
 
   // copy params and camera
-  auto params       = params_;
-  auto camera_guard = make_unique<trace_camera>();
-  auto camera       = camera_guard.get();
-  *camera           = *camera_;
+  auto params = params_;
 
   // build bvh
   auto bvh_guard = std::make_unique<trace_bvh>();
@@ -193,7 +188,7 @@ void view_scene(const string& title, const string& name,
 
   // set callback
   set_callback(viewer,
-      [state, scene, camera, bvh, lights, viewer, &params](const string& name,
+      [state, scene, &camera, bvh, lights, viewer, &params](const string& name,
           const json_value& uiparams, const gui_input& input) {
         if (name != name) return;
         if (!uiparams.is_null()) {
@@ -222,10 +217,10 @@ void view_scene(const string& title, const string& name,
           if (input.mouse_right)
             dolly = (input.mouse_pos.x - input.mouse_last.x) / 100.0f;
           if (input.mouse_left && input.modifier_shift)
-            pan = (input.mouse_pos - input.mouse_last) * camera->focus / 200.0f;
-          pan.x                                  = -pan.x;
-          std::tie(camera->frame, camera->focus) = camera_turntable(
-              camera->frame, camera->focus, rotate, dolly, pan);
+            pan = (input.mouse_pos - input.mouse_last) * camera.focus / 200.0f;
+          pan.x                                = -pan.x;
+          std::tie(camera.frame, camera.focus) = camera_turntable(
+              camera.frame, camera.focus, rotate, dolly, pan);
           trace_start(
               state, scene, camera, bvh, lights, params,
               [viewer, name](const string& message, int sample, int nsamples) {

@@ -515,7 +515,7 @@ static float sample_scattering_pdf(
 }
 
 // Sample camera
-static ray3f sample_camera(const scene_camera* camera, const vec2i& ij,
+static ray3f sample_camera(const scene_camera& camera, const vec2i& ij,
     const vec2i& image_size, const vec2f& puv, const vec2f& luv, bool tent) {
   if (!tent) {
     auto uv = vec2f{
@@ -1133,7 +1133,7 @@ bool is_sampler_lit(const trace_params& params) {
 
 // Trace a block of samples
 void trace_sample(trace_state* state, const trace_scene* scene,
-    const trace_camera* camera, const trace_bvh* bvh,
+    const scene_camera& camera, const trace_bvh* bvh,
     const trace_lights* lights, const vec2i& ij, const trace_params& params) {
   auto sampler = get_trace_sampler_func(params);
   auto ray     = sample_camera(camera, ij, state->render.imsize(),
@@ -1153,11 +1153,11 @@ void trace_sample(trace_state* state, const trace_scene* scene,
 
 // Init a sequence of random number generators.
 void init_state(trace_state* state, const trace_scene* scene,
-    const trace_camera* camera, const trace_params& params) {
-  auto image_size = (camera->aspect >= 1)
+    const scene_camera& camera, const trace_params& params) {
+  auto image_size = (camera.aspect >= 1)
                         ? vec2i{params.resolution,
-                              (int)round(params.resolution / camera->aspect)}
-                        : vec2i{(int)round(params.resolution * camera->aspect),
+                              (int)round(params.resolution / camera.aspect)}
+                        : vec2i{(int)round(params.resolution * camera.aspect),
                               params.resolution};
   state->render.assign(image_size, zero4f);
   state->accumulation.assign(image_size, zero4f);
@@ -1240,7 +1240,7 @@ void init_lights(trace_lights* lights, const trace_scene* scene,
 }
 
 // Progressively computes an image.
-image<vec4f> trace_image(const trace_scene* scene, const trace_camera* camera,
+image<vec4f> trace_image(const trace_scene* scene, const scene_camera& camera,
     const trace_params& params, const progress_callback& progress_cb,
     const image_callback& image_cb) {
   auto bvh_guard = std::make_unique<trace_bvh>();
@@ -1255,7 +1255,7 @@ image<vec4f> trace_image(const trace_scene* scene, const trace_camera* camera,
 }
 
 // Progressively compute an image by calling trace_samples multiple times.
-image<vec4f> trace_image(const trace_scene* scene, const trace_camera* camera,
+image<vec4f> trace_image(const trace_scene* scene, const scene_camera& camera,
     const trace_bvh* bvh, const trace_lights* lights,
     const trace_params& params, const progress_callback& progress_cb,
     const image_callback& image_cb) {
@@ -1286,7 +1286,7 @@ image<vec4f> trace_image(const trace_scene* scene, const trace_camera* camera,
 
 // [experimental] Asynchronous interface
 void trace_start(trace_state* state, const trace_scene* scene,
-    const trace_camera* camera, const trace_bvh* bvh,
+    const scene_camera& camera, const trace_bvh* bvh,
     const trace_lights* lights, const trace_params& params,
     const progress_callback& progress_cb, const image_callback& image_cb,
     const async_callback& async_cb) {

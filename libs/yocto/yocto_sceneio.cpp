@@ -463,30 +463,30 @@ static bool load_json_scene(const string& filename, sceneio_scene* scene,
       }
     } else if (gname == "cameras") {
       for (auto [name, element] : iterate_object(group)) {
-        auto camera = get_camera(scene, add_camera(scene, string{name}));
+        auto& camera = get_camera(scene, add_camera(scene, string{name}));
         for (auto [key, value] : iterate_object(element)) {
           if (key == "frame") {
-            get_value(value, camera->frame);
+            get_value(value, camera.frame);
           } else if (key == "orthographic") {
-            get_value(value, camera->orthographic);
+            get_value(value, camera.orthographic);
           } else if (key == "ortho") {
             // backward compatibility
-            get_value(value, camera->orthographic);
+            get_value(value, camera.orthographic);
           } else if (key == "lens") {
-            get_value(value, camera->lens);
+            get_value(value, camera.lens);
           } else if (key == "aspect") {
-            get_value(value, camera->aspect);
+            get_value(value, camera.aspect);
           } else if (key == "film") {
-            get_value(value, camera->film);
+            get_value(value, camera.film);
           } else if (key == "focus") {
-            get_value(value, camera->focus);
+            get_value(value, camera.focus);
           } else if (key == "aperture") {
-            get_value(value, camera->aperture);
+            get_value(value, camera.aperture);
           } else if (key == "lookat") {
-            get_value(value, (mat3f&)camera->frame);
-            camera->focus = length(camera->frame.x - camera->frame.y);
-            camera->frame = lookat_frame(
-                camera->frame.x, camera->frame.y, camera->frame.z);
+            get_value(value, (mat3f&)camera.frame);
+            camera.focus = length(camera.frame.x - camera.frame.y);
+            camera.frame = lookat_frame(
+                camera.frame.x, camera.frame.y, camera.frame.z);
           } else {
             set_error(js, "unknown key " + string{key});
           }
@@ -762,28 +762,28 @@ static bool save_json_scene(const string& filename, const sceneio_scene* scene,
   if (!scene->cameras.empty()) {
     // auto _ = append_object(js, "cameras");
     auto group = insert_object(js, "cameras");
-    for (auto camera : scene->cameras) {
+    for (auto& camera : scene->cameras) {
       auto elemnt = insert_object(group, get_camera_name(scene, camera));
-      if (camera->frame != def_cam.frame) {
-        insert_value(elemnt, "frame", camera->frame);
+      if (camera.frame != def_cam.frame) {
+        insert_value(elemnt, "frame", camera.frame);
       }
-      if (camera->orthographic != def_cam.orthographic) {
-        insert_value(elemnt, "orthographic", camera->orthographic);
+      if (camera.orthographic != def_cam.orthographic) {
+        insert_value(elemnt, "orthographic", camera.orthographic);
       }
-      if (camera->lens != def_cam.lens) {
-        insert_value(elemnt, "lens", camera->lens);
+      if (camera.lens != def_cam.lens) {
+        insert_value(elemnt, "lens", camera.lens);
       }
-      if (camera->aspect != def_cam.aspect) {
-        insert_value(elemnt, "aspect", camera->aspect);
+      if (camera.aspect != def_cam.aspect) {
+        insert_value(elemnt, "aspect", camera.aspect);
       }
-      if (camera->film != def_cam.film) {
-        insert_value(elemnt, "film", camera->film);
+      if (camera.film != def_cam.film) {
+        insert_value(elemnt, "film", camera.film);
       }
-      if (camera->focus != def_cam.focus) {
-        insert_value(elemnt, "focus", camera->focus);
+      if (camera.focus != def_cam.focus) {
+        insert_value(elemnt, "focus", camera.focus);
       }
-      if (camera->aperture != def_cam.aperture) {
-        insert_value(elemnt, "aperture", camera->aperture);
+      if (camera.aperture != def_cam.aperture) {
+        insert_value(elemnt, "aperture", camera.aperture);
       }
     }
   }
@@ -1018,15 +1018,15 @@ static bool load_obj_scene(const string& filename, sceneio_scene* scene,
 
   // convert cameras
   for (auto ocam : obj->cameras) {
-    auto camera = get_camera(scene, add_camera(scene));
-    // camera->name         = make_safe_name("camera", ocam->name);
-    camera->frame        = ocam->frame;
-    camera->orthographic = ocam->ortho;
-    camera->film         = max(ocam->width, ocam->height);
-    camera->aspect       = ocam->width / ocam->height;
-    camera->focus        = ocam->focus;
-    camera->lens         = ocam->lens;
-    camera->aperture     = ocam->aperture;
+    auto& camera = get_camera(scene, add_camera(scene));
+    // camera.name         = make_safe_name("camera", ocam->name);
+    camera.frame        = ocam->frame;
+    camera.orthographic = ocam->ortho;
+    camera.film         = max(ocam->width, ocam->height);
+    camera.aspect       = ocam->width / ocam->height;
+    camera.focus        = ocam->focus;
+    camera.lens         = ocam->lens;
+    camera.aperture     = ocam->aperture;
   }
 
   // helper to create texture maps
@@ -1198,16 +1198,16 @@ static bool save_obj_scene(const string& filename, const sceneio_scene* scene,
   auto obj       = obj_guard.get();
 
   // convert cameras
-  for (auto camera : scene->cameras) {
+  for (auto& camera : scene->cameras) {
     auto ocamera      = add_camera(obj);
     ocamera->name     = get_camera_name(scene, camera);
-    ocamera->frame    = camera->frame;
-    ocamera->ortho    = camera->orthographic;
-    ocamera->width    = camera->film;
-    ocamera->height   = camera->film / camera->aspect;
-    ocamera->focus    = camera->focus;
-    ocamera->lens     = camera->lens;
-    ocamera->aperture = camera->aperture;
+    ocamera->frame    = camera.frame;
+    ocamera->ortho    = camera.orthographic;
+    ocamera->width    = camera.film;
+    ocamera->height   = camera.film / camera.aspect;
+    ocamera->focus    = camera.focus;
+    ocamera->lens     = camera.lens;
+    ocamera->aperture = camera.aperture;
   }
 
   // textures
@@ -1307,18 +1307,6 @@ static bool save_obj_scene(const string& filename, const sceneio_scene* scene,
   // done
   if (progress_cb) progress_cb("save scene", progress.x++, progress.y);
   return true;
-}
-
-void print_obj_camera(sceneio_camera* camera) {
-  printf("cannot work now\n");
-  // printf("c %s %d %g %g %g %g %g %g %g %g %g %g%g %g %g %g %g %g %g\n",
-  //     camera->name.c_str(), (int)camera->orthographic, camera->film,
-  //     camera->film / camera->aspect, camera->lens, camera->focus,
-  //     camera->aperture, camera->frame.x.x, camera->frame.x.y,
-  //     camera->frame.x.z, camera->frame.y.x, camera->frame.y.y,
-  //     camera->frame.y.z, camera->frame.z.x, camera->frame.z.y,
-  //     camera->frame.z.z, camera->frame.o.x, camera->frame.o.y,
-  //     camera->frame.o.z);
 }
 
 }  // namespace yocto
@@ -1530,25 +1518,25 @@ static bool load_gltf_scene(const string& filename, sceneio_scene* scene,
     if (gnde->camera == nullptr) continue;
     auto mat = mat4f{};
     cgltf_node_transform_world(gnde, &mat.x.x);
-    auto gcam            = gnde->camera;
-    auto camera          = get_camera(scene, add_camera(scene));
-    camera->frame        = mat_to_frame(mat);
-    camera->orthographic = gcam->type == cgltf_camera_type_orthographic;
-    if (camera->orthographic) {
-      auto ortho     = &gcam->data.orthographic;
-      camera->aspect = ortho->xmag / ortho->ymag;
-      camera->lens   = ortho->ymag;  // this is probably bogus
-      camera->film   = 0.036;
+    auto  gcam          = gnde->camera;
+    auto& camera        = get_camera(scene, add_camera(scene));
+    camera.frame        = mat_to_frame(mat);
+    camera.orthographic = gcam->type == cgltf_camera_type_orthographic;
+    if (camera.orthographic) {
+      auto ortho    = &gcam->data.orthographic;
+      camera.aspect = ortho->xmag / ortho->ymag;
+      camera.lens   = ortho->ymag;  // this is probably bogus
+      camera.film   = 0.036;
     } else {
-      auto persp     = &gcam->data.perspective;
-      camera->aspect = persp->aspect_ratio;
-      if (camera->aspect == 0) camera->aspect = 16.0f / 9.0f;
-      camera->film = 0.036;
-      if (camera->aspect >= 1) {
-        camera->lens = (camera->film / camera->aspect) /
-                       (2 * tan(persp->yfov / 2));
+      auto persp    = &gcam->data.perspective;
+      camera.aspect = persp->aspect_ratio;
+      if (camera.aspect == 0) camera.aspect = 16.0f / 9.0f;
+      camera.film = 0.036;
+      if (camera.aspect >= 1) {
+        camera.lens = (camera.film / camera.aspect) /
+                      (2 * tan(persp->yfov / 2));
       } else {
-        camera->lens = camera->film / (2 * tan(persp->yfov / 2));
+        camera.lens = camera.film / (2 * tan(persp->yfov / 2));
       }
     }
   }
@@ -1940,10 +1928,10 @@ static bool load_gltf_scene(const string& filename, sceneio_scene* scene,
 
   // fix cameras
   auto bbox = compute_bounds(scene);
-  for (auto camera : scene->cameras) {
+  for (auto& camera : scene->cameras) {
     auto center   = (bbox.min + bbox.max) / 2;
-    auto distance = dot(-camera->frame.z, center - camera->frame.o);
-    if (distance > 0) camera->focus = distance;
+    auto distance = dot(-camera.frame.z, center - camera.frame.o);
+    if (distance > 0) camera.focus = distance;
   }
 
   // load done
@@ -1992,14 +1980,14 @@ static bool save_gltf_scene(const string& filename, const sceneio_scene* scene,
   if (!scene->cameras.empty()) {
     auto& ajs = js["cameras"];
     ajs       = json::array();
-    for (auto camera : scene->cameras) {
+    for (auto& camera : scene->cameras) {
       auto& cjs          = ajs.emplace_back();
       cjs                = json::object();
       cjs["name"]        = get_camera_name(scene, camera);
       cjs["type"]        = "perspective";
       auto& pjs          = cjs["perspective"];
       pjs                = json::object();
-      pjs["aspectRatio"] = camera->aspect;
+      pjs["aspectRatio"] = camera.aspect;
       pjs["yfov"]        = 0.660593;  // TODO(fabio): yfov
       pjs["znear"]       = 0.001;     // TODO(fabio): configurable?
     }
@@ -2201,7 +2189,7 @@ static bool save_gltf_scene(const string& filename, const sceneio_scene* scene,
       auto& njs    = js["nodes"].emplace_back();
       njs          = json::object();
       njs["name"]  = scene->camera_names[idx];
-      auto matrix = frame_to_mat(camera->frame);  // TODO(fabio): do this better
+      auto matrix  = frame_to_mat(camera.frame);  // TODO(fabio): do this better
       njs["matrix"] = to_json((array<float, 16>&)matrix);
       njs["camera"] = idx;
     }
@@ -2337,12 +2325,12 @@ static bool load_pbrt_scene(const string& filename, sceneio_scene* scene,
 
   // convert cameras
   for (auto pcamera : pbrt->cameras) {
-    auto camera    = get_camera(scene, add_camera(scene));
-    camera->frame  = pcamera->frame;
-    camera->aspect = pcamera->aspect;
-    camera->film   = 0.036;
-    camera->lens   = pcamera->lens;
-    camera->focus  = pcamera->focus;
+    auto& camera  = get_camera(scene, add_camera(scene));
+    camera.frame  = pcamera->frame;
+    camera.aspect = pcamera->aspect;
+    camera.film   = 0.036;
+    camera.lens   = pcamera->lens;
+    camera.focus  = pcamera->focus;
   }
 
   // convert materials
@@ -2522,11 +2510,11 @@ static bool save_pbrt_scene(const string& filename, const sceneio_scene* scene,
   auto pbrt       = pbrt_guard.get();
 
   // convert camera
-  auto camera         = scene->cameras.front();
-  auto pcamera        = add_camera(pbrt);
-  pcamera->frame      = camera->frame;
-  pcamera->lens       = camera->lens;
-  pcamera->aspect     = camera->aspect;
+  auto& camera        = scene->cameras.front();
+  auto  pcamera       = add_camera(pbrt);
+  pcamera->frame      = camera.frame;
+  pcamera->lens       = camera.lens;
+  pcamera->aspect     = camera.aspect;
   pcamera->resolution = {1280, (int)(1280 / pcamera->aspect)};
 
   // get texture name

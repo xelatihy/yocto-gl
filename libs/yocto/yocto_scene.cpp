@@ -223,7 +223,6 @@ vector<string> scene_validation(const scene_scene* scene, bool notextures) {
 namespace yocto {
 
 scene_scene::~scene_scene() {
-  for (auto camera : cameras) delete camera;
   for (auto shape : shapes) delete shape;
   for (auto material : materials) delete material;
   for (auto instance : instances) delete instance;
@@ -242,11 +241,18 @@ static element_handle add_element(vector<T*>& elements, vector<string>& names,
   name_map[element] = name;
   return (int)elements.size() - 1;
 }
+template <typename T>
+static element_handle add_element(vector<T>& elements, vector<string>& names,
+    const string& name, const string& base) {
+  names.push_back(
+      !name.empty() ? name : (base + std::to_string(elements.size())));
+  elements.emplace_back();
+  return (int)elements.size() - 1;
+}
 
 // add element
 camera_handle add_camera(scene_scene* scene, const string& name) {
-  return add_element(
-      scene->cameras, scene->camera_names, scene->camera_map, name, "camera");
+  return add_element(scene->cameras, scene->camera_names, name, "camera");
 }
 environment_handle add_environment(scene_scene* scene, const string& name) {
   return add_element(scene->environments, scene->environment_names,
@@ -277,7 +283,7 @@ instance_handle add_complete_instance(scene_scene* scene, const string& name) {
 }
 
 // get element from a scene
-scene_camera* get_camera(scene_scene* scene, camera_handle handle) {
+scene_camera& get_camera(scene_scene* scene, camera_handle handle) {
   return scene->cameras.at(handle);
 }
 scene_environment* get_environment(
@@ -302,7 +308,7 @@ scene_instance* get_complete_instance(
 }
 
 // get element from a scene
-const scene_camera* get_camera(const scene_scene* scene, camera_handle handle) {
+const scene_camera& get_camera(const scene_scene* scene, camera_handle handle) {
   return scene->cameras.at(handle);
 }
 const scene_environment* get_environment(
@@ -349,8 +355,8 @@ string get_material_name(const scene_scene* scene, int idx) {
   return scene->material_names[idx];
 }
 
-string get_camera_name(const scene_scene* scene, const scene_camera* camera) {
-  return scene->camera_map.at(camera);
+string get_camera_name(const scene_scene* scene, const scene_camera& camera) {
+  return scene->camera_names.at(&camera - scene->cameras.data());
 }
 string get_environment_name(
     const scene_scene* scene, const scene_environment* environment) {
@@ -375,24 +381,23 @@ string get_material_name(
 // Add missing cameras.
 void add_cameras(scene_scene* scene) {
   if (!scene->cameras.empty()) return;
-  auto camera          = get_camera(scene, add_camera(scene, "camera"));
-  camera->orthographic = false;
-  camera->film         = 0.036;
-  camera->aspect       = (float)16 / (float)9;
-  camera->aperture     = 0;
-  camera->lens         = 0.050;
-  auto bbox            = compute_bounds(scene);
-  auto center          = (bbox.max + bbox.min) / 2;
-  auto bbox_radius     = length(bbox.max - bbox.min) / 2;
-  auto camera_dir      = vec3f{0, 0, 1};
-  auto camera_dist     = bbox_radius * camera->lens /
-                     (camera->film / camera->aspect);
+  auto& camera        = get_camera(scene, add_camera(scene, "camera"));
+  camera.orthographic = false;
+  camera.film         = 0.036;
+  camera.aspect       = (float)16 / (float)9;
+  camera.aperture     = 0;
+  camera.lens         = 0.050;
+  auto bbox           = compute_bounds(scene);
+  auto center         = (bbox.max + bbox.min) / 2;
+  auto bbox_radius    = length(bbox.max - bbox.min) / 2;
+  auto camera_dir     = vec3f{0, 0, 1};
+  auto camera_dist = bbox_radius * camera.lens / (camera.film / camera.aspect);
   camera_dist *= 2.0f;  // correction for tracer camera implementation
-  auto from     = camera_dir * camera_dist + center;
-  auto to       = center;
-  auto up       = vec3f{0, 1, 0};
-  camera->frame = lookat_frame(from, to, up);
-  camera->focus = length(from - to);
+  auto from    = camera_dir * camera_dist + center;
+  auto to      = center;
+  auto up      = vec3f{0, 1, 0};
+  camera.frame = lookat_frame(from, to, up);
+  camera.focus = length(from - to);
 }
 
 // Add missing radius.
@@ -429,24 +434,12 @@ void add_sky(scene_scene* scene, float sun_angle) {
 }
 
 // get named camera or default if camera is empty
-scene_camera* get_camera(const scene_scene* scene, const string& name) {
-  if (scene->cameras.empty()) return nullptr;
-  for (auto idx = 0; idx < (int)scene->camera_names.size(); idx++) {
-    if (get_camera_name(scene, idx) == name) return scene->cameras[idx];
-  }
-  for (auto idx = 0; idx < (int)scene->camera_names.size(); idx++) {
-    if (get_camera_name(scene, idx) == "default") return scene->cameras[idx];
-  }
-  for (auto idx = 0; idx < (int)scene->camera_names.size(); idx++) {
-    if (get_camera_name(scene, idx) == "camera") return scene->cameras[idx];
-  }
-  for (auto idx = 0; idx < (int)scene->camera_names.size(); idx++) {
-    if (get_camera_name(scene, idx) == "camera1") return scene->cameras[idx];
-  }
-  return scene->cameras.front();
+scene_camera& get_camera(scene_scene* scene, const string& name) {
+  return get_camera(scene, get_camera_handle(scene, name));
 }
-
-// get named camera or default if camera is empty
+const scene_camera& get_camera(const scene_scene* scene, const string& name) {
+  return get_camera(scene, get_camera_handle(scene, name));
+}
 camera_handle get_camera_handle(const scene_scene* scene, const string& name) {
   if (scene->cameras.empty()) return invalid_handle;
   for (auto idx = 0; idx < (int)scene->camera_names.size(); idx++) {
@@ -916,39 +909,39 @@ vec4f eval_texture(const scene_scene* scene, texture_handle texture,
 // Generates a ray from a camera for yimg::image plane coordinate uv and
 // the lens coordinates luv.
 ray3f eval_camera(
-    const scene_camera* camera, const vec2f& image_uv, const vec2f& lens_uv) {
-  auto film = camera->aspect >= 1
-                  ? vec2f{camera->film, camera->film / camera->aspect}
-                  : vec2f{camera->film * camera->aspect, camera->film};
-  if (!camera->orthographic) {
+    const scene_camera& camera, const vec2f& image_uv, const vec2f& lens_uv) {
+  auto film = camera.aspect >= 1
+                  ? vec2f{camera.film, camera.film / camera.aspect}
+                  : vec2f{camera.film * camera.aspect, camera.film};
+  if (!camera.orthographic) {
     auto q = vec3f{film.x * (0.5f - image_uv.x), film.y * (image_uv.y - 0.5f),
-        camera->lens};
+        camera.lens};
     // ray direction through the lens center
     auto dc = -normalize(q);
     // point on the lens
     auto e = vec3f{
-        lens_uv.x * camera->aperture / 2, lens_uv.y * camera->aperture / 2, 0};
+        lens_uv.x * camera.aperture / 2, lens_uv.y * camera.aperture / 2, 0};
     // point on the focus plane
-    auto p = dc * camera->focus / abs(dc.z);
+    auto p = dc * camera.focus / abs(dc.z);
     // correct ray direction to account for camera focusing
     auto d = normalize(p - e);
     // done
-    return ray3f{transform_point(camera->frame, e),
-        transform_direction(camera->frame, d)};
+    return ray3f{
+        transform_point(camera.frame, e), transform_direction(camera.frame, d)};
   } else {
-    auto scale = 1 / camera->lens;
+    auto scale = 1 / camera.lens;
     auto q     = vec3f{film.x * (0.5f - image_uv.x) * scale,
-        film.y * (image_uv.y - 0.5f) * scale, camera->lens};
+        film.y * (image_uv.y - 0.5f) * scale, camera.lens};
     // point on the lens
-    auto e = vec3f{-q.x, -q.y, 0} + vec3f{lens_uv.x * camera->aperture / 2,
-                                        lens_uv.y * camera->aperture / 2, 0};
+    auto e = vec3f{-q.x, -q.y, 0} + vec3f{lens_uv.x * camera.aperture / 2,
+                                        lens_uv.y * camera.aperture / 2, 0};
     // point on the focus plane
-    auto p = vec3f{-q.x, -q.y, -camera->focus};
+    auto p = vec3f{-q.x, -q.y, -camera.focus};
     // correct ray direction to account for camera focusing
     auto d = normalize(p - e);
     // done
-    return ray3f{transform_point(camera->frame, e),
-        transform_direction(camera->frame, d)};
+    return ray3f{
+        transform_point(camera.frame, e), transform_direction(camera.frame, d)};
   }
 }
 
@@ -1271,15 +1264,15 @@ float eval_opacity(const scene_scene* scene, const scene_instance* instance,
 namespace yocto {
 
 void make_cornellbox(scene_scene* scene) {
-  scene->name      = "cornellbox";
-  auto camera      = get_camera(scene, add_camera(scene));
-  camera->frame    = frame3f{{1, 0, 0}, {0, 1, 0}, {0, 0, 1}, {0, 1, 3.9}};
-  camera->lens     = 0.035;
-  camera->aperture = 0.0;
-  camera->focus    = 3.9;
-  camera->film     = 0.024;
-  camera->aspect   = 1;
-  auto floor       = get_instance(scene, add_complete_instance(scene, "floor"));
+  scene->name     = "cornellbox";
+  auto& camera    = get_camera(scene, add_camera(scene));
+  camera.frame    = frame3f{{1, 0, 0}, {0, 1, 0}, {0, 0, 1}, {0, 1, 3.9}};
+  camera.lens     = 0.035;
+  camera.aperture = 0.0;
+  camera.focus    = 3.9;
+  camera.film     = 0.024;
+  camera.aspect   = 1;
+  auto floor      = get_instance(scene, add_complete_instance(scene, "floor"));
   get_shape(scene, floor->shape)->positions = {
       {-1, 0, 1}, {1, 0, 1}, {1, 0, -1}, {-1, 0, -1}};
   get_shape(scene, floor->shape)->triangles   = {{0, 1, 2}, {2, 3, 0}};

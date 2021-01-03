@@ -64,29 +64,29 @@ camera_handle add_camera(sceneio_scene* scene, const string& name,
     const vec3f& from, const vec3f& to, const vec3f& up, float lens,
     float aspect, float aperture = 0, bool orthographic = false,
     float film = 0.036) {
-  auto handle          = add_camera(scene, name);
-  auto camera          = get_camera(scene, handle);
-  camera->frame        = lookat_frame(from, to, up);
-  camera->lens         = lens;
-  camera->aspect       = aspect;
-  camera->film         = film;
-  camera->orthographic = orthographic;
-  camera->aperture     = aperture;
-  camera->focus        = length(from - to);
+  auto  handle        = add_camera(scene, name);
+  auto& camera        = get_camera(scene, handle);
+  camera.frame        = lookat_frame(from, to, up);
+  camera.lens         = lens;
+  camera.aspect       = aspect;
+  camera.film         = film;
+  camera.orthographic = orthographic;
+  camera.aperture     = aperture;
+  camera.focus        = length(from - to);
   return handle;
 }
 camera_handle add_camera(sceneio_scene* scene, const string& name,
     const frame3f& frame, float lens, float aspect, float aperture = 0,
     float focus = 10, bool orthographic = false, float film = 0.036) {
-  auto handle          = add_camera(scene, name);
-  auto camera          = get_camera(scene, handle);
-  camera->frame        = frame;
-  camera->lens         = lens;
-  camera->aspect       = aspect;
-  camera->film         = film;
-  camera->orthographic = orthographic;
-  camera->aperture     = aperture;
-  camera->focus        = focus;
+  auto  handle        = add_camera(scene, name);
+  auto& camera        = get_camera(scene, handle);
+  camera.frame        = frame;
+  camera.lens         = lens;
+  camera.aspect       = aspect;
+  camera.film         = film;
+  camera.orthographic = orthographic;
+  camera.aperture     = aperture;
+  camera.focus        = focus;
   return handle;
 }
 instance_handle add_instance(sceneio_scene* scene, const string& name,

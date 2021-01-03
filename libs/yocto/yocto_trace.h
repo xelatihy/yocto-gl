@@ -296,7 +296,7 @@ using image_callback =
     function<void(const image<vec4f>& render, int current, int total)>;
 
 // Progressively computes an image.
-image<vec4f> trace_image(const trace_scene* scene, const trace_camera* camera,
+image<vec4f> trace_image(const trace_scene* scene, const scene_camera& camera,
     const trace_params& params, const progress_callback& progress_cb = {},
     const image_callback& image_cb = {});
 
@@ -341,7 +341,7 @@ void update_bvh(trace_bvh* bvh, const trace_scene* scene,
     const progress_callback& progress_cb = {});
 
 // Progressively computes an image.
-image<vec4f> trace_image(const trace_scene* scene, const trace_camera* camera,
+image<vec4f> trace_image(const trace_scene* scene, const scene_camera& camera,
     const trace_bvh* bvh, const trace_lights* lights,
     const trace_params& params, const progress_callback& progress_cb = {},
     const image_callback& image_cb = {});
@@ -366,7 +366,7 @@ using async_callback = function<void(
 // [experimental] Asynchronous interface
 struct trace_state;
 void trace_start(trace_state* state, const trace_scene* scene,
-    const trace_camera* camera, const trace_bvh* bvh,
+    const scene_camera& camera, const trace_bvh* bvh,
     const trace_lights* lights, const trace_params& params,
     const progress_callback& progress_cb = {},
     const image_callback& image_cb = {}, const async_callback& async_cb = {});

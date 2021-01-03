@@ -192,7 +192,7 @@ int run_view(const view_params& params) {
   auto state       = state_guard.get();
 
   // render start
-  auto camera = get_camera(scene, camera_handle);
+  auto& camera = get_camera(scene, camera_handle);
   trace_start(
       state, scene, camera, bvh, lights, params,
       [viewer](const string& message, int sample, int nsamples) {
@@ -210,7 +210,7 @@ int run_view(const view_params& params) {
 
   // set callback
   set_callback(viewer,
-      [state, scene, camera, bvh, lights, viewer, &params](const string& name,
+      [state, scene, &camera, bvh, lights, viewer, &params](const string& name,
           const json_value& uiparams, const gui_input& input) {
         if (name != "render") return;
         if (!uiparams.is_null()) {
@@ -240,10 +240,10 @@ int run_view(const view_params& params) {
           if (input.mouse_right)
             dolly = (input.mouse_pos.x - input.mouse_last.x) / 100.0f;
           if (input.mouse_left && input.modifier_shift)
-            pan = (input.mouse_pos - input.mouse_last) * camera->focus / 200.0f;
-          pan.x                                  = -pan.x;
-          std::tie(camera->frame, camera->focus) = camera_turntable(
-              camera->frame, camera->focus, rotate, dolly, pan);
+            pan = (input.mouse_pos - input.mouse_last) * camera.focus / 200.0f;
+          pan.x                                = -pan.x;
+          std::tie(camera.frame, camera.focus) = camera_turntable(
+              camera.frame, camera.focus, rotate, dolly, pan);
           trace_start(
               state, scene, camera, bvh, lights, params,
               [viewer](const string& message, int sample, int nsamples) {
