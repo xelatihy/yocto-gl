@@ -136,13 +136,12 @@ bool load_shape(const string& filename, shape_data& shape, string& error,
     return true;
   } else if (ext == ".stl" || ext == ".STL") {
     // load obj
-    auto stl_guard = std::make_unique<stl_model>();
-    auto stl       = stl_guard.get();
+    auto stl = stl_model{};
     if (!load_stl(filename, stl, error, true)) return false;
 
     // get shape
-    if (stl->shapes.empty()) return shape_error();
-    if (stl->shapes.size() > 1) return shape_error();
+    if (stl.shapes.empty()) return shape_error();
+    if (stl.shapes.size() > 1) return shape_error();
     auto fnormals = vector<vec3f>{};
     if (!get_triangles(stl, 0, shape.triangles, shape.positions, fnormals))
       return shape_error();
@@ -208,8 +207,7 @@ bool save_shape(const string& filename, const shape_data& shape, string& error,
     return save_obj(filename, obj, error);
   } else if (ext == ".stl" || ext == ".STL") {
     // create ply
-    auto stl_guard = std::make_unique<stl_model>();
-    auto stl       = stl_guard.get();
+    auto stl = stl_model{};
     if (!shape.lines.empty()) return line_error();
     if (!shape.points.empty()) return point_error();
     if (!shape.triangles.empty()) {
@@ -330,13 +328,12 @@ bool load_fvshape(const string& filename, fvshape_data& shape, string& error,
     return true;
   } else if (ext == ".stl" || ext == ".STL") {
     // load obj
-    auto stl_guard = std::make_unique<stl_model>();
-    auto stl       = stl_guard.get();
+    auto stl = stl_model{};
     if (!load_stl(filename, stl, error, true)) return false;
 
     // get shape
-    if (stl->shapes.empty()) return shape_error();
-    if (stl->shapes.size() > 1) return shape_error();
+    if (stl.shapes.empty()) return shape_error();
+    if (stl.shapes.size() > 1) return shape_error();
     auto fnormals  = vector<vec3f>{};
     auto triangles = vector<vec3i>{};
     if (!get_triangles(stl, 0, triangles, shape.positions, fnormals))
@@ -395,8 +392,7 @@ bool save_fvshape(const string& filename, const fvshape_data& shape,
     return save_obj(filename, obj, error);
   } else if (ext == ".stl" || ext == ".STL") {
     // create ply
-    auto stl_guard = std::make_unique<stl_model>();
-    auto stl       = stl_guard.get();
+    auto stl = stl_model{};
     if (!shape.quadspos.empty()) {
       // split data
       auto [split_quads, split_positions, split_normals,
@@ -4165,13 +4161,12 @@ bool load_shape(const string& filename, vector<int>& points,
     return true;
   } else if (ext == ".stl" || ext == ".STL") {
     // load obj
-    auto stl_guard = std::make_unique<stl_model>();
-    auto stl       = stl_guard.get();
+    auto stl = stl_model{};
     if (!load_stl(filename, stl, error, true)) return false;
 
     // get shape
-    if (stl->shapes.empty()) return shape_error();
-    if (stl->shapes.size() > 1) return shape_error();
+    if (stl.shapes.empty()) return shape_error();
+    if (stl.shapes.size() > 1) return shape_error();
     auto fnormals = vector<vec3f>{};
     if (!get_triangles(stl, 0, triangles, positions, fnormals))
       return shape_error();
@@ -4257,8 +4252,7 @@ bool save_shape(const string& filename, const vector<int>& points,
     return save_obj(filename, obj, error);
   } else if (ext == ".stl" || ext == ".STL") {
     // create ply
-    auto stl_guard = std::make_unique<stl_model>();
-    auto stl       = stl_guard.get();
+    auto stl = stl_model{};
     if (!lines.empty()) return line_error();
     if (!points.empty()) return point_error();
     if (!triangles.empty()) {

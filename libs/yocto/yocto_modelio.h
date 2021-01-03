@@ -455,20 +455,19 @@ struct stl_shape {
 };
 
 struct stl_model {
-  vector<stl_shape*> shapes = {};
-  ~stl_model();
+  vector<stl_shape> shapes = {};
 };
 
 // Load/save stl
-bool load_stl(const string& filename, stl_model* stl, string& error,
+bool load_stl(const string& filename, stl_model& stl, string& error,
     bool unique_vertices = true);
-bool save_stl(const string& filename, const stl_model* stl, string& error,
+bool save_stl(const string& filename, const stl_model& stl, string& error,
     bool ascii = false);
 
 // Get/set data
-bool get_triangles(const stl_model* stl, int shape_id, vector<vec3i>& triangles,
+bool get_triangles(const stl_model& stl, int shape_id, vector<vec3i>& triangles,
     vector<vec3f>& positions, vector<vec3f>& fnormals);
-void add_triangles(stl_model* stl, const vector<vec3i>& triangles,
+void add_triangles(stl_model& stl, const vector<vec3i>& triangles,
     const vector<vec3f>& positions, const vector<vec3f>& fnormals);
 
 }  // namespace yocto

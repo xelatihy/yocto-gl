@@ -2571,13 +2571,8 @@ struct hash<yocto::vec3f> {
 // -----------------------------------------------------------------------------
 namespace yocto {
 
-// cleanup
-stl_model::~stl_model() {
-  for (auto shape : shapes) delete shape;
-}
-
 // Load/save stl
-bool load_stl(const string& filename, stl_model* stl, string& error,
+bool load_stl(const string& filename, stl_model& stl, string& error,
     bool unique_vertices) {
   // error helpers
   auto open_error = [filename, &error]() {
@@ -2593,8 +2588,7 @@ bool load_stl(const string& filename, stl_model* stl, string& error,
     return false;
   };
 
-  for (auto shape : stl->shapes) delete shape;
-  stl->shapes.clear();
+  stl.shapes.clear();
 
   // open file
   auto fs = open_file(filename, "rb");
@@ -2637,24 +2631,24 @@ bool load_stl(const string& filename, stl_model* stl, string& error,
     auto ntriangles = (uint32_t)0;
     while (read_value(fs, ntriangles)) {
       // append shape
-      auto shape = stl->shapes.emplace_back(new stl_shape{});
+      auto& shape = stl.shapes.emplace_back();
 
       // resize buffers
-      shape->fnormals.resize(ntriangles);
-      shape->triangles.resize(ntriangles);
-      shape->positions.resize(ntriangles * 3);
+      shape.fnormals.resize(ntriangles);
+      shape.triangles.resize(ntriangles);
+      shape.positions.resize(ntriangles * 3);
 
       // read all data
       for (auto triangle_id = 0; triangle_id < ntriangles; triangle_id++) {
         // read triangle data
-        if (!read_value(fs, shape->fnormals[triangle_id])) return read_error();
-        if (!read_value(fs, shape->positions[triangle_id * 3 + 0]))
+        if (!read_value(fs, shape.fnormals[triangle_id])) return read_error();
+        if (!read_value(fs, shape.positions[triangle_id * 3 + 0]))
           return read_error();
-        if (!read_value(fs, shape->positions[triangle_id * 3 + 1]))
+        if (!read_value(fs, shape.positions[triangle_id * 3 + 1]))
           return read_error();
-        if (!read_value(fs, shape->positions[triangle_id * 3 + 2]))
+        if (!read_value(fs, shape.positions[triangle_id * 3 + 2]))
           return read_error();
-        shape->triangles[triangle_id] = {
+        shape.triangles[triangle_id] = {
             triangle_id * 3 + 0, triangle_id * 3 + 1, triangle_id * 3 + 2};
         // read unused attrobute count
         auto attribute_count = (uint16_t)0;
@@ -2664,7 +2658,7 @@ bool load_stl(const string& filename, stl_model* stl, string& error,
     }
 
     // check if read at least one
-    if (stl->shapes.empty()) return read_error();
+    if (stl.shapes.empty()) return read_error();
   } else {
     // if ascii, re-open the file as text
     auto fs = open_file(filename, "rt");
@@ -2690,7 +2684,7 @@ bool load_stl(const string& filename, stl_model* stl, string& error,
       if (cmd == "solid") {
         if (in_solid) return parse_error();
         in_solid = true;
-        stl->shapes.emplace_back(new stl_shape{});
+        stl.shapes.emplace_back();
       } else if (cmd == "endsolid") {
         if (!in_solid) return parse_error();
         in_solid = false;
@@ -2701,20 +2695,20 @@ bool load_stl(const string& filename, stl_model* stl, string& error,
         if (!parse_value(str, cmd)) return parse_error();
         if (cmd != "normal") return parse_error();
         // vertex normal
-        if (!parse_value(str, stl->shapes.back()->fnormals.emplace_back()))
+        if (!parse_value(str, stl.shapes.back().fnormals.emplace_back()))
           return parse_error();
       } else if (cmd == "endfacet") {
         if (!in_solid || !in_facet || in_loop) return parse_error();
         in_facet = false;
         // check that it was a triangle
-        auto last_pos = (int)stl->shapes.back()->positions.size() - 3;
-        if (stl->shapes.back()->triangles.empty() && last_pos != 0)
+        auto last_pos = (int)stl.shapes.back().positions.size() - 3;
+        if (stl.shapes.back().triangles.empty() && last_pos != 0)
           return parse_error();
-        if (!stl->shapes.back()->triangles.empty() &&
-            last_pos != stl->shapes.back()->triangles.back().z + 1)
+        if (!stl.shapes.back().triangles.empty() &&
+            last_pos != stl.shapes.back().triangles.back().z + 1)
           return parse_error();
         // add triangle
-        stl->shapes.back()->triangles.push_back(
+        stl.shapes.back().triangles.push_back(
             {last_pos + 0, last_pos + 1, last_pos + 2});
       } else if (cmd == "outer") {
         if (!in_solid || !in_facet || in_loop) return parse_error();
@@ -2727,7 +2721,7 @@ bool load_stl(const string& filename, stl_model* stl, string& error,
         in_loop = false;
       } else if (cmd == "vertex") {
         // vertex position
-        if (!parse_value(str, stl->shapes.back()->positions.emplace_back()))
+        if (!parse_value(str, stl.shapes.back().positions.emplace_back()))
           return parse_error();
       } else {
         return parse_error();
@@ -2737,15 +2731,15 @@ bool load_stl(const string& filename, stl_model* stl, string& error,
 
   // make unique vertices
   if (unique_vertices) {
-    for (auto& shape : stl->shapes) {
+    for (auto& shape : stl.shapes) {
       auto vertex_map       = unordered_map<vec3f, int>{};
       auto unique_positions = vector<vec3f>{};
-      for (auto& triangle : shape->triangles) {
+      for (auto& triangle : shape.triangles) {
         for (auto& vertex_id : triangle) {
-          auto vertex_it = vertex_map.find(shape->positions[vertex_id]);
+          auto vertex_it = vertex_map.find(shape.positions[vertex_id]);
           if (vertex_it == vertex_map.end()) {
             auto new_vertex_id = (int)unique_positions.size();
-            unique_positions.push_back(shape->positions[vertex_id]);
+            unique_positions.push_back(shape.positions[vertex_id]);
             vertex_map.insert(
                 vertex_it, {unique_positions.back(), new_vertex_id});
             vertex_id = new_vertex_id;
@@ -2754,7 +2748,7 @@ bool load_stl(const string& filename, stl_model* stl, string& error,
           }
         }
       }
-      std::swap(unique_positions, shape->positions);
+      std::swap(unique_positions, shape.positions);
     }
   }
 
@@ -2763,7 +2757,7 @@ bool load_stl(const string& filename, stl_model* stl, string& error,
 }
 
 bool save_stl(
-    const string& filename, const stl_model* stl, string& error, bool ascii) {
+    const string& filename, const stl_model& stl, string& error, bool ascii) {
   // error helpers
   auto open_error = [filename, &error]() {
     error = filename + ": file not found";
@@ -2791,47 +2785,44 @@ bool save_stl(
     if (!write_value(fs, header)) return write_error();
 
     // write shapes
-    for (auto& shape : stl->shapes) {
-      auto ntriangles = (uint32_t)shape->triangles.size();
+    for (auto& shape : stl.shapes) {
+      auto ntriangles = (uint32_t)shape.triangles.size();
       if (!write_value(fs, ntriangles)) return write_error();
-      for (auto triangle_idx = 0; triangle_idx < shape->triangles.size();
+      for (auto triangle_idx = 0; triangle_idx < shape.triangles.size();
            triangle_idx++) {
-        auto& triangle = shape->triangles[triangle_idx];
-        auto  fnormal  = !shape->fnormals.empty()
-                             ? shape->fnormals[triangle_idx]
-                             : triangle_normal(shape->positions[triangle.x],
-                                 shape->positions[triangle.y],
-                                 shape->positions[triangle.z]);
+        auto& triangle = shape.triangles[triangle_idx];
+        auto  fnormal  = !shape.fnormals.empty()
+                             ? shape.fnormals[triangle_idx]
+                             : triangle_normal(shape.positions[triangle.x],
+                                 shape.positions[triangle.y],
+                                 shape.positions[triangle.z]);
         if (!write_value(fs, fnormal)) return write_error();
-        if (!write_value(fs, shape->positions[triangle.x]))
-          return write_error();
-        if (!write_value(fs, shape->positions[triangle.y]))
-          return write_error();
-        if (!write_value(fs, shape->positions[triangle.z]))
-          return write_error();
+        if (!write_value(fs, shape.positions[triangle.x])) return write_error();
+        if (!write_value(fs, shape.positions[triangle.y])) return write_error();
+        if (!write_value(fs, shape.positions[triangle.z])) return write_error();
         auto attribute_count = (uint16_t)0;
         if (!write_value(fs, attribute_count)) return write_error();
       }
     }
   } else {
-    for (auto& shape : stl->shapes) {
+    for (auto& shape : stl.shapes) {
       if (!format_values(fs, "solid \n")) return write_error();
-      for (auto triangle_idx = 0; triangle_idx < shape->triangles.size();
+      for (auto triangle_idx = 0; triangle_idx < shape.triangles.size();
            triangle_idx++) {
-        auto& triangle = shape->triangles[triangle_idx];
-        auto  fnormal  = !shape->fnormals.empty()
-                             ? shape->fnormals[triangle_idx]
-                             : triangle_normal(shape->positions[triangle.x],
-                                 shape->positions[triangle.y],
-                                 shape->positions[triangle.z]);
+        auto& triangle = shape.triangles[triangle_idx];
+        auto  fnormal  = !shape.fnormals.empty()
+                             ? shape.fnormals[triangle_idx]
+                             : triangle_normal(shape.positions[triangle.x],
+                                 shape.positions[triangle.y],
+                                 shape.positions[triangle.z]);
         if (!format_values(fs, "facet normal {}\n", fnormal))
           return write_error();
         if (!format_values(fs, "outer loop\n")) return write_error();
-        if (!format_values(fs, "vertex {}\n", shape->positions[triangle.x]))
+        if (!format_values(fs, "vertex {}\n", shape.positions[triangle.x]))
           return write_error();
-        if (!format_values(fs, "vertex {}\n", shape->positions[triangle.y]))
+        if (!format_values(fs, "vertex {}\n", shape.positions[triangle.y]))
           return write_error();
-        if (!format_values(fs, "vertex {}\n", shape->positions[triangle.z]))
+        if (!format_values(fs, "vertex {}\n", shape.positions[triangle.z]))
           return write_error();
         if (!format_values(fs, "endloop\n")) return write_error();
         if (!format_values(fs, "endfacet\n")) return write_error();
@@ -2845,21 +2836,21 @@ bool save_stl(
 }
 
 // Get/set data
-bool get_triangles(const stl_model* stl, int shape_id, vector<vec3i>& triangles,
+bool get_triangles(const stl_model& stl, int shape_id, vector<vec3i>& triangles,
     vector<vec3f>& positions, vector<vec3f>& fnormals) {
-  if (shape_id < 0 || shape_id >= stl->shapes.size()) return false;
-  auto shape = stl->shapes.at(shape_id);
-  triangles  = shape->triangles;
-  positions  = shape->positions;
-  fnormals   = shape->fnormals;
+  if (shape_id < 0 || shape_id >= stl.shapes.size()) return false;
+  auto& shape = stl.shapes.at(shape_id);
+  triangles   = shape.triangles;
+  positions   = shape.positions;
+  fnormals    = shape.fnormals;
   return true;
 }
-void add_triangles(stl_model* stl, const vector<vec3i>& triangles,
+void add_triangles(stl_model& stl, const vector<vec3i>& triangles,
     const vector<vec3f>& positions, const vector<vec3f>& fnormals) {
-  auto shape       = stl->shapes.emplace_back(new stl_shape{});
-  shape->triangles = triangles;
-  shape->positions = positions;
-  shape->fnormals  = fnormals;
+  auto& shape     = stl.shapes.emplace_back();
+  shape.triangles = triangles;
+  shape.positions = positions;
+  shape.fnormals  = fnormals;
 }
 
 }  // namespace yocto

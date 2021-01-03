@@ -2758,8 +2758,7 @@ bool save_mesh(const string& filename, const vector<vec3i>& triangles,
     if (!save_obj(filename, obj, error)) return false;
     return true;
   } else if (ext == ".stl" || ext == ".STL") {
-    auto stl_guard = std::make_unique<stl_model>();
-    auto stl       = stl_guard.get();
+    auto stl = stl_model{};
     if (triangles.empty()) return shape_error();
     add_triangles(stl, triangles, positions, {});
     if (!save_stl(filename, stl, error)) return false;
@@ -2818,11 +2817,10 @@ bool load_mesh(const string& filename, vector<vec3i>& triangles,
     return true;
   } else if (ext == ".stl" || ext == ".STL") {
     // open ply
-    auto stl_guard = std::make_unique<stl_model>();
-    auto stl       = stl_guard.get();
+    auto stl = stl_model{};
     if (!load_stl(filename, stl, error)) return false;
-    if (stl->shapes.empty()) return shape_error();
-    if (stl->shapes.size() > 1) return shape_error();
+    if (stl.shapes.empty()) return shape_error();
+    if (stl.shapes.size() > 1) return shape_error();
     auto fnormals = vector<vec3f>{};
     if (!get_triangles(stl, 0, triangles, positions, fnormals))
       return shape_error();
@@ -2864,8 +2862,7 @@ bool save_mesh(const string& filename, const vector<vec3i>& triangles,
     if (!save_obj(filename, obj, error)) return false;
     return true;
   } else if (ext == ".stl" || ext == ".STL") {
-    auto stl_guard = std::make_unique<stl_model>();
-    auto stl       = stl_guard.get();
+    auto stl = stl_model{};
     if (triangles.empty()) return shape_error();
     add_triangles(stl, triangles, positions, {});
     if (!save_stl(filename, stl, error)) return false;
