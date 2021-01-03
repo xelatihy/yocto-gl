@@ -271,8 +271,7 @@ int run_view(const view_params& params) {
 // view images
 int run_view(const view_params& params) {
   // open viewer
-  auto viewer_guard = make_imageviewer("yimage");
-  auto viewer       = viewer_guard.get();
+  auto viewer = make_imageviewer("yimage");
 
   // set image
   for (auto& filename : params.images) {
@@ -359,8 +358,7 @@ int run_grade(const grade_params& params) {
 // grade images
 int run_grade(const grade_params& params) {
   // open viewer
-  auto viewer_guard = make_imageviewer("yimage");
-  auto viewer       = viewer_guard.get();
+  auto viewer = make_imageviewer("yimage");
 
   // load image
   auto image   = image_data{};
@@ -382,14 +380,14 @@ int run_grade(const grade_params& params) {
       viewer, params.image, to_json(params), to_schema(params, "Color grade"));
 
   // set callback
-  set_callback(viewer, [&params, &graded, &image, viewer](const string& name,
-                           const json_value& uiparams, const gui_input&) {
-    if (uiparams.is_null()) return;
-    serialize_value(json_mode::from_json, (json_value&)uiparams,
-        (colorgrade_params&)params, "");
-    colorgrade_image_mt(graded, image, params);
-    set_image(viewer, name, graded);
-  });
+  set_callback(viewer,
+      [&](const string& name, const json_value& uiparams, const gui_input&) {
+        if (uiparams.is_null()) return;
+        serialize_value(json_mode::from_json, (json_value&)uiparams,
+            (colorgrade_params&)params, "");
+        colorgrade_image_mt(graded, image, params);
+        set_image(viewer, name, graded);
+      });
 
   // run view
   run_viewer(viewer);

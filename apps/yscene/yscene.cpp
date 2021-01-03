@@ -60,268 +60,286 @@ triangles_shape make_bunny(float scale = 1, bool align_middle = true) {
   return shape;
 }
 
-sceneio_camera* add_camera(sceneio_scene* scene, const string& name,
+camera_handle add_camera(scene_scene& scene, const string& name,
     const vec3f& from, const vec3f& to, const vec3f& up, float lens,
     float aspect, float aperture = 0, bool orthographic = false,
     float film = 0.036) {
-  auto camera          = add_camera(scene, name);
-  camera->frame        = lookat_frame(from, to, up);
-  camera->lens         = lens;
-  camera->aspect       = aspect;
-  camera->film         = film;
-  camera->orthographic = orthographic;
-  camera->aperture     = aperture;
-  camera->focus        = length(from - to);
-  return camera;
+  auto  handle        = add_camera(scene, name);
+  auto& camera        = get_camera(scene, handle);
+  camera.frame        = lookat_frame(from, to, up);
+  camera.lens         = lens;
+  camera.aspect       = aspect;
+  camera.film         = film;
+  camera.orthographic = orthographic;
+  camera.aperture     = aperture;
+  camera.focus        = length(from - to);
+  return handle;
 }
-sceneio_camera* add_camera(sceneio_scene* scene, const string& name,
+camera_handle add_camera(scene_scene& scene, const string& name,
     const frame3f& frame, float lens, float aspect, float aperture = 0,
     float focus = 10, bool orthographic = false, float film = 0.036) {
-  auto camera          = add_camera(scene, name);
-  camera->frame        = frame;
-  camera->lens         = lens;
-  camera->aspect       = aspect;
-  camera->film         = film;
-  camera->orthographic = orthographic;
-  camera->aperture     = aperture;
-  camera->focus        = focus;
-  return camera;
+  auto  handle        = add_camera(scene, name);
+  auto& camera        = get_camera(scene, handle);
+  camera.frame        = frame;
+  camera.lens         = lens;
+  camera.aspect       = aspect;
+  camera.film         = film;
+  camera.orthographic = orthographic;
+  camera.aperture     = aperture;
+  camera.focus        = focus;
+  return handle;
 }
-sceneio_instance* add_instance(sceneio_scene* scene, const string& name,
-    const frame3f& frame, sceneio_shape* shape, sceneio_material* material) {
-  auto instance      = add_instance(scene, name);
-  instance->frame    = frame;
-  instance->shape    = shape;
-  instance->material = material;
-  return instance;
+instance_handle add_instance(scene_scene& scene, const string& name,
+    const frame3f& frame, shape_handle shape, material_handle material) {
+  auto  handle      = add_instance(scene, name);
+  auto& instance    = get_instance(scene, handle);
+  instance.frame    = frame;
+  instance.shape    = shape;
+  instance.material = material;
+  return handle;
 }
-sceneio_environment* add_environment(sceneio_scene* scene, const string& name,
+environment_handle add_environment(scene_scene& scene, const string& name,
     const frame3f& frame, const vec3f& emission,
-    sceneio_texture* emission_tex = nullptr) {
-  auto environment          = add_environment(scene, name);
-  environment->frame        = frame;
-  environment->emission     = emission;
-  environment->emission_tex = emission_tex;
-  return environment;
+    texture_handle emission_tex = invalid_handle) {
+  auto  handle             = add_environment(scene, name);
+  auto& environment        = get_environment(scene, handle);
+  environment.frame        = frame;
+  environment.emission     = emission;
+  environment.emission_tex = emission_tex;
+  return handle;
 }
-sceneio_texture* add_texture(sceneio_scene* scene, const string& name,
+texture_handle add_texture(scene_scene& scene, const string& name,
     const image<vec4f>& img, bool hdr = false, bool ldr_linear = false,
     bool single_channel = false) {
-  auto texture = add_texture(scene, name);
+  auto  handle  = add_texture(scene, name);
+  auto& texture = get_texture(scene, handle);
   if (hdr) {
-    texture->hdr = img;
+    texture.hdr = img;
   } else {
-    texture->ldr = ldr_linear ? float_to_byte(img) : rgb_to_srgbb(img);
+    texture.ldr = ldr_linear ? float_to_byte(img) : rgb_to_srgbb(img);
   }
-  return texture;
+  return handle;
 }
-sceneio_shape* add_shape(sceneio_scene* scene, const string& name,
+shape_handle add_shape(scene_scene& scene, const string& name,
     const quads_shape& shape_data, int subdivisions = 0, float displacement = 0,
-    sceneio_texture* displacement_tex = nullptr) {
-  auto shape              = add_shape(scene, name);
-  shape->points           = shape_data.points;
-  shape->lines            = shape_data.lines;
-  shape->triangles        = shape_data.triangles;
-  shape->quads            = shape_data.quads;
-  shape->positions        = shape_data.positions;
-  shape->normals          = shape_data.normals;
-  shape->texcoords        = shape_data.texcoords;
-  shape->colors           = shape_data.colors;
-  shape->radius           = shape_data.radius;
-  shape->subdivisions     = subdivisions;
-  shape->smooth           = subdivisions > 0 || displacement_tex;
-  shape->displacement     = displacement;
-  shape->displacement_tex = displacement_tex;
-  return shape;
+    texture_handle displacement_tex = invalid_handle) {
+  auto  handle           = add_shape(scene, name);
+  auto& shape            = get_shape(scene, handle);
+  shape.points           = shape_data.points;
+  shape.lines            = shape_data.lines;
+  shape.triangles        = shape_data.triangles;
+  shape.quads            = shape_data.quads;
+  shape.positions        = shape_data.positions;
+  shape.normals          = shape_data.normals;
+  shape.texcoords        = shape_data.texcoords;
+  shape.colors           = shape_data.colors;
+  shape.radius           = shape_data.radius;
+  shape.subdivisions     = subdivisions;
+  shape.smooth           = subdivisions > 0 || displacement_tex;
+  shape.displacement     = displacement;
+  shape.displacement_tex = displacement_tex;
+  return handle;
 }
-sceneio_shape* add_shape(sceneio_scene* scene, const string& name,
+shape_handle add_shape(scene_scene& scene, const string& name,
     const quads_fvshape& shape_data, int subdivisions = 0,
-    float displacement = 0, sceneio_texture* displacement_tex = nullptr) {
-  auto shape              = add_shape(scene, name);
-  shape->quadspos         = shape_data.quadspos;
-  shape->quadsnorm        = shape_data.quadsnorm;
-  shape->quadstexcoord    = shape_data.quadstexcoord;
-  shape->positions        = shape_data.positions;
-  shape->normals          = shape_data.normals;
-  shape->texcoords        = shape_data.texcoords;
-  shape->subdivisions     = subdivisions;
-  shape->smooth           = subdivisions > 0 || displacement_tex;
-  shape->displacement     = displacement;
-  shape->displacement_tex = displacement_tex;
-  return shape;
+    float displacement = 0, texture_handle displacement_tex = invalid_handle) {
+  auto  handle           = add_shape(scene, name);
+  auto& shape            = get_shape(scene, handle);
+  shape.quadspos         = shape_data.quadspos;
+  shape.quadsnorm        = shape_data.quadsnorm;
+  shape.quadstexcoord    = shape_data.quadstexcoord;
+  shape.positions        = shape_data.positions;
+  shape.normals          = shape_data.normals;
+  shape.texcoords        = shape_data.texcoords;
+  shape.subdivisions     = subdivisions;
+  shape.smooth           = subdivisions > 0 || displacement_tex;
+  shape.displacement     = displacement;
+  shape.displacement_tex = displacement_tex;
+  return handle;
 }
-sceneio_material* add_emission_material(sceneio_scene* scene,
-    const string& name, const vec3f& emission, sceneio_texture* emission_tex) {
-  auto material          = add_material(scene, name);
-  material->emission     = emission;
-  material->emission_tex = emission_tex;
-  return material;
+material_handle add_emission_material(scene_scene& scene, const string& name,
+    const vec3f& emission, texture_handle emission_tex) {
+  auto  handle          = add_material(scene, name);
+  auto& material        = get_material(scene, handle);
+  material.emission     = emission;
+  material.emission_tex = emission_tex;
+  return handle;
 }
-sceneio_material* add_matte_material(sceneio_scene* scene, const string& name,
-    const vec3f& color, sceneio_texture* color_tex,
-    sceneio_texture* normal_tex = nullptr) {
-  auto material        = add_material(scene, name);
-  material->color      = color;
-  material->color_tex  = color_tex;
-  material->roughness  = 1;
-  material->normal_tex = normal_tex;
-  return material;
+material_handle add_matte_material(scene_scene& scene, const string& name,
+    const vec3f& color, texture_handle color_tex,
+    texture_handle normal_tex = invalid_handle) {
+  auto  handle        = add_material(scene, name);
+  auto& material      = get_material(scene, handle);
+  material.color      = color;
+  material.color_tex  = color_tex;
+  material.roughness  = 1;
+  material.normal_tex = normal_tex;
+  return handle;
 }
-sceneio_material* add_specular_material(sceneio_scene* scene,
-    const string& name, const vec3f& color, sceneio_texture* color_tex,
-    float roughness, sceneio_texture* roughness_tex = nullptr,
-    sceneio_texture* normal_tex = nullptr, float ior = 1.5, float specular = 1,
-    sceneio_texture* specular_tex = nullptr, const vec3f& spectint = {1, 1, 1},
-    sceneio_texture* spectint_tex = nullptr) {
-  auto material           = add_material(scene, name);
-  material->color         = color;
-  material->color_tex     = color_tex;
-  material->specular      = specular;
-  material->specular_tex  = specular_tex;
-  material->spectint      = spectint;
-  material->spectint_tex  = spectint_tex;
-  material->roughness     = roughness;
-  material->roughness_tex = roughness_tex;
-  material->ior           = ior;
-  material->normal_tex    = normal_tex;
-  return material;
+material_handle add_specular_material(scene_scene& scene, const string& name,
+    const vec3f& color, texture_handle color_tex, float roughness,
+    texture_handle roughness_tex = invalid_handle,
+    texture_handle normal_tex = invalid_handle, float ior = 1.5,
+    float specular = 1, texture_handle specular_tex = invalid_handle,
+    const vec3f&   spectint     = {1, 1, 1},
+    texture_handle spectint_tex = invalid_handle) {
+  auto  handle           = add_material(scene, name);
+  auto& material         = get_material(scene, handle);
+  material.color         = color;
+  material.color_tex     = color_tex;
+  material.specular      = specular;
+  material.specular_tex  = specular_tex;
+  material.spectint      = spectint;
+  material.spectint_tex  = spectint_tex;
+  material.roughness     = roughness;
+  material.roughness_tex = roughness_tex;
+  material.ior           = ior;
+  material.normal_tex    = normal_tex;
+  return handle;
 }
-sceneio_material* add_metallic_material(sceneio_scene* scene,
-    const string& name, const vec3f& color, sceneio_texture* color_tex,
-    float roughness, sceneio_texture* roughness_tex = nullptr,
-    sceneio_texture* normal_tex = nullptr, float metallic = 1,
-    sceneio_texture* metallic_tex = nullptr) {
-  auto material           = add_material(scene, name);
-  material->color         = color;
-  material->color_tex     = color_tex;
-  material->metallic      = metallic;
-  material->metallic_tex  = metallic_tex;
-  material->roughness     = roughness;
-  material->roughness_tex = roughness_tex;
-  material->normal_tex    = normal_tex;
-  return material;
+material_handle add_metallic_material(scene_scene& scene, const string& name,
+    const vec3f& color, texture_handle color_tex, float roughness,
+    texture_handle roughness_tex = invalid_handle,
+    texture_handle normal_tex = invalid_handle, float metallic = 1,
+    texture_handle metallic_tex = invalid_handle) {
+  auto  handle           = add_material(scene, name);
+  auto& material         = get_material(scene, handle);
+  material.color         = color;
+  material.color_tex     = color_tex;
+  material.metallic      = metallic;
+  material.metallic_tex  = metallic_tex;
+  material.roughness     = roughness;
+  material.roughness_tex = roughness_tex;
+  material.normal_tex    = normal_tex;
+  return handle;
 }
-sceneio_material* add_transmission_material(sceneio_scene* scene,
-    const string& name, const vec3f& color, sceneio_texture* color_tex,
-    float roughness, sceneio_texture* roughness_tex = nullptr,
-    sceneio_texture* normal_tex = nullptr, float ior = 1.5, float specular = 1,
-    sceneio_texture* specular_tex = nullptr, float transmission = 1,
-    sceneio_texture* transmission_tex = nullptr) {
-  auto material              = add_material(scene, name);
-  material->color            = color;
-  material->color_tex        = color_tex;
-  material->specular         = specular;
-  material->specular_tex     = specular_tex;
-  material->transmission     = transmission;
-  material->transmission_tex = transmission_tex;
-  material->roughness        = roughness;
-  material->roughness_tex    = roughness_tex;
-  material->ior              = ior;
-  material->thin             = true;
-  material->normal_tex       = normal_tex;
-  return material;
+material_handle add_transmission_material(scene_scene& scene,
+    const string& name, const vec3f& color, texture_handle color_tex,
+    float roughness, texture_handle roughness_tex = invalid_handle,
+    texture_handle normal_tex = invalid_handle, float ior = 1.5,
+    float specular = 1, texture_handle specular_tex = invalid_handle,
+    float transmission = 1, texture_handle transmission_tex = invalid_handle) {
+  auto  handle              = add_material(scene, name);
+  auto& material            = get_material(scene, handle);
+  material.color            = color;
+  material.color_tex        = color_tex;
+  material.specular         = specular;
+  material.specular_tex     = specular_tex;
+  material.transmission     = transmission;
+  material.transmission_tex = transmission_tex;
+  material.roughness        = roughness;
+  material.roughness_tex    = roughness_tex;
+  material.ior              = ior;
+  material.thin             = true;
+  material.normal_tex       = normal_tex;
+  return handle;
 }
-sceneio_material* add_volumetric_material(sceneio_scene* scene,
-    const string& name, const vec3f& color, sceneio_texture* color_tex,
-    float roughness, sceneio_texture* roughness_tex = nullptr,
-    const vec3f&     scattering     = {0, 0, 0},
-    sceneio_texture* scattering_tex = nullptr,
-    sceneio_texture* normal_tex = nullptr, float ior = 1.5,
+material_handle add_volumetric_material(scene_scene& scene, const string& name,
+    const vec3f& color, texture_handle color_tex, float roughness,
+    texture_handle roughness_tex  = invalid_handle,
+    const vec3f&   scattering     = {0, 0, 0},
+    texture_handle scattering_tex = invalid_handle,
+    texture_handle normal_tex = invalid_handle, float ior = 1.5,
     float scanisotropy = 0, float trdepth = 0.01, float specular = 1,
-    sceneio_texture* specular_tex = nullptr, float transmission = 1,
-    sceneio_texture* transmission_tex = nullptr) {
-  auto material              = add_material(scene, name);
-  material->color            = color;
-  material->color_tex        = color_tex;
-  material->specular         = specular;
-  material->specular_tex     = specular_tex;
-  material->transmission     = transmission;
-  material->transmission_tex = transmission_tex;
-  material->roughness        = roughness;
-  material->roughness_tex    = roughness_tex;
-  material->scattering       = scattering;
-  material->scattering_tex   = scattering_tex;
-  material->ior              = ior;
-  material->scanisotropy     = scanisotropy;
-  material->trdepth          = trdepth;
-  material->normal_tex       = normal_tex;
-  material->thin             = false;
-  return material;
+    texture_handle specular_tex = invalid_handle, float transmission = 1,
+    texture_handle transmission_tex = invalid_handle) {
+  auto  handle              = add_material(scene, name);
+  auto& material            = get_material(scene, handle);
+  material.color            = color;
+  material.color_tex        = color_tex;
+  material.specular         = specular;
+  material.specular_tex     = specular_tex;
+  material.transmission     = transmission;
+  material.transmission_tex = transmission_tex;
+  material.roughness        = roughness;
+  material.roughness_tex    = roughness_tex;
+  material.scattering       = scattering;
+  material.scattering_tex   = scattering_tex;
+  material.ior              = ior;
+  material.scanisotropy     = scanisotropy;
+  material.trdepth          = trdepth;
+  material.normal_tex       = normal_tex;
+  material.thin             = false;
+  return handle;
 }
-sceneio_material* add_volumetrict_material(sceneio_scene* scene,
-    const string& name, const vec3f& color, sceneio_texture* color_tex,
-    float roughness, sceneio_texture* roughness_tex = nullptr,
-    const vec3f&     scattering     = {0, 0, 0},
-    sceneio_texture* scattering_tex = nullptr,
-    sceneio_texture* normal_tex = nullptr, float ior = 1.5,
+material_handle add_volumetrict_material(scene_scene& scene, const string& name,
+    const vec3f& color, texture_handle color_tex, float roughness,
+    texture_handle roughness_tex  = invalid_handle,
+    const vec3f&   scattering     = {0, 0, 0},
+    texture_handle scattering_tex = invalid_handle,
+    texture_handle normal_tex = invalid_handle, float ior = 1.5,
     float scanisotropy = 0, float trdepth = 0.01, float specular = 1,
-    sceneio_texture* specular_tex = nullptr, float translucency = 1,
-    sceneio_texture* translucency_tex = nullptr) {
-  auto material              = add_material(scene, name);
-  material->color            = color;
-  material->color_tex        = color_tex;
-  material->specular         = specular;
-  material->specular_tex     = specular_tex;
-  material->translucency     = translucency;
-  material->translucency_tex = translucency_tex;
-  material->roughness        = roughness;
-  material->roughness_tex    = roughness_tex;
-  material->scattering       = scattering;
-  material->scattering_tex   = scattering_tex;
-  material->ior              = ior;
-  material->scanisotropy     = scanisotropy;
-  material->trdepth          = trdepth;
-  material->normal_tex       = normal_tex;
-  material->thin             = false;
-  return material;
+    texture_handle specular_tex = invalid_handle, float translucency = 1,
+    texture_handle translucency_tex = invalid_handle) {
+  auto  handle              = add_material(scene, name);
+  auto& material            = get_material(scene, handle);
+  material.color            = color;
+  material.color_tex        = color_tex;
+  material.specular         = specular;
+  material.specular_tex     = specular_tex;
+  material.translucency     = translucency;
+  material.translucency_tex = translucency_tex;
+  material.roughness        = roughness;
+  material.roughness_tex    = roughness_tex;
+  material.scattering       = scattering;
+  material.scattering_tex   = scattering_tex;
+  material.ior              = ior;
+  material.scanisotropy     = scanisotropy;
+  material.trdepth          = trdepth;
+  material.normal_tex       = normal_tex;
+  material.thin             = false;
+  return handle;
 }
-sceneio_material* add_specular_coated_material(sceneio_scene* scene,
-    const string& name, const vec3f& color, sceneio_texture* color_tex,
-    float roughness, sceneio_texture* roughness_tex = nullptr,
-    sceneio_texture* normal_tex = nullptr, float ior = 1.5, float specular = 1,
-    sceneio_texture* specular_tex = nullptr, float coat = 1,
-    sceneio_texture* coat_tex = nullptr) {
-  auto material           = add_material(scene, name);
-  material->color         = color;
-  material->color_tex     = color_tex;
-  material->specular      = specular;
-  material->specular_tex  = specular_tex;
-  material->roughness     = roughness;
-  material->roughness_tex = roughness_tex;
-  material->coat          = coat;
-  material->coat_tex      = coat_tex;
-  material->ior           = ior;
-  material->normal_tex    = normal_tex;
-  return material;
+material_handle add_specular_coated_material(scene_scene& scene,
+    const string& name, const vec3f& color, texture_handle color_tex,
+    float roughness, texture_handle roughness_tex = invalid_handle,
+    texture_handle normal_tex = invalid_handle, float ior = 1.5,
+    float specular = 1, texture_handle specular_tex = invalid_handle,
+    float coat = 1, texture_handle coat_tex = invalid_handle) {
+  auto  handle           = add_material(scene, name);
+  auto& material         = get_material(scene, handle);
+  material.color         = color;
+  material.color_tex     = color_tex;
+  material.specular      = specular;
+  material.specular_tex  = specular_tex;
+  material.roughness     = roughness;
+  material.roughness_tex = roughness_tex;
+  material.coat          = coat;
+  material.coat_tex      = coat_tex;
+  material.ior           = ior;
+  material.normal_tex    = normal_tex;
+  return handle;
 }
-sceneio_material* add_metallic_coated_material(sceneio_scene* scene,
-    const string& name, const vec3f& color, sceneio_texture* color_tex,
-    float roughness, sceneio_texture* roughness_tex = nullptr,
-    sceneio_texture* normal_tex = nullptr, float metallic = 1,
-    sceneio_texture* metallic_tex = nullptr, float coat = 1,
-    sceneio_texture* coat_tex = nullptr) {
-  auto material           = add_material(scene, name);
-  material->color         = color;
-  material->color_tex     = color_tex;
-  material->metallic      = metallic;
-  material->metallic_tex  = metallic_tex;
-  material->roughness     = roughness;
-  material->roughness_tex = roughness_tex;
-  material->coat          = coat;
-  material->coat_tex      = coat_tex;
-  material->normal_tex    = normal_tex;
-  return material;
+material_handle add_metallic_coated_material(scene_scene& scene,
+    const string& name, const vec3f& color, texture_handle color_tex,
+    float roughness, texture_handle roughness_tex = invalid_handle,
+    texture_handle normal_tex = invalid_handle, float metallic = 1,
+    texture_handle metallic_tex = invalid_handle, float coat = 1,
+    texture_handle coat_tex = invalid_handle) {
+  auto  handle           = add_material(scene, name);
+  auto& material         = get_material(scene, handle);
+  material.color         = color;
+  material.color_tex     = color_tex;
+  material.metallic      = metallic;
+  material.metallic_tex  = metallic_tex;
+  material.roughness     = roughness;
+  material.roughness_tex = roughness_tex;
+  material.coat          = coat;
+  material.coat_tex      = coat_tex;
+  material.normal_tex    = normal_tex;
+  return handle;
 }
-sceneio_material* add_transparent_material(sceneio_scene* scene,
-    const string& name, const vec3f& color, sceneio_texture* color_tex,
-    float opacity = 1, sceneio_texture* normal_tex = nullptr) {
-  auto material        = add_material(scene, name);
-  material->color      = color;
-  material->color_tex  = color_tex;
-  material->roughness  = 1;
-  material->opacity    = opacity;
-  material->normal_tex = normal_tex;
-  return material;
+material_handle add_transparent_material(scene_scene& scene, const string& name,
+    const vec3f& color, texture_handle color_tex, float opacity = 1,
+    texture_handle normal_tex = invalid_handle) {
+  auto  handle        = add_material(scene, name);
+  auto& material      = get_material(scene, handle);
+  material.color      = color;
+  material.color_tex  = color_tex;
+  material.roughness  = 1;
+  material.opacity    = opacity;
+  material.normal_tex = normal_tex;
+  return handle;
 }
 
 enum struct test_cameras_type { standard, wide };
@@ -353,7 +371,7 @@ struct test_params {
 };
 
 // Scene test
-void make_test(sceneio_scene* scene, const test_params& params) {
+void make_test(scene_scene& scene, const test_params& params) {
   // cameras
   switch (params.cameras) {
     case test_cameras_type::standard: {
@@ -390,23 +408,25 @@ void make_test(sceneio_scene* scene, const test_params& params) {
       add_instance(scene, "arealight1",
           lookat_frame({-0.4, 0.8, 0.8}, {0, 0.1, 0}, {0, 1, 0}, true),
           add_shape(scene, "arealight1", make_rect({1, 1}, {0.2, 0.2})),
-          add_emission_material(scene, "arealight1", {20, 20, 20}, nullptr));
+          add_emission_material(
+              scene, "arealight1", {20, 20, 20}, invalid_handle));
       add_instance(scene, "arealight2",
           lookat_frame({+0.4, 0.8, 0.8}, {0, 0.1, 0}, {0, 1, 0}, true),
           add_shape(scene, "arealight2", make_rect({1, 1}, {0.2, 0.2})),
-          add_emission_material(scene, "arealight2", {20, 20, 20}, nullptr));
+          add_emission_material(
+              scene, "arealight2", {20, 20, 20}, invalid_handle));
     } break;
     case test_arealights_type::large: {
       add_instance(scene, "largearealight1",
           lookat_frame({-0.8, 1.6, 1.6}, {0, 0.1, 0}, {0, 1, 0}, true),
           add_shape(scene, "largearealight1", make_rect({1, 1}, {0.4, 0.4})),
           add_emission_material(
-              scene, "largearealight1", {10, 10, 10}, nullptr));
+              scene, "largearealight1", {10, 10, 10}, invalid_handle));
       add_instance(scene, "largearealight2",
           lookat_frame({+0.8, 1.6, 1.6}, {0, 0.1, 0}, {0, 1, 0}, true),
           add_shape(scene, "largearealight2", make_rect({1, 1}, {0.4, 0.4})),
           add_emission_material(
-              scene, "largearealight2", {10, 10, 10}, nullptr));
+              scene, "largearealight2", {10, 10, 10}, invalid_handle));
     } break;
   }
   switch (params.floor) {
@@ -418,8 +438,8 @@ void make_test(sceneio_scene* scene, const test_params& params) {
               add_texture(scene, "floor", make_grid({1024, 1024}))));
     } break;
   }
-  auto shapes = vector<sceneio_shape*>{}, shapesi = vector<sceneio_shape*>{};
-  auto materials = vector<sceneio_material*>{};
+  auto shapes = vector<shape_handle>{}, shapesi = vector<shape_handle>{};
+  auto materials = vector<material_handle>{};
   switch (params.shapes) {
     case test_shapes_type::features1: {
       auto bunny  = add_shape(scene, "bunny", make_bunny(0.075));
@@ -439,9 +459,9 @@ void make_test(sceneio_scene* scene, const test_params& params) {
           add_shape(scene, "cube",
               make_rounded_box({32, 32, 32}, {0.075, 0.075, 0.075}, {1, 1, 1},
                   0.3 * 0.075f))};
-      shapesi = {nullptr, nullptr,
-          add_shape(scene, "hairi", make_sphere(32, 0.075f * 0.8f, 1)), nullptr,
-          nullptr};
+      shapesi = {invalid_handle, invalid_handle,
+          add_shape(scene, "hairi", make_sphere(32, 0.075f * 0.8f, 1)),
+          invalid_handle, invalid_handle};
     } break;
     case test_shapes_type::rows: {
       auto bunny  = add_shape(scene, "bunny", make_bunny(0.075));
@@ -481,7 +501,7 @@ void make_test(sceneio_scene* scene, const test_params& params) {
     } break;
     case test_shapes_type::shapes3: {
       shapes = {
-          nullptr,
+          invalid_handle,
           add_shape(scene, "hair1",
               make_hair(make_sphere(32, 0.075f * 0.8f, 1), {4, 65536},
                   {0.1f * 0.15f, 0.1f * 0.15f},
@@ -494,7 +514,7 @@ void make_test(sceneio_scene* scene, const test_params& params) {
               make_hair(make_sphere(32, 0.075f * 0.8f, 1), {4, 65536},
                   {0.1f * 0.15f, 0.1f * 0.15f},
                   {0.001f * 0.15f, 0.0005f * 0.15f}, {0, 0}, {0.5, 128})),
-          nullptr,
+          invalid_handle,
       };
     } break;
   }
@@ -503,23 +523,25 @@ void make_test(sceneio_scene* scene, const test_params& params) {
       materials = {
           add_specular_coated_material(scene, "coated", {1, 1, 1},
               add_texture(scene, "uvgrid", make_uvgrid({1024, 1024})), 0.2),
-          add_volumetric_material(scene, "glass", {1, 0.5, 0.5}, nullptr, 0),
-          add_volumetric_material(scene, "jade", {0.5, 0.5, 0.5}, nullptr, 0,
-              nullptr, {0.3, 0.6, 0.3}),
-          add_specular_material(scene, "bumped", {0.5, 0.7, 0.5}, nullptr, 0.2,
-              nullptr,
+          add_volumetric_material(
+              scene, "glass", {1, 0.5, 0.5}, invalid_handle, 0),
+          add_volumetric_material(scene, "jade", {0.5, 0.5, 0.5},
+              invalid_handle, 0, invalid_handle, {0.3, 0.6, 0.3}),
+          add_specular_material(scene, "bumped", {0.5, 0.7, 0.5},
+              invalid_handle, 0.2, invalid_handle,
               add_texture(scene, "bumps-normal",
                   bump_to_normal(make_bumps({1024, 1024}), 0.05), false, true)),
           add_metallic_material(
-              scene, "metal", {0.66, 0.45, 0.34}, nullptr, 0.2),
+              scene, "metal", {0.66, 0.45, 0.34}, invalid_handle, 0.2),
       };
     } break;
     case test_materials_type::features2: {
       auto uvgrid  = add_specular_material(scene, "uvgrid", {1, 1, 1},
           add_texture(scene, "uvgrid", make_uvgrid({1024, 1024})), 0.2);
       auto plastic = add_specular_material(
-          scene, "plastic", {0.5, 0.7, 0.5}, nullptr, 0.2);
-      auto hair = add_matte_material(scene, "hair", {0.7, 0.7, 0.7}, nullptr);
+          scene, "plastic", {0.5, 0.7, 0.5}, invalid_handle, 0.2);
+      auto hair = add_matte_material(
+          scene, "hair", {0.7, 0.7, 0.7}, invalid_handle);
       materials = {uvgrid, plastic, hair, plastic, uvgrid};
     } break;
     case test_materials_type::uvgrid: {
@@ -528,90 +550,98 @@ void make_test(sceneio_scene* scene, const test_params& params) {
       materials   = {uvgrid, uvgrid, uvgrid, uvgrid, uvgrid};
     } break;
     case test_materials_type::hair: {
-      auto hair = add_matte_material(scene, "hair", {0.7, 0.7, 0.7}, nullptr);
+      auto hair = add_matte_material(
+          scene, "hair", {0.7, 0.7, 0.7}, invalid_handle);
       materials = {hair, hair, hair, hair, hair};
     } break;
     case test_materials_type::plastic_metal: {
       materials = {
           add_specular_material(
-              scene, "plastic1", {0.5, 0.5, 0.7}, nullptr, 0.01),
+              scene, "plastic1", {0.5, 0.5, 0.7}, invalid_handle, 0.01),
           add_specular_material(
-              scene, "plastic2", {0.5, 0.7, 0.5}, nullptr, 0.2),
-          add_matte_material(scene, "matte", {0.7, 0.7, 0.7}, nullptr),
-          add_metallic_material(scene, "metal1", {0.7, 0.7, 0.7}, nullptr, 0),
+              scene, "plastic2", {0.5, 0.7, 0.5}, invalid_handle, 0.2),
+          add_matte_material(scene, "matte", {0.7, 0.7, 0.7}, invalid_handle),
           add_metallic_material(
-              scene, "metal2", {0.66, 0.45, 0.34}, nullptr, 0.2),
+              scene, "metal1", {0.7, 0.7, 0.7}, invalid_handle, 0),
+          add_metallic_material(
+              scene, "metal2", {0.66, 0.45, 0.34}, invalid_handle, 0.2),
       };
     } break;
     case test_materials_type::materials1: {
       materials = {
           add_specular_material(
-              scene, "plastic1", {0.5, 0.5, 0.7}, nullptr, 0.01),
+              scene, "plastic1", {0.5, 0.5, 0.7}, invalid_handle, 0.01),
           add_specular_material(
-              scene, "plastic2", {0.5, 0.7, 0.5}, nullptr, 0.2),
-          add_matte_material(scene, "matte", {0.7, 0.7, 0.7}, nullptr),
-          add_metallic_material(scene, "metal1", {0.7, 0.7, 0.7}, nullptr, 0),
+              scene, "plastic2", {0.5, 0.7, 0.5}, invalid_handle, 0.2),
+          add_matte_material(scene, "matte", {0.7, 0.7, 0.7}, invalid_handle),
           add_metallic_material(
-              scene, "metal2", {0.66, 0.45, 0.34}, nullptr, 0.2),
+              scene, "metal1", {0.7, 0.7, 0.7}, invalid_handle, 0),
+          add_metallic_material(
+              scene, "metal2", {0.66, 0.45, 0.34}, invalid_handle, 0.2),
       };
     } break;
     case test_materials_type::materials2: {
       materials = {
-          add_volumetric_material(scene, "glass1", {1, 1, 1}, nullptr, 0),
-          add_volumetric_material(scene, "glass2", {1, 0.7, 0.7}, nullptr, 0.1),
+          add_volumetric_material(
+              scene, "glass1", {1, 1, 1}, invalid_handle, 0),
+          add_volumetric_material(
+              scene, "glass2", {1, 0.7, 0.7}, invalid_handle, 0.1),
           add_transparent_material(
-              scene, "transparent", {0.7, 0.5, 0.5}, nullptr, 0.2),
-          add_transmission_material(scene, "tglass1", {1, 1, 1}, nullptr, 0),
+              scene, "transparent", {0.7, 0.5, 0.5}, invalid_handle, 0.2),
           add_transmission_material(
-              scene, "tglass2", {1, 0.7, 0.7}, nullptr, 0.1),
+              scene, "tglass1", {1, 1, 1}, invalid_handle, 0),
+          add_transmission_material(
+              scene, "tglass2", {1, 0.7, 0.7}, invalid_handle, 0.1),
       };
     } break;
     case test_materials_type::materials3: {
       auto bumps_normal = add_texture(scene, "bumps-normal",
           bump_to_normal(make_bumps({1024, 1024}), 0.05), false, true);
       materials         = {
-          add_specular_material(scene, "plastic1", {0.5, 0.5, 0.7}, nullptr,
-              0.01, nullptr, bumps_normal),
+          add_specular_material(scene, "plastic1", {0.5, 0.5, 0.7},
+              invalid_handle, 0.01, invalid_handle, bumps_normal),
           add_specular_coated_material(
-              scene, "plastic2", {0.5, 0.7, 0.5}, nullptr, 0.2),
-          add_metallic_material(scene, "metal1", {0.7, 0.7, 0.7}, nullptr, 0,
-              nullptr, bumps_normal),
+              scene, "plastic2", {0.5, 0.7, 0.5}, invalid_handle, 0.2),
+          add_metallic_material(scene, "metal1", {0.7, 0.7, 0.7},
+              invalid_handle, 0, invalid_handle, bumps_normal),
           add_metallic_coated_material(
-              scene, "metal2", {0.66, 0.45, 0.34}, nullptr, 0.2),
+              scene, "metal2", {0.66, 0.45, 0.34}, invalid_handle, 0.2),
           add_metallic_material(
-              scene, "metal3", {0.66, 0.45, 0.34}, nullptr, 0.2),
+              scene, "metal3", {0.66, 0.45, 0.34}, invalid_handle, 0.2),
       };
     } break;
     case test_materials_type::materials4: {
       materials = {
-          add_volumetric_material(scene, "cloud", {0.65, 0.65, 0.65}, nullptr,
-              0, nullptr, {0.9, 0.9, 0.9}, nullptr, nullptr, 1),
-          add_volumetric_material(scene, "glass", {1, 0.5, 0.5}, nullptr, 0),
-          add_volumetric_material(scene, "jade", {0.5, 0.5, 0.5}, nullptr, 0,
-              nullptr, {0.3, 0.6, 0.3}),
-          add_volumetrict_material(scene, "jade2", {0.5, 0.5, 0.5}, nullptr, 0,
-              nullptr, {0.3, 0.6, 0.3}),
-          add_volumetric_material(scene, "smoke", {0.5, 0.5, 0.5}, nullptr, 0.2,
-              nullptr, {0.2, 0.2, 0.2}),
+          add_volumetric_material(scene, "cloud", {0.65, 0.65, 0.65},
+              invalid_handle, 0, invalid_handle, {0.9, 0.9, 0.9},
+              invalid_handle, invalid_handle, 1),
+          add_volumetric_material(
+              scene, "glass", {1, 0.5, 0.5}, invalid_handle, 0),
+          add_volumetric_material(scene, "jade", {0.5, 0.5, 0.5},
+              invalid_handle, 0, invalid_handle, {0.3, 0.6, 0.3}),
+          add_volumetrict_material(scene, "jade2", {0.5, 0.5, 0.5},
+              invalid_handle, 0, invalid_handle, {0.3, 0.6, 0.3}),
+          add_volumetric_material(scene, "smoke", {0.5, 0.5, 0.5},
+              invalid_handle, 0.2, invalid_handle, {0.2, 0.2, 0.2}),
       };
     } break;
     case test_materials_type::materials5: {
       materials = {
-          add_volumetric_material(scene, "skin1a", {0.76, 0.48, 0.23}, nullptr,
-              0.25, nullptr, {0.436, 0.227, 0.131}, nullptr, nullptr, 1.5, -0.8,
-              0.001),
-          add_volumetric_material(scene, "skin2a", {0.82, 0.55, 0.4}, nullptr,
-              0.25, nullptr, {0.623, 0.433, 0.343}, nullptr, nullptr, 1.5, -0.8,
-              0.001),
-          add_volumetric_material(scene, "skins", {0.76, 0.48, 0.23}, nullptr,
-              0, nullptr, {0.436, 0.227, 0.131}, nullptr, nullptr, 1.5, -0.8,
-              0.001),
-          add_volumetrict_material(scene, "skin1b", {0.76, 0.48, 0.23}, nullptr,
-              0.25, nullptr, {0.436, 0.227, 0.131}, nullptr, nullptr, 1.5, -0.8,
-              0.001),
-          add_volumetrict_material(scene, "skin2b", {0.82, 0.55, 0.4}, nullptr,
-              0.25, nullptr, {0.623, 0.433, 0.343}, nullptr, nullptr, 1.5, -0.8,
-              0.001),
+          add_volumetric_material(scene, "skin1a", {0.76, 0.48, 0.23},
+              invalid_handle, 0.25, invalid_handle, {0.436, 0.227, 0.131},
+              invalid_handle, invalid_handle, 1.5, -0.8, 0.001),
+          add_volumetric_material(scene, "skin2a", {0.82, 0.55, 0.4},
+              invalid_handle, 0.25, invalid_handle, {0.623, 0.433, 0.343},
+              invalid_handle, invalid_handle, 1.5, -0.8, 0.001),
+          add_volumetric_material(scene, "skins", {0.76, 0.48, 0.23},
+              invalid_handle, 0, invalid_handle, {0.436, 0.227, 0.131},
+              invalid_handle, invalid_handle, 1.5, -0.8, 0.001),
+          add_volumetrict_material(scene, "skin1b", {0.76, 0.48, 0.23},
+              invalid_handle, 0.25, invalid_handle, {0.436, 0.227, 0.131},
+              invalid_handle, invalid_handle, 1.5, -0.8, 0.001),
+          add_volumetrict_material(scene, "skin2b", {0.82, 0.55, 0.4},
+              invalid_handle, 0.25, invalid_handle, {0.623, 0.433, 0.343},
+              invalid_handle, invalid_handle, 1.5, -0.8, 0.001),
       };
     } break;
   }
@@ -641,7 +671,7 @@ void make_test(sceneio_scene* scene, const test_params& params) {
 }
 
 // Scene presets used ofr testing.
-bool make_preset(sceneio_scene* scene, const string& type, string& error) {
+bool make_preset(scene_scene& scene, const string& type, string& error) {
   if (type == "cornellbox") {
     make_cornellbox(scene);
     return true;
@@ -766,9 +796,8 @@ void serialize_value(json_mode mode, json_value& json, convert_params& value,
 // convert images
 int run_convert(const convert_params& params) {
   // load scene
-  auto scene_guard = std::make_unique<sceneio_scene>();
-  auto scene       = scene_guard.get();
-  auto ioerror     = ""s;
+  auto scene   = scene_scene{};
+  auto ioerror = ""s;
   if (path_extension(params.scene) == ".ypreset") {
     print_progress("make preset", 0, 1);
     if (!make_preset(scene, path_basename(params.scene), ioerror))
@@ -781,7 +810,7 @@ int run_convert(const convert_params& params) {
 
   // copyright
   if (params.copyright != "") {
-    scene->copyright = params.copyright;
+    scene.copyright = params.copyright;
   }
 
   // validate scene
@@ -803,12 +832,12 @@ int run_convert(const convert_params& params) {
   // make a directory if needed
   if (!make_directory(path_dirname(params.output), ioerror))
     print_fatal(ioerror);
-  if (!scene->shapes.empty()) {
+  if (!scene.shapes.empty()) {
     if (!make_directory(
             path_join(path_dirname(params.output), "shapes"), ioerror))
       print_fatal(ioerror);
   }
-  if (!scene->textures.empty()) {
+  if (!scene.textures.empty()) {
     if (!make_directory(
             path_join(path_dirname(params.output), "textures"), ioerror))
       print_fatal(ioerror);
@@ -854,9 +883,8 @@ int run_view(const view_params& params) {
 // view scene
 int run_view(const view_params& params) {
   // load scene
-  auto scene_guard = std::make_unique<sceneio_scene>();
-  auto scene       = scene_guard.get();
-  auto ioerror     = ""s;
+  auto scene   = scene_scene{};
+  auto ioerror = ""s;
   if (path_extension(params.scene) == ".ypreset") {
     print_progress("make preset", 0, 1);
     if (!make_preset(scene, path_basename(params.scene), ioerror))

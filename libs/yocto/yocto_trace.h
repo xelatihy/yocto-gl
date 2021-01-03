@@ -148,13 +148,13 @@ struct trace_bsdf {
 };
 
 // Eval material to obtain emission, brdf and opacity.
-vec3f eval_emission(const trace_instance* instance, int element,
-    const vec2f& uv, const vec3f& normal, const vec3f& outgoing);
+vec3f eval_emission(const scene_scene& scene, const trace_instance& instance,
+    int element, const vec2f& uv, const vec3f& normal, const vec3f& outgoing);
 // Eval material to obatain emission, brdf and opacity.
-trace_bsdf eval_bsdf(const trace_instance* instance, int element,
-    const vec2f& uv, const vec3f& normal, const vec3f& outgoing);
-float eval_opacity(const trace_instance* instance, int element, const vec2f& uv,
-    const vec3f& normal, const vec3f& outgoing);
+trace_bsdf eval_bsdf(const scene_scene& scene, const trace_instance& instance,
+    int element, const vec2f& uv, const vec3f& normal, const vec3f& outgoing);
+float eval_opacity(const scene_scene& scene, const trace_instance& instance,
+    int element, const vec2f& uv, const vec3f& normal, const vec3f& outgoing);
 // check if a brdf is a delta
 bool is_delta(const trace_bsdf& bsdf);
 
@@ -166,10 +166,10 @@ struct trace_vsdf {
 };
 
 // check if we have a volume
-bool has_volume(const trace_instance* instance);
+bool has_volume(const scene_scene& scene, const trace_instance* instance);
 // evaluate volume
-trace_vsdf eval_vsdf(
-    const trace_instance* instance, int element, const vec2f& uv);
+trace_vsdf eval_vsdf(const scene_scene& scene, const trace_instance* instance,
+    int element, const vec2f& uv);
 
 }  // namespace yocto
 
@@ -296,7 +296,7 @@ using image_callback =
     function<void(const image<vec4f>& render, int current, int total)>;
 
 // Progressively computes an image.
-image<vec4f> trace_image(const trace_scene* scene, const trace_camera* camera,
+image<vec4f> trace_image(const scene_scene& scene, const scene_camera& camera,
     const trace_params& params, const progress_callback& progress_cb = {},
     const image_callback& image_cb = {});
 
@@ -309,40 +309,36 @@ namespace yocto {
 
 // Scene lights used during rendering. These are created automatically.
 struct trace_light {
-  trace_instance*    instance     = nullptr;
-  trace_environment* environment  = nullptr;
+  instance_handle    instance     = invalid_handle;
+  environment_handle environment  = invalid_handle;
   vector<float>      elements_cdf = {};
 };
 
 // Scene lights
 struct trace_lights {
-  // light elements
-  vector<trace_light*> lights = {};
-
-  // cleanup
-  ~trace_lights();
+  vector<trace_light> lights = {};
 };
 
 // Initialize lights.
-void init_lights(trace_lights* lights, const trace_scene* scene,
+void init_lights(trace_lights& lights, const scene_scene& scene,
     const trace_params& params, const progress_callback& progress_cb = {});
 
 // Define BVH
 using trace_bvh = bvh_scene;
 
 // Build the bvh acceleration structure.
-void init_bvh(trace_bvh* bvh, const trace_scene* scene,
+void init_bvh(trace_bvh& bvh, const scene_scene& scene,
     const trace_params& params, const progress_callback& progress_cb = {});
 
 // Refit bvh data
-void update_bvh(trace_bvh* bvh, const trace_scene* scene,
+void update_bvh(trace_bvh& bvh, const scene_scene& scene,
     const vector<trace_instance*>& updated_instances,
     const vector<trace_shape*>& updated_shapes, const trace_params& params,
     const progress_callback& progress_cb = {});
 
 // Progressively computes an image.
-image<vec4f> trace_image(const trace_scene* scene, const trace_camera* camera,
-    const trace_bvh* bvh, const trace_lights* lights,
+image<vec4f> trace_image(const scene_scene& scene, const scene_camera& camera,
+    const trace_bvh& bvh, const trace_lights& lights,
     const trace_params& params, const progress_callback& progress_cb = {},
     const image_callback& image_cb = {});
 
@@ -365,12 +361,12 @@ using async_callback = function<void(
 
 // [experimental] Asynchronous interface
 struct trace_state;
-void trace_start(trace_state* state, const trace_scene* scene,
-    const trace_camera* camera, const trace_bvh* bvh,
-    const trace_lights* lights, const trace_params& params,
+void trace_start(trace_state& state, const scene_scene& scene,
+    const scene_camera& camera, const trace_bvh& bvh,
+    const trace_lights& lights, const trace_params& params,
     const progress_callback& progress_cb = {},
     const image_callback& image_cb = {}, const async_callback& async_cb = {});
-void trace_stop(trace_state* state);
+void trace_stop(trace_state& state);
 
 }  // namespace yocto
 

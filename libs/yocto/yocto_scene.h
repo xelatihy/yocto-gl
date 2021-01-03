@@ -67,6 +67,16 @@ using std::vector;
 // -----------------------------------------------------------------------------
 namespace yocto {
 
+// Handles to refer to scene elements
+inline const int invalid_handle = -1;
+using element_handle            = int;
+using camera_handle             = int;
+using texture_handle            = int;
+using material_handle           = int;
+using shape_handle              = int;
+using instance_handle           = int;
+using environment_handle        = int;
+
 // Camera based on a simple lens model. The camera is placed using a frame.
 // Camera projection is described in photographic terms. In particular,
 // we specify film size (35mm by default), film aspect ration,
@@ -120,18 +130,18 @@ struct scene_material {
   bool  thin         = true;
 
   // textures
-  scene_texture* emission_tex     = nullptr;
-  scene_texture* color_tex        = nullptr;
-  scene_texture* specular_tex     = nullptr;
-  scene_texture* metallic_tex     = nullptr;
-  scene_texture* roughness_tex    = nullptr;
-  scene_texture* transmission_tex = nullptr;
-  scene_texture* translucency_tex = nullptr;
-  scene_texture* spectint_tex     = nullptr;
-  scene_texture* scattering_tex   = nullptr;
-  scene_texture* coat_tex         = nullptr;
-  scene_texture* opacity_tex      = nullptr;
-  scene_texture* normal_tex       = nullptr;
+  texture_handle emission_tex     = invalid_handle;
+  texture_handle color_tex        = invalid_handle;
+  texture_handle specular_tex     = invalid_handle;
+  texture_handle metallic_tex     = invalid_handle;
+  texture_handle roughness_tex    = invalid_handle;
+  texture_handle transmission_tex = invalid_handle;
+  texture_handle translucency_tex = invalid_handle;
+  texture_handle spectint_tex     = invalid_handle;
+  texture_handle scattering_tex   = invalid_handle;
+  texture_handle coat_tex         = invalid_handle;
+  texture_handle opacity_tex      = invalid_handle;
+  texture_handle normal_tex       = invalid_handle;
 };
 
 // Shape data represented as indexed meshes of elements.
@@ -165,7 +175,7 @@ struct scene_shape {
 
   // displacement data [experimental]
   float          displacement     = 0;
-  scene_texture* displacement_tex = nullptr;
+  texture_handle displacement_tex = invalid_handle;
 
   // element cdf for sampling
   vector<float> elements_cdf = {};
@@ -177,18 +187,15 @@ struct scene_shape {
 struct scene_instance {
   // instance data
   frame3f         frame    = identity3x4f;
-  scene_shape*    shape    = nullptr;
-  scene_material* material = nullptr;
-
-  // instance id assigned at creation
-  int instance_id = -1;
+  shape_handle    shape    = invalid_handle;
+  material_handle material = invalid_handle;
 };
 
 // Environment map.
 struct scene_environment {
   frame3f        frame        = identity3x4f;
   vec3f          emission     = {0, 0, 0};
-  scene_texture* emission_tex = nullptr;
+  texture_handle emission_tex = invalid_handle;
 };
 
 // Scene comprised an array of objects whose memory is owened by the scene.
@@ -204,12 +211,12 @@ struct scene_scene {
   string copyright = "";
 
   // scene elements
-  vector<scene_camera*>      cameras      = {};
-  vector<scene_instance*>    instances    = {};
-  vector<scene_environment*> environments = {};
-  vector<scene_shape*>       shapes       = {};
-  vector<scene_texture*>     textures     = {};
-  vector<scene_material*>    materials    = {};
+  vector<scene_camera>      cameras      = {};
+  vector<scene_instance>    instances    = {};
+  vector<scene_environment> environments = {};
+  vector<scene_shape>       shapes       = {};
+  vector<scene_texture>     textures     = {};
+  vector<scene_material>    materials    = {};
 
   // names (this will be cleanup significantly later)
   vector<string> camera_names      = {};
@@ -218,16 +225,6 @@ struct scene_scene {
   vector<string> shape_names       = {};
   vector<string> instance_names    = {};
   vector<string> environment_names = {};
-  // names (this will be cleanup significantly later)
-  unordered_map<const scene_camera*, string>      camera_map      = {};
-  unordered_map<const scene_texture*, string>     texture_map     = {};
-  unordered_map<const scene_material*, string>    material_map    = {};
-  unordered_map<const scene_shape*, string>       shape_map       = {};
-  unordered_map<const scene_instance*, string>    instance_map    = {};
-  unordered_map<const scene_environment*, string> environment_map = {};
-
-  // cleanup
-  ~scene_scene();
 };
 
 }  // namespace yocto
@@ -238,46 +235,73 @@ struct scene_scene {
 namespace yocto {
 
 // add element to a scene
-scene_camera*      add_camera(scene_scene* scene, const string& name = "");
-scene_environment* add_environment(scene_scene* scene, const string& name = "");
-scene_instance*    add_instance(scene_scene* scene, const string& name = "");
-scene_material*    add_material(scene_scene* scene, const string& name = "");
-scene_shape*       add_shape(scene_scene* scene, const string& name = "");
-scene_texture*     add_texture(scene_scene* scene, const string& name = "");
-scene_instance* add_complete_instance(scene_scene* scene, const string& name);
+camera_handle      add_camera(scene_scene& scene, const string& name = "");
+environment_handle add_environment(scene_scene& scene, const string& name = "");
+instance_handle    add_instance(scene_scene& scene, const string& name = "");
+material_handle    add_material(scene_scene& scene, const string& name = "");
+material_handle    add_shape(scene_scene& scene, const string& name = "");
+texture_handle     add_texture(scene_scene& scene, const string& name = "");
+instance_handle add_complete_instance(scene_scene& scene, const string& name);
+
+// get element from a scene
+scene_camera&      get_camera(scene_scene& scene, camera_handle handle);
+scene_environment& get_environment(
+    scene_scene& scene, environment_handle handle);
+scene_instance& get_instance(scene_scene& scene, instance_handle handle);
+scene_material& get_material(scene_scene& scene, material_handle handle);
+scene_shape&    get_shape(scene_scene& scene, shape_handle handle);
+scene_texture&  get_texture(scene_scene& scene, texture_handle handle);
+scene_instance& get_complete_instance(
+    scene_scene& scene, instance_handle handle);
+
+// get element from a scene
+const scene_camera& get_camera(const scene_scene& scene, camera_handle handle);
+const scene_environment& get_environment(
+    const scene_scene& scene, environment_handle handle);
+const scene_instance& get_instance(
+    const scene_scene& scene, instance_handle handle);
+const scene_material& get_material(
+    const scene_scene& scene, material_handle handle);
+const scene_shape&   get_shape(const scene_scene& scene, shape_handle handle);
+const scene_texture& get_texture(
+    const scene_scene& scene, texture_handle handle);
+const scene_instance& get_complete_instance(
+    const scene_scene& scene, instance_handle handle);
 
 // add missing elements
-void add_cameras(scene_scene* scene);
-void add_radius(scene_scene* scene, float radius = 0.001f);
-void add_materials(scene_scene* scene);
-void add_sky(scene_scene* scene, float sun_angle = pif / 4);
+void add_cameras(scene_scene& scene);
+void add_radius(scene_scene& scene, float radius = 0.001f);
+void add_materials(scene_scene& scene);
+void add_sky(scene_scene& scene, float sun_angle = pif / 4);
 
 // Trim all unused memory
-void trim_memory(scene_scene* scene);
+void trim_memory(scene_scene& scene);
 
 // compute scene bounds
-bbox3f compute_bounds(const scene_scene* scene);
+bbox3f compute_bounds(const scene_scene& scene);
 
 // get named camera or default if name is empty
-scene_camera* get_camera(const scene_scene* scene, const string& name = "");
+scene_camera&       get_camera(scene_scene& scene, const string& name);
+const scene_camera& get_camera(const scene_scene& scene, const string& name);
+camera_handle get_camera_handle(const scene_scene& scene, const string& name);
 
 // get name
-string get_camera_name(const scene_scene* scene, int idx);
-string get_environment_name(const scene_scene* scene, int idx);
-string get_shape_name(const scene_scene* scene, int idx);
-string get_texture_name(const scene_scene* scene, int idx);
-string get_instance_name(const scene_scene* scene, int idx);
-string get_material_name(const scene_scene* scene, int idx);
+string get_camera_name(const scene_scene& scene, int idx);
+string get_environment_name(const scene_scene& scene, int idx);
+string get_shape_name(const scene_scene& scene, int idx);
+string get_texture_name(const scene_scene& scene, int idx);
+string get_instance_name(const scene_scene& scene, int idx);
+string get_material_name(const scene_scene& scene, int idx);
 
-string get_camera_name(const scene_scene* scene, const scene_camera* camera);
+string get_camera_name(const scene_scene& scene, const scene_camera& camera);
 string get_environment_name(
-    const scene_scene* scene, const scene_environment* environment);
-string get_shape_name(const scene_scene* scene, const scene_shape* shape);
-string get_texture_name(const scene_scene* scene, const scene_texture* texture);
+    const scene_scene& scene, const scene_environment& environment);
+string get_shape_name(const scene_scene& scene, const scene_shape& shape);
+string get_texture_name(const scene_scene& scene, const scene_texture& texture);
 string get_instance_name(
-    const scene_scene* scene, const scene_instance* instance);
+    const scene_scene& scene, const scene_instance& instance);
 string get_material_name(
-    const scene_scene* scene, const scene_material* material);
+    const scene_scene& scene, const scene_material& material);
 
 }  // namespace yocto
 
@@ -292,8 +316,8 @@ using progress_callback =
 
 // Apply subdivision and displacement rules.
 void tesselate_shapes(
-    scene_scene* scene, const progress_callback& progress_cb = {});
-void tesselate_shape(scene_shape* shape);
+    scene_scene& scene, const progress_callback& progress_cb = {});
+void tesselate_shape(scene_scene& scene, scene_shape& shape);
 
 }  // namespace yocto
 
@@ -304,35 +328,42 @@ namespace yocto {
 
 // Generates a ray from a camera.
 ray3f eval_camera(
-    const scene_camera* camera, const vec2f& image_uv, const vec2f& lens_uv);
+    const scene_camera& camera, const vec2f& image_uv, const vec2f& lens_uv);
 
 // Evaluates a texture
-vec2i texture_size(const scene_texture* texture);
+vec2i texture_size(const scene_texture& texture);
 vec4f lookup_texture(
-    const scene_texture* texture, const vec2i& ij, bool ldr_as_linear = false);
-vec4f eval_texture(const scene_texture* texture, const vec2f& uv,
+    const scene_texture& texture, const vec2i& ij, bool ldr_as_linear = false);
+vec4f eval_texture(const scene_texture& texture, const vec2f& uv,
     bool ldr_as_linear = false, bool no_interpolation = false,
+    bool clamp_to_edge = false);
+vec4f eval_texture(const scene_scene& scene, texture_handle texture,
+    const vec2f& uv, bool ldr_as_linear = false, bool no_interpolation = false,
     bool clamp_to_edge = false);
 
 // Evaluate instance properties
-vec3f eval_position(
-    const scene_instance* instance, int element, const vec2f& uv);
-vec3f eval_element_normal(const scene_instance* instance, int element);
-vec3f eval_normal(const scene_instance* instance, int element, const vec2f& uv);
-vec2f eval_texcoord(
-    const scene_instance* instance, int element, const vec2f& uv);
+vec3f eval_position(const scene_scene& scene, const scene_instance& instance,
+    int element, const vec2f& uv);
+vec3f eval_element_normal(
+    const scene_scene& scene, const scene_instance& instance, int element);
+vec3f eval_normal(const scene_scene& scene, const scene_instance& instance,
+    int element, const vec2f& uv);
+vec2f eval_texcoord(const scene_scene& scene, const scene_instance& instance,
+    int element, const vec2f& uv);
 pair<vec3f, vec3f> eval_element_tangents(
-    const scene_instance* instance, int element);
-vec3f eval_normalmap(
-    const scene_instance* instance, int element, const vec2f& uv);
-vec3f eval_shading_normal(const scene_instance* instance, int element,
-    const vec2f& uv, const vec3f& outgoing);
-vec4f eval_color(const scene_instance* instance, int element, const vec2f& uv);
+    const scene_scene& scene, const scene_instance& instance, int element);
+vec3f eval_normalmap(const scene_scene& scene, const scene_instance& instance,
+    int element, const vec2f& uv);
+vec3f eval_shading_normal(const scene_scene& scene,
+    const scene_instance& instance, int element, const vec2f& uv,
+    const vec3f& outgoing);
+vec4f eval_color(const scene_scene& scene, const scene_instance& instance,
+    int element, const vec2f& uv);
 
 // Environment
-vec3f eval_environment(
-    const scene_environment* environment, const vec3f& direction);
-vec3f eval_environment(const scene_scene* scene, const vec3f& direction);
+vec3f eval_environment(const scene_scene& scene,
+    const scene_environment& environment, const vec3f& direction);
+vec3f eval_environment(const scene_scene& scene, const vec3f& direction);
 
 // Material sample
 struct scene_material_sample {
@@ -355,8 +386,8 @@ struct scene_material_sample {
 };
 
 // Evaluates material and textures
-scene_material_sample eval_material(
-    const scene_material* material, const vec2f& texcoord);
+scene_material_sample eval_material(const scene_scene& scene,
+    const scene_material& material, const vec2f& texcoord);
 
 }  // namespace yocto
 
@@ -366,7 +397,7 @@ scene_material_sample eval_material(
 namespace yocto {
 
 // Make Cornell Box scene
-void make_cornellbox(scene_scene* scene);
+void make_cornellbox(scene_scene& scene);
 
 }  // namespace yocto
 
@@ -376,10 +407,10 @@ void make_cornellbox(scene_scene* scene);
 namespace yocto {
 
 // Return scene statistics as list of strings.
-vector<string> scene_stats(const scene_scene* scene, bool verbose = false);
+vector<string> scene_stats(const scene_scene& scene, bool verbose = false);
 // Return validation errors as list of strings.
 vector<string> scene_validation(
-    const scene_scene* scene, bool notextures = false);
+    const scene_scene& scene, bool notextures = false);
 
 }  // namespace yocto
 

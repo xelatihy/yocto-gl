@@ -89,17 +89,27 @@ struct bvh_tree {
 
 // BVH data for whole shapes. This interface makes copies of all the data.
 struct bvh_shape {
-  bvh_tree bvh        = {};       // nodes
-  void*    embree_bvh = nullptr;  // embree
-  ~bvh_shape();                   // cleanup
+  bvh_tree bvh        = {};                         // nodes
+  void*    embree_bvh = nullptr;                    // embree
+  bvh_shape() {}                                    // move only
+  bvh_shape(const bvh_shape&)            = delete;  // move only
+  bvh_shape& opaerator(const bvh_shape&) = delete;  // move only
+  bvh_shape(bvh_shape&&);                           // move only
+  bvh_shape& opaerator(bvh_shape&&) = delete;       // move only
+  ~bvh_shape();                                     // cleanup
 };
 
 // BVH data for whole shapes. This interface makes copies of all the data.
 struct bvh_scene {
-  bvh_tree           bvh        = {};       // nodes
-  vector<bvh_shape*> shapes     = {};       // shapes
-  void*              embree_bvh = nullptr;  // embree
-  ~bvh_scene();                             // cleanup
+  bvh_tree          bvh        = {};                // nodes
+  vector<bvh_shape> shapes     = {};                // shapes
+  void*             embree_bvh = nullptr;           // embree
+  bvh_scene() {}                                    // move only
+  bvh_scene(const bvh_shape&)            = delete;  // move only
+  bvh_scene& opaerator(const bvh_scene&) = delete;  // move only
+  bvh_scene(bvh_scene&&);                           // move only
+  bvh_scene& opaerator(bvh_scene&&) = delete;       // move only
+  ~bvh_scene();                                     // cleanup
 };
 
 // Strategy used to build the bvh
@@ -134,18 +144,18 @@ using progress_callback =
 
 // Build the bvh acceleration structure.
 void init_bvh(
-    bvh_shape* bvh, const scene_shape* shape, const bvh_params& params);
-void init_bvh(bvh_scene* bvh, const scene_scene* scene,
+    bvh_shape& bvh, const scene_shape& shape, const bvh_params& params);
+void init_bvh(bvh_scene& bvh, const scene_scene& scene,
     const bvh_params& params, const progress_callback& progress_cb = {});
 
 // Refit bvh data
-void update_bvh(bvh_shape* bvh, const progress_callback& progress_cb = {});
-void update_bvh(bvh_scene* bvh, const scene_scene* scene,
+void update_bvh(bvh_shape& bvh, const progress_callback& progress_cb = {});
+void update_bvh(bvh_scene& bvh, const scene_scene& scene,
     const vector<int>& updated_instances, const vector<int>& updated_shapes,
     const bvh_params& params, const progress_callback& progress_cb = {});
-void update_bvh(bvh_scene* bvh, const scene_scene* scene,
+void update_bvh(bvh_scene& bvh, const scene_scene& scene,
     const vector<scene_instance*>& updated_instances,
-    const vector<scene_shape*>& updated_shapes, const bvh_params& params,
+    const vector<scene_shape&>& updated_shapes, const bvh_params& params,
     const progress_callback& progress_cb = {});
 
 // Results of intersect_xxx and overlap_xxx functions that include hit flag,
@@ -164,11 +174,11 @@ struct bvh_intersection {
 // Intersect ray with a bvh returning either the first or any intersection
 // depending on `find_any`. Returns the ray distance , the instance id,
 // the shape element index and the element barycentric coordinates.
-bvh_intersection intersect_bvh(const bvh_shape* bvh, const scene_shape* shape,
+bvh_intersection intersect_bvh(const bvh_shape& bvh, const scene_shape& shape,
     const ray3f& ray, bool find_any = false, bool non_rigid_frames = true);
-bvh_intersection intersect_bvh(const bvh_scene* bvh, const scene_scene* scene,
+bvh_intersection intersect_bvh(const bvh_scene& bvh, const scene_scene& scene,
     const ray3f& ray, bool find_any = false, bool non_rigid_frames = true);
-bvh_intersection intersect_bvh(const bvh_scene* bvh, const scene_scene* scene,
+bvh_intersection intersect_bvh(const bvh_scene& bvh, const scene_scene& scene,
     int instance, const ray3f& ray, bool find_any = false,
     bool non_rigid_frames = true);
 
@@ -176,9 +186,9 @@ bvh_intersection intersect_bvh(const bvh_scene* bvh, const scene_scene* scene,
 // max distance, returning either the closest or any overlap depending on
 // `find_any`. Returns the point distance, the instance id, the shape element
 // index and the element barycentric coordinates.
-bvh_intersection overlap_bvh(const bvh_shape* bvh, const scene_shape* shape,
+bvh_intersection overlap_bvh(const bvh_shape& bvh, const scene_shape& shape,
     const vec3f& pos, float max_distance, bool find_any = false);
-bvh_intersection overlap_bvh(const bvh_scene* bvh, const scene_scene* scene,
+bvh_intersection overlap_bvh(const bvh_scene& bvh, const scene_scene& scene,
     const vec3f& pos, float max_distance, bool find_any = false,
     bool non_rigid_frames = true);
 
