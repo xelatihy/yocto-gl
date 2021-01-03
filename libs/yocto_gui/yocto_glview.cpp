@@ -90,8 +90,7 @@ void view_shape(const string& title, const string& name,
     const shape_data& shape, bool addsky,
     const progress_callback& progress_cb) {
   // initialize path tracer scene
-  auto scene_guard = std::make_unique<sceneio_scene>();
-  auto scene       = scene_guard.get();
+  auto scene = scene_scene{};
   print_progress("create scene", 0, 1);
   auto  shandle     = add_shape(scene, "shape");
   auto& ioshape     = get_shape(scene, shandle);
@@ -113,11 +112,11 @@ void view_shape(const string& title, const string& name,
   print_progress("create scene", 0, 1);
 
   // run view
-  view_scene(title, name, scene, scene->camera_names[0], progress_cb);
+  view_scene(title, name, scene, scene.camera_names[0], progress_cb);
 }
 
 // Open a window and show an scene via path tracing
-void view_scene(const string& title, const string& name, scene_scene* scene,
+void view_scene(const string& title, const string& name, scene_scene& scene,
     const string& camera_, const progress_callback& progress_cb) {
   // get camera
   auto& camera = get_camera(scene, camera_);
@@ -125,12 +124,12 @@ void view_scene(const string& title, const string& name, scene_scene* scene,
   // rendering params
   auto params = trace_params{};
   auto has_lights =
-      std::any_of(scene->instances.begin(), scene->instances.end(),
+      std::any_of(scene.instances.begin(), scene.instances.end(),
           [&scene](sceneio_instance& instance) {
             auto& material = get_material(scene, instance.material);
             return material.emission != zero3f;
           }) ||
-      std::any_of(scene->environments.begin(), scene->environments.end(),
+      std::any_of(scene.environments.begin(), scene.environments.end(),
           [](const sceneio_environment& environment) {
             return environment.emission != zero3f;
           });
@@ -141,8 +140,8 @@ void view_scene(const string& title, const string& name, scene_scene* scene,
 }
 
 // Open a window and show an scene via path tracing
-void view_scene(const string& title, const string& name, trace_scene* scene,
-    trace_camera& camera, const trace_params& params_,
+void view_scene(const string& title, const string& name, scene_scene& scene,
+    scene_camera& camera, const trace_params& params_,
     const progress_callback& progress_cb) {
   // open viewer
   auto viewer_guard = make_imageviewer(title);

@@ -148,12 +148,12 @@ struct trace_bsdf {
 };
 
 // Eval material to obtain emission, brdf and opacity.
-vec3f eval_emission(const trace_scene* scene, const trace_instance& instance,
+vec3f eval_emission(const scene_scene& scene, const trace_instance& instance,
     int element, const vec2f& uv, const vec3f& normal, const vec3f& outgoing);
 // Eval material to obatain emission, brdf and opacity.
-trace_bsdf eval_bsdf(const trace_scene* scene, const trace_instance& instance,
+trace_bsdf eval_bsdf(const scene_scene& scene, const trace_instance& instance,
     int element, const vec2f& uv, const vec3f& normal, const vec3f& outgoing);
-float eval_opacity(const trace_scene* scene, const trace_instance& instance,
+float eval_opacity(const scene_scene& scene, const trace_instance& instance,
     int element, const vec2f& uv, const vec3f& normal, const vec3f& outgoing);
 // check if a brdf is a delta
 bool is_delta(const trace_bsdf& bsdf);
@@ -166,9 +166,9 @@ struct trace_vsdf {
 };
 
 // check if we have a volume
-bool has_volume(const trace_scene* scene, const trace_instance* instance);
+bool has_volume(const scene_scene& scene, const trace_instance* instance);
 // evaluate volume
-trace_vsdf eval_vsdf(const trace_scene* scene, const trace_instance* instance,
+trace_vsdf eval_vsdf(const scene_scene& scene, const trace_instance* instance,
     int element, const vec2f& uv);
 
 }  // namespace yocto
@@ -296,7 +296,7 @@ using image_callback =
     function<void(const image<vec4f>& render, int current, int total)>;
 
 // Progressively computes an image.
-image<vec4f> trace_image(const trace_scene* scene, const scene_camera& camera,
+image<vec4f> trace_image(const scene_scene& scene, const scene_camera& camera,
     const trace_params& params, const progress_callback& progress_cb = {},
     const image_callback& image_cb = {});
 
@@ -324,24 +324,24 @@ struct trace_lights {
 };
 
 // Initialize lights.
-void init_lights(trace_lights* lights, const trace_scene* scene,
+void init_lights(trace_lights* lights, const scene_scene& scene,
     const trace_params& params, const progress_callback& progress_cb = {});
 
 // Define BVH
 using trace_bvh = bvh_scene;
 
 // Build the bvh acceleration structure.
-void init_bvh(trace_bvh& bvh, const trace_scene* scene,
+void init_bvh(trace_bvh& bvh, const scene_scene& scene,
     const trace_params& params, const progress_callback& progress_cb = {});
 
 // Refit bvh data
-void update_bvh(trace_bvh& bvh, const trace_scene* scene,
+void update_bvh(trace_bvh& bvh, const scene_scene& scene,
     const vector<trace_instance*>& updated_instances,
     const vector<trace_shape*>& updated_shapes, const trace_params& params,
     const progress_callback& progress_cb = {});
 
 // Progressively computes an image.
-image<vec4f> trace_image(const trace_scene* scene, const scene_camera& camera,
+image<vec4f> trace_image(const scene_scene& scene, const scene_camera& camera,
     const trace_bvh& bvh, const trace_lights* lights,
     const trace_params& params, const progress_callback& progress_cb = {},
     const image_callback& image_cb = {});
@@ -365,7 +365,7 @@ using async_callback = function<void(
 
 // [experimental] Asynchronous interface
 struct trace_state;
-void trace_start(trace_state* state, const trace_scene* scene,
+void trace_start(trace_state* state, const scene_scene& scene,
     const scene_camera& camera, const trace_bvh& bvh,
     const trace_lights* lights, const trace_params& params,
     const progress_callback& progress_cb = {},

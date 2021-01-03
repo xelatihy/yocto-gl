@@ -60,7 +60,7 @@ triangles_shape make_bunny(float scale = 1, bool align_middle = true) {
   return shape;
 }
 
-camera_handle add_camera(sceneio_scene* scene, const string& name,
+camera_handle add_camera(scene_scene& scene, const string& name,
     const vec3f& from, const vec3f& to, const vec3f& up, float lens,
     float aspect, float aperture = 0, bool orthographic = false,
     float film = 0.036) {
@@ -75,7 +75,7 @@ camera_handle add_camera(sceneio_scene* scene, const string& name,
   camera.focus        = length(from - to);
   return handle;
 }
-camera_handle add_camera(sceneio_scene* scene, const string& name,
+camera_handle add_camera(scene_scene& scene, const string& name,
     const frame3f& frame, float lens, float aspect, float aperture = 0,
     float focus = 10, bool orthographic = false, float film = 0.036) {
   auto  handle        = add_camera(scene, name);
@@ -89,7 +89,7 @@ camera_handle add_camera(sceneio_scene* scene, const string& name,
   camera.focus        = focus;
   return handle;
 }
-instance_handle add_instance(sceneio_scene* scene, const string& name,
+instance_handle add_instance(scene_scene& scene, const string& name,
     const frame3f& frame, shape_handle shape, material_handle material) {
   auto  handle      = add_instance(scene, name);
   auto& instance    = get_instance(scene, handle);
@@ -98,7 +98,7 @@ instance_handle add_instance(sceneio_scene* scene, const string& name,
   instance.material = material;
   return handle;
 }
-environment_handle add_environment(sceneio_scene* scene, const string& name,
+environment_handle add_environment(scene_scene& scene, const string& name,
     const frame3f& frame, const vec3f& emission,
     texture_handle emission_tex = invalid_handle) {
   auto  handle             = add_environment(scene, name);
@@ -108,7 +108,7 @@ environment_handle add_environment(sceneio_scene* scene, const string& name,
   environment.emission_tex = emission_tex;
   return handle;
 }
-texture_handle add_texture(sceneio_scene* scene, const string& name,
+texture_handle add_texture(scene_scene& scene, const string& name,
     const image<vec4f>& img, bool hdr = false, bool ldr_linear = false,
     bool single_channel = false) {
   auto  handle  = add_texture(scene, name);
@@ -120,7 +120,7 @@ texture_handle add_texture(sceneio_scene* scene, const string& name,
   }
   return handle;
 }
-shape_handle add_shape(sceneio_scene* scene, const string& name,
+shape_handle add_shape(scene_scene& scene, const string& name,
     const quads_shape& shape_data, int subdivisions = 0, float displacement = 0,
     texture_handle displacement_tex = invalid_handle) {
   auto  handle           = add_shape(scene, name);
@@ -140,7 +140,7 @@ shape_handle add_shape(sceneio_scene* scene, const string& name,
   shape.displacement_tex = displacement_tex;
   return handle;
 }
-shape_handle add_shape(sceneio_scene* scene, const string& name,
+shape_handle add_shape(scene_scene& scene, const string& name,
     const quads_fvshape& shape_data, int subdivisions = 0,
     float displacement = 0, texture_handle displacement_tex = invalid_handle) {
   auto  handle           = add_shape(scene, name);
@@ -157,7 +157,7 @@ shape_handle add_shape(sceneio_scene* scene, const string& name,
   shape.displacement_tex = displacement_tex;
   return handle;
 }
-material_handle add_emission_material(sceneio_scene* scene, const string& name,
+material_handle add_emission_material(scene_scene& scene, const string& name,
     const vec3f& emission, texture_handle emission_tex) {
   auto  handle          = add_material(scene, name);
   auto& material        = get_material(scene, handle);
@@ -165,7 +165,7 @@ material_handle add_emission_material(sceneio_scene* scene, const string& name,
   material.emission_tex = emission_tex;
   return handle;
 }
-material_handle add_matte_material(sceneio_scene* scene, const string& name,
+material_handle add_matte_material(scene_scene& scene, const string& name,
     const vec3f& color, texture_handle color_tex,
     texture_handle normal_tex = invalid_handle) {
   auto  handle        = add_material(scene, name);
@@ -176,7 +176,7 @@ material_handle add_matte_material(sceneio_scene* scene, const string& name,
   material.normal_tex = normal_tex;
   return handle;
 }
-material_handle add_specular_material(sceneio_scene* scene, const string& name,
+material_handle add_specular_material(scene_scene& scene, const string& name,
     const vec3f& color, texture_handle color_tex, float roughness,
     texture_handle roughness_tex = invalid_handle,
     texture_handle normal_tex = invalid_handle, float ior = 1.5,
@@ -197,7 +197,7 @@ material_handle add_specular_material(sceneio_scene* scene, const string& name,
   material.normal_tex    = normal_tex;
   return handle;
 }
-material_handle add_metallic_material(sceneio_scene* scene, const string& name,
+material_handle add_metallic_material(scene_scene& scene, const string& name,
     const vec3f& color, texture_handle color_tex, float roughness,
     texture_handle roughness_tex = invalid_handle,
     texture_handle normal_tex = invalid_handle, float metallic = 1,
@@ -213,7 +213,7 @@ material_handle add_metallic_material(sceneio_scene* scene, const string& name,
   material.normal_tex    = normal_tex;
   return handle;
 }
-material_handle add_transmission_material(sceneio_scene* scene,
+material_handle add_transmission_material(scene_scene& scene,
     const string& name, const vec3f& color, texture_handle color_tex,
     float roughness, texture_handle roughness_tex = invalid_handle,
     texture_handle normal_tex = invalid_handle, float ior = 1.5,
@@ -234,9 +234,9 @@ material_handle add_transmission_material(sceneio_scene* scene,
   material.normal_tex       = normal_tex;
   return handle;
 }
-material_handle add_volumetric_material(sceneio_scene* scene,
-    const string& name, const vec3f& color, texture_handle color_tex,
-    float roughness, texture_handle roughness_tex = invalid_handle,
+material_handle add_volumetric_material(scene_scene& scene, const string& name,
+    const vec3f& color, texture_handle color_tex, float roughness,
+    texture_handle roughness_tex  = invalid_handle,
     const vec3f&   scattering     = {0, 0, 0},
     texture_handle scattering_tex = invalid_handle,
     texture_handle normal_tex = invalid_handle, float ior = 1.5,
@@ -262,9 +262,9 @@ material_handle add_volumetric_material(sceneio_scene* scene,
   material.thin             = false;
   return handle;
 }
-material_handle add_volumetrict_material(sceneio_scene* scene,
-    const string& name, const vec3f& color, texture_handle color_tex,
-    float roughness, texture_handle roughness_tex = invalid_handle,
+material_handle add_volumetrict_material(scene_scene& scene, const string& name,
+    const vec3f& color, texture_handle color_tex, float roughness,
+    texture_handle roughness_tex  = invalid_handle,
     const vec3f&   scattering     = {0, 0, 0},
     texture_handle scattering_tex = invalid_handle,
     texture_handle normal_tex = invalid_handle, float ior = 1.5,
@@ -290,7 +290,7 @@ material_handle add_volumetrict_material(sceneio_scene* scene,
   material.thin             = false;
   return handle;
 }
-material_handle add_specular_coated_material(sceneio_scene* scene,
+material_handle add_specular_coated_material(scene_scene& scene,
     const string& name, const vec3f& color, texture_handle color_tex,
     float roughness, texture_handle roughness_tex = invalid_handle,
     texture_handle normal_tex = invalid_handle, float ior = 1.5,
@@ -310,7 +310,7 @@ material_handle add_specular_coated_material(sceneio_scene* scene,
   material.normal_tex    = normal_tex;
   return handle;
 }
-material_handle add_metallic_coated_material(sceneio_scene* scene,
+material_handle add_metallic_coated_material(scene_scene& scene,
     const string& name, const vec3f& color, texture_handle color_tex,
     float roughness, texture_handle roughness_tex = invalid_handle,
     texture_handle normal_tex = invalid_handle, float metallic = 1,
@@ -329,9 +329,9 @@ material_handle add_metallic_coated_material(sceneio_scene* scene,
   material.normal_tex    = normal_tex;
   return handle;
 }
-material_handle add_transparent_material(sceneio_scene* scene,
-    const string& name, const vec3f& color, texture_handle color_tex,
-    float opacity = 1, texture_handle normal_tex = invalid_handle) {
+material_handle add_transparent_material(scene_scene& scene, const string& name,
+    const vec3f& color, texture_handle color_tex, float opacity = 1,
+    texture_handle normal_tex = invalid_handle) {
   auto  handle        = add_material(scene, name);
   auto& material      = get_material(scene, handle);
   material.color      = color;
@@ -371,7 +371,7 @@ struct test_params {
 };
 
 // Scene test
-void make_test(sceneio_scene* scene, const test_params& params) {
+void make_test(scene_scene& scene, const test_params& params) {
   // cameras
   switch (params.cameras) {
     case test_cameras_type::standard: {
@@ -671,7 +671,7 @@ void make_test(sceneio_scene* scene, const test_params& params) {
 }
 
 // Scene presets used ofr testing.
-bool make_preset(sceneio_scene* scene, const string& type, string& error) {
+bool make_preset(scene_scene& scene, const string& type, string& error) {
   if (type == "cornellbox") {
     make_cornellbox(scene);
     return true;
@@ -796,9 +796,8 @@ void serialize_value(json_mode mode, json_value& json, convert_params& value,
 // convert images
 int run_convert(const convert_params& params) {
   // load scene
-  auto scene_guard = std::make_unique<sceneio_scene>();
-  auto scene       = scene_guard.get();
-  auto ioerror     = ""s;
+  auto scene   = scene_scene{};
+  auto ioerror = ""s;
   if (path_extension(params.scene) == ".ypreset") {
     print_progress("make preset", 0, 1);
     if (!make_preset(scene, path_basename(params.scene), ioerror))
@@ -811,7 +810,7 @@ int run_convert(const convert_params& params) {
 
   // copyright
   if (params.copyright != "") {
-    scene->copyright = params.copyright;
+    scene.copyright = params.copyright;
   }
 
   // validate scene
@@ -833,12 +832,12 @@ int run_convert(const convert_params& params) {
   // make a directory if needed
   if (!make_directory(path_dirname(params.output), ioerror))
     print_fatal(ioerror);
-  if (!scene->shapes.empty()) {
+  if (!scene.shapes.empty()) {
     if (!make_directory(
             path_join(path_dirname(params.output), "shapes"), ioerror))
       print_fatal(ioerror);
   }
-  if (!scene->textures.empty()) {
+  if (!scene.textures.empty()) {
     if (!make_directory(
             path_join(path_dirname(params.output), "textures"), ioerror))
       print_fatal(ioerror);
@@ -884,9 +883,8 @@ int run_view(const view_params& params) {
 // view scene
 int run_view(const view_params& params) {
   // load scene
-  auto scene_guard = std::make_unique<sceneio_scene>();
-  auto scene       = scene_guard.get();
-  auto ioerror     = ""s;
+  auto scene   = scene_scene{};
+  auto ioerror = ""s;
   if (path_extension(params.scene) == ".ypreset") {
     print_progress("make preset", 0, 1);
     if (!make_preset(scene, path_basename(params.scene), ioerror))

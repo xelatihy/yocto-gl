@@ -145,15 +145,15 @@ using progress_callback =
 // Build the bvh acceleration structure.
 void init_bvh(
     bvh_shape& bvh, const scene_shape& shape, const bvh_params& params);
-void init_bvh(bvh_scene& bvh, const scene_scene* scene,
+void init_bvh(bvh_scene& bvh, const scene_scene& scene,
     const bvh_params& params, const progress_callback& progress_cb = {});
 
 // Refit bvh data
 void update_bvh(bvh_shape& bvh, const progress_callback& progress_cb = {});
-void update_bvh(bvh_scene& bvh, const scene_scene* scene,
+void update_bvh(bvh_scene& bvh, const scene_scene& scene,
     const vector<int>& updated_instances, const vector<int>& updated_shapes,
     const bvh_params& params, const progress_callback& progress_cb = {});
-void update_bvh(bvh_scene& bvh, const scene_scene* scene,
+void update_bvh(bvh_scene& bvh, const scene_scene& scene,
     const vector<scene_instance*>& updated_instances,
     const vector<scene_shape&>& updated_shapes, const bvh_params& params,
     const progress_callback& progress_cb = {});
@@ -176,9 +176,9 @@ struct bvh_intersection {
 // the shape element index and the element barycentric coordinates.
 bvh_intersection intersect_bvh(const bvh_shape& bvh, const scene_shape& shape,
     const ray3f& ray, bool find_any = false, bool non_rigid_frames = true);
-bvh_intersection intersect_bvh(const bvh_scene& bvh, const scene_scene* scene,
+bvh_intersection intersect_bvh(const bvh_scene& bvh, const scene_scene& scene,
     const ray3f& ray, bool find_any = false, bool non_rigid_frames = true);
-bvh_intersection intersect_bvh(const bvh_scene& bvh, const scene_scene* scene,
+bvh_intersection intersect_bvh(const bvh_scene& bvh, const scene_scene& scene,
     int instance, const ray3f& ray, bool find_any = false,
     bool non_rigid_frames = true);
 
@@ -188,7 +188,7 @@ bvh_intersection intersect_bvh(const bvh_scene& bvh, const scene_scene* scene,
 // index and the element barycentric coordinates.
 bvh_intersection overlap_bvh(const bvh_shape& bvh, const scene_shape& shape,
     const vec3f& pos, float max_distance, bool find_any = false);
-bvh_intersection overlap_bvh(const bvh_scene& bvh, const scene_scene* scene,
+bvh_intersection overlap_bvh(const bvh_scene& bvh, const scene_scene& scene,
     const vec3f& pos, float max_distance, bool find_any = false,
     bool non_rigid_frames = true);
 

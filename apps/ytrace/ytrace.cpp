@@ -64,9 +64,8 @@ void serialize_value(json_mode mode, json_value& json, render_params& value,
 // convert images
 int run_render(const render_params& params) {
   // scene loading
-  auto scene_guard = std::make_unique<sceneio_scene>();
-  auto scene       = scene_guard.get();
-  auto ioerror     = string{};
+  auto scene   = scene_scene{};
+  auto ioerror = string{};
   if (!load_scene(params.scene, scene, ioerror, print_progress))
     return print_fatal(ioerror);
 
@@ -156,9 +155,8 @@ int run_view(const view_params& params) {
   auto viewer       = viewer_guard.get();
 
   // scene loading
-  auto scene_guard = std::make_unique<sceneio_scene>();
-  auto scene       = scene_guard.get();
-  auto ioerror     = string{};
+  auto scene   = scene_scene{};
+  auto ioerror = string{};
   if (!load_scene(params.scene, scene, ioerror, print_progress))
     return print_fatal(ioerror);
 
@@ -207,53 +205,52 @@ int run_view(const view_params& params) {
       viewer, "render", to_json(params), to_schema(params, "Render params"));
 
   // set callback
-  set_callback(viewer,
-      [state, scene, &camera, &bvh, lights, viewer, &params](const string& name,
-          const json_value& uiparams, const gui_input& input) {
-        if (name != "render") return;
-        if (!uiparams.is_null()) {
-          trace_stop(state);
-          (view_params&)params = from_json<view_params>(uiparams);
-          // show rendering params
-          set_widgets(viewer, "render", to_json(params),
-              to_schema(params, "Render params"));
-          trace_start(
-              state, scene, camera, bvh, lights, params,
-              [viewer](const string& message, int sample, int nsamples) {
-                set_widget(viewer, "render", "sample", to_json(sample),
-                    to_schema(sample, "Current sample"));
-                print_progress(message, sample, nsamples);
-              },
-              [viewer](const image<vec4f>& render, int current, int total) {
-                set_image(viewer, "render", render);
-              });
-        } else if ((input.mouse_left || input.mouse_right) &&
-                   input.mouse_pos != input.mouse_last) {
-          trace_stop(state);
-          auto dolly  = 0.0f;
-          auto pan    = zero2f;
-          auto rotate = zero2f;
-          if (input.mouse_left && !input.modifier_shift)
-            rotate = (input.mouse_pos - input.mouse_last) / 100.0f;
-          if (input.mouse_right)
-            dolly = (input.mouse_pos.x - input.mouse_last.x) / 100.0f;
-          if (input.mouse_left && input.modifier_shift)
-            pan = (input.mouse_pos - input.mouse_last) * camera.focus / 200.0f;
-          pan.x                                = -pan.x;
-          std::tie(camera.frame, camera.focus) = camera_turntable(
-              camera.frame, camera.focus, rotate, dolly, pan);
-          trace_start(
-              state, scene, camera, bvh, lights, params,
-              [viewer](const string& message, int sample, int nsamples) {
-                set_widget(viewer, "render", "sample", to_json(sample),
-                    to_schema(sample, "Current sample"));
-                print_progress(message, sample, nsamples);
-              },
-              [viewer](const image<vec4f>& render, int current, int total) {
-                set_image(viewer, "render", render);
-              });
-        }
-      });
+  set_callback(viewer, [&](const string& name, const json_value& uiparams,
+                           const gui_input& input) {
+    if (name != "render") return;
+    if (!uiparams.is_null()) {
+      trace_stop(state);
+      (view_params&)params = from_json<view_params>(uiparams);
+      // show rendering params
+      set_widgets(viewer, "render", to_json(params),
+          to_schema(params, "Render params"));
+      trace_start(
+          state, scene, camera, bvh, lights, params,
+          [viewer](const string& message, int sample, int nsamples) {
+            set_widget(viewer, "render", "sample", to_json(sample),
+                to_schema(sample, "Current sample"));
+            print_progress(message, sample, nsamples);
+          },
+          [viewer](const image<vec4f>& render, int current, int total) {
+            set_image(viewer, "render", render);
+          });
+    } else if ((input.mouse_left || input.mouse_right) &&
+               input.mouse_pos != input.mouse_last) {
+      trace_stop(state);
+      auto dolly  = 0.0f;
+      auto pan    = zero2f;
+      auto rotate = zero2f;
+      if (input.mouse_left && !input.modifier_shift)
+        rotate = (input.mouse_pos - input.mouse_last) / 100.0f;
+      if (input.mouse_right)
+        dolly = (input.mouse_pos.x - input.mouse_last.x) / 100.0f;
+      if (input.mouse_left && input.modifier_shift)
+        pan = (input.mouse_pos - input.mouse_last) * camera.focus / 200.0f;
+      pan.x                                = -pan.x;
+      std::tie(camera.frame, camera.focus) = camera_turntable(
+          camera.frame, camera.focus, rotate, dolly, pan);
+      trace_start(
+          state, scene, camera, bvh, lights, params,
+          [viewer](const string& message, int sample, int nsamples) {
+            set_widget(viewer, "render", "sample", to_json(sample),
+                to_schema(sample, "Current sample"));
+            print_progress(message, sample, nsamples);
+          },
+          [viewer](const image<vec4f>& render, int current, int total) {
+            set_image(viewer, "render", render);
+          });
+    }
+  });
 
   // run view
   run_viewer(viewer);

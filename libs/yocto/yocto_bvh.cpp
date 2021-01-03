@@ -188,7 +188,7 @@ static void init_embree_bvh(
 }
 
 static void init_embree_bvh(
-    bvh_scene& bvh, const scene_scene* scene, const bvh_params& params) {
+    bvh_scene& bvh, const scene_scene& scene, const bvh_params& params) {
   // scene bvh
   auto edevice   = bvh_embree_device();
   bvh.embree_bvh = rtcNewScene(edevice);
@@ -197,9 +197,9 @@ static void init_embree_bvh(
     rtcSetSceneFlags(escene, RTC_SCENE_FLAG_COMPACT);
   if (params.bvh == bvh_build_type::embree_highquality)
     rtcSetSceneBuildQuality(escene, RTC_BUILD_QUALITY_HIGH);
-  for (auto instance_id = 0; instance_id < (int)scene->instances.size();
+  for (auto instance_id = 0; instance_id < (int)scene.instances.size();
        instance_id++) {
-    auto& instance  = scene->instances[instance_id];
+    auto& instance  = scene.instances[instance_id];
     auto& sbvh      = bvh.shapes[instance.shape];
     auto  egeometry = rtcNewGeometry(edevice, RTC_GEOMETRY_TYPE_INSTANCE);
     rtcSetGeometryInstancedScene(egeometry, (RTCScene)sbvh.embree_bvh);
@@ -211,12 +211,12 @@ static void init_embree_bvh(
   rtcCommitScene(escene);
 }
 
-static void update_embree_bvh(bvh_scene& bvh, const scene_scene* scene,
+static void update_embree_bvh(bvh_scene& bvh, const scene_scene& scene,
     const vector<int>& updated_instances) {
   // scene bvh
   auto escene = (RTCScene)bvh.embree_bvh;
   for (auto instance_id : updated_instances) {
-    auto& instance    = scene->instances[instance_id];
+    auto& instance    = scene.instances[instance_id];
     auto& sbvh        = bvh.shapes[instance.shape];
     auto  embree_geom = rtcGetGeometry(escene, instance_id);
     rtcSetGeometryInstancedScene(embree_geom, (RTCScene)sbvh.embree_bvh);
@@ -251,7 +251,7 @@ static bool intersect_embree_bvh(const bvh_shape& bvh, const scene_shape& shape,
   return true;
 }
 
-static bool intersect_embree_bvh(const bvh_scene& bvh, const scene_scene* scene,
+static bool intersect_embree_bvh(const bvh_scene& bvh, const scene_scene& scene,
     const ray3f& ray, int& instance, int& element, vec2f& uv, float& distance,
     bool find_any) {
   RTCRayHit embree_ray;
@@ -709,7 +709,7 @@ static void build_bvh(
 }
 
 static void build_bvh(
-    bvh_scene& bvh, const scene_scene* scene, const bvh_params& params) {
+    bvh_scene& bvh, const scene_scene& scene, const bvh_params& params) {
   // embree
 #ifdef YOCTO_EMBREE
   if (params.bvh == bvh_build_type::embree_default ||
@@ -720,9 +720,9 @@ static void build_bvh(
 #endif
 
   // instance bboxes
-  auto bboxes = vector<bbox3f>(scene->instances.size());
+  auto bboxes = vector<bbox3f>(scene.instances.size());
   for (auto idx = 0; idx < bboxes.size(); idx++) {
-    auto& instance = scene->instances[idx];
+    auto& instance = scene.instances[idx];
     auto& sbvh     = bvh.shapes[instance.shape];
     bboxes[idx]    = sbvh.bvh.nodes.empty()
                          ? invalidb3f
@@ -746,17 +746,17 @@ void init_bvh(bvh_shape& bvh, const scene_shape& shape,
   if (progress_cb) progress_cb("build bvh", progress.x++, progress.y);
 }
 
-void init_bvh(bvh_scene& bvh, const scene_scene* scene,
+void init_bvh(bvh_scene& bvh, const scene_scene& scene,
     const bvh_params& params, const progress_callback& progress_cb) {
   // handle progress
-  auto progress = vec2i{0, 1 + (int)scene->shapes.size()};
+  auto progress = vec2i{0, 1 + (int)scene.shapes.size()};
 
   // build shape bvh
   bvh.shapes.clear();
-  for (auto idx = 0; idx < scene->shapes.size(); idx++) {
+  for (auto idx = 0; idx < scene.shapes.size(); idx++) {
     if (progress_cb) progress_cb("build shape bvh", progress.x++, progress.y);
     bvh.shapes.emplace_back();
-    build_bvh(bvh.shapes[idx], scene->shapes[idx], params);
+    build_bvh(bvh.shapes[idx], scene.shapes[idx], params);
   }
 
   // build scene bvh
@@ -809,7 +809,7 @@ static void update_bvh(bvh_shape& bvh, const scene_shape& shape) {
   update_bvh(bvh.bvh, bboxes);
 }
 
-void update_bvh(bvh_scene& bvh, const scene_scene* scene,
+void update_bvh(bvh_scene& bvh, const scene_scene& scene,
     const vector<int>& updated_instances) {
 #ifdef YOCTO_EMBREE
   if (bvh.embree_bvh) {
@@ -818,9 +818,9 @@ void update_bvh(bvh_scene& bvh, const scene_scene* scene,
 #endif
 
   // build primitives
-  auto bboxes = vector<bbox3f>(scene->instances.size());
+  auto bboxes = vector<bbox3f>(scene.instances.size());
   for (auto idx = 0; idx < bboxes.size(); idx++) {
-    auto& instance = scene->instances[idx];
+    auto& instance = scene.instances[idx];
     auto& sbvh     = bvh.shapes[instance.shape].bvh;
     bboxes[idx]    = transform_bbox(instance.frame, sbvh.nodes[0].bbox);
   }
@@ -842,7 +842,7 @@ void update_bvh(bvh_shape& bvh, const scene_shape& shape,
   if (progress_cb) progress_cb("update bvh", progress.x++, progress.y);
 }
 
-void update_bvh(bvh_scene& bvh, const scene_scene* scene,
+void update_bvh(bvh_scene& bvh, const scene_scene& scene,
     const vector<int>& updated_instances, const vector<int>& updated_shapes,
     const bvh_params& params, const progress_callback& progress_cb) {
   // handle progress
@@ -851,7 +851,7 @@ void update_bvh(bvh_scene& bvh, const scene_scene* scene,
   // update shapes
   for (auto shape : updated_shapes) {
     if (progress_cb) progress_cb("update shape bvh", progress.x++, progress.y);
-    update_bvh(bvh.shapes[shape], scene->shapes[shape]);
+    update_bvh(bvh.shapes[shape], scene.shapes[shape]);
   }
 
   // handle instances
@@ -971,7 +971,7 @@ static bool intersect_bvh(const bvh_shape& bvh, const scene_shape& shape,
 }
 
 // Intersect ray with a bvh.
-static bool intersect_bvh(const bvh_scene& bvh, const scene_scene* scene,
+static bool intersect_bvh(const bvh_scene& bvh, const scene_scene& scene,
     const ray3f& ray_, int& instance, int& element, vec2f& uv, float& distance,
     bool find_any, bool non_rigid_frames) {
 #ifdef YOCTO_EMBREE
@@ -1024,8 +1024,8 @@ static bool intersect_bvh(const bvh_scene& bvh, const scene_scene* scene,
       }
     } else {
       for (auto idx = node.start; idx < node.start + node.num; idx++) {
-        auto& instance_ = scene->instances[bvh.bvh.primitives[idx]];
-        auto&  shape     = get_shape(scene, instance_.shape);
+        auto& instance_ = scene.instances[bvh.bvh.primitives[idx]];
+        auto& shape     = get_shape(scene, instance_.shape);
         auto& sbvh      = bvh.shapes[instance_.shape];
         auto  inv_ray   = transform_ray(
             inverse(instance_.frame, non_rigid_frames), ray);
@@ -1046,10 +1046,10 @@ static bool intersect_bvh(const bvh_scene& bvh, const scene_scene* scene,
 }
 
 // Intersect ray with a bvh.
-static bool intersect_bvh(const bvh_scene& bvh, const scene_scene* scene,
+static bool intersect_bvh(const bvh_scene& bvh, const scene_scene& scene,
     int instance_, const ray3f& ray, int& element, vec2f& uv, float& distance,
     bool find_any, bool non_rigid_frames) {
-  auto& instance = scene->instances[instance_];
+  auto& instance = scene.instances[instance_];
   auto  shape    = get_shape(scene, instance.shape);
   auto& sbvh     = bvh.shapes[instance.shape];
   auto  inv_ray = transform_ray(inverse(instance.frame, non_rigid_frames), ray);
@@ -1150,7 +1150,7 @@ static bool overlap_bvh(const bvh_shape& bvh, const scene_shape& shape,
 }
 
 // Intersect ray with a bvh.
-static bool overlap_bvh(const bvh_scene& bvh, const scene_scene* scene,
+static bool overlap_bvh(const bvh_scene& bvh, const scene_scene& scene,
     const vec3f& pos, float max_distance, int& instance, int& element,
     vec2f& uv, float& distance, bool find_any, bool non_rigid_frames) {
   // check if empty
@@ -1181,8 +1181,8 @@ static bool overlap_bvh(const bvh_scene& bvh, const scene_scene* scene,
     } else {
       for (auto idx = 0; idx < node.num; idx++) {
         auto  primitive = bvh.bvh.primitives[node.start + idx];
-        auto& instance_ = scene->instances[primitive];
-        auto& shape     = scene->shapes[instance_.shape];
+        auto& instance_ = scene.instances[primitive];
+        auto& shape     = scene.shapes[instance_.shape];
         auto& sbvh      = bvh.shapes[instance_.shape];
         auto  inv_pos   = transform_point(
             inverse(instance_.frame, non_rigid_frames), pos);
@@ -1263,7 +1263,7 @@ void overlap_bvh_elems(const bvh_data& bvh1, const bvh_data& bvh2,
 }
 #endif
 
-bvh_intersection intersect_bvh(const bvh_scene& bvh, const scene_scene* scene,
+bvh_intersection intersect_bvh(const bvh_scene& bvh, const scene_scene& scene,
     const ray3f& ray, bool find_any, bool non_rigid_frames) {
   auto intersection = bvh_intersection{};
   intersection.hit  = intersect_bvh(bvh, scene, ray, intersection.instance,
@@ -1271,7 +1271,7 @@ bvh_intersection intersect_bvh(const bvh_scene& bvh, const scene_scene* scene,
       non_rigid_frames);
   return intersection;
 }
-bvh_intersection intersect_bvh(const bvh_scene& bvh, const scene_scene* scene,
+bvh_intersection intersect_bvh(const bvh_scene& bvh, const scene_scene& scene,
     int instance, const ray3f& ray, bool find_any, bool non_rigid_frames) {
   auto intersection     = bvh_intersection{};
   intersection.hit      = intersect_bvh(bvh, scene, instance, ray,
@@ -1281,7 +1281,7 @@ bvh_intersection intersect_bvh(const bvh_scene& bvh, const scene_scene* scene,
   return intersection;
 }
 
-bvh_intersection overlap_bvh(const bvh_scene& bvh, const scene_scene* scene,
+bvh_intersection overlap_bvh(const bvh_scene& bvh, const scene_scene& scene,
     const vec3f& pos, float max_distance, bool find_any,
     bool non_rigid_frames) {
   auto intersection = bvh_intersection{};
