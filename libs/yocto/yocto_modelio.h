@@ -554,28 +554,25 @@ struct pbrt_environment {
 // Pbrt model
 struct pbrt_scene {
   // pbrt data
-  vector<string>            comments     = {};
-  vector<pbrt_camera*>      cameras      = {};
-  vector<pbrt_shape*>       shapes       = {};
-  vector<pbrt_environment*> environments = {};
-  vector<pbrt_light*>       lights       = {};
-  vector<pbrt_material*>    materials    = {};
-
-  // cleanup
-  ~pbrt_scene();
+  vector<string>           comments     = {};
+  vector<pbrt_camera>      cameras      = {};
+  vector<pbrt_shape>       shapes       = {};
+  vector<pbrt_environment> environments = {};
+  vector<pbrt_light>       lights       = {};
+  vector<pbrt_material>    materials    = {};
 };
 
 // Load/save pbrt
-bool load_pbrt(const string& filename, pbrt_scene* pbrt, string& error);
-bool save_pbrt(const string& filename, const pbrt_scene* pbrt, string& error,
+bool load_pbrt(const string& filename, pbrt_scene& pbrt, string& error);
+bool save_pbrt(const string& filename, const pbrt_scene& pbrt, string& error,
     bool ply_meshes = false);
 
 // Create pbrt
-pbrt_camera*      add_camera(pbrt_scene* pbrt);
-pbrt_shape*       add_shape(pbrt_scene* pbrt);
-pbrt_material*    add_material(pbrt_scene* pbrt);
-pbrt_environment* add_environment(pbrt_scene* pbrt);
-pbrt_light*       add_light(pbrt_scene* pbrt);
+pbrt_camera&      add_camera(pbrt_scene& pbrt);
+pbrt_shape&       add_shape(pbrt_scene& pbrt);
+pbrt_material&    add_material(pbrt_scene& pbrt);
+pbrt_environment& add_environment(pbrt_scene& pbrt);
+pbrt_light&       add_light(pbrt_scene& pbrt);
 
 }  // namespace yocto
 
