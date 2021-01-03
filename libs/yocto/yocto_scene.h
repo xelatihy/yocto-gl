@@ -189,9 +189,6 @@ struct scene_instance {
   frame3f         frame    = identity3x4f;
   shape_handle    shape    = invalid_handle;
   material_handle material = invalid_handle;
-
-  // instance id assigned at creation
-  int instance_id = -1;
 };
 
 // Environment map.
@@ -215,7 +212,7 @@ struct scene_scene {
 
   // scene elements
   vector<scene_camera>      cameras      = {};
-  vector<scene_instance*>   instances    = {};
+  vector<scene_instance>    instances    = {};
   vector<scene_environment> environments = {};
   vector<scene_shape*>      shapes       = {};
   vector<scene_texture*>    textures     = {};
@@ -232,7 +229,6 @@ struct scene_scene {
   unordered_map<const scene_texture*, string>  texture_map  = {};
   unordered_map<const scene_material*, string> material_map = {};
   unordered_map<const scene_shape*, string>    shape_map    = {};
-  unordered_map<const scene_instance*, string> instance_map = {};
 
   // cleanup
   ~scene_scene();
@@ -258,25 +254,25 @@ instance_handle add_complete_instance(scene_scene* scene, const string& name);
 scene_camera&      get_camera(scene_scene* scene, camera_handle handle);
 scene_environment& get_environment(
     scene_scene* scene, environment_handle handle);
-scene_instance* get_instance(scene_scene* scene, instance_handle handle);
+scene_instance& get_instance(scene_scene* scene, instance_handle handle);
 scene_material* get_material(scene_scene* scene, material_handle handle);
 scene_shape*    get_shape(scene_scene* scene, shape_handle handle);
 scene_texture*  get_texture(scene_scene* scene, texture_handle handle);
-scene_instance* get_complete_instance(
+scene_instance& get_complete_instance(
     scene_scene* scene, instance_handle handle);
 
 // get element from a scene
 const scene_camera& get_camera(const scene_scene* scene, camera_handle handle);
 const scene_environment& get_environment(
     const scene_scene* scene, environment_handle handle);
-const scene_instance* get_instance(
+const scene_instance& get_instance(
     const scene_scene* scene, instance_handle handle);
 const scene_material* get_material(
     const scene_scene* scene, material_handle handle);
 const scene_shape*   get_shape(const scene_scene* scene, shape_handle handle);
 const scene_texture* get_texture(
     const scene_scene* scene, texture_handle handle);
-const scene_instance* get_complete_instance(
+const scene_instance& get_complete_instance(
     const scene_scene* scene, instance_handle handle);
 
 // add missing elements
@@ -310,7 +306,7 @@ string get_environment_name(
 string get_shape_name(const scene_scene* scene, const scene_shape* shape);
 string get_texture_name(const scene_scene* scene, const scene_texture* texture);
 string get_instance_name(
-    const scene_scene* scene, const scene_instance* instance);
+    const scene_scene* scene, const scene_instance& instance);
 string get_material_name(
     const scene_scene* scene, const scene_material* material);
 
@@ -353,22 +349,22 @@ vec4f eval_texture(const scene_scene* scene, texture_handle texture,
     bool clamp_to_edge = false);
 
 // Evaluate instance properties
-vec3f eval_position(const scene_scene* scene, const scene_instance* instance,
+vec3f eval_position(const scene_scene* scene, const scene_instance& instance,
     int element, const vec2f& uv);
 vec3f eval_element_normal(
-    const scene_scene* scene, const scene_instance* instance, int element);
-vec3f eval_normal(const scene_scene* scene, const scene_instance* instance,
+    const scene_scene* scene, const scene_instance& instance, int element);
+vec3f eval_normal(const scene_scene* scene, const scene_instance& instance,
     int element, const vec2f& uv);
-vec2f eval_texcoord(const scene_scene* scene, const scene_instance* instance,
+vec2f eval_texcoord(const scene_scene* scene, const scene_instance& instance,
     int element, const vec2f& uv);
 pair<vec3f, vec3f> eval_element_tangents(
-    const scene_scene* scene, const scene_instance* instance, int element);
-vec3f eval_normalmap(const scene_scene* scene, const scene_instance* instance,
+    const scene_scene* scene, const scene_instance& instance, int element);
+vec3f eval_normalmap(const scene_scene* scene, const scene_instance& instance,
     int element, const vec2f& uv);
 vec3f eval_shading_normal(const scene_scene* scene,
-    const scene_instance* instance, int element, const vec2f& uv,
+    const scene_instance& instance, int element, const vec2f& uv,
     const vec3f& outgoing);
-vec4f eval_color(const scene_scene* scene, const scene_instance* instance,
+vec4f eval_color(const scene_scene* scene, const scene_instance& instance,
     int element, const vec2f& uv);
 
 // Environment

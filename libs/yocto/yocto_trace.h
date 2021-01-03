@@ -148,12 +148,12 @@ struct trace_bsdf {
 };
 
 // Eval material to obtain emission, brdf and opacity.
-vec3f eval_emission(const trace_scene* scene, const trace_instance* instance,
+vec3f eval_emission(const trace_scene* scene, const trace_instance& instance,
     int element, const vec2f& uv, const vec3f& normal, const vec3f& outgoing);
 // Eval material to obatain emission, brdf and opacity.
-trace_bsdf eval_bsdf(const trace_scene* scene, const trace_instance* instance,
+trace_bsdf eval_bsdf(const trace_scene* scene, const trace_instance& instance,
     int element, const vec2f& uv, const vec3f& normal, const vec3f& outgoing);
-float eval_opacity(const trace_scene* scene, const trace_instance* instance,
+float eval_opacity(const trace_scene* scene, const trace_instance& instance,
     int element, const vec2f& uv, const vec3f& normal, const vec3f& outgoing);
 // check if a brdf is a delta
 bool is_delta(const trace_bsdf& bsdf);
@@ -309,7 +309,7 @@ namespace yocto {
 
 // Scene lights used during rendering. These are created automatically.
 struct trace_light {
-  trace_instance*    instance     = nullptr;
+  instance_handle    instance     = invalid_handle;
   environment_handle environment  = invalid_handle;
   vector<float>      elements_cdf = {};
 };

@@ -425,12 +425,14 @@ static bool load_json_scene(const string& filename, sceneio_scene* scene,
   };
 
   // load json instance
-  auto ply_instances     = vector<unique_ptr<ply_instance>>{};
-  auto ply_instance_map  = unordered_map<string, ply_instance*>{{"", nullptr}};
-  auto instance_ply      = unordered_map<sceneio_instance*, ply_instance*>{};
+  using ply_instance_handle = int;
+  auto ply_instances        = vector<ply_instance>{};
+  auto ply_instance_map     = unordered_map<string, ply_instance_handle>{
+      {"", invalid_handle}};
+  auto instance_ply = unordered_map<instance_handle, ply_instance_handle>{};
   auto get_ply_instances = [&ply_instances, &ply_instance_map, &instance_ply](
-                               json_ctview       js,
-                               sceneio_instance* instance) -> bool {
+                               json_ctview     js,
+                               instance_handle instance) -> bool {
     auto name = ""s;
     if (!get_value(js, name)) return false;
     if (name.empty()) return true;
@@ -439,10 +441,15 @@ static bool load_json_scene(const string& filename, sceneio_scene* scene,
       instance_ply[instance] = it->second;
       return true;
     }
-    auto ply_instance_ = ply_instances.emplace_back(new ply_instance()).get();
-    ply_instance_map[name] = ply_instance_;
-    instance_ply[instance] = ply_instance_;
+    ply_instances.emplace_back(ply_instance());
+    ply_instance_map[name] = (int)ply_instances.size() - 1;
+    instance_ply[instance] = (int)ply_instances.size() - 1;
     return true;
+  };
+  auto get_instance_handle =
+      [](const scene_scene*     scene,
+          const scene_instance& instance) -> instance_handle {
+    return (instance_handle)(&instance - scene->instances.data());
   };
 
   // handle progress
@@ -578,47 +585,48 @@ static bool load_json_scene(const string& filename, sceneio_scene* scene,
       }
     } else if (gname == "instances" || gname == "objects") {
       for (auto [name, element] : iterate_object(group)) {
-        auto instance = get_instance(scene, add_instance(scene, string{name}));
+        auto& instance = get_instance(scene, add_instance(scene, string{name}));
         for (auto [key, value] : iterate_object(element)) {
           if (key == "frame") {
-            get_value(value, instance->frame);
+            get_value(value, instance.frame);
           } else if (key == "lookat") {
-            get_value(value, (mat3f&)instance->frame);
-            instance->frame = lookat_frame(
-                instance->frame.x, instance->frame.y, instance->frame.z, true);
+            get_value(value, (mat3f&)instance.frame);
+            instance.frame = lookat_frame(
+                instance.frame.x, instance.frame.y, instance.frame.z, true);
           } else if (key == "material") {
-            get_material(value, instance->material);
+            get_material(value, instance.material);
           } else if (key == "shape") {
-            get_shape(value, instance->shape);
+            get_shape(value, instance.shape);
           } else if (key == "instance") {
-            get_ply_instances(value, instance);
+            get_ply_instances(value, get_instance_handle(scene, instance));
           } else if (key == "subdivisions") {
-            if (instance->shape != invalid_handle) {
-              auto shape = yocto::get_shape(scene, instance->shape);
+            if (instance.shape != invalid_handle) {
+              auto shape = yocto::get_shape(scene, instance.shape);
               get_value(value, shape->subdivisions);
             }
           } else if (key == "catmullcark") {
-            if (instance->shape != invalid_handle) {
-              auto shape = yocto::get_shape(scene, instance->shape);
+            if (instance.shape != invalid_handle) {
+              auto shape = yocto::get_shape(scene, instance.shape);
               get_value(value, shape->catmullclark);
             }
           } else if (key == "smooth") {
-            if (instance->shape != invalid_handle) {
-              auto shape = yocto::get_shape(scene, instance->shape);
+            if (instance.shape != invalid_handle) {
+              auto shape = yocto::get_shape(scene, instance.shape);
               get_value(value, shape->smooth);
             }
           } else if (key == "displacement") {
-            if (instance->shape != invalid_handle) {
-              auto shape = yocto::get_shape(scene, instance->shape);
+            if (instance.shape != invalid_handle) {
+              auto shape = yocto::get_shape(scene, instance.shape);
               get_value(value, shape->displacement);
             }
           } else if (key == "displacement_tex") {
-            if (instance->shape != invalid_handle) {
-              auto shape = yocto::get_shape(scene, instance->shape);
+            if (instance.shape != invalid_handle) {
+              auto shape = yocto::get_shape(scene, instance.shape);
               get_texture(value, shape->displacement_tex);
             }
           } else if (key == "instance") {
-            get_ply_instances(value, instance);
+            throw std::invalid_argument{"instances not suppotyed yet"};
+            // get_ply_instances(value, instance);
           } else {
             // set_error(element, "unknown key " + string{key});
           }
@@ -679,10 +687,13 @@ static bool load_json_scene(const string& filename, sceneio_scene* scene,
 
   // load instances
   ply_instance_map.erase("");
-  for (auto [name, instance] : ply_instance_map) {
-    if (progress_cb) progress_cb("load instance", progress.x++, progress.y);
-    auto path = make_filename(name, "instances", {".ply"});
-    if (!load_instance(path, instance->frames, error)) return dependent_error();
+  for (auto& [name, ihandle] : ply_instance_map) {
+    throw std::invalid_argument{"instances not supported"};
+    // auto& instance = ply_instances.at(ihandle);
+    // if (progress_cb) progress_cb("load instance", progress.x++, progress.y);
+    // auto path = make_filename(name, "instances", {".ply"});
+    // if (!load_instance(path, instance->frames, error)) return
+    // dependent_error();
   }
 
   // apply instances
@@ -905,20 +916,20 @@ static bool save_json_scene(const string& filename, const sceneio_scene* scene,
   auto def_shape    = sceneio_shape{};
   if (!scene->instances.empty()) {
     auto group = insert_object(js, "instances");
-    for (auto instance : scene->instances) {
+    for (auto& instance : scene->instances) {
       auto elment = insert_object(group, get_instance_name(scene, instance));
-      if (instance->frame != def_instance.frame) {
-        insert_value(elment, "frame", instance->frame);
+      if (instance.frame != def_instance.frame) {
+        insert_value(elment, "frame", instance.frame);
       }
-      if (instance->shape != invalid_handle) {
-        insert_value(elment, "shape", get_shape_name(scene, instance->shape));
+      if (instance.shape != invalid_handle) {
+        insert_value(elment, "shape", get_shape_name(scene, instance.shape));
       }
-      if (instance->material != invalid_handle) {
+      if (instance.material != invalid_handle) {
         insert_value(
-            elment, "material", get_material_name(scene, instance->material));
+            elment, "material", get_material_name(scene, instance.material));
       }
-      if (instance->shape != invalid_handle) {
-        auto shape = get_shape(scene, instance->shape);
+      if (instance.shape != invalid_handle) {
+        auto shape = get_shape(scene, instance.shape);
         if (shape->subdivisions != def_shape.subdivisions) {
           insert_value(elment, "subdivisions", shape->subdivisions);
         }
@@ -1120,15 +1131,15 @@ static bool load_obj_scene(const string& filename, sceneio_scene* scene,
         return shape_error();
       }
       if (oshape->instances.empty()) {
-        auto instance      = get_instance(scene, add_instance(scene));
-        instance->shape    = shape_handle;
-        instance->material = material;
+        auto& instance    = get_instance(scene, add_instance(scene));
+        instance.shape    = shape_handle;
+        instance.material = material;
       } else {
         for (auto& frame : oshape->instances) {
-          auto instance      = get_instance(scene, add_instance(scene));
-          instance->frame    = frame;
-          instance->shape    = shape_handle;
-          instance->material = material;
+          auto instance     = get_instance(scene, add_instance(scene));
+          instance.frame    = frame;
+          instance.shape    = shape_handle;
+          instance.material = material;
         }
       }
     }
@@ -1248,14 +1259,14 @@ static bool save_obj_scene(const string& filename, const sceneio_scene* scene,
   }
 
   // convert objects
-  for (auto instance : scene->instances) {
-    auto shape     = get_shape(scene, instance->shape);
+  for (auto& instance : scene->instances) {
+    auto shape     = get_shape(scene, instance.shape);
     auto positions = shape->positions, normals = shape->normals;
-    for (auto& p : positions) p = transform_point(instance->frame, p);
-    for (auto& n : normals) n = transform_normal(instance->frame, n);
+    for (auto& p : positions) p = transform_point(instance.frame, p);
+    for (auto& n : normals) n = transform_normal(instance.frame, n);
     auto oshape       = add_shape(obj);
     oshape->name      = get_shape_name(scene, shape);
-    oshape->materials = {get_material_name(scene, instance->material)};
+    oshape->materials = {get_material_name(scene, instance.material)};
     if (!shape->triangles.empty()) {
       set_triangles(oshape, shape->triangles, positions, normals,
           shape->texcoords, {}, true);
@@ -1332,8 +1343,8 @@ static bool load_ply_scene(const string& filename, sceneio_scene* scene,
     return false;
 
   // create instance
-  auto instance   = get_instance(scene, add_instance(scene));
-  instance->shape = handle;
+  auto& instance = get_instance(scene, add_instance(scene));
+  instance.shape = handle;
 
   // fix scene
   add_cameras(scene);
@@ -1394,8 +1405,8 @@ static bool load_stl_scene(const string& filename, sceneio_scene* scene,
     return false;
 
   // create instance
-  auto instance   = get_instance(scene, add_instance(scene));
-  instance->shape = handle;
+  auto& instance = get_instance(scene, add_instance(scene));
+  instance.shape = handle;
 
   // fix scene
   add_cameras(scene);
@@ -1619,19 +1630,19 @@ static bool load_gltf_scene(const string& filename, sceneio_scene* scene,
   }
 
   // convert meshes
-  auto mesh_map = unordered_map<cgltf_mesh*, vector<sceneio_instance*>>{
+  auto mesh_map = unordered_map<cgltf_mesh*, vector<sceneio_instance>>{
       {nullptr, {}}};
   for (auto mid = 0; mid < gltf->meshes_count; mid++) {
     auto gmesh = &gltf->meshes[mid];
     for (auto sid = 0; sid < gmesh->primitives_count; sid++) {
       auto gprim = &gmesh->primitives[sid];
       if (gprim->attributes_count == 0) continue;
-      auto instance = get_instance(scene, add_instance(scene));
+      auto shandle      = add_shape(scene);
+      auto shape        = get_shape(scene, shandle);
+      auto instance     = scene_instance{};
+      instance.shape    = shandle;
+      instance.material = material_map.at(gprim->material);
       mesh_map[gmesh].push_back(instance);
-      auto shandle       = add_shape(scene);
-      auto shape         = get_shape(scene, shandle);
-      instance->shape    = shandle;
-      instance->material = material_map.at(gprim->material);
       for (auto aid = 0; aid < gprim->attributes_count; aid++) {
         auto gattr    = &gprim->attributes[aid];
         auto semantic = string(gattr->name != nullptr ? gattr->name : "");
@@ -1773,35 +1784,15 @@ static bool load_gltf_scene(const string& filename, sceneio_scene* scene,
   }
 
   // convert nodes
-  auto instance_map = unordered_map<cgltf_mesh*, vector<frame3f>>{};
   for (auto nid = 0; nid < gltf->nodes_count; nid++) {
     if (!visible_nodes[nid]) continue;
     auto gnde = &gltf->nodes[nid];
     if (gnde->mesh == nullptr) continue;
     auto mat = mat4f{};
     cgltf_node_transform_world(gnde, &mat.x.x);
-    auto frame = mat_to_frame(mat);
-    instance_map[gnde->mesh].push_back(frame);
-  }
-  for (auto& [gmsh, frames] : instance_map) {
-    if (frames.size() == 1) {
-      for (auto object : mesh_map.at(gmsh)) object->frame = frames.front();
-    } else {
-      for (auto object : mesh_map.at(gmsh)) {
-        scene->instances.erase(std::remove(scene->instances.begin(),
-                                   scene->instances.end(), object),
-            scene->instances.end());
-        for (auto fid = 0; fid < frames.size(); fid++) {
-          // TODO(fabio): better names
-          // auto nobject = add_instance(
-          //     scene, object->name + "@" + std::to_string(fid));
-          auto nobject      = get_instance(scene, add_instance(scene, ""));
-          nobject->frame    = frames[fid];
-          nobject->shape    = object->shape;
-          nobject->material = object->material;
-        }
-        delete object;
-      }
+    for (auto& prims : mesh_map.at(gnde->mesh)) {
+      auto& instance = get_instance(scene, add_instance(scene));
+      instance       = prims;
     }
   }
 
@@ -2207,26 +2198,26 @@ static bool save_gltf_scene(const string& filename, const sceneio_scene* scene,
       }
     };
     auto mesh_map = unordered_map<mesh_key, int, mesh_key_hash>{};
-    for (auto instance : scene->instances) {
+    for (auto& instance : scene->instances) {
       auto& njs   = js["nodes"].emplace_back();
       njs         = json::object();
       njs["name"] = get_instance_name(scene, instance);
       auto matrix = frame_to_mat(
-          instance->frame);  // TODO(fabio): do this better
+          instance.frame);  // TODO(fabio): do this better
       njs["matrix"] = to_json((array<float, 16>&)matrix);
-      if (mesh_map.find(mesh_key{instance->shape, instance->material}) ==
+      if (mesh_map.find(mesh_key{instance.shape, instance.material}) ==
           mesh_map.end()) {
         auto& mjs   = js["meshes"].emplace_back();
         mjs         = json::object();
-        mjs["name"] = get_shape_name(scene, instance->shape) + "_" +
-                      get_material_name(scene, instance->material);
+        mjs["name"] = get_shape_name(scene, instance.shape) + "_" +
+                      get_material_name(scene, instance.material);
         mjs["primitives"] = json::array();
-        mjs["primitives"].push_back(primitives_map.at(instance->shape));
-        mjs["primitives"].back()["material"] = instance->material;
-        mesh_map[mesh_key{instance->shape, instance->material}] =
+        mjs["primitives"].push_back(primitives_map.at(instance.shape));
+        mjs["primitives"].back()["material"] = instance.material;
+        mesh_map[mesh_key{instance.shape, instance.material}] =
             (int)js["meshes"].size() - 1;
       }
-      njs["mesh"] = mesh_map.at({instance->shape, instance->material});
+      njs["mesh"] = mesh_map.at({instance.shape, instance.material});
     }
   } else {
     js["meshes"] = json::array();
@@ -2403,16 +2394,16 @@ static bool load_pbrt_scene(const string& filename, sceneio_scene* scene,
     for (auto& uv : shape->texcoords) uv.y = 1 - uv.y;
     auto material = material_map.at(pshape->material);
     if (pshape->instances.empty()) {
-      auto instance      = get_instance(scene, add_instance(scene));
-      instance->frame    = pshape->frame;
-      instance->shape    = shandle;
-      instance->material = material;
+      auto& instance    = get_instance(scene, add_instance(scene));
+      instance.frame    = pshape->frame;
+      instance.shape    = shandle;
+      instance.material = material;
     } else {
       for (auto frame : pshape->instances) {
-        auto instance      = get_instance(scene, add_instance(scene));
-        instance->frame    = frame * pshape->frame;
-        instance->shape    = shandle;
-        instance->material = material;
+        auto& instance    = get_instance(scene, add_instance(scene));
+        instance.frame    = frame * pshape->frame;
+        instance.shape    = shandle;
+        instance.material = material;
       }
     }
   }
@@ -2427,15 +2418,15 @@ static bool load_pbrt_scene(const string& filename, sceneio_scene* scene,
 
   // lights
   for (auto plight : pbrt->lights) {
-    auto instance      = get_instance(scene, add_instance(scene));
-    instance->shape    = add_shape(scene);
-    instance->material = add_material(scene);
-    instance->frame    = plight->area_frame;
-    auto shape         = get_shape(scene, instance->shape);
+    auto& instance     = get_instance(scene, add_instance(scene));
+    instance.shape     = add_shape(scene);
+    instance.material  = add_material(scene);
+    instance.frame     = plight->area_frame;
+    auto shape         = get_shape(scene, instance.shape);
     shape->triangles   = plight->area_triangles;
     shape->positions   = plight->area_positions;
     shape->normals     = plight->area_normals;
-    auto material      = get_material(scene, instance->material);
+    auto material      = get_material(scene, instance.material);
     material->emission = plight->area_emission;
   }
 
@@ -2542,12 +2533,12 @@ static bool save_pbrt_scene(const string& filename, const sceneio_scene* scene,
   }
 
   // convert instances
-  for (auto instance : scene->instances) {
+  for (auto& instance : scene->instances) {
     auto pshape       = add_shape(pbrt);
-    pshape->filename_ = get_shape_name(scene, instance->shape) + ".ply";
-    pshape->frame     = instance->frame;
-    pshape->frend     = instance->frame;
-    pshape->material  = material_map.at(instance->material);
+    pshape->filename_ = get_shape_name(scene, instance.shape) + ".ply";
+    pshape->frame     = instance.frame;
+    pshape->frend     = instance.frame;
+    pshape->material  = material_map.at(instance.material);
   }
 
   // convert environments

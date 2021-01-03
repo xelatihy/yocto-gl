@@ -91,18 +91,18 @@ camera_handle add_camera(sceneio_scene* scene, const string& name,
 }
 instance_handle add_instance(sceneio_scene* scene, const string& name,
     const frame3f& frame, shape_handle shape, material_handle material) {
-  auto handle        = add_instance(scene, name);
-  auto instance      = get_instance(scene, handle);
-  instance->frame    = frame;
-  instance->shape    = shape;
-  instance->material = material;
+  auto  handle      = add_instance(scene, name);
+  auto& instance    = get_instance(scene, handle);
+  instance.frame    = frame;
+  instance.shape    = shape;
+  instance.material = material;
   return handle;
 }
 environment_handle add_environment(sceneio_scene* scene, const string& name,
     const frame3f& frame, const vec3f& emission,
     texture_handle emission_tex = invalid_handle) {
-  auto handle               = add_environment(scene, name);
-  auto& environment          = get_environment(scene, handle);
+  auto  handle             = add_environment(scene, name);
+  auto& environment        = get_environment(scene, handle);
   environment.frame        = frame;
   environment.emission     = emission;
   environment.emission_tex = emission_tex;

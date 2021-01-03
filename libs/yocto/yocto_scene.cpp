@@ -225,7 +225,6 @@ namespace yocto {
 scene_scene::~scene_scene() {
   for (auto shape : shapes) delete shape;
   for (auto material : materials) delete material;
-  for (auto instance : instances) delete instance;
   for (auto texture : textures) delete texture;
 }
 
@@ -266,18 +265,17 @@ texture_handle add_texture(scene_scene* scene, const string& name) {
       name, "texture");
 }
 instance_handle add_instance(scene_scene* scene, const string& name) {
-  return add_element(scene->instances, scene->instance_names,
-      scene->instance_map, name, "instance");
+  return add_element(scene->instances, scene->instance_names, name, "instance");
 }
 material_handle add_material(scene_scene* scene, const string& name) {
   return add_element(scene->materials, scene->material_names,
       scene->material_map, name, "material");
 }
 instance_handle add_complete_instance(scene_scene* scene, const string& name) {
-  auto handle        = add_instance(scene, name);
-  auto instance      = get_instance(scene, handle);
-  instance->shape    = add_shape(scene, name);
-  instance->material = add_material(scene, name);
+  auto  handle      = add_instance(scene, name);
+  auto& instance    = get_instance(scene, handle);
+  instance.shape    = add_shape(scene, name);
+  instance.material = add_material(scene, name);
   return handle;
 }
 
@@ -289,7 +287,7 @@ scene_environment& get_environment(
     scene_scene* scene, environment_handle handle) {
   return scene->environments.at(handle);
 }
-scene_instance* get_instance(scene_scene* scene, instance_handle handle) {
+scene_instance& get_instance(scene_scene* scene, instance_handle handle) {
   return scene->instances.at(handle);
 }
 scene_material* get_material(scene_scene* scene, material_handle handle) {
@@ -301,7 +299,7 @@ scene_shape* get_shape(scene_scene* scene, shape_handle handle) {
 scene_texture* get_texture(scene_scene* scene, texture_handle handle) {
   return scene->textures.at(handle);
 }
-scene_instance* get_complete_instance(
+scene_instance& get_complete_instance(
     scene_scene* scene, instance_handle handle) {
   return scene->instances.at(handle);
 }
@@ -314,7 +312,7 @@ const scene_environment& get_environment(
     const scene_scene* scene, environment_handle handle) {
   return scene->environments.at(handle);
 }
-const scene_instance* get_instance(
+const scene_instance& get_instance(
     const scene_scene* scene, instance_handle handle) {
   return scene->instances.at(handle);
 }
@@ -329,7 +327,7 @@ const scene_texture* get_texture(
     const scene_scene* scene, texture_handle handle) {
   return scene->textures.at(handle);
 }
-const scene_instance* get_complete_instance(
+const scene_instance& get_complete_instance(
     const scene_scene* scene, instance_handle handle) {
   return scene->instances.at(handle);
 }
@@ -369,8 +367,8 @@ string get_texture_name(
   return scene->texture_map.at(texture);
 }
 string get_instance_name(
-    const scene_scene* scene, const scene_instance* instance) {
-  return scene->instance_map.at(instance);
+    const scene_scene* scene, const scene_instance& instance) {
+  return scene->instance_names.at(&instance - scene->instances.data());
 }
 string get_material_name(
     const scene_scene* scene, const scene_material* material) {
@@ -412,13 +410,13 @@ void add_radius(scene_scene* scene, float radius) {
 void add_materials(scene_scene* scene) {
   auto default_material = invalid_handle;
   for (auto& instance : scene->instances) {
-    if (instance->material != invalid_handle) continue;
+    if (instance.material != invalid_handle) continue;
     if (default_material == invalid_handle) {
       default_material = add_material(scene);
       auto material    = get_material(scene, default_material);
       material->color  = {0.8, 0.8, 0.8};
     }
-    instance->material = default_material;
+    instance.material = default_material;
   }
 }
 
@@ -464,9 +462,9 @@ bbox3f compute_bounds(const scene_scene* scene) {
     auto sbvh = shape_bbox.emplace_back();
     for (auto p : shape->positions) sbvh = merge(sbvh, p);
   }
-  for (auto instance : scene->instances) {
-    auto& sbvh = shape_bbox[instance->shape];
-    bbox       = merge(bbox, transform_bbox(instance->frame, sbvh));
+  for (auto& instance : scene->instances) {
+    auto& sbvh = shape_bbox[instance.shape];
+    bbox       = merge(bbox, transform_bbox(instance.frame, sbvh));
   }
   return bbox;
 }
@@ -945,26 +943,26 @@ ray3f eval_camera(
 }
 
 // Eval position
-vec3f eval_position(const scene_scene* scene, const scene_instance* instance,
+vec3f eval_position(const scene_scene* scene, const scene_instance& instance,
     int element, const vec2f& uv) {
-  auto shape = get_shape(scene, instance->shape);
+  auto shape = get_shape(scene, instance.shape);
   if (!shape->triangles.empty()) {
     auto t = shape->triangles[element];
     return transform_point(
-        instance->frame, interpolate_triangle(shape->positions[t.x],
-                             shape->positions[t.y], shape->positions[t.z], uv));
+        instance.frame, interpolate_triangle(shape->positions[t.x],
+                            shape->positions[t.y], shape->positions[t.z], uv));
   } else if (!shape->quads.empty()) {
     auto q = shape->quads[element];
-    return transform_point(instance->frame,
+    return transform_point(instance.frame,
         interpolate_quad(shape->positions[q.x], shape->positions[q.y],
             shape->positions[q.z], shape->positions[q.w], uv));
   } else if (!shape->lines.empty()) {
     auto l = shape->lines[element];
-    return transform_point(instance->frame,
+    return transform_point(instance.frame,
         interpolate_line(shape->positions[l.x], shape->positions[l.y], uv.x));
   } else if (!shape->points.empty()) {
     return transform_point(
-        instance->frame, shape->positions[shape->points[element]]);
+        instance.frame, shape->positions[shape->points[element]]);
   } else {
     return zero3f;
   }
@@ -972,21 +970,21 @@ vec3f eval_position(const scene_scene* scene, const scene_instance* instance,
 
 // Shape element normal.
 vec3f eval_element_normal(
-    const scene_scene* scene, const scene_instance* instance, int element) {
-  auto shape = get_shape(scene, instance->shape);
+    const scene_scene* scene, const scene_instance& instance, int element) {
+  auto shape = get_shape(scene, instance.shape);
   if (!shape->triangles.empty()) {
     auto t = shape->triangles[element];
     return transform_normal(
-        instance->frame, triangle_normal(shape->positions[t.x],
-                             shape->positions[t.y], shape->positions[t.z]));
+        instance.frame, triangle_normal(shape->positions[t.x],
+                            shape->positions[t.y], shape->positions[t.z]));
   } else if (!shape->quads.empty()) {
     auto q = shape->quads[element];
-    return transform_normal(instance->frame,
+    return transform_normal(instance.frame,
         quad_normal(shape->positions[q.x], shape->positions[q.y],
             shape->positions[q.z], shape->positions[q.w]));
   } else if (!shape->lines.empty()) {
     auto l = shape->lines[element];
-    return transform_normal(instance->frame,
+    return transform_normal(instance.frame,
         line_tangent(shape->positions[l.x], shape->positions[l.y]));
   } else if (!shape->points.empty()) {
     return {0, 0, 1};
@@ -996,38 +994,38 @@ vec3f eval_element_normal(
 }
 
 // Eval normal
-vec3f eval_normal(const scene_scene* scene, const scene_instance* instance,
+vec3f eval_normal(const scene_scene* scene, const scene_instance& instance,
     int element, const vec2f& uv) {
-  auto shape = get_shape(scene, instance->shape);
+  auto shape = get_shape(scene, instance.shape);
   if (shape->normals.empty())
     return eval_element_normal(scene, instance, element);
   if (!shape->triangles.empty()) {
     auto t = shape->triangles[element];
     return transform_normal(
-        instance->frame, normalize(interpolate_triangle(shape->normals[t.x],
-                             shape->normals[t.y], shape->normals[t.z], uv)));
+        instance.frame, normalize(interpolate_triangle(shape->normals[t.x],
+                            shape->normals[t.y], shape->normals[t.z], uv)));
   } else if (!shape->quads.empty()) {
     auto q = shape->quads[element];
-    return transform_normal(instance->frame,
+    return transform_normal(instance.frame,
         normalize(interpolate_quad(shape->normals[q.x], shape->normals[q.y],
             shape->normals[q.z], shape->normals[q.w], uv)));
   } else if (!shape->lines.empty()) {
     auto l = shape->lines[element];
-    return transform_normal(instance->frame,
+    return transform_normal(instance.frame,
         normalize(
             interpolate_line(shape->normals[l.x], shape->normals[l.y], uv.x)));
   } else if (!shape->points.empty()) {
     return transform_normal(
-        instance->frame, normalize(shape->normals[shape->points[element]]));
+        instance.frame, normalize(shape->normals[shape->points[element]]));
   } else {
     return zero3f;
   }
 }
 
 // Eval texcoord
-vec2f eval_texcoord(const scene_scene* scene, const scene_instance* instance,
+vec2f eval_texcoord(const scene_scene* scene, const scene_instance& instance,
     int element, const vec2f& uv) {
-  auto shape = get_shape(scene, instance->shape);
+  auto shape = get_shape(scene, instance.shape);
   if (shape->texcoords.empty()) return uv;
   if (!shape->triangles.empty()) {
     auto t = shape->triangles[element];
@@ -1081,32 +1079,32 @@ static pair<vec3f, vec3f> eval_tangents(
 
 // Shape element normal.
 pair<vec3f, vec3f> eval_element_tangents(
-    const scene_scene* scene, const scene_instance* instance, int element) {
-  auto shape = get_shape(scene, instance->shape);
+    const scene_scene* scene, const scene_instance& instance, int element) {
+  auto shape = get_shape(scene, instance.shape);
   if (!shape->triangles.empty() && !shape->texcoords.empty()) {
     auto t        = shape->triangles[element];
     auto [tu, tv] = triangle_tangents_fromuv(shape->positions[t.x],
         shape->positions[t.y], shape->positions[t.z], shape->texcoords[t.x],
         shape->texcoords[t.y], shape->texcoords[t.z]);
-    return {transform_direction(instance->frame, tu),
-        transform_direction(instance->frame, tv)};
+    return {transform_direction(instance.frame, tu),
+        transform_direction(instance.frame, tv)};
   } else if (!shape->quads.empty() && !shape->texcoords.empty()) {
     auto q        = shape->quads[element];
     auto [tu, tv] = quad_tangents_fromuv(shape->positions[q.x],
         shape->positions[q.y], shape->positions[q.z], shape->positions[q.w],
         shape->texcoords[q.x], shape->texcoords[q.y], shape->texcoords[q.z],
         shape->texcoords[q.w], {0, 0});
-    return {transform_direction(instance->frame, tu),
-        transform_direction(instance->frame, tv)};
+    return {transform_direction(instance.frame, tu),
+        transform_direction(instance.frame, tv)};
   } else {
     return {};
   }
 }
 
-vec3f eval_normalmap(const scene_scene* scene, const scene_instance* instance,
+vec3f eval_normalmap(const scene_scene* scene, const scene_instance& instance,
     int element, const vec2f& uv) {
-  auto shape    = get_shape(scene, instance->shape);
-  auto material = get_material(scene, instance->material);
+  auto shape    = get_shape(scene, instance.shape);
+  auto material = get_material(scene, instance.material);
   // apply normal mapping
   auto normal   = eval_normal(scene, instance, element, uv);
   auto texcoord = eval_texcoord(scene, instance, element, uv);
@@ -1127,10 +1125,10 @@ vec3f eval_normalmap(const scene_scene* scene, const scene_instance* instance,
 
 // Eval shading normal
 vec3f eval_shading_normal(const scene_scene* scene,
-    const scene_instance* instance, int element, const vec2f& uv,
+    const scene_instance& instance, int element, const vec2f& uv,
     const vec3f& outgoing) {
-  auto shape    = get_shape(scene, instance->shape);
-  auto material = get_material(scene, instance->shape);
+  auto shape    = get_shape(scene, instance.shape);
+  auto material = get_material(scene, instance.shape);
   if (!shape->triangles.empty() || !shape->quads.empty()) {
     auto normal = eval_normal(scene, instance, element, uv);
     if (material->normal_tex != invalid_handle) {
@@ -1149,9 +1147,9 @@ vec3f eval_shading_normal(const scene_scene* scene,
 }
 
 // Eval color
-vec4f eval_color(const scene_scene* scene, const scene_instance* instance,
+vec4f eval_color(const scene_scene* scene, const scene_instance& instance,
     int element, const vec2f& uv) {
-  auto shape = get_shape(scene, instance->shape);
+  auto shape = get_shape(scene, instance.shape);
   if (shape->colors.empty()) return {1, 1, 1, 1};
   if (!shape->triangles.empty()) {
     auto t = shape->triangles[element];
@@ -1236,18 +1234,18 @@ static const auto coat_ior       = 1.5f;
 static const auto coat_roughness = 0.03f * 0.03f;
 
 // Eval material to obtain emission, brdf and opacity.
-vec3f eval_emission(const scene_scene* scene, const scene_instance* instance,
+vec3f eval_emission(const scene_scene* scene, const scene_instance& instance,
     int element, const vec2f& uv, const vec3f& normal, const vec3f& outgoing) {
-  auto material = get_material(scene, instance->material);
+  auto material = get_material(scene, instance.material);
   auto texcoord = eval_texcoord(scene, instance, element, uv);
   return material->emission *
          xyz(eval_texture(scene, material->emission_tex, texcoord));
 }
 
 // Eval material to obtain emission, brdf and opacity.
-float eval_opacity(const scene_scene* scene, const scene_instance* instance,
+float eval_opacity(const scene_scene* scene, const scene_instance& instance,
     int element, const vec2f& uv, const vec3f& normal, const vec3f& outgoing) {
-  auto material = get_material(scene, instance->material);
+  auto material = get_material(scene, instance.material);
   auto texcoord = eval_texcoord(scene, instance, element, uv);
   auto opacity  = material->opacity *
                  eval_texture(scene, material->opacity_tex, texcoord, true).x;
@@ -1271,34 +1269,37 @@ void make_cornellbox(scene_scene* scene) {
   camera.focus    = 3.9;
   camera.film     = 0.024;
   camera.aspect   = 1;
-  auto floor      = get_instance(scene, add_complete_instance(scene, "floor"));
-  get_shape(scene, floor->shape)->positions = {
+  auto& floor     = get_instance(scene, add_complete_instance(scene, "floor"));
+  get_shape(scene, floor.shape)->positions = {
       {-1, 0, 1}, {1, 0, 1}, {1, 0, -1}, {-1, 0, -1}};
-  get_shape(scene, floor->shape)->triangles   = {{0, 1, 2}, {2, 3, 0}};
-  get_material(scene, floor->material)->color = {0.725, 0.71, 0.68};
-  auto ceiling = get_instance(scene, add_complete_instance(scene, "ceiling"));
-  get_shape(scene, ceiling->shape)->positions = {
+  get_shape(scene, floor.shape)->triangles   = {{0, 1, 2}, {2, 3, 0}};
+  get_material(scene, floor.material)->color = {0.725, 0.71, 0.68};
+  auto& ceiling = get_instance(scene, add_complete_instance(scene, "ceiling"));
+  get_shape(scene, ceiling.shape)->positions = {
       {-1, 2, 1}, {-1, 2, -1}, {1, 2, -1}, {1, 2, 1}};
-  get_shape(scene, ceiling->shape)->triangles   = {{0, 1, 2}, {2, 3, 0}};
-  get_material(scene, ceiling->material)->color = {0.725, 0.71, 0.68};
-  auto backwall = get_instance(scene, add_complete_instance(scene, "backwall"));
-  get_shape(scene, backwall->shape)->positions = {
+  get_shape(scene, ceiling.shape)->triangles   = {{0, 1, 2}, {2, 3, 0}};
+  get_material(scene, ceiling.material)->color = {0.725, 0.71, 0.68};
+  auto& backwall                               = get_instance(
+      scene, add_complete_instance(scene, "backwall"));
+  get_shape(scene, backwall.shape)->positions = {
       {-1, 0, -1}, {1, 0, -1}, {1, 2, -1}, {-1, 2, -1}};
-  get_shape(scene, backwall->shape)->triangles   = {{0, 1, 2}, {2, 3, 0}};
-  get_material(scene, backwall->material)->color = {0.725, 0.71, 0.68};
-  auto rightwall                                 = get_instance(
+  get_shape(scene, backwall.shape)->triangles   = {{0, 1, 2}, {2, 3, 0}};
+  get_material(scene, backwall.material)->color = {0.725, 0.71, 0.68};
+  auto& rightwall                               = get_instance(
       scene, add_complete_instance(scene, "rightwall"));
-  get_shape(scene, rightwall->shape)->positions = {
+  get_shape(scene, rightwall.shape)->positions = {
       {1, 0, -1}, {1, 0, 1}, {1, 2, 1}, {1, 2, -1}};
-  get_shape(scene, rightwall->shape)->triangles   = {{0, 1, 2}, {2, 3, 0}};
-  get_material(scene, rightwall->material)->color = {0.14, 0.45, 0.091};
-  auto leftwall = get_instance(scene, add_complete_instance(scene, "leftwall"));
-  get_shape(scene, leftwall->shape)->positions = {
+  get_shape(scene, rightwall.shape)->triangles   = {{0, 1, 2}, {2, 3, 0}};
+  get_material(scene, rightwall.material)->color = {0.14, 0.45, 0.091};
+  auto& leftwall                                 = get_instance(
+      scene, add_complete_instance(scene, "leftwall"));
+  get_shape(scene, leftwall.shape)->positions = {
       {-1, 0, 1}, {-1, 0, -1}, {-1, 2, -1}, {-1, 2, 1}};
-  get_shape(scene, leftwall->shape)->triangles   = {{0, 1, 2}, {2, 3, 0}};
-  get_material(scene, leftwall->material)->color = {0.63, 0.065, 0.05};
-  auto shortbox = get_instance(scene, add_complete_instance(scene, "shortbox"));
-  get_shape(scene, shortbox->shape)->positions   = {{0.53, 0.6, 0.75},
+  get_shape(scene, leftwall.shape)->triangles   = {{0, 1, 2}, {2, 3, 0}};
+  get_material(scene, leftwall.material)->color = {0.63, 0.065, 0.05};
+  auto& shortbox                                = get_instance(
+      scene, add_complete_instance(scene, "shortbox"));
+  get_shape(scene, shortbox.shape)->positions   = {{0.53, 0.6, 0.75},
       {0.7, 0.6, 0.17}, {0.13, 0.6, 0.0}, {-0.05, 0.6, 0.57},
       {-0.05, 0.0, 0.57}, {-0.05, 0.6, 0.57}, {0.13, 0.6, 0.0},
       {0.13, 0.0, 0.0}, {0.53, 0.0, 0.75}, {0.53, 0.6, 0.75},
@@ -1306,12 +1307,12 @@ void make_cornellbox(scene_scene* scene) {
       {0.7, 0.6, 0.17}, {0.53, 0.6, 0.75}, {0.53, 0.0, 0.75}, {0.13, 0.0, 0.0},
       {0.13, 0.6, 0.0}, {0.7, 0.6, 0.17}, {0.7, 0.0, 0.17}, {0.53, 0.0, 0.75},
       {0.7, 0.0, 0.17}, {0.13, 0.0, 0.0}, {-0.05, 0.0, 0.57}};
-  get_shape(scene, shortbox->shape)->triangles   = {{0, 1, 2}, {2, 3, 0},
+  get_shape(scene, shortbox.shape)->triangles   = {{0, 1, 2}, {2, 3, 0},
       {4, 5, 6}, {6, 7, 4}, {8, 9, 10}, {10, 11, 8}, {12, 13, 14}, {14, 15, 12},
       {16, 17, 18}, {18, 19, 16}, {20, 21, 22}, {22, 23, 20}};
-  get_material(scene, shortbox->material)->color = {0.725, 0.71, 0.68};
-  auto tallbox = get_instance(scene, add_complete_instance(scene, "tallbox"));
-  get_shape(scene, tallbox->shape)->positions   = {{-0.53, 1.2, 0.09},
+  get_material(scene, shortbox.material)->color = {0.725, 0.71, 0.68};
+  auto& tallbox = get_instance(scene, add_complete_instance(scene, "tallbox"));
+  get_shape(scene, tallbox.shape)->positions = {{-0.53, 1.2, 0.09},
       {0.04, 1.2, -0.09}, {-0.14, 1.2, -0.67}, {-0.71, 1.2, -0.49},
       {-0.53, 0.0, 0.09}, {-0.53, 1.2, 0.09}, {-0.71, 1.2, -0.49},
       {-0.71, 0.0, -0.49}, {-0.71, 0.0, -0.49}, {-0.71, 1.2, -0.49},
@@ -1320,15 +1321,15 @@ void make_cornellbox(scene_scene* scene) {
       {0.04, 0.0, -0.09}, {0.04, 1.2, -0.09}, {-0.53, 1.2, 0.09},
       {-0.53, 0.0, 0.09}, {-0.53, 0.0, 0.09}, {0.04, 0.0, -0.09},
       {-0.14, 0.0, -0.67}, {-0.71, 0.0, -0.49}};
-  get_shape(scene, tallbox->shape)->triangles   = {{0, 1, 2}, {2, 3, 0},
-      {4, 5, 6}, {6, 7, 4}, {8, 9, 10}, {10, 11, 8}, {12, 13, 14}, {14, 15, 12},
+  get_shape(scene, tallbox.shape)->triangles = {{0, 1, 2}, {2, 3, 0}, {4, 5, 6},
+      {6, 7, 4}, {8, 9, 10}, {10, 11, 8}, {12, 13, 14}, {14, 15, 12},
       {16, 17, 18}, {18, 19, 16}, {20, 21, 22}, {22, 23, 20}};
-  get_material(scene, tallbox->material)->color = {0.725, 0.71, 0.68};
-  auto light = get_instance(scene, add_complete_instance(scene, "light"));
-  get_shape(scene, light->shape)->positions      = {{-0.25, 1.99, 0.25},
+  get_material(scene, tallbox.material)->color = {0.725, 0.71, 0.68};
+  auto& light = get_instance(scene, add_complete_instance(scene, "light"));
+  get_shape(scene, light.shape)->positions      = {{-0.25, 1.99, 0.25},
       {-0.25, 1.99, -0.25}, {0.25, 1.99, -0.25}, {0.25, 1.99, 0.25}};
-  get_shape(scene, light->shape)->triangles      = {{0, 1, 2}, {2, 3, 0}};
-  get_material(scene, light->material)->emission = {17, 12, 4};
+  get_shape(scene, light.shape)->triangles      = {{0, 1, 2}, {2, 3, 0}};
+  get_material(scene, light.material)->emission = {17, 12, 4};
 }
 
 }  // namespace yocto
