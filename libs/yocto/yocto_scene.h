@@ -187,8 +187,8 @@ struct scene_shape {
 struct scene_instance {
   // instance data
   frame3f         frame    = identity3x4f;
-  scene_shape*    shape    = nullptr;
-  scene_material* material = nullptr;
+  shape_handle    shape    = invalid_handle;
+  material_handle material = invalid_handle;
 
   // instance id assigned at creation
   int instance_id = -1;
@@ -266,6 +266,20 @@ scene_shape*    get_shape(scene_scene* scene, shape_handle handle);
 scene_texture*  get_texture(scene_scene* scene, texture_handle handle);
 scene_instance* get_complete_instance(
     scene_scene* scene, instance_handle handle);
+
+// get element from a scene
+const scene_camera* get_camera(const scene_scene* scene, camera_handle handle);
+const scene_environment* get_environment(
+    const scene_scene* scene, environment_handle handle);
+const scene_instance* get_instance(
+    const scene_scene* scene, instance_handle handle);
+const scene_material* get_material(
+    const scene_scene* scene, material_handle handle);
+const scene_shape*   get_shape(const scene_scene* scene, shape_handle handle);
+const scene_texture* get_texture(
+    const scene_scene* scene, texture_handle handle);
+const scene_instance* get_complete_instance(
+    const scene_scene* scene, instance_handle handle);
 
 // add missing elements
 void add_cameras(scene_scene* scene);

@@ -113,7 +113,7 @@ static const auto coat_roughness = 0.03f * 0.03f;
 // Evaluate bsdf
 trace_bsdf eval_bsdf(const scene_scene* scene, const scene_instance* instance,
     int element, const vec2f& uv, const vec3f& normal, const vec3f& outgoing) {
-  auto material = instance->material;
+  auto material = get_material(scene, instance->material);
   auto texcoord = eval_texcoord(scene, instance, element, uv);
   auto color = material->color * xyz(eval_color(scene, instance, element, uv)) *
                xyz(eval_texture(material->color_tex, texcoord, false));
@@ -197,7 +197,7 @@ bool is_delta(const trace_bsdf& bsdf) { return bsdf.roughness == 0; }
 // evaluate volume
 trace_vsdf eval_vsdf(const scene_scene* scene, const scene_instance* instance,
     int element, const vec2f& uv) {
-  auto material = instance->material;
+  auto material = get_material(scene, instance->material);
   // initialize factors
   auto texcoord = eval_texcoord(scene, instance, element, uv);
   auto color = material->color * xyz(eval_color(scene, instance, element, uv)) *
@@ -227,8 +227,9 @@ trace_vsdf eval_vsdf(const scene_scene* scene, const scene_instance* instance,
 }
 
 // check if we have a volume
-bool has_volume(const scene_instance* instance) {
-  return !instance->material->thin && instance->material->transmission != 0;
+bool has_volume(const scene_scene* scene, const scene_instance* instance) {
+  auto material = get_material(scene, instance->material);
+  return !material->thin && material->transmission != 0;
 }
 
 }  // namespace yocto
@@ -539,10 +540,10 @@ static vec3f sample_lights(const trace_scene* scene, const trace_lights* lights,
   auto light_id = sample_uniform((int)lights->lights.size(), rl);
   auto light    = lights->lights[light_id];
   if (light->instance != nullptr) {
-    auto instance = light->instance;
-    auto element  = sample_discrete_cdf(light->elements_cdf, rel);
-    auto uv       = (!instance->shape->triangles.empty()) ? sample_triangle(ruv)
-                                                          : ruv;
+    auto instance  = light->instance;
+    auto shape     = get_shape(scene, instance->material);
+    auto element   = sample_discrete_cdf(light->elements_cdf, rel);
+    auto uv        = (!shape->triangles.empty()) ? sample_triangle(ruv) : ruv;
     auto lposition = eval_position(scene, light->instance, element, uv);
     return normalize(lposition - position);
   } else if (light->environment != nullptr) {
@@ -704,7 +705,7 @@ static vec4f trace_path(const trace_scene* scene, const trace_bvh* bvh,
       }
 
       // update volume stack
-      if (has_volume(instance) &&
+      if (has_volume(scene, instance) &&
           dot(normal, outgoing) * dot(normal, incoming) < 0) {
         if (volume_stack.empty()) {
           auto vsdf = eval_vsdf(scene, instance, element, uv);
@@ -984,7 +985,7 @@ static vec4f trace_albedo(const trace_scene* scene, const trace_bvh* bvh,
   auto instance = scene->instances[intersection.instance];
   auto element  = intersection.element;
   auto uv       = intersection.uv;
-  auto material = scene->instances[intersection.instance]->material;
+  auto material = get_material(scene, instance->material);
   auto position = eval_position(scene, instance, element, uv);
   auto normal   = eval_shading_normal(scene, instance, element, uv, outgoing);
   auto texcoord = eval_texcoord(scene, instance, element, uv);
@@ -1051,7 +1052,7 @@ static vec4f trace_normal(const trace_scene* scene, const trace_bvh* bvh,
   auto instance = scene->instances[intersection.instance];
   auto element  = intersection.element;
   auto uv       = intersection.uv;
-  auto material = scene->instances[intersection.instance]->material;
+  auto material = get_material(scene, instance->material);
   auto position = eval_position(scene, instance, element, uv);
   auto normal   = eval_shading_normal(scene, instance, element, uv, outgoing);
   auto opacity  = eval_opacity(scene, instance, element, uv, normal, outgoing);
@@ -1181,8 +1182,9 @@ void init_lights(trace_lights* lights, const trace_scene* scene,
   lights->lights.clear();
 
   for (auto instance : scene->instances) {
-    if (instance->material->emission == zero3f) continue;
-    auto shape = instance->shape;
+    auto material = get_material(scene, instance->material);
+    if (material->emission == zero3f) continue;
+    auto shape = get_shape(scene, instance->shape);
     if (shape->triangles.empty() && shape->quads.empty()) continue;
     if (progress_cb) progress_cb("build light", progress.x++, ++progress.y);
     auto light         = add_light(lights);

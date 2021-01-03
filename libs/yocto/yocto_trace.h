@@ -166,7 +166,7 @@ struct trace_vsdf {
 };
 
 // check if we have a volume
-bool has_volume(const trace_instance* instance);
+bool has_volume(const trace_scene* scene, const trace_instance* instance);
 // evaluate volume
 trace_vsdf eval_vsdf(const trace_scene* scene, const trace_instance* instance,
     int element, const vec2f& uv);

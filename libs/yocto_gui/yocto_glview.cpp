@@ -106,7 +106,7 @@ void view_shape(const string& title, const string& name,
   ioshape->radius    = shape.radius;
   auto ihandle       = add_instance(scene, "instance");
   auto instance      = get_instance(scene, ihandle);
-  instance->shape    = ioshape;
+  instance->shape    = shandle;
   add_cameras(scene);
   add_materials(scene);
   if (addsky) add_sky(scene);
@@ -127,8 +127,9 @@ void view_scene(const string& title, const string& name,
   auto params = trace_params{};
   auto has_lights =
       std::any_of(scene->instances.begin(), scene->instances.end(),
-          [](sceneio_instance* instance) {
-            return instance->material->emission != zero3f;
+          [&scene](sceneio_instance* instance) {
+            auto material = get_material(scene, instance->material);
+            return material->emission != zero3f;
           }) ||
       std::any_of(scene->environments.begin(), scene->environments.end(),
           [](sceneio_environment* environment) {
