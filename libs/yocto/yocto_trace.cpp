@@ -531,9 +531,9 @@ static vec3f sample_lights(const trace_scene* scene, const trace_lights* lights,
     auto& environment = get_environment(scene, light->environment);
     if (environment.emission_tex != invalid_handle) {
       auto& emission_tex = get_texture(scene, environment.emission_tex);
-      auto idx          = sample_discrete_cdf(light->elements_cdf, rel);
-      auto size         = texture_size(emission_tex);
-      auto uv           = vec2f{
+      auto  idx          = sample_discrete_cdf(light->elements_cdf, rel);
+      auto  size         = texture_size(emission_tex);
+      auto  uv           = vec2f{
           ((idx % size.x) + 0.5f) / size.x, ((idx / size.x) + 0.5f) / size.y};
       return transform_direction(environment.frame,
           {cos(uv.x * 2 * pif) * sin(uv.y * pif), cos(uv.y * pif),
@@ -577,9 +577,9 @@ static float sample_lights_pdf(const trace_scene* scene, const trace_bvh* bvh,
       auto& environment = get_environment(scene, light->environment);
       if (environment.emission_tex != invalid_handle) {
         auto& emission_tex = get_texture(scene, environment.emission_tex);
-        auto size         = texture_size(emission_tex);
-        auto wl = transform_direction(inverse(environment.frame), direction);
-        auto texcoord = vec2f{atan2(wl.z, wl.x) / (2 * pif),
+        auto  size         = texture_size(emission_tex);
+        auto  wl = transform_direction(inverse(environment.frame), direction);
+        auto  texcoord = vec2f{atan2(wl.z, wl.x) / (2 * pif),
             acos(clamp(wl.y, -1.0f, 1.0f)) / pif};
         if (texcoord.x < 0) texcoord.x += 1;
         auto i    = clamp((int)(texcoord.x * size.x), 0, size.x - 1);
