@@ -1023,7 +1023,7 @@ static bool intersect_bvh(const bvh_scene* bvh, const scene_scene* scene,
     } else {
       for (auto idx = node.start; idx < node.start + node.num; idx++) {
         auto  instance_ = scene->instances[bvh->bvh.primitives[idx]];
-        auto shape     = get_shape(scene, instance_->shape);
+        auto  shape     = get_shape(scene, instance_->shape);
         auto& sbvh      = bvh->shapes[instance_->shape];
         auto  inv_ray   = transform_ray(
             inverse(instance_->frame, non_rigid_frames), ray);
@@ -1048,7 +1048,7 @@ static bool intersect_bvh(const bvh_scene* bvh, const scene_scene* scene,
     int instance_, const ray3f& ray, int& element, vec2f& uv, float& distance,
     bool find_any, bool non_rigid_frames) {
   auto& instance = scene->instances[instance_];
-  auto shape    = get_shape(scene, instance->shape);
+  auto  shape    = get_shape(scene, instance->shape);
   auto& sbvh     = bvh->shapes[instance->shape];
   auto inv_ray = transform_ray(inverse(instance->frame, non_rigid_frames), ray);
   return intersect_bvh(sbvh, shape, inv_ray, element, uv, distance, find_any);
