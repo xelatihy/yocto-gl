@@ -55,17 +55,6 @@ using namespace std::string_literals;
 }  // namespace yocto
 
 // -----------------------------------------------------------------------------
-// SCENE CREATION
-// -----------------------------------------------------------------------------
-namespace yocto {
-
-trace_lights::~trace_lights() {
-  for (auto light : lights) delete light;
-}
-
-}  // namespace yocto
-
-// -----------------------------------------------------------------------------
 // IMPLEMENTATION OF RAY-SCENE INTERSECTION
 // -----------------------------------------------------------------------------
 namespace yocto {
@@ -516,22 +505,22 @@ static ray3f sample_camera(const scene_camera& camera, const vec2i& ij,
 }
 
 // Sample lights wrt solid angle
-static vec3f sample_lights(const scene_scene& scene, const trace_lights* lights,
+static vec3f sample_lights(const scene_scene& scene, const trace_lights& lights,
     const vec3f& position, float rl, float rel, const vec2f& ruv) {
-  auto light_id = sample_uniform((int)lights->lights.size(), rl);
-  auto light    = lights->lights[light_id];
-  if (light->instance != invalid_handle) {
-    auto& instance  = get_instance(scene, light->instance);
+  auto  light_id = sample_uniform((int)lights.lights.size(), rl);
+  auto& light    = lights.lights[light_id];
+  if (light.instance != invalid_handle) {
+    auto& instance  = get_instance(scene, light.instance);
     auto& shape     = get_shape(scene, instance.shape);
-    auto  element   = sample_discrete_cdf(light->elements_cdf, rel);
+    auto  element   = sample_discrete_cdf(light.elements_cdf, rel);
     auto  uv        = (!shape.triangles.empty()) ? sample_triangle(ruv) : ruv;
     auto  lposition = eval_position(scene, instance, element, uv);
     return normalize(lposition - position);
-  } else if (light->environment != invalid_handle) {
-    auto& environment = get_environment(scene, light->environment);
+  } else if (light.environment != invalid_handle) {
+    auto& environment = get_environment(scene, light.environment);
     if (environment.emission_tex != invalid_handle) {
       auto& emission_tex = get_texture(scene, environment.emission_tex);
-      auto  idx          = sample_discrete_cdf(light->elements_cdf, rel);
+      auto  idx          = sample_discrete_cdf(light.elements_cdf, rel);
       auto  size         = texture_size(emission_tex);
       auto  uv           = vec2f{
           ((idx % size.x) + 0.5f) / size.x, ((idx / size.x) + 0.5f) / size.y};
@@ -548,17 +537,17 @@ static vec3f sample_lights(const scene_scene& scene, const trace_lights* lights,
 
 // Sample lights pdf
 static float sample_lights_pdf(const scene_scene& scene, const trace_bvh& bvh,
-    const trace_lights* lights, const vec3f& position, const vec3f& direction) {
+    const trace_lights& lights, const vec3f& position, const vec3f& direction) {
   auto pdf = 0.0f;
-  for (auto light : lights->lights) {
-    if (light->instance != invalid_handle) {
-      auto& instance = get_instance(scene, light->instance);
+  for (auto& light : lights.lights) {
+    if (light.instance != invalid_handle) {
+      auto& instance = get_instance(scene, light.instance);
       // check all intersection
       auto lpdf          = 0.0f;
       auto next_position = position;
       for (auto bounce = 0; bounce < 100; bounce++) {
         auto intersection = intersect_bvh(
-            bvh, scene, light->instance, {next_position, direction});
+            bvh, scene, light.instance, {next_position, direction});
         if (!intersection.hit) break;
         // accumulate pdf
         auto lposition = eval_position(
@@ -566,15 +555,15 @@ static float sample_lights_pdf(const scene_scene& scene, const trace_bvh& bvh,
         auto lnormal = eval_element_normal(
             scene, instance, intersection.element);
         // prob triangle * area triangle = area triangle mesh
-        auto area = light->elements_cdf.back();
+        auto area = light.elements_cdf.back();
         lpdf += distance_squared(lposition, position) /
                 (abs(dot(lnormal, direction)) * area);
         // continue
         next_position = lposition + direction * 1e-3f;
       }
       pdf += lpdf;
-    } else if (light->environment != invalid_handle) {
-      auto& environment = get_environment(scene, light->environment);
+    } else if (light.environment != invalid_handle) {
+      auto& environment = get_environment(scene, light.environment);
       if (environment.emission_tex != invalid_handle) {
         auto& emission_tex = get_texture(scene, environment.emission_tex);
         auto  size         = texture_size(emission_tex);
@@ -585,8 +574,8 @@ static float sample_lights_pdf(const scene_scene& scene, const trace_bvh& bvh,
         auto i    = clamp((int)(texcoord.x * size.x), 0, size.x - 1);
         auto j    = clamp((int)(texcoord.y * size.y), 0, size.y - 1);
         auto prob = sample_discrete_cdf_pdf(
-                        light->elements_cdf, j * size.x + i) /
-                    light->elements_cdf.back();
+                        light.elements_cdf, j * size.x + i) /
+                    light.elements_cdf.back();
         auto angle = (2 * pif / size.x) * (pif / size.y) *
                      sin(pif * (j + 0.5f) / size.y);
         pdf += prob / angle;
@@ -595,13 +584,13 @@ static float sample_lights_pdf(const scene_scene& scene, const trace_bvh& bvh,
       }
     }
   }
-  pdf *= sample_uniform_pdf((int)lights->lights.size());
+  pdf *= sample_uniform_pdf((int)lights.lights.size());
   return pdf;
 }
 
 // Recursive path tracing.
 static vec4f trace_path(const scene_scene& scene, const trace_bvh& bvh,
-    const trace_lights* lights, const ray3f& ray_, rng_state& rng,
+    const trace_lights& lights, const ray3f& ray_, rng_state& rng,
     const trace_params& params) {
   // initialize
   auto radiance      = zero3f;
@@ -744,7 +733,7 @@ static vec4f trace_path(const scene_scene& scene, const trace_bvh& bvh,
 
 // Recursive path tracing.
 static vec4f trace_naive(const scene_scene& scene, const trace_bvh& bvh,
-    const trace_lights* lights, const ray3f& ray_, rng_state& rng,
+    const trace_lights& lights, const ray3f& ray_, rng_state& rng,
     const trace_params& params) {
   // initialize
   auto radiance = zero3f;
@@ -817,7 +806,7 @@ static vec4f trace_naive(const scene_scene& scene, const trace_bvh& bvh,
 
 // Eyelight for quick previewing.
 static vec4f trace_eyelight(const scene_scene& scene, const trace_bvh& bvh,
-    const trace_lights* lights, const ray3f& ray_, rng_state& rng,
+    const trace_lights& lights, const ray3f& ray_, rng_state& rng,
     const trace_params& params) {
   // initialize
   auto radiance = zero3f;
@@ -878,7 +867,7 @@ static vec4f trace_eyelight(const scene_scene& scene, const trace_bvh& bvh,
 
 // False color rendering
 static vec4f trace_falsecolor(const scene_scene& scene, const trace_bvh& bvh,
-    const trace_lights* lights, const ray3f& ray, rng_state& rng,
+    const trace_lights& lights, const ray3f& ray, rng_state& rng,
     const trace_params& params) {
   // intersect next point
   auto intersection = intersect_bvh(bvh, scene, ray);
@@ -954,7 +943,7 @@ static vec4f trace_falsecolor(const scene_scene& scene, const trace_bvh& bvh,
 }
 
 static vec4f trace_albedo(const scene_scene& scene, const trace_bvh& bvh,
-    const trace_lights* lights, const ray3f& ray, rng_state& rng,
+    const trace_lights& lights, const ray3f& ray, rng_state& rng,
     const trace_params& params, int bounce) {
   auto intersection = intersect_bvh(bvh, scene, ray);
   if (!intersection.hit) {
@@ -1015,14 +1004,14 @@ static vec4f trace_albedo(const scene_scene& scene, const trace_bvh& bvh,
 }
 
 static vec4f trace_albedo(const scene_scene& scene, const trace_bvh& bvh,
-    const trace_lights* lights, const ray3f& ray, rng_state& rng,
+    const trace_lights& lights, const ray3f& ray, rng_state& rng,
     const trace_params& params) {
   auto albedo = trace_albedo(scene, bvh, lights, ray, rng, params, 0);
   return clamp(albedo, 0.0, 1.0);
 }
 
 static vec4f trace_normal(const scene_scene& scene, const trace_bvh& bvh,
-    const trace_lights* lights, const ray3f& ray, rng_state& rng,
+    const trace_lights& lights, const ray3f& ray, rng_state& rng,
     const trace_params& params, int bounce) {
   auto intersection = intersect_bvh(bvh, scene, ray);
   if (!intersection.hit) {
@@ -1070,14 +1059,14 @@ static vec4f trace_normal(const scene_scene& scene, const trace_bvh& bvh,
 }
 
 static vec4f trace_normal(const scene_scene& scene, const trace_bvh& bvh,
-    const trace_lights* lights, const ray3f& ray, rng_state& rng,
+    const trace_lights& lights, const ray3f& ray, rng_state& rng,
     const trace_params& params) {
   return trace_normal(scene, bvh, lights, ray, rng, params, 0);
 }
 
 // Trace a single ray from the camera using the given algorithm.
 using sampler_func = vec4f (*)(const scene_scene& scene, const trace_bvh& bvh,
-    const trace_lights* lights, const ray3f& ray, rng_state& rng,
+    const trace_lights& lights, const ray3f& ray, rng_state& rng,
     const trace_params& params);
 static sampler_func get_trace_sampler_func(const trace_params& params) {
   switch (params.sampler) {
@@ -1113,7 +1102,7 @@ bool is_sampler_lit(const trace_params& params) {
 // Trace a block of samples
 void trace_sample(trace_state* state, const scene_scene& scene,
     const scene_camera& camera, const trace_bvh& bvh,
-    const trace_lights* lights, const vec2i& ij, const trace_params& params) {
+    const trace_lights& lights, const vec2i& ij, const trace_params& params) {
   auto sampler = get_trace_sampler_func(params);
   auto ray     = sample_camera(camera, ij, state->render.imsize(),
       rand2f(state->rngs[ij]), rand2f(state->rngs[ij]), params.tentfilter);
@@ -1149,19 +1138,18 @@ void init_state(trace_state* state, const scene_scene& scene,
 }
 
 // Forward declaration
-static trace_light* add_light(trace_lights* lights) {
-  return lights->lights.emplace_back(new trace_light{});
+static trace_light& add_light(trace_lights& lights) {
+  return lights.lights.emplace_back();
 }
 
 // Init trace lights
-void init_lights(trace_lights* lights, const scene_scene& scene,
+void init_lights(trace_lights& lights, const scene_scene& scene,
     const trace_params& params, const progress_callback& progress_cb) {
   // handle progress
   auto progress = vec2i{0, 1};
   if (progress_cb) progress_cb("build light", progress.x++, progress.y);
 
-  for (auto light : lights->lights) delete light;
-  lights->lights.clear();
+  lights.lights.clear();
 
   for (auto handle = 0; handle < scene.instances.size(); handle++) {
     auto& instance = get_instance(scene, handle);
@@ -1170,25 +1158,25 @@ void init_lights(trace_lights* lights, const scene_scene& scene,
     auto& shape = get_shape(scene, instance.shape);
     if (shape.triangles.empty() && shape.quads.empty()) continue;
     if (progress_cb) progress_cb("build light", progress.x++, ++progress.y);
-    auto light         = add_light(lights);
-    light->instance    = handle;
-    light->environment = invalid_handle;
+    auto& light       = add_light(lights);
+    light.instance    = handle;
+    light.environment = invalid_handle;
     if (!shape.triangles.empty()) {
-      light->elements_cdf = vector<float>(shape.triangles.size());
-      for (auto idx = 0; idx < light->elements_cdf.size(); idx++) {
-        auto& t                  = shape.triangles[idx];
-        light->elements_cdf[idx] = triangle_area(
+      light.elements_cdf = vector<float>(shape.triangles.size());
+      for (auto idx = 0; idx < light.elements_cdf.size(); idx++) {
+        auto& t                 = shape.triangles[idx];
+        light.elements_cdf[idx] = triangle_area(
             shape.positions[t.x], shape.positions[t.y], shape.positions[t.z]);
-        if (idx != 0) light->elements_cdf[idx] += light->elements_cdf[idx - 1];
+        if (idx != 0) light.elements_cdf[idx] += light.elements_cdf[idx - 1];
       }
     }
     if (!shape.quads.empty()) {
-      light->elements_cdf = vector<float>(shape.quads.size());
-      for (auto idx = 0; idx < light->elements_cdf.size(); idx++) {
-        auto& t                  = shape.quads[idx];
-        light->elements_cdf[idx] = quad_area(shape.positions[t.x],
+      light.elements_cdf = vector<float>(shape.quads.size());
+      for (auto idx = 0; idx < light.elements_cdf.size(); idx++) {
+        auto& t                 = shape.quads[idx];
+        light.elements_cdf[idx] = quad_area(shape.positions[t.x],
             shape.positions[t.y], shape.positions[t.z], shape.positions[t.w]);
-        if (idx != 0) light->elements_cdf[idx] += light->elements_cdf[idx - 1];
+        if (idx != 0) light.elements_cdf[idx] += light.elements_cdf[idx - 1];
       }
     }
   }
@@ -1196,20 +1184,20 @@ void init_lights(trace_lights* lights, const scene_scene& scene,
     auto& environment = get_environment(scene, handle);
     if (environment.emission == zero3f) continue;
     if (progress_cb) progress_cb("build light", progress.x++, ++progress.y);
-    auto light         = add_light(lights);
-    light->instance    = invalid_handle;
-    light->environment = handle;
+    auto& light       = add_light(lights);
+    light.instance    = invalid_handle;
+    light.environment = handle;
     if (environment.emission_tex != invalid_handle) {
-      auto texture        = get_texture(scene, environment.emission_tex);
-      auto size           = texture_size(texture);
-      light->elements_cdf = vector<float>(size.x * size.y);
+      auto texture       = get_texture(scene, environment.emission_tex);
+      auto size          = texture_size(texture);
+      light.elements_cdf = vector<float>(size.x * size.y);
       if (size != zero2i) {
-        for (auto i = 0; i < light->elements_cdf.size(); i++) {
-          auto ij                = vec2i{i % size.x, i / size.x};
-          auto th                = (ij.y + 0.5f) * pif / size.y;
-          auto value             = lookup_texture(texture, ij);
-          light->elements_cdf[i] = max(value) * sin(th);
-          if (i != 0) light->elements_cdf[i] += light->elements_cdf[i - 1];
+        for (auto i = 0; i < light.elements_cdf.size(); i++) {
+          auto ij               = vec2i{i % size.x, i / size.x};
+          auto th               = (ij.y + 0.5f) * pif / size.y;
+          auto value            = lookup_texture(texture, ij);
+          light.elements_cdf[i] = max(value) * sin(th);
+          if (i != 0) light.elements_cdf[i] += light.elements_cdf[i - 1];
         }
       }
     }
@@ -1226,8 +1214,7 @@ image<vec4f> trace_image(const scene_scene& scene, const scene_camera& camera,
   auto bvh = trace_bvh{};
   init_bvh(bvh, scene, params, progress_cb);
 
-  auto lights_guard = std::make_unique<trace_lights>();
-  auto lights       = lights_guard.get();
+  auto lights = trace_lights{};
   init_lights(lights, scene, params, progress_cb);
 
   return trace_image(scene, camera, bvh, lights, params, progress_cb, image_cb);
@@ -1235,7 +1222,7 @@ image<vec4f> trace_image(const scene_scene& scene, const scene_camera& camera,
 
 // Progressively compute an image by calling trace_samples multiple times.
 image<vec4f> trace_image(const scene_scene& scene, const scene_camera& camera,
-    const trace_bvh& bvh, const trace_lights* lights,
+    const trace_bvh& bvh, const trace_lights& lights,
     const trace_params& params, const progress_callback& progress_cb,
     const image_callback& image_cb) {
   auto state_guard = std::make_unique<trace_state>();
@@ -1251,8 +1238,8 @@ image<vec4f> trace_image(const scene_scene& scene, const scene_camera& camera,
         }
       }
     } else {
-      parallel_for(state->render.width(), state->render.height(),
-          [state, scene, camera, &bvh, lights, &params](int i, int j) {
+      parallel_for(
+          state->render.width(), state->render.height(), [&](int i, int j) {
             trace_sample(state, scene, camera, bvh, lights, {i, j}, params);
           });
     }
@@ -1266,7 +1253,7 @@ image<vec4f> trace_image(const scene_scene& scene, const scene_camera& camera,
 // [experimental] Asynchronous interface
 void trace_start(trace_state* state, const scene_scene& scene,
     const scene_camera& camera, const trace_bvh& bvh,
-    const trace_lights* lights, const trace_params& params,
+    const trace_lights& lights, const trace_params& params,
     const progress_callback& progress_cb, const image_callback& image_cb,
     const async_callback& async_cb) {
   init_state(state, scene, camera, params);
@@ -1289,22 +1276,24 @@ void trace_start(trace_state* state, const scene_scene& scene,
   if (image_cb) image_cb(state->render, 0, params.samples);
 
   // start renderer
-  state->worker = std::async(std::launch::async, [=, &bvh]() {
-    for (auto sample = 0; sample < params.samples; sample++) {
-      if (state->stop) return;
-      if (progress_cb) progress_cb("trace image", sample, params.samples);
-      parallel_for(
-          state->render.width(), state->render.height(), [&](int i, int j) {
-            if (state->stop) return;
-            trace_sample(state, scene, camera, bvh, lights, {i, j}, params);
-            if (async_cb)
-              async_cb(state->render, sample, params.samples, {i, j});
-          });
-      if (image_cb) image_cb(state->render, sample + 1, params.samples);
-    }
-    if (progress_cb) progress_cb("trace image", params.samples, params.samples);
-    if (image_cb) image_cb(state->render, params.samples, params.samples);
-  });
+  state->worker = std::async(
+      std::launch::async, [=, &scene, &lights, &camera, &bvh]() {
+        for (auto sample = 0; sample < params.samples; sample++) {
+          if (state->stop) return;
+          if (progress_cb) progress_cb("trace image", sample, params.samples);
+          parallel_for(
+              state->render.width(), state->render.height(), [&](int i, int j) {
+                if (state->stop) return;
+                trace_sample(state, scene, camera, bvh, lights, {i, j}, params);
+                if (async_cb)
+                  async_cb(state->render, sample, params.samples, {i, j});
+              });
+          if (image_cb) image_cb(state->render, sample + 1, params.samples);
+        }
+        if (progress_cb)
+          progress_cb("trace image", params.samples, params.samples);
+        if (image_cb) image_cb(state->render, params.samples, params.samples);
+      });
 }
 void trace_stop(trace_state* state) {
   if (state == nullptr) return;

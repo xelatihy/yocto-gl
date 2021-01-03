@@ -316,15 +316,11 @@ struct trace_light {
 
 // Scene lights
 struct trace_lights {
-  // light elements
-  vector<trace_light*> lights = {};
-
-  // cleanup
-  ~trace_lights();
+  vector<trace_light> lights = {};
 };
 
 // Initialize lights.
-void init_lights(trace_lights* lights, const scene_scene& scene,
+void init_lights(trace_lights& lights, const scene_scene& scene,
     const trace_params& params, const progress_callback& progress_cb = {});
 
 // Define BVH
@@ -342,7 +338,7 @@ void update_bvh(trace_bvh& bvh, const scene_scene& scene,
 
 // Progressively computes an image.
 image<vec4f> trace_image(const scene_scene& scene, const scene_camera& camera,
-    const trace_bvh& bvh, const trace_lights* lights,
+    const trace_bvh& bvh, const trace_lights& lights,
     const trace_params& params, const progress_callback& progress_cb = {},
     const image_callback& image_cb = {});
 
@@ -367,7 +363,7 @@ using async_callback = function<void(
 struct trace_state;
 void trace_start(trace_state* state, const scene_scene& scene,
     const scene_camera& camera, const trace_bvh& bvh,
-    const trace_lights* lights, const trace_params& params,
+    const trace_lights& lights, const trace_params& params,
     const progress_callback& progress_cb = {},
     const image_callback& image_cb = {}, const async_callback& async_cb = {});
 void trace_stop(trace_state* state);

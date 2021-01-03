@@ -83,12 +83,11 @@ int run_render(const render_params& params) {
   init_bvh(bvh, scene, params, print_progress);
 
   // init renderer
-  auto lights_guard = std::make_unique<trace_lights>();
-  auto lights       = lights_guard.get();
+  auto lights = trace_lights{};
   init_lights(lights, scene, params, print_progress);
 
   // fix renderer type if no lights
-  if (lights->lights.empty() && is_sampler_lit(params)) {
+  if (lights.lights.empty() && is_sampler_lit(params)) {
     print_info("no lights presents, image will be black");
   }
 
@@ -174,12 +173,11 @@ int run_view(const view_params& params) {
   init_bvh(bvh, scene, params, print_progress);
 
   // init renderer
-  auto lights_guard = std::make_unique<trace_lights>();
-  auto lights       = lights_guard.get();
+  auto lights = trace_lights{};
   init_lights(lights, scene, params, print_progress);
 
   // fix renderer type if no lights
-  if (lights->lights.empty() && is_sampler_lit(params)) {
+  if (lights.lights.empty() && is_sampler_lit(params)) {
     print_info("no lights presents, image will be black");
   }
 
