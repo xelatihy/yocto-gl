@@ -371,6 +371,8 @@ static bool load_json_scene(const string& filename, scene_scene& scene,
       {"", {invalid_handle, true}}};
   auto material_map = unordered_map<string, pair<material_handle, bool>>{
       {"", {invalid_handle, true}}};
+  auto subdiv_map = unordered_map<string, pair<subdiv_handle, bool>>{
+      {"", {invalid_handle, true}}};
 
   // parse json reference
   auto get_shape = [&scene, &shape_map](
@@ -632,6 +634,28 @@ static bool load_json_scene(const string& filename, scene_scene& scene,
           }
         }
       }
+    } else if (gname == "subdivs") {
+      for (auto [name, element] : iterate_object(group)) {
+        auto& subdiv = get_subdiv(scene, add_subdiv(scene, string{name}));
+        subdiv_map[string{name}] = {(int)scene.subdivs.size() - 1, false};
+        for (auto [key, value] : iterate_object(element)) {
+          if (key == "shape") {
+            get_shape(value, subdiv.shape);
+          } else if (key == "subdivisions") {
+            get_value(value, subdiv.subdivisions);
+          } else if (key == "catmullcark") {
+            get_value(value, subdiv.catmullclark);
+          } else if (key == "smooth") {
+            get_value(value, subdiv.smooth);
+          } else if (key == "displacement") {
+            get_value(value, subdiv.displacement);
+          } else if (key == "displacement_tex") {
+            get_texture(value, subdiv.displacement_tex);
+          } else {
+            // set_error(element, "unknown key " + string{key});
+          }
+        }
+      }
     } else {
       set_error(js, "unknown key " + string{gname});
     }
@@ -648,6 +672,7 @@ static bool load_json_scene(const string& filename, scene_scene& scene,
   // handle progress
   progress.y += scene.shapes.size();
   progress.y += scene.textures.size();
+  progress.y += scene.subdivs.size();
   progress.y += ply_instances.size();
 
   // get filename from name
@@ -673,6 +698,25 @@ static bool load_json_scene(const string& filename, scene_scene& scene,
             shape.radius, error, shape.catmullclark && shape.subdivisions > 0))
       return dependent_error();
   }
+
+  // load subdivs
+  subdiv_map.erase("");
+  for (auto [name, value] : subdiv_map) {
+    auto& subdiv = yocto::get_subdiv(scene, value.first);
+    if (progress_cb) progress_cb("load subdiv", progress.x++, progress.y);
+    auto path      = make_filename(name, "subdivs", {".ply", ".obj"});
+    auto points    = vector<int>{};
+    auto lines     = vector<vec2i>{};
+    auto triangles = vector<vec3i>{};
+    auto quads     = vector<vec4i>{};
+    auto colors    = vector<vec4f>{};
+    auto radius    = vector<float>{};
+    if (!load_shape(path, points, lines, triangles, quads, subdiv.quadspos,
+            subdiv.quadsnorm, subdiv.quadstexcoord, subdiv.positions,
+            subdiv.normals, subdiv.texcoords, colors, radius, error, true))
+      return dependent_error();
+  }
+
   // load textures
   texture_map.erase("");
   for (auto [name, value] : texture_map) {
@@ -949,6 +993,33 @@ static bool save_json_scene(const string& filename, const scene_scene& scene,
     }
   }
 
+  auto def_subdiv = scene_subdiv{};
+  if (!scene.subdivs.empty()) {
+    auto group = insert_object(js, "subdivs");
+    for (auto& subdiv : scene.subdivs) {
+      auto elment = insert_object(group, get_subdiv_name(scene, subdiv));
+      if (subdiv.shape != invalid_handle) {
+        insert_value(elment, "shape", get_shape_name(scene, subdiv.shape));
+      }
+      if (subdiv.subdivisions != def_shape.subdivisions) {
+        insert_value(elment, "subdivisions", subdiv.subdivisions);
+      }
+      if (subdiv.catmullclark != def_shape.catmullclark) {
+        insert_value(elment, "catmullclark", subdiv.catmullclark);
+      }
+      if (subdiv.smooth != def_shape.smooth) {
+        insert_value(elment, "smooth", subdiv.smooth);
+      }
+      if (subdiv.displacement != def_shape.displacement) {
+        insert_value(elment, "displacement", subdiv.displacement);
+      }
+      if (subdiv.displacement_tex != invalid_handle) {
+        insert_value(elment, "displacement_tex",
+            get_texture_name(scene, subdiv.displacement_tex));
+      }
+    }
+  }
+
   // chck for errors
   if (!is_valid(js)) return conversion_error(get_error(js));
 
@@ -973,6 +1044,17 @@ static bool save_json_scene(const string& filename, const scene_scene& scene,
             shape.quads, shape.quadspos, shape.quadsnorm, shape.quadstexcoord,
             shape.positions, shape.normals, shape.texcoords, shape.colors,
             shape.radius, error, shape.catmullclark && shape.subdivisions > 0))
+      return dependent_error();
+  }
+
+  // save subdiv
+  for (auto& subdiv : scene.subdivs) {
+    if (progress_cb) progress_cb("save subdiv", progress.x++, progress.y);
+    auto path = make_filename(
+        get_subdiv_name(scene, subdiv), "subdivs", ".obj");
+    if (!save_shape(path, {}, {}, {}, {}, subdiv.quadspos, subdiv.quadsnorm,
+            subdiv.quadstexcoord, subdiv.positions, subdiv.normals,
+            subdiv.texcoords, {}, {}, error, true))
       return dependent_error();
   }
 

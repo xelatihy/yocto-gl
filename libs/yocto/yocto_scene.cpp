@@ -262,6 +262,9 @@ instance_handle add_instance(scene_scene& scene, const string& name) {
 material_handle add_material(scene_scene& scene, const string& name) {
   return add_element(scene.materials, scene.material_names, name, "material");
 }
+subdiv_handle add_subdiv(scene_scene& scene, const string& name) {
+  return add_element(scene.subdivs, scene.subdiv_names, name, "subdiv");
+}
 instance_handle add_complete_instance(scene_scene& scene, const string& name) {
   auto  handle      = add_instance(scene, name);
   auto& instance    = get_instance(scene, handle);
@@ -289,6 +292,9 @@ scene_shape& get_shape(scene_scene& scene, shape_handle handle) {
 }
 scene_texture& get_texture(scene_scene& scene, texture_handle handle) {
   return scene.textures.at(handle);
+}
+scene_subdiv& get_subdiv(scene_scene& scene, subdiv_handle handle) {
+  return scene.subdivs.at(handle);
 }
 scene_instance& get_complete_instance(
     scene_scene& scene, instance_handle handle) {
@@ -318,6 +324,9 @@ const scene_texture& get_texture(
     const scene_scene& scene, texture_handle handle) {
   return scene.textures.at(handle);
 }
+const scene_subdiv& get_subdiv(const scene_scene& scene, subdiv_handle handle) {
+  return scene.subdivs.at(handle);
+}
 const scene_instance& get_complete_instance(
     const scene_scene& scene, instance_handle handle) {
   return scene.instances.at(handle);
@@ -342,6 +351,9 @@ string get_instance_name(const scene_scene& scene, int idx) {
 string get_material_name(const scene_scene& scene, int idx) {
   return scene.material_names[idx];
 }
+string get_subdiv_name(const scene_scene& scene, int idx) {
+  return scene.subdiv_names[idx];
+}
 
 string get_camera_name(const scene_scene& scene, const scene_camera& camera) {
   return scene.camera_names.at(&camera - scene.cameras.data());
@@ -364,6 +376,9 @@ string get_instance_name(
 string get_material_name(
     const scene_scene& scene, const scene_material& material) {
   return scene.material_names.at(&material - scene.materials.data());
+}
+string get_subdiv_name(const scene_scene& scene, const scene_subdiv& subdiv) {
+  return scene.subdiv_names.at(&subdiv - scene.subdivs.data());
 }
 
 // Add missing cameras.
