@@ -361,12 +361,12 @@ using async_callback = function<void(
 
 // [experimental] Asynchronous interface
 struct trace_state;
-void trace_start(trace_state* state, const scene_scene& scene,
+void trace_start(trace_state& state, const scene_scene& scene,
     const scene_camera& camera, const trace_bvh& bvh,
     const trace_lights& lights, const trace_params& params,
     const progress_callback& progress_cb = {},
     const image_callback& image_cb = {}, const async_callback& async_cb = {});
-void trace_stop(trace_state* state);
+void trace_stop(trace_state& state);
 
 }  // namespace yocto
 

@@ -164,8 +164,7 @@ void view_scene(const string& title, const string& name, scene_scene& scene,
   }
 
   // init state
-  auto state_guard = std::make_unique<trace_state>();
-  auto state       = state_guard.get();
+  auto state = trace_state{};
 
   // render start
   trace_start(

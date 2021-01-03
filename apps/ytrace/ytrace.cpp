@@ -182,8 +182,7 @@ int run_view(const view_params& params) {
   }
 
   // init state
-  auto state_guard = std::make_unique<trace_state>();
-  auto state       = state_guard.get();
+  auto state = trace_state{};
 
   // render start
   auto& camera = get_camera(scene, camera_handle);
