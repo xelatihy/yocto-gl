@@ -77,18 +77,7 @@ struct shade_camera {
 };
 
 // Opengl texture
-struct shade_texture {
-  // shape properties
-  ogl_texture* texture = new ogl_texture{};
-
-  // Disable copy construction
-  shade_texture()                     = default;
-  shade_texture(const shade_texture&) = delete;
-  shade_texture& operator=(const shade_texture&) = delete;
-
-  // Cleanup
-  ~shade_texture();
-};
+struct shade_texture : ogl_texture {};
 
 // Opengl material
 struct shade_material {

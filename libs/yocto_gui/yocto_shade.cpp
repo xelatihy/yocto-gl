@@ -246,40 +246,39 @@ shade_texture* add_texture(shade_scene& scene) {
   return scene.textures.emplace_back(new shade_texture{});
 }
 
-// cleanup
-shade_texture::~shade_texture() { delete texture; }
-
 // check if initialized
 bool is_initialized(const shade_texture* texture) {
-  return is_initialized(texture->texture);
+  return is_initialized((ogl_texture*)texture);
 }
 // clear texture
-void clear_texture(shade_texture* texture) { clear_texture(texture->texture); }
+void clear_texture(shade_texture* texture) {
+  clear_texture((ogl_texture*)texture);
+}
 
 // set texture
 void set_texture(shade_texture* texture, const image<vec4b>& img, bool as_srgb,
     bool linear, bool mipmap) {
-  set_texture(texture->texture, img, as_srgb, linear, mipmap);
+  set_texture((ogl_texture*)texture, img, as_srgb, linear, mipmap);
 }
 void set_texture(shade_texture* texture, const image<vec4f>& img, bool as_float,
     bool linear, bool mipmap) {
-  set_texture(texture->texture, img, as_float, linear, mipmap);
+  set_texture((ogl_texture*)texture, img, as_float, linear, mipmap);
 }
 void set_texture(shade_texture* texture, const image<vec3b>& img, bool as_srgb,
     bool linear, bool mipmap) {
-  set_texture(texture->texture, img, as_srgb, linear, mipmap);
+  set_texture((ogl_texture*)texture, img, as_srgb, linear, mipmap);
 }
 void set_texture(shade_texture* texture, const image<vec3f>& img, bool as_float,
     bool linear, bool mipmap) {
-  set_texture(texture->texture, img, as_float, linear, mipmap);
+  set_texture((ogl_texture*)texture, img, as_float, linear, mipmap);
 }
 void set_texture(shade_texture* texture, const image<byte>& img, bool as_srgb,
     bool linear, bool mipmap) {
-  set_texture(texture->texture, img, as_srgb, linear, mipmap);
+  set_texture((ogl_texture*)texture, img, as_srgb, linear, mipmap);
 }
 void set_texture(shade_texture* texture, const image<float>& img, bool as_float,
     bool linear, bool mipmap) {
-  set_texture(texture->texture, img, as_float, linear, mipmap);
+  set_texture((ogl_texture*)texture, img, as_float, linear, mipmap);
 }
 
 // cheeck if initialized
@@ -476,8 +475,8 @@ void set_instance_uniforms(ogl_program* program, const frame3f& frame,
   auto set_texture = [](ogl_program* program, const char* name,
                          const char* name_on, shade_texture* texture,
                          int unit) {
-    set_uniform(program, name, name_on,
-        texture == nullptr ? nullptr : texture->texture, unit);
+    set_uniform(
+        program, name, name_on, texture == nullptr ? nullptr : texture, unit);
   };
 
   set_uniform(program, "unlit", material->unlit);
@@ -752,13 +751,13 @@ static void init_environment(
   set_cube_shape(environment->envlight_shape);
 
   // precompute cubemap from environment texture
-  auto size          = environment->emission_tex->texture->size.y;
+  auto size          = environment->emission_tex->size.y;
   auto program_guard = make_unique<ogl_program>();
   auto program       = program_guard.get();
   set_program(program, precompute_cubemap_vertex(),
       precompute_environment_fragment(), true);
-  precompute_cubemap(environment->envlight_cubemap,
-      environment->emission_tex->texture, program, size, 1);
+  precompute_cubemap(environment->envlight_cubemap, environment->emission_tex,
+      program, size, 1);
 }
 
 void init_envlight(shade_scene& scene, shade_environment* environment) {
