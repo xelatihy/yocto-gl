@@ -353,10 +353,10 @@ static void update_display(ogl_imageview* view) {
       view->display.height != view->image.height) {
     view->display = make_image(view->image.width, view->image.height, false);
   }
-  if (!view->image.hdr.empty()) {
+  if (!view->image.pixelsf.empty()) {
     tonemap_image_mt(view->display, view->image, view->exposure, view->filmic);
-  } else if (!view->image.ldr.empty()) {
-    view->display.ldr = view->image.ldr;
+  } else if (!view->image.pixelsb.empty()) {
+    view->display.pixelsb = view->image.pixelsb;
   } else {
     // TODO(fabio): decide about empty images
   }
@@ -406,13 +406,15 @@ void draw_widgets(
     auto display_pixel = zero4b;
     auto width = view->display.width, height = view->display.height;
     if (i >= 0 && j < width && i >= 0 && j < height) {
-      hdr_pixel     = !view->image.hdr.empty() ? view->image.hdr[j * width + i]
-                                               : zero4f;
-      ldr_pixel     = !view->image.ldr.empty() ? view->image.ldr[j * width + i]
-                                               : zero4b;
-      display_pixel = view->display.ldr[j * width + i];
+      hdr_pixel     = !view->image.pixelsf.empty()
+                          ? view->image.pixelsf[j * width + i]
+                          : zero4f;
+      ldr_pixel     = !view->image.pixelsb.empty()
+                          ? view->image.pixelsb[j * width + i]
+                          : zero4b;
+      display_pixel = view->display.pixelsb[j * width + i];
     }
-    if (!view->image.hdr.empty()) {
+    if (!view->image.pixelsf.empty()) {
       draw_coloredit(win, "source", hdr_pixel);
     } else {
       draw_coloredit(win, "source", ldr_pixel);
@@ -420,7 +422,7 @@ void draw_widgets(
     draw_coloredit(win, "display", display_pixel);
     end_header(win);
   }
-  if (!viewer.selected->image.hdr.empty()) {
+  if (!viewer.selected->image.pixelsf.empty()) {
     if (begin_header(win, "tonemap")) {
       auto view   = viewer.selected;
       auto edited = 0;

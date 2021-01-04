@@ -1274,12 +1274,12 @@ void set_image(
 
 void set_image(
     ogl_image* oimg, const image_data& img, bool linear, bool mipmap) {
-  if (is_hdr(img)) {
+  if (is_float(img)) {
     set_texture(oimg->texture, {img.width, img.height}, 4,
-        (const float*)img.hdr.data(), false, linear, mipmap);
+        (const float*)img.pixelsf.data(), false, linear, mipmap);
   } else {
     set_texture(oimg->texture, {img.width, img.height}, 4,
-        (const byte*)img.ldr.data(), false, linear, mipmap);
+        (const byte*)img.pixelsb.data(), false, linear, mipmap);
   }
 }
 

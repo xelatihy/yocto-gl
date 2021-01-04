@@ -65,26 +65,30 @@ namespace yocto {
 
 // Image contains
 struct image_data {
-  int           width  = 0;
-  int           height = 0;
-  vector<vec4f> hdr    = {};
-  vector<vec4b> ldr    = {};
+  int           width   = 0;
+  int           height  = 0;
+  vector<vec4f> pixelsf = {};
+  vector<vec4b> pixelsb = {};
 };
 
 // image creation
 image_data make_hdr(int width, int height);
 image_data make_ldr(int width, int height);
-image_data make_image(int width, int height, bool hdr);
+image_data make_image(int width, int height, bool as_byte);
 image_data make_image(int width, int height, const vec4f* data);
-image_data make_image(int width, int height, const vec4b& data);
+image_data make_image(int width, int height, const vec4b* data);
 
 // queries
-bool is_hdr(const image_data& image);
-bool is_ldr(const image_data& image);
+bool is_byte(const image_data& image);
+bool is_float(const image_data& image);
 
 // pixel access
 vec4f get_pixel(const image_data& image, int i, int j);
 void  set_pixel(image_data& image, int i, int j, const vec4f& pixel);
+
+// conversions
+image_data byte_to_float(const image_data& image);
+image_data float_to_byte(const image_data& image);
 
 // Evaluates an image at a point `uv`.
 vec4f eval_image(const image_data& image, const vec2f& uv,
@@ -247,7 +251,7 @@ image_data add_border(
     const image_data& img, float width, const vec4f& color = {0, 0, 0, 1});
 
 // Make logo images. Image is resized to proper size.
-image_data make_logo(const string& name, bool hdr);
+image_data make_logo(const string& name, bool as_byte);
 
 }  // namespace yocto
 

@@ -680,6 +680,88 @@ int run_view(const view_params& params) {
 
 #endif
 
+struct heightfield_params {
+  string image     = "heightfield.png"s;
+  string output    = "out.ply"s;
+  bool   smooth    = false;
+  float  height    = 1.0f;
+  vec3f  scale     = {1, 1, 1};
+  vec3f  rotate    = {0, 0, 0};
+  vec3f  translate = {0, 0, 0};
+  bool   info      = false;
+};
+
+// Json IO
+void serialize_value(json_mode mode, json_value& json,
+    heightfield_params& value, const string& description) {
+  serialize_object(mode, json, value, description);
+  serialize_property(mode, json, value.image, "image", "Input image.", true);
+  serialize_property(mode, json, value.output, "output", "Output shape.");
+  serialize_property(mode, json, value.smooth, "smooth", "Smoooth normals.");
+  serialize_property(mode, json, value.height, "height", "Shape height.");
+  serialize_property(
+      mode, json, (array<float, 3>&)value.scale, "scale", "Scale shape.");
+  serialize_property(
+      mode, json, (array<float, 3>&)value.rotate, "rotate", "Rotate shape.");
+  serialize_property(mode, json, (array<float, 3>&)value.scale, "translate",
+      "Translate shape.");
+  serialize_property(mode, json, value.info, "info", "Print info.");
+  serialize_clipositionals(mode, json, {"image"});
+  serialize_clialternates(mode, json, {{"output", "o"}});
+}
+
+int run_heightfield(const heightfield_params& params) {
+  // load mesh
+  auto image   = image_data{};
+  auto ioerror = ""s;
+  print_progress("load image", 0, 1);
+  if (!load_image(params.image, image, ioerror)) print_fatal(ioerror);
+  print_progress("load image", 1, 1);
+
+  // convert to float
+  if (!is_float(image)) image = byte_to_float(image);
+
+  // adjust height
+  if (params.height != 1) {
+    for (auto& pixel : image.pixelsf) pixel *= params.height;
+  }
+
+  // create heightfield
+  auto shape = make_heightfield({image.width, image.height}, image.pixelsf);
+  if (!params.smooth) shape.normals.clear();
+
+  // print info
+  if (params.info) {
+    print_info("shape stats ------------");
+    auto stats = shape_stats(shape);
+    for (auto& stat : stats) print_info(stat);
+  }
+
+  // transform
+  if (params.translate != vec3f{0, 0, 0} || params.rotate != vec3f{0, 0, 0} ||
+      params.scale != vec3f{1, 1, 1}) {
+    print_progress("transform shape", 0, 1);
+    auto translation = translation_frame(params.translate);
+    auto scaling     = scaling_frame(params.scale);
+    auto rotation    = rotation_frame({1, 0, 0}, radians(params.rotate.x)) *
+                    rotation_frame({0, 0, 1}, radians(params.rotate.z)) *
+                    rotation_frame({0, 1, 0}, radians(params.rotate.y));
+    auto xform = translation * scaling * rotation;
+    for (auto& p : shape.positions) p = transform_point(xform, p);
+    auto nonuniform_scaling = min(params.scale) != max(params.scale);
+    for (auto& n : shape.normals)
+      n = transform_normal(xform, n, nonuniform_scaling);
+    print_progress("transform shape", 1, 1);
+  }
+  // save mesh
+  print_progress("save shape", 0, 1);
+  if (!save_shape(params.output, shape, ioerror)) print_fatal(ioerror);
+  print_progress("save shape", 1, 1);
+
+  // done
+  return 0;
+}
+
 struct app_params {
   string           command   = "convert";
   convert_params   convert   = {};

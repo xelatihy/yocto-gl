@@ -100,7 +100,7 @@ bool make_image_preset(const string& type_, image_data& image, string& error) {
       montage_size.x += sub_img.width;
       montage_size.y = max(montage_size.y, sub_img.height);
     }
-    image    = make_image(montage_size.x, montage_size.y, is_hdr(sub_imgs[0]));
+    image = make_image(montage_size.x, montage_size.y, is_float(sub_imgs[0]));
     auto pos = 0;
     for (auto& sub_img : sub_imgs) {
       set_region(image, sub_img, pos, 0);
@@ -117,7 +117,7 @@ bool make_image_preset(const string& type_, image_data& image, string& error) {
       montage_size.x += sub_img.width;
       montage_size.y = max(montage_size.y, sub_img.height);
     }
-    image    = make_image(montage_size.x, montage_size.y, is_hdr(sub_imgs[0]));
+    image = make_image(montage_size.x, montage_size.y, is_float(sub_imgs[0]));
     auto pos = 0;
     for (auto& sub_img : sub_imgs) {
       set_region(image, sub_img, pos, 0);
@@ -226,7 +226,7 @@ int run_convert(const convert_params& params) {
   }
 
   // tonemap if needed
-  if (is_hdr(image) && is_ldr_filename(params.output)) {
+  if (is_float(image) && is_ldr_filename(params.output)) {
     image = tonemap_image(image, params.exposure, params.filmic);
   }
 
@@ -450,7 +450,8 @@ int run_diff(const diff_params& params) {
   }
 
   // check types
-  if (is_hdr(image1) != is_hdr(image2) || is_ldr(image1) != is_ldr(image2)) {
+  if (is_float(image1) != is_float(image2) ||
+      is_byte(image1) != is_byte(image2)) {
     ioerror = "image types are different";
     return print_fatal(ioerror);
   }
@@ -467,7 +468,7 @@ int run_diff(const diff_params& params) {
 
   // check diff
   if (params.signal) {
-    for (auto& c : diff.hdr) {
+    for (auto& c : diff.pixelsf) {
       if (max(xyz(c)) > params.threshold) {
         ioerror = "image content differs";
         return print_fatal(ioerror);
@@ -530,29 +531,30 @@ int run_setalpha(const setalpha_params& params) {
   }
 
   // check types
-  if (is_hdr(image) != is_hdr(alpha) || is_ldr(image) != is_ldr(alpha)) {
+  if (is_float(image) != is_float(alpha) || is_byte(image) != is_byte(alpha)) {
     ioerror = "image types are different";
     return print_fatal(ioerror);
   }
 
   // edit alpha
-  auto out = make_image(image.width, image.height, is_hdr(image));
+  auto out = make_image(image.width, image.height, is_float(image));
   for (auto idx = 0; idx < image.width * image.height; idx++) {
-    if (is_hdr(image)) {
-      auto a = params.from_color ? mean(xyz(image.hdr[idx])) : image.hdr[idx].w;
+    if (is_float(image)) {
+      auto a = params.from_color ? mean(xyz(image.pixelsf[idx]))
+                                 : image.pixelsf[idx].w;
       if (params.to_color) {
-        out.hdr[idx] = {a, a, a, a};
+        out.pixelsf[idx] = {a, a, a, a};
       } else {
-        out.hdr[idx].w = a;
+        out.pixelsf[idx].w = a;
       }
     } else {
       auto a = params.from_color
-                   ? float_to_byte(mean(xyz(byte_to_float(image.ldr[idx]))))
-                   : image.ldr[idx].w;
+                   ? float_to_byte(mean(xyz(byte_to_float(image.pixelsb[idx]))))
+                   : image.pixelsb[idx].w;
       if (params.to_color) {
-        out.ldr[idx] = {a, a, a, a};
+        out.pixelsb[idx] = {a, a, a, a};
       } else {
-        out.ldr[idx].w = a;
+        out.pixelsb[idx].w = a;
       }
     }
   }

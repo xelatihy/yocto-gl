@@ -58,8 +58,8 @@ image_data make_ldr(int width, int height) {
   return image_data{
       width, height, {}, vector<vec4b>(width * height, vec4b{0, 0, 0, 0})};
 }
-image_data make_image(int width, int height, bool hdr) {
-  if (hdr) {
+image_data make_image(int width, int height, bool as_byte) {
+  if (!as_byte) {
     return image_data{
         width, height, vector<vec4f>(width * height, vec4f{0, 0, 0, 0}), {}};
   } else {
@@ -77,31 +77,51 @@ image_data make_image(int width, int height, const vec4b* data) {
 }
 
 // queries
-bool is_hdr(const image_data& image) { return !image.hdr.empty(); }
-bool is_ldr(const image_data& image) { return !image.ldr.empty(); }
+bool is_float(const image_data& image) { return !image.pixelsf.empty(); }
+bool is_byte(const image_data& image) { return !image.pixelsb.empty(); }
 
 // pixel access
 vec4f get_pixel(const image_data& image, int i, int j) {
-  if (is_hdr(image)) {
-    return image.hdr[j * image.width + i];
+  if (is_float(image)) {
+    return image.pixelsf[j * image.width + i];
   } else {
-    return byte_to_float(image.ldr[j * image.width + i]);
+    return byte_to_float(image.pixelsb[j * image.width + i]);
   }
 }
 void set_pixel(image_data& image, int i, int j, const vec4f& pixel) {
-  if (is_hdr(image)) {
-    image.hdr[j * image.width + i] = pixel;
+  if (is_float(image)) {
+    image.pixelsf[j * image.width + i] = pixel;
   } else {
-    image.ldr[j * image.width + i] = float_to_byte(pixel);
+    image.pixelsb[j * image.width + i] = float_to_byte(pixel);
   }
 }
 
+// conversions
+image_data byte_to_float(const image_data& image) {
+  if (is_float(image)) return image;
+  auto result = make_image(image.width, image.height, false);
+  for (auto idx = 0; idx < image.width * image.height; idx++) {
+    result.pixelsf[idx] = byte_to_float(image.pixelsb[idx]);
+  }
+  return result;
+}
+image_data float_to_byte(const image_data& image) {
+  if (is_byte(image)) return image;
+  auto result = make_image(image.width, image.height, true);
+  for (auto idx = 0; idx < image.width * image.height; idx++) {
+    result.pixelsb[idx] = float_to_byte(image.pixelsf[idx]);
+  }
+  return result;
+}
+void byte_to_float(image_data& result, const image_data& image);
+void float_to_byte(image_data& result, const image_data& image);
+
 // Apply tone mapping returning a float or byte image.
 image_data tonemap_image(const image_data& image, float exposure, bool filmic) {
-  if (is_ldr(image)) return image;
+  if (is_byte(image)) return image;
   auto result = make_ldr(image.width, image.height);
   for (auto idx = 0; idx < image.width * image.height; idx++) {
-    result.ldr[idx] = tonemapb(image.hdr[idx], exposure, filmic, true);
+    result.pixelsb[idx] = tonemapb(image.pixelsf[idx], exposure, filmic, true);
   }
   return result;
 }
@@ -111,10 +131,10 @@ void tonemap_image(
     image_data& result, const image_data& image, float exposure, bool filmic) {
   if (image.width != result.width || image.height != result.height)
     throw std::invalid_argument{"image should be the same size"};
-  if (!is_ldr(result)) throw std::invalid_argument{"ldr expected"};
-  if (!is_hdr(image)) throw std::invalid_argument{"hdr expected"};
+  if (!is_byte(result)) throw std::invalid_argument{"ldr expected"};
+  if (!is_float(image)) throw std::invalid_argument{"hdr expected"};
   for (auto idx = 0; idx < image.width * image.height; idx++) {
-    result.ldr[idx] = tonemapb(image.hdr[idx], exposure, filmic);
+    result.pixelsb[idx] = tonemapb(image.pixelsf[idx], exposure, filmic);
   }
 }
 // Apply tone mapping using multithreading for speed.
@@ -122,11 +142,11 @@ void tonemap_image_mt(
     image_data& result, const image_data& image, float exposure, bool filmic) {
   if (image.width != result.width || image.height != result.height)
     throw std::invalid_argument{"image should be the same size"};
-  if (!is_ldr(result)) throw std::invalid_argument{"ldr expected"};
-  if (!is_hdr(image)) throw std::invalid_argument{"hdr expected"};
+  if (!is_byte(result)) throw std::invalid_argument{"ldr expected"};
+  if (!is_float(image)) throw std::invalid_argument{"hdr expected"};
   parallel_for(
       image.width * image.height, [&result, &image, exposure, filmic](int idx) {
-        result.ldr[idx] = tonemapb(image.hdr[idx], exposure, filmic);
+        result.pixelsb[idx] = tonemapb(image.pixelsf[idx], exposure, filmic);
       });
 }
 
@@ -140,19 +160,19 @@ image_data resize_image(const image_data& image, int width, int height) {
   } else if (width == 0) {
     width = (int)round(height * (double)width / (double)height);
   }
-  if (is_ldr(image)) {
+  if (is_byte(image)) {
     auto result = make_ldr(width, height);
-    stbir_resize_uint8_generic((byte*)image.ldr.data(), (int)image.width,
+    stbir_resize_uint8_generic((byte*)image.pixelsb.data(), (int)image.width,
         (int)image.height, (int)(sizeof(vec4b) * image.width),
-        (byte*)result.ldr.data(), (int)result.width, (int)result.height,
+        (byte*)result.pixelsb.data(), (int)result.width, (int)result.height,
         (int)(sizeof(vec4b) * result.width), 4, 3, 0, STBIR_EDGE_CLAMP,
         STBIR_FILTER_DEFAULT, STBIR_COLORSPACE_LINEAR, nullptr);
     return result;
   } else {
     auto result = make_hdr(width, height);
-    stbir_resize_float_generic((float*)image.hdr.data(), (int)image.width,
+    stbir_resize_float_generic((float*)image.pixelsf.data(), (int)image.width,
         (int)image.height, (int)(sizeof(vec4f) * image.width),
-        (float*)result.hdr.data(), (int)result.width, (int)result.height,
+        (float*)result.pixelsf.data(), (int)result.width, (int)result.height,
         (int)(sizeof(vec4f) * result.width), 4, 3, 0, STBIR_EDGE_CLAMP,
         STBIR_FILTER_DEFAULT, STBIR_COLORSPACE_LINEAR, nullptr);
     return result;
@@ -168,7 +188,8 @@ image_data image_difference(
   }
 
   // check types
-  if (is_hdr(image1) != is_hdr(image2) || is_ldr(image1) != is_ldr(image2)) {
+  if (is_float(image1) != is_float(image2) ||
+      is_byte(image1) != is_byte(image2)) {
     throw std::invalid_argument{"image types are different"};
   }
 
@@ -191,10 +212,12 @@ image_data image_difference(
 void set_region(image_data& image, const image_data& region, int x, int y) {
   // TODO(fabio): implement this
   throw std::invalid_argument{"not implemented yet"};
-  if (is_hdr(image)) {
-    if (!is_hdr(region)) throw std::invalid_argument{"color type should match"};
+  if (is_float(image)) {
+    if (!is_float(region))
+      throw std::invalid_argument{"color type should match"};
   } else {
-    if (!is_hdr(region)) throw std::invalid_argument{"color type should match"};
+    if (!is_float(region))
+      throw std::invalid_argument{"color type should match"};
   }
 }
 
@@ -202,7 +225,7 @@ void get_region(image_data& region, const image_data& image, int x, int y,
     int width, int height) {
   // TODO(fabio): implement this
   throw std::invalid_argument{"not implemented yet"};
-  if (is_hdr(image)) {
+  if (is_float(image)) {
   } else {
   }
 }
@@ -275,13 +298,13 @@ vec4b colorgradeb(const vec4b& ldr_color, const colorgrade_params& params) {
 image_data colorgrade_image(
     const image_data& image, const colorgrade_params& params) {
   auto result = make_ldr(image.width, image.height);
-  if (is_ldr(image)) {
+  if (is_byte(image)) {
     for (auto idx = (size_t)0; image.width * image.height; idx++) {
-      result.ldr[idx] = colorgradeb(image.ldr[idx], params);
+      result.pixelsb[idx] = colorgradeb(image.pixelsb[idx], params);
     }
   } else {
     for (auto idx = (size_t)0; image.width * image.height; idx++) {
-      result.ldr[idx] = colorgradeb(image.hdr[idx], params);
+      result.pixelsb[idx] = colorgradeb(image.pixelsf[idx], params);
     }
   }
   return result;
@@ -293,31 +316,31 @@ void colorgrade_image_mt(image_data& result, const image_data& image,
     const colorgrade_params& params) {
   if (image.width != result.width || image.height != result.height)
     throw std::invalid_argument{"image should be the same size"};
-  if (!is_ldr(result)) throw std::invalid_argument{"ldr expected"};
-  if (is_ldr(image)) {
+  if (!is_byte(result)) throw std::invalid_argument{"ldr expected"};
+  if (is_byte(image)) {
     parallel_for(
         image.width * image.height, [&result, &image, &params](size_t idx) {
-          result.ldr[idx] = colorgradeb(image.ldr[idx], params);
+          result.pixelsb[idx] = colorgradeb(image.pixelsb[idx], params);
         });
   } else {
     parallel_for(
         image.width * image.height, [&result, &image, &params](size_t idx) {
-          result.ldr[idx] = colorgradeb(image.hdr[idx], params);
+          result.pixelsb[idx] = colorgradeb(image.pixelsf[idx], params);
         });
   }
 }
 
 // determine white balance colors
 vec4f compute_white_balance(const image_data& image) {
-  if (is_hdr(image)) {
+  if (is_float(image)) {
     auto rgb = vec3f{0, 0, 0};
-    for (auto& p : image.hdr) rgb += xyz(p);
+    for (auto& p : image.pixelsf) rgb += xyz(p);
     if (rgb == vec3f{0, 0, 0}) return {0, 0, 0, 1};
     rgb /= max(rgb);
     return {rgb.x, rgb.y, rgb.z, 1};
   } else {
     auto rgb = vec3f{0, 0, 0};
-    for (auto& p : image.ldr) rgb += xyz(byte_to_float(p));
+    for (auto& p : image.pixelsb) rgb += xyz(byte_to_float(p));
     if (rgb == vec3f{0, 0, 0}) return {0, 0, 0, 1};
     return {rgb.x, rgb.y, rgb.z, 1};
   }
@@ -358,8 +381,9 @@ bool load_image(const string& filename, image_data& image, string& error) {
     auto pixels = (float*)nullptr;
     if (LoadEXR(&pixels, &width, &height, filename.c_str(), nullptr) != 0)
       return read_error();
-    image     = make_hdr(width, height);
-    image.hdr = vector<vec4f>{(vec4f*)pixels, (vec4f*)pixels + width * height};
+    image         = make_hdr(width, height);
+    image.pixelsf = vector<vec4f>{
+        (vec4f*)pixels, (vec4f*)pixels + width * height};
     free(pixels);
     return true;
   } else if (ext == ".pfm" || ext == ".PFM") {
@@ -370,40 +394,45 @@ bool load_image(const string& filename, image_data& image, string& error) {
     auto width = 0, height = 0, ncomp = 0;
     auto pixels = stbi_loadf(filename.c_str(), &width, &height, &ncomp, 4);
     if (!pixels) return read_error();
-    image     = make_hdr(width, height);
-    image.hdr = vector<vec4f>{(vec4f*)pixels, (vec4f*)pixels + width * height};
+    image         = make_hdr(width, height);
+    image.pixelsf = vector<vec4f>{
+        (vec4f*)pixels, (vec4f*)pixels + width * height};
     free(pixels);
     return true;
   } else if (ext == ".png" || ext == ".PNG") {
     auto width = 0, height = 0, ncomp = 0;
     auto pixels = stbi_load(filename.c_str(), &width, &height, &ncomp, 4);
     if (!pixels) return read_error();
-    image     = make_ldr(width, height);
-    image.ldr = vector<vec4b>{(vec4b*)pixels, (vec4b*)pixels + width * height};
+    image         = make_ldr(width, height);
+    image.pixelsb = vector<vec4b>{
+        (vec4b*)pixels, (vec4b*)pixels + width * height};
     free(pixels);
     return true;
   } else if (ext == ".jpg" || ext == ".JPG") {
     auto width = 0, height = 0, ncomp = 0;
     auto pixels = stbi_load(filename.c_str(), &width, &height, &ncomp, 4);
     if (!pixels) return read_error();
-    image     = make_ldr(width, height);
-    image.ldr = vector<vec4b>{(vec4b*)pixels, (vec4b*)pixels + width * height};
+    image         = make_ldr(width, height);
+    image.pixelsb = vector<vec4b>{
+        (vec4b*)pixels, (vec4b*)pixels + width * height};
     free(pixels);
     return true;
   } else if (ext == ".tga" || ext == ".TGA") {
     auto width = 0, height = 0, ncomp = 0;
     auto pixels = stbi_load(filename.c_str(), &width, &height, &ncomp, 4);
     if (!pixels) return read_error();
-    image     = make_ldr(width, height);
-    image.ldr = vector<vec4b>{(vec4b*)pixels, (vec4b*)pixels + width * height};
+    image         = make_ldr(width, height);
+    image.pixelsb = vector<vec4b>{
+        (vec4b*)pixels, (vec4b*)pixels + width * height};
     free(pixels);
     return true;
   } else if (ext == ".bmp" || ext == ".BMP") {
     auto width = 0, height = 0, ncomp = 0;
     auto pixels = stbi_load(filename.c_str(), &width, &height, &ncomp, 4);
     if (!pixels) return read_error();
-    image     = make_ldr(width, height);
-    image.ldr = vector<vec4b>{(vec4b*)pixels, (vec4b*)pixels + width * height};
+    image         = make_ldr(width, height);
+    image.pixelsb = vector<vec4b>{
+        (vec4b*)pixels, (vec4b*)pixels + width * height};
     free(pixels);
     return true;
   } else {
@@ -426,18 +455,18 @@ bool save_image(
   // handlle conversions if needed
   auto image_ptr = (const image_data*)nullptr;
   auto converted = image_data{};
-  if (is_hdr_filename(filename) && is_ldr(image_)) {
+  if (is_hdr_filename(filename) && is_byte(image_)) {
     converted = make_hdr(image_.width, image_.height);
     for (auto idx = (size_t)0; idx < converted.width * converted.height;
          idx++) {
-      converted.hdr[idx] = srgb_to_rgb(byte_to_float(image_.ldr[idx]));
+      converted.pixelsf[idx] = srgb_to_rgb(byte_to_float(image_.pixelsb[idx]));
     }
     image_ptr = &converted;
-  } else if (is_ldr_filename(filename) && is_hdr(image_)) {
+  } else if (is_ldr_filename(filename) && is_float(image_)) {
     converted = make_ldr(image_.width, image_.height);
     for (auto idx = (size_t)0; idx < converted.width * converted.height;
          idx++) {
-      converted.ldr[idx] = float_to_byte(rgb_to_srgb(image_.hdr[idx]));
+      converted.pixelsb[idx] = float_to_byte(rgb_to_srgb(image_.pixelsf[idx]));
     }
     image_ptr = &converted;
   } else {
@@ -448,7 +477,7 @@ bool save_image(
   auto ext = path_extension(filename);
   if (ext == ".hdr" || ext == ".HDR") {
     if (!stbi_write_hdr(filename.c_str(), (int)image.width, (int)image.height,
-            4, (const float*)image.hdr.data()))
+            4, (const float*)image.pixelsf.data()))
       return write_error();
     return true;
   } else if (ext == ".pfm" || ext == ".PFM") {
@@ -456,28 +485,28 @@ bool save_image(
     throw std::invalid_argument{"pfm not support"};
     return false;
   } else if (ext == ".exr" || ext == ".EXR") {
-    if (SaveEXR((const float*)image.hdr.data(), (int)image.width,
+    if (SaveEXR((const float*)image.pixelsf.data(), (int)image.width,
             (int)image.height, 4, 1, filename.c_str(), nullptr) < 0)
       return write_error();
     return true;
   } else if (ext == ".png" || ext == ".PNG") {
     if (!stbi_write_png(filename.c_str(), (int)image.width, (int)image.height,
-            4, (const byte*)image.ldr.data(), (int)image.width * 4))
+            4, (const byte*)image.pixelsb.data(), (int)image.width * 4))
       return write_error();
     return true;
   } else if (ext == ".jpg" || ext == ".JPG") {
     if (!stbi_write_jpg(filename.c_str(), (int)image.width, (int)image.height,
-            4, (const byte*)image.ldr.data(), 75))
+            4, (const byte*)image.pixelsb.data(), 75))
       return write_error();
     return true;
   } else if (ext == ".tga" || ext == ".TGA") {
     if (!stbi_write_tga(filename.c_str(), (int)image.width, (int)image.height,
-            4, (const byte*)image.ldr.data()))
+            4, (const byte*)image.pixelsb.data()))
       return write_error();
     return true;
   } else if (ext == ".bmp" || ext == ".BMP") {
     if (!stbi_write_bmp(filename.c_str(), (int)image.width, (int)image.height,
-            4, (const byte*)image.ldr.data()))
+            4, (const byte*)image.pixelsb.data()))
       return write_error();
     return true;
   } else {
@@ -502,8 +531,8 @@ void bump_to_normal(
     image_data& normalmap, const image_data& bumpmap, float scale) {
   auto width = bumpmap.width, height = bumpmap.height;
   if (normalmap.width != bumpmap.width || normalmap.height != bumpmap.height) {
-    normalmap = is_hdr(bumpmap) ? make_hdr(width, height)
-                                : make_ldr(width, height);
+    normalmap = is_float(bumpmap) ? make_hdr(width, height)
+                                  : make_ldr(width, height);
   }
   auto dx = 1.0f / width, dy = 1.0f / height;
   for (int j = 0; j < height; j++) {
@@ -524,7 +553,7 @@ void bump_to_normal(
   }
 }
 image_data bump_to_normal(const image_data& bumpmap, float scale) {
-  auto normalmap = make_image(bumpmap.width, bumpmap.height, is_hdr(bumpmap));
+  auto normalmap = make_image(bumpmap.width, bumpmap.height, is_byte(bumpmap));
   bump_to_normal(normalmap, bumpmap, scale);
   return normalmap;
 }
@@ -535,8 +564,8 @@ static image_data make_proc_hdr(int width, int height, Shader&& shader) {
   auto scale = 1.0f / max(width, height);
   for (auto j = 0; j < height; j++) {
     for (auto i = 0; i < width; i++) {
-      auto uv                  = vec2f{i * scale, j * scale};
-      image.hdr[j * width + i] = shader(uv);
+      auto uv                      = vec2f{i * scale, j * scale};
+      image.pixelsf[j * width + i] = shader(uv);
     }
   }
   return image;
@@ -547,8 +576,8 @@ static image_data make_proc_ldr(int width, int height, Shader&& shader) {
   auto scale = 1.0f / max(width, height);
   for (auto j = 0; j < height; j++) {
     for (auto i = 0; i < width; i++) {
-      auto uv                  = vec2f{i * scale, j * scale};
-      image.ldr[j * width + i] = shader(uv);
+      auto uv                      = vec2f{i * scale, j * scale};
+      image.pixelsb[j * width + i] = shader(uv);
     }
   }
   return image;
@@ -833,7 +862,7 @@ image_data make_sunsky(int width, int height, float theta_sun, float turbidity,
   };
 
   // Make the sun sky image
-  auto img          = make_image(width, height, true);
+  auto img          = make_image(width, height, false);
   auto sky_integral = 0.0f, sun_integral = 0.0f;
   for (auto j = 0; j < height / 2; j++) {
     auto theta = pif * ((j + 0.5f) / height);
@@ -846,8 +875,8 @@ image_data make_sunsky(int width, int height, float theta_sun, float turbidity,
       auto sun_col = sun(theta, gamma);
       sky_integral += mean(sky_col) * sin(theta);
       sun_integral += mean(sun_col) * sin(theta);
-      auto col               = sky_col + sun_col;
-      img.hdr[j * width + i] = {col.x, col.y, col.z, 1};
+      auto col                   = sky_col + sun_col;
+      img.pixelsf[j * width + i] = {col.x, col.y, col.z, 1};
     }
   }
 
@@ -856,7 +885,7 @@ image_data make_sunsky(int width, int height, float theta_sun, float turbidity,
     for (auto j = 0; j < height / 2; j++) {
       auto theta = pif * ((j + 0.5f) / height);
       for (int i = 0; i < width; i++) {
-        auto pxl   = img.hdr[j * width + i];
+        auto pxl   = img.pixelsf[j * width + i];
         auto le    = vec3f{pxl.x, pxl.y, pxl.z};
         auto angle = sin(theta) * 4 * pif / (width * height);
         ground += le * (ground_albedo / pif) * cos(theta) * angle;
@@ -864,13 +893,13 @@ image_data make_sunsky(int width, int height, float theta_sun, float turbidity,
     }
     for (auto j = height / 2; j < height; j++) {
       for (int i = 0; i < width; i++) {
-        img.hdr[j * width + i] = {ground.x, ground.y, ground.z, 1};
+        img.pixelsf[j * width + i] = {ground.x, ground.y, ground.z, 1};
       }
     }
   } else {
     for (auto j = height / 2; j < height; j++) {
       for (int i = 0; i < width; i++) {
-        img.hdr[j * width + i] = {0, 0, 0, 1};
+        img.pixelsf[j * width + i] = {0, 0, 0, 1};
       }
     }
   }
@@ -882,7 +911,7 @@ image_data make_sunsky(int width, int height, float theta_sun, float turbidity,
 // Make an image of multiple lights.
 image_data make_lights(int width, int height, const vec3f& le, int nlights,
     float langle, float lwidth, float lheight) {
-  auto img = make_image(width, height, true);
+  auto img = make_image(width, height, false);
   for (auto j = 0; j < height / 2; j++) {
     auto theta = pif * ((j + 0.5f) / height);
     theta      = clamp(theta, 0.0f, pif / 2 - 0.00001f);
@@ -894,13 +923,13 @@ image_data make_lights(int width, int height, const vec3f& le, int nlights,
         auto lphi = 2 * pif * (l + 0.5f) / nlights;
         inlight   = inlight || fabs(phi - lphi) < lwidth / 2;
       }
-      img.hdr[j * width + i] = {le.x, le.y, le.z, 1};
+      img.pixelsf[j * width + i] = {le.x, le.y, le.z, 1};
     }
   }
   return img;
 }
 
-image_data make_logo(const string& type, bool hdr) {
+image_data make_logo(const string& type, bool as_byte) {
   static const auto logo_medium_size = vec2i{102, 36};
   static const auto logo_small_size  = vec2i{72, 28};
   // clang-format off
@@ -974,25 +1003,25 @@ static const auto logo_small = vector<byte> {
   };
   // clang-format on
   if (type == "logo-medium") {
-    auto image = make_image(logo_medium_size.x, logo_medium_size.y, hdr);
+    auto image = make_image(logo_medium_size.x, logo_medium_size.y, as_byte);
     for (auto i = 0; i < logo_medium_size.x * logo_medium_size.y; i++) {
-      if (hdr) {
-        image.hdr[i] = srgb_to_rgb(byte_to_float(
+      if (!as_byte) {
+        image.pixelsf[i] = srgb_to_rgb(byte_to_float(
             vec4b{logo_medium[i], logo_medium[i], logo_medium[i], (byte)255}));
       } else {
-        image.ldr[i] = vec4b{
+        image.pixelsb[i] = vec4b{
             logo_medium[i], logo_medium[i], logo_medium[i], (byte)255};
       }
     }
     return image;
   } else if (type == "logo-small") {
-    auto image = make_image(logo_small_size.x, logo_small_size.y, hdr);
+    auto image = make_image(logo_small_size.x, logo_small_size.y, as_byte);
     for (auto i = 0; i < logo_small_size.x * logo_small_size.y; i++) {
-      if (hdr) {
-        image.hdr[i] = srgb_to_rgb(byte_to_float(
+      if (!as_byte) {
+        image.pixelsf[i] = srgb_to_rgb(byte_to_float(
             vec4b{logo_small[i], logo_small[i], logo_small[i], (byte)255}));
       } else {
-        image.ldr[i] = vec4b{
+        image.pixelsb[i] = vec4b{
             logo_small[i], logo_small[i], logo_small[i], (byte)255};
       }
     }
@@ -1005,7 +1034,7 @@ static const auto logo_small = vector<byte> {
 
 image_data add_logo(const image_data& image, const string& type) {
   auto result = image;
-  auto logo   = make_logo(type, is_hdr(image));
+  auto logo   = make_logo(type, is_byte(image));
   set_region(result, logo, image.width - logo.width - 8,
       image.height - logo.height - 8);
   return result;
