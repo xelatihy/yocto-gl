@@ -90,7 +90,7 @@ struct app_state {
   }
 };
 
-void init_glscene(shade_scene* glscene, const sceneio_scene& ioscene,
+static void init_glscene(shade_scene* glscene, const sceneio_scene& ioscene,
     progress_callback progress_cb) {
   // handle progress
   auto progress = vec2i{
