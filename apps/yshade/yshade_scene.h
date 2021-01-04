@@ -26,40 +26,19 @@
 // POSSIBILITY OF SUCH DAMAGE.
 //
 
-#include <yocto/yocto_commonio.h>
 #include <yocto/yocto_json.h>
-
-#include "yshade_scene.h"
-#include "yshade_sculpt.h"
-
 using namespace yocto;
 
-struct app_params {
-  string         command = "sculpt";
-  sculpt__params sculpt  = {};
-  scene_params   scene   = {};
+struct scene_params {
+  string scene = "scene.json"s;
 };
 
 // Json IO
-void serialize_value(json_mode mode, json_value& json, app_params& value,
-    const string& description) {
+inline void serialize_value(json_mode mode, json_value& json,
+    scene_params& value, const string& description) {
   serialize_object(mode, json, value, description);
-  serialize_command(mode, json, value.command, "command", "Command.");
-  serialize_property(mode, json, value.scene, "scene", "View scenes.");
-  serialize_property(mode, json, value.sculpt, "sculpt", "Sculpt shapes.");
+  serialize_property(mode, json, value.scene, "scene", "Input scene.", true);
+  serialize_clipositionals(mode, json, {"scene"});
 }
 
-int main(int argc, const char* argv[]) {
-  // command line parameters
-  auto params = app_params{};
-  parse_cli(params, "View and edit interactively", argc, argv);
-
-  // dispatch commands
-  if (params.command == "scene") {
-    return run_scene(params.scene);
-  } else if (params.command == "sculpt") {
-    return run_sculpt(params.sculpt);
-  } else {
-    return print_fatal("unknown command " + params.command);
-  }
-}
+int run_scene(const scene_params& params);
