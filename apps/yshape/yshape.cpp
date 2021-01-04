@@ -723,11 +723,11 @@ int run_heightfield(const heightfield_params& params) {
 
   // adjust height
   if (params.height != 1) {
-    for (auto& pixel : image.hdr) pixel *= params.height;
+    for (auto& pixel : image.pixelsf) pixel *= params.height;
   }
 
   // create heightfield
-  auto shape = make_heightfield({image.width, image.height}, image.hdr);
+  auto shape = make_heightfield({image.width, image.height}, image.pixelsf);
   if (!params.smooth) shape.normals.clear();
 
   // print info

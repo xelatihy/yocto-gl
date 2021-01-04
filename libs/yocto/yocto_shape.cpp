@@ -4036,6 +4036,7 @@ shape_data make_heightfield(const vec2i& size, const vector<float>& height) {
     for (auto i = 0; i < size.x; i++)
       shape.positions[j * size.x + i].y = height[j * size.x + i];
   shape.normals = quads_normals(shape.quads, shape.positions);
+  return shape;
 }
 shape_data make_heightfield(const vec2i& size, const vector<vec4f>& color) {
   auto shape = make_recty(
@@ -4044,6 +4045,7 @@ shape_data make_heightfield(const vec2i& size, const vector<vec4f>& color) {
     for (auto i = 0; i < size.x; i++)
       shape.positions[j * size.x + i].y = mean(xyz(color[j * size.x + i]));
   shape.normals = quads_normals(shape.quads, shape.positions);
+  return shape;
 }
 
 }  // namespace yocto

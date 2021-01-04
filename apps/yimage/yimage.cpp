@@ -467,7 +467,7 @@ int run_diff(const diff_params& params) {
 
   // check diff
   if (params.signal) {
-    for (auto& c : diff.hdr) {
+    for (auto& c : diff.pixelsf) {
       if (max(xyz(c)) > params.threshold) {
         ioerror = "image content differs";
         return print_fatal(ioerror);
@@ -539,20 +539,20 @@ int run_setalpha(const setalpha_params& params) {
   auto out = make_image(image.width, image.height, is_hdr(image));
   for (auto idx = 0; idx < image.width * image.height; idx++) {
     if (is_hdr(image)) {
-      auto a = params.from_color ? mean(xyz(image.hdr[idx])) : image.hdr[idx].w;
+      auto a = params.from_color ? mean(xyz(image.pixelsf[idx])) : image.pixelsf[idx].w;
       if (params.to_color) {
-        out.hdr[idx] = {a, a, a, a};
+        out.pixelsf[idx] = {a, a, a, a};
       } else {
-        out.hdr[idx].w = a;
+        out.pixelsf[idx].w = a;
       }
     } else {
       auto a = params.from_color
-                   ? float_to_byte(mean(xyz(byte_to_float(image.ldr[idx]))))
-                   : image.ldr[idx].w;
+                   ? float_to_byte(mean(xyz(byte_to_float(image.pixelsb[idx]))))
+                   : image.pixelsb[idx].w;
       if (params.to_color) {
-        out.ldr[idx] = {a, a, a, a};
+        out.pixelsb[idx] = {a, a, a, a};
       } else {
-        out.ldr[idx].w = a;
+        out.pixelsb[idx].w = a;
       }
     }
   }
