@@ -143,21 +143,13 @@ struct shade_environment {
   shade_texture* emission_tex = nullptr;
 
   // drawing data
-  shade_shape* shape   = new shade_shape{};
-  ogl_cubemap* cubemap = new ogl_cubemap{};
+  shade_shape* envlight_shape   = nullptr;
+  ogl_cubemap* envlight_cubemap = nullptr;
 
   // envlight precomputed data
-  ogl_cubemap* envlight_diffuse  = new ogl_cubemap{};
-  ogl_cubemap* envlight_specular = new ogl_cubemap{};
-  ogl_texture* envlight_brdflut  = new ogl_texture{};
-
-  // Disable copy construction
-  shade_environment()                         = default;
-  shade_environment(const shade_environment&) = delete;
-  shade_environment& operator=(const shade_environment&) = delete;
-
-  // Cleanup
-  ~shade_environment();
+  ogl_cubemap* envlight_diffuse_  = nullptr;
+  ogl_cubemap* envlight_specular_ = nullptr;
+  ogl_texture* envlight_brdflut_  = nullptr;
 };
 
 // Opengl scene
@@ -169,6 +161,13 @@ struct shade_scene {
   vector<shade_material*>    materials    = {};
   vector<shade_texture*>     textures     = {};
   vector<shade_environment*> environments = {};
+
+  // data for envmaps
+  vector<shade_shape*> envlight_shapes    = {};
+  vector<ogl_cubemap*> envlight_cubemaps  = {};
+  vector<ogl_cubemap*> envlight_diffuses  = {};
+  vector<ogl_cubemap*> envlight_speculars = {};
+  vector<ogl_texture*> envlight_brdfluts  = {};
 
   // programs
   ogl_program* environment_program = new ogl_program{};
@@ -310,8 +309,6 @@ void set_highlighted(shade_instance& instance, bool highlighted);
 
 // check if initialized
 bool is_initialized(const shade_environment* environment);
-// clear environment
-void clear_environment(shade_environment* environment);
 
 // environment properties
 void set_frame(shade_environment* environment, const frame3f& frame);
