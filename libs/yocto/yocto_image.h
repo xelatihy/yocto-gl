@@ -74,17 +74,23 @@ struct image_data {
 // image creation
 image_data make_hdr(int width, int height);
 image_data make_ldr(int width, int height);
-image_data make_image(int width, int height, bool hdr);
+image_data make_image(int width, int height, bool as_float);
 image_data make_image(int width, int height, const vec4f* data);
 image_data make_image(int width, int height, const vec4b& data);
 
 // queries
 bool is_hdr(const image_data& image);
 bool is_ldr(const image_data& image);
+bool is_byte(const image_data& image);
+bool is_float(const image_data& image);
 
 // pixel access
 vec4f get_pixel(const image_data& image, int i, int j);
 void  set_pixel(image_data& image, int i, int j, const vec4f& pixel);
+
+// conversions
+image_data byte_to_float(const image_data& image);
+image_data float_to_byte(const image_data& image);
 
 // Evaluates an image at a point `uv`.
 vec4f eval_image(const image_data& image, const vec2f& uv,

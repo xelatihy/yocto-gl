@@ -79,6 +79,8 @@ image_data make_image(int width, int height, const vec4b* data) {
 // queries
 bool is_hdr(const image_data& image) { return !image.hdr.empty(); }
 bool is_ldr(const image_data& image) { return !image.ldr.empty(); }
+bool is_float(const image_data& image) { return !image.hdr.empty(); }
+bool is_byte(const image_data& image) { return !image.ldr.empty(); }
 
 // pixel access
 vec4f get_pixel(const image_data& image, int i, int j) {
@@ -95,6 +97,26 @@ void set_pixel(image_data& image, int i, int j, const vec4f& pixel) {
     image.ldr[j * image.width + i] = float_to_byte(pixel);
   }
 }
+
+// conversions
+image_data byte_to_float(const image_data& image) {
+  if (is_float(image)) return image;
+  auto result = make_image(image.width, image.height, true);
+  for (auto idx = 0; idx < image.width * image.height; idx++) {
+    result.hdr[idx] = byte_to_float(image.ldr[idx]);
+  }
+  return result;
+}
+image_data float_to_byte(const image_data& image) {
+  if (is_byte(image)) return image;
+  auto result = make_image(image.width, image.height, false);
+  for (auto idx = 0; idx < image.width * image.height; idx++) {
+    result.ldr[idx] = float_to_byte(image.hdr[idx]);
+  }
+  return result;
+}
+void byte_to_float(image_data& result, const image_data& image);
+void float_to_byte(image_data& result, const image_data& image);
 
 // Apply tone mapping returning a float or byte image.
 image_data tonemap_image(const image_data& image, float exposure, bool filmic) {

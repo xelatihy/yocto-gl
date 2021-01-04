@@ -1072,9 +1072,9 @@ int main(int argc, const char* argv[]) {
   parse_cli(cli, argc, argv);
 
   // load data
-  auto geojson_guard = std::make_unique<geojson_scene>();
-  auto geojson       = geojson_guard.get();
-  auto ioerror       = ""s;
+  auto geojson = geojson_scene;
+  auto geojson = geojson_guard.get();
+  auto ioerror = ""s;
   print_progress("load geojsons", 0, 1);
   for (auto& filename : list_directory(path)) {
     if (path_extension(filename) != ".geojson") continue;
@@ -1099,8 +1099,7 @@ int main(int argc, const char* argv[]) {
   print_progress("load textures", 1, 1);
 
   // Create city
-  auto scene_guard = std::make_unique<sceneio_scene>();
-  auto scene       = scene_guard.get();
+  auto scene = sceneio_scene{};
   print_progress("convert scene", 0, 1);
   if (!geojson_to_scene(scene, geojson, path, ioerror)) print_fatal(ioerror);
   print_progress("convert scene", 1, 1);
@@ -1116,11 +1115,11 @@ int main(int argc, const char* argv[]) {
 
   // make a directory if needed
   if (!make_directory(path_dirname(output), ioerror)) print_fatal(ioerror);
-  if (!scene->shapes.empty()) {
+  if (!scene.shapes.empty()) {
     if (!make_directory(path_join(path_dirname(output), "shapes"), ioerror))
       print_fatal(ioerror);
   }
-  if (!scene->textures.empty()) {
+  if (!scene.textures.empty()) {
     if (!make_directory(path_join(path_dirname(output), "textures"), ioerror))
       print_fatal(ioerror);
   }

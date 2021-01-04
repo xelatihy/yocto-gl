@@ -814,9 +814,8 @@ void make_shell(vector<vec4i>& quads, vector<vec3f>& positions,
     vector<vec3f>& normals, vector<vec2f>& texcoords, float thickness);
 
 // Make a heightfield mesh.
-void make_heightfield(vector<vec4i>& quads, vector<vec3f>& positions,
-    vector<vec3f>& normals, vector<vec2f>& texcoords, const vec2i& size,
-    const vector<float>& height);
+shape_data make_heightfield(const vec2i& size, const vector<float>& height);
+shape_data make_heightfield(const vec2i& size, const vector<vec4f>& color);
 
 // Backward compatibility (mostly)
 using quads_shape     = shape_data;
