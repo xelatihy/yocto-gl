@@ -73,6 +73,20 @@ void set_ogl_blending(bool enabled);
 void set_ogl_point_size(int size);
 void set_ogl_msaa();
 
+// Utility for move contructions
+template <typename T>
+inline void move_by_swap(T* self, T&& other) {
+  // https://stackoverflow.com/questions/8166502/c-fastest-method-to-swap-two-memory-blocks-of-equal-size
+  unsigned char*       p      = (unsigned char*)self;
+  unsigned char*       q      = (unsigned char*)&other;
+  unsigned char* const sentry = p + sizeof(T);
+  for (; p < sentry; ++p, ++q) {
+    const unsigned char t = *p;
+    *p                    = *q;
+    *q                    = t;
+  }
+}
+
 // OpenGL texture
 struct ogl_texture {
   // Texture properties
@@ -90,6 +104,7 @@ struct ogl_texture {
   ogl_texture()                   = default;
   ogl_texture(const ogl_texture&) = delete;
   ogl_texture& operator=(const ogl_texture&) = delete;
+  ogl_texture(ogl_texture&& other) { move_by_swap(this, std::move(other)); }
 
   // cleanup
   ~ogl_texture();
@@ -140,6 +155,7 @@ struct ogl_cubemap {
   ogl_cubemap()                   = default;
   ogl_cubemap(const ogl_cubemap&) = delete;
   ogl_cubemap& operator=(const ogl_cubemap&) = delete;
+  ogl_cubemap(ogl_cubemap&& other) { move_by_swap(this, std::move(other)); }
 
   // cleanup
   ~ogl_cubemap();
@@ -192,6 +208,9 @@ struct ogl_arraybuffer {
   ogl_arraybuffer()                       = default;
   ogl_arraybuffer(const ogl_arraybuffer&) = delete;
   ogl_arraybuffer& operator=(const ogl_arraybuffer&) = delete;
+  ogl_arraybuffer(ogl_arraybuffer&& other) {
+    move_by_swap(this, std::move(other));
+  }
 
   // Cleanup
   ~ogl_arraybuffer();
@@ -231,6 +250,9 @@ struct ogl_elementbuffer {
   ogl_elementbuffer()                         = default;
   ogl_elementbuffer(const ogl_elementbuffer&) = delete;
   ogl_elementbuffer& operator=(const ogl_elementbuffer&) = delete;
+  ogl_elementbuffer(ogl_elementbuffer&& other) {
+    move_by_swap(this, std::move(other));
+  }
 
   // Cleanup
   ~ogl_elementbuffer();
@@ -272,6 +294,7 @@ struct ogl_program {
   ogl_program()                   = default;
   ogl_program(const ogl_program&) = delete;
   ogl_program& operator=(const ogl_program&) = delete;
+  ogl_program(ogl_program&& other) { move_by_swap(this, std::move(other)); }
 
   // Cleanup
   ~ogl_program();
@@ -362,6 +385,9 @@ struct ogl_framebuffer {
   ogl_framebuffer()                       = default;
   ogl_framebuffer(const ogl_framebuffer&) = delete;
   ogl_framebuffer& operator=(const ogl_framebuffer&) = delete;
+  ogl_framebuffer(ogl_framebuffer&& other) {
+    move_by_swap(this, std::move(other));
+  }
 
   // Cleanup
   ~ogl_framebuffer();
@@ -411,6 +437,14 @@ struct ogl_shape {
   ogl_shape()                 = default;
   ogl_shape(const ogl_shape&) = delete;
   ogl_shape& operator=(const ogl_shape&) = delete;
+  ogl_shape(ogl_shape&& other) {
+    vertex_buffers.swap(other.vertex_buffers);
+    std::swap(index_buffer, other.index_buffer);
+    std::swap(elements, other.elements);
+    std::swap(num_instances, other.num_instances);
+    std::swap(point_size, other.point_size);
+    std::swap(shape_id, other.shape_id);
+  }
 
   // Cleanup
   ~ogl_shape();

@@ -773,8 +773,7 @@ void init_envlight(shade_scene& scene, shade_environment& environment) {
     environment.envlight_specular_ = scene.envlight_speculars.emplace_back(
         new ogl_cubemap{});
   if (environment.envlight_brdflut_ == nullptr)
-    environment.envlight_brdflut_ = scene.envlight_brdfluts.emplace_back(
-        new ogl_texture{});
+    environment.envlight_brdflut_ = scene.envlight_brdfluts.emplace_back();
 
   // precompute irradiance map
   auto diffuse_program_guard = make_unique<ogl_program>();
