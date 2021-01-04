@@ -162,35 +162,35 @@ struct ogl_cubemap {
 };
 
 // set cubemap
-void set_cubemap(ogl_cubemap* cubemap, int size, int num_channels,
+void set_cubemap(ogl_cubemap& cubemap, int size, int num_channels,
     const array<byte*, 6>& img, bool as_srgb = false, bool linear = true,
     bool mipmap = true);
-void set_cubemap(ogl_cubemap* cubemap, int size, int num_channels,
+void set_cubemap(ogl_cubemap& cubemap, int size, int num_channels,
     const array<float*, 6>& img, bool as_float = false, bool linear = true,
     bool mipmap = true);
 
 // check if cubemap is initialized
-bool is_initialized(const ogl_cubemap* cubemap);
+bool is_initialized(const ogl_cubemap& cubemap);
 
 // clear cubemap
-void clear_cubemap(ogl_cubemap* cubemap);
+void clear_cubemap(ogl_cubemap& cubemap);
 
-void set_cubemap(ogl_cubemap* cubemap, const array<image<vec4b>, 6>& img,
+void set_cubemap(ogl_cubemap& cubemap, const array<image<vec4b>, 6>& img,
     int num_channels, bool as_srgb = true, bool linear = true,
     bool mipmap = true);
-void set_cubemap(ogl_cubemap* cubemap, const array<image<vec4f>, 6>& img,
+void set_cubemap(ogl_cubemap& cubemap, const array<image<vec4f>, 6>& img,
     int num_channels, bool as_float = false, bool linear = true,
     bool mipmap = true);
-void set_cubemap(ogl_cubemap* cubemap, const array<image<vec3b>, 6>& img,
+void set_cubemap(ogl_cubemap& cubemap, const array<image<vec3b>, 6>& img,
     int num_channels, bool as_srgb = true, bool linear = true,
     bool mipmap = true);
-void set_cubemap(ogl_cubemap* cubemap, const array<image<vec3f>, 6>& img,
+void set_cubemap(ogl_cubemap& cubemap, const array<image<vec3f>, 6>& img,
     int num_channels, bool as_float = false, bool linear = true,
     bool mipmap = true);
-void set_cubemap(ogl_cubemap* cubemap, const array<image<byte>, 6>& img,
+void set_cubemap(ogl_cubemap& cubemap, const array<image<byte>, 6>& img,
     int num_channels, bool as_srgb = true, bool linear = true,
     bool mipmap = true);
-void set_cubemap(ogl_cubemap* cubemap, const array<image<float>, 6>& img,
+void set_cubemap(ogl_cubemap& cubemap, const array<image<float>, 6>& img,
     int num_channels, bool as_float = false, bool linear = true,
     bool mipmap = true);
 
@@ -356,13 +356,13 @@ void set_uniform(const ogl_program* program, const char* name,
 
 // set uniform cubemap
 void set_uniform(const ogl_program* program, int location,
-    const ogl_cubemap* cubemap, int unit);
+    const ogl_cubemap& cubemap, int unit);
 void set_uniform(const ogl_program* program, const char* name,
-    const ogl_cubemap* cubemap, int unit);
+    const ogl_cubemap& cubemap, int unit);
 void set_uniform(ogl_program* program, int location, int location_on,
-    const ogl_cubemap* cubemap, int unit);
+    const ogl_cubemap& cubemap, int unit);
 void set_uniform(ogl_program* program, const char* name, const char* name_on,
-    const ogl_cubemap* cubemap, int unit);
+    const ogl_cubemap& cubemap, int unit);
 }  // namespace yocto
 
 // -----------------------------------------------------------------------------
@@ -399,7 +399,7 @@ void set_framebuffer_texture(const ogl_framebuffer* framebuffer,
     const ogl_texture* texture, uint mipmap_level = 0);
 
 void set_framebuffer_texture(const ogl_framebuffer* framebuffer,
-    const ogl_cubemap* cubemap, uint face, uint mipmap_level = 0);
+    const ogl_cubemap& cubemap, uint face, uint mipmap_level = 0);
 
 void bind_framebuffer(const ogl_framebuffer* target);
 void unbind_framebuffer();
