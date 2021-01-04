@@ -115,9 +115,9 @@ void init_glscene(shade_sculpt_state *app, shade_scene &glscene,
 
   // camera
   if (progress_cb) progress_cb("convert camera", progress.x++, progress.y);
-  auto glcamera = add_camera(glscene, camera_frame(0.050, 16.0f / 9.0f, 0.036),
+  auto &glcamera = add_camera(glscene, camera_frame(0.050, 16.0f / 9.0f, 0.036),
       0.050, 16.0f / 9.0f, 0.036);
-  glcamera->focus = length(glcamera->frame.o - center(bbox));
+  glcamera.focus = length(glcamera.frame.o - center(bbox));
 
   // material
   if (progress_cb) progress_cb("convert material", progress.x++, progress.y);
@@ -305,7 +305,7 @@ void view_pointer(generic_shape *shape, shade_shape *glshape,
 
 // To make the stroke sampling (position, normal) following the mouse
 vector<pair<vec3f, vec3f>> stroke(
-    sculpt_params *params, vec2f mouse_uv, shade_camera *glcamera) {
+    sculpt_params *params, vec2f mouse_uv, shade_camera &glcamera) {
   // eval current intersection
   auto                       shape = params->shape;
   vector<pair<vec3f, vec3f>> pairs;
@@ -344,8 +344,8 @@ vector<pair<vec3f, vec3f>> stroke(
   auto  mouse_dir = normalize(mouse_uv - params->locked_uv);
   for (int step = 0; step < steps; step++) {
     params->locked_uv += stroke_uv * mouse_dir;
-    auto ray = camera_ray(glcamera->frame, glcamera->lens, glcamera->aspect,
-        glcamera->film, params->locked_uv);
+    auto ray = camera_ray(glcamera.frame, glcamera.lens, glcamera.aspect,
+        glcamera.film, params->locked_uv);
     inter    = intersect_triangles_bvh(params->bvh_shape_tree,
         params->shape->triangles, params->shape->positions, ray, false);
     if (!inter.hit) continue;
@@ -658,9 +658,9 @@ int run_shade_sculpt(const shade_sculpt_params &params_) {
     auto mouse_uv = vec2f{input.mouse_pos.x / float(input.window_size.x),
         input.mouse_pos.y / float(input.window_size.y)};
 
-    auto glcamera            = app->glscene.cameras.at(0);
-    params->camera_ray       = camera_ray(glcamera->frame, glcamera->lens,
-        glcamera->aspect, glcamera->film, mouse_uv);
+    auto &glcamera           = app->glscene.cameras.at(0);
+    params->camera_ray       = camera_ray(glcamera.frame, glcamera.lens,
+        glcamera.aspect, glcamera.film, mouse_uv);
     params->bvh_intersection = intersect_triangles_bvh(params->bvh_shape_tree,
         params->shape->triangles, params->shape->positions, params->camera_ray,
         false);
@@ -724,10 +724,10 @@ int run_shade_sculpt(const shade_sculpt_params &params_) {
         dolly = (input.mouse_pos.x - input.mouse_last.x) / 100.0f;
       if (input.mouse_left && input.modifier_shift)
         pan = (input.mouse_pos - input.mouse_last) / 100.0f;
-      auto glcamera                              = app->glscene.cameras.at(0);
-      std::tie(glcamera->frame, glcamera->focus) = camera_turntable(
-          glcamera->frame, glcamera->focus, rotate, dolly, -pan);
-      // set_frame(glcamera, glcamera->frame);
+      auto &glcamera                           = app->glscene.cameras.at(0);
+      std::tie(glcamera.frame, glcamera.focus) = camera_turntable(
+          glcamera.frame, glcamera.focus, rotate, dolly, -pan);
+      // set_frame(glcamera, glcamera.frame);
     }
   };
 

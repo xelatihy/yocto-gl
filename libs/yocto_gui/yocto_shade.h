@@ -153,7 +153,7 @@ struct shade_environment {
 // Opengl scene
 struct shade_scene {
   // scene objects
-  vector<shade_camera*>      cameras      = {};
+  vector<shade_camera>       cameras      = {};
   vector<shade_instance*>    instances    = {};
   vector<shade_shape*>       shapes       = {};
   vector<shade_material*>    materials    = {};
@@ -216,7 +216,7 @@ bool has_envlight(const shade_scene& scene);
 void clear_scene(shade_scene& scene);
 
 // add scene elements
-shade_camera*      add_camera(shade_scene& scene);
+shade_camera&      add_camera(shade_scene& scene);
 shade_texture*     add_texture(shade_scene& scene);
 shade_material*    add_material(shade_scene& scene);
 shade_shape*       add_shape(shade_scene& scene);
@@ -224,9 +224,9 @@ shade_instance*    add_instance(shade_scene& scene);
 shade_environment* add_environment(shade_scene& scene);
 
 // camera properties
-void set_frame(shade_camera* camera, const frame3f& frame);
-void set_lens(shade_camera* camera, float lens, float aspect, float film);
-void set_nearfar(shade_camera* camera, float near, float far);
+void set_frame(shade_camera& camera, const frame3f& frame);
+void set_lens(shade_camera& camera, float lens, float aspect, float film);
+void set_nearfar(shade_camera& camera, float near, float far);
 
 // check if initialized
 bool is_initialized(const shade_texture* texture);
@@ -309,7 +309,7 @@ void set_emission(shade_environment* environment, const vec3f& emission,
     shade_texture* emission_tex = nullptr);
 
 // shortcuts
-shade_camera*   add_camera(shade_scene& scene, const frame3f& frame, float lens,
+shade_camera&   add_camera(shade_scene& scene, const frame3f& frame, float lens,
       float aspect, float film = 0.036, float near = 0.001, float far = 10000);
 shade_material* add_material(shade_scene& scene, const vec3f& emission,
     const vec3f& color, float specular, float metallic, float roughness,
@@ -330,7 +330,7 @@ shade_environment* add_environment(shade_scene& scene, const frame3f& frame,
     const vec3f& emission, shade_texture* emission_tex = nullptr);
 
 // draw scene
-void draw_scene(const shade_scene& scene, const shade_camera* camera,
+void draw_scene(const shade_scene& scene, const shade_camera& camera,
     const vec4i& viewport, const shade_params& params);
 
 }  // namespace yocto

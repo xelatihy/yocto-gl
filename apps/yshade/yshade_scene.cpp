@@ -99,7 +99,7 @@ static void init_glscene(shade_scene& glscene, const sceneio_scene& ioscene,
   // camera
   for (auto& iocamera : ioscene.cameras) {
     if (progress_cb) progress_cb("convert camera", progress.x++, progress.y);
-    auto camera = add_camera(glscene);
+    auto& camera = add_camera(glscene);
     set_frame(camera, iocamera.frame);
     set_lens(camera, iocamera.lens, iocamera.aspect, iocamera.film);
     set_nearfar(camera, 0.001, 10000);

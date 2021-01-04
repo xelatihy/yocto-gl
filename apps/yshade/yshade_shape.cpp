@@ -174,9 +174,9 @@ static void init_glscene(shade_shape_state* app, shade_scene& glscene,
 
   // camera
   if (progress_cb) progress_cb("convert camera", progress.x++, progress.y);
-  auto glcamera = add_camera(glscene, camera_frame(0.050, 16.0f / 9.0f, 0.036),
+  auto& glcamera = add_camera(glscene, camera_frame(0.050, 16.0f / 9.0f, 0.036),
       0.050, 16.0f / 9.0f, 0.036);
-  glcamera->focus = length(glcamera->frame.o - center(bbox));
+  glcamera.focus = length(glcamera.frame.o - center(bbox));
 
   // material
   if (progress_cb) progress_cb("convert material", progress.x++, progress.y);
@@ -402,9 +402,9 @@ int run_shade_shape(const shade_shape_params& params) {
       pan.x    = -pan.x;
       rotate.y = -rotate.y;
 
-      auto& glcamera                             = app->glscene.cameras.at(0);
-      std::tie(glcamera->frame, glcamera->focus) = camera_turntable(
-          glcamera->frame, glcamera->focus, rotate, dolly, pan);
+      auto& glcamera                           = app->glscene.cameras.at(0);
+      std::tie(glcamera.frame, glcamera.focus) = camera_turntable(
+          glcamera.frame, glcamera.focus, rotate, dolly, pan);
     }
   };
 

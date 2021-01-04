@@ -155,7 +155,6 @@ void set_point_size(shade_shape* shape, float point_size) {
 }
 
 shade_scene::~shade_scene() {
-  for (auto camera : cameras) delete camera;
   for (auto shape : shapes) delete shape;
   for (auto material : materials) delete material;
   for (auto texture : textures) delete texture;
@@ -222,20 +221,20 @@ void clear_scene(shade_scene& scene) {
 }
 
 // add camera
-shade_camera* add_camera(shade_scene& scene) {
-  return scene.cameras.emplace_back(new shade_camera{});
+shade_camera& add_camera(shade_scene& scene) {
+  return scene.cameras.emplace_back();
 }
-void set_frame(shade_camera* camera, const frame3f& frame) {
-  camera->frame = frame;
+void set_frame(shade_camera& camera, const frame3f& frame) {
+  camera.frame = frame;
 }
-void set_lens(shade_camera* camera, float lens, float aspect, float film) {
-  camera->lens   = lens;
-  camera->aspect = aspect;
-  camera->film   = film;
+void set_lens(shade_camera& camera, float lens, float aspect, float film) {
+  camera.lens   = lens;
+  camera.aspect = aspect;
+  camera.film   = film;
 }
-void set_nearfar(shade_camera* camera, float near, float far) {
-  camera->near = near;
-  camera->far  = far;
+void set_nearfar(shade_camera& camera, float near, float far) {
+  camera.near = near;
+  camera.far  = far;
 }
 
 // add texture
@@ -414,9 +413,9 @@ void set_emission(shade_environment* environment, const vec3f& emission,
 }
 
 // shortcuts
-shade_camera* add_camera(shade_scene& scene, const frame3f& frame, float lens,
+shade_camera& add_camera(shade_scene& scene, const frame3f& frame, float lens,
     float aspect, float film, float near, float far) {
-  auto camera = add_camera(scene);
+  auto& camera = add_camera(scene);
   set_frame(camera, frame);
   set_lens(camera, lens, aspect, film);
   set_nearfar(camera, near, far);
@@ -643,25 +642,25 @@ void draw_instances(const shade_scene& scene, const shade_view& view,
   unbind_program();
 }
 
-static shade_view make_scene_view(const shade_camera* camera,
+static shade_view make_scene_view(const shade_camera& camera,
     const vec4i& viewport, const shade_params& params) {
   auto camera_aspect = (float)viewport.z / (float)viewport.w;
   auto camera_yfov =
       camera_aspect >= 0
-          ? (2 * atan(camera->film / (camera_aspect * 2 * camera->lens)))
-          : (2 * atan(camera->film / (2 * camera->lens)));
-  auto view_matrix       = frame_to_mat(inverse(camera->frame));
+          ? (2 * atan(camera.film / (camera_aspect * 2 * camera.lens)))
+          : (2 * atan(camera.film / (2 * camera.lens)));
+  auto view_matrix       = frame_to_mat(inverse(camera.frame));
   auto projection_matrix = perspective_mat(
       camera_yfov, camera_aspect, params.near, params.far);
 
   auto view              = shade_view{};
-  view.camera_frame      = camera->frame;
+  view.camera_frame      = camera.frame;
   view.view_matrix       = view_matrix;
   view.projection_matrix = projection_matrix;
   return view;
 }
 
-void draw_scene(const shade_scene& scene, const shade_camera* camera,
+void draw_scene(const shade_scene& scene, const shade_camera& camera,
     const vec4i& viewport, const shade_params& params) {
   clear_ogl_framebuffer(params.background);
   set_ogl_viewport(viewport);
