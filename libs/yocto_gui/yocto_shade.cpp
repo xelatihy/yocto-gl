@@ -156,7 +156,6 @@ void set_point_size(shade_shape* shape, float point_size) {
 
 shade_scene::~shade_scene() {
   for (auto shape : shapes) delete shape;
-  for (auto material : materials) delete material;
   for (auto texture : textures) delete texture;
   delete environment_program;
   delete instance_program;
@@ -304,7 +303,7 @@ void set_frame(shade_instance& instance, const frame3f& frame) {
 void set_shape(shade_instance& instance, shade_shape* shape) {
   instance.shape = shape;
 }
-void set_material(shade_instance& instance, shade_material* material) {
+void set_material(shade_instance& instance, glmaterial_handle material) {
   instance.material = material;
 }
 void set_hidden(shade_instance& instance, bool hidden) {
@@ -315,44 +314,43 @@ void set_highlighted(shade_instance& instance, bool highlighted) {
 }
 
 // add material
-shade_material* add_material(shade_scene& scene) {
-  return scene.materials.emplace_back(new shade_material{});
+glmaterial_handle add_material(shade_scene& scene) {
+  scene.materials.emplace_back();
+  return (int)scene.materials.size() - 1;
 }
-void set_emission(shade_material* material, const vec3f& emission,
+void set_emission(shade_material& material, const vec3f& emission,
     shade_texture* emission_tex) {
-  material->emission     = emission;
-  material->emission_tex = emission_tex;
+  material.emission     = emission;
+  material.emission_tex = emission_tex;
 }
 void set_color(
-    shade_material* material, const vec3f& color, shade_texture* color_tex) {
-  material->color     = color;
-  material->color_tex = color_tex;
+    shade_material& material, const vec3f& color, shade_texture* color_tex) {
+  material.color     = color;
+  material.color_tex = color_tex;
 }
 void set_specular(
-    shade_material* material, float specular, shade_texture* specular_tex) {
-  material->specular     = specular;
-  material->specular_tex = specular_tex;
+    shade_material& material, float specular, shade_texture* specular_tex) {
+  material.specular     = specular;
+  material.specular_tex = specular_tex;
 }
 void set_roughness(
-    shade_material* material, float roughness, shade_texture* roughness_tex) {
-  material->roughness     = roughness;
-  material->roughness_tex = roughness_tex;
+    shade_material& material, float roughness, shade_texture* roughness_tex) {
+  material.roughness     = roughness;
+  material.roughness_tex = roughness_tex;
 }
 void set_opacity(
-    shade_material* material, float opacity, shade_texture* opacity_tex) {
-  material->opacity = opacity;
+    shade_material& material, float opacity, shade_texture* opacity_tex) {
+  material.opacity = opacity;
 }
 void set_metallic(
-    shade_material* material, float metallic, shade_texture* metallic_tex) {
-  material->metallic     = metallic;
-  material->metallic_tex = metallic_tex;
+    shade_material& material, float metallic, shade_texture* metallic_tex) {
+  material.metallic     = metallic;
+  material.metallic_tex = metallic_tex;
 }
-void set_normalmap(shade_material* material, shade_texture* normal_tex) {
-  material->normal_tex = normal_tex;
+void set_normalmap(shade_material& material, shade_texture* normal_tex) {
+  material.normal_tex = normal_tex;
 }
-void set_unlit(shade_material* material, bool unlit) {
-  material->unlit = unlit;
-}
+void set_unlit(shade_material& material, bool unlit) { material.unlit = unlit; }
 
 shade_shape* add_shape(shade_scene& scene, const vector<int>& points,
     const vector<vec2i>& lines, const vector<vec3i>& triangles,
@@ -400,23 +398,24 @@ glcamera_handle add_camera(shade_scene& scene, const frame3f& frame, float lens,
   set_nearfar(camera, near, far);
   return handle;
 }
-shade_material* add_material(shade_scene& scene, const vec3f& emission,
+glmaterial_handle add_material(shade_scene& scene, const vec3f& emission,
     const vec3f& color, float specular, float metallic, float roughness,
     shade_texture* emission_tex, shade_texture* color_tex,
     shade_texture* specular_tex, shade_texture* metallic_tex,
     shade_texture* roughness_tex, shade_texture* normalmap_tex) {
-  auto material = add_material(scene);
+  auto  handle   = add_material(scene);
+  auto& material = scene.materials[handle];
   set_emission(material, emission, emission_tex);
   set_color(material, color, color_tex);
   set_specular(material, specular, specular_tex);
   set_metallic(material, metallic, metallic_tex);
   set_roughness(material, roughness, roughness_tex);
   set_normalmap(material, normalmap_tex);
-  return material;
+  return handle;
 }
 
 glinstance_handle add_instance(shade_scene& scene, const frame3f& frame,
-    shade_shape* shape, shade_material* material, bool hidden,
+    shade_shape* shape, glmaterial_handle material, bool hidden,
     bool highlighted) {
   auto  handle   = add_instance(scene);
   auto& instance = scene.instances.back();
@@ -457,7 +456,7 @@ void set_params_uniforms(ogl_program* program, const shade_params& params) {
 
 // Draw a shape
 void set_instance_uniforms(ogl_program* program, const frame3f& frame,
-    const shade_shape* shape, const shade_material* material,
+    const shade_shape* shape, const shade_material& material,
     const shade_params& params) {
   auto shape_xform     = frame_to_mat(frame);
   auto shape_inv_xform = transpose(
@@ -480,25 +479,25 @@ void set_instance_uniforms(ogl_program* program, const frame3f& frame,
         program, name, name_on, texture == nullptr ? nullptr : texture, unit);
   };
 
-  set_uniform(program, "unlit", material->unlit);
-  set_uniform(program, "emission", material->emission);
-  set_uniform(program, "diffuse", material->color);
+  set_uniform(program, "unlit", material.unlit);
+  set_uniform(program, "emission", material.emission);
+  set_uniform(program, "diffuse", material.color);
   set_uniform(program, "specular",
-      vec3f{material->metallic, material->metallic, material->metallic});
-  set_uniform(program, "roughness", material->roughness);
-  set_uniform(program, "opacity", material->opacity);
+      vec3f{material.metallic, material.metallic, material.metallic});
+  set_uniform(program, "roughness", material.roughness);
+  set_uniform(program, "opacity", material.opacity);
   set_uniform(program, "double_sided", params.double_sided);
   set_texture(
-      program, "emission_tex", "emission_tex_on", material->emission_tex, 0);
-  set_texture(program, "diffuse_tex", "diffuse_tex_on", material->color_tex, 1);
+      program, "emission_tex", "emission_tex_on", material.emission_tex, 0);
+  set_texture(program, "diffuse_tex", "diffuse_tex_on", material.color_tex, 1);
   set_texture(
-      program, "specular_tex", "specular_tex_on", material->metallic_tex, 2);
+      program, "specular_tex", "specular_tex_on", material.metallic_tex, 2);
   set_texture(
-      program, "roughness_tex", "roughness_tex_on", material->roughness_tex, 3);
+      program, "roughness_tex", "roughness_tex_on", material.roughness_tex, 3);
   set_texture(
-      program, "opacity_tex", "opacity_tex_on", material->opacity_tex, 4);
+      program, "opacity_tex", "opacity_tex_on", material.opacity_tex, 4);
   set_texture(
-      program, "normalmap_tex", "normalmap_tex_on", material->normal_tex, 5);
+      program, "normalmap_tex", "normalmap_tex_on", material.normal_tex, 5);
 
   assert_ogl_error();
 
@@ -618,8 +617,8 @@ void draw_instances(const shade_scene& scene, const shade_view& view,
   set_ogl_wireframe(params.wireframe);
   for (auto& instance : scene.instances) {
     if (instance.hidden) continue;
-    set_instance_uniforms(
-        program, instance.frame, instance.shape, instance.material, params);
+    set_instance_uniforms(program, instance.frame, instance.shape,
+        scene.materials.at(instance.material), params);
     draw_shape(instance.shape);
   }
   unbind_program();

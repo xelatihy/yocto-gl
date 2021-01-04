@@ -184,8 +184,8 @@ static void init_glscene(shade_shape_state* app, shade_scene& glscene,
   auto glmaterial  = add_material(glscene, {0, 0, 0}, {0.5, 1, 0.5}, 1, 0, 0.2);
   auto glmateriale = add_material(glscene, {0, 0, 0}, {0, 0, 0}, 0, 0, 1);
   auto glmaterialv = add_material(glscene, {0, 0, 0}, {0, 0, 0}, 0, 0, 1);
-  set_unlit(glmateriale, true);
-  set_unlit(glmaterialv, true);
+  set_unlit(glscene.materials.at(glmateriale), true);
+  set_unlit(glscene.materials.at(glmaterialv), true);
 
   // shapes
   if (progress_cb) progress_cb("convert shape", progress.x++, progress.y);
@@ -285,7 +285,7 @@ static void draw_widgets(
     draw_checkbox(win, "lines", app->glscene.instances[1].hidden, true);
     continue_line(win);
     draw_checkbox(win, "points", app->glscene.instances[2].hidden, true);
-    draw_coloredit(win, "color", glmaterial->color);
+    draw_coloredit(win, "color", glmaterial.color);
     draw_slider(win, "resolution", params.resolution, 0, 4096);
     draw_combobox(win, "lighting", (int&)params.lighting, shade_lighting_names);
     draw_checkbox(win, "wireframe", params.wireframe);

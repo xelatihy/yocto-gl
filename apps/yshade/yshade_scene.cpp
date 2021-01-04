@@ -121,12 +121,10 @@ static void init_glscene(shade_scene& glscene, const sceneio_scene& ioscene,
   }
 
   // material
-  auto material_map = unordered_map<material_handle, shade_material*>{};
-  material_map[invalid_handle] = nullptr;
-  auto material_id             = 0;
   for (auto& iomaterial : ioscene.materials) {
     if (progress_cb) progress_cb("convert material", progress.x++, progress.y);
-    auto glmaterial = add_material(glscene);
+    auto  handle     = add_material(glscene);
+    auto& glmaterial = glscene.materials[handle];
     set_emission(glmaterial, iomaterial.emission,
         texture_map.at(iomaterial.emission_tex));
     set_color(glmaterial, (1 - iomaterial.transmission) * iomaterial.color,
@@ -142,7 +140,6 @@ static void init_glscene(shade_scene& glscene, const sceneio_scene& ioscene,
     set_opacity(
         glmaterial, iomaterial.opacity, texture_map.at(iomaterial.opacity_tex));
     set_normalmap(glmaterial, texture_map.at(iomaterial.normal_tex));
-    material_map[material_id++] = glmaterial;
   }
 
   // shapes
@@ -164,7 +161,7 @@ static void init_glscene(shade_scene& glscene, const sceneio_scene& ioscene,
     auto& glinstance = glscene.instances[handle];
     set_frame(glinstance, ioinstance.frame);
     set_shape(glinstance, shape_map.at(ioinstance.shape));
-    set_material(glinstance, material_map.at(ioinstance.material));
+    set_material(glinstance, ioinstance.material);
   }
 
   // environments

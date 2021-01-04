@@ -145,10 +145,10 @@ void init_glscene(shade_sculpt_state *app, shade_scene &glscene,
   if (progress_cb) progress_cb("convert instance", progress.x++, progress.y);
   add_instance(glscene, identity3x4f, model_shape, glmaterial);
 
-  auto pointer_shape      = add_shape(glscene);
-  auto pointer_material   = add_material(glscene);
-  pointer_material->color = {1, 1, 1};
-  set_unlit(pointer_material, true);
+  auto pointer_shape                           = add_shape(glscene);
+  auto pointer_material                        = add_material(glscene);
+  glscene.materials.at(pointer_material).color = {1, 1, 1};
+  set_unlit(glscene.materials.at(pointer_material), true);
   add_instance(glscene, identity3x4f, pointer_shape, pointer_material);
 
   // add_instance(glscene, identity3x4f, edges_shape, glmateriale, true);
