@@ -192,10 +192,10 @@ static void init_glscene(shade_shape_state* app, shade_scene& glscene,
   auto model_shape = add_shape(glscene, ioshape.points, ioshape.lines,
       ioshape.triangles, ioshape.quads, ioshape.positions, ioshape.normals,
       ioshape.texcoords, ioshape.colors, true);
-  if (!is_initialized(get_normals(model_shape))) {
+  if (!is_initialized(get_normals(glscene.shapes[model_shape]))) {
     app->drawgl_prms.faceted = true;
   }
-  set_instances(model_shape, {}, {});
+  set_instances(glscene.shapes[model_shape], {}, {});
 
   auto edges = get_edges(ioshape.triangles, ioshape.quads);
   auto froms = vector<vec3f>();
@@ -218,13 +218,13 @@ static void init_glscene(shade_shape_state* app, shade_scene& glscene,
   }
   auto edges_shape = add_shape(glscene, {}, {}, {}, cylinder.quads,
       cylinder.positions, cylinder.normals, cylinder.texcoords, {});
-  set_instances(edges_shape, froms, tos);
+  set_instances(glscene.shapes[model_shape], froms, tos);
 
   auto vertices_radius = 3.0f * cylinder_radius;
   auto vertices        = make_spheres(ioshape.positions, vertices_radius, 2);
   auto vertices_shape  = add_shape(glscene, {}, {}, {}, vertices.quads,
       vertices.positions, vertices.normals, vertices.texcoords, {});
-  set_instances(vertices_shape, {}, {});
+  set_instances(glscene.shapes[model_shape], {}, {});
 
   // shapes
   if (progress_cb) progress_cb("convert instance", progress.x++, progress.y);

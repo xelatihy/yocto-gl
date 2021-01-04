@@ -143,15 +143,11 @@ static void init_glscene(shade_scene& glscene, const sceneio_scene& ioscene,
   }
 
   // shapes
-  auto shape_map            = unordered_map<shape_handle, shade_shape*>{};
-  shape_map[invalid_handle] = nullptr;
-  auto shape_id             = 0;
   for (auto& ioshape : ioscene.shapes) {
     if (progress_cb) progress_cb("convert shape", progress.x++, progress.y);
-    auto glshape          = add_shape(glscene, ioshape.points, ioshape.lines,
-        ioshape.triangles, ioshape.quads, ioshape.positions, ioshape.normals,
-        ioshape.texcoords, ioshape.colors);
-    shape_map[shape_id++] = glshape;
+    add_shape(glscene, ioshape.points, ioshape.lines, ioshape.triangles,
+        ioshape.quads, ioshape.positions, ioshape.normals, ioshape.texcoords,
+        ioshape.colors);
   }
 
   // shapes
@@ -160,7 +156,7 @@ static void init_glscene(shade_scene& glscene, const sceneio_scene& ioscene,
     auto  handle     = add_instance(glscene);
     auto& glinstance = glscene.instances[handle];
     set_frame(glinstance, ioinstance.frame);
-    set_shape(glinstance, shape_map.at(ioinstance.shape));
+    set_shape(glinstance, ioinstance.shape);
     set_material(glinstance, ioinstance.material);
   }
 
