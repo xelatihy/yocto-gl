@@ -50,7 +50,7 @@ void print_obj_camera(sceneio_camera* camera);
 };
 
 // Application state
-struct app_state {
+struct shade_scene_state {
   // loading parameters
   string filename  = "scene.json";
   string imagename = "out.png";
@@ -65,8 +65,7 @@ struct app_state {
   camera_handle iocamera = invalid_handle;
 
   // rendering state
-  shade_scene*  glscene  = new shade_scene{};
-  shade_camera* glcamera = (shade_camera*)nullptr;
+  shade_scene glscene = {};
 
   // editing
   int selected_camera      = -1;
@@ -84,13 +83,9 @@ struct app_state {
   std::atomic<int>  current      = 0;
   std::atomic<int>  total        = 0;
   string            loader_error = "";
-
-  ~app_state() {
-    if (glscene) delete glscene;
-  }
 };
 
-static void init_glscene(shade_scene* glscene, const sceneio_scene& ioscene,
+static void init_glscene(shade_scene& glscene, const sceneio_scene& ioscene,
     progress_callback progress_cb) {
   // handle progress
   auto progress = vec2i{
@@ -186,9 +181,9 @@ static void init_glscene(shade_scene* glscene, const sceneio_scene& ioscene,
   if (progress_cb) progress_cb("convert done", progress.x++, progress.y);
 }
 
-int run_scene(const scene_params& params) {
+int run_shade_scene(const shade_scene_params& params) {
   // initialize app
-  auto app_guard = std::make_unique<app_state>();
+  auto app_guard = std::make_unique<shade_scene_state>();
   auto app       = app_guard.get();
 
   // copy command line
@@ -214,14 +209,13 @@ int run_scene(const scene_params& params) {
           app->current = current;
           app->total   = total;
         });
-    app->glcamera = app->glscene->cameras.at(0);
   };
   callbacks.clear_cb = [app](gui_window* win, const gui_input& input) {
     clear_scene(app->glscene);
   };
   callbacks.draw_cb = [app](gui_window* win, const gui_input& input) {
-    draw_scene(app->glscene, app->glcamera, input.framebuffer_viewport,
-        app->drawgl_prms);
+    draw_scene(app->glscene, app->glscene.cameras.at(0),
+        input.framebuffer_viewport, app->drawgl_prms);
   };
   callbacks.widgets_cb = [app](gui_window* win, const gui_input& input) {
     draw_progressbar(win, app->status.c_str(), app->current, app->total);
@@ -265,7 +259,7 @@ int run_scene(const scene_params& params) {
       auto& camera = app->ioscene.cameras.at(app->iocamera);
       std::tie(camera.frame, camera.focus) = camera_turntable(
           camera.frame, camera.focus, rotate, dolly, pan);
-      set_frame(app->glcamera, camera.frame);
+      set_frame(app->glscene.cameras.at(app->iocamera), camera.frame);
     }
   };
 

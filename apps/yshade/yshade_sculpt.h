@@ -29,18 +29,18 @@
 #include <yocto/yocto_json.h>
 using namespace yocto;
 
-struct sculpt__params {
+struct shade_sculpt_params {
   string shape   = "shape.ply"s;
   string texture = "";
 };
 
 // Json IO
 inline void serialize_value(json_mode mode, json_value& json,
-    sculpt__params& value, const string& description) {
+    shade_sculpt_params& value, const string& description) {
   serialize_object(mode, json, value, description);
   serialize_property(mode, json, value.shape, "shape", "Input shape.", true);
   serialize_property(mode, json, value.texture, "texture", "Brush texturee.");
   serialize_clipositionals(mode, json, {"shape"});
 }
 
-int run_sculpt(const sculpt__params& params);
+int run_shade_sculpt(const shade_sculpt_params& params);

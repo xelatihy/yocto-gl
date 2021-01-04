@@ -29,16 +29,16 @@
 #include <yocto/yocto_json.h>
 using namespace yocto;
 
-struct shape_params {
+struct shade_shape_params {
   vector<string> shapes = {"shape.json"s};
 };
 
 // Json IO
 inline void serialize_value(json_mode mode, json_value& json,
-    shape_params& value, const string& description) {
+    shade_shape_params& value, const string& description) {
   serialize_object(mode, json, value, description);
   serialize_property(mode, json, value.shapes, "shapes", "Input shapes.", true);
   serialize_clipositionals(mode, json, {"shapes"});
 }
 
-int run_shape(const shape_params& params);
+int run_shade_shape(const shade_shape_params& params);

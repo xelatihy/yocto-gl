@@ -44,7 +44,7 @@ using namespace yocto;
 #endif
 
 // Application state
-struct app_state {
+struct shade_shape_state {
   // loading parameters
   string filename  = "shape.obj";
   string imagename = "out.png";
@@ -55,11 +55,10 @@ struct app_state {
   shade_params drawgl_prms = {};
 
   // scene
-  generic_shape* ioshape = new generic_shape{};
+  generic_shape ioshape = {};
 
   // rendering state
-  shade_scene*  glscene  = new shade_scene{};
-  shade_camera* glcamera = nullptr;
+  shade_scene glscene = {};
 
   // loading status
   std::atomic<bool> ok           = false;
@@ -69,32 +68,27 @@ struct app_state {
   std::atomic<int>  current      = 0;
   std::atomic<int>  total        = 0;
   string            loader_error = "";
-
-  ~app_state() {
-    if (glscene) delete glscene;
-    if (ioshape) delete ioshape;
-  }
 };
 
 // Application state
-struct app_states {
+struct shade_shape_states {
   // data
-  vector<app_state*>     states   = {};
-  app_state*             selected = nullptr;
-  std::deque<app_state*> loading  = {};
+  vector<shade_shape_state*>     states   = {};
+  shade_shape_state*             selected = nullptr;
+  std::deque<shade_shape_state*> loading  = {};
 
   // default options
   shade_params drawgl_prms = {};
 
   // cleanup
-  ~app_states() {
+  ~shade_shape_states() {
     for (auto state : states) delete state;
   }
 };
 
-static void load_shape_async(
-    app_states* apps, const string& filename, const string& camera_name = "") {
-  auto app         = apps->states.emplace_back(new app_state{});
+static void load_shape_async(shade_shape_states* apps, const string& filename,
+    const string& camera_name = "") {
+  auto app         = apps->states.emplace_back(new shade_shape_state{});
   app->filename    = filename;
   app->imagename   = replace_extension(filename, ".png");
   app->outname     = replace_extension(filename, ".edited.obj");
@@ -102,7 +96,7 @@ static void load_shape_async(
   app->drawgl_prms = apps->drawgl_prms;
   app->status      = "load";
   app->loader      = std::async(std::launch::async, [app, camera_name]() {
-    if (!load_shape(app->filename, *app->ioshape, app->loader_error)) return;
+    if (!load_shape(app->filename, app->ioshape, app->loader_error)) return;
   });
   apps->loading.push_back(app);
   if (!apps->selected) apps->selected = app;
@@ -163,8 +157,8 @@ static quads_shape make_cylinders(const vector<vec2i>& lines,
   return shape;
 }
 
-static void init_glscene(app_state* app, shade_scene* glscene,
-    generic_shape* ioshape, progress_callback progress_cb) {
+static void init_glscene(shade_shape_state* app, shade_scene& glscene,
+    generic_shape& ioshape, progress_callback progress_cb) {
   // handle progress
   auto progress = vec2i{0, 4};
 
@@ -173,9 +167,9 @@ static void init_glscene(app_state* app, shade_scene* glscene,
 
   // compute bounding box
   auto bbox = invalidb3f;
-  for (auto& pos : ioshape->positions) bbox = merge(bbox, pos);
-  for (auto& pos : ioshape->positions) pos -= center(bbox);
-  for (auto& pos : ioshape->positions) pos /= max(size(bbox));
+  for (auto& pos : ioshape.positions) bbox = merge(bbox, pos);
+  for (auto& pos : ioshape.positions) pos -= center(bbox);
+  for (auto& pos : ioshape.positions) pos /= max(size(bbox));
   // TODO(fabio): this should be a math function
 
   // camera
@@ -194,23 +188,23 @@ static void init_glscene(app_state* app, shade_scene* glscene,
 
   // shapes
   if (progress_cb) progress_cb("convert shape", progress.x++, progress.y);
-  auto model_shape = add_shape(glscene, ioshape->points, ioshape->lines,
-      ioshape->triangles, ioshape->quads, ioshape->positions, ioshape->normals,
-      ioshape->texcoords, ioshape->colors, true);
+  auto model_shape = add_shape(glscene, ioshape.points, ioshape.lines,
+      ioshape.triangles, ioshape.quads, ioshape.positions, ioshape.normals,
+      ioshape.texcoords, ioshape.colors, true);
   if (!is_initialized(get_normals(model_shape))) {
     app->drawgl_prms.faceted = true;
   }
   set_instances(model_shape, {}, {});
 
-  auto edges = get_edges(ioshape->triangles, ioshape->quads);
+  auto edges = get_edges(ioshape.triangles, ioshape.quads);
   auto froms = vector<vec3f>();
   auto tos   = vector<vec3f>();
   froms.reserve(edges.size());
   tos.reserve(edges.size());
   float avg_edge_length = 0;
   for (auto& edge : edges) {
-    auto from = ioshape->positions[edge.x];
-    auto to   = ioshape->positions[edge.y];
+    auto from = ioshape.positions[edge.x];
+    auto to   = ioshape.positions[edge.y];
     froms.push_back(from);
     tos.push_back(to);
     avg_edge_length += length(from - to);
@@ -226,7 +220,7 @@ static void init_glscene(app_state* app, shade_scene* glscene,
   set_instances(edges_shape, froms, tos);
 
   auto vertices_radius = 3.0f * cylinder_radius;
-  auto vertices        = make_spheres(ioshape->positions, vertices_radius, 2);
+  auto vertices        = make_spheres(ioshape.positions, vertices_radius, 2);
   auto vertices_shape  = add_shape(glscene, {}, {}, {}, vertices.quads,
       vertices.positions, vertices.normals, vertices.texcoords, {});
   set_instances(vertices_shape, {}, {});
@@ -243,7 +237,7 @@ static void init_glscene(app_state* app, shade_scene* glscene,
 
 // draw with shading
 static void draw_widgets(
-    gui_window* win, app_states* apps, const gui_input& input) {
+    gui_window* win, shade_shape_states* apps, const gui_input& input) {
   static auto load_path = ""s, save_path = ""s, error_message = ""s;
   if (draw_filedialog_button(win, "load", true, "load", load_path, false, "./",
           "", "*.ply;*.obj")) {
@@ -256,7 +250,7 @@ static void draw_widgets(
           path_filename(save_path), "*.ply;*.obj")) {
     auto app     = apps->selected;
     app->outname = save_path;
-    save_shape(app->outname, *app->ioshape, app->error);
+    save_shape(app->outname, app->ioshape, app->error);
     save_path = "";
   }
   continue_line(win);
@@ -283,13 +277,13 @@ static void draw_widgets(
   if (!apps->selected->ok) return;
   auto app = apps->selected;
   if (begin_header(win, "view")) {
-    auto  glmaterial = app->glscene->materials.front();
+    auto& glmaterial = app->glscene.materials.front();
     auto& params     = app->drawgl_prms;
     draw_checkbox(win, "faceted", params.faceted);
     continue_line(win);
-    draw_checkbox(win, "lines", app->glscene->instances[1]->hidden, true);
+    draw_checkbox(win, "lines", app->glscene.instances[1]->hidden, true);
     continue_line(win);
-    draw_checkbox(win, "points", app->glscene->instances[2]->hidden, true);
+    draw_checkbox(win, "points", app->glscene.instances[2]->hidden, true);
     draw_coloredit(win, "color", glmaterial->color);
     draw_slider(win, "resolution", params.resolution, 0, 4096);
     draw_combobox(win, "lighting", (int&)params.lighting, shade_lighting_names);
@@ -307,34 +301,35 @@ static void draw_widgets(
     draw_label(win, "filename", app->filename);
     draw_label(win, "outname", app->outname);
     draw_label(win, "imagename", app->imagename);
-    auto ioshape = app->ioshape;
-    draw_label(win, "points", std::to_string(ioshape->points.size()));
-    draw_label(win, "lines", std::to_string(ioshape->lines.size()));
-    draw_label(win, "triangles", std::to_string(ioshape->triangles.size()));
-    draw_label(win, "quads", std::to_string(ioshape->quads.size()));
-    draw_label(win, "positions", std::to_string(ioshape->positions.size()));
-    draw_label(win, "normals", std::to_string(ioshape->normals.size()));
-    draw_label(win, "texcoords", std::to_string(ioshape->texcoords.size()));
-    draw_label(win, "colors", std::to_string(ioshape->colors.size()));
-    draw_label(win, "radius", std::to_string(ioshape->radius.size()));
-    draw_label(win, "quads pos", std::to_string(ioshape->quadspos.size()));
-    draw_label(win, "quads norm", std::to_string(ioshape->quadsnorm.size()));
+    auto& ioshape = app->ioshape;
+    draw_label(win, "points", std::to_string(ioshape.points.size()));
+    draw_label(win, "lines", std::to_string(ioshape.lines.size()));
+    draw_label(win, "triangles", std::to_string(ioshape.triangles.size()));
+    draw_label(win, "quads", std::to_string(ioshape.quads.size()));
+    draw_label(win, "positions", std::to_string(ioshape.positions.size()));
+    draw_label(win, "normals", std::to_string(ioshape.normals.size()));
+    draw_label(win, "texcoords", std::to_string(ioshape.texcoords.size()));
+    draw_label(win, "colors", std::to_string(ioshape.colors.size()));
+    draw_label(win, "radius", std::to_string(ioshape.radius.size()));
+    draw_label(win, "quads pos", std::to_string(ioshape.quadspos.size()));
+    draw_label(win, "quads norm", std::to_string(ioshape.quadsnorm.size()));
     draw_label(
-        win, "quads texcoord", std::to_string(ioshape->quadstexcoord.size()));
+        win, "quads texcoord", std::to_string(ioshape.quadstexcoord.size()));
     end_header(win);
   }
 }
 
 // draw with shading
-static void draw(gui_window* win, app_states* apps, const gui_input& input) {
+static void draw(
+    gui_window* win, shade_shape_states* apps, const gui_input& input) {
   if (!apps->selected || !apps->selected->ok) return;
   auto app = apps->selected;
-  draw_scene(app->glscene, app->glcamera, input.framebuffer_viewport,
-      app->drawgl_prms);
+  draw_scene(app->glscene, app->glscene.cameras.at(0),
+      input.framebuffer_viewport, app->drawgl_prms);
 }
 
 // update
-static void update(gui_window* win, app_states* apps) {
+static void update(gui_window* win, shade_shape_states* apps) {
   auto is_ready = [](const std::future<void>& result) -> bool {
     return result.valid() && result.wait_for(std::chrono::microseconds(0)) ==
                                  std::future_status::ready;
@@ -351,9 +346,8 @@ static void update(gui_window* win, app_states* apps) {
     app->loader.get();
     if (app->loader_error.empty()) {
       init_glscene(app, app->glscene, app->ioshape, progress_cb);
-      app->glcamera = app->glscene->cameras.front();
-      app->ok       = true;
-      app->status   = "ok";
+      app->ok     = true;
+      app->status = "ok";
     } else {
       app->status = "error";
       app->error  = app->loader_error;
@@ -361,9 +355,9 @@ static void update(gui_window* win, app_states* apps) {
   }
 }
 
-int run_shape(const shape_params& params) {
+int run_shade_shape(const shade_shape_params& params) {
   // initialize app
-  auto apps_guard = std::make_unique<app_states>();
+  auto apps_guard = std::make_unique<shade_shape_states>();
   auto apps       = apps_guard.get();
 
   // loading images
@@ -408,8 +402,9 @@ int run_shape(const shape_params& params) {
       pan.x    = -pan.x;
       rotate.y = -rotate.y;
 
-      std::tie(app->glcamera->frame, app->glcamera->focus) = camera_turntable(
-          app->glcamera->frame, app->glcamera->focus, rotate, dolly, pan);
+      auto& glcamera                             = app->glscene.cameras.at(0);
+      std::tie(glcamera->frame, glcamera->focus) = camera_turntable(
+          glcamera->frame, glcamera->focus, rotate, dolly, pan);
     }
   };
 

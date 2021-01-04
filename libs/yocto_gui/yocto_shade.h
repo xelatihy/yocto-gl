@@ -203,25 +203,25 @@ struct shade_params {
 };
 
 // Initialize an OpenGL scene
-void init_scene(shade_scene* scene, bool instanced_drawing = false);
-bool is_initialized(const shade_scene* scene);
+void init_scene(shade_scene& scene, bool instanced_drawing = false);
+bool is_initialized(const shade_scene& scene);
 
 // Initialize data for environment lighting
-void init_environments(shade_scene* scene, bool precompute_envlight = true);
+void init_environments(shade_scene& scene, bool precompute_envlight = true);
 
 // Check if we have an envlight
-bool has_envlight(const shade_scene* scene);
+bool has_envlight(const shade_scene& scene);
 
 // Clear an OpenGL scene
-void clear_scene(shade_scene* scene);
+void clear_scene(shade_scene& scene);
 
 // add scene elements
-shade_camera*      add_camera(shade_scene* scene);
-shade_texture*     add_texture(shade_scene* scene);
-shade_material*    add_material(shade_scene* scene);
-shade_shape*       add_shape(shade_scene* scene);
-shade_instance*    add_instance(shade_scene* scene);
-shade_environment* add_environment(shade_scene* scene);
+shade_camera*      add_camera(shade_scene& scene);
+shade_texture*     add_texture(shade_scene& scene);
+shade_material*    add_material(shade_scene& scene);
+shade_shape*       add_shape(shade_scene& scene);
+shade_instance*    add_instance(shade_scene& scene);
+shade_environment* add_environment(shade_scene& scene);
 
 // camera properties
 void set_frame(shade_camera* camera, const frame3f& frame);
@@ -309,28 +309,28 @@ void set_emission(shade_environment* environment, const vec3f& emission,
     shade_texture* emission_tex = nullptr);
 
 // shortcuts
-shade_camera*   add_camera(shade_scene* scene, const frame3f& frame, float lens,
+shade_camera*   add_camera(shade_scene& scene, const frame3f& frame, float lens,
       float aspect, float film = 0.036, float near = 0.001, float far = 10000);
-shade_material* add_material(shade_scene* scene, const vec3f& emission,
+shade_material* add_material(shade_scene& scene, const vec3f& emission,
     const vec3f& color, float specular, float metallic, float roughness,
     shade_texture* emission_tex = nullptr, shade_texture* color_tex = nullptr,
     shade_texture* specular_tex  = nullptr,
     shade_texture* metallic_tex  = nullptr,
     shade_texture* roughness_tex = nullptr,
     shade_texture* normalmap_tex = nullptr);
-shade_shape*    add_shape(shade_scene* scene, const vector<int>& points,
+shade_shape*    add_shape(shade_scene& scene, const vector<int>& points,
        const vector<vec2i>& lines, const vector<vec3i>& triangles,
        const vector<vec4i>& quads, const vector<vec3f>& positions,
        const vector<vec3f>& normals, const vector<vec2f>& texcoords,
        const vector<vec4f>& colors, bool edges = false);
-shade_instance* add_instance(shade_scene* scene, const frame3f& frame,
+shade_instance* add_instance(shade_scene& scene, const frame3f& frame,
     shade_shape* shape, shade_material* material, bool hidden = false,
     bool highlighted = false);
-shade_environment* add_environment(shade_scene* scene, const frame3f& frame,
+shade_environment* add_environment(shade_scene& scene, const frame3f& frame,
     const vec3f& emission, shade_texture* emission_tex = nullptr);
 
 // draw scene
-void draw_scene(const shade_scene* scene, const shade_camera* camera,
+void draw_scene(const shade_scene& scene, const shade_camera* camera,
     const vec4i& viewport, const shade_params& params);
 
 }  // namespace yocto

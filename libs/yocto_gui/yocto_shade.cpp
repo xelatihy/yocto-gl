@@ -183,47 +183,47 @@ static void init_environment(shade_environment* environment);
 static void init_envlight(shade_environment* environment);
 
 // Initialize an OpenGL scene
-void init_scene(shade_scene* scene, bool instanced_drawing) {
-  if (is_initialized(scene->instance_program)) return;
-  set_program(scene->instance_program,
+void init_scene(shade_scene& scene, bool instanced_drawing) {
+  if (is_initialized(scene.instance_program)) return;
+  set_program(scene.instance_program,
       instanced_drawing ? shade_instanced_vertex() : shade_instance_vertex(),
       shade_instance_fragment(), true);
-  // set_program(scene->envlight_program, shade_instance_vertex(),
+  // set_program(scene.envlight_program, shade_instance_vertex(),
   //     shade_instance_fragment(), true);
-  set_program(scene->environment_program, precompute_cubemap_vertex(),
+  set_program(scene.environment_program, precompute_cubemap_vertex(),
       shade_environment_fragment(), true);
 }
 
-bool is_initialized(shade_scene* scene) {
-  return scene && is_initialized(scene->instance_program);
+bool is_initialized(shade_scene& scene) {
+  return is_initialized(scene.instance_program);
 }
 
 // Initialize data for environment lighting
-void init_environments(shade_scene* scene, bool precompute_envlight) {
-  for (auto environment : scene->environments) {
+void init_environments(shade_scene& scene, bool precompute_envlight) {
+  for (auto environment : scene.environments) {
     init_environment(environment);
     if (precompute_envlight) init_envlight(environment);
   }
 }
 
 // Check if we have an envlight
-bool has_envlight(const shade_scene* scene) {
-  return !scene->environments.empty() &&
-         is_initialized(scene->environments.front()->cubemap);
+bool has_envlight(const shade_scene& scene) {
+  return !scene.environments.empty() &&
+         is_initialized(scene.environments.front()->cubemap);
 }
 
 // Clear an OpenGL scene
-void clear_scene(shade_scene* scene) {
-  for (auto texture : scene->textures) clear_texture(texture);
-  for (auto shape : scene->shapes) clear_shape(shape);
-  for (auto environment : scene->environments) clear_environment(environment);
-  clear_program(scene->environment_program);
-  clear_program(scene->instance_program);
+void clear_scene(shade_scene& scene) {
+  for (auto texture : scene.textures) clear_texture(texture);
+  for (auto shape : scene.shapes) clear_shape(shape);
+  for (auto environment : scene.environments) clear_environment(environment);
+  clear_program(scene.environment_program);
+  clear_program(scene.instance_program);
 }
 
 // add camera
-shade_camera* add_camera(shade_scene* scene) {
-  return scene->cameras.emplace_back(new shade_camera{});
+shade_camera* add_camera(shade_scene& scene) {
+  return scene.cameras.emplace_back(new shade_camera{});
 }
 void set_frame(shade_camera* camera, const frame3f& frame) {
   camera->frame = frame;
@@ -239,8 +239,8 @@ void set_nearfar(shade_camera* camera, float near, float far) {
 }
 
 // add texture
-shade_texture* add_texture(shade_scene* scene) {
-  return scene->textures.emplace_back(new shade_texture{});
+shade_texture* add_texture(shade_scene& scene) {
+  return scene.textures.emplace_back(new shade_texture{});
 }
 
 // cleanup
@@ -291,13 +291,13 @@ bool is_initialized(const shade_shape* shape) {
 void clear_shape(shade_shape* shape) { clear_shape(shape->shape); }
 
 // add shape
-shade_shape* add_shape(shade_scene* scene) {
-  return scene->shapes.emplace_back(new shade_shape{});
+shade_shape* add_shape(shade_scene& scene) {
+  return scene.shapes.emplace_back(new shade_shape{});
 }
 
 // add instance
-shade_instance* add_instance(shade_scene* scene) {
-  return scene->instances.emplace_back(new shade_instance{});
+shade_instance* add_instance(shade_scene& scene) {
+  return scene.instances.emplace_back(new shade_instance{});
 }
 void set_frame(shade_instance* instance, const frame3f& frame) {
   instance->frame = frame;
@@ -316,8 +316,8 @@ void set_highlighted(shade_instance* instance, bool highlighted) {
 }
 
 // add material
-shade_material* add_material(shade_scene* scene) {
-  return scene->materials.emplace_back(new shade_material{});
+shade_material* add_material(shade_scene& scene) {
+  return scene.materials.emplace_back(new shade_material{});
 }
 void set_emission(shade_material* material, const vec3f& emission,
     shade_texture* emission_tex) {
@@ -355,7 +355,7 @@ void set_unlit(shade_material* material, bool unlit) {
   material->unlit = unlit;
 }
 
-shade_shape* add_shape(shade_scene* scene, const vector<int>& points,
+shade_shape* add_shape(shade_scene& scene, const vector<int>& points,
     const vector<vec2i>& lines, const vector<vec3i>& triangles,
     const vector<vec4i>& quads, const vector<vec3f>& positions,
     const vector<vec3f>& normals, const vector<vec2f>& texcoords,
@@ -401,8 +401,8 @@ void clear_environment(shade_environment* environment) {
 }
 
 // environment properties
-shade_environment* add_environment(shade_scene* scene) {
-  return scene->environments.emplace_back(new shade_environment{});
+shade_environment* add_environment(shade_scene& scene) {
+  return scene.environments.emplace_back(new shade_environment{});
 }
 void set_frame(shade_environment* environment, const frame3f& frame) {
   environment->frame = frame;
@@ -414,7 +414,7 @@ void set_emission(shade_environment* environment, const vec3f& emission,
 }
 
 // shortcuts
-shade_camera* add_camera(shade_scene* scene, const frame3f& frame, float lens,
+shade_camera* add_camera(shade_scene& scene, const frame3f& frame, float lens,
     float aspect, float film, float near, float far) {
   auto camera = add_camera(scene);
   set_frame(camera, frame);
@@ -422,7 +422,7 @@ shade_camera* add_camera(shade_scene* scene, const frame3f& frame, float lens,
   set_nearfar(camera, near, far);
   return camera;
 }
-shade_material* add_material(shade_scene* scene, const vec3f& emission,
+shade_material* add_material(shade_scene& scene, const vec3f& emission,
     const vec3f& color, float specular, float metallic, float roughness,
     shade_texture* emission_tex, shade_texture* color_tex,
     shade_texture* specular_tex, shade_texture* metallic_tex,
@@ -437,7 +437,7 @@ shade_material* add_material(shade_scene* scene, const vec3f& emission,
   return material;
 }
 
-shade_instance* add_instance(shade_scene* scene, const frame3f& frame,
+shade_instance* add_instance(shade_scene& scene, const frame3f& frame,
     shade_shape* shape, shade_material* material, bool hidden,
     bool highlighted) {
   auto instance = add_instance(scene);
@@ -449,7 +449,7 @@ shade_instance* add_instance(shade_scene* scene, const frame3f& frame,
   return instance;
 }
 
-shade_environment* add_environment(shade_scene* scene, const frame3f& frame,
+shade_environment* add_environment(shade_scene& scene, const frame3f& frame,
     const vec3f& emission, shade_texture* emission_tex) {
   auto environment = add_environment(scene);
   set_frame(environment, frame);
@@ -535,15 +535,15 @@ void set_instance_uniforms(ogl_program* program, const frame3f& frame,
 
 static void draw_shape(shade_shape* shape) { draw_shape(shape->shape); }
 
-void draw_environments(const shade_scene* scene, const shade_view& view,
+void draw_environments(const shade_scene& scene, const shade_view& view,
     const shade_params& params) {
   if (params.hide_environment) return;
-  auto program = scene->environment_program;
+  auto program = scene.environment_program;
   if (!is_initialized(program)) return;
   bind_program(program);
   set_view_uniforms(program, view);
   set_params_uniforms(program, params);
-  for (auto environment : scene->environments) {
+  for (auto environment : scene.environments) {
     if (!is_initialized(environment->cubemap)) continue;
     set_uniform(program, "emission", environment->emission);
     set_uniform(program, "emission_tex", environment->cubemap, 0);
@@ -552,7 +552,7 @@ void draw_environments(const shade_scene* scene, const shade_view& view,
   unbind_program();
 }
 
-void set_lighting_uniforms(ogl_program* program, const shade_scene* scene,
+void set_lighting_uniforms(ogl_program* program, const shade_scene& scene,
     const shade_view& view, const shade_params& params) {
   struct gui_light {
     vec3f position = {0, 0, 0};
@@ -576,7 +576,7 @@ void set_lighting_uniforms(ogl_program* program, const shade_scene* scene,
     lighting = shade_lighting_type::camlight;
   if (lighting == shade_lighting_type::envlight && has_envlight(scene)) {
     if (!has_envlight(scene)) return;
-    auto environment = scene->environments.front();
+    auto environment = scene.environments.front();
     set_uniform(program, "lighting", 2);
     set_uniform(program, "lights_num", 0);
     set_uniform(program, "envlight_scale", environment->emission);
@@ -620,10 +620,10 @@ void set_lighting_uniforms(ogl_program* program, const shade_scene* scene,
   assert_ogl_error();
 }
 
-void draw_instances(const shade_scene* scene, const shade_view& view,
+void draw_instances(const shade_scene& scene, const shade_view& view,
     const shade_params& params) {
   // set program
-  auto program = scene->instance_program;
+  auto program = scene.instance_program;
   bind_program(program);
 
   // set scene uniforms
@@ -634,7 +634,7 @@ void draw_instances(const shade_scene* scene, const shade_view& view,
   set_lighting_uniforms(program, scene, view, params);
 
   set_ogl_wireframe(params.wireframe);
-  for (auto instance : scene->instances) {
+  for (auto instance : scene.instances) {
     if (instance->hidden) continue;
     set_instance_uniforms(
         program, instance->frame, instance->shape, instance->material, params);
@@ -661,7 +661,7 @@ static shade_view make_scene_view(const shade_camera* camera,
   return view;
 }
 
-void draw_scene(const shade_scene* scene, const shade_camera* camera,
+void draw_scene(const shade_scene& scene, const shade_camera* camera,
     const vec4i& viewport, const shade_params& params) {
   clear_ogl_framebuffer(params.background);
   set_ogl_viewport(viewport);
