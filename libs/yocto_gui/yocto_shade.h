@@ -109,18 +109,8 @@ struct shade_material {
   bool           unlit         = false;
 };
 
-struct shade_shape {
-  // shape properties
-  ogl_shape* shape = new ogl_shape{};
-
-  // Disable copy construction
-  shade_shape()                   = default;
-  shade_shape(const shade_shape&) = delete;
-  shade_shape& operator=(const shade_shape&) = delete;
-
-  // Cleanup
-  ~shade_shape();
-};
+// Opengl shape
+struct shade_shape : ogl_shape {};
 
 // Shading type
 enum struct shade_shading_type { constant = 0, shaded };

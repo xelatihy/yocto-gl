@@ -57,87 +57,87 @@ namespace yocto {
 #endif
 
 const ogl_arraybuffer* get_positions(const shade_shape* shape) {
-  if (shape->shape->vertex_buffers.size() <= 0) return nullptr;
-  return shape->shape->vertex_buffers[0];
+  if (shape->vertex_buffers.size() <= 0) return nullptr;
+  return shape->vertex_buffers[0];
 }
 const ogl_arraybuffer* get_normals(const shade_shape* shape) {
-  if (shape->shape->vertex_buffers.size() <= 1) return nullptr;
-  return shape->shape->vertex_buffers[1];
+  if (shape->vertex_buffers.size() <= 1) return nullptr;
+  return shape->vertex_buffers[1];
 }
 const ogl_arraybuffer* get_texcoords(const shade_shape* shape) {
-  if (shape->shape->vertex_buffers.size() <= 2) return nullptr;
-  return shape->shape->vertex_buffers[2];
+  if (shape->vertex_buffers.size() <= 2) return nullptr;
+  return shape->vertex_buffers[2];
 }
 const ogl_arraybuffer* get_colors(const shade_shape* shape) {
-  if (shape->shape->vertex_buffers.size() <= 3) return nullptr;
-  return shape->shape->vertex_buffers[3];
+  if (shape->vertex_buffers.size() <= 3) return nullptr;
+  return shape->vertex_buffers[3];
 }
 const ogl_arraybuffer* get_tangents(const shade_shape* shape) {
-  if (shape->shape->vertex_buffers.size() <= 4) return nullptr;
-  return shape->shape->vertex_buffers[4];
+  if (shape->vertex_buffers.size() <= 4) return nullptr;
+  return shape->vertex_buffers[4];
 }
 
 void set_positions(shade_shape* shape, const vector<vec3f>& positions) {
   if (positions.empty()) {
-    set_vertex_buffer(shape->shape, vec3f{0, 0, 0}, 0);
+    set_vertex_buffer(shape, vec3f{0, 0, 0}, 0);
   } else {
-    set_vertex_buffer(shape->shape, positions, 0);
+    set_vertex_buffer(shape, positions, 0);
   }
 }
 void set_normals(shade_shape* shape, const vector<vec3f>& normals) {
   if (normals.empty()) {
-    set_vertex_buffer(shape->shape, vec3f{0, 0, 1}, 1);
+    set_vertex_buffer(shape, vec3f{0, 0, 1}, 1);
   } else {
-    set_vertex_buffer(shape->shape, normals, 1);
+    set_vertex_buffer(shape, normals, 1);
   }
 }
 void set_texcoords(shade_shape* shape, const vector<vec2f>& texcoords) {
   if (texcoords.empty()) {
-    set_vertex_buffer(shape->shape, vec2f{0, 0}, 2);
+    set_vertex_buffer(shape, vec2f{0, 0}, 2);
   } else {
-    set_vertex_buffer(shape->shape, texcoords, 2);
+    set_vertex_buffer(shape, texcoords, 2);
   }
 }
 void set_colors(shade_shape* shape, const vector<vec4f>& colors) {
   if (colors.empty()) {
-    set_vertex_buffer(shape->shape, vec4f{1, 1, 1, 1}, 3);
+    set_vertex_buffer(shape, vec4f{1, 1, 1, 1}, 3);
   } else {
-    set_vertex_buffer(shape->shape, colors, 3);
+    set_vertex_buffer(shape, colors, 3);
   }
 }
 void set_tangents(shade_shape* shape, const vector<vec4f>& tangents) {
   if (tangents.empty()) {
-    set_vertex_buffer(shape->shape, vec4f{0, 0, 1, 1}, 4);
+    set_vertex_buffer(shape, vec4f{0, 0, 1, 1}, 4);
   } else {
-    set_vertex_buffer(shape->shape, tangents, 4);
+    set_vertex_buffer(shape, tangents, 4);
   }
 }
 void set_instances(
     shade_shape* shape, const vector<vec3f>& froms, const vector<vec3f>& tos) {
   if (froms.empty()) {
-    set_vertex_buffer(shape->shape, vec3f{0, 0, 0}, 5);
-    set_instance_buffer(shape->shape, 5, false);
+    set_vertex_buffer(shape, vec3f{0, 0, 0}, 5);
+    set_instance_buffer(shape, 5, false);
   } else {
-    set_vertex_buffer(shape->shape, froms, 5);
-    set_instance_buffer(shape->shape, 5, true);
+    set_vertex_buffer(shape, froms, 5);
+    set_instance_buffer(shape, 5, true);
   }
   if (tos.empty()) {
-    set_vertex_buffer(shape->shape, vec3f{0, 0, 0}, 5);
-    set_instance_buffer(shape->shape, 6, false);
+    set_vertex_buffer(shape, vec3f{0, 0, 0}, 5);
+    set_instance_buffer(shape, 6, false);
   } else {
-    set_vertex_buffer(shape->shape, tos, 6);
-    set_instance_buffer(shape->shape, 6, true);
+    set_vertex_buffer(shape, tos, 6);
+    set_instance_buffer(shape, 6, true);
   }
 }
 
 void set_points(shade_shape* shape, const vector<int>& points) {
-  set_index_buffer(shape->shape, points);
+  set_index_buffer(shape, points);
 }
 void set_lines(shade_shape* shape, const vector<vec2i>& lines) {
-  set_index_buffer(shape->shape, lines);
+  set_index_buffer(shape, lines);
 }
 void set_triangles(shade_shape* shape, const vector<vec3i>& triangles) {
-  set_index_buffer(shape->shape, triangles);
+  set_index_buffer(shape, triangles);
 }
 void set_quads(shade_shape* shape, const vector<vec4i>& quads) {
   auto triangles = vector<vec3i>{};
@@ -146,12 +146,12 @@ void set_quads(shade_shape* shape, const vector<vec4i>& quads) {
     triangles.push_back({q.x, q.y, q.w});
     if (q.z != q.w) triangles.push_back({q.z, q.w, q.y});
   }
-  set_index_buffer(shape->shape, triangles);
+  set_index_buffer(shape, triangles);
 }
 
 // set point size
 void set_point_size(shade_shape* shape, float point_size) {
-  set_point_size(shape->shape, point_size);
+  set_point_size((ogl_shape*)shape, point_size);
 }
 
 shade_scene::~shade_scene() {
@@ -282,16 +282,13 @@ void set_texture(shade_texture* texture, const image<float>& img, bool as_float,
   set_texture(texture->texture, img, as_float, linear, mipmap);
 }
 
-// cleanup
-shade_shape::~shade_shape() { delete shape; }
-
 // cheeck if initialized
 bool is_initialized(const shade_shape* shape) {
-  return is_initialized(shape->shape);
+  return is_initialized((ogl_shape*)shape);
 }
 
 // clear
-void clear_shape(shade_shape* shape) { clear_shape(shape->shape); }
+void clear_shape(shade_shape* shape) { clear_shape((ogl_shape*)shape); }
 
 // add shape
 shade_shape* add_shape(shade_scene& scene) {
@@ -505,7 +502,7 @@ void set_instance_uniforms(ogl_program* program, const frame3f& frame,
 
   assert_ogl_error();
 
-  switch (shape->shape->elements) {
+  switch (shape->elements) {
     case ogl_element_type::points: set_uniform(program, "element", 1); break;
     case ogl_element_type::line_strip:
     case ogl_element_type::lines: set_uniform(program, "element", 2); break;
@@ -516,7 +513,7 @@ void set_instance_uniforms(ogl_program* program, const frame3f& frame,
   assert_ogl_error();
 }
 
-static void draw_shape(shade_shape* shape) { draw_shape(shape->shape); }
+static void draw_shape(shade_shape* shape) { draw_shape((ogl_shape*)shape); }
 
 void draw_environments(const shade_scene& scene, const shade_view& view,
     const shade_params& params) {
@@ -752,7 +749,7 @@ static void init_environment(
         new shade_shape{});
 
   // init program and shape for drawing the environment
-  set_cube_shape(environment->envlight_shape->shape);
+  set_cube_shape(environment->envlight_shape);
 
   // precompute cubemap from environment texture
   auto size          = environment->emission_tex->texture->size.y;
