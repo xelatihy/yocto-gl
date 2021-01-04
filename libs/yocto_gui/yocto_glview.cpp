@@ -351,11 +351,11 @@ static ogl_imageinput* get_input(ogl_imageviewer& viewer, const string& name) {
 static void update_display(ogl_imageview* view) {
   if (view->display.width != view->image.width ||
       view->display.height != view->image.height) {
-    view->display = make_image(view->image.width, view->image.height, false);
+    view->display = make_image(view->image.width, view->image.height, true);
   }
-  if (!view->image.pixelsf.empty()) {
+  if (is_float(view->image)) {
     tonemap_image_mt(view->display, view->image, view->exposure, view->filmic);
-  } else if (!view->image.pixelsb.empty()) {
+  } else if (is_byte(view->image)) {
     view->display.pixelsb = view->image.pixelsb;
   } else {
     // TODO(fabio): decide about empty images
