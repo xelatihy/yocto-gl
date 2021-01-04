@@ -115,8 +115,9 @@ void init_glscene(shade_sculpt_state *app, shade_scene &glscene,
 
   // camera
   if (progress_cb) progress_cb("convert camera", progress.x++, progress.y);
-  auto &glcamera = add_camera(glscene, camera_frame(0.050, 16.0f / 9.0f, 0.036),
+  auto  chandle  = add_camera(glscene, camera_frame(0.050, 16.0f / 9.0f, 0.036),
       0.050, 16.0f / 9.0f, 0.036);
+  auto &glcamera = glscene.cameras.at(chandle);
   glcamera.focus = length(glcamera.frame.o - center(bbox));
 
   // material

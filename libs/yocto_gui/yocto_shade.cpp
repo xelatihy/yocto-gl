@@ -221,8 +221,9 @@ void clear_scene(shade_scene& scene) {
 }
 
 // add camera
-shade_camera& add_camera(shade_scene& scene) {
-  return scene.cameras.emplace_back();
+glcamera_handle add_camera(shade_scene& scene) {
+  scene.cameras.emplace_back();
+  return (int)scene.cameras.size() - 1;
 }
 void set_frame(shade_camera& camera, const frame3f& frame) {
   camera.frame = frame;
@@ -413,13 +414,14 @@ void set_emission(shade_environment* environment, const vec3f& emission,
 }
 
 // shortcuts
-shade_camera& add_camera(shade_scene& scene, const frame3f& frame, float lens,
+glcamera_handle add_camera(shade_scene& scene, const frame3f& frame, float lens,
     float aspect, float film, float near, float far) {
-  auto& camera = add_camera(scene);
+  auto  handle = add_camera(scene);
+  auto& camera = scene.cameras[handle];
   set_frame(camera, frame);
   set_lens(camera, lens, aspect, film);
   set_nearfar(camera, near, far);
-  return camera;
+  return handle;
 }
 shade_material* add_material(shade_scene& scene, const vec3f& emission,
     const vec3f& color, float specular, float metallic, float roughness,

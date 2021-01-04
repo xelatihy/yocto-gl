@@ -54,6 +54,16 @@ using std::vector;
 
 namespace yocto {
 
+// Handles
+using glcamera_handle              = int;
+using gltexture_handle             = int;
+using glshape_handle               = int;
+using glmaterial_handle            = int;
+using glinstance_handle            = int;
+using glenvironment_handle         = int;
+using glscene_handle               = int;
+inline const auto glinvalid_handle = -1;
+
 // Opengl caemra
 struct shade_camera {
   frame3f frame    = identity3x4f;
@@ -216,7 +226,7 @@ bool has_envlight(const shade_scene& scene);
 void clear_scene(shade_scene& scene);
 
 // add scene elements
-shade_camera&      add_camera(shade_scene& scene);
+glcamera_handle    add_camera(shade_scene& scene);
 shade_texture*     add_texture(shade_scene& scene);
 shade_material*    add_material(shade_scene& scene);
 shade_shape*       add_shape(shade_scene& scene);
@@ -309,8 +319,8 @@ void set_emission(shade_environment* environment, const vec3f& emission,
     shade_texture* emission_tex = nullptr);
 
 // shortcuts
-shade_camera&   add_camera(shade_scene& scene, const frame3f& frame, float lens,
-      float aspect, float film = 0.036, float near = 0.001, float far = 10000);
+glcamera_handle add_camera(shade_scene& scene, const frame3f& frame, float lens,
+    float aspect, float film = 0.036, float near = 0.001, float far = 10000);
 shade_material* add_material(shade_scene& scene, const vec3f& emission,
     const vec3f& color, float specular, float metallic, float roughness,
     shade_texture* emission_tex = nullptr, shade_texture* color_tex = nullptr,

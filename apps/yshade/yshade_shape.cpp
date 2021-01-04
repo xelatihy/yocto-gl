@@ -174,9 +174,10 @@ static void init_glscene(shade_shape_state* app, shade_scene& glscene,
 
   // camera
   if (progress_cb) progress_cb("convert camera", progress.x++, progress.y);
-  auto& glcamera = add_camera(glscene, camera_frame(0.050, 16.0f / 9.0f, 0.036),
-      0.050, 16.0f / 9.0f, 0.036);
-  glcamera.focus = length(glcamera.frame.o - center(bbox));
+  auto  glcamera_id = add_camera(glscene,
+      camera_frame(0.050, 16.0f / 9.0f, 0.036), 0.050, 16.0f / 9.0f, 0.036);
+  auto& glcamera    = glscene.cameras.at(glcamera_id);
+  glcamera.focus    = length(glcamera.frame.o - center(bbox));
 
   // material
   if (progress_cb) progress_cb("convert material", progress.x++, progress.y);
