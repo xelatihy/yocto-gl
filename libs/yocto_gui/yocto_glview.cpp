@@ -406,10 +406,12 @@ void draw_widgets(
     auto display_pixel = zero4b;
     auto width = view->display.width, height = view->display.height;
     if (i >= 0 && j < width && i >= 0 && j < height) {
-      hdr_pixel     = !view->image.pixelsf.empty() ? view->image.pixelsf[j * width + i]
-                                               : zero4f;
-      ldr_pixel     = !view->image.pixelsb.empty() ? view->image.pixelsb[j * width + i]
-                                               : zero4b;
+      hdr_pixel     = !view->image.pixelsf.empty()
+                          ? view->image.pixelsf[j * width + i]
+                          : zero4f;
+      ldr_pixel     = !view->image.pixelsb.empty()
+                          ? view->image.pixelsb[j * width + i]
+                          : zero4b;
       display_pixel = view->display.pixelsb[j * width + i];
     }
     if (!view->image.pixelsf.empty()) {

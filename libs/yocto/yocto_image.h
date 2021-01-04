@@ -65,10 +65,10 @@ namespace yocto {
 
 // Image contains
 struct image_data {
-  int           width  = 0;
-  int           height = 0;
-  vector<vec4f> pixelsf    = {};
-  vector<vec4b> pixelsb    = {};
+  int           width   = 0;
+  int           height  = 0;
+  vector<vec4f> pixelsf = {};
+  vector<vec4b> pixelsb = {};
 };
 
 // image creation
