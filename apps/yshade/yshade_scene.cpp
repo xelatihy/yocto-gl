@@ -169,9 +169,10 @@ static void init_glscene(shade_scene& glscene, const sceneio_scene& ioscene,
 
   // environments
   for (auto& ioenvironment : ioscene.environments) {
-    auto environment = add_environment(glscene);
-    set_frame(environment, ioenvironment.frame);
-    set_emission(environment, ioenvironment.emission,
+    auto  handle        = add_environment(glscene);
+    auto& glenvironment = glscene.environments[handle];
+    set_frame(glenvironment, ioenvironment.frame);
+    set_emission(glenvironment, ioenvironment.emission,
         texture_map.at(ioenvironment.emission_tex));
   }
 

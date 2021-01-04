@@ -158,7 +158,6 @@ shade_scene::~shade_scene() {
   for (auto shape : shapes) delete shape;
   for (auto material : materials) delete material;
   for (auto texture : textures) delete texture;
-  for (auto environment : environments) delete environment;
   delete environment_program;
   delete instance_program;
 }
@@ -178,8 +177,8 @@ static const char* precompute_irradiance_fragment();
 static const char* precompute_reflections_fragment();
 
 static void init_environment(
-    shade_scene& scene, shade_environment* environment);
-static void init_envlight(shade_scene& scene, shade_environment* environment);
+    shade_scene& scene, shade_environment& environment);
+static void init_envlight(shade_scene& scene, shade_environment& environment);
 
 // Initialize an OpenGL scene
 void init_scene(shade_scene& scene, bool instanced_drawing) {
@@ -378,16 +377,17 @@ shade_shape* add_shape(shade_scene& scene, const vector<int>& points,
 }
 
 // environment properties
-shade_environment* add_environment(shade_scene& scene) {
-  return scene.environments.emplace_back(new shade_environment{});
+glenvironment_handle add_environment(shade_scene& scene) {
+  scene.environments.emplace_back();
+  return (int)scene.environments.size() - 1;
 }
-void set_frame(shade_environment* environment, const frame3f& frame) {
-  environment->frame = frame;
+void set_frame(shade_environment& environment, const frame3f& frame) {
+  environment.frame = frame;
 }
-void set_emission(shade_environment* environment, const vec3f& emission,
+void set_emission(shade_environment& environment, const vec3f& emission,
     shade_texture* emission_tex) {
-  environment->emission     = emission;
-  environment->emission_tex = emission_tex;
+  environment.emission     = emission;
+  environment.emission_tex = emission_tex;
 }
 
 // shortcuts
@@ -428,12 +428,13 @@ glinstance_handle add_instance(shade_scene& scene, const frame3f& frame,
   return handle;
 }
 
-shade_environment* add_environment(shade_scene& scene, const frame3f& frame,
+glenvironment_handle add_environment(shade_scene& scene, const frame3f& frame,
     const vec3f& emission, shade_texture* emission_tex) {
-  auto environment = add_environment(scene);
+  auto  handle      = add_environment(scene);
+  auto& environment = scene.environments[handle];
   set_frame(environment, frame);
   set_emission(environment, emission, emission_tex);
-  return environment;
+  return handle;
 }
 
 struct shade_view {
@@ -523,10 +524,10 @@ void draw_environments(const shade_scene& scene, const shade_view& view,
   set_view_uniforms(program, view);
   set_params_uniforms(program, params);
   for (auto& environment : scene.environments) {
-    if (environment->envlight_cubemap == nullptr) continue;
-    set_uniform(program, "emission", environment->emission);
-    set_uniform(program, "emission_tex", environment->envlight_cubemap, 0);
-    draw_shape(environment->envlight_shape);
+    if (environment.envlight_cubemap == nullptr) continue;
+    set_uniform(program, "emission", environment.emission);
+    set_uniform(program, "emission_tex", environment.envlight_cubemap, 0);
+    draw_shape(environment.envlight_shape);
   }
   unbind_program();
 }
@@ -558,12 +559,12 @@ void set_lighting_uniforms(ogl_program* program, const shade_scene& scene,
     auto environment = scene.environments.front();
     set_uniform(program, "lighting", 2);
     set_uniform(program, "lights_num", 0);
-    set_uniform(program, "envlight_scale", environment->emission);
+    set_uniform(program, "envlight_scale", environment.emission);
     set_uniform(
-        program, "envlight_irradiance", environment->envlight_diffuse_, 6);
+        program, "envlight_irradiance", environment.envlight_diffuse_, 6);
     set_uniform(
-        program, "envlight_reflection", environment->envlight_specular_, 7);
-    set_uniform(program, "envlight_brdflut", environment->envlight_brdflut_, 8);
+        program, "envlight_reflection", environment.envlight_specular_, 7);
+    set_uniform(program, "envlight_brdflut", environment.envlight_brdflut_, 8);
   } else if (lighting == shade_lighting_type::camlight) {
     auto& lights = camera_lights;
     set_uniform(program, "lighting", 1);
@@ -738,41 +739,41 @@ static void precompute_brdflut(ogl_texture* texture) {
 }
 
 static void init_environment(
-    shade_scene& scene, shade_environment* environment) {
+    shade_scene& scene, shade_environment& environment) {
   // init drawing data
-  if (environment->envlight_cubemap == nullptr)
-    environment->envlight_cubemap = scene.envlight_cubemaps.emplace_back(
+  if (environment.envlight_cubemap == nullptr)
+    environment.envlight_cubemap = scene.envlight_cubemaps.emplace_back(
         new ogl_cubemap{});
-  if (environment->envlight_shape == nullptr)
-    environment->envlight_shape = scene.envlight_shapes.emplace_back(
+  if (environment.envlight_shape == nullptr)
+    environment.envlight_shape = scene.envlight_shapes.emplace_back(
         new shade_shape{});
 
   // init program and shape for drawing the environment
-  set_cube_shape(environment->envlight_shape);
+  set_cube_shape(environment.envlight_shape);
 
   // precompute cubemap from environment texture
-  auto size          = environment->emission_tex->size.y;
+  auto size          = environment.emission_tex->size.y;
   auto program_guard = make_unique<ogl_program>();
   auto program       = program_guard.get();
   set_program(program, precompute_cubemap_vertex(),
       precompute_environment_fragment(), true);
-  precompute_cubemap(environment->envlight_cubemap, environment->emission_tex,
-      program, size, 1);
+  precompute_cubemap(
+      environment.envlight_cubemap, environment.emission_tex, program, size, 1);
 }
 
-void init_envlight(shade_scene& scene, shade_environment* environment) {
+void init_envlight(shade_scene& scene, shade_environment& environment) {
   // init drawing data
-  if (environment->envlight_diffuse_ == nullptr)
-    environment->envlight_diffuse_ = scene.envlight_diffuses.emplace_back(
+  if (environment.envlight_diffuse_ == nullptr)
+    environment.envlight_diffuse_ = scene.envlight_diffuses.emplace_back(
         new ogl_cubemap{});
-  if (environment->envlight_cubemap == nullptr)
-    environment->envlight_cubemap = scene.envlight_cubemaps.emplace_back(
+  if (environment.envlight_cubemap == nullptr)
+    environment.envlight_cubemap = scene.envlight_cubemaps.emplace_back(
         new ogl_cubemap{});
-  if (environment->envlight_specular_ == nullptr)
-    environment->envlight_specular_ = scene.envlight_speculars.emplace_back(
+  if (environment.envlight_specular_ == nullptr)
+    environment.envlight_specular_ = scene.envlight_speculars.emplace_back(
         new ogl_cubemap{});
-  if (environment->envlight_brdflut_ == nullptr)
-    environment->envlight_brdflut_ = scene.envlight_brdfluts.emplace_back(
+  if (environment.envlight_brdflut_ == nullptr)
+    environment.envlight_brdflut_ = scene.envlight_brdfluts.emplace_back(
         new ogl_texture{});
 
   // precompute irradiance map
@@ -780,19 +781,19 @@ void init_envlight(shade_scene& scene, shade_environment* environment) {
   auto diffuse_program       = diffuse_program_guard.get();
   set_program(diffuse_program, precompute_cubemap_vertex(),
       precompute_irradiance_fragment(), true);
-  precompute_cubemap(environment->envlight_diffuse_,
-      environment->envlight_cubemap, diffuse_program, 64);
+  precompute_cubemap(environment.envlight_diffuse_,
+      environment.envlight_cubemap, diffuse_program, 64);
 
   // precompute specular map
   auto specular_program_guard = make_unique<ogl_program>();
   auto specular_program       = specular_program_guard.get();
   set_program(specular_program, precompute_cubemap_vertex(),
       precompute_reflections_fragment(), true);
-  precompute_cubemap(environment->envlight_specular_,
-      environment->envlight_cubemap, specular_program, 256, 6);
+  precompute_cubemap(environment.envlight_specular_,
+      environment.envlight_cubemap, specular_program, 256, 6);
 
   // precompute lookup texture for specular brdf
-  precompute_brdflut(environment->envlight_brdflut_);
+  precompute_brdflut(environment.envlight_brdflut_);
 }
 
 static const char* shade_instance_vertex() {

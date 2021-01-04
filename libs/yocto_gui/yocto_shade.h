@@ -134,12 +134,12 @@ struct shade_environment {
 // Opengl scene
 struct shade_scene {
   // scene objects
-  vector<shade_camera>       cameras      = {};
-  vector<shade_instance>     instances    = {};
-  vector<shade_shape*>       shapes       = {};
-  vector<shade_material*>    materials    = {};
-  vector<shade_texture*>     textures     = {};
-  vector<shade_environment*> environments = {};
+  vector<shade_camera>      cameras      = {};
+  vector<shade_instance>    instances    = {};
+  vector<shade_shape*>      shapes       = {};
+  vector<shade_material*>   materials    = {};
+  vector<shade_texture*>    textures     = {};
+  vector<shade_environment> environments = {};
 
   // data for envmaps
   vector<shade_shape*> envlight_shapes    = {};
@@ -204,12 +204,12 @@ bool has_envlight(const shade_scene& scene);
 void clear_scene(shade_scene& scene);
 
 // add scene elements
-glcamera_handle    add_camera(shade_scene& scene);
-shade_texture*     add_texture(shade_scene& scene);
-shade_material*    add_material(shade_scene& scene);
-shade_shape*       add_shape(shade_scene& scene);
-glinstance_handle  add_instance(shade_scene& scene);
-shade_environment* add_environment(shade_scene& scene);
+glcamera_handle      add_camera(shade_scene& scene);
+shade_texture*       add_texture(shade_scene& scene);
+shade_material*      add_material(shade_scene& scene);
+shade_shape*         add_shape(shade_scene& scene);
+glinstance_handle    add_instance(shade_scene& scene);
+glenvironment_handle add_environment(shade_scene& scene);
 
 // camera properties
 void set_frame(shade_camera& camera, const frame3f& frame);
@@ -287,11 +287,11 @@ void set_hidden(shade_instance& instance, bool hidden);
 void set_highlighted(shade_instance& instance, bool highlighted);
 
 // check if initialized
-bool is_initialized(const shade_environment* environment);
+bool is_initialized(const shade_environment& environment);
 
 // environment properties
-void set_frame(shade_environment* environment, const frame3f& frame);
-void set_emission(shade_environment* environment, const vec3f& emission,
+void set_frame(shade_environment& environment, const frame3f& frame);
+void set_emission(shade_environment& environment, const vec3f& emission,
     shade_texture* emission_tex = nullptr);
 
 // shortcuts
@@ -309,10 +309,10 @@ shade_shape*    add_shape(shade_scene& scene, const vector<int>& points,
        const vector<vec4i>& quads, const vector<vec3f>& positions,
        const vector<vec3f>& normals, const vector<vec2f>& texcoords,
        const vector<vec4f>& colors, bool edges = false);
-glinstance_handle  add_instance(shade_scene& scene, const frame3f& frame,
-     shade_shape* shape, shade_material* material, bool hidden = false,
-     bool highlighted = false);
-shade_environment* add_environment(shade_scene& scene, const frame3f& frame,
+glinstance_handle    add_instance(shade_scene& scene, const frame3f& frame,
+       shade_shape* shape, shade_material* material, bool hidden = false,
+       bool highlighted = false);
+glenvironment_handle add_environment(shade_scene& scene, const frame3f& frame,
     const vec3f& emission, shade_texture* emission_tex = nullptr);
 
 // draw scene
