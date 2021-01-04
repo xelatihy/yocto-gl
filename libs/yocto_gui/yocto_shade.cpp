@@ -158,7 +158,6 @@ shade_scene::~shade_scene() {
   for (auto shape : shapes) delete shape;
   for (auto material : materials) delete material;
   for (auto texture : textures) delete texture;
-  for (auto instance : instances) delete instance;
   for (auto environment : environments) delete environment;
   delete environment_program;
   delete instance_program;
@@ -296,23 +295,24 @@ shade_shape* add_shape(shade_scene& scene) {
 }
 
 // add instance
-shade_instance* add_instance(shade_scene& scene) {
-  return scene.instances.emplace_back(new shade_instance{});
+glinstance_handle add_instance(shade_scene& scene) {
+  scene.instances.emplace_back();
+  return (int)scene.instances.size() - 1;
 }
-void set_frame(shade_instance* instance, const frame3f& frame) {
-  instance->frame = frame;
+void set_frame(shade_instance& instance, const frame3f& frame) {
+  instance.frame = frame;
 }
-void set_shape(shade_instance* instance, shade_shape* shape) {
-  instance->shape = shape;
+void set_shape(shade_instance& instance, shade_shape* shape) {
+  instance.shape = shape;
 }
-void set_material(shade_instance* instance, shade_material* material) {
-  instance->material = material;
+void set_material(shade_instance& instance, shade_material* material) {
+  instance.material = material;
 }
-void set_hidden(shade_instance* instance, bool hidden) {
-  instance->hidden = hidden;
+void set_hidden(shade_instance& instance, bool hidden) {
+  instance.hidden = hidden;
 }
-void set_highlighted(shade_instance* instance, bool highlighted) {
-  instance->highlighted = highlighted;
+void set_highlighted(shade_instance& instance, bool highlighted) {
+  instance.highlighted = highlighted;
 }
 
 // add material
@@ -438,16 +438,17 @@ shade_material* add_material(shade_scene& scene, const vec3f& emission,
   return material;
 }
 
-shade_instance* add_instance(shade_scene& scene, const frame3f& frame,
+glinstance_handle add_instance(shade_scene& scene, const frame3f& frame,
     shade_shape* shape, shade_material* material, bool hidden,
     bool highlighted) {
-  auto instance = add_instance(scene);
+  auto  handle   = add_instance(scene);
+  auto& instance = scene.instances.back();
   set_frame(instance, frame);
   set_shape(instance, shape);
   set_material(instance, material);
   set_hidden(instance, hidden);
   set_highlighted(instance, highlighted);
-  return instance;
+  return handle;
 }
 
 shade_environment* add_environment(shade_scene& scene, const frame3f& frame,
@@ -488,7 +489,7 @@ void set_instance_uniforms(ogl_program* program, const frame3f& frame,
   set_uniform(program, "offset", 0.0f);
   set_uniform(program, "faceted",
       params.faceted || !is_initialized(get_normals(shape)));
-  //  if (instance->highlighted) {
+  //  if (instance.highlighted) {
   //    set_uniform(program, "highlight", vec4f{1, 1, 0, 1});
   //  } else {
   //    set_uniform(program, "highlight", vec4f{0, 0, 0, 0});
@@ -635,11 +636,11 @@ void draw_instances(const shade_scene& scene, const shade_view& view,
   set_lighting_uniforms(program, scene, view, params);
 
   set_ogl_wireframe(params.wireframe);
-  for (auto instance : scene.instances) {
-    if (instance->hidden) continue;
+  for (auto& instance : scene.instances) {
+    if (instance.hidden) continue;
     set_instance_uniforms(
-        program, instance->frame, instance->shape, instance->material, params);
-    draw_shape(instance->shape);
+        program, instance.frame, instance.shape, instance.material, params);
+    draw_shape(instance.shape);
   }
   unbind_program();
 }

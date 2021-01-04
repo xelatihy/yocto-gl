@@ -666,11 +666,11 @@ int run_shade_sculpt(const shade_sculpt_params &params_) {
         params->shape->triangles, params->shape->positions, params->camera_ray,
         false);
     if (params->bvh_intersection.hit) {
-      app->glscene.instances.back()->hidden = false;
+      app->glscene.instances.back().hidden = false;
       view_pointer(params->shape, app->glscene.shapes.back(),
           params->bvh_intersection, params->radius, 20, params->type);
     } else {
-      app->glscene.instances.back()->hidden = true;
+      app->glscene.instances.back().hidden = true;
     }
 
     auto isec = params->bvh_intersection;
@@ -681,33 +681,33 @@ int run_shade_sculpt(const shade_sculpt_params &params_) {
       auto        pairs = stroke(params, mouse_uv, app->glscene.cameras.at(0));
       vector<int> vertices;
       if (params->type == brush_type::gaussian) {
-        brush(params, app->glscene.instances[0]->shape, pairs);
+        brush(params, app->glscene.instances[0].shape, pairs);
       } else if (params->type == brush_type::smooth) {
         smooth(params->solver, params->stroke_sampling,
-            params->shape->positions, params, app->glscene.instances[0]->shape);
+            params->shape->positions, params, app->glscene.instances[0].shape);
       } else if (params->type == brush_type::texture && !pairs.empty()) {
         vertices = stroke_parameterization(params->solver, params->coords,
             params->stroke_sampling, params->old_positions, params->old_normals,
             params->radius);
         texture_brush(vertices, params->tex_image, params->coords, params,
-            app->glscene.instances[0]->shape, params->old_positions,
+            app->glscene.instances[0].shape, params->old_positions,
             params->old_normals);
       }
       if (params->symmetric) {
         pairs = symmetric_stroke(pairs, params->shape, params->bvh_shape_tree,
             params->symmetric_stroke_sampling, params->symmetric_axis);
         if (params->type == brush_type::gaussian) {
-          brush(params, app->glscene.instances[0]->shape, pairs);
+          brush(params, app->glscene.instances[0].shape, pairs);
         } else if (params->type == brush_type::smooth) {
           smooth(params->solver, params->symmetric_stroke_sampling,
               params->shape->positions, params,
-              app->glscene.instances[0]->shape);
+              app->glscene.instances[0].shape);
         } else if (params->type == brush_type::texture && !pairs.empty()) {
           vertices = stroke_parameterization(params->solver, params->coords,
               params->symmetric_stroke_sampling, params->old_positions,
               params->old_normals, params->radius);
           texture_brush(vertices, params->tex_image, params->coords, params,
-              app->glscene.instances[0]->shape, params->shape->positions,
+              app->glscene.instances[0].shape, params->shape->positions,
               params->shape->normals);
         }
       }

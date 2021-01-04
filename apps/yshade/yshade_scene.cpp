@@ -160,10 +160,11 @@ static void init_glscene(shade_scene& glscene, const sceneio_scene& ioscene,
   // shapes
   for (auto& ioinstance : ioscene.instances) {
     if (progress_cb) progress_cb("convert instance", progress.x++, progress.y);
-    auto globject = add_instance(glscene);
-    set_frame(globject, ioinstance.frame);
-    set_shape(globject, shape_map.at(ioinstance.shape));
-    set_material(globject, material_map.at(ioinstance.material));
+    auto  handle     = add_instance(glscene);
+    auto& glinstance = glscene.instances[handle];
+    set_frame(glinstance, ioinstance.frame);
+    set_shape(glinstance, shape_map.at(ioinstance.shape));
+    set_material(glinstance, material_map.at(ioinstance.material));
   }
 
   // environments

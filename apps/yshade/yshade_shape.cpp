@@ -282,9 +282,9 @@ static void draw_widgets(
     auto& params     = app->drawgl_prms;
     draw_checkbox(win, "faceted", params.faceted);
     continue_line(win);
-    draw_checkbox(win, "lines", app->glscene.instances[1]->hidden, true);
+    draw_checkbox(win, "lines", app->glscene.instances[1].hidden, true);
     continue_line(win);
-    draw_checkbox(win, "points", app->glscene.instances[2]->hidden, true);
+    draw_checkbox(win, "points", app->glscene.instances[2].hidden, true);
     draw_coloredit(win, "color", glmaterial->color);
     draw_slider(win, "resolution", params.resolution, 0, 4096);
     draw_combobox(win, "lighting", (int&)params.lighting, shade_lighting_names);

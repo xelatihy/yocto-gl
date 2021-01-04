@@ -164,7 +164,7 @@ struct shade_environment {
 struct shade_scene {
   // scene objects
   vector<shade_camera>       cameras      = {};
-  vector<shade_instance*>    instances    = {};
+  vector<shade_instance>     instances    = {};
   vector<shade_shape*>       shapes       = {};
   vector<shade_material*>    materials    = {};
   vector<shade_texture*>     textures     = {};
@@ -230,7 +230,7 @@ glcamera_handle    add_camera(shade_scene& scene);
 shade_texture*     add_texture(shade_scene& scene);
 shade_material*    add_material(shade_scene& scene);
 shade_shape*       add_shape(shade_scene& scene);
-shade_instance*    add_instance(shade_scene& scene);
+glinstance_handle  add_instance(shade_scene& scene);
 shade_environment* add_environment(shade_scene& scene);
 
 // camera properties
@@ -302,11 +302,11 @@ const ogl_arraybuffer* get_colors(const shade_shape* shape);
 const ogl_arraybuffer* get_tangents(const shade_shape* shape);
 
 // instance properties
-void set_frame(shade_instance* instance, const frame3f& frame);
-void set_shape(shade_instance* instance, shade_shape* shape);
-void set_material(shade_instance* instance, shade_material* material);
-void set_hidden(shade_instance* instance, bool hidden);
-void set_highlighted(shade_instance* instance, bool highlighted);
+void set_frame(shade_instance& instance, const frame3f& frame);
+void set_shape(shade_instance& instance, shade_shape* shape);
+void set_material(shade_instance& instance, shade_material* material);
+void set_hidden(shade_instance& instance, bool hidden);
+void set_highlighted(shade_instance& instance, bool highlighted);
 
 // check if initialized
 bool is_initialized(const shade_environment* environment);
@@ -333,9 +333,9 @@ shade_shape*    add_shape(shade_scene& scene, const vector<int>& points,
        const vector<vec4i>& quads, const vector<vec3f>& positions,
        const vector<vec3f>& normals, const vector<vec2f>& texcoords,
        const vector<vec4f>& colors, bool edges = false);
-shade_instance* add_instance(shade_scene& scene, const frame3f& frame,
-    shade_shape* shape, shade_material* material, bool hidden = false,
-    bool highlighted = false);
+glinstance_handle  add_instance(shade_scene& scene, const frame3f& frame,
+     shade_shape* shape, shade_material* material, bool hidden = false,
+     bool highlighted = false);
 shade_environment* add_environment(shade_scene& scene, const frame3f& frame,
     const vec3f& emission, shade_texture* emission_tex = nullptr);
 
