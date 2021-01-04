@@ -214,10 +214,10 @@ void clear_scene(shade_scene& scene) {
   for (auto& texture : scene.textures) clear_texture(texture);
   for (auto& shape : scene.shapes) clear_shape(shape);
   for (auto& shape : scene.envlight_shapes) clear_shape(shape);
-  for (auto& cubemap : scene.envlight_cubemaps) clear_cubemap(cubemap);
-  for (auto& cubemap : scene.envlight_diffuses) clear_cubemap(cubemap);
-  for (auto& cubemap : scene.envlight_speculars) clear_cubemap(cubemap);
-  for (auto& texture : scene.envlight_brdfluts) clear_texture(texture);
+  for (auto& cubemap : scene.envlight_cubemaps) clear_cubemap(&cubemap);
+  for (auto& cubemap : scene.envlight_diffuses) clear_cubemap(&cubemap);
+  for (auto& cubemap : scene.envlight_speculars) clear_cubemap(&cubemap);
+  for (auto& texture : scene.envlight_brdfluts) clear_texture(&texture);
   clear_program(scene.environment_program);
   clear_program(scene.instance_program);
 }
@@ -524,9 +524,10 @@ void draw_environments(const shade_scene& scene, const shade_view& view,
   set_view_uniforms(program, view);
   set_params_uniforms(program, params);
   for (auto& environment : scene.environments) {
-    if (environment.envlight_cubemap == nullptr) continue;
+    if (environment.envlight_cubemap == glinvalid_handle) continue;
     set_uniform(program, "emission", environment.emission);
-    set_uniform(program, "emission_tex", environment.envlight_cubemap, 0);
+    set_uniform(program, "emission_tex",
+        &scene.envlight_cubemaps[environment.envlight_cubemap], 0);
     draw_shape(environment.envlight_shape);
   }
   unbind_program();
@@ -560,11 +561,12 @@ void set_lighting_uniforms(ogl_program* program, const shade_scene& scene,
     set_uniform(program, "lighting", 2);
     set_uniform(program, "lights_num", 0);
     set_uniform(program, "envlight_scale", environment.emission);
-    set_uniform(
-        program, "envlight_irradiance", environment.envlight_diffuse_, 6);
-    set_uniform(
-        program, "envlight_reflection", environment.envlight_specular_, 7);
-    set_uniform(program, "envlight_brdflut", environment.envlight_brdflut_, 8);
+    set_uniform(program, "envlight_irradiance",
+        &scene.envlight_diffuses[environment.envlight_diffuse_], 6);
+    set_uniform(program, "envlight_reflection",
+        &scene.envlight_speculars[environment.envlight_specular_], 7);
+    set_uniform(program, "envlight_brdflut",
+        &scene.envlight_brdfluts[environment.envlight_brdflut_], 8);
   } else if (lighting == shade_lighting_type::camlight) {
     auto& lights = camera_lights;
     set_uniform(program, "lighting", 1);
@@ -656,10 +658,10 @@ void draw_scene(const shade_scene& scene, const shade_camera& camera,
 // Using 6 render passes, precompute a cubemap given a sampler for the
 // environment. The input sampler can be either a cubemap or a latlong texture.
 template <typename Sampler>
-static void precompute_cubemap(ogl_cubemap* cubemap, const Sampler* environment,
+static void precompute_cubemap(ogl_cubemap& cubemap, const Sampler* environment,
     ogl_program* program, int size, int num_mipmap_levels = 1) {
   // init cubemap with no data
-  set_cubemap(cubemap, size, 3,
+  set_cubemap(&cubemap, size, 3,
       array<float*, 6>{nullptr, nullptr, nullptr, nullptr, nullptr, nullptr},
       true, true, true);
   auto cube_guard = make_unique<ogl_shape>();
@@ -691,7 +693,7 @@ static void precompute_cubemap(ogl_cubemap* cubemap, const Sampler* environment,
       auto camera_proj = perspective_mat(radians(90), 1, 1, 100);
       auto camera_view = frame_to_mat(inverse(cameras[i]));
 
-      set_framebuffer_texture(framebuffer, cubemap, i, mipmap_level);
+      set_framebuffer_texture(framebuffer, &cubemap, i, mipmap_level);
       clear_ogl_framebuffer({0, 0, 0, 0}, true);
 
       set_uniform(program, "view", camera_view);
@@ -708,7 +710,7 @@ static void precompute_cubemap(ogl_cubemap* cubemap, const Sampler* environment,
   unbind_framebuffer();
 }
 
-static void precompute_brdflut(ogl_texture* texture) {
+static void precompute_brdflut(ogl_texture& texture) {
   auto size              = vec2i{512, 512};
   auto screen_quad_guard = make_unique<ogl_shape>();
   auto screen_quad       = screen_quad_guard.get();
@@ -719,12 +721,12 @@ static void precompute_brdflut(ogl_texture* texture) {
   set_program(program, precompute_brdflut_vertex(),
       precompute_brdflut_fragment(), true);
 
-  set_texture(texture, size, 3, (float*)nullptr, true, true, false, false);
+  set_texture(&texture, size, 3, (float*)nullptr, true, true, false, false);
 
   auto framebuffer_guard = make_unique<ogl_framebuffer>();
   auto framebuffer       = framebuffer_guard.get();
   set_framebuffer(framebuffer, size);
-  set_framebuffer_texture(framebuffer, texture, 0);
+  set_framebuffer_texture(framebuffer, &texture, 0);
 
   bind_framebuffer(framebuffer);
   bind_program(program);
@@ -741,12 +743,14 @@ static void precompute_brdflut(ogl_texture* texture) {
 static void init_environment(
     shade_scene& scene, shade_environment& environment) {
   // init drawing data
-  if (environment.envlight_cubemap == nullptr)
-    environment.envlight_cubemap = scene.envlight_cubemaps.emplace_back(
-        new ogl_cubemap{});
-  if (environment.envlight_shape == nullptr)
+  if (environment.envlight_cubemap == glinvalid_handle) {
+    scene.envlight_cubemaps.emplace_back();
+    environment.envlight_cubemap = (int)scene.envlight_cubemaps.size() - 1;
+  }
+  if (environment.envlight_shape == nullptr) {
     environment.envlight_shape = scene.envlight_shapes.emplace_back(
         new shade_shape{});
+  }
 
   // init program and shape for drawing the environment
   set_cube_shape(environment.envlight_shape);
@@ -757,42 +761,48 @@ static void init_environment(
   auto program       = program_guard.get();
   set_program(program, precompute_cubemap_vertex(),
       precompute_environment_fragment(), true);
-  precompute_cubemap(
-      environment.envlight_cubemap, environment.emission_tex, program, size, 1);
+  precompute_cubemap(scene.envlight_cubemaps[environment.envlight_cubemap],
+      environment.emission_tex, program, size, 1);
 }
 
 void init_envlight(shade_scene& scene, shade_environment& environment) {
   // init drawing data
-  if (environment.envlight_diffuse_ == nullptr)
-    environment.envlight_diffuse_ = scene.envlight_diffuses.emplace_back(
-        new ogl_cubemap{});
-  if (environment.envlight_cubemap == nullptr)
-    environment.envlight_cubemap = scene.envlight_cubemaps.emplace_back(
-        new ogl_cubemap{});
-  if (environment.envlight_specular_ == nullptr)
-    environment.envlight_specular_ = scene.envlight_speculars.emplace_back(
-        new ogl_cubemap{});
-  if (environment.envlight_brdflut_ == nullptr)
-    environment.envlight_brdflut_ = scene.envlight_brdfluts.emplace_back();
-
+  if (environment.envlight_diffuse_ == glinvalid_handle) {
+    scene.envlight_diffuses.emplace_back();
+    environment.envlight_diffuse_ = (int)scene.envlight_diffuses.size() - 1;
+  }
+  if (environment.envlight_cubemap == glinvalid_handle) {
+    scene.envlight_cubemaps.emplace_back();
+    environment.envlight_cubemap = (int)scene.envlight_cubemaps.size() - 1;
+  }
+  if (environment.envlight_specular_ == glinvalid_handle) {
+    scene.envlight_speculars.emplace_back();
+    environment.envlight_specular_ = (int)scene.envlight_speculars.size() - 1;
+  }
+  if (environment.envlight_brdflut_ == glinvalid_handle) {
+    scene.envlight_brdfluts.emplace_back();
+    environment.envlight_brdflut_ = (int)scene.envlight_brdfluts.size() - 1;
+  }
   // precompute irradiance map
   auto diffuse_program_guard = make_unique<ogl_program>();
   auto diffuse_program       = diffuse_program_guard.get();
   set_program(diffuse_program, precompute_cubemap_vertex(),
       precompute_irradiance_fragment(), true);
-  precompute_cubemap(environment.envlight_diffuse_,
-      environment.envlight_cubemap, diffuse_program, 64);
+  precompute_cubemap(scene.envlight_diffuses[environment.envlight_diffuse_],
+      &scene.envlight_cubemaps[environment.envlight_cubemap], diffuse_program,
+      64);
 
   // precompute specular map
   auto specular_program_guard = make_unique<ogl_program>();
   auto specular_program       = specular_program_guard.get();
   set_program(specular_program, precompute_cubemap_vertex(),
       precompute_reflections_fragment(), true);
-  precompute_cubemap(environment.envlight_specular_,
-      environment.envlight_cubemap, specular_program, 256, 6);
+  precompute_cubemap(scene.envlight_speculars[environment.envlight_specular_],
+      &scene.envlight_cubemaps[environment.envlight_cubemap], specular_program,
+      256, 6);
 
   // precompute lookup texture for specular brdf
-  precompute_brdflut(environment.envlight_brdflut_);
+  precompute_brdflut(scene.envlight_brdfluts[environment.envlight_brdflut_]);
 }
 
 static const char* shade_instance_vertex() {

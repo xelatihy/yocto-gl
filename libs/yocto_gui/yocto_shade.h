@@ -57,6 +57,7 @@ namespace yocto {
 // Handles
 using glcamera_handle              = int;
 using gltexture_handle             = int;
+using glcubemap_handle             = int;
 using glshape_handle               = int;
 using glmaterial_handle            = int;
 using glinstance_handle            = int;
@@ -122,13 +123,13 @@ struct shade_environment {
   shade_texture* emission_tex = nullptr;
 
   // drawing data
-  shade_shape* envlight_shape   = nullptr;
-  ogl_cubemap* envlight_cubemap = nullptr;
+  shade_shape*     envlight_shape   = nullptr;
+  glcubemap_handle envlight_cubemap = glinvalid_handle;
 
   // envlight precomputed data
-  ogl_cubemap* envlight_diffuse_  = nullptr;
-  ogl_cubemap* envlight_specular_ = nullptr;
-  ogl_texture* envlight_brdflut_  = nullptr;
+  glcubemap_handle envlight_diffuse_  = glinvalid_handle;
+  glcubemap_handle envlight_specular_ = glinvalid_handle;
+  glcubemap_handle envlight_brdflut_  = glinvalid_handle;
 };
 
 // Opengl scene
@@ -143,10 +144,10 @@ struct shade_scene {
 
   // data for envmaps
   vector<shade_shape*> envlight_shapes    = {};
-  vector<ogl_cubemap*> envlight_cubemaps  = {};
-  vector<ogl_cubemap*> envlight_diffuses  = {};
-  vector<ogl_cubemap*> envlight_speculars = {};
-  vector<ogl_texture*> envlight_brdfluts  = {};
+  vector<ogl_cubemap>  envlight_cubemaps  = {};
+  vector<ogl_cubemap>  envlight_diffuses  = {};
+  vector<ogl_cubemap>  envlight_speculars = {};
+  vector<ogl_texture>  envlight_brdfluts  = {};
 
   // programs
   ogl_program* environment_program = new ogl_program{};
