@@ -482,18 +482,18 @@ struct ogl_image {
 };
 
 // create image drawing program
-bool init_image(ogl_image* oimg);
-bool is_initialized(const ogl_image* oimg);
+bool init_image(ogl_image& oimg);
+bool is_initialized(const ogl_image& oimg);
 
 // clear image
-void clear_image(ogl_image* oimg);
+void clear_image(ogl_image& oimg);
 
 // update image data
-void set_image(ogl_image* oimg, const image<vec4f>& img, bool linear = false,
+void set_image(ogl_image& oimg, const image<vec4f>& img, bool linear = false,
     bool mipmap = false);
-void set_image(ogl_image* oimg, const image<vec4b>& img, bool linear = false,
+void set_image(ogl_image& oimg, const image<vec4b>& img, bool linear = false,
     bool mipmap = false);
-void set_image(ogl_image* oimg, const image_data& img, bool linear = false,
+void set_image(ogl_image& oimg, const image_data& img, bool linear = false,
     bool mipmap = false);
 
 // OpenGL image drawing params
@@ -509,7 +509,7 @@ struct ogl_image_params {
 };
 
 // draw image
-void draw_image(ogl_image* image, const ogl_image_params& params);
+void draw_image(ogl_image& image, const ogl_image_params& params);
 
 }  // namespace yocto
 

@@ -1242,61 +1242,61 @@ ogl_image::~ogl_image() {
   if (quad) delete quad;
 }
 
-bool is_initialized(const ogl_image* image) {
-  return is_initialized(image->program);
+bool is_initialized(const ogl_image& oimg) {
+  return is_initialized(oimg.program);
 }
 
 // init image program
-bool init_image(ogl_image* image) {
-  if (is_initialized(image)) return true;
-  if (!set_program(image->program, ogl_image_vertex, ogl_image_fragment))
+bool init_image(ogl_image& oimg) {
+  if (is_initialized(oimg)) return true;
+  if (!set_program(oimg.program, ogl_image_vertex, ogl_image_fragment))
     return false;
-  set_quad_shape(image->quad);
+  set_quad_shape(oimg.quad);
   return true;
 }
 
 // clear an opengl image
-void clear_image(ogl_image* image) {
-  clear_program(image->program);
-  clear_texture(image->texture);
-  clear_shape(image->quad);
+void clear_image(ogl_image& oimg) {
+  clear_program(oimg.program);
+  clear_texture(oimg.texture);
+  clear_shape(oimg.quad);
 }
 
 // update image data
 void set_image(
-    ogl_image* oimg, const image<vec4f>& img, bool linear, bool mipmap) {
-  set_texture(oimg->texture, img, false, linear, mipmap);
+    ogl_image& oimg, const image<vec4f>& img, bool linear, bool mipmap) {
+  set_texture(oimg.texture, img, false, linear, mipmap);
 }
 void set_image(
-    ogl_image* oimg, const image<vec4b>& img, bool linear, bool mipmap) {
-  set_texture(oimg->texture, img, false, linear, mipmap);
+    ogl_image& oimg, const image<vec4b>& img, bool linear, bool mipmap) {
+  set_texture(oimg.texture, img, false, linear, mipmap);
 }
 
 void set_image(
-    ogl_image* oimg, const image_data& img, bool linear, bool mipmap) {
+    ogl_image& oimg, const image_data& img, bool linear, bool mipmap) {
   if (is_float(img)) {
-    set_texture(oimg->texture, {img.width, img.height}, 4,
+    set_texture(oimg.texture, {img.width, img.height}, 4,
         (const float*)img.pixelsf.data(), false, linear, mipmap);
   } else {
-    set_texture(oimg->texture, {img.width, img.height}, 4,
+    set_texture(oimg.texture, {img.width, img.height}, 4,
         (const byte*)img.pixelsb.data(), false, linear, mipmap);
   }
 }
 
 // draw image
-void draw_image(ogl_image* image, const ogl_image_params& params) {
+void draw_image(ogl_image& oimg, const ogl_image_params& params) {
   assert_ogl_error();
   set_ogl_viewport(params.framebuffer);
   clear_ogl_framebuffer(params.background);
-  bind_program(image->program);
-  set_uniform(image->program, "txt", image->texture, 0);
-  set_uniform(image->program, "window_size",
+  bind_program(oimg.program);
+  set_uniform(oimg.program, "txt", oimg.texture, 0);
+  set_uniform(oimg.program, "window_size",
       vec2f{(float)params.window.x, (float)params.window.y});
-  set_uniform(image->program, "image_size",
-      vec2f{(float)image->texture->size.x, (float)image->texture->size.y});
-  set_uniform(image->program, "image_center", params.center);
-  set_uniform(image->program, "image_scale", params.scale);
-  draw_shape(image->quad);
+  set_uniform(oimg.program, "image_size",
+      vec2f{(float)oimg.texture->size.x, (float)oimg.texture->size.y});
+  set_uniform(oimg.program, "image_center", params.center);
+  set_uniform(oimg.program, "image_scale", params.scale);
+  draw_shape(oimg.quad);
   unbind_program();
 }
 
