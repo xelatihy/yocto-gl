@@ -2911,26 +2911,6 @@ bool save_image(
   }
 }
 
-// Loads/saves a  channel float/byte image in linear/srgb color space.
-bool load_image(const string& filename, image<vec4f>& imgf, image<vec4b>& imgb,
-    string& error) {
-  if (is_hdr_filename(filename)) {
-    return load_image(filename, imgf, error);
-  } else {
-    return load_image(filename, imgb, error);
-  }
-}
-
-// Loads/saves a  channel float/byte image in linear/srgb color space.
-bool save_image(const string& filename, const image<vec4f>& imgf,
-    const image<vec4b>& imgb, string& error) {
-  if (!imgf.empty()) {
-    return save_image(filename, imgf, error);
-  } else {
-    return save_image(filename, imgb, error);
-  }
-}
-
 }  // namespace yocto
 
 // -----------------------------------------------------------------------------

@@ -420,12 +420,6 @@ bool save_image(const string& filename, const image<vec4f>& img, string& error);
 bool load_image(const string& filename, image<vec4b>& img, string& error);
 bool save_image(const string& filename, const image<vec4b>& img, string& error);
 
-// Loads/saves a  channel float/byte image in linear/srgb color space.
-bool load_image(const string& filename, image<vec4f>& imgf, image<vec4b>& imgb,
-    string& error);
-bool save_image(const string& filename, const image<vec4f>& imgf,
-    const image<vec4b>& imgb, string& error);
-
 }  // namespace yocto
 
 // -----------------------------------------------------------------------------
