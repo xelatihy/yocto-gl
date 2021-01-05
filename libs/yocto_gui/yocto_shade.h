@@ -250,11 +250,11 @@ void set_instances(
 void set_point_size(shade_shape& shape, float point_size);
 
 // get shaoe properties
-const ogl_arraybuffer* get_positions(const shade_shape& shape);
-const ogl_arraybuffer* get_normals(const shade_shape& shape);
-const ogl_arraybuffer* get_texcoords(const shade_shape& shape);
-const ogl_arraybuffer* get_colors(const shade_shape& shape);
-const ogl_arraybuffer* get_tangents(const shade_shape& shape);
+const ogl_arraybuffer& get_positions(const shade_shape& shape);
+const ogl_arraybuffer& get_normals(const shade_shape& shape);
+const ogl_arraybuffer& get_texcoords(const shade_shape& shape);
+const ogl_arraybuffer& get_colors(const shade_shape& shape);
+const ogl_arraybuffer& get_tangents(const shade_shape& shape);
 
 // instance properties
 void set_frame(shade_instance& instance, const frame3f& frame);

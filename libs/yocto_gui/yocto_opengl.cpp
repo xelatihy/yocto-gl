@@ -483,15 +483,15 @@ void set_cubemap(ogl_cubemap& cubemap, const array<image<float>, 6>& img,
 }
 
 // cleanup
-ogl_arraybuffer::~ogl_arraybuffer() { clear_arraybuffer(this); }
+ogl_arraybuffer::~ogl_arraybuffer() { clear_arraybuffer(*this); }
 
 // check if buffer is initialized
-bool is_initialized(const ogl_arraybuffer* buffer) {
-  return buffer && buffer->buffer_id != 0;
+bool is_initialized(const ogl_arraybuffer& buffer) {
+  return buffer.buffer_id != 0;
 }
 
 // set buffer
-void set_arraybuffer(ogl_arraybuffer* buffer, size_t size, int esize,
+void set_arraybuffer(ogl_arraybuffer& buffer, size_t size, int esize,
     const float* data, bool dynamic) {
   assert_ogl_error();
 
@@ -501,60 +501,60 @@ void set_arraybuffer(ogl_arraybuffer* buffer, size_t size, int esize,
   }
 
   auto target = GL_ARRAY_BUFFER;
-  if (size > buffer->capacity) {
+  if (size > buffer.capacity) {
     // reallocate buffer if needed
-    if (buffer->buffer_id) {
-      glDeleteBuffers(1, &buffer->buffer_id);
+    if (buffer.buffer_id) {
+      glDeleteBuffers(1, &buffer.buffer_id);
     }
-    glGenBuffers(1, &buffer->buffer_id);
-    glBindBuffer(target, buffer->buffer_id);
+    glGenBuffers(1, &buffer.buffer_id);
+    glBindBuffer(target, buffer.buffer_id);
     glBufferData(target, size * sizeof(float), data,
         dynamic ? GL_DYNAMIC_DRAW : GL_STATIC_DRAW);
-    buffer->capacity = size;
+    buffer.capacity = size;
   } else {
     // we have enough space
-    assert(buffer->buffer_id);
-    glBindBuffer(target, buffer->buffer_id);
+    assert(buffer.buffer_id);
+    glBindBuffer(target, buffer.buffer_id);
     glBufferSubData(target, 0, size * sizeof(float), data);
   }
 
-  buffer->element_size = esize;
-  buffer->num_elements = size / esize;
-  buffer->dynamic      = dynamic;
+  buffer.element_size = esize;
+  buffer.num_elements = size / esize;
+  buffer.dynamic      = dynamic;
   assert_ogl_error();
 }
 
 // clear buffer
-void clear_arraybuffer(ogl_arraybuffer* buffer) {
+void clear_arraybuffer(ogl_arraybuffer& buffer) {
   assert_ogl_error();
-  if (buffer->buffer_id) glDeleteBuffers(1, &buffer->buffer_id);
-  buffer->capacity     = 0;
-  buffer->num_elements = 0;
-  buffer->element_size = 0;
-  buffer->dynamic      = false;
-  buffer->buffer_id    = 0;
+  if (buffer.buffer_id) glDeleteBuffers(1, &buffer.buffer_id);
+  buffer.capacity     = 0;
+  buffer.num_elements = 0;
+  buffer.element_size = 0;
+  buffer.dynamic      = false;
+  buffer.buffer_id    = 0;
   assert_ogl_error();
 }
 
 // set buffer
 void set_arraybuffer(
-    ogl_arraybuffer* buffer, const vector<float>& data, bool dynamic) {
+    ogl_arraybuffer& buffer, const vector<float>& data, bool dynamic) {
   set_arraybuffer(buffer, data.size() * 1, 1, (float*)data.data(), dynamic);
 }
 void set_arraybuffer(
-    ogl_arraybuffer* buffer, const vector<vec2f>& data, bool dynamic) {
+    ogl_arraybuffer& buffer, const vector<vec2f>& data, bool dynamic) {
   set_arraybuffer(buffer, data.size() * 2, 2, (float*)data.data(), dynamic);
 }
 void set_arraybuffer(
-    ogl_arraybuffer* buffer, const vector<vec3f>& data, bool dynamic) {
+    ogl_arraybuffer& buffer, const vector<vec3f>& data, bool dynamic) {
   set_arraybuffer(buffer, data.size() * 3, 3, (float*)data.data(), dynamic);
 }
 void set_arraybuffer(
-    ogl_arraybuffer* buffer, const vector<vec4f>& data, bool dynamic) {
+    ogl_arraybuffer& buffer, const vector<vec4f>& data, bool dynamic) {
   set_arraybuffer(buffer, data.size() * 4, 4, (float*)data.data(), dynamic);
 }
 
-void set_elementbuffer(ogl_elementbuffer* buffer, size_t size, int esize,
+void set_elementbuffer(ogl_elementbuffer& buffer, size_t size, int esize,
     const int* data, bool dynamic) {
   assert_ogl_error();
 
@@ -564,60 +564,60 @@ void set_elementbuffer(ogl_elementbuffer* buffer, size_t size, int esize,
   }
 
   auto target = GL_ELEMENT_ARRAY_BUFFER;
-  if (size > buffer->capacity) {
+  if (size > buffer.capacity) {
     // reallocate buffer if needed
-    if (buffer->buffer_id) {
-      glDeleteBuffers(1, &buffer->buffer_id);
+    if (buffer.buffer_id) {
+      glDeleteBuffers(1, &buffer.buffer_id);
     }
-    glGenBuffers(1, &buffer->buffer_id);
-    glBindBuffer(target, buffer->buffer_id);
+    glGenBuffers(1, &buffer.buffer_id);
+    glBindBuffer(target, buffer.buffer_id);
     glBufferData(target, size * sizeof(int), data,
         dynamic ? GL_DYNAMIC_DRAW : GL_STATIC_DRAW);
-    buffer->capacity = size;
+    buffer.capacity = size;
   } else {
     // we have enough space
-    assert(buffer->buffer_id);
-    glBindBuffer(target, buffer->buffer_id);
+    assert(buffer.buffer_id);
+    glBindBuffer(target, buffer.buffer_id);
     glBufferSubData(target, 0, size * sizeof(int), data);
   }
 
-  buffer->element_size = esize;
-  buffer->num_elements = size / esize;
-  buffer->dynamic      = dynamic;
+  buffer.element_size = esize;
+  buffer.num_elements = size / esize;
+  buffer.dynamic      = dynamic;
   assert_ogl_error();
 }
 
 // cleanup
-ogl_elementbuffer::~ogl_elementbuffer() { clear_elementbuffer(this); }
+ogl_elementbuffer::~ogl_elementbuffer() { clear_elementbuffer(*this); }
 
 // check if buffer is initialized
-bool is_initialized(const ogl_elementbuffer* buffer) {
-  return buffer && buffer->buffer_id != 0;
+bool is_initialized(const ogl_elementbuffer& buffer) {
+  return buffer.buffer_id != 0;
 }
 
 // clear buffer
-void clear_elementbuffer(ogl_elementbuffer* buffer) {
+void clear_elementbuffer(ogl_elementbuffer& buffer) {
   assert_ogl_error();
-  if (buffer->buffer_id) glDeleteBuffers(1, &buffer->buffer_id);
-  buffer->capacity     = 0;
-  buffer->num_elements = 0;
-  buffer->element_size = 0;
-  buffer->dynamic      = false;
-  buffer->buffer_id    = 0;
+  if (buffer.buffer_id) glDeleteBuffers(1, &buffer.buffer_id);
+  buffer.capacity     = 0;
+  buffer.num_elements = 0;
+  buffer.element_size = 0;
+  buffer.dynamic      = false;
+  buffer.buffer_id    = 0;
   assert_ogl_error();
 }
 
 // set buffer
 void set_elementbuffer(
-    ogl_elementbuffer* buffer, const vector<int>& points, bool dynamic) {
+    ogl_elementbuffer& buffer, const vector<int>& points, bool dynamic) {
   set_elementbuffer(buffer, points.size() * 1, 1, (int*)points.data(), dynamic);
 }
 void set_elementbuffer(
-    ogl_elementbuffer* buffer, const vector<vec2i>& lines, bool dynamic) {
+    ogl_elementbuffer& buffer, const vector<vec2i>& lines, bool dynamic) {
   set_elementbuffer(buffer, lines.size() * 2, 2, (int*)lines.data(), dynamic);
 }
 void set_elementbuffer(
-    ogl_elementbuffer* buffer, const vector<vec3i>& triangles, bool dynamic) {
+    ogl_elementbuffer& buffer, const vector<vec3i>& triangles, bool dynamic) {
   set_elementbuffer(
       buffer, triangles.size() * 3, 3, (int*)triangles.data(), dynamic);
 }
@@ -898,73 +898,73 @@ void set_uniform(const ogl_program& program, const char* name,
 }
 
 // cleanup
-ogl_framebuffer::~ogl_framebuffer() { clear_framebuffer(this); }
+ogl_framebuffer::~ogl_framebuffer() { clear_framebuffer(*this); }
 
-void set_framebuffer(ogl_framebuffer* framebuffer, const vec2i& size) {
+void set_framebuffer(ogl_framebuffer& framebuffer, const vec2i& size) {
   if (size == zero2i) {
     clear_framebuffer(framebuffer);
     return;
   }
 
-  if (!framebuffer->framebuffer_id) {
-    glGenFramebuffers(1, &framebuffer->framebuffer_id);
+  if (!framebuffer.framebuffer_id) {
+    glGenFramebuffers(1, &framebuffer.framebuffer_id);
   }
 
-  if (!framebuffer->renderbuffer_id) {
-    glGenRenderbuffers(1, &framebuffer->renderbuffer_id);
+  if (!framebuffer.renderbuffer_id) {
+    glGenRenderbuffers(1, &framebuffer.renderbuffer_id);
     // bind together frame buffer and render buffer
     // TODO(giacomo): Why do we need to put STENCIL8 to make things work on
     // Mac??
-    glBindFramebuffer(GL_FRAMEBUFFER, framebuffer->framebuffer_id);
-    glBindRenderbuffer(GL_RENDERBUFFER, framebuffer->renderbuffer_id);
+    glBindFramebuffer(GL_FRAMEBUFFER, framebuffer.framebuffer_id);
+    glBindRenderbuffer(GL_RENDERBUFFER, framebuffer.renderbuffer_id);
     glFramebufferRenderbuffer(GL_FRAMEBUFFER, GL_DEPTH_STENCIL_ATTACHMENT,
-        GL_RENDERBUFFER, framebuffer->renderbuffer_id);
+        GL_RENDERBUFFER, framebuffer.renderbuffer_id);
   }
 
-  if (size != framebuffer->size) {
+  if (size != framebuffer.size) {
     // create render buffer for depth and stencil
     // TODO(giacomo): We put STENCIL here for the same reason...
-    glBindRenderbuffer(GL_RENDERBUFFER, framebuffer->renderbuffer_id);
+    glBindRenderbuffer(GL_RENDERBUFFER, framebuffer.renderbuffer_id);
     glRenderbufferStorage(GL_RENDERBUFFER, GL_DEPTH24_STENCIL8, size.x, size.y);
-    framebuffer->size = size;
+    framebuffer.size = size;
   }
 
-  glBindFramebuffer(GL_FRAMEBUFFER, framebuffer->framebuffer_id);
+  glBindFramebuffer(GL_FRAMEBUFFER, framebuffer.framebuffer_id);
   assert(glCheckFramebufferStatus(GL_FRAMEBUFFER) == GL_FRAMEBUFFER_COMPLETE);
   glBindFramebuffer(GL_FRAMEBUFFER, ogl_framebuffer::bound_framebuffer_id);
 
   assert_ogl_error();
 }
 
-inline void set_framebuffer_texture(const ogl_framebuffer* framebuffer,
+inline void set_framebuffer_texture(const ogl_framebuffer& framebuffer,
     uint texture_id, uint target, uint mipmap_level) {
-  glBindFramebuffer(GL_FRAMEBUFFER, framebuffer->framebuffer_id);
+  glBindFramebuffer(GL_FRAMEBUFFER, framebuffer.framebuffer_id);
   glFramebufferTexture2D(
       GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, target, texture_id, mipmap_level);
   glBindFramebuffer(GL_FRAMEBUFFER, ogl_framebuffer::bound_framebuffer_id);
   assert_ogl_error();
 }
 
-bool is_framebuffer_bound(const ogl_framebuffer* framebuffer) {
-  return framebuffer->framebuffer_id == ogl_framebuffer::bound_framebuffer_id;
+bool is_framebuffer_bound(const ogl_framebuffer& framebuffer) {
+  return framebuffer.framebuffer_id == ogl_framebuffer::bound_framebuffer_id;
 }
 
-void set_framebuffer_texture(const ogl_framebuffer* framebuffer,
+void set_framebuffer_texture(const ogl_framebuffer& framebuffer,
     const ogl_texture& texture, uint mipmap_level) {
   set_framebuffer_texture(
       framebuffer, texture.texture_id, GL_TEXTURE_2D, mipmap_level);
 }
 
-void set_framebuffer_texture(const ogl_framebuffer* framebuffer,
+void set_framebuffer_texture(const ogl_framebuffer& framebuffer,
     const ogl_cubemap& cubemap, uint face, uint mipmap_level) {
   set_framebuffer_texture(framebuffer, cubemap.cubemap_id,
       GL_TEXTURE_CUBE_MAP_POSITIVE_X + face, mipmap_level);
 }
 
-void bind_framebuffer(const ogl_framebuffer* framebuffer) {
-  glBindFramebuffer(GL_FRAMEBUFFER, framebuffer->framebuffer_id);
+void bind_framebuffer(const ogl_framebuffer& framebuffer) {
+  glBindFramebuffer(GL_FRAMEBUFFER, framebuffer.framebuffer_id);
   assert_ogl_error();
-  ogl_framebuffer::bound_framebuffer_id = framebuffer->framebuffer_id;
+  ogl_framebuffer::bound_framebuffer_id = framebuffer.framebuffer_id;
 }
 
 void unbind_framebuffer() {
@@ -973,22 +973,19 @@ void unbind_framebuffer() {
   ogl_framebuffer::bound_framebuffer_id = 0;
 }
 
-void clear_framebuffer(ogl_framebuffer* framebuffer) {
-  if (ogl_framebuffer::bound_framebuffer_id == framebuffer->framebuffer_id) {
+void clear_framebuffer(ogl_framebuffer& framebuffer) {
+  if (ogl_framebuffer::bound_framebuffer_id == framebuffer.framebuffer_id) {
     unbind_framebuffer();
   }
-  glDeleteFramebuffers(1, &framebuffer->framebuffer_id);
-  glDeleteRenderbuffers(1, &framebuffer->renderbuffer_id);
-  framebuffer->size            = {0, 0};
-  framebuffer->framebuffer_id  = 0;
-  framebuffer->renderbuffer_id = 0;
+  glDeleteFramebuffers(1, &framebuffer.framebuffer_id);
+  glDeleteRenderbuffers(1, &framebuffer.renderbuffer_id);
+  framebuffer.size            = {0, 0};
+  framebuffer.framebuffer_id  = 0;
+  framebuffer.renderbuffer_id = 0;
   assert_ogl_error();
 }
 
-ogl_shape::~ogl_shape() {
-  for (auto buffer : vertex_buffers) delete buffer;
-  delete index_buffer;
-}
+ogl_shape::~ogl_shape() { clear_shape(*this); }
 
 void bind_shape(const ogl_shape& shape) { glBindVertexArray(shape.shape_id); }
 
@@ -996,7 +993,7 @@ bool is_initialized(const ogl_shape& shape) { return shape.shape_id != 0; }
 
 // Clear an OpenGL shape
 void clear_shape(ogl_shape& shape) {
-  for (auto buffer : shape.vertex_buffers) {
+  for (auto& buffer : shape.vertex_buffers) {
     clear_arraybuffer(buffer);
   }
   clear_elementbuffer(shape.index_buffer);
@@ -1011,16 +1008,16 @@ void set_vertex_buffer_impl(
     ogl_shape& shape, const vector<T>& data, int location) {
   if (!shape.shape_id) glGenVertexArrays(1, &shape.shape_id);
   while (shape.vertex_buffers.size() <= location) {
-    shape.vertex_buffers.push_back(new ogl_arraybuffer{});
+    shape.vertex_buffers.emplace_back();
   }
   set_arraybuffer(shape.vertex_buffers[location], data, false);
   glBindVertexArray(shape.shape_id);
-  auto buffer = shape.vertex_buffers[location];
+  auto& buffer = shape.vertex_buffers[location];
   assert_ogl_error();
-  glBindBuffer(GL_ARRAY_BUFFER, buffer->buffer_id);
+  glBindBuffer(GL_ARRAY_BUFFER, buffer.buffer_id);
   glEnableVertexAttribArray(location);
   glVertexAttribPointer(
-      location, buffer->element_size, GL_FLOAT, false, 0, nullptr);
+      location, buffer.element_size, GL_FLOAT, false, 0, nullptr);
   assert_ogl_error();
 }
 
@@ -1075,7 +1072,7 @@ void set_instance_buffer(ogl_shape& shape, int location, bool is_instance) {
   bind_shape(shape);
   if (is_instance) {
     glVertexAttribDivisor(location, 1);
-    shape.num_instances = shape.vertex_buffers[location]->num_elements;
+    shape.num_instances = shape.vertex_buffers[location].num_elements;
   } else {
     glVertexAttribDivisor(location, 0);
     shape.num_instances = 0;
@@ -1118,21 +1115,20 @@ void draw_shape(const ogl_shape& shape) {
     glPointSize(shape.point_size);
   }
 
-  auto indices = shape.index_buffer;
-  if (indices->buffer_id != 0) {
-    glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, indices->buffer_id);
+  auto& indices = shape.index_buffer;
+  if (indices.buffer_id != 0) {
+    glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, indices.buffer_id);
     if (shape.num_instances == 0) {
-      glDrawElements(type,
-          (GLsizei)indices->num_elements * indices->element_size,
+      glDrawElements(type, (GLsizei)indices.num_elements * indices.element_size,
           GL_UNSIGNED_INT, nullptr);
     } else {
       glDrawElementsInstanced(type,
-          (GLsizei)indices->num_elements * indices->element_size,
-          GL_UNSIGNED_INT, nullptr, (GLsizei)shape.num_instances);
+          (GLsizei)indices.num_elements * indices.element_size, GL_UNSIGNED_INT,
+          nullptr, (GLsizei)shape.num_instances);
     }
   } else {
-    auto vertices = shape.vertex_buffers[0];
-    glDrawArrays(type, 0, (int)vertices->num_elements);
+    auto& vertices = shape.vertex_buffers[0];
+    glDrawArrays(type, 0, (int)vertices.num_elements);
   }
 
   if (shape.elements == ogl_element_type::points) {

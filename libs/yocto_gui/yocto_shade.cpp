@@ -56,24 +56,29 @@ namespace yocto {
 #pragma GCC diagnostic pop
 #endif
 
-const ogl_arraybuffer* get_positions(const shade_shape& shape) {
-  if (shape.vertex_buffers.size() <= 0) return nullptr;
+const ogl_arraybuffer& get_positions(const shade_shape& shape) {
+  if (shape.vertex_buffers.size() <= 0)
+    throw std::out_of_range{"no vertex buffer"};
   return shape.vertex_buffers[0];
 }
-const ogl_arraybuffer* get_normals(const shade_shape& shape) {
-  if (shape.vertex_buffers.size() <= 1) return nullptr;
+const ogl_arraybuffer& get_normals(const shade_shape& shape) {
+  if (shape.vertex_buffers.size() <= 1)
+    throw std::out_of_range{"no vertex buffer"};
   return shape.vertex_buffers[1];
 }
-const ogl_arraybuffer* get_texcoords(const shade_shape& shape) {
-  if (shape.vertex_buffers.size() <= 2) return nullptr;
+const ogl_arraybuffer& get_texcoords(const shade_shape& shape) {
+  if (shape.vertex_buffers.size() <= 2)
+    throw std::out_of_range{"no vertex buffer"};
   return shape.vertex_buffers[2];
 }
-const ogl_arraybuffer* get_colors(const shade_shape& shape) {
-  if (shape.vertex_buffers.size() <= 3) return nullptr;
+const ogl_arraybuffer& get_colors(const shade_shape& shape) {
+  if (shape.vertex_buffers.size() <= 3)
+    throw std::out_of_range{"no vertex buffer"};
   return shape.vertex_buffers[3];
 }
-const ogl_arraybuffer* get_tangents(const shade_shape& shape) {
-  if (shape.vertex_buffers.size() <= 4) return nullptr;
+const ogl_arraybuffer& get_tangents(const shade_shape& shape) {
+  if (shape.vertex_buffers.size() <= 4)
+    throw std::out_of_range{"no vertex buffer"};
   return shape.vertex_buffers[4];
 }
 
@@ -622,8 +627,7 @@ static void precompute_cubemap(ogl_cubemap& cubemap, const Sampler& environment,
   auto cube = ogl_shape{};
   set_cube_shape(cube);
 
-  auto framebuffer_guard = make_unique<ogl_framebuffer>();
-  auto framebuffer       = framebuffer_guard.get();
+  auto framebuffer = ogl_framebuffer{};
   set_framebuffer(framebuffer, {size, size});
 
   auto cameras = array<frame3f, 6>{
@@ -675,8 +679,7 @@ static void precompute_brdflut(ogl_texture& texture) {
 
   set_texture(texture, size, 3, (float*)nullptr, true, true, false, false);
 
-  auto framebuffer_guard = make_unique<ogl_framebuffer>();
-  auto framebuffer       = framebuffer_guard.get();
+  auto framebuffer = ogl_framebuffer{};
   set_framebuffer(framebuffer, size);
   set_framebuffer_texture(framebuffer, texture, 0);
 

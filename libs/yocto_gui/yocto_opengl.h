@@ -217,24 +217,24 @@ struct ogl_arraybuffer {
 };
 
 // set buffer
-void set_arraybuffer(ogl_arraybuffer* buffer, size_t size, int esize,
+void set_arraybuffer(ogl_arraybuffer& buffer, size_t size, int esize,
     const float* data, bool dynamic = false);
 
 // check if buffer is initialized
-bool is_initialized(const ogl_arraybuffer* buffer);
+bool is_initialized(const ogl_arraybuffer& buffer);
 
 // clear buffer
-void clear_arraybuffer(ogl_arraybuffer* buffer);
+void clear_arraybuffer(ogl_arraybuffer& buffer);
 
 // set buffer
 void set_arraybuffer(
-    ogl_arraybuffer* buffer, const vector<float>& data, bool dynamic = false);
+    ogl_arraybuffer& buffer, const vector<float>& data, bool dynamic = false);
 void set_arraybuffer(
-    ogl_arraybuffer* buffer, const vector<vec2f>& data, bool dynamic = false);
+    ogl_arraybuffer& buffer, const vector<vec2f>& data, bool dynamic = false);
 void set_arraybuffer(
-    ogl_arraybuffer* buffer, const vector<vec3f>& data, bool dynamic = false);
+    ogl_arraybuffer& buffer, const vector<vec3f>& data, bool dynamic = false);
 void set_arraybuffer(
-    ogl_arraybuffer* buffer, const vector<vec4f>& data, bool dynamic = false);
+    ogl_arraybuffer& buffer, const vector<vec4f>& data, bool dynamic = false);
 
 // Opengl array/element buffer
 struct ogl_elementbuffer {
@@ -253,27 +253,31 @@ struct ogl_elementbuffer {
   ogl_elementbuffer(ogl_elementbuffer&& other) {
     move_by_swap(this, std::move(other));
   }
+  ogl_elementbuffer& operator=(ogl_elementbuffer&& other) {
+    move_by_swap(this, std::move(other));
+    return *this;
+  }
 
   // Cleanup
   ~ogl_elementbuffer();
 };
 
 // set buffer
-void set_elementbuffer(ogl_elementbuffer* buffer, size_t size, const int* data,
+void set_elementbuffer(ogl_elementbuffer& buffer, size_t size, const int* data,
     bool dynamic = false);
 
 // check if buffer is initialized
-bool is_initialized(const ogl_elementbuffer* buffer);
+bool is_initialized(const ogl_elementbuffer& buffer);
 
 // clear buffer
-void clear_elementbuffer(ogl_elementbuffer* buffer);
+void clear_elementbuffer(ogl_elementbuffer& buffer);
 
 // set buffer
 void set_elementbuffer(
-    ogl_elementbuffer* buffer, const vector<int>& points, bool dynamic = false);
-void set_elementbuffer(ogl_elementbuffer* buffer, const vector<vec2i>& lines,
+    ogl_elementbuffer& buffer, const vector<int>& points, bool dynamic = false);
+void set_elementbuffer(ogl_elementbuffer& buffer, const vector<vec2i>& lines,
     bool dynamic = false);
-void set_elementbuffer(ogl_elementbuffer* buffer,
+void set_elementbuffer(ogl_elementbuffer& buffer,
     const vector<vec3i>& triangles, bool dynamic = false);
 
 // Opengl program
@@ -393,17 +397,17 @@ struct ogl_framebuffer {
   ~ogl_framebuffer();
 };
 
-void set_framebuffer(ogl_framebuffer* framebuffer, const vec2i& size);
+void set_framebuffer(ogl_framebuffer& framebuffer, const vec2i& size);
 
-void set_framebuffer_texture(const ogl_framebuffer* framebuffer,
+void set_framebuffer_texture(const ogl_framebuffer& framebuffer,
     const ogl_texture& texture, uint mipmap_level = 0);
 
-void set_framebuffer_texture(const ogl_framebuffer* framebuffer,
+void set_framebuffer_texture(const ogl_framebuffer& framebuffer,
     const ogl_cubemap& cubemap, uint face, uint mipmap_level = 0);
 
-void bind_framebuffer(const ogl_framebuffer* target);
+void bind_framebuffer(const ogl_framebuffer& target);
 void unbind_framebuffer();
-void clear_framebuffer(ogl_framebuffer* target);
+void clear_framebuffer(ogl_framebuffer& target);
 }  // namespace yocto
 
 // -----------------------------------------------------------------------------
@@ -424,11 +428,11 @@ enum struct ogl_element_type {
 // Opengl shape
 struct ogl_shape {
   // OpenGL objects
-  vector<ogl_arraybuffer*> vertex_buffers = {};
-  ogl_elementbuffer*       index_buffer   = new ogl_elementbuffer{};
-  ogl_element_type         elements       = ogl_element_type::triangles;
-  size_t                   num_instances  = 0;
-  float                    point_size     = 1;
+  vector<ogl_arraybuffer> vertex_buffers = {};
+  ogl_elementbuffer       index_buffer   = {};
+  ogl_element_type        elements       = ogl_element_type::triangles;
+  size_t                  num_instances  = 0;
+  float                   point_size     = 1;
 
   // OpenGl state
   uint shape_id = 0;
