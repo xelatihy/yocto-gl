@@ -301,67 +301,67 @@ struct ogl_program {
 };
 
 // initialize program
-bool set_program(ogl_program* program, const string& vertex,
+bool set_program(ogl_program& program, const string& vertex,
     const string& fragment, string& error);
-bool set_program(ogl_program* program, const string& vertex,
+bool set_program(ogl_program& program, const string& vertex,
     const string& fragment, string& error, string& errorlog);
-bool set_program(ogl_program* program, const string& vertex,
+bool set_program(ogl_program& program, const string& vertex,
     const string& fragment, bool exceptions = true);
-bool is_initialized(const ogl_program* program);
+bool is_initialized(const ogl_program& program);
 
 // clear program
-void clear_program(ogl_program* program);
+void clear_program(ogl_program& program);
 
 // bind program
-void bind_program(const ogl_program* program);
+void bind_program(const ogl_program& program);
 
 // unbind program
 void unbind_program();
 
 // get uniform location
-int get_uniform_location(const ogl_program* program, const char* name);
+int get_uniform_location(const ogl_program& program, const char* name);
 
 // set uniforms
-void set_uniform(const ogl_program* program, int location, int value);
-void set_uniform(const ogl_program* program, int location, const vec2i& value);
-void set_uniform(const ogl_program* program, int location, const vec3i& value);
-void set_uniform(const ogl_program* program, int location, const vec4i& value);
-void set_uniform(const ogl_program* program, int location, float value);
-void set_uniform(const ogl_program* program, int location, const vec2f& value);
-void set_uniform(const ogl_program* program, int location, const vec3f& value);
-void set_uniform(const ogl_program* program, int location, const vec4f& value);
-void set_uniform(const ogl_program* program, int location, const mat2f& value);
-void set_uniform(const ogl_program* program, int location, const mat3f& value);
-void set_uniform(const ogl_program* program, int location, const mat4f& value);
+void set_uniform(const ogl_program& program, int location, int value);
+void set_uniform(const ogl_program& program, int location, const vec2i& value);
+void set_uniform(const ogl_program& program, int location, const vec3i& value);
+void set_uniform(const ogl_program& program, int location, const vec4i& value);
+void set_uniform(const ogl_program& program, int location, float value);
+void set_uniform(const ogl_program& program, int location, const vec2f& value);
+void set_uniform(const ogl_program& program, int location, const vec3f& value);
+void set_uniform(const ogl_program& program, int location, const vec4f& value);
+void set_uniform(const ogl_program& program, int location, const mat2f& value);
+void set_uniform(const ogl_program& program, int location, const mat3f& value);
+void set_uniform(const ogl_program& program, int location, const mat4f& value);
 void set_uniform(
-    const ogl_program* program, int location, const frame2f& value);
+    const ogl_program& program, int location, const frame2f& value);
 void set_uniform(
-    const ogl_program* program, int location, const frame3f& value);
+    const ogl_program& program, int location, const frame3f& value);
 
 template <typename T>
 inline void set_uniform(
-    const ogl_program* program, const char* name, const T& value) {
+    const ogl_program& program, const char* name, const T& value) {
   return set_uniform(program, get_uniform_location(program, name), value);
 }
 
 // set uniform texture
-void set_uniform(const ogl_program* program, int location,
+void set_uniform(const ogl_program& program, int location,
     const ogl_texture* texture, int unit);
-void set_uniform(const ogl_program* program, const char* name,
+void set_uniform(const ogl_program& program, const char* name,
     const ogl_texture* texture, int unit);
-void set_uniform(const ogl_program* program, int location, int location_on,
+void set_uniform(const ogl_program& program, int location, int location_on,
     const ogl_texture* texture, int unit);
-void set_uniform(const ogl_program* program, const char* name,
+void set_uniform(const ogl_program& program, const char* name,
     const char* name_on, const ogl_texture* texture, int unit);
 
 // set uniform cubemap
-void set_uniform(const ogl_program* program, int location,
+void set_uniform(const ogl_program& program, int location,
     const ogl_cubemap& cubemap, int unit);
-void set_uniform(const ogl_program* program, const char* name,
+void set_uniform(const ogl_program& program, const char* name,
     const ogl_cubemap& cubemap, int unit);
-void set_uniform(ogl_program* program, int location, int location_on,
+void set_uniform(ogl_program& program, int location, int location_on,
     const ogl_cubemap& cubemap, int unit);
-void set_uniform(ogl_program* program, const char* name, const char* name_on,
+void set_uniform(ogl_program& program, const char* name, const char* name_on,
     const ogl_cubemap& cubemap, int unit);
 }  // namespace yocto
 
@@ -502,7 +502,7 @@ namespace yocto {
 
 // OpenGL image data
 struct ogl_image {
-  ogl_program* program = new ogl_program{};
+  ogl_program  program = {};
   ogl_texture* texture = new ogl_texture{};
   ogl_shape*   quad    = new ogl_shape{};
 

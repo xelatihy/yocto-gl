@@ -154,11 +154,7 @@ void set_point_size(shade_shape& shape, float point_size) {
   set_point_size((ogl_shape*)&shape, point_size);
 }
 
-shade_scene::~shade_scene() {
-  clear_scene(*this);
-  delete environment_program;
-  delete instance_program;
-}
+shade_scene::~shade_scene() { clear_scene(*this); }
 
 static const char* shade_instance_vertex();
 static const char* shade_instanced_vertex();
@@ -444,20 +440,20 @@ struct shade_view {
   mat4f   projection_matrix = {};
 };
 
-void set_view_uniforms(ogl_program* program, const shade_view& view) {
+void set_view_uniforms(ogl_program& program, const shade_view& view) {
   set_uniform(program, "eye", view.camera_frame.o);
   set_uniform(program, "view", view.view_matrix);
   set_uniform(program, "projection", view.projection_matrix);
 }
 
-void set_params_uniforms(ogl_program* program, const shade_params& params) {
+void set_params_uniforms(ogl_program& program, const shade_params& params) {
   set_uniform(program, "exposure", params.exposure);
   set_uniform(program, "gamma", params.gamma);
   set_uniform(program, "double_sided", params.double_sided);
 }
 
 // Draw a shape
-void set_instance_uniforms(const shade_scene& scene, ogl_program* program,
+void set_instance_uniforms(const shade_scene& scene, ogl_program& program,
     const frame3f& frame, const shade_shape& shape,
     const shade_material& material, const shade_params& params) {
   auto shape_xform     = frame_to_mat(frame);
@@ -474,7 +470,7 @@ void set_instance_uniforms(const shade_scene& scene, ogl_program* program,
   //    set_uniform(program, "highlight", vec4f{0, 0, 0, 0});
   //  }
 
-  auto set_texture = [&scene](ogl_program* program, const char* name,
+  auto set_texture = [&scene](ogl_program& program, const char* name,
                          const char* name_on, gltexture_handle texture,
                          int unit) {
     set_uniform(program, name, name_on,
@@ -516,10 +512,10 @@ void set_instance_uniforms(const shade_scene& scene, ogl_program* program,
 
 static void draw_shape(shade_shape& shape) { draw_shape((ogl_shape*)&shape); }
 
-void draw_environments(const shade_scene& scene, const shade_view& view,
-    const shade_params& params) {
+void draw_environments(
+    shade_scene& scene, const shade_view& view, const shade_params& params) {
   if (params.hide_environment) return;
-  auto program = scene.environment_program;
+  auto& program = scene.environment_program;
   if (!is_initialized(program)) return;
   bind_program(program);
   set_view_uniforms(program, view);
@@ -534,7 +530,7 @@ void draw_environments(const shade_scene& scene, const shade_view& view,
   unbind_program();
 }
 
-void set_lighting_uniforms(ogl_program* program, const shade_scene& scene,
+void set_lighting_uniforms(ogl_program& program, const shade_scene& scene,
     const shade_view& view, const shade_params& params) {
   struct gui_light {
     vec3f position = {0, 0, 0};
@@ -603,10 +599,10 @@ void set_lighting_uniforms(ogl_program* program, const shade_scene& scene,
   assert_ogl_error();
 }
 
-void draw_instances(const shade_scene& scene, const shade_view& view,
-    const shade_params& params) {
+void draw_instances(
+    shade_scene& scene, const shade_view& view, const shade_params& params) {
   // set program
-  auto program = scene.instance_program;
+  auto& program = scene.instance_program;
   bind_program(program);
 
   // set scene uniforms
@@ -645,7 +641,7 @@ static shade_view make_scene_view(const shade_camera& camera,
   return view;
 }
 
-void draw_scene(const shade_scene& scene, const shade_camera& camera,
+void draw_scene(shade_scene& scene, const shade_camera& camera,
     const vec4i& viewport, const shade_params& params) {
   clear_ogl_framebuffer(params.background);
   set_ogl_viewport(viewport);
@@ -661,7 +657,7 @@ void draw_scene(const shade_scene& scene, const shade_camera& camera,
 // environment. The input sampler can be either a cubemap or a latlong texture.
 template <typename Sampler>
 static void precompute_cubemap(ogl_cubemap& cubemap, const Sampler& environment,
-    ogl_program* program, int size, int num_mipmap_levels = 1) {
+    ogl_program& program, int size, int num_mipmap_levels = 1) {
   // init cubemap with no data
   set_cubemap(cubemap, size, 3,
       array<float*, 6>{nullptr, nullptr, nullptr, nullptr, nullptr, nullptr},
@@ -718,8 +714,7 @@ static void precompute_brdflut(ogl_texture& texture) {
   auto screen_quad       = screen_quad_guard.get();
   set_quad_shape(screen_quad);
 
-  auto program_guard = make_unique<ogl_program>();
-  auto program       = program_guard.get();
+  auto program = ogl_program{};
   set_program(program, precompute_brdflut_vertex(),
       precompute_brdflut_fragment(), true);
 
@@ -758,9 +753,8 @@ static void init_environment(
   set_cube_shape(&scene.envlight_shapes[environment.envlight_shape]);
 
   // precompute cubemap from environment texture
-  auto size          = scene.textures[environment.emission_tex].size.y;
-  auto program_guard = make_unique<ogl_program>();
-  auto program       = program_guard.get();
+  auto size    = scene.textures[environment.emission_tex].size.y;
+  auto program = ogl_program{};
   set_program(program, precompute_cubemap_vertex(),
       precompute_environment_fragment(), true);
   precompute_cubemap(scene.envlight_cubemaps[environment.envlight_cubemap],
@@ -786,8 +780,7 @@ void init_envlight(shade_scene& scene, shade_environment& environment) {
     environment.envlight_brdflut_ = (int)scene.envlight_brdfluts.size() - 1;
   }
   // precompute irradiance map
-  auto diffuse_program_guard = make_unique<ogl_program>();
-  auto diffuse_program       = diffuse_program_guard.get();
+  auto diffuse_program = ogl_program{};
   set_program(diffuse_program, precompute_cubemap_vertex(),
       precompute_irradiance_fragment(), true);
   precompute_cubemap(scene.envlight_diffuses[environment.envlight_diffuse_],
@@ -795,8 +788,7 @@ void init_envlight(shade_scene& scene, shade_environment& environment) {
       64);
 
   // precompute specular map
-  auto specular_program_guard = make_unique<ogl_program>();
-  auto specular_program       = specular_program_guard.get();
+  auto specular_program = ogl_program{};
   set_program(specular_program, precompute_cubemap_vertex(),
       precompute_reflections_fragment(), true);
   precompute_cubemap(scene.envlight_speculars[environment.envlight_specular_],

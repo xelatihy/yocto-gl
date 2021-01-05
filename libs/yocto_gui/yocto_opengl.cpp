@@ -623,10 +623,10 @@ void set_elementbuffer(
 }
 
 // initialize program
-bool set_program(ogl_program* program, const string& vertex,
+bool set_program(ogl_program& program, const string& vertex,
     const string& fragment, string& error, string& errorlog) {
   // error
-  auto program_error = [&error, &errorlog, program](
+  auto program_error = [&error, &errorlog, &program](
                            const char* message, const char* log) {
     clear_program(program);
     error    = message;
@@ -635,11 +635,11 @@ bool set_program(ogl_program* program, const string& vertex,
   };
 
   // clear
-  if (program->program_id) clear_program(program);
+  if (program.program_id) clear_program(program);
 
   // setup code
-  program->vertex_code   = vertex;
-  program->fragment_code = fragment;
+  program.vertex_code   = vertex;
+  program.fragment_code = fragment;
 
   const char* ccvertex   = vertex.data();
   const char* ccfragment = fragment.data();
@@ -648,37 +648,37 @@ bool set_program(ogl_program* program, const string& vertex,
 
   // create vertex
   assert_ogl_error();
-  program->vertex_id = glCreateShader(GL_VERTEX_SHADER);
-  glShaderSource(program->vertex_id, 1, &ccvertex, NULL);
-  glCompileShader(program->vertex_id);
-  glGetShaderiv(program->vertex_id, GL_COMPILE_STATUS, &errflags);
+  program.vertex_id = glCreateShader(GL_VERTEX_SHADER);
+  glShaderSource(program.vertex_id, 1, &ccvertex, NULL);
+  glCompileShader(program.vertex_id);
+  glGetShaderiv(program.vertex_id, GL_COMPILE_STATUS, &errflags);
   if (errflags == 0) {
-    glGetShaderInfoLog(program->vertex_id, 10000, 0, errbuf.data());
+    glGetShaderInfoLog(program.vertex_id, 10000, 0, errbuf.data());
     return program_error("vertex shader not compiled", errbuf.data());
   }
   assert_ogl_error();
 
   // create fragment
   assert_ogl_error();
-  program->fragment_id = glCreateShader(GL_FRAGMENT_SHADER);
-  glShaderSource(program->fragment_id, 1, &ccfragment, NULL);
-  glCompileShader(program->fragment_id);
-  glGetShaderiv(program->fragment_id, GL_COMPILE_STATUS, &errflags);
+  program.fragment_id = glCreateShader(GL_FRAGMENT_SHADER);
+  glShaderSource(program.fragment_id, 1, &ccfragment, NULL);
+  glCompileShader(program.fragment_id);
+  glGetShaderiv(program.fragment_id, GL_COMPILE_STATUS, &errflags);
   if (errflags == 0) {
-    glGetShaderInfoLog(program->fragment_id, 10000, 0, errbuf.data());
+    glGetShaderInfoLog(program.fragment_id, 10000, 0, errbuf.data());
     return program_error("fragment shader not compiled", errbuf.data());
   }
   assert_ogl_error();
 
   // create program
   assert_ogl_error();
-  program->program_id = glCreateProgram();
-  glAttachShader(program->program_id, program->vertex_id);
-  glAttachShader(program->program_id, program->fragment_id);
-  glLinkProgram(program->program_id);
-  glGetProgramiv(program->program_id, GL_LINK_STATUS, &errflags);
+  program.program_id = glCreateProgram();
+  glAttachShader(program.program_id, program.vertex_id);
+  glAttachShader(program.program_id, program.fragment_id);
+  glLinkProgram(program.program_id);
+  glGetProgramiv(program.program_id, GL_LINK_STATUS, &errflags);
   if (errflags == 0) {
-    glGetProgramInfoLog(program->program_id, 10000, 0, errbuf.data());
+    glGetProgramInfoLog(program.program_id, 10000, 0, errbuf.data());
     return program_error("program not linked", errbuf.data());
   }
   // TODO(giacomo): Apparently validation must be done just before drawing.
@@ -687,10 +687,10 @@ bool set_program(ogl_program* program, const string& vertex,
   // same shader. We should create a function validate_program() anc call it
   // separately.
   //
-  // glValidateProgram(program->program_id);
-  // glGetProgramiv(program->program_id, GL_VALIDATE_STATUS, &errflags);
+  // glValidateProgram(program.program_id);
+  // glGetProgramiv(program.program_id, GL_VALIDATE_STATUS, &errflags);
   // if (!errflags) {
-  //   glGetProgramInfoLog(program->program_id, 10000, 0, errbuf);
+  //   glGetProgramInfoLog(program.program_id, 10000, 0, errbuf);
   //   return program_error("program not validated", errbuf);
   // }
   assert_ogl_error();
@@ -700,14 +700,14 @@ bool set_program(ogl_program* program, const string& vertex,
 }
 
 // initialize program
-bool set_program(ogl_program* program, const string& vertex,
+bool set_program(ogl_program& program, const string& vertex,
     const string& fragment, string& error) {
   auto errorlog = string{};
   return set_program(program, vertex, fragment, error, errorlog);
 }
 
 // initialize program, print eventual errors to stdout
-bool set_program(ogl_program* program, const string& vertex,
+bool set_program(ogl_program& program, const string& vertex,
     const string& fragment, bool exceptions) {
   auto error    = string{};
   auto errorlog = string{};
@@ -719,30 +719,30 @@ bool set_program(ogl_program* program, const string& vertex,
 }
 
 // clear program
-void clear_program(ogl_program* program) {
-  if (program->program_id) glDeleteProgram(program->program_id);
-  if (program->vertex_id) glDeleteShader(program->vertex_id);
-  if (program->fragment_id) glDeleteShader(program->fragment_id);
-  program->vertex_code   = {};
-  program->fragment_code = {};
-  program->program_id    = 0;
-  program->vertex_id     = 0;
-  program->fragment_id   = 0;
+void clear_program(ogl_program& program) {
+  if (program.program_id) glDeleteProgram(program.program_id);
+  if (program.vertex_id) glDeleteShader(program.vertex_id);
+  if (program.fragment_id) glDeleteShader(program.fragment_id);
+  program.vertex_code   = {};
+  program.fragment_code = {};
+  program.program_id    = 0;
+  program.vertex_id     = 0;
+  program.fragment_id   = 0;
   assert_ogl_error();
 }
 
 // cleanup
-ogl_program::~ogl_program() { clear_program(this); }
+ogl_program::~ogl_program() { clear_program(*this); }
 
-bool is_initialized(const ogl_program* program) {
-  return program && program->program_id != 0;
+bool is_initialized(const ogl_program& program) {
+  return program.program_id != 0;
 }
 
 // bind program
-void bind_program(const ogl_program* program) {
+void bind_program(const ogl_program& program) {
   assert_ogl_error();
-  glUseProgram(program->program_id);
-  ogl_program::bound_program_id = program->program_id;
+  glUseProgram(program.program_id);
+  ogl_program::bound_program_id = program.program_id;
   assert_ogl_error();
 }
 
@@ -754,92 +754,92 @@ void unbind_program() {
 }
 
 // set uniforms
-void set_uniform(const ogl_program* program, int location, int value) {
+void set_uniform(const ogl_program& program, int location, int value) {
   glUniform1i(location, value);
   assert_ogl_error();
 }
 
-void set_uniform(const ogl_program* program, int location, const vec2i& value) {
+void set_uniform(const ogl_program& program, int location, const vec2i& value) {
   glUniform2i(location, value.x, value.y);
   assert_ogl_error();
 }
 
-void set_uniform(const ogl_program* program, int location, const vec3i& value) {
+void set_uniform(const ogl_program& program, int location, const vec3i& value) {
   glUniform3i(location, value.x, value.y, value.z);
   assert_ogl_error();
 }
 
-void set_uniform(const ogl_program* program, int location, const vec4i& value) {
+void set_uniform(const ogl_program& program, int location, const vec4i& value) {
   glUniform4i(location, value.x, value.y, value.z, value.w);
   assert_ogl_error();
 }
 
-void set_uniform(const ogl_program* program, int location, float value) {
+void set_uniform(const ogl_program& program, int location, float value) {
   glUniform1f(location, value);
   assert_ogl_error();
 }
 
-void set_uniform(const ogl_program* program, int location, const vec2f& value) {
+void set_uniform(const ogl_program& program, int location, const vec2f& value) {
   glUniform2f(location, value.x, value.y);
   assert_ogl_error();
 }
 
-void set_uniform(const ogl_program* program, int location, const vec3f& value) {
+void set_uniform(const ogl_program& program, int location, const vec3f& value) {
   glUniform3f(location, value.x, value.y, value.z);
   assert_ogl_error();
 }
 
-void set_uniform(const ogl_program* program, int location, const vec4f& value) {
+void set_uniform(const ogl_program& program, int location, const vec4f& value) {
   glUniform4f(location, value.x, value.y, value.z, value.w);
   assert_ogl_error();
 }
 
-void set_uniform(const ogl_program* program, int location, const mat2f& value) {
+void set_uniform(const ogl_program& program, int location, const mat2f& value) {
   glUniformMatrix2fv(location, 1, false, &value.x.x);
   assert_ogl_error();
 }
 
-void set_uniform(const ogl_program* program, int location, const mat3f& value) {
+void set_uniform(const ogl_program& program, int location, const mat3f& value) {
   glUniformMatrix3fv(location, 1, false, &value.x.x);
   assert_ogl_error();
 }
 
-void set_uniform(const ogl_program* program, int location, const mat4f& value) {
+void set_uniform(const ogl_program& program, int location, const mat4f& value) {
   glUniformMatrix4fv(location, 1, false, &value.x.x);
   assert_ogl_error();
 }
 
 void set_uniform(
-    const ogl_program* program, int location, const frame2f& value) {
+    const ogl_program& program, int location, const frame2f& value) {
   glUniformMatrix3x2fv(location, 1, false, &value.x.x);
   assert_ogl_error();
 }
 
 void set_uniform(
-    const ogl_program* program, int location, const frame3f& value) {
+    const ogl_program& program, int location, const frame3f& value) {
   glUniformMatrix4x3fv(location, 1, false, &value.x.x);
   assert_ogl_error();
 }
 
 // get uniform location
-int get_uniform_location(const ogl_program* program, const char* name) {
-  return glGetUniformLocation(program->program_id, name);
+int get_uniform_location(const ogl_program& program, const char* name) {
+  return glGetUniformLocation(program.program_id, name);
 }
 
 // set uniform texture
-void set_uniform(const ogl_program* program, int location,
+void set_uniform(const ogl_program& program, int location,
     const ogl_texture* texture, int unit) {
   glActiveTexture(GL_TEXTURE0 + unit);
   glBindTexture(GL_TEXTURE_2D, texture ? texture->texture_id : 0);
   glUniform1i(location, unit);
   assert_ogl_error();
 }
-void set_uniform(const ogl_program* program, const char* name,
+void set_uniform(const ogl_program& program, const char* name,
     const ogl_texture* texture, int unit) {
   return set_uniform(
       program, get_uniform_location(program, name), texture, unit);
 }
-void set_uniform(const ogl_program* program, int location, int location_on,
+void set_uniform(const ogl_program& program, int location, int location_on,
     const ogl_texture* texture, int unit) {
   assert_ogl_error();
   if (texture && texture->texture_id) {
@@ -855,14 +855,14 @@ void set_uniform(const ogl_program* program, int location, int location_on,
   }
   assert_ogl_error();
 }
-void set_uniform(const ogl_program* program, const char* name,
+void set_uniform(const ogl_program& program, const char* name,
     const char* name_on, const ogl_texture* texture, int unit) {
   return set_uniform(program, get_uniform_location(program, name),
       get_uniform_location(program, name_on), texture, unit);
 }
 
 // set uniform cubemap
-void set_uniform(const ogl_program* program, int location,
+void set_uniform(const ogl_program& program, int location,
     const ogl_cubemap& cubemap, int unit) {
   assert_ogl_error();
   glActiveTexture(GL_TEXTURE0 + unit);
@@ -870,12 +870,12 @@ void set_uniform(const ogl_program* program, int location,
   glUniform1i(location, unit);
   assert_ogl_error();
 }
-void set_uniform(const ogl_program* program, const char* name,
+void set_uniform(const ogl_program& program, const char* name,
     const ogl_cubemap& cubemap, int unit) {
   return set_uniform(
       program, get_uniform_location(program, name), cubemap, unit);
 }
-void set_uniform(const ogl_program* program, int location, int location_on,
+void set_uniform(const ogl_program& program, int location, int location_on,
     const ogl_cubemap& cubemap, int unit) {
   assert_ogl_error();
   if (cubemap.cubemap_id) {
@@ -891,7 +891,7 @@ void set_uniform(const ogl_program* program, int location, int location_on,
   }
   assert_ogl_error();
 }
-void set_uniform(const ogl_program* program, const char* name,
+void set_uniform(const ogl_program& program, const char* name,
     const char* name_on, const ogl_cubemap& cubemap, int unit) {
   return set_uniform(program, get_uniform_location(program, name),
       get_uniform_location(program, name_on), cubemap, unit);
@@ -1237,7 +1237,6 @@ void main() {
 #endif
 
 ogl_image::~ogl_image() {
-  if (program) delete program;
   if (texture) delete texture;
   if (quad) delete quad;
 }

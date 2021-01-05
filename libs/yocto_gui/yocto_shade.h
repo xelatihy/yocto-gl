@@ -150,8 +150,8 @@ struct shade_scene {
   vector<ogl_texture> envlight_brdfluts  = {};
 
   // programs
-  ogl_program* environment_program = new ogl_program{};
-  ogl_program* instance_program    = new ogl_program{};
+  ogl_program environment_program;
+  ogl_program instance_program;
 
   // disable copy construction
   shade_scene()                   = default;
@@ -318,7 +318,7 @@ glenvironment_handle add_environment(shade_scene& scene, const frame3f& frame,
     const vec3f& emission, gltexture_handle emission_tex = glinvalid_handle);
 
 // draw scene
-void draw_scene(const shade_scene& scene, const shade_camera& camera,
+void draw_scene(shade_scene& scene, const shade_camera& camera,
     const vec4i& viewport, const shade_params& params);
 
 }  // namespace yocto
