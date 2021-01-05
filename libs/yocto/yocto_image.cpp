@@ -50,14 +50,6 @@
 namespace yocto {
 
 // image creation
-image_data make_hdr(int width, int height) {
-  return image_data{
-      width, height, vector<vec4f>(width * height, vec4f{0, 0, 0, 0}), {}};
-}
-image_data make_ldr(int width, int height) {
-  return image_data{
-      width, height, {}, vector<vec4b>(width * height, vec4b{0, 0, 0, 0})};
-}
 image_data make_image(int width, int height, bool as_byte) {
   if (!as_byte) {
     return image_data{
@@ -79,6 +71,24 @@ image_data make_image(int width, int height, const vec4b* data) {
 // queries
 bool is_float(const image_data& image) { return !image.pixelsf.empty(); }
 bool is_byte(const image_data& image) { return !image.pixelsb.empty(); }
+
+// equality
+bool operator==(const image_data& a, const image_data& b) {
+  return a.width == b.width && a.height == b.height && a.pixelsf == b.pixelsf &&
+         a.pixelsb == b.pixelsb;
+}
+bool operator!=(const image_data& a, const image_data& b) {
+  return a.width != b.width || a.height != b.height || a.pixelsf != b.pixelsf ||
+         a.pixelsb != b.pixelsb;
+}
+
+// swap
+void swap(image_data& a, image_data& b) {
+  std::swap(a.width, b.width);
+  std::swap(a.height, b.height);
+  std::swap(a.pixelsf, b.pixelsf);
+  std::swap(a.pixelsb, b.pixelsb);
+}
 
 // pixel access
 vec4f get_pixel(const image_data& image, int i, int j) {
@@ -119,7 +129,7 @@ void float_to_byte(image_data& result, const image_data& image);
 // Apply tone mapping returning a float or byte image.
 image_data tonemap_image(const image_data& image, float exposure, bool filmic) {
   if (is_byte(image)) return image;
-  auto result = make_ldr(image.width, image.height);
+  auto result = make_image(image.width, image.height, true);
   for (auto idx = 0; idx < image.width * image.height; idx++) {
     result.pixelsb[idx] = tonemapb(image.pixelsf[idx], exposure, filmic, true);
   }
@@ -161,7 +171,7 @@ image_data resize_image(const image_data& image, int width, int height) {
     width = (int)round(height * (double)width / (double)height);
   }
   if (is_byte(image)) {
-    auto result = make_ldr(width, height);
+    auto result = make_image(width, height, true);
     stbir_resize_uint8_generic((byte*)image.pixelsb.data(), (int)image.width,
         (int)image.height, (int)(sizeof(vec4b) * image.width),
         (byte*)result.pixelsb.data(), (int)result.width, (int)result.height,
@@ -169,7 +179,7 @@ image_data resize_image(const image_data& image, int width, int height) {
         STBIR_FILTER_DEFAULT, STBIR_COLORSPACE_LINEAR, nullptr);
     return result;
   } else {
-    auto result = make_hdr(width, height);
+    auto result = make_image(width, height, false);
     stbir_resize_float_generic((float*)image.pixelsf.data(), (int)image.width,
         (int)image.height, (int)(sizeof(vec4f) * image.width),
         (float*)result.pixelsf.data(), (int)result.width, (int)result.height,
@@ -297,7 +307,7 @@ vec4b colorgradeb(const vec4b& ldr_color, const colorgrade_params& params) {
 // Color grade an hsr or ldr image to an ldr image.
 image_data colorgrade_image(
     const image_data& image, const colorgrade_params& params) {
-  auto result = make_ldr(image.width, image.height);
+  auto result = make_image(image.width, image.height, true);
   if (is_byte(image)) {
     for (auto idx = (size_t)0; image.width * image.height; idx++) {
       result.pixelsb[idx] = colorgradeb(image.pixelsb[idx], params);
@@ -381,7 +391,7 @@ bool load_image(const string& filename, image_data& image, string& error) {
     auto pixels = (float*)nullptr;
     if (LoadEXR(&pixels, &width, &height, filename.c_str(), nullptr) != 0)
       return read_error();
-    image         = make_hdr(width, height);
+    image         = make_image(width, height, false);
     image.pixelsf = vector<vec4f>{
         (vec4f*)pixels, (vec4f*)pixels + width * height};
     free(pixels);
@@ -394,7 +404,7 @@ bool load_image(const string& filename, image_data& image, string& error) {
     auto width = 0, height = 0, ncomp = 0;
     auto pixels = stbi_loadf(filename.c_str(), &width, &height, &ncomp, 4);
     if (!pixels) return read_error();
-    image         = make_hdr(width, height);
+    image         = make_image(width, height, false);
     image.pixelsf = vector<vec4f>{
         (vec4f*)pixels, (vec4f*)pixels + width * height};
     free(pixels);
@@ -403,7 +413,7 @@ bool load_image(const string& filename, image_data& image, string& error) {
     auto width = 0, height = 0, ncomp = 0;
     auto pixels = stbi_load(filename.c_str(), &width, &height, &ncomp, 4);
     if (!pixels) return read_error();
-    image         = make_ldr(width, height);
+    image         = make_image(width, height, true);
     image.pixelsb = vector<vec4b>{
         (vec4b*)pixels, (vec4b*)pixels + width * height};
     free(pixels);
@@ -412,7 +422,7 @@ bool load_image(const string& filename, image_data& image, string& error) {
     auto width = 0, height = 0, ncomp = 0;
     auto pixels = stbi_load(filename.c_str(), &width, &height, &ncomp, 4);
     if (!pixels) return read_error();
-    image         = make_ldr(width, height);
+    image         = make_image(width, height, true);
     image.pixelsb = vector<vec4b>{
         (vec4b*)pixels, (vec4b*)pixels + width * height};
     free(pixels);
@@ -421,7 +431,7 @@ bool load_image(const string& filename, image_data& image, string& error) {
     auto width = 0, height = 0, ncomp = 0;
     auto pixels = stbi_load(filename.c_str(), &width, &height, &ncomp, 4);
     if (!pixels) return read_error();
-    image         = make_ldr(width, height);
+    image         = make_image(width, height, true);
     image.pixelsb = vector<vec4b>{
         (vec4b*)pixels, (vec4b*)pixels + width * height};
     free(pixels);
@@ -430,7 +440,7 @@ bool load_image(const string& filename, image_data& image, string& error) {
     auto width = 0, height = 0, ncomp = 0;
     auto pixels = stbi_load(filename.c_str(), &width, &height, &ncomp, 4);
     if (!pixels) return read_error();
-    image         = make_ldr(width, height);
+    image         = make_image(width, height, true);
     image.pixelsb = vector<vec4b>{
         (vec4b*)pixels, (vec4b*)pixels + width * height};
     free(pixels);
@@ -456,14 +466,14 @@ bool save_image(
   auto image_ptr = (const image_data*)nullptr;
   auto converted = image_data{};
   if (is_hdr_filename(filename) && is_byte(image_)) {
-    converted = make_hdr(image_.width, image_.height);
+    converted = make_image(image_.width, image_.height, false);
     for (auto idx = (size_t)0; idx < converted.width * converted.height;
          idx++) {
       converted.pixelsf[idx] = srgb_to_rgb(byte_to_float(image_.pixelsb[idx]));
     }
     image_ptr = &converted;
   } else if (is_ldr_filename(filename) && is_float(image_)) {
-    converted = make_ldr(image_.width, image_.height);
+    converted = make_image(image_.width, image_.height, true);
     for (auto idx = (size_t)0; idx < converted.width * converted.height;
          idx++) {
       converted.pixelsb[idx] = float_to_byte(rgb_to_srgb(image_.pixelsf[idx]));
@@ -531,8 +541,7 @@ void bump_to_normal(
     image_data& normalmap, const image_data& bumpmap, float scale) {
   auto width = bumpmap.width, height = bumpmap.height;
   if (normalmap.width != bumpmap.width || normalmap.height != bumpmap.height) {
-    normalmap = is_float(bumpmap) ? make_hdr(width, height)
-                                  : make_ldr(width, height);
+    normalmap = make_image(width, height, is_byte(bumpmap));
   }
   auto dx = 1.0f / width, dy = 1.0f / height;
   for (int j = 0; j < height; j++) {
@@ -559,25 +568,23 @@ image_data bump_to_normal(const image_data& bumpmap, float scale) {
 }
 
 template <typename Shader>
-static image_data make_proc_hdr(int width, int height, Shader&& shader) {
-  auto image = make_hdr(width, height);
+static image_data make_proc_image(
+    int width, int height, bool as_byte, Shader&& shader) {
+  auto image = make_image(width, height, as_byte);
   auto scale = 1.0f / max(width, height);
-  for (auto j = 0; j < height; j++) {
-    for (auto i = 0; i < width; i++) {
-      auto uv                      = vec2f{i * scale, j * scale};
-      image.pixelsf[j * width + i] = shader(uv);
+  if (as_byte) {
+    for (auto j = 0; j < height; j++) {
+      for (auto i = 0; i < width; i++) {
+        auto uv                      = vec2f{i * scale, j * scale};
+        image.pixelsb[j * width + i] = float_to_byte(shader(uv));
+      }
     }
-  }
-  return image;
-}
-template <typename Shader>
-static image_data make_proc_ldr(int width, int height, Shader&& shader) {
-  auto image = make_ldr(width, height);
-  auto scale = 1.0f / max(width, height);
-  for (auto j = 0; j < height; j++) {
-    for (auto i = 0; i < width; i++) {
-      auto uv                      = vec2f{i * scale, j * scale};
-      image.pixelsb[j * width + i] = shader(uv);
+  } else {
+    for (auto j = 0; j < height; j++) {
+      for (auto i = 0; i < width; i++) {
+        auto uv                      = vec2f{i * scale, j * scale};
+        image.pixelsf[j * width + i] = shader(uv);
+      }
     }
   }
   return image;
@@ -586,7 +593,7 @@ static image_data make_proc_ldr(int width, int height, Shader&& shader) {
 // Make an image
 image_data make_grid(int width, int height, float scale, const vec4f& color0,
     const vec4f& color1) {
-  return make_proc_hdr(width, height, [=](vec2f uv) {
+  return make_proc_image(width, height, false, [=](vec2f uv) {
     uv *= 4 * scale;
     uv -= vec2f{(float)(int)uv.x, (float)(int)uv.y};
     auto thick = 0.01f / 2;
@@ -600,7 +607,7 @@ image_data make_grid(int width, int height, float scale, const vec4f& color0,
 
 image_data make_checker(int width, int height, float scale, const vec4f& color0,
     const vec4f& color1) {
-  return make_proc_hdr(width, height, [=](vec2f uv) {
+  return make_proc_image(width, height, false, [=](vec2f uv) {
     uv *= 4 * scale;
     uv -= vec2f{(float)(int)uv.x, (float)(int)uv.y};
     auto c = uv.x <= 0.5f != uv.y <= 0.5f;
@@ -610,7 +617,7 @@ image_data make_checker(int width, int height, float scale, const vec4f& color0,
 
 image_data make_bumps(int width, int height, float scale, const vec4f& color0,
     const vec4f& color1) {
-  return make_proc_hdr(width, height, [=](vec2f uv) {
+  return make_proc_image(width, height, false, [=](vec2f uv) {
     uv *= 4 * scale;
     uv -= vec2f{(float)(int)uv.x, (float)(int)uv.y};
     auto thick  = 0.125f;
@@ -627,7 +634,7 @@ image_data make_bumps(int width, int height, float scale, const vec4f& color0,
 
 image_data make_ramp(int width, int height, float scale, const vec4f& color0,
     const vec4f& color1) {
-  return make_proc_hdr(width, height, [=](vec2f uv) {
+  return make_proc_image(width, height, false, [=](vec2f uv) {
     uv *= scale;
     uv -= vec2f{(float)(int)uv.x, (float)(int)uv.y};
     return lerp(color0, color1, uv.x);
@@ -636,7 +643,7 @@ image_data make_ramp(int width, int height, float scale, const vec4f& color0,
 
 image_data make_gammaramp(int width, int height, float scale,
     const vec4f& color0, const vec4f& color1) {
-  return make_proc_hdr(width, height, [=](vec2f uv) {
+  return make_proc_image(width, height, false, [=](vec2f uv) {
     uv *= scale;
     uv -= vec2f{(float)(int)uv.x, (float)(int)uv.y};
     if (uv.y < 1 / 3.0f) {
@@ -650,7 +657,7 @@ image_data make_gammaramp(int width, int height, float scale,
 }
 
 image_data make_uvramp(int width, int height, float scale) {
-  return make_proc_hdr(width, height, [=](vec2f uv) {
+  return make_proc_image(width, height, false, [=](vec2f uv) {
     uv *= scale;
     uv -= vec2f{(float)(int)uv.x, (float)(int)uv.y};
     return vec4f{uv.x, uv.y, 0, 1};
@@ -658,7 +665,7 @@ image_data make_uvramp(int width, int height, float scale) {
 }
 
 image_data make_uvgrid(int width, int height, float scale, bool colored) {
-  return make_proc_hdr(width, height, [=](vec2f uv) {
+  return make_proc_image(width, height, false, [=](vec2f uv) {
     uv *= scale;
     uv -= vec2f{(float)(int)uv.x, (float)(int)uv.y};
     uv.y     = 1 - uv.y;
@@ -687,7 +694,7 @@ image_data make_uvgrid(int width, int height, float scale, bool colored) {
 
 image_data make_blackbodyramp(
     int width, int height, float scale, float from, float to) {
-  return make_proc_hdr(width, height, [=](vec2f uv) {
+  return make_proc_image(width, height, false, [=](vec2f uv) {
     uv *= scale;
     uv -= vec2f{(float)(int)uv.x, (float)(int)uv.y};
     auto rgb = blackbody_to_rgb(lerp(from, to, uv.x));
@@ -696,7 +703,7 @@ image_data make_blackbodyramp(
 }
 
 image_data make_colormapramp(int width, int height, float scale) {
-  return make_proc_hdr(width, height, [=](vec2f uv) {
+  return make_proc_image(width, height, false, [=](vec2f uv) {
     uv *= scale;
     uv -= vec2f{(float)(int)uv.x, (float)(int)uv.y};
     auto rgb = zero3f;
@@ -715,7 +722,7 @@ image_data make_colormapramp(int width, int height, float scale) {
 
 image_data make_noisemap(int width, int height, float scale,
     const vec4f& color0, const vec4f& color1) {
-  return make_proc_hdr(width, height, [=](vec2f uv) {
+  return make_proc_image(width, height, false, [=](vec2f uv) {
     uv *= 8 * scale;
     auto v = perlin_noise(vec3f{uv.x, uv.y, 0});
     v      = clamp(v, 0.0f, 1.0f);
@@ -725,7 +732,7 @@ image_data make_noisemap(int width, int height, float scale,
 
 image_data make_fbmmap(int width, int height, float scale, const vec4f& noise,
     const vec4f& color0, const vec4f& color1) {
-  return make_proc_hdr(width, height, [=](vec2f uv) {
+  return make_proc_image(width, height, false, [=](vec2f uv) {
     uv *= 8 * scale;
     auto v = perlin_fbm({uv.x, uv.y, 0}, noise.x, noise.y, (int)noise.z);
     v      = clamp(v, 0.0f, 1.0f);
@@ -735,7 +742,7 @@ image_data make_fbmmap(int width, int height, float scale, const vec4f& noise,
 
 image_data make_turbulencemap(int width, int height, float scale,
     const vec4f& noise, const vec4f& color0, const vec4f& color1) {
-  return make_proc_hdr(width, height, [=](vec2f uv) {
+  return make_proc_image(width, height, false, [=](vec2f uv) {
     uv *= 8 * scale;
     auto v = perlin_turbulence({uv.x, uv.y, 0}, noise.x, noise.y, (int)noise.z);
     v      = clamp(v, 0.0f, 1.0f);
@@ -745,7 +752,7 @@ image_data make_turbulencemap(int width, int height, float scale,
 
 image_data make_ridgemap(int width, int height, float scale, const vec4f& noise,
     const vec4f& color0, const vec4f& color1) {
-  return make_proc_hdr(width, height, [=](vec2f uv) {
+  return make_proc_image(width, height, false, [=](vec2f uv) {
     uv *= 8 * scale;
     auto v = perlin_ridge(
         {uv.x, uv.y, 0}, noise.x, noise.y, (int)noise.z, noise.w);

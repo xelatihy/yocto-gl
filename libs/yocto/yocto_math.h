@@ -629,6 +629,14 @@ inline int sum(const vec4i& a);
 inline vec4i abs(const vec4i& a);
 inline void  swap(vec4i& a, vec4i& b);
 
+// Vector comparison operations.
+inline bool operator==(const vec3b& a, const vec3b& b);
+inline bool operator!=(const vec3b& a, const vec3b& b);
+
+// Vector comparison operations.
+inline bool operator==(const vec4b& a, const vec4b& b);
+inline bool operator!=(const vec4b& a, const vec4b& b);
+
 }  // namespace yocto
 
 // -----------------------------------------------------------------------------
@@ -1799,6 +1807,22 @@ inline vec4i abs(const vec4i& a) {
   return {abs(a.x), abs(a.y), abs(a.z), abs(a.w)};
 }
 inline void swap(vec4i& a, vec4i& b) { std::swap(a, b); }
+
+// Vector comparison operations.
+inline bool operator==(const vec3b& a, const vec3b& b) {
+  return a.x == b.x && a.y == b.y && a.z == b.z;
+}
+inline bool operator!=(const vec3b& a, const vec3b& b) {
+  return a.x != b.x || a.y != b.y || a.z != b.z;
+}
+
+// Vector comparison operations.
+inline bool operator==(const vec4b& a, const vec4b& b) {
+  return a.x == b.x && a.y == b.y && a.z == b.z && a.w == b.w;
+}
+inline bool operator!=(const vec4b& a, const vec4b& b) {
+  return a.x != b.x || a.y != b.y || a.z != b.z || a.w != b.w;
+}
 
 }  // namespace yocto
 

@@ -72,8 +72,6 @@ struct image_data {
 };
 
 // image creation
-image_data make_hdr(int width, int height);
-image_data make_ldr(int width, int height);
 image_data make_image(int width, int height, bool as_byte);
 image_data make_image(int width, int height, const vec4f* data);
 image_data make_image(int width, int height, const vec4b* data);
@@ -81,6 +79,13 @@ image_data make_image(int width, int height, const vec4b* data);
 // queries
 bool is_byte(const image_data& image);
 bool is_float(const image_data& image);
+
+// equality
+bool operator==(const image_data& a, const image_data& b);
+bool operator!=(const image_data& a, const image_data& b);
+
+// swap
+void swap(image_data& a, image_data& b);
 
 // pixel access
 vec4f get_pixel(const image_data& image, int i, int j);
@@ -97,8 +102,6 @@ vec4f eval_image(const image_data& image, const vec2f& uv,
 
 // Apply tone mapping returning a float or byte image.
 image_data tonemap_image(
-    const image_data& image, float exposure, bool filmic = false);
-image_data tonemap_imageb(
     const image_data& image, float exposure, bool filmic = false);
 
 // Apply tone mapping. If the input image is an ldr, does nothing.
@@ -162,7 +165,7 @@ struct colorgrade_params {
 };
 
 // Apply color grading from a linear or srgb color to an srgb color.
-vec4b colorgradeb(const vec4f& hdr_color, const colorgrade_params& params);
+vec4b colorgrade(const vec4f& hdr_color, const colorgrade_params& params);
 vec4b colorgradeb(const vec4b& ldr_color, const colorgrade_params& params);
 
 // Color grade an hsr or ldr image to an ldr image.
