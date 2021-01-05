@@ -56,6 +56,10 @@ namespace yocto {
 #pragma GCC diagnostic pop
 #endif
 
+bool has_normals(const shade_shape& shape) {
+  if (shape.vertex_buffers.size() <= 1) return false;
+  return is_initialized(shape.vertex_buffers[1]);
+}
 const ogl_arraybuffer& get_positions(const shade_shape& shape) {
   if (shape.vertex_buffers.size() <= 0)
     throw std::out_of_range{"no vertex buffer"};
@@ -420,8 +424,7 @@ void set_instance_uniforms(const shade_scene& scene, ogl_program& program,
   set_uniform(program, "frame", shape_xform);
   set_uniform(program, "frameit", shape_inv_xform);
   set_uniform(program, "offset", 0.0f);
-  set_uniform(program, "faceted",
-      params.faceted || !is_initialized(get_normals(shape)));
+  set_uniform(program, "faceted", params.faceted || !has_normals(shape));
   //  if (instance.highlighted) {
   //    set_uniform(program, "highlight", vec4f{1, 1, 0, 1});
   //  } else {

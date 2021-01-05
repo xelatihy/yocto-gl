@@ -249,7 +249,8 @@ void set_instances(
 // set point size
 void set_point_size(shade_shape& shape, float point_size);
 
-// get shaoe properties
+// get shape properties
+bool                   has_normals(const shade_shape& shape);
 const ogl_arraybuffer& get_positions(const shade_shape& shape);
 const ogl_arraybuffer& get_normals(const shade_shape& shape);
 const ogl_arraybuffer& get_texcoords(const shade_shape& shape);
