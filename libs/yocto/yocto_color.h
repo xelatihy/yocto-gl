@@ -84,14 +84,12 @@
 namespace yocto {
 
 // Conversion between flots and bytes
-inline vec3b  float_to_byte(const vec3f& a);
-inline vec3f  byte_to_float(const vec3b& a);
-inline vec4b  float_to_byte(const vec4f& a);
-inline vec4f  byte_to_float(const vec4b& a);
-inline byte   float_to_byte(float a);
-inline float  byte_to_float(byte a);
-inline ushort float_to_ushort(float a);
-inline float  ushort_to_float(ushort a);
+inline vec3b float_to_byte(const vec3f& a);
+inline vec3f byte_to_float(const vec3b& a);
+inline vec4b float_to_byte(const vec4f& a);
+inline vec4f byte_to_float(const vec4b& a);
+inline byte  float_to_byte(float a);
+inline float byte_to_float(byte a);
 
 // Luminance
 inline float luminance(const vec3f& a);
@@ -190,19 +188,6 @@ inline vec4f byte_to_float(const vec4b& a) {
 }
 inline byte float_to_byte(float a) { return (byte)clamp(int(a * 256), 0, 255); }
 inline float byte_to_float(byte a) { return a / 255.0f; }
-inline vec4s float_to_ushort(const vec4f& a) {
-  return {(ushort)clamp(int(a.x * 65536), 0, 65535),
-      (ushort)clamp(int(a.y * 65536), 0, 65535),
-      (ushort)clamp(int(a.z * 65536), 0, 65535),
-      (ushort)clamp(int(a.w * 65536), 0, 65535)};
-}
-inline vec4f ushort_to_float(const vec4s& a) {
-  return {a.x / 65535.0f, a.y / 65535.0f, a.z / 65535.0f, a.w / 65535.0f};
-}
-inline ushort float_to_ushort(float a) {
-  return (ushort)clamp(int(a * 65536), 0, 65535);
-}
-inline float ushort_to_float(ushort a) { return a / 65535.0f; }
 
 // Luminance
 inline float luminance(const vec3f& a) {

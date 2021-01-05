@@ -1542,18 +1542,6 @@ image<vec3b> float_to_byte(const image<vec3f>& fl) {
   return bt;
 }
 
-// Conversion from/to floats.
-image<vec4f> ushort_to_float(const image<vec4s>& bt) {
-  auto fl = image<vec4f>{bt.imsize()};
-  for (auto i = 0ull; i < fl.count(); i++) fl[i] = ushort_to_float(bt[i]);
-  return fl;
-}
-image<vec4s> float_to_ushort(const image<vec4f>& fl) {
-  auto bt = image<vec4s>{fl.imsize()};
-  for (auto i = 0ull; i < bt.count(); i++) bt[i] = float_to_ushort(fl[i]);
-  return bt;
-}
-
 // Conversion between linear and gamma-encoded images.
 image<vec4f> srgb_to_rgb(const image<vec4f>& srgb) {
   auto rgb = image<vec4f>{srgb.imsize()};
@@ -2918,35 +2906,6 @@ bool save_image(
         error);
   } else if (is_hdr_filename(filename)) {
     return save_image(filename, srgb_to_rgb(img), error);
-  } else {
-    return format_error();
-  }
-}
-
-// Loads a 16 bit image.
-bool load_image(const string& filename, image<vec4s>& img, string& error) {
-  auto format_error = [filename, &error]() {
-    error = filename + ": unknown format";
-    return false;
-  };
-  auto read_error = [filename, &error]() {
-    error = filename + ": read error";
-    return false;
-  };
-
-  auto ext = path_extension(filename);
-  if (ext == ".png" || ext == ".PNG") {
-    auto width = 0, height = 0, ncomp = 0;
-    auto pixels = stbi_load_16(filename.c_str(), &width, &height, &ncomp, 4);
-    if (pixels == nullptr) return read_error();
-    img = image{{width, height}, (const vec4s*)pixels};
-    free(pixels);
-    return true;
-  } else if (is_hdr_filename(filename)) {
-    auto imgf = image<vec4f>{};
-    if (!load_image(filename, imgf, error)) return false;
-    img = float_to_ushort(imgf);
-    return true;
   } else {
     return format_error();
   }
