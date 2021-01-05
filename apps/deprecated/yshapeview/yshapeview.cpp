@@ -201,7 +201,7 @@ void init_glscene(app_state* app, shade_scene* glscene, generic_shape* ioshape,
   auto model_shape = add_shape(glscene, ioshape->points, ioshape->lines,
       ioshape->triangles, ioshape->quads, ioshape->positions, ioshape->normals,
       ioshape->texcoords, ioshape->colors, true);
-  if (!is_initialized(get_normals(model_shape))) {
+  if (!has_normals(model_shape))) {
     app->drawgl_prms.faceted = true;
   }
   set_instances(model_shape, {}, {});

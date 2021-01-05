@@ -36,10 +36,10 @@
 using namespace yocto;
 
 struct app_params {
-  string         command = "sculpt";
-  sculpt__params sculpt  = {};
-  scene_params   scene   = {};
-  shape_params   shape   = {};
+  string              command = "sculpt";
+  shade_sculpt_params sculpt  = {};
+  shade_scene_params  scene   = {};
+  shade_shape_params  shape   = {};
 };
 
 // Json IO
@@ -59,11 +59,11 @@ int main(int argc, const char* argv[]) {
 
   // dispatch commands
   if (params.command == "scene") {
-    return run_scene(params.scene);
+    return run_shade_scene(params.scene);
   } else if (params.command == "shape") {
-    return run_shape(params.shape);
+    return run_shade_shape(params.shape);
   } else if (params.command == "sculpt") {
-    return run_sculpt(params.sculpt);
+    return run_shade_sculpt(params.sculpt);
   } else {
     return print_fatal("unknown command " + params.command);
   }

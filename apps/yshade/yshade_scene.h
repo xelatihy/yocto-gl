@@ -29,16 +29,16 @@
 #include <yocto/yocto_json.h>
 using namespace yocto;
 
-struct scene_params {
+struct shade_scene_params {
   string scene = "scene.json"s;
 };
 
 // Json IO
 inline void serialize_value(json_mode mode, json_value& json,
-    scene_params& value, const string& description) {
+    shade_scene_params& value, const string& description) {
   serialize_object(mode, json, value, description);
   serialize_property(mode, json, value.scene, "scene", "Input scene.", true);
   serialize_clipositionals(mode, json, {"scene"});
 }
 
-int run_scene(const scene_params& params);
+int run_shade_scene(const shade_scene_params& params);

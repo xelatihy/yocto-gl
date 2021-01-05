@@ -371,7 +371,7 @@ int run_grade(const grade_params& params) {
   }
 
   // grade image
-  auto graded = make_image(image.width, image.height, false);
+  auto graded = make_image(image.width, image.height, true);
   colorgrade_image_mt(graded, image, params);
 
   // set view
@@ -537,7 +537,7 @@ int run_setalpha(const setalpha_params& params) {
   }
 
   // edit alpha
-  auto out = make_image(image.width, image.height, is_float(image));
+  auto out = make_image(image.width, image.height, is_byte(image));
   for (auto idx = 0; idx < image.width * image.height; idx++) {
     if (is_float(image)) {
       auto a = params.from_color ? mean(xyz(image.pixelsf[idx]))

@@ -165,16 +165,12 @@ struct ogl_imageview {
   bool       filmic   = false;
 
   // viewing properties
-  ogl_image*       glimage  = new ogl_image{};
+  ogl_image        glimage  = {};
   ogl_image_params glparams = {};
 
   // user params
   json_value widgets = json_value::object();
   json_value schema  = to_schema_object("User params.");
-
-  ~ogl_imageview() {
-    if (glimage) delete glimage;
-  }
 };
 
 // Image pointer
