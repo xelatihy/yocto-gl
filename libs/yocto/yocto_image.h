@@ -348,10 +348,6 @@ image<vec4f> byte_to_float(const image<vec4b>& bt);
 image<vec4b> float_to_byte(const image<vec4f>& fl);
 image<vec3f> byte_to_float(const image<vec3b>& bt);
 image<vec3b> float_to_byte(const image<vec3f>& fl);
-image<float> byte_to_float(const image<byte>& bt);
-image<byte>  float_to_byte(const image<float>& fl);
-image<vec4f> ushort_to_float(const image<vec4s>& bt);
-image<vec4s> float_to_ushort(const image<vec4f>& fl);
 
 // Conversion between linear and gamma-encoded images.
 image<vec4f> srgb_to_rgb(const image<vec4f>& srgb);
@@ -362,24 +358,12 @@ image<vec3f> srgb_to_rgb(const image<vec3f>& srgb);
 image<vec3f> rgb_to_srgb(const image<vec3f>& rgb);
 image<vec3f> srgb_to_rgb(const image<vec3b>& srgb);
 image<vec3b> rgb_to_srgbb(const image<vec3f>& rgb);
-image<float> srgb_to_rgb(const image<float>& srgb);
-image<float> rgb_to_srgb(const image<float>& rgb);
-image<float> srgb_to_rgb(const image<byte>& srgb);
-image<byte>  rgb_to_srgbb(const image<float>& rgb);
 
 // Conversion between number of channels.
 image<vec4f> rgb_to_rgba(const image<vec3f>& rgb);
 image<vec3f> rgba_to_rgb(const image<vec4f>& rgba);
 image<vec4b> rgb_to_rgba(const image<vec3b>& rgb);
 image<vec3b> rgba_to_rgb(const image<vec4b>& rgba);
-image<vec4f> red_to_rgba(const image<float>& red);
-image<float> rgba_to_red(const image<vec4f>& rgba);
-image<vec4b> red_to_rgba(const image<byte>& red);
-image<byte>  rgba_to_red(const image<vec4b>& rgba);
-image<vec4f> gray_to_rgba(const image<float>& gray);
-image<float> rgba_to_gray(const image<vec4f>& rgba);
-image<vec4b> gray_to_rgba(const image<byte>& gray);
-image<byte>  rgba_to_gray(const image<vec4b>& rgba);
 
 // Apply tone mapping
 image<vec4f> tonemap_image(const image<vec4f>& hdr, float exposure,
@@ -591,7 +575,7 @@ inline void swap(volume<T>& a, volume<T>& b);
 namespace yocto {
 
 // Evaluates a color image at a point `uv`.
-float eval_volume(const image<float>& img, const vec3f& uvw,
+float eval_volume(const volume<float>& img, const vec3f& uvw,
     bool no_interpolation = false, bool clamp_to_edge = false);
 
 }  // namespace yocto

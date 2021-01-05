@@ -1543,18 +1543,6 @@ image<vec3b> float_to_byte(const image<vec3f>& fl) {
 }
 
 // Conversion from/to floats.
-image<float> byte_to_float(const image<byte>& bt) {
-  auto fl = image<float>{bt.imsize()};
-  for (auto i = 0ull; i < fl.count(); i++) fl[i] = byte_to_float(bt[i]);
-  return fl;
-}
-image<byte> float_to_byte(const image<float>& fl) {
-  auto bt = image<byte>{fl.imsize()};
-  for (auto i = 0ull; i < bt.count(); i++) bt[i] = float_to_byte(fl[i]);
-  return bt;
-}
-
-// Conversion from/to floats.
 image<vec4f> ushort_to_float(const image<vec4s>& bt) {
   auto fl = image<vec4f>{bt.imsize()};
   for (auto i = 0ull; i < fl.count(); i++) fl[i] = ushort_to_float(bt[i]);
@@ -1614,30 +1602,6 @@ image<vec3b> rgb_to_srgbb(const image<vec3f>& rgb) {
   return srgb;
 }
 
-// Conversion between linear and gamma-encoded images.
-image<float> srgb_to_rgb(const image<float>& srgb) {
-  auto rgb = image<float>{srgb.imsize()};
-  for (auto i = 0ull; i < rgb.count(); i++) rgb[i] = srgb_to_rgb(srgb[i]);
-  return rgb;
-}
-image<float> rgb_to_srgb(const image<float>& rgb) {
-  auto srgb = image<float>{rgb.imsize()};
-  for (auto i = 0ull; i < srgb.count(); i++) srgb[i] = rgb_to_srgb(rgb[i]);
-  return srgb;
-}
-image<float> srgb_to_rgb(const image<byte>& srgb) {
-  auto rgb = image<float>{srgb.imsize()};
-  for (auto i = 0ull; i < rgb.count(); i++)
-    rgb[i] = srgb_to_rgb(byte_to_float(srgb[i]));
-  return rgb;
-}
-image<byte> rgb_to_srgbb(const image<float>& rgb) {
-  auto srgb = image<byte>{rgb.imsize()};
-  for (auto i = 0ull; i < srgb.count(); i++)
-    srgb[i] = float_to_byte(rgb_to_srgb(rgb[i]));
-  return srgb;
-}
-
 // Conversion between number of channels.
 image<vec4f> rgb_to_rgba(const image<vec3f>& rgb) {
   auto rgba = image<vec4f>{rgb.imsize()};
@@ -1658,46 +1622,6 @@ image<vec3b> rgba_to_rgb(const image<vec4b>& rgba) {
   auto rgb = image<vec3b>{rgba.imsize()};
   for (auto i = 0ull; i < rgba.count(); i++) rgb[i] = rgba_to_rgb(rgba[i]);
   return rgb;
-}
-image<vec4f> red_to_rgba(const image<float>& red) {
-  auto rgba = image<vec4f>{red.imsize()};
-  for (auto i = 0ull; i < red.count(); i++) rgba[i] = red_to_rgba(red[i]);
-  return rgba;
-}
-image<float> rgba_to_red(const image<vec4f>& rgba) {
-  auto red = image<float>{rgba.imsize()};
-  for (auto i = 0ull; i < rgba.count(); i++) red[i] = rgba_to_red(rgba[i]);
-  return red;
-}
-image<vec4b> red_to_rgba(const image<byte>& red) {
-  auto rgba = image<vec4b>{red.imsize()};
-  for (auto i = 0ull; i < red.count(); i++) rgba[i] = red_to_rgba(red[i]);
-  return rgba;
-}
-image<byte> rgba_to_red(const image<vec4b>& rgba) {
-  auto red = image<byte>{rgba.imsize()};
-  for (auto i = 0ull; i < rgba.count(); i++) red[i] = rgba_to_red(rgba[i]);
-  return red;
-}
-image<vec4f> gray_to_rgba(const image<float>& gray) {
-  auto rgba = image<vec4f>{gray.imsize()};
-  for (auto i = 0ull; i < gray.count(); i++) rgba[i] = gray_to_rgba(gray[i]);
-  return rgba;
-}
-image<float> rgba_to_gray(const image<vec4f>& rgba) {
-  auto gray = image<float>{rgba.imsize()};
-  for (auto i = 0ull; i < rgba.count(); i++) gray[i] = rgba_to_gray(rgba[i]);
-  return gray;
-}
-image<vec4b> gray_to_rgba(const image<byte>& gray) {
-  auto rgba = image<vec4b>{gray.imsize()};
-  for (auto i = 0ull; i < gray.count(); i++) rgba[i] = gray_to_rgba(gray[i]);
-  return rgba;
-}
-image<byte> rgba_to_gray(const image<vec4b>& rgba) {
-  auto gray = image<byte>{rgba.imsize()};
-  for (auto i = 0ull; i < rgba.count(); i++) gray[i] = rgba_to_gray(rgba[i]);
-  return gray;
 }
 
 // Apply exposure and filmic tone mapping

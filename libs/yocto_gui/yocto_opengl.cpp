@@ -284,17 +284,6 @@ void set_texture(ogl_texture& texture, const image<vec3f>& img, bool as_float,
       linear, mipmap);
 }
 
-void set_texture(ogl_texture& texture, const image<byte>& img, bool as_srgb,
-    bool linear, bool mipmap) {
-  set_texture(texture, img.imsize(), 1, (const byte*)img.data(), as_srgb,
-      linear, mipmap);
-}
-void set_texture(ogl_texture& texture, const image<float>& img, bool as_float,
-    bool linear, bool mipmap) {
-  set_texture(texture, img.imsize(), 1, (const float*)img.data(), as_float,
-      linear, mipmap);
-}
-
 void set_cubemap(ogl_cubemap& cubemap, int size, int num_channels,
     const array<byte*, 6>& images, bool as_srgb, bool linear, bool mipmap) {
   static auto sformat = vector<uint>{
@@ -458,22 +447,6 @@ void set_cubemap(ogl_cubemap& cubemap, const array<image<vec3b>, 6>& img,
       cubemap, img[0].imsize().x, num_channels, data, as_srgb, linear, mipmap);
 }
 void set_cubemap(ogl_cubemap& cubemap, const array<image<vec3f>, 6>& img,
-    int num_channels, bool as_float, bool linear, bool mipmap) {
-  auto data = array<float*, 6>{(float*)img[0].data(), (float*)img[1].data(),
-      (float*)img[2].data(), (float*)img[3].data(), (float*)img[4].data(),
-      (float*)img[5].data()};
-  set_cubemap(
-      cubemap, img[0].imsize().x, num_channels, data, as_float, linear, mipmap);
-}
-void set_cubemap(ogl_cubemap& cubemap, const array<image<byte>, 6>& img,
-    int num_channels, bool as_srgb, bool linear, bool mipmap) {
-  auto data = array<byte*, 6>{(byte*)img[0].data(), (byte*)img[1].data(),
-      (byte*)img[2].data(), (byte*)img[3].data(), (byte*)img[4].data(),
-      (byte*)img[5].data()};
-  set_cubemap(
-      cubemap, img[0].imsize().x, num_channels, data, as_srgb, linear, mipmap);
-}
-void set_cubemap(ogl_cubemap& cubemap, const array<image<float>, 6>& img,
     int num_channels, bool as_float, bool linear, bool mipmap) {
   auto data = array<float*, 6>{(float*)img[0].data(), (float*)img[1].data(),
       (float*)img[2].data(), (float*)img[3].data(), (float*)img[4].data(),

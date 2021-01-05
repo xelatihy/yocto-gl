@@ -133,10 +133,6 @@ void set_texture(ogl_texture& texture, const image<vec3b>& img,
     bool as_srgb = true, bool linear = true, bool mipmap = true);
 void set_texture(ogl_texture& texture, const image<vec3f>& img,
     bool as_float = false, bool linear = true, bool mipmap = true);
-void set_texture(ogl_texture& texture, const image<byte>& img,
-    bool as_srgb = true, bool linear = true, bool mipmap = true);
-void set_texture(ogl_texture& texture, const image<float>& img,
-    bool as_float = false, bool linear = true, bool mipmap = true);
 
 // OpenGL cubemap
 struct ogl_cubemap {
@@ -185,12 +181,6 @@ void set_cubemap(ogl_cubemap& cubemap, const array<image<vec3b>, 6>& img,
     int num_channels, bool as_srgb = true, bool linear = true,
     bool mipmap = true);
 void set_cubemap(ogl_cubemap& cubemap, const array<image<vec3f>, 6>& img,
-    int num_channels, bool as_float = false, bool linear = true,
-    bool mipmap = true);
-void set_cubemap(ogl_cubemap& cubemap, const array<image<byte>, 6>& img,
-    int num_channels, bool as_srgb = true, bool linear = true,
-    bool mipmap = true);
-void set_cubemap(ogl_cubemap& cubemap, const array<image<float>, 6>& img,
     int num_channels, bool as_float = false, bool linear = true,
     bool mipmap = true);
 
