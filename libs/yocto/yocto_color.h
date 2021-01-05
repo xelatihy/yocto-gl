@@ -107,14 +107,6 @@ inline vec4f rgb_to_rgba(const vec3f& rgb);
 inline vec3f rgba_to_rgb(const vec4f& rgba);
 inline vec4b rgb_to_rgba(const vec3b& rgb);
 inline vec3b rgba_to_rgb(const vec4b& rgba);
-inline vec4f red_to_rgba(float red);
-inline float rgba_to_red(const vec4f& rgba);
-inline vec4b red_to_rgba(byte red);
-inline byte  rgba_to_red(const vec4b& rgba);
-inline vec4f gray_to_rgba(float gray);
-inline float rgba_to_gray(const vec4f& rgba);
-inline vec4b gray_to_rgba(byte gray);
-inline byte  rgba_to_gray(const vec4b& rgba);
 
 // Apply contrast. Grey should be 0.18 for linear and 0.5 for gamma.
 inline vec3f lincontrast(const vec3f& rgb, float contrast, float grey);
@@ -224,20 +216,6 @@ inline vec4b rgb_to_rgba(const vec3b& rgb) {
   return {rgb.x, rgb.y, rgb.z, 255};
 }
 inline vec3b rgba_to_rgb(const vec4b& rgba) { return xyz(rgba); }
-inline vec4f red_to_rgba(float red) { return {red, red, red, 1}; }
-inline float rgba_to_red(const vec4f& rgba) { return rgba.x; }
-inline vec4b red_to_rgba(byte red) { return {red, red, red, 255}; }
-inline byte  rgba_to_red(const vec4b& rgba) {
-  return (byte)(((int)rgba.x + (int)rgba.y + (int)rgba.z) / 3);
-}
-inline vec4f gray_to_rgba(float gray) { return {gray, gray, gray, 1}; }
-inline float rgba_to_gray(const vec4f& rgba) {
-  return (rgba.x + rgba.y + rgba.z) / 3;
-}
-inline vec4b gray_to_rgba(byte gray) { return {gray, gray, gray, 255}; }
-inline byte  rgba_to_gray(const vec4b& rgba) {
-  return (byte)(((int)rgba.x + (int)rgba.y + (int)rgba.z) / 3);
-}
 
 // Apply contrast. Grey should be 0.18 for linear and 0.5 for gamma.
 inline vec3f lincontrast(const vec3f& rgb, float contrast, float grey) {
