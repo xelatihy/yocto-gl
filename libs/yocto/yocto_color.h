@@ -84,14 +84,12 @@
 namespace yocto {
 
 // Conversion between flots and bytes
-inline vec3b  float_to_byte(const vec3f& a);
-inline vec3f  byte_to_float(const vec3b& a);
-inline vec4b  float_to_byte(const vec4f& a);
-inline vec4f  byte_to_float(const vec4b& a);
-inline byte   float_to_byte(float a);
-inline float  byte_to_float(byte a);
-inline ushort float_to_ushort(float a);
-inline float  ushort_to_float(ushort a);
+inline vec3b float_to_byte(const vec3f& a);
+inline vec3f byte_to_float(const vec3b& a);
+inline vec4b float_to_byte(const vec4f& a);
+inline vec4f byte_to_float(const vec4b& a);
+inline byte  float_to_byte(float a);
+inline float byte_to_float(byte a);
 
 // Luminance
 inline float luminance(const vec3f& a);
@@ -109,14 +107,6 @@ inline vec4f rgb_to_rgba(const vec3f& rgb);
 inline vec3f rgba_to_rgb(const vec4f& rgba);
 inline vec4b rgb_to_rgba(const vec3b& rgb);
 inline vec3b rgba_to_rgb(const vec4b& rgba);
-inline vec4f red_to_rgba(float red);
-inline float rgba_to_red(const vec4f& rgba);
-inline vec4b red_to_rgba(byte red);
-inline byte  rgba_to_red(const vec4b& rgba);
-inline vec4f gray_to_rgba(float gray);
-inline float rgba_to_gray(const vec4f& rgba);
-inline vec4b gray_to_rgba(byte gray);
-inline byte  rgba_to_gray(const vec4b& rgba);
 
 // Apply contrast. Grey should be 0.18 for linear and 0.5 for gamma.
 inline vec3f lincontrast(const vec3f& rgb, float contrast, float grey);
@@ -190,19 +180,6 @@ inline vec4f byte_to_float(const vec4b& a) {
 }
 inline byte float_to_byte(float a) { return (byte)clamp(int(a * 256), 0, 255); }
 inline float byte_to_float(byte a) { return a / 255.0f; }
-inline vec4s float_to_ushort(const vec4f& a) {
-  return {(ushort)clamp(int(a.x * 65536), 0, 65535),
-      (ushort)clamp(int(a.y * 65536), 0, 65535),
-      (ushort)clamp(int(a.z * 65536), 0, 65535),
-      (ushort)clamp(int(a.w * 65536), 0, 65535)};
-}
-inline vec4f ushort_to_float(const vec4s& a) {
-  return {a.x / 65535.0f, a.y / 65535.0f, a.z / 65535.0f, a.w / 65535.0f};
-}
-inline ushort float_to_ushort(float a) {
-  return (ushort)clamp(int(a * 65536), 0, 65535);
-}
-inline float ushort_to_float(ushort a) { return a / 65535.0f; }
 
 // Luminance
 inline float luminance(const vec3f& a) {
@@ -239,20 +216,6 @@ inline vec4b rgb_to_rgba(const vec3b& rgb) {
   return {rgb.x, rgb.y, rgb.z, 255};
 }
 inline vec3b rgba_to_rgb(const vec4b& rgba) { return xyz(rgba); }
-inline vec4f red_to_rgba(float red) { return {red, red, red, 1}; }
-inline float rgba_to_red(const vec4f& rgba) { return rgba.x; }
-inline vec4b red_to_rgba(byte red) { return {red, red, red, 255}; }
-inline byte  rgba_to_red(const vec4b& rgba) {
-  return (byte)(((int)rgba.x + (int)rgba.y + (int)rgba.z) / 3);
-}
-inline vec4f gray_to_rgba(float gray) { return {gray, gray, gray, 1}; }
-inline float rgba_to_gray(const vec4f& rgba) {
-  return (rgba.x + rgba.y + rgba.z) / 3;
-}
-inline vec4b gray_to_rgba(byte gray) { return {gray, gray, gray, 255}; }
-inline byte  rgba_to_gray(const vec4b& rgba) {
-  return (byte)(((int)rgba.x + (int)rgba.y + (int)rgba.z) / 3);
-}
 
 // Apply contrast. Grey should be 0.18 for linear and 0.5 for gamma.
 inline vec3f lincontrast(const vec3f& rgb, float contrast, float grey) {

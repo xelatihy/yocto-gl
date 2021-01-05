@@ -72,8 +72,6 @@ struct image_data {
 };
 
 // image creation
-image_data make_hdr(int width, int height);
-image_data make_ldr(int width, int height);
 image_data make_image(int width, int height, bool as_byte);
 image_data make_image(int width, int height, const vec4f* data);
 image_data make_image(int width, int height, const vec4b* data);
@@ -81,6 +79,13 @@ image_data make_image(int width, int height, const vec4b* data);
 // queries
 bool is_byte(const image_data& image);
 bool is_float(const image_data& image);
+
+// equality
+bool operator==(const image_data& a, const image_data& b);
+bool operator!=(const image_data& a, const image_data& b);
+
+// swap
+void swap(image_data& a, image_data& b);
 
 // pixel access
 vec4f get_pixel(const image_data& image, int i, int j);
@@ -97,8 +102,6 @@ vec4f eval_image(const image_data& image, const vec2f& uv,
 
 // Apply tone mapping returning a float or byte image.
 image_data tonemap_image(
-    const image_data& image, float exposure, bool filmic = false);
-image_data tonemap_imageb(
     const image_data& image, float exposure, bool filmic = false);
 
 // Apply tone mapping. If the input image is an ldr, does nothing.
@@ -162,7 +165,7 @@ struct colorgrade_params {
 };
 
 // Apply color grading from a linear or srgb color to an srgb color.
-vec4b colorgradeb(const vec4f& hdr_color, const colorgrade_params& params);
+vec4b colorgrade(const vec4f& hdr_color, const colorgrade_params& params);
 vec4b colorgradeb(const vec4b& ldr_color, const colorgrade_params& params);
 
 // Color grade an hsr or ldr image to an ldr image.
@@ -348,10 +351,6 @@ image<vec4f> byte_to_float(const image<vec4b>& bt);
 image<vec4b> float_to_byte(const image<vec4f>& fl);
 image<vec3f> byte_to_float(const image<vec3b>& bt);
 image<vec3b> float_to_byte(const image<vec3f>& fl);
-image<float> byte_to_float(const image<byte>& bt);
-image<byte>  float_to_byte(const image<float>& fl);
-image<vec4f> ushort_to_float(const image<vec4s>& bt);
-image<vec4s> float_to_ushort(const image<vec4f>& fl);
 
 // Conversion between linear and gamma-encoded images.
 image<vec4f> srgb_to_rgb(const image<vec4f>& srgb);
@@ -362,24 +361,12 @@ image<vec3f> srgb_to_rgb(const image<vec3f>& srgb);
 image<vec3f> rgb_to_srgb(const image<vec3f>& rgb);
 image<vec3f> srgb_to_rgb(const image<vec3b>& srgb);
 image<vec3b> rgb_to_srgbb(const image<vec3f>& rgb);
-image<float> srgb_to_rgb(const image<float>& srgb);
-image<float> rgb_to_srgb(const image<float>& rgb);
-image<float> srgb_to_rgb(const image<byte>& srgb);
-image<byte>  rgb_to_srgbb(const image<float>& rgb);
 
 // Conversion between number of channels.
 image<vec4f> rgb_to_rgba(const image<vec3f>& rgb);
 image<vec3f> rgba_to_rgb(const image<vec4f>& rgba);
 image<vec4b> rgb_to_rgba(const image<vec3b>& rgb);
 image<vec3b> rgba_to_rgb(const image<vec4b>& rgba);
-image<vec4f> red_to_rgba(const image<float>& red);
-image<float> rgba_to_red(const image<vec4f>& rgba);
-image<vec4b> red_to_rgba(const image<byte>& red);
-image<byte>  rgba_to_red(const image<vec4b>& rgba);
-image<vec4f> gray_to_rgba(const image<float>& gray);
-image<float> rgba_to_gray(const image<vec4f>& rgba);
-image<vec4b> gray_to_rgba(const image<byte>& gray);
-image<byte>  rgba_to_gray(const image<vec4b>& rgba);
 
 // Apply tone mapping
 image<vec4f> tonemap_image(const image<vec4f>& hdr, float exposure,
@@ -435,16 +422,6 @@ bool load_image(const string& filename, image<vec4f>& img, string& error);
 bool save_image(const string& filename, const image<vec4f>& img, string& error);
 bool load_image(const string& filename, image<vec4b>& img, string& error);
 bool save_image(const string& filename, const image<vec4b>& img, string& error);
-
-// Load/saves a 16 bit image in linear color space.
-bool load_image(const string& filename, image<vec4s>& img, string& error);
-bool save_image(const string& filename, const image<vec4s>& img, string& error);
-
-// Loads/saves a  channel float/byte image in linear/srgb color space.
-bool load_image(const string& filename, image<vec4f>& imgf, image<vec4b>& imgb,
-    string& error);
-bool save_image(const string& filename, const image<vec4f>& imgf,
-    const image<vec4b>& imgb, string& error);
 
 }  // namespace yocto
 
@@ -591,7 +568,7 @@ inline void swap(volume<T>& a, volume<T>& b);
 namespace yocto {
 
 // Evaluates a color image at a point `uv`.
-float eval_volume(const image<float>& img, const vec3f& uvw,
+float eval_volume(const volume<float>& img, const vec3f& uvw,
     bool no_interpolation = false, bool clamp_to_edge = false);
 
 }  // namespace yocto

@@ -268,6 +268,26 @@ bool save_instance(const string& filename, const vector<frame3f>& frames,
   }
 }
 
+// Loads/saves a  channel float/byte image in linear/srgb color space.
+static bool load_image(const string& filename, image<vec4f>& imgf,
+    image<vec4b>& imgb, string& error) {
+  if (is_hdr_filename(filename)) {
+    return load_image(filename, imgf, error);
+  } else {
+    return load_image(filename, imgb, error);
+  }
+}
+
+// Loads/saves a  channel float/byte image in linear/srgb color space.
+static bool save_image(const string& filename, const image<vec4f>& imgf,
+    const image<vec4b>& imgb, string& error) {
+  if (!imgf.empty()) {
+    return save_image(filename, imgf, error);
+  } else {
+    return save_image(filename, imgb, error);
+  }
+}
+
 }  // namespace yocto
 
 // -----------------------------------------------------------------------------
