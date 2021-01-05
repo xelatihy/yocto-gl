@@ -111,31 +111,31 @@ struct ogl_texture {
 };
 
 // set texture
-void set_texture(ogl_texture* texture, const vec2i& size, int num_channels,
+void set_texture(ogl_texture& texture, const vec2i& size, int num_channels,
     const byte* img, bool as_srgb = false, bool linear = true,
     bool mipmap = true, bool wrap_repeat = true);
-void set_texture(ogl_texture* texture, const vec2i& size, int num_channels,
+void set_texture(ogl_texture& texture, const vec2i& size, int num_channels,
     const float* img, bool as_float = false, bool linear = true,
     bool mipmap = true, bool wrap_repeat = true);
 
 // check if texture is initialized
-bool is_initialized(const ogl_texture* texture);
+bool is_initialized(const ogl_texture& texture);
 
 // clear texture
-void clear_texture(ogl_texture* texture);
+void clear_texture(ogl_texture& texture);
 
 // set texture
-void set_texture(ogl_texture* texture, const image<vec4b>& img,
+void set_texture(ogl_texture& texture, const image<vec4b>& img,
     bool as_srgb = true, bool linear = true, bool mipmap = true);
-void set_texture(ogl_texture* texture, const image<vec4f>& img,
+void set_texture(ogl_texture& texture, const image<vec4f>& img,
     bool as_float = false, bool linear = true, bool mipmap = true);
-void set_texture(ogl_texture* texture, const image<vec3b>& img,
+void set_texture(ogl_texture& texture, const image<vec3b>& img,
     bool as_srgb = true, bool linear = true, bool mipmap = true);
-void set_texture(ogl_texture* texture, const image<vec3f>& img,
+void set_texture(ogl_texture& texture, const image<vec3f>& img,
     bool as_float = false, bool linear = true, bool mipmap = true);
-void set_texture(ogl_texture* texture, const image<byte>& img,
+void set_texture(ogl_texture& texture, const image<byte>& img,
     bool as_srgb = true, bool linear = true, bool mipmap = true);
-void set_texture(ogl_texture* texture, const image<float>& img,
+void set_texture(ogl_texture& texture, const image<float>& img,
     bool as_float = false, bool linear = true, bool mipmap = true);
 
 // OpenGL cubemap
@@ -346,13 +346,13 @@ inline void set_uniform(
 
 // set uniform texture
 void set_uniform(const ogl_program& program, int location,
-    const ogl_texture* texture, int unit);
+    const ogl_texture& texture, int unit);
 void set_uniform(const ogl_program& program, const char* name,
-    const ogl_texture* texture, int unit);
+    const ogl_texture& texture, int unit);
 void set_uniform(const ogl_program& program, int location, int location_on,
-    const ogl_texture* texture, int unit);
+    const ogl_texture& texture, int unit);
 void set_uniform(const ogl_program& program, const char* name,
-    const char* name_on, const ogl_texture* texture, int unit);
+    const char* name_on, const ogl_texture& texture, int unit);
 
 // set uniform cubemap
 void set_uniform(const ogl_program& program, int location,
@@ -396,7 +396,7 @@ struct ogl_framebuffer {
 void set_framebuffer(ogl_framebuffer* framebuffer, const vec2i& size);
 
 void set_framebuffer_texture(const ogl_framebuffer* framebuffer,
-    const ogl_texture* texture, uint mipmap_level = 0);
+    const ogl_texture& texture, uint mipmap_level = 0);
 
 void set_framebuffer_texture(const ogl_framebuffer* framebuffer,
     const ogl_cubemap& cubemap, uint face, uint mipmap_level = 0);
@@ -452,46 +452,46 @@ struct ogl_shape {
 
 // set vertex buffer
 void set_vertex_buffer(
-    ogl_shape* shape, const vector<float>& values, int location);
+    ogl_shape& shape, const vector<float>& values, int location);
 void set_vertex_buffer(
-    ogl_shape* shape, const vector<vec2f>& values, int location);
+    ogl_shape& shape, const vector<vec2f>& values, int location);
 void set_vertex_buffer(
-    ogl_shape* shape, const vector<vec3f>& values, int location);
+    ogl_shape& shape, const vector<vec3f>& values, int location);
 void set_vertex_buffer(
-    ogl_shape* shape, const vector<vec4f>& values, int location);
+    ogl_shape& shape, const vector<vec4f>& values, int location);
 
 // set vertex buffer with constant value
-void set_vertex_buffer(ogl_shape* shape, float attribute, int location);
-void set_vertex_buffer(ogl_shape* shape, const vec2f& attribute, int location);
-void set_vertex_buffer(ogl_shape* shape, const vec3f& attribute, int location);
-void set_vertex_buffer(ogl_shape* shape, const vec4f& attribute, int location);
+void set_vertex_buffer(ogl_shape& shape, float attribute, int location);
+void set_vertex_buffer(ogl_shape& shape, const vec2f& attribute, int location);
+void set_vertex_buffer(ogl_shape& shape, const vec3f& attribute, int location);
+void set_vertex_buffer(ogl_shape& shape, const vec4f& attribute, int location);
 
 // set vertex buffer instance
-void set_instance_buffer(ogl_shape* shape, int location, bool is_instance);
+void set_instance_buffer(ogl_shape& shape, int location, bool is_instance);
 
 // set element buffer
-void set_index_buffer(ogl_shape* shape, const vector<int>& indices);
-void set_index_buffer(ogl_shape* shape, const vector<vec2i>& indices);
-void set_index_buffer(ogl_shape* shape, const vector<vec3i>& indices);
+void set_index_buffer(ogl_shape& shape, const vector<int>& indices);
+void set_index_buffer(ogl_shape& shape, const vector<vec2i>& indices);
+void set_index_buffer(ogl_shape& shape, const vector<vec3i>& indices);
 
 // set point size
-void set_point_size(ogl_shape* shape, float point_size);
+void set_point_size(ogl_shape& shape, float point_size);
 
 // check if shape is initialized
-bool is_initialized(const ogl_shape* shape);
+bool is_initialized(const ogl_shape& shape);
 
 // clear buffer
-void clear_shape(ogl_shape* shape);
+void clear_shape(ogl_shape& shape);
 
 // bind shape
-void bind_shape(const ogl_shape* shape);
+void bind_shape(const ogl_shape& shape);
 
 // draw shape
-void draw_shape(const ogl_shape* shape);
+void draw_shape(const ogl_shape& shape);
 
 // init common shapes
-void set_cube_shape(ogl_shape* shape);
-void set_quad_shape(ogl_shape* shape);
+void set_cube_shape(ogl_shape& shape);
+void set_quad_shape(ogl_shape& shape);
 
 }  // namespace yocto
 
@@ -502,17 +502,14 @@ namespace yocto {
 
 // OpenGL image data
 struct ogl_image {
-  ogl_program  program = {};
-  ogl_texture* texture = new ogl_texture{};
-  ogl_shape*   quad    = new ogl_shape{};
+  ogl_program program = {};
+  ogl_texture texture = {};
+  ogl_shape   quad    = {};
 
   // Disable copy construction
   ogl_image()                 = default;
   ogl_image(const ogl_image&) = delete;
   ogl_image& operator=(const ogl_image&) = delete;
-
-  // Cleanup
-  ~ogl_image();
 };
 
 // create image drawing program

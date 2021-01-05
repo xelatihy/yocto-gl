@@ -79,65 +79,65 @@ const ogl_arraybuffer* get_tangents(const shade_shape& shape) {
 
 void set_positions(shade_shape& shape, const vector<vec3f>& positions) {
   if (positions.empty()) {
-    set_vertex_buffer(&shape, vec3f{0, 0, 0}, 0);
+    set_vertex_buffer(shape, vec3f{0, 0, 0}, 0);
   } else {
-    set_vertex_buffer(&shape, positions, 0);
+    set_vertex_buffer(shape, positions, 0);
   }
 }
 void set_normals(shade_shape& shape, const vector<vec3f>& normals) {
   if (normals.empty()) {
-    set_vertex_buffer(&shape, vec3f{0, 0, 1}, 1);
+    set_vertex_buffer(shape, vec3f{0, 0, 1}, 1);
   } else {
-    set_vertex_buffer(&shape, normals, 1);
+    set_vertex_buffer(shape, normals, 1);
   }
 }
 void set_texcoords(shade_shape& shape, const vector<vec2f>& texcoords) {
   if (texcoords.empty()) {
-    set_vertex_buffer(&shape, vec2f{0, 0}, 2);
+    set_vertex_buffer(shape, vec2f{0, 0}, 2);
   } else {
-    set_vertex_buffer(&shape, texcoords, 2);
+    set_vertex_buffer(shape, texcoords, 2);
   }
 }
 void set_colors(shade_shape& shape, const vector<vec4f>& colors) {
   if (colors.empty()) {
-    set_vertex_buffer(&shape, vec4f{1, 1, 1, 1}, 3);
+    set_vertex_buffer(shape, vec4f{1, 1, 1, 1}, 3);
   } else {
-    set_vertex_buffer(&shape, colors, 3);
+    set_vertex_buffer(shape, colors, 3);
   }
 }
 void set_tangents(shade_shape& shape, const vector<vec4f>& tangents) {
   if (tangents.empty()) {
-    set_vertex_buffer(&shape, vec4f{0, 0, 1, 1}, 4);
+    set_vertex_buffer(shape, vec4f{0, 0, 1, 1}, 4);
   } else {
-    set_vertex_buffer(&shape, tangents, 4);
+    set_vertex_buffer(shape, tangents, 4);
   }
 }
 void set_instances(
     shade_shape& shape, const vector<vec3f>& froms, const vector<vec3f>& tos) {
   if (froms.empty()) {
-    set_vertex_buffer(&shape, vec3f{0, 0, 0}, 5);
-    set_instance_buffer(&shape, 5, false);
+    set_vertex_buffer(shape, vec3f{0, 0, 0}, 5);
+    set_instance_buffer(shape, 5, false);
   } else {
-    set_vertex_buffer(&shape, froms, 5);
-    set_instance_buffer(&shape, 5, true);
+    set_vertex_buffer(shape, froms, 5);
+    set_instance_buffer(shape, 5, true);
   }
   if (tos.empty()) {
-    set_vertex_buffer(&shape, vec3f{0, 0, 0}, 5);
-    set_instance_buffer(&shape, 6, false);
+    set_vertex_buffer(shape, vec3f{0, 0, 0}, 5);
+    set_instance_buffer(shape, 6, false);
   } else {
-    set_vertex_buffer(&shape, tos, 6);
-    set_instance_buffer(&shape, 6, true);
+    set_vertex_buffer(shape, tos, 6);
+    set_instance_buffer(shape, 6, true);
   }
 }
 
 void set_points(shade_shape& shape, const vector<int>& points) {
-  set_index_buffer(&shape, points);
+  set_index_buffer(shape, points);
 }
 void set_lines(shade_shape& shape, const vector<vec2i>& lines) {
-  set_index_buffer(&shape, lines);
+  set_index_buffer(shape, lines);
 }
 void set_triangles(shade_shape& shape, const vector<vec3i>& triangles) {
-  set_index_buffer(&shape, triangles);
+  set_index_buffer(shape, triangles);
 }
 void set_quads(shade_shape& shape, const vector<vec4i>& quads) {
   auto triangles = vector<vec3i>{};
@@ -146,12 +146,12 @@ void set_quads(shade_shape& shape, const vector<vec4i>& quads) {
     triangles.push_back({q.x, q.y, q.w});
     if (q.z != q.w) triangles.push_back({q.z, q.w, q.y});
   }
-  set_index_buffer(&shape, triangles);
+  set_index_buffer(shape, triangles);
 }
 
 // set point size
 void set_point_size(shade_shape& shape, float point_size) {
-  set_point_size((ogl_shape*)&shape, point_size);
+  set_point_size((ogl_shape&)shape, point_size);
 }
 
 shade_scene::~shade_scene() { clear_scene(*this); }
@@ -186,10 +186,6 @@ void init_scene(shade_scene& scene, bool instanced_drawing) {
       shade_environment_fragment(), true);
 }
 
-bool is_initialized(shade_scene& scene) {
-  return is_initialized(scene.instance_program);
-}
-
 // Initialize data for environment lighting
 void init_environments(shade_scene& scene, bool precompute_envlight) {
   for (auto& environment : scene.environments) {
@@ -206,12 +202,12 @@ bool has_envlight(const shade_scene& scene) {
 // Clear an OpenGL scene
 void clear_scene(shade_scene& scene) {
   for (auto& texture : scene.textures) clear_texture(texture);
-  for (auto& shape : scene.shapes) clear_shape(&shape);
-  for (auto& shape : scene.envlight_shapes) clear_shape(&shape);
+  for (auto& shape : scene.shapes) clear_shape(shape);
+  for (auto& shape : scene.envlight_shapes) clear_shape(shape);
   for (auto& cubemap : scene.envlight_cubemaps) clear_cubemap(cubemap);
   for (auto& cubemap : scene.envlight_diffuses) clear_cubemap(cubemap);
   for (auto& cubemap : scene.envlight_speculars) clear_cubemap(cubemap);
-  for (auto& texture : scene.envlight_brdfluts) clear_texture(&texture);
+  for (auto& texture : scene.envlight_brdfluts) clear_texture(texture);
   clear_program(scene.environment_program);
   clear_program(scene.instance_program);
 }
@@ -239,49 +235,6 @@ gltexture_handle add_texture(shade_scene& scene) {
   scene.textures.emplace_back();
   return (int)scene.textures.size() - 1;
 }
-
-// check if initialized
-bool is_initialized(const shade_texture& texture) {
-  return is_initialized((ogl_texture*)&texture);
-}
-// clear texture
-void clear_texture(shade_texture& texture) {
-  clear_texture((ogl_texture*)&texture);
-}
-
-// set texture
-void set_texture(shade_texture& texture, const image<vec4b>& img, bool as_srgb,
-    bool linear, bool mipmap) {
-  set_texture((ogl_texture*)&texture, img, as_srgb, linear, mipmap);
-}
-void set_texture(shade_texture& texture, const image<vec4f>& img, bool as_float,
-    bool linear, bool mipmap) {
-  set_texture((ogl_texture*)&texture, img, as_float, linear, mipmap);
-}
-void set_texture(shade_texture& texture, const image<vec3b>& img, bool as_srgb,
-    bool linear, bool mipmap) {
-  set_texture((ogl_texture*)&texture, img, as_srgb, linear, mipmap);
-}
-void set_texture(shade_texture& texture, const image<vec3f>& img, bool as_float,
-    bool linear, bool mipmap) {
-  set_texture((ogl_texture*)&texture, img, as_float, linear, mipmap);
-}
-void set_texture(shade_texture& texture, const image<byte>& img, bool as_srgb,
-    bool linear, bool mipmap) {
-  set_texture((ogl_texture*)&texture, img, as_srgb, linear, mipmap);
-}
-void set_texture(shade_texture& texture, const image<float>& img, bool as_float,
-    bool linear, bool mipmap) {
-  set_texture((ogl_texture*)&texture, img, as_float, linear, mipmap);
-}
-
-// cheeck if initialized
-bool is_initialized(const shade_shape& shape) {
-  return is_initialized((ogl_shape*)&shape);
-}
-
-// clear
-void clear_shape(shade_shape& shape) { clear_shape((ogl_shape*)&shape); }
 
 // add shape
 glshape_handle add_shape(shade_scene& scene) {
@@ -473,8 +426,12 @@ void set_instance_uniforms(const shade_scene& scene, ogl_program& program,
   auto set_texture = [&scene](ogl_program& program, const char* name,
                          const char* name_on, gltexture_handle texture,
                          int unit) {
-    set_uniform(program, name, name_on,
-        texture == glinvalid_handle ? nullptr : &scene.textures[texture], unit);
+    if (texture == glinvalid_handle) {
+      auto otexture = ogl_texture{};
+      set_uniform(program, name, name_on, otexture, unit);
+    } else {
+      set_uniform(program, name, name_on, scene.textures[texture], unit);
+    }
   };
 
   set_uniform(program, "unlit", material.unlit);
@@ -510,7 +467,7 @@ void set_instance_uniforms(const shade_scene& scene, ogl_program& program,
   assert_ogl_error();
 }
 
-static void draw_shape(shade_shape& shape) { draw_shape((ogl_shape*)&shape); }
+static void draw_shape(shade_shape& shape) { draw_shape((ogl_shape&)shape); }
 
 void draw_environments(
     shade_scene& scene, const shade_view& view, const shade_params& params) {
@@ -525,7 +482,7 @@ void draw_environments(
     set_uniform(program, "emission", environment.emission);
     set_uniform(program, "emission_tex",
         scene.envlight_cubemaps[environment.envlight_cubemap], 0);
-    draw_shape(&scene.envlight_shapes[environment.envlight_shape]);
+    draw_shape(scene.envlight_shapes[environment.envlight_shape]);
   }
   unbind_program();
 }
@@ -563,7 +520,7 @@ void set_lighting_uniforms(ogl_program& program, const shade_scene& scene,
     set_uniform(program, "envlight_reflection",
         scene.envlight_speculars[environment.envlight_specular_], 7);
     set_uniform(program, "envlight_brdflut",
-        &scene.envlight_brdfluts[environment.envlight_brdflut_], 8);
+        scene.envlight_brdfluts[environment.envlight_brdflut_], 8);
   } else if (lighting == shade_lighting_type::camlight) {
     auto& lights = camera_lights;
     set_uniform(program, "lighting", 1);
@@ -586,13 +543,13 @@ void set_lighting_uniforms(ogl_program& program, const shade_scene& scene,
     }
     set_uniform(program, "envlight_irradiance", ogl_cubemap{}, 6);
     set_uniform(program, "envlight_reflection", ogl_cubemap{}, 7);
-    set_uniform(program, "envlight_brdflut", (const ogl_texture*)nullptr, 8);
+    set_uniform(program, "envlight_brdflut", ogl_texture{}, 8);
   } else if (lighting == shade_lighting_type::eyelight) {
     set_uniform(program, "lighting", 0);
     set_uniform(program, "lights_num", 0);
     set_uniform(program, "envlight_irradiance", ogl_cubemap{}, 6);
     set_uniform(program, "envlight_reflection", ogl_cubemap{}, 7);
-    set_uniform(program, "envlight_brdflut", (const ogl_texture*)nullptr, 8);
+    set_uniform(program, "envlight_brdflut", ogl_texture{}, 8);
   } else {
     throw std::invalid_argument{"unknown lighting type"};
   }
@@ -618,7 +575,7 @@ void draw_instances(
     set_instance_uniforms(scene, program, instance.frame,
         scene.shapes.at(instance.shape), scene.materials.at(instance.material),
         params);
-    draw_shape(&scene.shapes.at(instance.shape));
+    draw_shape(scene.shapes.at(instance.shape));
   }
   unbind_program();
 }
@@ -662,8 +619,7 @@ static void precompute_cubemap(ogl_cubemap& cubemap, const Sampler& environment,
   set_cubemap(cubemap, size, 3,
       array<float*, 6>{nullptr, nullptr, nullptr, nullptr, nullptr, nullptr},
       true, true, true);
-  auto cube_guard = make_unique<ogl_shape>();
-  auto cube       = cube_guard.get();
+  auto cube = ogl_shape{};
   set_cube_shape(cube);
 
   auto framebuffer_guard = make_unique<ogl_framebuffer>();
@@ -709,21 +665,20 @@ static void precompute_cubemap(ogl_cubemap& cubemap, const Sampler& environment,
 }
 
 static void precompute_brdflut(ogl_texture& texture) {
-  auto size              = vec2i{512, 512};
-  auto screen_quad_guard = make_unique<ogl_shape>();
-  auto screen_quad       = screen_quad_guard.get();
+  auto size        = vec2i{512, 512};
+  auto screen_quad = ogl_shape{};
   set_quad_shape(screen_quad);
 
   auto program = ogl_program{};
   set_program(program, precompute_brdflut_vertex(),
       precompute_brdflut_fragment(), true);
 
-  set_texture(&texture, size, 3, (float*)nullptr, true, true, false, false);
+  set_texture(texture, size, 3, (float*)nullptr, true, true, false, false);
 
   auto framebuffer_guard = make_unique<ogl_framebuffer>();
   auto framebuffer       = framebuffer_guard.get();
   set_framebuffer(framebuffer, size);
-  set_framebuffer_texture(framebuffer, &texture, 0);
+  set_framebuffer_texture(framebuffer, texture, 0);
 
   bind_framebuffer(framebuffer);
   bind_program(program);
@@ -750,7 +705,7 @@ static void init_environment(
   }
 
   // init program and shape for drawing the environment
-  set_cube_shape(&scene.envlight_shapes[environment.envlight_shape]);
+  set_cube_shape(scene.envlight_shapes[environment.envlight_shape]);
 
   // precompute cubemap from environment texture
   auto size    = scene.textures[environment.emission_tex].size.y;
@@ -758,7 +713,7 @@ static void init_environment(
   set_program(program, precompute_cubemap_vertex(),
       precompute_environment_fragment(), true);
   precompute_cubemap(scene.envlight_cubemaps[environment.envlight_cubemap],
-      &scene.textures[environment.emission_tex], program, size, 1);
+      scene.textures[environment.emission_tex], program, size, 1);
 }
 
 void init_envlight(shade_scene& scene, shade_environment& environment) {

@@ -217,25 +217,6 @@ void set_frame(shade_camera& camera, const frame3f& frame);
 void set_lens(shade_camera& camera, float lens, float aspect, float film);
 void set_nearfar(shade_camera& camera, float near, float far);
 
-// check if initialized
-bool is_initialized(const shade_texture& texture);
-// clear texture
-void clear_texture(shade_texture& texture);
-
-// set texture
-void set_texture(shade_texture& texture, const image<vec4b>& img,
-    bool as_srgb = true, bool linear = true, bool mipmap = true);
-void set_texture(shade_texture& texture, const image<vec4f>& img,
-    bool as_float = false, bool linear = true, bool mipmap = true);
-void set_texture(shade_texture& texture, const image<vec3b>& img,
-    bool as_srgb = true, bool linear = true, bool mipmap = true);
-void set_texture(shade_texture& texture, const image<vec3f>& img,
-    bool as_float = false, bool linear = true, bool mipmap = true);
-void set_texture(shade_texture& texture, const image<byte>& img,
-    bool as_srgb = true, bool linear = true, bool mipmap = true);
-void set_texture(shade_texture& texture, const image<float>& img,
-    bool as_float = false, bool linear = true, bool mipmap = true);
-
 // material properties
 void set_emission(shade_material& material, const vec3f& emission,
     gltexture_handle emission_tex = glinvalid_handle);
@@ -251,11 +232,6 @@ void set_opacity(shade_material& material, float opacity,
     gltexture_handle opacity_tex = glinvalid_handle);
 void set_normalmap(shade_material& material, gltexture_handle normal_tex);
 void set_unlit(shade_material& material, bool unlit);
-
-// cheeck if initialized
-bool is_initialized(const shade_shape& shape);
-// clear
-void clear_shape(shade_shape& shape);
 
 // shape properties
 void set_points(shade_shape& shape, const vector<int>& points);
@@ -286,9 +262,6 @@ void set_shape(shade_instance& instance, glshape_handle shape);
 void set_material(shade_instance& instance, glmaterial_handle material);
 void set_hidden(shade_instance& instance, bool hidden);
 void set_highlighted(shade_instance& instance, bool highlighted);
-
-// check if initialized
-bool is_initialized(const shade_environment& environment);
 
 // environment properties
 void set_frame(shade_environment& environment, const frame3f& frame);

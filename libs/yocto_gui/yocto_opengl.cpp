@@ -142,7 +142,7 @@ void set_ogl_blending(bool enabled) {
 void set_ogl_point_size(int size) { glPointSize(size); }
 void set_ogl_msaa() { glEnable(GL_MULTISAMPLE); }
 
-void set_texture(ogl_texture* texture, const vec2i& size, int num_channels,
+void set_texture(ogl_texture& texture, const vec2i& size, int num_channels,
     const byte* img, bool as_srgb, bool linear, bool mipmap, bool wrap_repeat) {
   static auto sformat = vector<uint>{
       0, GL_SRGB, GL_SRGB, GL_SRGB, GL_SRGB_ALPHA};
@@ -155,11 +155,11 @@ void set_texture(ogl_texture* texture, const vec2i& size, int num_channels,
     return;
   }
 
-  if (!texture->texture_id) glGenTextures(1, &texture->texture_id);
-  if (texture->size != size || texture->num_channels != num_channels ||
-      texture->is_srgb != as_srgb || texture->is_float == true ||
-      texture->linear != linear || texture->mipmap != mipmap) {
-    glBindTexture(GL_TEXTURE_2D, texture->texture_id);
+  if (!texture.texture_id) glGenTextures(1, &texture.texture_id);
+  if (texture.size != size || texture.num_channels != num_channels ||
+      texture.is_srgb != as_srgb || texture.is_float == true ||
+      texture.linear != linear || texture.mipmap != mipmap) {
+    glBindTexture(GL_TEXTURE_2D, texture.texture_id);
     glTexImage2D(GL_TEXTURE_2D, 0,
         as_srgb ? sformat.at(num_channels) : iformat.at(num_channels), size.x,
         size.y, 0, cformat.at(num_channels), GL_UNSIGNED_BYTE, img);
@@ -170,7 +170,7 @@ void set_texture(ogl_texture* texture, const vec2i& size, int num_channels,
         GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, linear ? GL_LINEAR : GL_NEAREST);
     if (mipmap && img) glGenerateMipmap(GL_TEXTURE_2D);
   } else {
-    glBindTexture(GL_TEXTURE_2D, texture->texture_id);
+    glBindTexture(GL_TEXTURE_2D, texture.texture_id);
     glTexSubImage2D(GL_TEXTURE_2D, 0, 0, 0, size.x, size.y,
         cformat.at(num_channels), GL_UNSIGNED_BYTE, img);
     if (mipmap && img) glGenerateMipmap(GL_TEXTURE_2D);
@@ -182,16 +182,16 @@ void set_texture(ogl_texture* texture, const vec2i& size, int num_channels,
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
   }
-  texture->size         = size;
-  texture->num_channels = num_channels;
-  texture->is_srgb      = as_srgb;
-  texture->is_float     = false;
-  texture->linear       = linear;
-  texture->mipmap       = mipmap;
+  texture.size         = size;
+  texture.num_channels = num_channels;
+  texture.is_srgb      = as_srgb;
+  texture.is_float     = false;
+  texture.linear       = linear;
+  texture.mipmap       = mipmap;
   assert_ogl_error();
 }
 
-void set_texture(ogl_texture* texture, const vec2i& size, int num_channels,
+void set_texture(ogl_texture& texture, const vec2i& size, int num_channels,
     const float* img, bool as_float, bool linear, bool mipmap,
     bool wrap_repeat) {
   static auto fformat = vector<uint>{
@@ -205,11 +205,11 @@ void set_texture(ogl_texture* texture, const vec2i& size, int num_channels,
     return;
   }
 
-  if (!texture->texture_id) glGenTextures(1, &texture->texture_id);
-  if (texture->size != size || texture->num_channels != num_channels ||
-      texture->is_float != as_float || texture->is_srgb == true ||
-      texture->linear != linear || texture->mipmap != mipmap) {
-    glBindTexture(GL_TEXTURE_2D, texture->texture_id);
+  if (!texture.texture_id) glGenTextures(1, &texture.texture_id);
+  if (texture.size != size || texture.num_channels != num_channels ||
+      texture.is_float != as_float || texture.is_srgb == true ||
+      texture.linear != linear || texture.mipmap != mipmap) {
+    glBindTexture(GL_TEXTURE_2D, texture.texture_id);
     glTexImage2D(GL_TEXTURE_2D, 0,
         as_float ? fformat.at(num_channels) : iformat.at(num_channels), size.x,
         size.y, 0, iformat.at(num_channels), GL_FLOAT, img);
@@ -220,7 +220,7 @@ void set_texture(ogl_texture* texture, const vec2i& size, int num_channels,
         GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, linear ? GL_LINEAR : GL_NEAREST);
     if (mipmap && img) glGenerateMipmap(GL_TEXTURE_2D);
   } else {
-    glBindTexture(GL_TEXTURE_2D, texture->texture_id);
+    glBindTexture(GL_TEXTURE_2D, texture.texture_id);
     glTexSubImage2D(GL_TEXTURE_2D, 0, 0, 0, size.x, size.y,
         iformat.at(num_channels), GL_FLOAT, img);
     if (mipmap && img) glGenerateMipmap(GL_TEXTURE_2D);
@@ -232,64 +232,64 @@ void set_texture(ogl_texture* texture, const vec2i& size, int num_channels,
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
   }
-  texture->size         = size;
-  texture->num_channels = num_channels;
-  texture->is_srgb      = false;
-  texture->is_float     = as_float;
-  texture->linear       = linear;
-  texture->mipmap       = mipmap;
+  texture.size         = size;
+  texture.num_channels = num_channels;
+  texture.is_srgb      = false;
+  texture.is_float     = as_float;
+  texture.linear       = linear;
+  texture.mipmap       = mipmap;
   assert_ogl_error();
 }
 
 // cleanup
-ogl_texture::~ogl_texture() { clear_texture(this); }
+ogl_texture::~ogl_texture() { clear_texture(*this); }
 
 // check if texture is initialized
-bool is_initialized(const ogl_texture* texture) {
-  return texture && texture->texture_id != 0;
+bool is_initialized(const ogl_texture& texture) {
+  return texture.texture_id != 0;
 }
 
 // clear texture
-void clear_texture(ogl_texture* texture) {
-  if (texture->texture_id) glDeleteTextures(1, &texture->texture_id);
-  texture->size         = {0, 0};
-  texture->num_channels = 0;
-  texture->is_srgb      = false;
-  texture->is_float     = false;
-  texture->linear       = false;
-  texture->mipmap       = false;
-  texture->texture_id   = 0;
+void clear_texture(ogl_texture& texture) {
+  if (texture.texture_id) glDeleteTextures(1, &texture.texture_id);
+  texture.size         = {0, 0};
+  texture.num_channels = 0;
+  texture.is_srgb      = false;
+  texture.is_float     = false;
+  texture.linear       = false;
+  texture.mipmap       = false;
+  texture.texture_id   = 0;
   assert_ogl_error();
 }
 
-void set_texture(ogl_texture* texture, const image<vec4b>& img, bool as_srgb,
+void set_texture(ogl_texture& texture, const image<vec4b>& img, bool as_srgb,
     bool linear, bool mipmap) {
   set_texture(texture, img.imsize(), 4, (const byte*)img.data(), as_srgb,
       linear, mipmap);
 }
-void set_texture(ogl_texture* texture, const image<vec4f>& img, bool as_float,
+void set_texture(ogl_texture& texture, const image<vec4f>& img, bool as_float,
     bool linear, bool mipmap) {
   set_texture(texture, img.imsize(), 4, (const float*)img.data(), as_float,
       linear, mipmap);
 }
 
-void set_texture(ogl_texture* texture, const image<vec3b>& img, bool as_srgb,
+void set_texture(ogl_texture& texture, const image<vec3b>& img, bool as_srgb,
     bool linear, bool mipmap) {
   set_texture(texture, img.imsize(), 3, (const byte*)img.data(), as_srgb,
       linear, mipmap);
 }
-void set_texture(ogl_texture* texture, const image<vec3f>& img, bool as_float,
+void set_texture(ogl_texture& texture, const image<vec3f>& img, bool as_float,
     bool linear, bool mipmap) {
   set_texture(texture, img.imsize(), 3, (const float*)img.data(), as_float,
       linear, mipmap);
 }
 
-void set_texture(ogl_texture* texture, const image<byte>& img, bool as_srgb,
+void set_texture(ogl_texture& texture, const image<byte>& img, bool as_srgb,
     bool linear, bool mipmap) {
   set_texture(texture, img.imsize(), 1, (const byte*)img.data(), as_srgb,
       linear, mipmap);
 }
-void set_texture(ogl_texture* texture, const image<float>& img, bool as_float,
+void set_texture(ogl_texture& texture, const image<float>& img, bool as_float,
     bool linear, bool mipmap) {
   set_texture(texture, img.imsize(), 1, (const float*)img.data(), as_float,
       linear, mipmap);
@@ -828,23 +828,23 @@ int get_uniform_location(const ogl_program& program, const char* name) {
 
 // set uniform texture
 void set_uniform(const ogl_program& program, int location,
-    const ogl_texture* texture, int unit) {
+    const ogl_texture& texture, int unit) {
   glActiveTexture(GL_TEXTURE0 + unit);
-  glBindTexture(GL_TEXTURE_2D, texture ? texture->texture_id : 0);
+  glBindTexture(GL_TEXTURE_2D, texture.texture_id);
   glUniform1i(location, unit);
   assert_ogl_error();
 }
 void set_uniform(const ogl_program& program, const char* name,
-    const ogl_texture* texture, int unit) {
+    const ogl_texture& texture, int unit) {
   return set_uniform(
       program, get_uniform_location(program, name), texture, unit);
 }
 void set_uniform(const ogl_program& program, int location, int location_on,
-    const ogl_texture* texture, int unit) {
+    const ogl_texture& texture, int unit) {
   assert_ogl_error();
-  if (texture && texture->texture_id) {
+  if (texture.texture_id) {
     glActiveTexture(GL_TEXTURE0 + unit);
-    glBindTexture(GL_TEXTURE_2D, texture->texture_id);
+    glBindTexture(GL_TEXTURE_2D, texture.texture_id);
     glUniform1i(location, unit);
     glUniform1i(location_on, 1);
   } else {
@@ -856,7 +856,7 @@ void set_uniform(const ogl_program& program, int location, int location_on,
   assert_ogl_error();
 }
 void set_uniform(const ogl_program& program, const char* name,
-    const char* name_on, const ogl_texture* texture, int unit) {
+    const char* name_on, const ogl_texture& texture, int unit) {
   return set_uniform(program, get_uniform_location(program, name),
       get_uniform_location(program, name_on), texture, unit);
 }
@@ -950,9 +950,9 @@ bool is_framebuffer_bound(const ogl_framebuffer* framebuffer) {
 }
 
 void set_framebuffer_texture(const ogl_framebuffer* framebuffer,
-    const ogl_texture* texture, uint mipmap_level) {
+    const ogl_texture& texture, uint mipmap_level) {
   set_framebuffer_texture(
-      framebuffer, texture->texture_id, GL_TEXTURE_2D, mipmap_level);
+      framebuffer, texture.texture_id, GL_TEXTURE_2D, mipmap_level);
 }
 
 void set_framebuffer_texture(const ogl_framebuffer* framebuffer,
@@ -990,32 +990,32 @@ ogl_shape::~ogl_shape() {
   delete index_buffer;
 }
 
-void bind_shape(const ogl_shape* shape) { glBindVertexArray(shape->shape_id); }
+void bind_shape(const ogl_shape& shape) { glBindVertexArray(shape.shape_id); }
 
-bool is_initialized(const ogl_shape* shape) { return shape->shape_id != 0; }
+bool is_initialized(const ogl_shape& shape) { return shape.shape_id != 0; }
 
 // Clear an OpenGL shape
-void clear_shape(ogl_shape* shape) {
-  for (auto buffer : shape->vertex_buffers) {
+void clear_shape(ogl_shape& shape) {
+  for (auto buffer : shape.vertex_buffers) {
     clear_arraybuffer(buffer);
   }
-  clear_elementbuffer(shape->index_buffer);
-  glDeleteVertexArrays(1, &shape->shape_id);
-  shape->num_instances = 0;
-  shape->shape_id      = 0;
+  clear_elementbuffer(shape.index_buffer);
+  glDeleteVertexArrays(1, &shape.shape_id);
+  shape.num_instances = 0;
+  shape.shape_id      = 0;
   assert_ogl_error();
 }
 
 template <typename T>
 void set_vertex_buffer_impl(
-    ogl_shape* shape, const vector<T>& data, int location) {
-  if (!shape->shape_id) glGenVertexArrays(1, &shape->shape_id);
-  while (shape->vertex_buffers.size() <= location) {
-    shape->vertex_buffers.push_back(new ogl_arraybuffer{});
+    ogl_shape& shape, const vector<T>& data, int location) {
+  if (!shape.shape_id) glGenVertexArrays(1, &shape.shape_id);
+  while (shape.vertex_buffers.size() <= location) {
+    shape.vertex_buffers.push_back(new ogl_arraybuffer{});
   }
-  set_arraybuffer(shape->vertex_buffers[location], data, false);
-  glBindVertexArray(shape->shape_id);
-  auto buffer = shape->vertex_buffers[location];
+  set_arraybuffer(shape.vertex_buffers[location], data, false);
+  glBindVertexArray(shape.shape_id);
+  auto buffer = shape.vertex_buffers[location];
   assert_ogl_error();
   glBindBuffer(GL_ARRAY_BUFFER, buffer->buffer_id);
   glEnableVertexAttribArray(location);
@@ -1025,87 +1025,87 @@ void set_vertex_buffer_impl(
 }
 
 void set_vertex_buffer(
-    ogl_shape* shape, const vector<float>& values, int location) {
-  if (!shape->shape_id) glGenVertexArrays(1, &shape->shape_id);
+    ogl_shape& shape, const vector<float>& values, int location) {
+  if (!shape.shape_id) glGenVertexArrays(1, &shape.shape_id);
   set_vertex_buffer_impl(shape, values, location);
 }
 void set_vertex_buffer(
-    ogl_shape* shape, const vector<vec2f>& values, int location) {
-  if (!shape->shape_id) glGenVertexArrays(1, &shape->shape_id);
+    ogl_shape& shape, const vector<vec2f>& values, int location) {
+  if (!shape.shape_id) glGenVertexArrays(1, &shape.shape_id);
   set_vertex_buffer_impl(shape, values, location);
 }
 void set_vertex_buffer(
-    ogl_shape* shape, const vector<vec3f>& values, int location) {
-  if (!shape->shape_id) glGenVertexArrays(1, &shape->shape_id);
+    ogl_shape& shape, const vector<vec3f>& values, int location) {
+  if (!shape.shape_id) glGenVertexArrays(1, &shape.shape_id);
   set_vertex_buffer_impl(shape, values, location);
 }
 void set_vertex_buffer(
-    ogl_shape* shape, const vector<vec4f>& values, int location) {
-  if (!shape->shape_id) glGenVertexArrays(1, &shape->shape_id);
+    ogl_shape& shape, const vector<vec4f>& values, int location) {
+  if (!shape.shape_id) glGenVertexArrays(1, &shape.shape_id);
   set_vertex_buffer_impl(shape, values, location);
 }
 
-void set_vertex_buffer(ogl_shape* shape, float value, int location) {
-  if (!shape->shape_id) glGenVertexArrays(1, &shape->shape_id);
-  glBindVertexArray(shape->shape_id);
+void set_vertex_buffer(ogl_shape& shape, float value, int location) {
+  if (!shape.shape_id) glGenVertexArrays(1, &shape.shape_id);
+  glBindVertexArray(shape.shape_id);
   glVertexAttrib1f(location, value);
   assert_ogl_error();
 }
-void set_vertex_buffer(ogl_shape* shape, const vec2f& value, int location) {
-  if (!shape->shape_id) glGenVertexArrays(1, &shape->shape_id);
-  glBindVertexArray(shape->shape_id);
+void set_vertex_buffer(ogl_shape& shape, const vec2f& value, int location) {
+  if (!shape.shape_id) glGenVertexArrays(1, &shape.shape_id);
+  glBindVertexArray(shape.shape_id);
   glVertexAttrib2f(location, value.x, value.y);
   assert_ogl_error();
 }
-void set_vertex_buffer(ogl_shape* shape, const vec3f& value, int location) {
-  if (!shape->shape_id) glGenVertexArrays(1, &shape->shape_id);
-  glBindVertexArray(shape->shape_id);
+void set_vertex_buffer(ogl_shape& shape, const vec3f& value, int location) {
+  if (!shape.shape_id) glGenVertexArrays(1, &shape.shape_id);
+  glBindVertexArray(shape.shape_id);
   glVertexAttrib3f(location, value.x, value.y, value.z);
   assert_ogl_error();
 }
-void set_vertex_buffer(ogl_shape* shape, const vec4f& value, int location) {
-  if (!shape->shape_id) glGenVertexArrays(1, &shape->shape_id);
-  glBindVertexArray(shape->shape_id);
+void set_vertex_buffer(ogl_shape& shape, const vec4f& value, int location) {
+  if (!shape.shape_id) glGenVertexArrays(1, &shape.shape_id);
+  glBindVertexArray(shape.shape_id);
   glVertexAttrib4f(location, value.x, value.y, value.z, value.w);
   assert_ogl_error();
 }
 
-void set_instance_buffer(ogl_shape* shape, int location, bool is_instance) {
-  if (!shape->shape_id) glGenVertexArrays(1, &shape->shape_id);
+void set_instance_buffer(ogl_shape& shape, int location, bool is_instance) {
+  if (!shape.shape_id) glGenVertexArrays(1, &shape.shape_id);
   bind_shape(shape);
   if (is_instance) {
     glVertexAttribDivisor(location, 1);
-    shape->num_instances = shape->vertex_buffers[location]->num_elements;
+    shape.num_instances = shape.vertex_buffers[location]->num_elements;
   } else {
     glVertexAttribDivisor(location, 0);
-    shape->num_instances = 0;
+    shape.num_instances = 0;
   }
   assert_ogl_error();
 }
 
-void set_index_buffer(ogl_shape* shape, const vector<int>& indices) {
-  set_elementbuffer(shape->index_buffer, indices);
-  shape->elements = ogl_element_type::points;
+void set_index_buffer(ogl_shape& shape, const vector<int>& indices) {
+  set_elementbuffer(shape.index_buffer, indices);
+  shape.elements = ogl_element_type::points;
 }
-void set_index_buffer(ogl_shape* shape, const vector<vec2i>& indices) {
-  set_elementbuffer(shape->index_buffer, indices);
-  shape->elements = ogl_element_type::lines;
+void set_index_buffer(ogl_shape& shape, const vector<vec2i>& indices) {
+  set_elementbuffer(shape.index_buffer, indices);
+  shape.elements = ogl_element_type::lines;
 }
-void set_index_buffer(ogl_shape* shape, const vector<vec3i>& indices) {
-  set_elementbuffer(shape->index_buffer, indices);
-  shape->elements = ogl_element_type::triangles;
+void set_index_buffer(ogl_shape& shape, const vector<vec3i>& indices) {
+  set_elementbuffer(shape.index_buffer, indices);
+  shape.elements = ogl_element_type::triangles;
 }
 
 // set point size
-void set_point_size(ogl_shape* shape, float point_size) {
-  shape->point_size = point_size;
+void set_point_size(ogl_shape& shape, float point_size) {
+  shape.point_size = point_size;
 }
 
-void draw_shape(const ogl_shape* shape) {
-  if (shape->shape_id == 0) return;
+void draw_shape(const ogl_shape& shape) {
+  if (shape.shape_id == 0) return;
   bind_shape(shape);
   auto type = GL_TRIANGLES;
-  switch (shape->elements) {
+  switch (shape.elements) {
     case ogl_element_type::points: type = GL_POINTS; break;
     case ogl_element_type::lines: type = GL_LINES; break;
     case ogl_element_type::line_strip: type = GL_LINE_STRIP; break;
@@ -1114,35 +1114,35 @@ void draw_shape(const ogl_shape* shape) {
     case ogl_element_type::triangle_fan: type = GL_TRIANGLE_FAN; break;
   }
 
-  if (shape->elements == ogl_element_type::points) {
-    glPointSize(shape->point_size);
+  if (shape.elements == ogl_element_type::points) {
+    glPointSize(shape.point_size);
   }
 
-  auto indices = shape->index_buffer;
+  auto indices = shape.index_buffer;
   if (indices->buffer_id != 0) {
     glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, indices->buffer_id);
-    if (shape->num_instances == 0) {
+    if (shape.num_instances == 0) {
       glDrawElements(type,
           (GLsizei)indices->num_elements * indices->element_size,
           GL_UNSIGNED_INT, nullptr);
     } else {
       glDrawElementsInstanced(type,
           (GLsizei)indices->num_elements * indices->element_size,
-          GL_UNSIGNED_INT, nullptr, (GLsizei)shape->num_instances);
+          GL_UNSIGNED_INT, nullptr, (GLsizei)shape.num_instances);
     }
   } else {
-    auto vertices = shape->vertex_buffers[0];
+    auto vertices = shape.vertex_buffers[0];
     glDrawArrays(type, 0, (int)vertices->num_elements);
   }
 
-  if (shape->elements == ogl_element_type::points) {
-    glPointSize(shape->point_size);
+  if (shape.elements == ogl_element_type::points) {
+    glPointSize(shape.point_size);
   }
 
   assert_ogl_error();
 }
 
-void set_cube_shape(ogl_shape* shape) {
+void set_cube_shape(ogl_shape& shape) {
   // clang-format off
   static const auto positions = vector<vec3f>{
     {1, -1, -1}, {1, -1,  1}, {-1, -1,  1}, {-1, -1, -1},
@@ -1158,7 +1158,7 @@ void set_cube_shape(ogl_shape* shape) {
   set_index_buffer(shape, triangles);
 }
 
-void set_quad_shape(ogl_shape* shape) {
+void set_quad_shape(ogl_shape& shape) {
   // clang-format off
   static const auto positions = vector<vec3f>{
     {-1, -1, 0}, {1, -1,  0}, {1, 1,  0}, {-1, 1, 0},
@@ -1236,11 +1236,6 @@ void main() {
 )";
 #endif
 
-ogl_image::~ogl_image() {
-  if (texture) delete texture;
-  if (quad) delete quad;
-}
-
 bool is_initialized(const ogl_image& oimg) {
   return is_initialized(oimg.program);
 }
@@ -1292,7 +1287,7 @@ void draw_image(ogl_image& oimg, const ogl_image_params& params) {
   set_uniform(oimg.program, "window_size",
       vec2f{(float)params.window.x, (float)params.window.y});
   set_uniform(oimg.program, "image_size",
-      vec2f{(float)oimg.texture->size.x, (float)oimg.texture->size.y});
+      vec2f{(float)oimg.texture.size.x, (float)oimg.texture.size.y});
   set_uniform(oimg.program, "image_center", params.center);
   set_uniform(oimg.program, "image_scale", params.scale);
   draw_shape(oimg.quad);
