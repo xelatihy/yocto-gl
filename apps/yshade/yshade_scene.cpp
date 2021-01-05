@@ -106,18 +106,15 @@ static void init_glscene(shade_scene& glscene, const sceneio_scene& ioscene,
   }
 
   // textures
-  auto texture_map            = unordered_map<texture_handle, shade_texture*>{};
-  texture_map[invalid_handle] = nullptr;
-  auto texture_id             = 0;
   for (auto& iotexture : ioscene.textures) {
     if (progress_cb) progress_cb("convert texture", progress.x++, progress.y);
-    auto gltexture = add_texture(glscene);
+    auto  handle    = add_texture(glscene);
+    auto& gltexture = glscene.textures[handle];
     if (!iotexture.hdr.empty()) {
       set_texture(gltexture, iotexture.hdr);
     } else if (!iotexture.ldr.empty()) {
       set_texture(gltexture, iotexture.ldr);
     }
-    texture_map[texture_id++] = gltexture;
   }
 
   // material
@@ -125,21 +122,18 @@ static void init_glscene(shade_scene& glscene, const sceneio_scene& ioscene,
     if (progress_cb) progress_cb("convert material", progress.x++, progress.y);
     auto  handle     = add_material(glscene);
     auto& glmaterial = glscene.materials[handle];
-    set_emission(glmaterial, iomaterial.emission,
-        texture_map.at(iomaterial.emission_tex));
+    set_emission(glmaterial, iomaterial.emission, iomaterial.emission_tex);
     set_color(glmaterial, (1 - iomaterial.transmission) * iomaterial.color,
-        texture_map.at(iomaterial.color_tex));
+        iomaterial.color_tex);
     set_specular(glmaterial,
         (1 - iomaterial.transmission) * iomaterial.specular,
-        texture_map.at(iomaterial.specular_tex));
+        iomaterial.specular_tex);
     set_metallic(glmaterial,
         (1 - iomaterial.transmission) * iomaterial.metallic,
-        texture_map.at(iomaterial.metallic_tex));
-    set_roughness(glmaterial, iomaterial.roughness,
-        texture_map.at(iomaterial.roughness_tex));
-    set_opacity(
-        glmaterial, iomaterial.opacity, texture_map.at(iomaterial.opacity_tex));
-    set_normalmap(glmaterial, texture_map.at(iomaterial.normal_tex));
+        iomaterial.metallic_tex);
+    set_roughness(glmaterial, iomaterial.roughness, iomaterial.roughness_tex);
+    set_opacity(glmaterial, iomaterial.opacity, iomaterial.opacity_tex);
+    set_normalmap(glmaterial, iomaterial.normal_tex);
   }
 
   // shapes
@@ -165,8 +159,8 @@ static void init_glscene(shade_scene& glscene, const sceneio_scene& ioscene,
     auto  handle        = add_environment(glscene);
     auto& glenvironment = glscene.environments[handle];
     set_frame(glenvironment, ioenvironment.frame);
-    set_emission(glenvironment, ioenvironment.emission,
-        texture_map.at(ioenvironment.emission_tex));
+    set_emission(
+        glenvironment, ioenvironment.emission, ioenvironment.emission_tex);
   }
 
   // init environments

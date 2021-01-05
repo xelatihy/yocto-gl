@@ -83,20 +83,20 @@ struct shade_texture : ogl_texture {};
 // Opengl material
 struct shade_material {
   // material
-  vec3f          emission      = {0, 0, 0};
-  vec3f          color         = {0, 0, 0};
-  float          metallic      = 0;
-  float          roughness     = 0;
-  float          specular      = 0;
-  float          opacity       = 1;
-  shade_texture* emission_tex  = nullptr;
-  shade_texture* color_tex     = nullptr;
-  shade_texture* metallic_tex  = nullptr;
-  shade_texture* roughness_tex = nullptr;
-  shade_texture* specular_tex  = nullptr;
-  shade_texture* opacity_tex   = nullptr;
-  shade_texture* normal_tex    = nullptr;
-  bool           unlit         = false;
+  vec3f            emission      = {0, 0, 0};
+  vec3f            color         = {0, 0, 0};
+  float            metallic      = 0;
+  float            roughness     = 0;
+  float            specular      = 0;
+  float            opacity       = 1;
+  gltexture_handle emission_tex  = glinvalid_handle;
+  gltexture_handle color_tex     = glinvalid_handle;
+  gltexture_handle metallic_tex  = glinvalid_handle;
+  gltexture_handle roughness_tex = glinvalid_handle;
+  gltexture_handle specular_tex  = glinvalid_handle;
+  gltexture_handle opacity_tex   = glinvalid_handle;
+  gltexture_handle normal_tex    = glinvalid_handle;
+  bool             unlit         = false;
 };
 
 // Opengl shape
@@ -118,9 +118,9 @@ struct shade_instance {
 // Opengl environment
 struct shade_environment {
   // environment properties
-  frame3f        frame        = identity3x4f;
-  vec3f          emission     = {1, 1, 1};
-  shade_texture* emission_tex = nullptr;
+  frame3f          frame        = identity3x4f;
+  vec3f            emission     = {1, 1, 1};
+  gltexture_handle emission_tex = glinvalid_handle;
 
   // drawing data
   glshape_handle   envlight_shape   = glinvalid_handle;
@@ -139,7 +139,7 @@ struct shade_scene {
   vector<shade_instance>    instances    = {};
   vector<shade_shape>       shapes       = {};
   vector<shade_material>    materials    = {};
-  vector<shade_texture*>    textures     = {};
+  vector<shade_texture>     textures     = {};
   vector<shade_environment> environments = {};
 
   // data for envmaps
@@ -206,7 +206,7 @@ void clear_scene(shade_scene& scene);
 
 // add scene elements
 glcamera_handle      add_camera(shade_scene& scene);
-shade_texture*       add_texture(shade_scene& scene);
+gltexture_handle     add_texture(shade_scene& scene);
 glmaterial_handle    add_material(shade_scene& scene);
 glshape_handle       add_shape(shade_scene& scene);
 glinstance_handle    add_instance(shade_scene& scene);
@@ -218,38 +218,38 @@ void set_lens(shade_camera& camera, float lens, float aspect, float film);
 void set_nearfar(shade_camera& camera, float near, float far);
 
 // check if initialized
-bool is_initialized(const shade_texture* texture);
+bool is_initialized(const shade_texture& texture);
 // clear texture
-void clear_texture(shade_texture* texture);
+void clear_texture(shade_texture& texture);
 
 // set texture
-void set_texture(shade_texture* texture, const image<vec4b>& img,
+void set_texture(shade_texture& texture, const image<vec4b>& img,
     bool as_srgb = true, bool linear = true, bool mipmap = true);
-void set_texture(shade_texture* texture, const image<vec4f>& img,
+void set_texture(shade_texture& texture, const image<vec4f>& img,
     bool as_float = false, bool linear = true, bool mipmap = true);
-void set_texture(shade_texture* texture, const image<vec3b>& img,
+void set_texture(shade_texture& texture, const image<vec3b>& img,
     bool as_srgb = true, bool linear = true, bool mipmap = true);
-void set_texture(shade_texture* texture, const image<vec3f>& img,
+void set_texture(shade_texture& texture, const image<vec3f>& img,
     bool as_float = false, bool linear = true, bool mipmap = true);
-void set_texture(shade_texture* texture, const image<byte>& img,
+void set_texture(shade_texture& texture, const image<byte>& img,
     bool as_srgb = true, bool linear = true, bool mipmap = true);
-void set_texture(shade_texture* texture, const image<float>& img,
+void set_texture(shade_texture& texture, const image<float>& img,
     bool as_float = false, bool linear = true, bool mipmap = true);
 
 // material properties
 void set_emission(shade_material& material, const vec3f& emission,
-    shade_texture* emission_tex = nullptr);
+    gltexture_handle emission_tex = glinvalid_handle);
 void set_color(shade_material& material, const vec3f& color,
-    shade_texture* color_tex = nullptr);
+    gltexture_handle color_tex = glinvalid_handle);
 void set_metallic(shade_material& material, float metallic,
-    shade_texture* metallic_tex = nullptr);
+    gltexture_handle metallic_tex = glinvalid_handle);
 void set_roughness(shade_material& material, float roughness,
-    shade_texture* roughness_tex = nullptr);
+    gltexture_handle roughness_tex = glinvalid_handle);
 void set_specular(shade_material& material, float specular,
-    shade_texture* specular_tex = nullptr);
+    gltexture_handle specular_tex = glinvalid_handle);
 void set_opacity(shade_material& material, float opacity,
-    shade_texture* opacity_tex = nullptr);
-void set_normalmap(shade_material& material, shade_texture* normal_tex);
+    gltexture_handle opacity_tex = glinvalid_handle);
+void set_normalmap(shade_material& material, gltexture_handle normal_tex);
 void set_unlit(shade_material& material, bool unlit);
 
 // cheeck if initialized
@@ -293,18 +293,19 @@ bool is_initialized(const shade_environment& environment);
 // environment properties
 void set_frame(shade_environment& environment, const frame3f& frame);
 void set_emission(shade_environment& environment, const vec3f& emission,
-    shade_texture* emission_tex = nullptr);
+    gltexture_handle emission_tex = glinvalid_handle);
 
 // shortcuts
 glcamera_handle add_camera(shade_scene& scene, const frame3f& frame, float lens,
     float aspect, float film = 0.036, float near = 0.001, float far = 10000);
 glmaterial_handle    add_material(shade_scene& scene, const vec3f& emission,
        const vec3f& color, float specular, float metallic, float roughness,
-       shade_texture* emission_tex = nullptr, shade_texture* color_tex = nullptr,
-       shade_texture* specular_tex  = nullptr,
-       shade_texture* metallic_tex  = nullptr,
-       shade_texture* roughness_tex = nullptr,
-       shade_texture* normalmap_tex = nullptr);
+       gltexture_handle emission_tex  = glinvalid_handle,
+       gltexture_handle color_tex     = glinvalid_handle,
+       gltexture_handle specular_tex  = glinvalid_handle,
+       gltexture_handle metallic_tex  = glinvalid_handle,
+       gltexture_handle roughness_tex = glinvalid_handle,
+       gltexture_handle normalmap_tex = glinvalid_handle);
 glshape_handle       add_shape(shade_scene& scene, const vector<int>& points,
           const vector<vec2i>& lines, const vector<vec3i>& triangles,
           const vector<vec4i>& quads, const vector<vec3f>& positions,
@@ -314,7 +315,7 @@ glinstance_handle    add_instance(shade_scene& scene, const frame3f& frame,
        glmaterial_handle shape, glmaterial_handle material, bool hidden = false,
        bool highlighted = false);
 glenvironment_handle add_environment(shade_scene& scene, const frame3f& frame,
-    const vec3f& emission, shade_texture* emission_tex = nullptr);
+    const vec3f& emission, gltexture_handle emission_tex = glinvalid_handle);
 
 // draw scene
 void draw_scene(const shade_scene& scene, const shade_camera& camera,
