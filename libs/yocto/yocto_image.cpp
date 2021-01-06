@@ -257,23 +257,22 @@ image_data image_difference(
 }
 
 void set_region(image_data& image, const image_data& region, int x, int y) {
-  // TODO(fabio): implement this
-  throw std::invalid_argument{"not implemented yet"};
-  if (is_float(image)) {
-    if (!is_float(region))
-      throw std::invalid_argument{"color type should match"};
-  } else {
-    if (!is_float(region))
-      throw std::invalid_argument{"color type should match"};
+  for (auto j = 0; j < region.height; j++) {
+    for (auto i = 0; i < region.width; i++) {
+      set_pixel(image, i + x, j + y, get_pixel(region, i, j));
+    }
   }
 }
 
 void get_region(image_data& region, const image_data& image, int x, int y,
     int width, int height) {
-  // TODO(fabio): implement this
-  throw std::invalid_argument{"not implemented yet"};
-  if (is_float(image)) {
-  } else {
+  if (region.width != width || region.height != height) {
+    region = make_image(width, height, is_linear(image), is_byte(image));
+  }
+  for (auto j = 0; j < height; j++) {
+    for (auto i = 0; i < width; i++) {
+      set_pixel(region, i, j, get_pixel(region, i + x, j + y));
+    }
   }
 }
 

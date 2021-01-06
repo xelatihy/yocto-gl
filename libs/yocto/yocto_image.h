@@ -125,6 +125,11 @@ void tonemap_image_mt(image_data& ldr, const image_data& image, float exposure,
 // Resize an image.
 image_data resize_image(const image_data& image, int width, int height);
 
+// set/get region
+void set_region(image_data& image, const image_data& region, int x, int y);
+void get_region(image_data& region, const image_data& image, int x, int y,
+    int width, int height);
+
 // Compute the difference between two images.
 image_data image_difference(
     const image_data& image_a, const image_data& image_b, bool display_diff);
@@ -144,10 +149,8 @@ bool is_ldr_filename(const string& filename);
 bool load_image(const string& filename, image_data& img, string& error);
 bool save_image(const string& filename, const image_data& img, string& error);
 
-// set/get region
-void set_region(image_data& image, const image_data& region, int x, int y);
-void get_region(image_data& region, const image_data& image, int x, int y,
-    int width, int height);
+// add a logo to an image
+image_data add_logo(const image_data& image);
 
 }  // namespace yocto
 
@@ -190,9 +193,6 @@ void colorgrade_image_mt(image_data& result, const image_data& image,
 
 // determine white balance colors
 vec4f compute_white_balance(const image_data& image);
-
-// add a logo to an image
-image_data add_logo(const image_data& image);
 
 }  // namespace yocto
 
