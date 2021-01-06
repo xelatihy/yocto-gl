@@ -260,7 +260,7 @@ void set_image(ogl_imageviewer& viewer, const string& name,
         viewer.inputs.emplace_back(std::make_unique<ogl_imageinput>()).get();
   }
   input->name     = name;
-  input->image    = make_image(img.width(), img.height(), img.data());
+  input->image    = make_image(img.width(), img.height(), true, img.data());
   input->exposure = exposure;
   input->filmic   = filmic;
   input->ichanged = true;
@@ -274,7 +274,7 @@ void set_image(
         viewer.inputs.emplace_back(std::make_unique<ogl_imageinput>()).get();
   }
   input->name     = name;
-  input->image    = make_image(img.width(), img.height(), img.data());
+  input->image    = make_image(img.width(), img.height(), false, img.data());
   input->exposure = 0;
   input->filmic   = false;
   input->ichanged = true;
@@ -351,12 +351,13 @@ static ogl_imageinput* get_input(ogl_imageviewer& viewer, const string& name) {
 static void update_display(ogl_imageview* view) {
   if (view->display.width != view->image.width ||
       view->display.height != view->image.height) {
-    view->display = make_image(view->image.width, view->image.height, true);
+    view->display = make_image(
+        view->image.width, view->image.height, false, true);
   }
-  if (is_float(view->image)) {
+  if (is_linear(view->image)) {
     tonemap_image_mt(view->display, view->image, view->exposure, view->filmic);
-  } else if (is_byte(view->image)) {
-    view->display.pixelsb = view->image.pixelsb;
+  } else if (is_float(view->image) || is_byte(view->image)) {
+    convert_image(view->display, view->image);
   } else {
     // TODO(fabio): decide about empty images
   }

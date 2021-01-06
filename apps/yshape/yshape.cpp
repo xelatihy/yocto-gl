@@ -719,7 +719,7 @@ int run_heightfield(const heightfield_params& params) {
   print_progress("load image", 1, 1);
 
   // convert to float
-  if (!is_float(image)) image = byte_to_float(image);
+  if (!is_float(image)) image = convert_image(image, is_linear(image), false);
 
   // adjust height
   if (params.height != 1) {

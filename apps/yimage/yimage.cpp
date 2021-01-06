@@ -100,7 +100,8 @@ bool make_image_preset(const string& type_, image_data& image, string& error) {
       montage_size.x += sub_img.width;
       montage_size.y = max(montage_size.y, sub_img.height);
     }
-    image = make_image(montage_size.x, montage_size.y, is_float(sub_imgs[0]));
+    image = make_image(montage_size.x, montage_size.y, is_linear(sub_imgs[0]),
+        is_float(sub_imgs[0]));
     auto pos = 0;
     for (auto& sub_img : sub_imgs) {
       set_region(image, sub_img, pos, 0);
@@ -117,7 +118,8 @@ bool make_image_preset(const string& type_, image_data& image, string& error) {
       montage_size.x += sub_img.width;
       montage_size.y = max(montage_size.y, sub_img.height);
     }
-    image = make_image(montage_size.x, montage_size.y, is_float(sub_imgs[0]));
+    image = make_image(montage_size.x, montage_size.y, is_linear(sub_imgs[0]),
+        is_float(sub_imgs[0]));
     auto pos = 0;
     for (auto& sub_img : sub_imgs) {
       set_region(image, sub_img, pos, 0);
@@ -371,7 +373,7 @@ int run_grade(const grade_params& params) {
   }
 
   // grade image
-  auto graded = make_image(image.width, image.height, true);
+  auto graded = make_image(image.width, image.height, false, true);
   colorgrade_image_mt(graded, image, params);
 
   // set view
@@ -536,8 +538,16 @@ int run_setalpha(const setalpha_params& params) {
     return print_fatal(ioerror);
   }
 
+  // check types
+  if (is_linear(image) != is_linear(alpha) ||
+      is_nonlinear(image) != is_nonlinear(alpha)) {
+    ioerror = "image types are different";
+    return print_fatal(ioerror);
+  }
+
   // edit alpha
-  auto out = make_image(image.width, image.height, is_byte(image));
+  auto out = make_image(
+      image.width, image.height, is_linear(image), is_byte(image));
   for (auto idx = 0; idx < image.width * image.height; idx++) {
     if (is_float(image)) {
       auto a = params.from_color ? mean(xyz(image.pixelsf[idx]))
