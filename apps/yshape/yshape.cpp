@@ -727,7 +727,8 @@ int run_heightfield(const heightfield_params& params) {
   }
 
   // create heightfield
-  auto shape = make_heightfield({get_width(image), get_height(image)}, image.pixelsf);
+  auto shape = make_heightfield(
+      {get_width(image), get_height(image)}, image.pixelsf);
   if (!params.smooth) shape.normals.clear();
 
   // print info

@@ -149,6 +149,53 @@ void convert_image(image_data& result, const image_data& image) {
   }
 }
 
+// Evaluates an image at a point `uv`.
+vec4f eval_image(const image_data& image, const vec2f& uv, bool as_linear,
+    bool no_interpolation, bool clamp_to_edge) {
+  if (image.width == 0 || image.height == 0) return {0, 0, 0, 0};
+
+  // get image width/height
+  auto size = vec2i{get_width(image), get_height(image)};
+
+  // get coordinates normalized for tiling
+  auto s = 0.0f, t = 0.0f;
+  if (clamp_to_edge) {
+    s = clamp(uv.x, 0.0f, 1.0f) * size.x;
+    t = clamp(uv.y, 0.0f, 1.0f) * size.y;
+  } else {
+    s = fmod(uv.x, 1.0f) * size.x;
+    if (s < 0) s += size.x;
+    t = fmod(uv.y, 1.0f) * size.y;
+    if (t < 0) t += size.y;
+  }
+
+  // get image coordinates and residuals
+  auto i = clamp((int)s, 0, size.x - 1), j = clamp((int)t, 0, size.y - 1);
+  auto ii = (i + 1) % size.x, jj = (j + 1) % size.y;
+  auto u = s - i, v = t - j;
+
+  if (no_interpolation) {
+    if (as_linear && is_nonlinear(image)) {
+      return srgb_to_rgb(get_pixel(image, i, j));
+    } else {
+      return get_pixel(image, i, j);
+    }
+  } else {
+    // handle interpolation
+    if (as_linear && is_nonlinear(image)) {
+      return srgb_to_rgb(get_pixel(image, i, j)) * (1 - u) * (1 - v) +
+             srgb_to_rgb(get_pixel(image, i, jj)) * (1 - u) * v +
+             srgb_to_rgb(get_pixel(image, ii, j)) * u * (1 - v) +
+             srgb_to_rgb(get_pixel(image, ii, jj)) * u * v;
+    } else {
+      return get_pixel(image, i, j) * (1 - u) * (1 - v) +
+             get_pixel(image, i, jj) * (1 - u) * v +
+             get_pixel(image, ii, j) * u * (1 - v) +
+             get_pixel(image, ii, jj) * u * v;
+    }
+  }
+}
+
 // Apply tone mapping returning a float or byte image.
 image_data tonemap_image(
     const image_data& image, float exposure, bool filmic, bool as_byte) {
