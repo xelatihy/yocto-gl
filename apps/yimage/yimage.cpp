@@ -228,8 +228,8 @@ int run_convert(const convert_params& params) {
   }
 
   // tonemap if needed
-  if (is_float(image) && is_ldr_filename(params.output)) {
-    image = tonemap_image(image, params.exposure, params.filmic);
+  if (is_linear(image) && is_ldr_filename(params.output)) {
+    image = tonemap_image(image, params.exposure, params.filmic, true);
   }
 
   // apply logo
