@@ -67,18 +67,23 @@ namespace yocto {
 struct image_data {
   int           width   = 0;
   int           height  = 0;
+  bool          linear  = false;
   vector<vec4f> pixelsf = {};
   vector<vec4b> pixelsb = {};
 };
 
 // image creation
-image_data make_image(int width, int height, bool as_byte);
-image_data make_image(int width, int height, const vec4f* data);
-image_data make_image(int width, int height, const vec4b* data);
+image_data make_image(int width, int height, bool linear, bool as_byte);
+image_data make_image(int width, int height, bool linear, const vec4f* data);
+image_data make_image(int width, int height, bool linear, const vec4b* data);
 
 // queries
+int  get_width(const image_data& image);
+int  get_height(const image_data& image);
 bool is_byte(const image_data& image);
 bool is_float(const image_data& image);
+bool is_linear(const image_data& image);
+bool is_nonlinear(const image_data& image);
 
 // equality
 bool operator==(const image_data& a, const image_data& b);
@@ -91,9 +96,15 @@ void swap(image_data& a, image_data& b);
 vec4f get_pixel(const image_data& image, int i, int j);
 void  set_pixel(image_data& image, int i, int j, const vec4f& pixel);
 
+// data acess
+const float* get_dataf(const image_data& image);
+const byte*  get_datab(const image_data& image);
+const vec4f* get_data4f(const image_data& image);
+const vec4b* get_data4b(const image_data& image);
+
 // conversions
-image_data byte_to_float(const image_data& image);
-image_data float_to_byte(const image_data& image);
+image_data convert_image(const image_data& image, bool linear, bool as_byte);
+void       convert_image(image_data& result, const image_data& image);
 
 // Evaluates an image at a point `uv`.
 vec4f eval_image(const image_data& image, const vec2f& uv,
@@ -101,8 +112,8 @@ vec4f eval_image(const image_data& image, const vec2f& uv,
     bool clamp_to_edge = false);
 
 // Apply tone mapping returning a float or byte image.
-image_data tonemap_image(
-    const image_data& image, float exposure, bool filmic = false);
+image_data tonemap_image(const image_data& image, float exposure,
+    bool filmic = false, bool as_byte = false);
 
 // Apply tone mapping. If the input image is an ldr, does nothing.
 void tonemap_image(image_data& ldr, const image_data& image, float exposure,
@@ -113,6 +124,11 @@ void tonemap_image_mt(image_data& ldr, const image_data& image, float exposure,
 
 // Resize an image.
 image_data resize_image(const image_data& image, int width, int height);
+
+// set/get region
+void set_region(image_data& image, const image_data& region, int x, int y);
+void get_region(image_data& region, const image_data& image, int x, int y,
+    int width, int height);
 
 // Compute the difference between two images.
 image_data image_difference(
@@ -133,10 +149,8 @@ bool is_ldr_filename(const string& filename);
 bool load_image(const string& filename, image_data& img, string& error);
 bool save_image(const string& filename, const image_data& img, string& error);
 
-// set/get region
-void set_region(image_data& image, const image_data& region, int x, int y);
-void get_region(image_data& region, const image_data& image, int x, int y,
-    int width, int height);
+// add a logo to an image
+image_data add_logo(const image_data& image);
 
 }  // namespace yocto
 
@@ -165,12 +179,12 @@ struct colorgrade_params {
 };
 
 // Apply color grading from a linear or srgb color to an srgb color.
-vec4b colorgrade(const vec4f& hdr_color, const colorgrade_params& params);
-vec4b colorgradeb(const vec4b& ldr_color, const colorgrade_params& params);
+vec4f colorgrade(
+    const vec4f& color, bool linear, const colorgrade_params& params);
 
 // Color grade an hsr or ldr image to an ldr image.
-image_data colorgrade_image(
-    const image_data& image, const colorgrade_params& params);
+image_data colorgrade_image(const image_data& image,
+    const colorgrade_params& params, bool as_byte = false);
 
 // Color grade an hsr or ldr image to an ldr image.
 // Uses multithreading for speed.
@@ -179,9 +193,6 @@ void colorgrade_image_mt(image_data& result, const image_data& image,
 
 // determine white balance colors
 vec4f compute_white_balance(const image_data& image);
-
-// add a logo to an image
-image_data add_logo(const image_data& image);
 
 }  // namespace yocto
 
