@@ -69,6 +69,8 @@ image_data make_image(int width, int height, bool linear, const vec4b* data) {
 }
 
 // queries
+int  get_width(const image_data& image) { return image.width; }
+int  get_height(const image_data& image) { return image.height; }
 bool is_float(const image_data& image) { return !image.pixelsf.empty(); }
 bool is_byte(const image_data& image) { return !image.pixelsb.empty(); }
 bool is_linear(const image_data& image) { return image.linear; }
@@ -109,6 +111,20 @@ void set_pixel(image_data& image, int i, int j, const vec4f& pixel) {
   }
 }
 
+// data acess
+const float* get_dataf(const image_data& image) {
+  return is_float(image) ? (const float*)image.pixelsf.data() : nullptr;
+}
+const byte* get_datab(const image_data& image) {
+  return is_byte(image) ? (const byte*)image.pixelsb.data() : nullptr;
+}
+const vec4f* get_data4f(const image_data& image) {
+  return is_float(image) ? image.pixelsf.data() : nullptr;
+}
+const vec4b* get_data4b(const image_data& image) {
+  return is_byte(image) ? image.pixelsb.data() : nullptr;
+}
+
 // conversions
 image_data convert_image(const image_data& image, bool linear, bool as_byte) {
   if (is_linear(image) == linear && is_byte(image) == as_byte) return image;
@@ -132,26 +148,6 @@ void convert_image(image_data& result, const image_data& image) {
     }
   }
 }
-
-// conversions
-image_data byte_to_float(const image_data& image) {
-  if (is_float(image)) return image;
-  auto result = make_image(image.width, image.height, image.linear, false);
-  for (auto idx = 0; idx < image.width * image.height; idx++) {
-    result.pixelsf[idx] = byte_to_float(image.pixelsb[idx]);
-  }
-  return result;
-}
-image_data float_to_byte(const image_data& image) {
-  if (is_byte(image)) return image;
-  auto result = make_image(image.width, image.height, image.linear, true);
-  for (auto idx = 0; idx < image.width * image.height; idx++) {
-    result.pixelsb[idx] = float_to_byte(image.pixelsf[idx]);
-  }
-  return result;
-}
-void byte_to_float(image_data& result, const image_data& image);
-void float_to_byte(image_data& result, const image_data& image);
 
 // Apply tone mapping returning a float or byte image.
 image_data tonemap_image(

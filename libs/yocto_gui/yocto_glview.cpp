@@ -349,10 +349,10 @@ static ogl_imageinput* get_input(ogl_imageviewer& viewer, const string& name) {
 }
 
 static void update_display(ogl_imageview* view) {
-  if (view->display.width != view->image.width ||
-      view->display.height != view->image.height) {
+  if (get_width(view->display) != get_width(view->image) ||
+      get_height(view->display) != get_height(view->image)) {
     view->display = make_image(
-        view->image.width, view->image.height, false, true);
+        get_width(view->image), get_height(view->image), false, true);
   }
   if (is_linear(view->image)) {
     tonemap_image_mt(view->display, view->image, view->exposure, view->filmic);
@@ -394,18 +394,19 @@ void draw_widgets(
   if (begin_header(win, "inspect")) {
     auto view = viewer.selected;
     draw_label(win, "name", view->name);
-    auto size = vec2i{view->display.width, view->display.height};
+    auto size = vec2i{get_width(view->display), get_height(view->display)};
     draw_dragger(win, "size", size);
     draw_slider(win, "zoom", view->glparams.scale, 0.1, 10);
     draw_checkbox(win, "fit", view->glparams.fit);
     auto [i, j] = image_coords(input.mouse_pos, view->glparams.center,
-        view->glparams.scale, vec2i{view->display.width, view->display.height});
+        view->glparams.scale,
+        vec2i{get_width(view->display), get_height(view->display)});
     auto ij     = vec2i{i, j};
     draw_dragger(win, "mouse", ij);
     auto hdr_pixel     = zero4f;
     auto ldr_pixel     = zero4b;
     auto display_pixel = zero4b;
-    auto width = view->display.width, height = view->display.height;
+    auto width = get_width(view->display), height = get_height(view->display);
     if (i >= 0 && j < width && i >= 0 && j < height) {
       hdr_pixel     = !view->image.pixelsf.empty()
                           ? view->image.pixelsf[j * width + i]
@@ -453,8 +454,8 @@ void draw(gui_window* win, ogl_imageviewer& viewer, const gui_input& input) {
   if (!is_initialized(view->glimage)) init_image(view->glimage);
   std::tie(view->glparams.center, view->glparams.scale) = camera_imview(
       view->glparams.center, view->glparams.scale,
-      {view->display.width, view->display.height}, view->glparams.window,
-      view->glparams.fit);
+      {get_width(view->display), get_height(view->display)},
+      view->glparams.window, view->glparams.fit);
   draw_image(view->glimage, view->glparams);
 }
 

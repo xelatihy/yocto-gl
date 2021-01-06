@@ -78,6 +78,8 @@ image_data make_image(int width, int height, bool linear, const vec4f* data);
 image_data make_image(int width, int height, bool linear, const vec4b* data);
 
 // queries
+int  get_width(const image_data& image);
+int  get_height(const image_data& image);
 bool is_byte(const image_data& image);
 bool is_float(const image_data& image);
 bool is_linear(const image_data& image);
@@ -93,6 +95,12 @@ void swap(image_data& a, image_data& b);
 // pixel access
 vec4f get_pixel(const image_data& image, int i, int j);
 void  set_pixel(image_data& image, int i, int j, const vec4f& pixel);
+
+// data acess
+const float* get_dataf(const image_data& image);
+const byte*  get_datab(const image_data& image);
+const vec4f* get_data4f(const image_data& image);
+const vec4b* get_data4b(const image_data& image);
 
 // conversions
 image_data convert_image(const image_data& image, bool linear, bool as_byte);
