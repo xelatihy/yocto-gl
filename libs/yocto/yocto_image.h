@@ -77,14 +77,6 @@ image_data make_image(int width, int height, bool linear, bool as_byte);
 image_data make_image(int width, int height, bool linear, const vec4f* data);
 image_data make_image(int width, int height, bool linear, const vec4b* data);
 
-// queries
-int  get_width(const image_data& image);
-int  get_height(const image_data& image);
-bool is_byte(const image_data& image);
-bool is_float(const image_data& image);
-bool is_linear(const image_data& image);
-bool is_nonlinear(const image_data& image);
-
 // equality
 bool operator==(const image_data& a, const image_data& b);
 bool operator!=(const image_data& a, const image_data& b);

@@ -97,15 +97,15 @@ bool make_image_preset(const string& type_, image_data& image, string& error) {
     }
     auto montage_size = zero2i;
     for (auto& sub_img : sub_imgs) {
-      montage_size.x += get_width(sub_img);
+      montage_size.x += sub_img.width;
       montage_size.y = max(montage_size.y, sub_img.height);
     }
-    image = make_image(montage_size.x, montage_size.y, is_linear(sub_imgs[0]),
-        is_float(sub_imgs[0]));
+    image    = make_image(montage_size.x, montage_size.y, sub_imgs[0].linear,
+        !sub_imgs[0].pixelsb.empty());
     auto pos = 0;
     for (auto& sub_img : sub_imgs) {
       set_region(image, sub_img, pos, 0);
-      pos += get_width(sub_img);
+      pos += sub_img.width;
     }
   } else if (type == "images2") {
     auto sub_types = vector<string>{"sky", "sunsky"};
@@ -115,15 +115,15 @@ bool make_image_preset(const string& type_, image_data& image, string& error) {
     }
     auto montage_size = zero2i;
     for (auto& sub_img : sub_imgs) {
-      montage_size.x += get_width(sub_img);
+      montage_size.x += sub_img.width;
       montage_size.y = max(montage_size.y, sub_img.height);
     }
-    image = make_image(montage_size.x, montage_size.y, is_linear(sub_imgs[0]),
-        is_float(sub_imgs[0]));
+    image    = make_image(montage_size.x, montage_size.y, sub_imgs[0].linear,
+        !sub_imgs[0].pixelsb.empty());
     auto pos = 0;
     for (auto& sub_img : sub_imgs) {
       set_region(image, sub_img, pos, 0);
-      pos += get_width(sub_img);
+      pos += sub_img.width;
     }
   } else if (type == "test-floor") {
     image = make_grid(width, height);
@@ -228,7 +228,7 @@ int run_convert(const convert_params& params) {
   }
 
   // tonemap if needed
-  if (is_linear(image) && is_ldr_filename(params.output)) {
+  if (image.linear && is_ldr_filename(params.output)) {
     image = tonemap_image(image, params.exposure, params.filmic, true);
   }
 
@@ -373,7 +373,7 @@ int run_grade(const grade_params& params) {
   }
 
   // grade image
-  auto graded = make_image(get_width(image), get_height(image), false, true);
+  auto graded = make_image(image.width, image.height, false, true);
   colorgrade_image_mt(graded, image, params);
 
   // set view
@@ -446,15 +446,14 @@ int run_diff(const diff_params& params) {
   }
 
   // check sizes
-  if (get_width(image1) != get_width(image2) ||
-      get_height(image1) != get_height(image2)) {
+  if (image1.width != image2.width || image1.height != image2.height) {
     ioerror = "image sizes are different";
     return print_fatal(ioerror);
   }
 
   // check types
-  if (is_float(image1) != is_float(image2) ||
-      is_byte(image1) != is_byte(image2)) {
+  if (!image1.pixelsf.empty() != !image2.pixelsf.empty() ||
+      !image1.pixelsf.empty() != !image2.pixelsf.empty()) {
     ioerror = "image types are different";
     return print_fatal(ioerror);
   }
@@ -528,30 +527,29 @@ int run_setalpha(const setalpha_params& params) {
   }
 
   // check sizes
-  if (get_width(image) != get_width(alpha) ||
-      get_height(image) != get_height(alpha)) {
+  if (image.width != alpha.width || image.height != alpha.height) {
     ioerror = "image sizes are different";
     return print_fatal(ioerror);
   }
 
   // check types
-  if (is_float(image) != is_float(alpha) || is_byte(image) != is_byte(alpha)) {
+  if (!image.pixelsf.empty() != !alpha.pixelsf.empty() ||
+      !image.pixelsf.empty() != !alpha.pixelsf.empty()) {
     ioerror = "image types are different";
     return print_fatal(ioerror);
   }
 
   // check types
-  if (is_linear(image) != is_linear(alpha) ||
-      is_nonlinear(image) != is_nonlinear(alpha)) {
+  if (image.linear != alpha.linear || !image.linear != !alpha.linear) {
     ioerror = "image types are different";
     return print_fatal(ioerror);
   }
 
   // edit alpha
   auto out = make_image(
-      get_width(image), get_height(image), is_linear(image), is_byte(image));
-  for (auto j = 0; j < get_height(image); j++) {
-    for (auto i = 0; i < get_width(image); i++) {
+      image.width, image.height, image.linear, !image.pixelsf.empty());
+  for (auto j = 0; j < image.height; j++) {
+    for (auto i = 0; i < image.width; i++) {
       auto calpha = get_pixel(alpha, i, j);
       auto alpha_ = params.from_color ? mean(xyz(calpha)) : calpha.w;
       if (params.to_color) {
