@@ -300,12 +300,32 @@ shape_vertex interpolate_vertex(
 }
 
 // Compute per-vertex normals/tangents for lines/triangles/quads.
-vector<vec3f> shape_normals(const shape_data& shape);
-void          shape_normals(vector<vec3f>& normals, const shape_data& shape);
-
-// Update normals in place
-void smooth_normals(shape_data& shape);
-void remove_normals(shape_data& shape);
+vector<vec3f> shape_normals(const shape_data& shape) {
+  if (!shape.points.empty()) {
+    return vector<vec3f>(shape.positions.size(), {0, 0, 1});
+  } else if (!shape.lines.empty()) {
+    return lines_tangents(shape.lines, shape.positions);
+  } else if (!shape.triangles.empty()) {
+    return triangles_normals(shape.triangles, shape.positions);
+  } else if (!shape.quads.empty()) {
+    return quads_normals(shape.quads, shape.positions);
+  } else {
+    return vector<vec3f>(shape.positions.size(), {0, 0, 1});
+  }
+}
+void shape_normals(vector<vec3f>& normals, const shape_data& shape) {
+  if (!shape.points.empty()) {
+    normals.assign(shape.positions.size(), {0, 0, 1});
+  } else if (!shape.lines.empty()) {
+    lines_tangents(normals, shape.lines, shape.positions);
+  } else if (!shape.triangles.empty()) {
+    triangles_normals(normals, shape.triangles, shape.positions);
+  } else if (!shape.quads.empty()) {
+    quads_normals(normals, shape.quads, shape.positions);
+  } else {
+    normals.assign(shape.positions.size(), {0, 0, 1});
+  }
+}
 
 // Shape sampling
 vector<float> sample_shape_cdf(const shape_data& shape);

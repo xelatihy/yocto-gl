@@ -124,10 +124,6 @@ vec3f eval_element_normal(const shape_data& shape, int element);
 vector<vec3f> shape_normals(const shape_data& shape);
 void          shape_normals(vector<vec3f>& normals, const shape_data& shape);
 
-// Update normals in place
-void smooth_normals(shape_data& shape);
-void remove_normals(shape_data& shape);
-
 // Access vertex data
 struct shape_vertex {
   vec3f position = {0, 0, 0};
