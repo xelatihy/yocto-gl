@@ -86,15 +86,12 @@ struct shape_data {
 };
 
 // Interpolate vertex data
-vec3f interpolate_position(
-    const shape_data& shape, int element, const vec2f& uv);
-vec3f interpolate_normal(const shape_data& shape, int element, const vec2f& uv);
-vec3f interpolate_tangent(
-    const shape_data& shape, int element, const vec2f& uv);
-vec2f interpolate_texcoord(
-    const shape_data& shape, int element, const vec2f& uv);
-vec4f interpolate_color(const shape_data& shape, int element, const vec2f& uv);
-float interpolate_radius(const shape_data& shape, int element, const vec2f& uv);
+vec3f eval_position(const shape_data& shape, int element, const vec2f& uv);
+vec3f eval_normal(const shape_data& shape, int element, const vec2f& uv);
+vec3f eval_tangent(const shape_data& shape, int element, const vec2f& uv);
+vec2f eval_texcoord(const shape_data& shape, int element, const vec2f& uv);
+vec4f eval_color(const shape_data& shape, int element, const vec2f& uv);
+float eval_radius(const shape_data& shape, int element, const vec2f& uv);
 
 // Evaluate element normals
 vec3f eval_element_normal(const shape_data& shape, int element);
@@ -116,8 +113,7 @@ void set_vertex(const shape_data& shape, int vertex, const shape_vertex& vert);
 int  add_vertex(const shape_data& shape, const shape_vertex& vert);
 int  add_vertex(const shape_data& shape, const shape_vertex& vert,
      bool add_normals, bool add_texcoords, bool add_colors, bool add_radius);
-shape_vertex interpolate_vertex(
-    const shape_data& shape, int vertex, const vec2f& uv);
+shape_vertex eval_vertex(const shape_data& shape, int vertex, const vec2f& uv);
 
 // An unevaluated location on a shape
 struct shape_point {
@@ -282,7 +278,7 @@ void skin_matrices(vector<vec3f>& skinned_positions,
 }  // namespace yocto
 
 // -----------------------------------------------------------------------------
-// COMPUTATION OF PER_VERTEX PROPETIES
+// COMPUTATION OF VERTEX PROPETIES
 // -----------------------------------------------------------------------------
 namespace yocto {
 

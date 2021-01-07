@@ -61,8 +61,7 @@ using namespace std::string_literals;
 namespace yocto {
 
 // Interpolate vertex data
-vec3f interpolate_position(
-    const shape_data& shape, int element, const vec2f& uv) {
+vec3f eval_position(const shape_data& shape, int element, const vec2f& uv) {
   if (!shape.points.empty()) {
     auto& point = shape.points[element];
     return shape.positions[point];
@@ -82,8 +81,7 @@ vec3f interpolate_position(
     return {0, 0, 0};
   }
 }
-vec3f interpolate_normal(
-    const shape_data& shape, int element, const vec2f& uv) {
+vec3f eval_normal(const shape_data& shape, int element, const vec2f& uv) {
   if (shape.normals.empty()) return eval_element_normal(shape, element);
   if (!shape.points.empty()) {
     auto& point = shape.points[element];
@@ -105,12 +103,10 @@ vec3f interpolate_normal(
     return {0, 0, 1};
   }
 }
-vec3f interpolate_tangent(
-    const shape_data& shape, int element, const vec2f& uv) {
-  return interpolate_normal(shape, element, uv);
+vec3f eval_tangent(const shape_data& shape, int element, const vec2f& uv) {
+  return eval_normal(shape, element, uv);
 }
-vec2f interpolate_texcoord(
-    const shape_data& shape, int element, const vec2f& uv) {
+vec2f eval_texcoord(const shape_data& shape, int element, const vec2f& uv) {
   if (shape.texcoords.empty()) return {0, 0};
   if (!shape.points.empty()) {
     auto& point = shape.points[element];
@@ -132,7 +128,7 @@ vec2f interpolate_texcoord(
   }
 }
 
-vec4f interpolate_color(const shape_data& shape, int element, const vec2f& uv) {
+vec4f eval_color(const shape_data& shape, int element, const vec2f& uv) {
   if (shape.colors.empty()) return {1, 1, 1, 1};
   if (!shape.points.empty()) {
     auto& point = shape.points[element];
@@ -152,7 +148,7 @@ vec4f interpolate_color(const shape_data& shape, int element, const vec2f& uv) {
     return {0, 0};
   }
 }
-float interpolate_radius(
+float eval_radius(
     const shape_data& shape, int element, const vec2f& uv) {
   if (shape.radius.empty()) return 0;
   if (!shape.points.empty()) {
@@ -242,14 +238,14 @@ void add_vertex(shape_data& shape, const shape_vertex& vert, bool add_normals,
     if (!shape.radius.empty()) shape.radius.push_back(vert.radius);
   }
 }
-shape_vertex interpolate_vertex(
+shape_vertex eval_vertex(
     const shape_data& shape, int element, const vec2f& uv) {
   return {
-      interpolate_position(shape, element, uv),
-      interpolate_normal(shape, element, uv),
-      interpolate_texcoord(shape, element, uv),
-      interpolate_color(shape, element, uv),
-      interpolate_radius(shape, element, uv),
+      eval_position(shape, element, uv),
+      eval_normal(shape, element, uv),
+      eval_texcoord(shape, element, uv),
+      eval_color(shape, element, uv),
+      eval_radius(shape, element, uv),
   };
 }
 
@@ -2795,6 +2791,9 @@ vector<float> sample_points_cdf(int npoints) {
   auto cdf = vector<float>(npoints);
   for (auto i = 0; i < cdf.size(); i++) cdf[i] = 1 + (i != 0 ? cdf[i - 1] : 0);
   return cdf;
+}
+void sample_points_cdf(vector<float>& cdf, int npoints) {
+  for (auto i = 0; i < cdf.size(); i++) cdf[i] = 1 + (i != 0 ? cdf[i - 1] : 0);
 }
 
 // Pick a point on lines uniformly.
