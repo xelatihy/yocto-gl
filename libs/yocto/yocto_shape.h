@@ -97,23 +97,8 @@ float eval_radius(const shape_data& shape, int element, const vec2f& uv);
 vec3f eval_element_normal(const shape_data& shape, int element);
 
 // Compute per-vertex normals/tangents for lines/triangles/quads.
-vector<vec3f> shape_normals(const shape_data& shape);
-void          shape_normals(vector<vec3f>& normals, const shape_data& shape);
-
-// Access vertex data
-struct shape_vertex {
-  vec3f position = {0, 0, 0};
-  vec3f normal   = {0, 0, 0};
-  vec2f texcoord = {0, 0};
-  vec4f color    = {1, 1, 1, 1};
-  float radius   = 0;
-};
-shape_vertex get_vertex(const shape_data& shape, int vertex);
-void set_vertex(const shape_data& shape, int vertex, const shape_vertex& vert);
-int  add_vertex(const shape_data& shape, const shape_vertex& vert);
-int  add_vertex(const shape_data& shape, const shape_vertex& vert,
-     bool add_normals, bool add_texcoords, bool add_colors, bool add_radius);
-shape_vertex eval_vertex(const shape_data& shape, int vertex, const vec2f& uv);
+vector<vec3f> compute_normals(const shape_data& shape);
+void          compute_normals(vector<vec3f>& normals, const shape_data& shape);
 
 // An unevaluated location on a shape
 struct shape_point {
@@ -142,13 +127,20 @@ struct fvshape_data {
   vector<vec2f> texcoords = {};
 };
 
-// Compute per-vertex normals/tangents for lines/triangles/quads.
-vector<vec3f> fvshape_normals(const fvshape_data& shape);
-void fvshape_normals(vector<vec3f>& normals, const fvshape_data& shape);
+// Interpolate vertex data
+vec3f eval_position(const fvshape_data& shape, int element, const vec2f& uv);
+vec3f eval_normal(const fvshape_data& shape, int element, const vec2f& uv);
+vec2f eval_texcoord(const shape_data& shape, int element, const vec2f& uv);
 
-// Update normals in place
-void smooth_normals(fvshape_data& subdiv);
-void remove_normals(fvshape_data& subdiv);
+// Evaluate element normals
+vec3f eval_element_normal(const fvshape_data& shape, int element);
+
+// Compute per-vertex normals/tangents for lines/triangles/quads.
+vector<vec3f> compute_normals(const fvshape_data& shape);
+void compute_normals(vector<vec3f>& normals, const fvshape_data& shape);
+
+// An unevaluated location on a shape
+using fvshape_point = shape_point;
 
 }  // namespace yocto
 

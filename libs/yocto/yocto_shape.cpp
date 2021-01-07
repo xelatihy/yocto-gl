@@ -81,6 +81,7 @@ vec3f eval_position(const shape_data& shape, int element, const vec2f& uv) {
     return {0, 0, 0};
   }
 }
+
 vec3f eval_normal(const shape_data& shape, int element, const vec2f& uv) {
   if (shape.normals.empty()) return eval_element_normal(shape, element);
   if (!shape.points.empty()) {
@@ -103,9 +104,11 @@ vec3f eval_normal(const shape_data& shape, int element, const vec2f& uv) {
     return {0, 0, 1};
   }
 }
+
 vec3f eval_tangent(const shape_data& shape, int element, const vec2f& uv) {
   return eval_normal(shape, element, uv);
 }
+
 vec2f eval_texcoord(const shape_data& shape, int element, const vec2f& uv) {
   if (shape.texcoords.empty()) return {0, 0};
   if (!shape.points.empty()) {
@@ -148,6 +151,7 @@ vec4f eval_color(const shape_data& shape, int element, const vec2f& uv) {
     return {0, 0};
   }
 }
+
 float eval_radius(const shape_data& shape, int element, const vec2f& uv) {
   if (shape.radius.empty()) return 0;
   if (!shape.points.empty()) {
@@ -189,67 +193,8 @@ vec3f eval_element_normal(const shape_data& shape, int element) {
   }
 }
 
-// Access vertex data
-shape_vertex get_vertex(const shape_data& shape, int vertex) {
-  return {
-      shape.positions.empty() ? vec3f{0, 0, 0} : shape.positions[vertex],
-      shape.normals.empty() ? vec3f{0, 0, 1} : shape.normals[vertex],
-      shape.texcoords.empty() ? vec2f{0, 0} : shape.texcoords[vertex],
-      shape.colors.empty() ? vec4f{1, 1, 1, 1} : shape.colors[vertex],
-      shape.radius.empty() ? float{0} : shape.radius[vertex],
-  };
-}
-void set_vertex(shape_data& shape, int vertex, const shape_vertex& vert) {
-  if (!shape.positions.empty()) shape.positions[vertex] = vert.position;
-  if (!shape.normals.empty()) shape.normals[vertex] = vert.normal;
-  if (!shape.texcoords.empty()) shape.texcoords[vertex] = vert.texcoord;
-  if (!shape.colors.empty()) shape.colors[vertex] = vert.color;
-  if (!shape.radius.empty()) shape.radius[vertex] = vert.radius;
-}
-void add_vertex(shape_data& shape, const shape_vertex& vert) {
-  if (shape.positions.empty()) {
-    shape.positions.push_back(vert.position);
-    shape.normals.push_back(vert.normal);
-    shape.texcoords.push_back(vert.texcoord);
-    shape.colors.push_back(vert.color);
-    shape.radius.push_back(vert.radius);
-  } else {
-    if (!shape.positions.empty()) shape.positions.push_back(vert.position);
-    if (!shape.normals.empty()) shape.normals.push_back(vert.normal);
-    if (!shape.texcoords.empty()) shape.texcoords.push_back(vert.texcoord);
-    if (!shape.colors.empty()) shape.colors.push_back(vert.color);
-    if (!shape.radius.empty()) shape.radius.push_back(vert.radius);
-  }
-}
-void add_vertex(shape_data& shape, const shape_vertex& vert, bool add_normals,
-    bool add_texcoords, bool add_colors, bool add_radius) {
-  if (shape.positions.empty()) {
-    shape.positions.push_back(vert.position);
-    if (add_normals) shape.normals.push_back(vert.normal);
-    if (add_texcoords) shape.texcoords.push_back(vert.texcoord);
-    if (add_colors) shape.colors.push_back(vert.color);
-    if (add_radius) shape.radius.push_back(vert.radius);
-  } else {
-    if (!shape.positions.empty()) shape.positions.push_back(vert.position);
-    if (!shape.normals.empty()) shape.normals.push_back(vert.normal);
-    if (!shape.texcoords.empty()) shape.texcoords.push_back(vert.texcoord);
-    if (!shape.colors.empty()) shape.colors.push_back(vert.color);
-    if (!shape.radius.empty()) shape.radius.push_back(vert.radius);
-  }
-}
-shape_vertex eval_vertex(
-    const shape_data& shape, int element, const vec2f& uv) {
-  return {
-      eval_position(shape, element, uv),
-      eval_normal(shape, element, uv),
-      eval_texcoord(shape, element, uv),
-      eval_color(shape, element, uv),
-      eval_radius(shape, element, uv),
-  };
-}
-
 // Compute per-vertex normals/tangents for lines/triangles/quads.
-vector<vec3f> shape_normals(const shape_data& shape) {
+vector<vec3f> compute_normals(const shape_data& shape) {
   if (!shape.points.empty()) {
     return vector<vec3f>(shape.positions.size(), {0, 0, 1});
   } else if (!shape.lines.empty()) {
@@ -262,7 +207,7 @@ vector<vec3f> shape_normals(const shape_data& shape) {
     return vector<vec3f>(shape.positions.size(), {0, 0, 1});
   }
 }
-void shape_normals(vector<vec3f>& normals, const shape_data& shape) {
+void compute_normals(vector<vec3f>& normals, const shape_data& shape) {
   if (!shape.points.empty()) {
     normals.assign(shape.positions.size(), {0, 0, 1});
   } else if (!shape.lines.empty()) {
@@ -290,6 +235,7 @@ vector<float> sample_shape_cdf(const shape_data& shape) {
     return sample_points_cdf((int)shape.positions.size());
   }
 }
+
 void sample_shape_cdf(vector<float>& cdf, const shape_data& shape) {
   if (!shape.points.empty()) {
     sample_points_cdf(cdf, (int)shape.points.size());
@@ -303,6 +249,7 @@ void sample_shape_cdf(vector<float>& cdf, const shape_data& shape) {
     sample_points_cdf(cdf, (int)shape.positions.size());
   }
 }
+
 shape_point sample_shape(const shape_data& shape, const vector<float>& cdf,
     float rn, const vec2f& ruv) {
   if (!shape.points.empty()) {
@@ -322,6 +269,7 @@ shape_point sample_shape(const shape_data& shape, const vector<float>& cdf,
     return {element, {0, 0}};
   }
 }
+
 vector<shape_point> sample_shape(
     const shape_data& shape, int num_samples, uint64_t seed) {
   auto cdf    = sample_shape_cdf(shape);
@@ -333,13 +281,66 @@ vector<shape_point> sample_shape(
   return points;
 }
 
-// Compute per-vertex normals/tangents for lines/triangles/quads.
-vector<vec3f> fvshape_normals(const fvshape_data& shape);
-void fvshape_normals(vector<vec3f>& normals, const fvshape_data& shape);
+// Interpolate vertex data
+vec3f eval_position(const fvshape_data& shape, int element, const vec2f& uv) {
+  if (!shape.quadspos.empty()) {
+    auto& quad = shape.quadspos[element];
+    return interpolate_quad(shape.positions[quad.x], shape.positions[quad.y],
+        shape.positions[quad.z], shape.positions[quad.w], uv);
+  } else {
+    return {0, 0, 0};
+  }
+}
 
-// Update normals in place
-void smooth_normals(fvshape_data& subdiv);
-void remove_normals(fvshape_data& subdiv);
+vec3f eval_normal(const fvshape_data& shape, int element, const vec2f& uv) {
+  if (shape.normals.empty()) return eval_element_normal(shape, element);
+  if (!shape.quadspos.empty()) {
+    auto& quad = shape.quadsnorm[element];
+    return normalize(
+        interpolate_quad(shape.normals[quad.x], shape.normals[quad.y],
+            shape.normals[quad.z], shape.normals[quad.w], uv));
+  } else {
+    return {0, 0, 1};
+  }
+}
+
+vec2f eval_texcoord(const fvshape_data& shape, int element, const vec2f& uv) {
+  if (shape.texcoords.empty()) return {0, 0};
+  if (!shape.quadspos.empty()) {
+    auto& quad = shape.quadstexcoord[element];
+    return interpolate_quad(shape.texcoords[quad.x], shape.texcoords[quad.y],
+        shape.texcoords[quad.z], shape.texcoords[quad.w], uv);
+  } else {
+    return {0, 0};
+  }
+}
+
+// Evaluate element normals
+vec3f eval_element_normal(const fvshape_data& shape, int element) {
+  if (!shape.quadspos.empty()) {
+    auto& quad = shape.quadspos[element];
+    return quad_normal(shape.positions[quad.x], shape.positions[quad.y],
+        shape.positions[quad.z], shape.positions[quad.w]);
+  } else {
+    return {0, 0, 0};
+  }
+}
+
+// Compute per-vertex normals/tangents for lines/triangles/quads.
+vector<vec3f> compute_normals(const fvshape_data& shape) {
+  if (!shape.quadspos.empty()) {
+    return quads_normals(shape.quadspos, shape.positions);
+  } else {
+    return vector<vec3f>(shape.positions.size(), {0, 0, 1});
+  }
+}
+void compute_normals(vector<vec3f>& normals, const fvshape_data& shape) {
+  if (!shape.quadspos.empty()) {
+    quads_normals(normals, shape.quadspos, shape.positions);
+  } else {
+    normals.assign(shape.positions.size(), {0, 0, 1});
+  }
+}
 
 }  // namespace yocto
 
