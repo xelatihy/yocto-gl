@@ -110,23 +110,6 @@ static frame3f camera_frame(float lens, float aspect, float film = 0.036) {
   return lookat_frame(camera_dir * camera_dist, {0, 0, 0}, {0, 1, 0});
 }
 
-// TODO(fabio): move this function to shape
-static vector<vec3f> compute_normals(const generic_shape& shape) {
-  if (!shape.points.empty()) {
-    return {};
-  } else if (!shape.lines.empty()) {
-    return lines_tangents(shape.lines, shape.positions);
-  } else if (!shape.triangles.empty()) {
-    return triangles_normals(shape.triangles, shape.positions);
-  } else if (!shape.quads.empty()) {
-    return quads_normals(shape.quads, shape.positions);
-  } else if (!shape.quadspos.empty()) {
-    return quads_normals(shape.quadspos, shape.positions);
-  } else {
-    return {};
-  }
-}
-
 // Create a shape with small spheres for each point
 static quads_shape make_spheres(
     const vector<vec3f>& positions, float radius, int steps) {

@@ -85,13 +85,34 @@ struct shape_data {
   vector<float> radius    = {};
 };
 
-// Compute per-vertex normals/tangents for lines/triangles/quads.
-vector<vec3f> shape_normals(const shape_data& shape);
-void          shape_normals(vector<vec3f>& normals, const shape_data& shape);
+// Interpolate vertex data
+vec3f eval_position(const shape_data& shape, int element, const vec2f& uv);
+vec3f eval_normal(const shape_data& shape, int element, const vec2f& uv);
+vec3f eval_tangent(const shape_data& shape, int element, const vec2f& uv);
+vec2f eval_texcoord(const shape_data& shape, int element, const vec2f& uv);
+vec4f eval_color(const shape_data& shape, int element, const vec2f& uv);
+float eval_radius(const shape_data& shape, int element, const vec2f& uv);
 
-// Update normals in place
-void smooth_normals(shape_data& shape);
-void remove_normals(shape_data& shape);
+// Evaluate element normals
+vec3f eval_element_normal(const shape_data& shape, int element);
+
+// Compute per-vertex normals/tangents for lines/triangles/quads.
+vector<vec3f> compute_normals(const shape_data& shape);
+void          compute_normals(vector<vec3f>& normals, const shape_data& shape);
+
+// An unevaluated location on a shape
+struct shape_point {
+  int   element = 0;
+  vec2f uv      = {0, 0};
+};
+
+// Shape sampling
+vector<float> sample_shape_cdf(const shape_data& shape);
+void          sample_shape_cdf(vector<float>& cdf, const shape_data& shape);
+shape_point   sample_shape(const shape_data& shape, const vector<float>& cdf,
+      float rn, const vec2f& ruv);
+vector<shape_point> sample_shape(const shape_data& shape,
+    const vector<float>& cdf, int num_samples, uint64_t seed = 98729387);
 
 // Shape data stored as a face-varying mesh
 struct fvshape_data {
@@ -106,13 +127,20 @@ struct fvshape_data {
   vector<vec2f> texcoords = {};
 };
 
-// Compute per-vertex normals/tangents for lines/triangles/quads.
-vector<vec3f> fvshape_normals(const fvshape_data& shape);
-void fvshape_normals(vector<vec3f>& normals, const fvshape_data& shape);
+// Interpolate vertex data
+vec3f eval_position(const fvshape_data& shape, int element, const vec2f& uv);
+vec3f eval_normal(const fvshape_data& shape, int element, const vec2f& uv);
+vec2f eval_texcoord(const shape_data& shape, int element, const vec2f& uv);
 
-// Update normals in place
-void smooth_normals(fvshape_data& subdiv);
-void remove_normals(fvshape_data& subdiv);
+// Evaluate element normals
+vec3f eval_element_normal(const fvshape_data& shape, int element);
+
+// Compute per-vertex normals/tangents for lines/triangles/quads.
+vector<vec3f> compute_normals(const fvshape_data& shape);
+void compute_normals(vector<vec3f>& normals, const fvshape_data& shape);
+
+// An unevaluated location on a shape
+using fvshape_point = shape_point;
 
 }  // namespace yocto
 
@@ -242,7 +270,7 @@ void skin_matrices(vector<vec3f>& skinned_positions,
 }  // namespace yocto
 
 // -----------------------------------------------------------------------------
-// COMPUTATION OF PER_VERTEX PROPETIES
+// COMPUTATION OF VERTEX PROPETIES
 // -----------------------------------------------------------------------------
 namespace yocto {
 
@@ -610,25 +638,30 @@ namespace yocto {
 int           sample_points(int npoints, float re);
 int           sample_points(const vector<float>& cdf, float re);
 vector<float> sample_points_cdf(int npoints);
+void          sample_points_cdf(vector<float>& cdf, int npoints);
 
 // Pick a point on lines uniformly.
 pair<int, float> sample_lines(const vector<float>& cdf, float re, float ru);
 vector<float>    sample_lines_cdf(
        const vector<vec2i>& lines, const vector<vec3f>& positions);
+void sample_lines_cdf(vector<float>& cdf, const vector<vec2i>& lines,
+    const vector<vec3f>& positions);
 
 // Pick a point on a triangle mesh uniformly.
 pair<int, vec2f> sample_triangles(
     const vector<float>& cdf, float re, const vec2f& ruv);
 vector<float> sample_triangles_cdf(
     const vector<vec3i>& triangles, const vector<vec3f>& positions);
+void sample_triangles_cdf(vector<float>& cdf, const vector<vec3i>& triangles,
+    const vector<vec3f>& positions);
 
 // Pick a point on a quad mesh uniformly.
 pair<int, vec2f> sample_quads(
     const vector<float>& cdf, float re, const vec2f& ruv);
-pair<int, vec2f> sample_quads(const vector<vec4i>& quads,
-    const vector<float>& cdf, float re, const vec2f& ruv);
-vector<float>    sample_quads_cdf(
-       const vector<vec4i>& quads, const vector<vec3f>& positions);
+vector<float> sample_quads_cdf(
+    const vector<vec4i>& quads, const vector<vec3f>& positions);
+void sample_quads_cdf(vector<float>& cdf, const vector<vec4i>& quads,
+    const vector<vec3f>& positions);
 
 // Samples a set of points over a triangle/quad mesh uniformly. Returns pos,
 // norm and texcoord of the sampled points.
