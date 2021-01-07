@@ -2805,11 +2805,19 @@ vector<float> sample_lines_cdf(
     const vector<vec2i>& lines, const vector<vec3f>& positions) {
   auto cdf = vector<float>(lines.size());
   for (auto i = 0; i < cdf.size(); i++) {
-    auto l = lines[i];
-    auto w = line_length(positions[l.x], positions[l.y]);
-    cdf[i] = w + (i != 0 ? cdf[i - 1] : 0);
+    auto& l = lines[i];
+    auto  w = line_length(positions[l.x], positions[l.y]);
+    cdf[i]  = w + (i != 0 ? cdf[i - 1] : 0);
   }
   return cdf;
+}
+void sample_lines_cdf(vector<float>& cdf, const vector<vec2i>& lines,
+    const vector<vec3f>& positions) {
+  for (auto i = 0; i < cdf.size(); i++) {
+    auto& l = lines[i];
+    auto  w = line_length(positions[l.x], positions[l.y]);
+    cdf[i]  = w + (i != 0 ? cdf[i - 1] : 0);
+  }
 }
 
 // Pick a point on a triangle mesh uniformly.
@@ -2821,11 +2829,19 @@ vector<float> sample_triangles_cdf(
     const vector<vec3i>& triangles, const vector<vec3f>& positions) {
   auto cdf = vector<float>(triangles.size());
   for (auto i = 0; i < cdf.size(); i++) {
-    auto t = triangles[i];
-    auto w = triangle_area(positions[t.x], positions[t.y], positions[t.z]);
-    cdf[i] = w + (i != 0 ? cdf[i - 1] : 0);
+    auto& t = triangles[i];
+    auto  w = triangle_area(positions[t.x], positions[t.y], positions[t.z]);
+    cdf[i]  = w + (i != 0 ? cdf[i - 1] : 0);
   }
   return cdf;
+}
+void sample_triangles_cdf(vector<float>& cdf, const vector<vec3i>& triangles,
+    const vector<vec3f>& positions) {
+  for (auto i = 0; i < cdf.size(); i++) {
+    auto& t = triangles[i];
+    auto  w = triangle_area(positions[t.x], positions[t.y], positions[t.z]);
+    cdf[i]  = w + (i != 0 ? cdf[i - 1] : 0);
+  }
 }
 
 // Pick a point on a quad mesh uniformly.
@@ -2846,12 +2862,21 @@ vector<float> sample_quads_cdf(
     const vector<vec4i>& quads, const vector<vec3f>& positions) {
   auto cdf = vector<float>(quads.size());
   for (auto i = 0; i < cdf.size(); i++) {
-    auto q = quads[i];
-    auto w = quad_area(
+    auto& q = quads[i];
+    auto  w = quad_area(
         positions[q.x], positions[q.y], positions[q.z], positions[q.w]);
     cdf[i] = w + (i ? cdf[i - 1] : 0);
   }
   return cdf;
+}
+void sample_quads_cdf(vector<float>& cdf, const vector<vec4i>& quads,
+    const vector<vec3f>& positions) {
+  for (auto i = 0; i < cdf.size(); i++) {
+    auto& q = quads[i];
+    auto  w = quad_area(
+        positions[q.x], positions[q.y], positions[q.z], positions[q.w]);
+    cdf[i] = w + (i ? cdf[i - 1] : 0);
+  }
 }
 
 // Samples a set of points over a triangle mesh uniformly. The rng function
