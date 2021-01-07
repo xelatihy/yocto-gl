@@ -148,8 +148,7 @@ vec4f eval_color(const shape_data& shape, int element, const vec2f& uv) {
     return {0, 0};
   }
 }
-float eval_radius(
-    const shape_data& shape, int element, const vec2f& uv) {
+float eval_radius(const shape_data& shape, int element, const vec2f& uv) {
   if (shape.radius.empty()) return 0;
   if (!shape.points.empty()) {
     auto& point = shape.points[element];
@@ -323,8 +322,9 @@ shape_point sample_shape(const shape_data& shape, const vector<float>& cdf,
     return {element, {0, 0}};
   }
 }
-vector<shape_point> sample_shape(const shape_data& shape,
-    const vector<float>& cdf, int num_samples, uint64_t seed) {
+vector<shape_point> sample_shape(
+    const shape_data& shape, int num_samples, uint64_t seed) {
+  auto cdf    = sample_shape_cdf(shape);
   auto points = vector<shape_point>(num_samples);
   auto rng    = make_rng(seed);
   for (auto& point : points) {

@@ -126,8 +126,8 @@ vector<float> sample_shape_cdf(const shape_data& shape);
 void          sample_shape_cdf(vector<float>& cdf, const shape_data& shape);
 shape_point   sample_shape(const shape_data& shape, const vector<float>& cdf,
       float rn, const vec2f& ruv);
-vector<shape_point> sample_shape(const shape_data& shape,
-    const vector<float>& cdf, int num_samples, uint64_t seed = 98729387);
+vector<shape_point> sample_shape(
+    const shape_data& shape, int num_samples, uint64_t seed = 98729387);
 
 // Shape data stored as a face-varying mesh
 struct fvshape_data {
