@@ -114,6 +114,14 @@ shape_point   sample_shape(const shape_data& shape, const vector<float>& cdf,
 vector<shape_point> sample_shape(const shape_data& shape,
     const vector<float>& cdf, int num_samples, uint64_t seed = 98729387);
 
+// Conversions
+shape_data quads_to_triangles(const shape_data& shape);
+void       quads_to_triangles(shape_data& result, const shape_data& shape);
+
+// Subdivision
+shape_data subdivide_shape(
+    const shape_data& shape, int subdivisions, bool catmullclark);
+
 // Shape data stored as a face-varying mesh
 struct fvshape_data {
   // element data
@@ -141,6 +149,15 @@ void compute_normals(vector<vec3f>& normals, const fvshape_data& shape);
 
 // An unevaluated location on a shape
 using fvshape_point = shape_point;
+
+// Conversions
+shape_data fvshape_to_shape(
+    const fvshape_data& shape, bool as_triangles = false);
+fvshape_data shape_to_fvshape(const shape_data& shape);
+
+// Subdivision
+fvshape_data subdivide_fvshape(
+    const fvshape_data& shape, int subdivisions, bool catmullclark);
 
 }  // namespace yocto
 
@@ -522,6 +539,14 @@ std::tuple<vector<vec4i>, vector<vec3f>, vector<vec3f>, vector<vec2f>>
 split_facevarying(const vector<vec4i>& quadspos, const vector<vec4i>& quadsnorm,
     const vector<vec4i>& quadstexcoord, const vector<vec3f>& positions,
     const vector<vec3f>& normals, const vector<vec2f>& texcoords);
+// Convert face varying data to single primitives. Returns the quads indices
+// and filled vectors for pos, norm and texcoord.
+void split_facevarying(vector<vec4i>& split_quads,
+    vector<vec3f>& split_positions, vector<vec3f>& split_normals,
+    vector<vec2f>& split_texcoords, const vector<vec4i>& quadspos,
+    const vector<vec4i>& quadsnorm, const vector<vec4i>& quadstexcoord,
+    const vector<vec3f>& positions, const vector<vec3f>& normals,
+    const vector<vec2f>& texcoords);
 
 // Split primitives per id
 vector<vector<vec2i>> ungroup_lines(
