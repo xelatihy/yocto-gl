@@ -69,6 +69,13 @@ using std::vector;
 // -----------------------------------------------------------------------------
 namespace yocto {
 
+// Shape type
+enum shape_type { points, lines, triangles, quads };
+
+// Handles
+using vertex_handle  = int;
+using element_handle = int;
+
 // Shape ddata stored as an indexed mesh
 struct shape_data {
   // element data
@@ -85,6 +92,34 @@ struct shape_data {
   vector<float> radius    = {};
 };
 
+// Shape creation
+void make_shape(shape_type type, int num_elements, int num_vertices,
+    bool add_normals, bool add_texcoords, bool add_colors, bool add_radius);
+
+// Shape quaries
+bool       is_empty(const shape_data& shape);
+bool       is_points(const shape_data& shape);
+bool       is_lines(const shape_data& shape);
+bool       is_triangles(const shape_data& shape);
+bool       is_quads(const shape_data& shape);
+shape_type get_type(const shape_data& shape);
+int        get_nelements(const shape_data& shape);
+int        get_nvertices(const shape_data& shape);
+
+// Interpolate vertex data
+vec3f interpolate_position(
+    const shape_data& shape, int element, const vec2f& uv);
+vec3f interpolate_normal(const shape_data& shape, int element, const vec2f& uv);
+vec3f interpolate_tangent(
+    const shape_data& shape, int element, const vec2f& uv);
+vec2f interpolate_texcoord(
+    const shape_data& shape, int element, const vec2f& uv);
+vec4f interpolate_color(const shape_data& shape, int element, const vec2f& uv);
+float interpolate_radius(const shape_data& shape, int element, const vec2f& uv);
+
+// Evaluate element normals
+vec3f eval_element_normal(const shape_data& shape, int element);
+
 // Compute per-vertex normals/tangents for lines/triangles/quads.
 vector<vec3f> shape_normals(const shape_data& shape);
 void          shape_normals(vector<vec3f>& normals, const shape_data& shape);
@@ -92,6 +127,36 @@ void          shape_normals(vector<vec3f>& normals, const shape_data& shape);
 // Update normals in place
 void smooth_normals(shape_data& shape);
 void remove_normals(shape_data& shape);
+
+// Access vertex data
+struct shape_vertex {
+  vec3f position = {0, 0, 0};
+  vec3f normal   = {0, 0, 0};
+  vec2f texcoord = {0, 0};
+  vec4f color    = {1, 1, 1, 1};
+  float radius   = 0;
+};
+shape_vertex get_vertex(const shape_data& shape, int vertex);
+void set_vertex(const shape_data& shape, int vertex, const shape_vertex& vert);
+int  add_vertex(const shape_data& shape, const shape_vertex& vert);
+int  add_vertex(const shape_data& shape, const shape_vertex& vert,
+     bool add_normals, bool add_texcoords, bool add_colors, bool add_radius);
+shape_vertex interpolate_vertex(
+    const shape_data& shape, int vertex, const vec2f& uv);
+
+// An unevaluated location on a shape
+struct shape_point {
+  int   element = 0;
+  vec2f uv      = {0, 0};
+};
+
+// Shape sampling
+vector<float> sample_shape_cdf(const shape_data& shape);
+void          sample_shape_cdf(vector<float>& cdf, const shape_data& shape);
+shape_point   sample_shape(const shape_data& shape, const vector<float>& cdf,
+      float rn, const vec2f& uv);
+vector<shape_point> sample_shape(const shape_data& shape,
+    const vector<float>& cdf, int num_samples, uint64_t seed = 98729387);
 
 // Shape data stored as a face-varying mesh
 struct fvshape_data {

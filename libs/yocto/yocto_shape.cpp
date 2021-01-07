@@ -56,6 +56,276 @@ using namespace std::string_literals;
 }  // namespace yocto
 
 // -----------------------------------------------------------------------------
+// SHAPE DATA AND UTILITIES
+// -----------------------------------------------------------------------------
+namespace yocto {
+
+// Shape creation
+void make_shape(shape_type type, int num_elements, int num_vertices,
+    bool normals, bool texcoords, bool colors, bool radius) {
+  auto shape = shape_data{};
+  if (type == shape_type::points) {
+    shape.points = vector<int>(num_elements, 0);
+  } else if (type == shape_type::lines) {
+    shape.lines = vector<vec2i>(num_elements, {0, 0});
+  } else if (type == shape_type::triangles) {
+    shape.triangles = vector<vec3i>(num_elements, {0, 0, 0});
+  } else if (type == shape_type::quads) {
+    shape.quads = vector<vec4i>(num_elements, {0, 0, 0, 0});
+  } else {
+    throw std::invalid_argument{"unknown type"};
+  }
+  shape.positions = vector<vec3f>(num_vertices, {0, 0, 0});
+  if (normals) shape.normals = vector<vec3f>(num_vertices, {0, 0, 1});
+  if (texcoords) shape.texcoords = vector<vec2f>(num_vertices, {0, 0});
+  if (colors) shape.colors = vector<vec4f>(num_vertices, {1, 1, 1, 1});
+  if (radius) shape.radius = vector<float>(num_vertices, 0);
+}
+
+// Shape quaries
+bool is_empty(const shape_data& shape) { return shape.positions.empty(); }
+bool is_points(const shape_data& shape) { return !shape.points.empty(); }
+bool is_lines(const shape_data& shape) { return !shape.lines.empty(); }
+bool is_triangles(const shape_data& shape) { return !shape.triangles.empty(); }
+bool is_quads(const shape_data& shape) { return !shape.quads.empty(); }
+shape_type get_type(const shape_data& shape) {
+  if (is_points(shape)) return shape_type::points;
+  if (is_lines(shape)) return shape_type::lines;
+  if (is_triangles(shape)) return shape_type::triangles;
+  if (is_quads(shape)) return shape_type::quads;
+  return shape_type::triangles;
+}
+int get_nelements(const shape_data& shape) {
+  if (is_points(shape)) return (int)shape.points.size();
+  if (is_lines(shape)) return (int)shape.lines.size();
+  if (is_triangles(shape)) return (int)shape.triangles.size();
+  if (is_quads(shape)) return (int)shape.quads.size();
+  return 0;
+}
+int get_nvertices(const shape_data& shape) {
+  return (int)shape.positions.size();
+}
+
+// Interpolate vertex data
+vec3f interpolate_position(
+    const shape_data& shape, int element, const vec2f& uv) {
+  if (!shape.points.empty()) {
+    auto& point = shape.points[element];
+    return shape.positions[point];
+  } else if (!shape.lines.empty()) {
+    auto& line = shape.lines[element];
+    return interpolate_line(
+        shape.positions[line.x], shape.positions[line.y], uv.x);
+  } else if (!shape.triangles.empty()) {
+    auto& triangle = shape.triangles[element];
+    return interpolate_triangle(shape.positions[triangle.x],
+        shape.positions[triangle.y], shape.positions[triangle.z], uv);
+  } else if (!shape.quads.empty()) {
+    auto& quad = shape.quads[element];
+    return interpolate_quad(shape.positions[quad.x], shape.positions[quad.y],
+        shape.positions[quad.z], shape.positions[quad.w], uv);
+  } else {
+    return {0, 0, 0};
+  }
+}
+vec3f interpolate_normal(
+    const shape_data& shape, int element, const vec2f& uv) {
+  if (shape.normals.empty()) return eval_element_normal(shape, element);
+  if (!shape.points.empty()) {
+    auto& point = shape.points[element];
+    return normalize(shape.normals[point]);
+  } else if (!shape.lines.empty()) {
+    auto& line = shape.lines[element];
+    return normalize(
+        interpolate_line(shape.normals[line.x], shape.normals[line.y], uv.x));
+  } else if (!shape.triangles.empty()) {
+    auto& triangle = shape.triangles[element];
+    return normalize(interpolate_triangle(shape.normals[triangle.x],
+        shape.normals[triangle.y], shape.normals[triangle.z], uv));
+  } else if (!shape.quads.empty()) {
+    auto& quad = shape.quads[element];
+    return normalize(
+        interpolate_quad(shape.normals[quad.x], shape.normals[quad.y],
+            shape.normals[quad.z], shape.normals[quad.w], uv));
+  } else {
+    return {0, 0, 1};
+  }
+}
+vec3f interpolate_tangent(
+    const shape_data& shape, int element, const vec2f& uv) {
+  return interpolate_normal(shape, element, uv);
+}
+vec2f interpolate_texcoord(
+    const shape_data& shape, int element, const vec2f& uv) {
+  if (shape.texcoords.empty()) return {0, 0};
+  if (!shape.points.empty()) {
+    auto& point = shape.points[element];
+    return shape.texcoords[point];
+  } else if (!shape.lines.empty()) {
+    auto& line = shape.lines[element];
+    return interpolate_line(
+        shape.texcoords[line.x], shape.texcoords[line.y], uv.x);
+  } else if (!shape.triangles.empty()) {
+    auto& triangle = shape.triangles[element];
+    return interpolate_triangle(shape.texcoords[triangle.x],
+        shape.texcoords[triangle.y], shape.texcoords[triangle.z], uv);
+  } else if (!shape.quads.empty()) {
+    auto& quad = shape.quads[element];
+    return interpolate_quad(shape.texcoords[quad.x], shape.texcoords[quad.y],
+        shape.texcoords[quad.z], shape.texcoords[quad.w], uv);
+  } else {
+    return {0, 0};
+  }
+}
+
+vec4f interpolate_color(const shape_data& shape, int element, const vec2f& uv) {
+  if (shape.colors.empty()) return {1, 1, 1, 1};
+  if (!shape.points.empty()) {
+    auto& point = shape.points[element];
+    return shape.colors[point];
+  } else if (!shape.lines.empty()) {
+    auto& line = shape.lines[element];
+    return interpolate_line(shape.colors[line.x], shape.colors[line.y], uv.x);
+  } else if (!shape.triangles.empty()) {
+    auto& triangle = shape.triangles[element];
+    return interpolate_triangle(shape.colors[triangle.x],
+        shape.colors[triangle.y], shape.colors[triangle.z], uv);
+  } else if (!shape.quads.empty()) {
+    auto& quad = shape.quads[element];
+    return interpolate_quad(shape.colors[quad.x], shape.colors[quad.y],
+        shape.colors[quad.z], shape.colors[quad.w], uv);
+  } else {
+    return {0, 0};
+  }
+}
+float interpolate_radius(
+    const shape_data& shape, int element, const vec2f& uv) {
+  if (shape.radius.empty()) return 0;
+  if (!shape.points.empty()) {
+    auto& point = shape.points[element];
+    return shape.radius[point];
+  } else if (!shape.lines.empty()) {
+    auto& line = shape.lines[element];
+    return interpolate_line(shape.radius[line.x], shape.radius[line.y], uv.x);
+  } else if (!shape.triangles.empty()) {
+    auto& triangle = shape.triangles[element];
+    return interpolate_triangle(shape.radius[triangle.x],
+        shape.radius[triangle.y], shape.radius[triangle.z], uv);
+  } else if (!shape.quads.empty()) {
+    auto& quad = shape.quads[element];
+    return interpolate_quad(shape.radius[quad.x], shape.radius[quad.y],
+        shape.radius[quad.z], shape.radius[quad.w], uv);
+  } else {
+    return 0;
+  }
+}
+
+// Evaluate element normals
+vec3f eval_element_normal(const shape_data& shape, int element) {
+  if (!shape.points.empty()) {
+    return {0, 0, 1};
+  } else if (!shape.lines.empty()) {
+    auto& line = shape.lines[element];
+    return line_tangent(shape.positions[line.x], shape.positions[line.y]);
+  } else if (!shape.triangles.empty()) {
+    auto& triangle = shape.triangles[element];
+    return triangle_normal(shape.positions[triangle.x],
+        shape.positions[triangle.y], shape.positions[triangle.z]);
+  } else if (!shape.quads.empty()) {
+    auto& quad = shape.quads[element];
+    return quad_normal(shape.positions[quad.x], shape.positions[quad.y],
+        shape.positions[quad.z], shape.positions[quad.w]);
+  } else {
+    return {0, 0, 0};
+  }
+}
+
+// Access vertex data
+shape_vertex get_vertex(const shape_data& shape, int vertex) {
+  return {
+      shape.positions.empty() ? vec3f{0, 0, 0} : shape.positions[vertex],
+      shape.normals.empty() ? vec3f{0, 0, 1} : shape.normals[vertex],
+      shape.texcoords.empty() ? vec2f{0, 0} : shape.texcoords[vertex],
+      shape.colors.empty() ? vec4f{1, 1, 1, 1} : shape.colors[vertex],
+      shape.radius.empty() ? float{0} : shape.radius[vertex],
+  };
+}
+void set_vertex(shape_data& shape, int vertex, const shape_vertex& vert) {
+  if (!shape.positions.empty()) shape.positions[vertex] = vert.position;
+  if (!shape.normals.empty()) shape.normals[vertex] = vert.normal;
+  if (!shape.texcoords.empty()) shape.texcoords[vertex] = vert.texcoord;
+  if (!shape.colors.empty()) shape.colors[vertex] = vert.color;
+  if (!shape.radius.empty()) shape.radius[vertex] = vert.radius;
+}
+void add_vertex(shape_data& shape, const shape_vertex& vert) {
+  if (shape.positions.empty()) {
+    shape.positions.push_back(vert.position);
+    shape.normals.push_back(vert.normal);
+    shape.texcoords.push_back(vert.texcoord);
+    shape.colors.push_back(vert.color);
+    shape.radius.push_back(vert.radius);
+  } else {
+    if (!shape.positions.empty()) shape.positions.push_back(vert.position);
+    if (!shape.normals.empty()) shape.normals.push_back(vert.normal);
+    if (!shape.texcoords.empty()) shape.texcoords.push_back(vert.texcoord);
+    if (!shape.colors.empty()) shape.colors.push_back(vert.color);
+    if (!shape.radius.empty()) shape.radius.push_back(vert.radius);
+  }
+}
+void add_vertex(shape_data& shape, const shape_vertex& vert, bool add_normals,
+    bool add_texcoords, bool add_colors, bool add_radius) {
+  if (shape.positions.empty()) {
+    shape.positions.push_back(vert.position);
+    if (add_normals) shape.normals.push_back(vert.normal);
+    if (add_texcoords) shape.texcoords.push_back(vert.texcoord);
+    if (add_colors) shape.colors.push_back(vert.color);
+    if (add_radius) shape.radius.push_back(vert.radius);
+  } else {
+    if (!shape.positions.empty()) shape.positions.push_back(vert.position);
+    if (!shape.normals.empty()) shape.normals.push_back(vert.normal);
+    if (!shape.texcoords.empty()) shape.texcoords.push_back(vert.texcoord);
+    if (!shape.colors.empty()) shape.colors.push_back(vert.color);
+    if (!shape.radius.empty()) shape.radius.push_back(vert.radius);
+  }
+}
+shape_vertex interpolate_vertex(
+    const shape_data& shape, int element, const vec2f& uv) {
+  return {
+      interpolate_position(shape, element, uv),
+      interpolate_normal(shape, element, uv),
+      interpolate_texcoord(shape, element, uv),
+      interpolate_color(shape, element, uv),
+      interpolate_radius(shape, element, uv),
+  };
+}
+
+// Compute per-vertex normals/tangents for lines/triangles/quads.
+vector<vec3f> shape_normals(const shape_data& shape);
+void          shape_normals(vector<vec3f>& normals, const shape_data& shape);
+
+// Update normals in place
+void smooth_normals(shape_data& shape);
+void remove_normals(shape_data& shape);
+
+// Shape sampling
+vector<float> sample_shape_cdf(const shape_data& shape);
+void          sample_shape_cdf(vector<float>& cdf, const shape_data& shape);
+shape_point   sample_shape(const shape_data& shape, const vector<float>& cdf,
+      float rn, const vec2f& uv);
+vector<shape_point> sample_shape(const shape_data& shape,
+    const vector<float>& cdf, int num_samples, uint64_t seed);
+
+// Compute per-vertex normals/tangents for lines/triangles/quads.
+vector<vec3f> fvshape_normals(const fvshape_data& shape);
+void fvshape_normals(vector<vec3f>& normals, const fvshape_data& shape);
+
+// Update normals in place
+void smooth_normals(fvshape_data& subdiv);
+void remove_normals(fvshape_data& subdiv);
+
+}  // namespace yocto
+
+// -----------------------------------------------------------------------------
 // IMPLEMENTATION OF SHAPE IO
 // -----------------------------------------------------------------------------
 namespace yocto {
