@@ -69,13 +69,6 @@ using std::vector;
 // -----------------------------------------------------------------------------
 namespace yocto {
 
-// Shape type
-enum shape_type { points, lines, triangles, quads };
-
-// Handles
-using vertex_handle  = int;
-using element_handle = int;
-
 // Shape ddata stored as an indexed mesh
 struct shape_data {
   // element data
@@ -91,20 +84,6 @@ struct shape_data {
   vector<vec4f> colors    = {};
   vector<float> radius    = {};
 };
-
-// Shape creation
-void make_shape(shape_type type, int num_elements, int num_vertices,
-    bool add_normals, bool add_texcoords, bool add_colors, bool add_radius);
-
-// Shape quaries
-bool       is_empty(const shape_data& shape);
-bool       is_points(const shape_data& shape);
-bool       is_lines(const shape_data& shape);
-bool       is_triangles(const shape_data& shape);
-bool       is_quads(const shape_data& shape);
-shape_type get_type(const shape_data& shape);
-int        get_nelements(const shape_data& shape);
-int        get_nvertices(const shape_data& shape);
 
 // Interpolate vertex data
 vec3f interpolate_position(
@@ -150,7 +129,7 @@ struct shape_point {
 vector<float> sample_shape_cdf(const shape_data& shape);
 void          sample_shape_cdf(vector<float>& cdf, const shape_data& shape);
 shape_point   sample_shape(const shape_data& shape, const vector<float>& cdf,
-      float rn, const vec2f& uv);
+      float rn, const vec2f& ruv);
 vector<shape_point> sample_shape(const shape_data& shape,
     const vector<float>& cdf, int num_samples, uint64_t seed = 98729387);
 
@@ -686,10 +665,8 @@ vector<float> sample_triangles_cdf(
 // Pick a point on a quad mesh uniformly.
 pair<int, vec2f> sample_quads(
     const vector<float>& cdf, float re, const vec2f& ruv);
-pair<int, vec2f> sample_quads(const vector<vec4i>& quads,
-    const vector<float>& cdf, float re, const vec2f& ruv);
-vector<float>    sample_quads_cdf(
-       const vector<vec4i>& quads, const vector<vec3f>& positions);
+vector<float> sample_quads_cdf(
+    const vector<vec4i>& quads, const vector<vec3f>& positions);
 
 // Samples a set of points over a triangle/quad mesh uniformly. Returns pos,
 // norm and texcoord of the sampled points.

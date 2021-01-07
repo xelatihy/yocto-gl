@@ -60,52 +60,6 @@ using namespace std::string_literals;
 // -----------------------------------------------------------------------------
 namespace yocto {
 
-// Shape creation
-void make_shape(shape_type type, int num_elements, int num_vertices,
-    bool normals, bool texcoords, bool colors, bool radius) {
-  auto shape = shape_data{};
-  if (type == shape_type::points) {
-    shape.points = vector<int>(num_elements, 0);
-  } else if (type == shape_type::lines) {
-    shape.lines = vector<vec2i>(num_elements, {0, 0});
-  } else if (type == shape_type::triangles) {
-    shape.triangles = vector<vec3i>(num_elements, {0, 0, 0});
-  } else if (type == shape_type::quads) {
-    shape.quads = vector<vec4i>(num_elements, {0, 0, 0, 0});
-  } else {
-    throw std::invalid_argument{"unknown type"};
-  }
-  shape.positions = vector<vec3f>(num_vertices, {0, 0, 0});
-  if (normals) shape.normals = vector<vec3f>(num_vertices, {0, 0, 1});
-  if (texcoords) shape.texcoords = vector<vec2f>(num_vertices, {0, 0});
-  if (colors) shape.colors = vector<vec4f>(num_vertices, {1, 1, 1, 1});
-  if (radius) shape.radius = vector<float>(num_vertices, 0);
-}
-
-// Shape quaries
-bool is_empty(const shape_data& shape) { return shape.positions.empty(); }
-bool is_points(const shape_data& shape) { return !shape.points.empty(); }
-bool is_lines(const shape_data& shape) { return !shape.lines.empty(); }
-bool is_triangles(const shape_data& shape) { return !shape.triangles.empty(); }
-bool is_quads(const shape_data& shape) { return !shape.quads.empty(); }
-shape_type get_type(const shape_data& shape) {
-  if (is_points(shape)) return shape_type::points;
-  if (is_lines(shape)) return shape_type::lines;
-  if (is_triangles(shape)) return shape_type::triangles;
-  if (is_quads(shape)) return shape_type::quads;
-  return shape_type::triangles;
-}
-int get_nelements(const shape_data& shape) {
-  if (is_points(shape)) return (int)shape.points.size();
-  if (is_lines(shape)) return (int)shape.lines.size();
-  if (is_triangles(shape)) return (int)shape.triangles.size();
-  if (is_quads(shape)) return (int)shape.quads.size();
-  return 0;
-}
-int get_nvertices(const shape_data& shape) {
-  return (int)shape.positions.size();
-}
-
 // Interpolate vertex data
 vec3f interpolate_position(
     const shape_data& shape, int element, const vec2f& uv) {
@@ -328,12 +282,60 @@ void shape_normals(vector<vec3f>& normals, const shape_data& shape) {
 }
 
 // Shape sampling
-vector<float> sample_shape_cdf(const shape_data& shape);
-void          sample_shape_cdf(vector<float>& cdf, const shape_data& shape);
-shape_point   sample_shape(const shape_data& shape, const vector<float>& cdf,
-      float rn, const vec2f& uv);
+vector<float> sample_shape_cdf(const shape_data& shape) {
+  if (!shape.points.empty()) {
+    return sample_points_cdf((int)shape.points.size());
+  } else if (!shape.lines.empty()) {
+    return sample_lines_cdf(shape.lines, shape.positions);
+  } else if (!shape.triangles.empty()) {
+    return sample_triangles_cdf(shape.triangles, shape.positions);
+  } else if (!shape.quads.empty()) {
+    return sample_quads_cdf(shape.quads, shape.positions);
+  } else {
+    return sample_points_cdf((int)shape.positions.size());
+  }
+}
+void sample_shape_cdf(vector<float>& cdf, const shape_data& shape) {
+  if (!shape.points.empty()) {
+    sample_points_cdf(cdf, (int)shape.points.size());
+  } else if (!shape.lines.empty()) {
+    sample_lines_cdf(cdf, shape.lines, shape.positions);
+  } else if (!shape.triangles.empty()) {
+    sample_triangles_cdf(cdf, shape.triangles, shape.positions);
+  } else if (!shape.quads.empty()) {
+    sample_quads_cdf(cdf, shape.quads, shape.positions);
+  } else {
+    sample_points_cdf(cdf, (int)shape.positions.size());
+  }
+}
+shape_point sample_shape(const shape_data& shape, const vector<float>& cdf,
+    float rn, const vec2f& ruv) {
+  if (!shape.points.empty()) {
+    auto element = sample_points(cdf, rn);
+    return {element, {0, 0}};
+  } else if (!shape.lines.empty()) {
+    auto [element, u] = sample_lines(cdf, rn, ruv.x);
+    return {element, {u, 0}};
+  } else if (!shape.triangles.empty()) {
+    auto [element, uv] = sample_triangles(cdf, rn, ruv);
+    return {element, uv};
+  } else if (!shape.quads.empty()) {
+    auto [element, uv] = sample_quads(cdf, rn, ruv);
+    return {element, uv};
+  } else {
+    auto element = sample_points(cdf, rn);
+    return {element, {0, 0}};
+  }
+}
 vector<shape_point> sample_shape(const shape_data& shape,
-    const vector<float>& cdf, int num_samples, uint64_t seed);
+    const vector<float>& cdf, int num_samples, uint64_t seed) {
+  auto points = vector<shape_point>(num_samples);
+  auto rng    = make_rng(seed);
+  for (auto& point : points) {
+    point = sample_shape(shape, cdf, rand1f(rng), rand2f(rng));
+  }
+  return points;
+}
 
 // Compute per-vertex normals/tangents for lines/triangles/quads.
 vector<vec3f> fvshape_normals(const fvshape_data& shape);
