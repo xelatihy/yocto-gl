@@ -281,6 +281,75 @@ vector<shape_point> sample_shape(
   return points;
 }
 
+// Conversions
+shape_data quads_to_triangles(const shape_data& shape) {
+  auto result = shape;
+  quads_to_triangles(result, result);
+  return result;
+}
+void quads_to_triangles(shape_data& result, const shape_data& shape) {
+  result.triangles = quads_to_triangles(shape.quads);
+  result.quads     = {};
+}
+
+// Subdivision
+shape_data subdivide_shape(
+    const shape_data& shape, int subdivisions, bool catmullclark) {
+  // This should probably be reimplemented in a faster fashion,
+  // but how it is not obvious
+  auto subdivided = shape_data{};
+  if (!shape.points.empty()) {
+    // nothing to do
+  } else if (!shape.lines.empty()) {
+    std::tie(std::ignore, subdivided.normals) = subdivide_lines(
+        shape.lines, shape.normals, subdivisions);
+    std::tie(std::ignore, subdivided.texcoords) = subdivide_lines(
+        shape.lines, shape.texcoords, subdivisions);
+    std::tie(std::ignore, subdivided.colors) = subdivide_lines(
+        shape.lines, shape.colors, subdivisions);
+    std::tie(std::ignore, subdivided.radius) = subdivide_lines(
+        shape.lines, shape.radius, subdivisions);
+    std::tie(subdivided.lines, subdivided.positions) = subdivide_lines(
+        shape.lines, shape.positions, subdivisions);
+  } else if (!shape.triangles.empty()) {
+    std::tie(std::ignore, subdivided.normals) = subdivide_triangles(
+        shape.triangles, shape.normals, subdivisions);
+    std::tie(std::ignore, subdivided.texcoords) = subdivide_triangles(
+        shape.triangles, shape.texcoords, subdivisions);
+    std::tie(std::ignore, subdivided.colors) = subdivide_triangles(
+        shape.triangles, shape.colors, subdivisions);
+    std::tie(std::ignore, subdivided.radius) = subdivide_triangles(
+        shape.triangles, shape.radius, subdivisions);
+    std::tie(subdivided.triangles, subdivided.positions) = subdivide_triangles(
+        shape.triangles, shape.positions, subdivisions);
+  } else if (!shape.quads.empty() && !catmullclark) {
+    std::tie(std::ignore, subdivided.normals) = subdivide_quads(
+        shape.quads, shape.normals, subdivisions);
+    std::tie(std::ignore, subdivided.texcoords) = subdivide_quads(
+        shape.quads, shape.texcoords, subdivisions);
+    std::tie(std::ignore, subdivided.colors) = subdivide_quads(
+        shape.quads, shape.colors, subdivisions);
+    std::tie(std::ignore, subdivided.radius) = subdivide_quads(
+        shape.quads, shape.radius, subdivisions);
+    std::tie(subdivided.quads, subdivided.positions) = subdivide_quads(
+        shape.quads, shape.positions, subdivisions);
+  } else if (!shape.quads.empty() && catmullclark) {
+    std::tie(std::ignore, subdivided.normals) = subdivide_catmullclark(
+        shape.quads, shape.normals, subdivisions);
+    std::tie(std::ignore, subdivided.texcoords) = subdivide_catmullclark(
+        shape.quads, shape.texcoords, subdivisions);
+    std::tie(std::ignore, subdivided.colors) = subdivide_catmullclark(
+        shape.quads, shape.colors, subdivisions);
+    std::tie(std::ignore, subdivided.radius) = subdivide_catmullclark(
+        shape.quads, shape.radius, subdivisions);
+    std::tie(subdivided.quads, subdivided.positions) = subdivide_catmullclark(
+        shape.quads, shape.positions, subdivisions);
+  } else {
+    // empty shape
+  }
+  return subdivided;
+}
+
 // Interpolate vertex data
 vec3f eval_position(const fvshape_data& shape, int element, const vec2f& uv) {
   if (!shape.quadspos.empty()) {
@@ -340,6 +409,54 @@ void compute_normals(vector<vec3f>& normals, const fvshape_data& shape) {
   } else {
     normals.assign(shape.positions.size(), {0, 0, 1});
   }
+}
+
+// Conversions
+shape_data fvshape_to_shape(const fvshape_data& fvshape, bool as_triangles) {
+  auto shape = shape_data{};
+  split_facevarying(shape.quads, shape.positions, shape.normals,
+      shape.texcoords, fvshape.quadspos, fvshape.quadsnorm,
+      fvshape.quadstexcoord, fvshape.positions, fvshape.normals,
+      fvshape.texcoords);
+  return shape;
+}
+fvshape_data shape_to_fvshape(const shape_data& shape) {
+  if (!shape.points.empty() || !shape.lines.empty())
+    throw std::invalid_argument{"cannor convert shape"};
+  auto fvshape          = fvshape_data{};
+  fvshape.positions     = shape.positions;
+  fvshape.normals       = shape.normals;
+  fvshape.texcoords     = shape.texcoords;
+  fvshape.quadspos      = !shape.quads.empty() ? shape.quads
+                                               : triangles_to_quads(shape.triangles);
+  fvshape.quadsnorm     = !shape.normals.empty() ? fvshape.quadspos
+                                                 : vector<vec4i>{};
+  fvshape.quadstexcoord = !shape.texcoords.empty() ? fvshape.quadspos
+                                                   : vector<vec4i>{};
+  return fvshape;
+}
+
+// Subdivision
+fvshape_data subdivide_fvshape(
+    const fvshape_data& shape, int subdivisions, bool catmullclark) {
+  auto subdivided = fvshape_data{};
+  if (!catmullclark) {
+    std::tie(subdivided.quadspos, subdivided.positions) = subdivide_quads(
+        shape.quadspos, shape.positions, subdivisions);
+    std::tie(subdivided.quadsnorm, subdivided.normals) = subdivide_quads(
+        shape.quadsnorm, shape.normals, subdivisions);
+    std::tie(subdivided.quadstexcoord, subdivided.texcoords) = subdivide_quads(
+        shape.quadstexcoord, shape.texcoords, subdivisions);
+  } else {
+    std::tie(subdivided.quadspos, subdivided.positions) =
+        subdivide_catmullclark(shape.quadspos, shape.positions, subdivisions);
+    std::tie(subdivided.quadsnorm, subdivided.normals) = subdivide_catmullclark(
+        shape.quadsnorm, shape.normals, subdivisions);
+    std::tie(subdivided.quadstexcoord, subdivided.texcoords) =
+        subdivide_catmullclark(
+            shape.quadstexcoord, shape.texcoords, subdivisions, true);
+  }
+  return subdivided;
 }
 
 }  // namespace yocto
@@ -2184,6 +2301,59 @@ split_facevarying(const vector<vec4i>& quadspos, const vector<vec4i>& quadsnorm,
   }
 
   return split;
+}
+
+// Convert face varying data to single primitives. Returns the quads indices
+// and filled vectors for pos, norm and texcoord.
+void split_facevarying(vector<vec4i>& split_quads,
+    vector<vec3f>& split_positions, vector<vec3f>& split_normals,
+    vector<vec2f>& split_texcoords, const vector<vec4i>& quadspos,
+    const vector<vec4i>& quadsnorm, const vector<vec4i>& quadstexcoord,
+    const vector<vec3f>& positions, const vector<vec3f>& normals,
+    const vector<vec2f>& texcoords) {
+  // make faces unique
+  unordered_map<vec3i, int> vert_map;
+  split_quads.resize(quadspos.size());
+  for (auto fid = 0; fid < quadspos.size(); fid++) {
+    for (auto c = 0; c < 4; c++) {
+      auto v = vec3i{
+          (&quadspos[fid].x)[c],
+          (!quadsnorm.empty()) ? (&quadsnorm[fid].x)[c] : -1,
+          (!quadstexcoord.empty()) ? (&quadstexcoord[fid].x)[c] : -1,
+      };
+      auto it = vert_map.find(v);
+      if (it == vert_map.end()) {
+        auto s = (int)vert_map.size();
+        vert_map.insert(it, {v, s});
+        (&split_quads[fid].x)[c] = s;
+      } else {
+        (&split_quads[fid].x)[c] = it->second;
+      }
+    }
+  }
+
+  // fill vert data
+  split_positions.clear();
+  if (!positions.empty()) {
+    split_positions.resize(vert_map.size());
+    for (auto& [vert, index] : vert_map) {
+      split_positions[index] = positions[vert.x];
+    }
+  }
+  split_normals.clear();
+  if (!normals.empty()) {
+    split_normals.resize(vert_map.size());
+    for (auto& [vert, index] : vert_map) {
+      split_normals[index] = normals[vert.y];
+    }
+  }
+  split_texcoords.clear();
+  if (!texcoords.empty()) {
+    split_texcoords.resize(vert_map.size());
+    for (auto& [vert, index] : vert_map) {
+      split_texcoords[index] = texcoords[vert.z];
+    }
+  }
 }
 
 // Split primitives per id
