@@ -295,7 +295,59 @@ void quads_to_triangles(shape_data& result, const shape_data& shape) {
 // Subdivision
 shape_data subdivide_shape(
     const shape_data& shape, int subdivisions, bool catmullclark) {
-  throw std::invalid_argument{"not implemented yet"};
+  // This should probably be reimplemented in a faster fashion,
+  // but how it is not obvious
+  auto subdivided = shape_data{};
+  if (!shape.points.empty()) {
+    // nothing to do
+  } else if (!shape.lines.empty()) {
+    std::tie(std::ignore, subdivided.normals) = subdivide_lines(
+        shape.lines, shape.normals, subdivisions);
+    std::tie(std::ignore, subdivided.texcoords) = subdivide_lines(
+        shape.lines, shape.texcoords, subdivisions);
+    std::tie(std::ignore, subdivided.colors) = subdivide_lines(
+        shape.lines, shape.colors, subdivisions);
+    std::tie(std::ignore, subdivided.radius) = subdivide_lines(
+        shape.lines, shape.radius, subdivisions);
+    std::tie(subdivided.lines, subdivided.positions) = subdivide_lines(
+        shape.lines, shape.positions, subdivisions);
+  } else if (!shape.triangles.empty()) {
+    std::tie(std::ignore, subdivided.normals) = subdivide_triangles(
+        shape.triangles, shape.normals, subdivisions);
+    std::tie(std::ignore, subdivided.texcoords) = subdivide_triangles(
+        shape.triangles, shape.texcoords, subdivisions);
+    std::tie(std::ignore, subdivided.colors) = subdivide_triangles(
+        shape.triangles, shape.colors, subdivisions);
+    std::tie(std::ignore, subdivided.radius) = subdivide_triangles(
+        shape.triangles, shape.radius, subdivisions);
+    std::tie(subdivided.triangles, subdivided.positions) = subdivide_triangles(
+        shape.triangles, shape.positions, subdivisions);
+  } else if (!shape.quads.empty() && !catmullclark) {
+    std::tie(std::ignore, subdivided.normals) = subdivide_quads(
+        shape.quads, shape.normals, subdivisions);
+    std::tie(std::ignore, subdivided.texcoords) = subdivide_quads(
+        shape.quads, shape.texcoords, subdivisions);
+    std::tie(std::ignore, subdivided.colors) = subdivide_quads(
+        shape.quads, shape.colors, subdivisions);
+    std::tie(std::ignore, subdivided.radius) = subdivide_quads(
+        shape.quads, shape.radius, subdivisions);
+    std::tie(subdivided.quads, subdivided.positions) = subdivide_quads(
+        shape.quads, shape.positions, subdivisions);
+  } else if (!shape.quads.empty() && catmullclark) {
+    std::tie(std::ignore, subdivided.normals) = subdivide_catmullclark(
+        shape.quads, shape.normals, subdivisions);
+    std::tie(std::ignore, subdivided.texcoords) = subdivide_catmullclark(
+        shape.quads, shape.texcoords, subdivisions);
+    std::tie(std::ignore, subdivided.colors) = subdivide_catmullclark(
+        shape.quads, shape.colors, subdivisions);
+    std::tie(std::ignore, subdivided.radius) = subdivide_catmullclark(
+        shape.quads, shape.radius, subdivisions);
+    std::tie(subdivided.quads, subdivided.positions) = subdivide_catmullclark(
+        shape.quads, shape.positions, subdivisions);
+  } else {
+    // empty shape
+  }
+  return subdivided;
 }
 
 // Interpolate vertex data
