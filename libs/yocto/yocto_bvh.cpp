@@ -1025,12 +1025,11 @@ static bool intersect_bvh(const bvh_scene& bvh, const scene_scene& scene,
     } else {
       for (auto idx = node.start; idx < node.start + node.num; idx++) {
         auto& instance_ = scene.instances[bvh.bvh.primitives[idx]];
-        auto& shape     = get_shape(scene, instance_.shape);
-        auto& sbvh      = bvh.shapes[instance_.shape];
         auto  inv_ray   = transform_ray(
             inverse(instance_.frame, non_rigid_frames), ray);
-        if (intersect_bvh(
-                sbvh, shape, inv_ray, element, uv, distance, find_any)) {
+        if (intersect_bvh(bvh.shapes[instance_.shape],
+                scene.shapes[instance_.shape], inv_ray, element, uv, distance,
+                find_any)) {
           hit      = true;
           instance = bvh.bvh.primitives[idx];
           ray.tmax = distance;
@@ -1050,10 +1049,9 @@ static bool intersect_bvh(const bvh_scene& bvh, const scene_scene& scene,
     int instance_, const ray3f& ray, int& element, vec2f& uv, float& distance,
     bool find_any, bool non_rigid_frames) {
   auto& instance = scene.instances[instance_];
-  auto  shape    = get_shape(scene, instance.shape);
-  auto& sbvh     = bvh.shapes[instance.shape];
   auto  inv_ray = transform_ray(inverse(instance.frame, non_rigid_frames), ray);
-  return intersect_bvh(sbvh, shape, inv_ray, element, uv, distance, find_any);
+  return intersect_bvh(bvh.shapes[instance.shape], scene.shapes[instance.shape],
+      inv_ray, element, uv, distance, find_any);
 }
 
 }  // namespace yocto

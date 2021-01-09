@@ -271,19 +271,6 @@ scene_shape&    get_shape(scene_scene& scene, shape_handle handle);
 scene_texture&  get_texture(scene_scene& scene, texture_handle handle);
 scene_subdiv&   get_subdiv(scene_scene& scene, subdiv_handle handle);
 
-// get element from a scene
-const scene_camera& get_camera(const scene_scene& scene, camera_handle handle);
-const scene_environment& get_environment(
-    const scene_scene& scene, environment_handle handle);
-const scene_instance& get_instance(
-    const scene_scene& scene, instance_handle handle);
-const scene_material& get_material(
-    const scene_scene& scene, material_handle handle);
-const scene_shape&   get_shape(const scene_scene& scene, shape_handle handle);
-const scene_texture& get_texture(
-    const scene_scene& scene, texture_handle handle);
-const scene_subdiv& get_subdiv(const scene_scene& scene, subdiv_handle handle);
-
 // add scene elements
 camera_handle      add_camera(scene_scene& scene, const string& name,
          const vec3f& from, const vec3f& to, const vec3f& up, float lens,

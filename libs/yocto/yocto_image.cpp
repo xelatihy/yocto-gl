@@ -114,7 +114,7 @@ const vec4f* get_data4f(const image_data& image) {
   return !image.pixelsf.empty() ? image.pixelsf.data() : nullptr;
 }
 const vec4b* get_data4b(const image_data& image) {
-  return !image.pixelsf.empty() ? image.pixelsb.data() : nullptr;
+  return !image.pixelsb.empty() ? image.pixelsb.data() : nullptr;
 }
 
 // conversions
