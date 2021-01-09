@@ -73,7 +73,7 @@ int run_render(const render_params& params) {
   if (params.addsky) add_sky(scene);
 
   // get camera
-  auto camera_handle = get_camera_handle(scene, params.camera);
+  auto camera_handle = find_camera(scene, params.camera);
 
   // tesselation
   tesselate_shapes(scene, print_progress);
@@ -92,8 +92,8 @@ int run_render(const render_params& params) {
   }
 
   // render
-  auto camera = get_camera(scene, camera_handle);
-  auto render = trace_image(scene, camera, bvh, lights, params, print_progress,
+  auto& camera = scene.cameras[camera_handle];
+  auto  render = trace_image(scene, camera, bvh, lights, params, print_progress,
       [savebatch = params.savebatch, output = params.output](
           const image<vec4f>& render, int sample, int samples) {
         if (!savebatch) return;
@@ -162,7 +162,7 @@ int run_view(const view_params& params) {
   if (params.addsky) add_sky(scene);
 
   // get camera
-  auto camera_handle = get_camera_handle(scene, params.camera);
+  auto camera_handle = find_camera(scene, params.camera);
 
   // tesselation
   tesselate_shapes(scene, print_progress);
@@ -184,7 +184,7 @@ int run_view(const view_params& params) {
   auto state = trace_state{};
 
   // render start
-  auto& camera = get_camera(scene, camera_handle);
+  auto& camera = scene.cameras[camera_handle];
   trace_start(
       state, scene, camera, bvh, lights, params,
       [&](const string& message, int sample, int nsamples) {

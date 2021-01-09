@@ -227,7 +227,7 @@ vec3f get_building_color(const string& building_color) {
 bool geojson_to_scene(sceneio_scene& scene, const geojson_scene& geojson,
     const string& dirname, string& ioerror) {
   scene.asset.name = geojson.name;
-  auto& camera     = get_camera(scene, add_camera(scene));
+  auto& camera     = scene.cameras[add_camera(scene)];
   camera.frame     = frame3f{{-0.028f, 0.0f, 1.0f}, {0.764f, 0.645f, 0.022f},
       {-0.645f, 0.764f, -0.018f}, {-13.032f, 16.750f, -1.409f}};
   camera.lens      = 0.035;
@@ -235,15 +235,15 @@ bool geojson_to_scene(sceneio_scene& scene, const geojson_scene& geojson,
   camera.focus     = 3.9;
   camera.film      = 0.024;
   camera.aspect    = 1;
-  auto& floor      = get_instance(scene, add_instance(scene, "floor"));
+  auto& floor      = scene.instances[add_instance(scene, "floor")];
   floor.shape      = add_shape(scene, "floor");
   floor.material   = add_shape(scene, "material");
   auto floor_size  = 60.0f;
-  get_shape(scene, floor.shape).positions   = {{-floor_size, 0, floor_size},
+  scene.shapes[floor.shape].positions   = {{-floor_size, 0, floor_size},
       {floor_size, 0, floor_size}, {floor_size, 0, -floor_size},
       {-floor_size, 0, -floor_size}};
-  get_shape(scene, floor.shape).triangles   = {{0, 1, 2}, {2, 3, 0}};
-  get_material(scene, floor.material).color = {0.725, 0.71, 0.68};
+  scene.shapes[floor.shape].triangles   = {{0, 1, 2}, {2, 3, 0}};
+  scene.materials[floor.material].color = {0.725, 0.71, 0.68};
 
   add_sky(scene);
 
@@ -255,7 +255,7 @@ bool geojson_to_scene(sceneio_scene& scene, const geojson_scene& geojson,
     if (shape_it == geojson.shapes.end()) return invalid_handle;
     auto& gshape    = *shape_it;
     auto  handle    = add_shape(scene, name);
-    auto& shape     = get_shape(scene, handle);
+    auto& shape     = scene.shapes[handle];
     shape.triangles = gshape.shape.triangles;
     shape.quads     = gshape.shape.quads;
     shape.positions = gshape.shape.positions;
@@ -269,7 +269,7 @@ bool geojson_to_scene(sceneio_scene& scene, const geojson_scene& geojson,
   auto add_tree_material = [](sceneio_scene& scene, const vec3f& color,
                                const string& name) -> shape_handle {
     auto  handle   = add_material(scene, name);
-    auto& material = get_material(scene, handle);
+    auto& material = scene.materials[handle];
     material.color = color;
     return handle;
   };
@@ -284,7 +284,7 @@ bool geojson_to_scene(sceneio_scene& scene, const geojson_scene& geojson,
     if (texture_it == geojson.textures.end()) return invalid_handle;
     auto& gtexture = *texture_it;
     auto  handle   = add_texture(scene, name);
-    auto& texture  = get_texture(scene, handle);
+    auto& texture  = scene.textures[handle];
     texture.ldr    = gtexture.img;
     return handle;
   };
@@ -345,7 +345,7 @@ bool geojson_to_scene(sceneio_scene& scene, const geojson_scene& geojson,
       if (type_s == geojson_element_type::tree &&
           element.tree == geojson_tree_type::standard) {
         for (auto& elem : element.new_coords) {
-          auto& tree    = get_instance(scene, add_instance(scene, name));
+          auto& tree    = scene.instances[add_instance(scene, name)];
           auto  coord   = vec3f{(float)elem[0], 0, (float)elem[1]};
           auto  x       = coord.x + 0.09f;
           auto  z       = coord.z + 0.09f;
@@ -357,7 +357,7 @@ bool geojson_to_scene(sceneio_scene& scene, const geojson_scene& geojson,
       } else if (type_s == geojson_element_type::tree &&
                  element.tree == geojson_tree_type::palm) {
         for (auto& elem : element.new_coords) {
-          auto& tree    = get_instance(scene, add_instance(scene, name));
+          auto& tree    = scene.instances[add_instance(scene, name)];
           auto  coord   = vec3f{(float)elem[0], 0, (float)elem[1]};
           tree.shape    = shape_palm;
           tree.material = material_palm;
@@ -367,7 +367,7 @@ bool geojson_to_scene(sceneio_scene& scene, const geojson_scene& geojson,
       } else if (type_s == geojson_element_type::tree &&
                  element.tree == geojson_tree_type::cypress) {
         for (auto& elem : element.new_coords) {
-          auto& tree    = get_instance(scene, add_instance(scene, name));
+          auto& tree    = scene.instances[add_instance(scene, name)];
           auto  coord   = vec3f{(float)elem[0], 0, (float)elem[1]};
           tree.shape    = shape_cypress;
           tree.material = material_cypress;
@@ -377,7 +377,7 @@ bool geojson_to_scene(sceneio_scene& scene, const geojson_scene& geojson,
       } else if (type_s == geojson_element_type::tree &&
                  element.tree == geojson_tree_type::oak) {
         for (auto& elem : element.new_coords) {
-          auto& tree    = get_instance(scene, add_instance(scene, name));
+          auto& tree    = scene.instances[add_instance(scene, name)];
           auto  coord   = vec3f{(float)elem[0], 0, (float)elem[1]};
           tree.shape    = shape_oak;
           tree.material = material_oak;
@@ -386,7 +386,7 @@ bool geojson_to_scene(sceneio_scene& scene, const geojson_scene& geojson,
         }
       } else if (type_s == geojson_element_type::tree &&
                  element.tree == geojson_tree_type::pine) {
-        auto& tree = get_instance(scene, add_instance(scene, name));
+        auto& tree = scene.instances[add_instance(scene, name)];
         for (auto& elem : element.new_coords) {
           auto coord    = vec3f{(float)elem[0], 0, (float)elem[1]};
           tree.shape    = shape_pine;
@@ -396,11 +396,11 @@ bool geojson_to_scene(sceneio_scene& scene, const geojson_scene& geojson,
         }
       } else {
         auto  polygon       = vector<vector<double2>>{};
-        auto& instance      = get_instance(scene, add_instance(scene, name));
+        auto& instance      = scene.instances[add_instance(scene, name)];
         instance.shape      = add_shape(scene, name);
         instance.material   = add_material(scene, name);
-        auto& shape         = get_shape(scene, instance.shape);
-        auto& material      = get_material(scene, instance.material);
+        auto& shape         = scene.shapes[instance.shape];
+        auto& material      = scene.materials[instance.material];
         auto  triangles     = vector<vec3i>{};
         auto  positions     = vector<vec3f>{};
         auto  vect_building = vector<double2>{};
@@ -470,11 +470,11 @@ bool geojson_to_scene(sceneio_scene& scene, const geojson_scene& geojson,
 
         // Filling buildings
         if (type == geojson_element_type::building) {
-          auto& instance2    = get_instance(scene, add_instance(scene, name));
+          auto& instance2    = scene.instances[add_instance(scene, name)];
           instance2.shape    = add_shape(scene, name);
           instance2.material = add_material(scene, name);
-          auto& shape2       = get_shape(scene, instance2.shape);
-          auto& material2    = get_material(scene, instance2.material);
+          auto& shape2       = scene.shapes[instance2.shape];
+          auto& material2    = scene.materials[instance2.material];
 
           material2.color = color;
           auto _polygon2  = positions;
@@ -546,12 +546,12 @@ bool geojson_to_scene(sceneio_scene& scene, const geojson_scene& geojson,
         // Gabled roof
         if (type_roof == geojson_roof_type::gabled) {
           auto  polygon_roof = vector<vector<double2>>{};
-          auto& instancer    = get_instance(
-              scene, add_instance(scene, name + "_roof1"));
+          auto& instancer =
+              scene.instances[add_instance(scene, name + "_roof1")];
           instancer.shape      = add_shape(scene, name);
           instancer.material   = add_material(scene, name);
-          auto& shaper         = get_shape(scene, instancer.shape);
-          auto& materialr      = get_material(scene, instancer.material);
+          auto& shaper         = scene.shapes[instancer.shape];
+          auto& materialr      = scene.materials[instancer.material];
           auto  triangles_roof = vector<vec3i>{};
           auto  positions_roof = vector<vec3f>{};
           auto  vect_roof      = vector<double2>{};
@@ -586,12 +586,12 @@ bool geojson_to_scene(sceneio_scene& scene, const geojson_scene& geojson,
             }
 
             // Filling roofs
-            auto& instancer2 = get_instance(
-                scene, add_instance(scene, name + "_roof2"));
+            auto& instancer2 =
+                scene.instances[add_instance(scene, name + "_roof2")];
             instancer2.shape     = add_shape(scene, name);
             instancer2.material  = add_material(scene, name);
-            auto& shaper2        = get_shape(scene, instancer2.shape);
-            auto& materialr2     = get_material(scene, instancer2.material);
+            auto& shaper2        = scene.shapes[instancer2.shape];
+            auto& materialr2     = scene.materials[instancer2.material];
             materialr2.color     = roof_color;
             auto _polygon2_roof  = positions_roof;
             auto triangles2_roof = vector<vec3i>{};

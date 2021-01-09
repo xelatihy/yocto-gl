@@ -261,16 +261,6 @@ texture_handle     add_texture(scene_scene& scene, const string& name = "");
 subdiv_handle      add_subdiv(scene_scene& scene, const string& name = "");
 instance_handle add_complete_instance(scene_scene& scene, const string& name);
 
-// get element from a scene
-scene_camera&      get_camera(scene_scene& scene, camera_handle handle);
-scene_environment& get_environment(
-    scene_scene& scene, environment_handle handle);
-scene_instance& get_instance(scene_scene& scene, instance_handle handle);
-scene_material& get_material(scene_scene& scene, material_handle handle);
-scene_shape&    get_shape(scene_scene& scene, shape_handle handle);
-scene_texture&  get_texture(scene_scene& scene, texture_handle handle);
-scene_subdiv&   get_subdiv(scene_scene& scene, subdiv_handle handle);
-
 // add scene elements
 camera_handle      add_camera(scene_scene& scene, const string& name,
          const vec3f& from, const vec3f& to, const vec3f& up, float lens,
@@ -366,9 +356,7 @@ void trim_memory(scene_scene& scene);
 bbox3f compute_bounds(const scene_scene& scene);
 
 // get named camera or default if name is empty
-scene_camera&       get_camera(scene_scene& scene, const string& name);
-const scene_camera& get_camera(const scene_scene& scene, const string& name);
-camera_handle get_camera_handle(const scene_scene& scene, const string& name);
+camera_handle find_camera(const scene_scene& scene, const string& name);
 
 }  // namespace yocto
 
