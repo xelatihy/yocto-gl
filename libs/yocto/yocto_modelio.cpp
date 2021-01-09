@@ -1258,7 +1258,7 @@ inline bool load_mtl(const string& filename, obj_scene& obj, string& error) {
   if (!fs) return open_error();
 
   // init parsing
-  add_material(obj);
+  obj.materials.emplace_back();
 
   // read the file str by str
   auto buffer = array<char, 4096>{};
@@ -1279,7 +1279,7 @@ inline bool load_mtl(const string& filename, obj_scene& obj, string& error) {
 
     // possible token values
     if (cmd == "newmtl") {
-      auto& material = add_material(obj);
+      auto& material = obj.materials.emplace_back();
       if (!parse_value(str, material.name)) return parse_error();
     } else if (cmd == "illum") {
       if (!parse_value(str, material.illum)) return parse_error();
@@ -1505,7 +1505,7 @@ inline bool load_objx(const string& filename, obj_scene& obj, string& error) {
 
     // read values
     if (cmd == "c") {
-      auto& camera = add_camera(obj);
+      auto& camera = obj.cameras.emplace_back();
       if (!parse_value(str, camera.name)) return parse_error();
       if (!parse_value(str, camera.ortho)) return parse_error();
       if (!parse_value(str, camera.width)) return parse_error();
@@ -1515,7 +1515,7 @@ inline bool load_objx(const string& filename, obj_scene& obj, string& error) {
       if (!parse_value(str, camera.aperture)) return parse_error();
       if (!parse_value(str, camera.frame)) return parse_error();
     } else if (cmd == "e") {
-      auto& environment = add_environment(obj);
+      auto& environment = obj.environments.emplace_back();
       if (!parse_value(str, environment.name)) return parse_error();
       if (!parse_value(str, environment.emission)) return parse_error();
       auto emission_path = ""s;
@@ -1541,16 +1541,6 @@ inline bool load_objx(const string& filename, obj_scene& obj, string& error) {
 
   return true;
 }
-
-// Make obj
-obj_camera&   add_camera(obj_scene& obj) { return obj.cameras.emplace_back(); }
-obj_material& add_material(obj_scene& obj) {
-  return obj.materials.emplace_back();
-}
-obj_environment& add_environment(obj_scene& obj) {
-  return obj.environments.emplace_back();
-}
-obj_shape& add_shape(obj_scene& obj) { return obj.shapes.emplace_back(); }
 
 // Read obj
 bool load_obj(const string& filename, obj_scene& obj, string& error,
@@ -1626,7 +1616,7 @@ bool load_obj(const string& filename, obj_scene& obj, string& error,
         if ((cmd == "f" && (!shape.lines.empty() || !shape.points.empty())) ||
             (cmd == "l" && (!shape.faces.empty() || !shape.points.empty())) ||
             (cmd == "p" && (!shape.faces.empty() || !shape.lines.empty()))) {
-          add_shape(obj);
+          obj.shapes.emplace_back();
           obj.shapes.back().name = oname + gname;
         }
       }
@@ -1636,7 +1626,7 @@ bool load_obj(const string& filename, obj_scene& obj, string& error,
         if (shape.materials.size() > 1)
           throw std::runtime_error("should not have happened");
         if (shape.materials.back() != mname) {
-          add_shape(obj);
+          obj.shapes.emplace_back();
           obj.shapes.back().name = oname + gname;
         }
       }

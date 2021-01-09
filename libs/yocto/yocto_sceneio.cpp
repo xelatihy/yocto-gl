@@ -536,7 +536,7 @@ static bool load_json_scene(const string& filename, scene_scene& scene,
   // handle progress
   if (progress_cb) progress_cb("load scene", progress.x++, progress.y);
 
-  // loop over external dictioaries
+  // loop over external dictionaries
   for (auto [gname, group] : iterate_object(js)) {
     if (gname == "asset") {
       auto& asset = scene.asset;
@@ -551,7 +551,8 @@ static bool load_json_scene(const string& filename, scene_scene& scene,
       }
     } else if (gname == "cameras") {
       for (auto [name, element] : iterate_object(group)) {
-        auto& camera = scene.cameras[add_camera(scene, string{name})];
+        scene.camera_names.emplace_back(name);
+        auto& camera = scene.cameras.emplace_back();
         for (auto [key, value] : iterate_object(element)) {
           if (key == "frame") {
             get_value(value, camera.frame);
@@ -582,8 +583,8 @@ static bool load_json_scene(const string& filename, scene_scene& scene,
       }
     } else if (gname == "environments") {
       for (auto [name, element] : iterate_object(group)) {
-        auto& environment =
-            scene.environments[add_environment(scene, string{name})];
+        scene.environment_names.emplace_back(name);
+        auto& environment = scene.environments.emplace_back();
         for (auto [key, value] : iterate_object(element)) {
           if (key == "frame") {
             get_value(value, environment.frame);
@@ -666,7 +667,8 @@ static bool load_json_scene(const string& filename, scene_scene& scene,
       }
     } else if (gname == "instances" || gname == "objects") {
       for (auto [name, element] : iterate_object(group)) {
-        auto& instance = scene.instances[add_instance(scene, string{name})];
+        scene.instance_names.emplace_back(name);
+        auto& instance = scene.instances.emplace_back();
         for (auto [key, value] : iterate_object(element)) {
           if (key == "frame") {
             get_value(value, instance.frame);
@@ -688,8 +690,8 @@ static bool load_json_scene(const string& filename, scene_scene& scene,
       }
     } else if (gname == "subdivs") {
       for (auto [name, element] : iterate_object(group)) {
-        auto& subdiv = scene.subdivs[add_subdiv(scene, string{name})];
-        subdiv_map[string{name}] = {(int)scene.subdivs.size() - 1, false};
+        scene.subdiv_names.emplace_back();
+        auto& subdiv = scene.subdivs.emplace_back();
         for (auto [key, value] : iterate_object(element)) {
           if (key == "shape") {
             get_shape(value, subdiv.shape);
@@ -707,6 +709,7 @@ static bool load_json_scene(const string& filename, scene_scene& scene,
             // set_error(element, "unknown key " + string{key});
           }
         }
+        subdiv_map[string{name}] = {(int)scene.subdivs.size() - 1, false};
       }
     } else {
       set_error(js, "unknown key " + string{gname});
@@ -1321,7 +1324,7 @@ static bool save_obj_scene(const string& filename, const scene_scene& scene,
 
   // convert cameras
   for (auto& camera : scene.cameras) {
-    auto& ocamera    = add_camera(obj);
+    auto& ocamera    = obj.cameras.emplace_back();
     ocamera.name     = get_camera_name(scene, camera);
     ocamera.frame    = camera.frame;
     ocamera.ortho    = camera.orthographic;
@@ -1344,7 +1347,7 @@ static bool save_obj_scene(const string& filename, const scene_scene& scene,
 
   // convert materials and textures
   for (auto& material : scene.materials) {
-    auto& omaterial                = add_material(obj);
+    auto& omaterial                = obj.materials.emplace_back();
     omaterial.name                 = get_material_name(scene, material);
     omaterial.illum                = 2;
     omaterial.as_pbr               = true;
@@ -1375,7 +1378,7 @@ static bool save_obj_scene(const string& filename, const scene_scene& scene,
     auto  positions = shape.positions, normals = shape.normals;
     for (auto& p : positions) p = transform_point(instance.frame, p);
     for (auto& n : normals) n = transform_normal(instance.frame, n);
-    auto& oshape     = add_shape(obj);
+    auto& oshape     = obj.shapes.emplace_back();
     oshape.name      = get_shape_name(scene, shape);
     oshape.materials = {get_material_name(scene, instance.material)};
     if (!shape.triangles.empty()) {
@@ -1397,7 +1400,7 @@ static bool save_obj_scene(const string& filename, const scene_scene& scene,
 
   // convert environments
   for (auto& environment : scene.environments) {
-    auto& oenvironment        = add_environment(obj);
+    auto& oenvironment        = obj.environments.emplace_back();
     oenvironment.name         = get_environment_name(scene, environment);
     oenvironment.frame        = environment.frame;
     oenvironment.emission     = environment.emission;
