@@ -252,7 +252,6 @@ struct scene_scene {
 namespace yocto {
 
 // add element to a scene
-camera_handle      add_camera(scene_scene& scene, const string& name);
 environment_handle add_environment(scene_scene& scene, const string& name);
 instance_handle    add_instance(scene_scene& scene, const string& name);
 material_handle    add_material(scene_scene& scene, const string& name);
