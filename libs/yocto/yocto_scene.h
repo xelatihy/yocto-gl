@@ -206,6 +206,14 @@ struct scene_subdiv {
   shape_handle shape = invalid_handle;
 };
 
+// Metadata associated with the scene
+struct scene_asset {
+  // additional information
+  string name      = "";
+  string copyright = "";
+  string generator = "Yocto/GL - https://github.com/xelatihy/yocto-gl";
+};
+
 // Scene comprised an array of objects whose memory is owened by the scene.
 // All members are optional,Scene objects (camera, instances, environments)
 // have transforms defined internally. A scene can optionally contain a
@@ -214,10 +222,6 @@ struct scene_subdiv {
 // the hierarchy. Animation is also optional, with keyframe data that
 // updates node transformations only if defined.
 struct scene_scene {
-  // additional information
-  string name      = "";
-  string copyright = "";
-
   // scene elements
   vector<scene_camera>      cameras      = {};
   vector<scene_instance>    instances    = {};
@@ -226,6 +230,9 @@ struct scene_scene {
   vector<scene_texture>     textures     = {};
   vector<scene_material>    materials    = {};
   vector<scene_subdiv>      subdivs      = {};
+
+  // scene metadata
+  scene_asset asset = {};
 
   // names (this will be cleanup significantly later)
   vector<string> camera_names      = {};

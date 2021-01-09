@@ -123,53 +123,60 @@ auto zip(const vector<T1>& keys, const vector<T2>& values) {
 }
 
 // get name
-static string get_camera_name(const scene_scene& scene, int idx) {
+[[maybe_unused]] static string get_camera_name(
+    const scene_scene& scene, int idx) {
   return scene.camera_names[idx];
 }
-static string get_environment_name(const scene_scene& scene, int idx) {
+[[maybe_unused]] static string get_environment_name(
+    const scene_scene& scene, int idx) {
   return scene.environment_names[idx];
 }
-static string get_shape_name(const scene_scene& scene, int idx) {
+[[maybe_unused]] static string get_shape_name(
+    const scene_scene& scene, int idx) {
   return scene.shape_names[idx];
 }
-static string get_texture_name(const scene_scene& scene, int idx) {
+[[maybe_unused]] static string get_texture_name(
+    const scene_scene& scene, int idx) {
   return scene.texture_names[idx];
 }
-static string get_instance_name(const scene_scene& scene, int idx) {
+[[maybe_unused]] static string get_instance_name(
+    const scene_scene& scene, int idx) {
   return scene.instance_names[idx];
 }
-static string get_material_name(const scene_scene& scene, int idx) {
+[[maybe_unused]] static string get_material_name(
+    const scene_scene& scene, int idx) {
   return scene.material_names[idx];
 }
-static string get_subdiv_name(const scene_scene& scene, int idx) {
+[[maybe_unused]] static string get_subdiv_name(
+    const scene_scene& scene, int idx) {
   return scene.subdiv_names[idx];
 }
 
-static string get_camera_name(
+[[maybe_unused]] static string get_camera_name(
     const scene_scene& scene, const scene_camera& camera) {
   return scene.camera_names.at(&camera - scene.cameras.data());
 }
-static string get_environment_name(
+[[maybe_unused]] static string get_environment_name(
     const scene_scene& scene, const scene_environment& environment) {
   return scene.environment_names.at(&environment - scene.environments.data());
 }
-static string get_shape_name(
+[[maybe_unused]] static string get_shape_name(
     const scene_scene& scene, const scene_shape& shape) {
   return scene.shape_names.at(&shape - scene.shapes.data());
 }
-static string get_texture_name(
+[[maybe_unused]] static string get_texture_name(
     const scene_scene& scene, const scene_texture& texture) {
   return scene.texture_names.at(&texture - scene.textures.data());
 }
-static string get_instance_name(
+[[maybe_unused]] static string get_instance_name(
     const scene_scene& scene, const scene_instance& instance) {
   return scene.instance_names.at(&instance - scene.instances.data());
 }
-static string get_material_name(
+[[maybe_unused]] static string get_material_name(
     const scene_scene& scene, const scene_material& material) {
   return scene.material_names.at(&material - scene.materials.data());
 }
-static string get_subdiv_name(
+[[maybe_unused]] static string get_subdiv_name(
     const scene_scene& scene, const scene_subdiv& subdiv) {
   return scene.subdiv_names.at(&subdiv - scene.subdivs.data());
 }
@@ -532,12 +539,12 @@ static bool load_json_scene(const string& filename, scene_scene& scene,
   // loop over external dictioaries
   for (auto [gname, group] : iterate_object(js)) {
     if (gname == "asset") {
+      auto& asset = scene.asset;
       for (auto [key, value] : iterate_object(group)) {
         if (key == "copyright") {
-          get_value(value, scene.copyright);
+          get_value(value, asset.copyright);
         } else if (key == "generator") {
-          auto generator = string{};
-          get_value(value, generator);
+          get_value(value, asset.generator);
         } else {
           set_error(group, "unknown key " + string{key});
         }
@@ -815,7 +822,7 @@ static bool load_json_scene(const string& filename, scene_scene& scene,
   }
 
   // fix scene
-  if (scene.name.empty()) scene.name = path_basename(filename);
+  if (scene.asset.name.empty()) scene.asset.name = path_basename(filename);
   add_cameras(scene);
   add_radius(scene);
   add_materials(scene);
@@ -852,11 +859,13 @@ static bool save_json_scene(const string& filename, const scene_scene& scene,
 
   // asset
   {
-    auto element = insert_object(js, "asset");
-    insert_value(element, "generator",
-        "Yocto/GL - https://github.com/xelatihy/yocto-gl");
-    if (!scene.copyright.empty()) {
-      insert_value(element, "copyright", scene.copyright);
+    auto& asset   = scene.asset;
+    auto  element = insert_object(js, "asset");
+    if (!asset.copyright.empty()) {
+      insert_value(element, "copyright", asset.copyright);
+    }
+    if (!asset.generator.empty()) {
+      insert_value(element, "generator", asset.generator);
     }
   }
 
@@ -1285,7 +1294,7 @@ static bool load_obj_scene(const string& filename, scene_scene& scene,
   }
 
   // fix scene
-  if (scene.name.empty()) scene.name = path_basename(filename);
+  if (scene.asset.name.empty()) scene.asset.name = path_basename(filename);
   add_cameras(scene);
   add_radius(scene);
   add_materials(scene);
@@ -1605,7 +1614,7 @@ static bool load_gltf_scene(const string& filename, scene_scene& scene,
   // convert asset
   {
     auto gast = &gltf->asset;
-    if (gast->copyright != nullptr) scene.copyright = gast->copyright;
+    if (gast->copyright != nullptr) scene.asset.copyright = gast->copyright;
   }
 
   // prepare list of effective nodes
@@ -2018,7 +2027,7 @@ static bool load_gltf_scene(const string& filename, scene_scene& scene,
       scene.textures.end());
 
   // fix scene
-  if (scene.name.empty()) scene.name = path_basename(filename);
+  if (scene.asset.name.empty()) scene.asset.name = path_basename(filename);
   add_cameras(scene);
   add_radius(scene);
   add_materials(scene);
@@ -2065,12 +2074,11 @@ static bool save_gltf_scene(const string& filename, const scene_scene& scene,
 
   // asset
   {
-    auto& ajs      = js["asset"];
-    ajs            = json::object();
-    ajs["version"] = "2.0";
-    ajs["generator"] =
-        "Saved with Yocto/GL --- https://github.com/xelatihy/yocto-gl";
-    ajs["copyright"] = scene.copyright;
+    auto& ajs        = js["asset"];
+    ajs              = json::object();
+    ajs["version"]   = "2.0";
+    ajs["generator"] = scene.asset.generator;
+    ajs["copyright"] = scene.asset.copyright;
   }
 
   // cameras
@@ -2576,7 +2584,7 @@ static bool load_pbrt_scene(const string& filename, scene_scene& scene,
   }
 
   // fix scene
-  if (scene.name.empty()) scene.name = path_basename(filename);
+  if (scene.asset.name.empty()) scene.asset.name = path_basename(filename);
   add_cameras(scene);
   add_radius(scene);
   add_materials(scene);

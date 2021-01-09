@@ -722,13 +722,6 @@ bbox3f compute_bounds(const scene_scene& scene) {
   return bbox;
 }
 
-// Clone a scene
-void clone_scene(scene_scene& dest, const scene_scene& scene) {
-  dest.name      = scene.name;
-  dest.copyright = scene.copyright;
-  throw std::runtime_error("not implemented yet");
-}
-
 // Reduce memory usage
 void trim_memory(scene_scene& scene) {
   for (auto& shape : scene.shapes) {
@@ -1280,15 +1273,15 @@ float eval_opacity(const scene_scene& scene, const scene_instance& instance,
 namespace yocto {
 
 void make_cornellbox(scene_scene& scene) {
-  scene.name      = "cornellbox";
-  auto& camera    = get_camera(scene, add_camera(scene));
-  camera.frame    = frame3f{{1, 0, 0}, {0, 1, 0}, {0, 0, 1}, {0, 1, 3.9}};
-  camera.lens     = 0.035;
-  camera.aperture = 0.0;
-  camera.focus    = 3.9;
-  camera.film     = 0.024;
-  camera.aspect   = 1;
-  auto& floor     = get_instance(scene, add_complete_instance(scene, "floor"));
+  scene.asset.name = "cornellbox";
+  auto& camera     = get_camera(scene, add_camera(scene));
+  camera.frame     = frame3f{{1, 0, 0}, {0, 1, 0}, {0, 0, 1}, {0, 1, 3.9}};
+  camera.lens      = 0.035;
+  camera.aperture  = 0.0;
+  camera.focus     = 3.9;
+  camera.film      = 0.024;
+  camera.aspect    = 1;
+  auto& floor      = get_instance(scene, add_complete_instance(scene, "floor"));
   get_shape(scene, floor.shape).positions = {
       {-1, 0, 1}, {1, 0, 1}, {1, 0, -1}, {-1, 0, -1}};
   get_shape(scene, floor.shape).triangles   = {{0, 1, 2}, {2, 3, 0}};

@@ -538,7 +538,7 @@ int run_convert(const convert_params& params) {
 
   // copyright
   if (params.copyright != "") {
-    scene.copyright = params.copyright;
+    scene.asset.copyright = params.copyright;
   }
 
   // validate scene
