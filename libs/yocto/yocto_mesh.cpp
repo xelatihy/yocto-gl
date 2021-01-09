@@ -2749,7 +2749,7 @@ bool save_mesh(const string& filename, const vector<vec3i>& triangles,
     return true;
   } else if (ext == ".obj" || ext == ".OBJ") {
     auto  obj    = obj_scene{};
-    auto& oshape = add_shape(obj);
+    auto& oshape = obj.shapes.emplace_back();
     if (triangles.empty()) return shape_error();
     set_triangles(
         oshape, triangles, positions, normals, texcoords, {}, flip_texcoord);
@@ -2851,7 +2851,7 @@ bool save_mesh(const string& filename, const vector<vec3i>& triangles,
     return true;
   } else if (ext == ".obj" || ext == ".OBJ") {
     auto  obj    = obj_scene{};
-    auto& oshape = add_shape(obj);
+    auto& oshape = obj.shapes.emplace_back();
     if (triangles.empty()) return shape_error();
     set_triangles(oshape, triangles, positions, {}, {}, {});
     auto err = ""s;
@@ -2949,7 +2949,7 @@ bool save_lines(const string& filename, const vector<vec2i>& lines,
     return true;
   } else if (ext == ".obj" || ext == ".OBJ") {
     auto  obj    = obj_scene{};
-    auto& oshape = add_shape(obj);
+    auto& oshape = obj.shapes.emplace_back();
     if (lines.empty()) return shape_error();
     set_lines(oshape, lines, positions, normals, texcoords, {}, flip_texcoord);
     if (!save_obj(filename, obj, error)) return false;

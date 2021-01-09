@@ -389,12 +389,6 @@ void get_points(const obj_shape& shape, int material, vector<int>& points,
     vector<vec3f>& positions, vector<vec3f>& normals, vector<vec2f>& texcoords,
     bool flip_texcoord = false);
 
-// Create OBJ
-obj_camera&      add_camera(obj_scene& obj);
-obj_material&    add_material(obj_scene& obj);
-obj_environment& add_environment(obj_scene& obj);
-obj_shape&       add_shape(obj_scene& obj);
-
 // Add obj shape
 void set_triangles(obj_shape& shape, const vector<vec3i>& triangles,
     const vector<vec3f>& positions, const vector<vec3f>& normals,

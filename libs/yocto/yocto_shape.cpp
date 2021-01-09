@@ -590,7 +590,7 @@ bool save_shape(const string& filename, const shape_data& shape, string& error,
     return save_ply(filename, ply, error);
   } else if (ext == ".obj" || ext == ".OBJ") {
     auto  obj    = obj_scene{};
-    auto& oshape = add_shape(obj);
+    auto& oshape = obj.shapes.emplace_back();
     if (!shape.triangles.empty()) {
       set_triangles(oshape, shape.triangles, shape.positions, shape.normals,
           shape.texcoords, {}, flip_texcoord);
@@ -781,7 +781,7 @@ bool save_fvshape(const string& filename, const fvshape_data& shape,
     return save_ply(filename, ply, error);
   } else if (ext == ".obj" || ext == ".OBJ") {
     auto  obj    = obj_scene{};
-    auto& oshape = add_shape(obj);
+    auto& oshape = obj.shapes.emplace_back();
     if (!shape.quadspos.empty()) {
       set_fvquads(oshape, shape.quadspos, shape.quadsnorm, shape.quadstexcoord,
           shape.positions, shape.normals, shape.texcoords, {}, flip_texcoord);
@@ -4716,7 +4716,7 @@ bool save_shape(const string& filename, const vector<int>& points,
     return save_ply(filename, ply, error);
   } else if (ext == ".obj" || ext == ".OBJ") {
     auto  obj    = obj_scene{};
-    auto& oshape = add_shape(obj);
+    auto& oshape = obj.shapes.emplace_back();
     if (!triangles.empty()) {
       set_triangles(
           oshape, triangles, positions, normals, texcoords, {}, flip_texcoord);

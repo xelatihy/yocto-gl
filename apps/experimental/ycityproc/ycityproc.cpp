@@ -226,8 +226,9 @@ vec3f get_building_color(const string& building_color) {
 
 bool geojson_to_scene(sceneio_scene& scene, const geojson_scene& geojson,
     const string& dirname, string& ioerror) {
-  scene.name      = geojson.name;
-  auto& camera    = get_camera(scene, add_camera(scene));
+  scene.asset.name = geojson.name;
+  scene.camera_names.emplace_back("camera");
+  auto& camera    = scene.cameras.emplace_back();
   camera.frame    = frame3f{{-0.028f, 0.0f, 1.0f}, {0.764f, 0.645f, 0.022f},
       {-0.645f, 0.764f, -0.018f}, {-13.032f, 16.750f, -1.409f}};
   camera.lens     = 0.035;
@@ -235,15 +236,19 @@ bool geojson_to_scene(sceneio_scene& scene, const geojson_scene& geojson,
   camera.focus    = 3.9;
   camera.film     = 0.024;
   camera.aspect   = 1;
-  auto& floor     = get_instance(scene, add_instance(scene, "floor"));
-  floor.shape     = add_shape(scene, "floor");
-  floor.material  = add_shape(scene, "material");
-  auto floor_size = 60.0f;
-  get_shape(scene, floor.shape).positions   = {{-floor_size, 0, floor_size},
-      {floor_size, 0, floor_size}, {floor_size, 0, -floor_size},
-      {-floor_size, 0, -floor_size}};
-  get_shape(scene, floor.shape).triangles   = {{0, 1, 2}, {2, 3, 0}};
-  get_material(scene, floor.material).color = {0.725, 0.71, 0.68};
+  scene.instance_names.emplace_back("floor");
+  scene.material_names.emplace_back("floor");
+  scene.shape_names.emplace_back("floor");
+  auto& floor      = scene.instances.emplace_back();
+  auto& floors     = scene.shapes.emplace_back();
+  auto& floorm     = scene.materials.emplace_back();
+  floor.shape      = (int)scene.shapes.size() - 1;
+  floor.material   = (int)scene.materials.size() - 1;
+  auto floor_size  = 60.0f;
+  floors.positions = {{-floor_size, 0, floor_size}, {floor_size, 0, floor_size},
+      {floor_size, 0, -floor_size}, {-floor_size, 0, -floor_size}};
+  floors.triangles = {{0, 1, 2}, {2, 3, 0}};
+  floorm.color     = {0.725, 0.71, 0.68};
 
   add_sky(scene);
 
@@ -253,25 +258,25 @@ bool geojson_to_scene(sceneio_scene& scene, const geojson_scene& geojson,
     auto shape_it = std::find_if(geojson.shapes.begin(), geojson.shapes.end(),
         [name](auto& shape) { return shape.name == name; });
     if (shape_it == geojson.shapes.end()) return invalid_handle;
-    auto& gshape    = *shape_it;
-    auto  handle    = add_shape(scene, name);
-    auto& shape     = get_shape(scene, handle);
+    auto& gshape = *shape_it;
+    scene.shape_names.emplace_back(name);
+    auto& shape     = scene.shapes.emplace_back();
     shape.triangles = gshape.shape.triangles;
     shape.quads     = gshape.shape.quads;
     shape.positions = gshape.shape.positions;
     shape.normals   = gshape.shape.normals;
     shape.texcoords = gshape.shape.texcoords;
     shape.colors    = gshape.shape.colors;
-    return handle;
+    return (int)scene.shapes.size() - 1;
   };
 
   // add a tree shape
   auto add_tree_material = [](sceneio_scene& scene, const vec3f& color,
                                const string& name) -> shape_handle {
-    auto  handle   = add_material(scene, name);
-    auto& material = get_material(scene, handle);
+    scene.material_names.emplace_back(name);
+    auto& material = scene.materials.emplace_back();
     material.color = color;
-    return handle;
+    return (int)scene.materials.size() - 1;
   };
 
   // add building texture
@@ -283,10 +288,10 @@ bool geojson_to_scene(sceneio_scene& scene, const geojson_scene& geojson,
         [name](auto& texture) { return texture.name == name; });
     if (texture_it == geojson.textures.end()) return invalid_handle;
     auto& gtexture = *texture_it;
-    auto  handle   = add_texture(scene, name);
-    auto& texture  = get_texture(scene, handle);
-    texture.ldr    = gtexture.img;
-    return handle;
+    scene.texture_names.emplace_back(name);
+    auto& texture = scene.textures.emplace_back();
+    texture.ldr   = gtexture.img;
+    return (int)scene.textures.size() - 1;
   };
 
   // tree shapes
@@ -345,7 +350,8 @@ bool geojson_to_scene(sceneio_scene& scene, const geojson_scene& geojson,
       if (type_s == geojson_element_type::tree &&
           element.tree == geojson_tree_type::standard) {
         for (auto& elem : element.new_coords) {
-          auto& tree    = get_instance(scene, add_instance(scene, name));
+          scene.instance_names.emplace_back(name);
+          auto& tree    = scene.instances.emplace_back();
           auto  coord   = vec3f{(float)elem[0], 0, (float)elem[1]};
           auto  x       = coord.x + 0.09f;
           auto  z       = coord.z + 0.09f;
@@ -357,7 +363,8 @@ bool geojson_to_scene(sceneio_scene& scene, const geojson_scene& geojson,
       } else if (type_s == geojson_element_type::tree &&
                  element.tree == geojson_tree_type::palm) {
         for (auto& elem : element.new_coords) {
-          auto& tree    = get_instance(scene, add_instance(scene, name));
+          scene.instance_names.emplace_back(name);
+          auto& tree    = scene.instances.emplace_back();
           auto  coord   = vec3f{(float)elem[0], 0, (float)elem[1]};
           tree.shape    = shape_palm;
           tree.material = material_palm;
@@ -367,7 +374,8 @@ bool geojson_to_scene(sceneio_scene& scene, const geojson_scene& geojson,
       } else if (type_s == geojson_element_type::tree &&
                  element.tree == geojson_tree_type::cypress) {
         for (auto& elem : element.new_coords) {
-          auto& tree    = get_instance(scene, add_instance(scene, name));
+          scene.instance_names.emplace_back(name);
+          auto& tree    = scene.instances.emplace_back();
           auto  coord   = vec3f{(float)elem[0], 0, (float)elem[1]};
           tree.shape    = shape_cypress;
           tree.material = material_cypress;
@@ -377,7 +385,8 @@ bool geojson_to_scene(sceneio_scene& scene, const geojson_scene& geojson,
       } else if (type_s == geojson_element_type::tree &&
                  element.tree == geojson_tree_type::oak) {
         for (auto& elem : element.new_coords) {
-          auto& tree    = get_instance(scene, add_instance(scene, name));
+          scene.instance_names.emplace_back(name);
+          auto& tree    = scene.instances.emplace_back();
           auto  coord   = vec3f{(float)elem[0], 0, (float)elem[1]};
           tree.shape    = shape_oak;
           tree.material = material_oak;
@@ -386,7 +395,8 @@ bool geojson_to_scene(sceneio_scene& scene, const geojson_scene& geojson,
         }
       } else if (type_s == geojson_element_type::tree &&
                  element.tree == geojson_tree_type::pine) {
-        auto& tree = get_instance(scene, add_instance(scene, name));
+        scene.instance_names.emplace_back(name);
+        auto& tree = scene.instances.emplace_back();
         for (auto& elem : element.new_coords) {
           auto coord    = vec3f{(float)elem[0], 0, (float)elem[1]};
           tree.shape    = shape_pine;
@@ -395,18 +405,21 @@ bool geojson_to_scene(sceneio_scene& scene, const geojson_scene& geojson,
               vec3f{0.0f, 0.0f, 1.0f}, vec3f{coord.x, coord.y, coord.z}};
         }
       } else {
-        auto  polygon       = vector<vector<double2>>{};
-        auto& instance      = get_instance(scene, add_instance(scene, name));
-        instance.shape      = add_shape(scene, name);
-        instance.material   = add_material(scene, name);
-        auto& shape         = get_shape(scene, instance.shape);
-        auto& material      = get_material(scene, instance.material);
-        auto  triangles     = vector<vec3i>{};
-        auto  positions     = vector<vec3f>{};
-        auto  vect_building = vector<double2>{};
-        auto  height        = element.height;
-        auto  level         = element.level > 0 ? element.level : 0;
-        auto  type          = element.type;
+        auto polygon = vector<vector<double2>>{};
+        scene.instance_names.push_back(name);
+        scene.shape_names.push_back(name);
+        scene.material_names.push_back(name);
+        auto& instance     = scene.instances.emplace_back();
+        auto& shape        = scene.shapes.emplace_back();
+        auto& material     = scene.materials.emplace_back();
+        instance.shape     = (int)scene.shapes.size() - 1;
+        instance.material  = (int)scene.materials.size() - 1;
+        auto triangles     = vector<vec3i>{};
+        auto positions     = vector<vec3f>{};
+        auto vect_building = vector<double2>{};
+        auto height        = element.height;
+        auto level         = element.level > 0 ? element.level : 0;
+        auto type          = element.type;
 
         for (auto& elem : element.new_coords) {
           auto coord = vec3f{(float)elem[0], height, (float)elem[1]};
@@ -470,11 +483,14 @@ bool geojson_to_scene(sceneio_scene& scene, const geojson_scene& geojson,
 
         // Filling buildings
         if (type == geojson_element_type::building) {
-          auto& instance2    = get_instance(scene, add_instance(scene, name));
-          instance2.shape    = add_shape(scene, name);
-          instance2.material = add_material(scene, name);
-          auto& shape2       = get_shape(scene, instance2.shape);
-          auto& material2    = get_material(scene, instance2.material);
+          scene.instance_names.push_back(name);
+          scene.shape_names.push_back(name);
+          scene.material_names.push_back(name);
+          auto& instance2    = scene.instances.emplace_back();
+          auto& shape2       = scene.shapes.emplace_back();
+          auto& material2    = scene.materials.emplace_back();
+          instance2.shape    = (int)scene.shapes.size() - 1;
+          instance2.material = (int)scene.materials.size() - 1;
 
           material2.color = color;
           auto _polygon2  = positions;
@@ -545,21 +561,23 @@ bool geojson_to_scene(sceneio_scene& scene, const geojson_scene& geojson,
 
         // Gabled roof
         if (type_roof == geojson_roof_type::gabled) {
-          auto  polygon_roof = vector<vector<double2>>{};
-          auto& instancer    = get_instance(
-              scene, add_instance(scene, name + "_roof1"));
-          instancer.shape      = add_shape(scene, name);
-          instancer.material   = add_material(scene, name);
-          auto& shaper         = get_shape(scene, instancer.shape);
-          auto& materialr      = get_material(scene, instancer.material);
-          auto  triangles_roof = vector<vec3i>{};
-          auto  positions_roof = vector<vec3f>{};
-          auto  vect_roof      = vector<double2>{};
-          auto  height         = element.height;
-          auto  roof_height    = element.roof_height;
-          auto  centroid_x = 0.0f, centroid_y = 0.0f;
-          auto  num_vert  = (int)element.new_coords.size();
-          auto  num_holes = (int)element.new_holes.size();
+          auto polygon_roof = vector<vector<double2>>{};
+          scene.instance_names.push_back(name + "_roof1");
+          scene.shape_names.push_back(name + "_roof1");
+          scene.material_names.push_back(name + "_roof1");
+          auto& instancer     = scene.instances.emplace_back();
+          auto& shaper        = scene.shapes.emplace_back();
+          auto& materialr     = scene.materials.emplace_back();
+          instancer.shape     = (int)scene.shapes.size() - 1;
+          instancer.material  = (int)scene.materials.size() - 1;
+          auto triangles_roof = vector<vec3i>{};
+          auto positions_roof = vector<vec3f>{};
+          auto vect_roof      = vector<double2>{};
+          auto height         = element.height;
+          auto roof_height    = element.roof_height;
+          auto centroid_x = 0.0f, centroid_y = 0.0f;
+          auto num_vert  = (int)element.new_coords.size();
+          auto num_holes = (int)element.new_holes.size();
 
           if (num_holes == 0) {
             for (auto& elem : element.new_coords) {
@@ -586,12 +604,14 @@ bool geojson_to_scene(sceneio_scene& scene, const geojson_scene& geojson,
             }
 
             // Filling roofs
-            auto& instancer2 = get_instance(
-                scene, add_instance(scene, name + "_roof2"));
-            instancer2.shape     = add_shape(scene, name);
-            instancer2.material  = add_material(scene, name);
-            auto& shaper2        = get_shape(scene, instancer2.shape);
-            auto& materialr2     = get_material(scene, instancer2.material);
+            scene.instance_names.push_back(name + "_roof2");
+            scene.shape_names.push_back(name + "_roof2");
+            scene.material_names.push_back(name + "_roof2");
+            auto& instancer2     = scene.instances.emplace_back();
+            auto& shaper2        = scene.shapes.emplace_back();
+            auto& materialr2     = scene.materials.emplace_back();
+            instancer2.shape     = (int)scene.shapes.size() - 1;
+            instancer2.material  = (int)scene.materials.size() - 1;
             materialr2.color     = roof_color;
             auto _polygon2_roof  = positions_roof;
             auto triangles2_roof = vector<vec3i>{};

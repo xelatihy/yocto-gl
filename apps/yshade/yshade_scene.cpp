@@ -184,7 +184,7 @@ int run_shade_scene(const shade_scene_params& params) {
     print_fatal(ioerror);
 
   // get camera
-  app->iocamera = get_camera_handle(app->ioscene, "");
+  app->iocamera = find_camera(app->ioscene, "");
 
   // tesselation
   tesselate_shapes(app->ioscene, print_progress);

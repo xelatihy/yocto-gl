@@ -47,6 +47,7 @@
 #include "yocto_geometry.h"
 #include "yocto_image.h"
 #include "yocto_math.h"
+#include "yocto_shape.h"
 
 // -----------------------------------------------------------------------------
 // USING DIRECTIVES
@@ -205,6 +206,14 @@ struct scene_subdiv {
   shape_handle shape = invalid_handle;
 };
 
+// Metadata associated with the scene
+struct scene_asset {
+  // additional information
+  string name      = "";
+  string copyright = "";
+  string generator = "Yocto/GL - https://github.com/xelatihy/yocto-gl";
+};
+
 // Scene comprised an array of objects whose memory is owened by the scene.
 // All members are optional,Scene objects (camera, instances, environments)
 // have transforms defined internally. A scene can optionally contain a
@@ -213,10 +222,6 @@ struct scene_subdiv {
 // the hierarchy. Animation is also optional, with keyframe data that
 // updates node transformations only if defined.
 struct scene_scene {
-  // additional information
-  string name      = "";
-  string copyright = "";
-
   // scene elements
   vector<scene_camera>      cameras      = {};
   vector<scene_instance>    instances    = {};
@@ -225,6 +230,9 @@ struct scene_scene {
   vector<scene_texture>     textures     = {};
   vector<scene_material>    materials    = {};
   vector<scene_subdiv>      subdivs      = {};
+
+  // scene metadata
+  scene_asset asset = {};
 
   // names (this will be cleanup significantly later)
   vector<string> camera_names      = {};
@@ -243,38 +251,87 @@ struct scene_scene {
 // -----------------------------------------------------------------------------
 namespace yocto {
 
-// add element to a scene
-camera_handle      add_camera(scene_scene& scene, const string& name = "");
-environment_handle add_environment(scene_scene& scene, const string& name = "");
-instance_handle    add_instance(scene_scene& scene, const string& name = "");
-material_handle    add_material(scene_scene& scene, const string& name = "");
-material_handle    add_shape(scene_scene& scene, const string& name = "");
-texture_handle     add_texture(scene_scene& scene, const string& name = "");
-subdiv_handle      add_subdiv(scene_scene& scene, const string& name = "");
-instance_handle add_complete_instance(scene_scene& scene, const string& name);
-
-// get element from a scene
-scene_camera&      get_camera(scene_scene& scene, camera_handle handle);
-scene_environment& get_environment(
-    scene_scene& scene, environment_handle handle);
-scene_instance& get_instance(scene_scene& scene, instance_handle handle);
-scene_material& get_material(scene_scene& scene, material_handle handle);
-scene_shape&    get_shape(scene_scene& scene, shape_handle handle);
-scene_texture&  get_texture(scene_scene& scene, texture_handle handle);
-scene_subdiv&   get_subdiv(scene_scene& scene, subdiv_handle handle);
-
-// get element from a scene
-const scene_camera& get_camera(const scene_scene& scene, camera_handle handle);
-const scene_environment& get_environment(
-    const scene_scene& scene, environment_handle handle);
-const scene_instance& get_instance(
-    const scene_scene& scene, instance_handle handle);
-const scene_material& get_material(
-    const scene_scene& scene, material_handle handle);
-const scene_shape&   get_shape(const scene_scene& scene, shape_handle handle);
-const scene_texture& get_texture(
-    const scene_scene& scene, texture_handle handle);
-const scene_subdiv& get_subdiv(const scene_scene& scene, subdiv_handle handle);
+// add scene elements
+camera_handle      add_camera(scene_scene& scene, const string& name,
+         const vec3f& from, const vec3f& to, const vec3f& up, float lens,
+         float aspect, float aperture = 0, bool orthographic = false,
+         float film = 0.036);
+camera_handle      add_camera(scene_scene& scene, const string& name,
+         const frame3f& frame, float lens, float aspect, float aperture = 0,
+         float focus = 10, bool orthographic = false, float film = 0.036);
+instance_handle    add_instance(scene_scene& scene, const string& name,
+       const frame3f& frame, shape_handle shape, material_handle material);
+environment_handle add_environment(scene_scene& scene, const string& name,
+    const frame3f& frame, const vec3f& emission,
+    texture_handle emission_tex = invalid_handle);
+texture_handle     add_texture(scene_scene& scene, const string& name,
+        const image<vec4f>& img, bool hdr = false, bool ldr_linear = false);
+shape_handle       add_shape(
+          scene_scene& scene, const string& name, const quads_shape& shape_data);
+shape_handle add_shape(
+    scene_scene& scene, const string& name, const fvshape_data& shape_data);
+subdiv_handle   add_subdiv(scene_scene& scene, const string& name,
+      const quads_shape& shape_data, shape_handle shape, int subdivisions = 0,
+      float displacement = 0, texture_handle displacement_tex = invalid_handle);
+subdiv_handle   add_subdiv(scene_scene& scene, const string& name,
+      const quads_fvshape& subdiv_data, shape_handle shape, int subdivisions = 0,
+      float displacement = 0, texture_handle displacement_tex = invalid_handle);
+material_handle add_emission_material(scene_scene& scene, const string& name,
+    const vec3f& emission, texture_handle emission_tex);
+material_handle add_matte_material(scene_scene& scene, const string& name,
+    const vec3f& color, texture_handle color_tex,
+    texture_handle normal_tex = invalid_handle);
+material_handle add_specular_material(scene_scene& scene, const string& name,
+    const vec3f& color, texture_handle color_tex, float roughness,
+    texture_handle roughness_tex = invalid_handle,
+    texture_handle normal_tex = invalid_handle, float ior = 1.5,
+    float specular = 1, texture_handle specular_tex = invalid_handle,
+    const vec3f&   spectint     = {1, 1, 1},
+    texture_handle spectint_tex = invalid_handle);
+material_handle add_metallic_material(scene_scene& scene, const string& name,
+    const vec3f& color, texture_handle color_tex, float roughness,
+    texture_handle roughness_tex = invalid_handle,
+    texture_handle normal_tex = invalid_handle, float metallic = 1,
+    texture_handle metallic_tex = invalid_handle);
+material_handle add_transmission_material(scene_scene& scene,
+    const string& name, const vec3f& color, texture_handle color_tex,
+    float roughness, texture_handle roughness_tex = invalid_handle,
+    texture_handle normal_tex = invalid_handle, float ior = 1.5,
+    float specular = 1, texture_handle specular_tex = invalid_handle,
+    float transmission = 1, texture_handle transmission_tex = invalid_handle);
+material_handle add_volumetric_material(scene_scene& scene, const string& name,
+    const vec3f& color, texture_handle color_tex, float roughness,
+    texture_handle roughness_tex  = invalid_handle,
+    const vec3f&   scattering     = {0, 0, 0},
+    texture_handle scattering_tex = invalid_handle,
+    texture_handle normal_tex = invalid_handle, float ior = 1.5,
+    float scanisotropy = 0, float trdepth = 0.01, float specular = 1,
+    texture_handle specular_tex = invalid_handle, float transmission = 1,
+    texture_handle transmission_tex = invalid_handle);
+material_handle add_volumetrict_material(scene_scene& scene, const string& name,
+    const vec3f& color, texture_handle color_tex, float roughness,
+    texture_handle roughness_tex  = invalid_handle,
+    const vec3f&   scattering     = {0, 0, 0},
+    texture_handle scattering_tex = invalid_handle,
+    texture_handle normal_tex = invalid_handle, float ior = 1.5,
+    float scanisotropy = 0, float trdepth = 0.01, float specular = 1,
+    texture_handle specular_tex = invalid_handle, float translucency = 1,
+    texture_handle translucency_tex = invalid_handle);
+material_handle add_specular_coated_material(scene_scene& scene,
+    const string& name, const vec3f& color, texture_handle color_tex,
+    float roughness, texture_handle roughness_tex = invalid_handle,
+    texture_handle normal_tex = invalid_handle, float ior = 1.5,
+    float specular = 1, texture_handle specular_tex = invalid_handle,
+    float coat = 1, texture_handle coat_tex = invalid_handle);
+material_handle add_metallic_coated_material(scene_scene& scene,
+    const string& name, const vec3f& color, texture_handle color_tex,
+    float roughness, texture_handle roughness_tex = invalid_handle,
+    texture_handle normal_tex = invalid_handle, float metallic = 1,
+    texture_handle metallic_tex = invalid_handle, float coat = 1,
+    texture_handle coat_tex = invalid_handle);
+material_handle add_transparent_material(scene_scene& scene, const string& name,
+    const vec3f& color, texture_handle color_tex, float opacity = 1,
+    texture_handle normal_tex = invalid_handle);
 
 // add missing elements
 void add_cameras(scene_scene& scene);
@@ -289,29 +346,7 @@ void trim_memory(scene_scene& scene);
 bbox3f compute_bounds(const scene_scene& scene);
 
 // get named camera or default if name is empty
-scene_camera&       get_camera(scene_scene& scene, const string& name);
-const scene_camera& get_camera(const scene_scene& scene, const string& name);
-camera_handle get_camera_handle(const scene_scene& scene, const string& name);
-
-// get name
-string get_camera_name(const scene_scene& scene, int idx);
-string get_environment_name(const scene_scene& scene, int idx);
-string get_shape_name(const scene_scene& scene, int idx);
-string get_texture_name(const scene_scene& scene, int idx);
-string get_instance_name(const scene_scene& scene, int idx);
-string get_material_name(const scene_scene& scene, int idx);
-string get_subdiv_name(const scene_scene& scene, int idx);
-
-string get_camera_name(const scene_scene& scene, const scene_camera& camera);
-string get_environment_name(
-    const scene_scene& scene, const scene_environment& environment);
-string get_shape_name(const scene_scene& scene, const scene_shape& shape);
-string get_texture_name(const scene_scene& scene, const scene_texture& texture);
-string get_instance_name(
-    const scene_scene& scene, const scene_instance& instance);
-string get_material_name(
-    const scene_scene& scene, const scene_material& material);
-string get_subdiv_name(const scene_scene& scene, const scene_subdiv& subdiv);
+camera_handle find_camera(const scene_scene& scene, const string& name);
 
 }  // namespace yocto
 
