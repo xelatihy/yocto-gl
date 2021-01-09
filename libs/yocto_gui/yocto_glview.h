@@ -78,7 +78,7 @@ void view_shape(const string& title, const string& name,
 
 // Open a window and show an scene via path tracing
 void view_scene(const string& title, const string& name, scene_scene& scene,
-    const string& camera = "", const progress_callback& progress_cb = {});
+    camera_handle camera, const progress_callback& progress_cb = {});
 
 // Open a window and show an scene via path tracing
 void view_scene(const string& title, const string& name, scene_scene& scene,

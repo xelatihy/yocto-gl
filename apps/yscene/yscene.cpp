@@ -630,7 +630,8 @@ int run_view(const view_params& params) {
   tesselate_shapes(scene, print_progress);
 
   // run view
-  view_scene("yscene", params.scene, scene, params.camera, print_progress);
+  view_scene("yscene", params.scene, scene, find_camera(scene, params.camera),
+      print_progress);
 
   // done
   return 0;
