@@ -122,6 +122,58 @@ auto zip(const vector<T1>& keys, const vector<T2>& values) {
   return wrapper{keys, values};
 }
 
+// get name
+static string get_camera_name(const scene_scene& scene, int idx) {
+  return scene.camera_names[idx];
+}
+static string get_environment_name(const scene_scene& scene, int idx) {
+  return scene.environment_names[idx];
+}
+static string get_shape_name(const scene_scene& scene, int idx) {
+  return scene.shape_names[idx];
+}
+static string get_texture_name(const scene_scene& scene, int idx) {
+  return scene.texture_names[idx];
+}
+static string get_instance_name(const scene_scene& scene, int idx) {
+  return scene.instance_names[idx];
+}
+static string get_material_name(const scene_scene& scene, int idx) {
+  return scene.material_names[idx];
+}
+static string get_subdiv_name(const scene_scene& scene, int idx) {
+  return scene.subdiv_names[idx];
+}
+
+static string get_camera_name(
+    const scene_scene& scene, const scene_camera& camera) {
+  return scene.camera_names.at(&camera - scene.cameras.data());
+}
+static string get_environment_name(
+    const scene_scene& scene, const scene_environment& environment) {
+  return scene.environment_names.at(&environment - scene.environments.data());
+}
+static string get_shape_name(
+    const scene_scene& scene, const scene_shape& shape) {
+  return scene.shape_names.at(&shape - scene.shapes.data());
+}
+static string get_texture_name(
+    const scene_scene& scene, const scene_texture& texture) {
+  return scene.texture_names.at(&texture - scene.textures.data());
+}
+static string get_instance_name(
+    const scene_scene& scene, const scene_instance& instance) {
+  return scene.instance_names.at(&instance - scene.instances.data());
+}
+static string get_material_name(
+    const scene_scene& scene, const scene_material& material) {
+  return scene.material_names.at(&material - scene.materials.data());
+}
+static string get_subdiv_name(
+    const scene_scene& scene, const scene_subdiv& subdiv) {
+  return scene.subdiv_names.at(&subdiv - scene.subdivs.data());
+}
+
 }  // namespace yocto
 
 // -----------------------------------------------------------------------------

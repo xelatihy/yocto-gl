@@ -627,55 +627,6 @@ material_handle add_transparent_material(scene_scene& scene, const string& name,
   return handle;
 }
 
-// get name
-string get_camera_name(const scene_scene& scene, int idx) {
-  return scene.camera_names[idx];
-}
-string get_environment_name(const scene_scene& scene, int idx) {
-  return scene.environment_names[idx];
-}
-string get_shape_name(const scene_scene& scene, int idx) {
-  return scene.shape_names[idx];
-}
-string get_texture_name(const scene_scene& scene, int idx) {
-  return scene.texture_names[idx];
-}
-string get_instance_name(const scene_scene& scene, int idx) {
-  return scene.instance_names[idx];
-}
-string get_material_name(const scene_scene& scene, int idx) {
-  return scene.material_names[idx];
-}
-string get_subdiv_name(const scene_scene& scene, int idx) {
-  return scene.subdiv_names[idx];
-}
-
-string get_camera_name(const scene_scene& scene, const scene_camera& camera) {
-  return scene.camera_names.at(&camera - scene.cameras.data());
-}
-string get_environment_name(
-    const scene_scene& scene, const scene_environment& environment) {
-  return scene.environment_names.at(&environment - scene.environments.data());
-}
-string get_shape_name(const scene_scene& scene, const scene_shape& shape) {
-  return scene.shape_names.at(&shape - scene.shapes.data());
-}
-string get_texture_name(
-    const scene_scene& scene, const scene_texture& texture) {
-  return scene.texture_names.at(&texture - scene.textures.data());
-}
-string get_instance_name(
-    const scene_scene& scene, const scene_instance& instance) {
-  return scene.instance_names.at(&instance - scene.instances.data());
-}
-string get_material_name(
-    const scene_scene& scene, const scene_material& material) {
-  return scene.material_names.at(&material - scene.materials.data());
-}
-string get_subdiv_name(const scene_scene& scene, const scene_subdiv& subdiv) {
-  return scene.subdiv_names.at(&subdiv - scene.subdivs.data());
-}
-
 // Add missing cameras.
 void add_cameras(scene_scene& scene) {
   if (!scene.cameras.empty()) return;
@@ -740,17 +691,18 @@ const scene_camera& get_camera(const scene_scene& scene, const string& name) {
 }
 camera_handle get_camera_handle(const scene_scene& scene, const string& name) {
   if (scene.cameras.empty()) return invalid_handle;
+  if (scene.camera_names.empty()) return 0;
   for (auto idx = 0; idx < (int)scene.camera_names.size(); idx++) {
-    if (get_camera_name(scene, idx) == name) return idx;
+    if (scene.camera_names[idx] == name) return idx;
   }
   for (auto idx = 0; idx < (int)scene.camera_names.size(); idx++) {
-    if (get_camera_name(scene, idx) == "default") return idx;
+    if (scene.camera_names[idx] == "default") return idx;
   }
   for (auto idx = 0; idx < (int)scene.camera_names.size(); idx++) {
-    if (get_camera_name(scene, idx) == "camera") return idx;
+    if (scene.camera_names[idx] == "camera") return idx;
   }
   for (auto idx = 0; idx < (int)scene.camera_names.size(); idx++) {
-    if (get_camera_name(scene, idx) == "camera1") return idx;
+    if (scene.camera_names[idx] == "camera1") return idx;
   }
   return 0;
 }

@@ -376,26 +376,6 @@ scene_camera&       get_camera(scene_scene& scene, const string& name);
 const scene_camera& get_camera(const scene_scene& scene, const string& name);
 camera_handle get_camera_handle(const scene_scene& scene, const string& name);
 
-// get name
-string get_camera_name(const scene_scene& scene, int idx);
-string get_environment_name(const scene_scene& scene, int idx);
-string get_shape_name(const scene_scene& scene, int idx);
-string get_texture_name(const scene_scene& scene, int idx);
-string get_instance_name(const scene_scene& scene, int idx);
-string get_material_name(const scene_scene& scene, int idx);
-string get_subdiv_name(const scene_scene& scene, int idx);
-
-string get_camera_name(const scene_scene& scene, const scene_camera& camera);
-string get_environment_name(
-    const scene_scene& scene, const scene_environment& environment);
-string get_shape_name(const scene_scene& scene, const scene_shape& shape);
-string get_texture_name(const scene_scene& scene, const scene_texture& texture);
-string get_instance_name(
-    const scene_scene& scene, const scene_instance& instance);
-string get_material_name(
-    const scene_scene& scene, const scene_material& material);
-string get_subdiv_name(const scene_scene& scene, const scene_subdiv& subdiv);
-
 }  // namespace yocto
 
 // -----------------------------------------------------------------------------
