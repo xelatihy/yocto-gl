@@ -47,6 +47,7 @@
 #include "yocto_geometry.h"
 #include "yocto_image.h"
 #include "yocto_math.h"
+#include "yocto_shape.h"
 
 // -----------------------------------------------------------------------------
 // USING DIRECTIVES
@@ -275,6 +276,88 @@ const scene_shape&   get_shape(const scene_scene& scene, shape_handle handle);
 const scene_texture& get_texture(
     const scene_scene& scene, texture_handle handle);
 const scene_subdiv& get_subdiv(const scene_scene& scene, subdiv_handle handle);
+
+// add scene elements
+camera_handle      add_camera(scene_scene& scene, const string& name,
+         const vec3f& from, const vec3f& to, const vec3f& up, float lens,
+         float aspect, float aperture = 0, bool orthographic = false,
+         float film = 0.036);
+camera_handle      add_camera(scene_scene& scene, const string& name,
+         const frame3f& frame, float lens, float aspect, float aperture = 0,
+         float focus = 10, bool orthographic = false, float film = 0.036);
+instance_handle    add_instance(scene_scene& scene, const string& name,
+       const frame3f& frame, shape_handle shape, material_handle material);
+environment_handle add_environment(scene_scene& scene, const string& name,
+    const frame3f& frame, const vec3f& emission,
+    texture_handle emission_tex = invalid_handle);
+texture_handle     add_texture(scene_scene& scene, const string& name,
+        const image<vec4f>& img, bool hdr = false, bool ldr_linear = false);
+shape_handle       add_shape(
+          scene_scene& scene, const string& name, const quads_shape& shape_data);
+shape_handle add_shape(
+    scene_scene& scene, const string& name, const fvshape_data& shape_data);
+subdiv_handle   add_subdiv(scene_scene& scene, const string& name,
+      const quads_shape& shape_data, shape_handle shape, int subdivisions = 0,
+      float displacement = 0, texture_handle displacement_tex = invalid_handle);
+subdiv_handle   add_subdiv(scene_scene& scene, const string& name,
+      const quads_fvshape& subdiv_data, shape_handle shape, int subdivisions = 0,
+      float displacement = 0, texture_handle displacement_tex = invalid_handle);
+material_handle add_emission_material(scene_scene& scene, const string& name,
+    const vec3f& emission, texture_handle emission_tex);
+material_handle add_matte_material(scene_scene& scene, const string& name,
+    const vec3f& color, texture_handle color_tex,
+    texture_handle normal_tex = invalid_handle);
+material_handle add_specular_material(scene_scene& scene, const string& name,
+    const vec3f& color, texture_handle color_tex, float roughness,
+    texture_handle roughness_tex = invalid_handle,
+    texture_handle normal_tex = invalid_handle, float ior = 1.5,
+    float specular = 1, texture_handle specular_tex = invalid_handle,
+    const vec3f&   spectint     = {1, 1, 1},
+    texture_handle spectint_tex = invalid_handle);
+material_handle add_metallic_material(scene_scene& scene, const string& name,
+    const vec3f& color, texture_handle color_tex, float roughness,
+    texture_handle roughness_tex = invalid_handle,
+    texture_handle normal_tex = invalid_handle, float metallic = 1,
+    texture_handle metallic_tex = invalid_handle);
+material_handle add_transmission_material(scene_scene& scene,
+    const string& name, const vec3f& color, texture_handle color_tex,
+    float roughness, texture_handle roughness_tex = invalid_handle,
+    texture_handle normal_tex = invalid_handle, float ior = 1.5,
+    float specular = 1, texture_handle specular_tex = invalid_handle,
+    float transmission = 1, texture_handle transmission_tex = invalid_handle);
+material_handle add_volumetric_material(scene_scene& scene, const string& name,
+    const vec3f& color, texture_handle color_tex, float roughness,
+    texture_handle roughness_tex  = invalid_handle,
+    const vec3f&   scattering     = {0, 0, 0},
+    texture_handle scattering_tex = invalid_handle,
+    texture_handle normal_tex = invalid_handle, float ior = 1.5,
+    float scanisotropy = 0, float trdepth = 0.01, float specular = 1,
+    texture_handle specular_tex = invalid_handle, float transmission = 1,
+    texture_handle transmission_tex = invalid_handle);
+material_handle add_volumetrict_material(scene_scene& scene, const string& name,
+    const vec3f& color, texture_handle color_tex, float roughness,
+    texture_handle roughness_tex  = invalid_handle,
+    const vec3f&   scattering     = {0, 0, 0},
+    texture_handle scattering_tex = invalid_handle,
+    texture_handle normal_tex = invalid_handle, float ior = 1.5,
+    float scanisotropy = 0, float trdepth = 0.01, float specular = 1,
+    texture_handle specular_tex = invalid_handle, float translucency = 1,
+    texture_handle translucency_tex = invalid_handle);
+material_handle add_specular_coated_material(scene_scene& scene,
+    const string& name, const vec3f& color, texture_handle color_tex,
+    float roughness, texture_handle roughness_tex = invalid_handle,
+    texture_handle normal_tex = invalid_handle, float ior = 1.5,
+    float specular = 1, texture_handle specular_tex = invalid_handle,
+    float coat = 1, texture_handle coat_tex = invalid_handle);
+material_handle add_metallic_coated_material(scene_scene& scene,
+    const string& name, const vec3f& color, texture_handle color_tex,
+    float roughness, texture_handle roughness_tex = invalid_handle,
+    texture_handle normal_tex = invalid_handle, float metallic = 1,
+    texture_handle metallic_tex = invalid_handle, float coat = 1,
+    texture_handle coat_tex = invalid_handle);
+material_handle add_transparent_material(scene_scene& scene, const string& name,
+    const vec3f& color, texture_handle color_tex, float opacity = 1,
+    texture_handle normal_tex = invalid_handle);
 
 // add missing elements
 void add_cameras(scene_scene& scene);

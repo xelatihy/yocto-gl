@@ -332,6 +332,301 @@ const scene_instance& get_complete_instance(
   return scene.instances.at(handle);
 }
 
+camera_handle add_camera(scene_scene& scene, const string& name,
+    const vec3f& from, const vec3f& to, const vec3f& up, float lens,
+    float aspect, float aperture, bool orthographic, float film) {
+  auto  handle        = add_camera(scene, name);
+  auto& camera        = get_camera(scene, handle);
+  camera.frame        = lookat_frame(from, to, up);
+  camera.lens         = lens;
+  camera.aspect       = aspect;
+  camera.film         = film;
+  camera.orthographic = orthographic;
+  camera.aperture     = aperture;
+  camera.focus        = length(from - to);
+  return handle;
+}
+camera_handle add_camera(scene_scene& scene, const string& name,
+    const frame3f& frame, float lens, float aspect, float aperture, float focus,
+    bool orthographic, float film) {
+  auto  handle        = add_camera(scene, name);
+  auto& camera        = get_camera(scene, handle);
+  camera.frame        = frame;
+  camera.lens         = lens;
+  camera.aspect       = aspect;
+  camera.film         = film;
+  camera.orthographic = orthographic;
+  camera.aperture     = aperture;
+  camera.focus        = focus;
+  return handle;
+}
+instance_handle add_instance(scene_scene& scene, const string& name,
+    const frame3f& frame, shape_handle shape, material_handle material) {
+  auto  handle      = add_instance(scene, name);
+  auto& instance    = get_instance(scene, handle);
+  instance.frame    = frame;
+  instance.shape    = shape;
+  instance.material = material;
+  return handle;
+}
+environment_handle add_environment(scene_scene& scene, const string& name,
+    const frame3f& frame, const vec3f& emission, texture_handle emission_tex) {
+  auto  handle             = add_environment(scene, name);
+  auto& environment        = get_environment(scene, handle);
+  environment.frame        = frame;
+  environment.emission     = emission;
+  environment.emission_tex = emission_tex;
+  return handle;
+}
+texture_handle add_texture(scene_scene& scene, const string& name,
+    const image<vec4f>& img, bool hdr, bool ldr_linear) {
+  auto  handle  = add_texture(scene, name);
+  auto& texture = get_texture(scene, handle);
+  if (hdr) {
+    texture.hdr = img;
+  } else {
+    texture.ldr = ldr_linear ? float_to_byte(img) : rgb_to_srgbb(img);
+  }
+  return handle;
+}
+shape_handle add_shape(
+    scene_scene& scene, const string& name, const quads_shape& shape_data) {
+  auto  handle    = add_shape(scene, name);
+  auto& shape     = get_shape(scene, handle);
+  shape.points    = shape_data.points;
+  shape.lines     = shape_data.lines;
+  shape.triangles = shape_data.triangles;
+  shape.quads     = shape_data.quads;
+  shape.positions = shape_data.positions;
+  shape.normals   = shape_data.normals;
+  shape.texcoords = shape_data.texcoords;
+  shape.colors    = shape_data.colors;
+  shape.radius    = shape_data.radius;
+  return handle;
+}
+shape_handle add_shape(
+    scene_scene& scene, const string& name, const fvshape_data& shape_data) {
+  auto  handle = add_shape(scene, name);
+  auto& shape  = get_shape(scene, handle);
+  std::tie(shape.quads, shape.positions, shape.normals, shape.texcoords) =
+      split_facevarying(shape_data.quadspos, shape_data.quadsnorm,
+          shape_data.quadstexcoord, shape_data.positions, shape_data.normals,
+          shape_data.texcoords);
+  return handle;
+}
+subdiv_handle add_subdiv(scene_scene& scene, const string& name,
+    const quads_shape& shape_data, shape_handle shape, int subdivisions,
+    float displacement, texture_handle displacement_tex) {
+  auto  handle    = add_subdiv(scene, name);
+  auto& subdiv    = get_subdiv(scene, handle);
+  auto& quads     = (!shape_data.quads.empty())
+                        ? shape_data.quads
+                        : triangles_to_quads(shape_data.triangles);
+  subdiv.quadspos = quads;
+  if (!shape_data.normals.empty()) subdiv.quadsnorm = quads;
+  if (!shape_data.texcoords.empty()) subdiv.quadstexcoord = quads;
+  subdiv.positions        = shape_data.positions;
+  subdiv.normals          = shape_data.normals;
+  subdiv.texcoords        = shape_data.texcoords;
+  subdiv.shape            = shape;
+  subdiv.subdivisions     = subdivisions;
+  subdiv.smooth           = subdivisions > 0 || displacement_tex;
+  subdiv.displacement     = displacement;
+  subdiv.displacement_tex = displacement_tex;
+  return handle;
+}
+subdiv_handle add_subdiv(scene_scene& scene, const string& name,
+    const quads_fvshape& subdiv_data, shape_handle shape, int subdivisions,
+    float displacement, texture_handle displacement_tex) {
+  auto  handle            = add_subdiv(scene, name);
+  auto& subdiv            = get_subdiv(scene, handle);
+  subdiv.quadspos         = subdiv_data.quadspos;
+  subdiv.quadsnorm        = subdiv_data.quadsnorm;
+  subdiv.quadstexcoord    = subdiv_data.quadstexcoord;
+  subdiv.positions        = subdiv_data.positions;
+  subdiv.normals          = subdiv_data.normals;
+  subdiv.texcoords        = subdiv_data.texcoords;
+  subdiv.shape            = shape;
+  subdiv.subdivisions     = subdivisions;
+  subdiv.smooth           = subdivisions > 0 || displacement_tex;
+  subdiv.displacement     = displacement;
+  subdiv.displacement_tex = displacement_tex;
+  return handle;
+}
+material_handle add_emission_material(scene_scene& scene, const string& name,
+    const vec3f& emission, texture_handle emission_tex) {
+  auto  handle          = add_material(scene, name);
+  auto& material        = get_material(scene, handle);
+  material.emission     = emission;
+  material.emission_tex = emission_tex;
+  return handle;
+}
+material_handle add_matte_material(scene_scene& scene, const string& name,
+    const vec3f& color, texture_handle color_tex, texture_handle normal_tex) {
+  auto  handle        = add_material(scene, name);
+  auto& material      = get_material(scene, handle);
+  material.color      = color;
+  material.color_tex  = color_tex;
+  material.roughness  = 1;
+  material.normal_tex = normal_tex;
+  return handle;
+}
+material_handle add_specular_material(scene_scene& scene, const string& name,
+    const vec3f& color, texture_handle color_tex, float roughness,
+    texture_handle roughness_tex, texture_handle normal_tex, float ior,
+    float specular, texture_handle specular_tex, const vec3f& spectint,
+    texture_handle spectint_tex) {
+  auto  handle           = add_material(scene, name);
+  auto& material         = get_material(scene, handle);
+  material.color         = color;
+  material.color_tex     = color_tex;
+  material.specular      = specular;
+  material.specular_tex  = specular_tex;
+  material.spectint      = spectint;
+  material.spectint_tex  = spectint_tex;
+  material.roughness     = roughness;
+  material.roughness_tex = roughness_tex;
+  material.ior           = ior;
+  material.normal_tex    = normal_tex;
+  return handle;
+}
+material_handle add_metallic_material(scene_scene& scene, const string& name,
+    const vec3f& color, texture_handle color_tex, float roughness,
+    texture_handle roughness_tex, texture_handle normal_tex, float metallic,
+    texture_handle metallic_tex) {
+  auto  handle           = add_material(scene, name);
+  auto& material         = get_material(scene, handle);
+  material.color         = color;
+  material.color_tex     = color_tex;
+  material.metallic      = metallic;
+  material.metallic_tex  = metallic_tex;
+  material.roughness     = roughness;
+  material.roughness_tex = roughness_tex;
+  material.normal_tex    = normal_tex;
+  return handle;
+}
+material_handle add_transmission_material(scene_scene& scene,
+    const string& name, const vec3f& color, texture_handle color_tex,
+    float roughness, texture_handle roughness_tex, texture_handle normal_tex,
+    float ior, float specular, texture_handle specular_tex, float transmission,
+    texture_handle transmission_tex) {
+  auto  handle              = add_material(scene, name);
+  auto& material            = get_material(scene, handle);
+  material.color            = color;
+  material.color_tex        = color_tex;
+  material.specular         = specular;
+  material.specular_tex     = specular_tex;
+  material.transmission     = transmission;
+  material.transmission_tex = transmission_tex;
+  material.roughness        = roughness;
+  material.roughness_tex    = roughness_tex;
+  material.ior              = ior;
+  material.thin             = true;
+  material.normal_tex       = normal_tex;
+  return handle;
+}
+material_handle add_volumetric_material(scene_scene& scene, const string& name,
+    const vec3f& color, texture_handle color_tex, float roughness,
+    texture_handle roughness_tex, const vec3f& scattering,
+    texture_handle scattering_tex, texture_handle normal_tex, float ior,
+    float scanisotropy, float trdepth, float specular,
+    texture_handle specular_tex, float transmission,
+    texture_handle transmission_tex) {
+  auto  handle              = add_material(scene, name);
+  auto& material            = get_material(scene, handle);
+  material.color            = color;
+  material.color_tex        = color_tex;
+  material.specular         = specular;
+  material.specular_tex     = specular_tex;
+  material.transmission     = transmission;
+  material.transmission_tex = transmission_tex;
+  material.roughness        = roughness;
+  material.roughness_tex    = roughness_tex;
+  material.scattering       = scattering;
+  material.scattering_tex   = scattering_tex;
+  material.ior              = ior;
+  material.scanisotropy     = scanisotropy;
+  material.trdepth          = trdepth;
+  material.normal_tex       = normal_tex;
+  material.thin             = false;
+  return handle;
+}
+material_handle add_volumetrict_material(scene_scene& scene, const string& name,
+    const vec3f& color, texture_handle color_tex, float roughness,
+    texture_handle roughness_tex, const vec3f& scattering,
+    texture_handle scattering_tex, texture_handle normal_tex, float ior,
+    float scanisotropy, float trdepth, float specular,
+    texture_handle specular_tex, float translucency,
+    texture_handle translucency_tex) {
+  auto  handle              = add_material(scene, name);
+  auto& material            = get_material(scene, handle);
+  material.color            = color;
+  material.color_tex        = color_tex;
+  material.specular         = specular;
+  material.specular_tex     = specular_tex;
+  material.translucency     = translucency;
+  material.translucency_tex = translucency_tex;
+  material.roughness        = roughness;
+  material.roughness_tex    = roughness_tex;
+  material.scattering       = scattering;
+  material.scattering_tex   = scattering_tex;
+  material.ior              = ior;
+  material.scanisotropy     = scanisotropy;
+  material.trdepth          = trdepth;
+  material.normal_tex       = normal_tex;
+  material.thin             = false;
+  return handle;
+}
+material_handle add_specular_coated_material(scene_scene& scene,
+    const string& name, const vec3f& color, texture_handle color_tex,
+    float roughness, texture_handle roughness_tex, texture_handle normal_tex,
+    float ior, float specular, texture_handle specular_tex, float coat,
+    texture_handle coat_tex) {
+  auto  handle           = add_material(scene, name);
+  auto& material         = get_material(scene, handle);
+  material.color         = color;
+  material.color_tex     = color_tex;
+  material.specular      = specular;
+  material.specular_tex  = specular_tex;
+  material.roughness     = roughness;
+  material.roughness_tex = roughness_tex;
+  material.coat          = coat;
+  material.coat_tex      = coat_tex;
+  material.ior           = ior;
+  material.normal_tex    = normal_tex;
+  return handle;
+}
+material_handle add_metallic_coated_material(scene_scene& scene,
+    const string& name, const vec3f& color, texture_handle color_tex,
+    float roughness, texture_handle roughness_tex, texture_handle normal_tex,
+    float metallic, texture_handle metallic_tex, float coat,
+    texture_handle coat_tex) {
+  auto  handle           = add_material(scene, name);
+  auto& material         = get_material(scene, handle);
+  material.color         = color;
+  material.color_tex     = color_tex;
+  material.metallic      = metallic;
+  material.metallic_tex  = metallic_tex;
+  material.roughness     = roughness;
+  material.roughness_tex = roughness_tex;
+  material.coat          = coat;
+  material.coat_tex      = coat_tex;
+  material.normal_tex    = normal_tex;
+  return handle;
+}
+material_handle add_transparent_material(scene_scene& scene, const string& name,
+    const vec3f& color, texture_handle color_tex, float opacity,
+    texture_handle normal_tex) {
+  auto  handle        = add_material(scene, name);
+  auto& material      = get_material(scene, handle);
+  material.color      = color;
+  material.color_tex  = color_tex;
+  material.roughness  = 1;
+  material.opacity    = opacity;
+  material.normal_tex = normal_tex;
+  return handle;
+}
+
 // get name
 string get_camera_name(const scene_scene& scene, int idx) {
   return scene.camera_names[idx];
