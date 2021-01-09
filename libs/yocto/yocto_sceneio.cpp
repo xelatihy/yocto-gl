@@ -463,9 +463,11 @@ static bool load_json_scene(const string& filename, scene_scene& scene,
       value = it->second.first;
       return it->second.first != invalid_handle;
     }
-    auto shape      = add_shape(scene, name);
-    shape_map[name] = {shape, false};
-    value           = shape;
+    scene.shape_names.emplace_back(name);
+    scene.shapes.emplace_back();
+    auto shape_id   = (int)scene.shapes.size() - 1;
+    shape_map[name] = {shape_id, false};
+    value           = shape_id;
     return true;
   };
 
@@ -479,9 +481,11 @@ static bool load_json_scene(const string& filename, scene_scene& scene,
       value = it->second.first;
       return it->second.first != invalid_handle;
     }
-    auto material      = add_material(scene, name);
-    material_map[name] = {material, false};
-    value              = material;
+    scene.material_names.emplace_back(name);
+    scene.materials.emplace_back();
+    auto material_id   = (int)scene.materials.size() - 1;
+    material_map[name] = {material_id, false};
+    value              = material_id;
     return true;
   };
 
@@ -495,9 +499,11 @@ static bool load_json_scene(const string& filename, scene_scene& scene,
       value = it->second.first;
       return it->second.first != invalid_handle;
     }
-    auto texture      = add_texture(scene, name);
-    texture_map[name] = {texture, false};
-    value             = texture;
+    scene.texture_names.emplace_back(name);
+    scene.textures.emplace_back();
+    auto texture_id   = (int)scene.textures.size() - 1;
+    texture_map[name] = {texture_id, false};
+    value             = texture_id;
     return true;
   };
 
@@ -603,11 +609,16 @@ static bool load_json_scene(const string& filename, scene_scene& scene,
       }
     } else if (gname == "materials") {
       for (auto [name, element] : iterate_object(group)) {
-        auto  material_it = material_map.find(string{name});
-        auto  handle      = (material_it == material_map.end())
-                                ? add_material(scene, string{name})
-                                : material_it->second.first;
-        auto& material    = scene.materials[handle];
+        auto material_it = material_map.find(string{name});
+        auto handle      = invalid_handle;
+        if (material_it == material_map.end()) {
+          scene.material_names.emplace_back(name);
+          scene.materials.emplace_back();
+          handle = (int)scene.materials.size() - 1;
+        } else {
+          handle = material_it->second.first;
+        }
+        auto& material = scene.materials[handle];
         for (auto [key, value] : iterate_object(element)) {
           if (key == "emission") {
             get_value(value, material.emission);

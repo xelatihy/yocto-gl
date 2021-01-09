@@ -89,8 +89,8 @@ void view_shape(const string& title, const string& name,
   // initialize path tracer scene
   auto scene = scene_scene{};
   print_progress("create scene", 0, 1);
-  auto  shandle     = add_shape(scene, "shape");
-  auto& ioshape     = scene.shapes[shandle];
+  scene.shape_names.emplace_back("shape");
+  auto& ioshape     = scene.shapes.emplace_back();
   ioshape.points    = shape.points;
   ioshape.lines     = shape.lines;
   ioshape.triangles = shape.triangles;
@@ -100,9 +100,9 @@ void view_shape(const string& title, const string& name,
   ioshape.texcoords = shape.texcoords;
   ioshape.colors    = shape.colors;
   ioshape.radius    = shape.radius;
-  auto  ihandle     = add_instance(scene, "instance");
-  auto& instance    = scene.instances[ihandle];
-  instance.shape    = shandle;
+  scene.instance_names.emplace_back("instance");
+  auto& instance = scene.instances.emplace_back();
+  instance.shape = 0;
   add_cameras(scene);
   add_materials(scene);
   if (addsky) add_sky(scene);
