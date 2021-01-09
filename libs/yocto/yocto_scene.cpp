@@ -605,7 +605,7 @@ void add_materials(scene_scene& scene) {
   for (auto& instance : scene.instances) {
     if (instance.material != invalid_handle) continue;
     if (default_material == invalid_handle) {
-      default_material = add_material(scene);
+      default_material = add_material(scene, "default");
       auto& material   = scene.materials[default_material];
       material.color   = {0.8, 0.8, 0.8};
     }
@@ -1209,7 +1209,7 @@ namespace yocto {
 
 void make_cornellbox(scene_scene& scene) {
   scene.asset.name = "cornellbox";
-  auto& camera     = scene.cameras[add_camera(scene)];
+  auto& camera     = scene.cameras[add_camera(scene, "camera")];
   camera.frame     = frame3f{{1, 0, 0}, {0, 1, 0}, {0, 0, 1}, {0, 1, 3.9}};
   camera.lens      = 0.035;
   camera.aperture  = 0.0;

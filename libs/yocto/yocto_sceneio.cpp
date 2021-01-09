@@ -1143,8 +1143,7 @@ static bool load_obj_scene(const string& filename, scene_scene& scene,
 
   // convert cameras
   for (auto& ocamera : obj.cameras) {
-    auto& camera = scene.cameras[add_camera(scene)];
-    // camera.name         = make_safe_name("camera", ocamera.name);
+    auto& camera        = scene.cameras.emplace_back();
     camera.frame        = ocamera.frame;
     camera.orthographic = ocamera.ortho;
     camera.film         = max(ocamera.width, ocamera.height);
@@ -1163,9 +1162,9 @@ static bool load_obj_scene(const string& filename, scene_scene& scene,
     if (path.empty()) return invalid_handle;
     auto it = ctexture_map.find(path);
     if (it != ctexture_map.end()) return it->second;
-    auto texture       = add_texture(scene);
-    ctexture_map[path] = texture;
-    return texture;
+    scene.textures.emplace_back();
+    ctexture_map[path] = (int)scene.textures.size() - 1;
+    return (int)scene.textures.size() - 1;
   };
 
   // helper to create texture maps
@@ -1177,17 +1176,15 @@ static bool load_obj_scene(const string& filename, scene_scene& scene,
     if (path.empty()) return invalid_handle;
     auto it = stexture_map.find(path);
     if (it != stexture_map.end()) return it->second;
-    auto texture       = add_texture(scene);
-    stexture_map[path] = texture;
-    return texture;
+    scene.textures.emplace_back();
+    stexture_map[path] = (int)scene.textures.size() - 1;
+    return (int)scene.textures.size() - 1;
   };
 
   // handler for materials
   auto material_map = unordered_map<string, material_handle>{};
   for (auto& omaterial : obj.materials) {
-    auto  handle   = add_material(scene);
-    auto& material = scene.materials[handle];
-    // material.name             = make_safe_name("material", omaterial.name);
+    auto& material            = scene.materials.emplace_back();
     material.emission         = omaterial.pbr_emission;
     material.color            = omaterial.pbr_base;
     material.specular         = omaterial.pbr_specular;
@@ -1213,7 +1210,7 @@ static bool load_obj_scene(const string& filename, scene_scene& scene,
     material.opacity_tex      = get_stexture(omaterial.pbr_opacity_tex);
     material.normal_tex       = get_ctexture(omaterial.normal_tex);
     material.scattering_tex   = get_ctexture(omaterial.pbr_volscattering_tex);
-    material_map[omaterial.name] = handle;
+    material_map[omaterial.name] = (int)scene.materials.size() - 1;
   }
 
   // convert shapes
@@ -1223,8 +1220,7 @@ static bool load_obj_scene(const string& filename, scene_scene& scene,
     if (materials.empty()) materials.push_back(nullptr);
     for (auto material_idx = 0; material_idx < materials.size();
          material_idx++) {
-      auto  shape_handle = add_shape(scene);
-      auto& shape        = scene.shapes[shape_handle];
+      auto& shape = scene.shapes.emplace_back();
       if (material_map.find(materials[material_idx]) == material_map.end())
         return material_error(materials[material_idx]);
       auto material   = material_map.at(materials[material_idx]);
@@ -1244,15 +1240,16 @@ static bool load_obj_scene(const string& filename, scene_scene& scene,
       } else {
         return shape_error();
       }
+      auto shape_id = (int)scene.shapes.size() - 1;
       if (oshape.instances.empty()) {
-        auto& instance    = scene.instances[add_instance(scene)];
-        instance.shape    = shape_handle;
+        auto& instance    = scene.instances.emplace_back();
+        instance.shape    = shape_id;
         instance.material = material;
       } else {
         for (auto& frame : oshape.instances) {
-          auto instance     = scene.instances[add_instance(scene)];
+          auto instance     = scene.instances.emplace_back();
           instance.frame    = frame;
-          instance.shape    = shape_handle;
+          instance.shape    = shape_id;
           instance.material = material;
         }
       }
@@ -1261,7 +1258,7 @@ static bool load_obj_scene(const string& filename, scene_scene& scene,
 
   // convert environments
   for (auto& oenvironment : obj.environments) {
-    auto& environment        = scene.environments[add_environment(scene)];
+    auto& environment        = scene.environments.emplace_back();
     environment.frame        = oenvironment.frame;
     environment.emission     = oenvironment.emission;
     environment.emission_tex = get_ctexture(oenvironment.emission_tex);
@@ -1448,8 +1445,7 @@ static bool load_ply_scene(const string& filename, scene_scene& scene,
   if (progress_cb) progress_cb("load scene", progress.x++, progress.y);
 
   // load ply mesh
-  auto  handle        = add_shape(scene);
-  auto& shape         = scene.shapes[handle];
+  auto& shape         = scene.shapes.emplace_back();
   auto  quadspos      = vector<vec4i>{};
   auto  quadsnorm     = vector<vec4i>{};
   auto  quadstexcoord = vector<vec4i>{};
@@ -1460,8 +1456,8 @@ static bool load_ply_scene(const string& filename, scene_scene& scene,
     return false;
 
   // create instance
-  auto& instance = scene.instances[add_instance(scene)];
-  instance.shape = handle;
+  auto& instance = scene.instances.emplace_back();
+  instance.shape = (int)scene.shapes.size() - 1;
 
   // fix scene
   add_cameras(scene);
@@ -1512,8 +1508,7 @@ static bool load_stl_scene(const string& filename, scene_scene& scene,
   if (progress_cb) progress_cb("load scene", progress.x++, progress.y);
 
   // load stl mesh
-  auto  handle        = add_shape(scene);
-  auto& shape         = scene.shapes[handle];
+  auto& shape         = scene.shapes.emplace_back();
   auto  quadspos      = vector<vec4i>{};
   auto  quadsnorm     = vector<vec4i>{};
   auto  quadstexcoord = vector<vec4i>{};
@@ -1524,8 +1519,8 @@ static bool load_stl_scene(const string& filename, scene_scene& scene,
     return false;
 
   // create instance
-  auto& instance = scene.instances[add_instance(scene)];
-  instance.shape = handle;
+  auto& instance = scene.instances.emplace_back();
+  instance.shape = (int)scene.shapes.size() - 1;
 
   // fix scene
   add_cameras(scene);
@@ -1648,7 +1643,7 @@ static bool load_gltf_scene(const string& filename, scene_scene& scene,
     auto mat = mat4f{};
     cgltf_node_transform_world(gnde, &mat.x.x);
     auto  gcam          = gnde->camera;
-    auto& camera        = scene.cameras[add_camera(scene)];
+    auto& camera        = scene.cameras.emplace_back();
     camera.frame        = mat_to_frame(mat);
     camera.orthographic = gcam->type == cgltf_camera_type_orthographic;
     if (camera.orthographic) {
@@ -1681,9 +1676,9 @@ static bool load_gltf_scene(const string& filename, scene_scene& scene,
     if (path.empty()) return invalid_handle;
     auto it = ctexture_map.find(path);
     if (it != ctexture_map.end()) return it->second;
-    auto texture       = add_texture(scene);
-    ctexture_map[path] = texture;
-    return texture;
+    scene.textures.emplace_back();
+    ctexture_map[path] = (int)scene.textures.size() - 1;
+    return (int)scene.textures.size() - 1;
   };
   // convert color opacity textures
   auto cotexture_map =
@@ -1697,10 +1692,12 @@ static bool load_gltf_scene(const string& filename, scene_scene& scene,
     if (path.empty()) return {invalid_handle, invalid_handle};
     auto it = cotexture_map.find(path);
     if (it != cotexture_map.end()) return it->second;
-    auto color_texture   = add_texture(scene);
-    auto opacity_texture = add_texture(scene);
-    cotexture_map[path]  = {color_texture, opacity_texture};
-    return {color_texture, opacity_texture};
+    scene.textures.emplace_back();
+    scene.textures.emplace_back();
+    auto ids = pair<int, int>{
+        (int)scene.textures.size() - 2, (int)scene.textures.size() - 1};
+    cotexture_map[path] = ids;
+    return ids;
   };
   // convert textures
   auto mrtexture_map =
@@ -1714,10 +1711,12 @@ static bool load_gltf_scene(const string& filename, scene_scene& scene,
     if (path.empty()) return {invalid_handle, invalid_handle};
     auto it = mrtexture_map.find(path);
     if (it != mrtexture_map.end()) return it->second;
-    auto metallic_texture  = add_texture(scene);
-    auto roughness_texture = add_texture(scene);
-    mrtexture_map[path]    = {metallic_texture, roughness_texture};
-    return {metallic_texture, roughness_texture};
+    scene.textures.emplace_back();
+    scene.textures.emplace_back();
+    auto ids = pair<int, int>{
+        (int)scene.textures.size() - 2, (int)scene.textures.size() - 1};
+    mrtexture_map[path] = ids;
+    return ids;
   };
 
   // convert materials
@@ -1725,8 +1724,7 @@ static bool load_gltf_scene(const string& filename, scene_scene& scene,
       {nullptr, invalid_handle}};
   for (auto mid = 0; mid < gltf->materials_count; mid++) {
     auto  gmaterial       = &gltf->materials[mid];
-    auto  mhandle         = add_material(scene);
-    auto& material        = scene.materials[mhandle];
+    auto& material        = scene.materials.emplace_back();
     material.emission     = {gmaterial->emissive_factor[0],
         gmaterial->emissive_factor[1], gmaterial->emissive_factor[2]};
     material.emission_tex = get_ctexture(gmaterial->emissive_texture);
@@ -1744,7 +1742,7 @@ static bool load_gltf_scene(const string& filename, scene_scene& scene,
           gmr->metallic_roughness_texture);
     }
     material.normal_tex     = get_ctexture(gmaterial->normal_texture);
-    material_map[gmaterial] = mhandle;
+    material_map[gmaterial] = (int)scene.materials.size() - 1;
   }
 
   // convert meshes
@@ -1755,10 +1753,9 @@ static bool load_gltf_scene(const string& filename, scene_scene& scene,
     for (auto sid = 0; sid < gmesh->primitives_count; sid++) {
       auto gprim = &gmesh->primitives[sid];
       if (gprim->attributes_count == 0) continue;
-      auto  shandle     = add_shape(scene);
-      auto& shape       = scene.shapes[shandle];
+      auto& shape       = scene.shapes.emplace_back();
       auto  instance    = scene_instance{};
-      instance.shape    = shandle;
+      instance.shape    = (int)scene.shapes.size() - 1;
       instance.material = material_map.at(gprim->material);
       mesh_map[gmesh].push_back(instance);
       for (auto aid = 0; aid < gprim->attributes_count; aid++) {
@@ -1909,7 +1906,7 @@ static bool load_gltf_scene(const string& filename, scene_scene& scene,
     auto mat = mat4f{};
     cgltf_node_transform_world(gnde, &mat.x.x);
     for (auto& prims : mesh_map.at(gnde->mesh)) {
-      auto& instance = scene.instances[add_instance(scene)];
+      auto& instance = scene.instances.emplace_back();
       instance       = prims;
     }
   }
@@ -2426,7 +2423,7 @@ static bool load_pbrt_scene(const string& filename, scene_scene& scene,
 
   // convert cameras
   for (auto& pcamera : pbrt.cameras) {
-    auto& camera  = scene.cameras[add_camera(scene)];
+    auto& camera  = scene.cameras.emplace_back();
     camera.frame  = pcamera.frame;
     camera.aspect = pcamera.aspect;
     camera.film   = 0.036;
@@ -2442,9 +2439,9 @@ static bool load_pbrt_scene(const string& filename, scene_scene& scene,
     if (path.empty()) return invalid_handle;
     auto it = ctexture_map.find(path);
     if (it != ctexture_map.end()) return it->second;
-    auto texture       = add_texture(scene);
-    ctexture_map[path] = texture;
-    return texture;
+    scene.textures.emplace_back();
+    ctexture_map[path] = (int)scene.textures.size() - 1;
+    return (int)scene.textures.size() - 1;
   };
   auto stexture_map = unordered_map<string, texture_handle>{
       {"", invalid_handle}};
@@ -2453,9 +2450,9 @@ static bool load_pbrt_scene(const string& filename, scene_scene& scene,
     if (path.empty()) return invalid_handle;
     auto it = stexture_map.find(path);
     if (it != stexture_map.end()) return it->second;
-    auto texture       = add_texture(scene);
-    stexture_map[path] = texture;
-    return texture;
+    scene.textures.emplace_back();
+    stexture_map[path] = (int)scene.textures.size() - 1;
+    return (int)scene.textures.size() - 1;
   };
   auto atexture_map = unordered_map<string, texture_handle>{
       {"", invalid_handle}};
@@ -2464,16 +2461,15 @@ static bool load_pbrt_scene(const string& filename, scene_scene& scene,
     if (path.empty()) return invalid_handle;
     auto it = atexture_map.find(path);
     if (it != atexture_map.end()) return it->second;
-    auto texture       = add_texture(scene);
-    atexture_map[path] = texture;
-    return texture;
+    scene.textures.emplace_back();
+    atexture_map[path] = (int)scene.textures.size() - 1;
+    return (int)scene.textures.size() - 1;
   };
 
   // convert material
   auto material_map = unordered_map<string, material_handle>{};
   for (auto& pmaterial : pbrt.materials) {
-    auto  mhandle         = add_material(scene);
-    auto& material        = scene.materials[mhandle];
+    auto& material        = scene.materials.emplace_back();
     material.emission     = pmaterial.emission;
     material.color        = pmaterial.color;
     material.metallic     = pmaterial.metallic;
@@ -2487,16 +2483,16 @@ static bool load_pbrt_scene(const string& filename, scene_scene& scene,
     material.opacity_tex  = get_stexture(pmaterial.opacity_tex);
     if (material.opacity_tex == invalid_handle)
       material.opacity_tex = get_atexture(pmaterial.alpha_tex);
-    material_map[pmaterial.name] = mhandle;
+    material_map[pmaterial.name] = (int)scene.materials.size() - 1;
   }
 
   // hack for pbrt empty material
-  material_map[""] = add_material(scene);
+  scene.materials.emplace_back();
+  material_map[""] = (int)scene.materials.size() - 1;
 
   // convert shapes
   for (auto& pshape : pbrt.shapes) {
-    auto  shandle   = add_shape(scene);
-    auto& shape     = scene.shapes[shandle];
+    auto& shape     = scene.shapes.emplace_back();
     shape.positions = pshape.positions;
     shape.normals   = pshape.normals;
     shape.texcoords = pshape.texcoords;
@@ -2504,15 +2500,15 @@ static bool load_pbrt_scene(const string& filename, scene_scene& scene,
     for (auto& uv : shape.texcoords) uv.y = 1 - uv.y;
     auto material = material_map.at(pshape.material);
     if (pshape.instances.empty()) {
-      auto& instance    = scene.instances[add_instance(scene)];
+      auto& instance    = scene.instances.emplace_back();
       instance.frame    = pshape.frame;
-      instance.shape    = shandle;
+      instance.shape    = (int)scene.shapes.size() - 1;
       instance.material = material;
     } else {
       for (auto frame : pshape.instances) {
-        auto& instance    = scene.instances[add_instance(scene)];
+        auto& instance    = scene.instances.emplace_back();
         instance.frame    = frame * pshape.frame;
-        instance.shape    = shandle;
+        instance.shape    = (int)scene.shapes.size() - 1;
         instance.material = material;
       }
     }
@@ -2520,7 +2516,7 @@ static bool load_pbrt_scene(const string& filename, scene_scene& scene,
 
   // convert environments
   for (auto& penvironment : pbrt.environments) {
-    auto& environment        = scene.environments[add_environment(scene)];
+    auto& environment        = scene.environments.emplace_back();
     environment.frame        = penvironment.frame;
     environment.emission     = penvironment.emission;
     environment.emission_tex = get_ctexture(penvironment.emission_tex);
@@ -2528,16 +2524,16 @@ static bool load_pbrt_scene(const string& filename, scene_scene& scene,
 
   // lights
   for (auto& plight : pbrt.lights) {
-    auto& instance    = scene.instances[add_instance(scene)];
-    instance.shape    = add_shape(scene);
-    instance.material = add_material(scene);
-    instance.frame    = plight.area_frame;
-    auto& shape       = scene.shapes[instance.shape];
+    auto& shape       = scene.shapes.emplace_back();
     shape.triangles   = plight.area_triangles;
     shape.positions   = plight.area_positions;
     shape.normals     = plight.area_normals;
-    auto& material    = scene.materials[instance.material];
+    auto& material    = scene.materials.emplace_back();
     material.emission = plight.area_emission;
+    auto& instance    = scene.instances.emplace_back();
+    instance.shape    = (int)scene.shapes.size() - 1;
+    instance.material = (int)scene.materials.size() - 1;
+    instance.frame    = plight.area_frame;
   }
 
   // handle progress

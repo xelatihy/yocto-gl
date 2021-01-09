@@ -227,7 +227,7 @@ vec3f get_building_color(const string& building_color) {
 bool geojson_to_scene(sceneio_scene& scene, const geojson_scene& geojson,
     const string& dirname, string& ioerror) {
   scene.asset.name = geojson.name;
-  auto& camera     = scene.cameras[add_camera(scene)];
+  auto& camera     = scene.cameras[add_camera(scene, "camera")];
   camera.frame     = frame3f{{-0.028f, 0.0f, 1.0f}, {0.764f, 0.645f, 0.022f},
       {-0.645f, 0.764f, -0.018f}, {-13.032f, 16.750f, -1.409f}};
   camera.lens      = 0.035;
