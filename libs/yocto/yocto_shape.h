@@ -178,6 +178,11 @@ bool load_fvshape(const string& filename, fvshape_data& shape, string& error,
 bool save_fvshape(const string& filename, const fvshape_data& shape,
     string& error, bool flip_texcoords = true, bool ascii = false);
 
+// Make presets. Supported mostly in IO.
+bool make_shape_preset(shape_data& shape, const string& type, string& error);
+bool make_fvshape_preset(
+    fvshape_data& shape, const string& type, string& error);
+
 }  // namespace yocto
 
 // -----------------------------------------------------------------------------
@@ -853,6 +858,7 @@ shape_data   make_quady(float scale = 1);
 shape_data   make_cube(float scale = 1);
 fvshape_data make_fvcube(float scale = 1);
 shape_data   make_geosphere(float scale = 1);
+shape_data   make_bunny(float scale = 1, bool align_middle = true);
 
 // Make a hair ball around a shape.
 // length: minimum and maximum length
