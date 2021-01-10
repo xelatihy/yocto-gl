@@ -1,5 +1,5 @@
 //
-// #Yocto / Image : Image utilities
+// # Yocto/Image : Image utilities
 //
 // Yocto/Image is a collection of image utilities useful when writing rendering
 // algorithms. These include a simple image data structure, color conversion
