@@ -144,6 +144,9 @@ bool save_image(const string& filename, const image_data& img, string& error);
 // add a logo to an image
 image_data add_logo(const image_data& image);
 
+// Make presets. Supported mostly in IO.
+bool make_image_preset(image_data& image, const string& type, string& error);
+
 }  // namespace yocto
 
 // -----------------------------------------------------------------------------
