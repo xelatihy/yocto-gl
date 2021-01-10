@@ -426,7 +426,7 @@ bool load_image(const string& filename, image_data& image, string& error) {
     error = filename + ": read error";
     return false;
   };
-  auto preeset_error = [filename, &error]() {
+  auto preset_error = [filename, &error]() {
     error = filename + ": " + error;
     return false;
   };
@@ -494,7 +494,8 @@ bool load_image(const string& filename, image_data& image, string& error) {
   } else if (ext == ".ypreset" || ext == ".YPRESET") {
     // create preset
     if (!make_image_preset(image, path_basename(filename), error))
-      return preeset_error();
+      return preset_error();
+    return true;
   } else {
     return format_error();
   }

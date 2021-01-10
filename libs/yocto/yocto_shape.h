@@ -858,6 +858,7 @@ shape_data   make_quady(float scale = 1);
 shape_data   make_cube(float scale = 1);
 fvshape_data make_fvcube(float scale = 1);
 shape_data   make_geosphere(float scale = 1);
+shape_data   make_bunny(float scale = 1, bool align_middle = true);
 
 // Make a hair ball around a shape.
 // length: minimum and maximum length
