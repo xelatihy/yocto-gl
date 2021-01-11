@@ -125,60 +125,69 @@ auto zip(const vector<T1>& keys, const vector<T2>& values) {
 // get name
 [[maybe_unused]] static string get_camera_name(
     const scene_scene& scene, int idx) {
+  if (scene.camera_names.empty()) return "camera" + std::to_string(idx);
   return scene.camera_names[idx];
 }
 [[maybe_unused]] static string get_environment_name(
     const scene_scene& scene, int idx) {
+  if (scene.environment_names.empty())
+    return "environment" + std::to_string(idx);
   return scene.environment_names[idx];
 }
 [[maybe_unused]] static string get_shape_name(
     const scene_scene& scene, int idx) {
+  if (scene.shape_names.empty()) return "shape" + std::to_string(idx);
   return scene.shape_names[idx];
 }
 [[maybe_unused]] static string get_texture_name(
     const scene_scene& scene, int idx) {
+  if (scene.texture_names.empty()) return "texture" + std::to_string(idx);
   return scene.texture_names[idx];
 }
 [[maybe_unused]] static string get_instance_name(
     const scene_scene& scene, int idx) {
+  if (scene.instance_names.empty()) return "instance" + std::to_string(idx);
   return scene.instance_names[idx];
 }
 [[maybe_unused]] static string get_material_name(
     const scene_scene& scene, int idx) {
+  if (scene.material_names.empty()) return "material" + std::to_string(idx);
   return scene.material_names[idx];
 }
 [[maybe_unused]] static string get_subdiv_name(
     const scene_scene& scene, int idx) {
+  if (scene.subdiv_names.empty()) return "subdiv" + std::to_string(idx);
   return scene.subdiv_names[idx];
 }
 
 [[maybe_unused]] static string get_camera_name(
     const scene_scene& scene, const scene_camera& camera) {
-  return scene.camera_names.at(&camera - scene.cameras.data());
+  return get_camera_name(scene, (int)(&camera - scene.cameras.data()));
 }
 [[maybe_unused]] static string get_environment_name(
     const scene_scene& scene, const scene_environment& environment) {
-  return scene.environment_names.at(&environment - scene.environments.data());
+  return get_environment_name(
+      scene, (int)(&environment - scene.environments.data()));
 }
 [[maybe_unused]] static string get_shape_name(
     const scene_scene& scene, const scene_shape& shape) {
-  return scene.shape_names.at(&shape - scene.shapes.data());
+  return get_shape_name(scene, (int)(&shape - scene.shapes.data()));
 }
 [[maybe_unused]] static string get_texture_name(
     const scene_scene& scene, const scene_texture& texture) {
-  return scene.texture_names.at(&texture - scene.textures.data());
+  return get_texture_name(scene, (int)(&texture - scene.textures.data()));
 }
 [[maybe_unused]] static string get_instance_name(
     const scene_scene& scene, const scene_instance& instance) {
-  return scene.instance_names.at(&instance - scene.instances.data());
+  return get_instance_name(scene, (int)(&instance - scene.instances.data()));
 }
 [[maybe_unused]] static string get_material_name(
     const scene_scene& scene, const scene_material& material) {
-  return scene.material_names.at(&material - scene.materials.data());
+  return get_material_name(scene, (int)(&material - scene.materials.data()));
 }
 [[maybe_unused]] static string get_subdiv_name(
     const scene_scene& scene, const scene_subdiv& subdiv) {
-  return scene.subdiv_names.at(&subdiv - scene.subdivs.data());
+  return get_subdiv_name(scene, (int)(&subdiv - scene.subdivs.data()));
 }
 
 }  // namespace yocto

@@ -4201,7 +4201,7 @@ inline bool convert_shape(pbrt_shape& pshape, const pbrt_command& command,
 }
 
 // Convert pbrt arealights
-inline bool convert_arealight(pbrt_arealight* parealight,
+inline bool convert_arealight(pbrt_arealight& parealight,
     const pbrt_command& command, const string& filename, string& error,
     bool verbose = false) {
   auto parse_error = [filename, &error]() {
@@ -4213,12 +4213,12 @@ inline bool convert_arealight(pbrt_arealight* parealight,
     return false;
   };
 
-  parealight->name = command.name;
+  parealight.name = command.name;
   if (command.type == "diffuse") {
     auto l = vec3f{1, 1, 1}, scale = vec3f{1, 1, 1};
     if (!get_pbrt_value(command.values, "L", l)) return parse_error();
     if (!get_pbrt_value(command.values, "scale", scale)) return parse_error();
-    parealight->emission = l * scale;
+    parealight.emission = l * scale;
     return true;
   } else {
     return type_error();
@@ -4523,7 +4523,7 @@ inline bool load_pbrt(const string& filename, pbrt_scene& pbrt, string& error,
       if (!parse_params(str, command.values)) return parse_error();
       command.frame = ctx.stack.back().transform_start;
       command.frend = ctx.stack.back().transform_end;
-      auto camera   = add_camera(pbrt);
+      auto& camera  = add_camera(pbrt);
       if (!convert_camera(
               camera, command, ctx.film_resolution, filename, error))
         return false;
@@ -4570,10 +4570,10 @@ inline bool load_pbrt(const string& filename, pbrt_scene& pbrt, string& error,
       auto command = pbrt_command{};
       if (!parse_param(str, command.type)) return parse_error();
       if (!parse_params(str, command.values)) return parse_error();
-      command.frame = ctx.stack.back().transform_start;
-      command.frend = ctx.stack.back().transform_end;
-      auto shape    = add_shape(pbrt);
-      auto alphamap = ""s;
+      command.frame  = ctx.stack.back().transform_start;
+      command.frend  = ctx.stack.back().transform_end;
+      auto& shape    = add_shape(pbrt);
+      auto  alphamap = ""s;
       if (!convert_shape(shape, command, alphamap, named_textures, ply_dirname,
               filename, error))
         return false;
@@ -4600,7 +4600,7 @@ inline bool load_pbrt(const string& filename, pbrt_scene& pbrt, string& error,
       command.frame = ctx.stack.back().transform_start;
       command.frend = ctx.stack.back().transform_end;
       if (!convert_arealight(
-              &ctx.stack.back().arealight, command, filename, error))
+              ctx.stack.back().arealight, command, filename, error))
         return false;
     } else if (cmd == "LightSource") {
       auto command = pbrt_command{};
