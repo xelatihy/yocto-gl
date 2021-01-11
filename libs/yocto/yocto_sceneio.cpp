@@ -39,6 +39,7 @@
 #include <unordered_map>
 
 #include "ext/cgltf.h"
+#include "ext/json.hpp"
 #include "yocto_color.h"
 #include "yocto_commonio.h"
 #include "yocto_geometry.h"
@@ -836,9 +837,31 @@ static bool save_image(const string& filename, const image<vec4f>& imgf,
 // -----------------------------------------------------------------------------
 namespace yocto {
 
-#if 0
 using njson = nlohmann::json;
 using std::array;
+
+// load/save json
+[[maybe_unsued]] static bool load_json(
+    const string& filename, njson& json, string& error) {
+  // error helpers
+  auto parse_error = [filename, &error]() {
+    error = filename + ": parse error in json";
+    return false;
+  };
+  auto text = ""s;
+  if (!load_text(filename, text, error)) return false;
+  try {
+    json = njson::parse(text);
+    return true;
+  } catch (std::exception&) {
+    return parse_error();
+  }
+}
+
+[[maybe_unsued]] static bool save_json(
+    const string& filename, const njson& json, string& error) {
+  return save_text(filename, json.dump(2), error);
+}
 
 // support for json conversions
 inline void to_json(njson& j, const vec3f& value) {
@@ -863,7 +886,6 @@ inline void from_json(const njson& j, mat3f& value) {
 inline void from_json(const njson& j, frame3f& value) {
   nlohmann::from_json(j, (array<float, 12>&)value);
 }
-#endif
 
 // support for json conversions
 inline bool set_value(json_tview js, const vec3f& value) {
@@ -889,6 +911,30 @@ inline bool get_value(json_ctview js, frame3f& value) {
   return get_value(js, (array<float, 12>&)value);
 }
 
+// support for json conversions
+inline void to_json(json_value& js, const vec3f& value) {
+  return to_json(js, (const array<float, 3>&)value);
+}
+inline void to_json(json_value& js, const vec4f& value) {
+  return to_json(js, (const array<float, 4>&)value);
+}
+inline void to_json(json_value& js, const frame3f& value) {
+  return to_json(js, (const array<float, 12>&)value);
+}
+inline void to_json(json_value& js, const mat4f& value) {
+  return to_json(js, (const array<float, 16>&)value);
+}
+
+inline void from_json(const json_value& js, vec3f& value) {
+  return from_json(js, (array<float, 3>&)value);
+}
+inline void from_json(const json_value& js, mat3f& value) {
+  return from_json(js, (array<float, 9>&)value);
+}
+inline void from_json(const json_value& js, frame3f& value) {
+  return from_json(js, (array<float, 12>&)value);
+}
+
 }  // namespace yocto
 
 // -----------------------------------------------------------------------------
@@ -896,7 +942,725 @@ inline bool get_value(json_ctview js, frame3f& value) {
 // -----------------------------------------------------------------------------
 namespace yocto {
 
+#define YOCTO_SCENEIO_JSONTREE 0
+
+#if YOCTO_SCENEIO_JSONTREE == 0
+
+// Load a scene in the builtin JSON format.
+static bool load_json_scene(const string& filename, scene_scene& scene,
+    string& error, const progress_callback& progress_cb, bool noparallel) {
+  auto json_error = [filename]() {
+    // error does not need setting
+    return false;
+  };
+  auto parse_error = [filename, &error](string_view message) {
+    error = filename + ": parse error (" + string{message} + ")";
+    return false;
+  };
+  auto material_error = [filename, &error](string_view name) {
+    error = filename + ": missing material " + string{name};
+    return false;
+  };
+  auto dependent_error = [filename, &error]() {
+    error = filename + ": error in " + error;
+    return false;
+  };
+
+  // handle progress
+  auto progress = vec2i{0, 2};
+  if (progress_cb) progress_cb("load scene", progress.x++, progress.y);
+
+  // open file
+  auto js_tree = json_tree{};
+  if (!load_json(filename, js_tree, error)) return json_error();
+  auto js = get_croot(js_tree);
+
+  // reference disctionaries
+  auto texture_map = unordered_map<string, pair<texture_handle, bool>>{
+      {"", {invalid_handle, true}}};
+  auto shape_map = unordered_map<string, pair<shape_handle, bool>>{
+      {"", {invalid_handle, true}}};
+  auto material_map = unordered_map<string, pair<material_handle, bool>>{
+      {"", {invalid_handle, true}}};
+  auto subdiv_map = unordered_map<string, pair<subdiv_handle, bool>>{
+      {"", {invalid_handle, true}}};
+
+  // parse json reference
+  auto get_shape = [&scene, &shape_map](
+                       json_ctview js, shape_handle& value) -> bool {
+    auto name = ""s;
+    if (!get_value(js, name)) return false;
+    auto it = shape_map.find(name);
+    if (it != shape_map.end()) {
+      value = it->second.first;
+      return it->second.first != invalid_handle;
+    }
+    scene.shape_names.emplace_back(name);
+    scene.shapes.emplace_back();
+    auto shape_id   = (int)scene.shapes.size() - 1;
+    shape_map[name] = {shape_id, false};
+    value           = shape_id;
+    return true;
+  };
+
+  // parse json reference
+  auto get_material = [&scene, &material_map](
+                          json_ctview js, material_handle& value) -> bool {
+    auto name = ""s;
+    if (!get_value(js, name)) return false;
+    auto it = material_map.find(name);
+    if (it != material_map.end()) {
+      value = it->second.first;
+      return it->second.first != invalid_handle;
+    }
+    scene.material_names.emplace_back(name);
+    scene.materials.emplace_back();
+    auto material_id   = (int)scene.materials.size() - 1;
+    material_map[name] = {material_id, false};
+    value              = material_id;
+    return true;
+  };
+
+  // parse json reference
+  auto get_texture = [&scene, &texture_map](
+                         json_ctview js, texture_handle& value) -> bool {
+    auto name = ""s;
+    if (!get_value(js, name)) return false;
+    auto it = texture_map.find(name);
+    if (it != texture_map.end()) {
+      value = it->second.first;
+      return it->second.first != invalid_handle;
+    }
+    scene.texture_names.emplace_back(name);
+    scene.textures.emplace_back();
+    auto texture_id   = (int)scene.textures.size() - 1;
+    texture_map[name] = {texture_id, false};
+    value             = texture_id;
+    return true;
+  };
+
+  struct ply_instance {
+    vector<frame3f> frames = {};
+  };
+
+  // load json instance
+  using ply_instance_handle = int;
+  auto ply_instances        = vector<ply_instance>{};
+  auto ply_instance_map     = unordered_map<string, ply_instance_handle>{
+      {"", invalid_handle}};
+  auto instance_ply = unordered_map<instance_handle, ply_instance_handle>{};
+  auto get_ply_instances = [&ply_instances, &ply_instance_map, &instance_ply](
+                               json_ctview     js,
+                               instance_handle instance) -> bool {
+    auto name = ""s;
+    if (!get_value(js, name)) return false;
+    if (name.empty()) return true;
+    auto it = ply_instance_map.find(name);
+    if (it != ply_instance_map.end()) {
+      instance_ply[instance] = it->second;
+      return true;
+    }
+    ply_instances.emplace_back(ply_instance());
+    ply_instance_map[name] = (int)ply_instances.size() - 1;
+    instance_ply[instance] = (int)ply_instances.size() - 1;
+    return true;
+  };
+  auto get_instance_handle =
+      [](const scene_scene&     scene,
+          const scene_instance& instance) -> instance_handle {
+    return (instance_handle)(&instance - scene.instances.data());
+  };
+
+  // handle progress
+  if (progress_cb) progress_cb("load scene", progress.x++, progress.y);
+
+  // loop over external dictionaries
+  for (auto [gname, group] : iterate_object(js)) {
+    if (gname == "asset") {
+      auto& asset = scene.asset;
+      for (auto [key, value] : iterate_object(group)) {
+        if (key == "copyright") {
+          get_value(value, asset.copyright);
+        } else if (key == "generator") {
+          get_value(value, asset.generator);
+        } else {
+          set_error(group, "unknown key " + string{key});
+        }
+      }
+    } else if (gname == "cameras") {
+      for (auto [name, element] : iterate_object(group)) {
+        scene.camera_names.emplace_back(name);
+        auto& camera = scene.cameras.emplace_back();
+        for (auto [key, value] : iterate_object(element)) {
+          if (key == "frame") {
+            get_value(value, camera.frame);
+          } else if (key == "orthographic") {
+            get_value(value, camera.orthographic);
+          } else if (key == "ortho") {
+            // backward compatibility
+            get_value(value, camera.orthographic);
+          } else if (key == "lens") {
+            get_value(value, camera.lens);
+          } else if (key == "aspect") {
+            get_value(value, camera.aspect);
+          } else if (key == "film") {
+            get_value(value, camera.film);
+          } else if (key == "focus") {
+            get_value(value, camera.focus);
+          } else if (key == "aperture") {
+            get_value(value, camera.aperture);
+          } else if (key == "lookat") {
+            get_value(value, (mat3f&)camera.frame);
+            camera.focus = length(camera.frame.x - camera.frame.y);
+            camera.frame = lookat_frame(
+                camera.frame.x, camera.frame.y, camera.frame.z);
+          } else {
+            set_error(js, "unknown key " + string{key});
+          }
+        }
+      }
+    } else if (gname == "environments") {
+      for (auto [name, element] : iterate_object(group)) {
+        scene.environment_names.emplace_back(name);
+        auto& environment = scene.environments.emplace_back();
+        for (auto [key, value] : iterate_object(element)) {
+          if (key == "frame") {
+            get_value(value, environment.frame);
+          } else if (key == "emission") {
+            get_value(value, environment.emission);
+          } else if (key == "emission_tex") {
+            get_texture(value, environment.emission_tex);
+          } else if (key == "lookat") {
+            get_value(value, (mat3f&)environment.frame);
+            environment.frame = lookat_frame(environment.frame.x,
+                environment.frame.y, environment.frame.z, true);
+          } else {
+            set_error(js, "unknown key " + string{key});
+          }
+        }
+      }
+    } else if (gname == "materials") {
+      for (auto [name, element] : iterate_object(group)) {
+        auto material_it = material_map.find(string{name});
+        auto handle      = invalid_handle;
+        if (material_it == material_map.end()) {
+          scene.material_names.emplace_back(name);
+          scene.materials.emplace_back();
+          handle = (int)scene.materials.size() - 1;
+        } else {
+          handle = material_it->second.first;
+        }
+        auto& material = scene.materials[handle];
+        for (auto [key, value] : iterate_object(element)) {
+          if (key == "emission") {
+            get_value(value, material.emission);
+          } else if (key == "color") {
+            get_value(value, material.color);
+          } else if (key == "metallic") {
+            get_value(value, material.metallic);
+          } else if (key == "specular") {
+            get_value(value, material.specular);
+          } else if (key == "roughness") {
+            get_value(value, material.roughness);
+          } else if (key == "coat") {
+            get_value(value, material.coat);
+          } else if (key == "transmission") {
+            get_value(value, material.transmission);
+          } else if (key == "translucency") {
+            get_value(value, material.translucency);
+          } else if (key == "thin") {
+            get_value(value, material.thin);
+          } else if (key == "ior") {
+            get_value(value, material.ior);
+          } else if (key == "trdepth") {
+            get_value(value, material.trdepth);
+          } else if (key == "scattering") {
+            get_value(value, material.scattering);
+          } else if (key == "scanisotropy") {
+            get_value(value, material.scanisotropy);
+          } else if (key == "opacity") {
+            get_value(value, material.opacity);
+          } else if (key == "coat") {
+            get_value(value, material.coat);
+          } else if (key == "emission_tex") {
+            get_texture(value, material.emission_tex);
+          } else if (key == "color_tex") {
+            get_texture(value, material.color_tex);
+          } else if (key == "metallic_tex") {
+            get_texture(value, material.metallic_tex);
+          } else if (key == "specular_tex") {
+            get_texture(value, material.specular_tex);
+          } else if (key == "transmission_tex") {
+            get_texture(value, material.transmission_tex);
+          } else if (key == "translucency_tex") {
+            get_texture(value, material.translucency_tex);
+          } else if (key == "roughness_tex") {
+            get_texture(value, material.roughness_tex);
+          } else if (key == "scattering_tex") {
+            get_texture(value, material.scattering_tex);
+          } else if (key == "opacity_tex") {
+            get_texture(value, material.opacity_tex);
+          } else if (key == "normal_tex") {
+            get_texture(value, material.normal_tex);
+          } else {
+            set_error(element, "unknown key " + string{key});
+          }
+        }
+        material_map[string{name}] = {handle, true};
+      }
+    } else if (gname == "instances" || gname == "objects") {
+      for (auto [name, element] : iterate_object(group)) {
+        scene.instance_names.emplace_back(name);
+        auto& instance = scene.instances.emplace_back();
+        for (auto [key, value] : iterate_object(element)) {
+          if (key == "frame") {
+            get_value(value, instance.frame);
+          } else if (key == "lookat") {
+            get_value(value, (mat3f&)instance.frame);
+            instance.frame = lookat_frame(
+                instance.frame.x, instance.frame.y, instance.frame.z, true);
+          } else if (key == "material") {
+            get_material(value, instance.material);
+          } else if (key == "shape") {
+            get_shape(value, instance.shape);
+          } else if (key == "instance") {
+            throw std::invalid_argument{"instances not suppotyed yet"};
+            // get_ply_instances(value, instance);
+          } else {
+            // set_error(element, "unknown key " + string{key});
+          }
+        }
+      }
+    } else if (gname == "subdivs") {
+      for (auto [name, element] : iterate_object(group)) {
+        scene.subdiv_names.emplace_back();
+        auto& subdiv = scene.subdivs.emplace_back();
+        for (auto [key, value] : iterate_object(element)) {
+          if (key == "shape") {
+            get_shape(value, subdiv.shape);
+          } else if (key == "subdivisions") {
+            get_value(value, subdiv.subdivisions);
+          } else if (key == "catmullcark") {
+            get_value(value, subdiv.catmullclark);
+          } else if (key == "smooth") {
+            get_value(value, subdiv.smooth);
+          } else if (key == "displacement") {
+            get_value(value, subdiv.displacement);
+          } else if (key == "displacement_tex") {
+            get_texture(value, subdiv.displacement_tex);
+          } else {
+            // set_error(element, "unknown key " + string{key});
+          }
+        }
+        subdiv_map[string{name}] = {(int)scene.subdivs.size() - 1, false};
+      }
+    } else {
+      set_error(js, "unknown key " + string{gname});
+    }
+  }
+
+  // check for parsing errors
+  if (!is_valid(js)) return parse_error(get_error(js));
+
+  // check materials
+  for (auto& [key, value] : material_map) {
+    if (!value.second) return material_error(key);
+  }
+
+  // handle progress
+  progress.y += scene.shapes.size();
+  progress.y += scene.textures.size();
+  progress.y += scene.subdivs.size();
+  progress.y += ply_instances.size();
+
+  // get filename from name
+  auto make_filename = [filename](const string& name, const string& group,
+                           const vector<string>& extensions) {
+    for (auto& extension : extensions) {
+      auto filepath = path_join(
+          path_dirname(filename), group, name + extension);
+      if (path_exists(filepath)) return filepath;
+    }
+    return path_join(path_dirname(filename), group, name + extensions.front());
+  };
+
+  // load shapes
+  shape_map.erase("");
+  for (auto [name, value] : shape_map) {
+    auto& shape = scene.shapes[value.first];
+    if (progress_cb) progress_cb("load shape", progress.x++, progress.y);
+    auto path          = make_filename(name, "shapes", {".ply", ".obj"});
+    auto quadspos      = vector<vec4i>{};
+    auto quadsnorm     = vector<vec4i>{};
+    auto quadstexcoord = vector<vec4i>{};
+    if (!load_shape(path, shape.points, shape.lines, shape.triangles,
+            shape.quads, quadspos, quadsnorm, quadstexcoord, shape.positions,
+            shape.normals, shape.texcoords, shape.colors, shape.radius, error,
+            false))
+      return dependent_error();
+  }
+
+  // load subdivs
+  subdiv_map.erase("");
+  for (auto [name, value] : subdiv_map) {
+    auto& subdiv = scene.subdivs[value.first];
+    if (progress_cb) progress_cb("load subdiv", progress.x++, progress.y);
+    auto path      = make_filename(name, "subdivs", {".ply", ".obj"});
+    auto points    = vector<int>{};
+    auto lines     = vector<vec2i>{};
+    auto triangles = vector<vec3i>{};
+    auto quads     = vector<vec4i>{};
+    auto colors    = vector<vec4f>{};
+    auto radius    = vector<float>{};
+    if (!load_shape(path, points, lines, triangles, quads, subdiv.quadspos,
+            subdiv.quadsnorm, subdiv.quadstexcoord, subdiv.positions,
+            subdiv.normals, subdiv.texcoords, colors, radius, error, true))
+      return dependent_error();
+  }
+
+  // load textures
+  texture_map.erase("");
+  for (auto [name, value] : texture_map) {
+    auto& texture = scene.textures[value.first];
+    if (progress_cb) progress_cb("load texture", progress.x++, progress.y);
+    auto path = make_filename(
+        name, "textures", {".hdr", ".exr", ".png", ".jpg"});
+    if (!load_image(path, texture.hdr, texture.ldr, error))
+      return dependent_error();
+  }
+
+  // load instances
+  ply_instance_map.erase("");
+  for (auto& [name, ihandle] : ply_instance_map) {
+    throw std::invalid_argument{"instances not supported"};
+    // auto& instance = ply_instances.at(ihandle);
+    // if (progress_cb) progress_cb("load instance", progress.x++, progress.y);
+    // auto path = make_filename(name, "instances", {".ply"});
+    // if (!load_instance(path, instance->frames, error)) return
+    // dependent_error();
+  }
+
+  // apply instances
+  if (!ply_instances.empty()) {
+    throw std::invalid_argument{"not supported for now"};
+    // if (progress_cb)
+    //   progress_cb("flatten instances", progress.x++, progress.y++);
+    // auto instances = scene.instances;
+    // scene.instances.clear();
+    // for (auto instance : instances) {
+    //   auto it = instance_ply.find(instance);
+    //   if (it == instance_ply.end()) {
+    //     auto ninstance      = add_instance(scene, instance->name);
+    //     ninstance->frame    = instance->frame;
+    //     ninstance->shape    = instance->shape;
+    //     ninstance->material = instance->material;
+    //   } else {
+    //     auto ply_instance = it->second;
+    //     for (auto& frame : ply_instance->frames) {
+    //       auto ninstance      = add_instance(scene, instance->name);
+    //       ninstance->frame    = frame * instance->frame;
+    //       ninstance->shape    = instance->shape;
+    //       ninstance->material = instance->material;
+    //     }
+    //   }
+    // }
+    // for (auto instance : instances) delete instance;
+  }
+
+  // fix scene
+  if (scene.asset.name.empty()) scene.asset.name = path_basename(filename);
+  add_cameras(scene);
+  add_radius(scene);
+  add_materials(scene);
+  trim_memory(scene);
+
+  // done
+  if (progress_cb) progress_cb("load scene", progress.x++, progress.y);
+  return true;
+}
+
 // Save a scene in the builtin JSON format.
+static bool save_json_scene(const string& filename, const scene_scene& scene,
+    string& error, const progress_callback& progress_cb, bool noparallel) {
+  auto conversion_error = [filename, &error](const string& message) {
+    // should never happen
+    throw std::runtime_error{"programmer error"};
+    error = filename + ": conversion error (" + message + ")";
+    return false;
+  };
+  auto dependent_error = [filename, &error]() {
+    error = filename + ": error in " + error;
+    return false;
+  };
+
+  // helpers to handel old code paths
+  auto insert_object = [](njson& js, const string& name) -> njson& {
+    if (!js.is_object()) throw json_error{"object expected"};
+    js[name] = njson::object();
+    return js[name];
+  };
+  auto insert_value = [](njson& js, const string& name, const auto& value) {
+    if (!js.is_object()) throw json_error{"object expected"};
+    js[name] = value;
+  };
+
+  // handle progress
+  auto progress = vec2i{
+      0, 2 + (int)scene.shapes.size() + (int)scene.textures.size()};
+  if (progress_cb) progress_cb("save scene", progress.x++, progress.y);
+
+  // save json file
+  auto js = njson::object();
+
+  // asset
+  {
+    auto& asset   = scene.asset;
+    auto& element = insert_object(js, "asset");
+    if (!asset.copyright.empty()) {
+      insert_value(element, "copyright", asset.copyright);
+    }
+    if (!asset.generator.empty()) {
+      insert_value(element, "generator", asset.generator);
+    }
+  }
+
+  auto def_cam = sceneio_camera{};
+  if (!scene.cameras.empty()) {
+    auto& group = insert_object(js, "cameras");
+    for (auto& camera : scene.cameras) {
+      auto& element = insert_object(group, get_camera_name(scene, camera));
+      if (camera.frame != def_cam.frame) {
+        insert_value(element, "frame", camera.frame);
+      }
+      if (camera.orthographic != def_cam.orthographic) {
+        insert_value(element, "orthographic", camera.orthographic);
+      }
+      if (camera.lens != def_cam.lens) {
+        insert_value(element, "lens", camera.lens);
+      }
+      if (camera.aspect != def_cam.aspect) {
+        insert_value(element, "aspect", camera.aspect);
+      }
+      if (camera.film != def_cam.film) {
+        insert_value(element, "film", camera.film);
+      }
+      if (camera.focus != def_cam.focus) {
+        insert_value(element, "focus", camera.focus);
+      }
+      if (camera.aperture != def_cam.aperture) {
+        insert_value(element, "aperture", camera.aperture);
+      }
+    }
+  }
+
+  auto def_env = sceneio_environment{};
+  if (!scene.environments.empty()) {
+    auto& group = insert_object(js, "environments");
+    for (auto& environment : scene.environments) {
+      auto& element = insert_object(
+          group, get_environment_name(scene, environment));
+      if (environment.frame != def_env.frame) {
+        insert_value(element, "frame", environment.frame);
+      }
+      if (environment.emission != def_env.emission) {
+        insert_value(element, "emission", environment.emission);
+      }
+      if (environment.emission_tex != invalid_handle) {
+        insert_value(element, "emission_tex",
+            get_texture_name(scene, environment.emission_tex));
+      }
+    }
+  }
+
+  auto def_material = sceneio_material{};
+  if (!scene.materials.empty()) {
+    auto& group = insert_object(js, "materials");
+    for (auto& material : scene.materials) {
+      auto& element = insert_object(group, get_material_name(scene, material));
+      if (material.emission != def_material.emission) {
+        insert_value(element, "emission", material.emission);
+      }
+      if (material.color != def_material.color) {
+        insert_value(element, "color", material.color);
+      }
+      if (material.specular != def_material.specular) {
+        insert_value(element, "specular", material.specular);
+      }
+      if (material.metallic != def_material.metallic) {
+        insert_value(element, "metallic", material.metallic);
+      }
+      if (material.coat != def_material.coat) {
+        insert_value(element, "coat", material.coat);
+      }
+      if (material.roughness != def_material.roughness) {
+        insert_value(element, "roughness", material.roughness);
+      }
+      if (material.ior != def_material.ior) {
+        insert_value(element, "ior", material.ior);
+      }
+      if (material.transmission != def_material.transmission) {
+        insert_value(element, "transmission", material.transmission);
+      }
+      if (material.translucency != def_material.translucency) {
+        insert_value(element, "translucency", material.translucency);
+      }
+      if (material.trdepth != def_material.trdepth) {
+        insert_value(element, "trdepth", material.trdepth);
+      }
+      if (material.scattering != def_material.scattering) {
+        insert_value(element, "scattering", material.scattering);
+      }
+      if (material.scanisotropy != def_material.scanisotropy) {
+        insert_value(element, "scanisotropy", material.scanisotropy);
+      }
+      if (material.opacity != def_material.opacity) {
+        insert_value(element, "opacity", material.opacity);
+      }
+      if (material.thin != def_material.thin) {
+        insert_value(element, "thin", material.thin);
+      }
+      if (material.emission_tex != invalid_handle) {
+        insert_value(element, "emission_tex",
+            get_texture_name(scene, material.emission_tex));
+      }
+      if (material.color_tex != invalid_handle) {
+        insert_value(
+            element, "color_tex", get_texture_name(scene, material.color_tex));
+      }
+      if (material.metallic_tex != invalid_handle) {
+        insert_value(element, "metallic_tex",
+            get_texture_name(scene, material.metallic_tex));
+      }
+      if (material.specular_tex != invalid_handle) {
+        insert_value(element, "specular_tex",
+            get_texture_name(scene, material.specular_tex));
+      }
+      if (material.roughness_tex != invalid_handle) {
+        insert_value(element, "roughness_tex",
+            get_texture_name(scene, material.roughness_tex));
+      }
+      if (material.transmission_tex != invalid_handle) {
+        insert_value(element, "transmission_tex",
+            get_texture_name(scene, material.transmission_tex));
+      }
+      if (material.translucency_tex != invalid_handle) {
+        insert_value(element, "translucency_tex",
+            get_texture_name(scene, material.translucency_tex));
+      }
+      if (material.scattering_tex != invalid_handle) {
+        insert_value(element, "scattering_tex",
+            get_texture_name(scene, material.scattering_tex));
+      }
+      if (material.coat_tex != invalid_handle) {
+        insert_value(
+            element, "coat_tex", get_texture_name(scene, material.coat_tex));
+      }
+      if (material.opacity_tex != invalid_handle) {
+        insert_value(element, "opacity_tex",
+            get_texture_name(scene, material.opacity_tex));
+      }
+      if (material.normal_tex != invalid_handle) {
+        insert_value(element, "normal_tex",
+            get_texture_name(scene, material.normal_tex));
+      }
+    }
+  }
+
+  auto def_instance = sceneio_instance{};
+  if (!scene.instances.empty()) {
+    auto& group = insert_object(js, "instances");
+    for (auto& instance : scene.instances) {
+      auto& element = insert_object(group, get_instance_name(scene, instance));
+      if (instance.frame != def_instance.frame) {
+        insert_value(element, "frame", instance.frame);
+      }
+      if (instance.shape != invalid_handle) {
+        insert_value(element, "shape", get_shape_name(scene, instance.shape));
+      }
+      if (instance.material != invalid_handle) {
+        insert_value(
+            element, "material", get_material_name(scene, instance.material));
+      }
+    }
+  }
+
+  auto def_subdiv = scene_subdiv{};
+  if (!scene.subdivs.empty()) {
+    auto& group = insert_object(js, "subdivs");
+    for (auto& subdiv : scene.subdivs) {
+      auto& element = insert_object(group, get_subdiv_name(scene, subdiv));
+      if (subdiv.shape != invalid_handle) {
+        insert_value(element, "shape", get_shape_name(scene, subdiv.shape));
+      }
+      if (subdiv.subdivisions != def_subdiv.subdivisions) {
+        insert_value(element, "subdivisions", subdiv.subdivisions);
+      }
+      if (subdiv.catmullclark != def_subdiv.catmullclark) {
+        insert_value(element, "catmullclark", subdiv.catmullclark);
+      }
+      if (subdiv.smooth != def_subdiv.smooth) {
+        insert_value(element, "smooth", subdiv.smooth);
+      }
+      if (subdiv.displacement != def_subdiv.displacement) {
+        insert_value(element, "displacement", subdiv.displacement);
+      }
+      if (subdiv.displacement_tex != invalid_handle) {
+        insert_value(element, "displacement_tex",
+            get_texture_name(scene, subdiv.displacement_tex));
+      }
+    }
+  }
+
+  // handle progress
+  if (progress_cb) progress_cb("save scene", progress.x++, progress.y);
+
+  // save json
+  if (!save_json(filename, js, error)) return false;
+
+  // get filename from name
+  auto make_filename = [filename](const string& name, const string& group,
+                           const string& extension) {
+    return path_join(path_dirname(filename), group, name + extension);
+  };
+
+  // save shapes
+  for (auto& shape : scene.shapes) {
+    if (progress_cb) progress_cb("save shape", progress.x++, progress.y);
+    auto path = make_filename(get_shape_name(scene, shape), "shapes", ".ply"s);
+    if (!save_shape(path, shape.points, shape.lines, shape.triangles,
+            shape.quads, {}, {}, {}, shape.positions, shape.normals,
+            shape.texcoords, shape.colors, shape.radius, error, false))
+      return dependent_error();
+  }
+
+  // save subdiv
+  for (auto& subdiv : scene.subdivs) {
+    if (progress_cb) progress_cb("save subdiv", progress.x++, progress.y);
+    auto path = make_filename(
+        get_subdiv_name(scene, subdiv), "subdivs", ".obj");
+    if (!save_shape(path, {}, {}, {}, {}, subdiv.quadspos, subdiv.quadsnorm,
+            subdiv.quadstexcoord, subdiv.positions, subdiv.normals,
+            subdiv.texcoords, {}, {}, error, true))
+      return dependent_error();
+  }
+
+  // save textures
+  for (auto& texture : scene.textures) {
+    if (progress_cb) progress_cb("save texture", progress.x++, progress.y);
+    auto path = make_filename(get_texture_name(scene, texture), "textures",
+        (!texture.hdr.empty()) ? ".hdr"s : ".png"s);
+    if (!save_image(path, texture.hdr, texture.ldr, error))
+      return dependent_error();
+  }
+
+  // done
+  if (progress_cb) progress_cb("save done", progress.x++, progress.y);
+  return true;
+}
+
+#else
+
+// Load a scene in the builtin JSON format.
 static bool load_json_scene(const string& filename, scene_scene& scene,
     string& error, const progress_callback& progress_cb, bool noparallel) {
   auto json_error = [filename]() {
@@ -1602,6 +2366,8 @@ static bool save_json_scene(const string& filename, const scene_scene& scene,
   if (progress_cb) progress_cb("save done", progress.x++, progress.y);
   return true;
 }
+
+#endif
 
 }  // namespace yocto
 
