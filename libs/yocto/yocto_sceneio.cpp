@@ -841,7 +841,7 @@ using njson = nlohmann::json;
 using std::array;
 
 // load/save json
-[[maybe_unsued]] static bool load_json(
+[[maybe_unused]] static bool load_json(
     const string& filename, njson& json, string& error) {
   // error helpers
   auto parse_error = [filename, &error]() {
@@ -858,7 +858,7 @@ using std::array;
   }
 }
 
-[[maybe_unsued]] static bool save_json(
+[[maybe_unused]] static bool save_json(
     const string& filename, const njson& json, string& error) {
   return save_text(filename, json.dump(2), error);
 }
@@ -974,12 +974,15 @@ static bool load_json_scene(const string& filename, scene_scene& scene,
     return false;
   };
 
+  // setting the json library for testing
+  using json_type = json_value;
+
   // handle progress
   auto progress = vec2i{0, 2};
   if (progress_cb) progress_cb("load scene", progress.x++, progress.y);
 
   // open file
-  auto js = njson{};
+  auto js = json_type{};
   if (!load_json(filename, js, error)) return json_error();
 
   // reference disctionaries
@@ -993,9 +996,9 @@ static bool load_json_scene(const string& filename, scene_scene& scene,
       {"", {invalid_handle, true}}};
 
   // parse json value
-  auto get_value = [](const njson& js, auto& value) -> bool {
+  auto get_value = [](const json_type& js, auto& value) -> bool {
     try {
-      value = js;
+      from_json(js, value);
       return true;
     } catch (...) {
       return false;
@@ -1004,7 +1007,7 @@ static bool load_json_scene(const string& filename, scene_scene& scene,
 
   // parse json reference
   auto get_shape = [&scene, &shape_map, &get_value](
-                       const njson& js, shape_handle& value) -> bool {
+                       const json_type& js, shape_handle& value) -> bool {
     auto name = ""s;
     if (!get_value(js, name)) return false;
     auto it = shape_map.find(name);
@@ -1022,7 +1025,7 @@ static bool load_json_scene(const string& filename, scene_scene& scene,
 
   // parse json reference
   auto get_material = [&scene, &material_map, &get_value](
-                          const njson& js, material_handle& value) -> bool {
+                          const json_type& js, material_handle& value) -> bool {
     auto name = ""s;
     if (!get_value(js, name)) return false;
     auto it = material_map.find(name);
@@ -1040,7 +1043,7 @@ static bool load_json_scene(const string& filename, scene_scene& scene,
 
   // parse json reference
   auto get_texture = [&scene, &texture_map, &get_value](
-                         const njson& js, texture_handle& value) -> bool {
+                         const json_type& js, texture_handle& value) -> bool {
     auto name = ""s;
     if (!get_value(js, name)) return false;
     auto it = texture_map.find(name);
@@ -1067,7 +1070,7 @@ static bool load_json_scene(const string& filename, scene_scene& scene,
       {"", invalid_handle}};
   auto instance_ply = unordered_map<instance_handle, ply_instance_handle>{};
   auto get_ply_instances = [&ply_instances, &ply_instance_map, &instance_ply,
-                               &get_value](const njson& js,
+                               &get_value](const json_type& js,
                                instance_handle          instance) -> bool {
     auto name = ""s;
     if (!get_value(js, name)) return false;
@@ -1089,8 +1092,8 @@ static bool load_json_scene(const string& filename, scene_scene& scene,
   };
 
   // helper for iteration
-  auto iterate_object = [](const njson& js) { return js.items(); };
-  auto check_object   = [](const njson& js) { return js.is_object(); };
+  auto iterate_object = [](const json_type& js) { return js.items(); };
+  auto check_object   = [](const json_type& js) { return js.is_object(); };
 
   // handle progress
   if (progress_cb) progress_cb("load scene", progress.x++, progress.y);
