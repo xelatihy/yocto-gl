@@ -620,10 +620,6 @@ static string get_cliusage(
   return message;
 }
 
-string get_command(const cli_state& cli) { return cli.command; }
-bool   get_help(const cli_state& cli) { return cli.help; }
-string get_usage(const cli_state& cli) { return cli.usage; }
-
 static bool parse_clivalue(
     json_value& value, const string& arg, const json_value& schema) {
   // if (!choices.empty()) {
