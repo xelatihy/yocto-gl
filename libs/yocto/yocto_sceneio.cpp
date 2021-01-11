@@ -887,54 +887,6 @@ inline void from_json(const njson& j, frame3f& value) {
   nlohmann::from_json(j, (array<float, 12>&)value);
 }
 
-// support for json conversions
-inline bool set_value(json_tview js, const vec3f& value) {
-  return set_value(js, (const array<float, 3>&)value);
-}
-inline bool set_value(json_tview js, const vec4f& value) {
-  return set_value(js, (const array<float, 4>&)value);
-}
-inline bool set_value(json_tview js, const frame3f& value) {
-  return set_value(js, (const array<float, 12>&)value);
-}
-inline bool set_value(json_tview js, const mat4f& value) {
-  return set_value(js, (const array<float, 16>&)value);
-}
-
-inline bool get_value(json_ctview js, vec3f& value) {
-  return get_value(js, (array<float, 3>&)value);
-}
-inline bool get_value(json_ctview js, mat3f& value) {
-  return get_value(js, (array<float, 9>&)value);
-}
-inline bool get_value(json_ctview js, frame3f& value) {
-  return get_value(js, (array<float, 12>&)value);
-}
-
-// support for json conversions
-inline void to_json(json_value& js, const vec3f& value) {
-  return to_json(js, (const array<float, 3>&)value);
-}
-inline void to_json(json_value& js, const vec4f& value) {
-  return to_json(js, (const array<float, 4>&)value);
-}
-inline void to_json(json_value& js, const frame3f& value) {
-  return to_json(js, (const array<float, 12>&)value);
-}
-inline void to_json(json_value& js, const mat4f& value) {
-  return to_json(js, (const array<float, 16>&)value);
-}
-
-inline void from_json(const json_value& js, vec3f& value) {
-  return from_json(js, (array<float, 3>&)value);
-}
-inline void from_json(const json_value& js, mat3f& value) {
-  return from_json(js, (array<float, 9>&)value);
-}
-inline void from_json(const json_value& js, frame3f& value) {
-  return from_json(js, (array<float, 12>&)value);
-}
-
 }  // namespace yocto
 
 // -----------------------------------------------------------------------------
@@ -974,15 +926,12 @@ static bool load_json_scene(const string& filename, scene_scene& scene,
     return false;
   };
 
-  // setting the json library for testing
-  using json_type = json_value;
-
   // handle progress
   auto progress = vec2i{0, 2};
   if (progress_cb) progress_cb("load scene", progress.x++, progress.y);
 
   // open file
-  auto js = json_type{};
+  auto js = njson{};
   if (!load_json(filename, js, error)) return json_error();
 
   // reference disctionaries
@@ -996,9 +945,9 @@ static bool load_json_scene(const string& filename, scene_scene& scene,
       {"", {invalid_handle, true}}};
 
   // parse json value
-  auto get_value = [](const json_type& js, auto& value) -> bool {
+  auto get_value = [](const njson& js, auto& value) -> bool {
     try {
-      from_json(js, value);
+      value = js;
       return true;
     } catch (...) {
       return false;
@@ -1007,7 +956,7 @@ static bool load_json_scene(const string& filename, scene_scene& scene,
 
   // parse json reference
   auto get_shape = [&scene, &shape_map, &get_value](
-                       const json_type& js, shape_handle& value) -> bool {
+                       const njson& js, shape_handle& value) -> bool {
     auto name = ""s;
     if (!get_value(js, name)) return false;
     auto it = shape_map.find(name);
@@ -1025,7 +974,7 @@ static bool load_json_scene(const string& filename, scene_scene& scene,
 
   // parse json reference
   auto get_material = [&scene, &material_map, &get_value](
-                          const json_type& js, material_handle& value) -> bool {
+                          const njson& js, material_handle& value) -> bool {
     auto name = ""s;
     if (!get_value(js, name)) return false;
     auto it = material_map.find(name);
@@ -1043,7 +992,7 @@ static bool load_json_scene(const string& filename, scene_scene& scene,
 
   // parse json reference
   auto get_texture = [&scene, &texture_map, &get_value](
-                         const json_type& js, texture_handle& value) -> bool {
+                         const njson& js, texture_handle& value) -> bool {
     auto name = ""s;
     if (!get_value(js, name)) return false;
     auto it = texture_map.find(name);
@@ -1071,7 +1020,7 @@ static bool load_json_scene(const string& filename, scene_scene& scene,
   auto instance_ply = unordered_map<instance_handle, ply_instance_handle>{};
   auto get_ply_instances = [&ply_instances, &ply_instance_map, &instance_ply,
                                &get_value](const json_type& js,
-                               instance_handle          instance) -> bool {
+                               instance_handle              instance) -> bool {
     auto name = ""s;
     if (!get_value(js, name)) return false;
     if (name.empty()) return true;
@@ -1092,8 +1041,8 @@ static bool load_json_scene(const string& filename, scene_scene& scene,
   };
 
   // helper for iteration
-  auto iterate_object = [](const json_type& js) { return js.items(); };
-  auto check_object   = [](const json_type& js) { return js.is_object(); };
+  auto iterate_object = [](const njson& js) { return js.items(); };
+  auto check_object   = [](const njson& js) { return js.is_object(); };
 
   // handle progress
   if (progress_cb) progress_cb("load scene", progress.x++, progress.y);
