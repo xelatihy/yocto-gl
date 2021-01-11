@@ -155,5 +155,6 @@
     "-modernize-use-trailing-return-type"
   ],
   "python.pythonPath": "/usr/local/bin/python3",
-  "editor.formatOnSave": true
+  "editor.formatOnSave": true,
+  "python.formatting.provider": "yapf"
 }
