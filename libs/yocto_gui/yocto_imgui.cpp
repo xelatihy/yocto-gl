@@ -1143,4 +1143,381 @@ bool draw_params(gui_window* win, const char* lbl, json_value& value,
   }
 }
 
+// insert param
+static gui_param& insert_param(gui_params& params, const string& name) {
+  for (auto& param : params.params) {
+    if (param.name == name) return param;
+  }
+  auto param = gui_param{};
+  param.name = name;
+  return params.params.emplace_back(param);
+}
+
+// insert param
+static const gui_param& get_param(
+    const gui_params& params, const string& name, gui_param_type type) {
+  for (auto& param : params.params) {
+    if (param.name == name) {
+      if (param.type != type)
+        throw std::invalid_argument{"wrong type for " + name};
+      return param;
+    }
+  }
+  throw std::out_of_range{"unknown param " + name};
+}
+
+// set gui params
+void set_param(gui_params& params, const string& name, float value,
+    const vec2f& minmax, bool readonly) {
+  auto& param    = insert_param(params, name);
+  param.name     = name;
+  param.type     = gui_param_type::vec1f;
+  param.value1f  = value;
+  param.minmaxf  = minmax;
+  param.readonly = readonly;
+  param.color    = false;
+  param.labels   = {};
+}
+void set_param(gui_params& params, const string& name, vec2f value,
+    const vec2f& minmax, bool readonly) {
+  auto& param    = insert_param(params, name);
+  param.name     = name;
+  param.type     = gui_param_type::vec2f;
+  param.value2f  = value;
+  param.minmaxf  = minmax;
+  param.readonly = readonly;
+  param.color    = false;
+  param.labels   = {};
+}
+void set_param(gui_params& params, const string& name, vec3f value,
+    const vec2f& minmax, bool readonly) {
+  auto& param    = insert_param(params, name);
+  param.name     = name;
+  param.type     = gui_param_type::vec3f;
+  param.value3f  = value;
+  param.minmaxf  = minmax;
+  param.readonly = readonly;
+  param.color    = false;
+  param.labels   = {};
+}
+void set_param(gui_params& params, const string& name, vec4f value,
+    const vec2f& minmax, bool readonly) {
+  auto& param    = insert_param(params, name);
+  param.name     = name;
+  param.type     = gui_param_type::vec4f;
+  param.value4f  = value;
+  param.minmaxf  = minmax;
+  param.readonly = readonly;
+  param.color    = false;
+  param.labels   = {};
+}
+void set_param(gui_params& params, const string& name, vec3f value, bool color,
+    bool readonly) {
+  auto& param    = insert_param(params, name);
+  param.name     = name;
+  param.type     = gui_param_type::vec3f;
+  param.value3f  = value;
+  param.minmaxf  = {0, 1};
+  param.readonly = readonly;
+  param.color    = color;
+  param.labels   = {};
+}
+void set_param(gui_params& params, const string& name, vec4f value, bool color,
+    bool readonly) {
+  auto& param    = insert_param(params, name);
+  param.name     = name;
+  param.type     = gui_param_type::vec4f;
+  param.value4f  = value;
+  param.minmaxf  = {0, 1};
+  param.readonly = readonly;
+  param.color    = color;
+  param.labels   = {};
+}
+void set_param(gui_params& params, const string& name, int value,
+    const vec2i& minmax, bool readonly) {
+  auto& param    = insert_param(params, name);
+  param.name     = name;
+  param.type     = gui_param_type::vec1i;
+  param.value1i  = value;
+  param.minmaxi  = minmax;
+  param.readonly = readonly;
+  param.color    = false;
+  param.labels   = {};
+}
+void set_param(gui_params& params, const string& name, vec2i value,
+    const vec2i& minmax, bool readonly) {
+  auto& param    = insert_param(params, name);
+  param.name     = name;
+  param.type     = gui_param_type::vec2i;
+  param.value2i  = value;
+  param.minmaxi  = minmax;
+  param.readonly = readonly;
+  param.color    = false;
+  param.labels   = {};
+}
+void set_param(gui_params& params, const string& name, vec3i value,
+    const vec2i& minmax, bool readonly) {
+  auto& param    = insert_param(params, name);
+  param.name     = name;
+  param.type     = gui_param_type::vec3i;
+  param.value3i  = value;
+  param.minmaxi  = minmax;
+  param.readonly = readonly;
+  param.color    = false;
+  param.labels   = {};
+}
+void set_param(gui_params& params, const string& name, vec4i value,
+    const vec2i& minmax, bool readonly) {
+  auto& param    = insert_param(params, name);
+  param.name     = name;
+  param.type     = gui_param_type::vec4i;
+  param.value4i  = value;
+  param.minmaxi  = minmax;
+  param.readonly = readonly;
+  param.color    = false;
+  param.labels   = {};
+}
+void set_param(
+    gui_params& params, const string& name, bool value, bool readonly) {
+  auto& param    = insert_param(params, name);
+  param.name     = name;
+  param.type     = gui_param_type::boolean;
+  param.value1b  = value;
+  param.readonly = readonly;
+  param.color    = false;
+  param.labels   = {};
+}
+void set_param(gui_params& params, const string& name, const string& value,
+    bool readonly) {
+  auto& param    = insert_param(params, name);
+  param.name     = name;
+  param.type     = gui_param_type::string;
+  param.value1s  = value;
+  param.readonly = readonly;
+  param.color    = false;
+  param.labels   = {};
+}
+void set_param(gui_params& params, const string& name, const string& value,
+    const vector<string>& labels, bool readonly) {
+  auto& param    = insert_param(params, name);
+  param.name     = name;
+  param.type     = gui_param_type::string;
+  param.value1s  = value;
+  param.readonly = readonly;
+  param.color    = false;
+  param.labels   = labels;
+}
+void set_param(gui_params& params, const string& name, int value,
+    const vector<string>& labels, bool readonly) {
+  auto& param    = insert_param(params, name);
+  param.name     = name;
+  param.type     = gui_param_type::vec1i;
+  param.value1i  = value;
+  param.readonly = readonly;
+  param.color    = false;
+  param.labels   = labels;
+}
+
+// get gui params
+void get_param(gui_params& params, const string& name, float& value) {
+  auto& param = get_param(params, name, gui_param_type::vec1f);
+  value       = param.value1f;
+}
+void get_param(gui_params& params, const string& name, vec2f& value) {
+  auto& param = get_param(params, name, gui_param_type::vec2f);
+  value       = param.value2f;
+}
+void get_param(gui_params& params, const string& name, vec3f& value) {
+  auto& param = get_param(params, name, gui_param_type::vec3f);
+  value       = param.value3f;
+}
+void get_param(gui_params& params, const string& name, vec4f& value) {
+  auto& param = get_param(params, name, gui_param_type::vec4f);
+  value       = param.value4f;
+}
+void get_param(gui_params& params, const string& name, int& value) {
+  auto& param = get_param(params, name, gui_param_type::vec1i);
+  value       = param.value1i;
+}
+void get_param(gui_params& params, const string& name, vec2i& value) {
+  auto& param = get_param(params, name, gui_param_type::vec2i);
+  value       = param.value2i;
+}
+void get_param(gui_params& params, const string& name, vec3i& value) {
+  auto& param = get_param(params, name, gui_param_type::vec3i);
+  value       = param.value3i;
+}
+void get_param(gui_params& params, const string& name, vec4i& value) {
+  auto& param = get_param(params, name, gui_param_type::vec4i);
+  value       = param.value4i;
+}
+void get_param(gui_params& params, const string& name, bool& value) {
+  auto& param = get_param(params, name, gui_param_type::boolean);
+  value       = param.value1b;
+}
+void get_param(gui_params& params, const string& name, string& value) {
+  auto& param = get_param(params, name, gui_param_type::string);
+  value       = param.value1s;
+}
+
+// make params
+gui_params make_params(const string& name) {
+  auto params = gui_params{};
+  params.name = name;
+  return params;
+}
+
+// draw param
+bool draw_param(gui_window* win, gui_param& param) {
+  auto copy = param;
+  switch (param.type) {
+    case gui_param_type::vec1f:
+      if (param.minmaxf.x == param.minmaxf.y) {
+        return draw_dragger(win, param.name.c_str(),
+                   param.readonly ? copy.value1f : param.value1f) &&
+               !param.readonly;
+      } else {
+        return draw_slider(win, param.name.c_str(),
+                   param.readonly ? copy.value1f : param.value1f,
+                   param.minmaxf.x, param.minmaxf.y) &&
+               !param.readonly;
+      }
+      break;
+    case gui_param_type::vec2f:
+      if (param.minmaxf.x == param.minmaxf.y) {
+        return draw_dragger(win, param.name.c_str(),
+                   param.readonly ? copy.value2f : param.value2f) &&
+               !param.readonly;
+      } else {
+        return draw_slider(win, param.name.c_str(),
+                   param.readonly ? copy.value2f : param.value2f,
+                   param.minmaxf.x, param.minmaxf.y) &&
+               !param.readonly;
+      }
+      break;
+    case gui_param_type::vec3f:
+      if (param.color) {
+        return draw_coloredit(win, param.name.c_str(),
+                   param.readonly ? copy.value3f : param.value3f) &&
+               !param.readonly;
+      } else if (param.minmaxf.x == param.minmaxf.y) {
+        return draw_dragger(win, param.name.c_str(),
+                   param.readonly ? copy.value3f : param.value3f) &&
+               !param.readonly;
+      } else {
+        return draw_slider(win, param.name.c_str(),
+                   param.readonly ? copy.value3f : param.value3f,
+                   param.minmaxf.x, param.minmaxf.y) &&
+               !param.readonly;
+      }
+      break;
+    case gui_param_type::vec4f:
+      if (param.color) {
+        return draw_coloredit(win, param.name.c_str(),
+                   param.readonly ? copy.value4f : param.value4f) &&
+               !param.readonly;
+      } else if (param.minmaxf.x == param.minmaxf.y) {
+        return draw_dragger(win, param.name.c_str(),
+                   param.readonly ? copy.value4f : param.value4f) &&
+               !param.readonly;
+      } else {
+        return draw_slider(win, param.name.c_str(),
+                   param.readonly ? copy.value4f : param.value4f,
+                   param.minmaxf.x, param.minmaxf.y) &&
+               !param.readonly;
+      }
+      break;
+    case gui_param_type::vec1i:
+      if (!param.labels.empty()) {
+        return draw_combobox(win, param.name.c_str(),
+                   param.readonly ? copy.value1i : param.value1i,
+                   param.labels) &&
+               !param.readonly;
+      } else if (param.minmaxi.x == param.minmaxi.y) {
+        return draw_dragger(win, param.name.c_str(),
+                   param.readonly ? copy.value1i : param.value1i) &&
+               !param.readonly;
+      } else {
+        return draw_slider(win, param.name.c_str(),
+                   param.readonly ? copy.value1i : param.value1i,
+                   param.minmaxi.x, param.minmaxi.y) &&
+               !param.readonly;
+      }
+      break;
+    case gui_param_type::vec2i:
+      if (param.minmaxi.x == param.minmaxi.y) {
+        return draw_dragger(win, param.name.c_str(),
+                   param.readonly ? copy.value2i : param.value2i) &&
+               !param.readonly;
+      } else {
+        return draw_slider(win, param.name.c_str(),
+                   param.readonly ? copy.value2i : param.value2i,
+                   param.minmaxi.x, param.minmaxi.y) &&
+               !param.readonly;
+      }
+      break;
+    case gui_param_type::vec3i:
+      if (param.minmaxi.x == param.minmaxi.y) {
+        return draw_dragger(win, param.name.c_str(),
+                   param.readonly ? copy.value3i : param.value3i) &&
+               !param.readonly;
+      } else {
+        return draw_slider(win, param.name.c_str(),
+                   param.readonly ? copy.value3i : param.value3i,
+                   param.minmaxi.x, param.minmaxi.y) &&
+               !param.readonly;
+      }
+      break;
+    case gui_param_type::vec4i:
+      if (param.minmaxi.x == param.minmaxi.y) {
+        return draw_dragger(win, param.name.c_str(),
+                   param.readonly ? copy.value4i : param.value4i) &&
+               !param.readonly;
+      } else {
+        return draw_slider(win, param.name.c_str(),
+                   param.readonly ? copy.value4i : param.value4i,
+                   param.minmaxi.x, param.minmaxi.y) &&
+               !param.readonly;
+      }
+      break;
+    case gui_param_type::string:
+      if (!param.labels.empty()) {
+        return draw_combobox(win, param.name.c_str(),
+                   param.readonly ? copy.value1s : param.value1s,
+                   param.labels) &&
+               !param.readonly;
+      } else {
+        return draw_textinput(win, param.name.c_str(),
+                   param.readonly ? copy.value1s : param.value1s) &&
+               !param.readonly;
+      }
+      break;
+    case gui_param_type::boolean:
+      if (!param.labels.empty()) {
+        // maybe we should implement something different here
+        return draw_checkbox(win, param.name.c_str(),
+                   param.readonly ? copy.value1b : param.value1b) &&
+               !param.readonly;
+      } else {
+        return draw_checkbox(win, param.name.c_str(),
+                   param.readonly ? copy.value1b : param.value1b) &&
+               !param.readonly;
+      }
+      break;
+  }
+}
+
+// draw params
+bool draw_params(gui_window* win, gui_params& params) {
+  auto edited = false;
+  if (begin_header(win, params.name.c_str())) {
+    for (auto& param : params.params) {
+      auto pedited = draw_param(win, param);
+      edited       = edited || pedited;
+    }
+    end_header(win);
+  }
+  return edited;
+}
+
 }  // namespace yocto

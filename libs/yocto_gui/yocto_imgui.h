@@ -200,6 +200,96 @@ bool draw_params(
 bool draw_params(gui_window* win, const char* title, json_value& value,
     const json_value& schema, bool readonly);
 
+enum struct gui_param_type {
+  // clang-format off
+  vec1f, vec2f, vec3f, vec4f, 
+  vec1i, vec2i, vec3i, vec4i, 
+  string, boolean
+  // clang-format on
+};
+
+struct gui_param {
+  // name and type
+  string         name = "";
+  gui_param_type type = gui_param_type::vec1f;
+  // display properties
+  vec2f          minmaxf  = {0, 0};
+  vec2i          minmaxi  = {0, 0};
+  vector<string> labels   = {};
+  bool           readonly = false;
+  bool           color    = false;
+  // values (this could be a union)
+  float  value1f = 0;
+  vec2f  value2f = {0, 0};
+  vec3f  value3f = {0, 0, 0};
+  vec4f  value4f = {0, 0, 0, 0};
+  int    value1i = 0;
+  vec2i  value2i = {0, 0};
+  vec3i  value3i = {0, 0, 0};
+  vec4i  value4i = {0, 0, 0, 0};
+  bool   value1b = false;
+  string value1s = "";
+};
+
+struct gui_params {
+  string            name = "";
+  vector<gui_param> params;
+};
+
+// make params
+gui_params make_params(const string& name);
+
+// draw params
+bool draw_params(gui_window* win, const char* title, gui_params& value);
+
+// set gui params
+void set_param(gui_params& params, const string& name, float value,
+    const vec2f& minmax = {0, 0}, bool readonly = false);
+void set_param(gui_params& params, const string& name, vec2f value,
+    const vec2f& minmax = {0, 0}, bool readonly = false);
+void set_param(gui_params& params, const string& name, vec3f value,
+    const vec2f& minmax = {0, 0}, bool readonly = false);
+void set_param(gui_params& params, const string& name, vec4f value,
+    const vec2f& minmax = {0, 0}, bool readonly = false);
+void set_param(gui_params& params, const string& name, vec3f value, bool color,
+    bool readonly = false);
+void set_param(gui_params& params, const string& name, vec4f value, bool color,
+    bool readonly = false);
+void set_param(gui_params& params, const string& name, int value,
+    const vec2i& minmax = {0, 0}, bool readonly = false);
+void set_param(gui_params& params, const string& name, vec2i value,
+    const vec2i& minmax = {0, 0}, bool readonly = false);
+void set_param(gui_params& params, const string& name, vec3i value,
+    const vec2i& minmax = {0, 0}, bool readonly = false);
+void set_param(gui_params& params, const string& name, vec4i value,
+    const vec2i& minmax = {0, 0}, bool readonly = false);
+void set_param(
+    gui_params& params, const string& name, bool value, bool readonly = false);
+void set_param(gui_params& params, const string& name, const string& value,
+    bool readonly = false);
+void set_param(gui_params& params, const string& name, const string& value,
+    const vector<string>& labels, bool readonly = false);
+void set_param(gui_params& params, const string& name, int value,
+    const vector<string>& labels, bool readonly = false);
+
+// get gui params
+void get_param(gui_params& params, const string& name, float& value);
+void get_param(gui_params& params, const string& name, vec2f& value);
+void get_param(gui_params& params, const string& name, vec3f& value);
+void get_param(gui_params& params, const string& name, vec4f& value);
+void get_param(gui_params& params, const string& name, int& value);
+void get_param(gui_params& params, const string& name, vec2i& value);
+void get_param(gui_params& params, const string& name, vec3i& value);
+void get_param(gui_params& params, const string& name, vec4i& value);
+void get_param(gui_params& params, const string& name, bool& value);
+void get_param(gui_params& params, const string& name, string& value);
+
+struct json_value;
+bool draw_params(
+    gui_window* win, const char* title, json_value& value, bool readonly);
+bool draw_params(gui_window* win, const char* title, json_value& value,
+    const json_value& schema, bool readonly);
+
 bool begin_header(gui_window* win, const char* title);
 void end_header(gui_window* win);
 
