@@ -33,12 +33,11 @@ struct shade_shape_params {
   vector<string> shapes = {"shape.json"s};
 };
 
-// Json IO
-inline void serialize_value(json_mode mode, json_value& json,
-    shade_shape_params& value, const string& description) {
-  serialize_object(mode, json, value, description);
-  serialize_property(mode, json, value.shapes, "shapes", "Input shapes.", true);
-  serialize_clipositionals(mode, json, {"shapes"});
+// Cli
+inline void add_command(cli_state& cli, const string& name,
+    shade_shape_params& value, const string& usage) {
+  auto& cmd = add_command(cli, name, usage);
+  add_positional(cmd, "shapes", value.shapes, "Input shapes.");
 }
 
 int run_shade_shape(const shade_shape_params& params);
