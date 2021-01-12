@@ -26,7 +26,7 @@
 // POSSIBILITY OF SUCH DAMAGE.
 //
 
-#include <yocto/yocto_json.h>
+#include <yocto/yocto_commonio.h>
 using namespace yocto;
 
 struct shade_shape_params {
