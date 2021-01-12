@@ -979,7 +979,7 @@ void draw_log(gui_window* win) {
 bool draw_param(gui_window* win, const string& name, gui_param& param) {
   auto copy = param;
   switch (param.type) {
-    case gui_param_type::vec1f:
+    case gui_param_type::value1f:
       if (param.minmaxf.x == param.minmaxf.y) {
         return draw_dragger(win, name.c_str(),
                    param.readonly ? (float&)copy.valuef
@@ -992,7 +992,7 @@ bool draw_param(gui_window* win, const string& name, gui_param& param) {
                !param.readonly;
       }
       break;
-    case gui_param_type::vec2f:
+    case gui_param_type::value2f:
       if (param.minmaxf.x == param.minmaxf.y) {
         return draw_dragger(win, name.c_str(),
                    param.readonly ? (vec2f&)copy.valuef
@@ -1005,7 +1005,7 @@ bool draw_param(gui_window* win, const string& name, gui_param& param) {
                !param.readonly;
       }
       break;
-    case gui_param_type::vec3f:
+    case gui_param_type::value3f:
       if (param.color) {
         return draw_coloredit(win, name.c_str(),
                    param.readonly ? (vec3f&)copy.valuef
@@ -1023,7 +1023,7 @@ bool draw_param(gui_window* win, const string& name, gui_param& param) {
                !param.readonly;
       }
       break;
-    case gui_param_type::vec4f:
+    case gui_param_type::value4f:
       if (param.color) {
         return draw_coloredit(win, name.c_str(),
                    param.readonly ? (vec4f&)copy.valuef
@@ -1041,7 +1041,7 @@ bool draw_param(gui_window* win, const string& name, gui_param& param) {
                !param.readonly;
       }
       break;
-    case gui_param_type::vec1i:
+    case gui_param_type::value1i:
       if (!param.labels.empty()) {
         return draw_combobox(win, name.c_str(),
                    param.readonly ? (int&)copy.valuei : (int&)param.valuei,
@@ -1058,7 +1058,7 @@ bool draw_param(gui_window* win, const string& name, gui_param& param) {
                !param.readonly;
       }
       break;
-    case gui_param_type::vec2i:
+    case gui_param_type::value2i:
       if (param.minmaxi.x == param.minmaxi.y) {
         return draw_dragger(win, name.c_str(),
                    param.readonly ? (vec2i&)copy.valuei
@@ -1071,7 +1071,7 @@ bool draw_param(gui_window* win, const string& name, gui_param& param) {
                !param.readonly;
       }
       break;
-    case gui_param_type::vec3i:
+    case gui_param_type::value3i:
       if (param.minmaxi.x == param.minmaxi.y) {
         return draw_dragger(win, name.c_str(),
                    param.readonly ? (vec3i&)copy.valuei
@@ -1084,7 +1084,7 @@ bool draw_param(gui_window* win, const string& name, gui_param& param) {
                !param.readonly;
       }
       break;
-    case gui_param_type::vec4i:
+    case gui_param_type::value4i:
       if (param.minmaxi.x == param.minmaxi.y) {
         return draw_dragger(win, name.c_str(),
                    param.readonly ? (vec4i&)copy.valuei
@@ -1097,7 +1097,7 @@ bool draw_param(gui_window* win, const string& name, gui_param& param) {
                !param.readonly;
       }
       break;
-    case gui_param_type::vec1s:
+    case gui_param_type::value1s:
       if (!param.labels.empty()) {
         return draw_combobox(win, name.c_str(),
                    param.readonly ? copy.values : param.values, param.labels) &&
@@ -1108,7 +1108,7 @@ bool draw_param(gui_window* win, const string& name, gui_param& param) {
                !param.readonly;
       }
       break;
-    case gui_param_type::vec1b:
+    case gui_param_type::value1b:
       if (!param.labels.empty()) {
         // maybe we should implement something different here
         return draw_checkbox(win, name.c_str(),
