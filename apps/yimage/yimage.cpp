@@ -209,7 +209,7 @@ int run_grade(const grade_params& params) {
 
   // grade image
   auto graded = make_image(image.width, image.height, false, true);
-  colorgrade_image_mt(graded, image, params);
+  colorgrade_image(graded, image, params);
 
   // set view
   set_image(viewer, params.image, graded);
@@ -224,7 +224,7 @@ int run_grade(const grade_params& params) {
         auto gparams = params;
         from_params(uiparams, gparams);
         colorgrade_image_mt(graded, image, gparams);
-        set_image(viewer, name, graded);
+      set_image(viewer, name, graded);
       });
 
   // run view

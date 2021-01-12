@@ -379,6 +379,8 @@ static void update_display(ogl_imageview* view) {
     tonemap_image_mt(view->display, view->image, view->exposure, view->filmic);
   } else if (!view->image.pixelsf.empty() || !view->image.pixelsf.empty()) {
     convert_image(view->display, view->image);
+  } else if (!view->image.pixelsb.empty() || !view->image.pixelsb.empty()) {
+    convert_image(view->display, view->image);
   } else {
     // TODO(fabio): decide about empty images
   }
@@ -427,7 +429,7 @@ void draw_widgets(
     auto ldr_pixel     = zero4b;
     auto display_pixel = zero4b;
     auto width = view->display.width, height = view->display.height;
-    if (i >= 0 && j < width && i >= 0 && j < height) {
+    if (i >= 0 && i < width && j >= 0 && j < height) {
       hdr_pixel     = !view->image.pixelsf.empty()
                           ? view->image.pixelsf[j * width + i]
                           : zero4f;
