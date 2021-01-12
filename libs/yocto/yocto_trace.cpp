@@ -37,7 +37,6 @@
 
 #include "yocto_color.h"
 #include "yocto_geometry.h"
-#include "yocto_json.h"
 #include "yocto_parallel.h"
 #include "yocto_sampling.h"
 #include "yocto_shading.h"
@@ -1298,93 +1297,5 @@ void trace_stop(trace_state& state) {
   state.stop = true;
   if (state.worker.valid()) state.worker.get();
 }
-
-}  // namespace yocto
-
-// -----------------------------------------------------------------------------
-// TRACE IO
-// -----------------------------------------------------------------------------
-namespace yocto {
-
-// clang-format off
-    
- void serialize_value(json_mode mode,
-    json_value& json, trace_params& value, const string& description) {
-  serialize_object(mode, json, value, description);
-  serialize_property(mode, json, value.resolution, "resolution", "Image resolution.");
-  serialize_property(mode, json, value.sampler, "sampler", "Sampler type.");
-  serialize_property(mode, json, value.falsecolor, "falsecolor", "False color type.");
-  serialize_property(mode, json, value.samples, "samples", "Number of samples.");
-  serialize_property(mode, json, value.bounces, "bounces", "Number of bounces.");
-  serialize_property(mode, json, value.clamp, "clamp", "Clamp value.");
-  serialize_property(mode, json, value.nocaustics, "nocaustics", "Disable caustics.");
-  serialize_property(mode, json, value.envhidden, "envhidden", "Hide environment.");
-  serialize_property(mode, json, value.tentfilter, "tentfilter", "Filter image.");
-  serialize_property(mode, json, value.seed, "seed", "Random seed.");
-  serialize_property(mode, json, value.bvh, "bvh", "Bvh type.");
-  serialize_property(mode, json, value.noparallel, "noparallel", "Disable threading.");
-  serialize_property(mode, json, value.pratio, "pratio", "Preview ratio.");
-  serialize_property(mode, json, value.exposure, "exposure", "Image exposure.");
-}
-
-// Json enum conventions
- const vector<pair<trace_bvh_type, string>>& json_enum_labels(
-    trace_bvh_type) {
-  static const auto trace_bvh_labels = vector<pair<trace_bvh_type, string>>{
-      {trace_bvh_type::default_, "default"},
-      {trace_bvh_type::highquality, "highquality"},
-      {trace_bvh_type::middle, "middle"},
-      {trace_bvh_type::balanced, "balanced"},
-#ifdef YOCTO_EMBREE
-      {trace_bvh_type::embree_default, "embree-default"},
-      {trace_bvh_type::embree_highquality, "embree-highquality"},
-      {trace_bvh_type::embree_compact, "embree-compact"},
-#endif
-  };
-  return trace_bvh_labels;
-}
-
- const vector<pair<trace_falsecolor_type, string>>& json_enum_labels(
-    trace_falsecolor_type) {
-  static const auto trace_falsecolor_labels =
-      vector<pair<trace_falsecolor_type, string>>{
-          {trace_falsecolor_type::position, "position"},
-          {trace_falsecolor_type::normal, "normal"},
-          {trace_falsecolor_type::frontfacing, "frontfacing"},
-          {trace_falsecolor_type::gnormal, "gnormal"},
-          {trace_falsecolor_type::gfrontfacing, "gfrontfacing"},
-          {trace_falsecolor_type::texcoord, "texcoord"},
-          {trace_falsecolor_type::color, "color"},
-          {trace_falsecolor_type::emission, "emission"},
-          {trace_falsecolor_type::diffuse, "diffuse"},
-          {trace_falsecolor_type::specular, "specular"},
-          {trace_falsecolor_type::coat, "coat"},
-          {trace_falsecolor_type::metal, "metal"},
-          {trace_falsecolor_type::transmission, "transmission"},
-          {trace_falsecolor_type::translucency, "translucency"},
-          {trace_falsecolor_type::refraction, "refraction"},
-          {trace_falsecolor_type::roughness, "roughness"},
-          {trace_falsecolor_type::opacity, "opacity"},
-          {trace_falsecolor_type::ior, "ior"},
-          {trace_falsecolor_type::instance, "instance"},
-          {trace_falsecolor_type::element, "element"},
-          {trace_falsecolor_type::highlight, "highlight"}};
-  return trace_falsecolor_labels;
-}
-
-const vector<pair<trace_sampler_type, string>>& json_enum_labels(
-    trace_sampler_type) {
-  static const auto trace_sampler_labels =
-      vector<pair<trace_sampler_type, string>>{
-          {trace_sampler_type::path, "path"},
-          {trace_sampler_type::naive, "naive"},
-          {trace_sampler_type::eyelight, "eyelight"},
-          {trace_sampler_type::falsecolor, "falsecolor"},
-          {trace_sampler_type::albedo, "albedo"},
-          {trace_sampler_type::normal, "normal"}};
-  return trace_sampler_labels;
-}
-
-// clang-format on
 
 }  // namespace yocto

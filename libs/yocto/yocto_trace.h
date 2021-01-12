@@ -230,58 +230,15 @@ struct trace_params {
   float                 exposure   = 0;
 };
 
-const auto trace_sampler_labels = vector<pair<trace_sampler_type, string>>{
-    {trace_sampler_type::path, "path"}, {trace_sampler_type::naive, "naive"},
-    {trace_sampler_type::eyelight, "eyelight"},
-    {trace_sampler_type::falsecolor, "falsecolor"},
-    {trace_sampler_type::albedo, "albedo"},
-    {trace_sampler_type::normal, "normal"}};
-
-const auto trace_falsecolor_labels =
-    vector<pair<trace_falsecolor_type, string>>{
-        {trace_falsecolor_type::position, "position"},
-        {trace_falsecolor_type::normal, "normal"},
-        {trace_falsecolor_type::frontfacing, "frontfacing"},
-        {trace_falsecolor_type::gnormal, "gnormal"},
-        {trace_falsecolor_type::gfrontfacing, "gfrontfacing"},
-        {trace_falsecolor_type::texcoord, "texcoord"},
-        {trace_falsecolor_type::color, "color"},
-        {trace_falsecolor_type::emission, "emission"},
-        {trace_falsecolor_type::diffuse, "diffuse"},
-        {trace_falsecolor_type::specular, "specular"},
-        {trace_falsecolor_type::coat, "coat"},
-        {trace_falsecolor_type::metal, "metal"},
-        {trace_falsecolor_type::transmission, "transmission"},
-        {trace_falsecolor_type::translucency, "translucency"},
-        {trace_falsecolor_type::refraction, "refraction"},
-        {trace_falsecolor_type::roughness, "roughness"},
-        {trace_falsecolor_type::opacity, "opacity"},
-        {trace_falsecolor_type::ior, "ior"},
-        {trace_falsecolor_type::instance, "instance"},
-        {trace_falsecolor_type::element, "element"},
-        {trace_falsecolor_type::highlight, "highlight"}};
-
-const auto trace_bvh_labels = vector<pair<trace_bvh_type, string>>{
-    {trace_bvh_type::default_, "default"},
-    {trace_bvh_type::highquality, "highquality"},
-    {trace_bvh_type::middle, "middle"},
-    {trace_bvh_type::balanced, "balanced"},
-#ifdef YOCTO_EMBREE
-    {trace_bvh_type::embree_default, "embree-default"},
-    {trace_bvh_type::embree_highquality, "embree-highquality"},
-    {trace_bvh_type::embree_compact, "embree-compact"},
-#endif
-};
-
-const auto trace_sampler_names = std::vector<std::string>{
+inline const auto trace_sampler_names = std::vector<std::string>{
     "path", "naive", "eyelight", "falsecolor", "dalbedo", "dnormal"};
 
-const auto trace_falsecolor_names = vector<string>{"position", "normal",
+inline const auto trace_falsecolor_names = vector<string>{"position", "normal",
     "frontfacing", "gnormal", "gfrontfacing", "texcoord", "color", "emission",
     "diffuse", "specular", "coat", "metal", "transmission", "translucency",
     "refraction", "roughness", "opacity", "ior", "instance", "element",
     "highlight"};
-const auto trace_bvh_names        = vector<string>{
+const auto        trace_bvh_names        = vector<string>{
     "default", "highquality", "middle", "balanced",
 #ifdef YOCTO_EMBREE
     "embree-default", "embree-highquality", "embree-compact"
@@ -367,26 +324,6 @@ void trace_start(trace_state& state, const scene_scene& scene,
     const progress_callback& progress_cb = {},
     const image_callback& image_cb = {}, const async_callback& async_cb = {});
 void trace_stop(trace_state& state);
-
-}  // namespace yocto
-
-// -----------------------------------------------------------------------------
-// TRACE IO
-// -----------------------------------------------------------------------------
-namespace yocto {
-
-// Serialize value to json
-enum struct json_mode;
-struct json_value;
-void serialize_value(json_mode mode, json_value& json, trace_params& value,
-    const string& description);
-
-// Serialize enum to json
-const vector<pair<trace_bvh_type, string>>& json_enum_labels(trace_bvh_type);
-const vector<pair<trace_falsecolor_type, string>>& json_enum_labels(
-    trace_falsecolor_type);
-const vector<pair<trace_sampler_type, string>>& json_enum_labels(
-    trace_sampler_type);
 
 }  // namespace yocto
 
