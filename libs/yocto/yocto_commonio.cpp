@@ -471,17 +471,17 @@ static string get_usage(const cli_command& root, const cli_command& cli) {
     auto str = string{};
     str += "[";
     for (auto& value : option.def) {
-      switch (value.type) {
+      switch (option.type) {
         case cli_type::integer:
-          str += option.choices.empty() ? std::to_string(value.number)
+          str += option.choices.empty() ? std::to_string(value.integer)
                                         : option.choices[value.integer];
           break;
         case cli_type::uinteger:
-          str += option.choices.empty() ? std::to_string(value.number)
+          str += option.choices.empty() ? std::to_string(value.uinteger)
                                         : option.choices[value.uinteger];
           break;
         case cli_type::number: str += std::to_string(value.number); break;
-        case cli_type::string: str += value.text; break;
+        case cli_type::string: str += '\"' + value.text + '\"'; break;
         case cli_type::boolean: str += value.integer ? "true" : "false"; break;
       }
     }
@@ -506,7 +506,7 @@ static string get_usage(const cli_command& root, const cli_command& cli) {
       line += "  --" + option.name;
       if (!option.alt.empty()) line += ", -" + option.alt;
     }
-    line += " " + type_name(option);
+    if (option.nargs > 0) line += " " + type_name(option);
     while (line.size() < 32) line += " ";
     line += option.usage;
     line += " " + def_string(option) + "\n";
@@ -515,7 +515,7 @@ static string get_usage(const cli_command& root, const cli_command& cli) {
       auto len = 16;
       for (auto& choice : option.choices) {
         if (len + choice.size() + 2 > 78) {
-          line += "\n                 ";
+          line += "\n                  ";
           len = 16;
         }
         line += choice + ", ";
@@ -524,12 +524,12 @@ static string get_usage(const cli_command& root, const cli_command& cli) {
       line = line.substr(0, line.size() - 2);
       line += "\n";
     }
-    if (option.name.find("-") == 0) {
-      has_optional = true;
-      usage_optional += line;
-    } else {
+    if (option.positional) {
       has_positional = true;
       usage_positional += line;
+    } else {
+      has_optional = true;
+      usage_optional += line;
     }
   }
   for (auto& scmd : cli.commands) {
@@ -562,57 +562,57 @@ string get_usage(const cli_command& cli) { return get_usage(cli, cli); }
 string get_command(const cli_command& cli) { return cli.command; }
 
 static bool parse_value(
-    cli_value& value, const string& arg, const vector<string>& choices) {
-  if (!choices.empty()) {
-    if (std::find(choices.begin(), choices.end(), arg) == choices.end())
-      return false;
-  }
-  switch (value.type) {
-    case cli_type::string: {
-      value.text = arg;
-      return true;
-    } break;
-    case cli_type::boolean: {
-      if (arg == "true" || arg == "1") {
-        value.integer = 1;
-        return true;
-      } else if (arg == "false" || arg == "0") {
-        value.integer = 0;
-        return true;
-      } else {
+    cli_option& option, const vector<string>& args, size_t start) {
+  option.value.resize(option.nargs > 0 ? option.nargs : (args.size() - start));
+  for (auto idx = (size_t)0; idx < option.value.size(); idx++) {
+    auto& value   = option.value.at(idx);
+    auto& arg     = args.at(start + idx);
+    auto& choices = option.choices;
+    if (!choices.empty()) {
+      if (std::find(choices.begin(), choices.end(), arg) == choices.end())
         return false;
-      }
-    } break;
-    case cli_type::integer: {
-      if (choices.empty()) {
-        auto end      = (char*)nullptr;
-        value.integer = (int)strtol(arg.c_str(), &end, 10);
-        return end != nullptr;
-      } else {
-        value.integer = (int64_t)(
-            std::find(choices.begin(), choices.end(), arg) - choices.begin());
-        return true;
-      }
-    } break;
-    case cli_type::uinteger: {
-      if (choices.empty()) {
-        auto end       = (char*)nullptr;
-        value.uinteger = (int)strtoul(arg.c_str(), &end, 10);
-        return end != nullptr;
-      } else {
-        value.uinteger = (uint64_t)(
-            std::find(choices.begin(), choices.end(), arg) - choices.begin());
-        return true;
-      }
-    } break;
-    case cli_type::number: {
-      auto end     = (char*)nullptr;
-      value.number = strtod(arg.c_str(), &end);
-      return end != nullptr;
-      return true;
-    } break;
+    }
+    switch (option.type) {
+      case cli_type::string: {
+        value.text = arg;
+      } break;
+      case cli_type::boolean: {
+        if (arg == "true" || arg == "1") {
+          value.integer = 1;
+        } else if (arg == "false" || arg == "0") {
+          value.integer = 0;
+        } else {
+          return false;
+        }
+      } break;
+      case cli_type::integer: {
+        if (choices.empty()) {
+          auto end      = (char*)nullptr;
+          value.integer = (int)strtol(arg.c_str(), &end, 10);
+          if (end == nullptr) return false;
+        } else {
+          value.integer = (int64_t)(
+              std::find(choices.begin(), choices.end(), arg) - choices.begin());
+        }
+      } break;
+      case cli_type::uinteger: {
+        if (choices.empty()) {
+          auto end       = (char*)nullptr;
+          value.uinteger = (int)strtoul(arg.c_str(), &end, 10);
+          if (end == nullptr) return false;
+        } else {
+          value.uinteger = (uint64_t)(
+              std::find(choices.begin(), choices.end(), arg) - choices.begin());
+        }
+      } break;
+      case cli_type::number: {
+        auto end     = (char*)nullptr;
+        value.number = strtod(arg.c_str(), &end);
+        if (end == nullptr) return false;
+      } break;
+    }
   }
-  return false;
+  return true;
 }
 
 bool parse_cli(cli_command& cli, vector<string>& args, string& error) {
@@ -661,22 +661,12 @@ bool parse_cli(cli_command& cli, vector<string>& args, string& error) {
       if (option.nargs > 0) {
         if (idx + (size_t)option.nargs > args.size())
           return cli_error("missing value for " + option.name);
-        option.value.resize(option.nargs);
-        for (auto vidx = 0; vidx < option.nargs; vidx++) {
-          option.value[vidx].type = option.type;
-          if (!parse_value(
-                  option.value[vidx], args[idx + vidx], option.choices))
-            return cli_error("bad value for " + option.name);
-        }
+        if (!parse_value(option, args, idx))
+          return cli_error("bad value for " + option.name);
         idx += option.nargs - 1;
       } else if (option.nargs < 0) {
-        option.value.resize(option.nargs);
-        for (auto vidx = 0; vidx < option.nargs; vidx++) {
-          option.value[vidx].type = option.type;
-          if (!parse_value(
-                  option.value[vidx], args[idx + vidx], option.choices))
-            return cli_error("bad value for " + option.name);
-        }
+        if (!parse_value(option, args, idx))
+          return cli_error("bad value for " + option.name);
         idx += args.size();
       } else {
         throw std::invalid_argument{"unsupported number of arguments"};
@@ -694,19 +684,12 @@ bool parse_cli(cli_command& cli, vector<string>& args, string& error) {
         if (option.type != cli_type::boolean)
           throw std::invalid_argument{"unsupported flag type"};
         option.value.resize(1);
-        option.value[0].type = option.type;
-        if (!parse_value(option.value[0], "true", option.choices))
-          return cli_error("bad value for " + option.name);
+        option.value[0].integer = 1;
       } else if (option.nargs > 0) {
         if (idx + (size_t)option.nargs >= args.size())
           return cli_error("missing value for " + option.name);
-        option.value.resize(option.nargs);
-        for (auto vidx = 0; vidx < option.nargs; vidx++) {
-          option.value[vidx].type = option.type;
-          if (!parse_value(
-                  option.value[vidx], args[idx + 1 + vidx], option.choices))
-            return cli_error("bad value for " + option.name);
-        }
+        if (!parse_value(option, args, idx + 1))
+          return cli_error("bad value for " + option.name);
         idx += option.nargs;
       } else {
         throw std::invalid_argument{"unsupported number of arguments"};
@@ -730,7 +713,11 @@ bool parse_cli(cli_command& cli, vector<string>& args, string& error) {
       if (option.req && !option.set)
         return cli_error("missing value for " + option.name);
       if (!option.set) option.value = option.def;
-      if (option.set_reference) option.set_reference(option.value);
+      if (option.set_value) {
+        if (!option.set_value(option)) {
+          return cli_error("bad value for " + option.name);
+        }
+      }
     }
   }
 

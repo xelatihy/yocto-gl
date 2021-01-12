@@ -466,7 +466,6 @@ namespace yocto {
 enum struct cli_type { integer, uinteger, number, boolean, string };
 // Command line value
 struct cli_value {
-  cli_type type     = cli_type::integer;
   int64_t  integer  = 0;
   uint64_t uinteger = 0;
   double   number   = 0;
@@ -474,18 +473,18 @@ struct cli_value {
 };
 // Command line option. All data should be considered private.
 struct cli_option {
-  string                                          name       = "";
-  string                                          alt        = "";
-  bool                                            positional = false;
-  cli_type                                        type       = cli_type::string;
-  bool                                            req        = false;
-  int                                             nargs      = 0;
-  string                                          usage      = "";
-  vector<cli_value>                               value      = {};
-  vector<cli_value>                               def        = {};
-  vector<string>                                  choices    = {};
-  bool                                            set        = false;
-  function<void(const vector<cli_value>& values)> set_reference = {};
+  string                            name       = "";
+  string                            alt        = "";
+  bool                              positional = false;
+  cli_type                          type       = cli_type::string;
+  bool                              req        = false;
+  int                               nargs      = 0;
+  string                            usage      = "";
+  vector<cli_value>                 value      = {};
+  vector<cli_value>                 def        = {};
+  vector<string>                    choices    = {};
+  bool                              set        = false;
+  function<bool(const cli_option&)> set_value  = {};
 };
 // Command line command. All data should be considered private.
 struct cli_command {
@@ -523,63 +522,102 @@ inline cli_type get_cli_type() {
 }
 
 template <typename T>
-inline void set_value(cli_value& cvalue, const T& value) {
+inline vector<cli_value> make_cli_values(const vector<T>& values) {
   static_assert(std::is_same_v<T, string> || std::is_same_v<T, bool> ||
                     std::is_integral_v<T> || std::is_floating_point_v<T> ||
                     std::is_enum_v<T>,
       "unsupported type");
-  cvalue.type = get_cli_type<T>();
-  if constexpr (std::is_same_v<T, string>) {
-    cvalue.text = value;
-  } else if constexpr (std::is_same_v<T, bool>) {
-    cvalue.integer = value ? 1 : 0;
-  } else if constexpr (std::is_enum_v<T>) {
-    cvalue.integer = (int64_t)value;
-  } else if constexpr (std::is_integral_v<T> && !std::is_unsigned_v<T>) {
-    cvalue.integer = value;
-  } else if constexpr (std::is_integral_v<T> && std::is_unsigned_v<T>) {
-    cvalue.uinteger = value;
-  } else if constexpr (std::is_floating_point_v<T>) {
-    cvalue.number = value;
-  } else {
-    // probably should be an error
-    // pass
+  auto cvalues = vector<cli_value>{};
+  for (auto value : values) {  // needs to copy for booleans
+    auto& cvalue = cvalues.emplace_back();
+    if constexpr (std::is_same_v<T, string>) {
+      cvalue.text = value;
+    } else if constexpr (std::is_same_v<T, bool>) {
+      cvalue.integer = value ? 1 : 0;
+    } else if constexpr (std::is_enum_v<T>) {
+      cvalue.integer = (int64_t)value;
+    } else if constexpr (std::is_integral_v<T> && !std::is_unsigned_v<T>) {
+      cvalue.integer = value;
+    } else if constexpr (std::is_integral_v<T> && std::is_unsigned_v<T>) {
+      cvalue.uinteger = value;
+    } else if constexpr (std::is_floating_point_v<T>) {
+      cvalue.number = value;
+    } else {
+      // probably should be an error
+      // pass
+    }
   }
+  return cvalues;
+}
+template <typename T>
+inline vector<cli_value> make_cli_values(const T& value) {
+  return make_cli_values(vector<T>{value});
 }
 
 template <typename T>
-inline bool get_value(const cli_value& cvalue, T& value) {
+inline bool get_value(const cli_option& option, T& value) {
   static_assert(std::is_same_v<T, string> || std::is_same_v<T, bool> ||
                     std::is_integral_v<T> || std::is_floating_point_v<T> ||
                     std::is_enum_v<T>,
       "unsupported type");
+  if (option.value.size() != 1) throw std::out_of_range{"bad option size"};
+  auto& cvalue = option.value[0];
   if constexpr (std::is_same_v<T, string>) {
-    if (cvalue.type != cli_type::string) return false;
+    if (option.type != cli_type::string) return false;
     value = cvalue.text;
-    return true;
   } else if constexpr (std::is_same_v<T, bool>) {
-    if (cvalue.type != cli_type::boolean) return false;
+    if (option.type != cli_type::boolean) return false;
     value = cvalue.integer != 0;
-    return true;
   } else if constexpr (std::is_enum_v<T>) {
-    if (cvalue.type != cli_type::integer) return false;
+    if (option.type != cli_type::integer) return false;
     value = (T)cvalue.integer;
-    return true;
   } else if constexpr (std::is_integral_v<T> && !std::is_unsigned_v<T>) {
-    if (cvalue.type != cli_type::integer) return false;
+    if (option.type != cli_type::integer) return false;
     value = (T)cvalue.integer;
-    return true;
   } else if constexpr (std::is_integral_v<T> && std::is_unsigned_v<T>) {
-    if (cvalue.type != cli_type::uinteger) return false;
+    if (option.type != cli_type::uinteger) return false;
     value = (T)cvalue.uinteger;
-    return true;
   } else if constexpr (std::is_floating_point_v<T>) {
-    if (cvalue.type != cli_type::number) return false;
+    if (option.type != cli_type::number) return false;
     value = (T)cvalue.number;
-    return true;
   } else {
     return false;
   }
+  return true;
+}
+
+template <typename T>
+inline bool get_value(const cli_option& option, vector<T>& values) {
+  static_assert(std::is_same_v<T, string> || std::is_same_v<T, bool> ||
+                    std::is_integral_v<T> || std::is_floating_point_v<T> ||
+                    std::is_enum_v<T>,
+      "unsupported type");
+  values.clear();
+  for (auto& cvalue : option.value) {
+    auto& value = values.emplace_back();
+    if constexpr (std::is_same_v<T, string>) {
+      if (option.type != cli_type::string) return false;
+      value = cvalue.text;
+    } else if constexpr (std::is_same_v<T, bool>) {
+      if (option.type != cli_type::boolean) return false;
+      value = cvalue.integer != 0;
+    } else if constexpr (std::is_enum_v<T>) {
+      if (option.type != cli_type::integer) return false;
+      value = (T)cvalue.integer;
+    } else if constexpr (std::is_integral_v<T> && !std::is_unsigned_v<T>) {
+      if (option.type != cli_type::integer) return false;
+      value = (T)cvalue.integer;
+    } else if constexpr (std::is_integral_v<T> && std::is_unsigned_v<T>) {
+      if (option.type != cli_type::uinteger) return false;
+      value = (T)cvalue.uinteger;
+    } else if constexpr (std::is_floating_point_v<T>) {
+      if (option.type != cli_type::number) return false;
+      value = (T)cvalue.number;
+    } else {
+      return false;
+    }
+  }
+  return true;
 }
 
 template <typename T>
@@ -589,22 +627,19 @@ inline void add_optional(cli_command& cli, const string& name, T& value,
                     std::is_integral_v<T> || std::is_floating_point_v<T> ||
                     std::is_enum_v<T>,
       "unsupported type");
-  auto def = vector<cli_value>{};
-  set_value(def.emplace_back(), value);
-  auto& option         = cli.options.emplace_back();
-  option.name          = name;
-  option.alt           = alt;
-  option.positional    = false;
-  option.type          = get_cli_type<T>();
-  option.req           = req;
-  option.nargs         = !std::is_same_v<T, bool> ? 1 : 0;
-  option.usage         = usage;
-  option.value         = def;
-  option.def           = def;
-  option.choices       = {};
-  option.set_reference = [&value](const vector<cli_value>& cvalues) -> bool {
-    if (cvalues.size() != 1) throw std::out_of_range{"invalid number of args"};
-    return get_value(cvalues.front(), value);
+  auto& option      = cli.options.emplace_back();
+  option.name       = name;
+  option.alt        = alt;
+  option.positional = false;
+  option.type       = get_cli_type<T>();
+  option.req        = req;
+  option.nargs      = !std::is_same_v<T, bool> ? 1 : 0;
+  option.usage      = usage;
+  option.value      = make_cli_values(value);
+  option.def        = make_cli_values(value);
+  option.choices    = {};
+  option.set_value  = [&value](const cli_option& option) -> bool {
+    return get_value(option, value);
   };
 }
 
@@ -615,48 +650,42 @@ inline void add_positional(cli_command& cli, const string& name, T& value,
                     std::is_integral_v<T> || std::is_floating_point_v<T> ||
                     std::is_enum_v<T>,
       "unsupported type");
-  auto def = vector<cli_value>{};
-  set_value(def.emplace_back(), value);
-  auto& option         = cli.options.emplace_back();
-  option.name          = name;
-  option.alt           = "";
-  option.positional    = true;
-  option.type          = get_cli_type<T>();
-  option.req           = req;
-  option.nargs         = 1;
-  option.usage         = usage;
-  option.value         = def;
-  option.def           = def;
-  option.choices       = {};
-  option.set_reference = [&value](const vector<cli_value>& cvalues) -> bool {
-    if (cvalues.size() != 1) throw std::out_of_range{"invalid number of args"};
-    return get_value(cvalues.front(), value);
+  auto& option      = cli.options.emplace_back();
+  option.name       = name;
+  option.alt        = "";
+  option.positional = true;
+  option.type       = get_cli_type<T>();
+  option.req        = req;
+  option.nargs      = 1;
+  option.usage      = usage;
+  option.value      = make_cli_values(value);
+  option.def        = make_cli_values(value);
+  option.choices    = {};
+  option.set_value  = [&value](const cli_option& option) -> bool {
+    return get_value(option, value);
   };
 }
 
 template <typename T>
 inline void add_optional(cli_command& cli, const string& name, T& value,
-    const string& usage, const string& alt, const vector<string>& choices,
+    const string& usage, const vector<string>& choices, const string& alt,
     bool req) {
   static_assert(
       std::is_same_v<T, string> || std::is_integral_v<T> || std::is_enum_v<T>,
       "unsupported type");
-  auto def = vector<cli_value>{};
-  set_value(def.emplace_back(), value);
-  auto& option         = cli.options.emplace_back();
-  option.name          = name;
-  option.alt           = alt;
-  option.positional    = false;
-  option.type          = get_cli_type<T>();
-  option.req           = req;
-  option.nargs         = 1;
-  option.usage         = usage;
-  option.value         = def;
-  option.def           = def;
-  option.choices       = choices;
-  option.set_reference = [&value](const vector<cli_value>& cvalues) -> bool {
-    if (cvalues.size() != 1) throw std::out_of_range{"invalid number of args"};
-    return get_value(cvalues.front(), value);
+  auto& option      = cli.options.emplace_back();
+  option.name       = name;
+  option.alt        = alt;
+  option.positional = false;
+  option.type       = get_cli_type<T>();
+  option.req        = req;
+  option.nargs      = 1;
+  option.usage      = usage;
+  option.value      = make_cli_values(value);
+  option.def        = make_cli_values(value);
+  option.choices    = choices;
+  option.set_value  = [&value](const cli_option& option) -> bool {
+    return get_value(option, value);
   };
 }
 
@@ -666,80 +695,65 @@ inline void add_positional(cli_command& cli, const string& name, T& value,
   static_assert(
       std::is_same_v<T, string> || std::is_integral_v<T> || std::is_enum_v<T>,
       "unsupported type");
-  auto def = vector<cli_value>{};
-  set_value(def.emplace_back(), value);
-  auto& option         = cli.options.emplace_back();
-  option.name          = name;
-  option.alt           = "";
-  option.positional    = true;
-  option.type          = get_cli_type<T>();
-  option.req           = req;
-  option.nargs         = 1;
-  option.usage         = usage;
-  option.value         = def;
-  option.def           = def;
-  option.choices       = choices;
-  option.set_reference = [&value](const vector<cli_value>& cvalues) -> bool {
-    if (cvalues.size() != 1) throw std::out_of_range{"invalid number of args"};
-    return get_value(cvalues.front(), value);
+  auto& option      = cli.options.emplace_back();
+  option.name       = name;
+  option.alt        = "";
+  option.positional = true;
+  option.type       = get_cli_type<T>();
+  option.req        = req;
+  option.nargs      = 1;
+  option.usage      = usage;
+  option.value      = make_cli_values(value);
+  option.def        = make_cli_values(value);
+  option.choices    = choices;
+  option.set_value  = [&value](const cli_option& option) -> bool {
+    return get_value(option, value);
   };
 }
 
 template <typename T>
 inline void add_positional(cli_command& cli, const string& name,
-    vector<T>& values, const string& usage, bool req) {
+    vector<T>& value, const string& usage, bool req) {
   static_assert(std::is_same_v<T, string> || std::is_same_v<T, bool> ||
                     std::is_integral_v<T> || std::is_floating_point_v<T> ||
                     std::is_enum_v<T>,
       "unsupported type");
-  auto def = vector<cli_value>{};
-  for (auto& value : values) set_value(def.emplace_back(), value);
-  auto& option         = cli.options.emplace_back();
-  option.name          = name;
-  option.alt           = "";
-  option.positional    = true;
-  option.type          = get_cli_type<T>();
-  option.req           = req;
-  option.nargs         = -1;
-  option.usage         = usage;
-  option.value         = def;
-  option.def           = def;
-  option.choices       = {};
-  option.set_reference = [&values](const vector<cli_value>& cvalues) -> bool {
-    values.clear();
-    for (auto& cvalue : cvalues) {
-      if (!get_value(cvalue, values.emplace_back())) return false;
-    }
-    return true;
+  auto& option      = cli.options.emplace_back();
+  option.name       = name;
+  option.alt        = "";
+  option.positional = true;
+  option.type       = get_cli_type<T>();
+  option.req        = req;
+  option.nargs      = -1;
+  option.usage      = usage;
+  option.value      = make_cli_values(value);
+  option.def        = make_cli_values(value);
+  option.choices    = {};
+  option.set_value  = [&value](const cli_option& option) -> bool {
+    return get_value(option, value);
   };
 }
 
 template <typename T>
 inline void add_positional(cli_command& cli, const string& name,
-    vector<T>& values, const string& usage, const vector<string>& choices,
+    vector<T>& value, const string& usage, const vector<string>& choices,
     bool req) {
   static_assert(
       std::is_same_v<T, string> || std::is_integral_v<T> || std::is_enum_v<T>,
       "unsupported type");
-  auto def = vector<cli_value>{};
-  for (auto& value : values) set_value(def.emplace_back(), value);
-  auto& option         = cli.options.emplace_back();
-  option.name          = name;
-  option.alt           = "";
-  option.positional    = true;
-  option.type          = get_cli_type<T>();
-  option.req           = req;
-  option.nargs         = -1;
-  option.usage         = usage;
-  option.value         = def;
-  option.def           = def;
-  option.choices       = choices;
-  option.set_reference = [&values](const vector<cli_value>& cvalues) -> bool {
-    values.clear();
-    for (auto& cvalue : cvalues) {
-      if (!get_value(cvalue, values.emplace_back())) return false;
-    }
-    return true;
+  auto& option      = cli.options.emplace_back();
+  option.name       = name;
+  option.alt        = "";
+  option.positional = true;
+  option.type       = get_cli_type<T>();
+  option.req        = req;
+  option.nargs      = -1;
+  option.usage      = usage;
+  option.value      = make_cli_values(value);
+  option.def        = make_cli_values(value);
+  option.choices    = choices;
+  option.set_value  = [&value](const cli_option& option) -> bool {
+    return get_value(option, value);
   };
 }
 
@@ -769,8 +783,6 @@ inline void add_option(cli_command& cli, const string& name, T& value,
                     std::is_integral_v<T> || std::is_floating_point_v<T> ||
                     std::is_enum_v<T>,
       "unsupported type");
-  auto def = vector<cli_value>{};
-  set_value(def.emplace_back(), value);
   auto& option = cli.options.emplace_back();
   auto  names  = split_cli_names(name);
   if (names[0].find('-') == 0) {
@@ -785,16 +797,15 @@ inline void add_option(cli_command& cli, const string& name, T& value,
     option.alt        = "";
     option.positional = true;
   }
-  option.type          = get_cli_type<T>();
-  option.req           = req;
-  option.nargs         = !std::is_same_v<T, bool> ? 1 : 0;
-  option.usage         = usage;
-  option.value         = def;
-  option.def           = def;
-  option.choices       = {};
-  option.set_reference = [&value](const vector<cli_value>& cvalues) -> bool {
-    if (cvalues.size() != 1) throw std::out_of_range{"invalid number of args"};
-    return get_value(cvalues.front(), value);
+  option.type      = get_cli_type<T>();
+  option.req       = req;
+  option.nargs     = !std::is_same_v<T, bool> ? 1 : 0;
+  option.usage     = usage;
+  option.value     = make_cli_values(value);
+  option.def       = make_cli_values(value);
+  option.choices   = {};
+  option.set_value = [&value](const cli_option& option) -> bool {
+    return get_value(option, value);
   };
 }
 
@@ -804,8 +815,6 @@ inline void add_option(cli_command& cli, const string& name, T& value,
   static_assert(
       std::is_same_v<T, string> || std::is_integral_v<T> || std::is_enum_v<T>,
       "unsupported type");
-  auto def = vector<cli_value>{};
-  set_value(def.emplace_back(), value);
   auto& option = cli.options.emplace_back();
   auto  names  = split_cli_names(name);
   if (names[0].find('-') == 0) {
@@ -820,28 +829,25 @@ inline void add_option(cli_command& cli, const string& name, T& value,
     option.alt        = "";
     option.positional = true;
   }
-  option.type          = get_cli_type<T>();
-  option.req           = req;
-  option.nargs         = 1;
-  option.usage         = usage;
-  option.value         = def;
-  option.def           = def;
-  option.choices       = choices;
-  option.set_reference = [&value](const vector<cli_value>& cvalues) -> bool {
-    if (cvalues.size() != 1) throw std::out_of_range{"invalid number of args"};
-    return get_value(cvalues.front(), value);
+  option.type      = get_cli_type<T>();
+  option.req       = req;
+  option.nargs     = 1;
+  option.usage     = usage;
+  option.value     = make_cli_values(value);
+  option.def       = make_cli_values(value);
+  option.choices   = choices;
+  option.set_value = [&value](const cli_option& option) -> bool {
+    return get_value(option, value);
   };
 }
 
 template <typename T>
-inline void add_option(cli_command& cli, const string& name, vector<T>& values,
+inline void add_option(cli_command& cli, const string& name, vector<T>& value,
     const string& usage, bool req) {
   static_assert(std::is_same_v<T, string> || std::is_same_v<T, bool> ||
                     std::is_integral_v<T> || std::is_floating_point_v<T> ||
                     std::is_enum_v<T>,
       "unsupported type");
-  auto def = vector<cli_value>{};
-  for (auto& value : values) set_value(def.emplace_back(), value);
   auto& option = cli.options.emplace_back();
   auto  names  = split_cli_names(name);
   if (names[0].find('-') == 0) {
@@ -856,19 +862,15 @@ inline void add_option(cli_command& cli, const string& name, vector<T>& values,
     option.alt        = "";
     option.positional = true;
   }
-  option.type          = get_cli_type<T>();
-  option.req           = req;
-  option.nargs         = -1;
-  option.usage         = usage;
-  option.value         = def;
-  option.def           = def;
-  option.choices       = {};
-  option.set_reference = [&values](const vector<cli_value>& cvalues) -> bool {
-    values.clear();
-    for (auto& cvalue : cvalues) {
-      if (!get_value(cvalue, values.emplace_back())) return false;
-    }
-    return true;
+  option.type      = get_cli_type<T>();
+  option.req       = req;
+  option.nargs     = -1;
+  option.usage     = usage;
+  option.value     = make_cli_values(value);
+  option.def       = make_cli_values(value);
+  option.choices   = {};
+  option.set_value = [&value](const cli_option& option) -> bool {
+    return get_value(option, value);
   };
 }
 

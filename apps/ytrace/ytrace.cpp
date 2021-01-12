@@ -55,8 +55,10 @@ void add_command(cli_command& cli, const string& name, render_params& value,
   add_optional(cmd, "addsky", value.addsky, "Add sky.");
   add_optional(cmd, "savebatch", value.savebatch, "Save batch.");
   add_optional(cmd, "resolution", value.resolution, "Image resolution.", "r");
-  add_optional(cmd, "sampler", value.sampler, "Sampler type.", "t");
-  add_optional(cmd, "falsecolor", value.falsecolor, "False color type.", "F");
+  add_optional(
+      cmd, "sampler", value.sampler, "Sampler type.", trace_sampler_names, "t");
+  add_optional(cmd, "falsecolor", value.falsecolor, "False color type.",
+      trace_falsecolor_names, "F");
   add_optional(cmd, "samples", value.samples, "Number of samples.", "s");
   add_optional(cmd, "bounces", value.bounces, "Number of bounces.", "b");
   add_optional(cmd, "clamp", value.clamp, "Clamp value.");
