@@ -187,6 +187,42 @@ int run_grade(const grade_params& params) {
 
 #else
 
+// Parameter conversions
+void from_params(const gui_params& uiparams, colorgrade_params& params) {
+  params.exposure         = uiparams.at("exposure");
+  params.tint             = uiparams.at("tint");
+  params.lincontrast      = uiparams.at("lincontrast");
+  params.logcontrast      = uiparams.at("logcontrast");
+  params.linsaturation    = uiparams.at("linsaturation");
+  params.filmic           = uiparams.at("filmic");
+  params.srgb             = uiparams.at("srgb");
+  params.contrast         = uiparams.at("contrast");
+  params.saturation       = uiparams.at("saturation");
+  params.shadows          = uiparams.at("shadows");
+  params.midtones         = uiparams.at("midtones");
+  params.highlights       = uiparams.at("highlights");
+  params.shadows_color    = uiparams.at("shadows_color");
+  params.midtones_color   = uiparams.at("midtones_color");
+  params.highlights_color = uiparams.at("highlights_color");
+}
+void to_params(gui_params& uiparams, const colorgrade_params& params) {
+  uiparams["exposure"]         = {params.exposure, {-10, 10}};
+  uiparams["tint"]             = {params.tint, true};
+  uiparams["lincontrast"]      = {params.lincontrast, {0, 1}};
+  uiparams["logcontrast"]      = {params.logcontrast, {0, 1}};
+  uiparams["linsaturation"]    = {params.linsaturation, {0, 1}};
+  uiparams["filmic"]           = {params.filmic};
+  uiparams["srgb"]             = {params.srgb};
+  uiparams["contrast"]         = {params.contrast, {0, 1}};
+  uiparams["saturation"]       = {params.saturation, {0, 1}};
+  uiparams["shadows"]          = {params.shadows, {0, 1}};
+  uiparams["midtones"]         = {params.midtones, {0, 1}};
+  uiparams["highlights"]       = {params.highlights, {0, 1}};
+  uiparams["shadows_color"]    = {params.shadows_color, true};
+  uiparams["midtones_color"]   = {params.midtones_color, true};
+  uiparams["highlights_color"] = {params.highlights_color, true};
+}
+
 // grade images
 int run_grade(const grade_params& params) {
   // open viewer
@@ -203,16 +239,17 @@ int run_grade(const grade_params& params) {
 
   // set view
   set_image(viewer, params.image, graded);
-  set_widgets(
-      viewer, params.image, to_json(params), to_schema(params, "Color grade"));
+  auto uiparams = gui_params{};
+  to_params(uiparams, params);
+  set_params(viewer, params.image, "Color grade", uiparams);
 
   // set callback
-  set_callback(viewer,
-      [&](const string& name, const json_value& uiparams, const gui_input&) {
-        if (uiparams.is_null()) return;
-        serialize_value(json_mode::from_json, (json_value&)uiparams,
-            (colorgrade_params&)params, "");
-        colorgrade_image_mt(graded, image, params);
+  set_params_callback(
+      viewer, [&](const string& name, const gui_params& uiparams) {
+        if (uiparams.empty()) return;
+        auto gparams = params;
+        from_params(uiparams, gparams);
+        colorgrade_image_mt(graded, image, gparams);
         set_image(viewer, name, graded);
       });
 

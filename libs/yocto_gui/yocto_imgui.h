@@ -277,7 +277,13 @@ struct gui_param {
       , readonly{readonly} {}
   gui_param(int value, const vector<string>& labels, bool readonly = false)
       : type{gui_param_type::vec1i}
-      , valuei{value}
+      , valuei{value, 0, 0, 0}
+      , labels{labels}
+      , readonly{readonly} {}
+  template <typename T, typename = std::enable_if_t<std::is_enum_v<T>>>
+  gui_param(T value, const vector<string>& labels, bool readonly = false)
+      : type{gui_param_type::vec1i}
+      , valuei{(int)value, 0, 0, 0}
       , labels{labels}
       , readonly{readonly} {}
 
@@ -321,6 +327,11 @@ struct gui_param {
   operator string() const {
     check_type(gui_param_type::vec1s);
     return values;
+  }
+  template <typename T, typename = std::enable_if_t<std::is_enum_v<T>>>
+  operator T() const {
+    check_type(gui_param_type::vec1i);
+    return (T)valuei.x;
   }
 
   // type checking
@@ -393,11 +404,8 @@ struct gui_params {
   vector<pair<string, gui_param>> items;
 };
 
-// make params
-gui_params make_params(const string& name);
-
 // draw params
-bool draw_params(gui_window* win, const char* title, gui_params& value);
+bool draw_params(gui_window* win, const string& title, gui_params& value);
 
 struct json_value;
 bool draw_params(

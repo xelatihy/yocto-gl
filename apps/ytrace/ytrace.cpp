@@ -149,6 +149,30 @@ int run_view(const view_params& params) {
 
 #else
 
+// Parameter conversions
+void from_params(const gui_params& uiparams, trace_params& params) {
+  params.resolution = uiparams.at("resolution");
+  params.sampler    = uiparams.at("sampler");
+  params.falsecolor = uiparams.at("falsecolor");
+  params.samples    = uiparams.at("samples");
+  params.bounces    = uiparams.at("bounces");
+  params.clamp      = uiparams.at("clamp");
+  params.nocaustics = uiparams.at("nocaustics");
+  params.envhidden  = uiparams.at("envhidden");
+  params.tentfilter = uiparams.at("tentfilter");
+}
+void to_params(gui_params& uiparams, const trace_params& params) {
+  uiparams["resolution"] = {params.resolution, {128, 4096}};
+  uiparams["sampler"]    = {params.sampler, trace_sampler_names};
+  uiparams["falsecolor"] = {params.falsecolor, trace_falsecolor_names};
+  uiparams["samples"]    = {params.samples, {1, 4096}};
+  uiparams["bounces"]    = {params.bounces, {1, 64}};
+  uiparams["clamp"]      = {params.clamp, {10, 1000}};
+  uiparams["nocaustics"] = params.nocaustics;
+  uiparams["envhidden"]  = params.envhidden;
+  uiparams["tentfilter"] = params.tentfilter;
+}
+
 // interactive render
 int run_view(const view_params& params) {
   // open viewer
@@ -190,8 +214,7 @@ int run_view(const view_params& params) {
   trace_start(
       state, scene, camera, bvh, lights, params,
       [&](const string& message, int sample, int nsamples) {
-        set_widget(viewer, "render", "sample", to_json(sample),
-            to_schema(sample, "Current sample"));
+        set_param(viewer, "render", "sample", {sample, {0, 4096}, true});
         print_progress(message, sample, nsamples);
       },
       [&](const image<vec4f>& render, int current, int total) {
@@ -199,31 +222,32 @@ int run_view(const view_params& params) {
       });
 
   // show rendering params
-  set_widgets(
-      viewer, "render", to_json(params), to_schema(params, "Render params"));
+  auto uiparams = gui_params{};
+  to_params(uiparams, params);
+  set_params(viewer, "render", "Render", uiparams);
 
   // set callback
-  set_callback(viewer, [&](const string& name, const json_value& uiparams,
-                           const gui_input& input) {
-    if (name != "render") return;
-    if (!uiparams.is_null()) {
-      trace_stop(state);
-      (view_params&)params = from_json<view_params>(uiparams);
-      // show rendering params
-      set_widgets(viewer, "render", to_json(params),
-          to_schema(params, "Render params"));
-      trace_start(
-          state, scene, camera, bvh, lights, params,
-          [&](const string& message, int sample, int nsamples) {
-            set_widget(viewer, "render", "sample", to_json(sample),
-                to_schema(sample, "Current sample"));
-            print_progress(message, sample, nsamples);
-          },
-          [&](const image<vec4f>& render, int current, int total) {
-            set_image(viewer, "render", render);
-          });
-    } else if ((input.mouse_left || input.mouse_right) &&
-               input.mouse_pos != input.mouse_last) {
+  set_params_callback(
+      viewer, [&](const string& name, const gui_params& uiparams) {
+        if (name != "render") return;
+        if (uiparams.empty()) return;
+        trace_stop(state);
+        auto tparams = params;
+        from_params(uiparams, tparams);
+        trace_start(
+            state, scene, camera, bvh, lights, tparams,
+            [&](const string& message, int sample, int nsamples) {
+              set_param(viewer, "render", "sample", {sample, {1, 4096}, true});
+              print_progress(message, sample, nsamples);
+            },
+            [&](const image<vec4f>& render, int current, int total) {
+              set_image(viewer, "render", render);
+            });
+      });
+
+  set_input_callback(viewer, [&](const string& name, const gui_input& input) {
+    if ((input.mouse_left || input.mouse_right) &&
+        input.mouse_pos != input.mouse_last) {
       trace_stop(state);
       auto dolly  = 0.0f;
       auto pan    = zero2f;
@@ -240,8 +264,7 @@ int run_view(const view_params& params) {
       trace_start(
           state, scene, camera, bvh, lights, params,
           [&](const string& message, int sample, int nsamples) {
-            set_widget(viewer, "render", "sample", to_json(sample),
-                to_schema(sample, "Current sample"));
+            set_param(viewer, "render", "sample", {sample, {1, 4096}, true});
             print_progress(message, sample, nsamples);
           },
           [&](const image<vec4f>& render, int current, int total) {
