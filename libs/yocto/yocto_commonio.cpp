@@ -424,25 +424,6 @@ void add_command_name(
   cli.set_command = [&value](const string& cvalue) { value = cvalue; };
 }
 
-static vector<string> split_cli_names(const string& name_) {
-  auto name  = name_;
-  auto split = vector<string>{};
-  if (name.empty()) throw std::invalid_argument("option name cannot be empty");
-  if (name.find_first_of(" \t\r\n") != string::npos)
-    throw std::invalid_argument("option name cannot contain whitespaces");
-  while (name.find_first_of(",/") != string::npos) {
-    auto pos = name.find_first_of(",/");
-    if (pos > 0) split.push_back(name.substr(0, pos));
-    name = name.substr(pos + 1);
-  }
-  if (!name.empty()) split.push_back(name);
-  if (split.empty()) throw std::invalid_argument("option name cannot be empty");
-  for (auto& name : split)
-    if ((split[0][0] == '-') != (name[0] == '-'))
-      throw std::invalid_argument("inconsistent option names for " + name);
-  return split;
-}
-
 static void validate_names(const cli_command& cmd) {
   // check for errors
   auto used = unordered_set<string>{};
@@ -518,7 +499,14 @@ static string get_usage(const cli_command& root, const cli_command& cli) {
   auto usage_optional = string{}, usage_positional = string{},
        usage_command = string{};
   for (auto& option : cli.options) {
-    auto line = "  " + option.name + " " + type_name(option);
+    auto line = string{};
+    if (option.positional) {
+      line += "  " + option.name;
+    } else {
+      line += "  --" + option.name;
+      if (!option.alt.empty()) line += ", -" + option.alt;
+    }
+    line += " " + type_name(option);
     while (line.size() < 32) line += " ";
     line += option.usage;
     line += " " + def_string(option) + "\n";
@@ -659,7 +647,7 @@ bool parse_cli(cli_command& cli, vector<string>& args, string& error) {
       auto count = 0;
       for (auto it = cmd.options.begin(); it != cmd.options.end(); ++it) {
         auto& option = *it;
-        if (option.name.find('-') == 0) continue;
+        if (!option.positional) continue;
         if (count == positionals.back()) {
           pos = it;
           positionals.back()++;
@@ -696,9 +684,8 @@ bool parse_cli(cli_command& cli, vector<string>& args, string& error) {
     } else {
       auto pos = std::find_if(
           cmd.options.begin(), cmd.options.end(), [&arg](auto& option) {
-            if (option.name.find('-') != 0) return false;
-            auto names = split_cli_names(option.name);
-            return std::find(names.begin(), names.end(), arg) != names.end();
+            if (option.positional) return false;
+            return arg == "--" + option.name || arg == "-" + option.alt;
           });
       if (pos == cmd.options.end()) return cli_error("unknown option " + arg);
       auto& option = *pos;
@@ -708,8 +695,7 @@ bool parse_cli(cli_command& cli, vector<string>& args, string& error) {
           throw std::invalid_argument{"unsupported flag type"};
         option.value.resize(1);
         option.value[0].type = option.type;
-        if (!parse_value(option.value[0],
-                arg.find("--no-") != 0 ? "true" : "false", option.choices))
+        if (!parse_value(option.value[0], "true", option.choices))
           return cli_error("bad value for " + option.name);
       } else if (option.nargs > 0) {
         if (idx + (size_t)option.nargs >= args.size())
