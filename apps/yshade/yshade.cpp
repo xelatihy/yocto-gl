@@ -42,7 +42,7 @@ struct app_params {
 };
 
 // Cli
-void add_commands(cli_state& cli, const string& name, app_params& value,
+void add_commands(cli_command& cli, const string& name, app_params& value,
     const string& usage) {
   cli = make_cli(name, usage);
   add_command_name(cli, "command", value.command, "Command.");
@@ -53,7 +53,7 @@ void add_commands(cli_state& cli, const string& name, app_params& value,
 
 // Parse cli
 void parse_cli(app_params& params, int argc, const char** argv) {
-  auto cli = cli_state{};
+  auto cli = cli_command{};
   add_commands(cli, "yshade", params, "View and edit interactively");
   parse_cli(cli, argc, argv);
 }

@@ -35,7 +35,7 @@ struct shade_sculpt_params {
 };
 
 // Cli
-inline void add_command(cli_state& cli, const string& name,
+inline void add_command(cli_command& cli, const string& name,
     shade_sculpt_params& value, const string& usage) {
   auto& cmd = add_command(cli, name, usage);
   add_positional(cmd, "shape", value.shape, "Input shape.");

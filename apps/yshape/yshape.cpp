@@ -50,7 +50,7 @@ struct convert_params {
   float  scaleu      = 1;
 };
 
-void add_command(cli_state& cli, const string& name, convert_params& value,
+void add_command(cli_command& cli, const string& name, convert_params& value,
     const string& usage) {
   auto& cmd = add_command(cli, name, usage);
   add_positional(cmd, "shape", value.shape, "Input shape.");
@@ -176,7 +176,7 @@ struct fvconvert_params {
   float  scaleu      = 1;
 };
 
-void add_command(cli_state& cli, const string& name, fvconvert_params& value,
+void add_command(cli_command& cli, const string& name, fvconvert_params& value,
     const string& usage) {
   auto& cmd = add_command(cli, name, usage);
   add_positional(cmd, "shape", value.shape, "Input shape.");
@@ -287,7 +287,7 @@ struct view_params {
   bool   addsky = false;
 };
 
-void add_command(cli_state& cli, const string& name, view_params& value,
+void add_command(cli_command& cli, const string& name, view_params& value,
     const string& usage) {
   auto& cmd = add_command(cli, name, usage);
   add_positional(cmd, "shape", value.shape, "Input shape.");
@@ -341,8 +341,8 @@ struct heightfield_params {
   float  scaleu    = 1;
 };
 
-void add_command(cli_state& cli, const string& name, heightfield_params& value,
-    const string& usage) {
+void add_command(cli_command& cli, const string& name,
+    heightfield_params& value, const string& usage) {
   auto& cmd = add_command(cli, name, usage);
   add_positional(cmd, "image", value.image, "Input image.");
   add_optional(cmd, "output", value.output, "Output shape.", "o");
@@ -424,7 +424,7 @@ struct app_params {
 };
 
 // Cli
-void add_commands(cli_state& cli, const string& name, app_params& value,
+void add_commands(cli_command& cli, const string& name, app_params& value,
     const string& usage) {
   cli = make_cli(name, usage);
   add_command_name(cli, "command", value.command, "Command.");
@@ -436,7 +436,7 @@ void add_commands(cli_state& cli, const string& name, app_params& value,
 
 // Parse cli
 void parse_cli(app_params& params, int argc, const char** argv) {
-  auto cli = cli_state{};
+  auto cli = cli_command{};
   add_commands(cli, "yhape", params, "Process and view shapes.");
   parse_cli(cli, argc, argv);
 }

@@ -47,7 +47,7 @@ struct convert_params {
 };
 
 // Cli
-void add_command(cli_state& cli, const string& name, convert_params& value,
+void add_command(cli_command& cli, const string& name, convert_params& value,
     const string& usage) {
   auto& cmd = add_command(cli, name, usage);
   add_positional(cmd, "image", value.image, "Input image.");
@@ -96,7 +96,7 @@ struct view_params {
 };
 
 // Cli
-void add_command(cli_state& cli, const string& name, view_params& value,
+void add_command(cli_command& cli, const string& name, view_params& value,
     const string& usage) {
   auto& cmd = add_command(cli, name, usage);
   add_positional(cmd, "images", value.images, "Input images.");
@@ -145,7 +145,7 @@ struct grade_params : colorgrade_params {
 };
 
 // Cli
-void add_command(cli_state& cli, const string& name, grade_params& value,
+void add_command(cli_command& cli, const string& name, grade_params& value,
     const string& usage) {
   auto& cmd = add_command(cli, name, usage);
   add_positional(cmd, "image", value.image, "Input image.");
@@ -247,7 +247,7 @@ struct diff_params {
 };
 
 // Cli
-void add_command(cli_state& cli, const string& name, diff_params& value,
+void add_command(cli_command& cli, const string& name, diff_params& value,
     const string& usage) {
   auto& cmd = add_command(cli, name, usage);
   add_positional(cmd, "image1", value.image1, "Input image 1.");
@@ -314,7 +314,7 @@ struct setalpha_params {
 };
 
 // Cli
-void add_command(cli_state& cli, const string& name, setalpha_params& value,
+void add_command(cli_command& cli, const string& name, setalpha_params& value,
     const string& usage) {
   auto& cmd = add_command(cli, name, usage);
   add_positional(cmd, "image", value.image, "Input image.");
@@ -387,7 +387,7 @@ struct app_params {
 };
 
 // Cli
-void add_commands(cli_state& cli, const string& name, app_params& value,
+void add_commands(cli_command& cli, const string& name, app_params& value,
     const string& usage) {
   cli = make_cli(name, usage);
   add_command_name(cli, "command", value.command, "Command.");
@@ -400,7 +400,7 @@ void add_commands(cli_state& cli, const string& name, app_params& value,
 
 // Parse cli
 void parse_cli(app_params& params, int argc, const char** argv) {
-  auto cli = cli_state{};
+  auto cli = cli_command{};
   add_commands(cli, "yimage", params, "Process and view images.");
   parse_cli(cli, argc, argv);
 }

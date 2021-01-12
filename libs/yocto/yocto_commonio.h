@@ -124,112 +124,56 @@ string  elapsed_formatted(simple_timer& timer);
 namespace yocto {
 
 // Initialize a command line parser.
-struct cli_state;
-cli_state make_cli(const string& cmd, const string& usage);
+struct cli_command;
+cli_command make_cli(const string& cmd, const string& usage);
 // parse arguments, checks for errors, and exits on error or help
-void parse_cli(cli_state& cli, int argc, const char** argv);
+void parse_cli(cli_command& cli, int argc, const char** argv);
 // parse arguments and checks for errors
-bool parse_cli(cli_state& cli, int argc, const char** argv, string& error);
+bool parse_cli(cli_command& cli, int argc, const char** argv, string& error);
 // gets usage message
-string get_usage(const cli_state& cli);
+string get_usage(const cli_command& cli);
 // gets whether help was invoked
-bool get_help(const cli_state& cli);
+bool get_help(const cli_command& cli);
 // gets the set command
-string get_command(const cli_state& cli);
+string get_command(const cli_command& cli);
 
 // Add an optional argument. Supports strings, numbers, and boolean flags.
 // Optional arguments will be parsed with name `--<name>` and `-<alt>`.
 // Optional booleans will support both `--<name>` and `--no-<name>` to enabled
 // and disable the flag.
 template <typename T>
-inline void add_optional(cli_state& cli, const string& name, T& value,
+inline void add_optional(cli_command& cli, const string& name, T& value,
     const string& usage, const string& alt = "", bool req = false);
 // Add a positional argument. Supports strings, numbers, and boolean flags.
 template <typename T>
-inline void add_positional(cli_state& cli, const string& name, T& value,
+inline void add_positional(cli_command& cli, const string& name, T& value,
     const string& usage, bool req = true);
 // Add an optional argument with values as labels. Supports integers, enums and
 // strings.
 template <typename T>
-inline void add_optional(cli_state& cli, const string& name, T& value,
+inline void add_optional(cli_command& cli, const string& name, T& value,
     const string& usage, const vector<string>& choices, const string& alt = "",
     bool req = false);
 // Add a positional argument with values as labels. Supports string, integers
 // and enums.
 template <typename T>
-inline void add_positional(cli_state& cli, const string& name, T& value,
+inline void add_positional(cli_command& cli, const string& name, T& value,
     const string& usage, const vector<string>& choices, bool req = true);
-// Add an optional argument with values as labels. Supports integers
-// and enums.
-template <typename T>
-inline void add_optional(cli_state& cli, const string& name, T& value,
-    const string& usage, const vector<pair<T, string>>& choices,
-    const string& alt = "", bool req = false);
-// Add a positional argument with values as labels. Supports integers and enums.
-template <typename T>
-inline void add_positional(cli_state& cli, const string& name, T& value,
-    const string& usage, const vector<pair<T, string>>& choices,
-    bool req = true);
 // Add a positional argument that consumes all arguments left.
 // Supports strings and enums.
 template <typename T>
-inline void add_positional(cli_state& cli, const string& name, vector<T>& value,
-    const string& usage, bool req = true);
-template <typename T>
-inline void add_positional(cli_state& cli, const string& name, vector<T>& value,
-    const string& usage, const vector<string>& choices, bool req = true);
-
-// Add a subcommand
-struct cli_command;
-cli_command& add_command(
-    cli_state& cli, const string& name, const string& usage);
-cli_command& add_command(
-    cli_command& cmd, const string& name, const string& usage);
-void add_command_name(
-    cli_state& cli, const string& name, string& value, const string& usage);
-void add_command_name(
-    cli_command& cli, const string& name, string& value, const string& usage);
-
-// Add an optional argument. Supports strings, numbers, and boolean flags.
-// Optional arguments will be parsed with name `--<name>` and `-<alt>`.
-// Optional booleans will support both `--<name>` and `--no-<name>` to enabled
-// and disable the flag.
-template <typename T>
-inline void add_optional(cli_command& cmd, const string& name, T& value,
-    const string& usage, const string& alt = "", bool req = false);
-// Add a positional argument. Supports strings, numbers, and boolean flags.
-template <typename T>
-inline void add_positional(cli_command& cmd, const string& name, T& value,
-    const string& usage, bool req = true);
-// Add an optional argument with values as labels. Supports string, integers and
-// enums.
-template <typename T>
-inline void add_optional(cli_command& cmd, const string& name, T& value,
-    const string& usage, const vector<string>& choices, const string& alt = "",
-    bool req = false);
-// Add a positional argument with values as labels. Supports integers and enums.
-template <typename T>
-inline void add_positional(cli_command& cmd, const string& name, T& value,
-    const string& usage, const vector<string>& choices, bool req = true);
-// Add an optional argument with values as labels. Supports integers and enums.
-template <typename T>
-inline void add_optional(cli_command& cmd, const string& name, T& value,
-    const string& usage, const vector<pair<T, string>>& choices,
-    const string& alt = "", bool req = false);
-// Add a positional argument with values as labels. Supports integers and enums.
-template <typename T>
-inline void add_positional(cli_command& cmd, const string& name, T& value,
-    const string& usage, const vector<pair<T, string>>& choices,
-    bool req = true);
-// Add a positional argument that consumes all arguments left.
-// Supports strings and enums.
-template <typename T>
-inline void add_positional(cli_command& cmd, const string& name,
+inline void add_positional(cli_command& cli, const string& name,
     vector<T>& value, const string& usage, bool req = true);
 template <typename T>
-inline void add_positional(cli_command& cmd, const string& name,
+inline void add_positional(cli_command& cli, const string& name,
     vector<T>& value, const string& usage, const vector<string>& choices,
     bool req = true);
+
+// Add a subcommand
+cli_command& add_command(
+    cli_command& cli, const string& name, const string& usage);
+void add_command_name(
+    cli_command& cli, const string& name, string& value, const string& usage);
 
 // Parses an optional or positional argument. Optional arguments' names start
 // with "--" or "-", otherwise they are arguments. Supports strings, numbers,
@@ -238,33 +182,16 @@ inline void add_positional(cli_command& cmd, const string& name,
 // Boolean flags are indicated with a pair of names "--name/--no-name", so that
 // both options are explicitly specified.
 template <typename T>
-inline void add_option(cli_state& cli, const string& name, T& value,
-    const string& usage, bool req = false);
-template <typename T>
-inline void add_option(cli_command& cmd, const string& name, T& value,
+inline void add_option(cli_command& cli, const string& name, T& value,
     const string& usage, bool req = false);
 // Parses an optional or positional argument where values can only be within a
 // set of choices. Supports strings, integers and enums.
 template <typename T>
-inline void add_option(cli_state& cli, const string& name, T& value,
+inline void add_option(cli_command& cli, const string& name, T& value,
     const string& usage, const vector<string>& choices, bool req = false);
-template <typename T>
-inline void add_option(cli_command& cmd, const string& name, T& value,
-    const string& usage, const vector<string>& choices, bool req = false);
-template <typename T>
-inline void add_option(cli_state& cli, const string& name, T& value,
-    const string& usage, const vector<pair<T, string>>& choices,
-    bool req = false);
-template <typename T>
-inline void add_option(cli_command& cmd, const string& name, T& value,
-    const string& usage, const vector<pair<T, string>>& choices,
-    bool req = false);
 // Parse all arguments left on the command line. Can only be used as argument.
 template <typename T>
-inline void add_option(cli_state& cli, const string& name, vector<T>& value,
-    const string& usage, bool req = false);
-template <typename T>
-inline void add_option(cli_command& cmd, const string& name, vector<T>& value,
+inline void add_option(cli_command& cli, const string& name, vector<T>& value,
     const string& usage, bool req = false);
 
 }  // namespace yocto
@@ -570,10 +497,6 @@ struct cli_command {
   string                        command         = "";
   function<void(const string&)> set_command     = {};
 };
-// Command line parser. All data should be considered private.
-struct cli_state {
-  cli_command command = {};
-};
 
 template <typename T>
 inline cli_type get_cli_type() {
@@ -665,22 +588,12 @@ inline void add_optional(cli_command& cmd, const string& name, T& value,
   return add_option(
       cmd, "--" + name + (alt.empty() ? "" : (",-" + alt)), value, usage, req);
 }
-template <typename T>
-inline void add_optional(cli_state& cli, const string& name, T& value,
-    const string& usage, const string& alt, bool req) {
-  return add_optional(cli.command, name, value, usage, alt, req);
-}
 
 template <typename T>
 inline void add_positional(cli_command& cmd, const string& name, T& value,
     const string& usage, bool req) {
   return add_option(cmd, name, value, usage, req);
 }
-template <typename T>
-inline void add_positional(cli_state& cli, const string& name, T& value,
-    const string& usage, bool req) {
-  return add_positional(cli.command, name, value, usage, req);
-}
 
 template <typename T>
 inline void add_optional(cli_command& cmd, const string& name, T& value,
@@ -689,47 +602,11 @@ inline void add_optional(cli_command& cmd, const string& name, T& value,
   return add_option(cmd, "--" + name + (alt.empty() ? "" : (",-" + alt)), value,
       usage, choices, req);
 }
-template <typename T>
-inline void add_optional(cli_state& cli, const string& name, T& value,
-    const string& usage, const string& alt, const vector<string>& choices,
-    bool req) {
-  return add_optional(cli.command, name, value, usage, alt, choices, req);
-}
 
 template <typename T>
 inline void add_positional(cli_command& cmd, const string& name, T& value,
     const string& usage, const vector<string>& choices, bool req) {
   return add_option(cmd, name, value, usage, choices, req);
-}
-template <typename T>
-inline void add_positional(cli_state& cli, const string& name, T& value,
-    const string& usage, const vector<string>& choices, bool req) {
-  return add_positional(cli.command, name, value, usage, choices, req);
-}
-
-template <typename T>
-inline void add_optional(cli_command& cmd, const string& name, T& value,
-    const string& usage, const vector<pair<T, string>>& choices,
-    const string& alt, bool req) {
-  return add_option(cmd, "--" + name + (alt.empty() ? "" : (",-" + alt)), value,
-      usage, choices, req);
-}
-template <typename T>
-inline void add_optional(cli_state& cli, const string& name, T& value,
-    const string& usage, const vector<pair<T, string>>& choices,
-    const string& alt, bool req) {
-  return add_optional(cli.command, name, value, usage, choices, alt, req);
-}
-
-template <typename T>
-inline void add_positional(cli_command& cmd, const string& name, T& value,
-    const string& usage, const vector<pair<T, string>>& choices, bool req) {
-  return add_option(cmd, name, value, usage, choices, req);
-}
-template <typename T>
-inline void add_positional(cli_state& cli, const string& name, T& value,
-    const string& usage, const vector<pair<T, string>>& choices, bool req) {
-  return add_positional(cli.command, name, value, usage, choices, req);
 }
 
 template <typename T>
@@ -737,21 +614,11 @@ inline void add_positional(cli_command& cmd, const string& name,
     vector<T>& value, const string& usage, bool req) {
   return add_option(cmd, name, value, usage, req);
 }
-template <typename T>
-inline void add_positional(cli_state& cli, const string& name, vector<T>& value,
-    const string& usage, bool req) {
-  return add_positional(cli.command, name, value, usage, req);
-}
 
 template <typename T>
 inline void add_positional(cli_command& cmd, const string& name,
     vector<T>& value, const string& usage, const vector<T>& choices, bool req) {
   return add_option(cmd, name, value, usage, choices, req);
-}
-template <typename T>
-inline void add_positional(cli_state& cli, const string& name, vector<T>& value,
-    const string& usage, const vector<T>& choices, bool req) {
-  return add_positional(cli.command, name, value, usage, choices, req);
 }
 
 template <typename T>
@@ -777,11 +644,6 @@ inline void add_option(cli_command& cli, const string& name, T& value,
     return get_value(cvalues.front(), value);
   };
 }
-template <typename T>
-inline void add_option(cli_state& cli, const string& name, T& value,
-    const string& usage, bool req) {
-  return add_option(cli.command, name, value, usage, req);
-}
 
 template <typename T>
 inline void add_option(cli_command& cli, const string& name, T& value,
@@ -804,50 +666,6 @@ inline void add_option(cli_command& cli, const string& name, T& value,
     if (cvalues.size() != 1) throw std::out_of_range{"invalid number of args"};
     return get_value(cvalues.front(), value);
   };
-}
-template <typename T>
-inline void add_option(cli_state& cli, const string& name, T& value,
-    const string& usage, const vector<string>& choices, bool req) {
-  return add_option(cli.command, name, value, usage, choices, req);
-}
-
-template <typename T>
-inline void add_option(cli_command& cli, const string& name, T& value,
-    const string& usage, const vector<pair<T, string>>& choices, bool req) {
-  static_assert(
-      std::is_same_v<T, string> || std::is_integral_v<T> || std::is_enum_v<T>,
-      "unsupported type");
-  auto def = vector<cli_value>{};
-  for (auto& [value_, label] : choices) {
-    if (value == value_) set_value(def.emplace_back(), label);
-  }
-  auto& option = cli.options.emplace_back();
-  option.name  = name;
-  option.type  = cli_type::string;
-  option.req   = req;
-  option.nargs = 1;
-  option.usage = usage;
-  option.value = def;
-  option.def   = def;
-  for (auto& [value_, label] : choices) option.choices.push_back(label);
-  option.set_reference = [&value, &choices](
-                             const vector<cli_value>& cvalues) -> bool {
-    if (cvalues.size() != 1) throw std::out_of_range{"invalid number of args"};
-    auto values = string{};
-    return get_value(cvalues.front(), values);
-    for (auto& [value_, label] : choices) {
-      if (values == label) {
-        value = value_;
-        return true;
-      }
-    }
-    return false;
-  };
-}
-template <typename T>
-inline void add_option(cli_state& cli, const string& name, T& value,
-    const string& usage, const vector<pair<T, string>>& choices, bool req) {
-  return add_option(cli.command, name, value, usage, choices, req);
 }
 
 template <typename T>
@@ -875,11 +693,6 @@ inline void add_option(cli_command& cli, const string& name, vector<T>& values,
     }
     return true;
   };
-}
-template <typename T>
-inline void add_option(cli_state& cli, const string& name, vector<T>& values,
-    const string& usage, bool req) {
-  return add_option(cli.command, name, values, usage, req);
 }
 
 }  // namespace yocto

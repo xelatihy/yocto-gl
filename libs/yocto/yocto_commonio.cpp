@@ -396,12 +396,11 @@ string path_current() { return std::filesystem::current_path().u8string(); }
 namespace yocto {
 
 // initialize a command line parser
-cli_state make_cli(const string& name, const string& usage) {
-  auto  cli = cli_state{};
-  auto& cmd = cli.command;
-  cmd.name  = name;
-  cmd.usage = usage;
-  add_option(cmd, "--help/--no-help", cmd.help, "Print usage.");
+cli_command make_cli(const string& name, const string& usage) {
+  auto cli  = cli_command{};
+  cli.name  = name;
+  cli.usage = usage;
+  add_option(cli, "--help", cli.help, "Print usage.");
   return cli;
 }
 
@@ -416,21 +415,13 @@ cli_command& add_command(
   auto& cmd = cli.commands.emplace_back();
   cmd.name  = name;
   cmd.usage = usage;
-  add_option(cmd, "--help/--no-help", cmd.help, "Print usage.");
+  add_option(cmd, "--help", cmd.help, "Print usage.");
   return cmd;
-}
-cli_command& add_command(
-    cli_state& cli, const string& name, const string& usage) {
-  return add_command(cli.command, name, usage);
 }
 
 void add_command_name(
     cli_command& cli, const string& name, string& value, const string& usage) {
   cli.set_command = [&value](const string& cvalue) { value = cvalue; };
-}
-void add_command_name(
-    cli_state& cli, const string& name, string& value, const string& usage) {
-  add_command_name(cli.command, name, value, usage);
 }
 
 static vector<string> split_cli_names(const string& name_) {
@@ -471,14 +462,13 @@ static void validate_names(const cli_command& cmd) {
   for (auto& scmd : cmd.commands) validate_names(scmd);
 }
 
-static bool get_help(const cli_command& cli) {
+bool get_help(const cli_command& cli) {
   if (cli.help) return true;
   for (auto& cmd : cli.commands) return get_help(cmd);
   return false;
 }
-bool get_help(const cli_state& cli) { return get_help(cli.command); }
 
-static string get_usage(const cli_state& cli, const cli_command& cmd) {
+static string get_usage(const cli_command& root, const cli_command& cli) {
   auto type_name = [](const cli_option& option) -> string {
     auto str = string{};
     str += "<";
@@ -518,16 +508,16 @@ static string get_usage(const cli_state& cli, const cli_command& cmd) {
     return str;
   };
 
-  if (!cmd.command.empty()) {
-    for (auto& subcommand : cmd.commands)
-      if (cmd.command == subcommand.name) return get_usage(cli, subcommand);
+  if (!cli.command.empty()) {
+    for (auto& subcommand : cli.commands)
+      if (cli.command == subcommand.name) return get_usage(root, subcommand);
   }
 
   auto message      = string{};
   auto has_optional = false, has_positional = false, has_commands = false;
   auto usage_optional = string{}, usage_positional = string{},
        usage_command = string{};
-  for (auto& option : cmd.options) {
+  for (auto& option : cli.options) {
     auto line = "  " + option.name + " " + type_name(option);
     while (line.size() < 32) line += " ";
     line += option.usage;
@@ -554,19 +544,19 @@ static string get_usage(const cli_state& cli, const cli_command& cmd) {
       usage_positional += line;
     }
   }
-  for (auto& scmd : cmd.commands) {
+  for (auto& scmd : cli.commands) {
     has_commands = true;
     auto line    = "  " + scmd.name;
     while (line.size() < 32) line += " ";
     line += scmd.usage + "\n";
     usage_command += line;
   }
-  auto is_command = &cmd == &cli.command;
-  message += "usage: " + cli.command.name + (is_command ? " " + cmd.name : "") +
+  auto is_command = &cli != &root;
+  message += "usage: " + root.name + (is_command ? " " + cli.name : "") +
              (has_commands ? " command" : "") +
              (has_optional ? " [options]" : "") +
              (has_positional ? " <arguments>" : "") + "\n";
-  message += cmd.usage + "\n\n";
+  message += cli.usage + "\n\n";
   if (has_commands) {
     message += "commands:\n" + usage_command + "\n";
   }
@@ -578,9 +568,10 @@ static string get_usage(const cli_state& cli, const cli_command& cmd) {
   }
   return message;
 }
-string get_usage(const cli_state& cli) { return get_usage(cli, cli.command); }
 
-string get_command(const cli_state& cli) { return cli.command.command; }
+string get_usage(const cli_command& cli) { return get_usage(cli, cli); }
+
+string get_command(const cli_command& cli) { return cli.command; }
 
 static bool parse_value(
     cli_value& value, const string& arg, const vector<string>& choices) {
@@ -735,16 +726,16 @@ bool parse_cli(cli_command& cli, vector<string>& args, string& error) {
   return true;
 }
 
-bool parse_cli(cli_state& cli, int argc, const char** argv, string& error) {
+bool parse_cli(cli_command& cli, int argc, const char** argv, string& error) {
   // validate names
-  validate_names(cli.command);
+  validate_names(cli);
   // prepare args
   auto args = vector<string>{argv + 1, argv + argc};
   // parse
-  return parse_cli(cli.command, args, error);
+  return parse_cli(cli, args, error);
 }
 
-void parse_cli(cli_state& cli, int argc, const char** argv) {
+void parse_cli(cli_command& cli, int argc, const char** argv) {
   auto error = string{};
   if (!parse_cli(cli, argc, argv, error)) {
     print_info("error: " + error);
