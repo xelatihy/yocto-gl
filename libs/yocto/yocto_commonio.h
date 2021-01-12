@@ -695,6 +695,9 @@ inline void add_option(cli_command& cli, const string& name, vector<T>& values,
   };
 }
 
+// Backward compatibility
+using cli_state [[deprecated]] = cli_command;
+
 }  // namespace yocto
 
 #endif
