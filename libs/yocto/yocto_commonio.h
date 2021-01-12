@@ -487,15 +487,13 @@ struct cli_option {
 };
 // Command line command. All data should be considered private.
 struct cli_command {
-  string                        name            = "";
-  string                        usage           = "";
-  vector<cli_command>           commands        = {};
-  vector<cli_option>            options         = {};
-  string                        usage_options   = "";
-  string                        usage_arguments = "";
-  bool                          help            = false;
-  string                        command         = "";
-  function<void(const string&)> set_command     = {};
+  string                        name        = "";
+  string                        usage       = "";
+  vector<cli_command>           commands    = {};
+  vector<cli_option>            options     = {};
+  bool                          help        = false;
+  string                        command     = "";
+  function<void(const string&)> set_command = {};
 };
 
 template <typename T>
