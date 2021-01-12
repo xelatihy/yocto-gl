@@ -651,6 +651,7 @@ bool parse_cli(cli_command& cli, vector<string>& args, string& error) {
       return cli_error("missing value for command");
     if (subcommand.name == args.at(0)) {
       cli.command = args.at(0);
+      if (cli.set_command) cli.set_command(cli.command);
       args.erase(args.begin());
       return parse_cli(subcommand, args, error);
     }
