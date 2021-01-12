@@ -65,8 +65,7 @@ void add_command(cli_command& cli, const string& name, render_params& value,
   add_optional(cmd, "nocaustics", value.nocaustics, "Disable caustics.");
   add_optional(cmd, "envhidden", value.envhidden, "Hide environment.");
   add_optional(cmd, "tentfilter", value.tentfilter, "Filter image.");
-  add_optional(cmd, "seed", value.seed, "Random seed.");
-  add_optional(cmd, "bvh", value.bvh, "Bvh type.");
+  add_optional(cmd, "bvh", value.bvh, "Bvh type.", trace_bvh_names);
   add_optional(cmd, "noparallel", value.noparallel, "Disable threading.");
 }
 
