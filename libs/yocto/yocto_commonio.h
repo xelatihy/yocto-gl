@@ -145,13 +145,24 @@ string get_command(const cli_state& cli);
 // and disable the flag.
 template <typename T>
 inline void add_optional(cli_state& cli, const string& name, T& value,
-    const string& usage, const string& alt = "",
-    const vector<string>& choices = {}, bool req = false);
-// Add an optional argument. Supports strings, numbers, and boolean flags.
+    const string& usage, const string& alt = "", bool req = false);
+// Add a positional argument. Supports strings, numbers, and boolean flags.
 template <typename T>
 inline void add_positional(cli_state& cli, const string& name, T& value,
-    const string& usage, const vector<string>& choices = {}, bool req = true);
-// Add an optional argument with values as labels. Supports integers and enums.
+    const string& usage, bool req = true);
+// Add an optional argument with values as labels. Supports integers, enums and
+// strings.
+template <typename T>
+inline void add_optional(cli_state& cli, const string& name, T& value,
+    const string& usage, const vector<string>& choices, const string& alt = "",
+    bool req = false);
+// Add a positional argument with values as labels. Supports string, integers
+// and enums.
+template <typename T>
+inline void add_positional(cli_state& cli, const string& name, T& value,
+    const string& usage, const vector<string>& choices, bool req = true);
+// Add an optional argument with values as labels. Supports integers
+// and enums.
 template <typename T>
 inline void add_optional(cli_state& cli, const string& name, T& value,
     const string& usage, const vector<pair<T, string>>& choices,
@@ -173,6 +184,10 @@ cli_command& add_command(
     cli_state& cli, const string& name, const string& usage);
 cli_command& add_command(
     cli_command& cmd, const string& name, const string& usage);
+void add_command_name(
+    cli_state& cli, const string& name, string& value, const string& usage);
+void add_command_name(
+    cli_command& cli, const string& name, string& value, const string& usage);
 
 // Add an optional argument. Supports strings, numbers, and boolean flags.
 // Optional arguments will be parsed with name `--<name>` and `-<alt>`.
@@ -180,12 +195,21 @@ cli_command& add_command(
 // and disable the flag.
 template <typename T>
 inline void add_optional(cli_command& cmd, const string& name, T& value,
-    const string& usage, const string& alt = "",
-    const vector<string>& choices = {}, bool req = false);
-// Add an optional argument. Supports strings, numbers, and boolean flags.
+    const string& usage, const string& alt = "", bool req = false);
+// Add a positional argument. Supports strings, numbers, and boolean flags.
 template <typename T>
 inline void add_positional(cli_command& cmd, const string& name, T& value,
-    const string& usage, const vector<string>& choices = {}, bool req = true);
+    const string& usage, bool req = true);
+// Add an optional argument with values as labels. Supports string, integers and
+// enums.
+template <typename T>
+inline void add_optional(cli_command& cmd, const string& name, T& value,
+    const string& usage, const vector<string>& choices, const string& alt = "",
+    bool req = false);
+// Add a positional argument with values as labels. Supports integers and enums.
+template <typename T>
+inline void add_positional(cli_command& cmd, const string& name, T& value,
+    const string& usage, const vector<string>& choices, bool req = true);
 // Add an optional argument with values as labels. Supports integers and enums.
 template <typename T>
 inline void add_optional(cli_command& cmd, const string& name, T& value,
@@ -532,14 +556,15 @@ struct cli_option {
 };
 // Command line command. All data should be considered private.
 struct cli_command {
-  string              name            = "";
-  string              usage           = "";
-  vector<cli_command> commands        = {};
-  vector<cli_option>  options         = {};
-  string              usage_options   = "";
-  string              usage_arguments = "";
-  bool                help            = false;
-  string              command         = "";
+  string                        name            = "";
+  string                        usage           = "";
+  vector<cli_command>           commands        = {};
+  vector<cli_option>            options         = {};
+  string                        usage_options   = "";
+  string                        usage_arguments = "";
+  bool                          help            = false;
+  string                        command         = "";
+  function<void(const string&)> set_command     = {};
 };
 // Command line parser. All data should be considered private.
 struct cli_state {
@@ -630,11 +655,28 @@ inline bool get_value(const cli_value& cvalue, T& value) {
   }
 }
 
-// Add an optional argument. Supports strings, numbers, and boolean flags.
-// Optional arguments will be parsed with name `--<name>` and `-<alt>`.
-// Optional booleans will support both `--<name>` and `--no-<name>` to enabled
-// and disable the flag.
-// Add an optional argument. Supports strings, numbers, and boolean flags.
+template <typename T>
+inline void add_optional(cli_command& cmd, const string& name, T& value,
+    const string& usage, const string& alt, bool req) {
+  return add_option(
+      cmd, "--" + name + (alt.empty() ? "" : (",-" + alt)), value, usage, req);
+}
+template <typename T>
+inline void add_optional(cli_state& cli, const string& name, T& value,
+    const string& usage, const string& alt, bool req) {
+  return add_optional(cli.command, name, value, usage, alt, req);
+}
+
+template <typename T>
+inline void add_positional(cli_command& cmd, const string& name, T& value,
+    const string& usage, bool req) {
+  return add_option(cmd, name, value, usage, req);
+}
+template <typename T>
+inline void add_positional(cli_state& cli, const string& name, T& value,
+    const string& usage, bool req) {
+  return add_positional(cli.command, name, value, usage, req);
+}
 
 template <typename T>
 inline void add_optional(cli_command& cmd, const string& name, T& value,

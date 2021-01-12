@@ -426,6 +426,15 @@ cli_command& add_command(
   return add_command(cli.command, name, usage);
 }
 
+void add_command_name(
+    cli_command& cli, const string& name, string& value, const string& usage) {
+  cli.set_command = [&value](const string& cvalue) { value = cvalue; };
+}
+void add_command_name(
+    cli_state& cli, const string& name, string& value, const string& usage) {
+  add_command_name(cli.command, name, value, usage);
+}
+
 static vector<string> split_cli_names(const string& name_) {
   auto name  = name_;
   auto split = vector<string>{};
