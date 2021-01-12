@@ -639,9 +639,13 @@ bool parse_cli(cli_command& cli, vector<string>& args, string& error) {
 
   // parse arguments
   for (auto idx = (size_t)0; idx < args.size(); idx++) {
-    auto& cmd           = *commands.back();
-    auto& arg           = args[idx];
-    auto  is_positional = args[idx].find('-') != 0;
+    auto& cmd = *commands.back();
+    auto& arg = args[idx];
+    if (arg == "--help") {
+      cmd.help = true;
+      break;
+    }
+    auto is_positional = args[idx].find('-') != 0;
     if (!cmd.commands.empty() && is_positional) {
       auto pos = std::find_if(cmd.commands.begin(), cmd.commands.end(),
           [&arg](auto& command) { return command.name == arg; });
@@ -724,9 +728,17 @@ bool parse_cli(cli_command& cli, vector<string>& args, string& error) {
     }
   }
 
+  // check for help
+  for (auto command_ptr : commands) {
+    auto& command = *command_ptr;
+    if (command.help) return true;
+  }
+
   // check for required, set defaults and set references
   for (auto command_ptr : commands) {
     auto& command = *command_ptr;
+    if (!command.commands.empty() && command.command.empty())
+      return cli_error("command not set for " + command.name);
     if (command.set_command) command.set_command(command.command);
     for (auto& option : command.options) {
       if (option.req && !option.set)
