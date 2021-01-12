@@ -407,12 +407,6 @@ struct gui_params {
 // draw params
 bool draw_params(gui_window* win, const string& title, gui_params& value);
 
-struct json_value;
-bool draw_params(
-    gui_window* win, const char* title, json_value& value, bool readonly);
-bool draw_params(gui_window* win, const char* title, json_value& value,
-    const json_value& schema, bool readonly);
-
 bool begin_header(gui_window* win, const char* title);
 void end_header(gui_window* win);
 

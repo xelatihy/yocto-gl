@@ -144,32 +144,6 @@ struct grade_params : colorgrade_params {
   bool   logo   = false;
 };
 
-// Json IO
-void serialize_value(json_mode mode, json_value& json, colorgrade_params& value,
-    const string& description) {
-  serialize_object(mode, json, value, description);
-  // serialize_property(cmd, "exposure", value.exposure, "Hdr exposure");
-  // serialize_property(
-  //     mode, json, (array<float, 3>&)value.tint, "tint", "Hdr tint");
-  // serialize_property(cmd, "lincontrast", value.lincontrast, "Hdr lin
-  // contrast"); serialize_property(cmd, "logcontrast", value.logcontrast, "Hdr
-  // log contrast"); serialize_property(
-  //     cmd, "linsaturation", value.linsaturation, "Hdr saturation");
-  // serialize_property(cmd, "filmic", value.filmic, "Hdr filmic curve");
-  // serialize_property(cmd, "srgb", value.srgb, "sRGB coversion");
-  // serialize_property(cmd, "contrast", value.contrast, "Ldr contrast");
-  // serialize_property(cmd, "saturation", value.saturation, "Ldr saturation");
-  // serialize_property(cmd, "shadows", value.shadows, "Ldr shadows");
-  // serialize_property(cmd, "midtones", value.midtones, "Ldr midtones");
-  // serialize_property(cmd, "highlights", value.highlights, "Ldr highlights");
-  // serialize_property(mode, json, (array<float, 3>&)value.shadows_color,
-  //     "shadows_color", "Ldr shadows color");
-  // serialize_property(mode, json, (array<float, 3>&)value.midtones_color,
-  //     "midtones_color", "Ldr sidtones color");
-  // serialize_property(mode, json, (array<float, 3>&)value.highlights_color,
-  //     "highlights_color", "Ldr sighlights color");
-}
-
 // Cli
 void add_command(cli_state& cli, const string& name, grade_params& value,
     const string& usage) {

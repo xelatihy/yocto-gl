@@ -27,7 +27,6 @@
 //
 
 #include <yocto/yocto_commonio.h>
-#include <yocto/yocto_json.h>
 
 #include "yshade_scene.h"
 #include "yshade_sculpt.h"

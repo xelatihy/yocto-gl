@@ -35,7 +35,6 @@
 // -----------------------------------------------------------------------------
 
 #include <yocto/yocto_image.h>
-#include <yocto/yocto_json.h>
 #include <yocto/yocto_parallel.h>
 #include <yocto/yocto_sceneio.h>
 #include <yocto/yocto_shape.h>

@@ -1019,8 +1019,8 @@ static bool load_json_scene(const string& filename, scene_scene& scene,
       {"", invalid_handle}};
   auto instance_ply = unordered_map<instance_handle, ply_instance_handle>{};
   auto get_ply_instances = [&ply_instances, &ply_instance_map, &instance_ply,
-                               &get_value](const json_type& js,
-                               instance_handle              instance) -> bool {
+                               &get_value](const njson& js,
+                               instance_handle          instance) -> bool {
     auto name = ""s;
     if (!get_value(js, name)) return false;
     if (name.empty()) return true;
@@ -1426,12 +1426,10 @@ static bool save_json_scene(const string& filename, const scene_scene& scene,
 
   // helpers to handel old code paths
   auto insert_object = [](njson& js, const string& name) -> njson& {
-    if (!js.is_object()) throw json_error{"object expected"};
     js[name] = njson::object();
     return js[name];
   };
   auto insert_value = [](njson& js, const string& name, const auto& value) {
-    if (!js.is_object()) throw json_error{"object expected"};
     js[name] = value;
   };
 
@@ -2644,17 +2642,13 @@ static bool save_gltf_scene(const string& filename, const scene_scene& scene,
   auto progress = vec2i{0, 3};
   if (progress_cb) progress_cb("save scene", progress.x++, progress.y);
 
-  // setup json
-  using json = json_value;
-
   // convert scene to json
-  auto js = json{};
-  js      = json::object();
+  auto js = njson::object();
 
   // asset
   {
     auto& ajs        = js["asset"];
-    ajs              = json::object();
+    ajs              = njson::object();
     ajs["version"]   = "2.0";
     ajs["generator"] = scene.asset.generator;
     ajs["copyright"] = scene.asset.copyright;
@@ -2663,14 +2657,14 @@ static bool save_gltf_scene(const string& filename, const scene_scene& scene,
   // cameras
   if (!scene.cameras.empty()) {
     auto& ajs = js["cameras"];
-    ajs       = json::array();
+    ajs       = njson::array();
     for (auto& camera : scene.cameras) {
       auto& cjs          = ajs.emplace_back();
-      cjs                = json::object();
+      cjs                = njson::object();
       cjs["name"]        = get_camera_name(scene, camera);
       cjs["type"]        = "perspective";
       auto& pjs          = cjs["perspective"];
-      pjs                = json::object();
+      pjs                = njson::object();
       pjs["aspectRatio"] = camera.aspect;
       pjs["yfov"]        = 0.660593;  // TODO(fabio): yfov
       pjs["znear"]       = 0.001;     // TODO(fabio): configurable?
@@ -2682,17 +2676,16 @@ static bool save_gltf_scene(const string& filename, const scene_scene& scene,
   auto texture_map = unordered_map<string, int>{};
   if (!scene.materials.empty()) {
     auto& ajs = js["materials"];
-    ajs       = json::array();
+    ajs       = njson::array();
     for (auto& material : scene.materials) {
       auto& mjs              = ajs.emplace_back();
-      mjs                    = json::object();
+      mjs                    = njson::object();
       mjs["name"]            = get_material_name(scene, material);
-      mjs["emissiveFactor"]  = to_json(array<float, 3>{
-          material.emission.x, material.emission.y, material.emission.z});
+      mjs["emissiveFactor"]  = material.emission;
       auto& pjs              = mjs["pbrMetallicRoughness"];
-      pjs                    = json::object();
-      pjs["baseColorFactor"] = to_json(array<float, 4>{material.color.x,
-          material.color.y, material.color.z, material.opacity});
+      pjs                    = njson::object();
+      pjs["baseColorFactor"] = vec4f{material.color.x, material.color.y,
+          material.color.z, material.opacity};
       pjs["metallicFactor"]  = material.metallic;
       pjs["roughnessFactor"] = material.roughness;
       if (material.emission_tex != invalid_handle) {
@@ -2703,7 +2696,7 @@ static bool save_gltf_scene(const string& filename, const scene_scene& scene,
           textures.emplace_back(tname, texture.ldr);
           texture_map[tname] = (int)textures.size() - 1;
         }
-        mjs["emissiveTexture"]          = json::object();
+        mjs["emissiveTexture"]          = njson::object();
         mjs["emissiveTexture"]["index"] = texture_map.at(tname);
       }
       if (material.normal_tex != invalid_handle) {
@@ -2714,7 +2707,7 @@ static bool save_gltf_scene(const string& filename, const scene_scene& scene,
           textures.emplace_back(tname, texture.ldr);
           texture_map[tname] = (int)textures.size() - 1;
         }
-        mjs["normalTexture"]          = json::object();
+        mjs["normalTexture"]          = njson::object();
         mjs["normalTexture"]["index"] = texture_map.at(tname);
       }
       if (material.color_tex != invalid_handle) {  // TODO(fabio): opacity
@@ -2725,7 +2718,7 @@ static bool save_gltf_scene(const string& filename, const scene_scene& scene,
           textures.emplace_back(tname, texture.ldr);
           texture_map[tname] = (int)textures.size() - 1;
         }
-        pjs["baseColorTexture"]          = json::object();
+        pjs["baseColorTexture"]          = njson::object();
         pjs["baseColorTexture"]["index"] = texture_map.at(tname);
       }
       if (material.roughness_tex != invalid_handle) {  // TODO(fabio): roughness
@@ -2736,7 +2729,7 @@ static bool save_gltf_scene(const string& filename, const scene_scene& scene,
           textures.emplace_back(tname, texture.ldr);
           texture_map[tname] = (int)textures.size() - 1;
         }
-        pjs["metallicRoughnessTexture"]          = json::object();
+        pjs["metallicRoughnessTexture"]          = njson::object();
         pjs["metallicRoughnessTexture"]["index"] = texture_map.at(tname);
       }
     }
@@ -2744,19 +2737,19 @@ static bool save_gltf_scene(const string& filename, const scene_scene& scene,
 
   // textures
   if (!textures.empty()) {
-    js["textures"] = json::array();
-    js["samplers"] = json::array();
-    js["images"]   = json::array();
+    js["textures"] = njson::array();
+    js["samplers"] = njson::array();
+    js["images"]   = njson::array();
     auto& sjs      = js["samplers"].emplace_back();
-    sjs            = json::object();
+    sjs            = njson::object();
     sjs["name"]    = "sampler";
     for (auto& [name, img] : textures) {
       auto& ijs      = js["images"].emplace_back();
-      ijs            = json::object();
+      ijs            = njson::object();
       ijs["name"]    = name;
       ijs["uri"]     = "textures/" + name + ".png";
       auto& tjs      = js["textures"].emplace_back();
-      tjs            = json::object();
+      tjs            = njson::object();
       tjs["name"]    = name;
       tjs["sampler"] = 0;
       tjs["source"]  = (int)js["images"].size() - 1;
@@ -2764,20 +2757,20 @@ static bool save_gltf_scene(const string& filename, const scene_scene& scene,
   }
 
   // add an accessor
-  auto add_accessor = [](json& js, vector<pair<string, vector<byte>>>& buffers,
+  auto add_accessor = [](njson& js, vector<pair<string, vector<byte>>>& buffers,
                           const void* data, size_t count, size_t size,
                           bool is_index = false) -> int {
     static auto types = unordered_map<size_t, string>{
         {1, "SCALAR"}, {2, "VEC2"}, {3, "VEC3"}, {4, "VEC4"}};
     auto  length         = count * size * 4;
     auto& vjs            = js["bufferViews"].emplace_back();
-    vjs                  = json::object();
+    vjs                  = njson::object();
     vjs["buffer"]        = (int)buffers.size() - 1;
     vjs["byteLength"]    = (uint64_t)length;
     vjs["byteOffset"]    = (uint64_t)buffers.back().second.size();
     vjs["target"]        = is_index ? 34963 : 34962;
     auto& ajs            = js["accessors"].emplace_back();
-    ajs                  = json::object();
+    ajs                  = njson::object();
     ajs["bufferView"]    = (int)js["bufferViews"].size() - 1;
     ajs["byteOffset"]    = 0;
     ajs["componentType"] = is_index ? 5125 : 5126;
@@ -2793,8 +2786,8 @@ static bool save_gltf_scene(const string& filename, const scene_scene& scene,
           max_[channel] = max(max_[channel], *value);
         }
       }
-      ajs["min"] = to_json(min_);
-      ajs["max"] = to_json(max_);
+      ajs["min"] = min_;
+      ajs["max"] = max_;
     }
     buffers.back().second.insert(
         buffers.back().second.end(), (byte*)data, (byte*)data + length);
@@ -2803,20 +2796,20 @@ static bool save_gltf_scene(const string& filename, const scene_scene& scene,
 
   // meshes
   auto buffers        = vector<pair<string, vector<byte>>>{};
-  auto primitives_map = unordered_map<shape_handle, json>{};
+  auto primitives_map = unordered_map<shape_handle, njson>{};
   if (!scene.shapes.empty()) {
-    js["accessors"]   = json::array();
-    js["bufferViews"] = json::array();
-    js["buffers"]     = json::array();
+    js["accessors"]   = njson::array();
+    js["bufferViews"] = njson::array();
+    js["buffers"]     = njson::array();
     auto shape_id     = 0;
     for (auto& shape : scene.shapes) {
       auto& buffer =
           buffers.emplace_back(get_shape_name(scene, shape), vector<byte>{})
               .second;
       auto& pjs = primitives_map[shape_id++];
-      pjs       = json::object();
+      pjs       = njson::object();
       auto& ajs = pjs["attributes"];
-      ajs       = json::object();
+      ajs       = njson::object();
       if (!shape.positions.empty()) {
         ajs["POSITION"] = add_accessor(
             js, buffers, shape.positions.data(), shape.positions.size(), 3);
@@ -2856,27 +2849,27 @@ static bool save_gltf_scene(const string& filename, const scene_scene& scene,
         pjs["mode"] = 4;
       }
       auto& bjs         = js["buffers"].emplace_back();
-      bjs               = json::object();
+      bjs               = njson::object();
       bjs["byteLength"] = (uint64_t)buffer.size();
       bjs["uri"]        = "shapes/" + get_shape_name(scene, shape) + ".bin";
     }
   }
 
   // nodes
-  js["nodes"] = json::array();
+  js["nodes"] = njson::array();
   if (!scene.cameras.empty()) {
     for (auto idx = 0; idx < (int)scene.cameras.size(); idx++) {
       auto& camera = scene.cameras[idx];
       auto& njs    = js["nodes"].emplace_back();
-      njs          = json::object();
+      njs          = njson::object();
       njs["name"]  = scene.camera_names[idx];
       auto matrix  = frame_to_mat(camera.frame);  // TODO(fabio): do this better
-      njs["matrix"] = to_json((array<float, 16>&)matrix);
+      njs["matrix"] = matrix;
       njs["camera"] = idx;
     }
   }
   if (!scene.instances.empty()) {
-    js["meshes"]   = json::array();
+    js["meshes"]   = njson::array();
     using mesh_key = pair<shape_handle, material_handle>;
     struct mesh_key_hash {
       size_t operator()(const mesh_key& v) const {
@@ -2890,18 +2883,18 @@ static bool save_gltf_scene(const string& filename, const scene_scene& scene,
     auto mesh_map = unordered_map<mesh_key, int, mesh_key_hash>{};
     for (auto& instance : scene.instances) {
       auto& njs   = js["nodes"].emplace_back();
-      njs         = json::object();
+      njs         = njson::object();
       njs["name"] = get_instance_name(scene, instance);
       auto matrix = frame_to_mat(
           instance.frame);  // TODO(fabio): do this better
-      njs["matrix"] = to_json((array<float, 16>&)matrix);
+      njs["matrix"] = matrix;
       if (mesh_map.find(mesh_key{instance.shape, instance.material}) ==
           mesh_map.end()) {
         auto& mjs   = js["meshes"].emplace_back();
-        mjs         = json::object();
+        mjs         = njson::object();
         mjs["name"] = get_shape_name(scene, instance.shape) + "_" +
                       get_material_name(scene, instance.material);
-        mjs["primitives"] = json::array();
+        mjs["primitives"] = njson::array();
         mjs["primitives"].push_back(primitives_map.at(instance.shape));
         mjs["primitives"].back()["material"] = instance.material;
         mesh_map[mesh_key{instance.shape, instance.material}] =
@@ -2910,15 +2903,15 @@ static bool save_gltf_scene(const string& filename, const scene_scene& scene,
       njs["mesh"] = mesh_map.at({instance.shape, instance.material});
     }
   } else {
-    js["meshes"] = json::array();
+    js["meshes"] = njson::array();
     for (auto& [shape, pjs] : primitives_map) {
       auto& mjs         = js["meshes"].emplace_back();
-      mjs               = json::object();
+      mjs               = njson::object();
       mjs["name"]       = get_shape_name(scene, shape);
-      mjs["primitives"] = json::array();
+      mjs["primitives"] = njson::array();
       mjs["primitives"].push_back(pjs);
       auto& njs   = js["nodes"].emplace_back();
-      njs         = json::object();
+      njs         = njson::object();
       njs["name"] = get_shape_name(scene, shape);
       njs["mesh"] = (int)js["meshes"].size() - 1;
     }
@@ -2927,20 +2920,20 @@ static bool save_gltf_scene(const string& filename, const scene_scene& scene,
   // root children
   {
     auto& rjs       = js["nodes"].emplace_back();
-    rjs             = json::object();
+    rjs             = njson::object();
     rjs["name"]     = "root";
-    rjs["children"] = json::array();
+    rjs["children"] = njson::array();
     for (auto idx = 0; idx < (int)js["nodes"].size() - 1; idx++)
-      rjs["children"].push_back(json{idx});
+      rjs["children"].push_back(njson{idx});
   }
 
   // scene
   {
-    js["scenes"] = json::array();
+    js["scenes"] = njson::array();
     auto& sjs    = js["scenes"].emplace_back();
-    sjs          = json::object();
-    sjs["nodes"] = json::array();
-    sjs["nodes"].push_back(json{(int)js["nodes"].size() - 1});
+    sjs          = njson::object();
+    sjs["nodes"] = njson::array();
+    sjs["nodes"].push_back((int)js["nodes"].size() - 1);
     js["scene"] = 0;
   }
 
