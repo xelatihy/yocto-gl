@@ -456,6 +456,12 @@ void draw_widgets(
   }
   if (!viewer.selected->params.empty()) {
     if (draw_params(win, viewer.selected->pname, viewer.selected->params)) {
+      for (auto pos = (size_t)0; pos < viewer.views.size(); pos++) {
+        if (viewer.views[pos].get() == viewer.selected) {
+          auto lock                  = std::lock_guard{viewer.input_mutex};
+          viewer.inputs[pos]->params = viewer.selected->params;
+        }
+      }
       if (viewer.pcallback)
         viewer.pcallback(viewer.selected->name, viewer.selected->params);
     }

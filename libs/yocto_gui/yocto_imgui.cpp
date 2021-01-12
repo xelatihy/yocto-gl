@@ -975,20 +975,6 @@ void draw_log(gui_window* win) {
   _log_mutex.unlock();
 }
 
-template <typename T>
-static bool draw_number_param(
-    gui_window* win, const char* lbl, json_value& value, bool readonly) {
-  // This should work but breaks on windows
-  // auto gvalue = value.get<T>();
-  auto gvalue = from_json<T>(value);  // windows fix
-  if (draw_dragger(win, lbl, gvalue) && !readonly) {
-    value = gvalue;
-    return true;
-  } else {
-    return false;
-  }
-}
-
 // draw param
 bool draw_param(gui_window* win, const string& name, gui_param& param) {
   auto copy = param;
