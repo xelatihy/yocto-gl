@@ -31,7 +31,6 @@
 
 #include <yocto/yocto_color.h>
 #include <yocto/yocto_commonio.h>
-#include <yocto/yocto_json.h>
 
 #include <algorithm>
 #include <array>
@@ -976,171 +975,165 @@ void draw_log(gui_window* win) {
   _log_mutex.unlock();
 }
 
-template <typename T>
-static bool draw_number_param(
-    gui_window* win, const char* lbl, json_value& value, bool readonly) {
-  // This should work but breaks on windows
-  // auto gvalue = value.get<T>();
-  auto gvalue = from_json<T>(value);  // windows fix
-  if (draw_dragger(win, lbl, gvalue) && !readonly) {
-    value = gvalue;
-    return true;
-  } else {
-    return false;
-  }
-}
-
-static bool draw_boolean_param(
-    gui_window* win, const char* lbl, json_value& value, bool readonly) {
-  auto gvalue = value.get<bool>();
-  if (draw_checkbox(win, lbl, gvalue) && !readonly) {
-    value = gvalue;
-    return true;
-  } else {
-    return false;
-  }
-}
-
-static bool draw_string_param(
-    gui_window* win, const char* lbl, json_value& value, bool readonly) {
-  auto gvalue = value.get<string>();
-  if (draw_textinput(win, lbl, gvalue) && !readonly) {
-    value = gvalue;
-    return true;
-  } else {
-    return false;
-  }
-}
-
-static bool draw_enum_param(gui_window* win, const char* lbl, json_value& value,
-    bool readonly, const json_value& labels) {
-  auto gvalue = value.get<string>();
-  // this code should work by break windows
-  // auto glabels = labels.get<vector<string>>();
-  auto glabels = from_json<vector<string>>(labels);  // windows fix
-  if (draw_combobox(win, lbl, gvalue, glabels) && !readonly) {
-    value = gvalue;
-    return true;
-  } else {
-    return false;
-  }
-}
-
-bool draw_params(
-    gui_window* win, const char* lbl, json_value& value, bool readonly) {
-  if (value.is_integer()) {
-    return draw_number_param<int>(win, lbl, value, readonly);
-  } else if (value.is_number()) {
-    return draw_number_param<float>(win, lbl, value, readonly);
-  } else if (value.is_boolean()) {
-    return draw_boolean_param(win, lbl, value, readonly);
-  } else if (value.is_string()) {
-    return draw_string_param(win, lbl, value, readonly);
-  } else if (value.is_array()) {
-    if (value.size() > 4) return false;  // skip
-    auto is_integer_array = true, is_number_array = true;
-    for (auto& item : value) {
-      if (!item.is_integer()) is_integer_array = false;
-      if (!item.is_number()) is_number_array = false;
-    }
-    if (!is_integer_array && !is_number_array) return false;  // skip
-    if (is_integer_array) {
-      if (value.size() == 2)
-        return draw_number_param<array<int, 2>>(win, lbl, value, readonly);
-      if (value.size() == 3)
-        return draw_number_param<array<int, 3>>(win, lbl, value, readonly);
-      if (value.size() == 4)
-        return draw_number_param<array<int, 4>>(win, lbl, value, readonly);
-      return false;  // skip
-    } else if (is_number_array) {
-      if (value.size() == 2)
-        return draw_number_param<array<float, 2>>(win, lbl, value, readonly);
-      if (value.size() == 3)
-        return draw_number_param<array<float, 2>>(win, lbl, value, readonly);
-      if (value.size() == 4)
-        return draw_number_param<array<float, 2>>(win, lbl, value, readonly);
-      return false;  // skip
-    } else {
-      return false;  // skip
-    }
-  } else if (value.is_object()) {
-    if (begin_header(win, lbl)) {
-      auto edited = 0;
-      for (auto& [name, item] : value.items()) {
-        edited += (int)draw_params(win, name.c_str(), item, readonly);
+// draw param
+bool draw_param(gui_window* win, const string& name, gui_param& param) {
+  auto copy = param;
+  switch (param.type) {
+    case gui_param_type::vec1f:
+      if (param.minmaxf.x == param.minmaxf.y) {
+        return draw_dragger(win, name.c_str(),
+                   param.readonly ? (float&)copy.valuef
+                                  : (float&)param.valuef) &&
+               !param.readonly;
+      } else {
+        return draw_slider(win, name.c_str(),
+                   param.readonly ? (float&)copy.valuef : (float&)param.valuef,
+                   param.minmaxf.x, param.minmaxf.y) &&
+               !param.readonly;
       }
-      end_header(win);
-      return (bool)edited;
-    } else {
-      return false;
-    }
-  } else {
-    return false;  // skip
+      break;
+    case gui_param_type::vec2f:
+      if (param.minmaxf.x == param.minmaxf.y) {
+        return draw_dragger(win, name.c_str(),
+                   param.readonly ? (vec2f&)copy.valuef
+                                  : (vec2f&)param.valuef) &&
+               !param.readonly;
+      } else {
+        return draw_slider(win, name.c_str(),
+                   param.readonly ? (vec2f&)copy.valuef : (vec2f&)param.valuef,
+                   param.minmaxf.x, param.minmaxf.y) &&
+               !param.readonly;
+      }
+      break;
+    case gui_param_type::vec3f:
+      if (param.color) {
+        return draw_coloredit(win, name.c_str(),
+                   param.readonly ? (vec3f&)copy.valuef
+                                  : (vec3f&)param.valuef) &&
+               !param.readonly;
+      } else if (param.minmaxf.x == param.minmaxf.y) {
+        return draw_dragger(win, name.c_str(),
+                   param.readonly ? (vec3f&)copy.valuef
+                                  : (vec3f&)param.valuef) &&
+               !param.readonly;
+      } else {
+        return draw_slider(win, name.c_str(),
+                   param.readonly ? copy.valuef : param.valuef, param.minmaxf.x,
+                   param.minmaxf.y) &&
+               !param.readonly;
+      }
+      break;
+    case gui_param_type::vec4f:
+      if (param.color) {
+        return draw_coloredit(win, name.c_str(),
+                   param.readonly ? (vec4f&)copy.valuef
+                                  : (vec4f&)param.valuef) &&
+               !param.readonly;
+      } else if (param.minmaxf.x == param.minmaxf.y) {
+        return draw_dragger(win, name.c_str(),
+                   param.readonly ? (vec4f&)copy.valuef
+                                  : (vec4f&)param.valuef) &&
+               !param.readonly;
+      } else {
+        return draw_slider(win, name.c_str(),
+                   param.readonly ? (vec4f&)copy.valuef : (vec4f&)param.valuef,
+                   param.minmaxf.x, param.minmaxf.y) &&
+               !param.readonly;
+      }
+      break;
+    case gui_param_type::vec1i:
+      if (!param.labels.empty()) {
+        return draw_combobox(win, name.c_str(),
+                   param.readonly ? (int&)copy.valuei : (int&)param.valuei,
+                   param.labels) &&
+               !param.readonly;
+      } else if (param.minmaxi.x == param.minmaxi.y) {
+        return draw_dragger(win, name.c_str(),
+                   param.readonly ? (int&)copy.valuei : (int&)param.valuei) &&
+               !param.readonly;
+      } else {
+        return draw_slider(win, name.c_str(),
+                   param.readonly ? (int&)copy.valuei : (int&)param.valuei,
+                   param.minmaxi.x, param.minmaxi.y) &&
+               !param.readonly;
+      }
+      break;
+    case gui_param_type::vec2i:
+      if (param.minmaxi.x == param.minmaxi.y) {
+        return draw_dragger(win, name.c_str(),
+                   param.readonly ? (vec2i&)copy.valuei
+                                  : (vec2i&)param.valuei) &&
+               !param.readonly;
+      } else {
+        return draw_slider(win, name.c_str(),
+                   param.readonly ? (vec2i&)copy.valuei : (vec2i&)param.valuei,
+                   param.minmaxi.x, param.minmaxi.y) &&
+               !param.readonly;
+      }
+      break;
+    case gui_param_type::vec3i:
+      if (param.minmaxi.x == param.minmaxi.y) {
+        return draw_dragger(win, name.c_str(),
+                   param.readonly ? (vec3i&)copy.valuei
+                                  : (vec3i&)param.valuei) &&
+               !param.readonly;
+      } else {
+        return draw_slider(win, name.c_str(),
+                   param.readonly ? (vec3i&)copy.valuei : (vec3i&)param.valuei,
+                   param.minmaxi.x, param.minmaxi.y) &&
+               !param.readonly;
+      }
+      break;
+    case gui_param_type::vec4i:
+      if (param.minmaxi.x == param.minmaxi.y) {
+        return draw_dragger(win, name.c_str(),
+                   param.readonly ? (vec4i&)copy.valuei
+                                  : (vec4i&)param.valuei) &&
+               !param.readonly;
+      } else {
+        return draw_slider(win, name.c_str(),
+                   param.readonly ? (vec4i&)copy.valuei : (vec4i&)param.valuei,
+                   param.minmaxi.x, param.minmaxi.y) &&
+               !param.readonly;
+      }
+      break;
+    case gui_param_type::vec1s:
+      if (!param.labels.empty()) {
+        return draw_combobox(win, name.c_str(),
+                   param.readonly ? copy.values : param.values, param.labels) &&
+               !param.readonly;
+      } else {
+        return draw_textinput(win, name.c_str(),
+                   param.readonly ? copy.values : param.values) &&
+               !param.readonly;
+      }
+      break;
+    case gui_param_type::vec1b:
+      if (!param.labels.empty()) {
+        // maybe we should implement something different here
+        return draw_checkbox(win, name.c_str(),
+                   param.readonly ? copy.valueb : param.valueb) &&
+               !param.readonly;
+      } else {
+        return draw_checkbox(win, name.c_str(),
+                   param.readonly ? copy.valueb : param.valueb) &&
+               !param.readonly;
+      }
+      break;
   }
 }
 
-bool draw_params(gui_window* win, const char* lbl, json_value& value,
-    const json_value& schema, bool readonly) {
-  if (value.is_integer()) {
-    return draw_number_param<int>(win, lbl, value, readonly);
-  } else if (value.is_number()) {
-    return draw_number_param<float>(win, lbl, value, readonly);
-  } else if (value.is_boolean()) {
-    return draw_boolean_param(win, lbl, value, readonly);
-  } else if (value.is_string()) {
-    if (schema.contains("enum")) {
-      return draw_enum_param(win, lbl, value, readonly, schema.at("enum"));
-    } else {
-      return draw_string_param(win, lbl, value, readonly);
+// draw params
+bool draw_params(gui_window* win, const string& name, gui_params& params) {
+  auto edited = false;
+  if (begin_header(win, name.c_str())) {
+    for (auto& [name, param] : params) {
+      auto pedited = draw_param(win, name, param);
+      edited       = edited || pedited;
     }
-  } else if (value.is_array()) {
-    if (value.size() > 4) return false;  // skip
-    auto is_integer_array = true, is_number_array = true;
-    for (auto& item : value) {
-      if (!item.is_integer()) is_integer_array = false;
-      if (!item.is_number()) is_number_array = false;
-    }
-    if (!is_integer_array && !is_number_array) return false;  // skip
-    if (is_integer_array) {
-      if (value.size() == 2)
-        return draw_number_param<array<int, 2>>(win, lbl, value, readonly);
-      if (value.size() == 3)
-        return draw_number_param<array<int, 3>>(win, lbl, value, readonly);
-      if (value.size() == 4)
-        return draw_number_param<array<int, 4>>(win, lbl, value, readonly);
-      return false;  // skip
-    } else if (is_number_array) {
-      if (value.size() == 2)
-        return draw_number_param<array<float, 2>>(win, lbl, value, readonly);
-      if (value.size() == 3)
-        return draw_number_param<array<float, 3>>(win, lbl, value, readonly);
-      if (value.size() == 4)
-        return draw_number_param<array<float, 4>>(win, lbl, value, readonly);
-      return false;  // skip
-    } else {
-      return false;  // skip
-    }
-  } else if (value.is_object()) {
-    if (begin_header(win, lbl)) {
-      auto edited = 0;
-      for (auto& [name, item] : value.items()) {
-        auto item_readonly = false;
-        if (!readonly && schema.contains("gui_readonly")) {
-          for (auto& readonly_name : schema.at("gui_readonly")) {
-            if (name == readonly_name.get<string>()) item_readonly = true;
-          }
-        }
-        edited += (int)draw_params(win, name.c_str(), item,
-            schema.at("properties").at(name), readonly || item_readonly);
-      }
-      end_header(win);
-      return (bool)edited;
-    } else {
-      return false;
-    }
-  } else {
-    return false;  // skip
+    end_header(win);
   }
+  return edited;
 }
 
 }  // namespace yocto

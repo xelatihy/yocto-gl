@@ -26,7 +26,7 @@
 // POSSIBILITY OF SUCH DAMAGE.
 //
 
-#include <yocto/yocto_json.h>
+#include <yocto/yocto_commonio.h>
 using namespace yocto;
 
 struct shade_sculpt_params {
@@ -34,13 +34,12 @@ struct shade_sculpt_params {
   string texture = "";
 };
 
-// Json IO
-inline void serialize_value(json_mode mode, json_value& json,
-    shade_sculpt_params& value, const string& description) {
-  serialize_object(mode, json, value, description);
-  serialize_property(mode, json, value.shape, "shape", "Input shape.", true);
-  serialize_property(mode, json, value.texture, "texture", "Brush texturee.");
-  serialize_clipositionals(mode, json, {"shape"});
+// Cli
+inline void add_command(cli_state& cli, const string& name,
+    shade_sculpt_params& value, const string& usage) {
+  auto& cmd = add_command(cli, name, usage);
+  add_positional(cmd, "shape", value.shape, "Input shape.");
+  add_optional(cmd, "texture", value.texture, "Brush texture.");
 }
 
 int run_shade_sculpt(const shade_sculpt_params& params);

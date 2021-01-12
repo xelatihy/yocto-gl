@@ -47,28 +47,31 @@ struct convert_params {
   vec3f  translate   = {0, 0, 0};
   vec3f  rotate      = {0, 0, 0};
   vec3f  scale       = {1, 1, 1};
+  float  scaleu      = 1;
 };
 
-// Json IO
-void serialize_value(json_mode mode, json_value& json, convert_params& value,
-    const string& description) {
-  serialize_object(mode, json, value, description);
-  serialize_property(mode, json, value.shape, "shape", "Input shape.", true);
-  serialize_property(mode, json, value.output, "output", "Output shape.");
-  serialize_property(mode, json, value.smooth, "smooth", "Smooth normals.");
-  serialize_property(mode, json, value.facet, "facet", "Facet normals.");
-  serialize_property(mode, json, value.aspositions, "aspositions",
-      "Remove all but positions.");
-  serialize_property(
-      mode, json, value.astriangles, "astriangles", "Convert to triangles.");
-  serialize_property(mode, json, (array<float, 3>&)value.translate, "translate",
-      "Translate shape.");
-  serialize_property(
-      mode, json, (array<float, 3>&)value.scale, "scale", "Scale shape.");
-  serialize_property(
-      mode, json, (array<float, 3>&)value.rotate, "rotate", "Rotate shape.");
-  serialize_clipositionals(mode, json, {"shape"});
-  serialize_clialternates(mode, json, {{"output", "o"}});
+void add_command(cli_state& cli, const string& name, convert_params& value,
+    const string& usage) {
+  auto& cmd = add_command(cli, name, usage);
+  add_positional(cmd, "shape", value.shape, "Input shape.");
+  add_optional(cmd, "output", value.output, "Output shape.", "o");
+  add_optional(cmd, "smooth", value.smooth, "Smooth normals.");
+  add_optional(cmd, "facet", value.facet, "Facet normals.");
+  add_optional(
+      cmd, "aspositions", value.aspositions, "Remove all but positions.");
+  add_optional(cmd, "astriangles", value.astriangles, "Convert to triangles.");
+  add_optional(cmd, "translatex", value.translate.x, "Translate shape.");
+  add_optional(
+      cmd, "translatey", value.translate.y, "translatey", "Translate shape.");
+  add_optional(
+      cmd, "translatez", value.translate.z, "translatez", "Translate shape.");
+  add_optional(cmd, "scalex", value.scale.x, "Scale shape.");
+  add_optional(cmd, "scaley", value.scale.y, "Scale shape.");
+  add_optional(cmd, "scalez", value.scale.z, "Scale shape.");
+  add_optional(cmd, "scaleu", value.scaleu, "Scale shape.");
+  add_optional(cmd, "rotatex", value.rotate.x, "Rotate shape.");
+  add_optional(cmd, "rotatey", value.rotate.y, "Rotate shape.");
+  add_optional(cmd, "rotatez", value.rotate.z, "Rotate shape.");
 }
 
 // convert images
@@ -107,10 +110,10 @@ int run_convert(const convert_params& params) {
 
   // transform
   if (params.translate != vec3f{0, 0, 0} || params.rotate != vec3f{0, 0, 0} ||
-      params.scale != vec3f{1, 1, 1}) {
+      params.scale != vec3f{1, 1, 1} || params.scaleu != 1) {
     print_progress("transform shape", 0, 1);
     auto translation = translation_frame(params.translate);
-    auto scaling     = scaling_frame(params.scale);
+    auto scaling     = scaling_frame(params.scale * params.scaleu);
     auto rotation    = rotation_frame({1, 0, 0}, radians(params.rotate.x)) *
                     rotation_frame({0, 0, 1}, radians(params.rotate.z)) *
                     rotation_frame({0, 1, 0}, radians(params.rotate.y));
@@ -170,26 +173,30 @@ struct fvconvert_params {
   vec3f  translate   = {0, 0, 0};
   vec3f  rotate      = {0, 0, 0};
   vec3f  scale       = {1, 1, 1};
+  float  scaleu      = 1;
 };
 
-// Json IO
-void serialize_value(json_mode mode, json_value& json, fvconvert_params& value,
-    const string& description) {
-  serialize_object(mode, json, value, description);
-  serialize_property(mode, json, value.shape, "shape", "Input shape.", true);
-  serialize_property(mode, json, value.output, "output", "Output shape.");
-  serialize_property(mode, json, value.smooth, "smooth", "Smooth normals.");
-  serialize_property(mode, json, value.facet, "facet", "Facet normals.");
-  serialize_property(mode, json, value.aspositions, "aspositions",
-      "Remove all but positions.");
-  serialize_property(mode, json, (array<float, 3>&)value.translate, "translate",
-      "Translate shape.");
-  serialize_property(
-      mode, json, (array<float, 3>&)value.scale, "scale", "Scale shape.");
-  serialize_property(
-      mode, json, (array<float, 3>&)value.rotate, "rotate", "Rotate shape.");
-  serialize_clipositionals(mode, json, {"shape"});
-  serialize_clialternates(mode, json, {{"output", "o"}});
+void add_command(cli_state& cli, const string& name, fvconvert_params& value,
+    const string& usage) {
+  auto& cmd = add_command(cli, name, usage);
+  add_positional(cmd, "shape", value.shape, "Input shape.");
+  add_optional(cmd, "output", value.output, "Output shape.", "o");
+  add_optional(cmd, "smooth", value.smooth, "Smooth normals.");
+  add_optional(cmd, "facet", value.facet, "Facet normals.");
+  add_optional(
+      cmd, "aspositions", value.aspositions, "Remove all but positions.");
+  add_optional(cmd, "translatex", value.translate.x, "Translate shape.");
+  add_optional(
+      cmd, "translatey", value.translate.y, "translatey", "Translate shape.");
+  add_optional(
+      cmd, "translatez", value.translate.z, "translatez", "Translate shape.");
+  add_optional(cmd, "scalex", value.scale.x, "Scale shape.");
+  add_optional(cmd, "scaley", value.scale.y, "Scale shape.");
+  add_optional(cmd, "scalez", value.scale.z, "Scale shape.");
+  add_optional(cmd, "scaleu", value.scaleu, "Scale shape.");
+  add_optional(cmd, "rotatex", value.rotate.x, "Rotate shape.");
+  add_optional(cmd, "rotatey", value.rotate.y, "Rotate shape.");
+  add_optional(cmd, "rotatez", value.rotate.z, "Rotate shape.");
 }
 
 // convert images
@@ -225,10 +232,10 @@ int run_fvconvert(const fvconvert_params& params) {
 
   // transform
   if (params.translate != vec3f{0, 0, 0} || params.rotate != vec3f{0, 0, 0} ||
-      params.scale != vec3f{1, 1, 1}) {
+      params.scale != vec3f{1, 1, 1} || params.scaleu != 1) {
     print_progress("transform shape", 0, 1);
     auto translation = translation_frame(params.translate);
-    auto scaling     = scaling_frame(params.scale);
+    auto scaling     = scaling_frame(params.scale * params.scaleu);
     auto rotation    = rotation_frame({1, 0, 0}, radians(params.rotate.x)) *
                     rotation_frame({0, 0, 1}, radians(params.rotate.z)) *
                     rotation_frame({0, 1, 0}, radians(params.rotate.y));
@@ -280,15 +287,12 @@ struct view_params {
   bool   addsky = false;
 };
 
-// Json IO
-void serialize_value(json_mode mode, json_value& json, view_params& value,
-    const string& description) {
-  serialize_object(mode, json, value, description);
-  serialize_property(mode, json, value.shape, "shape", "Input shape.", true);
-  serialize_property(mode, json, value.output, "output", "Output shape.");
-  serialize_property(mode, json, value.addsky, "addsky", "Add sky.");
-  serialize_clipositionals(mode, json, {"shape"});
-  serialize_clialternates(mode, json, {{"output", "o"}});
+void add_command(cli_state& cli, const string& name, view_params& value,
+    const string& usage) {
+  auto& cmd = add_command(cli, name, usage);
+  add_positional(cmd, "shape", value.shape, "Input shape.");
+  add_optional(cmd, "output", value.output, "Output shape.", "o");
+  add_optional(cmd, "addsky", value.addsky, "Add sky.");
 }
 
 #ifndef YOCTO_OPENGL
@@ -330,29 +334,33 @@ struct heightfield_params {
   string output    = "out.ply"s;
   bool   smooth    = false;
   float  height    = 1.0f;
-  vec3f  scale     = {1, 1, 1};
-  vec3f  rotate    = {0, 0, 0};
-  vec3f  translate = {0, 0, 0};
   bool   info      = false;
+  vec3f  translate = {0, 0, 0};
+  vec3f  rotate    = {0, 0, 0};
+  vec3f  scale     = {1, 1, 1};
+  float  scaleu    = 1;
 };
 
-// Json IO
-void serialize_value(json_mode mode, json_value& json,
-    heightfield_params& value, const string& description) {
-  serialize_object(mode, json, value, description);
-  serialize_property(mode, json, value.image, "image", "Input image.", true);
-  serialize_property(mode, json, value.output, "output", "Output shape.");
-  serialize_property(mode, json, value.smooth, "smooth", "Smoooth normals.");
-  serialize_property(mode, json, value.height, "height", "Shape height.");
-  serialize_property(
-      mode, json, (array<float, 3>&)value.scale, "scale", "Scale shape.");
-  serialize_property(
-      mode, json, (array<float, 3>&)value.rotate, "rotate", "Rotate shape.");
-  serialize_property(mode, json, (array<float, 3>&)value.scale, "translate",
-      "Translate shape.");
-  serialize_property(mode, json, value.info, "info", "Print info.");
-  serialize_clipositionals(mode, json, {"image"});
-  serialize_clialternates(mode, json, {{"output", "o"}});
+void add_command(cli_state& cli, const string& name, heightfield_params& value,
+    const string& usage) {
+  auto& cmd = add_command(cli, name, usage);
+  add_positional(cmd, "image", value.image, "Input image.");
+  add_optional(cmd, "output", value.output, "Output shape.", "o");
+  add_optional(cmd, "smooth", value.smooth, "Smoooth normals.");
+  add_optional(cmd, "height", value.height, "Shape height.");
+  add_optional(cmd, "info", value.info, "Print info.");
+  add_optional(cmd, "translatex", value.translate.x, "Translate shape.");
+  add_optional(
+      cmd, "translatey", value.translate.y, "translatey", "Translate shape.");
+  add_optional(
+      cmd, "translatez", value.translate.z, "translatez", "Translate shape.");
+  add_optional(cmd, "scalex", value.scale.x, "Scale shape.");
+  add_optional(cmd, "scaley", value.scale.y, "Scale shape.");
+  add_optional(cmd, "scalez", value.scale.z, "Scale shape.");
+  add_optional(cmd, "scaleu", value.scaleu, "Scale shape.");
+  add_optional(cmd, "rotatex", value.rotate.x, "Rotate shape.");
+  add_optional(cmd, "rotatey", value.rotate.y, "Rotate shape.");
+  add_optional(cmd, "rotatez", value.rotate.z, "Rotate shape.");
 }
 
 int run_heightfield(const heightfield_params& params) {
@@ -415,21 +423,28 @@ struct app_params {
   view_params      view      = {};
 };
 
-// Json IO
-void serialize_value(json_mode mode, json_value& json, app_params& value,
-    const string& description) {
-  serialize_object(mode, json, value, description);
-  serialize_command(mode, json, value.command, "command", "Command.");
-  serialize_property(mode, json, value.convert, "convert", "Convert shapes.");
-  serialize_property(
-      mode, json, value.fvconvert, "fvconvert", "Convert face-varying shapes.");
-  serialize_property(mode, json, value.view, "view", "View shapes.");
+// Cli
+void add_commands(cli_state& cli, const string& name, app_params& value,
+    const string& usage) {
+  cli = make_cli(name, usage);
+  add_command_name(cli, "command", value.command, "Command.");
+  add_command(cli, "convert", value.convert, "Convert shapes.");
+  add_command(
+      cli, "fvconvert", value.fvconvert, "Convert face-varying shapes.");
+  add_command(cli, "view", value.view, "View shapes.");
+}
+
+// Parse cli
+void parse_cli(app_params& params, int argc, const char** argv) {
+  auto cli = cli_state{};
+  add_commands(cli, "yhape", params, "Process and view shapes.");
+  parse_cli(cli, argc, argv);
 }
 
 int main(int argc, const char* argv[]) {
   // command line parameters
   auto params = app_params{};
-  parse_cli(params, "Process and view shapes", argc, argv);
+  parse_cli(params, argc, argv);
 
   // dispatch commands
   if (params.command == "convert") {

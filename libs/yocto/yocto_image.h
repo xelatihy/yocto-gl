@@ -183,6 +183,11 @@ image_data colorgrade_image(const image_data& image,
 
 // Color grade an hsr or ldr image to an ldr image.
 // Uses multithreading for speed.
+void colorgrade_image(image_data& result, const image_data& image,
+    const colorgrade_params& params);
+
+// Color grade an hsr or ldr image to an ldr image.
+// Uses multithreading for speed.
 void colorgrade_image_mt(image_data& result, const image_data& image,
     const colorgrade_params& params);
 

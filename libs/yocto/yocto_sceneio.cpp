@@ -39,6 +39,7 @@
 #include <unordered_map>
 
 #include "ext/cgltf.h"
+#include "ext/json.hpp"
 #include "yocto_color.h"
 #include "yocto_commonio.h"
 #include "yocto_geometry.h"
@@ -125,60 +126,69 @@ auto zip(const vector<T1>& keys, const vector<T2>& values) {
 // get name
 [[maybe_unused]] static string get_camera_name(
     const scene_scene& scene, int idx) {
+  if (scene.camera_names.empty()) return "camera" + std::to_string(idx);
   return scene.camera_names[idx];
 }
 [[maybe_unused]] static string get_environment_name(
     const scene_scene& scene, int idx) {
+  if (scene.environment_names.empty())
+    return "environment" + std::to_string(idx);
   return scene.environment_names[idx];
 }
 [[maybe_unused]] static string get_shape_name(
     const scene_scene& scene, int idx) {
+  if (scene.shape_names.empty()) return "shape" + std::to_string(idx);
   return scene.shape_names[idx];
 }
 [[maybe_unused]] static string get_texture_name(
     const scene_scene& scene, int idx) {
+  if (scene.texture_names.empty()) return "texture" + std::to_string(idx);
   return scene.texture_names[idx];
 }
 [[maybe_unused]] static string get_instance_name(
     const scene_scene& scene, int idx) {
+  if (scene.instance_names.empty()) return "instance" + std::to_string(idx);
   return scene.instance_names[idx];
 }
 [[maybe_unused]] static string get_material_name(
     const scene_scene& scene, int idx) {
+  if (scene.material_names.empty()) return "material" + std::to_string(idx);
   return scene.material_names[idx];
 }
 [[maybe_unused]] static string get_subdiv_name(
     const scene_scene& scene, int idx) {
+  if (scene.subdiv_names.empty()) return "subdiv" + std::to_string(idx);
   return scene.subdiv_names[idx];
 }
 
 [[maybe_unused]] static string get_camera_name(
     const scene_scene& scene, const scene_camera& camera) {
-  return scene.camera_names.at(&camera - scene.cameras.data());
+  return get_camera_name(scene, (int)(&camera - scene.cameras.data()));
 }
 [[maybe_unused]] static string get_environment_name(
     const scene_scene& scene, const scene_environment& environment) {
-  return scene.environment_names.at(&environment - scene.environments.data());
+  return get_environment_name(
+      scene, (int)(&environment - scene.environments.data()));
 }
 [[maybe_unused]] static string get_shape_name(
     const scene_scene& scene, const scene_shape& shape) {
-  return scene.shape_names.at(&shape - scene.shapes.data());
+  return get_shape_name(scene, (int)(&shape - scene.shapes.data()));
 }
 [[maybe_unused]] static string get_texture_name(
     const scene_scene& scene, const scene_texture& texture) {
-  return scene.texture_names.at(&texture - scene.textures.data());
+  return get_texture_name(scene, (int)(&texture - scene.textures.data()));
 }
 [[maybe_unused]] static string get_instance_name(
     const scene_scene& scene, const scene_instance& instance) {
-  return scene.instance_names.at(&instance - scene.instances.data());
+  return get_instance_name(scene, (int)(&instance - scene.instances.data()));
 }
 [[maybe_unused]] static string get_material_name(
     const scene_scene& scene, const scene_material& material) {
-  return scene.material_names.at(&material - scene.materials.data());
+  return get_material_name(scene, (int)(&material - scene.materials.data()));
 }
 [[maybe_unused]] static string get_subdiv_name(
     const scene_scene& scene, const scene_subdiv& subdiv) {
-  return scene.subdiv_names.at(&subdiv - scene.subdivs.data());
+  return get_subdiv_name(scene, (int)(&subdiv - scene.subdivs.data()));
 }
 
 }  // namespace yocto
@@ -827,9 +837,31 @@ static bool save_image(const string& filename, const image<vec4f>& imgf,
 // -----------------------------------------------------------------------------
 namespace yocto {
 
-#if 0
 using njson = nlohmann::json;
 using std::array;
+
+// load/save json
+[[maybe_unused]] static bool load_json(
+    const string& filename, njson& json, string& error) {
+  // error helpers
+  auto parse_error = [filename, &error]() {
+    error = filename + ": parse error in json";
+    return false;
+  };
+  auto text = ""s;
+  if (!load_text(filename, text, error)) return false;
+  try {
+    json = njson::parse(text);
+    return true;
+  } catch (std::exception&) {
+    return parse_error();
+  }
+}
+
+[[maybe_unused]] static bool save_json(
+    const string& filename, const njson& json, string& error) {
+  return save_text(filename, json.dump(2), error);
+}
 
 // support for json conversions
 inline void to_json(njson& j, const vec3f& value) {
@@ -854,31 +886,6 @@ inline void from_json(const njson& j, mat3f& value) {
 inline void from_json(const njson& j, frame3f& value) {
   nlohmann::from_json(j, (array<float, 12>&)value);
 }
-#endif
-
-// support for json conversions
-inline bool set_value(json_tview js, const vec3f& value) {
-  return set_value(js, (const array<float, 3>&)value);
-}
-inline bool set_value(json_tview js, const vec4f& value) {
-  return set_value(js, (const array<float, 4>&)value);
-}
-inline bool set_value(json_tview js, const frame3f& value) {
-  return set_value(js, (const array<float, 12>&)value);
-}
-inline bool set_value(json_tview js, const mat4f& value) {
-  return set_value(js, (const array<float, 16>&)value);
-}
-
-inline bool get_value(json_ctview js, vec3f& value) {
-  return get_value(js, (array<float, 3>&)value);
-}
-inline bool get_value(json_ctview js, mat3f& value) {
-  return get_value(js, (array<float, 9>&)value);
-}
-inline bool get_value(json_ctview js, frame3f& value) {
-  return get_value(js, (array<float, 12>&)value);
-}
 
 }  // namespace yocto
 
@@ -887,15 +894,27 @@ inline bool get_value(json_ctview js, frame3f& value) {
 // -----------------------------------------------------------------------------
 namespace yocto {
 
-// Save a scene in the builtin JSON format.
+// Load a scene in the builtin JSON format.
 static bool load_json_scene(const string& filename, scene_scene& scene,
     string& error, const progress_callback& progress_cb, bool noparallel) {
   auto json_error = [filename]() {
     // error does not need setting
     return false;
   };
-  auto parse_error = [filename, &error](string_view message) {
-    error = filename + ": parse error (" + string{message} + ")";
+  auto parse_error = [filename, &error](const string& patha,
+                         const string& pathb = "", const string& pathc = "") {
+    auto path = patha;
+    if (!pathb.empty()) path += "/" + pathb;
+    if (!pathc.empty()) path += "/" + pathc;
+    error = filename + ": parse error at " + path;
+    return false;
+  };
+  auto key_error = [filename, &error](const string& patha,
+                       const string& pathb = "", const string& pathc = "") {
+    auto path = patha;
+    if (!pathb.empty()) path += "/" + pathb;
+    if (!pathc.empty()) path += "/" + pathc;
+    error = filename + ": unknow key at " + path;
     return false;
   };
   auto material_error = [filename, &error](string_view name) {
@@ -912,9 +931,8 @@ static bool load_json_scene(const string& filename, scene_scene& scene,
   if (progress_cb) progress_cb("load scene", progress.x++, progress.y);
 
   // open file
-  auto js_tree = json_tree{};
-  if (!load_json(filename, js_tree, error)) return json_error();
-  auto js = get_croot(js_tree);
+  auto js = njson{};
+  if (!load_json(filename, js, error)) return json_error();
 
   // reference disctionaries
   auto texture_map = unordered_map<string, pair<texture_handle, bool>>{
@@ -926,9 +944,19 @@ static bool load_json_scene(const string& filename, scene_scene& scene,
   auto subdiv_map = unordered_map<string, pair<subdiv_handle, bool>>{
       {"", {invalid_handle, true}}};
 
+  // parse json value
+  auto get_value = [](const njson& js, auto& value) -> bool {
+    try {
+      value = js;
+      return true;
+    } catch (...) {
+      return false;
+    }
+  };
+
   // parse json reference
-  auto get_shape = [&scene, &shape_map](
-                       json_ctview js, shape_handle& value) -> bool {
+  auto get_shape = [&scene, &shape_map, &get_value](
+                       const njson& js, shape_handle& value) -> bool {
     auto name = ""s;
     if (!get_value(js, name)) return false;
     auto it = shape_map.find(name);
@@ -945,8 +973,8 @@ static bool load_json_scene(const string& filename, scene_scene& scene,
   };
 
   // parse json reference
-  auto get_material = [&scene, &material_map](
-                          json_ctview js, material_handle& value) -> bool {
+  auto get_material = [&scene, &material_map, &get_value](
+                          const njson& js, material_handle& value) -> bool {
     auto name = ""s;
     if (!get_value(js, name)) return false;
     auto it = material_map.find(name);
@@ -963,8 +991,8 @@ static bool load_json_scene(const string& filename, scene_scene& scene,
   };
 
   // parse json reference
-  auto get_texture = [&scene, &texture_map](
-                         json_ctview js, texture_handle& value) -> bool {
+  auto get_texture = [&scene, &texture_map, &get_value](
+                         const njson& js, texture_handle& value) -> bool {
     auto name = ""s;
     if (!get_value(js, name)) return false;
     auto it = texture_map.find(name);
@@ -990,9 +1018,9 @@ static bool load_json_scene(const string& filename, scene_scene& scene,
   auto ply_instance_map     = unordered_map<string, ply_instance_handle>{
       {"", invalid_handle}};
   auto instance_ply = unordered_map<instance_handle, ply_instance_handle>{};
-  auto get_ply_instances = [&ply_instances, &ply_instance_map, &instance_ply](
-                               json_ctview     js,
-                               instance_handle instance) -> bool {
+  auto get_ply_instances = [&ply_instances, &ply_instance_map, &instance_ply,
+                               &get_value](const njson& js,
+                               instance_handle          instance) -> bool {
     auto name = ""s;
     if (!get_value(js, name)) return false;
     if (name.empty()) return true;
@@ -1012,76 +1040,102 @@ static bool load_json_scene(const string& filename, scene_scene& scene,
     return (instance_handle)(&instance - scene.instances.data());
   };
 
+  // helper for iteration
+  auto iterate_object = [](const njson& js) { return js.items(); };
+  auto check_object   = [](const njson& js) { return js.is_object(); };
+
   // handle progress
   if (progress_cb) progress_cb("load scene", progress.x++, progress.y);
 
   // loop over external dictionaries
-  for (auto [gname, group] : iterate_object(js)) {
+  for (auto& [gname, group] : iterate_object(js)) {
     if (gname == "asset") {
       auto& asset = scene.asset;
-      for (auto [key, value] : iterate_object(group)) {
+      if (!check_object(group)) return parse_error(gname);
+      for (auto& [key, value] : iterate_object(group)) {
         if (key == "copyright") {
-          get_value(value, asset.copyright);
+          if (!get_value(value, asset.copyright))
+            return parse_error(gname, key);
         } else if (key == "generator") {
-          get_value(value, asset.generator);
+          if (!get_value(value, asset.generator))
+            return parse_error(gname, key);
         } else {
-          set_error(group, "unknown key " + string{key});
+          return key_error(gname, key);
         }
       }
     } else if (gname == "cameras") {
-      for (auto [name, element] : iterate_object(group)) {
+      if (!check_object(group)) return parse_error(gname);
+      for (auto& [name, element] : iterate_object(group)) {
+        if (!check_object(element)) return parse_error(gname, name);
         scene.camera_names.emplace_back(name);
         auto& camera = scene.cameras.emplace_back();
-        for (auto [key, value] : iterate_object(element)) {
+        for (auto& [key, value] : iterate_object(element)) {
           if (key == "frame") {
-            get_value(value, camera.frame);
+            if (!get_value(value, camera.frame))
+              return parse_error(gname, name, key);
           } else if (key == "orthographic") {
-            get_value(value, camera.orthographic);
+            if (!get_value(value, camera.orthographic))
+              return parse_error(gname, name, key);
           } else if (key == "ortho") {
             // backward compatibility
-            get_value(value, camera.orthographic);
+            if (!get_value(value, camera.orthographic))
+              return parse_error(gname, name, key);
           } else if (key == "lens") {
-            get_value(value, camera.lens);
+            if (!get_value(value, camera.lens))
+              return parse_error(gname, name, key);
           } else if (key == "aspect") {
-            get_value(value, camera.aspect);
+            if (!get_value(value, camera.aspect))
+              return parse_error(gname, name, key);
           } else if (key == "film") {
-            get_value(value, camera.film);
+            if (!get_value(value, camera.film))
+              return parse_error(gname, name, key);
           } else if (key == "focus") {
-            get_value(value, camera.focus);
+            if (!get_value(value, camera.focus))
+              return parse_error(gname, name, key);
           } else if (key == "aperture") {
-            get_value(value, camera.aperture);
+            if (!get_value(value, camera.aperture))
+              return parse_error(gname, name, key);
           } else if (key == "lookat") {
-            get_value(value, (mat3f&)camera.frame);
+            if (!get_value(value, (mat3f&)camera.frame))
+              return parse_error(gname, name, key);
             camera.focus = length(camera.frame.x - camera.frame.y);
             camera.frame = lookat_frame(
                 camera.frame.x, camera.frame.y, camera.frame.z);
           } else {
-            set_error(js, "unknown key " + string{key});
+            return key_error(gname, name, key);
           }
         }
       }
     } else if (gname == "environments") {
-      for (auto [name, element] : iterate_object(group)) {
+      if (!check_object(group)) return parse_error(gname);
+      for (auto& [name, element] : iterate_object(group)) {
+        if (!check_object(element)) return parse_error(gname, name);
         scene.environment_names.emplace_back(name);
         auto& environment = scene.environments.emplace_back();
-        for (auto [key, value] : iterate_object(element)) {
+        for (auto& [key, value] : iterate_object(element)) {
           if (key == "frame") {
-            get_value(value, environment.frame);
+            if (!get_value(value, environment.frame))
+              return parse_error(gname, name, key);
           } else if (key == "emission") {
-            get_value(value, environment.emission);
+            if (!get_value(value, environment.emission))
+              return parse_error(gname, name, key);
           } else if (key == "emission_tex") {
-            get_texture(value, environment.emission_tex);
+            if (!get_texture(value, environment.emission_tex))
+              return parse_error(gname, name, key);
           } else if (key == "lookat") {
-            get_value(value, (mat3f&)environment.frame);
+            if (!get_value(value, (mat3f&)environment.frame))
+              return parse_error(gname, name, key);
             environment.frame = lookat_frame(environment.frame.x,
                 environment.frame.y, environment.frame.z, true);
           } else {
-            set_error(js, "unknown key " + string{key});
+            return key_error(gname, name, key);
           }
         }
       }
     } else if (gname == "materials") {
-      for (auto [name, element] : iterate_object(group)) {
+      if (!check_object(group)) return parse_error(gname);
+      for (auto& [name, element] : iterate_object(group)) {
+        if (!check_object(element)) return parse_error(gname, name);
         auto material_it = material_map.find(string{name});
         auto handle      = invalid_handle;
         if (material_it == material_map.end()) {
@@ -1092,116 +1146,152 @@ static bool load_json_scene(const string& filename, scene_scene& scene,
           handle = material_it->second.first;
         }
         auto& material = scene.materials[handle];
-        for (auto [key, value] : iterate_object(element)) {
+        for (auto& [key, value] : iterate_object(element)) {
           if (key == "emission") {
-            get_value(value, material.emission);
+            if (!get_value(value, material.emission))
+              return parse_error(gname, name, key);
           } else if (key == "color") {
-            get_value(value, material.color);
+            if (!get_value(value, material.color))
+              return parse_error(gname, name, key);
           } else if (key == "metallic") {
-            get_value(value, material.metallic);
+            if (!get_value(value, material.metallic))
+              return parse_error(gname, name, key);
           } else if (key == "specular") {
-            get_value(value, material.specular);
+            if (!get_value(value, material.specular))
+              return parse_error(gname, name, key);
           } else if (key == "roughness") {
-            get_value(value, material.roughness);
+            if (!get_value(value, material.roughness))
+              return parse_error(gname, name, key);
           } else if (key == "coat") {
-            get_value(value, material.coat);
+            if (!get_value(value, material.coat))
+              return parse_error(gname, name, key);
           } else if (key == "transmission") {
-            get_value(value, material.transmission);
+            if (!get_value(value, material.transmission))
+              return parse_error(gname, name, key);
           } else if (key == "translucency") {
-            get_value(value, material.translucency);
+            if (!get_value(value, material.translucency))
+              return parse_error(gname, name, key);
           } else if (key == "thin") {
-            get_value(value, material.thin);
+            if (!get_value(value, material.thin))
+              return parse_error(gname, name, key);
           } else if (key == "ior") {
-            get_value(value, material.ior);
+            if (!get_value(value, material.ior))
+              return parse_error(gname, name, key);
           } else if (key == "trdepth") {
-            get_value(value, material.trdepth);
+            if (!get_value(value, material.trdepth))
+              return parse_error(gname, name, key);
           } else if (key == "scattering") {
-            get_value(value, material.scattering);
+            if (!get_value(value, material.scattering))
+              return parse_error(gname, name, key);
           } else if (key == "scanisotropy") {
-            get_value(value, material.scanisotropy);
+            if (!get_value(value, material.scanisotropy))
+              return parse_error(gname, name, key);
           } else if (key == "opacity") {
-            get_value(value, material.opacity);
+            if (!get_value(value, material.opacity))
+              return parse_error(gname, name, key);
           } else if (key == "coat") {
-            get_value(value, material.coat);
+            if (!get_value(value, material.coat))
+              return parse_error(gname, name, key);
           } else if (key == "emission_tex") {
-            get_texture(value, material.emission_tex);
+            if (!get_texture(value, material.emission_tex))
+              return parse_error(gname, name, key);
           } else if (key == "color_tex") {
-            get_texture(value, material.color_tex);
+            if (!get_texture(value, material.color_tex))
+              return parse_error(gname, name, key);
           } else if (key == "metallic_tex") {
-            get_texture(value, material.metallic_tex);
+            if (!get_texture(value, material.metallic_tex))
+              return parse_error(gname, name, key);
           } else if (key == "specular_tex") {
-            get_texture(value, material.specular_tex);
+            if (!get_texture(value, material.specular_tex))
+              return parse_error(gname, name, key);
           } else if (key == "transmission_tex") {
-            get_texture(value, material.transmission_tex);
+            if (!get_texture(value, material.transmission_tex))
+              return parse_error(gname, name, key);
           } else if (key == "translucency_tex") {
-            get_texture(value, material.translucency_tex);
+            if (!get_texture(value, material.translucency_tex))
+              return parse_error(gname, name, key);
           } else if (key == "roughness_tex") {
-            get_texture(value, material.roughness_tex);
+            if (!get_texture(value, material.roughness_tex))
+              return parse_error(gname, name, key);
           } else if (key == "scattering_tex") {
-            get_texture(value, material.scattering_tex);
+            if (!get_texture(value, material.scattering_tex))
+              return parse_error(gname, name, key);
           } else if (key == "opacity_tex") {
-            get_texture(value, material.opacity_tex);
+            if (!get_texture(value, material.opacity_tex))
+              return parse_error(gname, name, key);
           } else if (key == "normal_tex") {
-            get_texture(value, material.normal_tex);
+            if (!get_texture(value, material.normal_tex))
+              return parse_error(gname, name, key);
           } else {
-            set_error(element, "unknown key " + string{key});
+            return key_error(gname, name, key);
           }
         }
         material_map[string{name}] = {handle, true};
       }
     } else if (gname == "instances" || gname == "objects") {
-      for (auto [name, element] : iterate_object(group)) {
+      if (!check_object(group)) return parse_error(gname);
+      for (auto& [name, element] : iterate_object(group)) {
+        if (!check_object(element)) return parse_error(gname, name);
         scene.instance_names.emplace_back(name);
         auto& instance = scene.instances.emplace_back();
         for (auto [key, value] : iterate_object(element)) {
           if (key == "frame") {
-            get_value(value, instance.frame);
+            if (!get_value(value, instance.frame))
+              return parse_error(gname, name, key);
           } else if (key == "lookat") {
-            get_value(value, (mat3f&)instance.frame);
+            if (!get_value(value, (mat3f&)instance.frame))
+              return parse_error(gname, name, key);
             instance.frame = lookat_frame(
                 instance.frame.x, instance.frame.y, instance.frame.z, true);
           } else if (key == "material") {
-            get_material(value, instance.material);
+            if (!get_material(value, instance.material))
+              return parse_error(gname, name, key);
           } else if (key == "shape") {
-            get_shape(value, instance.shape);
+            if (!get_shape(value, instance.shape))
+              return parse_error(gname, name, key);
           } else if (key == "instance") {
             throw std::invalid_argument{"instances not suppotyed yet"};
             // get_ply_instances(value, instance);
           } else {
-            // set_error(element, "unknown key " + string{key});
+            return key_error(gname, name, key);
           }
         }
       }
     } else if (gname == "subdivs") {
-      for (auto [name, element] : iterate_object(group)) {
+      if (!check_object(group)) return parse_error(gname);
+      for (auto& [name, element] : iterate_object(group)) {
+        if (!check_object(element)) return parse_error(gname, name);
         scene.subdiv_names.emplace_back();
         auto& subdiv = scene.subdivs.emplace_back();
-        for (auto [key, value] : iterate_object(element)) {
+        for (auto& [key, value] : iterate_object(element)) {
           if (key == "shape") {
-            get_shape(value, subdiv.shape);
+            if (!get_shape(value, subdiv.shape))
+              return parse_error(gname, name, key);
           } else if (key == "subdivisions") {
-            get_value(value, subdiv.subdivisions);
+            if (!get_value(value, subdiv.subdivisions))
+              return parse_error(gname, name, key);
           } else if (key == "catmullcark") {
-            get_value(value, subdiv.catmullclark);
+            if (!get_value(value, subdiv.catmullclark))
+              return parse_error(gname, name, key);
           } else if (key == "smooth") {
-            get_value(value, subdiv.smooth);
+            if (!get_value(value, subdiv.smooth))
+              return parse_error(gname, name, key);
           } else if (key == "displacement") {
-            get_value(value, subdiv.displacement);
+            if (!get_value(value, subdiv.displacement))
+              return parse_error(gname, name, key);
           } else if (key == "displacement_tex") {
-            get_texture(value, subdiv.displacement_tex);
+            if (!get_texture(value, subdiv.displacement_tex))
+              return parse_error(gname, name, key);
           } else {
-            // set_error(element, "unknown key " + string{key});
+            return key_error(gname, name, key);
           }
         }
         subdiv_map[string{name}] = {(int)scene.subdivs.size() - 1, false};
       }
     } else {
-      set_error(js, "unknown key " + string{gname});
+      return key_error(gname);
     }
   }
-
-  // check for parsing errors
-  if (!is_valid(js)) return parse_error(get_error(js));
 
   // check materials
   for (auto& [key, value] : material_map) {
@@ -1334,20 +1424,27 @@ static bool save_json_scene(const string& filename, const scene_scene& scene,
     return false;
   };
 
+  // helpers to handel old code paths
+  auto insert_object = [](njson& js, const string& name) -> njson& {
+    js[name] = njson::object();
+    return js[name];
+  };
+  auto insert_value = [](njson& js, const string& name, const auto& value) {
+    js[name] = value;
+  };
+
   // handle progress
   auto progress = vec2i{
       0, 2 + (int)scene.shapes.size() + (int)scene.textures.size()};
   if (progress_cb) progress_cb("save scene", progress.x++, progress.y);
 
   // save json file
-  auto js_tree = json_tree{};
-  auto js      = get_root(js_tree);
-  set_object(js);
+  auto js = njson::object();
 
   // asset
   {
     auto& asset   = scene.asset;
-    auto  element = insert_object(js, "asset");
+    auto& element = insert_object(js, "asset");
     if (!asset.copyright.empty()) {
       insert_value(element, "copyright", asset.copyright);
     }
@@ -1358,48 +1455,47 @@ static bool save_json_scene(const string& filename, const scene_scene& scene,
 
   auto def_cam = sceneio_camera{};
   if (!scene.cameras.empty()) {
-    // auto _ = append_object(js, "cameras");
-    auto group = insert_object(js, "cameras");
+    auto& group = insert_object(js, "cameras");
     for (auto& camera : scene.cameras) {
-      auto elemnt = insert_object(group, get_camera_name(scene, camera));
+      auto& element = insert_object(group, get_camera_name(scene, camera));
       if (camera.frame != def_cam.frame) {
-        insert_value(elemnt, "frame", camera.frame);
+        insert_value(element, "frame", camera.frame);
       }
       if (camera.orthographic != def_cam.orthographic) {
-        insert_value(elemnt, "orthographic", camera.orthographic);
+        insert_value(element, "orthographic", camera.orthographic);
       }
       if (camera.lens != def_cam.lens) {
-        insert_value(elemnt, "lens", camera.lens);
+        insert_value(element, "lens", camera.lens);
       }
       if (camera.aspect != def_cam.aspect) {
-        insert_value(elemnt, "aspect", camera.aspect);
+        insert_value(element, "aspect", camera.aspect);
       }
       if (camera.film != def_cam.film) {
-        insert_value(elemnt, "film", camera.film);
+        insert_value(element, "film", camera.film);
       }
       if (camera.focus != def_cam.focus) {
-        insert_value(elemnt, "focus", camera.focus);
+        insert_value(element, "focus", camera.focus);
       }
       if (camera.aperture != def_cam.aperture) {
-        insert_value(elemnt, "aperture", camera.aperture);
+        insert_value(element, "aperture", camera.aperture);
       }
     }
   }
 
   auto def_env = sceneio_environment{};
   if (!scene.environments.empty()) {
-    auto group = insert_object(js, "environments");
+    auto& group = insert_object(js, "environments");
     for (auto& environment : scene.environments) {
-      auto elemnt = insert_object(
+      auto& element = insert_object(
           group, get_environment_name(scene, environment));
       if (environment.frame != def_env.frame) {
-        insert_value(elemnt, "frame", environment.frame);
+        insert_value(element, "frame", environment.frame);
       }
       if (environment.emission != def_env.emission) {
-        insert_value(elemnt, "emission", environment.emission);
+        insert_value(element, "emission", environment.emission);
       }
       if (environment.emission_tex != invalid_handle) {
-        insert_value(elemnt, "emission_tex",
+        insert_value(element, "emission_tex",
             get_texture_name(scene, environment.emission_tex));
       }
     }
@@ -1407,151 +1503,148 @@ static bool save_json_scene(const string& filename, const scene_scene& scene,
 
   auto def_material = sceneio_material{};
   if (!scene.materials.empty()) {
-    auto group = insert_object(js, "materials");
+    auto& group = insert_object(js, "materials");
     for (auto& material : scene.materials) {
-      auto elment = insert_object(group, get_material_name(scene, material));
+      auto& element = insert_object(group, get_material_name(scene, material));
       if (material.emission != def_material.emission) {
-        insert_value(elment, "emission", material.emission);
+        insert_value(element, "emission", material.emission);
       }
       if (material.color != def_material.color) {
-        insert_value(elment, "color", material.color);
+        insert_value(element, "color", material.color);
       }
       if (material.specular != def_material.specular) {
-        insert_value(elment, "specular", material.specular);
+        insert_value(element, "specular", material.specular);
       }
       if (material.metallic != def_material.metallic) {
-        insert_value(elment, "metallic", material.metallic);
+        insert_value(element, "metallic", material.metallic);
       }
       if (material.coat != def_material.coat) {
-        insert_value(elment, "coat", material.coat);
+        insert_value(element, "coat", material.coat);
       }
       if (material.roughness != def_material.roughness) {
-        insert_value(elment, "roughness", material.roughness);
+        insert_value(element, "roughness", material.roughness);
       }
       if (material.ior != def_material.ior) {
-        insert_value(elment, "ior", material.ior);
+        insert_value(element, "ior", material.ior);
       }
       if (material.transmission != def_material.transmission) {
-        insert_value(elment, "transmission", material.transmission);
+        insert_value(element, "transmission", material.transmission);
       }
       if (material.translucency != def_material.translucency) {
-        insert_value(elment, "translucency", material.translucency);
+        insert_value(element, "translucency", material.translucency);
       }
       if (material.trdepth != def_material.trdepth) {
-        insert_value(elment, "trdepth", material.trdepth);
+        insert_value(element, "trdepth", material.trdepth);
       }
       if (material.scattering != def_material.scattering) {
-        insert_value(elment, "scattering", material.scattering);
+        insert_value(element, "scattering", material.scattering);
       }
       if (material.scanisotropy != def_material.scanisotropy) {
-        insert_value(elment, "scanisotropy", material.scanisotropy);
+        insert_value(element, "scanisotropy", material.scanisotropy);
       }
       if (material.opacity != def_material.opacity) {
-        insert_value(elment, "opacity", material.opacity);
+        insert_value(element, "opacity", material.opacity);
       }
       if (material.thin != def_material.thin) {
-        insert_value(elment, "thin", material.thin);
+        insert_value(element, "thin", material.thin);
       }
       if (material.emission_tex != invalid_handle) {
-        insert_value(elment, "emission_tex",
+        insert_value(element, "emission_tex",
             get_texture_name(scene, material.emission_tex));
       }
       if (material.color_tex != invalid_handle) {
         insert_value(
-            elment, "color_tex", get_texture_name(scene, material.color_tex));
+            element, "color_tex", get_texture_name(scene, material.color_tex));
       }
       if (material.metallic_tex != invalid_handle) {
-        insert_value(elment, "metallic_tex",
+        insert_value(element, "metallic_tex",
             get_texture_name(scene, material.metallic_tex));
       }
       if (material.specular_tex != invalid_handle) {
-        insert_value(elment, "specular_tex",
+        insert_value(element, "specular_tex",
             get_texture_name(scene, material.specular_tex));
       }
       if (material.roughness_tex != invalid_handle) {
-        insert_value(elment, "roughness_tex",
+        insert_value(element, "roughness_tex",
             get_texture_name(scene, material.roughness_tex));
       }
       if (material.transmission_tex != invalid_handle) {
-        insert_value(elment, "transmission_tex",
+        insert_value(element, "transmission_tex",
             get_texture_name(scene, material.transmission_tex));
       }
       if (material.translucency_tex != invalid_handle) {
-        insert_value(elment, "translucency_tex",
+        insert_value(element, "translucency_tex",
             get_texture_name(scene, material.translucency_tex));
       }
       if (material.scattering_tex != invalid_handle) {
-        insert_value(elment, "scattering_tex",
+        insert_value(element, "scattering_tex",
             get_texture_name(scene, material.scattering_tex));
       }
       if (material.coat_tex != invalid_handle) {
         insert_value(
-            elment, "coat_tex", get_texture_name(scene, material.coat_tex));
+            element, "coat_tex", get_texture_name(scene, material.coat_tex));
       }
       if (material.opacity_tex != invalid_handle) {
-        insert_value(elment, "opacity_tex",
+        insert_value(element, "opacity_tex",
             get_texture_name(scene, material.opacity_tex));
       }
       if (material.normal_tex != invalid_handle) {
-        insert_value(
-            elment, "normal_tex", get_texture_name(scene, material.normal_tex));
+        insert_value(element, "normal_tex",
+            get_texture_name(scene, material.normal_tex));
       }
     }
   }
 
   auto def_instance = sceneio_instance{};
   if (!scene.instances.empty()) {
-    auto group = insert_object(js, "instances");
+    auto& group = insert_object(js, "instances");
     for (auto& instance : scene.instances) {
-      auto elment = insert_object(group, get_instance_name(scene, instance));
+      auto& element = insert_object(group, get_instance_name(scene, instance));
       if (instance.frame != def_instance.frame) {
-        insert_value(elment, "frame", instance.frame);
+        insert_value(element, "frame", instance.frame);
       }
       if (instance.shape != invalid_handle) {
-        insert_value(elment, "shape", get_shape_name(scene, instance.shape));
+        insert_value(element, "shape", get_shape_name(scene, instance.shape));
       }
       if (instance.material != invalid_handle) {
         insert_value(
-            elment, "material", get_material_name(scene, instance.material));
+            element, "material", get_material_name(scene, instance.material));
       }
     }
   }
 
   auto def_subdiv = scene_subdiv{};
   if (!scene.subdivs.empty()) {
-    auto group = insert_object(js, "subdivs");
+    auto& group = insert_object(js, "subdivs");
     for (auto& subdiv : scene.subdivs) {
-      auto elment = insert_object(group, get_subdiv_name(scene, subdiv));
+      auto& element = insert_object(group, get_subdiv_name(scene, subdiv));
       if (subdiv.shape != invalid_handle) {
-        insert_value(elment, "shape", get_shape_name(scene, subdiv.shape));
+        insert_value(element, "shape", get_shape_name(scene, subdiv.shape));
       }
       if (subdiv.subdivisions != def_subdiv.subdivisions) {
-        insert_value(elment, "subdivisions", subdiv.subdivisions);
+        insert_value(element, "subdivisions", subdiv.subdivisions);
       }
       if (subdiv.catmullclark != def_subdiv.catmullclark) {
-        insert_value(elment, "catmullclark", subdiv.catmullclark);
+        insert_value(element, "catmullclark", subdiv.catmullclark);
       }
       if (subdiv.smooth != def_subdiv.smooth) {
-        insert_value(elment, "smooth", subdiv.smooth);
+        insert_value(element, "smooth", subdiv.smooth);
       }
       if (subdiv.displacement != def_subdiv.displacement) {
-        insert_value(elment, "displacement", subdiv.displacement);
+        insert_value(element, "displacement", subdiv.displacement);
       }
       if (subdiv.displacement_tex != invalid_handle) {
-        insert_value(elment, "displacement_tex",
+        insert_value(element, "displacement_tex",
             get_texture_name(scene, subdiv.displacement_tex));
       }
     }
   }
 
-  // chck for errors
-  if (!is_valid(js)) return conversion_error(get_error(js));
-
   // handle progress
   if (progress_cb) progress_cb("save scene", progress.x++, progress.y);
 
   // save json
-  if (!save_json(filename, js_tree, error)) return false;
+  if (!save_json(filename, js, error)) return false;
 
   // get filename from name
   auto make_filename = [filename](const string& name, const string& group,
@@ -2549,17 +2642,13 @@ static bool save_gltf_scene(const string& filename, const scene_scene& scene,
   auto progress = vec2i{0, 3};
   if (progress_cb) progress_cb("save scene", progress.x++, progress.y);
 
-  // setup json
-  using json = json_value;
-
   // convert scene to json
-  auto js = json{};
-  js      = json::object();
+  auto js = njson::object();
 
   // asset
   {
     auto& ajs        = js["asset"];
-    ajs              = json::object();
+    ajs              = njson::object();
     ajs["version"]   = "2.0";
     ajs["generator"] = scene.asset.generator;
     ajs["copyright"] = scene.asset.copyright;
@@ -2568,14 +2657,14 @@ static bool save_gltf_scene(const string& filename, const scene_scene& scene,
   // cameras
   if (!scene.cameras.empty()) {
     auto& ajs = js["cameras"];
-    ajs       = json::array();
+    ajs       = njson::array();
     for (auto& camera : scene.cameras) {
       auto& cjs          = ajs.emplace_back();
-      cjs                = json::object();
+      cjs                = njson::object();
       cjs["name"]        = get_camera_name(scene, camera);
       cjs["type"]        = "perspective";
       auto& pjs          = cjs["perspective"];
-      pjs                = json::object();
+      pjs                = njson::object();
       pjs["aspectRatio"] = camera.aspect;
       pjs["yfov"]        = 0.660593;  // TODO(fabio): yfov
       pjs["znear"]       = 0.001;     // TODO(fabio): configurable?
@@ -2587,17 +2676,16 @@ static bool save_gltf_scene(const string& filename, const scene_scene& scene,
   auto texture_map = unordered_map<string, int>{};
   if (!scene.materials.empty()) {
     auto& ajs = js["materials"];
-    ajs       = json::array();
+    ajs       = njson::array();
     for (auto& material : scene.materials) {
       auto& mjs              = ajs.emplace_back();
-      mjs                    = json::object();
+      mjs                    = njson::object();
       mjs["name"]            = get_material_name(scene, material);
-      mjs["emissiveFactor"]  = to_json(array<float, 3>{
-          material.emission.x, material.emission.y, material.emission.z});
+      mjs["emissiveFactor"]  = material.emission;
       auto& pjs              = mjs["pbrMetallicRoughness"];
-      pjs                    = json::object();
-      pjs["baseColorFactor"] = to_json(array<float, 4>{material.color.x,
-          material.color.y, material.color.z, material.opacity});
+      pjs                    = njson::object();
+      pjs["baseColorFactor"] = vec4f{material.color.x, material.color.y,
+          material.color.z, material.opacity};
       pjs["metallicFactor"]  = material.metallic;
       pjs["roughnessFactor"] = material.roughness;
       if (material.emission_tex != invalid_handle) {
@@ -2608,7 +2696,7 @@ static bool save_gltf_scene(const string& filename, const scene_scene& scene,
           textures.emplace_back(tname, texture.ldr);
           texture_map[tname] = (int)textures.size() - 1;
         }
-        mjs["emissiveTexture"]          = json::object();
+        mjs["emissiveTexture"]          = njson::object();
         mjs["emissiveTexture"]["index"] = texture_map.at(tname);
       }
       if (material.normal_tex != invalid_handle) {
@@ -2619,7 +2707,7 @@ static bool save_gltf_scene(const string& filename, const scene_scene& scene,
           textures.emplace_back(tname, texture.ldr);
           texture_map[tname] = (int)textures.size() - 1;
         }
-        mjs["normalTexture"]          = json::object();
+        mjs["normalTexture"]          = njson::object();
         mjs["normalTexture"]["index"] = texture_map.at(tname);
       }
       if (material.color_tex != invalid_handle) {  // TODO(fabio): opacity
@@ -2630,7 +2718,7 @@ static bool save_gltf_scene(const string& filename, const scene_scene& scene,
           textures.emplace_back(tname, texture.ldr);
           texture_map[tname] = (int)textures.size() - 1;
         }
-        pjs["baseColorTexture"]          = json::object();
+        pjs["baseColorTexture"]          = njson::object();
         pjs["baseColorTexture"]["index"] = texture_map.at(tname);
       }
       if (material.roughness_tex != invalid_handle) {  // TODO(fabio): roughness
@@ -2641,7 +2729,7 @@ static bool save_gltf_scene(const string& filename, const scene_scene& scene,
           textures.emplace_back(tname, texture.ldr);
           texture_map[tname] = (int)textures.size() - 1;
         }
-        pjs["metallicRoughnessTexture"]          = json::object();
+        pjs["metallicRoughnessTexture"]          = njson::object();
         pjs["metallicRoughnessTexture"]["index"] = texture_map.at(tname);
       }
     }
@@ -2649,19 +2737,19 @@ static bool save_gltf_scene(const string& filename, const scene_scene& scene,
 
   // textures
   if (!textures.empty()) {
-    js["textures"] = json::array();
-    js["samplers"] = json::array();
-    js["images"]   = json::array();
+    js["textures"] = njson::array();
+    js["samplers"] = njson::array();
+    js["images"]   = njson::array();
     auto& sjs      = js["samplers"].emplace_back();
-    sjs            = json::object();
+    sjs            = njson::object();
     sjs["name"]    = "sampler";
     for (auto& [name, img] : textures) {
       auto& ijs      = js["images"].emplace_back();
-      ijs            = json::object();
+      ijs            = njson::object();
       ijs["name"]    = name;
       ijs["uri"]     = "textures/" + name + ".png";
       auto& tjs      = js["textures"].emplace_back();
-      tjs            = json::object();
+      tjs            = njson::object();
       tjs["name"]    = name;
       tjs["sampler"] = 0;
       tjs["source"]  = (int)js["images"].size() - 1;
@@ -2669,20 +2757,20 @@ static bool save_gltf_scene(const string& filename, const scene_scene& scene,
   }
 
   // add an accessor
-  auto add_accessor = [](json& js, vector<pair<string, vector<byte>>>& buffers,
+  auto add_accessor = [](njson& js, vector<pair<string, vector<byte>>>& buffers,
                           const void* data, size_t count, size_t size,
                           bool is_index = false) -> int {
     static auto types = unordered_map<size_t, string>{
         {1, "SCALAR"}, {2, "VEC2"}, {3, "VEC3"}, {4, "VEC4"}};
     auto  length         = count * size * 4;
     auto& vjs            = js["bufferViews"].emplace_back();
-    vjs                  = json::object();
+    vjs                  = njson::object();
     vjs["buffer"]        = (int)buffers.size() - 1;
     vjs["byteLength"]    = (uint64_t)length;
     vjs["byteOffset"]    = (uint64_t)buffers.back().second.size();
     vjs["target"]        = is_index ? 34963 : 34962;
     auto& ajs            = js["accessors"].emplace_back();
-    ajs                  = json::object();
+    ajs                  = njson::object();
     ajs["bufferView"]    = (int)js["bufferViews"].size() - 1;
     ajs["byteOffset"]    = 0;
     ajs["componentType"] = is_index ? 5125 : 5126;
@@ -2698,8 +2786,8 @@ static bool save_gltf_scene(const string& filename, const scene_scene& scene,
           max_[channel] = max(max_[channel], *value);
         }
       }
-      ajs["min"] = to_json(min_);
-      ajs["max"] = to_json(max_);
+      ajs["min"] = min_;
+      ajs["max"] = max_;
     }
     buffers.back().second.insert(
         buffers.back().second.end(), (byte*)data, (byte*)data + length);
@@ -2708,20 +2796,20 @@ static bool save_gltf_scene(const string& filename, const scene_scene& scene,
 
   // meshes
   auto buffers        = vector<pair<string, vector<byte>>>{};
-  auto primitives_map = unordered_map<shape_handle, json>{};
+  auto primitives_map = unordered_map<shape_handle, njson>{};
   if (!scene.shapes.empty()) {
-    js["accessors"]   = json::array();
-    js["bufferViews"] = json::array();
-    js["buffers"]     = json::array();
+    js["accessors"]   = njson::array();
+    js["bufferViews"] = njson::array();
+    js["buffers"]     = njson::array();
     auto shape_id     = 0;
     for (auto& shape : scene.shapes) {
       auto& buffer =
           buffers.emplace_back(get_shape_name(scene, shape), vector<byte>{})
               .second;
       auto& pjs = primitives_map[shape_id++];
-      pjs       = json::object();
+      pjs       = njson::object();
       auto& ajs = pjs["attributes"];
-      ajs       = json::object();
+      ajs       = njson::object();
       if (!shape.positions.empty()) {
         ajs["POSITION"] = add_accessor(
             js, buffers, shape.positions.data(), shape.positions.size(), 3);
@@ -2761,27 +2849,27 @@ static bool save_gltf_scene(const string& filename, const scene_scene& scene,
         pjs["mode"] = 4;
       }
       auto& bjs         = js["buffers"].emplace_back();
-      bjs               = json::object();
+      bjs               = njson::object();
       bjs["byteLength"] = (uint64_t)buffer.size();
       bjs["uri"]        = "shapes/" + get_shape_name(scene, shape) + ".bin";
     }
   }
 
   // nodes
-  js["nodes"] = json::array();
+  js["nodes"] = njson::array();
   if (!scene.cameras.empty()) {
     for (auto idx = 0; idx < (int)scene.cameras.size(); idx++) {
       auto& camera = scene.cameras[idx];
       auto& njs    = js["nodes"].emplace_back();
-      njs          = json::object();
+      njs          = njson::object();
       njs["name"]  = scene.camera_names[idx];
       auto matrix  = frame_to_mat(camera.frame);  // TODO(fabio): do this better
-      njs["matrix"] = to_json((array<float, 16>&)matrix);
+      njs["matrix"] = matrix;
       njs["camera"] = idx;
     }
   }
   if (!scene.instances.empty()) {
-    js["meshes"]   = json::array();
+    js["meshes"]   = njson::array();
     using mesh_key = pair<shape_handle, material_handle>;
     struct mesh_key_hash {
       size_t operator()(const mesh_key& v) const {
@@ -2795,18 +2883,18 @@ static bool save_gltf_scene(const string& filename, const scene_scene& scene,
     auto mesh_map = unordered_map<mesh_key, int, mesh_key_hash>{};
     for (auto& instance : scene.instances) {
       auto& njs   = js["nodes"].emplace_back();
-      njs         = json::object();
+      njs         = njson::object();
       njs["name"] = get_instance_name(scene, instance);
       auto matrix = frame_to_mat(
           instance.frame);  // TODO(fabio): do this better
-      njs["matrix"] = to_json((array<float, 16>&)matrix);
+      njs["matrix"] = matrix;
       if (mesh_map.find(mesh_key{instance.shape, instance.material}) ==
           mesh_map.end()) {
         auto& mjs   = js["meshes"].emplace_back();
-        mjs         = json::object();
+        mjs         = njson::object();
         mjs["name"] = get_shape_name(scene, instance.shape) + "_" +
                       get_material_name(scene, instance.material);
-        mjs["primitives"] = json::array();
+        mjs["primitives"] = njson::array();
         mjs["primitives"].push_back(primitives_map.at(instance.shape));
         mjs["primitives"].back()["material"] = instance.material;
         mesh_map[mesh_key{instance.shape, instance.material}] =
@@ -2815,15 +2903,15 @@ static bool save_gltf_scene(const string& filename, const scene_scene& scene,
       njs["mesh"] = mesh_map.at({instance.shape, instance.material});
     }
   } else {
-    js["meshes"] = json::array();
+    js["meshes"] = njson::array();
     for (auto& [shape, pjs] : primitives_map) {
       auto& mjs         = js["meshes"].emplace_back();
-      mjs               = json::object();
+      mjs               = njson::object();
       mjs["name"]       = get_shape_name(scene, shape);
-      mjs["primitives"] = json::array();
+      mjs["primitives"] = njson::array();
       mjs["primitives"].push_back(pjs);
       auto& njs   = js["nodes"].emplace_back();
-      njs         = json::object();
+      njs         = njson::object();
       njs["name"] = get_shape_name(scene, shape);
       njs["mesh"] = (int)js["meshes"].size() - 1;
     }
@@ -2832,20 +2920,20 @@ static bool save_gltf_scene(const string& filename, const scene_scene& scene,
   // root children
   {
     auto& rjs       = js["nodes"].emplace_back();
-    rjs             = json::object();
+    rjs             = njson::object();
     rjs["name"]     = "root";
-    rjs["children"] = json::array();
+    rjs["children"] = njson::array();
     for (auto idx = 0; idx < (int)js["nodes"].size() - 1; idx++)
-      rjs["children"].push_back(json{idx});
+      rjs["children"].push_back(njson{idx});
   }
 
   // scene
   {
-    js["scenes"] = json::array();
+    js["scenes"] = njson::array();
     auto& sjs    = js["scenes"].emplace_back();
-    sjs          = json::object();
-    sjs["nodes"] = json::array();
-    sjs["nodes"].push_back(json{(int)js["nodes"].size() - 1});
+    sjs          = njson::object();
+    sjs["nodes"] = njson::array();
+    sjs["nodes"].push_back((int)js["nodes"].size() - 1);
     js["scene"] = 0;
   }
 

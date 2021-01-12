@@ -26,19 +26,18 @@
 // POSSIBILITY OF SUCH DAMAGE.
 //
 
-#include <yocto/yocto_json.h>
+#include <yocto/yocto_commonio.h>
 using namespace yocto;
 
 struct shade_scene_params {
   string scene = "scene.json"s;
 };
 
-// Json IO
-inline void serialize_value(json_mode mode, json_value& json,
-    shade_scene_params& value, const string& description) {
-  serialize_object(mode, json, value, description);
-  serialize_property(mode, json, value.scene, "scene", "Input scene.", true);
-  serialize_clipositionals(mode, json, {"scene"});
+// Cli
+inline void add_command(cli_state& cli, const string& name,
+    shade_scene_params& value, const string& usage) {
+  auto& cmd = add_command(cli, name, usage);
+  add_positional(cmd, "scene", value.scene, "Input scene.");
 }
 
 int run_shade_scene(const shade_scene_params& params);

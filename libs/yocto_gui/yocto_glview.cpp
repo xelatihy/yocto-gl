@@ -136,6 +136,30 @@ void view_scene(const string& title, const string& name, scene_scene& scene,
   view_scene(title, name, scene, camera, params, progress_cb);
 }
 
+// Parameter conversions
+void from_params(const gui_params& uiparams, trace_params& params) {
+  params.resolution = uiparams.at("resolution");
+  params.sampler    = uiparams.at("sampler");
+  params.falsecolor = uiparams.at("falsecolor");
+  params.samples    = uiparams.at("samples");
+  params.bounces    = uiparams.at("bounces");
+  params.clamp      = uiparams.at("clamp");
+  params.nocaustics = uiparams.at("nocaustics");
+  params.envhidden  = uiparams.at("envhidden");
+  params.tentfilter = uiparams.at("tentfilter");
+}
+void to_params(gui_params& uiparams, const trace_params& params) {
+  uiparams["resolution"] = {params.resolution, {128, 4096}};
+  uiparams["sampler"]    = {params.sampler, trace_sampler_names};
+  uiparams["falsecolor"] = {params.falsecolor, trace_falsecolor_names};
+  uiparams["samples"]    = {params.samples, {1, 4096}};
+  uiparams["bounces"]    = {params.bounces, {1, 64}};
+  uiparams["clamp"]      = {params.clamp, {10, 1000}};
+  uiparams["nocaustics"] = params.nocaustics;
+  uiparams["envhidden"]  = params.envhidden;
+  uiparams["tentfilter"] = params.tentfilter;
+}
+
 // Open a window and show an scene via path tracing
 void view_scene(const string& title, const string& name, scene_scene& scene,
     scene_camera& camera, const trace_params& params_,
@@ -166,8 +190,7 @@ void view_scene(const string& title, const string& name, scene_scene& scene,
   trace_start(
       state, scene, camera, bvh, lights, params,
       [&viewer, name](const string& message, int sample, int nsamples) {
-        set_widget(viewer, name, "sample", to_json(sample),
-            to_schema(sample, "Current sample"));
+        set_param(viewer, name, "sample", {sample, {1, 4096}, true});
         print_progress(message, sample, nsamples);
       },
       [&viewer, name](const image<vec4f>& render, int current, int total) {
@@ -175,31 +198,27 @@ void view_scene(const string& title, const string& name, scene_scene& scene,
       });
 
   // show rendering params
-  set_widgets(
-      viewer, name, to_json(params), to_schema(params, "Render params"));
+  auto uiparams = gui_params();
+  to_params(uiparams, params);
+  set_params(viewer, name, "render", uiparams);
 
   // set callback
-  set_callback(viewer, [&](const string& name, const json_value& uiparams,
-                           const gui_input& input) {
-    if (name != name) return;
-    if (!uiparams.is_null()) {
-      trace_stop(state);
-      params = from_json<trace_params>(uiparams);
-      // show rendering params
-      set_widgets(
-          viewer, name, to_json(params), to_schema(params, "Render params"));
-      trace_start(
-          state, scene, camera, bvh, lights, params,
-          [&viewer, name](const string& message, int sample, int nsamples) {
-            set_widget(viewer, name, "sample", to_json(sample),
-                to_schema(sample, "Current sample"));
-            print_progress(message, sample, nsamples);
-          },
-          [&viewer, name](const image<vec4f>& render, int current, int total) {
-            set_image(viewer, name, render);
-          });
-    } else if ((input.mouse_left || input.mouse_right) &&
-               input.mouse_pos != input.mouse_last) {
+  set_params_callback(
+      viewer, [&](const string& name, const gui_params& uiparams) {
+        trace_stop(state);
+        from_params(uiparams, params);
+        trace_start(
+            state, scene, camera, bvh, lights, params,
+            [&viewer, name](const string& message, int sample, int nsamples) {
+              set_param(viewer, name, "sample", {sample, {1, 4096}, true});
+              print_progress(message, sample, nsamples);
+            },
+            [&viewer, name](const image<vec4f>& render, int current,
+                int total) { set_image(viewer, name, render); });
+      });
+  set_input_callback(viewer, [&](const string& name, const gui_input& input) {
+    if ((input.mouse_left || input.mouse_right) &&
+        input.mouse_pos != input.mouse_last) {
       trace_stop(state);
       auto dolly  = 0.0f;
       auto pan    = zero2f;
@@ -216,8 +235,7 @@ void view_scene(const string& title, const string& name, scene_scene& scene,
       trace_start(
           state, scene, camera, bvh, lights, params,
           [&viewer, name](const string& message, int sample, int nsamples) {
-            set_widget(viewer, name, "sample", to_json(sample),
-                to_schema(sample, "Current sample"));
+            set_param(viewer, name, "sample", {sample, {1, 4096}, true});
             print_progress(message, sample, nsamples);
           },
           [&viewer, name](const image<vec4f>& render, int current, int total) {
@@ -302,29 +320,32 @@ void close_image(ogl_imageviewer& viewer, const string& name) {
 }
 
 // Set params
-void set_widget(ogl_imageviewer& viewer, const string& name,
-    const string& pname, const json_value& param, const json_value& schema) {
+void set_param(ogl_imageviewer& viewer, const string& name, const string& pname,
+    const gui_param& param) {
   auto lock  = std::lock_guard{viewer.input_mutex};
   auto input = get_input(viewer, name);
   if (!input) return;
-  input->widgets[pname]              = param;
-  input->schema["properties"][pname] = schema;
-  input->wchanged                    = true;
+  input->params[pname] = param;
+  input->pchanged      = true;
 }
-void set_widgets(ogl_imageviewer& viewer, const string& name,
-    const json_value& params, const json_value& schema) {
+void set_params(ogl_imageviewer& viewer, const string& name,
+    const string& pname, const gui_params& params) {
   auto lock  = std::lock_guard{viewer.input_mutex};
   auto input = get_input(viewer, name);
   if (!input) return;
-  input->widgets  = params;
-  input->schema   = schema;
-  input->wchanged = true;
+  input->pname    = pname;
+  input->params   = params;
+  input->pchanged = true;
 }
 
 // Callback
-void set_callback(
-    ogl_imageviewer& viewer, const ogl_imageviewer_callback& callback) {
-  viewer.callback = callback;
+void set_params_callback(
+    ogl_imageviewer& viewer, const ogl_imageviewer_pcallback& callback) {
+  viewer.pcallback = callback;
+}
+void set_input_callback(
+    ogl_imageviewer& viewer, const ogl_imageviewer_icallback& callback) {
+  viewer.icallback = callback;
 }
 
 }  // namespace yocto
@@ -357,6 +378,8 @@ static void update_display(ogl_imageview* view) {
   if (view->image.linear) {
     tonemap_image_mt(view->display, view->image, view->exposure, view->filmic);
   } else if (!view->image.pixelsf.empty() || !view->image.pixelsf.empty()) {
+    convert_image(view->display, view->image);
+  } else if (!view->image.pixelsb.empty() || !view->image.pixelsb.empty()) {
     convert_image(view->display, view->image);
   } else {
     // TODO(fabio): decide about empty images
@@ -406,7 +429,7 @@ void draw_widgets(
     auto ldr_pixel     = zero4b;
     auto display_pixel = zero4b;
     auto width = view->display.width, height = view->display.height;
-    if (i >= 0 && j < width && i >= 0 && j < height) {
+    if (i >= 0 && i < width && j >= 0 && j < height) {
       hdr_pixel     = !view->image.pixelsf.empty()
                           ? view->image.pixelsf[j * width + i]
                           : zero4f;
@@ -433,11 +456,16 @@ void draw_widgets(
       end_header(win);
     }
   }
-  if (!viewer.selected->widgets.empty()) {
-    if (draw_params(win, "params", viewer.selected->widgets,
-            viewer.selected->schema, false)) {
-      if (viewer.callback)
-        viewer.callback(viewer.selected->name, viewer.selected->widgets, {});
+  if (!viewer.selected->params.empty()) {
+    if (draw_params(win, viewer.selected->pname, viewer.selected->params)) {
+      for (auto pos = (size_t)0; pos < viewer.views.size(); pos++) {
+        if (viewer.views[pos].get() == viewer.selected) {
+          auto lock                  = std::lock_guard{viewer.input_mutex};
+          viewer.inputs[pos]->params = viewer.selected->params;
+        }
+      }
+      if (viewer.pcallback)
+        viewer.pcallback(viewer.selected->name, viewer.selected->params);
     }
   }
 }
@@ -486,10 +514,10 @@ void update(gui_window* win, ogl_imageviewer& viewer, const gui_input& input) {
       viewer.inputs[idx]->ichanged = false;
       update_display(viewer.views[idx].get());
     }
-    if (viewer.inputs[idx]->wchanged) {
-      viewer.views[idx]->widgets   = viewer.inputs[idx]->widgets;
-      viewer.views[idx]->schema    = viewer.inputs[idx]->schema;
-      viewer.inputs[idx]->wchanged = false;
+    if (viewer.inputs[idx]->pchanged) {
+      viewer.views[idx]->params    = viewer.inputs[idx]->params;
+      viewer.views[idx]->pname     = viewer.inputs[idx]->pname;
+      viewer.inputs[idx]->pchanged = false;
     }
   }
 
@@ -528,7 +556,7 @@ void run_viewer(ogl_imageviewer& viewer) {
             2, (input.mouse_pos.x - input.mouse_last.x) * 0.001f);
       }
     } else {
-      if (viewer.callback) viewer.callback(viewer.selected->name, {}, input);
+      if (viewer.icallback) viewer.icallback(viewer.selected->name, input);
     }
   };
 

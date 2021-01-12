@@ -44,18 +44,15 @@ struct convert_params {
   string copyright = "";
 };
 
-// Json IO
-void serialize_value(json_mode mode, json_value& json, convert_params& value,
-    const string& description) {
-  serialize_object(mode, json, value, description);
-  serialize_property(mode, json, value.scene, "scene", "Input scene.", true);
-  serialize_property(mode, json, value.output, "output", "Output scene.");
-  serialize_property(mode, json, value.info, "info", "Print info.");
-  serialize_property(mode, json, value.validate, "validate", "Validate scene.");
-  serialize_property(
-      mode, json, value.copyright, "copyright", "Set scene copyright.");
-  serialize_clipositionals(mode, json, {"scene"});
-  serialize_clialternates(mode, json, {{"output", "o"}});
+// Cli
+void add_command(cli_state& cli, const string& name, convert_params& value,
+    const string& usage) {
+  auto& cmd = add_command(cli, name, usage);
+  add_positional(cmd, "scene", value.scene, "Input scene.");
+  add_optional(cmd, "output", value.output, "Output scene.", "o");
+  add_optional(cmd, "info", value.info, "Print info.");
+  add_optional(cmd, "validate", value.validate, "Validate scene.");
+  add_optional(cmd, "copyright", value.copyright, "Set scene copyright.");
 }
 
 // convert images
@@ -117,16 +114,14 @@ struct view_params {
   bool   addsky = false;
 };
 
-// Json IO
-void serialize_value(json_mode mode, json_value& json, view_params& value,
-    const string& description) {
-  serialize_object(mode, json, value, description);
-  serialize_property(mode, json, value.scene, "scene", "Scene filename.", true);
-  serialize_property(mode, json, value.output, "output", "Output filename.");
-  serialize_property(mode, json, value.camera, "camera", "Camera name.");
-  serialize_property(mode, json, value.addsky, "addsky", "Add sky.");
-  serialize_clipositionals(mode, json, {"scene"});
-  serialize_clialternates(mode, json, {{"output", "o"}});
+// Cli
+void add_command(cli_state& cli, const string& name, view_params& value,
+    const string& usage) {
+  auto& cmd = add_command(cli, name, usage);
+  add_positional(cmd, "scene", value.scene, "Scene filename.");
+  add_optional(cmd, "output", value.output, "Output filename.", "o");
+  add_optional(cmd, "camera", value.camera, "Camera name.");
+  add_optional(cmd, "addsky", value.addsky, "Add sky.");
 }
 
 #ifndef YOCTO_OPENGL
@@ -168,19 +163,26 @@ struct app_params {
   view_params    view    = {};
 };
 
-// Json IO
-void serialize_value(json_mode mode, json_value& json, app_params& value,
-    const string& description) {
-  serialize_object(mode, json, value, description);
-  serialize_command(mode, json, value.command, "command", "Command.");
-  serialize_property(mode, json, value.convert, "convert", "Convert shapes.");
-  serialize_property(mode, json, value.view, "view", "View shapes.");
+// Cli
+void add_commands(cli_state& cli, const string& name, app_params& value,
+    const string& usage) {
+  cli = make_cli(name, usage);
+  add_command_name(cli, "command", value.command, "Command.");
+  add_command(cli, "convert", value.convert, "Convert shapes.");
+  add_command(cli, "view", value.view, "View shapes.");
+}
+
+// Parse cli
+void parse_cli(app_params& params, int argc, const char** argv) {
+  auto cli = cli_state{};
+  add_commands(cli, "yscene", params, "Process and view scenes.");
+  parse_cli(cli, argc, argv);
 }
 
 int main(int argc, const char* argv[]) {
   // command line parameters
   auto params = app_params{};
-  parse_cli(params, "Process and view scenes", argc, argv);
+  parse_cli(params, argc, argv);
 
   // dispatch commands
   if (params.command == "convert") {

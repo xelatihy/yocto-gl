@@ -28,7 +28,6 @@
 
 #include <yocto/yocto_commonio.h>
 #include <yocto/yocto_image.h>
-#include <yocto/yocto_json.h>
 #include <yocto/yocto_math.h>
 #include <yocto/yocto_sceneio.h>
 #include <yocto/yocto_trace.h>
@@ -46,19 +45,27 @@ struct render_params : trace_params {
   bool   savebatch = false;
 };
 
-// Json IO
-void serialize_value(json_mode mode, json_value& json, render_params& value,
-    const string& description) {
-  serialize_object(mode, json, value, description);
-  serialize_property(mode, json, value.scene, "scene", "Scene filename.", true);
-  serialize_property(mode, json, value.output, "output", "Output filename.");
-  serialize_property(mode, json, value.camera, "camera", "Camera name.");
-  serialize_property(mode, json, value.addsky, "addsky", "Add sky.");
-  serialize_property(mode, json, value.savebatch, "savebatch", "Save batch.");
-  serialize_value(mode, json, (trace_params&)value, description);
-  serialize_clipositionals(mode, json, {"scene"});
-  serialize_clialternates(mode, json,
-      {{"samples", "s"}, {"bounces", "b"}, {"output", "o"}, {"tracer", "t"}});
+// Cli
+void add_command(cli_state& cli, const string& name, render_params& value,
+    const string& usage) {
+  auto& cmd = add_command(cli, name, usage);
+  add_positional(cmd, "scene", value.scene, "Scene filename.");
+  add_optional(cmd, "output", value.output, "Output filename.", "o");
+  add_optional(cmd, "camera", value.camera, "Camera name.", "c");
+  add_optional(cmd, "addsky", value.addsky, "Add sky.");
+  add_optional(cmd, "savebatch", value.savebatch, "Save batch.");
+  add_optional(cmd, "resolution", value.resolution, "Image resolution.", "r");
+  add_optional(cmd, "sampler", value.sampler, "Sampler type.", "t");
+  add_optional(cmd, "falsecolor", value.falsecolor, "False color type.", "F");
+  add_optional(cmd, "samples", value.samples, "Number of samples.", "s");
+  add_optional(cmd, "bounces", value.bounces, "Number of bounces.", "b");
+  add_optional(cmd, "clamp", value.clamp, "Clamp value.");
+  add_optional(cmd, "nocaustics", value.nocaustics, "Disable caustics.");
+  add_optional(cmd, "envhidden", value.envhidden, "Hide environment.");
+  add_optional(cmd, "tentfilter", value.tentfilter, "Filter image.");
+  add_optional(cmd, "seed", value.seed, "Random seed.");
+  add_optional(cmd, "bvh", value.bvh, "Bvh type.");
+  add_optional(cmd, "noparallel", value.noparallel, "Disable threading.");
 }
 
 // convert images
@@ -116,26 +123,20 @@ int run_render(const render_params& params) {
 
 // convert params
 struct view_params : trace_params {
-  string scene     = "scene.json";
-  string output    = "out.png";
-  string camera    = "";
-  bool   addsky    = false;
-  bool   savebatch = false;
+  string scene  = "scene.json";
+  string output = "out.png";
+  string camera = "";
+  bool   addsky = false;
 };
 
-// Json IO
-void serialize_value(json_mode mode, json_value& json, view_params& value,
-    const string& description) {
-  serialize_object(mode, json, value, description);
-  serialize_property(mode, json, value.scene, "scene", "Scene filename.", true);
-  serialize_property(mode, json, value.output, "output", "Output filename.");
-  serialize_property(mode, json, value.camera, "camera", "Camera name.");
-  serialize_property(mode, json, value.addsky, "addsky", "Add sky.");
-  serialize_property(mode, json, value.savebatch, "savebatch", "Save batch.");
-  serialize_value(mode, json, (trace_params&)value, description);
-  serialize_clipositionals(mode, json, {"scene"});
-  serialize_clialternates(mode, json,
-      {{"samples", "s"}, {"bounces", "b"}, {"output", "o"}, {"tracer", "t"}});
+// Cli
+void add_command(cli_state& cli, const string& name, view_params& value,
+    const string& usage) {
+  auto& cmd = add_command(cli, name, usage);
+  add_positional(cmd, "scene", value.scene, "Scene filename.");
+  add_optional(cmd, "output", value.output, "Output filename.", "o");
+  add_optional(cmd, "camera", value.camera, "Camera name.", "c");
+  add_optional(cmd, "addsky", value.addsky, "Add sky.");
 }
 
 #ifndef YOCTO_OPENGL
@@ -146,6 +147,30 @@ int run_view(const view_params& params) {
 }
 
 #else
+
+// Parameter conversions
+void from_params(const gui_params& uiparams, trace_params& params) {
+  params.resolution = uiparams.at("resolution");
+  params.sampler    = uiparams.at("sampler");
+  params.falsecolor = uiparams.at("falsecolor");
+  params.samples    = uiparams.at("samples");
+  params.bounces    = uiparams.at("bounces");
+  params.clamp      = uiparams.at("clamp");
+  params.nocaustics = uiparams.at("nocaustics");
+  params.envhidden  = uiparams.at("envhidden");
+  params.tentfilter = uiparams.at("tentfilter");
+}
+void to_params(gui_params& uiparams, const trace_params& params) {
+  uiparams["resolution"] = {params.resolution, {128, 4096}};
+  uiparams["sampler"]    = {params.sampler, trace_sampler_names};
+  uiparams["falsecolor"] = {params.falsecolor, trace_falsecolor_names};
+  uiparams["samples"]    = {params.samples, {1, 4096}};
+  uiparams["bounces"]    = {params.bounces, {1, 64}};
+  uiparams["clamp"]      = {params.clamp, {10, 1000}};
+  uiparams["nocaustics"] = params.nocaustics;
+  uiparams["envhidden"]  = params.envhidden;
+  uiparams["tentfilter"] = params.tentfilter;
+}
 
 // interactive render
 int run_view(const view_params& params) {
@@ -188,8 +213,7 @@ int run_view(const view_params& params) {
   trace_start(
       state, scene, camera, bvh, lights, params,
       [&](const string& message, int sample, int nsamples) {
-        set_widget(viewer, "render", "sample", to_json(sample),
-            to_schema(sample, "Current sample"));
+        set_param(viewer, "render", "sample", {sample, {0, 4096}, true});
         print_progress(message, sample, nsamples);
       },
       [&](const image<vec4f>& render, int current, int total) {
@@ -197,31 +221,32 @@ int run_view(const view_params& params) {
       });
 
   // show rendering params
-  set_widgets(
-      viewer, "render", to_json(params), to_schema(params, "Render params"));
+  auto uiparams = gui_params{};
+  to_params(uiparams, params);
+  set_params(viewer, "render", "Render", uiparams);
 
   // set callback
-  set_callback(viewer, [&](const string& name, const json_value& uiparams,
-                           const gui_input& input) {
-    if (name != "render") return;
-    if (!uiparams.is_null()) {
-      trace_stop(state);
-      (view_params&)params = from_json<view_params>(uiparams);
-      // show rendering params
-      set_widgets(viewer, "render", to_json(params),
-          to_schema(params, "Render params"));
-      trace_start(
-          state, scene, camera, bvh, lights, params,
-          [&](const string& message, int sample, int nsamples) {
-            set_widget(viewer, "render", "sample", to_json(sample),
-                to_schema(sample, "Current sample"));
-            print_progress(message, sample, nsamples);
-          },
-          [&](const image<vec4f>& render, int current, int total) {
-            set_image(viewer, "render", render);
-          });
-    } else if ((input.mouse_left || input.mouse_right) &&
-               input.mouse_pos != input.mouse_last) {
+  set_params_callback(
+      viewer, [&](const string& name, const gui_params& uiparams) {
+        if (name != "render") return;
+        if (uiparams.empty()) return;
+        trace_stop(state);
+        auto tparams = params;
+        from_params(uiparams, tparams);
+        trace_start(
+            state, scene, camera, bvh, lights, tparams,
+            [&](const string& message, int sample, int nsamples) {
+              set_param(viewer, "render", "sample", {sample, {1, 4096}, true});
+              print_progress(message, sample, nsamples);
+            },
+            [&](const image<vec4f>& render, int current, int total) {
+              set_image(viewer, "render", render);
+            });
+      });
+
+  set_input_callback(viewer, [&](const string& name, const gui_input& input) {
+    if ((input.mouse_left || input.mouse_right) &&
+        input.mouse_pos != input.mouse_last) {
       trace_stop(state);
       auto dolly  = 0.0f;
       auto pan    = zero2f;
@@ -238,8 +263,7 @@ int run_view(const view_params& params) {
       trace_start(
           state, scene, camera, bvh, lights, params,
           [&](const string& message, int sample, int nsamples) {
-            set_widget(viewer, "render", "sample", to_json(sample),
-                to_schema(sample, "Current sample"));
+            set_param(viewer, "render", "sample", {sample, {1, 4096}, true});
             print_progress(message, sample, nsamples);
           },
           [&](const image<vec4f>& render, int current, int total) {
@@ -271,19 +295,26 @@ struct app_params {
   view_params   view    = {};
 };
 
-// Json IO
-void serialize_value(json_mode mode, json_value& json, app_params& value,
-    const string& description) {
-  serialize_object(mode, json, value, description);
-  serialize_command(mode, json, value.command, "command", "Command.");
-  serialize_property(mode, json, value.render, "render", "Render offline.");
-  serialize_property(mode, json, value.view, "view", "Render interactively.");
+// Cli
+void add_commands(cli_state& cli, const string& name, app_params& value,
+    const string& usage) {
+  cli = make_cli(name, usage);
+  add_command_name(cli, "command", value.command, "Command.");
+  add_command(cli, "render", value.render, "Render offline.");
+  add_command(cli, "view", value.view, "Render interactively.");
+}
+
+// Parse cli
+void parse_cli(app_params& params, int argc, const char** argv) {
+  auto cli = cli_state{};
+  add_commands(cli, "ytrace", params, "Render images from scenes");
+  parse_cli(cli, argc, argv);
 }
 
 int main(int argc, const char* argv[]) {
   // parse cli
   auto params = app_params{};
-  parse_cli(params, "Render images from scenes", argc, argv);
+  parse_cli(params, argc, argv);
 
   // dispatch commands
   if (params.command == "render") {

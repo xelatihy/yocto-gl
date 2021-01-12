@@ -360,14 +360,30 @@ vec4f colorgradeb(
 image_data colorgrade_image(
     const image_data& image, const colorgrade_params& params, bool as_byte) {
   auto result = make_image(image.width, image.height, false, as_byte);
-  for (auto j = 0; image.height; j++) {
-    for (auto i = 0; image.width; i++) {
+  for (auto j = 0; j < image.height; j++) {
+    for (auto i = 0; i < image.width; i++) {
       auto color  = get_pixel(image, i, j);
       auto graded = colorgrade(color, image.linear, params);
       set_pixel(result, i, j, graded);
     }
   }
   return result;
+}
+
+// Color grade an hsr or ldr image to an ldr image.
+// Uses multithreading for speed.
+void colorgrade_image(image_data& result, const image_data& image,
+    const colorgrade_params& params) {
+  if (image.width != result.width || image.height != result.height)
+    throw std::invalid_argument{"image should be the same size"};
+  if (!!result.linear) throw std::invalid_argument{"non linear expected"};
+  for (auto j = 0; j < image.height; j++) {
+    for (auto i = 0; i < image.width; i++) {
+      auto color  = get_pixel(image, i, j);
+      auto graded = colorgrade(color, image.linear, params);
+      set_pixel(result, i, j, graded);
+    }
+  }
 }
 
 // Color grade an hsr or ldr image to an ldr image.

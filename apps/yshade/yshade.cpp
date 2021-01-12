@@ -27,7 +27,6 @@
 //
 
 #include <yocto/yocto_commonio.h>
-#include <yocto/yocto_json.h>
 
 #include "yshade_scene.h"
 #include "yshade_sculpt.h"
@@ -42,20 +41,27 @@ struct app_params {
   shade_shape_params  shape   = {};
 };
 
-// Json IO
-void serialize_value(json_mode mode, json_value& json, app_params& value,
-    const string& description) {
-  serialize_object(mode, json, value, description);
-  serialize_command(mode, json, value.command, "command", "Command.");
-  serialize_property(mode, json, value.scene, "scene", "View scenes.");
-  serialize_property(mode, json, value.shape, "shape", "View shapes.");
-  serialize_property(mode, json, value.sculpt, "sculpt", "Sculpt shapes.");
+// Cli
+void add_commands(cli_state& cli, const string& name, app_params& value,
+    const string& usage) {
+  cli = make_cli(name, usage);
+  add_command_name(cli, "command", value.command, "Command.");
+  add_command(cli, "scene", value.scene, "View scenes.");
+  add_command(cli, "shape", value.shape, "View shapes.");
+  add_command(cli, "sculpt", value.sculpt, "Sculpt shapes.");
+}
+
+// Parse cli
+void parse_cli(app_params& params, int argc, const char** argv) {
+  auto cli = cli_state{};
+  add_commands(cli, "yshade", params, "View and edit interactively");
+  parse_cli(cli, argc, argv);
 }
 
 int main(int argc, const char* argv[]) {
   // command line parameters
   auto params = app_params{};
-  parse_cli(params, "View and edit interactively", argc, argv);
+  parse_cli(params, argc, argv);
 
   // dispatch commands
   if (params.command == "scene") {

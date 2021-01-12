@@ -51,8 +51,6 @@
 #include <utility>
 #include <vector>
 
-#include "yocto_json.h"
-
 // -----------------------------------------------------------------------------
 // USING DIRECTIVES
 // -----------------------------------------------------------------------------
@@ -145,13 +143,24 @@ string get_command(const cli_state& cli);
 // and disable the flag.
 template <typename T>
 inline void add_optional(cli_state& cli, const string& name, T& value,
-    const string& usage, const string& alt = "", const vector<T>& choices = {},
-    bool req = false);
-// Add an optional argument. Supports strings, numbers, and boolean flags.
+    const string& usage, const string& alt = "", bool req = false);
+// Add a positional argument. Supports strings, numbers, and boolean flags.
 template <typename T>
 inline void add_positional(cli_state& cli, const string& name, T& value,
-    const string& usage, const vector<T>& choices = {}, bool req = true);
-// Add an optional argument with values as labels. Supports integers and enums.
+    const string& usage, bool req = true);
+// Add an optional argument with values as labels. Supports integers, enums and
+// strings.
+template <typename T>
+inline void add_optional(cli_state& cli, const string& name, T& value,
+    const string& usage, const vector<string>& choices, const string& alt = "",
+    bool req = false);
+// Add a positional argument with values as labels. Supports string, integers
+// and enums.
+template <typename T>
+inline void add_positional(cli_state& cli, const string& name, T& value,
+    const string& usage, const vector<string>& choices, bool req = true);
+// Add an optional argument with values as labels. Supports integers
+// and enums.
 template <typename T>
 inline void add_optional(cli_state& cli, const string& name, T& value,
     const string& usage, const vector<pair<T, string>>& choices,
@@ -165,42 +174,61 @@ inline void add_positional(cli_state& cli, const string& name, T& value,
 // Supports strings and enums.
 template <typename T>
 inline void add_positional(cli_state& cli, const string& name, vector<T>& value,
-    const string& usage, const vector<T>& choices = {}, bool req = true);
+    const string& usage, bool req = true);
+template <typename T>
+inline void add_positional(cli_state& cli, const string& name, vector<T>& value,
+    const string& usage, const vector<string>& choices, bool req = true);
 
 // Add a subcommand
 struct cli_command;
-cli_command add_command(
+cli_command& add_command(
     cli_state& cli, const string& name, const string& usage);
-cli_command add_command(
-    const cli_command& cmd, const string& name, const string& usage);
+cli_command& add_command(
+    cli_command& cmd, const string& name, const string& usage);
+void add_command_name(
+    cli_state& cli, const string& name, string& value, const string& usage);
+void add_command_name(
+    cli_command& cli, const string& name, string& value, const string& usage);
 
 // Add an optional argument. Supports strings, numbers, and boolean flags.
 // Optional arguments will be parsed with name `--<name>` and `-<alt>`.
 // Optional booleans will support both `--<name>` and `--no-<name>` to enabled
 // and disable the flag.
 template <typename T>
-inline void add_optional(const cli_command& cmd, const string& name, T& value,
-    const string& usage, const string& alt = "", const vector<T>& choices = {},
-    bool req = false);
-// Add an optional argument. Supports strings, numbers, and boolean flags.
+inline void add_optional(cli_command& cmd, const string& name, T& value,
+    const string& usage, const string& alt = "", bool req = false);
+// Add a positional argument. Supports strings, numbers, and boolean flags.
 template <typename T>
-inline void add_positional(const cli_command& cmd, const string& name, T& value,
-    const string& usage, const vector<T>& choices = {}, bool req = true);
+inline void add_positional(cli_command& cmd, const string& name, T& value,
+    const string& usage, bool req = true);
+// Add an optional argument with values as labels. Supports string, integers and
+// enums.
+template <typename T>
+inline void add_optional(cli_command& cmd, const string& name, T& value,
+    const string& usage, const vector<string>& choices, const string& alt = "",
+    bool req = false);
+// Add a positional argument with values as labels. Supports integers and enums.
+template <typename T>
+inline void add_positional(cli_command& cmd, const string& name, T& value,
+    const string& usage, const vector<string>& choices, bool req = true);
 // Add an optional argument with values as labels. Supports integers and enums.
 template <typename T>
-inline void add_optional(const cli_command& cmd, const string& name, T& value,
+inline void add_optional(cli_command& cmd, const string& name, T& value,
     const string& usage, const vector<pair<T, string>>& choices,
     const string& alt = "", bool req = false);
 // Add a positional argument with values as labels. Supports integers and enums.
 template <typename T>
-inline void add_positional(const cli_command& cmd, const string& name, T& value,
+inline void add_positional(cli_command& cmd, const string& name, T& value,
     const string& usage, const vector<pair<T, string>>& choices,
     bool req = true);
 // Add a positional argument that consumes all arguments left.
 // Supports strings and enums.
 template <typename T>
-inline void add_positional(const cli_command& cmd, const string& name,
-    vector<T>& value, const string& usage, const vector<T>& choices = {},
+inline void add_positional(cli_command& cmd, const string& name,
+    vector<T>& value, const string& usage, bool req = true);
+template <typename T>
+inline void add_positional(cli_command& cmd, const string& name,
+    vector<T>& value, const string& usage, const vector<string>& choices,
     bool req = true);
 
 // Parses an optional or positional argument. Optional arguments' names start
@@ -210,29 +238,34 @@ inline void add_positional(const cli_command& cmd, const string& name,
 // Boolean flags are indicated with a pair of names "--name/--no-name", so that
 // both options are explicitly specified.
 template <typename T>
-[[deprecated]] inline void add_option(cli_state& cli, const string& name,
-    T& value, const string& usage, bool req = false);
+inline void add_option(cli_state& cli, const string& name, T& value,
+    const string& usage, bool req = false);
 template <typename T>
-[[deprecated]] inline void add_option(const cli_command& cmd,
-    const string& name, T& value, const string& usage, bool req = false);
+inline void add_option(cli_command& cmd, const string& name, T& value,
+    const string& usage, bool req = false);
 // Parses an optional or positional argument where values can only be within a
 // set of choices. Supports strings, integers and enums.
 template <typename T>
-[[deprecated]] inline void add_option(cli_state& cli, const string& name,
-    T& value, const string& usage, const vector<string>& choices,
+inline void add_option(cli_state& cli, const string& name, T& value,
+    const string& usage, const vector<string>& choices, bool req = false);
+template <typename T>
+inline void add_option(cli_command& cmd, const string& name, T& value,
+    const string& usage, const vector<string>& choices, bool req = false);
+template <typename T>
+inline void add_option(cli_state& cli, const string& name, T& value,
+    const string& usage, const vector<pair<T, string>>& choices,
     bool req = false);
 template <typename T>
-[[deprecated]] inline void add_option(const cli_command& cmd,
-    const string& name, T& value, const string& usage,
-    const vector<string>& choices, bool req = false);
+inline void add_option(cli_command& cmd, const string& name, T& value,
+    const string& usage, const vector<pair<T, string>>& choices,
+    bool req = false);
 // Parse all arguments left on the command line. Can only be used as argument.
 template <typename T>
-[[deprecated]] inline void add_option(cli_state& cli, const string& name,
-    vector<T>& value, const string& usage, bool req = false);
+inline void add_option(cli_state& cli, const string& name, vector<T>& value,
+    const string& usage, bool req = false);
 template <typename T>
-[[deprecated]] inline void add_option(const cli_command& cmd,
-    const string& name, vector<T>& value, const string& usage,
-    bool req = false);
+inline void add_option(cli_command& cmd, const string& name, vector<T>& value,
+    const string& usage, bool req = false);
 
 }  // namespace yocto
 
@@ -502,395 +535,351 @@ inline bool format_value(file_stream& fs, const T& value) {
 // -----------------------------------------------------------------------------
 namespace yocto {
 
-// Command line command
-struct cli_command {
-  cli_state&     cli;
-  vector<string> path;
+// Command line value type
+enum struct cli_type { integer, uinteger, number, boolean, string };
+// Command line value
+struct cli_value {
+  cli_type type     = cli_type::integer;
+  int64_t  integer  = 0;
+  uint64_t uinteger = 0;
+  double   number   = 0;
+  string   text     = "";
 };
-// Command line setting function
-struct cli_setter {
-  using setter_func = function<bool(const json_value&, json_error&)>;
-  setter_func                      setter  = {};
-  vector<pair<string, cli_setter>> setters = {};
-
-  bool is_object() const { return !setter; }
-  bool is_value() const { return (bool)setter; }
-
-  auto begin() { return setters.begin(); }
-  auto end() { return setters.end(); }
-  auto begin() const { return setters.begin(); }
-  auto end() const { return setters.end(); }
-
-  cli_setter& at(const string& key) {
-    for (auto& [name, setter] : setters)
-      if (name == key) return setter;
-    throw std::invalid_argument{"missing key " + key};
-  }
-  cli_setter& operator[](const string& key) {
-    for (auto& [name, setter] : setters)
-      if (name == key) return setter;
-    setters.emplace_back();
-    setters.back().first = key;
-    return setters.back().second;
-  }
-
-  bool set(const json_value& value) {
-    auto error = json_error{""};
-    if (!setter || !setter(value, error)) return false;
-    return true;
-  }
+// Command line option. All data should be considered private.
+struct cli_option {
+  string                                          name    = "";
+  cli_type                                        type    = cli_type::string;
+  bool                                            req     = false;
+  int                                             nargs   = 0;
+  string                                          usage   = "";
+  vector<cli_value>                               value   = {};
+  vector<cli_value>                               def     = {};
+  vector<string>                                  choices = {};
+  bool                                            set     = false;
+  function<void(const vector<cli_value>& values)> set_reference = {};
+};
+// Command line command. All data should be considered private.
+struct cli_command {
+  string                        name            = "";
+  string                        usage           = "";
+  vector<cli_command>           commands        = {};
+  vector<cli_option>            options         = {};
+  string                        usage_options   = "";
+  string                        usage_arguments = "";
+  bool                          help            = false;
+  string                        command         = "";
+  function<void(const string&)> set_command     = {};
 };
 // Command line parser. All data should be considered private.
 struct cli_state {
-  json_value value   = {};
-  json_value schema  = {};
-  cli_setter setter  = {};
-  string     command = "";
-  string     usage   = "";
-  bool       help    = false;
+  cli_command command = {};
 };
 
 template <typename T>
-inline string cli_gettype() {
+inline cli_type get_cli_type() {
   static_assert(std::is_same_v<T, string> || std::is_same_v<T, bool> ||
-                    std::is_same_v<T, int64_t> || std::is_same_v<T, int32_t> ||
-                    std::is_same_v<T, uint64_t> ||
-                    std::is_same_v<T, uint32_t> || std::is_same_v<T, float> ||
-                    std::is_same_v<T, double> || std::is_enum_v<T>,
+                    std::is_integral_v<T> || std::is_floating_point_v<T> ||
+                    std::is_enum_v<T>,
       "unsupported type");
   if constexpr (std::is_same_v<T, string>) {
-    return "string";
+    return cli_type::string;
   } else if constexpr (std::is_same_v<T, bool>) {
-    return "boolean";
+    return cli_type::boolean;
   } else if constexpr (std::is_enum_v<T>) {
-    return "integer";
-  } else if constexpr (std::is_same_v<T, int64_t> ||
-                       std::is_same_v<T, int32_t>) {
-    return "integer";
-  } else if constexpr (std::is_same_v<T, uint64_t> ||
-                       std::is_same_v<T, uint32_t>) {
-    return "integer";
-  } else if constexpr (std::is_same_v<T, float> || std::is_same_v<T, double>) {
-    return "number";
+    return cli_type::integer;
+  } else if constexpr (std::is_integral_v<T> && !std::is_unsigned_v<T>) {
+    return cli_type::integer;
+  } else if constexpr (std::is_integral_v<T> && std::is_unsigned_v<T>) {
+    return cli_type::uinteger;
+  } else if constexpr (std::is_floating_point_v<T>) {
+    return cli_type::number;
   } else {
     // probably should be an error
-    return "string";
+    return cli_type::string;
   }
 }
 
-inline json_value& get_clischema(
-    json_value& schema, const vector<string>& path) {
-  auto current = &schema;
-  for (auto& name : path) {
-    current = &(current->at("properties").at(name));
+template <typename T>
+inline void set_value(cli_value& cvalue, const T& value) {
+  static_assert(std::is_same_v<T, string> || std::is_same_v<T, bool> ||
+                    std::is_integral_v<T> || std::is_floating_point_v<T> ||
+                    std::is_enum_v<T>,
+      "unsupported type");
+  cvalue.type = get_cli_type<T>();
+  if constexpr (std::is_same_v<T, string>) {
+    cvalue.text = value;
+  } else if constexpr (std::is_same_v<T, bool>) {
+    cvalue.integer = value ? 1 : 0;
+  } else if constexpr (std::is_enum_v<T>) {
+    cvalue.integer = (int64_t)value;
+  } else if constexpr (std::is_integral_v<T> && !std::is_unsigned_v<T>) {
+    cvalue.integer = value;
+  } else if constexpr (std::is_integral_v<T> && std::is_unsigned_v<T>) {
+    cvalue.uinteger = value;
+  } else if constexpr (std::is_floating_point_v<T>) {
+    cvalue.number = value;
+  } else {
+    // probably should be an error
+    // pass
   }
-  return *current;
-}
-inline cli_setter& get_clisetter(
-    cli_setter& setter, const vector<string>& path) {
-  auto current = &setter;
-  for (auto& name : path) {
-    current = &(current->at(name));
-  }
-  return *current;
 }
 
-// Add an optional argument. Supports strings, numbers, and boolean flags.
+template <typename T>
+inline bool get_value(const cli_value& cvalue, T& value) {
+  static_assert(std::is_same_v<T, string> || std::is_same_v<T, bool> ||
+                    std::is_integral_v<T> || std::is_floating_point_v<T> ||
+                    std::is_enum_v<T>,
+      "unsupported type");
+  if constexpr (std::is_same_v<T, string>) {
+    if (cvalue.type != cli_type::string) return false;
+    value = cvalue.text;
+    return true;
+  } else if constexpr (std::is_same_v<T, bool>) {
+    if (cvalue.type != cli_type::boolean) return false;
+    value = cvalue.integer != 0;
+    return true;
+  } else if constexpr (std::is_enum_v<T>) {
+    if (cvalue.type != cli_type::integer) return false;
+    value = (T)cvalue.integer;
+    return true;
+  } else if constexpr (std::is_integral_v<T> && !std::is_unsigned_v<T>) {
+    if (cvalue.type != cli_type::integer) return false;
+    value = (T)cvalue.integer;
+    return true;
+  } else if constexpr (std::is_integral_v<T> && std::is_unsigned_v<T>) {
+    if (cvalue.type != cli_type::uinteger) return false;
+    value = (T)cvalue.uinteger;
+    return true;
+  } else if constexpr (std::is_floating_point_v<T>) {
+    if (cvalue.type != cli_type::number) return false;
+    value = (T)cvalue.number;
+    return true;
+  } else {
+    return false;
+  }
+}
+
+template <typename T>
+inline void add_optional(cli_command& cmd, const string& name, T& value,
+    const string& usage, const string& alt, bool req) {
+  return add_option(
+      cmd, "--" + name + (alt.empty() ? "" : (",-" + alt)), value, usage, req);
+}
 template <typename T>
 inline void add_optional(cli_state& cli, const string& name, T& value,
-    const string& usage, const string& alt, const vector<T>& choices,
-    bool req) {
-  return add_optional({cli, {}}, name, value, usage, alt, choices, req);
+    const string& usage, const string& alt, bool req) {
+  return add_optional(cli.command, name, value, usage, alt, req);
 }
+
 template <typename T>
-inline void add_optional(const cli_command& cmd, const string& name, T& value,
-    const string& usage, const string& alt, const vector<T>& choices,
-    bool req) {
-  static_assert(std::is_same_v<T, string> || std::is_same_v<T, bool> ||
-                    std::is_same_v<T, int64_t> || std::is_same_v<T, int32_t> ||
-                    std::is_same_v<T, uint64_t> ||
-                    std::is_same_v<T, uint32_t> || std::is_same_v<T, float> ||
-                    std::is_same_v<T, double> || std::is_enum_v<T>,
-      "unsupported type");
-  auto& schema = get_clischema(cmd.cli.schema, cmd.path);
-  auto& setter = get_clisetter(cmd.cli.setter, cmd.path);
-  if (!alt.empty()) schema["cli_alternate"][name] = alt;
-  if (req) schema["required"].push_back(name);
-  auto& property          = schema["properties"][name];
-  property["title"]       = name;
-  property["type"]        = cli_gettype<T>();
-  property["description"] = usage;
-  property["default"]     = value;
-  if constexpr (!std::is_same_v<T, bool>) {
-    for (auto& choice : choices) {
-      property["enum"].push_back(choice);
-    }
-  }
-  setter[name].setter = [&value](
-                            const json_value& js, json_error& error) -> bool {
-    return from_json(js, value, error);
-  };
+inline void add_positional(cli_command& cmd, const string& name, T& value,
+    const string& usage, bool req) {
+  return add_option(cmd, name, value, usage, req);
 }
-// Add an optional argument. Supports strings, numbers, and boolean flags.
 template <typename T>
 inline void add_positional(cli_state& cli, const string& name, T& value,
-    const string& usage, const vector<T>& choices, bool req) {
-  return add_positional({cli, {}}, name, value, usage, choices, req);
+    const string& usage, bool req) {
+  return add_positional(cli.command, name, value, usage, req);
+}
+
+template <typename T>
+inline void add_optional(cli_command& cmd, const string& name, T& value,
+    const string& usage, const string& alt, const vector<string>& choices,
+    bool req) {
+  return add_option(cmd, "--" + name + (alt.empty() ? "" : (",-" + alt)), value,
+      usage, choices, req);
 }
 template <typename T>
-inline void add_positional(const cli_command& cmd, const string& name, T& value,
-    const string& usage, const vector<T>& choices, bool req) {
-  static_assert(std::is_same_v<T, string> || std::is_same_v<T, bool> ||
-                    std::is_same_v<T, int64_t> || std::is_same_v<T, int32_t> ||
-                    std::is_same_v<T, uint64_t> ||
-                    std::is_same_v<T, uint32_t> || std::is_same_v<T, float> ||
-                    std::is_same_v<T, double> || std::is_enum_v<T>,
-      "unsupported type");
-  auto& schema = get_clischema(cmd.cli.schema, cmd.path);
-  auto& setter = get_clisetter(cmd.cli.setter, cmd.path);
-  if (req) schema["required"].push_back(to_json(name));
-  schema["cli_positional"].push_back(name);
-  auto& property          = schema["properties"][name];
-  property["title"]       = name;
-  property["type"]        = cli_gettype<T>();
-  property["description"] = usage;
-  property["default"]     = to_json(value);
-  for (auto& choice : choices) {
-    property["enum"].push_back(to_json(choice));
-  }
-  setter[name].setter = [&value](
-                            const json_value& js, json_error& error) -> bool {
-    return from_json(js, value, error);
-  };
+inline void add_optional(cli_state& cli, const string& name, T& value,
+    const string& usage, const string& alt, const vector<string>& choices,
+    bool req) {
+  return add_optional(cli.command, name, value, usage, alt, choices, req);
 }
-// Add an optional argument with values as labels. Supports integers and enums.
+
+template <typename T>
+inline void add_positional(cli_command& cmd, const string& name, T& value,
+    const string& usage, const vector<string>& choices, bool req) {
+  return add_option(cmd, name, value, usage, choices, req);
+}
+template <typename T>
+inline void add_positional(cli_state& cli, const string& name, T& value,
+    const string& usage, const vector<string>& choices, bool req) {
+  return add_positional(cli.command, name, value, usage, choices, req);
+}
+
+template <typename T>
+inline void add_optional(cli_command& cmd, const string& name, T& value,
+    const string& usage, const vector<pair<T, string>>& choices,
+    const string& alt, bool req) {
+  return add_option(cmd, "--" + name + (alt.empty() ? "" : (",-" + alt)), value,
+      usage, choices, req);
+}
 template <typename T>
 inline void add_optional(cli_state& cli, const string& name, T& value,
     const string& usage, const vector<pair<T, string>>& choices,
     const string& alt, bool req) {
-  return add_optional({cli, {}}, name, value, usage, choices, alt, req);
+  return add_optional(cli.command, name, value, usage, choices, alt, req);
 }
+
 template <typename T>
-inline void add_optional(const cli_command& cmd, const string& name, T& value,
-    const string& usage, const vector<pair<T, string>>& choices,
-    const string& alt, bool req) {
-  static_assert(std::is_same_v<T, string> || std::is_same_v<T, bool> ||
-                    std::is_same_v<T, int64_t> || std::is_same_v<T, int32_t> ||
-                    std::is_same_v<T, uint64_t> ||
-                    std::is_same_v<T, uint32_t> || std::is_same_v<T, float> ||
-                    std::is_same_v<T, double> || std::is_enum_v<T>,
-      "unsupported type");
-  auto def = string{};
-  for (auto& [item, choice] : choices)
-    if (item == value) def = choice;
-  auto& schema = get_clischema(cmd.cli.schema, cmd.path);
-  auto& setter = get_clisetter(cmd.cli.setter, cmd.path);
-  if (!alt.empty()) schema["cli_alternate"][name] = alt;
-  if (req) schema["required"].push_back(to_json(name));
-  auto& property          = schema["properties"][name];
-  property["title"]       = name;
-  property["type"]        = "string";
-  property["description"] = usage;
-  property["default"]     = def;
-  for (auto& [_, choice] : choices) {
-    property["enum"].push_back(to_json(choice));
-  }
-  setter[name].setter = [&value, &choices](
-                            const json_value& js, json_error& error) -> bool {
-    auto& svalue = js.get_ref<string>();
-    for (auto& [value_, choice] : choices) {
-      if (svalue == choice) {
-        value = value_;
-        return true;
-      }
-    }
-    error = json_error{"bad value"};
-    return false;
-  };
+inline void add_positional(cli_command& cmd, const string& name, T& value,
+    const string& usage, const vector<pair<T, string>>& choices, bool req) {
+  return add_option(cmd, name, value, usage, choices, req);
 }
-// Add a positional argument with values as labels. Supports integers and enums.
 template <typename T>
 inline void add_positional(cli_state& cli, const string& name, T& value,
     const string& usage, const vector<pair<T, string>>& choices, bool req) {
-  return add_positional({cli, {}}, name, value, usage, choices, req);
+  return add_positional(cli.command, name, value, usage, choices, req);
+}
+
+template <typename T>
+inline void add_positional(cli_command& cmd, const string& name,
+    vector<T>& value, const string& usage, bool req) {
+  return add_option(cmd, name, value, usage, req);
 }
 template <typename T>
-inline void add_positional(const cli_command& cmd, const string& name, T& value,
-    const string& usage, const vector<pair<T, string>>& choices, bool req) {
-  static_assert(std::is_same_v<T, string> || std::is_same_v<T, bool> ||
-                    std::is_same_v<T, int64_t> || std::is_same_v<T, int32_t> ||
-                    std::is_same_v<T, uint64_t> ||
-                    std::is_same_v<T, uint32_t> || std::is_same_v<T, float> ||
-                    std::is_same_v<T, double> || std::is_enum_v<T>,
-      "unsupported type");
-  auto& schema = get_clischema(cmd.cli.schema, cmd.path);
-  auto& setter = get_clisetter(cmd.cli.setter, cmd.path);
-  if (req) schema["required"].push_back(name);
-  schema["cli_positional"].push_back(name);
-  auto& property          = schema["properties"][name];
-  property["title"]       = name;
-  property["type"]        = "string";
-  property["description"] = usage;
-  property["default"]     = to_json(value);
-  for (auto& choice : choices) {
-    property["enum"].push_back(to_json(choice));
-  }
-  setter[name].setter = [&value, &choices](
-                            const json_value& js, json_error& error) -> bool {
-    auto& svalue = js.get_ref<string>();
-    for (auto& [value_, choice] : choices) {
-      if (svalue == choice) {
-        value = value_;
-        return true;
-      }
-    }
-    error = json_error{"bad value"};
-    return false;
-  };
+inline void add_positional(cli_state& cli, const string& name, vector<T>& value,
+    const string& usage, bool req) {
+  return add_positional(cli.command, name, value, usage, req);
 }
-// Add a positional argument that consumes all arguments left.
-// Supports strings and enums.
+
+template <typename T>
+inline void add_positional(cli_command& cmd, const string& name,
+    vector<T>& value, const string& usage, const vector<T>& choices, bool req) {
+  return add_option(cmd, name, value, usage, choices, req);
+}
 template <typename T>
 inline void add_positional(cli_state& cli, const string& name, vector<T>& value,
     const string& usage, const vector<T>& choices, bool req) {
-  return add_positional({cli, {}}, name, value, usage, choices, req);
+  return add_positional(cli.command, name, value, usage, choices, req);
 }
+
 template <typename T>
-inline void add_positional(const cli_command& cmd, const string& name,
-    vector<T>& value, const string& usage, const vector<T>& choices, bool req) {
+inline void add_option(cli_command& cli, const string& name, T& value,
+    const string& usage, bool req) {
   static_assert(std::is_same_v<T, string> || std::is_same_v<T, bool> ||
-                    std::is_same_v<T, int64_t> || std::is_same_v<T, int32_t> ||
-                    std::is_same_v<T, uint64_t> ||
-                    std::is_same_v<T, uint32_t> || std::is_same_v<T, float> ||
-                    std::is_same_v<T, double>,
+                    std::is_integral_v<T> || std::is_floating_point_v<T> ||
+                    std::is_enum_v<T>,
       "unsupported type");
-  auto& schema = get_clischema(cmd.cli.schema, cmd.path);
-  auto& setter = get_clisetter(cmd.cli.setter, cmd.path);
-  schema["cli_positional"].push_back(name);
-  if (req) schema["required"].push_back(name);
-  auto& property          = schema["properties"][name];
-  property["title"]       = name;
-  property["type"]        = "array";
-  property["description"] = usage;
-  property["default"]     = to_json(value);
-  auto& item              = property["items"];
-  item["title"]           = name;
-  item["type"]            = cli_gettype<T>();
-  item["description"]     = usage;
-  for (auto& choice : choices) {
-    property["enum"].push_back(to_json(choice));
-  }
-  setter[name].setter = [&value](
-                            const json_value& js, json_error& error) -> bool {
-    return from_json(js, value, error);
+  auto def = vector<cli_value>{};
+  set_value(def.emplace_back(), value);
+  auto& option         = cli.options.emplace_back();
+  option.name          = name;
+  option.type          = get_cli_type<T>();
+  option.req           = req;
+  option.nargs         = !std::is_same_v<T, bool> ? 1 : 0;
+  option.usage         = usage;
+  option.value         = def;
+  option.def           = def;
+  option.choices       = {};
+  option.set_reference = [&value](const vector<cli_value>& cvalues) -> bool {
+    if (cvalues.size() != 1) throw std::out_of_range{"invalid number of args"};
+    return get_value(cvalues.front(), value);
   };
 }
-
-inline vector<string> split_cli_names(const string& name_) {
-  auto name  = name_;
-  auto split = vector<string>{};
-  if (name.empty()) throw std::invalid_argument("option name cannot be empty");
-  if (name.find_first_of(" \t\r\n") != string::npos)
-    throw std::invalid_argument("option name cannot contain whitespaces");
-  while (name.find_first_of(",/") != string::npos) {
-    auto pos = name.find_first_of(",/");
-    if (pos > 0) split.push_back(name.substr(0, pos));
-    name = name.substr(pos + 1);
-  }
-  if (!name.empty()) split.push_back(name);
-  if (split.empty()) throw std::invalid_argument("option name cannot be empty");
-  for (auto& name : split)
-    if ((split[0][0] == '-') != (name[0] == '-'))
-      throw std::invalid_argument("inconsistent option names for " + name);
-  return split;
-}
-
-template <typename T>
-inline void add_option(const cli_command& cmd, const string& name, T& value,
-    const string& usage, bool req) {
-  static_assert(std::is_same_v<T, string> || std::is_same_v<T, bool> ||
-                    std::is_same_v<T, int64_t> || std::is_same_v<T, int32_t> ||
-                    std::is_same_v<T, uint64_t> ||
-                    std::is_same_v<T, uint32_t> || std::is_same_v<T, float> ||
-                    std::is_same_v<T, double> || std::is_enum_v<T>,
-      "unsupported type");
-  auto names = split_cli_names(name);
-  if (names.at(0).find("--") == 0) {
-    auto alt = string{};
-    for (auto& aname : names) {
-      if (aname.at(0) == '-' && std::isalpha((int)aname.at(1)))
-        alt = aname.substr(1);
-    }
-    return add_optional(cmd, names.at(0).substr(2), value, usage, alt, {}, req);
-  } else if (std::isalpha((int)names.at(0).front())) {
-    return add_positional(cmd, names.at(0), value, usage, {}, req);
-  } else {
-    throw std::invalid_argument{"bad name"};
-  }
-}
 template <typename T>
 inline void add_option(cli_state& cli, const string& name, T& value,
     const string& usage, bool req) {
-  return add_option({cli, {}}, name, value, usage, req);
+  return add_option(cli.command, name, value, usage, req);
 }
 
 template <typename T>
-inline void add_option(const cli_command& cmd, const string& name, T& value,
+inline void add_option(cli_command& cli, const string& name, T& value,
     const string& usage, const vector<string>& choices, bool req) {
-  static_assert(std::is_same_v<T, string> || std::is_same_v<T, int64_t> ||
-                    std::is_same_v<T, int32_t> || std::is_same_v<T, uint64_t> ||
-                    std::is_same_v<T, uint32_t> || std::is_enum_v<T>,
+  static_assert(
+      std::is_same_v<T, string> || std::is_integral_v<T> || std::is_enum_v<T>,
       "unsupported type");
-  auto nchoices = vector<pair<T, string>>{};
-  for (auto& choice : choices)
-    nchoices.emplace_back((T)nchoices.size(), choice);
-  auto names = split_cli_names(name);
-  if (names.at(0).find("--") == 0) {
-    auto alt = string{};
-    for (auto& aname : names) {
-      if (aname.at(0) == '-' && std::isalpha((int)aname.at(1)))
-        alt = aname.substr(1);
-    }
-    return add_optional(cmd, names.at(0).substr(2), value, usage, alt, {}, req);
-  } else if (std::isalpha((int)names.at(0).front())) {
-    return add_positional(cmd, names.at(0), value, usage, {}, req);
-  } else {
-    throw std::invalid_argument{"bad name"};
-  }
+  auto def = vector<cli_value>{};
+  set_value(def.emplace_back(), value);
+  auto& option         = cli.options.emplace_back();
+  option.name          = name;
+  option.type          = get_cli_type<T>();
+  option.req           = req;
+  option.nargs         = 1;
+  option.usage         = usage;
+  option.value         = def;
+  option.def           = def;
+  option.choices       = choices;
+  option.set_reference = [&value](const vector<cli_value>& cvalues) -> bool {
+    if (cvalues.size() != 1) throw std::out_of_range{"invalid number of args"};
+    return get_value(cvalues.front(), value);
+  };
 }
 template <typename T>
 inline void add_option(cli_state& cli, const string& name, T& value,
     const string& usage, const vector<string>& choices, bool req) {
-  return add_option({cli, {}}, name, value, usage, choices, req);
+  return add_option(cli.command, name, value, usage, choices, req);
 }
 
 template <typename T>
-inline void add_option(const cli_command& cmd, const string& name,
-    vector<T>& value, const string& usage, bool req) {
-  static_assert(std::is_same_v<T, string> || std::is_same_v<T, bool> ||
-                    std::is_same_v<T, int64_t> || std::is_same_v<T, int32_t> ||
-                    std::is_same_v<T, uint64_t> ||
-                    std::is_same_v<T, uint32_t> || std::is_same_v<T, float> ||
-                    std::is_same_v<T, double> || std::is_enum_v<T>,
+inline void add_option(cli_command& cli, const string& name, T& value,
+    const string& usage, const vector<pair<T, string>>& choices, bool req) {
+  static_assert(
+      std::is_same_v<T, string> || std::is_integral_v<T> || std::is_enum_v<T>,
       "unsupported type");
-  auto names = split_cli_names(name);
-  if (names.at(0).find("--") == 0) {
-    auto alt = string{};
-    for (auto& aname : names) {
-      if (aname.at(0) == '-' && std::isalpha((int)aname.at(1)))
-        alt = aname.substr(1);
-    }
-    return add_optional(cmd, names.at(0).substr(2), value, usage, alt, {}, req);
-  } else if (std::isalpha((int)names.at(0).front())) {
-    return add_positional(cmd, names.at(0), value, usage, {}, req);
-  } else {
-    throw std::invalid_argument{"bad name"};
+  auto def = vector<cli_value>{};
+  for (auto& [value_, label] : choices) {
+    if (value == value_) set_value(def.emplace_back(), label);
   }
+  auto& option = cli.options.emplace_back();
+  option.name  = name;
+  option.type  = cli_type::string;
+  option.req   = req;
+  option.nargs = 1;
+  option.usage = usage;
+  option.value = def;
+  option.def   = def;
+  for (auto& [value_, label] : choices) option.choices.push_back(label);
+  option.set_reference = [&value, &choices](
+                             const vector<cli_value>& cvalues) -> bool {
+    if (cvalues.size() != 1) throw std::out_of_range{"invalid number of args"};
+    auto values = string{};
+    return get_value(cvalues.front(), values);
+    for (auto& [value_, label] : choices) {
+      if (values == label) {
+        value = value_;
+        return true;
+      }
+    }
+    return false;
+  };
+}
+template <typename T>
+inline void add_option(cli_state& cli, const string& name, T& value,
+    const string& usage, const vector<pair<T, string>>& choices, bool req) {
+  return add_option(cli.command, name, value, usage, choices, req);
+}
+
+template <typename T>
+inline void add_option(cli_command& cli, const string& name, vector<T>& values,
+    const string& usage, bool req) {
+  static_assert(std::is_same_v<T, string> || std::is_same_v<T, bool> ||
+                    std::is_integral_v<T> || std::is_floating_point_v<T> ||
+                    std::is_enum_v<T>,
+      "unsupported type");
+  auto def = vector<cli_value>{};
+  for (auto& value : values) set_value(def.emplace_back(), value);
+  auto& option         = cli.options.emplace_back();
+  option.name          = name;
+  option.type          = get_cli_type<T>();
+  option.req           = req;
+  option.nargs         = -1;
+  option.usage         = usage;
+  option.value         = def;
+  option.def           = def;
+  option.choices       = {};
+  option.set_reference = [&values](const vector<cli_value>& cvalues) -> bool {
+    values.clear();
+    for (auto& cvalue : cvalues) {
+      if (!get_value(cvalue, values.emplace_back())) return false;
+    }
+    return true;
+  };
 }
 template <typename T>
 inline void add_option(cli_state& cli, const string& name, vector<T>& values,
     const string& usage, bool req) {
-  return add_option({cli, {}}, name, values, usage, req);
+  return add_option(cli.command, name, values, usage, req);
 }
 
 }  // namespace yocto

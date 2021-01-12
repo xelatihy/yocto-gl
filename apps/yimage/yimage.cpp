@@ -46,22 +46,17 @@ struct convert_params {
   int    height   = 0;
 };
 
-// Json IO
-void serialize_value(json_mode mode, json_value& json, convert_params& value,
-    const string& description) {
-  serialize_object(mode, json, value, description);
-  serialize_property(mode, json, value.image, "image", "Input image.", true);
-  serialize_property(mode, json, value.output, "output", "Output image.");
-  serialize_property(
-      mode, json, value.exposure, "exposure", "Tonemap exposure.");
-  serialize_property(mode, json, value.filmic, "filmic", "Tonemap filmic.");
-  serialize_property(mode, json, value.width, "width", "Resize width.");
-  serialize_property(mode, json, value.height, "height", "Resize height.");
-  serialize_property(mode, json, value.logo, "logo", "Add logo.");
-  serialize_clipositionals(mode, json, {"image"});
-  serialize_clialternates(mode, json,
-      {{"output", "o"}, {"exposure", "e"}, {"filmic", "f"}, {"width", "w"},
-          {"height", "h"}, {"logo", "L"}});
+// Cli
+void add_command(cli_state& cli, const string& name, convert_params& value,
+    const string& usage) {
+  auto& cmd = add_command(cli, name, usage);
+  add_positional(cmd, "image", value.image, "Input image.");
+  add_optional(cmd, "output", value.output, "Output image.", "o");
+  add_optional(cmd, "exposure", value.exposure, "Tonemap exposure.", "e");
+  add_optional(cmd, "filmic", value.filmic, "Tonemap filmic.", "f");
+  add_optional(cmd, "width", value.width, "Resize width.", "w");
+  add_optional(cmd, "height", value.height, "Resize height.", "h");
+  add_optional(cmd, "logo", value.logo, "Add logo.", "L");
 }
 
 // convert images
@@ -100,14 +95,12 @@ struct view_params {
   bool           logo   = false;
 };
 
-// Json IO
-void serialize_value(json_mode mode, json_value& json, view_params& value,
-    const string& description) {
-  serialize_object(mode, json, value, description);
-  serialize_property(mode, json, value.images, "images", "Input images.", true);
-  serialize_property(mode, json, value.output, "output", "Output image.");
-  serialize_clipositionals(mode, json, {"images"});
-  serialize_clialternates(mode, json, {{"output", "o"}});
+// Cli
+void add_command(cli_state& cli, const string& name, view_params& value,
+    const string& usage) {
+  auto& cmd = add_command(cli, name, usage);
+  add_positional(cmd, "images", value.images, "Input images.");
+  add_optional(cmd, "output", value.output, "Output image.", "o");
 }
 
 #ifndef YOCTO_OPENGL
@@ -151,45 +144,12 @@ struct grade_params : colorgrade_params {
   bool   logo   = false;
 };
 
-// Json IO
-void serialize_value(json_mode mode, json_value& json, colorgrade_params& value,
-    const string& description) {
-  serialize_object(mode, json, value, description);
-  serialize_property(mode, json, value.exposure, "exposure", "Hdr exposure");
-  serialize_property(
-      mode, json, (array<float, 3>&)value.tint, "tint", "Hdr tint");
-  serialize_property(
-      mode, json, value.lincontrast, "lincontrast", "Hdr lin contrast");
-  serialize_property(
-      mode, json, value.logcontrast, "logcontrast", "Hdr log contrast");
-  serialize_property(
-      mode, json, value.linsaturation, "linsaturation", "Hdr saturation");
-  serialize_property(mode, json, value.filmic, "filmic", "Hdr filmic curve");
-  serialize_property(mode, json, value.srgb, "srgb", "sRGB coversion");
-  serialize_property(mode, json, value.contrast, "contrast", "Ldr contrast");
-  serialize_property(
-      mode, json, value.saturation, "saturation", "Ldr saturation");
-  serialize_property(mode, json, value.shadows, "shadows", "Ldr shadows");
-  serialize_property(mode, json, value.midtones, "midtones", "Ldr midtones");
-  serialize_property(
-      mode, json, value.highlights, "highlights", "Ldr highlights");
-  serialize_property(mode, json, (array<float, 3>&)value.shadows_color,
-      "shadows_color", "Ldr shadows color");
-  serialize_property(mode, json, (array<float, 3>&)value.midtones_color,
-      "midtones_color", "Ldr sidtones color");
-  serialize_property(mode, json, (array<float, 3>&)value.highlights_color,
-      "highlights_color", "Ldr sighlights color");
-}
-
-// Json IO
-void serialize_value(json_mode mode, json_value& json, grade_params& value,
-    const string& description) {
-  serialize_object(mode, json, value, description);
-  serialize_property(mode, json, value.image, "image", "Input image.", true);
-  serialize_property(mode, json, value.output, "output", "Output image.");
-  serialize_value(mode, json, (colorgrade_params&)value, description);
-  serialize_clipositionals(mode, json, {"image"});
-  serialize_clialternates(mode, json, {{"output", "o"}});
+// Cli
+void add_command(cli_state& cli, const string& name, grade_params& value,
+    const string& usage) {
+  auto& cmd = add_command(cli, name, usage);
+  add_positional(cmd, "image", value.image, "Input image.");
+  add_optional(cmd, "output", value.output, "Output image.", "o");
 }
 
 #ifndef YOCTO_OPENGL
@@ -200,6 +160,42 @@ int run_grade(const grade_params& params) {
 }
 
 #else
+
+// Parameter conversions
+void from_params(const gui_params& uiparams, colorgrade_params& params) {
+  params.exposure         = uiparams.at("exposure");
+  params.tint             = uiparams.at("tint");
+  params.lincontrast      = uiparams.at("lincontrast");
+  params.logcontrast      = uiparams.at("logcontrast");
+  params.linsaturation    = uiparams.at("linsaturation");
+  params.filmic           = uiparams.at("filmic");
+  params.srgb             = uiparams.at("srgb");
+  params.contrast         = uiparams.at("contrast");
+  params.saturation       = uiparams.at("saturation");
+  params.shadows          = uiparams.at("shadows");
+  params.midtones         = uiparams.at("midtones");
+  params.highlights       = uiparams.at("highlights");
+  params.shadows_color    = uiparams.at("shadows_color");
+  params.midtones_color   = uiparams.at("midtones_color");
+  params.highlights_color = uiparams.at("highlights_color");
+}
+void to_params(gui_params& uiparams, const colorgrade_params& params) {
+  uiparams["exposure"]         = {params.exposure, {-10, 10}};
+  uiparams["tint"]             = {params.tint, true};
+  uiparams["lincontrast"]      = {params.lincontrast, {0, 1}};
+  uiparams["logcontrast"]      = {params.logcontrast, {0, 1}};
+  uiparams["linsaturation"]    = {params.linsaturation, {0, 1}};
+  uiparams["filmic"]           = {params.filmic};
+  uiparams["srgb"]             = {params.srgb};
+  uiparams["contrast"]         = {params.contrast, {0, 1}};
+  uiparams["saturation"]       = {params.saturation, {0, 1}};
+  uiparams["shadows"]          = {params.shadows, {0, 1}};
+  uiparams["midtones"]         = {params.midtones, {0, 1}};
+  uiparams["highlights"]       = {params.highlights, {0, 1}};
+  uiparams["shadows_color"]    = {params.shadows_color, true};
+  uiparams["midtones_color"]   = {params.midtones_color, true};
+  uiparams["highlights_color"] = {params.highlights_color, true};
+}
 
 // grade images
 int run_grade(const grade_params& params) {
@@ -213,20 +209,21 @@ int run_grade(const grade_params& params) {
 
   // grade image
   auto graded = make_image(image.width, image.height, false, true);
-  colorgrade_image_mt(graded, image, params);
+  colorgrade_image(graded, image, params);
 
   // set view
   set_image(viewer, params.image, graded);
-  set_widgets(
-      viewer, params.image, to_json(params), to_schema(params, "Color grade"));
+  auto uiparams = gui_params{};
+  to_params(uiparams, params);
+  set_params(viewer, params.image, "Color grade", uiparams);
 
   // set callback
-  set_callback(viewer,
-      [&](const string& name, const json_value& uiparams, const gui_input&) {
-        if (uiparams.is_null()) return;
-        serialize_value(json_mode::from_json, (json_value&)uiparams,
-            (colorgrade_params&)params, "");
-        colorgrade_image_mt(graded, image, params);
+  set_params_callback(
+      viewer, [&](const string& name, const gui_params& uiparams) {
+        if (uiparams.empty()) return;
+        auto gparams = params;
+        from_params(uiparams, gparams);
+        colorgrade_image_mt(graded, image, gparams);
         set_image(viewer, name, graded);
       });
 
@@ -249,21 +246,16 @@ struct diff_params {
   float  threshold = 0;
 };
 
-// Json IO
-void serialize_value(json_mode mode, json_value& json, diff_params& value,
-    const string& description) {
-  serialize_object(mode, json, value, description);
-  serialize_property(
-      mode, json, value.image1, "image1", "Input image 1.", true);
-  serialize_property(
-      mode, json, value.image2, "image2", "Input image 2.", true);
-  serialize_property(mode, json, value.output, "output", "Output image.");
-  serialize_property(mode, json, value.signal, "signal", "Error on diff.");
-  serialize_property(
-      mode, json, value.threshold, "threshold", "Diff threshold.");
-  serialize_property(mode, json, value.logo, "logo", "Add logo.");
-  serialize_clipositionals(mode, json, {"image1", "image2"});
-  serialize_clialternates(mode, json, {{"output", "o"}});
+// Cli
+void add_command(cli_state& cli, const string& name, diff_params& value,
+    const string& usage) {
+  auto& cmd = add_command(cli, name, usage);
+  add_positional(cmd, "image1", value.image1, "Input image 1.");
+  add_positional(cmd, "image2", value.image2, "Input image 2.");
+  add_optional(cmd, "output", value.output, "Output image.", "o");
+  add_optional(cmd, "signal", value.signal, "Error on diff.");
+  add_optional(cmd, "threshold", value.threshold, "Diff threshold.");
+  add_optional(cmd, "logo", value.logo, "Add logo.");
 }
 
 // resize images
@@ -321,20 +313,16 @@ struct setalpha_params {
   bool   to_color   = false;
 };
 
-// Json IO
-void serialize_value(json_mode mode, json_value& json, setalpha_params& value,
-    const string& description) {
-  serialize_object(mode, json, value, description);
-  serialize_property(mode, json, value.image, "image", "Input image.", true);
-  serialize_property(mode, json, value.alpha, "alpha", "Alpha image.", true);
-  serialize_property(mode, json, value.output, "output", "Output image.");
-  serialize_property(
-      mode, json, value.from_color, "from-color", "Alpha from color.");
-  serialize_property(
-      mode, json, value.to_color, "to-color", "Color from alpha.");
-  serialize_property(mode, json, value.logo, "logo", "Add logo.");
-  serialize_clipositionals(mode, json, {"image", "alpha"});
-  serialize_clialternates(mode, json, {{"output", "o"}});
+// Cli
+void add_command(cli_state& cli, const string& name, setalpha_params& value,
+    const string& usage) {
+  auto& cmd = add_command(cli, name, usage);
+  add_positional(cmd, "image", value.image, "Input image.");
+  add_positional(cmd, "alpha", value.alpha, "Alpha image.");
+  add_optional(cmd, "output", value.output, "Output image.", "o");
+  add_optional(cmd, "from-color", value.from_color, "Alpha from color.");
+  add_optional(cmd, "to-color", value.to_color, "Color from alpha.");
+  add_optional(cmd, "logo", value.logo, "Add logo.");
 }
 
 // setalpha images
@@ -398,23 +386,29 @@ struct app_params {
   setalpha_params setalpha = {};
 };
 
-// Json IO
-void serialize_value(json_mode mode, json_value& json, app_params& value,
-    const string& description) {
-  serialize_object(mode, json, value, description);
-  serialize_command(mode, json, value.command, "command", "Command.");
-  serialize_property(mode, json, value.convert, "convert", "Convert images.");
-  serialize_property(mode, json, value.view, "view", "View images.");
-  serialize_property(mode, json, value.grade, "grade", "Grade images.");
-  serialize_property(mode, json, value.diff, "diff", "Diff two images.");
-  serialize_property(
-      mode, json, value.setalpha, "setalpha", "Set alpha in images.");
+// Cli
+void add_commands(cli_state& cli, const string& name, app_params& value,
+    const string& usage) {
+  cli = make_cli(name, usage);
+  add_command_name(cli, "command", value.command, "Command.");
+  add_command(cli, "convert", value.convert, "Convert images.");
+  add_command(cli, "view", value.view, "View images.");
+  add_command(cli, "grade", value.grade, "Grade images.");
+  add_command(cli, "diff", value.diff, "Diff two images.");
+  add_command(cli, "setalpha", value.setalpha, "Set alpha in images.");
+}
+
+// Parse cli
+void parse_cli(app_params& params, int argc, const char** argv) {
+  auto cli = cli_state{};
+  add_commands(cli, "yimage", params, "Process and view images.");
+  parse_cli(cli, argc, argv);
 }
 
 int main(int argc, const char* argv[]) {
   // command line parameters
   auto params = app_params{};
-  parse_cli(params, "Process and view images", argc, argv);
+  parse_cli(params, argc, argv);
 
   // dispatch commands
   if (params.command == "convert") {

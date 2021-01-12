@@ -35,7 +35,6 @@
 // -----------------------------------------------------------------------------
 
 #include <yocto/yocto_image.h>
-#include <yocto/yocto_json.h>
 #include <yocto/yocto_parallel.h>
 #include <yocto/yocto_sceneio.h>
 #include <yocto/yocto_shape.h>
@@ -109,16 +108,20 @@ void set_image(
 void close_image(ogl_imageviewer& viewer, const string& name);
 
 // Set params
-void set_widget(ogl_imageviewer& viewer, const string& name,
-    const string& pname, const json_value& param, const json_value& schema);
-void set_widgets(ogl_imageviewer& viewer, const string& name,
-    const json_value& params, const json_value& schema);
+void set_param(ogl_imageviewer& viewer, const string& name, const string& pname,
+    const gui_param& param);
+void set_params(ogl_imageviewer& viewer, const string& name,
+    const string& pname, const gui_params& params);
 
 // Set ui callback
-using ogl_imageviewer_callback =
-    function<void(const string&, const json_value&, const gui_input&)>;
-void set_callback(
-    ogl_imageviewer& viewer, const ogl_imageviewer_callback& callback);
+using ogl_imageviewer_pcallback =
+    function<void(const string&, const gui_params&)>;
+using ogl_imageviewer_icallback =
+    function<void(const string&, const gui_input&)>;
+void set_params_callback(
+    ogl_imageviewer& viewer, const ogl_imageviewer_pcallback& callback);
+void set_input_callback(
+    ogl_imageviewer& viewer, const ogl_imageviewer_icallback& callback);
 
 }  // namespace yocto
 
@@ -146,9 +149,9 @@ struct ogl_imageinput {
   float      exposure = 0;
   bool       filmic   = false;
 
-  bool       wchanged = true;
-  json_value widgets  = {};
-  json_value schema   = {};
+  bool       pchanged = true;
+  string     pname    = "Params";
+  gui_params params   = {};
 };
 
 // An image visualized
@@ -169,8 +172,8 @@ struct ogl_imageview {
   ogl_image_params glparams = {};
 
   // user params
-  json_value widgets = json_value::object();
-  json_value schema  = to_schema_object("User params.");
+  string     pname  = "Params";
+  gui_params params = gui_params{};
 };
 
 // Image pointer
@@ -183,7 +186,8 @@ struct ogl_imageviewer {
   ogl_imageview*             selected    = nullptr;  // selected
   std::mutex                 input_mutex = {};
   vector<ogl_imageinput_ptr> inputs      = {};  // input images
-  ogl_imageviewer_callback   callback    = {};  // params and ui callback
+  ogl_imageviewer_pcallback  pcallback   = {};  // params callback
+  ogl_imageviewer_icallback  icallback   = {};  // input callback
 };
 
 }  // namespace yocto
