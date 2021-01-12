@@ -46,19 +46,27 @@ struct render_params : trace_params {
   bool   savebatch = false;
 };
 
-// Json IO
-void serialize_value(json_mode mode, json_value& json, render_params& value,
-    const string& description) {
-  serialize_object(mode, json, value, description);
-  serialize_property(mode, json, value.scene, "scene", "Scene filename.", true);
-  serialize_property(mode, json, value.output, "output", "Output filename.");
-  serialize_property(mode, json, value.camera, "camera", "Camera name.");
-  serialize_property(mode, json, value.addsky, "addsky", "Add sky.");
-  serialize_property(mode, json, value.savebatch, "savebatch", "Save batch.");
-  serialize_value(mode, json, (trace_params&)value, description);
-  serialize_clipositionals(mode, json, {"scene"});
-  serialize_clialternates(mode, json,
-      {{"samples", "s"}, {"bounces", "b"}, {"output", "o"}, {"tracer", "t"}});
+// Cli
+void add_command(cli_state& cli, const string& name, render_params& value,
+    const string& usage) {
+  auto& cmd = add_command(cli, name, usage);
+  add_positional(cmd, "scene", value.scene, "Scene filename.");
+  add_optional(cmd, "output", value.output, "Output filename.", "o");
+  add_optional(cmd, "camera", value.camera, "Camera name.", "c");
+  add_optional(cmd, "addsky", value.addsky, "Add sky.");
+  add_optional(cmd, "savebatch", value.savebatch, "Save batch.");
+  add_optional(cmd, "resolution", value.resolution, "Image resolution.", "r");
+  add_optional(cmd, "sampler", value.sampler, "Sampler type.", "t");
+  add_optional(cmd, "falsecolor", value.falsecolor, "False color type.", "F");
+  add_optional(cmd, "samples", value.samples, "Number of samples.", "s");
+  add_optional(cmd, "bounces", value.bounces, "Number of bounces.", "b");
+  add_optional(cmd, "clamp", value.clamp, "Clamp value.");
+  add_optional(cmd, "nocaustics", value.nocaustics, "Disable caustics.");
+  add_optional(cmd, "envhidden", value.envhidden, "Hide environment.");
+  add_optional(cmd, "tentfilter", value.tentfilter, "Filter image.");
+  add_optional(cmd, "seed", value.seed, "Random seed.");
+  add_optional(cmd, "bvh", value.bvh, "Bvh type.");
+  add_optional(cmd, "noparallel", value.noparallel, "Disable threading.");
 }
 
 // convert images
@@ -116,26 +124,20 @@ int run_render(const render_params& params) {
 
 // convert params
 struct view_params : trace_params {
-  string scene     = "scene.json";
-  string output    = "out.png";
-  string camera    = "";
-  bool   addsky    = false;
-  bool   savebatch = false;
+  string scene  = "scene.json";
+  string output = "out.png";
+  string camera = "";
+  bool   addsky = false;
 };
 
-// Json IO
-void serialize_value(json_mode mode, json_value& json, view_params& value,
-    const string& description) {
-  serialize_object(mode, json, value, description);
-  serialize_property(mode, json, value.scene, "scene", "Scene filename.", true);
-  serialize_property(mode, json, value.output, "output", "Output filename.");
-  serialize_property(mode, json, value.camera, "camera", "Camera name.");
-  serialize_property(mode, json, value.addsky, "addsky", "Add sky.");
-  serialize_property(mode, json, value.savebatch, "savebatch", "Save batch.");
-  serialize_value(mode, json, (trace_params&)value, description);
-  serialize_clipositionals(mode, json, {"scene"});
-  serialize_clialternates(mode, json,
-      {{"samples", "s"}, {"bounces", "b"}, {"output", "o"}, {"tracer", "t"}});
+// Cli
+void add_command(cli_state& cli, const string& name, view_params& value,
+    const string& usage) {
+  auto& cmd = add_command(cli, name, usage);
+  add_positional(cmd, "scene", value.scene, "Scene filename.");
+  add_optional(cmd, "output", value.output, "Output filename.", "o");
+  add_optional(cmd, "camera", value.camera, "Camera name.", "c");
+  add_optional(cmd, "addsky", value.addsky, "Add sky.");
 }
 
 #ifndef YOCTO_OPENGL
@@ -271,19 +273,26 @@ struct app_params {
   view_params   view    = {};
 };
 
-// Json IO
-void serialize_value(json_mode mode, json_value& json, app_params& value,
-    const string& description) {
-  serialize_object(mode, json, value, description);
-  serialize_command(mode, json, value.command, "command", "Command.");
-  serialize_property(mode, json, value.render, "render", "Render offline.");
-  serialize_property(mode, json, value.view, "view", "Render interactively.");
+// Cli
+void add_commands(cli_state& cli, const string& name, app_params& value,
+    const string& usage) {
+  cli = make_cli(name, usage);
+  add_command_name(cli, "command", value.command, "Command.");
+  add_command(cli, "render", value.render, "Render offline.");
+  add_command(cli, "view", value.view, "Render interactively.");
+}
+
+// Parse cli
+void parse_cli(app_params& params, int argc, const char** argv) {
+  auto cli = cli_state{};
+  add_commands(cli, "ytrace", params, "Render images from scenes");
+  parse_cli(cli, argc, argv);
 }
 
 int main(int argc, const char* argv[]) {
   // parse cli
   auto params = app_params{};
-  parse_cli(params, "Render images from scenes", argc, argv);
+  parse_cli(params, argc, argv);
 
   // dispatch commands
   if (params.command == "render") {

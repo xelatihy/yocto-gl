@@ -175,7 +175,7 @@ void add_commands(cli_state& cli, const string& name, app_params& value,
 // Parse cli
 void parse_cli(app_params& params, int argc, const char** argv) {
   auto cli = cli_state{};
-  add_commands(cli, "yscene", params, "Process and view scenes");
+  add_commands(cli, "yscene", params, "Process and view scenes.");
   parse_cli(cli, argc, argv);
 }
 

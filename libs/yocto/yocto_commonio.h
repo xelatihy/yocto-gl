@@ -176,7 +176,10 @@ inline void add_positional(cli_state& cli, const string& name, T& value,
 // Supports strings and enums.
 template <typename T>
 inline void add_positional(cli_state& cli, const string& name, vector<T>& value,
-    const string& usage, const vector<string>& choices = {}, bool req = true);
+    const string& usage, bool req = true);
+template <typename T>
+inline void add_positional(cli_state& cli, const string& name, vector<T>& value,
+    const string& usage, const vector<string>& choices, bool req = true);
 
 // Add a subcommand
 struct cli_command;
@@ -224,7 +227,10 @@ inline void add_positional(cli_command& cmd, const string& name, T& value,
 // Supports strings and enums.
 template <typename T>
 inline void add_positional(cli_command& cmd, const string& name,
-    vector<T>& value, const string& usage, const vector<string>& choices = {},
+    vector<T>& value, const string& usage, bool req = true);
+template <typename T>
+inline void add_positional(cli_command& cmd, const string& name,
+    vector<T>& value, const string& usage, const vector<string>& choices,
     bool req = true);
 
 // Parses an optional or positional argument. Optional arguments' names start
@@ -726,6 +732,17 @@ template <typename T>
 inline void add_positional(cli_state& cli, const string& name, T& value,
     const string& usage, const vector<pair<T, string>>& choices, bool req) {
   return add_positional(cli.command, name, value, usage, choices, req);
+}
+
+template <typename T>
+inline void add_positional(cli_command& cmd, const string& name,
+    vector<T>& value, const string& usage, bool req) {
+  return add_option(cmd, name, value, usage, req);
+}
+template <typename T>
+inline void add_positional(cli_state& cli, const string& name, vector<T>& value,
+    const string& usage, bool req) {
+  return add_positional(cli.command, name, value, usage, req);
 }
 
 template <typename T>
