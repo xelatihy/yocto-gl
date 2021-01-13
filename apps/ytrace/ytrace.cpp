@@ -50,23 +50,25 @@ void add_command(cli_command& cli, const string& name, render_params& value,
     const string& usage) {
   auto& cmd = add_command(cli, name, usage);
   add_positional(cmd, "scene", value.scene, "Scene filename.");
-  add_optional(cmd, "output", value.output, "Output filename.", "o");
-  add_optional(cmd, "camera", value.camera, "Camera name.", "c");
+  add_optional(cmd, "output", value.output, "Output filename.", {}, "o");
+  add_optional(cmd, "camera", value.camera, "Camera name.", {}, "c");
   add_optional(cmd, "addsky", value.addsky, "Add sky.");
   add_optional(cmd, "savebatch", value.savebatch, "Save batch.");
-  add_optional(cmd, "resolution", value.resolution, "Image resolution.", "r");
+  add_optional(
+      cmd, "resolution", value.resolution, "Image resolution.", {1, 4096}, "r");
   add_optional(
       cmd, "sampler", value.sampler, "Sampler type.", trace_sampler_names, "t");
   add_optional(cmd, "falsecolor", value.falsecolor, "False color type.",
       trace_falsecolor_names, "F");
-  add_optional(cmd, "samples", value.samples, "Number of samples.", "s");
-  add_optional(cmd, "bounces", value.bounces, "Number of bounces.", "b");
-  add_optional(cmd, "clamp", value.clamp, "Clamp value.");
+  add_optional(
+      cmd, "samples", value.samples, "Number of samples.", {1, 4096}, "s");
+  add_optional(
+      cmd, "bounces", value.bounces, "Number of bounces.", {1, 128}, "b");
+  add_optional(cmd, "clamp", value.clamp, "Clamp value.", {10, flt_max});
   add_optional(cmd, "nocaustics", value.nocaustics, "Disable caustics.");
   add_optional(cmd, "envhidden", value.envhidden, "Hide environment.");
   add_optional(cmd, "tentfilter", value.tentfilter, "Filter image.");
-  add_optional(cmd, "seed", value.seed, "Random seed.");
-  add_optional(cmd, "bvh", value.bvh, "Bvh type.");
+  add_optional(cmd, "bvh", value.bvh, "Bvh type.", trace_bvh_names);
   add_optional(cmd, "noparallel", value.noparallel, "Disable threading.");
 }
 
@@ -136,8 +138,8 @@ void add_command(cli_command& cli, const string& name, view_params& value,
     const string& usage) {
   auto& cmd = add_command(cli, name, usage);
   add_positional(cmd, "scene", value.scene, "Scene filename.");
-  add_optional(cmd, "output", value.output, "Output filename.", "o");
-  add_optional(cmd, "camera", value.camera, "Camera name.", "c");
+  add_optional(cmd, "output", value.output, "Output filename.", {}, "o");
+  add_optional(cmd, "camera", value.camera, "Camera name.", {}, "c");
   add_optional(cmd, "addsky", value.addsky, "Add sky.");
 }
 

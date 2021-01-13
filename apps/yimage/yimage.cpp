@@ -51,12 +51,14 @@ void add_command(cli_command& cli, const string& name, convert_params& value,
     const string& usage) {
   auto& cmd = add_command(cli, name, usage);
   add_positional(cmd, "image", value.image, "Input image.");
-  add_optional(cmd, "output", value.output, "Output image.", "o");
-  add_optional(cmd, "exposure", value.exposure, "Tonemap exposure.", "e");
-  add_optional(cmd, "filmic", value.filmic, "Tonemap filmic.", "f");
-  add_optional(cmd, "width", value.width, "Resize width.", "w");
-  add_optional(cmd, "height", value.height, "Resize height.", "h");
-  add_optional(cmd, "logo", value.logo, "Add logo.", "L");
+  add_optional(cmd, "output", value.output, "Output image.", {}, "o");
+  add_optional(
+      cmd, "exposure", value.exposure, "Tonemap exposure.", {-100, +100}, "e");
+  add_optional(cmd, "filmic", value.filmic, "Tonemap filmic.", {}, "f");
+  add_optional(cmd, "width", value.width, "Resize width.", {1, int_max}, "w");
+  add_optional(
+      cmd, "height", value.height, "Resize height.", {1, int_max}, "h");
+  add_optional(cmd, "logo", value.logo, "Add logo.");
 }
 
 // convert images
@@ -100,7 +102,7 @@ void add_command(cli_command& cli, const string& name, view_params& value,
     const string& usage) {
   auto& cmd = add_command(cli, name, usage);
   add_positional(cmd, "images", value.images, "Input images.");
-  add_optional(cmd, "output", value.output, "Output image.", "o");
+  add_optional(cmd, "output", value.output, "Output image.", {}, "o");
 }
 
 #ifndef YOCTO_OPENGL
@@ -149,7 +151,7 @@ void add_command(cli_command& cli, const string& name, grade_params& value,
     const string& usage) {
   auto& cmd = add_command(cli, name, usage);
   add_positional(cmd, "image", value.image, "Input image.");
-  add_optional(cmd, "output", value.output, "Output image.", "o");
+  add_optional(cmd, "output", value.output, "Output image.", {}, "o");
 }
 
 #ifndef YOCTO_OPENGL
@@ -252,7 +254,7 @@ void add_command(cli_command& cli, const string& name, diff_params& value,
   auto& cmd = add_command(cli, name, usage);
   add_positional(cmd, "image1", value.image1, "Input image 1.");
   add_positional(cmd, "image2", value.image2, "Input image 2.");
-  add_optional(cmd, "output", value.output, "Output image.", "o");
+  add_optional(cmd, "output", value.output, "Output image.", {}, "o");
   add_optional(cmd, "signal", value.signal, "Error on diff.");
   add_optional(cmd, "threshold", value.threshold, "Diff threshold.");
   add_optional(cmd, "logo", value.logo, "Add logo.");
@@ -319,7 +321,7 @@ void add_command(cli_command& cli, const string& name, setalpha_params& value,
   auto& cmd = add_command(cli, name, usage);
   add_positional(cmd, "image", value.image, "Input image.");
   add_positional(cmd, "alpha", value.alpha, "Alpha image.");
-  add_optional(cmd, "output", value.output, "Output image.", "o");
+  add_optional(cmd, "output", value.output, "Output image.", {}, "o");
   add_optional(cmd, "from-color", value.from_color, "Alpha from color.");
   add_optional(cmd, "to-color", value.to_color, "Color from alpha.");
   add_optional(cmd, "logo", value.logo, "Add logo.");

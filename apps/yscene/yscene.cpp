@@ -49,7 +49,7 @@ void add_command(cli_command& cli, const string& name, convert_params& value,
     const string& usage) {
   auto& cmd = add_command(cli, name, usage);
   add_positional(cmd, "scene", value.scene, "Input scene.");
-  add_optional(cmd, "output", value.output, "Output scene.", "o");
+  add_optional(cmd, "output", value.output, "Output scene.", {}, "o");
   add_optional(cmd, "info", value.info, "Print info.");
   add_optional(cmd, "validate", value.validate, "Validate scene.");
   add_optional(cmd, "copyright", value.copyright, "Set scene copyright.");
@@ -119,7 +119,7 @@ void add_command(cli_command& cli, const string& name, view_params& value,
     const string& usage) {
   auto& cmd = add_command(cli, name, usage);
   add_positional(cmd, "scene", value.scene, "Scene filename.");
-  add_optional(cmd, "output", value.output, "Output filename.", "o");
+  add_optional(cmd, "output", value.output, "Output filename.", {}, "o");
   add_optional(cmd, "camera", value.camera, "Camera name.");
   add_optional(cmd, "addsky", value.addsky, "Add sky.");
 }
