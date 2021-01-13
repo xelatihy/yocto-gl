@@ -142,28 +142,29 @@ string get_command(const cli_command& cli);
 // Optional booleans will support both `--<name>` and `--no-<name>` to enabled
 // and disable the flag.
 void add_optional(cli_command& cli, const string& name, int& value,
-    const string& usage, const string& alt = "", bool req = false);
+    const string& usage, const vector<int>& minmax = {}, const string& alt = "",
+    bool req = false);
 void add_optional(cli_command& cli, const string& name, float& value,
-    const string& usage, const string& alt = "", bool req = false);
+    const string& usage, const vector<float>& minmax = {},
+    const string& alt = "", bool req = false);
 void add_optional(cli_command& cli, const string& name, bool& value,
-    const string& usage, const string& alt = "", bool req = false);
+    const string& usage, const vector<string>& choices = {},
+    const string& alt = "", bool req = false);
 void add_optional(cli_command& cli, const string& name, string& value,
-    const string& usage, const string& alt = "", bool req = false);
+    const string& usage, const vector<string>& choices = {},
+    const string& alt = "", bool req = false);
 // Add a positional argument. Supports strings, numbers, and boolean flags.
 void add_positional(cli_command& cli, const string& name, int& value,
-    const string& usage, bool req = true);
+    const string& usage, const vector<int>& minmax = {}, bool req = true);
 void add_positional(cli_command& cli, const string& name, float& value,
-    const string& usage, bool req = true);
+    const string& usage, const vector<float>& minmax = {}, bool req = true);
 void add_positional(cli_command& cli, const string& name, bool& value,
-    const string& usage, bool req = true);
+    const string& usage, const vector<string>& choices = {}, bool req = true);
 void add_positional(cli_command& cli, const string& name, string& value,
-    const string& usage, bool req = true);
+    const string& usage, const vector<string>& choices = {}, bool req = true);
 // Add an optional argument with values as labels. Supports integers, enums and
 // strings.
 void add_optional(cli_command& cli, const string& name, int& value,
-    const string& usage, const vector<string>& choices, const string& alt = "",
-    bool req = false);
-void add_optional(cli_command& cli, const string& name, string& value,
     const string& usage, const vector<string>& choices, const string& alt = "",
     bool req = false);
 template <typename T, typename = std::enable_if_t<std::is_enum_v<T>>>
@@ -174,23 +175,19 @@ void add_optional(cli_command& cli, const string& name, T& value,
 // and enums.
 void add_positional(cli_command& cli, const string& name, int& value,
     const string& usage, const vector<string>& choices, bool req = true);
-void add_positional(cli_command& cli, const string& name, string& value,
-    const string& usage, const vector<string>& choices, bool req = true);
 template <typename T, typename = std::enable_if_t<std::is_enum_v<T>>>
 inline void add_positional(cli_command& cli, const string& name, T& value,
     const string& usage, const vector<string>& choices, bool req = true);
 // Add a positional argument that consumes all arguments left.
 // Supports strings and enums.
 void add_positional(cli_command& cli, const string& name, vector<int>& value,
-    const string& usage, bool req = true);
+    const string& usage, const vector<int>& minmax, bool req = true);
 void add_positional(cli_command& cli, const string& name, vector<float>& value,
-    const string& usage, bool req = true);
-void add_positional(cli_command& cli, const string& name, vector<string>& value,
-    const string& usage, bool req = true);
+    const string& usage, const vector<float>& minmax, bool req = true);
 void add_positional(cli_command& cli, const string& name, vector<int>& value,
-    const string& usage, const vector<string>& choices, bool req = true);
+    const string& usage, const vector<string>& choices = {}, bool req = true);
 void add_positional(cli_command& cli, const string& name, vector<string>& value,
-    const string& usage, const vector<string>& choices, bool req = true);
+    const string& usage, const vector<string>& choices = {}, bool req = true);
 
 // Add a subcommand
 cli_command& add_command(
@@ -508,9 +505,10 @@ struct cli_option {
   bool                              req        = false;
   int                               nargs      = 0;
   string                            usage      = "";
+  vector<cli_value>                 minmax     = {};
+  vector<string>                    choices    = {};
   vector<cli_value>                 value      = {};
   vector<cli_value>                 def        = {};
-  vector<string>                    choices    = {};
   bool                              set        = false;
   function<bool(const cli_option&)> set_value  = {};
 };

@@ -1116,10 +1116,10 @@ int main(int argc, const char* argv[]) {
 
   // parse command line
   auto cli = make_cli("ycityproc", "Process scene");
-  add_optional(cli, "info", info, "print scene info", "i");
-  add_optional(cli, "copyright", copyright, "copyright string", "c");
+  add_optional(cli, "info", info, "print scene info", {}, "i");
+  add_optional(cli, "copyright", copyright, "copyright string", {}, "c");
   add_optional(cli, "validate", validate, "Validate scene");
-  add_optional(cli, "output", output, "output scene", "o");
+  add_optional(cli, "output", output, "output scene", {}, "o");
   add_positional(cli, "dirname", path, "input directory");
   parse_cli(cli, argc, argv);
 

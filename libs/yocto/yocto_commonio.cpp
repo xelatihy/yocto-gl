@@ -520,7 +520,8 @@ inline bool get_value(const cli_option& option, vector<T>& values) {
 
 template <typename T>
 inline void add_optional_impl(cli_command& cli, const string& name, T& value,
-    const string& usage, const string& alt, bool req) {
+    const string& usage, const vector<T>& minmax, const vector<string>& choices,
+    const string& alt, bool req) {
   static_assert(std::is_same_v<T, string> || std::is_same_v<T, bool> ||
                     std::is_integral_v<T> || std::is_floating_point_v<T> ||
                     std::is_enum_v<T>,
@@ -531,11 +532,12 @@ inline void add_optional_impl(cli_command& cli, const string& name, T& value,
   option.positional = false;
   option.type       = get_cli_type<T>();
   option.req        = req;
-  option.nargs      = !std::is_same_v<T, bool> ? 1 : 0;
+  option.nargs      = std::is_same_v<T, bool> ? 0 : 1;
   option.usage      = usage;
+  option.minmax     = make_cli_values(minmax);
+  option.choices    = choices;
   option.value      = make_cli_values(value);
   option.def        = make_cli_values(value);
-  option.choices    = {};
   option.set_value  = [&value](const cli_option& option) -> bool {
     return get_value(option, value);
   };
@@ -543,55 +545,11 @@ inline void add_optional_impl(cli_command& cli, const string& name, T& value,
 
 template <typename T>
 inline void add_positional_impl(cli_command& cli, const string& name, T& value,
-    const string& usage, bool req) {
-  static_assert(std::is_same_v<T, string> || std::is_same_v<T, bool> ||
-                    std::is_integral_v<T> || std::is_floating_point_v<T> ||
-                    std::is_enum_v<T>,
-      "unsupported type");
-  auto& option      = cli.options.emplace_back();
-  option.name       = name;
-  option.alt        = "";
-  option.positional = true;
-  option.type       = get_cli_type<T>();
-  option.req        = req;
-  option.nargs      = 1;
-  option.usage      = usage;
-  option.value      = make_cli_values(value);
-  option.def        = make_cli_values(value);
-  option.choices    = {};
-  option.set_value  = [&value](const cli_option& option) -> bool {
-    return get_value(option, value);
-  };
-}
-
-template <typename T>
-inline void add_optional_impl(cli_command& cli, const string& name, T& value,
-    const string& usage, const vector<string>& choices, const string& alt,
+    const string& usage, const vector<T>& minmax, const vector<string>& choices,
     bool req) {
-  static_assert(
-      std::is_same_v<T, string> || std::is_integral_v<T> || std::is_enum_v<T>,
-      "unsupported type");
-  auto& option      = cli.options.emplace_back();
-  option.name       = name;
-  option.alt        = alt;
-  option.positional = false;
-  option.type       = get_cli_type<T>();
-  option.req        = req;
-  option.nargs      = 1;
-  option.usage      = usage;
-  option.value      = make_cli_values(value);
-  option.def        = make_cli_values(value);
-  option.choices    = choices;
-  option.set_value  = [&value](const cli_option& option) -> bool {
-    return get_value(option, value);
-  };
-}
-
-template <typename T>
-inline void add_positional_impl(cli_command& cli, const string& name, T& value,
-    const string& usage, const vector<string>& choices, bool req) {
-  static_assert(
-      std::is_same_v<T, string> || std::is_integral_v<T> || std::is_enum_v<T>,
+  static_assert(std::is_same_v<T, string> || std::is_same_v<T, bool> ||
+                    std::is_integral_v<T> || std::is_floating_point_v<T> ||
+                    std::is_enum_v<T>,
       "unsupported type");
   auto& option      = cli.options.emplace_back();
   option.name       = name;
@@ -601,17 +559,19 @@ inline void add_positional_impl(cli_command& cli, const string& name, T& value,
   option.req        = req;
   option.nargs      = 1;
   option.usage      = usage;
+  option.minmax     = make_cli_values(value);
+  option.choices    = choices;
   option.value      = make_cli_values(value);
   option.def        = make_cli_values(value);
-  option.choices    = choices;
   option.set_value  = [&value](const cli_option& option) -> bool {
     return get_value(option, value);
   };
 }
 
 template <typename T>
-inline void add_positional_impl(cli_command& cli, const string& name,
-    vector<T>& value, const string& usage, bool req) {
+inline void add_positionalv_impl(cli_command& cli, const string& name,
+    vector<T>& value, const string& usage, const vector<T>& minmax,
+    const vector<string>& choices, bool req) {
   static_assert(std::is_same_v<T, string> || std::is_same_v<T, bool> ||
                     std::is_integral_v<T> || std::is_floating_point_v<T> ||
                     std::is_enum_v<T>,
@@ -624,32 +584,10 @@ inline void add_positional_impl(cli_command& cli, const string& name,
   option.req        = req;
   option.nargs      = -1;
   option.usage      = usage;
-  option.value      = make_cli_values(value);
-  option.def        = make_cli_values(value);
-  option.choices    = {};
-  option.set_value  = [&value](const cli_option& option) -> bool {
-    return get_value(option, value);
-  };
-}
-
-template <typename T>
-inline void add_positional_impl(cli_command& cli, const string& name,
-    vector<T>& value, const string& usage, const vector<string>& choices,
-    bool req) {
-  static_assert(
-      std::is_same_v<T, string> || std::is_integral_v<T> || std::is_enum_v<T>,
-      "unsupported type");
-  auto& option      = cli.options.emplace_back();
-  option.name       = name;
-  option.alt        = "";
-  option.positional = true;
-  option.type       = get_cli_type<T>();
-  option.req        = req;
-  option.nargs      = -1;
-  option.usage      = usage;
-  option.value      = make_cli_values(value);
-  option.def        = make_cli_values(value);
+  option.minmax     = make_cli_values(value);
   option.choices    = choices;
+  option.value      = make_cli_values(value);
+  option.def        = make_cli_values(value);
   option.set_value  = [&value](const cli_option& option) -> bool {
     return get_value(option, value);
   };
@@ -660,81 +598,69 @@ inline void add_positional_impl(cli_command& cli, const string& name,
 // Optional booleans will support both `--<name>` and `--no-<name>` to enabled
 // and disable the flag.
 void add_optional(cli_command& cli, const string& name, int& value,
-    const string& usage, const string& alt, bool req) {
-  return add_optional_impl(cli, name, value, usage, alt, req);
+    const string& usage, const vector<int>& minmax, const string& alt,
+    bool req) {
+  return add_optional_impl(
+      cli, name, value, usage, {minmax[0], minmax[1]}, {}, alt, req);
 }
 void add_optional(cli_command& cli, const string& name, float& value,
-    const string& usage, const string& alt, bool req) {
-  return add_optional_impl(cli, name, value, usage, alt, req);
+    const string& usage, const vector<float>& minmax, const string& alt,
+    bool req) {
+  return add_optional_impl(cli, name, value, usage, minmax, {}, alt, req);
 }
 void add_optional(cli_command& cli, const string& name, bool& value,
-    const string& usage, const string& alt, bool req) {
-  return add_optional_impl(cli, name, value, usage, alt, req);
+    const string& usage, const vector<string>& choices, const string& alt,
+    bool req) {
+  return add_optional_impl(cli, name, value, usage, {}, choices, alt, req);
 }
 void add_optional(cli_command& cli, const string& name, string& value,
-    const string& usage, const string& alt, bool req) {
-  return add_optional_impl(cli, name, value, usage, alt, req);
+    const string& usage, const vector<string>& choices, const string& alt,
+    bool req) {
+  return add_optional_impl(cli, name, value, usage, {}, choices, alt, req);
 }
-// Add a positional argument. Supports strings, numbers, and boolean flags.
-void add_positional(cli_command& cli, const string& name, int& value,
-    const string& usage, bool req) {
-  return add_positional_impl(cli, name, value, usage, req);
-}
-void add_positional(cli_command& cli, const string& name, float& value,
-    const string& usage, bool req) {
-  return add_positional_impl(cli, name, value, usage, req);
-}
-void add_positional(cli_command& cli, const string& name, bool& value,
-    const string& usage, bool req) {
-  return add_positional_impl(cli, name, value, usage, req);
-}
-void add_positional(cli_command& cli, const string& name, string& value,
-    const string& usage, bool req) {
-  return add_positional_impl(cli, name, value, usage, req);
-}
-// Add an optional argument with values as labels. Supports integers, enums and
-// strings.
 void add_optional(cli_command& cli, const string& name, int& value,
     const string& usage, const vector<string>& choices, const string& alt,
     bool req) {
-  return add_optional_impl(cli, name, value, usage, choices, alt, req);
+  return add_optional_impl(cli, name, value, usage, {}, choices, alt, req);
 }
-void add_optional(cli_command& cli, const string& name, string& value,
-    const string& usage, const vector<string>& choices, const string& alt,
-    bool req) {
-  return add_optional_impl(cli, name, value, usage, choices, alt, req);
-}
-// Add a positional argument with values as labels. Supports string, integers
-// and enums.
+// Add a positional argument. Supports strings, numbers, and boolean flags.
 void add_positional(cli_command& cli, const string& name, int& value,
+    const string& usage, const vector<int>& minmax, bool req) {
+  return add_positional_impl(cli, name, value, usage, minmax, {}, req);
+}
+void add_positional(cli_command& cli, const string& name, float& value,
+    const string& usage, const vector<float>& minmax, bool req) {
+  return add_positional_impl(cli, name, value, usage, minmax, {}, req);
+}
+void add_positional(cli_command& cli, const string& name, bool& value,
     const string& usage, const vector<string>& choices, bool req) {
-  return add_positional_impl(cli, name, value, usage, choices, req);
+  return add_positional_impl(cli, name, value, usage, {}, choices, req);
 }
 void add_positional(cli_command& cli, const string& name, string& value,
     const string& usage, const vector<string>& choices, bool req) {
-  return add_positional_impl(cli, name, value, usage, choices, req);
+  return add_positional_impl(cli, name, value, usage, {}, choices, req);
+}
+void add_positional(cli_command& cli, const string& name, int& value,
+    const string& usage, const vector<string>& choices, bool req) {
+  return add_positional_impl(cli, name, value, usage, {}, choices, req);
 }
 // Add a positional argument that consumes all arguments left.
 // Supports strings and enums.
 void add_positional(cli_command& cli, const string& name, vector<int>& value,
-    const string& usage, bool req) {
-  return add_positional_impl(cli, name, value, usage, req);
+    const string& usage, const vector<int>& minmax, bool req) {
+  return add_positionalv_impl(cli, name, value, usage, minmax, {}, req);
 }
 void add_positional(cli_command& cli, const string& name, vector<float>& value,
-    const string& usage, bool req) {
-  return add_positional_impl(cli, name, value, usage, req);
-}
-void add_positional(cli_command& cli, const string& name, vector<string>& value,
-    const string& usage, bool req) {
-  return add_positional_impl(cli, name, value, usage, req);
+    const string& usage, const vector<float>& minmax, bool req) {
+  return add_positionalv_impl(cli, name, value, usage, minmax, {}, req);
 }
 void add_positional(cli_command& cli, const string& name, vector<int>& value,
     const string& usage, const vector<string>& choices, bool req) {
-  return add_positional_impl(cli, name, value, usage, choices, req);
+  return add_positionalv_impl(cli, name, value, usage, {}, choices, req);
 }
 void add_positional(cli_command& cli, const string& name, vector<string>& value,
     const string& usage, const vector<string>& choices, bool req) {
-  return add_positional_impl(cli, name, value, usage, choices, req);
+  return add_positionalv_impl(cli, name, value, usage, {}, choices, req);
 }
 
 inline vector<string> split_cli_names(const string& name_) {

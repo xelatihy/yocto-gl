@@ -54,17 +54,15 @@ void add_command(cli_command& cli, const string& name, convert_params& value,
     const string& usage) {
   auto& cmd = add_command(cli, name, usage);
   add_positional(cmd, "shape", value.shape, "Input shape.");
-  add_optional(cmd, "output", value.output, "Output shape.", "o");
+  add_optional(cmd, "output", value.output, "Output shape.", {}, "o");
   add_optional(cmd, "smooth", value.smooth, "Smooth normals.");
   add_optional(cmd, "facet", value.facet, "Facet normals.");
   add_optional(
       cmd, "aspositions", value.aspositions, "Remove all but positions.");
   add_optional(cmd, "astriangles", value.astriangles, "Convert to triangles.");
   add_optional(cmd, "translatex", value.translate.x, "Translate shape.");
-  add_optional(
-      cmd, "translatey", value.translate.y, "translatey", "Translate shape.");
-  add_optional(
-      cmd, "translatez", value.translate.z, "translatez", "Translate shape.");
+  add_optional(cmd, "translatey", value.translate.y, "Translate shape.");
+  add_optional(cmd, "translatez", value.translate.z, "Translate shape.");
   add_optional(cmd, "scalex", value.scale.x, "Scale shape.");
   add_optional(cmd, "scaley", value.scale.y, "Scale shape.");
   add_optional(cmd, "scalez", value.scale.z, "Scale shape.");
@@ -180,16 +178,14 @@ void add_command(cli_command& cli, const string& name, fvconvert_params& value,
     const string& usage) {
   auto& cmd = add_command(cli, name, usage);
   add_positional(cmd, "shape", value.shape, "Input shape.");
-  add_optional(cmd, "output", value.output, "Output shape.", "o");
+  add_optional(cmd, "output", value.output, "Output shape.", {}, "o");
   add_optional(cmd, "smooth", value.smooth, "Smooth normals.");
   add_optional(cmd, "facet", value.facet, "Facet normals.");
   add_optional(
       cmd, "aspositions", value.aspositions, "Remove all but positions.");
   add_optional(cmd, "translatex", value.translate.x, "Translate shape.");
-  add_optional(
-      cmd, "translatey", value.translate.y, "translatey", "Translate shape.");
-  add_optional(
-      cmd, "translatez", value.translate.z, "translatez", "Translate shape.");
+  add_optional(cmd, "translatey", value.translate.y, "Translate shape.");
+  add_optional(cmd, "translatez", value.translate.z, "Translate shape.");
   add_optional(cmd, "scalex", value.scale.x, "Scale shape.");
   add_optional(cmd, "scaley", value.scale.y, "Scale shape.");
   add_optional(cmd, "scalez", value.scale.z, "Scale shape.");
@@ -291,7 +287,7 @@ void add_command(cli_command& cli, const string& name, view_params& value,
     const string& usage) {
   auto& cmd = add_command(cli, name, usage);
   add_positional(cmd, "shape", value.shape, "Input shape.");
-  add_optional(cmd, "output", value.output, "Output shape.", "o");
+  add_optional(cmd, "output", value.output, "Output shape.", {}, "o");
   add_optional(cmd, "addsky", value.addsky, "Add sky.");
 }
 
@@ -345,15 +341,13 @@ void add_command(cli_command& cli, const string& name,
     heightfield_params& value, const string& usage) {
   auto& cmd = add_command(cli, name, usage);
   add_positional(cmd, "image", value.image, "Input image.");
-  add_optional(cmd, "output", value.output, "Output shape.", "o");
+  add_optional(cmd, "output", value.output, "Output shape.", {}, "o");
   add_optional(cmd, "smooth", value.smooth, "Smoooth normals.");
   add_optional(cmd, "height", value.height, "Shape height.");
   add_optional(cmd, "info", value.info, "Print info.");
   add_optional(cmd, "translatex", value.translate.x, "Translate shape.");
-  add_optional(
-      cmd, "translatey", value.translate.y, "translatey", "Translate shape.");
-  add_optional(
-      cmd, "translatez", value.translate.z, "translatez", "Translate shape.");
+  add_optional(cmd, "translatey", value.translate.y, "Translate shape.");
+  add_optional(cmd, "translatez", value.translate.z, "Translate shape.");
   add_optional(cmd, "scalex", value.scale.x, "Scale shape.");
   add_optional(cmd, "scaley", value.scale.y, "Scale shape.");
   add_optional(cmd, "scalez", value.scale.z, "Scale shape.");
