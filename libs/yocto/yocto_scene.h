@@ -119,7 +119,7 @@ enum struct material_type {
 // Enum labels
 inline const auto material_type_names = std::vector<std::string>{"matte",
     "plastic", "metal", "thinglass", "glass", "leaves", "subsurface", "volume",
-    "metallic", "old"};
+    "metallic"};
 
 // Material for surfaces, lines and triangles.
 // For surfaces, uses a microfacet model with thin sheet transmission.

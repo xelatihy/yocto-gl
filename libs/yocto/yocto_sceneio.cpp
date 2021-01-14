@@ -890,12 +890,12 @@ inline void from_json(const njson& j, frame3f& value) {
 inline void to_json(njson& j, material_type value) {
   j = material_type_names.at((int)value);
 }
-inline void to_json(njson& j, material_type& value) {
+inline void from_json(const njson& j, material_type& value) {
   auto values = j.get<string>();
   auto pos    = std::find(
       material_type_names.begin(), material_type_names.end(), values);
-  if (pos == material_type_names.end())
-    value = (material_type)(pos - material_type_names.begin());
+  if (pos == material_type_names.end()) throw std::invalid_argument{"unknown value"};
+  value = (material_type)(pos - material_type_names.begin());
 }
 
 }  // namespace yocto

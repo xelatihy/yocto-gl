@@ -125,6 +125,14 @@ namespace yocto {
 
 // Material Bsdf parameters
 struct trace_bsdf {
+  // material information
+  material_type type      = material_type::metallic;
+  vec3f         emission  = {0, 0, 0};
+  vec3f         color     = {0, 0, 0};
+  float         opacity   = 1;
+  float         roughness = 0;
+  float         ior       = 1;
+
   // brdf lobes
   vec3f diffuse      = {0, 0, 0};
   vec3f specular     = {0, 0, 0};
@@ -133,8 +141,6 @@ struct trace_bsdf {
   vec3f transmission = {0, 0, 0};
   vec3f translucency = {0, 0, 0};
   vec3f refraction   = {0, 0, 0};
-  float roughness    = 0;
-  float ior          = 1;
   vec3f meta         = {0, 0, 0};
   vec3f metak        = {0, 0, 0};
   // weights

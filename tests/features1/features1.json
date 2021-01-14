@@ -97,16 +97,17 @@
   },
   "materials": {
     "floor": {
+      "type": "matte",
       "color": [0.7, 0.7, 0.7],
       "color_tex": "floor",
       "specular": 0
     },
     "bunny-uvgrid-coated": {
+      "type": "plastic",
       "color": [1, 1, 1],
-      "specular": 1,
       "roughness": 0.2,
-      "coat": 1,
-      "color_tex": "uvgrid"
+      "color_tex": "uvgrid",
+      "specular": 1
     },
     "bunny-volume-jade": {
       "color": [0.5, 0.5, 0.5],

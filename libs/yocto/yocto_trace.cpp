@@ -81,8 +81,13 @@ trace_bsdf eval_bsdf(const scene_scene& scene, const scene_instance& instance,
     int element, const vec2f& uv, const vec3f& normal, const vec3f& outgoing) {
   auto& material = scene.materials[instance.material];
   auto  texcoord = eval_texcoord(scene, instance, element, uv);
-  auto  color = material.color * xyz(eval_color(scene, instance, element, uv)) *
+  auto  emission =
+      material.emission *
+      xyz(eval_texture(scene, material.emission_tex, texcoord, false));
+  auto color = material.color * xyz(eval_color(scene, instance, element, uv)) *
                xyz(eval_texture(scene, material.color_tex, texcoord, false));
+  auto opacity = material.opacity * eval_color(scene, instance, element, uv).w *
+                 eval_texture(scene, material.color_tex, texcoord, false).w;
   auto specular = material.specular *
                   eval_texture(scene, material.specular_tex, texcoord, true).x;
   auto metallic = material.metallic *
@@ -101,8 +106,14 @@ trace_bsdf eval_bsdf(const scene_scene& scene, const scene_instance& instance,
       eval_texture(scene, material.translucency_tex, texcoord, true).x;
   auto thin = material.thin || material.transmission == 0;
 
+  // material point
+  auto bsdf     = trace_bsdf{};
+  bsdf.type     = material.type;
+  bsdf.emission = emission;
+  bsdf.color    = color;
+  bsdf.opacity  = opacity;
+
   // factors
-  auto bsdf   = trace_bsdf{};
   auto weight = vec3f{1, 1, 1};
   bsdf.coat   = weight * coat;
   weight *= 1 - bsdf.coat * fresnel_dielectric(coat_ior, outgoing, normal);
@@ -219,6 +230,15 @@ static vec3f eval_bsdfcos(const trace_bsdf& bsdf, const vec3f& normal,
     const vec3f& outgoing, const vec3f& incoming) {
   if (bsdf.roughness == 0) return zero3f;
 
+  if (bsdf.type == material_type::matte) {
+    return bsdf.color * eval_diffuse_reflection(normal, outgoing, incoming);
+  } else if (bsdf.type == material_type::plastic) {
+    return bsdf.color * (1 - fresnel_dielectric(bsdf.ior, normal, outgoing)) *
+               eval_diffuse_reflection(normal, outgoing, incoming) +
+           eval_microfacet_reflection(
+               bsdf.ior, bsdf.roughness, normal, outgoing, incoming);
+  }
+
   // accumulate the lobes
   auto brdfcos = zero3f;
   if (bsdf.diffuse != zero3f) {
@@ -288,6 +308,15 @@ static vec3f eval_delta(const trace_bsdf& bsdf, const vec3f& normal,
 static vec3f sample_bsdfcos(const trace_bsdf& bsdf, const vec3f& normal,
     const vec3f& outgoing, float rnl, const vec2f& rn) {
   if (bsdf.roughness == 0) return zero3f;
+
+  if (bsdf.type == material_type::matte) {
+    return sample_diffuse_reflection(normal, outgoing, rn);
+  } else if (bsdf.type == material_type::plastic) {
+    auto weight = fresnel_dielectric(bsdf.ior, normal, outgoing);
+    return (1 - weight) * sample_diffuse_reflection(normal, outgoing, rn) +
+           weight * sample_microfacet_reflection(
+                        bsdf.ior, bsdf.roughness, normal, outgoing, rn);
+  }
 
   auto cdf = 0.0f;
 
@@ -389,6 +418,16 @@ static vec3f sample_delta(const trace_bsdf& bsdf, const vec3f& normal,
 static float sample_bsdfcos_pdf(const trace_bsdf& bsdf, const vec3f& normal,
     const vec3f& outgoing, const vec3f& incoming) {
   if (bsdf.roughness == 0) return 0;
+
+  if (bsdf.type == material_type::matte) {
+    return sample_diffuse_reflection_pdf(normal, outgoing, incoming);
+  } else if (bsdf.type == material_type::plastic) {
+    auto weight = fresnel_dielectric(bsdf.ior, normal, outgoing);
+    return (1 - weight) *
+               sample_diffuse_reflection_pdf(normal, outgoing, incoming) +
+           weight * sample_microfacet_reflection_pdf(
+                        bsdf.ior, bsdf.roughness, normal, outgoing, incoming);
+  }
 
   auto pdf = 0.0f;
 
