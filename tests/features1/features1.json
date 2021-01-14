@@ -110,6 +110,7 @@
       "specular": 1
     },
     "bunny-volume-jade": {
+      "type": "glass",
       "color": [0.5, 0.5, 0.5],
       "roughness": 0,
       "specular": 1,
@@ -132,15 +133,18 @@
       "thin": false
     },
     "sphere-plastic-rough-bumped": {
+      "type": "plastic",
       "color": [0.5, 0.7, 0.5],
       "specular": 1,
       "roughness": 0.2,
       "normal_tex": "bumps-normal"
     },
     "arealight1": {
+      "type": "matte",
       "emission": [20, 20, 20]
     },
     "arealight2": {
+      "type": "matte",
       "emission": [20, 20, 20]
     }
   }
