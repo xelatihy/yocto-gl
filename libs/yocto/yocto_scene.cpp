@@ -1081,7 +1081,7 @@ vec3f eval_shading_normal(const scene_scene& scene,
     const scene_instance& instance, int element, const vec2f& uv,
     const vec3f& outgoing) {
   auto& shape    = scene.shapes[instance.shape];
-  auto& material = scene.materials[instance.shape];
+  auto& material = scene.materials[instance.material];
   if (!shape.triangles.empty() || !shape.quads.empty()) {
     auto normal = eval_normal(scene, instance, element, uv);
     if (material.normal_tex != invalid_handle) {
