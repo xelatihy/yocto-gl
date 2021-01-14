@@ -240,6 +240,9 @@ static vec3f eval_bsdfcos(const trace_bsdf& bsdf, const vec3f& normal,
   } else if (bsdf.type == material_type::metal) {
     return eval_microfacet_reflection(reflectivity_to_eta(bsdf.color),
         vec3f{0, 0, 0}, bsdf.roughness, normal, outgoing, incoming);
+  } else if (bsdf.type == material_type::glass) {
+    return eval_microfacet_refraction(
+        bsdf.ior, bsdf.roughness, normal, outgoing, incoming);
   }
 
   // accumulate the lobes
@@ -280,6 +283,13 @@ static vec3f eval_bsdfcos(const trace_bsdf& bsdf, const vec3f& normal,
 static vec3f eval_delta(const trace_bsdf& bsdf, const vec3f& normal,
     const vec3f& outgoing, const vec3f& incoming) {
   if (bsdf.roughness != 0) return zero3f;
+
+  if (bsdf.type == material_type::metal) {
+    return eval_delta_reflection(reflectivity_to_eta(bsdf.color),
+        vec3f{0, 0, 0}, normal, outgoing, incoming);
+  } else if (bsdf.type == material_type::glass) {
+    return eval_delta_refraction(bsdf.ior, normal, outgoing, incoming);
+  }
 
   auto brdfcos = zero3f;
 
@@ -322,6 +332,9 @@ static vec3f sample_bsdfcos(const trace_bsdf& bsdf, const vec3f& normal,
   } else if (bsdf.type == material_type::metal) {
     return sample_microfacet_reflection(reflectivity_to_eta(bsdf.color),
         vec3f{0, 0, 0}, bsdf.roughness, normal, outgoing, rn);
+  } else if (bsdf.type == material_type::glass) {
+    return sample_microfacet_refraction(
+        bsdf.ior, bsdf.roughness, normal, outgoing, rnl, rn);
   }
 
   auto cdf = 0.0f;
@@ -377,6 +390,13 @@ static vec3f sample_bsdfcos(const trace_bsdf& bsdf, const vec3f& normal,
 static vec3f sample_delta(const trace_bsdf& bsdf, const vec3f& normal,
     const vec3f& outgoing, float rnl) {
   if (bsdf.roughness != 0) return zero3f;
+
+  if (bsdf.type == material_type::metal) {
+    return sample_delta_reflection(
+        reflectivity_to_eta(bsdf.color), vec3f{0, 0, 0}, normal, outgoing);
+  } else if (bsdf.type == material_type::glass) {
+    return sample_delta_refraction(bsdf.ior, normal, outgoing, rnl);
+  }
 
   // keep a weight sum to pick a lobe
   auto cdf = 0.0f;
@@ -436,6 +456,9 @@ static float sample_bsdfcos_pdf(const trace_bsdf& bsdf, const vec3f& normal,
   } else if (bsdf.type == material_type::metal) {
     return sample_microfacet_reflection_pdf(reflectivity_to_eta(bsdf.color),
         vec3f{0, 0, 0}, bsdf.roughness, normal, outgoing, incoming);
+  } else if (bsdf.type == material_type::glass) {
+    return sample_microfacet_refraction_pdf(
+        bsdf.ior, bsdf.roughness, normal, outgoing, incoming);
   }
 
   auto pdf = 0.0f;
@@ -484,6 +507,13 @@ static float sample_bsdfcos_pdf(const trace_bsdf& bsdf, const vec3f& normal,
 static float sample_delta_pdf(const trace_bsdf& bsdf, const vec3f& normal,
     const vec3f& outgoing, const vec3f& incoming) {
   if (bsdf.roughness != 0) return 0;
+
+  if (bsdf.type == material_type::metal) {
+    return sample_delta_reflection_pdf(reflectivity_to_eta(bsdf.color),
+        vec3f{0, 0, 0}, normal, outgoing, incoming);
+  } else if (bsdf.type == material_type::glass) {
+    return sample_delta_refraction_pdf(bsdf.ior, normal, outgoing, incoming);
+  }
 
   auto pdf = 0.0f;
   if (bsdf.specular_pdf != 0 && bsdf.refraction_pdf == 0) {
