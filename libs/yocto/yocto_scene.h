@@ -109,27 +109,40 @@ struct scene_texture {
   image<vec4b> ldr = {};
 };
 
+// Material type
+enum struct material_type {
+  // clang-format off
+  matte, plastic, metal, thinglass, glass, leaves, subsurface, volume, metallic
+  // clang-format on
+};
+
+// Enum labels
+inline const auto material_type_names = std::vector<std::string>{"matte",
+    "plastic", "metal", "thinglass", "glass", "leaves", "subsurface", "volume",
+    "metallic", "old"};
+
 // Material for surfaces, lines and triangles.
 // For surfaces, uses a microfacet model with thin sheet transmission.
 // The model is based on OBJ, but contains glTF compatibility.
 // For the documentation on the values, please see the OBJ format.
 struct scene_material {
   // material
-  vec3f emission     = {0, 0, 0};
-  vec3f color        = {0, 0, 0};
-  float specular     = 0;
-  float roughness    = 0;
-  float metallic     = 0;
-  float ior          = 1.5;
-  vec3f spectint     = {1, 1, 1};
-  float coat         = 0;
-  float transmission = 0;
-  float translucency = 0;
-  vec3f scattering   = {0, 0, 0};
-  float scanisotropy = 0;
-  float trdepth      = 0.01;
-  float opacity      = 1;
-  bool  thin         = true;
+  material_type type         = material_type::metallic;
+  vec3f         emission     = {0, 0, 0};
+  vec3f         color        = {0, 0, 0};
+  float         specular     = 0;
+  float         roughness    = 0;
+  float         metallic     = 0;
+  float         ior          = 1.5;
+  vec3f         spectint     = {1, 1, 1};
+  float         coat         = 0;
+  float         transmission = 0;
+  float         translucency = 0;
+  vec3f         scattering   = {0, 0, 0};
+  float         scanisotropy = 0;
+  float         trdepth      = 0.01;
+  float         opacity      = 1;
+  bool          thin         = true;
 
   // textures
   texture_handle emission_tex     = invalid_handle;
@@ -412,22 +425,23 @@ vec3f eval_environment(const scene_scene& scene, const vec3f& direction);
 
 // Material sample
 struct scene_material_sample {
-  vec3f emission     = {0, 0, 0};
-  vec3f color        = {0, 0, 0};
-  float specular     = 0;
-  float roughness    = 0;
-  float metallic     = 0;
-  float ior          = 1.5;
-  vec3f spectint     = {1, 1, 1};
-  float coat         = 0;
-  float transmission = 0;
-  float translucency = 0;
-  vec3f scattering   = {0, 0, 0};
-  float scanisotropy = 0;
-  float trdepth      = 0.01;
-  float opacity      = 1;
-  bool  thin         = true;
-  vec3f normalmap    = {0, 0, 1};
+  material_type type         = material_type::matte;
+  vec3f         emission     = {0, 0, 0};
+  vec3f         color        = {0, 0, 0};
+  float         specular     = 0;
+  float         roughness    = 0;
+  float         metallic     = 0;
+  float         ior          = 1.5;
+  vec3f         spectint     = {1, 1, 1};
+  float         coat         = 0;
+  float         transmission = 0;
+  float         translucency = 0;
+  vec3f         scattering   = {0, 0, 0};
+  float         scanisotropy = 0;
+  float         trdepth      = 0.01;
+  float         opacity      = 1;
+  bool          thin         = true;
+  vec3f         normalmap    = {0, 0, 1};
 };
 
 // Evaluates material and textures

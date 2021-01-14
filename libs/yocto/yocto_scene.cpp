@@ -1146,6 +1146,7 @@ vec3f eval_environment(const scene_scene& scene, const vec3f& direction) {
 scene_material_sample eval_material(const scene_scene& scene,
     const scene_material& material, const vec2f& texcoord) {
   auto mat = scene_material_sample{};
+  mat.type = material.type;
   mat.emission =
       material.emission *
       xyz(eval_texture(scene, material.emission_tex, texcoord, false));

@@ -887,6 +887,17 @@ inline void from_json(const njson& j, frame3f& value) {
   nlohmann::from_json(j, (array<float, 12>&)value);
 }
 
+inline void to_json(njson& j, material_type value) {
+  j = material_type_names.at((int)value);
+}
+inline void to_json(njson& j, material_type& value) {
+  auto values = j.get<string>();
+  auto pos    = std::find(
+      material_type_names.begin(), material_type_names.end(), values);
+  if (pos == material_type_names.end())
+    value = (material_type)(pos - material_type_names.begin());
+}
+
 }  // namespace yocto
 
 // -----------------------------------------------------------------------------
@@ -1146,8 +1157,12 @@ static bool load_json_scene(const string& filename, scene_scene& scene,
           handle = material_it->second.first;
         }
         auto& material = scene.materials[handle];
+        material.type  = material_type::metallic;
         for (auto& [key, value] : iterate_object(element)) {
-          if (key == "emission") {
+          if (key == "type") {
+            if (!get_value(value, material.type))
+              return parse_error(gname, name, key);
+          } else if (key == "emission") {
             if (!get_value(value, material.emission))
               return parse_error(gname, name, key);
           } else if (key == "color") {
