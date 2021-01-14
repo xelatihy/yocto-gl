@@ -237,6 +237,9 @@ static vec3f eval_bsdfcos(const trace_bsdf& bsdf, const vec3f& normal,
                eval_diffuse_reflection(normal, outgoing, incoming) +
            eval_microfacet_reflection(
                bsdf.ior, bsdf.roughness, normal, outgoing, incoming);
+  } else if (bsdf.type == material_type::metal) {
+    return eval_microfacet_reflection(reflectivity_to_eta(bsdf.color),
+        vec3f{0, 0, 0}, bsdf.roughness, normal, outgoing, incoming);
   }
 
   // accumulate the lobes
@@ -316,6 +319,9 @@ static vec3f sample_bsdfcos(const trace_bsdf& bsdf, const vec3f& normal,
     return (1 - weight) * sample_diffuse_reflection(normal, outgoing, rn) +
            weight * sample_microfacet_reflection(
                         bsdf.ior, bsdf.roughness, normal, outgoing, rn);
+  } else if (bsdf.type == material_type::metal) {
+    return sample_microfacet_reflection(reflectivity_to_eta(bsdf.color),
+        vec3f{0, 0, 0}, bsdf.roughness, normal, outgoing, rn);
   }
 
   auto cdf = 0.0f;
@@ -427,6 +433,9 @@ static float sample_bsdfcos_pdf(const trace_bsdf& bsdf, const vec3f& normal,
                sample_diffuse_reflection_pdf(normal, outgoing, incoming) +
            weight * sample_microfacet_reflection_pdf(
                         bsdf.ior, bsdf.roughness, normal, outgoing, incoming);
+  } else if (bsdf.type == material_type::metal) {
+    return sample_microfacet_reflection_pdf(reflectivity_to_eta(bsdf.color),
+        vec3f{0, 0, 0}, bsdf.roughness, normal, outgoing, incoming);
   }
 
   auto pdf = 0.0f;

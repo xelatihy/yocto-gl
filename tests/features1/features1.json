@@ -118,6 +118,7 @@
       "thin": false
     },
     "bunny-metal-rough": {
+      "type": "metal",
       "color": [0.66, 0.45, 0.34],
       "metallic": 1,
       "roughness": 0.2
