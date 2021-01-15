@@ -2233,57 +2233,19 @@ static bool load_gltf_scene(const string& filename, scene_scene& scene,
   }
 
   // convert color textures
-  auto ctexture_map = unordered_map<string, texture_handle>{
+  auto texture_map = unordered_map<string, texture_handle>{
       {"", invalid_handle}};
-  auto get_ctexture = [&scene, &ctexture_map](
-                          const cgltf_texture_view& ginfo) -> texture_handle {
+  auto get_texture = [&scene, &texture_map](
+                         const cgltf_texture_view& ginfo) -> texture_handle {
     if (ginfo.texture == nullptr || ginfo.texture->image == nullptr)
       return invalid_handle;
     auto path = string{ginfo.texture->image->uri};
     if (path.empty()) return invalid_handle;
-    auto it = ctexture_map.find(path);
-    if (it != ctexture_map.end()) return it->second;
+    auto it = texture_map.find(path);
+    if (it != texture_map.end()) return it->second;
     scene.textures.emplace_back();
-    ctexture_map[path] = (int)scene.textures.size() - 1;
+    texture_map[path] = (int)scene.textures.size() - 1;
     return (int)scene.textures.size() - 1;
-  };
-  // convert color opacity textures
-  auto cotexture_map =
-      unordered_map<string, pair<texture_handle, texture_handle>>{
-          {"", {invalid_handle, invalid_handle}}};
-  auto get_cotexture = [&scene, &cotexture_map](const cgltf_texture_view& ginfo)
-      -> pair<texture_handle, texture_handle> {
-    if (ginfo.texture == nullptr || ginfo.texture->image == nullptr)
-      return {invalid_handle, invalid_handle};
-    auto path = string{ginfo.texture->image->uri};
-    if (path.empty()) return {invalid_handle, invalid_handle};
-    auto it = cotexture_map.find(path);
-    if (it != cotexture_map.end()) return it->second;
-    scene.textures.emplace_back();
-    scene.textures.emplace_back();
-    auto ids = pair<int, int>{
-        (int)scene.textures.size() - 2, (int)scene.textures.size() - 1};
-    cotexture_map[path] = ids;
-    return ids;
-  };
-  // convert textures
-  auto mrtexture_map =
-      unordered_map<string, pair<texture_handle, texture_handle>>{
-          {"", {invalid_handle, invalid_handle}}};
-  auto get_mrtexture = [&scene, &mrtexture_map](const cgltf_texture_view& ginfo)
-      -> pair<texture_handle, texture_handle> {
-    if (ginfo.texture == nullptr || ginfo.texture->image == nullptr)
-      return {invalid_handle, invalid_handle};
-    auto path = string{ginfo.texture->image->uri};
-    if (path.empty()) return {invalid_handle, invalid_handle};
-    auto it = mrtexture_map.find(path);
-    if (it != mrtexture_map.end()) return it->second;
-    scene.textures.emplace_back();
-    scene.textures.emplace_back();
-    auto ids = pair<int, int>{
-        (int)scene.textures.size() - 2, (int)scene.textures.size() - 1};
-    mrtexture_map[path] = ids;
-    return ids;
   };
 
   // convert materials
@@ -2295,22 +2257,20 @@ static bool load_gltf_scene(const string& filename, scene_scene& scene,
     material.type         = material_type::metallic;
     material.emission     = {gmaterial->emissive_factor[0],
         gmaterial->emissive_factor[1], gmaterial->emissive_factor[2]};
-    material.emission_tex = get_ctexture(gmaterial->emissive_texture);
+    material.emission_tex = get_texture(gmaterial->emissive_texture);
     if (gmaterial->has_pbr_metallic_roughness != 0) {
       auto gmr          = &gmaterial->pbr_metallic_roughness;
       material.color    = {gmr->base_color_factor[0], gmr->base_color_factor[1],
           gmr->base_color_factor[2]};
       material.opacity  = gmr->base_color_factor[3];
       material.metallic = gmr->metallic_factor;
-      material.roughness = gmr->roughness_factor;
-      material.specular  = 1;
-      std::tie(material.color_tex, material.opacity_tex) = get_cotexture(
-          gmr->base_color_texture);
-      std::tie(material.metallic_tex, material.roughness_tex) = get_mrtexture(
-          gmr->metallic_roughness_texture);
+      material.roughness      = gmr->roughness_factor;
+      material.specular       = 1;
+      material.color_tex      = get_texture(gmr->base_color_texture);
+      material.metallic_tex   = get_texture(gmr->metallic_roughness_texture);
+      material.normal_tex     = get_texture(gmaterial->normal_texture);
+      material_map[gmaterial] = (int)scene.materials.size() - 1;
     }
-    material.normal_tex     = get_ctexture(gmaterial->normal_texture);
-    material_map[gmaterial] = (int)scene.materials.size() - 1;
   }
 
   // convert meshes
@@ -2483,113 +2443,14 @@ static bool load_gltf_scene(const string& filename, scene_scene& scene,
   progress.y += (int)scene.textures.size();
 
   // load texture
-  ctexture_map.erase("");
-  for (auto [tpath, thandle] : ctexture_map) {
+  texture_map.erase("");
+  for (auto [tpath, thandle] : texture_map) {
     auto& texture = scene.textures[thandle];
     if (progress_cb) progress_cb("load texture", progress.x++, progress.y);
     if (!load_image(path_join(path_dirname(filename), tpath), texture.hdr,
             texture.ldr, error))
       return dependent_error();
   }
-
-  // load texture
-  cotexture_map.erase("");
-  for (auto [tpath, thandles] : cotexture_map) {
-    if (progress_cb) progress_cb("load texture", progress.x++, progress.y);
-    auto color_opacityf = image<vec4f>{};
-    auto color_opacityb = image<vec4b>{};
-    if (!load_image(path_join(path_dirname(filename), tpath), color_opacityf,
-            color_opacityb, error))
-      return dependent_error();
-    if (!color_opacityf.empty()) {
-      auto& ctexture = scene.textures[thandles.first];
-      auto& otexture = scene.textures[thandles.second];
-      ctexture.hdr.resize(color_opacityf.imsize());
-      otexture.hdr.resize(color_opacityf.imsize());
-      auto oempty = true;
-      for (auto j = 0; j < color_opacityf.height(); j++) {
-        for (auto i = 0; i < color_opacityf.width(); i++) {
-          auto color           = xyz(color_opacityf[{i, j}]);
-          auto opacity         = color_opacityf[{i, j}].w;
-          ctexture.hdr[{i, j}] = {color.x, color.y, color.z, opacity};
-          otexture.hdr[{i, j}] = {opacity, opacity, opacity, opacity};
-          if (opacity != 1) oempty = false;
-        }
-      }
-      if (oempty) otexture.hdr.clear();
-    }
-    if (!color_opacityb.empty()) {
-      auto& ctexture = scene.textures[thandles.first];
-      auto& otexture = scene.textures[thandles.second];
-      ctexture.ldr.resize(color_opacityb.imsize());
-      otexture.ldr.resize(color_opacityb.imsize());
-      auto oempty = true;
-      for (auto j = 0; j < color_opacityb.height(); j++) {
-        for (auto i = 0; i < color_opacityb.width(); i++) {
-          auto color           = xyz(color_opacityb[{i, j}]);
-          auto opacity         = color_opacityb[{i, j}].w;
-          ctexture.ldr[{i, j}] = {color.x, color.y, color.z, opacity};
-          otexture.ldr[{i, j}] = {opacity, opacity, opacity, opacity};
-          if (opacity != 1) oempty = false;
-        }
-      }
-      if (oempty) otexture.ldr.clear();
-    }
-  }
-
-  // load texture
-  mrtexture_map.erase("");
-  for (auto [tpath, thandles] : mrtexture_map) {
-    if (progress_cb) progress_cb("load texture", progress.x++, progress.y);
-    auto metallic_roughnessf = image<vec4f>{};
-    auto metallic_roughnessb = image<vec4b>{};
-    if (!load_image(path_join(path_dirname(filename), tpath),
-            metallic_roughnessf, metallic_roughnessb, error))
-      return dependent_error();
-    if (!metallic_roughnessf.empty()) {
-      auto& mtexture = scene.textures[thandles.first];
-      auto& rtexture = scene.textures[thandles.second];
-      mtexture.hdr.resize(metallic_roughnessf.imsize());
-      rtexture.hdr.resize(metallic_roughnessf.imsize());
-      for (auto j = 0; j < metallic_roughnessf.height(); j++) {
-        for (auto i = 0; i < metallic_roughnessf.width(); i++) {
-          auto metallic        = metallic_roughnessf[{i, j}].z;
-          auto roughness       = metallic_roughnessf[{i, j}].y;
-          mtexture.hdr[{i, j}] = {metallic, metallic, metallic, 1};
-          rtexture.hdr[{i, j}] = {roughness, roughness, roughness, 1};
-        }
-      }
-    }
-    if (!metallic_roughnessb.empty()) {
-      auto& mtexture = scene.textures[thandles.first];
-      auto& rtexture = scene.textures[thandles.second];
-      mtexture.ldr.resize(metallic_roughnessb.imsize());
-      rtexture.ldr.resize(metallic_roughnessb.imsize());
-      for (auto j = 0; j < metallic_roughnessb.height(); j++) {
-        for (auto i = 0; i < metallic_roughnessb.width(); i++) {
-          auto metallic        = metallic_roughnessb[{i, j}].z;
-          auto roughness       = metallic_roughnessb[{i, j}].y;
-          mtexture.ldr[{i, j}] = {metallic, metallic, metallic, 1};
-          rtexture.ldr[{i, j}] = {roughness, roughness, roughness, 1};
-        }
-      }
-    }
-  }
-
-  // remove empty textures
-  for (auto& material : scene.materials) {
-    if (material.opacity_tex != invalid_handle) {
-      if (scene.textures[material.opacity_tex].hdr.empty() &&
-          scene.textures[material.opacity_tex].ldr.empty())
-        material.opacity_tex = invalid_handle;
-    }
-  }
-  scene.textures.erase(
-      std::remove_if(scene.textures.begin(), scene.textures.end(),
-          [](scene_texture& texture) {
-            return texture.hdr.empty() && texture.ldr.empty();
-          }),
-      scene.textures.end());
 
   // fix scene
   if (scene.asset.name.empty()) scene.asset.name = path_basename(filename);
