@@ -404,24 +404,36 @@ vec3f eval_environment(const scene_scene& scene,
     const scene_environment& environment, const vec3f& direction);
 vec3f eval_environment(const scene_scene& scene, const vec3f& direction);
 
-// Material sample
-struct scene_material_sample {
-  material_type type         = material_type::matte;
+// Material parameters evaluated at a point on the surface
+struct material_point {
+  material_type type         = material_type::metallic;
   vec3f         emission     = {0, 0, 0};
   vec3f         color        = {0, 0, 0};
+  float         opacity      = 1;
   float         roughness    = 0;
   float         metallic     = 0;
-  float         ior          = 1.5;
+  float         ior          = 1;
+  vec3f         density      = {0, 0, 0};
   vec3f         scattering   = {0, 0, 0};
   float         scanisotropy = 0;
   float         trdepth      = 0.01;
-  float         opacity      = 1;
-  vec3f         normalmap    = {0, 0, 1};
 };
 
-// Evaluates material and textures
-scene_material_sample eval_material(const scene_scene& scene,
-    const scene_material& material, const vec2f& texcoord);
+// Eval material to obatain emission, brdf and opacity.
+material_point eval_material(const scene_scene& scene,
+    const scene_instance& instance, int element, const vec2f& uv);
+material_point eval_material(const scene_scene& scene,
+    const scene_material& material, const vec2f& texcoord,
+    const vec4f& shape_color = {1, 1, 1, 1});
+
+// check if a material is a delta
+bool is_delta(const scene_material& material);
+bool is_delta(const material_point& material);
+
+// check if a material has a volume
+bool is_volumetric(const scene_material& material);
+bool is_volumetric(const material_point& material);
+bool is_volumetric(const scene_scene& scene, const scene_instance& instance);
 
 }  // namespace yocto
 

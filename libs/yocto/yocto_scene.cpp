@@ -1140,47 +1140,134 @@ vec3f eval_environment(const scene_scene& scene, const vec3f& direction) {
   return emission;
 }
 
-// Evaluate point
-scene_material_sample eval_material(const scene_scene& scene,
-    const scene_material& material, const vec2f& texcoord) {
+// constant values
+static const auto coat_ior       = 1.5f;
+static const auto coat_roughness = 0.03f * 0.03f;
+
+// Evaluate material
+material_point eval_material(const scene_scene& scene,
+    const scene_instance& instance, int element, const vec2f& uv) {
+  auto& material = scene.materials[instance.material];
+  auto  texcoord = eval_texcoord(scene, instance, element, uv);
+
+  // evaluate textures
+  auto emission_tex = eval_texture(
+      scene, material.emission_tex, texcoord, false);
+  auto color_shp     = eval_color(scene, instance, element, uv);
+  auto color_tex     = eval_texture(scene, material.color_tex, texcoord, false);
+  auto roughness_tex = eval_texture(
+      scene, material.roughness_tex, texcoord, true);
+  auto scattering_tex = eval_texture(
+      scene, material.scattering_tex, texcoord, false);
+
+  // material point
+  auto point         = material_point{};
+  point.type         = material.type;
+  point.emission     = material.emission * xyz(emission_tex);
+  point.color        = material.color * xyz(color_tex) * xyz(color_shp);
+  point.opacity      = material.opacity * color_tex.w * color_shp.w;
+  point.metallic     = material.metallic * roughness_tex.z;
+  point.roughness    = material.roughness * roughness_tex.y;
+  point.roughness    = point.roughness * point.roughness;
+  point.ior          = material.ior;
+  point.scattering   = material.scattering * xyz(scattering_tex);
+  point.scanisotropy = material.scanisotropy;
+  point.trdepth      = material.trdepth;
+
+  // volume density
+  if (material.type == material_type::glass ||
+      material.type == material_type::volume ||
+      material.type == material_type::subsurface) {
+    point.density = -log(clamp(point.color, 0.0001f, 1.0f)) / point.trdepth;
+  } else {
+    point.density = {0, 0, 0};
+  }
+
+  // fix roughness
+  if (point.type == material_type::matte ||
+      point.type == material_type::metallic ||
+      point.type == material_type::plastic) {
+    point.roughness = clamp(point.roughness, coat_roughness, 1.0f);
+  }
+
+  return point;
+}
+
+// Evaluate material
+material_point eval_material(const scene_scene& scene,
+    const scene_material& material, const vec2f& texcoord,
+    const vec4f& color_shp) {
   // evaluate textures
   auto emission_tex = eval_texture(
       scene, material.emission_tex, texcoord, false);
   auto color_tex     = eval_texture(scene, material.color_tex, texcoord, false);
   auto roughness_tex = eval_texture(
       scene, material.roughness_tex, texcoord, true);
+  auto scattering_tex = eval_texture(
+      scene, material.scattering_tex, texcoord, false);
 
-  auto mat      = scene_material_sample{};
-  mat.type      = material.type;
-  mat.emission  = material.emission * xyz(emission_tex);
-  mat.color     = material.color * xyz(color_tex);
-  mat.metallic  = material.metallic * roughness_tex.z;
-  mat.roughness = material.roughness * roughness_tex.y;
-  mat.ior       = material.ior;
-  mat.opacity   = material.opacity * color_tex.w;
-  mat.scattering =
-      material.scattering *
-      xyz(eval_texture(scene, material.scattering_tex, texcoord, false));
-  mat.scanisotropy = material.scanisotropy;
-  mat.trdepth      = material.trdepth;
-  mat.normalmap    = material.normal_tex != invalid_handle
-                         ? -1 + 2 * xyz(eval_texture(scene, material.normal_tex,
-                                     texcoord, true))
-                         : vec3f{0, 0, 1};
-  return mat;
+  // material point
+  auto point         = material_point{};
+  point.type         = material.type;
+  point.emission     = material.emission * xyz(emission_tex);
+  point.color        = material.color * xyz(color_tex) * xyz(color_shp);
+  point.opacity      = material.opacity * color_tex.w * color_shp.w;
+  point.metallic     = material.metallic * roughness_tex.z;
+  point.roughness    = material.roughness * roughness_tex.y;
+  point.roughness    = point.roughness * point.roughness;
+  point.ior          = material.ior;
+  point.scattering   = material.scattering * xyz(scattering_tex);
+  point.scanisotropy = material.scanisotropy;
+  point.trdepth      = material.trdepth;
+
+  // volume density
+  if (material.type == material_type::glass ||
+      material.type == material_type::volume ||
+      material.type == material_type::subsurface) {
+    point.density = -log(clamp(point.color, 0.0001f, 1.0f)) / point.trdepth;
+  } else {
+    point.density = {0, 0, 0};
+  }
+
+  // fix roughness
+  if (point.type == material_type::matte ||
+      point.type == material_type::metallic ||
+      point.type == material_type::plastic) {
+    point.roughness = clamp(point.roughness, coat_roughness, 1.0f);
+  }
+
+  return point;
 }
 
-// constant values
-static const auto coat_ior       = 1.5f;
-static const auto coat_roughness = 0.03f * 0.03f;
+// check if a material is a delta
+bool is_delta(const scene_material& material) {
+  return (material.type == material_type::metal && material.roughness == 0) ||
+         (material.type == material_type::glass && material.roughness == 0) ||
+         (material.type == material_type::thinglass &&
+             material.roughness == 0) ||
+         (material.type == material_type::volume);
+}
+bool is_volumetric(const scene_material& material) {
+  return material.type == material_type::glass ||
+         material.type == material_type::volume ||
+         material.type == material_type::subsurface;
+}
+bool is_volumetric(const scene_scene& scene, const scene_instance& instance) {
+  return is_volumetric(scene.materials[instance.material]);
+}
 
-// Eval material to obtain emission, brdf and opacity.
-vec3f eval_emission(const scene_scene& scene, const scene_instance& instance,
-    int element, const vec2f& uv, const vec3f& normal, const vec3f& outgoing) {
-  auto& material = scene.materials[instance.material];
-  auto  texcoord = eval_texcoord(scene, instance, element, uv);
-  return material.emission *
-         xyz(eval_texture(scene, material.emission_tex, texcoord));
+// check if a brdf is a delta
+bool is_delta(const material_point& material) {
+  return (material.type == material_type::metal && material.roughness == 0) ||
+         (material.type == material_type::glass && material.roughness == 0) ||
+         (material.type == material_type::thinglass &&
+             material.roughness == 0) ||
+         (material.type == material_type::volume);
+}
+bool has_volume(const material_point& material) {
+  return material.type == material_type::glass ||
+         material.type == material_type::volume ||
+         material.type == material_type::subsurface;
 }
 
 }  // namespace yocto

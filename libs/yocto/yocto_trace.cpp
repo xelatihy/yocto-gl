@@ -68,198 +68,114 @@ void init_bvh(trace_bvh& bvh, const scene_scene& scene,
 }  // namespace yocto
 
 // -----------------------------------------------------------------------------
-// IMPLEMENTATION OF EVALUATION OF SCENE PROPERTIES
-// -----------------------------------------------------------------------------
-namespace yocto {
-
-// constant values
-static const auto coat_ior       = 1.5f;
-static const auto coat_roughness = 0.03f * 0.03f;
-
-// Evaluate bsdf
-trace_bsdf eval_bsdf(const scene_scene& scene, const scene_instance& instance,
-    int element, const vec2f& uv) {
-  auto& material = scene.materials[instance.material];
-  auto  texcoord = eval_texcoord(scene, instance, element, uv);
-
-  // evaluate textures
-  auto emission_tex = eval_texture(
-      scene, material.emission_tex, texcoord, false);
-  auto color_shp     = eval_color(scene, instance, element, uv);
-  auto color_tex     = eval_texture(scene, material.color_tex, texcoord, false);
-  auto roughness_tex = eval_texture(
-      scene, material.roughness_tex, texcoord, true);
-  auto scattering_tex = eval_texture(
-      scene, material.scattering_tex, texcoord, false);
-
-  // material point
-  auto bsdf         = trace_bsdf{};
-  bsdf.type         = material.type;
-  bsdf.emission     = material.emission * xyz(emission_tex);
-  bsdf.color        = material.color * xyz(color_tex) * xyz(color_shp);
-  bsdf.opacity      = material.opacity * color_tex.w * color_shp.w;
-  bsdf.metallic     = material.metallic * roughness_tex.z;
-  bsdf.roughness    = material.roughness * roughness_tex.y;
-  bsdf.roughness    = bsdf.roughness * bsdf.roughness;
-  bsdf.ior          = material.ior;
-  bsdf.scattering   = material.scattering * xyz(scattering_tex);
-  bsdf.scanisotropy = material.scanisotropy;
-  bsdf.trdepth      = material.trdepth;
-
-  // volume density
-  if (material.type == material_type::glass ||
-      material.type == material_type::volume ||
-      material.type == material_type::subsurface) {
-    bsdf.density = -log(clamp(bsdf.color, 0.0001f, 1.0f)) / bsdf.trdepth;
-  } else {
-    bsdf.density = {0, 0, 0};
-  }
-
-  // fix roughness
-  if (bsdf.type == material_type::matte ||
-      bsdf.type == material_type::metallic ||
-      bsdf.type == material_type::plastic) {
-    bsdf.roughness = clamp(bsdf.roughness, coat_roughness, 1.0f);
-  }
-
-  return bsdf;
-}
-
-// check if a material is a delta
-bool is_delta(const scene_material& material) {
-  return (material.type == material_type::metal && material.roughness == 0) ||
-         (material.type == material_type::glass && material.roughness == 0) ||
-         (material.type == material_type::thinglass &&
-             material.roughness == 0) ||
-         (material.type == material_type::volume);
-}
-bool is_volume(const scene_material& material) {
-  return material.type == material_type::glass ||
-         material.type == material_type::volume ||
-         material.type == material_type::subsurface;
-}
-bool has_volume(const scene_scene& scene, const scene_instance& instance) {
-  return is_volume(scene.materials[instance.material]);
-}
-
-// check if a brdf is a delta
-bool is_delta(const trace_bsdf& bsdf) {
-  return (bsdf.type == material_type::metal && bsdf.roughness == 0) ||
-         (bsdf.type == material_type::glass && bsdf.roughness == 0) ||
-         (bsdf.type == material_type::thinglass && bsdf.roughness == 0) ||
-         (bsdf.type == material_type::volume);
-}
-bool is_volume(const trace_bsdf& bsdf) {
-  return bsdf.type == material_type::glass ||
-         bsdf.type == material_type::volume ||
-         bsdf.type == material_type::subsurface;
-}
-
-}  // namespace yocto
-
-// -----------------------------------------------------------------------------
 // IMPLEMENTATION FOR PATH TRACING
 // -----------------------------------------------------------------------------
 namespace yocto {
 
 // Evaluates/sample the BRDF scaled by the cosine of the incoming direction.
-static vec3f eval_emission(
-    const trace_bsdf& bsdf, const vec3f& normal, const vec3f& outgoing) {
-  return bsdf.emission;
+static vec3f eval_emission(const material_point& material, const vec3f& normal,
+    const vec3f& outgoing) {
+  return material.emission;
 }
 
 // Evaluates/sample the BRDF scaled by the cosine of the incoming direction.
-static vec3f eval_bsdfcos(const trace_bsdf& bsdf, const vec3f& normal,
+static vec3f eval_bsdfcos(const material_point& material, const vec3f& normal,
     const vec3f& outgoing, const vec3f& incoming) {
-  if (bsdf.roughness == 0) return zero3f;
+  if (material.roughness == 0) return zero3f;
 
-  if (bsdf.type == material_type::matte) {
-    return bsdf.color * eval_diffuse_reflection(normal, outgoing, incoming);
-  } else if (bsdf.type == material_type::plastic) {
-    return bsdf.color * (1 - fresnel_dielectric(bsdf.ior, normal, outgoing)) *
+  if (material.type == material_type::matte) {
+    return material.color * eval_diffuse_reflection(normal, outgoing, incoming);
+  } else if (material.type == material_type::plastic) {
+    return material.color *
+               (1 - fresnel_dielectric(material.ior, normal, outgoing)) *
                eval_diffuse_reflection(normal, outgoing, incoming) +
            eval_microfacet_reflection(
-               bsdf.ior, bsdf.roughness, normal, outgoing, incoming);
-  } else if (bsdf.type == material_type::metal) {
-    return eval_microfacet_reflection(reflectivity_to_eta(bsdf.color),
-        vec3f{0, 0, 0}, bsdf.roughness, normal, outgoing, incoming);
-  } else if (bsdf.type == material_type::thinglass) {
-    return bsdf.color * (1 - fresnel_dielectric(bsdf.ior, normal, outgoing)) *
-               eval_microfacet_transmission(
-                   bsdf.ior, bsdf.roughness, normal, outgoing, incoming) +
+               material.ior, material.roughness, normal, outgoing, incoming);
+  } else if (material.type == material_type::metal) {
+    return eval_microfacet_reflection(reflectivity_to_eta(material.color),
+        vec3f{0, 0, 0}, material.roughness, normal, outgoing, incoming);
+  } else if (material.type == material_type::thinglass) {
+    return material.color *
+               (1 - fresnel_dielectric(material.ior, normal, outgoing)) *
+               eval_microfacet_transmission(material.ior, material.roughness,
+                   normal, outgoing, incoming) +
            eval_microfacet_reflection(
-               bsdf.ior, bsdf.roughness, normal, outgoing, incoming);
-  } else if (bsdf.type == material_type::glass) {
+               material.ior, material.roughness, normal, outgoing, incoming);
+  } else if (material.type == material_type::glass) {
     return eval_microfacet_refraction(
-        bsdf.ior, bsdf.roughness, normal, outgoing, incoming);
-  } else if (bsdf.type == material_type::plastic) {
-    auto diffuse  = bsdf.color * (1 - bsdf.metallic);
-    auto specular = lerp(bsdf.color, vec3f{0.04, 0.04, 0.04}, bsdf.metallic);
+        material.ior, material.roughness, normal, outgoing, incoming);
+  } else if (material.type == material_type::plastic) {
+    auto diffuse  = material.color * (1 - material.metallic);
+    auto specular = lerp(
+        material.color, vec3f{0.04, 0.04, 0.04}, material.metallic);
     return diffuse * (1 - fresnel_schlick(specular, normal, outgoing)) *
                eval_diffuse_reflection(normal, outgoing, incoming) +
            eval_microfacet_reflection(reflectivity_to_eta(specular),
-               vec3f{0, 0, 0}, bsdf.roughness, normal, outgoing, incoming);
+               vec3f{0, 0, 0}, material.roughness, normal, outgoing, incoming);
   } else {
     return {0, 0, 0};
   }
 }
 
-static vec3f eval_delta(const trace_bsdf& bsdf, const vec3f& normal,
+static vec3f eval_delta(const material_point& material, const vec3f& normal,
     const vec3f& outgoing, const vec3f& incoming) {
-  if (bsdf.roughness != 0) return zero3f;
+  if (material.roughness != 0) return zero3f;
 
-  if (bsdf.type == material_type::metal) {
-    return eval_delta_reflection(reflectivity_to_eta(bsdf.color),
+  if (material.type == material_type::metal) {
+    return eval_delta_reflection(reflectivity_to_eta(material.color),
         vec3f{0, 0, 0}, normal, outgoing, incoming);
-  } else if (bsdf.type == material_type::thinglass) {
-    return bsdf.color * (1 - fresnel_dielectric(bsdf.ior, normal, outgoing)) *
-               eval_delta_transmission(bsdf.ior, normal, outgoing, incoming) +
-           eval_delta_reflection(bsdf.ior, normal, outgoing, incoming);
-  } else if (bsdf.type == material_type::glass) {
-    return eval_delta_refraction(bsdf.ior, normal, outgoing, incoming);
-  } else if (bsdf.type == material_type::volume) {
-    return eval_delta_transmission(bsdf.ior, normal, outgoing, incoming);
+  } else if (material.type == material_type::thinglass) {
+    return material.color *
+               (1 - fresnel_dielectric(material.ior, normal, outgoing)) *
+               eval_delta_transmission(
+                   material.ior, normal, outgoing, incoming) +
+           eval_delta_reflection(material.ior, normal, outgoing, incoming);
+  } else if (material.type == material_type::glass) {
+    return eval_delta_refraction(material.ior, normal, outgoing, incoming);
+  } else if (material.type == material_type::volume) {
+    return eval_delta_transmission(material.ior, normal, outgoing, incoming);
   } else {
     return {0, 0, 0};
   }
 }
 
 // Picks a direction based on the BRDF
-static vec3f sample_bsdfcos(const trace_bsdf& bsdf, const vec3f& normal,
+static vec3f sample_bsdfcos(const material_point& material, const vec3f& normal,
     const vec3f& outgoing, float rnl, const vec2f& rn) {
-  if (bsdf.roughness == 0) return zero3f;
+  if (material.roughness == 0) return zero3f;
 
-  if (bsdf.type == material_type::matte) {
+  if (material.type == material_type::matte) {
     return sample_diffuse_reflection(normal, outgoing, rn);
-  } else if (bsdf.type == material_type::plastic) {
-    auto weight = fresnel_dielectric(bsdf.ior, normal, outgoing);
+  } else if (material.type == material_type::plastic) {
+    auto weight = fresnel_dielectric(material.ior, normal, outgoing);
     if (rnl < weight) {
       return sample_microfacet_reflection(
-          bsdf.ior, bsdf.roughness, normal, outgoing, rn);
+          material.ior, material.roughness, normal, outgoing, rn);
     } else {
       return sample_diffuse_reflection(normal, outgoing, rn);
     }
-  } else if (bsdf.type == material_type::metal) {
-    return sample_microfacet_reflection(reflectivity_to_eta(bsdf.color),
-        vec3f{0, 0, 0}, bsdf.roughness, normal, outgoing, rn);
-  } else if (bsdf.type == material_type::thinglass) {
-    auto weight = fresnel_dielectric(bsdf.ior, normal, outgoing);
+  } else if (material.type == material_type::metal) {
+    return sample_microfacet_reflection(reflectivity_to_eta(material.color),
+        vec3f{0, 0, 0}, material.roughness, normal, outgoing, rn);
+  } else if (material.type == material_type::thinglass) {
+    auto weight = fresnel_dielectric(material.ior, normal, outgoing);
     if (rnl < weight) {
       return sample_microfacet_reflection(
-          bsdf.ior, bsdf.roughness, normal, outgoing, rn);
+          material.ior, material.roughness, normal, outgoing, rn);
     } else {
       return sample_microfacet_transmission(
-          bsdf.ior, bsdf.roughness, normal, outgoing, rn);
+          material.ior, material.roughness, normal, outgoing, rn);
     }
-  } else if (bsdf.type == material_type::glass) {
+  } else if (material.type == material_type::glass) {
     return sample_microfacet_refraction(
-        bsdf.ior, bsdf.roughness, normal, outgoing, rnl, rn);
-  } else if (bsdf.type == material_type::metallic) {
-    auto specular = lerp(bsdf.color, vec3f{0.04, 0.04, 0.04}, bsdf.metallic);
-    auto weight   = max(fresnel_schlick(specular, normal, outgoing));
+        material.ior, material.roughness, normal, outgoing, rnl, rn);
+  } else if (material.type == material_type::metallic) {
+    auto specular = lerp(
+        material.color, vec3f{0.04, 0.04, 0.04}, material.metallic);
+    auto weight = max(fresnel_schlick(specular, normal, outgoing));
     if (rnl < weight) {
       return sample_microfacet_reflection(
-          bsdf.ior, bsdf.roughness, normal, outgoing, rn);
+          material.ior, material.roughness, normal, outgoing, rn);
     } else {
       return sample_diffuse_reflection(normal, outgoing, rn);
     }
@@ -268,105 +184,108 @@ static vec3f sample_bsdfcos(const trace_bsdf& bsdf, const vec3f& normal,
   }
 }
 
-static vec3f sample_delta(const trace_bsdf& bsdf, const vec3f& normal,
+static vec3f sample_delta(const material_point& material, const vec3f& normal,
     const vec3f& outgoing, float rnl) {
-  if (bsdf.roughness != 0) return zero3f;
+  if (material.roughness != 0) return zero3f;
 
-  if (bsdf.type == material_type::metal) {
+  if (material.type == material_type::metal) {
     return sample_delta_reflection(
-        reflectivity_to_eta(bsdf.color), vec3f{0, 0, 0}, normal, outgoing);
-  } else if (bsdf.type == material_type::thinglass) {
-    auto weight = fresnel_dielectric(bsdf.ior, normal, outgoing);
+        reflectivity_to_eta(material.color), vec3f{0, 0, 0}, normal, outgoing);
+  } else if (material.type == material_type::thinglass) {
+    auto weight = fresnel_dielectric(material.ior, normal, outgoing);
     if (rnl < weight) {
-      return sample_delta_reflection(bsdf.ior, normal, outgoing);
+      return sample_delta_reflection(material.ior, normal, outgoing);
     } else {
-      return sample_delta_transmission(bsdf.ior, normal, outgoing);
+      return sample_delta_transmission(material.ior, normal, outgoing);
     }
-  } else if (bsdf.type == material_type::glass) {
-    return sample_delta_refraction(bsdf.ior, normal, outgoing, rnl);
-  } else if (bsdf.type == material_type::volume) {
-    return sample_delta_transmission(bsdf.ior, normal, outgoing);
+  } else if (material.type == material_type::glass) {
+    return sample_delta_refraction(material.ior, normal, outgoing, rnl);
+  } else if (material.type == material_type::volume) {
+    return sample_delta_transmission(material.ior, normal, outgoing);
   } else {
     return {0, 0, 0};
   }
 }
 
 // Compute the weight for sampling the BRDF
-static float sample_bsdfcos_pdf(const trace_bsdf& bsdf, const vec3f& normal,
-    const vec3f& outgoing, const vec3f& incoming) {
-  if (bsdf.roughness == 0) return 0;
+static float sample_bsdfcos_pdf(const material_point& material,
+    const vec3f& normal, const vec3f& outgoing, const vec3f& incoming) {
+  if (material.roughness == 0) return 0;
 
-  if (bsdf.type == material_type::matte) {
+  if (material.type == material_type::matte) {
     return sample_diffuse_reflection_pdf(normal, outgoing, incoming);
-  } else if (bsdf.type == material_type::plastic) {
-    auto weight = fresnel_dielectric(bsdf.ior, normal, outgoing);
+  } else if (material.type == material_type::plastic) {
+    auto weight = fresnel_dielectric(material.ior, normal, outgoing);
     return (1 - weight) *
                sample_diffuse_reflection_pdf(normal, outgoing, incoming) +
-           weight * sample_microfacet_reflection_pdf(
-                        bsdf.ior, bsdf.roughness, normal, outgoing, incoming);
-  } else if (bsdf.type == material_type::metal) {
-    return sample_microfacet_reflection_pdf(reflectivity_to_eta(bsdf.color),
-        vec3f{0, 0, 0}, bsdf.roughness, normal, outgoing, incoming);
-  } else if (bsdf.type == material_type::thinglass) {
-    auto weight = fresnel_dielectric(bsdf.ior, normal, outgoing);
-    return (1 - weight) * sample_microfacet_transmission_pdf(bsdf.ior,
-                              bsdf.roughness, normal, outgoing, incoming) +
-           weight * sample_microfacet_reflection_pdf(
-                        bsdf.ior, bsdf.roughness, normal, outgoing, incoming);
-  } else if (bsdf.type == material_type::glass) {
+           weight * sample_microfacet_reflection_pdf(material.ior,
+                        material.roughness, normal, outgoing, incoming);
+  } else if (material.type == material_type::metal) {
+    return sample_microfacet_reflection_pdf(reflectivity_to_eta(material.color),
+        vec3f{0, 0, 0}, material.roughness, normal, outgoing, incoming);
+  } else if (material.type == material_type::thinglass) {
+    auto weight = fresnel_dielectric(material.ior, normal, outgoing);
+    return (1 - weight) * sample_microfacet_transmission_pdf(material.ior,
+                              material.roughness, normal, outgoing, incoming) +
+           weight * sample_microfacet_reflection_pdf(material.ior,
+                        material.roughness, normal, outgoing, incoming);
+  } else if (material.type == material_type::glass) {
     return sample_microfacet_refraction_pdf(
-        bsdf.ior, bsdf.roughness, normal, outgoing, incoming);
-  } else if (bsdf.type == material_type::metallic) {
-    auto specular = lerp(bsdf.color, vec3f{0.04, 0.04, 0.04}, bsdf.metallic);
-    auto weight   = max(fresnel_schlick(specular, normal, outgoing));
+        material.ior, material.roughness, normal, outgoing, incoming);
+  } else if (material.type == material_type::metallic) {
+    auto specular = lerp(
+        material.color, vec3f{0.04, 0.04, 0.04}, material.metallic);
+    auto weight = max(fresnel_schlick(specular, normal, outgoing));
     return (1 - weight) *
                sample_diffuse_reflection_pdf(normal, outgoing, incoming) +
-           weight * sample_microfacet_reflection_pdf(
-                        bsdf.ior, bsdf.roughness, normal, outgoing, incoming);
+           weight * sample_microfacet_reflection_pdf(material.ior,
+                        material.roughness, normal, outgoing, incoming);
   } else {
     return 0;
   }
 }
 
-static float sample_delta_pdf(const trace_bsdf& bsdf, const vec3f& normal,
-    const vec3f& outgoing, const vec3f& incoming) {
-  if (bsdf.roughness != 0) return 0;
+static float sample_delta_pdf(const material_point& material,
+    const vec3f& normal, const vec3f& outgoing, const vec3f& incoming) {
+  if (material.roughness != 0) return 0;
 
-  if (bsdf.type == material_type::metal) {
-    return sample_delta_reflection_pdf(reflectivity_to_eta(bsdf.color),
+  if (material.type == material_type::metal) {
+    return sample_delta_reflection_pdf(reflectivity_to_eta(material.color),
         vec3f{0, 0, 0}, normal, outgoing, incoming);
-  } else if (bsdf.type == material_type::thinglass) {
-    auto weight = fresnel_dielectric(bsdf.ior, normal, outgoing);
+  } else if (material.type == material_type::thinglass) {
+    auto weight = fresnel_dielectric(material.ior, normal, outgoing);
     return (1 - weight) * sample_delta_transmission_pdf(
-                              bsdf.ior, normal, outgoing, incoming) +
+                              material.ior, normal, outgoing, incoming) +
            weight * sample_delta_reflection_pdf(
-                        bsdf.ior, normal, outgoing, incoming);
-  } else if (bsdf.type == material_type::glass) {
-    return sample_delta_refraction_pdf(bsdf.ior, normal, outgoing, incoming);
-  } else if (bsdf.type == material_type::volume) {
-    return sample_delta_transmission_pdf(bsdf.ior, normal, outgoing, incoming);
+                        material.ior, normal, outgoing, incoming);
+  } else if (material.type == material_type::glass) {
+    return sample_delta_refraction_pdf(
+        material.ior, normal, outgoing, incoming);
+  } else if (material.type == material_type::volume) {
+    return sample_delta_transmission_pdf(
+        material.ior, normal, outgoing, incoming);
   } else {
     return 0;
   }
 }
 
-static vec3f eval_scattering(
-    const trace_bsdf& bsdf, const vec3f& outgoing, const vec3f& incoming) {
-  if (bsdf.density == zero3f) return zero3f;
-  return bsdf.scattering * bsdf.density *
-         eval_phasefunction(bsdf.scanisotropy, outgoing, incoming);
+static vec3f eval_scattering(const material_point& material,
+    const vec3f& outgoing, const vec3f& incoming) {
+  if (material.density == zero3f) return zero3f;
+  return material.scattering * material.density *
+         eval_phasefunction(material.scanisotropy, outgoing, incoming);
 }
 
-static vec3f sample_scattering(
-    const trace_bsdf& bsdf, const vec3f& outgoing, float rnl, const vec2f& rn) {
-  if (bsdf.density == zero3f) return zero3f;
-  return sample_phasefunction(bsdf.scanisotropy, outgoing, rn);
+static vec3f sample_scattering(const material_point& material,
+    const vec3f& outgoing, float rnl, const vec2f& rn) {
+  if (material.density == zero3f) return zero3f;
+  return sample_phasefunction(material.scanisotropy, outgoing, rn);
 }
 
-static float sample_scattering_pdf(
-    const trace_bsdf& bsdf, const vec3f& outgoing, const vec3f& incoming) {
-  if (bsdf.density == zero3f) return 0;
-  return sample_phasefunction_pdf(bsdf.scanisotropy, outgoing, incoming);
+static float sample_scattering_pdf(const material_point& material,
+    const vec3f& outgoing, const vec3f& incoming) {
+  if (material.density == zero3f) return 0;
+  return sample_phasefunction_pdf(material.scanisotropy, outgoing, incoming);
 }
 
 // Sample camera
@@ -484,7 +403,7 @@ static vec4f trace_path(const scene_scene& scene, const trace_bvh& bvh,
   auto radiance      = zero3f;
   auto weight        = vec3f{1, 1, 1};
   auto ray           = ray_;
-  auto volume_stack  = vector<trace_bsdf>{};
+  auto volume_stack  = vector<material_point>{};
   auto max_roughness = 0.0f;
   auto hit           = !params.envhidden && !scene.environments.empty();
 
@@ -520,16 +439,16 @@ static vec4f trace_path(const scene_scene& scene, const trace_bvh& bvh,
       auto  uv       = intersection.uv;
       auto  position = eval_position(scene, instance, element, uv);
       auto normal = eval_shading_normal(scene, instance, element, uv, outgoing);
-      auto bsdf   = eval_bsdf(scene, instance, element, uv);
+      auto material = eval_material(scene, instance, element, uv);
 
       // correct roughness
       if (params.nocaustics) {
-        max_roughness  = max(bsdf.roughness, max_roughness);
-        bsdf.roughness = max_roughness;
+        max_roughness      = max(material.roughness, max_roughness);
+        material.roughness = max_roughness;
       }
 
       // handle opacity
-      if (bsdf.opacity < 1 && rand1f(rng) >= bsdf.opacity) {
+      if (material.opacity < 1 && rand1f(rng) >= material.opacity) {
         ray = {position + ray.d * 1e-2f, ray.d};
         bounce -= 1;
         continue;
@@ -537,34 +456,35 @@ static vec4f trace_path(const scene_scene& scene, const trace_bvh& bvh,
       hit = true;
 
       // accumulate emission
-      radiance += weight * eval_emission(bsdf, normal, outgoing);
+      radiance += weight * eval_emission(material, normal, outgoing);
 
       // next direction
       auto incoming = zero3f;
-      if (!is_delta(bsdf)) {
+      if (!is_delta(material)) {
         if (rand1f(rng) < 0.5f) {
           incoming = sample_bsdfcos(
-              bsdf, normal, outgoing, rand1f(rng), rand2f(rng));
+              material, normal, outgoing, rand1f(rng), rand2f(rng));
         } else {
           incoming = sample_lights(
               scene, lights, position, rand1f(rng), rand1f(rng), rand2f(rng));
         }
-        weight *= eval_bsdfcos(bsdf, normal, outgoing, incoming) /
-                  (0.5f * sample_bsdfcos_pdf(bsdf, normal, outgoing, incoming) +
-                      0.5f * sample_lights_pdf(
-                                 scene, bvh, lights, position, incoming));
+        weight *=
+            eval_bsdfcos(material, normal, outgoing, incoming) /
+            (0.5f * sample_bsdfcos_pdf(material, normal, outgoing, incoming) +
+                0.5f *
+                    sample_lights_pdf(scene, bvh, lights, position, incoming));
       } else {
-        incoming = sample_delta(bsdf, normal, outgoing, rand1f(rng));
-        weight *= eval_delta(bsdf, normal, outgoing, incoming) /
-                  sample_delta_pdf(bsdf, normal, outgoing, incoming);
+        incoming = sample_delta(material, normal, outgoing, rand1f(rng));
+        weight *= eval_delta(material, normal, outgoing, incoming) /
+                  sample_delta_pdf(material, normal, outgoing, incoming);
       }
 
       // update volume stack
-      if (has_volume(scene, instance) &&
+      if (is_volumetric(scene, instance) &&
           dot(normal, outgoing) * dot(normal, incoming) < 0) {
         if (volume_stack.empty()) {
-          auto bsdf = eval_bsdf(scene, instance, element, uv);
-          volume_stack.push_back(bsdf);
+          auto material = eval_material(scene, instance, element, uv);
+          volume_stack.push_back(material);
         } else {
           volume_stack.pop_back();
         }
@@ -642,10 +562,10 @@ static vec4f trace_naive(const scene_scene& scene, const trace_bvh& bvh,
     auto uv       = intersection.uv;
     auto position = eval_position(scene, instance, element, uv);
     auto normal   = eval_shading_normal(scene, instance, element, uv, outgoing);
-    auto bsdf     = eval_bsdf(scene, instance, element, uv);
+    auto material = eval_material(scene, instance, element, uv);
 
     // handle opacity
-    if (bsdf.opacity < 1 && rand1f(rng) >= bsdf.opacity) {
+    if (material.opacity < 1 && rand1f(rng) >= material.opacity) {
       ray = {position + ray.d * 1e-2f, ray.d};
       bounce -= 1;
       continue;
@@ -653,19 +573,19 @@ static vec4f trace_naive(const scene_scene& scene, const trace_bvh& bvh,
     hit = true;
 
     // accumulate emission
-    radiance += weight * eval_emission(bsdf, normal, outgoing);
+    radiance += weight * eval_emission(material, normal, outgoing);
 
     // next direction
     auto incoming = zero3f;
-    if (bsdf.roughness != 0) {
+    if (material.roughness != 0) {
       incoming = sample_bsdfcos(
-          bsdf, normal, outgoing, rand1f(rng), rand2f(rng));
-      weight *= eval_bsdfcos(bsdf, normal, outgoing, incoming) /
-                sample_bsdfcos_pdf(bsdf, normal, outgoing, incoming);
+          material, normal, outgoing, rand1f(rng), rand2f(rng));
+      weight *= eval_bsdfcos(material, normal, outgoing, incoming) /
+                sample_bsdfcos_pdf(material, normal, outgoing, incoming);
     } else {
-      incoming = sample_delta(bsdf, normal, outgoing, rand1f(rng));
-      weight *= eval_delta(bsdf, normal, outgoing, incoming) /
-                sample_delta_pdf(bsdf, normal, outgoing, incoming);
+      incoming = sample_delta(material, normal, outgoing, rand1f(rng));
+      weight *= eval_delta(material, normal, outgoing, incoming) /
+                sample_delta_pdf(material, normal, outgoing, incoming);
     }
 
     // check weight
@@ -712,10 +632,10 @@ static vec4f trace_eyelight(const scene_scene& scene, const trace_bvh& bvh,
     auto uv       = intersection.uv;
     auto position = eval_position(scene, instance, element, uv);
     auto normal   = eval_shading_normal(scene, instance, element, uv, outgoing);
-    auto bsdf     = eval_bsdf(scene, instance, element, uv);
+    auto material = eval_material(scene, instance, element, uv);
 
     // handle opacity
-    if (bsdf.opacity < 1 && rand1f(rng) >= bsdf.opacity) {
+    if (material.opacity < 1 && rand1f(rng) >= material.opacity) {
       ray = {position + ray.d * 1e-2f, ray.d};
       bounce -= 1;
       continue;
@@ -724,16 +644,17 @@ static vec4f trace_eyelight(const scene_scene& scene, const trace_bvh& bvh,
 
     // accumulate emission
     auto incoming = outgoing;
-    radiance += weight * eval_emission(bsdf, normal, outgoing);
+    radiance += weight * eval_emission(material, normal, outgoing);
 
     // brdf * light
-    radiance += weight * pif * eval_bsdfcos(bsdf, normal, outgoing, incoming);
+    radiance += weight * pif *
+                eval_bsdfcos(material, normal, outgoing, incoming);
 
     // continue path
-    if (bsdf.roughness != 0) break;
-    incoming = sample_delta(bsdf, normal, outgoing, rand1f(rng));
-    weight *= eval_delta(bsdf, normal, outgoing, incoming) /
-              sample_delta_pdf(bsdf, normal, outgoing, incoming);
+    if (material.roughness != 0) break;
+    incoming = sample_delta(material, normal, outgoing, rand1f(rng));
+    weight *= eval_delta(material, normal, outgoing, incoming) /
+              sample_delta_pdf(material, normal, outgoing, incoming);
     if (weight == zero3f || !isfinite(weight)) break;
 
     // setup next iteration
@@ -762,8 +683,7 @@ static vec4f trace_falsecolor(const scene_scene& scene, const trace_bvh& bvh,
   auto normal   = eval_shading_normal(scene, instance, element, uv, outgoing);
   auto gnormal  = eval_element_normal(scene, instance, element);
   auto texcoord = eval_texcoord(scene, instance, element, uv);
-  auto color    = eval_color(scene, instance, element, uv);
-  auto bsdf     = eval_bsdf(scene, instance, element, uv);
+  auto material = eval_material(scene, instance, element, uv);
 
   // hash color
   auto hashed_color = [](int id) {
@@ -791,19 +711,19 @@ static vec4f trace_falsecolor(const scene_scene& scene, const trace_bvh& bvh,
           dot(gnormal, -ray.d) > 0 ? vec3f{0, 1, 0} : vec3f{1, 0, 0}, 1);
     case trace_falsecolor_type::texcoord:
       return {fmod(texcoord.x, 1.0f), fmod(texcoord.y, 1.0f), 0, 1};
-    case trace_falsecolor_type::color: return make_vec(xyz(color), 1);
-    case trace_falsecolor_type::emission: return make_vec(bsdf.emission, 1);
+    case trace_falsecolor_type::color: return make_vec(material.color, 1);
+    case trace_falsecolor_type::emission: return make_vec(material.emission, 1);
     case trace_falsecolor_type::roughness:
-      return {bsdf.roughness, bsdf.roughness, bsdf.roughness, 1};
+      return {material.roughness, material.roughness, material.roughness, 1};
     case trace_falsecolor_type::opacity:
-      return {bsdf.opacity, bsdf.opacity, bsdf.opacity, 1};
+      return {material.opacity, material.opacity, material.opacity, 1};
     case trace_falsecolor_type::element:
       return make_vec(hashed_color(intersection.element), 1);
     case trace_falsecolor_type::instance:
       return make_vec(hashed_color(intersection.instance), 1);
     case trace_falsecolor_type::highlight: {
-      if (bsdf.emission == zero3f) bsdf.emission = {0.2f, 0.2f, 0.2f};
-      return make_vec(bsdf.emission * abs(dot(-ray.d, normal)), 1);
+      if (material.emission == zero3f) material.emission = {0.2f, 0.2f, 0.2f};
+      return make_vec(material.emission * abs(dot(-ray.d, normal)), 1);
     } break;
     default: return {0, 0, 0, 0};
   }
@@ -823,30 +743,26 @@ static vec4f trace_albedo(const scene_scene& scene, const trace_bvh& bvh,
   auto& instance = scene.instances[intersection.instance];
   auto  element  = intersection.element;
   auto  uv       = intersection.uv;
-  auto& material = scene.materials[instance.material];
   auto  position = eval_position(scene, instance, element, uv);
   auto  normal   = eval_shading_normal(scene, instance, element, uv, outgoing);
-  auto  texcoord = eval_texcoord(scene, instance, element, uv);
-  auto  color    = eval_color(scene, instance, element, uv);
-  auto  bsdf     = eval_bsdf(scene, instance, element, uv);
+  auto  material = eval_material(scene, instance, element, uv);
 
-  if (bsdf.emission != zero3f) {
-    return {bsdf.emission.x, bsdf.emission.y, bsdf.emission.z, 1};
+  if (material.emission != zero3f) {
+    return {material.emission.x, material.emission.y, material.emission.z, 1};
   }
 
-  auto albedo = material.color * xyz(color) *
-                xyz(eval_texture(scene, material.color_tex, texcoord, false));
+  auto albedo = material.color;
 
   // handle opacity
-  if (bsdf.opacity < 1.0f) {
+  if (material.opacity < 1.0f) {
     auto blend_albedo = trace_albedo(scene, bvh, lights,
         ray3f{position + ray.d * 1e-2f, ray.d}, rng, params, bounce);
     return lerp(
-        blend_albedo, vec4f{albedo.x, albedo.y, albedo.z, 1}, bsdf.opacity);
+        blend_albedo, vec4f{albedo.x, albedo.y, albedo.z, 1}, material.opacity);
   }
 
-  if (bsdf.roughness < 0.05 && bounce < 5) {
-    if (bsdf.type == material_type::thinglass) {
+  if (material.roughness < 0.05 && bounce < 5) {
+    if (material.type == material_type::thinglass) {
       auto incoming     = -outgoing;
       auto trans_albedo = trace_albedo(scene, bvh, lights,
           ray3f{position, incoming}, rng, params, bounce + 1);
@@ -858,7 +774,7 @@ static vec4f trace_albedo(const scene_scene& scene, const trace_bvh& bvh,
       auto fresnel = fresnel_dielectric(material.ior, outgoing, normal);
       auto dielectric_albedo = lerp(trans_albedo, spec_albedo, fresnel);
       return dielectric_albedo * vec4f{albedo.x, albedo.y, albedo.z, 1};
-    } else if (bsdf.type == material_type::metal) {
+    } else if (material.type == material_type::metal) {
       auto incoming    = reflect(outgoing, normal);
       auto refl_albedo = trace_albedo(scene, bvh, lights,
           ray3f{position, incoming}, rng, params, bounce + 1);
@@ -889,20 +805,19 @@ static vec4f trace_normal(const scene_scene& scene, const trace_bvh& bvh,
   auto& instance = scene.instances[intersection.instance];
   auto  element  = intersection.element;
   auto  uv       = intersection.uv;
-  auto& material = scene.materials[instance.material];
   auto  position = eval_position(scene, instance, element, uv);
   auto  normal   = eval_shading_normal(scene, instance, element, uv, outgoing);
-  auto  bsdf     = eval_bsdf(scene, instance, element, uv);
+  auto  material = eval_material(scene, instance, element, uv);
 
   // handle opacity
-  if (bsdf.opacity < 1.0f) {
+  if (material.opacity < 1.0f) {
     auto normal = trace_normal(scene, bvh, lights,
         ray3f{position + ray.d * 1e-2f, ray.d}, rng, params, bounce);
-    return lerp(normal, normal, bsdf.opacity);
+    return lerp(normal, normal, material.opacity);
   }
 
-  if (bsdf.roughness < 0.05f && bounce < 5) {
-    if (bsdf.type == material_type::thinglass) {
+  if (material.roughness < 0.05f && bounce < 5) {
+    if (material.type == material_type::thinglass) {
       auto incoming   = -outgoing;
       auto trans_norm = trace_normal(scene, bvh, lights,
           ray3f{position, incoming}, rng, params, bounce + 1);
@@ -913,7 +828,7 @@ static vec4f trace_normal(const scene_scene& scene, const trace_bvh& bvh,
 
       auto fresnel = fresnel_dielectric(material.ior, outgoing, normal);
       return lerp(trans_norm, spec_norm, fresnel);
-    } else if (bsdf.type == material_type::metal) {
+    } else if (material.type == material_type::metal) {
       auto incoming = reflect(outgoing, normal);
       return trace_normal(scene, bvh, lights, ray3f{position, incoming}, rng,
           params, bounce + 1);

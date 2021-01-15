@@ -119,35 +119,6 @@ using trace_scene = scene_scene;
 }  // namespace yocto
 
 // -----------------------------------------------------------------------------
-// EVALUATION OF SCENE PROPERTIES
-// -----------------------------------------------------------------------------
-namespace yocto {
-
-// Material Bsdf parameters
-struct trace_bsdf {
-  // material information
-  material_type type         = material_type::metallic;
-  vec3f         emission     = {0, 0, 0};
-  vec3f         color        = {0, 0, 0};
-  float         opacity      = 1;
-  float         roughness    = 0;
-  float         metallic     = 0;
-  float         ior          = 1;
-  vec3f         density      = {0, 0, 0};
-  vec3f         scattering   = {0, 0, 0};
-  float         scanisotropy = 0;
-  float         trdepth      = 0.01;
-};
-
-// Eval material to obatain emission, brdf and opacity.
-trace_bsdf eval_bsdf(const scene_scene& scene, const trace_instance& instance,
-    int element, const vec2f& uv);
-// check if a brdf is a delta
-bool is_delta(const trace_bsdf& bsdf);
-
-}  // namespace yocto
-
-// -----------------------------------------------------------------------------
 // RENDERING API
 // -----------------------------------------------------------------------------
 namespace yocto {
