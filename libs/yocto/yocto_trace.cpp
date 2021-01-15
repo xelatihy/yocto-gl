@@ -221,6 +221,12 @@ bool has_volume(const scene_scene& scene, const scene_instance& instance) {
 namespace yocto {
 
 // Evaluates/sample the BRDF scaled by the cosine of the incoming direction.
+static vec3f eval_emission(
+    const trace_bsdf& bsdf, const vec3f& normal, const vec3f& outgoing) {
+  return bsdf.emission;
+}
+
+// Evaluates/sample the BRDF scaled by the cosine of the incoming direction.
 static vec3f eval_bsdfcos(const trace_bsdf& bsdf, const vec3f& normal,
     const vec3f& outgoing, const vec3f& incoming) {
   if (bsdf.roughness == 0) return zero3f;
@@ -752,11 +758,7 @@ static vec4f trace_path(const scene_scene& scene, const trace_bvh& bvh,
       auto  uv       = intersection.uv;
       auto  position = eval_position(scene, instance, element, uv);
       auto normal = eval_shading_normal(scene, instance, element, uv, outgoing);
-      auto emission = eval_emission(
-          scene, instance, element, uv, normal, outgoing);
-      auto opacity = eval_opacity(
-          scene, instance, element, uv, normal, outgoing);
-      auto bsdf = eval_bsdf(scene, instance, element, uv, normal, outgoing);
+      auto bsdf   = eval_bsdf(scene, instance, element, uv, normal, outgoing);
 
       // correct roughness
       if (params.nocaustics) {
@@ -765,7 +767,7 @@ static vec4f trace_path(const scene_scene& scene, const trace_bvh& bvh,
       }
 
       // handle opacity
-      if (opacity < 1 && rand1f(rng) >= opacity) {
+      if (bsdf.opacity < 1 && rand1f(rng) >= bsdf.opacity) {
         ray = {position + ray.d * 1e-2f, ray.d};
         bounce -= 1;
         continue;
@@ -773,7 +775,7 @@ static vec4f trace_path(const scene_scene& scene, const trace_bvh& bvh,
       hit = true;
 
       // accumulate emission
-      radiance += weight * eval_emission(emission, normal, outgoing);
+      radiance += weight * eval_emission(bsdf, normal, outgoing);
 
       // next direction
       auto incoming = zero3f;
@@ -878,13 +880,10 @@ static vec4f trace_naive(const scene_scene& scene, const trace_bvh& bvh,
     auto uv       = intersection.uv;
     auto position = eval_position(scene, instance, element, uv);
     auto normal   = eval_shading_normal(scene, instance, element, uv, outgoing);
-    auto emission = eval_emission(
-        scene, instance, element, uv, normal, outgoing);
-    auto opacity = eval_opacity(scene, instance, element, uv, normal, outgoing);
-    auto bsdf    = eval_bsdf(scene, instance, element, uv, normal, outgoing);
+    auto bsdf     = eval_bsdf(scene, instance, element, uv, normal, outgoing);
 
     // handle opacity
-    if (opacity < 1 && rand1f(rng) >= opacity) {
+    if (bsdf.opacity < 1 && rand1f(rng) >= bsdf.opacity) {
       ray = {position + ray.d * 1e-2f, ray.d};
       bounce -= 1;
       continue;
@@ -892,7 +891,7 @@ static vec4f trace_naive(const scene_scene& scene, const trace_bvh& bvh,
     hit = true;
 
     // accumulate emission
-    radiance += weight * eval_emission(emission, normal, outgoing);
+    radiance += weight * eval_emission(bsdf, normal, outgoing);
 
     // next direction
     auto incoming = zero3f;
@@ -951,13 +950,10 @@ static vec4f trace_eyelight(const scene_scene& scene, const trace_bvh& bvh,
     auto uv       = intersection.uv;
     auto position = eval_position(scene, instance, element, uv);
     auto normal   = eval_shading_normal(scene, instance, element, uv, outgoing);
-    auto emission = eval_emission(
-        scene, instance, element, uv, normal, outgoing);
-    auto opacity = eval_opacity(scene, instance, element, uv, normal, outgoing);
-    auto bsdf    = eval_bsdf(scene, instance, element, uv, normal, outgoing);
+    auto bsdf     = eval_bsdf(scene, instance, element, uv, normal, outgoing);
 
     // handle opacity
-    if (opacity < 1 && rand1f(rng) >= opacity) {
+    if (bsdf.opacity < 1 && rand1f(rng) >= bsdf.opacity) {
       ray = {position + ray.d * 1e-2f, ray.d};
       bounce -= 1;
       continue;
@@ -966,7 +962,7 @@ static vec4f trace_eyelight(const scene_scene& scene, const trace_bvh& bvh,
 
     // accumulate emission
     auto incoming = outgoing;
-    radiance += weight * eval_emission(emission, normal, outgoing);
+    radiance += weight * eval_emission(bsdf, normal, outgoing);
 
     // brdf * light
     radiance += weight * pif * eval_bsdfcos(bsdf, normal, outgoing, incoming);
