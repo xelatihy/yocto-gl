@@ -78,7 +78,7 @@ static const auto coat_roughness = 0.03f * 0.03f;
 
 // Evaluate bsdf
 trace_bsdf eval_bsdf(const scene_scene& scene, const scene_instance& instance,
-    int element, const vec2f& uv, const vec3f& normal, const vec3f& outgoing) {
+    int element, const vec2f& uv) {
   auto& material = scene.materials[instance.material];
   auto  texcoord = eval_texcoord(scene, instance, element, uv);
 
@@ -88,18 +88,23 @@ trace_bsdf eval_bsdf(const scene_scene& scene, const scene_instance& instance,
   auto color_shp     = eval_color(scene, instance, element, uv);
   auto color_tex     = eval_texture(scene, material.color_tex, texcoord, false);
   auto roughness_tex = eval_texture(
-      scene, material.roughness_tex, texcoord, false);
+      scene, material.roughness_tex, texcoord, true);
+  auto scattering_tex = eval_texture(
+      scene, material.scattering_tex, texcoord, false);
 
   // material point
-  auto bsdf      = trace_bsdf{};
-  bsdf.type      = material.type;
-  bsdf.emission  = material.emission * xyz(emission_tex);
-  bsdf.color     = material.color * xyz(color_tex) * xyz(color_shp);
-  bsdf.opacity   = material.opacity * color_tex.w * color_shp.w;
-  bsdf.metallic  = material.metallic * roughness_tex.z;
-  bsdf.roughness = material.roughness * roughness_tex.y;
-  bsdf.roughness = bsdf.roughness * bsdf.roughness;
-  bsdf.ior       = material.ior;
+  auto bsdf         = trace_bsdf{};
+  bsdf.type         = material.type;
+  bsdf.emission     = material.emission * xyz(emission_tex);
+  bsdf.color        = material.color * xyz(color_tex) * xyz(color_shp);
+  bsdf.opacity      = material.opacity * color_tex.w * color_shp.w;
+  bsdf.metallic     = material.metallic * roughness_tex.z;
+  bsdf.roughness    = material.roughness * roughness_tex.y;
+  bsdf.roughness    = bsdf.roughness * bsdf.roughness;
+  bsdf.ior          = material.ior;
+  bsdf.scattering   = material.scattering * xyz(scattering_tex);
+  bsdf.scanisotropy = material.scanisotropy;
+  bsdf.trdepth      = material.trdepth;
 
   // fix roughness
   if (bsdf.type == material_type::matte ||
@@ -111,46 +116,34 @@ trace_bsdf eval_bsdf(const scene_scene& scene, const scene_instance& instance,
   return bsdf;
 }
 
-// check if a brdf is a delta
-bool is_delta(const trace_bsdf& bsdf) { return bsdf.roughness == 0; }
-
-// evaluate volume
-trace_vsdf eval_vsdf(const scene_scene& scene, const scene_instance& instance,
-    int element, const vec2f& uv) {
-  auto& material = scene.materials[instance.material];
-  // initialize factors
-  auto texcoord = eval_texcoord(scene, instance, element, uv);
-  auto color = material.color * xyz(eval_color(scene, instance, element, uv)) *
-               xyz(eval_texture(scene, material.color_tex, texcoord, false));
-  auto transmission =
-      material.transmission *
-      eval_texture(scene, material.emission_tex, texcoord, true).x;
-  auto translucency =
-      material.translucency *
-      eval_texture(scene, material.translucency_tex, texcoord, true).x;
-  auto thin = material.thin ||
-              (material.transmission == 0 && material.translucency == 0);
-  auto scattering =
-      material.scattering *
-      xyz(eval_texture(scene, material.scattering_tex, texcoord, false));
-  auto scanisotropy = material.scanisotropy;
-  auto trdepth      = material.trdepth;
-
-  // factors
-  auto vsdf       = trace_vsdf{};
-  vsdf.density    = ((transmission != 0 || translucency != 0) && !thin)
-                        ? -log(clamp(color, 0.0001f, 1.0f)) / trdepth
-                        : zero3f;
-  vsdf.scatter    = scattering;
-  vsdf.anisotropy = scanisotropy;
-
-  return vsdf;
+// check if a material is a delta
+bool is_delta(const scene_material& material) {
+  return (material.type == material_type::metal && material.roughness == 0) ||
+         (material.type == material_type::glass && material.roughness == 0) ||
+         (material.type == material_type::thinglass &&
+             material.roughness == 0) ||
+         (material.type == material_type::volume);
+}
+bool is_volume(const scene_material& material) {
+  return material.type == material_type::glass ||
+         material.type == material_type::volume ||
+         material.type == material_type::subsurface;
+}
+bool has_volume(const scene_scene& scene, const scene_instance& instance) {
+  return is_volume(scene.materials[instance.material]);
 }
 
-// check if we have a volume
-bool has_volume(const scene_scene& scene, const scene_instance& instance) {
-  auto& material = scene.materials[instance.material];
-  return !material.thin && material.transmission != 0;
+// check if a brdf is a delta
+bool is_delta(const trace_bsdf& bsdf) {
+  return (bsdf.type == material_type::metal && bsdf.roughness == 0) ||
+         (bsdf.type == material_type::glass && bsdf.roughness == 0) ||
+         (bsdf.type == material_type::thinglass && bsdf.roughness == 0) ||
+         (bsdf.type == material_type::volume);
+}
+bool is_volume(const trace_bsdf& bsdf) {
+  return bsdf.type == material_type::glass ||
+         bsdf.type == material_type::volume ||
+         bsdf.type == material_type::subsurface;
 }
 
 }  // namespace yocto
@@ -349,22 +342,25 @@ static float sample_delta_pdf(const trace_bsdf& bsdf, const vec3f& normal,
 }
 
 static vec3f eval_scattering(
-    const trace_vsdf& vsdf, const vec3f& outgoing, const vec3f& incoming) {
-  if (vsdf.density == zero3f) return zero3f;
-  return vsdf.scatter * vsdf.density *
-         eval_phasefunction(vsdf.anisotropy, outgoing, incoming);
+    const trace_bsdf& bsdf, const vec3f& outgoing, const vec3f& incoming) {
+  // vsdf.density    = ((transmission != 0 || translucency != 0) && !thin)
+  //                       ? -log(clamp(color, 0.0001f, 1.0f)) / trdepth
+  //                       : zero3f;
+  if (bsdf.density == zero3f) return zero3f;
+  return bsdf.scattering * bsdf.density *
+         eval_phasefunction(bsdf.scanisotropy, outgoing, incoming);
 }
 
 static vec3f sample_scattering(
-    const trace_vsdf& vsdf, const vec3f& outgoing, float rnl, const vec2f& rn) {
-  if (vsdf.density == zero3f) return zero3f;
-  return sample_phasefunction(vsdf.anisotropy, outgoing, rn);
+    const trace_bsdf& bsdf, const vec3f& outgoing, float rnl, const vec2f& rn) {
+  if (bsdf.density == zero3f) return zero3f;
+  return sample_phasefunction(bsdf.scanisotropy, outgoing, rn);
 }
 
 static float sample_scattering_pdf(
-    const trace_vsdf& vsdf, const vec3f& outgoing, const vec3f& incoming) {
-  if (vsdf.density == zero3f) return 0;
-  return sample_phasefunction_pdf(vsdf.anisotropy, outgoing, incoming);
+    const trace_bsdf& bsdf, const vec3f& outgoing, const vec3f& incoming) {
+  if (bsdf.density == zero3f) return 0;
+  return sample_phasefunction_pdf(bsdf.scanisotropy, outgoing, incoming);
 }
 
 // Sample camera
@@ -482,7 +478,7 @@ static vec4f trace_path(const scene_scene& scene, const trace_bvh& bvh,
   auto radiance      = zero3f;
   auto weight        = vec3f{1, 1, 1};
   auto ray           = ray_;
-  auto volume_stack  = vector<trace_vsdf>{};
+  auto volume_stack  = vector<trace_bsdf>{};
   auto max_roughness = 0.0f;
   auto hit           = !params.envhidden && !scene.environments.empty();
 
@@ -518,7 +514,7 @@ static vec4f trace_path(const scene_scene& scene, const trace_bvh& bvh,
       auto  uv       = intersection.uv;
       auto  position = eval_position(scene, instance, element, uv);
       auto normal = eval_shading_normal(scene, instance, element, uv, outgoing);
-      auto bsdf   = eval_bsdf(scene, instance, element, uv, normal, outgoing);
+      auto bsdf   = eval_bsdf(scene, instance, element, uv);
 
       // correct roughness
       if (params.nocaustics) {
@@ -561,8 +557,8 @@ static vec4f trace_path(const scene_scene& scene, const trace_bvh& bvh,
       if (has_volume(scene, instance) &&
           dot(normal, outgoing) * dot(normal, incoming) < 0) {
         if (volume_stack.empty()) {
-          auto vsdf = eval_vsdf(scene, instance, element, uv);
-          volume_stack.push_back(vsdf);
+          auto bsdf = eval_bsdf(scene, instance, element, uv);
+          volume_stack.push_back(bsdf);
         } else {
           volume_stack.pop_back();
         }
@@ -640,7 +636,7 @@ static vec4f trace_naive(const scene_scene& scene, const trace_bvh& bvh,
     auto uv       = intersection.uv;
     auto position = eval_position(scene, instance, element, uv);
     auto normal   = eval_shading_normal(scene, instance, element, uv, outgoing);
-    auto bsdf     = eval_bsdf(scene, instance, element, uv, normal, outgoing);
+    auto bsdf     = eval_bsdf(scene, instance, element, uv);
 
     // handle opacity
     if (bsdf.opacity < 1 && rand1f(rng) >= bsdf.opacity) {
@@ -710,7 +706,7 @@ static vec4f trace_eyelight(const scene_scene& scene, const trace_bvh& bvh,
     auto uv       = intersection.uv;
     auto position = eval_position(scene, instance, element, uv);
     auto normal   = eval_shading_normal(scene, instance, element, uv, outgoing);
-    auto bsdf     = eval_bsdf(scene, instance, element, uv, normal, outgoing);
+    auto bsdf     = eval_bsdf(scene, instance, element, uv);
 
     // handle opacity
     if (bsdf.opacity < 1 && rand1f(rng) >= bsdf.opacity) {
@@ -761,9 +757,7 @@ static vec4f trace_falsecolor(const scene_scene& scene, const trace_bvh& bvh,
   auto gnormal  = eval_element_normal(scene, instance, element);
   auto texcoord = eval_texcoord(scene, instance, element, uv);
   auto color    = eval_color(scene, instance, element, uv);
-  auto emission = eval_emission(scene, instance, element, uv, normal, outgoing);
-  auto opacity  = eval_opacity(scene, instance, element, uv, normal, outgoing);
-  auto bsdf     = eval_bsdf(scene, instance, element, uv, normal, outgoing);
+  auto bsdf     = eval_bsdf(scene, instance, element, uv);
 
   // hash color
   auto hashed_color = [](int id) {
@@ -792,17 +786,18 @@ static vec4f trace_falsecolor(const scene_scene& scene, const trace_bvh& bvh,
     case trace_falsecolor_type::texcoord:
       return {fmod(texcoord.x, 1.0f), fmod(texcoord.y, 1.0f), 0, 1};
     case trace_falsecolor_type::color: return make_vec(xyz(color), 1);
-    case trace_falsecolor_type::emission: return make_vec(emission, 1);
+    case trace_falsecolor_type::emission: return make_vec(bsdf.emission, 1);
     case trace_falsecolor_type::roughness:
       return {bsdf.roughness, bsdf.roughness, bsdf.roughness, 1};
-    case trace_falsecolor_type::opacity: return {opacity, opacity, opacity, 1};
+    case trace_falsecolor_type::opacity:
+      return {bsdf.opacity, bsdf.opacity, bsdf.opacity, 1};
     case trace_falsecolor_type::element:
       return make_vec(hashed_color(intersection.element), 1);
     case trace_falsecolor_type::instance:
       return make_vec(hashed_color(intersection.instance), 1);
     case trace_falsecolor_type::highlight: {
-      if (emission == zero3f) emission = {0.2f, 0.2f, 0.2f};
-      return make_vec(emission * abs(dot(-ray.d, normal)), 1);
+      if (bsdf.emission == zero3f) bsdf.emission = {0.2f, 0.2f, 0.2f};
+      return make_vec(bsdf.emission * abs(dot(-ray.d, normal)), 1);
     } break;
     default: return {0, 0, 0, 0};
   }
@@ -827,22 +822,21 @@ static vec4f trace_albedo(const scene_scene& scene, const trace_bvh& bvh,
   auto  normal   = eval_shading_normal(scene, instance, element, uv, outgoing);
   auto  texcoord = eval_texcoord(scene, instance, element, uv);
   auto  color    = eval_color(scene, instance, element, uv);
-  auto emission = eval_emission(scene, instance, element, uv, normal, outgoing);
-  auto opacity  = eval_opacity(scene, instance, element, uv, normal, outgoing);
-  auto bsdf     = eval_bsdf(scene, instance, element, uv, normal, outgoing);
+  auto  bsdf     = eval_bsdf(scene, instance, element, uv);
 
-  if (emission != zero3f) {
-    return {emission.x, emission.y, emission.z, 1};
+  if (bsdf.emission != zero3f) {
+    return {bsdf.emission.x, bsdf.emission.y, bsdf.emission.z, 1};
   }
 
   auto albedo = material.color * xyz(color) *
                 xyz(eval_texture(scene, material.color_tex, texcoord, false));
 
   // handle opacity
-  if (opacity < 1.0f) {
+  if (bsdf.opacity < 1.0f) {
     auto blend_albedo = trace_albedo(scene, bvh, lights,
         ray3f{position + ray.d * 1e-2f, ray.d}, rng, params, bounce);
-    return lerp(blend_albedo, vec4f{albedo.x, albedo.y, albedo.z, 1}, opacity);
+    return lerp(
+        blend_albedo, vec4f{albedo.x, albedo.y, albedo.z, 1}, bsdf.opacity);
   }
 
   if (bsdf.roughness < 0.05 && bounce < 5) {
@@ -892,14 +886,13 @@ static vec4f trace_normal(const scene_scene& scene, const trace_bvh& bvh,
   auto& material = scene.materials[instance.material];
   auto  position = eval_position(scene, instance, element, uv);
   auto  normal   = eval_shading_normal(scene, instance, element, uv, outgoing);
-  auto  opacity  = eval_opacity(scene, instance, element, uv, normal, outgoing);
-  auto  bsdf     = eval_bsdf(scene, instance, element, uv, normal, outgoing);
+  auto  bsdf     = eval_bsdf(scene, instance, element, uv);
 
   // handle opacity
-  if (opacity < 1.0f) {
+  if (bsdf.opacity < 1.0f) {
     auto normal = trace_normal(scene, bvh, lights,
         ray3f{position + ray.d * 1e-2f, ray.d}, rng, params, bounce);
-    return lerp(normal, normal, opacity);
+    return lerp(normal, normal, bsdf.opacity);
   }
 
   if (bsdf.roughness < 0.05f && bounce < 5) {

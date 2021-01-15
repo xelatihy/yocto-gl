@@ -130,33 +130,20 @@ struct scene_material {
   material_type type         = material_type::metallic;
   vec3f         emission     = {0, 0, 0};
   vec3f         color        = {0, 0, 0};
-  float         specular     = 0;
   float         roughness    = 0;
   float         metallic     = 0;
   float         ior          = 1.5;
-  vec3f         spectint     = {1, 1, 1};
-  float         coat         = 0;
-  float         transmission = 0;
-  float         translucency = 0;
   vec3f         scattering   = {0, 0, 0};
   float         scanisotropy = 0;
   float         trdepth      = 0.01;
   float         opacity      = 1;
-  bool          thin         = true;
 
   // textures
-  texture_handle emission_tex     = invalid_handle;
-  texture_handle color_tex        = invalid_handle;
-  texture_handle specular_tex     = invalid_handle;
-  texture_handle metallic_tex     = invalid_handle;
-  texture_handle roughness_tex    = invalid_handle;
-  texture_handle transmission_tex = invalid_handle;
-  texture_handle translucency_tex = invalid_handle;
-  texture_handle spectint_tex     = invalid_handle;
-  texture_handle scattering_tex   = invalid_handle;
-  texture_handle coat_tex         = invalid_handle;
-  texture_handle opacity_tex      = invalid_handle;
-  texture_handle normal_tex       = invalid_handle;
+  texture_handle emission_tex   = invalid_handle;
+  texture_handle color_tex      = invalid_handle;
+  texture_handle roughness_tex  = invalid_handle;
+  texture_handle scattering_tex = invalid_handle;
+  texture_handle normal_tex     = invalid_handle;
 };
 
 // Shape data represented as indexed meshes of elements.
@@ -422,19 +409,13 @@ struct scene_material_sample {
   material_type type         = material_type::matte;
   vec3f         emission     = {0, 0, 0};
   vec3f         color        = {0, 0, 0};
-  float         specular     = 0;
   float         roughness    = 0;
   float         metallic     = 0;
   float         ior          = 1.5;
-  vec3f         spectint     = {1, 1, 1};
-  float         coat         = 0;
-  float         transmission = 0;
-  float         translucency = 0;
   vec3f         scattering   = {0, 0, 0};
   float         scanisotropy = 0;
   float         trdepth      = 0.01;
   float         opacity      = 1;
-  bool          thin         = true;
   vec3f         normalmap    = {0, 0, 1};
 };
 

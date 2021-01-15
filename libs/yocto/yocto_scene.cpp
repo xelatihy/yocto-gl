@@ -536,7 +536,6 @@ material_handle add_subsurface_material(scene_scene& scene, const string& name,
   material.scanisotropy   = scanisotropy;
   material.trdepth        = trdepth;
   material.normal_tex     = normal_tex;
-  material.thin           = false;
   return (int)scene.materials.size() - 1;
 }
 material_handle add_volume_material(scene_scene& scene, const string& name,
@@ -1086,7 +1085,7 @@ vec3f eval_shading_normal(const scene_scene& scene,
     if (material.normal_tex != invalid_handle) {
       normal = eval_normalmap(scene, instance, element, uv);
     }
-    if (!material.thin) return normal;
+    if (material.type == material_type::glass) return normal;
     return dot(normal, outgoing) >= 0 ? normal : -normal;
   } else if (!shape.lines.empty()) {
     auto normal = eval_normal(scene, instance, element, uv);
@@ -1144,31 +1143,21 @@ vec3f eval_environment(const scene_scene& scene, const vec3f& direction) {
 // Evaluate point
 scene_material_sample eval_material(const scene_scene& scene,
     const scene_material& material, const vec2f& texcoord) {
-  auto mat = scene_material_sample{};
-  mat.type = material.type;
-  mat.emission =
-      material.emission *
-      xyz(eval_texture(scene, material.emission_tex, texcoord, false));
-  mat.color = material.color *
-              xyz(eval_texture(scene, material.color_tex, texcoord, false));
-  mat.specular = material.specular *
-                 eval_texture(scene, material.specular_tex, texcoord, true).x;
-  mat.metallic = material.metallic *
-                 eval_texture(scene, material.metallic_tex, texcoord, true).x;
-  mat.roughness = material.roughness *
-                  eval_texture(scene, material.roughness_tex, texcoord, true).x;
-  mat.ior  = material.ior;
-  mat.coat = material.coat *
-             eval_texture(scene, material.coat_tex, texcoord, true).x;
-  mat.transmission =
-      material.transmission *
-      eval_texture(scene, material.emission_tex, texcoord, true).x;
-  mat.translucency =
-      material.translucency *
-      eval_texture(scene, material.translucency_tex, texcoord, true).x;
-  mat.opacity = material.opacity *
-                eval_texture(scene, material.opacity_tex, texcoord, true).x;
-  mat.thin = material.thin || material.transmission == 0;
+  // evaluate textures
+  auto emission_tex = eval_texture(
+      scene, material.emission_tex, texcoord, false);
+  auto color_tex     = eval_texture(scene, material.color_tex, texcoord, false);
+  auto roughness_tex = eval_texture(
+      scene, material.roughness_tex, texcoord, true);
+
+  auto mat      = scene_material_sample{};
+  mat.type      = material.type;
+  mat.emission  = material.emission * xyz(emission_tex);
+  mat.color     = material.color * xyz(color_tex);
+  mat.metallic  = material.metallic * roughness_tex.z;
+  mat.roughness = material.roughness * roughness_tex.y;
+  mat.ior       = material.ior;
+  mat.opacity   = material.opacity * color_tex.w;
   mat.scattering =
       material.scattering *
       xyz(eval_texture(scene, material.scattering_tex, texcoord, false));
@@ -1192,17 +1181,6 @@ vec3f eval_emission(const scene_scene& scene, const scene_instance& instance,
   auto  texcoord = eval_texcoord(scene, instance, element, uv);
   return material.emission *
          xyz(eval_texture(scene, material.emission_tex, texcoord));
-}
-
-// Eval material to obtain emission, brdf and opacity.
-float eval_opacity(const scene_scene& scene, const scene_instance& instance,
-    int element, const vec2f& uv, const vec3f& normal, const vec3f& outgoing) {
-  auto& material = scene.materials[instance.material];
-  auto  texcoord = eval_texcoord(scene, instance, element, uv);
-  auto  opacity  = material.opacity *
-                 eval_texture(scene, material.opacity_tex, texcoord, true).x;
-  if (opacity > 0.999f) opacity = 1;
-  return opacity;
 }
 
 }  // namespace yocto

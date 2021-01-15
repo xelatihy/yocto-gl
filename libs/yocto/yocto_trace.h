@@ -126,38 +126,24 @@ namespace yocto {
 // Material Bsdf parameters
 struct trace_bsdf {
   // material information
-  material_type type      = material_type::metallic;
-  vec3f         emission  = {0, 0, 0};
-  vec3f         color     = {0, 0, 0};
-  float         opacity   = 1;
-  float         roughness = 0;
-  float         metallic  = 0;
-  float         ior       = 1;
+  material_type type         = material_type::metallic;
+  vec3f         emission     = {0, 0, 0};
+  vec3f         color        = {0, 0, 0};
+  float         opacity      = 1;
+  float         roughness    = 0;
+  float         metallic     = 0;
+  float         ior          = 1;
+  vec3f         density      = {0, 0, 0};
+  vec3f         scattering   = {0, 0, 0};
+  float         scanisotropy = 0;
+  float         trdepth      = 0.01;
 };
 
-// Eval material to obtain emission, brdf and opacity.
-vec3f eval_emission(const scene_scene& scene, const trace_instance& instance,
-    int element, const vec2f& uv, const vec3f& normal, const vec3f& outgoing);
 // Eval material to obatain emission, brdf and opacity.
 trace_bsdf eval_bsdf(const scene_scene& scene, const trace_instance& instance,
-    int element, const vec2f& uv, const vec3f& normal, const vec3f& outgoing);
-float eval_opacity(const scene_scene& scene, const trace_instance& instance,
-    int element, const vec2f& uv, const vec3f& normal, const vec3f& outgoing);
+    int element, const vec2f& uv);
 // check if a brdf is a delta
 bool is_delta(const trace_bsdf& bsdf);
-
-// Material volume parameters
-struct trace_vsdf {
-  vec3f density    = {0, 0, 0};
-  vec3f scatter    = {0, 0, 0};
-  float anisotropy = 0;
-};
-
-// check if we have a volume
-bool has_volume(const scene_scene& scene, const trace_instance* instance);
-// evaluate volume
-trace_vsdf eval_vsdf(const scene_scene& scene, const trace_instance* instance,
-    int element, const vec2f& uv);
 
 }  // namespace yocto
 

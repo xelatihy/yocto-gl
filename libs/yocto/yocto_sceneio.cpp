@@ -1149,23 +1149,8 @@ static bool load_json_scene(const string& filename, scene_scene& scene,
           } else if (key == "metallic") {
             if (!get_value(value, material.metallic))
               return parse_error(gname, name, key);
-          } else if (key == "specular") {
-            if (!get_value(value, material.specular))
-              return parse_error(gname, name, key);
           } else if (key == "roughness") {
             if (!get_value(value, material.roughness))
-              return parse_error(gname, name, key);
-          } else if (key == "coat") {
-            if (!get_value(value, material.coat))
-              return parse_error(gname, name, key);
-          } else if (key == "transmission") {
-            if (!get_value(value, material.transmission))
-              return parse_error(gname, name, key);
-          } else if (key == "translucency") {
-            if (!get_value(value, material.translucency))
-              return parse_error(gname, name, key);
-          } else if (key == "thin") {
-            if (!get_value(value, material.thin))
               return parse_error(gname, name, key);
           } else if (key == "ior") {
             if (!get_value(value, material.ior))
@@ -1182,35 +1167,17 @@ static bool load_json_scene(const string& filename, scene_scene& scene,
           } else if (key == "opacity") {
             if (!get_value(value, material.opacity))
               return parse_error(gname, name, key);
-          } else if (key == "coat") {
-            if (!get_value(value, material.coat))
-              return parse_error(gname, name, key);
           } else if (key == "emission_tex") {
             if (!get_texture(value, material.emission_tex))
               return parse_error(gname, name, key);
           } else if (key == "color_tex") {
             if (!get_texture(value, material.color_tex))
               return parse_error(gname, name, key);
-          } else if (key == "metallic_tex") {
-            if (!get_texture(value, material.metallic_tex))
-              return parse_error(gname, name, key);
-          } else if (key == "specular_tex") {
-            if (!get_texture(value, material.specular_tex))
-              return parse_error(gname, name, key);
-          } else if (key == "transmission_tex") {
-            if (!get_texture(value, material.transmission_tex))
-              return parse_error(gname, name, key);
-          } else if (key == "translucency_tex") {
-            if (!get_texture(value, material.translucency_tex))
-              return parse_error(gname, name, key);
           } else if (key == "roughness_tex") {
             if (!get_texture(value, material.roughness_tex))
               return parse_error(gname, name, key);
           } else if (key == "scattering_tex") {
             if (!get_texture(value, material.scattering_tex))
-              return parse_error(gname, name, key);
-          } else if (key == "opacity_tex") {
-            if (!get_texture(value, material.opacity_tex))
               return parse_error(gname, name, key);
           } else if (key == "normal_tex") {
             if (!get_texture(value, material.normal_tex))
@@ -1508,26 +1475,14 @@ static bool save_json_scene(const string& filename, const scene_scene& scene,
       if (material.color != def_material.color) {
         insert_value(element, "color", material.color);
       }
-      if (material.specular != def_material.specular) {
-        insert_value(element, "specular", material.specular);
-      }
       if (material.metallic != def_material.metallic) {
         insert_value(element, "metallic", material.metallic);
-      }
-      if (material.coat != def_material.coat) {
-        insert_value(element, "coat", material.coat);
       }
       if (material.roughness != def_material.roughness) {
         insert_value(element, "roughness", material.roughness);
       }
       if (material.ior != def_material.ior) {
         insert_value(element, "ior", material.ior);
-      }
-      if (material.transmission != def_material.transmission) {
-        insert_value(element, "transmission", material.transmission);
-      }
-      if (material.translucency != def_material.translucency) {
-        insert_value(element, "translucency", material.translucency);
       }
       if (material.trdepth != def_material.trdepth) {
         insert_value(element, "trdepth", material.trdepth);
@@ -1541,9 +1496,6 @@ static bool save_json_scene(const string& filename, const scene_scene& scene,
       if (material.opacity != def_material.opacity) {
         insert_value(element, "opacity", material.opacity);
       }
-      if (material.thin != def_material.thin) {
-        insert_value(element, "thin", material.thin);
-      }
       if (material.emission_tex != invalid_handle) {
         insert_value(element, "emission_tex",
             get_texture_name(scene, material.emission_tex));
@@ -1552,37 +1504,13 @@ static bool save_json_scene(const string& filename, const scene_scene& scene,
         insert_value(
             element, "color_tex", get_texture_name(scene, material.color_tex));
       }
-      if (material.metallic_tex != invalid_handle) {
-        insert_value(element, "metallic_tex",
-            get_texture_name(scene, material.metallic_tex));
-      }
-      if (material.specular_tex != invalid_handle) {
-        insert_value(element, "specular_tex",
-            get_texture_name(scene, material.specular_tex));
-      }
       if (material.roughness_tex != invalid_handle) {
         insert_value(element, "roughness_tex",
             get_texture_name(scene, material.roughness_tex));
       }
-      if (material.transmission_tex != invalid_handle) {
-        insert_value(element, "transmission_tex",
-            get_texture_name(scene, material.transmission_tex));
-      }
-      if (material.translucency_tex != invalid_handle) {
-        insert_value(element, "translucency_tex",
-            get_texture_name(scene, material.translucency_tex));
-      }
       if (material.scattering_tex != invalid_handle) {
         insert_value(element, "scattering_tex",
             get_texture_name(scene, material.scattering_tex));
-      }
-      if (material.coat_tex != invalid_handle) {
-        insert_value(
-            element, "coat_tex", get_texture_name(scene, material.coat_tex));
-      }
-      if (material.opacity_tex != invalid_handle) {
-        insert_value(element, "opacity_tex",
-            get_texture_name(scene, material.opacity_tex));
       }
       if (material.normal_tex != invalid_handle) {
         insert_value(element, "normal_tex",
@@ -1750,15 +1678,12 @@ static bool load_obj_scene(const string& filename, scene_scene& scene,
     material.type                = material_type::metallic;
     material.emission            = omaterial.pbr_emission;
     material.color               = omaterial.pbr_base;
-    material.specular            = omaterial.pbr_specular;
     material.roughness           = omaterial.pbr_roughness;
     material.ior                 = omaterial.pbr_ior;
     material.metallic            = omaterial.pbr_metallic;
     material.opacity             = omaterial.pbr_opacity;
     material.emission_tex        = get_texture(omaterial.pbr_emission_tex);
     material.color_tex           = get_texture(omaterial.pbr_base_tex);
-    material.specular_tex        = get_texture(omaterial.pbr_specular_tex);
-    material.metallic_tex        = get_texture(omaterial.pbr_metallic_tex);
     material.roughness_tex       = get_texture(omaterial.pbr_roughness_tex);
     material.normal_tex          = get_texture(omaterial.normal_tex);
     material_map[omaterial.name] = (int)scene.materials.size() - 1;
@@ -1888,29 +1813,21 @@ static bool save_obj_scene(const string& filename, const scene_scene& scene,
 
   // convert materials and textures
   for (auto& material : scene.materials) {
-    auto& omaterial                = obj.materials.emplace_back();
-    omaterial.name                 = get_material_name(scene, material);
-    omaterial.illum                = 2;
-    omaterial.as_pbr               = true;
-    omaterial.pbr_emission         = material.emission;
-    omaterial.pbr_base             = material.color;
-    omaterial.pbr_specular         = material.specular;
-    omaterial.pbr_roughness        = material.roughness;
-    omaterial.pbr_metallic         = material.metallic;
-    omaterial.pbr_coat             = material.coat;
-    omaterial.pbr_transmission     = material.transmission;
-    omaterial.pbr_translucency     = material.translucency;
-    omaterial.pbr_opacity          = material.opacity;
-    omaterial.pbr_emission_tex     = get_texture(material.emission_tex);
-    omaterial.pbr_base_tex         = get_texture(material.color_tex);
-    omaterial.pbr_specular_tex     = get_texture(material.specular_tex);
-    omaterial.pbr_metallic_tex     = get_texture(material.metallic_tex);
-    omaterial.pbr_roughness_tex    = get_texture(material.roughness_tex);
-    omaterial.pbr_transmission_tex = get_texture(material.transmission_tex);
-    omaterial.pbr_translucency_tex = get_texture(material.translucency_tex);
-    omaterial.pbr_coat_tex         = get_texture(material.coat_tex);
-    omaterial.pbr_opacity_tex      = get_texture(material.opacity_tex);
-    omaterial.pbr_normal_tex       = get_texture(material.normal_tex);
+    auto& omaterial             = obj.materials.emplace_back();
+    omaterial.name              = get_material_name(scene, material);
+    omaterial.illum             = 2;
+    omaterial.as_pbr            = true;
+    omaterial.pbr_emission      = material.emission;
+    omaterial.pbr_base          = material.color;
+    omaterial.pbr_specular      = 1;
+    omaterial.pbr_roughness     = material.roughness;
+    omaterial.pbr_metallic      = material.metallic;
+    omaterial.pbr_coat          = 0;
+    omaterial.pbr_opacity       = material.opacity;
+    omaterial.pbr_emission_tex  = get_texture(material.emission_tex);
+    omaterial.pbr_base_tex      = get_texture(material.color_tex);
+    omaterial.pbr_roughness_tex = get_texture(material.roughness_tex);
+    omaterial.pbr_normal_tex    = get_texture(material.normal_tex);
   }
 
   // convert objects
@@ -2242,9 +2159,8 @@ static bool load_gltf_scene(const string& filename, scene_scene& scene,
       material.opacity  = gmr->base_color_factor[3];
       material.metallic = gmr->metallic_factor;
       material.roughness      = gmr->roughness_factor;
-      material.specular       = 1;
       material.color_tex      = get_texture(gmr->base_color_texture);
-      material.metallic_tex   = get_texture(gmr->metallic_roughness_texture);
+      material.roughness_tex  = get_texture(gmr->metallic_roughness_texture);
       material.normal_tex     = get_texture(gmaterial->normal_texture);
       material_map[gmaterial] = (int)scene.materials.size() - 1;
     }
@@ -2859,24 +2775,34 @@ static bool load_pbrt_scene(const string& filename, scene_scene& scene,
   // convert material
   auto material_map = unordered_map<string, material_handle>{};
   for (auto& pmaterial : pbrt.materials) {
-    auto& material    = scene.materials.emplace_back();
-    material.type     = pmaterial.transmission > 0 ? material_type::thinglass
-                                                   : material_type::metallic;
-    material.color    = pmaterial.color;
-    material.type     = material_type::metallic;
-    material.emission = pmaterial.emission;
-    material.color    = pmaterial.color;
-    material.metallic = pmaterial.metallic;
-    material.specular = pmaterial.specular;
-    material.transmission = pmaterial.transmission;
-    material.ior          = pmaterial.ior;
-    material.roughness    = pmaterial.roughness;
-    material.opacity      = pmaterial.opacity;
-    material.thin         = pmaterial.thin;
-    material.color_tex    = get_texture(pmaterial.color_tex);
-    material.opacity_tex  = get_texture(pmaterial.opacity_tex);
-    if (material.opacity_tex == invalid_handle)
-      material.opacity_tex = get_atexture(pmaterial.alpha_tex);
+    auto& material = scene.materials.emplace_back();
+    material.type  = pmaterial.transmission > 0 ? material_type::thinglass
+                                                : material_type::metallic;
+    material.color = pmaterial.color;
+    if (pmaterial.emission != zero3f) {
+      material.type = material_type::matte;
+    } else if (pmaterial.transmission > 0 && pmaterial.thin) {
+      material.type = material_type::thinglass;
+    } else if (pmaterial.transmission > 0 && !pmaterial.thin) {
+      material.type = material_type::glass;
+    } else if (pmaterial.metallic > 0) {
+      material.type = material_type::metal;
+    } else if (pmaterial.specular > 0) {
+      material.type = material_type::plastic;
+    } else {
+      material.type = material_type::matte;
+    }
+    material.type      = material_type::metallic;
+    material.emission  = pmaterial.emission;
+    material.color     = pmaterial.color;
+    material.metallic  = pmaterial.metallic;
+    material.ior       = pmaterial.ior;
+    material.roughness = pmaterial.roughness;
+    material.opacity   = pmaterial.opacity;
+    material.color_tex = get_texture(pmaterial.color_tex);
+    // material.opacity_tex  = get_texture(pmaterial.opacity_tex);
+    // if (material.opacity_tex == invalid_handle)
+    //   material.opacity_tex = get_atexture(pmaterial.alpha_tex);
     material_map[pmaterial.name] = (int)scene.materials.size() - 1;
   }
 
@@ -3007,18 +2933,20 @@ static bool save_pbrt_scene(const string& filename, const scene_scene& scene,
   auto material_map = unordered_map<material_handle, string>{};
   auto material_id  = 0;
   for (auto& material : scene.materials) {
-    auto& pmaterial             = add_material(pbrt);
-    pmaterial.name              = get_material_name(scene, material);
-    pmaterial.emission          = material.emission;
-    pmaterial.color             = material.color;
-    pmaterial.metallic          = material.metallic;
-    pmaterial.specular          = material.specular;
-    pmaterial.transmission      = material.transmission;
-    pmaterial.roughness         = material.roughness;
-    pmaterial.ior               = material.ior;
-    pmaterial.opacity           = material.opacity;
-    pmaterial.color_tex         = get_texture(material.color_tex);
-    pmaterial.opacity_tex       = get_texture(material.opacity_tex);
+    auto& pmaterial        = add_material(pbrt);
+    pmaterial.name         = get_material_name(scene, material);
+    pmaterial.emission     = material.emission;
+    pmaterial.color        = material.color;
+    pmaterial.specular     = material.type == material_type::plastic ? 1 : 0;
+    pmaterial.metallic     = material.metallic;
+    pmaterial.roughness    = material.roughness;
+    pmaterial.transmission = material.type == material_type::thinglass ||
+                                     material.type == material_type::glass
+                                 ? 1
+                                 : 0;
+    pmaterial.ior          = material.ior;
+    pmaterial.opacity      = material.opacity;
+    pmaterial.color_tex    = get_texture(material.color_tex);
     material_map[material_id++] = pmaterial.name;
   }
 
