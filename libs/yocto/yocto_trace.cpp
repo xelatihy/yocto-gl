@@ -343,7 +343,7 @@ static float sample_delta_pdf(const trace_bsdf& bsdf, const vec3f& normal,
                         bsdf.ior, normal, outgoing, incoming);
   } else if (bsdf.type == material_type::glass) {
     return sample_delta_refraction_pdf(bsdf.ior, normal, outgoing, incoming);
-  } else if (bsdf.type == material_type::thinglass) {
+  } else if (bsdf.type == material_type::volume) {
     return sample_delta_transmission_pdf(bsdf.ior, normal, outgoing, incoming);
   } else {
     return 0;
