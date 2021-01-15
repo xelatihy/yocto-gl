@@ -2772,30 +2772,26 @@ static bool load_pbrt_scene(const string& filename, scene_scene& scene,
     return (int)scene.textures.size() - 1;
   };
 
+  // material type map
+  auto material_type_map = unordered_map<pbrt_material_type, material_type>{
+      {pbrt_material_type::matte, material_type::matte},
+      {pbrt_material_type::plastic, material_type::plastic},
+      {pbrt_material_type::metal, material_type::metal},
+      {pbrt_material_type::glass, material_type::glass},
+      {pbrt_material_type::thinglass, material_type::thinglass},
+      {pbrt_material_type::subsurface, material_type::matte},
+  };
+
   // convert material
   auto material_map = unordered_map<string, material_handle>{};
   for (auto& pmaterial : pbrt.materials) {
     auto& material = scene.materials.emplace_back();
-    material.type  = pmaterial.transmission > 0 ? material_type::thinglass
-                                                : material_type::metallic;
-    material.color = pmaterial.color;
+    material.type  = material_type_map.at(pmaterial.type);
     if (pmaterial.emission != zero3f) {
       material.type = material_type::matte;
-    } else if (pmaterial.transmission > 0 && pmaterial.thin) {
-      material.type = material_type::thinglass;
-    } else if (pmaterial.transmission > 0 && !pmaterial.thin) {
-      material.type = material_type::glass;
-    } else if (pmaterial.metallic > 0) {
-      material.type = material_type::metal;
-    } else if (pmaterial.specular > 0) {
-      material.type = material_type::plastic;
-    } else {
-      material.type = material_type::matte;
     }
-    material.type      = material_type::metallic;
     material.emission  = pmaterial.emission;
     material.color     = pmaterial.color;
-    material.metallic  = pmaterial.metallic;
     material.ior       = pmaterial.ior;
     material.roughness = pmaterial.roughness;
     material.opacity   = pmaterial.opacity;
@@ -2929,24 +2925,30 @@ static bool save_pbrt_scene(const string& filename, const scene_scene& scene,
     return texture != invalid_handle ? get_texture_name(scene, texture) : "";
   };
 
+  // material type map
+  auto material_type_map = unordered_map<material_type, pbrt_material_type>{
+      {material_type::matte, pbrt_material_type::matte},
+      {material_type::plastic, pbrt_material_type::plastic},
+      {material_type::metal, pbrt_material_type::metal},
+      {material_type::glass, pbrt_material_type::glass},
+      {material_type::thinglass, pbrt_material_type::thinglass},
+      {material_type::subsurface, pbrt_material_type::matte},
+      {material_type::volume, pbrt_material_type::matte},
+  };
+
   // convert materials
   auto material_map = unordered_map<material_handle, string>{};
   auto material_id  = 0;
   for (auto& material : scene.materials) {
-    auto& pmaterial        = add_material(pbrt);
-    pmaterial.name         = get_material_name(scene, material);
-    pmaterial.emission     = material.emission;
-    pmaterial.color        = material.color;
-    pmaterial.specular     = material.type == material_type::plastic ? 1 : 0;
-    pmaterial.metallic     = material.metallic;
-    pmaterial.roughness    = material.roughness;
-    pmaterial.transmission = material.type == material_type::thinglass ||
-                                     material.type == material_type::glass
-                                 ? 1
-                                 : 0;
-    pmaterial.ior          = material.ior;
-    pmaterial.opacity      = material.opacity;
-    pmaterial.color_tex    = get_texture(material.color_tex);
+    auto& pmaterial             = add_material(pbrt);
+    pmaterial.name              = get_material_name(scene, material);
+    pmaterial.type              = material_type_map.at(material.type);
+    pmaterial.emission          = material.emission;
+    pmaterial.color             = material.color;
+    pmaterial.roughness         = material.roughness;
+    pmaterial.ior               = material.ior;
+    pmaterial.opacity           = material.opacity;
+    pmaterial.color_tex         = get_texture(material.color_tex);
     material_map[material_id++] = pmaterial.name;
   }
 

@@ -482,25 +482,29 @@ struct pbrt_camera {
   float   aperture   = 0;
 };
 
+// Pbrt material type (simplified and only for the materials that matter here)
+enum struct pbrt_material_type {
+  // clang-format off
+  matte, plastic, metal, glass, thinglass, subsurface
+  // clang-format on
+};
+
 // Pbrt material
 struct pbrt_material {
   // material parameters
-  string name            = "";
-  vec3f  emission        = {0, 0, 0};
-  vec3f  color           = {0, 0, 0};
-  float  specular        = 0;
-  float  metallic        = 0;
-  float  transmission    = 0;
-  float  roughness       = 0;
-  float  ior             = 1.5;
-  float  opacity         = 1;
-  string color_tex       = "";
-  string opacity_tex     = "";
-  string alpha_tex       = "";
-  bool   thin            = true;
-  vec3f  volmeanfreepath = {0, 0, 0};
-  vec3f  volscatter      = {0, 0, 0};
-  float  volscale        = 0.01;
+  string             name            = "";
+  pbrt_material_type type            = pbrt_material_type::matte;
+  vec3f              emission        = {0, 0, 0};
+  vec3f              color           = {0, 0, 0};
+  float              roughness       = 0;
+  float              ior             = 1.5;
+  float              opacity         = 1;
+  string             color_tex       = "";
+  string             opacity_tex     = "";
+  string             alpha_tex       = "";
+  vec3f              volmeanfreepath = {0, 0, 0};
+  vec3f              volscatter      = {0, 0, 0};
+  float              volscale        = 0.01;
 };
 
 // Pbrt shape
