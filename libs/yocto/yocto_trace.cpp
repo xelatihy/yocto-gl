@@ -220,12 +220,6 @@ bool has_volume(const scene_scene& scene, const scene_instance& instance) {
 // -----------------------------------------------------------------------------
 namespace yocto {
 
-// Evaluate emission
-static vec3f eval_emission(
-    const vec3f& emission, const vec3f& normal, const vec3f& outgoing) {
-  return emission;
-}
-
 // Evaluates/sample the BRDF scaled by the cosine of the incoming direction.
 static vec3f eval_bsdfcos(const trace_bsdf& bsdf, const vec3f& normal,
     const vec3f& outgoing, const vec3f& incoming) {
