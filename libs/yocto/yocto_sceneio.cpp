@@ -389,15 +389,14 @@ void make_test(scene_scene& scene, const test_params& params) {
       materials = {
           add_plastic_material(scene, "coated", {1, 1, 1}, 0.2,
               add_texture(scene, "uvgrid", make_uvgrid({1024, 1024}))),
-          add_glass_material(scene, "glass", {1, 0.5, 0.5}, 0, invalid_handle),
-          add_volumetric_material(scene, "jade", {0.5, 0.5, 0.5},
-              invalid_handle, 0, invalid_handle, {0.3, 0.6, 0.3}),
+          add_glass_material(scene, "glass", {1, 0.5, 0.5}, 0),
+          add_glass_material(
+              scene, "jade", {0.5, 0.5, 0.5}, 0, {0.3, 0.6, 0.3}),
           add_plastic_material(scene, "bumped", {0.5, 0.7, 0.5}, 0.2,
               invalid_handle, invalid_handle,
               add_texture(scene, "bumps-normal",
                   bump_to_normal(make_bumps({1024, 1024}), 0.05), false, true)),
-          add_metal_material(
-              scene, "metal", {0.66, 0.45, 0.34}, 0.2, invalid_handle),
+          add_metal_material(scene, "metal", {0.66, 0.45, 0.34}, 0.2),
       };
     } break;
     case test_materials_type::features2: {
@@ -459,36 +458,33 @@ void make_test(scene_scene& scene, const test_params& params) {
     } break;
     case test_materials_type::materials4: {
       materials = {
-          add_volumetric_material(scene, "cloud", {0.65, 0.65, 0.65},
-              invalid_handle, 0, invalid_handle, {0.9, 0.9, 0.9},
-              invalid_handle, invalid_handle, 1),
-          add_volumetric_material(
-              scene, "glass", {1, 0.5, 0.5}, invalid_handle, 0),
-          add_volumetric_material(scene, "jade", {0.5, 0.5, 0.5},
-              invalid_handle, 0, invalid_handle, {0.3, 0.6, 0.3}),
-          add_volumetrict_material(scene, "jade2", {0.5, 0.5, 0.5},
-              invalid_handle, 0, invalid_handle, {0.3, 0.6, 0.3}),
-          add_volumetric_material(scene, "smoke", {0.5, 0.5, 0.5},
-              invalid_handle, 0.2, invalid_handle, {0.2, 0.2, 0.2}),
+          add_volume_material(
+              scene, "cloud", {0.65, 0.65, 0.65}, {0.9, 0.9, 0.9}, 1),
+          add_glass_material(scene, "glass", {1, 0.5, 0.5}, 0),
+          add_glass_material(
+              scene, "jade", {0.5, 0.5, 0.5}, 0, {0.3, 0.6, 0.3}),
+          add_glass_material(
+              scene, "jade2", {0.5, 0.5, 0.5}, 0, {0.3, 0.6, 0.3}),
+          add_volume_material(scene, "smoke", {0.5, 0.5, 0.5}, {0.2, 0.2, 0.2}),
       };
     } break;
     case test_materials_type::materials5: {
       materials = {
-          add_volumetric_material(scene, "skin1a", {0.76, 0.48, 0.23},
-              invalid_handle, 0.25, invalid_handle, {0.436, 0.227, 0.131},
-              invalid_handle, invalid_handle, 1.5, -0.8, 0.001),
-          add_volumetric_material(scene, "skin2a", {0.82, 0.55, 0.4},
-              invalid_handle, 0.25, invalid_handle, {0.623, 0.433, 0.343},
-              invalid_handle, invalid_handle, 1.5, -0.8, 0.001),
-          add_volumetric_material(scene, "skins", {0.76, 0.48, 0.23},
-              invalid_handle, 0, invalid_handle, {0.436, 0.227, 0.131},
-              invalid_handle, invalid_handle, 1.5, -0.8, 0.001),
-          add_volumetrict_material(scene, "skin1b", {0.76, 0.48, 0.23},
-              invalid_handle, 0.25, invalid_handle, {0.436, 0.227, 0.131},
-              invalid_handle, invalid_handle, 1.5, -0.8, 0.001),
-          add_volumetrict_material(scene, "skin2b", {0.82, 0.55, 0.4},
-              invalid_handle, 0.25, invalid_handle, {0.623, 0.433, 0.343},
-              invalid_handle, invalid_handle, 1.5, -0.8, 0.001),
+          add_glass_material(scene, "skin1a", {0.76, 0.48, 0.23}, 0.25,
+              {0.436, 0.227, 0.131}, invalid_handle, invalid_handle,
+              invalid_handle, 1.5, -0.8, 0.001),
+          add_glass_material(scene, "skin2a", {0.82, 0.55, 0.4}, 0.25,
+              {0.623, 0.433, 0.343}, invalid_handle, invalid_handle,
+              invalid_handle, 1.5, -0.8, 0.001),
+          add_glass_material(scene, "skins", {0.76, 0.48, 0.23}, 0,
+              {0.436, 0.227, 0.131}, invalid_handle, invalid_handle,
+              invalid_handle, 1.5, -0.8, 0.001),
+          add_glass_material(scene, "skin1b", {0.76, 0.48, 0.23}, 0.25,
+              {0.436, 0.227, 0.131}, invalid_handle, invalid_handle,
+              invalid_handle, 1.5, -0.8, 0.001),
+          add_glass_material(scene, "skin2b", {0.82, 0.55, 0.4}, 0.25,
+              {0.623, 0.433, 0.343}, invalid_handle, invalid_handle,
+              invalid_handle, 1.5, -0.8, 0.001),
       };
     } break;
   }
