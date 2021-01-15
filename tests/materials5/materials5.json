@@ -122,16 +122,20 @@
   },
   "materials": {
     "floor": {
+      "type": "matte",
       "color": [0.7, 0.7, 0.7],
       "color_tex": "floor"
     },
     "largearealight1": {
+      "type": "matte",
       "emission": [10, 10, 10]
     },
     "largearealight2": {
+      "type": "matte",
       "emission": [10, 10, 10]
     },
     "skin1a": {
+      "type": "glass",
       "transmission": 1,
       "roughness": 0.25,
       "color": [0.76, 0.48, 0.23],
@@ -141,6 +145,7 @@
       "thin": false
     },
     "skin2a": {
+      "type": "glass",
       "specular": 1,
       "roughness": 0.25,
       "transmission": 1,
@@ -151,6 +156,7 @@
       "thin": false
     },
     "skins": {
+      "type": "glass",
       "specular": 1,
       "roughness": 0,
       "transmission": 1,
@@ -161,6 +167,7 @@
       "thin": false
     },
     "skin1b": {
+      "type": "glass",
       "translucency": 1,
       "specular": 1,
       "roughness": 0.25,
@@ -171,6 +178,7 @@
       "thin": false
     },
     "skin2b": {
+      "type": "glass",
       "translucency": 1,
       "specular": 1,
       "roughness": 0.25,
