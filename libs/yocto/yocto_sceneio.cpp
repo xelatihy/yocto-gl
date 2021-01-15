@@ -387,93 +387,74 @@ void make_test(scene_scene& scene, const test_params& params) {
   switch (params.materials) {
     case test_materials_type::features1: {
       materials = {
-          add_specular_coated_material(scene, "coated", {1, 1, 1},
-              add_texture(scene, "uvgrid", make_uvgrid({1024, 1024})), 0.2),
-          add_volumetric_material(
-              scene, "glass", {1, 0.5, 0.5}, invalid_handle, 0),
+          add_plastic_material(scene, "coated", {1, 1, 1}, 0.2,
+              add_texture(scene, "uvgrid", make_uvgrid({1024, 1024}))),
+          add_glass_material(scene, "glass", {1, 0.5, 0.5}, 0, invalid_handle),
           add_volumetric_material(scene, "jade", {0.5, 0.5, 0.5},
               invalid_handle, 0, invalid_handle, {0.3, 0.6, 0.3}),
-          add_specular_material(scene, "bumped", {0.5, 0.7, 0.5},
-              invalid_handle, 0.2, invalid_handle,
+          add_plastic_material(scene, "bumped", {0.5, 0.7, 0.5}, 0.2,
+              invalid_handle, invalid_handle,
               add_texture(scene, "bumps-normal",
                   bump_to_normal(make_bumps({1024, 1024}), 0.05), false, true)),
-          add_metallic_material(
-              scene, "metal", {0.66, 0.45, 0.34}, invalid_handle, 0.2),
+          add_metal_material(
+              scene, "metal", {0.66, 0.45, 0.34}, 0.2, invalid_handle),
       };
     } break;
     case test_materials_type::features2: {
-      auto uvgrid  = add_specular_material(scene, "uvgrid", {1, 1, 1},
-          add_texture(scene, "uvgrid", make_uvgrid({1024, 1024})), 0.2);
-      auto plastic = add_specular_material(
-          scene, "plastic", {0.5, 0.7, 0.5}, invalid_handle, 0.2);
-      auto hair = add_matte_material(
-          scene, "hair", {0.7, 0.7, 0.7}, invalid_handle);
+      auto uvgrid  = add_plastic_material(scene, "uvgrid", {1, 1, 1}, 0.2,
+          add_texture(scene, "uvgrid", make_uvgrid({1024, 1024})));
+      auto plastic = add_plastic_material(
+          scene, "plastic", {0.5, 0.7, 0.5}, 0.2);
+      auto hair = add_matte_material(scene, "hair", {0.7, 0.7, 0.7});
       materials = {uvgrid, plastic, hair, plastic, uvgrid};
     } break;
     case test_materials_type::uvgrid: {
-      auto uvgrid = add_specular_material(scene, "uvgrid", {1, 1, 1},
-          add_texture(scene, "uvgrid", make_uvgrid({1024, 1024})), 0.2);
+      auto uvgrid = add_plastic_material(scene, "uvgrid", {1, 1, 1}, 0.2,
+          add_texture(scene, "uvgrid", make_uvgrid({1024, 1024})));
       materials   = {uvgrid, uvgrid, uvgrid, uvgrid, uvgrid};
     } break;
     case test_materials_type::hair: {
-      auto hair = add_matte_material(
-          scene, "hair", {0.7, 0.7, 0.7}, invalid_handle);
+      auto hair = add_matte_material(scene, "hair", {0.7, 0.7, 0.7});
       materials = {hair, hair, hair, hair, hair};
     } break;
     case test_materials_type::plastic_metal: {
       materials = {
-          add_specular_material(
-              scene, "plastic1", {0.5, 0.5, 0.7}, invalid_handle, 0.01),
-          add_specular_material(
-              scene, "plastic2", {0.5, 0.7, 0.5}, invalid_handle, 0.2),
-          add_matte_material(scene, "matte", {0.7, 0.7, 0.7}, invalid_handle),
-          add_metallic_material(
-              scene, "metal1", {0.7, 0.7, 0.7}, invalid_handle, 0),
-          add_metallic_material(
-              scene, "metal2", {0.66, 0.45, 0.34}, invalid_handle, 0.2),
+          add_plastic_material(scene, "plastic1", {0.5, 0.5, 0.7}, 0.01),
+          add_plastic_material(scene, "plastic2", {0.5, 0.7, 0.5}, 0.2),
+          add_matte_material(scene, "matte", {0.7, 0.7, 0.7}),
+          add_metal_material(scene, "metal1", {0.7, 0.7, 0.7}, 0),
+          add_metal_material(scene, "metal2", {0.66, 0.45, 0.34}, 0.2),
       };
     } break;
     case test_materials_type::materials1: {
       materials = {
-          add_specular_material(
-              scene, "plastic1", {0.5, 0.5, 0.7}, invalid_handle, 0.01),
-          add_specular_material(
-              scene, "plastic2", {0.5, 0.7, 0.5}, invalid_handle, 0.2),
-          add_matte_material(scene, "matte", {0.7, 0.7, 0.7}, invalid_handle),
-          add_metallic_material(
-              scene, "metal1", {0.7, 0.7, 0.7}, invalid_handle, 0),
-          add_metallic_material(
-              scene, "metal2", {0.66, 0.45, 0.34}, invalid_handle, 0.2),
+          add_plastic_material(scene, "plastic1", {0.5, 0.5, 0.7}, 0.01),
+          add_plastic_material(scene, "plastic2", {0.5, 0.7, 0.5}, 0.2),
+          add_matte_material(scene, "matte", {0.7, 0.7, 0.7}),
+          add_plastic_material(scene, "metal1", {0.7, 0.7, 0.7}, 0),
+          add_plastic_material(scene, "metal2", {0.66, 0.45, 0.34}, 0.2),
       };
     } break;
     case test_materials_type::materials2: {
       materials = {
-          add_volumetric_material(
-              scene, "glass1", {1, 1, 1}, invalid_handle, 0),
-          add_volumetric_material(
-              scene, "glass2", {1, 0.7, 0.7}, invalid_handle, 0.1),
-          add_transparent_material(
-              scene, "transparent", {0.7, 0.5, 0.5}, invalid_handle, 0.2),
-          add_transmission_material(
-              scene, "tglass1", {1, 1, 1}, invalid_handle, 0),
-          add_transmission_material(
-              scene, "tglass2", {1, 0.7, 0.7}, invalid_handle, 0.1),
+          add_glass_material(scene, "glass1", {1, 1, 1}, 0),
+          add_glass_material(scene, "glass2", {1, 0.7, 0.7}, 0.1),
+          add_transparent_material(scene, "transparent", {0.7, 0.5, 0.5}, 0.2),
+          add_thinglass_material(scene, "tglass1", {1, 1, 1}, 0),
+          add_thinglass_material(scene, "tglass2", {1, 0.7, 0.7}, 0.1),
       };
     } break;
     case test_materials_type::materials3: {
       auto bumps_normal = add_texture(scene, "bumps-normal",
           bump_to_normal(make_bumps({1024, 1024}), 0.05), false, true);
       materials         = {
-          add_specular_material(scene, "plastic1", {0.5, 0.5, 0.7},
-              invalid_handle, 0.01, invalid_handle, bumps_normal),
-          add_specular_coated_material(
-              scene, "plastic2", {0.5, 0.7, 0.5}, invalid_handle, 0.2),
-          add_metallic_material(scene, "metal1", {0.7, 0.7, 0.7},
-              invalid_handle, 0, invalid_handle, bumps_normal),
-          add_metallic_coated_material(
-              scene, "metal2", {0.66, 0.45, 0.34}, invalid_handle, 0.2),
-          add_metallic_material(
-              scene, "metal3", {0.66, 0.45, 0.34}, invalid_handle, 0.2),
+          add_plastic_material(scene, "plastic1", {0.5, 0.5, 0.7}, 0.01,
+              invalid_handle, invalid_handle, bumps_normal),
+          add_plastic_material(scene, "plastic2", {0.5, 0.7, 0.5}, 0.2),
+          add_metal_material(scene, "metal1", {0.7, 0.7, 0.7}, 0,
+              invalid_handle, invalid_handle, bumps_normal),
+          add_metal_material(scene, "metal2", {0.66, 0.45, 0.34}, 0.2),
+          add_metal_material(scene, "metal3", {0.66, 0.45, 0.34}, 0.2),
       };
     } break;
     case test_materials_type::materials4: {

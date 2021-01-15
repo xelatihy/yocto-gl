@@ -292,26 +292,33 @@ subdiv_handle   add_subdiv(scene_scene& scene, const string& name,
 material_handle add_emission_material(scene_scene& scene, const string& name,
     const vec3f& emission, texture_handle emission_tex);
 material_handle add_matte_material(scene_scene& scene, const string& name,
-    const vec3f& color, texture_handle color_tex,
+    const vec3f& color, texture_handle color_tex = invalid_handle,
     texture_handle normal_tex = invalid_handle);
-material_handle add_specular_material(scene_scene& scene, const string& name,
-    const vec3f& color, texture_handle color_tex, float roughness,
+material_handle add_plastic_material(scene_scene& scene, const string& name,
+    const vec3f& color, float roughness,
+    texture_handle color_tex     = invalid_handle,
     texture_handle roughness_tex = invalid_handle,
-    texture_handle normal_tex = invalid_handle, float ior = 1.5,
-    float specular = 1, texture_handle specular_tex = invalid_handle,
-    const vec3f&   spectint     = {1, 1, 1},
-    texture_handle spectint_tex = invalid_handle);
+    texture_handle normal_tex = invalid_handle, float ior = 1.5);
+material_handle add_metal_material(scene_scene& scene, const string& name,
+    const vec3f& color, float roughness,
+    texture_handle color_tex     = invalid_handle,
+    texture_handle roughness_tex = invalid_handle,
+    texture_handle normal_tex    = invalid_handle);
 material_handle add_metallic_material(scene_scene& scene, const string& name,
-    const vec3f& color, texture_handle color_tex, float roughness,
+    const vec3f& color, float roughness, float metallic,
+    texture_handle color_tex     = invalid_handle,
     texture_handle roughness_tex = invalid_handle,
-    texture_handle normal_tex = invalid_handle, float metallic = 1,
-    texture_handle metallic_tex = invalid_handle);
-material_handle add_transmission_material(scene_scene& scene,
-    const string& name, const vec3f& color, texture_handle color_tex,
-    float roughness, texture_handle roughness_tex = invalid_handle,
-    texture_handle normal_tex = invalid_handle, float ior = 1.5,
-    float specular = 1, texture_handle specular_tex = invalid_handle,
-    float transmission = 1, texture_handle transmission_tex = invalid_handle);
+    texture_handle normal_tex    = invalid_handle);
+material_handle add_thinglass_material(scene_scene& scene, const string& name,
+    const vec3f& color, float roughness,
+    texture_handle color_tex     = invalid_handle,
+    texture_handle roughness_tex = invalid_handle,
+    texture_handle normal_tex = invalid_handle, float ior = 1.5);
+material_handle add_glass_material(scene_scene& scene, const string& name,
+    const vec3f& color, float roughness,
+    texture_handle color_tex     = invalid_handle,
+    texture_handle roughness_tex = invalid_handle,
+    texture_handle normal_tex = invalid_handle, float ior = 1.5);
 material_handle add_volumetric_material(scene_scene& scene, const string& name,
     const vec3f& color, texture_handle color_tex, float roughness,
     texture_handle roughness_tex  = invalid_handle,
@@ -330,20 +337,9 @@ material_handle add_volumetrict_material(scene_scene& scene, const string& name,
     float scanisotropy = 0, float trdepth = 0.01, float specular = 1,
     texture_handle specular_tex = invalid_handle, float translucency = 1,
     texture_handle translucency_tex = invalid_handle);
-material_handle add_specular_coated_material(scene_scene& scene,
-    const string& name, const vec3f& color, texture_handle color_tex,
-    float roughness, texture_handle roughness_tex = invalid_handle,
-    texture_handle normal_tex = invalid_handle, float ior = 1.5,
-    float specular = 1, texture_handle specular_tex = invalid_handle,
-    float coat = 1, texture_handle coat_tex = invalid_handle);
-material_handle add_metallic_coated_material(scene_scene& scene,
-    const string& name, const vec3f& color, texture_handle color_tex,
-    float roughness, texture_handle roughness_tex = invalid_handle,
-    texture_handle normal_tex = invalid_handle, float metallic = 1,
-    texture_handle metallic_tex = invalid_handle, float coat = 1,
-    texture_handle coat_tex = invalid_handle);
 material_handle add_transparent_material(scene_scene& scene, const string& name,
-    const vec3f& color, texture_handle color_tex, float opacity = 1,
+    const vec3f& color, float opacity,
+    texture_handle color_tex  = invalid_handle,
     texture_handle normal_tex = invalid_handle);
 
 // add missing elements

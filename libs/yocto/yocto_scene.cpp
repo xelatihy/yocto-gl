@@ -406,65 +406,96 @@ material_handle add_emission_material(scene_scene& scene, const string& name,
 material_handle add_matte_material(scene_scene& scene, const string& name,
     const vec3f& color, texture_handle color_tex, texture_handle normal_tex) {
   scene.material_names.emplace_back(name);
-  auto& material      = scene.materials.emplace_back();
-  material.color      = color;
-  material.color_tex  = color_tex;
-  material.roughness  = 1;
-  material.normal_tex = normal_tex;
+  auto& material         = scene.materials.emplace_back();
+  material.type          = material_type::matte;
+  material.color         = color;
+  material.opacity       = 1;
+  material.roughness     = 1;
+  material.metallic      = 0;
+  material.ior           = 1.5;
+  material.color_tex     = color_tex;
+  material.roughness_tex = invalid_handle;
+  material.normal_tex    = normal_tex;
   return (int)scene.materials.size() - 1;
 }
-material_handle add_specular_material(scene_scene& scene, const string& name,
-    const vec3f& color, texture_handle color_tex, float roughness,
-    texture_handle roughness_tex, texture_handle normal_tex, float ior,
-    float specular, texture_handle specular_tex, const vec3f& spectint,
-    texture_handle spectint_tex) {
+material_handle add_plastic_material(scene_scene& scene, const string& name,
+    const vec3f& color, float roughness, texture_handle color_tex,
+    texture_handle roughness_tex, texture_handle normal_tex, float ior) {
   scene.material_names.emplace_back(name);
   auto& material         = scene.materials.emplace_back();
+  material.type          = material_type::plastic;
   material.color         = color;
-  material.color_tex     = color_tex;
-  material.specular      = specular;
-  material.specular_tex  = specular_tex;
-  material.spectint      = spectint;
-  material.spectint_tex  = spectint_tex;
+  material.opacity       = 1;
   material.roughness     = roughness;
-  material.roughness_tex = roughness_tex;
   material.ior           = ior;
+  material.color_tex     = color_tex;
+  material.roughness_tex = roughness_tex;
+  material.normal_tex    = normal_tex;
+  return (int)scene.materials.size() - 1;
+}
+material_handle add_metal_material(scene_scene& scene, const string& name,
+    const vec3f& color, float roughness, texture_handle color_tex,
+    texture_handle roughness_tex, texture_handle normal_tex) {
+  scene.material_names.emplace_back(name);
+  auto& material         = scene.materials.emplace_back();
+  material.type          = material_type::metal;
+  material.color         = color;
+  material.opacity       = 1;
+  material.roughness     = roughness;
+  material.metallic      = 1;
+  material.ior           = 1.5;
+  material.color_tex     = color_tex;
+  material.roughness_tex = roughness_tex;
   material.normal_tex    = normal_tex;
   return (int)scene.materials.size() - 1;
 }
 material_handle add_metallic_material(scene_scene& scene, const string& name,
     const vec3f& color, texture_handle color_tex, float roughness,
-    texture_handle roughness_tex, texture_handle normal_tex, float metallic,
-    texture_handle metallic_tex) {
+    float metallic, texture_handle roughness_tex, texture_handle normal_tex,
+    texture_handle metallic_tex, float ior) {
   scene.material_names.emplace_back(name);
   auto& material         = scene.materials.emplace_back();
+  material.type          = material_type::metallic;
   material.color         = color;
-  material.color_tex     = color_tex;
+  material.opacity       = 1;
   material.metallic      = metallic;
-  material.metallic_tex  = metallic_tex;
   material.roughness     = roughness;
+  material.ior           = ior;
+  material.color_tex     = color_tex;
   material.roughness_tex = roughness_tex;
   material.normal_tex    = normal_tex;
   return (int)scene.materials.size() - 1;
 }
-material_handle add_transmission_material(scene_scene& scene,
-    const string& name, const vec3f& color, texture_handle color_tex,
-    float roughness, texture_handle roughness_tex, texture_handle normal_tex,
-    float ior, float specular, texture_handle specular_tex, float transmission,
-    texture_handle transmission_tex) {
+material_handle add_thinglass_material(scene_scene& scene, const string& name,
+    const vec3f& color, float roughness, texture_handle color_tex,
+    texture_handle roughness_tex, texture_handle normal_tex, float ior) {
   scene.material_names.emplace_back(name);
-  auto& material            = scene.materials.emplace_back();
-  material.color            = color;
-  material.color_tex        = color_tex;
-  material.specular         = specular;
-  material.specular_tex     = specular_tex;
-  material.transmission     = transmission;
-  material.transmission_tex = transmission_tex;
-  material.roughness        = roughness;
-  material.roughness_tex    = roughness_tex;
-  material.ior              = ior;
-  material.thin             = true;
-  material.normal_tex       = normal_tex;
+  auto& material         = scene.materials.emplace_back();
+  material.type          = material_type::thinglass;
+  material.color         = color;
+  material.opacity       = 1;
+  material.roughness     = roughness;
+  material.metallic      = 0;
+  material.ior           = ior;
+  material.color_tex     = color_tex;
+  material.roughness_tex = roughness_tex;
+  material.normal_tex    = normal_tex;
+  return (int)scene.materials.size() - 1;
+}
+material_handle add_glass_material(scene_scene& scene, const string& name,
+    const vec3f& color, float roughness, texture_handle color_tex,
+    texture_handle roughness_tex, texture_handle normal_tex, float ior) {
+  scene.material_names.emplace_back(name);
+  auto& material         = scene.materials.emplace_back();
+  material.type          = material_type::glass;
+  material.color         = color;
+  material.opacity       = 1;
+  material.roughness     = roughness;
+  material.metallic      = 0;
+  material.ior           = ior;
+  material.color_tex     = color_tex;
+  material.roughness_tex = roughness_tex;
+  material.normal_tex    = normal_tex;
   return (int)scene.materials.size() - 1;
 }
 material_handle add_volumetric_material(scene_scene& scene, const string& name,
@@ -519,45 +550,8 @@ material_handle add_volumetrict_material(scene_scene& scene, const string& name,
   material.thin             = false;
   return (int)scene.materials.size() - 1;
 }
-material_handle add_specular_coated_material(scene_scene& scene,
-    const string& name, const vec3f& color, texture_handle color_tex,
-    float roughness, texture_handle roughness_tex, texture_handle normal_tex,
-    float ior, float specular, texture_handle specular_tex, float coat,
-    texture_handle coat_tex) {
-  scene.material_names.emplace_back(name);
-  auto& material         = scene.materials.emplace_back();
-  material.color         = color;
-  material.color_tex     = color_tex;
-  material.specular      = specular;
-  material.specular_tex  = specular_tex;
-  material.roughness     = roughness;
-  material.roughness_tex = roughness_tex;
-  material.coat          = coat;
-  material.coat_tex      = coat_tex;
-  material.ior           = ior;
-  material.normal_tex    = normal_tex;
-  return (int)scene.materials.size() - 1;
-}
-material_handle add_metallic_coated_material(scene_scene& scene,
-    const string& name, const vec3f& color, texture_handle color_tex,
-    float roughness, texture_handle roughness_tex, texture_handle normal_tex,
-    float metallic, texture_handle metallic_tex, float coat,
-    texture_handle coat_tex) {
-  scene.material_names.emplace_back(name);
-  auto& material         = scene.materials.emplace_back();
-  material.color         = color;
-  material.color_tex     = color_tex;
-  material.metallic      = metallic;
-  material.metallic_tex  = metallic_tex;
-  material.roughness     = roughness;
-  material.roughness_tex = roughness_tex;
-  material.coat          = coat;
-  material.coat_tex      = coat_tex;
-  material.normal_tex    = normal_tex;
-  return (int)scene.materials.size() - 1;
-}
 material_handle add_transparent_material(scene_scene& scene, const string& name,
-    const vec3f& color, texture_handle color_tex, float opacity,
+    const vec3f& color, float opacity, texture_handle color_tex,
     texture_handle normal_tex) {
   scene.material_names.emplace_back(name);
   auto& material      = scene.materials.emplace_back();
