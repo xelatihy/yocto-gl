@@ -174,7 +174,6 @@
       "transmission": 1,
       "color": [0.5, 0.5, 0.5],
       "scattering": [0.2, 0.2, 0.2],
-      "phaseg": 0,
       "ior": 1,
       "thin": false
     },
