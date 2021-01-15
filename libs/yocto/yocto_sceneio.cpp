@@ -894,7 +894,8 @@ inline void from_json(const njson& j, material_type& value) {
   auto values = j.get<string>();
   auto pos    = std::find(
       material_type_names.begin(), material_type_names.end(), values);
-  if (pos == material_type_names.end()) throw std::invalid_argument{"unknown value"};
+  if (pos == material_type_names.end())
+    throw std::invalid_argument{"unknown value"};
   value = (material_type)(pos - material_type_names.begin());
 }
 
@@ -1521,6 +1522,9 @@ static bool save_json_scene(const string& filename, const scene_scene& scene,
     auto& group = insert_object(js, "materials");
     for (auto& material : scene.materials) {
       auto& element = insert_object(group, get_material_name(scene, material));
+      if (material.type != def_material.type) {
+        insert_value(element, "type", material.type);
+      }
       if (material.emission != def_material.emission) {
         insert_value(element, "emission", material.emission);
       }
@@ -1749,63 +1753,40 @@ static bool load_obj_scene(const string& filename, scene_scene& scene,
   }
 
   // helper to create texture maps
-  auto ctexture_map = unordered_map<string, texture_handle>{
+  auto texture_map = unordered_map<string, texture_handle>{
       {"", invalid_handle}};
-  auto get_ctexture = [&ctexture_map, &scene](
-                          const obj_texture& tinfo) -> texture_handle {
+  auto get_texture = [&texture_map, &scene](
+                         const obj_texture& tinfo) -> texture_handle {
     auto path = tinfo.path;
     if (path.empty()) return invalid_handle;
-    auto it = ctexture_map.find(path);
-    if (it != ctexture_map.end()) return it->second;
+    auto it = texture_map.find(path);
+    if (it != texture_map.end()) return it->second;
     scene.textures.emplace_back();
-    ctexture_map[path] = (int)scene.textures.size() - 1;
-    return (int)scene.textures.size() - 1;
-  };
-
-  // helper to create texture maps
-  auto stexture_map = unordered_map<string, texture_handle>{
-      {"", invalid_handle}};
-  auto get_stexture = [&stexture_map, &scene](
-                          const obj_texture& tinfo) -> texture_handle {
-    auto path = tinfo.path;
-    if (path.empty()) return invalid_handle;
-    auto it = stexture_map.find(path);
-    if (it != stexture_map.end()) return it->second;
-    scene.textures.emplace_back();
-    stexture_map[path] = (int)scene.textures.size() - 1;
+    texture_map[path] = (int)scene.textures.size() - 1;
     return (int)scene.textures.size() - 1;
   };
 
   // handler for materials
   auto material_map = unordered_map<string, material_handle>{};
   for (auto& omaterial : obj.materials) {
-    auto& material            = scene.materials.emplace_back();
-    material.emission         = omaterial.pbr_emission;
-    material.color            = omaterial.pbr_base;
-    material.specular         = omaterial.pbr_specular;
-    material.roughness        = omaterial.pbr_roughness;
-    material.ior              = omaterial.pbr_ior;
-    material.metallic         = omaterial.pbr_metallic;
-    material.coat             = omaterial.pbr_coat;
-    material.transmission     = omaterial.pbr_transmission;
-    material.translucency     = omaterial.pbr_translucency;
-    material.scattering       = omaterial.pbr_volscattering;
-    material.scanisotropy     = omaterial.pbr_volanisotropy;
-    material.trdepth          = omaterial.pbr_volscale;
-    material.opacity          = omaterial.pbr_opacity;
-    material.thin             = omaterial.pbr_thin;
-    material.emission_tex     = get_ctexture(omaterial.pbr_emission_tex);
-    material.color_tex        = get_ctexture(omaterial.pbr_base_tex);
-    material.specular_tex     = get_stexture(omaterial.pbr_specular_tex);
-    material.metallic_tex     = get_stexture(omaterial.pbr_metallic_tex);
-    material.roughness_tex    = get_stexture(omaterial.pbr_roughness_tex);
-    material.transmission_tex = get_stexture(omaterial.pbr_transmission_tex);
-    material.translucency_tex = get_stexture(omaterial.pbr_translucency_tex);
-    material.coat_tex         = get_stexture(omaterial.pbr_coat_tex);
-    material.opacity_tex      = get_stexture(omaterial.pbr_opacity_tex);
-    material.normal_tex       = get_ctexture(omaterial.normal_tex);
-    material.scattering_tex   = get_ctexture(omaterial.pbr_volscattering_tex);
+    auto& material               = scene.materials.emplace_back();
+    material.type                = material_type::metallic;
+    material.emission            = omaterial.pbr_emission;
+    material.color               = omaterial.pbr_base;
+    material.specular            = omaterial.pbr_specular;
+    material.roughness           = omaterial.pbr_roughness;
+    material.ior                 = omaterial.pbr_ior;
+    material.metallic            = omaterial.pbr_metallic;
+    material.opacity             = omaterial.pbr_opacity;
+    material.emission_tex        = get_texture(omaterial.pbr_emission_tex);
+    material.color_tex           = get_texture(omaterial.pbr_base_tex);
+    material.specular_tex        = get_texture(omaterial.pbr_specular_tex);
+    material.metallic_tex        = get_texture(omaterial.pbr_metallic_tex);
+    material.roughness_tex       = get_texture(omaterial.pbr_roughness_tex);
+    material.normal_tex          = get_texture(omaterial.normal_tex);
     material_map[omaterial.name] = (int)scene.materials.size() - 1;
+    // material.transmission     = omaterial.pbr_transmission;
+    // material.thin             = omaterial.pbr_thin;
   }
 
   // convert shapes
@@ -1856,7 +1837,7 @@ static bool load_obj_scene(const string& filename, scene_scene& scene,
     auto& environment        = scene.environments.emplace_back();
     environment.frame        = oenvironment.frame;
     environment.emission     = oenvironment.emission;
-    environment.emission_tex = get_ctexture(oenvironment.emission_tex);
+    environment.emission_tex = get_texture(oenvironment.emission_tex);
   }
 
   // handle progress
@@ -1868,17 +1849,8 @@ static bool load_obj_scene(const string& filename, scene_scene& scene,
   };
 
   // load textures
-  ctexture_map.erase("");
-  for (auto [name, thandle] : ctexture_map) {
-    auto& texture = scene.textures[thandle];
-    if (progress_cb) progress_cb("load texture", progress.x++, progress.y);
-    if (!load_image(make_filename(name), texture.hdr, texture.ldr, error))
-      return dependent_error();
-  }
-
-  // load textures
-  stexture_map.erase("");
-  for (auto [name, thandle] : stexture_map) {
+  texture_map.erase("");
+  for (auto [name, thandle] : texture_map) {
     auto& texture = scene.textures[thandle];
     if (progress_cb) progress_cb("load texture", progress.x++, progress.y);
     if (!load_image(make_filename(name), texture.hdr, texture.ldr, error))
@@ -2320,6 +2292,7 @@ static bool load_gltf_scene(const string& filename, scene_scene& scene,
   for (auto mid = 0; mid < gltf->materials_count; mid++) {
     auto  gmaterial       = &gltf->materials[mid];
     auto& material        = scene.materials.emplace_back();
+    material.type         = material_type::metallic;
     material.emission     = {gmaterial->emissive_factor[0],
         gmaterial->emissive_factor[1], gmaterial->emissive_factor[2]};
     material.emission_tex = get_ctexture(gmaterial->emissive_texture);
@@ -3022,26 +2995,15 @@ static bool load_pbrt_scene(const string& filename, scene_scene& scene,
   }
 
   // convert materials
-  auto ctexture_map = unordered_map<string, texture_handle>{
+  auto texture_map = unordered_map<string, texture_handle>{
       {"", invalid_handle}};
-  auto get_ctexture = [&scene, &ctexture_map](
-                          const string& path) -> texture_handle {
+  auto get_texture = [&scene, &texture_map](
+                         const string& path) -> texture_handle {
     if (path.empty()) return invalid_handle;
-    auto it = ctexture_map.find(path);
-    if (it != ctexture_map.end()) return it->second;
+    auto it = texture_map.find(path);
+    if (it != texture_map.end()) return it->second;
     scene.textures.emplace_back();
-    ctexture_map[path] = (int)scene.textures.size() - 1;
-    return (int)scene.textures.size() - 1;
-  };
-  auto stexture_map = unordered_map<string, texture_handle>{
-      {"", invalid_handle}};
-  auto get_stexture = [&scene, &stexture_map](
-                          const string& path) -> texture_handle {
-    if (path.empty()) return invalid_handle;
-    auto it = stexture_map.find(path);
-    if (it != stexture_map.end()) return it->second;
-    scene.textures.emplace_back();
-    stexture_map[path] = (int)scene.textures.size() - 1;
+    texture_map[path] = (int)scene.textures.size() - 1;
     return (int)scene.textures.size() - 1;
   };
   auto atexture_map = unordered_map<string, texture_handle>{
@@ -3059,18 +3021,22 @@ static bool load_pbrt_scene(const string& filename, scene_scene& scene,
   // convert material
   auto material_map = unordered_map<string, material_handle>{};
   for (auto& pmaterial : pbrt.materials) {
-    auto& material        = scene.materials.emplace_back();
-    material.emission     = pmaterial.emission;
-    material.color        = pmaterial.color;
-    material.metallic     = pmaterial.metallic;
-    material.specular     = pmaterial.specular;
+    auto& material    = scene.materials.emplace_back();
+    material.type     = pmaterial.transmission > 0 ? material_type::thinglass
+                                                   : material_type::metallic;
+    material.color    = pmaterial.color;
+    material.type     = material_type::metallic;
+    material.emission = pmaterial.emission;
+    material.color    = pmaterial.color;
+    material.metallic = pmaterial.metallic;
+    material.specular = pmaterial.specular;
     material.transmission = pmaterial.transmission;
     material.ior          = pmaterial.ior;
     material.roughness    = pmaterial.roughness;
     material.opacity      = pmaterial.opacity;
     material.thin         = pmaterial.thin;
-    material.color_tex    = get_ctexture(pmaterial.color_tex);
-    material.opacity_tex  = get_stexture(pmaterial.opacity_tex);
+    material.color_tex    = get_texture(pmaterial.color_tex);
+    material.opacity_tex  = get_texture(pmaterial.opacity_tex);
     if (material.opacity_tex == invalid_handle)
       material.opacity_tex = get_atexture(pmaterial.alpha_tex);
     material_map[pmaterial.name] = (int)scene.materials.size() - 1;
@@ -3109,7 +3075,7 @@ static bool load_pbrt_scene(const string& filename, scene_scene& scene,
     auto& environment        = scene.environments.emplace_back();
     environment.frame        = penvironment.frame;
     environment.emission     = penvironment.emission;
-    environment.emission_tex = get_ctexture(penvironment.emission_tex);
+    environment.emission_tex = get_texture(penvironment.emission_tex);
   }
 
   // lights
@@ -3135,17 +3101,8 @@ static bool load_pbrt_scene(const string& filename, scene_scene& scene,
   };
 
   // load texture
-  ctexture_map.erase("");
-  for (auto [name, thandle] : ctexture_map) {
-    auto& texture = scene.textures[thandle];
-    if (progress_cb) progress_cb("load texture", progress.x++, progress.y);
-    if (!load_image(make_filename(name), texture.hdr, texture.ldr, error))
-      return dependent_error();
-  }
-
-  // load texture
-  stexture_map.erase("");
-  for (auto [name, thandle] : stexture_map) {
+  texture_map.erase("");
+  for (auto [name, thandle] : texture_map) {
     auto& texture = scene.textures[thandle];
     if (progress_cb) progress_cb("load texture", progress.x++, progress.y);
     if (!load_image(make_filename(name), texture.hdr, texture.ldr, error))
