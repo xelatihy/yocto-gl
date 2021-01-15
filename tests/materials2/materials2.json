@@ -137,18 +137,12 @@
     "sphere-glass-sharp": {
       "type": "glass",
       "color": [1, 1, 1],
-      "specular": 1,
-      "transmission": 1,
-      "roughness": 0,
-      "thin": false
+      "roughness": 0
     },
     "sphere-glass-rough": {
       "type": "glass",
-      "specular": 1,
       "color": [1, 0.7, 0.7],
-      "transmission": 1,
-      "roughness": 0.1,
-      "thin": false
+      "roughness": 0.1
     },
     "sphere-transparent": {
       "type": "matte",
@@ -158,35 +152,23 @@
     },
     "sphere-thinglass-sharp": {
       "type": "thinglass",
-      "specular": 1,
       "color": [1, 1, 1],
-      "transmission": 1,
-      "roughness": 0,
-      "thin": true
+      "roughness": 0
     },
     "sphere-thinglass-rough": {
       "type": "thinglass",
-      "specular": 1,
       "color": [1, 0.7, 0.7],
-      "transmission": 1,
-      "roughness": 0.05,
-      "thin": true
+      "roughness": 0.05
     },
     "bunny-glass-sharp": {
       "type": "glass",
       "color": [1, 1, 1],
-      "specular": 1,
-      "transmission": 1,
-      "roughness": 0,
-      "thin": false
+      "roughness": 0
     },
     "bunny-glass-rough": {
       "type": "glass",
-      "specular": 1,
       "color": [1, 0.7, 0.7],
-      "transmission": 1,
-      "roughness": 0.1,
-      "thin": false
+      "roughness": 0.1
     },
     "bunny-transparent": {
       "type": "matte",
@@ -196,19 +178,13 @@
     },
     "bunny-thinglass-sharp": {
       "type": "thinglass",
-      "specular": 1,
       "color": [1, 1, 1],
-      "transmission": 1,
-      "roughness": 0,
-      "thin": true
+      "roughness": 0
     },
     "bunny-thinglass-rough": {
       "type": "thinglass",
-      "specular": 1,
       "color": [1, 0.7, 0.7],
-      "transmission": 1,
-      "roughness": 0.05,
-      "thin": true
+      "roughness": 0.05
     }
   }
 }

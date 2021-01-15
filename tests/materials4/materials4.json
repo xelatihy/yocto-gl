@@ -137,89 +137,56 @@
     "sphere-volume-cloud": {
       "type": "volume",
       "color": [0.65, 0.65, 0.65],
-      "transmission": 1,
-      "scattering": [0.9, 0.9, 0.9],
-      "ior": 1,
-      "thin": false
+      "scattering": [0.9, 0.9, 0.9]
     },
     "sphere-volume-glass": {
       "type": "glass",
-      "specular": 1,
-      "roughness": 0,
-      "transmission": 1,
       "color": [1, 0.5, 0.5],
-      "trdepth": 0.02,
-      "thin": false
+      "trdepth": 0.02
     },
     "sphere-volume-jade": {
       "type": "glass",
-      "specular": 1,
-      "roughness": 0,
-      "transmission": 1,
       "color": [0.5, 0.5, 0.5],
-      "scattering": [0.3, 0.6, 0.3],
-      "thin": false
+      "scattering": [0.3, 0.6, 0.3]
     },
     "sphere-volume-jade2": {
       "type": "glass",
-      "translucency": 1,
-      "specular": 1,
-      "roughness": 0,
       "color": [0.5, 0.5, 0.5],
-      "scattering": [0.3, 0.6, 0.3],
-      "thin": false
+      "scattering": [0.3, 0.6, 0.3]
     },
     "sphere-volume-smoke": {
       "type": "volume",
-      "transmission": 1,
       "color": [0.5, 0.5, 0.5],
-      "scattering": [0.2, 0.2, 0.2],
-      "ior": 1,
-      "thin": false
+      "scattering": [0.2, 0.2, 0.2]
     },
     "bunny-volume-cloud": {
       "type": "volume",
       "color": [0.65, 0.65, 0.65],
-      "transmission": 1,
-      "scattering": [0.9, 0.9, 0.9],
-      "ior": 1,
-      "thin": false
+      "scattering": [0.9, 0.9, 0.9]
     },
     "bunny-volume-glass": {
       "type": "glass",
-      "specular": 1,
       "roughness": 0,
-      "transmission": 1,
       "color": [1, 0.5, 0.5],
-      "trdepth": 0.02,
-      "thin": false
+      "trdepth": 0.02
     },
     "bunny-volume-jade": {
       "type": "glass",
-      "specular": 1,
       "roughness": 0,
-      "transmission": 1,
       "color": [0.5, 0.5, 0.5],
-      "scattering": [0.3, 0.6, 0.3],
-      "thin": false
+      "scattering": [0.3, 0.6, 0.3]
     },
     "bunny-volume-jade2": {
       "type": "glass",
-      "specular": 1,
       "roughness": 0.1,
-      "translucency": 1,
       "color": [0.5, 0.5, 0.5],
-      "scattering": [0.3, 0.6, 0.3],
-      "thin": false
+      "scattering": [0.3, 0.6, 0.3]
     },
     "bunny-volume-smoke": {
       "type": "volume",
-      "transmission": 1,
       "color": [0.5, 0.5, 0.5],
       "scattering": [0.2, 0.2, 0.2],
-      "scanisotropy": 0,
-      "ior": 1,
-      "thin": false
+      "scanisotropy": 0
     }
   }
 }

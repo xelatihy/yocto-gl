@@ -136,13 +136,11 @@
     },
     "sphere-plastic-sharp": {
       "type": "plastic",
-      "specular": 1,
       "color": [0.5, 0.5, 0.7],
       "roughness": 0.01
     },
     "sphere-plastic-rough": {
       "type": "plastic",
-      "specular": 1,
       "color": [0.5, 0.7, 0.5],
       "roughness": 0.2
     },
@@ -154,24 +152,20 @@
     "sphere-metal-sharp": {
       "type": "metal",
       "color": [0.7, 0.7, 0.7],
-      "metallic": 1,
       "roughness": 0
     },
     "sphere-metal-rough": {
       "type": "metal",
       "color": [0.66, 0.45, 0.34],
-      "metallic": 1,
       "roughness": 0.2
     },
     "bunny-plastic-sharp": {
       "type": "plastic",
-      "specular": 1,
       "color": [0.5, 0.5, 0.7],
       "roughness": 0.01
     },
     "bunny-plastic-rough": {
       "type": "plastic",
-      "specular": 1,
       "color": [0.5, 0.7, 0.5],
       "roughness": 0.2
     },
@@ -183,13 +177,11 @@
     "bunny-metal-sharp": {
       "type": "metal",
       "color": [0.7, 0.7, 0.7],
-      "metallic": 1,
       "roughness": 0
     },
     "bunny-metal-rough": {
       "type": "metal",
       "color": [0.66, 0.45, 0.34],
-      "metallic": 1,
       "roughness": 0.2
     }
   }

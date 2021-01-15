@@ -136,57 +136,43 @@
     },
     "skin1a": {
       "type": "glass",
-      "transmission": 1,
       "roughness": 0.25,
       "color": [0.76, 0.48, 0.23],
       "scattering": [0.436, 0.227, 0.131],
       "scanisotropy": -0.8,
-      "trdepth": 0.001,
-      "thin": false
+      "trdepth": 0.001
     },
     "skin2a": {
       "type": "glass",
-      "specular": 1,
       "roughness": 0.25,
-      "transmission": 1,
       "color": [0.82, 0.55, 0.4],
       "scattering": [0.623, 0.433, 0.343],
       "scanisotropy": -0.8,
-      "trdepth": 0.001,
-      "thin": false
+      "trdepth": 0.001
     },
     "skins": {
       "type": "glass",
-      "specular": 1,
       "roughness": 0,
-      "transmission": 1,
       "color": [0.76, 0.48, 0.23],
       "scattering": [0.436, 0.227, 0.131],
       "scanisotropy": -0.8,
-      "trdepth": 0.001,
-      "thin": false
+      "trdepth": 0.001
     },
     "skin1b": {
       "type": "glass",
-      "translucency": 1,
-      "specular": 1,
       "roughness": 0.25,
       "color": [0.76, 0.48, 0.23],
       "scattering": [0.436, 0.227, 0.131],
       "scanisotropy": -0.8,
-      "trdepth": 0.001,
-      "thin": false
+      "trdepth": 0.001
     },
     "skin2b": {
       "type": "glass",
-      "translucency": 1,
-      "specular": 1,
       "roughness": 0.25,
       "color": [0.82, 0.55, 0.4],
       "scattering": [0.623, 0.433, 0.343],
       "scanisotropy": -0.8,
-      "trdepth": 0.001,
-      "thin": false
+      "trdepth": 0.001
     }
   }
 }

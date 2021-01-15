@@ -106,6 +106,15 @@ trace_bsdf eval_bsdf(const scene_scene& scene, const scene_instance& instance,
   bsdf.scanisotropy = material.scanisotropy;
   bsdf.trdepth      = material.trdepth;
 
+  // volume density
+  if (material.type == material_type::glass ||
+      material.type == material_type::volume ||
+      material.type == material_type::subsurface) {
+    bsdf.density = -log(clamp(bsdf.color, 0.0001f, 1.0f)) / bsdf.trdepth;
+  } else {
+    bsdf.density = {0, 0, 0};
+  }
+
   // fix roughness
   if (bsdf.type == material_type::matte ||
       bsdf.type == material_type::metallic ||
@@ -343,9 +352,6 @@ static float sample_delta_pdf(const trace_bsdf& bsdf, const vec3f& normal,
 
 static vec3f eval_scattering(
     const trace_bsdf& bsdf, const vec3f& outgoing, const vec3f& incoming) {
-  // vsdf.density    = ((transmission != 0 || translucency != 0) && !thin)
-  //                       ? -log(clamp(color, 0.0001f, 1.0f)) / trdepth
-  //                       : zero3f;
   if (bsdf.density == zero3f) return zero3f;
   return bsdf.scattering * bsdf.density *
          eval_phasefunction(bsdf.scanisotropy, outgoing, incoming);
