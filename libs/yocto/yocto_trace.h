@@ -131,6 +131,7 @@ struct trace_bsdf {
   vec3f         color     = {0, 0, 0};
   float         opacity   = 1;
   float         roughness = 0;
+  float         metallic  = 0;
   float         ior       = 1;
 
   // brdf lobes

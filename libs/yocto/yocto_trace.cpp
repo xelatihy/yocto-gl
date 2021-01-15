@@ -111,6 +111,7 @@ trace_bsdf eval_bsdf(const scene_scene& scene, const scene_instance& instance,
   bsdf.type     = material.type;
   bsdf.emission = emission;
   bsdf.color    = color;
+  bsdf.metallic = metallic;
   bsdf.opacity  = opacity;
 
   // factors
@@ -248,41 +249,49 @@ static vec3f eval_bsdfcos(const trace_bsdf& bsdf, const vec3f& normal,
   } else if (bsdf.type == material_type::glass) {
     return eval_microfacet_refraction(
         bsdf.ior, bsdf.roughness, normal, outgoing, incoming);
-  }
-
-  // accumulate the lobes
-  auto brdfcos = zero3f;
-  if (bsdf.diffuse != zero3f) {
-    brdfcos += bsdf.diffuse *
-               eval_diffuse_reflection(normal, outgoing, incoming);
-  }
-  if (bsdf.specular != zero3f) {
-    brdfcos += bsdf.specular * eval_microfacet_reflection(bsdf.ior,
-                                   bsdf.roughness, normal, outgoing, incoming);
-  }
-  if (bsdf.metal != zero3f) {
-    brdfcos += bsdf.metal * eval_microfacet_reflection(bsdf.meta, bsdf.metak,
-                                bsdf.roughness, normal, outgoing, incoming);
-  }
-  if (bsdf.coat != zero3f) {
-    brdfcos += bsdf.coat * eval_microfacet_reflection(coat_ior, coat_roughness,
-                               normal, outgoing, incoming);
-  }
-  if (bsdf.transmission != zero3f) {
-    brdfcos += bsdf.transmission * eval_microfacet_transmission(bsdf.ior,
-                                       bsdf.roughness, normal, outgoing,
-                                       incoming);
-  }
-  if (bsdf.translucency != zero3f) {
-    brdfcos += bsdf.translucency *
-               eval_diffuse_transmission(normal, outgoing, incoming);
-  }
-  if (bsdf.refraction != zero3f) {
-    brdfcos += bsdf.refraction * eval_microfacet_refraction(bsdf.ior,
+  } else if (bsdf.type == material_type::plastic) {
+    auto diffuse  = bsdf.color * (1 - bsdf.metallic);
+    auto specular = lerp(bsdf.color, vec3f{0.04, 0.04, 0.04}, bsdf.metallic);
+    return diffuse * (1 - fresnel_schlick(specular, normal, outgoing)) *
+               eval_diffuse_reflection(normal, outgoing, incoming) +
+           eval_microfacet_reflection(reflectivity_to_eta(specular),
+               vec3f{0, 0, 0}, bsdf.roughness, normal, outgoing, incoming);
+  } else {
+    // accumulate the lobes
+    auto brdfcos = zero3f;
+    if (bsdf.diffuse != zero3f) {
+      brdfcos += bsdf.diffuse *
+                 eval_diffuse_reflection(normal, outgoing, incoming);
+    }
+    if (bsdf.specular != zero3f) {
+      brdfcos += bsdf.specular * eval_microfacet_reflection(bsdf.ior,
                                      bsdf.roughness, normal, outgoing,
                                      incoming);
+    }
+    if (bsdf.metal != zero3f) {
+      brdfcos += bsdf.metal * eval_microfacet_reflection(bsdf.meta, bsdf.metak,
+                                  bsdf.roughness, normal, outgoing, incoming);
+    }
+    if (bsdf.coat != zero3f) {
+      brdfcos += bsdf.coat * eval_microfacet_reflection(coat_ior,
+                                 coat_roughness, normal, outgoing, incoming);
+    }
+    if (bsdf.transmission != zero3f) {
+      brdfcos += bsdf.transmission * eval_microfacet_transmission(bsdf.ior,
+                                         bsdf.roughness, normal, outgoing,
+                                         incoming);
+    }
+    if (bsdf.translucency != zero3f) {
+      brdfcos += bsdf.translucency *
+                 eval_diffuse_transmission(normal, outgoing, incoming);
+    }
+    if (bsdf.refraction != zero3f) {
+      brdfcos += bsdf.refraction * eval_microfacet_refraction(bsdf.ior,
+                                       bsdf.roughness, normal, outgoing,
+                                       incoming);
+    }
+    return brdfcos;
   }
-  return brdfcos;
 }
 
 static vec3f eval_delta(const trace_bsdf& bsdf, const vec3f& normal,
@@ -298,32 +307,32 @@ static vec3f eval_delta(const trace_bsdf& bsdf, const vec3f& normal,
            eval_delta_reflection(bsdf.ior, normal, outgoing, incoming);
   } else if (bsdf.type == material_type::glass) {
     return eval_delta_refraction(bsdf.ior, normal, outgoing, incoming);
+  } else if (bsdf.type == material_type::volume) {
+    return eval_delta_transmission(bsdf.ior, normal, outgoing, incoming);
+  } else {
+    auto brdfcos = zero3f;
+    if (bsdf.specular != zero3f && bsdf.refraction == zero3f) {
+      brdfcos += bsdf.specular *
+                 eval_delta_reflection(bsdf.ior, normal, outgoing, incoming);
+    }
+    if (bsdf.metal != zero3f) {
+      brdfcos += bsdf.metal * eval_delta_reflection(bsdf.meta, bsdf.metak,
+                                  normal, outgoing, incoming);
+    }
+    if (bsdf.coat != zero3f) {
+      brdfcos += bsdf.coat *
+                 eval_delta_reflection(coat_ior, normal, outgoing, incoming);
+    }
+    if (bsdf.transmission != zero3f) {
+      brdfcos += bsdf.transmission *
+                 eval_delta_transmission(bsdf.ior, normal, outgoing, incoming);
+    }
+    if (bsdf.refraction != zero3f) {
+      brdfcos += bsdf.refraction *
+                 eval_delta_refraction(bsdf.ior, normal, outgoing, incoming);
+    }
+    return brdfcos;
   }
-
-  auto brdfcos = zero3f;
-
-  if (bsdf.specular != zero3f && bsdf.refraction == zero3f) {
-    brdfcos += bsdf.specular *
-               eval_delta_reflection(bsdf.ior, normal, outgoing, incoming);
-  }
-  if (bsdf.metal != zero3f) {
-    brdfcos += bsdf.metal * eval_delta_reflection(bsdf.meta, bsdf.metak, normal,
-                                outgoing, incoming);
-  }
-  if (bsdf.coat != zero3f) {
-    brdfcos += bsdf.coat *
-               eval_delta_reflection(coat_ior, normal, outgoing, incoming);
-  }
-  if (bsdf.transmission != zero3f) {
-    brdfcos += bsdf.transmission *
-               eval_delta_transmission(bsdf.ior, normal, outgoing, incoming);
-  }
-  if (bsdf.refraction != zero3f) {
-    brdfcos += bsdf.refraction *
-               eval_delta_refraction(bsdf.ior, normal, outgoing, incoming);
-  }
-
-  return brdfcos;
 }
 
 // Picks a direction based on the BRDF
@@ -356,56 +365,57 @@ static vec3f sample_bsdfcos(const trace_bsdf& bsdf, const vec3f& normal,
   } else if (bsdf.type == material_type::glass) {
     return sample_microfacet_refraction(
         bsdf.ior, bsdf.roughness, normal, outgoing, rnl, rn);
-  }
-
-  auto cdf = 0.0f;
-
-  if (bsdf.diffuse_pdf != 0) {
-    cdf += bsdf.diffuse_pdf;
-    if (rnl < cdf) return sample_diffuse_reflection(normal, outgoing, rn);
-  }
-
-  if (bsdf.specular_pdf != 0 && bsdf.refraction_pdf == 0) {
-    cdf += bsdf.specular_pdf;
-    if (rnl < cdf)
+  } else if (bsdf.type == material_type::metallic) {
+    auto specular = lerp(bsdf.color, vec3f{0.04, 0.04, 0.04}, bsdf.metallic);
+    auto weight   = max(fresnel_schlick(specular, normal, outgoing));
+    if (rnl < weight) {
       return sample_microfacet_reflection(
           bsdf.ior, bsdf.roughness, normal, outgoing, rn);
+    } else {
+      return sample_diffuse_reflection(normal, outgoing, rn);
+    }
+  } else {
+    auto cdf = 0.0f;
+    if (bsdf.diffuse_pdf != 0) {
+      cdf += bsdf.diffuse_pdf;
+      if (rnl < cdf) return sample_diffuse_reflection(normal, outgoing, rn);
+    }
+    if (bsdf.specular_pdf != 0 && bsdf.refraction_pdf == 0) {
+      cdf += bsdf.specular_pdf;
+      if (rnl < cdf)
+        return sample_microfacet_reflection(
+            bsdf.ior, bsdf.roughness, normal, outgoing, rn);
+    }
+    if (bsdf.metal_pdf != 0) {
+      cdf += bsdf.metal_pdf;
+      if (rnl < cdf)
+        return sample_microfacet_reflection(
+            bsdf.meta, bsdf.metak, bsdf.roughness, normal, outgoing, rn);
+    }
+    if (bsdf.coat_pdf != 0) {
+      cdf += bsdf.coat_pdf;
+      if (rnl < cdf)
+        return sample_microfacet_reflection(
+            coat_ior, coat_roughness, normal, outgoing, rn);
+    }
+    if (bsdf.transmission_pdf != 0) {
+      cdf += bsdf.transmission_pdf;
+      if (rnl < cdf)
+        return sample_microfacet_transmission(
+            bsdf.ior, bsdf.roughness, normal, outgoing, rn);
+    }
+    if (bsdf.translucency_pdf != 0) {
+      cdf += bsdf.translucency_pdf;
+      if (rnl < cdf) return sample_diffuse_transmission(normal, outgoing, rn);
+    }
+    if (bsdf.refraction_pdf != 0) {
+      cdf += bsdf.refraction_pdf;
+      if (rnl < cdf)
+        return sample_microfacet_refraction(
+            bsdf.ior, bsdf.roughness, normal, outgoing, rnl, rn);
+    }
+    return zero3f;
   }
-
-  if (bsdf.metal_pdf != 0) {
-    cdf += bsdf.metal_pdf;
-    if (rnl < cdf)
-      return sample_microfacet_reflection(
-          bsdf.meta, bsdf.metak, bsdf.roughness, normal, outgoing, rn);
-  }
-
-  if (bsdf.coat_pdf != 0) {
-    cdf += bsdf.coat_pdf;
-    if (rnl < cdf)
-      return sample_microfacet_reflection(
-          coat_ior, coat_roughness, normal, outgoing, rn);
-  }
-
-  if (bsdf.transmission_pdf != 0) {
-    cdf += bsdf.transmission_pdf;
-    if (rnl < cdf)
-      return sample_microfacet_transmission(
-          bsdf.ior, bsdf.roughness, normal, outgoing, rn);
-  }
-
-  if (bsdf.translucency_pdf != 0) {
-    cdf += bsdf.translucency_pdf;
-    if (rnl < cdf) return sample_diffuse_transmission(normal, outgoing, rn);
-  }
-
-  if (bsdf.refraction_pdf != 0) {
-    cdf += bsdf.refraction_pdf;
-    if (rnl < cdf)
-      return sample_microfacet_refraction(
-          bsdf.ior, bsdf.roughness, normal, outgoing, rnl, rn);
-  }
-
-  return zero3f;
 }
 
 static vec3f sample_delta(const trace_bsdf& bsdf, const vec3f& normal,
@@ -424,48 +434,44 @@ static vec3f sample_delta(const trace_bsdf& bsdf, const vec3f& normal,
     }
   } else if (bsdf.type == material_type::glass) {
     return sample_delta_refraction(bsdf.ior, normal, outgoing, rnl);
-  }
-
-  // keep a weight sum to pick a lobe
-  auto cdf = 0.0f;
-  cdf += bsdf.diffuse_pdf;
-
-  if (bsdf.specular_pdf != 0 && bsdf.refraction_pdf == 0) {
-    cdf += bsdf.specular_pdf;
-    if (rnl < cdf) {
-      return sample_delta_reflection(bsdf.ior, normal, outgoing);
+  } else if (bsdf.type == material_type::volume) {
+    return sample_delta_transmission(bsdf.ior, normal, outgoing);
+  } else {
+    // keep a weight sum to pick a lobe
+    auto cdf = 0.0f;
+    cdf += bsdf.diffuse_pdf;
+    if (bsdf.specular_pdf != 0 && bsdf.refraction_pdf == 0) {
+      cdf += bsdf.specular_pdf;
+      if (rnl < cdf) {
+        return sample_delta_reflection(bsdf.ior, normal, outgoing);
+      }
     }
-  }
-
-  if (bsdf.metal_pdf != 0) {
-    cdf += bsdf.metal_pdf;
-    if (rnl < cdf) {
-      return sample_delta_reflection(bsdf.meta, bsdf.metak, normal, outgoing);
+    if (bsdf.metal_pdf != 0) {
+      cdf += bsdf.metal_pdf;
+      if (rnl < cdf) {
+        return sample_delta_reflection(bsdf.meta, bsdf.metak, normal, outgoing);
+      }
     }
-  }
-
-  if (bsdf.coat_pdf != 0) {
-    cdf += bsdf.coat_pdf;
-    if (rnl < cdf) {
-      return sample_delta_reflection(coat_ior, normal, outgoing);
+    if (bsdf.coat_pdf != 0) {
+      cdf += bsdf.coat_pdf;
+      if (rnl < cdf) {
+        return sample_delta_reflection(coat_ior, normal, outgoing);
+      }
     }
-  }
-
-  if (bsdf.transmission_pdf != 0) {
-    cdf += bsdf.transmission_pdf;
-    if (rnl < cdf) {
-      return sample_delta_transmission(bsdf.ior, normal, outgoing);
+    if (bsdf.transmission_pdf != 0) {
+      cdf += bsdf.transmission_pdf;
+      if (rnl < cdf) {
+        return sample_delta_transmission(bsdf.ior, normal, outgoing);
+      }
     }
-  }
-
-  if (bsdf.refraction_pdf != 0) {
-    cdf += bsdf.refraction_pdf;
-    if (rnl < cdf) {
-      return sample_delta_refraction(bsdf.ior, normal, outgoing, rnl);
+    if (bsdf.refraction_pdf != 0) {
+      cdf += bsdf.refraction_pdf;
+      if (rnl < cdf) {
+        return sample_delta_refraction(bsdf.ior, normal, outgoing, rnl);
+      }
     }
+    return zero3f;
   }
-
-  return zero3f;
 }
 
 // Compute the weight for sampling the BRDF
@@ -493,49 +499,49 @@ static float sample_bsdfcos_pdf(const trace_bsdf& bsdf, const vec3f& normal,
   } else if (bsdf.type == material_type::glass) {
     return sample_microfacet_refraction_pdf(
         bsdf.ior, bsdf.roughness, normal, outgoing, incoming);
-  }
-
-  auto pdf = 0.0f;
-
-  if (bsdf.diffuse_pdf != 0) {
-    pdf += bsdf.diffuse_pdf *
-           sample_diffuse_reflection_pdf(normal, outgoing, incoming);
-  }
-
-  if (bsdf.specular_pdf != 0 && bsdf.refraction_pdf == 0) {
-    pdf += bsdf.specular_pdf * sample_microfacet_reflection_pdf(bsdf.ior,
-                                   bsdf.roughness, normal, outgoing, incoming);
-  }
-
-  if (bsdf.metal_pdf != 0) {
-    pdf += bsdf.metal_pdf * sample_microfacet_reflection_pdf(bsdf.meta,
-                                bsdf.metak, bsdf.roughness, normal, outgoing,
-                                incoming);
-  }
-
-  if (bsdf.coat_pdf != 0) {
-    pdf += bsdf.coat_pdf * sample_microfacet_reflection_pdf(coat_ior,
-                               coat_roughness, normal, outgoing, incoming);
-  }
-
-  if (bsdf.transmission_pdf != 0) {
-    pdf += bsdf.transmission_pdf * sample_microfacet_transmission_pdf(bsdf.ior,
-                                       bsdf.roughness, normal, outgoing,
-                                       incoming);
-  }
-
-  if (bsdf.translucency_pdf != 0) {
-    pdf += bsdf.translucency_pdf *
-           sample_diffuse_transmission_pdf(normal, outgoing, incoming);
-  }
-
-  if (bsdf.refraction_pdf != 0) {
-    pdf += bsdf.refraction_pdf * sample_microfacet_refraction_pdf(bsdf.ior,
+  } else if (bsdf.type == material_type::metallic) {
+    auto specular = lerp(bsdf.color, vec3f{0.04, 0.04, 0.04}, bsdf.metallic);
+    auto weight   = max(fresnel_schlick(specular, normal, outgoing));
+    return (1 - weight) *
+               sample_diffuse_reflection_pdf(normal, outgoing, incoming) +
+           weight * sample_microfacet_reflection_pdf(
+                        bsdf.ior, bsdf.roughness, normal, outgoing, incoming);
+  } else {
+    auto pdf = 0.0f;
+    if (bsdf.diffuse_pdf != 0) {
+      pdf += bsdf.diffuse_pdf *
+             sample_diffuse_reflection_pdf(normal, outgoing, incoming);
+    }
+    if (bsdf.specular_pdf != 0 && bsdf.refraction_pdf == 0) {
+      pdf += bsdf.specular_pdf * sample_microfacet_reflection_pdf(bsdf.ior,
                                      bsdf.roughness, normal, outgoing,
                                      incoming);
+    }
+    if (bsdf.metal_pdf != 0) {
+      pdf += bsdf.metal_pdf * sample_microfacet_reflection_pdf(bsdf.meta,
+                                  bsdf.metak, bsdf.roughness, normal, outgoing,
+                                  incoming);
+    }
+    if (bsdf.coat_pdf != 0) {
+      pdf += bsdf.coat_pdf * sample_microfacet_reflection_pdf(coat_ior,
+                                 coat_roughness, normal, outgoing, incoming);
+    }
+    if (bsdf.transmission_pdf != 0) {
+      pdf += bsdf.transmission_pdf *
+             sample_microfacet_transmission_pdf(
+                 bsdf.ior, bsdf.roughness, normal, outgoing, incoming);
+    }
+    if (bsdf.translucency_pdf != 0) {
+      pdf += bsdf.translucency_pdf *
+             sample_diffuse_transmission_pdf(normal, outgoing, incoming);
+    }
+    if (bsdf.refraction_pdf != 0) {
+      pdf += bsdf.refraction_pdf * sample_microfacet_refraction_pdf(bsdf.ior,
+                                       bsdf.roughness, normal, outgoing,
+                                       incoming);
+    }
+    return pdf;
   }
-
-  return pdf;
 }
 
 static float sample_delta_pdf(const trace_bsdf& bsdf, const vec3f& normal,
@@ -553,30 +559,32 @@ static float sample_delta_pdf(const trace_bsdf& bsdf, const vec3f& normal,
                         bsdf.ior, normal, outgoing, incoming);
   } else if (bsdf.type == material_type::glass) {
     return sample_delta_refraction_pdf(bsdf.ior, normal, outgoing, incoming);
+  } else if (bsdf.type == material_type::thinglass) {
+    return sample_delta_transmission_pdf(bsdf.ior, normal, outgoing, incoming);
+  } else {
+    auto pdf = 0.0f;
+    if (bsdf.specular_pdf != 0 && bsdf.refraction_pdf == 0) {
+      pdf += bsdf.specular_pdf *
+             sample_delta_reflection_pdf(bsdf.ior, normal, outgoing, incoming);
+    }
+    if (bsdf.metal_pdf != 0) {
+      pdf += bsdf.metal_pdf * sample_delta_reflection_pdf(bsdf.meta, bsdf.metak,
+                                  normal, outgoing, incoming);
+    }
+    if (bsdf.coat_pdf != 0) {
+      pdf += bsdf.coat_pdf *
+             sample_delta_reflection_pdf(coat_ior, normal, outgoing, incoming);
+    }
+    if (bsdf.transmission_pdf != 0) {
+      pdf += bsdf.transmission_pdf * sample_delta_transmission_pdf(
+                                         bsdf.ior, normal, outgoing, incoming);
+    }
+    if (bsdf.refraction_pdf != 0) {
+      pdf += bsdf.refraction_pdf *
+             sample_delta_refraction_pdf(bsdf.ior, normal, outgoing, incoming);
+    }
+    return pdf;
   }
-
-  auto pdf = 0.0f;
-  if (bsdf.specular_pdf != 0 && bsdf.refraction_pdf == 0) {
-    pdf += bsdf.specular_pdf *
-           sample_delta_reflection_pdf(bsdf.ior, normal, outgoing, incoming);
-  }
-  if (bsdf.metal_pdf != 0) {
-    pdf += bsdf.metal_pdf * sample_delta_reflection_pdf(bsdf.meta, bsdf.metak,
-                                normal, outgoing, incoming);
-  }
-  if (bsdf.coat_pdf != 0) {
-    pdf += bsdf.coat_pdf *
-           sample_delta_reflection_pdf(coat_ior, normal, outgoing, incoming);
-  }
-  if (bsdf.transmission_pdf != 0) {
-    pdf += bsdf.transmission_pdf *
-           sample_delta_transmission_pdf(bsdf.ior, normal, outgoing, incoming);
-  }
-  if (bsdf.refraction_pdf != 0) {
-    pdf += bsdf.refraction_pdf *
-           sample_delta_refraction_pdf(bsdf.ior, normal, outgoing, incoming);
-  }
-  return pdf;
 }
 
 static vec3f eval_scattering(
