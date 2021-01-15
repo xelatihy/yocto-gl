@@ -242,8 +242,9 @@ static vec3f eval_bsdfcos(const trace_bsdf& bsdf, const vec3f& normal,
     return eval_microfacet_reflection(reflectivity_to_eta(bsdf.color),
         vec3f{0, 0, 0}, bsdf.roughness, normal, outgoing, incoming);
   } else if (bsdf.type == material_type::thinglass) {
-    return bsdf.color * eval_microfacet_transmission(bsdf.ior, bsdf.roughness,
-                            normal, outgoing, incoming) +
+    return bsdf.color * (1 - fresnel_dielectric(bsdf.ior, normal, outgoing)) *
+               eval_microfacet_transmission(
+                   bsdf.ior, bsdf.roughness, normal, outgoing, incoming) +
            eval_microfacet_reflection(
                bsdf.ior, bsdf.roughness, normal, outgoing, incoming);
   } else if (bsdf.type == material_type::glass) {
@@ -302,7 +303,7 @@ static vec3f eval_delta(const trace_bsdf& bsdf, const vec3f& normal,
     return eval_delta_reflection(reflectivity_to_eta(bsdf.color),
         vec3f{0, 0, 0}, normal, outgoing, incoming);
   } else if (bsdf.type == material_type::thinglass) {
-    return bsdf.color *
+    return bsdf.color * (1 - fresnel_dielectric(bsdf.ior, normal, outgoing)) *
                eval_delta_transmission(bsdf.ior, normal, outgoing, incoming) +
            eval_delta_reflection(bsdf.ior, normal, outgoing, incoming);
   } else if (bsdf.type == material_type::glass) {
