@@ -1819,25 +1819,26 @@ static bool load_obj_scene(const string& filename, scene_scene& scene,
         }
       }
       if (obj->face_vertices[cur_face] == 3) {
-        if (shape.quads.empty()) {
-          shape.triangles.push_back({vids[0], vids[1], vids[2]});
-        } else {
-          shape.quads.push_back({vids[0], vids[1], vids[2], vids[2]});
-        }
+        shape.triangles.push_back({vids[0], vids[1], vids[2]});
       } else if (obj->face_vertices[cur_face] == 4) {
-        if (!shape.triangles.empty()) {
-          shape.quads = triangles_to_quads(shape.triangles);
-          shape.triangles.clear();
-        }
         shape.quads.push_back({vids[0], vids[1], vids[2], vids[3]});
       } else if (obj->face_vertices[cur_face] > 4) {
         for (auto vidx = 2; vidx < obj->face_vertices[cur_face]; vidx++) {
-          shape.triangles.push_back({vids[0], vids[1], vids[vidx]});
+          shape.triangles.push_back({vids[0], vids[vidx-1], vids[vidx]});
         }
       } else {
         // not supported
       }
       cur_index_offset += obj->face_vertices[cur_face];
+    }
+  }
+
+  // handle mixed shapes
+  for(auto& shape : scene.shapes) {
+    if (!shape.quads.empty() && !shape.triangles.empty()) {
+      auto tquads = quads_to_triangles(shape.quads);
+      shape.triangles.insert(shape.triangles.end(), tquads.begin(), tquads.end());
+      shape.quads.clear();
     }
   }
 
