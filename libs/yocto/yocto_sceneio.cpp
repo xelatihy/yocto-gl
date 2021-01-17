@@ -1704,7 +1704,8 @@ static bool load_obj_scene(const string& filename, scene_scene& scene,
     auto& environment = scene.environments.emplace_back();
     environment.frame = lookat_frame(
         vec3f{omaterial->Kd[0], omaterial->Kd[1], omaterial->Kd[2]},
-        vec3f{omaterial->Ks[0], omaterial->Ks[1], omaterial->Ks[2]}, {0, 1, 0});
+        vec3f{omaterial->Ks[0], omaterial->Ks[1], omaterial->Ks[2]}, {0, 1, 0},
+        true);
     environment.emission = vec3f{
         omaterial->Ke[0], omaterial->Ke[1], omaterial->Ke[2]};
     environment.emission_tex = get_texture(omaterial->map_Ke);
@@ -1777,7 +1778,8 @@ static bool load_obj_scene(const string& filename, scene_scene& scene,
          cur_face < group->face_offset + group->face_count; cur_face++) {
       if (cur_mat != obj->face_materials[cur_face]) {
         cur_mat       = obj->face_materials[cur_face];
-        auto cur_name = string{group->name} + "@@@" + std::to_string(cur_mat);
+        auto cur_name = string{group->name != nullptr ? group->name : ""} +
+                        "@@@" + std::to_string(cur_mat);
         if (shape_map.find(cur_name) != shape_map.end()) {
           cur_shape = shape_map.at(cur_name);
         } else {
