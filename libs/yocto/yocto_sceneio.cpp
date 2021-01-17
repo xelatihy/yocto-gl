@@ -39,6 +39,7 @@
 #include <unordered_map>
 
 #include "ext/cgltf.h"
+#include "ext/fast_obj.h"
 #include "ext/json.hpp"
 #include "yocto_color.h"
 #include "yocto_commonio.h"
@@ -1280,15 +1281,18 @@ static bool load_json_scene(const string& filename, scene_scene& scene,
   for (auto [name, value] : shape_map) {
     auto& shape = scene.shapes[value.first];
     if (progress_cb) progress_cb("load shape", progress.x++, progress.y);
-    auto path          = make_filename(name, "shapes", {".ply", ".obj"});
-    auto quadspos      = vector<vec4i>{};
-    auto quadsnorm     = vector<vec4i>{};
-    auto quadstexcoord = vector<vec4i>{};
-    if (!load_shape(path, shape.points, shape.lines, shape.triangles,
-            shape.quads, quadspos, quadsnorm, quadstexcoord, shape.positions,
-            shape.normals, shape.texcoords, shape.colors, shape.radius, error,
-            false))
-      return dependent_error();
+    auto path   = make_filename(name, "shapes", {".ply", ".obj"});
+    auto lshape = shape_data{};
+    if (!load_shape(path, lshape, error, false)) return dependent_error();
+    shape.points    = lshape.points;
+    shape.lines     = lshape.lines;
+    shape.triangles = lshape.triangles;
+    shape.quads     = lshape.quads;
+    shape.positions = lshape.positions;
+    shape.normals   = lshape.normals;
+    shape.texcoords = lshape.texcoords;
+    shape.colors    = lshape.colors;
+    shape.radius    = lshape.radius;
   }
 
   // load subdivs
@@ -1296,17 +1300,15 @@ static bool load_json_scene(const string& filename, scene_scene& scene,
   for (auto [name, value] : subdiv_map) {
     auto& subdiv = scene.subdivs[value.first];
     if (progress_cb) progress_cb("load subdiv", progress.x++, progress.y);
-    auto path      = make_filename(name, "subdivs", {".ply", ".obj"});
-    auto points    = vector<int>{};
-    auto lines     = vector<vec2i>{};
-    auto triangles = vector<vec3i>{};
-    auto quads     = vector<vec4i>{};
-    auto colors    = vector<vec4f>{};
-    auto radius    = vector<float>{};
-    if (!load_shape(path, points, lines, triangles, quads, subdiv.quadspos,
-            subdiv.quadsnorm, subdiv.quadstexcoord, subdiv.positions,
-            subdiv.normals, subdiv.texcoords, colors, radius, error, true))
-      return dependent_error();
+    auto path    = make_filename(name, "subdivs", {".ply", ".obj"});
+    auto lsubdiv = fvshape_data{};
+    if (!load_fvshape(path, lsubdiv, error, true)) return dependent_error();
+    subdiv.quadspos      = lsubdiv.quadspos;
+    subdiv.quadsnorm     = lsubdiv.quadsnorm;
+    subdiv.quadstexcoord = lsubdiv.quadstexcoord;
+    subdiv.positions     = lsubdiv.positions;
+    subdiv.normals       = lsubdiv.normals;
+    subdiv.texcoords     = lsubdiv.texcoords;
   }
 
   // load textures
@@ -1580,10 +1582,17 @@ static bool save_json_scene(const string& filename, const scene_scene& scene,
   for (auto& shape : scene.shapes) {
     if (progress_cb) progress_cb("save shape", progress.x++, progress.y);
     auto path = make_filename(get_shape_name(scene, shape), "shapes", ".ply"s);
-    if (!save_shape(path, shape.points, shape.lines, shape.triangles,
-            shape.quads, {}, {}, {}, shape.positions, shape.normals,
-            shape.texcoords, shape.colors, shape.radius, error, false))
-      return dependent_error();
+    auto sshape      = shape_data{};
+    sshape.points    = shape.points;
+    sshape.lines     = shape.lines;
+    sshape.triangles = shape.triangles;
+    sshape.quads     = shape.quads;
+    sshape.positions = shape.positions;
+    sshape.normals   = shape.normals;
+    sshape.texcoords = shape.texcoords;
+    sshape.colors    = shape.colors;
+    sshape.radius    = shape.radius;
+    if (!save_shape(path, sshape, error, false)) return dependent_error();
   }
 
   // save subdiv
@@ -1591,10 +1600,14 @@ static bool save_json_scene(const string& filename, const scene_scene& scene,
     if (progress_cb) progress_cb("save subdiv", progress.x++, progress.y);
     auto path = make_filename(
         get_subdiv_name(scene, subdiv), "subdivs", ".obj");
-    if (!save_shape(path, {}, {}, {}, {}, subdiv.quadspos, subdiv.quadsnorm,
-            subdiv.quadstexcoord, subdiv.positions, subdiv.normals,
-            subdiv.texcoords, {}, {}, error, true))
-      return dependent_error();
+    auto ssubdiv          = fvshape_data{};
+    ssubdiv.quadspos      = subdiv.quadspos;
+    ssubdiv.quadsnorm     = subdiv.quadsnorm;
+    ssubdiv.quadstexcoord = subdiv.quadstexcoord;
+    ssubdiv.positions     = subdiv.positions;
+    ssubdiv.normals       = subdiv.normals;
+    ssubdiv.texcoords     = subdiv.texcoords;
+    if (!save_fvshape(path, ssubdiv, error, true)) return dependent_error();
   }
 
   // save textures
@@ -1617,6 +1630,283 @@ static bool save_json_scene(const string& filename, const scene_scene& scene,
 // OBJ CONVERSION
 // -----------------------------------------------------------------------------
 namespace yocto {
+
+#define YOCTO_FASTOBJ
+
+#ifdef YOCTO_FASTOBJ
+
+// Loads an OBJ
+static bool load_obj_scene(const string& filename, scene_scene& scene,
+    string& error, const progress_callback& progress_cb, bool noparallel) {
+  auto read_error = [filename, &error]() {
+    error = filename + ": error reading obj";
+    return false;
+  };
+  auto shape_error = [filename, &error]() {
+    error = filename + ": empty shape";
+    return false;
+  };
+  auto material_error = [filename, &error](const string& name) {
+    error = filename + ": missing material " + name;
+    return false;
+  };
+  auto dependent_error = [filename, &error]() {
+    error = filename + ": error in " + error;
+    return false;
+  };
+
+  // handle progress
+  auto progress = vec2i{0, 2};
+  if (progress_cb) progress_cb("load scene", progress.x++, progress.y);
+
+  // load obj
+  auto obj = fast_obj_read(filename.c_str());
+  if (!obj) return read_error();
+  auto obj_guard = std::unique_ptr<fastObjMesh, void (*)(fastObjMesh*)>(
+      obj, &fast_obj_destroy);
+
+  // handle progress
+  if (progress_cb) progress_cb("load scene", progress.x++, progress.y);
+
+  // helper to create texture maps
+  auto texture_map = unordered_map<string, texture_handle>{
+      {"", invalid_handle}};
+  auto get_texture = [&texture_map, &scene](
+                         const fastObjTexture& tinfo) -> texture_handle {
+    if (tinfo.name == nullptr) return invalid_handle;
+    auto path = string{tinfo.name};
+    for (auto& c : path)
+      if (c == '\\') c = '/';
+    if (path.empty()) return invalid_handle;
+    auto it = texture_map.find(path);
+    if (it != texture_map.end()) return it->second;
+    scene.textures.emplace_back();
+    texture_map[path] = (int)scene.textures.size() - 1;
+    return (int)scene.textures.size() - 1;
+  };
+
+  // convert between roughness and exponent
+  auto exponent_to_roughness = [](float exponent) {
+    auto roughness = exponent;
+    roughness      = pow(2 / (roughness + 2), 1 / 4.0f);
+    if (roughness < 0.01f) roughness = 0;
+    if (roughness > 0.99f) roughness = 1;
+    return roughness;
+  };
+
+  // handler for cameras
+  for (auto idx = 0; idx < obj->material_count; idx++) {
+    auto omaterial = obj->materials + idx;
+    if (omaterial->name == nullptr) continue;
+    if (string{omaterial->name}.find("ycamera_") != 0) continue;
+    auto& camera = scene.cameras.emplace_back();
+    camera.frame = lookat_frame(
+        vec3f{omaterial->Kd[0], omaterial->Kd[1], omaterial->Kd[2]},
+        vec3f{omaterial->Ks[0], omaterial->Ks[1], omaterial->Ks[2]}, {0, 1, 0});
+    camera.focus = distance(
+        vec3f{omaterial->Kd[0], omaterial->Kd[1], omaterial->Kd[2]},
+        vec3f{omaterial->Ks[0], omaterial->Ks[1], omaterial->Ks[2]});
+    camera.aspect = omaterial->Ni;
+    camera.lens   = omaterial->Ns / 1000.0f;
+  }
+
+  // handler for environments
+  for (auto idx = 0; idx < obj->material_count; idx++) {
+    auto omaterial = obj->materials + idx;
+    if (omaterial->name == nullptr) continue;
+    if (string{omaterial->name}.find("yenvironment_") != 0) continue;
+    auto& environment = scene.environments.emplace_back();
+    environment.frame = lookat_frame(
+        vec3f{omaterial->Kd[0], omaterial->Kd[1], omaterial->Kd[2]},
+        vec3f{omaterial->Ks[0], omaterial->Ks[1], omaterial->Ks[2]}, {0, 1, 0},
+        true);
+    environment.emission = vec3f{
+        omaterial->Ke[0], omaterial->Ke[1], omaterial->Ke[2]};
+    environment.emission_tex = get_texture(omaterial->map_Ke);
+  }
+
+  // handler for materials
+  auto material_map = unordered_map<string, material_handle>{};
+  for (auto idx = 0; idx < obj->material_count; idx++) {
+    auto omaterial = obj->materials + idx;
+    if (omaterial->name == nullptr) continue;
+    if (string{omaterial->name}.find("ycamera_") == 0) continue;
+    if (string{omaterial->name}.find("yenvironment_") == 0) continue;
+    auto& material    = scene.materials.emplace_back();
+    material.type     = material_type::metallic;
+    material.emission = vec3f{
+        omaterial->Ke[0], omaterial->Ke[1], omaterial->Ke[2]};
+    material.emission_tex = get_texture(omaterial->map_Ke);
+    if (max(max(omaterial->Kt[0], omaterial->Kt[1]), omaterial->Kt[2]) > 0.1) {
+      material.type  = material_type::thinglass;
+      material.color = vec3f{
+          omaterial->Kt[0], omaterial->Kt[1], omaterial->Kt[2]};
+      material.color_tex = get_texture(omaterial->map_Kt);
+      material.roughness = exponent_to_roughness(omaterial->Ns);
+      material.ior       = 1.5;
+      material.metallic  = 0;
+      material.opacity   = 1;
+    } else if (min(min(omaterial->Tf[0], omaterial->Tf[1]), omaterial->Tf[2]) <
+               0.99) {
+      material.type      = material_type::thinglass;
+      material.color     = vec3f{1, 1, 1};
+      material.color_tex = get_texture(omaterial->map_Kt);
+      material.roughness = 0;
+      material.ior       = 1.5;
+      material.metallic  = 0;
+      material.opacity   = 1;
+    } else if (max(max(omaterial->Ks[0], omaterial->Ks[1]), omaterial->Ks[2]) >
+               0.2) {
+      material.type  = material_type::metal;
+      material.color = vec3f{
+          omaterial->Ks[0], omaterial->Ks[1], omaterial->Ks[2]};
+      material.color_tex = get_texture(omaterial->map_Ks);
+      material.roughness = exponent_to_roughness(omaterial->Ns);
+      material.ior       = 1.5;
+      material.metallic  = 0;
+      material.opacity   = omaterial->d;
+    } else if (max(max(omaterial->Ks[0], omaterial->Ks[1]), omaterial->Ks[2]) >
+               0) {
+      material.type  = material_type::plastic;
+      material.color = vec3f{
+          omaterial->Kd[0], omaterial->Kd[1], omaterial->Kd[2]};
+      material.color_tex = get_texture(omaterial->map_Kd);
+      material.roughness = exponent_to_roughness(omaterial->Ns);
+      material.ior       = 1.5;
+      material.metallic  = 0;
+      material.opacity   = omaterial->d;
+    } else {
+      material.type  = material_type::matte;
+      material.color = vec3f{
+          omaterial->Kd[0], omaterial->Kd[1], omaterial->Kd[2]};
+      material.color_tex = get_texture(omaterial->map_Kd);
+      material.roughness = exponent_to_roughness(omaterial->Ns);
+      material.ior       = 1.5;
+      material.metallic  = 0;
+      material.opacity   = omaterial->d;
+    }
+    material.normal_tex           = get_texture(omaterial->map_bump);
+    material_map[omaterial->name] = (int)scene.materials.size() - 1;
+  }
+
+  struct index_hash {
+    size_t operator()(const vec3i& v) const {
+      const std::hash<int> hasher = std::hash<int>();
+      auto                 h      = (size_t)0;
+      h ^= hasher(v.x) + 0x9e3779b9 + (h << 6) + (h >> 2);
+      h ^= hasher(v.y) + 0x9e3779b9 + (h << 6) + (h >> 2);
+      h ^= hasher(v.z) + 0x9e3779b9 + (h << 6) + (h >> 2);
+      return h;
+    }
+  };
+
+  // convert shapes
+  auto shape_map  = unordered_map<string, int>{};
+  auto shape_vmap = vector<unordered_map<vec3i, int, index_hash>>{};
+  for (auto idx = 0; idx < obj->group_count; idx++) {
+    auto group = obj->groups + idx;
+    if (group->face_count == 0) continue;
+    auto cur_mat          = -1;
+    auto cur_shape        = -1;
+    auto cur_index_offset = group->index_offset;
+    for (auto cur_face = group->face_offset;
+         cur_face < group->face_offset + group->face_count; cur_face++) {
+      if (cur_mat != obj->face_materials[cur_face]) {
+        cur_mat       = obj->face_materials[cur_face];
+        auto cur_name = string{group->name != nullptr ? group->name : ""} +
+                        "@@@" + std::to_string(cur_mat);
+        if (shape_map.find(cur_name) != shape_map.end()) {
+          cur_shape = shape_map.at(cur_name);
+        } else {
+          scene.shapes.emplace_back();
+          shape_vmap.emplace_back();
+          cur_shape           = (int)scene.shapes.size() - 1;
+          auto& instance      = scene.instances.emplace_back();
+          instance.material   = cur_mat;
+          instance.shape      = cur_shape;
+          shape_map[cur_name] = cur_shape;
+        }
+      }
+      auto& shape = scene.shapes[cur_shape];
+      auto& vmap  = shape_vmap[cur_shape];
+      auto  vids  = array<int, 128>{};
+      for (auto vidx = 0; vidx < obj->face_vertices[cur_face]; vidx++) {
+        auto indices  = obj->indices[cur_index_offset + vidx];
+        auto vindices = vec3i{(int)indices.p, (int)indices.n, (int)indices.t};
+        auto vert_it  = vmap.find(vindices);
+        if (vert_it == vmap.end()) {
+          shape.positions.push_back({obj->positions[indices.p * 3 + 0],
+              obj->positions[indices.p * 3 + 1],
+              obj->positions[indices.p * 3 + 2]});
+          if (!shape.normals.empty() || indices.n != 0) {
+            shape.normals.push_back({obj->normals[indices.n * 3 + 0],
+                obj->normals[indices.n * 3 + 1],
+                obj->normals[indices.n * 3 + 2]});
+          }
+          if (!shape.texcoords.empty() || indices.t != 0) {
+            shape.texcoords.push_back({obj->texcoords[indices.t * 2 + 0],
+                1 - obj->texcoords[indices.t * 2 + 1]});
+          }
+          vids[vidx] = (int)shape.positions.size() - 1;
+          vmap.insert(vert_it, {vindices, vids[vidx]});
+        } else {
+          vids[vidx] = vert_it->second;
+        }
+      }
+      if (obj->face_vertices[cur_face] == 3) {
+        shape.triangles.push_back({vids[0], vids[1], vids[2]});
+      } else if (obj->face_vertices[cur_face] == 4) {
+        shape.quads.push_back({vids[0], vids[1], vids[2], vids[3]});
+      } else if (obj->face_vertices[cur_face] > 4) {
+        for (auto vidx = 2; vidx < obj->face_vertices[cur_face]; vidx++) {
+          shape.triangles.push_back({vids[0], vids[vidx - 1], vids[vidx]});
+        }
+      } else {
+        // not supported
+      }
+      cur_index_offset += obj->face_vertices[cur_face];
+    }
+  }
+
+  // handle mixed shapes
+  for (auto& shape : scene.shapes) {
+    if (!shape.quads.empty() && !shape.triangles.empty()) {
+      auto tquads = quads_to_triangles(shape.quads);
+      shape.triangles.insert(
+          shape.triangles.end(), tquads.begin(), tquads.end());
+      shape.quads.clear();
+    }
+  }
+
+  // handle progress
+  progress.y += (int)scene.textures.size();
+
+  // get filename from name
+  auto make_filename = [filename](const string& name) {
+    return path_join(path_dirname(filename), name);
+  };
+
+  // load textures
+  texture_map.erase("");
+  for (auto [name, thandle] : texture_map) {
+    auto& texture = scene.textures[thandle];
+    if (progress_cb) progress_cb("load texture", progress.x++, progress.y);
+    if (!load_image(make_filename(name), texture.hdr, texture.ldr, error))
+      return dependent_error();
+  }
+
+  // fix scene
+  if (scene.asset.name.empty()) scene.asset.name = path_basename(filename);
+  add_cameras(scene);
+  add_radius(scene);
+  add_materials(scene);
+
+  // done
+  if (progress_cb) progress_cb("load scene", progress.x++, progress.y);
+  return true;
+}
+
+#else
 
 // Loads an OBJ
 static bool load_obj_scene(const string& filename, scene_scene& scene,
@@ -1791,6 +2081,8 @@ static bool load_obj_scene(const string& filename, scene_scene& scene,
   return true;
 }
 
+#endif
+
 static bool save_obj_scene(const string& filename, const scene_scene& scene,
     string& error, const progress_callback& progress_cb, bool noparallel) {
   auto shape_error = [filename, &error]() {
@@ -1929,15 +2221,18 @@ static bool load_ply_scene(const string& filename, scene_scene& scene,
   if (progress_cb) progress_cb("load scene", progress.x++, progress.y);
 
   // load ply mesh
-  auto& shape         = scene.shapes.emplace_back();
-  auto  quadspos      = vector<vec4i>{};
-  auto  quadsnorm     = vector<vec4i>{};
-  auto  quadstexcoord = vector<vec4i>{};
-  if (!load_shape(filename, shape.points, shape.lines, shape.triangles,
-          shape.quads, quadspos, quadsnorm, quadstexcoord, shape.positions,
-          shape.normals, shape.texcoords, shape.colors, shape.radius, error,
-          false))
-    return false;
+  auto& shape  = scene.shapes.emplace_back();
+  auto  lshape = shape_data{};
+  if (!load_shape(filename, lshape, error, false)) return false;
+  shape.points    = lshape.points;
+  shape.lines     = lshape.lines;
+  shape.triangles = lshape.triangles;
+  shape.quads     = lshape.quads;
+  shape.positions = lshape.positions;
+  shape.normals   = lshape.normals;
+  shape.texcoords = lshape.texcoords;
+  shape.colors    = lshape.colors;
+  shape.radius    = lshape.radius;
 
   // create instance
   auto& instance = scene.instances.emplace_back();
@@ -1967,11 +2262,18 @@ static bool save_ply_scene(const string& filename, const scene_scene& scene,
   if (progress_cb) progress_cb("save scene", progress.x++, progress.y);
 
   // save shape
-  auto& shape = scene.shapes.front();
-  if (!save_shape(filename, shape.points, shape.lines, shape.triangles,
-          shape.quads, {}, {}, {}, shape.positions, shape.normals,
-          shape.texcoords, shape.colors, shape.radius, error))
-    return false;
+  auto& shape      = scene.shapes.front();
+  auto  sshape     = shape_data{};
+  sshape.points    = shape.points;
+  sshape.lines     = shape.lines;
+  sshape.triangles = shape.triangles;
+  sshape.quads     = shape.quads;
+  sshape.positions = shape.positions;
+  sshape.normals   = shape.normals;
+  sshape.texcoords = shape.texcoords;
+  sshape.colors    = shape.colors;
+  sshape.radius    = shape.radius;
+  if (!save_shape(filename, sshape, error)) return false;
 
   // done
   if (progress_cb) progress_cb("save done", progress.x++, progress.y);
@@ -1992,15 +2294,18 @@ static bool load_stl_scene(const string& filename, scene_scene& scene,
   if (progress_cb) progress_cb("load scene", progress.x++, progress.y);
 
   // load stl mesh
-  auto& shape         = scene.shapes.emplace_back();
-  auto  quadspos      = vector<vec4i>{};
-  auto  quadsnorm     = vector<vec4i>{};
-  auto  quadstexcoord = vector<vec4i>{};
-  if (!load_shape(filename, shape.points, shape.lines, shape.triangles,
-          shape.quads, quadspos, quadsnorm, quadstexcoord, shape.positions,
-          shape.normals, shape.texcoords, shape.colors, shape.radius, error,
-          false))
-    return false;
+  auto& shape  = scene.shapes.emplace_back();
+  auto  lshape = shape_data{};
+  if (!load_shape(filename, lshape, error, false)) return false;
+  shape.points    = lshape.points;
+  shape.lines     = lshape.lines;
+  shape.triangles = lshape.triangles;
+  shape.quads     = lshape.quads;
+  shape.positions = lshape.positions;
+  shape.normals   = lshape.normals;
+  shape.texcoords = lshape.texcoords;
+  shape.colors    = lshape.colors;
+  shape.radius    = lshape.radius;
 
   // create instance
   auto& instance = scene.instances.emplace_back();
@@ -2030,10 +2335,18 @@ static bool save_stl_scene(const string& filename, const scene_scene& scene,
   if (progress_cb) progress_cb("save scene", progress.x++, progress.y);
 
   // save shape
-  auto& shape = scene.shapes.front();
-  if (!save_shape(filename, shape.points, shape.lines, shape.triangles,
-          shape.quads, {}, {}, {}, shape.positions, shape.normals,
-          shape.texcoords, shape.colors, shape.radius, error, false))
+  auto& shape      = scene.shapes.front();
+  auto  sshape     = shape_data{};
+  sshape.points    = shape.points;
+  sshape.lines     = shape.lines;
+  sshape.triangles = shape.triangles;
+  sshape.quads     = shape.quads;
+  sshape.positions = shape.positions;
+  sshape.normals   = shape.normals;
+  sshape.texcoords = shape.texcoords;
+  sshape.colors    = shape.colors;
+  sshape.radius    = shape.radius;
+  if (!save_shape(filename, sshape, error, false))
     return false;
 
   // done

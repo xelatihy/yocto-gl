@@ -641,7 +641,8 @@ static vec4f trace_falsecolor(const scene_scene& scene, const trace_bvh& bvh,
   auto hashed_color = [](int id) {
     auto hashed = std::hash<int>()(id);
     auto rng    = make_rng(trace_default_seed, hashed);
-    return pow(0.5f + 0.5f * rand3f(rng), 2.2f);
+    auto rgb    = pow(0.5f + 0.5f * rand3f(rng), 2.2f);
+    return vec4f{rgb.x, rgb.y, rgb.z, 1};
   };
 
   // make vec4f
@@ -670,9 +671,13 @@ static vec4f trace_falsecolor(const scene_scene& scene, const trace_bvh& bvh,
     case trace_falsecolor_type::opacity:
       return {material.opacity, material.opacity, material.opacity, 1};
     case trace_falsecolor_type::element:
-      return make_vec(hashed_color(intersection.element), 1);
+      return hashed_color(intersection.element);
     case trace_falsecolor_type::instance:
-      return make_vec(hashed_color(intersection.instance), 1);
+      return hashed_color(intersection.instance);
+    case trace_falsecolor_type::shape:
+      return hashed_color(scene.instances[intersection.instance].shape);
+    case trace_falsecolor_type::material:
+      return hashed_color(scene.instances[intersection.instance].material);
     case trace_falsecolor_type::highlight: {
       if (material.emission == zero3f) material.emission = {0.2f, 0.2f, 0.2f};
       return make_vec(material.emission * abs(dot(-ray.d, normal)), 1);

@@ -55,7 +55,7 @@ struct shade_shape_state {
   shade_params drawgl_prms = {};
 
   // scene
-  generic_shape ioshape = {};
+  shape_data ioshape = {};
 
   // rendering state
   shade_scene glscene = {};
@@ -141,7 +141,7 @@ static quads_shape make_cylinders(const vector<vec2i>& lines,
 }
 
 static void init_glscene(shade_shape_state* app, shade_scene& glscene,
-    generic_shape& ioshape, progress_callback progress_cb) {
+    shape_data& ioshape, progress_callback progress_cb) {
   // handle progress
   auto progress = vec2i{0, 4};
 
@@ -295,10 +295,6 @@ static void draw_widgets(
     draw_label(win, "texcoords", std::to_string(ioshape.texcoords.size()));
     draw_label(win, "colors", std::to_string(ioshape.colors.size()));
     draw_label(win, "radius", std::to_string(ioshape.radius.size()));
-    draw_label(win, "quads pos", std::to_string(ioshape.quadspos.size()));
-    draw_label(win, "quads norm", std::to_string(ioshape.quadsnorm.size()));
-    draw_label(
-        win, "quads texcoord", std::to_string(ioshape.quadstexcoord.size()));
     end_header(win);
   }
 }
