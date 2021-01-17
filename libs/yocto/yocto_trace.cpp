@@ -91,7 +91,7 @@ static vec3f eval_bsdfcos(const material_point& material, const vec3f& normal,
   if (material.type == material_type::matte) {
     return eval_diffuse(material.color, normal, outgoing, incoming);
   } else if (material.type == material_type::plastic) {
-    return eval_specular(material.color, material.roughness, material.ior,
+    return eval_specular(material.color, material.ior, material.roughness,
         normal, outgoing, incoming);
   } else if (material.type == material_type::metal) {
     return eval_metal(reflectivity_to_eta(material.color), vec3f{0, 0, 0},
