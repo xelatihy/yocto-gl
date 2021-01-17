@@ -1803,11 +1803,15 @@ static bool load_obj_scene(const string& filename, scene_scene& scene,
           shape.positions.push_back({obj->positions[indices.p * 3 + 0],
               obj->positions[indices.p * 3 + 1],
               obj->positions[indices.p * 3 + 2]});
-          shape.normals.push_back(
-              {obj->normals[indices.n * 3 + 0], obj->normals[indices.n * 3 + 1],
-                  obj->normals[indices.n * 3 + 2]});
-          shape.texcoords.push_back({obj->texcoords[indices.t * 2 + 0],
-              obj->texcoords[indices.t * 2 + 1]});
+          if (!shape.normals.empty() || indices.n != 0) {
+            shape.normals.push_back({obj->normals[indices.n * 3 + 0],
+                obj->normals[indices.n * 3 + 1],
+                obj->normals[indices.n * 3 + 2]});
+          }
+          if (!shape.texcoords.empty() || indices.t != 0) {
+            shape.texcoords.push_back({obj->texcoords[indices.t * 2 + 0],
+                obj->texcoords[indices.t * 2 + 1]});
+          }
           vids[vidx] = (int)shape.positions.size() - 1;
           vmap.insert(vert_it, {vindices, vids[vidx]});
         } else {
@@ -1825,7 +1829,7 @@ static bool load_obj_scene(const string& filename, scene_scene& scene,
           shape.quads = triangles_to_quads(shape.triangles);
           shape.triangles.clear();
         }
-        shape.quads.push_back({vids[0], vids[1], vids[2], vids[4]});
+        shape.quads.push_back({vids[0], vids[1], vids[2], vids[3]});
       } else if (obj->face_vertices[cur_face] > 4) {
         for (auto vidx = 2; vidx < obj->face_vertices[cur_face]; vidx++) {
           shape.triangles.push_back({vids[0], vids[1], vids[vidx]});
