@@ -68,6 +68,11 @@ void init_bvh(trace_bvh& bvh, const scene_scene& scene,
 }  // namespace yocto
 
 // -----------------------------------------------------------------------------
+// IMPLEMENTATION FOR MATERIALS
+// -----------------------------------------------------------------------------
+namespace yocto {}  // namespace yocto
+
+// -----------------------------------------------------------------------------
 // IMPLEMENTATION FOR PATH TRACING
 // -----------------------------------------------------------------------------
 namespace yocto {
@@ -84,34 +89,22 @@ static vec3f eval_bsdfcos(const material_point& material, const vec3f& normal,
   if (material.roughness == 0) return zero3f;
 
   if (material.type == material_type::matte) {
-    return material.color * eval_diffuse_reflection(normal, outgoing, incoming);
+    return eval_diffuse(material.color, normal, outgoing, incoming);
   } else if (material.type == material_type::plastic) {
-    return material.color *
-               (1 - fresnel_dielectric(material.ior, normal, outgoing)) *
-               eval_diffuse_reflection(normal, outgoing, incoming) +
-           eval_microfacet_reflection(
-               material.ior, material.roughness, normal, outgoing, incoming);
+    return eval_specular(material.color, material.roughness, material.ior,
+        normal, outgoing, incoming);
   } else if (material.type == material_type::metal) {
-    return eval_microfacet_reflection(reflectivity_to_eta(material.color),
-        vec3f{0, 0, 0}, material.roughness, normal, outgoing, incoming);
+    return eval_metal(reflectivity_to_eta(material.color), vec3f{0, 0, 0},
+        material.roughness, normal, outgoing, incoming);
   } else if (material.type == material_type::thinglass) {
-    return material.color *
-               (1 - fresnel_dielectric(material.ior, normal, outgoing)) *
-               eval_microfacet_transmission(material.ior, material.roughness,
-                   normal, outgoing, incoming) +
-           eval_microfacet_reflection(
-               material.ior, material.roughness, normal, outgoing, incoming);
+    return eval_transmission(material.color, material.ior, material.roughness,
+        normal, outgoing, incoming);
   } else if (material.type == material_type::glass) {
-    return eval_microfacet_refraction(
-        material.ior, material.roughness, normal, outgoing, incoming);
-  } else if (material.type == material_type::plastic) {
-    auto diffuse  = material.color * (1 - material.metallic);
-    auto specular = lerp(
-        material.color, vec3f{0.04, 0.04, 0.04}, material.metallic);
-    return diffuse * (1 - fresnel_schlick(specular, normal, outgoing)) *
-               eval_diffuse_reflection(normal, outgoing, incoming) +
-           eval_microfacet_reflection(reflectivity_to_eta(specular),
-               vec3f{0, 0, 0}, material.roughness, normal, outgoing, incoming);
+    return eval_refraction(material.color, material.ior, material.roughness,
+        normal, outgoing, incoming);
+  } else if (material.type == material_type::metallic) {
+    return eval_metallic(material.color, material.ior, material.roughness,
+        material.metallic, normal, outgoing, incoming);
   } else {
     return {0, 0, 0};
   }
@@ -122,18 +115,16 @@ static vec3f eval_delta(const material_point& material, const vec3f& normal,
   if (material.roughness != 0) return zero3f;
 
   if (material.type == material_type::metal) {
-    return eval_delta_reflection(reflectivity_to_eta(material.color),
-        vec3f{0, 0, 0}, normal, outgoing, incoming);
+    return eval_metal(material.color, normal, outgoing, incoming);
   } else if (material.type == material_type::thinglass) {
-    return material.color *
-               (1 - fresnel_dielectric(material.ior, normal, outgoing)) *
-               eval_delta_transmission(
-                   material.ior, normal, outgoing, incoming) +
-           eval_delta_reflection(material.ior, normal, outgoing, incoming);
+    return eval_transmission(
+        material.color, material.ior, normal, outgoing, incoming);
   } else if (material.type == material_type::glass) {
-    return eval_delta_refraction(material.ior, normal, outgoing, incoming);
+    return eval_refraction(
+        material.color, material.ior, normal, outgoing, incoming);
   } else if (material.type == material_type::volume) {
-    return eval_delta_transmission(material.ior, normal, outgoing, incoming);
+    return eval_transmission(
+        material.color, material.ior, normal, outgoing, incoming);
   } else {
     return {0, 0, 0};
   }
@@ -145,40 +136,22 @@ static vec3f sample_bsdfcos(const material_point& material, const vec3f& normal,
   if (material.roughness == 0) return zero3f;
 
   if (material.type == material_type::matte) {
-    return sample_diffuse_reflection(normal, outgoing, rn);
+    return sample_diffuse(material.color, normal, outgoing, rn);
   } else if (material.type == material_type::plastic) {
-    auto weight = fresnel_dielectric(material.ior, normal, outgoing);
-    if (rnl < weight) {
-      return sample_microfacet_reflection(
-          material.ior, material.roughness, normal, outgoing, rn);
-    } else {
-      return sample_diffuse_reflection(normal, outgoing, rn);
-    }
+    return sample_specular(material.color, material.ior, material.roughness,
+        normal, outgoing, rnl, rn);
   } else if (material.type == material_type::metal) {
-    return sample_microfacet_reflection(reflectivity_to_eta(material.color),
-        vec3f{0, 0, 0}, material.roughness, normal, outgoing, rn);
+    return sample_metal(
+        material.color, material.roughness, normal, outgoing, rn);
   } else if (material.type == material_type::thinglass) {
-    auto weight = fresnel_dielectric(material.ior, normal, outgoing);
-    if (rnl < weight) {
-      return sample_microfacet_reflection(
-          material.ior, material.roughness, normal, outgoing, rn);
-    } else {
-      return sample_microfacet_transmission(
-          material.ior, material.roughness, normal, outgoing, rn);
-    }
+    return sample_transmission(material.color, material.ior, material.roughness,
+        normal, outgoing, rnl, rn);
   } else if (material.type == material_type::glass) {
-    return sample_microfacet_refraction(
-        material.ior, material.roughness, normal, outgoing, rnl, rn);
+    return sample_refraction(material.color, material.ior, material.roughness,
+        normal, outgoing, rnl, rn);
   } else if (material.type == material_type::metallic) {
-    auto specular = lerp(
-        material.color, vec3f{0.04, 0.04, 0.04}, material.metallic);
-    auto weight = max(fresnel_schlick(specular, normal, outgoing));
-    if (rnl < weight) {
-      return sample_microfacet_reflection(
-          material.ior, material.roughness, normal, outgoing, rn);
-    } else {
-      return sample_diffuse_reflection(normal, outgoing, rn);
-    }
+    return sample_metallic(material.color, material.ior, material.roughness,
+        material.metallic, normal, outgoing, rnl, rn);
   } else {
     return {0, 0, 0};
   }
@@ -189,19 +162,16 @@ static vec3f sample_delta(const material_point& material, const vec3f& normal,
   if (material.roughness != 0) return zero3f;
 
   if (material.type == material_type::metal) {
-    return sample_delta_reflection(
-        reflectivity_to_eta(material.color), vec3f{0, 0, 0}, normal, outgoing);
+    return sample_metal(material.color, normal, outgoing);
   } else if (material.type == material_type::thinglass) {
-    auto weight = fresnel_dielectric(material.ior, normal, outgoing);
-    if (rnl < weight) {
-      return sample_delta_reflection(material.ior, normal, outgoing);
-    } else {
-      return sample_delta_transmission(material.ior, normal, outgoing);
-    }
+    return sample_transmission(
+        material.color, material.ior, normal, outgoing, rnl);
   } else if (material.type == material_type::glass) {
-    return sample_delta_refraction(material.ior, normal, outgoing, rnl);
+    return sample_refraction(
+        material.color, material.ior, normal, outgoing, rnl);
   } else if (material.type == material_type::volume) {
-    return sample_delta_transmission(material.ior, normal, outgoing);
+    return sample_transmission(
+        material.color, material.ior, normal, outgoing, rnl);
   } else {
     return {0, 0, 0};
   }
@@ -213,33 +183,22 @@ static float sample_bsdfcos_pdf(const material_point& material,
   if (material.roughness == 0) return 0;
 
   if (material.type == material_type::matte) {
-    return sample_diffuse_reflection_pdf(normal, outgoing, incoming);
+    return sample_diffuse_pdf(material.color, normal, outgoing, incoming);
   } else if (material.type == material_type::plastic) {
-    auto weight = fresnel_dielectric(material.ior, normal, outgoing);
-    return (1 - weight) *
-               sample_diffuse_reflection_pdf(normal, outgoing, incoming) +
-           weight * sample_microfacet_reflection_pdf(material.ior,
-                        material.roughness, normal, outgoing, incoming);
+    return sample_specular_pdf(material.color, material.ior, material.roughness,
+        normal, outgoing, incoming);
   } else if (material.type == material_type::metal) {
-    return sample_microfacet_reflection_pdf(reflectivity_to_eta(material.color),
-        vec3f{0, 0, 0}, material.roughness, normal, outgoing, incoming);
+    return sample_metal_pdf(
+        material.color, material.roughness, normal, outgoing, incoming);
   } else if (material.type == material_type::thinglass) {
-    auto weight = fresnel_dielectric(material.ior, normal, outgoing);
-    return (1 - weight) * sample_microfacet_transmission_pdf(material.ior,
-                              material.roughness, normal, outgoing, incoming) +
-           weight * sample_microfacet_reflection_pdf(material.ior,
-                        material.roughness, normal, outgoing, incoming);
+    return sample_transmission_pdf(material.color, material.ior,
+        material.roughness, normal, outgoing, incoming);
   } else if (material.type == material_type::glass) {
-    return sample_microfacet_refraction_pdf(
-        material.ior, material.roughness, normal, outgoing, incoming);
+    return sample_refraction_pdf(material.color, material.ior,
+        material.roughness, normal, outgoing, incoming);
   } else if (material.type == material_type::metallic) {
-    auto specular = lerp(
-        material.color, vec3f{0.04, 0.04, 0.04}, material.metallic);
-    auto weight = max(fresnel_schlick(specular, normal, outgoing));
-    return (1 - weight) *
-               sample_diffuse_reflection_pdf(normal, outgoing, incoming) +
-           weight * sample_microfacet_reflection_pdf(material.ior,
-                        material.roughness, normal, outgoing, incoming);
+    return sample_metallic_pdf(material.color, material.ior, material.roughness,
+        material.metallic, normal, outgoing, incoming);
   } else {
     return 0;
   }
@@ -250,20 +209,16 @@ static float sample_delta_pdf(const material_point& material,
   if (material.roughness != 0) return 0;
 
   if (material.type == material_type::metal) {
-    return sample_delta_reflection_pdf(reflectivity_to_eta(material.color),
-        vec3f{0, 0, 0}, normal, outgoing, incoming);
+    return sample_metal_pdf(material.color, normal, outgoing, incoming);
   } else if (material.type == material_type::thinglass) {
-    auto weight = fresnel_dielectric(material.ior, normal, outgoing);
-    return (1 - weight) * sample_delta_transmission_pdf(
-                              material.ior, normal, outgoing, incoming) +
-           weight * sample_delta_reflection_pdf(
-                        material.ior, normal, outgoing, incoming);
+    return sample_transmission_pdf(
+        material.color, material.ior, normal, outgoing, incoming);
   } else if (material.type == material_type::glass) {
-    return sample_delta_refraction_pdf(
-        material.ior, normal, outgoing, incoming);
+    return sample_refraction_pdf(
+        material.color, material.ior, normal, outgoing, incoming);
   } else if (material.type == material_type::volume) {
-    return sample_delta_transmission_pdf(
-        material.ior, normal, outgoing, incoming);
+    return sample_transmission_pdf(
+        material.color, material.ior, normal, outgoing, incoming);
   } else {
     return 0;
   }
