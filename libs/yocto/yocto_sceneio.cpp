@@ -1812,7 +1812,7 @@ static bool load_obj_scene(const string& filename, scene_scene& scene,
           }
           if (!shape.texcoords.empty() || indices.t != 0) {
             shape.texcoords.push_back({obj->texcoords[indices.t * 2 + 0],
-                obj->texcoords[indices.t * 2 + 1]});
+                1 - obj->texcoords[indices.t * 2 + 1]});
           }
           vids[vidx] = (int)shape.positions.size() - 1;
           vmap.insert(vert_it, {vindices, vids[vidx]});
