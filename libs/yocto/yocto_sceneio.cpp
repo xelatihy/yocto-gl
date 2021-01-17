@@ -1671,24 +1671,45 @@ static bool load_obj_scene(const string& filename, scene_scene& scene,
     return (int)scene.textures.size() - 1;
   };
 
+  // convert between roughness and exponent
+  auto exponent_to_roughness = [](float exponent) {
+    auto roughness = exponent;
+    roughness      = pow(2 / (roughness + 2), 1 / 4.0f);
+    if (roughness < 0.01f) roughness = 0;
+    if (roughness > 0.99f) roughness = 1;
+    return roughness;
+  };
+
   // handler for materials
   auto material_map = unordered_map<string, material_handle>{};
   for (auto& omaterial : obj.materials) {
-    auto& material               = scene.materials.emplace_back();
-    material.type                = material_type::metallic;
-    material.emission            = omaterial.pbr_emission;
-    material.color               = omaterial.pbr_base;
-    material.roughness           = omaterial.pbr_roughness;
-    material.ior                 = omaterial.pbr_ior;
-    material.metallic            = omaterial.pbr_metallic;
-    material.opacity             = omaterial.pbr_opacity;
-    material.emission_tex        = get_texture(omaterial.pbr_emission_tex);
-    material.color_tex           = get_texture(omaterial.pbr_base_tex);
-    material.roughness_tex       = get_texture(omaterial.pbr_roughness_tex);
+    auto& material        = scene.materials.emplace_back();
+    material.type         = material_type::metallic;
+    material.emission     = omaterial.emission;
+    material.emission_tex = get_texture(omaterial.emission_tex);
+    if (max(omaterial.transmission) > 0.1) {
+      material.type      = material_type::thinglass;
+      material.color     = omaterial.transmission;
+      material.color_tex = get_texture(omaterial.transmission_tex);
+    } else if (max(omaterial.specular) > 0.2) {
+      material.type      = material_type::metal;
+      material.color     = omaterial.specular;
+      material.color_tex = get_texture(omaterial.specular_tex);
+    } else if (max(omaterial.specular) > 0) {
+      material.type      = material_type::plastic;
+      material.color     = omaterial.diffuse;
+      material.color_tex = get_texture(omaterial.diffuse_tex);
+    } else {
+      material.type      = material_type::matte;
+      material.color     = omaterial.diffuse;
+      material.color_tex = get_texture(omaterial.diffuse_tex);
+    }
+    material.roughness           = exponent_to_roughness(omaterial.exponent);
+    material.ior                 = omaterial.ior;
+    material.metallic            = 0;
+    material.opacity             = omaterial.opacity;
     material.normal_tex          = get_texture(omaterial.normal_tex);
     material_map[omaterial.name] = (int)scene.materials.size() - 1;
-    // material.transmission     = omaterial.pbr_transmission;
-    // material.thin             = omaterial.pbr_thin;
   }
 
   // convert shapes
@@ -1811,23 +1832,25 @@ static bool save_obj_scene(const string& filename, const scene_scene& scene,
     return tinfo;
   };
 
+  auto roughness_to_exponent = [](float roughness) -> float {
+    if (roughness < 0.01f) return 10000;
+    if (roughness > 0.99f) return 10;
+    return 2 / pow(roughness, 4.0f) - 2;
+  };
+
   // convert materials and textures
   for (auto& material : scene.materials) {
-    auto& omaterial             = obj.materials.emplace_back();
-    omaterial.name              = get_material_name(scene, material);
-    omaterial.illum             = 2;
-    omaterial.as_pbr            = true;
-    omaterial.pbr_emission      = material.emission;
-    omaterial.pbr_base          = material.color;
-    omaterial.pbr_specular      = 1;
-    omaterial.pbr_roughness     = material.roughness;
-    omaterial.pbr_metallic      = material.metallic;
-    omaterial.pbr_coat          = 0;
-    omaterial.pbr_opacity       = material.opacity;
-    omaterial.pbr_emission_tex  = get_texture(material.emission_tex);
-    omaterial.pbr_base_tex      = get_texture(material.color_tex);
-    omaterial.pbr_roughness_tex = get_texture(material.roughness_tex);
-    omaterial.pbr_normal_tex    = get_texture(material.normal_tex);
+    auto& omaterial        = obj.materials.emplace_back();
+    omaterial.name         = get_material_name(scene, material);
+    omaterial.illum        = 2;
+    omaterial.emission     = material.emission;
+    omaterial.diffuse      = material.color;
+    omaterial.specular     = {0, 0, 0};
+    omaterial.exponent     = roughness_to_exponent(material.roughness);
+    omaterial.opacity      = material.opacity;
+    omaterial.emission_tex = get_texture(material.emission_tex);
+    omaterial.diffuse_tex  = get_texture(material.color_tex);
+    omaterial.normal_tex   = get_texture(material.normal_tex);
   }
 
   // convert objects

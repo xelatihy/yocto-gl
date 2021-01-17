@@ -261,42 +261,6 @@ struct obj_material {
   obj_texture bump_tex         = {};
   obj_texture normal_tex       = {};
   obj_texture displacement_tex = {};
-
-  // pbrt extension values
-  bool  as_pbr            = false;
-  vec3f pbr_emission      = {0, 0, 0};
-  vec3f pbr_base          = {0, 0, 0};
-  float pbr_specular      = 0;
-  float pbr_roughness     = 0;
-  float pbr_metallic      = 0;
-  float pbr_sheen         = 0;
-  float pbr_coat          = 0;
-  float pbr_coatroughness = 0;
-  float pbr_transmission  = 0;
-  float pbr_translucency  = 0;
-  float pbr_ior           = 1.5;
-  float pbr_opacity       = 1;
-  vec3f pbr_volscattering = {0, 0, 0};
-  float pbr_volanisotropy = 0;
-  float pbr_volscale      = 0.01;
-  bool  pbr_thin          = true;
-
-  // pbr extension textures
-  obj_texture pbr_emission_tex      = {};
-  obj_texture pbr_base_tex          = {};
-  obj_texture pbr_specular_tex      = {};
-  obj_texture pbr_roughness_tex     = {};
-  obj_texture pbr_metallic_tex      = {};
-  obj_texture pbr_sheen_tex         = {};
-  obj_texture pbr_coat_tex          = {};
-  obj_texture pbr_coatroughness_tex = {};
-  obj_texture pbr_transmission_tex  = {};
-  obj_texture pbr_translucency_tex  = {};
-  obj_texture pbr_opacity_tex       = {};
-  obj_texture pbr_volscattering_tex = {};
-  obj_texture pbr_bump_tex          = {};
-  obj_texture pbr_normal_tex        = {};
-  obj_texture pbr_displacement_tex  = {};
 };
 
 // Obj shape

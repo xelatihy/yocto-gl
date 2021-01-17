@@ -1322,99 +1322,6 @@ inline bool load_mtl(const string& filename, obj_scene& obj, string& error) {
       if (!parse_value(str, material.displacement_tex)) return parse_error();
     } else if (cmd == "map_norm" || cmd == "norm") {
       if (!parse_value(str, material.normal_tex)) return parse_error();
-    } else if (cmd == "Pe") {
-      if (!parse_value(str, material.pbr_emission)) return parse_error();
-      material.as_pbr = true;
-    } else if (cmd == "Pb") {
-      if (!parse_value(str, material.pbr_base)) return parse_error();
-      material.as_pbr = true;
-    } else if (cmd == "Ps") {
-      if (!parse_value(str, material.pbr_specular)) return parse_error();
-      material.as_pbr = true;
-    } else if (cmd == "Pm") {
-      if (!parse_value(str, material.pbr_metallic)) return parse_error();
-      material.as_pbr = true;
-    } else if (cmd == "Pr") {
-      if (!parse_value(str, material.pbr_roughness)) return parse_error();
-      material.as_pbr = true;
-    } else if (cmd == "Psh") {
-      if (!parse_value(str, material.pbr_sheen)) return parse_error();
-      material.as_pbr = true;
-    } else if (cmd == "Pc") {
-      if (!parse_value(str, material.pbr_coat)) return parse_error();
-      material.as_pbr = true;
-    } else if (cmd == "Pcr") {
-      if (!parse_value(str, material.pbr_coatroughness)) return parse_error();
-      material.as_pbr = true;
-    } else if (cmd == "Pt") {
-      if (!parse_value(str, material.pbr_transmission)) return parse_error();
-      material.as_pbr = true;
-    } else if (cmd == "Pss") {
-      if (!parse_value(str, material.pbr_translucency)) return parse_error();
-      material.as_pbr = true;
-    } else if (cmd == "Pn") {
-      if (!parse_value(str, material.pbr_ior)) return parse_error();
-      material.as_pbr = true;
-    } else if (cmd == "Po") {
-      if (!parse_value(str, material.pbr_opacity)) return parse_error();
-      material.as_pbr = true;
-    } else if (cmd == "Pvs") {
-      if (!parse_value(str, material.pbr_volscattering)) return parse_error();
-      material.as_pbr = true;
-    } else if (cmd == "Pvg") {
-      if (!parse_value(str, material.pbr_volanisotropy)) return parse_error();
-      material.as_pbr = true;
-    } else if (cmd == "Pvr") {
-      if (!parse_value(str, material.pbr_volscale)) return parse_error();
-      material.as_pbr = true;
-    } else if (cmd == "Pthin") {
-      if (!parse_value(str, material.pbr_thin)) return parse_error();
-      material.as_pbr = true;
-    } else if (cmd == "map_Pe") {
-      if (!parse_value(str, material.pbr_emission_tex)) return parse_error();
-      material.as_pbr = true;
-    } else if (cmd == "map_Pb") {
-      if (!parse_value(str, material.pbr_base_tex)) return parse_error();
-      material.as_pbr = true;
-    } else if (cmd == "map_Ps") {
-      if (!parse_value(str, material.pbr_specular_tex)) return parse_error();
-      material.as_pbr = true;
-    } else if (cmd == "map_Pm") {
-      if (!parse_value(str, material.pbr_metallic_tex)) return parse_error();
-      material.as_pbr = true;
-    } else if (cmd == "map_Pr") {
-      if (!parse_value(str, material.pbr_roughness_tex)) return parse_error();
-      material.as_pbr = true;
-    } else if (cmd == "map_Psh") {
-      if (!parse_value(str, material.pbr_sheen_tex)) return parse_error();
-      material.as_pbr = true;
-    } else if (cmd == "map_Pc") {
-      if (!parse_value(str, material.pbr_coat_tex)) return parse_error();
-      material.as_pbr = true;
-    } else if (cmd == "map_Pcr") {
-      if (!parse_value(str, material.pbr_coatroughness_tex))
-        return parse_error();
-      material.as_pbr = true;
-    } else if (cmd == "map_Po") {
-      if (!parse_value(str, material.pbr_opacity_tex)) return parse_error();
-      material.as_pbr = true;
-    } else if (cmd == "map_Pt") {
-      if (!parse_value(str, material.pbr_transmission_tex))
-        return parse_error();
-      material.as_pbr = true;
-    } else if (cmd == "map_Pss") {
-      if (!parse_value(str, material.pbr_translucency_tex))
-        return parse_error();
-      material.as_pbr = true;
-    } else if (cmd == "map_Pvs") {
-      if (!parse_value(str, material.pbr_volscattering_tex))
-        return parse_error();
-      material.as_pbr = true;
-    } else if (cmd == "map_Pdisp") {
-      if (!parse_value(str, material.pbr_displacement_tex))
-        return parse_error();
-    } else if (cmd == "map_Pnorm") {
-      if (!parse_value(str, material.pbr_normal_tex)) return parse_error();
     } else {
       continue;
     }
@@ -1422,42 +1329,6 @@ inline bool load_mtl(const string& filename, obj_scene& obj, string& error) {
 
   // remove placeholder material
   obj.materials.erase(obj.materials.begin());
-
-  // convert between roughness and exponent
-  auto exponent_to_roughness = [](float exponent) {
-    auto roughness = exponent;
-    roughness      = pow(2 / (roughness + 2), 1 / 4.0f);
-    if (roughness < 0.01f) roughness = 0;
-    if (roughness > 0.99f) roughness = 1;
-    return roughness;
-  };
-
-  // convert values when possible
-  for (auto& material : obj.materials) {
-    if (material.as_pbr) continue;
-    material.pbr_emission     = material.emission;
-    material.pbr_emission_tex = material.emission_tex;
-    material.pbr_roughness    = exponent_to_roughness(material.exponent);
-    material.pbr_ior          = material.ior;
-    material.pbr_opacity      = material.opacity;
-    material.pbr_opacity_tex  = material.opacity_tex;
-    if (max(material.transmission) > 0.1) {
-      material.pbr_base         = material.transmission;
-      material.pbr_transmission = 1;
-      material.pbr_specular     = 1;
-    } else if (max(material.specular) > 0.2) {
-      material.pbr_base     = material.specular;
-      material.pbr_base_tex = material.specular_tex;
-      material.pbr_metallic = 1;
-    } else {
-      material.pbr_base     = material.diffuse;
-      material.pbr_base_tex = material.diffuse_tex;
-      material.pbr_specular = max(material.specular) != 0 ? 1 : 0;
-    }
-    material.pbr_bump_tex         = material.bump_tex;
-    material.pbr_normal_tex       = material.normal_tex;
-    material.pbr_displacement_tex = material.displacement_tex;
-  }
 
   return true;
 }
@@ -1638,11 +1509,10 @@ bool load_obj(const string& filename, obj_scene& obj, string& error,
       // get element material or add if needed
       if (!geom_only) {
         if (mname.empty() && has_empty_material == false) {
-          auto& material    = obj.materials.emplace_back();
-          material.name     = "empty_material";
-          material.diffuse  = {0.8, 0.8, 0.8};
-          material.pbr_base = {0.8, 0.8, 0.8};
-          material_map[""]  = (int)obj.materials.size() - 1;
+          auto& material   = obj.materials.emplace_back();
+          material.name    = "empty_material";
+          material.diffuse = {0.8, 0.8, 0.8};
+          material_map[""] = (int)obj.materials.size() - 1;
         }
         auto mat_idx = -1;
         for (auto midx = 0; midx < shape.materials.size(); midx++)
@@ -1802,143 +1672,54 @@ inline bool save_mtl(
   // write material
   for (auto& material : obj.materials) {
     if (!format_values(fs, "newmtl {}\n", material.name)) return write_error();
-    if (!material.as_pbr) {
-      if (!format_values(fs, "illum {}\n", material.illum))
+    if (!format_values(fs, "illum {}\n", material.illum)) return write_error();
+    if (material.emission != zero3f)
+      if (!format_values(fs, "Ke {}\n", material.emission))
         return write_error();
-      if (material.emission != zero3f)
-        if (!format_values(fs, "Ke {}\n", material.emission))
-          return write_error();
-      if (material.ambient != zero3f)
-        if (!format_values(fs, "Ka {}\n", material.ambient))
-          return write_error();
-      if (!format_values(fs, "Kd {}\n", material.diffuse)) return write_error();
-      if (!format_values(fs, "Ks {}\n", material.specular))
+    if (material.ambient != zero3f)
+      if (!format_values(fs, "Ka {}\n", material.ambient)) return write_error();
+    if (!format_values(fs, "Kd {}\n", material.diffuse)) return write_error();
+    if (!format_values(fs, "Ks {}\n", material.specular)) return write_error();
+    if (material.reflection != zero3f)
+      if (!format_values(fs, "Kr {}\n", material.reflection))
         return write_error();
-      if (material.reflection != zero3f)
-        if (!format_values(fs, "Kr {}\n", material.reflection))
-          return write_error();
-      if (material.transmission != zero3f)
-        if (!format_values(fs, "Kt {}\n", material.transmission))
-          return write_error();
-      if (!format_values(fs, "Ns {}\n", (int)material.exponent))
+    if (material.transmission != zero3f)
+      if (!format_values(fs, "Kt {}\n", material.transmission))
         return write_error();
-      if (material.opacity != 1)
-        if (!format_values(fs, "d {}\n", material.opacity))
-          return write_error();
-      if (!material.emission_tex.path.empty())
-        if (!format_values(fs, "map_Ke {}\n", material.emission_tex))
-          return write_error();
-      if (!material.diffuse_tex.path.empty())
-        if (!format_values(fs, "map_Kd {}\n", material.diffuse_tex))
-          return write_error();
-      if (!material.specular_tex.path.empty())
-        if (!format_values(fs, "map_Ks {}\n", material.specular_tex))
-          return write_error();
-      if (!material.transmission_tex.path.empty())
-        if (!format_values(fs, "map_Kt {}\n", material.transmission_tex))
-          return write_error();
-      if (!material.reflection_tex.path.empty())
-        if (!format_values(fs, "map_Kr {}\n", material.reflection_tex))
-          return write_error();
-      if (!material.exponent_tex.path.empty())
-        if (!format_values(fs, "map_Ns {}\n", material.exponent_tex))
-          return write_error();
-      if (!material.opacity_tex.path.empty())
-        if (!format_values(fs, "map_d {}\n", material.opacity_tex))
-          return write_error();
-      if (!material.bump_tex.path.empty())
-        if (!format_values(fs, "map_bump {}\n", material.bump_tex))
-          return write_error();
-      if (!material.displacement_tex.path.empty())
-        if (!format_values(fs, "map_disp {}\n", material.displacement_tex))
-          return write_error();
-      if (!material.normal_tex.path.empty())
-        if (!format_values(fs, "map_norm {}\n", material.normal_tex))
-          return write_error();
-    } else {
-      if (!format_values(fs, "illum 2\n")) return write_error();
-      if (material.pbr_emission != zero3f)
-        if (!format_values(fs, "Pe {}\n", material.pbr_emission))
-          return write_error();
-      if (material.pbr_base != zero3f)
-        if (!format_values(fs, "Pb {}\n", material.pbr_base))
-          return write_error();
-      if (material.pbr_specular != 0)
-        if (!format_values(fs, "Ps {}\n", material.pbr_specular))
-          return write_error();
-      if (material.pbr_roughness != 0)
-        if (!format_values(fs, "Pr {}\n", material.pbr_roughness))
-          return write_error();
-      if (material.pbr_metallic != 0)
-        if (!format_values(fs, "Pm {}\n", material.pbr_metallic))
-          return write_error();
-      if (material.pbr_sheen != 0)
-        if (!format_values(fs, "Psh {}\n", material.pbr_sheen))
-          return write_error();
-      if (material.pbr_transmission != 0)
-        if (!format_values(fs, "Pt {}\n", material.pbr_transmission))
-          return write_error();
-      if (material.pbr_translucency != 0)
-        if (!format_values(fs, "Pss {}\n", material.pbr_translucency))
-          return write_error();
-      if (material.pbr_coat != 0)
-        if (!format_values(fs, "Pc {}\n", material.pbr_coat))
-          return write_error();
-      if (material.pbr_coatroughness != 0)
-        if (!format_values(fs, "Pcr {}\n", material.pbr_coatroughness))
-          return write_error();
-      if (material.pbr_volscattering != zero3f)
-        if (!format_values(fs, "Pvs {}\n", material.pbr_volscattering))
-          return write_error();
-      if (material.pbr_volanisotropy != 0)
-        if (!format_values(fs, "Pvg {}\n", material.pbr_volanisotropy))
-          return write_error();
-      if (material.pbr_volscale != 0)
-        if (!format_values(fs, "Pvr {}\n", material.pbr_volscale))
-          return write_error();
-      if (!material.pbr_emission_tex.path.empty())
-        if (!format_values(fs, "map_Pe {}\n", material.pbr_emission_tex))
-          return write_error();
-      if (!material.pbr_base_tex.path.empty())
-        if (!format_values(fs, "map_Pb {}\n", material.pbr_base_tex))
-          return write_error();
-      if (!material.pbr_specular_tex.path.empty())
-        if (!format_values(fs, "map_Ps {}\n", material.pbr_specular_tex))
-          return write_error();
-      if (!material.pbr_roughness_tex.path.empty())
-        if (!format_values(fs, "map_Pr {}\n", material.pbr_roughness_tex))
-          return write_error();
-      if (!material.pbr_metallic_tex.path.empty())
-        if (!format_values(fs, "map_Pm {}\n", material.pbr_metallic_tex))
-          return write_error();
-      if (!material.pbr_sheen_tex.path.empty())
-        if (!format_values(fs, "map_Psh {}\n", material.pbr_sheen_tex))
-          return write_error();
-      if (!material.pbr_transmission_tex.path.empty())
-        if (!format_values(fs, "map_Pt {}\n", material.pbr_transmission_tex))
-          return write_error();
-      if (!material.pbr_translucency_tex.path.empty())
-        if (!format_values(fs, "map_Pss {}\n", material.pbr_translucency_tex))
-          return write_error();
-      if (!material.pbr_coat_tex.path.empty())
-        if (!format_values(fs, "map_Pc {}\n", material.pbr_coat_tex))
-          return write_error();
-      if (!material.pbr_coatroughness_tex.path.empty())
-        if (!format_values(fs, "map_Pcr {}\n", material.pbr_coatroughness_tex))
-          return write_error();
-      if (!material.pbr_volscattering_tex.path.empty())
-        if (!format_values(fs, "map_Pvs {}\n", material.pbr_volscattering_tex))
-          return write_error();
-      if (!material.bump_tex.path.empty())
-        if (!format_values(fs, "map_Pbump {}\n", material.pbr_bump_tex))
-          return write_error();
-      if (!material.displacement_tex.path.empty())
-        if (!format_values(fs, "map_Pdisp {}\n", material.pbr_displacement_tex))
-          return write_error();
-      if (!material.normal_tex.path.empty())
-        if (!format_values(fs, "map_Pnorm {}\n", material.pbr_normal_tex))
-          return write_error();
-    }
+    if (!format_values(fs, "Ns {}\n", (int)material.exponent))
+      return write_error();
+    if (material.opacity != 1)
+      if (!format_values(fs, "d {}\n", material.opacity)) return write_error();
+    if (!material.emission_tex.path.empty())
+      if (!format_values(fs, "map_Ke {}\n", material.emission_tex))
+        return write_error();
+    if (!material.diffuse_tex.path.empty())
+      if (!format_values(fs, "map_Kd {}\n", material.diffuse_tex))
+        return write_error();
+    if (!material.specular_tex.path.empty())
+      if (!format_values(fs, "map_Ks {}\n", material.specular_tex))
+        return write_error();
+    if (!material.transmission_tex.path.empty())
+      if (!format_values(fs, "map_Kt {}\n", material.transmission_tex))
+        return write_error();
+    if (!material.reflection_tex.path.empty())
+      if (!format_values(fs, "map_Kr {}\n", material.reflection_tex))
+        return write_error();
+    if (!material.exponent_tex.path.empty())
+      if (!format_values(fs, "map_Ns {}\n", material.exponent_tex))
+        return write_error();
+    if (!material.opacity_tex.path.empty())
+      if (!format_values(fs, "map_d {}\n", material.opacity_tex))
+        return write_error();
+    if (!material.bump_tex.path.empty())
+      if (!format_values(fs, "map_bump {}\n", material.bump_tex))
+        return write_error();
+    if (!material.displacement_tex.path.empty())
+      if (!format_values(fs, "map_disp {}\n", material.displacement_tex))
+        return write_error();
+    if (!material.normal_tex.path.empty())
+      if (!format_values(fs, "map_norm {}\n", material.normal_tex))
+        return write_error();
     if (!format_values(fs, "\n")) return write_error();
   }
   return true;
