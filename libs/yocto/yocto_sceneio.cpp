@@ -1663,6 +1663,8 @@ static bool load_obj_scene(const string& filename, scene_scene& scene,
                          const fastObjTexture& tinfo) -> texture_handle {
     if (tinfo.name == nullptr) return invalid_handle;
     auto path = string{tinfo.name};
+    for (auto& c : path)
+      if (c == '\\') c = '/';
     if (path.empty()) return invalid_handle;
     auto it = texture_map.find(path);
     if (it != texture_map.end()) return it->second;
@@ -1824,7 +1826,7 @@ static bool load_obj_scene(const string& filename, scene_scene& scene,
         shape.quads.push_back({vids[0], vids[1], vids[2], vids[3]});
       } else if (obj->face_vertices[cur_face] > 4) {
         for (auto vidx = 2; vidx < obj->face_vertices[cur_face]; vidx++) {
-          shape.triangles.push_back({vids[0], vids[vidx-1], vids[vidx]});
+          shape.triangles.push_back({vids[0], vids[vidx - 1], vids[vidx]});
         }
       } else {
         // not supported
@@ -1834,10 +1836,11 @@ static bool load_obj_scene(const string& filename, scene_scene& scene,
   }
 
   // handle mixed shapes
-  for(auto& shape : scene.shapes) {
+  for (auto& shape : scene.shapes) {
     if (!shape.quads.empty() && !shape.triangles.empty()) {
       auto tquads = quads_to_triangles(shape.quads);
-      shape.triangles.insert(shape.triangles.end(), tquads.begin(), tquads.end());
+      shape.triangles.insert(
+          shape.triangles.end(), tquads.begin(), tquads.end());
       shape.quads.clear();
     }
   }
