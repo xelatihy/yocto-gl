@@ -1281,15 +1281,18 @@ static bool load_json_scene(const string& filename, scene_scene& scene,
   for (auto [name, value] : shape_map) {
     auto& shape = scene.shapes[value.first];
     if (progress_cb) progress_cb("load shape", progress.x++, progress.y);
-    auto path          = make_filename(name, "shapes", {".ply", ".obj"});
-    auto quadspos      = vector<vec4i>{};
-    auto quadsnorm     = vector<vec4i>{};
-    auto quadstexcoord = vector<vec4i>{};
-    if (!load_shape(path, shape.points, shape.lines, shape.triangles,
-            shape.quads, quadspos, quadsnorm, quadstexcoord, shape.positions,
-            shape.normals, shape.texcoords, shape.colors, shape.radius, error,
-            false))
-      return dependent_error();
+    auto path   = make_filename(name, "shapes", {".ply", ".obj"});
+    auto lshape = shape_data{};
+    if (!load_shape(path, lshape, error, false)) return dependent_error();
+    shape.points    = lshape.points;
+    shape.lines     = lshape.lines;
+    shape.triangles = lshape.triangles;
+    shape.quads     = lshape.quads;
+    shape.positions = lshape.positions;
+    shape.normals   = lshape.normals;
+    shape.texcoords = lshape.texcoords;
+    shape.colors    = lshape.colors;
+    shape.radius    = lshape.radius;
   }
 
   // load subdivs
@@ -1297,17 +1300,15 @@ static bool load_json_scene(const string& filename, scene_scene& scene,
   for (auto [name, value] : subdiv_map) {
     auto& subdiv = scene.subdivs[value.first];
     if (progress_cb) progress_cb("load subdiv", progress.x++, progress.y);
-    auto path      = make_filename(name, "subdivs", {".ply", ".obj"});
-    auto points    = vector<int>{};
-    auto lines     = vector<vec2i>{};
-    auto triangles = vector<vec3i>{};
-    auto quads     = vector<vec4i>{};
-    auto colors    = vector<vec4f>{};
-    auto radius    = vector<float>{};
-    if (!load_shape(path, points, lines, triangles, quads, subdiv.quadspos,
-            subdiv.quadsnorm, subdiv.quadstexcoord, subdiv.positions,
-            subdiv.normals, subdiv.texcoords, colors, radius, error, true))
-      return dependent_error();
+    auto path    = make_filename(name, "subdivs", {".ply", ".obj"});
+    auto lsubdiv = fvshape_data{};
+    if (!load_fvshape(path, lsubdiv, error, true)) return dependent_error();
+    subdiv.quadspos      = lsubdiv.quadspos;
+    subdiv.quadsnorm     = lsubdiv.quadsnorm;
+    subdiv.quadstexcoord = lsubdiv.quadstexcoord;
+    subdiv.positions     = lsubdiv.positions;
+    subdiv.normals       = lsubdiv.normals;
+    subdiv.texcoords     = lsubdiv.texcoords;
   }
 
   // load textures
@@ -1581,10 +1582,17 @@ static bool save_json_scene(const string& filename, const scene_scene& scene,
   for (auto& shape : scene.shapes) {
     if (progress_cb) progress_cb("save shape", progress.x++, progress.y);
     auto path = make_filename(get_shape_name(scene, shape), "shapes", ".ply"s);
-    if (!save_shape(path, shape.points, shape.lines, shape.triangles,
-            shape.quads, {}, {}, {}, shape.positions, shape.normals,
-            shape.texcoords, shape.colors, shape.radius, error, false))
-      return dependent_error();
+    auto sshape      = shape_data{};
+    sshape.points    = shape.points;
+    sshape.lines     = shape.lines;
+    sshape.triangles = shape.triangles;
+    sshape.quads     = shape.quads;
+    sshape.positions = shape.positions;
+    sshape.normals   = shape.normals;
+    sshape.texcoords = shape.texcoords;
+    sshape.colors    = shape.colors;
+    sshape.radius    = shape.radius;
+    if (!save_shape(path, sshape, error, false)) return dependent_error();
   }
 
   // save subdiv
@@ -1592,10 +1600,14 @@ static bool save_json_scene(const string& filename, const scene_scene& scene,
     if (progress_cb) progress_cb("save subdiv", progress.x++, progress.y);
     auto path = make_filename(
         get_subdiv_name(scene, subdiv), "subdivs", ".obj");
-    if (!save_shape(path, {}, {}, {}, {}, subdiv.quadspos, subdiv.quadsnorm,
-            subdiv.quadstexcoord, subdiv.positions, subdiv.normals,
-            subdiv.texcoords, {}, {}, error, true))
-      return dependent_error();
+    auto ssubdiv          = fvshape_data{};
+    ssubdiv.quadspos      = subdiv.quadspos;
+    ssubdiv.quadsnorm     = subdiv.quadsnorm;
+    ssubdiv.quadstexcoord = subdiv.quadstexcoord;
+    ssubdiv.positions     = subdiv.positions;
+    ssubdiv.normals       = subdiv.normals;
+    ssubdiv.texcoords     = subdiv.texcoords;
+    if (!save_fvshape(path, ssubdiv, error, true)) return dependent_error();
   }
 
   // save textures
@@ -2209,15 +2221,18 @@ static bool load_ply_scene(const string& filename, scene_scene& scene,
   if (progress_cb) progress_cb("load scene", progress.x++, progress.y);
 
   // load ply mesh
-  auto& shape         = scene.shapes.emplace_back();
-  auto  quadspos      = vector<vec4i>{};
-  auto  quadsnorm     = vector<vec4i>{};
-  auto  quadstexcoord = vector<vec4i>{};
-  if (!load_shape(filename, shape.points, shape.lines, shape.triangles,
-          shape.quads, quadspos, quadsnorm, quadstexcoord, shape.positions,
-          shape.normals, shape.texcoords, shape.colors, shape.radius, error,
-          false))
-    return false;
+  auto& shape  = scene.shapes.emplace_back();
+  auto  lshape = shape_data{};
+  if (!load_shape(filename, lshape, error, false)) return false;
+  shape.points    = lshape.points;
+  shape.lines     = lshape.lines;
+  shape.triangles = lshape.triangles;
+  shape.quads     = lshape.quads;
+  shape.positions = lshape.positions;
+  shape.normals   = lshape.normals;
+  shape.texcoords = lshape.texcoords;
+  shape.colors    = lshape.colors;
+  shape.radius    = lshape.radius;
 
   // create instance
   auto& instance = scene.instances.emplace_back();
@@ -2247,11 +2262,18 @@ static bool save_ply_scene(const string& filename, const scene_scene& scene,
   if (progress_cb) progress_cb("save scene", progress.x++, progress.y);
 
   // save shape
-  auto& shape = scene.shapes.front();
-  if (!save_shape(filename, shape.points, shape.lines, shape.triangles,
-          shape.quads, {}, {}, {}, shape.positions, shape.normals,
-          shape.texcoords, shape.colors, shape.radius, error))
-    return false;
+  auto& shape      = scene.shapes.front();
+  auto  sshape     = shape_data{};
+  sshape.points    = shape.points;
+  sshape.lines     = shape.lines;
+  sshape.triangles = shape.triangles;
+  sshape.quads     = shape.quads;
+  sshape.positions = shape.positions;
+  sshape.normals   = shape.normals;
+  sshape.texcoords = shape.texcoords;
+  sshape.colors    = shape.colors;
+  sshape.radius    = shape.radius;
+  if (!save_shape(filename, sshape, error)) return false;
 
   // done
   if (progress_cb) progress_cb("save done", progress.x++, progress.y);
@@ -2272,15 +2294,18 @@ static bool load_stl_scene(const string& filename, scene_scene& scene,
   if (progress_cb) progress_cb("load scene", progress.x++, progress.y);
 
   // load stl mesh
-  auto& shape         = scene.shapes.emplace_back();
-  auto  quadspos      = vector<vec4i>{};
-  auto  quadsnorm     = vector<vec4i>{};
-  auto  quadstexcoord = vector<vec4i>{};
-  if (!load_shape(filename, shape.points, shape.lines, shape.triangles,
-          shape.quads, quadspos, quadsnorm, quadstexcoord, shape.positions,
-          shape.normals, shape.texcoords, shape.colors, shape.radius, error,
-          false))
-    return false;
+  auto& shape  = scene.shapes.emplace_back();
+  auto  lshape = shape_data{};
+  if (!load_shape(filename, lshape, error, false)) return false;
+  shape.points    = lshape.points;
+  shape.lines     = lshape.lines;
+  shape.triangles = lshape.triangles;
+  shape.quads     = lshape.quads;
+  shape.positions = lshape.positions;
+  shape.normals   = lshape.normals;
+  shape.texcoords = lshape.texcoords;
+  shape.colors    = lshape.colors;
+  shape.radius    = lshape.radius;
 
   // create instance
   auto& instance = scene.instances.emplace_back();
@@ -2310,10 +2335,18 @@ static bool save_stl_scene(const string& filename, const scene_scene& scene,
   if (progress_cb) progress_cb("save scene", progress.x++, progress.y);
 
   // save shape
-  auto& shape = scene.shapes.front();
-  if (!save_shape(filename, shape.points, shape.lines, shape.triangles,
-          shape.quads, {}, {}, {}, shape.positions, shape.normals,
-          shape.texcoords, shape.colors, shape.radius, error, false))
+  auto& shape      = scene.shapes.front();
+  auto  sshape     = shape_data{};
+  sshape.points    = shape.points;
+  sshape.lines     = shape.lines;
+  sshape.triangles = shape.triangles;
+  sshape.quads     = shape.quads;
+  sshape.positions = shape.positions;
+  sshape.normals   = shape.normals;
+  sshape.texcoords = shape.texcoords;
+  sshape.colors    = shape.colors;
+  sshape.radius    = shape.radius;
+  if (!save_shape(filename, sshape, error, false))
     return false;
 
   // done

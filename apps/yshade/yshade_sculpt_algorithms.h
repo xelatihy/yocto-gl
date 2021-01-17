@@ -17,10 +17,10 @@ int closest_vertex(const vector<vec3i> &triangles, vec2f uv, int element) {
   return tr.z;
 }
 
-vec3f eval_position(const generic_shape *shape, int element, const vec2f &uv) {
+vec3f eval_position(const shape_data *shape, int element, const vec2f &uv) {
   return eval_position(shape->triangles, shape->positions, {element, uv});
 }
-vec3f eval_normal(const generic_shape *shape, int element, const vec2f &uv) {
+vec3f eval_normal(const shape_data *shape, int element, const vec2f &uv) {
   return eval_normal(shape->triangles, shape->normals, {element, uv});
 }
 enum struct axes { x, y, z };
@@ -32,7 +32,7 @@ auto const brushes_names = vector<std::string>{
 
 // To obtain symmetric from stroke result
 inline vector<pair<vec3f, vec3f>> symmetric_stroke(
-    vector<pair<vec3f, vec3f>> &pairs, generic_shape *shape, shape_bvh &tree,
+    vector<pair<vec3f, vec3f>> &pairs, shape_data *shape, shape_bvh &tree,
     vector<int> &symmetric_stroke_sampling, axes &axis) {
   vector<pair<vec3f, vec3f>> symmetric_pairs;
   if (pairs.empty()) return symmetric_pairs;

@@ -34,7 +34,7 @@ struct shade_sculpt_state {
   shade_params drawgl_prms = {};
 
   // shape
-  generic_shape *ioshape = new generic_shape{};
+  shape_data *ioshape = new shape_data{};
 
   // rendering state
   shade_scene  glscene   = {};
@@ -57,7 +57,7 @@ struct sculpt_params {
   // intersection
   ray3f camera_ray = {};
   // sceneio_instance * shape_instance   = nullptr;
-  generic_shape *    shape        = nullptr;
+  shape_data *       shape        = nullptr;
   shape_bvh          bvh          = {};
   shape_intersection intersection = {};
 
@@ -99,7 +99,7 @@ frame3f camera_frame(float lens, float aspect, float film = 0.036) {
 }
 
 void init_glscene(shade_sculpt_state *app, shade_scene &glscene,
-    generic_shape *ioshape, progress_callback progress_cb) {
+    shape_data *ioshape, progress_callback progress_cb) {
   // handle progress
   auto progress = vec2i{0, 4};
 
@@ -159,7 +159,7 @@ void init_glscene(shade_sculpt_state *app, shade_scene &glscene,
 }
 
 // Initialize all sculpting parameters.
-void init_sculpt_tool(sculpt_params *params, generic_shape *shape,
+void init_sculpt_tool(sculpt_params *params, shape_data *shape,
     std::string shapename, std::string texture_name,
     sceneio_material *material = nullptr) {
   // sculpt_params *params = new sculpt_params();
@@ -281,7 +281,7 @@ lines_shape make_circle(vec3f center, mat3f basis, float radius, int steps) {
 }
 
 // To visualize mouse intersection on mesh
-void view_pointer(generic_shape *shape, shade_shape &glshape,
+void view_pointer(shape_data *shape, shade_shape &glshape,
     shape_intersection intersection, float radius, int definition,
     brush_type &type) {
   if (intersection.hit) {
@@ -389,7 +389,7 @@ float gaussian_distribution(vec3f origin, vec3f position, float standard_dev,
 }
 
 // Change positions, normals, boundig volume hierarchy and hash grid
-void apply_brush(generic_shape *shape, vector<vec3f> &positions,
+void apply_brush(shape_data *shape, vector<vec3f> &positions,
     shade_shape &glshape, shape_bvh &tree, hash_grid &grid) {
   shape->positions = positions;
   set_positions(glshape, positions);

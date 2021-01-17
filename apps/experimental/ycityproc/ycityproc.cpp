@@ -80,8 +80,8 @@ struct geojson_element {
 };
 
 struct geojson_shape {
-  string        name  = "";
-  generic_shape shape = {};
+  string     name  = "";
+  shape_data shape = {};
 };
 
 struct geojson_texture {
