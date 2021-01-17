@@ -1730,28 +1730,49 @@ static bool load_obj_scene(const string& filename, scene_scene& scene,
       material.color = vec3f{
           omaterial->Kt[0], omaterial->Kt[1], omaterial->Kt[2]};
       material.color_tex = get_texture(omaterial->map_Kt);
+      material.roughness = exponent_to_roughness(omaterial->Ns);
+      material.ior       = 1.5;
+      material.metallic  = 0;
+      material.opacity   = 1;
+    } else if (min(min(omaterial->Tf[0], omaterial->Tf[1]), omaterial->Tf[2]) <
+               0.99) {
+      material.type      = material_type::thinglass;
+      material.color     = vec3f{1, 1, 1};
+      material.color_tex = get_texture(omaterial->map_Kt);
+      material.roughness = 0;
+      material.ior       = 1.5;
+      material.metallic  = 0;
+      material.opacity   = 1;
     } else if (max(max(omaterial->Ks[0], omaterial->Ks[1]), omaterial->Ks[2]) >
                0.2) {
       material.type  = material_type::metal;
       material.color = vec3f{
           omaterial->Ks[0], omaterial->Ks[1], omaterial->Ks[2]};
       material.color_tex = get_texture(omaterial->map_Ks);
+      material.roughness = exponent_to_roughness(omaterial->Ns);
+      material.ior       = 1.5;
+      material.metallic  = 0;
+      material.opacity   = omaterial->d;
     } else if (max(max(omaterial->Ks[0], omaterial->Ks[1]), omaterial->Ks[2]) >
                0) {
       material.type  = material_type::plastic;
       material.color = vec3f{
           omaterial->Kd[0], omaterial->Kd[1], omaterial->Kd[2]};
       material.color_tex = get_texture(omaterial->map_Kd);
+      material.roughness = exponent_to_roughness(omaterial->Ns);
+      material.ior       = 1.5;
+      material.metallic  = 0;
+      material.opacity   = omaterial->d;
     } else {
       material.type  = material_type::matte;
       material.color = vec3f{
           omaterial->Kd[0], omaterial->Kd[1], omaterial->Kd[2]};
       material.color_tex = get_texture(omaterial->map_Kd);
+      material.roughness = exponent_to_roughness(omaterial->Ns);
+      material.ior       = 1.5;
+      material.metallic  = 0;
+      material.opacity   = omaterial->d;
     }
-    material.roughness            = exponent_to_roughness(omaterial->Ns);
-    material.ior                  = omaterial->Ni;
-    material.metallic             = 0;
-    material.opacity              = omaterial->d;
     material.normal_tex           = get_texture(omaterial->map_bump);
     material_map[omaterial->name] = (int)scene.materials.size() - 1;
   }
