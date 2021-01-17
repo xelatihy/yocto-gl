@@ -642,6 +642,11 @@ static bool load_obj_shape(const string& filename, shape_data& shape,
     shape.quads.clear();
   }
 
+  // flip texcoords if needed
+  if (flip_texcoord) {
+    for (auto& texcoord : shape.texcoords) texcoord.y = 1 - texcoord.y;
+  }
+
   return true;
 }
 static bool save_obj_shape(const string& filename, const shape_data& shape,
@@ -1082,6 +1087,11 @@ static bool load_obj_fvshape(const string& filename, fvshape_data& shape,
       // not supported
     }
     cur_index_offset += obj->face_vertices[cur_face];
+  }
+
+  // flip texcoords if needed
+  if (flip_texcoord) {
+    for (auto& texcoord : shape.texcoords) texcoord.y = 1 - texcoord.y;
   }
 
   return true;
