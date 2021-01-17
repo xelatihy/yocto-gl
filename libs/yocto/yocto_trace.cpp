@@ -123,8 +123,7 @@ static vec3f eval_delta(const material_point& material, const vec3f& normal,
     return eval_refraction(
         material.color, material.ior, normal, outgoing, incoming);
   } else if (material.type == material_type::volume) {
-    return eval_transmission(
-        material.color, material.ior, normal, outgoing, incoming);
+    return eval_passthrough(material.color, normal, outgoing, incoming);
   } else {
     return {0, 0, 0};
   }
@@ -170,8 +169,7 @@ static vec3f sample_delta(const material_point& material, const vec3f& normal,
     return sample_refraction(
         material.color, material.ior, normal, outgoing, rnl);
   } else if (material.type == material_type::volume) {
-    return sample_transmission(
-        material.color, material.ior, normal, outgoing, rnl);
+    return sample_passthrough(material.color, normal, outgoing);
   } else {
     return {0, 0, 0};
   }
@@ -217,8 +215,7 @@ static float sample_delta_pdf(const material_point& material,
     return sample_refraction_pdf(
         material.color, material.ior, normal, outgoing, incoming);
   } else if (material.type == material_type::volume) {
-    return sample_transmission_pdf(
-        material.color, material.ior, normal, outgoing, incoming);
+    return sample_passthrough_pdf(material.color, normal, outgoing, incoming);
   } else {
     return 0;
   }

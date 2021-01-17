@@ -224,6 +224,16 @@ inline float sample_translucent_pdf(const vec3f& color, const vec3f& normal,
 inline vec3f sample_translucent(const vec3f& color, const vec3f& normal,
     const vec3f& outgoing, const vec2f& rn);
 
+// Evaluate a passthrough BRDF lobe.
+inline vec3f eval_passthrough(const vec3f& color, const vec3f& normal,
+    const vec3f& outgoing, const vec3f& incoming);
+// Sample a passthrough BRDF lobe.
+inline vec3f sample_passthrough(
+    const vec3f& color, const vec3f& normal, const vec3f& outgoing);
+// Pdf for passthrough BRDF lobe sampling.
+inline float sample_passthrough_pdf(const vec3f& color, const vec3f& normal,
+    const vec3f& outgoing, const vec3f& incoming);
+
 // Convert mean-free-path to transmission
 inline vec3f mfp_to_transmission(const vec3f& mfp, float depth);
 
