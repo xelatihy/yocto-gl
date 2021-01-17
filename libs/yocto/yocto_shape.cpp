@@ -466,15 +466,33 @@ fvshape_data subdivide_fvshape(
 // -----------------------------------------------------------------------------
 namespace yocto {
 
+// Load/save a shape from/to OBJ.
+static bool load_obj_shape(const string& filename, shape_data& shape,
+    string& error, bool flip_texcoord);
+static bool save_obj_shape(const string& filename, const shape_data& shape,
+    string& error, bool flip_texcoord, bool ascii);
+
+// Load/save a shape from/to PLY.
+static bool load_ply_shape(const string& filename, shape_data& shape,
+    string& error, bool flip_texcoord);
+static bool save_ply_shape(const string& filename, const shape_data& shape,
+    string& error, bool flip_texcoord, bool ascii);
+
+// Load/save a shape from/to STL.
+static bool load_stl_shape(const string& filename, shape_data& shape,
+    string& error, bool flip_texcoord);
+static bool save_stl_shape(const string& filename, const shape_data& shape,
+    string& error, bool flip_texcoord, bool ascii);
+
+// Save a shape to C++.
+static bool save_cpp_shape(const string& filename, const shape_data& shape,
+    string& error, bool flip_texcoord, bool ascii);
+
 // Load ply mesh
 bool load_shape(const string& filename, shape_data& shape, string& error,
     bool flip_texcoord) {
   auto format_error = [filename, &error]() {
     error = filename + ": unknown format";
-    return false;
-  };
-  auto shape_error = [filename, &error]() {
-    error = filename + ": empty shape";
     return false;
   };
   auto preset_error = [filename, &error]() {
@@ -486,74 +504,11 @@ bool load_shape(const string& filename, shape_data& shape, string& error,
 
   auto ext = path_extension(filename);
   if (ext == ".ply" || ext == ".PLY") {
-    // open ply
-    auto ply = ply_model{};
-    if (!load_ply(filename, ply, error)) return false;
-
-    // gets vertex
-    get_positions(ply, shape.positions);
-    get_normals(ply, shape.normals);
-    get_texcoords(ply, shape.texcoords, flip_texcoord);
-    get_colors(ply, shape.colors);
-    get_radius(ply, shape.radius);
-
-    // get faces
-    if (has_quads(ply)) {
-      get_quads(ply, shape.quads);
-    } else {
-      get_triangles(ply, shape.triangles);
-    }
-    get_lines(ply, shape.lines);
-    get_points(ply, shape.points);
-
-    if (shape.positions.empty()) return shape_error();
-    return true;
+    return load_ply_shape(filename, shape, error, flip_texcoord);
   } else if (ext == ".obj" || ext == ".OBJ") {
-    // load obj
-    auto obj = obj_scene{};
-    if (!load_obj(filename, obj, error, true)) return false;
-
-    // get shape
-    if (obj.shapes.empty()) return shape_error();
-    if (obj.shapes.size() > 1) return shape_error();
-    auto& oshape = obj.shapes.front();
-    if (oshape.points.empty() && oshape.lines.empty() && oshape.faces.empty())
-      return shape_error();
-
-    // decide what to do and get properties
-    auto materials  = vector<string>{};
-    auto ematerials = vector<int>{};
-    auto has_quads_ = has_quads(oshape);
-    if (!oshape.faces.empty() && !has_quads_) {
-      get_triangles(oshape, shape.triangles, shape.positions, shape.normals,
-          shape.texcoords, materials, ematerials, flip_texcoord);
-    } else if (!oshape.faces.empty() && has_quads_) {
-      get_quads(oshape, shape.quads, shape.positions, shape.normals,
-          shape.texcoords, materials, ematerials, flip_texcoord);
-    } else if (!oshape.lines.empty()) {
-      get_lines(oshape, shape.lines, shape.positions, shape.normals,
-          shape.texcoords, materials, ematerials, flip_texcoord);
-    } else if (!oshape.points.empty()) {
-      get_points(oshape, shape.points, shape.positions, shape.normals,
-          shape.texcoords, materials, ematerials, flip_texcoord);
-    } else {
-      return shape_error();
-    }
-
-    if (shape.positions.empty()) return shape_error();
-    return true;
+    return load_obj_shape(filename, shape, error, flip_texcoord);
   } else if (ext == ".stl" || ext == ".STL") {
-    // load obj
-    auto stl = stl_model{};
-    if (!load_stl(filename, stl, error, true)) return false;
-
-    // get shape
-    if (stl.shapes.empty()) return shape_error();
-    if (stl.shapes.size() > 1) return shape_error();
-    auto fnormals = vector<vec3f>{};
-    if (!get_triangles(stl, 0, shape.triangles, shape.positions, fnormals))
-      return shape_error();
-    return true;
+    return load_stl_shape(filename, shape, error, flip_texcoord);
   } else if (ext == ".ypreset" || ext == ".YPRESET") {
     // create preset
     if (!make_shape_preset(shape, path_basename(filename), error))
@@ -586,109 +541,21 @@ bool save_shape(const string& filename, const shape_data& shape, string& error,
 
   auto ext = path_extension(filename);
   if (ext == ".ply" || ext == ".PLY") {
-    // create ply
-    auto ply = ply_model{};
-    add_positions(ply, shape.positions);
-    add_normals(ply, shape.normals);
-    add_texcoords(ply, shape.texcoords, flip_texcoord);
-    add_colors(ply, shape.colors);
-    add_radius(ply, shape.radius);
-    add_faces(ply, shape.triangles, shape.quads);
-    add_lines(ply, shape.lines);
-    add_points(ply, shape.points);
-    return save_ply(filename, ply, error);
+    return save_ply_shape(filename, shape, error, flip_texcoord, ascii);
   } else if (ext == ".obj" || ext == ".OBJ") {
-    auto  obj    = obj_scene{};
-    auto& oshape = obj.shapes.emplace_back();
-    if (!shape.triangles.empty()) {
-      set_triangles(oshape, shape.triangles, shape.positions, shape.normals,
-          shape.texcoords, {}, flip_texcoord);
-    } else if (!shape.quads.empty()) {
-      set_quads(oshape, shape.quads, shape.positions, shape.normals,
-          shape.texcoords, {}, flip_texcoord);
-    } else if (!shape.lines.empty()) {
-      set_lines(oshape, shape.lines, shape.positions, shape.normals,
-          shape.texcoords, {}, flip_texcoord);
-    } else if (!shape.points.empty()) {
-      set_points(oshape, shape.points, shape.positions, shape.normals,
-          shape.texcoords, {}, flip_texcoord);
-    } else {
-      return shape_error();
-    }
-    auto err = ""s;
-    return save_obj(filename, obj, error);
+    return save_obj_shape(filename, shape, error, flip_texcoord, ascii);
   } else if (ext == ".stl" || ext == ".STL") {
-    // create ply
-    auto stl = stl_model{};
-    if (!shape.lines.empty()) return line_error();
-    if (!shape.points.empty()) return point_error();
-    if (!shape.triangles.empty()) {
-      add_triangles(stl, shape.triangles, shape.positions, {});
-    } else if (!shape.quads.empty()) {
-      add_triangles(stl, quads_to_triangles(shape.quads), shape.positions, {});
-    } else {
-      return shape_error();
-    }
-    return save_stl(filename, stl, error);
+    return save_stl_shape(filename, shape, error, flip_texcoord, ascii);
   } else if (ext == ".cpp" || ext == ".CPP") {
-    auto to_cpp = [](const string& name, const string& vname,
-                      const auto& values) -> string {
-      using T = typename std::remove_const_t<
-          std::remove_reference_t<decltype(values)>>::value_type;
-      if (values.empty()) return ""s;
-      auto str = "auto " + name + "_" + vname + " = ";
-      if constexpr (std::is_same_v<int, T>) str += "vector<int>{\n";
-      if constexpr (std::is_same_v<float, T>) str += "vector<float>{\n";
-      if constexpr (std::is_same_v<vec2i, T>) str += "vector<vec2i>{\n";
-      if constexpr (std::is_same_v<vec2f, T>) str += "vector<vec2f>{\n";
-      if constexpr (std::is_same_v<vec3i, T>) str += "vector<vec3i>{\n";
-      if constexpr (std::is_same_v<vec3f, T>) str += "vector<vec3f>{\n";
-      if constexpr (std::is_same_v<vec4i, T>) str += "vector<vec4i>{\n";
-      if constexpr (std::is_same_v<vec4f, T>) str += "vector<vec4f>{\n";
-      for (auto& value : values) {
-        if constexpr (std::is_same_v<int, T> || std::is_same_v<float, T>) {
-          str += std::to_string(value) + ",\n";
-        } else if constexpr (std::is_same_v<vec2i, T> ||
-                             std::is_same_v<vec2f, T>) {
-          str += "{" + std::to_string(value.x) + "," + std::to_string(value.y) +
-                 "},\n";
-        } else if constexpr (std::is_same_v<vec3i, T> ||
-                             std::is_same_v<vec3f, T>) {
-          str += "{" + std::to_string(value.x) + "," + std::to_string(value.y) +
-                 "," + std::to_string(value.z) + "},\n";
-        } else if constexpr (std::is_same_v<vec4i, T> ||
-                             std::is_same_v<vec4f, T>) {
-          str += "{" + std::to_string(value.x) + "," + std::to_string(value.y) +
-                 "," + std::to_string(value.z) + "," + std::to_string(value.w) +
-                 "},\n";
-        } else {
-          throw std::invalid_argument{"cannot print this"};
-        }
-      }
-      str += "};\n\n";
-      return str;
-    };
-
-    auto name = string{"shape"};
-    auto str  = ""s;
-    str += to_cpp(name, "positions", shape.positions);
-    str += to_cpp(name, "normals", shape.normals);
-    str += to_cpp(name, "texcoords", shape.texcoords);
-    str += to_cpp(name, "colors", shape.colors);
-    str += to_cpp(name, "radius", shape.radius);
-    str += to_cpp(name, "points", shape.points);
-    str += to_cpp(name, "lines", shape.lines);
-    str += to_cpp(name, "triangles", shape.triangles);
-    str += to_cpp(name, "quads", shape.quads);
-    return save_text(filename, str, error);
+    return save_cpp_shape(filename, shape, error, flip_texcoord, ascii);
   } else {
     return format_error();
   }
 }
 
-// Load ply mesh
-bool load_fvshape(const string& filename, fvshape_data& shape, string& error,
-    bool flip_texcoord) {
+// Load/save a shape from/to OBJ.
+static bool load_obj_shape(const string& filename, shape_data& shape,
+    string& error, bool flip_texcoord) {
   auto format_error = [filename, &error]() {
     error = filename + ": unknown format";
     return false;
@@ -704,56 +571,276 @@ bool load_fvshape(const string& filename, fvshape_data& shape, string& error,
 
   shape = {};
 
+  // load obj
+  auto obj = obj_scene{};
+  if (!load_obj(filename, obj, error, true)) return false;
+
+  // get shape
+  if (obj.shapes.empty()) return shape_error();
+  if (obj.shapes.size() > 1) return shape_error();
+  auto& oshape = obj.shapes.front();
+  if (oshape.points.empty() && oshape.lines.empty() && oshape.faces.empty())
+    return shape_error();
+
+  // decide what to do and get properties
+  auto materials  = vector<string>{};
+  auto ematerials = vector<int>{};
+  auto has_quads_ = has_quads(oshape);
+  if (!oshape.faces.empty() && !has_quads_) {
+    get_triangles(oshape, shape.triangles, shape.positions, shape.normals,
+        shape.texcoords, materials, ematerials, flip_texcoord);
+  } else if (!oshape.faces.empty() && has_quads_) {
+    get_quads(oshape, shape.quads, shape.positions, shape.normals,
+        shape.texcoords, materials, ematerials, flip_texcoord);
+  } else if (!oshape.lines.empty()) {
+    get_lines(oshape, shape.lines, shape.positions, shape.normals,
+        shape.texcoords, materials, ematerials, flip_texcoord);
+  } else if (!oshape.points.empty()) {
+    get_points(oshape, shape.points, shape.positions, shape.normals,
+        shape.texcoords, materials, ematerials, flip_texcoord);
+  } else {
+    return shape_error();
+  }
+
+  if (shape.positions.empty()) return shape_error();
+  return true;
+}
+static bool save_obj_shape(const string& filename, const shape_data& shape,
+    string& error, bool flip_texcoord, bool ascii) {
+  auto shape_error = [filename, &error]() {
+    error = filename + ": empty shape";
+    return false;
+  };
+  auto line_error = [filename, &error]() {
+    error = filename + ": unsupported lines";
+    return false;
+  };
+  auto point_error = [filename, &error]() {
+    error = filename + ": unsupported points";
+    return false;
+  };
+
+  auto  obj    = obj_scene{};
+  auto& oshape = obj.shapes.emplace_back();
+  if (!shape.triangles.empty()) {
+    set_triangles(oshape, shape.triangles, shape.positions, shape.normals,
+        shape.texcoords, {}, flip_texcoord);
+  } else if (!shape.quads.empty()) {
+    set_quads(oshape, shape.quads, shape.positions, shape.normals,
+        shape.texcoords, {}, flip_texcoord);
+  } else if (!shape.lines.empty()) {
+    set_lines(oshape, shape.lines, shape.positions, shape.normals,
+        shape.texcoords, {}, flip_texcoord);
+  } else if (!shape.points.empty()) {
+    set_points(oshape, shape.points, shape.positions, shape.normals,
+        shape.texcoords, {}, flip_texcoord);
+  } else {
+    return shape_error();
+  }
+  auto err = ""s;
+  return save_obj(filename, obj, error);
+}
+
+// Load/save a shape from/to PLY. Loads/saves only one mesh with no other data.
+static bool load_ply_shape(const string& filename, shape_data& shape,
+    string& error, bool flip_texcoord) {
+  auto shape_error = [filename, &error]() {
+    error = filename + ": empty shape";
+    return false;
+  };
+
+  shape = {};
+
+  // open ply
+  auto ply = ply_model{};
+  if (!load_ply(filename, ply, error)) return false;
+
+  // gets vertex
+  get_positions(ply, shape.positions);
+  get_normals(ply, shape.normals);
+  get_texcoords(ply, shape.texcoords, flip_texcoord);
+  get_colors(ply, shape.colors);
+  get_radius(ply, shape.radius);
+
+  // get faces
+  if (has_quads(ply)) {
+    get_quads(ply, shape.quads);
+  } else {
+    get_triangles(ply, shape.triangles);
+  }
+  get_lines(ply, shape.lines);
+  get_points(ply, shape.points);
+
+  if (shape.positions.empty()) return shape_error();
+  return true;
+}
+static bool save_ply_shape(const string& filename, const shape_data& shape,
+    string& error, bool flip_texcoord, bool ascii) {
+  auto shape_error = [filename, &error]() {
+    error = filename + ": empty shape";
+    return false;
+  };
+
+  // create ply
+  auto ply = ply_model{};
+  add_positions(ply, shape.positions);
+  add_normals(ply, shape.normals);
+  add_texcoords(ply, shape.texcoords, flip_texcoord);
+  add_colors(ply, shape.colors);
+  add_radius(ply, shape.radius);
+  add_faces(ply, shape.triangles, shape.quads);
+  add_lines(ply, shape.lines);
+  add_points(ply, shape.points);
+  return save_ply(filename, ply, error);
+}
+
+// Load/save a shape from/to STL. Loads/saves only one mesh with no other data.
+static bool load_stl_shape(const string& filename, shape_data& shape,
+    string& error, bool flip_texcoord) {
+  auto shape_error = [filename, &error]() {
+    error = filename + ": empty shape";
+    return false;
+  };
+
+  // load stl
+  auto stl = stl_model{};
+  if (!load_stl(filename, stl, error, true)) return false;
+
+  // get shape
+  if (stl.shapes.empty()) return shape_error();
+  if (stl.shapes.size() > 1) return shape_error();
+  auto fnormals = vector<vec3f>{};
+  if (!get_triangles(stl, 0, shape.triangles, shape.positions, fnormals))
+    return shape_error();
+  return true;
+}
+static bool save_stl_shape(const string& filename, const shape_data& shape,
+    string& error, bool flip_texcoord, bool ascii) {
+  auto line_error = [filename, &error]() {
+    error = filename + ": unsupported lines";
+    return false;
+  };
+  auto point_error = [filename, &error]() {
+    error = filename + ": unsupported points";
+    return false;
+  };
+  auto shape_error = [filename, &error]() {
+    error = filename + ": empty shape";
+    return false;
+  };
+
+  // create stl
+  auto stl = stl_model{};
+  if (!shape.lines.empty()) return line_error();
+  if (!shape.points.empty()) return point_error();
+  if (!shape.triangles.empty()) {
+    add_triangles(stl, shape.triangles, shape.positions, {});
+  } else if (!shape.quads.empty()) {
+    add_triangles(stl, quads_to_triangles(shape.quads), shape.positions, {});
+  } else {
+    return shape_error();
+  }
+  return save_stl(filename, stl, error);
+}
+
+// Save a shape to C++.
+static bool save_cpp_shape(const string& filename, const shape_data& shape,
+    string& error, bool flip_texcoord, bool ascii) {
+  auto to_cpp = [](const string& name, const string& vname,
+                    const auto& values) -> string {
+    using T = typename std::remove_const_t<
+        std::remove_reference_t<decltype(values)>>::value_type;
+    if (values.empty()) return ""s;
+    auto str = "auto " + name + "_" + vname + " = ";
+    if constexpr (std::is_same_v<int, T>) str += "vector<int>{\n";
+    if constexpr (std::is_same_v<float, T>) str += "vector<float>{\n";
+    if constexpr (std::is_same_v<vec2i, T>) str += "vector<vec2i>{\n";
+    if constexpr (std::is_same_v<vec2f, T>) str += "vector<vec2f>{\n";
+    if constexpr (std::is_same_v<vec3i, T>) str += "vector<vec3i>{\n";
+    if constexpr (std::is_same_v<vec3f, T>) str += "vector<vec3f>{\n";
+    if constexpr (std::is_same_v<vec4i, T>) str += "vector<vec4i>{\n";
+    if constexpr (std::is_same_v<vec4f, T>) str += "vector<vec4f>{\n";
+    for (auto& value : values) {
+      if constexpr (std::is_same_v<int, T> || std::is_same_v<float, T>) {
+        str += std::to_string(value) + ",\n";
+      } else if constexpr (std::is_same_v<vec2i, T> ||
+                           std::is_same_v<vec2f, T>) {
+        str += "{" + std::to_string(value.x) + "," + std::to_string(value.y) +
+               "},\n";
+      } else if constexpr (std::is_same_v<vec3i, T> ||
+                           std::is_same_v<vec3f, T>) {
+        str += "{" + std::to_string(value.x) + "," + std::to_string(value.y) +
+               "," + std::to_string(value.z) + "},\n";
+      } else if constexpr (std::is_same_v<vec4i, T> ||
+                           std::is_same_v<vec4f, T>) {
+        str += "{" + std::to_string(value.x) + "," + std::to_string(value.y) +
+               "," + std::to_string(value.z) + "," + std::to_string(value.w) +
+               "},\n";
+      } else {
+        throw std::invalid_argument{"cannot print this"};
+      }
+    }
+    str += "};\n\n";
+    return str;
+  };
+
+  auto name = string{"shape"};
+  auto str  = ""s;
+  str += to_cpp(name, "positions", shape.positions);
+  str += to_cpp(name, "normals", shape.normals);
+  str += to_cpp(name, "texcoords", shape.texcoords);
+  str += to_cpp(name, "colors", shape.colors);
+  str += to_cpp(name, "radius", shape.radius);
+  str += to_cpp(name, "points", shape.points);
+  str += to_cpp(name, "lines", shape.lines);
+  str += to_cpp(name, "triangles", shape.triangles);
+  str += to_cpp(name, "quads", shape.quads);
+  return save_text(filename, str, error);
+}
+
+// Load/save a shape from/to OBJ.
+static bool load_obj_fvshape(const string& filename, fvshape_data& shape,
+    string& error, bool flip_texcoord);
+static bool save_obj_fvshape(const string& filename, const fvshape_data& shape,
+    string& error, bool flip_texcoord, bool ascii);
+
+// Load/save a shape from/to PLY. Loads/saves only one mesh with no other data.
+static bool load_ply_fvshape(const string& filename, fvshape_data& shape,
+    string& error, bool flip_texcoord);
+static bool save_ply_fvshape(const string& filename, const fvshape_data& shape,
+    string& error, bool flip_texcoord, bool ascii);
+
+// Load/save a shape from/to STL. Loads/saves only one mesh with no other data.
+static bool load_stl_fvshape(const string& filename, fvshape_data& shape,
+    string& error, bool flip_texcoord);
+static bool save_stl_fvshape(const string& filename, const fvshape_data& shape,
+    string& error, bool flip_texcoord, bool ascii);
+
+// Save a shape to C++.
+static bool save_cpp_fvshape(const string& filename, const fvshape_data& shape,
+    string& error, bool flip_texcoord, bool ascii);
+
+// Load ply mesh
+bool load_fvshape(const string& filename, fvshape_data& shape, string& error,
+    bool flip_texcoord) {
+  auto format_error = [filename, &error]() {
+    error = filename + ": unknown format";
+    return false;
+  };
+  auto preset_error = [filename, &error]() {
+    error = filename + ": " + error;
+    return false;
+  };
+
+  shape = {};
+
   auto ext = path_extension(filename);
   if (ext == ".ply" || ext == ".PLY") {
-    // open ply
-    auto ply = ply_model{};
-    if (!load_ply(filename, ply, error)) return false;
-
-    get_positions(ply, shape.positions);
-    get_normals(ply, shape.normals);
-    get_texcoords(ply, shape.texcoords, flip_texcoord);
-    get_quads(ply, shape.quadspos);
-    if (!shape.normals.empty()) shape.quadsnorm = shape.quadspos;
-    if (!shape.texcoords.empty()) shape.quadstexcoord = shape.quadspos;
-
-    if (shape.positions.empty()) return shape_error();
-    return true;
+    return load_ply_fvshape(filename, shape, error, flip_texcoord);
   } else if (ext == ".obj" || ext == ".OBJ") {
-    // load obj
-    auto obj = obj_scene{};
-    if (!load_obj(filename, obj, error, true)) return false;
-
-    // get shape
-    if (obj.shapes.empty()) return shape_error();
-    if (obj.shapes.size() > 1) return shape_error();
-    auto& oshape = obj.shapes.front();
-    if (oshape.points.empty() && oshape.lines.empty() && oshape.faces.empty())
-      return shape_error();
-
-    if (oshape.faces.empty()) return shape_error();
-    auto materials  = vector<string>{};
-    auto ematerials = vector<int>{};
-    get_fvquads(oshape, shape.quadspos, shape.quadsnorm, shape.quadstexcoord,
-        shape.positions, shape.normals, shape.texcoords, materials, ematerials,
-        flip_texcoord);
-
-    if (shape.positions.empty()) return shape_error();
-    return true;
+    return load_obj_fvshape(filename, shape, error, flip_texcoord);
   } else if (ext == ".stl" || ext == ".STL") {
-    // load obj
-    auto stl = stl_model{};
-    if (!load_stl(filename, stl, error, true)) return false;
-
-    // get shape
-    if (stl.shapes.empty()) return shape_error();
-    if (stl.shapes.size() > 1) return shape_error();
-    auto fnormals  = vector<vec3f>{};
-    auto triangles = vector<vec3i>{};
-    if (!get_triangles(stl, 0, triangles, shape.positions, fnormals))
-      return shape_error();
-    shape.quadspos = triangles_to_quads(triangles);
-    return true;
+    return load_stl_fvshape(filename, shape, error, flip_texcoord);
   } else if (ext == ".ypreset" || ext == ".YPRESET") {
     // create preset
     if (!make_fvshape_preset(shape, path_basename(filename), error))
@@ -766,6 +853,66 @@ bool load_fvshape(const string& filename, fvshape_data& shape, string& error,
 
 // Save ply mesh
 bool save_fvshape(const string& filename, const fvshape_data& shape,
+    string& error, bool flip_texcoord, bool ascii) {
+  auto format_error = [filename, &error]() {
+    error = filename + ": unknown format";
+    return false;
+  };
+
+  auto ext = path_extension(filename);
+  if (ext == ".ply" || ext == ".PLY") {
+    return save_ply_fvshape(filename, shape, error, flip_texcoord, ascii);
+  } else if (ext == ".obj" || ext == ".OBJ") {
+    return save_obj_fvshape(filename, shape, error, flip_texcoord, ascii);
+  } else if (ext == ".stl" || ext == ".STL") {
+    return save_stl_fvshape(filename, shape, error, flip_texcoord, ascii);
+  } else if (ext == ".cpp" || ext == ".CPP") {
+    return save_cpp_fvshape(filename, shape, error, flip_texcoord, ascii);
+  } else {
+    return format_error();
+  }
+}
+
+// Load/save a shape from/to OBJ.
+static bool load_obj_fvshape(const string& filename, fvshape_data& shape,
+    string& error, bool flip_texcoord) {
+  auto format_error = [filename, &error]() {
+    error = filename + ": unknown format";
+    return false;
+  };
+  auto shape_error = [filename, &error]() {
+    error = filename + ": empty shape";
+    return false;
+  };
+  auto preset_error = [filename, &error]() {
+    error = filename + ": " + error;
+    return false;
+  };
+
+  shape = {};
+
+  // load obj
+  auto obj = obj_scene{};
+  if (!load_obj(filename, obj, error, true)) return false;
+
+  // get shape
+  if (obj.shapes.empty()) return shape_error();
+  if (obj.shapes.size() > 1) return shape_error();
+  auto& oshape = obj.shapes.front();
+  if (oshape.points.empty() && oshape.lines.empty() && oshape.faces.empty())
+    return shape_error();
+
+  if (oshape.faces.empty()) return shape_error();
+  auto materials  = vector<string>{};
+  auto ematerials = vector<int>{};
+  get_fvquads(oshape, shape.quadspos, shape.quadsnorm, shape.quadstexcoord,
+      shape.positions, shape.normals, shape.texcoords, materials, ematerials,
+      flip_texcoord);
+
+  if (shape.positions.empty()) return shape_error();
+  return true;
+}
+static bool save_obj_fvshape(const string& filename, const fvshape_data& shape,
     string& error, bool flip_texcoord, bool ascii) {
   auto format_error = [filename, &error]() {
     error = filename + ": unknown format";
@@ -784,94 +931,169 @@ bool save_fvshape(const string& filename, const fvshape_data& shape,
     return false;
   };
 
-  auto ext = path_extension(filename);
-  if (ext == ".ply" || ext == ".PLY") {
-    // create ply
-    auto ply = ply_model{};
+  auto  obj    = obj_scene{};
+  auto& oshape = obj.shapes.emplace_back();
+  if (!shape.quadspos.empty()) {
+    set_fvquads(oshape, shape.quadspos, shape.quadsnorm, shape.quadstexcoord,
+        shape.positions, shape.normals, shape.texcoords, {}, flip_texcoord);
+  } else {
+    return shape_error();
+  }
+  return save_obj(filename, obj, error);
+}
+
+// Load/save a scene from/to PLY. Loads/saves only one mesh with no other data.
+static bool load_ply_fvshape(const string& filename, fvshape_data& shape,
+    string& error, bool flip_texcoord) {
+  auto shape_error = [filename, &error]() {
+    error = filename + ": empty shape";
+    return false;
+  };
+
+  shape = {};
+
+  // open ply
+  auto ply = ply_model{};
+  if (!load_ply(filename, ply, error)) return false;
+
+  get_positions(ply, shape.positions);
+  get_normals(ply, shape.normals);
+  get_texcoords(ply, shape.texcoords, flip_texcoord);
+  get_quads(ply, shape.quadspos);
+  if (!shape.normals.empty()) shape.quadsnorm = shape.quadspos;
+  if (!shape.texcoords.empty()) shape.quadstexcoord = shape.quadspos;
+
+  if (shape.positions.empty()) return shape_error();
+  return true;
+}
+static bool save_ply_fvshape(const string& filename, const fvshape_data& shape,
+    string& error, bool flip_texcoord, bool ascii) {
+  auto shape_error = [filename, &error]() {
+    error = filename + ": empty shape";
+    return false;
+  };
+
+  // create ply
+  auto ply = ply_model{};
+  // split data
+  auto [split_quads, split_positions, split_normals, split_texcoords] =
+      split_facevarying(shape.quadspos, shape.quadsnorm, shape.quadstexcoord,
+          shape.positions, shape.normals, shape.texcoords);
+  add_positions(ply, split_positions);
+  add_normals(ply, split_normals);
+  add_texcoords(ply, split_texcoords, flip_texcoord);
+  add_faces(ply, {}, split_quads);
+  return save_ply(filename, ply, error);
+}
+
+// Load/save a scene from/to STL. Loads/saves only one mesh with no other data.
+static bool load_stl_fvshape(const string& filename, fvshape_data& shape,
+    string& error, bool flip_texcoord) {
+  auto shape_error = [filename, &error]() {
+    error = filename + ": empty shape";
+    return false;
+  };
+
+  shape = {};
+
+  // load obj
+  auto stl = stl_model{};
+  if (!load_stl(filename, stl, error, true)) return false;
+
+  // get shape
+  if (stl.shapes.empty()) return shape_error();
+  if (stl.shapes.size() > 1) return shape_error();
+  auto fnormals  = vector<vec3f>{};
+  auto triangles = vector<vec3i>{};
+  if (!get_triangles(stl, 0, triangles, shape.positions, fnormals))
+    return shape_error();
+  shape.quadspos = triangles_to_quads(triangles);
+  return true;
+}
+static bool save_stl_fvshape(const string& filename, const fvshape_data& shape,
+    string& error, bool flip_texcoord, bool ascii) {
+  auto shape_error = [filename, &error]() {
+    error = filename + ": empty shape";
+    return false;
+  };
+  auto line_error = [filename, &error]() {
+    error = filename + ": unsupported lines";
+    return false;
+  };
+  auto point_error = [filename, &error]() {
+    error = filename + ": unsupported points";
+    return false;
+  };
+
+  // create ply
+  auto stl = stl_model{};
+  if (!shape.quadspos.empty()) {
     // split data
     auto [split_quads, split_positions, split_normals, split_texcoords] =
         split_facevarying(shape.quadspos, shape.quadsnorm, shape.quadstexcoord,
             shape.positions, shape.normals, shape.texcoords);
-    add_positions(ply, split_positions);
-    add_normals(ply, split_normals);
-    add_texcoords(ply, split_texcoords, flip_texcoord);
-    add_faces(ply, {}, split_quads);
-    return save_ply(filename, ply, error);
-  } else if (ext == ".obj" || ext == ".OBJ") {
-    auto  obj    = obj_scene{};
-    auto& oshape = obj.shapes.emplace_back();
-    if (!shape.quadspos.empty()) {
-      set_fvquads(oshape, shape.quadspos, shape.quadsnorm, shape.quadstexcoord,
-          shape.positions, shape.normals, shape.texcoords, {}, flip_texcoord);
-    } else {
-      return shape_error();
-    }
-    auto err = ""s;
-    return save_obj(filename, obj, error);
-  } else if (ext == ".stl" || ext == ".STL") {
-    // create ply
-    auto stl = stl_model{};
-    if (!shape.quadspos.empty()) {
-      // split data
-      auto [split_quads, split_positions, split_normals,
-          split_texcoords] = split_facevarying(shape.quadspos, shape.quadsnorm,
-          shape.quadstexcoord, shape.positions, shape.normals, shape.texcoords);
-      add_triangles(stl, quads_to_triangles(split_quads), split_positions, {});
-    } else {
-      return shape_error();
-    }
-    return save_stl(filename, stl, error);
-  } else if (ext == ".cpp" || ext == ".CPP") {
-    auto to_cpp = [](const string& name, const string& vname,
-                      const auto& values) -> string {
-      using T = typename std::remove_const_t<
-          std::remove_reference_t<decltype(values)>>::value_type;
-      if (values.empty()) return ""s;
-      auto str = "auto " + name + "_" + vname + " = ";
-      if constexpr (std::is_same_v<int, T>) str += "vector<int>{\n";
-      if constexpr (std::is_same_v<float, T>) str += "vector<float>{\n";
-      if constexpr (std::is_same_v<vec2i, T>) str += "vector<vec2i>{\n";
-      if constexpr (std::is_same_v<vec2f, T>) str += "vector<vec2f>{\n";
-      if constexpr (std::is_same_v<vec3i, T>) str += "vector<vec3i>{\n";
-      if constexpr (std::is_same_v<vec3f, T>) str += "vector<vec3f>{\n";
-      if constexpr (std::is_same_v<vec4i, T>) str += "vector<vec4i>{\n";
-      if constexpr (std::is_same_v<vec4f, T>) str += "vector<vec4f>{\n";
-      for (auto& value : values) {
-        if constexpr (std::is_same_v<int, T> || std::is_same_v<float, T>) {
-          str += std::to_string(value) + ",\n";
-        } else if constexpr (std::is_same_v<vec2i, T> ||
-                             std::is_same_v<vec2f, T>) {
-          str += "{" + std::to_string(value.x) + "," + std::to_string(value.y) +
-                 "},\n";
-        } else if constexpr (std::is_same_v<vec3i, T> ||
-                             std::is_same_v<vec3f, T>) {
-          str += "{" + std::to_string(value.x) + "," + std::to_string(value.y) +
-                 "," + std::to_string(value.z) + "},\n";
-        } else if constexpr (std::is_same_v<vec4i, T> ||
-                             std::is_same_v<vec4f, T>) {
-          str += "{" + std::to_string(value.x) + "," + std::to_string(value.y) +
-                 "," + std::to_string(value.z) + "," + std::to_string(value.w) +
-                 "},\n";
-        } else {
-          throw std::invalid_argument{"cannot print this"};
-        }
-      }
-      str += "};\n\n";
-      return str;
-    };
-
-    auto name = string{"shape"};
-    auto str  = ""s;
-    str += to_cpp(name, "positions", shape.positions);
-    str += to_cpp(name, "normals", shape.normals);
-    str += to_cpp(name, "texcoords", shape.texcoords);
-    str += to_cpp(name, "quadspos", shape.quadspos);
-    str += to_cpp(name, "quadsnorm", shape.quadsnorm);
-    str += to_cpp(name, "quadstexcoord", shape.quadstexcoord);
-    return save_text(filename, str, error);
+    add_triangles(stl, quads_to_triangles(split_quads), split_positions, {});
   } else {
-    return format_error();
+    return shape_error();
   }
+  return save_stl(filename, stl, error);
+}
+
+// Save a shape to C++.
+static bool save_cpp_fvshape(const string& filename, const fvshape_data& shape,
+    string& error, bool flip_texcoord, bool ascii) {
+  auto shape_error = [filename, &error]() {
+    error = filename + ": empty shape";
+    return false;
+  };
+
+  auto to_cpp = [](const string& name, const string& vname,
+                    const auto& values) -> string {
+    using T = typename std::remove_const_t<
+        std::remove_reference_t<decltype(values)>>::value_type;
+    if (values.empty()) return ""s;
+    auto str = "auto " + name + "_" + vname + " = ";
+    if constexpr (std::is_same_v<int, T>) str += "vector<int>{\n";
+    if constexpr (std::is_same_v<float, T>) str += "vector<float>{\n";
+    if constexpr (std::is_same_v<vec2i, T>) str += "vector<vec2i>{\n";
+    if constexpr (std::is_same_v<vec2f, T>) str += "vector<vec2f>{\n";
+    if constexpr (std::is_same_v<vec3i, T>) str += "vector<vec3i>{\n";
+    if constexpr (std::is_same_v<vec3f, T>) str += "vector<vec3f>{\n";
+    if constexpr (std::is_same_v<vec4i, T>) str += "vector<vec4i>{\n";
+    if constexpr (std::is_same_v<vec4f, T>) str += "vector<vec4f>{\n";
+    for (auto& value : values) {
+      if constexpr (std::is_same_v<int, T> || std::is_same_v<float, T>) {
+        str += std::to_string(value) + ",\n";
+      } else if constexpr (std::is_same_v<vec2i, T> ||
+                           std::is_same_v<vec2f, T>) {
+        str += "{" + std::to_string(value.x) + "," + std::to_string(value.y) +
+               "},\n";
+      } else if constexpr (std::is_same_v<vec3i, T> ||
+                           std::is_same_v<vec3f, T>) {
+        str += "{" + std::to_string(value.x) + "," + std::to_string(value.y) +
+               "," + std::to_string(value.z) + "},\n";
+      } else if constexpr (std::is_same_v<vec4i, T> ||
+                           std::is_same_v<vec4f, T>) {
+        str += "{" + std::to_string(value.x) + "," + std::to_string(value.y) +
+               "," + std::to_string(value.z) + "," + std::to_string(value.w) +
+               "},\n";
+      } else {
+        throw std::invalid_argument{"cannot print this"};
+      }
+    }
+    str += "};\n\n";
+    return str;
+  };
+
+  auto name = string{"shape"};
+  auto str  = ""s;
+  str += to_cpp(name, "positions", shape.positions);
+  str += to_cpp(name, "normals", shape.normals);
+  str += to_cpp(name, "texcoords", shape.texcoords);
+  str += to_cpp(name, "quadspos", shape.quadspos);
+  str += to_cpp(name, "quadsnorm", shape.quadsnorm);
+  str += to_cpp(name, "quadstexcoord", shape.quadstexcoord);
+  return save_text(filename, str, error);
 }
 
 // Shape presets used ofr testing.
