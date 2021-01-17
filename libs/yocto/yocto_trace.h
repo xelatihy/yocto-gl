@@ -119,61 +119,6 @@ using trace_scene = scene_scene;
 }  // namespace yocto
 
 // -----------------------------------------------------------------------------
-// EVALUATION OF SCENE PROPERTIES
-// -----------------------------------------------------------------------------
-namespace yocto {
-
-// Material Bsdf parameters
-struct trace_bsdf {
-  // brdf lobes
-  vec3f diffuse      = {0, 0, 0};
-  vec3f specular     = {0, 0, 0};
-  vec3f metal        = {0, 0, 0};
-  vec3f coat         = {0, 0, 0};
-  vec3f transmission = {0, 0, 0};
-  vec3f translucency = {0, 0, 0};
-  vec3f refraction   = {0, 0, 0};
-  float roughness    = 0;
-  float ior          = 1;
-  vec3f meta         = {0, 0, 0};
-  vec3f metak        = {0, 0, 0};
-  // weights
-  float diffuse_pdf      = 0;
-  float specular_pdf     = 0;
-  float metal_pdf        = 0;
-  float coat_pdf         = 0;
-  float transmission_pdf = 0;
-  float translucency_pdf = 0;
-  float refraction_pdf   = 0;
-};
-
-// Eval material to obtain emission, brdf and opacity.
-vec3f eval_emission(const scene_scene& scene, const trace_instance& instance,
-    int element, const vec2f& uv, const vec3f& normal, const vec3f& outgoing);
-// Eval material to obatain emission, brdf and opacity.
-trace_bsdf eval_bsdf(const scene_scene& scene, const trace_instance& instance,
-    int element, const vec2f& uv, const vec3f& normal, const vec3f& outgoing);
-float eval_opacity(const scene_scene& scene, const trace_instance& instance,
-    int element, const vec2f& uv, const vec3f& normal, const vec3f& outgoing);
-// check if a brdf is a delta
-bool is_delta(const trace_bsdf& bsdf);
-
-// Material volume parameters
-struct trace_vsdf {
-  vec3f density    = {0, 0, 0};
-  vec3f scatter    = {0, 0, 0};
-  float anisotropy = 0;
-};
-
-// check if we have a volume
-bool has_volume(const scene_scene& scene, const trace_instance* instance);
-// evaluate volume
-trace_vsdf eval_vsdf(const scene_scene& scene, const trace_instance* instance,
-    int element, const vec2f& uv);
-
-}  // namespace yocto
-
-// -----------------------------------------------------------------------------
 // RENDERING API
 // -----------------------------------------------------------------------------
 namespace yocto {
@@ -204,8 +149,7 @@ enum struct trace_sampler_type {
 enum struct trace_falsecolor_type {
   // clang-format off
   position, normal, frontfacing, gnormal, gfrontfacing, texcoord, color,
-  emission, diffuse, specular, coat, metal, transmission, translucency,
-  refraction, roughness, opacity, ior, instance, element, highlight
+  emission, roughness, opacity, instance, element, highlight
   // clang-format on
 };
 
@@ -216,7 +160,7 @@ const auto trace_default_seed = 961748941ull;
 struct trace_params {
   int                   resolution = 1280;
   trace_sampler_type    sampler    = trace_sampler_type::path;
-  trace_falsecolor_type falsecolor = trace_falsecolor_type::diffuse;
+  trace_falsecolor_type falsecolor = trace_falsecolor_type::color;
   int                   samples    = 512;
   int                   bounces    = 8;
   float                 clamp      = 100;
@@ -235,9 +179,7 @@ inline const auto trace_sampler_names = std::vector<std::string>{
 
 inline const auto trace_falsecolor_names = vector<string>{"position", "normal",
     "frontfacing", "gnormal", "gfrontfacing", "texcoord", "color", "emission",
-    "diffuse", "specular", "coat", "metal", "transmission", "translucency",
-    "refraction", "roughness", "opacity", "ior", "instance", "element",
-    "highlight"};
+    "roughness", "opacity", "instance", "element", "highlight"};
 const auto        trace_bvh_names        = vector<string>{
     "default", "highquality", "middle", "balanced",
 #ifdef YOCTO_EMBREE

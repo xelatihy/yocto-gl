@@ -109,41 +109,41 @@ struct scene_texture {
   image<vec4b> ldr = {};
 };
 
+// Material type
+enum struct material_type {
+  // clang-format off
+  matte, plastic, metal, thinglass, glass, leaves, subsurface, volume, metallic
+  // clang-format on
+};
+
+// Enum labels
+inline const auto material_type_names = std::vector<std::string>{"matte",
+    "plastic", "metal", "thinglass", "glass", "leaves", "subsurface", "volume",
+    "metallic"};
+
 // Material for surfaces, lines and triangles.
 // For surfaces, uses a microfacet model with thin sheet transmission.
 // The model is based on OBJ, but contains glTF compatibility.
 // For the documentation on the values, please see the OBJ format.
 struct scene_material {
   // material
-  vec3f emission     = {0, 0, 0};
-  vec3f color        = {0, 0, 0};
-  float specular     = 0;
-  float roughness    = 0;
-  float metallic     = 0;
-  float ior          = 1.5;
-  vec3f spectint     = {1, 1, 1};
-  float coat         = 0;
-  float transmission = 0;
-  float translucency = 0;
-  vec3f scattering   = {0, 0, 0};
-  float scanisotropy = 0;
-  float trdepth      = 0.01;
-  float opacity      = 1;
-  bool  thin         = true;
+  material_type type         = material_type::metallic;
+  vec3f         emission     = {0, 0, 0};
+  vec3f         color        = {0, 0, 0};
+  float         roughness    = 0;
+  float         metallic     = 0;
+  float         ior          = 1.5;
+  vec3f         scattering   = {0, 0, 0};
+  float         scanisotropy = 0;
+  float         trdepth      = 0.01;
+  float         opacity      = 1;
 
   // textures
-  texture_handle emission_tex     = invalid_handle;
-  texture_handle color_tex        = invalid_handle;
-  texture_handle specular_tex     = invalid_handle;
-  texture_handle metallic_tex     = invalid_handle;
-  texture_handle roughness_tex    = invalid_handle;
-  texture_handle transmission_tex = invalid_handle;
-  texture_handle translucency_tex = invalid_handle;
-  texture_handle spectint_tex     = invalid_handle;
-  texture_handle scattering_tex   = invalid_handle;
-  texture_handle coat_tex         = invalid_handle;
-  texture_handle opacity_tex      = invalid_handle;
-  texture_handle normal_tex       = invalid_handle;
+  texture_handle emission_tex   = invalid_handle;
+  texture_handle color_tex      = invalid_handle;
+  texture_handle roughness_tex  = invalid_handle;
+  texture_handle scattering_tex = invalid_handle;
+  texture_handle normal_tex     = invalid_handle;
 };
 
 // Shape data represented as indexed meshes of elements.
@@ -279,58 +279,52 @@ subdiv_handle   add_subdiv(scene_scene& scene, const string& name,
 material_handle add_emission_material(scene_scene& scene, const string& name,
     const vec3f& emission, texture_handle emission_tex);
 material_handle add_matte_material(scene_scene& scene, const string& name,
-    const vec3f& color, texture_handle color_tex,
+    const vec3f& color, texture_handle color_tex = invalid_handle,
     texture_handle normal_tex = invalid_handle);
-material_handle add_specular_material(scene_scene& scene, const string& name,
-    const vec3f& color, texture_handle color_tex, float roughness,
+material_handle add_plastic_material(scene_scene& scene, const string& name,
+    const vec3f& color, float roughness,
+    texture_handle color_tex     = invalid_handle,
     texture_handle roughness_tex = invalid_handle,
-    texture_handle normal_tex = invalid_handle, float ior = 1.5,
-    float specular = 1, texture_handle specular_tex = invalid_handle,
-    const vec3f&   spectint     = {1, 1, 1},
-    texture_handle spectint_tex = invalid_handle);
+    texture_handle normal_tex = invalid_handle, float ior = 1.5);
+material_handle add_metal_material(scene_scene& scene, const string& name,
+    const vec3f& color, float roughness,
+    texture_handle color_tex     = invalid_handle,
+    texture_handle roughness_tex = invalid_handle,
+    texture_handle normal_tex    = invalid_handle);
 material_handle add_metallic_material(scene_scene& scene, const string& name,
-    const vec3f& color, texture_handle color_tex, float roughness,
+    const vec3f& color, float roughness, float metallic,
+    texture_handle color_tex     = invalid_handle,
     texture_handle roughness_tex = invalid_handle,
-    texture_handle normal_tex = invalid_handle, float metallic = 1,
-    texture_handle metallic_tex = invalid_handle);
-material_handle add_transmission_material(scene_scene& scene,
-    const string& name, const vec3f& color, texture_handle color_tex,
-    float roughness, texture_handle roughness_tex = invalid_handle,
+    texture_handle normal_tex    = invalid_handle);
+material_handle add_thinglass_material(scene_scene& scene, const string& name,
+    const vec3f& color, float roughness,
+    texture_handle color_tex     = invalid_handle,
+    texture_handle roughness_tex = invalid_handle,
+    texture_handle normal_tex = invalid_handle, float ior = 1.5);
+material_handle add_glass_material(scene_scene& scene, const string& name,
+    const vec3f& color, float roughness,
+    texture_handle color_tex     = invalid_handle,
+    texture_handle roughness_tex = invalid_handle,
+    texture_handle normal_tex = invalid_handle, float ior = 1.5);
+material_handle add_glass_material(scene_scene& scene, const string& name,
+    const vec3f& color, float roughness, const vec3f& scattering,
+    texture_handle color_tex     = invalid_handle,
+    texture_handle roughness_tex = invalid_handle,
     texture_handle normal_tex = invalid_handle, float ior = 1.5,
-    float specular = 1, texture_handle specular_tex = invalid_handle,
-    float transmission = 1, texture_handle transmission_tex = invalid_handle);
-material_handle add_volumetric_material(scene_scene& scene, const string& name,
-    const vec3f& color, texture_handle color_tex, float roughness,
+    float scanisotropy = 0, float trdepth = 0.01);
+material_handle add_subsurface_material(scene_scene& scene, const string& name,
+    const vec3f& color, float roughness, const vec3f& scattering,
+    texture_handle color_tex      = invalid_handle,
     texture_handle roughness_tex  = invalid_handle,
-    const vec3f&   scattering     = {0, 0, 0},
     texture_handle scattering_tex = invalid_handle,
     texture_handle normal_tex = invalid_handle, float ior = 1.5,
-    float scanisotropy = 0, float trdepth = 0.01, float specular = 1,
-    texture_handle specular_tex = invalid_handle, float transmission = 1,
-    texture_handle transmission_tex = invalid_handle);
-material_handle add_volumetrict_material(scene_scene& scene, const string& name,
-    const vec3f& color, texture_handle color_tex, float roughness,
-    texture_handle roughness_tex  = invalid_handle,
-    const vec3f&   scattering     = {0, 0, 0},
-    texture_handle scattering_tex = invalid_handle,
-    texture_handle normal_tex = invalid_handle, float ior = 1.5,
-    float scanisotropy = 0, float trdepth = 0.01, float specular = 1,
-    texture_handle specular_tex = invalid_handle, float translucency = 1,
-    texture_handle translucency_tex = invalid_handle);
-material_handle add_specular_coated_material(scene_scene& scene,
-    const string& name, const vec3f& color, texture_handle color_tex,
-    float roughness, texture_handle roughness_tex = invalid_handle,
-    texture_handle normal_tex = invalid_handle, float ior = 1.5,
-    float specular = 1, texture_handle specular_tex = invalid_handle,
-    float coat = 1, texture_handle coat_tex = invalid_handle);
-material_handle add_metallic_coated_material(scene_scene& scene,
-    const string& name, const vec3f& color, texture_handle color_tex,
-    float roughness, texture_handle roughness_tex = invalid_handle,
-    texture_handle normal_tex = invalid_handle, float metallic = 1,
-    texture_handle metallic_tex = invalid_handle, float coat = 1,
-    texture_handle coat_tex = invalid_handle);
+    float scanisotropy = 0, float trdepth = 0.01);
+material_handle add_volume_material(scene_scene& scene, const string& name,
+    const vec3f& color, const vec3f& scattering, float scanisotropy = 0,
+    float trdepth = 0.01);
 material_handle add_transparent_material(scene_scene& scene, const string& name,
-    const vec3f& color, texture_handle color_tex, float opacity = 1,
+    const vec3f& color, float opacity,
+    texture_handle color_tex  = invalid_handle,
     texture_handle normal_tex = invalid_handle);
 
 // add missing elements
@@ -410,29 +404,36 @@ vec3f eval_environment(const scene_scene& scene,
     const scene_environment& environment, const vec3f& direction);
 vec3f eval_environment(const scene_scene& scene, const vec3f& direction);
 
-// Material sample
-struct scene_material_sample {
-  vec3f emission     = {0, 0, 0};
-  vec3f color        = {0, 0, 0};
-  float specular     = 0;
-  float roughness    = 0;
-  float metallic     = 0;
-  float ior          = 1.5;
-  vec3f spectint     = {1, 1, 1};
-  float coat         = 0;
-  float transmission = 0;
-  float translucency = 0;
-  vec3f scattering   = {0, 0, 0};
-  float scanisotropy = 0;
-  float trdepth      = 0.01;
-  float opacity      = 1;
-  bool  thin         = true;
-  vec3f normalmap    = {0, 0, 1};
+// Material parameters evaluated at a point on the surface
+struct material_point {
+  material_type type         = material_type::metallic;
+  vec3f         emission     = {0, 0, 0};
+  vec3f         color        = {0, 0, 0};
+  float         opacity      = 1;
+  float         roughness    = 0;
+  float         metallic     = 0;
+  float         ior          = 1;
+  vec3f         density      = {0, 0, 0};
+  vec3f         scattering   = {0, 0, 0};
+  float         scanisotropy = 0;
+  float         trdepth      = 0.01;
 };
 
-// Evaluates material and textures
-scene_material_sample eval_material(const scene_scene& scene,
-    const scene_material& material, const vec2f& texcoord);
+// Eval material to obatain emission, brdf and opacity.
+material_point eval_material(const scene_scene& scene,
+    const scene_instance& instance, int element, const vec2f& uv);
+material_point eval_material(const scene_scene& scene,
+    const scene_material& material, const vec2f& texcoord,
+    const vec4f& shape_color = {1, 1, 1, 1});
+
+// check if a material is a delta
+bool is_delta(const scene_material& material);
+bool is_delta(const material_point& material);
+
+// check if a material has a volume
+bool is_volumetric(const scene_material& material);
+bool is_volumetric(const material_point& material);
+bool is_volumetric(const scene_scene& scene, const scene_instance& instance);
 
 }  // namespace yocto
 

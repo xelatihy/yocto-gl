@@ -57,12 +57,12 @@ struct sculpt_params {
   // intersection
   ray3f camera_ray = {};
   // sceneio_instance * shape_instance   = nullptr;
-  generic_shape *    shape            = nullptr;
-  shape_bvh          bvh_shape_tree   = {};
-  shape_intersection bvh_intersection = {};
+  generic_shape *    shape        = nullptr;
+  shape_bvh          bvh          = {};
+  shape_intersection intersection = {};
 
   // hash grid
-  hash_grid hash_grid = {};
+  hash_grid grid = {};
 
   // stroke
   vec3f locked_position = {};
@@ -209,11 +209,11 @@ void init_sculpt_tool(sculpt_params *params, generic_shape *shape,
   // add_cameras(ioscene);
 
   // create bvh structure
-  params->bvh_shape_tree = make_triangles_bvh(
+  params->bvh = make_triangles_bvh(
       shape->triangles, shape->positions, shape->radius);
 
   // create an hash grid
-  params->hash_grid = make_hash_grid(shape->positions, 0.05f);
+  params->grid = make_hash_grid(shape->positions, 0.05f);
 
   // init saturation buffer
   params->opacity = vector<float>(shape->positions.size(), 0.0f);
@@ -310,7 +310,7 @@ vector<pair<vec3f, vec3f>> stroke(
   // eval current intersection
   auto                       shape = params->shape;
   vector<pair<vec3f, vec3f>> pairs;
-  auto &                     inter = params->bvh_intersection;
+  auto &                     inter = params->intersection;
   auto                       pos   = eval_position(
       shape->triangles, shape->positions, {inter.element, inter.uv});
   auto nor = eval_normal(
@@ -347,8 +347,8 @@ vector<pair<vec3f, vec3f>> stroke(
     params->locked_uv += stroke_uv * mouse_dir;
     auto ray = camera_ray(glcamera.frame, glcamera.lens, glcamera.aspect,
         glcamera.film, params->locked_uv);
-    inter    = intersect_triangles_bvh(params->bvh_shape_tree,
-        params->shape->triangles, params->shape->positions, ray, false);
+    inter    = intersect_triangles_bvh(params->bvh, params->shape->triangles,
+        params->shape->positions, ray, false);
     if (!inter.hit) continue;
     pos = eval_position(params->shape, inter.element, inter.uv);
     nor = eval_normal(params->shape, inter.element, inter.uv);
@@ -410,8 +410,7 @@ void brush(sculpt_params *params, shade_shape &glshape,
   float scale_factor = 3.5f / params->radius;
 
   for (int p = 0; p < pairs.size(); p++) {
-    find_neighbors(
-        params->hash_grid, neighbors, pairs[p].first, params->radius);
+    find_neighbors(params->grid, neighbors, pairs[p].first, params->radius);
     auto center = pairs[p].first;
     auto normal = pairs[p].second;
     if (params->negative) normal = -normal;
@@ -443,8 +442,7 @@ void brush(sculpt_params *params, shade_shape &glshape,
     neighbors.clear();
   }
 
-  apply_brush(params->shape, positions, glshape, params->bvh_shape_tree,
-      params->hash_grid);
+  apply_brush(params->shape, positions, glshape, params->bvh, params->grid);
 }
 
 // Compute texture values through the parameterization
@@ -468,8 +466,7 @@ void texture_brush(vector<int> &vertices, image<vec3f> &texture,
     positions[i] += normal * height;
   }
 
-  apply_brush(params->shape, positions, glshape, params->bvh_shape_tree,
-      params->hash_grid);
+  apply_brush(params->shape, positions, glshape, params->bvh, params->grid);
 }
 
 // Cotangent operator
@@ -537,8 +534,7 @@ void smooth(geodesic_solver &solver, vector<int> &stroke_sampling,
   };
   dijkstra(solver, stroke_sampling, distances, params->radius, update);
 
-  apply_brush(params->shape, positions, glshape, params->bvh_shape_tree,
-      params->hash_grid);
+  apply_brush(params->shape, positions, glshape, params->bvh, params->grid);
 
   stroke_sampling.clear();
 }
@@ -659,21 +655,21 @@ int run_shade_sculpt(const shade_sculpt_params &params_) {
     auto mouse_uv = vec2f{input.mouse_pos.x / float(input.window_size.x),
         input.mouse_pos.y / float(input.window_size.y)};
 
-    auto &glcamera           = app->glscene.cameras.at(0);
-    params->camera_ray       = camera_ray(glcamera.frame, glcamera.lens,
+    auto &glcamera       = app->glscene.cameras.at(0);
+    params->camera_ray   = camera_ray(glcamera.frame, glcamera.lens,
         glcamera.aspect, glcamera.film, mouse_uv);
-    params->bvh_intersection = intersect_triangles_bvh(params->bvh_shape_tree,
+    params->intersection = intersect_triangles_bvh(params->bvh,
         params->shape->triangles, params->shape->positions, params->camera_ray,
         false);
-    if (params->bvh_intersection.hit) {
+    if (params->intersection.hit) {
       app->glscene.instances.back().hidden = false;
       view_pointer(params->shape, app->glscene.shapes.back(),
-          params->bvh_intersection, params->radius, 20, params->type);
+          params->intersection, params->radius, 20, params->type);
     } else {
       app->glscene.instances.back().hidden = true;
     }
 
-    auto isec = params->bvh_intersection;
+    auto isec = params->intersection;
     // sculpting
     if (input.mouse_left && isec.hit && !input.modifier_ctrl &&
         (isec.uv.x >= 0 && isec.uv.x < 1) &&
@@ -696,7 +692,7 @@ int run_shade_sculpt(const shade_sculpt_params &params_) {
             params->old_positions, params->old_normals);
       }
       if (params->symmetric) {
-        pairs = symmetric_stroke(pairs, params->shape, params->bvh_shape_tree,
+        pairs = symmetric_stroke(pairs, params->shape, params->bvh,
             params->symmetric_stroke_sampling, params->symmetric_axis);
         if (params->type == brush_type::gaussian) {
           brush(params, app->glscene.shapes[app->glscene.instances[0].shape],

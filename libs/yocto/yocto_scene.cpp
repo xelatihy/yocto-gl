@@ -406,161 +406,159 @@ material_handle add_emission_material(scene_scene& scene, const string& name,
 material_handle add_matte_material(scene_scene& scene, const string& name,
     const vec3f& color, texture_handle color_tex, texture_handle normal_tex) {
   scene.material_names.emplace_back(name);
-  auto& material      = scene.materials.emplace_back();
-  material.color      = color;
-  material.color_tex  = color_tex;
-  material.roughness  = 1;
-  material.normal_tex = normal_tex;
+  auto& material         = scene.materials.emplace_back();
+  material.type          = material_type::matte;
+  material.color         = color;
+  material.opacity       = 1;
+  material.roughness     = 1;
+  material.metallic      = 0;
+  material.ior           = 1.5;
+  material.color_tex     = color_tex;
+  material.roughness_tex = invalid_handle;
+  material.normal_tex    = normal_tex;
   return (int)scene.materials.size() - 1;
 }
-material_handle add_specular_material(scene_scene& scene, const string& name,
-    const vec3f& color, texture_handle color_tex, float roughness,
-    texture_handle roughness_tex, texture_handle normal_tex, float ior,
-    float specular, texture_handle specular_tex, const vec3f& spectint,
-    texture_handle spectint_tex) {
+material_handle add_plastic_material(scene_scene& scene, const string& name,
+    const vec3f& color, float roughness, texture_handle color_tex,
+    texture_handle roughness_tex, texture_handle normal_tex, float ior) {
   scene.material_names.emplace_back(name);
   auto& material         = scene.materials.emplace_back();
+  material.type          = material_type::plastic;
   material.color         = color;
-  material.color_tex     = color_tex;
-  material.specular      = specular;
-  material.specular_tex  = specular_tex;
-  material.spectint      = spectint;
-  material.spectint_tex  = spectint_tex;
+  material.opacity       = 1;
   material.roughness     = roughness;
-  material.roughness_tex = roughness_tex;
   material.ior           = ior;
+  material.color_tex     = color_tex;
+  material.roughness_tex = roughness_tex;
+  material.normal_tex    = normal_tex;
+  return (int)scene.materials.size() - 1;
+}
+material_handle add_metal_material(scene_scene& scene, const string& name,
+    const vec3f& color, float roughness, texture_handle color_tex,
+    texture_handle roughness_tex, texture_handle normal_tex) {
+  scene.material_names.emplace_back(name);
+  auto& material         = scene.materials.emplace_back();
+  material.type          = material_type::metal;
+  material.color         = color;
+  material.opacity       = 1;
+  material.roughness     = roughness;
+  material.metallic      = 1;
+  material.ior           = 1.5;
+  material.color_tex     = color_tex;
+  material.roughness_tex = roughness_tex;
   material.normal_tex    = normal_tex;
   return (int)scene.materials.size() - 1;
 }
 material_handle add_metallic_material(scene_scene& scene, const string& name,
     const vec3f& color, texture_handle color_tex, float roughness,
-    texture_handle roughness_tex, texture_handle normal_tex, float metallic,
-    texture_handle metallic_tex) {
+    float metallic, texture_handle roughness_tex, texture_handle normal_tex,
+    texture_handle metallic_tex, float ior) {
   scene.material_names.emplace_back(name);
   auto& material         = scene.materials.emplace_back();
+  material.type          = material_type::metallic;
   material.color         = color;
-  material.color_tex     = color_tex;
+  material.opacity       = 1;
   material.metallic      = metallic;
-  material.metallic_tex  = metallic_tex;
   material.roughness     = roughness;
-  material.roughness_tex = roughness_tex;
-  material.normal_tex    = normal_tex;
-  return (int)scene.materials.size() - 1;
-}
-material_handle add_transmission_material(scene_scene& scene,
-    const string& name, const vec3f& color, texture_handle color_tex,
-    float roughness, texture_handle roughness_tex, texture_handle normal_tex,
-    float ior, float specular, texture_handle specular_tex, float transmission,
-    texture_handle transmission_tex) {
-  scene.material_names.emplace_back(name);
-  auto& material            = scene.materials.emplace_back();
-  material.color            = color;
-  material.color_tex        = color_tex;
-  material.specular         = specular;
-  material.specular_tex     = specular_tex;
-  material.transmission     = transmission;
-  material.transmission_tex = transmission_tex;
-  material.roughness        = roughness;
-  material.roughness_tex    = roughness_tex;
-  material.ior              = ior;
-  material.thin             = true;
-  material.normal_tex       = normal_tex;
-  return (int)scene.materials.size() - 1;
-}
-material_handle add_volumetric_material(scene_scene& scene, const string& name,
-    const vec3f& color, texture_handle color_tex, float roughness,
-    texture_handle roughness_tex, const vec3f& scattering,
-    texture_handle scattering_tex, texture_handle normal_tex, float ior,
-    float scanisotropy, float trdepth, float specular,
-    texture_handle specular_tex, float transmission,
-    texture_handle transmission_tex) {
-  scene.material_names.emplace_back(name);
-  auto& material            = scene.materials.emplace_back();
-  material.color            = color;
-  material.color_tex        = color_tex;
-  material.specular         = specular;
-  material.specular_tex     = specular_tex;
-  material.transmission     = transmission;
-  material.transmission_tex = transmission_tex;
-  material.roughness        = roughness;
-  material.roughness_tex    = roughness_tex;
-  material.scattering       = scattering;
-  material.scattering_tex   = scattering_tex;
-  material.ior              = ior;
-  material.scanisotropy     = scanisotropy;
-  material.trdepth          = trdepth;
-  material.normal_tex       = normal_tex;
-  material.thin             = false;
-  return (int)scene.materials.size() - 1;
-}
-material_handle add_volumetrict_material(scene_scene& scene, const string& name,
-    const vec3f& color, texture_handle color_tex, float roughness,
-    texture_handle roughness_tex, const vec3f& scattering,
-    texture_handle scattering_tex, texture_handle normal_tex, float ior,
-    float scanisotropy, float trdepth, float specular,
-    texture_handle specular_tex, float translucency,
-    texture_handle translucency_tex) {
-  scene.material_names.emplace_back(name);
-  auto& material            = scene.materials.emplace_back();
-  material.color            = color;
-  material.color_tex        = color_tex;
-  material.specular         = specular;
-  material.specular_tex     = specular_tex;
-  material.translucency     = translucency;
-  material.translucency_tex = translucency_tex;
-  material.roughness        = roughness;
-  material.roughness_tex    = roughness_tex;
-  material.scattering       = scattering;
-  material.scattering_tex   = scattering_tex;
-  material.ior              = ior;
-  material.scanisotropy     = scanisotropy;
-  material.trdepth          = trdepth;
-  material.normal_tex       = normal_tex;
-  material.thin             = false;
-  return (int)scene.materials.size() - 1;
-}
-material_handle add_specular_coated_material(scene_scene& scene,
-    const string& name, const vec3f& color, texture_handle color_tex,
-    float roughness, texture_handle roughness_tex, texture_handle normal_tex,
-    float ior, float specular, texture_handle specular_tex, float coat,
-    texture_handle coat_tex) {
-  scene.material_names.emplace_back(name);
-  auto& material         = scene.materials.emplace_back();
-  material.color         = color;
-  material.color_tex     = color_tex;
-  material.specular      = specular;
-  material.specular_tex  = specular_tex;
-  material.roughness     = roughness;
-  material.roughness_tex = roughness_tex;
-  material.coat          = coat;
-  material.coat_tex      = coat_tex;
   material.ior           = ior;
+  material.color_tex     = color_tex;
+  material.roughness_tex = roughness_tex;
   material.normal_tex    = normal_tex;
   return (int)scene.materials.size() - 1;
 }
-material_handle add_metallic_coated_material(scene_scene& scene,
-    const string& name, const vec3f& color, texture_handle color_tex,
-    float roughness, texture_handle roughness_tex, texture_handle normal_tex,
-    float metallic, texture_handle metallic_tex, float coat,
-    texture_handle coat_tex) {
+material_handle add_thinglass_material(scene_scene& scene, const string& name,
+    const vec3f& color, float roughness, texture_handle color_tex,
+    texture_handle roughness_tex, texture_handle normal_tex, float ior) {
   scene.material_names.emplace_back(name);
   auto& material         = scene.materials.emplace_back();
+  material.type          = material_type::thinglass;
   material.color         = color;
-  material.color_tex     = color_tex;
-  material.metallic      = metallic;
-  material.metallic_tex  = metallic_tex;
+  material.opacity       = 1;
   material.roughness     = roughness;
+  material.metallic      = 0;
+  material.ior           = ior;
+  material.color_tex     = color_tex;
   material.roughness_tex = roughness_tex;
-  material.coat          = coat;
-  material.coat_tex      = coat_tex;
   material.normal_tex    = normal_tex;
+  return (int)scene.materials.size() - 1;
+}
+material_handle add_glass_material(scene_scene& scene, const string& name,
+    const vec3f& color, float roughness, texture_handle color_tex,
+    texture_handle roughness_tex, texture_handle normal_tex, float ior) {
+  scene.material_names.emplace_back(name);
+  auto& material         = scene.materials.emplace_back();
+  material.type          = material_type::glass;
+  material.color         = color;
+  material.opacity       = 1;
+  material.roughness     = roughness;
+  material.metallic      = 0;
+  material.ior           = ior;
+  material.color_tex     = color_tex;
+  material.roughness_tex = roughness_tex;
+  material.normal_tex    = normal_tex;
+  return (int)scene.materials.size() - 1;
+}
+material_handle add_glass_material(scene_scene& scene, const string& name,
+    const vec3f& color, float roughness, const vec3f& scattering,
+    texture_handle color_tex, texture_handle roughness_tex,
+    texture_handle normal_tex, float ior, float scanisotropy, float trdepth) {
+  scene.material_names.emplace_back(name);
+  auto& material         = scene.materials.emplace_back();
+  material.type          = material_type::glass;
+  material.color         = color;
+  material.opacity       = 1;
+  material.roughness     = roughness;
+  material.metallic      = 0;
+  material.ior           = ior;
+  material.scattering    = scattering;
+  material.scanisotropy  = scanisotropy;
+  material.trdepth       = trdepth;
+  material.color_tex     = color_tex;
+  material.roughness_tex = roughness_tex;
+  material.normal_tex    = normal_tex;
+  return (int)scene.materials.size() - 1;
+}
+material_handle add_subsurface_material(scene_scene& scene, const string& name,
+    const vec3f& color, float roughness, const vec3f& scattering,
+    texture_handle color_tex, texture_handle roughness_tex,
+    const texture_handle scattering_tex, texture_handle normal_tex, float ior,
+    float scanisotropy, float trdepth) {
+  scene.material_names.emplace_back(name);
+  auto& material          = scene.materials.emplace_back();
+  material.type           = material_type::subsurface;
+  material.color          = color;
+  material.color_tex      = color_tex;
+  material.roughness      = roughness;
+  material.roughness_tex  = roughness_tex;
+  material.scattering     = scattering;
+  material.scattering_tex = scattering_tex;
+  material.ior            = ior;
+  material.scanisotropy   = scanisotropy;
+  material.trdepth        = trdepth;
+  material.normal_tex     = normal_tex;
+  return (int)scene.materials.size() - 1;
+}
+material_handle add_volume_material(scene_scene& scene, const string& name,
+    const vec3f& color, const vec3f& scattering, float scanisotropy,
+    float trdepth) {
+  scene.material_names.emplace_back(name);
+  auto& material        = scene.materials.emplace_back();
+  material.type         = material_type::volume;
+  material.color        = color;
+  material.scattering   = scattering;
+  material.scanisotropy = scanisotropy;
+  material.trdepth      = trdepth;
+  material.roughness    = 0;
+  material.ior          = 1;
+  material.opacity      = 1;
   return (int)scene.materials.size() - 1;
 }
 material_handle add_transparent_material(scene_scene& scene, const string& name,
-    const vec3f& color, texture_handle color_tex, float opacity,
+    const vec3f& color, float opacity, texture_handle color_tex,
     texture_handle normal_tex) {
   scene.material_names.emplace_back(name);
   auto& material      = scene.materials.emplace_back();
+  material.type       = material_type::matte;
   material.color      = color;
   material.color_tex  = color_tex;
   material.roughness  = 1;
@@ -1081,13 +1079,13 @@ vec3f eval_shading_normal(const scene_scene& scene,
     const scene_instance& instance, int element, const vec2f& uv,
     const vec3f& outgoing) {
   auto& shape    = scene.shapes[instance.shape];
-  auto& material = scene.materials[instance.shape];
+  auto& material = scene.materials[instance.material];
   if (!shape.triangles.empty() || !shape.quads.empty()) {
     auto normal = eval_normal(scene, instance, element, uv);
     if (material.normal_tex != invalid_handle) {
       normal = eval_normalmap(scene, instance, element, uv);
     }
-    if (!material.thin) return normal;
+    if (material.type == material_type::glass) return normal;
     return dot(normal, outgoing) >= 0 ? normal : -normal;
   } else if (!shape.lines.empty()) {
     auto normal = eval_normal(scene, instance, element, uv);
@@ -1142,67 +1140,134 @@ vec3f eval_environment(const scene_scene& scene, const vec3f& direction) {
   return emission;
 }
 
-// Evaluate point
-scene_material_sample eval_material(const scene_scene& scene,
-    const scene_material& material, const vec2f& texcoord) {
-  auto mat = scene_material_sample{};
-  mat.emission =
-      material.emission *
-      xyz(eval_texture(scene, material.emission_tex, texcoord, false));
-  mat.color = material.color *
-              xyz(eval_texture(scene, material.color_tex, texcoord, false));
-  mat.specular = material.specular *
-                 eval_texture(scene, material.specular_tex, texcoord, true).x;
-  mat.metallic = material.metallic *
-                 eval_texture(scene, material.metallic_tex, texcoord, true).x;
-  mat.roughness = material.roughness *
-                  eval_texture(scene, material.roughness_tex, texcoord, true).x;
-  mat.ior  = material.ior;
-  mat.coat = material.coat *
-             eval_texture(scene, material.coat_tex, texcoord, true).x;
-  mat.transmission =
-      material.transmission *
-      eval_texture(scene, material.emission_tex, texcoord, true).x;
-  mat.translucency =
-      material.translucency *
-      eval_texture(scene, material.translucency_tex, texcoord, true).x;
-  mat.opacity = material.opacity *
-                eval_texture(scene, material.opacity_tex, texcoord, true).x;
-  mat.thin = material.thin || material.transmission == 0;
-  mat.scattering =
-      material.scattering *
-      xyz(eval_texture(scene, material.scattering_tex, texcoord, false));
-  mat.scanisotropy = material.scanisotropy;
-  mat.trdepth      = material.trdepth;
-  mat.normalmap    = material.normal_tex != invalid_handle
-                         ? -1 + 2 * xyz(eval_texture(scene, material.normal_tex,
-                                     texcoord, true))
-                         : vec3f{0, 0, 1};
-  return mat;
-}
-
 // constant values
 static const auto coat_ior       = 1.5f;
 static const auto coat_roughness = 0.03f * 0.03f;
 
-// Eval material to obtain emission, brdf and opacity.
-vec3f eval_emission(const scene_scene& scene, const scene_instance& instance,
-    int element, const vec2f& uv, const vec3f& normal, const vec3f& outgoing) {
+// Evaluate material
+material_point eval_material(const scene_scene& scene,
+    const scene_instance& instance, int element, const vec2f& uv) {
   auto& material = scene.materials[instance.material];
   auto  texcoord = eval_texcoord(scene, instance, element, uv);
-  return material.emission *
-         xyz(eval_texture(scene, material.emission_tex, texcoord));
+
+  // evaluate textures
+  auto emission_tex = eval_texture(
+      scene, material.emission_tex, texcoord, false);
+  auto color_shp     = eval_color(scene, instance, element, uv);
+  auto color_tex     = eval_texture(scene, material.color_tex, texcoord, false);
+  auto roughness_tex = eval_texture(
+      scene, material.roughness_tex, texcoord, true);
+  auto scattering_tex = eval_texture(
+      scene, material.scattering_tex, texcoord, false);
+
+  // material point
+  auto point         = material_point{};
+  point.type         = material.type;
+  point.emission     = material.emission * xyz(emission_tex);
+  point.color        = material.color * xyz(color_tex) * xyz(color_shp);
+  point.opacity      = material.opacity * color_tex.w * color_shp.w;
+  point.metallic     = material.metallic * roughness_tex.z;
+  point.roughness    = material.roughness * roughness_tex.y;
+  point.roughness    = point.roughness * point.roughness;
+  point.ior          = material.ior;
+  point.scattering   = material.scattering * xyz(scattering_tex);
+  point.scanisotropy = material.scanisotropy;
+  point.trdepth      = material.trdepth;
+
+  // volume density
+  if (material.type == material_type::glass ||
+      material.type == material_type::volume ||
+      material.type == material_type::subsurface) {
+    point.density = -log(clamp(point.color, 0.0001f, 1.0f)) / point.trdepth;
+  } else {
+    point.density = {0, 0, 0};
+  }
+
+  // fix roughness
+  if (point.type == material_type::matte ||
+      point.type == material_type::metallic ||
+      point.type == material_type::plastic) {
+    point.roughness = clamp(point.roughness, coat_roughness, 1.0f);
+  }
+
+  return point;
 }
 
-// Eval material to obtain emission, brdf and opacity.
-float eval_opacity(const scene_scene& scene, const scene_instance& instance,
-    int element, const vec2f& uv, const vec3f& normal, const vec3f& outgoing) {
-  auto& material = scene.materials[instance.material];
-  auto  texcoord = eval_texcoord(scene, instance, element, uv);
-  auto  opacity  = material.opacity *
-                 eval_texture(scene, material.opacity_tex, texcoord, true).x;
-  if (opacity > 0.999f) opacity = 1;
-  return opacity;
+// Evaluate material
+material_point eval_material(const scene_scene& scene,
+    const scene_material& material, const vec2f& texcoord,
+    const vec4f& color_shp) {
+  // evaluate textures
+  auto emission_tex = eval_texture(
+      scene, material.emission_tex, texcoord, false);
+  auto color_tex     = eval_texture(scene, material.color_tex, texcoord, false);
+  auto roughness_tex = eval_texture(
+      scene, material.roughness_tex, texcoord, true);
+  auto scattering_tex = eval_texture(
+      scene, material.scattering_tex, texcoord, false);
+
+  // material point
+  auto point         = material_point{};
+  point.type         = material.type;
+  point.emission     = material.emission * xyz(emission_tex);
+  point.color        = material.color * xyz(color_tex) * xyz(color_shp);
+  point.opacity      = material.opacity * color_tex.w * color_shp.w;
+  point.metallic     = material.metallic * roughness_tex.z;
+  point.roughness    = material.roughness * roughness_tex.y;
+  point.roughness    = point.roughness * point.roughness;
+  point.ior          = material.ior;
+  point.scattering   = material.scattering * xyz(scattering_tex);
+  point.scanisotropy = material.scanisotropy;
+  point.trdepth      = material.trdepth;
+
+  // volume density
+  if (material.type == material_type::glass ||
+      material.type == material_type::volume ||
+      material.type == material_type::subsurface) {
+    point.density = -log(clamp(point.color, 0.0001f, 1.0f)) / point.trdepth;
+  } else {
+    point.density = {0, 0, 0};
+  }
+
+  // fix roughness
+  if (point.type == material_type::matte ||
+      point.type == material_type::metallic ||
+      point.type == material_type::plastic) {
+    point.roughness = clamp(point.roughness, coat_roughness, 1.0f);
+  }
+
+  return point;
+}
+
+// check if a material is a delta
+bool is_delta(const scene_material& material) {
+  return (material.type == material_type::metal && material.roughness == 0) ||
+         (material.type == material_type::glass && material.roughness == 0) ||
+         (material.type == material_type::thinglass &&
+             material.roughness == 0) ||
+         (material.type == material_type::volume);
+}
+bool is_volumetric(const scene_material& material) {
+  return material.type == material_type::glass ||
+         material.type == material_type::volume ||
+         material.type == material_type::subsurface;
+}
+bool is_volumetric(const scene_scene& scene, const scene_instance& instance) {
+  return is_volumetric(scene.materials[instance.material]);
+}
+
+// check if a brdf is a delta
+bool is_delta(const material_point& material) {
+  return (material.type == material_type::metal && material.roughness == 0) ||
+         (material.type == material_type::glass && material.roughness == 0) ||
+         (material.type == material_type::thinglass &&
+             material.roughness == 0) ||
+         (material.type == material_type::volume);
+}
+bool has_volume(const material_point& material) {
+  return material.type == material_type::glass ||
+         material.type == material_type::volume ||
+         material.type == material_type::subsurface;
 }
 
 }  // namespace yocto

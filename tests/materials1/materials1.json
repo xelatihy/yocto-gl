@@ -122,61 +122,66 @@
   },
   "materials": {
     "floor": {
+      "type": "matte",
       "color": [0.7, 0.7, 0.7],
       "color_tex": "floor"
     },
     "largearealight1": {
+      "type": "matte",
       "emission": [10, 10, 10]
     },
     "largearealight2": {
+      "type": "matte",
       "emission": [10, 10, 10]
     },
     "sphere-plastic-sharp": {
-      "specular": 1,
+      "type": "plastic",
       "color": [0.5, 0.5, 0.7],
       "roughness": 0.01
     },
     "sphere-plastic-rough": {
-      "specular": 1,
+      "type": "plastic",
       "color": [0.5, 0.7, 0.5],
       "roughness": 0.2
     },
     "sphere-matte": {
+      "type": "matte",
       "color": [0.7, 0.7, 0.7],
       "roughness": 1
     },
     "sphere-metal-sharp": {
+      "type": "metal",
       "color": [0.7, 0.7, 0.7],
-      "metallic": 1,
       "roughness": 0
     },
     "sphere-metal-rough": {
+      "type": "metal",
       "color": [0.66, 0.45, 0.34],
-      "metallic": 1,
       "roughness": 0.2
     },
     "bunny-plastic-sharp": {
-      "specular": 1,
+      "type": "plastic",
       "color": [0.5, 0.5, 0.7],
       "roughness": 0.01
     },
     "bunny-plastic-rough": {
-      "specular": 1,
+      "type": "plastic",
       "color": [0.5, 0.7, 0.5],
       "roughness": 0.2
     },
     "bunny-matte": {
+      "type": "matte",
       "color": [0.7, 0.7, 0.7],
       "roughness": 1
     },
     "bunny-metal-sharp": {
+      "type": "metal",
       "color": [0.7, 0.7, 0.7],
-      "metallic": 1,
       "roughness": 0
     },
     "bunny-metal-rough": {
+      "type": "metal",
       "color": [0.66, 0.45, 0.34],
-      "metallic": 1,
       "roughness": 0.2
     }
   }

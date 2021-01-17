@@ -116,46 +116,48 @@
   },
   "materials": {
     "floor": {
+      "type": "matte",
       "color": [0.7, 0.7, 0.7],
-      "color_tex": "floor",
-      "specular": 0
+      "color_tex": "floor"
     },
     "arealight1": {
+      "type": "matte",
       "emission": [20, 20, 20]
     },
     "arealight2": {
+      "type": "matte",
       "emission": [20, 20, 20]
     },
     "sphere-uvgrid": {
+      "type": "plastic",
       "color": [1, 1, 1],
-      "specular": 1,
       "roughness": 0.1,
       "color_tex": "uvgrid"
     },
     "suzanne-subdiv-plastic-rough": {
+      "type": "plastic",
       "color": [0.5, 0.7, 0.5],
-      "specular": 1,
       "roughness": 0.2
     },
     "hairball1-hair": {
+      "type": "matte",
       "color": [0.7, 0.7, 0.7],
-      "specular": 0,
       "roughness": 1
     },
     "sphere-displaced-plastic-rough": {
+      "type": "plastic",
       "color": [0.5, 0.7, 0.5],
-      "specular": 1,
       "roughness": 0.2
     },
     "cube-uvgrid": {
+      "type": "plastic",
       "color": [1, 1, 1],
-      "specular": 1,
       "roughness": 0.1,
       "color_tex": "uvgrid"
     },
     "hairballi-hair": {
+      "type": "matte",
       "color": [0.7, 0.7, 0.7],
-      "specular": 0,
       "roughness": 1
     }
   }

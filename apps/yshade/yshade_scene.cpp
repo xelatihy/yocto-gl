@@ -123,17 +123,42 @@ static void init_glscene(shade_scene& glscene, const sceneio_scene& ioscene,
     auto  handle     = add_material(glscene);
     auto& glmaterial = glscene.materials[handle];
     set_emission(glmaterial, iomaterial.emission, iomaterial.emission_tex);
-    set_color(glmaterial, (1 - iomaterial.transmission) * iomaterial.color,
-        iomaterial.color_tex);
-    set_specular(glmaterial,
-        (1 - iomaterial.transmission) * iomaterial.specular,
-        iomaterial.specular_tex);
-    set_metallic(glmaterial,
-        (1 - iomaterial.transmission) * iomaterial.metallic,
-        iomaterial.metallic_tex);
-    set_roughness(glmaterial, iomaterial.roughness, iomaterial.roughness_tex);
-    set_opacity(glmaterial, iomaterial.opacity, iomaterial.opacity_tex);
+    set_opacity(glmaterial, iomaterial.opacity, invalid_handle);
     set_normalmap(glmaterial, iomaterial.normal_tex);
+    switch (iomaterial.type) {
+      case material_type::matte: {
+        set_color(glmaterial, iomaterial.color, iomaterial.color_tex);
+        set_specular(glmaterial, 0, invalid_handle);
+        set_metallic(glmaterial, 0, invalid_handle);
+        set_roughness(glmaterial, 0, invalid_handle);
+      } break;
+      case material_type::plastic: {
+        set_color(glmaterial, iomaterial.color, iomaterial.color_tex);
+        set_specular(glmaterial, 1, invalid_handle);
+        set_metallic(glmaterial, 0, invalid_handle);
+        set_roughness(glmaterial, iomaterial.roughness, invalid_handle);
+      } break;
+      case material_type::metal: {
+        set_color(glmaterial, iomaterial.color, iomaterial.color_tex);
+        set_specular(glmaterial, 0, invalid_handle);
+        set_metallic(glmaterial, 1, invalid_handle);
+        set_roughness(
+            glmaterial, iomaterial.roughness, iomaterial.roughness_tex);
+      } break;
+      case material_type::metallic: {
+        set_color(glmaterial, iomaterial.color, iomaterial.color_tex);
+        set_specular(glmaterial, 1, invalid_handle);
+        set_metallic(glmaterial, iomaterial.metallic, invalid_handle);
+        set_roughness(glmaterial, iomaterial.roughness, invalid_handle);
+      } break;
+      default: {
+        set_color(glmaterial, iomaterial.color, iomaterial.color_tex);
+        set_specular(glmaterial, 0, invalid_handle);
+        set_metallic(glmaterial, 0, invalid_handle);
+        set_roughness(
+            glmaterial, iomaterial.roughness, iomaterial.roughness_tex);
+      } break;
+    }
   }
 
   // shapes

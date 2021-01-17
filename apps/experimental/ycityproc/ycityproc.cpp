@@ -469,16 +469,13 @@ bool geojson_to_scene(sceneio_scene& scene, const geojson_scene& geojson,
         // Water characteristics
         if (type == geojson_element_type::water ||
             type == geojson_element_type::waterway) {
-          material.specular     = 1.0f;
-          material.transmission = 0.99f;
-          material.metallic     = 0.8f;
-          material.roughness    = 0.1f;
+          material.type      = material_type::metal;
+          material.roughness = 0.1f;
         }
 
         // Road characteristics
         if (type == geojson_element_type::highway) {
           material.roughness = 0.9f;
-          material.specular  = 0.7f;
         }
 
         // Filling buildings
