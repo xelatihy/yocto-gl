@@ -125,8 +125,8 @@ static void init_glscene(shade_scene& glscene, const sceneio_scene& ioscene,
     set_emission(glmaterial, iomaterial.emission, iomaterial.emission_tex);
     set_opacity(glmaterial, iomaterial.opacity, invalid_handle);
     set_normalmap(glmaterial, iomaterial.normal_tex);
-    switch (material.type) {
-      case material_type::diffuse: {
+    switch (iomaterial.type) {
+      case material_type::matte: {
         set_color(glmaterial, iomaterial.color, iomaterial.color_tex);
         set_specular(glmaterial, 0, invalid_handle);
         set_metallic(glmaterial, 0, invalid_handle);
