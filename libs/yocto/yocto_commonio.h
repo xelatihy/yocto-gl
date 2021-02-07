@@ -43,6 +43,7 @@
 #include <array>
 #include <cstdio>
 #include <functional>
+#include <memory>
 #include <stdexcept>
 #include <string>
 #include <string_view>
@@ -50,7 +51,6 @@
 #include <unordered_map>
 #include <utility>
 #include <vector>
-#include <memory>
 
 // -----------------------------------------------------------------------------
 // USING DIRECTIVES

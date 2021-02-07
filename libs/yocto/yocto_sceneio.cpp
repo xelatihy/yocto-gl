@@ -3008,7 +3008,7 @@ static bool save_gltf_scene(const string& filename, const scene_scene& scene,
       groot.children[idx] = &gltf.nodes[idx];
     }
     auto& gscene = gltf.scenes[0];
-    gscene.name = copy_string("scene");
+    gscene.name  = copy_string("scene");
     alloc_arrays(gscene.nodes, gscene.nodes_count, 1);
     gscene.nodes[0] = &groot;
   }
