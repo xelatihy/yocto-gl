@@ -697,7 +697,7 @@ bool save_ply(const string& filename, const ply_model& ply, string& error) {
 
 // Get ply properties
 bool has_property(
-    ply_model& ply, const string& element, const string& property) {
+    const ply_model& ply, const string& element, const string& property) {
   for (auto& elem : ply.elements) {
     if (elem.name != element) continue;
     for (auto& prop : elem.properties) {
@@ -716,6 +716,16 @@ ply_property& get_property(
   }
   throw std::runtime_error("property not found");
 }
+const ply_property& get_property(
+    const ply_model& ply, const string& element, const string& property) {
+  for (auto& elem : ply.elements) {
+    if (elem.name != element) continue;
+    for (auto& prop : elem.properties) {
+      if (prop.name == property) return prop;
+    }
+  }
+  throw std::runtime_error("property not found");
+}
 template <typename T, typename T1>
 inline bool convert_property(const vector<T1>& prop, vector<T>& values) {
   values = vector<T>(prop.size());
@@ -723,7 +733,7 @@ inline bool convert_property(const vector<T1>& prop, vector<T>& values) {
   return true;
 }
 template <typename T>
-inline bool convert_property(ply_property& prop, vector<T>& values) {
+inline bool convert_property(const ply_property& prop, vector<T>& values) {
   switch (prop.type) {
     case ply_type::i8: return convert_property(prop.data_i8, values);
     case ply_type::i16: return convert_property(prop.data_i16, values);
@@ -740,8 +750,8 @@ inline bool convert_property(ply_property& prop, vector<T>& values) {
   throw std::runtime_error{"should not have gotten here"};
   return false;
 }
-bool get_value(ply_model& ply, const string& element, const string& property,
-    vector<float>& values) {
+bool get_value(const ply_model& ply, const string& element,
+    const string& property, vector<float>& values) {
   values.clear();
   if (!has_property(ply, element, property)) return false;
   auto& prop = get_property(ply, element, property);
@@ -749,7 +759,7 @@ bool get_value(ply_model& ply, const string& element, const string& property,
   if (!convert_property(prop, values)) return false;
   return true;
 }
-bool get_values(ply_model& ply, const string& element,
+bool get_values(const ply_model& ply, const string& element,
     const array<string, 2>& properties, vector<vec2f>& values) {
   values.clear();
   auto x = vector<float>{}, y = vector<float>{};
@@ -759,7 +769,7 @@ bool get_values(ply_model& ply, const string& element,
   for (auto i = (size_t)0; i < values.size(); i++) values[i] = {x[i], y[i]};
   return true;
 }
-bool get_values(ply_model& ply, const string& element,
+bool get_values(const ply_model& ply, const string& element,
     const array<string, 3>& properties, vector<vec3f>& values) {
   values.clear();
   auto x = vector<float>{}, y = vector<float>{}, z = vector<float>{};
@@ -771,7 +781,7 @@ bool get_values(ply_model& ply, const string& element,
     values[i] = {x[i], y[i], z[i]};
   return true;
 }
-bool get_values(ply_model& ply, const string& element,
+bool get_values(const ply_model& ply, const string& element,
     const array<string, 4>& properties, vector<vec4f>& values) {
   values.clear();
   auto x = vector<float>{}, y = vector<float>{}, z = vector<float>{},
@@ -785,7 +795,7 @@ bool get_values(ply_model& ply, const string& element,
     values[i] = {x[i], y[i], z[i], w[i]};
   return true;
 }
-bool get_values(ply_model& ply, const string& element,
+bool get_values(const ply_model& ply, const string& element,
     const array<string, 12>& properties, vector<frame3f>& values) {
   values.clear();
   auto coords = array<vector<float>, 12>{};
@@ -797,8 +807,8 @@ bool get_values(ply_model& ply, const string& element,
   }
   return true;
 }
-bool get_lists(ply_model& ply, const string& element, const string& property,
-    vector<vector<int>>& lists) {
+bool get_lists(const ply_model& ply, const string& element,
+    const string& property, vector<vector<int>>& lists) {
   lists.clear();
   if (!has_property(ply, element, property)) return false;
   auto& prop = get_property(ply, element, property);
@@ -816,7 +826,7 @@ bool get_lists(ply_model& ply, const string& element, const string& property,
   }
   return true;
 }
-bool get_list_sizes(ply_model& ply, const string& element,
+bool get_list_sizes(const ply_model& ply, const string& element,
     const string& property, vector<byte>& sizes) {
   if (!has_property(ply, element, property)) return {};
   auto& prop = get_property(ply, element, property);
@@ -824,7 +834,7 @@ bool get_list_sizes(ply_model& ply, const string& element,
   sizes = prop.ldata_u8;
   return true;
 }
-bool get_list_values(ply_model& ply, const string& element,
+bool get_list_values(const ply_model& ply, const string& element,
     const string& property, vector<int>& values) {
   if (!has_property(ply, element, property)) return {};
   auto& prop = get_property(ply, element, property);
@@ -839,13 +849,13 @@ inline vector<vec2f> flip_ply_texcoord(const vector<vec2f>& texcoords) {
 }
 
 // Get ply properties for meshes
-bool get_positions(ply_model& ply, vector<vec3f>& positions) {
+bool get_positions(const ply_model& ply, vector<vec3f>& positions) {
   return get_values(ply, "vertex", {"x", "y", "z"}, positions);
 }
-bool get_normals(ply_model& ply, vector<vec3f>& normals) {
+bool get_normals(const ply_model& ply, vector<vec3f>& normals) {
   return get_values(ply, "vertex", {"nx", "ny", "nz"}, normals);
 }
-bool get_texcoords(ply_model& ply, vector<vec2f>& texcoords, bool flipv) {
+bool get_texcoords(const ply_model& ply, vector<vec2f>& texcoords, bool flipv) {
   if (has_property(ply, "vertex", "u")) {
     if (!get_values(ply, "vertex", {"u", "v"}, texcoords)) return false;
   } else {
@@ -856,10 +866,10 @@ bool get_texcoords(ply_model& ply, vector<vec2f>& texcoords, bool flipv) {
   }
   return true;
 }
-bool get_colors(ply_model& ply, vector<vec3f>& colors) {
+bool get_colors(const ply_model& ply, vector<vec3f>& colors) {
   return get_values(ply, "vertex", {"red", "green", "blue"}, colors);
 }
-bool get_colors(ply_model& ply, vector<vec4f>& colors) {
+bool get_colors(const ply_model& ply, vector<vec4f>& colors) {
   if (has_property(ply, "vertex", "alpha")) {
     return get_values(ply, "vertex", {"red", "green", "blue", "alpha"}, colors);
   } else {
@@ -872,13 +882,13 @@ bool get_colors(ply_model& ply, vector<vec4f>& colors) {
     return true;
   }
 }
-bool get_radius(ply_model& ply, vector<float>& radius) {
+bool get_radius(const ply_model& ply, vector<float>& radius) {
   return get_value(ply, "vertex", "radius", radius);
 }
-bool get_faces(ply_model& ply, vector<vector<int>>& faces) {
+bool get_faces(const ply_model& ply, vector<vector<int>>& faces) {
   return get_lists(ply, "face", "vertex_indices", faces);
 }
-bool get_triangles(ply_model& ply, vector<vec3i>& triangles) {
+bool get_triangles(const ply_model& ply, vector<vec3i>& triangles) {
   triangles.clear();
   auto indices = vector<int>{};
   auto sizes   = vector<uint8_t>{};
@@ -896,7 +906,7 @@ bool get_triangles(ply_model& ply, vector<vec3i>& triangles) {
   }
   return true;
 }
-bool get_quads(ply_model& ply, vector<vec4i>& quads) {
+bool get_quads(const ply_model& ply, vector<vec4i>& quads) {
   quads.clear();
   auto indices = vector<int>{};
   auto sizes   = vector<uint8_t>{};
@@ -919,14 +929,15 @@ bool get_quads(ply_model& ply, vector<vec4i>& quads) {
   }
   return true;
 }
-bool get_faces(ply_model& ply, vector<vec3i>& triangles, vector<vec4i>& quads) {
+bool get_faces(
+    const ply_model& ply, vector<vec3i>& triangles, vector<vec4i>& quads) {
   if (has_quads(ply)) {
-    get_quads(ply, quads);
+    return get_quads(ply, quads);
   } else {
-    get_triangles(ply, triangles);
+    return get_triangles(ply, triangles);
   }
 }
-bool get_lines(ply_model& ply, vector<vec2i>& lines) {
+bool get_lines(const ply_model& ply, vector<vec2i>& lines) {
   auto indices = vector<int>{};
   auto sizes   = vector<uint8_t>{};
   if (!get_list_values(ply, "line", "vertex_indices", indices)) return false;
@@ -942,10 +953,10 @@ bool get_lines(ply_model& ply, vector<vec2i>& lines) {
   }
   return true;
 }
-bool get_points(ply_model& ply, vector<int>& values) {
+bool get_points(const ply_model& ply, vector<int>& values) {
   return get_list_values(ply, "point", "vertex_indices", values);
 }
-bool has_quads(ply_model& ply) {
+bool has_quads(const ply_model& ply) {
   auto sizes = vector<uint8_t>{};
   if (!get_list_sizes(ply, "face", "vertex_indices", sizes)) return false;
   for (auto size : sizes)
@@ -1922,6 +1933,18 @@ inline vector<vec2f> flip_obj_texcoord(const vector<vec2f>& texcoord) {
 }
 
 // Get obj shape
+void get_faces(const obj_shape& shape, vector<vec3i>& triangles,
+    vector<vec4i>& quads, vector<vec3f>& positions, vector<vec3f>& normals,
+    vector<vec2f>& texcoords, vector<string>& materials,
+    vector<int>& ematerials, bool flipv) {
+  if (has_quads(shape)) {
+    get_quads(shape, quads, positions, normals, texcoords, materials,
+        ematerials, flipv);
+  } else {
+    get_triangles(shape, triangles, positions, normals, texcoords, materials,
+        ematerials, flipv);
+  }
+}
 void get_triangles(const obj_shape& shape, vector<vec3i>& triangles,
     vector<vec3f>& positions, vector<vec3f>& normals, vector<vec2f>& texcoords,
     vector<string>& materials, vector<int>& ematerials, bool flipv) {
@@ -2059,7 +2082,7 @@ void get_fvquads(const obj_shape& shape, vector<vec4i>& quadspos,
   }
 }
 
-bool has_quads(obj_shape& shape) {
+bool has_quads(const obj_shape& shape) {
   for (auto& face : shape.faces)
     if (face.size == 4) return true;
   return false;

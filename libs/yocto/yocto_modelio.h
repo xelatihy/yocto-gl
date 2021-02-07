@@ -113,40 +113,42 @@ bool save_ply(const string& filename, const ply_model& ply, string& error);
 
 // Get ply properties
 bool has_property(
-    ply_model& ply, const string& element, const string& property);
+    const ply_model& ply, const string& element, const string& property);
 
-bool get_value(ply_model& ply, const string& element, const string& property,
-    vector<float>& values);
-bool get_values(ply_model& ply, const string& element,
+bool get_value(const ply_model& ply, const string& element,
+    const string& property, vector<float>& values);
+bool get_values(const ply_model& ply, const string& element,
     const array<string, 2>& properties, vector<vec4f>& values);
-bool get_values(ply_model& ply, const string& element,
+bool get_values(const ply_model& ply, const string& element,
     const array<string, 3>& properties, vector<vec3f>& values);
-bool get_values(ply_model& ply, const string& element,
+bool get_values(const ply_model& ply, const string& element,
     const array<string, 4>& properties, vector<vec4f>& values);
-bool get_values(ply_model& ply, const string& element,
+bool get_values(const ply_model& ply, const string& element,
     const array<string, 12>& properties, vector<frame3f>& values);
 
-bool get_lists(ply_model& ply, const string& element, const string& property,
-    vector<vector<int>>& lists);
-bool get_list_sizes(ply_model& ply, const string& element,
+bool get_lists(const ply_model& ply, const string& element,
+    const string& property, vector<vector<int>>& lists);
+bool get_list_sizes(const ply_model& ply, const string& element,
     const string& property, vector<byte>& sizes);
-bool get_list_values(ply_model& ply, const string& element,
+bool get_list_values(const ply_model& ply, const string& element,
     const string& property, vector<int>& values);
 
 // Get ply properties for meshes
-bool get_positions(ply_model& ply, vector<vec3f>& values);
-bool get_normals(ply_model& ply, vector<vec3f>& values);
-bool get_texcoords(ply_model& ply, vector<vec2f>& values, bool flipv = false);
-bool get_colors(ply_model& ply, vector<vec3f>& values);
-bool get_colors(ply_model& ply, vector<vec4f>& values);
-bool get_radius(ply_model& ply, vector<float>& values);
-bool get_faces(ply_model& ply, vector<vector<int>>*& faces);
-bool get_lines(ply_model& ply, vector<vec2i>& lines);
-bool get_points(ply_model& ply, vector<int>& points);
-bool get_triangles(ply_model& ply, vector<vec3i>& triangles);
-bool get_quads(ply_model& ply, vector<vec4i>& quads);
-bool get_faces(ply_model& ply, vector<vec3i>& triangles, vector<vec4i>& quads);
-bool has_quads(ply_model& ply);
+bool get_positions(const ply_model& ply, vector<vec3f>& values);
+bool get_normals(const ply_model& ply, vector<vec3f>& values);
+bool get_texcoords(
+    const ply_model& ply, vector<vec2f>& values, bool flipv = false);
+bool get_colors(const ply_model& ply, vector<vec3f>& values);
+bool get_colors(const ply_model& ply, vector<vec4f>& values);
+bool get_radius(const ply_model& ply, vector<float>& values);
+bool get_faces(const ply_model& ply, vector<vector<int>>*& faces);
+bool get_lines(const ply_model& ply, vector<vec2i>& lines);
+bool get_points(const ply_model& ply, vector<int>& points);
+bool get_triangles(const ply_model& ply, vector<vec3i>& triangles);
+bool get_quads(const ply_model& ply, vector<vec4i>& quads);
+bool get_faces(
+    const ply_model& ply, vector<vec3i>& triangles, vector<vec4i>& quads);
+bool has_quads(const ply_model& ply);
 
 // Add ply properties
 bool add_value(ply_model& ply, const string& element, const string& property,
@@ -317,6 +319,10 @@ bool save_obj(const string& filename, const obj_scene& obj, string& error);
 // to ensure that no duplication occurs, either use the facevarying interface,
 // or set `no_vertex_duplication`. In the latter case, the code will fallback
 // to position only if duplication occurs.
+void get_faces(const obj_shape& shape, vector<vec3i>& triangles,
+    vector<vec4i>& quads, vector<vec3f>& positions, vector<vec3f>& normals,
+    vector<vec2f>& texcoords, vector<string>& materials,
+    vector<int>& ematerials, bool flip_texcoord = false);
 void get_triangles(const obj_shape& shape, vector<vec3i>& triangles,
     vector<vec3f>& positions, vector<vec3f>& normals, vector<vec2f>& texcoords,
     vector<string>& materials, vector<int>& ematerials,
@@ -338,9 +344,12 @@ void get_fvquads(const obj_shape& shape, vector<vec4i>& quadspos,
     vector<vec3f>& positions, vector<vec3f>& normals, vector<vec2f>& texcoords,
     vector<string>& materials, vector<int>& ematerials,
     bool flip_texcoord = false);
-bool has_quads(obj_shape& shape);
+bool has_quads(const obj_shape& shape);
 
 // Get obj shape by extracting the elements beloing to only one material.
+void get_faces(const obj_shape& shape, int material, vector<vec3i>& triangles,
+    vector<vec4i>& quads, vector<vec3f>& positions, vector<vec3f>& normals,
+    vector<vec2f>& texcoords, bool flip_texcoord = false);
 void get_triangles(const obj_shape& shape, int material,
     vector<vec3i>& triangles, vector<vec3f>& positions, vector<vec3f>& normals,
     vector<vec2f>& texcoords, bool flip_texcoord = false);

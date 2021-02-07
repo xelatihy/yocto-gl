@@ -585,13 +585,9 @@ static bool load_obj_shape(const string& filename, shape_data& shape,
   // decide what to do and get properties
   auto materials  = vector<string>{};
   auto ematerials = vector<int>{};
-  auto has_quads_ = has_quads(oshape);
-  if (!oshape.faces.empty() && !has_quads_) {
-    get_triangles(oshape, shape.triangles, shape.positions, shape.normals,
-        shape.texcoords, materials, ematerials, flip_texcoord);
-  } else if (!oshape.faces.empty() && has_quads_) {
-    get_quads(oshape, shape.quads, shape.positions, shape.normals,
-        shape.texcoords, materials, ematerials, flip_texcoord);
+  if (!oshape.faces.empty()) {
+    get_faces(oshape, shape.triangles, shape.quads, shape.positions,
+        shape.normals, shape.texcoords, materials, ematerials, flip_texcoord);
   } else if (!oshape.lines.empty()) {
     get_lines(oshape, shape.lines, shape.positions, shape.normals,
         shape.texcoords, materials, ematerials, flip_texcoord);
