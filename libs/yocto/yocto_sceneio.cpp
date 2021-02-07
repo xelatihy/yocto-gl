@@ -2849,7 +2849,7 @@ static bool load_gltf_scene(const string& filename, scene_scene& scene,
       for (auto& gmaterial : gltf.at("materials")) {
         auto& material    = scene.materials.emplace_back();
         material.type     = material_type::metallic;
-        material.emission = gmaterial.value("emissiveFactor", vec3f{1, 1, 1});
+        material.emission = gmaterial.value("emissiveFactor", vec3f{0, 0, 0});
         material.emission_tex = get_texture(gmaterial, "emissiveTexture");
         material.normal_tex   = get_texture(gmaterial, "normalTexture");
         if (gmaterial.contains("pbrMetallicRoughness")) {

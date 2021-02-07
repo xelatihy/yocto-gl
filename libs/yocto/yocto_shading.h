@@ -671,7 +671,7 @@ inline vec3f eval_metallic(const vec3f& color, float ior, float roughness,
     const vec3f& incoming) {
   if (dot(normal, incoming) * dot(normal, outgoing) <= 0) return zero3f;
   auto reflectivity = lerp(
-      reflectivity_to_eta(vec3f{ior, ior, ior}), color, metallic);
+      eta_to_reflectivity(vec3f{ior, ior, ior}), color, metallic);
   auto up_normal = dot(normal, outgoing) <= 0 ? -normal : normal;
   auto F1        = fresnel_schlick(reflectivity, up_normal, outgoing);
   auto halfway   = normalize(incoming + outgoing);
@@ -681,8 +681,7 @@ inline vec3f eval_metallic(const vec3f& color, float ior, float roughness,
       roughness, up_normal, halfway, outgoing, incoming);
   return color * (1 - metallic) * (1 - F1) / pif *
              abs(dot(up_normal, incoming)) +
-         vec3f{1, 1, 1} * F * D * G /
-             (4 * dot(up_normal, outgoing) * dot(up_normal, incoming)) *
+         F * D * G / (4 * dot(up_normal, outgoing) * dot(up_normal, incoming)) *
              abs(dot(up_normal, incoming));
 }
 
@@ -692,7 +691,7 @@ inline vec3f sample_metallic(const vec3f& color, float ior, float roughness,
     const vec2f& rn) {
   auto up_normal    = dot(normal, outgoing) <= 0 ? -normal : normal;
   auto reflectivity = lerp(
-      reflectivity_to_eta(vec3f{ior, ior, ior}), color, metallic);
+      eta_to_reflectivity(vec3f{ior, ior, ior}), color, metallic);
   if (rnl < mean(fresnel_schlick(reflectivity, up_normal, outgoing))) {
     auto halfway = sample_microfacet(roughness, up_normal, rn);
     return reflect(outgoing, halfway);
@@ -709,7 +708,7 @@ inline float sample_metallic_pdf(const vec3f& color, float ior, float roughness,
   auto up_normal    = dot(normal, outgoing) <= 0 ? -normal : normal;
   auto halfway      = normalize(outgoing + incoming);
   auto reflectivity = lerp(
-      reflectivity_to_eta(vec3f{ior, ior, ior}), color, metallic);
+      eta_to_reflectivity(vec3f{ior, ior, ior}), color, metallic);
   auto F = mean(fresnel_schlick(reflectivity, up_normal, outgoing));
   return F * sample_microfacet_pdf(roughness, up_normal, halfway) /
              (4 * abs(dot(outgoing, halfway))) +
