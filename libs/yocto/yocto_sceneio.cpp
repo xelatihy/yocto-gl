@@ -2704,7 +2704,7 @@ static bool load_gltf_scene(const string& filename, scene_scene& scene,
   return true;
 }
 
-// #define YOCTO_GLTF_OUT
+#define YOCTO_GLTF_OUT
 
 #ifdef YOCTO_GLTF_OUT
 
@@ -2895,6 +2895,7 @@ static bool save_gltf_scene(const string& filename, const scene_scene& scene,
         gview.size   = sizeof(values.front()) * values.size();
         gview.offset = gbuffer.size;
         gview.stride = 0;
+        gview.type   = cgltf_buffer_view_type_vertices;
         gbuffer.size += gview.size;
         auto& gaccessor          = gltf.accessors[cur_accessor++];
         gaccessor.buffer_view    = &gview;
@@ -2948,6 +2949,7 @@ static bool save_gltf_scene(const string& filename, const scene_scene& scene,
         gview.buffer = &gbuffer;
         gview.size   = sizeof(values.front()) * values.size();
         gview.offset = gbuffer.size;
+        gview.type   = cgltf_buffer_view_type_indices;
         gbuffer.size += gview.size;
         auto& gaccessor          = gltf.accessors[cur_accessor++];
         gaccessor.buffer_view    = &gview;
@@ -2984,7 +2986,7 @@ static bool save_gltf_scene(const string& filename, const scene_scene& scene,
       memcpy(gnode.matrix, &mat, sizeof(mat4f));
     };
     alloc_arrays(gltf.nodes, gltf.nodes_count,
-        scene.cameras.size() + scene.instances.size());
+        scene.cameras.size() + scene.instances.size() + 1);
     alloc_arrays(gltf.scenes, gltf.scenes_count, 1);
     auto cur_node = (size_t)0;
     for (auto& camera : scene.cameras) {
@@ -2999,6 +3001,16 @@ static bool save_gltf_scene(const string& filename, const scene_scene& scene,
       gnode.mesh  = &gltf.meshes[mesh_map[{instance.shape, instance.material}]];
       set_matrix(gnode, instance.frame);
     }
+    auto& groot = gltf.nodes[cur_node++];
+    groot.name  = copy_string("root");
+    alloc_arrays(groot.children, groot.children_count, gltf.nodes_count - 1);
+    for (auto idx = 0; idx < gltf.nodes_count - 1; idx++) {
+      groot.children[idx] = &gltf.nodes[idx];
+    }
+    auto& gscene = gltf.scenes[0];
+    gscene.name = copy_string("scene");
+    alloc_arrays(gscene.nodes, gscene.nodes_count, 1);
+    gscene.nodes[0] = &groot;
   }
 
   // save json
