@@ -859,11 +859,17 @@ inline void to_json(njson& j, const mat4f& value) {
 inline void from_json(const njson& j, vec3f& value) {
   nlohmann::from_json(j, (array<float, 3>&)value);
 }
+inline void from_json(const njson& j, vec4f& value) {
+  nlohmann::from_json(j, (array<float, 4>&)value);
+}
 inline void from_json(const njson& j, mat3f& value) {
   nlohmann::from_json(j, (array<float, 9>&)value);
 }
 inline void from_json(const njson& j, frame3f& value) {
   nlohmann::from_json(j, (array<float, 12>&)value);
+}
+inline void from_json(const njson& j, mat4f& value) {
+  nlohmann::from_json(j, (array<float, 16>&)value);
 }
 
 inline void to_json(njson& j, material_type value) {
@@ -2721,6 +2727,10 @@ static bool load_gltf_scene(const string& filename, scene_scene& scene,
     error = filename + ": primitive error";
     return false;
   };
+  auto parse_error = [filename, &error]() {
+    error = filename + ": parse error";
+    return false;
+  };
   auto dependent_error = [filename, &error]() {
     error = filename + ": error in " + error;
     return false;
@@ -2731,293 +2741,483 @@ static bool load_gltf_scene(const string& filename, scene_scene& scene,
   if (progress_cb) progress_cb("load scene", progress.x++, progress.y);
 
   // load gltf
-  auto params = cgltf_options{};
-  memset(&params, 0, sizeof(params));
-  auto data   = (cgltf_data*)nullptr;
-  auto result = cgltf_parse_file(&params, filename.c_str(), &data);
-  if (result != cgltf_result_success) return read_error();
-  auto gltf = std::unique_ptr<cgltf_data, void (*)(cgltf_data*)>{
-      data, cgltf_free};
+  auto gltf = njson{};
+  if (!load_json(filename, gltf, error)) return false;
 
   // handle progress
   if (progress_cb) progress_cb("load scene", progress.x++, progress.y);
 
   // load buffers
+  auto bnames = vector<string>{};
+  try {
+    if (gltf.contains("buffers")) {
+      for (auto& gbuffer : gltf.at("buffers")) {
+        if (!gbuffer.contains("uri")) return parse_error();
+        bnames.push_back(gbuffer.value("uri", ""));
+      }
+    }
+  } catch (...) {
+    return parse_error();
+  }
+  auto buffers = vector<vector<byte>>();
+  buffers.reserve(bnames.size());
   auto dirname = path_dirname(filename);
-  if (!dirname.empty()) dirname += "/";
-  if (cgltf_load_buffers(&params, data, dirname.c_str()) !=
-      cgltf_result_success)
-    return read_error();
-
-  // handle progress
-  if (progress_cb) progress_cb("load scene", progress.x++, progress.y);
-
-  // convert asset
-  {
-    auto gast = &gltf->asset;
-    if (gast->copyright != nullptr) scene.asset.copyright = gast->copyright;
+  for (auto& name : bnames) {
+    progress_cb("load buffer", progress.x++, progress.y);
+    if (!load_binary(path_join(dirname, name), buffers.emplace_back(), error))
+      return dependent_error();
   }
 
-  // prepare list of effective nodes
-  auto visible_nodes = vector<bool>(gltf->nodes_count, false);
-  auto gscene        = gltf->scene != nullptr ? gltf->scene : gltf->scenes;
-  if (gscene != nullptr) {
-    auto node_index = unordered_map<cgltf_node*, int>{};
-    node_index.reserve(gltf->nodes_count);
-    for (auto nid = 0; nid < gltf->nodes_count; nid++)
-      node_index[&gltf->nodes[nid]] = nid;
-    auto stack = vector<cgltf_node*>{};
-    for (auto nid = 0; nid < gscene->nodes_count; nid++)
-      stack.push_back(gscene->nodes[nid]);
-    while (!stack.empty()) {
-      auto gnde = stack.back();
-      stack.pop_back();
-      visible_nodes[node_index[gnde]] = true;
-      for (auto nid = 0; nid < gnde->children_count; nid++)
-        stack.push_back(gnde->children[nid]);
+  // handle progress
+  if (progress_cb) progress_cb("convert scene", progress.x++, progress.y);
+
+  // convert asset
+  if (gltf.contains("asset")) {
+    try {
+      scene.asset.copyright = gltf.value("copyright", ""s);
+    } catch (...) {
+      return parse_error();
     }
-  } else {
-    for (auto nid = 0; nid < gltf->nodes_count; nid++)
-      visible_nodes[nid] = true;
   }
 
   // convert cameras
-  for (auto nid = 0; nid < gltf->nodes_count; nid++) {
-    if (!visible_nodes[nid]) continue;
-    auto gnde = &gltf->nodes[nid];
-    if (gnde->camera == nullptr) continue;
-    auto mat = mat4f{};
-    cgltf_node_transform_world(gnde, &mat.x.x);
-    auto  gcam          = gnde->camera;
-    auto& camera        = scene.cameras.emplace_back();
-    camera.frame        = mat_to_frame(mat);
-    camera.orthographic = gcam->type == cgltf_camera_type_orthographic;
-    if (camera.orthographic) {
-      auto ortho    = &gcam->data.orthographic;
-      camera.aspect = ortho->xmag / ortho->ymag;
-      camera.lens   = ortho->ymag;  // this is probably bogus
-      camera.film   = 0.036;
-    } else {
-      auto persp    = &gcam->data.perspective;
-      camera.aspect = persp->aspect_ratio;
-      if (camera.aspect == 0) camera.aspect = 16.0f / 9.0f;
-      camera.film = 0.036;
-      if (camera.aspect >= 1) {
-        camera.lens = (camera.film / camera.aspect) /
-                      (2 * tan(persp->yfov / 2));
-      } else {
-        camera.lens = camera.film / (2 * tan(persp->yfov / 2));
+  auto cameras = vector<scene_camera>{};
+  if (gltf.contains("cameras")) {
+    try {
+      for (auto& gcamera : gltf.at("cameras")) {
+        auto& camera = cameras.emplace_back();
+        auto  type   = gcamera.value("type", "perspective");
+        if (type == "orthographic") {
+          auto& gortho  = gcamera.at("orthographic");
+          auto  xmag    = gortho.value("xmag", 1.0f);
+          auto  ymag    = gortho.value("ymag", 1.0f);
+          camera.aspect = xmag / ymag;
+          camera.lens   = ymag;  // this is probably bogus
+          camera.film   = 0.036;
+        } else if (type == "perspective") {
+          auto& gpersp  = gcamera.at("perspective");
+          camera.aspect = gpersp.value("aspectRatio", 0.0f);
+          auto yfov     = gpersp.value("yfov", radians(45));
+          if (camera.aspect == 0) camera.aspect = 16.0f / 9.0f;
+          camera.film = 0.036;
+          if (camera.aspect >= 1) {
+            camera.lens = (camera.film / camera.aspect) / (2 * tan(yfov / 2));
+          } else {
+            camera.lens = camera.film / (2 * tan(yfov / 2));
+          }
+          camera.focus = 1;
+        } else {
+          return parse_error();
+        }
       }
-      camera.focus = 1;
+    } catch (...) {
+      return parse_error();
     }
   }
+
+  // prepare list of effective nodes
+  auto visible_nodes = vector<bool>{};
+  if (gltf.contains("nodes")) {
+    try {
+      visible_nodes.assign(gltf.at("nodes").size(), true);
+    } catch (...) {
+      return parse_error();
+    }
+  }
+  // auto visible_nodes = vector<bool>(gltf->nodes_count, false);
+  // auto gscene        = gltf->scene != nullptr ? gltf->scene : gltf->scenes;
+  // if (gscene != nullptr) {
+  //   auto node_index = unordered_map<cgltf_node*, int>{};
+  //   node_index.reserve(gltf->nodes_count);
+  //   for (auto nid = 0; nid < gltf->nodes_count; nid++)
+  //     node_index[&gltf->nodes[nid]] = nid;
+  //   auto stack = vector<cgltf_node*>{};
+  //   for (auto nid = 0; nid < gscene->nodes_count; nid++)
+  //     stack.push_back(gscene->nodes[nid]);
+  //   while (!stack.empty()) {
+  //     auto gnde = stack.back();
+  //     stack.pop_back();
+  //     visible_nodes[node_index[gnde]] = true;
+  //     for (auto nid = 0; nid < gnde->children_count; nid++)
+  //       stack.push_back(gnde->children[nid]);
+  //   }
+  // } else {
+  //   for (auto nid = 0; nid < gltf->nodes_count; nid++)
+  //     visible_nodes[nid] = true;
+  // }
 
   // convert color textures
   auto texture_map = unordered_map<string, texture_handle>{
       {"", invalid_handle}};
-  auto get_texture = [&scene, &texture_map](
-                         const cgltf_texture_view& ginfo) -> texture_handle {
-    if (ginfo.texture == nullptr || ginfo.texture->image == nullptr)
-      return invalid_handle;
-    auto path = string{ginfo.texture->image->uri};
-    if (path.empty()) return invalid_handle;
-    auto it = texture_map.find(path);
-    if (it != texture_map.end()) return it->second;
-    scene.textures.emplace_back();
-    texture_map[path] = (int)scene.textures.size() - 1;
-    return (int)scene.textures.size() - 1;
+  auto get_texture = [&scene, &texture_map](const njson& js,
+                         const string& name) -> texture_handle {
+    // TODO(fabio): textures
+    return invalid_handle;
+    // if (ginfo.texture == nullptr || ginfo.texture->image == nullptr)
+    //   return invalid_handle;
+    // auto path = string{ginfo.texture->image->uri};
+    // if (path.empty()) return invalid_handle;
+    // auto it = texture_map.find(path);
+    // if (it != texture_map.end()) return it->second;
+    // scene.textures.emplace_back();
+    // texture_map[path] = (int)scene.textures.size() - 1;
+    // return (int)scene.textures.size() - 1;
   };
 
   // convert materials
-  auto material_map = unordered_map<cgltf_material*, material_handle>{
-      {nullptr, invalid_handle}};
-  for (auto mid = 0; mid < gltf->materials_count; mid++) {
-    auto  gmaterial       = &gltf->materials[mid];
-    auto& material        = scene.materials.emplace_back();
-    material.type         = material_type::metallic;
-    material.emission     = {gmaterial->emissive_factor[0],
-        gmaterial->emissive_factor[1], gmaterial->emissive_factor[2]};
-    material.emission_tex = get_texture(gmaterial->emissive_texture);
-    if (gmaterial->has_pbr_metallic_roughness != 0) {
-      auto gmr          = &gmaterial->pbr_metallic_roughness;
-      material.color    = {gmr->base_color_factor[0], gmr->base_color_factor[1],
-          gmr->base_color_factor[2]};
-      material.opacity  = gmr->base_color_factor[3];
-      material.metallic = gmr->metallic_factor;
-      material.roughness      = gmr->roughness_factor;
-      material.color_tex      = get_texture(gmr->base_color_texture);
-      material.roughness_tex  = get_texture(gmr->metallic_roughness_texture);
-      material.normal_tex     = get_texture(gmaterial->normal_texture);
-      material_map[gmaterial] = (int)scene.materials.size() - 1;
+  if (gltf.contains("materials")) {
+    try {
+      for (auto& gmaterial : gltf.at("materials")) {
+        auto& material        = scene.materials.emplace_back();
+        material.type         = material_type::metallic;
+        material.emission     = gmaterial.value("emissiveFactor", zero3f);
+        material.emission_tex = get_texture(gmaterial, "emissiveTexture");
+        material.normal_tex   = get_texture(gmaterial, "normalTexture");
+        if (gmaterial.contains("pbrMetallicRoughness")) {
+          auto& gpbr             = gmaterial.at("pbrMetallicRoughness");
+          auto  base             = gpbr.value("baseColorFactor", zero4f);
+          material.color         = xyz(base);
+          material.opacity       = base.w;
+          material.metallic      = gpbr.value("metallicFactor", 1.0f);
+          material.roughness     = gpbr.value("roughnessFactor", 1.0f);
+          material.color_tex     = get_texture(gpbr, "baseColorTexture");
+          material.roughness_tex = get_texture(
+              gpbr, "metallicRoughnessTexture");
+        }
+      }
+    } catch (...) {
+      return parse_error();
     }
   }
 
+  auto get_attribute = [](const njson&                 gltf,
+                           const vector<vector<byte>>& buffers, auto& values,
+                           int index, bool color = false) {
+    constexpr auto ncomp     = sizeof(values.front()) / sizeof(float);
+    auto&          gaccessor = gltf.at("accessors").at(index);
+    if (gaccessor.contains("sparse"))
+      throw std::invalid_argument{"not implemented"};
+    auto  type      = gaccessor.value("type", "VEC3");
+    auto  component = gaccessor.value("type", 5126);
+    auto  count     = gaccessor.value("count", (size_t)0);
+    auto  offset1   = gaccessor.value("byteOffset", (size_t)0);
+    auto& gview = gltf.at("bufferViews").at(gaccessor.value("bufferView", -1));
+    auto  offset2 = gview.value("byteOffset", (size_t)0);
+    auto  stride  = gview.value("byteStride", (size_t)0);
+    auto& buffer  = buffers.at(gview.value("buffer", -1));
+    values.resize(count);
+    auto data    = (float*)values.data();
+    auto current = buffer.data() + offset1 + offset2;
+    auto nncomp  = 0;
+    if (type == "SCALAR") nncomp = 1;
+    if (type == "VEC2") nncomp = 2;
+    if (type == "VEC3") nncomp = 3;
+    if (type == "VEC4") nncomp = 4;
+    if (ncomp != nncomp) throw std::invalid_argument{"bad value"};
+    if (component == 5121) {
+      if (stride == 0) stride += nncomp * 1;
+      for (auto idx = (size_t)0; idx < count; idx++, current += stride) {
+        for (auto c = 0; c < nncomp; c++) {
+          data[idx * ncomp + c] = *(byte*)current / 255.0f;
+        }
+      }
+    } else if (component == 5123) {
+      if (stride == 0) stride += nncomp * 2;
+      for (auto idx = (size_t)0; idx < count; idx++, current += stride) {
+        for (auto c = 0; c < nncomp; c++) {
+          data[idx * ncomp + c] = *(ushort*)current / 65535.0f;
+        }
+      }
+    } else if (component == 5126) {
+      if (stride == 0) stride += nncomp * 4;
+      for (auto idx = (size_t)0; idx < count; idx++, current += stride) {
+        for (auto c = 0; c < nncomp; c++) {
+          data[idx * ncomp + c] = *(float*)current;
+        }
+      }
+    } else {
+      throw std::invalid_argument{"bad value"};
+    }
+  };
+
   // convert meshes
-  auto mesh_map = unordered_map<cgltf_mesh*, vector<sceneio_instance>>{
-      {nullptr, {}}};
-  for (auto mid = 0; mid < gltf->meshes_count; mid++) {
-    auto gmesh = &gltf->meshes[mid];
-    for (auto sid = 0; sid < gmesh->primitives_count; sid++) {
-      auto gprim = &gmesh->primitives[sid];
-      if (gprim->attributes_count == 0) continue;
-      auto& shape       = scene.shapes.emplace_back();
-      auto  instance    = scene_instance{};
-      instance.shape    = (int)scene.shapes.size() - 1;
-      instance.material = material_map.at(gprim->material);
-      mesh_map[gmesh].push_back(instance);
-      for (auto aid = 0; aid < gprim->attributes_count; aid++) {
-        auto gattr    = &gprim->attributes[aid];
-        auto semantic = string(gattr->name != nullptr ? gattr->name : "");
-        auto gacc     = gattr->data;
-        if (semantic == "POSITION") {
-          shape.positions.resize(gacc->count);
-          for (auto i = 0; i < gacc->count; i++)
-            cgltf_accessor_read_float(gacc, i, &shape.positions[i].x, 3);
-        } else if (semantic == "NORMAL") {
-          shape.normals.resize(gacc->count);
-          for (auto i = 0; i < gacc->count; i++)
-            cgltf_accessor_read_float(gacc, i, &shape.normals[i].x, 3);
-        } else if (semantic == "TEXCOORD" || semantic == "TEXCOORD_0") {
-          shape.texcoords.resize(gacc->count);
-          for (auto i = 0; i < gacc->count; i++)
-            cgltf_accessor_read_float(gacc, i, &shape.texcoords[i].x, 2);
-        } else if (semantic == "COLOR" || semantic == "COLOR_0") {
-          shape.colors.resize(gacc->count);
-          if (cgltf_num_components(gacc->type) == 3) {
-            for (auto i = 0; i < gacc->count; i++)
-              cgltf_accessor_read_float(gacc, i, &shape.colors[i].x, 3);
-          } else {
-            for (auto i = 0; i < gacc->count; i++) {
-              auto color4 = vec4f{0, 0, 0, 0};
-              cgltf_accessor_read_float(gacc, i, &color4.x, 4);
-              shape.colors[i] = color4;
+  auto mesh_primitives = vector<vector<sceneio_instance>>{};
+  if (gltf.contains("meshes")) {
+    try {
+      auto type_components = unordered_map<string, int>{
+          {"SCALAR", 1}, {"VEC2", 2}, {"VEC3", 3}, {"VEC4", 4}};
+      for (auto& gmesh : gltf.at("meshes")) {
+        auto& primitives = mesh_primitives.emplace_back();
+        if (!gmesh.contains("primitives")) continue;
+        for (auto& gprimitive : gmesh.at("primitives")) {
+          if (!gprimitive.contains("attributes")) continue;
+          auto& shape       = scene.shapes.emplace_back();
+          auto& instance    = primitives.emplace_back();
+          instance.shape    = (int)scene.shapes.size() - 1;
+          instance.material = gprimitive.value("material", -1);
+          for (auto& [gname, gattribute] :
+              gprimitive.at("attributes").items()) {
+            auto& gaccessor = gltf.at("accessors").at(gattribute.get<int>());
+            if (gaccessor.contains("sparse"))
+              throw std::invalid_argument{"sparse accessor"};
+            auto& gview =
+                gltf.at("bufferViews").at(gaccessor.value("bufferView", -1));
+            auto& buffer      = buffers.at(gview.value("buffer", 0));
+            auto  components  = type_components.at(gaccessor.value("type", ""));
+            auto  dcomponents = components;
+            auto  count       = gaccessor.value("count", (size_t)0);
+            auto  data        = (float*)nullptr;
+            if (gname == "POSITION") {
+              if (components != 3)
+                throw std::invalid_argument{"invalid accessor"};
+              shape.positions.resize(count);
+              data = (float*)shape.positions.data();
+            } else if (gname == "NORMAL") {
+              if (components != 3)
+                throw std::invalid_argument{"invalid accessor"};
+              shape.normals.resize(count);
+              data = (float*)shape.normals.data();
+            } else if (gname == "TEXCOORD" || gname == "TEXCOORD_0") {
+              if (components != 2)
+                throw std::invalid_argument{"invalid accessor"};
+              shape.texcoords.resize(count);
+              data = (float*)shape.texcoords.data();
+            } else if (gname == "COLOR" || gname == "COLOR_0") {
+              if (components != 3 && components != 4)
+                throw std::invalid_argument{"invalid accessor"};
+              shape.colors.resize(count);
+              data = (float*)shape.colors.data();
+              if (components == 3) {
+                dcomponents = 4;
+                for (auto& c : shape.colors) c.w = 1;
+              }
+            } else if (gname == "TANGENT") {
+              if (components != 4)
+                throw std::invalid_argument{"invalid accessor"};
+              shape.tangents.resize(count);
+              data = (float*)shape.tangents.data();
+            } else if (gname == "RADIUS") {
+              if (components != 1)
+                throw std::invalid_argument{"invalid accessor"};
+              shape.radius.resize(count);
+              data = (float*)shape.radius.data();
+            } else {
+              // ignore
+            }
+            // convert values
+            auto current = buffer.data() +
+                           gaccessor.value("byteOffset", (size_t)0) +
+                           gview.value("byteOffset", (size_t)0);
+            auto stride = gaccessor.value("byteStride", (size_t)0);
+            auto ctype  = gaccessor.value("componentType", 0);
+            if (ctype == 5121) {
+              if (stride == 0) stride = components * 1;
+              for (auto idx = 0; idx < count; idx++, current += stride) {
+                for (auto comp = 0; comp < components; comp++) {
+                  data[idx * dcomponents + comp] =
+                      *(byte*)(current + comp * 1) / 255.0f;
+                }
+              }
+            } else if (ctype == 5123) {
+              if (stride == 0) stride = components * 2;
+              for (auto idx = 0; idx < count; idx++, current += stride) {
+                for (auto comp = 0; comp < components; comp++) {
+                  data[idx * dcomponents + comp] =
+                      *(ushort*)(current + comp * 2) / 65535.0f;
+                }
+              }
+            } else if (ctype == 5126) {
+              if (stride == 0) stride = components * 4;
+              for (auto idx = 0; idx < count; idx++, current += stride) {
+                for (auto comp = 0; comp < components; comp++) {
+                  data[idx * dcomponents + comp] = *(
+                      float*)(current + comp * 4);
+                }
+              }
+            } else {
+              throw std::invalid_argument{"invalid accessor"};
+            }
+            // fixes
+            if (gname == "TANGENT") {
+              for (auto& t : shape.tangents) t.w = -t.w;
             }
           }
-        } else if (semantic == "TANGENT") {
-          shape.tangents.resize(gacc->count);
-          for (auto i = 0; i < gacc->count; i++)
-            cgltf_accessor_read_float(gacc, i, &shape.tangents[i].x, 4);
-          for (auto& t : shape.tangents) t.w = -t.w;
-        } else if (semantic == "_RADIUS") {
-          shape.radius.resize(gacc->count);
-          for (auto i = 0; i < gacc->count; i++)
-            cgltf_accessor_read_float(gacc, i, &shape.radius[i], 1);
-        } else {
-          // ignore
+          // mode
+          auto mode = gprimitive.value("mode", 4);
+          // indices
+          if (!gprimitive.contains("indices")) {
+            if (mode == 4) {  // triangles
+              shape.triangles.resize(shape.positions.size() / 3);
+              for (auto i = 0; i < shape.positions.size() / 3; i++)
+                shape.triangles[i] = {i * 3 + 0, i * 3 + 1, i * 3 + 2};
+            } else if (mode == 6) {  // fans
+              shape.triangles.resize(shape.positions.size() - 2);
+              for (auto i = 2; i < shape.positions.size(); i++)
+                shape.triangles[i - 2] = {0, i - 1, i};
+            } else if (mode == 5) {  // strips
+              shape.triangles.resize(shape.positions.size() - 2);
+              for (auto i = 2; i < shape.positions.size(); i++)
+                shape.triangles[i - 2] = {i - 2, i - 1, i};
+            } else if (mode == 1) {  // lines
+              shape.lines.resize(shape.positions.size() / 2);
+              for (auto i = 0; i < shape.positions.size() / 2; i++)
+                shape.lines[i] = {i * 2 + 0, i * 2 + 1};
+            } else if (mode == 2) {  // lines loops
+              shape.lines.resize(shape.positions.size());
+              for (auto i = 1; i < shape.positions.size(); i++)
+                shape.lines[i - 1] = {i - 1, i};
+              shape.lines.back() = {(int)shape.positions.size() - 1, 0};
+            } else if (mode == 3) {  // lines strips
+              shape.lines.resize(shape.positions.size() - 1);
+              for (auto i = 1; i < shape.positions.size(); i++)
+                shape.lines[i - 1] = {i - 1, i};
+            } else if (mode == 0) {  // points strips
+              // points
+              return primitive_error();
+            } else {
+              return primitive_error();
+            }
+          } else {
+            auto& gaccessor =
+                gltf.at("accessors").at(gprimitive.value("indices", -1));
+            auto& gview =
+                gltf.at("bufferViews").at(gaccessor.value("bufferView", -1));
+            auto& buffer = buffers.at(gview.value("buffer", 0));
+            if (gaccessor.value("type", "") != "SCALAR")
+              throw std::invalid_argument{"invalid accessor"};
+            auto count   = gaccessor.value("count", (size_t)0);
+            auto indices = vector<int>(count);
+            // convert values
+            auto current = buffer.data() +
+                           gaccessor.value("byteOffset", (size_t)0) +
+                           gview.value("byteOffset", (size_t)0);
+            auto stride = gaccessor.value("byteStride", (size_t)0);
+            auto ctype  = gaccessor.value("componentType", 0);
+            if (ctype == 5121) {
+              if (stride == 0) stride = 1;
+              for (auto idx = 0; idx < count; idx++, current += stride) {
+                indices[idx] = (int)*(byte*)current;
+              }
+            } else if (ctype == 5123) {
+              if (stride == 0) stride = 2;
+              for (auto idx = 0; idx < count; idx++, current += stride) {
+                indices[idx] = (int)*(ushort*)current;
+              }
+            } else if (ctype == 5125) {
+              if (stride == 0) stride = 4;
+              for (auto idx = 0; idx < count; idx++, current += stride) {
+                indices[idx] = (int)*(uint*)current;
+              }
+            } else {
+              throw std::invalid_argument{"invalid accessor"};
+            }
+            if (mode == 4) {  // triangles
+              shape.triangles.resize(indices.size() / 3);
+              for (auto i = 0; i < (int)indices.size() / 3; i++) {
+                shape.triangles[i] = {
+                    indices[i * 3 + 0], indices[i * 3 + 1], indices[i * 3 + 2]};
+              }
+            } else if (mode == 6) {  // fans
+              shape.triangles.resize(indices.size() - 2);
+              for (auto i = 2; i < (int)indices.size(); i++) {
+                shape.triangles[i - 2] = {
+                    indices[0], indices[i - 1], indices[i + 0]};
+              }
+            } else if (mode == 5) {  // strips
+              shape.triangles.resize(indices.size() - 2);
+              for (auto i = 2; i < (int)indices.size(); i++) {
+                shape.triangles[i - 2] = {
+                    indices[i - 2], indices[i - 1], indices[i + 0]};
+              }
+            } else if (mode == 1) {  // lines
+              shape.lines.resize(indices.size() / 2);
+              for (auto i = 0; i < (int)indices.size() / 2; i++) {
+                shape.lines[i] = {indices[i * 2 + 0], indices[i * 2 + 1]};
+              }
+            } else if (mode == 2) {  // lines loops
+              shape.lines.resize(indices.size());
+              for (auto i = 0; i < (int)indices.size(); i++) {
+                shape.lines[i] = {
+                    indices[i + 0], indices[i + 1] % (int)indices.size()};
+              }
+            } else if (mode == 3) {  // lines strips
+              shape.lines.resize(indices.size() - 1);
+              for (auto i = 0; i < (int)indices.size() - 1; i++) {
+                shape.lines[i] = {indices[i + 0], indices[i + 1]};
+              }
+            } else if (mode == 0) {  // points strips
+              // points
+              return primitive_error();
+            } else {
+              return primitive_error();
+            }
+          }
         }
       }
-      // indices
-      if (gprim->indices == nullptr) {
-        if (gprim->type == cgltf_primitive_type_triangles) {
-          shape.triangles.resize(shape.positions.size() / 3);
-          for (auto i = 0; i < shape.positions.size() / 3; i++)
-            shape.triangles[i] = {i * 3 + 0, i * 3 + 1, i * 3 + 2};
-        } else if (gprim->type == cgltf_primitive_type_triangle_fan) {
-          shape.triangles.resize(shape.positions.size() - 2);
-          for (auto i = 2; i < shape.positions.size(); i++)
-            shape.triangles[i - 2] = {0, i - 1, i};
-        } else if (gprim->type == cgltf_primitive_type_triangle_strip) {
-          shape.triangles.resize(shape.positions.size() - 2);
-          for (auto i = 2; i < shape.positions.size(); i++)
-            shape.triangles[i - 2] = {i - 2, i - 1, i};
-        } else if (gprim->type == cgltf_primitive_type_lines) {
-          shape.lines.resize(shape.positions.size() / 2);
-          for (auto i = 0; i < shape.positions.size() / 2; i++)
-            shape.lines[i] = {i * 2 + 0, i * 2 + 1};
-        } else if (gprim->type == cgltf_primitive_type_line_loop) {
-          shape.lines.resize(shape.positions.size());
-          for (auto i = 1; i < shape.positions.size(); i++)
-            shape.lines[i - 1] = {i - 1, i};
-          shape.lines.back() = {(int)shape.positions.size() - 1, 0};
-        } else if (gprim->type == cgltf_primitive_type_line_strip) {
-          shape.lines.resize(shape.positions.size() - 1);
-          for (auto i = 1; i < shape.positions.size(); i++)
-            shape.lines[i - 1] = {i - 1, i};
-        } else if (gprim->type == cgltf_primitive_type_points) {
-          // points
-          return primitive_error();
-        } else {
-          return primitive_error();
-        }
-      } else {
-        auto giacc = gprim->indices;
-        if (gprim->type == cgltf_primitive_type_triangles) {
-          shape.triangles.resize(giacc->count / 3);
-          for (auto i = 0; i < giacc->count / 3; i++) {
-            cgltf_accessor_read_uint(
-                giacc, i * 3 + 0, (uint*)&shape.triangles[i].x, 1);
-            cgltf_accessor_read_uint(
-                giacc, i * 3 + 1, (uint*)&shape.triangles[i].y, 1);
-            cgltf_accessor_read_uint(
-                giacc, i * 3 + 2, (uint*)&shape.triangles[i].z, 1);
-          }
-        } else if (gprim->type == cgltf_primitive_type_triangle_fan) {
-          shape.triangles.resize(giacc->count - 2);
-          for (auto i = 2; i < giacc->count; i++) {
-            cgltf_accessor_read_uint(
-                giacc, 0 + 0, (uint*)&shape.triangles[i - 2].x, 1);
-            cgltf_accessor_read_uint(
-                giacc, i - 1, (uint*)&shape.triangles[i - 2].y, 1);
-            cgltf_accessor_read_uint(
-                giacc, i + 0, (uint*)&shape.triangles[i - 2].z, 1);
-          }
-        } else if (gprim->type == cgltf_primitive_type_triangle_strip) {
-          shape.triangles.resize(giacc->count - 2);
-          for (auto i = 2; i < giacc->count; i++) {
-            cgltf_accessor_read_uint(
-                giacc, i - 2, (uint*)&shape.triangles[i - 2].x, 1);
-            cgltf_accessor_read_uint(
-                giacc, i - 1, (uint*)&shape.triangles[i - 2].y, 1);
-            cgltf_accessor_read_uint(
-                giacc, i + 0, (uint*)&shape.triangles[i - 2].z, 1);
-          }
-        } else if (gprim->type == cgltf_primitive_type_lines) {
-          shape.lines.resize(giacc->count / 2);
-          for (auto i = 0; i < giacc->count / 2; i++) {
-            cgltf_accessor_read_uint(
-                giacc, i * 2 + 0, (uint*)&shape.lines[i].x, 1);
-            cgltf_accessor_read_uint(
-                giacc, i * 2 + 1, (uint*)&shape.lines[i].y, 1);
-          }
-        } else if (gprim->type == cgltf_primitive_type_line_loop) {
-          shape.lines.resize(giacc->count);
-          for (auto i = 0; i < giacc->count; i++) {
-            cgltf_accessor_read_uint(
-                giacc, (i + 0) % giacc->count, (uint*)&shape.lines[i].x, 1);
-            cgltf_accessor_read_uint(
-                giacc, (i + 1) % giacc->count, (uint*)&shape.lines[i].y, 1);
-          }
-        } else if (gprim->type == cgltf_primitive_type_line_strip) {
-          shape.lines.resize(giacc->count - 1);
-          for (auto i = 0; i < giacc->count - 1; i++) {
-            cgltf_accessor_read_uint(
-                giacc, (i + 0) % giacc->count, (uint*)&shape.lines[i].x, 1);
-            cgltf_accessor_read_uint(
-                giacc, (i + 1) % giacc->count, (uint*)&shape.lines[i].y, 1);
-          }
-        } else if (gprim->type == cgltf_primitive_type_points) {
-          // points
-          return primitive_error();
-        } else {
-          return primitive_error();
-        }
-      }
+    } catch (...) {
+      return parse_error();
     }
   }
 
   // convert nodes
-  for (auto nid = 0; nid < gltf->nodes_count; nid++) {
-    if (!visible_nodes[nid]) continue;
-    auto gnde = &gltf->nodes[nid];
-    if (gnde->mesh == nullptr) continue;
-    auto mat = mat4f{};
-    cgltf_node_transform_world(gnde, &mat.x.x);
-    for (auto& prims : mesh_map.at(gnde->mesh)) {
-      auto& instance = scene.instances.emplace_back();
-      instance       = prims;
-      auto mat       = mat4f{};
-      cgltf_node_transform_world(gnde, &mat.x.x);
-      instance.frame = mat_to_frame(mat);
+  if (gltf.contains("nodes")) {
+    try {
+      auto parents = vector<int>(gltf.at("nodes").size(), -1);
+      auto lxforms = vector<frame3f>(gltf.at("nodes").size(), identity3x4f);
+      auto node_id = 0;
+      for (auto& gnode : gltf.at("nodes")) {
+        auto& xform = lxforms.at(node_id);
+        if (gnode.contains("matrix")) {
+          xform = mat_to_frame(gnode.value("matrix", identity4x4f));
+        }
+        if (gnode.contains("translation")) {
+          // TODO(fabio): translation
+          xform *= translation_frame(gnode.value("translation", zero3f));
+        }
+        if (gnode.contains("scale")) {
+          // TODO(fabio): scaling
+          xform *= scaling_frame(gnode.value("scale", zero3f));
+        }
+        if (gnode.contains("rotation")) {
+          // TODO(fabio): rotation
+        }
+        if (gnode.contains("children")) {
+          for (auto& gchild : gnode.at("children")) {
+            parents.at(gchild.get<int>()) = node_id;
+          }
+        }
+        node_id++;
+      }
+      auto xforms = vector<frame3f>(gltf.at("nodes").size(), identity3x4f);
+      node_id     = 0;
+      for (auto& gnode : gltf.at("nodes")) {
+        if (!gnode.contains("camera") && !gnode.contains("mesh")) {
+          node_id++;
+          continue;
+        }
+        auto& xform = xforms.at(node_id);
+        xform       = lxforms.at(node_id);
+        auto parent = parents.at(node_id);
+        while (parent >= 0) {
+          xform  = lxforms.at(parent) * xform;
+          parent = parents.at(parent);
+        }
+        if (gnode.contains("camera")) {
+          auto& camera = scene.cameras.emplace_back();
+          camera       = cameras.at(gnode.value("camera", -1));
+          camera.frame = xform;
+        }
+        if (gnode.contains("mesh")) {
+          for (auto& primitive : mesh_primitives.at(gnode.value("mesh", -1))) {
+            auto& instance = scene.instances.emplace_back();
+            instance       = primitive;
+            instance.frame = xform;
+          }
+        }
+        node_id++;
+      }
+    } catch (...) {
+      return parse_error();
     }
   }
 
