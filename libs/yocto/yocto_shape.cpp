@@ -655,7 +655,7 @@ static bool load_ply_shape(const string& filename, shape_data& shape,
   auto ply = ply_model{};
   if (!load_ply(filename, ply, error)) return false;
 
-  // gets vertex
+  // get vertex
   get_positions(ply, shape.positions);
   get_normals(ply, shape.normals);
   get_texcoords(ply, shape.texcoords, flip_texcoord);
@@ -663,11 +663,7 @@ static bool load_ply_shape(const string& filename, shape_data& shape,
   get_radius(ply, shape.radius);
 
   // get faces
-  if (has_quads(ply)) {
-    get_quads(ply, shape.quads);
-  } else {
-    get_triangles(ply, shape.triangles);
-  }
+  get_faces(ply, shape.triangles, shape.quads);
   get_lines(ply, shape.lines);
   get_points(ply, shape.points);
 

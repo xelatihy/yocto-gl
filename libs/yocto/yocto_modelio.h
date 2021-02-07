@@ -140,11 +140,12 @@ bool get_texcoords(ply_model& ply, vector<vec2f>& values, bool flipv = false);
 bool get_colors(ply_model& ply, vector<vec3f>& values);
 bool get_colors(ply_model& ply, vector<vec4f>& values);
 bool get_radius(ply_model& ply, vector<float>& values);
-bool get_faces(ply_model& ply, vector<vector<int>>*& values);
-bool get_lines(ply_model& ply, vector<vec2i>& values);
-bool get_points(ply_model& ply, vector<int>& values);
-bool get_triangles(ply_model& ply, vector<vec3i>& values);
-bool get_quads(ply_model& ply, vector<vec4i>& values);
+bool get_faces(ply_model& ply, vector<vector<int>>*& faces);
+bool get_lines(ply_model& ply, vector<vec2i>& lines);
+bool get_points(ply_model& ply, vector<int>& points);
+bool get_triangles(ply_model& ply, vector<vec3i>& triangles);
+bool get_quads(ply_model& ply, vector<vec4i>& quads);
+bool get_faces(ply_model& ply, vector<vec3i>& triangles, vector<vec4i>& quads);
 bool has_quads(ply_model& ply);
 
 // Add ply properties
@@ -191,11 +192,11 @@ bool add_colors(ply_model& ply, const vector<vec4f>& values);
 bool add_radius(ply_model& ply, const vector<float>& values);
 bool add_faces(ply_model& ply, const vector<vector<int>>& values);
 bool add_faces(
-    ply_model& ply, const vector<vec3i>& tvalues, const vector<vec4i>& qvalues);
-bool add_triangles(ply_model& ply, const vector<vec3i>& values);
-bool add_quads(ply_model& ply, const vector<vec4i>& values);
-bool add_lines(ply_model& ply, const vector<vec2i>& values);
-bool add_points(ply_model& ply, const vector<int>& values);
+    ply_model& ply, const vector<vec3i>& triangles, const vector<vec4i>& quads);
+bool add_triangles(ply_model& ply, const vector<vec3i>& triangles);
+bool add_quads(ply_model& ply, const vector<vec4i>& quads);
+bool add_lines(ply_model& ply, const vector<vec2i>& lines);
+bool add_points(ply_model& ply, const vector<int>& points);
 
 }  // namespace yocto
 

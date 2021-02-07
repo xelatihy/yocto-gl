@@ -919,6 +919,13 @@ bool get_quads(ply_model& ply, vector<vec4i>& quads) {
   }
   return true;
 }
+bool get_faces(ply_model& ply, vector<vec3i>& triangles, vector<vec4i>& quads) {
+  if (has_quads(ply)) {
+    get_quads(ply, quads);
+  } else {
+    get_triangles(ply, triangles);
+  }
+}
 bool get_lines(ply_model& ply, vector<vec2i>& lines) {
   auto indices = vector<int>{};
   auto sizes   = vector<uint8_t>{};
