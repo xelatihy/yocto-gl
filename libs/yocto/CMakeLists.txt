@@ -12,7 +12,7 @@ add_library(yocto
   yocto_sceneio.h yocto_sceneio.cpp
   yocto_commonio.h yocto_commonio.cpp
   ext/stb_image.h ext/stb_image_resize.h ext/stb_image_write.h ext/stb_image.cpp
-  ext/cgltf.h ext/cgltf_write.h ext/cgltf.cpp
+  ext/cgltf.h ext/cgltf_write.h ext/cgltf.cpp ext/cgltf_write.cpp
   ext/fast_obj.h ext/fast_obj.cpp
   ext/json.hpp
   ext/tinyexr.h ext/tinyexr.cpp

@@ -50,6 +50,7 @@
 #include <unordered_map>
 #include <utility>
 #include <vector>
+#include <memory>
 
 // -----------------------------------------------------------------------------
 // USING DIRECTIVES
@@ -374,6 +375,12 @@ inline bool read_values(file_stream& fs, T* buffer, size_t count) {
 template <typename T>
 inline bool write_values(file_stream& fs, const T* buffer, size_t count) {
   return write_data(fs, buffer, sizeof(T) * count);
+}
+
+// Write data from a file
+template <typename T>
+inline bool write_values(file_stream& fs, const vector<T>& values) {
+  return write_data(fs, values.data(), sizeof(T) * values.size());
 }
 
 template <typename T>
