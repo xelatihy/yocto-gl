@@ -650,7 +650,7 @@ bbox3f compute_bounds(const scene_scene& scene) {
   auto shape_bbox = vector<bbox3f>{};
   auto bbox       = invalidb3f;
   for (auto& shape : scene.shapes) {
-    auto sbvh = shape_bbox.emplace_back();
+    auto& sbvh = shape_bbox.emplace_back();
     for (auto p : shape.positions) sbvh = merge(sbvh, p);
   }
   for (auto& instance : scene.instances) {
