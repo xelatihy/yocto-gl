@@ -38,7 +38,6 @@
 #include <stdexcept>
 #include <string>
 
-#include "ext/fast_obj.h"
 #include "yocto_commonio.h"
 #include "yocto_geometry.h"
 #include "yocto_modelio.h"
@@ -554,139 +553,6 @@ bool save_shape(const string& filename, const shape_data& shape, string& error,
   }
 }
 
-#define YOCTO_FASTOBJ
-
-#ifdef YOCTO_FASTOBJ
-
-// Load/save a shape from/to OBJ.
-static bool load_obj_shape(const string& filename, shape_data& shape,
-    string& error, bool flip_texcoord) {
-  auto read_error = [filename, &error]() {
-    error = filename + ": error reading obj";
-    return false;
-  };
-  auto shape_error = [filename, &error]() {
-    error = filename + ": empty shape";
-    return false;
-  };
-
-  shape = {};
-
-  // load obj
-  auto obj = fast_obj_read(filename.c_str());
-  if (!obj) return read_error();
-  auto obj_guard = std::unique_ptr<fastObjMesh, void (*)(fastObjMesh*)>(
-      obj, &fast_obj_destroy);
-
-  // check shape
-  if (obj->face_count == 0) return shape_error();
-
-  // vertex map
-  struct index_hash {
-    size_t operator()(const vec3i& v) const {
-      const std::hash<int> hasher = std::hash<int>();
-      auto                 h      = (size_t)0;
-      h ^= hasher(v.x) + 0x9e3779b9 + (h << 6) + (h >> 2);
-      h ^= hasher(v.y) + 0x9e3779b9 + (h << 6) + (h >> 2);
-      h ^= hasher(v.z) + 0x9e3779b9 + (h << 6) + (h >> 2);
-      return h;
-    }
-  };
-  auto vmap = unordered_map<vec3i, int, index_hash>{};
-
-  // convert faces
-  auto cur_index_offset = 0;
-  for (auto cur_face = 0; cur_face < obj->face_count; cur_face++) {
-    auto vids = array<int, 128>{};
-    for (auto vidx = 0; vidx < obj->face_vertices[cur_face]; vidx++) {
-      auto indices  = obj->indices[cur_index_offset + vidx];
-      auto vindices = vec3i{(int)indices.p, (int)indices.n, (int)indices.t};
-      auto vert_it  = vmap.find(vindices);
-      if (vert_it == vmap.end()) {
-        shape.positions.push_back({obj->positions[indices.p * 3 + 0],
-            obj->positions[indices.p * 3 + 1],
-            obj->positions[indices.p * 3 + 2]});
-        if (!shape.normals.empty() || indices.n != 0) {
-          shape.normals.push_back(
-              {obj->normals[indices.n * 3 + 0], obj->normals[indices.n * 3 + 1],
-                  obj->normals[indices.n * 3 + 2]});
-        }
-        if (!shape.texcoords.empty() || indices.t != 0) {
-          shape.texcoords.push_back({obj->texcoords[indices.t * 2 + 0],
-              1 - obj->texcoords[indices.t * 2 + 1]});
-        }
-        vids[vidx] = (int)shape.positions.size() - 1;
-        vmap.insert(vert_it, {vindices, vids[vidx]});
-      } else {
-        vids[vidx] = vert_it->second;
-      }
-    }
-    if (obj->face_vertices[cur_face] == 3) {
-      shape.triangles.push_back({vids[0], vids[1], vids[2]});
-    } else if (obj->face_vertices[cur_face] == 4) {
-      shape.quads.push_back({vids[0], vids[1], vids[2], vids[3]});
-    } else if (obj->face_vertices[cur_face] > 4) {
-      for (auto vidx = 2; vidx < obj->face_vertices[cur_face]; vidx++) {
-        shape.triangles.push_back({vids[0], vids[vidx - 1], vids[vidx]});
-      }
-    } else {
-      // not supported
-    }
-    cur_index_offset += obj->face_vertices[cur_face];
-  }
-
-  // handle mixed shapes
-  if (!shape.quads.empty() && !shape.triangles.empty()) {
-    auto tquads = quads_to_triangles(shape.quads);
-    shape.triangles.insert(shape.triangles.end(), tquads.begin(), tquads.end());
-    shape.quads.clear();
-  }
-
-  // flip texcoords if needed
-  if (flip_texcoord) {
-    for (auto& texcoord : shape.texcoords) texcoord.y = 1 - texcoord.y;
-  }
-
-  return true;
-}
-static bool save_obj_shape(const string& filename, const shape_data& shape,
-    string& error, bool flip_texcoord, bool ascii) {
-  auto shape_error = [filename, &error]() {
-    error = filename + ": empty shape";
-    return false;
-  };
-  auto line_error = [filename, &error]() {
-    error = filename + ": unsupported lines";
-    return false;
-  };
-  auto point_error = [filename, &error]() {
-    error = filename + ": unsupported points";
-    return false;
-  };
-
-  auto  obj    = obj_scene{};
-  auto& oshape = obj.shapes.emplace_back();
-  if (!shape.triangles.empty()) {
-    set_triangles(oshape, shape.triangles, shape.positions, shape.normals,
-        shape.texcoords, {}, flip_texcoord);
-  } else if (!shape.quads.empty()) {
-    set_quads(oshape, shape.quads, shape.positions, shape.normals,
-        shape.texcoords, {}, flip_texcoord);
-  } else if (!shape.lines.empty()) {
-    set_lines(oshape, shape.lines, shape.positions, shape.normals,
-        shape.texcoords, {}, flip_texcoord);
-  } else if (!shape.points.empty()) {
-    set_points(oshape, shape.points, shape.positions, shape.normals,
-        shape.texcoords, {}, flip_texcoord);
-  } else {
-    return shape_error();
-  }
-  auto err = ""s;
-  return save_obj(filename, obj, error);
-}
-
-#else
-
 // Load/save a shape from/to OBJ.
 static bool load_obj_shape(const string& filename, shape_data& shape,
     string& error, bool flip_texcoord) {
@@ -774,8 +640,6 @@ static bool save_obj_shape(const string& filename, const shape_data& shape,
   auto err = ""s;
   return save_obj(filename, obj, error);
 }
-
-#endif
 
 // Load/save a shape from/to PLY. Loads/saves only one mesh with no other data.
 static bool load_ply_shape(const string& filename, shape_data& shape,
