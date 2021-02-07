@@ -3220,14 +3220,6 @@ static bool load_gltf_scene(const string& filename, scene_scene& scene,
   add_radius(scene);
   add_materials(scene);
 
-  // fix cameras
-  // auto bbox = compute_bounds(scene);
-  // for (auto& camera : scene.cameras) {
-  //   auto center   = (bbox.min + bbox.max) / 2;
-  //   auto distance = dot(-camera.frame.z, center - camera.frame.o);
-  //   if (distance > 0) camera.focus = distance;
-  // }
-
   // load done
   if (progress_cb) progress_cb("load scene", progress.x++, progress.y);
   return true;
