@@ -2824,63 +2824,42 @@ static bool load_gltf_scene(const string& filename, scene_scene& scene,
       return parse_error();
     }
   }
-  // auto visible_nodes = vector<bool>(gltf->nodes_count, false);
-  // auto gscene        = gltf->scene != nullptr ? gltf->scene : gltf->scenes;
-  // if (gscene != nullptr) {
-  //   auto node_index = unordered_map<cgltf_node*, int>{};
-  //   node_index.reserve(gltf->nodes_count);
-  //   for (auto nid = 0; nid < gltf->nodes_count; nid++)
-  //     node_index[&gltf->nodes[nid]] = nid;
-  //   auto stack = vector<cgltf_node*>{};
-  //   for (auto nid = 0; nid < gscene->nodes_count; nid++)
-  //     stack.push_back(gscene->nodes[nid]);
-  //   while (!stack.empty()) {
-  //     auto gnde = stack.back();
-  //     stack.pop_back();
-  //     visible_nodes[node_index[gnde]] = true;
-  //     for (auto nid = 0; nid < gnde->children_count; nid++)
-  //       stack.push_back(gnde->children[nid]);
-  //   }
-  // } else {
-  //   for (auto nid = 0; nid < gltf->nodes_count; nid++)
-  //     visible_nodes[nid] = true;
-  // }
 
   // convert color textures
   auto texture_map = unordered_map<string, texture_handle>{
       {"", invalid_handle}};
-  auto get_texture = [&scene, &texture_map](const njson& js,
+  auto get_texture = [&gltf, &scene, &texture_map](const njson& js,
                          const string& name) -> texture_handle {
-    // TODO(fabio): textures
-    return invalid_handle;
-    // if (ginfo.texture == nullptr || ginfo.texture->image == nullptr)
-    //   return invalid_handle;
-    // auto path = string{ginfo.texture->image->uri};
-    // if (path.empty()) return invalid_handle;
-    // auto it = texture_map.find(path);
-    // if (it != texture_map.end()) return it->second;
-    // scene.textures.emplace_back();
-    // texture_map[path] = (int)scene.textures.size() - 1;
-    // return (int)scene.textures.size() - 1;
+    if (!js.contains(name)) return invalid_handle;
+    auto& ginfo    = js.at(name);
+    auto& gtexture = gltf.at("textures").at(ginfo.value("index", -1));
+    auto& gimage   = gltf.at("images").at(gtexture.value("source", -1));
+    auto  path     = gimage.value("uri", "");
+    if (path.empty()) return invalid_handle;
+    auto it = texture_map.find(path);
+    if (it != texture_map.end()) return it->second;
+    scene.textures.emplace_back();
+    texture_map[path] = (int)scene.textures.size() - 1;
+    return (int)scene.textures.size() - 1;
   };
 
   // convert materials
   if (gltf.contains("materials")) {
     try {
       for (auto& gmaterial : gltf.at("materials")) {
-        auto& material        = scene.materials.emplace_back();
-        material.type         = material_type::metallic;
-        material.emission     = gmaterial.value("emissiveFactor", zero3f);
+        auto& material    = scene.materials.emplace_back();
+        material.type     = material_type::metallic;
+        material.emission = gmaterial.value("emissiveFactor", vec3f{1, 1, 1});
         material.emission_tex = get_texture(gmaterial, "emissiveTexture");
         material.normal_tex   = get_texture(gmaterial, "normalTexture");
         if (gmaterial.contains("pbrMetallicRoughness")) {
-          auto& gpbr             = gmaterial.at("pbrMetallicRoughness");
-          auto  base             = gpbr.value("baseColorFactor", zero4f);
-          material.color         = xyz(base);
-          material.opacity       = base.w;
-          material.metallic      = gpbr.value("metallicFactor", 1.0f);
-          material.roughness     = gpbr.value("roughnessFactor", 1.0f);
-          material.color_tex     = get_texture(gpbr, "baseColorTexture");
+          auto& gpbr         = gmaterial.at("pbrMetallicRoughness");
+          auto  base         = gpbr.value("baseColorFactor", vec4f{1, 1, 1, 1});
+          material.color     = xyz(base);
+          material.opacity   = base.w;
+          material.metallic  = gpbr.value("metallicFactor", 1.0f);
+          material.roughness = gpbr.value("roughnessFactor", 1.0f);
+          material.color_tex = get_texture(gpbr, "baseColorTexture");
           material.roughness_tex = get_texture(
               gpbr, "metallicRoughnessTexture");
         }
@@ -3170,16 +3149,17 @@ static bool load_gltf_scene(const string& filename, scene_scene& scene,
         if (gnode.contains("matrix")) {
           xform = mat_to_frame(gnode.value("matrix", identity4x4f));
         }
-        if (gnode.contains("translation")) {
-          // TODO(fabio): translation
-          xform *= translation_frame(gnode.value("translation", zero3f));
-        }
         if (gnode.contains("scale")) {
-          // TODO(fabio): scaling
-          xform *= scaling_frame(gnode.value("scale", zero3f));
+          xform = scaling_frame(gnode.value("scale", vec3f{1, 1, 1})) * xform;
         }
         if (gnode.contains("rotation")) {
-          // TODO(fabio): rotation
+          xform = rotation_frame(gnode.value("rotation", vec4f{0, 0, 0, 1})) *
+                  xform;
+        }
+        if (gnode.contains("translation")) {
+          xform = translation_frame(
+                      gnode.value("translation", vec3f{0, 0, 0})) *
+                  xform;
         }
         if (gnode.contains("children")) {
           for (auto& gchild : gnode.at("children")) {
