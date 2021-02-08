@@ -1730,8 +1730,8 @@ static bool load_obj_scene(const string& filename, scene_scene& scene,
   // convert shapes
   for (auto& oshape : obj.shapes) {
     if (oshape.elements.empty()) continue;
-    auto material = oshape.elements.front().material;
-    auto& shape = scene.shapes.emplace_back();
+    auto  material = oshape.elements.front().material;
+    auto& shape    = scene.shapes.emplace_back();
     get_positions(oshape, shape.positions);
     get_normals(oshape, shape.normals);
     get_texcoords(oshape, shape.texcoords, true);
