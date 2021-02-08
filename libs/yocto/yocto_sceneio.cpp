@@ -766,7 +766,6 @@ static bool load_instance(
 }
 
 // save instances
-// static
 bool save_instance(const string& filename, const vector<frame3f>& frames,
     string& error, bool ascii = false) {
   auto format_error = [filename, &error]() {
@@ -786,7 +785,7 @@ bool save_instance(const string& filename, const vector<frame3f>& frames,
   }
 }
 
-// Loads/saves a  channel float/byte image in linear/srgb color space.
+// load texture
 static bool load_texture(
     const string& filename, scene_texture& texture, string& error) {
   if (is_hdr_filename(filename)) {
@@ -796,7 +795,7 @@ static bool load_texture(
   }
 }
 
-// Loads/saves a  channel float/byte image in linear/srgb color space.
+// save texture
 static bool save_texture(
     const string& filename, const scene_texture& texture, string& error) {
   if (!texture.hdr.empty()) {
@@ -804,6 +803,94 @@ static bool save_texture(
   } else {
     return save_image(filename, texture.ldr, error);
   }
+}
+
+// load shape
+static bool load_shape(
+    const string& filename, scene_shape& shape, string& error) {
+  auto lshape = shape_data{};
+  if (!load_shape(filename, lshape, error, false)) return false;
+  shape.points    = lshape.points;
+  shape.lines     = lshape.lines;
+  shape.triangles = lshape.triangles;
+  shape.quads     = lshape.quads;
+  shape.positions = lshape.positions;
+  shape.normals   = lshape.normals;
+  shape.texcoords = lshape.texcoords;
+  shape.colors    = lshape.colors;
+  shape.radius    = lshape.radius;
+  return true;
+}
+
+// save shape
+static bool save_shape(
+    const string& filename, const scene_shape& shape, string& error) {
+  auto sshape      = shape_data{};
+  sshape.points    = shape.points;
+  sshape.lines     = shape.lines;
+  sshape.triangles = shape.triangles;
+  sshape.quads     = shape.quads;
+  sshape.positions = shape.positions;
+  sshape.normals   = shape.normals;
+  sshape.texcoords = shape.texcoords;
+  sshape.colors    = shape.colors;
+  sshape.radius    = shape.radius;
+  return save_shape(filename, sshape, error, false);
+}
+
+// load subdiv
+static bool load_subdiv(
+    const string& filename, scene_subdiv& subdiv, string& error) {
+  auto lsubdiv = fvshape_data{};
+  if (!load_fvshape(filename, lsubdiv, error, true)) return false;
+  subdiv.quadspos      = lsubdiv.quadspos;
+  subdiv.quadsnorm     = lsubdiv.quadsnorm;
+  subdiv.quadstexcoord = lsubdiv.quadstexcoord;
+  subdiv.positions     = lsubdiv.positions;
+  subdiv.normals       = lsubdiv.normals;
+  subdiv.texcoords     = lsubdiv.texcoords;
+  return true;
+}
+
+// save subdiv
+static bool save_subdiv(
+    const string& filename, const scene_subdiv& subdiv, string& error) {
+  auto ssubdiv          = fvshape_data{};
+  ssubdiv.quadspos      = subdiv.quadspos;
+  ssubdiv.quadsnorm     = subdiv.quadsnorm;
+  ssubdiv.quadstexcoord = subdiv.quadstexcoord;
+  ssubdiv.positions     = subdiv.positions;
+  ssubdiv.normals       = subdiv.normals;
+  ssubdiv.texcoords     = subdiv.texcoords;
+  return save_fvshape(filename, ssubdiv, error, true);
+}
+
+// save binary shape
+static bool save_binshape(
+    const string& filename, const scene_shape& shape, string& error) {
+  auto open_error = [filename, &error]() {
+    error = filename + ": file not found";
+    return false;
+  };
+  auto write_error = [filename, &error]() {
+    error = filename + ": write error";
+    return false;
+  };
+
+  auto fs = open_file(filename, "wb");
+  if (!fs) return open_error();
+
+  if (!write_values(fs, shape.positions)) return write_error();
+  if (!write_values(fs, shape.normals)) return write_error();
+  if (!write_values(fs, shape.texcoords)) return write_error();
+  if (!write_values(fs, shape.colors)) return write_error();
+  if (!write_values(fs, shape.radius)) return write_error();
+  if (!write_values(fs, shape.points)) return write_error();
+  if (!write_values(fs, shape.lines)) return write_error();
+  if (!write_values(fs, shape.triangles)) return write_error();
+  if (!write_values(fs, quads_to_triangles(shape.quads))) return write_error();
+
+  return true;
 }
 
 }  // namespace yocto
@@ -1279,18 +1366,8 @@ static bool load_json_scene(const string& filename, scene_scene& scene,
     if (progress_cb) progress_cb("load shape", progress.x++, progress.y);
     auto path = find_path(
         get_shape_name(scene, shape), "shapes", {".ply", ".obj"});
-    auto lshape = shape_data{};
-    if (!load_shape(path_join(dirname, path), lshape, error, false))
+    if (!load_shape(path_join(dirname, path), shape, error))
       return dependent_error();
-    shape.points    = lshape.points;
-    shape.lines     = lshape.lines;
-    shape.triangles = lshape.triangles;
-    shape.quads     = lshape.quads;
-    shape.positions = lshape.positions;
-    shape.normals   = lshape.normals;
-    shape.texcoords = lshape.texcoords;
-    shape.colors    = lshape.colors;
-    shape.radius    = lshape.radius;
   }
 
   // load subdivs
@@ -1298,15 +1375,8 @@ static bool load_json_scene(const string& filename, scene_scene& scene,
     if (progress_cb) progress_cb("load subdiv", progress.x++, progress.y);
     auto path = find_path(
         get_subdiv_name(scene, subdiv), "subdivs", {".ply", ".obj"});
-    auto lsubdiv = fvshape_data{};
-    if (!load_fvshape(path_join(dirname, path), lsubdiv, error, true))
+    if (!load_subdiv(path_join(dirname, path), subdiv, error))
       return dependent_error();
-    subdiv.quadspos      = lsubdiv.quadspos;
-    subdiv.quadsnorm     = lsubdiv.quadsnorm;
-    subdiv.quadstexcoord = lsubdiv.quadstexcoord;
-    subdiv.positions     = lsubdiv.positions;
-    subdiv.normals       = lsubdiv.normals;
-    subdiv.texcoords     = lsubdiv.texcoords;
   }
 
   // load textures
@@ -1575,33 +1645,16 @@ static bool save_json_scene(const string& filename, const scene_scene& scene,
   // save shapes
   for (auto& shape : scene.shapes) {
     if (progress_cb) progress_cb("save shape", progress.x++, progress.y);
-    auto path        = "shapes/" + get_shape_name(scene, shape) + ".ply";
-    auto sshape      = shape_data{};
-    sshape.points    = shape.points;
-    sshape.lines     = shape.lines;
-    sshape.triangles = shape.triangles;
-    sshape.quads     = shape.quads;
-    sshape.positions = shape.positions;
-    sshape.normals   = shape.normals;
-    sshape.texcoords = shape.texcoords;
-    sshape.colors    = shape.colors;
-    sshape.radius    = shape.radius;
-    if (!save_shape(path_join(dirname, path), sshape, error, false))
+    auto path = "shapes/" + get_shape_name(scene, shape) + ".ply";
+    if (!save_shape(path_join(dirname, path), shape, error))
       return dependent_error();
   }
 
   // save subdiv
   for (auto& subdiv : scene.subdivs) {
     if (progress_cb) progress_cb("save subdiv", progress.x++, progress.y);
-    auto path         = "subdivs/" + get_subdiv_name(scene, subdiv) + ".obj";
-    auto ssubdiv      = fvshape_data{};
-    ssubdiv.quadspos  = subdiv.quadspos;
-    ssubdiv.quadsnorm = subdiv.quadsnorm;
-    ssubdiv.quadstexcoord = subdiv.quadstexcoord;
-    ssubdiv.positions     = subdiv.positions;
-    ssubdiv.normals       = subdiv.normals;
-    ssubdiv.texcoords     = subdiv.texcoords;
-    if (!save_fvshape(path_join(dirname, path), ssubdiv, error, true))
+    auto path = "subdivs/" + get_subdiv_name(scene, subdiv) + ".obj";
+    if (!save_subdiv(path_join(dirname, path), subdiv, error))
       return dependent_error();
   }
 
@@ -2804,35 +2857,6 @@ static bool save_gltf_scene(const string& filename, const scene_scene& scene,
 
   // dirname
   auto dirname = path_dirname(filename);
-
-  // save binary shape
-  auto save_binshape = [](const string& filename, const scene_shape& shape,
-                           string& error) {
-    auto open_error = [filename, &error]() {
-      error = filename + ": file not found";
-      return false;
-    };
-    auto write_error = [filename, &error]() {
-      error = filename + ": write error";
-      return false;
-    };
-
-    auto fs = open_file(filename, "wb");
-    if (!fs) return open_error();
-
-    if (!write_values(fs, shape.positions)) return write_error();
-    if (!write_values(fs, shape.normals)) return write_error();
-    if (!write_values(fs, shape.texcoords)) return write_error();
-    if (!write_values(fs, shape.colors)) return write_error();
-    if (!write_values(fs, shape.radius)) return write_error();
-    if (!write_values(fs, shape.points)) return write_error();
-    if (!write_values(fs, shape.lines)) return write_error();
-    if (!write_values(fs, shape.triangles)) return write_error();
-    if (!write_values(fs, quads_to_triangles(shape.quads)))
-      return write_error();
-
-    return true;
-  };
 
   // save shapes
   for (auto& shape : scene.shapes) {
