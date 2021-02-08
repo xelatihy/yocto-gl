@@ -249,6 +249,11 @@ inline bool parse_value(string_view& str, vec4f& value) {
     if (!parse_value(str, value[i])) return false;
   return true;
 }
+inline bool parse_value(string_view& str, mat3f& value) {
+  for (auto i = 0; i < 3; i++)
+    if (!parse_value(str, value[i])) return false;
+  return true;
+}
 inline bool parse_value(string_view& str, mat4f& value) {
   for (auto i = 0; i < 4; i++)
     if (!parse_value(str, value[i])) return false;
@@ -1352,7 +1357,7 @@ inline bool load_mtl(const string& filename, obj_scene& obj, string& error) {
 }
 
 // Read obj
-inline bool load_objx(const string& filename, obj_scene& obj, string& error) {
+inline bool load_obx(const string& filename, obj_scene& obj, string& error) {
   // error helpers
   auto open_error = [filename, &error]() {
     error = filename + ": file not found";
@@ -1371,6 +1376,10 @@ inline bool load_objx(const string& filename, obj_scene& obj, string& error) {
   auto fs = open_file(filename, "rt");
   if (!fs) return open_error();
 
+  // init parsing
+  obj.cameras.emplace_back();
+  obj.environments.emplace_back();
+
   // read the file str by str
   auto buffer = array<char, 4096>{};
   while (read_line(fs, buffer)) {
@@ -1385,30 +1394,54 @@ inline bool load_objx(const string& filename, obj_scene& obj, string& error) {
     if (!parse_value(str, cmd)) return parse_error();
     if (cmd.empty()) continue;
 
+    // grab elements
+    auto& camera      = obj.cameras.back();
+    auto& environment = obj.environments.back();
+
     // read values
-    if (cmd == "c") {
+    if (cmd == "newCam") {
       auto& camera = obj.cameras.emplace_back();
       if (!parse_value(str, camera.name)) return parse_error();
+    } else if (cmd == "Co") {
       if (!parse_value(str, camera.ortho)) return parse_error();
-      if (!parse_value(str, camera.width)) return parse_error();
-      if (!parse_value(str, camera.height)) return parse_error();
+    } else if (cmd == "Ca") {
+      if (!parse_value(str, camera.aspect)) return parse_error();
+    } else if (cmd == "Cl") {
       if (!parse_value(str, camera.lens)) return parse_error();
+    } else if (cmd == "Cs") {
+      if (!parse_value(str, camera.film)) return parse_error();
+    } else if (cmd == "Cf") {
       if (!parse_value(str, camera.focus)) return parse_error();
+    } else if (cmd == "Cp") {
       if (!parse_value(str, camera.aperture)) return parse_error();
+    } else if (cmd == "Cx") {
       if (!parse_value(str, camera.frame)) return parse_error();
-    } else if (cmd == "e") {
+    } else if (cmd == "Ct") {
+      auto lookat = mat3f{};
+      if (!parse_value(str, lookat)) return parse_error();
+      camera.frame = lookat_frame(lookat.x, lookat.y, lookat.z);
+      if (camera.focus == 0) camera.focus = length(lookat.y - lookat.x);
+    } else if (cmd == "newEnv") {
       auto& environment = obj.environments.emplace_back();
       if (!parse_value(str, environment.name)) return parse_error();
+    } else if (cmd == "Ee") {
       if (!parse_value(str, environment.emission)) return parse_error();
-      auto emission_path = ""s;
-      if (!parse_value(str, emission_path)) return parse_error();
-      if (emission_path == "\"\"") emission_path = "";
-      environment.emission_tex.path = emission_path;
+    } else if (cmd == "map_Ee") {
+      if (!parse_value(str, environment.emission_tex)) return parse_error();
+    } else if (cmd == "Ex") {
       if (!parse_value(str, environment.frame)) return parse_error();
+    } else if (cmd == "Et") {
+      auto lookat = mat3f{};
+      if (!parse_value(str, lookat)) return parse_error();
+      environment.frame = lookat_frame(lookat.x, lookat.y, lookat.z, true);
     } else {
       // unused
     }
   }
+
+  // remove placeholders
+  obj.cameras.erase(obj.cameras.begin());
+  obj.environments.erase(obj.environments.begin());
 
   return true;
 }
@@ -1627,9 +1660,9 @@ bool load_obj(const string& filename, obj_scene& obj, string& error,
   }
 
   // load extensions
-  auto extfilename = replace_extension(filename, ".objx");
+  auto extfilename = replace_extension(filename, ".obx");
   if (path_exists(extfilename)) {
-    if (!load_objx(extfilename, obj, error)) return dependent_error();
+    if (!load_obx(extfilename, obj, error)) return dependent_error();
   }
 
   return true;
@@ -1868,7 +1901,7 @@ inline bool save_mtl(
 }
 
 // Save obj
-inline bool save_objx(
+inline bool save_obx(
     const string& filename, const obj_scene& obj, string& error) {
   // error helpers
   auto open_error = [filename, &error]() {
@@ -1897,20 +1930,27 @@ inline bool save_objx(
 
   // cameras
   for (auto& camera : obj.cameras) {
-    if (!format_values(fs, "c {} {} {} {} {} {} {} {}\n", camera.name,
-            camera.ortho, camera.width, camera.height, camera.lens,
-            camera.focus, camera.aperture, camera.frame))
-      return write_error();
+    if (!format_values(fs, "newCam {}\n", camera.name)) return write_error();
+    if (!format_values(fs, "  Co {}\n", camera.ortho)) return write_error();
+    if (!format_values(fs, "  Ca {}\n", camera.aspect)) return write_error();
+    if (!format_values(fs, "  Cl {}\n", camera.lens)) return write_error();
+    if (!format_values(fs, "  Cs {}\n", camera.film)) return write_error();
+    if (!format_values(fs, "  Cf {}\n", camera.focus)) return write_error();
+    if (!format_values(fs, "  Cp {}\n", camera.aperture)) return write_error();
+    if (!format_values(fs, "  Cx {}\n", camera.frame)) return write_error();
   }
 
   // environments
   for (auto& environment : obj.environments) {
-    if (!format_values(fs, "e {} {} {} {}\n", environment.name,
-            environment.emission,
-            environment.emission_tex.path.empty()
-                ? "\"\""s
-                : environment.emission_tex.path,
-            environment.frame))
+    if (!format_values(fs, "newEnv {}\n", environment.name))
+      return write_error();
+    if (!format_values(fs, "  Ee {}\n", environment.emission))
+      return write_error();
+    if (!environment.emission_tex.path.empty()) {
+      if (!format_values(fs, "  map_Ee {}\n", environment.emission_tex))
+        return write_error();
+    }
+    if (!format_values(fs, "  Ex {}\n", environment.frame))
       return write_error();
   }
 
@@ -2002,9 +2042,9 @@ bool save_obj(const string& filename, const obj_scene& obj, string& error) {
       return dependent_error();
   }
 
-  // save objx
+  // save obx
   if (!obj.cameras.empty() || !obj.environments.empty()) {
-    if (!save_objx(replace_extension(filename, ".objx"), obj, error))
+    if (!save_obx(replace_extension(filename, ".obx"), obj, error))
       return dependent_error();
   }
 

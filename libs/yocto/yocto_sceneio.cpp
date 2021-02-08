@@ -1667,8 +1667,8 @@ static bool load_obj_scene(const string& filename, scene_scene& scene,
     auto& camera        = scene.cameras.emplace_back();
     camera.frame        = ocamera.frame;
     camera.orthographic = ocamera.ortho;
-    camera.film         = max(ocamera.width, ocamera.height);
-    camera.aspect       = ocamera.width / ocamera.height;
+    camera.film         = ocamera.film;
+    camera.aspect       = ocamera.aspect;
     camera.focus        = ocamera.focus;
     camera.lens         = ocamera.lens;
     camera.aperture     = ocamera.aperture;
@@ -1802,8 +1802,8 @@ static bool save_obj_scene(const string& filename, const scene_scene& scene,
     ocamera.name     = get_camera_name(scene, camera);
     ocamera.frame    = camera.frame;
     ocamera.ortho    = camera.orthographic;
-    ocamera.width    = camera.film;
-    ocamera.height   = camera.film / camera.aspect;
+    ocamera.film    = camera.film;
+    ocamera.aspect   = camera.aspect;
     ocamera.focus    = camera.focus;
     ocamera.lens     = camera.lens;
     ocamera.aperture = camera.aperture;

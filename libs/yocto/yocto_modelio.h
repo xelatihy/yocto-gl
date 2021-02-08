@@ -285,9 +285,9 @@ struct obj_camera {
   string  name     = "";
   frame3f frame    = identity3x4f;
   bool    ortho    = false;
-  float   width    = 0.036;
-  float   height   = 0.028;
+  float   aspect   = 16.0f / 9.0f;
   float   lens     = 0.50;
+  float   film     = 0.036;
   float   focus    = 0;
   float   aperture = 0;
 };
