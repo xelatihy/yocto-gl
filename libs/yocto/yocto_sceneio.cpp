@@ -1698,7 +1698,6 @@ static bool load_obj_scene(const string& filename, scene_scene& scene,
   };
 
   // handler for materials
-  auto material_map = unordered_map<string, material_handle>{};
   for (auto& omaterial : obj.materials) {
     auto& material        = scene.materials.emplace_back();
     material.type         = material_type::metallic;
@@ -1721,37 +1720,27 @@ static bool load_obj_scene(const string& filename, scene_scene& scene,
       material.color     = omaterial.diffuse;
       material.color_tex = get_texture(omaterial.diffuse_tex);
     }
-    material.roughness           = exponent_to_roughness(omaterial.exponent);
-    material.ior                 = omaterial.ior;
-    material.metallic            = 0;
-    material.opacity             = omaterial.opacity;
-    material.normal_tex          = get_texture(omaterial.normal_tex);
-    material_map[omaterial.name] = (int)scene.materials.size() - 1;
+    material.roughness  = exponent_to_roughness(omaterial.exponent);
+    material.ior        = omaterial.ior;
+    material.metallic   = 0;
+    material.opacity    = omaterial.opacity;
+    material.normal_tex = get_texture(omaterial.normal_tex);
   }
 
   // convert shapes
   auto shape_name_counts = unordered_map<string, int>{};
   for (auto& oshape : obj.shapes) {
-    auto& materials = oshape.materials;
-    if (materials.empty()) materials.push_back(nullptr);
-    for (auto material_idx = 0; material_idx < materials.size();
-         material_idx++) {
+    auto materials = get_materials(oshape);
+    for (auto material : materials) {
       auto& shape = scene.shapes.emplace_back();
-      if (material_map.find(materials[material_idx]) == material_map.end())
-        return material_error(materials[material_idx]);
-      auto material   = material_map.at(materials[material_idx]);
-      auto has_quads_ = has_quads(oshape);
-      if (!oshape.faces.empty() && !has_quads_) {
-        get_triangles(oshape, material_idx, shape.triangles, shape.positions,
-            shape.normals, shape.texcoords, true);
-      } else if (!oshape.faces.empty() && has_quads_) {
-        get_quads(oshape, material_idx, shape.quads, shape.positions,
-            shape.normals, shape.texcoords, true);
+      if (!oshape.faces.empty()) {
+        get_faces(oshape, material, shape.triangles, shape.quads,
+            shape.positions, shape.normals, shape.texcoords, true);
       } else if (!oshape.lines.empty()) {
-        get_lines(oshape, material_idx, shape.lines, shape.positions,
-            shape.normals, shape.texcoords, true);
+        get_lines(oshape, material, shape.lines, shape.positions, shape.normals,
+            shape.texcoords, true);
       } else if (!oshape.points.empty()) {
-        get_points(oshape, material_idx, shape.points, shape.positions,
+        get_points(oshape, material, shape.points, shape.positions,
             shape.normals, shape.texcoords, true);
       } else {
         return shape_error();
@@ -1876,21 +1865,20 @@ static bool save_obj_scene(const string& filename, const scene_scene& scene,
     auto  positions = shape.positions, normals = shape.normals;
     for (auto& p : positions) p = transform_point(instance.frame, p);
     for (auto& n : normals) n = transform_normal(instance.frame, n);
-    auto& oshape     = obj.shapes.emplace_back();
-    oshape.name      = get_shape_name(scene, shape);
-    oshape.materials = {get_material_name(scene, instance.material)};
+    auto& oshape = obj.shapes.emplace_back();
+    oshape.name  = get_shape_name(scene, shape);
     if (!shape.triangles.empty()) {
       set_triangles(oshape, shape.triangles, positions, normals,
-          shape.texcoords, {}, true);
+          shape.texcoords, instance.material, {}, true);
     } else if (!shape.quads.empty()) {
-      set_quads(
-          oshape, shape.quads, positions, normals, shape.texcoords, {}, true);
+      set_quads(oshape, shape.quads, positions, normals, shape.texcoords,
+          instance.material, {}, true);
     } else if (!shape.lines.empty()) {
-      set_lines(
-          oshape, shape.lines, positions, normals, shape.texcoords, {}, true);
+      set_lines(oshape, shape.lines, positions, normals, shape.texcoords,
+          instance.material, {}, true);
     } else if (!shape.points.empty()) {
-      set_points(
-          oshape, shape.points, positions, normals, shape.texcoords, {}, true);
+      set_points(oshape, shape.points, positions, normals, shape.texcoords,
+          instance.material, {}, true);
     } else {
       return shape_error();
     }
