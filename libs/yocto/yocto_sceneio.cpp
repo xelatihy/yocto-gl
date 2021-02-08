@@ -1728,28 +1728,26 @@ static bool load_obj_scene(const string& filename, scene_scene& scene,
   }
 
   // convert shapes
-  auto shape_name_counts = unordered_map<string, int>{};
   for (auto& oshape : obj.shapes) {
-    auto materials = get_materials(oshape);
-    for (auto material : materials) {
-      auto& shape = scene.shapes.emplace_back();
-      get_positions(oshape, shape.positions);
-      get_normals(oshape, shape.normals);
-      get_texcoords(oshape, shape.texcoords, true);
-      get_faces(oshape, material, shape.triangles, shape.quads);
-      get_lines(oshape, material, shape.lines);
-      get_points(oshape, material, shape.points);
-      if (oshape.instances.empty()) {
-        auto& instance    = scene.instances.emplace_back();
+    if (oshape.elements.empty()) continue;
+    auto material = oshape.elements.front().material;
+    auto& shape = scene.shapes.emplace_back();
+    get_positions(oshape, shape.positions);
+    get_normals(oshape, shape.normals);
+    get_texcoords(oshape, shape.texcoords, true);
+    get_faces(oshape, material, shape.triangles, shape.quads);
+    get_lines(oshape, material, shape.lines);
+    get_points(oshape, material, shape.points);
+    if (oshape.instances.empty()) {
+      auto& instance    = scene.instances.emplace_back();
+      instance.shape    = (int)scene.shapes.size() - 1;
+      instance.material = material;
+    } else {
+      for (auto& frame : oshape.instances) {
+        auto instance     = scene.instances.emplace_back();
+        instance.frame    = frame;
         instance.shape    = (int)scene.shapes.size() - 1;
         instance.material = material;
-      } else {
-        for (auto& frame : oshape.instances) {
-          auto instance     = scene.instances.emplace_back();
-          instance.frame    = frame;
-          instance.shape    = (int)scene.shapes.size() - 1;
-          instance.material = material;
-        }
       }
     }
   }
