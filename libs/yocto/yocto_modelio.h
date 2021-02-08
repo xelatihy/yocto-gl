@@ -316,6 +316,11 @@ bool load_obj(const string& filename, obj_scene& obj, string& error,
     bool split_materials = false);
 bool save_obj(const string& filename, const obj_scene& obj, string& error);
 
+// Load and save obj shape
+bool load_obj(const string& filename, obj_shape& obj, string& error,
+    bool face_varying = false);
+bool save_obj(const string& filename, const obj_shape& obj, string& error);
+
 // Get obj shape.
 void get_positions(const obj_shape& shape, vector<vec3f>& positions);
 void get_normals(const obj_shape& shape, vector<vec3f>& normals);

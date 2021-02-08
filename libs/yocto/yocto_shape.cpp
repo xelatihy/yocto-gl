@@ -572,21 +572,17 @@ static bool load_obj_shape(const string& filename, shape_data& shape,
   shape = {};
 
   // load obj
-  auto obj = obj_scene{};
+  auto obj = obj_shape{};
   if (!load_obj(filename, obj, error, true)) return false;
-
-  // get shape
-  if (obj.shapes.size() != 1) return shape_error();
-  auto& oshape = obj.shapes.front();
 
   // decide what to do and get properties
   auto materials = vector<int>{};
-  get_positions(oshape, shape.positions);
-  get_normals(oshape, shape.normals);
-  get_texcoords(oshape, shape.texcoords, flip_texcoord);
-  get_faces(oshape, shape.triangles, shape.quads, materials);
-  get_lines(oshape, shape.lines, materials);
-  get_points(oshape, shape.points, materials);
+  get_positions(obj, shape.positions);
+  get_normals(obj, shape.normals);
+  get_texcoords(obj, shape.texcoords, flip_texcoord);
+  get_faces(obj, shape.triangles, shape.quads, materials);
+  get_lines(obj, shape.lines, materials);
+  get_points(obj, shape.points, materials);
 
   if (shape.points.empty() && shape.lines.empty() && shape.triangles.empty() &&
       shape.quads.empty())
@@ -608,19 +604,18 @@ static bool save_obj_shape(const string& filename, const shape_data& shape,
     return false;
   };
 
-  auto  obj    = obj_scene{};
-  auto& oshape = obj.shapes.emplace_back();
-  add_positions(oshape, shape.positions);
-  add_normals(oshape, shape.normals);
-  add_texcoords(oshape, shape.texcoords, flip_texcoord);
-  add_triangles(oshape, shape.triangles, 0, !shape.normals.empty(),
+  auto obj = obj_shape{};
+  add_positions(obj, shape.positions);
+  add_normals(obj, shape.normals);
+  add_texcoords(obj, shape.texcoords, flip_texcoord);
+  add_triangles(obj, shape.triangles, 0, !shape.normals.empty(),
       !shape.texcoords.empty());
   add_quads(
-      oshape, shape.quads, 0, !shape.normals.empty(), !shape.texcoords.empty());
+      obj, shape.quads, 0, !shape.normals.empty(), !shape.texcoords.empty());
   add_lines(
-      oshape, shape.lines, 0, !shape.normals.empty(), !shape.texcoords.empty());
-  add_points(oshape, shape.points, 0, !shape.normals.empty(),
-      !shape.texcoords.empty());
+      obj, shape.lines, 0, !shape.normals.empty(), !shape.texcoords.empty());
+  add_points(
+      obj, shape.points, 0, !shape.normals.empty(), !shape.texcoords.empty());
   return save_obj(filename, obj, error);
 }
 
@@ -872,22 +867,16 @@ static bool load_obj_fvshape(const string& filename, fvshape_data& shape,
   shape = {};
 
   // load obj
-  auto obj = obj_scene{};
-  if (!load_obj(filename, obj, error, true, true)) return false;
-
-  // get shape
-  if (obj.shapes.size() != 1) return shape_error();
-  auto& oshape = obj.shapes.front();
-
+  auto obj = obj_shape{};
+  if (!load_obj(filename, obj, error, true)) return false;
   auto materials = vector<int>{};
-  get_positions(oshape, shape.positions);
-  get_normals(oshape, shape.normals);
-  get_texcoords(oshape, shape.texcoords, flip_texcoord);
+  get_positions(obj, shape.positions);
+  get_normals(obj, shape.normals);
+  get_texcoords(obj, shape.texcoords, flip_texcoord);
   get_fvquads(
-      oshape, shape.quadspos, shape.quadsnorm, shape.quadstexcoord, materials);
+      obj, shape.quadspos, shape.quadsnorm, shape.quadstexcoord, materials);
 
-  if (shape.quadspos.empty())
-    return shape_error();
+  if (shape.quadspos.empty()) return shape_error();
   return true;
 }
 static bool save_obj_fvshape(const string& filename, const fvshape_data& shape,
@@ -909,12 +898,11 @@ static bool save_obj_fvshape(const string& filename, const fvshape_data& shape,
     return false;
   };
 
-  auto  obj    = obj_scene{};
-  auto& oshape = obj.shapes.emplace_back();
-  add_positions(oshape, shape.positions);
-  add_normals(oshape, shape.positions);
-  add_texcoords(oshape, shape.texcoords, flip_texcoord);
-  add_fvquads(oshape, shape.quadspos, shape.quadsnorm, shape.quadstexcoord, 0);
+  auto obj = obj_shape{};
+  add_positions(obj, shape.positions);
+  add_normals(obj, shape.positions);
+  add_texcoords(obj, shape.texcoords, flip_texcoord);
+  add_fvquads(obj, shape.quadspos, shape.quadsnorm, shape.quadstexcoord, 0);
   return save_obj(filename, obj, error);
 }
 

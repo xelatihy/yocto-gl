@@ -1658,6 +1658,134 @@ bool load_obj(const string& filename, obj_scene& obj, string& error,
   return true;
 }
 
+// Read obj
+bool load_obj(const string& filename, obj_shape& shape, string& error,
+    bool face_varying) {
+  // error helpers
+  auto open_error = [filename, &error]() {
+    error = filename + ": file not found";
+    return false;
+  };
+  auto parse_error = [filename, &error]() {
+    error = filename + ": parse error";
+    return false;
+  };
+  auto read_error = [filename, &error]() {
+    error = filename + ": read error";
+    return false;
+  };
+
+  // open file
+  auto fs = open_file(filename, "rt");
+  if (!fs) return open_error();
+
+  // parsing state
+  auto material_map = unordered_map<string, int>{};
+  int  cur_material = -1;
+
+  // initialize obj
+  shape = {};
+
+  // read the file str by str
+  auto buffer = array<char, 4096>{};
+  while (read_line(fs, buffer)) {
+    // str
+    auto str = string_view{buffer.data()};
+    remove_comment(str);
+    skip_whitespace(str);
+    if (str.empty()) continue;
+
+    // get command
+    auto cmd = ""s;
+    if (!parse_value(str, cmd)) return parse_error();
+    if (cmd.empty()) continue;
+
+    // possible token values
+    if (cmd == "v") {
+      if (!parse_value(str, shape.positions.emplace_back()))
+        return parse_error();
+    } else if (cmd == "vn") {
+      if (!parse_value(str, shape.normals.emplace_back())) return parse_error();
+    } else if (cmd == "vt") {
+      if (!parse_value(str, shape.texcoords.emplace_back()))
+        return parse_error();
+    } else if (cmd == "f" || cmd == "l" || cmd == "p") {
+      // elemnet type
+      auto etype = (cmd == "f")   ? obj_etype::face
+                   : (cmd == "l") ? obj_etype::line
+                                  : obj_etype::point;
+      // grab shape and add element
+      auto& element    = shape.elements.emplace_back();
+      element.material = cur_material;
+      element.etype    = etype;
+      // parse vertices
+      skip_whitespace(str);
+      while (!str.empty()) {
+        auto vert = obj_vertex{};
+        if (!parse_value(str, vert)) return parse_error();
+        if (vert.position == 0) break;
+        if (vert.position < 0)
+          vert.position = (int)shape.positions.size() + vert.position + 1;
+        if (vert.texcoord < 0)
+          vert.texcoord = (int)shape.texcoords.size() + vert.texcoord + 1;
+        if (vert.normal < 0)
+          vert.normal = (int)shape.normals.size() + vert.normal + 1;
+        shape.vertices.push_back(vert);
+        element.size += 1;
+        skip_whitespace(str);
+      }
+    } else if (cmd == "usemtl") {
+      auto mname = string{};
+      if (!parse_value(str, mname)) return parse_error();
+      auto material_it = material_map.find(mname);
+      if (material_it == material_map.end()) {
+        cur_material        = (int)material_map.size();
+        material_map[mname] = cur_material;
+      } else {
+        cur_material = material_it->second;
+      }
+    } else {
+      // unused
+    }
+  }
+
+  // convert vertex data
+  if (!face_varying) {
+    auto opositions = vector<vec3f>{};
+    auto onormals   = vector<vec3f>{};
+    auto otexcoords = vector<vec2f>{};
+    shape.positions.swap(opositions);
+    shape.normals.swap(onormals);
+    shape.texcoords.swap(otexcoords);
+    auto vertex_map = unordered_map<obj_vertex, obj_vertex>{};
+    for (auto& vertex : shape.vertices) {
+      auto vertex_it = vertex_map.find(vertex);
+      if (vertex_it == vertex_map.end()) {
+        auto new_vertex = vertex;
+        auto index      = (int)vertex_map.size();
+        if (vertex.position > 0) {
+          shape.positions.push_back(opositions[vertex.position - 1]);
+          new_vertex.position = index + 1;
+        }
+        if (vertex.normal > 0) {
+          shape.normals.push_back(onormals[vertex.normal - 1]);
+          new_vertex.normal = index + 1;
+        }
+        if (vertex.texcoord > 0) {
+          shape.texcoords.push_back(otexcoords[vertex.texcoord - 1]);
+          new_vertex.texcoord = index + 1;
+        }
+        vertex_map[vertex] = new_vertex;
+        vertex             = new_vertex;
+      } else {
+        vertex = vertex_it->second;
+      }
+    }
+  }
+
+  return true;
+}
+
 // Format values
 inline void format_value(string& str, const obj_texture& value) {
   str += value.path.empty() ? "" : value.path;
@@ -1869,33 +1997,29 @@ bool save_obj(const string& filename, const obj_scene& obj, string& error) {
       if (!format_values(fs, "vn {}\n", n)) return write_error();
     for (auto& t : shape.texcoords)
       if (!format_values(fs, "vt {}\n", t)) return write_error();
-    auto element_labels = vector<string>{"f", "l", "p"};
-    for (auto element_idx = 0; element_idx < 3; element_idx++) {
-      auto& label        = element_labels[element_idx];
-      auto  cur_material = -1, cur_vertex = 0;
-      for (auto& element : shape.elements) {
-        if (!obj.materials.empty() && cur_material != element.material) {
-          if (!format_values(
-                  fs, "usemtl {}\n", obj.materials[element.material].name))
-            return write_error();
-          cur_material = element.material;
-        }
-        if (element.etype == obj_etype::face) {
-          if (!format_values(fs, "{}", "f")) return write_error();
-        } else if (element.etype == obj_etype::line) {
-          if (!format_values(fs, "{}", "l")) return write_error();
-        } else if (element.etype == obj_etype::point) {
-          if (!format_values(fs, "{}", "p")) return write_error();
-        }
-        for (auto c = 0; c < element.size; c++) {
-          auto vert = shape.vertices[cur_vertex++];
-          if (vert.position != 0) vert.position += vert_size.position;
-          if (vert.normal != 0) vert.normal += vert_size.normal;
-          if (vert.texcoord != 0) vert.texcoord += vert_size.texcoord;
-          if (!format_values(fs, " {}", vert)) return write_error();
-        }
-        if (!format_values(fs, "\n")) return write_error();
+    auto cur_material = -1, cur_vertex = 0;
+    for (auto& element : shape.elements) {
+      if (!obj.materials.empty() && cur_material != element.material) {
+        if (!format_values(
+                fs, "usemtl {}\n", obj.materials[element.material].name))
+          return write_error();
+        cur_material = element.material;
       }
+      if (element.etype == obj_etype::face) {
+        if (!format_values(fs, "{}", "f")) return write_error();
+      } else if (element.etype == obj_etype::line) {
+        if (!format_values(fs, "{}", "l")) return write_error();
+      } else if (element.etype == obj_etype::point) {
+        if (!format_values(fs, "{}", "p")) return write_error();
+      }
+      for (auto c = 0; c < element.size; c++) {
+        auto vert = shape.vertices[cur_vertex++];
+        if (vert.position != 0) vert.position += vert_size.position;
+        if (vert.normal != 0) vert.normal += vert_size.normal;
+        if (vert.texcoord != 0) vert.texcoord += vert_size.texcoord;
+        if (!format_values(fs, " {}", vert)) return write_error();
+      }
+      if (!format_values(fs, "\n")) return write_error();
     }
     if (!format_values(fs, "\n")) return write_error();
     vert_size.position += (int)shape.positions.size();
@@ -1915,6 +2039,64 @@ bool save_obj(const string& filename, const obj_scene& obj, string& error) {
           [](auto shape) { return !shape.instances.empty(); })) {
     if (!save_objx(replace_extension(filename, ".objx"), obj, error))
       return dependent_error();
+  }
+
+  // done
+  return true;
+}
+
+// Save obj
+bool save_obj(const string& filename, const obj_shape& shape, string& error) {
+  // error helpers
+  auto open_error = [filename, &error]() {
+    error = filename + ": file not found";
+    return false;
+  };
+  auto write_error = [filename, &error]() {
+    error = filename + ": write error";
+    return false;
+  };
+
+  // open file
+  auto fs = open_file(filename, "wt");
+  if (!fs) return open_error();
+
+  // save comments
+  if (!format_values(fs, "#\n")) return write_error();
+  if (!format_values(fs, "# Written by Yocto/GL\n")) return write_error();
+  if (!format_values(fs, "# https://github.com/xelatihy/yocto-gl\n"))
+    return write_error();
+  if (!format_values(fs, "#\n\n")) return write_error();
+  if (!format_values(fs, "\n")) return write_error();
+
+  // save objects
+  if (!format_values(fs, "o {}\n", shape.name)) return write_error();
+  for (auto& p : shape.positions)
+    if (!format_values(fs, "v {}\n", p)) return write_error();
+  for (auto& n : shape.normals)
+    if (!format_values(fs, "vn {}\n", n)) return write_error();
+  for (auto& t : shape.texcoords)
+    if (!format_values(fs, "vt {}\n", t)) return write_error();
+  auto cur_material = -1, cur_vertex = 0;
+  for (auto& element : shape.elements) {
+    if (cur_material != element.material) {
+      if (!format_values(
+              fs, "usemtl {}\n", "material" + std::to_string(element.material)))
+        return write_error();
+      cur_material = element.material;
+    }
+    if (element.etype == obj_etype::face) {
+      if (!format_values(fs, "{}", "f")) return write_error();
+    } else if (element.etype == obj_etype::line) {
+      if (!format_values(fs, "{}", "l")) return write_error();
+    } else if (element.etype == obj_etype::point) {
+      if (!format_values(fs, "{}", "p")) return write_error();
+    }
+    for (auto c = 0; c < element.size; c++) {
+      auto& vert = shape.vertices[cur_vertex++];
+      if (!format_values(fs, " {}", vert)) return write_error();
+    }
+    if (!format_values(fs, "\n")) return write_error();
   }
 
   // done
