@@ -2070,12 +2070,14 @@ static bool load_gltf_scene(const string& filename, scene_scene& scene,
   if (!load_json(filename, gltf, error)) return false;
 
   // parse buffers
-  auto bnames = vector<string>{};
+  auto buffers_paths = vector<string>{};
+  auto buffers       = vector<vector<byte>>();
   try {
     if (gltf.contains("buffers")) {
       for (auto& gbuffer : gltf.at("buffers")) {
         if (!gbuffer.contains("uri")) return parse_error();
-        bnames.push_back(gbuffer.value("uri", ""));
+        buffers_paths.push_back(gbuffer.value("uri", ""));
+        buffers.emplace_back();
       }
     }
   } catch (...) {
@@ -2083,15 +2085,14 @@ static bool load_gltf_scene(const string& filename, scene_scene& scene,
   }
 
   // handle progress
-  progress.y += (int)bnames.size();
+  progress.y += (int)buffers_paths.size();
 
   // parse buffers
-  auto buffers = vector<vector<byte>>();
-  buffers.reserve(bnames.size());
   auto dirname = path_dirname(filename);
-  for (auto& name : bnames) {
+  for (auto& buffer : buffers) {
+    auto& bfilename = buffers_paths[&buffer - &buffers.front()];
     progress_cb("load buffer", progress.x++, progress.y);
-    if (!load_binary(path_join(dirname, name), buffers.emplace_back(), error))
+    if (!load_binary(path_join(dirname, bfilename), buffer, error))
       return dependent_error();
   }
 
@@ -2142,33 +2143,27 @@ static bool load_gltf_scene(const string& filename, scene_scene& scene,
     }
   }
 
-  // prepare list of effective nodes
-  auto visible_nodes = vector<bool>{};
-  if (gltf.contains("nodes")) {
+  // convert color textures
+  auto get_texture = [&gltf](const njson& js,
+                         const string&    name) -> texture_handle {
+    if (!js.contains(name)) return invalid_handle;
+    auto& ginfo    = js.at(name);
+    auto& gtexture = gltf.at("textures").at(ginfo.value("index", -1));
+    return gtexture.value("source", -1);
+  };
+
+  // convert textures
+  auto texture_paths = vector<string>{};
+  if (gltf.contains("images")) {
     try {
-      visible_nodes.assign(gltf.at("nodes").size(), true);
+      for (auto& gimage : gltf.at("images")) {
+        scene.textures.emplace_back();
+        texture_paths.push_back(gimage.value("uri", ""));
+      }
     } catch (...) {
       return parse_error();
     }
   }
-
-  // convert color textures
-  auto texture_map = unordered_map<string, texture_handle>{
-      {"", invalid_handle}};
-  auto get_texture = [&gltf, &scene, &texture_map](const njson& js,
-                         const string& name) -> texture_handle {
-    if (!js.contains(name)) return invalid_handle;
-    auto& ginfo    = js.at(name);
-    auto& gtexture = gltf.at("textures").at(ginfo.value("index", -1));
-    auto& gimage   = gltf.at("images").at(gtexture.value("source", -1));
-    auto  path     = gimage.value("uri", "");
-    if (path.empty()) return invalid_handle;
-    auto it = texture_map.find(path);
-    if (it != texture_map.end()) return it->second;
-    scene.textures.emplace_back();
-    texture_map[path] = (int)scene.textures.size() - 1;
-    return (int)scene.textures.size() - 1;
-  };
 
   // convert materials
   if (gltf.contains("materials")) {
@@ -2532,11 +2527,10 @@ static bool load_gltf_scene(const string& filename, scene_scene& scene,
   progress.y += (int)scene.textures.size();
 
   // load texture
-  texture_map.erase("");
-  for (auto [tpath, thandle] : texture_map) {
-    auto& texture = scene.textures[thandle];
+  for (auto& texture : scene.textures) {
+    auto& tfilename = texture_paths[&texture - &scene.textures.front()];
     if (progress_cb) progress_cb("load texture", progress.x++, progress.y);
-    if (!load_image(path_join(path_dirname(filename), tpath), texture.hdr,
+    if (!load_image(path_join(path_dirname(filename), tfilename), texture.hdr,
             texture.ldr, error))
       return dependent_error();
   }
