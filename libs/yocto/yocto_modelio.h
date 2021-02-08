@@ -435,6 +435,13 @@ struct pbrt_camera {
   float   aperture   = 0;
 };
 
+// Pbrt material
+struct pbrt_texture {
+  string name     = "";
+  vec3f  constant = {1, 1, 1};
+  string filename = "";
+};
+
 // Pbrt material type (simplified and only for the materials that matter here)
 enum struct pbrt_material_type {
   // clang-format off
@@ -444,19 +451,19 @@ enum struct pbrt_material_type {
 
 // Pbrt material
 struct pbrt_material {
-  string             name            = "";
-  pbrt_material_type type            = pbrt_material_type::matte;
-  vec3f              emission        = {0, 0, 0};
-  vec3f              color           = {0, 0, 0};
-  float              roughness       = 0;
-  float              ior             = 1.5;
-  float              opacity         = 1;
-  string             color_tex       = "";
-  string             opacity_tex     = "";
-  string             alpha_tex       = "";
-  vec3f              volmeanfreepath = {0, 0, 0};
-  vec3f              volscatter      = {0, 0, 0};
-  float              volscale        = 0.01;
+  string             name        = "";
+  pbrt_material_type type        = pbrt_material_type::matte;
+  vec3f              emission    = {0, 0, 0};
+  vec3f              color       = {0, 0, 0};
+  float              roughness   = 0;
+  float              ior         = 1.5;
+  float              opacity     = 1;
+  int                color_tex   = -1;
+  int                opacity_tex = -1;
+  // int                alpha_tex       = -1;
+  vec3f volmeanfreepath = {0, 0, 0};
+  vec3f volscatter      = {0, 0, 0};
+  float volscale        = 0.01;
 };
 
 // Pbrt shape
@@ -492,7 +499,7 @@ struct pbrt_environment {
   frame3f frame        = identity3x4f;
   frame3f frend        = identity3x4f;
   vec3f   emission     = {0, 0, 0};
-  string  emission_tex = "";
+  int     emission_tex = -1;
 };
 
 // Pbrt model
@@ -504,6 +511,7 @@ struct pbrt_scene {
   vector<pbrt_environment> environments = {};
   vector<pbrt_light>       lights       = {};
   vector<pbrt_material>    materials    = {};
+  vector<pbrt_texture>     textures     = {};
 };
 
 // Load/save pbrt

@@ -2958,29 +2958,12 @@ static bool load_pbrt_scene(const string& filename, scene_scene& scene,
     camera.focus  = pcamera.focus;
   }
 
-  // convert materials
-  auto texture_map = unordered_map<string, texture_handle>{
-      {"", invalid_handle}};
-  auto get_texture = [&scene, &texture_map](
-                         const string& path) -> texture_handle {
-    if (path.empty()) return invalid_handle;
-    auto it = texture_map.find(path);
-    if (it != texture_map.end()) return it->second;
+  // convert material
+  auto texture_paths = vector<string>{};
+  for (auto& ptexture : pbrt.textures) {
     scene.textures.emplace_back();
-    texture_map[path] = (int)scene.textures.size() - 1;
-    return (int)scene.textures.size() - 1;
-  };
-  auto atexture_map = unordered_map<string, texture_handle>{
-      {"", invalid_handle}};
-  auto get_atexture = [&scene, &atexture_map](
-                          const string& path) -> texture_handle {
-    if (path.empty()) return invalid_handle;
-    auto it = atexture_map.find(path);
-    if (it != atexture_map.end()) return it->second;
-    scene.textures.emplace_back();
-    atexture_map[path] = (int)scene.textures.size() - 1;
-    return (int)scene.textures.size() - 1;
-  };
+    texture_paths.push_back(ptexture.filename);
+  }
 
   // material type map
   auto material_type_map = unordered_map<pbrt_material_type, material_type>{
@@ -2993,7 +2976,6 @@ static bool load_pbrt_scene(const string& filename, scene_scene& scene,
   };
 
   // convert material
-  auto material_map = unordered_map<string, material_handle>{};
   for (auto& pmaterial : pbrt.materials) {
     auto& material = scene.materials.emplace_back();
     material.type  = material_type_map.at(pmaterial.type);
@@ -3005,11 +2987,7 @@ static bool load_pbrt_scene(const string& filename, scene_scene& scene,
     material.ior       = pmaterial.ior;
     material.roughness = pmaterial.roughness;
     material.opacity   = pmaterial.opacity;
-    material.color_tex = get_texture(pmaterial.color_tex);
-    // material.opacity_tex  = get_texture(pmaterial.opacity_tex);
-    // if (material.opacity_tex == invalid_handle)
-    //   material.opacity_tex = get_atexture(pmaterial.alpha_tex);
-    material_map[pmaterial.name] = (int)scene.materials.size() - 1;
+    material.color_tex = pmaterial.color_tex;
   }
 
   // convert shapes
@@ -3040,7 +3018,7 @@ static bool load_pbrt_scene(const string& filename, scene_scene& scene,
     auto& environment        = scene.environments.emplace_back();
     environment.frame        = penvironment.frame;
     environment.emission     = penvironment.emission;
-    environment.emission_tex = get_texture(penvironment.emission_tex);
+    environment.emission_tex = penvironment.emission_tex;
   }
 
   // lights
@@ -3066,29 +3044,11 @@ static bool load_pbrt_scene(const string& filename, scene_scene& scene,
   };
 
   // load texture
-  texture_map.erase("");
-  for (auto [name, thandle] : texture_map) {
-    auto& texture = scene.textures[thandle];
+  for (auto& texture : scene.textures) {
+    auto& filename = texture_paths[&texture - &scene.textures.front()];
     if (progress_cb) progress_cb("load texture", progress.x++, progress.y);
-    if (!load_image(make_filename(name), texture.hdr, texture.ldr, error))
+    if (!load_image(make_filename(filename), texture.hdr, texture.ldr, error))
       return dependent_error();
-  }
-
-  // load alpha
-  atexture_map.erase("");
-  for (auto [name, thandle] : atexture_map) {
-    auto& texture = scene.textures[thandle];
-    if (progress_cb) progress_cb("load texture", progress.x++, progress.y);
-    if (!load_image(make_filename(name), texture.hdr, texture.ldr, error))
-      return dependent_error();
-    for (auto& c : texture.hdr) {
-      c = (max(vec3f{c.x, c.y, c.z}) < 0.01) ? vec4f{0, 0, 0, c.w}
-                                             : vec4f{1, 1, 1, c.w};
-    }
-    for (auto& c : texture.ldr) {
-      c = (max(vec3i{c.x, c.y, c.z}) < 2) ? vec4b{0, 0, 0, c.w}
-                                          : vec4b{255, 255, 255, c.w};
-    }
   }
 
   // fix scene
@@ -3125,10 +3085,12 @@ static bool save_pbrt_scene(const string& filename, const scene_scene& scene,
   pcamera.aspect     = camera.aspect;
   pcamera.resolution = {1280, (int)(1280 / pcamera.aspect)};
 
-  // get texture name
-  auto get_texture = [&](texture_handle texture) -> string {
-    return texture != invalid_handle ? get_texture_name(scene, texture) : "";
-  };
+  // convert textures
+  for (auto& texture : scene.textures) {
+    auto& ptexture    = pbrt.textures.emplace_back();
+    ptexture.filename = "textures/" + get_texture_name(scene, texture) +
+                        (!texture.hdr.empty() ? ".hdr" : ".png");
+  }
 
   // material type map
   auto material_type_map = unordered_map<material_type, pbrt_material_type>{
@@ -3151,7 +3113,7 @@ static bool save_pbrt_scene(const string& filename, const scene_scene& scene,
     pmaterial.roughness = material.roughness;
     pmaterial.ior       = material.ior;
     pmaterial.opacity   = material.opacity;
-    pmaterial.color_tex = get_texture(material.color_tex);
+    pmaterial.color_tex = material.color_tex;
   }
 
   // convert instances
@@ -3167,7 +3129,7 @@ static bool save_pbrt_scene(const string& filename, const scene_scene& scene,
   for (auto& environment : scene.environments) {
     auto& penvironment        = add_environment(pbrt);
     penvironment.emission     = environment.emission;
-    penvironment.emission_tex = get_texture(environment.emission_tex);
+    penvironment.emission_tex = environment.emission_tex;
   }
 
   // handle progress
