@@ -787,22 +787,22 @@ bool save_instance(const string& filename, const vector<frame3f>& frames,
 }
 
 // Loads/saves a  channel float/byte image in linear/srgb color space.
-static bool load_image(const string& filename, image<vec4f>& imgf,
-    image<vec4b>& imgb, string& error) {
+static bool load_texture(
+    const string& filename, scene_texture& texture, string& error) {
   if (is_hdr_filename(filename)) {
-    return load_image(filename, imgf, error);
+    return load_image(filename, texture.hdr, error);
   } else {
-    return load_image(filename, imgb, error);
+    return load_image(filename, texture.ldr, error);
   }
 }
 
 // Loads/saves a  channel float/byte image in linear/srgb color space.
-static bool save_image(const string& filename, const image<vec4f>& imgf,
-    const image<vec4b>& imgb, string& error) {
-  if (!imgf.empty()) {
-    return save_image(filename, imgf, error);
+static bool save_texture(
+    const string& filename, const scene_texture& texture, string& error) {
+  if (!texture.hdr.empty()) {
+    return save_image(filename, texture.hdr, error);
   } else {
-    return save_image(filename, imgb, error);
+    return save_image(filename, texture.ldr, error);
   }
 }
 
@@ -1314,7 +1314,7 @@ static bool load_json_scene(const string& filename, scene_scene& scene,
     if (progress_cb) progress_cb("load texture", progress.x++, progress.y);
     auto path = find_path(get_texture_name(scene, texture), "textures",
         {".hdr", ".exr", ".png", ".jpg"});
-    if (!load_image(path_join(dirname, path), texture.hdr, texture.ldr, error))
+    if (!load_texture(path_join(dirname, path), texture, error))
       return dependent_error();
   }
 
@@ -1610,7 +1610,7 @@ static bool save_json_scene(const string& filename, const scene_scene& scene,
     if (progress_cb) progress_cb("save texture", progress.x++, progress.y);
     auto path = "textures/" + get_texture_name(scene, texture) +
                 (!texture.hdr.empty() ? ".hdr"s : ".png"s);
-    if (!save_image(path_join(dirname, path), texture.hdr, texture.ldr, error))
+    if (!save_texture(path_join(dirname, path), texture, error))
       return dependent_error();
   }
 
@@ -1744,7 +1744,7 @@ static bool load_obj_scene(const string& filename, scene_scene& scene,
   for (auto& texture : scene.textures) {
     if (progress_cb) progress_cb("load texture", progress.x++, progress.y);
     auto& path = textures_paths[&texture - &scene.textures.front()];
-    if (!load_image(path_join(dirname, path), texture.hdr, texture.ldr, error))
+    if (!load_texture(path_join(dirname, path), texture, error))
       return dependent_error();
   }
 
@@ -1863,7 +1863,7 @@ static bool save_obj_scene(const string& filename, const scene_scene& scene,
     if (progress_cb) progress_cb("save texture", progress.x++, progress.y);
     auto path = "textures/" + get_texture_name(scene, texture) +
                 (!texture.hdr.empty() ? ".hdr"s : ".png"s);
-    if (!save_image(path_join(dirname, path), texture.hdr, texture.ldr, error))
+    if (!save_texture(path_join(dirname, path), texture, error))
       return dependent_error();
   }
 
@@ -2466,7 +2466,7 @@ static bool load_gltf_scene(const string& filename, scene_scene& scene,
   for (auto& texture : scene.textures) {
     if (progress_cb) progress_cb("load texture", progress.x++, progress.y);
     auto& path = textures_paths[&texture - &scene.textures.front()];
-    if (!load_image(path_join(dirname, path), texture.hdr, texture.ldr, error))
+    if (!load_texture(path_join(dirname, path), texture, error))
       return dependent_error();
   }
 
@@ -2847,7 +2847,7 @@ static bool save_gltf_scene(const string& filename, const scene_scene& scene,
     if (progress_cb) progress_cb("save texture", progress.x++, progress.y);
     auto path = "textures/" + get_texture_name(scene, texture) +
                 (!texture.hdr.empty() ? ".hdr" : ".png");
-    if (!save_image(path_join(dirname, path), texture.hdr, texture.ldr, error))
+    if (!save_texture(path_join(dirname, path), texture, error))
       return dependent_error();
   }
 
@@ -2979,7 +2979,7 @@ static bool load_pbrt_scene(const string& filename, scene_scene& scene,
   for (auto& texture : scene.textures) {
     if (progress_cb) progress_cb("load texture", progress.x++, progress.y);
     auto& path = textures_paths[&texture - &scene.textures.front()];
-    if (!load_image(path_join(dirname, path), texture.hdr, texture.ldr, error))
+    if (!load_texture(path_join(dirname, path), texture, error))
       return dependent_error();
   }
 
@@ -3079,7 +3079,7 @@ static bool save_pbrt_scene(const string& filename, const scene_scene& scene,
     if (progress_cb) progress_cb("save texture", progress.x++, progress.y);
     auto path = "textures/" + get_texture_name(scene, texture) +
                 (!texture.hdr.empty() ? ".hdr" : ".png");
-    if (!save_image(path_join(dirname, path), texture.hdr, texture.ldr, error))
+    if (!save_texture(path_join(dirname, path), texture, error))
       return dependent_error();
   }
 
