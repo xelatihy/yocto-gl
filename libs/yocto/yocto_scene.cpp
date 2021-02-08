@@ -36,7 +36,6 @@
 #include <stdexcept>
 #include <unordered_map>
 
-#include "ext/cgltf.h"
 #include "yocto_color.h"
 #include "yocto_commonio.h"
 #include "yocto_geometry.h"
