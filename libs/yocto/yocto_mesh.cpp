@@ -2699,22 +2699,23 @@ bool load_mesh(const string& filename, vector<vec3i>& triangles,
     get_colors(ply, colors);
     // get faces
     get_triangles(ply, triangles);
-    if (positions.empty()) return shape_error();
+    if (triangles.empty()) return shape_error();
     return true;
   } else if (ext == ".obj" || ext == ".OBJ") {
     // load obj
     auto obj = obj_scene{};
     if (!load_obj(filename, obj, error, true)) return false;
     // get shape
-    if (obj.shapes.empty()) return shape_error();
-    if (obj.shapes.size() > 1) return shape_error();
+    if (obj.shapes.size() != 1) return shape_error();
     auto& shape = obj.shapes.front();
     if (shape.faces.empty()) return shape_error();
     // decide what to do and get properties
     auto materials = vector<int>{};
-    get_triangles(shape, triangles, positions, normals, texcoords, materials,
-        flip_texcoord);
-    if (positions.empty()) return shape_error();
+    get_positions(shape, positions);
+    get_normals(shape, normals);
+    get_texcoords(shape, texcoords, flip_texcoord);
+    get_triangles(shape, triangles, materials);
+    if (triangles.empty()) return shape_error();
     return true;
   } else {
     return format_error();
@@ -2750,8 +2751,10 @@ bool save_mesh(const string& filename, const vector<vec3i>& triangles,
     auto  obj    = obj_scene{};
     auto& oshape = obj.shapes.emplace_back();
     if (triangles.empty()) return shape_error();
-    set_triangles(
-        oshape, triangles, positions, normals, texcoords, 0, {}, flip_texcoord);
+    add_positions(oshape, positions);
+    add_normals(oshape, normals);
+    add_texcoords(oshape, texcoords, flip_texcoord);
+    add_triangles(oshape, triangles, 0, !normals.empty(), !texcoords.empty());
     if (!save_obj(filename, obj, error)) return false;
     return true;
   } else if (ext == ".stl" || ext == ".STL") {
@@ -2792,23 +2795,16 @@ bool load_mesh(const string& filename, vector<vec3i>& triangles,
   } else if (ext == ".obj" || ext == ".OBJ") {
     // load obj
     auto obj = obj_scene{};
-    if (!load_obj(filename, obj, error, true)) return false;
+    if (!load_obj(filename, obj, error, true, true)) return false;
     // get shape
-    if (obj.shapes.empty()) return shape_error();
-    if (obj.shapes.size() > 1) return shape_error();
+    if (obj.shapes.size() != 1) return shape_error();
     auto& shape = obj.shapes.front();
     if (shape.faces.empty()) return shape_error();
     // decide what to do and get properties
-    auto materials     = vector<int>{};
-    auto quadspos      = vector<vec4i>{};
-    auto quadsnorm     = vector<vec4i>{};
-    auto quadstexcoord = vector<vec4i>{};
-    auto normals       = vector<vec3f>{};
-    auto texcoords     = vector<vec2f>{};
-    get_fvquads(shape, quadspos, quadsnorm, quadstexcoord, positions, normals,
-        texcoords, materials);
-    triangles = quads_to_triangles(quadspos);
-    if (positions.empty()) return shape_error();
+    auto materials = vector<int>{};
+    get_positions(shape, positions);
+    get_triangles(shape, triangles, materials);
+    if (triangles.empty()) return shape_error();
     return true;
   } else if (ext == ".stl" || ext == ".STL") {
     // open ply
@@ -2851,7 +2847,8 @@ bool save_mesh(const string& filename, const vector<vec3i>& triangles,
     auto  obj    = obj_scene{};
     auto& oshape = obj.shapes.emplace_back();
     if (triangles.empty()) return shape_error();
-    set_triangles(oshape, triangles, positions, {}, {}, 0, {});
+    add_positions(oshape, positions);
+    add_triangles(oshape, triangles, 0, false, false);
     auto err = ""s;
     if (!save_obj(filename, obj, error)) return false;
     return true;
@@ -2910,9 +2907,11 @@ bool load_lines(const string& filename, vector<vec2i>& lines,
     if (shape.lines.empty()) return shape_error();
     // decide what to do and get properties
     auto materials = vector<int>{};
-    get_lines(
-        shape, lines, positions, normals, texcoords, materials, flip_texcoord);
-    if (positions.empty()) return shape_error();
+    get_positions(shape, positions);
+    get_normals(shape, normals);
+    get_texcoords(shape, texcoords, flip_texcoord);
+    get_lines(shape, lines, materials);
+    if (lines.empty()) return shape_error();
     return true;
   } else {
     return format_error();
@@ -2948,8 +2947,10 @@ bool save_lines(const string& filename, const vector<vec2i>& lines,
     auto  obj    = obj_scene{};
     auto& oshape = obj.shapes.emplace_back();
     if (lines.empty()) return shape_error();
-    set_lines(
-        oshape, lines, positions, normals, texcoords, 0, {}, flip_texcoord);
+    add_positions(oshape, positions);
+    add_normals(oshape, normals);
+    add_texcoords(oshape, texcoords, flip_texcoord);
+    add_lines(oshape, lines, 0, !normals.empty(), !texcoords.empty());
     if (!save_obj(filename, obj, error)) return false;
     return true;
   } else {

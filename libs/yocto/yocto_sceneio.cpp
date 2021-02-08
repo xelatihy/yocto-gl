@@ -1657,7 +1657,7 @@ static bool load_obj_scene(const string& filename, scene_scene& scene,
 
   // load obj
   auto obj = obj_scene{};
-  if (!load_obj(filename, obj, error)) return false;
+  if (!load_obj(filename, obj, error, false, false, true)) return false;
 
   // handle progress
   if (progress_cb) progress_cb("load scene", progress.x++, progress.y);
@@ -1733,28 +1733,21 @@ static bool load_obj_scene(const string& filename, scene_scene& scene,
     auto materials = get_materials(oshape);
     for (auto material : materials) {
       auto& shape = scene.shapes.emplace_back();
-      if (!oshape.faces.empty()) {
-        get_faces(oshape, material, shape.triangles, shape.quads,
-            shape.positions, shape.normals, shape.texcoords, true);
-      } else if (!oshape.lines.empty()) {
-        get_lines(oshape, material, shape.lines, shape.positions, shape.normals,
-            shape.texcoords, true);
-      } else if (!oshape.points.empty()) {
-        get_points(oshape, material, shape.points, shape.positions,
-            shape.normals, shape.texcoords, true);
-      } else {
-        return shape_error();
-      }
-      auto shape_id = (int)scene.shapes.size() - 1;
+      get_positions(oshape, shape.positions);
+      get_normals(oshape, shape.normals);
+      get_texcoords(oshape, shape.texcoords, true);
+      get_faces(oshape, material, shape.triangles, shape.quads);
+      get_lines(oshape, material, shape.lines);
+      get_points(oshape, material, shape.points);
       if (oshape.instances.empty()) {
         auto& instance    = scene.instances.emplace_back();
-        instance.shape    = shape_id;
+        instance.shape    = (int)scene.shapes.size() - 1;
         instance.material = material;
       } else {
         for (auto& frame : oshape.instances) {
           auto instance     = scene.instances.emplace_back();
           instance.frame    = frame;
-          instance.shape    = shape_id;
+          instance.shape    = (int)scene.shapes.size() - 1;
           instance.material = material;
         }
       }
@@ -1867,21 +1860,17 @@ static bool save_obj_scene(const string& filename, const scene_scene& scene,
     for (auto& n : normals) n = transform_normal(instance.frame, n);
     auto& oshape = obj.shapes.emplace_back();
     oshape.name  = get_shape_name(scene, shape);
-    if (!shape.triangles.empty()) {
-      set_triangles(oshape, shape.triangles, positions, normals,
-          shape.texcoords, instance.material, {}, true);
-    } else if (!shape.quads.empty()) {
-      set_quads(oshape, shape.quads, positions, normals, shape.texcoords,
-          instance.material, {}, true);
-    } else if (!shape.lines.empty()) {
-      set_lines(oshape, shape.lines, positions, normals, shape.texcoords,
-          instance.material, {}, true);
-    } else if (!shape.points.empty()) {
-      set_points(oshape, shape.points, positions, normals, shape.texcoords,
-          instance.material, {}, true);
-    } else {
-      return shape_error();
-    }
+    add_positions(oshape, positions);
+    add_normals(oshape, normals);
+    add_texcoords(oshape, shape.texcoords, true);
+    add_triangles(oshape, shape.triangles, instance.material,
+        !shape.normals.empty(), !shape.texcoords.empty());
+    add_quads(oshape, shape.quads, instance.material, !shape.normals.empty(),
+        !shape.texcoords.empty());
+    add_lines(oshape, shape.lines, instance.material, !shape.normals.empty(),
+        !shape.texcoords.empty());
+    add_points(oshape, shape.points, instance.material, !shape.normals.empty(),
+        !shape.texcoords.empty());
   }
 
   // convert environments

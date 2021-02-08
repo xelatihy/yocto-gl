@@ -584,18 +584,12 @@ static bool load_obj_shape(const string& filename, shape_data& shape,
 
   // decide what to do and get properties
   auto materials = vector<int>{};
-  if (!oshape.faces.empty()) {
-    get_faces(oshape, shape.triangles, shape.quads, shape.positions,
-        shape.normals, shape.texcoords, materials, flip_texcoord);
-  } else if (!oshape.lines.empty()) {
-    get_lines(oshape, shape.lines, shape.positions, shape.normals,
-        shape.texcoords, materials, flip_texcoord);
-  } else if (!oshape.points.empty()) {
-    get_points(oshape, shape.points, shape.positions, shape.normals,
-        shape.texcoords, materials, flip_texcoord);
-  } else {
-    return shape_error();
-  }
+  get_positions(oshape, shape.positions);
+  get_normals(oshape, shape.normals);
+  get_texcoords(oshape, shape.texcoords, flip_texcoord);
+  get_faces(oshape, shape.triangles, shape.quads, materials);
+  get_lines(oshape, shape.lines, materials);
+  get_points(oshape, shape.points, materials);
 
   if (shape.positions.empty()) return shape_error();
   return true;
@@ -617,22 +611,17 @@ static bool save_obj_shape(const string& filename, const shape_data& shape,
 
   auto  obj    = obj_scene{};
   auto& oshape = obj.shapes.emplace_back();
-  if (!shape.triangles.empty()) {
-    set_triangles(oshape, shape.triangles, shape.positions, shape.normals,
-        shape.texcoords, 0, {}, flip_texcoord);
-  } else if (!shape.quads.empty()) {
-    set_quads(oshape, shape.quads, shape.positions, shape.normals,
-        shape.texcoords, 0, {}, flip_texcoord);
-  } else if (!shape.lines.empty()) {
-    set_lines(oshape, shape.lines, shape.positions, shape.normals,
-        shape.texcoords, 0, {}, flip_texcoord);
-  } else if (!shape.points.empty()) {
-    set_points(oshape, shape.points, shape.positions, shape.normals,
-        shape.texcoords, 0, {}, flip_texcoord);
-  } else {
-    return shape_error();
-  }
-  auto err = ""s;
+  add_positions(oshape, shape.positions);
+  add_normals(oshape, shape.normals);
+  add_texcoords(oshape, shape.texcoords, flip_texcoord);
+  add_triangles(oshape, shape.triangles, 0, !shape.normals.empty(),
+      !shape.texcoords.empty());
+  add_quads(
+      oshape, shape.quads, 0, !shape.normals.empty(), !shape.texcoords.empty());
+  add_lines(
+      oshape, shape.lines, 0, !shape.normals.empty(), !shape.texcoords.empty());
+  add_points(oshape, shape.points, 0, !shape.normals.empty(),
+      !shape.texcoords.empty());
   return save_obj(filename, obj, error);
 }
 
@@ -894,9 +883,11 @@ static bool load_obj_fvshape(const string& filename, fvshape_data& shape,
 
   if (oshape.faces.empty()) return shape_error();
   auto materials = vector<int>{};
-  get_fvquads(oshape, shape.quadspos, shape.quadsnorm, shape.quadstexcoord,
-      shape.positions, shape.normals, shape.texcoords, materials,
-      flip_texcoord);
+  get_positions(oshape, shape.positions);
+  get_normals(oshape, shape.normals);
+  get_texcoords(oshape, shape.texcoords, flip_texcoord);
+  get_fvquads(
+      oshape, shape.quadspos, shape.quadsnorm, shape.quadstexcoord, materials);
 
   if (shape.positions.empty()) return shape_error();
   return true;
@@ -922,12 +913,10 @@ static bool save_obj_fvshape(const string& filename, const fvshape_data& shape,
 
   auto  obj    = obj_scene{};
   auto& oshape = obj.shapes.emplace_back();
-  if (!shape.quadspos.empty()) {
-    set_fvquads(oshape, shape.quadspos, shape.quadsnorm, shape.quadstexcoord,
-        shape.positions, shape.normals, shape.texcoords, 0, {}, flip_texcoord);
-  } else {
-    return shape_error();
-  }
+  add_positions(oshape, shape.positions);
+  add_normals(oshape, shape.positions);
+  add_texcoords(oshape, shape.texcoords, flip_texcoord);
+  add_fvquads(oshape, shape.quadspos, shape.quadsnorm, shape.quadstexcoord, 0);
   return save_obj(filename, obj, error);
 }
 
