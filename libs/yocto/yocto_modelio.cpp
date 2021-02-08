@@ -4299,7 +4299,6 @@ struct pbrt_stack_element {
 struct pbrt_context {
   vector<pbrt_stack_element>                stack           = {};
   unordered_map<string, pbrt_stack_element> coordsys        = {};
-  unordered_map<string, vector<int>>        objects         = {};
   string                                    cur_object      = "";
   vec2i                                     film_resolution = {512, 512};
 };
@@ -4310,6 +4309,7 @@ inline bool load_pbrt(const string& filename, pbrt_scene& pbrt, string& error,
     unordered_map<string, pbrt_material>& named_materials,
     unordered_map<string, pbrt_texture>&  named_textures,
     unordered_map<string, pbrt_medium>&   named_mediums,
+    unordered_map<string, vector<int>>&   named_objects,
     const string&                         ply_dirname) {
   // error helpers
   auto open_error = [filename, &error]() {
@@ -4384,16 +4384,16 @@ inline bool load_pbrt(const string& filename, pbrt_scene& pbrt, string& error,
     } else if (cmd == "ObjectBegin") {
       ctx.stack.push_back(ctx.stack.back());
       if (!parse_param(str, ctx.cur_object)) return parse_error();
-      ctx.objects[ctx.cur_object] = {};
+      named_objects[ctx.cur_object] = {};
     } else if (cmd == "ObjectEnd") {
       ctx.stack.pop_back();
       ctx.cur_object = "";
     } else if (cmd == "ObjectInstance") {
       auto object = ""s;
       if (!parse_param(str, object)) return parse_error();
-      if (ctx.objects.find(object) == ctx.objects.end())
+      if (named_objects.find(object) == named_objects.end())
         return object_error(object);
-      for (auto& shape_id : ctx.objects.at(object)) {
+      for (auto& shape_id : named_objects.at(object)) {
         pbrt.shapes[shape_id].instances.push_back(
             ctx.stack.back().transform_start);
         pbrt.shapes[shape_id].instaends.push_back(
@@ -4552,7 +4552,7 @@ inline bool load_pbrt(const string& filename, pbrt_scene& pbrt, string& error,
       }
       shape.material = material_map.at(matkey);
       if (!ctx.cur_object.empty()) {
-        ctx.objects[ctx.cur_object].push_back((int)pbrt.shapes.size() - 1);
+        named_objects[ctx.cur_object].push_back((int)pbrt.shapes.size() - 1);
       }
     } else if (cmd == "AreaLightSource") {
       static auto arealight_id = 0;
@@ -4599,7 +4599,7 @@ inline bool load_pbrt(const string& filename, pbrt_scene& pbrt, string& error,
       if (!parse_param(str, includename)) return parse_error();
       if (!load_pbrt(path_join(path_dirname(filename), includename), pbrt,
               error, ctx, material_map, named_materials, named_textures,
-              named_mediums, ply_dirname))
+              named_mediums, named_objects, ply_dirname))
         return dependent_error();
     } else {
       return command_error(cmd);
@@ -4628,8 +4628,9 @@ bool load_pbrt(const string& filename, pbrt_scene& pbrt, string& error) {
   auto named_materials = unordered_map<string, pbrt_material>{{"", {}}};
   auto named_mediums   = unordered_map<string, pbrt_medium>{{"", {}}};
   auto named_textures  = unordered_map<string, pbrt_texture>{{"", {}}};
+  auto named_objects   = unordered_map<string, vector<int>>{};
   if (!load_pbrt(filename, pbrt, error, ctx, material_map, named_materials,
-          named_textures, named_mediums, path_dirname(filename)))
+          named_textures, named_mediums, named_objects, path_dirname(filename)))
     return false;
 
   // remove unused materials
