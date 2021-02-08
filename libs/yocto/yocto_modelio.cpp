@@ -1472,8 +1472,6 @@ bool load_obj(const string& filename, obj_scene& obj, string& error,
 
   // initialize obj
   obj = {};
-
-  // initialize load
   obj.shapes.emplace_back();
 
   // read the file str by str
@@ -1502,21 +1500,6 @@ bool load_obj(const string& filename, obj_scene& obj, string& error,
       auto etype = (cmd == "f")   ? obj_etype::face
                    : (cmd == "l") ? obj_etype::line
                                   : obj_etype::point;
-      // split if split_elements and different primitives
-      if (auto& shape = obj.shapes.back(); !shape.elements.empty()) {
-        if (shape.elements.back().etype != etype) {
-          obj.shapes.emplace_back();
-          obj.shapes.back().name = oname + gname;
-        }
-      }
-      // split if splt_material and different materials
-      if (auto& shape = obj.shapes.back();
-          split_materials && !shape.elements.empty()) {
-        if (shape.elements.back().material != cur_material) {
-          obj.shapes.emplace_back();
-          obj.shapes.back().name = oname + gname;
-        }
-      }
       // grab shape and add element
       auto& shape   = obj.shapes.back();
       auto& element = shape.elements.emplace_back();
@@ -1539,33 +1522,32 @@ bool load_obj(const string& filename, obj_scene& obj, string& error,
         element.size += 1;
         skip_whitespace(str);
       }
-    } else if (cmd == "o") {
+    } else if (cmd == "o" || cmd == "g") {
       skip_whitespace(str);
+      auto& name = cmd == "o" ? oname : gname;
       if (str.empty()) {
-        oname = "";
+        name = "";
       } else {
-        if (!parse_value(str, oname)) return parse_error();
+        if (!parse_value(str, name)) return parse_error();
       }
       if (!obj.shapes.back().vertices.empty()) {
         obj.shapes.emplace_back();
-      }
-      obj.shapes.back().name = oname + gname;
-    } else if (cmd == "g") {
-      skip_whitespace(str);
-      if (str.empty()) {
-        gname = "";
+        obj.shapes.back().name = oname + gname;
       } else {
-        if (!parse_value(str, gname)) return parse_error();
+        obj.shapes.back().name = oname + gname;
       }
-      if (!obj.shapes.back().vertices.empty()) {
-        obj.shapes.emplace_back();
-      }
-      obj.shapes.back().name = oname + gname;
     } else if (cmd == "usemtl") {
       auto mname = string{};
       if (!parse_value(str, mname)) return parse_error();
       auto material_it = material_map.find(mname);
       if (material_it == material_map.end()) return material_error(mname);
+      if (split_materials) {
+        if (cur_material != material_it->second &&
+            !obj.shapes.back().vertices.empty()) {
+          obj.shapes.emplace_back();
+          obj.shapes.back().name = oname + gname;
+        }
+      }
       cur_material = material_it->second;
     } else if (cmd == "mtllib") {
       auto mtllib = ""s;
