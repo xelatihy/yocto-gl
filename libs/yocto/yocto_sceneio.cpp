@@ -3022,10 +3022,6 @@ static bool load_pbrt_scene(const string& filename, scene_scene& scene,
     material_map[pmaterial.name] = (int)scene.materials.size() - 1;
   }
 
-  // hack for pbrt empty material
-  scene.materials.emplace_back();
-  material_map[""] = (int)scene.materials.size() - 1;
-
   // convert shapes
   for (auto& pshape : pbrt.shapes) {
     auto& shape     = scene.shapes.emplace_back();
@@ -3034,18 +3030,17 @@ static bool load_pbrt_scene(const string& filename, scene_scene& scene,
     shape.texcoords = pshape.texcoords;
     shape.triangles = pshape.triangles;
     for (auto& uv : shape.texcoords) uv.y = 1 - uv.y;
-    auto material = material_map.at(pshape.material);
     if (pshape.instances.empty()) {
       auto& instance    = scene.instances.emplace_back();
       instance.frame    = pshape.frame;
       instance.shape    = (int)scene.shapes.size() - 1;
-      instance.material = material;
+      instance.material = pshape.material;
     } else {
       for (auto frame : pshape.instances) {
         auto& instance    = scene.instances.emplace_back();
         instance.frame    = frame * pshape.frame;
         instance.shape    = (int)scene.shapes.size() - 1;
-        instance.material = material;
+        instance.material = pshape.material;
       }
     }
   }
@@ -3157,19 +3152,16 @@ static bool save_pbrt_scene(const string& filename, const scene_scene& scene,
   };
 
   // convert materials
-  auto material_map = unordered_map<material_handle, string>{};
-  auto material_id  = 0;
   for (auto& material : scene.materials) {
-    auto& pmaterial             = add_material(pbrt);
-    pmaterial.name              = get_material_name(scene, material);
-    pmaterial.type              = material_type_map.at(material.type);
-    pmaterial.emission          = material.emission;
-    pmaterial.color             = material.color;
-    pmaterial.roughness         = material.roughness;
-    pmaterial.ior               = material.ior;
-    pmaterial.opacity           = material.opacity;
-    pmaterial.color_tex         = get_texture(material.color_tex);
-    material_map[material_id++] = pmaterial.name;
+    auto& pmaterial     = add_material(pbrt);
+    pmaterial.name      = get_material_name(scene, material);
+    pmaterial.type      = material_type_map.at(material.type);
+    pmaterial.emission  = material.emission;
+    pmaterial.color     = material.color;
+    pmaterial.roughness = material.roughness;
+    pmaterial.ior       = material.ior;
+    pmaterial.opacity   = material.opacity;
+    pmaterial.color_tex = get_texture(material.color_tex);
   }
 
   // convert instances
@@ -3178,7 +3170,7 @@ static bool save_pbrt_scene(const string& filename, const scene_scene& scene,
     pshape.filename_ = get_shape_name(scene, instance.shape) + ".ply";
     pshape.frame     = instance.frame;
     pshape.frend     = instance.frame;
-    pshape.material  = material_map.at(instance.material);
+    pshape.material  = instance.material;
   }
 
   // convert environments

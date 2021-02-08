@@ -443,7 +443,6 @@ enum struct pbrt_material_type {
 
 // Pbrt material
 struct pbrt_material {
-  // material parameters
   string             name            = "";
   pbrt_material_type type            = pbrt_material_type::matte;
   vec3f              emission        = {0, 0, 0};
@@ -461,31 +460,26 @@ struct pbrt_material {
 
 // Pbrt shape
 struct pbrt_shape {
-  // frames
   frame3f         frame     = identity3x4f;
   frame3f         frend     = identity3x4f;
   vector<frame3f> instances = {};
   vector<frame3f> instaends = {};
-  // shape
-  string        filename_ = "";
-  vector<vec3f> positions = {};
-  vector<vec3f> normals   = {};
-  vector<vec2f> texcoords = {};
-  vector<vec3i> triangles = {};
-  // material
-  string material = "";
+  int             material  = -1;
+  string          filename_ = "";
+  vector<vec3f>   positions = {};
+  vector<vec3f>   normals   = {};
+  vector<vec2f>   texcoords = {};
+  vector<vec3i>   triangles = {};
 };
 
 // Pbrt lights
 struct pbrt_light {
-  // light parameters
-  frame3f frame    = identity3x4f;
-  frame3f frend    = identity3x4f;
-  vec3f   emission = {0, 0, 0};
-  vec3f   from     = {0, 0, 0};
-  vec3f   to       = {0, 0, 0};
-  bool    distant  = false;
-  // arealight approximation
+  frame3f       frame          = identity3x4f;
+  frame3f       frend          = identity3x4f;
+  vec3f         emission       = {0, 0, 0};
+  vec3f         from           = {0, 0, 0};
+  vec3f         to             = {0, 0, 0};
+  bool          distant        = false;
   vec3f         area_emission  = {0, 0, 0};
   frame3f       area_frame     = identity3x4f;
   frame3f       area_frend     = identity3x4f;
@@ -494,7 +488,6 @@ struct pbrt_light {
   vector<vec3f> area_normals   = {};
 };
 struct pbrt_environment {
-  // environment approximation
   frame3f frame        = identity3x4f;
   frame3f frend        = identity3x4f;
   vec3f   emission     = {0, 0, 0};

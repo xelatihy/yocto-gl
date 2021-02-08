@@ -4305,7 +4305,7 @@ struct pbrt_context {
 
 // load pbrt
 inline bool load_pbrt(const string& filename, pbrt_scene& pbrt, string& error,
-    pbrt_context& ctx, unordered_map<string, string>& material_map,
+    pbrt_context& ctx, unordered_map<string, int>& material_map,
     unordered_map<string, pbrt_material>& named_materials,
     unordered_map<string, pbrt_texture>&  named_textures,
     unordered_map<string, pbrt_medium>&   named_mediums,
@@ -4548,7 +4548,7 @@ inline bool load_pbrt(const string& filename, pbrt_scene& pbrt, string& error,
         material.name      = "material" + std::to_string(pbrt.materials.size());
         material.emission  = ctx.stack.back().arealight.emission;
         material.alpha_tex = alphamap;
-        material_map[matkey] = material.name;
+        material_map[matkey] = (int)pbrt.materials.size() - 1;
       }
       shape.material = material_map.at(matkey);
       if (!ctx.cur_object.empty()) {
@@ -4624,7 +4624,7 @@ pbrt_light& add_light(pbrt_scene& pbrt) { return pbrt.lights.emplace_back(); }
 // load pbrt
 bool load_pbrt(const string& filename, pbrt_scene& pbrt, string& error) {
   auto ctx             = pbrt_context{};
-  auto material_map    = unordered_map<string, string>{};
+  auto material_map    = unordered_map<string, int>{};
   auto named_materials = unordered_map<string, pbrt_material>{{"", {}}};
   auto named_mediums   = unordered_map<string, pbrt_medium>{{"", {}}};
   auto named_textures  = unordered_map<string, pbrt_texture>{{"", {}}};
@@ -4632,19 +4632,6 @@ bool load_pbrt(const string& filename, pbrt_scene& pbrt, string& error) {
   if (!load_pbrt(filename, pbrt, error, ctx, material_map, named_materials,
           named_textures, named_mediums, named_objects, path_dirname(filename)))
     return false;
-
-  // remove unused materials
-  auto used_materials = unordered_set<string>{};
-  for (auto& shape : pbrt.shapes) used_materials.insert(shape.material);
-  pbrt.materials.erase(
-      std::remove_if(pbrt.materials.begin(), pbrt.materials.end(),
-          [&used_materials](auto& material) {
-            auto found = used_materials.find(material.name) !=
-                         used_materials.end();
-            // if (!found) delete material;
-            return !found;
-          }),
-      pbrt.materials.end());
 
   return true;
 }
@@ -4821,11 +4808,8 @@ bool save_pbrt(const string& filename, const pbrt_scene& pbrt, string& error,
     return (1 + sqrt(reflectivity)) / (1 - sqrt(reflectivity));
   };
 
-  auto material_map = unordered_map<string, int>{};
-  auto material_id  = 0;
   for (auto& material : pbrt.materials) {
-    material_map[material.name] = material_id++;
-    auto command                = pbrt_command{};
+    auto command = pbrt_command{};
     switch (material.type) {
       case pbrt_material_type::matte: {
         command.type = "matte";
@@ -4883,7 +4867,7 @@ bool save_pbrt(const string& filename, const pbrt_scene& pbrt, string& error,
 
   auto object_id = 0;
   for (auto& shape : pbrt.shapes) {
-    auto& material = pbrt.materials.at(material_map.at(shape.material));
+    auto& material = pbrt.materials.at(shape.material);
     auto  command  = pbrt_command{};
     command.frame  = shape.frame;
     if (ply_meshes) {
