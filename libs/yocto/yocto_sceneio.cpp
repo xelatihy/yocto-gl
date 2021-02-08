@@ -1657,7 +1657,7 @@ static bool load_obj_scene(const string& filename, scene_scene& scene,
 
   // load obj
   auto obj = obj_scene{};
-  if (!load_obj(filename, obj, error, false, true, false)) return false;
+  if (!load_obj(filename, obj, error)) return false;
 
   // handle progress
   if (progress_cb) progress_cb("load scene", progress.x++, progress.y);

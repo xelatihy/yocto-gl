@@ -1433,7 +1433,7 @@ inline bool load_objx(const string& filename, obj_scene& obj, string& error) {
 
 // Read obj
 bool load_obj(const string& filename, obj_scene& obj, string& error,
-    bool geom_only, bool split_elements, bool split_materials) {
+    bool geom_only, bool face_varying, bool split_materials) {
   // error helpers
   auto open_error = [filename, &error]() {
     error = filename + ": file not found";
@@ -1460,7 +1460,6 @@ bool load_obj(const string& filename, obj_scene& obj, string& error,
   auto opositions   = vector<vec3f>{};
   auto onormals     = vector<vec3f>{};
   auto otexcoords   = vector<vec2f>{};
-  auto vert_size    = obj_vertex{};
   auto oname        = ""s;
   auto gname        = ""s;
   auto mname        = ""s;
@@ -1491,17 +1490,13 @@ bool load_obj(const string& filename, obj_scene& obj, string& error,
     // possible token values
     if (cmd == "v") {
       if (!parse_value(str, opositions.emplace_back())) return parse_error();
-      vert_size.position += 1;
     } else if (cmd == "vn") {
       if (!parse_value(str, onormals.emplace_back())) return parse_error();
-      vert_size.normal += 1;
     } else if (cmd == "vt") {
       if (!parse_value(str, otexcoords.emplace_back())) return parse_error();
-      vert_size.texcoord += 1;
     } else if (cmd == "f" || cmd == "l" || cmd == "p") {
       // split if split_elements and different primitives
-      if (auto& shape = obj.shapes.back();
-          split_elements && !shape.vertices.empty()) {
+      if (auto& shape = obj.shapes.back(); !shape.vertices.empty()) {
         if ((cmd == "f" && (!shape.lines.empty() || !shape.points.empty())) ||
             (cmd == "l" && (!shape.faces.empty() || !shape.points.empty())) ||
             (cmd == "p" && (!shape.faces.empty() || !shape.lines.empty()))) {
@@ -1548,10 +1543,11 @@ bool load_obj(const string& filename, obj_scene& obj, string& error,
         if (!parse_value(str, vert)) return parse_error();
         if (vert.position == 0) break;
         if (vert.position < 0)
-          vert.position = vert_size.position + vert.position + 1;
+          vert.position = (int)opositions.size() + vert.position + 1;
         if (vert.texcoord < 0)
-          vert.texcoord = vert_size.texcoord + vert.texcoord + 1;
-        if (vert.normal < 0) vert.normal = vert_size.normal + vert.normal + 1;
+          vert.texcoord = (int)otexcoords.size() + vert.texcoord + 1;
+        if (vert.normal < 0)
+          vert.normal = (int)onormals.size() + vert.normal + 1;
         shape.vertices.push_back(vert);
         element.size += 1;
         skip_whitespace(str);
@@ -1601,29 +1597,56 @@ bool load_obj(const string& filename, obj_scene& obj, string& error,
   }
 
   // convert vertex data
-  auto ipositions = vector<int>{};
-  auto inormals   = vector<int>{};
-  auto itexcoords = vector<int>{};
-  for (auto& shape : obj.shapes) {
-    ipositions.assign(opositions.size() + 1, 0);
-    inormals.assign(onormals.size() + 1, 0);
-    itexcoords.assign(otexcoords.size() + 1, 0);
-    for (auto& vertex : shape.vertices) {
-      if (vertex.position != 0 && ipositions[vertex.position] == 0) {
-        shape.positions.push_back(opositions[vertex.position - 1]);
-        ipositions[vertex.position] = (int)shape.positions.size();
+  if (face_varying) {
+    auto ipositions = vector<int>{};
+    auto inormals   = vector<int>{};
+    auto itexcoords = vector<int>{};
+    for (auto& shape : obj.shapes) {
+      ipositions.assign(opositions.size() + 1, 0);
+      inormals.assign(onormals.size() + 1, 0);
+      itexcoords.assign(otexcoords.size() + 1, 0);
+      for (auto& vertex : shape.vertices) {
+        if (vertex.position != 0 && ipositions[vertex.position] == 0) {
+          shape.positions.push_back(opositions[vertex.position - 1]);
+          ipositions[vertex.position] = (int)shape.positions.size();
+        }
+        if (vertex.normal != 0 && inormals[vertex.normal] == 0) {
+          shape.normals.push_back(onormals[vertex.normal - 1]);
+          inormals[vertex.normal] = (int)shape.normals.size();
+        }
+        if (vertex.texcoord != 0 && itexcoords[vertex.texcoord] == 0) {
+          shape.texcoords.push_back(otexcoords[vertex.texcoord - 1]);
+          itexcoords[vertex.texcoord] = (int)shape.texcoords.size();
+        }
+        vertex.position = ipositions[vertex.position];
+        vertex.normal   = inormals[vertex.normal];
+        vertex.texcoord = itexcoords[vertex.texcoord];
       }
-      if (vertex.normal != 0 && inormals[vertex.normal] == 0) {
-        shape.normals.push_back(onormals[vertex.normal - 1]);
-        inormals[vertex.normal] = (int)shape.normals.size();
+    }
+  } else {
+    auto vertex_map = unordered_map<obj_vertex, obj_vertex>{};
+    for (auto& shape : obj.shapes) {
+      vertex_map.clear();
+      for (auto& vertex : shape.vertices) {
+        auto vertex_it = vertex_map.find(vertex);
+        if (vertex_it == vertex_map.end()) {
+          auto index = (int)vertex_map.size();
+          if (vertex.position > 0) {
+            shape.positions.push_back(opositions[vertex.position - 1]);
+            vertex.position = index;
+          }
+          if (vertex.normal > 0) {
+            shape.normals.push_back(onormals[vertex.normal - 1]);
+            vertex.normal = index;
+          }
+          if (vertex.texcoord > 0) {
+            shape.texcoords.push_back(otexcoords[vertex.texcoord - 1]);
+            vertex.texcoord = index;
+          }
+        } else {
+          vertex = vertex_it->second;
+        }
       }
-      if (vertex.texcoord != 0 && itexcoords[vertex.texcoord] == 0) {
-        shape.texcoords.push_back(otexcoords[vertex.texcoord - 1]);
-        itexcoords[vertex.texcoord] = (int)shape.texcoords.size();
-      }
-      vertex.position = ipositions[vertex.position];
-      vertex.normal   = inormals[vertex.normal];
-      vertex.texcoord = itexcoords[vertex.texcoord];
     }
   }
 

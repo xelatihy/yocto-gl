@@ -865,125 +865,6 @@ bool save_fvshape(const string& filename, const fvshape_data& shape,
   }
 }
 
-#ifdef YOCTO_FASTOBJ
-
-// Load/save a shape from/to OBJ.
-static bool load_obj_fvshape(const string& filename, fvshape_data& shape,
-    string& error, bool flip_texcoord) {
-  auto read_error = [filename, &error]() {
-    error = filename + ": error reading obj";
-    return false;
-  };
-  auto shape_error = [filename, &error]() {
-    error = filename + ": empty shape";
-    return false;
-  };
-
-  shape = {};
-
-  // load obj
-  auto obj = fast_obj_read(filename.c_str());
-  if (!obj) return read_error();
-  auto obj_guard = std::unique_ptr<fastObjMesh, void (*)(fastObjMesh*)>(
-      obj, &fast_obj_destroy);
-
-  // check shape
-  if (obj->face_count == 0) return shape_error();
-
-  // copy vertices
-  shape.positions.assign(
-      (vec3f*)obj->positions + 1, (vec3f*)obj->positions + obj->position_count);
-  shape.normals.assign(
-      (vec3f*)obj->normals + 1, (vec3f*)obj->normals + obj->normal_count);
-  shape.texcoords.assign(
-      (vec2f*)obj->texcoords + 1, (vec2f*)obj->texcoords + obj->texcoord_count);
-
-  // convert faces
-  auto cur_index_offset = 0;
-  for (auto cur_face = 0; cur_face < obj->face_count; cur_face++) {
-    auto indices = obj->indices + cur_index_offset;
-    if (obj->face_vertices[cur_face] == 3) {
-      if (!shape.positions.empty())
-        shape.quadspos.push_back({(int)indices[0].p - 1, (int)indices[1].p - 1,
-            (int)indices[2].p - 1, (int)indices[2].p - 1});
-      if (!shape.normals.empty())
-        shape.quadsnorm.push_back({(int)indices[0].n - 1, (int)indices[1].n - 1,
-            (int)indices[2].n - 1, (int)indices[2].n - 1});
-      if (!shape.texcoords.empty())
-        shape.quadstexcoord.push_back(
-            {(int)indices[0].t - 1, (int)indices[1].t - 1,
-                (int)indices[2].t - 1, (int)indices[2].t - 1});
-    } else if (obj->face_vertices[cur_face] == 4) {
-      if (!shape.positions.empty())
-        shape.quadspos.push_back({(int)indices[0].p - 1, (int)indices[1].p - 1,
-            (int)indices[2].p - 1, (int)indices[3].p - 1});
-      if (!shape.normals.empty())
-        shape.quadsnorm.push_back({(int)indices[0].n - 1, (int)indices[1].n - 1,
-            (int)indices[2].n - 1, (int)indices[3].n - 1});
-      if (!shape.texcoords.empty())
-        shape.quadstexcoord.push_back(
-            {(int)indices[0].t - 1, (int)indices[1].t - 1,
-                (int)indices[2].t - 1, (int)indices[3].t - 1});
-    } else if (obj->face_vertices[cur_face] > 4) {
-      for (auto vidx = 2; vidx < obj->face_vertices[cur_face]; vidx++) {
-        if (!shape.positions.empty())
-          shape.quadspos.push_back(
-              {(int)indices[0].p - 1, (int)indices[vidx - 1].p - 1,
-                  (int)indices[vidx].p - 1, (int)indices[vidx].p - 1});
-        if (!shape.normals.empty())
-          shape.quadsnorm.push_back(
-              {(int)indices[0].n - 1, (int)indices[vidx - 1].n - 1,
-                  (int)indices[vidx].n - 1, (int)indices[vidx].n - 1});
-        if (!shape.texcoords.empty())
-          shape.quadstexcoord.push_back(
-              {(int)indices[0].t - 1, (int)indices[vidx - 1].t - 1,
-                  (int)indices[vidx].t - 1, (int)indices[vidx].t - 1});
-      }
-    } else {
-      // not supported
-    }
-    cur_index_offset += obj->face_vertices[cur_face];
-  }
-
-  // flip texcoords if needed
-  if (flip_texcoord) {
-    for (auto& texcoord : shape.texcoords) texcoord.y = 1 - texcoord.y;
-  }
-
-  return true;
-}
-static bool save_obj_fvshape(const string& filename, const fvshape_data& shape,
-    string& error, bool flip_texcoord, bool ascii) {
-  auto format_error = [filename, &error]() {
-    error = filename + ": unknown format";
-    return false;
-  };
-  auto shape_error = [filename, &error]() {
-    error = filename + ": empty shape";
-    return false;
-  };
-  auto line_error = [filename, &error]() {
-    error = filename + ": unsupported lines";
-    return false;
-  };
-  auto point_error = [filename, &error]() {
-    error = filename + ": unsupported points";
-    return false;
-  };
-
-  auto  obj    = obj_scene{};
-  auto& oshape = obj.shapes.emplace_back();
-  if (!shape.quadspos.empty()) {
-    set_fvquads(oshape, shape.quadspos, shape.quadsnorm, shape.quadstexcoord,
-        shape.positions, shape.normals, shape.texcoords, {}, flip_texcoord);
-  } else {
-    return shape_error();
-  }
-  return save_obj(filename, obj, error);
-}
-
-#else
-
 // Load/save a shape from/to OBJ.
 static bool load_obj_fvshape(const string& filename, fvshape_data& shape,
     string& error, bool flip_texcoord) {
@@ -1004,11 +885,10 @@ static bool load_obj_fvshape(const string& filename, fvshape_data& shape,
 
   // load obj
   auto obj = obj_scene{};
-  if (!load_obj(filename, obj, error, true)) return false;
+  if (!load_obj(filename, obj, error, true, true)) return false;
 
   // get shape
-  if (obj.shapes.empty()) return shape_error();
-  if (obj.shapes.size() > 1) return shape_error();
+  if (obj.shapes.size() != 1) return shape_error();
   auto& oshape = obj.shapes.front();
   if (oshape.points.empty() && oshape.lines.empty() && oshape.faces.empty())
     return shape_error();
@@ -1052,8 +932,6 @@ static bool save_obj_fvshape(const string& filename, const fvshape_data& shape,
   }
   return save_obj(filename, obj, error);
 }
-
-#endif
 
 // Load/save a scene from/to PLY. Loads/saves only one mesh with no other
 // data.
