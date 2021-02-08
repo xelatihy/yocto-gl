@@ -1433,7 +1433,7 @@ inline bool load_objx(const string& filename, obj_scene& obj, string& error) {
 
 // Read obj
 bool load_obj(const string& filename, obj_scene& obj, string& error,
-    bool geom_only, bool face_varying, bool split_materials) {
+    bool face_varying, bool split_materials) {
   // error helpers
   auto open_error = [filename, &error]() {
     error = filename + ": file not found";
@@ -1511,7 +1511,7 @@ bool load_obj(const string& filename, obj_scene& obj, string& error,
       }
       // split if splt_material and different materials
       if (auto& shape = obj.shapes.back();
-          !geom_only && split_materials && !shape.elements.empty()) {
+          split_materials && !shape.elements.empty()) {
         if (shape.elements.back().material != cur_material) {
           obj.shapes.emplace_back();
           obj.shapes.back().name = oname + gname;
@@ -1520,7 +1520,7 @@ bool load_obj(const string& filename, obj_scene& obj, string& error,
       // grab shape and add element
       auto& shape   = obj.shapes.back();
       auto& element = shape.elements.emplace_back();
-      if (!geom_only && cur_material < 0) return material_error("default");
+      if (cur_material < 0) return material_error("default");
       element.material = cur_material;
       element.etype    = etype;
       // parse vertices
@@ -1540,7 +1540,6 @@ bool load_obj(const string& filename, obj_scene& obj, string& error,
         skip_whitespace(str);
       }
     } else if (cmd == "o") {
-      if (geom_only) continue;
       skip_whitespace(str);
       if (str.empty()) {
         oname = "";
@@ -1552,7 +1551,6 @@ bool load_obj(const string& filename, obj_scene& obj, string& error,
       }
       obj.shapes.back().name = oname + gname;
     } else if (cmd == "g") {
-      if (geom_only) continue;
       skip_whitespace(str);
       if (str.empty()) {
         gname = "";
@@ -1564,16 +1562,12 @@ bool load_obj(const string& filename, obj_scene& obj, string& error,
       }
       obj.shapes.back().name = oname + gname;
     } else if (cmd == "usemtl") {
-      if (geom_only) continue;
       auto mname = string{};
       if (!parse_value(str, mname)) return parse_error();
       auto material_it = material_map.find(mname);
       if (material_it == material_map.end()) return material_error(mname);
       cur_material = material_it->second;
-    } else if (cmd == "s") {
-      if (geom_only) continue;
     } else if (cmd == "mtllib") {
-      if (geom_only) continue;
       auto mtllib = ""s;
       if (!parse_value(str, mtllib)) return parse_error();
       if (std::find(mtllibs.begin(), mtllibs.end(), mtllib) == mtllibs.end()) {
@@ -1645,9 +1639,6 @@ bool load_obj(const string& filename, obj_scene& obj, string& error,
       }
     }
   }
-
-  // exit if done
-  if (geom_only) return true;
 
   // load extensions
   auto extfilename = replace_extension(filename, ".objx");

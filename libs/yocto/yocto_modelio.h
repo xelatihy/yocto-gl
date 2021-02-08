@@ -312,8 +312,7 @@ struct obj_scene {
 
 // Load and save obj
 bool load_obj(const string& filename, obj_scene& obj, string& error,
-    bool geom_only = false, bool face_varying = false,
-    bool split_materials = false);
+    bool face_varying = false, bool split_materials = false);
 bool save_obj(const string& filename, const obj_scene& obj, string& error);
 
 // Load and save obj shape
