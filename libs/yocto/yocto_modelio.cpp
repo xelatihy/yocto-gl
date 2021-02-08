@@ -1498,31 +1498,31 @@ bool load_obj(const string& filename, obj_scene& obj, string& error,
     } else if (cmd == "vt") {
       if (!parse_value(str, otexcoords.emplace_back())) return parse_error();
     } else if (cmd == "f" || cmd == "l" || cmd == "p") {
+      // elemnet type
+      auto etype = (cmd == "f")   ? obj_etype::face
+                   : (cmd == "l") ? obj_etype::line
+                                  : obj_etype::point;
       // split if split_elements and different primitives
-      if (auto& shape = obj.shapes.back(); !shape.vertices.empty()) {
-        if ((cmd == "f" && (!shape.lines.empty() || !shape.points.empty())) ||
-            (cmd == "l" && (!shape.faces.empty() || !shape.points.empty())) ||
-            (cmd == "p" && (!shape.faces.empty() || !shape.lines.empty()))) {
+      if (auto& shape = obj.shapes.back(); !shape.elements.empty()) {
+        if (shape.elements.back().etype != etype) {
           obj.shapes.emplace_back();
           obj.shapes.back().name = oname + gname;
         }
       }
       // split if splt_material and different materials
       if (auto& shape = obj.shapes.back();
-          !geom_only && split_materials && !shape.faces.empty()) {
-        if (shape.faces.back().material != cur_material) {
+          !geom_only && split_materials && !shape.elements.empty()) {
+        if (shape.elements.back().material != cur_material) {
           obj.shapes.emplace_back();
           obj.shapes.back().name = oname + gname;
         }
       }
       // grab shape and add element
       auto& shape   = obj.shapes.back();
-      auto& element = (cmd == "f")   ? shape.faces.emplace_back()
-                      : (cmd == "l") ? shape.lines.emplace_back()
-                                     : shape.points.emplace_back();
-      // material
+      auto& element = shape.elements.emplace_back();
       if (!geom_only && cur_material < 0) return material_error("default");
       element.material = cur_material;
+      element.etype    = etype;
       // parse vertices
       skip_whitespace(str);
       while (!str.empty()) {
@@ -1870,20 +1870,23 @@ bool save_obj(const string& filename, const obj_scene& obj, string& error) {
     for (auto& t : shape.texcoords)
       if (!format_values(fs, "vt {}\n", t)) return write_error();
     auto element_labels = vector<string>{"f", "l", "p"};
-    auto element_groups = vector<const vector<obj_element>*>{
-        &shape.faces, &shape.lines, &shape.points};
     for (auto element_idx = 0; element_idx < 3; element_idx++) {
       auto& label        = element_labels[element_idx];
-      auto& elements     = *element_groups[element_idx];
       auto  cur_material = -1, cur_vertex = 0;
-      for (auto& element : elements) {
+      for (auto& element : shape.elements) {
         if (!obj.materials.empty() && cur_material != element.material) {
           if (!format_values(
                   fs, "usemtl {}\n", obj.materials[element.material].name))
             return write_error();
           cur_material = element.material;
         }
-        if (!format_values(fs, "{}", label)) return write_error();
+        if (element.etype == obj_etype::face) {
+          if (!format_values(fs, "{}", "f")) return write_error();
+        } else if (element.etype == obj_etype::line) {
+          if (!format_values(fs, "{}", "l")) return write_error();
+        } else if (element.etype == obj_etype::point) {
+          if (!format_values(fs, "{}", "p")) return write_error();
+        }
         for (auto c = 0; c < element.size; c++) {
           auto vert = shape.vertices[cur_vertex++];
           if (vert.position != 0) vert.position += vert_size.position;
@@ -1944,78 +1947,78 @@ void get_triangles(
     const obj_shape& shape, vector<vec3i>& triangles, vector<int>& materials) {
   triangles.clear();
   materials.clear();
-  if (shape.faces.empty()) return;
-  triangles.reserve(shape.faces.size());
-  materials.reserve(shape.faces.size());
+  triangles.reserve(shape.elements.size());
+  materials.reserve(shape.elements.size());
   auto cur = 0;
-  for (auto& face : shape.faces) {
-    for (auto c = 2; c < face.size; c++) {
+  for (auto& element : shape.elements) {
+    if (element.etype != obj_etype::face) continue;
+    for (auto c = 2; c < element.size; c++) {
       triangles.push_back({shape.vertices[cur + 0].position - 1,
           shape.vertices[cur + c - 1].position - 1,
           shape.vertices[cur + c].position - 1});
-      materials.push_back(face.material);
+      materials.push_back(element.material);
     }
-    cur += face.size;
+    cur += element.size;
   }
 }
 void get_quads(
     const obj_shape& shape, vector<vec4i>& quads, vector<int>& materials) {
   quads.clear();
   materials.clear();
-  if (shape.faces.empty()) return;
-  quads.reserve(shape.faces.size());
-  materials.reserve(shape.faces.size());
+  quads.reserve(shape.elements.size());
+  materials.reserve(shape.elements.size());
   auto cur = 0;
-  for (auto& face : shape.faces) {
-    if (face.size == 4) {
+  for (auto& element : shape.elements) {
+    if (element.etype != obj_etype::face) continue;
+    if (element.size == 4) {
       quads.push_back({shape.vertices[cur + 0].position - 1,
           shape.vertices[cur + 1].position - 1,
           shape.vertices[cur + 2].position - 1,
           shape.vertices[cur + 3].position - 1});
-      materials.push_back(face.material);
+      materials.push_back(element.material);
     } else {
-      for (auto c = 2; c < face.size; c++) {
+      for (auto c = 2; c < element.size; c++) {
         quads.push_back({shape.vertices[cur + 0].position - 1,
             shape.vertices[cur + c - 1].position - 1,
             shape.vertices[cur + c].position - 1,
             shape.vertices[cur + c].position - 1});
-        materials.push_back(face.material);
+        materials.push_back(element.material);
       }
     }
-    cur += face.size;
+    cur += element.size;
   }
 }
 void get_lines(
     const obj_shape& shape, vector<vec2i>& lines, vector<int>& materials) {
   lines.clear();
   materials.clear();
-  if (shape.faces.empty()) return;
-  lines.reserve(shape.faces.size());
-  materials.reserve(shape.faces.size());
+  lines.reserve(shape.elements.size());
+  materials.reserve(shape.elements.size());
   auto cur = 0;
-  for (auto& line : shape.lines) {
-    for (auto c = 1; c < line.size; c++) {
+  for (auto& element : shape.elements) {
+    if (element.etype != obj_etype::line) continue;
+    for (auto c = 1; c < element.size; c++) {
       lines.push_back({shape.vertices[cur + c - 1].position - 1,
           shape.vertices[cur + c].position - 1});
-      materials.push_back(line.material);
+      materials.push_back(element.material);
     }
-    cur += line.size;
+    cur += element.size;
   }
 }
 void get_points(
     const obj_shape& shape, vector<int>& points, vector<int>& materials) {
   points.clear();
   materials.clear();
-  if (shape.faces.empty()) return;
-  points.reserve(shape.faces.size());
-  materials.reserve(shape.faces.size());
+  points.reserve(shape.elements.size());
+  materials.reserve(shape.elements.size());
   auto cur = 0;
-  for (auto& point : shape.points) {
-    for (auto c = 0; c < point.size; c++) {
+  for (auto& element : shape.elements) {
+    if (element.etype != obj_etype::point) continue;
+    for (auto c = 0; c < element.size; c++) {
       points.push_back({shape.vertices[cur + 0].position - 1});
-      materials.push_back(point.material);
+      materials.push_back(element.material);
     }
-    cur += point.size;
+    cur += element.size;
   }
 }
 void get_fvquads(const obj_shape& shape, vector<vec4i>& quadspos,
@@ -2025,14 +2028,14 @@ void get_fvquads(const obj_shape& shape, vector<vec4i>& quadspos,
   quadsnorm.clear();
   quadstexcoord.clear();
   materials.clear();
-  if (shape.faces.empty()) return;
-  quadspos.reserve(shape.faces.size());
-  quadsnorm.reserve(shape.faces.size());
-  quadstexcoord.reserve(shape.faces.size());
-  materials.reserve(shape.faces.size());
+  quadspos.reserve(shape.elements.size());
+  quadsnorm.reserve(shape.elements.size());
+  quadstexcoord.reserve(shape.elements.size());
+  materials.reserve(shape.elements.size());
   auto cur = 0;
-  for (auto& face : shape.faces) {
-    if (face.size == 4) {
+  for (auto& element : shape.elements) {
+    if (element.etype != obj_etype::face) continue;
+    if (element.size == 4) {
       if (shape.vertices[0].position != 0)
         quadspos.push_back({shape.vertices[cur + 0].position - 1,
             shape.vertices[cur + 1].position - 1,
@@ -2048,9 +2051,9 @@ void get_fvquads(const obj_shape& shape, vector<vec4i>& quadspos,
             shape.vertices[cur + 1].texcoord - 1,
             shape.vertices[cur + 2].texcoord - 1,
             shape.vertices[cur + 3].texcoord - 1});
-      materials.push_back(face.material);
+      materials.push_back(element.material);
     } else {
-      for (auto c = 2; c < face.size; c++) {
+      for (auto c = 2; c < element.size; c++) {
         if (shape.vertices[0].position != 0)
           quadspos.push_back({shape.vertices[cur + 0].position - 1,
               shape.vertices[cur + c - 1].position - 1,
@@ -2066,10 +2069,10 @@ void get_fvquads(const obj_shape& shape, vector<vec4i>& quadspos,
               shape.vertices[cur + c - 1].texcoord - 1,
               shape.vertices[cur + c].texcoord - 1,
               shape.vertices[cur + c].texcoord - 1});
-        materials.push_back(face.material);
+        materials.push_back(element.material);
       }
     }
-    cur += face.size;
+    cur += element.size;
   }
 }
 void get_faces(const obj_shape& shape, int material, vector<vec3i>& triangles,
@@ -2083,95 +2086,87 @@ void get_faces(const obj_shape& shape, int material, vector<vec3i>& triangles,
 void get_triangles(
     const obj_shape& shape, int material, vector<vec3i>& triangles) {
   triangles.clear();
-  if (shape.faces.empty()) return;
-  triangles.reserve(shape.faces.size());
+  if (shape.elements.empty()) return;
+  triangles.reserve(shape.elements.size());
   auto cur = 0;
-  for (auto& face : shape.faces) {
-    if (face.material != material) continue;
-    for (auto c = 2; c < face.size; c++) {
+  for (auto& element : shape.elements) {
+    if (element.etype != obj_etype::face) continue;
+    if (element.material != material) continue;
+    for (auto c = 2; c < element.size; c++) {
       triangles.push_back({shape.vertices[cur + 0].position - 1,
           shape.vertices[cur + c - 1].position - 1,
           shape.vertices[cur + c].position - 1});
     }
-    cur += face.size;
+    cur += element.size;
   }
 }
 void get_quads(const obj_shape& shape, int material, vector<vec4i>& quads) {
   quads.clear();
-  if (shape.faces.empty()) return;
-  quads.reserve(shape.faces.size());
+  if (shape.elements.empty()) return;
+  quads.reserve(shape.elements.size());
   auto cur = 0;
-  for (auto& face : shape.faces) {
-    if (face.material != material) continue;
-    if (face.size == 4) {
+  for (auto& element : shape.elements) {
+    if (element.etype != obj_etype::face) continue;
+    if (element.material != material) continue;
+    if (element.size == 4) {
       quads.push_back({shape.vertices[cur + 0].position - 1,
           shape.vertices[cur + 1].position - 1,
           shape.vertices[cur + 2].position - 1,
           shape.vertices[cur + 3].position - 1});
     } else {
-      for (auto c = 2; c < face.size; c++) {
+      for (auto c = 2; c < element.size; c++) {
         quads.push_back({shape.vertices[cur + 0].position - 1,
             shape.vertices[cur + c - 1].position - 1,
             shape.vertices[cur + c].position - 1,
             shape.vertices[cur + c].position - 1});
       }
     }
-    cur += face.size;
+    cur += element.size;
   }
 }
 void get_lines(const obj_shape& shape, int material, vector<vec2i>& lines) {
   lines.clear();
-  if (shape.faces.empty()) return;
-  lines.reserve(shape.faces.size());
+  if (shape.elements.empty()) return;
+  lines.reserve(shape.elements.size());
   auto cur = 0;
-  for (auto& line : shape.lines) {
-    if (line.material != material) continue;
-    for (auto c = 1; c < line.size; c++) {
+  for (auto& element : shape.elements) {
+    if (element.etype != obj_etype::line) continue;
+    if (element.material != material) continue;
+    for (auto c = 1; c < element.size; c++) {
       lines.push_back({shape.vertices[cur + c - 1].position - 1,
           shape.vertices[cur + c].position - 1});
     }
-    cur += line.size;
+    cur += element.size;
   }
 }
 void get_points(const obj_shape& shape, int material, vector<int>& points) {
   points.clear();
-  if (shape.faces.empty()) return;
-  points.reserve(shape.faces.size());
+  if (shape.elements.empty()) return;
+  points.reserve(shape.elements.size());
   auto cur = 0;
-  for (auto& point : shape.points) {
-    if (point.material != material) continue;
-    for (auto c = 0; c < point.size; c++) {
+  for (auto& element : shape.elements) {
+    if (element.etype != obj_etype::point) continue;
+    if (element.material != material) continue;
+    for (auto c = 0; c < element.size; c++) {
       points.push_back({shape.vertices[cur + 0].position - 1});
     }
-    cur += point.size;
+    cur += element.size;
   }
 }
 
 bool has_quads(const obj_shape& shape) {
-  for (auto& face : shape.faces)
-    if (face.size == 4) return true;
+  for (auto& element : shape.elements)
+    if (element.etype == obj_etype::face && element.size == 4) return true;
   return false;
 }
 
 vector<int> get_materials(const obj_shape& shape) {
   auto materials    = vector<int>{};
   auto material_set = unordered_set<int>{};
-  for (auto& face : shape.faces) {
-    if (material_set.find(face.material) == material_set.end()) {
-      material_set.insert(face.material);
-      materials.push_back(face.material);
-    }
-  }
-  for (auto& line : shape.lines) {
-    if (material_set.find(line.material) == material_set.end()) {
-      material_set.insert(line.material);
-      materials.push_back(line.material);
-    }
-  }
-  for (auto& point : shape.points) {
-    if (material_set.find(point.material) == material_set.end()) {
-      material_set.insert(point.material);
-      materials.push_back(point.material);
+  for (auto& element : shape.elements) {
+    if (material_set.find(element.material) == material_set.end()) {
+      material_set.insert(element.material);
+      materials.push_back(element.material);
     }
   }
   return materials;
@@ -2206,7 +2201,7 @@ void add_triangles(obj_shape& shape, const vector<vec3i>& triangles,
           !has_normals ? 0 : triangle[c] + 1,
       });
     }
-    shape.faces.push_back({3, material});
+    shape.elements.push_back({3, obj_etype::face, material});
   }
 }
 void add_quads(obj_shape& shape, const vector<vec4i>& quads, int material,
@@ -2221,7 +2216,7 @@ void add_quads(obj_shape& shape, const vector<vec4i>& quads, int material,
           !has_normals ? 0 : quad[c] + 1,
       });
     }
-    shape.faces.push_back({nv, material});
+    shape.elements.push_back({(uint16_t)nv, obj_etype::face, material});
   }
 }
 void add_lines(obj_shape& shape, const vector<vec2i>& lines, int material,
@@ -2235,7 +2230,7 @@ void add_lines(obj_shape& shape, const vector<vec2i>& lines, int material,
           !has_normals ? 0 : line[c] + 1,
       });
     }
-    shape.lines.push_back({2, material});
+    shape.elements.push_back({2, obj_etype::line, material});
   }
 }
 void add_points(obj_shape& shape, const vector<int>& points, int material,
@@ -2247,7 +2242,7 @@ void add_points(obj_shape& shape, const vector<int>& points, int material,
         !has_texcoord ? 0 : point + 1,
         !has_normals ? 0 : point + 1,
     });
-    shape.points.push_back({1, material});
+    shape.elements.push_back({1, obj_etype::point, material});
   }
 }
 void add_fvquads(obj_shape& shape, const vector<vec4i>& quadspos,
@@ -2262,7 +2257,7 @@ void add_fvquads(obj_shape& shape, const vector<vec4i>& quadspos,
           quadsnorm.empty() ? 0 : quadsnorm[idx][c] + 1,
       });
     }
-    shape.faces.push_back({nv, material});
+    shape.elements.push_back({(uint16_t)nv, obj_etype::face, material});
   }
 }
 void add_quads(obj_shape& shape, const vector<vec4i>& quads,
@@ -2277,7 +2272,7 @@ void add_quads(obj_shape& shape, const vector<vec4i>& quads,
           !has_normals ? 0 : quad[c] + 1,
       });
     }
-    shape.faces.push_back({nv, materials[idx]});
+    shape.elements.push_back({(uint16_t)nv, obj_etype::face, materials[idx]});
   }
 }
 void add_lines(obj_shape& shape, const vector<vec2i>& lines,
@@ -2291,7 +2286,7 @@ void add_lines(obj_shape& shape, const vector<vec2i>& lines,
           !has_normals ? 0 : line[c] + 1,
       });
     }
-    shape.lines.push_back({2, materials[idx]});
+    shape.elements.push_back({2, obj_etype::line, materials[idx]});
   }
 }
 void add_points(obj_shape& shape, const vector<int>& points,
@@ -2303,7 +2298,7 @@ void add_points(obj_shape& shape, const vector<int>& points,
         !has_texcoord ? 0 : point + 1,
         !has_normals ? 0 : point + 1,
     });
-    shape.points.push_back({1, materials[idx]});
+    shape.elements.push_back({1, obj_etype::point, materials[idx]});
   }
 }
 void add_fvquads(obj_shape& shape, const vector<vec4i>& quadspos,
@@ -2318,7 +2313,7 @@ void add_fvquads(obj_shape& shape, const vector<vec4i>& quadspos,
           quadsnorm.empty() ? 0 : quadsnorm[idx][c] + 1,
       });
     }
-    shape.faces.push_back({nv, materials[idx]});
+    shape.elements.push_back({(uint16_t)nv, obj_etype::face, materials[idx]});
   }
 }
 void add_instances(obj_shape& shape, const vector<frame3f>& instances) {

@@ -229,10 +229,14 @@ struct obj_texture {
   explicit obj_texture(const string& path) : path{path} {}
 };
 
+// Obj element type
+enum struct obj_etype : uint16_t { face, line, point };
+
 // Obj element
 struct obj_element {
-  int size     = 0;
-  int material = 0;
+  uint16_t  size     = 0;
+  obj_etype etype    = obj_etype::face;
+  int       material = 0;
 };
 
 // Obj material
@@ -273,9 +277,7 @@ struct obj_shape {
   vector<vec3f>       normals   = {};
   vector<vec2f>       texcoords = {};
   vector<obj_vertex>  vertices  = {};
-  vector<obj_element> faces     = {};
-  vector<obj_element> lines     = {};
-  vector<obj_element> points    = {};
+  vector<obj_element> elements  = {};
   vector<frame3f>     instances = {};
 };
 

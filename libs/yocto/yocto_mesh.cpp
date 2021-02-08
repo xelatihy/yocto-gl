@@ -2708,7 +2708,6 @@ bool load_mesh(const string& filename, vector<vec3i>& triangles,
     // get shape
     if (obj.shapes.size() != 1) return shape_error();
     auto& shape = obj.shapes.front();
-    if (shape.faces.empty()) return shape_error();
     // decide what to do and get properties
     auto materials = vector<int>{};
     get_positions(shape, positions);
@@ -2799,7 +2798,6 @@ bool load_mesh(const string& filename, vector<vec3i>& triangles,
     // get shape
     if (obj.shapes.size() != 1) return shape_error();
     auto& shape = obj.shapes.front();
-    if (shape.faces.empty()) return shape_error();
     // decide what to do and get properties
     auto materials = vector<int>{};
     get_positions(shape, positions);
@@ -2904,7 +2902,6 @@ bool load_lines(const string& filename, vector<vec2i>& lines,
     if (obj.shapes.empty()) return shape_error();
     if (obj.shapes.size() > 1) return shape_error();
     auto& shape = obj.shapes.front();
-    if (shape.lines.empty()) return shape_error();
     // decide what to do and get properties
     auto materials = vector<int>{};
     get_positions(shape, positions);

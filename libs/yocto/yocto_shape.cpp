@@ -576,11 +576,8 @@ static bool load_obj_shape(const string& filename, shape_data& shape,
   if (!load_obj(filename, obj, error, true)) return false;
 
   // get shape
-  if (obj.shapes.empty()) return shape_error();
-  if (obj.shapes.size() > 1) return shape_error();
+  if (obj.shapes.size() != 1) return shape_error();
   auto& oshape = obj.shapes.front();
-  if (oshape.points.empty() && oshape.lines.empty() && oshape.faces.empty())
-    return shape_error();
 
   // decide what to do and get properties
   auto materials = vector<int>{};
@@ -591,7 +588,9 @@ static bool load_obj_shape(const string& filename, shape_data& shape,
   get_lines(oshape, shape.lines, materials);
   get_points(oshape, shape.points, materials);
 
-  if (shape.positions.empty()) return shape_error();
+  if (shape.points.empty() && shape.lines.empty() && shape.triangles.empty() &&
+      shape.quads.empty())
+    return shape_error();
   return true;
 }
 static bool save_obj_shape(const string& filename, const shape_data& shape,
@@ -651,7 +650,9 @@ static bool load_ply_shape(const string& filename, shape_data& shape,
   get_lines(ply, shape.lines);
   get_points(ply, shape.points);
 
-  if (shape.positions.empty()) return shape_error();
+  if (shape.points.empty() && shape.lines.empty() && shape.triangles.empty() &&
+      shape.quads.empty())
+    return shape_error();
   return true;
 }
 static bool save_ply_shape(const string& filename, const shape_data& shape,
@@ -687,8 +688,7 @@ static bool load_stl_shape(const string& filename, shape_data& shape,
   if (!load_stl(filename, stl, error, true)) return false;
 
   // get shape
-  if (stl.shapes.empty()) return shape_error();
-  if (stl.shapes.size() > 1) return shape_error();
+  if (stl.shapes.size() != 1) return shape_error();
   auto fnormals = vector<vec3f>{};
   if (!get_triangles(stl, 0, shape.triangles, shape.positions, fnormals))
     return shape_error();
@@ -878,10 +878,7 @@ static bool load_obj_fvshape(const string& filename, fvshape_data& shape,
   // get shape
   if (obj.shapes.size() != 1) return shape_error();
   auto& oshape = obj.shapes.front();
-  if (oshape.points.empty() && oshape.lines.empty() && oshape.faces.empty())
-    return shape_error();
 
-  if (oshape.faces.empty()) return shape_error();
   auto materials = vector<int>{};
   get_positions(oshape, shape.positions);
   get_normals(oshape, shape.normals);
@@ -889,7 +886,8 @@ static bool load_obj_fvshape(const string& filename, fvshape_data& shape,
   get_fvquads(
       oshape, shape.quadspos, shape.quadsnorm, shape.quadstexcoord, materials);
 
-  if (shape.positions.empty()) return shape_error();
+  if (shape.quadspos.empty())
+    return shape_error();
   return true;
 }
 static bool save_obj_fvshape(const string& filename, const fvshape_data& shape,
