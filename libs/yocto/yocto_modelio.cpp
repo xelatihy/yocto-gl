@@ -1469,10 +1469,15 @@ bool load_obj(const string& filename, obj_scene& obj, string& error,
   auto mtllibs      = vector<string>{};
   auto material_map = unordered_map<string, int>{};
   int  cur_material = -1;
+  auto cur_shape    = (obj_shape*)nullptr;
+  auto cur_shapes   = unordered_map<int, int>{};
 
   // initialize obj
-  obj = {};
-  obj.shapes.emplace_back();
+  obj       = {};
+  cur_shape = &obj.shapes.emplace_back();
+  if (split_materials) {
+    cur_shapes = {{cur_material, (int)obj.shapes.size() - 1}};
+  }
 
   // read the file str by str
   auto buffer = array<char, 4096>{};
@@ -1501,7 +1506,7 @@ bool load_obj(const string& filename, obj_scene& obj, string& error,
                    : (cmd == "l") ? obj_etype::line
                                   : obj_etype::point;
       // grab shape and add element
-      auto& shape   = obj.shapes.back();
+      auto& shape   = *cur_shape;
       auto& element = shape.elements.emplace_back();
       if (cur_material < 0) return material_error("default");
       element.material = cur_material;
@@ -1530,25 +1535,34 @@ bool load_obj(const string& filename, obj_scene& obj, string& error,
       } else {
         if (!parse_value(str, name)) return parse_error();
       }
-      if (!obj.shapes.back().vertices.empty()) {
-        obj.shapes.emplace_back();
-        obj.shapes.back().name = oname + gname;
+      if (split_materials) {
+        cur_shape       = &obj.shapes.emplace_back();
+        cur_shapes      = {{cur_material, (int)obj.shapes.size() - 1}};
+        cur_shape->name = oname + gname;
       } else {
-        obj.shapes.back().name = oname + gname;
+        if (!cur_shape->vertices.empty()) {
+          cur_shape = &obj.shapes.emplace_back();
+        }
+        cur_shape->name = oname + gname;
       }
     } else if (cmd == "usemtl") {
       auto mname = string{};
       if (!parse_value(str, mname)) return parse_error();
       auto material_it = material_map.find(mname);
       if (material_it == material_map.end()) return material_error(mname);
-      if (split_materials) {
-        if (cur_material != material_it->second &&
-            !obj.shapes.back().vertices.empty()) {
-          obj.shapes.emplace_back();
-          obj.shapes.back().name = oname + gname;
+      if (split_materials && cur_material != material_it->second) {
+        cur_material  = material_it->second;
+        auto shape_it = cur_shapes.find(cur_material);
+        if (shape_it == cur_shapes.end()) {
+          cur_shape                = &obj.shapes.emplace_back();
+          cur_shapes[cur_material] = (int)obj.shapes.size() - 1;
+          cur_shape->name          = oname + gname;
+        } else {
+          cur_shape = &obj.shapes.at(shape_it->second);
         }
+      } else {
+        cur_material = material_it->second;
       }
-      cur_material = material_it->second;
     } else if (cmd == "mtllib") {
       auto mtllib = ""s;
       if (!parse_value(str, mtllib)) return parse_error();
@@ -1563,6 +1577,14 @@ bool load_obj(const string& filename, obj_scene& obj, string& error,
     } else {
       // unused
     }
+  }
+
+  // remove empty shapes if splitting by materials
+  if (split_materials) {
+    obj.shapes.erase(
+        std::remove_if(obj.shapes.begin(), obj.shapes.end(),
+            [](const obj_shape& shape) { return shape.elements.empty(); }),
+        obj.shapes.end());
   }
 
   // convert vertex data
