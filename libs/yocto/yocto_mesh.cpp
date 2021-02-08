@@ -2657,17 +2657,6 @@ mesh_point eval_path_point(const geodesic_path& path,
 // -----------------------------------------------------------------------------
 namespace yocto {
 
-// Convert quads to triangles
-static vector<vec3i> quads_to_triangles(const vector<vec4i>& quads) {
-  auto triangles = vector<vec3i>{};
-  triangles.reserve(quads.size() * 2);
-  for (auto& q : quads) {
-    triangles.push_back({q.x, q.y, q.w});
-    if (q.z != q.w) triangles.push_back({q.z, q.w, q.y});
-  }
-  return triangles;
-}
-
 // Load ply mesh
 bool load_mesh(const string& filename, vector<vec3i>& triangles,
     vector<vec3f>& positions, vector<vec3f>& normals, vector<vec2f>& texcoords,
