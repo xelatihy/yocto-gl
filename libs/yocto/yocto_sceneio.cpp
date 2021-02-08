@@ -1674,20 +1674,6 @@ static bool load_obj_scene(const string& filename, scene_scene& scene,
     camera.aperture     = ocamera.aperture;
   }
 
-  // helper to create texture maps
-  auto texture_map = unordered_map<string, texture_handle>{
-      {"", invalid_handle}};
-  auto get_texture = [&texture_map, &scene](
-                         const obj_texture& tinfo) -> texture_handle {
-    auto path = tinfo.path;
-    if (path.empty()) return invalid_handle;
-    auto it = texture_map.find(path);
-    if (it != texture_map.end()) return it->second;
-    scene.textures.emplace_back();
-    texture_map[path] = (int)scene.textures.size() - 1;
-    return (int)scene.textures.size() - 1;
-  };
-
   // convert between roughness and exponent
   auto exponent_to_roughness = [](float exponent) {
     auto roughness = exponent;
@@ -1697,34 +1683,41 @@ static bool load_obj_scene(const string& filename, scene_scene& scene,
     return roughness;
   };
 
+  // handler for textures
+  auto texture_paths = vector<string>{};
+  for (auto& otexture : obj.textures) {
+    scene.textures.emplace_back();
+    texture_paths.emplace_back(otexture.path);
+  }
+
   // handler for materials
   for (auto& omaterial : obj.materials) {
     auto& material        = scene.materials.emplace_back();
     material.type         = material_type::metallic;
     material.emission     = omaterial.emission;
-    material.emission_tex = get_texture(omaterial.emission_tex);
+    material.emission_tex = omaterial.emission_tex;
     if (max(omaterial.transmission) > 0.1) {
       material.type      = material_type::thinglass;
       material.color     = omaterial.transmission;
-      material.color_tex = get_texture(omaterial.transmission_tex);
+      material.color_tex = omaterial.transmission_tex;
     } else if (max(omaterial.specular) > 0.2) {
       material.type      = material_type::metal;
       material.color     = omaterial.specular;
-      material.color_tex = get_texture(omaterial.specular_tex);
+      material.color_tex = omaterial.specular_tex;
     } else if (max(omaterial.specular) > 0) {
       material.type      = material_type::plastic;
       material.color     = omaterial.diffuse;
-      material.color_tex = get_texture(omaterial.diffuse_tex);
+      material.color_tex = omaterial.diffuse_tex;
     } else {
       material.type      = material_type::matte;
       material.color     = omaterial.diffuse;
-      material.color_tex = get_texture(omaterial.diffuse_tex);
+      material.color_tex = omaterial.diffuse_tex;
     }
     material.roughness  = exponent_to_roughness(omaterial.exponent);
     material.ior        = omaterial.ior;
     material.metallic   = 0;
     material.opacity    = omaterial.opacity;
-    material.normal_tex = get_texture(omaterial.normal_tex);
+    material.normal_tex = omaterial.normal_tex;
   }
 
   // convert shapes
@@ -1747,7 +1740,7 @@ static bool load_obj_scene(const string& filename, scene_scene& scene,
     auto& environment        = scene.environments.emplace_back();
     environment.frame        = oenvironment.frame;
     environment.emission     = oenvironment.emission;
-    environment.emission_tex = get_texture(oenvironment.emission_tex);
+    environment.emission_tex = oenvironment.emission_tex;
   }
 
   // handle progress
@@ -1759,11 +1752,10 @@ static bool load_obj_scene(const string& filename, scene_scene& scene,
   };
 
   // load textures
-  texture_map.erase("");
-  for (auto [name, thandle] : texture_map) {
-    auto& texture = scene.textures[thandle];
+  for (auto& texture : scene.textures) {
+    auto& filename = texture_paths[&texture - &scene.textures.front()];
     if (progress_cb) progress_cb("load texture", progress.x++, progress.y);
-    if (!load_image(make_filename(name), texture.hdr, texture.ldr, error))
+    if (!load_image(make_filename(filename), texture.hdr, texture.ldr, error))
       return dependent_error();
   }
 
@@ -1802,30 +1794,28 @@ static bool save_obj_scene(const string& filename, const scene_scene& scene,
     ocamera.name     = get_camera_name(scene, camera);
     ocamera.frame    = camera.frame;
     ocamera.ortho    = camera.orthographic;
-    ocamera.film    = camera.film;
+    ocamera.film     = camera.film;
     ocamera.aspect   = camera.aspect;
     ocamera.focus    = camera.focus;
     ocamera.lens     = camera.lens;
     ocamera.aperture = camera.aperture;
   }
 
-  // textures
-  auto get_texture = [&](texture_handle texture) {
-    if (texture == invalid_handle) return obj_texture{};
-    auto tinfo  = obj_texture{};
-    auto is_hdr = !scene.textures[texture].hdr.empty();
-    tinfo.path  = "textures/" + get_texture_name(scene, texture) +
-                 (is_hdr ? ".hdr"s : ".png"s);
-    return tinfo;
-  };
-
+  // helper
   auto roughness_to_exponent = [](float roughness) -> float {
     if (roughness < 0.01f) return 10000;
     if (roughness > 0.99f) return 10;
     return 2 / pow(roughness, 4.0f) - 2;
   };
 
-  // convert materials and textures
+  // convert textures
+  for (auto& texture : scene.textures) {
+    auto& otexture = obj.textures.emplace_back();
+    otexture.path  = "textures/" + get_texture_name(scene, texture) +
+                    (!texture.hdr.empty() ? ".hdr"s : ".png"s);
+  }
+
+  // convert materials
   for (auto& material : scene.materials) {
     auto& omaterial        = obj.materials.emplace_back();
     omaterial.name         = get_material_name(scene, material);
@@ -1835,9 +1825,9 @@ static bool save_obj_scene(const string& filename, const scene_scene& scene,
     omaterial.specular     = {0, 0, 0};
     omaterial.exponent     = roughness_to_exponent(material.roughness);
     omaterial.opacity      = material.opacity;
-    omaterial.emission_tex = get_texture(material.emission_tex);
-    omaterial.diffuse_tex  = get_texture(material.color_tex);
-    omaterial.normal_tex   = get_texture(material.normal_tex);
+    omaterial.emission_tex = material.emission_tex;
+    omaterial.diffuse_tex  = material.color_tex;
+    omaterial.normal_tex   = material.normal_tex;
   }
 
   // convert objects
@@ -1867,7 +1857,7 @@ static bool save_obj_scene(const string& filename, const scene_scene& scene,
     oenvironment.name         = get_environment_name(scene, environment);
     oenvironment.frame        = environment.frame;
     oenvironment.emission     = environment.emission;
-    oenvironment.emission_tex = get_texture(environment.emission_tex);
+    oenvironment.emission_tex = environment.emission_tex;
   }
 
   // handle progress

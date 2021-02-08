@@ -219,16 +219,6 @@ inline bool operator==(const obj_vertex& a, const obj_vertex& b) {
          a.normal == b.normal;
 }
 
-// Obj texture information.
-struct obj_texture {
-  string path  = "";     // file path
-  bool   clamp = false;  // clamp to edge
-  float  scale = 1;      // scale for bump/displacement
-
-  obj_texture() = default;
-  explicit obj_texture(const string& path) : path{path} {}
-};
-
 // Obj element type
 enum struct obj_etype : uint16_t { face, line, point };
 
@@ -237,6 +227,16 @@ struct obj_element {
   uint16_t  size     = 0;
   obj_etype etype    = obj_etype::face;
   int       material = 0;
+};
+
+// Obj texture information.
+struct obj_texture {
+  string path  = "";     // file path
+  bool   clamp = false;  // clamp to edge
+  float  scale = 1;      // scale for bump/displacement
+
+  obj_texture() = default;
+  explicit obj_texture(const string& path) : path{path} {}
 };
 
 // Obj material
@@ -257,17 +257,17 @@ struct obj_material {
   float opacity      = 1;
 
   // material textures
-  obj_texture emission_tex     = {};
-  obj_texture ambient_tex      = {};
-  obj_texture diffuse_tex      = {};
-  obj_texture specular_tex     = {};
-  obj_texture reflection_tex   = {};
-  obj_texture transmission_tex = {};
-  obj_texture exponent_tex     = {};
-  obj_texture opacity_tex      = {};
-  obj_texture bump_tex         = {};
-  obj_texture normal_tex       = {};
-  obj_texture displacement_tex = {};
+  int emission_tex     = -1;
+  int ambient_tex      = -1;
+  int diffuse_tex      = -1;
+  int specular_tex     = -1;
+  int reflection_tex   = -1;
+  int transmission_tex = -1;
+  int exponent_tex     = -1;
+  int opacity_tex      = -1;
+  int bump_tex         = -1;
+  int normal_tex       = -1;
+  int displacement_tex = -1;
 };
 
 // Obj shape
@@ -294,10 +294,10 @@ struct obj_camera {
 
 // Obj environment
 struct obj_environment {
-  string      name         = "";
-  frame3f     frame        = identity3x4f;
-  vec3f       emission     = {0, 0, 0};
-  obj_texture emission_tex = {};
+  string  name         = "";
+  frame3f frame        = identity3x4f;
+  vec3f   emission     = {0, 0, 0};
+  int     emission_tex = -1;
 };
 
 // Obj model
@@ -305,6 +305,7 @@ struct obj_scene {
   vector<string>          comments     = {};
   vector<obj_shape>       shapes       = {};
   vector<obj_material>    materials    = {};
+  vector<obj_texture>     textures     = {};
   vector<obj_camera>      cameras      = {};
   vector<obj_environment> environments = {};
 };

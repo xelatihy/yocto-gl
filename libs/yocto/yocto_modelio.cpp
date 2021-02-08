@@ -1276,6 +1276,25 @@ inline bool load_mtl(const string& filename, obj_scene& obj, string& error) {
     return false;
   };
 
+  // texture map
+  auto texture_map = unordered_map<string, int>{};
+  auto texture_id  = 0;
+  for (auto& texture : obj.textures) texture_map[texture.path] = texture_id++;
+  auto parse_texture = [&texture_map, &obj](string_view& str, int& texture_id) {
+    auto texture_path = obj_texture{};
+    if (!parse_value(str, texture_path)) return false;
+    auto texture_it = texture_map.find(texture_path.path);
+    if (texture_it == texture_map.end()) {
+      auto& texture             = obj.textures.emplace_back();
+      texture.path              = texture_path.path;
+      texture_id                = (int)obj.textures.size() - 1;
+      texture_map[texture.path] = texture_id;
+    } else {
+      texture_id = texture_it->second;
+    }
+    return true;
+  };
+
   // open file
   auto fs = open_file(filename, "rt");
   if (!fs) return open_error();
@@ -1328,23 +1347,23 @@ inline bool load_mtl(const string& filename, obj_scene& obj, string& error) {
     } else if (cmd == "d") {
       if (!parse_value(str, material.opacity)) return parse_error();
     } else if (cmd == "map_Ke") {
-      if (!parse_value(str, material.emission_tex)) return parse_error();
+      if (!parse_texture(str, material.emission_tex)) return parse_error();
     } else if (cmd == "map_Ka") {
-      if (!parse_value(str, material.ambient_tex)) return parse_error();
+      if (!parse_texture(str, material.ambient_tex)) return parse_error();
     } else if (cmd == "map_Kd") {
-      if (!parse_value(str, material.diffuse_tex)) return parse_error();
+      if (!parse_texture(str, material.diffuse_tex)) return parse_error();
     } else if (cmd == "map_Ks") {
-      if (!parse_value(str, material.specular_tex)) return parse_error();
+      if (!parse_texture(str, material.specular_tex)) return parse_error();
     } else if (cmd == "map_Tr") {
-      if (!parse_value(str, material.transmission_tex)) return parse_error();
+      if (!parse_texture(str, material.transmission_tex)) return parse_error();
     } else if (cmd == "map_d" || cmd == "map_Tr") {
-      if (!parse_value(str, material.opacity_tex)) return parse_error();
+      if (!parse_texture(str, material.opacity_tex)) return parse_error();
     } else if (cmd == "map_bump" || cmd == "bump") {
-      if (!parse_value(str, material.bump_tex)) return parse_error();
+      if (!parse_texture(str, material.bump_tex)) return parse_error();
     } else if (cmd == "map_disp" || cmd == "disp") {
-      if (!parse_value(str, material.displacement_tex)) return parse_error();
+      if (!parse_texture(str, material.displacement_tex)) return parse_error();
     } else if (cmd == "map_norm" || cmd == "norm") {
-      if (!parse_value(str, material.normal_tex)) return parse_error();
+      if (!parse_texture(str, material.normal_tex)) return parse_error();
     } else {
       continue;
     }
@@ -1370,6 +1389,25 @@ inline bool load_obx(const string& filename, obj_scene& obj, string& error) {
   auto read_error = [filename, &error]() {
     error = filename + ": read error";
     return false;
+  };
+
+  // texture map
+  auto texture_map = unordered_map<string, int>{};
+  auto texture_id  = 0;
+  for (auto& texture : obj.textures) texture_map[texture.path] = texture_id++;
+  auto parse_texture = [&texture_map, &obj](string_view& str, int& texture_id) {
+    auto texture_path = obj_texture{};
+    if (!parse_value(str, texture_path)) return false;
+    auto texture_it = texture_map.find(texture_path.path);
+    if (texture_it == texture_map.end()) {
+      auto& texture             = obj.textures.emplace_back();
+      texture.path              = texture_path.path;
+      texture_id                = (int)obj.textures.size() - 1;
+      texture_map[texture.path] = texture_id;
+    } else {
+      texture_id = texture_it->second;
+    }
+    return true;
   };
 
   // open file
@@ -1427,7 +1465,7 @@ inline bool load_obx(const string& filename, obj_scene& obj, string& error) {
     } else if (cmd == "Ee") {
       if (!parse_value(str, environment.emission)) return parse_error();
     } else if (cmd == "map_Ee") {
-      if (!parse_value(str, environment.emission_tex)) return parse_error();
+      if (!parse_texture(str, environment.emission_tex)) return parse_error();
     } else if (cmd == "Ex") {
       if (!parse_value(str, environment.frame)) return parse_error();
     } else if (cmd == "Et") {
@@ -1865,35 +1903,45 @@ inline bool save_mtl(
       return write_error();
     if (material.opacity != 1)
       if (!format_values(fs, "d {}\n", material.opacity)) return write_error();
-    if (!material.emission_tex.path.empty())
-      if (!format_values(fs, "map_Ke {}\n", material.emission_tex))
+    if (material.emission_tex >= 0)
+      if (!format_values(
+              fs, "map_Ke {}\n", obj.textures[material.emission_tex].path))
         return write_error();
-    if (!material.diffuse_tex.path.empty())
-      if (!format_values(fs, "map_Kd {}\n", material.diffuse_tex))
+    if (material.diffuse_tex >= 0)
+      if (!format_values(
+              fs, "map_Kd {}\n", obj.textures[material.diffuse_tex].path))
         return write_error();
-    if (!material.specular_tex.path.empty())
-      if (!format_values(fs, "map_Ks {}\n", material.specular_tex))
+    if (material.specular_tex >= 0)
+      if (!format_values(
+              fs, "map_Ks {}\n", obj.textures[material.specular_tex].path))
         return write_error();
-    if (!material.transmission_tex.path.empty())
-      if (!format_values(fs, "map_Kt {}\n", material.transmission_tex))
+    if (material.transmission_tex >= 0)
+      if (!format_values(
+              fs, "map_Kt {}\n", obj.textures[material.transmission_tex].path))
         return write_error();
-    if (!material.reflection_tex.path.empty())
-      if (!format_values(fs, "map_Kr {}\n", material.reflection_tex))
+    if (material.reflection_tex >= 0)
+      if (!format_values(
+              fs, "map_Kr {}\n", obj.textures[material.reflection_tex].path))
         return write_error();
-    if (!material.exponent_tex.path.empty())
-      if (!format_values(fs, "map_Ns {}\n", material.exponent_tex))
+    if (material.exponent_tex >= 0)
+      if (!format_values(
+              fs, "map_Ns {}\n", obj.textures[material.exponent_tex].path))
         return write_error();
-    if (!material.opacity_tex.path.empty())
-      if (!format_values(fs, "map_d {}\n", material.opacity_tex))
+    if (material.opacity_tex >= 0)
+      if (!format_values(
+              fs, "map_d {}\n", obj.textures[material.opacity_tex].path))
         return write_error();
-    if (!material.bump_tex.path.empty())
-      if (!format_values(fs, "map_bump {}\n", material.bump_tex))
+    if (material.bump_tex >= 0)
+      if (!format_values(
+              fs, "map_bump {}\n", obj.textures[material.bump_tex].path))
         return write_error();
-    if (!material.displacement_tex.path.empty())
-      if (!format_values(fs, "map_disp {}\n", material.displacement_tex))
+    if (material.displacement_tex >= 0)
+      if (!format_values(fs, "map_disp {}\n",
+              obj.textures[material.displacement_tex].path))
         return write_error();
-    if (!material.normal_tex.path.empty())
-      if (!format_values(fs, "map_norm {}\n", material.normal_tex))
+    if (material.normal_tex >= 0)
+      if (!format_values(
+              fs, "map_norm {}\n", obj.textures[material.normal_tex].path))
         return write_error();
     if (!format_values(fs, "\n")) return write_error();
   }
@@ -1946,8 +1994,9 @@ inline bool save_obx(
       return write_error();
     if (!format_values(fs, "  Ee {}\n", environment.emission))
       return write_error();
-    if (!environment.emission_tex.path.empty()) {
-      if (!format_values(fs, "  map_Ee {}\n", environment.emission_tex))
+    if (environment.emission_tex >= 0) {
+      if (!format_values(
+              fs, "  map_Ee {}\n", obj.textures[environment.emission_tex].path))
         return write_error();
     }
     if (!format_values(fs, "  Ex {}\n", environment.frame))
