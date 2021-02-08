@@ -911,7 +911,7 @@ static bool load_json_scene(const string& filename, scene_scene& scene,
     error = filename + ": unknow key at " + path;
     return false;
   };
-  auto material_error = [filename, &error](string_view name) {
+  auto material_error = [filename, &error](const string& name) {
     error = filename + ": missing material " + string{name};
     return false;
   };
@@ -928,16 +928,6 @@ static bool load_json_scene(const string& filename, scene_scene& scene,
   auto js = njson{};
   if (!load_json(filename, js, error)) return json_error();
 
-  // reference dictionaries
-  auto texture_map = unordered_map<string, pair<texture_handle, bool>>{
-      {"", {invalid_handle, true}}};
-  auto shape_map = unordered_map<string, pair<shape_handle, bool>>{
-      {"", {invalid_handle, true}}};
-  auto material_map = unordered_map<string, pair<material_handle, bool>>{
-      {"", {invalid_handle, true}}};
-  auto subdiv_map = unordered_map<string, pair<subdiv_handle, bool>>{
-      {"", {invalid_handle, true}}};
-
   // parse json value
   auto get_value = [](const njson& js, auto& value) -> bool {
     try {
@@ -949,55 +939,60 @@ static bool load_json_scene(const string& filename, scene_scene& scene,
   };
 
   // parse json reference
+  auto shape_map = unordered_map<string, shape_handle>{};
   auto get_shape = [&scene, &shape_map, &get_value](
                        const njson& js, shape_handle& value) -> bool {
     auto name = ""s;
     if (!get_value(js, name)) return false;
     auto it = shape_map.find(name);
     if (it != shape_map.end()) {
-      value = it->second.first;
-      return it->second.first != invalid_handle;
+      value = it->second;
+      return true;
     }
     scene.shape_names.emplace_back(name);
     scene.shapes.emplace_back();
     auto shape_id   = (int)scene.shapes.size() - 1;
-    shape_map[name] = {shape_id, false};
+    shape_map[name] = shape_id;
     value           = shape_id;
     return true;
   };
 
   // parse json reference
-  auto get_material = [&scene, &material_map, &get_value](
+  auto material_map = unordered_map<string, material_handle>{};
+  auto material_set = vector<bool>{};
+  auto get_material = [&scene, &material_map, &material_set, &get_value](
                           const njson& js, material_handle& value) -> bool {
     auto name = ""s;
     if (!get_value(js, name)) return false;
     auto it = material_map.find(name);
     if (it != material_map.end()) {
-      value = it->second.first;
-      return it->second.first != invalid_handle;
+      value = it->second;
+      return true;
     }
     scene.material_names.emplace_back(name);
     scene.materials.emplace_back();
     auto material_id   = (int)scene.materials.size() - 1;
-    material_map[name] = {material_id, false};
+    material_map[name] = material_id;
     value              = material_id;
+    material_set.push_back(false);
     return true;
   };
 
   // parse json reference
+  auto texture_map = unordered_map<string, texture_handle>{};
   auto get_texture = [&scene, &texture_map, &get_value](
                          const njson& js, texture_handle& value) -> bool {
     auto name = ""s;
     if (!get_value(js, name)) return false;
     auto it = texture_map.find(name);
     if (it != texture_map.end()) {
-      value = it->second.first;
-      return it->second.first != invalid_handle;
+      value = it->second;
+      return true;
     }
     scene.texture_names.emplace_back(name);
     scene.textures.emplace_back();
     auto texture_id   = (int)scene.textures.size() - 1;
-    texture_map[name] = {texture_id, false};
+    texture_map[name] = texture_id;
     value             = texture_id;
     return true;
   };
@@ -1130,17 +1125,15 @@ static bool load_json_scene(const string& filename, scene_scene& scene,
       if (!check_object(group)) return parse_error(gname);
       for (auto& [name, element] : iterate_object(group)) {
         if (!check_object(element)) return parse_error(gname, name);
-        auto material_it = material_map.find(string{name});
-        auto handle      = invalid_handle;
-        if (material_it == material_map.end()) {
+        if (material_map.find(name) == material_map.end()) {
           scene.material_names.emplace_back(name);
           scene.materials.emplace_back();
-          handle = (int)scene.materials.size() - 1;
-        } else {
-          handle = material_it->second.first;
+          material_map[name] = (int)scene.materials.size() - 1;
+          material_set.push_back(false);
         }
-        auto& material = scene.materials[handle];
-        material.type  = material_type::metallic;
+        auto& material = scene.materials.at(material_map.at(name));
+        material_set[&material - &scene.materials.front()] = true;
+        material.type = material_type::metallic;
         for (auto& [key, value] : iterate_object(element)) {
           if (key == "type") {
             if (!get_value(value, material.type))
@@ -1191,7 +1184,6 @@ static bool load_json_scene(const string& filename, scene_scene& scene,
             return key_error(gname, name, key);
           }
         }
-        material_map[string{name}] = {handle, true};
       }
     } else if (gname == "instances" || gname == "objects") {
       if (!check_object(group)) return parse_error(gname);
@@ -1215,7 +1207,7 @@ static bool load_json_scene(const string& filename, scene_scene& scene,
             if (!get_shape(value, instance.shape))
               return parse_error(gname, name, key);
           } else if (key == "instance") {
-            throw std::invalid_argument{"instances not suppotyed yet"};
+            throw std::invalid_argument{"instances not supported yet"};
             // get_ply_instances(value, instance);
           } else {
             return key_error(gname, name, key);
@@ -1226,7 +1218,7 @@ static bool load_json_scene(const string& filename, scene_scene& scene,
       if (!check_object(group)) return parse_error(gname);
       for (auto& [name, element] : iterate_object(group)) {
         if (!check_object(element)) return parse_error(gname, name);
-        scene.subdiv_names.emplace_back();
+        scene.subdiv_names.emplace_back(name);
         auto& subdiv = scene.subdivs.emplace_back();
         for (auto& [key, value] : iterate_object(element)) {
           if (key == "shape") {
@@ -1251,7 +1243,6 @@ static bool load_json_scene(const string& filename, scene_scene& scene,
             return key_error(gname, name, key);
           }
         }
-        subdiv_map[string{name}] = {(int)scene.subdivs.size() - 1, false};
       }
     } else {
       return key_error(gname);
@@ -1259,8 +1250,9 @@ static bool load_json_scene(const string& filename, scene_scene& scene,
   }
 
   // check materials
-  for (auto& [key, value] : material_map) {
-    if (!value.second) return material_error(key);
+  for (auto& material : scene.materials) {
+    if (!material_set[&material - &scene.materials.front()])
+      return material_error(get_material_name(scene, material));
   }
 
   // handle progress
@@ -1269,25 +1261,27 @@ static bool load_json_scene(const string& filename, scene_scene& scene,
   progress.y += scene.subdivs.size();
   progress.y += ply_instances.size();
 
+  // dirname
+  auto dirname = path_dirname(filename);
+
   // get filename from name
-  auto make_filename = [filename](const string& name, const string& group,
-                           const vector<string>& extensions) {
+  auto find_path = [dirname](const string& name, const string& group,
+                       const vector<string>& extensions) {
     for (auto& extension : extensions) {
-      auto filepath = path_join(
-          path_dirname(filename), group, name + extension);
-      if (path_exists(filepath)) return filepath;
+      auto path = path_join(dirname, group, name + extension);
+      if (path_exists(path)) return path_join(group, name + extension);
     }
-    return path_join(path_dirname(filename), group, name + extensions.front());
+    return path_join(group, name + extensions.front());
   };
 
   // load shapes
-  shape_map.erase("");
-  for (auto [name, value] : shape_map) {
-    auto& shape = scene.shapes[value.first];
+  for (auto& shape : scene.shapes) {
     if (progress_cb) progress_cb("load shape", progress.x++, progress.y);
-    auto path   = make_filename(name, "shapes", {".ply", ".obj"});
+    auto path = find_path(
+        get_shape_name(scene, shape), "shapes", {".ply", ".obj"});
     auto lshape = shape_data{};
-    if (!load_shape(path, lshape, error, false)) return dependent_error();
+    if (!load_shape(path_join(dirname, path), lshape, error, false))
+      return dependent_error();
     shape.points    = lshape.points;
     shape.lines     = lshape.lines;
     shape.triangles = lshape.triangles;
@@ -1300,13 +1294,13 @@ static bool load_json_scene(const string& filename, scene_scene& scene,
   }
 
   // load subdivs
-  subdiv_map.erase("");
-  for (auto [name, value] : subdiv_map) {
-    auto& subdiv = scene.subdivs[value.first];
+  for (auto& subdiv : scene.subdivs) {
     if (progress_cb) progress_cb("load subdiv", progress.x++, progress.y);
-    auto path    = make_filename(name, "subdivs", {".ply", ".obj"});
+    auto path = find_path(
+        get_subdiv_name(scene, subdiv), "subdivs", {".ply", ".obj"});
     auto lsubdiv = fvshape_data{};
-    if (!load_fvshape(path, lsubdiv, error, true)) return dependent_error();
+    if (!load_fvshape(path_join(dirname, path), lsubdiv, error, true))
+      return dependent_error();
     subdiv.quadspos      = lsubdiv.quadspos;
     subdiv.quadsnorm     = lsubdiv.quadsnorm;
     subdiv.quadstexcoord = lsubdiv.quadstexcoord;
@@ -1316,13 +1310,11 @@ static bool load_json_scene(const string& filename, scene_scene& scene,
   }
 
   // load textures
-  texture_map.erase("");
-  for (auto [name, value] : texture_map) {
-    auto& texture = scene.textures[value.first];
+  for (auto& texture : scene.textures) {
     if (progress_cb) progress_cb("load texture", progress.x++, progress.y);
-    auto path = make_filename(
-        name, "textures", {".hdr", ".exr", ".png", ".jpg"});
-    if (!load_image(path, texture.hdr, texture.ldr, error))
+    auto path = find_path(get_texture_name(scene, texture), "textures",
+        {".hdr", ".exr", ".png", ".jpg"});
+    if (!load_image(path_join(dirname, path), texture.hdr, texture.ldr, error))
       return dependent_error();
   }
 
