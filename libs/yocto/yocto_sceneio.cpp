@@ -1577,16 +1577,13 @@ static bool save_json_scene(const string& filename, const scene_scene& scene,
   // save json
   if (!save_json(filename, js, error)) return false;
 
-  // get filename from name
-  auto make_filename = [filename](const string& name, const string& group,
-                           const string& extension) {
-    return path_join(path_dirname(filename), group, name + extension);
-  };
+  // dirname
+  auto dirname = path_dirname(filename);
 
   // save shapes
   for (auto& shape : scene.shapes) {
     if (progress_cb) progress_cb("save shape", progress.x++, progress.y);
-    auto path = make_filename(get_shape_name(scene, shape), "shapes", ".ply"s);
+    auto path        = "shapes/" + get_shape_name(scene, shape) + ".ply";
     auto sshape      = shape_data{};
     sshape.points    = shape.points;
     sshape.lines     = shape.lines;
@@ -1597,30 +1594,31 @@ static bool save_json_scene(const string& filename, const scene_scene& scene,
     sshape.texcoords = shape.texcoords;
     sshape.colors    = shape.colors;
     sshape.radius    = shape.radius;
-    if (!save_shape(path, sshape, error, false)) return dependent_error();
+    if (!save_shape(path_join(dirname, path), sshape, error, false))
+      return dependent_error();
   }
 
   // save subdiv
   for (auto& subdiv : scene.subdivs) {
     if (progress_cb) progress_cb("save subdiv", progress.x++, progress.y);
-    auto path = make_filename(
-        get_subdiv_name(scene, subdiv), "subdivs", ".obj");
-    auto ssubdiv          = fvshape_data{};
-    ssubdiv.quadspos      = subdiv.quadspos;
-    ssubdiv.quadsnorm     = subdiv.quadsnorm;
+    auto path         = "subdivs/" + get_subdiv_name(scene, subdiv) + ".obj";
+    auto ssubdiv      = fvshape_data{};
+    ssubdiv.quadspos  = subdiv.quadspos;
+    ssubdiv.quadsnorm = subdiv.quadsnorm;
     ssubdiv.quadstexcoord = subdiv.quadstexcoord;
     ssubdiv.positions     = subdiv.positions;
     ssubdiv.normals       = subdiv.normals;
     ssubdiv.texcoords     = subdiv.texcoords;
-    if (!save_fvshape(path, ssubdiv, error, true)) return dependent_error();
+    if (!save_fvshape(path_join(dirname, path), ssubdiv, error, true))
+      return dependent_error();
   }
 
   // save textures
   for (auto& texture : scene.textures) {
     if (progress_cb) progress_cb("save texture", progress.x++, progress.y);
-    auto path = make_filename(get_texture_name(scene, texture), "textures",
-        (!texture.hdr.empty()) ? ".hdr"s : ".png"s);
-    if (!save_image(path, texture.hdr, texture.ldr, error))
+    auto path = "textures/" + get_texture_name(scene, texture) +
+                (!texture.hdr.empty() ? ".hdr"s : ".png"s);
+    if (!save_image(path_join(dirname, path), texture.hdr, texture.ldr, error))
       return dependent_error();
   }
 
@@ -2186,56 +2184,6 @@ static bool load_gltf_scene(const string& filename, scene_scene& scene,
       return parse_error();
     }
   }
-
-  auto get_attribute = [](const njson&                 gltf,
-                           const vector<vector<byte>>& buffers, auto& values,
-                           int index, bool color = false) {
-    constexpr auto ncomp     = sizeof(values.front()) / sizeof(float);
-    auto&          gaccessor = gltf.at("accessors").at(index);
-    if (gaccessor.contains("sparse"))
-      throw std::invalid_argument{"not implemented"};
-    auto  type      = gaccessor.value("type", "VEC3");
-    auto  component = gaccessor.value("type", 5126);
-    auto  count     = gaccessor.value("count", (size_t)0);
-    auto  offset1   = gaccessor.value("byteOffset", (size_t)0);
-    auto& gview = gltf.at("bufferViews").at(gaccessor.value("bufferView", -1));
-    auto  offset2 = gview.value("byteOffset", (size_t)0);
-    auto  stride  = gview.value("byteStride", (size_t)0);
-    auto& buffer  = buffers.at(gview.value("buffer", -1));
-    values.resize(count);
-    auto data    = (float*)values.data();
-    auto current = buffer.data() + offset1 + offset2;
-    auto nncomp  = 0;
-    if (type == "SCALAR") nncomp = 1;
-    if (type == "VEC2") nncomp = 2;
-    if (type == "VEC3") nncomp = 3;
-    if (type == "VEC4") nncomp = 4;
-    if (ncomp != nncomp) throw std::invalid_argument{"bad value"};
-    if (component == 5121) {
-      if (stride == 0) stride += nncomp * 1;
-      for (auto idx = (size_t)0; idx < count; idx++, current += stride) {
-        for (auto c = 0; c < nncomp; c++) {
-          data[idx * ncomp + c] = *(byte*)current / 255.0f;
-        }
-      }
-    } else if (component == 5123) {
-      if (stride == 0) stride += nncomp * 2;
-      for (auto idx = (size_t)0; idx < count; idx++, current += stride) {
-        for (auto c = 0; c < nncomp; c++) {
-          data[idx * ncomp + c] = *(ushort*)current / 65535.0f;
-        }
-      }
-    } else if (component == 5126) {
-      if (stride == 0) stride += nncomp * 4;
-      for (auto idx = (size_t)0; idx < count; idx++, current += stride) {
-        for (auto c = 0; c < nncomp; c++) {
-          data[idx * ncomp + c] = *(float*)current;
-        }
-      }
-    } else {
-      throw std::invalid_argument{"bad value"};
-    }
-  };
 
   // convert meshes
   auto mesh_primitives = vector<vector<sceneio_instance>>{};
