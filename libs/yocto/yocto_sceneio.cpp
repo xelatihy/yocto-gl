@@ -1730,26 +1730,16 @@ static bool load_obj_scene(const string& filename, scene_scene& scene,
   // convert shapes
   for (auto& oshape : obj.shapes) {
     if (oshape.elements.empty()) continue;
-    auto  material = oshape.elements.front().material;
-    auto& shape    = scene.shapes.emplace_back();
+    auto& shape       = scene.shapes.emplace_back();
+    auto& instance    = scene.instances.emplace_back();
+    instance.shape    = (int)scene.shapes.size() - 1;
+    instance.material = oshape.elements.front().material;
     get_positions(oshape, shape.positions);
     get_normals(oshape, shape.normals);
     get_texcoords(oshape, shape.texcoords, true);
-    get_faces(oshape, material, shape.triangles, shape.quads);
-    get_lines(oshape, material, shape.lines);
-    get_points(oshape, material, shape.points);
-    if (oshape.instances.empty()) {
-      auto& instance    = scene.instances.emplace_back();
-      instance.shape    = (int)scene.shapes.size() - 1;
-      instance.material = material;
-    } else {
-      for (auto& frame : oshape.instances) {
-        auto instance     = scene.instances.emplace_back();
-        instance.frame    = frame;
-        instance.shape    = (int)scene.shapes.size() - 1;
-        instance.material = material;
-      }
-    }
+    get_faces(oshape, instance.material, shape.triangles, shape.quads);
+    get_lines(oshape, instance.material, shape.lines);
+    get_points(oshape, instance.material, shape.points);
   }
 
   // convert environments

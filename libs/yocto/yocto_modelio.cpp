@@ -1371,13 +1371,6 @@ inline bool load_objx(const string& filename, obj_scene& obj, string& error) {
   auto fs = open_file(filename, "rt");
   if (!fs) return open_error();
 
-  // shape map for instances
-  auto shape_map = unordered_map<string, vector<int>>{};
-  auto shape_id  = 0;
-  for (auto& shape : obj.shapes) {
-    shape_map[shape.name].push_back(shape_id++);
-  }
-
   // read the file str by str
   auto buffer = array<char, 4096>{};
   while (read_line(fs, buffer)) {
@@ -1412,17 +1405,6 @@ inline bool load_objx(const string& filename, obj_scene& obj, string& error) {
       if (emission_path == "\"\"") emission_path = "";
       environment.emission_tex.path = emission_path;
       if (!parse_value(str, environment.frame)) return parse_error();
-    } else if (cmd == "i") {
-      auto object = ""s;
-      auto frame  = identity3x4f;
-      if (!parse_value(str, object)) return parse_error();
-      if (!parse_value(str, frame)) return parse_error();
-      if (shape_map.find(object) == shape_map.end()) {
-        return parse_error();
-      }
-      for (auto shape_id : shape_map.at(object)) {
-        obj.shapes[shape_id].instances.push_back(frame);
-      }
     } else {
       // unused
     }
@@ -1932,14 +1914,6 @@ inline bool save_objx(
       return write_error();
   }
 
-  // instances
-  for (auto& shape : obj.shapes) {
-    for (auto& frame : shape.instances) {
-      if (!format_values(fs, "i {} {}\n", shape.name, frame))
-        return write_error();
-    }
-  }
-
   // done
   return true;
 }
@@ -2029,9 +2003,7 @@ bool save_obj(const string& filename, const obj_scene& obj, string& error) {
   }
 
   // save objx
-  if (!obj.cameras.empty() || !obj.environments.empty() ||
-      std::any_of(obj.shapes.begin(), obj.shapes.end(),
-          [](auto shape) { return !shape.instances.empty(); })) {
+  if (!obj.cameras.empty() || !obj.environments.empty()) {
     if (!save_objx(replace_extension(filename, ".objx"), obj, error))
       return dependent_error();
   }
@@ -2492,10 +2464,6 @@ void add_fvquads(obj_shape& shape, const vector<vec4i>& quadspos,
     }
     shape.elements.push_back({(uint16_t)nv, obj_etype::face, materials[idx]});
   }
-}
-void add_instances(obj_shape& shape, const vector<frame3f>& instances) {
-  shape.instances.insert(
-      shape.instances.end(), instances.begin(), instances.end());
 }
 
 }  // namespace yocto

@@ -278,7 +278,6 @@ struct obj_shape {
   vector<vec2f>       texcoords = {};
   vector<obj_vertex>  vertices  = {};
   vector<obj_element> elements  = {};
-  vector<frame3f>     instances = {};
 };
 
 // Obj camera
@@ -366,7 +365,6 @@ void add_points(obj_shape& shape, const vector<int>& points, int material,
 void add_fvquads(obj_shape& shape, const vector<vec4i>& quadspos,
     const vector<vec4i>& quadsnorm, const vector<vec4i>& quadstexcoord,
     int material);
-void add_instances(obj_shape& shape, const vector<frame3f>& instances);
 
 }  // namespace yocto
 
