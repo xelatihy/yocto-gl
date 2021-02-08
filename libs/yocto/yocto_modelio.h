@@ -219,16 +219,6 @@ inline bool operator==(const obj_vertex& a, const obj_vertex& b) {
          a.normal == b.normal;
 }
 
-// Obj texture information.
-struct obj_texture {
-  string path  = "";     // file path
-  bool   clamp = false;  // clamp to edge
-  float  scale = 1;      // scale for bump/displacement
-
-  obj_texture() = default;
-  explicit obj_texture(const string& path) : path{path} {}
-};
-
 // Obj element type
 enum struct obj_etype : uint16_t { face, line, point };
 
@@ -237,6 +227,16 @@ struct obj_element {
   uint16_t  size     = 0;
   obj_etype etype    = obj_etype::face;
   int       material = 0;
+};
+
+// Obj texture information.
+struct obj_texture {
+  string path  = "";     // file path
+  bool   clamp = false;  // clamp to edge
+  float  scale = 1;      // scale for bump/displacement
+
+  obj_texture() = default;
+  explicit obj_texture(const string& path) : path{path} {}
 };
 
 // Obj material
@@ -257,17 +257,17 @@ struct obj_material {
   float opacity      = 1;
 
   // material textures
-  obj_texture emission_tex     = {};
-  obj_texture ambient_tex      = {};
-  obj_texture diffuse_tex      = {};
-  obj_texture specular_tex     = {};
-  obj_texture reflection_tex   = {};
-  obj_texture transmission_tex = {};
-  obj_texture exponent_tex     = {};
-  obj_texture opacity_tex      = {};
-  obj_texture bump_tex         = {};
-  obj_texture normal_tex       = {};
-  obj_texture displacement_tex = {};
+  int emission_tex     = -1;
+  int ambient_tex      = -1;
+  int diffuse_tex      = -1;
+  int specular_tex     = -1;
+  int reflection_tex   = -1;
+  int transmission_tex = -1;
+  int exponent_tex     = -1;
+  int opacity_tex      = -1;
+  int bump_tex         = -1;
+  int normal_tex       = -1;
+  int displacement_tex = -1;
 };
 
 // Obj shape
@@ -278,7 +278,6 @@ struct obj_shape {
   vector<vec2f>       texcoords = {};
   vector<obj_vertex>  vertices  = {};
   vector<obj_element> elements  = {};
-  vector<frame3f>     instances = {};
 };
 
 // Obj camera
@@ -286,19 +285,19 @@ struct obj_camera {
   string  name     = "";
   frame3f frame    = identity3x4f;
   bool    ortho    = false;
-  float   width    = 0.036;
-  float   height   = 0.028;
+  float   aspect   = 16.0f / 9.0f;
   float   lens     = 0.50;
+  float   film     = 0.036;
   float   focus    = 0;
   float   aperture = 0;
 };
 
 // Obj environment
 struct obj_environment {
-  string      name         = "";
-  frame3f     frame        = identity3x4f;
-  vec3f       emission     = {0, 0, 0};
-  obj_texture emission_tex = {};
+  string  name         = "";
+  frame3f frame        = identity3x4f;
+  vec3f   emission     = {0, 0, 0};
+  int     emission_tex = -1;
 };
 
 // Obj model
@@ -306,6 +305,7 @@ struct obj_scene {
   vector<string>          comments     = {};
   vector<obj_shape>       shapes       = {};
   vector<obj_material>    materials    = {};
+  vector<obj_texture>     textures     = {};
   vector<obj_camera>      cameras      = {};
   vector<obj_environment> environments = {};
 };
@@ -366,7 +366,6 @@ void add_points(obj_shape& shape, const vector<int>& points, int material,
 void add_fvquads(obj_shape& shape, const vector<vec4i>& quadspos,
     const vector<vec4i>& quadsnorm, const vector<vec4i>& quadstexcoord,
     int material);
-void add_instances(obj_shape& shape, const vector<frame3f>& instances);
 
 }  // namespace yocto
 
@@ -436,8 +435,15 @@ struct pbrt_camera {
   float   aperture   = 0;
 };
 
+// Pbrt material
+struct pbrt_texture {
+  string name     = "";
+  vec3f  constant = {1, 1, 1};
+  string filename = "";
+};
+
 // Pbrt material type (simplified and only for the materials that matter here)
-enum struct pbrt_material_type {
+enum struct pbrt_mtype {
   // clang-format off
   matte, plastic, metal, glass, thinglass, subsurface
   // clang-format on
@@ -445,49 +451,41 @@ enum struct pbrt_material_type {
 
 // Pbrt material
 struct pbrt_material {
-  // material parameters
-  string             name            = "";
-  pbrt_material_type type            = pbrt_material_type::matte;
-  vec3f              emission        = {0, 0, 0};
-  vec3f              color           = {0, 0, 0};
-  float              roughness       = 0;
-  float              ior             = 1.5;
-  float              opacity         = 1;
-  string             color_tex       = "";
-  string             opacity_tex     = "";
-  string             alpha_tex       = "";
-  vec3f              volmeanfreepath = {0, 0, 0};
-  vec3f              volscatter      = {0, 0, 0};
-  float              volscale        = 0.01;
+  string     name            = "";
+  pbrt_mtype type            = pbrt_mtype::matte;
+  vec3f      emission        = {0, 0, 0};
+  vec3f      color           = {0, 0, 0};
+  float      roughness       = 0;
+  float      ior             = 1.5;
+  float      opacity         = 1;
+  int        color_tex       = -1;
+  vec3f      volmeanfreepath = {0, 0, 0};
+  vec3f      volscatter      = {0, 0, 0};
+  float      volscale        = 0.01;
 };
 
 // Pbrt shape
 struct pbrt_shape {
-  // frames
   frame3f         frame     = identity3x4f;
   frame3f         frend     = identity3x4f;
   vector<frame3f> instances = {};
   vector<frame3f> instaends = {};
-  // shape
-  string        filename_ = "";
-  vector<vec3f> positions = {};
-  vector<vec3f> normals   = {};
-  vector<vec2f> texcoords = {};
-  vector<vec3i> triangles = {};
-  // material
-  string material = "";
+  int             material  = -1;
+  string          filename_ = "";
+  vector<vec3f>   positions = {};
+  vector<vec3f>   normals   = {};
+  vector<vec2f>   texcoords = {};
+  vector<vec3i>   triangles = {};
 };
 
 // Pbrt lights
 struct pbrt_light {
-  // light parameters
-  frame3f frame    = identity3x4f;
-  frame3f frend    = identity3x4f;
-  vec3f   emission = {0, 0, 0};
-  vec3f   from     = {0, 0, 0};
-  vec3f   to       = {0, 0, 0};
-  bool    distant  = false;
-  // arealight approximation
+  frame3f       frame          = identity3x4f;
+  frame3f       frend          = identity3x4f;
+  vec3f         emission       = {0, 0, 0};
+  vec3f         from           = {0, 0, 0};
+  vec3f         to             = {0, 0, 0};
+  bool          distant        = false;
   vec3f         area_emission  = {0, 0, 0};
   frame3f       area_frame     = identity3x4f;
   frame3f       area_frend     = identity3x4f;
@@ -496,11 +494,10 @@ struct pbrt_light {
   vector<vec3f> area_normals   = {};
 };
 struct pbrt_environment {
-  // environment approximation
   frame3f frame        = identity3x4f;
   frame3f frend        = identity3x4f;
   vec3f   emission     = {0, 0, 0};
-  string  emission_tex = "";
+  int     emission_tex = -1;
 };
 
 // Pbrt model
@@ -512,6 +509,7 @@ struct pbrt_scene {
   vector<pbrt_environment> environments = {};
   vector<pbrt_light>       lights       = {};
   vector<pbrt_material>    materials    = {};
+  vector<pbrt_texture>     textures     = {};
 };
 
 // Load/save pbrt

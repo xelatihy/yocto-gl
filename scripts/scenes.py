@@ -490,5 +490,35 @@ def stats(directory='mcguire',
         for stat in stats:
             writer.writerow([stat[key] for key in keys])
 
+@cli.command()
+@click.option('--directory', '-d', default='mcguire')
+def fix_objx(directory='mcguire'):
+    for filename in glob.glob(directory + "/source/*/*.objx"):
+        newname = filename.replace('.objx', '.obx')
+        obx = ''
+        with open(filename) as f:
+            for line in f:
+                if line.startswith('c'):
+                    tokens = line.split()
+                    for i in range(len(tokens)):
+                        if i in [0, 1, 2]: continue
+                        tokens[i] = float(tokens[i])
+                    obx += 'newCam {}\n'.format(tokens[1])
+                    obx += '  Ca {}\n'.format(round(tokens[3] / tokens[4], 3))
+                    obx += '  Cl {}\n'.format(round(tokens[5] * 0.036 / tokens[3],3))
+                    obx += '  Ct {} {} {} {} {} {} 0 1 0\n'.format(round(tokens[17], 2), round(tokens[18], 2), round(tokens[19], 2), round(tokens[17] - tokens[14] * tokens[6], 2), round(tokens[18] - tokens[15] * tokens[6], 2), round(tokens[19] - tokens[16] * tokens[6], 2))
+                    obx += '\n';
+                if line.startswith('e'):
+                    tokens = line.split()
+                    for i in range(len(tokens)):
+                        if i in [0, 1, 5]: continue
+                        tokens[i] = float(tokens[i])
+                    obx += 'newEnv {}\n'.format(tokens[1])
+                    obx += '  Ee {} {} {}\n'.format(round(tokens[2], 1), round(tokens[3], 1), round(tokens[4], 1))
+                    if tokens[5] != '""': obx += '  map_Ee {}\n'.format(tokens[5])
+                    obx += '  Et {} {} {} {} {} {} 0 1 0\n'.format(round(tokens[15], 2), round(tokens[16], 2), round(tokens[17], 2), round(tokens[15] + tokens[12], 2), round(tokens[16] + tokens[13], 2), round(tokens[17] + tokens[14], 2))
+                    obx += '\n';
+        with open(newname, 'wt') as f:
+            f.write(obx)
 
 cli()

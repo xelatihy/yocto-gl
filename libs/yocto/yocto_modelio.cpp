@@ -249,6 +249,11 @@ inline bool parse_value(string_view& str, vec4f& value) {
     if (!parse_value(str, value[i])) return false;
   return true;
 }
+inline bool parse_value(string_view& str, mat3f& value) {
+  for (auto i = 0; i < 3; i++)
+    if (!parse_value(str, value[i])) return false;
+  return true;
+}
 inline bool parse_value(string_view& str, mat4f& value) {
   for (auto i = 0; i < 4; i++)
     if (!parse_value(str, value[i])) return false;
@@ -1271,6 +1276,25 @@ inline bool load_mtl(const string& filename, obj_scene& obj, string& error) {
     return false;
   };
 
+  // texture map
+  auto texture_map = unordered_map<string, int>{};
+  auto texture_id  = 0;
+  for (auto& texture : obj.textures) texture_map[texture.path] = texture_id++;
+  auto parse_texture = [&texture_map, &obj](string_view& str, int& texture_id) {
+    auto texture_path = obj_texture{};
+    if (!parse_value(str, texture_path)) return false;
+    auto texture_it = texture_map.find(texture_path.path);
+    if (texture_it == texture_map.end()) {
+      auto& texture             = obj.textures.emplace_back();
+      texture.path              = texture_path.path;
+      texture_id                = (int)obj.textures.size() - 1;
+      texture_map[texture.path] = texture_id;
+    } else {
+      texture_id = texture_it->second;
+    }
+    return true;
+  };
+
   // open file
   auto fs = open_file(filename, "rt");
   if (!fs) return open_error();
@@ -1323,23 +1347,23 @@ inline bool load_mtl(const string& filename, obj_scene& obj, string& error) {
     } else if (cmd == "d") {
       if (!parse_value(str, material.opacity)) return parse_error();
     } else if (cmd == "map_Ke") {
-      if (!parse_value(str, material.emission_tex)) return parse_error();
+      if (!parse_texture(str, material.emission_tex)) return parse_error();
     } else if (cmd == "map_Ka") {
-      if (!parse_value(str, material.ambient_tex)) return parse_error();
+      if (!parse_texture(str, material.ambient_tex)) return parse_error();
     } else if (cmd == "map_Kd") {
-      if (!parse_value(str, material.diffuse_tex)) return parse_error();
+      if (!parse_texture(str, material.diffuse_tex)) return parse_error();
     } else if (cmd == "map_Ks") {
-      if (!parse_value(str, material.specular_tex)) return parse_error();
+      if (!parse_texture(str, material.specular_tex)) return parse_error();
     } else if (cmd == "map_Tr") {
-      if (!parse_value(str, material.transmission_tex)) return parse_error();
+      if (!parse_texture(str, material.transmission_tex)) return parse_error();
     } else if (cmd == "map_d" || cmd == "map_Tr") {
-      if (!parse_value(str, material.opacity_tex)) return parse_error();
+      if (!parse_texture(str, material.opacity_tex)) return parse_error();
     } else if (cmd == "map_bump" || cmd == "bump") {
-      if (!parse_value(str, material.bump_tex)) return parse_error();
+      if (!parse_texture(str, material.bump_tex)) return parse_error();
     } else if (cmd == "map_disp" || cmd == "disp") {
-      if (!parse_value(str, material.displacement_tex)) return parse_error();
+      if (!parse_texture(str, material.displacement_tex)) return parse_error();
     } else if (cmd == "map_norm" || cmd == "norm") {
-      if (!parse_value(str, material.normal_tex)) return parse_error();
+      if (!parse_texture(str, material.normal_tex)) return parse_error();
     } else {
       continue;
     }
@@ -1352,7 +1376,7 @@ inline bool load_mtl(const string& filename, obj_scene& obj, string& error) {
 }
 
 // Read obj
-inline bool load_objx(const string& filename, obj_scene& obj, string& error) {
+inline bool load_obx(const string& filename, obj_scene& obj, string& error) {
   // error helpers
   auto open_error = [filename, &error]() {
     error = filename + ": file not found";
@@ -1367,16 +1391,32 @@ inline bool load_objx(const string& filename, obj_scene& obj, string& error) {
     return false;
   };
 
+  // texture map
+  auto texture_map = unordered_map<string, int>{};
+  auto texture_id  = 0;
+  for (auto& texture : obj.textures) texture_map[texture.path] = texture_id++;
+  auto parse_texture = [&texture_map, &obj](string_view& str, int& texture_id) {
+    auto texture_path = obj_texture{};
+    if (!parse_value(str, texture_path)) return false;
+    auto texture_it = texture_map.find(texture_path.path);
+    if (texture_it == texture_map.end()) {
+      auto& texture             = obj.textures.emplace_back();
+      texture.path              = texture_path.path;
+      texture_id                = (int)obj.textures.size() - 1;
+      texture_map[texture.path] = texture_id;
+    } else {
+      texture_id = texture_it->second;
+    }
+    return true;
+  };
+
   // open file
   auto fs = open_file(filename, "rt");
   if (!fs) return open_error();
 
-  // shape map for instances
-  auto shape_map = unordered_map<string, vector<int>>{};
-  auto shape_id  = 0;
-  for (auto& shape : obj.shapes) {
-    shape_map[shape.name].push_back(shape_id++);
-  }
+  // init parsing
+  obj.cameras.emplace_back();
+  obj.environments.emplace_back();
 
   // read the file str by str
   auto buffer = array<char, 4096>{};
@@ -1392,41 +1432,54 @@ inline bool load_objx(const string& filename, obj_scene& obj, string& error) {
     if (!parse_value(str, cmd)) return parse_error();
     if (cmd.empty()) continue;
 
+    // grab elements
+    auto& camera      = obj.cameras.back();
+    auto& environment = obj.environments.back();
+
     // read values
-    if (cmd == "c") {
+    if (cmd == "newCam") {
       auto& camera = obj.cameras.emplace_back();
       if (!parse_value(str, camera.name)) return parse_error();
+    } else if (cmd == "Co") {
       if (!parse_value(str, camera.ortho)) return parse_error();
-      if (!parse_value(str, camera.width)) return parse_error();
-      if (!parse_value(str, camera.height)) return parse_error();
+    } else if (cmd == "Ca") {
+      if (!parse_value(str, camera.aspect)) return parse_error();
+    } else if (cmd == "Cl") {
       if (!parse_value(str, camera.lens)) return parse_error();
+    } else if (cmd == "Cs") {
+      if (!parse_value(str, camera.film)) return parse_error();
+    } else if (cmd == "Cf") {
       if (!parse_value(str, camera.focus)) return parse_error();
+    } else if (cmd == "Cp") {
       if (!parse_value(str, camera.aperture)) return parse_error();
+    } else if (cmd == "Cx") {
       if (!parse_value(str, camera.frame)) return parse_error();
-    } else if (cmd == "e") {
+    } else if (cmd == "Ct") {
+      auto lookat = mat3f{};
+      if (!parse_value(str, lookat)) return parse_error();
+      camera.frame = lookat_frame(lookat.x, lookat.y, lookat.z);
+      if (camera.focus == 0) camera.focus = length(lookat.y - lookat.x);
+    } else if (cmd == "newEnv") {
       auto& environment = obj.environments.emplace_back();
       if (!parse_value(str, environment.name)) return parse_error();
+    } else if (cmd == "Ee") {
       if (!parse_value(str, environment.emission)) return parse_error();
-      auto emission_path = ""s;
-      if (!parse_value(str, emission_path)) return parse_error();
-      if (emission_path == "\"\"") emission_path = "";
-      environment.emission_tex.path = emission_path;
+    } else if (cmd == "map_Ee") {
+      if (!parse_texture(str, environment.emission_tex)) return parse_error();
+    } else if (cmd == "Ex") {
       if (!parse_value(str, environment.frame)) return parse_error();
-    } else if (cmd == "i") {
-      auto object = ""s;
-      auto frame  = identity3x4f;
-      if (!parse_value(str, object)) return parse_error();
-      if (!parse_value(str, frame)) return parse_error();
-      if (shape_map.find(object) == shape_map.end()) {
-        return parse_error();
-      }
-      for (auto shape_id : shape_map.at(object)) {
-        obj.shapes[shape_id].instances.push_back(frame);
-      }
+    } else if (cmd == "Et") {
+      auto lookat = mat3f{};
+      if (!parse_value(str, lookat)) return parse_error();
+      environment.frame = lookat_frame(lookat.x, lookat.y, lookat.z, true);
     } else {
       // unused
     }
   }
+
+  // remove placeholders
+  obj.cameras.erase(obj.cameras.begin());
+  obj.environments.erase(obj.environments.begin());
 
   return true;
 }
@@ -1645,9 +1698,9 @@ bool load_obj(const string& filename, obj_scene& obj, string& error,
   }
 
   // load extensions
-  auto extfilename = replace_extension(filename, ".objx");
+  auto extfilename = replace_extension(filename, ".obx");
   if (path_exists(extfilename)) {
-    if (!load_objx(extfilename, obj, error)) return dependent_error();
+    if (!load_obx(extfilename, obj, error)) return dependent_error();
   }
 
   return true;
@@ -1850,35 +1903,45 @@ inline bool save_mtl(
       return write_error();
     if (material.opacity != 1)
       if (!format_values(fs, "d {}\n", material.opacity)) return write_error();
-    if (!material.emission_tex.path.empty())
-      if (!format_values(fs, "map_Ke {}\n", material.emission_tex))
+    if (material.emission_tex >= 0)
+      if (!format_values(
+              fs, "map_Ke {}\n", obj.textures[material.emission_tex].path))
         return write_error();
-    if (!material.diffuse_tex.path.empty())
-      if (!format_values(fs, "map_Kd {}\n", material.diffuse_tex))
+    if (material.diffuse_tex >= 0)
+      if (!format_values(
+              fs, "map_Kd {}\n", obj.textures[material.diffuse_tex].path))
         return write_error();
-    if (!material.specular_tex.path.empty())
-      if (!format_values(fs, "map_Ks {}\n", material.specular_tex))
+    if (material.specular_tex >= 0)
+      if (!format_values(
+              fs, "map_Ks {}\n", obj.textures[material.specular_tex].path))
         return write_error();
-    if (!material.transmission_tex.path.empty())
-      if (!format_values(fs, "map_Kt {}\n", material.transmission_tex))
+    if (material.transmission_tex >= 0)
+      if (!format_values(
+              fs, "map_Kt {}\n", obj.textures[material.transmission_tex].path))
         return write_error();
-    if (!material.reflection_tex.path.empty())
-      if (!format_values(fs, "map_Kr {}\n", material.reflection_tex))
+    if (material.reflection_tex >= 0)
+      if (!format_values(
+              fs, "map_Kr {}\n", obj.textures[material.reflection_tex].path))
         return write_error();
-    if (!material.exponent_tex.path.empty())
-      if (!format_values(fs, "map_Ns {}\n", material.exponent_tex))
+    if (material.exponent_tex >= 0)
+      if (!format_values(
+              fs, "map_Ns {}\n", obj.textures[material.exponent_tex].path))
         return write_error();
-    if (!material.opacity_tex.path.empty())
-      if (!format_values(fs, "map_d {}\n", material.opacity_tex))
+    if (material.opacity_tex >= 0)
+      if (!format_values(
+              fs, "map_d {}\n", obj.textures[material.opacity_tex].path))
         return write_error();
-    if (!material.bump_tex.path.empty())
-      if (!format_values(fs, "map_bump {}\n", material.bump_tex))
+    if (material.bump_tex >= 0)
+      if (!format_values(
+              fs, "map_bump {}\n", obj.textures[material.bump_tex].path))
         return write_error();
-    if (!material.displacement_tex.path.empty())
-      if (!format_values(fs, "map_disp {}\n", material.displacement_tex))
+    if (material.displacement_tex >= 0)
+      if (!format_values(fs, "map_disp {}\n",
+              obj.textures[material.displacement_tex].path))
         return write_error();
-    if (!material.normal_tex.path.empty())
-      if (!format_values(fs, "map_norm {}\n", material.normal_tex))
+    if (material.normal_tex >= 0)
+      if (!format_values(
+              fs, "map_norm {}\n", obj.textures[material.normal_tex].path))
         return write_error();
     if (!format_values(fs, "\n")) return write_error();
   }
@@ -1886,7 +1949,7 @@ inline bool save_mtl(
 }
 
 // Save obj
-inline bool save_objx(
+inline bool save_obx(
     const string& filename, const obj_scene& obj, string& error) {
   // error helpers
   auto open_error = [filename, &error]() {
@@ -1915,29 +1978,29 @@ inline bool save_objx(
 
   // cameras
   for (auto& camera : obj.cameras) {
-    if (!format_values(fs, "c {} {} {} {} {} {} {} {}\n", camera.name,
-            camera.ortho, camera.width, camera.height, camera.lens,
-            camera.focus, camera.aperture, camera.frame))
-      return write_error();
+    if (!format_values(fs, "newCam {}\n", camera.name)) return write_error();
+    if (!format_values(fs, "  Co {}\n", camera.ortho)) return write_error();
+    if (!format_values(fs, "  Ca {}\n", camera.aspect)) return write_error();
+    if (!format_values(fs, "  Cl {}\n", camera.lens)) return write_error();
+    if (!format_values(fs, "  Cs {}\n", camera.film)) return write_error();
+    if (!format_values(fs, "  Cf {}\n", camera.focus)) return write_error();
+    if (!format_values(fs, "  Cp {}\n", camera.aperture)) return write_error();
+    if (!format_values(fs, "  Cx {}\n", camera.frame)) return write_error();
   }
 
   // environments
   for (auto& environment : obj.environments) {
-    if (!format_values(fs, "e {} {} {} {}\n", environment.name,
-            environment.emission,
-            environment.emission_tex.path.empty()
-                ? "\"\""s
-                : environment.emission_tex.path,
-            environment.frame))
+    if (!format_values(fs, "newEnv {}\n", environment.name))
       return write_error();
-  }
-
-  // instances
-  for (auto& shape : obj.shapes) {
-    for (auto& frame : shape.instances) {
-      if (!format_values(fs, "i {} {}\n", shape.name, frame))
+    if (!format_values(fs, "  Ee {}\n", environment.emission))
+      return write_error();
+    if (environment.emission_tex >= 0) {
+      if (!format_values(
+              fs, "  map_Ee {}\n", obj.textures[environment.emission_tex].path))
         return write_error();
     }
+    if (!format_values(fs, "  Ex {}\n", environment.frame))
+      return write_error();
   }
 
   // done
@@ -2028,11 +2091,9 @@ bool save_obj(const string& filename, const obj_scene& obj, string& error) {
       return dependent_error();
   }
 
-  // save objx
-  if (!obj.cameras.empty() || !obj.environments.empty() ||
-      std::any_of(obj.shapes.begin(), obj.shapes.end(),
-          [](auto shape) { return !shape.instances.empty(); })) {
-    if (!save_objx(replace_extension(filename, ".objx"), obj, error))
+  // save obx
+  if (!obj.cameras.empty() || !obj.environments.empty()) {
+    if (!save_obx(replace_extension(filename, ".obx"), obj, error))
       return dependent_error();
   }
 
@@ -2492,10 +2553,6 @@ void add_fvquads(obj_shape& shape, const vector<vec4i>& quadspos,
     }
     shape.elements.push_back({(uint16_t)nv, obj_etype::face, materials[idx]});
   }
-}
-void add_instances(obj_shape& shape, const vector<frame3f>& instances) {
-  shape.instances.insert(
-      shape.instances.end(), instances.begin(), instances.end());
 }
 
 }  // namespace yocto
@@ -3493,14 +3550,6 @@ struct pbrt_film {
   vec2i  resolution = {0, 0};
 };
 
-// Pbrt texture
-struct pbrt_texture {
-  // texture parameters
-  string name     = "";
-  vec3f  constant = {1, 1, 1};
-  string filename = "";
-};
-
 // Pbrt area light
 struct pbrt_arealight {
   // arealight parameters
@@ -3695,8 +3744,8 @@ inline bool convert_texture(pbrt_texture& ptexture, const pbrt_command& command,
 }
 
 // convert pbrt materials
-inline bool convert_material(pbrt_material&     pmaterial,
-    const pbrt_command&                         command,
+inline bool convert_material(pbrt_material& pmaterial,
+    const pbrt_command& command, unordered_map<string, int>& texture_map,
     const unordered_map<string, pbrt_material>& named_materials,
     const unordered_map<string, pbrt_texture>&  named_textures,
     const string& filename, string& error, bool verbose = false) {
@@ -3718,22 +3767,33 @@ inline bool convert_material(pbrt_material&     pmaterial,
   };
 
   // helpers
+  auto get_texture_id = [&texture_map](const string& path) {
+    if (path.empty()) return -1;
+    auto texture_it = texture_map.find(path);
+    if (texture_it == texture_map.end()) {
+      auto texture_id   = (int)texture_map.size();
+      texture_map[path] = texture_id;
+      return texture_id;
+    } else {
+      return texture_it->second;
+    }
+  };
   auto get_texture = [&](const vector<pbrt_value>& values, const string& name,
-                         vec3f& color, string& filename,
+                         vec3f& color, int& texture_id,
                          const vec3f& def) -> bool {
     auto textured = pair{def, ""s};
     if (!get_pbrt_value(values, name, textured)) return parse_error();
     if (textured.second.empty()) {
-      color    = textured.first;
-      filename = "";
+      color      = textured.first;
+      texture_id = -1;
     } else {
       auto& texture = named_textures.at(textured.second);
       if (texture.filename.empty()) {
-        color    = texture.constant;
-        filename = "";
+        color      = texture.constant;
+        texture_id = -1;
       } else {
-        color    = {1, 1, 1};
-        filename = texture.filename;
+        color      = {1, 1, 1};
+        texture_id = get_texture_id(texture.filename);
       }
     }
     return true;
@@ -3805,7 +3865,7 @@ inline bool convert_material(pbrt_material&     pmaterial,
   pmaterial.name = command.name;
   if (command.type == "uber") {
     auto diffuse = zero3f, specular = zero3f, transmission = zero3f;
-    auto diffuse_map = ""s, specular_map = ""s, transmission_map = ""s;
+    auto diffuse_map = -1, specular_map = -1, transmission_map = -1;
     if (!get_texture(command.values, "Kd", diffuse, diffuse_map,
             vec3f{0.25, 0.25, 0.25}))
       return parse_error();
@@ -3816,15 +3876,15 @@ inline bool convert_material(pbrt_material&     pmaterial,
             vec3f{0, 0, 0}))
       return parse_error();
     if (max(transmission) > 0.1) {
-      pmaterial.type      = pbrt_material_type::thinglass;
+      pmaterial.type      = pbrt_mtype::thinglass;
       pmaterial.color     = transmission;
       pmaterial.color_tex = transmission_map;
     } else if (max(specular) > 0.1) {
-      pmaterial.type      = pbrt_material_type::plastic;
+      pmaterial.type      = pbrt_mtype::plastic;
       pmaterial.color     = diffuse;
       pmaterial.color_tex = diffuse_map;
     } else {
-      pmaterial.type      = pbrt_material_type::plastic;
+      pmaterial.type      = pbrt_mtype::plastic;
       pmaterial.color     = diffuse;
       pmaterial.color_tex = diffuse_map;
     }
@@ -3836,7 +3896,7 @@ inline bool convert_material(pbrt_material&     pmaterial,
       return parse_error();
     return true;
   } else if (command.type == "plastic") {
-    pmaterial.type = pbrt_material_type::plastic;
+    pmaterial.type = pbrt_mtype::plastic;
     if (!get_texture(command.values, "Kd", pmaterial.color, pmaterial.color_tex,
             vec3f{0.25, 0.25, 0.25}))
       return parse_error();
@@ -3850,7 +3910,7 @@ inline bool convert_material(pbrt_material&     pmaterial,
     return true;
   } else if (command.type == "translucent") {
     // not well supported yet
-    pmaterial.type = pbrt_material_type::matte;
+    pmaterial.type = pbrt_mtype::matte;
     if (!get_texture(command.values, "Kd", pmaterial.color, pmaterial.color_tex,
             vec3f{0.25, 0.25, 0.25}))
       return parse_error();
@@ -3862,20 +3922,20 @@ inline bool convert_material(pbrt_material&     pmaterial,
     //   return parse_error();
     return true;
   } else if (command.type == "matte") {
-    pmaterial.type = pbrt_material_type::matte;
+    pmaterial.type = pbrt_mtype::matte;
     if (!get_texture(command.values, "Kd", pmaterial.color, pmaterial.color_tex,
             vec3f{0.5, 0.5, 0.5}))
       return parse_error();
     return true;
   } else if (command.type == "mirror") {
-    pmaterial.type = pbrt_material_type::metal;
+    pmaterial.type = pbrt_mtype::metal;
     if (!get_texture(command.values, "Kr", pmaterial.color, pmaterial.color_tex,
             vec3f{0.9, 0.9, 0.9}))
       return parse_error();
     pmaterial.roughness = 0;
     return true;
   } else if (command.type == "metal") {
-    pmaterial.type = pbrt_material_type::metal;
+    pmaterial.type = pbrt_mtype::metal;
     // get_texture(
     //     values, "Kr", material->specular, material->specular_tex,
     //     vec3f{1});
@@ -3893,7 +3953,7 @@ inline bool convert_material(pbrt_material&     pmaterial,
     return true;
   } else if (command.type == "substrate") {
     // not well supported
-    pmaterial.type = pbrt_material_type::plastic;
+    pmaterial.type = pbrt_mtype::plastic;
     if (!get_texture(command.values, "Kd", pmaterial.color, pmaterial.color_tex,
             vec3f{0.5, 0.5, 0.5}))
       return parse_error();
@@ -3906,7 +3966,7 @@ inline bool convert_material(pbrt_material&     pmaterial,
       return parse_error();
     return true;
   } else if (command.type == "glass") {
-    pmaterial.type = pbrt_material_type::glass;
+    pmaterial.type = pbrt_mtype::glass;
     // get_texture(
     //     values, "Kr", material->specular, material->specular_tex,
     //     vec3f{1});
@@ -3920,7 +3980,7 @@ inline bool convert_material(pbrt_material&     pmaterial,
       return parse_error();
     return true;
   } else if (command.type == "hair") {
-    pmaterial.type = pbrt_material_type::matte;
+    pmaterial.type = pbrt_mtype::matte;
     if (!get_texture(command.values, "color", pmaterial.color,
             pmaterial.color_tex, vec3f{0, 0, 0}))
       return parse_error();
@@ -3928,7 +3988,7 @@ inline bool convert_material(pbrt_material&     pmaterial,
     if (verbose) printf("hair material not properly supported\n");
     return true;
   } else if (command.type == "disney") {
-    pmaterial.type = pbrt_material_type::matte;
+    pmaterial.type = pbrt_mtype::matte;
     if (!get_texture(command.values, "color", pmaterial.color,
             pmaterial.color_tex, vec3f{0.5, 0.5, 0.5}))
       return parse_error();
@@ -3936,7 +3996,7 @@ inline bool convert_material(pbrt_material&     pmaterial,
     if (verbose) printf("disney material not properly supported\n");
     return true;
   } else if (command.type == "kdsubsurface") {
-    pmaterial.type = pbrt_material_type::plastic;
+    pmaterial.type = pbrt_mtype::plastic;
     if (!get_texture(command.values, "Kd", pmaterial.color, pmaterial.color_tex,
             vec3f{0.5, 0.5, 0.5}))
       return parse_error();
@@ -3950,7 +4010,7 @@ inline bool convert_material(pbrt_material&     pmaterial,
     if (verbose) printf("kdsubsurface material not properly supported\n");
     return true;
   } else if (command.type == "subsurface") {
-    pmaterial.type = pbrt_material_type::subsurface;
+    pmaterial.type = pbrt_mtype::subsurface;
     // if (!get_scalar(command.values, "Kr", pmaterial.specular, 1))
     //   return parse_error();
     // if (!get_scalar(command.values, "Kt", pmaterial.transmission, 1))
@@ -3965,7 +4025,7 @@ inline bool convert_material(pbrt_material&     pmaterial,
     if (!get_pbrt_value(command.values, "scale", scale)) return parse_error();
     pmaterial.volscale = 1 / scale;
     auto sigma_a = zero3f, sigma_s = zero3f;
-    auto sigma_a_tex = ""s, sigma_s_tex = ""s;
+    auto sigma_a_tex = -1, sigma_s_tex = -1;
     if (!get_texture(command.values, "sigma_a", sigma_a, sigma_a_tex,
             vec3f{0011, .0024, .014}))
       return parse_error();
@@ -3997,33 +4057,33 @@ inline bool convert_material(pbrt_material&     pmaterial,
     if (bsdffile.rfind('/') != string::npos)
       bsdffile = bsdffile.substr(bsdffile.rfind('/') + 1);
     if (bsdffile == "paint.bsdf") {
-      pmaterial.type      = pbrt_material_type::plastic;
+      pmaterial.type      = pbrt_mtype::plastic;
       pmaterial.color     = {0.6f, 0.6f, 0.6f};
       pmaterial.ior       = 1.5;
       pmaterial.roughness = 0.2;
     } else if (bsdffile == "ceramic.bsdf") {
-      pmaterial.type      = pbrt_material_type::plastic;
+      pmaterial.type      = pbrt_mtype::plastic;
       pmaterial.color     = {0.6f, 0.6f, 0.6f};
       pmaterial.ior       = 1.5;
       pmaterial.roughness = 0.25;
     } else if (bsdffile == "leather.bsdf") {
-      pmaterial.type      = pbrt_material_type::plastic;
+      pmaterial.type      = pbrt_mtype::plastic;
       pmaterial.color     = {0.6f, 0.57f, 0.48f};
       pmaterial.ior       = 1.5;
       pmaterial.roughness = 0.3;
     } else if (bsdffile == "coated_copper.bsdf") {
-      pmaterial.type      = pbrt_material_type::metal;
+      pmaterial.type      = pbrt_mtype::metal;
       auto eta            = vec3f{0.2004376970f, 0.9240334304f, 1.1022119527f};
       auto etak           = vec3f{3.9129485033f, 2.4528477015f, 2.1421879552f};
       pmaterial.color     = eta_to_reflectivity(eta, etak);
       pmaterial.roughness = 0.01;
     } else if (bsdffile == "roughglass_alpha_0.2.bsdf") {
-      pmaterial.type      = pbrt_material_type::glass;
+      pmaterial.type      = pbrt_mtype::glass;
       pmaterial.color     = {1, 1, 1};
       pmaterial.ior       = 1.5;
       pmaterial.roughness = 0.2;
     } else if (bsdffile == "roughgold_alpha_0.2.bsdf") {
-      pmaterial.type      = pbrt_material_type::metal;
+      pmaterial.type      = pbrt_mtype::metal;
       auto eta            = vec3f{0.1431189557f, 0.3749570432f, 1.4424785571f};
       auto etak           = vec3f{3.9831604247f, 2.3857207478f, 1.6032152899f};
       pmaterial.color     = eta_to_reflectivity(eta, etak);
@@ -4283,8 +4343,8 @@ inline bool convert_light(pbrt_light& plight, const pbrt_command& command,
 }
 
 inline bool convert_environment(pbrt_environment& penvironment,
-    const pbrt_command& command, const string& filename, string& error,
-    bool verbose = false) {
+    const pbrt_command& command, unordered_map<string, int>& texture_map,
+    const string& filename, string& error, bool verbose = false) {
   auto parse_error = [filename, &error]() {
     error = filename + ": parse error";
     return false;
@@ -4305,9 +4365,17 @@ inline bool convert_environment(pbrt_environment& penvironment,
     if (!get_pbrt_value(command.values, "L", l)) return parse_error();
     if (!get_pbrt_value(command.values, "scale", scale)) return parse_error();
     penvironment.emission     = scale * l;
-    penvironment.emission_tex = ""s;
-    if (!get_pbrt_value(command.values, "mapname", penvironment.emission_tex))
+    penvironment.emission_tex = -1;
+    auto mapname              = ""s;
+    if (!get_pbrt_value(command.values, "mapname", mapname))
       return parse_error();
+    if (!mapname.empty()) {
+      if (texture_map.find(mapname) == texture_map.end()) {
+        auto texture_id      = (int)texture_map.size();
+        texture_map[mapname] = texture_id;
+      }
+      penvironment.emission_tex = texture_map.at(mapname);
+    }
     return true;
   } else {
     return type_error();
@@ -4331,17 +4399,18 @@ struct pbrt_stack_element {
 struct pbrt_context {
   vector<pbrt_stack_element>                stack           = {};
   unordered_map<string, pbrt_stack_element> coordsys        = {};
-  unordered_map<string, vector<int>>        objects         = {};
   string                                    cur_object      = "";
   vec2i                                     film_resolution = {512, 512};
 };
 
 // load pbrt
 inline bool load_pbrt(const string& filename, pbrt_scene& pbrt, string& error,
-    pbrt_context& ctx, unordered_map<string, string>& material_map,
+    pbrt_context& ctx, unordered_map<string, int>& material_map,
+    unordered_map<string, int>&           texture_map,
     unordered_map<string, pbrt_material>& named_materials,
     unordered_map<string, pbrt_texture>&  named_textures,
     unordered_map<string, pbrt_medium>&   named_mediums,
+    unordered_map<string, vector<int>>&   named_objects,
     const string&                         ply_dirname) {
   // error helpers
   auto open_error = [filename, &error]() {
@@ -4416,16 +4485,16 @@ inline bool load_pbrt(const string& filename, pbrt_scene& pbrt, string& error,
     } else if (cmd == "ObjectBegin") {
       ctx.stack.push_back(ctx.stack.back());
       if (!parse_param(str, ctx.cur_object)) return parse_error();
-      ctx.objects[ctx.cur_object] = {};
+      named_objects[ctx.cur_object] = {};
     } else if (cmd == "ObjectEnd") {
       ctx.stack.pop_back();
       ctx.cur_object = "";
     } else if (cmd == "ObjectInstance") {
       auto object = ""s;
       if (!parse_param(str, object)) return parse_error();
-      if (ctx.objects.find(object) == ctx.objects.end())
+      if (named_objects.find(object) == named_objects.end())
         return object_error(object);
-      for (auto& shape_id : ctx.objects.at(object)) {
+      for (auto& shape_id : named_objects.at(object)) {
         pbrt.shapes[shape_id].instances.push_back(
             ctx.stack.back().transform_start);
         pbrt.shapes[shape_id].instaends.push_back(
@@ -4543,7 +4612,7 @@ inline bool load_pbrt(const string& filename, pbrt_scene& pbrt, string& error,
         ctx.stack.back().material = {};
       } else {
         ctx.stack.back().material = {};
-        if (!convert_material(ctx.stack.back().material, command,
+        if (!convert_material(ctx.stack.back().material, command, texture_map,
                 named_materials, named_textures, filename, error))
           return false;
       }
@@ -4554,7 +4623,7 @@ inline bool load_pbrt(const string& filename, pbrt_scene& pbrt, string& error,
       command.type = "";
       for (auto& value : command.values)
         if (value.name == "type") command.type = value.value1s;
-      if (!convert_material(named_materials[command.name], command,
+      if (!convert_material(named_materials[command.name], command, texture_map,
               named_materials, named_textures, filename, error))
         return false;
     } else if (cmd == "NamedMaterial") {
@@ -4575,16 +4644,16 @@ inline bool load_pbrt(const string& filename, pbrt_scene& pbrt, string& error,
       auto matkey = "?!!!?" + ctx.stack.back().material.name + "?!!!?" +
                     ctx.stack.back().arealight.name + "?!!!?" + alphamap;
       if (material_map.find(matkey) == material_map.end()) {
-        auto& material     = add_material(pbrt);
-        material           = ctx.stack.back().material;
-        material.name      = "material" + std::to_string(pbrt.materials.size());
-        material.emission  = ctx.stack.back().arealight.emission;
-        material.alpha_tex = alphamap;
-        material_map[matkey] = material.name;
+        auto& material    = add_material(pbrt);
+        material          = ctx.stack.back().material;
+        material.name     = "material" + std::to_string(pbrt.materials.size());
+        material.emission = ctx.stack.back().arealight.emission;
+        // material.alpha_tex = alphamap;
+        material_map[matkey] = (int)pbrt.materials.size() - 1;
       }
       shape.material = material_map.at(matkey);
       if (!ctx.cur_object.empty()) {
-        ctx.objects[ctx.cur_object].push_back((int)pbrt.shapes.size() - 1);
+        named_objects[ctx.cur_object].push_back((int)pbrt.shapes.size() - 1);
       }
     } else if (cmd == "AreaLightSource") {
       static auto arealight_id = 0;
@@ -4605,7 +4674,8 @@ inline bool load_pbrt(const string& filename, pbrt_scene& pbrt, string& error,
       command.frend = ctx.stack.back().transform_end;
       if (command.type == "infinite") {
         auto& environment = add_environment(pbrt);
-        if (!convert_environment(environment, command, filename, error))
+        if (!convert_environment(
+                environment, command, texture_map, filename, error))
           return false;
       } else {
         auto& light = add_light(pbrt);
@@ -4630,8 +4700,8 @@ inline bool load_pbrt(const string& filename, pbrt_scene& pbrt, string& error,
       auto includename = ""s;
       if (!parse_param(str, includename)) return parse_error();
       if (!load_pbrt(path_join(path_dirname(filename), includename), pbrt,
-              error, ctx, material_map, named_materials, named_textures,
-              named_mediums, ply_dirname))
+              error, ctx, material_map, texture_map, named_materials,
+              named_textures, named_mediums, named_objects, ply_dirname))
         return dependent_error();
     } else {
       return command_error(cmd);
@@ -4656,27 +4726,20 @@ pbrt_light& add_light(pbrt_scene& pbrt) { return pbrt.lights.emplace_back(); }
 // load pbrt
 bool load_pbrt(const string& filename, pbrt_scene& pbrt, string& error) {
   auto ctx             = pbrt_context{};
-  auto material_map    = unordered_map<string, string>{};
+  auto material_map    = unordered_map<string, int>{};
+  auto texture_map     = unordered_map<string, int>{};
   auto named_materials = unordered_map<string, pbrt_material>{{"", {}}};
   auto named_mediums   = unordered_map<string, pbrt_medium>{{"", {}}};
   auto named_textures  = unordered_map<string, pbrt_texture>{{"", {}}};
-  if (!load_pbrt(filename, pbrt, error, ctx, material_map, named_materials,
-          named_textures, named_mediums, path_dirname(filename)))
+  auto named_objects   = unordered_map<string, vector<int>>{};
+  if (!load_pbrt(filename, pbrt, error, ctx, material_map, texture_map,
+          named_materials, named_textures, named_mediums, named_objects,
+          path_dirname(filename)))
     return false;
-
-  // remove unused materials
-  auto used_materials = unordered_set<string>{};
-  for (auto& shape : pbrt.shapes) used_materials.insert(shape.material);
-  pbrt.materials.erase(
-      std::remove_if(pbrt.materials.begin(), pbrt.materials.end(),
-          [&used_materials](auto& material) {
-            auto found = used_materials.find(material.name) !=
-                         used_materials.end();
-            // if (!found) delete material;
-            return !found;
-          }),
-      pbrt.materials.end());
-
+  pbrt.textures.resize(texture_map.size());
+  for (auto& [path, texture_id] : texture_map) {
+    pbrt.textures[texture_id].filename = path;
+  }
   return true;
 }
 
@@ -4852,17 +4915,14 @@ bool save_pbrt(const string& filename, const pbrt_scene& pbrt, string& error,
     return (1 + sqrt(reflectivity)) / (1 - sqrt(reflectivity));
   };
 
-  auto material_map = unordered_map<string, int>{};
-  auto material_id  = 0;
   for (auto& material : pbrt.materials) {
-    material_map[material.name] = material_id++;
-    auto command                = pbrt_command{};
+    auto command = pbrt_command{};
     switch (material.type) {
-      case pbrt_material_type::matte: {
+      case pbrt_mtype::matte: {
         command.type = "matte";
         command.values.push_back(make_pbrt_value("Kd", material.color));
       } break;
-      case pbrt_material_type::plastic: {
+      case pbrt_mtype::plastic: {
         command.type = "matte";
         command.values.push_back(make_pbrt_value("Kd", material.color));
         command.values.push_back(make_pbrt_value("Ks", vec3f{1, 1, 1}));
@@ -4872,7 +4932,7 @@ bool save_pbrt(const string& filename, const pbrt_scene& pbrt, string& error,
             make_pbrt_value("eta", reflectivity_to_eta(material.color)));
         command.values.push_back(make_pbrt_value("remaproughness", false));
       } break;
-      case pbrt_material_type::metal: {
+      case pbrt_mtype::metal: {
         command.type = "metal";
         command.values.push_back(make_pbrt_value("Kr", vec3f{1, 1, 1}));
         command.values.push_back(
@@ -4881,7 +4941,7 @@ bool save_pbrt(const string& filename, const pbrt_scene& pbrt, string& error,
             make_pbrt_value("eta", reflectivity_to_eta(material.color)));
         command.values.push_back(make_pbrt_value("remaproughness", false));
       } break;
-      case pbrt_material_type::thinglass: {
+      case pbrt_mtype::thinglass: {
         command.type = "uber";
         command.values.push_back(make_pbrt_value("Ks", vec3f{1, 1, 1}));
         command.values.push_back(make_pbrt_value("Kt", material.color));
@@ -4891,7 +4951,7 @@ bool save_pbrt(const string& filename, const pbrt_scene& pbrt, string& error,
             make_pbrt_value("eta", reflectivity_to_eta(material.color)));
         command.values.push_back(make_pbrt_value("remaproughness", false));
       } break;
-      case pbrt_material_type::glass: {
+      case pbrt_mtype::glass: {
         command.type = "glass";
         command.values.push_back(make_pbrt_value("Kr", vec3f{1, 1, 1}));
         command.values.push_back(make_pbrt_value("Kt", vec3f{1, 1, 1}));
@@ -4900,7 +4960,7 @@ bool save_pbrt(const string& filename, const pbrt_scene& pbrt, string& error,
         command.values.push_back(make_pbrt_value("eta", material.ior));
         command.values.push_back(make_pbrt_value("remaproughness", false));
       } break;
-      case pbrt_material_type::subsurface: {
+      case pbrt_mtype::subsurface: {
         command.type = "matte";
         command.values.push_back(make_pbrt_value("Kd", material.color));
       } break;
@@ -4914,7 +4974,7 @@ bool save_pbrt(const string& filename, const pbrt_scene& pbrt, string& error,
 
   auto object_id = 0;
   for (auto& shape : pbrt.shapes) {
-    auto& material = pbrt.materials.at(material_map.at(shape.material));
+    auto& material = pbrt.materials.at(shape.material);
     auto  command  = pbrt_command{};
     command.frame  = shape.frame;
     if (ply_meshes) {
