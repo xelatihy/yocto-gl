@@ -2966,13 +2966,13 @@ static bool load_pbrt_scene(const string& filename, scene_scene& scene,
   }
 
   // material type map
-  auto material_type_map = unordered_map<pbrt_material_type, material_type>{
-      {pbrt_material_type::matte, material_type::matte},
-      {pbrt_material_type::plastic, material_type::plastic},
-      {pbrt_material_type::metal, material_type::metal},
-      {pbrt_material_type::glass, material_type::glass},
-      {pbrt_material_type::thinglass, material_type::thinglass},
-      {pbrt_material_type::subsurface, material_type::matte},
+  auto material_type_map = unordered_map<pbrt_mtype, material_type>{
+      {pbrt_mtype::matte, material_type::matte},
+      {pbrt_mtype::plastic, material_type::plastic},
+      {pbrt_mtype::metal, material_type::metal},
+      {pbrt_mtype::glass, material_type::glass},
+      {pbrt_mtype::thinglass, material_type::thinglass},
+      {pbrt_mtype::subsurface, material_type::matte},
   };
 
   // convert material
@@ -3093,14 +3093,14 @@ static bool save_pbrt_scene(const string& filename, const scene_scene& scene,
   }
 
   // material type map
-  auto material_type_map = unordered_map<material_type, pbrt_material_type>{
-      {material_type::matte, pbrt_material_type::matte},
-      {material_type::plastic, pbrt_material_type::plastic},
-      {material_type::metal, pbrt_material_type::metal},
-      {material_type::glass, pbrt_material_type::glass},
-      {material_type::thinglass, pbrt_material_type::thinglass},
-      {material_type::subsurface, pbrt_material_type::matte},
-      {material_type::volume, pbrt_material_type::matte},
+  auto material_type_map = unordered_map<material_type, pbrt_mtype>{
+      {material_type::matte, pbrt_mtype::matte},
+      {material_type::plastic, pbrt_mtype::plastic},
+      {material_type::metal, pbrt_mtype::metal},
+      {material_type::glass, pbrt_mtype::glass},
+      {material_type::thinglass, pbrt_mtype::thinglass},
+      {material_type::subsurface, pbrt_mtype::matte},
+      {material_type::volume, pbrt_mtype::matte},
   };
 
   // convert materials

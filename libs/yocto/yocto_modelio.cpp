@@ -3876,15 +3876,15 @@ inline bool convert_material(pbrt_material& pmaterial,
             vec3f{0, 0, 0}))
       return parse_error();
     if (max(transmission) > 0.1) {
-      pmaterial.type      = pbrt_material_type::thinglass;
+      pmaterial.type      = pbrt_mtype::thinglass;
       pmaterial.color     = transmission;
       pmaterial.color_tex = transmission_map;
     } else if (max(specular) > 0.1) {
-      pmaterial.type      = pbrt_material_type::plastic;
+      pmaterial.type      = pbrt_mtype::plastic;
       pmaterial.color     = diffuse;
       pmaterial.color_tex = diffuse_map;
     } else {
-      pmaterial.type      = pbrt_material_type::plastic;
+      pmaterial.type      = pbrt_mtype::plastic;
       pmaterial.color     = diffuse;
       pmaterial.color_tex = diffuse_map;
     }
@@ -3896,7 +3896,7 @@ inline bool convert_material(pbrt_material& pmaterial,
       return parse_error();
     return true;
   } else if (command.type == "plastic") {
-    pmaterial.type = pbrt_material_type::plastic;
+    pmaterial.type = pbrt_mtype::plastic;
     if (!get_texture(command.values, "Kd", pmaterial.color, pmaterial.color_tex,
             vec3f{0.25, 0.25, 0.25}))
       return parse_error();
@@ -3910,7 +3910,7 @@ inline bool convert_material(pbrt_material& pmaterial,
     return true;
   } else if (command.type == "translucent") {
     // not well supported yet
-    pmaterial.type = pbrt_material_type::matte;
+    pmaterial.type = pbrt_mtype::matte;
     if (!get_texture(command.values, "Kd", pmaterial.color, pmaterial.color_tex,
             vec3f{0.25, 0.25, 0.25}))
       return parse_error();
@@ -3922,20 +3922,20 @@ inline bool convert_material(pbrt_material& pmaterial,
     //   return parse_error();
     return true;
   } else if (command.type == "matte") {
-    pmaterial.type = pbrt_material_type::matte;
+    pmaterial.type = pbrt_mtype::matte;
     if (!get_texture(command.values, "Kd", pmaterial.color, pmaterial.color_tex,
             vec3f{0.5, 0.5, 0.5}))
       return parse_error();
     return true;
   } else if (command.type == "mirror") {
-    pmaterial.type = pbrt_material_type::metal;
+    pmaterial.type = pbrt_mtype::metal;
     if (!get_texture(command.values, "Kr", pmaterial.color, pmaterial.color_tex,
             vec3f{0.9, 0.9, 0.9}))
       return parse_error();
     pmaterial.roughness = 0;
     return true;
   } else if (command.type == "metal") {
-    pmaterial.type = pbrt_material_type::metal;
+    pmaterial.type = pbrt_mtype::metal;
     // get_texture(
     //     values, "Kr", material->specular, material->specular_tex,
     //     vec3f{1});
@@ -3953,7 +3953,7 @@ inline bool convert_material(pbrt_material& pmaterial,
     return true;
   } else if (command.type == "substrate") {
     // not well supported
-    pmaterial.type = pbrt_material_type::plastic;
+    pmaterial.type = pbrt_mtype::plastic;
     if (!get_texture(command.values, "Kd", pmaterial.color, pmaterial.color_tex,
             vec3f{0.5, 0.5, 0.5}))
       return parse_error();
@@ -3966,7 +3966,7 @@ inline bool convert_material(pbrt_material& pmaterial,
       return parse_error();
     return true;
   } else if (command.type == "glass") {
-    pmaterial.type = pbrt_material_type::glass;
+    pmaterial.type = pbrt_mtype::glass;
     // get_texture(
     //     values, "Kr", material->specular, material->specular_tex,
     //     vec3f{1});
@@ -3980,7 +3980,7 @@ inline bool convert_material(pbrt_material& pmaterial,
       return parse_error();
     return true;
   } else if (command.type == "hair") {
-    pmaterial.type = pbrt_material_type::matte;
+    pmaterial.type = pbrt_mtype::matte;
     if (!get_texture(command.values, "color", pmaterial.color,
             pmaterial.color_tex, vec3f{0, 0, 0}))
       return parse_error();
@@ -3988,7 +3988,7 @@ inline bool convert_material(pbrt_material& pmaterial,
     if (verbose) printf("hair material not properly supported\n");
     return true;
   } else if (command.type == "disney") {
-    pmaterial.type = pbrt_material_type::matte;
+    pmaterial.type = pbrt_mtype::matte;
     if (!get_texture(command.values, "color", pmaterial.color,
             pmaterial.color_tex, vec3f{0.5, 0.5, 0.5}))
       return parse_error();
@@ -3996,7 +3996,7 @@ inline bool convert_material(pbrt_material& pmaterial,
     if (verbose) printf("disney material not properly supported\n");
     return true;
   } else if (command.type == "kdsubsurface") {
-    pmaterial.type = pbrt_material_type::plastic;
+    pmaterial.type = pbrt_mtype::plastic;
     if (!get_texture(command.values, "Kd", pmaterial.color, pmaterial.color_tex,
             vec3f{0.5, 0.5, 0.5}))
       return parse_error();
@@ -4010,7 +4010,7 @@ inline bool convert_material(pbrt_material& pmaterial,
     if (verbose) printf("kdsubsurface material not properly supported\n");
     return true;
   } else if (command.type == "subsurface") {
-    pmaterial.type = pbrt_material_type::subsurface;
+    pmaterial.type = pbrt_mtype::subsurface;
     // if (!get_scalar(command.values, "Kr", pmaterial.specular, 1))
     //   return parse_error();
     // if (!get_scalar(command.values, "Kt", pmaterial.transmission, 1))
@@ -4057,33 +4057,33 @@ inline bool convert_material(pbrt_material& pmaterial,
     if (bsdffile.rfind('/') != string::npos)
       bsdffile = bsdffile.substr(bsdffile.rfind('/') + 1);
     if (bsdffile == "paint.bsdf") {
-      pmaterial.type      = pbrt_material_type::plastic;
+      pmaterial.type      = pbrt_mtype::plastic;
       pmaterial.color     = {0.6f, 0.6f, 0.6f};
       pmaterial.ior       = 1.5;
       pmaterial.roughness = 0.2;
     } else if (bsdffile == "ceramic.bsdf") {
-      pmaterial.type      = pbrt_material_type::plastic;
+      pmaterial.type      = pbrt_mtype::plastic;
       pmaterial.color     = {0.6f, 0.6f, 0.6f};
       pmaterial.ior       = 1.5;
       pmaterial.roughness = 0.25;
     } else if (bsdffile == "leather.bsdf") {
-      pmaterial.type      = pbrt_material_type::plastic;
+      pmaterial.type      = pbrt_mtype::plastic;
       pmaterial.color     = {0.6f, 0.57f, 0.48f};
       pmaterial.ior       = 1.5;
       pmaterial.roughness = 0.3;
     } else if (bsdffile == "coated_copper.bsdf") {
-      pmaterial.type      = pbrt_material_type::metal;
+      pmaterial.type      = pbrt_mtype::metal;
       auto eta            = vec3f{0.2004376970f, 0.9240334304f, 1.1022119527f};
       auto etak           = vec3f{3.9129485033f, 2.4528477015f, 2.1421879552f};
       pmaterial.color     = eta_to_reflectivity(eta, etak);
       pmaterial.roughness = 0.01;
     } else if (bsdffile == "roughglass_alpha_0.2.bsdf") {
-      pmaterial.type      = pbrt_material_type::glass;
+      pmaterial.type      = pbrt_mtype::glass;
       pmaterial.color     = {1, 1, 1};
       pmaterial.ior       = 1.5;
       pmaterial.roughness = 0.2;
     } else if (bsdffile == "roughgold_alpha_0.2.bsdf") {
-      pmaterial.type      = pbrt_material_type::metal;
+      pmaterial.type      = pbrt_mtype::metal;
       auto eta            = vec3f{0.1431189557f, 0.3749570432f, 1.4424785571f};
       auto etak           = vec3f{3.9831604247f, 2.3857207478f, 1.6032152899f};
       pmaterial.color     = eta_to_reflectivity(eta, etak);
@@ -4918,11 +4918,11 @@ bool save_pbrt(const string& filename, const pbrt_scene& pbrt, string& error,
   for (auto& material : pbrt.materials) {
     auto command = pbrt_command{};
     switch (material.type) {
-      case pbrt_material_type::matte: {
+      case pbrt_mtype::matte: {
         command.type = "matte";
         command.values.push_back(make_pbrt_value("Kd", material.color));
       } break;
-      case pbrt_material_type::plastic: {
+      case pbrt_mtype::plastic: {
         command.type = "matte";
         command.values.push_back(make_pbrt_value("Kd", material.color));
         command.values.push_back(make_pbrt_value("Ks", vec3f{1, 1, 1}));
@@ -4932,7 +4932,7 @@ bool save_pbrt(const string& filename, const pbrt_scene& pbrt, string& error,
             make_pbrt_value("eta", reflectivity_to_eta(material.color)));
         command.values.push_back(make_pbrt_value("remaproughness", false));
       } break;
-      case pbrt_material_type::metal: {
+      case pbrt_mtype::metal: {
         command.type = "metal";
         command.values.push_back(make_pbrt_value("Kr", vec3f{1, 1, 1}));
         command.values.push_back(
@@ -4941,7 +4941,7 @@ bool save_pbrt(const string& filename, const pbrt_scene& pbrt, string& error,
             make_pbrt_value("eta", reflectivity_to_eta(material.color)));
         command.values.push_back(make_pbrt_value("remaproughness", false));
       } break;
-      case pbrt_material_type::thinglass: {
+      case pbrt_mtype::thinglass: {
         command.type = "uber";
         command.values.push_back(make_pbrt_value("Ks", vec3f{1, 1, 1}));
         command.values.push_back(make_pbrt_value("Kt", material.color));
@@ -4951,7 +4951,7 @@ bool save_pbrt(const string& filename, const pbrt_scene& pbrt, string& error,
             make_pbrt_value("eta", reflectivity_to_eta(material.color)));
         command.values.push_back(make_pbrt_value("remaproughness", false));
       } break;
-      case pbrt_material_type::glass: {
+      case pbrt_mtype::glass: {
         command.type = "glass";
         command.values.push_back(make_pbrt_value("Kr", vec3f{1, 1, 1}));
         command.values.push_back(make_pbrt_value("Kt", vec3f{1, 1, 1}));
@@ -4960,7 +4960,7 @@ bool save_pbrt(const string& filename, const pbrt_scene& pbrt, string& error,
         command.values.push_back(make_pbrt_value("eta", material.ior));
         command.values.push_back(make_pbrt_value("remaproughness", false));
       } break;
-      case pbrt_material_type::subsurface: {
+      case pbrt_mtype::subsurface: {
         command.type = "matte";
         command.values.push_back(make_pbrt_value("Kd", material.color));
       } break;
