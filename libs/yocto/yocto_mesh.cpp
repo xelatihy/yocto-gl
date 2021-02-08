@@ -2689,23 +2689,18 @@ bool load_mesh(const string& filename, vector<vec3i>& triangles,
 
   auto ext = path_extension(filename);
   if (ext == ".ply" || ext == ".PLY") {
-    // open ply
     auto ply = ply_model{};
     if (!load_ply(filename, ply, error)) return false;
-    // gets vertex
     get_positions(ply, positions);
     get_normals(ply, normals);
     get_texcoords(ply, texcoords, flip_texcoord);
     get_colors(ply, colors);
-    // get faces
     get_triangles(ply, triangles);
     if (triangles.empty()) return shape_error();
     return true;
   } else if (ext == ".obj" || ext == ".OBJ") {
-    // load obj
     auto obj = obj_shape{};
     if (!load_obj(filename, obj, error, true)) return false;
-    // decide what to do and get properties
     auto materials = vector<int>{};
     get_positions(obj, positions);
     get_normals(obj, normals);
@@ -2734,7 +2729,6 @@ bool save_mesh(const string& filename, const vector<vec3i>& triangles,
 
   auto ext = path_extension(filename);
   if (ext == ".ply" || ext == ".PLY") {
-    // create ply
     auto ply = ply_model{};
     add_positions(ply, positions);
     add_normals(ply, normals);
@@ -2779,7 +2773,6 @@ bool load_mesh(const string& filename, vector<vec3i>& triangles,
 
   auto ext = path_extension(filename);
   if (ext == ".ply" || ext == ".PLY") {
-    // open ply
     auto ply = ply_model{};
     if (!load_ply(filename, ply, error)) return false;
     get_positions(ply, positions);
@@ -2787,7 +2780,6 @@ bool load_mesh(const string& filename, vector<vec3i>& triangles,
     if (positions.empty()) return shape_error();
     return true;
   } else if (ext == ".obj" || ext == ".OBJ") {
-    // load obj
     auto obj = obj_shape{};
     if (!load_obj(filename, obj, error, true)) return false;
     auto materials = vector<int>{};
@@ -2796,7 +2788,6 @@ bool load_mesh(const string& filename, vector<vec3i>& triangles,
     if (triangles.empty()) return shape_error();
     return true;
   } else if (ext == ".stl" || ext == ".STL") {
-    // open ply
     auto stl = stl_model{};
     if (!load_stl(filename, stl, error)) return false;
     if (stl.shapes.empty()) return shape_error();
@@ -2825,7 +2816,6 @@ bool save_mesh(const string& filename, const vector<vec3i>& triangles,
 
   auto ext = path_extension(filename);
   if (ext == ".ply" || ext == ".PLY") {
-    // create ply
     auto ply = ply_model{};
     if (triangles.empty()) return shape_error();
     add_positions(ply, positions);
@@ -2871,20 +2861,16 @@ bool load_lines(const string& filename, vector<vec2i>& lines,
 
   auto ext = path_extension(filename);
   if (ext == ".ply" || ext == ".PLY") {
-    // open ply
     auto ply = ply_model{};
     if (!load_ply(filename, ply, error)) return false;
-    // gets vertex
     get_positions(ply, positions);
     get_normals(ply, normals);
     get_texcoords(ply, texcoords, flip_texcoord);
     get_colors(ply, colors);
-    // get faces
     get_lines(ply, lines);
     if (positions.empty()) return shape_error();
     return true;
   } else if (ext == ".obj" || ext == ".OBJ") {
-    // load obj
     auto obj = obj_shape{};
     if (!load_obj(filename, obj, error, true)) return false;
     auto materials = vector<int>{};
@@ -2915,7 +2901,6 @@ bool save_lines(const string& filename, const vector<vec2i>& lines,
 
   auto ext = path_extension(filename);
   if (ext == ".ply" || ext == ".PLY") {
-    // create ply
     auto ply = ply_model{};
     add_positions(ply, positions);
     add_normals(ply, normals);
