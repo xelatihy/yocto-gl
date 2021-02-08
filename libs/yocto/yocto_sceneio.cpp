@@ -1039,7 +1039,7 @@ static bool load_json_scene(const string& filename, scene_scene& scene,
   auto check_object   = [](const njson& js) { return js.is_object(); };
 
   // handle progress
-  if (progress_cb) progress_cb("load scene", progress.x++, progress.y);
+  if (progress_cb) progress_cb("convert scene", progress.x++, progress.y);
 
   // loop over external dictionaries
   for (auto& [gname, group] : iterate_object(js)) {
@@ -1400,9 +1400,10 @@ static bool save_json_scene(const string& filename, const scene_scene& scene,
   };
 
   // handle progress
-  auto progress = vec2i{
-      0, 2 + (int)scene.shapes.size() + (int)scene.textures.size()};
-  if (progress_cb) progress_cb("save scene", progress.x++, progress.y);
+  auto progress = vec2i{0, 2 + (int)scene.shapes.size() +
+                               (int)scene.subdivs.size() +
+                               (int)scene.textures.size()};
+  if (progress_cb) progress_cb("convert scene", progress.x++, progress.y);
 
   // save json file
   auto js = njson::object();
@@ -1624,7 +1625,7 @@ static bool save_json_scene(const string& filename, const scene_scene& scene,
   }
 
   // done
-  if (progress_cb) progress_cb("save done", progress.x++, progress.y);
+  if (progress_cb) progress_cb("save scene", progress.x++, progress.y);
   return true;
 }
 
@@ -1660,7 +1661,7 @@ static bool load_obj_scene(const string& filename, scene_scene& scene,
   if (!load_obj(filename, obj, error, false, true)) return false;
 
   // handle progress
-  if (progress_cb) progress_cb("load scene", progress.x++, progress.y);
+  if (progress_cb) progress_cb("convert scene", progress.x++, progress.y);
 
   // convert cameras
   for (auto& ocamera : obj.cameras) {
@@ -1783,7 +1784,7 @@ static bool save_obj_scene(const string& filename, const scene_scene& scene,
 
   // handle progress
   auto progress = vec2i{0, 2 + (int)scene.textures.size()};
-  if (progress_cb) progress_cb("save scene", progress.x++, progress.y);
+  if (progress_cb) progress_cb("convert scene", progress.x++, progress.y);
 
   // build obj
   auto obj = obj_scene{};
@@ -1956,7 +1957,7 @@ static bool save_ply_scene(const string& filename, const scene_scene& scene,
   if (!save_shape(filename, sshape, error)) return false;
 
   // done
-  if (progress_cb) progress_cb("save done", progress.x++, progress.y);
+  if (progress_cb) progress_cb("save scene", progress.x++, progress.y);
   return true;
 }
 
@@ -2029,7 +2030,7 @@ static bool save_stl_scene(const string& filename, const scene_scene& scene,
   if (!save_shape(filename, sshape, error, false)) return false;
 
   // done
-  if (progress_cb) progress_cb("save done", progress.x++, progress.y);
+  if (progress_cb) progress_cb("save scene", progress.x++, progress.y);
   return true;
 }
 
@@ -2061,17 +2062,14 @@ static bool load_gltf_scene(const string& filename, scene_scene& scene,
   };
 
   // handle progress
-  auto progress = vec2i{0, 3};
+  auto progress = vec2i{0, 2};
   if (progress_cb) progress_cb("load scene", progress.x++, progress.y);
 
   // load gltf
   auto gltf = njson{};
   if (!load_json(filename, gltf, error)) return false;
 
-  // handle progress
-  if (progress_cb) progress_cb("load scene", progress.x++, progress.y);
-
-  // load buffers
+  // parse buffers
   auto bnames = vector<string>{};
   try {
     if (gltf.contains("buffers")) {
@@ -2083,6 +2081,11 @@ static bool load_gltf_scene(const string& filename, scene_scene& scene,
   } catch (...) {
     return parse_error();
   }
+
+  // handle progress
+  progress.y += (int)bnames.size();
+
+  // parse buffers
   auto buffers = vector<vector<byte>>();
   buffers.reserve(bnames.size());
   auto dirname = path_dirname(filename);
@@ -2566,8 +2569,9 @@ static bool save_gltf_scene(const string& filename, const scene_scene& scene,
   };
 
   // handle progress
-  auto progress = vec2i{0, 3};
-  if (progress_cb) progress_cb("save scene", progress.x++, progress.y);
+  auto progress = vec2i{
+      0, 2 + (int)scene.shapes.size() + (int)scene.textures.size()};
+  if (progress_cb) progress_cb("convert scene", progress.x++, progress.y);
 
   // convert scene to json
   auto gltf = njson::object();
@@ -2857,6 +2861,9 @@ static bool save_gltf_scene(const string& filename, const scene_scene& scene,
     gltf["scene"] = 0;
   }
 
+  // handle progress
+  if (progress_cb) progress_cb("save scene", progress.x++, progress.y);
+
   // save json
   if (!save_json(filename, gltf, error)) return false;
 
@@ -2900,7 +2907,7 @@ static bool save_gltf_scene(const string& filename, const scene_scene& scene,
 
   // save shapes
   for (auto& shape : scene.shapes) {
-    if (progress_cb) progress_cb("save buffer", progress.x++, progress.y);
+    if (progress_cb) progress_cb("save shape", progress.x++, progress.y);
     if (!save_binshape(path_join(dirname,
                            "shapes/" + get_shape_name(scene, shape) + ".bin"),
             shape, error))
@@ -2918,7 +2925,7 @@ static bool save_gltf_scene(const string& filename, const scene_scene& scene,
   }
 
   // done
-  if (progress_cb) progress_cb("save done", progress.x++, progress.y);
+  if (progress_cb) progress_cb("save scene", progress.x++, progress.y);
   return true;
 }
 
@@ -2946,7 +2953,7 @@ static bool load_pbrt_scene(const string& filename, scene_scene& scene,
   if (!load_pbrt(filename, pbrt, error)) return false;
 
   // handle progress
-  if (progress_cb) progress_cb("load scene", progress.x++, progress.y);
+  if (progress_cb) progress_cb("convert scene", progress.x++, progress.y);
 
   // convert cameras
   for (auto& pcamera : pbrt.cameras) {
@@ -3071,8 +3078,9 @@ static bool save_pbrt_scene(const string& filename, const scene_scene& scene,
   };
 
   // handle progress
-  auto progress = vec2i{0, 2};
-  if (progress_cb) progress_cb("save scene", progress.x++, progress.y);
+  auto progress = vec2i{
+      0, 2 + (int)scene.shapes.size() + (int)scene.textures.size()};
+  if (progress_cb) progress_cb("convert scene", progress.x++, progress.y);
 
   // save pbrt
   auto pbrt = pbrt_scene{};
@@ -3137,9 +3145,6 @@ static bool save_pbrt_scene(const string& filename, const scene_scene& scene,
 
   // save pbrt
   if (!save_pbrt(filename, pbrt, error)) return false;
-
-  // handle progress
-  progress.y += (int)scene.shapes.size() + (int)scene.textures.size();
 
   // get filename from name
   auto make_filename = [filename](const string& name, const string& group,
