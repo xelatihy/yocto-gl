@@ -3436,6 +3436,15 @@ inline bool parse_params(string_view& str, vector<pbrt_value>& values) {
     }
   };
 
+  auto starts_with = [](string_view value, string_view prefix) {
+    if (prefix.size() > value.size()) return false;
+    return value.rfind(prefix, 0) == 0;
+  };
+  auto ends_with = [](string_view value, string_view postfix) {
+    if (postfix.size() > value.size()) return false;
+    return std::equal(postfix.rbegin(), postfix.rend(), value.rbegin());
+  };
+
   values.clear();
   skip_whitespace(str);
   while (!str.empty()) {
@@ -3523,15 +3532,31 @@ inline bool parse_params(string_view& str, vector<pbrt_value>& values) {
         }
         if (str.empty()) return false;
         auto filenamep = path_filename(filename);
-        if (path_extension(filenamep) == ".spd") {
-          filenamep = replace_extension(filenamep, "");
-          if (filenamep == "SHPS") {
+        auto name      = string_view{filenamep};
+        if (ends_with(name, ".spd")) {
+          name.remove_suffix(4);
+          if (name == "SHPS") {
             value.value3f = {1, 1, 1};
-          } else if (path_extension(filenamep) == ".eta") {
-            auto eta      = get_etak(replace_extension(filenamep, "")).first;
+          } else if (ends_with(name, ".eta")) {
+            name.remove_suffix(4);
+            auto eta      = get_etak(string{name}).first;
             value.value3f = {eta.x, eta.y, eta.z};
-          } else if (path_extension(filenamep) == ".k") {
-            auto k        = get_etak(replace_extension(filenamep, "")).second;
+          } else if (ends_with(name, ".k")) {
+            name.remove_suffix(2);
+            auto k        = get_etak(string{name}).second;
+            value.value3f = {k.x, k.y, k.z};
+          } else {
+            return false;
+          }
+        } else if (starts_with(name, "metal-")) {
+          name.remove_prefix(6);
+          if (ends_with(name, "-eta")) {
+            name.remove_suffix(4);
+            auto eta      = get_etak(string{name}).first;
+            value.value3f = {eta.x, eta.y, eta.z};
+          } else if (ends_with(name, "-k")) {
+            name.remove_suffix(2);
+            auto k        = get_etak(string{name}).second;
             value.value3f = {k.x, k.y, k.z};
           } else {
             return false;
@@ -3926,6 +3951,17 @@ inline bool convert_material(pbrt_material& pmaterial,
     if (!get_roughness(command.values, pmaterial.roughness, 0.1))
       return parse_error();
     return true;
+  } else if (command.type == "coateddiffuse") {
+    pmaterial.type = pbrt_mtype::plastic;
+    if (!get_texture(command.values, "reflectance", pmaterial.color,
+            pmaterial.color_tex, vec3f{0.25, 0.25, 0.25}))
+      return parse_error();
+    if (!get_scalar(command.values, "eta", pmaterial.ior, 1.5))
+      return parse_error();
+    pmaterial.roughness = 0.1f;
+    if (!get_roughness(command.values, pmaterial.roughness, 0.1))
+      return parse_error();
+    return true;
   } else if (command.type == "translucent") {
     // not well supported yet
     pmaterial.type = pbrt_mtype::matte;
@@ -3937,6 +3973,16 @@ inline bool convert_material(pbrt_material& pmaterial,
     // if (!get_scalar(command.values, "eta", pmaterial.ior, 1.5))
     //   return parse_error();
     // if (!get_roughness(command.values, pmaterial.roughness, 0.1))
+    //   return parse_error();
+    return true;
+  } else if (command.type == "diffusetransmission") {
+    // not well supported yet
+    pmaterial.type = pbrt_mtype::matte;
+    if (!get_texture(command.values, "reflectance", pmaterial.color,
+            pmaterial.color_tex, vec3f{0.25, 0.25, 0.25}))
+      return parse_error();
+    // if (!get_texture(command.values, "transmittance", pmaterial.color,
+    //         pmaterial.color_tex, vec3f{0.25, 0.25, 0.25}))
     //   return parse_error();
     return true;
   } else if (command.type == "matte") {
@@ -3989,6 +4035,20 @@ inline bool convert_material(pbrt_material& pmaterial,
     if (!get_roughness(command.values, pmaterial.roughness, 0.01))
       return parse_error();
     return true;
+  } else if (command.type == "coatedconductor") {
+    pmaterial.type = pbrt_mtype::metal;
+    auto eta = zero3f, etak = zero3f;
+    if (!get_color(command.values, "conductor.eta", eta,
+            vec3f{0.2004376970f, 0.9240334304f, 1.1022119527f}))
+      return parse_error();
+    if (!get_color(command.values, "conductor.k", etak,
+            vec3f{3.9129485033f, 2.4528477015f, 2.1421879552f}))
+      return parse_error();
+    pmaterial.color     = eta_to_reflectivity(eta, etak);
+    pmaterial.roughness = 0.01f;
+    if (!get_roughness(command.values, pmaterial.roughness, 0.01))
+      return parse_error();
+    return true;
   } else if (command.type == "substrate") {
     // not well supported
     pmaterial.type = pbrt_mtype::plastic;
@@ -4010,6 +4070,15 @@ inline bool convert_material(pbrt_material& pmaterial,
     //     vec3f{1});
     // get_texture(command.values, "Kt", material->transmission,
     //     material->transmission_tex, vec3f{1});
+    pmaterial.color = {1, 1, 1};
+    if (!get_scalar(command.values, "eta", pmaterial.ior, 1.5))
+      return parse_error();
+    pmaterial.roughness = 0;
+    if (!get_roughness(command.values, pmaterial.roughness, 0))
+      return parse_error();
+    return true;
+  } else if (command.type == "dielectric") {
+    pmaterial.type  = pbrt_mtype::glass;
     pmaterial.color = {1, 1, 1};
     if (!get_scalar(command.values, "eta", pmaterial.ior, 1.5))
       return parse_error();
