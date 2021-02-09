@@ -513,7 +513,8 @@ struct pbrt_scene {
 };
 
 // Load/save pbrt
-bool load_pbrt(const string& filename, pbrt_scene& pbrt, string& error);
+bool load_pbrt(const string& filename, pbrt_scene& pbrt, string& error,
+    bool ply_meshes = false);
 bool save_pbrt(const string& filename, const pbrt_scene& pbrt, string& error,
     bool ply_meshes = false);
 

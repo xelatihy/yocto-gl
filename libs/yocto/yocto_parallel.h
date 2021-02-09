@@ -207,12 +207,12 @@ inline void parallel_for(T num1, T num2, Func&& func) {
 template <typename T, typename Func>
 inline void parallel_foreach(vector<T>& values, Func&& func) {
   parallel_for(
-      0, (int)values.size(), [&func, &values](int idx) { func(values[idx]); });
+      values.size(), [&func, &values](size_t idx) { func(values[idx]); });
 }
 template <typename T, typename Func>
 inline void parallel_foreach(const vector<T>& values, Func&& func) {
   parallel_for(
-      0, (int)values.size(), [&func, &values](int idx) { func(values[idx]); });
+      values.size(), [&func, &values](size_t idx) { func(values[idx]); });
 }
 
 }  // namespace yocto
