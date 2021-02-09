@@ -752,11 +752,23 @@ void init_bvh(bvh_scene& bvh, const scene_scene& scene,
   auto progress = vec2i{0, 1 + (int)scene.shapes.size()};
 
   // build shape bvh
-  bvh.shapes.clear();
-  for (auto idx = 0; idx < scene.shapes.size(); idx++) {
-    if (progress_cb) progress_cb("build shape bvh", progress.x++, progress.y);
-    bvh.shapes.emplace_back();
-    build_bvh(bvh.shapes[idx], scene.shapes[idx], params);
+  bvh.shapes.resize(scene.shapes.size());
+  if (params.noparallel) {
+    for (auto idx = (size_t)0; idx < scene.shapes.size(); idx++) {
+      if (progress_cb) progress_cb("build shape bvh", progress.x++, progress.y);
+      build_bvh(bvh.shapes[idx], scene.shapes[idx], params);
+    }
+  } else {
+    // mutex
+    auto mutex = std::mutex{};
+    parallel_for(scene.shapes.size(), [&](size_t idx) {
+      {
+        auto lock = std::lock_guard{mutex};
+        if (progress_cb)
+          progress_cb("build shape bvh", progress.x++, progress.y);
+      }
+      build_bvh(bvh.shapes[idx], scene.shapes[idx], params);
+    });
   }
 
   // build scene bvh

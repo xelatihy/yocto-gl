@@ -766,7 +766,6 @@ static bool load_instance(
 }
 
 // save instances
-// static
 bool save_instance(const string& filename, const vector<frame3f>& frames,
     string& error, bool ascii = false) {
   auto format_error = [filename, &error]() {
@@ -786,24 +785,112 @@ bool save_instance(const string& filename, const vector<frame3f>& frames,
   }
 }
 
-// Loads/saves a  channel float/byte image in linear/srgb color space.
-static bool load_image(const string& filename, image<vec4f>& imgf,
-    image<vec4b>& imgb, string& error) {
+// load texture
+static bool load_texture(
+    const string& filename, scene_texture& texture, string& error) {
   if (is_hdr_filename(filename)) {
-    return load_image(filename, imgf, error);
+    return load_image(filename, texture.hdr, error);
   } else {
-    return load_image(filename, imgb, error);
+    return load_image(filename, texture.ldr, error);
   }
 }
 
-// Loads/saves a  channel float/byte image in linear/srgb color space.
-static bool save_image(const string& filename, const image<vec4f>& imgf,
-    const image<vec4b>& imgb, string& error) {
-  if (!imgf.empty()) {
-    return save_image(filename, imgf, error);
+// save texture
+static bool save_texture(
+    const string& filename, const scene_texture& texture, string& error) {
+  if (!texture.hdr.empty()) {
+    return save_image(filename, texture.hdr, error);
   } else {
-    return save_image(filename, imgb, error);
+    return save_image(filename, texture.ldr, error);
   }
+}
+
+// load shape
+static bool load_shape(
+    const string& filename, scene_shape& shape, string& error) {
+  auto lshape = shape_data{};
+  if (!load_shape(filename, lshape, error, false)) return false;
+  shape.points    = lshape.points;
+  shape.lines     = lshape.lines;
+  shape.triangles = lshape.triangles;
+  shape.quads     = lshape.quads;
+  shape.positions = lshape.positions;
+  shape.normals   = lshape.normals;
+  shape.texcoords = lshape.texcoords;
+  shape.colors    = lshape.colors;
+  shape.radius    = lshape.radius;
+  return true;
+}
+
+// save shape
+static bool save_shape(
+    const string& filename, const scene_shape& shape, string& error) {
+  auto sshape      = shape_data{};
+  sshape.points    = shape.points;
+  sshape.lines     = shape.lines;
+  sshape.triangles = shape.triangles;
+  sshape.quads     = shape.quads;
+  sshape.positions = shape.positions;
+  sshape.normals   = shape.normals;
+  sshape.texcoords = shape.texcoords;
+  sshape.colors    = shape.colors;
+  sshape.radius    = shape.radius;
+  return save_shape(filename, sshape, error, false);
+}
+
+// load subdiv
+static bool load_subdiv(
+    const string& filename, scene_subdiv& subdiv, string& error) {
+  auto lsubdiv = fvshape_data{};
+  if (!load_fvshape(filename, lsubdiv, error, true)) return false;
+  subdiv.quadspos      = lsubdiv.quadspos;
+  subdiv.quadsnorm     = lsubdiv.quadsnorm;
+  subdiv.quadstexcoord = lsubdiv.quadstexcoord;
+  subdiv.positions     = lsubdiv.positions;
+  subdiv.normals       = lsubdiv.normals;
+  subdiv.texcoords     = lsubdiv.texcoords;
+  return true;
+}
+
+// save subdiv
+static bool save_subdiv(
+    const string& filename, const scene_subdiv& subdiv, string& error) {
+  auto ssubdiv          = fvshape_data{};
+  ssubdiv.quadspos      = subdiv.quadspos;
+  ssubdiv.quadsnorm     = subdiv.quadsnorm;
+  ssubdiv.quadstexcoord = subdiv.quadstexcoord;
+  ssubdiv.positions     = subdiv.positions;
+  ssubdiv.normals       = subdiv.normals;
+  ssubdiv.texcoords     = subdiv.texcoords;
+  return save_fvshape(filename, ssubdiv, error, true);
+}
+
+// save binary shape
+static bool save_binshape(
+    const string& filename, const scene_shape& shape, string& error) {
+  auto open_error = [filename, &error]() {
+    error = filename + ": file not found";
+    return false;
+  };
+  auto write_error = [filename, &error]() {
+    error = filename + ": write error";
+    return false;
+  };
+
+  auto fs = open_file(filename, "wb");
+  if (!fs) return open_error();
+
+  if (!write_values(fs, shape.positions)) return write_error();
+  if (!write_values(fs, shape.normals)) return write_error();
+  if (!write_values(fs, shape.texcoords)) return write_error();
+  if (!write_values(fs, shape.colors)) return write_error();
+  if (!write_values(fs, shape.radius)) return write_error();
+  if (!write_values(fs, shape.points)) return write_error();
+  if (!write_values(fs, shape.lines)) return write_error();
+  if (!write_values(fs, shape.triangles)) return write_error();
+  if (!write_values(fs, quads_to_triangles(shape.quads))) return write_error();
+
+  return true;
 }
 
 }  // namespace yocto
@@ -911,7 +998,7 @@ static bool load_json_scene(const string& filename, scene_scene& scene,
     error = filename + ": unknow key at " + path;
     return false;
   };
-  auto material_error = [filename, &error](string_view name) {
+  auto material_error = [filename, &error](const string& name) {
     error = filename + ": missing material " + string{name};
     return false;
   };
@@ -928,16 +1015,6 @@ static bool load_json_scene(const string& filename, scene_scene& scene,
   auto js = njson{};
   if (!load_json(filename, js, error)) return json_error();
 
-  // reference disctionaries
-  auto texture_map = unordered_map<string, pair<texture_handle, bool>>{
-      {"", {invalid_handle, true}}};
-  auto shape_map = unordered_map<string, pair<shape_handle, bool>>{
-      {"", {invalid_handle, true}}};
-  auto material_map = unordered_map<string, pair<material_handle, bool>>{
-      {"", {invalid_handle, true}}};
-  auto subdiv_map = unordered_map<string, pair<subdiv_handle, bool>>{
-      {"", {invalid_handle, true}}};
-
   // parse json value
   auto get_value = [](const njson& js, auto& value) -> bool {
     try {
@@ -949,55 +1026,60 @@ static bool load_json_scene(const string& filename, scene_scene& scene,
   };
 
   // parse json reference
+  auto shape_map = unordered_map<string, shape_handle>{};
   auto get_shape = [&scene, &shape_map, &get_value](
                        const njson& js, shape_handle& value) -> bool {
     auto name = ""s;
     if (!get_value(js, name)) return false;
     auto it = shape_map.find(name);
     if (it != shape_map.end()) {
-      value = it->second.first;
-      return it->second.first != invalid_handle;
+      value = it->second;
+      return true;
     }
     scene.shape_names.emplace_back(name);
     scene.shapes.emplace_back();
     auto shape_id   = (int)scene.shapes.size() - 1;
-    shape_map[name] = {shape_id, false};
+    shape_map[name] = shape_id;
     value           = shape_id;
     return true;
   };
 
   // parse json reference
-  auto get_material = [&scene, &material_map, &get_value](
+  auto material_map = unordered_map<string, material_handle>{};
+  auto material_set = vector<bool>{};
+  auto get_material = [&scene, &material_map, &material_set, &get_value](
                           const njson& js, material_handle& value) -> bool {
     auto name = ""s;
     if (!get_value(js, name)) return false;
     auto it = material_map.find(name);
     if (it != material_map.end()) {
-      value = it->second.first;
-      return it->second.first != invalid_handle;
+      value = it->second;
+      return true;
     }
     scene.material_names.emplace_back(name);
     scene.materials.emplace_back();
     auto material_id   = (int)scene.materials.size() - 1;
-    material_map[name] = {material_id, false};
+    material_map[name] = material_id;
     value              = material_id;
+    material_set.push_back(false);
     return true;
   };
 
   // parse json reference
+  auto texture_map = unordered_map<string, texture_handle>{};
   auto get_texture = [&scene, &texture_map, &get_value](
                          const njson& js, texture_handle& value) -> bool {
     auto name = ""s;
     if (!get_value(js, name)) return false;
     auto it = texture_map.find(name);
     if (it != texture_map.end()) {
-      value = it->second.first;
-      return it->second.first != invalid_handle;
+      value = it->second;
+      return true;
     }
     scene.texture_names.emplace_back(name);
     scene.textures.emplace_back();
     auto texture_id   = (int)scene.textures.size() - 1;
-    texture_map[name] = {texture_id, false};
+    texture_map[name] = texture_id;
     value             = texture_id;
     return true;
   };
@@ -1130,17 +1212,15 @@ static bool load_json_scene(const string& filename, scene_scene& scene,
       if (!check_object(group)) return parse_error(gname);
       for (auto& [name, element] : iterate_object(group)) {
         if (!check_object(element)) return parse_error(gname, name);
-        auto material_it = material_map.find(string{name});
-        auto handle      = invalid_handle;
-        if (material_it == material_map.end()) {
+        if (material_map.find(name) == material_map.end()) {
           scene.material_names.emplace_back(name);
           scene.materials.emplace_back();
-          handle = (int)scene.materials.size() - 1;
-        } else {
-          handle = material_it->second.first;
+          material_map[name] = (int)scene.materials.size() - 1;
+          material_set.push_back(false);
         }
-        auto& material = scene.materials[handle];
-        material.type  = material_type::metallic;
+        auto& material = scene.materials.at(material_map.at(name));
+        material_set[&material - &scene.materials.front()] = true;
+        material.type = material_type::metallic;
         for (auto& [key, value] : iterate_object(element)) {
           if (key == "type") {
             if (!get_value(value, material.type))
@@ -1191,7 +1271,6 @@ static bool load_json_scene(const string& filename, scene_scene& scene,
             return key_error(gname, name, key);
           }
         }
-        material_map[string{name}] = {handle, true};
       }
     } else if (gname == "instances" || gname == "objects") {
       if (!check_object(group)) return parse_error(gname);
@@ -1215,7 +1294,7 @@ static bool load_json_scene(const string& filename, scene_scene& scene,
             if (!get_shape(value, instance.shape))
               return parse_error(gname, name, key);
           } else if (key == "instance") {
-            throw std::invalid_argument{"instances not suppotyed yet"};
+            throw std::invalid_argument{"instances not supported yet"};
             // get_ply_instances(value, instance);
           } else {
             return key_error(gname, name, key);
@@ -1226,7 +1305,7 @@ static bool load_json_scene(const string& filename, scene_scene& scene,
       if (!check_object(group)) return parse_error(gname);
       for (auto& [name, element] : iterate_object(group)) {
         if (!check_object(element)) return parse_error(gname, name);
-        scene.subdiv_names.emplace_back();
+        scene.subdiv_names.emplace_back(name);
         auto& subdiv = scene.subdivs.emplace_back();
         for (auto& [key, value] : iterate_object(element)) {
           if (key == "shape") {
@@ -1251,7 +1330,6 @@ static bool load_json_scene(const string& filename, scene_scene& scene,
             return key_error(gname, name, key);
           }
         }
-        subdiv_map[string{name}] = {(int)scene.subdivs.size() - 1, false};
       }
     } else {
       return key_error(gname);
@@ -1259,8 +1337,9 @@ static bool load_json_scene(const string& filename, scene_scene& scene,
   }
 
   // check materials
-  for (auto& [key, value] : material_map) {
-    if (!value.second) return material_error(key);
+  for (auto& material : scene.materials) {
+    if (!material_set[&material - &scene.materials.front()])
+      return material_error(get_material_name(scene, material));
   }
 
   // handle progress
@@ -1269,61 +1348,99 @@ static bool load_json_scene(const string& filename, scene_scene& scene,
   progress.y += scene.subdivs.size();
   progress.y += ply_instances.size();
 
+  // dirname
+  auto dirname = path_dirname(filename);
+
   // get filename from name
-  auto make_filename = [filename](const string& name, const string& group,
-                           const vector<string>& extensions) {
+  auto find_path = [dirname](const string& name, const string& group,
+                       const vector<string>& extensions) {
     for (auto& extension : extensions) {
-      auto filepath = path_join(
-          path_dirname(filename), group, name + extension);
-      if (path_exists(filepath)) return filepath;
+      auto path = path_join(dirname, group, name + extension);
+      if (path_exists(path)) return path_join(group, name + extension);
     }
-    return path_join(path_dirname(filename), group, name + extensions.front());
+    return path_join(group, name + extensions.front());
   };
 
-  // load shapes
-  shape_map.erase("");
-  for (auto [name, value] : shape_map) {
-    auto& shape = scene.shapes[value.first];
-    if (progress_cb) progress_cb("load shape", progress.x++, progress.y);
-    auto path   = make_filename(name, "shapes", {".ply", ".obj"});
-    auto lshape = shape_data{};
-    if (!load_shape(path, lshape, error, false)) return dependent_error();
-    shape.points    = lshape.points;
-    shape.lines     = lshape.lines;
-    shape.triangles = lshape.triangles;
-    shape.quads     = lshape.quads;
-    shape.positions = lshape.positions;
-    shape.normals   = lshape.normals;
-    shape.texcoords = lshape.texcoords;
-    shape.colors    = lshape.colors;
-    shape.radius    = lshape.radius;
-  }
-
-  // load subdivs
-  subdiv_map.erase("");
-  for (auto [name, value] : subdiv_map) {
-    auto& subdiv = scene.subdivs[value.first];
-    if (progress_cb) progress_cb("load subdiv", progress.x++, progress.y);
-    auto path    = make_filename(name, "subdivs", {".ply", ".obj"});
-    auto lsubdiv = fvshape_data{};
-    if (!load_fvshape(path, lsubdiv, error, true)) return dependent_error();
-    subdiv.quadspos      = lsubdiv.quadspos;
-    subdiv.quadsnorm     = lsubdiv.quadsnorm;
-    subdiv.quadstexcoord = lsubdiv.quadstexcoord;
-    subdiv.positions     = lsubdiv.positions;
-    subdiv.normals       = lsubdiv.normals;
-    subdiv.texcoords     = lsubdiv.texcoords;
-  }
-
-  // load textures
-  texture_map.erase("");
-  for (auto [name, value] : texture_map) {
-    auto& texture = scene.textures[value.first];
-    if (progress_cb) progress_cb("load texture", progress.x++, progress.y);
-    auto path = make_filename(
-        name, "textures", {".hdr", ".exr", ".png", ".jpg"});
-    if (!load_image(path, texture.hdr, texture.ldr, error))
-      return dependent_error();
+  // load resources
+  if (noparallel) {
+    // load shapes
+    for (auto& shape : scene.shapes) {
+      if (progress_cb) progress_cb("load shape", progress.x++, progress.y);
+      auto path = find_path(
+          get_shape_name(scene, shape), "shapes", {".ply", ".obj"});
+      if (!load_shape(path_join(dirname, path), shape, error))
+        return dependent_error();
+    }
+    // load subdivs
+    for (auto& subdiv : scene.subdivs) {
+      if (progress_cb) progress_cb("load subdiv", progress.x++, progress.y);
+      auto path = find_path(
+          get_subdiv_name(scene, subdiv), "subdivs", {".ply", ".obj"});
+      if (!load_subdiv(path_join(dirname, path), subdiv, error))
+        return dependent_error();
+    }
+    // load textures
+    for (auto& texture : scene.textures) {
+      if (progress_cb) progress_cb("load texture", progress.x++, progress.y);
+      auto path = find_path(get_texture_name(scene, texture), "textures",
+          {".hdr", ".exr", ".png", ".jpg"});
+      if (!load_texture(path_join(dirname, path), texture, error))
+        return dependent_error();
+    }
+  } else {
+    // helpers
+    auto mutex = std::mutex{};
+    // load shapes
+    parallel_foreach(scene.shapes, [&](auto& shape) {
+      {
+        auto lock = std::lock_guard{mutex};
+        if (!error.empty()) return;
+        if (progress_cb) progress_cb("load shape", progress.x++, progress.y);
+      }
+      auto path = find_path(
+          get_shape_name(scene, shape), "shapes", {".ply", ".obj"});
+      auto err = string{};
+      if (!load_shape(path_join(dirname, path), shape, err)) {
+        auto lock = std::lock_guard{mutex};
+        error     = err;
+        return;
+      }
+    });
+    if (!error.empty()) return dependent_error();
+    // load subdivs
+    parallel_foreach(scene.subdivs, [&](auto& subdiv) {
+      {
+        auto lock = std::lock_guard{mutex};
+        if (!error.empty()) return;
+        if (progress_cb) progress_cb("load subdiv", progress.x++, progress.y);
+      }
+      auto path = find_path(
+          get_subdiv_name(scene, subdiv), "subdivs", {".ply", ".obj"});
+      auto err = string{};
+      if (!load_subdiv(path_join(dirname, path), subdiv, err)) {
+        auto lock = std::lock_guard{mutex};
+        error     = err;
+        return;
+      }
+    });
+    if (!error.empty()) return dependent_error();
+    // load textures
+    parallel_foreach(scene.textures, [&](auto& texture) {
+      {
+        auto lock = std::lock_guard{mutex};
+        if (!error.empty()) return;
+        if (progress_cb) progress_cb("load texture", progress.x++, progress.y);
+      }
+      auto path = find_path(get_texture_name(scene, texture), "textures",
+          {".hdr", ".exr", ".png", ".jpg"});
+      auto err  = string{};
+      if (!load_texture(path_join(dirname, path), texture, err)) {
+        auto lock = std::lock_guard{mutex};
+        error     = err;
+        return;
+      }
+    });
+    if (!error.empty()) return dependent_error();
   }
 
   // load instances
@@ -1577,51 +1694,86 @@ static bool save_json_scene(const string& filename, const scene_scene& scene,
   // save json
   if (!save_json(filename, js, error)) return false;
 
-  // get filename from name
-  auto make_filename = [filename](const string& name, const string& group,
-                           const string& extension) {
-    return path_join(path_dirname(filename), group, name + extension);
-  };
+  // dirname
+  auto dirname = path_dirname(filename);
 
-  // save shapes
-  for (auto& shape : scene.shapes) {
-    if (progress_cb) progress_cb("save shape", progress.x++, progress.y);
-    auto path = make_filename(get_shape_name(scene, shape), "shapes", ".ply"s);
-    auto sshape      = shape_data{};
-    sshape.points    = shape.points;
-    sshape.lines     = shape.lines;
-    sshape.triangles = shape.triangles;
-    sshape.quads     = shape.quads;
-    sshape.positions = shape.positions;
-    sshape.normals   = shape.normals;
-    sshape.texcoords = shape.texcoords;
-    sshape.colors    = shape.colors;
-    sshape.radius    = shape.radius;
-    if (!save_shape(path, sshape, error, false)) return dependent_error();
-  }
+  if (noparallel) {
+    // save shapes
+    for (auto& shape : scene.shapes) {
+      if (progress_cb) progress_cb("save shape", progress.x++, progress.y);
+      auto path = "shapes/" + get_shape_name(scene, shape) + ".ply";
+      if (!save_shape(path_join(dirname, path), shape, error))
+        return dependent_error();
+    }
 
-  // save subdiv
-  for (auto& subdiv : scene.subdivs) {
-    if (progress_cb) progress_cb("save subdiv", progress.x++, progress.y);
-    auto path = make_filename(
-        get_subdiv_name(scene, subdiv), "subdivs", ".obj");
-    auto ssubdiv          = fvshape_data{};
-    ssubdiv.quadspos      = subdiv.quadspos;
-    ssubdiv.quadsnorm     = subdiv.quadsnorm;
-    ssubdiv.quadstexcoord = subdiv.quadstexcoord;
-    ssubdiv.positions     = subdiv.positions;
-    ssubdiv.normals       = subdiv.normals;
-    ssubdiv.texcoords     = subdiv.texcoords;
-    if (!save_fvshape(path, ssubdiv, error, true)) return dependent_error();
-  }
+    // save subdiv
+    for (auto& subdiv : scene.subdivs) {
+      if (progress_cb) progress_cb("save subdiv", progress.x++, progress.y);
+      auto path = "subdivs/" + get_subdiv_name(scene, subdiv) + ".obj";
+      if (!save_subdiv(path_join(dirname, path), subdiv, error))
+        return dependent_error();
+    }
 
-  // save textures
-  for (auto& texture : scene.textures) {
-    if (progress_cb) progress_cb("save texture", progress.x++, progress.y);
-    auto path = make_filename(get_texture_name(scene, texture), "textures",
-        (!texture.hdr.empty()) ? ".hdr"s : ".png"s);
-    if (!save_image(path, texture.hdr, texture.ldr, error))
-      return dependent_error();
+    // save textures
+    for (auto& texture : scene.textures) {
+      if (progress_cb) progress_cb("save texture", progress.x++, progress.y);
+      auto path = "textures/" + get_texture_name(scene, texture) +
+                  (!texture.hdr.empty() ? ".hdr"s : ".png"s);
+      if (!save_texture(path_join(dirname, path), texture, error))
+        return dependent_error();
+    }
+  } else {
+    // mutex
+    auto mutex = std::mutex{};
+    // save shapes
+    parallel_foreach(scene.shapes, [&](auto& shape) {
+      {
+        auto lock = std::lock_guard{mutex};
+        if (!error.empty()) return;
+        if (progress_cb) progress_cb("save shape", progress.x++, progress.y);
+      }
+      auto path = "shapes/" + get_shape_name(scene, shape) + ".ply";
+      auto err  = string{};
+      if (!save_shape(path_join(dirname, path), shape, err)) {
+        auto lock = std::lock_guard{mutex};
+        error     = err;
+        return;
+      }
+    });
+    if (!error.empty()) return dependent_error();
+    // save subdivs
+    parallel_foreach(scene.subdivs, [&](auto& subdiv) {
+      {
+        auto lock = std::lock_guard{mutex};
+        if (!error.empty()) return;
+        if (progress_cb) progress_cb("save subdiv", progress.x++, progress.y);
+      }
+      auto path = "subdivs/" + get_subdiv_name(scene, subdiv) + ".obj";
+      auto err  = string{};
+      if (!save_subdiv(path_join(dirname, path), subdiv, err)) {
+        auto lock = std::lock_guard{mutex};
+        error     = err;
+        return;
+      }
+    });
+    if (!error.empty()) return dependent_error();
+    // save textures
+    parallel_foreach(scene.textures, [&](auto& texture) {
+      {
+        auto lock = std::lock_guard{mutex};
+        if (!error.empty()) return;
+        if (progress_cb) progress_cb("save texture", progress.x++, progress.y);
+      }
+      auto path = "textures/" + get_texture_name(scene, texture) +
+                  (!texture.hdr.empty() ? ".hdr"s : ".png"s);
+      auto err = string{};
+      if (!save_texture(path_join(dirname, path), texture, err)) {
+        auto lock = std::lock_guard{mutex};
+        error     = err;
+        return;
+      }
+    });
+    if (!error.empty()) return dependent_error();
   }
 
   // done
@@ -1685,10 +1837,10 @@ static bool load_obj_scene(const string& filename, scene_scene& scene,
   };
 
   // handler for textures
-  auto texture_paths = vector<string>{};
+  auto textures_paths = vector<string>{};
   for (auto& otexture : obj.textures) {
     scene.textures.emplace_back();
-    texture_paths.emplace_back(otexture.path);
+    textures_paths.emplace_back(otexture.path);
   }
 
   // handler for materials
@@ -1747,17 +1899,36 @@ static bool load_obj_scene(const string& filename, scene_scene& scene,
   // handle progress
   progress.y += (int)scene.textures.size();
 
-  // get filename from name
-  auto make_filename = [filename](const string& name) {
-    return path_join(path_dirname(filename), name);
-  };
+  // dirname
+  auto dirname = path_dirname(filename);
 
-  // load textures
-  for (auto& texture : scene.textures) {
-    auto& filename = texture_paths[&texture - &scene.textures.front()];
-    if (progress_cb) progress_cb("load texture", progress.x++, progress.y);
-    if (!load_image(make_filename(filename), texture.hdr, texture.ldr, error))
-      return dependent_error();
+  if (noparallel) {
+    // load textures
+    for (auto& texture : scene.textures) {
+      if (progress_cb) progress_cb("load texture", progress.x++, progress.y);
+      auto& path = textures_paths[&texture - &scene.textures.front()];
+      if (!load_texture(path_join(dirname, path), texture, error))
+        return dependent_error();
+    }
+  } else {
+    // mutex
+    auto mutex = std::mutex{};
+    // load textures
+    parallel_foreach(scene.textures, [&](auto& texture) {
+      {
+        auto lock = std::lock_guard{mutex};
+        if (!error.empty()) return;
+        if (progress_cb) progress_cb("load texture", progress.x++, progress.y);
+      }
+      auto& path = textures_paths[&texture - &scene.textures.front()];
+      auto  err  = string{};
+      if (!load_texture(path_join(dirname, path), texture, err)) {
+        auto lock = std::lock_guard{mutex};
+        error     = err;
+        return;
+      }
+    });
+    if (!error.empty()) return dependent_error();
   }
 
   // fix scene
@@ -1867,20 +2038,38 @@ static bool save_obj_scene(const string& filename, const scene_scene& scene,
   // save obj
   if (!save_obj(filename, obj, error)) return false;
 
-  // get filename from name
-  auto make_filename = [filename](const string& name, const string& group,
-                           const string& extension) {
-    return path_join(path_dirname(filename), group, name + extension);
-  };
+  // dirname
+  auto dirname = path_dirname(filename);
 
-  // save textures
-  auto texture_id = 0;
-  for (auto& texture : scene.textures) {
-    if (progress_cb) progress_cb("save texture", progress.x++, progress.y);
-    auto path = make_filename(get_texture_name(scene, texture_id++), "textures",
-        (!texture.hdr.empty()) ? ".hdr"s : ".png"s);
-    if (!save_image(path, texture.hdr, texture.ldr, error))
-      return dependent_error();
+  if (noparallel) {
+    // save textures
+    for (auto& texture : scene.textures) {
+      if (progress_cb) progress_cb("save texture", progress.x++, progress.y);
+      auto path = "textures/" + get_texture_name(scene, texture) +
+                  (!texture.hdr.empty() ? ".hdr"s : ".png"s);
+      if (!save_texture(path_join(dirname, path), texture, error))
+        return dependent_error();
+    }
+  } else {
+    // mutex
+    auto mutex = std::mutex{};
+    // save textures
+    parallel_foreach(scene.textures, [&](auto& texture) {
+      {
+        auto lock = std::lock_guard{mutex};
+        if (!error.empty()) return;
+        if (progress_cb) progress_cb("save texture", progress.x++, progress.y);
+      }
+      auto path = "textures/" + get_texture_name(scene, texture) +
+                  (!texture.hdr.empty() ? ".hdr"s : ".png"s);
+      auto err = string{};
+      if (!save_texture(path_join(dirname, path), texture, err)) {
+        auto lock = std::lock_guard{mutex};
+        error     = err;
+        return;
+      }
+    });
+    if (!error.empty()) return dependent_error();
   }
 
   // done
@@ -2070,12 +2259,14 @@ static bool load_gltf_scene(const string& filename, scene_scene& scene,
   if (!load_json(filename, gltf, error)) return false;
 
   // parse buffers
-  auto bnames = vector<string>{};
+  auto buffers_paths = vector<string>{};
+  auto buffers       = vector<vector<byte>>();
   try {
     if (gltf.contains("buffers")) {
       for (auto& gbuffer : gltf.at("buffers")) {
         if (!gbuffer.contains("uri")) return parse_error();
-        bnames.push_back(gbuffer.value("uri", ""));
+        buffers_paths.push_back(gbuffer.value("uri", ""));
+        buffers.emplace_back();
       }
     }
   } catch (...) {
@@ -2083,16 +2274,38 @@ static bool load_gltf_scene(const string& filename, scene_scene& scene,
   }
 
   // handle progress
-  progress.y += (int)bnames.size();
+  progress.y += (int)buffers_paths.size();
 
-  // parse buffers
-  auto buffers = vector<vector<byte>>();
-  buffers.reserve(bnames.size());
+  // dirname
   auto dirname = path_dirname(filename);
-  for (auto& name : bnames) {
-    progress_cb("load buffer", progress.x++, progress.y);
-    if (!load_binary(path_join(dirname, name), buffers.emplace_back(), error))
-      return dependent_error();
+
+  if (noparallel) {
+    // load buffers
+    for (auto& buffer : buffers) {
+      if (progress_cb) progress_cb("load buffer", progress.x++, progress.y);
+      auto& path = buffers_paths[&buffer - &buffers.front()];
+      if (!load_binary(path_join(dirname, path), buffer, error))
+        return dependent_error();
+    }
+  } else {
+    // mutex
+    auto mutex = std::mutex{};
+    // load buffers
+    parallel_foreach(buffers, [&](auto& buffer) {
+      {
+        auto lock = std::lock_guard{mutex};
+        if (!error.empty()) return;
+        if (progress_cb) progress_cb("load buffer", progress.x++, progress.y);
+      }
+      auto& path = buffers_paths[&buffer - &buffers.front()];
+      auto  err  = string{};
+      if (!load_binary(path_join(dirname, path), buffer, err)) {
+        auto lock = std::lock_guard{mutex};
+        error     = err;
+        return;
+      }
+    });
+    if (!error.empty()) return dependent_error();
   }
 
   // handle progress
@@ -2142,33 +2355,27 @@ static bool load_gltf_scene(const string& filename, scene_scene& scene,
     }
   }
 
-  // prepare list of effective nodes
-  auto visible_nodes = vector<bool>{};
-  if (gltf.contains("nodes")) {
+  // convert color textures
+  auto get_texture = [&gltf](const njson& js,
+                         const string&    name) -> texture_handle {
+    if (!js.contains(name)) return invalid_handle;
+    auto& ginfo    = js.at(name);
+    auto& gtexture = gltf.at("textures").at(ginfo.value("index", -1));
+    return gtexture.value("source", -1);
+  };
+
+  // convert textures
+  auto textures_paths = vector<string>{};
+  if (gltf.contains("images")) {
     try {
-      visible_nodes.assign(gltf.at("nodes").size(), true);
+      for (auto& gimage : gltf.at("images")) {
+        scene.textures.emplace_back();
+        textures_paths.push_back(gimage.value("uri", ""));
+      }
     } catch (...) {
       return parse_error();
     }
   }
-
-  // convert color textures
-  auto texture_map = unordered_map<string, texture_handle>{
-      {"", invalid_handle}};
-  auto get_texture = [&gltf, &scene, &texture_map](const njson& js,
-                         const string& name) -> texture_handle {
-    if (!js.contains(name)) return invalid_handle;
-    auto& ginfo    = js.at(name);
-    auto& gtexture = gltf.at("textures").at(ginfo.value("index", -1));
-    auto& gimage   = gltf.at("images").at(gtexture.value("source", -1));
-    auto  path     = gimage.value("uri", "");
-    if (path.empty()) return invalid_handle;
-    auto it = texture_map.find(path);
-    if (it != texture_map.end()) return it->second;
-    scene.textures.emplace_back();
-    texture_map[path] = (int)scene.textures.size() - 1;
-    return (int)scene.textures.size() - 1;
-  };
 
   // convert materials
   if (gltf.contains("materials")) {
@@ -2195,56 +2402,6 @@ static bool load_gltf_scene(const string& filename, scene_scene& scene,
       return parse_error();
     }
   }
-
-  auto get_attribute = [](const njson&                 gltf,
-                           const vector<vector<byte>>& buffers, auto& values,
-                           int index, bool color = false) {
-    constexpr auto ncomp     = sizeof(values.front()) / sizeof(float);
-    auto&          gaccessor = gltf.at("accessors").at(index);
-    if (gaccessor.contains("sparse"))
-      throw std::invalid_argument{"not implemented"};
-    auto  type      = gaccessor.value("type", "VEC3");
-    auto  component = gaccessor.value("type", 5126);
-    auto  count     = gaccessor.value("count", (size_t)0);
-    auto  offset1   = gaccessor.value("byteOffset", (size_t)0);
-    auto& gview = gltf.at("bufferViews").at(gaccessor.value("bufferView", -1));
-    auto  offset2 = gview.value("byteOffset", (size_t)0);
-    auto  stride  = gview.value("byteStride", (size_t)0);
-    auto& buffer  = buffers.at(gview.value("buffer", -1));
-    values.resize(count);
-    auto data    = (float*)values.data();
-    auto current = buffer.data() + offset1 + offset2;
-    auto nncomp  = 0;
-    if (type == "SCALAR") nncomp = 1;
-    if (type == "VEC2") nncomp = 2;
-    if (type == "VEC3") nncomp = 3;
-    if (type == "VEC4") nncomp = 4;
-    if (ncomp != nncomp) throw std::invalid_argument{"bad value"};
-    if (component == 5121) {
-      if (stride == 0) stride += nncomp * 1;
-      for (auto idx = (size_t)0; idx < count; idx++, current += stride) {
-        for (auto c = 0; c < nncomp; c++) {
-          data[idx * ncomp + c] = *(byte*)current / 255.0f;
-        }
-      }
-    } else if (component == 5123) {
-      if (stride == 0) stride += nncomp * 2;
-      for (auto idx = (size_t)0; idx < count; idx++, current += stride) {
-        for (auto c = 0; c < nncomp; c++) {
-          data[idx * ncomp + c] = *(ushort*)current / 65535.0f;
-        }
-      }
-    } else if (component == 5126) {
-      if (stride == 0) stride += nncomp * 4;
-      for (auto idx = (size_t)0; idx < count; idx++, current += stride) {
-        for (auto c = 0; c < nncomp; c++) {
-          data[idx * ncomp + c] = *(float*)current;
-        }
-      }
-    } else {
-      throw std::invalid_argument{"bad value"};
-    }
-  };
 
   // convert meshes
   auto mesh_primitives = vector<vector<sceneio_instance>>{};
@@ -2531,14 +2688,33 @@ static bool load_gltf_scene(const string& filename, scene_scene& scene,
   // handle progress
   progress.y += (int)scene.textures.size();
 
-  // load texture
-  texture_map.erase("");
-  for (auto [tpath, thandle] : texture_map) {
-    auto& texture = scene.textures[thandle];
-    if (progress_cb) progress_cb("load texture", progress.x++, progress.y);
-    if (!load_image(path_join(path_dirname(filename), tpath), texture.hdr,
-            texture.ldr, error))
-      return dependent_error();
+  if (noparallel) {
+    // load texture
+    for (auto& texture : scene.textures) {
+      if (progress_cb) progress_cb("load texture", progress.x++, progress.y);
+      auto& path = textures_paths[&texture - &scene.textures.front()];
+      if (!load_texture(path_join(dirname, path), texture, error))
+        return dependent_error();
+    }
+  } else {
+    // mutex
+    auto mutex = std::mutex{};
+    // load textures
+    parallel_foreach(scene.textures, [&](auto& texture) {
+      {
+        auto lock = std::lock_guard{mutex};
+        if (!error.empty()) return;
+        if (progress_cb) progress_cb("load texture", progress.x++, progress.y);
+      }
+      auto& path = textures_paths[&texture - &scene.textures.front()];
+      auto  err  = string{};
+      if (!load_texture(path_join(dirname, path), texture, err)) {
+        auto lock = std::lock_guard{mutex};
+        error     = err;
+        return;
+      }
+    });
+    if (!error.empty()) return dependent_error();
   }
 
   // fix scene
@@ -2876,52 +3052,58 @@ static bool save_gltf_scene(const string& filename, const scene_scene& scene,
   // dirname
   auto dirname = path_dirname(filename);
 
-  // save binary shape
-  auto save_binshape = [](const string& filename, const scene_shape& shape,
-                           string& error) {
-    auto open_error = [filename, &error]() {
-      error = filename + ": file not found";
-      return false;
-    };
-    auto write_error = [filename, &error]() {
-      error = filename + ": write error";
-      return false;
-    };
-
-    auto fs = open_file(filename, "wb");
-    if (!fs) return open_error();
-
-    if (!write_values(fs, shape.positions)) return write_error();
-    if (!write_values(fs, shape.normals)) return write_error();
-    if (!write_values(fs, shape.texcoords)) return write_error();
-    if (!write_values(fs, shape.colors)) return write_error();
-    if (!write_values(fs, shape.radius)) return write_error();
-    if (!write_values(fs, shape.points)) return write_error();
-    if (!write_values(fs, shape.lines)) return write_error();
-    if (!write_values(fs, shape.triangles)) return write_error();
-    if (!write_values(fs, quads_to_triangles(shape.quads)))
-      return write_error();
-
-    return true;
-  };
-
-  // save shapes
-  for (auto& shape : scene.shapes) {
-    if (progress_cb) progress_cb("save shape", progress.x++, progress.y);
-    if (!save_binshape(path_join(dirname,
-                           "shapes/" + get_shape_name(scene, shape) + ".bin"),
-            shape, error))
-      return dependent_error();
-  }
-
-  // save textures
-  for (auto& texture : scene.textures) {
-    if (progress_cb) progress_cb("save texture", progress.x++, progress.y);
-    if (!save_image(
-            path_join(dirname,
-                "textures/" + get_texture_name(scene, texture) + ".png"),
-            texture.hdr, texture.ldr, error))
-      return dependent_error();
+  if (noparallel) {
+    // save shapes
+    for (auto& shape : scene.shapes) {
+      if (progress_cb) progress_cb("save shape", progress.x++, progress.y);
+      auto path = "shapes/" + get_shape_name(scene, shape) + ".bin";
+      if (!save_binshape(path_join(dirname, path), shape, error))
+        return dependent_error();
+    }
+    // save textures
+    for (auto& texture : scene.textures) {
+      if (progress_cb) progress_cb("save texture", progress.x++, progress.y);
+      auto path = "textures/" + get_texture_name(scene, texture) +
+                  (!texture.hdr.empty() ? ".hdr" : ".png");
+      if (!save_texture(path_join(dirname, path), texture, error))
+        return dependent_error();
+    }
+  } else {
+    // mutex
+    auto mutex = std::mutex{};
+    // save shapes
+    parallel_foreach(scene.shapes, [&](auto& shape) {
+      {
+        auto lock = std::lock_guard{mutex};
+        if (!error.empty()) return;
+        if (progress_cb) progress_cb("save shape", progress.x++, progress.y);
+      }
+      auto path = "shapes/" + get_shape_name(scene, shape) + ".bin";
+      auto err  = string{};
+      if (!save_binshape(path_join(dirname, path), shape, err)) {
+        auto lock = std::lock_guard{mutex};
+        error     = err;
+        return;
+      }
+    });
+    if (!error.empty()) return dependent_error();
+    // save textures
+    parallel_foreach(scene.textures, [&](auto& texture) {
+      {
+        auto lock = std::lock_guard{mutex};
+        if (!error.empty()) return;
+        if (progress_cb) progress_cb("save texture", progress.x++, progress.y);
+      }
+      auto path = "textures/" + get_texture_name(scene, texture) +
+                  (!texture.hdr.empty() ? ".hdr"s : ".png"s);
+      auto err = string{};
+      if (!save_texture(path_join(dirname, path), texture, err)) {
+        auto lock = std::lock_guard{mutex};
+        error     = err;
+        return;
+      }
+    });
+    if (!error.empty()) return dependent_error();
   }
 
   // done
@@ -2966,10 +3148,10 @@ static bool load_pbrt_scene(const string& filename, scene_scene& scene,
   }
 
   // convert material
-  auto texture_paths = vector<string>{};
+  auto textures_paths = vector<string>{};
   for (auto& ptexture : pbrt.textures) {
     scene.textures.emplace_back();
-    texture_paths.push_back(ptexture.filename);
+    textures_paths.push_back(ptexture.filename);
   }
 
   // material type map
@@ -2998,8 +3180,10 @@ static bool load_pbrt_scene(const string& filename, scene_scene& scene,
   }
 
   // convert shapes
+  auto shapes_paths = vector<string>{};
   for (auto& pshape : pbrt.shapes) {
-    auto& shape     = scene.shapes.emplace_back();
+    auto& shape = scene.shapes.emplace_back();
+    shapes_paths.emplace_back(pshape.filename_);
     shape.positions = pshape.positions;
     shape.normals   = pshape.normals;
     shape.texcoords = pshape.texcoords;
@@ -3043,19 +3227,64 @@ static bool load_pbrt_scene(const string& filename, scene_scene& scene,
   }
 
   // handle progress
+  progress.y += (int)scene.shapes.size();
   progress.y += (int)scene.textures.size();
 
-  // get filename from name
-  auto make_filename = [filename](const string& name) {
-    return path_join(path_dirname(filename), name);
-  };
+  // dirname
+  auto dirname = path_dirname(filename);
 
-  // load texture
-  for (auto& texture : scene.textures) {
-    auto& filename = texture_paths[&texture - &scene.textures.front()];
-    if (progress_cb) progress_cb("load texture", progress.x++, progress.y);
-    if (!load_image(make_filename(filename), texture.hdr, texture.ldr, error))
-      return dependent_error();
+  if (noparallel) {
+    // load shape
+    for (auto& shape : scene.shapes) {
+      if (progress_cb) progress_cb("load shape", progress.x++, progress.y);
+      auto& path = shapes_paths[&shape - &scene.shapes.front()];
+      if (path.empty()) continue;
+      if (!load_shape(path_join(dirname, path), shape, error))
+        return dependent_error();
+    }
+    // load texture
+    for (auto& texture : scene.textures) {
+      if (progress_cb) progress_cb("load texture", progress.x++, progress.y);
+      auto& path = textures_paths[&texture - &scene.textures.front()];
+      if (!load_texture(path_join(dirname, path), texture, error))
+        return dependent_error();
+    }
+  } else {
+    // mutex
+    auto mutex = std::mutex{};
+    // load shapes
+    parallel_foreach(scene.shapes, [&](auto& shape) {
+      {
+        auto lock = std::lock_guard{mutex};
+        if (!error.empty()) return;
+        if (progress_cb) progress_cb("load shape", progress.x++, progress.y);
+      }
+      auto& path = shapes_paths[&shape - &scene.shapes.front()];
+      if (path.empty()) return;
+      auto err = string{};
+      if (!load_shape(path_join(dirname, path), shape, err)) {
+        auto lock = std::lock_guard{mutex};
+        error     = err;
+        return;
+      }
+    });
+    if (!error.empty()) return dependent_error();
+    // load textures
+    parallel_foreach(scene.textures, [&](auto& texture) {
+      {
+        auto lock = std::lock_guard{mutex};
+        if (!error.empty()) return;
+        if (progress_cb) progress_cb("load texture", progress.x++, progress.y);
+      }
+      auto& path = textures_paths[&texture - &scene.textures.front()];
+      auto  err  = string{};
+      if (!load_texture(path_join(dirname, path), texture, err)) {
+        auto lock = std::lock_guard{mutex};
+        error     = err;
+        return;
+      }
+    });
+    if (!error.empty()) return dependent_error();
   }
 
   // fix scene
@@ -3146,20 +3375,61 @@ static bool save_pbrt_scene(const string& filename, const scene_scene& scene,
   // save pbrt
   if (!save_pbrt(filename, pbrt, error)) return false;
 
-  // get filename from name
-  auto make_filename = [filename](const string& name, const string& group,
-                           const string& extension) {
-    return path_join(path_dirname(filename), group, name + extension);
-  };
+  // dirname
+  auto dirname = path_dirname(filename);
 
-  // save textures
-  auto texture_id = 0;
-  for (auto& texture : scene.textures) {
-    if (progress_cb) progress_cb("save texture", progress.x++, progress.y);
-    auto path = make_filename(get_texture_name(scene, texture_id++), "textures",
-        (!texture.hdr.empty()) ? ".hdr"s : ".png"s);
-    if (!save_image(path, texture.hdr, texture.ldr, error))
-      return dependent_error();
+  if (noparallel) {
+    // save textures
+    for (auto& shape : scene.shapes) {
+      if (progress_cb) progress_cb("save shape", progress.x++, progress.y);
+      auto path = "shapes/" + get_shape_name(scene, shape) + ".ply";
+      if (!save_shape(path_join(dirname, path), shape, error))
+        return dependent_error();
+    }
+    // save shapes
+    for (auto& texture : scene.textures) {
+      if (progress_cb) progress_cb("save texture", progress.x++, progress.y);
+      auto path = "textures/" + get_texture_name(scene, texture) +
+                  (!texture.hdr.empty() ? ".hdr" : ".png");
+      if (!save_texture(path_join(dirname, path), texture, error))
+        return dependent_error();
+    }
+  } else {
+    // mutex
+    auto mutex = std::mutex{};
+    // save shapes
+    parallel_foreach(scene.shapes, [&](auto& shape) {
+      {
+        auto lock = std::lock_guard{mutex};
+        if (!error.empty()) return;
+        if (progress_cb) progress_cb("save shape", progress.x++, progress.y);
+      }
+      auto path = "shapes/" + get_shape_name(scene, shape) + ".ply";
+      auto err  = string{};
+      if (!save_shape(path_join(dirname, path), shape, err)) {
+        auto lock = std::lock_guard{mutex};
+        error     = err;
+        return;
+      }
+    });
+    if (!error.empty()) return dependent_error();
+    // save textures
+    parallel_foreach(scene.textures, [&](auto& texture) {
+      {
+        auto lock = std::lock_guard{mutex};
+        if (!error.empty()) return;
+        if (progress_cb) progress_cb("save texture", progress.x++, progress.y);
+      }
+      auto path = "textures/" + get_texture_name(scene, texture) +
+                  (!texture.hdr.empty() ? ".hdr"s : ".png"s);
+      auto err = string{};
+      if (!save_texture(path_join(dirname, path), texture, err)) {
+        auto lock = std::lock_guard{mutex};
+        error     = err;
+        return;
+      }
+    });
+    if (!error.empty()) return dependent_error();
   }
 
   // done

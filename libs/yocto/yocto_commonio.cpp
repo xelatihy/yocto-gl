@@ -824,7 +824,6 @@ cli_command make_cli(const string& name, const string& usage) {
   cli.name  = name;
   cli.usage = usage;
   cli.commands.reserve(256);
-  add_option(cli, "--help", cli.help, "Print usage.");
   return cli;
 }
 
@@ -840,7 +839,6 @@ cli_command& add_command(
   cmd.name  = name;
   cmd.usage = usage;
   cmd.commands.reserve(256);
-  add_option(cmd, "--help", cmd.help, "Print usage.");
   return cmd;
 }
 

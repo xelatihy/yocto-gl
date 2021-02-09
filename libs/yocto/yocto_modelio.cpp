@@ -4169,8 +4169,8 @@ inline void make_quad(vector<vec3i>& triangles, vector<vec3f>& positions,
 // Convert pbrt shapes
 inline bool convert_shape(pbrt_shape& pshape, const pbrt_command& command,
     string& alphamap, const unordered_map<string, pbrt_texture>& named_textures,
-    const string& ply_dirname, const string& filename, string& error,
-    bool verbose = false) {
+    const string& ply_dirname, bool ply_meshes, const string& filename,
+    string& error, bool verbose = false) {
   auto parse_error = [filename, &error]() {
     error = filename + ": parse error";
     return false;
@@ -4230,13 +4230,15 @@ inline bool convert_shape(pbrt_shape& pshape, const pbrt_command& command,
     if (!get_pbrt_value(command.values, "filename", pshape.filename_))
       return parse_error();
     if (!get_alpha(command.values, "alpha", alphamap)) return parse_error();
-    auto ply = ply_model{};
-    if (!load_ply(path_join(ply_dirname, pshape.filename_), ply, error))
-      return dependent_error();
-    get_positions(ply, pshape.positions);
-    get_normals(ply, pshape.normals);
-    get_texcoords(ply, pshape.texcoords);
-    get_triangles(ply, pshape.triangles);
+    if (ply_meshes) {
+      auto ply = ply_model{};
+      if (!load_ply(path_join(ply_dirname, pshape.filename_), ply, error))
+        return dependent_error();
+      get_positions(ply, pshape.positions);
+      get_normals(ply, pshape.normals);
+      get_texcoords(ply, pshape.texcoords);
+      get_triangles(ply, pshape.triangles);
+    }
     return true;
   } else if (command.type == "sphere") {
     auto radius = 1.0f;
@@ -4411,7 +4413,7 @@ inline bool load_pbrt(const string& filename, pbrt_scene& pbrt, string& error,
     unordered_map<string, pbrt_texture>&  named_textures,
     unordered_map<string, pbrt_medium>&   named_mediums,
     unordered_map<string, vector<int>>&   named_objects,
-    const string&                         ply_dirname) {
+    const string& ply_dirname, bool ply_meshes) {
   // error helpers
   auto open_error = [filename, &error]() {
     error = filename + ": file not found";
@@ -4639,7 +4641,7 @@ inline bool load_pbrt(const string& filename, pbrt_scene& pbrt, string& error,
       auto& shape    = add_shape(pbrt);
       auto  alphamap = ""s;
       if (!convert_shape(shape, command, alphamap, named_textures, ply_dirname,
-              filename, error))
+              ply_meshes, filename, error))
         return false;
       auto matkey = "?!!!?" + ctx.stack.back().material.name + "?!!!?" +
                     ctx.stack.back().arealight.name + "?!!!?" + alphamap;
@@ -4701,7 +4703,8 @@ inline bool load_pbrt(const string& filename, pbrt_scene& pbrt, string& error,
       if (!parse_param(str, includename)) return parse_error();
       if (!load_pbrt(path_join(path_dirname(filename), includename), pbrt,
               error, ctx, material_map, texture_map, named_materials,
-              named_textures, named_mediums, named_objects, ply_dirname))
+              named_textures, named_mediums, named_objects, ply_dirname,
+              ply_meshes))
         return dependent_error();
     } else {
       return command_error(cmd);
@@ -4724,7 +4727,8 @@ pbrt_environment& add_environment(pbrt_scene& pbrt) {
 pbrt_light& add_light(pbrt_scene& pbrt) { return pbrt.lights.emplace_back(); }
 
 // load pbrt
-bool load_pbrt(const string& filename, pbrt_scene& pbrt, string& error) {
+bool load_pbrt(
+    const string& filename, pbrt_scene& pbrt, string& error, bool ply_meshes) {
   auto ctx             = pbrt_context{};
   auto material_map    = unordered_map<string, int>{};
   auto texture_map     = unordered_map<string, int>{};
@@ -4734,7 +4738,7 @@ bool load_pbrt(const string& filename, pbrt_scene& pbrt, string& error) {
   auto named_objects   = unordered_map<string, vector<int>>{};
   if (!load_pbrt(filename, pbrt, error, ctx, material_map, texture_map,
           named_materials, named_textures, named_mediums, named_objects,
-          path_dirname(filename)))
+          path_dirname(filename), ply_meshes))
     return false;
   pbrt.textures.resize(texture_map.size());
   for (auto& [path, texture_id] : texture_map) {
