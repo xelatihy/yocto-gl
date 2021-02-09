@@ -1697,29 +1697,83 @@ static bool save_json_scene(const string& filename, const scene_scene& scene,
   // dirname
   auto dirname = path_dirname(filename);
 
-  // save shapes
-  for (auto& shape : scene.shapes) {
-    if (progress_cb) progress_cb("save shape", progress.x++, progress.y);
-    auto path = "shapes/" + get_shape_name(scene, shape) + ".ply";
-    if (!save_shape(path_join(dirname, path), shape, error))
-      return dependent_error();
-  }
+  if (noparallel) {
+    // save shapes
+    for (auto& shape : scene.shapes) {
+      if (progress_cb) progress_cb("save shape", progress.x++, progress.y);
+      auto path = "shapes/" + get_shape_name(scene, shape) + ".ply";
+      if (!save_shape(path_join(dirname, path), shape, error))
+        return dependent_error();
+    }
 
-  // save subdiv
-  for (auto& subdiv : scene.subdivs) {
-    if (progress_cb) progress_cb("save subdiv", progress.x++, progress.y);
-    auto path = "subdivs/" + get_subdiv_name(scene, subdiv) + ".obj";
-    if (!save_subdiv(path_join(dirname, path), subdiv, error))
-      return dependent_error();
-  }
+    // save subdiv
+    for (auto& subdiv : scene.subdivs) {
+      if (progress_cb) progress_cb("save subdiv", progress.x++, progress.y);
+      auto path = "subdivs/" + get_subdiv_name(scene, subdiv) + ".obj";
+      if (!save_subdiv(path_join(dirname, path), subdiv, error))
+        return dependent_error();
+    }
 
-  // save textures
-  for (auto& texture : scene.textures) {
-    if (progress_cb) progress_cb("save texture", progress.x++, progress.y);
-    auto path = "textures/" + get_texture_name(scene, texture) +
-                (!texture.hdr.empty() ? ".hdr"s : ".png"s);
-    if (!save_texture(path_join(dirname, path), texture, error))
-      return dependent_error();
+    // save textures
+    for (auto& texture : scene.textures) {
+      if (progress_cb) progress_cb("save texture", progress.x++, progress.y);
+      auto path = "textures/" + get_texture_name(scene, texture) +
+                  (!texture.hdr.empty() ? ".hdr"s : ".png"s);
+      if (!save_texture(path_join(dirname, path), texture, error))
+        return dependent_error();
+    }
+  } else {
+    // mutex
+    auto mutex = std::mutex{};
+    // save shapes
+    parallel_foreach(scene.shapes, [&](auto& shape) {
+      {
+        auto lock = std::lock_guard{mutex};
+        if (!error.empty()) return;
+        if (progress_cb) progress_cb("save shape", progress.x++, progress.y);
+      }
+      auto path = "shapes/" + get_shape_name(scene, shape) + ".ply";
+      auto err  = string{};
+      if (!save_shape(path_join(dirname, path), shape, err)) {
+        auto lock = std::lock_guard{mutex};
+        error     = err;
+        return;
+      }
+    });
+    if (!error.empty()) return dependent_error();
+    // save subdivs
+    parallel_foreach(scene.subdivs, [&](auto& subdiv) {
+      {
+        auto lock = std::lock_guard{mutex};
+        if (!error.empty()) return;
+        if (progress_cb) progress_cb("save subdiv", progress.x++, progress.y);
+      }
+      auto path = "subdivs/" + get_subdiv_name(scene, subdiv) + ".obj";
+      auto err  = string{};
+      if (!save_subdiv(path_join(dirname, path), subdiv, err)) {
+        auto lock = std::lock_guard{mutex};
+        error     = err;
+        return;
+      }
+    });
+    if (!error.empty()) return dependent_error();
+    // save textures
+    parallel_foreach(scene.textures, [&](auto& texture) {
+      {
+        auto lock = std::lock_guard{mutex};
+        if (!error.empty()) return;
+        if (progress_cb) progress_cb("save texture", progress.x++, progress.y);
+      }
+      auto path = "textures/" + get_texture_name(scene, texture) +
+                  (!texture.hdr.empty() ? ".hdr"s : ".png"s);
+      auto err = string{};
+      if (!save_texture(path_join(dirname, path), texture, err)) {
+        auto lock = std::lock_guard{mutex};
+        error     = err;
+        return;
+      }
+    });
+    if (!error.empty()) return dependent_error();
   }
 
   // done
@@ -1987,13 +2041,35 @@ static bool save_obj_scene(const string& filename, const scene_scene& scene,
   // dirname
   auto dirname = path_dirname(filename);
 
-  // save textures
-  for (auto& texture : scene.textures) {
-    if (progress_cb) progress_cb("save texture", progress.x++, progress.y);
-    auto path = "textures/" + get_texture_name(scene, texture) +
-                (!texture.hdr.empty() ? ".hdr"s : ".png"s);
-    if (!save_texture(path_join(dirname, path), texture, error))
-      return dependent_error();
+  if (noparallel) {
+    // save textures
+    for (auto& texture : scene.textures) {
+      if (progress_cb) progress_cb("save texture", progress.x++, progress.y);
+      auto path = "textures/" + get_texture_name(scene, texture) +
+                  (!texture.hdr.empty() ? ".hdr"s : ".png"s);
+      if (!save_texture(path_join(dirname, path), texture, error))
+        return dependent_error();
+    }
+  } else {
+    // mutex
+    auto mutex = std::mutex{};
+    // save textures
+    parallel_foreach(scene.textures, [&](auto& texture) {
+      {
+        auto lock = std::lock_guard{mutex};
+        if (!error.empty()) return;
+        if (progress_cb) progress_cb("save texture", progress.x++, progress.y);
+      }
+      auto path = "textures/" + get_texture_name(scene, texture) +
+                  (!texture.hdr.empty() ? ".hdr"s : ".png"s);
+      auto err = string{};
+      if (!save_texture(path_join(dirname, path), texture, err)) {
+        auto lock = std::lock_guard{mutex};
+        error     = err;
+        return;
+      }
+    });
+    if (!error.empty()) return dependent_error();
   }
 
   // done
@@ -2976,21 +3052,58 @@ static bool save_gltf_scene(const string& filename, const scene_scene& scene,
   // dirname
   auto dirname = path_dirname(filename);
 
-  // save shapes
-  for (auto& shape : scene.shapes) {
-    if (progress_cb) progress_cb("save shape", progress.x++, progress.y);
-    auto path = "shapes/" + get_shape_name(scene, shape) + ".bin";
-    if (!save_binshape(path_join(dirname, path), shape, error))
-      return dependent_error();
-  }
-
-  // save textures
-  for (auto& texture : scene.textures) {
-    if (progress_cb) progress_cb("save texture", progress.x++, progress.y);
-    auto path = "textures/" + get_texture_name(scene, texture) +
-                (!texture.hdr.empty() ? ".hdr" : ".png");
-    if (!save_texture(path_join(dirname, path), texture, error))
-      return dependent_error();
+  if (noparallel) {
+    // save shapes
+    for (auto& shape : scene.shapes) {
+      if (progress_cb) progress_cb("save shape", progress.x++, progress.y);
+      auto path = "shapes/" + get_shape_name(scene, shape) + ".bin";
+      if (!save_binshape(path_join(dirname, path), shape, error))
+        return dependent_error();
+    }
+    // save textures
+    for (auto& texture : scene.textures) {
+      if (progress_cb) progress_cb("save texture", progress.x++, progress.y);
+      auto path = "textures/" + get_texture_name(scene, texture) +
+                  (!texture.hdr.empty() ? ".hdr" : ".png");
+      if (!save_texture(path_join(dirname, path), texture, error))
+        return dependent_error();
+    }
+  } else {
+    // mutex
+    auto mutex = std::mutex{};
+    // save shapes
+    parallel_foreach(scene.shapes, [&](auto& shape) {
+      {
+        auto lock = std::lock_guard{mutex};
+        if (!error.empty()) return;
+        if (progress_cb) progress_cb("save shape", progress.x++, progress.y);
+      }
+      auto path = "shapes/" + get_shape_name(scene, shape) + ".bin";
+      auto err  = string{};
+      if (!save_binshape(path_join(dirname, path), shape, err)) {
+        auto lock = std::lock_guard{mutex};
+        error     = err;
+        return;
+      }
+    });
+    if (!error.empty()) return dependent_error();
+    // save textures
+    parallel_foreach(scene.textures, [&](auto& texture) {
+      {
+        auto lock = std::lock_guard{mutex};
+        if (!error.empty()) return;
+        if (progress_cb) progress_cb("save texture", progress.x++, progress.y);
+      }
+      auto path = "textures/" + get_texture_name(scene, texture) +
+                  (!texture.hdr.empty() ? ".hdr"s : ".png"s);
+      auto err = string{};
+      if (!save_texture(path_join(dirname, path), texture, err)) {
+        auto lock = std::lock_guard{mutex};
+        error     = err;
+        return;
+      }
+    });
+    if (!error.empty()) return dependent_error();
   }
 
   // done
@@ -3265,13 +3378,58 @@ static bool save_pbrt_scene(const string& filename, const scene_scene& scene,
   // dirname
   auto dirname = path_dirname(filename);
 
-  // save textures
-  for (auto& texture : scene.textures) {
-    if (progress_cb) progress_cb("save texture", progress.x++, progress.y);
-    auto path = "textures/" + get_texture_name(scene, texture) +
-                (!texture.hdr.empty() ? ".hdr" : ".png");
-    if (!save_texture(path_join(dirname, path), texture, error))
-      return dependent_error();
+  if (noparallel) {
+    // save textures
+    for (auto& shape : scene.shapes) {
+      if (progress_cb) progress_cb("save shape", progress.x++, progress.y);
+      auto path = "shapes/" + get_shape_name(scene, shape) + ".ply";
+      if (!save_shape(path_join(dirname, path), shape, error))
+        return dependent_error();
+    }
+    // save shapes
+    for (auto& texture : scene.textures) {
+      if (progress_cb) progress_cb("save texture", progress.x++, progress.y);
+      auto path = "textures/" + get_texture_name(scene, texture) +
+                  (!texture.hdr.empty() ? ".hdr" : ".png");
+      if (!save_texture(path_join(dirname, path), texture, error))
+        return dependent_error();
+    }
+  } else {
+    // mutex
+    auto mutex = std::mutex{};
+    // save shapes
+    parallel_foreach(scene.shapes, [&](auto& shape) {
+      {
+        auto lock = std::lock_guard{mutex};
+        if (!error.empty()) return;
+        if (progress_cb) progress_cb("save shape", progress.x++, progress.y);
+      }
+      auto path = "shapes/" + get_shape_name(scene, shape) + ".ply";
+      auto err  = string{};
+      if (!save_shape(path_join(dirname, path), shape, err)) {
+        auto lock = std::lock_guard{mutex};
+        error     = err;
+        return;
+      }
+    });
+    if (!error.empty()) return dependent_error();
+    // save textures
+    parallel_foreach(scene.textures, [&](auto& texture) {
+      {
+        auto lock = std::lock_guard{mutex};
+        if (!error.empty()) return;
+        if (progress_cb) progress_cb("save texture", progress.x++, progress.y);
+      }
+      auto path = "textures/" + get_texture_name(scene, texture) +
+                  (!texture.hdr.empty() ? ".hdr"s : ".png"s);
+      auto err = string{};
+      if (!save_texture(path_join(dirname, path), texture, err)) {
+        auto lock = std::lock_guard{mutex};
+        error     = err;
+        return;
+      }
+    });
+    if (!error.empty()) return dependent_error();
   }
 
   // done
