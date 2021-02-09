@@ -3215,6 +3215,7 @@ static bool load_pbrt_scene(const string& filename, scene_scene& scene,
   // lights
   for (auto& plight : pbrt.lights) {
     auto& shape       = scene.shapes.emplace_back();
+    shapes_paths.emplace_back();
     shape.triangles   = plight.area_triangles;
     shape.positions   = plight.area_positions;
     shape.normals     = plight.area_normals;

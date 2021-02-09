@@ -71,9 +71,9 @@ using progress_callback =
 // Load/save a scene in the supported formats. Throws on error.
 // Calls the progress callback, if defined, as we process more data.
 bool load_scene(const string& filename, scene_scene& scene, string& error,
-    const progress_callback& progress_cb = {}, bool noparallel = false);
+    const progress_callback& progress_cb = {}, bool noparallel = true);
 bool save_scene(const string& filename, const scene_scene& scene, string& error,
-    const progress_callback& progress_cb = {}, bool noparallel = false);
+    const progress_callback& progress_cb = {}, bool noparallel = true);
 
 // Scene presets used for testing.
 bool make_scene_preset(scene_scene& scene, const string& type, string& error);

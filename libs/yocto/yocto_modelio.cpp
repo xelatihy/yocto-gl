@@ -3512,7 +3512,15 @@ inline bool parse_params(string_view& str, vector<pbrt_value>& values) {
         value.type     = pbrt_type::color;
         auto filename  = ""s;
         auto filenames = vector<string>{};
+        skip_whitespace(str);
+        auto has_parens = str.front() == '[';
+        if (has_parens) str.remove_prefix(1);
         if (!parse_value(str, filename)) return false;
+        if (has_parens) {
+          skip_whitespace(str);
+          if (str.front() != ']') return false;
+          str.remove_prefix(1);
+        }
         if (str.empty()) return false;
         auto filenamep = path_filename(filename);
         if (path_extension(filenamep) == ".spd") {
@@ -3576,6 +3584,16 @@ inline bool convert_film(pbrt_film& film, const pbrt_command& command,
   };
 
   if (command.type == "image") {
+    film.resolution = {512, 512};
+    if (!get_pbrt_value(command.values, "xresolution", film.resolution.x))
+      return parse_error();
+    if (!get_pbrt_value(command.values, "yresolution", film.resolution.y))
+      return parse_error();
+    film.filename = "out.png"s;
+    if (!get_pbrt_value(command.values, "filename", film.filename))
+      return parse_error();
+    return true;
+  } else if (command.type == "rgb") {
     film.resolution = {512, 512};
     if (!get_pbrt_value(command.values, "xresolution", film.resolution.x))
       return parse_error();
@@ -3927,6 +3945,12 @@ inline bool convert_material(pbrt_material& pmaterial,
             vec3f{0.5, 0.5, 0.5}))
       return parse_error();
     return true;
+  } else if (command.type == "diffuse") {
+    pmaterial.type = pbrt_mtype::matte;
+    if (!get_texture(command.values, "reflectance", pmaterial.color,
+            pmaterial.color_tex, vec3f{0.5, 0.5, 0.5}))
+      return parse_error();
+    return true;
   } else if (command.type == "mirror") {
     pmaterial.type = pbrt_mtype::metal;
     if (!get_texture(command.values, "Kr", pmaterial.color, pmaterial.color_tex,
@@ -3939,6 +3963,20 @@ inline bool convert_material(pbrt_material& pmaterial,
     // get_texture(
     //     values, "Kr", material->specular, material->specular_tex,
     //     vec3f{1});
+    auto eta = zero3f, etak = zero3f;
+    if (!get_color(command.values, "eta", eta,
+            vec3f{0.2004376970f, 0.9240334304f, 1.1022119527f}))
+      return parse_error();
+    if (!get_color(command.values, "k", etak,
+            vec3f{3.9129485033f, 2.4528477015f, 2.1421879552f}))
+      return parse_error();
+    pmaterial.color     = eta_to_reflectivity(eta, etak);
+    pmaterial.roughness = 0.01f;
+    if (!get_roughness(command.values, pmaterial.roughness, 0.01))
+      return parse_error();
+    return true;
+  } else if (command.type == "conductor") {
+    pmaterial.type = pbrt_mtype::metal;
     auto eta = zero3f, etak = zero3f;
     if (!get_color(command.values, "eta", eta,
             vec3f{0.2004376970f, 0.9240334304f, 1.1022119527f}))
