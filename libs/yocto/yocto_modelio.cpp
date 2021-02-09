@@ -3492,12 +3492,20 @@ inline bool parse_params(string_view& str, vector<pbrt_value>& values) {
       value.type = pbrt_type::vector2;
       parse_pvalues(str, value.value2f, value.vector2f);
     } else if (type == "blackbody") {
-      value.type     = pbrt_type::color;
-      auto blackbody = zero2f;
-      auto vector2f  = vector<vec2f>{};
-      parse_pvalues(str, blackbody, vector2f);
-      if (!vector2f.empty()) return false;
-      value.value3f = blackbody_to_rgb(blackbody.x) * blackbody.y;
+      value.type = pbrt_type::color;
+      // auto blackbody = zero2f;
+      // auto vec tor2f  = vector<vec2f>{};
+      // parse_pvalues(str, blackbody, vector2f);
+      // if (!vector2f.empty()) return false;
+      // value.value3f = blackbody_to_rgb(blackbody.x) * blackbody.y;
+      auto blackbody = 0.0f;
+      auto vector1f  = vector<float>{};
+      parse_pvalues(str, blackbody, vector1f);
+      if (vector1f.size() < 2) {
+        value.value3f = blackbody_to_rgb(blackbody);
+      } else {
+        value.value3f = blackbody_to_rgb(vector1f[0]) * vector1f[1];
+      }
     } else if (type == "color" || type == "rgb") {
       value.type = pbrt_type::color;
       if (!parse_pvalues(str, value.value3f, value.vector3f)) return false;
@@ -3561,6 +3569,8 @@ inline bool parse_params(string_view& str, vector<pbrt_value>& values) {
           } else {
             return false;
           }
+        } else if (starts_with(name, "glass-")) {
+          value.value3f = {1.5, 1.5, 1.5};
         } else {
           return false;
         }
@@ -4086,6 +4096,15 @@ inline bool convert_material(pbrt_material& pmaterial,
     if (!get_roughness(command.values, pmaterial.roughness, 0))
       return parse_error();
     return true;
+  } else if (command.type == "thindielectric") {
+    pmaterial.type  = pbrt_mtype::thinglass;
+    pmaterial.color = {1, 1, 1};
+    if (!get_scalar(command.values, "eta", pmaterial.ior, 1.5))
+      return parse_error();
+    pmaterial.roughness = 0;
+    if (!get_roughness(command.values, pmaterial.roughness, 0))
+      return parse_error();
+    return true;
   } else if (command.type == "hair") {
     pmaterial.type = pbrt_mtype::matte;
     if (!get_texture(command.values, "color", pmaterial.color,
@@ -4550,6 +4569,10 @@ inline bool load_pbrt(const string& filename, pbrt_scene& pbrt, string& error,
     error = filename + ": unknown object " + obj;
     return false;
   };
+  auto material_error = [filename, &error](const string& name) {
+    error = filename + ": missing material " + name;
+    return false;
+  };
 
   // open file
   auto fs = open_file(filename, "rt");
@@ -4738,6 +4761,8 @@ inline bool load_pbrt(const string& filename, pbrt_scene& pbrt, string& error,
     } else if (cmd == "NamedMaterial") {
       auto name = ""s;
       if (!parse_param(str, name)) return parse_error();
+      if (named_materials.find(name) == named_materials.end())
+        return material_error(name);
       ctx.stack.back().material = named_materials.at(name);
     } else if (cmd == "Shape") {
       auto command = pbrt_command{};
