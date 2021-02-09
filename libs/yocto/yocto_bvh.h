@@ -135,7 +135,7 @@ const auto bvh_build_names = vector<string>{
 // Bvh parameters
 struct bvh_params {
   bvh_build_type bvh        = bvh_build_type::default_;
-  bool           noparallel = false;  // only serial momentarily
+  bool           noparallel = false;
 };
 
 // Progress report callback
