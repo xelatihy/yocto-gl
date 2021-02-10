@@ -809,7 +809,7 @@ static bool save_texture(
 static bool load_shape(
     const string& filename, scene_shape& shape, string& error) {
   auto lshape = shape_data{};
-  if (!load_shape(filename, lshape, error, false)) return false;
+  if (!load_shape(filename, lshape, error, true)) return false;
   shape.points    = lshape.points;
   shape.lines     = lshape.lines;
   shape.triangles = lshape.triangles;
@@ -835,7 +835,7 @@ static bool save_shape(
   sshape.texcoords = shape.texcoords;
   sshape.colors    = shape.colors;
   sshape.radius    = shape.radius;
-  return save_shape(filename, sshape, error, false);
+  return save_shape(filename, sshape, error, true);
 }
 
 // load subdiv
