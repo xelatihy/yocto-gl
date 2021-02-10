@@ -13,15 +13,12 @@ def cli():
 @click.option('--scene', '-s', default='*')
 @click.option('--format', '-f', default='json')
 @click.option('--mode', '-m', default='path')
-def itrace(directory='mcguire', scene='*', format='json', mode='path'):
+def view(directory='mcguire', scene='*', format='json', mode='path'):
     modes = {
-        'path': '',
-        'path-skyenv': '--skyenv',
-        'embree': '--bvh embree-highquality',
-        'embree-compact': '--bvh embree-compact',
-        'eyelight': '-t eyelight --bvh highquality',
-        'eyelight-quick':
-        '--all-cameras -s 16 -r 1280 -t eyelight --bvh default'
+        'path': '-r 720',
+        'embree': '-r 720 --bvh embree-highquality',
+        'eyelight': '-r 720 -t eyelight',
+        'eyelight-quick': '-r 720 -s 16 -t eyelight'
     }
     options = modes[mode]
     for dirname in sorted(glob.glob(f'{directory}/{format}/{scene}')):
@@ -40,32 +37,8 @@ def itrace(directory='mcguire', scene='*', format='json', mode='path'):
 @click.option('--directory', '-d', default='mcguire')
 @click.option('--scene', '-s', default='*')
 @click.option('--format', '-f', default='json')
-@click.option('--mode', '-m', default='default')
-def view(directory='mcguire', scene='*', format='json', mode='path'):
-    modes = {
-        'default': '--double-sided',
-        'double-sided': '--double-sided',
-        'eyelight': '--double-sided --eyelight'
-    }
-    options = modes[mode]
-    for dirname in sorted(glob.glob(f'{directory}/{format}/{scene}')):
-        if not os.path.isdir(dirname): continue
-        if '/_' in dirname: continue
-        for filename in sorted(glob.glob(f'{dirname}/*.{format}')):
-            if format == 'pbrt':
-                with open(filename) as f:
-                    if 'WorldBegin' not in f.read(): continue
-            cmd = f'../yocto-gl/bin/yshade view {options} {filename}'
-            print(cmd, file=sys.stderr)
-            os.system(cmd)
-
-
-@cli.command()
-@click.option('--directory', '-d', default='mcguire')
-@click.option('--scene', '-s', default='*')
-@click.option('--format', '-f', default='json')
 @click.option('--mode', '-m', default='path')
-def trace(directory='mcguire', scene='*', format='json', mode='path'):
+def render(directory='mcguire', scene='*', format='json', mode='path'):
     modes = {
         'path': '-s 64 -r 640',
         'path-skyenv': '-s 64 -r 640 --skyenv',
@@ -197,8 +170,6 @@ def convert(directory='mcguire',
             mode='path',
             clean=True):
     modes = {
-        # 'default': '--uniform-textures --mesh-filenames',
-        # 'gltf': '--uniform-textures --mesh-filenames --mesh-directory gltf_meshes/'
         'default': '',
     }
     options = modes[mode]
@@ -210,44 +181,24 @@ def convert(directory='mcguire',
             with open(f'{dirname}/AUTHOR.txt') as f:
                 copyright = f.read().strip().replace('"', '')
             copyright_options += f'--copyright "{copyright}"'
-        obj_options = ''
-        if 'bunny2' in dirname and outformat == 'obj':
-            obj_options = '--obj-instances'
-        if 'ecosys' in dirname and outformat == 'obj':
-            obj_options = '--obj-instances'
-        if 'landscape' in dirname and outformat == 'obj':
-            obj_options = '--obj-instances'
-        if 'fractal' in dirname and outformat == 'obj':
-            obj_options = '--obj-instances'
-        if 'pavilion' in dirname and outformat == 'obj': continue
-        if 'sanmiguel' in dirname and 'pbrt' in dirname and outformat == 'obj':
-            continue
         outdirname = dirname.replace(f'/source/', f'/{outformat}/')
         if clean: os.system(f'rm -rf {outdirname}')
         os.system(f'mkdir -p {outdirname}')
-        os.system(f'mkdir -p {outdirname}/textures')
         if os.path.exists(f'{dirname}/AUTHOR.txt'):
             os.system(f'cp {dirname}/AUTHOR.txt {outdirname}/')
         if os.path.exists(f'{dirname}/LICENSE.txt'):
             os.system(f'cp {dirname}/LICENSE.txt {outdirname}/')
         if os.path.exists(f'{dirname}/LINKS.txt'):
             os.system(f'cp {dirname}/LINKS.txt {outdirname}/')
-        if outformat == 'yaml' or outformat == 'json':
-            os.system(f'mkdir -p {outdirname}/shapes')
         for filename in sorted(glob.glob(f'{dirname}/*.{format}')):
             if format == 'pbrt':
                 with open(filename) as f:
                     if 'WorldBegin' not in f.read(): continue
             outname = filename.replace(f'/source/', f'/{outformat}/').replace(
                 f'.{format}', f'.{outformat}')
-            if format != 'dijson':
-                cmd = f'../yocto-gl/bin/yscene convert -o {outname} {options} {obj_options} {filename} {copyright_options}'
-                print(cmd, file=sys.stderr)
-                os.system(cmd)
-            else:
-                cmd = f'../yocto-gl/bin/yislandproc -o {outname} {options} {obj_options} {filename}'
-                print(cmd, file=sys.stderr)
-                os.system(cmd)
+            cmd = f'../yocto-gl/bin/yscene convert -o {outname} {options} {filename} {copyright_options}'
+            print(cmd, file=sys.stderr)
+            os.system(cmd)
 
 
 @cli.command()
