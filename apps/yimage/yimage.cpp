@@ -39,7 +39,6 @@ using namespace yocto;
 struct convert_params {
   string image    = "image.png";
   string output   = "out.png";
-  bool   logo     = false;
   float  exposure = 0;
   bool   filmic   = false;
   int    width    = 0;
@@ -58,7 +57,6 @@ void add_command(cli_command& cli, const string& name, convert_params& value,
   add_optional(cmd, "width", value.width, "Resize width.", {1, int_max}, "w");
   add_optional(
       cmd, "height", value.height, "Resize height.", {1, int_max}, "h");
-  add_optional(cmd, "logo", value.logo, "Add logo.");
 }
 
 // convert images
@@ -78,11 +76,6 @@ int run_convert(const convert_params& params) {
     image = tonemap_image(image, params.exposure, params.filmic, true);
   }
 
-  // apply logo
-  if (params.logo) {
-    image = add_logo(image);
-  }
-
   // save
   if (!save_image(params.output, image, ioerror)) return print_fatal(ioerror);
 
@@ -94,7 +87,6 @@ int run_convert(const convert_params& params) {
 struct view_params {
   vector<string> images = {"image.png"};
   string         output = "out.png";
-  bool           logo   = false;
 };
 
 // Cli
@@ -143,7 +135,6 @@ int run_view(const view_params& params) {
 struct grade_params : colorgrade_params {
   string image  = "image.png";
   string output = "out.png";
-  bool   logo   = false;
 };
 
 // Cli
@@ -243,7 +234,6 @@ struct diff_params {
   string image1    = "image1.png";
   string image2    = "image2.png";
   string output    = "";
-  bool   logo      = false;
   bool   signal    = false;
   float  threshold = 0;
 };
@@ -257,7 +247,6 @@ void add_command(cli_command& cli, const string& name, diff_params& value,
   add_optional(cmd, "output", value.output, "Output image.", {}, "o");
   add_optional(cmd, "signal", value.signal, "Error on diff.");
   add_optional(cmd, "threshold", value.threshold, "Diff threshold.");
-  add_optional(cmd, "logo", value.logo, "Add logo.");
 }
 
 // resize images
@@ -286,9 +275,7 @@ int run_diff(const diff_params& params) {
 
   // save
   if (params.output != "") {
-    if (!save_image(
-            params.output, params.logo ? add_logo(diff) : diff, ioerror))
-      return print_fatal(ioerror);
+    if (!save_image(params.output, diff, ioerror)) return print_fatal(ioerror);
   }
 
   // check diff
@@ -310,7 +297,6 @@ struct setalpha_params {
   string image      = "image.png";
   string alpha      = "alpha.png";
   string output     = "out.png";
-  bool   logo       = false;
   bool   from_color = false;
   bool   to_color   = false;
 };
@@ -324,7 +310,6 @@ void add_command(cli_command& cli, const string& name, setalpha_params& value,
   add_optional(cmd, "output", value.output, "Output image.", {}, "o");
   add_optional(cmd, "from-color", value.from_color, "Alpha from color.");
   add_optional(cmd, "to-color", value.to_color, "Color from alpha.");
-  add_optional(cmd, "logo", value.logo, "Add logo.");
 }
 
 // setalpha images
@@ -372,8 +357,7 @@ int run_setalpha(const setalpha_params& params) {
   }
 
   // save
-  if (!save_image(params.output, params.logo ? add_logo(out) : out, ioerror))
-    return print_fatal(ioerror);
+  if (!save_image(params.output, out, ioerror)) return print_fatal(ioerror);
 
   // done
   return 0;

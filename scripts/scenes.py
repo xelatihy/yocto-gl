@@ -84,17 +84,17 @@ def render(directory='mcguire', scene='*', format='json', mode='path'):
 @click.option('--mode', '-m', default='linear')
 def tonemap(directory='mcguire', scene='*', format='json', mode='filmic'):
     modes = {
-        'linear': '-t --logo',
+        'linear': '',
         'contrast1': '-t --logcontrast 0.6 --logo',
     }
     options = modes[mode]
     outformat = 'png'
     outprefix = 'images'
-    from PIL import Image
-    from PIL import ImageFont
-    from PIL import ImageDraw
-    font = ImageFont.truetype('~/Library/Fonts/FiraSansCondensed-Regular.otf',
-                              18)
+    from PIL import Image, ImageFont, ImageDraw
+    fontname1 = '~/Library/Fonts/FiraSansCondensed-Regular.ttf'
+    fontname2 = '~/Library/Fonts/FiraSansCondensed-Regular.ttf'
+    font1 = ImageFont.truetype(fontname1, 30)
+    font2 = ImageFont.truetype(fontname2, 18)
     for filename in sorted(
             glob.glob(f'{directory}/{outprefix}-{format}/{scene}.hdr') +
             glob.glob(f'{directory}/{outprefix}-{format}/{scene}.exr')):
@@ -103,21 +103,24 @@ def tonemap(directory='mcguire', scene='*', format='json', mode='filmic'):
         cmd = f'../yocto-gl/bin/yimage convert -o {imagename} {options} {filename}'
         print(cmd, file=sys.stderr)
         os.system(cmd)
-        if directory not in ['bitterli', 'disney', 'mcguire', 'pbrt']: continue
-        authorfilename = filename.replace('images-json/', 'source/').replace(
-            '-fr.', '.').replace('-hr.', '.').replace('-c1.', '.').replace(
-                '-c2.', '.').replace('-c3.', '.').replace('-c4.', '.').replace(
-                    '-c5.', '.').replace('-c6.', '.').replace(
-                        '.hdr', '') + '/AUTHOR.txt'
-        print(authorfilename)
-        with open(authorfilename) as f:
-            text = f.read().strip()
         img = Image.open(imagename)
-        _, h = img.size
+        w, h = img.size
         draw = ImageDraw.Draw(img)
-        tw, _ = draw.textsize(text, font=font)
-        draw.rectangle([8, h - 26 - 8, 8 + 8 + tw, h - 8], (0, 0, 0))
-        draw.text((8 + 4, h - 20 - 8 - 4), text, (255, 255, 255), font=font)
+        tw, _ = draw.textsize("Yocto/GL", font=font1)
+        draw.rectangle([w - 8, h - 32 - 8, w - 8 - 8 - tw, h - 8], (0, 0, 0))
+        draw.text((w - 8 - 4, h - 26 - 8 - 4), "Yocto/GL", (255, 255, 255), font=font1, anchor='rt')
+        if directory in ['bitterli', 'disney', 'mcguire', 'pbrt']:
+            authorfilename = filename.replace('images-json/', 'source/').replace(
+                '-fr.', '.').replace('-hr.', '.').replace('-c1.', '.').replace(
+                    '-c2.', '.').replace('-c3.', '.').replace('-c4.', '.').replace(
+                        '-c5.', '.').replace('-c6.', '.').replace(
+                            '.hdr', '') + '/AUTHOR.txt'
+            print(authorfilename)
+            with open(authorfilename) as f:
+                text = f.read().strip()
+            tw, _ = draw.textsize(text, font=font2)
+            draw.rectangle([8, h - 26 - 8, 8 + 8 + tw, h - 8], (0, 0, 0))
+            draw.text((8 + 4, h - 20 - 8 - 4), text, (255, 255, 255), font=font2)
         img.save(imagename)
 
 
@@ -125,12 +128,10 @@ def tonemap(directory='mcguire', scene='*', format='json', mode='filmic'):
 @click.option('--directory', '-d', default='mcguire')
 @click.option('--scene', '-s', default='*')
 @click.option('--format', '-f', default='obj')
-# @click.option('--mode','-m', default='no-clear')
 @click.option('--clean/--no-clean', '-C', default=False)
 def sync_images(directory='mcguire',
                 scene='*',
                 format='obj',
-                mode='path',
                 clean=True):
     for dirname in sorted(glob.glob(f'{directory}/{format}/{scene}')):
         if not os.path.isdir(dirname): continue
