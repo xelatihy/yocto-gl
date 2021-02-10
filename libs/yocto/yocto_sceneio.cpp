@@ -1119,11 +1119,6 @@ static bool load_json_scene(const string& filename, scene_scene& scene,
                                    const ply_instance& instance) -> string {
     return ply_instances_names[&instance - ply_instances.data()];
   };
-  auto get_instance_handle =
-      [](const scene_scene&     scene,
-          const scene_instance& instance) -> instance_handle {
-    return (instance_handle)(&instance - scene.instances.data());
-  };
 
   // helper for iteration
   auto iterate_object = [](const njson& js) { return js.items(); };
