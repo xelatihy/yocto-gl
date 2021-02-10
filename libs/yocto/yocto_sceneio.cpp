@@ -809,7 +809,7 @@ static bool save_texture(
 static bool load_shape(
     const string& filename, scene_shape& shape, string& error) {
   auto lshape = shape_data{};
-  if (!load_shape(filename, lshape, error, false)) return false;
+  if (!load_shape(filename, lshape, error, true)) return false;
   shape.points    = lshape.points;
   shape.lines     = lshape.lines;
   shape.triangles = lshape.triangles;
@@ -835,7 +835,7 @@ static bool save_shape(
   sshape.texcoords = shape.texcoords;
   sshape.colors    = shape.colors;
   sshape.radius    = shape.radius;
-  return save_shape(filename, sshape, error, false);
+  return save_shape(filename, sshape, error, true);
 }
 
 // load subdiv
@@ -1084,31 +1084,40 @@ static bool load_json_scene(const string& filename, scene_scene& scene,
     return true;
   };
 
+  // load json instance
   struct ply_instance {
     vector<frame3f> frames = {};
   };
-
-  // load json instance
   using ply_instance_handle = int;
   auto ply_instances        = vector<ply_instance>{};
+  auto ply_instances_names  = vector<string>{};
   auto ply_instance_map     = unordered_map<string, ply_instance_handle>{
       {"", invalid_handle}};
   auto instance_ply = unordered_map<instance_handle, ply_instance_handle>{};
-  auto get_ply_instances = [&ply_instances, &ply_instance_map, &instance_ply,
+  auto get_ply_instances = [&scene, &ply_instances, &ply_instances_names,
+                               &ply_instance_map, &instance_ply,
                                &get_value](const njson& js,
-                               instance_handle          instance) -> bool {
+                               const scene_instance&    instance) -> bool {
     auto name = ""s;
     if (!get_value(js, name)) return false;
     if (name.empty()) return true;
-    auto it = ply_instance_map.find(name);
+    auto instance_id = (int)(&instance - scene.instances.data());
+    auto it          = ply_instance_map.find(name);
     if (it != ply_instance_map.end()) {
-      instance_ply[instance] = it->second;
+      instance_ply[instance_id] = it->second;
       return true;
     }
+    ply_instances_names.emplace_back(name);
     ply_instances.emplace_back(ply_instance());
-    ply_instance_map[name] = (int)ply_instances.size() - 1;
-    instance_ply[instance] = (int)ply_instances.size() - 1;
+    auto ply_instance_id      = (int)ply_instances.size() - 1;
+    ply_instance_map[name]    = ply_instance_id;
+    instance_ply[instance_id] = ply_instance_id;
     return true;
+  };
+  auto get_ply_instance_name = [&ply_instances, &ply_instances_names](
+                                   const scene_scene&  scene,
+                                   const ply_instance& instance) -> string {
+    return ply_instances_names[&instance - ply_instances.data()];
   };
   auto get_instance_handle =
       [](const scene_scene&     scene,
@@ -1294,8 +1303,8 @@ static bool load_json_scene(const string& filename, scene_scene& scene,
             if (!get_shape(value, instance.shape))
               return parse_error(gname, name, key);
           } else if (key == "instance") {
-            throw std::invalid_argument{"instances not supported yet"};
-            // get_ply_instances(value, instance);
+            if (!get_ply_instances(value, instance))
+              return parse_error(gname, name, key);
           } else {
             return key_error(gname, name, key);
           }
@@ -1387,6 +1396,14 @@ static bool load_json_scene(const string& filename, scene_scene& scene,
       if (!load_texture(path_join(dirname, path), texture, error))
         return dependent_error();
     }
+    // load instances
+    for (auto& ply_instance : ply_instances) {
+      if (progress_cb) progress_cb("load instances", progress.x++, progress.y);
+      auto path = find_path(
+          get_ply_instance_name(scene, ply_instance), "instances", {".ply"});
+      if (!load_instance(path_join(dirname, path), ply_instance.frames, error))
+        return dependent_error();
+    }
   } else {
     // helpers
     auto mutex = std::mutex{};
@@ -1441,44 +1458,57 @@ static bool load_json_scene(const string& filename, scene_scene& scene,
       }
     });
     if (!error.empty()) return dependent_error();
-  }
-
-  // load instances
-  ply_instance_map.erase("");
-  for (auto& [name, ihandle] : ply_instance_map) {
-    throw std::invalid_argument{"instances not supported"};
-    // auto& instance = ply_instances.at(ihandle);
-    // if (progress_cb) progress_cb("load instance", progress.x++, progress.y);
-    // auto path = make_filename(name, "instances", {".ply"});
-    // if (!load_instance(path, instance->frames, error)) return
-    // dependent_error();
+    // load instances
+    parallel_foreach(ply_instances, [&](auto& ply_instance) {
+      {
+        auto lock = std::lock_guard{mutex};
+        if (!error.empty()) return;
+        if (progress_cb)
+          progress_cb("load instances", progress.x++, progress.y);
+      }
+      auto path = find_path(
+          get_ply_instance_name(scene, ply_instance), "instances", {".ply"});
+      auto err = string{};
+      if (!load_instance(path_join(dirname, path), ply_instance.frames, err)) {
+        auto lock = std::lock_guard{mutex};
+        error     = err;
+        return;
+      }
+    });
+    if (!error.empty()) return dependent_error();
   }
 
   // apply instances
   if (!ply_instances.empty()) {
-    throw std::invalid_argument{"not supported for now"};
-    // if (progress_cb)
-    //   progress_cb("flatten instances", progress.x++, progress.y++);
-    // auto instances = scene.instances;
-    // scene.instances.clear();
-    // for (auto instance : instances) {
-    //   auto it = instance_ply.find(instance);
-    //   if (it == instance_ply.end()) {
-    //     auto ninstance      = add_instance(scene, instance->name);
-    //     ninstance->frame    = instance->frame;
-    //     ninstance->shape    = instance->shape;
-    //     ninstance->material = instance->material;
-    //   } else {
-    //     auto ply_instance = it->second;
-    //     for (auto& frame : ply_instance->frames) {
-    //       auto ninstance      = add_instance(scene, instance->name);
-    //       ninstance->frame    = frame * instance->frame;
-    //       ninstance->shape    = instance->shape;
-    //       ninstance->material = instance->material;
-    //     }
-    //   }
-    // }
-    // for (auto instance : instances) delete instance;
+    if (progress_cb)
+      progress_cb("flatten instances", progress.x++, progress.y++);
+    auto instances      = scene.instances;
+    auto instance_names = scene.instance_names;
+    scene.instances.clear();
+    scene.instance_names.clear();
+    for (auto& instance : instances) {
+      auto it = instance_ply.find((int)(&instance - instances.data()));
+      if (it == instance_ply.end()) {
+        auto& ninstance = scene.instances.emplace_back();
+        scene.instance_names.emplace_back(
+            instance_names[&instance - instances.data()]);
+        ninstance.frame    = instance.frame;
+        ninstance.shape    = instance.shape;
+        ninstance.material = instance.material;
+      } else {
+        auto& ply_instance = ply_instances[it->second];
+        auto  instance_id  = 0;
+        for (auto& frame : ply_instance.frames) {
+          auto& ninstance = scene.instances.emplace_back();
+          scene.instance_names.emplace_back(
+              instance_names[&instance - instances.data()] + "_" +
+              std::to_string(instance_id++));
+          ninstance.frame    = frame * instance.frame;
+          ninstance.shape    = instance.shape;
+          ninstance.material = instance.material;
+        }
+      }
+    }
   }
 
   // fix scene
@@ -3214,7 +3244,8 @@ static bool load_pbrt_scene(const string& filename, scene_scene& scene,
 
   // lights
   for (auto& plight : pbrt.lights) {
-    auto& shape       = scene.shapes.emplace_back();
+    auto& shape = scene.shapes.emplace_back();
+    shapes_paths.emplace_back();
     shape.triangles   = plight.area_triangles;
     shape.positions   = plight.area_positions;
     shape.normals     = plight.area_normals;

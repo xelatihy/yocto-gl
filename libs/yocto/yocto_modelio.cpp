@@ -3436,6 +3436,15 @@ inline bool parse_params(string_view& str, vector<pbrt_value>& values) {
     }
   };
 
+  auto starts_with = [](string_view value, string_view prefix) {
+    if (prefix.size() > value.size()) return false;
+    return value.rfind(prefix, 0) == 0;
+  };
+  auto ends_with = [](string_view value, string_view postfix) {
+    if (postfix.size() > value.size()) return false;
+    return std::equal(postfix.rbegin(), postfix.rend(), value.rbegin());
+  };
+
   values.clear();
   skip_whitespace(str);
   while (!str.empty()) {
@@ -3483,12 +3492,20 @@ inline bool parse_params(string_view& str, vector<pbrt_value>& values) {
       value.type = pbrt_type::vector2;
       parse_pvalues(str, value.value2f, value.vector2f);
     } else if (type == "blackbody") {
-      value.type     = pbrt_type::color;
-      auto blackbody = zero2f;
-      auto vector2f  = vector<vec2f>{};
-      parse_pvalues(str, blackbody, vector2f);
-      if (!vector2f.empty()) return false;
-      value.value3f = blackbody_to_rgb(blackbody.x) * blackbody.y;
+      value.type = pbrt_type::color;
+      // auto blackbody = zero2f;
+      // auto vec tor2f  = vector<vec2f>{};
+      // parse_pvalues(str, blackbody, vector2f);
+      // if (!vector2f.empty()) return false;
+      // value.value3f = blackbody_to_rgb(blackbody.x) * blackbody.y;
+      auto blackbody = 0.0f;
+      auto vector1f  = vector<float>{};
+      parse_pvalues(str, blackbody, vector1f);
+      if (vector1f.size() < 2) {
+        value.value3f = blackbody_to_rgb(blackbody);
+      } else {
+        value.value3f = blackbody_to_rgb(vector1f[0]) * vector1f[1];
+      }
     } else if (type == "color" || type == "rgb") {
       value.type = pbrt_type::color;
       if (!parse_pvalues(str, value.value3f, value.vector3f)) return false;
@@ -3512,22 +3529,48 @@ inline bool parse_params(string_view& str, vector<pbrt_value>& values) {
         value.type     = pbrt_type::color;
         auto filename  = ""s;
         auto filenames = vector<string>{};
+        skip_whitespace(str);
+        auto has_parens = str.front() == '[';
+        if (has_parens) str.remove_prefix(1);
         if (!parse_value(str, filename)) return false;
+        if (has_parens) {
+          skip_whitespace(str);
+          if (str.front() != ']') return false;
+          str.remove_prefix(1);
+        }
         if (str.empty()) return false;
         auto filenamep = path_filename(filename);
-        if (path_extension(filenamep) == ".spd") {
-          filenamep = replace_extension(filenamep, "");
-          if (filenamep == "SHPS") {
+        auto name      = string_view{filenamep};
+        if (ends_with(name, ".spd")) {
+          name.remove_suffix(4);
+          if (name == "SHPS") {
             value.value3f = {1, 1, 1};
-          } else if (path_extension(filenamep) == ".eta") {
-            auto eta      = get_etak(replace_extension(filenamep, "")).first;
+          } else if (ends_with(name, ".eta")) {
+            name.remove_suffix(4);
+            auto eta      = get_etak(string{name}).first;
             value.value3f = {eta.x, eta.y, eta.z};
-          } else if (path_extension(filenamep) == ".k") {
-            auto k        = get_etak(replace_extension(filenamep, "")).second;
+          } else if (ends_with(name, ".k")) {
+            name.remove_suffix(2);
+            auto k        = get_etak(string{name}).second;
             value.value3f = {k.x, k.y, k.z};
           } else {
             return false;
           }
+        } else if (starts_with(name, "metal-")) {
+          name.remove_prefix(6);
+          if (ends_with(name, "-eta")) {
+            name.remove_suffix(4);
+            auto eta      = get_etak(string{name}).first;
+            value.value3f = {eta.x, eta.y, eta.z};
+          } else if (ends_with(name, "-k")) {
+            name.remove_suffix(2);
+            auto k        = get_etak(string{name}).second;
+            value.value3f = {k.x, k.y, k.z};
+          } else {
+            return false;
+          }
+        } else if (starts_with(name, "glass-")) {
+          value.value3f = {1.5, 1.5, 1.5};
         } else {
           return false;
         }
@@ -3576,6 +3619,16 @@ inline bool convert_film(pbrt_film& film, const pbrt_command& command,
   };
 
   if (command.type == "image") {
+    film.resolution = {512, 512};
+    if (!get_pbrt_value(command.values, "xresolution", film.resolution.x))
+      return parse_error();
+    if (!get_pbrt_value(command.values, "yresolution", film.resolution.y))
+      return parse_error();
+    film.filename = "out.png"s;
+    if (!get_pbrt_value(command.values, "filename", film.filename))
+      return parse_error();
+    return true;
+  } else if (command.type == "rgb") {
     film.resolution = {512, 512};
     if (!get_pbrt_value(command.values, "xresolution", film.resolution.x))
       return parse_error();
@@ -3908,6 +3961,17 @@ inline bool convert_material(pbrt_material& pmaterial,
     if (!get_roughness(command.values, pmaterial.roughness, 0.1))
       return parse_error();
     return true;
+  } else if (command.type == "coateddiffuse") {
+    pmaterial.type = pbrt_mtype::plastic;
+    if (!get_texture(command.values, "reflectance", pmaterial.color,
+            pmaterial.color_tex, vec3f{0.25, 0.25, 0.25}))
+      return parse_error();
+    if (!get_scalar(command.values, "eta", pmaterial.ior, 1.5))
+      return parse_error();
+    pmaterial.roughness = 0.1f;
+    if (!get_roughness(command.values, pmaterial.roughness, 0.1))
+      return parse_error();
+    return true;
   } else if (command.type == "translucent") {
     // not well supported yet
     pmaterial.type = pbrt_mtype::matte;
@@ -3921,10 +3985,26 @@ inline bool convert_material(pbrt_material& pmaterial,
     // if (!get_roughness(command.values, pmaterial.roughness, 0.1))
     //   return parse_error();
     return true;
+  } else if (command.type == "diffusetransmission") {
+    // not well supported yet
+    pmaterial.type = pbrt_mtype::matte;
+    if (!get_texture(command.values, "reflectance", pmaterial.color,
+            pmaterial.color_tex, vec3f{0.25, 0.25, 0.25}))
+      return parse_error();
+    // if (!get_texture(command.values, "transmittance", pmaterial.color,
+    //         pmaterial.color_tex, vec3f{0.25, 0.25, 0.25}))
+    //   return parse_error();
+    return true;
   } else if (command.type == "matte") {
     pmaterial.type = pbrt_mtype::matte;
     if (!get_texture(command.values, "Kd", pmaterial.color, pmaterial.color_tex,
             vec3f{0.5, 0.5, 0.5}))
+      return parse_error();
+    return true;
+  } else if (command.type == "diffuse") {
+    pmaterial.type = pbrt_mtype::matte;
+    if (!get_texture(command.values, "reflectance", pmaterial.color,
+            pmaterial.color_tex, vec3f{0.5, 0.5, 0.5}))
       return parse_error();
     return true;
   } else if (command.type == "mirror") {
@@ -3944,6 +4024,34 @@ inline bool convert_material(pbrt_material& pmaterial,
             vec3f{0.2004376970f, 0.9240334304f, 1.1022119527f}))
       return parse_error();
     if (!get_color(command.values, "k", etak,
+            vec3f{3.9129485033f, 2.4528477015f, 2.1421879552f}))
+      return parse_error();
+    pmaterial.color     = eta_to_reflectivity(eta, etak);
+    pmaterial.roughness = 0.01f;
+    if (!get_roughness(command.values, pmaterial.roughness, 0.01))
+      return parse_error();
+    return true;
+  } else if (command.type == "conductor") {
+    pmaterial.type = pbrt_mtype::metal;
+    auto eta = zero3f, etak = zero3f;
+    if (!get_color(command.values, "eta", eta,
+            vec3f{0.2004376970f, 0.9240334304f, 1.1022119527f}))
+      return parse_error();
+    if (!get_color(command.values, "k", etak,
+            vec3f{3.9129485033f, 2.4528477015f, 2.1421879552f}))
+      return parse_error();
+    pmaterial.color     = eta_to_reflectivity(eta, etak);
+    pmaterial.roughness = 0.01f;
+    if (!get_roughness(command.values, pmaterial.roughness, 0.01))
+      return parse_error();
+    return true;
+  } else if (command.type == "coatedconductor") {
+    pmaterial.type = pbrt_mtype::metal;
+    auto eta = zero3f, etak = zero3f;
+    if (!get_color(command.values, "conductor.eta", eta,
+            vec3f{0.2004376970f, 0.9240334304f, 1.1022119527f}))
+      return parse_error();
+    if (!get_color(command.values, "conductor.k", etak,
             vec3f{3.9129485033f, 2.4528477015f, 2.1421879552f}))
       return parse_error();
     pmaterial.color     = eta_to_reflectivity(eta, etak);
@@ -3972,6 +4080,24 @@ inline bool convert_material(pbrt_material& pmaterial,
     //     vec3f{1});
     // get_texture(command.values, "Kt", material->transmission,
     //     material->transmission_tex, vec3f{1});
+    pmaterial.color = {1, 1, 1};
+    if (!get_scalar(command.values, "eta", pmaterial.ior, 1.5))
+      return parse_error();
+    pmaterial.roughness = 0;
+    if (!get_roughness(command.values, pmaterial.roughness, 0))
+      return parse_error();
+    return true;
+  } else if (command.type == "dielectric") {
+    pmaterial.type  = pbrt_mtype::glass;
+    pmaterial.color = {1, 1, 1};
+    if (!get_scalar(command.values, "eta", pmaterial.ior, 1.5))
+      return parse_error();
+    pmaterial.roughness = 0;
+    if (!get_roughness(command.values, pmaterial.roughness, 0))
+      return parse_error();
+    return true;
+  } else if (command.type == "thindielectric") {
+    pmaterial.type  = pbrt_mtype::thinglass;
     pmaterial.color = {1, 1, 1};
     if (!get_scalar(command.values, "eta", pmaterial.ior, 1.5))
       return parse_error();
@@ -4443,6 +4569,10 @@ inline bool load_pbrt(const string& filename, pbrt_scene& pbrt, string& error,
     error = filename + ": unknown object " + obj;
     return false;
   };
+  auto material_error = [filename, &error](const string& name) {
+    error = filename + ": missing material " + name;
+    return false;
+  };
 
   // open file
   auto fs = open_file(filename, "rt");
@@ -4631,6 +4761,8 @@ inline bool load_pbrt(const string& filename, pbrt_scene& pbrt, string& error,
     } else if (cmd == "NamedMaterial") {
       auto name = ""s;
       if (!parse_param(str, name)) return parse_error();
+      if (named_materials.find(name) == named_materials.end())
+        return material_error(name);
       ctx.stack.back().material = named_materials.at(name);
     } else if (cmd == "Shape") {
       auto command = pbrt_command{};
