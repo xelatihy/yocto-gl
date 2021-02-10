@@ -39,7 +39,7 @@ def xcode():
 
 
 @cli.command()
-def vs():
+def visualstudio():
     os.makedirs('build/vs', exist_ok=True)
     os.chdir('build/vs')
     os.system('cmake ../.. -G  "Visual Studio 15 2017" -DYOCTO_EMBREE=ON')
@@ -60,6 +60,15 @@ def format():
             continue
         print(f'formatting {filename}')
         os.system(f'clang-format -i -style=file {filename}')
+
+
+@cli.command()
+@click.option('--deploy/--no-deploy', default=False)
+def docs(deploy=False):
+    if deploy:
+        os.system('mkdocs gh-deploy')
+    else:
+        os.system('mkdocs serve')
 
 
 cli()
