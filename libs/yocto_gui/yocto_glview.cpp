@@ -415,10 +415,10 @@ void draw_widgets(
   }
   continue_line(win);
   if (draw_filedialog_button(win, "save", viewer.selected, "save image",
-          save_path, true, path_dirname(save_path), path_filename(save_path),
-          "*.png;*.jpg;*.tga;*.bmp;*.hdr;*.exr")) {
-    // viewer.selected->outname = save_path;
-    // save_image(view->outname, view->display, view->error);
+          save_path, true, path_dirname(save_path) + "/",
+          path_filename(save_path), "*.png;*.jpg;*.tga;*.bmp;*.hdr;*.exr")) {
+    auto error = ""s;
+    save_image(save_path, viewer.selected->display, error);
     save_path = "";
   }
   continue_line(win);
