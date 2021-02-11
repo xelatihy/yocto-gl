@@ -1515,7 +1515,7 @@ static bool load_json_scene(const string& filename, scene_scene& scene,
   // apply instances
   if (!ply_instances.empty()) {
     if (progress_cb)
-      progress_cb("flatten instances", progress.x++, progress.y++);
+      progress_cb("flatten instances", progress.x++, ++progress.y);
     auto instances      = scene.instances;
     auto instance_names = scene.instance_names;
     scene.instances.clear();

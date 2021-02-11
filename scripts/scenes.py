@@ -58,7 +58,7 @@ def render(directory='mcguire', scene='*', format='json', mode='path'):
         if '/_' in dirname: continue
         extracams = []
         if 'sanmiguel' in dirname: extracams = ['camera1', 'camera2']
-        if 'island' in dirname: extracams = ['camera1', 'camera2', 'camera3', 'camera4', 'camera5', 'camera6']
+        if 'island' in dirname: extracams = ["beachCam", "birdseyeCam", "dunesACam", "grassCam", "palmsCam", "rootsCam", "shotCam"]
         if 'landscape' in dirname: extracams = ['camera1', 'camera2', 'camera3']
         for filename in sorted(glob.glob(f'{dirname}/*.{format}')):
             if format == 'pbrt':
@@ -70,9 +70,8 @@ def render(directory='mcguire', scene='*', format='json', mode='path'):
             cmd = f'../yocto-gl/bin/ytrace render -o {imagename} {options} {filename}'
             print(cmd, file=sys.stderr)
             os.system(cmd)
-            for cam in extracams:
-                cname = cam.replace('camera','')
-                imagename = f'{directory}/{outprefix}-{format}/{basename}-c{cname}.{outformat}'
+            for idx, cam in enumerate(extracams, 1):
+                imagename = f'{directory}/{outprefix}-{format}/{basename}-c{idx}.{outformat}'
                 cmd = f'../yocto-gl/bin/ytrace render -o {imagename} --camera {cam} {options} {filename}'
                 print(cmd, file=sys.stderr)
                 os.system(cmd)
