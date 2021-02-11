@@ -298,6 +298,7 @@ struct setalpha_params {
   string alpha      = "alpha.png";
   string output     = "out.png";
   bool   from_color = false;
+  bool   from_black = false;
   bool   to_color   = false;
 };
 
@@ -309,6 +310,7 @@ void add_command(cli_command& cli, const string& name, setalpha_params& value,
   add_positional(cmd, "alpha", value.alpha, "Alpha image.");
   add_optional(cmd, "output", value.output, "Output image.", {}, "o");
   add_optional(cmd, "from-color", value.from_color, "Alpha from color.");
+  add_optional(cmd, "from-black", value.from_black, "Alpha from black.");
   add_optional(cmd, "to-color", value.to_color, "Color from alpha.");
 }
 
@@ -345,7 +347,10 @@ int run_setalpha(const setalpha_params& params) {
   for (auto j = 0; j < image.height; j++) {
     for (auto i = 0; i < image.width; i++) {
       auto calpha = get_pixel(alpha, i, j);
-      auto alpha_ = params.from_color ? mean(xyz(calpha)) : calpha.w;
+      auto alpha_ = params.from_color ? mean(xyz(calpha))
+                    : params.from_black
+                        ? (mean(xyz(calpha)) > 0.01 ? 1.0f : 0.0f)
+                        : calpha.w;
       if (params.to_color) {
         set_pixel(out, i, j, {alpha_, alpha_, alpha_, alpha_});
       } else {
