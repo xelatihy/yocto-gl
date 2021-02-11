@@ -115,6 +115,12 @@ void view_shape(const string& title, const string& name,
 // Open a window and show an scene via path tracing
 void view_scene(const string& title, const string& name, scene_scene& scene,
     const progress_callback& progress_cb) {
+  return view_scene(title, name, scene, "", progress_cb);
+}
+
+// Open a window and show an scene via path tracing
+void view_scene(const string& title, const string& name, scene_scene& scene,
+    const string& camname, const progress_callback& progress_cb) {
   // rendering params
   auto params     = trace_params{};
   auto has_lights = std::any_of(scene.instances.begin(), scene.instances.end(),
@@ -128,6 +134,9 @@ void view_scene(const string& title, const string& name, scene_scene& scene,
                           return environment.emission != zero3f;
                         });
   if (!has_lights) params.sampler = trace_sampler_type::eyelight;
+
+  // get camera
+  params.camera = find_camera(scene, camname);
 
   // run viewer
   view_scene(title, name, scene, params, progress_cb);

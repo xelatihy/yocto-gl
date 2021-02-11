@@ -40,6 +40,7 @@ using namespace yocto;
 struct render_params : trace_params {
   string scene     = "scene.json";
   string output    = "out.png";
+  string camname   = "";
   bool   addsky    = false;
   bool   savebatch = false;
 };
@@ -50,7 +51,7 @@ void add_command(cli_command& cli, const string& name, render_params& value,
   auto& cmd = add_command(cli, name, usage);
   add_positional(cmd, "scene", value.scene, "Scene filename.");
   add_optional(cmd, "output", value.output, "Output filename.", {}, "o");
-  add_optional(cmd, "camera", value.camera, "Camera index.", {0, 100}, "c");
+  add_optional(cmd, "camera", value.camname, "Camera name.", {}, "c");
   add_optional(cmd, "addsky", value.addsky, "Add sky.");
   add_optional(cmd, "savebatch", value.savebatch, "Save batch.");
   add_optional(
@@ -72,7 +73,10 @@ void add_command(cli_command& cli, const string& name, render_params& value,
 }
 
 // convert images
-int run_render(const render_params& params) {
+int run_render(const render_params& params_) {
+  // copy params
+  auto params = params_;
+
   // scene loading
   auto scene   = scene_scene{};
   auto ioerror = string{};
@@ -96,7 +100,11 @@ int run_render(const render_params& params) {
   // fix renderer type if no lights
   if (lights.lights.empty() && is_sampler_lit(params)) {
     print_info("no lights presents, image will be black");
+    params.sampler = trace_sampler_type::eyelight;
   }
+
+  // camera
+  params.camera = find_camera(scene, params.camname);
 
   // render
   auto render = trace_image(scene, bvh, lights, params, print_progress,
@@ -122,9 +130,10 @@ int run_render(const render_params& params) {
 
 // convert params
 struct view_params : trace_params {
-  string scene  = "scene.json";
-  string output = "out.png";
-  bool   addsky = false;
+  string scene   = "scene.json";
+  string output  = "out.png";
+  string camname = "";
+  bool   addsky  = false;
 };
 
 // Cli
@@ -133,7 +142,7 @@ void add_command(cli_command& cli, const string& name, view_params& value,
   auto& cmd = add_command(cli, name, usage);
   add_positional(cmd, "scene", value.scene, "Scene filename.");
   add_optional(cmd, "output", value.output, "Output filename.", {}, "o");
-  add_optional(cmd, "camera", value.camera, "Camera index.", {0, 100}, "c");
+  add_optional(cmd, "camera", value.camname, "Camera name.", {}, "c");
   add_optional(cmd, "addsky", value.addsky, "Add sky.");
   add_optional(
       cmd, "resolution", value.resolution, "Image resolution.", {1, 4096}, "r");
@@ -190,7 +199,10 @@ void to_params(gui_params& uiparams, const trace_params& params,
 }
 
 // interactive render
-int run_view(const view_params& params) {
+int run_view(const view_params& params_) {
+  // copy params
+  auto params = params_;
+
   // open viewer
   auto viewer = make_imageviewer("yimage");
 
@@ -225,7 +237,11 @@ int run_view(const view_params& params) {
   // fix renderer type if no lights
   if (lights.lights.empty() && is_sampler_lit(params)) {
     print_info("no lights presents, image will be black");
+    params.sampler = trace_sampler_type::eyelight;
   }
+
+  // camera
+  params.camera = find_camera(scene, params.camname);
 
   // init state
   auto state = trace_state{};

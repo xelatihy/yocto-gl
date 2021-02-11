@@ -57,9 +57,9 @@ def render(directory='mcguire', scene='*', format='json', mode='path'):
         if not os.path.isdir(dirname): continue
         if '/_' in dirname: continue
         extracams = []
-        if 'sanmiguel' in dirname: extracams = [1, 2]
-        if 'island' in dirname: extracams = [1, 2, 3, 4, 5, 6]
-        if 'landscape' in dirname: extracams = [1, 2, 3]
+        if 'sanmiguel' in dirname: extracams = ['camera1', 'camera2']
+        if 'island' in dirname: extracams = ['camera1', 'camera2', 'camera3', 'camera4', 'camera5', 'camera6']
+        if 'landscape' in dirname: extracams = ['camera1', 'camera2', 'camera3']
         for filename in sorted(glob.glob(f'{dirname}/*.{format}')):
             if format == 'pbrt':
                 with open(filename) as f:

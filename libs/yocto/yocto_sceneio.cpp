@@ -900,7 +900,7 @@ static bool save_binshape(
 // -----------------------------------------------------------------------------
 namespace yocto {
 
-using njson = nlohmann::ordered_json;
+using njson = nlohmann::json;
 using std::array;
 
 // load/save json

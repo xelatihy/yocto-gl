@@ -629,7 +629,6 @@ void add_sky(scene_scene& scene, float sun_angle) {
 camera_handle find_camera(const scene_scene& scene, const string& name) {
   if (scene.cameras.empty()) return invalid_handle;
   if (scene.camera_names.empty()) return 0;
-  if (name.empty()) return 0;
   for (auto idx = 0; idx < (int)scene.camera_names.size(); idx++) {
     if (scene.camera_names[idx] == name) return idx;
   }
@@ -638,6 +637,9 @@ camera_handle find_camera(const scene_scene& scene, const string& name) {
   }
   for (auto idx = 0; idx < (int)scene.camera_names.size(); idx++) {
     if (scene.camera_names[idx] == "camera") return idx;
+  }
+  for (auto idx = 0; idx < (int)scene.camera_names.size(); idx++) {
+    if (scene.camera_names[idx] == "camera0") return idx;
   }
   for (auto idx = 0; idx < (int)scene.camera_names.size(); idx++) {
     if (scene.camera_names[idx] == "camera1") return idx;
