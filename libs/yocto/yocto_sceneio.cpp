@@ -3257,13 +3257,13 @@ static bool load_pbrt_scene(const string& filename, scene_scene& scene,
     shape.texcoords = pshape.texcoords;
     shape.triangles = pshape.triangles;
     for (auto& uv : shape.texcoords) uv.y = 1 - uv.y;
-    if (pshape.instances.empty()) {
+    if (!pshape.instanced) {
       auto& instance    = scene.instances.emplace_back();
       instance.frame    = pshape.frame;
       instance.shape    = (int)scene.shapes.size() - 1;
       instance.material = pshape.material;
     } else {
-      for (auto frame : pshape.instances) {
+      for (auto& frame : pshape.instances) {
         auto& instance    = scene.instances.emplace_back();
         instance.frame    = frame * pshape.frame;
         instance.shape    = (int)scene.shapes.size() - 1;
