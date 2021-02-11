@@ -71,7 +71,8 @@ def render(directory='mcguire', scene='*', format='json', mode='path'):
             print(cmd, file=sys.stderr)
             os.system(cmd)
             for cam in extracams:
-                imagename = f'{directory}/{outprefix}-{format}/{basename}-c{cam}.{outformat}'
+                cname = cam.replace('camera','')
+                imagename = f'{directory}/{outprefix}-{format}/{basename}-c{cname}.{outformat}'
                 cmd = f'../yocto-gl/bin/ytrace render -o {imagename} --camera {cam} {options} {filename}'
                 print(cmd, file=sys.stderr)
                 os.system(cmd)
