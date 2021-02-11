@@ -1076,6 +1076,7 @@ bool parse_cli(cli_command& cli, vector<string>& args, string& error) {
           positionals.back()++;
           break;
         }
+        count++;
       }
       if (pos == cmd.options.end())
         return cli_error("too many positional arguments");

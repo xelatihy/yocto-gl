@@ -341,7 +341,7 @@ int run_setalpha(const setalpha_params& params) {
 
   // edit alpha
   auto out = make_image(
-      image.width, image.height, image.linear, !image.pixelsf.empty());
+      image.width, image.height, image.linear, image.pixelsf.empty());
   for (auto j = 0; j < image.height; j++) {
     for (auto i = 0; i < image.width; i++) {
       auto calpha = get_pixel(alpha, i, j);
