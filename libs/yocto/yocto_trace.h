@@ -158,6 +158,7 @@ const auto trace_default_seed = 961748941ull;
 
 // Options for trace functions
 struct trace_params {
+  int                   camera     = 0;
   int                   resolution = 1280;
   trace_sampler_type    sampler    = trace_sampler_type::path;
   trace_falsecolor_type falsecolor = trace_falsecolor_type::color;
@@ -196,9 +197,9 @@ using image_callback =
     function<void(const image<vec4f>& render, int current, int total)>;
 
 // Progressively computes an image.
-image<vec4f> trace_image(const scene_scene& scene, const scene_camera& camera,
-    const trace_params& params, const progress_callback& progress_cb = {},
-    const image_callback& image_cb = {});
+image<vec4f> trace_image(const scene_scene& scene, const trace_params& params,
+    const progress_callback& progress_cb = {},
+    const image_callback&    image_cb    = {});
 
 }  // namespace yocto
 
@@ -237,10 +238,10 @@ void update_bvh(trace_bvh& bvh, const scene_scene& scene,
     const progress_callback& progress_cb = {});
 
 // Progressively computes an image.
-image<vec4f> trace_image(const scene_scene& scene, const scene_camera& camera,
-    const trace_bvh& bvh, const trace_lights& lights,
-    const trace_params& params, const progress_callback& progress_cb = {},
-    const image_callback& image_cb = {});
+image<vec4f> trace_image(const scene_scene& scene, const trace_bvh& bvh,
+    const trace_lights& lights, const trace_params& params,
+    const progress_callback& progress_cb = {},
+    const image_callback&    image_cb    = {});
 
 // Check is a sampler requires lights
 bool is_sampler_lit(const trace_params& params);
@@ -262,9 +263,8 @@ using async_callback = function<void(
 // [experimental] Asynchronous interface
 struct trace_state;
 void trace_start(trace_state& state, const scene_scene& scene,
-    const scene_camera& camera, const trace_bvh& bvh,
-    const trace_lights& lights, const trace_params& params,
-    const progress_callback& progress_cb = {},
+    const trace_bvh& bvh, const trace_lights& lights,
+    const trace_params& params, const progress_callback& progress_cb = {},
     const image_callback& image_cb = {}, const async_callback& async_cb = {});
 void trace_stop(trace_state& state);
 

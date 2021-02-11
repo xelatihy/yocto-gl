@@ -1854,6 +1854,7 @@ static bool load_obj_scene(const string& filename, scene_scene& scene,
 
   // convert between roughness and exponent
   auto exponent_to_roughness = [](float exponent) {
+    if (exponent >= 1000) return 0.0f;
     auto roughness = exponent;
     roughness      = pow(2 / (roughness + 2), 1 / 4.0f);
     if (roughness < 0.01f) roughness = 0;

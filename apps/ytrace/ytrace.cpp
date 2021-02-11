@@ -40,7 +40,6 @@ using namespace yocto;
 struct render_params : trace_params {
   string scene     = "scene.json";
   string output    = "out.png";
-  string camera    = "";
   bool   addsky    = false;
   bool   savebatch = false;
 };
@@ -51,7 +50,7 @@ void add_command(cli_command& cli, const string& name, render_params& value,
   auto& cmd = add_command(cli, name, usage);
   add_positional(cmd, "scene", value.scene, "Scene filename.");
   add_optional(cmd, "output", value.output, "Output filename.", {}, "o");
-  add_optional(cmd, "camera", value.camera, "Camera name.", {}, "c");
+  add_optional(cmd, "camera", value.camera, "Camera index.", {0, 100}, "c");
   add_optional(cmd, "addsky", value.addsky, "Add sky.");
   add_optional(cmd, "savebatch", value.savebatch, "Save batch.");
   add_optional(
@@ -83,9 +82,6 @@ int run_render(const render_params& params) {
   // add sky
   if (params.addsky) add_sky(scene);
 
-  // get camera
-  auto camera_handle = find_camera(scene, params.camera);
-
   // tesselation
   tesselate_shapes(scene, print_progress);
 
@@ -103,8 +99,7 @@ int run_render(const render_params& params) {
   }
 
   // render
-  auto& camera = scene.cameras[camera_handle];
-  auto  render = trace_image(scene, camera, bvh, lights, params, print_progress,
+  auto render = trace_image(scene, bvh, lights, params, print_progress,
       [savebatch = params.savebatch, output = params.output](
           const image<vec4f>& render, int sample, int samples) {
         if (!savebatch) return;
@@ -129,7 +124,6 @@ int run_render(const render_params& params) {
 struct view_params : trace_params {
   string scene  = "scene.json";
   string output = "out.png";
-  string camera = "";
   bool   addsky = false;
 };
 
@@ -139,7 +133,7 @@ void add_command(cli_command& cli, const string& name, view_params& value,
   auto& cmd = add_command(cli, name, usage);
   add_positional(cmd, "scene", value.scene, "Scene filename.");
   add_optional(cmd, "output", value.output, "Output filename.", {}, "o");
-  add_optional(cmd, "camera", value.camera, "Camera name.", {}, "c");
+  add_optional(cmd, "camera", value.camera, "Camera index.", {0, 100}, "c");
   add_optional(cmd, "addsky", value.addsky, "Add sky.");
   add_optional(
       cmd, "resolution", value.resolution, "Image resolution.", {1, 4096}, "r");
@@ -206,9 +200,6 @@ int run_view(const view_params& params) {
   // add sky
   if (params.addsky) add_sky(scene);
 
-  // get camera
-  auto camera_handle = find_camera(scene, params.camera);
-
   // tesselation
   tesselate_shapes(scene, print_progress);
 
@@ -229,9 +220,8 @@ int run_view(const view_params& params) {
   auto state = trace_state{};
 
   // render start
-  auto& camera = scene.cameras[camera_handle];
   trace_start(
-      state, scene, camera, bvh, lights, params,
+      state, scene, bvh, lights, params,
       [&](const string& message, int sample, int nsamples) {
         set_param(viewer, "render", "sample", {sample, {0, 4096}, true});
         print_progress(message, sample, nsamples);
@@ -254,7 +244,7 @@ int run_view(const view_params& params) {
         auto tparams = params;
         from_params(uiparams, tparams);
         trace_start(
-            state, scene, camera, bvh, lights, tparams,
+            state, scene, bvh, lights, tparams,
             [&](const string& message, int sample, int nsamples) {
               set_param(viewer, "render", "sample", {sample, {1, 4096}, true});
               print_progress(message, sample, nsamples);
@@ -275,13 +265,14 @@ int run_view(const view_params& params) {
         rotate = (input.mouse_pos - input.mouse_last) / 100.0f;
       if (input.mouse_right)
         dolly = (input.mouse_pos.x - input.mouse_last.x) / 100.0f;
+      auto& camera = scene.cameras[params.camera];
       if (input.mouse_left && input.modifier_shift)
         pan = (input.mouse_pos - input.mouse_last) * camera.focus / 200.0f;
       pan.x                                = -pan.x;
       std::tie(camera.frame, camera.focus) = camera_turntable(
           camera.frame, camera.focus, rotate, dolly, pan);
       trace_start(
-          state, scene, camera, bvh, lights, params,
+          state, scene, bvh, lights, params,
           [&](const string& message, int sample, int nsamples) {
             set_param(viewer, "render", "sample", {sample, {1, 4096}, true});
             print_progress(message, sample, nsamples);

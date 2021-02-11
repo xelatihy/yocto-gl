@@ -109,15 +109,12 @@ void view_shape(const string& title, const string& name,
   print_progress("create scene", 0, 1);
 
   // run view
-  view_scene(title, name, scene, 0, progress_cb);
+  view_scene(title, name, scene, progress_cb);
 }
 
 // Open a window and show an scene via path tracing
 void view_scene(const string& title, const string& name, scene_scene& scene,
-    camera_handle camera_id, const progress_callback& progress_cb) {
-  // get camera
-  auto& camera = scene.cameras[camera_id];
-
+    const progress_callback& progress_cb) {
   // rendering params
   auto params     = trace_params{};
   auto has_lights = std::any_of(scene.instances.begin(), scene.instances.end(),
@@ -133,7 +130,7 @@ void view_scene(const string& title, const string& name, scene_scene& scene,
   if (!has_lights) params.sampler = trace_sampler_type::eyelight;
 
   // run viewer
-  view_scene(title, name, scene, camera, params, progress_cb);
+  view_scene(title, name, scene, params, progress_cb);
 }
 
 // Parameter conversions
@@ -162,8 +159,7 @@ void to_params(gui_params& uiparams, const trace_params& params) {
 
 // Open a window and show an scene via path tracing
 void view_scene(const string& title, const string& name, scene_scene& scene,
-    scene_camera& camera, const trace_params& params_,
-    const progress_callback& progress_cb) {
+    const trace_params& params_, const progress_callback& progress_cb) {
   // open viewer
   auto viewer = make_imageviewer(title);
 
@@ -188,7 +184,7 @@ void view_scene(const string& title, const string& name, scene_scene& scene,
 
   // render start
   trace_start(
-      state, scene, camera, bvh, lights, params,
+      state, scene, bvh, lights, params,
       [&viewer, name](const string& message, int sample, int nsamples) {
         set_param(viewer, name, "sample", {sample, {1, 4096}, true});
         print_progress(message, sample, nsamples);
@@ -208,7 +204,7 @@ void view_scene(const string& title, const string& name, scene_scene& scene,
         trace_stop(state);
         from_params(uiparams, params);
         trace_start(
-            state, scene, camera, bvh, lights, params,
+            state, scene, bvh, lights, params,
             [&viewer, name](const string& message, int sample, int nsamples) {
               set_param(viewer, name, "sample", {sample, {1, 4096}, true});
               print_progress(message, sample, nsamples);
@@ -227,13 +223,14 @@ void view_scene(const string& title, const string& name, scene_scene& scene,
         rotate = (input.mouse_pos - input.mouse_last) / 100.0f;
       if (input.mouse_right)
         dolly = (input.mouse_pos.x - input.mouse_last.x) / 100.0f;
+      auto& camera = scene.cameras[params.camera];
       if (input.mouse_left && input.modifier_shift)
         pan = (input.mouse_pos - input.mouse_last) * camera.focus / 200.0f;
       pan.x                                = -pan.x;
       std::tie(camera.frame, camera.focus) = camera_turntable(
           camera.frame, camera.focus, rotate, dolly, pan);
       trace_start(
-          state, scene, camera, bvh, lights, params,
+          state, scene, bvh, lights, params,
           [&viewer, name](const string& message, int sample, int nsamples) {
             set_param(viewer, name, "sample", {sample, {1, 4096}, true});
             print_progress(message, sample, nsamples);
