@@ -164,6 +164,7 @@ int run_view(const view_params& params) {
 
 // Parameter conversions
 void from_params(const gui_params& uiparams, trace_params& params) {
+  params.camera     = uiparams.at("camera");
   params.resolution = uiparams.at("resolution");
   params.sampler    = uiparams.at("sampler");
   params.falsecolor = uiparams.at("falsecolor");
@@ -174,7 +175,9 @@ void from_params(const gui_params& uiparams, trace_params& params) {
   params.envhidden  = uiparams.at("envhidden");
   params.tentfilter = uiparams.at("tentfilter");
 }
-void to_params(gui_params& uiparams, const trace_params& params) {
+void to_params(gui_params& uiparams, const trace_params& params,
+    const vector<string>& camera_names) {
+  uiparams["camera"]     = {params.camera, camera_names};
   uiparams["resolution"] = {params.resolution, {128, 4096}};
   uiparams["sampler"]    = {params.sampler, trace_sampler_names};
   uiparams["falsecolor"] = {params.falsecolor, trace_falsecolor_names};
@@ -196,6 +199,14 @@ int run_view(const view_params& params) {
   auto ioerror = string{};
   if (!load_scene(params.scene, scene, ioerror, print_progress))
     return print_fatal(ioerror);
+
+  // create camera names if missing
+  if (scene.camera_names.empty()) {
+    for (auto& camera : scene.cameras) {
+      scene.camera_names.push_back(
+          "camera" + std::to_string(&camera - scene.cameras.data()));
+    }
+  }
 
   // add sky
   if (params.addsky) add_sky(scene);
@@ -232,7 +243,7 @@ int run_view(const view_params& params) {
 
   // show rendering params
   auto uiparams = gui_params{};
-  to_params(uiparams, params);
+  to_params(uiparams, params, scene.camera_names);
   set_params(viewer, "render", "Render", uiparams);
 
   // set callback
