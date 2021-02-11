@@ -603,7 +603,7 @@ static vec4f trace_eyelight(const scene_scene& scene, const trace_bvh& bvh,
                 eval_bsdfcos(material, normal, outgoing, incoming);
 
     // continue path
-    if (material.roughness != 0) break;
+    if (!is_delta(material)) break;
     incoming = sample_delta(material, normal, outgoing, rand1f(rng));
     weight *= eval_delta(material, normal, outgoing, incoming) /
               sample_delta_pdf(material, normal, outgoing, incoming);
