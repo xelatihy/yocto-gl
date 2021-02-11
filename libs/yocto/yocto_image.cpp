@@ -2628,11 +2628,6 @@ bool save_image(
 
 // Loads an ldr image.
 bool load_image(const string& filename, image<vec4b>& img, string& error) {
-  auto imgg = image_data{};
-  if (load_image(filename, imgg, error)) return false;
-
-  return true;
-
   auto format_error = [filename, &error]() {
     error = filename + ": unknown format";
     return false;
