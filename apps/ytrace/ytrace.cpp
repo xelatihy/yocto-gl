@@ -268,10 +268,9 @@ int run_view(const view_params& params_) {
         if (name != "render") return;
         if (uiparams.empty()) return;
         trace_stop(state);
-        auto tparams = params;
-        from_params(uiparams, tparams);
+        from_params(uiparams, params);
         trace_start(
-            state, scene, bvh, lights, tparams,
+            state, scene, bvh, lights, params,
             [&](const string& message, int sample, int nsamples) {
               set_param(viewer, "render", "sample", {sample, {1, 4096}, true});
               print_progress(message, sample, nsamples);
