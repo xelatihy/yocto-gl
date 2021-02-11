@@ -785,6 +785,43 @@ bool save_instance(const string& filename, const vector<frame3f>& frames,
   }
 }
 
+#define YOCTO_TEXTUREIO_AS_IMAGE
+
+#ifdef YOCTO_TEXTUREIO_AS_IMAGE
+
+// load texture
+static bool load_texture(
+    const string& filename, scene_texture& texture, string& error) {
+  auto image = image_data{};
+  if (!load_image(filename, image, error)) return false;
+  if (!image.pixelsf.empty()) {
+    texture.hdr = {
+        {image.width, image.height}, (const vec4f*)image.pixelsf.data()};
+  } else {
+    texture.ldr = {
+        {image.width, image.height}, (const vec4b*)image.pixelsb.data()};
+  }
+  return true;
+}
+
+// save texture
+static bool save_texture(
+    const string& filename, const scene_texture& texture, string& error) {
+  if (!texture.hdr.empty()) {
+    auto image = make_image(
+        texture.hdr.width(), texture.hdr.height(), true, false);
+    image.pixelsf = texture.hdr.data_vector();
+    return save_image(filename, image, error);
+  } else {
+    auto image = make_image(
+        texture.ldr.width(), texture.ldr.height(), false, true);
+    image.pixelsb = texture.ldr.data_vector();
+    return save_image(filename, image, error);
+  }
+}
+
+#else
+
 // load texture
 static bool load_texture(
     const string& filename, scene_texture& texture, string& error) {
@@ -804,6 +841,8 @@ static bool save_texture(
     return save_image(filename, texture.ldr, error);
   }
 }
+
+#endif
 
 // load shape
 static bool load_shape(
@@ -1929,35 +1968,36 @@ static bool load_obj_scene(const string& filename, scene_scene& scene,
   auto dirname = path_dirname(filename);
 
   // if (noparallel) {
-    // load textures
-    for (auto& texture : scene.textures) {
-      if (progress_cb) progress_cb("load texture", progress.x++, progress.y);
-      auto& path = textures_paths[&texture - &scene.textures.front()];
-      if (!load_texture(path_join(dirname, path), texture, error))
-        return dependent_error();
-    }
-//  } else {
-//    // mutex
-//    auto mutex = std::mutex{};
-//    // load textures
-//    parallel_foreach(scene.textures, [&](auto& texture) {
-//      {
-//        auto lock = std::lock_guard{mutex};
-//        if (!error.empty()) return;
-//        if (progress_cb) progress_cb("load texture", progress.x++, progress.y);
-//        printf("%s %s\n", get_texture_name(scene, texture).c_str(),
-//            textures_paths[&texture - &scene.textures.front()].c_str());
-//      }
-//      auto& path = textures_paths[&texture - &scene.textures.front()];
-//      auto  err  = string{};
-//      if (!load_texture(path_join(dirname, path), texture, err)) {
-//        auto lock = std::lock_guard{mutex};
-//        error     = err;
-//        return;
-//      }
-//    });
-//    if (!error.empty()) return dependent_error();
-//  }
+  // load textures
+  for (auto& texture : scene.textures) {
+    if (progress_cb) progress_cb("load texture", progress.x++, progress.y);
+    auto& path = textures_paths[&texture - &scene.textures.front()];
+    if (!load_texture(path_join(dirname, path), texture, error))
+      return dependent_error();
+  }
+  //  } else {
+  //    // mutex
+  //    auto mutex = std::mutex{};
+  //    // load textures
+  //    parallel_foreach(scene.textures, [&](auto& texture) {
+  //      {
+  //        auto lock = std::lock_guard{mutex};
+  //        if (!error.empty()) return;
+  //        if (progress_cb) progress_cb("load texture", progress.x++,
+  //        progress.y); printf("%s %s\n", get_texture_name(scene,
+  //        texture).c_str(),
+  //            textures_paths[&texture - &scene.textures.front()].c_str());
+  //      }
+  //      auto& path = textures_paths[&texture - &scene.textures.front()];
+  //      auto  err  = string{};
+  //      if (!load_texture(path_join(dirname, path), texture, err)) {
+  //        auto lock = std::lock_guard{mutex};
+  //        error     = err;
+  //        return;
+  //      }
+  //    });
+  //    if (!error.empty()) return dependent_error();
+  //  }
 
   // fix scene
   if (scene.asset.name.empty()) scene.asset.name = path_basename(filename);
