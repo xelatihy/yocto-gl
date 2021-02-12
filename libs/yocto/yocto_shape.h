@@ -69,7 +69,7 @@ using std::vector;
 // -----------------------------------------------------------------------------
 namespace yocto {
 
-// Shape ddata stored as an indexed mesh
+// Shape data stored as an indexed mesh
 struct shape_data {
   // element data
   vector<int>   points    = {};
