@@ -108,10 +108,10 @@ int run_convert(const convert_params& params) {
 
 // convert params
 struct view_params {
-  string scene  = "scene.json";
-  string output = "out.png";
-  string camera = "";
-  bool   addsky = false;
+  string scene   = "scene.json";
+  string output  = "out.png";
+  string camname = "";
+  bool   addsky  = false;
 };
 
 // Cli
@@ -120,7 +120,7 @@ void add_command(cli_command& cli, const string& name, view_params& value,
   auto& cmd = add_command(cli, name, usage);
   add_positional(cmd, "scene", value.scene, "Scene filename.");
   add_optional(cmd, "output", value.output, "Output filename.", {}, "o");
-  add_optional(cmd, "camera", value.camera, "Camera name.");
+  add_optional(cmd, "camera", value.camname, "Camera name.");
   add_optional(cmd, "addsky", value.addsky, "Add sky.");
 }
 
@@ -148,8 +148,7 @@ int run_view(const view_params& params) {
   tesselate_shapes(scene, print_progress);
 
   // run view
-  view_scene("yscene", params.scene, scene, find_camera(scene, params.camera),
-      print_progress);
+  view_scene("yscene", params.scene, scene, params.camname, print_progress);
 
   // done
   return 0;

@@ -141,9 +141,6 @@ bool is_ldr_filename(const string& filename);
 bool load_image(const string& filename, image_data& img, string& error);
 bool save_image(const string& filename, const image_data& img, string& error);
 
-// add a logo to an image
-image_data add_logo(const image_data& image);
-
 // Make presets. Supported mostly in IO.
 bool make_image_preset(image_data& image, const string& type, string& error);
 
@@ -263,9 +260,6 @@ image_data bump_to_normal(const image_data& image, float scale = 1);
 // Add a border to an image
 image_data add_border(
     const image_data& img, float width, const vec4f& color = {0, 0, 0, 1});
-
-// Make logo images. Image is resized to proper size.
-image_data make_logo(const string& name, bool as_byte);
 
 }  // namespace yocto
 
@@ -503,13 +497,6 @@ image<vec4f> bump_to_normal(const image<vec4f>& img, float scale = 1);
 // Add a border to an image
 image<vec4f> add_border(
     const image<vec4f>& img, float width, const vec4f& color = {0, 0, 0, 1});
-
-// Make logo images. Image is resized to proper size.
-image<vec4b> make_logo_(const string& name);
-image<vec4f> add_logo(
-    const image<vec4f>& img, const string& name = "logo-medium");
-image<vec4b> add_logo(
-    const image<vec4b>& img, const string& name = "logo-medium");
 
 }  // namespace yocto
 

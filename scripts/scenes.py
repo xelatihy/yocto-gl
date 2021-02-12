@@ -13,15 +13,12 @@ def cli():
 @click.option('--scene', '-s', default='*')
 @click.option('--format', '-f', default='json')
 @click.option('--mode', '-m', default='path')
-def itrace(directory='mcguire', scene='*', format='json', mode='path'):
+def view(directory='mcguire', scene='*', format='json', mode='path'):
     modes = {
-        'path': '',
-        'path-skyenv': '--skyenv',
-        'embree': '--bvh embree-highquality',
-        'embree-compact': '--bvh embree-compact',
-        'eyelight': '-t eyelight --bvh highquality',
-        'eyelight-quick':
-        '--all-cameras -s 16 -r 1280 -t eyelight --bvh default'
+        'path': '-r 720',
+        'embree': '-r 720 --bvh embree-highquality',
+        'eyelight': '-r 720 -t eyelight',
+        'eyelight-quick': '-r 720 -s 16 -t eyelight'
     }
     options = modes[mode]
     for dirname in sorted(glob.glob(f'{directory}/{format}/{scene}')):
@@ -40,43 +37,17 @@ def itrace(directory='mcguire', scene='*', format='json', mode='path'):
 @click.option('--directory', '-d', default='mcguire')
 @click.option('--scene', '-s', default='*')
 @click.option('--format', '-f', default='json')
-@click.option('--mode', '-m', default='default')
-def view(directory='mcguire', scene='*', format='json', mode='path'):
-    modes = {
-        'default': '--double-sided',
-        'double-sided': '--double-sided',
-        'eyelight': '--double-sided --eyelight'
-    }
-    options = modes[mode]
-    for dirname in sorted(glob.glob(f'{directory}/{format}/{scene}')):
-        if not os.path.isdir(dirname): continue
-        if '/_' in dirname: continue
-        for filename in sorted(glob.glob(f'{dirname}/*.{format}')):
-            if format == 'pbrt':
-                with open(filename) as f:
-                    if 'WorldBegin' not in f.read(): continue
-            cmd = f'../yocto-gl/bin/yshade view {options} {filename}'
-            print(cmd, file=sys.stderr)
-            os.system(cmd)
-
-
-@cli.command()
-@click.option('--directory', '-d', default='mcguire')
-@click.option('--scene', '-s', default='*')
-@click.option('--format', '-f', default='json')
 @click.option('--mode', '-m', default='path')
-def trace(directory='mcguire', scene='*', format='json', mode='path'):
+def render(directory='mcguire', scene='*', format='json', mode='path'):
     modes = {
-        'path': '-s 64 -r 640',
-        'path-skyenv': '-s 64 -r 640 --skyenv',
-        'path-face': '-s 256 -r 640',
+        'path': '-s 64 -r 1280',
+        'path-face': '-s 256 -r 1280',
         'embree': '-s 256 -r 1280 --bvh embree-highquality',
         'embree-compact': '-s 256 -r 1280 --bvh embree-compact',
         'eyelight': '-s 16 -r 1280 -t eyelight',
-        'embree-face': '-s 1024 -r 640 --bvh embree-highquality',
+        'embree-face': '-s 1024 -r 1280 --bvh embree-highquality',
         'final': '-s 4096 -r 1280 --bvh embree-highquality',
         'final-compact': '-s 4096 -r 1280 --bvh embree-compact',
-        'final-filter': '-s 4096 -r 1280 --filter --bvh embree-highquality',
         'final-face': '-s 4096 -r 1280 --bvh embree-highquality',
     }
     options = modes[mode]
@@ -86,9 +57,9 @@ def trace(directory='mcguire', scene='*', format='json', mode='path'):
         if not os.path.isdir(dirname): continue
         if '/_' in dirname: continue
         extracams = []
-        if 'sanmiguel' in dirname: extracams = [1, 2]
-        if 'island' in dirname: extracams = [1, 2, 3, 4, 5, 6]
-        if 'landscape' in dirname: extracams = [1, 2, 3]
+        if 'sanmiguel' in dirname: extracams = ['camera1', 'camera2']
+        if 'island' in dirname: extracams = ["beachCam", "birdseyeCam", "dunesACam", "grassCam", "palmsCam", "rootsCam", "shotCam"]
+        if 'landscape' in dirname: extracams = ['camera1', 'camera2', 'camera3']
         for filename in sorted(glob.glob(f'{dirname}/*.{format}')):
             if format == 'pbrt':
                 with open(filename) as f:
@@ -99,9 +70,9 @@ def trace(directory='mcguire', scene='*', format='json', mode='path'):
             cmd = f'../yocto-gl/bin/ytrace render -o {imagename} {options} {filename}'
             print(cmd, file=sys.stderr)
             os.system(cmd)
-            for cam in extracams:
-                imagename = f'{directory}/{outprefix}-{format}/{basename}-c{cam}.{outformat}'
-                cmd = f'../yocto-gl/bin/yscenetrace -o {imagename} --camera {cam} {options} {filename}'
+            for idx, cam in enumerate(extracams, 1):
+                imagename = f'{directory}/{outprefix}-{format}/{basename}-c{idx}.{outformat}'
+                cmd = f'../yocto-gl/bin/ytrace render -o {imagename} --camera {cam} {options} {filename}'
                 print(cmd, file=sys.stderr)
                 os.system(cmd)
 
@@ -113,17 +84,17 @@ def trace(directory='mcguire', scene='*', format='json', mode='path'):
 @click.option('--mode', '-m', default='linear')
 def tonemap(directory='mcguire', scene='*', format='json', mode='filmic'):
     modes = {
-        'linear': '-t --logo',
+        'linear': '',
         'contrast1': '-t --logcontrast 0.6 --logo',
     }
     options = modes[mode]
     outformat = 'png'
     outprefix = 'images'
-    from PIL import Image
-    from PIL import ImageFont
-    from PIL import ImageDraw
-    font = ImageFont.truetype('~/Library/Fonts/FiraSansCondensed-Regular.otf',
-                              18)
+    from PIL import Image, ImageFont, ImageDraw
+    fontname1 = '~/Library/Fonts/FiraSansCondensed-Regular.ttf'
+    fontname2 = '~/Library/Fonts/FiraSansCondensed-Regular.ttf'
+    font1 = ImageFont.truetype(fontname1, 30)
+    font2 = ImageFont.truetype(fontname2, 18)
     for filename in sorted(
             glob.glob(f'{directory}/{outprefix}-{format}/{scene}.hdr') +
             glob.glob(f'{directory}/{outprefix}-{format}/{scene}.exr')):
@@ -132,21 +103,24 @@ def tonemap(directory='mcguire', scene='*', format='json', mode='filmic'):
         cmd = f'../yocto-gl/bin/yimage convert -o {imagename} {options} {filename}'
         print(cmd, file=sys.stderr)
         os.system(cmd)
-        if directory not in ['bitterli', 'disney', 'mcguire', 'pbrt']: continue
-        authorfilename = filename.replace('images-json/', 'source/').replace(
-            '-fr.', '.').replace('-hr.', '.').replace('-c1.', '.').replace(
-                '-c2.', '.').replace('-c3.', '.').replace('-c4.', '.').replace(
-                    '-c5.', '.').replace('-c6.', '.').replace(
-                        '.hdr', '') + '/AUTHOR.txt'
-        print(authorfilename)
-        with open(authorfilename) as f:
-            text = f.read().strip()
         img = Image.open(imagename)
-        _, h = img.size
+        w, h = img.size
         draw = ImageDraw.Draw(img)
-        tw, _ = draw.textsize(text, font=font)
-        draw.rectangle([8, h - 26 - 8, 8 + 8 + tw, h - 8], (0, 0, 0))
-        draw.text((8 + 4, h - 20 - 8 - 4), text, (255, 255, 255), font=font)
+        tw, _ = draw.textsize("Yocto/GL", font=font1)
+        draw.rectangle([w - 8, h - 32 - 8, w - 8 - 8 - tw, h - 8], (0, 0, 0))
+        draw.text((w - 8 - 4, h - 26 - 8 - 4), "Yocto/GL", (255, 255, 255), font=font1, anchor='rt')
+        if directory in ['bitterli', 'disney', 'mcguire', 'pbrt']:
+            authorfilename = filename.replace('images-json/', 'source/').replace(
+                '-fr.', '.').replace('-hr.', '.').replace('-c1.', '.').replace(
+                    '-c2.', '.').replace('-c3.', '.').replace('-c4.', '.').replace(
+                        '-c5.', '.').replace('-c6.', '.').replace(
+                            '.hdr', '') + '/AUTHOR.txt'
+            print(authorfilename)
+            with open(authorfilename) as f:
+                text = f.read().strip()
+            tw, _ = draw.textsize(text, font=font2)
+            draw.rectangle([8, h - 26 - 8, 8 + 8 + tw, h - 8], (0, 0, 0))
+            draw.text((8 + 4, h - 20 - 8 - 4), text, (255, 255, 255), font=font2)
         img.save(imagename)
 
 
@@ -154,12 +128,10 @@ def tonemap(directory='mcguire', scene='*', format='json', mode='filmic'):
 @click.option('--directory', '-d', default='mcguire')
 @click.option('--scene', '-s', default='*')
 @click.option('--format', '-f', default='obj')
-# @click.option('--mode','-m', default='no-clear')
 @click.option('--clean/--no-clean', '-C', default=False)
 def sync_images(directory='mcguire',
                 scene='*',
                 format='obj',
-                mode='path',
                 clean=True):
     for dirname in sorted(glob.glob(f'{directory}/{format}/{scene}')):
         if not os.path.isdir(dirname): continue
@@ -197,8 +169,6 @@ def convert(directory='mcguire',
             mode='path',
             clean=True):
     modes = {
-        # 'default': '--uniform-textures --mesh-filenames',
-        # 'gltf': '--uniform-textures --mesh-filenames --mesh-directory gltf_meshes/'
         'default': '',
     }
     options = modes[mode]
@@ -210,44 +180,24 @@ def convert(directory='mcguire',
             with open(f'{dirname}/AUTHOR.txt') as f:
                 copyright = f.read().strip().replace('"', '')
             copyright_options += f'--copyright "{copyright}"'
-        obj_options = ''
-        if 'bunny2' in dirname and outformat == 'obj':
-            obj_options = '--obj-instances'
-        if 'ecosys' in dirname and outformat == 'obj':
-            obj_options = '--obj-instances'
-        if 'landscape' in dirname and outformat == 'obj':
-            obj_options = '--obj-instances'
-        if 'fractal' in dirname and outformat == 'obj':
-            obj_options = '--obj-instances'
-        if 'pavilion' in dirname and outformat == 'obj': continue
-        if 'sanmiguel' in dirname and 'pbrt' in dirname and outformat == 'obj':
-            continue
         outdirname = dirname.replace(f'/source/', f'/{outformat}/')
         if clean: os.system(f'rm -rf {outdirname}')
         os.system(f'mkdir -p {outdirname}')
-        os.system(f'mkdir -p {outdirname}/textures')
         if os.path.exists(f'{dirname}/AUTHOR.txt'):
             os.system(f'cp {dirname}/AUTHOR.txt {outdirname}/')
         if os.path.exists(f'{dirname}/LICENSE.txt'):
             os.system(f'cp {dirname}/LICENSE.txt {outdirname}/')
         if os.path.exists(f'{dirname}/LINKS.txt'):
             os.system(f'cp {dirname}/LINKS.txt {outdirname}/')
-        if outformat == 'yaml' or outformat == 'json':
-            os.system(f'mkdir -p {outdirname}/shapes')
         for filename in sorted(glob.glob(f'{dirname}/*.{format}')):
             if format == 'pbrt':
                 with open(filename) as f:
                     if 'WorldBegin' not in f.read(): continue
             outname = filename.replace(f'/source/', f'/{outformat}/').replace(
                 f'.{format}', f'.{outformat}')
-            if format != 'dijson':
-                cmd = f'../yocto-gl/bin/yscene convert -o {outname} {options} {obj_options} {filename} {copyright_options}'
-                print(cmd, file=sys.stderr)
-                os.system(cmd)
-            else:
-                cmd = f'../yocto-gl/bin/yislandproc -o {outname} {options} {obj_options} {filename}'
-                print(cmd, file=sys.stderr)
-                os.system(cmd)
+            cmd = f'../yocto-gl/bin/yscene convert -o {outname} {options} {filename} {copyright_options}'
+            print(cmd, file=sys.stderr)
+            os.system(cmd)
 
 
 @cli.command()

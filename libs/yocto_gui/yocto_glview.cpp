@@ -109,15 +109,18 @@ void view_shape(const string& title, const string& name,
   print_progress("create scene", 0, 1);
 
   // run view
-  view_scene(title, name, scene, 0, progress_cb);
+  view_scene(title, name, scene, progress_cb);
 }
 
 // Open a window and show an scene via path tracing
 void view_scene(const string& title, const string& name, scene_scene& scene,
-    camera_handle camera_id, const progress_callback& progress_cb) {
-  // get camera
-  auto& camera = scene.cameras[camera_id];
+    const progress_callback& progress_cb) {
+  return view_scene(title, name, scene, "", progress_cb);
+}
 
+// Open a window and show an scene via path tracing
+void view_scene(const string& title, const string& name, scene_scene& scene,
+    const string& camname, const progress_callback& progress_cb) {
   // rendering params
   auto params     = trace_params{};
   auto has_lights = std::any_of(scene.instances.begin(), scene.instances.end(),
@@ -132,12 +135,16 @@ void view_scene(const string& title, const string& name, scene_scene& scene,
                         });
   if (!has_lights) params.sampler = trace_sampler_type::eyelight;
 
+  // get camera
+  params.camera = find_camera(scene, camname);
+
   // run viewer
-  view_scene(title, name, scene, camera, params, progress_cb);
+  view_scene(title, name, scene, params, progress_cb);
 }
 
 // Parameter conversions
 void from_params(const gui_params& uiparams, trace_params& params) {
+  params.camera     = uiparams.at("camera");
   params.resolution = uiparams.at("resolution");
   params.sampler    = uiparams.at("sampler");
   params.falsecolor = uiparams.at("falsecolor");
@@ -148,7 +155,9 @@ void from_params(const gui_params& uiparams, trace_params& params) {
   params.envhidden  = uiparams.at("envhidden");
   params.tentfilter = uiparams.at("tentfilter");
 }
-void to_params(gui_params& uiparams, const trace_params& params) {
+void to_params(gui_params& uiparams, const trace_params& params,
+    const vector<string>& camera_names) {
+  uiparams["camera"]     = {params.camera, camera_names};
   uiparams["resolution"] = {params.resolution, {128, 4096}};
   uiparams["sampler"]    = {params.sampler, trace_sampler_names};
   uiparams["falsecolor"] = {params.falsecolor, trace_falsecolor_names};
@@ -162,8 +171,7 @@ void to_params(gui_params& uiparams, const trace_params& params) {
 
 // Open a window and show an scene via path tracing
 void view_scene(const string& title, const string& name, scene_scene& scene,
-    scene_camera& camera, const trace_params& params_,
-    const progress_callback& progress_cb) {
+    const trace_params& params_, const progress_callback& progress_cb) {
   // open viewer
   auto viewer = make_imageviewer(title);
 
@@ -188,7 +196,7 @@ void view_scene(const string& title, const string& name, scene_scene& scene,
 
   // render start
   trace_start(
-      state, scene, camera, bvh, lights, params,
+      state, scene, bvh, lights, params,
       [&viewer, name](const string& message, int sample, int nsamples) {
         set_param(viewer, name, "sample", {sample, {1, 4096}, true});
         print_progress(message, sample, nsamples);
@@ -197,9 +205,17 @@ void view_scene(const string& title, const string& name, scene_scene& scene,
         set_image(viewer, name, render);
       });
 
+  // create camera names if missing
+  if (scene.camera_names.empty()) {
+    for (auto& camera : scene.cameras) {
+      scene.camera_names.push_back(
+          "camera" + std::to_string(&camera - scene.cameras.data()));
+    }
+  }
+
   // show rendering params
   auto uiparams = gui_params();
-  to_params(uiparams, params);
+  to_params(uiparams, params, scene.camera_names);
   set_params(viewer, name, "render", uiparams);
 
   // set callback
@@ -208,7 +224,7 @@ void view_scene(const string& title, const string& name, scene_scene& scene,
         trace_stop(state);
         from_params(uiparams, params);
         trace_start(
-            state, scene, camera, bvh, lights, params,
+            state, scene, bvh, lights, params,
             [&viewer, name](const string& message, int sample, int nsamples) {
               set_param(viewer, name, "sample", {sample, {1, 4096}, true});
               print_progress(message, sample, nsamples);
@@ -227,13 +243,14 @@ void view_scene(const string& title, const string& name, scene_scene& scene,
         rotate = (input.mouse_pos - input.mouse_last) / 100.0f;
       if (input.mouse_right)
         dolly = (input.mouse_pos.x - input.mouse_last.x) / 100.0f;
+      auto& camera = scene.cameras[params.camera];
       if (input.mouse_left && input.modifier_shift)
         pan = (input.mouse_pos - input.mouse_last) * camera.focus / 200.0f;
       pan.x                                = -pan.x;
       std::tie(camera.frame, camera.focus) = camera_turntable(
           camera.frame, camera.focus, rotate, dolly, pan);
       trace_start(
-          state, scene, camera, bvh, lights, params,
+          state, scene, bvh, lights, params,
           [&viewer, name](const string& message, int sample, int nsamples) {
             set_param(viewer, name, "sample", {sample, {1, 4096}, true});
             print_progress(message, sample, nsamples);
@@ -398,10 +415,10 @@ void draw_widgets(
   }
   continue_line(win);
   if (draw_filedialog_button(win, "save", viewer.selected, "save image",
-          save_path, true, path_dirname(save_path), path_filename(save_path),
-          "*.png;*.jpg;*.tga;*.bmp;*.hdr;*.exr")) {
-    // viewer.selected->outname = save_path;
-    // save_image(view->outname, view->display, view->error);
+          save_path, true, path_dirname(save_path) + "/",
+          path_filename(save_path), "*.png;*.jpg;*.tga;*.bmp;*.hdr;*.exr")) {
+    auto error = ""s;
+    save_image(save_path, viewer.selected->display, error);
     save_path = "";
   }
   continue_line(win);

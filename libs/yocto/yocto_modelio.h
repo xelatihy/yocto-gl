@@ -468,6 +468,7 @@ struct pbrt_material {
 struct pbrt_shape {
   frame3f         frame     = identity3x4f;
   frame3f         frend     = identity3x4f;
+  bool            instanced = false;
   vector<frame3f> instances = {};
   vector<frame3f> instaends = {};
   int             material  = -1;

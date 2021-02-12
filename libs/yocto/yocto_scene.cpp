@@ -639,6 +639,9 @@ camera_handle find_camera(const scene_scene& scene, const string& name) {
     if (scene.camera_names[idx] == "camera") return idx;
   }
   for (auto idx = 0; idx < (int)scene.camera_names.size(); idx++) {
+    if (scene.camera_names[idx] == "camera0") return idx;
+  }
+  for (auto idx = 0; idx < (int)scene.camera_names.size(); idx++) {
     if (scene.camera_names[idx] == "camera1") return idx;
   }
   return 0;

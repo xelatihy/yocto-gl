@@ -4263,7 +4263,7 @@ inline void make_sphere(vector<vec3i>& triangles, vector<vec3f>& positions,
       },
       [](const vec2f& uv) {
         auto pt = vec2f{2 * pif * uv.x, pif * (1 - uv.y)};
-        return vec3f{cos(pt.x) * cos(pt.y), sin(pt.x) * cos(pt.y), sin(pt.y)};
+        return vec3f{cos(pt.x) * sin(pt.y), sin(pt.x) * sin(pt.y), cos(pt.y)};
       });
 }
 inline void make_disk(vector<vec3i>& triangles, vector<vec3f>& positions,
@@ -4626,7 +4626,8 @@ inline bool load_pbrt(const string& filename, pbrt_scene& pbrt, string& error,
       if (!parse_param(str, object)) return parse_error();
       if (named_objects.find(object) == named_objects.end())
         return object_error(object);
-      for (auto& shape_id : named_objects.at(object)) {
+      auto& named_object = named_objects.at(object);
+      for (auto& shape_id : named_object) {
         pbrt.shapes[shape_id].instances.push_back(
             ctx.stack.back().transform_start);
         pbrt.shapes[shape_id].instaends.push_back(
@@ -4788,6 +4789,7 @@ inline bool load_pbrt(const string& filename, pbrt_scene& pbrt, string& error,
       shape.material = material_map.at(matkey);
       if (!ctx.cur_object.empty()) {
         named_objects[ctx.cur_object].push_back((int)pbrt.shapes.size() - 1);
+        shape.instanced = true;
       }
     } else if (cmd == "AreaLightSource") {
       static auto arealight_id = 0;
