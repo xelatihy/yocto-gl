@@ -131,7 +131,7 @@ const vec4b* get_data4b(const image_data& image) {
 image_data convert_image(const image_data& image, bool linear, bool as_byte) {
   if (image.linear == linear && !image.pixelsf.empty() == as_byte) return image;
   auto result = make_image(
-      image.width, image.height, image.linear, !image.pixelsf.empty());
+      image.width, image.height, linear, as_byte);
   convert_image(result, image);
   return result;
 }
