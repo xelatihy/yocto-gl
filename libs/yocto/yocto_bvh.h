@@ -41,6 +41,7 @@
 #include <array>
 #include <cstdint>
 #include <functional>
+#include <memory>
 #include <string>
 #include <vector>
 
@@ -57,6 +58,7 @@ namespace yocto {
 using std::array;
 using std::function;
 using std::string;
+using std::unique_ptr;
 using std::vector;
 
 }  // namespace yocto
@@ -89,27 +91,19 @@ struct bvh_tree {
 
 // BVH data for whole shapes. This interface makes copies of all the data.
 struct bvh_shape {
-  bvh_tree bvh        = {};                         // nodes
-  void*    embree_bvh = nullptr;                    // embree
-  bvh_shape() {}                                    // move only
-  bvh_shape(const bvh_shape&)            = delete;  // move only
-  bvh_shape& opaerator(const bvh_shape&) = delete;  // move only
-  bvh_shape(bvh_shape&&);                           // move only
-  bvh_shape& opaerator(bvh_shape&&) = delete;       // move only
-  ~bvh_shape();                                     // cleanup
+  bvh_tree bvh = {};  // nodes
+#ifdef YOCTO_EMBREE
+  unique_ptr<void, void (*)(void*)> embree_bvh = {nullptr, nullptr};  // embree
+#endif
 };
 
 // BVH data for whole shapes. This interface makes copies of all the data.
 struct bvh_scene {
-  bvh_tree          bvh        = {};                // nodes
-  vector<bvh_shape> shapes     = {};                // shapes
-  void*             embree_bvh = nullptr;           // embree
-  bvh_scene() {}                                    // move only
-  bvh_scene(const bvh_shape&)            = delete;  // move only
-  bvh_scene& opaerator(const bvh_scene&) = delete;  // move only
-  bvh_scene(bvh_scene&&);                           // move only
-  bvh_scene& opaerator(bvh_scene&&) = delete;       // move only
-  ~bvh_scene();                                     // cleanup
+  bvh_tree          bvh    = {};  // nodes
+  vector<bvh_shape> shapes = {};  // shapes
+#ifdef YOCTO_EMBREE
+  unique_ptr<void, void (*)(void*)> embree_bvh = {nullptr, nullptr};  // embree
+#endif
 };
 
 // Strategy used to build the bvh
@@ -143,10 +137,9 @@ using progress_callback =
     function<void(const string& message, int current, int total)>;
 
 // Build the bvh acceleration structure.
-void init_bvh(
-    bvh_shape& bvh, const scene_shape& shape, const bvh_params& params);
-void init_bvh(bvh_scene& bvh, const scene_scene& scene,
-    const bvh_params& params, const progress_callback& progress_cb = {});
+bvh_shape make_bvh(const scene_shape& shape, const bvh_params& params);
+bvh_scene make_bvh(const scene_scene& scene, const bvh_params& params,
+    const progress_callback& progress_cb = {});
 
 // Refit bvh data
 void update_bvh(bvh_shape& bvh, const progress_callback& progress_cb = {});

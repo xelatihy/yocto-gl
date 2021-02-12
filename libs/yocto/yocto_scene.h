@@ -102,7 +102,7 @@ struct scene_camera {
   float   aperture     = 0;
 };
 
-// Texture containing either an LDR or HDR image. HdR images are encoded
+// Texture containing either an LDR or HDR image. HDR images are encoded
 // in linear color space, while LDRs are encoded as sRGB.
 struct scene_texture {
   image<vec4f> hdr = {};

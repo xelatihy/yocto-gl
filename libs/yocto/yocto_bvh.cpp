@@ -109,12 +109,18 @@ static RTCDevice bvh_embree_device() {
   return device;
 }
 
+// Clear embreee bvh
+void clear_embree_bvh(void* embree_bvh) {
+  if (embree_bvh) rtcReleaseScene((RTCScene)embree_bvh);
+}
+
 // Initialize Embree BVH
-static void init_embree_bvh(
+static void build_embree_bvh(
     bvh_shape& bvh, const scene_shape& shape, const bvh_params& params) {
   auto edevice   = bvh_embree_device();
-  bvh.embree_bvh = rtcNewScene(edevice);
-  auto escene    = (RTCScene)bvh.embree_bvh;
+  bvh.embree_bvh = unique_ptr<void, void (*)(void*)>{
+      rtcNewScene(edevice), &clear_embree_bvh};
+  auto escene = (RTCScene)bvh.embree_bvh.get();
   if (params.bvh == bvh_build_type::embree_compact)
     rtcSetSceneFlags(escene, RTC_SCENE_FLAG_COMPACT);
   if (params.bvh == bvh_build_type::embree_highquality)
@@ -153,6 +159,7 @@ static void init_embree_bvh(
     memcpy(embree_lines, elines.data(), elines.size() * 4);
     rtcCommitGeometry(egeometry);
     rtcAttachGeometryByID(escene, egeometry, 0);
+    rtcReleaseGeometry(egeometry);
   } else if (!shape.triangles.empty()) {
     auto egeometry = rtcNewGeometry(edevice, RTC_GEOMETRY_TYPE_TRIANGLE);
     rtcSetGeometryVertexAttributeCount(egeometry, 1);
@@ -168,6 +175,7 @@ static void init_embree_bvh(
         embree_triangles, shape.triangles.data(), shape.triangles.size() * 12);
     rtcCommitGeometry(egeometry);
     rtcAttachGeometryByID(escene, egeometry, 0);
+    rtcReleaseGeometry(egeometry);
   } else if (!shape.quads.empty()) {
     auto egeometry = rtcNewGeometry(edevice, RTC_GEOMETRY_TYPE_QUAD);
     rtcSetGeometryVertexAttributeCount(egeometry, 1);
@@ -181,18 +189,20 @@ static void init_embree_bvh(
     memcpy(embree_quads, shape.quads.data(), shape.quads.size() * 16);
     rtcCommitGeometry(egeometry);
     rtcAttachGeometryByID(escene, egeometry, 0);
+    rtcReleaseGeometry(egeometry);
   } else {
     throw std::runtime_error("empty shapes not supported");
   }
   rtcCommitScene(escene);
 }
 
-static void init_embree_bvh(
+static void build_embree_bvh(
     bvh_scene& bvh, const scene_scene& scene, const bvh_params& params) {
   // scene bvh
   auto edevice   = bvh_embree_device();
-  bvh.embree_bvh = rtcNewScene(edevice);
-  auto escene    = (RTCScene)bvh.embree_bvh;
+  bvh.embree_bvh = unique_ptr<void, void (*)(void*)>{
+      rtcNewScene(edevice), &clear_embree_bvh};
+  auto escene = (RTCScene)bvh.embree_bvh.get();
   if (params.bvh == bvh_build_type::embree_compact)
     rtcSetSceneFlags(escene, RTC_SCENE_FLAG_COMPACT);
   if (params.bvh == bvh_build_type::embree_highquality)
@@ -202,11 +212,12 @@ static void init_embree_bvh(
     auto& instance  = scene.instances[instance_id];
     auto& sbvh      = bvh.shapes[instance.shape];
     auto  egeometry = rtcNewGeometry(edevice, RTC_GEOMETRY_TYPE_INSTANCE);
-    rtcSetGeometryInstancedScene(egeometry, (RTCScene)sbvh.embree_bvh);
+    rtcSetGeometryInstancedScene(egeometry, (RTCScene)sbvh.embree_bvh.get());
     rtcSetGeometryTransform(
         egeometry, 0, RTC_FORMAT_FLOAT3X4_COLUMN_MAJOR, &instance.frame);
     rtcCommitGeometry(egeometry);
     rtcAttachGeometryByID(escene, egeometry, instance_id);
+    rtcReleaseGeometry(egeometry);
   }
   rtcCommitScene(escene);
 }
@@ -214,12 +225,12 @@ static void init_embree_bvh(
 static void update_embree_bvh(bvh_scene& bvh, const scene_scene& scene,
     const vector<int>& updated_instances) {
   // scene bvh
-  auto escene = (RTCScene)bvh.embree_bvh;
+  auto escene = (RTCScene)bvh.embree_bvh.get();
   for (auto instance_id : updated_instances) {
     auto& instance    = scene.instances[instance_id];
     auto& sbvh        = bvh.shapes[instance.shape];
     auto  embree_geom = rtcGetGeometry(escene, instance_id);
-    rtcSetGeometryInstancedScene(embree_geom, (RTCScene)sbvh.embree_bvh);
+    rtcSetGeometryInstancedScene(embree_geom, (RTCScene)sbvh.embree_bvh.get());
     rtcSetGeometryTransform(
         embree_geom, 0, RTC_FORMAT_FLOAT3X4_COLUMN_MAJOR, &instance.frame);
     rtcCommitGeometry(embree_geom);
@@ -243,7 +254,7 @@ static bool intersect_embree_bvh(const bvh_shape& bvh, const scene_shape& shape,
   embree_ray.hit.instID[0] = RTC_INVALID_GEOMETRY_ID;
   RTCIntersectContext embree_ctx;
   rtcInitIntersectContext(&embree_ctx);
-  rtcIntersect1((RTCScene)bvh.embree_bvh, &embree_ctx, &embree_ray);
+  rtcIntersect1((RTCScene)bvh.embree_bvh.get(), &embree_ctx, &embree_ray);
   if (embree_ray.hit.geomID == RTC_INVALID_GEOMETRY_ID) return false;
   element  = (int)embree_ray.hit.primID;
   uv       = {embree_ray.hit.u, embree_ray.hit.v};
@@ -268,7 +279,7 @@ static bool intersect_embree_bvh(const bvh_scene& bvh, const scene_scene& scene,
   embree_ray.hit.instID[0] = RTC_INVALID_GEOMETRY_ID;
   RTCIntersectContext embree_ctx;
   rtcInitIntersectContext(&embree_ctx);
-  rtcIntersect1((RTCScene)bvh.embree_bvh, &embree_ctx, &embree_ray);
+  rtcIntersect1((RTCScene)bvh.embree_bvh.get(), &embree_ctx, &embree_ray);
   if (embree_ray.hit.geomID == RTC_INVALID_GEOMETRY_ID) return false;
   instance = (int)embree_ray.hit.instID[0];
   element  = (int)embree_ray.hit.primID;
@@ -277,38 +288,6 @@ static bool intersect_embree_bvh(const bvh_scene& bvh, const scene_scene& scene,
   return true;
 }
 #endif
-
-}  // namespace yocto
-
-// -----------------------------------------------------------------------------
-// IMPLEMENTATION FOR BVH CREATION
-// -----------------------------------------------------------------------------
-namespace yocto {
-
-bvh_shape::bvh_shape(bvh_shape&& other) {
-  bvh.nodes.swap(other.bvh.nodes);
-  bvh.primitives.swap(other.bvh.primitives);
-  std::swap(embree_bvh, other.embree_bvh);
-}
-
-bvh_scene::bvh_scene(bvh_scene&& other) {
-  bvh.nodes.swap(other.bvh.nodes);
-  bvh.primitives.swap(other.bvh.primitives);
-  shapes.swap(other.shapes);
-  std::swap(embree_bvh, other.embree_bvh);
-}
-
-bvh_shape::~bvh_shape() {
-#ifdef YOCTO_EMBREE
-  if (embree_bvh) rtcReleaseScene((RTCScene)embree_bvh);
-#endif
-}
-
-bvh_scene::~bvh_scene() {
-#ifdef YOCTO_EMBREE
-  if (embree_bvh) rtcReleaseScene((RTCScene)embree_bvh);
-#endif
-}
 
 }  // namespace yocto
 
@@ -669,7 +648,7 @@ static void build_bvh(
   if (params.bvh == bvh_build_type::embree_default ||
       params.bvh == bvh_build_type::embree_highquality ||
       params.bvh == bvh_build_type::embree_compact) {
-    return init_embree_bvh(bvh, shape, params);
+    return build_embree_bvh(bvh, shape, params);
   }
 #endif
 
@@ -715,7 +694,7 @@ static void build_bvh(
   if (params.bvh == bvh_build_type::embree_default ||
       params.bvh == bvh_build_type::embree_highquality ||
       params.bvh == bvh_build_type::embree_compact) {
-    return init_embree_bvh(bvh, scene, params);
+    return build_embree_bvh(bvh, scene, params);
   }
 #endif
 
@@ -733,10 +712,13 @@ static void build_bvh(
   build_bvh_serial(bvh.bvh, bboxes, params);
 }
 
-void init_bvh(bvh_shape& bvh, const scene_shape& shape,
-    const bvh_params& params, const progress_callback& progress_cb) {
+bvh_shape init_bvh(const scene_shape& shape, const bvh_params& params,
+    const progress_callback& progress_cb) {
   // handle progress
   auto progress = vec2i{0, 1};
+
+  // bvh
+  auto bvh = bvh_shape{};
 
   // build scene bvh
   if (progress_cb) progress_cb("build bvh", progress.x++, progress.y);
@@ -744,12 +726,16 @@ void init_bvh(bvh_shape& bvh, const scene_shape& shape,
 
   // handle progress
   if (progress_cb) progress_cb("build bvh", progress.x++, progress.y);
+  return bvh;
 }
 
-void init_bvh(bvh_scene& bvh, const scene_scene& scene,
-    const bvh_params& params, const progress_callback& progress_cb) {
+bvh_scene make_bvh(const scene_scene& scene, const bvh_params& params,
+    const progress_callback& progress_cb) {
   // handle progress
   auto progress = vec2i{0, 1 + (int)scene.shapes.size()};
+
+  // bvh
+  auto bvh = bvh_scene{};
 
   // build shape bvh
   bvh.shapes.resize(scene.shapes.size());
@@ -777,6 +763,7 @@ void init_bvh(bvh_scene& bvh, const scene_scene& scene,
 
   // handle progress
   if (progress_cb) progress_cb("build bvh", progress.x++, progress.y);
+  return bvh;
 }
 
 static void update_bvh(bvh_shape& bvh, const scene_shape& shape) {

@@ -221,15 +221,15 @@ struct trace_lights {
 };
 
 // Initialize lights.
-void init_lights(trace_lights& lights, const scene_scene& scene,
-    const trace_params& params, const progress_callback& progress_cb = {});
+trace_lights make_lights(const scene_scene& scene, const trace_params& params,
+    const progress_callback& progress_cb = {});
 
 // Define BVH
 using trace_bvh = bvh_scene;
 
 // Build the bvh acceleration structure.
-void init_bvh(trace_bvh& bvh, const scene_scene& scene,
-    const trace_params& params, const progress_callback& progress_cb = {});
+trace_bvh make_bvh(const scene_scene& scene, const trace_params& params,
+    const progress_callback& progress_cb = {});
 
 // Refit bvh data
 void update_bvh(trace_bvh& bvh, const scene_scene& scene,
@@ -246,14 +246,18 @@ image<vec4f> trace_image(const scene_scene& scene, const trace_bvh& bvh,
 // Check is a sampler requires lights
 bool is_sampler_lit(const trace_params& params);
 
-// [experimental] Asynchronous state
+// Trace state
 struct trace_state {
   image<vec4f>     render       = {};
   image<vec4f>     accumulation = {};
   image<int>       samples      = {};
   image<rng_state> rngs         = {};
-  future<void>     worker       = {};  // async
-  atomic<bool>     stop         = {};  // async
+};
+
+// [experimental] Asynchronous state
+struct trace_worker {
+  future<void> worker = {};  // async
+  atomic<bool> stop   = {};  // async
 };
 
 // [experimental] Callback used to report partially computed image
@@ -262,11 +266,11 @@ using async_callback = function<void(
 
 // [experimental] Asynchronous interface
 struct trace_state;
-void trace_start(trace_state& state, const scene_scene& scene,
-    const trace_bvh& bvh, const trace_lights& lights,
+void trace_start(trace_worker& worker, trace_state& state,
+    const scene_scene& scene, const trace_bvh& bvh, const trace_lights& lights,
     const trace_params& params, const progress_callback& progress_cb = {},
     const image_callback& image_cb = {}, const async_callback& async_cb = {});
-void trace_stop(trace_state& state);
+void trace_stop(trace_worker& worker);
 
 }  // namespace yocto
 

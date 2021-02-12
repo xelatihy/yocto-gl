@@ -59,9 +59,9 @@ using namespace std::string_literals;
 namespace yocto {
 
 // Build the bvh acceleration structure.
-void init_bvh(trace_bvh& bvh, const scene_scene& scene,
-    const trace_params& params, const progress_callback& progress_cb) {
-  init_bvh(bvh, scene,
+trace_bvh make_bvh(const scene_scene& scene, const trace_params& params,
+    const progress_callback& progress_cb) {
+  return make_bvh(scene,
       bvh_params{(bvh_build_type)params.bvh, params.noparallel}, progress_cb);
 }
 
@@ -858,14 +858,14 @@ void trace_sample(trace_state& state, const scene_scene& scene,
 }
 
 // Init a sequence of random number generators.
-void init_state(
-    trace_state& state, const scene_scene& scene, const trace_params& params) {
+trace_state make_state(const scene_scene& scene, const trace_params& params) {
   auto& camera     = scene.cameras[params.camera];
   auto  image_size = (camera.aspect >= 1)
                          ? vec2i{params.resolution,
                               (int)round(params.resolution / camera.aspect)}
                          : vec2i{(int)round(params.resolution * camera.aspect),
                               params.resolution};
+  auto  state      = trace_state{};
   state.render.assign(image_size, zero4f);
   state.accumulation.assign(image_size, zero4f);
   state.samples.assign(image_size, 0);
@@ -874,6 +874,7 @@ void init_state(
   for (auto& rng : state.rngs) {
     rng = make_rng(params.seed, rand1i(rng_, 1 << 31) / 2 + 1);
   }
+  return state;
 }
 
 // Forward declaration
@@ -882,13 +883,13 @@ static trace_light& add_light(trace_lights& lights) {
 }
 
 // Init trace lights
-void init_lights(trace_lights& lights, const scene_scene& scene,
-    const trace_params& params, const progress_callback& progress_cb) {
+trace_lights make_lights(const scene_scene& scene, const trace_params& params,
+    const progress_callback& progress_cb) {
   // handle progress
   auto progress = vec2i{0, 1};
   if (progress_cb) progress_cb("build light", progress.x++, progress.y);
 
-  lights.lights.clear();
+  auto lights = trace_lights{};
 
   for (auto handle = 0; handle < scene.instances.size(); handle++) {
     auto& instance = scene.instances[handle];
@@ -944,17 +945,14 @@ void init_lights(trace_lights& lights, const scene_scene& scene,
 
   // handle progress
   if (progress_cb) progress_cb("build light", progress.x++, progress.y);
+  return lights;
 }
 
 // Progressively computes an image.
 image<vec4f> trace_image(const scene_scene& scene, const trace_params& params,
     const progress_callback& progress_cb, const image_callback& image_cb) {
-  auto bvh = trace_bvh{};
-  init_bvh(bvh, scene, params, progress_cb);
-
-  auto lights = trace_lights{};
-  init_lights(lights, scene, params, progress_cb);
-
+  auto bvh    = make_bvh(scene, params, progress_cb);
+  auto lights = make_lights(scene, params, progress_cb);
   return trace_image(scene, bvh, lights, params, progress_cb, image_cb);
 }
 
@@ -962,8 +960,7 @@ image<vec4f> trace_image(const scene_scene& scene, const trace_params& params,
 image<vec4f> trace_image(const scene_scene& scene, const trace_bvh& bvh,
     const trace_lights& lights, const trace_params& params,
     const progress_callback& progress_cb, const image_callback& image_cb) {
-  auto state = trace_state{};
-  init_state(state, scene, params);
+  auto state = make_state(scene, params);
 
   for (auto sample = 0; sample < params.samples; sample++) {
     if (progress_cb) progress_cb("trace image", sample, params.samples);
@@ -987,13 +984,13 @@ image<vec4f> trace_image(const scene_scene& scene, const trace_bvh& bvh,
 }
 
 // [experimental] Asynchronous interface
-void trace_start(trace_state& state, const scene_scene& scene,
-    const trace_bvh& bvh, const trace_lights& lights,
+void trace_start(trace_worker& worker, trace_state& state,
+    const scene_scene& scene, const trace_bvh& bvh, const trace_lights& lights,
     const trace_params& params, const progress_callback& progress_cb,
     const image_callback& image_cb, const async_callback& async_cb) {
-  init_state(state, scene, params);
-  state.worker = {};
-  state.stop   = false;
+  state         = make_state(scene, params);
+  worker.worker = {};
+  worker.stop   = false;
 
   // render preview
   if (progress_cb) progress_cb("trace preview", 0, params.samples);
@@ -1011,14 +1008,14 @@ void trace_start(trace_state& state, const scene_scene& scene,
   if (image_cb) image_cb(state.render, 0, params.samples);
 
   // start renderer
-  state.worker = std::async(
-      std::launch::async, [=, &state, &scene, &lights, &bvh]() {
+  worker.worker = std::async(
+      std::launch::async, [=, &worker, &state, &scene, &lights, &bvh]() {
         for (auto sample = 0; sample < params.samples; sample++) {
-          if (state.stop) return;
+          if (worker.stop) return;
           if (progress_cb) progress_cb("trace image", sample, params.samples);
           parallel_for(
               state.render.width(), state.render.height(), [&](int i, int j) {
-                if (state.stop) return;
+                if (worker.stop) return;
                 trace_sample(state, scene, bvh, lights, {i, j}, params);
                 if (async_cb)
                   async_cb(state.render, sample, params.samples, {i, j});
@@ -1030,9 +1027,9 @@ void trace_start(trace_state& state, const scene_scene& scene,
         if (image_cb) image_cb(state.render, params.samples, params.samples);
       });
 }
-void trace_stop(trace_state& state) {
-  state.stop = true;
-  if (state.worker.valid()) state.worker.get();
+void trace_stop(trace_worker& worker) {
+  worker.stop = true;
+  if (worker.worker.valid()) worker.worker.get();
 }
 
 }  // namespace yocto
