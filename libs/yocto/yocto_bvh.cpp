@@ -115,7 +115,7 @@ void clear_embree_bvh(void* embree_bvh) {
 }
 
 // Initialize Embree BVH
-static void init_embree_bvh(
+static void build_embree_bvh(
     bvh_shape& bvh, const scene_shape& shape, const bvh_params& params) {
   auto edevice   = bvh_embree_device();
   bvh.embree_bvh = unique_ptr<void, void (*)(void*)>{
@@ -196,7 +196,7 @@ static void init_embree_bvh(
   rtcCommitScene(escene);
 }
 
-static void init_embree_bvh(
+static void build_embree_bvh(
     bvh_scene& bvh, const scene_scene& scene, const bvh_params& params) {
   // scene bvh
   auto edevice   = bvh_embree_device();
@@ -648,7 +648,7 @@ static void build_bvh(
   if (params.bvh == bvh_build_type::embree_default ||
       params.bvh == bvh_build_type::embree_highquality ||
       params.bvh == bvh_build_type::embree_compact) {
-    return init_embree_bvh(bvh, shape, params);
+    return build_embree_bvh(bvh, shape, params);
   }
 #endif
 
@@ -694,7 +694,7 @@ static void build_bvh(
   if (params.bvh == bvh_build_type::embree_default ||
       params.bvh == bvh_build_type::embree_highquality ||
       params.bvh == bvh_build_type::embree_compact) {
-    return init_embree_bvh(bvh, scene, params);
+    return build_embree_bvh(bvh, scene, params);
   }
 #endif
 
