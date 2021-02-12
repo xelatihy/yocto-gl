@@ -858,14 +858,14 @@ void trace_sample(trace_state& state, const scene_scene& scene,
 }
 
 // Init a sequence of random number generators.
-void init_state(
-    trace_state& state, const scene_scene& scene, const trace_params& params) {
+trace_state make_state(const scene_scene& scene, const trace_params& params) {
   auto& camera     = scene.cameras[params.camera];
   auto  image_size = (camera.aspect >= 1)
                          ? vec2i{params.resolution,
                               (int)round(params.resolution / camera.aspect)}
                          : vec2i{(int)round(params.resolution * camera.aspect),
                               params.resolution};
+  auto  state      = trace_state{};
   state.render.assign(image_size, zero4f);
   state.accumulation.assign(image_size, zero4f);
   state.samples.assign(image_size, 0);
@@ -874,6 +874,7 @@ void init_state(
   for (auto& rng : state.rngs) {
     rng = make_rng(params.seed, rand1i(rng_, 1 << 31) / 2 + 1);
   }
+  return state;
 }
 
 // Forward declaration
@@ -959,8 +960,7 @@ image<vec4f> trace_image(const scene_scene& scene, const trace_params& params,
 image<vec4f> trace_image(const scene_scene& scene, const trace_bvh& bvh,
     const trace_lights& lights, const trace_params& params,
     const progress_callback& progress_cb, const image_callback& image_cb) {
-  auto state = trace_state{};
-  init_state(state, scene, params);
+  auto state = make_state(scene, params);
 
   for (auto sample = 0; sample < params.samples; sample++) {
     if (progress_cb) progress_cb("trace image", sample, params.samples);
@@ -988,7 +988,7 @@ void trace_start(trace_worker& worker, trace_state& state,
     const scene_scene& scene, const trace_bvh& bvh, const trace_lights& lights,
     const trace_params& params, const progress_callback& progress_cb,
     const image_callback& image_cb, const async_callback& async_cb) {
-  init_state(state, scene, params);
+  state         = make_state(scene, params);
   worker.worker = {};
   worker.stop   = false;
 
