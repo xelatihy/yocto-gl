@@ -107,7 +107,7 @@ int run_render(const render_params& params_) {
   // render
   auto render = trace_image(scene, bvh, lights, params, print_progress,
       [savebatch = params.savebatch, output = params.output](
-          const image<vec4f>& render, int sample, int samples) {
+          const image_data& render, int sample, int samples) {
         if (!savebatch) return;
         auto ext = "-s" + std::to_string(sample + samples) +
                    path_extension(output);
@@ -250,7 +250,7 @@ int run_view(const view_params& params_) {
         set_param(viewer, "render", "sample", {sample, {0, 4096}, true});
         print_progress(message, sample, nsamples);
       },
-      [&](const image<vec4f>& render, int current, int total) {
+      [&](const image_data& render, int current, int total) {
         set_image(viewer, "render", render);
       });
 
@@ -272,7 +272,7 @@ int run_view(const view_params& params_) {
               set_param(viewer, "render", "sample", {sample, {1, 4096}, true});
               print_progress(message, sample, nsamples);
             },
-            [&](const image<vec4f>& render, int current, int total) {
+            [&](const image_data& render, int current, int total) {
               set_image(viewer, "render", render);
             });
       });
@@ -300,7 +300,7 @@ int run_view(const view_params& params_) {
             set_param(viewer, "render", "sample", {sample, {1, 4096}, true});
             print_progress(message, sample, nsamples);
           },
-          [&](const image<vec4f>& render, int current, int total) {
+          [&](const image_data& render, int current, int total) {
             set_image(viewer, "render", render);
           });
     }

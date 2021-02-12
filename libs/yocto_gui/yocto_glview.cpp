@@ -200,7 +200,7 @@ void view_scene(const string& title, const string& name, scene_scene& scene,
         set_param(viewer, name, "sample", {sample, {1, 4096}, true});
         print_progress(message, sample, nsamples);
       },
-      [&viewer, name](const image<vec4f>& render, int current, int total) {
+      [&viewer, name](const image_data& render, int current, int total) {
         set_image(viewer, name, render);
       });
 
@@ -228,8 +228,9 @@ void view_scene(const string& title, const string& name, scene_scene& scene,
               set_param(viewer, name, "sample", {sample, {1, 4096}, true});
               print_progress(message, sample, nsamples);
             },
-            [&viewer, name](const image<vec4f>& render, int current,
-                int total) { set_image(viewer, name, render); });
+            [&viewer, name](const image_data& render, int current, int total) {
+              set_image(viewer, name, render);
+            });
       });
   set_input_callback(viewer, [&](const string& name, const gui_input& input) {
     if ((input.mouse_left || input.mouse_right) &&
@@ -254,7 +255,7 @@ void view_scene(const string& title, const string& name, scene_scene& scene,
             set_param(viewer, name, "sample", {sample, {1, 4096}, true});
             print_progress(message, sample, nsamples);
           },
-          [&viewer, name](const image<vec4f>& render, int current, int total) {
+          [&viewer, name](const image_data& render, int current, int total) {
             set_image(viewer, name, render);
           });
     }
