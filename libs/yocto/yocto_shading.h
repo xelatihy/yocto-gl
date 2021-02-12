@@ -442,7 +442,7 @@ inline float sample_microfacet_pdf(
   return microfacet_distribution(roughness, normal, halfway, ggx) * cosine;
 }
 
-// Sample a microfacet ditribution with the distribution of visible normals.
+// Sample a microfacet distribution with the distribution of visible normals.
 inline vec3f sample_microfacet(float roughness, const vec3f& normal,
     const vec3f& outgoing, const vec2f& rn, bool ggx) {
   // http://jcgt.org/published/0007/04/01/
