@@ -153,6 +153,7 @@ static void init_embree_bvh(
     memcpy(embree_lines, elines.data(), elines.size() * 4);
     rtcCommitGeometry(egeometry);
     rtcAttachGeometryByID(escene, egeometry, 0);
+    rtcReleaseGeometry(egeometry);
   } else if (!shape.triangles.empty()) {
     auto egeometry = rtcNewGeometry(edevice, RTC_GEOMETRY_TYPE_TRIANGLE);
     rtcSetGeometryVertexAttributeCount(egeometry, 1);
@@ -168,6 +169,7 @@ static void init_embree_bvh(
         embree_triangles, shape.triangles.data(), shape.triangles.size() * 12);
     rtcCommitGeometry(egeometry);
     rtcAttachGeometryByID(escene, egeometry, 0);
+    rtcReleaseGeometry(egeometry);
   } else if (!shape.quads.empty()) {
     auto egeometry = rtcNewGeometry(edevice, RTC_GEOMETRY_TYPE_QUAD);
     rtcSetGeometryVertexAttributeCount(egeometry, 1);
@@ -181,6 +183,7 @@ static void init_embree_bvh(
     memcpy(embree_quads, shape.quads.data(), shape.quads.size() * 16);
     rtcCommitGeometry(egeometry);
     rtcAttachGeometryByID(escene, egeometry, 0);
+    rtcReleaseGeometry(egeometry);
   } else {
     throw std::runtime_error("empty shapes not supported");
   }
@@ -207,6 +210,7 @@ static void init_embree_bvh(
         egeometry, 0, RTC_FORMAT_FLOAT3X4_COLUMN_MAJOR, &instance.frame);
     rtcCommitGeometry(egeometry);
     rtcAttachGeometryByID(escene, egeometry, instance_id);
+    rtcReleaseGeometry(egeometry);
   }
   rtcCommitScene(escene);
 }
