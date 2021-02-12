@@ -289,6 +289,8 @@ static bool intersect_embree_bvh(const bvh_scene& bvh, const scene_scene& scene,
 // -----------------------------------------------------------------------------
 namespace yocto {
 
+#ifdef YOCTO_EMBREE
+
 bvh_shape::bvh_shape(bvh_shape&& other) {
   bvh.nodes.swap(other.bvh.nodes);
   bvh.primitives.swap(other.bvh.primitives);
@@ -318,16 +320,14 @@ bvh_scene& bvh_scene::operator=(bvh_scene&& other) {
 }
 
 bvh_shape::~bvh_shape() {
-#ifdef YOCTO_EMBREE
   if (embree_bvh) rtcReleaseScene((RTCScene)embree_bvh);
-#endif
 }
 
 bvh_scene::~bvh_scene() {
-#ifdef YOCTO_EMBREE
   if (embree_bvh) rtcReleaseScene((RTCScene)embree_bvh);
-#endif
 }
+
+#endif
 
 }  // namespace yocto
 

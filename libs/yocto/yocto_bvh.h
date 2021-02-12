@@ -89,27 +89,31 @@ struct bvh_tree {
 
 // BVH data for whole shapes. This interface makes copies of all the data.
 struct bvh_shape {
-  bvh_tree bvh        = {};                         // nodes
-  void*    embree_bvh = nullptr;                    // embree
+  bvh_tree bvh = {};  // nodes
+#ifdef YOCTO_EMBREE
+  void* embree_bvh = nullptr;                       // embree
   bvh_shape() {}                                    // move only
   bvh_shape(const bvh_shape&) = delete;             // move only
   bvh_shape& operator=(const bvh_shape&) = delete;  // move only
   bvh_shape(bvh_shape&&);                           // move only
   bvh_shape& operator=(bvh_shape&&);                // move only
   ~bvh_shape();                                     // cleanup
+#endif
 };
 
 // BVH data for whole shapes. This interface makes copies of all the data.
 struct bvh_scene {
-  bvh_tree          bvh        = {};                // nodes
-  vector<bvh_shape> shapes     = {};                // shapes
-  void*             embree_bvh = nullptr;           // embree
+  bvh_tree          bvh    = {};  // nodes
+  vector<bvh_shape> shapes = {};  // shapes
+#ifdef YOCTO_EMBREE
+  void* embree_bvh = nullptr;                       // embree
   bvh_scene() {}                                    // move only
   bvh_scene(const bvh_shape&) = delete;             // move only
   bvh_scene& operator=(const bvh_scene&) = delete;  // move only
   bvh_scene(bvh_scene&&);                           // move only
   bvh_scene& operator=(bvh_scene&&);                // move only
   ~bvh_scene();                                     // cleanup
+#endif
 };
 
 // Strategy used to build the bvh
