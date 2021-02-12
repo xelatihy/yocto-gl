@@ -228,8 +228,8 @@ void init_lights(trace_lights& lights, const scene_scene& scene,
 using trace_bvh = bvh_scene;
 
 // Build the bvh acceleration structure.
-void init_bvh(trace_bvh& bvh, const scene_scene& scene,
-    const trace_params& params, const progress_callback& progress_cb = {});
+trace_bvh make_bvh(const scene_scene& scene, const trace_params& params,
+    const progress_callback& progress_cb = {});
 
 // Refit bvh data
 void update_bvh(trace_bvh& bvh, const scene_scene& scene,

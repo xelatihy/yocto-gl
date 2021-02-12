@@ -733,10 +733,13 @@ static void build_bvh(
   build_bvh_serial(bvh.bvh, bboxes, params);
 }
 
-void init_bvh(bvh_shape& bvh, const scene_shape& shape,
-    const bvh_params& params, const progress_callback& progress_cb) {
+bvh_shape init_bvh(const scene_shape& shape, const bvh_params& params,
+    const progress_callback& progress_cb) {
   // handle progress
   auto progress = vec2i{0, 1};
+
+  // bvh
+  auto bvh = bvh_shape{};
 
   // build scene bvh
   if (progress_cb) progress_cb("build bvh", progress.x++, progress.y);
@@ -744,12 +747,16 @@ void init_bvh(bvh_shape& bvh, const scene_shape& shape,
 
   // handle progress
   if (progress_cb) progress_cb("build bvh", progress.x++, progress.y);
+  return bvh;
 }
 
-void init_bvh(bvh_scene& bvh, const scene_scene& scene,
-    const bvh_params& params, const progress_callback& progress_cb) {
+bvh_scene make_bvh(const scene_scene& scene, const bvh_params& params,
+    const progress_callback& progress_cb) {
   // handle progress
   auto progress = vec2i{0, 1 + (int)scene.shapes.size()};
+
+  // bvh
+  auto bvh = bvh_scene{};
 
   // build shape bvh
   bvh.shapes.resize(scene.shapes.size());
@@ -777,6 +784,7 @@ void init_bvh(bvh_scene& bvh, const scene_scene& scene,
 
   // handle progress
   if (progress_cb) progress_cb("build bvh", progress.x++, progress.y);
+  return bvh;
 }
 
 static void update_bvh(bvh_shape& bvh, const scene_shape& shape) {

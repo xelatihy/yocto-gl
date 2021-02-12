@@ -59,9 +59,9 @@ using namespace std::string_literals;
 namespace yocto {
 
 // Build the bvh acceleration structure.
-void init_bvh(trace_bvh& bvh, const scene_scene& scene,
-    const trace_params& params, const progress_callback& progress_cb) {
-  init_bvh(bvh, scene,
+trace_bvh make_bvh(const scene_scene& scene, const trace_params& params,
+    const progress_callback& progress_cb) {
+  return make_bvh(scene,
       bvh_params{(bvh_build_type)params.bvh, params.noparallel}, progress_cb);
 }
 
@@ -949,9 +949,7 @@ void init_lights(trace_lights& lights, const scene_scene& scene,
 // Progressively computes an image.
 image<vec4f> trace_image(const scene_scene& scene, const trace_params& params,
     const progress_callback& progress_cb, const image_callback& image_cb) {
-  auto bvh = trace_bvh{};
-  init_bvh(bvh, scene, params, progress_cb);
-
+  auto bvh    = make_bvh(scene, params, progress_cb);
   auto lights = trace_lights{};
   init_lights(lights, scene, params, progress_cb);
 

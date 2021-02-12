@@ -90,8 +90,7 @@ int run_render(const render_params& params_) {
   tesselate_shapes(scene, print_progress);
 
   // build bvh
-  auto bvh = trace_bvh{};
-  init_bvh(bvh, scene, params, print_progress);
+  auto bvh = make_bvh(scene, params, print_progress);
 
   // init renderer
   auto lights = trace_lights{};
@@ -227,8 +226,7 @@ int run_view(const view_params& params_) {
   tesselate_shapes(scene, print_progress);
 
   // build bvh
-  auto bvh = trace_bvh{};
-  init_bvh(bvh, scene, params, print_progress);
+  auto bvh = make_bvh(scene, params, print_progress);
 
   // init renderer
   auto lights = trace_lights{};

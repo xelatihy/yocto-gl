@@ -179,8 +179,7 @@ void view_scene(const string& title, const string& name, scene_scene& scene,
   auto params = params_;
 
   // build bvh
-  auto bvh = trace_bvh{};
-  init_bvh(bvh, scene, params, print_progress);
+  auto bvh = make_bvh(scene, params, print_progress);
 
   // init renderer
   auto lights = trace_lights{};

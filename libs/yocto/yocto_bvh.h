@@ -92,10 +92,10 @@ struct bvh_shape {
   bvh_tree bvh        = {};                         // nodes
   void*    embree_bvh = nullptr;                    // embree
   bvh_shape() {}                                    // move only
-  bvh_shape(const bvh_shape&)            = delete;  // move only
-  bvh_shape& opaerator(const bvh_shape&) = delete;  // move only
+  bvh_shape(const bvh_shape&) = delete;             // move only
+  bvh_shape& operator=(const bvh_shape&) = delete;  // move only
   bvh_shape(bvh_shape&&);                           // move only
-  bvh_shape& opaerator(bvh_shape&&) = delete;       // move only
+  bvh_shape& operator=(bvh_shape&&) = delete;       // move only
   ~bvh_shape();                                     // cleanup
 };
 
@@ -143,10 +143,9 @@ using progress_callback =
     function<void(const string& message, int current, int total)>;
 
 // Build the bvh acceleration structure.
-void init_bvh(
-    bvh_shape& bvh, const scene_shape& shape, const bvh_params& params);
-void init_bvh(bvh_scene& bvh, const scene_scene& scene,
-    const bvh_params& params, const progress_callback& progress_cb = {});
+bvh_shape make_bvh(const scene_shape& shape, const bvh_params& params);
+bvh_scene make_bvh(const scene_scene& scene, const bvh_params& params,
+    const progress_callback& progress_cb = {});
 
 // Refit bvh data
 void update_bvh(bvh_shape& bvh, const progress_callback& progress_cb = {});
