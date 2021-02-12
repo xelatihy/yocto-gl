@@ -240,11 +240,12 @@ int run_view(const view_params& params_) {
   params.camera = find_camera(scene, params.camname);
 
   // init state
-  auto state = trace_state{};
+  auto worker = trace_worker{};
+  auto state  = trace_state{};
 
   // render start
   trace_start(
-      state, scene, bvh, lights, params,
+      worker, state, scene, bvh, lights, params,
       [&](const string& message, int sample, int nsamples) {
         set_param(viewer, "render", "sample", {sample, {0, 4096}, true});
         print_progress(message, sample, nsamples);
@@ -263,10 +264,10 @@ int run_view(const view_params& params_) {
       viewer, [&](const string& name, const gui_params& uiparams) {
         if (name != "render") return;
         if (uiparams.empty()) return;
-        trace_stop(state);
+        trace_stop(worker);
         from_params(uiparams, params);
         trace_start(
-            state, scene, bvh, lights, params,
+            worker, state, scene, bvh, lights, params,
             [&](const string& message, int sample, int nsamples) {
               set_param(viewer, "render", "sample", {sample, {1, 4096}, true});
               print_progress(message, sample, nsamples);
@@ -279,7 +280,7 @@ int run_view(const view_params& params_) {
   set_input_callback(viewer, [&](const string& name, const gui_input& input) {
     if ((input.mouse_left || input.mouse_right) &&
         input.mouse_pos != input.mouse_last) {
-      trace_stop(state);
+      trace_stop(worker);
       auto dolly  = 0.0f;
       auto pan    = zero2f;
       auto rotate = zero2f;
@@ -294,7 +295,7 @@ int run_view(const view_params& params_) {
       std::tie(camera.frame, camera.focus) = camera_turntable(
           camera.frame, camera.focus, rotate, dolly, pan);
       trace_start(
-          state, scene, bvh, lights, params,
+          worker, state, scene, bvh, lights, params,
           [&](const string& message, int sample, int nsamples) {
             set_param(viewer, "render", "sample", {sample, {1, 4096}, true});
             print_progress(message, sample, nsamples);
@@ -309,7 +310,7 @@ int run_view(const view_params& params_) {
   run_viewer(viewer);
 
   // stop
-  trace_stop(state);
+  trace_stop(worker);
 
   // // save image
   // print_progress("save image", 0, 1);

@@ -190,11 +190,12 @@ void view_scene(const string& title, const string& name, scene_scene& scene,
   }
 
   // init state
-  auto state = trace_state{};
+  auto worker = trace_worker{};
+  auto state  = trace_state{};
 
   // render start
   trace_start(
-      state, scene, bvh, lights, params,
+      worker, state, scene, bvh, lights, params,
       [&viewer, name](const string& message, int sample, int nsamples) {
         set_param(viewer, name, "sample", {sample, {1, 4096}, true});
         print_progress(message, sample, nsamples);
@@ -219,10 +220,10 @@ void view_scene(const string& title, const string& name, scene_scene& scene,
   // set callback
   set_params_callback(
       viewer, [&](const string& name, const gui_params& uiparams) {
-        trace_stop(state);
+        trace_stop(worker);
         from_params(uiparams, params);
         trace_start(
-            state, scene, bvh, lights, params,
+            worker, state, scene, bvh, lights, params,
             [&viewer, name](const string& message, int sample, int nsamples) {
               set_param(viewer, name, "sample", {sample, {1, 4096}, true});
               print_progress(message, sample, nsamples);
@@ -233,7 +234,7 @@ void view_scene(const string& title, const string& name, scene_scene& scene,
   set_input_callback(viewer, [&](const string& name, const gui_input& input) {
     if ((input.mouse_left || input.mouse_right) &&
         input.mouse_pos != input.mouse_last) {
-      trace_stop(state);
+      trace_stop(worker);
       auto dolly  = 0.0f;
       auto pan    = zero2f;
       auto rotate = zero2f;
@@ -248,7 +249,7 @@ void view_scene(const string& title, const string& name, scene_scene& scene,
       std::tie(camera.frame, camera.focus) = camera_turntable(
           camera.frame, camera.focus, rotate, dolly, pan);
       trace_start(
-          state, scene, bvh, lights, params,
+          worker, state, scene, bvh, lights, params,
           [&viewer, name](const string& message, int sample, int nsamples) {
             set_param(viewer, name, "sample", {sample, {1, 4096}, true});
             print_progress(message, sample, nsamples);
@@ -263,7 +264,7 @@ void view_scene(const string& title, const string& name, scene_scene& scene,
   run_viewer(viewer);
 
   // stop
-  trace_stop(state);
+  trace_stop(worker);
 }
 
 }  // namespace yocto

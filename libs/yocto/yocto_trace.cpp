@@ -984,13 +984,13 @@ image<vec4f> trace_image(const scene_scene& scene, const trace_bvh& bvh,
 }
 
 // [experimental] Asynchronous interface
-void trace_start(trace_state& state, const scene_scene& scene,
-    const trace_bvh& bvh, const trace_lights& lights,
+void trace_start(trace_worker& worker, trace_state& state,
+    const scene_scene& scene, const trace_bvh& bvh, const trace_lights& lights,
     const trace_params& params, const progress_callback& progress_cb,
     const image_callback& image_cb, const async_callback& async_cb) {
   init_state(state, scene, params);
-  state.worker = {};
-  state.stop   = false;
+  worker.worker = {};
+  worker.stop   = false;
 
   // render preview
   if (progress_cb) progress_cb("trace preview", 0, params.samples);
@@ -1008,14 +1008,14 @@ void trace_start(trace_state& state, const scene_scene& scene,
   if (image_cb) image_cb(state.render, 0, params.samples);
 
   // start renderer
-  state.worker = std::async(
-      std::launch::async, [=, &state, &scene, &lights, &bvh]() {
+  worker.worker = std::async(
+      std::launch::async, [=, &worker, &state, &scene, &lights, &bvh]() {
         for (auto sample = 0; sample < params.samples; sample++) {
-          if (state.stop) return;
+          if (worker.stop) return;
           if (progress_cb) progress_cb("trace image", sample, params.samples);
           parallel_for(
               state.render.width(), state.render.height(), [&](int i, int j) {
-                if (state.stop) return;
+                if (worker.stop) return;
                 trace_sample(state, scene, bvh, lights, {i, j}, params);
                 if (async_cb)
                   async_cb(state.render, sample, params.samples, {i, j});
@@ -1027,9 +1027,9 @@ void trace_start(trace_state& state, const scene_scene& scene,
         if (image_cb) image_cb(state.render, params.samples, params.samples);
       });
 }
-void trace_stop(trace_state& state) {
-  state.stop = true;
-  if (state.worker.valid()) state.worker.get();
+void trace_stop(trace_worker& worker) {
+  worker.stop = true;
+  if (worker.worker.valid()) worker.worker.get();
 }
 
 }  // namespace yocto
