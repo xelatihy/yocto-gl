@@ -162,7 +162,7 @@ inline vec3f colormap(float t, colormap_type type = colormap_type::viridis);
 // -----------------------------------------------------------------------------
 namespace yocto {
 
-// Conversion between flots and bytes
+// Conversion between floats and bytes
 inline vec3b float_to_byte(const vec3f& a) {
   return {(byte)clamp(int(a.x * 256), 0, 255),
       (byte)clamp(int(a.y * 256), 0, 255), (byte)clamp(int(a.z * 256), 0, 255)};
