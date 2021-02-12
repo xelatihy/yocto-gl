@@ -882,13 +882,13 @@ static trace_light& add_light(trace_lights& lights) {
 }
 
 // Init trace lights
-void init_lights(trace_lights& lights, const scene_scene& scene,
-    const trace_params& params, const progress_callback& progress_cb) {
+trace_lights make_lights(const scene_scene& scene, const trace_params& params,
+    const progress_callback& progress_cb) {
   // handle progress
   auto progress = vec2i{0, 1};
   if (progress_cb) progress_cb("build light", progress.x++, progress.y);
 
-  lights.lights.clear();
+  auto lights = trace_lights{};
 
   for (auto handle = 0; handle < scene.instances.size(); handle++) {
     auto& instance = scene.instances[handle];
@@ -944,15 +944,14 @@ void init_lights(trace_lights& lights, const scene_scene& scene,
 
   // handle progress
   if (progress_cb) progress_cb("build light", progress.x++, progress.y);
+  return lights;
 }
 
 // Progressively computes an image.
 image<vec4f> trace_image(const scene_scene& scene, const trace_params& params,
     const progress_callback& progress_cb, const image_callback& image_cb) {
   auto bvh    = make_bvh(scene, params, progress_cb);
-  auto lights = trace_lights{};
-  init_lights(lights, scene, params, progress_cb);
-
+  auto lights = make_lights(scene, params, progress_cb);
   return trace_image(scene, bvh, lights, params, progress_cb, image_cb);
 }
 

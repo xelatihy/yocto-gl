@@ -221,8 +221,8 @@ struct trace_lights {
 };
 
 // Initialize lights.
-void init_lights(trace_lights& lights, const scene_scene& scene,
-    const trace_params& params, const progress_callback& progress_cb = {});
+trace_lights make_lights(const scene_scene& scene, const trace_params& params,
+    const progress_callback& progress_cb = {});
 
 // Define BVH
 using trace_bvh = bvh_scene;

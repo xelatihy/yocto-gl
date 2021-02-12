@@ -182,8 +182,7 @@ void view_scene(const string& title, const string& name, scene_scene& scene,
   auto bvh = make_bvh(scene, params, print_progress);
 
   // init renderer
-  auto lights = trace_lights{};
-  init_lights(lights, scene, params, print_progress);
+  auto lights = make_lights(scene, params, print_progress);
 
   // fix renderer type if no lights
   if (lights.lights.empty() && is_sampler_lit(params)) {

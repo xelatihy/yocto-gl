@@ -93,8 +93,7 @@ int run_render(const render_params& params_) {
   auto bvh = make_bvh(scene, params, print_progress);
 
   // init renderer
-  auto lights = trace_lights{};
-  init_lights(lights, scene, params, print_progress);
+  auto lights = make_lights(scene, params, print_progress);
 
   // fix renderer type if no lights
   if (lights.lights.empty() && is_sampler_lit(params)) {
@@ -229,8 +228,7 @@ int run_view(const view_params& params_) {
   auto bvh = make_bvh(scene, params, print_progress);
 
   // init renderer
-  auto lights = trace_lights{};
-  init_lights(lights, scene, params, print_progress);
+  auto lights = make_lights(scene, params, print_progress);
 
   // fix renderer type if no lights
   if (lights.lights.empty() && is_sampler_lit(params)) {
