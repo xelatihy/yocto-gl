@@ -119,7 +119,7 @@ static void init_embree_bvh(
     bvh_shape& bvh, const scene_shape& shape, const bvh_params& params) {
   auto edevice   = bvh_embree_device();
   bvh.embree_bvh = unique_ptr<void, void (*)(void*)>{
-      rtcNewScene(edevice), clear_embree_bvh};
+      rtcNewScene(edevice), &clear_embree_bvh};
   auto escene = (RTCScene)bvh.embree_bvh.get();
   if (params.bvh == bvh_build_type::embree_compact)
     rtcSetSceneFlags(escene, RTC_SCENE_FLAG_COMPACT);
@@ -201,7 +201,7 @@ static void init_embree_bvh(
   // scene bvh
   auto edevice   = bvh_embree_device();
   bvh.embree_bvh = unique_ptr<void, void (*)(void*)>{
-      rtcNewScene(edevice), clear_embree_bvh};
+      rtcNewScene(edevice), &clear_embree_bvh};
   auto escene = (RTCScene)bvh.embree_bvh.get();
   if (params.bvh == bvh_build_type::embree_compact)
     rtcSetSceneFlags(escene, RTC_SCENE_FLAG_COMPACT);
