@@ -49,28 +49,6 @@ namespace yocto {
 
 // Open a window and show an image
 void view_image(
-    const string& title, const string& name, const image<vec4f>& img) {
-  // open viewer
-  auto viewer = make_imageviewer(title);
-
-  // set view
-  set_image(viewer, name, img);
-
-  // run view
-  run_viewer(viewer);
-}
-void view_image(
-    const string& title, const string& name, const image<vec4b>& img) {
-  // open viewer
-  auto viewer = make_imageviewer(title);
-
-  // set view
-  set_image(viewer, name, img);
-
-  // run view
-  run_viewer(viewer);
-}
-void view_image(
     const string& title, const string& name, const image_data& img) {
   // open viewer
   auto viewer = make_imageviewer(title);
@@ -286,34 +264,6 @@ ogl_imageviewer make_imageviewer(const string& title) {
 }
 
 // Set image
-void set_image(ogl_imageviewer& viewer, const string& name,
-    const image<vec4f>& img, float exposure, bool filmic) {
-  auto lock  = std::lock_guard{viewer.input_mutex};
-  auto input = get_input(viewer, name);
-  if (!input) {
-    input =
-        viewer.inputs.emplace_back(std::make_unique<ogl_imageinput>()).get();
-  }
-  input->name     = name;
-  input->image    = make_image(img.width(), img.height(), true, img.data());
-  input->exposure = exposure;
-  input->filmic   = filmic;
-  input->ichanged = true;
-}
-void set_image(
-    ogl_imageviewer& viewer, const string& name, const image<vec4b>& img) {
-  auto lock  = std::lock_guard{viewer.input_mutex};
-  auto input = get_input(viewer, name);
-  if (!input) {
-    input =
-        viewer.inputs.emplace_back(std::make_unique<ogl_imageinput>()).get();
-  }
-  input->name     = name;
-  input->image    = make_image(img.width(), img.height(), false, img.data());
-  input->exposure = 0;
-  input->filmic   = false;
-  input->ichanged = true;
-}
 void set_image(
     ogl_imageviewer& viewer, const string& name, const image_data& image) {
   auto lock  = std::lock_guard{viewer.input_mutex};
