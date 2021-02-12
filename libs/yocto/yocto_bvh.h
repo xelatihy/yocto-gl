@@ -41,6 +41,7 @@
 #include <array>
 #include <cstdint>
 #include <functional>
+#include <memory>
 #include <string>
 #include <vector>
 
@@ -57,6 +58,7 @@ namespace yocto {
 using std::array;
 using std::function;
 using std::string;
+using std::unique_ptr;
 using std::vector;
 
 }  // namespace yocto
@@ -91,13 +93,7 @@ struct bvh_tree {
 struct bvh_shape {
   bvh_tree bvh = {};  // nodes
 #ifdef YOCTO_EMBREE
-  void* embree_bvh = nullptr;                       // embree
-  bvh_shape() {}                                    // move only
-  bvh_shape(const bvh_shape&) = delete;             // move only
-  bvh_shape& operator=(const bvh_shape&) = delete;  // move only
-  bvh_shape(bvh_shape&&);                           // move only
-  bvh_shape& operator=(bvh_shape&&);                // move only
-  ~bvh_shape();                                     // cleanup
+  unique_ptr<void, void (*)(void*)> embree_bvh = {nullptr, nullptr};  // embree
 #endif
 };
 
@@ -106,13 +102,7 @@ struct bvh_scene {
   bvh_tree          bvh    = {};  // nodes
   vector<bvh_shape> shapes = {};  // shapes
 #ifdef YOCTO_EMBREE
-  void* embree_bvh = nullptr;                       // embree
-  bvh_scene() {}                                    // move only
-  bvh_scene(const bvh_shape&) = delete;             // move only
-  bvh_scene& operator=(const bvh_scene&) = delete;  // move only
-  bvh_scene(bvh_scene&&);                           // move only
-  bvh_scene& operator=(bvh_scene&&);                // move only
-  ~bvh_scene();                                     // cleanup
+  unique_ptr<void, void (*)(void*)> embree_bvh = {nullptr, nullptr};  // embree
 #endif
 };
 

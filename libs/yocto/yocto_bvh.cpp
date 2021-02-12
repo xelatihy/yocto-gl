@@ -109,12 +109,18 @@ static RTCDevice bvh_embree_device() {
   return device;
 }
 
+// Clear embreee bvh
+void clear_embree_bvh(void* embree_bvh) {
+  if (embree_bvh) rtcReleaseScene((RTCScene)embree_bvh);
+}
+
 // Initialize Embree BVH
 static void init_embree_bvh(
     bvh_shape& bvh, const scene_shape& shape, const bvh_params& params) {
   auto edevice   = bvh_embree_device();
-  bvh.embree_bvh = rtcNewScene(edevice);
-  auto escene    = (RTCScene)bvh.embree_bvh;
+  bvh.embree_bvh = unique_ptr<void, void (*)(void*)>{
+      rtcNewScene(edevice), clear_embree_bvh};
+  auto escene = (RTCScene)bvh.embree_bvh.get();
   if (params.bvh == bvh_build_type::embree_compact)
     rtcSetSceneFlags(escene, RTC_SCENE_FLAG_COMPACT);
   if (params.bvh == bvh_build_type::embree_highquality)
@@ -194,8 +200,9 @@ static void init_embree_bvh(
     bvh_scene& bvh, const scene_scene& scene, const bvh_params& params) {
   // scene bvh
   auto edevice   = bvh_embree_device();
-  bvh.embree_bvh = rtcNewScene(edevice);
-  auto escene    = (RTCScene)bvh.embree_bvh;
+  bvh.embree_bvh = unique_ptr<void, void (*)(void*)>{
+      rtcNewScene(edevice), clear_embree_bvh};
+  auto escene = (RTCScene)bvh.embree_bvh.get();
   if (params.bvh == bvh_build_type::embree_compact)
     rtcSetSceneFlags(escene, RTC_SCENE_FLAG_COMPACT);
   if (params.bvh == bvh_build_type::embree_highquality)
@@ -205,7 +212,7 @@ static void init_embree_bvh(
     auto& instance  = scene.instances[instance_id];
     auto& sbvh      = bvh.shapes[instance.shape];
     auto  egeometry = rtcNewGeometry(edevice, RTC_GEOMETRY_TYPE_INSTANCE);
-    rtcSetGeometryInstancedScene(egeometry, (RTCScene)sbvh.embree_bvh);
+    rtcSetGeometryInstancedScene(egeometry, (RTCScene)sbvh.embree_bvh.get());
     rtcSetGeometryTransform(
         egeometry, 0, RTC_FORMAT_FLOAT3X4_COLUMN_MAJOR, &instance.frame);
     rtcCommitGeometry(egeometry);
@@ -218,12 +225,12 @@ static void init_embree_bvh(
 static void update_embree_bvh(bvh_scene& bvh, const scene_scene& scene,
     const vector<int>& updated_instances) {
   // scene bvh
-  auto escene = (RTCScene)bvh.embree_bvh;
+  auto escene = (RTCScene)bvh.embree_bvh.get();
   for (auto instance_id : updated_instances) {
     auto& instance    = scene.instances[instance_id];
     auto& sbvh        = bvh.shapes[instance.shape];
     auto  embree_geom = rtcGetGeometry(escene, instance_id);
-    rtcSetGeometryInstancedScene(embree_geom, (RTCScene)sbvh.embree_bvh);
+    rtcSetGeometryInstancedScene(embree_geom, (RTCScene)sbvh.embree_bvh.get());
     rtcSetGeometryTransform(
         embree_geom, 0, RTC_FORMAT_FLOAT3X4_COLUMN_MAJOR, &instance.frame);
     rtcCommitGeometry(embree_geom);
@@ -247,7 +254,7 @@ static bool intersect_embree_bvh(const bvh_shape& bvh, const scene_shape& shape,
   embree_ray.hit.instID[0] = RTC_INVALID_GEOMETRY_ID;
   RTCIntersectContext embree_ctx;
   rtcInitIntersectContext(&embree_ctx);
-  rtcIntersect1((RTCScene)bvh.embree_bvh, &embree_ctx, &embree_ray);
+  rtcIntersect1((RTCScene)bvh.embree_bvh.get(), &embree_ctx, &embree_ray);
   if (embree_ray.hit.geomID == RTC_INVALID_GEOMETRY_ID) return false;
   element  = (int)embree_ray.hit.primID;
   uv       = {embree_ray.hit.u, embree_ray.hit.v};
@@ -272,7 +279,7 @@ static bool intersect_embree_bvh(const bvh_scene& bvh, const scene_scene& scene,
   embree_ray.hit.instID[0] = RTC_INVALID_GEOMETRY_ID;
   RTCIntersectContext embree_ctx;
   rtcInitIntersectContext(&embree_ctx);
-  rtcIntersect1((RTCScene)bvh.embree_bvh, &embree_ctx, &embree_ray);
+  rtcIntersect1((RTCScene)bvh.embree_bvh.get(), &embree_ctx, &embree_ray);
   if (embree_ray.hit.geomID == RTC_INVALID_GEOMETRY_ID) return false;
   instance = (int)embree_ray.hit.instID[0];
   element  = (int)embree_ray.hit.primID;
@@ -280,53 +287,6 @@ static bool intersect_embree_bvh(const bvh_scene& bvh, const scene_scene& scene,
   distance = embree_ray.ray.tfar;
   return true;
 }
-#endif
-
-}  // namespace yocto
-
-// -----------------------------------------------------------------------------
-// IMPLEMENTATION FOR BVH CREATION
-// -----------------------------------------------------------------------------
-namespace yocto {
-
-#ifdef YOCTO_EMBREE
-
-bvh_shape::bvh_shape(bvh_shape&& other) {
-  bvh.nodes.swap(other.bvh.nodes);
-  bvh.primitives.swap(other.bvh.primitives);
-  std::swap(embree_bvh, other.embree_bvh);
-}
-
-bvh_shape& bvh_shape::operator=(bvh_shape&& other) {
-  bvh.nodes.swap(other.bvh.nodes);
-  bvh.primitives.swap(other.bvh.primitives);
-  std::swap(embree_bvh, other.embree_bvh);
-  return *this;
-}
-
-bvh_scene::bvh_scene(bvh_scene&& other) {
-  bvh.nodes.swap(other.bvh.nodes);
-  bvh.primitives.swap(other.bvh.primitives);
-  shapes.swap(other.shapes);
-  std::swap(embree_bvh, other.embree_bvh);
-}
-
-bvh_scene& bvh_scene::operator=(bvh_scene&& other) {
-  bvh.nodes.swap(other.bvh.nodes);
-  bvh.primitives.swap(other.bvh.primitives);
-  shapes.swap(other.shapes);
-  std::swap(embree_bvh, other.embree_bvh);
-  return *this;
-}
-
-bvh_shape::~bvh_shape() {
-  if (embree_bvh) rtcReleaseScene((RTCScene)embree_bvh);
-}
-
-bvh_scene::~bvh_scene() {
-  if (embree_bvh) rtcReleaseScene((RTCScene)embree_bvh);
-}
-
 #endif
 
 }  // namespace yocto
