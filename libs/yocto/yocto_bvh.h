@@ -95,7 +95,7 @@ struct bvh_shape {
   bvh_shape(const bvh_shape&) = delete;             // move only
   bvh_shape& operator=(const bvh_shape&) = delete;  // move only
   bvh_shape(bvh_shape&&);                           // move only
-  bvh_shape& operator=(bvh_shape&&) = delete;       // move only
+  bvh_shape& operator=(bvh_shape&&);                // move only
   ~bvh_shape();                                     // cleanup
 };
 
@@ -105,10 +105,10 @@ struct bvh_scene {
   vector<bvh_shape> shapes     = {};                // shapes
   void*             embree_bvh = nullptr;           // embree
   bvh_scene() {}                                    // move only
-  bvh_scene(const bvh_shape&)            = delete;  // move only
-  bvh_scene& opaerator(const bvh_scene&) = delete;  // move only
+  bvh_scene(const bvh_shape&) = delete;             // move only
+  bvh_scene& operator=(const bvh_scene&) = delete;  // move only
   bvh_scene(bvh_scene&&);                           // move only
-  bvh_scene& opaerator(bvh_scene&&) = delete;       // move only
+  bvh_scene& operator=(bvh_scene&&);                // move only
   ~bvh_scene();                                     // cleanup
 };
 

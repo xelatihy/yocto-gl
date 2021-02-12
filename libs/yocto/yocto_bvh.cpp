@@ -291,11 +291,26 @@ bvh_shape::bvh_shape(bvh_shape&& other) {
   std::swap(embree_bvh, other.embree_bvh);
 }
 
+bvh_shape& bvh_shape::operator=(bvh_shape&& other) {
+  bvh.nodes.swap(other.bvh.nodes);
+  bvh.primitives.swap(other.bvh.primitives);
+  std::swap(embree_bvh, other.embree_bvh);
+  return *this;
+}
+
 bvh_scene::bvh_scene(bvh_scene&& other) {
   bvh.nodes.swap(other.bvh.nodes);
   bvh.primitives.swap(other.bvh.primitives);
   shapes.swap(other.shapes);
   std::swap(embree_bvh, other.embree_bvh);
+}
+
+bvh_scene& bvh_scene::operator=(bvh_scene&& other) {
+  bvh.nodes.swap(other.bvh.nodes);
+  bvh.primitives.swap(other.bvh.primitives);
+  shapes.swap(other.shapes);
+  std::swap(embree_bvh, other.embree_bvh);
+  return *this;
 }
 
 bvh_shape::~bvh_shape() {
