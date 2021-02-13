@@ -194,10 +194,10 @@ using progress_callback =
     function<void(const string& message, int current, int total)>;
 // Callback used to report partially computed image
 using image_callback =
-    function<void(const image<vec4f>& render, int current, int total)>;
+    function<void(const image_data& render, int current, int total)>;
 
 // Progressively computes an image.
-image<vec4f> trace_image(const scene_scene& scene, const trace_params& params,
+image_data trace_image(const scene_scene& scene, const trace_params& params,
     const progress_callback& progress_cb = {},
     const image_callback&    image_cb    = {});
 
@@ -238,7 +238,7 @@ void update_bvh(trace_bvh& bvh, const scene_scene& scene,
     const progress_callback& progress_cb = {});
 
 // Progressively computes an image.
-image<vec4f> trace_image(const scene_scene& scene, const trace_bvh& bvh,
+image_data trace_image(const scene_scene& scene, const trace_bvh& bvh,
     const trace_lights& lights, const trace_params& params,
     const progress_callback& progress_cb = {},
     const image_callback&    image_cb    = {});
@@ -248,10 +248,14 @@ bool is_sampler_lit(const trace_params& params);
 
 // Trace state
 struct trace_state {
-  image<vec4f>     render       = {};
-  image<vec4f>     accumulation = {};
-  image<int>       samples      = {};
-  image<rng_state> rngs         = {};
+  // final rendered image
+  image_data image = {};
+  // computing buffers
+  int               width        = 0;
+  int               height       = 0;
+  vector<vec4f>     accumulation = {};
+  vector<int>       samples      = {};
+  vector<rng_state> rngs         = {};
 };
 
 // [experimental] Asynchronous state
@@ -262,7 +266,7 @@ struct trace_worker {
 
 // [experimental] Callback used to report partially computed image
 using async_callback = function<void(
-    const image<vec4f>& render, int current, int total, const vec2i& ij)>;
+    const image_data& render, int current, int total, const vec2i& ij)>;
 
 // [experimental] Asynchronous interface
 struct trace_state;

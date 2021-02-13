@@ -66,8 +66,6 @@ using std::vector;
 namespace yocto {
 
 // Open a window and show an image
-void view_image(const image<vec4f>& img);
-void view_image(const image<vec4b>& img);
 void view_image(const image_data& img);
 
 // Open a window and show a shape via path tracing
@@ -102,10 +100,6 @@ ogl_imageviewer make_imageviewer(const string& title);
 void run_viewer(ogl_imageviewer& viewer);
 
 // Set image
-void set_image(ogl_imageviewer& viewer, const string& name,
-    const image<vec4f>& img, float exposure = 0, bool filmic = false);
-void set_image(
-    ogl_imageviewer& viewer, const string& name, const image<vec4b>& img);
 void set_image(
     ogl_imageviewer& viewer, const string& name, const image_data& image);
 void close_image(ogl_imageviewer& viewer, const string& name);
