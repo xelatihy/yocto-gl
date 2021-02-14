@@ -443,6 +443,9 @@ static pair<int, int> split_nodes(vector<int>& primitives,
     int end, bvh_build_type type) {
   switch (type) {
     case bvh_build_type::default_:
+    case bvh_build_type::embree_default:
+    case bvh_build_type::embree_highquality:
+    case bvh_build_type::embree_compact:
       return split_middle(primitives, bboxes, centers, start, end);
     case bvh_build_type::highquality:
       return split_sah(primitives, bboxes, centers, start, end);

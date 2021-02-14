@@ -709,13 +709,16 @@ inline string get_usage(const cli_command& root, const cli_command& cli) {
     auto str = string{};
     str += "<";
     if (option.nargs < 0) str += "[";
-    if (!option.choices.empty()) str += "string";
-    switch (option.type) {
-      case cli_type::integer: str += "integer"; break;
-      case cli_type::uinteger: str += "uinteger"; break;
-      case cli_type::number: str += "number"; break;
-      case cli_type::string: str += "string"; break;
-      case cli_type::boolean: str += "boolean"; break;
+    if (!option.choices.empty()) {
+      str += "string";
+    } else {
+      switch (option.type) {
+        case cli_type::integer: str += "integer"; break;
+        case cli_type::uinteger: str += "uinteger"; break;
+        case cli_type::number: str += "number"; break;
+        case cli_type::string: str += "string"; break;
+        case cli_type::boolean: str += "boolean"; break;
+      }
     }
     if (option.nargs < 0) str += "]";
     str += ">";

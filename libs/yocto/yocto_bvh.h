@@ -91,14 +91,14 @@ struct bvh_tree {
 
 // BVH data for whole shapes. This interface makes copies of all the data.
 struct bvh_shape {
-  bvh_tree bvh = {};  // nodes
+  bvh_tree                          bvh        = {};                  // nodes
   unique_ptr<void, void (*)(void*)> embree_bvh = {nullptr, nullptr};  // embree
 };
 
 // BVH data for whole shapes. This interface makes copies of all the data.
 struct bvh_scene {
-  bvh_tree          bvh    = {};  // nodes
-  vector<bvh_shape> shapes = {};  // shapes
+  bvh_tree                          bvh        = {};                  // nodes
+  vector<bvh_shape>                 shapes     = {};                  // shapes
   unique_ptr<void, void (*)(void*)> embree_bvh = {nullptr, nullptr};  // embree
 };
 
@@ -108,19 +108,13 @@ enum struct bvh_build_type {
   highquality,
   middle,
   balanced,
-#ifdef YOCTO_EMBREE
   embree_default,
   embree_highquality,
   embree_compact  // only for copy interface
-#endif
 };
 
-const auto bvh_build_names = vector<string>{
-    "default", "highquality", "middle", "balanced",
-#ifdef YOCTO_EMBREE
-    "embree-default", "embree-highquality", "embree-compact"
-#endif
-};
+const auto bvh_build_names = vector<string>{"default", "highquality", "middle",
+    "balanced", "embree-default", "embree-highquality", "embree-compact"};
 
 // Bvh parameters
 struct bvh_params {
