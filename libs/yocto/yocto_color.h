@@ -84,8 +84,6 @@
 namespace yocto {
 
 // Conversion between flots and bytes
-inline vec3b float_to_byte(const vec3f& a);
-inline vec3f byte_to_float(const vec3b& a);
 inline vec4b float_to_byte(const vec4f& a);
 inline vec4f byte_to_float(const vec4b& a);
 inline byte  float_to_byte(float a);
@@ -105,8 +103,6 @@ inline vec4f rgb_to_srgb(const vec4f& rgb);
 // Conversion between number of channels.
 inline vec4f rgb_to_rgba(const vec3f& rgb);
 inline vec3f rgba_to_rgb(const vec4f& rgba);
-inline vec4b rgb_to_rgba(const vec3b& rgb);
-inline vec3b rgba_to_rgb(const vec4b& rgba);
 
 // Apply contrast. Grey should be 0.18 for linear and 0.5 for gamma.
 inline vec3f lincontrast(const vec3f& rgb, float contrast, float grey);
@@ -229,13 +225,6 @@ inline vec3f convert_color(const vec3f& col, color_space from, color_space to);
 namespace yocto {
 
 // Conversion between floats and bytes
-inline vec3b float_to_byte(const vec3f& a) {
-  return {(byte)clamp(int(a.x * 256), 0, 255),
-      (byte)clamp(int(a.y * 256), 0, 255), (byte)clamp(int(a.z * 256), 0, 255)};
-}
-inline vec3f byte_to_float(const vec3b& a) {
-  return {a.x / 255.0f, a.y / 255.0f, a.z / 255.0f};
-}
 inline vec4b float_to_byte(const vec4f& a) {
   return {(byte)clamp(int(a.x * 256), 0, 255),
       (byte)clamp(int(a.y * 256), 0, 255), (byte)clamp(int(a.z * 256), 0, 255),
@@ -278,10 +267,6 @@ inline vec4f rgb_to_srgb(const vec4f& rgb) {
 // Conversion between number of channels.
 inline vec4f rgb_to_rgba(const vec3f& rgb) { return {rgb.x, rgb.y, rgb.z, 1}; }
 inline vec3f rgba_to_rgb(const vec4f& rgba) { return xyz(rgba); }
-inline vec4b rgb_to_rgba(const vec3b& rgb) {
-  return {rgb.x, rgb.y, rgb.z, 255};
-}
-inline vec3b rgba_to_rgb(const vec4b& rgba) { return xyz(rgba); }
 
 // Apply contrast. Grey should be 0.18 for linear and 0.5 for gamma.
 inline vec3f lincontrast(const vec3f& rgb, float contrast, float grey) {

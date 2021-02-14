@@ -814,16 +814,6 @@ bool draw_hdrcoloredit(gui_window* win, const char* lbl, vec4f& value) {
   }
 }
 
-bool draw_coloredit(gui_window* win, const char* lbl, vec3b& value) {
-  auto valuef = byte_to_float(value);
-  if (ImGui::ColorEdit3(lbl, &valuef.x)) {
-    value = float_to_byte(valuef);
-    return true;
-  } else {
-    return false;
-  }
-}
-
 bool draw_coloredit(gui_window* win, const char* lbl, vec4b& value) {
   auto valuef = byte_to_float(value);
   if (ImGui::ColorEdit4(lbl, &valuef.x)) {
