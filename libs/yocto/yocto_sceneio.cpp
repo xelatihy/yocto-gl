@@ -2522,7 +2522,7 @@ static bool save_json_scene(const string& filename, const scene_scene& scene,
       }
       auto path = "subdivs/" + get_subdiv_name(scene, subdiv) + ".obj";
       auto err  = string{};
-      if (!save_subdiv(path_join(dirname, path), subdiv, err, true)) {
+      if (!save_subdiv(path_join(dirname, path), subdiv, err)) {
         auto lock = std::lock_guard{mutex};
         error     = err;
         return;
@@ -4123,7 +4123,7 @@ static bool save_pbrt_scene(const string& filename, const scene_scene& scene,
       if (progress_cb) progress_cb("save texture", progress.x++, progress.y);
       auto path = "textures/" + get_texture_name(scene, texture) +
                   (!texture.hdr.empty() ? ".hdr" : ".png");
-      if (!save_texture(path_join(dirname, path), texture, error, true))
+      if (!save_texture(path_join(dirname, path), texture, error))
         return dependent_error();
     }
   } else {
