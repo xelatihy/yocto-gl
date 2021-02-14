@@ -253,6 +253,7 @@ struct cli_command {
   string                        usage       = "";
   vector<cli_command>           commands    = {};
   vector<cli_option>            options     = {};
+  vector<cli_option>            arguments   = {};
   bool                          help        = false;
   string                        command     = "";
   function<void(const string&)> set_command = {};
@@ -536,7 +537,7 @@ inline void validate_name(const cli_command& cli, const string& name) {
 }
 
 template <typename T>
-inline void add_optional_impl(cli_command& cli, const string& name, T& value,
+inline void add_option_impl(cli_command& cli, const string& name, T& value,
     const string& usage, const vector<T>& minmax, const vector<string>& choices,
     const string& alt, bool req) {
   static_assert(std::is_same_v<T, string> || std::is_same_v<T, bool> ||
@@ -562,7 +563,7 @@ inline void add_optional_impl(cli_command& cli, const string& name, T& value,
 }
 
 template <typename T>
-inline void add_positional_impl(cli_command& cli, const string& name, T& value,
+inline void add_argument_impl(cli_command& cli, const string& name, T& value,
     const string& usage, const vector<T>& minmax, const vector<string>& choices,
     bool req) {
   static_assert(std::is_same_v<T, string> || std::is_same_v<T, bool> ||
@@ -588,7 +589,7 @@ inline void add_positional_impl(cli_command& cli, const string& name, T& value,
 }
 
 template <typename T>
-inline void add_positionalv_impl(cli_command& cli, const string& name,
+inline void add_argumentv_impl(cli_command& cli, const string& name,
     vector<T>& value, const string& usage, const vector<T>& minmax,
     const vector<string>& choices, bool req) {
   static_assert(std::is_same_v<T, string> || std::is_same_v<T, bool> ||
@@ -620,71 +621,71 @@ inline void add_positionalv_impl(cli_command& cli, const string& name,
 inline void add_optional(cli_command& cli, const string& name, int& value,
     const string& usage, const vector<int>& minmax, const string& alt,
     bool req) {
-  return add_optional_impl(
+  return add_option_impl(
       cli, name, value, usage, {minmax[0], minmax[1]}, {}, alt, req);
 }
 inline void add_optional(cli_command& cli, const string& name, float& value,
     const string& usage, const vector<float>& minmax, const string& alt,
     bool req) {
-  return add_optional_impl(cli, name, value, usage, minmax, {}, alt, req);
+  return add_option_impl(cli, name, value, usage, minmax, {}, alt, req);
 }
 inline void add_optional(cli_command& cli, const string& name, bool& value,
     const string& usage, const vector<string>& choices, const string& alt,
     bool req) {
-  return add_optional_impl(cli, name, value, usage, {}, choices, alt, req);
+  return add_option_impl(cli, name, value, usage, {}, choices, alt, req);
 }
 inline void add_optional(cli_command& cli, const string& name, string& value,
     const string& usage, const vector<string>& choices, const string& alt,
     bool req) {
-  return add_optional_impl(cli, name, value, usage, {}, choices, alt, req);
+  return add_option_impl(cli, name, value, usage, {}, choices, alt, req);
 }
 inline void add_optional(cli_command& cli, const string& name, int& value,
     const string& usage, const vector<string>& choices, const string& alt,
     bool req) {
-  return add_optional_impl(cli, name, value, usage, {}, choices, alt, req);
+  return add_option_impl(cli, name, value, usage, {}, choices, alt, req);
 }
 // Add a positional argument. Supports strings, numbers, and boolean flags.
 inline void add_positional(cli_command& cli, const string& name, int& value,
     const string& usage, const vector<int>& minmax, bool req) {
-  return add_positional_impl(cli, name, value, usage, minmax, {}, req);
+  return add_argument_impl(cli, name, value, usage, minmax, {}, req);
 }
 inline void add_positional(cli_command& cli, const string& name, float& value,
     const string& usage, const vector<float>& minmax, bool req) {
-  return add_positional_impl(cli, name, value, usage, minmax, {}, req);
+  return add_argument_impl(cli, name, value, usage, minmax, {}, req);
 }
 inline void add_positional(cli_command& cli, const string& name, bool& value,
     const string& usage, const vector<string>& choices, bool req) {
-  return add_positional_impl(cli, name, value, usage, {}, choices, req);
+  return add_argument_impl(cli, name, value, usage, {}, choices, req);
 }
 inline void add_positional(cli_command& cli, const string& name, string& value,
     const string& usage, const vector<string>& choices, bool req) {
-  return add_positional_impl(cli, name, value, usage, {}, choices, req);
+  return add_argument_impl(cli, name, value, usage, {}, choices, req);
 }
 inline void add_positional(cli_command& cli, const string& name, int& value,
     const string& usage, const vector<string>& choices, bool req) {
-  return add_positional_impl(cli, name, value, usage, {}, choices, req);
+  return add_argument_impl(cli, name, value, usage, {}, choices, req);
 }
 // Add a positional argument that consumes all arguments left.
 // Supports strings and enums.
 inline void add_positional(cli_command& cli, const string& name,
     vector<int>& value, const string& usage, const vector<int>& minmax,
     bool req) {
-  return add_positionalv_impl(cli, name, value, usage, minmax, {}, req);
+  return add_argumentv_impl(cli, name, value, usage, minmax, {}, req);
 }
 inline void add_positional(cli_command& cli, const string& name,
     vector<float>& value, const string& usage, const vector<float>& minmax,
     bool req) {
-  return add_positionalv_impl(cli, name, value, usage, minmax, {}, req);
+  return add_argumentv_impl(cli, name, value, usage, minmax, {}, req);
 }
 inline void add_positional(cli_command& cli, const string& name,
     vector<int>& value, const string& usage, const vector<string>& choices,
     bool req) {
-  return add_positionalv_impl(cli, name, value, usage, {}, choices, req);
+  return add_argumentv_impl(cli, name, value, usage, {}, choices, req);
 }
 inline void add_positional(cli_command& cli, const string& name,
     vector<string>& value, const string& usage, const vector<string>& choices,
     bool req) {
-  return add_positionalv_impl(cli, name, value, usage, {}, choices, req);
+  return add_argumentv_impl(cli, name, value, usage, {}, choices, req);
 }
 
 // initialize a command line parser
@@ -699,11 +700,7 @@ inline cli_command make_cli(const string& name, const string& usage) {
 // add command
 inline cli_command& add_command(
     cli_command& cli, const string& name, const string& usage) {
-  for (auto& cmd : cli.commands) {
-    if (cmd.name == name) {
-      throw std::invalid_argument{"cannot add two commands with the same name"};
-    }
-  }
+  validate_name(cli, name);
   auto& cmd = cli.commands.emplace_back();
   cmd.name  = name;
   cmd.usage = usage;
@@ -718,7 +715,8 @@ inline void add_command_name(
 
 inline bool get_help(const cli_command& cli) {
   if (cli.help) return true;
-  for (auto& cmd : cli.commands) return get_help(cmd);
+  for (auto& cmd : cli.commands)
+    if (get_help(cmd)) return true;
   return false;
 }
 
