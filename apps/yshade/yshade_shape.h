@@ -37,7 +37,7 @@ struct shade_shape_params {
 inline void add_command(cli_command& cli, const string& name,
     shade_shape_params& value, const string& usage) {
   auto& cmd = add_command(cli, name, usage);
-  add_positional(cmd, "shapes", value.shapes, "Input shapes.");
+  add_argument(cmd, "shapes", value.shapes, "Input shapes.");
 }
 
 int run_shade_shape(const shade_shape_params& params);

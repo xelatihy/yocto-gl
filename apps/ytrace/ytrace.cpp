@@ -49,7 +49,7 @@ struct render_params : trace_params {
 void add_command(cli_command& cli, const string& name, render_params& value,
     const string& usage) {
   auto& cmd = add_command(cli, name, usage);
-  add_positional(cmd, "scene", value.scene, "Scene filename.");
+  add_argument(cmd, "scene", value.scene, "Scene filename.");
   add_optional(cmd, "output", value.output, "Output filename.", {}, "o");
   add_optional(cmd, "camera", value.camname, "Camera name.", {}, "c");
   add_optional(cmd, "addsky", value.addsky, "Add sky.");
@@ -138,7 +138,7 @@ struct view_params : trace_params {
 void add_command(cli_command& cli, const string& name, view_params& value,
     const string& usage) {
   auto& cmd = add_command(cli, name, usage);
-  add_positional(cmd, "scene", value.scene, "Scene filename.");
+  add_argument(cmd, "scene", value.scene, "Scene filename.");
   add_optional(cmd, "output", value.output, "Output filename.", {}, "o");
   add_optional(cmd, "camera", value.camname, "Camera name.", {}, "c");
   add_optional(cmd, "addsky", value.addsky, "Add sky.");

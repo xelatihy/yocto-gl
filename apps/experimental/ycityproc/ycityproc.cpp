@@ -1117,7 +1117,7 @@ int main(int argc, const char* argv[]) {
   add_optional(cli, "copyright", copyright, "copyright string", {}, "c");
   add_optional(cli, "validate", validate, "Validate scene");
   add_optional(cli, "output", output, "output scene", {}, "o");
-  add_positional(cli, "dirname", path, "input directory");
+  add_argument(cli, "dirname", path, "input directory");
   parse_cli(cli, argc, argv);
 
   // load data

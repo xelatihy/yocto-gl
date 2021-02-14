@@ -49,7 +49,7 @@ struct convert_params {
 void add_command(cli_command& cli, const string& name, convert_params& value,
     const string& usage) {
   auto& cmd = add_command(cli, name, usage);
-  add_positional(cmd, "image", value.image, "Input image.");
+  add_argument(cmd, "image", value.image, "Input image.");
   add_optional(cmd, "output", value.output, "Output image.", {}, "o");
   add_optional(
       cmd, "exposure", value.exposure, "Tonemap exposure.", {-100, +100}, "e");
@@ -93,7 +93,7 @@ struct view_params {
 void add_command(cli_command& cli, const string& name, view_params& value,
     const string& usage) {
   auto& cmd = add_command(cli, name, usage);
-  add_positional(cmd, "images", value.images, "Input images.");
+  add_argument(cmd, "images", value.images, "Input images.");
   add_optional(cmd, "output", value.output, "Output image.", {}, "o");
 }
 
@@ -141,7 +141,7 @@ struct grade_params : colorgrade_params {
 void add_command(cli_command& cli, const string& name, grade_params& value,
     const string& usage) {
   auto& cmd = add_command(cli, name, usage);
-  add_positional(cmd, "image", value.image, "Input image.");
+  add_argument(cmd, "image", value.image, "Input image.");
   add_optional(cmd, "output", value.output, "Output image.", {}, "o");
 }
 
@@ -242,8 +242,8 @@ struct diff_params {
 void add_command(cli_command& cli, const string& name, diff_params& value,
     const string& usage) {
   auto& cmd = add_command(cli, name, usage);
-  add_positional(cmd, "image1", value.image1, "Input image 1.");
-  add_positional(cmd, "image2", value.image2, "Input image 2.");
+  add_argument(cmd, "image1", value.image1, "Input image 1.");
+  add_argument(cmd, "image2", value.image2, "Input image 2.");
   add_optional(cmd, "output", value.output, "Output image.", {}, "o");
   add_optional(cmd, "signal", value.signal, "Error on diff.");
   add_optional(cmd, "threshold", value.threshold, "Diff threshold.");
@@ -306,8 +306,8 @@ struct setalpha_params {
 void add_command(cli_command& cli, const string& name, setalpha_params& value,
     const string& usage) {
   auto& cmd = add_command(cli, name, usage);
-  add_positional(cmd, "image", value.image, "Input image.");
-  add_positional(cmd, "alpha", value.alpha, "Alpha image.");
+  add_argument(cmd, "image", value.image, "Input image.");
+  add_argument(cmd, "alpha", value.alpha, "Alpha image.");
   add_optional(cmd, "output", value.output, "Output image.", {}, "o");
   add_optional(cmd, "from-color", value.from_color, "Alpha from color.");
   add_optional(cmd, "from-black", value.from_black, "Alpha from black.");

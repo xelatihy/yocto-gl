@@ -54,7 +54,7 @@ struct convert_params {
 void add_command(cli_command& cli, const string& name, convert_params& value,
     const string& usage) {
   auto& cmd = add_command(cli, name, usage);
-  add_positional(cmd, "shape", value.shape, "Input shape.");
+  add_argument(cmd, "shape", value.shape, "Input shape.");
   add_optional(cmd, "output", value.output, "Output shape.", {}, "o");
   add_optional(cmd, "smooth", value.smooth, "Smooth normals.");
   add_optional(cmd, "facet", value.facet, "Facet normals.");
@@ -178,7 +178,7 @@ struct fvconvert_params {
 void add_command(cli_command& cli, const string& name, fvconvert_params& value,
     const string& usage) {
   auto& cmd = add_command(cli, name, usage);
-  add_positional(cmd, "shape", value.shape, "Input shape.");
+  add_argument(cmd, "shape", value.shape, "Input shape.");
   add_optional(cmd, "output", value.output, "Output shape.", {}, "o");
   add_optional(cmd, "smooth", value.smooth, "Smooth normals.");
   add_optional(cmd, "facet", value.facet, "Facet normals.");
@@ -287,7 +287,7 @@ struct view_params {
 void add_command(cli_command& cli, const string& name, view_params& value,
     const string& usage) {
   auto& cmd = add_command(cli, name, usage);
-  add_positional(cmd, "shape", value.shape, "Input shape.");
+  add_argument(cmd, "shape", value.shape, "Input shape.");
   add_optional(cmd, "output", value.output, "Output shape.", {}, "o");
   add_optional(cmd, "addsky", value.addsky, "Add sky.");
 }
@@ -341,7 +341,7 @@ struct heightfield_params {
 void add_command(cli_command& cli, const string& name,
     heightfield_params& value, const string& usage) {
   auto& cmd = add_command(cli, name, usage);
-  add_positional(cmd, "image", value.image, "Input image.");
+  add_argument(cmd, "image", value.image, "Input image.");
   add_optional(cmd, "output", value.output, "Output shape.", {}, "o");
   add_optional(cmd, "smooth", value.smooth, "Smoooth normals.");
   add_optional(cmd, "height", value.height, "Shape height.");

@@ -150,13 +150,13 @@ inline void add_optional(cli_command& cli, const string& name, string& value,
     const string& usage, const vector<string>& choices = {},
     const string& alt = "", bool req = false);
 // Add a positional argument. Supports strings, numbers, and boolean flags.
-inline void add_positional(cli_command& cli, const string& name, int& value,
+inline void add_argument(cli_command& cli, const string& name, int& value,
     const string& usage, const vector<int>& minmax = {}, bool req = true);
-inline void add_positional(cli_command& cli, const string& name, float& value,
+inline void add_argument(cli_command& cli, const string& name, float& value,
     const string& usage, const vector<float>& minmax = {}, bool req = true);
-inline void add_positional(cli_command& cli, const string& name, bool& value,
+inline void add_argument(cli_command& cli, const string& name, bool& value,
     const string& usage, const vector<string>& choices = {}, bool req = true);
-inline void add_positional(cli_command& cli, const string& name, string& value,
+inline void add_argument(cli_command& cli, const string& name, string& value,
     const string& usage, const vector<string>& choices = {}, bool req = true);
 // Add an optional argument with values as labels. Supports integers, enums and
 // strings.
@@ -169,23 +169,23 @@ inline void add_optional(cli_command& cli, const string& name, T& value,
     bool req = false);
 // Add a positional argument with values as labels. Supports string, integers
 // and enums.
-inline void add_positional(cli_command& cli, const string& name, int& value,
+inline void add_argument(cli_command& cli, const string& name, int& value,
     const string& usage, const vector<string>& choices, bool req = true);
 template <typename T, typename = std::enable_if_t<std::is_enum_v<T>>>
-inline void add_positional(cli_command& cli, const string& name, T& value,
+inline void add_argument(cli_command& cli, const string& name, T& value,
     const string& usage, const vector<string>& choices, bool req = true);
 // Add a positional argument that consumes all arguments left.
 // Supports strings and enums.
-inline void add_positional(cli_command& cli, const string& name,
+inline void add_argument(cli_command& cli, const string& name,
     vector<int>& value, const string& usage, const vector<int>& minmax,
     bool req = true);
-inline void add_positional(cli_command& cli, const string& name,
+inline void add_argument(cli_command& cli, const string& name,
     vector<float>& value, const string& usage, const vector<float>& minmax,
     bool req = true);
-inline void add_positional(cli_command& cli, const string& name,
+inline void add_argument(cli_command& cli, const string& name,
     vector<int>& value, const string& usage, const vector<string>& choices = {},
     bool req = true);
-inline void add_positional(cli_command& cli, const string& name,
+inline void add_argument(cli_command& cli, const string& name,
     vector<string>& value, const string& usage,
     const vector<string>& choices = {}, bool req = true);
 
@@ -267,9 +267,9 @@ inline void add_optional(cli_command& cli, const string& name, T& value,
       cli, name, (std::underlying_type_t<T>&)value, usage, choices, alt, req);
 }
 template <typename T, typename>
-inline void add_positional(cli_command& cli, const string& name, T& value,
+inline void add_argument(cli_command& cli, const string& name, T& value,
     const string& usage, const vector<string>& choices, bool req) {
-  return add_positional(
+  return add_argument(
       cli, name, (std::underlying_type_t<T>&)value, usage, choices, req);
 }
 
@@ -645,44 +645,44 @@ inline void add_optional(cli_command& cli, const string& name, int& value,
   return add_option_impl(cli, name, value, usage, {}, choices, alt, req);
 }
 // Add a positional argument. Supports strings, numbers, and boolean flags.
-inline void add_positional(cli_command& cli, const string& name, int& value,
+inline void add_argument(cli_command& cli, const string& name, int& value,
     const string& usage, const vector<int>& minmax, bool req) {
   return add_argument_impl(cli, name, value, usage, minmax, {}, req);
 }
-inline void add_positional(cli_command& cli, const string& name, float& value,
+inline void add_argument(cli_command& cli, const string& name, float& value,
     const string& usage, const vector<float>& minmax, bool req) {
   return add_argument_impl(cli, name, value, usage, minmax, {}, req);
 }
-inline void add_positional(cli_command& cli, const string& name, bool& value,
+inline void add_argument(cli_command& cli, const string& name, bool& value,
     const string& usage, const vector<string>& choices, bool req) {
   return add_argument_impl(cli, name, value, usage, {}, choices, req);
 }
-inline void add_positional(cli_command& cli, const string& name, string& value,
+inline void add_argument(cli_command& cli, const string& name, string& value,
     const string& usage, const vector<string>& choices, bool req) {
   return add_argument_impl(cli, name, value, usage, {}, choices, req);
 }
-inline void add_positional(cli_command& cli, const string& name, int& value,
+inline void add_argument(cli_command& cli, const string& name, int& value,
     const string& usage, const vector<string>& choices, bool req) {
   return add_argument_impl(cli, name, value, usage, {}, choices, req);
 }
 // Add a positional argument that consumes all arguments left.
 // Supports strings and enums.
-inline void add_positional(cli_command& cli, const string& name,
+inline void add_argument(cli_command& cli, const string& name,
     vector<int>& value, const string& usage, const vector<int>& minmax,
     bool req) {
   return add_argumentv_impl(cli, name, value, usage, minmax, {}, req);
 }
-inline void add_positional(cli_command& cli, const string& name,
+inline void add_argument(cli_command& cli, const string& name,
     vector<float>& value, const string& usage, const vector<float>& minmax,
     bool req) {
   return add_argumentv_impl(cli, name, value, usage, minmax, {}, req);
 }
-inline void add_positional(cli_command& cli, const string& name,
+inline void add_argument(cli_command& cli, const string& name,
     vector<int>& value, const string& usage, const vector<string>& choices,
     bool req) {
   return add_argumentv_impl(cli, name, value, usage, {}, choices, req);
 }
-inline void add_positional(cli_command& cli, const string& name,
+inline void add_argument(cli_command& cli, const string& name,
     vector<string>& value, const string& usage, const vector<string>& choices,
     bool req) {
   return add_argumentv_impl(cli, name, value, usage, {}, choices, req);
