@@ -68,7 +68,7 @@ void add_command(cli_command& cli, const string& name, render_params& value,
   add_option(cmd, "nocaustics", value.nocaustics, "Disable caustics.");
   add_option(cmd, "envhidden", value.envhidden, "Hide environment.");
   add_option(cmd, "tentfilter", value.tentfilter, "Filter image.");
-  add_option(cmd, "bvh", value.bvh, "Bvh type.", trace_bvh_names);
+  add_option(cmd, "bvh", value.bvh, "Bvh type.", bvh_names);
   add_option(cmd, "noparallel", value.noparallel, "Disable threading.");
 }
 
@@ -156,7 +156,7 @@ void add_command(cli_command& cli, const string& name, view_params& value,
   add_option(cmd, "nocaustics", value.nocaustics, "Disable caustics.");
   add_option(cmd, "envhidden", value.envhidden, "Hide environment.");
   add_option(cmd, "tentfilter", value.tentfilter, "Filter image.");
-  add_option(cmd, "bvh", value.bvh, "Bvh type.", trace_bvh_names);
+  add_option(cmd, "bvh", value.bvh, "Bvh type.", bvh_names);
   add_option(cmd, "noparallel", value.noparallel, "Disable threading.");
 }
 

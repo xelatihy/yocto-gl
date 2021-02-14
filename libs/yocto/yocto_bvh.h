@@ -103,7 +103,7 @@ struct bvh_scene {
 };
 
 // Strategy used to build the bvh
-enum struct bvh_build_type {
+enum struct bvh_type {
   default_,
   highquality,
   middle,
@@ -113,13 +113,13 @@ enum struct bvh_build_type {
   embree_compact  // only for copy interface
 };
 
-const auto bvh_build_names = vector<string>{"default", "highquality", "middle",
+const auto bvh_names = vector<string>{"default", "highquality", "middle",
     "balanced", "embree-default", "embree-highquality", "embree-compact"};
 
 // Bvh parameters
 struct bvh_params {
-  bvh_build_type bvh        = bvh_build_type::default_;
-  bool           noparallel = false;
+  bvh_type bvh        = bvh_type::default_;
+  bool     noparallel = false;
 };
 
 // Progress report callback
