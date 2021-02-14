@@ -419,7 +419,7 @@ struct material_point {
   float         trdepth      = 0.01;
 };
 
-// Eval material to obatain emission, brdf and opacity.
+// Eval material to obtain emission, brdf and opacity.
 material_point eval_material(const scene_scene& scene,
     const scene_instance& instance, int element, const vec2f& uv);
 material_point eval_material(const scene_scene& scene,
@@ -438,17 +438,7 @@ bool is_volumetric(const scene_scene& scene, const scene_instance& instance);
 }  // namespace yocto
 
 // -----------------------------------------------------------------------------
-// EXAMPLE SCENES
-// -----------------------------------------------------------------------------
-namespace yocto {
-
-// Make Cornell Box scene
-void make_cornellbox(scene_scene& scene);
-
-}  // namespace yocto
-
-// -----------------------------------------------------------------------------
-// SCENE STATS AND VALIDATION
+// STATS AND VALIDATION
 // -----------------------------------------------------------------------------
 namespace yocto {
 
@@ -457,6 +447,16 @@ vector<string> scene_stats(const scene_scene& scene, bool verbose = false);
 // Return validation errors as list of strings.
 vector<string> scene_validation(
     const scene_scene& scene, bool notextures = false);
+
+}  // namespace yocto
+
+// -----------------------------------------------------------------------------
+// EXAMPLE SCENES
+// -----------------------------------------------------------------------------
+namespace yocto {
+
+// Make Cornell Box scene
+void make_cornellbox(scene_scene& scene);
 
 }  // namespace yocto
 

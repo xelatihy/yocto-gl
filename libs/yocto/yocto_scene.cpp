@@ -59,164 +59,6 @@ using namespace std::string_literals;
 }  // namespace yocto
 
 // -----------------------------------------------------------------------------
-// IMPLEMENTATION OF ANIMATION UTILITIES
-// -----------------------------------------------------------------------------
-namespace yocto {
-
-// Find the first keyframe value that is greater than the argument.
-inline int keyframe_index(const vector<float>& times, const float& time) {
-  for (auto i = 0; i < times.size(); i++)
-    if (times[i] > time) return i;
-  return (int)times.size();
-}
-
-// Evaluates a keyframed value using step interpolation.
-template <typename T>
-inline T keyframe_step(
-    const vector<float>& times, const vector<T>& vals, float time) {
-  if (time <= times.front()) return vals.front();
-  if (time >= times.back()) return vals.back();
-  time     = clamp(time, times.front(), times.back() - 0.001f);
-  auto idx = keyframe_index(times, time);
-  return vals.at(idx - 1);
-}
-
-// Evaluates a keyframed value using linear interpolation.
-template <typename T>
-inline vec4f keyframe_slerp(
-    const vector<float>& times, const vector<vec4f>& vals, float time) {
-  if (time <= times.front()) return vals.front();
-  if (time >= times.back()) return vals.back();
-  time     = clamp(time, times.front(), times.back() - 0.001f);
-  auto idx = keyframe_index(times, time);
-  auto t   = (time - times.at(idx - 1)) / (times.at(idx) - times.at(idx - 1));
-  return slerp(vals.at(idx - 1), vals.at(idx), t);
-}
-
-// Evaluates a keyframed value using linear interpolation.
-template <typename T>
-inline T keyframe_linear(
-    const vector<float>& times, const vector<T>& vals, float time) {
-  if (time <= times.front()) return vals.front();
-  if (time >= times.back()) return vals.back();
-  time     = clamp(time, times.front(), times.back() - 0.001f);
-  auto idx = keyframe_index(times, time);
-  auto t   = (time - times.at(idx - 1)) / (times.at(idx) - times.at(idx - 1));
-  return vals.at(idx - 1) * (1 - t) + vals.at(idx) * t;
-}
-
-// Evaluates a keyframed value using Bezier interpolation.
-template <typename T>
-inline T keyframe_bezier(
-    const vector<float>& times, const vector<T>& vals, float time) {
-  if (time <= times.front()) return vals.front();
-  if (time >= times.back()) return vals.back();
-  time     = clamp(time, times.front(), times.back() - 0.001f);
-  auto idx = keyframe_index(times, time);
-  auto t   = (time - times.at(idx - 1)) / (times.at(idx) - times.at(idx - 1));
-  return interpolate_bezier(
-      vals.at(idx - 3), vals.at(idx - 2), vals.at(idx - 1), vals.at(idx), t);
-}
-
-}  // namespace yocto
-
-// -----------------------------------------------------------------------------
-// SCENE STATS AND VALIDATION
-// -----------------------------------------------------------------------------
-namespace yocto {
-
-vector<string> scene_stats(const scene_scene& scene, bool verbose) {
-  auto accumulate = [](const auto& values, const auto& func) -> size_t {
-    auto sum = (size_t)0;
-    for (auto& value : values) sum += func(value);
-    return sum;
-  };
-  auto format = [](auto num) {
-    auto str = std::to_string(num);
-    while (str.size() < 13) str = " " + str;
-    return str;
-  };
-  auto format3 = [](auto num) {
-    auto str = std::to_string(num.x) + " " + std::to_string(num.y) + " " +
-               std::to_string(num.z);
-    while (str.size() < 13) str = " " + str;
-    return str;
-  };
-
-  auto bbox = compute_bounds(scene);
-
-  auto stats = vector<string>{};
-  stats.push_back("cameras:      " + format(scene.cameras.size()));
-  stats.push_back("shapes:       " + format(scene.shapes.size()));
-  stats.push_back("environments: " + format(scene.environments.size()));
-  stats.push_back("textures:     " + format(scene.textures.size()));
-  stats.push_back(
-      "points:       " + format(accumulate(scene.shapes,
-                             [](auto& shape) { return shape.points.size(); })));
-  stats.push_back(
-      "lines:        " + format(accumulate(scene.shapes,
-                             [](auto& shape) { return shape.lines.size(); })));
-  stats.push_back("triangles:    " +
-                  format(accumulate(scene.shapes,
-                      [](auto& shape) { return shape.triangles.size(); })));
-  stats.push_back(
-      "quads:        " + format(accumulate(scene.shapes,
-                             [](auto& shape) { return shape.quads.size(); })));
-  stats.push_back("fvquads:     " +
-                  format(accumulate(scene.subdivs,
-                      [](auto& subdiv) { return subdiv.quadspos.size(); })));
-  stats.push_back(
-      "texels4b:     " + format(accumulate(scene.textures, [](auto& texture) {
-        return (size_t)texture.ldr.width() * (size_t)texture.ldr.width();
-      })));
-  stats.push_back(
-      "texels4f:     " + format(accumulate(scene.textures, [](auto& texture) {
-        return (size_t)texture.hdr.width() * (size_t)texture.hdr.height();
-      })));
-  stats.push_back("center:       " + format3(center(bbox)));
-  stats.push_back("size:         " + format3(size(bbox)));
-
-  return stats;
-}
-
-// Checks for validity of the scene.
-vector<string> scene_validation(const scene_scene& scene, bool notextures) {
-  auto errs        = vector<string>();
-  auto check_names = [&errs](const vector<string>& names, const string& base) {
-    auto used = unordered_map<string, int>();
-    used.reserve(names.size());
-    for (auto& name : names) used[name] += 1;
-    for (auto& [name, used] : used) {
-      if (name.empty()) {
-        errs.push_back("empty " + base + " name");
-      } else if (used > 1) {
-        errs.push_back("duplicated " + base + " name " + name);
-      }
-    }
-  };
-  auto check_empty_textures = [&errs](const scene_scene& scene) {
-    for (auto idx = 0; idx < (int)scene.textures.size(); idx++) {
-      auto& texture = scene.textures[idx];
-      if (texture.hdr.empty() && texture.ldr.empty()) {
-        errs.push_back("empty texture " + scene.texture_names[idx]);
-      }
-    }
-  };
-
-  check_names(scene.camera_names, "camera");
-  check_names(scene.shape_names, "shape");
-  check_names(scene.material_names, "material");
-  check_names(scene.instance_names, "instance");
-  check_names(scene.texture_names, "texture");
-  check_names(scene.environment_names, "environment");
-  if (!notextures) check_empty_textures(scene);
-
-  return errs;
-}
-
-}  // namespace yocto
-
-// -----------------------------------------------------------------------------
 // SCENE UTILITIES
 // -----------------------------------------------------------------------------
 namespace yocto {
@@ -1275,6 +1117,102 @@ bool has_volume(const material_point& material) {
 }  // namespace yocto
 
 // -----------------------------------------------------------------------------
+// SCENE STATS AND VALIDATION
+// -----------------------------------------------------------------------------
+namespace yocto {
+
+vector<string> scene_stats(const scene_scene& scene, bool verbose) {
+  auto accumulate = [](const auto& values, const auto& func) -> size_t {
+    auto sum = (size_t)0;
+    for (auto& value : values) sum += func(value);
+    return sum;
+  };
+  auto format = [](auto num) {
+    auto str = std::to_string(num);
+    while (str.size() < 13) str = " " + str;
+    return str;
+  };
+  auto format3 = [](auto num) {
+    auto str = std::to_string(num.x) + " " + std::to_string(num.y) + " " +
+               std::to_string(num.z);
+    while (str.size() < 13) str = " " + str;
+    return str;
+  };
+
+  auto bbox = compute_bounds(scene);
+
+  auto stats = vector<string>{};
+  stats.push_back("cameras:      " + format(scene.cameras.size()));
+  stats.push_back("shapes:       " + format(scene.shapes.size()));
+  stats.push_back("environments: " + format(scene.environments.size()));
+  stats.push_back("textures:     " + format(scene.textures.size()));
+  stats.push_back(
+      "points:       " + format(accumulate(scene.shapes,
+                             [](auto& shape) { return shape.points.size(); })));
+  stats.push_back(
+      "lines:        " + format(accumulate(scene.shapes,
+                             [](auto& shape) { return shape.lines.size(); })));
+  stats.push_back("triangles:    " +
+                  format(accumulate(scene.shapes,
+                      [](auto& shape) { return shape.triangles.size(); })));
+  stats.push_back(
+      "quads:        " + format(accumulate(scene.shapes,
+                             [](auto& shape) { return shape.quads.size(); })));
+  stats.push_back("fvquads:     " +
+                  format(accumulate(scene.subdivs,
+                      [](auto& subdiv) { return subdiv.quadspos.size(); })));
+  stats.push_back(
+      "texels4b:     " + format(accumulate(scene.textures, [](auto& texture) {
+        return (size_t)texture.ldr.width() * (size_t)texture.ldr.width();
+      })));
+  stats.push_back(
+      "texels4f:     " + format(accumulate(scene.textures, [](auto& texture) {
+        return (size_t)texture.hdr.width() * (size_t)texture.hdr.height();
+      })));
+  stats.push_back("center:       " + format3(center(bbox)));
+  stats.push_back("size:         " + format3(size(bbox)));
+
+  return stats;
+}
+
+// Checks for validity of the scene.
+vector<string> scene_validation(const scene_scene& scene, bool notextures) {
+  auto errs        = vector<string>();
+  auto check_names = [&errs](const vector<string>& names, const string& base) {
+    auto used = unordered_map<string, int>();
+    used.reserve(names.size());
+    for (auto& name : names) used[name] += 1;
+    for (auto& [name, used] : used) {
+      if (name.empty()) {
+        errs.push_back("empty " + base + " name");
+      } else if (used > 1) {
+        errs.push_back("duplicated " + base + " name " + name);
+      }
+    }
+  };
+  auto check_empty_textures = [&errs](const scene_scene& scene) {
+    for (auto idx = 0; idx < (int)scene.textures.size(); idx++) {
+      auto& texture = scene.textures[idx];
+      if (texture.hdr.empty() && texture.ldr.empty()) {
+        errs.push_back("empty texture " + scene.texture_names[idx]);
+      }
+    }
+  };
+
+  check_names(scene.camera_names, "camera");
+  check_names(scene.shape_names, "shape");
+  check_names(scene.material_names, "material");
+  check_names(scene.instance_names, "instance");
+  check_names(scene.texture_names, "texture");
+  check_names(scene.environment_names, "environment");
+  if (!notextures) check_empty_textures(scene);
+
+  return errs;
+}
+
+}  // namespace yocto
+
+// -----------------------------------------------------------------------------
 // EXAMPLE SCENES
 // -----------------------------------------------------------------------------
 namespace yocto {
@@ -1345,6 +1283,68 @@ void make_cornellbox(scene_scene& scene) {
       {-0.25, 1.99, -0.25}, {0.25, 1.99, -0.25}, {0.25, 1.99, 0.25}};
   scene.shapes[light.shape].triangles      = {{0, 1, 2}, {2, 3, 0}};
   scene.materials[light.material].emission = {17, 12, 4};
+}
+
+}  // namespace yocto
+
+// -----------------------------------------------------------------------------
+// IMPLEMENTATION OF ANIMATION UTILITIES
+// -----------------------------------------------------------------------------
+namespace yocto {
+
+// Find the first keyframe value that is greater than the argument.
+inline int keyframe_index(const vector<float>& times, const float& time) {
+  for (auto i = 0; i < times.size(); i++)
+    if (times[i] > time) return i;
+  return (int)times.size();
+}
+
+// Evaluates a keyframed value using step interpolation.
+template <typename T>
+inline T keyframe_step(
+    const vector<float>& times, const vector<T>& vals, float time) {
+  if (time <= times.front()) return vals.front();
+  if (time >= times.back()) return vals.back();
+  time     = clamp(time, times.front(), times.back() - 0.001f);
+  auto idx = keyframe_index(times, time);
+  return vals.at(idx - 1);
+}
+
+// Evaluates a keyframed value using linear interpolation.
+template <typename T>
+inline vec4f keyframe_slerp(
+    const vector<float>& times, const vector<vec4f>& vals, float time) {
+  if (time <= times.front()) return vals.front();
+  if (time >= times.back()) return vals.back();
+  time     = clamp(time, times.front(), times.back() - 0.001f);
+  auto idx = keyframe_index(times, time);
+  auto t   = (time - times.at(idx - 1)) / (times.at(idx) - times.at(idx - 1));
+  return slerp(vals.at(idx - 1), vals.at(idx), t);
+}
+
+// Evaluates a keyframed value using linear interpolation.
+template <typename T>
+inline T keyframe_linear(
+    const vector<float>& times, const vector<T>& vals, float time) {
+  if (time <= times.front()) return vals.front();
+  if (time >= times.back()) return vals.back();
+  time     = clamp(time, times.front(), times.back() - 0.001f);
+  auto idx = keyframe_index(times, time);
+  auto t   = (time - times.at(idx - 1)) / (times.at(idx) - times.at(idx - 1));
+  return vals.at(idx - 1) * (1 - t) + vals.at(idx) * t;
+}
+
+// Evaluates a keyframed value using Bezier interpolation.
+template <typename T>
+inline T keyframe_bezier(
+    const vector<float>& times, const vector<T>& vals, float time) {
+  if (time <= times.front()) return vals.front();
+  if (time >= times.back()) return vals.back();
+  time     = clamp(time, times.front(), times.back() - 0.001f);
+  auto idx = keyframe_index(times, time);
+  auto t   = (time - times.at(idx - 1)) / (times.at(idx) - times.at(idx - 1));
+  return interpolate_bezier(
+      vals.at(idx - 3), vals.at(idx - 2), vals.at(idx - 1), vals.at(idx), t);
 }
 
 }  // namespace yocto
