@@ -524,6 +524,17 @@ inline bool get_value(const cli_option& option, vector<T>& values) {
   return true;
 }
 
+inline void validate_name(const cli_command& cli, const string& name) {
+  for (auto& command : cli.commands) {
+    if (name == command.name)
+      throw std::invalid_argument{name + " already used"};
+  }
+  for (auto& option : cli.options) {
+    if (name == option.name)
+      throw std::invalid_argument{name + " already used"};
+  }
+}
+
 template <typename T>
 inline void add_optional_impl(cli_command& cli, const string& name, T& value,
     const string& usage, const vector<T>& minmax, const vector<string>& choices,
@@ -532,6 +543,7 @@ inline void add_optional_impl(cli_command& cli, const string& name, T& value,
                     std::is_integral_v<T> || std::is_floating_point_v<T> ||
                     std::is_enum_v<T>,
       "unsupported type");
+  validate_name(cli, name);
   auto& option      = cli.options.emplace_back();
   option.name       = name;
   option.alt        = alt;
@@ -557,6 +569,7 @@ inline void add_positional_impl(cli_command& cli, const string& name, T& value,
                     std::is_integral_v<T> || std::is_floating_point_v<T> ||
                     std::is_enum_v<T>,
       "unsupported type");
+  validate_name(cli, name);
   auto& option      = cli.options.emplace_back();
   option.name       = name;
   option.alt        = "";
@@ -582,6 +595,7 @@ inline void add_positionalv_impl(cli_command& cli, const string& name,
                     std::is_integral_v<T> || std::is_floating_point_v<T> ||
                     std::is_enum_v<T>,
       "unsupported type");
+  validate_name(cli, name);
   auto& option      = cli.options.emplace_back();
   option.name       = name;
   option.alt        = "";
@@ -700,25 +714,6 @@ inline cli_command& add_command(
 inline void add_command_name(
     cli_command& cli, const string& name, string& value, const string& usage) {
   cli.set_command = [&value](const string& cvalue) { value = cvalue; };
-}
-
-inline void validate_names(const cli_command& cmd) {
-  // check for errors
-  auto used = unordered_set<string>{};
-  for (auto& option : cmd.options) {
-    if (option.name.empty())
-      throw std::invalid_argument("name cannot be empty");
-    auto names = split_cli_names(option.name);
-    if (names.empty()) throw std::invalid_argument("name cannot be empty");
-    for (auto& name : names) {
-      if (used.find(name) != used.end())
-        throw std::invalid_argument("option name " + name + " already in use");
-      used.insert(name);
-      if ((name[0] == '-') != (option.name[0] == '-'))
-        throw std::invalid_argument("inconsistent option type for " + name);
-    }
-  }
-  for (auto& scmd : cmd.commands) validate_names(scmd);
 }
 
 inline bool get_help(const cli_command& cli) {
@@ -1006,8 +1001,6 @@ inline bool parse_cli(cli_command& cli, vector<string>& args, string& error) {
 
 inline bool parse_cli(
     cli_command& cli, int argc, const char** argv, string& error) {
-  // validate names
-  validate_names(cli);
   // prepare args
   auto args = vector<string>{argv + 1, argv + argc};
   // parse
