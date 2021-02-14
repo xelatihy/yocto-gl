@@ -486,8 +486,7 @@ vec4f eval_texture(const scene_scene& scene, texture_handle texture,
 namespace yocto {
 
 // constant values
-static const auto coat_ior       = 1.5f;
-static const auto coat_roughness = 0.03f * 0.03f;
+static const auto min_roughness = 0.03f * 0.03f;
 
 // Evaluate material
 material_point eval_material(const scene_scene& scene,
@@ -529,7 +528,7 @@ material_point eval_material(const scene_scene& scene,
   if (point.type == material_type::matte ||
       point.type == material_type::metallic ||
       point.type == material_type::plastic) {
-    point.roughness = clamp(point.roughness, coat_roughness, 1.0f);
+    point.roughness = clamp(point.roughness, min_roughness, 1.0f);
   }
 
   return point;
@@ -1309,7 +1308,7 @@ material_point eval_material(const scene_scene& scene,
   if (point.type == material_type::matte ||
       point.type == material_type::metallic ||
       point.type == material_type::plastic) {
-    point.roughness = clamp(point.roughness, coat_roughness, 1.0f);
+    point.roughness = clamp(point.roughness, min_roughness, 1.0f);
   }
 
   return point;
