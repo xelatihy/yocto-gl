@@ -1207,7 +1207,7 @@ vec3f eval_normalmap(const scene_scene& scene, const scene_instance& instance,
   if (material.normal_tex != invalid_handle &&
       (!shape.triangles.empty() || !shape.quads.empty())) {
     auto& normal_tex = scene.textures[material.normal_tex];
-    auto  normalmap  = -1 + 2 * xyz(eval_texture(normal_tex, texcoord, true));
+    auto  normalmap  = -1 + 2 * xyz(eval_texture(normal_tex, texcoord, false));
     auto [tu, tv]    = eval_element_tangents(scene, instance, element);
     auto frame       = frame3f{tu, tv, normal, zero3f};
     frame.x          = orthonormalize(frame.x, frame.z);
