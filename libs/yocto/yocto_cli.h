@@ -137,16 +137,16 @@ inline string get_command(const cli_command& cli);
 // Optional arguments will be parsed with name `--<name>` and `-<alt>`.
 // Optional booleans will support both `--<name>` and `--no-<name>` to enabled
 // and disable the flag.
-inline void add_optional(cli_command& cli, const string& name, int& value,
+inline void add_option(cli_command& cli, const string& name, int& value,
     const string& usage, const vector<int>& minmax = {}, const string& alt = "",
     bool req = false);
-inline void add_optional(cli_command& cli, const string& name, float& value,
+inline void add_option(cli_command& cli, const string& name, float& value,
     const string& usage, const vector<float>& minmax = {},
     const string& alt = "", bool req = false);
-inline void add_optional(cli_command& cli, const string& name, bool& value,
+inline void add_option(cli_command& cli, const string& name, bool& value,
     const string& usage, const vector<string>& choices = {},
     const string& alt = "", bool req = false);
-inline void add_optional(cli_command& cli, const string& name, string& value,
+inline void add_option(cli_command& cli, const string& name, string& value,
     const string& usage, const vector<string>& choices = {},
     const string& alt = "", bool req = false);
 // Add a positional argument. Supports strings, numbers, and boolean flags.
@@ -160,11 +160,11 @@ inline void add_argument(cli_command& cli, const string& name, string& value,
     const string& usage, const vector<string>& choices = {}, bool req = true);
 // Add an optional argument with values as labels. Supports integers, enums and
 // strings.
-inline void add_optional(cli_command& cli, const string& name, int& value,
+inline void add_option(cli_command& cli, const string& name, int& value,
     const string& usage, const vector<string>& choices, const string& alt = "",
     bool req = false);
 template <typename T, typename = std::enable_if_t<std::is_enum_v<T>>>
-inline void add_optional(cli_command& cli, const string& name, T& value,
+inline void add_option(cli_command& cli, const string& name, T& value,
     const string& usage, const vector<string>& choices, const string& alt = "",
     bool req = false);
 // Add a positional argument with values as labels. Supports string, integers
@@ -260,10 +260,10 @@ struct cli_command {
 };
 
 template <typename T, typename>
-inline void add_optional(cli_command& cli, const string& name, T& value,
+inline void add_option(cli_command& cli, const string& name, T& value,
     const string& usage, const vector<string>& choices, const string& alt,
     bool req) {
-  return add_optional(
+  return add_option(
       cli, name, (std::underlying_type_t<T>&)value, usage, choices, alt, req);
 }
 template <typename T, typename>
@@ -618,28 +618,28 @@ inline void add_argumentv_impl(cli_command& cli, const string& name,
 // Optional arguments will be parsed with name `--<name>` and `-<alt>`.
 // Optional booleans will support both `--<name>` and `--no-<name>` to enabled
 // and disable the flag.
-inline void add_optional(cli_command& cli, const string& name, int& value,
+inline void add_option(cli_command& cli, const string& name, int& value,
     const string& usage, const vector<int>& minmax, const string& alt,
     bool req) {
   return add_option_impl(
       cli, name, value, usage, {minmax[0], minmax[1]}, {}, alt, req);
 }
-inline void add_optional(cli_command& cli, const string& name, float& value,
+inline void add_option(cli_command& cli, const string& name, float& value,
     const string& usage, const vector<float>& minmax, const string& alt,
     bool req) {
   return add_option_impl(cli, name, value, usage, minmax, {}, alt, req);
 }
-inline void add_optional(cli_command& cli, const string& name, bool& value,
+inline void add_option(cli_command& cli, const string& name, bool& value,
     const string& usage, const vector<string>& choices, const string& alt,
     bool req) {
   return add_option_impl(cli, name, value, usage, {}, choices, alt, req);
 }
-inline void add_optional(cli_command& cli, const string& name, string& value,
+inline void add_option(cli_command& cli, const string& name, string& value,
     const string& usage, const vector<string>& choices, const string& alt,
     bool req) {
   return add_option_impl(cli, name, value, usage, {}, choices, alt, req);
 }
-inline void add_optional(cli_command& cli, const string& name, int& value,
+inline void add_option(cli_command& cli, const string& name, int& value,
     const string& usage, const vector<string>& choices, const string& alt,
     bool req) {
   return add_option_impl(cli, name, value, usage, {}, choices, alt, req);
