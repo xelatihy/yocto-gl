@@ -45,6 +45,7 @@
 #include <utility>
 #include <vector>
 
+#include "yocto_color.h"
 #include "yocto_math.h"
 
 // -----------------------------------------------------------------------------
@@ -126,29 +127,6 @@ image_data image_difference(
 // COLOR GRADING
 // -----------------------------------------------------------------------------
 namespace yocto {
-
-// minimal color grading
-struct colorgrade_params {
-  float exposure         = 0;
-  vec3f tint             = {1, 1, 1};
-  float lincontrast      = 0.5;
-  float logcontrast      = 0.5;
-  float linsaturation    = 0.5;
-  bool  filmic           = false;
-  bool  srgb             = true;
-  float contrast         = 0.5;
-  float saturation       = 0.5;
-  float shadows          = 0.5;
-  float midtones         = 0.5;
-  float highlights       = 0.5;
-  vec3f shadows_color    = {1, 1, 1};
-  vec3f midtones_color   = {1, 1, 1};
-  vec3f highlights_color = {1, 1, 1};
-};
-
-// Apply color grading from a linear or srgb color to an srgb color.
-vec4f colorgrade(
-    const vec4f& color, bool linear, const colorgrade_params& params);
 
 // Color grade an hsr or ldr image to an ldr image.
 image_data colorgrade_image(const image_data& image,

@@ -1801,45 +1801,6 @@ void tonemap_image_mt(image<vec4b>& ldr, const image<vec4f>& hdr,
   });
 }
 
-vec3f colorgrade(
-    const vec3f& rgb_, bool linear, const colorgrade_params& params) {
-  auto rgb = rgb_;
-  if (params.exposure != 0) rgb *= exp2(params.exposure);
-  if (params.tint != vec3f{1, 1, 1}) rgb *= params.tint;
-  if (params.lincontrast != 0.5f)
-    rgb = lincontrast(rgb, params.lincontrast, linear ? 0.18f : 0.5f);
-  if (params.logcontrast != 0.5f)
-    rgb = logcontrast(rgb, params.logcontrast, linear ? 0.18f : 0.5f);
-  if (params.linsaturation != 0.5f) rgb = saturate(rgb, params.linsaturation);
-  if (params.filmic) rgb = tonemap_filmic(rgb);
-  if (linear && params.srgb) rgb = rgb_to_srgb(rgb);
-  if (params.contrast != 0.5f) rgb = contrast(rgb, params.contrast);
-  if (params.saturation != 0.5f) rgb = saturate(rgb, params.saturation);
-  if (params.shadows != 0.5f || params.midtones != 0.5f ||
-      params.highlights != 0.5f || params.shadows_color != vec3f{1, 1, 1} ||
-      params.midtones_color != vec3f{1, 1, 1} ||
-      params.highlights_color != vec3f{1, 1, 1}) {
-    auto lift  = params.shadows_color;
-    auto gamma = params.midtones_color;
-    auto gain  = params.highlights_color;
-
-    lift      = lift - mean(lift) + params.shadows - (float)0.5;
-    gain      = gain - mean(gain) + params.highlights + (float)0.5;
-    auto grey = gamma - mean(gamma) + params.midtones;
-    gamma     = log(((float)0.5 - lift) / (gain - lift)) / log(grey);
-
-    // apply_image
-    auto lerp_value = clamp(pow(rgb, 1 / gamma), 0, 1);
-    rgb             = gain * lerp_value + lift * (1 - lerp_value);
-  }
-  return rgb;
-}
-vec4f colorgrade(
-    const vec4f& rgba, bool linear, const colorgrade_params& params) {
-  auto graded = colorgrade(xyz(rgba), linear, params);
-  return {graded.x, graded.y, graded.z, rgba.w};
-}
-
 // Apply exposure and filmic tone mapping
 image<vec4f> colorgrade_image(
     const image<vec4f>& img, bool linear, const colorgrade_params& params) {

@@ -147,6 +147,31 @@ enum struct colormap_type { viridis, plasma, magma, inferno };
 // Colormaps from [0,1] to color
 inline vec3f colormap(float t, colormap_type type = colormap_type::viridis);
 
+// minimal color grading
+struct colorgrade_params {
+  float exposure         = 0;
+  vec3f tint             = {1, 1, 1};
+  float lincontrast      = 0.5;
+  float logcontrast      = 0.5;
+  float linsaturation    = 0.5;
+  bool  filmic           = false;
+  bool  srgb             = true;
+  float contrast         = 0.5;
+  float saturation       = 0.5;
+  float shadows          = 0.5;
+  float midtones         = 0.5;
+  float highlights       = 0.5;
+  vec3f shadows_color    = {1, 1, 1};
+  vec3f midtones_color   = {1, 1, 1};
+  vec3f highlights_color = {1, 1, 1};
+};
+
+// Apply color grading from a linear or srgb color to an srgb color.
+inline vec3f colorgrade(
+    const vec3f& color, bool linear, const colorgrade_params& params);
+inline vec4f colorgrade(
+    const vec4f& color, bool linear, const colorgrade_params& params);
+
 }  // namespace yocto
 
 // -----------------------------------------------------------------------------
@@ -513,6 +538,45 @@ inline vec3f colormap(float t, colormap_type type) {
     case colormap_type::plasma: return colormap_plasma(t);
   }
   return {0, 0, 0};
+}
+
+inline vec3f colorgrade(
+    const vec3f& rgb_, bool linear, const colorgrade_params& params) {
+  auto rgb = rgb_;
+  if (params.exposure != 0) rgb *= exp2(params.exposure);
+  if (params.tint != vec3f{1, 1, 1}) rgb *= params.tint;
+  if (params.lincontrast != 0.5f)
+    rgb = lincontrast(rgb, params.lincontrast, linear ? 0.18f : 0.5f);
+  if (params.logcontrast != 0.5f)
+    rgb = logcontrast(rgb, params.logcontrast, linear ? 0.18f : 0.5f);
+  if (params.linsaturation != 0.5f) rgb = saturate(rgb, params.linsaturation);
+  if (params.filmic) rgb = tonemap_filmic(rgb);
+  if (linear && params.srgb) rgb = rgb_to_srgb(rgb);
+  if (params.contrast != 0.5f) rgb = contrast(rgb, params.contrast);
+  if (params.saturation != 0.5f) rgb = saturate(rgb, params.saturation);
+  if (params.shadows != 0.5f || params.midtones != 0.5f ||
+      params.highlights != 0.5f || params.shadows_color != vec3f{1, 1, 1} ||
+      params.midtones_color != vec3f{1, 1, 1} ||
+      params.highlights_color != vec3f{1, 1, 1}) {
+    auto lift  = params.shadows_color;
+    auto gamma = params.midtones_color;
+    auto gain  = params.highlights_color;
+
+    lift      = lift - mean(lift) + params.shadows - (float)0.5;
+    gain      = gain - mean(gain) + params.highlights + (float)0.5;
+    auto grey = gamma - mean(gamma) + params.midtones;
+    gamma     = log(((float)0.5 - lift) / (gain - lift)) / log(grey);
+
+    // apply_image
+    auto lerp_value = clamp(pow(rgb, 1 / gamma), 0, 1);
+    rgb             = gain * lerp_value + lift * (1 - lerp_value);
+  }
+  return rgb;
+}
+inline vec4f colorgrade(
+    const vec4f& rgba, bool linear, const colorgrade_params& params) {
+  auto graded = colorgrade(xyz(rgba), linear, params);
+  return {graded.x, graded.y, graded.z, rgba.w};
 }
 
 }  // namespace yocto
