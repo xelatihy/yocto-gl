@@ -534,6 +534,10 @@ inline void validate_name(const cli_command& cli, const string& name) {
     if (name == option.name)
       throw std::invalid_argument{name + " already used"};
   }
+  for (auto& option : cli.arguments) {
+    if (name == option.name)
+      throw std::invalid_argument{name + " already used"};
+  }
 }
 
 template <typename T>
@@ -571,7 +575,7 @@ inline void add_argument_impl(cli_command& cli, const string& name, T& value,
                     std::is_enum_v<T>,
       "unsupported type");
   validate_name(cli, name);
-  auto& option      = cli.options.emplace_back();
+  auto& option      = cli.arguments.emplace_back();
   option.name       = name;
   option.alt        = "";
   option.positional = true;
@@ -597,7 +601,7 @@ inline void add_argumentv_impl(cli_command& cli, const string& name,
                     std::is_enum_v<T>,
       "unsupported type");
   validate_name(cli, name);
-  auto& option      = cli.options.emplace_back();
+  auto& option      = cli.arguments.emplace_back();
   option.name       = name;
   option.alt        = "";
   option.positional = true;
@@ -765,18 +769,12 @@ inline string get_usage(const cli_command& root, const cli_command& cli) {
       if (cli.command == subcommand.name) return get_usage(root, subcommand);
   }
 
-  auto message      = string{};
-  auto has_optional = false, has_positional = false, has_commands = false;
-  auto usage_optional = string{}, usage_positional = string{},
-       usage_command = string{};
+  auto message       = string{};
+  auto usage_options = string{}, usage_arguments = string{},
+       usage_commands = string{};
   for (auto& option : cli.options) {
-    auto line = string{};
-    if (option.positional) {
-      line += "  " + option.name;
-    } else {
-      line += "  --" + option.name;
-      if (!option.alt.empty()) line += ", -" + option.alt;
-    }
+    auto line = "  --" + option.name;
+    if (!option.alt.empty()) line += ", -" + option.alt;
     if (option.nargs > 0) line += " " + type_name(option);
     while (line.size() < 32) line += " ";
     line += option.usage;
@@ -795,35 +793,56 @@ inline string get_usage(const cli_command& root, const cli_command& cli) {
       line = line.substr(0, line.size() - 2);
       line += "\n";
     }
-    if (option.positional) {
-      has_positional = true;
-      usage_positional += line;
-    } else {
-      has_optional = true;
-      usage_optional += line;
+    usage_options += line;
+  }
+  {
+    auto line = "  --help" + string{};
+    while (line.size() < 32) line += " ";
+    line += "Prints help. [false]";
+    usage_options += line;
+  }
+  for (auto& option : cli.arguments) {
+    auto line = "  " + option.name;
+    if (option.nargs > 0) line += " " + type_name(option);
+    while (line.size() < 32) line += " ";
+    line += option.usage;
+    line += " " + def_string(option) + "\n";
+    if (!option.choices.empty()) {
+      line += "    with choices: ";
+      auto len = 16;
+      for (auto& choice : option.choices) {
+        if (len + choice.size() + 2 > 78) {
+          line += "\n                  ";
+          len = 16;
+        }
+        line += choice + ", ";
+        len += choice.size() + 2;
+      }
+      line = line.substr(0, line.size() - 2);
+      line += "\n";
     }
+    usage_arguments += line;
   }
   for (auto& scmd : cli.commands) {
-    has_commands = true;
-    auto line    = "  " + scmd.name;
+    auto line = "  " + scmd.name;
     while (line.size() < 32) line += " ";
     line += scmd.usage + "\n";
-    usage_command += line;
+    usage_commands += line;
   }
   auto is_command = &cli != &root;
   message += "usage: " + root.name + (is_command ? " " + cli.name : "") +
-             (has_commands ? " command" : "") +
-             (has_optional ? " [options]" : "") +
-             (has_positional ? " <arguments>" : "") + "\n";
+             (!usage_commands.empty() ? " command" : "") +
+             (!usage_options.empty() ? " [options]" : "") +
+             (!usage_arguments.empty() ? " <arguments>" : "") + "\n";
   message += cli.usage + "\n\n";
-  if (has_commands) {
-    message += "commands:\n" + usage_command + "\n";
+  if (!usage_commands.empty()) {
+    message += "commands:\n" + usage_commands + "\n";
   }
-  if (has_optional) {
-    message += "options:\n" + usage_optional + "\n";
+  if (!usage_options.empty()) {
+    message += "options:\n" + usage_options + "\n";
   }
-  if (has_positional) {
-    message += "arguments:\n" + usage_positional + "\n";
+  if (!usage_arguments.empty()) {
+    message += "arguments:\n" + usage_arguments + "\n";
   }
   return message;
 }
@@ -914,21 +933,9 @@ inline bool parse_cli(cli_command& cli, vector<string>& args, string& error) {
       positionals.push_back(0);
       continue;
     } else if (is_positional) {
-      auto pos   = cmd.options.end();
-      auto count = 0;
-      for (auto it = cmd.options.begin(); it != cmd.options.end(); ++it) {
-        auto& option = *it;
-        if (!option.positional) continue;
-        if (count == positionals.back()) {
-          pos = it;
-          positionals.back()++;
-          break;
-        }
-        count++;
-      }
-      if (pos == cmd.options.end())
+      if (positionals.back() >= cmd.arguments.size())
         return cli_error("too many positional arguments");
-      auto& option = *pos;
+      auto& option = cmd.arguments[positionals.back()++];
       option.set   = true;
       if (option.nargs > 0) {
         if (idx + (size_t)option.nargs > args.size())
@@ -946,7 +953,6 @@ inline bool parse_cli(cli_command& cli, vector<string>& args, string& error) {
     } else {
       auto pos = std::find_if(
           cmd.options.begin(), cmd.options.end(), [&arg](auto& option) {
-            if (option.positional) return false;
             return arg == "--" + option.name || arg == "-" + option.alt;
           });
       if (pos == cmd.options.end()) return cli_error("unknown option " + arg);
@@ -982,6 +988,16 @@ inline bool parse_cli(cli_command& cli, vector<string>& args, string& error) {
       return cli_error("command not set for " + command.name);
     if (command.set_command) command.set_command(command.command);
     for (auto& option : command.options) {
+      if (option.req && !option.set)
+        return cli_error("missing value for " + option.name);
+      if (!option.set) option.value = option.def;
+      if (option.set_value) {
+        if (!option.set_value(option)) {
+          return cli_error("bad value for " + option.name);
+        }
+      }
+    }
+    for (auto& option : command.arguments) {
       if (option.req && !option.set)
         return cli_error("missing value for " + option.name);
       if (!option.set) option.value = option.def;
