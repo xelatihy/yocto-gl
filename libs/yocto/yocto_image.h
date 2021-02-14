@@ -121,13 +121,6 @@ void get_region(image_data& region, const image_data& image, int x, int y,
 image_data image_difference(
     const image_data& image_a, const image_data& image_b, bool display_diff);
 
-}  // namespace yocto
-
-// -----------------------------------------------------------------------------
-// COLOR GRADING
-// -----------------------------------------------------------------------------
-namespace yocto {
-
 // Color grade an hsr or ldr image to an ldr image.
 image_data colorgrade_image(const image_data& image,
     const colorgrade_params& params, bool as_byte = false);
