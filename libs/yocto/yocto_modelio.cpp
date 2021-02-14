@@ -54,6 +54,43 @@ using namespace std::string_literals;
 }  // namespace yocto
 
 // -----------------------------------------------------------------------------
+// PATH UTILITIES
+// -----------------------------------------------------------------------------
+namespace yocto {
+
+// Make a path from a utf8 string
+static std::filesystem::path make_path(const string& filename) {
+  return std::filesystem::u8path(filename);
+}
+
+// Get directory name (not including /)
+static string path_dirname(const string& filename) {
+  return make_path(filename).parent_path().generic_u8string();
+}
+
+// Get filename without directory.
+static string path_filename(const string& filename) {
+  return make_path(filename).filename().u8string();
+}
+
+// Joins paths
+static string path_join(const string& patha, const string& pathb) {
+  return (make_path(patha) / make_path(pathb)).generic_u8string();
+}
+
+// Replaces extensions
+static string replace_extension(const string& filename, const string& ext) {
+  return make_path(filename).replace_extension(ext).u8string();
+}
+
+// Check if a file can be opened for reading.
+static bool path_exists(const string& filename) {
+  return exists(make_path(filename));
+}
+
+}  // namespace yocto
+
+// -----------------------------------------------------------------------------
 // FILE IO
 // -----------------------------------------------------------------------------
 namespace yocto {
