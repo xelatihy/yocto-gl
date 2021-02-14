@@ -10,7 +10,7 @@ add_library(yocto
   yocto_scene.h yocto_scene.cpp
   yocto_trace.h yocto_trace.cpp
   yocto_sceneio.h yocto_sceneio.cpp
-  yocto_commonio.h yocto_commonio.cpp
+  yocto_commonio.h
   ext/stb_image.h ext/stb_image_resize.h ext/stb_image_write.h ext/stb_image.cpp
   ext/json.hpp
   ext/tinyexr.h ext/tinyexr.cpp

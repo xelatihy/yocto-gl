@@ -88,11 +88,6 @@ static string normalize_path(const string& filename) {
   return make_path(filename).generic_u8string();
 }
 
-// Get directory name (not including /)
-static string path_dirname(const string& filename) {
-  return make_path(filename).parent_path().generic_u8string();
-}
-
 // Get extension (including .)
 static string path_extension(const string& filename) {
   return make_path(filename).extension().u8string();
@@ -112,16 +107,6 @@ static string path_basename(const string& filename) {
 static string path_join(const string& patha, const string& pathb) {
   return (make_path(patha) / make_path(pathb)).generic_u8string();
 }
-static string path_join(
-    const string& patha, const string& pathb, const string& pathc) {
-  return (make_path(patha) / make_path(pathb) / make_path(pathc))
-      .generic_u8string();
-}
-
-// Replaces extensions
-static string replace_extension(const string& filename, const string& ext) {
-  return make_path(filename).replace_extension(ext).u8string();
-}
 
 // Check if a file can be opened for reading.
 static bool path_exists(const string& filename) {
@@ -133,11 +118,6 @@ static bool path_isdir(const string& filename) {
   return is_directory(make_path(filename));
 }
 
-// Check if a file is a file
-static bool path_isfile(const string& filename) {
-  return is_regular_file(make_path(filename));
-}
-
 // List the contents of a directory
 static vector<string> list_directory(const string& filename) {
   auto entries = vector<string>{};
@@ -145,18 +125,6 @@ static vector<string> list_directory(const string& filename) {
     entries.push_back(entry.path().generic_u8string());
   }
   return entries;
-}
-
-// Create a directory and all missing parent directories if needed
-static bool make_directory(const string& dirname, string& error) {
-  if (path_exists(dirname)) return true;
-  try {
-    create_directories(make_path(dirname));
-    return true;
-  } catch (...) {
-    error = dirname + ": cannot create directory";
-    return false;
-  }
 }
 
 // Get the current directory
