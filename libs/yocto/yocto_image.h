@@ -240,6 +240,79 @@ image_data add_border(
 }  // namespace yocto
 
 // -----------------------------------------------------------------------------
+// EXAMPLE IMAGES
+// -----------------------------------------------------------------------------
+namespace yocto {
+
+// Make a grid image.
+void make_grid(vector<vec4f>& pixels, int width, int height, float scale = 1,
+    const vec4f& color0 = vec4f{0.2, 0.2, 0.2, 1},
+    const vec4f& color1 = vec4f{0.5, 0.5, 0.5, 1});
+// Make a checker image.
+void make_checker(vector<vec4f>& pixels, int width, int height, float scale = 1,
+    const vec4f& color0 = vec4f{0.2, 0.2, 0.2, 1},
+    const vec4f& color1 = vec4f{0.5, 0.5, 0.5, 1});
+// Make a bump map.
+void make_bumps(vector<vec4f>& pixels, int width, int height, float scale = 1,
+    const vec4f& color0 = vec4f{0, 0, 0, 1},
+    const vec4f& color1 = vec4f{1, 1, 1, 1});
+// Make a ramp
+void make_ramp(vector<vec4f>& pixels, int width, int height, float scale = 1,
+    const vec4f& color0 = vec4f{0, 0, 0, 1},
+    const vec4f& color1 = vec4f{1, 1, 1, 1});
+// Make a gamma ramp.
+void make_gammaramp(vector<vec4f>& pixels, int width, int height,
+    float scale = 1, const vec4f& color0 = vec4f{0, 0, 0, 1},
+    const vec4f& color1 = vec4f{1, 1, 1, 1});
+// Make a uv ramp
+void make_uvramp(vector<vec4f>& pixels, int width, int height, float scale = 1);
+// Make a uv grid
+void make_uvgrid(vector<vec4f>& pixels, int width, int height, float scale = 1,
+    bool colored = true);
+// Make blackbody ramp.
+void make_blackbodyramp(vector<vec4f>& pixels, int width, int height,
+    float scale = 1, float from = 1000, float to = 12000);
+// Make color map ramp.
+void make_colormapramp(
+    vector<vec4f>& pixels, int width, int height, float scale = 1);
+// Make a noise image. Noise parameters: lacunarity, gain, octaves, offset.
+void make_noisemap(vector<vec4f>& pixels, int width, int height,
+    float scale = 1, const vec4f& color0 = {0, 0, 0, 1},
+    const vec4f& color1 = {1, 1, 1, 1});
+void make_fbmmap(vector<vec4f>& pixels, int width, int height, float scale = 1,
+    const vec4f& noise = {2, 0.5, 8, 1}, const vec4f& color0 = {0, 0, 0, 1},
+    const vec4f& color1 = {1, 1, 1, 1});
+void make_turbulencemap(vector<vec4f>& pixels, int width, int height,
+    float scale = 1, const vec4f& noise = {2, 0.5, 8, 1},
+    const vec4f& color0 = {0, 0, 0, 1}, const vec4f& color1 = {1, 1, 1, 1});
+void make_ridgemap(vector<vec4f>& pixels, int width, int height,
+    float scale = 1, const vec4f& noise = {2, 0.5, 8, 1},
+    const vec4f& color0 = {0, 0, 0, 1}, const vec4f& color1 = {1, 1, 1, 1});
+
+// Make a sunsky HDR model with sun at sun_angle elevation in [0,pif/2],
+// turbidity in [1.7,10] with or without sun. The sun can be enabled or
+// disabled with has_sun. The sun parameters can be slightly modified by
+// changing the sun intensity and temperature. Has a convention, a temperature
+// of 0 sets the eath sun defaults (ignoring intensity too).
+void make_sunsky(vector<vec4f>& pixels, int width, int height, float sun_angle,
+    float turbidity = 3, bool has_sun = false, float sun_intensity = 1,
+    float sun_radius = 1, const vec3f& ground_albedo = {0.2, 0.2, 0.2});
+// Make an image of multiple lights.
+void make_lights(vector<vec4f>& pixels, int width, int height,
+    const vec3f& le = {1, 1, 1}, int nlights = 4, float langle = pif / 4,
+    float lwidth = pif / 16, float lheight = pif / 16);
+
+// Comvert a bump map to a normal map. All linear color spaces.
+void bump_to_normal(vector<vec4f>& normal, const vector<vec4f>& bump, int width,
+    int height, float scale = 1);
+
+// Add a border to an image
+void add_border(vector<vec4f>& pixels, const vector<vec4f>& source, int width,
+    int height, float thickness, const vec4f& color = {0, 0, 0, 1});
+
+}  // namespace yocto
+
+// -----------------------------------------------------------------------------
 // IMAGE DATA AND UTILITIES
 // -----------------------------------------------------------------------------
 namespace yocto {
