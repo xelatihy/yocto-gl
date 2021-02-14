@@ -60,7 +60,7 @@ using std::vector;
 }  // namespace yocto
 
 // -----------------------------------------------------------------------------
-// IMAGE DATA AND UTILITIES
+// IMAGE UTILITIES
 // -----------------------------------------------------------------------------
 namespace yocto {
 
@@ -207,6 +207,55 @@ image_data bump_to_normal(const image_data& image, float scale = 1);
 // Add a border to an image
 image_data add_border(
     const image_data& img, float width, const vec4f& color = {0, 0, 0, 1});
+
+}  // namespace yocto
+
+// -----------------------------------------------------------------------------
+// IMAGE UTILITIES
+// -----------------------------------------------------------------------------
+namespace yocto {
+
+// Conversion from/to floats.
+void byte_to_float(vector<vec4f>& fl, const vector<vec4b>& bt);
+void float_to_byte(vector<vec4b>& bt, const vector<vec4f>& fl);
+
+// Conversion between linear and gamma-encoded images.
+void srgb_to_rgb(vector<vec4f>& rgb, const vector<vec4f>& srgb);
+void rgb_to_srgb(vector<vec4f>& srgb, const vector<vec4f>& rgb);
+void srgb_to_rgb(vector<vec4f>& rgb, const vector<vec4b>& srgb);
+void rgb_to_srgb(vector<vec4b>& srgb, const vector<vec4f>& rgb);
+
+// Apply tone mapping
+void tonemap_image(vector<vec4f>& ldr, const vector<vec4f>& hdr, float exposure,
+    bool filmic = false, bool srgb = true);
+void tonemap_imageb(vector<vec4b>& ldr, const vector<vec4f>& hdr,
+    float exposure, bool filmic = false, bool srgb = true);
+
+// Apply tone mapping using multithreading for speed
+void tonemap_image_mt(vector<vec4f>& ldr, const vector<vec4f>& hdr,
+    float exposure, bool filmic = false, bool srgb = true);
+void tonemap_image_mt(vector<vec4b>& ldr, const vector<vec4f>& hdr,
+    float exposure, bool filmic = false, bool srgb = true);
+
+// Color grade a linear or srgb image to an srgb image.
+// Uses multithreading for speed.
+void colorgrade_image_mt(vector<vec4f>& corrected, const vector<vec4f>& img,
+    bool linear, const colorgrade_params& params);
+void colorgrade_image_mt(vector<vec4b>& corrected, const vector<vec4f>& img,
+    bool linear, const colorgrade_params& params);
+
+// determine white balance colors
+vec3f compute_white_balance(const vector<vec4f>& img);
+
+// Resize an image.
+void resize_image(vector<vec4f>& res, const vector<vec4f>& img, int width,
+    int height, int res_width, int res_height);
+void resize_image(vector<vec4b>& res, const vector<vec4b>& img, int width,
+    int height, int res_width, int res_height);
+
+// Compute the difference between two images
+void image_difference(vector<vec4f>& diff, const vector<vec4f>& a,
+    const vector<vec4f>& b, bool disply_diff);
 
 }  // namespace yocto
 

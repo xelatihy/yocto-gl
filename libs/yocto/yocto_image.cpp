@@ -220,17 +220,20 @@ void tonemap_image_mt(
 }
 
 // Resize an image.
-image_data resize_image(const image_data& image, int width, int height) {
-  if (width == 0 && height == 0) {
+image_data resize_image(
+    const image_data& image, int res_width, int res_height) {
+  if (res_width == 0 && res_height == 0) {
     throw std::invalid_argument{"bad image size in resize"};
   }
-  if (height == 0) {
-    height = (int)round(width * (double)height / (double)width);
-  } else if (width == 0) {
-    width = (int)round(height * (double)width / (double)height);
+  if (res_height == 0) {
+    res_height = (int)round(
+        res_width * (double)image.height / (double)image.width);
+  } else if (res_width == 0) {
+    res_width = (int)round(
+        res_height * (double)image.width / (double)image.height);
   }
   if (!image.pixelsf.empty()) {
-    auto result = make_image(width, height, image.linear, true);
+    auto result = make_image(res_width, res_height, image.linear, true);
     stbir_resize_uint8_generic((byte*)image.pixelsb.data(), (int)image.width,
         (int)image.height, (int)(sizeof(vec4b) * image.width),
         (byte*)result.pixelsb.data(), (int)result.width, (int)result.height,
@@ -238,7 +241,7 @@ image_data resize_image(const image_data& image, int width, int height) {
         STBIR_FILTER_DEFAULT, STBIR_COLORSPACE_LINEAR, nullptr);
     return result;
   } else {
-    auto result = make_image(width, height, image.linear, false);
+    auto result = make_image(res_width, res_height, image.linear, false);
     stbir_resize_float_generic((float*)image.pixelsf.data(), (int)image.width,
         (int)image.height, (int)(sizeof(vec4f) * image.width),
         (float*)result.pixelsf.data(), (int)result.width, (int)result.height,
@@ -812,6 +815,209 @@ image_data make_lights(int width, int height, const vec3f& le, int nlights,
     }
   }
   return img;
+}
+
+}  // namespace yocto
+
+// -----------------------------------------------------------------------------
+// IMAGE SAMPLING
+// -----------------------------------------------------------------------------
+namespace yocto {
+
+// Lookup an image at coordinates `ij`
+static vec4f lookup_image(const vector<vec4f>& img, int width, int height,
+    int i, int j, bool as_linear) {
+  return img[j * width * i];
+}
+static vec4f lookup_image(const vector<vec4b>& img, int width, int height,
+    int i, int j, bool as_linear) {
+  if (as_linear) {
+    return srgb_to_rgb(byte_to_float(img[j * width * i]));
+  } else {
+    return byte_to_float(img[j * width * i]);
+  }
+}
+
+// Evaluate a texture
+template <typename T>
+static vec4f eval_image_generic(const vector<T>& img, int width, int height,
+    const vec2f& uv, bool as_linear, bool no_interpolation,
+    bool clamp_to_edge) {
+  if (img.empty()) return vec4f{0, 0, 0, 0};
+
+  // get image width/height
+  auto size = vec2i{width, height};
+
+  // get coordinates normalized for tiling
+  auto s = 0.0f, t = 0.0f;
+  if (clamp_to_edge) {
+    s = clamp(uv.x, 0.0f, 1.0f) * size.x;
+    t = clamp(uv.y, 0.0f, 1.0f) * size.y;
+  } else {
+    s = fmod(uv.x, 1.0f) * size.x;
+    if (s < 0) s += size.x;
+    t = fmod(uv.y, 1.0f) * size.y;
+    if (t < 0) t += size.y;
+  }
+
+  // get image coordinates and residuals
+  auto i = clamp((int)s, 0, size.x - 1), j = clamp((int)t, 0, size.y - 1);
+  auto ii = (i + 1) % size.x, jj = (j + 1) % size.y;
+  auto u = s - i, v = t - j;
+
+  if (no_interpolation)
+    return lookup_image(img, width, height, i, j, as_linear);
+
+  // handle interpolation
+  return lookup_image(img, width, height, i, j, as_linear) * (1 - u) * (1 - v) +
+         lookup_image(img, width, height, i, jj, as_linear) * (1 - u) * v +
+         lookup_image(img, width, height, ii, j, as_linear) * u * (1 - v) +
+         lookup_image(img, width, height, ii, jj, as_linear) * u * v;
+}
+
+// Evaluates a color image at a point `uv`.
+vec4f eval_image(const vector<vec4f>& img, int width, int height,
+    const vec2f& uv, bool no_interpolation, bool clamp_to_edge) {
+  return eval_image_generic(
+      img, width, height, uv, false, no_interpolation, clamp_to_edge);
+}
+vec4f eval_image(const vector<vec4b>& img, int width, int height,
+    const vec2f& uv, bool as_linear, bool no_interpolation,
+    bool clamp_to_edge) {
+  return eval_image_generic(
+      img, width, height, uv, as_linear, no_interpolation, clamp_to_edge);
+}
+
+// Conversion from/to floats.
+void byte_to_float(vector<vec4f>& fl, const vector<vec4b>& bt) {
+  fl.resize(bt.size());
+  for (auto i = 0ull; i < fl.size(); i++) fl[i] = byte_to_float(bt[i]);
+}
+void float_to_byte(vector<vec4b>& bt, const vector<vec4f>& fl) {
+  bt.resize(fl.size());
+  for (auto i = 0ull; i < bt.size(); i++) bt[i] = float_to_byte(fl[i]);
+}
+
+// Conversion between linear and gamma-encoded images.
+void srgb_to_rgb(vector<vec4f>& rgb, const vector<vec4f>& srgb) {
+  rgb.resize(srgb.size());
+  for (auto i = 0ull; i < rgb.size(); i++) rgb[i] = srgb_to_rgb(srgb[i]);
+}
+void rgb_to_srgb(vector<vec4f>& srgb, const vector<vec4f>& rgb) {
+  srgb.resize(rgb.size());
+  for (auto i = 0ull; i < srgb.size(); i++) srgb[i] = rgb_to_srgb(rgb[i]);
+}
+void srgb_to_rgb(vector<vec4f>& rgb, const vector<vec4b>& srgb) {
+  rgb.resize(srgb.size());
+  for (auto i = 0ull; i < rgb.size(); i++)
+    rgb[i] = srgb_to_rgb(byte_to_float(srgb[i]));
+}
+void rgb_to_srgbb(vector<vec4b>& srgb, const vector<vec4f>& rgb) {
+  srgb.resize(rgb.size());
+  for (auto i = 0ull; i < srgb.size(); i++)
+    srgb[i] = float_to_byte(rgb_to_srgb(rgb[i]));
+}
+
+// Apply exposure and filmic tone mapping
+void tonemap_image(vector<vec4f>& ldr, const vector<vec4f>& hdr, float exposure,
+    bool filmic, bool srgb) {
+  ldr.resize(hdr.size());
+  for (auto i = 0ull; i < hdr.size(); i++)
+    ldr[i] = tonemap(hdr[i], exposure, filmic, srgb);
+}
+void tonemap_imageb(vector<vec4b>& ldr, const vector<vec4f>& hdr,
+    float exposure, bool filmic, bool srgb) {
+  ldr.resize(hdr.size());
+  for (auto i = 0ull; i < hdr.size(); i++)
+    ldr[i] = float_to_byte(tonemap(hdr[i], exposure, filmic, srgb));
+}
+
+void tonemap_image_mt(vector<vec4f>& ldr, const vector<vec4f>& hdr,
+    float exposure, bool filmic, bool srgb) {
+  parallel_for(hdr.size(),
+      [&](size_t i) { ldr[i] = tonemap(hdr[i], exposure, filmic, srgb); });
+}
+void tonemap_image_mt(vector<vec4b>& ldr, const vector<vec4f>& hdr,
+    float exposure, bool filmic, bool srgb) {
+  parallel_for(hdr.size(), [&](size_t i) {
+    ldr[i] = float_to_byte(tonemap(hdr[i], exposure, filmic, srgb));
+  });
+}
+
+// Apply exposure and filmic tone mapping
+void colorgrade_image(vector<vec4f>& corrected, const vector<vec4f>& img,
+    bool linear, const colorgrade_params& params) {
+  corrected.resize(img.size());
+  for (auto i = 0ull; i < img.size(); i++)
+    corrected[i] = colorgrade(img[i], linear, params);
+}
+
+// Apply exposure and filmic tone mapping
+void colorgrade_image_mt(vector<vec4f>& corrected, const vector<vec4f>& img,
+    bool linear, const colorgrade_params& params) {
+  parallel_for(img.size(),
+      [&](size_t i) { corrected[i] = colorgrade(img[i], linear, params); });
+}
+void colorgrade_image_mt(vector<vec4b>& corrected, const vector<vec4f>& img,
+    bool linear, const colorgrade_params& params) {
+  parallel_for(img.size(), [&](size_t i) {
+    corrected[i] = float_to_byte(colorgrade(img[i], linear, params));
+  });
+}
+
+// compute white balance
+vec3f compute_white_balance(const vector<vec4f>& img) {
+  auto rgb = zero3f;
+  for (auto& p : img) rgb += xyz(p);
+  if (rgb == zero3f) return zero3f;
+  return rgb / max(rgb);
+}
+
+void resize_image(vector<vec4f>& res, const vector<vec4f>& img, int width,
+    int height, int res_width, int res_height) {
+  if (res_width == 0 && res_height == 0) {
+    throw std::invalid_argument{"bad image size in resize"};
+  }
+  if (res_height == 0) {
+    res_height = (int)round(res_width * (double)height / (double)width);
+  } else if (res_width == 0) {
+    res_width = (int)round(res_height * (double)width / (double)height);
+  }
+  res.resize((size_t)res_width * (size_t)res_height);
+  stbir_resize_float_generic((float*)img.data(), width, height,
+      sizeof(vec4f) * width, (float*)res.data(), res_width, res_height,
+      sizeof(vec4f) * res_width, 4, 3, 0, STBIR_EDGE_CLAMP,
+      STBIR_FILTER_DEFAULT, STBIR_COLORSPACE_LINEAR, nullptr);
+}
+void resize_image(vector<vec4b>& res, const vector<vec4b>& img, int width,
+    int height, int res_width, int res_height) {
+  if (res_width == 0 && res_height == 0) {
+    throw std::invalid_argument{"bad image size in resize"};
+  }
+  if (res_height == 0) {
+    res_height = (int)round(res_width * (double)height / (double)width);
+  } else if (res_width == 0) {
+    res_width = (int)round(res_height * (double)width / (double)height);
+  }
+  res.resize((size_t)res_width * (size_t)res_height);
+  stbir_resize_uint8_generic((byte*)img.data(), width, height,
+      sizeof(vec4b) * width, (byte*)res.data(), res_width, res_height,
+      sizeof(vec4b) * res_width, 4, 3, 0, STBIR_EDGE_CLAMP,
+      STBIR_FILTER_DEFAULT, STBIR_COLORSPACE_LINEAR, nullptr);
+}
+
+void image_difference(vector<vec4f>& diff, const vector<vec4f>& a,
+    const vector<vec4f>& b, bool display) {
+  if (a.size() != b.size())
+    throw std::invalid_argument{"image haev different sizes"};
+  diff.resize(a.size());
+  for (auto i = 0llu; i < diff.size(); i++) diff[i] = abs(a[i] - b[i]);
+  if (display) {
+    for (auto i = 0llu; i < diff.size(); i++) {
+      auto d  = max(diff[i]);
+      diff[i] = {d, d, d, 1};
+    }
+  }
 }
 
 }  // namespace yocto
