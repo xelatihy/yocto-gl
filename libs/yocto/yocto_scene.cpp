@@ -193,7 +193,8 @@ image_data tonemap_image(
   if (!image.linear) return image;
   auto result = make_image(image.width, image.height, false, as_byte);
   for (auto idx = 0; idx < image.width * image.height; idx++) {
-    result.pixelsb[idx] = tonemapb(image.pixelsf[idx], exposure, filmic, true);
+    result.pixelsb[idx] = float_to_byte(
+        tonemap(image.pixelsf[idx], exposure, filmic, true));
   }
   return result;
 }
@@ -203,7 +204,7 @@ void tonemap_image(
     image_data& result, const image_data& image, float exposure, bool filmic) {
   if (image.width != result.width || image.height != result.height)
     throw std::invalid_argument{"image should be the same size"};
-  if (!!result.linear) throw std::invalid_argument{"ldr expected"};
+  if (result.linear) throw std::invalid_argument{"ldr expected"};
   if (!image.linear) throw std::invalid_argument{"hdr expected"};
   for (auto j = 0; j < image.height; j++) {
     for (auto i = 0; i < image.width; i++) {
@@ -218,7 +219,7 @@ void tonemap_image_mt(
     image_data& result, const image_data& image, float exposure, bool filmic) {
   if (image.width != result.width || image.height != result.height)
     throw std::invalid_argument{"image should be the same size"};
-  if (!!result.linear) throw std::invalid_argument{"ldr expected"};
+  if (result.linear) throw std::invalid_argument{"ldr expected"};
   if (!image.linear) throw std::invalid_argument{"hdr expected"};
   parallel_for(image.width, image.height,
       [&result, &image, exposure, filmic](int i, int j) {
