@@ -45,7 +45,6 @@
 #include <unordered_set>
 #include <utility>
 
-#include "yocto_commonio.h"
 #include "yocto_geometry.h"
 #include "yocto_modelio.h"
 

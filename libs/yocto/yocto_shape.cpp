@@ -38,7 +38,6 @@
 #include <stdexcept>
 #include <string>
 
-#include "yocto_commonio.h"
 #include "yocto_geometry.h"
 #include "yocto_modelio.h"
 #include "yocto_noise.h"
@@ -3399,18 +3398,20 @@ void make_shell(vector<vec4i>& quads, vector<vec3f>& positions,
 
 // Make a heightfield mesh.
 void make_heightfield(vector<vec4i>& quads, vector<vec3f>& positions,
-    vector<vec3f>& normals, vector<vec2f>& texcoords, const vec2i& size, const vector<float>& height) {
-  make_recty(quads, positions, normals, texcoords,
-      size - 1, vec2f{(float)size.x, (float)size.y} / max(size), {1, 1});
+    vector<vec3f>& normals, vector<vec2f>& texcoords, const vec2i& size,
+    const vector<float>& height) {
+  make_recty(quads, positions, normals, texcoords, size - 1,
+      vec2f{(float)size.x, (float)size.y} / max(size), {1, 1});
   for (auto j = 0; j < size.y; j++)
     for (auto i = 0; i < size.x; i++)
       positions[j * size.x + i].y = height[j * size.x + i];
   normals = quads_normals(quads, positions);
 }
 void make_heightfield(vector<vec4i>& quads, vector<vec3f>& positions,
-    vector<vec3f>& normals, vector<vec2f>& texcoords, const vec2i& size, const vector<vec4f>& color) {
-  make_recty(quads, positions, normals, texcoords,
-      size - 1, vec2f{(float)size.x, (float)size.y} / max(size), {1, 1});
+    vector<vec3f>& normals, vector<vec2f>& texcoords, const vec2i& size,
+    const vector<vec4f>& color) {
+  make_recty(quads, positions, normals, texcoords, size - 1,
+      vec2f{(float)size.x, (float)size.y} / max(size), {1, 1});
   for (auto j = 0; j < size.y; j++)
     for (auto i = 0; i < size.x; i++)
       positions[j * size.x + i].y = mean(xyz(color[j * size.x + i]));

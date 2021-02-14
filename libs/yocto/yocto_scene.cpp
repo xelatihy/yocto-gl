@@ -37,7 +37,6 @@
 #include <unordered_map>
 
 #include "yocto_color.h"
-#include "yocto_commonio.h"
 #include "yocto_geometry.h"
 #include "yocto_image.h"
 #include "yocto_modelio.h"

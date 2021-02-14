@@ -37,7 +37,6 @@
 
 #include "ext/stb_image_resize.h"
 #include "yocto_color.h"
-#include "yocto_commonio.h"
 #include "yocto_noise.h"
 #include "yocto_parallel.h"
 

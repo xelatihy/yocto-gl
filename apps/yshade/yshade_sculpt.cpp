@@ -1,4 +1,4 @@
-#include <yocto/yocto_commonio.h>
+#include <yocto/yocto_cli.h>
 #include <yocto/yocto_image.h>
 #include <yocto/yocto_sceneio.h>
 #include <yocto_gui/yocto_imgui.h>

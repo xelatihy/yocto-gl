@@ -26,7 +26,7 @@
 // POSSIBILITY OF SUCH DAMAGE.
 //
 
-#include <yocto/yocto_commonio.h>
+#include <yocto/yocto_cli.h>
 
 #include "yshade_scene.h"
 #include "yshade_sculpt.h"

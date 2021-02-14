@@ -38,7 +38,6 @@
 #include <utility>
 
 #include "yocto_color.h"
-#include "yocto_commonio.h"
 
 // -----------------------------------------------------------------------------
 // USING DIRECTIVES
