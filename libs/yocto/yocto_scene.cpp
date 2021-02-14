@@ -53,7 +53,6 @@
 namespace yocto {
 
 // using directives
-using std::deque;
 using std::unique_ptr;
 using namespace std::string_literals;
 

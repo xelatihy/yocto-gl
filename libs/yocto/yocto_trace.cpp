@@ -30,7 +30,6 @@
 
 #include <algorithm>
 #include <cstring>
-#include <deque>
 #include <memory>
 #include <stdexcept>
 #include <utility>
@@ -41,17 +40,6 @@
 #include "yocto_sampling.h"
 #include "yocto_shading.h"
 #include "yocto_shape.h"
-
-// -----------------------------------------------------------------------------
-// USING DIRECTIVES
-// -----------------------------------------------------------------------------
-namespace yocto {
-
-// using directives
-using std::deque;
-using namespace std::string_literals;
-
-}  // namespace yocto
 
 // -----------------------------------------------------------------------------
 // IMPLEMENTATION OF RAY-SCENE INTERSECTION

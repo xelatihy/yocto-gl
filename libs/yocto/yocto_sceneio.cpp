@@ -58,7 +58,6 @@
 namespace yocto {
 
 // using directives
-using std::deque;
 using std::unique_ptr;
 using namespace std::string_literals;
 
@@ -1451,63 +1450,6 @@ bool make_fvshape_preset(
 // UTILITIES
 // -----------------------------------------------------------------------------
 namespace yocto {
-
-// Enumerate
-template <typename T>
-auto enumerate(const vector<T>& elements) {
-  struct item {
-    const size_t& idx;
-    const T&      element;
-  };
-  struct iterator {
-    size_t    idx;
-    const T*  element;
-    bool      operator!=(const iterator& other) { return idx != other.idx; }
-    iterator& operator++() {
-      ++element;
-      ++idx;
-      return *this;
-    }
-    item operator*() { return {idx, *element}; }
-  };
-  struct wrapper {
-    const vector<T>& elements;
-    iterator         begin() { return {0, elements.data()}; }
-    iterator         end() {
-      return {elements.size(), elements.data() + elements.size()};
-    }
-  };
-  return wrapper{elements};
-}
-
-template <typename T1, typename T2>
-auto zip(const vector<T1>& keys, const vector<T2>& values) {
-  struct item {
-    const T1& key;
-    const T2& value;
-  };
-  struct iterator {
-    const T1* key;
-    const T2* value;
-    bool      operator!=(const iterator& other) {
-      return key != other.key || value != other.value;
-    }
-    void operator++() {
-      ++key;
-      ++value;
-    }
-    item operator*() { return item{*key, *value}; }
-  };
-  struct wrapper {
-    const vector<T1>& keys;
-    const vector<T2>& values;
-    iterator          begin() { return {keys.data(), values.data()}; }
-    iterator          end() {
-      return {keys.data() + keys.size(), values.data() + values.size()};
-    }
-  };
-  return wrapper{keys, values};
-}
 
 // get name
 [[maybe_unused]] static string get_camera_name(
