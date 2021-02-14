@@ -966,6 +966,22 @@ inline frame3f camera_fpscam(
 }  // namespace yocto
 
 // -----------------------------------------------------------------------------
+// PYTHON-LIKE ITERATORS
+// -----------------------------------------------------------------------------
+namespace yocto {
+
+// Python `range()` equivalent. Construct an object that iterates over an
+// integer sequence.
+template <typename T>
+constexpr auto range(T max);
+template <typename T>
+constexpr auto range(T min, T max);
+template <typename T>
+constexpr auto range(T min, T max, T step);
+
+}  // namespace yocto
+
+// -----------------------------------------------------------------------------
 //
 //
 // IMPLEMENTATION
@@ -2527,6 +2543,40 @@ inline void update_fpscam(
   auto pos = frame.o + transl.x * x + transl.y * y + transl.z * z;
 
   frame = {rot.x, rot.y, rot.z, pos};
+}
+
+}  // namespace yocto
+
+// -----------------------------------------------------------------------------
+// PYTHON-LIKE ITERATORS
+// -----------------------------------------------------------------------------
+namespace yocto {
+
+// Python `range()` equivalent. Construct an object to iterate over a sequence.
+template <typename T>
+constexpr auto range(T max) {
+  return range((T)0, max, (T)1);
+}
+template <typename T>
+constexpr auto range(T min, T max) {
+  return range(min, max, (T)1);
+}
+template <typename T>
+constexpr auto range(T min, T max, T step) {
+  struct iterator {
+    T    index;
+    void operator++() { ++index; }
+    bool operator!=(const iterator& other) const {
+      return index != other.index;
+    }
+    T operator*() const { return index; }
+  };
+  struct range_helper {
+    T        begin_ = 0, end_ = 0;
+    iterator begin() const { return {begin_}; }
+    iterator end() const { return {end_}; }
+  };
+  return range_helper{min, max};
 }
 
 }  // namespace yocto
