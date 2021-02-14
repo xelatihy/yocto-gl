@@ -40,7 +40,6 @@
 #include <functional>
 #include <memory>
 #include <string>
-#include <unordered_map>
 #include <utility>
 #include <vector>
 
@@ -58,7 +57,6 @@ namespace yocto {
 using std::function;
 using std::pair;
 using std::string;
-using std::unordered_map;
 using std::vector;
 
 }  // namespace yocto
