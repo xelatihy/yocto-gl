@@ -102,12 +102,8 @@ struct scene_camera {
   float   aperture     = 0;
 };
 
-// Texture containing either an LDR or HDR image. HDR images are encoded
-// in linear color space, while LDRs are encoded as sRGB.
-struct scene_texture {
-  image<vec4f> hdr = {};
-  image<vec4b> ldr = {};
-};
+// Texture containing either an LDR or HDR image.
+using scene_texture = image_data;
 
 // Material type
 enum struct material_type {
@@ -304,14 +300,11 @@ ray3f eval_camera(
 namespace yocto {
 
 // Evaluates a texture
-vec2i texture_size(const scene_texture& texture);
-vec4f lookup_texture(
-    const scene_texture& texture, const vec2i& ij, bool ldr_as_linear = false);
 vec4f eval_texture(const scene_texture& texture, const vec2f& uv,
-    bool ldr_as_linear = false, bool no_interpolation = false,
+    bool as_linear = false, bool no_interpolation = false,
     bool clamp_to_edge = false);
 vec4f eval_texture(const scene_scene& scene, texture_handle texture,
-    const vec2f& uv, bool ldr_as_linear = false, bool no_interpolation = false,
+    const vec2f& uv, bool as_linear = false, bool no_interpolation = false,
     bool clamp_to_edge = false);
 
 }  // namespace yocto

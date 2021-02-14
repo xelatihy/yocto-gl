@@ -89,7 +89,7 @@ void add_camera(scene_scene& scene) {
 void add_sky(scene_scene& scene, float sun_angle) {
   scene.texture_names.emplace_back("sky");
   auto& texture = scene.textures.emplace_back();
-  texture.hdr   = make_sunsky({1024, 512}, sun_angle);
+  texture       = make_sunsky(1024, 512, sun_angle);
   scene.environment_names.emplace_back("sky");
   auto& environment        = scene.environments.emplace_back();
   environment.emission     = {1, 1, 1};
@@ -182,8 +182,8 @@ void tesselate_subdiv(
       for (auto i = 0; i < 4; i++) {
         auto& displacement_tex = scene.textures[subdiv.displacement_tex];
         auto  disp             = mean(
-            eval_texture(displacement_tex, subdiv.texcoords[qtxt[i]], true));
-        if (!displacement_tex.ldr.empty()) disp -= 0.5f;
+            eval_texture(displacement_tex, subdiv.texcoords[qtxt[i]], false));
+        if (!displacement_tex.pixelsb.empty()) disp -= 0.5f;
         offset[qpos[i]] += subdiv.displacement * disp;
         count[qpos[i]] += 1;
       }
@@ -273,60 +273,10 @@ ray3f eval_camera(
 // -----------------------------------------------------------------------------
 namespace yocto {
 
-// Check texture size
-vec2i texture_size(const scene_texture& texture) {
-  if (!texture.hdr.empty()) {
-    return texture.hdr.imsize();
-  } else if (!texture.ldr.empty()) {
-    return texture.ldr.imsize();
-  } else {
-    return zero2i;
-  }
-}
-
-// Evaluate a texture
-vec4f lookup_texture(
-    const scene_texture& texture, const vec2i& ij, bool ldr_as_linear) {
-  if (!texture.hdr.empty()) {
-    return texture.hdr[ij];
-  } else if (!texture.ldr.empty()) {
-    return ldr_as_linear ? byte_to_float(texture.ldr[ij])
-                         : srgb_to_rgb(byte_to_float(texture.ldr[ij]));
-  } else {
-    return {1, 1, 1, 1};
-  }
-}
-
 // Evaluate a texture
 vec4f eval_texture(const scene_texture& texture, const vec2f& uv,
-    bool ldr_as_linear, bool no_interpolation, bool clamp_to_edge) {
-  // get image width/height
-  auto size = texture_size(texture);
-
-  // get coordinates normalized for tiling
-  auto s = 0.0f, t = 0.0f;
-  if (clamp_to_edge) {
-    s = clamp(uv.x, 0.0f, 1.0f) * size.x;
-    t = clamp(uv.y, 0.0f, 1.0f) * size.y;
-  } else {
-    s = fmod(uv.x, 1.0f) * size.x;
-    if (s < 0) s += size.x;
-    t = fmod(uv.y, 1.0f) * size.y;
-    if (t < 0) t += size.y;
-  }
-
-  // get image coordinates and residuals
-  auto i = clamp((int)s, 0, size.x - 1), j = clamp((int)t, 0, size.y - 1);
-  auto ii = (i + 1) % size.x, jj = (j + 1) % size.y;
-  auto u = s - i, v = t - j;
-
-  if (no_interpolation) return lookup_texture(texture, {i, j}, ldr_as_linear);
-
-  // handle interpolation
-  return lookup_texture(texture, {i, j}, ldr_as_linear) * (1 - u) * (1 - v) +
-         lookup_texture(texture, {i, jj}, ldr_as_linear) * (1 - u) * v +
-         lookup_texture(texture, {ii, j}, ldr_as_linear) * u * (1 - v) +
-         lookup_texture(texture, {ii, jj}, ldr_as_linear) * u * v;
+    bool as_linear, bool no_interpolation, bool clamp_to_edge) {
+  return eval_image(texture, uv, as_linear, no_interpolation, clamp_to_edge);
 }
 
 // Helpers
@@ -355,12 +305,12 @@ material_point eval_material(const scene_scene& scene,
     const vec4f& color_shp) {
   // evaluate textures
   auto emission_tex = eval_texture(
-      scene, material.emission_tex, texcoord, false);
-  auto color_tex     = eval_texture(scene, material.color_tex, texcoord, false);
+      scene, material.emission_tex, texcoord, true);
+  auto color_tex     = eval_texture(scene, material.color_tex, texcoord, true);
   auto roughness_tex = eval_texture(
-      scene, material.roughness_tex, texcoord, true);
+      scene, material.roughness_tex, texcoord, false);
   auto scattering_tex = eval_texture(
-      scene, material.scattering_tex, texcoord, false);
+      scene, material.scattering_tex, texcoord, true);
 
   // material point
   auto point         = material_point{};
@@ -1134,13 +1084,13 @@ material_point eval_material(const scene_scene& scene,
 
   // evaluate textures
   auto emission_tex = eval_texture(
-      scene, material.emission_tex, texcoord, false);
+      scene, material.emission_tex, texcoord, true);
   auto color_shp     = eval_color(scene, instance, element, uv);
-  auto color_tex     = eval_texture(scene, material.color_tex, texcoord, false);
+  auto color_tex     = eval_texture(scene, material.color_tex, texcoord, true);
   auto roughness_tex = eval_texture(
-      scene, material.roughness_tex, texcoord, true);
+      scene, material.roughness_tex, texcoord, false);
   auto scattering_tex = eval_texture(
-      scene, material.scattering_tex, texcoord, false);
+      scene, material.scattering_tex, texcoord, true);
 
   // material point
   auto point         = material_point{};
@@ -1254,14 +1204,12 @@ vector<string> scene_stats(const scene_scene& scene, bool verbose) {
   stats.push_back("fvquads:     " +
                   format(accumulate(scene.subdivs,
                       [](auto& subdiv) { return subdiv.quadspos.size(); })));
-  stats.push_back(
-      "texels4b:     " + format(accumulate(scene.textures, [](auto& texture) {
-        return (size_t)texture.ldr.width() * (size_t)texture.ldr.width();
-      })));
-  stats.push_back(
-      "texels4f:     " + format(accumulate(scene.textures, [](auto& texture) {
-        return (size_t)texture.hdr.width() * (size_t)texture.hdr.height();
-      })));
+  stats.push_back("texels4b:     " +
+                  format(accumulate(scene.textures,
+                      [](auto& texture) { return texture.pixelsb.size(); })));
+  stats.push_back("texels4f:     " +
+                  format(accumulate(scene.textures,
+                      [](auto& texture) { return texture.pixelsf.size(); })));
   stats.push_back("center:       " + format3(center(bbox)));
   stats.push_back("size:         " + format3(size(bbox)));
 
@@ -1286,7 +1234,7 @@ vector<string> scene_validation(const scene_scene& scene, bool notextures) {
   auto check_empty_textures = [&errs](const scene_scene& scene) {
     for (auto idx = 0; idx < (int)scene.textures.size(); idx++) {
       auto& texture = scene.textures[idx];
-      if (texture.hdr.empty() && texture.ldr.empty()) {
+      if (texture.pixelsf.empty() && texture.pixelsb.empty()) {
         errs.push_back("empty texture " + scene.texture_names[idx]);
       }
     }

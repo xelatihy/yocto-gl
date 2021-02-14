@@ -61,6 +61,25 @@ using namespace std::string_literals;
 }  // namespace yocto
 
 // -----------------------------------------------------------------------------
+// TEXTURE IO
+// -----------------------------------------------------------------------------
+namespace yocto {
+
+// load texture
+bool load_texture(
+    const string& filename, scene_texture& texture, string& error) {
+  return load_image(filename, texture, error);
+}
+
+// save texture
+bool save_texture(
+    const string& filename, const scene_texture& texture, string& error) {
+  return save_image(filename, texture, error);
+}
+
+}  // namespace yocto
+
+// -----------------------------------------------------------------------------
 // SHAPE IO
 // -----------------------------------------------------------------------------
 namespace yocto {
@@ -937,8 +956,8 @@ static void trim_memory(scene_scene& scene) {
     subdiv.quadstexcoord.shrink_to_fit();
   }
   for (auto& texture : scene.textures) {
-    texture.hdr.shrink_to_fit();
-    texture.ldr.shrink_to_fit();
+    texture.pixelsf.shrink_to_fit();
+    texture.pixelsb.shrink_to_fit();
   }
   scene.cameras.shrink_to_fit();
   scene.shapes.shrink_to_fit();
@@ -1553,37 +1572,6 @@ bool save_instance(const string& filename, const vector<frame3f>& frames,
     return save_ply(filename, ply, error);
   } else {
     return format_error();
-  }
-}
-
-// load texture
-bool load_texture(
-    const string& filename, scene_texture& texture, string& error) {
-  auto image = image_data{};
-  if (!load_image(filename, image, error)) return false;
-  if (!image.pixelsf.empty()) {
-    texture.hdr = {
-        {image.width, image.height}, (const vec4f*)image.pixelsf.data()};
-  } else {
-    texture.ldr = {
-        {image.width, image.height}, (const vec4b*)image.pixelsb.data()};
-  }
-  return true;
-}
-
-// save texture
-bool save_texture(
-    const string& filename, const scene_texture& texture, string& error) {
-  if (!texture.hdr.empty()) {
-    auto image = make_image(
-        texture.hdr.width(), texture.hdr.height(), true, false);
-    image.pixelsf = texture.hdr.data_vector();
-    return save_image(filename, image, error);
-  } else {
-    auto image = make_image(
-        texture.ldr.width(), texture.ldr.height(), false, true);
-    image.pixelsb = texture.ldr.data_vector();
-    return save_image(filename, image, error);
   }
 }
 
@@ -2490,7 +2478,7 @@ static bool save_json_scene(const string& filename, const scene_scene& scene,
     for (auto& texture : scene.textures) {
       if (progress_cb) progress_cb("save texture", progress.x++, progress.y);
       auto path = "textures/" + get_texture_name(scene, texture) +
-                  (!texture.hdr.empty() ? ".hdr"s : ".png"s);
+                  (!texture.pixelsf.empty() ? ".hdr"s : ".png"s);
       if (!save_texture(path_join(dirname, path), texture, error))
         return dependent_error();
     }
@@ -2537,7 +2525,7 @@ static bool save_json_scene(const string& filename, const scene_scene& scene,
         if (progress_cb) progress_cb("save texture", progress.x++, progress.y);
       }
       auto path = "textures/" + get_texture_name(scene, texture) +
-                  (!texture.hdr.empty() ? ".hdr"s : ".png"s);
+                  (!texture.pixelsf.empty() ? ".hdr"s : ".png"s);
       auto err = string{};
       if (!save_texture(path_join(dirname, path), texture, err)) {
         auto lock = std::lock_guard{mutex};
@@ -2759,7 +2747,7 @@ static bool save_obj_scene(const string& filename, const scene_scene& scene,
   for (auto& texture : scene.textures) {
     auto& otexture = obj.textures.emplace_back();
     otexture.path  = "textures/" + get_texture_name(scene, texture) +
-                    (!texture.hdr.empty() ? ".hdr"s : ".png"s);
+                    (!texture.pixelsf.empty() ? ".hdr"s : ".png"s);
   }
 
   // convert materials
@@ -2821,7 +2809,7 @@ static bool save_obj_scene(const string& filename, const scene_scene& scene,
     for (auto& texture : scene.textures) {
       if (progress_cb) progress_cb("save texture", progress.x++, progress.y);
       auto path = "textures/" + get_texture_name(scene, texture) +
-                  (!texture.hdr.empty() ? ".hdr"s : ".png"s);
+                  (!texture.pixelsf.empty() ? ".hdr"s : ".png"s);
       if (!save_texture(path_join(dirname, path), texture, error))
         return dependent_error();
     }
@@ -2836,7 +2824,7 @@ static bool save_obj_scene(const string& filename, const scene_scene& scene,
         if (progress_cb) progress_cb("save texture", progress.x++, progress.y);
       }
       auto path = "textures/" + get_texture_name(scene, texture) +
-                  (!texture.hdr.empty() ? ".hdr"s : ".png"s);
+                  (!texture.pixelsf.empty() ? ".hdr"s : ".png"s);
       auto err = string{};
       if (!save_texture(path_join(dirname, path), texture, err)) {
         auto lock = std::lock_guard{mutex};
@@ -3796,7 +3784,7 @@ static bool save_gltf_scene(const string& filename, const scene_scene& scene,
     for (auto& texture : scene.textures) {
       if (progress_cb) progress_cb("save texture", progress.x++, progress.y);
       auto path = "textures/" + get_texture_name(scene, texture) +
-                  (!texture.hdr.empty() ? ".hdr" : ".png");
+                  (!texture.pixelsf.empty() ? ".hdr" : ".png");
       if (!save_texture(path_join(dirname, path), texture, error))
         return dependent_error();
     }
@@ -3827,7 +3815,7 @@ static bool save_gltf_scene(const string& filename, const scene_scene& scene,
         if (progress_cb) progress_cb("save texture", progress.x++, progress.y);
       }
       auto path = "textures/" + get_texture_name(scene, texture) +
-                  (!texture.hdr.empty() ? ".hdr"s : ".png"s);
+                  (!texture.pixelsf.empty() ? ".hdr"s : ".png"s);
       auto err = string{};
       if (!save_texture(path_join(dirname, path), texture, err)) {
         auto lock = std::lock_guard{mutex};
@@ -4058,7 +4046,7 @@ static bool save_pbrt_scene(const string& filename, const scene_scene& scene,
   for (auto& texture : scene.textures) {
     auto& ptexture    = pbrt.textures.emplace_back();
     ptexture.filename = "textures/" + get_texture_name(scene, texture) +
-                        (!texture.hdr.empty() ? ".hdr" : ".png");
+                        (!texture.pixelsf.empty() ? ".hdr" : ".png");
   }
 
   // material type map
@@ -4122,7 +4110,7 @@ static bool save_pbrt_scene(const string& filename, const scene_scene& scene,
     for (auto& texture : scene.textures) {
       if (progress_cb) progress_cb("save texture", progress.x++, progress.y);
       auto path = "textures/" + get_texture_name(scene, texture) +
-                  (!texture.hdr.empty() ? ".hdr" : ".png");
+                  (!texture.pixelsf.empty() ? ".hdr" : ".png");
       if (!save_texture(path_join(dirname, path), texture, error))
         return dependent_error();
     }
@@ -4153,7 +4141,7 @@ static bool save_pbrt_scene(const string& filename, const scene_scene& scene,
         if (progress_cb) progress_cb("save texture", progress.x++, progress.y);
       }
       auto path = "textures/" + get_texture_name(scene, texture) +
-                  (!texture.hdr.empty() ? ".hdr"s : ".png"s);
+                  (!texture.pixelsf.empty() ? ".hdr"s : ".png"s);
       auto err = string{};
       if (!save_texture(path_join(dirname, path), texture, err)) {
         auto lock = std::lock_guard{mutex};
