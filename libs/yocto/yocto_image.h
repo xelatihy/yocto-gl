@@ -88,12 +88,6 @@ void swap(image_data& a, image_data& b);
 vec4f get_pixel(const image_data& image, int i, int j);
 void  set_pixel(image_data& image, int i, int j, const vec4f& pixel);
 
-// data acess
-const float* get_dataf(const image_data& image);
-const byte*  get_datab(const image_data& image);
-const vec4f* get_data4f(const image_data& image);
-const vec4b* get_data4b(const image_data& image);
-
 // conversions
 image_data convert_image(const image_data& image, bool linear, bool as_byte);
 void       convert_image(image_data& result, const image_data& image);

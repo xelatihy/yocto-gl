@@ -1239,10 +1239,10 @@ void set_image(
     ogl_image& oimg, const image_data& img, bool linear, bool mipmap) {
   if (!img.pixelsf.empty()) {
     set_texture(oimg.texture, {img.width, img.height}, 4,
-        (const float*)get_data4f(img), false, linear, mipmap);
+        (const float*)img.pixelsf.data(), false, linear, mipmap);
   } else {
     set_texture(oimg.texture, {img.width, img.height}, 4,
-        (const byte*)get_data4b(img), false, linear, mipmap);
+        (const byte*)img.pixelsb.data(), false, linear, mipmap);
   }
 }
 

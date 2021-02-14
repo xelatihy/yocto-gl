@@ -113,25 +113,10 @@ void set_pixel(image_data& image, int i, int j, const vec4f& pixel) {
   }
 }
 
-// data acess
-const float* get_dataf(const image_data& image) {
-  return !image.pixelsf.empty() ? (const float*)image.pixelsf.data() : nullptr;
-}
-const byte* get_datab(const image_data& image) {
-  return !image.pixelsf.empty() ? (const byte*)image.pixelsb.data() : nullptr;
-}
-const vec4f* get_data4f(const image_data& image) {
-  return !image.pixelsf.empty() ? image.pixelsf.data() : nullptr;
-}
-const vec4b* get_data4b(const image_data& image) {
-  return !image.pixelsb.empty() ? image.pixelsb.data() : nullptr;
-}
-
 // conversions
 image_data convert_image(const image_data& image, bool linear, bool as_byte) {
   if (image.linear == linear && !image.pixelsf.empty() == as_byte) return image;
-  auto result = make_image(
-      image.width, image.height, linear, as_byte);
+  auto result = make_image(image.width, image.height, linear, as_byte);
   convert_image(result, image);
   return result;
 }
