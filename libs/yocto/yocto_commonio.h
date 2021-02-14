@@ -40,18 +40,13 @@
 // INCLUDES
 // -----------------------------------------------------------------------------
 
-#include <array>
 #include <chrono>
 #include <cstdio>
 #include <functional>
-#include <memory>
 #include <stdexcept>
 #include <string>
-#include <string_view>
 #include <type_traits>
-#include <unordered_map>
 #include <unordered_set>
-#include <utility>
 #include <vector>
 
 // -----------------------------------------------------------------------------
@@ -60,12 +55,8 @@
 namespace yocto {
 
 // using directives
-using std::array;
 using std::function;
-using std::pair;
 using std::string;
-using std::string_view;
-using std::unordered_map;
 using std::unordered_set;
 using std::vector;
 using namespace std::string_literals;
