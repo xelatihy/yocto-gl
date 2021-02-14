@@ -68,7 +68,7 @@ namespace yocto {
 using progress_callback =
     function<void(const string& message, int current, int total)>;
 
-// Load/save a scene in the supported formats. Throws on error.
+// Load/save a scene in the supported formats.
 // Calls the progress callback, if defined, as we process more data.
 bool load_scene(const string& filename, scene_scene& scene, string& error,
     const progress_callback& progress_cb = {}, bool noparallel = false);
@@ -77,6 +77,29 @@ bool save_scene(const string& filename, const scene_scene& scene, string& error,
 
 // Scene presets used for testing.
 bool make_scene_preset(scene_scene& scene, const string& type, string& error);
+
+}  // namespace yocto
+
+// -----------------------------------------------------------------------------
+// ELEMENT IO FUNCTIONS
+// -----------------------------------------------------------------------------
+namespace yocto {
+
+// Load/save a texture in the supported formats.
+bool load_texture(
+    const string& filename, scene_texture& texture, string& error);
+bool save_texture(
+    const string& filename, const scene_texture& texture, string& error);
+
+// Load/save a shape in the supported formats.
+bool load_shape(const string& filename, scene_shape& shape, string& error);
+bool save_shape(
+    const string& filename, const scene_shape& shape, string& error);
+
+// Load/save a subdiv in the supported formats.
+bool load_subdiv(const string& filename, scene_subdiv& subdiv, string& error);
+bool save_subdiv(
+    const string& filename, const scene_subdiv& subdiv, string& error);
 
 }  // namespace yocto
 

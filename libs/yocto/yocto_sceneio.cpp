@@ -785,12 +785,8 @@ bool save_instance(const string& filename, const vector<frame3f>& frames,
   }
 }
 
-#define YOCTO_TEXTUREIO_AS_IMAGE
-
-#ifdef YOCTO_TEXTUREIO_AS_IMAGE
-
 // load texture
-static bool load_texture(
+bool load_texture(
     const string& filename, scene_texture& texture, string& error) {
   auto image = image_data{};
   if (!load_image(filename, image, error)) return false;
@@ -805,7 +801,7 @@ static bool load_texture(
 }
 
 // save texture
-static bool save_texture(
+bool save_texture(
     const string& filename, const scene_texture& texture, string& error) {
   if (!texture.hdr.empty()) {
     auto image = make_image(
@@ -820,33 +816,8 @@ static bool save_texture(
   }
 }
 
-#else
-
-// load texture
-static bool load_texture(
-    const string& filename, scene_texture& texture, string& error) {
-  if (is_hdr_filename(filename)) {
-    return load_image(filename, texture.hdr, error);
-  } else {
-    return load_image(filename, texture.ldr, error);
-  }
-}
-
-// save texture
-static bool save_texture(
-    const string& filename, const scene_texture& texture, string& error) {
-  if (!texture.hdr.empty()) {
-    return save_image(filename, texture.hdr, error);
-  } else {
-    return save_image(filename, texture.ldr, error);
-  }
-}
-
-#endif
-
 // load shape
-static bool load_shape(
-    const string& filename, scene_shape& shape, string& error) {
+bool load_shape(const string& filename, scene_shape& shape, string& error) {
   auto lshape = shape_data{};
   if (!load_shape(filename, lshape, error, true)) return false;
   shape.points    = lshape.points;
@@ -862,7 +833,7 @@ static bool load_shape(
 }
 
 // save shape
-static bool save_shape(
+bool save_shape(
     const string& filename, const scene_shape& shape, string& error) {
   auto sshape      = shape_data{};
   sshape.points    = shape.points;
@@ -878,8 +849,7 @@ static bool save_shape(
 }
 
 // load subdiv
-static bool load_subdiv(
-    const string& filename, scene_subdiv& subdiv, string& error) {
+bool load_subdiv(const string& filename, scene_subdiv& subdiv, string& error) {
   auto lsubdiv = fvshape_data{};
   if (!load_fvshape(filename, lsubdiv, error, true)) return false;
   subdiv.quadspos      = lsubdiv.quadspos;
@@ -892,7 +862,7 @@ static bool load_subdiv(
 }
 
 // save subdiv
-static bool save_subdiv(
+bool save_subdiv(
     const string& filename, const scene_subdiv& subdiv, string& error) {
   auto ssubdiv          = fvshape_data{};
   ssubdiv.quadspos      = subdiv.quadspos;
