@@ -298,7 +298,7 @@ void make_test(scene_scene& scene, const test_params& params) {
   auto materials = vector<material_handle>{};
   switch (params.shapes) {
     case test_shapes_type::features1: {
-      auto bunny  = add_shape(scene, "bunny", make_bunny(0.075));
+      auto bunny  = add_shape(scene, "sphere", make_sphere(32, 0.075, 1));
       auto sphere = add_shape(scene, "sphere", make_sphere(32, 0.075, 1));
       shapes      = {bunny, sphere, bunny, sphere, bunny};
     } break;
@@ -324,13 +324,13 @@ void make_test(scene_scene& scene, const test_params& params) {
                   false, true))};
     } break;
     case test_shapes_type::rows: {
-      auto bunny  = add_shape(scene, "bunny", make_bunny(0.075));
+      auto bunny  = add_shape(scene, "bunny", make_sphere(32, 0.075, 1));
       auto sphere = add_shape(scene, "sphere", make_sphere(32, 0.075, 1));
       shapes      = {bunny, bunny, bunny, bunny, bunny, sphere, sphere, sphere,
           sphere, sphere};
     } break;
     case test_shapes_type::bunny_sphere: {
-      auto bunny  = add_shape(scene, "bunny", make_bunny(0.075));
+      auto bunny  = add_shape(scene, "bunny", make_sphere(32, 0.075, 1));
       auto sphere = add_shape(scene, "sphere", make_sphere(32, 0.075, 1));
       shapes      = {bunny, sphere, bunny, sphere, bunny};
     } break;
@@ -353,7 +353,7 @@ void make_test(scene_scene& scene, const test_params& params) {
           add_shape(scene, "cube-subdiv", make_fvcube(0.075)),
           add_shape(scene, "suzanne-subdiv", make_monkey(0.075)),
           add_shape(scene, "displaced", make_sphere(128, 0.075f, 1)),
-          add_shape(scene, "bunny", make_bunny(0.075)),
+          add_shape(scene, "bunny", make_sphere(32, 0.075, 1)),
           add_shape(scene, "teapot", make_sphere(32, 0.075, 1)),
       };
       subdivs = {
