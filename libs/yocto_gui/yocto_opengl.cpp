@@ -399,39 +399,6 @@ void clear_cubemap(ogl_cubemap& cubemap) {
   assert_ogl_error();
 }
 
-void set_cubemap(ogl_cubemap& cubemap, const array<image<vec4b>, 6>& img,
-    int num_channels, bool as_srgb, bool linear, bool mipmap) {
-  auto data = array<byte*, 6>{(byte*)img[0].data(), (byte*)img[1].data(),
-      (byte*)img[2].data(), (byte*)img[3].data(), (byte*)img[4].data(),
-      (byte*)img[5].data()};
-  set_cubemap(
-      cubemap, img[0].imsize().x, num_channels, data, as_srgb, linear, mipmap);
-}
-void set_cubemap(ogl_cubemap& cubemap, const array<image<vec4f>, 6>& img,
-    int num_channels, bool as_float, bool linear, bool mipmap) {
-  auto data = array<float*, 6>{(float*)img[0].data(), (float*)img[1].data(),
-      (float*)img[2].data(), (float*)img[3].data(), (float*)img[4].data(),
-      (float*)img[5].data()};
-  set_cubemap(
-      cubemap, img[0].imsize().x, num_channels, data, as_float, linear, mipmap);
-}
-void set_cubemap(ogl_cubemap& cubemap, const array<image<vec3b>, 6>& img,
-    int num_channels, bool as_srgb, bool linear, bool mipmap) {
-  auto data = array<byte*, 6>{(byte*)img[0].data(), (byte*)img[1].data(),
-      (byte*)img[2].data(), (byte*)img[3].data(), (byte*)img[4].data(),
-      (byte*)img[5].data()};
-  set_cubemap(
-      cubemap, img[0].imsize().x, num_channels, data, as_srgb, linear, mipmap);
-}
-void set_cubemap(ogl_cubemap& cubemap, const array<image<vec3f>, 6>& img,
-    int num_channels, bool as_float, bool linear, bool mipmap) {
-  auto data = array<float*, 6>{(float*)img[0].data(), (float*)img[1].data(),
-      (float*)img[2].data(), (float*)img[3].data(), (float*)img[4].data(),
-      (float*)img[5].data()};
-  set_cubemap(
-      cubemap, img[0].imsize().x, num_channels, data, as_float, linear, mipmap);
-}
-
 // cleanup
 ogl_arraybuffer::~ogl_arraybuffer() { clear_arraybuffer(*this); }
 

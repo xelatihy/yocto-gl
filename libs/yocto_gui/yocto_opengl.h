@@ -168,19 +168,6 @@ bool is_initialized(const ogl_cubemap& cubemap);
 // clear cubemap
 void clear_cubemap(ogl_cubemap& cubemap);
 
-void set_cubemap(ogl_cubemap& cubemap, const array<image<vec4b>, 6>& img,
-    int num_channels, bool as_srgb = true, bool linear = true,
-    bool mipmap = true);
-void set_cubemap(ogl_cubemap& cubemap, const array<image<vec4f>, 6>& img,
-    int num_channels, bool as_float = false, bool linear = true,
-    bool mipmap = true);
-void set_cubemap(ogl_cubemap& cubemap, const array<image<vec3b>, 6>& img,
-    int num_channels, bool as_srgb = true, bool linear = true,
-    bool mipmap = true);
-void set_cubemap(ogl_cubemap& cubemap, const array<image<vec3f>, 6>& img,
-    int num_channels, bool as_float = false, bool linear = true,
-    bool mipmap = true);
-
 // Opengl array/element buffer
 struct ogl_arraybuffer {
   size_t capacity     = 0;
