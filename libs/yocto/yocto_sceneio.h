@@ -60,6 +60,19 @@ using std::vector;
 }  // namespace yocto
 
 // -----------------------------------------------------------------------------
+// TEXTURE IO
+// -----------------------------------------------------------------------------
+namespace yocto {
+
+// Load/save a texture in the supported formats.
+bool load_texture(
+    const string& filename, scene_texture& texture, string& error);
+bool save_texture(
+    const string& filename, const scene_texture& texture, string& error);
+
+}  // namespace yocto
+
+// -----------------------------------------------------------------------------
 // SHAPE IO
 // -----------------------------------------------------------------------------
 namespace yocto {
@@ -84,6 +97,18 @@ bool make_fvshape_preset(
 }  // namespace yocto
 
 // -----------------------------------------------------------------------------
+// SUBDIV IO
+// -----------------------------------------------------------------------------
+namespace yocto {
+
+// Load/save a subdiv in the supported formats.
+bool load_subdiv(const string& filename, scene_subdiv& subdiv, string& error);
+bool save_subdiv(
+    const string& filename, const scene_subdiv& subdiv, string& error);
+
+}  // namespace yocto
+
+// -----------------------------------------------------------------------------
 // SCENE IO
 // -----------------------------------------------------------------------------
 namespace yocto {
@@ -101,29 +126,6 @@ bool save_scene(const string& filename, const scene_scene& scene, string& error,
 
 // Scene presets used for testing.
 bool make_scene_preset(scene_scene& scene, const string& type, string& error);
-
-}  // namespace yocto
-
-// -----------------------------------------------------------------------------
-// ELEMENT IO FUNCTIONS
-// -----------------------------------------------------------------------------
-namespace yocto {
-
-// Load/save a texture in the supported formats.
-bool load_texture(
-    const string& filename, scene_texture& texture, string& error);
-bool save_texture(
-    const string& filename, const scene_texture& texture, string& error);
-
-// Load/save a shape in the supported formats.
-bool load_shape(const string& filename, scene_shape& shape, string& error);
-bool save_shape(
-    const string& filename, const scene_shape& shape, string& error);
-
-// Load/save a subdiv in the supported formats.
-bool load_subdiv(const string& filename, scene_subdiv& subdiv, string& error);
-bool save_subdiv(
-    const string& filename, const scene_subdiv& subdiv, string& error);
 
 }  // namespace yocto
 

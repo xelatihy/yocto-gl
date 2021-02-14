@@ -148,8 +148,8 @@ struct scene_material {
 
 // Shape data represented as indexed meshes of elements.
 // May contain either points, lines, triangles and quads.
-struct scene_shape {
-  // primitives
+struct shape_data {
+  // element data
   vector<int>   points    = {};
   vector<vec2i> lines     = {};
   vector<vec3i> triangles = {};
@@ -163,6 +163,8 @@ struct scene_shape {
   vector<float> radius    = {};
   vector<vec4f> tangents  = {};
 };
+
+using scene_shape = shape_data;
 
 // Instance.
 struct scene_instance {
@@ -354,22 +356,6 @@ bool is_volumetric(const scene_scene& scene, const scene_instance& instance);
 // SHAPE PROPERTIES
 // -----------------------------------------------------------------------------
 namespace yocto {
-
-// Shape data stored as an indexed mesh
-struct shape_data {
-  // element data
-  vector<int>   points    = {};
-  vector<vec2i> lines     = {};
-  vector<vec3i> triangles = {};
-  vector<vec4i> quads     = {};
-
-  // vertex data
-  vector<vec3f> positions = {};
-  vector<vec3f> normals   = {};
-  vector<vec2f> texcoords = {};
-  vector<vec4f> colors    = {};
-  vector<float> radius    = {};
-};
 
 // Interpolate vertex data
 vec3f eval_position(const shape_data& shape, int element, const vec2f& uv);

@@ -1587,38 +1587,6 @@ bool save_texture(
   }
 }
 
-// load shape
-bool load_shape(const string& filename, scene_shape& shape, string& error) {
-  auto lshape = shape_data{};
-  if (!load_shape(filename, lshape, error, true)) return false;
-  shape.points    = lshape.points;
-  shape.lines     = lshape.lines;
-  shape.triangles = lshape.triangles;
-  shape.quads     = lshape.quads;
-  shape.positions = lshape.positions;
-  shape.normals   = lshape.normals;
-  shape.texcoords = lshape.texcoords;
-  shape.colors    = lshape.colors;
-  shape.radius    = lshape.radius;
-  return true;
-}
-
-// save shape
-bool save_shape(
-    const string& filename, const scene_shape& shape, string& error) {
-  auto sshape      = shape_data{};
-  sshape.points    = shape.points;
-  sshape.lines     = shape.lines;
-  sshape.triangles = shape.triangles;
-  sshape.quads     = shape.quads;
-  sshape.positions = shape.positions;
-  sshape.normals   = shape.normals;
-  sshape.texcoords = shape.texcoords;
-  sshape.colors    = shape.colors;
-  sshape.radius    = shape.radius;
-  return save_shape(filename, sshape, error, true);
-}
-
 // load subdiv
 bool load_subdiv(const string& filename, scene_subdiv& subdiv, string& error) {
   auto lsubdiv = fvshape_data{};
@@ -2152,7 +2120,7 @@ static bool load_json_scene(const string& filename, scene_scene& scene,
       if (progress_cb) progress_cb("load shape", progress.x++, progress.y);
       auto path = find_path(
           get_shape_name(scene, shape), "shapes", {".ply", ".obj"});
-      if (!load_shape(path_join(dirname, path), shape, error))
+      if (!load_shape(path_join(dirname, path), shape, error, true))
         return dependent_error();
     }
     // load subdivs
@@ -2192,7 +2160,7 @@ static bool load_json_scene(const string& filename, scene_scene& scene,
       auto path = find_path(
           get_shape_name(scene, shape), "shapes", {".ply", ".obj"});
       auto err = string{};
-      if (!load_shape(path_join(dirname, path), shape, err)) {
+      if (!load_shape(path_join(dirname, path), shape, err, true)) {
         auto lock = std::lock_guard{mutex};
         error     = err;
         return;
@@ -2506,7 +2474,7 @@ static bool save_json_scene(const string& filename, const scene_scene& scene,
     for (auto& shape : scene.shapes) {
       if (progress_cb) progress_cb("save shape", progress.x++, progress.y);
       auto path = "shapes/" + get_shape_name(scene, shape) + ".ply";
-      if (!save_shape(path_join(dirname, path), shape, error))
+      if (!save_shape(path_join(dirname, path), shape, error, true))
         return dependent_error();
     }
 
@@ -2538,7 +2506,7 @@ static bool save_json_scene(const string& filename, const scene_scene& scene,
       }
       auto path = "shapes/" + get_shape_name(scene, shape) + ".ply";
       auto err  = string{};
-      if (!save_shape(path_join(dirname, path), shape, err)) {
+      if (!save_shape(path_join(dirname, path), shape, err, true)) {
         auto lock = std::lock_guard{mutex};
         error     = err;
         return;
@@ -2554,7 +2522,7 @@ static bool save_json_scene(const string& filename, const scene_scene& scene,
       }
       auto path = "subdivs/" + get_subdiv_name(scene, subdiv) + ".obj";
       auto err  = string{};
-      if (!save_subdiv(path_join(dirname, path), subdiv, err)) {
+      if (!save_subdiv(path_join(dirname, path), subdiv, err, true)) {
         auto lock = std::lock_guard{mutex};
         error     = err;
         return;
@@ -2898,18 +2866,8 @@ static bool load_ply_scene(const string& filename, scene_scene& scene,
   if (progress_cb) progress_cb("load scene", progress.x++, progress.y);
 
   // load ply mesh
-  auto& shape  = scene.shapes.emplace_back();
-  auto  lshape = shape_data{};
-  if (!load_shape(filename, lshape, error, false)) return false;
-  shape.points    = lshape.points;
-  shape.lines     = lshape.lines;
-  shape.triangles = lshape.triangles;
-  shape.quads     = lshape.quads;
-  shape.positions = lshape.positions;
-  shape.normals   = lshape.normals;
-  shape.texcoords = lshape.texcoords;
-  shape.colors    = lshape.colors;
-  shape.radius    = lshape.radius;
+  auto& shape = scene.shapes.emplace_back();
+  if (!load_shape(filename, shape, error, false)) return false;
 
   // create instance
   auto& instance = scene.instances.emplace_back();
@@ -2938,18 +2896,8 @@ static bool save_ply_scene(const string& filename, const scene_scene& scene,
   if (progress_cb) progress_cb("save scene", progress.x++, progress.y);
 
   // save shape
-  auto& shape      = scene.shapes.front();
-  auto  sshape     = shape_data{};
-  sshape.points    = shape.points;
-  sshape.lines     = shape.lines;
-  sshape.triangles = shape.triangles;
-  sshape.quads     = shape.quads;
-  sshape.positions = shape.positions;
-  sshape.normals   = shape.normals;
-  sshape.texcoords = shape.texcoords;
-  sshape.colors    = shape.colors;
-  sshape.radius    = shape.radius;
-  if (!save_shape(filename, sshape, error)) return false;
+  auto& shape = scene.shapes.front();
+  if (!save_shape(filename, shape, error, false)) return false;
 
   // done
   if (progress_cb) progress_cb("save scene", progress.x++, progress.y);
@@ -2970,18 +2918,8 @@ static bool load_stl_scene(const string& filename, scene_scene& scene,
   if (progress_cb) progress_cb("load scene", progress.x++, progress.y);
 
   // load stl mesh
-  auto& shape  = scene.shapes.emplace_back();
-  auto  lshape = shape_data{};
-  if (!load_shape(filename, lshape, error, false)) return false;
-  shape.points    = lshape.points;
-  shape.lines     = lshape.lines;
-  shape.triangles = lshape.triangles;
-  shape.quads     = lshape.quads;
-  shape.positions = lshape.positions;
-  shape.normals   = lshape.normals;
-  shape.texcoords = lshape.texcoords;
-  shape.colors    = lshape.colors;
-  shape.radius    = lshape.radius;
+  auto& shape = scene.shapes.emplace_back();
+  if (!load_shape(filename, shape, error, false)) return false;
 
   // create instance
   auto& instance = scene.instances.emplace_back();
@@ -3010,18 +2948,8 @@ static bool save_stl_scene(const string& filename, const scene_scene& scene,
   if (progress_cb) progress_cb("save scene", progress.x++, progress.y);
 
   // save shape
-  auto& shape      = scene.shapes.front();
-  auto  sshape     = shape_data{};
-  sshape.points    = shape.points;
-  sshape.lines     = shape.lines;
-  sshape.triangles = shape.triangles;
-  sshape.quads     = shape.quads;
-  sshape.positions = shape.positions;
-  sshape.normals   = shape.normals;
-  sshape.texcoords = shape.texcoords;
-  sshape.colors    = shape.colors;
-  sshape.radius    = shape.radius;
-  if (!save_shape(filename, sshape, error, false)) return false;
+  auto& shape = scene.shapes.front();
+  if (!save_shape(filename, shape, error, false)) return false;
 
   // done
   if (progress_cb) progress_cb("save scene", progress.x++, progress.y);
@@ -4044,7 +3972,7 @@ static bool load_pbrt_scene(const string& filename, scene_scene& scene,
       if (progress_cb) progress_cb("load shape", progress.x++, progress.y);
       auto& path = shapes_paths[&shape - &scene.shapes.front()];
       if (path.empty()) continue;
-      if (!load_shape(path_join(dirname, path), shape, error))
+      if (!load_shape(path_join(dirname, path), shape, error, true))
         return dependent_error();
     }
     // load texture
@@ -4067,7 +3995,7 @@ static bool load_pbrt_scene(const string& filename, scene_scene& scene,
       auto& path = shapes_paths[&shape - &scene.shapes.front()];
       if (path.empty()) return;
       auto err = string{};
-      if (!load_shape(path_join(dirname, path), shape, err)) {
+      if (!load_shape(path_join(dirname, path), shape, err, true)) {
         auto lock = std::lock_guard{mutex};
         error     = err;
         return;
@@ -4187,7 +4115,7 @@ static bool save_pbrt_scene(const string& filename, const scene_scene& scene,
     for (auto& shape : scene.shapes) {
       if (progress_cb) progress_cb("save shape", progress.x++, progress.y);
       auto path = "shapes/" + get_shape_name(scene, shape) + ".ply";
-      if (!save_shape(path_join(dirname, path), shape, error))
+      if (!save_shape(path_join(dirname, path), shape, error, true))
         return dependent_error();
     }
     // save shapes
@@ -4195,7 +4123,7 @@ static bool save_pbrt_scene(const string& filename, const scene_scene& scene,
       if (progress_cb) progress_cb("save texture", progress.x++, progress.y);
       auto path = "textures/" + get_texture_name(scene, texture) +
                   (!texture.hdr.empty() ? ".hdr" : ".png");
-      if (!save_texture(path_join(dirname, path), texture, error))
+      if (!save_texture(path_join(dirname, path), texture, error, true))
         return dependent_error();
     }
   } else {
@@ -4210,7 +4138,7 @@ static bool save_pbrt_scene(const string& filename, const scene_scene& scene,
       }
       auto path = "shapes/" + get_shape_name(scene, shape) + ".ply";
       auto err  = string{};
-      if (!save_shape(path_join(dirname, path), shape, err)) {
+      if (!save_shape(path_join(dirname, path), shape, err, true)) {
         auto lock = std::lock_guard{mutex};
         error     = err;
         return;
