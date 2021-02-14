@@ -70,19 +70,6 @@ using std::vector;
 // -----------------------------------------------------------------------------
 namespace yocto {
 
-// Strategy used to build the bvh
-enum struct trace_bvh_type {
-  default_,
-  highquality,
-  middle,
-  balanced,
-#ifdef YOCTO_EMBREE
-  embree_default,
-  embree_highquality,
-  embree_compact  // only for copy interface
-#endif
-};
-
 // Type of tracing algorithm
 enum struct trace_sampler_type {
   path,        // path tracing
@@ -116,7 +103,7 @@ struct trace_params {
   bool                  envhidden  = false;
   bool                  tentfilter = false;
   uint64_t              seed       = trace_default_seed;
-  trace_bvh_type        bvh        = trace_bvh_type::default_;
+  bvh_type              bvh        = bvh_type::default_;
   bool                  noparallel = false;
   int                   pratio     = 8;
   float                 exposure   = 0;
@@ -129,12 +116,6 @@ inline const auto trace_falsecolor_names = vector<string>{"position", "normal",
     "frontfacing", "gnormal", "gfrontfacing", "texcoord", "color", "emission",
     "roughness", "opacity", "instance", "shape", "material", "element",
     "highlight"};
-const auto        trace_bvh_names        = vector<string>{
-    "default", "highquality", "middle", "balanced",
-#ifdef YOCTO_EMBREE
-    "embree-default", "embree-highquality", "embree-compact"
-#endif
-};
 
 // Progress report callback
 using progress_callback =

@@ -1490,7 +1490,7 @@ inline bool parse_value(string_view& str, obj_texture& info) {
 }
 
 // Read obj
-inline bool load_mtl(const string& filename, obj_scene& obj, string& error) {
+inline bool load_mtl(const string& filename, obj_model& obj, string& error) {
   // error helpers
   auto open_error = [filename, &error]() {
     error = filename + ": file not found";
@@ -1605,7 +1605,7 @@ inline bool load_mtl(const string& filename, obj_scene& obj, string& error) {
 }
 
 // Read obj
-inline bool load_obx(const string& filename, obj_scene& obj, string& error) {
+inline bool load_obx(const string& filename, obj_model& obj, string& error) {
   // error helpers
   auto open_error = [filename, &error]() {
     error = filename + ": file not found";
@@ -1714,7 +1714,7 @@ inline bool load_obx(const string& filename, obj_scene& obj, string& error) {
 }
 
 // Read obj
-bool load_obj(const string& filename, obj_scene& obj, string& error,
+bool load_obj(const string& filename, obj_model& obj, string& error,
     bool face_varying, bool split_materials) {
   // error helpers
   auto open_error = [filename, &error]() {
@@ -2084,7 +2084,7 @@ inline void format_value(string& str, const obj_vertex& value) {
 
 // Save obj
 inline bool save_mtl(
-    const string& filename, const obj_scene& obj, string& error) {
+    const string& filename, const obj_model& obj, string& error) {
   // throw helpers
   // error helpers
   auto open_error = [filename, &error]() {
@@ -2179,7 +2179,7 @@ inline bool save_mtl(
 
 // Save obj
 inline bool save_obx(
-    const string& filename, const obj_scene& obj, string& error) {
+    const string& filename, const obj_model& obj, string& error) {
   // error helpers
   auto open_error = [filename, &error]() {
     error = filename + ": file not found";
@@ -2237,7 +2237,7 @@ inline bool save_obx(
 }
 
 // Save obj
-bool save_obj(const string& filename, const obj_scene& obj, string& error) {
+bool save_obj(const string& filename, const obj_model& obj, string& error) {
   // error helpers
   auto open_error = [filename, &error]() {
     error = filename + ": file not found";
@@ -4761,7 +4761,7 @@ struct pbrt_context {
 };
 
 // load pbrt
-inline bool load_pbrt(const string& filename, pbrt_scene& pbrt, string& error,
+inline bool load_pbrt(const string& filename, pbrt_model& pbrt, string& error,
     pbrt_context& ctx, unordered_map<string, int>& material_map,
     unordered_map<string, int>&           texture_map,
     unordered_map<string, pbrt_material>& named_materials,
@@ -5078,7 +5078,7 @@ inline bool load_pbrt(const string& filename, pbrt_scene& pbrt, string& error,
 
 // load pbrt
 bool load_pbrt(
-    const string& filename, pbrt_scene& pbrt, string& error, bool ply_meshes) {
+    const string& filename, pbrt_model& pbrt, string& error, bool ply_meshes) {
   auto ctx             = pbrt_context{};
   auto material_map    = unordered_map<string, int>{};
   auto texture_map     = unordered_map<string, int>{};
@@ -5172,7 +5172,7 @@ inline void format_value(string& str, const vector<pbrt_value>& values) {
   }
 }
 
-bool save_pbrt(const string& filename, const pbrt_scene& pbrt, string& error,
+bool save_pbrt(const string& filename, const pbrt_model& pbrt, string& error,
     bool ply_meshes) {
   // error helpers
   auto open_error = [filename, &error]() {

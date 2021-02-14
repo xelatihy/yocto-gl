@@ -37,7 +37,7 @@ struct shade_scene_params {
 inline void add_command(cli_command& cli, const string& name,
     shade_scene_params& value, const string& usage) {
   auto& cmd = add_command(cli, name, usage);
-  add_positional(cmd, "scene", value.scene, "Input scene.");
+  add_argument(cmd, "scene", value.scene, "Input scene.");
 }
 
 int run_shade_scene(const shade_scene_params& params);

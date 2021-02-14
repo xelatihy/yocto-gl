@@ -111,54 +111,10 @@ void skin_matrices(vector<vec3f>& skinned_positions,
     const vector<vec3f>& normals, const vector<vec4f>& weights,
     const vector<vec4i>& joints, const vector<mat4f>& xforms);
 
-// Compute per-vertex normals/tangents for lines/triangles/quads.
-[[deprecated]] vector<vec3f> compute_tangents(
-    const vector<vec2i>& lines, const vector<vec3f>& positions);
-[[deprecated]] vector<vec3f> compute_normals(
-    const vector<vec3i>& triangles, const vector<vec3f>& positions);
-[[deprecated]] vector<vec3f> compute_normals(
-    const vector<vec4i>& quads, const vector<vec3f>& positions);
-// Update normals and tangents
-[[deprecated]] void update_tangents(vector<vec3f>& tangents,
-    const vector<vec2i>& lines, const vector<vec3f>& positions);
-[[deprecated]] void update_normals(vector<vec3f>& normals,
-    const vector<vec3i>& triangles, const vector<vec3f>& positions);
-[[deprecated]] void update_normals(vector<vec3f>& normals,
-    const vector<vec4i>& quads, const vector<vec3f>& positions);
-
-// Compute per-vertex tangent space for triangle meshes.
-// Tangent space is defined by a four component vector.
-// The first three components are the tangent with respect to the u texcoord.
-// The fourth component is the sign of the tangent wrt the v texcoord.
-// Tangent frame is useful in normal mapping.
-[[deprecated]] vector<vec4f> compute_tangent_spaces(
-    const vector<vec3i>& triangles, const vector<vec3f>& positions,
-    const vector<vec3f>& normals, const vector<vec2f>& texcoords);
-
-// Apply skinning to vertex position and normals.
-[[deprecated]] pair<vector<vec3f>, vector<vec3f>> compute_skinning(
-    const vector<vec3f>& positions, const vector<vec3f>& normals,
-    const vector<vec4f>& weights, const vector<vec4i>& joints,
-    const vector<frame3f>& xforms);
-// Apply skinning as specified in Khronos glTF.
-[[deprecated]] pair<vector<vec3f>, vector<vec3f>> compute_matrix_skinning(
-    const vector<vec3f>& positions, const vector<vec3f>& normals,
-    const vector<vec4f>& weights, const vector<vec4i>& joints,
-    const vector<mat4f>& xforms);
-// Update skinning
-[[deprecated]] void udpate_skinning(vector<vec3f>& skinned_positions,
-    vector<vec3f>& skinned_normals, const vector<vec3f>& positions,
-    const vector<vec3f>& normals, const vector<vec4f>& weights,
-    const vector<vec4i>& joints, const vector<frame3f>& xforms);
-[[deprecated]] void update_matrix_skinning(vector<vec3f>& skinned_positions,
-    vector<vec3f>& skinned_normals, const vector<vec3f>& positions,
-    const vector<vec3f>& normals, const vector<vec4f>& weights,
-    const vector<vec4i>& joints, const vector<mat4f>& xforms);
-
 }  // namespace yocto
 
 // -----------------------------------------------------------------------------
-// COMPUTATION OF VERTEX PROPETIES
+// COMPUTATION OF VERTEX PROPERTIES
 // -----------------------------------------------------------------------------
 namespace yocto {
 

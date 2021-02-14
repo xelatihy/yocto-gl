@@ -54,23 +54,23 @@ struct convert_params {
 void add_command(cli_command& cli, const string& name, convert_params& value,
     const string& usage) {
   auto& cmd = add_command(cli, name, usage);
-  add_positional(cmd, "shape", value.shape, "Input shape.");
-  add_optional(cmd, "output", value.output, "Output shape.", {}, "o");
-  add_optional(cmd, "smooth", value.smooth, "Smooth normals.");
-  add_optional(cmd, "facet", value.facet, "Facet normals.");
-  add_optional(
+  add_argument(cmd, "shape", value.shape, "Input shape.");
+  add_option(cmd, "output", value.output, "Output shape.", {}, "o");
+  add_option(cmd, "smooth", value.smooth, "Smooth normals.");
+  add_option(cmd, "facet", value.facet, "Facet normals.");
+  add_option(
       cmd, "aspositions", value.aspositions, "Remove all but positions.");
-  add_optional(cmd, "astriangles", value.astriangles, "Convert to triangles.");
-  add_optional(cmd, "translatex", value.translate.x, "Translate shape.");
-  add_optional(cmd, "translatey", value.translate.y, "Translate shape.");
-  add_optional(cmd, "translatez", value.translate.z, "Translate shape.");
-  add_optional(cmd, "scalex", value.scale.x, "Scale shape.");
-  add_optional(cmd, "scaley", value.scale.y, "Scale shape.");
-  add_optional(cmd, "scalez", value.scale.z, "Scale shape.");
-  add_optional(cmd, "scaleu", value.scaleu, "Scale shape.");
-  add_optional(cmd, "rotatex", value.rotate.x, "Rotate shape.");
-  add_optional(cmd, "rotatey", value.rotate.y, "Rotate shape.");
-  add_optional(cmd, "rotatez", value.rotate.z, "Rotate shape.");
+  add_option(cmd, "astriangles", value.astriangles, "Convert to triangles.");
+  add_option(cmd, "translatex", value.translate.x, "Translate shape.");
+  add_option(cmd, "translatey", value.translate.y, "Translate shape.");
+  add_option(cmd, "translatez", value.translate.z, "Translate shape.");
+  add_option(cmd, "scalex", value.scale.x, "Scale shape.");
+  add_option(cmd, "scaley", value.scale.y, "Scale shape.");
+  add_option(cmd, "scalez", value.scale.z, "Scale shape.");
+  add_option(cmd, "scaleu", value.scaleu, "Scale shape.");
+  add_option(cmd, "rotatex", value.rotate.x, "Rotate shape.");
+  add_option(cmd, "rotatey", value.rotate.y, "Rotate shape.");
+  add_option(cmd, "rotatez", value.rotate.z, "Rotate shape.");
 }
 
 // convert images
@@ -178,22 +178,22 @@ struct fvconvert_params {
 void add_command(cli_command& cli, const string& name, fvconvert_params& value,
     const string& usage) {
   auto& cmd = add_command(cli, name, usage);
-  add_positional(cmd, "shape", value.shape, "Input shape.");
-  add_optional(cmd, "output", value.output, "Output shape.", {}, "o");
-  add_optional(cmd, "smooth", value.smooth, "Smooth normals.");
-  add_optional(cmd, "facet", value.facet, "Facet normals.");
-  add_optional(
+  add_argument(cmd, "shape", value.shape, "Input shape.");
+  add_option(cmd, "output", value.output, "Output shape.", {}, "o");
+  add_option(cmd, "smooth", value.smooth, "Smooth normals.");
+  add_option(cmd, "facet", value.facet, "Facet normals.");
+  add_option(
       cmd, "aspositions", value.aspositions, "Remove all but positions.");
-  add_optional(cmd, "translatex", value.translate.x, "Translate shape.");
-  add_optional(cmd, "translatey", value.translate.y, "Translate shape.");
-  add_optional(cmd, "translatez", value.translate.z, "Translate shape.");
-  add_optional(cmd, "scalex", value.scale.x, "Scale shape.");
-  add_optional(cmd, "scaley", value.scale.y, "Scale shape.");
-  add_optional(cmd, "scalez", value.scale.z, "Scale shape.");
-  add_optional(cmd, "scaleu", value.scaleu, "Scale shape.");
-  add_optional(cmd, "rotatex", value.rotate.x, "Rotate shape.");
-  add_optional(cmd, "rotatey", value.rotate.y, "Rotate shape.");
-  add_optional(cmd, "rotatez", value.rotate.z, "Rotate shape.");
+  add_option(cmd, "translatex", value.translate.x, "Translate shape.");
+  add_option(cmd, "translatey", value.translate.y, "Translate shape.");
+  add_option(cmd, "translatez", value.translate.z, "Translate shape.");
+  add_option(cmd, "scalex", value.scale.x, "Scale shape.");
+  add_option(cmd, "scaley", value.scale.y, "Scale shape.");
+  add_option(cmd, "scalez", value.scale.z, "Scale shape.");
+  add_option(cmd, "scaleu", value.scaleu, "Scale shape.");
+  add_option(cmd, "rotatex", value.rotate.x, "Rotate shape.");
+  add_option(cmd, "rotatey", value.rotate.y, "Rotate shape.");
+  add_option(cmd, "rotatez", value.rotate.z, "Rotate shape.");
 }
 
 // convert images
@@ -287,9 +287,9 @@ struct view_params {
 void add_command(cli_command& cli, const string& name, view_params& value,
     const string& usage) {
   auto& cmd = add_command(cli, name, usage);
-  add_positional(cmd, "shape", value.shape, "Input shape.");
-  add_optional(cmd, "output", value.output, "Output shape.", {}, "o");
-  add_optional(cmd, "addsky", value.addsky, "Add sky.");
+  add_argument(cmd, "shape", value.shape, "Input shape.");
+  add_option(cmd, "output", value.output, "Output shape.", {}, "o");
+  add_option(cmd, "addsky", value.addsky, "Add sky.");
 }
 
 #ifndef YOCTO_OPENGL
@@ -341,21 +341,21 @@ struct heightfield_params {
 void add_command(cli_command& cli, const string& name,
     heightfield_params& value, const string& usage) {
   auto& cmd = add_command(cli, name, usage);
-  add_positional(cmd, "image", value.image, "Input image.");
-  add_optional(cmd, "output", value.output, "Output shape.", {}, "o");
-  add_optional(cmd, "smooth", value.smooth, "Smoooth normals.");
-  add_optional(cmd, "height", value.height, "Shape height.");
-  add_optional(cmd, "info", value.info, "Print info.");
-  add_optional(cmd, "translatex", value.translate.x, "Translate shape.");
-  add_optional(cmd, "translatey", value.translate.y, "Translate shape.");
-  add_optional(cmd, "translatez", value.translate.z, "Translate shape.");
-  add_optional(cmd, "scalex", value.scale.x, "Scale shape.");
-  add_optional(cmd, "scaley", value.scale.y, "Scale shape.");
-  add_optional(cmd, "scalez", value.scale.z, "Scale shape.");
-  add_optional(cmd, "scaleu", value.scaleu, "Scale shape.");
-  add_optional(cmd, "rotatex", value.rotate.x, "Rotate shape.");
-  add_optional(cmd, "rotatey", value.rotate.y, "Rotate shape.");
-  add_optional(cmd, "rotatez", value.rotate.z, "Rotate shape.");
+  add_argument(cmd, "image", value.image, "Input image.");
+  add_option(cmd, "output", value.output, "Output shape.", {}, "o");
+  add_option(cmd, "smooth", value.smooth, "Smoooth normals.");
+  add_option(cmd, "height", value.height, "Shape height.");
+  add_option(cmd, "info", value.info, "Print info.");
+  add_option(cmd, "translatex", value.translate.x, "Translate shape.");
+  add_option(cmd, "translatey", value.translate.y, "Translate shape.");
+  add_option(cmd, "translatez", value.translate.z, "Translate shape.");
+  add_option(cmd, "scalex", value.scale.x, "Scale shape.");
+  add_option(cmd, "scaley", value.scale.y, "Scale shape.");
+  add_option(cmd, "scalez", value.scale.z, "Scale shape.");
+  add_option(cmd, "scaleu", value.scaleu, "Scale shape.");
+  add_option(cmd, "rotatex", value.rotate.x, "Rotate shape.");
+  add_option(cmd, "rotatey", value.rotate.y, "Rotate shape.");
+  add_option(cmd, "rotatez", value.rotate.z, "Rotate shape.");
 }
 
 int run_heightfield(const heightfield_params& params) {

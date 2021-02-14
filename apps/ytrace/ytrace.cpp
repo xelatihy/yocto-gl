@@ -49,27 +49,27 @@ struct render_params : trace_params {
 void add_command(cli_command& cli, const string& name, render_params& value,
     const string& usage) {
   auto& cmd = add_command(cli, name, usage);
-  add_positional(cmd, "scene", value.scene, "Scene filename.");
-  add_optional(cmd, "output", value.output, "Output filename.", {}, "o");
-  add_optional(cmd, "camera", value.camname, "Camera name.", {}, "c");
-  add_optional(cmd, "addsky", value.addsky, "Add sky.");
-  add_optional(cmd, "savebatch", value.savebatch, "Save batch.");
-  add_optional(
+  add_argument(cmd, "scene", value.scene, "Scene filename.");
+  add_option(cmd, "output", value.output, "Output filename.", {}, "o");
+  add_option(cmd, "camera", value.camname, "Camera name.", {}, "c");
+  add_option(cmd, "addsky", value.addsky, "Add sky.");
+  add_option(cmd, "savebatch", value.savebatch, "Save batch.");
+  add_option(
       cmd, "resolution", value.resolution, "Image resolution.", {1, 4096}, "r");
-  add_optional(
+  add_option(
       cmd, "sampler", value.sampler, "Sampler type.", trace_sampler_names, "t");
-  add_optional(cmd, "falsecolor", value.falsecolor, "False color type.",
+  add_option(cmd, "falsecolor", value.falsecolor, "False color type.",
       trace_falsecolor_names, "F");
-  add_optional(
+  add_option(
       cmd, "samples", value.samples, "Number of samples.", {1, 4096}, "s");
-  add_optional(
+  add_option(
       cmd, "bounces", value.bounces, "Number of bounces.", {1, 128}, "b");
-  add_optional(cmd, "clamp", value.clamp, "Clamp value.", {10, flt_max});
-  add_optional(cmd, "nocaustics", value.nocaustics, "Disable caustics.");
-  add_optional(cmd, "envhidden", value.envhidden, "Hide environment.");
-  add_optional(cmd, "tentfilter", value.tentfilter, "Filter image.");
-  add_optional(cmd, "bvh", value.bvh, "Bvh type.", trace_bvh_names);
-  add_optional(cmd, "noparallel", value.noparallel, "Disable threading.");
+  add_option(cmd, "clamp", value.clamp, "Clamp value.", {10, flt_max});
+  add_option(cmd, "nocaustics", value.nocaustics, "Disable caustics.");
+  add_option(cmd, "envhidden", value.envhidden, "Hide environment.");
+  add_option(cmd, "tentfilter", value.tentfilter, "Filter image.");
+  add_option(cmd, "bvh", value.bvh, "Bvh type.", bvh_names);
+  add_option(cmd, "noparallel", value.noparallel, "Disable threading.");
 }
 
 // convert images
@@ -138,26 +138,26 @@ struct view_params : trace_params {
 void add_command(cli_command& cli, const string& name, view_params& value,
     const string& usage) {
   auto& cmd = add_command(cli, name, usage);
-  add_positional(cmd, "scene", value.scene, "Scene filename.");
-  add_optional(cmd, "output", value.output, "Output filename.", {}, "o");
-  add_optional(cmd, "camera", value.camname, "Camera name.", {}, "c");
-  add_optional(cmd, "addsky", value.addsky, "Add sky.");
-  add_optional(
+  add_argument(cmd, "scene", value.scene, "Scene filename.");
+  add_option(cmd, "output", value.output, "Output filename.", {}, "o");
+  add_option(cmd, "camera", value.camname, "Camera name.", {}, "c");
+  add_option(cmd, "addsky", value.addsky, "Add sky.");
+  add_option(
       cmd, "resolution", value.resolution, "Image resolution.", {1, 4096}, "r");
-  add_optional(
+  add_option(
       cmd, "sampler", value.sampler, "Sampler type.", trace_sampler_names, "t");
-  add_optional(cmd, "falsecolor", value.falsecolor, "False color type.",
+  add_option(cmd, "falsecolor", value.falsecolor, "False color type.",
       trace_falsecolor_names, "F");
-  add_optional(
+  add_option(
       cmd, "samples", value.samples, "Number of samples.", {1, 4096}, "s");
-  add_optional(
+  add_option(
       cmd, "bounces", value.bounces, "Number of bounces.", {1, 128}, "b");
-  add_optional(cmd, "clamp", value.clamp, "Clamp value.", {10, flt_max});
-  add_optional(cmd, "nocaustics", value.nocaustics, "Disable caustics.");
-  add_optional(cmd, "envhidden", value.envhidden, "Hide environment.");
-  add_optional(cmd, "tentfilter", value.tentfilter, "Filter image.");
-  add_optional(cmd, "bvh", value.bvh, "Bvh type.", trace_bvh_names);
-  add_optional(cmd, "noparallel", value.noparallel, "Disable threading.");
+  add_option(cmd, "clamp", value.clamp, "Clamp value.", {10, flt_max});
+  add_option(cmd, "nocaustics", value.nocaustics, "Disable caustics.");
+  add_option(cmd, "envhidden", value.envhidden, "Hide environment.");
+  add_option(cmd, "tentfilter", value.tentfilter, "Filter image.");
+  add_option(cmd, "bvh", value.bvh, "Bvh type.", bvh_names);
+  add_option(cmd, "noparallel", value.noparallel, "Disable threading.");
 }
 
 #ifndef YOCTO_OPENGL

@@ -156,8 +156,8 @@ void tonemap_image(vector<vec4f>& ldr, const vector<vec4f>& hdr, float exposure,
   for (auto i = 0ull; i < hdr.size(); i++)
     ldr[i] = tonemap(hdr[i], exposure, filmic, srgb);
 }
-void tonemap_imageb(vector<vec4b>& ldr, const vector<vec4f>& hdr,
-    float exposure, bool filmic, bool srgb) {
+void tonemap_image(vector<vec4b>& ldr, const vector<vec4f>& hdr, float exposure,
+    bool filmic, bool srgb) {
   ldr.resize(hdr.size());
   for (auto i = 0ull; i < hdr.size(); i++)
     ldr[i] = float_to_byte(tonemap(hdr[i], exposure, filmic, srgb));

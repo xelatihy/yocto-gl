@@ -58,7 +58,6 @@
 namespace yocto {
 
 // using directives
-using std::deque;
 using std::unique_ptr;
 using namespace std::string_literals;
 
@@ -1452,63 +1451,6 @@ bool make_fvshape_preset(
 // -----------------------------------------------------------------------------
 namespace yocto {
 
-// Enumerate
-template <typename T>
-auto enumerate(const vector<T>& elements) {
-  struct item {
-    const size_t& idx;
-    const T&      element;
-  };
-  struct iterator {
-    size_t    idx;
-    const T*  element;
-    bool      operator!=(const iterator& other) { return idx != other.idx; }
-    iterator& operator++() {
-      ++element;
-      ++idx;
-      return *this;
-    }
-    item operator*() { return {idx, *element}; }
-  };
-  struct wrapper {
-    const vector<T>& elements;
-    iterator         begin() { return {0, elements.data()}; }
-    iterator         end() {
-      return {elements.size(), elements.data() + elements.size()};
-    }
-  };
-  return wrapper{elements};
-}
-
-template <typename T1, typename T2>
-auto zip(const vector<T1>& keys, const vector<T2>& values) {
-  struct item {
-    const T1& key;
-    const T2& value;
-  };
-  struct iterator {
-    const T1* key;
-    const T2* value;
-    bool      operator!=(const iterator& other) {
-      return key != other.key || value != other.value;
-    }
-    void operator++() {
-      ++key;
-      ++value;
-    }
-    item operator*() { return item{*key, *value}; }
-  };
-  struct wrapper {
-    const vector<T1>& keys;
-    const vector<T2>& values;
-    iterator          begin() { return {keys.data(), values.data()}; }
-    iterator          end() {
-      return {keys.data() + keys.size(), values.data() + values.size()};
-    }
-  };
-  return wrapper{keys, values};
-}
-
 // get name
 [[maybe_unused]] static string get_camera_name(
     const scene_scene& scene, int idx) {
@@ -2200,6 +2142,22 @@ static bool load_preset_scene(const string& filename, scene_scene& scene,
   if (progress_cb) progress_cb("make preset", 0, 1);
 
   // done
+  return true;
+}
+
+// Make missing scene directories
+bool make_scene_directories(
+    const string& filename, const scene_scene& scene, string& error) {
+  // make a directory if needed
+  if (!make_directory(path_dirname(filename), error)) return false;
+  if (!scene.shapes.empty()) {
+    if (!make_directory(path_join(path_dirname(filename), "shapes"), error))
+      return false;
+  }
+  if (!scene.textures.empty()) {
+    if (!make_directory(path_join(path_dirname(filename), "textures"), error))
+      return false;
+  }
   return true;
 }
 
@@ -3251,7 +3209,7 @@ static bool load_obj_scene(const string& filename, scene_scene& scene,
   if (progress_cb) progress_cb("load scene", progress.x++, progress.y);
 
   // load obj
-  auto obj = obj_scene{};
+  auto obj = obj_model{};
   if (!load_obj(filename, obj, error, false, true)) return false;
 
   // handle progress
@@ -3345,37 +3303,36 @@ static bool load_obj_scene(const string& filename, scene_scene& scene,
   // dirname
   auto dirname = path_dirname(filename);
 
-  // if (noparallel) {
-  // load textures
-  for (auto& texture : scene.textures) {
-    if (progress_cb) progress_cb("load texture", progress.x++, progress.y);
-    auto& path = textures_paths[&texture - &scene.textures.front()];
-    if (!load_texture(path_join(dirname, path), texture, error))
-      return dependent_error();
+  if (noparallel) {
+    // load textures
+    for (auto& texture : scene.textures) {
+      if (progress_cb) progress_cb("load texture", progress.x++, progress.y);
+      auto& path = textures_paths[&texture - &scene.textures.front()];
+      if (!load_texture(path_join(dirname, path), texture, error))
+        return dependent_error();
+    }
+  } else {
+    // mutex
+    auto mutex = std::mutex{};
+    // load textures
+    parallel_foreach(scene.textures, [&](auto& texture) {
+      {
+        auto lock = std::lock_guard{mutex};
+        if (!error.empty()) return;
+        if (progress_cb) progress_cb("load texture", progress.x++, progress.y);
+        printf("%s %s\n", get_texture_name(scene, texture).c_str(),
+            textures_paths[&texture - &scene.textures.front()].c_str());
+      }
+      auto& path = textures_paths[&texture - &scene.textures.front()];
+      auto  err  = string{};
+      if (!load_texture(path_join(dirname, path), texture, err)) {
+        auto lock = std::lock_guard{mutex};
+        error     = err;
+        return;
+      }
+    });
+    if (!error.empty()) return dependent_error();
   }
-  //  } else {
-  //    // mutex
-  //    auto mutex = std::mutex{};
-  //    // load textures
-  //    parallel_foreach(scene.textures, [&](auto& texture) {
-  //      {
-  //        auto lock = std::lock_guard{mutex};
-  //        if (!error.empty()) return;
-  //        if (progress_cb) progress_cb("load texture", progress.x++,
-  //        progress.y); printf("%s %s\n", get_texture_name(scene,
-  //        texture).c_str(),
-  //            textures_paths[&texture - &scene.textures.front()].c_str());
-  //      }
-  //      auto& path = textures_paths[&texture - &scene.textures.front()];
-  //      auto  err  = string{};
-  //      if (!load_texture(path_join(dirname, path), texture, err)) {
-  //        auto lock = std::lock_guard{mutex};
-  //        error     = err;
-  //        return;
-  //      }
-  //    });
-  //    if (!error.empty()) return dependent_error();
-  //  }
 
   // fix scene
   if (scene.asset.name.empty()) scene.asset.name = path_basename(filename);
@@ -3403,7 +3360,7 @@ static bool save_obj_scene(const string& filename, const scene_scene& scene,
   if (progress_cb) progress_cb("convert scene", progress.x++, progress.y);
 
   // build obj
-  auto obj = obj_scene{};
+  auto obj = obj_model{};
 
   // convert cameras
   for (auto& camera : scene.cameras) {
@@ -4533,7 +4490,7 @@ static bool load_pbrt_scene(const string& filename, scene_scene& scene,
   if (progress_cb) progress_cb("load scene", progress.x++, progress.y);
 
   // load pbrt
-  auto pbrt = pbrt_scene{};
+  auto pbrt = pbrt_model{};
   if (!load_pbrt(filename, pbrt, error)) return false;
 
   // handle progress
@@ -4714,7 +4671,7 @@ static bool save_pbrt_scene(const string& filename, const scene_scene& scene,
   if (progress_cb) progress_cb("convert scene", progress.x++, progress.y);
 
   // save pbrt
-  auto pbrt = pbrt_scene{};
+  auto pbrt = pbrt_model{};
 
   // convert camera
   auto& camera       = scene.cameras.front();

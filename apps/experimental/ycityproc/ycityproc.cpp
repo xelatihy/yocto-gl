@@ -1113,11 +1113,11 @@ int main(int argc, const char* argv[]) {
 
   // parse command line
   auto cli = make_cli("ycityproc", "Process scene");
-  add_optional(cli, "info", info, "print scene info", {}, "i");
-  add_optional(cli, "copyright", copyright, "copyright string", {}, "c");
-  add_optional(cli, "validate", validate, "Validate scene");
-  add_optional(cli, "output", output, "output scene", {}, "o");
-  add_positional(cli, "dirname", path, "input directory");
+  add_option(cli, "info", info, "print scene info", {}, "i");
+  add_option(cli, "copyright", copyright, "copyright string", {}, "c");
+  add_option(cli, "validate", validate, "Validate scene");
+  add_option(cli, "output", output, "output scene", {}, "o");
+  add_argument(cli, "dirname", path, "input directory");
   parse_cli(cli, argc, argv);
 
   // load data
@@ -1162,15 +1162,7 @@ int main(int argc, const char* argv[]) {
   }
 
   // make a directory if needed
-  if (!make_directory(path_dirname(output), ioerror)) print_fatal(ioerror);
-  if (!scene.shapes.empty()) {
-    if (!make_directory(path_join(path_dirname(output), "shapes"), ioerror))
-      print_fatal(ioerror);
-  }
-  if (!scene.textures.empty()) {
-    if (!make_directory(path_join(path_dirname(output), "textures"), ioerror))
-      print_fatal(ioerror);
-  }
+  if (!make_scene_directories(output, scene, ioerror)) print_fatal(ioerror);
 
   // save scene
   if (!save_scene(output, scene, ioerror, print_progress)) print_fatal(ioerror);

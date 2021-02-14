@@ -30,7 +30,6 @@
 
 #include <algorithm>
 #include <cstring>
-#include <deque>
 #include <memory>
 #include <stdexcept>
 #include <utility>
@@ -43,17 +42,6 @@
 #include "yocto_shape.h"
 
 // -----------------------------------------------------------------------------
-// USING DIRECTIVES
-// -----------------------------------------------------------------------------
-namespace yocto {
-
-// using directives
-using std::deque;
-using namespace std::string_literals;
-
-}  // namespace yocto
-
-// -----------------------------------------------------------------------------
 // IMPLEMENTATION OF RAY-SCENE INTERSECTION
 // -----------------------------------------------------------------------------
 namespace yocto {
@@ -61,8 +49,8 @@ namespace yocto {
 // Build the bvh acceleration structure.
 trace_bvh make_bvh(const scene_scene& scene, const trace_params& params,
     const progress_callback& progress_cb) {
-  return make_bvh(scene,
-      bvh_params{(bvh_build_type)params.bvh, params.noparallel}, progress_cb);
+  return make_bvh(
+      scene, bvh_params{params.bvh, params.noparallel}, progress_cb);
 }
 
 }  // namespace yocto
@@ -271,7 +259,7 @@ static vec3f sample_lights(const scene_scene& scene, const trace_lights& lights,
   if (light.instance != invalid_handle) {
     auto& instance  = scene.instances[light.instance];
     auto& shape     = scene.shapes[instance.shape];
-    auto  element   = sample_discrete_cdf(light.elements_cdf, rel);
+    auto  element   = sample_discrete(light.elements_cdf, rel);
     auto  uv        = (!shape.triangles.empty()) ? sample_triangle(ruv) : ruv;
     auto  lposition = eval_position(scene, instance, element, uv);
     return normalize(lposition - position);
@@ -279,7 +267,7 @@ static vec3f sample_lights(const scene_scene& scene, const trace_lights& lights,
     auto& environment = scene.environments[light.environment];
     if (environment.emission_tex != invalid_handle) {
       auto& emission_tex = scene.textures[environment.emission_tex];
-      auto  idx          = sample_discrete_cdf(light.elements_cdf, rel);
+      auto  idx          = sample_discrete(light.elements_cdf, rel);
       auto  uv = vec2f{((idx % emission_tex.width) + 0.5f) / emission_tex.width,
           ((idx / emission_tex.width) + 0.5f) / emission_tex.height};
       return transform_direction(environment.frame,
@@ -332,7 +320,7 @@ static float sample_lights_pdf(const scene_scene& scene, const trace_bvh& bvh,
             (int)(texcoord.x * emission_tex.width), 0, emission_tex.width - 1);
         auto j    = clamp((int)(texcoord.y * emission_tex.height), 0,
             emission_tex.height - 1);
-        auto prob = sample_discrete_cdf_pdf(
+        auto prob = sample_discrete_pdf(
                         light.elements_cdf, j * emission_tex.width + i) /
                     light.elements_cdf.back();
         auto angle = (2 * pif / emission_tex.width) *

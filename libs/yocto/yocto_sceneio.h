@@ -161,6 +161,10 @@ bool load_scene(const string& filename, scene_scene& scene, string& error,
 bool save_scene(const string& filename, const scene_scene& scene, string& error,
     const progress_callback& progress_cb = {}, bool noparallel = false);
 
+// Make missing scene directories
+bool make_scene_directories(
+    const string& filename, const scene_scene& scene, string& error);
+
 // Scene presets used for testing.
 bool make_scene_preset(scene_scene& scene, const string& type, string& error);
 

@@ -77,8 +77,8 @@ void rgb_to_srgb(vector<vec4b>& srgb, const vector<vec4f>& rgb);
 // Apply tone mapping
 void tonemap_image(vector<vec4f>& ldr, const vector<vec4f>& hdr, float exposure,
     bool filmic = false, bool srgb = true);
-void tonemap_imageb(vector<vec4b>& ldr, const vector<vec4f>& hdr,
-    float exposure, bool filmic = false, bool srgb = true);
+void tonemap_image(vector<vec4b>& ldr, const vector<vec4f>& hdr, float exposure,
+    bool filmic = false, bool srgb = true);
 
 // Apply tone mapping using multithreading for speed
 void tonemap_image_mt(vector<vec4f>& ldr, const vector<vec4f>& hdr,

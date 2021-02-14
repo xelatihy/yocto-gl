@@ -121,9 +121,9 @@ static void build_embree_bvh(
   bvh.embree_bvh = unique_ptr<void, void (*)(void*)>{
       rtcNewScene(edevice), &clear_embree_bvh};
   auto escene = (RTCScene)bvh.embree_bvh.get();
-  if (params.bvh == bvh_build_type::embree_compact)
+  if (params.bvh == bvh_type::embree_compact)
     rtcSetSceneFlags(escene, RTC_SCENE_FLAG_COMPACT);
-  if (params.bvh == bvh_build_type::embree_highquality)
+  if (params.bvh == bvh_type::embree_highquality)
     rtcSetSceneBuildQuality(escene, RTC_BUILD_QUALITY_HIGH);
   if (!shape.points.empty()) {
     throw std::runtime_error("embree does not support points");
@@ -203,9 +203,9 @@ static void build_embree_bvh(
   bvh.embree_bvh = unique_ptr<void, void (*)(void*)>{
       rtcNewScene(edevice), &clear_embree_bvh};
   auto escene = (RTCScene)bvh.embree_bvh.get();
-  if (params.bvh == bvh_build_type::embree_compact)
+  if (params.bvh == bvh_type::embree_compact)
     rtcSetSceneFlags(escene, RTC_SCENE_FLAG_COMPACT);
-  if (params.bvh == bvh_build_type::embree_highquality)
+  if (params.bvh == bvh_type::embree_highquality)
     rtcSetSceneBuildQuality(escene, RTC_BUILD_QUALITY_HIGH);
   for (auto instance_id = 0; instance_id < (int)scene.instances.size();
        instance_id++) {
@@ -440,15 +440,18 @@ static pair<int, int> split_middle(vector<int>& primitives,
 // Split bvh nodes according to a type
 static pair<int, int> split_nodes(vector<int>& primitives,
     const vector<bbox3f>& bboxes, const vector<vec3f>& centers, int start,
-    int end, bvh_build_type type) {
+    int end, bvh_type type) {
   switch (type) {
-    case bvh_build_type::default_:
+    case bvh_type::default_:
+    case bvh_type::embree_default:
+    case bvh_type::embree_highquality:
+    case bvh_type::embree_compact:
       return split_middle(primitives, bboxes, centers, start, end);
-    case bvh_build_type::highquality:
+    case bvh_type::highquality:
       return split_sah(primitives, bboxes, centers, start, end);
-    case bvh_build_type::middle:
+    case bvh_type::middle:
       return split_middle(primitives, bboxes, centers, start, end);
-    case bvh_build_type::balanced:
+    case bvh_type::balanced:
       return split_balanced(primitives, bboxes, centers, start, end);
     default: throw std::runtime_error("should not have gotten here");
   }
@@ -527,7 +530,7 @@ static void build_bvh_serial(
 
 // Build BVH nodes
 static void build_bvh_parallel(
-    bvh_tree_& bvh, const vector<bbox3f>& bboxes, bvh_build_type type) {
+    bvh_tree_& bvh, const vector<bbox3f>& bboxes, bvh_type type) {
   // get values
   auto& nodes      = bvh.nodes;
   auto& primitives = bvh.primitives;
@@ -645,9 +648,9 @@ static void update_bvh(bvh_tree& bvh, const vector<bbox3f>& bboxes) {
 static void build_bvh(
     bvh_shape& bvh, const scene_shape& shape, const bvh_params& params) {
 #ifdef YOCTO_EMBREE
-  if (params.bvh == bvh_build_type::embree_default ||
-      params.bvh == bvh_build_type::embree_highquality ||
-      params.bvh == bvh_build_type::embree_compact) {
+  if (params.bvh == bvh_type::embree_default ||
+      params.bvh == bvh_type::embree_highquality ||
+      params.bvh == bvh_type::embree_compact) {
     return build_embree_bvh(bvh, shape, params);
   }
 #endif
@@ -691,9 +694,9 @@ static void build_bvh(
     bvh_scene& bvh, const scene_scene& scene, const bvh_params& params) {
   // embree
 #ifdef YOCTO_EMBREE
-  if (params.bvh == bvh_build_type::embree_default ||
-      params.bvh == bvh_build_type::embree_highquality ||
-      params.bvh == bvh_build_type::embree_compact) {
+  if (params.bvh == bvh_type::embree_default ||
+      params.bvh == bvh_type::embree_highquality ||
+      params.bvh == bvh_type::embree_compact) {
     return build_embree_bvh(bvh, scene, params);
   }
 #endif

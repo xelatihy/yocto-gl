@@ -49,14 +49,13 @@ struct convert_params {
 void add_command(cli_command& cli, const string& name, convert_params& value,
     const string& usage) {
   auto& cmd = add_command(cli, name, usage);
-  add_positional(cmd, "image", value.image, "Input image.");
-  add_optional(cmd, "output", value.output, "Output image.", {}, "o");
-  add_optional(
+  add_argument(cmd, "image", value.image, "Input image.");
+  add_option(cmd, "output", value.output, "Output image.", {}, "o");
+  add_option(
       cmd, "exposure", value.exposure, "Tonemap exposure.", {-100, +100}, "e");
-  add_optional(cmd, "filmic", value.filmic, "Tonemap filmic.", {}, "f");
-  add_optional(cmd, "width", value.width, "Resize width.", {1, int_max}, "w");
-  add_optional(
-      cmd, "height", value.height, "Resize height.", {1, int_max}, "h");
+  add_option(cmd, "filmic", value.filmic, "Tonemap filmic.", {}, "f");
+  add_option(cmd, "width", value.width, "Resize width.", {1, int_max}, "w");
+  add_option(cmd, "height", value.height, "Resize height.", {1, int_max}, "h");
 }
 
 // convert images
@@ -93,8 +92,8 @@ struct view_params {
 void add_command(cli_command& cli, const string& name, view_params& value,
     const string& usage) {
   auto& cmd = add_command(cli, name, usage);
-  add_positional(cmd, "images", value.images, "Input images.");
-  add_optional(cmd, "output", value.output, "Output image.", {}, "o");
+  add_argument(cmd, "images", value.images, "Input images.");
+  add_option(cmd, "output", value.output, "Output image.", {}, "o");
 }
 
 #ifndef YOCTO_OPENGL
@@ -141,8 +140,8 @@ struct grade_params : colorgrade_params {
 void add_command(cli_command& cli, const string& name, grade_params& value,
     const string& usage) {
   auto& cmd = add_command(cli, name, usage);
-  add_positional(cmd, "image", value.image, "Input image.");
-  add_optional(cmd, "output", value.output, "Output image.", {}, "o");
+  add_argument(cmd, "image", value.image, "Input image.");
+  add_option(cmd, "output", value.output, "Output image.", {}, "o");
 }
 
 #ifndef YOCTO_OPENGL
@@ -242,11 +241,11 @@ struct diff_params {
 void add_command(cli_command& cli, const string& name, diff_params& value,
     const string& usage) {
   auto& cmd = add_command(cli, name, usage);
-  add_positional(cmd, "image1", value.image1, "Input image 1.");
-  add_positional(cmd, "image2", value.image2, "Input image 2.");
-  add_optional(cmd, "output", value.output, "Output image.", {}, "o");
-  add_optional(cmd, "signal", value.signal, "Error on diff.");
-  add_optional(cmd, "threshold", value.threshold, "Diff threshold.");
+  add_argument(cmd, "image1", value.image1, "Input image 1.");
+  add_argument(cmd, "image2", value.image2, "Input image 2.");
+  add_option(cmd, "output", value.output, "Output image.", {}, "o");
+  add_option(cmd, "signal", value.signal, "Error on diff.");
+  add_option(cmd, "threshold", value.threshold, "Diff threshold.");
 }
 
 // resize images
@@ -306,12 +305,12 @@ struct setalpha_params {
 void add_command(cli_command& cli, const string& name, setalpha_params& value,
     const string& usage) {
   auto& cmd = add_command(cli, name, usage);
-  add_positional(cmd, "image", value.image, "Input image.");
-  add_positional(cmd, "alpha", value.alpha, "Alpha image.");
-  add_optional(cmd, "output", value.output, "Output image.", {}, "o");
-  add_optional(cmd, "from-color", value.from_color, "Alpha from color.");
-  add_optional(cmd, "from-black", value.from_black, "Alpha from black.");
-  add_optional(cmd, "to-color", value.to_color, "Color from alpha.");
+  add_argument(cmd, "image", value.image, "Input image.");
+  add_argument(cmd, "alpha", value.alpha, "Alpha image.");
+  add_option(cmd, "output", value.output, "Output image.", {}, "o");
+  add_option(cmd, "from-color", value.from_color, "Alpha from color.");
+  add_option(cmd, "from-black", value.from_black, "Alpha from black.");
+  add_option(cmd, "to-color", value.to_color, "Color from alpha.");
 }
 
 // setalpha images

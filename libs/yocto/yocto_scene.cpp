@@ -53,7 +53,6 @@
 namespace yocto {
 
 // using directives
-using std::deque;
 using std::unique_ptr;
 using namespace std::string_literals;
 
@@ -193,7 +192,8 @@ image_data tonemap_image(
   if (!image.linear) return image;
   auto result = make_image(image.width, image.height, false, as_byte);
   for (auto idx = 0; idx < image.width * image.height; idx++) {
-    result.pixelsb[idx] = tonemapb(image.pixelsf[idx], exposure, filmic, true);
+    result.pixelsb[idx] = float_to_byte(
+        tonemap(image.pixelsf[idx], exposure, filmic, true));
   }
   return result;
 }
@@ -203,7 +203,7 @@ void tonemap_image(
     image_data& result, const image_data& image, float exposure, bool filmic) {
   if (image.width != result.width || image.height != result.height)
     throw std::invalid_argument{"image should be the same size"};
-  if (!!result.linear) throw std::invalid_argument{"ldr expected"};
+  if (result.linear) throw std::invalid_argument{"ldr expected"};
   if (!image.linear) throw std::invalid_argument{"hdr expected"};
   for (auto j = 0; j < image.height; j++) {
     for (auto i = 0; i < image.width; i++) {
@@ -218,7 +218,7 @@ void tonemap_image_mt(
     image_data& result, const image_data& image, float exposure, bool filmic) {
   if (image.width != result.width || image.height != result.height)
     throw std::invalid_argument{"image should be the same size"};
-  if (!!result.linear) throw std::invalid_argument{"ldr expected"};
+  if (result.linear) throw std::invalid_argument{"ldr expected"};
   if (!image.linear) throw std::invalid_argument{"hdr expected"};
   parallel_for(image.width, image.height,
       [&result, &image, exposure, filmic](int i, int j) {
@@ -486,8 +486,7 @@ vec4f eval_texture(const scene_scene& scene, texture_handle texture,
 namespace yocto {
 
 // constant values
-static const auto coat_ior       = 1.5f;
-static const auto coat_roughness = 0.03f * 0.03f;
+static const auto min_roughness = 0.03f * 0.03f;
 
 // Evaluate material
 material_point eval_material(const scene_scene& scene,
@@ -529,7 +528,7 @@ material_point eval_material(const scene_scene& scene,
   if (point.type == material_type::matte ||
       point.type == material_type::metallic ||
       point.type == material_type::plastic) {
-    point.roughness = clamp(point.roughness, coat_roughness, 1.0f);
+    point.roughness = clamp(point.roughness, min_roughness, 1.0f);
   }
 
   return point;
@@ -1208,7 +1207,7 @@ vec3f eval_normalmap(const scene_scene& scene, const scene_instance& instance,
   if (material.normal_tex != invalid_handle &&
       (!shape.triangles.empty() || !shape.quads.empty())) {
     auto& normal_tex = scene.textures[material.normal_tex];
-    auto  normalmap  = -1 + 2 * xyz(eval_texture(normal_tex, texcoord, true));
+    auto  normalmap  = -1 + 2 * xyz(eval_texture(normal_tex, texcoord, false));
     auto [tu, tv]    = eval_element_tangents(scene, instance, element);
     auto frame       = frame3f{tu, tv, normal, zero3f};
     frame.x          = orthonormalize(frame.x, frame.z);
@@ -1309,7 +1308,7 @@ material_point eval_material(const scene_scene& scene,
   if (point.type == material_type::matte ||
       point.type == material_type::metallic ||
       point.type == material_type::plastic) {
-    point.roughness = clamp(point.roughness, coat_roughness, 1.0f);
+    point.roughness = clamp(point.roughness, min_roughness, 1.0f);
   }
 
   return point;

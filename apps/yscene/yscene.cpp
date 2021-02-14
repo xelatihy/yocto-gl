@@ -48,11 +48,11 @@ struct convert_params {
 void add_command(cli_command& cli, const string& name, convert_params& value,
     const string& usage) {
   auto& cmd = add_command(cli, name, usage);
-  add_positional(cmd, "scene", value.scene, "Input scene.");
-  add_optional(cmd, "output", value.output, "Output scene.", {}, "o");
-  add_optional(cmd, "info", value.info, "Print info.");
-  add_optional(cmd, "validate", value.validate, "Validate scene.");
-  add_optional(cmd, "copyright", value.copyright, "Set scene copyright.");
+  add_argument(cmd, "scene", value.scene, "Input scene.");
+  add_option(cmd, "output", value.output, "Output scene.", {}, "o");
+  add_option(cmd, "info", value.info, "Print info.");
+  add_option(cmd, "validate", value.validate, "Validate scene.");
+  add_option(cmd, "copyright", value.copyright, "Set scene copyright.");
 }
 
 // convert images
@@ -83,18 +83,8 @@ int run_convert(const convert_params& params) {
   tesselate_shapes(scene, print_progress);
 
   // make a directory if needed
-  if (!make_directory(path_dirname(params.output), ioerror))
+  if (!make_scene_directories(params.output, scene, ioerror))
     print_fatal(ioerror);
-  if (!scene.shapes.empty()) {
-    if (!make_directory(
-            path_join(path_dirname(params.output), "shapes"), ioerror))
-      print_fatal(ioerror);
-  }
-  if (!scene.textures.empty()) {
-    if (!make_directory(
-            path_join(path_dirname(params.output), "textures"), ioerror))
-      print_fatal(ioerror);
-  }
 
   // save scene
   if (!save_scene(params.output, scene, ioerror, print_progress))
@@ -116,10 +106,10 @@ struct view_params {
 void add_command(cli_command& cli, const string& name, view_params& value,
     const string& usage) {
   auto& cmd = add_command(cli, name, usage);
-  add_positional(cmd, "scene", value.scene, "Scene filename.");
-  add_optional(cmd, "output", value.output, "Output filename.", {}, "o");
-  add_optional(cmd, "camera", value.camname, "Camera name.");
-  add_optional(cmd, "addsky", value.addsky, "Add sky.");
+  add_argument(cmd, "scene", value.scene, "Scene filename.");
+  add_option(cmd, "output", value.output, "Output filename.", {}, "o");
+  add_option(cmd, "camera", value.camname, "Camera name.");
+  add_option(cmd, "addsky", value.addsky, "Add sky.");
 }
 
 #ifndef YOCTO_OPENGL
