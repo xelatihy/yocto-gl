@@ -984,7 +984,6 @@ vector<vector<float>> compute_voronoi_fields(
   // computation time weakly dependant on the number of generators.
   auto total = compute_geodesic_distances(solver, generators);
   auto max   = *std::max_element(total.begin(), total.end());
-  // @Speed: use parallel_for
   for (auto i = 0; i < generators.size(); ++i) {
     fields[i]                = vector<float>(solver.graph.size(), flt_max);
     fields[i][generators[i]] = 0;
