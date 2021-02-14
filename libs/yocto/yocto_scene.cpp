@@ -63,351 +63,6 @@ using namespace std::string_literals;
 // -----------------------------------------------------------------------------
 namespace yocto {
 
-// add an element
-template <typename T>
-static element_handle add_element(vector<T*>& elements, vector<string>& names,
-    unordered_map<const T*, string>& name_map, const string& name,
-    const string& base) {
-  names.push_back(
-      !name.empty() ? name : (base + std::to_string(elements.size())));
-  auto element      = elements.emplace_back(new T{});
-  name_map[element] = name;
-  return (int)elements.size() - 1;
-}
-template <typename T>
-static element_handle add_element(vector<T>& elements, vector<string>& names,
-    const string& name, const string& base) {
-  names.push_back(
-      !name.empty() ? name : (base + std::to_string(elements.size())));
-  elements.emplace_back();
-  return (int)elements.size() - 1;
-}
-
-// add element
-camera_handle add_camera(scene_scene& scene, const string& name) {
-  return add_element(scene.cameras, scene.camera_names, name, "camera");
-}
-environment_handle add_environment(scene_scene& scene, const string& name) {
-  return add_element(
-      scene.environments, scene.environment_names, name, "environment");
-}
-shape_handle add_shape(scene_scene& scene, const string& name) {
-  return add_element(scene.shapes, scene.shape_names, name, "shape");
-}
-texture_handle add_texture(scene_scene& scene, const string& name) {
-  return add_element(scene.textures, scene.texture_names, name, "texture");
-}
-instance_handle add_instance(scene_scene& scene, const string& name) {
-  return add_element(scene.instances, scene.instance_names, name, "instance");
-}
-material_handle add_material(scene_scene& scene, const string& name) {
-  return add_element(scene.materials, scene.material_names, name, "material");
-}
-subdiv_handle add_subdiv(scene_scene& scene, const string& name) {
-  return add_element(scene.subdivs, scene.subdiv_names, name, "subdiv");
-}
-instance_handle add_complete_instance(scene_scene& scene, const string& name) {
-  auto  handle      = add_instance(scene, name);
-  auto& instance    = scene.instances[handle];
-  instance.shape    = add_shape(scene, name);
-  instance.material = add_material(scene, name);
-  return handle;
-}
-
-camera_handle add_camera(scene_scene& scene, const string& name,
-    const vec3f& from, const vec3f& to, const vec3f& up, float lens,
-    float aspect, float aperture, bool orthographic, float film) {
-  scene.camera_names.emplace_back(name);
-  auto& camera        = scene.cameras.emplace_back();
-  camera.frame        = lookat_frame(from, to, up);
-  camera.lens         = lens;
-  camera.aspect       = aspect;
-  camera.film         = film;
-  camera.orthographic = orthographic;
-  camera.aperture     = aperture;
-  camera.focus        = length(from - to);
-  return (int)scene.cameras.size() - 1;
-}
-camera_handle add_camera(scene_scene& scene, const string& name,
-    const frame3f& frame, float lens, float aspect, float aperture, float focus,
-    bool orthographic, float film) {
-  scene.camera_names.emplace_back(name);
-  auto& camera        = scene.cameras.emplace_back();
-  camera.frame        = frame;
-  camera.lens         = lens;
-  camera.aspect       = aspect;
-  camera.film         = film;
-  camera.orthographic = orthographic;
-  camera.aperture     = aperture;
-  camera.focus        = focus;
-  return (int)scene.cameras.size() - 1;
-}
-instance_handle add_instance(scene_scene& scene, const string& name,
-    const frame3f& frame, shape_handle shape, material_handle material) {
-  scene.instance_names.emplace_back(name);
-  auto& instance    = scene.instances.emplace_back();
-  instance.frame    = frame;
-  instance.shape    = shape;
-  instance.material = material;
-  return (int)scene.instances.size() - 1;
-}
-environment_handle add_environment(scene_scene& scene, const string& name,
-    const frame3f& frame, const vec3f& emission, texture_handle emission_tex) {
-  scene.environment_names.emplace_back(name);
-  auto& environment        = scene.environments.emplace_back();
-  environment.frame        = frame;
-  environment.emission     = emission;
-  environment.emission_tex = emission_tex;
-  return (int)scene.environments.size() - 1;
-  ;
-}
-texture_handle add_texture(scene_scene& scene, const string& name,
-    const image<vec4f>& img, bool hdr, bool ldr_linear) {
-  scene.texture_names.emplace_back(name);
-  auto& texture = scene.textures.emplace_back();
-  if (hdr) {
-    texture.hdr = img;
-  } else {
-    texture.ldr = ldr_linear ? float_to_byte(img) : rgb_to_srgbb(img);
-  }
-  return (int)scene.textures.size() - 1;
-}
-shape_handle add_shape(
-    scene_scene& scene, const string& name, const quads_shape& shape_data) {
-  scene.shape_names.emplace_back(name);
-  auto& shape     = scene.shapes.emplace_back();
-  shape.points    = shape_data.points;
-  shape.lines     = shape_data.lines;
-  shape.triangles = shape_data.triangles;
-  shape.quads     = shape_data.quads;
-  shape.positions = shape_data.positions;
-  shape.normals   = shape_data.normals;
-  shape.texcoords = shape_data.texcoords;
-  shape.colors    = shape_data.colors;
-  shape.radius    = shape_data.radius;
-  return (int)scene.shapes.size() - 1;
-}
-shape_handle add_shape(
-    scene_scene& scene, const string& name, const fvshape_data& shape_data) {
-  scene.shape_names.emplace_back(name);
-  auto& shape = scene.shapes.emplace_back();
-  std::tie(shape.quads, shape.positions, shape.normals, shape.texcoords) =
-      split_facevarying(shape_data.quadspos, shape_data.quadsnorm,
-          shape_data.quadstexcoord, shape_data.positions, shape_data.normals,
-          shape_data.texcoords);
-  return (int)scene.shapes.size() - 1;
-}
-subdiv_handle add_subdiv(scene_scene& scene, const string& name,
-    const quads_shape& shape_data, shape_handle shape, int subdivisions,
-    float displacement, texture_handle displacement_tex) {
-  scene.subdiv_names.emplace_back(name);
-  auto& subdiv    = scene.subdivs.emplace_back();
-  auto& quads     = (!shape_data.quads.empty())
-                        ? shape_data.quads
-                        : triangles_to_quads(shape_data.triangles);
-  subdiv.quadspos = quads;
-  if (!shape_data.normals.empty()) subdiv.quadsnorm = quads;
-  if (!shape_data.texcoords.empty()) subdiv.quadstexcoord = quads;
-  subdiv.positions        = shape_data.positions;
-  subdiv.normals          = shape_data.normals;
-  subdiv.texcoords        = shape_data.texcoords;
-  subdiv.shape            = shape;
-  subdiv.subdivisions     = subdivisions;
-  subdiv.smooth           = subdivisions > 0 || displacement_tex;
-  subdiv.displacement     = displacement;
-  subdiv.displacement_tex = displacement_tex;
-  return (int)scene.subdivs.size() - 1;
-}
-subdiv_handle add_subdiv(scene_scene& scene, const string& name,
-    const quads_fvshape& subdiv_data, shape_handle shape, int subdivisions,
-    float displacement, texture_handle displacement_tex) {
-  scene.subdiv_names.emplace_back(name);
-  auto& subdiv            = scene.subdivs.emplace_back();
-  subdiv.quadspos         = subdiv_data.quadspos;
-  subdiv.quadsnorm        = subdiv_data.quadsnorm;
-  subdiv.quadstexcoord    = subdiv_data.quadstexcoord;
-  subdiv.positions        = subdiv_data.positions;
-  subdiv.normals          = subdiv_data.normals;
-  subdiv.texcoords        = subdiv_data.texcoords;
-  subdiv.shape            = shape;
-  subdiv.subdivisions     = subdivisions;
-  subdiv.smooth           = subdivisions > 0 || displacement_tex;
-  subdiv.displacement     = displacement;
-  subdiv.displacement_tex = displacement_tex;
-  return (int)scene.subdivs.size() - 1;
-}
-material_handle add_emission_material(scene_scene& scene, const string& name,
-    const vec3f& emission, texture_handle emission_tex) {
-  scene.material_names.emplace_back(name);
-  auto& material        = scene.materials.emplace_back();
-  material.emission     = emission;
-  material.emission_tex = emission_tex;
-  return (int)scene.materials.size() - 1;
-}
-material_handle add_matte_material(scene_scene& scene, const string& name,
-    const vec3f& color, texture_handle color_tex, texture_handle normal_tex) {
-  scene.material_names.emplace_back(name);
-  auto& material         = scene.materials.emplace_back();
-  material.type          = material_type::matte;
-  material.color         = color;
-  material.opacity       = 1;
-  material.roughness     = 1;
-  material.metallic      = 0;
-  material.ior           = 1.5;
-  material.color_tex     = color_tex;
-  material.roughness_tex = invalid_handle;
-  material.normal_tex    = normal_tex;
-  return (int)scene.materials.size() - 1;
-}
-material_handle add_plastic_material(scene_scene& scene, const string& name,
-    const vec3f& color, float roughness, texture_handle color_tex,
-    texture_handle roughness_tex, texture_handle normal_tex, float ior) {
-  scene.material_names.emplace_back(name);
-  auto& material         = scene.materials.emplace_back();
-  material.type          = material_type::plastic;
-  material.color         = color;
-  material.opacity       = 1;
-  material.roughness     = roughness;
-  material.ior           = ior;
-  material.color_tex     = color_tex;
-  material.roughness_tex = roughness_tex;
-  material.normal_tex    = normal_tex;
-  return (int)scene.materials.size() - 1;
-}
-material_handle add_metal_material(scene_scene& scene, const string& name,
-    const vec3f& color, float roughness, texture_handle color_tex,
-    texture_handle roughness_tex, texture_handle normal_tex) {
-  scene.material_names.emplace_back(name);
-  auto& material         = scene.materials.emplace_back();
-  material.type          = material_type::metal;
-  material.color         = color;
-  material.opacity       = 1;
-  material.roughness     = roughness;
-  material.metallic      = 1;
-  material.ior           = 1.5;
-  material.color_tex     = color_tex;
-  material.roughness_tex = roughness_tex;
-  material.normal_tex    = normal_tex;
-  return (int)scene.materials.size() - 1;
-}
-material_handle add_metallic_material(scene_scene& scene, const string& name,
-    const vec3f& color, texture_handle color_tex, float roughness,
-    float metallic, texture_handle roughness_tex, texture_handle normal_tex,
-    texture_handle metallic_tex, float ior) {
-  scene.material_names.emplace_back(name);
-  auto& material         = scene.materials.emplace_back();
-  material.type          = material_type::metallic;
-  material.color         = color;
-  material.opacity       = 1;
-  material.metallic      = metallic;
-  material.roughness     = roughness;
-  material.ior           = ior;
-  material.color_tex     = color_tex;
-  material.roughness_tex = roughness_tex;
-  material.normal_tex    = normal_tex;
-  return (int)scene.materials.size() - 1;
-}
-material_handle add_thinglass_material(scene_scene& scene, const string& name,
-    const vec3f& color, float roughness, texture_handle color_tex,
-    texture_handle roughness_tex, texture_handle normal_tex, float ior) {
-  scene.material_names.emplace_back(name);
-  auto& material         = scene.materials.emplace_back();
-  material.type          = material_type::thinglass;
-  material.color         = color;
-  material.opacity       = 1;
-  material.roughness     = roughness;
-  material.metallic      = 0;
-  material.ior           = ior;
-  material.color_tex     = color_tex;
-  material.roughness_tex = roughness_tex;
-  material.normal_tex    = normal_tex;
-  return (int)scene.materials.size() - 1;
-}
-material_handle add_glass_material(scene_scene& scene, const string& name,
-    const vec3f& color, float roughness, texture_handle color_tex,
-    texture_handle roughness_tex, texture_handle normal_tex, float ior) {
-  scene.material_names.emplace_back(name);
-  auto& material         = scene.materials.emplace_back();
-  material.type          = material_type::glass;
-  material.color         = color;
-  material.opacity       = 1;
-  material.roughness     = roughness;
-  material.metallic      = 0;
-  material.ior           = ior;
-  material.color_tex     = color_tex;
-  material.roughness_tex = roughness_tex;
-  material.normal_tex    = normal_tex;
-  return (int)scene.materials.size() - 1;
-}
-material_handle add_glass_material(scene_scene& scene, const string& name,
-    const vec3f& color, float roughness, const vec3f& scattering,
-    texture_handle color_tex, texture_handle roughness_tex,
-    texture_handle normal_tex, float ior, float scanisotropy, float trdepth) {
-  scene.material_names.emplace_back(name);
-  auto& material         = scene.materials.emplace_back();
-  material.type          = material_type::glass;
-  material.color         = color;
-  material.opacity       = 1;
-  material.roughness     = roughness;
-  material.metallic      = 0;
-  material.ior           = ior;
-  material.scattering    = scattering;
-  material.scanisotropy  = scanisotropy;
-  material.trdepth       = trdepth;
-  material.color_tex     = color_tex;
-  material.roughness_tex = roughness_tex;
-  material.normal_tex    = normal_tex;
-  return (int)scene.materials.size() - 1;
-}
-material_handle add_subsurface_material(scene_scene& scene, const string& name,
-    const vec3f& color, float roughness, const vec3f& scattering,
-    texture_handle color_tex, texture_handle roughness_tex,
-    const texture_handle scattering_tex, texture_handle normal_tex, float ior,
-    float scanisotropy, float trdepth) {
-  scene.material_names.emplace_back(name);
-  auto& material          = scene.materials.emplace_back();
-  material.type           = material_type::subsurface;
-  material.color          = color;
-  material.color_tex      = color_tex;
-  material.roughness      = roughness;
-  material.roughness_tex  = roughness_tex;
-  material.scattering     = scattering;
-  material.scattering_tex = scattering_tex;
-  material.ior            = ior;
-  material.scanisotropy   = scanisotropy;
-  material.trdepth        = trdepth;
-  material.normal_tex     = normal_tex;
-  return (int)scene.materials.size() - 1;
-}
-material_handle add_volume_material(scene_scene& scene, const string& name,
-    const vec3f& color, const vec3f& scattering, float scanisotropy,
-    float trdepth) {
-  scene.material_names.emplace_back(name);
-  auto& material        = scene.materials.emplace_back();
-  material.type         = material_type::volume;
-  material.color        = color;
-  material.scattering   = scattering;
-  material.scanisotropy = scanisotropy;
-  material.trdepth      = trdepth;
-  material.roughness    = 0;
-  material.ior          = 1;
-  material.opacity      = 1;
-  return (int)scene.materials.size() - 1;
-}
-material_handle add_transparent_material(scene_scene& scene, const string& name,
-    const vec3f& color, float opacity, texture_handle color_tex,
-    texture_handle normal_tex) {
-  scene.material_names.emplace_back(name);
-  auto& material      = scene.materials.emplace_back();
-  material.type       = material_type::matte;
-  material.color      = color;
-  material.color_tex  = color_tex;
-  material.roughness  = 1;
-  material.opacity    = opacity;
-  material.normal_tex = normal_tex;
-  return (int)scene.materials.size() - 1;
-}
-
 // Add missing cameras.
 void add_cameras(scene_scene& scene) {
   if (!scene.cameras.empty()) return;
@@ -1219,40 +874,62 @@ namespace yocto {
 
 void make_cornellbox(scene_scene& scene) {
   scene.asset.name = "cornellbox";
-  auto& camera     = scene.cameras[add_camera(scene, "camera")];
-  camera.frame     = frame3f{{1, 0, 0}, {0, 1, 0}, {0, 0, 1}, {0, 1, 3.9}};
-  camera.lens      = 0.035;
-  camera.aperture  = 0.0;
-  camera.focus     = 3.9;
-  camera.film      = 0.024;
-  camera.aspect    = 1;
-  auto& floor      = scene.instances[add_complete_instance(scene, "floor")];
-  scene.shapes[floor.shape].positions = {
-      {-1, 0, 1}, {1, 0, 1}, {1, 0, -1}, {-1, 0, -1}};
-  scene.shapes[floor.shape].triangles   = {{0, 1, 2}, {2, 3, 0}};
-  scene.materials[floor.material].color = {0.725, 0.71, 0.68};
-  auto& ceiling = scene.instances[add_complete_instance(scene, "ceiling")];
-  scene.shapes[ceiling.shape].positions = {
-      {-1, 2, 1}, {-1, 2, -1}, {1, 2, -1}, {1, 2, 1}};
-  scene.shapes[ceiling.shape].triangles   = {{0, 1, 2}, {2, 3, 0}};
-  scene.materials[ceiling.material].color = {0.725, 0.71, 0.68};
-  auto& backwall = scene.instances[add_complete_instance(scene, "backwall")];
-  scene.shapes[backwall.shape].positions = {
-      {-1, 0, -1}, {1, 0, -1}, {1, 2, -1}, {-1, 2, -1}};
-  scene.shapes[backwall.shape].triangles   = {{0, 1, 2}, {2, 3, 0}};
-  scene.materials[backwall.material].color = {0.725, 0.71, 0.68};
-  auto& rightwall = scene.instances[add_complete_instance(scene, "rightwall")];
-  scene.shapes[rightwall.shape].positions = {
-      {1, 0, -1}, {1, 0, 1}, {1, 2, 1}, {1, 2, -1}};
-  scene.shapes[rightwall.shape].triangles   = {{0, 1, 2}, {2, 3, 0}};
-  scene.materials[rightwall.material].color = {0.14, 0.45, 0.091};
-  auto& leftwall = scene.instances[add_complete_instance(scene, "leftwall")];
-  scene.shapes[leftwall.shape].positions = {
-      {-1, 0, 1}, {-1, 0, -1}, {-1, 2, -1}, {-1, 2, 1}};
-  scene.shapes[leftwall.shape].triangles   = {{0, 1, 2}, {2, 3, 0}};
-  scene.materials[leftwall.material].color = {0.63, 0.065, 0.05};
-  auto& shortbox = scene.instances[add_complete_instance(scene, "shortbox")];
-  scene.shapes[shortbox.shape].positions = {{0.53, 0.6, 0.75}, {0.7, 0.6, 0.17},
+
+  auto& camera    = scene.cameras.emplace_back();
+  camera.frame    = frame3f{{1, 0, 0}, {0, 1, 0}, {0, 0, 1}, {0, 1, 3.9}};
+  camera.lens     = 0.035;
+  camera.aperture = 0.0;
+  camera.focus    = 3.9;
+  camera.film     = 0.024;
+  camera.aspect   = 1;
+
+  auto& floor_shape       = scene.shapes.emplace_back();
+  floor_shape.positions   = {{-1, 0, 1}, {1, 0, 1}, {1, 0, -1}, {-1, 0, -1}};
+  floor_shape.triangles   = {{0, 1, 2}, {2, 3, 0}};
+  auto& floor_material    = scene.materials.emplace_back();
+  floor_material.color    = {0.725, 0.71, 0.68};
+  auto& floor_instance    = scene.instances.emplace_back();
+  floor_instance.shape    = (int)scene.shapes.size() - 1;
+  floor_instance.material = (int)scene.materials.size() - 1;
+
+  auto& ceiling_shape       = scene.shapes.emplace_back();
+  ceiling_shape.positions   = {{-1, 2, 1}, {-1, 2, -1}, {1, 2, -1}, {1, 2, 1}};
+  ceiling_shape.triangles   = {{0, 1, 2}, {2, 3, 0}};
+  auto& ceiling_material    = scene.materials.emplace_back();
+  ceiling_material.color    = {0.725, 0.71, 0.68};
+  auto& ceiling_instance    = scene.instances.emplace_back();
+  ceiling_instance.shape    = (int)scene.shapes.size() - 1;
+  ceiling_instance.material = (int)scene.materials.size() - 1;
+
+  auto& backwall_shape     = scene.shapes.emplace_back();
+  backwall_shape.positions = {{-1, 0, -1}, {1, 0, -1}, {1, 2, -1}, {-1, 2, -1}};
+  backwall_shape.triangles = {{0, 1, 2}, {2, 3, 0}};
+  auto& backwall_material  = scene.materials.emplace_back();
+  backwall_material.color  = {0.725, 0.71, 0.68};
+  auto& backwall_instance  = scene.instances.emplace_back();
+  backwall_instance.shape  = (int)scene.shapes.size() - 1;
+  backwall_instance.material = (int)scene.materials.size() - 1;
+
+  auto& rightwall_shape       = scene.shapes.emplace_back();
+  rightwall_shape.positions   = {{1, 0, -1}, {1, 0, 1}, {1, 2, 1}, {1, 2, -1}};
+  rightwall_shape.triangles   = {{0, 1, 2}, {2, 3, 0}};
+  auto& rightwall_material    = scene.materials.emplace_back();
+  rightwall_material.color    = {0.14, 0.45, 0.091};
+  auto& rightwall_instance    = scene.instances.emplace_back();
+  rightwall_instance.shape    = (int)scene.shapes.size() - 1;
+  rightwall_instance.material = (int)scene.materials.size() - 1;
+
+  auto& leftwall_shape     = scene.shapes.emplace_back();
+  leftwall_shape.positions = {{-1, 0, 1}, {-1, 0, -1}, {-1, 2, -1}, {-1, 2, 1}};
+  leftwall_shape.triangles = {{0, 1, 2}, {2, 3, 0}};
+  auto& leftwall_material  = scene.materials.emplace_back();
+  leftwall_material.color  = {0.63, 0.065, 0.05};
+  auto& leftwall_instance  = scene.instances.emplace_back();
+  leftwall_instance.shape  = (int)scene.shapes.size() - 1;
+  leftwall_instance.material = (int)scene.materials.size() - 1;
+
+  auto& shortbox_shape       = scene.shapes.emplace_back();
+  shortbox_shape.positions   = {{0.53, 0.6, 0.75}, {0.7, 0.6, 0.17},
       {0.13, 0.6, 0.0}, {-0.05, 0.6, 0.57}, {-0.05, 0.0, 0.57},
       {-0.05, 0.6, 0.57}, {0.13, 0.6, 0.0}, {0.13, 0.0, 0.0}, {0.53, 0.0, 0.75},
       {0.53, 0.6, 0.75}, {-0.05, 0.6, 0.57}, {-0.05, 0.0, 0.57},
@@ -1260,29 +937,43 @@ void make_cornellbox(scene_scene& scene) {
       {0.13, 0.0, 0.0}, {0.13, 0.6, 0.0}, {0.7, 0.6, 0.17}, {0.7, 0.0, 0.17},
       {0.53, 0.0, 0.75}, {0.7, 0.0, 0.17}, {0.13, 0.0, 0.0},
       {-0.05, 0.0, 0.57}};
-  scene.shapes[shortbox.shape].triangles = {{0, 1, 2}, {2, 3, 0}, {4, 5, 6},
-      {6, 7, 4}, {8, 9, 10}, {10, 11, 8}, {12, 13, 14}, {14, 15, 12},
-      {16, 17, 18}, {18, 19, 16}, {20, 21, 22}, {22, 23, 20}};
-  scene.materials[shortbox.material].color = {0.725, 0.71, 0.68};
-  auto& tallbox = scene.instances[add_complete_instance(scene, "tallbox")];
-  scene.shapes[tallbox.shape].positions   = {{-0.53, 1.2, 0.09},
-      {0.04, 1.2, -0.09}, {-0.14, 1.2, -0.67}, {-0.71, 1.2, -0.49},
-      {-0.53, 0.0, 0.09}, {-0.53, 1.2, 0.09}, {-0.71, 1.2, -0.49},
-      {-0.71, 0.0, -0.49}, {-0.71, 0.0, -0.49}, {-0.71, 1.2, -0.49},
-      {-0.14, 1.2, -0.67}, {-0.14, 0.0, -0.67}, {-0.14, 0.0, -0.67},
-      {-0.14, 1.2, -0.67}, {0.04, 1.2, -0.09}, {0.04, 0.0, -0.09},
-      {0.04, 0.0, -0.09}, {0.04, 1.2, -0.09}, {-0.53, 1.2, 0.09},
-      {-0.53, 0.0, 0.09}, {-0.53, 0.0, 0.09}, {0.04, 0.0, -0.09},
-      {-0.14, 0.0, -0.67}, {-0.71, 0.0, -0.49}};
-  scene.shapes[tallbox.shape].triangles   = {{0, 1, 2}, {2, 3, 0}, {4, 5, 6},
-      {6, 7, 4}, {8, 9, 10}, {10, 11, 8}, {12, 13, 14}, {14, 15, 12},
-      {16, 17, 18}, {18, 19, 16}, {20, 21, 22}, {22, 23, 20}};
-  scene.materials[tallbox.material].color = {0.725, 0.71, 0.68};
-  auto& light = scene.instances[add_complete_instance(scene, "light")];
-  scene.shapes[light.shape].positions      = {{-0.25, 1.99, 0.25},
-      {-0.25, 1.99, -0.25}, {0.25, 1.99, -0.25}, {0.25, 1.99, 0.25}};
-  scene.shapes[light.shape].triangles      = {{0, 1, 2}, {2, 3, 0}};
-  scene.materials[light.material].emission = {17, 12, 4};
+  shortbox_shape.triangles   = {{0, 1, 2}, {2, 3, 0}, {4, 5, 6}, {6, 7, 4},
+      {8, 9, 10}, {10, 11, 8}, {12, 13, 14}, {14, 15, 12}, {16, 17, 18},
+      {18, 19, 16}, {20, 21, 22}, {22, 23, 20}};
+  auto& shortbox_material    = scene.materials.emplace_back();
+  shortbox_material.color    = {0.725, 0.71, 0.68};
+  auto& shortbox_instance    = scene.instances.emplace_back();
+  shortbox_instance.shape    = (int)scene.shapes.size() - 1;
+  shortbox_instance.material = (int)scene.materials.size() - 1;
+
+  auto& tallbox_shape       = scene.shapes.emplace_back();
+  tallbox_shape.positions   = {{-0.53, 1.2, 0.09}, {0.04, 1.2, -0.09},
+      {-0.14, 1.2, -0.67}, {-0.71, 1.2, -0.49}, {-0.53, 0.0, 0.09},
+      {-0.53, 1.2, 0.09}, {-0.71, 1.2, -0.49}, {-0.71, 0.0, -0.49},
+      {-0.71, 0.0, -0.49}, {-0.71, 1.2, -0.49}, {-0.14, 1.2, -0.67},
+      {-0.14, 0.0, -0.67}, {-0.14, 0.0, -0.67}, {-0.14, 1.2, -0.67},
+      {0.04, 1.2, -0.09}, {0.04, 0.0, -0.09}, {0.04, 0.0, -0.09},
+      {0.04, 1.2, -0.09}, {-0.53, 1.2, 0.09}, {-0.53, 0.0, 0.09},
+      {-0.53, 0.0, 0.09}, {0.04, 0.0, -0.09}, {-0.14, 0.0, -0.67},
+      {-0.71, 0.0, -0.49}};
+  tallbox_shape.triangles   = {{0, 1, 2}, {2, 3, 0}, {4, 5, 6}, {6, 7, 4},
+      {8, 9, 10}, {10, 11, 8}, {12, 13, 14}, {14, 15, 12}, {16, 17, 18},
+      {18, 19, 16}, {20, 21, 22}, {22, 23, 20}};
+  auto& tallbox_material    = scene.materials.emplace_back();
+  tallbox_material.color    = {0.725, 0.71, 0.68};
+  auto& tallbox_instance    = scene.instances.emplace_back();
+  tallbox_instance.shape    = (int)scene.shapes.size() - 1;
+  tallbox_instance.material = (int)scene.materials.size() - 1;
+
+  auto& light_shape       = scene.shapes.emplace_back();
+  light_shape.positions   = {{-0.25, 1.99, 0.25}, {-0.25, 1.99, -0.25},
+      {0.25, 1.99, -0.25}, {0.25, 1.99, 0.25}};
+  light_shape.triangles   = {{0, 1, 2}, {2, 3, 0}};
+  auto& light_material    = scene.materials.emplace_back();
+  light_material.emission = {17, 12, 4};
+  auto& light_instance    = scene.instances.emplace_back();
+  light_instance.shape    = (int)scene.shapes.size() - 1;
+  light_instance.material = (int)scene.materials.size() - 1;
 }
 
 }  // namespace yocto

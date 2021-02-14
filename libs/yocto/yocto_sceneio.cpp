@@ -227,289 +227,301 @@ struct test_params {
 
 // Scene test
 void make_test(scene_scene& scene, const test_params& params) {
-  // cameras
-  switch (params.cameras) {
-    case test_cameras_type::standard: {
-      add_camera(scene, "default", {-0.75, 0.4, 0.9}, {-0.075, 0.05, -0.05},
-          {0, 1, 0}, 0.05, 2.4, 0);
-    } break;
-    // TODO(fabio): fix wide camera
-    case test_cameras_type::wide: {
-      add_camera(scene, "default", {-0.75, 0.4, 0.9}, {-0.075, 0.05, -0.05},
-          {0, 1, 0}, 0.05, 2.4, 0);
-    } break;
-  }
-  // TODO(fabio): port other cameras
-  switch (params.environments) {
-    case test_environments_type::none: break;
-    case test_environments_type::sky: {
-      add_environment(scene, "sky", identity3x4f, {0.5, 0.5, 0.5},
-          add_texture(scene, "sky",
-              make_sunsky(
-                  {2048, 1024}, pif / 4, 3.0, false, 1.0, 1.0, {0.7, 0.7, 0.7}),
-              true));
-    } break;
-    case test_environments_type::sunsky: {
-      add_environment(scene, "sunsky", identity3x4f, {0.5, 0.5, 0.5},
-          add_texture(scene, "sky",
-              make_sunsky(
-                  {2048, 1024}, pif / 4, 3.0, true, 1.0, 1.0, {0.7, 0.7, 0.7}),
-              true));
-    } break;
-  }
-  switch (params.arealights) {
-    case test_arealights_type::none: break;
-    case test_arealights_type::standard: {
-      add_instance(scene, "arealight1",
-          lookat_frame({-0.4, 0.8, 0.8}, {0, 0.1, 0}, {0, 1, 0}, true),
-          add_shape(scene, "arealight1", make_rect({1, 1}, {0.2, 0.2})),
-          add_emission_material(
-              scene, "arealight1", {20, 20, 20}, invalid_handle));
-      add_instance(scene, "arealight2",
-          lookat_frame({+0.4, 0.8, 0.8}, {0, 0.1, 0}, {0, 1, 0}, true),
-          add_shape(scene, "arealight2", make_rect({1, 1}, {0.2, 0.2})),
-          add_emission_material(
-              scene, "arealight2", {20, 20, 20}, invalid_handle));
-    } break;
-    case test_arealights_type::large: {
-      add_instance(scene, "largearealight1",
-          lookat_frame({-0.8, 1.6, 1.6}, {0, 0.1, 0}, {0, 1, 0}, true),
-          add_shape(scene, "largearealight1", make_rect({1, 1}, {0.4, 0.4})),
-          add_emission_material(
-              scene, "largearealight1", {10, 10, 10}, invalid_handle));
-      add_instance(scene, "largearealight2",
-          lookat_frame({+0.8, 1.6, 1.6}, {0, 0.1, 0}, {0, 1, 0}, true),
-          add_shape(scene, "largearealight2", make_rect({1, 1}, {0.4, 0.4})),
-          add_emission_material(
-              scene, "largearealight2", {10, 10, 10}, invalid_handle));
-    } break;
-  }
-  switch (params.floor) {
-    case test_floor_type::none: break;
-    case test_floor_type::standard: {
-      add_instance(scene, "floor", identity3x4f,
-          add_shape(scene, "floor", make_floor({1, 1}, {2, 2}, {20, 20})),
-          add_matte_material(scene, "floor", {1, 1, 1},
-              add_texture(scene, "floor", make_grid({1024, 1024}))));
-    } break;
-  }
-  auto shapes = vector<shape_handle>{}, shapesi = vector<shape_handle>{};
-  auto subdivs   = vector<subdiv_handle>{};
-  auto materials = vector<material_handle>{};
-  switch (params.shapes) {
-    case test_shapes_type::features1: {
-      auto bunny  = add_shape(scene, "sphere", make_sphere(32, 0.075, 1));
-      auto sphere = add_shape(scene, "sphere", make_sphere(32, 0.075, 1));
-      shapes      = {bunny, sphere, bunny, sphere, bunny};
-    } break;
-    case test_shapes_type::features2: {
-      shapes  = {add_shape(scene, "sphere", make_sphere(32, 0.075, 1)),
-          add_shape(scene, "suzanne", make_monkey(0.075f * 0.8f)),
-          add_shape(scene, "hair",
-              make_hair(make_sphere(32, 0.075f * 0.8f, 1), {4, 65536},
-                  {0.1f * 0.15f, 0.1f * 0.15f},
-                  {0.001f * 0.15f, 0.0005f * 0.15f}, {0.03, 100})),
-          add_shape(scene, "displaced", make_sphere(128, 0.075f, 1)),
-          add_shape(scene, "cube",
-              make_rounded_box({32, 32, 32}, {0.075, 0.075, 0.075}, {1, 1, 1},
-                  0.3 * 0.075f))};
-      shapesi = {invalid_handle, invalid_handle,
-          add_shape(scene, "hairi", make_sphere(32, 0.075f * 0.8f, 1)),
-          invalid_handle, invalid_handle};
-      subdivs = {add_subdiv(scene, "suzanne", make_monkey(0.075f * 0.8f),
-                     shapes[1], 2),
-          add_subdiv(scene, "displaced", make_sphere(128, 0.075f, 1), shapes[3],
-              0, 0.025,
-              add_texture(scene, "bumps-displacement", make_bumps({1024, 1024}),
-                  false, true))};
-    } break;
-    case test_shapes_type::rows: {
-      auto bunny  = add_shape(scene, "bunny", make_sphere(32, 0.075, 1));
-      auto sphere = add_shape(scene, "sphere", make_sphere(32, 0.075, 1));
-      shapes      = {bunny, bunny, bunny, bunny, bunny, sphere, sphere, sphere,
-          sphere, sphere};
-    } break;
-    case test_shapes_type::bunny_sphere: {
-      auto bunny  = add_shape(scene, "bunny", make_sphere(32, 0.075, 1));
-      auto sphere = add_shape(scene, "sphere", make_sphere(32, 0.075, 1));
-      shapes      = {bunny, sphere, bunny, sphere, bunny};
-    } break;
-    case test_shapes_type::shapes1: {
-      shapes = {
-          add_shape(scene, "sphere", make_sphere(32, 0.075, 1)),
-          add_shape(scene, "uvsphere-flipcap",
-              make_capped_uvsphere({32, 32}, 0.075, {1, 1}, 0.3 * 0.075)),
-          add_shape(scene, "disk", make_disk(32, 0.075f, 1)),
-          add_shape(scene, "uvcylinder",
-              make_rounded_uvcylinder(
-                  {32, 32, 32}, {0.075, 0.075}, {1, 1, 1}, 0.3 * 0.075)),
-          add_shape(scene, "cube",
-              make_rounded_box({32, 32, 32}, {0.075, 0.075, 0.075}, {1, 1, 1},
-                  0.3 * 0.075f)),
-      };
-    } break;
-    case test_shapes_type::shapes2: {
-      shapes = {
-          add_shape(scene, "cube-subdiv", make_fvcube(0.075)),
-          add_shape(scene, "suzanne-subdiv", make_monkey(0.075)),
-          add_shape(scene, "displaced", make_sphere(128, 0.075f, 1)),
-          add_shape(scene, "bunny", make_sphere(32, 0.075, 1)),
-          add_shape(scene, "teapot", make_sphere(32, 0.075, 1)),
-      };
-      subdivs = {
-          add_subdiv(scene, "cube-subdiv", make_fvcube(0.075), shapes[0], 4),
-          add_subdiv(scene, "suzanne-subdiv", make_monkey(0.075), shapes[1], 2),
-          add_subdiv(scene, "displaced", make_sphere(128, 0.075f, 1), shapes[2],
-              0, 0.025,
-              add_texture(scene, "bumps-displacement", make_bumps({1024, 1024}),
-                  false, true))};
-    } break;
-    case test_shapes_type::shapes3: {
-      shapes = {
-          invalid_handle,
-          add_shape(scene, "hair1",
-              make_hair(make_sphere(32, 0.075f * 0.8f, 1), {4, 65536},
-                  {0.1f * 0.15f, 0.1f * 0.15f},
-                  {0.001f * 0.15f, 0.0005f * 0.15f}, {0.03, 100})),
-          add_shape(scene, "hair2",
-              make_hair(make_sphere(32, 0.075f * 0.8f, 1), {4, 65536},
-                  {0.1f * 0.15f, 0.1f * 0.15f},
-                  {0.001f * 0.15f, 0.0005f * 0.15f})),
-          add_shape(scene, "hair3",
-              make_hair(make_sphere(32, 0.075f * 0.8f, 1), {4, 65536},
-                  {0.1f * 0.15f, 0.1f * 0.15f},
-                  {0.001f * 0.15f, 0.0005f * 0.15f}, {0, 0}, {0.5, 128})),
-          invalid_handle,
-      };
-    } break;
-  }
-  switch (params.materials) {
-    case test_materials_type::features1: {
-      materials = {
-          add_plastic_material(scene, "coated", {1, 1, 1}, 0.2,
-              add_texture(scene, "uvgrid", make_uvgrid({1024, 1024}))),
-          add_glass_material(scene, "glass", {1, 0.5, 0.5}, 0),
-          add_glass_material(
-              scene, "jade", {0.5, 0.5, 0.5}, 0, {0.3, 0.6, 0.3}),
-          add_plastic_material(scene, "bumped", {0.5, 0.7, 0.5}, 0.2,
-              invalid_handle, invalid_handle,
-              add_texture(scene, "bumps-normal",
-                  bump_to_normal(make_bumps({1024, 1024}), 0.05), false, true)),
-          add_metal_material(scene, "metal", {0.66, 0.45, 0.34}, 0.2),
-      };
-    } break;
-    case test_materials_type::features2: {
-      auto uvgrid  = add_plastic_material(scene, "uvgrid", {1, 1, 1}, 0.2,
-          add_texture(scene, "uvgrid", make_uvgrid({1024, 1024})));
-      auto plastic = add_plastic_material(
-          scene, "plastic", {0.5, 0.7, 0.5}, 0.2);
-      auto hair = add_matte_material(scene, "hair", {0.7, 0.7, 0.7});
-      materials = {uvgrid, plastic, hair, plastic, uvgrid};
-    } break;
-    case test_materials_type::uvgrid: {
-      auto uvgrid = add_plastic_material(scene, "uvgrid", {1, 1, 1}, 0.2,
-          add_texture(scene, "uvgrid", make_uvgrid({1024, 1024})));
-      materials   = {uvgrid, uvgrid, uvgrid, uvgrid, uvgrid};
-    } break;
-    case test_materials_type::hair: {
-      auto hair = add_matte_material(scene, "hair", {0.7, 0.7, 0.7});
-      materials = {hair, hair, hair, hair, hair};
-    } break;
-    case test_materials_type::plastic_metal: {
-      materials = {
-          add_plastic_material(scene, "plastic1", {0.5, 0.5, 0.7}, 0.01),
-          add_plastic_material(scene, "plastic2", {0.5, 0.7, 0.5}, 0.2),
-          add_matte_material(scene, "matte", {0.7, 0.7, 0.7}),
-          add_metal_material(scene, "metal1", {0.7, 0.7, 0.7}, 0),
-          add_metal_material(scene, "metal2", {0.66, 0.45, 0.34}, 0.2),
-      };
-    } break;
-    case test_materials_type::materials1: {
-      materials = {
-          add_plastic_material(scene, "plastic1", {0.5, 0.5, 0.7}, 0.01),
-          add_plastic_material(scene, "plastic2", {0.5, 0.7, 0.5}, 0.2),
-          add_matte_material(scene, "matte", {0.7, 0.7, 0.7}),
-          add_plastic_material(scene, "metal1", {0.7, 0.7, 0.7}, 0),
-          add_plastic_material(scene, "metal2", {0.66, 0.45, 0.34}, 0.2),
-      };
-    } break;
-    case test_materials_type::materials2: {
-      materials = {
-          add_glass_material(scene, "glass1", {1, 1, 1}, 0),
-          add_glass_material(scene, "glass2", {1, 0.7, 0.7}, 0.1),
-          add_transparent_material(scene, "transparent", {0.7, 0.5, 0.5}, 0.2),
-          add_thinglass_material(scene, "tglass1", {1, 1, 1}, 0),
-          add_thinglass_material(scene, "tglass2", {1, 0.7, 0.7}, 0.1),
-      };
-    } break;
-    case test_materials_type::materials3: {
-      auto bumps_normal = add_texture(scene, "bumps-normal",
-          bump_to_normal(make_bumps({1024, 1024}), 0.05), false, true);
-      materials         = {
-          add_plastic_material(scene, "plastic1", {0.5, 0.5, 0.7}, 0.01,
-              invalid_handle, invalid_handle, bumps_normal),
-          add_plastic_material(scene, "plastic2", {0.5, 0.7, 0.5}, 0.2),
-          add_metal_material(scene, "metal1", {0.7, 0.7, 0.7}, 0,
-              invalid_handle, invalid_handle, bumps_normal),
-          add_metal_material(scene, "metal2", {0.66, 0.45, 0.34}, 0.2),
-          add_metal_material(scene, "metal3", {0.66, 0.45, 0.34}, 0.2),
-      };
-    } break;
-    case test_materials_type::materials4: {
-      materials = {
-          add_volume_material(
-              scene, "cloud", {0.65, 0.65, 0.65}, {0.9, 0.9, 0.9}, 1),
-          add_glass_material(scene, "glass", {1, 0.5, 0.5}, 0),
-          add_glass_material(
-              scene, "jade", {0.5, 0.5, 0.5}, 0, {0.3, 0.6, 0.3}),
-          add_glass_material(
-              scene, "jade2", {0.5, 0.5, 0.5}, 0, {0.3, 0.6, 0.3}),
-          add_volume_material(scene, "smoke", {0.5, 0.5, 0.5}, {0.2, 0.2, 0.2}),
-      };
-    } break;
-    case test_materials_type::materials5: {
-      materials = {
-          add_glass_material(scene, "skin1a", {0.76, 0.48, 0.23}, 0.25,
-              {0.436, 0.227, 0.131}, invalid_handle, invalid_handle,
-              invalid_handle, 1.5, -0.8, 0.001),
-          add_glass_material(scene, "skin2a", {0.82, 0.55, 0.4}, 0.25,
-              {0.623, 0.433, 0.343}, invalid_handle, invalid_handle,
-              invalid_handle, 1.5, -0.8, 0.001),
-          add_glass_material(scene, "skins", {0.76, 0.48, 0.23}, 0,
-              {0.436, 0.227, 0.131}, invalid_handle, invalid_handle,
-              invalid_handle, 1.5, -0.8, 0.001),
-          add_glass_material(scene, "skin1b", {0.76, 0.48, 0.23}, 0.25,
-              {0.436, 0.227, 0.131}, invalid_handle, invalid_handle,
-              invalid_handle, 1.5, -0.8, 0.001),
-          add_glass_material(scene, "skin2b", {0.82, 0.55, 0.4}, 0.25,
-              {0.623, 0.433, 0.343}, invalid_handle, invalid_handle,
-              invalid_handle, 1.5, -0.8, 0.001),
-      };
-    } break;
-  }
-  for (auto idx = 0; idx < shapes.size(); idx++) {
-    if (!shapes[idx]) continue;
-    if (shapes.size() > 5) {
-      add_instance(scene,
-          scene.shape_names[idx] + "-" + scene.shape_names[idx % 5],
-          {{1, 0, 0}, {0, 1, 0}, {0, 0, 1},
-              {0.2f * (idx % 5 - 2), 0.075, -0.4f * (idx / 5)}},
-          shapes[idx], materials[idx % 5]);
-    } else {
-      auto name = params.instance_name == test_instance_name_type::material
-                      ? scene.material_names[idx]
-                      : scene.shape_names[idx];
-      add_instance(scene, name,
-          {{1, 0, 0}, {0, 1, 0}, {0, 0, 1}, {0.2f * (idx % 5 - 2), 0.075, 0}},
-          shapes[idx], materials[idx]);
-    }
-    if (!shapesi.empty() && shapesi[idx]) {
-      // TODO(fabio): fix name
-      add_instance(scene, "",
-          {{1, 0, 0}, {0, 1, 0}, {0, 0, 1}, {0.2f * (idx - 2), 0.075, 0}},
-          shapesi[idx], materials[idx]);
-    }
-  }
+  return;
+  // // cameras
+  // switch (params.cameras) {
+  //   case test_cameras_type::standard: {
+  //     add_camera(scene, "default", {-0.75, 0.4, 0.9}, {-0.075, 0.05, -0.05},
+  //         {0, 1, 0}, 0.05, 2.4, 0);
+  //   } break;
+  //   // TODO(fabio): fix wide camera
+  //   case test_cameras_type::wide: {
+  //     add_camera(scene, "default", {-0.75, 0.4, 0.9}, {-0.075, 0.05, -0.05},
+  //         {0, 1, 0}, 0.05, 2.4, 0);
+  //   } break;
+  // }
+  // // TODO(fabio): port other cameras
+  // switch (params.environments) {
+  //   case test_environments_type::none: break;
+  //   case test_environments_type::sky: {
+  //     add_environment(scene, "sky", identity3x4f, {0.5, 0.5, 0.5},
+  //         add_texture(scene, "sky",
+  //             make_sunsky(
+  //                 {2048, 1024}, pif / 4, 3.0, false, 1.0, 1.0, {0.7, 0.7,
+  //                 0.7}),
+  //             true));
+  //   } break;
+  //   case test_environments_type::sunsky: {
+  //     add_environment(scene, "sunsky", identity3x4f, {0.5, 0.5, 0.5},
+  //         add_texture(scene, "sky",
+  //             make_sunsky(
+  //                 {2048, 1024}, pif / 4, 3.0, true, 1.0, 1.0, {0.7, 0.7,
+  //                 0.7}),
+  //             true));
+  //   } break;
+  // }
+  // switch (params.arealights) {
+  //   case test_arealights_type::none: break;
+  //   case test_arealights_type::standard: {
+  //     add_instance(scene, "arealight1",
+  //         lookat_frame({-0.4, 0.8, 0.8}, {0, 0.1, 0}, {0, 1, 0}, true),
+  //         add_shape(scene, "arealight1", make_rect({1, 1}, {0.2, 0.2})),
+  //         add_emission_material(
+  //             scene, "arealight1", {20, 20, 20}, invalid_handle));
+  //     add_instance(scene, "arealight2",
+  //         lookat_frame({+0.4, 0.8, 0.8}, {0, 0.1, 0}, {0, 1, 0}, true),
+  //         add_shape(scene, "arealight2", make_rect({1, 1}, {0.2, 0.2})),
+  //         add_emission_material(
+  //             scene, "arealight2", {20, 20, 20}, invalid_handle));
+  //   } break;
+  //   case test_arealights_type::large: {
+  //     add_instance(scene, "largearealight1",
+  //         lookat_frame({-0.8, 1.6, 1.6}, {0, 0.1, 0}, {0, 1, 0}, true),
+  //         add_shape(scene, "largearealight1", make_rect({1, 1}, {0.4, 0.4})),
+  //         add_emission_material(
+  //             scene, "largearealight1", {10, 10, 10}, invalid_handle));
+  //     add_instance(scene, "largearealight2",
+  //         lookat_frame({+0.8, 1.6, 1.6}, {0, 0.1, 0}, {0, 1, 0}, true),
+  //         add_shape(scene, "largearealight2", make_rect({1, 1}, {0.4, 0.4})),
+  //         add_emission_material(
+  //             scene, "largearealight2", {10, 10, 10}, invalid_handle));
+  //   } break;
+  // }
+  // switch (params.floor) {
+  //   case test_floor_type::none: break;
+  //   case test_floor_type::standard: {
+  //     add_instance(scene, "floor", identity3x4f,
+  //         add_shape(scene, "floor", make_floor({1, 1}, {2, 2}, {20, 20})),
+  //         add_matte_material(scene, "floor", {1, 1, 1},
+  //             add_texture(scene, "floor", make_grid({1024, 1024}))));
+  //   } break;
+  // }
+  // auto shapes = vector<shape_handle>{}, shapesi = vector<shape_handle>{};
+  // auto subdivs   = vector<subdiv_handle>{};
+  // auto materials = vector<material_handle>{};
+  // switch (params.shapes) {
+  //   case test_shapes_type::features1: {
+  //     auto bunny  = add_shape(scene, "sphere", make_sphere(32, 0.075, 1));
+  //     auto sphere = add_shape(scene, "sphere", make_sphere(32, 0.075, 1));
+  //     shapes      = {bunny, sphere, bunny, sphere, bunny};
+  //   } break;
+  //   case test_shapes_type::features2: {
+  //     shapes  = {add_shape(scene, "sphere", make_sphere(32, 0.075, 1)),
+  //         add_shape(scene, "suzanne", make_monkey(0.075f * 0.8f)),
+  //         add_shape(scene, "hair",
+  //             make_hair(make_sphere(32, 0.075f * 0.8f, 1), {4, 65536},
+  //                 {0.1f * 0.15f, 0.1f * 0.15f},
+  //                 {0.001f * 0.15f, 0.0005f * 0.15f}, {0.03, 100})),
+  //         add_shape(scene, "displaced", make_sphere(128, 0.075f, 1)),
+  //         add_shape(scene, "cube",
+  //             make_rounded_box({32, 32, 32}, {0.075, 0.075, 0.075}, {1, 1,
+  //             1},
+  //                 0.3 * 0.075f))};
+  //     shapesi = {invalid_handle, invalid_handle,
+  //         add_shape(scene, "hairi", make_sphere(32, 0.075f * 0.8f, 1)),
+  //         invalid_handle, invalid_handle};
+  //     subdivs = {add_subdiv(scene, "suzanne", make_monkey(0.075f * 0.8f),
+  //                    shapes[1], 2),
+  //         add_subdiv(scene, "displaced", make_sphere(128, 0.075f, 1),
+  //         shapes[3],
+  //             0, 0.025,
+  //             add_texture(scene, "bumps-displacement", make_bumps({1024,
+  //             1024}),
+  //                 false, true))};
+  //   } break;
+  //   case test_shapes_type::rows: {
+  //     auto bunny  = add_shape(scene, "bunny", make_sphere(32, 0.075, 1));
+  //     auto sphere = add_shape(scene, "sphere", make_sphere(32, 0.075, 1));
+  //     shapes      = {bunny, bunny, bunny, bunny, bunny, sphere, sphere,
+  //     sphere,
+  //         sphere, sphere};
+  //   } break;
+  //   case test_shapes_type::bunny_sphere: {
+  //     auto bunny  = add_shape(scene, "bunny", make_sphere(32, 0.075, 1));
+  //     auto sphere = add_shape(scene, "sphere", make_sphere(32, 0.075, 1));
+  //     shapes      = {bunny, sphere, bunny, sphere, bunny};
+  //   } break;
+  //   case test_shapes_type::shapes1: {
+  //     shapes = {
+  //         add_shape(scene, "sphere", make_sphere(32, 0.075, 1)),
+  //         add_shape(scene, "uvsphere-flipcap",
+  //             make_capped_uvsphere({32, 32}, 0.075, {1, 1}, 0.3 * 0.075)),
+  //         add_shape(scene, "disk", make_disk(32, 0.075f, 1)),
+  //         add_shape(scene, "uvcylinder",
+  //             make_rounded_uvcylinder(
+  //                 {32, 32, 32}, {0.075, 0.075}, {1, 1, 1}, 0.3 * 0.075)),
+  //         add_shape(scene, "cube",
+  //             make_rounded_box({32, 32, 32}, {0.075, 0.075, 0.075}, {1, 1,
+  //             1},
+  //                 0.3 * 0.075f)),
+  //     };
+  //   } break;
+  //   case test_shapes_type::shapes2: {
+  //     shapes = {
+  //         add_shape(scene, "cube-subdiv", make_fvcube(0.075)),
+  //         add_shape(scene, "suzanne-subdiv", make_monkey(0.075)),
+  //         add_shape(scene, "displaced", make_sphere(128, 0.075f, 1)),
+  //         add_shape(scene, "bunny", make_sphere(32, 0.075, 1)),
+  //         add_shape(scene, "teapot", make_sphere(32, 0.075, 1)),
+  //     };
+  //     subdivs = {
+  //         add_subdiv(scene, "cube-subdiv", make_fvcube(0.075), shapes[0], 4),
+  //         add_subdiv(scene, "suzanne-subdiv", make_monkey(0.075), shapes[1],
+  //         2), add_subdiv(scene, "displaced", make_sphere(128, 0.075f, 1),
+  //         shapes[2],
+  //             0, 0.025,
+  //             add_texture(scene, "bumps-displacement", make_bumps({1024,
+  //             1024}),
+  //                 false, true))};
+  //   } break;
+  //   case test_shapes_type::shapes3: {
+  //     shapes = {
+  //         invalid_handle,
+  //         add_shape(scene, "hair1",
+  //             make_hair(make_sphere(32, 0.075f * 0.8f, 1), {4, 65536},
+  //                 {0.1f * 0.15f, 0.1f * 0.15f},
+  //                 {0.001f * 0.15f, 0.0005f * 0.15f}, {0.03, 100})),
+  //         add_shape(scene, "hair2",
+  //             make_hair(make_sphere(32, 0.075f * 0.8f, 1), {4, 65536},
+  //                 {0.1f * 0.15f, 0.1f * 0.15f},
+  //                 {0.001f * 0.15f, 0.0005f * 0.15f})),
+  //         add_shape(scene, "hair3",
+  //             make_hair(make_sphere(32, 0.075f * 0.8f, 1), {4, 65536},
+  //                 {0.1f * 0.15f, 0.1f * 0.15f},
+  //                 {0.001f * 0.15f, 0.0005f * 0.15f}, {0, 0}, {0.5, 128})),
+  //         invalid_handle,
+  //     };
+  //   } break;
+  // }
+  // switch (params.materials) {
+  //   case test_materials_type::features1: {
+  //     materials = {
+  //         add_plastic_material(scene, "coated", {1, 1, 1}, 0.2,
+  //             add_texture(scene, "uvgrid", make_uvgrid({1024, 1024}))),
+  //         add_glass_material(scene, "glass", {1, 0.5, 0.5}, 0),
+  //         add_glass_material(
+  //             scene, "jade", {0.5, 0.5, 0.5}, 0, {0.3, 0.6, 0.3}),
+  //         add_plastic_material(scene, "bumped", {0.5, 0.7, 0.5}, 0.2,
+  //             invalid_handle, invalid_handle,
+  //             add_texture(scene, "bumps-normal",
+  //                 bump_to_normal(make_bumps({1024, 1024}), 0.05), false,
+  //                 true)),
+  //         add_metal_material(scene, "metal", {0.66, 0.45, 0.34}, 0.2),
+  //     };
+  //   } break;
+  //   case test_materials_type::features2: {
+  //     auto uvgrid  = add_plastic_material(scene, "uvgrid", {1, 1, 1}, 0.2,
+  //         add_texture(scene, "uvgrid", make_uvgrid({1024, 1024})));
+  //     auto plastic = add_plastic_material(
+  //         scene, "plastic", {0.5, 0.7, 0.5}, 0.2);
+  //     auto hair = add_matte_material(scene, "hair", {0.7, 0.7, 0.7});
+  //     materials = {uvgrid, plastic, hair, plastic, uvgrid};
+  //   } break;
+  //   case test_materials_type::uvgrid: {
+  //     auto uvgrid = add_plastic_material(scene, "uvgrid", {1, 1, 1}, 0.2,
+  //         add_texture(scene, "uvgrid", make_uvgrid({1024, 1024})));
+  //     materials   = {uvgrid, uvgrid, uvgrid, uvgrid, uvgrid};
+  //   } break;
+  //   case test_materials_type::hair: {
+  //     auto hair = add_matte_material(scene, "hair", {0.7, 0.7, 0.7});
+  //     materials = {hair, hair, hair, hair, hair};
+  //   } break;
+  //   case test_materials_type::plastic_metal: {
+  //     materials = {
+  //         add_plastic_material(scene, "plastic1", {0.5, 0.5, 0.7}, 0.01),
+  //         add_plastic_material(scene, "plastic2", {0.5, 0.7, 0.5}, 0.2),
+  //         add_matte_material(scene, "matte", {0.7, 0.7, 0.7}),
+  //         add_metal_material(scene, "metal1", {0.7, 0.7, 0.7}, 0),
+  //         add_metal_material(scene, "metal2", {0.66, 0.45, 0.34}, 0.2),
+  //     };
+  //   } break;
+  //   case test_materials_type::materials1: {
+  //     materials = {
+  //         add_plastic_material(scene, "plastic1", {0.5, 0.5, 0.7}, 0.01),
+  //         add_plastic_material(scene, "plastic2", {0.5, 0.7, 0.5}, 0.2),
+  //         add_matte_material(scene, "matte", {0.7, 0.7, 0.7}),
+  //         add_plastic_material(scene, "metal1", {0.7, 0.7, 0.7}, 0),
+  //         add_plastic_material(scene, "metal2", {0.66, 0.45, 0.34}, 0.2),
+  //     };
+  //   } break;
+  //   case test_materials_type::materials2: {
+  //     materials = {
+  //         add_glass_material(scene, "glass1", {1, 1, 1}, 0),
+  //         add_glass_material(scene, "glass2", {1, 0.7, 0.7}, 0.1),
+  //         add_transparent_material(scene, "transparent", {0.7, 0.5, 0.5},
+  //         0.2), add_thinglass_material(scene, "tglass1", {1, 1, 1}, 0),
+  //         add_thinglass_material(scene, "tglass2", {1, 0.7, 0.7}, 0.1),
+  //     };
+  //   } break;
+  //   case test_materials_type::materials3: {
+  //     auto bumps_normal = add_texture(scene, "bumps-normal",
+  //         bump_to_normal(make_bumps({1024, 1024}), 0.05), false, true);
+  //     materials         = {
+  //         add_plastic_material(scene, "plastic1", {0.5, 0.5, 0.7}, 0.01,
+  //             invalid_handle, invalid_handle, bumps_normal),
+  //         add_plastic_material(scene, "plastic2", {0.5, 0.7, 0.5}, 0.2),
+  //         add_metal_material(scene, "metal1", {0.7, 0.7, 0.7}, 0,
+  //             invalid_handle, invalid_handle, bumps_normal),
+  //         add_metal_material(scene, "metal2", {0.66, 0.45, 0.34}, 0.2),
+  //         add_metal_material(scene, "metal3", {0.66, 0.45, 0.34}, 0.2),
+  //     };
+  //   } break;
+  //   case test_materials_type::materials4: {
+  //     materials = {
+  //         add_volume_material(
+  //             scene, "cloud", {0.65, 0.65, 0.65}, {0.9, 0.9, 0.9}, 1),
+  //         add_glass_material(scene, "glass", {1, 0.5, 0.5}, 0),
+  //         add_glass_material(
+  //             scene, "jade", {0.5, 0.5, 0.5}, 0, {0.3, 0.6, 0.3}),
+  //         add_glass_material(
+  //             scene, "jade2", {0.5, 0.5, 0.5}, 0, {0.3, 0.6, 0.3}),
+  //         add_volume_material(scene, "smoke", {0.5, 0.5, 0.5}, {0.2, 0.2,
+  //         0.2}),
+  //     };
+  //   } break;
+  //   case test_materials_type::materials5: {
+  //     materials = {
+  //         add_glass_material(scene, "skin1a", {0.76, 0.48, 0.23}, 0.25,
+  //             {0.436, 0.227, 0.131}, invalid_handle, invalid_handle,
+  //             invalid_handle, 1.5, -0.8, 0.001),
+  //         add_glass_material(scene, "skin2a", {0.82, 0.55, 0.4}, 0.25,
+  //             {0.623, 0.433, 0.343}, invalid_handle, invalid_handle,
+  //             invalid_handle, 1.5, -0.8, 0.001),
+  //         add_glass_material(scene, "skins", {0.76, 0.48, 0.23}, 0,
+  //             {0.436, 0.227, 0.131}, invalid_handle, invalid_handle,
+  //             invalid_handle, 1.5, -0.8, 0.001),
+  //         add_glass_material(scene, "skin1b", {0.76, 0.48, 0.23}, 0.25,
+  //             {0.436, 0.227, 0.131}, invalid_handle, invalid_handle,
+  //             invalid_handle, 1.5, -0.8, 0.001),
+  //         add_glass_material(scene, "skin2b", {0.82, 0.55, 0.4}, 0.25,
+  //             {0.623, 0.433, 0.343}, invalid_handle, invalid_handle,
+  //             invalid_handle, 1.5, -0.8, 0.001),
+  //     };
+  //   } break;
+  // }
+  // for (auto idx = 0; idx < shapes.size(); idx++) {
+  //   if (!shapes[idx]) continue;
+  //   if (shapes.size() > 5) {
+  //     add_instance(scene,
+  //         scene.shape_names[idx] + "-" + scene.shape_names[idx % 5],
+  //         {{1, 0, 0}, {0, 1, 0}, {0, 0, 1},
+  //             {0.2f * (idx % 5 - 2), 0.075, -0.4f * (idx / 5)}},
+  //         shapes[idx], materials[idx % 5]);
+  //   } else {
+  //     auto name = params.instance_name == test_instance_name_type::material
+  //                     ? scene.material_names[idx]
+  //                     : scene.shape_names[idx];
+  //     add_instance(scene, name,
+  //         {{1, 0, 0}, {0, 1, 0}, {0, 0, 1}, {0.2f * (idx % 5 - 2), 0.075,
+  //         0}}, shapes[idx], materials[idx]);
+  //   }
+  //   if (!shapesi.empty() && shapesi[idx]) {
+  //     // TODO(fabio): fix name
+  //     add_instance(scene, "",
+  //         {{1, 0, 0}, {0, 1, 0}, {0, 0, 1}, {0.2f * (idx - 2), 0.075, 0}},
+  //         shapesi[idx], materials[idx]);
+  //   }
+  // }
 }
 
 // Scene presets used for testing.
