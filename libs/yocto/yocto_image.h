@@ -348,25 +348,6 @@ inline void swap(image<T>& a, image<T>& b);
 }  // namespace yocto
 
 // -----------------------------------------------------------------------------
-// IMAGE SAMPLING
-// -----------------------------------------------------------------------------
-namespace yocto {
-
-// Evaluates a color image at a point `uv`.
-vec4f eval_image(const image<vec4f>& img, const vec2f& uv,
-    bool no_interpolation = false, bool clamp_to_edge = false);
-vec4f eval_image(const image<vec4b>& img, const vec2f& uv,
-    bool as_linear = false, bool no_interpolation = false,
-    bool clamp_to_edge = false);
-vec3f eval_image(const image<vec3f>& img, const vec2f& uv,
-    bool no_interpolation = false, bool clamp_to_edge = false);
-vec3f eval_image(const image<vec3b>& img, const vec2f& uv,
-    bool as_linear = false, bool no_interpolation = false,
-    bool clamp_to_edge = false);
-
-}  // namespace yocto
-
-// -----------------------------------------------------------------------------
 // IMAGE UTILITIES
 // -----------------------------------------------------------------------------
 namespace yocto {

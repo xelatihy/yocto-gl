@@ -87,7 +87,7 @@ struct sculpt_params {
   vector<int>     symmetric_stroke_sampling = {};
   geodesic_solver solver                    = {};
   vector<vec2f>   coords                    = {};
-  image<vec3f>    tex_image                 = {};
+  image_data      tex_image                 = {};
   vector<vec3f>   old_positions             = {};
   vector<vec3f>   old_normals               = {};
 };
@@ -228,17 +228,9 @@ void init_sculpt_tool(sculpt_params *params, shape_data *shape,
 
   // init texture
   if (texture_name != "") {
-    auto   img = image_data{};
     string ioerror;
-    if (!load_image(texture_name, img, ioerror)) print_fatal(ioerror);
-    params->tex_image.resize({img.width, img.height});
-    for (auto idx = 0; idx < params->tex_image.count(); idx++) {
-      if (!img.pixelsf.empty()) {
-        params->tex_image[idx] = xyz(img.pixelsf[idx]);
-      } else {
-        params->tex_image[idx] = xyz(byte_to_float(img.pixelsb[idx]));
-      }
-    }
+    if (!load_image(texture_name, params->tex_image, ioerror))
+      print_fatal(ioerror);
   }
 }
 
@@ -453,11 +445,11 @@ void brush(sculpt_params *params, shade_shape &glshape,
 }
 
 // Compute texture values through the parameterization
-void texture_brush(vector<int> &vertices, image<vec3f> &texture,
+void texture_brush(vector<int> &vertices, image_data &texture,
     vector<vec2f> &coords, sculpt_params *params, shade_shape &glshape,
     vector<vec3f> positions, vector<vec3f> normals) {
   if (vertices.empty()) return;
-  if (texture.empty()) return;
+  if (texture.pixelsf.empty() && texture.pixelsb.empty()) return;
 
   auto scale_factor = 3.5f / params->radius;
   auto max_height   = gaussian_distribution(
