@@ -235,7 +235,7 @@ void init_sculpt_tool(sculpt_params *params, shape_data *shape,
   }
 }
 
-lines_shape make_circle(vec3f center, mat3f basis, float radius, int steps) {
+shape_data make_circle(vec3f center, mat3f basis, float radius, int steps) {
   // 4 initial vertices
   auto  lines    = make_lines({1, 4});
   vec3f next_dir = basis.x;

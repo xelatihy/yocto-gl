@@ -61,6 +61,698 @@ using namespace std::string_literals;
 }  // namespace yocto
 
 // -----------------------------------------------------------------------------
+// SHAPE IO
+// -----------------------------------------------------------------------------
+namespace yocto {
+
+// Load ply mesh
+bool load_shape(const string& filename, shape_data& shape, string& error,
+    bool flip_texcoord) {
+  auto format_error = [filename, &error]() {
+    error = filename + ": unknown format";
+    return false;
+  };
+  auto shape_error = [filename, &error]() {
+    error = filename + ": empty shape";
+    return false;
+  };
+  auto preset_error = [filename, &error]() {
+    error = filename + ": " + error;
+    return false;
+  };
+
+  shape = {};
+
+  auto ext = path_extension(filename);
+  if (ext == ".ply" || ext == ".PLY") {
+    auto ply = ply_model{};
+    if (!load_ply(filename, ply, error)) return false;
+    get_positions(ply, shape.positions);
+    get_normals(ply, shape.normals);
+    get_texcoords(ply, shape.texcoords, flip_texcoord);
+    get_colors(ply, shape.colors);
+    get_radius(ply, shape.radius);
+    get_faces(ply, shape.triangles, shape.quads);
+    get_lines(ply, shape.lines);
+    get_points(ply, shape.points);
+    if (shape.points.empty() && shape.lines.empty() &&
+        shape.triangles.empty() && shape.quads.empty())
+      return shape_error();
+    return true;
+  } else if (ext == ".obj" || ext == ".OBJ") {
+    auto obj = obj_shape{};
+    if (!load_obj(filename, obj, error, true)) return false;
+    auto materials = vector<int>{};
+    get_positions(obj, shape.positions);
+    get_normals(obj, shape.normals);
+    get_texcoords(obj, shape.texcoords, flip_texcoord);
+    get_faces(obj, shape.triangles, shape.quads, materials);
+    get_lines(obj, shape.lines, materials);
+    get_points(obj, shape.points, materials);
+    if (shape.points.empty() && shape.lines.empty() &&
+        shape.triangles.empty() && shape.quads.empty())
+      return shape_error();
+    return true;
+  } else if (ext == ".stl" || ext == ".STL") {
+    auto stl = stl_model{};
+    if (!load_stl(filename, stl, error, true)) return false;
+    if (stl.shapes.size() != 1) return shape_error();
+    auto fnormals = vector<vec3f>{};
+    if (!get_triangles(stl, 0, shape.triangles, shape.positions, fnormals))
+      return shape_error();
+    return true;
+  } else if (ext == ".ypreset" || ext == ".YPRESET") {
+    // create preset
+    if (!make_shape_preset(shape, path_basename(filename), error))
+      return preset_error();
+    return true;
+  } else {
+    return format_error();
+  }
+}
+
+// Save ply mesh
+bool save_shape(const string& filename, const shape_data& shape, string& error,
+    bool flip_texcoord, bool ascii) {
+  auto format_error = [filename, &error]() {
+    error = filename + ": unknown format";
+    return false;
+  };
+  auto shape_error = [filename, &error]() {
+    error = filename + ": empty shape";
+    return false;
+  };
+  auto line_error = [filename, &error]() {
+    error = filename + ": unsupported lines";
+    return false;
+  };
+  auto point_error = [filename, &error]() {
+    error = filename + ": unsupported points";
+    return false;
+  };
+
+  auto ext = path_extension(filename);
+  if (ext == ".ply" || ext == ".PLY") {
+    auto ply = ply_model{};
+    add_positions(ply, shape.positions);
+    add_normals(ply, shape.normals);
+    add_texcoords(ply, shape.texcoords, flip_texcoord);
+    add_colors(ply, shape.colors);
+    add_radius(ply, shape.radius);
+    add_faces(ply, shape.triangles, shape.quads);
+    add_lines(ply, shape.lines);
+    add_points(ply, shape.points);
+    return save_ply(filename, ply, error);
+  } else if (ext == ".obj" || ext == ".OBJ") {
+    auto obj = obj_shape{};
+    add_positions(obj, shape.positions);
+    add_normals(obj, shape.normals);
+    add_texcoords(obj, shape.texcoords, flip_texcoord);
+    add_triangles(obj, shape.triangles, 0, !shape.normals.empty(),
+        !shape.texcoords.empty());
+    add_quads(
+        obj, shape.quads, 0, !shape.normals.empty(), !shape.texcoords.empty());
+    add_lines(
+        obj, shape.lines, 0, !shape.normals.empty(), !shape.texcoords.empty());
+    add_points(
+        obj, shape.points, 0, !shape.normals.empty(), !shape.texcoords.empty());
+    return save_obj(filename, obj, error);
+  } else if (ext == ".stl" || ext == ".STL") {
+    auto stl = stl_model{};
+    if (!shape.lines.empty()) return line_error();
+    if (!shape.points.empty()) return point_error();
+    if (!shape.triangles.empty()) {
+      add_triangles(stl, shape.triangles, shape.positions, {});
+    } else if (!shape.quads.empty()) {
+      add_triangles(stl, quads_to_triangles(shape.quads), shape.positions, {});
+    } else {
+      return shape_error();
+    }
+    return save_stl(filename, stl, error);
+  } else if (ext == ".cpp" || ext == ".CPP") {
+    auto to_cpp = [](const string& name, const string& vname,
+                      const auto& values) -> string {
+      using T = typename std::remove_const_t<
+          std::remove_reference_t<decltype(values)>>::value_type;
+      if (values.empty()) return ""s;
+      auto str = "auto " + name + "_" + vname + " = ";
+      if constexpr (std::is_same_v<int, T>) str += "vector<int>{\n";
+      if constexpr (std::is_same_v<float, T>) str += "vector<float>{\n";
+      if constexpr (std::is_same_v<vec2i, T>) str += "vector<vec2i>{\n";
+      if constexpr (std::is_same_v<vec2f, T>) str += "vector<vec2f>{\n";
+      if constexpr (std::is_same_v<vec3i, T>) str += "vector<vec3i>{\n";
+      if constexpr (std::is_same_v<vec3f, T>) str += "vector<vec3f>{\n";
+      if constexpr (std::is_same_v<vec4i, T>) str += "vector<vec4i>{\n";
+      if constexpr (std::is_same_v<vec4f, T>) str += "vector<vec4f>{\n";
+      for (auto& value : values) {
+        if constexpr (std::is_same_v<int, T> || std::is_same_v<float, T>) {
+          str += std::to_string(value) + ",\n";
+        } else if constexpr (std::is_same_v<vec2i, T> ||
+                             std::is_same_v<vec2f, T>) {
+          str += "{" + std::to_string(value.x) + "," + std::to_string(value.y) +
+                 "},\n";
+        } else if constexpr (std::is_same_v<vec3i, T> ||
+                             std::is_same_v<vec3f, T>) {
+          str += "{" + std::to_string(value.x) + "," + std::to_string(value.y) +
+                 "," + std::to_string(value.z) + "},\n";
+        } else if constexpr (std::is_same_v<vec4i, T> ||
+                             std::is_same_v<vec4f, T>) {
+          str += "{" + std::to_string(value.x) + "," + std::to_string(value.y) +
+                 "," + std::to_string(value.z) + "," + std::to_string(value.w) +
+                 "},\n";
+        } else {
+          throw std::invalid_argument{"cannot print this"};
+        }
+      }
+      str += "};\n\n";
+      return str;
+    };
+
+    auto name = string{"shape"};
+    auto str  = ""s;
+    str += to_cpp(name, "positions", shape.positions);
+    str += to_cpp(name, "normals", shape.normals);
+    str += to_cpp(name, "texcoords", shape.texcoords);
+    str += to_cpp(name, "colors", shape.colors);
+    str += to_cpp(name, "radius", shape.radius);
+    str += to_cpp(name, "points", shape.points);
+    str += to_cpp(name, "lines", shape.lines);
+    str += to_cpp(name, "triangles", shape.triangles);
+    str += to_cpp(name, "quads", shape.quads);
+    return save_text(filename, str, error);
+  } else {
+    return format_error();
+  }
+}
+
+// Load ply mesh
+bool load_fvshape(const string& filename, fvshape_data& shape, string& error,
+    bool flip_texcoord) {
+  auto format_error = [filename, &error]() {
+    error = filename + ": unknown format";
+    return false;
+  };
+  auto shape_error = [filename, &error]() {
+    error = filename + ": empty shape";
+    return false;
+  };
+  auto preset_error = [filename, &error]() {
+    error = filename + ": " + error;
+    return false;
+  };
+
+  shape = {};
+
+  auto ext = path_extension(filename);
+  if (ext == ".ply" || ext == ".PLY") {
+    auto ply = ply_model{};
+    if (!load_ply(filename, ply, error)) return false;
+    get_positions(ply, shape.positions);
+    get_normals(ply, shape.normals);
+    get_texcoords(ply, shape.texcoords, flip_texcoord);
+    get_quads(ply, shape.quadspos);
+    if (!shape.normals.empty()) shape.quadsnorm = shape.quadspos;
+    if (!shape.texcoords.empty()) shape.quadstexcoord = shape.quadspos;
+    if (shape.quadspos.empty()) return shape_error();
+    return true;
+  } else if (ext == ".obj" || ext == ".OBJ") {
+    auto obj = obj_shape{};
+    if (!load_obj(filename, obj, error, true)) return false;
+    auto materials = vector<int>{};
+    get_positions(obj, shape.positions);
+    get_normals(obj, shape.normals);
+    get_texcoords(obj, shape.texcoords, flip_texcoord);
+    get_fvquads(
+        obj, shape.quadspos, shape.quadsnorm, shape.quadstexcoord, materials);
+    if (shape.quadspos.empty()) return shape_error();
+    return true;
+  } else if (ext == ".stl" || ext == ".STL") {
+    auto stl = stl_model{};
+    if (!load_stl(filename, stl, error, true)) return false;
+    if (stl.shapes.empty()) return shape_error();
+    if (stl.shapes.size() > 1) return shape_error();
+    auto fnormals  = vector<vec3f>{};
+    auto triangles = vector<vec3i>{};
+    if (!get_triangles(stl, 0, triangles, shape.positions, fnormals))
+      return shape_error();
+    shape.quadspos = triangles_to_quads(triangles);
+    return true;
+  } else if (ext == ".ypreset" || ext == ".YPRESET") {
+    // create preset
+    if (!make_fvshape_preset(shape, path_basename(filename), error))
+      return preset_error();
+    return true;
+  } else {
+    return format_error();
+  }
+}
+
+// Save ply mesh
+bool save_fvshape(const string& filename, const fvshape_data& shape,
+    string& error, bool flip_texcoord, bool ascii) {
+  auto format_error = [filename, &error]() {
+    error = filename + ": unknown format";
+    return false;
+  };
+  auto shape_error = [filename, &error]() {
+    error = filename + ": empty shape";
+    return false;
+  };
+
+  auto ext = path_extension(filename);
+  if (ext == ".ply" || ext == ".PLY") {
+    auto ply = ply_model{};
+    auto [split_quads, split_positions, split_normals, split_texcoords] =
+        split_facevarying(shape.quadspos, shape.quadsnorm, shape.quadstexcoord,
+            shape.positions, shape.normals, shape.texcoords);
+    add_positions(ply, split_positions);
+    add_normals(ply, split_normals);
+    add_texcoords(ply, split_texcoords, flip_texcoord);
+    add_faces(ply, {}, split_quads);
+    return save_ply(filename, ply, error);
+  } else if (ext == ".obj" || ext == ".OBJ") {
+    auto obj = obj_shape{};
+    add_positions(obj, shape.positions);
+    add_normals(obj, shape.positions);
+    add_texcoords(obj, shape.texcoords, flip_texcoord);
+    add_fvquads(obj, shape.quadspos, shape.quadsnorm, shape.quadstexcoord, 0);
+    return save_obj(filename, obj, error);
+  } else if (ext == ".stl" || ext == ".STL") {
+    auto stl = stl_model{};
+    if (!shape.quadspos.empty()) {
+      auto [split_quads, split_positions, split_normals,
+          split_texcoords] = split_facevarying(shape.quadspos, shape.quadsnorm,
+          shape.quadstexcoord, shape.positions, shape.normals, shape.texcoords);
+      add_triangles(stl, quads_to_triangles(split_quads), split_positions, {});
+    } else {
+      return shape_error();
+    }
+    return save_stl(filename, stl, error);
+  } else if (ext == ".cpp" || ext == ".CPP") {
+    auto to_cpp = [](const string& name, const string& vname,
+                      const auto& values) -> string {
+      using T = typename std::remove_const_t<
+          std::remove_reference_t<decltype(values)>>::value_type;
+      if (values.empty()) return ""s;
+      auto str = "auto " + name + "_" + vname + " = ";
+      if constexpr (std::is_same_v<int, T>) str += "vector<int>{\n";
+      if constexpr (std::is_same_v<float, T>) str += "vector<float>{\n";
+      if constexpr (std::is_same_v<vec2i, T>) str += "vector<vec2i>{\n";
+      if constexpr (std::is_same_v<vec2f, T>) str += "vector<vec2f>{\n";
+      if constexpr (std::is_same_v<vec3i, T>) str += "vector<vec3i>{\n";
+      if constexpr (std::is_same_v<vec3f, T>) str += "vector<vec3f>{\n";
+      if constexpr (std::is_same_v<vec4i, T>) str += "vector<vec4i>{\n";
+      if constexpr (std::is_same_v<vec4f, T>) str += "vector<vec4f>{\n";
+      for (auto& value : values) {
+        if constexpr (std::is_same_v<int, T> || std::is_same_v<float, T>) {
+          str += std::to_string(value) + ",\n";
+        } else if constexpr (std::is_same_v<vec2i, T> ||
+                             std::is_same_v<vec2f, T>) {
+          str += "{" + std::to_string(value.x) + "," + std::to_string(value.y) +
+                 "},\n";
+        } else if constexpr (std::is_same_v<vec3i, T> ||
+                             std::is_same_v<vec3f, T>) {
+          str += "{" + std::to_string(value.x) + "," + std::to_string(value.y) +
+                 "," + std::to_string(value.z) + "},\n";
+        } else if constexpr (std::is_same_v<vec4i, T> ||
+                             std::is_same_v<vec4f, T>) {
+          str += "{" + std::to_string(value.x) + "," + std::to_string(value.y) +
+                 "," + std::to_string(value.z) + "," + std::to_string(value.w) +
+                 "},\n";
+        } else {
+          throw std::invalid_argument{"cannot print this"};
+        }
+      }
+      str += "};\n\n";
+      return str;
+    };
+    auto name = string{"shape"};
+    auto str  = ""s;
+    str += to_cpp(name, "positions", shape.positions);
+    str += to_cpp(name, "normals", shape.normals);
+    str += to_cpp(name, "texcoords", shape.texcoords);
+    str += to_cpp(name, "quadspos", shape.quadspos);
+    str += to_cpp(name, "quadsnorm", shape.quadsnorm);
+    str += to_cpp(name, "quadstexcoord", shape.quadstexcoord);
+    return save_text(filename, str, error);
+  } else {
+    return format_error();
+  }
+}
+
+// Shape presets used ofr testing.
+bool make_shape_preset(shape_data& shape, const string& type, string& error) {
+  auto set_quads = [&](shape_data&& shape_) {
+    shape.quads     = shape_.quads;
+    shape.positions = shape_.positions;
+    shape.normals   = shape_.normals;
+    shape.texcoords = shape_.texcoords;
+  };
+  auto set_triangles = [&](shape_data&& shape_) {
+    shape.triangles = shape_.triangles;
+    shape.positions = shape_.positions;
+    shape.normals   = shape_.normals;
+    shape.texcoords = shape_.texcoords;
+  };
+  auto set_lines = [&](shape_data&& shape_) {
+    shape.lines     = shape_.lines;
+    shape.positions = shape_.positions;
+    shape.normals   = shape_.normals;
+    shape.texcoords = shape_.texcoords;
+    shape.radius    = shape_.radius;
+  };
+  auto set_points = [&](shape_data&& shape_) {
+    shape.points    = shape_.points;
+    shape.positions = shape_.positions;
+    shape.normals   = shape_.normals;
+    shape.texcoords = shape_.texcoords;
+    shape.radius    = shape_.radius;
+  };
+  auto set_fvquads = [&](fvshape_data&& shape_) {
+    shape.quads     = shape_.quadspos;
+    shape.positions = shape_.positions;
+    shape.normals   = shape_.normals;
+    shape.texcoords = shape_.texcoords;
+  };
+
+  if (type == "default-quad") {
+    set_quads(make_rect());
+  } else if (type == "default-quady") {
+    set_quads(make_recty());
+  } else if (type == "default-cube") {
+    set_quads(make_box());
+  } else if (type == "default-cube-rounded") {
+    set_quads(make_rounded_box());
+  } else if (type == "default-sphere") {
+    set_quads(make_sphere());
+  } else if (type == "default-disk") {
+    set_quads(make_disk());
+  } else if (type == "default-disk-bulged") {
+    set_quads(make_bulged_disk());
+  } else if (type == "default-quad-bulged") {
+    set_quads(make_bulged_rect());
+  } else if (type == "default-uvsphere") {
+    set_quads(make_uvsphere());
+  } else if (type == "default-uvsphere-flipcap") {
+    set_quads(make_capped_uvsphere());
+  } else if (type == "default-uvdisk") {
+    set_quads(make_uvdisk());
+  } else if (type == "default-uvcylinder") {
+    set_quads(make_uvcylinder());
+  } else if (type == "default-uvcylinder-rounded") {
+    set_quads(make_rounded_uvcylinder({32, 32, 32}));
+  } else if (type == "default-geosphere") {
+    set_triangles(make_geosphere());
+  } else if (type == "default-floor") {
+    set_quads(make_floor());
+  } else if (type == "default-floor-bent") {
+    set_quads(make_bent_floor());
+  } else if (type == "default-matball") {
+    set_quads(make_sphere());
+  } else if (type == "default-hairball") {
+    auto base = make_sphere(pow2(5), 0.8);
+    set_lines(make_hair(base, {4, 65536}, {0.2, 0.2}, {0.002, 0.001}));
+  } else if (type == "default-hairball-interior") {
+    set_quads(make_sphere(pow2(5), 0.8));
+  } else if (type == "default-suzanne") {
+    set_quads(make_monkey());
+  } else if (type == "default-cube-facevarying") {
+    set_fvquads(make_fvbox());
+  } else if (type == "default-sphere-facevarying") {
+    set_fvquads(make_fvsphere());
+  } else if (type == "default-quady-displaced") {
+    set_quads(make_recty({256, 256}));
+  } else if (type == "default-sphere-displaced") {
+    set_quads(make_sphere(128));
+  } else if (type == "test-cube") {
+    set_quads(make_rounded_box(
+        {32, 32, 32}, {0.075f, 0.075f, 0.075f}, {1, 1, 1}, 0.3 * 0.075f));
+    for (auto& p : shape.positions) p += {0, 0.075, 0};
+  } else if (type == "test-uvsphere") {
+    set_quads(make_uvsphere({32, 32}, 0.075));
+    for (auto& p : shape.positions) p += {0, 0.075, 0};
+  } else if (type == "test-uvsphere-flipcap") {
+    set_quads(make_capped_uvsphere({32, 32}, 0.075, {1, 1}, 0.3 * 0.075));
+    for (auto& p : shape.positions) p += {0, 0.075, 0};
+  } else if (type == "test-sphere") {
+    set_quads(make_sphere(32, 0.075f, 1));
+    for (auto& p : shape.positions) p += {0, 0.075, 0};
+  } else if (type == "test-sphere-displaced") {
+    set_quads(make_sphere(128, 0.075f, 1));
+    for (auto& p : shape.positions) p += {0, 0.075, 0};
+  } else if (type == "test-disk") {
+    set_quads(make_disk(32, 0.075f, 1));
+    for (auto& p : shape.positions) p += {0, 0.075, 0};
+  } else if (type == "test-uvcylinder") {
+    set_quads(make_rounded_uvcylinder(
+        {32, 32, 32}, {0.075, 0.075}, {1, 1, 1}, 0.3 * 0.075));
+    for (auto& p : shape.positions) p += {0, 0.075, 0};
+  } else if (type == "test-floor") {
+    set_quads(make_floor({1, 1}, {2, 2}, {20, 20}));
+  } else if (type == "test-quad") {
+    set_quads(make_rect({1, 1}, {0.075, 0.075}, {1, 1}));
+  } else if (type == "test-quady") {
+    set_quads(make_recty({1, 1}, {0.075, 0.075}, {1, 1}));
+  } else if (type == "test-quad-displaced") {
+    set_quads(make_rect({256, 256}, {0.075, 0.075}, {1, 1}));
+  } else if (type == "test-quady-displaced") {
+    set_quads(make_recty({256, 256}, {0.075, 0.075}, {1, 1}));
+  } else if (type == "test-matball") {
+    set_quads(make_sphere(32, 0.075));
+    for (auto& p : shape.positions) p += {0, 0.075, 0};
+  } else if (type == "test-hairball1") {
+    auto base = make_sphere(32, 0.075f * 0.8f, 1);
+    for (auto& p : base.positions) p += {0, 0.075, 0};
+    set_lines(make_hair(base, {4, 65536}, {0.1f * 0.15f, 0.1f * 0.15f},
+        {0.001f * 0.15f, 0.0005f * 0.15f}, {0.03, 100}));
+  } else if (type == "test-hairball2") {
+    auto base = make_sphere(32, 0.075f * 0.8f, 1);
+    for (auto& p : base.positions) p += {0, 0.075, 0};
+    set_lines(make_hair(base, {4, 65536}, {0.1f * 0.15f, 0.1f * 0.15f},
+        {0.001f * 0.15f, 0.0005f * 0.15f}));
+  } else if (type == "test-hairball3") {
+    auto base = make_sphere(32, 0.075f * 0.8f, 1);
+    for (auto& p : base.positions) p += {0, 0.075, 0};
+    set_lines(make_hair(base, {4, 65536}, {0.1f * 0.15f, 0.1f * 0.15f},
+        {0.001f * 0.15f, 0.0005f * 0.15f}, {0, 0}, {0.5, 128}));
+  } else if (type == "test-hairball-interior") {
+    set_quads(make_sphere(32, 0.075f * 0.8f, 1));
+    for (auto& p : shape.positions) p += {0, 0.075, 0};
+  } else if (type == "test-suzanne-subdiv") {
+    set_quads(make_monkey(0.075f * 0.8f));
+    for (auto& p : shape.positions) p += {0, 0.075, 0};
+  } else if (type == "test-cube-subdiv") {
+    // set_quads(make_cube( 0.075f);
+    set_fvquads(make_fvcube(0.075f));
+    // make_fvbox(quadspos, quadsnorm, quadstexcoord, positions, normals,
+    //      texcoords, {1, 1, 1}, {0.075f, 0.075f, 0.075f});
+    for (auto& p : shape.positions) p += {0, 0.075, 0};
+  } else if (type == "test-arealight1") {
+    set_quads(make_rect({1, 1}, {0.2, 0.2}));
+  } else if (type == "test-arealight2") {
+    set_quads(make_rect({1, 1}, {0.2, 0.2}));
+  } else if (type == "test-largearealight1") {
+    set_quads(make_rect({1, 1}, {0.4, 0.4}));
+  } else if (type == "test-largearealight2") {
+    set_quads(make_rect({1, 1}, {0.4, 0.4}));
+  } else if (type == "test-pointlight1") {
+    set_points(make_point(0));
+  } else if (type == "test-pointlight2") {
+    set_points(make_point(0));
+  } else if (type == "test-point") {
+    set_points(make_points(1));
+  } else if (type == "test-points") {
+    set_points(make_points(4096));
+  } else if (type == "test-points-random") {
+    set_points(make_random_points(4096, {0.2, 0.2, 0.2}));
+  } else if (type == "test-particles") {
+    set_points(make_points(4096));
+  } else if (type == "test-cloth") {
+    set_quads(make_rect({64, 64}, {0.2, 0.2}));
+  } else if (type == "test-clothy") {
+    set_quads(make_recty({64, 64}, {0.2, 0.2}));
+  } else {
+    error = "unknown preset";
+    return false;
+  }
+  return true;
+}
+
+// Shape presets used for testing.
+bool make_fvshape_preset(
+    fvshape_data& shape, const string& type, string& error) {
+  auto set_quads = [&](shape_data&& shape_) {
+    shape.quadspos  = shape_.quads;
+    shape.positions = shape_.positions;
+    if (!shape_.normals.empty()) shape.quadsnorm = shape_.quads;
+    shape.normals = shape_.normals;
+    if (!shape_.texcoords.empty()) shape.quadstexcoord = shape_.quads;
+    shape.texcoords = shape_.texcoords;
+  };
+  auto set_triangles = [&](shape_data&& shape) {
+    throw std::invalid_argument{"bad shape type"};
+  };
+  auto set_lines = [&](shape_data&& shape) {
+    throw std::invalid_argument{"bad shape type"};
+  };
+  auto set_points = [&](shape_data&& shape) {
+    throw std::invalid_argument{"bad shape type"};
+  };
+  auto set_fvquads = [&](fvshape_data&& shape_) {
+    shape.quadspos      = shape_.quadspos;
+    shape.quadsnorm     = shape_.quadsnorm;
+    shape.quadstexcoord = shape_.quadstexcoord;
+    shape.positions     = shape_.positions;
+    shape.normals       = shape_.normals;
+    shape.texcoords     = shape_.texcoords;
+  };
+
+  if (type == "default-quad") {
+    set_quads(make_rect());
+  } else if (type == "default-quady") {
+    set_quads(make_recty());
+  } else if (type == "default-cube") {
+    set_quads(make_box());
+  } else if (type == "default-cube-rounded") {
+    set_quads(make_rounded_box());
+  } else if (type == "default-sphere") {
+    set_quads(make_sphere());
+  } else if (type == "default-disk") {
+    set_quads(make_disk());
+  } else if (type == "default-disk-bulged") {
+    set_quads(make_bulged_disk());
+  } else if (type == "default-quad-bulged") {
+    set_quads(make_bulged_rect());
+  } else if (type == "default-uvsphere") {
+    set_quads(make_uvsphere());
+  } else if (type == "default-uvsphere-flipcap") {
+    set_quads(make_capped_uvsphere());
+  } else if (type == "default-uvdisk") {
+    set_quads(make_uvdisk());
+  } else if (type == "default-uvcylinder") {
+    set_quads(make_uvcylinder());
+  } else if (type == "default-uvcylinder-rounded") {
+    set_quads(make_rounded_uvcylinder({32, 32, 32}));
+  } else if (type == "default-geosphere") {
+    set_triangles(make_geosphere());
+  } else if (type == "default-floor") {
+    set_quads(make_floor());
+  } else if (type == "default-floor-bent") {
+    set_quads(make_bent_floor());
+  } else if (type == "default-matball") {
+    set_quads(make_sphere());
+  } else if (type == "default-hairball") {
+    auto base = make_sphere(pow2(5), 0.8);
+    set_lines(make_hair(base, {4, 65536}, {0.2, 0.2}, {0.002, 0.001}));
+  } else if (type == "default-hairball-interior") {
+    set_quads(make_sphere(pow2(5), 0.8));
+  } else if (type == "default-suzanne") {
+    set_quads(make_monkey());
+  } else if (type == "default-cube-facevarying") {
+    set_fvquads(make_fvbox());
+  } else if (type == "default-sphere-facevarying") {
+    set_fvquads(make_fvsphere());
+  } else if (type == "default-quady-displaced") {
+    set_quads(make_recty({256, 256}));
+  } else if (type == "default-sphere-displaced") {
+    set_quads(make_sphere(128));
+  } else if (type == "test-cube") {
+    set_quads(make_rounded_box(
+        {32, 32, 32}, {0.075f, 0.075f, 0.075f}, {1, 1, 1}, 0.3 * 0.075f));
+    for (auto& p : shape.positions) p += {0, 0.075, 0};
+  } else if (type == "test-uvsphere") {
+    set_quads(make_uvsphere({32, 32}, 0.075));
+    for (auto& p : shape.positions) p += {0, 0.075, 0};
+  } else if (type == "test-uvsphere-flipcap") {
+    set_quads(make_capped_uvsphere({32, 32}, 0.075, {1, 1}, 0.3 * 0.075));
+    for (auto& p : shape.positions) p += {0, 0.075, 0};
+  } else if (type == "test-sphere") {
+    set_quads(make_sphere(32, 0.075f, 1));
+    for (auto& p : shape.positions) p += {0, 0.075, 0};
+  } else if (type == "test-sphere-displaced") {
+    set_quads(make_sphere(128, 0.075f, 1));
+    for (auto& p : shape.positions) p += {0, 0.075, 0};
+  } else if (type == "test-disk") {
+    set_quads(make_disk(32, 0.075f, 1));
+    for (auto& p : shape.positions) p += {0, 0.075, 0};
+  } else if (type == "test-uvcylinder") {
+    set_quads(make_rounded_uvcylinder(
+        {32, 32, 32}, {0.075, 0.075}, {1, 1, 1}, 0.3 * 0.075));
+    for (auto& p : shape.positions) p += {0, 0.075, 0};
+  } else if (type == "test-floor") {
+    set_quads(make_floor({1, 1}, {2, 2}, {20, 20}));
+  } else if (type == "test-quad") {
+    set_quads(make_rect({1, 1}, {0.075, 0.075}, {1, 1}));
+  } else if (type == "test-quady") {
+    set_quads(make_recty({1, 1}, {0.075, 0.075}, {1, 1}));
+  } else if (type == "test-quad-displaced") {
+    set_quads(make_rect({256, 256}, {0.075, 0.075}, {1, 1}));
+  } else if (type == "test-quady-displaced") {
+    set_quads(make_recty({256, 256}, {0.075, 0.075}, {1, 1}));
+  } else if (type == "test-matball") {
+    set_quads(make_sphere(32, 0.075));
+    for (auto& p : shape.positions) p += {0, 0.075, 0};
+  } else if (type == "test-hairball1") {
+    auto base = make_sphere(32, 0.075f * 0.8f, 1);
+    for (auto& p : base.positions) p += {0, 0.075, 0};
+    set_lines(make_hair(base, {4, 65536}, {0.1f * 0.15f, 0.1f * 0.15f},
+        {0.001f * 0.15f, 0.0005f * 0.15f}, {0.03, 100}));
+  } else if (type == "test-hairball2") {
+    auto base = make_sphere(32, 0.075f * 0.8f, 1);
+    for (auto& p : base.positions) p += {0, 0.075, 0};
+    set_lines(make_hair(base, {4, 65536}, {0.1f * 0.15f, 0.1f * 0.15f},
+        {0.001f * 0.15f, 0.0005f * 0.15f}));
+  } else if (type == "test-hairball3") {
+    auto base = make_sphere(32, 0.075f * 0.8f, 1);
+    for (auto& p : base.positions) p += {0, 0.075, 0};
+    set_lines(make_hair(base, {4, 65536}, {0.1f * 0.15f, 0.1f * 0.15f},
+        {0.001f * 0.15f, 0.0005f * 0.15f}, {0, 0}, {0.5, 128}));
+  } else if (type == "test-hairball-interior") {
+    set_quads(make_sphere(32, 0.075f * 0.8f, 1));
+    for (auto& p : shape.positions) p += {0, 0.075, 0};
+  } else if (type == "test-suzanne-subdiv") {
+    set_quads(make_monkey(0.075f * 0.8f));
+    for (auto& p : shape.positions) p += {0, 0.075, 0};
+  } else if (type == "test-cube-subdiv") {
+    // set_quads(make_cube( 0.075f);
+    set_fvquads(make_fvcube(0.075f));
+    // make_fvbox(quadspos, quadsnorm, quadstexcoord, positions, normals,
+    //      texcoords, {1, 1, 1}, {0.075f, 0.075f, 0.075f});
+    for (auto& p : shape.positions) p += {0, 0.075, 0};
+  } else if (type == "test-arealight1") {
+    set_quads(make_rect({1, 1}, {0.2, 0.2}));
+  } else if (type == "test-arealight2") {
+    set_quads(make_rect({1, 1}, {0.2, 0.2}));
+  } else if (type == "test-largearealight1") {
+    set_quads(make_rect({1, 1}, {0.4, 0.4}));
+  } else if (type == "test-largearealight2") {
+    set_quads(make_rect({1, 1}, {0.4, 0.4}));
+  } else if (type == "test-pointlight1") {
+    set_points(make_point(0));
+  } else if (type == "test-pointlight2") {
+    set_points(make_point(0));
+  } else if (type == "test-point") {
+    set_points(make_points(1));
+  } else if (type == "test-points") {
+    set_points(make_points(4096));
+  } else if (type == "test-points-random") {
+    set_points(make_random_points(4096, {0.2, 0.2, 0.2}));
+  } else if (type == "test-particles") {
+    set_points(make_points(4096));
+  } else if (type == "test-cloth") {
+    set_quads(make_rect({64, 64}, {0.2, 0.2}));
+  } else if (type == "test-clothy") {
+    set_quads(make_recty({64, 64}, {0.2, 0.2}));
+  } else {
+    error = "unknown preset";
+    return false;
+  }
+  return true;
+}
+
+}  // namespace yocto
+
+// -----------------------------------------------------------------------------
 // UTILITIES
 // -----------------------------------------------------------------------------
 namespace yocto {

@@ -60,7 +60,31 @@ using std::vector;
 }  // namespace yocto
 
 // -----------------------------------------------------------------------------
-// SCENE IO FUNCTIONS
+// SHAPE IO
+// -----------------------------------------------------------------------------
+namespace yocto {
+
+// Load/save a shape
+bool load_shape(const string& filename, shape_data& shape, string& error,
+    bool flip_texcoords = true);
+bool save_shape(const string& filename, const shape_data& shape, string& error,
+    bool flip_texcoords = true, bool ascii = false);
+
+// Load/save a subdiv
+bool load_fvshape(const string& filename, fvshape_data& shape, string& error,
+    bool flip_texcoords = true);
+bool save_fvshape(const string& filename, const fvshape_data& shape,
+    string& error, bool flip_texcoords = true, bool ascii = false);
+
+// Make presets. Supported mostly in IO.
+bool make_shape_preset(shape_data& shape, const string& type, string& error);
+bool make_fvshape_preset(
+    fvshape_data& shape, const string& type, string& error);
+
+}  // namespace yocto
+
+// -----------------------------------------------------------------------------
+// SCENE IO
 // -----------------------------------------------------------------------------
 namespace yocto {
 

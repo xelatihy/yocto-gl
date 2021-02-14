@@ -111,9 +111,9 @@ static frame3f camera_frame(float lens, float aspect, float film = 0.036) {
 }
 
 // Create a shape with small spheres for each point
-static quads_shape make_spheres(
+static shape_data make_spheres(
     const vector<vec3f>& positions, float radius, int steps) {
-  auto shape = quads_shape{};
+  auto shape = shape_data{};
   for (auto position : positions) {
     auto sphere = make_sphere(steps, radius);
     for (auto& p : sphere.positions) p += position;
@@ -122,9 +122,9 @@ static quads_shape make_spheres(
   }
   return shape;
 }
-static quads_shape make_cylinders(const vector<vec2i>& lines,
+static shape_data make_cylinders(const vector<vec2i>& lines,
     const vector<vec3f>& positions, float radius, const vec3i& steps) {
-  auto shape = quads_shape{};
+  auto shape = shape_data{};
   for (auto line : lines) {
     auto len      = length(positions[line.x] - positions[line.y]);
     auto dir      = normalize(positions[line.x] - positions[line.y]);

@@ -426,6 +426,475 @@ bool has_volume(const material_point& material) {
 }  // namespace yocto
 
 // -----------------------------------------------------------------------------
+// SHAPE PROPERTIES
+// -----------------------------------------------------------------------------
+namespace yocto {
+
+// Interpolate vertex data
+vec3f eval_position(const shape_data& shape, int element, const vec2f& uv) {
+  if (!shape.points.empty()) {
+    auto& point = shape.points[element];
+    return shape.positions[point];
+  } else if (!shape.lines.empty()) {
+    auto& line = shape.lines[element];
+    return interpolate_line(
+        shape.positions[line.x], shape.positions[line.y], uv.x);
+  } else if (!shape.triangles.empty()) {
+    auto& triangle = shape.triangles[element];
+    return interpolate_triangle(shape.positions[triangle.x],
+        shape.positions[triangle.y], shape.positions[triangle.z], uv);
+  } else if (!shape.quads.empty()) {
+    auto& quad = shape.quads[element];
+    return interpolate_quad(shape.positions[quad.x], shape.positions[quad.y],
+        shape.positions[quad.z], shape.positions[quad.w], uv);
+  } else {
+    return {0, 0, 0};
+  }
+}
+
+vec3f eval_normal(const shape_data& shape, int element, const vec2f& uv) {
+  if (shape.normals.empty()) return eval_element_normal(shape, element);
+  if (!shape.points.empty()) {
+    auto& point = shape.points[element];
+    return normalize(shape.normals[point]);
+  } else if (!shape.lines.empty()) {
+    auto& line = shape.lines[element];
+    return normalize(
+        interpolate_line(shape.normals[line.x], shape.normals[line.y], uv.x));
+  } else if (!shape.triangles.empty()) {
+    auto& triangle = shape.triangles[element];
+    return normalize(interpolate_triangle(shape.normals[triangle.x],
+        shape.normals[triangle.y], shape.normals[triangle.z], uv));
+  } else if (!shape.quads.empty()) {
+    auto& quad = shape.quads[element];
+    return normalize(
+        interpolate_quad(shape.normals[quad.x], shape.normals[quad.y],
+            shape.normals[quad.z], shape.normals[quad.w], uv));
+  } else {
+    return {0, 0, 1};
+  }
+}
+
+vec3f eval_tangent(const shape_data& shape, int element, const vec2f& uv) {
+  return eval_normal(shape, element, uv);
+}
+
+vec2f eval_texcoord(const shape_data& shape, int element, const vec2f& uv) {
+  if (shape.texcoords.empty()) return {0, 0};
+  if (!shape.points.empty()) {
+    auto& point = shape.points[element];
+    return shape.texcoords[point];
+  } else if (!shape.lines.empty()) {
+    auto& line = shape.lines[element];
+    return interpolate_line(
+        shape.texcoords[line.x], shape.texcoords[line.y], uv.x);
+  } else if (!shape.triangles.empty()) {
+    auto& triangle = shape.triangles[element];
+    return interpolate_triangle(shape.texcoords[triangle.x],
+        shape.texcoords[triangle.y], shape.texcoords[triangle.z], uv);
+  } else if (!shape.quads.empty()) {
+    auto& quad = shape.quads[element];
+    return interpolate_quad(shape.texcoords[quad.x], shape.texcoords[quad.y],
+        shape.texcoords[quad.z], shape.texcoords[quad.w], uv);
+  } else {
+    return {0, 0};
+  }
+}
+
+vec4f eval_color(const shape_data& shape, int element, const vec2f& uv) {
+  if (shape.colors.empty()) return {1, 1, 1, 1};
+  if (!shape.points.empty()) {
+    auto& point = shape.points[element];
+    return shape.colors[point];
+  } else if (!shape.lines.empty()) {
+    auto& line = shape.lines[element];
+    return interpolate_line(shape.colors[line.x], shape.colors[line.y], uv.x);
+  } else if (!shape.triangles.empty()) {
+    auto& triangle = shape.triangles[element];
+    return interpolate_triangle(shape.colors[triangle.x],
+        shape.colors[triangle.y], shape.colors[triangle.z], uv);
+  } else if (!shape.quads.empty()) {
+    auto& quad = shape.quads[element];
+    return interpolate_quad(shape.colors[quad.x], shape.colors[quad.y],
+        shape.colors[quad.z], shape.colors[quad.w], uv);
+  } else {
+    return {0, 0};
+  }
+}
+
+float eval_radius(const shape_data& shape, int element, const vec2f& uv) {
+  if (shape.radius.empty()) return 0;
+  if (!shape.points.empty()) {
+    auto& point = shape.points[element];
+    return shape.radius[point];
+  } else if (!shape.lines.empty()) {
+    auto& line = shape.lines[element];
+    return interpolate_line(shape.radius[line.x], shape.radius[line.y], uv.x);
+  } else if (!shape.triangles.empty()) {
+    auto& triangle = shape.triangles[element];
+    return interpolate_triangle(shape.radius[triangle.x],
+        shape.radius[triangle.y], shape.radius[triangle.z], uv);
+  } else if (!shape.quads.empty()) {
+    auto& quad = shape.quads[element];
+    return interpolate_quad(shape.radius[quad.x], shape.radius[quad.y],
+        shape.radius[quad.z], shape.radius[quad.w], uv);
+  } else {
+    return 0;
+  }
+}
+
+// Evaluate element normals
+vec3f eval_element_normal(const shape_data& shape, int element) {
+  if (!shape.points.empty()) {
+    return {0, 0, 1};
+  } else if (!shape.lines.empty()) {
+    auto& line = shape.lines[element];
+    return line_tangent(shape.positions[line.x], shape.positions[line.y]);
+  } else if (!shape.triangles.empty()) {
+    auto& triangle = shape.triangles[element];
+    return triangle_normal(shape.positions[triangle.x],
+        shape.positions[triangle.y], shape.positions[triangle.z]);
+  } else if (!shape.quads.empty()) {
+    auto& quad = shape.quads[element];
+    return quad_normal(shape.positions[quad.x], shape.positions[quad.y],
+        shape.positions[quad.z], shape.positions[quad.w]);
+  } else {
+    return {0, 0, 0};
+  }
+}
+
+// Compute per-vertex normals/tangents for lines/triangles/quads.
+vector<vec3f> compute_normals(const shape_data& shape) {
+  if (!shape.points.empty()) {
+    return vector<vec3f>(shape.positions.size(), {0, 0, 1});
+  } else if (!shape.lines.empty()) {
+    return lines_tangents(shape.lines, shape.positions);
+  } else if (!shape.triangles.empty()) {
+    return triangles_normals(shape.triangles, shape.positions);
+  } else if (!shape.quads.empty()) {
+    return quads_normals(shape.quads, shape.positions);
+  } else {
+    return vector<vec3f>(shape.positions.size(), {0, 0, 1});
+  }
+}
+void compute_normals(vector<vec3f>& normals, const shape_data& shape) {
+  if (!shape.points.empty()) {
+    normals.assign(shape.positions.size(), {0, 0, 1});
+  } else if (!shape.lines.empty()) {
+    lines_tangents(normals, shape.lines, shape.positions);
+  } else if (!shape.triangles.empty()) {
+    triangles_normals(normals, shape.triangles, shape.positions);
+  } else if (!shape.quads.empty()) {
+    quads_normals(normals, shape.quads, shape.positions);
+  } else {
+    normals.assign(shape.positions.size(), {0, 0, 1});
+  }
+}
+
+// Shape sampling
+vector<float> sample_shape_cdf(const shape_data& shape) {
+  if (!shape.points.empty()) {
+    return sample_points_cdf((int)shape.points.size());
+  } else if (!shape.lines.empty()) {
+    return sample_lines_cdf(shape.lines, shape.positions);
+  } else if (!shape.triangles.empty()) {
+    return sample_triangles_cdf(shape.triangles, shape.positions);
+  } else if (!shape.quads.empty()) {
+    return sample_quads_cdf(shape.quads, shape.positions);
+  } else {
+    return sample_points_cdf((int)shape.positions.size());
+  }
+}
+
+void sample_shape_cdf(vector<float>& cdf, const shape_data& shape) {
+  if (!shape.points.empty()) {
+    sample_points_cdf(cdf, (int)shape.points.size());
+  } else if (!shape.lines.empty()) {
+    sample_lines_cdf(cdf, shape.lines, shape.positions);
+  } else if (!shape.triangles.empty()) {
+    sample_triangles_cdf(cdf, shape.triangles, shape.positions);
+  } else if (!shape.quads.empty()) {
+    sample_quads_cdf(cdf, shape.quads, shape.positions);
+  } else {
+    sample_points_cdf(cdf, (int)shape.positions.size());
+  }
+}
+
+shape_point sample_shape(const shape_data& shape, const vector<float>& cdf,
+    float rn, const vec2f& ruv) {
+  if (!shape.points.empty()) {
+    auto element = sample_points(cdf, rn);
+    return {element, {0, 0}};
+  } else if (!shape.lines.empty()) {
+    auto [element, u] = sample_lines(cdf, rn, ruv.x);
+    return {element, {u, 0}};
+  } else if (!shape.triangles.empty()) {
+    auto [element, uv] = sample_triangles(cdf, rn, ruv);
+    return {element, uv};
+  } else if (!shape.quads.empty()) {
+    auto [element, uv] = sample_quads(cdf, rn, ruv);
+    return {element, uv};
+  } else {
+    auto element = sample_points(cdf, rn);
+    return {element, {0, 0}};
+  }
+}
+
+vector<shape_point> sample_shape(
+    const shape_data& shape, int num_samples, uint64_t seed) {
+  auto cdf    = sample_shape_cdf(shape);
+  auto points = vector<shape_point>(num_samples);
+  auto rng    = make_rng(seed);
+  for (auto& point : points) {
+    point = sample_shape(shape, cdf, rand1f(rng), rand2f(rng));
+  }
+  return points;
+}
+
+// Conversions
+shape_data quads_to_triangles(const shape_data& shape) {
+  auto result = shape;
+  quads_to_triangles(result, result);
+  return result;
+}
+void quads_to_triangles(shape_data& result, const shape_data& shape) {
+  result.triangles = quads_to_triangles(shape.quads);
+  result.quads     = {};
+}
+
+// Subdivision
+shape_data subdivide_shape(
+    const shape_data& shape, int subdivisions, bool catmullclark) {
+  // This should probably be reimplemented in a faster fashion,
+  // but how it is not obvious
+  auto subdivided = shape_data{};
+  if (!shape.points.empty()) {
+    // nothing to do
+  } else if (!shape.lines.empty()) {
+    std::tie(std::ignore, subdivided.normals) = subdivide_lines(
+        shape.lines, shape.normals, subdivisions);
+    std::tie(std::ignore, subdivided.texcoords) = subdivide_lines(
+        shape.lines, shape.texcoords, subdivisions);
+    std::tie(std::ignore, subdivided.colors) = subdivide_lines(
+        shape.lines, shape.colors, subdivisions);
+    std::tie(std::ignore, subdivided.radius) = subdivide_lines(
+        shape.lines, shape.radius, subdivisions);
+    std::tie(subdivided.lines, subdivided.positions) = subdivide_lines(
+        shape.lines, shape.positions, subdivisions);
+  } else if (!shape.triangles.empty()) {
+    std::tie(std::ignore, subdivided.normals) = subdivide_triangles(
+        shape.triangles, shape.normals, subdivisions);
+    std::tie(std::ignore, subdivided.texcoords) = subdivide_triangles(
+        shape.triangles, shape.texcoords, subdivisions);
+    std::tie(std::ignore, subdivided.colors) = subdivide_triangles(
+        shape.triangles, shape.colors, subdivisions);
+    std::tie(std::ignore, subdivided.radius) = subdivide_triangles(
+        shape.triangles, shape.radius, subdivisions);
+    std::tie(subdivided.triangles, subdivided.positions) = subdivide_triangles(
+        shape.triangles, shape.positions, subdivisions);
+  } else if (!shape.quads.empty() && !catmullclark) {
+    std::tie(std::ignore, subdivided.normals) = subdivide_quads(
+        shape.quads, shape.normals, subdivisions);
+    std::tie(std::ignore, subdivided.texcoords) = subdivide_quads(
+        shape.quads, shape.texcoords, subdivisions);
+    std::tie(std::ignore, subdivided.colors) = subdivide_quads(
+        shape.quads, shape.colors, subdivisions);
+    std::tie(std::ignore, subdivided.radius) = subdivide_quads(
+        shape.quads, shape.radius, subdivisions);
+    std::tie(subdivided.quads, subdivided.positions) = subdivide_quads(
+        shape.quads, shape.positions, subdivisions);
+  } else if (!shape.quads.empty() && catmullclark) {
+    std::tie(std::ignore, subdivided.normals) = subdivide_catmullclark(
+        shape.quads, shape.normals, subdivisions);
+    std::tie(std::ignore, subdivided.texcoords) = subdivide_catmullclark(
+        shape.quads, shape.texcoords, subdivisions);
+    std::tie(std::ignore, subdivided.colors) = subdivide_catmullclark(
+        shape.quads, shape.colors, subdivisions);
+    std::tie(std::ignore, subdivided.radius) = subdivide_catmullclark(
+        shape.quads, shape.radius, subdivisions);
+    std::tie(subdivided.quads, subdivided.positions) = subdivide_catmullclark(
+        shape.quads, shape.positions, subdivisions);
+  } else {
+    // empty shape
+  }
+  return subdivided;
+}
+
+// Interpolate vertex data
+vec3f eval_position(const fvshape_data& shape, int element, const vec2f& uv) {
+  if (!shape.quadspos.empty()) {
+    auto& quad = shape.quadspos[element];
+    return interpolate_quad(shape.positions[quad.x], shape.positions[quad.y],
+        shape.positions[quad.z], shape.positions[quad.w], uv);
+  } else {
+    return {0, 0, 0};
+  }
+}
+
+vec3f eval_normal(const fvshape_data& shape, int element, const vec2f& uv) {
+  if (shape.normals.empty()) return eval_element_normal(shape, element);
+  if (!shape.quadspos.empty()) {
+    auto& quad = shape.quadsnorm[element];
+    return normalize(
+        interpolate_quad(shape.normals[quad.x], shape.normals[quad.y],
+            shape.normals[quad.z], shape.normals[quad.w], uv));
+  } else {
+    return {0, 0, 1};
+  }
+}
+
+vec2f eval_texcoord(const fvshape_data& shape, int element, const vec2f& uv) {
+  if (shape.texcoords.empty()) return {0, 0};
+  if (!shape.quadspos.empty()) {
+    auto& quad = shape.quadstexcoord[element];
+    return interpolate_quad(shape.texcoords[quad.x], shape.texcoords[quad.y],
+        shape.texcoords[quad.z], shape.texcoords[quad.w], uv);
+  } else {
+    return {0, 0};
+  }
+}
+
+// Evaluate element normals
+vec3f eval_element_normal(const fvshape_data& shape, int element) {
+  if (!shape.quadspos.empty()) {
+    auto& quad = shape.quadspos[element];
+    return quad_normal(shape.positions[quad.x], shape.positions[quad.y],
+        shape.positions[quad.z], shape.positions[quad.w]);
+  } else {
+    return {0, 0, 0};
+  }
+}
+
+// Compute per-vertex normals/tangents for lines/triangles/quads.
+vector<vec3f> compute_normals(const fvshape_data& shape) {
+  if (!shape.quadspos.empty()) {
+    return quads_normals(shape.quadspos, shape.positions);
+  } else {
+    return vector<vec3f>(shape.positions.size(), {0, 0, 1});
+  }
+}
+void compute_normals(vector<vec3f>& normals, const fvshape_data& shape) {
+  if (!shape.quadspos.empty()) {
+    quads_normals(normals, shape.quadspos, shape.positions);
+  } else {
+    normals.assign(shape.positions.size(), {0, 0, 1});
+  }
+}
+
+// Conversions
+shape_data fvshape_to_shape(const fvshape_data& fvshape, bool as_triangles) {
+  auto shape = shape_data{};
+  split_facevarying(shape.quads, shape.positions, shape.normals,
+      shape.texcoords, fvshape.quadspos, fvshape.quadsnorm,
+      fvshape.quadstexcoord, fvshape.positions, fvshape.normals,
+      fvshape.texcoords);
+  return shape;
+}
+fvshape_data shape_to_fvshape(const shape_data& shape) {
+  if (!shape.points.empty() || !shape.lines.empty())
+    throw std::invalid_argument{"cannor convert shape"};
+  auto fvshape          = fvshape_data{};
+  fvshape.positions     = shape.positions;
+  fvshape.normals       = shape.normals;
+  fvshape.texcoords     = shape.texcoords;
+  fvshape.quadspos      = !shape.quads.empty() ? shape.quads
+                                               : triangles_to_quads(shape.triangles);
+  fvshape.quadsnorm     = !shape.normals.empty() ? fvshape.quadspos
+                                                 : vector<vec4i>{};
+  fvshape.quadstexcoord = !shape.texcoords.empty() ? fvshape.quadspos
+                                                   : vector<vec4i>{};
+  return fvshape;
+}
+
+// Subdivision
+fvshape_data subdivide_fvshape(
+    const fvshape_data& shape, int subdivisions, bool catmullclark) {
+  auto subdivided = fvshape_data{};
+  if (!catmullclark) {
+    std::tie(subdivided.quadspos, subdivided.positions) = subdivide_quads(
+        shape.quadspos, shape.positions, subdivisions);
+    std::tie(subdivided.quadsnorm, subdivided.normals) = subdivide_quads(
+        shape.quadsnorm, shape.normals, subdivisions);
+    std::tie(subdivided.quadstexcoord, subdivided.texcoords) = subdivide_quads(
+        shape.quadstexcoord, shape.texcoords, subdivisions);
+  } else {
+    std::tie(subdivided.quadspos, subdivided.positions) =
+        subdivide_catmullclark(shape.quadspos, shape.positions, subdivisions);
+    std::tie(subdivided.quadsnorm, subdivided.normals) = subdivide_catmullclark(
+        shape.quadsnorm, shape.normals, subdivisions);
+    std::tie(subdivided.quadstexcoord, subdivided.texcoords) =
+        subdivide_catmullclark(
+            shape.quadstexcoord, shape.texcoords, subdivisions, true);
+  }
+  return subdivided;
+}
+
+vector<string> shape_stats(const shape_data& shape, bool verbose) {
+  auto format = [](auto num) {
+    auto str = std::to_string(num);
+    while (str.size() < 13) str = " " + str;
+    return str;
+  };
+  auto format3 = [](auto num) {
+    auto str = std::to_string(num.x) + " " + std::to_string(num.y) + " " +
+               std::to_string(num.z);
+    while (str.size() < 13) str = " " + str;
+    return str;
+  };
+
+  auto bbox = invalidb3f;
+  for (auto& pos : shape.positions) bbox = merge(bbox, pos);
+
+  auto stats = vector<string>{};
+  stats.push_back("points:       " + format(shape.points.size()));
+  stats.push_back("lines:        " + format(shape.lines.size()));
+  stats.push_back("triangles:    " + format(shape.triangles.size()));
+  stats.push_back("quads:        " + format(shape.quads.size()));
+  stats.push_back("positions:    " + format(shape.positions.size()));
+  stats.push_back("normals:      " + format(shape.normals.size()));
+  stats.push_back("texcoords:    " + format(shape.texcoords.size()));
+  stats.push_back("colors:       " + format(shape.colors.size()));
+  stats.push_back("radius:       " + format(shape.radius.size()));
+  stats.push_back("center:       " + format3(center(bbox)));
+  stats.push_back("size:         " + format3(size(bbox)));
+  stats.push_back("min:          " + format3(bbox.min));
+  stats.push_back("max:          " + format3(bbox.max));
+
+  return stats;
+}
+
+vector<string> fvshape_stats(const fvshape_data& shape, bool verbose) {
+  auto format = [](auto num) {
+    auto str = std::to_string(num);
+    while (str.size() < 13) str = " " + str;
+    return str;
+  };
+  auto format3 = [](auto num) {
+    auto str = std::to_string(num.x) + " " + std::to_string(num.y) + " " +
+               std::to_string(num.z);
+    while (str.size() < 13) str = " " + str;
+    return str;
+  };
+
+  auto bbox = invalidb3f;
+  for (auto& pos : shape.positions) bbox = merge(bbox, pos);
+
+  auto stats = vector<string>{};
+  stats.push_back("fvquads:      " + format(shape.quadspos.size()));
+  stats.push_back("positions:    " + format(shape.positions.size()));
+  stats.push_back("normals:      " + format(shape.normals.size()));
+  stats.push_back("texcoords:    " + format(shape.texcoords.size()));
+  stats.push_back("center:       " + format3(center(bbox)));
+  stats.push_back("size:         " + format3(size(bbox)));
+  stats.push_back("min:          " + format3(bbox.min));
+  stats.push_back("max:          " + format3(bbox.max));
+
+  return stats;
+}
+
+}  // namespace yocto
+
+// -----------------------------------------------------------------------------
 // INSTANCE PROPERTIES
 // -----------------------------------------------------------------------------
 namespace yocto {
@@ -943,6 +1412,273 @@ void make_cornellbox(scene_scene& scene) {
   auto& light_instance    = scene.instances.emplace_back();
   light_instance.shape    = (int)scene.shapes.size() - 1;
   light_instance.material = (int)scene.materials.size() - 1;
+}
+
+}  // namespace yocto
+
+// -----------------------------------------------------------------------------
+// ANIMATION UTILITIES
+// -----------------------------------------------------------------------------
+namespace yocto {
+
+// Make a plane.
+shape_data make_rect(
+    const vec2i& steps, const vec2f& scale, const vec2f& uvscale) {
+  auto shape = shape_data{};
+  make_rect(shape.quads, shape.positions, shape.normals, shape.texcoords, steps,
+      scale, uvscale);
+  return shape;
+}
+shape_data make_bulged_rect(const vec2i& steps, const vec2f& scale,
+    const vec2f& uvscale, float radius) {
+  auto shape = shape_data{};
+  make_bulged_rect(shape.quads, shape.positions, shape.normals, shape.texcoords,
+      steps, scale, uvscale, radius);
+  return shape;
+}
+
+// Make a plane in the xz plane.
+shape_data make_recty(
+    const vec2i& steps, const vec2f& scale, const vec2f& uvscale) {
+  auto shape = shape_data{};
+  make_recty(shape.quads, shape.positions, shape.normals, shape.texcoords,
+      steps, scale, uvscale);
+  return shape;
+}
+shape_data make_bulged_recty(const vec2i& steps, const vec2f& scale,
+    const vec2f& uvscale, float radius) {
+  auto shape = shape_data{};
+  make_bulged_recty(shape.quads, shape.positions, shape.normals,
+      shape.texcoords, steps, scale, uvscale, radius);
+  return shape;
+}
+
+// Make a box.
+shape_data make_box(
+    const vec3i& steps, const vec3f& scale, const vec3f& uvscale) {
+  auto shape = shape_data{};
+  make_box(shape.quads, shape.positions, shape.normals, shape.texcoords, steps,
+      scale, uvscale);
+  return shape;
+}
+shape_data make_rounded_box(const vec3i& steps, const vec3f& scale,
+    const vec3f& uvscale, float radius) {
+  auto shape = shape_data{};
+  make_rounded_box(shape.quads, shape.positions, shape.normals, shape.texcoords,
+      steps, scale, uvscale, radius);
+  return shape;
+}
+
+// Make a quad stack
+shape_data make_rect_stack(
+    const vec3i& steps, const vec3f& scale, const vec2f& uvscale) {
+  auto shape = shape_data{};
+  make_rect_stack(shape.quads, shape.positions, shape.normals, shape.texcoords,
+      steps, scale, uvscale);
+  return shape;
+}
+
+// Make a floor.
+shape_data make_floor(
+    const vec2i& steps, const vec2f& scale, const vec2f& uvscale) {
+  auto shape = shape_data{};
+  make_floor(shape.quads, shape.positions, shape.normals, shape.texcoords,
+      steps, scale, uvscale);
+  return shape;
+}
+shape_data make_bent_floor(
+    const vec2i& steps, const vec2f& scale, const vec2f& uvscale, float bent) {
+  auto shape = shape_data{};
+  make_bent_floor(shape.quads, shape.positions, shape.normals, shape.texcoords,
+      steps, scale, uvscale, bent);
+  return shape;
+}
+
+// Make a sphere.
+shape_data make_sphere(int steps, float scale, float uvscale) {
+  auto shape = shape_data{};
+  make_sphere(shape.quads, shape.positions, shape.normals, shape.texcoords,
+      steps, scale, uvscale);
+  return shape;
+}
+
+// Make a sphere.
+shape_data make_uvsphere(
+    const vec2i& steps, float scale, const vec2f& uvscale) {
+  auto shape = shape_data{};
+  make_uvsphere(shape.quads, shape.positions, shape.normals, shape.texcoords,
+      steps, scale, uvscale);
+  return shape;
+}
+
+// Make a sphere with slipped caps.
+shape_data make_capped_uvsphere(
+    const vec2i& steps, float scale, const vec2f& uvscale, float height) {
+  auto shape = shape_data{};
+  make_capped_uvsphere(shape.quads, shape.positions, shape.normals,
+      shape.texcoords, steps, scale, uvscale, height);
+  return shape;
+}
+// Make a disk
+shape_data make_disk(int steps, float scale, float uvscale) {
+  auto shape = shape_data{};
+  make_disk(shape.quads, shape.positions, shape.normals, shape.texcoords, steps,
+      scale, uvscale);
+  return shape;
+}
+
+// Make a bulged disk
+shape_data make_bulged_disk(
+    int steps, float scale, float uvscale, float height) {
+  auto shape = shape_data{};
+  make_bulged_disk(shape.quads, shape.positions, shape.normals, shape.texcoords,
+      steps, scale, uvscale, height);
+  return shape;
+}
+
+// Make a uv disk
+shape_data make_uvdisk(const vec2i& steps, float scale, const vec2f& uvscale) {
+  auto shape = shape_data{};
+  make_uvdisk(shape.quads, shape.positions, shape.normals, shape.texcoords,
+      steps, scale, uvscale);
+  return shape;
+}
+
+// Make a uv cylinder
+shape_data make_uvcylinder(
+    const vec3i& steps, const vec2f& scale, const vec3f& uvscale) {
+  auto shape = shape_data{};
+  make_uvcylinder(shape.quads, shape.positions, shape.normals, shape.texcoords,
+      steps, scale, uvscale);
+  return shape;
+}
+
+// Make a rounded uv cylinder
+shape_data make_rounded_uvcylinder(const vec3i& steps, const vec2f& scale,
+    const vec3f& uvscale, float radius) {
+  auto shape = shape_data{};
+  make_rounded_uvcylinder(shape.quads, shape.positions, shape.normals,
+      shape.texcoords, steps, scale, uvscale, radius);
+  return shape;
+}
+
+// Generate lines set along a quad. Returns lines, pos, norm, texcoord, radius.
+shape_data make_lines(const vec2i& steps, const vec2f& scale,
+    const vec2f& uvscale, const vec2f& rad) {
+  auto shape = shape_data{};
+  make_lines(shape.lines, shape.positions, shape.normals, shape.texcoords,
+      shape.radius, steps, scale, uvscale, rad);
+  return shape;
+}
+
+// Make point primitives. Returns points, pos, norm, texcoord, radius.
+shape_data make_point(float radius) {
+  auto shape = shape_data{};
+  make_point(shape.points, shape.positions, shape.normals, shape.texcoords,
+      shape.radius, radius);
+  return shape;
+}
+
+shape_data make_points(int num, float uvscale, float radius) {
+  auto shape = shape_data{};
+  make_points(shape.points, shape.positions, shape.normals, shape.texcoords,
+      shape.radius, num, uvscale, radius);
+  return shape;
+}
+
+shape_data make_random_points(
+    int num, const vec3f& size, float uvscale, float radius, uint64_t seed) {
+  auto shape = shape_data{};
+  make_random_points(shape.points, shape.positions, shape.normals,
+      shape.texcoords, shape.radius, num, size, uvscale, radius, seed);
+  return shape;
+}
+
+// Make a facevarying rect
+fvshape_data make_fvrect(
+    const vec2i& steps, const vec2f& scale, const vec2f& uvscale) {
+  auto shape = fvshape_data{};
+  make_fvrect(shape.quadspos, shape.quadsnorm, shape.quadstexcoord,
+      shape.positions, shape.normals, shape.texcoords, steps, scale, uvscale);
+  return shape;
+}
+
+// Make a facevarying box
+fvshape_data make_fvbox(
+    const vec3i& steps, const vec3f& scale, const vec3f& uvscale) {
+  auto shape = fvshape_data{};
+  make_fvbox(shape.quadspos, shape.quadsnorm, shape.quadstexcoord,
+      shape.positions, shape.normals, shape.texcoords, steps, scale, uvscale);
+  return shape;
+}
+
+// Make a facevarying sphere
+fvshape_data make_fvsphere(int steps, float scale, float uvscale) {
+  auto shape = fvshape_data{};
+  make_fvsphere(shape.quadspos, shape.quadsnorm, shape.quadstexcoord,
+      shape.positions, shape.normals, shape.texcoords, steps, scale, uvscale);
+  return shape;
+}
+
+// Predefined meshes
+shape_data make_monkey(float scale) {
+  auto shape = shape_data{};
+  make_monkey(shape.quads, shape.positions, scale);
+  return shape;
+}
+shape_data make_quad(float scale) {
+  auto shape = shape_data{};
+  make_quad(
+      shape.quads, shape.positions, shape.normals, shape.texcoords, scale);
+  return shape;
+}
+shape_data make_quady(float scale) {
+  auto shape = shape_data{};
+  make_quady(
+      shape.quads, shape.positions, shape.normals, shape.texcoords, scale);
+  return shape;
+}
+shape_data make_cube(float scale) {
+  auto shape = shape_data{};
+  make_cube(
+      shape.quads, shape.positions, shape.normals, shape.texcoords, scale);
+  return shape;
+}
+fvshape_data make_fvcube(float scale) {
+  auto shape = fvshape_data{};
+  make_fvcube(shape.quadspos, shape.quadsnorm, shape.quadstexcoord,
+      shape.positions, shape.normals, shape.texcoords, scale);
+  return shape;
+}
+shape_data make_geosphere(float scale) {
+  auto shape = shape_data{};
+  make_geosphere(shape.triangles, shape.positions, scale);
+  return shape;
+}
+
+// Make a hair ball around a shape
+shape_data make_hair(const shape_data& base, const vec2i& steps,
+    const vec2f& len, const vec2f& rad, const vec2f& noise, const vec2f& clump,
+    const vec2f& rotation, int seed) {
+  auto shape = shape_data{};
+  make_hair(shape.lines, shape.positions, shape.normals, shape.texcoords,
+      shape.radius, base.triangles, base.quads, base.positions, base.normals,
+      base.texcoords, steps, len, rad, noise, clump, rotation, seed);
+  return shape;
+}
+
+// Make a heightfield mesh.
+shape_data make_heightfield(const vec2i& size, const vector<float>& height) {
+  auto shape = shape_data{};
+  make_heightfield(shape.quads, shape.positions, shape.normals, shape.texcoords,
+      size, height);
+  return shape;
+}
+shape_data make_heightfield(const vec2i& size, const vector<vec4f>& color) {
+  auto shape = shape_data{};
+  make_heightfield(shape.quads, shape.positions, shape.normals, shape.texcoords,
+      size, color);
+  return shape;
 }
 
 }  // namespace yocto
