@@ -132,41 +132,6 @@ bbox3f compute_bounds(const scene_scene& scene) {
   return bbox;
 }
 
-// Reduce memory usage
-void trim_memory(scene_scene& scene) {
-  for (auto& shape : scene.shapes) {
-    shape.points.shrink_to_fit();
-    shape.lines.shrink_to_fit();
-    shape.triangles.shrink_to_fit();
-    shape.quads.shrink_to_fit();
-    shape.positions.shrink_to_fit();
-    shape.normals.shrink_to_fit();
-    shape.texcoords.shrink_to_fit();
-    shape.colors.shrink_to_fit();
-    shape.radius.shrink_to_fit();
-    shape.tangents.shrink_to_fit();
-  }
-  for (auto& subdiv : scene.subdivs) {
-    subdiv.positions.shrink_to_fit();
-    subdiv.normals.shrink_to_fit();
-    subdiv.texcoords.shrink_to_fit();
-    subdiv.quadspos.shrink_to_fit();
-    subdiv.quadsnorm.shrink_to_fit();
-    subdiv.quadstexcoord.shrink_to_fit();
-  }
-  for (auto& texture : scene.textures) {
-    texture.hdr.shrink_to_fit();
-    texture.ldr.shrink_to_fit();
-  }
-  scene.cameras.shrink_to_fit();
-  scene.shapes.shrink_to_fit();
-  scene.subdivs.shrink_to_fit();
-  scene.instances.shrink_to_fit();
-  scene.materials.shrink_to_fit();
-  scene.textures.shrink_to_fit();
-  scene.environments.shrink_to_fit();
-}
-
 }  // namespace yocto
 
 // -----------------------------------------------------------------------------

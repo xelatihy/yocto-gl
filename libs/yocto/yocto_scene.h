@@ -255,12 +255,6 @@ namespace yocto {
 void add_camera(scene_scene& scene);
 void add_sky(scene_scene& scene, float sun_angle = pif / 4);
 
-// Trim all unused memory
-void trim_memory(scene_scene& scene);
-
-// compute scene bounds
-bbox3f compute_bounds(const scene_scene& scene);
-
 // get named camera or default if name is empty
 camera_handle find_camera(const scene_scene& scene, const string& name);
 
@@ -286,6 +280,9 @@ void tesselate_shape(scene_scene& scene, scene_shape& shape);
 // EVALUATION OF SCENE PROPERTIES
 // -----------------------------------------------------------------------------
 namespace yocto {
+
+// compute scene bounds
+bbox3f compute_bounds(const scene_scene& scene);
 
 // Generates a ray from a camera.
 ray3f eval_camera(
