@@ -81,8 +81,7 @@ void view_shape(const string& title, const string& name,
   scene.instance_names.emplace_back("instance");
   auto& instance = scene.instances.emplace_back();
   instance.shape = 0;
-  add_cameras(scene);
-  add_materials(scene);
+  add_camera(scene);
   if (addsky) add_sky(scene);
   print_progress("create scene", 0, 1);
 

@@ -64,8 +64,7 @@ using namespace std::string_literals;
 namespace yocto {
 
 // Add missing cameras.
-void add_cameras(scene_scene& scene) {
-  if (!scene.cameras.empty()) return;
+void add_camera(scene_scene& scene) {
   scene.camera_names.emplace_back("camera");
   auto& camera        = scene.cameras.emplace_back();
   camera.orthographic = false;
@@ -85,32 +84,6 @@ void add_cameras(scene_scene& scene) {
   camera.frame = lookat_frame(from, to, up);
   camera.focus = length(from - to);
 }
-
-// Add missing radius.
-void add_radius(scene_scene& scene, float radius) {
-  for (auto& shape : scene.shapes) {
-    if (shape.points.empty() && shape.lines.empty()) continue;
-    if (!shape.radius.empty()) continue;
-    shape.radius.assign(shape.positions.size(), radius);
-  }
-}
-
-// Add missing materials.
-void add_materials(scene_scene& scene) {
-  auto default_material = invalid_handle;
-  for (auto& instance : scene.instances) {
-    if (instance.material != invalid_handle) continue;
-    if (default_material == invalid_handle) {
-      if (!scene.instance_names.empty())
-        scene.material_names.emplace_back("default");
-      auto& material   = scene.materials.emplace_back();
-      material.color   = {0.8, 0.8, 0.8};
-      default_material = (int)scene.materials.size() - 1;
-    }
-    instance.material = default_material;
-  }
-}
-
 // Add a sky environment
 void add_sky(scene_scene& scene, float sun_angle) {
   scene.texture_names.emplace_back("sky");

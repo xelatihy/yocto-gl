@@ -190,6 +190,38 @@ auto zip(const vector<T1>& keys, const vector<T2>& values) {
   return get_subdiv_name(scene, (int)(&subdiv - scene.subdivs.data()));
 }
 
+// Add missing cameras.
+void add_missing_camera(scene_scene& scene) {
+  if (!scene.cameras.empty()) return;
+  scene.camera_names.emplace_back("camera");
+  auto& camera        = scene.cameras.emplace_back();
+  camera.orthographic = false;
+  camera.film         = 0.036;
+  camera.aspect       = (float)16 / (float)9;
+  camera.aperture     = 0;
+  camera.lens         = 0.050;
+  auto bbox           = compute_bounds(scene);
+  auto center         = (bbox.max + bbox.min) / 2;
+  auto bbox_radius    = length(bbox.max - bbox.min) / 2;
+  auto camera_dir     = vec3f{0, 0, 1};
+  auto camera_dist = bbox_radius * camera.lens / (camera.film / camera.aspect);
+  camera_dist *= 2.0f;  // correction for tracer camera implementation
+  auto from    = camera_dir * camera_dist + center;
+  auto to      = center;
+  auto up      = vec3f{0, 1, 0};
+  camera.frame = lookat_frame(from, to, up);
+  camera.focus = length(from - to);
+}
+
+// Add missing radius.
+static void add_missing_radius(scene_scene& scene, float radius = 0.001f) {
+  for (auto& shape : scene.shapes) {
+    if (shape.points.empty() && shape.lines.empty()) continue;
+    if (!shape.radius.empty()) continue;
+    shape.radius.assign(shape.positions.size(), radius);
+  }
+}
+
 }  // namespace yocto
 
 // -----------------------------------------------------------------------------
@@ -1529,9 +1561,8 @@ static bool load_json_scene(const string& filename, scene_scene& scene,
 
   // fix scene
   if (scene.asset.name.empty()) scene.asset.name = path_basename(filename);
-  add_cameras(scene);
-  add_radius(scene);
-  add_materials(scene);
+  add_missing_camera(scene);
+  add_missing_radius(scene);
   trim_memory(scene);
 
   // done
@@ -1983,9 +2014,8 @@ static bool load_obj_scene(const string& filename, scene_scene& scene,
 
   // fix scene
   if (scene.asset.name.empty()) scene.asset.name = path_basename(filename);
-  add_cameras(scene);
-  add_radius(scene);
-  add_materials(scene);
+  add_missing_camera(scene);
+  add_missing_radius(scene);
 
   // done
   if (progress_cb) progress_cb("load scene", progress.x++, progress.y);
@@ -2159,9 +2189,8 @@ static bool load_ply_scene(const string& filename, scene_scene& scene,
   instance.shape = (int)scene.shapes.size() - 1;
 
   // fix scene
-  add_cameras(scene);
-  add_radius(scene);
-  add_materials(scene);
+  add_missing_camera(scene);
+  add_missing_radius(scene);
 
   // done
   if (progress_cb) progress_cb("load scene", progress.x++, progress.y);
@@ -2232,9 +2261,8 @@ static bool load_stl_scene(const string& filename, scene_scene& scene,
   instance.shape = (int)scene.shapes.size() - 1;
 
   // fix scene
-  add_cameras(scene);
-  add_radius(scene);
-  add_materials(scene);
+  add_missing_camera(scene);
+  add_missing_radius(scene);
 
   // done
   if (progress_cb) progress_cb("load scene", progress.x++, progress.y);
@@ -2769,9 +2797,8 @@ static bool load_gltf_scene(const string& filename, scene_scene& scene,
 
   // fix scene
   if (scene.asset.name.empty()) scene.asset.name = path_basename(filename);
-  add_cameras(scene);
-  add_radius(scene);
-  add_materials(scene);
+  add_missing_camera(scene);
+  add_missing_radius(scene);
 
   // load done
   if (progress_cb) progress_cb("load scene", progress.x++, progress.y);
@@ -3340,9 +3367,8 @@ static bool load_pbrt_scene(const string& filename, scene_scene& scene,
 
   // fix scene
   if (scene.asset.name.empty()) scene.asset.name = path_basename(filename);
-  add_cameras(scene);
-  add_radius(scene);
-  add_materials(scene);
+  add_missing_camera(scene);
+  add_missing_radius(scene);
 
   // done
   if (progress_cb) progress_cb("load scene", progress.x++, progress.y);

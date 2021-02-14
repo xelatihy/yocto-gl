@@ -252,9 +252,7 @@ struct scene_scene {
 namespace yocto {
 
 // add missing elements
-void add_cameras(scene_scene& scene);
-void add_radius(scene_scene& scene, float radius = 0.001f);
-void add_materials(scene_scene& scene);
+void add_camera(scene_scene& scene);
 void add_sky(scene_scene& scene, float sun_angle = pif / 4);
 
 // Trim all unused memory
