@@ -3287,37 +3287,36 @@ static bool load_obj_scene(const string& filename, scene_scene& scene,
   // dirname
   auto dirname = path_dirname(filename);
 
-  // if (noparallel) {
-  // load textures
-  for (auto& texture : scene.textures) {
-    if (progress_cb) progress_cb("load texture", progress.x++, progress.y);
-    auto& path = textures_paths[&texture - &scene.textures.front()];
-    if (!load_texture(path_join(dirname, path), texture, error))
-      return dependent_error();
+  if (noparallel) {
+    // load textures
+    for (auto& texture : scene.textures) {
+      if (progress_cb) progress_cb("load texture", progress.x++, progress.y);
+      auto& path = textures_paths[&texture - &scene.textures.front()];
+      if (!load_texture(path_join(dirname, path), texture, error))
+        return dependent_error();
+    }
+  } else {
+    // mutex
+    auto mutex = std::mutex{};
+    // load textures
+    parallel_foreach(scene.textures, [&](auto& texture) {
+      {
+        auto lock = std::lock_guard{mutex};
+        if (!error.empty()) return;
+        if (progress_cb) progress_cb("load texture", progress.x++, progress.y);
+        printf("%s %s\n", get_texture_name(scene, texture).c_str(),
+            textures_paths[&texture - &scene.textures.front()].c_str());
+      }
+      auto& path = textures_paths[&texture - &scene.textures.front()];
+      auto  err  = string{};
+      if (!load_texture(path_join(dirname, path), texture, err)) {
+        auto lock = std::lock_guard{mutex};
+        error     = err;
+        return;
+      }
+    });
+    if (!error.empty()) return dependent_error();
   }
-  //  } else {
-  //    // mutex
-  //    auto mutex = std::mutex{};
-  //    // load textures
-  //    parallel_foreach(scene.textures, [&](auto& texture) {
-  //      {
-  //        auto lock = std::lock_guard{mutex};
-  //        if (!error.empty()) return;
-  //        if (progress_cb) progress_cb("load texture", progress.x++,
-  //        progress.y); printf("%s %s\n", get_texture_name(scene,
-  //        texture).c_str(),
-  //            textures_paths[&texture - &scene.textures.front()].c_str());
-  //      }
-  //      auto& path = textures_paths[&texture - &scene.textures.front()];
-  //      auto  err  = string{};
-  //      if (!load_texture(path_join(dirname, path), texture, err)) {
-  //        auto lock = std::lock_guard{mutex};
-  //        error     = err;
-  //        return;
-  //      }
-  //    });
-  //    if (!error.empty()) return dependent_error();
-  //  }
 
   // fix scene
   if (scene.asset.name.empty()) scene.asset.name = path_basename(filename);
