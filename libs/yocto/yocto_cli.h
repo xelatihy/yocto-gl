@@ -1,11 +1,10 @@
 //
-// # Yocto/CommonIO: Utilities for writing command-line apps
+// # Yocto/CLI: Utilities for writing command-line apps
 //
-// Yocto/CommonIO is a collection of utilities used in writing command-line
-// applications, including parsing command line arguments, simple path
-// manipulation, file lading and saving, and printing values, timers and
-// progress bars.
-// Yocto/CommonIO is implemented in `yocto_commonio.h` and `yocto_commonio.cpp`.
+// Yocto/CLI is a collection of utilities used in writing command-line
+// applications, including parsing command line arguments, printing values,
+// timers and progress bars.
+// Yocto/CLI is implemented in `yocto_cli.h`.
 //
 
 //
@@ -33,8 +32,8 @@
 //
 //
 
-#ifndef _YOCTO_COMMONIO_H_
-#define _YOCTO_COMMONIO_H_
+#ifndef _YOCTO_CLI_H_
+#define _YOCTO_CLI_H_
 
 // -----------------------------------------------------------------------------
 // INCLUDES
