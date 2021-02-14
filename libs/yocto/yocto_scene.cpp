@@ -84,6 +84,7 @@ void add_camera(scene_scene& scene) {
   camera.frame = lookat_frame(from, to, up);
   camera.focus = length(from - to);
 }
+
 // Add a sky environment
 void add_sky(scene_scene& scene, float sun_angle) {
   scene.texture_names.emplace_back("sky");
@@ -135,7 +136,7 @@ bbox3f compute_bounds(const scene_scene& scene) {
 }  // namespace yocto
 
 // -----------------------------------------------------------------------------
-// IMPLEMENTATION FOR SCENE TESSELATION
+// SCENE TESSELATION
 // -----------------------------------------------------------------------------
 namespace yocto {
 
@@ -222,7 +223,53 @@ void tesselate_shapes(
 }  // namespace yocto
 
 // -----------------------------------------------------------------------------
-// IMPLEMENTATION OF EVALUATION OF SCENE PROPERTIES
+// CAMERA PROPERTIES
+// -----------------------------------------------------------------------------
+namespace yocto {
+
+// Generates a ray from a camera for yimg::image plane coordinate uv and
+// the lens coordinates luv.
+ray3f eval_camera(
+    const scene_camera& camera, const vec2f& image_uv, const vec2f& lens_uv) {
+  auto film = camera.aspect >= 1
+                  ? vec2f{camera.film, camera.film / camera.aspect}
+                  : vec2f{camera.film * camera.aspect, camera.film};
+  if (!camera.orthographic) {
+    auto q = vec3f{film.x * (0.5f - image_uv.x), film.y * (image_uv.y - 0.5f),
+        camera.lens};
+    // ray direction through the lens center
+    auto dc = -normalize(q);
+    // point on the lens
+    auto e = vec3f{
+        lens_uv.x * camera.aperture / 2, lens_uv.y * camera.aperture / 2, 0};
+    // point on the focus plane
+    auto p = dc * camera.focus / abs(dc.z);
+    // correct ray direction to account for camera focusing
+    auto d = normalize(p - e);
+    // done
+    return ray3f{
+        transform_point(camera.frame, e), transform_direction(camera.frame, d)};
+  } else {
+    auto scale = 1 / camera.lens;
+    auto q     = vec3f{film.x * (0.5f - image_uv.x) * scale,
+        film.y * (image_uv.y - 0.5f) * scale, camera.lens};
+    // point on the lens
+    auto e = vec3f{-q.x, -q.y, 0} + vec3f{lens_uv.x * camera.aperture / 2,
+                                        lens_uv.y * camera.aperture / 2, 0};
+    // point on the focus plane
+    auto p = vec3f{-q.x, -q.y, -camera.focus};
+    // correct ray direction to account for camera focusing
+    auto d = normalize(p - e);
+    // done
+    return ray3f{
+        transform_point(camera.frame, e), transform_direction(camera.frame, d)};
+  }
+}
+
+}  // namespace yocto
+
+// -----------------------------------------------------------------------------
+// TEXTURE PROPERTIES
 // -----------------------------------------------------------------------------
 namespace yocto {
 
@@ -291,44 +338,97 @@ vec4f eval_texture(const scene_scene& scene, texture_handle texture,
       scene.textures[texture], uv, ldr_as_linear, no_interpolation);
 }
 
-// Generates a ray from a camera for yimg::image plane coordinate uv and
-// the lens coordinates luv.
-ray3f eval_camera(
-    const scene_camera& camera, const vec2f& image_uv, const vec2f& lens_uv) {
-  auto film = camera.aspect >= 1
-                  ? vec2f{camera.film, camera.film / camera.aspect}
-                  : vec2f{camera.film * camera.aspect, camera.film};
-  if (!camera.orthographic) {
-    auto q = vec3f{film.x * (0.5f - image_uv.x), film.y * (image_uv.y - 0.5f),
-        camera.lens};
-    // ray direction through the lens center
-    auto dc = -normalize(q);
-    // point on the lens
-    auto e = vec3f{
-        lens_uv.x * camera.aperture / 2, lens_uv.y * camera.aperture / 2, 0};
-    // point on the focus plane
-    auto p = dc * camera.focus / abs(dc.z);
-    // correct ray direction to account for camera focusing
-    auto d = normalize(p - e);
-    // done
-    return ray3f{
-        transform_point(camera.frame, e), transform_direction(camera.frame, d)};
+}  // namespace yocto
+
+// -----------------------------------------------------------------------------
+// MATERIAL PROPERTIES
+// -----------------------------------------------------------------------------
+namespace yocto {
+
+// constant values
+static const auto coat_ior       = 1.5f;
+static const auto coat_roughness = 0.03f * 0.03f;
+
+// Evaluate material
+material_point eval_material(const scene_scene& scene,
+    const scene_material& material, const vec2f& texcoord,
+    const vec4f& color_shp) {
+  // evaluate textures
+  auto emission_tex = eval_texture(
+      scene, material.emission_tex, texcoord, false);
+  auto color_tex     = eval_texture(scene, material.color_tex, texcoord, false);
+  auto roughness_tex = eval_texture(
+      scene, material.roughness_tex, texcoord, true);
+  auto scattering_tex = eval_texture(
+      scene, material.scattering_tex, texcoord, false);
+
+  // material point
+  auto point         = material_point{};
+  point.type         = material.type;
+  point.emission     = material.emission * xyz(emission_tex);
+  point.color        = material.color * xyz(color_tex) * xyz(color_shp);
+  point.opacity      = material.opacity * color_tex.w * color_shp.w;
+  point.metallic     = material.metallic * roughness_tex.z;
+  point.roughness    = material.roughness * roughness_tex.y;
+  point.roughness    = point.roughness * point.roughness;
+  point.ior          = material.ior;
+  point.scattering   = material.scattering * xyz(scattering_tex);
+  point.scanisotropy = material.scanisotropy;
+  point.trdepth      = material.trdepth;
+
+  // volume density
+  if (material.type == material_type::glass ||
+      material.type == material_type::volume ||
+      material.type == material_type::subsurface) {
+    point.density = -log(clamp(point.color, 0.0001f, 1.0f)) / point.trdepth;
   } else {
-    auto scale = 1 / camera.lens;
-    auto q     = vec3f{film.x * (0.5f - image_uv.x) * scale,
-        film.y * (image_uv.y - 0.5f) * scale, camera.lens};
-    // point on the lens
-    auto e = vec3f{-q.x, -q.y, 0} + vec3f{lens_uv.x * camera.aperture / 2,
-                                        lens_uv.y * camera.aperture / 2, 0};
-    // point on the focus plane
-    auto p = vec3f{-q.x, -q.y, -camera.focus};
-    // correct ray direction to account for camera focusing
-    auto d = normalize(p - e);
-    // done
-    return ray3f{
-        transform_point(camera.frame, e), transform_direction(camera.frame, d)};
+    point.density = {0, 0, 0};
   }
+
+  // fix roughness
+  if (point.type == material_type::matte ||
+      point.type == material_type::metallic ||
+      point.type == material_type::plastic) {
+    point.roughness = clamp(point.roughness, coat_roughness, 1.0f);
+  }
+
+  return point;
 }
+
+// check if a material is a delta or volumetric
+bool is_delta(const scene_material& material) {
+  return (material.type == material_type::metal && material.roughness == 0) ||
+         (material.type == material_type::glass && material.roughness == 0) ||
+         (material.type == material_type::thinglass &&
+             material.roughness == 0) ||
+         (material.type == material_type::volume);
+}
+bool is_volumetric(const scene_material& material) {
+  return material.type == material_type::glass ||
+         material.type == material_type::volume ||
+         material.type == material_type::subsurface;
+}
+
+// check if a brdf is a delta
+bool is_delta(const material_point& material) {
+  return (material.type == material_type::metal && material.roughness == 0) ||
+         (material.type == material_type::glass && material.roughness == 0) ||
+         (material.type == material_type::thinglass &&
+             material.roughness == 0) ||
+         (material.type == material_type::volume);
+}
+bool has_volume(const material_point& material) {
+  return material.type == material_type::glass ||
+         material.type == material_type::volume ||
+         material.type == material_type::subsurface;
+}
+
+}  // namespace yocto
+
+// -----------------------------------------------------------------------------
+// INSTANCE PROPERTIES
+// -----------------------------------------------------------------------------
+namespace yocto {
 
 // Eval position
 vec3f eval_position(const scene_scene& scene, const scene_instance& instance,
@@ -557,30 +657,6 @@ vec4f eval_color(const scene_scene& scene, const scene_instance& instance,
   }
 }
 
-// Evaluate environment color.
-vec3f eval_environment(const scene_scene& scene,
-    const scene_environment& environment, const vec3f& direction) {
-  auto wl       = transform_direction(inverse(environment.frame), direction);
-  auto texcoord = vec2f{
-      atan2(wl.z, wl.x) / (2 * pif), acos(clamp(wl.y, -1.0f, 1.0f)) / pif};
-  if (texcoord.x < 0) texcoord.x += 1;
-  return environment.emission *
-         xyz(eval_texture(scene, environment.emission_tex, texcoord));
-}
-
-// Evaluate all environment color.
-vec3f eval_environment(const scene_scene& scene, const vec3f& direction) {
-  auto emission = zero3f;
-  for (auto environment : scene.environments) {
-    emission += eval_environment(scene, environment, direction);
-  }
-  return emission;
-}
-
-// constant values
-static const auto coat_ior       = 1.5f;
-static const auto coat_roughness = 0.03f * 0.03f;
-
 // Evaluate material
 material_point eval_material(const scene_scene& scene,
     const scene_instance& instance, int element, const vec2f& uv) {
@@ -630,81 +706,36 @@ material_point eval_material(const scene_scene& scene,
   return point;
 }
 
-// Evaluate material
-material_point eval_material(const scene_scene& scene,
-    const scene_material& material, const vec2f& texcoord,
-    const vec4f& color_shp) {
-  // evaluate textures
-  auto emission_tex = eval_texture(
-      scene, material.emission_tex, texcoord, false);
-  auto color_tex     = eval_texture(scene, material.color_tex, texcoord, false);
-  auto roughness_tex = eval_texture(
-      scene, material.roughness_tex, texcoord, true);
-  auto scattering_tex = eval_texture(
-      scene, material.scattering_tex, texcoord, false);
-
-  // material point
-  auto point         = material_point{};
-  point.type         = material.type;
-  point.emission     = material.emission * xyz(emission_tex);
-  point.color        = material.color * xyz(color_tex) * xyz(color_shp);
-  point.opacity      = material.opacity * color_tex.w * color_shp.w;
-  point.metallic     = material.metallic * roughness_tex.z;
-  point.roughness    = material.roughness * roughness_tex.y;
-  point.roughness    = point.roughness * point.roughness;
-  point.ior          = material.ior;
-  point.scattering   = material.scattering * xyz(scattering_tex);
-  point.scanisotropy = material.scanisotropy;
-  point.trdepth      = material.trdepth;
-
-  // volume density
-  if (material.type == material_type::glass ||
-      material.type == material_type::volume ||
-      material.type == material_type::subsurface) {
-    point.density = -log(clamp(point.color, 0.0001f, 1.0f)) / point.trdepth;
-  } else {
-    point.density = {0, 0, 0};
-  }
-
-  // fix roughness
-  if (point.type == material_type::matte ||
-      point.type == material_type::metallic ||
-      point.type == material_type::plastic) {
-    point.roughness = clamp(point.roughness, coat_roughness, 1.0f);
-  }
-
-  return point;
-}
-
-// check if a material is a delta
-bool is_delta(const scene_material& material) {
-  return (material.type == material_type::metal && material.roughness == 0) ||
-         (material.type == material_type::glass && material.roughness == 0) ||
-         (material.type == material_type::thinglass &&
-             material.roughness == 0) ||
-         (material.type == material_type::volume);
-}
-bool is_volumetric(const scene_material& material) {
-  return material.type == material_type::glass ||
-         material.type == material_type::volume ||
-         material.type == material_type::subsurface;
-}
+// check if an instance is volumetric
 bool is_volumetric(const scene_scene& scene, const scene_instance& instance) {
   return is_volumetric(scene.materials[instance.material]);
 }
 
-// check if a brdf is a delta
-bool is_delta(const material_point& material) {
-  return (material.type == material_type::metal && material.roughness == 0) ||
-         (material.type == material_type::glass && material.roughness == 0) ||
-         (material.type == material_type::thinglass &&
-             material.roughness == 0) ||
-         (material.type == material_type::volume);
+}  // namespace yocto
+
+// -----------------------------------------------------------------------------
+// ENVIRONMENT PROPERTIES
+// -----------------------------------------------------------------------------
+namespace yocto {
+
+// Evaluate environment color.
+vec3f eval_environment(const scene_scene& scene,
+    const scene_environment& environment, const vec3f& direction) {
+  auto wl       = transform_direction(inverse(environment.frame), direction);
+  auto texcoord = vec2f{
+      atan2(wl.z, wl.x) / (2 * pif), acos(clamp(wl.y, -1.0f, 1.0f)) / pif};
+  if (texcoord.x < 0) texcoord.x += 1;
+  return environment.emission *
+         xyz(eval_texture(scene, environment.emission_tex, texcoord));
 }
-bool has_volume(const material_point& material) {
-  return material.type == material_type::glass ||
-         material.type == material_type::volume ||
-         material.type == material_type::subsurface;
+
+// Evaluate all environment color.
+vec3f eval_environment(const scene_scene& scene, const vec3f& direction) {
+  auto emission = zero3f;
+  for (auto environment : scene.environments) {
+    emission += eval_environment(scene, environment, direction);
+  }
+  return emission;
 }
 
 }  // namespace yocto
@@ -917,7 +948,7 @@ void make_cornellbox(scene_scene& scene) {
 }  // namespace yocto
 
 // -----------------------------------------------------------------------------
-// IMPLEMENTATION OF ANIMATION UTILITIES
+// ANIMATION UTILITIES
 // -----------------------------------------------------------------------------
 namespace yocto {
 

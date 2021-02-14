@@ -247,9 +247,12 @@ struct scene_scene {
 }  // namespace yocto
 
 // -----------------------------------------------------------------------------
-// SCENE CREATION
+// SCENE UTILITIES
 // -----------------------------------------------------------------------------
 namespace yocto {
+
+// compute scene bounds
+bbox3f compute_bounds(const scene_scene& scene);
 
 // add missing elements
 void add_camera(scene_scene& scene);
@@ -257,6 +260,12 @@ void add_sky(scene_scene& scene, float sun_angle = pif / 4);
 
 // get named camera or default if name is empty
 camera_handle find_camera(const scene_scene& scene, const string& name);
+
+// Return scene statistics as list of strings.
+vector<string> scene_stats(const scene_scene& scene, bool verbose = false);
+// Return validation errors as list of strings.
+vector<string> scene_validation(
+    const scene_scene& scene, bool notextures = false);
 
 }  // namespace yocto
 
@@ -277,16 +286,20 @@ void tesselate_shape(scene_scene& scene, scene_shape& shape);
 }  // namespace yocto
 
 // -----------------------------------------------------------------------------
-// EVALUATION OF SCENE PROPERTIES
+// CAMERA PROPERTIES
 // -----------------------------------------------------------------------------
 namespace yocto {
-
-// compute scene bounds
-bbox3f compute_bounds(const scene_scene& scene);
 
 // Generates a ray from a camera.
 ray3f eval_camera(
     const scene_camera& camera, const vec2f& image_uv, const vec2f& lens_uv);
+
+}  // namespace yocto
+
+// -----------------------------------------------------------------------------
+// TEXTURE PROPERTIES
+// -----------------------------------------------------------------------------
+namespace yocto {
 
 // Evaluates a texture
 vec2i texture_size(const scene_texture& texture);
@@ -298,6 +311,49 @@ vec4f eval_texture(const scene_texture& texture, const vec2f& uv,
 vec4f eval_texture(const scene_scene& scene, texture_handle texture,
     const vec2f& uv, bool ldr_as_linear = false, bool no_interpolation = false,
     bool clamp_to_edge = false);
+
+}  // namespace yocto
+
+// -----------------------------------------------------------------------------
+// MATERIAL PROPERTIES
+// -----------------------------------------------------------------------------
+namespace yocto {
+
+// Material parameters evaluated at a point on the surface
+struct material_point {
+  material_type type         = material_type::metallic;
+  vec3f         emission     = {0, 0, 0};
+  vec3f         color        = {0, 0, 0};
+  float         opacity      = 1;
+  float         roughness    = 0;
+  float         metallic     = 0;
+  float         ior          = 1;
+  vec3f         density      = {0, 0, 0};
+  vec3f         scattering   = {0, 0, 0};
+  float         scanisotropy = 0;
+  float         trdepth      = 0.01;
+};
+
+// Eval material to obtain emission, brdf and opacity.
+material_point eval_material(const scene_scene& scene,
+    const scene_material& material, const vec2f& texcoord,
+    const vec4f& shape_color = {1, 1, 1, 1});
+
+// check if a material is a delta
+bool is_delta(const scene_material& material);
+bool is_delta(const material_point& material);
+
+// check if a material has a volume
+bool is_volumetric(const scene_material& material);
+bool is_volumetric(const material_point& material);
+bool is_volumetric(const scene_scene& scene, const scene_instance& instance);
+
+}  // namespace yocto
+
+// -----------------------------------------------------------------------------
+// INSTANCE PROPERTIES
+// -----------------------------------------------------------------------------
+namespace yocto {
 
 // Evaluate instance properties
 vec3f eval_position(const scene_scene& scene, const scene_instance& instance,
@@ -318,54 +374,23 @@ vec3f eval_shading_normal(const scene_scene& scene,
 vec4f eval_color(const scene_scene& scene, const scene_instance& instance,
     int element, const vec2f& uv);
 
-// Environment
-vec3f eval_environment(const scene_scene& scene,
-    const scene_environment& environment, const vec3f& direction);
-vec3f eval_environment(const scene_scene& scene, const vec3f& direction);
-
-// Material parameters evaluated at a point on the surface
-struct material_point {
-  material_type type         = material_type::metallic;
-  vec3f         emission     = {0, 0, 0};
-  vec3f         color        = {0, 0, 0};
-  float         opacity      = 1;
-  float         roughness    = 0;
-  float         metallic     = 0;
-  float         ior          = 1;
-  vec3f         density      = {0, 0, 0};
-  vec3f         scattering   = {0, 0, 0};
-  float         scanisotropy = 0;
-  float         trdepth      = 0.01;
-};
-
 // Eval material to obtain emission, brdf and opacity.
 material_point eval_material(const scene_scene& scene,
     const scene_instance& instance, int element, const vec2f& uv);
-material_point eval_material(const scene_scene& scene,
-    const scene_material& material, const vec2f& texcoord,
-    const vec4f& shape_color = {1, 1, 1, 1});
-
-// check if a material is a delta
-bool is_delta(const scene_material& material);
-bool is_delta(const material_point& material);
-
 // check if a material has a volume
-bool is_volumetric(const scene_material& material);
-bool is_volumetric(const material_point& material);
 bool is_volumetric(const scene_scene& scene, const scene_instance& instance);
 
 }  // namespace yocto
 
 // -----------------------------------------------------------------------------
-// STATS AND VALIDATION
+// ENVIRONMENT PROPERTIES
 // -----------------------------------------------------------------------------
 namespace yocto {
 
-// Return scene statistics as list of strings.
-vector<string> scene_stats(const scene_scene& scene, bool verbose = false);
-// Return validation errors as list of strings.
-vector<string> scene_validation(
-    const scene_scene& scene, bool notextures = false);
+// Environment
+vec3f eval_environment(const scene_scene& scene,
+    const scene_environment& environment, const vec3f& direction);
+vec3f eval_environment(const scene_scene& scene, const vec3f& direction);
 
 }  // namespace yocto
 
