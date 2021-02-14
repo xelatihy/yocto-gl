@@ -361,12 +361,6 @@ vector<vec4i> triangles_to_quads(const vector<vec3i>& triangles);
 vector<vec4i> bezier_to_lines(vector<vec2i>& lines);
 
 // Convert face-varying data to single primitives. Returns the quads indices
-// and face ids and filled vectors for pos, norm, texcoord and colors.
-std::tuple<vector<vec4i>, vector<vec3f>, vector<vec3f>, vector<vec2f>>
-split_facevarying(const vector<vec4i>& quadspos, const vector<vec4i>& quadsnorm,
-    const vector<vec4i>& quadstexcoord, const vector<vec3f>& positions,
-    const vector<vec3f>& normals, const vector<vec2f>& texcoords);
-// Convert face varying data to single primitives. Returns the quads indices
 // and filled vectors for pos, norm and texcoord.
 void split_facevarying(vector<vec4i>& split_quads,
     vector<vec3f>& split_positions, vector<vec3f>& split_normals,

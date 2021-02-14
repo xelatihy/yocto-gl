@@ -1015,10 +1015,14 @@ bool save_fvshape(const string& filename, const fvshape_data& shape,
 
   auto ext = path_extension(filename);
   if (ext == ".ply" || ext == ".PLY") {
-    auto ply = ply_model{};
-    auto [split_quads, split_positions, split_normals, split_texcoords] =
-        split_facevarying(shape.quadspos, shape.quadsnorm, shape.quadstexcoord,
-            shape.positions, shape.normals, shape.texcoords);
+    auto ply             = ply_model{};
+    auto split_quads     = vector<vec4i>{};
+    auto split_positions = vector<vec3f>{};
+    auto split_normals   = vector<vec3f>{};
+    auto split_texcoords = vector<vec2f>{};
+    split_facevarying(split_quads, split_positions, split_normals,
+        split_texcoords, shape.quadspos, shape.quadsnorm, shape.quadstexcoord,
+        shape.positions, shape.normals, shape.texcoords);
     add_positions(ply, split_positions);
     add_normals(ply, split_normals);
     add_texcoords(ply, split_texcoords, flip_texcoord);
@@ -1034,9 +1038,13 @@ bool save_fvshape(const string& filename, const fvshape_data& shape,
   } else if (ext == ".stl" || ext == ".STL") {
     auto stl = stl_model{};
     if (!shape.quadspos.empty()) {
-      auto [split_quads, split_positions, split_normals,
-          split_texcoords] = split_facevarying(shape.quadspos, shape.quadsnorm,
-          shape.quadstexcoord, shape.positions, shape.normals, shape.texcoords);
+      auto split_quads     = vector<vec4i>{};
+      auto split_positions = vector<vec3f>{};
+      auto split_normals   = vector<vec3f>{};
+      auto split_texcoords = vector<vec2f>{};
+      split_facevarying(split_quads, split_positions, split_normals,
+          split_texcoords, shape.quadspos, shape.quadsnorm, shape.quadstexcoord,
+          shape.positions, shape.normals, shape.texcoords);
       add_triangles(stl, quads_to_triangles(split_quads), split_positions, {});
     } else {
       return shape_error();
