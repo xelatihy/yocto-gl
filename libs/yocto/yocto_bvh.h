@@ -92,18 +92,14 @@ struct bvh_tree {
 // BVH data for whole shapes. This interface makes copies of all the data.
 struct bvh_shape {
   bvh_tree bvh = {};  // nodes
-#ifdef YOCTO_EMBREE
   unique_ptr<void, void (*)(void*)> embree_bvh = {nullptr, nullptr};  // embree
-#endif
 };
 
 // BVH data for whole shapes. This interface makes copies of all the data.
 struct bvh_scene {
   bvh_tree          bvh    = {};  // nodes
   vector<bvh_shape> shapes = {};  // shapes
-#ifdef YOCTO_EMBREE
   unique_ptr<void, void (*)(void*)> embree_bvh = {nullptr, nullptr};  // embree
-#endif
 };
 
 // Strategy used to build the bvh
