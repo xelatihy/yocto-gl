@@ -52,25 +52,6 @@ using namespace std::string_literals;
 }  // namespace yocto
 
 // -----------------------------------------------------------------------------
-// VECTOR HASHING
-// -----------------------------------------------------------------------------
-namespace std {
-
-// Hash functor for vector for use with hash_map
-template <>
-struct hash<yocto::vec2i> {
-  size_t operator()(const yocto::vec2i& v) const {
-    static const auto hasher = std::hash<int>();
-    auto              h      = (size_t)0;
-    h ^= hasher(v.x) + 0x9e3779b9 + (h << 6) + (h >> 2);
-    h ^= hasher(v.y) + 0x9e3779b9 + (h << 6) + (h >> 2);
-    return h;
-  }
-};
-
-}  // namespace std
-
-// -----------------------------------------------------------------------------
 // LOW-LEVEL OPENGL HELPERS
 // -----------------------------------------------------------------------------
 namespace yocto {
@@ -142,7 +123,7 @@ void set_ogl_blending(bool enabled) {
 void set_ogl_point_size(int size) { glPointSize(size); }
 void set_ogl_msaa() { glEnable(GL_MULTISAMPLE); }
 
-void set_texture(ogl_texture& texture, const vec2i& size, int num_channels,
+void set_texture(ogl_texture& texture, int width, int height, int channels,
     const byte* img, bool as_srgb, bool linear, bool mipmap, bool wrap_repeat) {
   static auto sformat = vector<uint>{
       0, GL_SRGB, GL_SRGB, GL_SRGB, GL_SRGB_ALPHA};
@@ -150,19 +131,20 @@ void set_texture(ogl_texture& texture, const vec2i& size, int num_channels,
   static auto cformat = vector<uint>{0, GL_RED, GL_RG, GL_RGB, GL_RGBA};
   assert_ogl_error();
 
-  if (size == zero2i) {
+  if (width == 0 && height == 0) {
     clear_texture(texture);
     return;
   }
 
   if (!texture.texture_id) glGenTextures(1, &texture.texture_id);
-  if (texture.size != size || texture.num_channels != num_channels ||
-      texture.is_srgb != as_srgb || texture.is_float == true ||
-      texture.linear != linear || texture.mipmap != mipmap) {
+  if (texture.width != width || texture.height != height ||
+      texture.channels != channels || texture.is_srgb != as_srgb ||
+      texture.is_float == true || texture.linear != linear ||
+      texture.mipmap != mipmap) {
     glBindTexture(GL_TEXTURE_2D, texture.texture_id);
     glTexImage2D(GL_TEXTURE_2D, 0,
-        as_srgb ? sformat.at(num_channels) : iformat.at(num_channels), size.x,
-        size.y, 0, cformat.at(num_channels), GL_UNSIGNED_BYTE, img);
+        as_srgb ? sformat.at(channels) : iformat.at(channels), width, height, 0,
+        cformat.at(channels), GL_UNSIGNED_BYTE, img);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER,
         mipmap ? (linear ? GL_LINEAR_MIPMAP_LINEAR : GL_NEAREST_MIPMAP_NEAREST)
                : (linear ? GL_LINEAR : GL_NEAREST));
@@ -171,8 +153,8 @@ void set_texture(ogl_texture& texture, const vec2i& size, int num_channels,
     if (mipmap && img) glGenerateMipmap(GL_TEXTURE_2D);
   } else {
     glBindTexture(GL_TEXTURE_2D, texture.texture_id);
-    glTexSubImage2D(GL_TEXTURE_2D, 0, 0, 0, size.x, size.y,
-        cformat.at(num_channels), GL_UNSIGNED_BYTE, img);
+    glTexSubImage2D(GL_TEXTURE_2D, 0, 0, 0, width, height, cformat.at(channels),
+        GL_UNSIGNED_BYTE, img);
     if (mipmap && img) glGenerateMipmap(GL_TEXTURE_2D);
   }
   if (wrap_repeat) {
@@ -182,16 +164,17 @@ void set_texture(ogl_texture& texture, const vec2i& size, int num_channels,
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
   }
-  texture.size         = size;
-  texture.num_channels = num_channels;
-  texture.is_srgb      = as_srgb;
-  texture.is_float     = false;
-  texture.linear       = linear;
-  texture.mipmap       = mipmap;
+  texture.width    = width;
+  texture.height   = height;
+  texture.channels = channels;
+  texture.is_srgb  = as_srgb;
+  texture.is_float = false;
+  texture.linear   = linear;
+  texture.mipmap   = mipmap;
   assert_ogl_error();
 }
 
-void set_texture(ogl_texture& texture, const vec2i& size, int num_channels,
+void set_texture(ogl_texture& texture, int width, int height, int channels,
     const float* img, bool as_float, bool linear, bool mipmap,
     bool wrap_repeat) {
   static auto fformat = vector<uint>{
@@ -200,19 +183,20 @@ void set_texture(ogl_texture& texture, const vec2i& size, int num_channels,
   static auto cformat = vector<uint>{0, GL_RED, GL_RG, GL_RGB, GL_RGBA};
   assert_ogl_error();
 
-  if (size == zero2i) {
+  if (width == 0 && height == 0) {
     clear_texture(texture);
     return;
   }
 
   if (!texture.texture_id) glGenTextures(1, &texture.texture_id);
-  if (texture.size != size || texture.num_channels != num_channels ||
-      texture.is_float != as_float || texture.is_srgb == true ||
-      texture.linear != linear || texture.mipmap != mipmap) {
+  if (texture.width != width || texture.height != height ||
+      texture.channels != channels || texture.is_float != as_float ||
+      texture.is_srgb == true || texture.linear != linear ||
+      texture.mipmap != mipmap) {
     glBindTexture(GL_TEXTURE_2D, texture.texture_id);
     glTexImage2D(GL_TEXTURE_2D, 0,
-        as_float ? fformat.at(num_channels) : iformat.at(num_channels), size.x,
-        size.y, 0, iformat.at(num_channels), GL_FLOAT, img);
+        as_float ? fformat.at(channels) : iformat.at(channels), width, height,
+        0, iformat.at(channels), GL_FLOAT, img);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER,
         mipmap ? (linear ? GL_LINEAR_MIPMAP_LINEAR : GL_NEAREST_MIPMAP_NEAREST)
                : (linear ? GL_LINEAR : GL_NEAREST));
@@ -221,8 +205,8 @@ void set_texture(ogl_texture& texture, const vec2i& size, int num_channels,
     if (mipmap && img) glGenerateMipmap(GL_TEXTURE_2D);
   } else {
     glBindTexture(GL_TEXTURE_2D, texture.texture_id);
-    glTexSubImage2D(GL_TEXTURE_2D, 0, 0, 0, size.x, size.y,
-        iformat.at(num_channels), GL_FLOAT, img);
+    glTexSubImage2D(GL_TEXTURE_2D, 0, 0, 0, width, height, iformat.at(channels),
+        GL_FLOAT, img);
     if (mipmap && img) glGenerateMipmap(GL_TEXTURE_2D);
   }
   if (wrap_repeat) {
@@ -232,13 +216,27 @@ void set_texture(ogl_texture& texture, const vec2i& size, int num_channels,
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
   }
-  texture.size         = size;
-  texture.num_channels = num_channels;
-  texture.is_srgb      = false;
-  texture.is_float     = as_float;
-  texture.linear       = linear;
-  texture.mipmap       = mipmap;
+  texture.width    = width;
+  texture.height   = height;
+  texture.channels = channels;
+  texture.is_srgb  = false;
+  texture.is_float = as_float;
+  texture.linear   = linear;
+  texture.mipmap   = mipmap;
   assert_ogl_error();
+}
+
+void set_texture(ogl_texture& texture, int width, int height,
+    const vector<vec4b>& img, bool as_srgb, bool linear, bool mipmap,
+    bool wrap_repeat) {
+  return set_texture(texture, width, height, 4, (const byte*)img.data(),
+      as_srgb, linear, mipmap, wrap_repeat);
+}
+void set_texture(ogl_texture& texture, int width, int height,
+    const vector<vec4f>& img, bool as_float, bool linear, bool mipmap,
+    bool wrap_repeat) {
+  return set_texture(texture, width, height, 4, (const float*)img.data(),
+      as_float, linear, mipmap, wrap_repeat);
 }
 
 // cleanup
@@ -252,36 +250,15 @@ bool is_initialized(const ogl_texture& texture) {
 // clear texture
 void clear_texture(ogl_texture& texture) {
   if (texture.texture_id) glDeleteTextures(1, &texture.texture_id);
-  texture.size         = {0, 0};
-  texture.num_channels = 0;
-  texture.is_srgb      = false;
-  texture.is_float     = false;
-  texture.linear       = false;
-  texture.mipmap       = false;
-  texture.texture_id   = 0;
+  texture.width      = 0;
+  texture.height     = 0;
+  texture.channels   = 0;
+  texture.is_srgb    = false;
+  texture.is_float   = false;
+  texture.linear     = false;
+  texture.mipmap     = false;
+  texture.texture_id = 0;
   assert_ogl_error();
-}
-
-void set_texture(ogl_texture& texture, const image<vec4b>& img, bool as_srgb,
-    bool linear, bool mipmap) {
-  set_texture(texture, img.imsize(), 4, (const byte*)img.data(), as_srgb,
-      linear, mipmap);
-}
-void set_texture(ogl_texture& texture, const image<vec4f>& img, bool as_float,
-    bool linear, bool mipmap) {
-  set_texture(texture, img.imsize(), 4, (const float*)img.data(), as_float,
-      linear, mipmap);
-}
-
-void set_texture(ogl_texture& texture, const image<vec3b>& img, bool as_srgb,
-    bool linear, bool mipmap) {
-  set_texture(texture, img.imsize(), 3, (const byte*)img.data(), as_srgb,
-      linear, mipmap);
-}
-void set_texture(ogl_texture& texture, const image<vec3f>& img, bool as_float,
-    bool linear, bool mipmap) {
-  set_texture(texture, img.imsize(), 3, (const float*)img.data(), as_float,
-      linear, mipmap);
 }
 
 void set_cubemap(ogl_cubemap& cubemap, int size, int num_channels,
@@ -420,39 +397,6 @@ void clear_cubemap(ogl_cubemap& cubemap) {
   cubemap.mipmap       = false;
   cubemap.cubemap_id   = 0;
   assert_ogl_error();
-}
-
-void set_cubemap(ogl_cubemap& cubemap, const array<image<vec4b>, 6>& img,
-    int num_channels, bool as_srgb, bool linear, bool mipmap) {
-  auto data = array<byte*, 6>{(byte*)img[0].data(), (byte*)img[1].data(),
-      (byte*)img[2].data(), (byte*)img[3].data(), (byte*)img[4].data(),
-      (byte*)img[5].data()};
-  set_cubemap(
-      cubemap, img[0].imsize().x, num_channels, data, as_srgb, linear, mipmap);
-}
-void set_cubemap(ogl_cubemap& cubemap, const array<image<vec4f>, 6>& img,
-    int num_channels, bool as_float, bool linear, bool mipmap) {
-  auto data = array<float*, 6>{(float*)img[0].data(), (float*)img[1].data(),
-      (float*)img[2].data(), (float*)img[3].data(), (float*)img[4].data(),
-      (float*)img[5].data()};
-  set_cubemap(
-      cubemap, img[0].imsize().x, num_channels, data, as_float, linear, mipmap);
-}
-void set_cubemap(ogl_cubemap& cubemap, const array<image<vec3b>, 6>& img,
-    int num_channels, bool as_srgb, bool linear, bool mipmap) {
-  auto data = array<byte*, 6>{(byte*)img[0].data(), (byte*)img[1].data(),
-      (byte*)img[2].data(), (byte*)img[3].data(), (byte*)img[4].data(),
-      (byte*)img[5].data()};
-  set_cubemap(
-      cubemap, img[0].imsize().x, num_channels, data, as_srgb, linear, mipmap);
-}
-void set_cubemap(ogl_cubemap& cubemap, const array<image<vec3f>, 6>& img,
-    int num_channels, bool as_float, bool linear, bool mipmap) {
-  auto data = array<float*, 6>{(float*)img[0].data(), (float*)img[1].data(),
-      (float*)img[2].data(), (float*)img[3].data(), (float*)img[4].data(),
-      (float*)img[5].data()};
-  set_cubemap(
-      cubemap, img[0].imsize().x, num_channels, data, as_float, linear, mipmap);
 }
 
 // cleanup
@@ -1225,24 +1169,14 @@ void clear_image(ogl_image& oimg) {
   clear_shape(oimg.quad);
 }
 
-// update image data
-void set_image(
-    ogl_image& oimg, const image<vec4f>& img, bool linear, bool mipmap) {
-  set_texture(oimg.texture, img, false, linear, mipmap);
-}
-void set_image(
-    ogl_image& oimg, const image<vec4b>& img, bool linear, bool mipmap) {
-  set_texture(oimg.texture, img, false, linear, mipmap);
-}
-
 void set_image(
     ogl_image& oimg, const image_data& img, bool linear, bool mipmap) {
   if (!img.pixelsf.empty()) {
-    set_texture(oimg.texture, {img.width, img.height}, 4,
-        (const float*)get_data4f(img), false, linear, mipmap);
+    set_texture(oimg.texture, img.width, img.height, 4,
+        (const float*)img.pixelsf.data(), false, linear, mipmap);
   } else {
-    set_texture(oimg.texture, {img.width, img.height}, 4,
-        (const byte*)get_data4b(img), false, linear, mipmap);
+    set_texture(oimg.texture, img.width, img.height, 4,
+        (const byte*)img.pixelsb.data(), false, linear, mipmap);
   }
 }
 
@@ -1256,7 +1190,7 @@ void draw_image(ogl_image& oimg, const ogl_image_params& params) {
   set_uniform(oimg.program, "window_size",
       vec2f{(float)params.window.x, (float)params.window.y});
   set_uniform(oimg.program, "image_size",
-      vec2f{(float)oimg.texture.size.x, (float)oimg.texture.size.y});
+      vec2f{(float)oimg.texture.width, (float)oimg.texture.height});
   set_uniform(oimg.program, "image_center", params.center);
   set_uniform(oimg.program, "image_scale", params.scale);
   draw_shape(oimg.quad);

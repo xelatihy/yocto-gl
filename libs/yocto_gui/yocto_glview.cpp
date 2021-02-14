@@ -29,7 +29,6 @@
 
 #include "yocto_glview.h"
 
-#include <yocto/yocto_commonio.h>
 #include <yocto/yocto_geometry.h>
 
 // -----------------------------------------------------------------------------
@@ -66,7 +65,7 @@ void view_shape(const string& title, const string& name,
     const progress_callback& progress_cb) {
   // initialize path tracer scene
   auto scene = scene_scene{};
-  print_progress("create scene", 0, 1);
+  if (progress_cb) progress_cb("create scene", 0, 1);
   scene.shape_names.emplace_back("shape");
   auto& ioshape     = scene.shapes.emplace_back();
   ioshape.points    = shape.points;
@@ -81,10 +80,9 @@ void view_shape(const string& title, const string& name,
   scene.instance_names.emplace_back("instance");
   auto& instance = scene.instances.emplace_back();
   instance.shape = 0;
-  add_cameras(scene);
-  add_materials(scene);
+  add_camera(scene);
   if (addsky) add_sky(scene);
-  print_progress("create scene", 0, 1);
+  if (progress_cb) progress_cb("create scene", 0, 1);
 
   // run view
   view_scene(title, name, scene, progress_cb);
@@ -157,14 +155,14 @@ void view_scene(const string& title, const string& name, scene_scene& scene,
   auto params = params_;
 
   // build bvh
-  auto bvh = make_bvh(scene, params, print_progress);
+  auto bvh = make_bvh(scene, params, progress_cb);
 
   // init renderer
-  auto lights = make_lights(scene, params, print_progress);
+  auto lights = make_lights(scene, params, progress_cb);
 
   // fix renderer type if no lights
   if (lights.lights.empty() && is_sampler_lit(params)) {
-    print_info("no lights presents, image will be black");
+    // TODO(fabio): fix this
   }
 
   // init state
@@ -174,9 +172,10 @@ void view_scene(const string& title, const string& name, scene_scene& scene,
   // render start
   trace_start(
       worker, state, scene, bvh, lights, params,
-      [&viewer, name](const string& message, int sample, int nsamples) {
+      [&viewer, &progress_cb, name](
+          const string& message, int sample, int nsamples) {
         set_param(viewer, name, "sample", {sample, {1, 4096}, true});
-        print_progress(message, sample, nsamples);
+        if (progress_cb) progress_cb(message, sample, nsamples);
       },
       [&viewer, name](const image_data& render, int current, int total) {
         set_image(viewer, name, render);
@@ -202,9 +201,10 @@ void view_scene(const string& title, const string& name, scene_scene& scene,
         from_params(uiparams, params);
         trace_start(
             worker, state, scene, bvh, lights, params,
-            [&viewer, name](const string& message, int sample, int nsamples) {
+            [&viewer, &progress_cb, name](
+                const string& message, int sample, int nsamples) {
               set_param(viewer, name, "sample", {sample, {1, 4096}, true});
-              print_progress(message, sample, nsamples);
+              if (progress_cb) progress_cb(message, sample, nsamples);
             },
             [&viewer, name](const image_data& render, int current, int total) {
               set_image(viewer, name, render);
@@ -229,9 +229,10 @@ void view_scene(const string& title, const string& name, scene_scene& scene,
           camera.frame, camera.focus, rotate, dolly, pan);
       trace_start(
           worker, state, scene, bvh, lights, params,
-          [&viewer, name](const string& message, int sample, int nsamples) {
+          [&viewer, &progress_cb, name](
+              const string& message, int sample, int nsamples) {
             set_param(viewer, name, "sample", {sample, {1, 4096}, true});
-            print_progress(message, sample, nsamples);
+            if (progress_cb) progress_cb(message, sample, nsamples);
           },
           [&viewer, name](const image_data& render, int current, int total) {
             set_image(viewer, name, render);
@@ -367,7 +368,7 @@ void draw_widgets(
   if (draw_filedialog_button(win, "save", viewer.selected, "save image",
           save_path, true, path_dirname(save_path) + "/",
           path_filename(save_path), "*.png;*.jpg;*.tga;*.bmp;*.hdr;*.exr")) {
-    auto error = ""s;
+    auto error = string{};
     save_image(save_path, viewer.selected->display, error);
     save_path = "";
   }

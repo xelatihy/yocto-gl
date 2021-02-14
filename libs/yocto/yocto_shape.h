@@ -65,140 +65,6 @@ using std::vector;
 }  // namespace yocto
 
 // -----------------------------------------------------------------------------
-// SHAPE DATA AND UTILITIES
-// -----------------------------------------------------------------------------
-namespace yocto {
-
-// Shape data stored as an indexed mesh
-struct shape_data {
-  // element data
-  vector<int>   points    = {};
-  vector<vec2i> lines     = {};
-  vector<vec3i> triangles = {};
-  vector<vec4i> quads     = {};
-
-  // vertex data
-  vector<vec3f> positions = {};
-  vector<vec3f> normals   = {};
-  vector<vec2f> texcoords = {};
-  vector<vec4f> colors    = {};
-  vector<float> radius    = {};
-};
-
-// Interpolate vertex data
-vec3f eval_position(const shape_data& shape, int element, const vec2f& uv);
-vec3f eval_normal(const shape_data& shape, int element, const vec2f& uv);
-vec3f eval_tangent(const shape_data& shape, int element, const vec2f& uv);
-vec2f eval_texcoord(const shape_data& shape, int element, const vec2f& uv);
-vec4f eval_color(const shape_data& shape, int element, const vec2f& uv);
-float eval_radius(const shape_data& shape, int element, const vec2f& uv);
-
-// Evaluate element normals
-vec3f eval_element_normal(const shape_data& shape, int element);
-
-// Compute per-vertex normals/tangents for lines/triangles/quads.
-vector<vec3f> compute_normals(const shape_data& shape);
-void          compute_normals(vector<vec3f>& normals, const shape_data& shape);
-
-// An unevaluated location on a shape
-struct shape_point {
-  int   element = 0;
-  vec2f uv      = {0, 0};
-};
-
-// Shape sampling
-vector<float> sample_shape_cdf(const shape_data& shape);
-void          sample_shape_cdf(vector<float>& cdf, const shape_data& shape);
-shape_point   sample_shape(const shape_data& shape, const vector<float>& cdf,
-      float rn, const vec2f& ruv);
-vector<shape_point> sample_shape(const shape_data& shape,
-    const vector<float>& cdf, int num_samples, uint64_t seed = 98729387);
-
-// Conversions
-shape_data quads_to_triangles(const shape_data& shape);
-void       quads_to_triangles(shape_data& result, const shape_data& shape);
-
-// Subdivision
-shape_data subdivide_shape(
-    const shape_data& shape, int subdivisions, bool catmullclark);
-
-// Shape data stored as a face-varying mesh
-struct fvshape_data {
-  // element data
-  vector<vec4i> quadspos      = {};
-  vector<vec4i> quadsnorm     = {};
-  vector<vec4i> quadstexcoord = {};
-
-  // vertex data
-  vector<vec3f> positions = {};
-  vector<vec3f> normals   = {};
-  vector<vec2f> texcoords = {};
-};
-
-// Interpolate vertex data
-vec3f eval_position(const fvshape_data& shape, int element, const vec2f& uv);
-vec3f eval_normal(const fvshape_data& shape, int element, const vec2f& uv);
-vec2f eval_texcoord(const shape_data& shape, int element, const vec2f& uv);
-
-// Evaluate element normals
-vec3f eval_element_normal(const fvshape_data& shape, int element);
-
-// Compute per-vertex normals/tangents for lines/triangles/quads.
-vector<vec3f> compute_normals(const fvshape_data& shape);
-void compute_normals(vector<vec3f>& normals, const fvshape_data& shape);
-
-// An unevaluated location on a shape
-using fvshape_point = shape_point;
-
-// Conversions
-shape_data fvshape_to_shape(
-    const fvshape_data& shape, bool as_triangles = false);
-fvshape_data shape_to_fvshape(const shape_data& shape);
-
-// Subdivision
-fvshape_data subdivide_fvshape(
-    const fvshape_data& shape, int subdivisions, bool catmullclark);
-
-}  // namespace yocto
-
-// -----------------------------------------------------------------------------
-// SHAPE IO FUNCTIONS
-// -----------------------------------------------------------------------------
-namespace yocto {
-
-// Load/save a shape
-bool load_shape(const string& filename, shape_data& shape, string& error,
-    bool flip_texcoords = true);
-bool save_shape(const string& filename, const shape_data& shape, string& error,
-    bool flip_texcoords = true, bool ascii = false);
-
-// Load/save a subdiv
-bool load_fvshape(const string& filename, fvshape_data& shape, string& error,
-    bool flip_texcoords = true);
-bool save_fvshape(const string& filename, const fvshape_data& shape,
-    string& error, bool flip_texcoords = true, bool ascii = false);
-
-// Make presets. Supported mostly in IO.
-bool make_shape_preset(shape_data& shape, const string& type, string& error);
-bool make_fvshape_preset(
-    fvshape_data& shape, const string& type, string& error);
-
-}  // namespace yocto
-
-// -----------------------------------------------------------------------------
-// SHAPE STATS AND VALIDATION
-// -----------------------------------------------------------------------------
-namespace yocto {
-
-// Get mesh statistics for printing
-vector<string> shape_stats(const shape_data& shape, bool verbose = false);
-
-// Get mesh statistics for printing
-vector<string> fvshape_stats(const fvshape_data& shape, bool verbose = false);
-
-}  // namespace yocto
-
-// -----------------------------------------------------------------------------
 // COMPUTATION OF PER_VERTEX PROPERTIES
 // -----------------------------------------------------------------------------
 namespace yocto {
@@ -713,114 +579,144 @@ void sample_quads(vector<vec3f>& sampled_positions,
 // -----------------------------------------------------------------------------
 namespace yocto {
 
-// Make a plane.
-shape_data make_rect(const vec2i& steps = {1, 1}, const vec2f& scale = {1, 1},
-    const vec2f& uvscale = {1, 1});
-shape_data make_bulged_rect(const vec2i& steps = {1, 1},
-    const vec2f& scale = {1, 1}, const vec2f& uvscale = {1, 1},
-    float radius = 0.3);
-// Make a plane in the xz plane.
-shape_data make_recty(const vec2i& steps = {1, 1}, const vec2f& scale = {1, 1},
-    const vec2f& uvscale = {1, 1});
-shape_data make_bulged_recty(const vec2i& steps = {1, 1},
-    const vec2f& scale = {1, 1}, const vec2f& uvscale = {1, 1},
-    float radius = 0.3);
-// Make a box.
-shape_data make_box(const vec3i& steps = {1, 1, 1},
-    const vec3f& scale = {1, 1, 1}, const vec3f& uvscale = {1, 1, 1});
-shape_data make_rounded_box(const vec3i& steps = {1, 1, 1},
-    const vec3f& scale = {1, 1, 1}, const vec3f& uvscale = {1, 1, 1},
-    float radius = 0.3);
-// Make a quad stack
-shape_data make_rect_stack(const vec3i& steps = {1, 1, 1},
-    const vec3f& scale = {1, 1, 1}, const vec2f& uvscale = {1, 1});
-// Make a floor.
-shape_data make_floor(const vec2i& steps = {1, 1},
-    const vec2f& scale = {10, 10}, const vec2f& uvscale = {10, 10});
-shape_data make_bent_floor(const vec2i& steps = {1, 1},
-    const vec2f& scale = {10, 10}, const vec2f& uvscale = {10, 10},
-    float bent = 0.5);
-// Make a sphere.
-shape_data make_sphere(int steps = 32, float scale = 1, float uvscale = 1);
-// Make a sphere.
-shape_data make_uvsphere(const vec2i& steps = {32, 32}, float scale = 1,
-    const vec2f& uvscale = {1, 1});
-// Make a sphere with slipped caps.
-shape_data make_capped_uvsphere(const vec2i& steps = {32, 32}, float scale = 1,
-    const vec2f& uvscale = {1, 1}, float height = 0.3);
-// Make a disk
-shape_data make_disk(int steps = 32, float scale = 1, float uvscale = 1);
-// Make a bulged disk
-shape_data make_bulged_disk(
-    int steps = 32, float scale = 1, float uvscale = 1, float height = 0.3);
-// Make a uv disk
-shape_data make_uvdisk(const vec2i& steps = {32, 32}, float scale = 1,
-    const vec2f& uvscale = {1, 1});
-// Make a uv cylinder
-shape_data make_uvcylinder(const vec3i& steps = {32, 32, 32},
-    const vec2f& scale = {1, 1}, const vec3f& uvscale = {1, 1, 1});
-// Make a rounded uv cylinder
-shape_data make_rounded_uvcylinder(const vec3i& steps = {32, 32, 32},
-    const vec2f& scale = {1, 1}, const vec3f& uvscale = {1, 1, 1},
-    float radius = 0.3);
+// Make a quad.
+void make_rect(vector<vec4i>& quads, vector<vec3f>& positions,
+    vector<vec3f>& normals, vector<vec2f>& texcoords, const vec2i& steps,
+    const vec2f& scale, const vec2f& uvscale);
+void make_bulged_rect(vector<vec4i>& quads, vector<vec3f>& positions,
+    vector<vec3f>& normals, vector<vec2f>& texcoords, const vec2i& steps,
+    const vec2f& scale, const vec2f& uvscale, float height);
+// Make a quad.
+void make_recty(vector<vec4i>& quads, vector<vec3f>& positions,
+    vector<vec3f>& normals, vector<vec2f>& texcoords, const vec2i& steps,
+    const vec2f& scale, const vec2f& uvscale);
+void make_bulged_recty(vector<vec4i>& quads, vector<vec3f>& positions,
+    vector<vec3f>& normals, vector<vec2f>& texcoords, const vec2i& steps,
+    const vec2f& scale, const vec2f& uvscale, float height);
+// Make a cube.
+void make_box(vector<vec4i>& quads, vector<vec3f>& positions,
+    vector<vec3f>& normals, vector<vec2f>& texcoords, const vec3i& steps,
+    const vec3f& scale, const vec3f& uvscale);
+void make_rounded_box(vector<vec4i>& quads, vector<vec3f>& positions,
+    vector<vec3f>& normals, vector<vec2f>& texcoords, const vec3i& steps,
+    const vec3f& scale, const vec3f& uvscale, float radius);
+void make_rect_stack(vector<vec4i>& quads, vector<vec3f>& positions,
+    vector<vec3f>& normals, vector<vec2f>& texcoords, const vec3i& steps,
+    const vec3f& scale, const vec2f& uvscale);
+void make_floor(vector<vec4i>& quads, vector<vec3f>& positions,
+    vector<vec3f>& normals, vector<vec2f>& texcoords, const vec2i& steps,
+    const vec2f& scale, const vec2f& uvscale);
+void make_bent_floor(vector<vec4i>& quads, vector<vec3f>& positions,
+    vector<vec3f>& normals, vector<vec2f>& texcoords, const vec2i& steps,
+    const vec2f& scale, const vec2f& uvscale, float radius);
+// Generate a sphere
+void make_sphere(vector<vec4i>& quads, vector<vec3f>& positions,
+    vector<vec3f>& normals, vector<vec2f>& texcoords, int steps, float scale,
+    float uvscale);
+// Generate a uvsphere
+void make_uvsphere(vector<vec4i>& quads, vector<vec3f>& positions,
+    vector<vec3f>& normals, vector<vec2f>& texcoords, const vec2i& steps,
+    float scale, const vec2f& uvscale);
+void make_capped_uvsphere(vector<vec4i>& quads, vector<vec3f>& positions,
+    vector<vec3f>& normals, vector<vec2f>& texcoords, const vec2i& steps,
+    float scale, const vec2f& uvscale, float cap);
+// Generate a disk
+void make_disk(vector<vec4i>& quads, vector<vec3f>& positions,
+    vector<vec3f>& normals, vector<vec2f>& texcoords, int steps, float scale,
+    float uvscale);
+void make_bulged_disk(vector<vec4i>& quads, vector<vec3f>& positions,
+    vector<vec3f>& normals, vector<vec2f>& texcoords, int steps, float scale,
+    float uvscale, float height);
+// Generate a uvdisk
+void make_uvdisk(vector<vec4i>& quads, vector<vec3f>& positions,
+    vector<vec3f>& normals, vector<vec2f>& texcoords, const vec2i& steps,
+    float scale, const vec2f& uvscale);
+// Generate a uvcylinder
+void make_uvcylinder(vector<vec4i>& quads, vector<vec3f>& positions,
+    vector<vec3f>& normals, vector<vec2f>& texcoords, const vec3i& steps,
+    const vec2f& scale, const vec3f& uvscale);
+// Generate a uvcylinder
+void make_rounded_uvcylinder(vector<vec4i>& quads, vector<vec3f>& positions,
+    vector<vec3f>& normals, vector<vec2f>& texcoords, const vec3i& steps,
+    const vec2f& scale, const vec3f& uvscale, float radius);
 
-// Make a facevarying rect
-fvshape_data make_fvrect(const vec2i& steps = {1, 1},
-    const vec2f& scale = {1, 1}, const vec2f& uvscale = {1, 1});
-// Make a facevarying box
-fvshape_data make_fvbox(const vec3i& steps = {1, 1, 1},
-    const vec3f& scale = {1, 1, 1}, const vec3f& uvscale = {1, 1, 1});
-// Make a facevarying sphere
-fvshape_data make_fvsphere(int steps = 32, float scale = 1, float uvscale = 1);
+// Generate lines set along a quad.
+void make_lines(vector<vec2i>& lines, vector<vec3f>& positions,
+    vector<vec3f>& normals, vector<vec2f>& texcoords, vector<float>& radius,
+    const vec2i& steps, const vec2f& size, const vec2f& uvscale,
+    const vec2f& rad);
 
-// Generate lines set along a quad. Returns lines, pos, norm, texcoord, radius.
-shape_data make_lines(const vec2i& steps = {4, 65536},
-    const vec2f& scale = {1, 1}, const vec2f& uvscale = {1, 1},
-    const vec2f& radius = {0.001, 0.001});
+// Generate a point at the origin.
+void make_point(vector<int>& points, vector<vec3f>& positions,
+    vector<vec3f>& normals, vector<vec2f>& texcoords, vector<float>& radius,
+    float point_radius);
 
-// Make point primitives. Returns points, pos, norm, texcoord, radius.
-shape_data make_point(float radius = 0.001);
-shape_data make_points(
-    int num = 65536, float uvscale = 1, float radius = 0.001);
-shape_data make_random_points(int num = 65536, const vec3f& size = {1, 1, 1},
-    float uvscale = 1, float radius = 0.001, uint64_t seed = 17);
+// Generate a point set with points placed at the origin with texcoords
+// varying along u.
+void make_points(vector<int>& points, vector<vec3f>& positions,
+    vector<vec3f>& normals, vector<vec2f>& texcoords, vector<float>& radius,
+    int num, float uvscale, float point_radius);
+
+// Generate a point set.
+void make_random_points(vector<int>& points, vector<vec3f>& positions,
+    vector<vec3f>& normals, vector<vec2f>& texcoords, vector<float>& radius,
+    int num, const vec3f& size, float uvscale, float point_radius,
+    uint64_t seed);
+
+// Make a bezier circle. Returns bezier, pos.
+void make_bezier_circle(
+    vector<vec4i>& beziers, vector<vec3f>& positions, float size);
+
+// Make fvquad
+void make_fvrect(vector<vec4i>& quadspos, vector<vec4i>& quadsnorm,
+    vector<vec4i>& quadstexcoord, vector<vec3f>& positions,
+    vector<vec3f>& normals, vector<vec2f>& texcoords, const vec2i& steps,
+    const vec2f& size, const vec2f& uvscale);
+void make_fvbox(vector<vec4i>& quadspos, vector<vec4i>& quadsnorm,
+    vector<vec4i>& quadstexcoord, vector<vec3f>& positions,
+    vector<vec3f>& normals, vector<vec2f>& texcoords, const vec3i& steps,
+    const vec3f& size, const vec3f& uvscale);
+void make_fvsphere(vector<vec4i>& quadspos, vector<vec4i>& quadsnorm,
+    vector<vec4i>& quadstexcoord, vector<vec3f>& positions,
+    vector<vec3f>& normals, vector<vec2f>& texcoords, int steps, float size,
+    float uvscale);
 
 // Predefined meshes
-shape_data   make_monkey(float scale = 1);
-shape_data   make_quad(float scale = 1);
-shape_data   make_quady(float scale = 1);
-shape_data   make_cube(float scale = 1);
-fvshape_data make_fvcube(float scale = 1);
-shape_data   make_geosphere(float scale = 1);
-shape_data   make_bunny(float scale = 1, bool align_middle = true);
+void make_monkey(vector<vec4i>& quads, vector<vec3f>& positions, float scale);
+void make_quad(vector<vec4i>& quads, vector<vec3f>& positions,
+    vector<vec3f>& normals, vector<vec2f>& texcoords, float scale);
+void make_quady(vector<vec4i>& quads, vector<vec3f>& positions,
+    vector<vec3f>& normals, vector<vec2f>& texcoords, float scale);
+void make_cube(vector<vec4i>& quads, vector<vec3f>& positions,
+    vector<vec3f>& normals, vector<vec2f>& texcoords, float scale);
+void make_fvcube(vector<vec4i>& quadspos, vector<vec4i>& quadsnorm,
+    vector<vec4i>& quadstexcoord, vector<vec3f>& positions,
+    vector<vec3f>& normals, vector<vec2f>& texcoords, float scale);
+void make_geosphere(
+    vector<vec3i>& triangles, vector<vec3f>& positions, float scale);
 
-// Make a hair ball around a shape.
-// length: minimum and maximum length
-// rad: minimum and maximum radius from base to tip
-// noise: noise added to hair (strength/scale)
-// clump: clump added to hair (strength/number)
-// rotation: rotation added to hair (angle/strength)
-shape_data make_hair(const shape_data& shape, const vec2i& steps = {8, 65536},
-    const vec2f& length = {0.1, 0.1}, const vec2f& rad = {0.001, 0.001},
-    const vec2f& noise = {0, 10}, const vec2f& clump = {0, 128},
-    const vec2f& rotation = {0, 0}, int seed = 7);
+// Make a hair ball around a shape
+void make_hair(vector<vec2i>& lines, vector<vec3f>& positions,
+    vector<vec3f>& normals, vector<vec2f>& texcoords, vector<float>& radius,
+    const vector<vec3i>& striangles, const vector<vec4i>& squads,
+    const vector<vec3f>& spos, const vector<vec3f>& snorm,
+    const vector<vec2f>& stexcoord, const vec2i& steps, const vec2f& len,
+    const vec2f& rad, const vec2f& noise, const vec2f& clump,
+    const vec2f& rotation, int seed);
 
-// Thickens a shape by copying the shape content, rescaling it and flipping its
-// normals. Note that this is very much not robust and only useful for trivial
-// cases.
+// Thickens a shape by copy9ing the shape content, rescaling it and flipping
+// its normals. Note that this is very much not robust and only useful for
+// trivial cases.
 void make_shell(vector<vec4i>& quads, vector<vec3f>& positions,
     vector<vec3f>& normals, vector<vec2f>& texcoords, float thickness);
 
 // Make a heightfield mesh.
-shape_data make_heightfield(const vec2i& size, const vector<float>& height);
-shape_data make_heightfield(const vec2i& size, const vector<vec4f>& color);
-
-// Backward compatibility (mostly)
-using quads_shape     = shape_data;
-using triangles_shape = shape_data;
-using lines_shape     = shape_data;
-using points_shape    = shape_data;
-using quads_fvshape   = fvshape_data;
+void make_heightfield(vector<vec4i>& quads, vector<vec3f>& positions,
+    vector<vec3f>& normals, vector<vec2f>& texcoords, const vec2i& size,
+    const vector<float>& height);
+void make_heightfield(vector<vec4i>& quads, vector<vec3f>& positions,
+    vector<vec3f>& normals, vector<vec2f>& texcoords, const vec2i& size,
+    const vector<vec4f>& color);
 
 }  // namespace yocto
 

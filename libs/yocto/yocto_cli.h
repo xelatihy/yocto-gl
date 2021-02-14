@@ -1,5 +1,11 @@
 //
-// Implementation for Yocto/CommonIO
+// # Yocto/CommonIO: Utilities for writing command-line apps
+//
+// Yocto/CommonIO is a collection of utilities used in writing command-line
+// applications, including parsing command line arguments, simple path
+// manipulation, file lading and saving, and printing values, timers and
+// progress bars.
+// Yocto/CommonIO is implemented in `yocto_commonio.h` and `yocto_commonio.cpp`.
 //
 
 //
@@ -27,14 +33,16 @@
 //
 //
 
-#include "yocto_commonio.h"
+#ifndef _YOCTO_COMMONIO_H_
+#define _YOCTO_COMMONIO_H_
 
-#include <algorithm>
+// -----------------------------------------------------------------------------
+// INCLUDES
+// -----------------------------------------------------------------------------
+
 #include <chrono>
 #include <cstdio>
-#include <filesystem>
 #include <functional>
-#include <memory>
 #include <stdexcept>
 #include <string>
 #include <type_traits>
@@ -47,7 +55,10 @@
 namespace yocto {
 
 // using directives
+using std::function;
+using std::string;
 using std::unordered_set;
+using std::vector;
 using namespace std::string_literals;
 
 }  // namespace yocto
@@ -58,21 +69,259 @@ using namespace std::string_literals;
 namespace yocto {
 
 // Print a message to the console
-void print_info(const string& msg) { printf("%s\n", msg.c_str()); }
+inline void print_info(const string& msg);
+// Prints a message to the console and exit with an error. Returns error code.
+inline int print_fatal(const string& msg);
+
+// Timer that prints as scope end. Create with `print_timed` and print with
+// `print_elapsed`.
+struct print_timer {
+  int64_t start_time = -1;
+  ~print_timer();  // print time if scope ends
+};
+// Print traces for timing and program debugging
+inline print_timer print_timed(const string& msg);
+inline int64_t     print_elapsed(print_timer& timer);
+
+// Print progress
+inline void print_progress(const string& message, int current, int total);
+
+// Format duration string from nanoseconds
+inline string format_duration(int64_t duration);
+// Format a large integer number in human readable form
+inline string format_num(uint64_t num);
+
+}  // namespace yocto
+
+// -----------------------------------------------------------------------------
+// SIMPLE TIMER
+// -----------------------------------------------------------------------------
+namespace yocto {
+
+// Simple timer
+struct simple_timer {
+  int64_t start = -1, stop = -1;
+  simple_timer();
+};
+
+// Timer opreations
+inline void    start_timer(simple_timer& timer);
+inline void    stop_timer(simple_timer& timer);
+inline int64_t elapsed_nanoseconds(simple_timer& timer);
+inline double  elapsed_seconds(simple_timer& timer);
+inline string  elapsed_formatted(simple_timer& timer);
+
+}  // namespace yocto
+
+// -----------------------------------------------------------------------------
+// COMMAND LINE PARSING
+// -----------------------------------------------------------------------------
+namespace yocto {
+
+// Initialize a command line parser.
+struct cli_command;
+inline cli_command make_cli(const string& cmd, const string& usage);
+// parse arguments, checks for errors, and exits on error or help
+inline void parse_cli(cli_command& cli, int argc, const char** argv);
+// parse arguments and checks for errors
+inline bool parse_cli(
+    cli_command& cli, int argc, const char** argv, string& error);
+// gets usage message
+inline string get_usage(const cli_command& cli);
+// gets whether help was invoked
+inline bool get_help(const cli_command& cli);
+// gets the set command
+inline string get_command(const cli_command& cli);
+
+// Add an optional argument. Supports strings, numbers, and boolean flags.
+// Optional arguments will be parsed with name `--<name>` and `-<alt>`.
+// Optional booleans will support both `--<name>` and `--no-<name>` to enabled
+// and disable the flag.
+inline void add_optional(cli_command& cli, const string& name, int& value,
+    const string& usage, const vector<int>& minmax = {}, const string& alt = "",
+    bool req = false);
+inline void add_optional(cli_command& cli, const string& name, float& value,
+    const string& usage, const vector<float>& minmax = {},
+    const string& alt = "", bool req = false);
+inline void add_optional(cli_command& cli, const string& name, bool& value,
+    const string& usage, const vector<string>& choices = {},
+    const string& alt = "", bool req = false);
+inline void add_optional(cli_command& cli, const string& name, string& value,
+    const string& usage, const vector<string>& choices = {},
+    const string& alt = "", bool req = false);
+// Add a positional argument. Supports strings, numbers, and boolean flags.
+inline void add_positional(cli_command& cli, const string& name, int& value,
+    const string& usage, const vector<int>& minmax = {}, bool req = true);
+inline void add_positional(cli_command& cli, const string& name, float& value,
+    const string& usage, const vector<float>& minmax = {}, bool req = true);
+inline void add_positional(cli_command& cli, const string& name, bool& value,
+    const string& usage, const vector<string>& choices = {}, bool req = true);
+inline void add_positional(cli_command& cli, const string& name, string& value,
+    const string& usage, const vector<string>& choices = {}, bool req = true);
+// Add an optional argument with values as labels. Supports integers, enums and
+// strings.
+inline void add_optional(cli_command& cli, const string& name, int& value,
+    const string& usage, const vector<string>& choices, const string& alt = "",
+    bool req = false);
+template <typename T, typename = std::enable_if_t<std::is_enum_v<T>>>
+inline void add_optional(cli_command& cli, const string& name, T& value,
+    const string& usage, const vector<string>& choices, const string& alt = "",
+    bool req = false);
+// Add a positional argument with values as labels. Supports string, integers
+// and enums.
+inline void add_positional(cli_command& cli, const string& name, int& value,
+    const string& usage, const vector<string>& choices, bool req = true);
+template <typename T, typename = std::enable_if_t<std::is_enum_v<T>>>
+inline void add_positional(cli_command& cli, const string& name, T& value,
+    const string& usage, const vector<string>& choices, bool req = true);
+// Add a positional argument that consumes all arguments left.
+// Supports strings and enums.
+inline void add_positional(cli_command& cli, const string& name,
+    vector<int>& value, const string& usage, const vector<int>& minmax,
+    bool req = true);
+inline void add_positional(cli_command& cli, const string& name,
+    vector<float>& value, const string& usage, const vector<float>& minmax,
+    bool req = true);
+inline void add_positional(cli_command& cli, const string& name,
+    vector<int>& value, const string& usage, const vector<string>& choices = {},
+    bool req = true);
+inline void add_positional(cli_command& cli, const string& name,
+    vector<string>& value, const string& usage,
+    const vector<string>& choices = {}, bool req = true);
+
+// Add a subcommand
+inline cli_command& add_command(
+    cli_command& cli, const string& name, const string& usage);
+inline void add_command_name(
+    cli_command& cli, const string& name, string& value, const string& usage);
+
+// Parses an optional or positional argument. Optional arguments' names start
+// with "--" or "-", otherwise they are arguments. Supports strings, numbers,
+// boolean flags and enums.
+// Many names, separated by commas, can be used for each argument.
+// Boolean flags are indicated with a pair of names "--name/--no-name", so that
+// both options are explicitly specified.
+inline void add_option(cli_command& cli, const string& name, int& value,
+    const string& usage, bool req = false);
+inline void add_option(cli_command& cli, const string& name, float& value,
+    const string& usage, bool req = false);
+inline void add_option(cli_command& cli, const string& name, bool& value,
+    const string& usage, bool req = false);
+inline void add_option(cli_command& cli, const string& name, string& value,
+    const string& usage, bool req = false);
+// Parses an optional or positional argument where values can only be within a
+// set of choices. Supports strings, integers and enums.
+inline void add_option(cli_command& cli, const string& name, int& value,
+    const string& usage, const vector<string>& choices, bool req = false);
+inline void add_option(cli_command& cli, const string& name, string& value,
+    const string& usage, const vector<string>& choices, bool req = false);
+// Parse all arguments left on the command line. Can only be used as argument.
+inline void add_option(cli_command& cli, const string& name,
+    vector<string>& value, const string& usage, bool req = false);
+
+}  // namespace yocto
+
+// -----------------------------------------------------------------------------
+//
+//
+// IMPLEMENTATION
+//
+//
+// -----------------------------------------------------------------------------
+
+// -----------------------------------------------------------------------------
+// FORMATTING
+// -----------------------------------------------------------------------------
+namespace yocto {
+
+// This is a very crude replacement for `std::format()` that will be used when
+// available on all platforms.
+template <typename... Args>
+inline string format(const string& fmt, Args&&... args);
+
+}  // namespace yocto
+
+// -----------------------------------------------------------------------------
+// IMPLEMENTATION OF COMMAND-LINE PARSING
+// -----------------------------------------------------------------------------
+namespace yocto {
+
+// Command line value type
+enum struct cli_type { integer, uinteger, number, boolean, string };
+// Command line value
+struct cli_value {
+  int64_t  integer  = 0;
+  uint64_t uinteger = 0;
+  double   number   = 0;
+  string   text     = "";
+};
+// Command line option. All data should be considered private.
+struct cli_option {
+  string                            name       = "";
+  string                            alt        = "";
+  bool                              positional = false;
+  cli_type                          type       = cli_type::string;
+  bool                              req        = false;
+  int                               nargs      = 0;
+  string                            usage      = "";
+  vector<cli_value>                 minmax     = {};
+  vector<string>                    choices    = {};
+  vector<cli_value>                 value      = {};
+  vector<cli_value>                 def        = {};
+  bool                              set        = false;
+  function<bool(const cli_option&)> set_value  = {};
+};
+// Command line command. All data should be considered private.
+struct cli_command {
+  string                        name        = "";
+  string                        usage       = "";
+  vector<cli_command>           commands    = {};
+  vector<cli_option>            options     = {};
+  bool                          help        = false;
+  string                        command     = "";
+  function<void(const string&)> set_command = {};
+};
+
+template <typename T, typename>
+inline void add_optional(cli_command& cli, const string& name, T& value,
+    const string& usage, const vector<string>& choices, const string& alt,
+    bool req) {
+  return add_optional(
+      cli, name, (std::underlying_type_t<T>&)value, usage, choices, alt, req);
+}
+template <typename T, typename>
+inline void add_positional(cli_command& cli, const string& name, T& value,
+    const string& usage, const vector<string>& choices, bool req) {
+  return add_positional(
+      cli, name, (std::underlying_type_t<T>&)value, usage, choices, req);
+}
+
+// Backward compatibility
+using cli_state [[deprecated]] = cli_command;
+
+}  // namespace yocto
+
+// -----------------------------------------------------------------------------
+// PRINT/FORMATTING UTILITIES
+// -----------------------------------------------------------------------------
+namespace yocto {
+
+// Print a message to the console
+inline void print_info(const string& msg) { printf("%s\n", msg.c_str()); }
 // Prints a messgae to the console and exit with an error.
-int print_fatal(const string& msg) {
+inline int print_fatal(const string& msg) {
   printf("\n%s\n", msg.c_str());
   exit(1);
   return 1;
 }
 
 // get time in nanoseconds - useful only to compute difference of times
-int64_t get_time_() {
+inline int64_t get_time_() {
   return std::chrono::high_resolution_clock::now().time_since_epoch().count();
 }
 
 // Format duration string from nanoseconds
-string format_duration(int64_t duration) {
+inline string format_duration(int64_t duration) {
   auto elapsed = duration / 1000000;  // milliseconds
   auto hours   = (int)(elapsed / 3600000);
   elapsed %= 3600000;
@@ -87,7 +336,7 @@ string format_duration(int64_t duration) {
 }
 
 // Format a large integer number in human readable form
-string format_num(uint64_t num) {
+inline string format_num(uint64_t num) {
   auto rem = num % 1000;
   auto div = num / 1000;
   if (div > 0) return format_num(div) + "," + std::to_string(rem);
@@ -95,23 +344,23 @@ string format_num(uint64_t num) {
 }
 
 // Print traces for timing and program debugging
-print_timer print_timed(const string& msg) {
+inline print_timer print_timed(const string& msg) {
   printf("%s", msg.c_str());
   fflush(stdout);
   // print_info(fmt + " [started]", args...);
   return print_timer{get_time_()};
 }
-int64_t print_elapsed(print_timer& timer) {
+inline int64_t print_elapsed(print_timer& timer) {
   if (timer.start_time < 0) return -1;
   auto elapsed = get_time_() - timer.start_time;
   printf(" in %s\n", format_duration(elapsed).c_str());
   timer.start_time = -1;
   return elapsed;
 }
-print_timer::~print_timer() { print_elapsed(*this); }
+inline print_timer::~print_timer() { print_elapsed(*this); }
 
 // Print progress
-void print_progress(const string& message, int current, int total) {
+inline void print_progress(const string& message, int current, int total) {
   static auto pad = [](const string& str, int n) -> string {
     return string(std::max(0, n - (int)str.size()), '0') + str;
   };
@@ -148,245 +397,26 @@ void print_progress(const string& message, int current, int total) {
 namespace yocto {
 
 // Simple timer
-simple_timer::simple_timer() {
+inline simple_timer::simple_timer() {
   start = get_time_();
   stop  = -1;
 }
 
 // Timer opreations
-void start_timer(simple_timer& timer) {
+inline void start_timer(simple_timer& timer) {
   timer.start = get_time_();
   timer.stop  = -1;
 }
-void    stop_timer(simple_timer& timer) { timer.stop = get_time_(); }
-int64_t elapsed_nanoseconds(simple_timer& timer) {
+inline void    stop_timer(simple_timer& timer) { timer.stop = get_time_(); }
+inline int64_t elapsed_nanoseconds(simple_timer& timer) {
   return get_time_() - timer.start;
 }
-double elapsed_seconds(simple_timer& timer) {
+inline double elapsed_seconds(simple_timer& timer) {
   return (double)(get_time_() - timer.start) * 1e-9;
 }
-string elapsed_formatted(simple_timer& timer) {
+inline string elapsed_formatted(simple_timer& timer) {
   return format_duration(get_time_() - timer.start);
 }
-
-}  // namespace yocto
-
-// -----------------------------------------------------------------------------
-// FILE IO
-// -----------------------------------------------------------------------------
-namespace yocto {
-
-// Cleanup
-file_stream::~file_stream() {
-  if (owned && fs) fclose(fs);
-}
-
-// Open a file
-file_stream open_file(const string& filename, const string& mode) {
-#ifdef _WIN32
-  auto path8 = std::filesystem::u8path(filename);
-  auto wmode = std::wstring(mode.begin(), mode.end());
-  auto fs    = _wfopen(path8.c_str(), wmode.c_str());
-#else
-  auto fs = fopen(filename.c_str(), mode.c_str());
-#endif
-  return {filename, fs, true};
-}
-
-// Close a file
-void close_file(file_stream& fs) {
-  if (fs.owned && fs.fs) fclose(fs.fs);
-  fs.filename = "";
-  fs.fs       = nullptr;
-  fs.owned    = false;
-}
-
-// Read a line of text
-bool read_line(file_stream& fs, char* buffer, size_t size) {
-  return fgets(buffer, (int)size, fs.fs);
-}
-
-// Write text to a file
-bool write_text(file_stream& fs, const string& str) {
-  return fprintf(fs.fs, "%s", str.c_str()) >= 0;
-}
-
-// Read data from a file
-bool read_data(file_stream& fs, void* buffer, size_t count) {
-  return fread(buffer, 1, count, fs.fs) == count;
-}
-
-// Write data from a file
-bool write_data(file_stream& fs, const void* buffer, size_t count) {
-  return fwrite(buffer, 1, count, fs.fs) == count;
-}
-
-// Opens a file with a utf8 file name
-FILE* fopen_utf8(const char* filename, const char* mode) {
-#ifdef _WIN32
-  auto path8 = std::filesystem::u8path(filename);
-  auto wmode = std::wstring(string{mode}.begin(), string{mode}.end());
-  return _wfopen(path8.c_str(), wmode.c_str());
-#else
-  return fopen(filename, mode);
-#endif
-}
-
-// Load a text file
-bool load_text(const string& filename, string& str, string& error) {
-  // https://stackoverflow.com/questions/174531/how-to-read-the-content-of-a-file-to-a-string-in-c
-  auto fs = open_file(filename, "rb");
-  if (!fs) {
-    error = filename + ": file not found";
-    return false;
-  }
-  fseek(fs.fs, 0, SEEK_END);
-  auto length = ftell(fs.fs);
-  fseek(fs.fs, 0, SEEK_SET);
-  str.resize(length);
-  if (!read_values(fs, str.data(), length)) {
-    error = filename + ": read error";
-    return false;
-  }
-  return true;
-}
-
-// Save a text file
-bool save_text(const string& filename, const string& str, string& error) {
-  auto fs = open_file(filename, "wt");
-  if (!fs) {
-    error = filename + ": file not found";
-    return false;
-  }
-  if (!write_text(fs, str)) {
-    error = filename + ": write error";
-    return false;
-  }
-  return true;
-}
-
-// Load a binary file
-bool load_binary(const string& filename, vector<byte>& data, string& error) {
-  // https://stackoverflow.com/questions/174531/how-to-read-the-content-of-a-file-to-a-string-in-c
-  auto fs = open_file(filename, "rb");
-  if (!fs) {
-    error = filename + ": file not found";
-    return false;
-  }
-  fseek(fs.fs, 0, SEEK_END);
-  auto length = ftell(fs.fs);
-  fseek(fs.fs, 0, SEEK_SET);
-  data.resize(length);
-  if (!read_values(fs, data.data(), length)) {
-    error = filename + ": read error";
-    return false;
-  }
-  return true;
-}
-
-// Save a binary file
-bool save_binary(
-    const string& filename, const vector<byte>& data, string& error) {
-  auto fs = open_file(filename, "wb");
-  if (!fs) {
-    error = filename + ": file not found";
-    return false;
-  }
-  if (!write_values(fs, data.data(), data.size())) {
-    error = filename + ": write error";
-    return false;
-  }
-  return true;
-}
-
-}  // namespace yocto
-
-// -----------------------------------------------------------------------------
-// PATH UTILITIES
-// -----------------------------------------------------------------------------
-namespace yocto {
-
-// Make a path from a utf8 string
-static std::filesystem::path make_path(const string& filename) {
-  return std::filesystem::u8path(filename);
-}
-
-// Normalize path
-string normalize_path(const string& filename) {
-  return make_path(filename).generic_u8string();
-}
-
-// Get directory name (not including /)
-string path_dirname(const string& filename) {
-  return make_path(filename).parent_path().generic_u8string();
-}
-
-// Get extension (including .)
-string path_extension(const string& filename) {
-  return make_path(filename).extension().u8string();
-}
-
-// Get filename without directory.
-string path_filename(const string& filename) {
-  return make_path(filename).filename().u8string();
-}
-
-// Get filename without directory and extension.
-string path_basename(const string& filename) {
-  return make_path(filename).stem().u8string();
-}
-
-// Joins paths
-string path_join(const string& patha, const string& pathb) {
-  return (make_path(patha) / make_path(pathb)).generic_u8string();
-}
-string path_join(
-    const string& patha, const string& pathb, const string& pathc) {
-  return (make_path(patha) / make_path(pathb) / make_path(pathc))
-      .generic_u8string();
-}
-
-// Replaces extensions
-string replace_extension(const string& filename, const string& ext) {
-  return make_path(filename).replace_extension(ext).u8string();
-}
-
-// Check if a file can be opened for reading.
-bool path_exists(const string& filename) { return exists(make_path(filename)); }
-
-// Check if a file is a directory
-bool path_isdir(const string& filename) {
-  return is_directory(make_path(filename));
-}
-
-// Check if a file is a file
-bool path_isfile(const string& filename) {
-  return is_regular_file(make_path(filename));
-}
-
-// List the contents of a directory
-vector<string> list_directory(const string& filename) {
-  auto entries = vector<string>{};
-  for (auto entry : std::filesystem::directory_iterator(make_path(filename))) {
-    entries.push_back(entry.path().generic_u8string());
-  }
-  return entries;
-}
-
-// Create a directory and all missing parent directories if needed
-bool make_directory(const string& dirname, string& error) {
-  if (path_exists(dirname)) return true;
-  try {
-    create_directories(make_path(dirname));
-    return true;
-  } catch (...) {
-    error = dirname + ": cannot create directory";
-    return false;
-  }
-}
-
-// Get the current directory
-string path_current() { return std::filesystem::current_path().u8string(); }
 
 }  // namespace yocto
 
@@ -597,69 +627,73 @@ inline void add_positionalv_impl(cli_command& cli, const string& name,
 // Optional arguments will be parsed with name `--<name>` and `-<alt>`.
 // Optional booleans will support both `--<name>` and `--no-<name>` to enabled
 // and disable the flag.
-void add_optional(cli_command& cli, const string& name, int& value,
+inline void add_optional(cli_command& cli, const string& name, int& value,
     const string& usage, const vector<int>& minmax, const string& alt,
     bool req) {
   return add_optional_impl(
       cli, name, value, usage, {minmax[0], minmax[1]}, {}, alt, req);
 }
-void add_optional(cli_command& cli, const string& name, float& value,
+inline void add_optional(cli_command& cli, const string& name, float& value,
     const string& usage, const vector<float>& minmax, const string& alt,
     bool req) {
   return add_optional_impl(cli, name, value, usage, minmax, {}, alt, req);
 }
-void add_optional(cli_command& cli, const string& name, bool& value,
+inline void add_optional(cli_command& cli, const string& name, bool& value,
     const string& usage, const vector<string>& choices, const string& alt,
     bool req) {
   return add_optional_impl(cli, name, value, usage, {}, choices, alt, req);
 }
-void add_optional(cli_command& cli, const string& name, string& value,
+inline void add_optional(cli_command& cli, const string& name, string& value,
     const string& usage, const vector<string>& choices, const string& alt,
     bool req) {
   return add_optional_impl(cli, name, value, usage, {}, choices, alt, req);
 }
-void add_optional(cli_command& cli, const string& name, int& value,
+inline void add_optional(cli_command& cli, const string& name, int& value,
     const string& usage, const vector<string>& choices, const string& alt,
     bool req) {
   return add_optional_impl(cli, name, value, usage, {}, choices, alt, req);
 }
 // Add a positional argument. Supports strings, numbers, and boolean flags.
-void add_positional(cli_command& cli, const string& name, int& value,
+inline void add_positional(cli_command& cli, const string& name, int& value,
     const string& usage, const vector<int>& minmax, bool req) {
   return add_positional_impl(cli, name, value, usage, minmax, {}, req);
 }
-void add_positional(cli_command& cli, const string& name, float& value,
+inline void add_positional(cli_command& cli, const string& name, float& value,
     const string& usage, const vector<float>& minmax, bool req) {
   return add_positional_impl(cli, name, value, usage, minmax, {}, req);
 }
-void add_positional(cli_command& cli, const string& name, bool& value,
+inline void add_positional(cli_command& cli, const string& name, bool& value,
     const string& usage, const vector<string>& choices, bool req) {
   return add_positional_impl(cli, name, value, usage, {}, choices, req);
 }
-void add_positional(cli_command& cli, const string& name, string& value,
+inline void add_positional(cli_command& cli, const string& name, string& value,
     const string& usage, const vector<string>& choices, bool req) {
   return add_positional_impl(cli, name, value, usage, {}, choices, req);
 }
-void add_positional(cli_command& cli, const string& name, int& value,
+inline void add_positional(cli_command& cli, const string& name, int& value,
     const string& usage, const vector<string>& choices, bool req) {
   return add_positional_impl(cli, name, value, usage, {}, choices, req);
 }
 // Add a positional argument that consumes all arguments left.
 // Supports strings and enums.
-void add_positional(cli_command& cli, const string& name, vector<int>& value,
-    const string& usage, const vector<int>& minmax, bool req) {
+inline void add_positional(cli_command& cli, const string& name,
+    vector<int>& value, const string& usage, const vector<int>& minmax,
+    bool req) {
   return add_positionalv_impl(cli, name, value, usage, minmax, {}, req);
 }
-void add_positional(cli_command& cli, const string& name, vector<float>& value,
-    const string& usage, const vector<float>& minmax, bool req) {
+inline void add_positional(cli_command& cli, const string& name,
+    vector<float>& value, const string& usage, const vector<float>& minmax,
+    bool req) {
   return add_positionalv_impl(cli, name, value, usage, minmax, {}, req);
 }
-void add_positional(cli_command& cli, const string& name, vector<int>& value,
-    const string& usage, const vector<string>& choices, bool req) {
+inline void add_positional(cli_command& cli, const string& name,
+    vector<int>& value, const string& usage, const vector<string>& choices,
+    bool req) {
   return add_positionalv_impl(cli, name, value, usage, {}, choices, req);
 }
-void add_positional(cli_command& cli, const string& name, vector<string>& value,
-    const string& usage, const vector<string>& choices, bool req) {
+inline void add_positional(cli_command& cli, const string& name,
+    vector<string>& value, const string& usage, const vector<string>& choices,
+    bool req) {
   return add_positionalv_impl(cli, name, value, usage, {}, choices, req);
 }
 
@@ -786,40 +820,40 @@ inline void add_option_impl(cli_command& cli, const string& name,
 // Many names, separated by commas, can be used for each argument.
 // Boolean flags are indicated with a pair of names "--name/--no-name", so that
 // both options are explicitly specified.
-void add_option(cli_command& cli, const string& name, int& value,
+inline void add_option(cli_command& cli, const string& name, int& value,
     const string& usage, bool req) {
   return add_option_impl(cli, name, value, usage, req);
 }
-void add_option(cli_command& cli, const string& name, float& value,
+inline void add_option(cli_command& cli, const string& name, float& value,
     const string& usage, bool req) {
   return add_option_impl(cli, name, value, usage, req);
 }
-void add_option(cli_command& cli, const string& name, bool& value,
+inline void add_option(cli_command& cli, const string& name, bool& value,
     const string& usage, bool req) {
   return add_option_impl(cli, name, value, usage, req);
 }
-void add_option(cli_command& cli, const string& name, string& value,
+inline void add_option(cli_command& cli, const string& name, string& value,
     const string& usage, bool req) {
   return add_option_impl(cli, name, value, usage, req);
 }
 // Parses an optional or positional argument where values can only be within a
 // set of choices. Supports strings, integers and enums.
-void add_option(cli_command& cli, const string& name, int& value,
+inline void add_option(cli_command& cli, const string& name, int& value,
     const string& usage, const vector<string>& choices, bool req) {
   return add_option_impl(cli, name, value, usage, choices, req);
 }
-void add_option(cli_command& cli, const string& name, string& value,
+inline void add_option(cli_command& cli, const string& name, string& value,
     const string& usage, const vector<string>& choices, bool req) {
   return add_option_impl(cli, name, value, usage, choices, req);
 }
 // Parse all arguments left on the command line. Can only be used as argument.
-void add_option(cli_command& cli, const string& name, vector<string>& value,
-    const string& usage, bool req) {
+inline void add_option(cli_command& cli, const string& name,
+    vector<string>& value, const string& usage, bool req) {
   return add_option_impl(cli, name, value, usage, req);
 }
 
 // initialize a command line parser
-cli_command make_cli(const string& name, const string& usage) {
+inline cli_command make_cli(const string& name, const string& usage) {
   auto cli  = cli_command{};
   cli.name  = name;
   cli.usage = usage;
@@ -828,7 +862,7 @@ cli_command make_cli(const string& name, const string& usage) {
 }
 
 // add command
-cli_command& add_command(
+inline cli_command& add_command(
     cli_command& cli, const string& name, const string& usage) {
   for (auto& cmd : cli.commands) {
     if (cmd.name == name) {
@@ -842,12 +876,12 @@ cli_command& add_command(
   return cmd;
 }
 
-void add_command_name(
+inline void add_command_name(
     cli_command& cli, const string& name, string& value, const string& usage) {
   cli.set_command = [&value](const string& cvalue) { value = cvalue; };
 }
 
-static void validate_names(const cli_command& cmd) {
+inline void validate_names(const cli_command& cmd) {
   // check for errors
   auto used = unordered_set<string>{};
   for (auto& option : cmd.options) {
@@ -866,13 +900,13 @@ static void validate_names(const cli_command& cmd) {
   for (auto& scmd : cmd.commands) validate_names(scmd);
 }
 
-bool get_help(const cli_command& cli) {
+inline bool get_help(const cli_command& cli) {
   if (cli.help) return true;
   for (auto& cmd : cli.commands) return get_help(cmd);
   return false;
 }
 
-static string get_usage(const cli_command& root, const cli_command& cli) {
+inline string get_usage(const cli_command& root, const cli_command& cli) {
   auto type_name = [](const cli_option& option) -> string {
     auto str = string{};
     str += "<";
@@ -980,11 +1014,11 @@ static string get_usage(const cli_command& root, const cli_command& cli) {
   return message;
 }
 
-string get_usage(const cli_command& cli) { return get_usage(cli, cli); }
+inline string get_usage(const cli_command& cli) { return get_usage(cli, cli); }
 
-string get_command(const cli_command& cli) { return cli.command; }
+inline string get_command(const cli_command& cli) { return cli.command; }
 
-static bool parse_value(
+inline static bool parse_value(
     cli_option& option, const vector<string>& args, size_t start) {
   option.value.resize(option.nargs > 0 ? option.nargs : (args.size() - start));
   for (auto idx = (size_t)0; idx < option.value.size(); idx++) {
@@ -1038,7 +1072,7 @@ static bool parse_value(
   return true;
 }
 
-bool parse_cli(cli_command& cli, vector<string>& args, string& error) {
+inline bool parse_cli(cli_command& cli, vector<string>& args, string& error) {
   auto cli_error = [&error](const string& message) {
     error = message;
     return false;
@@ -1149,7 +1183,8 @@ bool parse_cli(cli_command& cli, vector<string>& args, string& error) {
   return true;
 }
 
-bool parse_cli(cli_command& cli, int argc, const char** argv, string& error) {
+inline bool parse_cli(
+    cli_command& cli, int argc, const char** argv, string& error) {
   // validate names
   validate_names(cli);
   // prepare args
@@ -1158,7 +1193,7 @@ bool parse_cli(cli_command& cli, int argc, const char** argv, string& error) {
   return parse_cli(cli, args, error);
 }
 
-void parse_cli(cli_command& cli, int argc, const char** argv) {
+inline void parse_cli(cli_command& cli, int argc, const char** argv) {
   auto error = string{};
   if (!parse_cli(cli, argc, argv, error)) {
     print_info("error: " + error);
@@ -1172,3 +1207,5 @@ void parse_cli(cli_command& cli, int argc, const char** argv) {
 }
 
 }  // namespace yocto
+
+#endif

@@ -1,4 +1,4 @@
-#include <yocto/yocto_commonio.h>
+#include <yocto/yocto_cli.h>
 #include <yocto/yocto_image.h>
 #include <yocto/yocto_sceneio.h>
 #include <yocto_gui/yocto_imgui.h>
@@ -17,6 +17,8 @@ using namespace std::string_literals;
 #undef far
 #undef max
 #endif
+
+#include <yocto/yocto_color.h>
 
 #include "yshade_sculpt.h"
 #include "yshade_sculpt_algorithms.h"
@@ -85,7 +87,7 @@ struct sculpt_params {
   vector<int>     symmetric_stroke_sampling = {};
   geodesic_solver solver                    = {};
   vector<vec2f>   coords                    = {};
-  image<vec3f>    tex_image                 = {};
+  image_data      tex_image                 = {};
   vector<vec3f>   old_positions             = {};
   vector<vec3f>   old_normals               = {};
 };
@@ -226,16 +228,13 @@ void init_sculpt_tool(sculpt_params *params, shape_data *shape,
 
   // init texture
   if (texture_name != "") {
-    auto   img = image<vec4f>{};
     string ioerror;
-    if (!load_image(texture_name, img, ioerror)) print_fatal(ioerror);
-    params->tex_image.resize(img.imsize());
-    for (auto idx = 0; idx < img.count(); idx++)
-      params->tex_image[idx] = xyz(img[idx]);
+    if (!load_image(texture_name, params->tex_image, ioerror))
+      print_fatal(ioerror);
   }
 }
 
-lines_shape make_circle(vec3f center, mat3f basis, float radius, int steps) {
+shape_data make_circle(vec3f center, mat3f basis, float radius, int steps) {
   // 4 initial vertices
   auto  lines    = make_lines({1, 4});
   vec3f next_dir = basis.x;
@@ -446,11 +445,11 @@ void brush(sculpt_params *params, shade_shape &glshape,
 }
 
 // Compute texture values through the parameterization
-void texture_brush(vector<int> &vertices, image<vec3f> &texture,
+void texture_brush(vector<int> &vertices, image_data &texture,
     vector<vec2f> &coords, sculpt_params *params, shade_shape &glshape,
     vector<vec3f> positions, vector<vec3f> normals) {
   if (vertices.empty()) return;
-  if (texture.empty()) return;
+  if (texture.pixelsf.empty() && texture.pixelsb.empty()) return;
 
   auto scale_factor = 3.5f / params->radius;
   auto max_height   = gaussian_distribution(

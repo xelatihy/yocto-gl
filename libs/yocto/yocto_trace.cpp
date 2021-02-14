@@ -280,9 +280,8 @@ static vec3f sample_lights(const scene_scene& scene, const trace_lights& lights,
     if (environment.emission_tex != invalid_handle) {
       auto& emission_tex = scene.textures[environment.emission_tex];
       auto  idx          = sample_discrete_cdf(light.elements_cdf, rel);
-      auto  size         = texture_size(emission_tex);
-      auto  uv           = vec2f{
-          ((idx % size.x) + 0.5f) / size.x, ((idx / size.x) + 0.5f) / size.y};
+      auto  uv = vec2f{((idx % emission_tex.width) + 0.5f) / emission_tex.width,
+          ((idx / emission_tex.width) + 0.5f) / emission_tex.height};
       return transform_direction(environment.frame,
           {cos(uv.x * 2 * pif) * sin(uv.y * pif), cos(uv.y * pif),
               sin(uv.x * 2 * pif) * sin(uv.y * pif)});
@@ -325,18 +324,20 @@ static float sample_lights_pdf(const scene_scene& scene, const trace_bvh& bvh,
       auto& environment = scene.environments[light.environment];
       if (environment.emission_tex != invalid_handle) {
         auto& emission_tex = scene.textures[environment.emission_tex];
-        auto  size         = texture_size(emission_tex);
         auto  wl = transform_direction(inverse(environment.frame), direction);
         auto  texcoord = vec2f{atan2(wl.z, wl.x) / (2 * pif),
             acos(clamp(wl.y, -1.0f, 1.0f)) / pif};
         if (texcoord.x < 0) texcoord.x += 1;
-        auto i    = clamp((int)(texcoord.x * size.x), 0, size.x - 1);
-        auto j    = clamp((int)(texcoord.y * size.y), 0, size.y - 1);
+        auto i = clamp(
+            (int)(texcoord.x * emission_tex.width), 0, emission_tex.width - 1);
+        auto j    = clamp((int)(texcoord.y * emission_tex.height), 0,
+            emission_tex.height - 1);
         auto prob = sample_discrete_cdf_pdf(
-                        light.elements_cdf, j * size.x + i) /
+                        light.elements_cdf, j * emission_tex.width + i) /
                     light.elements_cdf.back();
-        auto angle = (2 * pif / size.x) * (pif / size.y) *
-                     sin(pif * (j + 0.5f) / size.y);
+        auto angle = (2 * pif / emission_tex.width) *
+                     (pif / emission_tex.height) *
+                     sin(pif * (j + 0.5f) / emission_tex.height);
         pdf += prob / angle;
       } else {
         pdf += 1 / (4 * pif);
@@ -932,16 +933,13 @@ trace_lights make_lights(const scene_scene& scene, const trace_params& params,
     light.environment = handle;
     if (environment.emission_tex != invalid_handle) {
       auto& texture      = scene.textures[environment.emission_tex];
-      auto  size         = texture_size(texture);
-      light.elements_cdf = vector<float>(size.x * size.y);
-      if (size != zero2i) {
-        for (auto i = 0; i < light.elements_cdf.size(); i++) {
-          auto ij               = vec2i{i % size.x, i / size.x};
-          auto th               = (ij.y + 0.5f) * pif / size.y;
-          auto value            = lookup_texture(texture, ij);
-          light.elements_cdf[i] = max(value) * sin(th);
-          if (i != 0) light.elements_cdf[i] += light.elements_cdf[i - 1];
-        }
+      light.elements_cdf = vector<float>(texture.width * texture.height);
+      for (auto idx = 0; idx < light.elements_cdf.size(); idx++) {
+        auto ij    = vec2i{idx % texture.width, idx / texture.width};
+        auto th    = (ij.y + 0.5f) * pif / texture.height;
+        auto value = get_pixel(texture, ij.x, ij.y);
+        light.elements_cdf[idx] = max(value) * sin(th);
+        if (idx != 0) light.elements_cdf[idx] += light.elements_cdf[idx - 1];
       }
     }
   }

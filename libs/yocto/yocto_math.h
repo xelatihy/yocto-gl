@@ -435,15 +435,6 @@ struct vec4i {
   const int& operator[](int i) const;
 };
 
-struct vec3b {
-  byte x = 0;
-  byte y = 0;
-  byte z = 0;
-
-  byte&       operator[](int i);
-  const byte& operator[](int i) const;
-};
-
 struct vec4b {
   byte x = 0;
   byte y = 0;
@@ -458,14 +449,10 @@ struct vec4b {
 inline const auto zero2i = vec2i{0, 0};
 inline const auto zero3i = vec3i{0, 0, 0};
 inline const auto zero4i = vec4i{0, 0, 0, 0};
-inline const auto zero3b = vec3b{0, 0, 0};
 inline const auto zero4b = vec4b{0, 0, 0, 0};
 
 // Element access
 inline vec3i xyz(const vec4i& a);
-
-// Element access
-inline vec3b xyz(const vec4b& a);
 
 // Vector sequence operations.
 inline int        size(const vec2i& a);
@@ -628,10 +615,6 @@ inline int sum(const vec4i& a);
 // Functions applied to vector elements
 inline vec4i abs(const vec4i& a);
 inline void  swap(vec4i& a, vec4i& b);
-
-// Vector comparison operations.
-inline bool operator==(const vec3b& a, const vec3b& b);
-inline bool operator!=(const vec3b& a, const vec3b& b);
 
 // Vector comparison operations.
 inline bool operator==(const vec4b& a, const vec4b& b);
@@ -1536,18 +1519,11 @@ inline int& vec4i::operator[](int i) { return (&x)[i]; }
 inline const int& vec4i::operator[](int i) const { return (&x)[i]; }
 
 // Vector data types
-inline byte& vec3b::operator[](int i) { return (&x)[i]; }
-inline const byte& vec3b::operator[](int i) const { return (&x)[i]; }
-
-// Vector data types
 inline byte& vec4b::operator[](int i) { return (&x)[i]; }
 inline const byte& vec4b::operator[](int i) const { return (&x)[i]; }
 
 // Element access
 inline vec3i xyz(const vec4i& a) { return {a.x, a.y, a.z}; }
-
-// Element access
-inline vec3b xyz(const vec4b& a) { return {a.x, a.y, a.z}; }
 
 // Vector sequence operations.
 inline int        size(const vec2i& a) { return 2; }
@@ -1807,14 +1783,6 @@ inline vec4i abs(const vec4i& a) {
   return {abs(a.x), abs(a.y), abs(a.z), abs(a.w)};
 }
 inline void swap(vec4i& a, vec4i& b) { std::swap(a, b); }
-
-// Vector comparison operations.
-inline bool operator==(const vec3b& a, const vec3b& b) {
-  return a.x == b.x && a.y == b.y && a.z == b.z;
-}
-inline bool operator!=(const vec3b& a, const vec3b& b) {
-  return a.x != b.x || a.y != b.y || a.z != b.z;
-}
 
 // Vector comparison operations.
 inline bool operator==(const vec4b& a, const vec4b& b) {

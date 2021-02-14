@@ -26,7 +26,7 @@
 // POSSIBILITY OF SUCH DAMAGE.
 //
 
-#include <yocto/yocto_commonio.h>
+#include <yocto/yocto_cli.h>
 #include <yocto/yocto_math.h>
 #include <yocto/yocto_sceneio.h>
 #include <yocto/yocto_shape.h>
@@ -80,9 +80,7 @@ int run_convert(const convert_params& params) {
   }
 
   // tesselate if needed
-  if (path_extension(params.output) != ".json") {
-    tesselate_shapes(scene, print_progress);
-  }
+  tesselate_shapes(scene, print_progress);
 
   // make a directory if needed
   if (!make_directory(path_dirname(params.output), ioerror))

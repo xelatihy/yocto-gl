@@ -30,11 +30,11 @@
 #include "yocto_imgui.h"
 
 #include <yocto/yocto_color.h>
-#include <yocto/yocto_commonio.h>
 
 #include <algorithm>
 #include <array>
 #include <cstdarg>
+#include <filesystem>
 #include <memory>
 #include <mutex>
 #include <stdexcept>
@@ -69,6 +69,67 @@ using std::mutex;
 using std::pair;
 using std::unordered_map;
 using namespace std::string_literals;
+
+}  // namespace yocto
+
+// -----------------------------------------------------------------------------
+// PATH UTILITIES
+// -----------------------------------------------------------------------------
+namespace yocto {
+
+// Make a path from a utf8 string
+static std::filesystem::path make_path(const string& filename) {
+  return std::filesystem::u8path(filename);
+}
+
+// Normalize path
+static string normalize_path(const string& filename) {
+  return make_path(filename).generic_u8string();
+}
+
+// Get extension (including .)
+static string path_extension(const string& filename) {
+  return make_path(filename).extension().u8string();
+}
+
+// Get filename without directory.
+static string path_filename(const string& filename) {
+  return make_path(filename).filename().u8string();
+}
+
+// Get filename without directory and extension.
+static string path_basename(const string& filename) {
+  return make_path(filename).stem().u8string();
+}
+
+// Joins paths
+static string path_join(const string& patha, const string& pathb) {
+  return (make_path(patha) / make_path(pathb)).generic_u8string();
+}
+
+// Check if a file can be opened for reading.
+static bool path_exists(const string& filename) {
+  return exists(make_path(filename));
+}
+
+// Check if a file is a directory
+static bool path_isdir(const string& filename) {
+  return is_directory(make_path(filename));
+}
+
+// List the contents of a directory
+static vector<string> list_directory(const string& filename) {
+  auto entries = vector<string>{};
+  for (auto entry : std::filesystem::directory_iterator(make_path(filename))) {
+    entries.push_back(entry.path().generic_u8string());
+  }
+  return entries;
+}
+
+// Get the current directory
+static string path_current() {
+  return std::filesystem::current_path().u8string();
+}
 
 }  // namespace yocto
 
@@ -747,16 +808,6 @@ bool draw_hdrcoloredit(gui_window* win, const char* lbl, vec4f& value) {
     value.y = color.y * exp2(exposure);
     value.z = color.z * exp2(exposure);
     value.w = color.w;
-    return true;
-  } else {
-    return false;
-  }
-}
-
-bool draw_coloredit(gui_window* win, const char* lbl, vec3b& value) {
-  auto valuef = byte_to_float(value);
-  if (ImGui::ColorEdit3(lbl, &valuef.x)) {
-    value = float_to_byte(valuef);
     return true;
   } else {
     return false;

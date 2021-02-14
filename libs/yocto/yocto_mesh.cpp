@@ -45,7 +45,6 @@
 #include <unordered_set>
 #include <utility>
 
-#include "yocto_commonio.h"
 #include "yocto_geometry.h"
 #include "yocto_modelio.h"
 
@@ -59,6 +58,23 @@ using std::deque;
 using std::pair;
 using std::unordered_set;
 using namespace std::string_literals;
+
+}  // namespace yocto
+
+// -----------------------------------------------------------------------------
+// PATH UTILITIES
+// -----------------------------------------------------------------------------
+namespace yocto {
+
+// Make a path from a utf8 string
+static std::filesystem::path make_path(const string& filename) {
+  return std::filesystem::u8path(filename);
+}
+
+// Get extension (including .)
+static string path_extension(const string& filename) {
+  return make_path(filename).extension().u8string();
+}
 
 }  // namespace yocto
 
@@ -968,7 +984,6 @@ vector<vector<float>> compute_voronoi_fields(
   // computation time weakly dependant on the number of generators.
   auto total = compute_geodesic_distances(solver, generators);
   auto max   = *std::max_element(total.begin(), total.end());
-  // @Speed: use parallel_for
   for (auto i = 0; i < generators.size(); ++i) {
     fields[i]                = vector<float>(solver.graph.size(), flt_max);
     fields[i][generators[i]] = 0;

@@ -60,7 +60,93 @@ using std::vector;
 }  // namespace yocto
 
 // -----------------------------------------------------------------------------
-// SCENE IO FUNCTIONS
+// FILE IO
+// -----------------------------------------------------------------------------
+namespace yocto {
+
+// Load/save a text file
+bool load_text(const string& filename, string& str, string& error);
+bool save_text(const string& filename, const string& str, string& error);
+
+// Using directive
+using byte = unsigned char;
+
+// Load/save a binary file
+bool load_binary(const string& filename, vector<byte>& data, string& error);
+bool save_binary(
+    const string& filename, const vector<byte>& data, string& error);
+
+}  // namespace yocto
+
+// -----------------------------------------------------------------------------
+// IMAGE IO
+// -----------------------------------------------------------------------------
+namespace yocto {
+
+// Check if an image is HDR or LDR based on filename.
+bool is_hdr_filename(const string& filename);
+bool is_ldr_filename(const string& filename);
+
+// Loads/saves a 4 channels float/byte image in linear/srgb color space.
+bool load_image(const string& filename, image_data& img, string& error);
+bool save_image(const string& filename, const image_data& img, string& error);
+
+// Make presets. Supported mostly in IO.
+bool make_image_preset(image_data& image, const string& type, string& error);
+
+}  // namespace yocto
+
+// -----------------------------------------------------------------------------
+// TEXTURE IO
+// -----------------------------------------------------------------------------
+namespace yocto {
+
+// Load/save a texture in the supported formats.
+bool load_texture(
+    const string& filename, scene_texture& texture, string& error);
+bool save_texture(
+    const string& filename, const scene_texture& texture, string& error);
+
+}  // namespace yocto
+
+// -----------------------------------------------------------------------------
+// SHAPE IO
+// -----------------------------------------------------------------------------
+namespace yocto {
+
+// Load/save a shape
+bool load_shape(const string& filename, shape_data& shape, string& error,
+    bool flip_texcoords = true);
+bool save_shape(const string& filename, const shape_data& shape, string& error,
+    bool flip_texcoords = true, bool ascii = false);
+
+// Load/save a subdiv
+bool load_fvshape(const string& filename, fvshape_data& shape, string& error,
+    bool flip_texcoords = true);
+bool save_fvshape(const string& filename, const fvshape_data& shape,
+    string& error, bool flip_texcoords = true, bool ascii = false);
+
+// Make presets. Supported mostly in IO.
+bool make_shape_preset(shape_data& shape, const string& type, string& error);
+bool make_fvshape_preset(
+    fvshape_data& shape, const string& type, string& error);
+
+}  // namespace yocto
+
+// -----------------------------------------------------------------------------
+// SUBDIV IO
+// -----------------------------------------------------------------------------
+namespace yocto {
+
+// Load/save a subdiv in the supported formats.
+bool load_subdiv(const string& filename, scene_subdiv& subdiv, string& error);
+bool save_subdiv(
+    const string& filename, const scene_subdiv& subdiv, string& error);
+
+}  // namespace yocto
+
+// -----------------------------------------------------------------------------
+// SCENE IO
 // -----------------------------------------------------------------------------
 namespace yocto {
 
@@ -68,7 +154,7 @@ namespace yocto {
 using progress_callback =
     function<void(const string& message, int current, int total)>;
 
-// Load/save a scene in the supported formats. Throws on error.
+// Load/save a scene in the supported formats.
 // Calls the progress callback, if defined, as we process more data.
 bool load_scene(const string& filename, scene_scene& scene, string& error,
     const progress_callback& progress_cb = {}, bool noparallel = false);
@@ -77,6 +163,53 @@ bool save_scene(const string& filename, const scene_scene& scene, string& error,
 
 // Scene presets used for testing.
 bool make_scene_preset(scene_scene& scene, const string& type, string& error);
+
+}  // namespace yocto
+
+// -----------------------------------------------------------------------------
+// PATH UTILITIES
+// -----------------------------------------------------------------------------
+namespace yocto {
+
+// Utility to normalize a path
+string normalize_path(const string& filename);
+
+// Get directory name (not including '/').
+string path_dirname(const string& filename);
+
+// Get extension (including '.').
+string path_extension(const string& filename);
+
+// Get filename without directory.
+string path_filename(const string& filename);
+
+// Get filename without directory and extension.
+string path_basename(const string& filename);
+
+// Joins paths
+string path_join(const string& patha, const string& pathb);
+string path_join(const string& patha, const string& pathb, const string& pathc);
+
+// Replaces extensions
+string replace_extension(const string& filename, const string& ext);
+
+// Check if a file can be opened for reading.
+bool path_exists(const string& filename);
+
+// Check if a file is a directory
+bool path_isdir(const string& filename);
+
+// Check if a file is a file
+bool path_isfile(const string& filename);
+
+// List the contents of a directory
+vector<string> list_directory(const string& filename);
+
+// Create a directory and all missing parent directories if needed
+bool make_directory(const string& dirname, string& error);
+
+// Get the current directory
+string path_current();
 
 }  // namespace yocto
 

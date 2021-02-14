@@ -262,7 +262,6 @@ using vec3i = vec<int, 3>;
 using vec4i = vec<int, 4>;
 using vec1b = vec<byte, 1>;
 using vec2b = vec<byte, 2>;
-using vec3b = vec<byte, 3>;
 using vec4b = vec<byte, 4>;
 
 // Zero vector constants.
@@ -274,7 +273,6 @@ inline const auto zero1i = vec1i{0};
 inline const auto zero2i = vec2i{0, 0};
 inline const auto zero3i = vec3i{0, 0, 0};
 inline const auto zero4i = vec4i{0, 0, 0, 0};
-inline const auto zero3b = vec3b{0, 0, 0};
 inline const auto zero4b = vec4b{0, 0, 0, 0};
 
 // Element access
@@ -1117,8 +1115,6 @@ inline bool overlap_bbox(const bbox<T, 3>& bbox1, const bbox<T, 3>& bbox2);
 namespace yocto::math {
 
 // Conversion between flots and bytes
-inline vec3b float_to_byte(const vec3f& a);
-inline vec3f byte_to_float(const vec3b& a);
 inline vec4b float_to_byte(const vec4f& a);
 inline vec4f byte_to_float(const vec4b& a);
 inline byte  float_to_byte(float a);
@@ -3935,13 +3931,6 @@ inline bool overlap_bbox(const bbox<T, 3>& bbox1, const bbox<T, 3>& bbox2) {
 namespace yocto::math {
 
 // Conversion between flots and bytes
-inline vec3b float_to_byte(const vec3f& a) {
-  return {(byte)clamp(int(a.x * 256), 0, 255),
-      (byte)clamp(int(a.y * 256), 0, 255), (byte)clamp(int(a.z * 256), 0, 255)};
-}
-inline vec3f byte_to_float(const vec3b& a) {
-  return {a.x / 255.0f, a.y / 255.0f, a.z / 255.0f};
-}
 inline vec4b float_to_byte(const vec4f& a) {
   return {(byte)clamp(int(a.x * 256), 0, 255),
       (byte)clamp(int(a.y * 256), 0, 255), (byte)clamp(int(a.z * 256), 0, 255),

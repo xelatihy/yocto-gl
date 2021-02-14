@@ -26,7 +26,7 @@
 // POSSIBILITY OF SUCH DAMAGE.
 //
 
-#include <yocto/yocto_commonio.h>
+#include <yocto/yocto_cli.h>
 #include <yocto/yocto_geometry.h>
 #include <yocto/yocto_image.h>
 #include <yocto/yocto_parallel.h>
@@ -110,10 +110,12 @@ static void init_glscene(shade_scene& glscene, const sceneio_scene& ioscene,
     if (progress_cb) progress_cb("convert texture", progress.x++, progress.y);
     auto  handle    = add_texture(glscene);
     auto& gltexture = glscene.textures[handle];
-    if (!iotexture.hdr.empty()) {
-      set_texture(gltexture, iotexture.hdr);
-    } else if (!iotexture.ldr.empty()) {
-      set_texture(gltexture, iotexture.ldr);
+    if (!iotexture.pixelsf.empty()) {
+      set_texture(
+          gltexture, iotexture.width, iotexture.height, iotexture.pixelsf);
+    } else if (!iotexture.pixelsb.empty()) {
+      set_texture(
+          gltexture, iotexture.width, iotexture.height, iotexture.pixelsb);
     }
   }
 

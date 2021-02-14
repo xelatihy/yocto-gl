@@ -680,7 +680,8 @@ static void precompute_brdflut(ogl_texture& texture) {
   set_program(program, precompute_brdflut_vertex(),
       precompute_brdflut_fragment(), true);
 
-  set_texture(texture, size, 3, (float*)nullptr, true, true, false, false);
+  set_texture(
+      texture, size.x, size.y, 3, (float*)nullptr, true, true, false, false);
 
   auto framebuffer = ogl_framebuffer{};
   set_framebuffer(framebuffer, size);
@@ -714,7 +715,7 @@ static void init_environment(
   set_cube_shape(scene.envlight_shapes[environment.envlight_shape]);
 
   // precompute cubemap from environment texture
-  auto size    = scene.textures[environment.emission_tex].size.y;
+  auto size    = scene.textures[environment.emission_tex].height;
   auto program = ogl_program{};
   set_program(program, precompute_cubemap_vertex(),
       precompute_environment_fragment(), true);

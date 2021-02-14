@@ -32,7 +32,7 @@
 // It shiould be rewritten to make it faster and probably reqrite roofs.
 //
 
-#include <yocto/yocto_commonio.h>
+#include <yocto/yocto_cli.h>
 #include <yocto/yocto_sceneio.h>
 #include <yocto/yocto_shape.h>
 #include <yocto/yocto_trace.h>
@@ -85,8 +85,8 @@ struct geojson_shape {
 };
 
 struct geojson_texture {
-  string       name = "";
-  image<vec4b> img  = {};
+  string     name = "";
+  image_data img  = {};
 };
 
 struct geojson_scene {
@@ -290,7 +290,7 @@ bool geojson_to_scene(sceneio_scene& scene, const geojson_scene& geojson,
     auto& gtexture = *texture_it;
     scene.texture_names.emplace_back(name);
     auto& texture = scene.textures.emplace_back();
-    texture.ldr   = gtexture.img;
+    texture       = gtexture.img;
     return (int)scene.textures.size() - 1;
   };
 

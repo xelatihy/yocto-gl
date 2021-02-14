@@ -34,13 +34,17 @@
 #include <climits>
 #include <cstdlib>
 #include <cstring>
+#include <filesystem>
 #include <memory>
 #include <stdexcept>
 #include <unordered_map>
 
 #include "ext/json.hpp"
+#include "ext/stb_image.h"
+#include "ext/stb_image_resize.h"
+#include "ext/stb_image_write.h"
+#include "ext/tinyexr.h"
 #include "yocto_color.h"
-#include "yocto_commonio.h"
 #include "yocto_geometry.h"
 #include "yocto_image.h"
 #include "yocto_modelio.h"
@@ -57,6 +61,1389 @@ namespace yocto {
 using std::deque;
 using std::unique_ptr;
 using namespace std::string_literals;
+
+}  // namespace yocto
+
+// -----------------------------------------------------------------------------
+// PATH UTILITIES
+// -----------------------------------------------------------------------------
+namespace yocto {
+
+// Make a path from a utf8 string
+static std::filesystem::path make_path(const string& filename) {
+  return std::filesystem::u8path(filename);
+}
+
+// Normalize path
+string normalize_path(const string& filename) {
+  return make_path(filename).generic_u8string();
+}
+
+// Get directory name (not including /)
+string path_dirname(const string& filename) {
+  return make_path(filename).parent_path().generic_u8string();
+}
+
+// Get extension (including .)
+string path_extension(const string& filename) {
+  return make_path(filename).extension().u8string();
+}
+
+// Get filename without directory.
+string path_filename(const string& filename) {
+  return make_path(filename).filename().u8string();
+}
+
+// Get filename without directory and extension.
+string path_basename(const string& filename) {
+  return make_path(filename).stem().u8string();
+}
+
+// Joins paths
+string path_join(const string& patha, const string& pathb) {
+  return (make_path(patha) / make_path(pathb)).generic_u8string();
+}
+string path_join(
+    const string& patha, const string& pathb, const string& pathc) {
+  return (make_path(patha) / make_path(pathb) / make_path(pathc))
+      .generic_u8string();
+}
+
+// Replaces extensions
+string replace_extension(const string& filename, const string& ext) {
+  return make_path(filename).replace_extension(ext).u8string();
+}
+
+// Check if a file can be opened for reading.
+bool path_exists(const string& filename) { return exists(make_path(filename)); }
+
+// Check if a file is a directory
+bool path_isdir(const string& filename) {
+  return is_directory(make_path(filename));
+}
+
+// Check if a file is a file
+bool path_isfile(const string& filename) {
+  return is_regular_file(make_path(filename));
+}
+
+// List the contents of a directory
+vector<string> list_directory(const string& filename) {
+  auto entries = vector<string>{};
+  for (auto entry : std::filesystem::directory_iterator(make_path(filename))) {
+    entries.push_back(entry.path().generic_u8string());
+  }
+  return entries;
+}
+
+// Create a directory and all missing parent directories if needed
+bool make_directory(const string& dirname, string& error) {
+  if (path_exists(dirname)) return true;
+  try {
+    create_directories(make_path(dirname));
+    return true;
+  } catch (...) {
+    error = dirname + ": cannot create directory";
+    return false;
+  }
+}
+
+// Get the current directory
+string path_current() { return std::filesystem::current_path().u8string(); }
+
+}  // namespace yocto
+
+// -----------------------------------------------------------------------------
+// FILE IO
+// -----------------------------------------------------------------------------
+namespace yocto {
+
+// Opens a file with a utf8 file name
+static FILE* fopen_utf8(const char* filename, const char* mode) {
+#ifdef _WIN32
+  auto path8 = std::filesystem::u8path(filename);
+  auto wmode = std::wstring(string{mode}.begin(), string{mode}.end());
+  return _wfopen(path8.c_str(), wmode.c_str());
+#else
+  return fopen(filename, mode);
+#endif
+}
+
+// Load a text file
+bool load_text(const string& filename, string& str, string& error) {
+  // https://stackoverflow.com/questions/174531/how-to-read-the-content-of-a-file-to-a-string-in-c
+  auto fs = fopen_utf8(filename.c_str(), "rb");
+  if (!fs) {
+    error = filename + ": file not found";
+    return false;
+  }
+  fseek(fs, 0, SEEK_END);
+  auto length = ftell(fs);
+  fseek(fs, 0, SEEK_SET);
+  str.resize(length);
+  if (fread(str.data(), 1, length, fs) != length) {
+    fclose(fs);
+    error = filename + ": read error";
+    return false;
+  }
+  fclose(fs);
+  return true;
+}
+
+// Save a text file
+bool save_text(const string& filename, const string& str, string& error) {
+  auto fs = fopen_utf8(filename.c_str(), "rb");
+  if (!fs) {
+    error = filename + ": file not found";
+    return false;
+  }
+  if (fprintf(fs, "%s", str.c_str()) < 0) {
+    fclose(fs);
+    error = filename + ": write error";
+    return false;
+  }
+  fclose(fs);
+  return true;
+}
+
+// Load a binary file
+bool load_binary(const string& filename, vector<byte>& data, string& error) {
+  // https://stackoverflow.com/questions/174531/how-to-read-the-content-of-a-file-to-a-string-in-c
+  auto fs = fopen_utf8(filename.c_str(), "rb");
+  if (!fs) {
+    error = filename + ": file not found";
+    return false;
+  }
+  fseek(fs, 0, SEEK_END);
+  auto length = ftell(fs);
+  fseek(fs, 0, SEEK_SET);
+  data.resize(length);
+  if (fread(data.data(), 1, length, fs) != length) {
+    fclose(fs);
+    error = filename + ": read error";
+    return false;
+  }
+  fclose(fs);
+  return true;
+}
+
+// Save a binary file
+bool save_binary(
+    const string& filename, const vector<byte>& data, string& error) {
+  auto fs = fopen_utf8(filename.c_str(), "rb");
+  if (!fs) {
+    error = filename + ": file not found";
+    return false;
+  }
+  if (fwrite(data.data(), 1, data.size(), fs) != data.size()) {
+    fclose(fs);
+    error = filename + ": write error";
+    return false;
+  }
+  fclose(fs);
+  return true;
+}
+
+}  // namespace yocto
+
+// -----------------------------------------------------------------------------
+// IMAGE IO
+// -----------------------------------------------------------------------------
+namespace yocto {
+
+template <typename T>
+static T swap_endian(T value) {
+  // https://stackoverflow.com/questions/105252/how-do-i-convert-between-big-endian-and-little-endian-values-in-c
+  static_assert(sizeof(char) == 1, "sizeof(char) == 1");
+  union {
+    T             value;
+    unsigned char bytes[sizeof(T)];
+  } source, dest;
+  source.value = value;
+  for (auto k = (size_t)0; k < sizeof(T); k++)
+    dest.bytes[k] = source.bytes[sizeof(T) - k - 1];
+  return dest.value;
+}
+
+// Pfm load
+static float* load_pfm(
+    const string& filename, int* width, int* height, int* components, int req) {
+  // Split a string
+  auto split_string = [](const string& str) -> vector<string> {
+    auto ret = vector<string>();
+    if (str.empty()) return ret;
+    auto lpos = (size_t)0;
+    while (lpos != string::npos) {
+      auto pos = str.find_first_of(" \t\n\r", lpos);
+      if (pos != string::npos) {
+        if (pos > lpos) ret.push_back(str.substr(lpos, pos - lpos));
+        lpos = pos + 1;
+      } else {
+        if (lpos < str.size()) ret.push_back(str.substr(lpos));
+        lpos = pos;
+      }
+    }
+    return ret;
+  };
+
+  auto fs       = fopen_utf8(filename.c_str(), "rb");
+  auto fs_guard = unique_ptr<FILE, int (*)(FILE*)>(fs, &fclose);
+  if (!fs) return nullptr;
+
+  // buffer
+  auto buffer = array<char, 4096>{};
+  auto toks   = vector<string>();
+
+  // read magic
+  if (!fgets(buffer.data(), (int)buffer.size(), fs)) return nullptr;
+  toks = split_string(buffer.data());
+  if (toks[0] == "Pf") {
+    *components = 1;
+  } else if (toks[0] == "PF") {
+    *components = 3;
+  } else {
+    return nullptr;
+  }
+
+  // read width, height
+  if (!fgets(buffer.data(), (int)buffer.size(), fs)) return nullptr;
+  toks    = split_string(buffer.data());
+  *width  = atoi(toks[0].c_str());
+  *height = atoi(toks[1].c_str());
+
+  // read scale
+  if (!fgets(buffer.data(), (int)buffer.size(), fs)) return nullptr;
+  toks   = split_string(buffer.data());
+  auto s = atof(toks[0].c_str());
+
+  // read the data (flip y)
+  auto npixels = (size_t)*width * (size_t)*height;
+  auto nvalues = npixels * (size_t)*components;
+  auto nrow    = (size_t)*width * (size_t)*components;
+  auto pixels  = unique_ptr<float[]>{new float[nvalues]};
+  for (auto j = *height - 1; j >= 0; j--) {
+    if (fread(pixels.get() + j * nrow, 4, nrow, fs) != nrow) return nullptr;
+  }
+
+  // endian conversion
+  if (s > 0) {
+    for (auto i = (size_t)0; i < nvalues; ++i) {
+      pixels[i] = swap_endian(pixels[i]);
+    }
+  }
+
+  // scale
+  auto scl = (s > 0) ? s : -s;
+  if (scl != 1) {
+    for (auto i = (size_t)0; i < nvalues; i++) pixels[i] *= scl;
+  }
+
+  // check convertions
+  if (req == 0 || *components == req) return pixels.release();
+
+  // convert channels
+  auto cpixels = unique_ptr<float[]>{new float[npixels * req]};
+  if (req == 1) {
+    if (*components == 3) {
+      for (auto i = (size_t)0; i < npixels; i++) {
+        cpixels[i] =
+            (pixels[i * 3 + 0] + pixels[i * 3 + 1] + pixels[i * 3 + 2]) / 3;
+      }
+    }
+  } else if (req == 2) {
+    if (*components == 1) {
+      for (auto i = (size_t)0; i < npixels; i++) {
+        cpixels[i * 2 + 0] = pixels[i];
+        cpixels[i * 2 + 1] = 1;
+      }
+    }
+    if (*components == 3) {
+      for (auto i = (size_t)0; i < npixels; i++) {
+        cpixels[i * 2 + 0] =
+            (pixels[i * 3 + 0] + pixels[i * 3 + 1] + pixels[i * 3 + 2]) / 3;
+        cpixels[i * 2 + 1] = 1;
+      }
+    }
+  } else if (req == 3) {
+    if (*components == 1) {
+      for (auto i = (size_t)0; i < npixels; i++) {
+        cpixels[i * 3 + 0] = pixels[i];
+        cpixels[i * 3 + 1] = pixels[i];
+        cpixels[i * 3 + 2] = pixels[i];
+      }
+    }
+  } else if (req == 4) {
+    if (*components == 1) {
+      for (auto i = (size_t)0; i < npixels; i++) {
+        cpixels[i * 4 + 0] = pixels[i];
+        cpixels[i * 4 + 1] = pixels[i];
+        cpixels[i * 4 + 2] = pixels[i];
+        cpixels[i * 4 + 3] = 1;
+      }
+    }
+    if (*components == 3) {
+      for (auto i = (size_t)0; i < npixels; i++) {
+        cpixels[i * 4 + 0] = pixels[i * 3 + 0];
+        cpixels[i * 4 + 1] = pixels[i * 3 + 1];
+        cpixels[i * 4 + 2] = pixels[i * 3 + 2];
+        cpixels[i * 4 + 3] = 1;
+      }
+    }
+  } else {
+    return nullptr;
+  }
+
+  // done
+  return cpixels.release();
+}
+
+// save pfm
+static bool save_pfm(const char* filename, int width, int height,
+    int components, const float* pixels) {
+  auto fs       = fopen_utf8(filename, "wb");
+  auto fs_guard = unique_ptr<FILE, int (*)(FILE*)>(fs, &fclose);
+  if (!fs) return false;
+
+  if (fprintf(fs, "%s\n", (components == 1) ? "Pf" : "PF") < 0) return false;
+  if (fprintf(fs, "%d %d\n", width, height) < 0) return false;
+  if (fprintf(fs, "-1\n") < 0) return false;
+  if (components == 1 || components == 3) {
+    for (auto j = height - 1; j >= 0; j--) {
+      if (fwrite(pixels + j * width * components, 4, width * components, fs) !=
+          width * components)
+        return false;
+    }
+  } else {
+    for (auto j = height - 1; j >= 0; j--) {
+      for (auto i = 0; i < width; i++) {
+        auto vz = 0.0f;
+        auto v  = pixels + (j * width + i) * components;
+        if (fwrite(&v[0], 4, 1, fs) != 1) return false;
+        if (fwrite(&v[1], 4, 1, fs) != 1) return false;
+        if (components == 2) {
+          if (fwrite(&vz, 4, 1, fs) != 1) return false;
+        } else {
+          if (fwrite(&v[2], 4, 1, fs) != 1) return false;
+        }
+      }
+    }
+  }
+
+  return true;
+}
+
+// Check if an image is HDR based on filename.
+bool is_hdr_filename(const string& filename) {
+  auto ext = path_extension(filename);
+  return ext == ".hdr" || ext == ".exr" || ext == ".pfm";
+}
+bool is_ldr_filename(const string& filename) {
+  auto ext = path_extension(filename);
+  return ext == ".png" || ext == ".jpg" || ext == ".jpeg" || ext == ".bmp" ||
+         ext == ".tga";
+}
+
+// Loads/saves an image. Chooses hdr or ldr based on file name.
+bool load_image(const string& filename, image_data& image, string& error) {
+  auto format_error = [filename, &error]() {
+    error = filename + ": unknown format";
+    return false;
+  };
+  auto read_error = [filename, &error]() {
+    error = filename + ": read error";
+    return false;
+  };
+  auto preset_error = [filename, &error]() {
+    error = filename + ": " + error;
+    return false;
+  };
+
+  auto ext = path_extension(filename);
+  if (ext == ".exr" || ext == ".EXR") {
+    auto width = 0, height = 0;
+    auto pixels = (float*)nullptr;
+    if (LoadEXR(&pixels, &width, &height, filename.c_str(), nullptr) != 0)
+      return read_error();
+    image         = make_image(width, height, true, false);
+    image.pixelsf = vector<vec4f>{
+        (vec4f*)pixels, (vec4f*)pixels + width * height};
+    free(pixels);
+    return true;
+  } else if (ext == ".pfm" || ext == ".PFM") {
+    auto width = 0, height = 0, ncomp = 0;
+    auto pixels = load_pfm(filename.c_str(), &width, &height, &ncomp, 4);
+    if (!pixels) return read_error();
+    image         = make_image(width, height, true, false);
+    image.pixelsf = vector<vec4f>{
+        (vec4f*)pixels, (vec4f*)pixels + width * height};
+    delete[] pixels;
+    return true;
+  } else if (ext == ".hdr" || ext == ".HDR") {
+    auto width = 0, height = 0, ncomp = 0;
+    auto pixels = stbi_loadf(filename.c_str(), &width, &height, &ncomp, 4);
+    if (!pixels) return read_error();
+    image         = make_image(width, height, true, false);
+    image.pixelsf = vector<vec4f>{
+        (vec4f*)pixels, (vec4f*)pixels + width * height};
+    free(pixels);
+    return true;
+  } else if (ext == ".png" || ext == ".PNG") {
+    auto width = 0, height = 0, ncomp = 0;
+    auto pixels = stbi_load(filename.c_str(), &width, &height, &ncomp, 4);
+    if (!pixels) return read_error();
+    image         = make_image(width, height, false, true);
+    image.pixelsb = vector<vec4b>{
+        (vec4b*)pixels, (vec4b*)pixels + width * height};
+    free(pixels);
+    return true;
+  } else if (ext == ".jpg" || ext == ".JPG") {
+    auto width = 0, height = 0, ncomp = 0;
+    auto pixels = stbi_load(filename.c_str(), &width, &height, &ncomp, 4);
+    if (!pixels) return read_error();
+    image         = make_image(width, height, false, true);
+    image.pixelsb = vector<vec4b>{
+        (vec4b*)pixels, (vec4b*)pixels + width * height};
+    free(pixels);
+    return true;
+  } else if (ext == ".tga" || ext == ".TGA") {
+    auto width = 0, height = 0, ncomp = 0;
+    auto pixels = stbi_load(filename.c_str(), &width, &height, &ncomp, 4);
+    if (!pixels) return read_error();
+    image         = make_image(width, height, false, true);
+    image.pixelsb = vector<vec4b>{
+        (vec4b*)pixels, (vec4b*)pixels + width * height};
+    free(pixels);
+    return true;
+  } else if (ext == ".bmp" || ext == ".BMP") {
+    auto width = 0, height = 0, ncomp = 0;
+    auto pixels = stbi_load(filename.c_str(), &width, &height, &ncomp, 4);
+    if (!pixels) return read_error();
+    image         = make_image(width, height, false, true);
+    image.pixelsb = vector<vec4b>{
+        (vec4b*)pixels, (vec4b*)pixels + width * height};
+    free(pixels);
+    return true;
+  } else if (ext == ".ypreset" || ext == ".YPRESET") {
+    // create preset
+    if (!make_image_preset(image, path_basename(filename), error))
+      return preset_error();
+    return true;
+  } else {
+    return format_error();
+  }
+}
+
+// Saves an hdr image.
+bool save_image(
+    const string& filename, const image_data& image_, string& error) {
+  auto format_error = [filename, &error]() {
+    error = filename + ": unknown format";
+    return false;
+  };
+  auto write_error = [filename, &error]() {
+    error = filename + ": write error";
+    return false;
+  };
+
+  // handle conversions if needed
+  auto image_ptr = (const image_data*)nullptr;
+  auto converted = image_data{};
+  if (is_hdr_filename(filename) &&
+      (!image_.pixelsf.empty() || !image_.linear)) {
+    converted = convert_image(image_, true, false);
+    image_ptr = &converted;
+  } else if (is_ldr_filename(filename) && !image_.pixelsf.empty()) {
+    converted = convert_image(image_, false, true);
+    image_ptr = &converted;
+  } else {
+    image_ptr = &image_;
+  }
+  auto& image = *image_ptr;
+
+  auto ext = path_extension(filename);
+  if (ext == ".hdr" || ext == ".HDR") {
+    if (!stbi_write_hdr(filename.c_str(), (int)image.width, (int)image.height,
+            4, (const float*)image.pixelsf.data()))
+      return write_error();
+    return true;
+  } else if (ext == ".pfm" || ext == ".PFM") {
+    if (!save_pfm(filename.c_str(), image.width, image.height, 4,
+            (const float*)image.pixelsf.data()))
+      return write_error();
+    return true;
+  } else if (ext == ".exr" || ext == ".EXR") {
+    if (SaveEXR((const float*)image.pixelsf.data(), (int)image.width,
+            (int)image.height, 4, 1, filename.c_str(), nullptr) < 0)
+      return write_error();
+    return true;
+  } else if (ext == ".png" || ext == ".PNG") {
+    if (!stbi_write_png(filename.c_str(), (int)image.width, (int)image.height,
+            4, (const byte*)image.pixelsb.data(), (int)image.width * 4))
+      return write_error();
+    return true;
+  } else if (ext == ".jpg" || ext == ".JPG") {
+    if (!stbi_write_jpg(filename.c_str(), (int)image.width, (int)image.height,
+            4, (const byte*)image.pixelsb.data(), 75))
+      return write_error();
+    return true;
+  } else if (ext == ".tga" || ext == ".TGA") {
+    if (!stbi_write_tga(filename.c_str(), (int)image.width, (int)image.height,
+            4, (const byte*)image.pixelsb.data()))
+      return write_error();
+    return true;
+  } else if (ext == ".bmp" || ext == ".BMP") {
+    if (!stbi_write_bmp(filename.c_str(), (int)image.width, (int)image.height,
+            4, (const byte*)image.pixelsb.data()))
+      return write_error();
+    return true;
+  } else {
+    return format_error();
+  }
+}
+
+bool make_image_preset(image_data& image, const string& type_, string& error) {
+  auto type = path_basename(type_);
+
+  auto width = 1024, height = 1024;
+  if (type.find("sky") != type.npos) width = 2048;
+  if (type.find("images2") != type.npos) width = 2048;
+  if (type == "grid") {
+    image = make_grid(width, height);
+  } else if (type == "checker") {
+    image = make_checker(width, height);
+  } else if (type == "bumps") {
+    image = make_bumps(width, height);
+  } else if (type == "uvramp") {
+    image = make_uvramp(width, height);
+  } else if (type == "gammaramp") {
+    image = make_gammaramp(width, height);
+  } else if (type == "blackbodyramp") {
+    image = make_blackbodyramp(width, height);
+  } else if (type == "uvgrid") {
+    image = make_uvgrid(width, height);
+  } else if (type == "colormap") {
+    image = make_colormapramp(width, height);
+    // TODO(fabio): fix color space
+    // image   = srgb_to_rgb(image);
+  } else if (type == "sky") {
+    image = make_sunsky(
+        width, height, pif / 4, 3.0, false, 1.0, 1.0, vec3f{0.7, 0.7, 0.7});
+  } else if (type == "sunsky") {
+    image = make_sunsky(
+        width, height, pif / 4, 3.0, true, 1.0, 1.0, vec3f{0.7, 0.7, 0.7});
+  } else if (type == "noise") {
+    image = make_noisemap(width, height, 1);
+  } else if (type == "fbm") {
+    image = make_fbmmap(width, height, 1);
+  } else if (type == "ridge") {
+    image = make_ridgemap(width, height, 1);
+  } else if (type == "turbulence") {
+    image = make_turbulencemap(width, height, 1);
+  } else if (type == "bump-normal") {
+    image = make_bumps(width, height);
+    // TODO(fabio): fix color space
+    // img   = srgb_to_rgb(bump_to_normal(img, 0.05f));
+  } else if (type == "images1") {
+    auto sub_types = vector<string>{"grid", "uvgrid", "checker", "gammaramp",
+        "bumps", "bump-normal", "noise", "fbm", "blackbodyramp"};
+    auto sub_imgs  = vector<image_data>(sub_types.size());
+    for (auto i = 0; i < sub_imgs.size(); i++) {
+      if (!make_image_preset(sub_imgs[i], sub_types[i], error)) return false;
+    }
+    auto montage_size = zero2i;
+    for (auto& sub_img : sub_imgs) {
+      montage_size.x += sub_img.width;
+      montage_size.y = max(montage_size.y, sub_img.height);
+    }
+    image    = make_image(montage_size.x, montage_size.y, sub_imgs[0].linear,
+        !sub_imgs[0].pixelsb.empty());
+    auto pos = 0;
+    for (auto& sub_img : sub_imgs) {
+      set_region(image, sub_img, pos, 0);
+      pos += sub_img.width;
+    }
+  } else if (type == "images2") {
+    auto sub_types = vector<string>{"sky", "sunsky"};
+    auto sub_imgs  = vector<image_data>(sub_types.size());
+    for (auto i = 0; i < sub_imgs.size(); i++) {
+      if (!make_image_preset(sub_imgs[i], sub_types[i], error)) return false;
+    }
+    auto montage_size = zero2i;
+    for (auto& sub_img : sub_imgs) {
+      montage_size.x += sub_img.width;
+      montage_size.y = max(montage_size.y, sub_img.height);
+    }
+    image    = make_image(montage_size.x, montage_size.y, sub_imgs[0].linear,
+        !sub_imgs[0].pixelsb.empty());
+    auto pos = 0;
+    for (auto& sub_img : sub_imgs) {
+      set_region(image, sub_img, pos, 0);
+      pos += sub_img.width;
+    }
+  } else if (type == "test-floor") {
+    image = make_grid(width, height);
+    image = add_border(image, 0.0025);
+  } else if (type == "test-grid") {
+    image = make_grid(width, height);
+  } else if (type == "test-checker") {
+    image = make_checker(width, height);
+  } else if (type == "test-bumps") {
+    image = make_bumps(width, height);
+  } else if (type == "test-uvramp") {
+    image = make_uvramp(width, height);
+  } else if (type == "test-gammaramp") {
+    image = make_gammaramp(width, height);
+  } else if (type == "test-blackbodyramp") {
+    image = make_blackbodyramp(width, height);
+  } else if (type == "test-colormapramp") {
+    image = make_colormapramp(width, height);
+    // TODO(fabio): fix color space
+    // img   = srgb_to_rgb(img);
+  } else if (type == "test-uvgrid") {
+    image = make_uvgrid(width, height);
+  } else if (type == "test-sky") {
+    image = make_sunsky(
+        width, height, pif / 4, 3.0, false, 1.0, 1.0, vec3f{0.7, 0.7, 0.7});
+  } else if (type == "test-sunsky") {
+    image = make_sunsky(
+        width, height, pif / 4, 3.0, true, 1.0, 1.0, vec3f{0.7, 0.7, 0.7});
+  } else if (type == "test-noise") {
+    image = make_noisemap(width, height);
+  } else if (type == "test-fbm") {
+    image = make_noisemap(width, height);
+  } else if (type == "test-bumps-normal") {
+    image = make_bumps(width, height);
+    image = bump_to_normal(image, 0.05);
+  } else if (type == "test-bumps-displacement") {
+    image = make_bumps(width, height);
+    // TODO(fabio): fix color space
+    // img   = srgb_to_rgb(img);
+  } else if (type == "test-fbm-displacement") {
+    image = make_fbmmap(width, height);
+    // TODO(fabio): fix color space
+    // img   = srgb_to_rgb(img);
+  } else if (type == "test-checker-opacity") {
+    image = make_checker(width, height, 1, {1, 1, 1, 1}, {0, 0, 0, 0});
+  } else if (type == "test-grid-opacity") {
+    image = make_grid(width, height, 1, {1, 1, 1, 1}, {0, 0, 0, 0});
+  } else {
+    error = "unknown preset";
+    image = {};
+    return false;
+  }
+  return true;
+}
+
+}  // namespace yocto
+
+// -----------------------------------------------------------------------------
+// TEXTURE IO
+// -----------------------------------------------------------------------------
+namespace yocto {
+
+// load texture
+bool load_texture(
+    const string& filename, scene_texture& texture, string& error) {
+  return load_image(filename, texture, error);
+}
+
+// save texture
+bool save_texture(
+    const string& filename, const scene_texture& texture, string& error) {
+  return save_image(filename, texture, error);
+}
+
+}  // namespace yocto
+
+// -----------------------------------------------------------------------------
+// SHAPE IO
+// -----------------------------------------------------------------------------
+namespace yocto {
+
+// Load ply mesh
+bool load_shape(const string& filename, shape_data& shape, string& error,
+    bool flip_texcoord) {
+  auto format_error = [filename, &error]() {
+    error = filename + ": unknown format";
+    return false;
+  };
+  auto shape_error = [filename, &error]() {
+    error = filename + ": empty shape";
+    return false;
+  };
+  auto preset_error = [filename, &error]() {
+    error = filename + ": " + error;
+    return false;
+  };
+
+  shape = {};
+
+  auto ext = path_extension(filename);
+  if (ext == ".ply" || ext == ".PLY") {
+    auto ply = ply_model{};
+    if (!load_ply(filename, ply, error)) return false;
+    get_positions(ply, shape.positions);
+    get_normals(ply, shape.normals);
+    get_texcoords(ply, shape.texcoords, flip_texcoord);
+    get_colors(ply, shape.colors);
+    get_radius(ply, shape.radius);
+    get_faces(ply, shape.triangles, shape.quads);
+    get_lines(ply, shape.lines);
+    get_points(ply, shape.points);
+    if (shape.points.empty() && shape.lines.empty() &&
+        shape.triangles.empty() && shape.quads.empty())
+      return shape_error();
+    return true;
+  } else if (ext == ".obj" || ext == ".OBJ") {
+    auto obj = obj_shape{};
+    if (!load_obj(filename, obj, error, true)) return false;
+    auto materials = vector<int>{};
+    get_positions(obj, shape.positions);
+    get_normals(obj, shape.normals);
+    get_texcoords(obj, shape.texcoords, flip_texcoord);
+    get_faces(obj, shape.triangles, shape.quads, materials);
+    get_lines(obj, shape.lines, materials);
+    get_points(obj, shape.points, materials);
+    if (shape.points.empty() && shape.lines.empty() &&
+        shape.triangles.empty() && shape.quads.empty())
+      return shape_error();
+    return true;
+  } else if (ext == ".stl" || ext == ".STL") {
+    auto stl = stl_model{};
+    if (!load_stl(filename, stl, error, true)) return false;
+    if (stl.shapes.size() != 1) return shape_error();
+    auto fnormals = vector<vec3f>{};
+    if (!get_triangles(stl, 0, shape.triangles, shape.positions, fnormals))
+      return shape_error();
+    return true;
+  } else if (ext == ".ypreset" || ext == ".YPRESET") {
+    // create preset
+    if (!make_shape_preset(shape, path_basename(filename), error))
+      return preset_error();
+    return true;
+  } else {
+    return format_error();
+  }
+}
+
+// Save ply mesh
+bool save_shape(const string& filename, const shape_data& shape, string& error,
+    bool flip_texcoord, bool ascii) {
+  auto format_error = [filename, &error]() {
+    error = filename + ": unknown format";
+    return false;
+  };
+  auto shape_error = [filename, &error]() {
+    error = filename + ": empty shape";
+    return false;
+  };
+  auto line_error = [filename, &error]() {
+    error = filename + ": unsupported lines";
+    return false;
+  };
+  auto point_error = [filename, &error]() {
+    error = filename + ": unsupported points";
+    return false;
+  };
+
+  auto ext = path_extension(filename);
+  if (ext == ".ply" || ext == ".PLY") {
+    auto ply = ply_model{};
+    add_positions(ply, shape.positions);
+    add_normals(ply, shape.normals);
+    add_texcoords(ply, shape.texcoords, flip_texcoord);
+    add_colors(ply, shape.colors);
+    add_radius(ply, shape.radius);
+    add_faces(ply, shape.triangles, shape.quads);
+    add_lines(ply, shape.lines);
+    add_points(ply, shape.points);
+    return save_ply(filename, ply, error);
+  } else if (ext == ".obj" || ext == ".OBJ") {
+    auto obj = obj_shape{};
+    add_positions(obj, shape.positions);
+    add_normals(obj, shape.normals);
+    add_texcoords(obj, shape.texcoords, flip_texcoord);
+    add_triangles(obj, shape.triangles, 0, !shape.normals.empty(),
+        !shape.texcoords.empty());
+    add_quads(
+        obj, shape.quads, 0, !shape.normals.empty(), !shape.texcoords.empty());
+    add_lines(
+        obj, shape.lines, 0, !shape.normals.empty(), !shape.texcoords.empty());
+    add_points(
+        obj, shape.points, 0, !shape.normals.empty(), !shape.texcoords.empty());
+    return save_obj(filename, obj, error);
+  } else if (ext == ".stl" || ext == ".STL") {
+    auto stl = stl_model{};
+    if (!shape.lines.empty()) return line_error();
+    if (!shape.points.empty()) return point_error();
+    if (!shape.triangles.empty()) {
+      add_triangles(stl, shape.triangles, shape.positions, {});
+    } else if (!shape.quads.empty()) {
+      add_triangles(stl, quads_to_triangles(shape.quads), shape.positions, {});
+    } else {
+      return shape_error();
+    }
+    return save_stl(filename, stl, error);
+  } else if (ext == ".cpp" || ext == ".CPP") {
+    auto to_cpp = [](const string& name, const string& vname,
+                      const auto& values) -> string {
+      using T = typename std::remove_const_t<
+          std::remove_reference_t<decltype(values)>>::value_type;
+      if (values.empty()) return ""s;
+      auto str = "auto " + name + "_" + vname + " = ";
+      if constexpr (std::is_same_v<int, T>) str += "vector<int>{\n";
+      if constexpr (std::is_same_v<float, T>) str += "vector<float>{\n";
+      if constexpr (std::is_same_v<vec2i, T>) str += "vector<vec2i>{\n";
+      if constexpr (std::is_same_v<vec2f, T>) str += "vector<vec2f>{\n";
+      if constexpr (std::is_same_v<vec3i, T>) str += "vector<vec3i>{\n";
+      if constexpr (std::is_same_v<vec3f, T>) str += "vector<vec3f>{\n";
+      if constexpr (std::is_same_v<vec4i, T>) str += "vector<vec4i>{\n";
+      if constexpr (std::is_same_v<vec4f, T>) str += "vector<vec4f>{\n";
+      for (auto& value : values) {
+        if constexpr (std::is_same_v<int, T> || std::is_same_v<float, T>) {
+          str += std::to_string(value) + ",\n";
+        } else if constexpr (std::is_same_v<vec2i, T> ||
+                             std::is_same_v<vec2f, T>) {
+          str += "{" + std::to_string(value.x) + "," + std::to_string(value.y) +
+                 "},\n";
+        } else if constexpr (std::is_same_v<vec3i, T> ||
+                             std::is_same_v<vec3f, T>) {
+          str += "{" + std::to_string(value.x) + "," + std::to_string(value.y) +
+                 "," + std::to_string(value.z) + "},\n";
+        } else if constexpr (std::is_same_v<vec4i, T> ||
+                             std::is_same_v<vec4f, T>) {
+          str += "{" + std::to_string(value.x) + "," + std::to_string(value.y) +
+                 "," + std::to_string(value.z) + "," + std::to_string(value.w) +
+                 "},\n";
+        } else {
+          throw std::invalid_argument{"cannot print this"};
+        }
+      }
+      str += "};\n\n";
+      return str;
+    };
+
+    auto name = string{"shape"};
+    auto str  = ""s;
+    str += to_cpp(name, "positions", shape.positions);
+    str += to_cpp(name, "normals", shape.normals);
+    str += to_cpp(name, "texcoords", shape.texcoords);
+    str += to_cpp(name, "colors", shape.colors);
+    str += to_cpp(name, "radius", shape.radius);
+    str += to_cpp(name, "points", shape.points);
+    str += to_cpp(name, "lines", shape.lines);
+    str += to_cpp(name, "triangles", shape.triangles);
+    str += to_cpp(name, "quads", shape.quads);
+    return save_text(filename, str, error);
+  } else {
+    return format_error();
+  }
+}
+
+// Load ply mesh
+bool load_fvshape(const string& filename, fvshape_data& shape, string& error,
+    bool flip_texcoord) {
+  auto format_error = [filename, &error]() {
+    error = filename + ": unknown format";
+    return false;
+  };
+  auto shape_error = [filename, &error]() {
+    error = filename + ": empty shape";
+    return false;
+  };
+  auto preset_error = [filename, &error]() {
+    error = filename + ": " + error;
+    return false;
+  };
+
+  shape = {};
+
+  auto ext = path_extension(filename);
+  if (ext == ".ply" || ext == ".PLY") {
+    auto ply = ply_model{};
+    if (!load_ply(filename, ply, error)) return false;
+    get_positions(ply, shape.positions);
+    get_normals(ply, shape.normals);
+    get_texcoords(ply, shape.texcoords, flip_texcoord);
+    get_quads(ply, shape.quadspos);
+    if (!shape.normals.empty()) shape.quadsnorm = shape.quadspos;
+    if (!shape.texcoords.empty()) shape.quadstexcoord = shape.quadspos;
+    if (shape.quadspos.empty()) return shape_error();
+    return true;
+  } else if (ext == ".obj" || ext == ".OBJ") {
+    auto obj = obj_shape{};
+    if (!load_obj(filename, obj, error, true)) return false;
+    auto materials = vector<int>{};
+    get_positions(obj, shape.positions);
+    get_normals(obj, shape.normals);
+    get_texcoords(obj, shape.texcoords, flip_texcoord);
+    get_fvquads(
+        obj, shape.quadspos, shape.quadsnorm, shape.quadstexcoord, materials);
+    if (shape.quadspos.empty()) return shape_error();
+    return true;
+  } else if (ext == ".stl" || ext == ".STL") {
+    auto stl = stl_model{};
+    if (!load_stl(filename, stl, error, true)) return false;
+    if (stl.shapes.empty()) return shape_error();
+    if (stl.shapes.size() > 1) return shape_error();
+    auto fnormals  = vector<vec3f>{};
+    auto triangles = vector<vec3i>{};
+    if (!get_triangles(stl, 0, triangles, shape.positions, fnormals))
+      return shape_error();
+    shape.quadspos = triangles_to_quads(triangles);
+    return true;
+  } else if (ext == ".ypreset" || ext == ".YPRESET") {
+    // create preset
+    if (!make_fvshape_preset(shape, path_basename(filename), error))
+      return preset_error();
+    return true;
+  } else {
+    return format_error();
+  }
+}
+
+// Save ply mesh
+bool save_fvshape(const string& filename, const fvshape_data& shape,
+    string& error, bool flip_texcoord, bool ascii) {
+  auto format_error = [filename, &error]() {
+    error = filename + ": unknown format";
+    return false;
+  };
+  auto shape_error = [filename, &error]() {
+    error = filename + ": empty shape";
+    return false;
+  };
+
+  auto ext = path_extension(filename);
+  if (ext == ".ply" || ext == ".PLY") {
+    auto ply = ply_model{};
+    auto [split_quads, split_positions, split_normals, split_texcoords] =
+        split_facevarying(shape.quadspos, shape.quadsnorm, shape.quadstexcoord,
+            shape.positions, shape.normals, shape.texcoords);
+    add_positions(ply, split_positions);
+    add_normals(ply, split_normals);
+    add_texcoords(ply, split_texcoords, flip_texcoord);
+    add_faces(ply, {}, split_quads);
+    return save_ply(filename, ply, error);
+  } else if (ext == ".obj" || ext == ".OBJ") {
+    auto obj = obj_shape{};
+    add_positions(obj, shape.positions);
+    add_normals(obj, shape.positions);
+    add_texcoords(obj, shape.texcoords, flip_texcoord);
+    add_fvquads(obj, shape.quadspos, shape.quadsnorm, shape.quadstexcoord, 0);
+    return save_obj(filename, obj, error);
+  } else if (ext == ".stl" || ext == ".STL") {
+    auto stl = stl_model{};
+    if (!shape.quadspos.empty()) {
+      auto [split_quads, split_positions, split_normals,
+          split_texcoords] = split_facevarying(shape.quadspos, shape.quadsnorm,
+          shape.quadstexcoord, shape.positions, shape.normals, shape.texcoords);
+      add_triangles(stl, quads_to_triangles(split_quads), split_positions, {});
+    } else {
+      return shape_error();
+    }
+    return save_stl(filename, stl, error);
+  } else if (ext == ".cpp" || ext == ".CPP") {
+    auto to_cpp = [](const string& name, const string& vname,
+                      const auto& values) -> string {
+      using T = typename std::remove_const_t<
+          std::remove_reference_t<decltype(values)>>::value_type;
+      if (values.empty()) return ""s;
+      auto str = "auto " + name + "_" + vname + " = ";
+      if constexpr (std::is_same_v<int, T>) str += "vector<int>{\n";
+      if constexpr (std::is_same_v<float, T>) str += "vector<float>{\n";
+      if constexpr (std::is_same_v<vec2i, T>) str += "vector<vec2i>{\n";
+      if constexpr (std::is_same_v<vec2f, T>) str += "vector<vec2f>{\n";
+      if constexpr (std::is_same_v<vec3i, T>) str += "vector<vec3i>{\n";
+      if constexpr (std::is_same_v<vec3f, T>) str += "vector<vec3f>{\n";
+      if constexpr (std::is_same_v<vec4i, T>) str += "vector<vec4i>{\n";
+      if constexpr (std::is_same_v<vec4f, T>) str += "vector<vec4f>{\n";
+      for (auto& value : values) {
+        if constexpr (std::is_same_v<int, T> || std::is_same_v<float, T>) {
+          str += std::to_string(value) + ",\n";
+        } else if constexpr (std::is_same_v<vec2i, T> ||
+                             std::is_same_v<vec2f, T>) {
+          str += "{" + std::to_string(value.x) + "," + std::to_string(value.y) +
+                 "},\n";
+        } else if constexpr (std::is_same_v<vec3i, T> ||
+                             std::is_same_v<vec3f, T>) {
+          str += "{" + std::to_string(value.x) + "," + std::to_string(value.y) +
+                 "," + std::to_string(value.z) + "},\n";
+        } else if constexpr (std::is_same_v<vec4i, T> ||
+                             std::is_same_v<vec4f, T>) {
+          str += "{" + std::to_string(value.x) + "," + std::to_string(value.y) +
+                 "," + std::to_string(value.z) + "," + std::to_string(value.w) +
+                 "},\n";
+        } else {
+          throw std::invalid_argument{"cannot print this"};
+        }
+      }
+      str += "};\n\n";
+      return str;
+    };
+    auto name = string{"shape"};
+    auto str  = ""s;
+    str += to_cpp(name, "positions", shape.positions);
+    str += to_cpp(name, "normals", shape.normals);
+    str += to_cpp(name, "texcoords", shape.texcoords);
+    str += to_cpp(name, "quadspos", shape.quadspos);
+    str += to_cpp(name, "quadsnorm", shape.quadsnorm);
+    str += to_cpp(name, "quadstexcoord", shape.quadstexcoord);
+    return save_text(filename, str, error);
+  } else {
+    return format_error();
+  }
+}
+
+// Shape presets used ofr testing.
+bool make_shape_preset(shape_data& shape, const string& type, string& error) {
+  auto set_quads = [&](shape_data&& shape_) {
+    shape.quads     = shape_.quads;
+    shape.positions = shape_.positions;
+    shape.normals   = shape_.normals;
+    shape.texcoords = shape_.texcoords;
+  };
+  auto set_triangles = [&](shape_data&& shape_) {
+    shape.triangles = shape_.triangles;
+    shape.positions = shape_.positions;
+    shape.normals   = shape_.normals;
+    shape.texcoords = shape_.texcoords;
+  };
+  auto set_lines = [&](shape_data&& shape_) {
+    shape.lines     = shape_.lines;
+    shape.positions = shape_.positions;
+    shape.normals   = shape_.normals;
+    shape.texcoords = shape_.texcoords;
+    shape.radius    = shape_.radius;
+  };
+  auto set_points = [&](shape_data&& shape_) {
+    shape.points    = shape_.points;
+    shape.positions = shape_.positions;
+    shape.normals   = shape_.normals;
+    shape.texcoords = shape_.texcoords;
+    shape.radius    = shape_.radius;
+  };
+  auto set_fvquads = [&](fvshape_data&& shape_) {
+    shape.quads     = shape_.quadspos;
+    shape.positions = shape_.positions;
+    shape.normals   = shape_.normals;
+    shape.texcoords = shape_.texcoords;
+  };
+
+  if (type == "default-quad") {
+    set_quads(make_rect());
+  } else if (type == "default-quady") {
+    set_quads(make_recty());
+  } else if (type == "default-cube") {
+    set_quads(make_box());
+  } else if (type == "default-cube-rounded") {
+    set_quads(make_rounded_box());
+  } else if (type == "default-sphere") {
+    set_quads(make_sphere());
+  } else if (type == "default-disk") {
+    set_quads(make_disk());
+  } else if (type == "default-disk-bulged") {
+    set_quads(make_bulged_disk());
+  } else if (type == "default-quad-bulged") {
+    set_quads(make_bulged_rect());
+  } else if (type == "default-uvsphere") {
+    set_quads(make_uvsphere());
+  } else if (type == "default-uvsphere-flipcap") {
+    set_quads(make_capped_uvsphere());
+  } else if (type == "default-uvdisk") {
+    set_quads(make_uvdisk());
+  } else if (type == "default-uvcylinder") {
+    set_quads(make_uvcylinder());
+  } else if (type == "default-uvcylinder-rounded") {
+    set_quads(make_rounded_uvcylinder({32, 32, 32}));
+  } else if (type == "default-geosphere") {
+    set_triangles(make_geosphere());
+  } else if (type == "default-floor") {
+    set_quads(make_floor());
+  } else if (type == "default-floor-bent") {
+    set_quads(make_bent_floor());
+  } else if (type == "default-matball") {
+    set_quads(make_sphere());
+  } else if (type == "default-hairball") {
+    auto base = make_sphere(pow2(5), 0.8);
+    set_lines(make_hair(base, {4, 65536}, {0.2, 0.2}, {0.002, 0.001}));
+  } else if (type == "default-hairball-interior") {
+    set_quads(make_sphere(pow2(5), 0.8));
+  } else if (type == "default-suzanne") {
+    set_quads(make_monkey());
+  } else if (type == "default-cube-facevarying") {
+    set_fvquads(make_fvbox());
+  } else if (type == "default-sphere-facevarying") {
+    set_fvquads(make_fvsphere());
+  } else if (type == "default-quady-displaced") {
+    set_quads(make_recty({256, 256}));
+  } else if (type == "default-sphere-displaced") {
+    set_quads(make_sphere(128));
+  } else if (type == "test-cube") {
+    set_quads(make_rounded_box(
+        {32, 32, 32}, {0.075f, 0.075f, 0.075f}, {1, 1, 1}, 0.3 * 0.075f));
+    for (auto& p : shape.positions) p += {0, 0.075, 0};
+  } else if (type == "test-uvsphere") {
+    set_quads(make_uvsphere({32, 32}, 0.075));
+    for (auto& p : shape.positions) p += {0, 0.075, 0};
+  } else if (type == "test-uvsphere-flipcap") {
+    set_quads(make_capped_uvsphere({32, 32}, 0.075, {1, 1}, 0.3 * 0.075));
+    for (auto& p : shape.positions) p += {0, 0.075, 0};
+  } else if (type == "test-sphere") {
+    set_quads(make_sphere(32, 0.075f, 1));
+    for (auto& p : shape.positions) p += {0, 0.075, 0};
+  } else if (type == "test-sphere-displaced") {
+    set_quads(make_sphere(128, 0.075f, 1));
+    for (auto& p : shape.positions) p += {0, 0.075, 0};
+  } else if (type == "test-disk") {
+    set_quads(make_disk(32, 0.075f, 1));
+    for (auto& p : shape.positions) p += {0, 0.075, 0};
+  } else if (type == "test-uvcylinder") {
+    set_quads(make_rounded_uvcylinder(
+        {32, 32, 32}, {0.075, 0.075}, {1, 1, 1}, 0.3 * 0.075));
+    for (auto& p : shape.positions) p += {0, 0.075, 0};
+  } else if (type == "test-floor") {
+    set_quads(make_floor({1, 1}, {2, 2}, {20, 20}));
+  } else if (type == "test-quad") {
+    set_quads(make_rect({1, 1}, {0.075, 0.075}, {1, 1}));
+  } else if (type == "test-quady") {
+    set_quads(make_recty({1, 1}, {0.075, 0.075}, {1, 1}));
+  } else if (type == "test-quad-displaced") {
+    set_quads(make_rect({256, 256}, {0.075, 0.075}, {1, 1}));
+  } else if (type == "test-quady-displaced") {
+    set_quads(make_recty({256, 256}, {0.075, 0.075}, {1, 1}));
+  } else if (type == "test-matball") {
+    set_quads(make_sphere(32, 0.075));
+    for (auto& p : shape.positions) p += {0, 0.075, 0};
+  } else if (type == "test-hairball1") {
+    auto base = make_sphere(32, 0.075f * 0.8f, 1);
+    for (auto& p : base.positions) p += {0, 0.075, 0};
+    set_lines(make_hair(base, {4, 65536}, {0.1f * 0.15f, 0.1f * 0.15f},
+        {0.001f * 0.15f, 0.0005f * 0.15f}, {0.03, 100}));
+  } else if (type == "test-hairball2") {
+    auto base = make_sphere(32, 0.075f * 0.8f, 1);
+    for (auto& p : base.positions) p += {0, 0.075, 0};
+    set_lines(make_hair(base, {4, 65536}, {0.1f * 0.15f, 0.1f * 0.15f},
+        {0.001f * 0.15f, 0.0005f * 0.15f}));
+  } else if (type == "test-hairball3") {
+    auto base = make_sphere(32, 0.075f * 0.8f, 1);
+    for (auto& p : base.positions) p += {0, 0.075, 0};
+    set_lines(make_hair(base, {4, 65536}, {0.1f * 0.15f, 0.1f * 0.15f},
+        {0.001f * 0.15f, 0.0005f * 0.15f}, {0, 0}, {0.5, 128}));
+  } else if (type == "test-hairball-interior") {
+    set_quads(make_sphere(32, 0.075f * 0.8f, 1));
+    for (auto& p : shape.positions) p += {0, 0.075, 0};
+  } else if (type == "test-suzanne-subdiv") {
+    set_quads(make_monkey(0.075f * 0.8f));
+    for (auto& p : shape.positions) p += {0, 0.075, 0};
+  } else if (type == "test-cube-subdiv") {
+    // set_quads(make_cube( 0.075f);
+    set_fvquads(make_fvcube(0.075f));
+    // make_fvbox(quadspos, quadsnorm, quadstexcoord, positions, normals,
+    //      texcoords, {1, 1, 1}, {0.075f, 0.075f, 0.075f});
+    for (auto& p : shape.positions) p += {0, 0.075, 0};
+  } else if (type == "test-arealight1") {
+    set_quads(make_rect({1, 1}, {0.2, 0.2}));
+  } else if (type == "test-arealight2") {
+    set_quads(make_rect({1, 1}, {0.2, 0.2}));
+  } else if (type == "test-largearealight1") {
+    set_quads(make_rect({1, 1}, {0.4, 0.4}));
+  } else if (type == "test-largearealight2") {
+    set_quads(make_rect({1, 1}, {0.4, 0.4}));
+  } else if (type == "test-pointlight1") {
+    set_points(make_point(0));
+  } else if (type == "test-pointlight2") {
+    set_points(make_point(0));
+  } else if (type == "test-point") {
+    set_points(make_points(1));
+  } else if (type == "test-points") {
+    set_points(make_points(4096));
+  } else if (type == "test-points-random") {
+    set_points(make_random_points(4096, {0.2, 0.2, 0.2}));
+  } else if (type == "test-particles") {
+    set_points(make_points(4096));
+  } else if (type == "test-cloth") {
+    set_quads(make_rect({64, 64}, {0.2, 0.2}));
+  } else if (type == "test-clothy") {
+    set_quads(make_recty({64, 64}, {0.2, 0.2}));
+  } else {
+    error = "unknown preset";
+    return false;
+  }
+  return true;
+}
+
+// Shape presets used for testing.
+bool make_fvshape_preset(
+    fvshape_data& shape, const string& type, string& error) {
+  auto set_quads = [&](shape_data&& shape_) {
+    shape.quadspos  = shape_.quads;
+    shape.positions = shape_.positions;
+    if (!shape_.normals.empty()) shape.quadsnorm = shape_.quads;
+    shape.normals = shape_.normals;
+    if (!shape_.texcoords.empty()) shape.quadstexcoord = shape_.quads;
+    shape.texcoords = shape_.texcoords;
+  };
+  auto set_triangles = [&](shape_data&& shape) {
+    throw std::invalid_argument{"bad shape type"};
+  };
+  auto set_lines = [&](shape_data&& shape) {
+    throw std::invalid_argument{"bad shape type"};
+  };
+  auto set_points = [&](shape_data&& shape) {
+    throw std::invalid_argument{"bad shape type"};
+  };
+  auto set_fvquads = [&](fvshape_data&& shape_) {
+    shape.quadspos      = shape_.quadspos;
+    shape.quadsnorm     = shape_.quadsnorm;
+    shape.quadstexcoord = shape_.quadstexcoord;
+    shape.positions     = shape_.positions;
+    shape.normals       = shape_.normals;
+    shape.texcoords     = shape_.texcoords;
+  };
+
+  if (type == "default-quad") {
+    set_quads(make_rect());
+  } else if (type == "default-quady") {
+    set_quads(make_recty());
+  } else if (type == "default-cube") {
+    set_quads(make_box());
+  } else if (type == "default-cube-rounded") {
+    set_quads(make_rounded_box());
+  } else if (type == "default-sphere") {
+    set_quads(make_sphere());
+  } else if (type == "default-disk") {
+    set_quads(make_disk());
+  } else if (type == "default-disk-bulged") {
+    set_quads(make_bulged_disk());
+  } else if (type == "default-quad-bulged") {
+    set_quads(make_bulged_rect());
+  } else if (type == "default-uvsphere") {
+    set_quads(make_uvsphere());
+  } else if (type == "default-uvsphere-flipcap") {
+    set_quads(make_capped_uvsphere());
+  } else if (type == "default-uvdisk") {
+    set_quads(make_uvdisk());
+  } else if (type == "default-uvcylinder") {
+    set_quads(make_uvcylinder());
+  } else if (type == "default-uvcylinder-rounded") {
+    set_quads(make_rounded_uvcylinder({32, 32, 32}));
+  } else if (type == "default-geosphere") {
+    set_triangles(make_geosphere());
+  } else if (type == "default-floor") {
+    set_quads(make_floor());
+  } else if (type == "default-floor-bent") {
+    set_quads(make_bent_floor());
+  } else if (type == "default-matball") {
+    set_quads(make_sphere());
+  } else if (type == "default-hairball") {
+    auto base = make_sphere(pow2(5), 0.8);
+    set_lines(make_hair(base, {4, 65536}, {0.2, 0.2}, {0.002, 0.001}));
+  } else if (type == "default-hairball-interior") {
+    set_quads(make_sphere(pow2(5), 0.8));
+  } else if (type == "default-suzanne") {
+    set_quads(make_monkey());
+  } else if (type == "default-cube-facevarying") {
+    set_fvquads(make_fvbox());
+  } else if (type == "default-sphere-facevarying") {
+    set_fvquads(make_fvsphere());
+  } else if (type == "default-quady-displaced") {
+    set_quads(make_recty({256, 256}));
+  } else if (type == "default-sphere-displaced") {
+    set_quads(make_sphere(128));
+  } else if (type == "test-cube") {
+    set_quads(make_rounded_box(
+        {32, 32, 32}, {0.075f, 0.075f, 0.075f}, {1, 1, 1}, 0.3 * 0.075f));
+    for (auto& p : shape.positions) p += {0, 0.075, 0};
+  } else if (type == "test-uvsphere") {
+    set_quads(make_uvsphere({32, 32}, 0.075));
+    for (auto& p : shape.positions) p += {0, 0.075, 0};
+  } else if (type == "test-uvsphere-flipcap") {
+    set_quads(make_capped_uvsphere({32, 32}, 0.075, {1, 1}, 0.3 * 0.075));
+    for (auto& p : shape.positions) p += {0, 0.075, 0};
+  } else if (type == "test-sphere") {
+    set_quads(make_sphere(32, 0.075f, 1));
+    for (auto& p : shape.positions) p += {0, 0.075, 0};
+  } else if (type == "test-sphere-displaced") {
+    set_quads(make_sphere(128, 0.075f, 1));
+    for (auto& p : shape.positions) p += {0, 0.075, 0};
+  } else if (type == "test-disk") {
+    set_quads(make_disk(32, 0.075f, 1));
+    for (auto& p : shape.positions) p += {0, 0.075, 0};
+  } else if (type == "test-uvcylinder") {
+    set_quads(make_rounded_uvcylinder(
+        {32, 32, 32}, {0.075, 0.075}, {1, 1, 1}, 0.3 * 0.075));
+    for (auto& p : shape.positions) p += {0, 0.075, 0};
+  } else if (type == "test-floor") {
+    set_quads(make_floor({1, 1}, {2, 2}, {20, 20}));
+  } else if (type == "test-quad") {
+    set_quads(make_rect({1, 1}, {0.075, 0.075}, {1, 1}));
+  } else if (type == "test-quady") {
+    set_quads(make_recty({1, 1}, {0.075, 0.075}, {1, 1}));
+  } else if (type == "test-quad-displaced") {
+    set_quads(make_rect({256, 256}, {0.075, 0.075}, {1, 1}));
+  } else if (type == "test-quady-displaced") {
+    set_quads(make_recty({256, 256}, {0.075, 0.075}, {1, 1}));
+  } else if (type == "test-matball") {
+    set_quads(make_sphere(32, 0.075));
+    for (auto& p : shape.positions) p += {0, 0.075, 0};
+  } else if (type == "test-hairball1") {
+    auto base = make_sphere(32, 0.075f * 0.8f, 1);
+    for (auto& p : base.positions) p += {0, 0.075, 0};
+    set_lines(make_hair(base, {4, 65536}, {0.1f * 0.15f, 0.1f * 0.15f},
+        {0.001f * 0.15f, 0.0005f * 0.15f}, {0.03, 100}));
+  } else if (type == "test-hairball2") {
+    auto base = make_sphere(32, 0.075f * 0.8f, 1);
+    for (auto& p : base.positions) p += {0, 0.075, 0};
+    set_lines(make_hair(base, {4, 65536}, {0.1f * 0.15f, 0.1f * 0.15f},
+        {0.001f * 0.15f, 0.0005f * 0.15f}));
+  } else if (type == "test-hairball3") {
+    auto base = make_sphere(32, 0.075f * 0.8f, 1);
+    for (auto& p : base.positions) p += {0, 0.075, 0};
+    set_lines(make_hair(base, {4, 65536}, {0.1f * 0.15f, 0.1f * 0.15f},
+        {0.001f * 0.15f, 0.0005f * 0.15f}, {0, 0}, {0.5, 128}));
+  } else if (type == "test-hairball-interior") {
+    set_quads(make_sphere(32, 0.075f * 0.8f, 1));
+    for (auto& p : shape.positions) p += {0, 0.075, 0};
+  } else if (type == "test-suzanne-subdiv") {
+    set_quads(make_monkey(0.075f * 0.8f));
+    for (auto& p : shape.positions) p += {0, 0.075, 0};
+  } else if (type == "test-cube-subdiv") {
+    // set_quads(make_cube( 0.075f);
+    set_fvquads(make_fvcube(0.075f));
+    // make_fvbox(quadspos, quadsnorm, quadstexcoord, positions, normals,
+    //      texcoords, {1, 1, 1}, {0.075f, 0.075f, 0.075f});
+    for (auto& p : shape.positions) p += {0, 0.075, 0};
+  } else if (type == "test-arealight1") {
+    set_quads(make_rect({1, 1}, {0.2, 0.2}));
+  } else if (type == "test-arealight2") {
+    set_quads(make_rect({1, 1}, {0.2, 0.2}));
+  } else if (type == "test-largearealight1") {
+    set_quads(make_rect({1, 1}, {0.4, 0.4}));
+  } else if (type == "test-largearealight2") {
+    set_quads(make_rect({1, 1}, {0.4, 0.4}));
+  } else if (type == "test-pointlight1") {
+    set_points(make_point(0));
+  } else if (type == "test-pointlight2") {
+    set_points(make_point(0));
+  } else if (type == "test-point") {
+    set_points(make_points(1));
+  } else if (type == "test-points") {
+    set_points(make_points(4096));
+  } else if (type == "test-points-random") {
+    set_points(make_random_points(4096, {0.2, 0.2, 0.2}));
+  } else if (type == "test-particles") {
+    set_points(make_points(4096));
+  } else if (type == "test-cloth") {
+    set_quads(make_rect({64, 64}, {0.2, 0.2}));
+  } else if (type == "test-clothy") {
+    set_quads(make_recty({64, 64}, {0.2, 0.2}));
+  } else {
+    error = "unknown preset";
+    return false;
+  }
+  return true;
+}
 
 }  // namespace yocto
 
@@ -190,6 +1577,73 @@ auto zip(const vector<T1>& keys, const vector<T2>& values) {
   return get_subdiv_name(scene, (int)(&subdiv - scene.subdivs.data()));
 }
 
+// Add missing cameras.
+void add_missing_camera(scene_scene& scene) {
+  if (!scene.cameras.empty()) return;
+  scene.camera_names.emplace_back("camera");
+  auto& camera        = scene.cameras.emplace_back();
+  camera.orthographic = false;
+  camera.film         = 0.036;
+  camera.aspect       = (float)16 / (float)9;
+  camera.aperture     = 0;
+  camera.lens         = 0.050;
+  auto bbox           = compute_bounds(scene);
+  auto center         = (bbox.max + bbox.min) / 2;
+  auto bbox_radius    = length(bbox.max - bbox.min) / 2;
+  auto camera_dir     = vec3f{0, 0, 1};
+  auto camera_dist = bbox_radius * camera.lens / (camera.film / camera.aspect);
+  camera_dist *= 2.0f;  // correction for tracer camera implementation
+  auto from    = camera_dir * camera_dist + center;
+  auto to      = center;
+  auto up      = vec3f{0, 1, 0};
+  camera.frame = lookat_frame(from, to, up);
+  camera.focus = length(from - to);
+}
+
+// Add missing radius.
+static void add_missing_radius(scene_scene& scene, float radius = 0.001f) {
+  for (auto& shape : scene.shapes) {
+    if (shape.points.empty() && shape.lines.empty()) continue;
+    if (!shape.radius.empty()) continue;
+    shape.radius.assign(shape.positions.size(), radius);
+  }
+}
+
+// Reduce memory usage
+static void trim_memory(scene_scene& scene) {
+  for (auto& shape : scene.shapes) {
+    shape.points.shrink_to_fit();
+    shape.lines.shrink_to_fit();
+    shape.triangles.shrink_to_fit();
+    shape.quads.shrink_to_fit();
+    shape.positions.shrink_to_fit();
+    shape.normals.shrink_to_fit();
+    shape.texcoords.shrink_to_fit();
+    shape.colors.shrink_to_fit();
+    shape.radius.shrink_to_fit();
+    shape.tangents.shrink_to_fit();
+  }
+  for (auto& subdiv : scene.subdivs) {
+    subdiv.positions.shrink_to_fit();
+    subdiv.normals.shrink_to_fit();
+    subdiv.texcoords.shrink_to_fit();
+    subdiv.quadspos.shrink_to_fit();
+    subdiv.quadsnorm.shrink_to_fit();
+    subdiv.quadstexcoord.shrink_to_fit();
+  }
+  for (auto& texture : scene.textures) {
+    texture.pixelsf.shrink_to_fit();
+    texture.pixelsb.shrink_to_fit();
+  }
+  scene.cameras.shrink_to_fit();
+  scene.shapes.shrink_to_fit();
+  scene.subdivs.shrink_to_fit();
+  scene.instances.shrink_to_fit();
+  scene.materials.shrink_to_fit();
+  scene.textures.shrink_to_fit();
+  scene.environments.shrink_to_fit();
+}
+
 }  // namespace yocto
 
 // -----------------------------------------------------------------------------
@@ -227,289 +1681,301 @@ struct test_params {
 
 // Scene test
 void make_test(scene_scene& scene, const test_params& params) {
-  // cameras
-  switch (params.cameras) {
-    case test_cameras_type::standard: {
-      add_camera(scene, "default", {-0.75, 0.4, 0.9}, {-0.075, 0.05, -0.05},
-          {0, 1, 0}, 0.05, 2.4, 0);
-    } break;
-    // TODO(fabio): fix wide camera
-    case test_cameras_type::wide: {
-      add_camera(scene, "default", {-0.75, 0.4, 0.9}, {-0.075, 0.05, -0.05},
-          {0, 1, 0}, 0.05, 2.4, 0);
-    } break;
-  }
-  // TODO(fabio): port other cameras
-  switch (params.environments) {
-    case test_environments_type::none: break;
-    case test_environments_type::sky: {
-      add_environment(scene, "sky", identity3x4f, {0.5, 0.5, 0.5},
-          add_texture(scene, "sky",
-              make_sunsky(
-                  {2048, 1024}, pif / 4, 3.0, false, 1.0, 1.0, {0.7, 0.7, 0.7}),
-              true));
-    } break;
-    case test_environments_type::sunsky: {
-      add_environment(scene, "sunsky", identity3x4f, {0.5, 0.5, 0.5},
-          add_texture(scene, "sky",
-              make_sunsky(
-                  {2048, 1024}, pif / 4, 3.0, true, 1.0, 1.0, {0.7, 0.7, 0.7}),
-              true));
-    } break;
-  }
-  switch (params.arealights) {
-    case test_arealights_type::none: break;
-    case test_arealights_type::standard: {
-      add_instance(scene, "arealight1",
-          lookat_frame({-0.4, 0.8, 0.8}, {0, 0.1, 0}, {0, 1, 0}, true),
-          add_shape(scene, "arealight1", make_rect({1, 1}, {0.2, 0.2})),
-          add_emission_material(
-              scene, "arealight1", {20, 20, 20}, invalid_handle));
-      add_instance(scene, "arealight2",
-          lookat_frame({+0.4, 0.8, 0.8}, {0, 0.1, 0}, {0, 1, 0}, true),
-          add_shape(scene, "arealight2", make_rect({1, 1}, {0.2, 0.2})),
-          add_emission_material(
-              scene, "arealight2", {20, 20, 20}, invalid_handle));
-    } break;
-    case test_arealights_type::large: {
-      add_instance(scene, "largearealight1",
-          lookat_frame({-0.8, 1.6, 1.6}, {0, 0.1, 0}, {0, 1, 0}, true),
-          add_shape(scene, "largearealight1", make_rect({1, 1}, {0.4, 0.4})),
-          add_emission_material(
-              scene, "largearealight1", {10, 10, 10}, invalid_handle));
-      add_instance(scene, "largearealight2",
-          lookat_frame({+0.8, 1.6, 1.6}, {0, 0.1, 0}, {0, 1, 0}, true),
-          add_shape(scene, "largearealight2", make_rect({1, 1}, {0.4, 0.4})),
-          add_emission_material(
-              scene, "largearealight2", {10, 10, 10}, invalid_handle));
-    } break;
-  }
-  switch (params.floor) {
-    case test_floor_type::none: break;
-    case test_floor_type::standard: {
-      add_instance(scene, "floor", identity3x4f,
-          add_shape(scene, "floor", make_floor({1, 1}, {2, 2}, {20, 20})),
-          add_matte_material(scene, "floor", {1, 1, 1},
-              add_texture(scene, "floor", make_grid({1024, 1024}))));
-    } break;
-  }
-  auto shapes = vector<shape_handle>{}, shapesi = vector<shape_handle>{};
-  auto subdivs   = vector<subdiv_handle>{};
-  auto materials = vector<material_handle>{};
-  switch (params.shapes) {
-    case test_shapes_type::features1: {
-      auto bunny  = add_shape(scene, "bunny", make_bunny(0.075));
-      auto sphere = add_shape(scene, "sphere", make_sphere(32, 0.075, 1));
-      shapes      = {bunny, sphere, bunny, sphere, bunny};
-    } break;
-    case test_shapes_type::features2: {
-      shapes  = {add_shape(scene, "sphere", make_sphere(32, 0.075, 1)),
-          add_shape(scene, "suzanne", make_monkey(0.075f * 0.8f)),
-          add_shape(scene, "hair",
-              make_hair(make_sphere(32, 0.075f * 0.8f, 1), {4, 65536},
-                  {0.1f * 0.15f, 0.1f * 0.15f},
-                  {0.001f * 0.15f, 0.0005f * 0.15f}, {0.03, 100})),
-          add_shape(scene, "displaced", make_sphere(128, 0.075f, 1)),
-          add_shape(scene, "cube",
-              make_rounded_box({32, 32, 32}, {0.075, 0.075, 0.075}, {1, 1, 1},
-                  0.3 * 0.075f))};
-      shapesi = {invalid_handle, invalid_handle,
-          add_shape(scene, "hairi", make_sphere(32, 0.075f * 0.8f, 1)),
-          invalid_handle, invalid_handle};
-      subdivs = {add_subdiv(scene, "suzanne", make_monkey(0.075f * 0.8f),
-                     shapes[1], 2),
-          add_subdiv(scene, "displaced", make_sphere(128, 0.075f, 1), shapes[3],
-              0, 0.025,
-              add_texture(scene, "bumps-displacement", make_bumps({1024, 1024}),
-                  false, true))};
-    } break;
-    case test_shapes_type::rows: {
-      auto bunny  = add_shape(scene, "bunny", make_bunny(0.075));
-      auto sphere = add_shape(scene, "sphere", make_sphere(32, 0.075, 1));
-      shapes      = {bunny, bunny, bunny, bunny, bunny, sphere, sphere, sphere,
-          sphere, sphere};
-    } break;
-    case test_shapes_type::bunny_sphere: {
-      auto bunny  = add_shape(scene, "bunny", make_bunny(0.075));
-      auto sphere = add_shape(scene, "sphere", make_sphere(32, 0.075, 1));
-      shapes      = {bunny, sphere, bunny, sphere, bunny};
-    } break;
-    case test_shapes_type::shapes1: {
-      shapes = {
-          add_shape(scene, "sphere", make_sphere(32, 0.075, 1)),
-          add_shape(scene, "uvsphere-flipcap",
-              make_capped_uvsphere({32, 32}, 0.075, {1, 1}, 0.3 * 0.075)),
-          add_shape(scene, "disk", make_disk(32, 0.075f, 1)),
-          add_shape(scene, "uvcylinder",
-              make_rounded_uvcylinder(
-                  {32, 32, 32}, {0.075, 0.075}, {1, 1, 1}, 0.3 * 0.075)),
-          add_shape(scene, "cube",
-              make_rounded_box({32, 32, 32}, {0.075, 0.075, 0.075}, {1, 1, 1},
-                  0.3 * 0.075f)),
-      };
-    } break;
-    case test_shapes_type::shapes2: {
-      shapes = {
-          add_shape(scene, "cube-subdiv", make_fvcube(0.075)),
-          add_shape(scene, "suzanne-subdiv", make_monkey(0.075)),
-          add_shape(scene, "displaced", make_sphere(128, 0.075f, 1)),
-          add_shape(scene, "bunny", make_bunny(0.075)),
-          add_shape(scene, "teapot", make_sphere(32, 0.075, 1)),
-      };
-      subdivs = {
-          add_subdiv(scene, "cube-subdiv", make_fvcube(0.075), shapes[0], 4),
-          add_subdiv(scene, "suzanne-subdiv", make_monkey(0.075), shapes[1], 2),
-          add_subdiv(scene, "displaced", make_sphere(128, 0.075f, 1), shapes[2],
-              0, 0.025,
-              add_texture(scene, "bumps-displacement", make_bumps({1024, 1024}),
-                  false, true))};
-    } break;
-    case test_shapes_type::shapes3: {
-      shapes = {
-          invalid_handle,
-          add_shape(scene, "hair1",
-              make_hair(make_sphere(32, 0.075f * 0.8f, 1), {4, 65536},
-                  {0.1f * 0.15f, 0.1f * 0.15f},
-                  {0.001f * 0.15f, 0.0005f * 0.15f}, {0.03, 100})),
-          add_shape(scene, "hair2",
-              make_hair(make_sphere(32, 0.075f * 0.8f, 1), {4, 65536},
-                  {0.1f * 0.15f, 0.1f * 0.15f},
-                  {0.001f * 0.15f, 0.0005f * 0.15f})),
-          add_shape(scene, "hair3",
-              make_hair(make_sphere(32, 0.075f * 0.8f, 1), {4, 65536},
-                  {0.1f * 0.15f, 0.1f * 0.15f},
-                  {0.001f * 0.15f, 0.0005f * 0.15f}, {0, 0}, {0.5, 128})),
-          invalid_handle,
-      };
-    } break;
-  }
-  switch (params.materials) {
-    case test_materials_type::features1: {
-      materials = {
-          add_plastic_material(scene, "coated", {1, 1, 1}, 0.2,
-              add_texture(scene, "uvgrid", make_uvgrid({1024, 1024}))),
-          add_glass_material(scene, "glass", {1, 0.5, 0.5}, 0),
-          add_glass_material(
-              scene, "jade", {0.5, 0.5, 0.5}, 0, {0.3, 0.6, 0.3}),
-          add_plastic_material(scene, "bumped", {0.5, 0.7, 0.5}, 0.2,
-              invalid_handle, invalid_handle,
-              add_texture(scene, "bumps-normal",
-                  bump_to_normal(make_bumps({1024, 1024}), 0.05), false, true)),
-          add_metal_material(scene, "metal", {0.66, 0.45, 0.34}, 0.2),
-      };
-    } break;
-    case test_materials_type::features2: {
-      auto uvgrid  = add_plastic_material(scene, "uvgrid", {1, 1, 1}, 0.2,
-          add_texture(scene, "uvgrid", make_uvgrid({1024, 1024})));
-      auto plastic = add_plastic_material(
-          scene, "plastic", {0.5, 0.7, 0.5}, 0.2);
-      auto hair = add_matte_material(scene, "hair", {0.7, 0.7, 0.7});
-      materials = {uvgrid, plastic, hair, plastic, uvgrid};
-    } break;
-    case test_materials_type::uvgrid: {
-      auto uvgrid = add_plastic_material(scene, "uvgrid", {1, 1, 1}, 0.2,
-          add_texture(scene, "uvgrid", make_uvgrid({1024, 1024})));
-      materials   = {uvgrid, uvgrid, uvgrid, uvgrid, uvgrid};
-    } break;
-    case test_materials_type::hair: {
-      auto hair = add_matte_material(scene, "hair", {0.7, 0.7, 0.7});
-      materials = {hair, hair, hair, hair, hair};
-    } break;
-    case test_materials_type::plastic_metal: {
-      materials = {
-          add_plastic_material(scene, "plastic1", {0.5, 0.5, 0.7}, 0.01),
-          add_plastic_material(scene, "plastic2", {0.5, 0.7, 0.5}, 0.2),
-          add_matte_material(scene, "matte", {0.7, 0.7, 0.7}),
-          add_metal_material(scene, "metal1", {0.7, 0.7, 0.7}, 0),
-          add_metal_material(scene, "metal2", {0.66, 0.45, 0.34}, 0.2),
-      };
-    } break;
-    case test_materials_type::materials1: {
-      materials = {
-          add_plastic_material(scene, "plastic1", {0.5, 0.5, 0.7}, 0.01),
-          add_plastic_material(scene, "plastic2", {0.5, 0.7, 0.5}, 0.2),
-          add_matte_material(scene, "matte", {0.7, 0.7, 0.7}),
-          add_plastic_material(scene, "metal1", {0.7, 0.7, 0.7}, 0),
-          add_plastic_material(scene, "metal2", {0.66, 0.45, 0.34}, 0.2),
-      };
-    } break;
-    case test_materials_type::materials2: {
-      materials = {
-          add_glass_material(scene, "glass1", {1, 1, 1}, 0),
-          add_glass_material(scene, "glass2", {1, 0.7, 0.7}, 0.1),
-          add_transparent_material(scene, "transparent", {0.7, 0.5, 0.5}, 0.2),
-          add_thinglass_material(scene, "tglass1", {1, 1, 1}, 0),
-          add_thinglass_material(scene, "tglass2", {1, 0.7, 0.7}, 0.1),
-      };
-    } break;
-    case test_materials_type::materials3: {
-      auto bumps_normal = add_texture(scene, "bumps-normal",
-          bump_to_normal(make_bumps({1024, 1024}), 0.05), false, true);
-      materials         = {
-          add_plastic_material(scene, "plastic1", {0.5, 0.5, 0.7}, 0.01,
-              invalid_handle, invalid_handle, bumps_normal),
-          add_plastic_material(scene, "plastic2", {0.5, 0.7, 0.5}, 0.2),
-          add_metal_material(scene, "metal1", {0.7, 0.7, 0.7}, 0,
-              invalid_handle, invalid_handle, bumps_normal),
-          add_metal_material(scene, "metal2", {0.66, 0.45, 0.34}, 0.2),
-          add_metal_material(scene, "metal3", {0.66, 0.45, 0.34}, 0.2),
-      };
-    } break;
-    case test_materials_type::materials4: {
-      materials = {
-          add_volume_material(
-              scene, "cloud", {0.65, 0.65, 0.65}, {0.9, 0.9, 0.9}, 1),
-          add_glass_material(scene, "glass", {1, 0.5, 0.5}, 0),
-          add_glass_material(
-              scene, "jade", {0.5, 0.5, 0.5}, 0, {0.3, 0.6, 0.3}),
-          add_glass_material(
-              scene, "jade2", {0.5, 0.5, 0.5}, 0, {0.3, 0.6, 0.3}),
-          add_volume_material(scene, "smoke", {0.5, 0.5, 0.5}, {0.2, 0.2, 0.2}),
-      };
-    } break;
-    case test_materials_type::materials5: {
-      materials = {
-          add_glass_material(scene, "skin1a", {0.76, 0.48, 0.23}, 0.25,
-              {0.436, 0.227, 0.131}, invalid_handle, invalid_handle,
-              invalid_handle, 1.5, -0.8, 0.001),
-          add_glass_material(scene, "skin2a", {0.82, 0.55, 0.4}, 0.25,
-              {0.623, 0.433, 0.343}, invalid_handle, invalid_handle,
-              invalid_handle, 1.5, -0.8, 0.001),
-          add_glass_material(scene, "skins", {0.76, 0.48, 0.23}, 0,
-              {0.436, 0.227, 0.131}, invalid_handle, invalid_handle,
-              invalid_handle, 1.5, -0.8, 0.001),
-          add_glass_material(scene, "skin1b", {0.76, 0.48, 0.23}, 0.25,
-              {0.436, 0.227, 0.131}, invalid_handle, invalid_handle,
-              invalid_handle, 1.5, -0.8, 0.001),
-          add_glass_material(scene, "skin2b", {0.82, 0.55, 0.4}, 0.25,
-              {0.623, 0.433, 0.343}, invalid_handle, invalid_handle,
-              invalid_handle, 1.5, -0.8, 0.001),
-      };
-    } break;
-  }
-  for (auto idx = 0; idx < shapes.size(); idx++) {
-    if (!shapes[idx]) continue;
-    if (shapes.size() > 5) {
-      add_instance(scene,
-          scene.shape_names[idx] + "-" + scene.shape_names[idx % 5],
-          {{1, 0, 0}, {0, 1, 0}, {0, 0, 1},
-              {0.2f * (idx % 5 - 2), 0.075, -0.4f * (idx / 5)}},
-          shapes[idx], materials[idx % 5]);
-    } else {
-      auto name = params.instance_name == test_instance_name_type::material
-                      ? scene.material_names[idx]
-                      : scene.shape_names[idx];
-      add_instance(scene, name,
-          {{1, 0, 0}, {0, 1, 0}, {0, 0, 1}, {0.2f * (idx % 5 - 2), 0.075, 0}},
-          shapes[idx], materials[idx]);
-    }
-    if (!shapesi.empty() && shapesi[idx]) {
-      // TODO(fabio): fix name
-      add_instance(scene, "",
-          {{1, 0, 0}, {0, 1, 0}, {0, 0, 1}, {0.2f * (idx - 2), 0.075, 0}},
-          shapesi[idx], materials[idx]);
-    }
-  }
+  return;
+  // // cameras
+  // switch (params.cameras) {
+  //   case test_cameras_type::standard: {
+  //     add_camera(scene, "default", {-0.75, 0.4, 0.9}, {-0.075, 0.05, -0.05},
+  //         {0, 1, 0}, 0.05, 2.4, 0);
+  //   } break;
+  //   // TODO(fabio): fix wide camera
+  //   case test_cameras_type::wide: {
+  //     add_camera(scene, "default", {-0.75, 0.4, 0.9}, {-0.075, 0.05, -0.05},
+  //         {0, 1, 0}, 0.05, 2.4, 0);
+  //   } break;
+  // }
+  // // TODO(fabio): port other cameras
+  // switch (params.environments) {
+  //   case test_environments_type::none: break;
+  //   case test_environments_type::sky: {
+  //     add_environment(scene, "sky", identity3x4f, {0.5, 0.5, 0.5},
+  //         add_texture(scene, "sky",
+  //             make_sunsky(
+  //                 {2048, 1024}, pif / 4, 3.0, false, 1.0, 1.0, {0.7, 0.7,
+  //                 0.7}),
+  //             true));
+  //   } break;
+  //   case test_environments_type::sunsky: {
+  //     add_environment(scene, "sunsky", identity3x4f, {0.5, 0.5, 0.5},
+  //         add_texture(scene, "sky",
+  //             make_sunsky(
+  //                 {2048, 1024}, pif / 4, 3.0, true, 1.0, 1.0, {0.7, 0.7,
+  //                 0.7}),
+  //             true));
+  //   } break;
+  // }
+  // switch (params.arealights) {
+  //   case test_arealights_type::none: break;
+  //   case test_arealights_type::standard: {
+  //     add_instance(scene, "arealight1",
+  //         lookat_frame({-0.4, 0.8, 0.8}, {0, 0.1, 0}, {0, 1, 0}, true),
+  //         add_shape(scene, "arealight1", make_rect({1, 1}, {0.2, 0.2})),
+  //         add_emission_material(
+  //             scene, "arealight1", {20, 20, 20}, invalid_handle));
+  //     add_instance(scene, "arealight2",
+  //         lookat_frame({+0.4, 0.8, 0.8}, {0, 0.1, 0}, {0, 1, 0}, true),
+  //         add_shape(scene, "arealight2", make_rect({1, 1}, {0.2, 0.2})),
+  //         add_emission_material(
+  //             scene, "arealight2", {20, 20, 20}, invalid_handle));
+  //   } break;
+  //   case test_arealights_type::large: {
+  //     add_instance(scene, "largearealight1",
+  //         lookat_frame({-0.8, 1.6, 1.6}, {0, 0.1, 0}, {0, 1, 0}, true),
+  //         add_shape(scene, "largearealight1", make_rect({1, 1}, {0.4, 0.4})),
+  //         add_emission_material(
+  //             scene, "largearealight1", {10, 10, 10}, invalid_handle));
+  //     add_instance(scene, "largearealight2",
+  //         lookat_frame({+0.8, 1.6, 1.6}, {0, 0.1, 0}, {0, 1, 0}, true),
+  //         add_shape(scene, "largearealight2", make_rect({1, 1}, {0.4, 0.4})),
+  //         add_emission_material(
+  //             scene, "largearealight2", {10, 10, 10}, invalid_handle));
+  //   } break;
+  // }
+  // switch (params.floor) {
+  //   case test_floor_type::none: break;
+  //   case test_floor_type::standard: {
+  //     add_instance(scene, "floor", identity3x4f,
+  //         add_shape(scene, "floor", make_floor({1, 1}, {2, 2}, {20, 20})),
+  //         add_matte_material(scene, "floor", {1, 1, 1},
+  //             add_texture(scene, "floor", make_grid({1024, 1024}))));
+  //   } break;
+  // }
+  // auto shapes = vector<shape_handle>{}, shapesi = vector<shape_handle>{};
+  // auto subdivs   = vector<subdiv_handle>{};
+  // auto materials = vector<material_handle>{};
+  // switch (params.shapes) {
+  //   case test_shapes_type::features1: {
+  //     auto bunny  = add_shape(scene, "sphere", make_sphere(32, 0.075, 1));
+  //     auto sphere = add_shape(scene, "sphere", make_sphere(32, 0.075, 1));
+  //     shapes      = {bunny, sphere, bunny, sphere, bunny};
+  //   } break;
+  //   case test_shapes_type::features2: {
+  //     shapes  = {add_shape(scene, "sphere", make_sphere(32, 0.075, 1)),
+  //         add_shape(scene, "suzanne", make_monkey(0.075f * 0.8f)),
+  //         add_shape(scene, "hair",
+  //             make_hair(make_sphere(32, 0.075f * 0.8f, 1), {4, 65536},
+  //                 {0.1f * 0.15f, 0.1f * 0.15f},
+  //                 {0.001f * 0.15f, 0.0005f * 0.15f}, {0.03, 100})),
+  //         add_shape(scene, "displaced", make_sphere(128, 0.075f, 1)),
+  //         add_shape(scene, "cube",
+  //             make_rounded_box({32, 32, 32}, {0.075, 0.075, 0.075}, {1, 1,
+  //             1},
+  //                 0.3 * 0.075f))};
+  //     shapesi = {invalid_handle, invalid_handle,
+  //         add_shape(scene, "hairi", make_sphere(32, 0.075f * 0.8f, 1)),
+  //         invalid_handle, invalid_handle};
+  //     subdivs = {add_subdiv(scene, "suzanne", make_monkey(0.075f * 0.8f),
+  //                    shapes[1], 2),
+  //         add_subdiv(scene, "displaced", make_sphere(128, 0.075f, 1),
+  //         shapes[3],
+  //             0, 0.025,
+  //             add_texture(scene, "bumps-displacement", make_bumps({1024,
+  //             1024}),
+  //                 false, true))};
+  //   } break;
+  //   case test_shapes_type::rows: {
+  //     auto bunny  = add_shape(scene, "bunny", make_sphere(32, 0.075, 1));
+  //     auto sphere = add_shape(scene, "sphere", make_sphere(32, 0.075, 1));
+  //     shapes      = {bunny, bunny, bunny, bunny, bunny, sphere, sphere,
+  //     sphere,
+  //         sphere, sphere};
+  //   } break;
+  //   case test_shapes_type::bunny_sphere: {
+  //     auto bunny  = add_shape(scene, "bunny", make_sphere(32, 0.075, 1));
+  //     auto sphere = add_shape(scene, "sphere", make_sphere(32, 0.075, 1));
+  //     shapes      = {bunny, sphere, bunny, sphere, bunny};
+  //   } break;
+  //   case test_shapes_type::shapes1: {
+  //     shapes = {
+  //         add_shape(scene, "sphere", make_sphere(32, 0.075, 1)),
+  //         add_shape(scene, "uvsphere-flipcap",
+  //             make_capped_uvsphere({32, 32}, 0.075, {1, 1}, 0.3 * 0.075)),
+  //         add_shape(scene, "disk", make_disk(32, 0.075f, 1)),
+  //         add_shape(scene, "uvcylinder",
+  //             make_rounded_uvcylinder(
+  //                 {32, 32, 32}, {0.075, 0.075}, {1, 1, 1}, 0.3 * 0.075)),
+  //         add_shape(scene, "cube",
+  //             make_rounded_box({32, 32, 32}, {0.075, 0.075, 0.075}, {1, 1,
+  //             1},
+  //                 0.3 * 0.075f)),
+  //     };
+  //   } break;
+  //   case test_shapes_type::shapes2: {
+  //     shapes = {
+  //         add_shape(scene, "cube-subdiv", make_fvcube(0.075)),
+  //         add_shape(scene, "suzanne-subdiv", make_monkey(0.075)),
+  //         add_shape(scene, "displaced", make_sphere(128, 0.075f, 1)),
+  //         add_shape(scene, "bunny", make_sphere(32, 0.075, 1)),
+  //         add_shape(scene, "teapot", make_sphere(32, 0.075, 1)),
+  //     };
+  //     subdivs = {
+  //         add_subdiv(scene, "cube-subdiv", make_fvcube(0.075), shapes[0], 4),
+  //         add_subdiv(scene, "suzanne-subdiv", make_monkey(0.075), shapes[1],
+  //         2), add_subdiv(scene, "displaced", make_sphere(128, 0.075f, 1),
+  //         shapes[2],
+  //             0, 0.025,
+  //             add_texture(scene, "bumps-displacement", make_bumps({1024,
+  //             1024}),
+  //                 false, true))};
+  //   } break;
+  //   case test_shapes_type::shapes3: {
+  //     shapes = {
+  //         invalid_handle,
+  //         add_shape(scene, "hair1",
+  //             make_hair(make_sphere(32, 0.075f * 0.8f, 1), {4, 65536},
+  //                 {0.1f * 0.15f, 0.1f * 0.15f},
+  //                 {0.001f * 0.15f, 0.0005f * 0.15f}, {0.03, 100})),
+  //         add_shape(scene, "hair2",
+  //             make_hair(make_sphere(32, 0.075f * 0.8f, 1), {4, 65536},
+  //                 {0.1f * 0.15f, 0.1f * 0.15f},
+  //                 {0.001f * 0.15f, 0.0005f * 0.15f})),
+  //         add_shape(scene, "hair3",
+  //             make_hair(make_sphere(32, 0.075f * 0.8f, 1), {4, 65536},
+  //                 {0.1f * 0.15f, 0.1f * 0.15f},
+  //                 {0.001f * 0.15f, 0.0005f * 0.15f}, {0, 0}, {0.5, 128})),
+  //         invalid_handle,
+  //     };
+  //   } break;
+  // }
+  // switch (params.materials) {
+  //   case test_materials_type::features1: {
+  //     materials = {
+  //         add_plastic_material(scene, "coated", {1, 1, 1}, 0.2,
+  //             add_texture(scene, "uvgrid", make_uvgrid({1024, 1024}))),
+  //         add_glass_material(scene, "glass", {1, 0.5, 0.5}, 0),
+  //         add_glass_material(
+  //             scene, "jade", {0.5, 0.5, 0.5}, 0, {0.3, 0.6, 0.3}),
+  //         add_plastic_material(scene, "bumped", {0.5, 0.7, 0.5}, 0.2,
+  //             invalid_handle, invalid_handle,
+  //             add_texture(scene, "bumps-normal",
+  //                 bump_to_normal(make_bumps({1024, 1024}), 0.05), false,
+  //                 true)),
+  //         add_metal_material(scene, "metal", {0.66, 0.45, 0.34}, 0.2),
+  //     };
+  //   } break;
+  //   case test_materials_type::features2: {
+  //     auto uvgrid  = add_plastic_material(scene, "uvgrid", {1, 1, 1}, 0.2,
+  //         add_texture(scene, "uvgrid", make_uvgrid({1024, 1024})));
+  //     auto plastic = add_plastic_material(
+  //         scene, "plastic", {0.5, 0.7, 0.5}, 0.2);
+  //     auto hair = add_matte_material(scene, "hair", {0.7, 0.7, 0.7});
+  //     materials = {uvgrid, plastic, hair, plastic, uvgrid};
+  //   } break;
+  //   case test_materials_type::uvgrid: {
+  //     auto uvgrid = add_plastic_material(scene, "uvgrid", {1, 1, 1}, 0.2,
+  //         add_texture(scene, "uvgrid", make_uvgrid({1024, 1024})));
+  //     materials   = {uvgrid, uvgrid, uvgrid, uvgrid, uvgrid};
+  //   } break;
+  //   case test_materials_type::hair: {
+  //     auto hair = add_matte_material(scene, "hair", {0.7, 0.7, 0.7});
+  //     materials = {hair, hair, hair, hair, hair};
+  //   } break;
+  //   case test_materials_type::plastic_metal: {
+  //     materials = {
+  //         add_plastic_material(scene, "plastic1", {0.5, 0.5, 0.7}, 0.01),
+  //         add_plastic_material(scene, "plastic2", {0.5, 0.7, 0.5}, 0.2),
+  //         add_matte_material(scene, "matte", {0.7, 0.7, 0.7}),
+  //         add_metal_material(scene, "metal1", {0.7, 0.7, 0.7}, 0),
+  //         add_metal_material(scene, "metal2", {0.66, 0.45, 0.34}, 0.2),
+  //     };
+  //   } break;
+  //   case test_materials_type::materials1: {
+  //     materials = {
+  //         add_plastic_material(scene, "plastic1", {0.5, 0.5, 0.7}, 0.01),
+  //         add_plastic_material(scene, "plastic2", {0.5, 0.7, 0.5}, 0.2),
+  //         add_matte_material(scene, "matte", {0.7, 0.7, 0.7}),
+  //         add_plastic_material(scene, "metal1", {0.7, 0.7, 0.7}, 0),
+  //         add_plastic_material(scene, "metal2", {0.66, 0.45, 0.34}, 0.2),
+  //     };
+  //   } break;
+  //   case test_materials_type::materials2: {
+  //     materials = {
+  //         add_glass_material(scene, "glass1", {1, 1, 1}, 0),
+  //         add_glass_material(scene, "glass2", {1, 0.7, 0.7}, 0.1),
+  //         add_transparent_material(scene, "transparent", {0.7, 0.5, 0.5},
+  //         0.2), add_thinglass_material(scene, "tglass1", {1, 1, 1}, 0),
+  //         add_thinglass_material(scene, "tglass2", {1, 0.7, 0.7}, 0.1),
+  //     };
+  //   } break;
+  //   case test_materials_type::materials3: {
+  //     auto bumps_normal = add_texture(scene, "bumps-normal",
+  //         bump_to_normal(make_bumps({1024, 1024}), 0.05), false, true);
+  //     materials         = {
+  //         add_plastic_material(scene, "plastic1", {0.5, 0.5, 0.7}, 0.01,
+  //             invalid_handle, invalid_handle, bumps_normal),
+  //         add_plastic_material(scene, "plastic2", {0.5, 0.7, 0.5}, 0.2),
+  //         add_metal_material(scene, "metal1", {0.7, 0.7, 0.7}, 0,
+  //             invalid_handle, invalid_handle, bumps_normal),
+  //         add_metal_material(scene, "metal2", {0.66, 0.45, 0.34}, 0.2),
+  //         add_metal_material(scene, "metal3", {0.66, 0.45, 0.34}, 0.2),
+  //     };
+  //   } break;
+  //   case test_materials_type::materials4: {
+  //     materials = {
+  //         add_volume_material(
+  //             scene, "cloud", {0.65, 0.65, 0.65}, {0.9, 0.9, 0.9}, 1),
+  //         add_glass_material(scene, "glass", {1, 0.5, 0.5}, 0),
+  //         add_glass_material(
+  //             scene, "jade", {0.5, 0.5, 0.5}, 0, {0.3, 0.6, 0.3}),
+  //         add_glass_material(
+  //             scene, "jade2", {0.5, 0.5, 0.5}, 0, {0.3, 0.6, 0.3}),
+  //         add_volume_material(scene, "smoke", {0.5, 0.5, 0.5}, {0.2, 0.2,
+  //         0.2}),
+  //     };
+  //   } break;
+  //   case test_materials_type::materials5: {
+  //     materials = {
+  //         add_glass_material(scene, "skin1a", {0.76, 0.48, 0.23}, 0.25,
+  //             {0.436, 0.227, 0.131}, invalid_handle, invalid_handle,
+  //             invalid_handle, 1.5, -0.8, 0.001),
+  //         add_glass_material(scene, "skin2a", {0.82, 0.55, 0.4}, 0.25,
+  //             {0.623, 0.433, 0.343}, invalid_handle, invalid_handle,
+  //             invalid_handle, 1.5, -0.8, 0.001),
+  //         add_glass_material(scene, "skins", {0.76, 0.48, 0.23}, 0,
+  //             {0.436, 0.227, 0.131}, invalid_handle, invalid_handle,
+  //             invalid_handle, 1.5, -0.8, 0.001),
+  //         add_glass_material(scene, "skin1b", {0.76, 0.48, 0.23}, 0.25,
+  //             {0.436, 0.227, 0.131}, invalid_handle, invalid_handle,
+  //             invalid_handle, 1.5, -0.8, 0.001),
+  //         add_glass_material(scene, "skin2b", {0.82, 0.55, 0.4}, 0.25,
+  //             {0.623, 0.433, 0.343}, invalid_handle, invalid_handle,
+  //             invalid_handle, 1.5, -0.8, 0.001),
+  //     };
+  //   } break;
+  // }
+  // for (auto idx = 0; idx < shapes.size(); idx++) {
+  //   if (!shapes[idx]) continue;
+  //   if (shapes.size() > 5) {
+  //     add_instance(scene,
+  //         scene.shape_names[idx] + "-" + scene.shape_names[idx % 5],
+  //         {{1, 0, 0}, {0, 1, 0}, {0, 0, 1},
+  //             {0.2f * (idx % 5 - 2), 0.075, -0.4f * (idx / 5)}},
+  //         shapes[idx], materials[idx % 5]);
+  //   } else {
+  //     auto name = params.instance_name == test_instance_name_type::material
+  //                     ? scene.material_names[idx]
+  //                     : scene.shape_names[idx];
+  //     add_instance(scene, name,
+  //         {{1, 0, 0}, {0, 1, 0}, {0, 0, 1}, {0.2f * (idx % 5 - 2), 0.075,
+  //         0}}, shapes[idx], materials[idx]);
+  //   }
+  //   if (!shapesi.empty() && shapesi[idx]) {
+  //     // TODO(fabio): fix name
+  //     add_instance(scene, "",
+  //         {{1, 0, 0}, {0, 1, 0}, {0, 0, 1}, {0.2f * (idx - 2), 0.075, 0}},
+  //         shapesi[idx], materials[idx]);
+  //   }
+  // }
 }
 
 // Scene presets used for testing.
@@ -785,101 +2251,8 @@ bool save_instance(const string& filename, const vector<frame3f>& frames,
   }
 }
 
-#define YOCTO_TEXTUREIO_AS_IMAGE
-
-#ifdef YOCTO_TEXTUREIO_AS_IMAGE
-
-// load texture
-static bool load_texture(
-    const string& filename, scene_texture& texture, string& error) {
-  auto image = image_data{};
-  if (!load_image(filename, image, error)) return false;
-  if (!image.pixelsf.empty()) {
-    texture.hdr = {
-        {image.width, image.height}, (const vec4f*)image.pixelsf.data()};
-  } else {
-    texture.ldr = {
-        {image.width, image.height}, (const vec4b*)image.pixelsb.data()};
-  }
-  return true;
-}
-
-// save texture
-static bool save_texture(
-    const string& filename, const scene_texture& texture, string& error) {
-  if (!texture.hdr.empty()) {
-    auto image = make_image(
-        texture.hdr.width(), texture.hdr.height(), true, false);
-    image.pixelsf = texture.hdr.data_vector();
-    return save_image(filename, image, error);
-  } else {
-    auto image = make_image(
-        texture.ldr.width(), texture.ldr.height(), false, true);
-    image.pixelsb = texture.ldr.data_vector();
-    return save_image(filename, image, error);
-  }
-}
-
-#else
-
-// load texture
-static bool load_texture(
-    const string& filename, scene_texture& texture, string& error) {
-  if (is_hdr_filename(filename)) {
-    return load_image(filename, texture.hdr, error);
-  } else {
-    return load_image(filename, texture.ldr, error);
-  }
-}
-
-// save texture
-static bool save_texture(
-    const string& filename, const scene_texture& texture, string& error) {
-  if (!texture.hdr.empty()) {
-    return save_image(filename, texture.hdr, error);
-  } else {
-    return save_image(filename, texture.ldr, error);
-  }
-}
-
-#endif
-
-// load shape
-static bool load_shape(
-    const string& filename, scene_shape& shape, string& error) {
-  auto lshape = shape_data{};
-  if (!load_shape(filename, lshape, error, true)) return false;
-  shape.points    = lshape.points;
-  shape.lines     = lshape.lines;
-  shape.triangles = lshape.triangles;
-  shape.quads     = lshape.quads;
-  shape.positions = lshape.positions;
-  shape.normals   = lshape.normals;
-  shape.texcoords = lshape.texcoords;
-  shape.colors    = lshape.colors;
-  shape.radius    = lshape.radius;
-  return true;
-}
-
-// save shape
-static bool save_shape(
-    const string& filename, const scene_shape& shape, string& error) {
-  auto sshape      = shape_data{};
-  sshape.points    = shape.points;
-  sshape.lines     = shape.lines;
-  sshape.triangles = shape.triangles;
-  sshape.quads     = shape.quads;
-  sshape.positions = shape.positions;
-  sshape.normals   = shape.normals;
-  sshape.texcoords = shape.texcoords;
-  sshape.colors    = shape.colors;
-  sshape.radius    = shape.radius;
-  return save_shape(filename, sshape, error, true);
-}
-
 // load subdiv
-static bool load_subdiv(
-    const string& filename, scene_subdiv& subdiv, string& error) {
+bool load_subdiv(const string& filename, scene_subdiv& subdiv, string& error) {
   auto lsubdiv = fvshape_data{};
   if (!load_fvshape(filename, lsubdiv, error, true)) return false;
   subdiv.quadspos      = lsubdiv.quadspos;
@@ -892,7 +2265,7 @@ static bool load_subdiv(
 }
 
 // save subdiv
-static bool save_subdiv(
+bool save_subdiv(
     const string& filename, const scene_subdiv& subdiv, string& error) {
   auto ssubdiv          = fvshape_data{};
   ssubdiv.quadspos      = subdiv.quadspos;
@@ -916,7 +2289,13 @@ static bool save_binshape(
     return false;
   };
 
-  auto fs = open_file(filename, "wb");
+  auto write_values = [](FILE* fs, const auto& values) -> bool {
+    return fwrite(values.data(), sizeof(values.front()), values.size(), fs) ==
+           values.size();
+  };
+
+  auto fs       = fopen_utf8(filename.c_str(), "wb");
+  auto fs_guard = unique_ptr<FILE, int (*)(FILE*)>(fs, &fclose);
   if (!fs) return open_error();
 
   if (!write_values(fs, shape.positions)) return write_error();
@@ -1411,7 +2790,7 @@ static bool load_json_scene(const string& filename, scene_scene& scene,
       if (progress_cb) progress_cb("load shape", progress.x++, progress.y);
       auto path = find_path(
           get_shape_name(scene, shape), "shapes", {".ply", ".obj"});
-      if (!load_shape(path_join(dirname, path), shape, error))
+      if (!load_shape(path_join(dirname, path), shape, error, true))
         return dependent_error();
     }
     // load subdivs
@@ -1451,7 +2830,7 @@ static bool load_json_scene(const string& filename, scene_scene& scene,
       auto path = find_path(
           get_shape_name(scene, shape), "shapes", {".ply", ".obj"});
       auto err = string{};
-      if (!load_shape(path_join(dirname, path), shape, err)) {
+      if (!load_shape(path_join(dirname, path), shape, err, true)) {
         auto lock = std::lock_guard{mutex};
         error     = err;
         return;
@@ -1547,9 +2926,8 @@ static bool load_json_scene(const string& filename, scene_scene& scene,
 
   // fix scene
   if (scene.asset.name.empty()) scene.asset.name = path_basename(filename);
-  add_cameras(scene);
-  add_radius(scene);
-  add_materials(scene);
+  add_missing_camera(scene);
+  add_missing_radius(scene);
   trim_memory(scene);
 
   // done
@@ -1766,7 +3144,7 @@ static bool save_json_scene(const string& filename, const scene_scene& scene,
     for (auto& shape : scene.shapes) {
       if (progress_cb) progress_cb("save shape", progress.x++, progress.y);
       auto path = "shapes/" + get_shape_name(scene, shape) + ".ply";
-      if (!save_shape(path_join(dirname, path), shape, error))
+      if (!save_shape(path_join(dirname, path), shape, error, true))
         return dependent_error();
     }
 
@@ -1782,7 +3160,7 @@ static bool save_json_scene(const string& filename, const scene_scene& scene,
     for (auto& texture : scene.textures) {
       if (progress_cb) progress_cb("save texture", progress.x++, progress.y);
       auto path = "textures/" + get_texture_name(scene, texture) +
-                  (!texture.hdr.empty() ? ".hdr"s : ".png"s);
+                  (!texture.pixelsf.empty() ? ".hdr"s : ".png"s);
       if (!save_texture(path_join(dirname, path), texture, error))
         return dependent_error();
     }
@@ -1798,7 +3176,7 @@ static bool save_json_scene(const string& filename, const scene_scene& scene,
       }
       auto path = "shapes/" + get_shape_name(scene, shape) + ".ply";
       auto err  = string{};
-      if (!save_shape(path_join(dirname, path), shape, err)) {
+      if (!save_shape(path_join(dirname, path), shape, err, true)) {
         auto lock = std::lock_guard{mutex};
         error     = err;
         return;
@@ -1829,7 +3207,7 @@ static bool save_json_scene(const string& filename, const scene_scene& scene,
         if (progress_cb) progress_cb("save texture", progress.x++, progress.y);
       }
       auto path = "textures/" + get_texture_name(scene, texture) +
-                  (!texture.hdr.empty() ? ".hdr"s : ".png"s);
+                  (!texture.pixelsf.empty() ? ".hdr"s : ".png"s);
       auto err = string{};
       if (!save_texture(path_join(dirname, path), texture, err)) {
         auto lock = std::lock_guard{mutex};
@@ -2001,9 +3379,8 @@ static bool load_obj_scene(const string& filename, scene_scene& scene,
 
   // fix scene
   if (scene.asset.name.empty()) scene.asset.name = path_basename(filename);
-  add_cameras(scene);
-  add_radius(scene);
-  add_materials(scene);
+  add_missing_camera(scene);
+  add_missing_radius(scene);
 
   // done
   if (progress_cb) progress_cb("load scene", progress.x++, progress.y);
@@ -2052,7 +3429,7 @@ static bool save_obj_scene(const string& filename, const scene_scene& scene,
   for (auto& texture : scene.textures) {
     auto& otexture = obj.textures.emplace_back();
     otexture.path  = "textures/" + get_texture_name(scene, texture) +
-                    (!texture.hdr.empty() ? ".hdr"s : ".png"s);
+                    (!texture.pixelsf.empty() ? ".hdr"s : ".png"s);
   }
 
   // convert materials
@@ -2114,7 +3491,7 @@ static bool save_obj_scene(const string& filename, const scene_scene& scene,
     for (auto& texture : scene.textures) {
       if (progress_cb) progress_cb("save texture", progress.x++, progress.y);
       auto path = "textures/" + get_texture_name(scene, texture) +
-                  (!texture.hdr.empty() ? ".hdr"s : ".png"s);
+                  (!texture.pixelsf.empty() ? ".hdr"s : ".png"s);
       if (!save_texture(path_join(dirname, path), texture, error))
         return dependent_error();
     }
@@ -2129,7 +3506,7 @@ static bool save_obj_scene(const string& filename, const scene_scene& scene,
         if (progress_cb) progress_cb("save texture", progress.x++, progress.y);
       }
       auto path = "textures/" + get_texture_name(scene, texture) +
-                  (!texture.hdr.empty() ? ".hdr"s : ".png"s);
+                  (!texture.pixelsf.empty() ? ".hdr"s : ".png"s);
       auto err = string{};
       if (!save_texture(path_join(dirname, path), texture, err)) {
         auto lock = std::lock_guard{mutex};
@@ -2159,27 +3536,16 @@ static bool load_ply_scene(const string& filename, scene_scene& scene,
   if (progress_cb) progress_cb("load scene", progress.x++, progress.y);
 
   // load ply mesh
-  auto& shape  = scene.shapes.emplace_back();
-  auto  lshape = shape_data{};
-  if (!load_shape(filename, lshape, error, false)) return false;
-  shape.points    = lshape.points;
-  shape.lines     = lshape.lines;
-  shape.triangles = lshape.triangles;
-  shape.quads     = lshape.quads;
-  shape.positions = lshape.positions;
-  shape.normals   = lshape.normals;
-  shape.texcoords = lshape.texcoords;
-  shape.colors    = lshape.colors;
-  shape.radius    = lshape.radius;
+  auto& shape = scene.shapes.emplace_back();
+  if (!load_shape(filename, shape, error, false)) return false;
 
   // create instance
   auto& instance = scene.instances.emplace_back();
   instance.shape = (int)scene.shapes.size() - 1;
 
   // fix scene
-  add_cameras(scene);
-  add_radius(scene);
-  add_materials(scene);
+  add_missing_camera(scene);
+  add_missing_radius(scene);
 
   // done
   if (progress_cb) progress_cb("load scene", progress.x++, progress.y);
@@ -2200,18 +3566,8 @@ static bool save_ply_scene(const string& filename, const scene_scene& scene,
   if (progress_cb) progress_cb("save scene", progress.x++, progress.y);
 
   // save shape
-  auto& shape      = scene.shapes.front();
-  auto  sshape     = shape_data{};
-  sshape.points    = shape.points;
-  sshape.lines     = shape.lines;
-  sshape.triangles = shape.triangles;
-  sshape.quads     = shape.quads;
-  sshape.positions = shape.positions;
-  sshape.normals   = shape.normals;
-  sshape.texcoords = shape.texcoords;
-  sshape.colors    = shape.colors;
-  sshape.radius    = shape.radius;
-  if (!save_shape(filename, sshape, error)) return false;
+  auto& shape = scene.shapes.front();
+  if (!save_shape(filename, shape, error, false)) return false;
 
   // done
   if (progress_cb) progress_cb("save scene", progress.x++, progress.y);
@@ -2232,27 +3588,16 @@ static bool load_stl_scene(const string& filename, scene_scene& scene,
   if (progress_cb) progress_cb("load scene", progress.x++, progress.y);
 
   // load stl mesh
-  auto& shape  = scene.shapes.emplace_back();
-  auto  lshape = shape_data{};
-  if (!load_shape(filename, lshape, error, false)) return false;
-  shape.points    = lshape.points;
-  shape.lines     = lshape.lines;
-  shape.triangles = lshape.triangles;
-  shape.quads     = lshape.quads;
-  shape.positions = lshape.positions;
-  shape.normals   = lshape.normals;
-  shape.texcoords = lshape.texcoords;
-  shape.colors    = lshape.colors;
-  shape.radius    = lshape.radius;
+  auto& shape = scene.shapes.emplace_back();
+  if (!load_shape(filename, shape, error, false)) return false;
 
   // create instance
   auto& instance = scene.instances.emplace_back();
   instance.shape = (int)scene.shapes.size() - 1;
 
   // fix scene
-  add_cameras(scene);
-  add_radius(scene);
-  add_materials(scene);
+  add_missing_camera(scene);
+  add_missing_radius(scene);
 
   // done
   if (progress_cb) progress_cb("load scene", progress.x++, progress.y);
@@ -2273,18 +3618,8 @@ static bool save_stl_scene(const string& filename, const scene_scene& scene,
   if (progress_cb) progress_cb("save scene", progress.x++, progress.y);
 
   // save shape
-  auto& shape      = scene.shapes.front();
-  auto  sshape     = shape_data{};
-  sshape.points    = shape.points;
-  sshape.lines     = shape.lines;
-  sshape.triangles = shape.triangles;
-  sshape.quads     = shape.quads;
-  sshape.positions = shape.positions;
-  sshape.normals   = shape.normals;
-  sshape.texcoords = shape.texcoords;
-  sshape.colors    = shape.colors;
-  sshape.radius    = shape.radius;
-  if (!save_shape(filename, sshape, error, false)) return false;
+  auto& shape = scene.shapes.front();
+  if (!save_shape(filename, shape, error, false)) return false;
 
   // done
   if (progress_cb) progress_cb("save scene", progress.x++, progress.y);
@@ -2787,9 +4122,8 @@ static bool load_gltf_scene(const string& filename, scene_scene& scene,
 
   // fix scene
   if (scene.asset.name.empty()) scene.asset.name = path_basename(filename);
-  add_cameras(scene);
-  add_radius(scene);
-  add_materials(scene);
+  add_missing_camera(scene);
+  add_missing_radius(scene);
 
   // load done
   if (progress_cb) progress_cb("load scene", progress.x++, progress.y);
@@ -3132,7 +4466,7 @@ static bool save_gltf_scene(const string& filename, const scene_scene& scene,
     for (auto& texture : scene.textures) {
       if (progress_cb) progress_cb("save texture", progress.x++, progress.y);
       auto path = "textures/" + get_texture_name(scene, texture) +
-                  (!texture.hdr.empty() ? ".hdr" : ".png");
+                  (!texture.pixelsf.empty() ? ".hdr" : ".png");
       if (!save_texture(path_join(dirname, path), texture, error))
         return dependent_error();
     }
@@ -3163,7 +4497,7 @@ static bool save_gltf_scene(const string& filename, const scene_scene& scene,
         if (progress_cb) progress_cb("save texture", progress.x++, progress.y);
       }
       auto path = "textures/" + get_texture_name(scene, texture) +
-                  (!texture.hdr.empty() ? ".hdr"s : ".png"s);
+                  (!texture.pixelsf.empty() ? ".hdr"s : ".png"s);
       auto err = string{};
       if (!save_texture(path_join(dirname, path), texture, err)) {
         auto lock = std::lock_guard{mutex};
@@ -3308,7 +4642,7 @@ static bool load_pbrt_scene(const string& filename, scene_scene& scene,
       if (progress_cb) progress_cb("load shape", progress.x++, progress.y);
       auto& path = shapes_paths[&shape - &scene.shapes.front()];
       if (path.empty()) continue;
-      if (!load_shape(path_join(dirname, path), shape, error))
+      if (!load_shape(path_join(dirname, path), shape, error, true))
         return dependent_error();
     }
     // load texture
@@ -3331,7 +4665,7 @@ static bool load_pbrt_scene(const string& filename, scene_scene& scene,
       auto& path = shapes_paths[&shape - &scene.shapes.front()];
       if (path.empty()) return;
       auto err = string{};
-      if (!load_shape(path_join(dirname, path), shape, err)) {
+      if (!load_shape(path_join(dirname, path), shape, err, true)) {
         auto lock = std::lock_guard{mutex};
         error     = err;
         return;
@@ -3358,9 +4692,8 @@ static bool load_pbrt_scene(const string& filename, scene_scene& scene,
 
   // fix scene
   if (scene.asset.name.empty()) scene.asset.name = path_basename(filename);
-  add_cameras(scene);
-  add_radius(scene);
-  add_materials(scene);
+  add_missing_camera(scene);
+  add_missing_radius(scene);
 
   // done
   if (progress_cb) progress_cb("load scene", progress.x++, progress.y);
@@ -3385,7 +4718,7 @@ static bool save_pbrt_scene(const string& filename, const scene_scene& scene,
 
   // convert camera
   auto& camera       = scene.cameras.front();
-  auto& pcamera      = add_camera(pbrt);
+  auto& pcamera      = pbrt.cameras.emplace_back();
   pcamera.frame      = camera.frame;
   pcamera.lens       = camera.lens;
   pcamera.aspect     = camera.aspect;
@@ -3395,7 +4728,7 @@ static bool save_pbrt_scene(const string& filename, const scene_scene& scene,
   for (auto& texture : scene.textures) {
     auto& ptexture    = pbrt.textures.emplace_back();
     ptexture.filename = "textures/" + get_texture_name(scene, texture) +
-                        (!texture.hdr.empty() ? ".hdr" : ".png");
+                        (!texture.pixelsf.empty() ? ".hdr" : ".png");
   }
 
   // material type map
@@ -3411,7 +4744,7 @@ static bool save_pbrt_scene(const string& filename, const scene_scene& scene,
 
   // convert materials
   for (auto& material : scene.materials) {
-    auto& pmaterial     = add_material(pbrt);
+    auto& pmaterial     = pbrt.materials.emplace_back();
     pmaterial.name      = get_material_name(scene, material);
     pmaterial.type      = material_type_map.at(material.type);
     pmaterial.emission  = material.emission;
@@ -3424,7 +4757,7 @@ static bool save_pbrt_scene(const string& filename, const scene_scene& scene,
 
   // convert instances
   for (auto& instance : scene.instances) {
-    auto& pshape     = add_shape(pbrt);
+    auto& pshape     = pbrt.shapes.emplace_back();
     pshape.filename_ = get_shape_name(scene, instance.shape) + ".ply";
     pshape.frame     = instance.frame;
     pshape.frend     = instance.frame;
@@ -3433,7 +4766,7 @@ static bool save_pbrt_scene(const string& filename, const scene_scene& scene,
 
   // convert environments
   for (auto& environment : scene.environments) {
-    auto& penvironment        = add_environment(pbrt);
+    auto& penvironment        = pbrt.environments.emplace_back();
     penvironment.emission     = environment.emission;
     penvironment.emission_tex = environment.emission_tex;
   }
@@ -3452,14 +4785,14 @@ static bool save_pbrt_scene(const string& filename, const scene_scene& scene,
     for (auto& shape : scene.shapes) {
       if (progress_cb) progress_cb("save shape", progress.x++, progress.y);
       auto path = "shapes/" + get_shape_name(scene, shape) + ".ply";
-      if (!save_shape(path_join(dirname, path), shape, error))
+      if (!save_shape(path_join(dirname, path), shape, error, true))
         return dependent_error();
     }
     // save shapes
     for (auto& texture : scene.textures) {
       if (progress_cb) progress_cb("save texture", progress.x++, progress.y);
       auto path = "textures/" + get_texture_name(scene, texture) +
-                  (!texture.hdr.empty() ? ".hdr" : ".png");
+                  (!texture.pixelsf.empty() ? ".hdr" : ".png");
       if (!save_texture(path_join(dirname, path), texture, error))
         return dependent_error();
     }
@@ -3475,7 +4808,7 @@ static bool save_pbrt_scene(const string& filename, const scene_scene& scene,
       }
       auto path = "shapes/" + get_shape_name(scene, shape) + ".ply";
       auto err  = string{};
-      if (!save_shape(path_join(dirname, path), shape, err)) {
+      if (!save_shape(path_join(dirname, path), shape, err, true)) {
         auto lock = std::lock_guard{mutex};
         error     = err;
         return;
@@ -3490,7 +4823,7 @@ static bool save_pbrt_scene(const string& filename, const scene_scene& scene,
         if (progress_cb) progress_cb("save texture", progress.x++, progress.y);
       }
       auto path = "textures/" + get_texture_name(scene, texture) +
-                  (!texture.hdr.empty() ? ".hdr"s : ".png"s);
+                  (!texture.pixelsf.empty() ? ".hdr"s : ".png"s);
       auto err = string{};
       if (!save_texture(path_join(dirname, path), texture, err)) {
         auto lock = std::lock_guard{mutex};
@@ -3507,3 +4840,202 @@ static bool save_pbrt_scene(const string& filename, const scene_scene& scene,
 }
 
 }  // namespace yocto
+
+#if 0
+
+// -----------------------------------------------------------------------------
+// IMPLEMENTATION FOR VOLUME IMAGE IO
+// -----------------------------------------------------------------------------
+namespace yocto {
+
+// Volume load
+static bool load_yvol(const string& filename, int& width, int& height,
+    int& depth, int& components, vector<float>& voxels, string& error) {
+  // error helpers
+  auto open_error = [filename, &error]() {
+    error = filename + ": file not found";
+    return false;
+  };
+  auto parse_error = [filename, &error]() {
+    error = filename + ": parse error";
+    return false;
+  };
+  auto read_error = [filename, &error]() {
+    error = filename + ": read error";
+    return false;
+  };
+
+  // Split a string
+  auto split_string = [](const string& str) -> vector<string> {
+    auto ret = vector<string>();
+    if (str.empty()) return ret;
+    auto lpos = (size_t)0;
+    while (lpos != string::npos) {
+      auto pos = str.find_first_of(" \t\n\r", lpos);
+      if (pos != string::npos) {
+        if (pos > lpos) ret.push_back(str.substr(lpos, pos - lpos));
+        lpos = pos + 1;
+      } else {
+        if (lpos < str.size()) ret.push_back(str.substr(lpos));
+        lpos = pos;
+      }
+    }
+    return ret;
+  };
+
+  auto fs       = fopen_utf8(filename.c_str(), "rb");
+  auto fs_guard = unique_ptr<FILE, int (*)(FILE*)>(fs, &fclose);
+  if (!fs) return open_error();
+
+  // buffer
+  auto buffer = array<char, 4096>{};
+  auto toks   = vector<string>();
+
+  // read magic
+  if (!fgets(buffer.data(), (int)buffer.size(), fs)) return parse_error();
+  toks = split_string(buffer.data());
+  if (toks[0] != "YVOL") return parse_error();
+
+  // read width, height
+  if (!fgets(buffer.data(), (int)buffer.size(), fs)) return parse_error();
+  toks       = split_string(buffer.data());
+  width      = atoi(toks[0].c_str());
+  height     = atoi(toks[1].c_str());
+  depth      = atoi(toks[2].c_str());
+  components = atoi(toks[3].c_str());
+
+  // read data
+  auto nvoxels = (size_t)width * (size_t)height * (size_t)depth;
+  auto nvalues = nvoxels * (size_t)components;
+  voxels       = vector<float>(nvalues);
+  if (!read_values(fs, voxels.data(), nvalues)) return read_error();
+
+  // done
+  return true;
+}
+
+// save pfm
+static bool save_yvol(const string& filename, int width, int height, int depth,
+    int components, const vector<float>& voxels, string& error) {
+  // error helpers
+  auto open_error = [filename, &error]() {
+    error = filename + ": file not found";
+    return false;
+  };
+  auto write_error = [filename, &error]() {
+    error = filename + ": read error";
+    return false;
+  };
+
+  auto fs       = fopen_utf8(filename.c_str(), "wb");
+  auto fs_guard = unique_ptr<FILE, int (*)(FILE*)>(fs, &fclose);
+  if (!fs) return open_error();
+
+  if (!write_text(fs, "YVOL\n")) return write_error();
+  if (!write_text(fs, std::to_string(width) + " " + std::to_string(height) +
+                          " " + std::to_string(depth) + " " +
+                          std::to_string(components) + "\n"))
+    return write_error();
+  auto nvalues = (size_t)width * (size_t)height * (size_t)depth *
+                 (size_t)components;
+  if (!write_values(fs, voxels.data(), nvalues)) return write_error();
+  return true;
+}
+
+// Loads volume data from binary format.
+bool load_volume(const string& filename, volume<float>& vol, string& error) {
+  auto read_error = [filename, &error]() {
+    error = filename + ": read error";
+    return false;
+  };
+  auto width = 0, height = 0, depth = 0, ncomp = 0;
+  auto voxels = vector<float>{};
+  if (!load_yvol(filename, width, height, depth, ncomp, voxels, error))
+    return false;
+  if (ncomp != 1) voxels = convert_components(voxels, ncomp, 1);
+  vol = volume{{width, height, depth}, (const float*)voxels.data()};
+  return true;
+}
+
+// Saves volume data in binary format.
+bool save_volume(
+    const string& filename, const volume<float>& vol, string& error) {
+  return save_yvol(filename, vol.width(), vol.height(), vol.depth(), 1,
+      {vol.data(), vol.data() + vol.count()}, error);
+}
+
+}  // namespace yocto
+
+// -----------------------------------------------------------------------------
+// IMPLEMENTATION FOR DEPRECATED CODE
+// -----------------------------------------------------------------------------
+namespace yocto {
+
+image<vec4f> filter_bilateral(const image<vec4f>& img, float spatial_sigma,
+    float range_sigma, const vector<image<vec4f>>& features,
+    const vector<float>& features_sigma) {
+  auto filtered     = image{img.imsize(), zero4f};
+  auto filter_width = (int)ceil(2.57f * spatial_sigma);
+  auto sw           = 1 / (2.0f * spatial_sigma * spatial_sigma);
+  auto rw           = 1 / (2.0f * range_sigma * range_sigma);
+  auto fw           = vector<float>();
+  for (auto feature_sigma : features_sigma)
+    fw.push_back(1 / (2.0f * feature_sigma * feature_sigma));
+  for (auto j = 0; j < img.height(); j++) {
+    for (auto i = 0; i < img.width(); i++) {
+      auto av = zero4f;
+      auto aw = 0.0f;
+      for (auto fj = -filter_width; fj <= filter_width; fj++) {
+        for (auto fi = -filter_width; fi <= filter_width; fi++) {
+          auto ii = i + fi, jj = j + fj;
+          if (ii < 0 || jj < 0) continue;
+          if (ii >= img.width() || jj >= img.height()) continue;
+          auto uv  = vec2f{float(i - ii), float(j - jj)};
+          auto rgb = img[{i, j}] - img[{i, j}];
+          auto w   = (float)exp(-dot(uv, uv) * sw) *
+                   (float)exp(-dot(rgb, rgb) * rw);
+          for (auto fi = 0; fi < features.size(); fi++) {
+            auto feat = features[fi][{i, j}] - features[fi][{i, j}];
+            w *= exp(-dot(feat, feat) * fw[fi]);
+          }
+          av += w * img[{ii, jj}];
+          aw += w;
+        }
+      }
+      filtered[{i, j}] = av / aw;
+    }
+  }
+  return filtered;
+}
+
+image<vec4f> filter_bilateral(
+    const image<vec4f>& img, float spatial_sigma, float range_sigma) {
+  auto filtered = image{img.imsize(), zero4f};
+  auto fwidth   = (int)ceil(2.57f * spatial_sigma);
+  auto sw       = 1 / (2.0f * spatial_sigma * spatial_sigma);
+  auto rw       = 1 / (2.0f * range_sigma * range_sigma);
+  for (auto j = 0; j < img.height(); j++) {
+    for (auto i = 0; i < img.width(); i++) {
+      auto av = zero4f;
+      auto aw = 0.0f;
+      for (auto fj = -fwidth; fj <= fwidth; fj++) {
+        for (auto fi = -fwidth; fi <= fwidth; fi++) {
+          auto ii = i + fi, jj = j + fj;
+          if (ii < 0 || jj < 0) continue;
+          if (ii >= img.width() || jj >= img.height()) continue;
+          auto uv  = vec2f{float(i - ii), float(j - jj)};
+          auto rgb = img[{i, j}] - img[{ii, jj}];
+          auto w   = exp(-dot(uv, uv) * sw) * exp(-dot(rgb, rgb) * rw);
+          av += w * img[{ii, jj}];
+          aw += w;
+        }
+      }
+      filtered[{i, j}] = av / aw;
+    }
+  }
+  return filtered;
+}
+
+}  // namespace yocto
+
+#endif
