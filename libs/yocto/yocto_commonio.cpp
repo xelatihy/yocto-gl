@@ -172,58 +172,6 @@ string elapsed_formatted(simple_timer& timer) {
 }  // namespace yocto
 
 // -----------------------------------------------------------------------------
-// FILE IO
-// -----------------------------------------------------------------------------
-namespace yocto {
-
-// Cleanup
-file_stream::~file_stream() {
-  if (owned && fs) fclose(fs);
-}
-
-// Open a file
-file_stream open_file(const string& filename, const string& mode) {
-#ifdef _WIN32
-  auto path8 = std::filesystem::u8path(filename);
-  auto wmode = std::wstring(mode.begin(), mode.end());
-  auto fs    = _wfopen(path8.c_str(), wmode.c_str());
-#else
-  auto fs = fopen(filename.c_str(), mode.c_str());
-#endif
-  return {filename, fs, true};
-}
-
-// Close a file
-void close_file(file_stream& fs) {
-  if (fs.owned && fs.fs) fclose(fs.fs);
-  fs.filename = "";
-  fs.fs       = nullptr;
-  fs.owned    = false;
-}
-
-// Read a line of text
-bool read_line(file_stream& fs, char* buffer, size_t size) {
-  return fgets(buffer, (int)size, fs.fs);
-}
-
-// Write text to a file
-bool write_text(file_stream& fs, const string& str) {
-  return fprintf(fs.fs, "%s", str.c_str()) >= 0;
-}
-
-// Read data from a file
-bool read_data(file_stream& fs, void* buffer, size_t count) {
-  return fread(buffer, 1, count, fs.fs) == count;
-}
-
-// Write data from a file
-bool write_data(file_stream& fs, const void* buffer, size_t count) {
-  return fwrite(buffer, 1, count, fs.fs) == count;
-}
-
-}  // namespace yocto
-
-// -----------------------------------------------------------------------------
 // PATH UTILITIES
 // -----------------------------------------------------------------------------
 namespace yocto {

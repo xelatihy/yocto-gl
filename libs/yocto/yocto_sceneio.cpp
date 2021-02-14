@@ -162,6 +162,20 @@ bool save_binary(
 // -----------------------------------------------------------------------------
 namespace yocto {
 
+template <typename T>
+static T swap_endian(T value) {
+  // https://stackoverflow.com/questions/105252/how-do-i-convert-between-big-endian-and-little-endian-values-in-c
+  static_assert(sizeof(char) == 1, "sizeof(char) == 1");
+  union {
+    T             value;
+    unsigned char bytes[sizeof(T)];
+  } source, dest;
+  source.value = value;
+  for (auto k = (size_t)0; k < sizeof(T); k++)
+    dest.bytes[k] = source.bytes[sizeof(T) - k - 1];
+  return dest.value;
+}
+
 // Pfm load
 static float* load_pfm(
     const string& filename, int* width, int* height, int* components, int req) {
