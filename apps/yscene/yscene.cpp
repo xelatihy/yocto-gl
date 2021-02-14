@@ -83,18 +83,8 @@ int run_convert(const convert_params& params) {
   tesselate_shapes(scene, print_progress);
 
   // make a directory if needed
-  if (!make_directory(path_dirname(params.output), ioerror))
+  if (!make_scene_directories(params.output, scene, ioerror))
     print_fatal(ioerror);
-  if (!scene.shapes.empty()) {
-    if (!make_directory(
-            path_join(path_dirname(params.output), "shapes"), ioerror))
-      print_fatal(ioerror);
-  }
-  if (!scene.textures.empty()) {
-    if (!make_directory(
-            path_join(path_dirname(params.output), "textures"), ioerror))
-      print_fatal(ioerror);
-  }
 
   // save scene
   if (!save_scene(params.output, scene, ioerror, print_progress))

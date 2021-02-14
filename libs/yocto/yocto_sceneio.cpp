@@ -2145,6 +2145,22 @@ static bool load_preset_scene(const string& filename, scene_scene& scene,
   return true;
 }
 
+// Make missing scene directories
+bool make_scene_directories(
+    const string& filename, const scene_scene& scene, string& error) {
+  // make a directory if needed
+  if (!make_directory(path_dirname(filename), error)) return false;
+  if (!scene.shapes.empty()) {
+    if (!make_directory(path_join(path_dirname(filename), "shapes"), error))
+      return false;
+  }
+  if (!scene.textures.empty()) {
+    if (!make_directory(path_join(path_dirname(filename), "textures"), error))
+      return false;
+  }
+  return true;
+}
+
 }  // namespace yocto
 
 // -----------------------------------------------------------------------------

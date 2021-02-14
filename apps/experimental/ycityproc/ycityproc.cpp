@@ -1162,15 +1162,7 @@ int main(int argc, const char* argv[]) {
   }
 
   // make a directory if needed
-  if (!make_directory(path_dirname(output), ioerror)) print_fatal(ioerror);
-  if (!scene.shapes.empty()) {
-    if (!make_directory(path_join(path_dirname(output), "shapes"), ioerror))
-      print_fatal(ioerror);
-  }
-  if (!scene.textures.empty()) {
-    if (!make_directory(path_join(path_dirname(output), "textures"), ioerror))
-      print_fatal(ioerror);
-  }
+  if (!make_scene_directories(output, scene, ioerror)) print_fatal(ioerror);
 
   // save scene
   if (!save_scene(output, scene, ioerror, print_progress)) print_fatal(ioerror);
