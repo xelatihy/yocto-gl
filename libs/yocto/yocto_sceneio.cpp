@@ -183,7 +183,8 @@ static float* load_pfm(
     return ret;
   };
 
-  auto fs = open_file(filename, "rb");
+  auto fs       = fopen_utf8(filename.c_str(), "rb");
+  auto fs_guard = unique_ptr<FILE, int (*)(FILE*)>(fs, &fclose);
   if (!fs) return nullptr;
 
   // buffer
@@ -191,7 +192,7 @@ static float* load_pfm(
   auto toks   = vector<string>();
 
   // read magic
-  if (!read_line(fs, buffer)) return nullptr;
+  if (!fgets(buffer.data(), (int)buffer.size(), fs)) return nullptr;
   toks = split_string(buffer.data());
   if (toks[0] == "Pf") {
     *components = 1;
@@ -202,13 +203,13 @@ static float* load_pfm(
   }
 
   // read width, height
-  if (!read_line(fs, buffer)) return nullptr;
+  if (!fgets(buffer.data(), (int)buffer.size(), fs)) return nullptr;
   toks    = split_string(buffer.data());
   *width  = atoi(toks[0].c_str());
   *height = atoi(toks[1].c_str());
 
   // read scale
-  if (!read_line(fs, buffer)) return nullptr;
+  if (!fgets(buffer.data(), (int)buffer.size(), fs)) return nullptr;
   toks   = split_string(buffer.data());
   auto s = atof(toks[0].c_str());
 
@@ -218,7 +219,7 @@ static float* load_pfm(
   auto nrow    = (size_t)*width * (size_t)*components;
   auto pixels  = unique_ptr<float[]>{new float[nvalues]};
   for (auto j = *height - 1; j >= 0; j--) {
-    if (!read_values(fs, pixels.get() + j * nrow, nrow)) return nullptr;
+    if (fread(pixels.get() + j * nrow, 4, nrow, fs) != nrow) return nullptr;
   }
 
   // endian conversion
@@ -296,18 +297,17 @@ static float* load_pfm(
 // save pfm
 static bool save_pfm(const char* filename, int width, int height,
     int components, const float* pixels) {
-  auto fs = open_file(filename, "wb");
+  auto fs       = fopen_utf8(filename, "wb");
+  auto fs_guard = unique_ptr<FILE, int (*)(FILE*)>(fs, &fclose);
   if (!fs) return false;
 
-  if (!write_text(fs, (components == 1) ? "Pf\n"s : "PF\n"s)) return false;
-  if (!write_text(
-          fs, std::to_string(width) + " " + std::to_string(height) + "\n"))
-    return false;
-  if (!write_text(fs, "-1\n")) return false;
+  if (fprintf(fs, "%s\n", (components == 1) ? "Pf" : "PF") < 0) return false;
+  if (fprintf(fs, "%d %d\n", width, height) < 0) return false;
+  if (fprintf(fs, "-1\n") < 0) return false;
   if (components == 1 || components == 3) {
     for (auto j = height - 1; j >= 0; j--) {
-      if (!write_values(
-              fs, pixels + j * width * components, width * components))
+      if (fwrite(pixels + j * width * components, 4, width * components, fs) !=
+          width * components)
         return false;
     }
   } else {
@@ -315,12 +315,12 @@ static bool save_pfm(const char* filename, int width, int height,
       for (auto i = 0; i < width; i++) {
         auto vz = 0.0f;
         auto v  = pixels + (j * width + i) * components;
-        if (!write_value(fs, v[0])) return false;
-        if (!write_value(fs, v[1])) return false;
+        if (fwrite(&v[0], 4, 1, fs) != 1) return false;
+        if (fwrite(&v[1], 4, 1, fs) != 1) return false;
         if (components == 2) {
-          if (!write_value(fs, vz)) return false;
+          if (fwrite(&vz, 4, 1, fs) != 1) return false;
         } else {
-          if (!write_value(fs, v[2])) return false;
+          if (fwrite(&v[2], 4, 1, fs) != 1) return false;
         }
       }
     }
@@ -2186,7 +2186,13 @@ static bool save_binshape(
     return false;
   };
 
-  auto fs = open_file(filename, "wb");
+  auto write_values = [](FILE* fs, const auto& values) -> bool {
+    return fwrite(values.data(), sizeof(values.front()), values.size(), fs) ==
+           values.size();
+  };
+
+  auto fs       = fopen_utf8(filename.c_str(), "wb");
+  auto fs_guard = unique_ptr<FILE, int (*)(FILE*)>(fs, &fclose);
   if (!fs) return open_error();
 
   if (!write_values(fs, shape.positions)) return write_error();
@@ -4774,7 +4780,8 @@ static bool load_yvol(const string& filename, int& width, int& height,
     return ret;
   };
 
-  auto fs = open_file(filename, "rb");
+  auto fs       = fopen_utf8(filename.c_str(), "rb");
+  auto fs_guard = unique_ptr<FILE, int (*)(FILE*)>(fs, &fclose);
   if (!fs) return open_error();
 
   // buffer
@@ -4782,12 +4789,12 @@ static bool load_yvol(const string& filename, int& width, int& height,
   auto toks   = vector<string>();
 
   // read magic
-  if (!read_line(fs, buffer)) return parse_error();
+  if (!fgets(buffer.data(), (int)buffer.size(), fs)) return parse_error();
   toks = split_string(buffer.data());
   if (toks[0] != "YVOL") return parse_error();
 
   // read width, height
-  if (!read_line(fs, buffer)) return parse_error();
+  if (!fgets(buffer.data(), (int)buffer.size(), fs)) return parse_error();
   toks       = split_string(buffer.data());
   width      = atoi(toks[0].c_str());
   height     = atoi(toks[1].c_str());
@@ -4817,7 +4824,8 @@ static bool save_yvol(const string& filename, int width, int height, int depth,
     return false;
   };
 
-  auto fs = open_file(filename, "wb");
+  auto fs       = fopen_utf8(filename.c_str(), "wb");
+  auto fs_guard = unique_ptr<FILE, int (*)(FILE*)>(fs, &fclose);
   if (!fs) return open_error();
 
   if (!write_text(fs, "YVOL\n")) return write_error();
