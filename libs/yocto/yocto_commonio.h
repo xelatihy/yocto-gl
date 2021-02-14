@@ -270,25 +270,6 @@ string path_current();
 }  // namespace yocto
 
 // -----------------------------------------------------------------------------
-// FILE IO
-// -----------------------------------------------------------------------------
-namespace yocto {
-
-// Load/save a text file
-bool load_text(const string& filename, string& str, string& error);
-bool save_text(const string& filename, const string& str, string& error);
-
-// Using directive
-using byte = unsigned char;
-
-// Load/save a binary file
-bool load_binary(const string& filename, vector<byte>& data, string& error);
-bool save_binary(
-    const string& filename, const vector<byte>& data, string& error);
-
-}  // namespace yocto
-
-// -----------------------------------------------------------------------------
 //
 //
 // IMPLEMENTATION
@@ -409,9 +390,6 @@ inline bool write_value(file_stream& fs, const T& value_, bool big_endian) {
   auto value = big_endian ? swap_endian(value_) : value_;
   return write_value(fs, value);
 }
-
-// Opens a file with a utf8 file name
-FILE* fopen_utf8(const char* filename, const char* mode);
 
 }  // namespace yocto
 

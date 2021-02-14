@@ -65,7 +65,100 @@ using namespace std::string_literals;
 }  // namespace yocto
 
 // -----------------------------------------------------------------------------
-// IMPLEMENTATION OF IMAGE IO
+// FILE IO
+// -----------------------------------------------------------------------------
+namespace yocto {
+
+// Opens a file with a utf8 file name
+static FILE* fopen_utf8(const char* filename, const char* mode) {
+#ifdef _WIN32
+  auto path8 = std::filesystem::u8path(filename);
+  auto wmode = std::wstring(string{mode}.begin(), string{mode}.end());
+  return _wfopen(path8.c_str(), wmode.c_str());
+#else
+  return fopen(filename, mode);
+#endif
+}
+
+// Load a text file
+bool load_text(const string& filename, string& str, string& error) {
+  // https://stackoverflow.com/questions/174531/how-to-read-the-content-of-a-file-to-a-string-in-c
+  auto fs = fopen_utf8(filename.c_str(), "rb");
+  if (!fs) {
+    error = filename + ": file not found";
+    return false;
+  }
+  fseek(fs, 0, SEEK_END);
+  auto length = ftell(fs);
+  fseek(fs, 0, SEEK_SET);
+  str.resize(length);
+  if (fread(str.data(), 1, length, fs) != length) {
+    fclose(fs);
+    error = filename + ": read error";
+    return false;
+  }
+  fclose(fs);
+  return true;
+}
+
+// Save a text file
+bool save_text(const string& filename, const string& str, string& error) {
+  auto fs = fopen_utf8(filename.c_str(), "rb");
+  if (!fs) {
+    error = filename + ": file not found";
+    return false;
+  }
+  if (fprintf(fs, "%s", str.c_str()) < 0) {
+    fclose(fs);
+    error = filename + ": write error";
+    return false;
+  }
+  fclose(fs);
+  return true;
+}
+
+// Load a binary file
+bool load_binary(const string& filename, vector<byte>& data, string& error) {
+  // https://stackoverflow.com/questions/174531/how-to-read-the-content-of-a-file-to-a-string-in-c
+  auto fs = fopen_utf8(filename.c_str(), "rb");
+  if (!fs) {
+    error = filename + ": file not found";
+    return false;
+  }
+  fseek(fs, 0, SEEK_END);
+  auto length = ftell(fs);
+  fseek(fs, 0, SEEK_SET);
+  data.resize(length);
+  if (fread(data.data(), 1, length, fs) != length) {
+    fclose(fs);
+    error = filename + ": read error";
+    return false;
+  }
+  fclose(fs);
+  return true;
+}
+
+// Save a binary file
+bool save_binary(
+    const string& filename, const vector<byte>& data, string& error) {
+  auto fs = fopen_utf8(filename.c_str(), "rb");
+  if (!fs) {
+    error = filename + ": file not found";
+    return false;
+  }
+  if (fwrite(data.data(), 1, data.size(), fs) != data.size()) {
+    fclose(fs);
+    error = filename + ": write error";
+    return false;
+  }
+  fclose(fs);
+  return true;
+}
+
+}  // namespace yocto
+
+// -----------------------------------------------------------------------------
+// IMAGE IO
 // -----------------------------------------------------------------------------
 namespace yocto {
 

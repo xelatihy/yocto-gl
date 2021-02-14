@@ -60,6 +60,25 @@ using std::vector;
 }  // namespace yocto
 
 // -----------------------------------------------------------------------------
+// FILE IO
+// -----------------------------------------------------------------------------
+namespace yocto {
+
+// Load/save a text file
+bool load_text(const string& filename, string& str, string& error);
+bool save_text(const string& filename, const string& str, string& error);
+
+// Using directive
+using byte = unsigned char;
+
+// Load/save a binary file
+bool load_binary(const string& filename, vector<byte>& data, string& error);
+bool save_binary(
+    const string& filename, const vector<byte>& data, string& error);
+
+}  // namespace yocto
+
+// -----------------------------------------------------------------------------
 // IMAGE IO
 // -----------------------------------------------------------------------------
 namespace yocto {
