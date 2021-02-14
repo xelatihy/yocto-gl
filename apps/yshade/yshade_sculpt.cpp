@@ -18,6 +18,8 @@ using namespace std::string_literals;
 #undef max
 #endif
 
+#include <yocto/yocto_color.h>
+
 #include "yshade_sculpt.h"
 #include "yshade_sculpt_algorithms.h"
 
@@ -226,12 +228,17 @@ void init_sculpt_tool(sculpt_params *params, shape_data *shape,
 
   // init texture
   if (texture_name != "") {
-    auto   img = image<vec4f>{};
+    auto   img = image_data{};
     string ioerror;
     if (!load_image(texture_name, img, ioerror)) print_fatal(ioerror);
-    params->tex_image.resize(img.imsize());
-    for (auto idx = 0; idx < img.count(); idx++)
-      params->tex_image[idx] = xyz(img[idx]);
+    params->tex_image.resize({img.width, img.height});
+    for (auto idx = 0; idx < params->tex_image.count(); idx++) {
+      if (!img.pixelsf.empty()) {
+        params->tex_image[idx] = xyz(img.pixelsf[idx]);
+      } else {
+        params->tex_image[idx] = xyz(byte_to_float(img.pixelsb[idx]));
+      }
+    }
   }
 }
 
