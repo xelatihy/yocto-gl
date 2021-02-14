@@ -90,12 +90,13 @@ inline void move_by_swap(T* self, T&& other) {
 // OpenGL texture
 struct ogl_texture {
   // Texture properties
-  vec2i size         = {0, 0};
-  int   num_channels = 0;
-  bool  is_srgb      = false;
-  bool  is_float     = false;
-  bool  linear       = false;
-  bool  mipmap       = false;
+  int  width    = 0;
+  int  height   = 0;
+  int  channels = 0;
+  bool is_srgb  = false;
+  bool is_float = false;
+  bool linear   = false;
+  bool mipmap   = false;
 
   // OpenGL state
   uint texture_id = 0;
@@ -111,11 +112,17 @@ struct ogl_texture {
 };
 
 // set texture
-void set_texture(ogl_texture& texture, const vec2i& size, int num_channels,
+void set_texture(ogl_texture& texture, int width, int height, int channels,
     const byte* img, bool as_srgb = false, bool linear = true,
     bool mipmap = true, bool wrap_repeat = true);
-void set_texture(ogl_texture& texture, const vec2i& size, int num_channels,
+void set_texture(ogl_texture& texture, int width, int height, int channels,
     const float* img, bool as_float = false, bool linear = true,
+    bool mipmap = true, bool wrap_repeat = true);
+void set_texture(ogl_texture& texture, int width, int height,
+    const vector<vec4b>& img, bool as_srgb = false, bool linear = true,
+    bool mipmap = true, bool wrap_repeat = true);
+void set_texture(ogl_texture& texture, int width, int height,
+    const vector<vec4f>& img, bool as_float = false, bool linear = true,
     bool mipmap = true, bool wrap_repeat = true);
 
 // check if texture is initialized
@@ -123,16 +130,6 @@ bool is_initialized(const ogl_texture& texture);
 
 // clear texture
 void clear_texture(ogl_texture& texture);
-
-// set texture
-void set_texture(ogl_texture& texture, const image<vec4b>& img,
-    bool as_srgb = true, bool linear = true, bool mipmap = true);
-void set_texture(ogl_texture& texture, const image<vec4f>& img,
-    bool as_float = false, bool linear = true, bool mipmap = true);
-void set_texture(ogl_texture& texture, const image<vec3b>& img,
-    bool as_srgb = true, bool linear = true, bool mipmap = true);
-void set_texture(ogl_texture& texture, const image<vec3f>& img,
-    bool as_float = false, bool linear = true, bool mipmap = true);
 
 // OpenGL cubemap
 struct ogl_cubemap {
@@ -514,10 +511,6 @@ bool is_initialized(const ogl_image& oimg);
 void clear_image(ogl_image& oimg);
 
 // update image data
-void set_image(ogl_image& oimg, const image<vec4f>& img, bool linear = false,
-    bool mipmap = false);
-void set_image(ogl_image& oimg, const image<vec4b>& img, bool linear = false,
-    bool mipmap = false);
 void set_image(ogl_image& oimg, const image_data& img, bool linear = false,
     bool mipmap = false);
 

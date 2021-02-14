@@ -111,11 +111,11 @@ static void init_glscene(shade_scene& glscene, const sceneio_scene& ioscene,
     auto  handle    = add_texture(glscene);
     auto& gltexture = glscene.textures[handle];
     if (!iotexture.pixelsf.empty()) {
-      set_texture(gltexture, {iotexture.width, iotexture.height}, 4,
-          (const float*)iotexture.pixelsf.data());
+      set_texture(
+          gltexture, iotexture.width, iotexture.height, iotexture.pixelsf);
     } else if (!iotexture.pixelsb.empty()) {
-      set_texture(gltexture, {iotexture.width, iotexture.height}, 4,
-          (const byte*)iotexture.pixelsb.data());
+      set_texture(
+          gltexture, iotexture.width, iotexture.height, iotexture.pixelsb);
     }
   }
 
