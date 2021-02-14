@@ -36,10 +36,12 @@
 #include <stdexcept>
 #include <unordered_map>
 
+#include "ext/stb_image_resize.h"
 #include "yocto_color.h"
 #include "yocto_geometry.h"
 #include "yocto_image.h"
 #include "yocto_modelio.h"
+#include "yocto_noise.h"
 #include "yocto_parallel.h"
 #include "yocto_sceneio.h"
 #include "yocto_shading.h"
@@ -58,165 +60,354 @@ using namespace std::string_literals;
 }  // namespace yocto
 
 // -----------------------------------------------------------------------------
-// SCENE UTILITIES
+// IMPLEMENTATION OF IMAGE DATA AND UTILITIES
 // -----------------------------------------------------------------------------
 namespace yocto {
 
-// Add missing cameras.
-void add_camera(scene_scene& scene) {
-  scene.camera_names.emplace_back("camera");
-  auto& camera        = scene.cameras.emplace_back();
-  camera.orthographic = false;
-  camera.film         = 0.036;
-  camera.aspect       = (float)16 / (float)9;
-  camera.aperture     = 0;
-  camera.lens         = 0.050;
-  auto bbox           = compute_bounds(scene);
-  auto center         = (bbox.max + bbox.min) / 2;
-  auto bbox_radius    = length(bbox.max - bbox.min) / 2;
-  auto camera_dir     = vec3f{0, 0, 1};
-  auto camera_dist = bbox_radius * camera.lens / (camera.film / camera.aspect);
-  camera_dist *= 2.0f;  // correction for tracer camera implementation
-  auto from    = camera_dir * camera_dist + center;
-  auto to      = center;
-  auto up      = vec3f{0, 1, 0};
-  camera.frame = lookat_frame(from, to, up);
-  camera.focus = length(from - to);
+// image creation
+image_data make_image(int width, int height, bool linear, bool as_byte) {
+  if (!as_byte) {
+    return image_data{width, height, linear,
+        vector<vec4f>(width * height, vec4f{0, 0, 0, 0}), {}};
+  } else {
+    return image_data{width, height, linear, {},
+        vector<vec4b>(width * height, vec4b{0, 0, 0, 0})};
+  }
+}
+image_data make_image(int width, int height, bool linear, const vec4f* data) {
+  return image_data{
+      width, height, linear, vector<vec4f>(data, data + width * height), {}};
+}
+image_data make_image(int width, int height, bool linear, const vec4b* data) {
+  return image_data{
+      width, height, linear, {}, vector<vec4b>(data, data + width * height)};
 }
 
-// Add a sky environment
-void add_sky(scene_scene& scene, float sun_angle) {
-  scene.texture_names.emplace_back("sky");
-  auto& texture = scene.textures.emplace_back();
-  texture       = make_sunsky(1024, 512, sun_angle);
-  scene.environment_names.emplace_back("sky");
-  auto& environment        = scene.environments.emplace_back();
-  environment.emission     = {1, 1, 1};
-  environment.emission_tex = (int)scene.textures.size() - 1;
+// equality
+bool operator==(const image_data& a, const image_data& b) {
+  return a.width == b.width && a.height == b.height && a.linear == b.linear &&
+         a.pixelsf == b.pixelsf && a.pixelsb == b.pixelsb;
+}
+bool operator!=(const image_data& a, const image_data& b) {
+  return a.width != b.width || a.height != b.height || a.linear != b.linear ||
+         a.pixelsf != b.pixelsf || a.pixelsb != b.pixelsb;
 }
 
-// get named camera or default if camera is empty
-camera_handle find_camera(const scene_scene& scene, const string& name) {
-  if (scene.cameras.empty()) return invalid_handle;
-  if (scene.camera_names.empty()) return 0;
-  for (auto idx = 0; idx < (int)scene.camera_names.size(); idx++) {
-    if (scene.camera_names[idx] == name) return idx;
-  }
-  for (auto idx = 0; idx < (int)scene.camera_names.size(); idx++) {
-    if (scene.camera_names[idx] == "default") return idx;
-  }
-  for (auto idx = 0; idx < (int)scene.camera_names.size(); idx++) {
-    if (scene.camera_names[idx] == "camera") return idx;
-  }
-  for (auto idx = 0; idx < (int)scene.camera_names.size(); idx++) {
-    if (scene.camera_names[idx] == "camera0") return idx;
-  }
-  for (auto idx = 0; idx < (int)scene.camera_names.size(); idx++) {
-    if (scene.camera_names[idx] == "camera1") return idx;
-  }
-  return 0;
+// swap
+void swap(image_data& a, image_data& b) {
+  std::swap(a.width, b.width);
+  std::swap(a.height, b.height);
+  std::swap(a.linear, b.linear);
+  std::swap(a.pixelsf, b.pixelsf);
+  std::swap(a.pixelsb, b.pixelsb);
 }
 
-// Updates the scene and scene's instances bounding boxes
-bbox3f compute_bounds(const scene_scene& scene) {
-  auto shape_bbox = vector<bbox3f>{};
-  auto bbox       = invalidb3f;
-  for (auto& shape : scene.shapes) {
-    auto& sbvh = shape_bbox.emplace_back();
-    for (auto p : shape.positions) sbvh = merge(sbvh, p);
+// pixel access
+vec4f get_pixel(const image_data& image, int i, int j) {
+  if (!image.pixelsf.empty()) {
+    return image.pixelsf[j * image.width + i];
+  } else {
+    return byte_to_float(image.pixelsb[j * image.width + i]);
   }
-  for (auto& instance : scene.instances) {
-    auto& sbvh = shape_bbox[instance.shape];
-    bbox       = merge(bbox, transform_bbox(instance.frame, sbvh));
+}
+void set_pixel(image_data& image, int i, int j, const vec4f& pixel) {
+  if (!image.pixelsf.empty()) {
+    image.pixelsf[j * image.width + i] = pixel;
+  } else {
+    image.pixelsb[j * image.width + i] = float_to_byte(pixel);
   }
-  return bbox;
 }
 
-}  // namespace yocto
-
-// -----------------------------------------------------------------------------
-// SCENE TESSELATION
-// -----------------------------------------------------------------------------
-namespace yocto {
-
-void tesselate_subdiv(
-    scene_shape& shape, scene_subdiv& subdiv_, const scene_scene& scene) {
-  auto subdiv = subdiv_;
-
-  if (subdiv.subdivisions > 0) {
-    if (subdiv.catmullclark) {
-      std::tie(subdiv.quadstexcoord, subdiv.texcoords) = subdivide_catmullclark(
-          subdiv.quadstexcoord, subdiv.texcoords, subdiv.subdivisions, true);
-      std::tie(subdiv.quadsnorm, subdiv.normals) = subdivide_catmullclark(
-          subdiv.quadsnorm, subdiv.normals, subdiv.subdivisions, true);
-      std::tie(subdiv.quadspos, subdiv.positions) = subdivide_catmullclark(
-          subdiv.quadspos, subdiv.positions, subdiv.subdivisions);
-    } else {
-      std::tie(subdiv.quadstexcoord, subdiv.texcoords) = subdivide_quads(
-          subdiv.quadstexcoord, subdiv.texcoords, subdiv.subdivisions);
-      std::tie(subdiv.quadsnorm, subdiv.normals) = subdivide_quads(
-          subdiv.quadsnorm, subdiv.normals, subdiv.subdivisions);
-      std::tie(subdiv.quadspos, subdiv.positions) = subdivide_quads(
-          subdiv.quadspos, subdiv.positions, subdiv.subdivisions);
-    }
-    if (subdiv.smooth) {
-      subdiv.normals   = quads_normals(subdiv.quadspos, subdiv.positions);
-      subdiv.quadsnorm = subdiv.quadspos;
-    } else {
-      subdiv.normals   = {};
-      subdiv.quadsnorm = {};
-    }
-  }
-
-  if (subdiv.displacement != 0 && subdiv.displacement_tex != invalid_handle) {
-    if (subdiv.texcoords.empty())
-      throw std::runtime_error("missing texture coordinates");
-
-    // facevarying case
-    auto offset = vector<float>(subdiv.positions.size(), 0);
-    auto count  = vector<int>(subdiv.positions.size(), 0);
-    for (auto fid = 0; fid < subdiv.quadspos.size(); fid++) {
-      auto qpos = subdiv.quadspos[fid];
-      auto qtxt = subdiv.quadstexcoord[fid];
-      for (auto i = 0; i < 4; i++) {
-        auto& displacement_tex = scene.textures[subdiv.displacement_tex];
-        auto  disp             = mean(
-            eval_texture(displacement_tex, subdiv.texcoords[qtxt[i]], false));
-        if (!displacement_tex.pixelsb.empty()) disp -= 0.5f;
-        offset[qpos[i]] += subdiv.displacement * disp;
-        count[qpos[i]] += 1;
+// conversions
+image_data convert_image(const image_data& image, bool linear, bool as_byte) {
+  if (image.linear == linear && !image.pixelsf.empty() == as_byte) return image;
+  auto result = make_image(image.width, image.height, linear, as_byte);
+  convert_image(result, image);
+  return result;
+}
+void convert_image(image_data& result, const image_data& image) {
+  if (image.linear == result.linear) {
+    result.pixelsb = image.pixelsb;
+    result.pixelsf = image.pixelsf;
+  } else {
+    for (auto j = 0; j < image.height; j++) {
+      for (auto i = 0; i < image.width; i++) {
+        auto color     = get_pixel(image, i, j);
+        auto converted = image.linear ? rgb_to_srgb(color) : srgb_to_rgb(color);
+        set_pixel(result, i, j, converted);
       }
     }
-    auto normals = quads_normals(subdiv.quadspos, subdiv.positions);
-    for (auto vid = 0; vid < subdiv.positions.size(); vid++) {
-      subdiv.positions[vid] += normals[vid] * offset[vid] / count[vid];
-    }
-    if (subdiv.smooth || !subdiv.normals.empty()) {
-      subdiv.quadsnorm = subdiv.quadspos;
-      subdiv.normals   = quads_normals(subdiv.quadspos, subdiv.positions);
-    }
   }
-
-  shape = {};
-  std::tie(shape.quads, shape.positions, shape.normals, shape.texcoords) =
-      split_facevarying(subdiv.quadspos, subdiv.quadsnorm, subdiv.quadstexcoord,
-          subdiv.positions, subdiv.normals, subdiv.texcoords);
 }
 
-void tesselate_shapes(
-    scene_scene& scene, const progress_callback& progress_cb) {
-  // handle progress
-  auto progress = vec2i{0, (int)scene.subdivs.size() + 1};
-  if (progress_cb) progress_cb("tesselate subdivs", progress.x++, progress.y);
+// Evaluates an image at a point `uv`.
+vec4f eval_image(const image_data& image, const vec2f& uv, bool as_linear,
+    bool no_interpolation, bool clamp_to_edge) {
+  if (image.width == 0 || image.height == 0) return {0, 0, 0, 0};
 
-  // tesselate shapes
-  for (auto& subdiv : scene.subdivs) {
-    if (progress_cb) progress_cb("tesselate subdiv", progress.x++, progress.y);
-    tesselate_subdiv(scene.shapes[subdiv.shape], subdiv, scene);
+  // get image width/height
+  auto size = vec2i{image.width, image.height};
+
+  // get coordinates normalized for tiling
+  auto s = 0.0f, t = 0.0f;
+  if (clamp_to_edge) {
+    s = clamp(uv.x, 0.0f, 1.0f) * size.x;
+    t = clamp(uv.y, 0.0f, 1.0f) * size.y;
+  } else {
+    s = fmod(uv.x, 1.0f) * size.x;
+    if (s < 0) s += size.x;
+    t = fmod(uv.y, 1.0f) * size.y;
+    if (t < 0) t += size.y;
   }
 
-  // done
-  if (progress_cb) progress_cb("tesselate subdivs", progress.x++, progress.y);
+  // get image coordinates and residuals
+  auto i = clamp((int)s, 0, size.x - 1), j = clamp((int)t, 0, size.y - 1);
+  auto ii = (i + 1) % size.x, jj = (j + 1) % size.y;
+  auto u = s - i, v = t - j;
+
+  if (no_interpolation) {
+    if (as_linear && !image.linear) {
+      return srgb_to_rgb(get_pixel(image, i, j));
+    } else {
+      return get_pixel(image, i, j);
+    }
+  } else {
+    // handle interpolation
+    if (as_linear && !image.linear) {
+      return srgb_to_rgb(get_pixel(image, i, j)) * (1 - u) * (1 - v) +
+             srgb_to_rgb(get_pixel(image, i, jj)) * (1 - u) * v +
+             srgb_to_rgb(get_pixel(image, ii, j)) * u * (1 - v) +
+             srgb_to_rgb(get_pixel(image, ii, jj)) * u * v;
+    } else {
+      return get_pixel(image, i, j) * (1 - u) * (1 - v) +
+             get_pixel(image, i, jj) * (1 - u) * v +
+             get_pixel(image, ii, j) * u * (1 - v) +
+             get_pixel(image, ii, jj) * u * v;
+    }
+  }
+}
+
+// Apply tone mapping returning a float or byte image.
+image_data tonemap_image(
+    const image_data& image, float exposure, bool filmic, bool as_byte) {
+  if (!image.linear) return image;
+  auto result = make_image(image.width, image.height, false, as_byte);
+  for (auto idx = 0; idx < image.width * image.height; idx++) {
+    result.pixelsb[idx] = tonemapb(image.pixelsf[idx], exposure, filmic, true);
+  }
+  return result;
+}
+
+// Apply tone mapping. If the input image is an ldr, does nothing.
+void tonemap_image(
+    image_data& result, const image_data& image, float exposure, bool filmic) {
+  if (image.width != result.width || image.height != result.height)
+    throw std::invalid_argument{"image should be the same size"};
+  if (!!result.linear) throw std::invalid_argument{"ldr expected"};
+  if (!image.linear) throw std::invalid_argument{"hdr expected"};
+  for (auto j = 0; j < image.height; j++) {
+    for (auto i = 0; i < image.width; i++) {
+      auto hdr = get_pixel(image, i, j);
+      auto ldr = tonemap(hdr, exposure, filmic);
+      set_pixel(result, i, j, ldr);
+    }
+  }
+}
+// Apply tone mapping using multithreading for speed.
+void tonemap_image_mt(
+    image_data& result, const image_data& image, float exposure, bool filmic) {
+  if (image.width != result.width || image.height != result.height)
+    throw std::invalid_argument{"image should be the same size"};
+  if (!!result.linear) throw std::invalid_argument{"ldr expected"};
+  if (!image.linear) throw std::invalid_argument{"hdr expected"};
+  parallel_for(image.width, image.height,
+      [&result, &image, exposure, filmic](int i, int j) {
+        auto hdr = get_pixel(image, i, j);
+        auto ldr = tonemap(hdr, exposure, filmic);
+        set_pixel(result, i, j, ldr);
+      });
+}
+
+// Resize an image.
+image_data resize_image(
+    const image_data& image, int res_width, int res_height) {
+  if (res_width == 0 && res_height == 0) {
+    throw std::invalid_argument{"bad image size in resize"};
+  }
+  if (res_height == 0) {
+    res_height = (int)round(
+        res_width * (double)image.height / (double)image.width);
+  } else if (res_width == 0) {
+    res_width = (int)round(
+        res_height * (double)image.width / (double)image.height);
+  }
+  if (!image.pixelsf.empty()) {
+    auto result = make_image(res_width, res_height, image.linear, true);
+    stbir_resize_uint8_generic((byte*)image.pixelsb.data(), (int)image.width,
+        (int)image.height, (int)(sizeof(vec4b) * image.width),
+        (byte*)result.pixelsb.data(), (int)result.width, (int)result.height,
+        (int)(sizeof(vec4b) * result.width), 4, 3, 0, STBIR_EDGE_CLAMP,
+        STBIR_FILTER_DEFAULT, STBIR_COLORSPACE_LINEAR, nullptr);
+    return result;
+  } else {
+    auto result = make_image(res_width, res_height, image.linear, false);
+    stbir_resize_float_generic((float*)image.pixelsf.data(), (int)image.width,
+        (int)image.height, (int)(sizeof(vec4f) * image.width),
+        (float*)result.pixelsf.data(), (int)result.width, (int)result.height,
+        (int)(sizeof(vec4f) * result.width), 4, 3, 0, STBIR_EDGE_CLAMP,
+        STBIR_FILTER_DEFAULT, STBIR_COLORSPACE_LINEAR, nullptr);
+    return result;
+  }
+}
+
+// Compute the difference between two images.
+image_data image_difference(
+    const image_data& image1, const image_data& image2, bool display) {
+  // check sizes
+  if (image1.width != image2.width || image1.height != image2.height) {
+    throw std::invalid_argument{"image sizes are different"};
+  }
+
+  // check types
+  if (!image1.pixelsf.empty() != !image2.pixelsf.empty() ||
+      !image1.pixelsf.empty() != !image2.pixelsf.empty()) {
+    throw std::invalid_argument{"image types are different"};
+  }
+
+  // check types
+  if (image1.linear != image2.linear || !image1.linear != !image2.linear) {
+    throw std::invalid_argument{"image types are different"};
+  }
+
+  // compute diff
+  auto difference = make_image(
+      image1.width, image1.height, image1.linear, false);
+  for (auto j = 0; j < image1.height; j++) {
+    for (auto i = 0; i < image1.width; i++) {
+      auto diff = abs(get_pixel(image1, i, j) - get_pixel(image2, i, j));
+      if (display) {
+        auto d = max(diff);
+        set_pixel(difference, i, j, {d, d, d, 1});
+      } else {
+        set_pixel(difference, i, j, diff);
+      }
+    }
+  }
+  return difference;
+}
+
+void set_region(image_data& image, const image_data& region, int x, int y) {
+  for (auto j = 0; j < region.height; j++) {
+    for (auto i = 0; i < region.width; i++) {
+      set_pixel(image, i + x, j + y, get_pixel(region, i, j));
+    }
+  }
+}
+
+void get_region(image_data& region, const image_data& image, int x, int y,
+    int width, int height) {
+  if (region.width != width || region.height != height) {
+    region = make_image(width, height, image.linear, !image.pixelsf.empty());
+  }
+  for (auto j = 0; j < height; j++) {
+    for (auto i = 0; i < width; i++) {
+      set_pixel(region, i, j, get_pixel(region, i + x, j + y));
+    }
+  }
+}
+
+// Apply color grading from a linear or srgb color to an srgb color.
+vec4f colorgradeb(
+    const vec4f& color, bool linear, const colorgrade_params& params) {
+  auto rgb   = xyz(color);
+  auto alpha = color.w;
+  if (linear) {
+    if (params.exposure != 0) rgb *= exp2(params.exposure);
+    if (params.tint != vec3f{1, 1, 1}) rgb *= params.tint;
+    if (params.lincontrast != 0.5f)
+      rgb = lincontrast(rgb, params.lincontrast, 0.18f);
+    if (params.logcontrast != 0.5f)
+      rgb = logcontrast(rgb, params.logcontrast, 0.18f);
+    if (params.linsaturation != 0.5f) rgb = saturate(rgb, params.linsaturation);
+    if (params.filmic) rgb = tonemap_filmic(rgb);
+    if (params.srgb) rgb = rgb_to_srgb(rgb);
+  }
+  if (params.contrast != 0.5f) rgb = contrast(rgb, params.contrast);
+  if (params.saturation != 0.5f) rgb = saturate(rgb, params.saturation);
+  if (params.shadows != 0.5f || params.midtones != 0.5f ||
+      params.highlights != 0.5f || params.shadows_color != vec3f{1, 1, 1} ||
+      params.midtones_color != vec3f{1, 1, 1} ||
+      params.highlights_color != vec3f{1, 1, 1}) {
+    auto lift  = params.shadows_color;
+    auto gamma = params.midtones_color;
+    auto gain  = params.highlights_color;
+    lift       = lift - mean(lift) + params.shadows - (float)0.5;
+    gain       = gain - mean(gain) + params.highlights + (float)0.5;
+    auto grey  = gamma - mean(gamma) + params.midtones;
+    gamma      = log(((float)0.5 - lift) / (gain - lift)) / log(grey);
+    // apply_image
+    auto lerp_value = clamp(pow(rgb, 1 / gamma), 0, 1);
+    rgb             = gain * lerp_value + lift * (1 - lerp_value);
+  }
+  return vec4f{rgb.x, rgb.y, rgb.z, alpha};
+}
+
+// Color grade an hsr or ldr image to an ldr image.
+image_data colorgrade_image(
+    const image_data& image, const colorgrade_params& params, bool as_byte) {
+  auto result = make_image(image.width, image.height, false, as_byte);
+  for (auto j = 0; j < image.height; j++) {
+    for (auto i = 0; i < image.width; i++) {
+      auto color  = get_pixel(image, i, j);
+      auto graded = colorgrade(color, image.linear, params);
+      set_pixel(result, i, j, graded);
+    }
+  }
+  return result;
+}
+
+// Color grade an hsr or ldr image to an ldr image.
+// Uses multithreading for speed.
+void colorgrade_image(image_data& result, const image_data& image,
+    const colorgrade_params& params) {
+  if (image.width != result.width || image.height != result.height)
+    throw std::invalid_argument{"image should be the same size"};
+  if (!!result.linear) throw std::invalid_argument{"non linear expected"};
+  for (auto j = 0; j < image.height; j++) {
+    for (auto i = 0; i < image.width; i++) {
+      auto color  = get_pixel(image, i, j);
+      auto graded = colorgrade(color, image.linear, params);
+      set_pixel(result, i, j, graded);
+    }
+  }
+}
+
+// Color grade an hsr or ldr image to an ldr image.
+// Uses multithreading for speed.
+void colorgrade_image_mt(image_data& result, const image_data& image,
+    const colorgrade_params& params) {
+  if (image.width != result.width || image.height != result.height)
+    throw std::invalid_argument{"image should be the same size"};
+  if (!!result.linear) throw std::invalid_argument{"non linear expected"};
+  parallel_for(
+      image.width, image.height, [&result, &image, &params](int i, int j) {
+        auto color  = get_pixel(image, i, j);
+        auto graded = colorgrade(color, image.linear, params);
+        set_pixel(result, i, j, graded);
+      });
+}
+
+// determine white balance colors
+vec4f compute_white_balance(const image_data& image) {
+  auto rgb = vec3f{0, 0, 0};
+  for (auto j = 0; image.height; j++) {
+    for (auto i = 0; image.width; i++) {
+      rgb += xyz(get_pixel(image, i, j));
+    }
+  }
+  if (rgb == vec3f{0, 0, 0}) return {0, 0, 0, 1};
+  rgb /= max(rgb);
+  return {rgb.x, rgb.y, rgb.z, 1};
 }
 
 }  // namespace yocto
@@ -1159,6 +1350,170 @@ vec3f eval_environment(const scene_scene& scene, const vec3f& direction) {
 }  // namespace yocto
 
 // -----------------------------------------------------------------------------
+// SCENE UTILITIES
+// -----------------------------------------------------------------------------
+namespace yocto {
+
+// Add missing cameras.
+void add_camera(scene_scene& scene) {
+  scene.camera_names.emplace_back("camera");
+  auto& camera        = scene.cameras.emplace_back();
+  camera.orthographic = false;
+  camera.film         = 0.036;
+  camera.aspect       = (float)16 / (float)9;
+  camera.aperture     = 0;
+  camera.lens         = 0.050;
+  auto bbox           = compute_bounds(scene);
+  auto center         = (bbox.max + bbox.min) / 2;
+  auto bbox_radius    = length(bbox.max - bbox.min) / 2;
+  auto camera_dir     = vec3f{0, 0, 1};
+  auto camera_dist = bbox_radius * camera.lens / (camera.film / camera.aspect);
+  camera_dist *= 2.0f;  // correction for tracer camera implementation
+  auto from    = camera_dir * camera_dist + center;
+  auto to      = center;
+  auto up      = vec3f{0, 1, 0};
+  camera.frame = lookat_frame(from, to, up);
+  camera.focus = length(from - to);
+}
+
+// Add a sky environment
+void add_sky(scene_scene& scene, float sun_angle) {
+  scene.texture_names.emplace_back("sky");
+  auto& texture = scene.textures.emplace_back();
+  texture       = make_sunsky(1024, 512, sun_angle);
+  scene.environment_names.emplace_back("sky");
+  auto& environment        = scene.environments.emplace_back();
+  environment.emission     = {1, 1, 1};
+  environment.emission_tex = (int)scene.textures.size() - 1;
+}
+
+// get named camera or default if camera is empty
+camera_handle find_camera(const scene_scene& scene, const string& name) {
+  if (scene.cameras.empty()) return invalid_handle;
+  if (scene.camera_names.empty()) return 0;
+  for (auto idx = 0; idx < (int)scene.camera_names.size(); idx++) {
+    if (scene.camera_names[idx] == name) return idx;
+  }
+  for (auto idx = 0; idx < (int)scene.camera_names.size(); idx++) {
+    if (scene.camera_names[idx] == "default") return idx;
+  }
+  for (auto idx = 0; idx < (int)scene.camera_names.size(); idx++) {
+    if (scene.camera_names[idx] == "camera") return idx;
+  }
+  for (auto idx = 0; idx < (int)scene.camera_names.size(); idx++) {
+    if (scene.camera_names[idx] == "camera0") return idx;
+  }
+  for (auto idx = 0; idx < (int)scene.camera_names.size(); idx++) {
+    if (scene.camera_names[idx] == "camera1") return idx;
+  }
+  return 0;
+}
+
+// Updates the scene and scene's instances bounding boxes
+bbox3f compute_bounds(const scene_scene& scene) {
+  auto shape_bbox = vector<bbox3f>{};
+  auto bbox       = invalidb3f;
+  for (auto& shape : scene.shapes) {
+    auto& sbvh = shape_bbox.emplace_back();
+    for (auto p : shape.positions) sbvh = merge(sbvh, p);
+  }
+  for (auto& instance : scene.instances) {
+    auto& sbvh = shape_bbox[instance.shape];
+    bbox       = merge(bbox, transform_bbox(instance.frame, sbvh));
+  }
+  return bbox;
+}
+
+}  // namespace yocto
+
+// -----------------------------------------------------------------------------
+// SCENE TESSELATION
+// -----------------------------------------------------------------------------
+namespace yocto {
+
+void tesselate_subdiv(
+    scene_shape& shape, scene_subdiv& subdiv_, const scene_scene& scene) {
+  auto subdiv = subdiv_;
+
+  if (subdiv.subdivisions > 0) {
+    if (subdiv.catmullclark) {
+      std::tie(subdiv.quadstexcoord, subdiv.texcoords) = subdivide_catmullclark(
+          subdiv.quadstexcoord, subdiv.texcoords, subdiv.subdivisions, true);
+      std::tie(subdiv.quadsnorm, subdiv.normals) = subdivide_catmullclark(
+          subdiv.quadsnorm, subdiv.normals, subdiv.subdivisions, true);
+      std::tie(subdiv.quadspos, subdiv.positions) = subdivide_catmullclark(
+          subdiv.quadspos, subdiv.positions, subdiv.subdivisions);
+    } else {
+      std::tie(subdiv.quadstexcoord, subdiv.texcoords) = subdivide_quads(
+          subdiv.quadstexcoord, subdiv.texcoords, subdiv.subdivisions);
+      std::tie(subdiv.quadsnorm, subdiv.normals) = subdivide_quads(
+          subdiv.quadsnorm, subdiv.normals, subdiv.subdivisions);
+      std::tie(subdiv.quadspos, subdiv.positions) = subdivide_quads(
+          subdiv.quadspos, subdiv.positions, subdiv.subdivisions);
+    }
+    if (subdiv.smooth) {
+      subdiv.normals   = quads_normals(subdiv.quadspos, subdiv.positions);
+      subdiv.quadsnorm = subdiv.quadspos;
+    } else {
+      subdiv.normals   = {};
+      subdiv.quadsnorm = {};
+    }
+  }
+
+  if (subdiv.displacement != 0 && subdiv.displacement_tex != invalid_handle) {
+    if (subdiv.texcoords.empty())
+      throw std::runtime_error("missing texture coordinates");
+
+    // facevarying case
+    auto offset = vector<float>(subdiv.positions.size(), 0);
+    auto count  = vector<int>(subdiv.positions.size(), 0);
+    for (auto fid = 0; fid < subdiv.quadspos.size(); fid++) {
+      auto qpos = subdiv.quadspos[fid];
+      auto qtxt = subdiv.quadstexcoord[fid];
+      for (auto i = 0; i < 4; i++) {
+        auto& displacement_tex = scene.textures[subdiv.displacement_tex];
+        auto  disp             = mean(
+            eval_texture(displacement_tex, subdiv.texcoords[qtxt[i]], false));
+        if (!displacement_tex.pixelsb.empty()) disp -= 0.5f;
+        offset[qpos[i]] += subdiv.displacement * disp;
+        count[qpos[i]] += 1;
+      }
+    }
+    auto normals = quads_normals(subdiv.quadspos, subdiv.positions);
+    for (auto vid = 0; vid < subdiv.positions.size(); vid++) {
+      subdiv.positions[vid] += normals[vid] * offset[vid] / count[vid];
+    }
+    if (subdiv.smooth || !subdiv.normals.empty()) {
+      subdiv.quadsnorm = subdiv.quadspos;
+      subdiv.normals   = quads_normals(subdiv.quadspos, subdiv.positions);
+    }
+  }
+
+  shape = {};
+  std::tie(shape.quads, shape.positions, shape.normals, shape.texcoords) =
+      split_facevarying(subdiv.quadspos, subdiv.quadsnorm, subdiv.quadstexcoord,
+          subdiv.positions, subdiv.normals, subdiv.texcoords);
+}
+
+void tesselate_shapes(
+    scene_scene& scene, const progress_callback& progress_cb) {
+  // handle progress
+  auto progress = vec2i{0, (int)scene.subdivs.size() + 1};
+  if (progress_cb) progress_cb("tesselate subdivs", progress.x++, progress.y);
+
+  // tesselate shapes
+  for (auto& subdiv : scene.subdivs) {
+    if (progress_cb) progress_cb("tesselate subdiv", progress.x++, progress.y);
+    tesselate_subdiv(scene.shapes[subdiv.shape], subdiv, scene);
+  }
+
+  // done
+  if (progress_cb) progress_cb("tesselate subdivs", progress.x++, progress.y);
+}
+
+}  // namespace yocto
+
+// -----------------------------------------------------------------------------
 // SCENE STATS AND VALIDATION
 // -----------------------------------------------------------------------------
 namespace yocto {
@@ -1253,118 +1608,416 @@ vector<string> scene_validation(const scene_scene& scene, bool notextures) {
 }  // namespace yocto
 
 // -----------------------------------------------------------------------------
-// EXAMPLE SCENES
+// IMAGE EXAMPLES
 // -----------------------------------------------------------------------------
 namespace yocto {
 
-void make_cornellbox(scene_scene& scene) {
-  scene.asset.name = "cornellbox";
+// Comvert a bump map to a normal map.
+void bump_to_normal(
+    image_data& normalmap, const image_data& bumpmap, float scale) {
+  auto width = bumpmap.width, height = bumpmap.height;
+  if (normalmap.width != bumpmap.width || normalmap.height != bumpmap.height) {
+    normalmap = make_image(
+        width, height, bumpmap.linear, !bumpmap.pixelsf.empty());
+  }
+  auto dx = 1.0f / width, dy = 1.0f / height;
+  for (int j = 0; j < height; j++) {
+    for (int i = 0; i < width; i++) {
+      auto i1 = (i + 1) % width, j1 = (j + 1) % height;
+      auto p00 = get_pixel(bumpmap, i, j), p10 = get_pixel(bumpmap, i1, j),
+           p01    = get_pixel(bumpmap, i, j1);
+      auto g00    = (p00.x + p00.y + p00.z) / 3;
+      auto g01    = (p01.x + p01.y + p01.z) / 3;
+      auto g10    = (p10.x + p10.y + p10.z) / 3;
+      auto normal = vec3f{
+          scale * (g00 - g10) / dx, scale * (g00 - g01) / dy, 1.0f};
+      normal.y = -normal.y;  // make green pointing up, even if y axis
+                             // points down
+      normal = normalize(normal) * 0.5f + vec3f{0.5f, 0.5f, 0.5f};
+      set_pixel(normalmap, i, j, {normal.x, normal.y, normal.z, 1});
+    }
+  }
+}
+image_data bump_to_normal(const image_data& bumpmap, float scale) {
+  auto normalmap = make_image(
+      bumpmap.width, bumpmap.height, bumpmap.linear, !bumpmap.pixelsf.empty());
+  bump_to_normal(normalmap, bumpmap, scale);
+  return normalmap;
+}
 
-  auto& camera    = scene.cameras.emplace_back();
-  camera.frame    = frame3f{{1, 0, 0}, {0, 1, 0}, {0, 0, 1}, {0, 1, 3.9}};
-  camera.lens     = 0.035;
-  camera.aperture = 0.0;
-  camera.focus    = 3.9;
-  camera.film     = 0.024;
-  camera.aspect   = 1;
+template <typename Shader>
+static image_data make_proc_image(
+    int width, int height, bool linear, bool as_byte, Shader&& shader) {
+  auto image = make_image(width, height, linear, as_byte);
+  auto scale = 1.0f / max(width, height);
+  if (as_byte) {
+    for (auto j = 0; j < height; j++) {
+      for (auto i = 0; i < width; i++) {
+        auto uv                      = vec2f{i * scale, j * scale};
+        image.pixelsb[j * width + i] = float_to_byte(shader(uv));
+      }
+    }
+  } else {
+    for (auto j = 0; j < height; j++) {
+      for (auto i = 0; i < width; i++) {
+        auto uv                      = vec2f{i * scale, j * scale};
+        image.pixelsf[j * width + i] = shader(uv);
+      }
+    }
+  }
+  return image;
+}
 
-  auto& floor_shape       = scene.shapes.emplace_back();
-  floor_shape.positions   = {{-1, 0, 1}, {1, 0, 1}, {1, 0, -1}, {-1, 0, -1}};
-  floor_shape.triangles   = {{0, 1, 2}, {2, 3, 0}};
-  auto& floor_material    = scene.materials.emplace_back();
-  floor_material.color    = {0.725, 0.71, 0.68};
-  auto& floor_instance    = scene.instances.emplace_back();
-  floor_instance.shape    = (int)scene.shapes.size() - 1;
-  floor_instance.material = (int)scene.materials.size() - 1;
+// Make an image
+image_data make_grid(int width, int height, float scale, const vec4f& color0,
+    const vec4f& color1) {
+  return make_proc_image(width, height, false, false, [=](vec2f uv) {
+    uv *= 4 * scale;
+    uv -= vec2f{(float)(int)uv.x, (float)(int)uv.y};
+    auto thick = 0.01f / 2;
+    auto c     = uv.x <= thick || uv.x >= 1 - thick || uv.y <= thick ||
+             uv.y >= 1 - thick ||
+             (uv.x >= 0.5f - thick && uv.x <= 0.5f + thick) ||
+             (uv.y >= 0.5f - thick && uv.y <= 0.5f + thick);
+    return c ? color0 : color1;
+  });
+}
 
-  auto& ceiling_shape       = scene.shapes.emplace_back();
-  ceiling_shape.positions   = {{-1, 2, 1}, {-1, 2, -1}, {1, 2, -1}, {1, 2, 1}};
-  ceiling_shape.triangles   = {{0, 1, 2}, {2, 3, 0}};
-  auto& ceiling_material    = scene.materials.emplace_back();
-  ceiling_material.color    = {0.725, 0.71, 0.68};
-  auto& ceiling_instance    = scene.instances.emplace_back();
-  ceiling_instance.shape    = (int)scene.shapes.size() - 1;
-  ceiling_instance.material = (int)scene.materials.size() - 1;
+image_data make_checker(int width, int height, float scale, const vec4f& color0,
+    const vec4f& color1) {
+  return make_proc_image(width, height, false, false, [=](vec2f uv) {
+    uv *= 4 * scale;
+    uv -= vec2f{(float)(int)uv.x, (float)(int)uv.y};
+    auto c = uv.x <= 0.5f != uv.y <= 0.5f;
+    return c ? color0 : color1;
+  });
+}
 
-  auto& backwall_shape     = scene.shapes.emplace_back();
-  backwall_shape.positions = {{-1, 0, -1}, {1, 0, -1}, {1, 2, -1}, {-1, 2, -1}};
-  backwall_shape.triangles = {{0, 1, 2}, {2, 3, 0}};
-  auto& backwall_material  = scene.materials.emplace_back();
-  backwall_material.color  = {0.725, 0.71, 0.68};
-  auto& backwall_instance  = scene.instances.emplace_back();
-  backwall_instance.shape  = (int)scene.shapes.size() - 1;
-  backwall_instance.material = (int)scene.materials.size() - 1;
+image_data make_bumps(int width, int height, float scale, const vec4f& color0,
+    const vec4f& color1) {
+  return make_proc_image(width, height, false, false, [=](vec2f uv) {
+    uv *= 4 * scale;
+    uv -= vec2f{(float)(int)uv.x, (float)(int)uv.y};
+    auto thick  = 0.125f;
+    auto center = vec2f{
+        uv.x <= 0.5f ? 0.25f : 0.75f,
+        uv.y <= 0.5f ? 0.25f : 0.75f,
+    };
+    auto dist = clamp(length(uv - center), 0.0f, thick) / thick;
+    auto val  = uv.x <= 0.5f != uv.y <= 0.5f ? (1 + sqrt(1 - dist)) / 2
+                                             : (dist * dist) / 2;
+    return lerp(color0, color1, val);
+  });
+}
 
-  auto& rightwall_shape       = scene.shapes.emplace_back();
-  rightwall_shape.positions   = {{1, 0, -1}, {1, 0, 1}, {1, 2, 1}, {1, 2, -1}};
-  rightwall_shape.triangles   = {{0, 1, 2}, {2, 3, 0}};
-  auto& rightwall_material    = scene.materials.emplace_back();
-  rightwall_material.color    = {0.14, 0.45, 0.091};
-  auto& rightwall_instance    = scene.instances.emplace_back();
-  rightwall_instance.shape    = (int)scene.shapes.size() - 1;
-  rightwall_instance.material = (int)scene.materials.size() - 1;
+image_data make_ramp(int width, int height, float scale, const vec4f& color0,
+    const vec4f& color1) {
+  return make_proc_image(width, height, false, false, [=](vec2f uv) {
+    uv *= scale;
+    uv -= vec2f{(float)(int)uv.x, (float)(int)uv.y};
+    return lerp(color0, color1, uv.x);
+  });
+}
 
-  auto& leftwall_shape     = scene.shapes.emplace_back();
-  leftwall_shape.positions = {{-1, 0, 1}, {-1, 0, -1}, {-1, 2, -1}, {-1, 2, 1}};
-  leftwall_shape.triangles = {{0, 1, 2}, {2, 3, 0}};
-  auto& leftwall_material  = scene.materials.emplace_back();
-  leftwall_material.color  = {0.63, 0.065, 0.05};
-  auto& leftwall_instance  = scene.instances.emplace_back();
-  leftwall_instance.shape  = (int)scene.shapes.size() - 1;
-  leftwall_instance.material = (int)scene.materials.size() - 1;
+image_data make_gammaramp(int width, int height, float scale,
+    const vec4f& color0, const vec4f& color1) {
+  return make_proc_image(width, height, false, false, [=](vec2f uv) {
+    uv *= scale;
+    uv -= vec2f{(float)(int)uv.x, (float)(int)uv.y};
+    if (uv.y < 1 / 3.0f) {
+      return lerp(color0, color1, pow(uv.x, 2.2f));
+    } else if (uv.y < 2 / 3.0f) {
+      return lerp(color0, color1, uv.x);
+    } else {
+      return lerp(color0, color1, pow(uv.x, 1 / 2.2f));
+    }
+  });
+}
 
-  auto& shortbox_shape       = scene.shapes.emplace_back();
-  shortbox_shape.positions   = {{0.53, 0.6, 0.75}, {0.7, 0.6, 0.17},
-      {0.13, 0.6, 0.0}, {-0.05, 0.6, 0.57}, {-0.05, 0.0, 0.57},
-      {-0.05, 0.6, 0.57}, {0.13, 0.6, 0.0}, {0.13, 0.0, 0.0}, {0.53, 0.0, 0.75},
-      {0.53, 0.6, 0.75}, {-0.05, 0.6, 0.57}, {-0.05, 0.0, 0.57},
-      {0.7, 0.0, 0.17}, {0.7, 0.6, 0.17}, {0.53, 0.6, 0.75}, {0.53, 0.0, 0.75},
-      {0.13, 0.0, 0.0}, {0.13, 0.6, 0.0}, {0.7, 0.6, 0.17}, {0.7, 0.0, 0.17},
-      {0.53, 0.0, 0.75}, {0.7, 0.0, 0.17}, {0.13, 0.0, 0.0},
-      {-0.05, 0.0, 0.57}};
-  shortbox_shape.triangles   = {{0, 1, 2}, {2, 3, 0}, {4, 5, 6}, {6, 7, 4},
-      {8, 9, 10}, {10, 11, 8}, {12, 13, 14}, {14, 15, 12}, {16, 17, 18},
-      {18, 19, 16}, {20, 21, 22}, {22, 23, 20}};
-  auto& shortbox_material    = scene.materials.emplace_back();
-  shortbox_material.color    = {0.725, 0.71, 0.68};
-  auto& shortbox_instance    = scene.instances.emplace_back();
-  shortbox_instance.shape    = (int)scene.shapes.size() - 1;
-  shortbox_instance.material = (int)scene.materials.size() - 1;
+image_data make_uvramp(int width, int height, float scale) {
+  return make_proc_image(width, height, false, false, [=](vec2f uv) {
+    uv *= scale;
+    uv -= vec2f{(float)(int)uv.x, (float)(int)uv.y};
+    return vec4f{uv.x, uv.y, 0, 1};
+  });
+}
 
-  auto& tallbox_shape       = scene.shapes.emplace_back();
-  tallbox_shape.positions   = {{-0.53, 1.2, 0.09}, {0.04, 1.2, -0.09},
-      {-0.14, 1.2, -0.67}, {-0.71, 1.2, -0.49}, {-0.53, 0.0, 0.09},
-      {-0.53, 1.2, 0.09}, {-0.71, 1.2, -0.49}, {-0.71, 0.0, -0.49},
-      {-0.71, 0.0, -0.49}, {-0.71, 1.2, -0.49}, {-0.14, 1.2, -0.67},
-      {-0.14, 0.0, -0.67}, {-0.14, 0.0, -0.67}, {-0.14, 1.2, -0.67},
-      {0.04, 1.2, -0.09}, {0.04, 0.0, -0.09}, {0.04, 0.0, -0.09},
-      {0.04, 1.2, -0.09}, {-0.53, 1.2, 0.09}, {-0.53, 0.0, 0.09},
-      {-0.53, 0.0, 0.09}, {0.04, 0.0, -0.09}, {-0.14, 0.0, -0.67},
-      {-0.71, 0.0, -0.49}};
-  tallbox_shape.triangles   = {{0, 1, 2}, {2, 3, 0}, {4, 5, 6}, {6, 7, 4},
-      {8, 9, 10}, {10, 11, 8}, {12, 13, 14}, {14, 15, 12}, {16, 17, 18},
-      {18, 19, 16}, {20, 21, 22}, {22, 23, 20}};
-  auto& tallbox_material    = scene.materials.emplace_back();
-  tallbox_material.color    = {0.725, 0.71, 0.68};
-  auto& tallbox_instance    = scene.instances.emplace_back();
-  tallbox_instance.shape    = (int)scene.shapes.size() - 1;
-  tallbox_instance.material = (int)scene.materials.size() - 1;
+image_data make_uvgrid(int width, int height, float scale, bool colored) {
+  return make_proc_image(width, height, false, false, [=](vec2f uv) {
+    uv *= scale;
+    uv -= vec2f{(float)(int)uv.x, (float)(int)uv.y};
+    uv.y     = 1 - uv.y;
+    auto hsv = zero3f;
+    hsv.x    = (clamp((int)(uv.x * 8), 0, 7) +
+                (clamp((int)(uv.y * 8), 0, 7) + 5) % 8 * 8) /
+            64.0f;
+    auto vuv = uv * 4;
+    vuv -= vec2f{(float)(int)vuv.x, (float)(int)vuv.y};
+    auto vc  = vuv.x <= 0.5f != vuv.y <= 0.5f;
+    hsv.z    = vc ? 0.5f - 0.05f : 0.5f + 0.05f;
+    auto suv = uv * 16;
+    suv -= vec2f{(float)(int)suv.x, (float)(int)suv.y};
+    auto st = 0.01f / 2;
+    auto sc = suv.x <= st || suv.x >= 1 - st || suv.y <= st || suv.y >= 1 - st;
+    if (sc) {
+      hsv.y = 0.2f;
+      hsv.z = 0.8f;
+    } else {
+      hsv.y = 0.8f;
+    }
+    auto rgb = (colored) ? hsv_to_rgb(hsv) : vec3f{hsv.z, hsv.z, hsv.z};
+    return vec4f{rgb.x, rgb.y, rgb.z, 1};
+  });
+}
 
-  auto& light_shape       = scene.shapes.emplace_back();
-  light_shape.positions   = {{-0.25, 1.99, 0.25}, {-0.25, 1.99, -0.25},
-      {0.25, 1.99, -0.25}, {0.25, 1.99, 0.25}};
-  light_shape.triangles   = {{0, 1, 2}, {2, 3, 0}};
-  auto& light_material    = scene.materials.emplace_back();
-  light_material.emission = {17, 12, 4};
-  auto& light_instance    = scene.instances.emplace_back();
-  light_instance.shape    = (int)scene.shapes.size() - 1;
-  light_instance.material = (int)scene.materials.size() - 1;
+image_data make_blackbodyramp(
+    int width, int height, float scale, float from, float to) {
+  return make_proc_image(width, height, false, false, [=](vec2f uv) {
+    uv *= scale;
+    uv -= vec2f{(float)(int)uv.x, (float)(int)uv.y};
+    auto rgb = blackbody_to_rgb(lerp(from, to, uv.x));
+    return vec4f{rgb.x, rgb.y, rgb.z, 1};
+  });
+}
+
+image_data make_colormapramp(int width, int height, float scale) {
+  return make_proc_image(width, height, false, false, [=](vec2f uv) {
+    uv *= scale;
+    uv -= vec2f{(float)(int)uv.x, (float)(int)uv.y};
+    auto rgb = zero3f;
+    if (uv.y < 0.25) {
+      rgb = colormap(uv.x, colormap_type::viridis);
+    } else if (uv.y < 0.50) {
+      rgb = colormap(uv.x, colormap_type::plasma);
+    } else if (uv.y < 0.75) {
+      rgb = colormap(uv.x, colormap_type::magma);
+    } else {
+      rgb = colormap(uv.x, colormap_type::inferno);
+    }
+    return vec4f{rgb.x, rgb.y, rgb.z, 1};
+  });
+}
+
+image_data make_noisemap(int width, int height, float scale,
+    const vec4f& color0, const vec4f& color1) {
+  return make_proc_image(width, height, false, false, [=](vec2f uv) {
+    uv *= 8 * scale;
+    auto v = perlin_noise(vec3f{uv.x, uv.y, 0});
+    v      = clamp(v, 0.0f, 1.0f);
+    return lerp(color0, color1, v);
+  });
+}
+
+image_data make_fbmmap(int width, int height, float scale, const vec4f& noise,
+    const vec4f& color0, const vec4f& color1) {
+  return make_proc_image(width, height, false, false, [=](vec2f uv) {
+    uv *= 8 * scale;
+    auto v = perlin_fbm({uv.x, uv.y, 0}, noise.x, noise.y, (int)noise.z);
+    v      = clamp(v, 0.0f, 1.0f);
+    return lerp(color0, color1, v);
+  });
+}
+
+image_data make_turbulencemap(int width, int height, float scale,
+    const vec4f& noise, const vec4f& color0, const vec4f& color1) {
+  return make_proc_image(width, height, false, false, [=](vec2f uv) {
+    uv *= 8 * scale;
+    auto v = perlin_turbulence({uv.x, uv.y, 0}, noise.x, noise.y, (int)noise.z);
+    v      = clamp(v, 0.0f, 1.0f);
+    return lerp(color0, color1, v);
+  });
+}
+
+image_data make_ridgemap(int width, int height, float scale, const vec4f& noise,
+    const vec4f& color0, const vec4f& color1) {
+  return make_proc_image(width, height, false, false, [=](vec2f uv) {
+    uv *= 8 * scale;
+    auto v = perlin_ridge(
+        {uv.x, uv.y, 0}, noise.x, noise.y, (int)noise.z, noise.w);
+    v = clamp(v, 0.0f, 1.0f);
+    return lerp(color0, color1, v);
+  });
+}
+
+// Add image border
+image_data add_border(
+    const image_data& image, float width, const vec4f& color) {
+  auto result = image;
+  auto scale  = 1.0f / max(image.width, image.height);
+  for (auto j = 0; j < image.height; j++) {
+    for (auto i = 0; i < image.width; i++) {
+      auto uv = vec2f{i * scale, j * scale};
+      if (uv.x < width || uv.y < width || uv.x > image.width * scale - width ||
+          uv.y > image.height * scale - width) {
+        set_pixel(result, i, j, color);
+      }
+    }
+  }
+  return result;
+}
+
+// Implementation of sunsky modified heavily from pbrt
+image_data make_sunsky(int width, int height, float theta_sun, float turbidity,
+    bool has_sun, float sun_intensity, float sun_radius,
+    const vec3f& ground_albedo) {
+  auto zenith_xyY = vec3f{
+      (+0.00165f * pow(theta_sun, 3.f) - 0.00374f * pow(theta_sun, 2.f) +
+          0.00208f * theta_sun + 0.00000f) *
+              pow(turbidity, 2.f) +
+          (-0.02902f * pow(theta_sun, 3.f) + 0.06377f * pow(theta_sun, 2.f) -
+              0.03202f * theta_sun + 0.00394f) *
+              turbidity +
+          (+0.11693f * pow(theta_sun, 3.f) - 0.21196f * pow(theta_sun, 2.f) +
+              0.06052f * theta_sun + 0.25885f),
+      (+0.00275f * pow(theta_sun, 3.f) - 0.00610f * pow(theta_sun, 2.f) +
+          0.00316f * theta_sun + 0.00000f) *
+              pow(turbidity, 2.f) +
+          (-0.04214f * pow(theta_sun, 3.f) + 0.08970f * pow(theta_sun, 2.f) -
+              0.04153f * theta_sun + 0.00515f) *
+              turbidity +
+          (+0.15346f * pow(theta_sun, 3.f) - 0.26756f * pow(theta_sun, 2.f) +
+              0.06669f * theta_sun + 0.26688f),
+      1000 * (4.0453f * turbidity - 4.9710f) *
+              tan((4.0f / 9.0f - turbidity / 120.0f) * (pif - 2 * theta_sun)) -
+          .2155f * turbidity + 2.4192f,
+  };
+
+  auto perez_A_xyY = vec3f{-0.01925f * turbidity - 0.25922f,
+      -0.01669f * turbidity - 0.26078f, +0.17872f * turbidity - 1.46303f};
+  auto perez_B_xyY = vec3f{-0.06651f * turbidity + 0.00081f,
+      -0.09495f * turbidity + 0.00921f, -0.35540f * turbidity + 0.42749f};
+  auto perez_C_xyY = vec3f{-0.00041f * turbidity + 0.21247f,
+      -0.00792f * turbidity + 0.21023f, -0.02266f * turbidity + 5.32505f};
+  auto perez_D_xyY = vec3f{-0.06409f * turbidity - 0.89887f,
+      -0.04405f * turbidity - 1.65369f, +0.12064f * turbidity - 2.57705f};
+  auto perez_E_xyY = vec3f{-0.00325f * turbidity + 0.04517f,
+      -0.01092f * turbidity + 0.05291f, -0.06696f * turbidity + 0.37027f};
+
+  auto perez_f = [](vec3f A, vec3f B, vec3f C, vec3f D, vec3f E, float theta,
+                     float gamma, float theta_sun, vec3f zenith) -> vec3f {
+    auto num = ((1 + A * exp(B / cos(theta))) *
+                (1 + C * exp(D * gamma) + E * cos(gamma) * cos(gamma)));
+    auto den = ((1 + A * exp(B)) * (1 + C * exp(D * theta_sun) +
+                                       E * cos(theta_sun) * cos(theta_sun)));
+    return zenith * num / den;
+  };
+
+  auto sky = [&perez_f, perez_A_xyY, perez_B_xyY, perez_C_xyY, perez_D_xyY,
+                 perez_E_xyY, zenith_xyY](
+                 float theta, float gamma, float theta_sun) -> vec3f {
+    return xyz_to_rgb(xyY_to_xyz(
+               perez_f(perez_A_xyY, perez_B_xyY, perez_C_xyY, perez_D_xyY,
+                   perez_E_xyY, theta, gamma, theta_sun, zenith_xyY))) /
+           10000;
+  };
+
+  // compute sun luminance
+  auto sun_ko     = vec3f{0.48f, 0.75f, 0.14f};
+  auto sun_kg     = vec3f{0.1f, 0.0f, 0.0f};
+  auto sun_kwa    = vec3f{0.02f, 0.0f, 0.0f};
+  auto sun_sol    = vec3f{20000.0f, 27000.0f, 30000.0f};
+  auto sun_lambda = vec3f{680, 530, 480};
+  auto sun_beta   = 0.04608365822050f * turbidity - 0.04586025928522f;
+  auto sun_m      = 1.0f /
+               (cos(theta_sun) + 0.000940f * pow(1.6386f - theta_sun, -1.253f));
+
+  auto tauR = exp(-sun_m * 0.008735f * pow(sun_lambda / 1000, -4.08f));
+  auto tauA = exp(-sun_m * sun_beta * pow(sun_lambda / 1000, -1.3f));
+  auto tauO = exp(-sun_m * sun_ko * .35f);
+  auto tauG = exp(
+      -1.41f * sun_kg * sun_m / pow(1 + 118.93f * sun_kg * sun_m, 0.45f));
+  auto tauWA  = exp(-0.2385f * sun_kwa * 2.0f * sun_m /
+                   pow(1 + 20.07f * sun_kwa * 2.0f * sun_m, 0.45f));
+  auto sun_le = sun_sol * tauR * tauA * tauO * tauG * tauWA * 10000;
+
+  // rescale by user
+  sun_le *= sun_intensity;
+
+  // sun scale from Wikipedia scaled by user quantity and rescaled to at
+  // the minimum 5 pixel diamater
+  auto sun_angular_radius = 9.35e-03f / 2;  // Wikipedia
+  sun_angular_radius *= sun_radius;
+  sun_angular_radius = max(sun_angular_radius, 2 * pif / height);
+
+  // sun direction
+  auto sun_direction = vec3f{0, cos(theta_sun), sin(theta_sun)};
+
+  auto sun = [has_sun, sun_angular_radius, sun_le](auto theta, auto gamma) {
+    return (has_sun && gamma < sun_angular_radius) ? sun_le / 10000 : zero3f;
+  };
+
+  // Make the sun sky image
+  auto img          = make_image(width, height, true, false);
+  auto sky_integral = 0.0f, sun_integral = 0.0f;
+  for (auto j = 0; j < height / 2; j++) {
+    auto theta = pif * ((j + 0.5f) / height);
+    theta      = clamp(theta, 0.0f, pif / 2 - flt_eps);
+    for (int i = 0; i < width; i++) {
+      auto phi = 2 * pif * (float(i + 0.5f) / width);
+      auto w = vec3f{cos(phi) * sin(theta), cos(theta), sin(phi) * sin(theta)};
+      auto gamma   = acos(clamp(dot(w, sun_direction), -1.0f, 1.0f));
+      auto sky_col = sky(theta, gamma, theta_sun);
+      auto sun_col = sun(theta, gamma);
+      sky_integral += mean(sky_col) * sin(theta);
+      sun_integral += mean(sun_col) * sin(theta);
+      auto col                   = sky_col + sun_col;
+      img.pixelsf[j * width + i] = {col.x, col.y, col.z, 1};
+    }
+  }
+
+  if (ground_albedo != zero3f) {
+    auto ground = zero3f;
+    for (auto j = 0; j < height / 2; j++) {
+      auto theta = pif * ((j + 0.5f) / height);
+      for (int i = 0; i < width; i++) {
+        auto pxl   = img.pixelsf[j * width + i];
+        auto le    = vec3f{pxl.x, pxl.y, pxl.z};
+        auto angle = sin(theta) * 4 * pif / (width * height);
+        ground += le * (ground_albedo / pif) * cos(theta) * angle;
+      }
+    }
+    for (auto j = height / 2; j < height; j++) {
+      for (int i = 0; i < width; i++) {
+        img.pixelsf[j * width + i] = {ground.x, ground.y, ground.z, 1};
+      }
+    }
+  } else {
+    for (auto j = height / 2; j < height; j++) {
+      for (int i = 0; i < width; i++) {
+        img.pixelsf[j * width + i] = {0, 0, 0, 1};
+      }
+    }
+  }
+
+  // done
+  return img;
+}
+
+// Make an image of multiple lights.
+image_data make_lights(int width, int height, const vec3f& le, int nlights,
+    float langle, float lwidth, float lheight) {
+  auto img = make_image(width, height, true, false);
+  for (auto j = 0; j < height / 2; j++) {
+    auto theta = pif * ((j + 0.5f) / height);
+    theta      = clamp(theta, 0.0f, pif / 2 - 0.00001f);
+    if (fabs(theta - langle) > lheight / 2) continue;
+    for (int i = 0; i < width; i++) {
+      auto phi     = 2 * pif * (float(i + 0.5f) / width);
+      auto inlight = false;
+      for (auto l = 0; l < nlights; l++) {
+        auto lphi = 2 * pif * (l + 0.5f) / nlights;
+        inlight   = inlight || fabs(phi - lphi) < lwidth / 2;
+      }
+      img.pixelsf[j * width + i] = {le.x, le.y, le.z, 1};
+    }
+  }
+  return img;
 }
 
 }  // namespace yocto
 
 // -----------------------------------------------------------------------------
-// ANIMATION UTILITIES
+// SHAPE EXAMPLES
 // -----------------------------------------------------------------------------
 namespace yocto {
 
@@ -1626,6 +2279,117 @@ shape_data make_heightfield(const vec2i& size, const vector<vec4f>& color) {
   make_heightfield(shape.quads, shape.positions, shape.normals, shape.texcoords,
       size, color);
   return shape;
+}
+
+}  // namespace yocto
+
+// -----------------------------------------------------------------------------
+// EXAMPLE SCENES
+// -----------------------------------------------------------------------------
+namespace yocto {
+
+void make_cornellbox(scene_scene& scene) {
+  scene.asset.name = "cornellbox";
+
+  auto& camera    = scene.cameras.emplace_back();
+  camera.frame    = frame3f{{1, 0, 0}, {0, 1, 0}, {0, 0, 1}, {0, 1, 3.9}};
+  camera.lens     = 0.035;
+  camera.aperture = 0.0;
+  camera.focus    = 3.9;
+  camera.film     = 0.024;
+  camera.aspect   = 1;
+
+  auto& floor_shape       = scene.shapes.emplace_back();
+  floor_shape.positions   = {{-1, 0, 1}, {1, 0, 1}, {1, 0, -1}, {-1, 0, -1}};
+  floor_shape.triangles   = {{0, 1, 2}, {2, 3, 0}};
+  auto& floor_material    = scene.materials.emplace_back();
+  floor_material.color    = {0.725, 0.71, 0.68};
+  auto& floor_instance    = scene.instances.emplace_back();
+  floor_instance.shape    = (int)scene.shapes.size() - 1;
+  floor_instance.material = (int)scene.materials.size() - 1;
+
+  auto& ceiling_shape       = scene.shapes.emplace_back();
+  ceiling_shape.positions   = {{-1, 2, 1}, {-1, 2, -1}, {1, 2, -1}, {1, 2, 1}};
+  ceiling_shape.triangles   = {{0, 1, 2}, {2, 3, 0}};
+  auto& ceiling_material    = scene.materials.emplace_back();
+  ceiling_material.color    = {0.725, 0.71, 0.68};
+  auto& ceiling_instance    = scene.instances.emplace_back();
+  ceiling_instance.shape    = (int)scene.shapes.size() - 1;
+  ceiling_instance.material = (int)scene.materials.size() - 1;
+
+  auto& backwall_shape     = scene.shapes.emplace_back();
+  backwall_shape.positions = {{-1, 0, -1}, {1, 0, -1}, {1, 2, -1}, {-1, 2, -1}};
+  backwall_shape.triangles = {{0, 1, 2}, {2, 3, 0}};
+  auto& backwall_material  = scene.materials.emplace_back();
+  backwall_material.color  = {0.725, 0.71, 0.68};
+  auto& backwall_instance  = scene.instances.emplace_back();
+  backwall_instance.shape  = (int)scene.shapes.size() - 1;
+  backwall_instance.material = (int)scene.materials.size() - 1;
+
+  auto& rightwall_shape       = scene.shapes.emplace_back();
+  rightwall_shape.positions   = {{1, 0, -1}, {1, 0, 1}, {1, 2, 1}, {1, 2, -1}};
+  rightwall_shape.triangles   = {{0, 1, 2}, {2, 3, 0}};
+  auto& rightwall_material    = scene.materials.emplace_back();
+  rightwall_material.color    = {0.14, 0.45, 0.091};
+  auto& rightwall_instance    = scene.instances.emplace_back();
+  rightwall_instance.shape    = (int)scene.shapes.size() - 1;
+  rightwall_instance.material = (int)scene.materials.size() - 1;
+
+  auto& leftwall_shape     = scene.shapes.emplace_back();
+  leftwall_shape.positions = {{-1, 0, 1}, {-1, 0, -1}, {-1, 2, -1}, {-1, 2, 1}};
+  leftwall_shape.triangles = {{0, 1, 2}, {2, 3, 0}};
+  auto& leftwall_material  = scene.materials.emplace_back();
+  leftwall_material.color  = {0.63, 0.065, 0.05};
+  auto& leftwall_instance  = scene.instances.emplace_back();
+  leftwall_instance.shape  = (int)scene.shapes.size() - 1;
+  leftwall_instance.material = (int)scene.materials.size() - 1;
+
+  auto& shortbox_shape       = scene.shapes.emplace_back();
+  shortbox_shape.positions   = {{0.53, 0.6, 0.75}, {0.7, 0.6, 0.17},
+      {0.13, 0.6, 0.0}, {-0.05, 0.6, 0.57}, {-0.05, 0.0, 0.57},
+      {-0.05, 0.6, 0.57}, {0.13, 0.6, 0.0}, {0.13, 0.0, 0.0}, {0.53, 0.0, 0.75},
+      {0.53, 0.6, 0.75}, {-0.05, 0.6, 0.57}, {-0.05, 0.0, 0.57},
+      {0.7, 0.0, 0.17}, {0.7, 0.6, 0.17}, {0.53, 0.6, 0.75}, {0.53, 0.0, 0.75},
+      {0.13, 0.0, 0.0}, {0.13, 0.6, 0.0}, {0.7, 0.6, 0.17}, {0.7, 0.0, 0.17},
+      {0.53, 0.0, 0.75}, {0.7, 0.0, 0.17}, {0.13, 0.0, 0.0},
+      {-0.05, 0.0, 0.57}};
+  shortbox_shape.triangles   = {{0, 1, 2}, {2, 3, 0}, {4, 5, 6}, {6, 7, 4},
+      {8, 9, 10}, {10, 11, 8}, {12, 13, 14}, {14, 15, 12}, {16, 17, 18},
+      {18, 19, 16}, {20, 21, 22}, {22, 23, 20}};
+  auto& shortbox_material    = scene.materials.emplace_back();
+  shortbox_material.color    = {0.725, 0.71, 0.68};
+  auto& shortbox_instance    = scene.instances.emplace_back();
+  shortbox_instance.shape    = (int)scene.shapes.size() - 1;
+  shortbox_instance.material = (int)scene.materials.size() - 1;
+
+  auto& tallbox_shape       = scene.shapes.emplace_back();
+  tallbox_shape.positions   = {{-0.53, 1.2, 0.09}, {0.04, 1.2, -0.09},
+      {-0.14, 1.2, -0.67}, {-0.71, 1.2, -0.49}, {-0.53, 0.0, 0.09},
+      {-0.53, 1.2, 0.09}, {-0.71, 1.2, -0.49}, {-0.71, 0.0, -0.49},
+      {-0.71, 0.0, -0.49}, {-0.71, 1.2, -0.49}, {-0.14, 1.2, -0.67},
+      {-0.14, 0.0, -0.67}, {-0.14, 0.0, -0.67}, {-0.14, 1.2, -0.67},
+      {0.04, 1.2, -0.09}, {0.04, 0.0, -0.09}, {0.04, 0.0, -0.09},
+      {0.04, 1.2, -0.09}, {-0.53, 1.2, 0.09}, {-0.53, 0.0, 0.09},
+      {-0.53, 0.0, 0.09}, {0.04, 0.0, -0.09}, {-0.14, 0.0, -0.67},
+      {-0.71, 0.0, -0.49}};
+  tallbox_shape.triangles   = {{0, 1, 2}, {2, 3, 0}, {4, 5, 6}, {6, 7, 4},
+      {8, 9, 10}, {10, 11, 8}, {12, 13, 14}, {14, 15, 12}, {16, 17, 18},
+      {18, 19, 16}, {20, 21, 22}, {22, 23, 20}};
+  auto& tallbox_material    = scene.materials.emplace_back();
+  tallbox_material.color    = {0.725, 0.71, 0.68};
+  auto& tallbox_instance    = scene.instances.emplace_back();
+  tallbox_instance.shape    = (int)scene.shapes.size() - 1;
+  tallbox_instance.material = (int)scene.materials.size() - 1;
+
+  auto& light_shape       = scene.shapes.emplace_back();
+  light_shape.positions   = {{-0.25, 1.99, 0.25}, {-0.25, 1.99, -0.25},
+      {0.25, 1.99, -0.25}, {0.25, 1.99, 0.25}};
+  light_shape.triangles   = {{0, 1, 2}, {2, 3, 0}};
+  auto& light_material    = scene.materials.emplace_back();
+  light_material.emission = {17, 12, 4};
+  auto& light_instance    = scene.instances.emplace_back();
+  light_instance.shape    = (int)scene.shapes.size() - 1;
+  light_instance.material = (int)scene.materials.size() - 1;
 }
 
 }  // namespace yocto
