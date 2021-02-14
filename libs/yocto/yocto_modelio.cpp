@@ -4720,7 +4720,7 @@ inline bool load_pbrt(const string& filename, pbrt_scene& pbrt, string& error,
       if (!parse_params(str, command.values)) return parse_error();
       command.frame = ctx.stack.back().transform_start;
       command.frend = ctx.stack.back().transform_end;
-      auto& camera  = add_camera(pbrt);
+      auto& camera  = pbrt.cameras.emplace_back();
       if (!convert_camera(
               camera, command, ctx.film_resolution, filename, error))
         return false;
@@ -4771,7 +4771,7 @@ inline bool load_pbrt(const string& filename, pbrt_scene& pbrt, string& error,
       if (!parse_params(str, command.values)) return parse_error();
       command.frame  = ctx.stack.back().transform_start;
       command.frend  = ctx.stack.back().transform_end;
-      auto& shape    = add_shape(pbrt);
+      auto& shape    = pbrt.shapes.emplace_back();
       auto  alphamap = ""s;
       if (!convert_shape(shape, command, alphamap, named_textures, ply_dirname,
               ply_meshes, filename, error))
@@ -4779,7 +4779,7 @@ inline bool load_pbrt(const string& filename, pbrt_scene& pbrt, string& error,
       auto matkey = "?!!!?" + ctx.stack.back().material.name + "?!!!?" +
                     ctx.stack.back().arealight.name + "?!!!?" + alphamap;
       if (material_map.find(matkey) == material_map.end()) {
-        auto& material    = add_material(pbrt);
+        auto& material    = pbrt.materials.emplace_back();
         material          = ctx.stack.back().material;
         material.name     = "material" + std::to_string(pbrt.materials.size());
         material.emission = ctx.stack.back().arealight.emission;
@@ -4809,12 +4809,12 @@ inline bool load_pbrt(const string& filename, pbrt_scene& pbrt, string& error,
       command.frame = ctx.stack.back().transform_start;
       command.frend = ctx.stack.back().transform_end;
       if (command.type == "infinite") {
-        auto& environment = add_environment(pbrt);
+        auto& environment = pbrt.environments.emplace_back();
         if (!convert_environment(
                 environment, command, texture_map, filename, error))
           return false;
       } else {
-        auto& light = add_light(pbrt);
+        auto& light = pbrt.lights.emplace_back();
         if (!convert_light(light, command, filename, error)) return false;
       }
     } else if (cmd == "MakeNamedMedium") {
@@ -4846,19 +4846,6 @@ inline bool load_pbrt(const string& filename, pbrt_scene& pbrt, string& error,
   }
   return true;
 }
-
-// Make pbrt
-pbrt_camera& add_camera(pbrt_scene& pbrt) {
-  return pbrt.cameras.emplace_back();
-}
-pbrt_shape& add_shape(pbrt_scene& pbrt) { return pbrt.shapes.emplace_back(); }
-pbrt_material& add_material(pbrt_scene& pbrt) {
-  return pbrt.materials.emplace_back();
-}
-pbrt_environment& add_environment(pbrt_scene& pbrt) {
-  return pbrt.environments.emplace_back();
-}
-pbrt_light& add_light(pbrt_scene& pbrt) { return pbrt.lights.emplace_back(); }
 
 // load pbrt
 bool load_pbrt(

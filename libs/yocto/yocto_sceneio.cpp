@@ -3355,7 +3355,7 @@ static bool save_pbrt_scene(const string& filename, const scene_scene& scene,
 
   // convert camera
   auto& camera       = scene.cameras.front();
-  auto& pcamera      = add_camera(pbrt);
+  auto& pcamera      = pbrt.cameras.emplace_back();
   pcamera.frame      = camera.frame;
   pcamera.lens       = camera.lens;
   pcamera.aspect     = camera.aspect;
@@ -3381,7 +3381,7 @@ static bool save_pbrt_scene(const string& filename, const scene_scene& scene,
 
   // convert materials
   for (auto& material : scene.materials) {
-    auto& pmaterial     = add_material(pbrt);
+    auto& pmaterial     = pbrt.materials.emplace_back();
     pmaterial.name      = get_material_name(scene, material);
     pmaterial.type      = material_type_map.at(material.type);
     pmaterial.emission  = material.emission;
@@ -3394,7 +3394,7 @@ static bool save_pbrt_scene(const string& filename, const scene_scene& scene,
 
   // convert instances
   for (auto& instance : scene.instances) {
-    auto& pshape     = add_shape(pbrt);
+    auto& pshape     = pbrt.shapes.emplace_back();
     pshape.filename_ = get_shape_name(scene, instance.shape) + ".ply";
     pshape.frame     = instance.frame;
     pshape.frend     = instance.frame;
@@ -3403,7 +3403,7 @@ static bool save_pbrt_scene(const string& filename, const scene_scene& scene,
 
   // convert environments
   for (auto& environment : scene.environments) {
-    auto& penvironment        = add_environment(pbrt);
+    auto& penvironment        = pbrt.environments.emplace_back();
     penvironment.emission     = environment.emission;
     penvironment.emission_tex = environment.emission_tex;
   }
