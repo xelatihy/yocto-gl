@@ -1586,6 +1586,44 @@ static void trim_memory(scene_scene& scene) {
   scene.environments.shrink_to_fit();
 }
 
+[[maybe_unused]] static void remove_unused_textures(
+    scene_scene& scene, vector<string>& paths) {
+  auto texture_map = unordered_map<int, int>{};
+  auto get_texture = [](unordered_map<int, int>& texture_map,
+                         int                     texture) -> int {
+    auto texture_it = texture_map.find(texture);
+    if (texture_it == texture_map.end()) {
+      auto idx             = (int)texture_map.size();
+      texture_map[texture] = idx;
+      return idx;
+    } else {
+      return texture_it->second;
+    }
+  };
+
+  for (auto& material : scene.materials) {
+    material.emission_tex   = get_texture(texture_map, material.emission_tex);
+    material.color_tex      = get_texture(texture_map, material.color_tex);
+    material.roughness_tex  = get_texture(texture_map, material.roughness_tex);
+    material.scattering_tex = get_texture(texture_map, material.scattering_tex);
+    material.normal_tex     = get_texture(texture_map, material.normal_tex);
+  }
+  for (auto& environment : scene.environments) {
+    environment.emission_tex = get_texture(
+        texture_map, environment.emission_tex);
+  }
+  for (auto& subdiv : scene.subdivs) {
+    subdiv.displacement_tex = get_texture(texture_map, subdiv.displacement_tex);
+  }
+
+  auto new_textures = vector<scene_texture>(texture_map.size());
+  auto new_paths    = vector<string>(texture_map.size());
+  for (auto [oldt, newt] : texture_map) {
+    new_textures[newt] = scene.textures[oldt];
+    new_paths[newt]    = paths[newt];
+  }
+}
+
 }  // namespace yocto
 
 // -----------------------------------------------------------------------------
