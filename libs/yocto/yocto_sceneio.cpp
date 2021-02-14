@@ -3193,7 +3193,7 @@ static bool load_obj_scene(const string& filename, scene_scene& scene,
   if (progress_cb) progress_cb("load scene", progress.x++, progress.y);
 
   // load obj
-  auto obj = obj_scene{};
+  auto obj = obj_model{};
   if (!load_obj(filename, obj, error, false, true)) return false;
 
   // handle progress
@@ -3344,7 +3344,7 @@ static bool save_obj_scene(const string& filename, const scene_scene& scene,
   if (progress_cb) progress_cb("convert scene", progress.x++, progress.y);
 
   // build obj
-  auto obj = obj_scene{};
+  auto obj = obj_model{};
 
   // convert cameras
   for (auto& camera : scene.cameras) {
@@ -4474,7 +4474,7 @@ static bool load_pbrt_scene(const string& filename, scene_scene& scene,
   if (progress_cb) progress_cb("load scene", progress.x++, progress.y);
 
   // load pbrt
-  auto pbrt = pbrt_scene{};
+  auto pbrt = pbrt_model{};
   if (!load_pbrt(filename, pbrt, error)) return false;
 
   // handle progress
@@ -4655,7 +4655,7 @@ static bool save_pbrt_scene(const string& filename, const scene_scene& scene,
   if (progress_cb) progress_cb("convert scene", progress.x++, progress.y);
 
   // save pbrt
-  auto pbrt = pbrt_scene{};
+  auto pbrt = pbrt_model{};
 
   // convert camera
   auto& camera       = scene.cameras.front();

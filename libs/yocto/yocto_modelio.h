@@ -301,7 +301,7 @@ struct obj_environment {
 };
 
 // Obj model
-struct obj_scene {
+struct obj_model {
   vector<string>          comments     = {};
   vector<obj_shape>       shapes       = {};
   vector<obj_material>    materials    = {};
@@ -311,9 +311,9 @@ struct obj_scene {
 };
 
 // Load and save obj
-bool load_obj(const string& filename, obj_scene& obj, string& error,
+bool load_obj(const string& filename, obj_model& obj, string& error,
     bool face_varying = false, bool split_materials = false);
-bool save_obj(const string& filename, const obj_scene& obj, string& error);
+bool save_obj(const string& filename, const obj_model& obj, string& error);
 
 // Load and save obj shape
 bool load_obj(const string& filename, obj_shape& obj, string& error,
@@ -502,7 +502,7 @@ struct pbrt_environment {
 };
 
 // Pbrt model
-struct pbrt_scene {
+struct pbrt_model {
   // pbrt data
   vector<string>           comments     = {};
   vector<pbrt_camera>      cameras      = {};
@@ -514,20 +514,10 @@ struct pbrt_scene {
 };
 
 // Load/save pbrt
-bool load_pbrt(const string& filename, pbrt_scene& pbrt, string& error,
+bool load_pbrt(const string& filename, pbrt_model& pbrt, string& error,
     bool ply_meshes = false);
-bool save_pbrt(const string& filename, const pbrt_scene& pbrt, string& error,
+bool save_pbrt(const string& filename, const pbrt_model& pbrt, string& error,
     bool ply_meshes = false);
-
-}  // namespace yocto
-
-// -----------------------------------------------------------------------------
-// BACKWARDS COMPATIBILITY
-// -----------------------------------------------------------------------------
-namespace yocto {
-
-using obj_model [[deprecated]]  = obj_scene;
-using pbrt_model [[deprecated]] = pbrt_scene;
 
 }  // namespace yocto
 
