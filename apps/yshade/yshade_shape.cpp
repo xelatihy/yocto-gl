@@ -321,6 +321,8 @@ int run_shade_shape(const shade_shape_params& params) {
   auto callbacks    = gui_callbacks{};
   callbacks.init_cb = [app](gui_window* win, const gui_input& input) {
     init_glscene(app->glscene, app->ioscene, print_progress);
+    app->glscene.instances[1].hidden = true;
+    app->glscene.instances[2].hidden = true;
   };
   callbacks.clear_cb = [app](gui_window* win, const gui_input& input) {
     clear_scene(app->glscene);
