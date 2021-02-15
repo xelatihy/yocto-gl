@@ -66,23 +66,6 @@ struct shade_scene_state {
 
   // rendering state
   shade_scene glscene = {};
-
-  // editing
-  int selected_camera      = -1;
-  int selected_instance    = -1;
-  int selected_shape       = -1;
-  int selected_material    = -1;
-  int selected_environment = -1;
-  int selected_texture     = -1;
-
-  // loading status
-  std::atomic<bool> ok           = false;
-  std::future<void> loader       = {};
-  string            status       = "";
-  string            error        = "";
-  std::atomic<int>  current      = 0;
-  std::atomic<int>  total        = 0;
-  string            loader_error = "";
 };
 
 static void init_glscene(shade_scene& glscene, const sceneio_scene& ioscene,
@@ -219,12 +202,7 @@ int run_shade_scene(const shade_scene_params& params) {
   // callbacks
   auto callbacks    = gui_callbacks{};
   callbacks.init_cb = [app](gui_window* win, const gui_input& input) {
-    init_glscene(app->glscene, app->ioscene,
-        [app](const string& message, int current, int total) {
-          app->status  = "init scene";
-          app->current = current;
-          app->total   = total;
-        });
+    init_glscene(app->glscene, app->ioscene, print_progress);
   };
   callbacks.clear_cb = [app](gui_window* win, const gui_input& input) {
     clear_scene(app->glscene);
@@ -234,16 +212,13 @@ int run_shade_scene(const shade_scene_params& params) {
         input.framebuffer_viewport, app->drawgl_prms);
   };
   callbacks.widgets_cb = [app](gui_window* win, const gui_input& input) {
-    draw_progressbar(win, app->status.c_str(), app->current, app->total);
     auto& params = app->drawgl_prms;
-    draw_slider(win, "resolution", params.resolution, 0, 4096);
     draw_checkbox(win, "wireframe", params.wireframe);
     continue_line(win);
     draw_checkbox(win, "faceted", params.faceted);
     continue_line(win);
     draw_checkbox(win, "double sided", params.double_sided);
     draw_combobox(win, "lighting", (int&)params.lighting, shade_lighting_names);
-    // draw_checkbox(win, "edges", params.edges);
     draw_slider(win, "exposure", params.exposure, -10, 10);
     draw_slider(win, "gamma", params.gamma, 0.1f, 4);
     draw_slider(win, "near", params.near, 0.01f, 1.0f);
@@ -273,7 +248,7 @@ int run_shade_scene(const shade_scene_params& params) {
   };
 
   // run ui
-  run_ui({1280 + 320, 720}, "ysceneviews", callbacks);
+  run_ui({1280 + 320, 720}, "yshade", callbacks);
 
   // done
   return 0;
