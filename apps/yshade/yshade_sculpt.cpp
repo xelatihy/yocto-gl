@@ -577,6 +577,64 @@ static void init_glscene(shade_scene &glscene, const sceneio_scene &ioscene,
   if (progress_cb) progress_cb("convert scene", progress.x++, progress.y);
 }
 
+void sculpt_stroke(sculpt_params &params, scene_shape &shape,
+    shade_shape &glshape, shade_camera &glcamera, shade_scene &glscene,
+    const vec2f &mouse_uv, bool mouse_pressed) {
+  params.camera_ray = camera_ray(
+      glcamera.frame, glcamera.lens, glcamera.aspect, glcamera.film, mouse_uv);
+  params.intersection = intersect_triangles_bvh(
+      params.bvh, shape.triangles, shape.positions, params.camera_ray, false);
+  if (params.intersection.hit) {
+    glscene.instances.back().hidden = false;
+    view_pointer(shape, glscene.shapes.back(), params.intersection,
+        params.radius, 20, params.type);
+  } else {
+    glscene.instances.back().hidden = true;
+  }
+
+  auto isec = params.intersection;
+  // sculpting
+  if (mouse_pressed && isec.hit && (isec.uv.x >= 0 && isec.uv.x < 1) &&
+      (isec.uv.y >= 0 && isec.uv.y < 1)) {
+    auto        pairs = stroke(params, shape, mouse_uv, glcamera);
+    vector<int> vertices;
+    if (params.type == brush_type::gaussian) {
+      brush(params, shape, pairs);
+    } else if (params.type == brush_type::smooth) {
+      smooth(params.solver, params.stroke_sampling, shape.positions, params,
+          shape);
+    } else if (params.type == brush_type::texture && !pairs.empty()) {
+      vertices = stroke_parameterization(params.solver, params.coords,
+          params.stroke_sampling, params.old_positions, params.old_normals,
+          params.radius);
+      texture_brush(vertices, params.tex_image, params.coords, params, shape,
+          params.old_positions, params.old_normals);
+    }
+    set_positions(glshape, shape.positions);
+    set_normals(glshape, shape.normals);
+    if (params.symmetric) {
+      pairs = symmetric_stroke(pairs, shape, params.bvh,
+          params.symmetric_stroke_sampling, params.symmetric_axis);
+      if (params.type == brush_type::gaussian) {
+        brush(params, shape, pairs);
+      } else if (params.type == brush_type::smooth) {
+        smooth(params.solver, params.symmetric_stroke_sampling, shape.positions,
+            params, shape);
+      } else if (params.type == brush_type::texture && !pairs.empty()) {
+        vertices = stroke_parameterization(params.solver, params.coords,
+            params.symmetric_stroke_sampling, params.old_positions,
+            params.old_normals, params.radius);
+        texture_brush(vertices, params.tex_image, params.coords, params, shape,
+            shape.positions, shape.normals);
+      }
+      set_positions(glshape, shape.positions);
+      set_normals(glshape, shape.normals);
+    }
+  } else {
+    end_stroke(params, shape);
+  }
+}
+
 int run_shade_sculpt(const shade_sculpt_params &params_) {
   // initialize app
   auto app = shade_sculpt_state();
@@ -679,66 +737,13 @@ int run_shade_sculpt(const shade_sculpt_params &params_) {
   callbacks.uiupdate_cb = [&app, &params](
                               gui_window *win, const gui_input &input) {
     // intersect mouse position and shape
-    auto mouse_uv = vec2f{input.mouse_pos.x / float(input.window_size.x),
+    auto  mouse_uv = vec2f{input.mouse_pos.x / float(input.window_size.x),
         input.mouse_pos.y / float(input.window_size.y)};
-
-    auto &shape         = app.ioscene.shapes.at(0);
-    auto &glcamera      = app.glscene.cameras.at(0);
-    auto &glshape       = app.glscene.shapes.at(0);
-    params.camera_ray   = camera_ray(glcamera.frame, glcamera.lens,
-        glcamera.aspect, glcamera.film, mouse_uv);
-    params.intersection = intersect_triangles_bvh(
-        params.bvh, shape.triangles, shape.positions, params.camera_ray, false);
-    if (params.intersection.hit) {
-      app.glscene.instances.back().hidden = false;
-      view_pointer(shape, app.glscene.shapes.back(), params.intersection,
-          params.radius, 20, params.type);
-    } else {
-      app.glscene.instances.back().hidden = true;
-    }
-
-    auto isec = params.intersection;
-    // sculpting
-    if (input.mouse_left && isec.hit && !input.modifier_ctrl &&
-        (isec.uv.x >= 0 && isec.uv.x < 1) &&
-        (isec.uv.y >= 0 && isec.uv.y < 1)) {
-      auto pairs = stroke(params, shape, mouse_uv, app.glscene.cameras.at(0));
-      vector<int> vertices;
-      if (params.type == brush_type::gaussian) {
-        brush(params, shape, pairs);
-      } else if (params.type == brush_type::smooth) {
-        smooth(params.solver, params.stroke_sampling, shape.positions, params,
-            shape);
-      } else if (params.type == brush_type::texture && !pairs.empty()) {
-        vertices = stroke_parameterization(params.solver, params.coords,
-            params.stroke_sampling, params.old_positions, params.old_normals,
-            params.radius);
-        texture_brush(vertices, params.tex_image, params.coords, params, shape,
-            params.old_positions, params.old_normals);
-      }
-      set_positions(glshape, shape.positions);
-      set_normals(glshape, shape.normals);
-      if (params.symmetric) {
-        pairs = symmetric_stroke(pairs, shape, params.bvh,
-            params.symmetric_stroke_sampling, params.symmetric_axis);
-        if (params.type == brush_type::gaussian) {
-          brush(params, shape, pairs);
-        } else if (params.type == brush_type::smooth) {
-          smooth(params.solver, params.symmetric_stroke_sampling,
-              shape.positions, params, shape);
-        } else if (params.type == brush_type::texture && !pairs.empty()) {
-          vertices = stroke_parameterization(params.solver, params.coords,
-              params.symmetric_stroke_sampling, params.old_positions,
-              params.old_normals, params.radius);
-          texture_brush(vertices, params.tex_image, params.coords, params,
-              shape, shape.positions, shape.normals);
-        }
-        set_positions(glshape, shape.positions);
-        set_normals(glshape, shape.normals);
-      }
-    } else {
-      end_stroke(params, shape);
-    }
+    auto &shape    = app.ioscene.shapes.at(0);
+    auto &glcamera = app.glscene.cameras.at(0);
+    auto &glshape  = app.glscene.shapes.at(0);
+    sculpt_stroke(params, shape, glshape, glcamera, app.glscene, mouse_uv,
+        input.mouse_left && !input.modifier_ctrl);
     if (input.modifier_ctrl && !input.widgets_active) {
       auto dolly  = 0.0f;
       auto pan    = zero2f;
