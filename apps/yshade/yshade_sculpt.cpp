@@ -722,21 +722,28 @@ pair<bool, bool> update_stroke(sculpt_stroke &stroke, sculpt_state &state,
 
   // sculpting
   if (isec.hit && mouse_pressed) {
-    sample_stroke(stroke, state.bvh, shape, mouse_uv, camera,
-        params.type != brush_type::texture, params);
-    if (params.type == brush_type::gaussian) {
-      updated_shape = gaussian_brush(
-          shape.positions, state.grid, stroke.pairs, params);
-    } else if (params.type == brush_type::smooth) {
-      updated_shape = smooth_brush(shape.positions, state.solver,
-          state.adjacencies, stroke.sampling, params);
-    } else if (params.type == brush_type::texture && !stroke.pairs.empty() &&
-               !stroke.sampling.empty()) {
-      auto vertices = stroke_parameterization(buffers.coords, state.solver,
-          stroke.sampling, buffers.old_positions, buffers.old_normals,
-          params.radius);
-      updated_shape = texture_brush(shape.positions, vertices, state.tex_image,
-          buffers.coords, buffers.old_positions, buffers.old_normals, params);
+    if (!stroke.lock) {
+      stroke.lock            = true;
+      stroke.locked_uv       = mouse_uv;
+      stroke.locked_position = eval_position(shape, isec.element, isec.uv);
+    } else {
+      sample_stroke(stroke, state.bvh, shape, mouse_uv, camera,
+          params.type != brush_type::texture, params);
+      if (params.type == brush_type::gaussian) {
+        updated_shape = gaussian_brush(
+            shape.positions, state.grid, stroke.pairs, params);
+      } else if (params.type == brush_type::smooth) {
+        updated_shape = smooth_brush(shape.positions, state.solver,
+            state.adjacencies, stroke.sampling, params);
+      } else if (params.type == brush_type::texture && !stroke.pairs.empty() &&
+                 !stroke.sampling.empty()) {
+        auto vertices = stroke_parameterization(buffers.coords, state.solver,
+            stroke.sampling, buffers.old_positions, buffers.old_normals,
+            params.radius);
+        updated_shape = texture_brush(shape.positions, vertices,
+            state.tex_image, buffers.coords, buffers.old_positions,
+            buffers.old_normals, params);
+      }
     }
     if (updated_shape) {
       triangles_normals(shape.normals, shape.triangles, shape.positions);
