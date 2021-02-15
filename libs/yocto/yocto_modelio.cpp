@@ -1790,7 +1790,13 @@ bool load_obj(const string& filename, obj_model& obj, string& error,
       // grab shape and add element
       auto& shape   = *cur_shape;
       auto& element = shape.elements.emplace_back();
-      if (cur_material < 0) return material_error("default");
+      if (cur_material < 0) {
+        auto& material              = obj.materials.emplace_back();
+        material.name               = "__default__";
+        material.diffuse            = {0.8, 0.8, 0.8};
+        cur_material                = 0;
+        material_map[material.name] = 0;
+      }
       element.material = cur_material;
       element.etype    = etype;
       // parse vertices
