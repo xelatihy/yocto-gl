@@ -795,7 +795,7 @@ bool load_shape(const string& filename, shape_data& shape, string& error,
     return true;
   } else if (ext == ".obj" || ext == ".OBJ") {
     auto obj = obj_shape{};
-    if (!load_obj(filename, obj, error, true)) return false;
+    if (!load_obj(filename, obj, error, false)) return false;
     auto materials = vector<int>{};
     get_positions(obj, shape.positions);
     get_normals(obj, shape.normals);
