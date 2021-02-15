@@ -652,8 +652,8 @@ static void init_glscene(shade_scene &glscene, const sceneio_scene &ioscene,
 
 // To make the stroke sampling (position, normal) following the mouse
 bool sample_stroke(sculpt_stroke &stroke, const shape_bvh &bvh,
-    const scene_shape &shape, const vec2f &mouse_uv, const scene_camera &camera,
-    bool clear, const sculpt_params &params) {
+    const scene_shape &shape, const vec2f &last_uv, const vec2f &mouse_uv,
+    const scene_camera &camera, bool clear, const sculpt_params &params) {
   // clear
   if (clear) {
     stroke.pairs.clear();
@@ -668,9 +668,6 @@ bool sample_stroke(sculpt_stroke &stroke, const shape_bvh &bvh,
         bvh, shape.triangles, shape.positions, ray, false);
   };
 
-  // setup uv
-  auto last_uv = stroke.locked_uv;
-
   // eval current intersection
   auto last  = intersect_shape(last_uv);
   auto mouse = intersect_shape(mouse_uv);
@@ -684,19 +681,17 @@ bool sample_stroke(sculpt_stroke &stroke, const shape_bvh &bvh,
   auto steps       = int(delta_pos / stroke_dist);
   if (steps == 0) return true;
   auto stroke_uv = delta_uv * stroke_dist / delta_pos;
-  auto mouse_dir = normalize(mouse_uv - stroke.locked_uv);
+  auto mouse_dir = normalize(mouse_uv - last_uv);
+  auto cur_uv    = last_uv;
   for (auto step = 0; step < steps; step++) {
-    last_uv += stroke_uv * mouse_dir;
-    auto isec = intersect_shape(stroke.locked_uv);
+    cur_uv += stroke_uv * mouse_dir;
+    auto isec = intersect_shape(cur_uv);
     if (!isec.hit) continue;
     stroke.pairs.push_back({eval_position(shape, isec.element, isec.uv),
         eval_normal(shape, isec.element, isec.uv)});
     stroke.sampling.push_back(
         closest_vertex(shape.triangles, isec.element, isec.uv));
   }
-
-  // update
-  stroke.locked_uv = mouse_uv;
 
   return true;
 }
@@ -724,8 +719,9 @@ pair<bool, bool> update_stroke(sculpt_stroke &stroke, sculpt_state &state,
       stroke.lock      = true;
       stroke.locked_uv = mouse_uv;
     } else {
-      sample_stroke(stroke, state.bvh, shape, mouse_uv, camera,
-          params.type != brush_type::texture, params);
+      sample_stroke(stroke, state.bvh, shape, stroke.locked_uv, mouse_uv,
+          camera, params.type != brush_type::texture, params);
+      stroke.locked_uv = mouse_uv;
       if (params.type == brush_type::gaussian) {
         updated_shape = gaussian_brush(
             shape.positions, state.grid, stroke.pairs, params);
