@@ -744,7 +744,7 @@ pair<bool, bool> update_stroke(sculpt_stroke &stroke, sculpt_state &state,
       state.grid = make_hash_grid(shape.positions, state.grid.cell_size);
     }
   } else {
-    end_stroke(params, stroke, buffers, shape);
+    if (stroke.lock) end_stroke(params, stroke, buffers, shape);
   }
 
   return {updated_shape, updated_cursor};
