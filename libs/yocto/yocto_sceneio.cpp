@@ -1594,44 +1594,6 @@ static void trim_memory(scene_scene& scene) {
   scene.environments.shrink_to_fit();
 }
 
-[[maybe_unused]] static void remove_unused_textures(
-    scene_scene& scene, vector<string>& paths) {
-  auto texture_map = unordered_map<int, int>{};
-  auto get_texture = [](unordered_map<int, int>& texture_map,
-                         int                     texture) -> int {
-    auto texture_it = texture_map.find(texture);
-    if (texture_it == texture_map.end()) {
-      auto idx             = (int)texture_map.size();
-      texture_map[texture] = idx;
-      return idx;
-    } else {
-      return texture_it->second;
-    }
-  };
-
-  for (auto& material : scene.materials) {
-    material.emission_tex   = get_texture(texture_map, material.emission_tex);
-    material.color_tex      = get_texture(texture_map, material.color_tex);
-    material.roughness_tex  = get_texture(texture_map, material.roughness_tex);
-    material.scattering_tex = get_texture(texture_map, material.scattering_tex);
-    material.normal_tex     = get_texture(texture_map, material.normal_tex);
-  }
-  for (auto& environment : scene.environments) {
-    environment.emission_tex = get_texture(
-        texture_map, environment.emission_tex);
-  }
-  for (auto& subdiv : scene.subdivs) {
-    subdiv.displacement_tex = get_texture(texture_map, subdiv.displacement_tex);
-  }
-
-  auto new_textures = vector<scene_texture>(texture_map.size());
-  auto new_paths    = vector<string>(texture_map.size());
-  for (auto [oldt, newt] : texture_map) {
-    new_textures[newt] = scene.textures[oldt];
-    new_paths[newt]    = paths[newt];
-  }
-}
-
 }  // namespace yocto
 
 // -----------------------------------------------------------------------------
@@ -3284,10 +3246,10 @@ static bool load_obj_scene(const string& filename, scene_scene& scene,
   };
 
   // handler for textures
-  auto textures_paths = vector<string>{};
+  auto texture_paths = vector<string>{};
   for (auto& otexture : obj.textures) {
     scene.textures.emplace_back();
-    textures_paths.emplace_back(otexture.path);
+    texture_paths.emplace_back(otexture.path);
   }
 
   // handler for materials
@@ -3353,7 +3315,7 @@ static bool load_obj_scene(const string& filename, scene_scene& scene,
     // load textures
     for (auto& texture : scene.textures) {
       if (progress_cb) progress_cb("load texture", progress.x++, progress.y);
-      auto& path = textures_paths[&texture - &scene.textures.front()];
+      auto& path = texture_paths[&texture - &scene.textures.front()];
       if (!load_texture(path_join(dirname, path), texture, error))
         return dependent_error();
     }
@@ -3367,9 +3329,9 @@ static bool load_obj_scene(const string& filename, scene_scene& scene,
         if (!error.empty()) return;
         if (progress_cb) progress_cb("load texture", progress.x++, progress.y);
         printf("%s %s\n", get_texture_name(scene, texture).c_str(),
-            textures_paths[&texture - &scene.textures.front()].c_str());
+            texture_paths[&texture - &scene.textures.front()].c_str());
       }
-      auto& path = textures_paths[&texture - &scene.textures.front()];
+      auto& path = texture_paths[&texture - &scene.textures.front()];
       auto  err  = string{};
       if (!load_texture(path_join(dirname, path), texture, err)) {
         auto lock = std::lock_guard{mutex};
@@ -3771,12 +3733,12 @@ static bool load_gltf_scene(const string& filename, scene_scene& scene,
   };
 
   // convert textures
-  auto textures_paths = vector<string>{};
+  auto texture_paths = vector<string>{};
   if (gltf.contains("images")) {
     try {
       for (auto& gimage : gltf.at("images")) {
         scene.textures.emplace_back();
-        textures_paths.push_back(gimage.value("uri", ""));
+        texture_paths.push_back(gimage.value("uri", ""));
       }
     } catch (...) {
       return parse_error();
@@ -4098,7 +4060,7 @@ static bool load_gltf_scene(const string& filename, scene_scene& scene,
     // load texture
     for (auto& texture : scene.textures) {
       if (progress_cb) progress_cb("load texture", progress.x++, progress.y);
-      auto& path = textures_paths[&texture - &scene.textures.front()];
+      auto& path = texture_paths[&texture - &scene.textures.front()];
       if (!load_texture(path_join(dirname, path), texture, error))
         return dependent_error();
     }
@@ -4112,7 +4074,7 @@ static bool load_gltf_scene(const string& filename, scene_scene& scene,
         if (!error.empty()) return;
         if (progress_cb) progress_cb("load texture", progress.x++, progress.y);
       }
-      auto& path = textures_paths[&texture - &scene.textures.front()];
+      auto& path = texture_paths[&texture - &scene.textures.front()];
       auto  err  = string{};
       if (!load_texture(path_join(dirname, path), texture, err)) {
         auto lock = std::lock_guard{mutex};
@@ -4553,10 +4515,10 @@ static bool load_pbrt_scene(const string& filename, scene_scene& scene,
   }
 
   // convert material
-  auto textures_paths = vector<string>{};
+  auto texture_paths = vector<string>{};
   for (auto& ptexture : pbrt.textures) {
     scene.textures.emplace_back();
-    textures_paths.push_back(ptexture.filename);
+    texture_paths.push_back(ptexture.filename);
   }
 
   // material type map
@@ -4651,7 +4613,7 @@ static bool load_pbrt_scene(const string& filename, scene_scene& scene,
     // load texture
     for (auto& texture : scene.textures) {
       if (progress_cb) progress_cb("load texture", progress.x++, progress.y);
-      auto& path = textures_paths[&texture - &scene.textures.front()];
+      auto& path = texture_paths[&texture - &scene.textures.front()];
       if (!load_texture(path_join(dirname, path), texture, error))
         return dependent_error();
     }
@@ -4682,7 +4644,7 @@ static bool load_pbrt_scene(const string& filename, scene_scene& scene,
         if (!error.empty()) return;
         if (progress_cb) progress_cb("load texture", progress.x++, progress.y);
       }
-      auto& path = textures_paths[&texture - &scene.textures.front()];
+      auto& path = texture_paths[&texture - &scene.textures.front()];
       auto  err  = string{};
       if (!load_texture(path_join(dirname, path), texture, err)) {
         auto lock = std::lock_guard{mutex};
