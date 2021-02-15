@@ -75,12 +75,11 @@ struct sculpt_state {
 
 // sculpt stroke
 struct sculpt_stroke {
-  vector<pair<vec3f, vec3f>> pairs                     = {};
-  vector<int>                sampling                  = {};
-  vector<int>                symmetric_stroke_sampling = {};
-  vec3f                      locked_position           = {};
-  vec2f                      locked_uv                 = {};
-  bool                       lock                      = false;
+  vector<pair<vec3f, vec3f>> pairs           = {};
+  vector<int>                sampling        = {};
+  vec3f                      locked_position = {};
+  vec2f                      locked_uv       = {};
+  bool                       lock            = false;
 };
 
 // sculpt buffers
@@ -820,7 +819,8 @@ bool update_stroke(sculpt_stroke &stroke, sculpt_state &state,
     } else if (params.type == brush_type::smooth) {
       updated = smooth_brush(shape.positions, state.solver, state.adjacencies,
           stroke.sampling, params);
-    } else if (params.type == brush_type::texture && !stroke.pairs.empty() && !stroke.sampling.empty()) {
+    } else if (params.type == brush_type::texture && !stroke.pairs.empty() &&
+               !stroke.sampling.empty()) {
       auto vertices = stroke_parameterization(buffers.coords, state.solver,
           stroke.sampling, buffers.old_positions, buffers.old_normals,
           params.radius);
