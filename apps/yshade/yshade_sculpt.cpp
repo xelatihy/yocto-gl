@@ -661,24 +661,21 @@ bool sample_stroke(sculpt_stroke &stroke, const shape_bvh &bvh,
     stroke.sampling.clear();
   }
 
-  // eval current intersection
-  auto ray = camera_ray(
-      camera.frame, camera.lens, camera.aspect, camera.film, mouse_uv);
-  auto isec = intersect_triangles_bvh(
-      bvh, shape.triangles, shape.positions, ray, false);
-  if (!isec.hit) return false;
-  auto  pos         = eval_position(shape, isec.element, isec.uv);
-  auto  nor         = eval_normal(shape, isec.element, isec.uv);
-  float delta_pos   = distance(pos, stroke.locked_position);
-  float stroke_dist = params.radius * 0.2f;
+  // helper
+  auto intersect_shape = [&](const vec2f &uv) {
+    auto ray = camera_ray(
+        camera.frame, camera.lens, camera.aspect, camera.film, uv);
+    return intersect_triangles_bvh(
+        bvh, shape.triangles, shape.positions, ray, false);
+  };
 
-  // handle first stroke intersection
-  if (!stroke.lock) {
-    stroke.locked_position = pos;
-    stroke.locked_uv       = mouse_uv;
-    stroke.lock            = true;
-    return true;
-  }
+  // eval current intersection
+  auto first = intersect_shape(stroke.locked_uv);
+  auto last  = intersect_shape(mouse_uv);
+  if (!first.hit || !last.hit) return false;
+  float delta_pos   = distance(eval_position(shape, last.element, last.uv),
+      eval_position(shape, first.element, first.uv));
+  float stroke_dist = params.radius * 0.2f;
 
   float delta_uv = distance(mouse_uv, stroke.locked_uv);
   int   steps    = int(delta_pos / stroke_dist);
@@ -688,18 +685,19 @@ bool sample_stroke(sculpt_stroke &stroke, const shape_bvh &bvh,
   auto mouse_dir = normalize(mouse_uv - stroke.locked_uv);
   for (int step = 0; step < steps; step++) {
     stroke.locked_uv += stroke_uv * mouse_dir;
-    auto ray = camera_ray(camera.frame, camera.lens, camera.aspect, camera.film,
-        stroke.locked_uv);
-    isec     = intersect_triangles_bvh(
-        bvh, shape.triangles, shape.positions, ray, false);
+    auto isec = intersect_shape(stroke.locked_uv);
     if (!isec.hit) continue;
-    pos                    = eval_position(shape, isec.element, isec.uv);
-    nor                    = eval_normal(shape, isec.element, isec.uv);
+    auto pos               = eval_position(shape, isec.element, isec.uv);
+    auto nor               = eval_normal(shape, isec.element, isec.uv);
     stroke.locked_position = pos;
     stroke.sampling.push_back(
         closest_vertex(shape.triangles, isec.element, isec.uv));
     stroke.pairs.push_back({pos, nor});
   }
+
+  stroke.locked_position = eval_position(shape, last.element, last.uv);
+  stroke.locked_uv       = mouse_uv;
+
   return true;
 }
 
