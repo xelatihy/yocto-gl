@@ -246,48 +246,6 @@ bool sample_stroke(sculpt_stroke &stroke, const shape_bvh &bvh,
   return true;
 }
 
-// To obtain symmetric from stroke result
-pair<vector<pair<vec3f, vec3f>>, vector<int>> symmetric_stroke(
-    vector<pair<vec3f, vec3f>> &pairs, shape_data &shape, shape_bvh &tree,
-    axes axis) {
-  vector<pair<vec3f, vec3f>> symmetric_pairs;
-  vector<int>                symmetric_sampling;
-  if (pairs.empty()) return {symmetric_pairs, symmetric_sampling};
-  for (int i = 0; i < pairs.size(); i++) {
-    auto ray = ray3f{};
-    ray.d    = pairs[i].first;
-
-    if (axis == axes::x) {
-      ray.o   = vec3f{0.0f, ray.d.y, 0.0f};
-      ray.d   = normalize(ray.d - ray.o);
-      ray.d.x = -ray.d.x;
-    }
-
-    if (axis == axes::y) {
-      ray.o   = vec3f{ray.d.x, 0.0f, 0.0f};
-      ray.d   = normalize(ray.d - ray.o);
-      ray.d.y = -ray.d.y;
-    }
-
-    if (axis == axes::z) {
-      ray.o   = vec3f{0.0f, ray.d.y, 0.0f};
-      ray.d   = normalize(ray.d - ray.o);
-      ray.d.z = -ray.d.z;
-    }
-
-    auto inter = intersect_triangles_bvh(
-        tree, shape.triangles, shape.positions, ray);
-    if (!inter.hit) continue;
-    auto pos  = eval_position(shape, inter.element, inter.uv);
-    auto nor  = eval_normal(shape, inter.element, inter.uv);
-    auto pair = std::pair<vec3f, vec3f>{pos, nor};
-    symmetric_sampling.push_back(
-        closest_vertex(shape.triangles, inter.element, inter.uv));
-    symmetric_pairs.push_back(pair);
-  }
-  return {symmetric_pairs, symmetric_sampling};
-}
-
 // Project a vector on a plane, maintaining vector length
 inline vec2f project_onto_plane(const mat3f &basis, const vec3f &p) {
   auto v  = p - dot(p, basis.z) * basis.z;
@@ -446,9 +404,9 @@ vector<int> stroke_parameterization(vector<vec2f> &coords,
 void end_stroke(sculpt_params &params, sculpt_stroke &stroke,
     sculpt_buffers &buffers, scene_shape &shape) {
   stroke.lock = false;
-  std::fill(buffers.opacity.begin(), buffers.opacity.end(), 0.0f);
   stroke.sampling.clear();
-  buffers.coords.clear();
+  buffers.opacity.assign(buffers.opacity.size(), 0);
+  buffers.coords.assign(buffers.opacity.size(), {0, 0});
   buffers.old_positions = shape.positions;
   buffers.old_normals   = shape.normals;
 }
