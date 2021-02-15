@@ -190,9 +190,9 @@ int closest_vertex(
 }
 
 // To make the stroke sampling (position, normal) following the mouse
-bool sample_stroke(sculpt_params &params, sculpt_stroke &stroke,
-    scene_shape &shape, const vec2f &mouse_uv, const scene_camera &camera,
-    bool clear) {
+bool sample_stroke(sculpt_stroke &stroke, const shape_bvh &bvh,
+    const scene_shape &shape, const vec2f &mouse_uv, const scene_camera &camera,
+    bool clear, const sculpt_params &params) {
   // clear
   if (clear) {
     stroke.pairs.clear();
@@ -812,9 +812,10 @@ bool update_cursor(scene_shape &cursor, const shape_bvh &bvh,
 bool update_stroke(sculpt_stroke &stroke, sculpt_params &params,
     scene_shape &shape, const scene_camera &camera, const vec2f &mouse_uv,
     bool mouse_pressed) {
-  auto hit = mouse_pressed ? sample_stroke(params, stroke, shape, mouse_uv,
-                                 camera, params.type != brush_type::texture)
-                           : false;
+  auto hit = mouse_pressed
+                 ? sample_stroke(stroke, params.bvh, shape, mouse_uv, camera,
+                       params.type != brush_type::texture, params)
+                 : false;
 
   // sculpting
   if (hit) {
