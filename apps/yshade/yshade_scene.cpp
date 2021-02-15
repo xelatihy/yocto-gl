@@ -54,7 +54,7 @@ struct shade_scene_state {
   // loading parameters
   string filename  = "scene.json";
   string imagename = "out.png";
-  string outname   = "scene.json";
+  string outname   = "out.json";
   string name      = "";
 
   // options
