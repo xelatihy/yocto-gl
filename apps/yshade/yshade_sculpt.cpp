@@ -401,34 +401,32 @@ inline void compute_stroke_frames(vector<mat3f> &frames,
 }
 
 // To take shape positions indices associate with planar coordinates
-vector<int> stroke_parameterization(const geodesic_solver &solver,
-    vector<vec2f> &coords, vector<int> &stroke_sampling,
+vector<int> stroke_parameterization(vector<vec2f> &coords,
+    const geodesic_solver &solver, const vector<int> &sampling,
     const vector<vec3f> &positions, const vector<vec3f> &normals,
     float radius) {
-  if (stroke_sampling.empty()) return vector<int>{};
+  if (normals.empty()) return vector<int>{};
 
   // init params
   std::set<int> vertices;  // to avoid duplicates
 
   auto visited = vector<bool>(positions.size(), false);
-  for (auto sample : stroke_sampling) visited[sample] = true;
+  for (auto sample : sampling) visited[sample] = true;
 
-  coords                     = vector<vec2f>(solver.graph.size(), zero2f);
-  coords[stroke_sampling[0]] = {radius, radius};
-  vertices.insert(stroke_sampling[0]);
-  for (int i = 1; i < stroke_sampling.size(); i++) {
-    auto edge = positions[stroke_sampling[i]] -
-                positions[stroke_sampling[i - 1]];
-    coords[stroke_sampling[i]] = {
-        coords[stroke_sampling[i - 1]].x + length(edge), radius};
-    vertices.insert(stroke_sampling[i]);
+  coords              = vector<vec2f>(solver.graph.size(), zero2f);
+  coords[sampling[0]] = {radius, radius};
+  vertices.insert(sampling[0]);
+  for (int i = 1; i < sampling.size(); i++) {
+    auto edge           = positions[sampling[i]] - positions[sampling[i - 1]];
+    coords[sampling[i]] = {coords[sampling[i - 1]].x + length(edge), radius};
+    vertices.insert(sampling[i]);
   }
 
   auto distances = vector<float>(solver.graph.size(), flt_max);
-  for (auto sample : stroke_sampling) distances[sample] = 0.0f;
+  for (auto sample : sampling) distances[sample] = 0.0f;
 
   auto frames = vector<mat3f>(positions.size(), identity3x3f);
-  compute_stroke_frames(frames, positions, normals, stroke_sampling);
+  compute_stroke_frames(frames, positions, normals, sampling);
 
   auto update = [&](int node, int neighbor, float new_distance) {
     vertices.insert(node);
@@ -439,7 +437,7 @@ vector<int> stroke_parameterization(const geodesic_solver &solver,
     compute_frame(frames, normals, node, neighbor, weight);
     visited[node] = true;
   };
-  dijkstra(solver, stroke_sampling, distances, radius, update);
+  dijkstra(solver, sampling, distances, radius, update);
 
   auto vec_vertices = vector<int>(vertices.begin(), vertices.end());
 
@@ -489,8 +487,8 @@ void apply_brush(shape_data &shape, const vector<vec3f> &positions,
 
 // To apply brush on intersected points' neighbors
 bool gaussian_brush(vector<vec3f> &positions, vector<float> &opacity,
-    const sculpt_params &             params,
-    const vector<pair<vec3f, vec3f>> &stroke_samples) {
+    const vector<pair<vec3f, vec3f>> &stroke_samples,
+    const sculpt_params &             params) {
   if (stroke_samples.empty()) return false;
 
   // for a correct gaussian distribution
@@ -532,8 +530,8 @@ bool gaussian_brush(vector<vec3f> &positions, vector<float> &opacity,
 // Compute texture values through the parameterization
 bool texture_brush(vector<vec3f> &positions, const vector<int> &vertices,
     const image_data &texture, const vector<vec2f> &coords,
-    const sculpt_params &params, const vector<vec3f> &base_positions,
-    const vector<vec3f> &base_normals) {
+    const vector<vec3f> &base_positions, const vector<vec3f> &base_normals,
+    const sculpt_params &params) {
   if (vertices.empty()) return false;
   if (texture.pixelsf.empty() && texture.pixelsb.empty()) return false;
 
@@ -590,7 +588,8 @@ float laplacian_weight(const vector<vec3f> &positions,
 
 // Smooth brush with Laplace Operator Discretization and Cotangents Weights
 bool smooth_brush(vector<vec3f> &positions, const geodesic_solver &solver,
-    vector<int> &stroke_sampling, sculpt_params &params) {
+    const vector<vector<int>> &adjacencies, vector<int> &stroke_sampling,
+    const sculpt_params &params) {
   if (stroke_sampling.empty()) return false;
 
   auto distances = vector<float>(solver.graph.size(), flt_max);
@@ -615,8 +614,7 @@ bool smooth_brush(vector<vec3f> &positions, const geodesic_solver &solver,
       weights.clear();
     }
     neighbors.push_back(neighbor);
-    weights.push_back(
-        laplacian_weight(positions, params.adjacencies, node, neighbor));
+    weights.push_back(laplacian_weight(positions, adjacencies, node, neighbor));
   };
   dijkstra(solver, stroke_sampling, distances, params.radius, update);
 
@@ -796,12 +794,13 @@ static void init_glscene(shade_scene &glscene, const sceneio_scene &ioscene,
   if (progress_cb) progress_cb("convert scene", progress.x++, progress.y);
 }
 
-bool update_cursor(scene_shape &cursor, sculpt_params &params,
-    scene_shape &shape, const scene_camera &camera, const vec2f &mouse_uv) {
+bool update_cursor(scene_shape &cursor, const shape_bvh &bvh,
+    const scene_shape &shape, const scene_camera &camera, const vec2f &mouse_uv,
+    const sculpt_params &params) {
   auto ray = camera_ray(
       camera.frame, camera.lens, camera.aspect, camera.film, mouse_uv);
   auto isec = intersect_triangles_bvh(
-      params.bvh, shape.triangles, shape.positions, ray, false);
+      bvh, shape.triangles, shape.positions, ray, false);
   if (isec.hit) {
     cursor = make_cursor(eval_position(shape, isec.element, isec.uv),
         eval_normal(shape, isec.element, isec.uv),
@@ -822,16 +821,16 @@ bool update_stroke(sculpt_stroke &stroke, sculpt_params &params,
     auto updated = false;
     if (params.type == brush_type::gaussian) {
       updated = gaussian_brush(
-          shape.positions, stroke.opacity, params, stroke.pairs);
+          shape.positions, stroke.opacity, stroke.pairs, params);
     } else if (params.type == brush_type::smooth) {
-      updated = smooth_brush(
-          shape.positions, params.solver, stroke.sampling, params);
+      updated = smooth_brush(shape.positions, params.solver, params.adjacencies,
+          stroke.sampling, params);
     } else if (params.type == brush_type::texture && !stroke.pairs.empty()) {
-      auto vertices = stroke_parameterization(params.solver, stroke.coords,
+      auto vertices = stroke_parameterization(stroke.coords, params.solver,
           stroke.sampling, stroke.old_positions, stroke.old_normals,
           params.radius);
       updated       = texture_brush(shape.positions, vertices, params.tex_image,
-          stroke.coords, params, stroke.old_positions, stroke.old_normals);
+          stroke.coords, stroke.old_positions, stroke.old_normals, params);
     }
     if (updated) {
       triangles_normals(shape.normals, shape.triangles, shape.positions);
@@ -982,7 +981,7 @@ int run_shade_sculpt(const shade_sculpt_params &params_) {
     auto &glcamera = app.glscene.cameras.at(0);
     auto &glshape  = app.glscene.shapes.at(0);
     auto &glscene  = app.glscene;
-    if (update_cursor(cursor, params, shape, camera, mouse_uv)) {
+    if (update_cursor(cursor, params.bvh, shape, camera, mouse_uv, params)) {
       set_positions(glscene.shapes.at(1), cursor.positions);
       set_lines(glscene.shapes.at(1), cursor.lines);
       glscene.instances.at(1).hidden = false;
