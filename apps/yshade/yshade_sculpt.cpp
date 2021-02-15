@@ -44,25 +44,17 @@ struct shade_sculpt_state {
   shade_scene glscene = {};
 };
 
-enum struct axes { x, y, z };
-auto const symmetric_axes = vector<std::string>{"asse x", "asse y", "asse z"};
-
 enum struct brush_type { gaussian, texture, smooth };
 auto const brushes_names = vector<std::string>{
     "gaussian brush", "texture brush", "smooth brush"};
 
 struct sculpt_params {
-  // brush type
-  brush_type type = brush_type::gaussian;
-  // stroke
-  bool continuous     = false;
-  bool symmetric      = false;
-  axes symmetric_axis = axes::x;
-  // brush
-  float radius     = 0.35f;
-  float strength   = 1.0f;
-  bool  negative   = false;
-  bool  saturation = false;
+  brush_type type       = brush_type::gaussian;
+  float      radius     = 0.35f;
+  float      strength   = 1.0f;
+  bool       negative   = false;
+  bool       saturation = false;
+  bool       continuous = false;
 };
 
 struct sculpt_state {
@@ -790,31 +782,6 @@ bool update_stroke(sculpt_stroke &stroke, sculpt_state &state,
       update_triangles_bvh(state.bvh, shape.triangles, shape.positions);
       state.grid = make_hash_grid(shape.positions, state.grid.cell_size);
     }
-    // if (params.symmetric) {
-    //   auto updated              = false;
-    //   std::tie(pairs, sampling) = symmetric_stroke(
-    //       pairs, shape, params.bvh, params.symmetric_axis);
-    //   if (params.type == brush_type::gaussian) {
-    //     updated = gaussian_brush(shape, params, stroke, pairs);
-    //   } else if (params.type == brush_type::smooth) {
-    //     updated = smooth_brush(params.solver, sampling, params, shape);
-    //   } else if (params.type == brush_type::texture && !pairs.empty()) {
-    //     sampling.insert(sampling.begin(),
-    //         stroke.symmetric_stroke_sampling.begin(),
-    //         stroke.symmetric_stroke_sampling.end());
-    //     stroke.symmetric_stroke_sampling = sampling;
-    //     vertices = stroke_parameterization(params.solver, params.coords,
-    //         sampling, params.old_positions, params.old_normals,
-    //         params.radius);
-    //     updated  = texture_brush(shape, vertices, params.tex_image,
-    //         params.coords, params, shape.positions, shape.normals);
-    //   }
-    //   if (updated) {
-    //     triangles_normals(shape.normals, shape.triangles, shape.positions);
-    //     update_triangles_bvh(params.bvh, shape.triangles, shape.positions);
-    //     params.grid = make_hash_grid(shape.positions, params.grid.cell_size);
-    //   }
-    // }
     return true;
   } else {
     end_stroke(params, stroke, buffers, shape);
@@ -897,27 +864,15 @@ int run_shade_sculpt(const shade_sculpt_params &params_) {
       draw_checkbox(win, "negative", params.negative);
       draw_checkbox(win, "continuous", params.continuous);
       draw_checkbox(win, "saturation", params.saturation);
-      draw_checkbox(win, "symmetric", params.symmetric);
-      if (params.symmetric)
-        draw_combobox(win, "symmetric axis", (int &)params.symmetric_axis,
-            symmetric_axes);
     } else if (params.type == brush_type::texture) {
       if (params.strength < 0.8f || params.strength > 1.5f)
         params.strength = 1.0f;
       draw_slider(win, "radius", params.radius, 0.1f, 0.8f);
       draw_slider(win, "strength", params.strength, 1.5f, 0.9f);
       draw_checkbox(win, "negative", params.negative);
-      draw_checkbox(win, "symmetric", params.symmetric);
-      if (params.symmetric)
-        draw_combobox(win, "symmetric axis", (int &)params.symmetric_axis,
-            symmetric_axes);
     } else if (params.type == brush_type::smooth) {
       draw_slider(win, "radius", params.radius, 0.1f, 0.8f);
       draw_slider(win, "strength", params.strength, 0.1f, 1.0f);
-      draw_checkbox(win, "symmetric", params.symmetric);
-      if (params.symmetric)
-        draw_combobox(win, "symmetric axis", (int &)params.symmetric_axis,
-            symmetric_axes);
     }
   };
   callbacks.update_cb = [](gui_window *win, const gui_input &input) {
