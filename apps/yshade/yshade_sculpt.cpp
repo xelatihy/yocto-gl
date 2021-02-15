@@ -42,15 +42,6 @@ struct shade_sculpt_state {
   // rendering state
   shade_scene  glscene   = {};
   shade_shape *glpointer = new shade_shape{};
-
-  // loading status
-  std::atomic<bool> ok           = false;
-  std::future<void> loader       = {};
-  string            status       = "";
-  string            error        = "";
-  std::atomic<int>  current      = 0;
-  std::atomic<int>  total        = 0;
-  string            loader_error = "";
 };
 
 struct sculpt_params {
@@ -659,7 +650,6 @@ int run_shade_sculpt(const shade_sculpt_params &params_) {
       end_stroke(params);
     }
     if (input.modifier_ctrl && !input.widgets_active) {
-      // printf("%d\n", input.window_size.x);
       auto dolly  = 0.0f;
       auto pan    = zero2f;
       auto rotate = zero2f;
@@ -672,7 +662,6 @@ int run_shade_sculpt(const shade_sculpt_params &params_) {
       auto &glcamera                           = app.glscene.cameras.at(0);
       std::tie(glcamera.frame, glcamera.focus) = camera_turntable(
           glcamera.frame, glcamera.focus, rotate, dolly, -pan);
-      // set_frame(glcamera, glcamera.frame);
     }
   };
 
