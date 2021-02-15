@@ -521,16 +521,18 @@ bool gaussian_brush(scene_shape &shape, sculpt_params &params,
     neighbors.clear();
   }
 
-  apply_brush(shape, shape.positions, params.bvh, params.grid);
   return true;
 }
 
 // Compute texture values through the parameterization
-bool texture_brush(vector<int> &vertices, const image_data &texture,
-    vector<vec2f> &coords, sculpt_params &params, scene_shape &shape,
-    vector<vec3f> positions, vector<vec3f> normals) {
+bool texture_brush(scene_shape &shape, vector<int> &vertices,
+    const image_data &texture, vector<vec2f> &coords, sculpt_params &params,
+    const vector<vec3f> &positions, const vector<vec3f> &normals) {
   if (vertices.empty()) return false;
   if (texture.pixelsf.empty() && texture.pixelsb.empty()) return false;
+
+  shape.positions = positions;
+  shape.normals   = normals;
 
   auto scale_factor = 3.5f / params.radius;
   auto max_height   = gaussian_distribution(
@@ -539,13 +541,12 @@ bool texture_brush(vector<int> &vertices, const image_data &texture,
   for (auto idx : vertices) {
     auto uv     = coords[idx];
     auto height = max(xyz(eval_image(texture, uv)));
-    auto normal = normals[idx];
+    auto normal = shape.normals[idx];
     if (params.negative) normal = -normal;
     height *= max_height;
-    positions[idx] += normal * height;
+    shape.positions[idx] += normal * height;
   }
 
-  apply_brush(shape, positions, params.bvh, params.grid);
   return true;
 }
 
@@ -584,8 +585,10 @@ float laplacian_weight(vector<vec3f> &positions,
 
 // Smooth brush with Laplace Operator Discretization and Cotangents Weights
 bool smooth_brush(geodesic_solver &solver, vector<int> &stroke_sampling,
-    vector<vec3f> &positions, sculpt_params &params, scene_shape &shape) {
+    sculpt_params &params, scene_shape &shape) {
   if (stroke_sampling.empty()) return false;
+
+  auto &positions = shape.positions;
 
   auto distances = vector<float>(solver.graph.size(), flt_max);
   for (auto sample : stroke_sampling) distances[sample] = 0.0f;
@@ -616,7 +619,6 @@ bool smooth_brush(geodesic_solver &solver, vector<int> &stroke_sampling,
 
   stroke_sampling.clear();
 
-  apply_brush(shape, positions, params.bvh, params.grid);
   return true;
 }
 
@@ -820,26 +822,33 @@ bool update_stroke(sculpt_stroke &stroke, sculpt_params &params,
     auto [pairs, sampling] = sample_stroke(
         params, stroke, shape, mouse_uv, camera);
     vector<int> vertices;
+    auto        updated = false;
     if (params.type == brush_type::gaussian) {
-      gaussian_brush(shape, params, pairs);
+      updated = gaussian_brush(shape, params, pairs);
     } else if (params.type == brush_type::smooth) {
-      smooth_brush(params.solver, sampling, shape.positions, params, shape);
+      updated = smooth_brush(params.solver, sampling, params, shape);
     } else if (params.type == brush_type::texture && !pairs.empty()) {
       sampling.insert(sampling.begin(), stroke.stroke_sampling.begin(),
           stroke.stroke_sampling.end());
       stroke.stroke_sampling = sampling;
       vertices = stroke_parameterization(params.solver, params.coords, sampling,
           params.old_positions, params.old_normals, params.radius);
-      texture_brush(vertices, params.tex_image, params.coords, params, shape,
-          params.old_positions, params.old_normals);
+      updated  = texture_brush(shape, vertices, params.tex_image, params.coords,
+          params, params.old_positions, params.old_normals);
+    }
+    if (updated) {
+      triangles_normals(shape.normals, shape.triangles, shape.positions);
+      update_triangles_bvh(params.bvh, shape.triangles, shape.positions);
+      params.grid = make_hash_grid(shape.positions, params.grid.cell_size);
     }
     if (params.symmetric) {
+      auto updated              = false;
       std::tie(pairs, sampling) = symmetric_stroke(
           pairs, shape, params.bvh, params.symmetric_axis);
       if (params.type == brush_type::gaussian) {
-        gaussian_brush(shape, params, pairs);
+        updated = gaussian_brush(shape, params, pairs);
       } else if (params.type == brush_type::smooth) {
-        smooth_brush(params.solver, sampling, shape.positions, params, shape);
+        updated = smooth_brush(params.solver, sampling, params, shape);
       } else if (params.type == brush_type::texture && !pairs.empty()) {
         sampling.insert(sampling.begin(),
             stroke.symmetric_stroke_sampling.begin(),
@@ -847,8 +856,13 @@ bool update_stroke(sculpt_stroke &stroke, sculpt_params &params,
         stroke.symmetric_stroke_sampling = sampling;
         vertices = stroke_parameterization(params.solver, params.coords,
             sampling, params.old_positions, params.old_normals, params.radius);
-        texture_brush(vertices, params.tex_image, params.coords, params, shape,
-            shape.positions, shape.normals);
+        updated  = texture_brush(shape, vertices, params.tex_image,
+            params.coords, params, shape.positions, shape.normals);
+      }
+      if (updated) {
+        triangles_normals(shape.normals, shape.triangles, shape.positions);
+        update_triangles_bvh(params.bvh, shape.triangles, shape.positions);
+        params.grid = make_hash_grid(shape.positions, params.grid.cell_size);
       }
     }
     return true;
