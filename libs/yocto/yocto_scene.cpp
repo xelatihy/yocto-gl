@@ -1489,9 +1489,9 @@ void tesselate_subdiv(
   }
 
   shape = {};
-  std::tie(shape.quads, shape.positions, shape.normals, shape.texcoords) =
-      split_facevarying(subdiv.quadspos, subdiv.quadsnorm, subdiv.quadstexcoord,
-          subdiv.positions, subdiv.normals, subdiv.texcoords);
+  split_facevarying(shape.quads, shape.positions, shape.normals,
+      shape.texcoords, subdiv.quadspos, subdiv.quadsnorm, subdiv.quadstexcoord,
+      subdiv.positions, subdiv.normals, subdiv.texcoords);
 }
 
 void tesselate_shapes(

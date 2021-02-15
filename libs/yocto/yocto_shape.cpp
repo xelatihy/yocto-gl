@@ -1192,62 +1192,6 @@ vector<vec2i> bezier_to_lines(const vector<vec4i>& beziers) {
 
 // Convert face varying data to single primitives. Returns the quads indices
 // and filled vectors for pos, norm and texcoord.
-std::tuple<vector<vec4i>, vector<vec3f>, vector<vec3f>, vector<vec2f>>
-split_facevarying(const vector<vec4i>& quadspos, const vector<vec4i>& quadsnorm,
-    const vector<vec4i>& quadstexcoord, const vector<vec3f>& positions,
-    const vector<vec3f>& normals, const vector<vec2f>& texcoords) {
-  auto split =
-      std::tuple<vector<vec4i>, vector<vec3f>, vector<vec3f>, vector<vec2f>>{};
-  auto& [split_quads, split_positions, split_normals, split_texcoords] = split;
-  // make faces unique
-  unordered_map<vec3i, int> vert_map;
-  split_quads.resize(quadspos.size());
-  for (auto fid = 0; fid < quadspos.size(); fid++) {
-    for (auto c = 0; c < 4; c++) {
-      auto v = vec3i{
-          (&quadspos[fid].x)[c],
-          (!quadsnorm.empty()) ? (&quadsnorm[fid].x)[c] : -1,
-          (!quadstexcoord.empty()) ? (&quadstexcoord[fid].x)[c] : -1,
-      };
-      auto it = vert_map.find(v);
-      if (it == vert_map.end()) {
-        auto s = (int)vert_map.size();
-        vert_map.insert(it, {v, s});
-        (&split_quads[fid].x)[c] = s;
-      } else {
-        (&split_quads[fid].x)[c] = it->second;
-      }
-    }
-  }
-
-  // fill vert data
-  split_positions.clear();
-  if (!positions.empty()) {
-    split_positions.resize(vert_map.size());
-    for (auto& [vert, index] : vert_map) {
-      split_positions[index] = positions[vert.x];
-    }
-  }
-  split_normals.clear();
-  if (!normals.empty()) {
-    split_normals.resize(vert_map.size());
-    for (auto& [vert, index] : vert_map) {
-      split_normals[index] = normals[vert.y];
-    }
-  }
-  split_texcoords.clear();
-  if (!texcoords.empty()) {
-    split_texcoords.resize(vert_map.size());
-    for (auto& [vert, index] : vert_map) {
-      split_texcoords[index] = texcoords[vert.z];
-    }
-  }
-
-  return split;
-}
-
-// Convert face varying data to single primitives. Returns the quads indices
-// and filled vectors for pos, norm and texcoord.
 void split_facevarying(vector<vec4i>& split_quads,
     vector<vec3f>& split_positions, vector<vec3f>& split_normals,
     vector<vec2f>& split_texcoords, const vector<vec4i>& quadspos,
@@ -1299,30 +1243,6 @@ void split_facevarying(vector<vec4i>& split_quads,
   }
 }
 
-// Split primitives per id
-template <typename T>
-vector<vector<T>> ungroup_elems_impl(
-    const vector<T>& elems, const vector<int>& ids) {
-  auto max_id      = *max_element(ids.begin(), ids.end());
-  auto split_elems = vector<vector<T>>(max_id + 1);
-  for (auto elem_id = 0; elem_id < elems.size(); elem_id++) {
-    split_elems[ids[elem_id]].push_back(elems[elem_id]);
-  }
-  return split_elems;
-}
-vector<vector<vec2i>> ungroup_lines(
-    const vector<vec2i>& lines, const vector<int>& ids) {
-  return ungroup_elems_impl(lines, ids);
-}
-vector<vector<vec3i>> ungroup_triangles(
-    const vector<vec3i>& triangles, const vector<int>& ids) {
-  return ungroup_elems_impl(triangles, ids);
-}
-vector<vector<vec4i>> ungroup_quads(
-    const vector<vec4i>& quads, const vector<int>& ids) {
-  return ungroup_elems_impl(quads, ids);
-}
-
 // Weld vertices within a threshold.
 pair<vector<vec3f>, vector<int>> weld_vertices(
     const vector<vec3f>& positions, float threshold) {
@@ -1366,22 +1286,6 @@ pair<vector<vec4i>, vector<vec3f>> weld_quads(const vector<vec4i>& quads,
 }
 
 // Merge shape elements
-void merge_lines(
-    vector<vec2i>& lines, const vector<vec2i>& merge_lines, int num_verts) {
-  for (auto& l : merge_lines)
-    lines.push_back({l.x + num_verts, l.y + num_verts});
-}
-void merge_triangles(vector<vec3i>& triangles,
-    const vector<vec3i>& merge_triangles, int num_verts) {
-  for (auto& t : merge_triangles)
-    triangles.push_back({t.x + num_verts, t.y + num_verts, t.z + num_verts});
-}
-void merge_quads(
-    vector<vec4i>& quads, const vector<vec4i>& merge_quads, int num_verts) {
-  for (auto& q : merge_quads)
-    quads.push_back(
-        {q.x + num_verts, q.y + num_verts, q.z + num_verts, q.w + num_verts});
-}
 void merge_lines(vector<vec2i>& lines, vector<vec3f>& positions,
     vector<vec3f>& tangents, vector<vec2f>& texcoords, vector<float>& radius,
     const vector<vec2i>& merge_lines, const vector<vec3f>& merge_positions,
@@ -1427,20 +1331,6 @@ void merge_quads(vector<vec4i>& quads, vector<vec3f>& positions,
   normals.insert(normals.end(), merge_normals.begin(), merge_normals.end());
   texcoords.insert(
       texcoords.end(), merge_texturecoords.begin(), merge_texturecoords.end());
-}
-
-void merge_triangles_and_quads(
-    vector<vec3i>& triangles, vector<vec4i>& quads, bool force_triangles) {
-  if (quads.empty()) return;
-  if (force_triangles) {
-    auto qtriangles = quads_to_triangles(quads);
-    triangles.insert(triangles.end(), qtriangles.begin(), qtriangles.end());
-    quads = {};
-  } else {
-    auto tquads = triangles_to_quads(triangles);
-    quads.insert(quads.end(), tquads.begin(), tquads.end());
-    triangles = {};
-  }
 }
 
 }  // namespace yocto

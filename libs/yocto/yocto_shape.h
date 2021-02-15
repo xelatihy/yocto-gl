@@ -361,12 +361,6 @@ vector<vec4i> triangles_to_quads(const vector<vec3i>& triangles);
 vector<vec4i> bezier_to_lines(vector<vec2i>& lines);
 
 // Convert face-varying data to single primitives. Returns the quads indices
-// and face ids and filled vectors for pos, norm, texcoord and colors.
-std::tuple<vector<vec4i>, vector<vec3f>, vector<vec3f>, vector<vec2f>>
-split_facevarying(const vector<vec4i>& quadspos, const vector<vec4i>& quadsnorm,
-    const vector<vec4i>& quadstexcoord, const vector<vec3f>& positions,
-    const vector<vec3f>& normals, const vector<vec2f>& texcoords);
-// Convert face varying data to single primitives. Returns the quads indices
 // and filled vectors for pos, norm and texcoord.
 void split_facevarying(vector<vec4i>& split_quads,
     vector<vec3f>& split_positions, vector<vec3f>& split_normals,
@@ -374,14 +368,6 @@ void split_facevarying(vector<vec4i>& split_quads,
     const vector<vec4i>& quadsnorm, const vector<vec4i>& quadstexcoord,
     const vector<vec3f>& positions, const vector<vec3f>& normals,
     const vector<vec2f>& texcoords);
-
-// Split primitives per id
-vector<vector<vec2i>> ungroup_lines(
-    const vector<vec2i>& lines, const vector<int>& ids);
-vector<vector<vec3i>> ungroup_triangles(
-    const vector<vec3i>& triangles, const vector<int>& ids);
-vector<vector<vec4i>> ungroup_quads(
-    const vector<vec4i>& quads, const vector<int>& ids);
 
 // Weld vertices within a threshold.
 pair<vector<vec3f>, vector<int>> weld_vertices(
@@ -393,12 +379,6 @@ pair<vector<vec4i>, vector<vec3f>> weld_quads(const vector<vec4i>& quads,
     const vector<vec3f>& positions, float threshold);
 
 // Merge shape elements
-void merge_lines(
-    vector<vec2i>& lines, const vector<vec2i>& merge_lines, int num_verts);
-void merge_triangles(vector<vec3i>& triangles,
-    const vector<vec2i>& merge_triangles, int num_verts);
-void merge_quads(
-    vector<vec4i>& quads, const vector<vec4i>& merge_quads, int num_verts);
 void merge_lines(vector<vec2i>& lines, vector<vec3f>& positions,
     vector<vec3f>& tangents, vector<vec2f>& texcoords, vector<float>& radius,
     const vector<vec2i>& merge_lines, const vector<vec3f>& merge_positions,
@@ -415,10 +395,6 @@ void merge_quads(vector<vec4i>& quads, vector<vec3f>& positions,
     const vector<vec4i>& merge_quads, const vector<vec3f>& merge_positions,
     const vector<vec3f>& merge_normals,
     const vector<vec2f>& merge_texturecoords);
-
-// Merge quads and triangles
-void merge_triangles_and_quads(
-    vector<vec3i>& triangles, vector<vec4i>& quads, bool force_triangles);
 
 }  // namespace yocto
 

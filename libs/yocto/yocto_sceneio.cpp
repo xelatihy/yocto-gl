@@ -1015,10 +1015,14 @@ bool save_fvshape(const string& filename, const fvshape_data& shape,
 
   auto ext = path_extension(filename);
   if (ext == ".ply" || ext == ".PLY") {
-    auto ply = ply_model{};
-    auto [split_quads, split_positions, split_normals, split_texcoords] =
-        split_facevarying(shape.quadspos, shape.quadsnorm, shape.quadstexcoord,
-            shape.positions, shape.normals, shape.texcoords);
+    auto ply             = ply_model{};
+    auto split_quads     = vector<vec4i>{};
+    auto split_positions = vector<vec3f>{};
+    auto split_normals   = vector<vec3f>{};
+    auto split_texcoords = vector<vec2f>{};
+    split_facevarying(split_quads, split_positions, split_normals,
+        split_texcoords, shape.quadspos, shape.quadsnorm, shape.quadstexcoord,
+        shape.positions, shape.normals, shape.texcoords);
     add_positions(ply, split_positions);
     add_normals(ply, split_normals);
     add_texcoords(ply, split_texcoords, flip_texcoord);
@@ -1034,9 +1038,13 @@ bool save_fvshape(const string& filename, const fvshape_data& shape,
   } else if (ext == ".stl" || ext == ".STL") {
     auto stl = stl_model{};
     if (!shape.quadspos.empty()) {
-      auto [split_quads, split_positions, split_normals,
-          split_texcoords] = split_facevarying(shape.quadspos, shape.quadsnorm,
-          shape.quadstexcoord, shape.positions, shape.normals, shape.texcoords);
+      auto split_quads     = vector<vec4i>{};
+      auto split_positions = vector<vec3f>{};
+      auto split_normals   = vector<vec3f>{};
+      auto split_texcoords = vector<vec2f>{};
+      split_facevarying(split_quads, split_positions, split_normals,
+          split_texcoords, shape.quadspos, shape.quadsnorm, shape.quadstexcoord,
+          shape.positions, shape.normals, shape.texcoords);
       add_triangles(stl, quads_to_triangles(split_quads), split_positions, {});
     } else {
       return shape_error();
@@ -3238,10 +3246,10 @@ static bool load_obj_scene(const string& filename, scene_scene& scene,
   };
 
   // handler for textures
-  auto textures_paths = vector<string>{};
+  auto texture_paths = vector<string>{};
   for (auto& otexture : obj.textures) {
     scene.textures.emplace_back();
-    textures_paths.emplace_back(otexture.path);
+    texture_paths.emplace_back(otexture.path);
   }
 
   // handler for materials
@@ -3307,7 +3315,7 @@ static bool load_obj_scene(const string& filename, scene_scene& scene,
     // load textures
     for (auto& texture : scene.textures) {
       if (progress_cb) progress_cb("load texture", progress.x++, progress.y);
-      auto& path = textures_paths[&texture - &scene.textures.front()];
+      auto& path = texture_paths[&texture - &scene.textures.front()];
       if (!load_texture(path_join(dirname, path), texture, error))
         return dependent_error();
     }
@@ -3321,9 +3329,9 @@ static bool load_obj_scene(const string& filename, scene_scene& scene,
         if (!error.empty()) return;
         if (progress_cb) progress_cb("load texture", progress.x++, progress.y);
         printf("%s %s\n", get_texture_name(scene, texture).c_str(),
-            textures_paths[&texture - &scene.textures.front()].c_str());
+            texture_paths[&texture - &scene.textures.front()].c_str());
       }
-      auto& path = textures_paths[&texture - &scene.textures.front()];
+      auto& path = texture_paths[&texture - &scene.textures.front()];
       auto  err  = string{};
       if (!load_texture(path_join(dirname, path), texture, err)) {
         auto lock = std::lock_guard{mutex};
@@ -3725,12 +3733,12 @@ static bool load_gltf_scene(const string& filename, scene_scene& scene,
   };
 
   // convert textures
-  auto textures_paths = vector<string>{};
+  auto texture_paths = vector<string>{};
   if (gltf.contains("images")) {
     try {
       for (auto& gimage : gltf.at("images")) {
         scene.textures.emplace_back();
-        textures_paths.push_back(gimage.value("uri", ""));
+        texture_paths.push_back(gimage.value("uri", ""));
       }
     } catch (...) {
       return parse_error();
@@ -4052,7 +4060,7 @@ static bool load_gltf_scene(const string& filename, scene_scene& scene,
     // load texture
     for (auto& texture : scene.textures) {
       if (progress_cb) progress_cb("load texture", progress.x++, progress.y);
-      auto& path = textures_paths[&texture - &scene.textures.front()];
+      auto& path = texture_paths[&texture - &scene.textures.front()];
       if (!load_texture(path_join(dirname, path), texture, error))
         return dependent_error();
     }
@@ -4066,7 +4074,7 @@ static bool load_gltf_scene(const string& filename, scene_scene& scene,
         if (!error.empty()) return;
         if (progress_cb) progress_cb("load texture", progress.x++, progress.y);
       }
-      auto& path = textures_paths[&texture - &scene.textures.front()];
+      auto& path = texture_paths[&texture - &scene.textures.front()];
       auto  err  = string{};
       if (!load_texture(path_join(dirname, path), texture, err)) {
         auto lock = std::lock_guard{mutex};
@@ -4507,10 +4515,10 @@ static bool load_pbrt_scene(const string& filename, scene_scene& scene,
   }
 
   // convert material
-  auto textures_paths = vector<string>{};
+  auto texture_paths = vector<string>{};
   for (auto& ptexture : pbrt.textures) {
     scene.textures.emplace_back();
-    textures_paths.push_back(ptexture.filename);
+    texture_paths.push_back(ptexture.filename);
   }
 
   // material type map
@@ -4605,7 +4613,7 @@ static bool load_pbrt_scene(const string& filename, scene_scene& scene,
     // load texture
     for (auto& texture : scene.textures) {
       if (progress_cb) progress_cb("load texture", progress.x++, progress.y);
-      auto& path = textures_paths[&texture - &scene.textures.front()];
+      auto& path = texture_paths[&texture - &scene.textures.front()];
       if (!load_texture(path_join(dirname, path), texture, error))
         return dependent_error();
     }
@@ -4636,7 +4644,7 @@ static bool load_pbrt_scene(const string& filename, scene_scene& scene,
         if (!error.empty()) return;
         if (progress_cb) progress_cb("load texture", progress.x++, progress.y);
       }
-      auto& path = textures_paths[&texture - &scene.textures.front()];
+      auto& path = texture_paths[&texture - &scene.textures.front()];
       auto  err  = string{};
       if (!load_texture(path_join(dirname, path), texture, err)) {
         auto lock = std::lock_guard{mutex};
