@@ -256,19 +256,17 @@ float gaussian_distribution(vec3f origin, vec3f position, float standard_dev,
   return N * yocto::exp(-E);
 }
 
-// Change positions, normals, boundig volume hierarchy and hash grid
-void apply_brush(shape_data &shape, vector<vec3f> &positions,
-    shade_shape &glshape, shape_bvh &tree, hash_grid &grid) {
+// Change positions, normals, bounding volume hierarchy and hash grid
+void apply_brush(shape_data &shape, vector<vec3f> &positions, shape_bvh &tree,
+    hash_grid &grid) {
   shape.positions = positions;
-  set_positions(glshape, positions);
   triangles_normals(shape.normals, shape.triangles, shape.positions);
-  set_normals(glshape, shape.normals);
   update_triangles_bvh(tree, shape.triangles, shape.positions);
   grid = make_hash_grid(positions, grid.cell_size);
 }
 
 // To apply brush on intersected points' neighbors
-void brush(sculpt_params &params, scene_shape &shape, shade_shape &glshape,
+void brush(sculpt_params &params, scene_shape &shape,
     vector<pair<vec3f, vec3f>> &pairs) {
   if (pairs.empty()) return;
   auto &positions = shape.positions;
@@ -310,13 +308,13 @@ void brush(sculpt_params &params, scene_shape &shape, shade_shape &glshape,
     neighbors.clear();
   }
 
-  apply_brush(shape, positions, glshape, params.bvh, params.grid);
+  apply_brush(shape, positions, params.bvh, params.grid);
 }
 
 // Compute texture values through the parameterization
 void texture_brush(vector<int> &vertices, image_data &texture,
     vector<vec2f> &coords, sculpt_params &params, scene_shape &shape,
-    shade_shape &glshape, vector<vec3f> positions, vector<vec3f> normals) {
+    vector<vec3f> positions, vector<vec3f> normals) {
   if (vertices.empty()) return;
   if (texture.pixelsf.empty() && texture.pixelsb.empty()) return;
 
@@ -334,7 +332,7 @@ void texture_brush(vector<int> &vertices, image_data &texture,
     positions[i] += normal * height;
   }
 
-  apply_brush(shape, positions, glshape, params.bvh, params.grid);
+  apply_brush(shape, positions, params.bvh, params.grid);
 }
 
 // Cotangent operator
@@ -372,8 +370,7 @@ float laplacian_weight(vector<vec3f> &positions,
 
 // Smooth brush with Laplace Operator Discretization and Cotangents Weights
 void smooth(geodesic_solver &solver, vector<int> &stroke_sampling,
-    vector<vec3f> &positions, sculpt_params &params, scene_shape &shape,
-    shade_shape &glshape) {
+    vector<vec3f> &positions, sculpt_params &params, scene_shape &shape) {
   if (stroke_sampling.empty()) return;
 
   auto distances = vector<float>(solver.graph.size(), flt_max);
@@ -403,7 +400,7 @@ void smooth(geodesic_solver &solver, vector<int> &stroke_sampling,
   };
   dijkstra(solver, stroke_sampling, distances, params.radius, update);
 
-  apply_brush(shape, positions, glshape, params.bvh, params.grid);
+  apply_brush(shape, positions, params.bvh, params.grid);
 
   stroke_sampling.clear();
 }
@@ -685,8 +682,9 @@ int run_shade_sculpt(const shade_sculpt_params &params_) {
     auto mouse_uv = vec2f{input.mouse_pos.x / float(input.window_size.x),
         input.mouse_pos.y / float(input.window_size.y)};
 
-    auto &shape         = app.ioscene.shapes.front();
+    auto &shape         = app.ioscene.shapes.at(0);
     auto &glcamera      = app.glscene.cameras.at(0);
+    auto &glshape       = app.glscene.shapes.at(0);
     params.camera_ray   = camera_ray(glcamera.frame, glcamera.lens,
         glcamera.aspect, glcamera.film, mouse_uv);
     params.intersection = intersect_triangles_bvh(
@@ -707,34 +705,36 @@ int run_shade_sculpt(const shade_sculpt_params &params_) {
       auto pairs = stroke(params, shape, mouse_uv, app.glscene.cameras.at(0));
       vector<int> vertices;
       if (params.type == brush_type::gaussian) {
-        brush(params, shape, app.glscene.shapes.front(), pairs);
+        brush(params, shape, pairs);
       } else if (params.type == brush_type::smooth) {
         smooth(params.solver, params.stroke_sampling, shape.positions, params,
-            shape, app.glscene.shapes.front());
+            shape);
       } else if (params.type == brush_type::texture && !pairs.empty()) {
         vertices = stroke_parameterization(params.solver, params.coords,
             params.stroke_sampling, params.old_positions, params.old_normals,
             params.radius);
         texture_brush(vertices, params.tex_image, params.coords, params, shape,
-            app.glscene.shapes[app.glscene.instances[0].shape],
             params.old_positions, params.old_normals);
       }
+      set_positions(glshape, shape.positions);
+      set_normals(glshape, shape.normals);
       if (params.symmetric) {
         pairs = symmetric_stroke(pairs, shape, params.bvh,
             params.symmetric_stroke_sampling, params.symmetric_axis);
         if (params.type == brush_type::gaussian) {
-          brush(params, shape, app.glscene.shapes.front(), pairs);
+          brush(params, shape, pairs);
         } else if (params.type == brush_type::smooth) {
           smooth(params.solver, params.symmetric_stroke_sampling,
-              shape.positions, params, shape, app.glscene.shapes.front());
+              shape.positions, params, shape);
         } else if (params.type == brush_type::texture && !pairs.empty()) {
           vertices = stroke_parameterization(params.solver, params.coords,
               params.symmetric_stroke_sampling, params.old_positions,
               params.old_normals, params.radius);
           texture_brush(vertices, params.tex_image, params.coords, params,
-              shape, app.glscene.shapes[app.glscene.instances[0].shape],
-              shape.positions, shape.normals);
+              shape, shape.positions, shape.normals);
         }
+        set_positions(glshape, shape.positions);
+        set_normals(glshape, shape.normals);
       }
     } else {
       end_stroke(params, shape);
