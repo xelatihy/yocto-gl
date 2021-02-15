@@ -81,71 +81,6 @@ struct sculpt_params {
   vector<vec3f>   old_normals               = {};
 };
 
-// TODO(fabio): move this function to math
-static frame3f camera_frame(float lens, float aspect, float film = 0.036) {
-  auto camera_dir  = normalize(vec3f{0, 0.5, 1});
-  auto bbox_radius = 2.0f;
-  auto camera_dist = bbox_radius * lens / (film / aspect);
-  return lookat_frame(camera_dir * camera_dist, {0, 0, 0}, {0, 1, 0});
-}
-
-void init_glscene(shade_sculpt_state &app, shade_scene &glscene,
-    shape_data *ioshape, progress_callback progress_cb) {
-  // handle progress
-  auto progress = vec2i{0, 4};
-
-  // init scene
-  init_scene(glscene, true);
-
-  // compute bounding box
-  auto bbox = invalidb3f;
-  for (auto &pos : ioshape->positions) bbox = merge(bbox, pos);
-  // for (auto &pos : ioshape->positions) pos -= center(bbox);
-  // for (auto &pos : ioshape->positions) pos /= yocto::max(size(bbox));
-  // TODO(fabio): this should be a math function
-
-  // camera
-  if (progress_cb) progress_cb("convert camera", progress.x++, progress.y);
-  auto  chandle  = add_camera(glscene, camera_frame(0.050, 16.0f / 9.0f, 0.036),
-      0.050, 16.0f / 9.0f, 0.036);
-  auto &glcamera = glscene.cameras.at(chandle);
-  glcamera.focus = length(glcamera.frame.o - center(bbox));
-
-  // material
-  if (progress_cb) progress_cb("convert material", progress.x++, progress.y);
-
-  auto emission   = vec3f{0, 0, 0};
-  auto color      = vec3f{0.78f, 0.31f, 0.23f};
-  auto specular   = 0.0f;
-  auto metallic   = 0.0f;
-  auto roughness  = 0.0f;
-  auto glmaterial = add_material(
-      glscene, emission, color, specular, metallic, roughness);
-
-  // shapes
-  if (progress_cb) progress_cb("convert shape", progress.x++, progress.y);
-  auto model_shape = add_shape(glscene, ioshape->points, ioshape->lines,
-      ioshape->triangles, ioshape->quads, ioshape->positions, ioshape->normals,
-      ioshape->texcoords, ioshape->colors, true);
-  if (!has_normals(glscene.shapes[model_shape])) {
-    app.drawgl_prms.faceted = true;
-  }
-  set_instances(glscene.shapes[model_shape], {}, {});
-
-  // shapes
-  if (progress_cb) progress_cb("convert instance", progress.x++, progress.y);
-  add_instance(glscene, identity3x4f, model_shape, glmaterial);
-
-  auto pointer_shape                           = add_shape(glscene);
-  auto pointer_material                        = add_material(glscene);
-  glscene.materials.at(pointer_material).color = {1, 1, 1};
-  set_unlit(glscene.materials.at(pointer_material), true);
-  add_instance(glscene, identity3x4f, pointer_shape, pointer_material);
-
-  // done
-  if (progress_cb) progress_cb("convert done", progress.x++, progress.y);
-}
-
 // Initialize all sculpting parameters.
 void init_sculpt_tool(sculpt_params *params, shape_data *shape,
     std::string shapename, std::string texture_name,
@@ -484,6 +419,14 @@ void smooth(geodesic_solver &solver, vector<int> &stroke_sampling,
   apply_brush(params->shape, positions, glshape, params->bvh, params->grid);
 
   stroke_sampling.clear();
+}
+
+// TODO(fabio): move this function to math
+static frame3f camera_frame(float lens, float aspect, float film = 0.036) {
+  auto camera_dir  = normalize(vec3f{0, 0.5, 1});
+  auto bbox_radius = 2.0f;
+  auto camera_dist = bbox_radius * lens / (film / aspect);
+  return lookat_frame(camera_dir * camera_dist, {0, 0, 0}, {0, 1, 0});
 }
 
 static void convert_scene(scene_scene &scene, const scene_shape &ioshape_,
