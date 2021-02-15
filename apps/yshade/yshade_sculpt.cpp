@@ -27,6 +27,10 @@ struct shade_sculpt_state {
   string texturename = "";
   string name        = "";
 
+  // scene
+  sceneio_scene ioscene  = sceneio_scene{};
+  camera_handle iocamera = invalid_handle;
+
   // options
   shade_params drawgl_prms = {};
 
@@ -97,8 +101,8 @@ void init_glscene(shade_sculpt_state &app, shade_scene &glscene,
   // compute bounding box
   auto bbox = invalidb3f;
   for (auto &pos : ioshape->positions) bbox = merge(bbox, pos);
-  for (auto &pos : ioshape->positions) pos -= center(bbox);
-  for (auto &pos : ioshape->positions) pos /= yocto::max(size(bbox));
+  // for (auto &pos : ioshape->positions) pos -= center(bbox);
+  // for (auto &pos : ioshape->positions) pos /= yocto::max(size(bbox));
   // TODO(fabio): this should be a math function
 
   // camera
@@ -483,6 +487,98 @@ void smooth(geodesic_solver &solver, vector<int> &stroke_sampling,
   stroke_sampling.clear();
 }
 
+static void convert_scene(scene_scene &scene, const scene_shape &ioshape_,
+    progress_callback progress_cb) {
+  // handle progress
+  auto progress = vec2i{0, 5};
+  if (progress_cb) progress_cb("create scene", progress.x++, progress.y);
+
+  // init scene
+  scene = {};
+
+  // rescale shape to unit
+  auto ioshape = ioshape_;
+  auto bbox    = invalidb3f;
+  for (auto &pos : ioshape.positions) bbox = merge(bbox, pos);
+  for (auto &pos : ioshape.positions) pos -= center(bbox);
+  for (auto &pos : ioshape.positions) pos /= max(size(bbox));
+  // TODO(fabio): this should be a math function
+
+  // material
+  if (progress_cb) progress_cb("create material", progress.x++, progress.y);
+  auto &shape_material     = scene.materials.emplace_back();
+  shape_material.type      = material_type::plastic;
+  shape_material.color     = {0.5, 1, 0.5};
+  shape_material.roughness = 0.2;
+  auto &edges_material     = scene.materials.emplace_back();
+  edges_material.type      = material_type::matte;
+  edges_material.color     = {0, 0, 0};
+  auto &vertices_material  = scene.materials.emplace_back();
+  vertices_material.type   = material_type::matte;
+  vertices_material.color  = {0, 0, 0};
+
+  // shapes
+  if (progress_cb) progress_cb("create shape", progress.x++, progress.y);
+  scene.shapes.emplace_back(ioshape);
+  auto &edges_shape        = scene.shapes.emplace_back();
+  edges_shape.positions    = ioshape.positions;
+  edges_shape.lines        = get_edges(ioshape.triangles, ioshape.quads);
+  auto &vertices_shape     = scene.shapes.emplace_back(ioshape);
+  vertices_shape.positions = ioshape.positions;
+  vertices_shape.points    = vector<int>(ioshape.positions.size());
+  for (auto idx = 0; idx < (int)vertices_shape.points.size(); idx++)
+    vertices_shape.points[idx] = idx;
+
+#if 0
+  auto froms = vector<vec3f>();
+  auto tos   = vector<vec3f>();
+  froms.reserve(edges.size());
+  tos.reserve(edges.size());
+  float avg_edge_length = 0;
+  for (auto& edge : edges) {
+    auto from = ioshape.positions[edge.x];
+    auto to   = ioshape.positions[edge.y];
+    froms.push_back(from);
+    tos.push_back(to);
+    avg_edge_length += length(from - to);
+  }
+  avg_edge_length /= edges.size();
+  auto cylinder_radius = 0.05f * avg_edge_length;
+  auto cylinder        = make_uvcylinder({4, 1, 1}, {cylinder_radius, 1});
+  for (auto& p : cylinder.positions) {
+    p.z = p.z * 0.5 + 0.5;
+  }
+  auto edges_shape = add_shape(glscene, {}, {}, {}, cylinder.quads,
+      cylinder.positions, cylinder.normals, cylinder.texcoords, {});
+  set_instances(glscene.shapes[edges_shape], froms, tos);
+
+  auto vertices_radius = 3.0f * cylinder_radius;
+  auto vertices        = make_spheres(ioshape.positions, vertices_radius, 2);
+  auto vertices_shape  = add_shape(glscene, {}, {}, {}, vertices.quads,
+      vertices.positions, vertices.normals, vertices.texcoords, {});
+  set_instances(glscene.shapes[vertices_shape], {}, {});
+#endif
+
+  // instances
+  if (progress_cb) progress_cb("create instance", progress.x++, progress.y);
+  auto &shape_instance       = scene.instances.emplace_back();
+  shape_instance.shape       = 0;
+  shape_instance.material    = 0;
+  auto &edges_instance       = scene.instances.emplace_back();
+  edges_instance.shape       = 1;
+  edges_instance.material    = 1;
+  auto &vertices_instance    = scene.instances.emplace_back();
+  vertices_instance.shape    = 2;
+  vertices_instance.material = 2;
+
+  // camera
+  if (progress_cb) progress_cb("create camera", progress.x++, progress.y);
+  add_camera(scene);
+
+  // done
+  if (progress_cb) progress_cb("create scene", progress.x++, progress.y);
+}
+
 int run_shade_sculpt(const shade_sculpt_params &params_) {
   // initialize app
   auto app = shade_sculpt_state();
@@ -510,7 +606,8 @@ int run_shade_sculpt(const shade_sculpt_params &params_) {
   }
 
   // setup app
-  *app.ioshape = ioshape;
+  convert_scene(app.ioscene, ioshape, print_progress);
+  *app.ioshape = app.ioscene.shapes[0];
 
   sculpt_params *params = nullptr;
 
