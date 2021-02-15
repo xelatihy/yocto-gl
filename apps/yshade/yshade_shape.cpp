@@ -389,7 +389,7 @@ int run_shade_shape(const shade_shape_params& params) {
   };
 
   // run ui
-  run_ui({1280 + 320, 720}, "yshapeview", callbacks);
+  run_ui({1280 + 320, 720}, "yshape", callbacks);
 
   // done
   return 0;

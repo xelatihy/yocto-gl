@@ -235,13 +235,6 @@ int run_shade_scene(const shade_scene_params& params) {
   };
   callbacks.widgets_cb = [app](gui_window* win, const gui_input& input) {
     draw_progressbar(win, app->status.c_str(), app->current, app->total);
-    // if (draw_combobox(
-    //         win, "camera", app->iocamera, app->ioscene.camera_names)) {
-    //   for (auto idx = 0; idx < app->ioscene.cameras.size(); idx++) {
-    //     if (app->ioscene.cameras[idx] == app->iocamera)
-    //       app->glcamera = app->glscene->cameras[idx];
-    //   }
-    // }
     auto& params = app->drawgl_prms;
     draw_slider(win, "resolution", params.resolution, 0, 4096);
     draw_checkbox(win, "wireframe", params.wireframe);
