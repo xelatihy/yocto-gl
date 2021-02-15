@@ -186,12 +186,13 @@ int closest_vertex(
 }
 
 // To make the stroke sampling (position, normal) following the mouse
-vector<pair<vec3f, vec3f>> stroke(sculpt_params &params, scene_shape &shape,
-    const vec2f &mouse_uv, const scene_camera &camera) {
+pair<vector<pair<vec3f, vec3f>>, vector<int>> stroke(sculpt_params &params,
+    scene_shape &shape, const vec2f &mouse_uv, const scene_camera &camera) {
   // eval current intersection
-  auto  pairs = vector<pair<vec3f, vec3f>>{};
-  auto &inter = params.intersection;
-  auto  pos   = eval_position(
+  auto  pairs    = vector<pair<vec3f, vec3f>>{};
+  auto  sampling = vector<int>{};
+  auto &inter    = params.intersection;
+  auto  pos      = eval_position(
       shape.triangles, shape.positions, {inter.element, inter.uv});
   auto nor = eval_normal(
       shape.triangles, shape.normals, {inter.element, inter.uv});
@@ -204,9 +205,9 @@ vector<pair<vec3f, vec3f>> stroke(sculpt_params &params, scene_shape &shape,
     pair.first  = pos;
     pair.second = nor;
     pairs.push_back(pair);
-    params.stroke_sampling.push_back(
+    sampling.push_back(
         closest_vertex(shape.triangles, inter.element, inter.uv));
-    return pairs;
+    return {pairs, sampling};
   }
 
   // handle first stroke intersection
@@ -214,12 +215,12 @@ vector<pair<vec3f, vec3f>> stroke(sculpt_params &params, scene_shape &shape,
     params.locked_position = pos;
     params.locked_uv       = mouse_uv;
     params.lock            = true;
-    return pairs;
+    return {pairs, sampling};
   }
 
   float delta_uv = distance(mouse_uv, params.locked_uv);
   int   steps    = int(delta_pos / stroke_dist);
-  if (steps == 0) return pairs;
+  if (steps == 0) return {pairs, sampling};
   pairs           = vector<pair<vec3f, vec3f>>(steps);
   float stroke_uv = delta_uv * stroke_dist / delta_pos;
   auto  mouse_dir = normalize(mouse_uv - params.locked_uv);
@@ -230,23 +231,23 @@ vector<pair<vec3f, vec3f>> stroke(sculpt_params &params, scene_shape &shape,
     inter    = intersect_triangles_bvh(
         params.bvh, shape.triangles, shape.positions, ray, false);
     if (!inter.hit) continue;
-    pos = eval_position(shape, inter.element, inter.uv);
-    nor = eval_normal(shape, inter.element, inter.uv);
-    params.stroke_sampling.push_back(
-        closest_vertex(shape.triangles, inter.element, inter.uv));
-    auto pair              = std::pair<vec3f, vec3f>{pos, nor};
+    pos                    = eval_position(shape, inter.element, inter.uv);
+    nor                    = eval_normal(shape, inter.element, inter.uv);
     params.locked_position = pos;
-    pairs.push_back(pair);
+    sampling.push_back(
+        closest_vertex(shape.triangles, inter.element, inter.uv));
+    pairs.push_back({pos, nor});
   }
-  return pairs;
+  return {pairs, sampling};
 }
 
 // To obtain symmetric from stroke result
-vector<pair<vec3f, vec3f>> symmetric_stroke(vector<pair<vec3f, vec3f>> &pairs,
-    shape_data &shape, shape_bvh &tree, vector<int> &symmetric_stroke_sampling,
+pair<vector<pair<vec3f, vec3f>>, vector<int>> symmetric_stroke(
+    vector<pair<vec3f, vec3f>> &pairs, shape_data &shape, shape_bvh &tree,
     axes axis) {
   vector<pair<vec3f, vec3f>> symmetric_pairs;
-  if (pairs.empty()) return symmetric_pairs;
+  vector<int>                symmetric_sampling;
+  if (pairs.empty()) return {symmetric_pairs, symmetric_sampling};
   for (int i = 0; i < pairs.size(); i++) {
     auto ray = ray3f{};
     ray.d    = pairs[i].first;
@@ -275,14 +276,14 @@ vector<pair<vec3f, vec3f>> symmetric_stroke(vector<pair<vec3f, vec3f>> &pairs,
     auto pos  = eval_position(shape, inter.element, inter.uv);
     auto nor  = eval_normal(shape, inter.element, inter.uv);
     auto pair = std::pair<vec3f, vec3f>{pos, nor};
-    symmetric_stroke_sampling.push_back(
+    symmetric_sampling.push_back(
         closest_vertex(shape.triangles, inter.element, inter.uv));
     symmetric_pairs.push_back(pair);
   }
-  return symmetric_pairs;
+  return {symmetric_pairs, symmetric_sampling};
 }
 
-// Project a vector on a plane, maintaining vector lenght
+// Project a vector on a plane, maintaining vector length
 inline vec2f project_onto_plane(const mat3f &basis, const vec3f &p) {
   auto v  = p - dot(p, basis.z) * basis.z;
   auto v1 = vec2f{dot(v, basis.x), dot(v, basis.y)};
@@ -807,7 +808,7 @@ bool update_stroke(sculpt_params &params, scene_shape &shape,
   // sculpting
   if (mouse_pressed && isec.hit && (isec.uv.x >= 0 && isec.uv.x < 1) &&
       (isec.uv.y >= 0 && isec.uv.y < 1)) {
-    auto        pairs = stroke(params, shape, mouse_uv, camera);
+    auto [pairs, sampling] = stroke(params, shape, mouse_uv, camera);
     vector<int> vertices;
     if (params.type == brush_type::gaussian) {
       gaussian_brush(shape, params, pairs);
@@ -815,24 +816,29 @@ bool update_stroke(sculpt_params &params, scene_shape &shape,
       smooth_brush(params.solver, params.stroke_sampling, shape.positions,
           params, shape);
     } else if (params.type == brush_type::texture && !pairs.empty()) {
-      vertices = stroke_parameterization(params.solver, params.coords,
-          params.stroke_sampling, params.old_positions, params.old_normals,
-          params.radius);
+      sampling.insert(sampling.begin(), params.stroke_sampling.begin(),
+          params.stroke_sampling.end());
+      params.stroke_sampling = sampling;
+      vertices = stroke_parameterization(params.solver, params.coords, sampling,
+          params.old_positions, params.old_normals, params.radius);
       texture_brush(vertices, params.tex_image, params.coords, params, shape,
           params.old_positions, params.old_normals);
     }
     if (params.symmetric) {
-      pairs = symmetric_stroke(pairs, shape, params.bvh,
-          params.symmetric_stroke_sampling, params.symmetric_axis);
+      std::tie(pairs, sampling) = symmetric_stroke(
+          pairs, shape, params.bvh, params.symmetric_axis);
       if (params.type == brush_type::gaussian) {
         gaussian_brush(shape, params, pairs);
       } else if (params.type == brush_type::smooth) {
         smooth_brush(params.solver, params.symmetric_stroke_sampling,
             shape.positions, params, shape);
       } else if (params.type == brush_type::texture && !pairs.empty()) {
+        sampling.insert(sampling.begin(),
+            params.symmetric_stroke_sampling.begin(),
+            params.symmetric_stroke_sampling.end());
+        params.symmetric_stroke_sampling = sampling;
         vertices = stroke_parameterization(params.solver, params.coords,
-            params.symmetric_stroke_sampling, params.old_positions,
-            params.old_normals, params.radius);
+            sampling, params.old_positions, params.old_normals, params.radius);
         texture_brush(vertices, params.tex_image, params.coords, params, shape,
             shape.positions, shape.normals);
       }
