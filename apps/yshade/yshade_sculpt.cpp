@@ -530,15 +530,14 @@ bool gaussian_brush(vector<vec3f> &positions, vector<float> &opacity,
 }
 
 // Compute texture values through the parameterization
-bool texture_brush(scene_shape &shape, const vector<int> &vertices,
+bool texture_brush(vector<vec3f> &positions, const vector<int> &vertices,
     const image_data &texture, const vector<vec2f> &coords,
-    const sculpt_params &params, const vector<vec3f> &positions,
-    const vector<vec3f> &normals) {
+    const sculpt_params &params, const vector<vec3f> &base_positions,
+    const vector<vec3f> &base_normals) {
   if (vertices.empty()) return false;
   if (texture.pixelsf.empty() && texture.pixelsb.empty()) return false;
 
-  shape.positions = positions;
-  shape.normals   = normals;
+  positions = base_positions;
 
   auto scale_factor = 3.5f / params.radius;
   auto max_height   = gaussian_distribution(
@@ -547,10 +546,10 @@ bool texture_brush(scene_shape &shape, const vector<int> &vertices,
   for (auto idx : vertices) {
     auto uv     = coords[idx];
     auto height = max(xyz(eval_image(texture, uv)));
-    auto normal = shape.normals[idx];
+    auto normal = base_normals[idx];
     if (params.negative) normal = -normal;
     height *= max_height;
-    shape.positions[idx] += normal * height;
+    positions[idx] += normal * height;
   }
 
   return true;
@@ -590,11 +589,9 @@ float laplacian_weight(const vector<vec3f> &positions,
 }
 
 // Smooth brush with Laplace Operator Discretization and Cotangents Weights
-bool smooth_brush(geodesic_solver &solver, vector<int> &stroke_sampling,
-    sculpt_params &params, scene_shape &shape) {
+bool smooth_brush(vector<vec3f> &positions, const geodesic_solver &solver,
+    vector<int> &stroke_sampling, sculpt_params &params) {
   if (stroke_sampling.empty()) return false;
-
-  auto &positions = shape.positions;
 
   auto distances = vector<float>(solver.graph.size(), flt_max);
   for (auto sample : stroke_sampling) distances[sample] = 0.0f;
@@ -827,13 +824,14 @@ bool update_stroke(sculpt_stroke &stroke, sculpt_params &params,
       updated = gaussian_brush(
           shape.positions, stroke.opacity, params, stroke.pairs);
     } else if (params.type == brush_type::smooth) {
-      updated = smooth_brush(params.solver, stroke.sampling, params, shape);
+      updated = smooth_brush(
+          shape.positions, params.solver, stroke.sampling, params);
     } else if (params.type == brush_type::texture && !stroke.pairs.empty()) {
       auto vertices = stroke_parameterization(params.solver, stroke.coords,
           stroke.sampling, stroke.old_positions, stroke.old_normals,
           params.radius);
-      updated = texture_brush(shape, vertices, params.tex_image, stroke.coords,
-          params, stroke.old_positions, stroke.old_normals);
+      updated       = texture_brush(shape.positions, vertices, params.tex_image,
+          stroke.coords, params, stroke.old_positions, stroke.old_normals);
     }
     if (updated) {
       triangles_normals(shape.normals, shape.triangles, shape.positions);
