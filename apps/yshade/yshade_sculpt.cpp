@@ -815,8 +815,7 @@ bool update_stroke(sculpt_params &params, scene_shape &shape,
     if (params.type == brush_type::gaussian) {
       gaussian_brush(shape, params, pairs);
     } else if (params.type == brush_type::smooth) {
-      smooth_brush(params.solver, params.stroke_sampling, shape.positions,
-          params, shape);
+      smooth_brush(params.solver, sampling, shape.positions, params, shape);
     } else if (params.type == brush_type::texture && !pairs.empty()) {
       sampling.insert(sampling.begin(), params.stroke_sampling.begin(),
           params.stroke_sampling.end());
@@ -832,8 +831,7 @@ bool update_stroke(sculpt_params &params, scene_shape &shape,
       if (params.type == brush_type::gaussian) {
         gaussian_brush(shape, params, pairs);
       } else if (params.type == brush_type::smooth) {
-        smooth_brush(params.solver, params.symmetric_stroke_sampling,
-            shape.positions, params, shape);
+        smooth_brush(params.solver, sampling, shape.positions, params, shape);
       } else if (params.type == brush_type::texture && !pairs.empty()) {
         sampling.insert(sampling.begin(),
             params.symmetric_stroke_sampling.begin(),
