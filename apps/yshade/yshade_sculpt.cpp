@@ -73,7 +73,6 @@ struct sculpt_params {
   float               radius      = 0.35f;
   float               strength    = 1.0f;
   bool                negative    = false;
-  vector<float>       opacity     = {};
   bool                saturation  = false;
   vector<vector<int>> adjacencies = {};
 
@@ -87,11 +86,12 @@ struct sculpt_params {
 
 // sculpt stroke
 struct sculpt_stroke {
-  vector<int> stroke_sampling           = {};
-  vector<int> symmetric_stroke_sampling = {};
-  vec3f       locked_position           = {};
-  vec2f       locked_uv                 = {};
-  bool        lock                      = false;
+  vector<int>   stroke_sampling           = {};
+  vector<int>   symmetric_stroke_sampling = {};
+  vec3f         locked_position           = {};
+  vec2f         locked_uv                 = {};
+  bool          lock                      = false;
+  vector<float> opacity                   = {};
 };
 
 // Initialize all sculpting parameters.
@@ -107,9 +107,6 @@ void init_sculpt_tool(
   // create an hash grid
   params.grid = make_hash_grid(shape.positions, 0.05f);
 
-  // init saturation buffer
-  params.opacity = vector<float>(shape.positions.size(), 0.0f);
-
   // create geodesic distance graph (ONLY TRIANGLES MESHES!)
   auto adjacencies = face_adjacencies(shape.triangles);
   params.solver    = make_geodesic_solver(
@@ -118,6 +115,11 @@ void init_sculpt_tool(
 
   // init texture
   params.tex_image = texture;
+}
+
+void init_sculpt_stroke(sculpt_stroke &stroke, const shape_data &shape) {
+  // init saturation buffer
+  stroke.opacity = vector<float>(shape.positions.size(), 0.0f);
 }
 
 shape_data make_circle(
@@ -448,7 +450,7 @@ vector<int> stroke_parameterization(const geodesic_solver &solver,
 void end_stroke(
     sculpt_params &params, sculpt_stroke &stroke, scene_shape &shape) {
   stroke.lock = false;
-  std::fill(params.opacity.begin(), params.opacity.end(), 0.0f);
+  std::fill(stroke.opacity.begin(), stroke.opacity.end(), 0.0f);
   stroke.stroke_sampling.clear();
   params.coords.clear();
   stroke.symmetric_stroke_sampling.clear();
@@ -483,7 +485,7 @@ void apply_brush(shape_data &shape, const vector<vec3f> &positions,
 
 // To apply brush on intersected points' neighbors
 bool gaussian_brush(scene_shape &shape, sculpt_params &params,
-    const vector<pair<vec3f, vec3f>> &stroke_samples) {
+    sculpt_stroke &stroke, const vector<pair<vec3f, vec3f>> &stroke_samples) {
   if (stroke_samples.empty()) return false;
 
   // for a correct gaussian distribution
@@ -497,7 +499,7 @@ bool gaussian_brush(scene_shape &shape, sculpt_params &params,
       auto max_height = gaussian_distribution(position, position, 0.7f,
           scale_factor, params.strength, params.radius);
       for (auto neighbor : neighbors) {
-        auto opacity_val = params.opacity[neighbor];
+        auto opacity_val = stroke.opacity[neighbor];
         if (opacity_val == 1.0f) continue;
         auto gauss_height = gaussian_distribution(position,
             shape.positions[neighbor], 0.7f, scale_factor, params.strength,
@@ -507,7 +509,7 @@ bool gaussian_brush(scene_shape &shape, sculpt_params &params,
           gauss_height = max_height * (1.0f - opacity_val);
           gauss_ratio  = 1.0f - opacity_val;
         }
-        params.opacity[neighbor] += gauss_ratio;
+        stroke.opacity[neighbor] += gauss_ratio;
         shape.positions[neighbor] += normal * gauss_height;
       }
     } else {
@@ -824,7 +826,7 @@ bool update_stroke(sculpt_stroke &stroke, sculpt_params &params,
     vector<int> vertices;
     auto        updated = false;
     if (params.type == brush_type::gaussian) {
-      updated = gaussian_brush(shape, params, pairs);
+      updated = gaussian_brush(shape, params, stroke, pairs);
     } else if (params.type == brush_type::smooth) {
       updated = smooth_brush(params.solver, sampling, params, shape);
     } else if (params.type == brush_type::texture && !pairs.empty()) {
@@ -846,7 +848,7 @@ bool update_stroke(sculpt_stroke &stroke, sculpt_params &params,
       std::tie(pairs, sampling) = symmetric_stroke(
           pairs, shape, params.bvh, params.symmetric_axis);
       if (params.type == brush_type::gaussian) {
-        updated = gaussian_brush(shape, params, pairs);
+        updated = gaussian_brush(shape, params, stroke, pairs);
       } else if (params.type == brush_type::smooth) {
         updated = smooth_brush(params.solver, sampling, params, shape);
       } else if (params.type == brush_type::texture && !pairs.empty()) {
@@ -909,6 +911,7 @@ int run_shade_sculpt(const shade_sculpt_params &params_) {
   auto params = sculpt_params{};
   init_sculpt_tool(params, app.ioscene.shapes.front(), iotexture);
   auto stroke = sculpt_stroke{};
+  init_sculpt_stroke(stroke, app.ioscene.shapes.front());
 
   // callbacks
   auto callbacks    = gui_callbacks{};
