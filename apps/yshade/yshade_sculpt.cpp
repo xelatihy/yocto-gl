@@ -390,7 +390,7 @@ inline void compute_stroke_frames(vector<mat3f> &frames,
 }
 
 // To take shape positions indices associate with planar coordinates
-inline vector<int> stroke_parameterization(const geodesic_solver &solver,
+vector<int> stroke_parameterization(const geodesic_solver &solver,
     vector<vec2f> &coords, vector<int> &stroke_sampling,
     const vector<vec3f> &positions, const vector<vec3f> &normals,
     float radius) {
