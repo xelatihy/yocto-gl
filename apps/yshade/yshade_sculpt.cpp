@@ -55,9 +55,6 @@ struct sculpt_params {
   // brush type
   brush_type type = brush_type::gaussian;
 
-  // intersection
-  ray3f camera_ray = {};
-  // sceneio_instance * shape_instance   = nullptr;
   shape_bvh          bvh          = {};
   shape_intersection intersection = {};
 
@@ -95,8 +92,8 @@ struct sculpt_stroke {
 };
 
 // Initialize all sculpting parameters.
-void init_sculpt_tool(
-    sculpt_params &params, shape_data &shape, const scene_texture &texture) {
+void init_sculpt_tool(sculpt_params &params, const shape_data &shape,
+    const scene_texture &texture) {
   // save positions
   params.old_positions = shape.positions;
 
@@ -812,10 +809,10 @@ bool update_cursor(scene_shape &cursor, sculpt_params &params,
 bool update_stroke(sculpt_stroke &stroke, sculpt_params &params,
     scene_shape &shape, const scene_camera &camera, const vec2f &mouse_uv,
     bool mouse_pressed) {
-  params.camera_ray = camera_ray(
+  auto ray = camera_ray(
       camera.frame, camera.lens, camera.aspect, camera.film, mouse_uv);
   params.intersection = intersect_triangles_bvh(
-      params.bvh, shape.triangles, shape.positions, params.camera_ray, false);
+      params.bvh, shape.triangles, shape.positions, ray, false);
 
   auto isec = params.intersection;
   // sculpting
