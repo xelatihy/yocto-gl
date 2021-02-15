@@ -92,6 +92,13 @@ static shape_data make_cylinders(const vector<vec2i>& lines,
   return shape;
 }
 
+static frame3f camera_frame(float lens, float aspect, float film = 0.036) {
+  auto camera_dir  = normalize(vec3f{0, 0.5, 1});
+  auto bbox_radius = 2.0f;
+  auto camera_dist = bbox_radius * lens / (film / aspect);
+  return lookat_frame(camera_dir * camera_dist, {0, 0, 0}, {0, 1, 0});
+}
+
 static void convert_scene(scene_scene& scene, const scene_shape& ioshape_,
     progress_callback progress_cb) {
   // handle progress
@@ -108,6 +115,15 @@ static void convert_scene(scene_scene& scene, const scene_shape& ioshape_,
   for (auto& pos : ioshape.positions) pos -= center(bbox);
   for (auto& pos : ioshape.positions) pos /= max(size(bbox));
   // TODO(fabio): this should be a math function
+
+  // camera
+  if (progress_cb) progress_cb("create camera", progress.x++, progress.y);
+  auto& camera  = scene.cameras.emplace_back();
+  camera.frame  = camera_frame(0.050, 16.0f / 9.0f, 0.036);
+  camera.lens   = 0.050;
+  camera.aspect = 16.0f / 9.0f;
+  camera.film   = 0.036;
+  camera.focus  = length(camera.frame.o - center(bbox));
 
   // material
   if (progress_cb) progress_cb("create material", progress.x++, progress.y);
@@ -175,10 +191,6 @@ static void convert_scene(scene_scene& scene, const scene_shape& ioshape_,
   auto& vertices_instance    = scene.instances.emplace_back();
   vertices_instance.shape    = 2;
   vertices_instance.material = 2;
-
-  // camera
-  if (progress_cb) progress_cb("create camera", progress.x++, progress.y);
-  add_camera(scene);
 
   // done
   if (progress_cb) progress_cb("create scene", progress.x++, progress.y);
