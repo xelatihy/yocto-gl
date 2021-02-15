@@ -6,6 +6,3 @@ add_subdirectory(yscene)
 if(YOCTO_OPENGL)
 add_subdirectory(yshade)
 endif(YOCTO_OPENGL)
-
-add_subdirectory(experimental)
-# add_subdirectory(deprecated)
