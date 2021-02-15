@@ -488,8 +488,9 @@ void apply_brush(shape_data &shape, const vector<vec3f> &positions,
 }
 
 // To apply brush on intersected points' neighbors
-bool gaussian_brush(scene_shape &shape, sculpt_params &params,
-    sculpt_stroke &stroke, const vector<pair<vec3f, vec3f>> &stroke_samples) {
+bool gaussian_brush(vector<vec3f> &positions, vector<float> &opacity,
+    const sculpt_params &             params,
+    const vector<pair<vec3f, vec3f>> &stroke_samples) {
   if (stroke_samples.empty()) return false;
 
   // for a correct gaussian distribution
@@ -503,25 +504,23 @@ bool gaussian_brush(scene_shape &shape, sculpt_params &params,
       auto max_height = gaussian_distribution(position, position, 0.7f,
           scale_factor, params.strength, params.radius);
       for (auto neighbor : neighbors) {
-        auto opacity_val = stroke.opacity[neighbor];
+        auto opacity_val = opacity[neighbor];
         if (opacity_val == 1.0f) continue;
-        auto gauss_height = gaussian_distribution(position,
-            shape.positions[neighbor], 0.7f, scale_factor, params.strength,
-            params.radius);
+        auto gauss_height = gaussian_distribution(position, positions[neighbor],
+            0.7f, scale_factor, params.strength, params.radius);
         auto gauss_ratio  = gauss_height / max_height;
         if ((opacity_val + gauss_ratio) > 1.0f) {
           gauss_height = max_height * (1.0f - opacity_val);
           gauss_ratio  = 1.0f - opacity_val;
         }
-        stroke.opacity[neighbor] += gauss_ratio;
-        shape.positions[neighbor] += normal * gauss_height;
+        opacity[neighbor] += gauss_ratio;
+        positions[neighbor] += normal * gauss_height;
       }
     } else {
       for (auto neighbor : neighbors) {
-        auto gauss_height = gaussian_distribution(position,
-            shape.positions[neighbor], 0.7f, scale_factor, params.strength,
-            params.radius);
-        shape.positions[neighbor] += normal * gauss_height;
+        auto gauss_height = gaussian_distribution(position, positions[neighbor],
+            0.7f, scale_factor, params.strength, params.radius);
+        positions[neighbor] += normal * gauss_height;
       }
     }
     neighbors.clear();
@@ -531,9 +530,10 @@ bool gaussian_brush(scene_shape &shape, sculpt_params &params,
 }
 
 // Compute texture values through the parameterization
-bool texture_brush(scene_shape &shape, vector<int> &vertices,
-    const image_data &texture, vector<vec2f> &coords, sculpt_params &params,
-    const vector<vec3f> &positions, const vector<vec3f> &normals) {
+bool texture_brush(scene_shape &shape, const vector<int> &vertices,
+    const image_data &texture, const vector<vec2f> &coords,
+    const sculpt_params &params, const vector<vec3f> &positions,
+    const vector<vec3f> &normals) {
   if (vertices.empty()) return false;
   if (texture.pixelsf.empty() && texture.pixelsb.empty()) return false;
 
@@ -560,8 +560,8 @@ bool texture_brush(scene_shape &shape, vector<int> &vertices,
 float cotan(vec3f &a, vec3f &b) { return dot(a, b) / length(cross(a, b)); }
 
 // Compute edge cotangents weights
-float laplacian_weight(vector<vec3f> &positions,
-    vector<vector<int>> &adjacencies, int node, int neighbor) {
+float laplacian_weight(const vector<vec3f> &positions,
+    const vector<vector<int>> &adjacencies, int node, int neighbor) {
   auto num_neighbors = int(adjacencies[node].size());
 
   int ind = -1;
@@ -824,7 +824,8 @@ bool update_stroke(sculpt_stroke &stroke, sculpt_params &params,
   if (hit) {
     auto updated = false;
     if (params.type == brush_type::gaussian) {
-      updated = gaussian_brush(shape, params, stroke, stroke.pairs);
+      updated = gaussian_brush(
+          shape.positions, stroke.opacity, params, stroke.pairs);
     } else if (params.type == brush_type::smooth) {
       updated = smooth_brush(params.solver, stroke.sampling, params, shape);
     } else if (params.type == brush_type::texture && !stroke.pairs.empty()) {
