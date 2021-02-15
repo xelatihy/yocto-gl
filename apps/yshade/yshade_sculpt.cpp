@@ -49,12 +49,10 @@ auto const brushes_names = vector<std::string>{
     "gaussian brush", "texture brush", "smooth brush"};
 
 struct sculpt_params {
-  brush_type type       = brush_type::gaussian;
-  float      radius     = 0.35f;
-  float      strength   = 1.0f;
-  bool       negative   = false;
-  bool       saturation = false;
-  bool       continuous = false;
+  brush_type type     = brush_type::gaussian;
+  float      radius   = 0.35f;
+  float      strength = 1.0f;
+  bool       negative = false;
 };
 
 struct sculpt_state {
@@ -76,7 +74,6 @@ struct sculpt_stroke {
 
 // sculpt buffers
 struct sculpt_buffers {
-  vector<float> opacity       = {};
   vector<vec2f> coords        = {};
   vector<vec3f> old_positions = {};
   vector<vec3f> old_normals   = {};
@@ -99,7 +96,6 @@ sculpt_state make_sculpt_state(
 
 sculpt_buffers make_sculpt_buffers(const shape_data &shape) {
   auto buffers          = sculpt_buffers{};
-  buffers.opacity       = vector<float>(shape.positions.size(), 0);
   buffers.old_positions = shape.positions;
   buffers.old_normals   = shape.normals;
   buffers.coords        = vector<vec2f>(shape.positions.size(), vec2f{0, 0});
@@ -195,17 +191,6 @@ bool sample_stroke(sculpt_stroke &stroke, const shape_bvh &bvh,
   auto  nor         = eval_normal(shape, isec.element, isec.uv);
   float delta_pos   = distance(pos, stroke.locked_position);
   float stroke_dist = params.radius * 0.2f;
-
-  // handle continuous stroke
-  if (params.continuous && (delta_pos < stroke_dist)) {
-    pair<vec3f, vec3f> pair;
-    pair.first  = pos;
-    pair.second = nor;
-    stroke.pairs.push_back(pair);
-    stroke.sampling.push_back(
-        closest_vertex(shape.triangles, isec.element, isec.uv));
-    return true;
-  }
 
   // handle first stroke intersection
   if (!stroke.lock) {
@@ -397,8 +382,7 @@ void end_stroke(sculpt_params &params, sculpt_stroke &stroke,
     sculpt_buffers &buffers, scene_shape &shape) {
   stroke.lock = false;
   stroke.sampling.clear();
-  buffers.opacity.assign(buffers.opacity.size(), 0);
-  buffers.coords.assign(buffers.opacity.size(), {0, 0});
+  buffers.coords.assign(buffers.coords.size(), {0, 0});
   buffers.old_positions = shape.positions;
   buffers.old_normals   = shape.normals;
 }
@@ -429,9 +413,9 @@ void apply_brush(shape_data &shape, const vector<vec3f> &positions,
 }
 
 // To apply brush on intersected points' neighbors
-bool gaussian_brush(vector<vec3f> &positions, vector<float> &opacity,
-    const hash_grid &grid, const vector<pair<vec3f, vec3f>> &stroke_samples,
-    const sculpt_params &params) {
+bool gaussian_brush(vector<vec3f> &positions, const hash_grid &grid,
+    const vector<pair<vec3f, vec3f>> &stroke_samples,
+    const sculpt_params &             params) {
   if (stroke_samples.empty()) return false;
 
   // for a correct gaussian distribution
@@ -441,28 +425,10 @@ bool gaussian_brush(vector<vec3f> &positions, vector<float> &opacity,
   for (auto [position, normal] : stroke_samples) {
     find_neighbors(grid, neighbors, position, params.radius);
     if (params.negative) normal = -normal;
-    if (params.saturation) {
-      auto max_height = gaussian_distribution(position, position, 0.7f,
-          scale_factor, params.strength, params.radius);
-      for (auto neighbor : neighbors) {
-        auto opacity_val = opacity[neighbor];
-        if (opacity_val == 1.0f) continue;
-        auto gauss_height = gaussian_distribution(position, positions[neighbor],
-            0.7f, scale_factor, params.strength, params.radius);
-        auto gauss_ratio  = gauss_height / max_height;
-        if ((opacity_val + gauss_ratio) > 1.0f) {
-          gauss_height = max_height * (1.0f - opacity_val);
-          gauss_ratio  = 1.0f - opacity_val;
-        }
-        opacity[neighbor] += gauss_ratio;
-        positions[neighbor] += normal * gauss_height;
-      }
-    } else {
-      for (auto neighbor : neighbors) {
-        auto gauss_height = gaussian_distribution(position, positions[neighbor],
-            0.7f, scale_factor, params.strength, params.radius);
-        positions[neighbor] += normal * gauss_height;
-      }
+    for (auto neighbor : neighbors) {
+      auto gauss_height = gaussian_distribution(position, positions[neighbor],
+          0.7f, scale_factor, params.strength, params.radius);
+      positions[neighbor] += normal * gauss_height;
     }
     neighbors.clear();
   }
@@ -765,7 +731,7 @@ bool update_stroke(sculpt_stroke &stroke, sculpt_state &state,
     auto updated = false;
     if (params.type == brush_type::gaussian) {
       updated = gaussian_brush(
-          shape.positions, buffers.opacity, state.grid, stroke.pairs, params);
+          shape.positions, state.grid, stroke.pairs, params);
     } else if (params.type == brush_type::smooth) {
       updated = smooth_brush(shape.positions, state.solver, state.adjacencies,
           stroke.sampling, params);
@@ -862,8 +828,6 @@ int run_shade_sculpt(const shade_sculpt_params &params_) {
       draw_slider(win, "radius", params.radius, 0.1f, 0.8f);
       draw_slider(win, "strength", params.strength, 1.5f, 0.9f);
       draw_checkbox(win, "negative", params.negative);
-      draw_checkbox(win, "continuous", params.continuous);
-      draw_checkbox(win, "saturation", params.saturation);
     } else if (params.type == brush_type::texture) {
       if (params.strength < 0.8f || params.strength > 1.5f)
         params.strength = 1.0f;
