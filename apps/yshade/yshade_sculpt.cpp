@@ -34,9 +34,6 @@ struct shade_sculpt_state {
   // options
   shade_params drawgl_prms = {};
 
-  // shape
-  shape_data *ioshape = nullptr;
-
   // rendering state
   shade_scene glscene = {};
 };
@@ -616,12 +613,11 @@ int run_shade_sculpt(const shade_sculpt_params &params_) {
 
   // setup app
   convert_scene(app.ioscene, ioshape, print_progress);
-  app.ioshape = &app.ioscene.shapes[0];
 
   // sculpt params
   auto params  = sculpt_params{};
-  params.shape = app.ioshape;
-  init_sculpt_tool(params, *app.ioshape, iotexture);
+  params.shape = &app.ioscene.shapes.front();
+  init_sculpt_tool(params, app.ioscene.shapes.front(), iotexture);
 
   // callbacks
   auto callbacks    = gui_callbacks{};
