@@ -65,11 +65,10 @@ struct sculpt_state {
 
 // sculpt stroke
 struct sculpt_stroke {
-  vector<pair<vec3f, vec3f>> pairs           = {};
-  vector<int>                sampling        = {};
-  vec3f                      locked_position = {};
-  vec2f                      locked_uv       = {};
-  bool                       lock            = false;
+  vector<pair<vec3f, vec3f>> pairs     = {};
+  vector<int>                sampling  = {};
+  vec2f                      locked_uv = {};
+  bool                       lock      = false;
 };
 
 // sculpt buffers
@@ -687,16 +686,14 @@ bool sample_stroke(sculpt_stroke &stroke, const shape_bvh &bvh,
     stroke.locked_uv += stroke_uv * mouse_dir;
     auto isec = intersect_shape(stroke.locked_uv);
     if (!isec.hit) continue;
-    auto pos               = eval_position(shape, isec.element, isec.uv);
-    auto nor               = eval_normal(shape, isec.element, isec.uv);
-    stroke.locked_position = pos;
+    auto pos = eval_position(shape, isec.element, isec.uv);
+    auto nor = eval_normal(shape, isec.element, isec.uv);
     stroke.sampling.push_back(
         closest_vertex(shape.triangles, isec.element, isec.uv));
     stroke.pairs.push_back({pos, nor});
   }
 
-  stroke.locked_position = eval_position(shape, last.element, last.uv);
-  stroke.locked_uv       = mouse_uv;
+  stroke.locked_uv = mouse_uv;
 
   return true;
 }
@@ -721,9 +718,8 @@ pair<bool, bool> update_stroke(sculpt_stroke &stroke, sculpt_state &state,
   // sculpting
   if (isec.hit && mouse_pressed) {
     if (!stroke.lock) {
-      stroke.lock            = true;
-      stroke.locked_uv       = mouse_uv;
-      stroke.locked_position = eval_position(shape, isec.element, isec.uv);
+      stroke.lock      = true;
+      stroke.locked_uv = mouse_uv;
     } else {
       sample_stroke(stroke, state.bvh, shape, mouse_uv, camera,
           params.type != brush_type::texture, params);
