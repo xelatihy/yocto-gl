@@ -55,8 +55,7 @@ struct sculpt_params {
   // brush type
   brush_type type = brush_type::gaussian;
 
-  shape_bvh          bvh          = {};
-  shape_intersection intersection = {};
+  shape_bvh bvh = {};
 
   // hash grid
   hash_grid grid = {};
@@ -190,7 +189,7 @@ int closest_vertex(
 }
 
 // To make the stroke sampling (position, normal) following the mouse
-void sample_stroke(sculpt_params &params, sculpt_stroke &stroke,
+bool sample_stroke(sculpt_params &params, sculpt_stroke &stroke,
     scene_shape &shape, const vec2f &mouse_uv, const scene_camera &camera,
     bool clear) {
   // clear
@@ -200,11 +199,13 @@ void sample_stroke(sculpt_params &params, sculpt_stroke &stroke,
   }
 
   // eval current intersection
-  auto &inter = params.intersection;
-  auto  pos   = eval_position(
-      shape.triangles, shape.positions, {inter.element, inter.uv});
-  auto nor = eval_normal(
-      shape.triangles, shape.normals, {inter.element, inter.uv});
+  auto ray = camera_ray(
+      camera.frame, camera.lens, camera.aspect, camera.film, mouse_uv);
+  auto isec = intersect_triangles_bvh(
+      params.bvh, shape.triangles, shape.positions, ray, false);
+  if (!isec.hit) return false;
+  auto  pos         = eval_position(shape, isec.element, isec.uv);
+  auto  nor         = eval_normal(shape, isec.element, isec.uv);
   float delta_pos   = distance(pos, stroke.locked_position);
   float stroke_dist = params.radius * 0.2f;
 
@@ -215,8 +216,8 @@ void sample_stroke(sculpt_params &params, sculpt_stroke &stroke,
     pair.second = nor;
     stroke.pairs.push_back(pair);
     stroke.sampling.push_back(
-        closest_vertex(shape.triangles, inter.element, inter.uv));
-    return;
+        closest_vertex(shape.triangles, isec.element, isec.uv));
+    return true;
   }
 
   // handle first stroke intersection
@@ -224,12 +225,12 @@ void sample_stroke(sculpt_params &params, sculpt_stroke &stroke,
     stroke.locked_position = pos;
     stroke.locked_uv       = mouse_uv;
     stroke.lock            = true;
-    return;
+    return true;
   }
 
   float delta_uv = distance(mouse_uv, stroke.locked_uv);
   int   steps    = int(delta_pos / stroke_dist);
-  if (steps == 0) return;
+  if (steps == 0) return true;
   stroke.pairs   = vector<pair<vec3f, vec3f>>(steps);  // TODO: bug
   auto stroke_uv = delta_uv * stroke_dist / delta_pos;
   auto mouse_dir = normalize(mouse_uv - stroke.locked_uv);
@@ -237,17 +238,17 @@ void sample_stroke(sculpt_params &params, sculpt_stroke &stroke,
     stroke.locked_uv += stroke_uv * mouse_dir;
     auto ray = camera_ray(camera.frame, camera.lens, camera.aspect, camera.film,
         stroke.locked_uv);
-    inter    = intersect_triangles_bvh(
+    isec     = intersect_triangles_bvh(
         params.bvh, shape.triangles, shape.positions, ray, false);
-    if (!inter.hit) continue;
-    pos                    = eval_position(shape, inter.element, inter.uv);
-    nor                    = eval_normal(shape, inter.element, inter.uv);
+    if (!isec.hit) continue;
+    pos                    = eval_position(shape, isec.element, isec.uv);
+    nor                    = eval_normal(shape, isec.element, isec.uv);
     stroke.locked_position = pos;
     stroke.sampling.push_back(
-        closest_vertex(shape.triangles, inter.element, inter.uv));
+        closest_vertex(shape.triangles, isec.element, isec.uv));
     stroke.pairs.push_back({pos, nor});
   }
-  return;
+  return true;
 }
 
 // To obtain symmetric from stroke result
@@ -814,28 +815,22 @@ bool update_cursor(scene_shape &cursor, sculpt_params &params,
 bool update_stroke(sculpt_stroke &stroke, sculpt_params &params,
     scene_shape &shape, const scene_camera &camera, const vec2f &mouse_uv,
     bool mouse_pressed) {
-  auto ray = camera_ray(
-      camera.frame, camera.lens, camera.aspect, camera.film, mouse_uv);
-  params.intersection = intersect_triangles_bvh(
-      params.bvh, shape.triangles, shape.positions, ray, false);
+  auto hit = mouse_pressed ? sample_stroke(params, stroke, shape, mouse_uv,
+                                 camera, params.type != brush_type::texture)
+                           : false;
 
-  auto isec = params.intersection;
   // sculpting
-  if (mouse_pressed && isec.hit && (isec.uv.x >= 0 && isec.uv.x < 1) &&
-      (isec.uv.y >= 0 && isec.uv.y < 1)) {
-    sample_stroke(params, stroke, shape, mouse_uv, camera,
-        params.type != brush_type::texture);
-    vector<int> vertices;
-    auto        updated = false;
+  if (hit) {
+    auto updated = false;
     if (params.type == brush_type::gaussian) {
       updated = gaussian_brush(shape, params, stroke, stroke.pairs);
     } else if (params.type == brush_type::smooth) {
       updated = smooth_brush(params.solver, stroke.sampling, params, shape);
     } else if (params.type == brush_type::texture && !stroke.pairs.empty()) {
-      vertices = stroke_parameterization(params.solver, params.coords,
+      auto vertices = stroke_parameterization(params.solver, params.coords,
           stroke.sampling, params.old_positions, params.old_normals,
           params.radius);
-      updated  = texture_brush(shape, vertices, params.tex_image, params.coords,
+      updated = texture_brush(shape, vertices, params.tex_image, params.coords,
           params, params.old_positions, params.old_normals);
     }
     if (updated) {
