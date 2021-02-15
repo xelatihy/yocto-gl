@@ -82,39 +82,29 @@ struct sculpt_params {
 };
 
 // Initialize all sculpting parameters.
-void init_sculpt_tool(sculpt_params *params, shape_data *shape,
-    std::string shapename, std::string texture_name,
-    sceneio_material *material = nullptr) {
-  if (!shape->quads.empty()) {
-    shape->triangles = quads_to_triangles(shape->quads);
-    shape->quads.clear();
-  }
-
+void init_sculpt_tool(
+    sculpt_params &params, shape_data &shape, const scene_texture &texture) {
   // save positions
-  params->old_positions = shape->positions;
+  params.old_positions = shape.positions;
 
   // create bvh structure
-  params->bvh = make_triangles_bvh(
-      shape->triangles, shape->positions, shape->radius);
+  params.bvh = make_triangles_bvh(
+      shape.triangles, shape.positions, shape.radius);
 
   // create an hash grid
-  params->grid = make_hash_grid(shape->positions, 0.05f);
+  params.grid = make_hash_grid(shape.positions, 0.05f);
 
   // init saturation buffer
-  params->opacity = vector<float>(shape->positions.size(), 0.0f);
+  params.opacity = vector<float>(shape.positions.size(), 0.0f);
 
   // create geodesic distance graph (ONLY TRIANGLES MESHES!)
-  auto adjacencies = face_adjacencies(shape->triangles);
-  params->solver   = make_geodesic_solver(
-      shape->triangles, adjacencies, shape->positions);
-  params->adjacencies = vertex_adjacencies(shape->triangles, adjacencies);
+  auto adjacencies = face_adjacencies(shape.triangles);
+  params.solver    = make_geodesic_solver(
+      shape.triangles, adjacencies, shape.positions);
+  params.adjacencies = vertex_adjacencies(shape.triangles, adjacencies);
 
   // init texture
-  if (texture_name != "") {
-    string ioerror;
-    if (!load_image(texture_name, params->tex_image, ioerror))
-      print_fatal(ioerror);
-  }
+  params.tex_image = texture;
 }
 
 shape_data make_circle(vec3f center, mat3f basis, float radius, int steps) {
@@ -608,6 +598,10 @@ int run_shade_sculpt(const shade_sculpt_params &params_) {
   auto ioshape = scene_shape{};
   print_progress("load shape", 0, 1);
   if (!load_shape(app.filename, ioshape, ioerror)) print_fatal(ioerror);
+  if (!ioshape.quads.empty()) {
+    ioshape.triangles = quads_to_triangles(ioshape.quads);
+    ioshape.quads.clear();
+  }
   print_progress("load shape", 1, 1);
 
   // loading texture
@@ -626,7 +620,7 @@ int run_shade_sculpt(const shade_sculpt_params &params_) {
   // sculpt params
   auto params  = sculpt_params{};
   params.shape = app.ioshape;
-  init_sculpt_tool(&params, app.ioshape, app.shapename, app.imagename);
+  init_sculpt_tool(params, *app.ioshape, iotexture);
 
   // callbacks
   auto callbacks    = gui_callbacks{};
