@@ -73,11 +73,8 @@ struct sculpt_params {
   vector<vector<int>> adjacencies = {};
 
   // stroke parameterization
-  geodesic_solver solver        = {};
-  vector<vec2f>   coords        = {};
-  image_data      tex_image     = {};
-  vector<vec3f>   old_positions = {};
-  vector<vec3f>   old_normals   = {};
+  geodesic_solver solver    = {};
+  image_data      tex_image = {};
 };
 
 // sculpt stroke
@@ -88,15 +85,17 @@ struct sculpt_stroke {
   vec3f                      locked_position           = {};
   vec2f                      locked_uv                 = {};
   bool                       lock                      = false;
-  vector<float>              opacity                   = {};
+
+  // vertex properties
+  vector<float> opacity       = {};
+  vector<vec2f> coords        = {};
+  vector<vec3f> old_positions = {};
+  vector<vec3f> old_normals   = {};
 };
 
 // Initialize all sculpting parameters.
 void init_sculpt_tool(sculpt_params &params, const shape_data &shape,
     const scene_texture &texture) {
-  // save positions
-  params.old_positions = shape.positions;
-
   // create bvh structure
   params.bvh = make_triangles_bvh(
       shape.triangles, shape.positions, shape.radius);
@@ -117,6 +116,8 @@ void init_sculpt_tool(sculpt_params &params, const shape_data &shape,
 void init_sculpt_stroke(sculpt_stroke &stroke, const shape_data &shape) {
   // init saturation buffer
   stroke.opacity = vector<float>(shape.positions.size(), 0.0f);
+  // save positions
+  stroke.old_positions = shape.positions;
 }
 
 shape_data make_circle(
@@ -455,10 +456,10 @@ void end_stroke(
   stroke.lock = false;
   std::fill(stroke.opacity.begin(), stroke.opacity.end(), 0.0f);
   stroke.sampling.clear();
-  params.coords.clear();
+  stroke.coords.clear();
   stroke.symmetric_stroke_sampling.clear();
-  params.old_positions = shape.positions;
-  params.old_normals   = shape.normals;
+  stroke.old_positions = shape.positions;
+  stroke.old_normals   = shape.normals;
 }
 
 // Compute gaussian function
@@ -827,11 +828,11 @@ bool update_stroke(sculpt_stroke &stroke, sculpt_params &params,
     } else if (params.type == brush_type::smooth) {
       updated = smooth_brush(params.solver, stroke.sampling, params, shape);
     } else if (params.type == brush_type::texture && !stroke.pairs.empty()) {
-      auto vertices = stroke_parameterization(params.solver, params.coords,
-          stroke.sampling, params.old_positions, params.old_normals,
+      auto vertices = stroke_parameterization(params.solver, stroke.coords,
+          stroke.sampling, stroke.old_positions, stroke.old_normals,
           params.radius);
-      updated = texture_brush(shape, vertices, params.tex_image, params.coords,
-          params, params.old_positions, params.old_normals);
+      updated = texture_brush(shape, vertices, params.tex_image, stroke.coords,
+          params, stroke.old_positions, stroke.old_normals);
     }
     if (updated) {
       triangles_normals(shape.normals, shape.triangles, shape.positions);
