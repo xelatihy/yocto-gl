@@ -291,8 +291,9 @@ inline vec2f project_onto_plane(const mat3f &basis, const vec3f &p) {
 }
 
 // Planar coordinates by local computation between neighbors
-inline void compute_coordinates(vector<vec2f> &coords, vector<mat3f> &frames,
-    vector<vec3f> &positions, int node, int neighbor, float weight) {
+inline void compute_coordinates(vector<vec2f> &coords,
+    const vector<mat3f> &frames, const vector<vec3f> &positions, int node,
+    int neighbor, float weight) {
   auto current_coord = coords[node];
   auto edge          = positions[node] - positions[neighbor];
   auto projection    = project_onto_plane(frames[neighbor], edge);
@@ -306,7 +307,7 @@ inline void compute_coordinates(vector<vec2f> &coords, vector<mat3f> &frames,
 }
 
 // Frame by local computation between neighbors
-inline void compute_frame(vector<mat3f> &frames, vector<vec3f> &normals,
+inline void compute_frame(vector<mat3f> &frames, const vector<vec3f> &normals,
     int node, int neighbor, float weight) {
   auto current_dir = frames[node].x;
   auto rotation    = basis_fromz(normals[neighbor]) *
@@ -350,8 +351,8 @@ void dijkstra(const geodesic_solver &solver, const vector<int> &sources,
 
 // Compute initial frames of stroke sampling vertices
 inline void compute_stroke_frames(vector<mat3f> &frames,
-    vector<vec3f> &positions, vector<vec3f> &normals,
-    vector<int> &stroke_sampling) {
+    const vector<vec3f> &positions, const vector<vec3f> &normals,
+    const vector<int> &stroke_sampling) {
   // frames follow stroke direction
   for (int i = 0; i < stroke_sampling.size() - 1; i++) {
     int  curr    = stroke_sampling[i];
@@ -389,9 +390,10 @@ inline void compute_stroke_frames(vector<mat3f> &frames,
 }
 
 // To take shape positions indices associate with planar coordinates
-inline vector<int> stroke_parameterization(geodesic_solver &solver,
+inline vector<int> stroke_parameterization(const geodesic_solver &solver,
     vector<vec2f> &coords, vector<int> &stroke_sampling,
-    vector<vec3f> &positions, vector<vec3f> &normals, float radius) {
+    const vector<vec3f> &positions, const vector<vec3f> &normals,
+    float radius) {
   if (stroke_sampling.empty()) return vector<int>{};
 
   // init params
