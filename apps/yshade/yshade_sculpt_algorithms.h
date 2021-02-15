@@ -33,7 +33,7 @@ auto const brushes_names = vector<std::string>{
 
 // To obtain symmetric from stroke result
 inline vector<pair<vec3f, vec3f>> symmetric_stroke(
-    vector<pair<vec3f, vec3f>> &pairs, shape_data *shape, shape_bvh &tree,
+    vector<pair<vec3f, vec3f>> &pairs, shape_data &shape, shape_bvh &tree,
     vector<int> &symmetric_stroke_sampling, axes &axis) {
   vector<pair<vec3f, vec3f>> symmetric_pairs;
   if (pairs.empty()) return symmetric_pairs;
@@ -60,13 +60,13 @@ inline vector<pair<vec3f, vec3f>> symmetric_stroke(
     }
 
     auto inter = intersect_triangles_bvh(
-        tree, shape->triangles, shape->positions, ray);
+        tree, shape.triangles, shape.positions, ray);
     if (!inter.hit) continue;
     auto pos  = eval_position(shape, inter.element, inter.uv);
     auto nor  = eval_normal(shape, inter.element, inter.uv);
     auto pair = std::pair<vec3f, vec3f>{pos, nor};
     symmetric_stroke_sampling.push_back(
-        closest_vertex(shape->triangles, inter.uv, inter.element));
+        closest_vertex(shape.triangles, inter.uv, inter.element));
     symmetric_pairs.push_back(pair);
   }
   return symmetric_pairs;

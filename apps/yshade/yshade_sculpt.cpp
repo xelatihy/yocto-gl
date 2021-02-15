@@ -45,7 +45,6 @@ struct sculpt_params {
   // intersection
   ray3f camera_ray = {};
   // sceneio_instance * shape_instance   = nullptr;
-  shape_data *       shape        = nullptr;
   shape_bvh          bvh          = {};
   shape_intersection intersection = {};
 
@@ -151,7 +150,7 @@ shape_data make_circle(
 }
 
 // To visualize mouse intersection on mesh
-void view_pointer(shape_data *shape, shade_shape &glshape,
+void view_pointer(shape_data &shape, shade_shape &glshape,
     shape_intersection intersection, float radius, int definition,
     brush_type &type) {
   if (intersection.hit) {
@@ -175,16 +174,15 @@ void view_pointer(shape_data *shape, shade_shape &glshape,
 }
 
 // To make the stroke sampling (position, normal) following the mouse
-vector<pair<vec3f, vec3f>> stroke(
-    sculpt_params &params, const vec2f &mouse_uv, shade_camera &glcamera) {
+vector<pair<vec3f, vec3f>> stroke(sculpt_params &params, scene_shape &shape,
+    const vec2f &mouse_uv, shade_camera &glcamera) {
   // eval current intersection
-  auto &shape = params.shape;
   auto  pairs = vector<pair<vec3f, vec3f>>{};
   auto &inter = params.intersection;
   auto  pos   = eval_position(
-      shape->triangles, shape->positions, {inter.element, inter.uv});
+      shape.triangles, shape.positions, {inter.element, inter.uv});
   auto nor = eval_normal(
-      shape->triangles, shape->normals, {inter.element, inter.uv});
+      shape.triangles, shape.normals, {inter.element, inter.uv});
   float delta_pos   = distance(pos, params.locked_position);
   float stroke_dist = params.radius * 0.2f;
 
@@ -195,7 +193,7 @@ vector<pair<vec3f, vec3f>> stroke(
     pair.second = nor;
     pairs.push_back(pair);
     params.stroke_sampling.push_back(
-        closest_vertex(shape->triangles, inter.uv, inter.element));
+        closest_vertex(shape.triangles, inter.uv, inter.element));
     return pairs;
   }
 
@@ -217,13 +215,13 @@ vector<pair<vec3f, vec3f>> stroke(
     params.locked_uv += stroke_uv * mouse_dir;
     auto ray = camera_ray(glcamera.frame, glcamera.lens, glcamera.aspect,
         glcamera.film, params.locked_uv);
-    inter    = intersect_triangles_bvh(params.bvh, params.shape->triangles,
-        params.shape->positions, ray, false);
+    inter    = intersect_triangles_bvh(
+        params.bvh, shape.triangles, shape.positions, ray, false);
     if (!inter.hit) continue;
-    pos = eval_position(params.shape, inter.element, inter.uv);
-    nor = eval_normal(params.shape, inter.element, inter.uv);
+    pos = eval_position(shape, inter.element, inter.uv);
+    nor = eval_normal(shape, inter.element, inter.uv);
     params.stroke_sampling.push_back(
-        closest_vertex(params.shape->triangles, inter.uv, inter.element));
+        closest_vertex(shape.triangles, inter.uv, inter.element));
     auto pair              = std::pair<vec3f, vec3f>{pos, nor};
     params.locked_position = pos;
     pairs.push_back(pair);
@@ -232,14 +230,14 @@ vector<pair<vec3f, vec3f>> stroke(
 }
 
 // End stroke settings
-void end_stroke(sculpt_params &params) {
+void end_stroke(sculpt_params &params, scene_shape &shape) {
   params.lock = false;
   std::fill(params.opacity.begin(), params.opacity.end(), 0.0f);
   params.stroke_sampling.clear();
   params.coords.clear();
   params.symmetric_stroke_sampling.clear();
-  params.old_positions = params.shape->positions;
-  params.old_normals   = params.shape->normals;
+  params.old_positions = shape.positions;
+  params.old_normals   = shape.normals;
 }
 
 // Compute gaussian function
@@ -259,21 +257,21 @@ float gaussian_distribution(vec3f origin, vec3f position, float standard_dev,
 }
 
 // Change positions, normals, boundig volume hierarchy and hash grid
-void apply_brush(shape_data *shape, vector<vec3f> &positions,
+void apply_brush(shape_data &shape, vector<vec3f> &positions,
     shade_shape &glshape, shape_bvh &tree, hash_grid &grid) {
-  shape->positions = positions;
+  shape.positions = positions;
   set_positions(glshape, positions);
-  triangles_normals(shape->normals, shape->triangles, shape->positions);
-  set_normals(glshape, shape->normals);
-  update_triangles_bvh(tree, shape->triangles, shape->positions);
+  triangles_normals(shape.normals, shape.triangles, shape.positions);
+  set_normals(glshape, shape.normals);
+  update_triangles_bvh(tree, shape.triangles, shape.positions);
   grid = make_hash_grid(positions, grid.cell_size);
 }
 
 // To apply brush on intersected points' neighbors
-void brush(sculpt_params &params, shade_shape &glshape,
+void brush(sculpt_params &params, scene_shape &shape, shade_shape &glshape,
     vector<pair<vec3f, vec3f>> &pairs) {
   if (pairs.empty()) return;
-  auto &positions = params.shape->positions;
+  auto &positions = shape.positions;
   auto  neighbors = vector<int>{};
 
   // for a correct gaussian distribution
@@ -312,13 +310,13 @@ void brush(sculpt_params &params, shade_shape &glshape,
     neighbors.clear();
   }
 
-  apply_brush(params.shape, positions, glshape, params.bvh, params.grid);
+  apply_brush(shape, positions, glshape, params.bvh, params.grid);
 }
 
 // Compute texture values through the parameterization
 void texture_brush(vector<int> &vertices, image_data &texture,
-    vector<vec2f> &coords, sculpt_params &params, shade_shape &glshape,
-    vector<vec3f> positions, vector<vec3f> normals) {
+    vector<vec2f> &coords, sculpt_params &params, scene_shape &shape,
+    shade_shape &glshape, vector<vec3f> positions, vector<vec3f> normals) {
   if (vertices.empty()) return;
   if (texture.pixelsf.empty() && texture.pixelsb.empty()) return;
 
@@ -336,7 +334,7 @@ void texture_brush(vector<int> &vertices, image_data &texture,
     positions[i] += normal * height;
   }
 
-  apply_brush(params.shape, positions, glshape, params.bvh, params.grid);
+  apply_brush(shape, positions, glshape, params.bvh, params.grid);
 }
 
 // Cotangent operator
@@ -374,7 +372,8 @@ float laplacian_weight(vector<vec3f> &positions,
 
 // Smooth brush with Laplace Operator Discretization and Cotangents Weights
 void smooth(geodesic_solver &solver, vector<int> &stroke_sampling,
-    vector<vec3f> &positions, sculpt_params &params, shade_shape &glshape) {
+    vector<vec3f> &positions, sculpt_params &params, scene_shape &shape,
+    shade_shape &glshape) {
   if (stroke_sampling.empty()) return;
 
   auto distances = vector<float>(solver.graph.size(), flt_max);
@@ -404,7 +403,7 @@ void smooth(geodesic_solver &solver, vector<int> &stroke_sampling,
   };
   dijkstra(solver, stroke_sampling, distances, params.radius, update);
 
-  apply_brush(params.shape, positions, glshape, params.bvh, params.grid);
+  apply_brush(shape, positions, glshape, params.bvh, params.grid);
 
   stroke_sampling.clear();
 }
@@ -615,8 +614,7 @@ int run_shade_sculpt(const shade_sculpt_params &params_) {
   convert_scene(app.ioscene, ioshape, print_progress);
 
   // sculpt params
-  auto params  = sculpt_params{};
-  params.shape = &app.ioscene.shapes.front();
+  auto params = sculpt_params{};
   init_sculpt_tool(params, app.ioscene.shapes.front(), iotexture);
 
   // callbacks
@@ -687,15 +685,15 @@ int run_shade_sculpt(const shade_sculpt_params &params_) {
     auto mouse_uv = vec2f{input.mouse_pos.x / float(input.window_size.x),
         input.mouse_pos.y / float(input.window_size.y)};
 
+    auto &shape         = app.ioscene.shapes.front();
     auto &glcamera      = app.glscene.cameras.at(0);
     params.camera_ray   = camera_ray(glcamera.frame, glcamera.lens,
         glcamera.aspect, glcamera.film, mouse_uv);
-    params.intersection = intersect_triangles_bvh(params.bvh,
-        params.shape->triangles, params.shape->positions, params.camera_ray,
-        false);
+    params.intersection = intersect_triangles_bvh(
+        params.bvh, shape.triangles, shape.positions, params.camera_ray, false);
     if (params.intersection.hit) {
       app.glscene.instances.back().hidden = false;
-      view_pointer(params.shape, app.glscene.shapes.back(), params.intersection,
+      view_pointer(shape, app.glscene.shapes.back(), params.intersection,
           params.radius, 20, params.type);
     } else {
       app.glscene.instances.back().hidden = true;
@@ -706,43 +704,40 @@ int run_shade_sculpt(const shade_sculpt_params &params_) {
     if (input.mouse_left && isec.hit && !input.modifier_ctrl &&
         (isec.uv.x >= 0 && isec.uv.x < 1) &&
         (isec.uv.y >= 0 && isec.uv.y < 1)) {
-      auto        pairs = stroke(params, mouse_uv, app.glscene.cameras.at(0));
+      auto pairs = stroke(params, shape, mouse_uv, app.glscene.cameras.at(0));
       vector<int> vertices;
       if (params.type == brush_type::gaussian) {
-        brush(
-            params, app.glscene.shapes[app.glscene.instances[0].shape], pairs);
+        brush(params, shape, app.glscene.shapes.front(), pairs);
       } else if (params.type == brush_type::smooth) {
-        smooth(params.solver, params.stroke_sampling, params.shape->positions,
-            params, app.glscene.shapes[app.glscene.instances[0].shape]);
+        smooth(params.solver, params.stroke_sampling, shape.positions, params,
+            shape, app.glscene.shapes.front());
       } else if (params.type == brush_type::texture && !pairs.empty()) {
         vertices = stroke_parameterization(params.solver, params.coords,
             params.stroke_sampling, params.old_positions, params.old_normals,
             params.radius);
-        texture_brush(vertices, params.tex_image, params.coords, params,
+        texture_brush(vertices, params.tex_image, params.coords, params, shape,
             app.glscene.shapes[app.glscene.instances[0].shape],
             params.old_positions, params.old_normals);
       }
       if (params.symmetric) {
-        pairs = symmetric_stroke(pairs, params.shape, params.bvh,
+        pairs = symmetric_stroke(pairs, shape, params.bvh,
             params.symmetric_stroke_sampling, params.symmetric_axis);
         if (params.type == brush_type::gaussian) {
-          brush(params, app.glscene.shapes[app.glscene.instances[0].shape],
-              pairs);
+          brush(params, shape, app.glscene.shapes.front(), pairs);
         } else if (params.type == brush_type::smooth) {
           smooth(params.solver, params.symmetric_stroke_sampling,
-              params.shape->positions, params,
-              app.glscene.shapes[app.glscene.instances[0].shape]);
+              shape.positions, params, shape, app.glscene.shapes.front());
         } else if (params.type == brush_type::texture && !pairs.empty()) {
           vertices = stroke_parameterization(params.solver, params.coords,
               params.symmetric_stroke_sampling, params.old_positions,
               params.old_normals, params.radius);
           texture_brush(vertices, params.tex_image, params.coords, params,
-              app.glscene.shapes[app.glscene.instances[0].shape],
-              params.shape->positions, params.shape->normals);
+              shape, app.glscene.shapes[app.glscene.instances[0].shape],
+              shape.positions, shape.normals);
         }
       }
     } else {
-      end_stroke(params);
+      end_stroke(params, shape);
     }
     if (input.modifier_ctrl && !input.widgets_active) {
       auto dolly  = 0.0f;
