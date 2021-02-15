@@ -65,12 +65,9 @@ struct sculpt_params {
   hash_grid grid = {};
 
   // stroke
-  vec3f locked_position = {};
-  vec2f locked_uv       = {};
-  bool  lock            = false;
-  bool  continuous      = false;
-  bool  symmetric       = false;
-  axes  symmetric_axis  = axes::x;
+  bool continuous     = false;
+  bool symmetric      = false;
+  axes symmetric_axis = axes::x;
 
   // brush
   float               radius      = 0.35f;
@@ -81,13 +78,20 @@ struct sculpt_params {
   vector<vector<int>> adjacencies = {};
 
   // stroke parameterization
-  vector<int>     stroke_sampling           = {};
-  vector<int>     symmetric_stroke_sampling = {};
-  geodesic_solver solver                    = {};
-  vector<vec2f>   coords                    = {};
-  image_data      tex_image                 = {};
-  vector<vec3f>   old_positions             = {};
-  vector<vec3f>   old_normals               = {};
+  geodesic_solver solver        = {};
+  vector<vec2f>   coords        = {};
+  image_data      tex_image     = {};
+  vector<vec3f>   old_positions = {};
+  vector<vec3f>   old_normals   = {};
+};
+
+// sculpt stroke
+struct sculpt_stroke {
+  vector<int> stroke_sampling           = {};
+  vector<int> symmetric_stroke_sampling = {};
+  vec3f       locked_position           = {};
+  vec2f       locked_uv                 = {};
+  bool        lock                      = false;
 };
 
 // Initialize all sculpting parameters.
@@ -186,8 +190,9 @@ int closest_vertex(
 }
 
 // To make the stroke sampling (position, normal) following the mouse
-pair<vector<pair<vec3f, vec3f>>, vector<int>> stroke(sculpt_params &params,
-    scene_shape &shape, const vec2f &mouse_uv, const scene_camera &camera) {
+pair<vector<pair<vec3f, vec3f>>, vector<int>> sample_stroke(
+    sculpt_params &params, sculpt_stroke &stroke, scene_shape &shape,
+    const vec2f &mouse_uv, const scene_camera &camera) {
   // eval current intersection
   auto  pairs    = vector<pair<vec3f, vec3f>>{};
   auto  sampling = vector<int>{};
@@ -196,7 +201,7 @@ pair<vector<pair<vec3f, vec3f>>, vector<int>> stroke(sculpt_params &params,
       shape.triangles, shape.positions, {inter.element, inter.uv});
   auto nor = eval_normal(
       shape.triangles, shape.normals, {inter.element, inter.uv});
-  float delta_pos   = distance(pos, params.locked_position);
+  float delta_pos   = distance(pos, stroke.locked_position);
   float stroke_dist = params.radius * 0.2f;
 
   // handle continuous stroke
@@ -211,29 +216,29 @@ pair<vector<pair<vec3f, vec3f>>, vector<int>> stroke(sculpt_params &params,
   }
 
   // handle first stroke intersection
-  if (!params.lock) {
-    params.locked_position = pos;
-    params.locked_uv       = mouse_uv;
-    params.lock            = true;
+  if (!stroke.lock) {
+    stroke.locked_position = pos;
+    stroke.locked_uv       = mouse_uv;
+    stroke.lock            = true;
     return {pairs, sampling};
   }
 
-  float delta_uv = distance(mouse_uv, params.locked_uv);
+  float delta_uv = distance(mouse_uv, stroke.locked_uv);
   int   steps    = int(delta_pos / stroke_dist);
   if (steps == 0) return {pairs, sampling};
   pairs           = vector<pair<vec3f, vec3f>>(steps);
   float stroke_uv = delta_uv * stroke_dist / delta_pos;
-  auto  mouse_dir = normalize(mouse_uv - params.locked_uv);
+  auto  mouse_dir = normalize(mouse_uv - stroke.locked_uv);
   for (int step = 0; step < steps; step++) {
-    params.locked_uv += stroke_uv * mouse_dir;
+    stroke.locked_uv += stroke_uv * mouse_dir;
     auto ray = camera_ray(camera.frame, camera.lens, camera.aspect, camera.film,
-        params.locked_uv);
+        stroke.locked_uv);
     inter    = intersect_triangles_bvh(
         params.bvh, shape.triangles, shape.positions, ray, false);
     if (!inter.hit) continue;
     pos                    = eval_position(shape, inter.element, inter.uv);
     nor                    = eval_normal(shape, inter.element, inter.uv);
-    params.locked_position = pos;
+    stroke.locked_position = pos;
     sampling.push_back(
         closest_vertex(shape.triangles, inter.element, inter.uv));
     pairs.push_back({pos, nor});
@@ -440,12 +445,13 @@ vector<int> stroke_parameterization(const geodesic_solver &solver,
 }
 
 // End stroke settings
-void end_stroke(sculpt_params &params, scene_shape &shape) {
-  params.lock = false;
+void end_stroke(
+    sculpt_params &params, sculpt_stroke &stroke, scene_shape &shape) {
+  stroke.lock = false;
   std::fill(params.opacity.begin(), params.opacity.end(), 0.0f);
-  params.stroke_sampling.clear();
+  stroke.stroke_sampling.clear();
   params.coords.clear();
-  params.symmetric_stroke_sampling.clear();
+  stroke.symmetric_stroke_sampling.clear();
   params.old_positions = shape.positions;
   params.old_normals   = shape.normals;
 }
@@ -799,8 +805,9 @@ bool update_cursor(scene_shape &cursor, sculpt_params &params,
   return isec.hit;
 }
 
-bool update_stroke(sculpt_params &params, scene_shape &shape,
-    const scene_camera &camera, const vec2f &mouse_uv, bool mouse_pressed) {
+bool update_stroke(sculpt_stroke &stroke, sculpt_params &params,
+    scene_shape &shape, const scene_camera &camera, const vec2f &mouse_uv,
+    bool mouse_pressed) {
   params.camera_ray = camera_ray(
       camera.frame, camera.lens, camera.aspect, camera.film, mouse_uv);
   params.intersection = intersect_triangles_bvh(
@@ -810,16 +817,17 @@ bool update_stroke(sculpt_params &params, scene_shape &shape,
   // sculpting
   if (mouse_pressed && isec.hit && (isec.uv.x >= 0 && isec.uv.x < 1) &&
       (isec.uv.y >= 0 && isec.uv.y < 1)) {
-    auto [pairs, sampling] = stroke(params, shape, mouse_uv, camera);
+    auto [pairs, sampling] = sample_stroke(
+        params, stroke, shape, mouse_uv, camera);
     vector<int> vertices;
     if (params.type == brush_type::gaussian) {
       gaussian_brush(shape, params, pairs);
     } else if (params.type == brush_type::smooth) {
       smooth_brush(params.solver, sampling, shape.positions, params, shape);
     } else if (params.type == brush_type::texture && !pairs.empty()) {
-      sampling.insert(sampling.begin(), params.stroke_sampling.begin(),
-          params.stroke_sampling.end());
-      params.stroke_sampling = sampling;
+      sampling.insert(sampling.begin(), stroke.stroke_sampling.begin(),
+          stroke.stroke_sampling.end());
+      stroke.stroke_sampling = sampling;
       vertices = stroke_parameterization(params.solver, params.coords, sampling,
           params.old_positions, params.old_normals, params.radius);
       texture_brush(vertices, params.tex_image, params.coords, params, shape,
@@ -834,9 +842,9 @@ bool update_stroke(sculpt_params &params, scene_shape &shape,
         smooth_brush(params.solver, sampling, shape.positions, params, shape);
       } else if (params.type == brush_type::texture && !pairs.empty()) {
         sampling.insert(sampling.begin(),
-            params.symmetric_stroke_sampling.begin(),
-            params.symmetric_stroke_sampling.end());
-        params.symmetric_stroke_sampling = sampling;
+            stroke.symmetric_stroke_sampling.begin(),
+            stroke.symmetric_stroke_sampling.end());
+        stroke.symmetric_stroke_sampling = sampling;
         vertices = stroke_parameterization(params.solver, params.coords,
             sampling, params.old_positions, params.old_normals, params.radius);
         texture_brush(vertices, params.tex_image, params.coords, params, shape,
@@ -845,7 +853,7 @@ bool update_stroke(sculpt_params &params, scene_shape &shape,
     }
     return true;
   } else {
-    end_stroke(params, shape);
+    end_stroke(params, stroke, shape);
     return false;
   }
 }
@@ -886,6 +894,7 @@ int run_shade_sculpt(const shade_sculpt_params &params_) {
   // sculpt params
   auto params = sculpt_params{};
   init_sculpt_tool(params, app.ioscene.shapes.front(), iotexture);
+  auto stroke = sculpt_stroke{};
 
   // callbacks
   auto callbacks    = gui_callbacks{};
@@ -949,7 +958,7 @@ int run_shade_sculpt(const shade_sculpt_params &params_) {
   callbacks.update_cb = [](gui_window *win, const gui_input &input) {
     // pass
   };
-  callbacks.uiupdate_cb = [&app, &params](
+  callbacks.uiupdate_cb = [&app, &params, &stroke](
                               gui_window *win, const gui_input &input) {
     // intersect mouse position and shape
     auto  mouse_uv = vec2f{input.mouse_pos.x / float(input.window_size.x),
@@ -967,7 +976,7 @@ int run_shade_sculpt(const shade_sculpt_params &params_) {
     } else {
       glscene.instances.at(1).hidden = true;
     }
-    if (update_stroke(params, shape, camera, mouse_uv,
+    if (update_stroke(stroke, params, shape, camera, mouse_uv,
             input.mouse_left && !input.modifier_ctrl)) {
       set_positions(glshape, shape.positions);
       set_normals(glshape, shape.normals);
