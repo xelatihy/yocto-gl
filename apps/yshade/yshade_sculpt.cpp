@@ -581,7 +581,7 @@ bool update_cursor(scene_shape &cursor, sculpt_params &params,
 }
 
 bool update_stroke(sculpt_params &params, scene_shape &shape,
-    scene_camera &camera, const vec2f &mouse_uv, bool mouse_pressed) {
+    const scene_camera &camera, const vec2f &mouse_uv, bool mouse_pressed) {
   params.camera_ray = camera_ray(
       camera.frame, camera.lens, camera.aspect, camera.film, mouse_uv);
   params.intersection = intersect_triangles_bvh(
