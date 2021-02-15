@@ -513,12 +513,11 @@ static void convert_scene(scene_scene &scene, const scene_shape &ioshape_,
 
   // material
   if (progress_cb) progress_cb("create material", progress.x++, progress.y);
-  auto &shape_material     = scene.materials.emplace_back();
-  shape_material.type      = material_type::plastic;
-  shape_material.color     = {0.5, 1, 0.5};
-  shape_material.roughness = 0.2;
-  auto &cursor_material    = scene.materials.emplace_back();
-  cursor_material.type     = material_type::matte;
+  auto &shape_material  = scene.materials.emplace_back();
+  shape_material.type   = material_type::matte;
+  shape_material.color  = {0.78f, 0.31f, 0.23f};
+  auto &cursor_material = scene.materials.emplace_back();
+  cursor_material.type  = material_type::matte;
 
   // shapes
   if (progress_cb) progress_cb("create shape", progress.x++, progress.y);
@@ -687,7 +686,6 @@ int run_shade_sculpt(const shade_sculpt_params &params_) {
   auto callbacks    = gui_callbacks{};
   callbacks.init_cb = [&app, &params](gui_window *win, const gui_input &input) {
     init_glscene(app.glscene, app.ioscene, print_progress);
-    // init_glscene(app, app.glscene, app.ioshape, print_progress);
     params        = new sculpt_params{};
     params->shape = app.ioshape;
     init_sculpt_tool(params, app.ioshape, app.shapename, app.imagename);
