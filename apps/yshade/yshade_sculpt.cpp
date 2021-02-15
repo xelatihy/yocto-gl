@@ -193,7 +193,7 @@ vector<pair<vec3f, vec3f>> stroke(sculpt_params &params, scene_shape &shape,
     pair.second = nor;
     pairs.push_back(pair);
     params.stroke_sampling.push_back(
-        closest_vertex(shape.triangles, inter.uv, inter.element));
+        closest_vertex(shape.triangles, inter.element, inter.uv));
     return pairs;
   }
 
@@ -221,7 +221,7 @@ vector<pair<vec3f, vec3f>> stroke(sculpt_params &params, scene_shape &shape,
     pos = eval_position(shape, inter.element, inter.uv);
     nor = eval_normal(shape, inter.element, inter.uv);
     params.stroke_sampling.push_back(
-        closest_vertex(shape.triangles, inter.uv, inter.element));
+        closest_vertex(shape.triangles, inter.element, inter.uv));
     auto pair              = std::pair<vec3f, vec3f>{pos, nor};
     params.locked_position = pos;
     pairs.push_back(pair);
@@ -257,8 +257,8 @@ float gaussian_distribution(vec3f origin, vec3f position, float standard_dev,
 }
 
 // Change positions, normals, bounding volume hierarchy and hash grid
-void apply_brush(shape_data &shape, vector<vec3f> &positions, shape_bvh &tree,
-    hash_grid &grid) {
+void apply_brush(shape_data &shape, const vector<vec3f> &positions,
+    shape_bvh &tree, hash_grid &grid) {
   shape.positions = positions;
   triangles_normals(shape.normals, shape.triangles, shape.positions);
   update_triangles_bvh(tree, shape.triangles, shape.positions);
@@ -267,7 +267,7 @@ void apply_brush(shape_data &shape, vector<vec3f> &positions, shape_bvh &tree,
 
 // To apply brush on intersected points' neighbors
 void brush(sculpt_params &params, scene_shape &shape,
-    vector<pair<vec3f, vec3f>> &pairs) {
+    const vector<pair<vec3f, vec3f>> &pairs) {
   if (pairs.empty()) return;
   auto &positions = shape.positions;
   auto  neighbors = vector<int>{};

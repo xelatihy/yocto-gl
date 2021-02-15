@@ -11,19 +11,14 @@ using namespace yocto;
 using namespace std;
 
 // Taking closest vertex of an intersection
-int closest_vertex(const vector<vec3i> &triangles, vec2f uv, int element) {
-  auto tr = triangles[element];
-  if (uv.x < 0.5f && uv.y < 0.5f) return tr.x;
-  if (uv.x > uv.y) return tr.y;
-  return tr.z;
+int closest_vertex(
+    const vector<vec3i> &triangles, int element, const vec2f &uv) {
+  auto &triangle = triangles[element];
+  if (uv.x < 0.5f && uv.y < 0.5f) return triangle.x;
+  if (uv.x > uv.y) return triangle.y;
+  return triangle.z;
 }
 
-vec3f eval_position(const shape_data *shape, int element, const vec2f &uv) {
-  return eval_position(shape->triangles, shape->positions, {element, uv});
-}
-vec3f eval_normal(const shape_data *shape, int element, const vec2f &uv) {
-  return eval_normal(shape->triangles, shape->normals, {element, uv});
-}
 enum struct axes { x, y, z };
 auto const symmetric_axes = vector<std::string>{"asse x", "asse y", "asse z"};
 
@@ -34,7 +29,7 @@ auto const brushes_names = vector<std::string>{
 // To obtain symmetric from stroke result
 inline vector<pair<vec3f, vec3f>> symmetric_stroke(
     vector<pair<vec3f, vec3f>> &pairs, shape_data &shape, shape_bvh &tree,
-    vector<int> &symmetric_stroke_sampling, axes &axis) {
+    vector<int> &symmetric_stroke_sampling, axes axis) {
   vector<pair<vec3f, vec3f>> symmetric_pairs;
   if (pairs.empty()) return symmetric_pairs;
   for (int i = 0; i < pairs.size(); i++) {
@@ -66,7 +61,7 @@ inline vector<pair<vec3f, vec3f>> symmetric_stroke(
     auto nor  = eval_normal(shape, inter.element, inter.uv);
     auto pair = std::pair<vec3f, vec3f>{pos, nor};
     symmetric_stroke_sampling.push_back(
-        closest_vertex(shape.triangles, inter.uv, inter.element));
+        closest_vertex(shape.triangles, inter.element, inter.uv));
     symmetric_pairs.push_back(pair);
   }
   return symmetric_pairs;
