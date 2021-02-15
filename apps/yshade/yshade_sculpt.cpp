@@ -623,15 +623,15 @@ int run_shade_sculpt(const shade_sculpt_params &params_) {
   convert_scene(app.ioscene, ioshape, print_progress);
   app.ioshape = &app.ioscene.shapes[0];
 
-  sculpt_params *params = nullptr;
+  // sculpt params
+  auto params  = sculpt_params{};
+  params.shape = app.ioshape;
+  init_sculpt_tool(&params, app.ioshape, app.shapename, app.imagename);
 
   // callbacks
   auto callbacks    = gui_callbacks{};
-  callbacks.init_cb = [&app, &params](gui_window *win, const gui_input &input) {
+  callbacks.init_cb = [&app](gui_window *win, const gui_input &input) {
     init_glscene(app.glscene, app.ioscene, print_progress);
-    params        = new sculpt_params{};
-    params->shape = app.ioshape;
-    init_sculpt_tool(params, app.ioshape, app.shapename, app.imagename);
   };
   callbacks.clear_cb = [&app](gui_window *win, const gui_input &input) {
     clear_scene(app.glscene);
@@ -655,35 +655,35 @@ int run_shade_sculpt(const shade_sculpt_params &params_) {
     draw_slider(win, "far", glparams.far, 1000.0f, 10000.0f);
     draw_label(win, "", "");
     draw_label(win, "", "sculpt params");
-    draw_combobox(win, "brush type", (int &)params->type, brushes_names);
-    if (params->type == brush_type::gaussian) {
-      if (params->strength < 0.8f || params->strength > 1.5f)
-        params->strength = 1.0f;
-      draw_slider(win, "radius", params->radius, 0.1f, 0.8f);
-      draw_slider(win, "strength", params->strength, 1.5f, 0.9f);
-      draw_checkbox(win, "negative", params->negative);
-      draw_checkbox(win, "continuous", params->continuous);
-      draw_checkbox(win, "saturation", params->saturation);
-      draw_checkbox(win, "symmetric", params->symmetric);
-      if (params->symmetric)
-        draw_combobox(win, "symmetric axis", (int &)params->symmetric_axis,
+    draw_combobox(win, "brush type", (int &)params.type, brushes_names);
+    if (params.type == brush_type::gaussian) {
+      if (params.strength < 0.8f || params.strength > 1.5f)
+        params.strength = 1.0f;
+      draw_slider(win, "radius", params.radius, 0.1f, 0.8f);
+      draw_slider(win, "strength", params.strength, 1.5f, 0.9f);
+      draw_checkbox(win, "negative", params.negative);
+      draw_checkbox(win, "continuous", params.continuous);
+      draw_checkbox(win, "saturation", params.saturation);
+      draw_checkbox(win, "symmetric", params.symmetric);
+      if (params.symmetric)
+        draw_combobox(win, "symmetric axis", (int &)params.symmetric_axis,
             symmetric_axes);
-    } else if (params->type == brush_type::texture) {
-      if (params->strength < 0.8f || params->strength > 1.5f)
-        params->strength = 1.0f;
-      draw_slider(win, "radius", params->radius, 0.1f, 0.8f);
-      draw_slider(win, "strength", params->strength, 1.5f, 0.9f);
-      draw_checkbox(win, "negative", params->negative);
-      draw_checkbox(win, "symmetric", params->symmetric);
-      if (params->symmetric)
-        draw_combobox(win, "symmetric axis", (int &)params->symmetric_axis,
+    } else if (params.type == brush_type::texture) {
+      if (params.strength < 0.8f || params.strength > 1.5f)
+        params.strength = 1.0f;
+      draw_slider(win, "radius", params.radius, 0.1f, 0.8f);
+      draw_slider(win, "strength", params.strength, 1.5f, 0.9f);
+      draw_checkbox(win, "negative", params.negative);
+      draw_checkbox(win, "symmetric", params.symmetric);
+      if (params.symmetric)
+        draw_combobox(win, "symmetric axis", (int &)params.symmetric_axis,
             symmetric_axes);
-    } else if (params->type == brush_type::smooth) {
-      draw_slider(win, "radius", params->radius, 0.1f, 0.8f);
-      draw_slider(win, "strength", params->strength, 0.1f, 1.0f);
-      draw_checkbox(win, "symmetric", params->symmetric);
-      if (params->symmetric)
-        draw_combobox(win, "symmetric axis", (int &)params->symmetric_axis,
+    } else if (params.type == brush_type::smooth) {
+      draw_slider(win, "radius", params.radius, 0.1f, 0.8f);
+      draw_slider(win, "strength", params.strength, 0.1f, 1.0f);
+      draw_checkbox(win, "symmetric", params.symmetric);
+      if (params.symmetric)
+        draw_combobox(win, "symmetric axis", (int &)params.symmetric_axis,
             symmetric_axes);
     }
   };
@@ -696,63 +696,62 @@ int run_shade_sculpt(const shade_sculpt_params &params_) {
     auto mouse_uv = vec2f{input.mouse_pos.x / float(input.window_size.x),
         input.mouse_pos.y / float(input.window_size.y)};
 
-    auto &glcamera       = app.glscene.cameras.at(0);
-    params->camera_ray   = camera_ray(glcamera.frame, glcamera.lens,
+    auto &glcamera      = app.glscene.cameras.at(0);
+    params.camera_ray   = camera_ray(glcamera.frame, glcamera.lens,
         glcamera.aspect, glcamera.film, mouse_uv);
-    params->intersection = intersect_triangles_bvh(params->bvh,
-        params->shape->triangles, params->shape->positions, params->camera_ray,
+    params.intersection = intersect_triangles_bvh(params.bvh,
+        params.shape->triangles, params.shape->positions, params.camera_ray,
         false);
-    if (params->intersection.hit) {
+    if (params.intersection.hit) {
       app.glscene.instances.back().hidden = false;
-      view_pointer(params->shape, app.glscene.shapes.back(),
-          params->intersection, params->radius, 20, params->type);
+      view_pointer(params.shape, app.glscene.shapes.back(), params.intersection,
+          params.radius, 20, params.type);
     } else {
       app.glscene.instances.back().hidden = true;
     }
 
-    auto isec = params->intersection;
+    auto isec = params.intersection;
     // sculpting
     if (input.mouse_left && isec.hit && !input.modifier_ctrl &&
         (isec.uv.x >= 0 && isec.uv.x < 1) &&
         (isec.uv.y >= 0 && isec.uv.y < 1)) {
-      auto        pairs = stroke(params, mouse_uv, app.glscene.cameras.at(0));
+      auto        pairs = stroke(&params, mouse_uv, app.glscene.cameras.at(0));
       vector<int> vertices;
-      if (params->type == brush_type::gaussian) {
+      if (params.type == brush_type::gaussian) {
         brush(
-            params, app.glscene.shapes[app.glscene.instances[0].shape], pairs);
-      } else if (params->type == brush_type::smooth) {
-        smooth(params->solver, params->stroke_sampling,
-            params->shape->positions, params,
-            app.glscene.shapes[app.glscene.instances[0].shape]);
-      } else if (params->type == brush_type::texture && !pairs.empty()) {
-        vertices = stroke_parameterization(params->solver, params->coords,
-            params->stroke_sampling, params->old_positions, params->old_normals,
-            params->radius);
-        texture_brush(vertices, params->tex_image, params->coords, params,
+            &params, app.glscene.shapes[app.glscene.instances[0].shape], pairs);
+      } else if (params.type == brush_type::smooth) {
+        smooth(params.solver, params.stroke_sampling, params.shape->positions,
+            &params, app.glscene.shapes[app.glscene.instances[0].shape]);
+      } else if (params.type == brush_type::texture && !pairs.empty()) {
+        vertices = stroke_parameterization(params.solver, params.coords,
+            params.stroke_sampling, params.old_positions, params.old_normals,
+            params.radius);
+        texture_brush(vertices, params.tex_image, params.coords, &params,
             app.glscene.shapes[app.glscene.instances[0].shape],
-            params->old_positions, params->old_normals);
+            params.old_positions, params.old_normals);
       }
-      if (params->symmetric) {
-        pairs = symmetric_stroke(pairs, params->shape, params->bvh,
-            params->symmetric_stroke_sampling, params->symmetric_axis);
-        if (params->type == brush_type::gaussian) {
-          brush(params, app.glscene.shapes[app.glscene.instances[0].shape],
+      if (params.symmetric) {
+        pairs = symmetric_stroke(pairs, params.shape, params.bvh,
+            params.symmetric_stroke_sampling, params.symmetric_axis);
+        if (params.type == brush_type::gaussian) {
+          brush(&params, app.glscene.shapes[app.glscene.instances[0].shape],
               pairs);
-        } else if (params->type == brush_type::smooth) {
-          smooth(params->solver, params->symmetric_stroke_sampling,
-              params->shape->positions, params,
+        } else if (params.type == brush_type::smooth) {
+          smooth(params.solver, params.symmetric_stroke_sampling,
+              params.shape->positions, &params,
               app.glscene.shapes[app.glscene.instances[0].shape]);
-        } else if (params->type == brush_type::texture && !pairs.empty()) {
-          vertices = stroke_parameterization(params->solver, params->coords,
-              params->symmetric_stroke_sampling, params->old_positions,
-              params->old_normals, params->radius);
-          texture_brush(vertices, params->tex_image, params->coords, params,
+        } else if (params.type == brush_type::texture && !pairs.empty()) {
+          vertices = stroke_parameterization(params.solver, params.coords,
+              params.symmetric_stroke_sampling, params.old_positions,
+              params.old_normals, params.radius);
+          texture_brush(vertices, params.tex_image, params.coords, &params,
               app.glscene.shapes[app.glscene.instances[0].shape],
-              params->shape->positions, params->shape->normals);
+              params.shape->positions, params.shape->normals);
         }
       }
     } else {
-      end_stroke(params);
+      end_stroke(&params);
     }
     if (input.modifier_ctrl && !input.widgets_active) {
       auto dolly  = 0.0f;
