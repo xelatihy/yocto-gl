@@ -38,8 +38,7 @@ struct shade_sculpt_state {
   shape_data *ioshape = nullptr;
 
   // rendering state
-  shade_scene  glscene   = {};
-  shade_shape *glpointer = new shade_shape{};
+  shade_scene glscene = {};
 };
 
 struct sculpt_params {
