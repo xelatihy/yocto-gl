@@ -54,27 +54,23 @@ auto const brushes_names = vector<std::string>{
 struct sculpt_params {
   // brush type
   brush_type type = brush_type::gaussian;
-
-  shape_bvh bvh = {};
-
-  // hash grid
-  hash_grid grid = {};
-
   // stroke
   bool continuous     = false;
   bool symmetric      = false;
   axes symmetric_axis = axes::x;
-
   // brush
-  float               radius      = 0.35f;
-  float               strength    = 1.0f;
-  bool                negative    = false;
-  bool                saturation  = false;
-  vector<vector<int>> adjacencies = {};
+  float radius     = 0.35f;
+  float strength   = 1.0f;
+  bool  negative   = false;
+  bool  saturation = false;
+};
 
-  // stroke parameterization
-  geodesic_solver solver    = {};
-  image_data      tex_image = {};
+struct sculpt_state {
+  shape_bvh           bvh         = {};
+  hash_grid           grid        = {};
+  vector<vector<int>> adjacencies = {};
+  geodesic_solver     solver      = {};
+  image_data          tex_image   = {};
 };
 
 // sculpt stroke
@@ -96,27 +92,18 @@ struct sculpt_buffers {
 };
 
 // Initialize all sculpting parameters.
-void init_sculpt_tool(sculpt_params &params, const shape_data &shape,
-    const scene_texture &texture) {
-  // create bvh structure
-  params.bvh = make_triangles_bvh(
+sculpt_state make_sculpt_state(
+    const shape_data &shape, const scene_texture &texture) {
+  auto state = sculpt_state{};
+  state.bvh  = make_triangles_bvh(
       shape.triangles, shape.positions, shape.radius);
-
-  // create an hash grid
-  params.grid = make_hash_grid(shape.positions, 0.05f);
-
-  // create geodesic distance graph (ONLY TRIANGLES MESHES!)
+  state.grid       = make_hash_grid(shape.positions, 0.05f);
   auto adjacencies = face_adjacencies(shape.triangles);
-  params.solver    = make_geodesic_solver(
+  state.solver     = make_geodesic_solver(
       shape.triangles, adjacencies, shape.positions);
-  params.adjacencies = vertex_adjacencies(shape.triangles, adjacencies);
-
-  // init texture
-  params.tex_image = texture;
-}
-
-sculpt_stroke make_sculpt_stroke(const shape_data &shape) {
-  return sculpt_stroke{};
+  state.adjacencies = vertex_adjacencies(shape.triangles, adjacencies);
+  state.tex_image   = texture;
+  return state;
 }
 
 sculpt_buffers make_sculpt_buffers(const shape_data &shape) {
@@ -211,7 +198,7 @@ bool sample_stroke(sculpt_stroke &stroke, const shape_bvh &bvh,
   auto ray = camera_ray(
       camera.frame, camera.lens, camera.aspect, camera.film, mouse_uv);
   auto isec = intersect_triangles_bvh(
-      params.bvh, shape.triangles, shape.positions, ray, false);
+      bvh, shape.triangles, shape.positions, ray, false);
   if (!isec.hit) return false;
   auto  pos         = eval_position(shape, isec.element, isec.uv);
   auto  nor         = eval_normal(shape, isec.element, isec.uv);
@@ -248,7 +235,7 @@ bool sample_stroke(sculpt_stroke &stroke, const shape_bvh &bvh,
     auto ray = camera_ray(camera.frame, camera.lens, camera.aspect, camera.film,
         stroke.locked_uv);
     isec     = intersect_triangles_bvh(
-        params.bvh, shape.triangles, shape.positions, ray, false);
+        bvh, shape.triangles, shape.positions, ray, false);
     if (!isec.hit) continue;
     pos                    = eval_position(shape, isec.element, isec.uv);
     nor                    = eval_normal(shape, isec.element, isec.uv);
@@ -373,7 +360,7 @@ inline void compute_stroke_frames(vector<mat3f> &frames,
     const vector<vec3f> &positions, const vector<vec3f> &normals,
     const vector<int> &stroke_sampling) {
   // frames follow stroke direction
-  for (int i = 0; i < stroke_sampling.size() - 1; i++) {
+  for (int i = 0; i < (int)stroke_sampling.size() - 1; i++) {
     int  curr    = stroke_sampling[i];
     int  next    = stroke_sampling[i + 1];
     auto dir     = positions[next] - positions[curr];
@@ -494,8 +481,8 @@ void apply_brush(shape_data &shape, const vector<vec3f> &positions,
 
 // To apply brush on intersected points' neighbors
 bool gaussian_brush(vector<vec3f> &positions, vector<float> &opacity,
-    const vector<pair<vec3f, vec3f>> &stroke_samples,
-    const sculpt_params &             params) {
+    const hash_grid &grid, const vector<pair<vec3f, vec3f>> &stroke_samples,
+    const sculpt_params &params) {
   if (stroke_samples.empty()) return false;
 
   // for a correct gaussian distribution
@@ -503,7 +490,7 @@ bool gaussian_brush(vector<vec3f> &positions, vector<float> &opacity,
 
   auto neighbors = vector<int>{};
   for (auto [position, normal] : stroke_samples) {
-    find_neighbors(params.grid, neighbors, position, params.radius);
+    find_neighbors(grid, neighbors, position, params.radius);
     if (params.negative) normal = -normal;
     if (params.saturation) {
       auto max_height = gaussian_distribution(position, position, 0.7f,
@@ -816,11 +803,11 @@ bool update_cursor(scene_shape &cursor, const shape_bvh &bvh,
   return isec.hit;
 }
 
-bool update_stroke(sculpt_stroke &stroke, sculpt_params &params,
-    sculpt_buffers &buffers, scene_shape &shape, const scene_camera &camera,
-    const vec2f &mouse_uv, bool mouse_pressed) {
+bool update_stroke(sculpt_stroke &stroke, sculpt_state &state,
+    sculpt_params &params, sculpt_buffers &buffers, scene_shape &shape,
+    const scene_camera &camera, const vec2f &mouse_uv, bool mouse_pressed) {
   auto hit = mouse_pressed
-                 ? sample_stroke(stroke, params.bvh, shape, mouse_uv, camera,
+                 ? sample_stroke(stroke, state.bvh, shape, mouse_uv, camera,
                        params.type != brush_type::texture, params)
                  : false;
 
@@ -829,21 +816,21 @@ bool update_stroke(sculpt_stroke &stroke, sculpt_params &params,
     auto updated = false;
     if (params.type == brush_type::gaussian) {
       updated = gaussian_brush(
-          shape.positions, buffers.opacity, stroke.pairs, params);
+          shape.positions, buffers.opacity, state.grid, stroke.pairs, params);
     } else if (params.type == brush_type::smooth) {
-      updated = smooth_brush(shape.positions, params.solver, params.adjacencies,
+      updated = smooth_brush(shape.positions, state.solver, state.adjacencies,
           stroke.sampling, params);
-    } else if (params.type == brush_type::texture && !stroke.pairs.empty()) {
-      auto vertices = stroke_parameterization(buffers.coords, params.solver,
+    } else if (params.type == brush_type::texture && !stroke.pairs.empty() && !stroke.sampling.empty()) {
+      auto vertices = stroke_parameterization(buffers.coords, state.solver,
           stroke.sampling, buffers.old_positions, buffers.old_normals,
           params.radius);
-      updated       = texture_brush(shape.positions, vertices, params.tex_image,
+      updated       = texture_brush(shape.positions, vertices, state.tex_image,
           buffers.coords, buffers.old_positions, buffers.old_normals, params);
     }
     if (updated) {
       triangles_normals(shape.normals, shape.triangles, shape.positions);
-      update_triangles_bvh(params.bvh, shape.triangles, shape.positions);
-      params.grid = make_hash_grid(shape.positions, params.grid.cell_size);
+      update_triangles_bvh(state.bvh, shape.triangles, shape.positions);
+      state.grid = make_hash_grid(shape.positions, state.grid.cell_size);
     }
     // if (params.symmetric) {
     //   auto updated              = false;
@@ -911,9 +898,9 @@ int run_shade_sculpt(const shade_sculpt_params &params_) {
   convert_scene(app.ioscene, ioshape, print_progress);
 
   // sculpt params
-  auto params = sculpt_params{};
-  init_sculpt_tool(params, app.ioscene.shapes.front(), iotexture);
-  auto stroke  = make_sculpt_stroke(app.ioscene.shapes.front());
+  auto params  = sculpt_params{};
+  auto stroke  = sculpt_stroke{};
+  auto state   = make_sculpt_state(app.ioscene.shapes.front(), iotexture);
   auto buffers = make_sculpt_buffers(app.ioscene.shapes.front());
 
   // callbacks
@@ -978,7 +965,7 @@ int run_shade_sculpt(const shade_sculpt_params &params_) {
   callbacks.update_cb = [](gui_window *win, const gui_input &input) {
     // pass
   };
-  callbacks.uiupdate_cb = [&app, &params, &stroke, &buffers](
+  callbacks.uiupdate_cb = [&app, &params, &stroke, &buffers, &state](
                               gui_window *win, const gui_input &input) {
     // intersect mouse position and shape
     auto  mouse_uv = vec2f{input.mouse_pos.x / float(input.window_size.x),
@@ -989,14 +976,14 @@ int run_shade_sculpt(const shade_sculpt_params &params_) {
     auto &glcamera = app.glscene.cameras.at(0);
     auto &glshape  = app.glscene.shapes.at(0);
     auto &glscene  = app.glscene;
-    if (update_cursor(cursor, params.bvh, shape, camera, mouse_uv, params)) {
+    if (update_cursor(cursor, state.bvh, shape, camera, mouse_uv, params)) {
       set_positions(glscene.shapes.at(1), cursor.positions);
       set_lines(glscene.shapes.at(1), cursor.lines);
       glscene.instances.at(1).hidden = false;
     } else {
       glscene.instances.at(1).hidden = true;
     }
-    if (update_stroke(stroke, params, buffers, shape, camera, mouse_uv,
+    if (update_stroke(stroke, state, params, buffers, shape, camera, mouse_uv,
             input.mouse_left && !input.modifier_ctrl)) {
       set_positions(glshape, shape.positions);
       set_normals(glshape, shape.normals);
