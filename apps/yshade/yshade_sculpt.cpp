@@ -150,27 +150,17 @@ shape_data make_circle(
 }
 
 // To visualize mouse intersection on mesh
-void view_pointer(shape_data &shape, shade_shape &glshape,
-    shape_intersection intersection, float radius, int definition,
-    brush_type &type) {
-  if (intersection.hit) {
-    if (type == brush_type::gaussian) radius *= 0.5f;
-    auto pos    = eval_position(shape, intersection.element, intersection.uv);
-    auto nor    = eval_normal(shape, intersection.element, intersection.uv);
-    auto basis  = basis_fromz(nor);
-    auto circle = make_circle(pos, basis, radius, definition);
-    auto positions        = vector<vec3f>();
-    positions             = circle.positions;
-    auto lines            = circle.lines;
-    auto nor_line         = make_lines({1, 1});
-    nor_line.positions[0] = pos;
-    nor_line.positions[1] = pos + nor * 0.05f;
-    positions.insert(
-        positions.end(), nor_line.positions.begin(), nor_line.positions.end());
-    lines.push_back({int(positions.size() - 2), int(positions.size() - 1)});
-    set_positions(glshape, positions);
-    set_lines(glshape, lines);
-  }
+shape_data make_cursor(const vec3f &position, const vec3f &normal, float radius,
+    float height = 0.05f) {
+  auto basis  = basis_fromz(normal);
+  auto cursor = make_circle(position, basis, radius, 32);
+  cursor.normals.clear();
+  cursor.texcoords.clear();
+  cursor.positions.push_back(position);
+  cursor.positions.push_back(position + normal * 0.05f);
+  cursor.lines.push_back(
+      {int(cursor.positions.size() - 2), int(cursor.positions.size() - 1)});
+  return cursor;
 }
 
 // To make the stroke sampling (position, normal) following the mouse
@@ -449,8 +439,7 @@ static void convert_scene(scene_scene &scene, const scene_shape &ioshape_,
   // shapes
   if (progress_cb) progress_cb("create shape", progress.x++, progress.y);
   scene.shapes.emplace_back(ioshape);
-  scene.shapes.emplace_back(
-      make_circle({0, 0, 0}, basis_fromz({0, 0, 1}), 1, 32));
+  scene.shapes.emplace_back(make_cursor({0, 0, 0}, {0, 0, 1}, 1));
 
   // instances
   if (progress_cb) progress_cb("create instance", progress.x++, progress.y);
@@ -577,6 +566,20 @@ static void init_glscene(shade_scene &glscene, const sceneio_scene &ioscene,
   if (progress_cb) progress_cb("convert scene", progress.x++, progress.y);
 }
 
+bool update_cursor(scene_shape &cursor, sculpt_params &params,
+    scene_shape &shape, scene_camera &camera, const vec2f &mouse_uv) {
+  auto ray = camera_ray(
+      camera.frame, camera.lens, camera.aspect, camera.film, mouse_uv);
+  auto isec = intersect_triangles_bvh(
+      params.bvh, shape.triangles, shape.positions, ray, false);
+  if (isec.hit) {
+    cursor = make_cursor(eval_position(shape, isec.element, isec.uv),
+        eval_normal(shape, isec.element, isec.uv),
+        params.radius * (params.type == brush_type::gaussian ? 0.5f : 1.0f));
+  }
+  return isec.hit;
+}
+
 void sculpt_stroke(sculpt_params &params, scene_shape &shape,
     shade_shape &glshape, scene_camera &camera, shade_scene &glscene,
     const vec2f &mouse_uv, bool mouse_pressed) {
@@ -584,13 +587,6 @@ void sculpt_stroke(sculpt_params &params, scene_shape &shape,
       camera.frame, camera.lens, camera.aspect, camera.film, mouse_uv);
   params.intersection = intersect_triangles_bvh(
       params.bvh, shape.triangles, shape.positions, params.camera_ray, false);
-  if (params.intersection.hit) {
-    glscene.instances.back().hidden = false;
-    view_pointer(shape, glscene.shapes.back(), params.intersection,
-        params.radius, 20, params.type);
-  } else {
-    glscene.instances.back().hidden = true;
-  }
 
   auto isec = params.intersection;
   // sculpting
@@ -740,9 +736,18 @@ int run_shade_sculpt(const shade_sculpt_params &params_) {
     auto  mouse_uv = vec2f{input.mouse_pos.x / float(input.window_size.x),
         input.mouse_pos.y / float(input.window_size.y)};
     auto &shape    = app.ioscene.shapes.at(0);
+    auto &cursor   = app.ioscene.shapes.at(1);
     auto &camera   = app.ioscene.cameras.at(0);
     auto &glcamera = app.glscene.cameras.at(0);
     auto &glshape  = app.glscene.shapes.at(0);
+    auto &glscene  = app.glscene;
+    if (update_cursor(cursor, params, shape, camera, mouse_uv)) {
+      set_positions(glscene.shapes.at(1), cursor.positions);
+      set_lines(glscene.shapes.at(1), cursor.lines);
+      glscene.instances.at(1).hidden = false;
+    } else {
+      glscene.instances.at(1).hidden = true;
+    }
     sculpt_stroke(params, shape, glshape, camera, app.glscene, mouse_uv,
         input.mouse_left && !input.modifier_ctrl);
     if (input.modifier_ctrl && !input.widgets_active) {
