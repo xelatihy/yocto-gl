@@ -201,13 +201,13 @@ static void init_glscene(shade_shape_state* app, shade_scene& glscene,
   }
   auto edges_shape = add_shape(glscene, {}, {}, {}, cylinder.quads,
       cylinder.positions, cylinder.normals, cylinder.texcoords, {});
-  set_instances(glscene.shapes[model_shape], froms, tos);
+  set_instances(glscene.shapes[edges_shape], froms, tos);
 
   auto vertices_radius = 3.0f * cylinder_radius;
   auto vertices        = make_spheres(ioshape.positions, vertices_radius, 2);
   auto vertices_shape  = add_shape(glscene, {}, {}, {}, vertices.quads,
       vertices.positions, vertices.normals, vertices.texcoords, {});
-  set_instances(glscene.shapes[model_shape], {}, {});
+  set_instances(glscene.shapes[vertices_shape], {}, {});
 
   // shapes
   if (progress_cb) progress_cb("convert instance", progress.x++, progress.y);
