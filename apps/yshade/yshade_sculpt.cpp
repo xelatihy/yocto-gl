@@ -567,7 +567,7 @@ static void init_glscene(shade_scene &glscene, const sceneio_scene &ioscene,
 }
 
 bool update_cursor(scene_shape &cursor, sculpt_params &params,
-    scene_shape &shape, scene_camera &camera, const vec2f &mouse_uv) {
+    scene_shape &shape, const scene_camera &camera, const vec2f &mouse_uv) {
   auto ray = camera_ray(
       camera.frame, camera.lens, camera.aspect, camera.film, mouse_uv);
   auto isec = intersect_triangles_bvh(
@@ -580,9 +580,8 @@ bool update_cursor(scene_shape &cursor, sculpt_params &params,
   return isec.hit;
 }
 
-void sculpt_stroke(sculpt_params &params, scene_shape &shape,
-    shade_shape &glshape, scene_camera &camera, shade_scene &glscene,
-    const vec2f &mouse_uv, bool mouse_pressed) {
+bool sculpt_stroke(sculpt_params &params, scene_shape &shape,
+    scene_camera &camera, const vec2f &mouse_uv, bool mouse_pressed) {
   params.camera_ray = camera_ray(
       camera.frame, camera.lens, camera.aspect, camera.film, mouse_uv);
   params.intersection = intersect_triangles_bvh(
@@ -606,8 +605,6 @@ void sculpt_stroke(sculpt_params &params, scene_shape &shape,
       texture_brush(vertices, params.tex_image, params.coords, params, shape,
           params.old_positions, params.old_normals);
     }
-    set_positions(glshape, shape.positions);
-    set_normals(glshape, shape.normals);
     if (params.symmetric) {
       pairs = symmetric_stroke(pairs, shape, params.bvh,
           params.symmetric_stroke_sampling, params.symmetric_axis);
@@ -623,11 +620,11 @@ void sculpt_stroke(sculpt_params &params, scene_shape &shape,
         texture_brush(vertices, params.tex_image, params.coords, params, shape,
             shape.positions, shape.normals);
       }
-      set_positions(glshape, shape.positions);
-      set_normals(glshape, shape.normals);
     }
+    return true;
   } else {
     end_stroke(params, shape);
+    return false;
   }
 }
 
@@ -748,8 +745,11 @@ int run_shade_sculpt(const shade_sculpt_params &params_) {
     } else {
       glscene.instances.at(1).hidden = true;
     }
-    sculpt_stroke(params, shape, glshape, camera, app.glscene, mouse_uv,
-        input.mouse_left && !input.modifier_ctrl);
+    if (sculpt_stroke(params, shape, camera, mouse_uv,
+            input.mouse_left && !input.modifier_ctrl)) {
+      set_positions(glshape, shape.positions);
+      set_normals(glshape, shape.normals);
+    }
     if (input.modifier_ctrl && !input.widgets_active) {
       auto dolly  = 0.0f;
       auto pan    = zero2f;
