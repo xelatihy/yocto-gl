@@ -580,7 +580,7 @@ bool update_cursor(scene_shape &cursor, sculpt_params &params,
   return isec.hit;
 }
 
-bool sculpt_stroke(sculpt_params &params, scene_shape &shape,
+bool update_stroke(sculpt_params &params, scene_shape &shape,
     scene_camera &camera, const vec2f &mouse_uv, bool mouse_pressed) {
   params.camera_ray = camera_ray(
       camera.frame, camera.lens, camera.aspect, camera.film, mouse_uv);
@@ -745,7 +745,7 @@ int run_shade_sculpt(const shade_sculpt_params &params_) {
     } else {
       glscene.instances.at(1).hidden = true;
     }
-    if (sculpt_stroke(params, shape, camera, mouse_uv,
+    if (update_stroke(params, shape, camera, mouse_uv,
             input.mouse_left && !input.modifier_ctrl)) {
       set_positions(glshape, shape.positions);
       set_normals(glshape, shape.normals);
