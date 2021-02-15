@@ -4,13 +4,7 @@
 #include <yocto_gui/yocto_imgui.h>
 #include <yocto_gui/yocto_shade.h>
 
-#include <set>
-
 using namespace yocto;
-
-#include <atomic>
-#include <future>
-using namespace std::string_literals;
 
 #ifdef _WIN32
 #undef near

@@ -5,6 +5,7 @@
 
 #include <deque>
 #include <queue>
+#include <set>
 
 using namespace yocto;
 using namespace std;
