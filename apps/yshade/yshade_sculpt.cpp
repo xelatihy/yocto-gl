@@ -85,8 +85,10 @@ struct sculpt_stroke {
   vec3f                      locked_position           = {};
   vec2f                      locked_uv                 = {};
   bool                       lock                      = false;
+};
 
-  // vertex properties
+// sculpt buffers
+struct sculpt_buffers {
   vector<float> opacity       = {};
   vector<vec2f> coords        = {};
   vector<vec3f> old_positions = {};
@@ -113,11 +115,17 @@ void init_sculpt_tool(sculpt_params &params, const shape_data &shape,
   params.tex_image = texture;
 }
 
-void init_sculpt_stroke(sculpt_stroke &stroke, const shape_data &shape) {
-  // init saturation buffer
-  stroke.opacity = vector<float>(shape.positions.size(), 0.0f);
-  // save positions
-  stroke.old_positions = shape.positions;
+sculpt_stroke make_sculpt_stroke(const shape_data &shape) {
+  return sculpt_stroke{};
+}
+
+sculpt_buffers make_sculpt_buffers(const shape_data &shape) {
+  auto buffers          = sculpt_buffers{};
+  buffers.opacity       = vector<float>(shape.positions.size(), 0);
+  buffers.old_positions = shape.positions;
+  buffers.old_normals   = shape.normals;
+  buffers.coords        = vector<vec2f>(shape.positions.size(), vec2f{0, 0});
+  return buffers;
 }
 
 shape_data make_circle(
@@ -449,15 +457,14 @@ vector<int> stroke_parameterization(vector<vec2f> &coords,
 }
 
 // End stroke settings
-void end_stroke(
-    sculpt_params &params, sculpt_stroke &stroke, scene_shape &shape) {
+void end_stroke(sculpt_params &params, sculpt_stroke &stroke,
+    sculpt_buffers &buffers, scene_shape &shape) {
   stroke.lock = false;
-  std::fill(stroke.opacity.begin(), stroke.opacity.end(), 0.0f);
+  std::fill(buffers.opacity.begin(), buffers.opacity.end(), 0.0f);
   stroke.sampling.clear();
-  stroke.coords.clear();
-  stroke.symmetric_stroke_sampling.clear();
-  stroke.old_positions = shape.positions;
-  stroke.old_normals   = shape.normals;
+  buffers.coords.clear();
+  buffers.old_positions = shape.positions;
+  buffers.old_normals   = shape.normals;
 }
 
 // Compute gaussian function
@@ -810,8 +817,8 @@ bool update_cursor(scene_shape &cursor, const shape_bvh &bvh,
 }
 
 bool update_stroke(sculpt_stroke &stroke, sculpt_params &params,
-    scene_shape &shape, const scene_camera &camera, const vec2f &mouse_uv,
-    bool mouse_pressed) {
+    sculpt_buffers &buffers, scene_shape &shape, const scene_camera &camera,
+    const vec2f &mouse_uv, bool mouse_pressed) {
   auto hit = mouse_pressed
                  ? sample_stroke(stroke, params.bvh, shape, mouse_uv, camera,
                        params.type != brush_type::texture, params)
@@ -822,16 +829,16 @@ bool update_stroke(sculpt_stroke &stroke, sculpt_params &params,
     auto updated = false;
     if (params.type == brush_type::gaussian) {
       updated = gaussian_brush(
-          shape.positions, stroke.opacity, stroke.pairs, params);
+          shape.positions, buffers.opacity, stroke.pairs, params);
     } else if (params.type == brush_type::smooth) {
       updated = smooth_brush(shape.positions, params.solver, params.adjacencies,
           stroke.sampling, params);
     } else if (params.type == brush_type::texture && !stroke.pairs.empty()) {
-      auto vertices = stroke_parameterization(stroke.coords, params.solver,
-          stroke.sampling, stroke.old_positions, stroke.old_normals,
+      auto vertices = stroke_parameterization(buffers.coords, params.solver,
+          stroke.sampling, buffers.old_positions, buffers.old_normals,
           params.radius);
       updated       = texture_brush(shape.positions, vertices, params.tex_image,
-          stroke.coords, stroke.old_positions, stroke.old_normals, params);
+          buffers.coords, buffers.old_positions, buffers.old_normals, params);
     }
     if (updated) {
       triangles_normals(shape.normals, shape.triangles, shape.positions);
@@ -865,7 +872,7 @@ bool update_stroke(sculpt_stroke &stroke, sculpt_params &params,
     // }
     return true;
   } else {
-    end_stroke(params, stroke, shape);
+    end_stroke(params, stroke, buffers, shape);
     return false;
   }
 }
@@ -906,8 +913,8 @@ int run_shade_sculpt(const shade_sculpt_params &params_) {
   // sculpt params
   auto params = sculpt_params{};
   init_sculpt_tool(params, app.ioscene.shapes.front(), iotexture);
-  auto stroke = sculpt_stroke{};
-  init_sculpt_stroke(stroke, app.ioscene.shapes.front());
+  auto stroke  = make_sculpt_stroke(app.ioscene.shapes.front());
+  auto buffers = make_sculpt_buffers(app.ioscene.shapes.front());
 
   // callbacks
   auto callbacks    = gui_callbacks{};
@@ -971,7 +978,7 @@ int run_shade_sculpt(const shade_sculpt_params &params_) {
   callbacks.update_cb = [](gui_window *win, const gui_input &input) {
     // pass
   };
-  callbacks.uiupdate_cb = [&app, &params, &stroke](
+  callbacks.uiupdate_cb = [&app, &params, &stroke, &buffers](
                               gui_window *win, const gui_input &input) {
     // intersect mouse position and shape
     auto  mouse_uv = vec2f{input.mouse_pos.x / float(input.window_size.x),
@@ -989,7 +996,7 @@ int run_shade_sculpt(const shade_sculpt_params &params_) {
     } else {
       glscene.instances.at(1).hidden = true;
     }
-    if (update_stroke(stroke, params, shape, camera, mouse_uv,
+    if (update_stroke(stroke, params, buffers, shape, camera, mouse_uv,
             input.mouse_left && !input.modifier_ctrl)) {
       set_positions(glshape, shape.positions);
       set_normals(glshape, shape.normals);
