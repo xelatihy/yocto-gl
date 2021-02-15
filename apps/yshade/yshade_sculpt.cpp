@@ -703,24 +703,23 @@ static void init_glscene(shade_scene &glscene, const sceneio_scene &ioscene,
   if (progress_cb) progress_cb("convert scene", progress.x++, progress.y);
 }
 
-bool update_cursor(scene_shape &cursor, const shape_bvh &bvh,
-    const scene_shape &shape, const scene_camera &camera, const vec2f &mouse_uv,
-    const sculpt_params &params) {
+pair<bool, bool> update_stroke(sculpt_stroke &stroke, sculpt_state &state,
+    sculpt_params &params, sculpt_buffers &buffers, scene_shape &shape,
+    scene_shape &cursor, const scene_camera &camera, const vec2f &mouse_uv,
+    bool mouse_pressed) {
+  auto updated_shape = false, updated_cursor = false;
+
   auto ray = camera_ray(
       camera.frame, camera.lens, camera.aspect, camera.film, mouse_uv);
   auto isec = intersect_triangles_bvh(
-      bvh, shape.triangles, shape.positions, ray, false);
+      state.bvh, shape.triangles, shape.positions, ray, false);
   if (isec.hit) {
-    cursor = make_cursor(eval_position(shape, isec.element, isec.uv),
+    cursor         = make_cursor(eval_position(shape, isec.element, isec.uv),
         eval_normal(shape, isec.element, isec.uv),
         params.radius * (params.type == brush_type::gaussian ? 0.5f : 1.0f));
+    updated_cursor = true;
   }
-  return isec.hit;
-}
 
-bool update_stroke(sculpt_stroke &stroke, sculpt_state &state,
-    sculpt_params &params, sculpt_buffers &buffers, scene_shape &shape,
-    const scene_camera &camera, const vec2f &mouse_uv, bool mouse_pressed) {
   auto hit = mouse_pressed
                  ? sample_stroke(stroke, state.bvh, shape, mouse_uv, camera,
                        params.type != brush_type::texture, params)
@@ -728,31 +727,30 @@ bool update_stroke(sculpt_stroke &stroke, sculpt_state &state,
 
   // sculpting
   if (hit) {
-    auto updated = false;
     if (params.type == brush_type::gaussian) {
-      updated = gaussian_brush(
+      updated_shape = gaussian_brush(
           shape.positions, state.grid, stroke.pairs, params);
     } else if (params.type == brush_type::smooth) {
-      updated = smooth_brush(shape.positions, state.solver, state.adjacencies,
-          stroke.sampling, params);
+      updated_shape = smooth_brush(shape.positions, state.solver,
+          state.adjacencies, stroke.sampling, params);
     } else if (params.type == brush_type::texture && !stroke.pairs.empty() &&
                !stroke.sampling.empty()) {
       auto vertices = stroke_parameterization(buffers.coords, state.solver,
           stroke.sampling, buffers.old_positions, buffers.old_normals,
           params.radius);
-      updated       = texture_brush(shape.positions, vertices, state.tex_image,
+      updated_shape = texture_brush(shape.positions, vertices, state.tex_image,
           buffers.coords, buffers.old_positions, buffers.old_normals, params);
     }
-    if (updated) {
+    if (updated_shape) {
       triangles_normals(shape.normals, shape.triangles, shape.positions);
       update_triangles_bvh(state.bvh, shape.triangles, shape.positions);
       state.grid = make_hash_grid(shape.positions, state.grid.cell_size);
     }
-    return true;
   } else {
     end_stroke(params, stroke, buffers, shape);
-    return false;
   }
+
+  return {updated_shape, updated_cursor};
 }
 
 int run_shade_sculpt(const shade_sculpt_params &params_) {
@@ -853,15 +851,17 @@ int run_shade_sculpt(const shade_sculpt_params &params_) {
     auto &glcamera = app.glscene.cameras.at(0);
     auto &glshape  = app.glscene.shapes.at(0);
     auto &glscene  = app.glscene;
-    if (update_cursor(cursor, state.bvh, shape, camera, mouse_uv, params)) {
+    auto [updated_shape, updated_cursor] = update_stroke(stroke, state, params,
+        buffers, shape, cursor, camera, mouse_uv,
+        input.mouse_left && !input.modifier_ctrl);
+    if (updated_cursor) {
       set_positions(glscene.shapes.at(1), cursor.positions);
       set_lines(glscene.shapes.at(1), cursor.lines);
       glscene.instances.at(1).hidden = false;
     } else {
       glscene.instances.at(1).hidden = true;
     }
-    if (update_stroke(stroke, state, params, buffers, shape, camera, mouse_uv,
-            input.mouse_left && !input.modifier_ctrl)) {
+    if (updated_shape) {
       set_positions(glshape, shape.positions);
       set_normals(glshape, shape.normals);
     }
