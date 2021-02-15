@@ -668,31 +668,34 @@ bool sample_stroke(sculpt_stroke &stroke, const shape_bvh &bvh,
         bvh, shape.triangles, shape.positions, ray, false);
   };
 
-  // eval current intersection
-  auto first = intersect_shape(stroke.locked_uv);
-  auto last  = intersect_shape(mouse_uv);
-  if (!first.hit || !last.hit) return false;
-  float delta_pos   = distance(eval_position(shape, last.element, last.uv),
-      eval_position(shape, first.element, first.uv));
-  float stroke_dist = params.radius * 0.2f;
+  // setup uv
+  auto last_uv = stroke.locked_uv;
 
-  float delta_uv = distance(mouse_uv, stroke.locked_uv);
-  int   steps    = int(delta_pos / stroke_dist);
+  // eval current intersection
+  auto last  = intersect_shape(last_uv);
+  auto mouse = intersect_shape(mouse_uv);
+  if (!mouse.hit || !last.hit) return false;
+
+  // sample
+  auto delta_pos   = distance(eval_position(shape, last.element, last.uv),
+      eval_position(shape, mouse.element, mouse.uv));
+  auto stroke_dist = params.radius * 0.2f;
+  auto delta_uv    = distance(mouse_uv, last_uv);
+  auto steps       = int(delta_pos / stroke_dist);
   if (steps == 0) return true;
-  stroke.pairs   = vector<pair<vec3f, vec3f>>(steps);  // TODO: bug
   auto stroke_uv = delta_uv * stroke_dist / delta_pos;
   auto mouse_dir = normalize(mouse_uv - stroke.locked_uv);
-  for (int step = 0; step < steps; step++) {
-    stroke.locked_uv += stroke_uv * mouse_dir;
+  for (auto step = 0; step < steps; step++) {
+    last_uv += stroke_uv * mouse_dir;
     auto isec = intersect_shape(stroke.locked_uv);
     if (!isec.hit) continue;
-    auto pos = eval_position(shape, isec.element, isec.uv);
-    auto nor = eval_normal(shape, isec.element, isec.uv);
+    stroke.pairs.push_back({eval_position(shape, isec.element, isec.uv),
+        eval_normal(shape, isec.element, isec.uv)});
     stroke.sampling.push_back(
         closest_vertex(shape.triangles, isec.element, isec.uv));
-    stroke.pairs.push_back({pos, nor});
   }
 
+  // update
   stroke.locked_uv = mouse_uv;
 
   return true;
