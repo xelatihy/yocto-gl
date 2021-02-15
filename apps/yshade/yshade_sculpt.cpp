@@ -175,7 +175,7 @@ void view_pointer(shape_data &shape, shade_shape &glshape,
 
 // To make the stroke sampling (position, normal) following the mouse
 vector<pair<vec3f, vec3f>> stroke(sculpt_params &params, scene_shape &shape,
-    const vec2f &mouse_uv, shade_camera &glcamera) {
+    const vec2f &mouse_uv, scene_camera &camera) {
   // eval current intersection
   auto  pairs = vector<pair<vec3f, vec3f>>{};
   auto &inter = params.intersection;
@@ -213,8 +213,8 @@ vector<pair<vec3f, vec3f>> stroke(sculpt_params &params, scene_shape &shape,
   auto  mouse_dir = normalize(mouse_uv - params.locked_uv);
   for (int step = 0; step < steps; step++) {
     params.locked_uv += stroke_uv * mouse_dir;
-    auto ray = camera_ray(glcamera.frame, glcamera.lens, glcamera.aspect,
-        glcamera.film, params.locked_uv);
+    auto ray = camera_ray(camera.frame, camera.lens, camera.aspect, camera.film,
+        params.locked_uv);
     inter    = intersect_triangles_bvh(
         params.bvh, shape.triangles, shape.positions, ray, false);
     if (!inter.hit) continue;
@@ -578,10 +578,10 @@ static void init_glscene(shade_scene &glscene, const sceneio_scene &ioscene,
 }
 
 void sculpt_stroke(sculpt_params &params, scene_shape &shape,
-    shade_shape &glshape, shade_camera &glcamera, shade_scene &glscene,
+    shade_shape &glshape, scene_camera &camera, shade_scene &glscene,
     const vec2f &mouse_uv, bool mouse_pressed) {
   params.camera_ray = camera_ray(
-      glcamera.frame, glcamera.lens, glcamera.aspect, glcamera.film, mouse_uv);
+      camera.frame, camera.lens, camera.aspect, camera.film, mouse_uv);
   params.intersection = intersect_triangles_bvh(
       params.bvh, shape.triangles, shape.positions, params.camera_ray, false);
   if (params.intersection.hit) {
@@ -596,7 +596,7 @@ void sculpt_stroke(sculpt_params &params, scene_shape &shape,
   // sculpting
   if (mouse_pressed && isec.hit && (isec.uv.x >= 0 && isec.uv.x < 1) &&
       (isec.uv.y >= 0 && isec.uv.y < 1)) {
-    auto        pairs = stroke(params, shape, mouse_uv, glcamera);
+    auto        pairs = stroke(params, shape, mouse_uv, camera);
     vector<int> vertices;
     if (params.type == brush_type::gaussian) {
       brush(params, shape, pairs);
@@ -740,9 +740,10 @@ int run_shade_sculpt(const shade_sculpt_params &params_) {
     auto  mouse_uv = vec2f{input.mouse_pos.x / float(input.window_size.x),
         input.mouse_pos.y / float(input.window_size.y)};
     auto &shape    = app.ioscene.shapes.at(0);
+    auto &camera   = app.ioscene.cameras.at(0);
     auto &glcamera = app.glscene.cameras.at(0);
     auto &glshape  = app.glscene.shapes.at(0);
-    sculpt_stroke(params, shape, glshape, glcamera, app.glscene, mouse_uv,
+    sculpt_stroke(params, shape, glshape, camera, app.glscene, mouse_uv,
         input.mouse_left && !input.modifier_ctrl);
     if (input.modifier_ctrl && !input.widgets_active) {
       auto dolly  = 0.0f;
@@ -754,9 +755,10 @@ int run_shade_sculpt(const shade_sculpt_params &params_) {
         dolly = (input.mouse_pos.x - input.mouse_last.x) / 100.0f;
       if (input.mouse_left && input.modifier_shift)
         pan = (input.mouse_pos - input.mouse_last) / 100.0f;
-      auto &glcamera                           = app.glscene.cameras.at(0);
-      std::tie(glcamera.frame, glcamera.focus) = camera_turntable(
-          glcamera.frame, glcamera.focus, rotate, dolly, -pan);
+      std::tie(camera.frame, camera.focus) = camera_turntable(
+          camera.frame, camera.focus, rotate, dolly, -pan);
+      glcamera.frame = camera.frame;
+      glcamera.focus = camera.focus;
     }
   };
 
