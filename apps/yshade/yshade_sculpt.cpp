@@ -26,11 +26,12 @@ using namespace std::string_literals;
 // Application state
 struct shade_sculpt_state {
   // loading parameters
-  string shapename = "";
-  string filename  = "scene.json";
-  string imagename = "";
-  string outname   = "scene.json";
-  string name      = "";
+  string shapename   = "";
+  string filename    = "shape.ply";
+  string imagename   = "";
+  string outname     = "out.ply";
+  string texturename = "";
+  string name        = "";
 
   // options
   shade_params drawgl_prms = {};
@@ -100,7 +101,7 @@ frame3f camera_frame(float lens, float aspect, float film = 0.036) {
   return lookat_frame(camera_dir * camera_dist, {0, 0, 0}, {0, 1, 0});
 }
 
-void init_glscene(shade_sculpt_state *app, shade_scene &glscene,
+void init_glscene(shade_sculpt_state &app, shade_scene &glscene,
     shape_data *ioshape, progress_callback progress_cb) {
   // handle progress
   auto progress = vec2i{0, 4};
@@ -139,7 +140,7 @@ void init_glscene(shade_sculpt_state *app, shade_scene &glscene,
       ioshape->triangles, ioshape->quads, ioshape->positions, ioshape->normals,
       ioshape->texcoords, ioshape->colors, true);
   if (!has_normals(glscene.shapes[model_shape])) {
-    app->drawgl_prms.faceted = true;
+    app.drawgl_prms.faceted = true;
   }
   set_instances(glscene.shapes[model_shape], {}, {});
 
@@ -153,9 +154,6 @@ void init_glscene(shade_sculpt_state *app, shade_scene &glscene,
   set_unlit(glscene.materials.at(pointer_material), true);
   add_instance(glscene, identity3x4f, pointer_shape, pointer_material);
 
-  // add_instance(glscene, identity3x4f, edges_shape, glmateriale, true);
-  // add_instance(glscene, identity3x4f, vertices_shape, glmaterialv, true);
-
   // done
   if (progress_cb) progress_cb("convert done", progress.x++, progress.y);
 }
@@ -164,51 +162,13 @@ void init_glscene(shade_sculpt_state *app, shade_scene &glscene,
 void init_sculpt_tool(sculpt_params *params, shape_data *shape,
     std::string shapename, std::string texture_name,
     sceneio_material *material = nullptr) {
-  // sculpt_params *params = new sculpt_params();
-
-  // create sceneio_shape and sceneio_instance
-  // sceneio_instance *shape_instance = add_instance(ioscene, "object");
-  // sceneio_shape *   shape          = add_shape(ioscene, "object");
-
-  // loading shape
-  // auto ioerror = ""s;
-  // if (!load_shape(shapename, shape->points, shape->lines, shape->triangles,
-  //         shape->quads, shape->quadspos, shape->quadsnorm,
-  //         shape->quadstexcoord, shape->positions, shape->normals,
-  //         shape->texcoords, shape->colors, shape->radius, ioerror))
-  //   print_fatal(ioerror);
-
-  // convert quads meshes to triangles meshes
-  // (geodesic solver works only on triangles)
-  // auto shape = app->ioshape;
   if (!shape->quads.empty()) {
     shape->triangles = quads_to_triangles(shape->quads);
     shape->quads.clear();
   }
 
-  // set shape instance
-  // shape  = shape;
-  // shape_instance->frame  = identity3x4f;
-  // params->shape_instance = shape_instance;
-
   // save positions
   params->old_positions = shape->positions;
-
-  // set/create sceneio_material
-  // if (material == nullptr) {
-  //   material                 = add_material(ioscene, "clay");
-  //   material->color          = {0.78f, 0.31f, 0.23f};
-  //   material->specular       = 0.0f;
-  //   shape_instance->material = material;
-  // } else {
-  //   shape_instance->material = material;
-  // }
-  // shape->colors = vector<vec4f>(
-  //     shape->positions.size(), vec4f{1.0f, 1.0f, 1.0f, 1.0f});
-  // sceneio_texture* tex = add_texture(app->ioscene);
-
-  // create camera
-  // add_cameras(ioscene);
 
   // create bvh structure
   params->bvh = make_triangles_bvh(
@@ -540,62 +500,53 @@ void smooth(geodesic_solver &solver, vector<int> &stroke_sampling,
 
 int run_shade_sculpt(const shade_sculpt_params &params_) {
   // initialize app
-  auto app_guard = std::make_unique<shade_sculpt_state>();
-  auto app       = app_guard.get();
-  // auto camera_name = "default";
+  auto app = shade_sculpt_state();
 
-  // copy params
-  app->imagename = params_.texture;
-  app->shapename = params_.shape;
+  // copy command line
+  app.filename    = params_.shape;
+  app.texturename = params_.texture;
+  app.imagename   = params_.texture;
+  app.shapename   = params_.shape;
 
-  auto ioerror              = ""s;
-  app->drawgl_prms.lighting = shade_lighting_type::eyelight;
+  // loading shape
+  auto ioerror = ""s;
+  auto ioshape = scene_shape{};
+  print_progress("load shape", 0, 1);
+  if (!load_shape(app.filename, ioshape, ioerror)) print_fatal(ioerror);
+  print_progress("load shape", 1, 1);
+
+  // loading texture
+  auto iotexture = scene_texture{};
+  if (!app.texturename.empty()) {
+    print_progress("load texture", 0, 1);
+    if (!load_texture(app.texturename, iotexture, ioerror))
+      print_fatal(ioerror);
+    print_progress("load texture", 1, 1);
+  }
+
+  // setup app
+  *app.ioshape = ioshape;
 
   sculpt_params *params = nullptr;
 
-  // app->iocamera = get_camera(app->ioscene);
-
-  // tesselation
-  // tesselate_shapes(app->ioscene, print_progress);
-
   // callbacks
   auto callbacks    = gui_callbacks{};
-  callbacks.init_cb = [app, &params](gui_window *win, const gui_input &input) {
-    if (!load_shape(app->shapename, *app->ioshape, app->loader_error)) {
-      printf("%s\n", app->loader_error.c_str());
-      return;
-    }
-    auto progress_cb = [app](const string &message, int current, int total) {
-      app->status  = "init scene";
-      app->current = current;
-      app->total   = total;
-    };
-    init_glscene(app, app->glscene, app->ioshape, progress_cb);
-    //    params->shape_instance           = new sceneio_instance{};
+  callbacks.init_cb = [&app, &params](gui_window *win, const gui_input &input) {
+    init_glscene(app, app.glscene, app.ioshape, print_progress);
     params        = new sculpt_params{};
-    params->shape = app->ioshape;
-    //    params->shape_instance->material = new sceneio_material{};
-    init_sculpt_tool(params, app->ioshape, app->shapename, app->imagename);
+    params->shape = app.ioshape;
+    init_sculpt_tool(params, app.ioshape, app.shapename, app.imagename);
   };
-  callbacks.clear_cb = [app](gui_window *win, const gui_input &input) {
-    clear_scene(app->glscene);
+  callbacks.clear_cb = [&app](gui_window *win, const gui_input &input) {
+    clear_scene(app.glscene);
   };
-  callbacks.draw_cb = [app](gui_window *win, const gui_input &input) {
-    draw_scene(app->glscene, app->glscene.cameras.at(0),
-        input.framebuffer_viewport, app->drawgl_prms);
+  callbacks.draw_cb = [&app](gui_window *win, const gui_input &input) {
+    draw_scene(app.glscene, app.glscene.cameras.at(0),
+        input.framebuffer_viewport, app.drawgl_prms);
   };
-  callbacks.widgets_cb = [app, &params](
+  callbacks.widgets_cb = [&app, &params](
                              gui_window *win, const gui_input &input) {
-    draw_progressbar(win, app->status.c_str(), app->current, app->total);
-    // if (draw_combobox(win, "camera", app->iocamera, app->ioscene->cameras)) {
-    //   for (auto idx = 0; idx < app->ioscene->cameras.size(); idx++) {
-    //     if (app->ioscene->cameras[idx] == app->iocamera)
-    //       app->glcamera = app->glscene->cameras[idx];
-    //   }
-    // }
-    auto &glparams = app->drawgl_prms;
-    // float mouse_x = input.mouse_pos.x;
-    // float mouse_y = input.mouse_pos.y;
+    auto &glparams = app.drawgl_prms;
     draw_slider(win, "resolution", glparams.resolution, 0, 4096);
     draw_checkbox(win, "wireframe", glparams.wireframe);
     draw_combobox(
@@ -631,11 +582,6 @@ int run_shade_sculpt(const shade_sculpt_params &params_) {
       if (params->symmetric)
         draw_combobox(win, "symmetric axis", (int &)params->symmetric_axis,
             symmetric_axes);
-      /*
-      capire come funziona
-      draw_filedialog_button(win, "Load", true, "Load Texture", app->imagename,
-          false, "./", "", "");
-          */
     } else if (params->type == brush_type::smooth) {
       draw_slider(win, "radius", params->radius, 0.1f, 0.8f);
       draw_slider(win, "strength", params->strength, 0.1f, 1.0f);
@@ -646,26 +592,26 @@ int run_shade_sculpt(const shade_sculpt_params &params_) {
     }
   };
   callbacks.update_cb = [](gui_window *win, const gui_input &input) {
-    // update(win, apps);
+    // pass
   };
-  callbacks.uiupdate_cb = [app, &params](
+  callbacks.uiupdate_cb = [&app, &params](
                               gui_window *win, const gui_input &input) {
     // intersect mouse position and shape
     auto mouse_uv = vec2f{input.mouse_pos.x / float(input.window_size.x),
         input.mouse_pos.y / float(input.window_size.y)};
 
-    auto &glcamera       = app->glscene.cameras.at(0);
+    auto &glcamera       = app.glscene.cameras.at(0);
     params->camera_ray   = camera_ray(glcamera.frame, glcamera.lens,
         glcamera.aspect, glcamera.film, mouse_uv);
     params->intersection = intersect_triangles_bvh(params->bvh,
         params->shape->triangles, params->shape->positions, params->camera_ray,
         false);
     if (params->intersection.hit) {
-      app->glscene.instances.back().hidden = false;
-      view_pointer(params->shape, app->glscene.shapes.back(),
+      app.glscene.instances.back().hidden = false;
+      view_pointer(params->shape, app.glscene.shapes.back(),
           params->intersection, params->radius, 20, params->type);
     } else {
-      app->glscene.instances.back().hidden = true;
+      app.glscene.instances.back().hidden = true;
     }
 
     auto isec = params->intersection;
@@ -673,39 +619,39 @@ int run_shade_sculpt(const shade_sculpt_params &params_) {
     if (input.mouse_left && isec.hit && !input.modifier_ctrl &&
         (isec.uv.x >= 0 && isec.uv.x < 1) &&
         (isec.uv.y >= 0 && isec.uv.y < 1)) {
-      auto        pairs = stroke(params, mouse_uv, app->glscene.cameras.at(0));
+      auto        pairs = stroke(params, mouse_uv, app.glscene.cameras.at(0));
       vector<int> vertices;
       if (params->type == brush_type::gaussian) {
-        brush(params, app->glscene.shapes[app->glscene.instances[0].shape],
-            pairs);
+        brush(
+            params, app.glscene.shapes[app.glscene.instances[0].shape], pairs);
       } else if (params->type == brush_type::smooth) {
         smooth(params->solver, params->stroke_sampling,
             params->shape->positions, params,
-            app->glscene.shapes[app->glscene.instances[0].shape]);
+            app.glscene.shapes[app.glscene.instances[0].shape]);
       } else if (params->type == brush_type::texture && !pairs.empty()) {
         vertices = stroke_parameterization(params->solver, params->coords,
             params->stroke_sampling, params->old_positions, params->old_normals,
             params->radius);
         texture_brush(vertices, params->tex_image, params->coords, params,
-            app->glscene.shapes[app->glscene.instances[0].shape],
+            app.glscene.shapes[app.glscene.instances[0].shape],
             params->old_positions, params->old_normals);
       }
       if (params->symmetric) {
         pairs = symmetric_stroke(pairs, params->shape, params->bvh,
             params->symmetric_stroke_sampling, params->symmetric_axis);
         if (params->type == brush_type::gaussian) {
-          brush(params, app->glscene.shapes[app->glscene.instances[0].shape],
+          brush(params, app.glscene.shapes[app.glscene.instances[0].shape],
               pairs);
         } else if (params->type == brush_type::smooth) {
           smooth(params->solver, params->symmetric_stroke_sampling,
               params->shape->positions, params,
-              app->glscene.shapes[app->glscene.instances[0].shape]);
+              app.glscene.shapes[app.glscene.instances[0].shape]);
         } else if (params->type == brush_type::texture && !pairs.empty()) {
           vertices = stroke_parameterization(params->solver, params->coords,
               params->symmetric_stroke_sampling, params->old_positions,
               params->old_normals, params->radius);
           texture_brush(vertices, params->tex_image, params->coords, params,
-              app->glscene.shapes[app->glscene.instances[0].shape],
+              app.glscene.shapes[app.glscene.instances[0].shape],
               params->shape->positions, params->shape->normals);
         }
       }
@@ -723,7 +669,7 @@ int run_shade_sculpt(const shade_sculpt_params &params_) {
         dolly = (input.mouse_pos.x - input.mouse_last.x) / 100.0f;
       if (input.mouse_left && input.modifier_shift)
         pan = (input.mouse_pos - input.mouse_last) / 100.0f;
-      auto &glcamera                           = app->glscene.cameras.at(0);
+      auto &glcamera                           = app.glscene.cameras.at(0);
       std::tie(glcamera.frame, glcamera.focus) = camera_turntable(
           glcamera.frame, glcamera.focus, rotate, dolly, -pan);
       // set_frame(glcamera, glcamera.frame);
@@ -731,7 +677,7 @@ int run_shade_sculpt(const shade_sculpt_params &params_) {
   };
 
   // run ui
-  run_ui({1900, 876}, "ysculpting", callbacks);
+  run_ui({1900, 876}, "yshade", callbacks);
 
   // done
   return 0;
