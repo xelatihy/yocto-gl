@@ -171,58 +171,6 @@ int closest_vertex(
   return triangle.z;
 }
 
-// To make the stroke sampling (position, normal) following the mouse
-bool sample_stroke(sculpt_stroke &stroke, const shape_bvh &bvh,
-    const scene_shape &shape, const vec2f &mouse_uv, const scene_camera &camera,
-    bool clear, const sculpt_params &params) {
-  // clear
-  if (clear) {
-    stroke.pairs.clear();
-    stroke.sampling.clear();
-  }
-
-  // eval current intersection
-  auto ray = camera_ray(
-      camera.frame, camera.lens, camera.aspect, camera.film, mouse_uv);
-  auto isec = intersect_triangles_bvh(
-      bvh, shape.triangles, shape.positions, ray, false);
-  if (!isec.hit) return false;
-  auto  pos         = eval_position(shape, isec.element, isec.uv);
-  auto  nor         = eval_normal(shape, isec.element, isec.uv);
-  float delta_pos   = distance(pos, stroke.locked_position);
-  float stroke_dist = params.radius * 0.2f;
-
-  // handle first stroke intersection
-  if (!stroke.lock) {
-    stroke.locked_position = pos;
-    stroke.locked_uv       = mouse_uv;
-    stroke.lock            = true;
-    return true;
-  }
-
-  float delta_uv = distance(mouse_uv, stroke.locked_uv);
-  int   steps    = int(delta_pos / stroke_dist);
-  if (steps == 0) return true;
-  stroke.pairs   = vector<pair<vec3f, vec3f>>(steps);  // TODO: bug
-  auto stroke_uv = delta_uv * stroke_dist / delta_pos;
-  auto mouse_dir = normalize(mouse_uv - stroke.locked_uv);
-  for (int step = 0; step < steps; step++) {
-    stroke.locked_uv += stroke_uv * mouse_dir;
-    auto ray = camera_ray(camera.frame, camera.lens, camera.aspect, camera.film,
-        stroke.locked_uv);
-    isec     = intersect_triangles_bvh(
-        bvh, shape.triangles, shape.positions, ray, false);
-    if (!isec.hit) continue;
-    pos                    = eval_position(shape, isec.element, isec.uv);
-    nor                    = eval_normal(shape, isec.element, isec.uv);
-    stroke.locked_position = pos;
-    stroke.sampling.push_back(
-        closest_vertex(shape.triangles, isec.element, isec.uv));
-    stroke.pairs.push_back({pos, nor});
-  }
-  return true;
-}
-
 // Project a vector on a plane, maintaining vector length
 inline vec2f project_onto_plane(const mat3f &basis, const vec3f &p) {
   auto v  = p - dot(p, basis.z) * basis.z;
@@ -703,6 +651,58 @@ static void init_glscene(shade_scene &glscene, const sceneio_scene &ioscene,
   if (progress_cb) progress_cb("convert scene", progress.x++, progress.y);
 }
 
+// To make the stroke sampling (position, normal) following the mouse
+bool sample_stroke(sculpt_stroke &stroke, const shape_bvh &bvh,
+    const scene_shape &shape, const vec2f &mouse_uv, const scene_camera &camera,
+    bool clear, const sculpt_params &params) {
+  // clear
+  if (clear) {
+    stroke.pairs.clear();
+    stroke.sampling.clear();
+  }
+
+  // eval current intersection
+  auto ray = camera_ray(
+      camera.frame, camera.lens, camera.aspect, camera.film, mouse_uv);
+  auto isec = intersect_triangles_bvh(
+      bvh, shape.triangles, shape.positions, ray, false);
+  if (!isec.hit) return false;
+  auto  pos         = eval_position(shape, isec.element, isec.uv);
+  auto  nor         = eval_normal(shape, isec.element, isec.uv);
+  float delta_pos   = distance(pos, stroke.locked_position);
+  float stroke_dist = params.radius * 0.2f;
+
+  // handle first stroke intersection
+  if (!stroke.lock) {
+    stroke.locked_position = pos;
+    stroke.locked_uv       = mouse_uv;
+    stroke.lock            = true;
+    return true;
+  }
+
+  float delta_uv = distance(mouse_uv, stroke.locked_uv);
+  int   steps    = int(delta_pos / stroke_dist);
+  if (steps == 0) return true;
+  stroke.pairs   = vector<pair<vec3f, vec3f>>(steps);  // TODO: bug
+  auto stroke_uv = delta_uv * stroke_dist / delta_pos;
+  auto mouse_dir = normalize(mouse_uv - stroke.locked_uv);
+  for (int step = 0; step < steps; step++) {
+    stroke.locked_uv += stroke_uv * mouse_dir;
+    auto ray = camera_ray(camera.frame, camera.lens, camera.aspect, camera.film,
+        stroke.locked_uv);
+    isec     = intersect_triangles_bvh(
+        bvh, shape.triangles, shape.positions, ray, false);
+    if (!isec.hit) continue;
+    pos                    = eval_position(shape, isec.element, isec.uv);
+    nor                    = eval_normal(shape, isec.element, isec.uv);
+    stroke.locked_position = pos;
+    stroke.sampling.push_back(
+        closest_vertex(shape.triangles, isec.element, isec.uv));
+    stroke.pairs.push_back({pos, nor});
+  }
+  return true;
+}
+
 pair<bool, bool> update_stroke(sculpt_stroke &stroke, sculpt_state &state,
     sculpt_params &params, sculpt_buffers &buffers, scene_shape &shape,
     scene_shape &cursor, const scene_camera &camera, const vec2f &mouse_uv,
@@ -720,13 +720,10 @@ pair<bool, bool> update_stroke(sculpt_stroke &stroke, sculpt_state &state,
     updated_cursor = true;
   }
 
-  auto hit = mouse_pressed
-                 ? sample_stroke(stroke, state.bvh, shape, mouse_uv, camera,
-                       params.type != brush_type::texture, params)
-                 : false;
-
   // sculpting
-  if (hit) {
+  if (isec.hit && mouse_pressed) {
+    sample_stroke(stroke, state.bvh, shape, mouse_uv, camera,
+        params.type != brush_type::texture, params);
     if (params.type == brush_type::gaussian) {
       updated_shape = gaussian_brush(
           shape.positions, state.grid, stroke.pairs, params);
