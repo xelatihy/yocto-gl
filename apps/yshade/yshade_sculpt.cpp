@@ -83,12 +83,13 @@ struct sculpt_params {
 
 // sculpt stroke
 struct sculpt_stroke {
-  vector<int>   stroke_sampling           = {};
-  vector<int>   symmetric_stroke_sampling = {};
-  vec3f         locked_position           = {};
-  vec2f         locked_uv                 = {};
-  bool          lock                      = false;
-  vector<float> opacity                   = {};
+  vector<pair<vec3f, vec3f>> pairs                     = {};
+  vector<int>                sampling                  = {};
+  vector<int>                symmetric_stroke_sampling = {};
+  vec3f                      locked_position           = {};
+  vec2f                      locked_uv                 = {};
+  bool                       lock                      = false;
+  vector<float>              opacity                   = {};
 };
 
 // Initialize all sculpting parameters.
@@ -189,14 +190,18 @@ int closest_vertex(
 }
 
 // To make the stroke sampling (position, normal) following the mouse
-pair<vector<pair<vec3f, vec3f>>, vector<int>> sample_stroke(
-    sculpt_params &params, sculpt_stroke &stroke, scene_shape &shape,
-    const vec2f &mouse_uv, const scene_camera &camera) {
+void sample_stroke(sculpt_params &params, sculpt_stroke &stroke,
+    scene_shape &shape, const vec2f &mouse_uv, const scene_camera &camera,
+    bool clear) {
+  // clear
+  if (clear) {
+    stroke.pairs.clear();
+    stroke.sampling.clear();
+  }
+
   // eval current intersection
-  auto  pairs    = vector<pair<vec3f, vec3f>>{};
-  auto  sampling = vector<int>{};
-  auto &inter    = params.intersection;
-  auto  pos      = eval_position(
+  auto &inter = params.intersection;
+  auto  pos   = eval_position(
       shape.triangles, shape.positions, {inter.element, inter.uv});
   auto nor = eval_normal(
       shape.triangles, shape.normals, {inter.element, inter.uv});
@@ -208,10 +213,10 @@ pair<vector<pair<vec3f, vec3f>>, vector<int>> sample_stroke(
     pair<vec3f, vec3f> pair;
     pair.first  = pos;
     pair.second = nor;
-    pairs.push_back(pair);
-    sampling.push_back(
+    stroke.pairs.push_back(pair);
+    stroke.sampling.push_back(
         closest_vertex(shape.triangles, inter.element, inter.uv));
-    return {pairs, sampling};
+    return;
   }
 
   // handle first stroke intersection
@@ -219,15 +224,15 @@ pair<vector<pair<vec3f, vec3f>>, vector<int>> sample_stroke(
     stroke.locked_position = pos;
     stroke.locked_uv       = mouse_uv;
     stroke.lock            = true;
-    return {pairs, sampling};
+    return;
   }
 
   float delta_uv = distance(mouse_uv, stroke.locked_uv);
   int   steps    = int(delta_pos / stroke_dist);
-  if (steps == 0) return {pairs, sampling};
-  pairs           = vector<pair<vec3f, vec3f>>(steps);
-  float stroke_uv = delta_uv * stroke_dist / delta_pos;
-  auto  mouse_dir = normalize(mouse_uv - stroke.locked_uv);
+  if (steps == 0) return;
+  stroke.pairs   = vector<pair<vec3f, vec3f>>(steps);  // TODO: bug
+  auto stroke_uv = delta_uv * stroke_dist / delta_pos;
+  auto mouse_dir = normalize(mouse_uv - stroke.locked_uv);
   for (int step = 0; step < steps; step++) {
     stroke.locked_uv += stroke_uv * mouse_dir;
     auto ray = camera_ray(camera.frame, camera.lens, camera.aspect, camera.film,
@@ -238,11 +243,11 @@ pair<vector<pair<vec3f, vec3f>>, vector<int>> sample_stroke(
     pos                    = eval_position(shape, inter.element, inter.uv);
     nor                    = eval_normal(shape, inter.element, inter.uv);
     stroke.locked_position = pos;
-    sampling.push_back(
+    stroke.sampling.push_back(
         closest_vertex(shape.triangles, inter.element, inter.uv));
-    pairs.push_back({pos, nor});
+    stroke.pairs.push_back({pos, nor});
   }
-  return {pairs, sampling};
+  return;
 }
 
 // To obtain symmetric from stroke result
@@ -448,7 +453,7 @@ void end_stroke(
     sculpt_params &params, sculpt_stroke &stroke, scene_shape &shape) {
   stroke.lock = false;
   std::fill(stroke.opacity.begin(), stroke.opacity.end(), 0.0f);
-  stroke.stroke_sampling.clear();
+  stroke.sampling.clear();
   params.coords.clear();
   stroke.symmetric_stroke_sampling.clear();
   params.old_positions = shape.positions;
@@ -818,20 +823,18 @@ bool update_stroke(sculpt_stroke &stroke, sculpt_params &params,
   // sculpting
   if (mouse_pressed && isec.hit && (isec.uv.x >= 0 && isec.uv.x < 1) &&
       (isec.uv.y >= 0 && isec.uv.y < 1)) {
-    auto [pairs, sampling] = sample_stroke(
-        params, stroke, shape, mouse_uv, camera);
+    sample_stroke(params, stroke, shape, mouse_uv, camera,
+        params.type != brush_type::texture);
     vector<int> vertices;
     auto        updated = false;
     if (params.type == brush_type::gaussian) {
-      updated = gaussian_brush(shape, params, stroke, pairs);
+      updated = gaussian_brush(shape, params, stroke, stroke.pairs);
     } else if (params.type == brush_type::smooth) {
-      updated = smooth_brush(params.solver, sampling, params, shape);
-    } else if (params.type == brush_type::texture && !pairs.empty()) {
-      sampling.insert(sampling.begin(), stroke.stroke_sampling.begin(),
-          stroke.stroke_sampling.end());
-      stroke.stroke_sampling = sampling;
-      vertices = stroke_parameterization(params.solver, params.coords, sampling,
-          params.old_positions, params.old_normals, params.radius);
+      updated = smooth_brush(params.solver, stroke.sampling, params, shape);
+    } else if (params.type == brush_type::texture && !stroke.pairs.empty()) {
+      vertices = stroke_parameterization(params.solver, params.coords,
+          stroke.sampling, params.old_positions, params.old_normals,
+          params.radius);
       updated  = texture_brush(shape, vertices, params.tex_image, params.coords,
           params, params.old_positions, params.old_normals);
     }
@@ -840,30 +843,31 @@ bool update_stroke(sculpt_stroke &stroke, sculpt_params &params,
       update_triangles_bvh(params.bvh, shape.triangles, shape.positions);
       params.grid = make_hash_grid(shape.positions, params.grid.cell_size);
     }
-    if (params.symmetric) {
-      auto updated              = false;
-      std::tie(pairs, sampling) = symmetric_stroke(
-          pairs, shape, params.bvh, params.symmetric_axis);
-      if (params.type == brush_type::gaussian) {
-        updated = gaussian_brush(shape, params, stroke, pairs);
-      } else if (params.type == brush_type::smooth) {
-        updated = smooth_brush(params.solver, sampling, params, shape);
-      } else if (params.type == brush_type::texture && !pairs.empty()) {
-        sampling.insert(sampling.begin(),
-            stroke.symmetric_stroke_sampling.begin(),
-            stroke.symmetric_stroke_sampling.end());
-        stroke.symmetric_stroke_sampling = sampling;
-        vertices = stroke_parameterization(params.solver, params.coords,
-            sampling, params.old_positions, params.old_normals, params.radius);
-        updated  = texture_brush(shape, vertices, params.tex_image,
-            params.coords, params, shape.positions, shape.normals);
-      }
-      if (updated) {
-        triangles_normals(shape.normals, shape.triangles, shape.positions);
-        update_triangles_bvh(params.bvh, shape.triangles, shape.positions);
-        params.grid = make_hash_grid(shape.positions, params.grid.cell_size);
-      }
-    }
+    // if (params.symmetric) {
+    //   auto updated              = false;
+    //   std::tie(pairs, sampling) = symmetric_stroke(
+    //       pairs, shape, params.bvh, params.symmetric_axis);
+    //   if (params.type == brush_type::gaussian) {
+    //     updated = gaussian_brush(shape, params, stroke, pairs);
+    //   } else if (params.type == brush_type::smooth) {
+    //     updated = smooth_brush(params.solver, sampling, params, shape);
+    //   } else if (params.type == brush_type::texture && !pairs.empty()) {
+    //     sampling.insert(sampling.begin(),
+    //         stroke.symmetric_stroke_sampling.begin(),
+    //         stroke.symmetric_stroke_sampling.end());
+    //     stroke.symmetric_stroke_sampling = sampling;
+    //     vertices = stroke_parameterization(params.solver, params.coords,
+    //         sampling, params.old_positions, params.old_normals,
+    //         params.radius);
+    //     updated  = texture_brush(shape, vertices, params.tex_image,
+    //         params.coords, params, shape.positions, shape.normals);
+    //   }
+    //   if (updated) {
+    //     triangles_normals(shape.normals, shape.triangles, shape.positions);
+    //     update_triangles_bvh(params.bvh, shape.triangles, shape.positions);
+    //     params.grid = make_hash_grid(shape.positions, params.grid.cell_size);
+    //   }
+    // }
     return true;
   } else {
     end_stroke(params, stroke, shape);
