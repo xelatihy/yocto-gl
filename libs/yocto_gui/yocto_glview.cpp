@@ -528,7 +528,7 @@ void view_scene(const string& title, const string& name, scene_scene& scene,
       edited += draw_checkbox(win, "filter", tparams.tentfilter);
       edited += draw_slider(win, "seed", (int&)tparams.seed, 0, 1000000);
       edited += draw_slider(win, "pratio", tparams.pratio, 1, 64);
-      edited += draw_slider(win, "exposure", tparams.exposure, -5, 5);
+      // edited += draw_slider(win, "exposure", tparams.exposure, -5, 5);
       end_header(win);
       if (edited) {
         trace_stop(worker);
