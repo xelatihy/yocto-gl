@@ -10,9 +10,8 @@
 #include <yocto_gui/yocto_imgui.h>
 #include <yocto_gui/yocto_shade.h>
 
-#include <deque>
 #include <queue>
-#include <set>
+#include <unordered_set>
 
 using namespace yocto;
 using namespace std;
@@ -265,7 +264,7 @@ vector<int> stroke_parameterization(vector<vec2f> &coords,
   };
 
   // init params
-  std::set<int> vertices;  // to avoid duplicates
+  auto vertices = std::unordered_set<int>{};  // to avoid duplicates
 
   auto visited = vector<bool>(positions.size(), false);
   for (auto sample : sampling) visited[sample] = true;
