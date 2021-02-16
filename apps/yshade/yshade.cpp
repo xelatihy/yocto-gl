@@ -208,7 +208,7 @@ void run_shade_scene(scene_scene &scene, const string &name,
     // handle mouse and keyboard for navigation
     if (uiupdate_callback) uiupdate_callback(win, input, scene, glscene);
     if ((input.mouse_left || input.mouse_right) && !input.modifier_alt &&
-        !input.widgets_active) {
+        !input.modifier_ctrl && !input.widgets_active) {
       auto dolly  = 0.0f;
       auto pan    = zero2f;
       auto rotate = zero2f;
@@ -922,8 +922,8 @@ bool smooth_brush(vector<vec3f> &positions, const geodesic_solver &solver,
   return true;
 }
 
-static void convert_scene2(scene_scene &scene, const scene_shape &ioshape_,
-    progress_callback progress_cb) {
+static scene_scene make_sculptscene(
+    const scene_shape &ioshape_, progress_callback progress_cb) {
   // Frame camera
   auto camera_frame = [](float lens, float aspect,
                           float film = 0.036) -> frame3f {
@@ -938,7 +938,7 @@ static void convert_scene2(scene_scene &scene, const scene_shape &ioshape_,
   if (progress_cb) progress_cb("create scene", progress.x++, progress.y);
 
   // init scene
-  scene = {};
+  auto scene = scene_scene{};
 
   // rescale shape to unit
   auto ioshape = ioshape_;
@@ -980,10 +980,11 @@ static void convert_scene2(scene_scene &scene, const scene_shape &ioshape_,
 
   // done
   if (progress_cb) progress_cb("create scene", progress.x++, progress.y);
+  return scene;
 }
 
 // To make the stroke sampling (position, normal) following the mouse
-pair<vector<shape_point>, vec2f> sample_stroke(const shape_bvh &bvh,
+static pair<vector<shape_point>, vec2f> sample_stroke(const shape_bvh &bvh,
     const scene_shape &shape, const vec2f &last_uv, const vec2f &mouse_uv,
     const scene_camera &camera, const sculpt_params &params) {
   // helper
@@ -1018,7 +1019,7 @@ pair<vector<shape_point>, vec2f> sample_stroke(const shape_bvh &bvh,
   return {samples, cur_uv};
 }
 
-pair<bool, bool> sculpt_update(sculpt_state &state, scene_shape &shape,
+static pair<bool, bool> sculpt_update(sculpt_state &state, scene_shape &shape,
     scene_shape &cursor, const scene_camera &camera, const vec2f &mouse_uv,
     bool mouse_pressed, const sculpt_params &params) {
   auto updated_shape = false, updated_cursor = false;
@@ -1136,111 +1137,67 @@ int run_shade_sculpt(const shade_sculpt_params &params_) {
   print_progress("load shape", 1, 1);
 
   // loading texture
-  auto iotexture = scene_texture{};
+  auto texture = scene_texture{};
   if (!app.imagename.empty()) {
     print_progress("load texture", 0, 1);
-    if (!load_texture(app.imagename, iotexture, ioerror)) print_fatal(ioerror);
+    if (!load_texture(app.imagename, texture, ioerror)) print_fatal(ioerror);
     print_progress("load texture", 1, 1);
   }
 
   // setup app
-  convert_scene2(app.ioscene, ioshape, print_progress);
+  auto scene = make_sculptscene(ioshape, print_progress);
 
   // sculpt params
   auto params = sculpt_params{};
-  auto state  = make_sculpt_state(app.ioscene.shapes.front(), iotexture);
+  auto state  = make_sculpt_state(scene.shapes.front(), texture);
 
   // callbacks
-  auto callbacks    = gui_callbacks{};
-  callbacks.init_cb = [&app](gui_window *win, const gui_input &input) {
-    init_glscene(app.glscene, app.ioscene, print_progress);
-  };
-  callbacks.clear_cb = [&app](gui_window *win, const gui_input &input) {
-    clear_scene(app.glscene);
-  };
-  callbacks.draw_cb = [&app](gui_window *win, const gui_input &input) {
-    draw_scene(app.glscene, app.glscene.cameras.at(0),
-        input.framebuffer_viewport, app.drawgl_prms);
-  };
-  callbacks.widgets_cb = [&app, &params](
-                             gui_window *win, const gui_input &input) {
-    auto &glparams = app.drawgl_prms;
-    draw_slider(win, "resolution", glparams.resolution, 0, 4096);
-    draw_checkbox(win, "wireframe", glparams.wireframe);
-    draw_combobox(
-        win, "lighting", (int &)glparams.lighting, shade_lighting_names);
-    continue_line(win);
-    draw_checkbox(win, "double sided", glparams.double_sided);
-    draw_slider(win, "exposure", glparams.exposure, -10, 10);
-    draw_slider(win, "gamma", glparams.gamma, 0.1f, 4);
-    draw_slider(win, "near", glparams.near, 0.01f, 1.0f);
-    draw_slider(win, "far", glparams.far, 1000.0f, 10000.0f);
-    draw_label(win, "", "");
-    draw_label(win, "", "sculpt params");
-    draw_combobox(win, "brush type", (int &)params.type, sculpt_brush_names);
-    if (params.type == sculpt_brush_type::gaussian) {
-      if (params.strength < 0.8f || params.strength > 1.5f)
-        params.strength = 1.0f;
-      draw_slider(win, "radius", params.radius, 0.1f, 0.8f);
-      draw_slider(win, "strength", params.strength, 1.5f, 0.9f);
-      draw_checkbox(win, "negative", params.negative);
-    } else if (params.type == sculpt_brush_type::texture) {
-      if (params.strength < 0.8f || params.strength > 1.5f)
-        params.strength = 1.0f;
-      draw_slider(win, "radius", params.radius, 0.1f, 0.8f);
-      draw_slider(win, "strength", params.strength, 1.5f, 0.9f);
-      draw_checkbox(win, "negative", params.negative);
-    } else if (params.type == sculpt_brush_type::smooth) {
-      draw_slider(win, "radius", params.radius, 0.1f, 0.8f);
-      draw_slider(win, "strength", params.strength, 0.1f, 1.0f);
-    }
-  };
-  callbacks.update_cb = [](gui_window *win, const gui_input &input) {
-    // pass
-  };
-  callbacks.uiupdate_cb = [&app, &params, &state](
-                              gui_window *win, const gui_input &input) {
-    // intersect mouse position and shape
-    auto  mouse_uv = vec2f{input.mouse_pos.x / float(input.window_size.x),
-        input.mouse_pos.y / float(input.window_size.y)};
-    auto &shape    = app.ioscene.shapes.at(0);
-    auto &cursor   = app.ioscene.shapes.at(1);
-    auto &camera   = app.ioscene.cameras.at(0);
-    auto &glcamera = app.glscene.cameras.at(0);
-    auto &glshape  = app.glscene.shapes.at(0);
-    auto &glscene  = app.glscene;
-    auto [updated_shape, updated_cursor] = sculpt_update(state, shape, cursor,
-        camera, mouse_uv, input.mouse_left && !input.modifier_ctrl, params);
-    if (updated_cursor) {
-      set_positions(glscene.shapes.at(1), cursor.positions);
-      set_lines(glscene.shapes.at(1), cursor.lines);
-      glscene.instances.at(1).hidden = false;
-    } else {
-      glscene.instances.at(1).hidden = true;
-    }
-    if (updated_shape) {
-      set_positions(glshape, shape.positions);
-      set_normals(glshape, shape.normals);
-    }
-    if (input.modifier_ctrl && !input.widgets_active) {
-      auto dolly  = 0.0f;
-      auto pan    = zero2f;
-      auto rotate = zero2f;
-      if (input.mouse_left && !input.modifier_shift)
-        rotate = (input.mouse_pos - input.mouse_last) / 100.0f;
-      if (input.mouse_right)
-        dolly = (input.mouse_pos.x - input.mouse_last.x) / 100.0f;
-      if (input.mouse_left && input.modifier_shift)
-        pan = (input.mouse_pos - input.mouse_last) / 100.0f;
-      std::tie(camera.frame, camera.focus) = camera_turntable(
-          camera.frame, camera.focus, rotate, dolly, -pan);
-      glcamera.frame = camera.frame;
-      glcamera.focus = camera.focus;
-    }
-  };
-
-  // run ui
-  run_ui({1280 + 320, 720}, "yshade", callbacks);
+  run_shade_scene(
+      scene, params_.shape, "", print_progress,
+      [&params](gui_window *win, const gui_input &input, scene_scene &scene,
+          shade_scene &glscene) {
+        draw_combobox(
+            win, "brush type", (int &)params.type, sculpt_brush_names);
+        if (params.type == sculpt_brush_type::gaussian) {
+          if (params.strength < 0.8f || params.strength > 1.5f)
+            params.strength = 1.0f;
+          draw_slider(win, "radius", params.radius, 0.1f, 0.8f);
+          draw_slider(win, "strength", params.strength, 1.5f, 0.9f);
+          draw_checkbox(win, "negative", params.negative);
+        } else if (params.type == sculpt_brush_type::texture) {
+          if (params.strength < 0.8f || params.strength > 1.5f)
+            params.strength = 1.0f;
+          draw_slider(win, "radius", params.radius, 0.1f, 0.8f);
+          draw_slider(win, "strength", params.strength, 1.5f, 0.9f);
+          draw_checkbox(win, "negative", params.negative);
+        } else if (params.type == sculpt_brush_type::smooth) {
+          draw_slider(win, "radius", params.radius, 0.1f, 0.8f);
+          draw_slider(win, "strength", params.strength, 0.1f, 1.0f);
+        }
+      },
+      [&state, &params](gui_window *win, const gui_input &input,
+          scene_scene &scene, shade_scene &glscene) {
+        auto  mouse_uv = vec2f{input.mouse_pos.x / float(input.window_size.x),
+            input.mouse_pos.y / float(input.window_size.y)};
+        auto &shape    = scene.shapes.at(0);
+        auto &cursor   = scene.shapes.at(1);
+        auto &camera   = scene.cameras.at(0);
+        auto &glshape  = glscene.shapes.at(0);
+        auto [updated_shape, updated_cursor] = sculpt_update(state, shape,
+            cursor, camera, mouse_uv, input.mouse_left && input.modifier_ctrl,
+            params);
+        if (updated_cursor) {
+          set_positions(glscene.shapes.at(1), cursor.positions);
+          set_lines(glscene.shapes.at(1), cursor.lines);
+          glscene.instances.at(1).hidden = false;
+        } else {
+          glscene.instances.at(1).hidden = true;
+        }
+        if (updated_shape) {
+          set_positions(glshape, shape.positions);
+          set_normals(glshape, shape.normals);
+        }
+      });
 
   // done
   return 0;
