@@ -462,6 +462,7 @@ void view_scene(const string& title, const string& name, scene_scene& scene,
   // renderer update
   auto             render_counter = 0;
   std::atomic<int> current;
+  std::mutex       mutex;
   auto             reset_display = [&]() {
     // stop render
     trace_stop(worker);
@@ -475,6 +476,7 @@ void view_scene(const string& title, const string& name, scene_scene& scene,
         },
         [&](const image_data& render, int current, int total) {
           // if (current > 0) return;
+          auto lock = std::lock_guard{mutex};
           if (current == 0) render_counter = 0;
           image = render;
           tonemap_image_mt(display, image, params.exposure);
@@ -496,6 +498,7 @@ void view_scene(const string& title, const string& name, scene_scene& scene,
   callbacks.draw_cb = [&](gui_window* win, const gui_input& input) {
     // update image
     if (!render_counter) {
+      auto lock = std::lock_guard{mutex};
       set_image(glimage, display, false, false);
     }
     render_counter++;
