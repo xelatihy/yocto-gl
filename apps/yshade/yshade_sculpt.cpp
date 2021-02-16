@@ -68,10 +68,7 @@ struct sculpt_state {
   vec2f               last_uv  = {};
   bool                instroke = false;
   // shape at the beginning of the stroke
-  vector<vec2f> coords        = {};
-  vector<vec3f> old_positions = {};
-  vector<vec3f> old_normals   = {};
-  scene_shape   old_shape     = {};
+  scene_shape base_shape = {};
 };
 
 // Initialize all sculpting parameters.
@@ -84,12 +81,10 @@ sculpt_state make_sculpt_state(
   auto adjacencies = face_adjacencies(shape.triangles);
   state.solver     = make_geodesic_solver(
       shape.triangles, adjacencies, shape.positions);
-  state.adjacencies   = vertex_adjacencies(shape.triangles, adjacencies);
-  state.tex_image     = texture;
-  state.old_positions = shape.positions;
-  state.old_normals   = shape.normals;
-  state.coords        = vector<vec2f>(shape.positions.size(), vec2f{0, 0});
-  state.old_shape     = shape;
+  state.adjacencies = vertex_adjacencies(shape.triangles, adjacencies);
+  state.tex_image   = texture;
+  state.base_shape  = shape;
+  state.base_shape.texcoords.assign(shape.positions.size(), {0, 0});
   return state;
 }
 
@@ -469,7 +464,7 @@ bool smooth_brush(vector<vec3f> &positions, const geodesic_solver &solver,
         sum2 += weights[i];
       }
       positions[current_node] += 0.5f *
-                                 (((sum1 / sum2) - positions[current_node]));
+                                 ((sum1 / sum2) - positions[current_node]);
       current_node = node;
       neighbors.clear();
       weights.clear();
@@ -720,8 +715,8 @@ pair<bool, bool> sculpt_update(sculpt_state &state, scene_shape &shape,
         if (params.type == sculpt_brush_type::gaussian) {
           state.stroke  = samples;
           updated_shape = gaussian_brush(shape.positions, state.grid,
-              shape.triangles, state.old_positions, state.old_normals,
-              state.stroke, params);
+              shape.triangles, state.base_shape.positions,
+              state.base_shape.normals, state.stroke, params);
         } else if (params.type == sculpt_brush_type::smooth) {
           state.stroke  = samples;
           updated_shape = smooth_brush(shape.positions, state.solver,
@@ -730,15 +725,15 @@ pair<bool, bool> sculpt_update(sculpt_state &state, scene_shape &shape,
           state.stroke.insert(
               state.stroke.end(), samples.begin(), samples.end());
           auto sampling = vector<int>{};
-          for (auto sample : state.stroke) {
-            sampling.push_back(
-                closest_vertex(shape.triangles, sample.element, sample.uv));
+          for (auto [element, uv] : state.stroke) {
+            sampling.push_back(closest_vertex(shape.triangles, element, uv));
           }
-          auto vertices = stroke_parameterization(state.coords, state.solver,
-              sampling, state.old_positions, state.old_normals, params.radius);
+          auto vertices = stroke_parameterization(state.base_shape.texcoords,
+              state.solver, sampling, state.base_shape.positions,
+              state.base_shape.normals, params.radius);
           updated_shape = texture_brush(shape.positions, vertices,
-              state.tex_image, state.coords, state.old_positions,
-              state.old_normals, params);
+              state.tex_image, state.base_shape.texcoords,
+              state.base_shape.positions, state.base_shape.normals, params);
         }
       }
     }
@@ -751,9 +746,10 @@ pair<bool, bool> sculpt_update(sculpt_state &state, scene_shape &shape,
     if (state.instroke) {
       state.instroke = false;
       state.stroke.clear();
-      state.coords.assign(state.coords.size(), {0, 0});
-      state.old_positions = shape.positions;
-      state.old_normals   = shape.normals;
+      state.base_shape.positions = shape.positions;
+      state.base_shape.normals   = shape.normals;
+      state.base_shape.texcoords.assign(
+          state.base_shape.texcoords.size(), {0, 0});
     }
   }
 
