@@ -148,118 +148,121 @@ shape_data make_cursor(const vec3f &position, const vec3f &normal, float radius,
   return cursor;
 }
 
-// Planar coordinates by local computation between neighbors
-inline void compute_coordinates(vector<vec2f> &coords,
-    const vector<mat3f> &frames, const vector<vec3f> &positions, int node,
-    int neighbor, float weight) {
-  // Project a vector on a plane, maintaining vector length
-  auto project_onto_plane = [](const mat3f &basis, const vec3f &p) -> vec2f {
-    auto v  = p - dot(p, basis.z) * basis.z;
-    auto v1 = vec2f{dot(v, basis.x), dot(v, basis.y)};
-    return v1 * (length(p) / length(v1));
-  };
-
-  auto current_coord = coords[node];
-  auto edge          = positions[node] - positions[neighbor];
-  auto projection    = project_onto_plane(frames[neighbor], edge);
-  auto new_coord     = coords[neighbor] + projection;
-  auto avg_lenght    = (length(current_coord) + length(new_coord)) / 2;
-  auto new_dir       = normalize(current_coord + new_coord);
-  coords[node] = current_coord == zero2f ? new_coord : new_dir * avg_lenght;
-
-  // following doesn't work
-  // coords[node] = current_coord + (weight * (coords[neighbor] + projection));
-}
-
-// Frame by local computation between neighbors
-inline void compute_frame(vector<mat3f> &frames, const vector<vec3f> &normals,
-    int node, int neighbor, float weight) {
-  auto current_dir = frames[node].x;
-  auto rotation    = basis_fromz(normals[neighbor]) *
-                  transpose(basis_fromz(normals[node]));
-  auto neighbor_dir = frames[neighbor].x;
-  current_dir       = current_dir + (rotation * weight * neighbor_dir);
-  frames[node].z    = normals[node];
-  frames[node].y    = cross(frames[node].z, normalize(current_dir));
-  frames[node].x    = cross(frames[node].y, frames[node].z);
-}
-
-// Classic Dijkstra
-template <typename Update>
-void dijkstra(const geodesic_solver &solver, const vector<int> &sources,
-    vector<float> &distances, float max_distance, Update &&update) {
-  auto compare = [&](int i, int j) { return distances[i] > distances[j]; };
-  std::priority_queue<int, vector<int>, decltype(compare)> queue(compare);
-
-  // setup queue
-  for (auto source : sources) queue.push(source);
-
-  while (!queue.empty()) {
-    int node = queue.top();
-    queue.pop();
-
-    auto distance = distances[node];
-    if (distance > max_distance) continue;  // early exit
-
-    for (auto arc : solver.graph[node]) {
-      auto new_distance = distance + arc.length;
-
-      update(node, arc.node, new_distance);
-
-      if (new_distance < distances[arc.node]) {
-        distances[arc.node] = new_distance;
-        queue.push(arc.node);
-      }
-    }
-  }
-}
-
-// Compute initial frames of stroke sampling vertices
-inline void compute_stroke_frames(vector<mat3f> &frames,
-    const vector<vec3f> &positions, const vector<vec3f> &normals,
-    const vector<int> &stroke_sampling) {
-  // frames follow stroke direction
-  for (int i = 0; i < (int)stroke_sampling.size() - 1; i++) {
-    int  curr    = stroke_sampling[i];
-    int  next    = stroke_sampling[i + 1];
-    auto dir     = positions[next] - positions[curr];
-    auto z       = normals[curr];
-    auto y       = cross(z, normalize(dir));
-    auto x       = cross(y, z);
-    frames[curr] = {x, y, z};
-  }
-
-  if (stroke_sampling.size() == 1) {
-    frames[stroke_sampling[0]] = basis_fromz(normals[stroke_sampling[0]]);
-  } else {
-    int  final    = stroke_sampling[stroke_sampling.size() - 1];
-    int  prev     = stroke_sampling[stroke_sampling.size() - 2];
-    auto dir      = positions[final] - positions[prev];
-    auto z        = normals[final];
-    auto y        = cross(z, normalize(dir));
-    auto x        = cross(y, z);
-    frames[final] = {x, y, z};
-  }
-
-  // average frames direction of middle stroke vertices
-  for (int i = 1; i < stroke_sampling.size() - 1; i++) {
-    int  curr    = stroke_sampling[i];
-    int  next    = stroke_sampling[i + 1];
-    int  prev    = stroke_sampling[i - 1];
-    auto dir     = frames[prev].x + frames[next].x;
-    auto z       = normals[curr];
-    auto y       = cross(z, normalize(dir));
-    auto x       = cross(y, z);
-    frames[curr] = {x, y, z};
-  }
-}
-
 // To take shape positions indices associate with planar coordinates
 vector<int> stroke_parameterization(vector<vec2f> &coords,
     const geodesic_solver &solver, const vector<int> &sampling,
     const vector<vec3f> &positions, const vector<vec3f> &normals,
     float radius) {
   if (normals.empty()) return vector<int>{};
+
+  // Planar coordinates by local computation between neighbors
+  auto compute_coordinates = [](vector<vec2f> &       coords,
+                                 const vector<mat3f> &frames,
+                                 const vector<vec3f> &positions, int node,
+                                 int neighbor, float weight) -> void {
+    // Project a vector on a plane, maintaining vector length
+    auto project_onto_plane = [](const mat3f &basis, const vec3f &p) -> vec2f {
+      auto v  = p - dot(p, basis.z) * basis.z;
+      auto v1 = vec2f{dot(v, basis.x), dot(v, basis.y)};
+      return v1 * (length(p) / length(v1));
+    };
+
+    auto current_coord = coords[node];
+    auto edge          = positions[node] - positions[neighbor];
+    auto projection    = project_onto_plane(frames[neighbor], edge);
+    auto new_coord     = coords[neighbor] + projection;
+    auto avg_lenght    = (length(current_coord) + length(new_coord)) / 2;
+    auto new_dir       = normalize(current_coord + new_coord);
+    coords[node] = current_coord == zero2f ? new_coord : new_dir * avg_lenght;
+
+    // following doesn't work
+    // coords[node] = current_coord + (weight * (coords[neighbor] +
+    // projection));
+  };
+
+  // Frame by local computation between neighbors
+  auto compute_frame = [](vector<mat3f> &frames, const vector<vec3f> &normals,
+                           int node, int neighbor, float weight) -> void {
+    auto current_dir = frames[node].x;
+    auto rotation    = basis_fromz(normals[neighbor]) *
+                    transpose(basis_fromz(normals[node]));
+    auto neighbor_dir = frames[neighbor].x;
+    current_dir       = current_dir + (rotation * weight * neighbor_dir);
+    frames[node].z    = normals[node];
+    frames[node].y    = cross(frames[node].z, normalize(current_dir));
+    frames[node].x    = cross(frames[node].y, frames[node].z);
+  };
+
+  // Classic Dijkstra
+  auto dijkstra = [](const geodesic_solver &solver, const vector<int> &sources,
+                      vector<float> &distances, float max_distance,
+                      auto &&update) -> void {
+    auto compare = [&](int i, int j) { return distances[i] > distances[j]; };
+    std::priority_queue<int, vector<int>, decltype(compare)> queue(compare);
+
+    // setup queue
+    for (auto source : sources) queue.push(source);
+
+    while (!queue.empty()) {
+      int node = queue.top();
+      queue.pop();
+
+      auto distance = distances[node];
+      if (distance > max_distance) continue;  // early exit
+
+      for (auto arc : solver.graph[node]) {
+        auto new_distance = distance + arc.length;
+
+        update(node, arc.node, new_distance);
+
+        if (new_distance < distances[arc.node]) {
+          distances[arc.node] = new_distance;
+          queue.push(arc.node);
+        }
+      }
+    }
+  };
+
+  // Compute initial frames of stroke sampling vertices
+  auto compute_stroke_frames = [](vector<mat3f> &       frames,
+                                   const vector<vec3f> &positions,
+                                   const vector<vec3f> &normals,
+                                   const vector<int> &stroke_sampling) -> void {
+    // frames follow stroke direction
+    for (int i = 0; i < (int)stroke_sampling.size() - 1; i++) {
+      int  curr    = stroke_sampling[i];
+      int  next    = stroke_sampling[i + 1];
+      auto dir     = positions[next] - positions[curr];
+      auto z       = normals[curr];
+      auto y       = cross(z, normalize(dir));
+      auto x       = cross(y, z);
+      frames[curr] = {x, y, z};
+    }
+
+    if (stroke_sampling.size() == 1) {
+      frames[stroke_sampling[0]] = basis_fromz(normals[stroke_sampling[0]]);
+    } else {
+      int  final    = stroke_sampling[stroke_sampling.size() - 1];
+      int  prev     = stroke_sampling[stroke_sampling.size() - 2];
+      auto dir      = positions[final] - positions[prev];
+      auto z        = normals[final];
+      auto y        = cross(z, normalize(dir));
+      auto x        = cross(y, z);
+      frames[final] = {x, y, z};
+    }
+
+    // average frames direction of middle stroke vertices
+    for (int i = 1; i < stroke_sampling.size() - 1; i++) {
+      int  curr    = stroke_sampling[i];
+      int  next    = stroke_sampling[i + 1];
+      int  prev    = stroke_sampling[i - 1];
+      auto dir     = frames[prev].x + frames[next].x;
+      auto z       = normals[curr];
+      auto y       = cross(z, normalize(dir));
+      auto x       = cross(y, z);
+      frames[curr] = {x, y, z};
+    }
+  };
 
   // init params
   std::set<int> vertices;  // to avoid duplicates
@@ -459,6 +462,36 @@ bool smooth_brush(vector<vec3f> &positions, const geodesic_solver &solver,
   auto stroke_vertices = vector<int>{};
   for (auto [element, uv] : stroke)
     stroke_vertices.push_back(closest_vertex(triangles, element, uv));
+
+  // Classic Dijkstra
+  auto dijkstra = [](const geodesic_solver &solver, const vector<int> &sources,
+                      vector<float> &distances, float max_distance,
+                      auto &&update) -> void {
+    auto compare = [&](int i, int j) { return distances[i] > distances[j]; };
+    std::priority_queue<int, vector<int>, decltype(compare)> queue(compare);
+
+    // setup queue
+    for (auto source : sources) queue.push(source);
+
+    while (!queue.empty()) {
+      int node = queue.top();
+      queue.pop();
+
+      auto distance = distances[node];
+      if (distance > max_distance) continue;  // early exit
+
+      for (auto arc : solver.graph[node]) {
+        auto new_distance = distance + arc.length;
+
+        update(node, arc.node, new_distance);
+
+        if (new_distance < distances[arc.node]) {
+          distances[arc.node] = new_distance;
+          queue.push(arc.node);
+        }
+      }
+    }
+  };
 
   auto distances = vector<float>(solver.graph.size(), flt_max);
   for (auto sample : stroke_vertices) distances[sample] = 0.0f;
