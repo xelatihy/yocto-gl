@@ -46,25 +46,6 @@
 
 using namespace yocto;
 
-// Application state
-struct app_state {
-  // loading parameters
-  string filename  = "scene.json";
-  string imagename = "out.png";
-  string outname   = "out.json";
-  string name      = "";
-
-  // options
-  shade_params drawgl_prms = {};
-
-  // scene
-  sceneio_scene ioscene  = sceneio_scene{};
-  camera_handle iocamera = 0;
-
-  // rendering state
-  shade_scene glscene = {};
-};
-
 static void init_glscene(shade_scene &glscene, const sceneio_scene &ioscene,
     progress_callback progress_cb) {
   // handle progress
@@ -180,36 +161,32 @@ static void init_glscene(shade_scene &glscene, const sceneio_scene &ioscene,
 using run_shade_scene_callback = std::function<void(gui_window *win,
     const gui_input &input, scene_scene &scene, shade_scene &glscene)>;
 
-void run_shade_scene(const scene_scene &scene, const string &name,
+void run_shade_scene(scene_scene &scene, const string &name,
     const string &camname, const progress_callback &progress_cb,
     const run_shade_scene_callback &widgets_callback  = {},
     const run_shade_scene_callback &uiupdate_callback = {}) {
-  // initialize app
-  auto app    = app_state{};
-  app.ioscene = scene;
+  // glscene
+  auto glscene = shade_scene{};
 
-  // copy command line
-  app.filename = name;
-
-  // get camera
-  // app.iocamera = find_camera(app.ioscene, "");
+  // draw params
+  auto params = shade_params{};
 
   // callbacks
   auto callbacks    = gui_callbacks{};
-  callbacks.init_cb = [&app, &progress_cb](
+  callbacks.init_cb = [&glscene, &scene, &progress_cb](
                           gui_window *win, const gui_input &input) {
-    init_glscene(app.glscene, app.ioscene, progress_cb);
+    init_glscene(glscene, scene, progress_cb);
   };
-  callbacks.clear_cb = [&app](gui_window *win, const gui_input &input) {
-    clear_scene(app.glscene);
+  callbacks.clear_cb = [&glscene](gui_window *win, const gui_input &input) {
+    clear_scene(glscene);
   };
-  callbacks.draw_cb = [&app](gui_window *win, const gui_input &input) {
-    draw_scene(app.glscene, app.glscene.cameras.at(0),
-        input.framebuffer_viewport, app.drawgl_prms);
+  callbacks.draw_cb = [&glscene, &params](
+                          gui_window *win, const gui_input &input) {
+    draw_scene(
+        glscene, glscene.cameras.at(0), input.framebuffer_viewport, params);
   };
-  callbacks.widgets_cb = [&app, &widgets_callback](
+  callbacks.widgets_cb = [&glscene, &scene, &params, &widgets_callback](
                              gui_window *win, const gui_input &input) {
-    auto &params = app.drawgl_prms;
     draw_checkbox(win, "wireframe", params.wireframe);
     continue_line(win);
     draw_checkbox(win, "faceted", params.faceted);
@@ -221,17 +198,15 @@ void run_shade_scene(const scene_scene &scene, const string &name,
     draw_slider(win, "gamma", params.gamma, 0.1f, 4);
     draw_slider(win, "near", params.near, 0.01f, 1.0f);
     draw_slider(win, "far", params.far, 1000.0f, 10000.0f);
-    if (widgets_callback)
-      widgets_callback(win, input, app.ioscene, app.glscene);
+    if (widgets_callback) widgets_callback(win, input, scene, glscene);
   };
   callbacks.update_cb = [](gui_window *win, const gui_input &input) {
     // update(win, apps);
   };
-  callbacks.uiupdate_cb = [&app, &uiupdate_callback](
+  callbacks.uiupdate_cb = [&glscene, &scene, &uiupdate_callback](
                               gui_window *win, const gui_input &input) {
     // handle mouse and keyboard for navigation
-    if (uiupdate_callback)
-      uiupdate_callback(win, input, app.ioscene, app.glscene);
+    if (uiupdate_callback) uiupdate_callback(win, input, scene, glscene);
     if ((input.mouse_left || input.mouse_right) && !input.modifier_alt &&
         !input.widgets_active) {
       auto dolly  = 0.0f;
@@ -243,10 +218,10 @@ void run_shade_scene(const scene_scene &scene, const string &name,
         dolly = (input.mouse_pos.x - input.mouse_last.x) / 100.0f;
       if (input.mouse_left && input.modifier_shift)
         pan = (input.mouse_pos - input.mouse_last) / 100.0f;
-      auto &camera = app.ioscene.cameras.at(app.iocamera);
+      auto &camera                         = scene.cameras.at(0);
       std::tie(camera.frame, camera.focus) = camera_turntable(
           camera.frame, camera.focus, rotate, dolly, pan);
-      set_frame(app.glscene.cameras.at(app.iocamera), camera.frame);
+      set_frame(glscene.cameras.at(0), camera.frame);
     }
   };
 
@@ -317,8 +292,8 @@ static shape_data make_cylinders(const vector<vec2i> &lines,
   return shape;
 }
 
-static void convert_scene1(scene_scene &scene, const scene_shape &ioshape_,
-    progress_callback progress_cb) {
+static scene_scene make_shapescene(
+    const scene_shape &ioshape_, progress_callback progress_cb) {
   // Frame camera
   auto camera_frame = [](float lens, float aspect,
                           float film = 0.036) -> frame3f {
@@ -333,7 +308,7 @@ static void convert_scene1(scene_scene &scene, const scene_shape &ioshape_,
   if (progress_cb) progress_cb("create scene", progress.x++, progress.y);
 
   // init scene
-  scene = {};
+  auto scene = scene_scene{};
 
   // rescale shape to unit
   auto ioshape = ioshape_;
@@ -421,6 +396,7 @@ static void convert_scene1(scene_scene &scene, const scene_shape &ioshape_,
 
   // done
   if (progress_cb) progress_cb("create scene", progress.x++, progress.y);
+  return scene;
 }
 
 struct shade_shape_params {
@@ -443,8 +419,7 @@ int run_shade_shape(const shade_shape_params &params) {
   print_progress("load shape", 1, 1);
 
   // create scene
-  auto scene = scene_scene{};
-  convert_scene1(scene, shape, print_progress);
+  auto scene = make_shapescene(shape, print_progress);
 
   // run viewer
   run_shade_scene(
@@ -1121,6 +1096,25 @@ inline void add_command(cli_command &cli, const string &name,
   add_argument(cmd, "shape", value.shape, "Input shape.");
   add_option(cmd, "texture", value.texture, "Brush texture.");
 }
+
+// Application state
+struct app_state {
+  // loading parameters
+  string filename  = "scene.json";
+  string imagename = "out.png";
+  string outname   = "out.json";
+  string name      = "";
+
+  // options
+  shade_params drawgl_prms = {};
+
+  // scene
+  sceneio_scene ioscene  = sceneio_scene{};
+  camera_handle iocamera = 0;
+
+  // rendering state
+  shade_scene glscene = {};
+};
 
 int run_shade_sculpt(const shade_sculpt_params &params_) {
   // initialize app
