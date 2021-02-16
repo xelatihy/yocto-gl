@@ -150,42 +150,6 @@ int run_grade(const grade_params& params) {
 
 #else
 
-// Parameter conversions
-void from_params(const gui_params& uiparams, colorgrade_params& params) {
-  params.exposure         = uiparams.at("exposure");
-  params.tint             = uiparams.at("tint");
-  params.lincontrast      = uiparams.at("lincontrast");
-  params.logcontrast      = uiparams.at("logcontrast");
-  params.linsaturation    = uiparams.at("linsaturation");
-  params.filmic           = uiparams.at("filmic");
-  params.srgb             = uiparams.at("srgb");
-  params.contrast         = uiparams.at("contrast");
-  params.saturation       = uiparams.at("saturation");
-  params.shadows          = uiparams.at("shadows");
-  params.midtones         = uiparams.at("midtones");
-  params.highlights       = uiparams.at("highlights");
-  params.shadows_color    = uiparams.at("shadows_color");
-  params.midtones_color   = uiparams.at("midtones_color");
-  params.highlights_color = uiparams.at("highlights_color");
-}
-void to_params(gui_params& uiparams, const colorgrade_params& params) {
-  uiparams["exposure"]         = {params.exposure, {-10, 10}};
-  uiparams["tint"]             = {params.tint, true};
-  uiparams["lincontrast"]      = {params.lincontrast, {0, 1}};
-  uiparams["logcontrast"]      = {params.logcontrast, {0, 1}};
-  uiparams["linsaturation"]    = {params.linsaturation, {0, 1}};
-  uiparams["filmic"]           = {params.filmic};
-  uiparams["srgb"]             = {params.srgb};
-  uiparams["contrast"]         = {params.contrast, {0, 1}};
-  uiparams["saturation"]       = {params.saturation, {0, 1}};
-  uiparams["shadows"]          = {params.shadows, {0, 1}};
-  uiparams["midtones"]         = {params.midtones, {0, 1}};
-  uiparams["highlights"]       = {params.highlights, {0, 1}};
-  uiparams["shadows_color"]    = {params.shadows_color, true};
-  uiparams["midtones_color"]   = {params.midtones_color, true};
-  uiparams["highlights_color"] = {params.highlights_color, true};
-}
-
 // grade images
 int run_grade(const grade_params& params) {
   // open viewer
