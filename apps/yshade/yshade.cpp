@@ -1098,38 +1098,12 @@ inline void add_command(cli_command &cli, const string &name,
   add_option(cmd, "texture", value.texture, "Brush texture.");
 }
 
-// Application state
-struct app_state {
-  // loading parameters
-  string filename  = "scene.json";
-  string imagename = "out.png";
-  string outname   = "out.json";
-  string name      = "";
-
-  // options
-  shade_params drawgl_prms = {};
-
-  // scene
-  sceneio_scene ioscene  = sceneio_scene{};
-  camera_handle iocamera = 0;
-
-  // rendering state
-  shade_scene glscene = {};
-};
-
 int run_shade_sculpt(const shade_sculpt_params &params_) {
-  // initialize app
-  auto app = app_state{};
-
-  // copy command line
-  app.filename  = params_.shape;
-  app.imagename = params_.texture;
-
   // loading shape
   auto ioerror = ""s;
   auto ioshape = scene_shape{};
   print_progress("load shape", 0, 1);
-  if (!load_shape(app.filename, ioshape, ioerror)) print_fatal(ioerror);
+  if (!load_shape(params_.shape, ioshape, ioerror)) print_fatal(ioerror);
   if (!ioshape.quads.empty()) {
     ioshape.triangles = quads_to_triangles(ioshape.quads);
     ioshape.quads.clear();
@@ -1138,9 +1112,9 @@ int run_shade_sculpt(const shade_sculpt_params &params_) {
 
   // loading texture
   auto texture = scene_texture{};
-  if (!app.imagename.empty()) {
+  if (!params_.texture.empty()) {
     print_progress("load texture", 0, 1);
-    if (!load_texture(app.imagename, texture, ioerror)) print_fatal(ioerror);
+    if (!load_texture(params_.texture, texture, ioerror)) print_fatal(ioerror);
     print_progress("load texture", 1, 1);
   }
 
