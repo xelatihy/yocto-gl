@@ -252,6 +252,113 @@ void view_images(const string& title, const vector<string>& names,
   run_ui({1280, 720}, title, callbacks);
 }
 
+// Open a window and show an image
+void colorgrade_image(const string& title, const string& name,
+    const image_data& image, const progress_callback& progress_cb) {
+  // color grading parameters
+  auto params = colorgrade_params{};
+
+  // display image
+  if (progress_cb) progress_cb("colorgrade image", 0, 1);
+  auto display = make_image(image.width, image.height, false, true);
+  colorgrade_image_mt(display, image, params);
+  if (progress_cb) progress_cb("colorgrade image", 1, 1);
+
+  // opengl image
+  auto glimage  = ogl_image{};
+  auto glparams = ogl_image_params{};
+
+  // top level combo
+  auto names    = vector<string>{name};
+  auto selected = 0;
+
+  // callbacks
+  auto callbacks    = gui_callbacks{};
+  callbacks.init_cb = [&](gui_window* win, const gui_input& input) {
+    init_image(glimage);
+    set_image(glimage, display, false, false);
+  };
+  callbacks.clear_cb = [&](gui_window* win, const gui_input& input) {
+    clear_image(glimage);
+  };
+  callbacks.draw_cb = [&](gui_window* win, const gui_input& input) {
+    glparams.window                           = input.window_size;
+    glparams.framebuffer                      = input.framebuffer_viewport;
+    std::tie(glparams.center, glparams.scale) = camera_imview(glparams.center,
+        glparams.scale, {display.width, display.height}, glparams.window,
+        glparams.fit);
+    draw_image(glimage, glparams);
+  };
+  callbacks.widgets_cb = [&](gui_window* win, const gui_input& input) {
+    draw_combobox(win, "name", selected, names);
+    if (begin_header(win, "colorgrade")) {
+      auto edited = 0;
+      edited += draw_slider(win, "exposure", params.exposure, -5, 5);
+      edited += draw_coloredit(win, "tint", params.tint);
+      edited += draw_slider(win, "lincontrast", params.lincontrast, 0, 1);
+      edited += draw_slider(win, "logcontrast", params.logcontrast, 0, 1);
+      edited += draw_slider(win, "linsaturation", params.linsaturation, 0, 1);
+      edited += draw_checkbox(win, "filmic", params.filmic);
+      continue_line(win);
+      edited += draw_checkbox(win, "srgb", params.srgb);
+      edited += draw_slider(win, "contrast", params.contrast, 0, 1);
+      edited += draw_slider(win, "saturation", params.saturation, 0, 1);
+      edited += draw_slider(win, "shadows", params.shadows, 0, 1);
+      edited += draw_slider(win, "midtones", params.midtones, 0, 1);
+      edited += draw_slider(win, "highlights", params.highlights, 0, 1);
+      edited += draw_coloredit(win, "shadows color", params.shadows_color);
+      edited += draw_coloredit(win, "midtones color", params.midtones_color);
+      edited += draw_coloredit(
+          win, "highlights color", params.highlights_color);
+      end_header(win);
+      if (edited) {
+        if (progress_cb) progress_cb("colorgrade image", 0, 1);
+        colorgrade_image_mt(display, image, params);
+        set_image(glimage, display, false, false);
+        if (progress_cb) progress_cb("colorgrade image", 0, 1);
+      }
+    }
+    if (begin_header(win, "inspect")) {
+      draw_slider(win, "zoom", glparams.scale, 0.1, 10);
+      draw_checkbox(win, "fit", glparams.fit);
+      auto [i, j] = image_coords(input.mouse_pos, glparams.center,
+          glparams.scale, {image.width, image.height});
+      auto ij     = vec2i{i, j};
+      draw_dragger(win, "mouse", ij);
+      auto hdr_pixel     = zero4f;
+      auto ldr_pixel     = zero4b;
+      auto display_pixel = zero4b;
+      if (i >= 0 && i < image.width && j >= 0 && j < image.height) {
+        display_pixel = image.pixelsb[j * image.width + i];
+        if (!image.pixelsf.empty())
+          hdr_pixel = image.pixelsf[j * image.width + i];
+        if (!image.pixelsb.empty())
+          ldr_pixel = image.pixelsb[j * image.width + i];
+      }
+      if (!image.pixelsf.empty()) {
+        draw_coloredit(win, "image", hdr_pixel);
+      } else {
+        draw_coloredit(win, "image", ldr_pixel);
+      }
+      draw_coloredit(win, "display", display_pixel);
+      end_header(win);
+    }
+  };
+  callbacks.uiupdate_cb = [&glparams](gui_window* win, const gui_input& input) {
+    // handle mouse
+    if (input.mouse_left && !input.widgets_active) {
+      glparams.center += input.mouse_pos - input.mouse_last;
+    }
+    if (input.mouse_right && !input.widgets_active) {
+      glparams.scale *= powf(
+          2, (input.mouse_pos.x - input.mouse_last.x) * 0.001f);
+    }
+  };
+
+  // run ui
+  run_ui({1280, 720}, title, callbacks);
+}
+
 // Open a window and show a shape via path tracing
 void view_shape(const string& title, const string& name,
     const shape_data& shape, bool addsky,

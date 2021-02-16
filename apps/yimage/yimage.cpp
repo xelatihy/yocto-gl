@@ -194,30 +194,12 @@ int run_grade(const grade_params& params) {
   // load image
   auto image   = image_data{};
   auto ioerror = string{};
+  print_progress("load image", 0, 1);
   if (!load_image(params.image, image, ioerror)) return print_fatal(ioerror);
+  print_progress("load image", 1, 1);
 
-  // grade image
-  auto graded = make_image(image.width, image.height, false, true);
-  colorgrade_image(graded, image, params);
-
-  // set view
-  set_image(viewer, params.image, graded);
-  auto uiparams = gui_params{};
-  to_params(uiparams, params);
-  set_params(viewer, params.image, "Color grade", uiparams);
-
-  // set callback
-  set_params_callback(
-      viewer, [&](const string& name, const gui_params& uiparams) {
-        if (uiparams.empty()) return;
-        auto gparams = params;
-        from_params(uiparams, gparams);
-        colorgrade_image_mt(graded, image, gparams);
-        set_image(viewer, name, graded);
-      });
-
-  // run view
-  run_viewer(viewer);
+  // run viewer
+  colorgrade_image("yimage", params.image, image, print_progress);
 
   // done
   return 0;
