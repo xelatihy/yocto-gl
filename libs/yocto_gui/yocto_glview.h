@@ -41,6 +41,7 @@
 #include <yocto/yocto_trace.h>
 #include <yocto_gui/yocto_imgui.h>
 #include <yocto_gui/yocto_opengl.h>
+#include <yocto_gui/yocto_shade.h>
 
 #include <array>
 #include <memory>
@@ -94,6 +95,14 @@ void view_scene(const string& title, const string& name, scene_scene& scene,
 // Open a window and show an scene via path tracing
 void view_scene(const string& title, const string& name, scene_scene& scene,
     const trace_params& params, const progress_callback& progress_cb = {});
+
+using glview_scene_callback = std::function<void(gui_window* win,
+    const gui_input& input, scene_scene& scene, shade_scene& glscene)>;
+
+void glview_scene(scene_scene& scene, const string& name, const string& camname,
+    const progress_callback&     progress_cb,
+    const glview_scene_callback& widgets_callback  = {},
+    const glview_scene_callback& uiupdate_callback = {});
 
 }  // namespace yocto
 
