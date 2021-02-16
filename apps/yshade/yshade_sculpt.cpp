@@ -73,8 +73,6 @@ struct sculpt_state {
 
 // sculpt stroke
 struct sculpt_stroke {
-  vector<pair<vec3f, vec3f>> pairs     = {};
-  vector<int>                sampling  = {};
   vector<pair<vec3f, vec3f>> pairs_    = {};
   vector<int>                sampling_ = {};
   vec2f                      locked_uv = {};
@@ -327,7 +325,6 @@ vector<int> stroke_parameterization(vector<vec2f> &coords,
 void end_stroke(sculpt_params &params, sculpt_stroke &stroke,
     sculpt_state &state, scene_shape &shape) {
   stroke.lock = false;
-  stroke.sampling.clear();
   stroke.sampling_.clear();
   state.coords.assign(state.coords.size(), {0, 0});
   state.old_positions = shape.positions;
@@ -669,55 +666,6 @@ static void init_glscene(shade_scene &glscene, const sceneio_scene &ioscene,
 
   // done
   if (progress_cb) progress_cb("convert scene", progress.x++, progress.y);
-}
-
-// To make the stroke sampling (position, normal) following the mouse
-bool sample_stroke(sculpt_stroke &stroke, const shape_bvh &bvh,
-    const scene_shape &shape, const vec2f &mouse_uv, const scene_camera &camera,
-    bool clear, const sculpt_params &params) {
-  // clear
-  if (clear) {
-    // stroke.pairs.clear();
-    // stroke.sampling.clear();
-  }
-
-  // helper
-  auto intersect_shape = [&](const vec2f &uv) {
-    auto ray = camera_ray(
-        camera.frame, camera.lens, camera.aspect, camera.film, uv);
-    return intersect_triangles_bvh(
-        bvh, shape.triangles, shape.positions, ray, false);
-  };
-
-  // setup uv
-  auto last_uv = stroke.locked_uv;
-
-  // eval current intersection
-  auto last  = intersect_shape(last_uv);
-  auto mouse = intersect_shape(mouse_uv);
-  if (!mouse.hit || !last.hit) return false;
-
-  // sample
-  auto delta_pos   = distance(eval_position(shape, last.element, last.uv),
-      eval_position(shape, mouse.element, mouse.uv));
-  auto stroke_dist = params.radius * 0.2f;
-  auto steps       = int(delta_pos / stroke_dist);
-  if (steps == 0) return true;
-  auto update_uv = (mouse_uv - last_uv) * stroke_dist / delta_pos;
-  for (auto step = 0; step < steps; step++) {
-    last_uv += update_uv;
-    auto isec = intersect_shape(last_uv);
-    if (!isec.hit) continue;
-    stroke.pairs.push_back({eval_position(shape, isec.element, isec.uv),
-        eval_normal(shape, isec.element, isec.uv)});
-    stroke.sampling.push_back(
-        closest_vertex(shape.triangles, isec.element, isec.uv));
-  }
-
-  // update
-  stroke.locked_uv = mouse_uv;
-
-  return true;
 }
 
 // To make the stroke sampling (position, normal) following the mouse
