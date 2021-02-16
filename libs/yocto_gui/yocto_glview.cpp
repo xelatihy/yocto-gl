@@ -29,6 +29,7 @@
 
 #include "yocto_glview.h"
 
+#include <yocto/yocto_cli.h>
 #include <yocto/yocto_geometry.h>
 
 // -----------------------------------------------------------------------------
@@ -429,7 +430,8 @@ void view_scene(const string& title, const string& name, scene_scene& scene,
 
   // fix renderer type if no lights
   if (lights.lights.empty() && is_sampler_lit(params)) {
-    // TODO(fabio): fix this
+    print_info("no lights presents --- switching to eyelight");
+    params.sampler = trace_sampler_type::eyelight;
   }
 
   // init images
