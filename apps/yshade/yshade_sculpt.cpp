@@ -67,6 +67,8 @@ struct sculpt_state {
 struct sculpt_stroke {
   vector<pair<vec3f, vec3f>> pairs     = {};
   vector<int>                sampling  = {};
+  vector<pair<vec3f, vec3f>> pairs_    = {};
+  vector<int>                sampling_ = {};
   vec2f                      locked_uv = {};
   bool                       lock      = false;
 };
@@ -329,6 +331,7 @@ void end_stroke(sculpt_params &params, sculpt_stroke &stroke,
     sculpt_buffers &buffers, scene_shape &shape) {
   stroke.lock = false;
   stroke.sampling.clear();
+  stroke.sampling_.clear();
   buffers.coords.assign(buffers.coords.size(), {0, 0});
   buffers.old_positions = shape.positions;
   buffers.old_normals   = shape.normals;
@@ -656,8 +659,8 @@ bool sample_stroke(sculpt_stroke &stroke, const shape_bvh &bvh,
     bool clear, const sculpt_params &params) {
   // clear
   if (clear) {
-    stroke.pairs.clear();
-    stroke.sampling.clear();
+    // stroke.pairs.clear();
+    // stroke.sampling.clear();
   }
 
   // helper
@@ -699,6 +702,42 @@ bool sample_stroke(sculpt_stroke &stroke, const shape_bvh &bvh,
   return true;
 }
 
+// To make the stroke sampling (position, normal) following the mouse
+vector<shape_point> sample_stroke(const shape_bvh &bvh,
+    const scene_shape &shape, const vec2f &last_uv, const vec2f &mouse_uv,
+    const scene_camera &camera, const sculpt_params &params) {
+  // helper
+  auto intersect_shape = [&](const vec2f &uv) {
+    auto ray = camera_ray(
+        camera.frame, camera.lens, camera.aspect, camera.film, uv);
+    return intersect_triangles_bvh(
+        bvh, shape.triangles, shape.positions, ray, false);
+  };
+
+  // eval current intersection
+  auto last  = intersect_shape(last_uv);
+  auto mouse = intersect_shape(mouse_uv);
+  if (!mouse.hit || !last.hit) return {};
+
+  // sample
+  auto delta_pos   = distance(eval_position(shape, last.element, last.uv),
+      eval_position(shape, mouse.element, mouse.uv));
+  auto stroke_dist = params.radius * 0.2f;
+  auto steps       = int(delta_pos / stroke_dist);
+  if (steps == 0) return {};
+  auto update_uv = (mouse_uv - last_uv) * stroke_dist / delta_pos;
+  auto cur_uv    = last_uv;
+  auto samples   = vector<shape_point>{};
+  for (auto step = 0; step < steps; step++) {
+    cur_uv += update_uv;
+    auto isec = intersect_shape(cur_uv);
+    if (!isec.hit) continue;
+    samples.push_back({isec.element, isec.uv});
+  }
+
+  return samples;
+}
+
 pair<bool, bool> update_stroke(sculpt_stroke &stroke, sculpt_state &state,
     sculpt_params &params, sculpt_buffers &buffers, scene_shape &shape,
     scene_shape &cursor, const scene_camera &camera, const vec2f &mouse_uv,
@@ -722,18 +761,41 @@ pair<bool, bool> update_stroke(sculpt_stroke &stroke, sculpt_state &state,
       stroke.lock      = true;
       stroke.locked_uv = mouse_uv;
     } else {
-      sample_stroke(stroke, state.bvh, shape, mouse_uv, camera,
-          params.type != brush_type::texture, params);
+      auto last_uv = stroke.locked_uv;
+      // sample_stroke(stroke, state.bvh, shape, mouse_uv, camera,
+      //     params.type != brush_type::texture, params);
+      auto samples = sample_stroke(
+          state.bvh, shape, last_uv, mouse_uv, camera, params);
+      if (!samples.empty()) stroke.locked_uv = mouse_uv;
       if (params.type == brush_type::gaussian) {
+        stroke.pairs_.clear();
+        for (auto sample : samples) {
+          stroke.pairs_.push_back(
+              {eval_position(shape, sample.element, sample.uv),
+                  eval_normal(shape, sample.element, sample.uv)});
+        }
+        printf("%d %d\n", (int)stroke.pairs.size(), (int)stroke.pairs_.size());
         updated_shape = gaussian_brush(
-            shape.positions, state.grid, stroke.pairs, params);
+            shape.positions, state.grid, stroke.pairs_, params);
       } else if (params.type == brush_type::smooth) {
+        stroke.sampling_.clear();
+        for (auto sample : samples) {
+          stroke.sampling_.push_back(
+              closest_vertex(shape.triangles, sample.element, sample.uv));
+        }
+        printf("%d %d\n", (int)stroke.sampling.size(),
+            (int)stroke.sampling_.size());
         updated_shape = smooth_brush(shape.positions, state.solver,
-            state.adjacencies, stroke.sampling, params);
-      } else if (params.type == brush_type::texture && !stroke.pairs.empty() &&
-                 !stroke.sampling.empty()) {
+            state.adjacencies, stroke.sampling_, params);
+      } else if (params.type == brush_type::texture && !samples.empty()) {
+        for (auto sample : samples) {
+          stroke.sampling_.push_back(
+              closest_vertex(shape.triangles, sample.element, sample.uv));
+        }
+        printf("%d %d\n", (int)stroke.sampling.size(),
+            (int)stroke.sampling_.size());
         auto vertices = stroke_parameterization(buffers.coords, state.solver,
-            stroke.sampling, buffers.old_positions, buffers.old_normals,
+            stroke.sampling_, buffers.old_positions, buffers.old_normals,
             params.radius);
         updated_shape = texture_brush(shape.positions, vertices,
             state.tex_image, buffers.coords, buffers.old_positions,
