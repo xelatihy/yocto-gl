@@ -177,39 +177,23 @@ static void init_glscene(shade_scene &glscene, const sceneio_scene &ioscene,
   if (progress_cb) progress_cb("convert done", progress.x++, progress.y);
 }
 
-struct shade_scene_params {
-  string scene = "scene.json"s;
-};
-
-// Cli
-void add_command(cli_command &cli, const string &name,
-    shade_scene_params &value, const string &usage) {
-  auto &cmd = add_command(cli, name, usage);
-  add_argument(cmd, "scene", value.scene, "Input scene.");
-}
-
-int run_shade_scene(const shade_scene_params &params) {
+void run_shade_scene(const scene_scene &scene, const string &name,
+    const string &camname, const progress_callback &progress_cb) {
   // initialize app
-  auto app = app_state{};
+  auto app    = app_state{};
+  app.ioscene = scene;
 
   // copy command line
-  app.filename = params.scene;
-
-  // loading scene
-  auto ioerror = ""s;
-  if (!load_scene(app.filename, app.ioscene, ioerror, print_progress))
-    print_fatal(ioerror);
+  app.filename = name;
 
   // get camera
   app.iocamera = find_camera(app.ioscene, "");
 
-  // tesselation
-  tesselate_shapes(app.ioscene, print_progress);
-
   // callbacks
   auto callbacks    = gui_callbacks{};
-  callbacks.init_cb = [&app](gui_window *win, const gui_input &input) {
-    init_glscene(app.glscene, app.ioscene, print_progress);
+  callbacks.init_cb = [&app, &progress_cb](
+                          gui_window *win, const gui_input &input) {
+    init_glscene(app.glscene, app.ioscene, progress_cb);
   };
   callbacks.clear_cb = [&app](gui_window *win, const gui_input &input) {
     clear_scene(app.glscene);
@@ -257,6 +241,31 @@ int run_shade_scene(const shade_scene_params &params) {
 
   // run ui
   run_ui({1280 + 320, 720}, "yshade", callbacks);
+}
+
+struct shade_scene_params {
+  string scene = "scene.json"s;
+};
+
+// Cli
+void add_command(cli_command &cli, const string &name,
+    shade_scene_params &value, const string &usage) {
+  auto &cmd = add_command(cli, name, usage);
+  add_argument(cmd, "scene", value.scene, "Input scene.");
+}
+
+int run_shade_scene(const shade_scene_params &params) {
+  // loading scene
+  auto ioerror = ""s;
+  auto scene   = scene_scene{};
+  if (!load_scene(params.scene, scene, ioerror, print_progress))
+    print_fatal(ioerror);
+
+  // tesselation
+  tesselate_shapes(scene, print_progress);
+
+  // run viewer
+  run_shade_scene(scene, params.scene, "", print_progress);
 
   // done
   return 0;
@@ -1282,10 +1291,10 @@ int run_shade_sculpt(const shade_sculpt_params &params_) {
 }
 
 struct app_params {
-  string              command = "sculpt";
-  shade_sculpt_params sculpt  = {};
+  string              command = "scene";
   shade_scene_params  scene   = {};
   shade_shape_params  shape   = {};
+  shade_sculpt_params sculpt  = {};
 };
 
 // Cli
