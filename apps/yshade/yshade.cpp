@@ -59,7 +59,7 @@ struct app_state {
 
   // scene
   sceneio_scene ioscene  = sceneio_scene{};
-  camera_handle iocamera = invalid_handle;
+  camera_handle iocamera = 0;
 
   // rendering state
   shade_scene glscene = {};
@@ -192,7 +192,7 @@ void run_shade_scene(const scene_scene &scene, const string &name,
   app.filename = name;
 
   // get camera
-  app.iocamera = find_camera(app.ioscene, "");
+  // app.iocamera = find_camera(app.ioscene, "");
 
   // callbacks
   auto callbacks    = gui_callbacks{};
@@ -276,7 +276,26 @@ int run_shade_scene(const shade_scene_params &params) {
   tesselate_shapes(scene, print_progress);
 
   // run viewer
-  run_shade_scene(scene, params.scene, "", print_progress);
+  run_shade_scene(
+      scene, params.scene, "", print_progress,
+      [](gui_window *win, const gui_input &input, scene_scene &scene,
+          shade_scene &glscene) {
+        auto &ioshape = scene.shapes.at(0);
+        draw_label(win, "points", std::to_string(ioshape.points.size()));
+        draw_label(win, "lines", std::to_string(ioshape.lines.size()));
+        draw_label(win, "triangles", std::to_string(ioshape.triangles.size()));
+        draw_label(win, "quads", std::to_string(ioshape.quads.size()));
+        draw_label(win, "positions", std::to_string(ioshape.positions.size()));
+        draw_label(win, "normals", std::to_string(ioshape.normals.size()));
+        draw_label(win, "texcoords", std::to_string(ioshape.texcoords.size()));
+        draw_label(win, "colors", std::to_string(ioshape.colors.size()));
+        draw_label(win, "radius", std::to_string(ioshape.radius.size()));
+      },
+      [](gui_window *win, const gui_input &input, scene_scene &scene,
+          shade_scene &glscene) {
+        glscene.instances[1].hidden = true;
+        glscene.instances[2].hidden = true;
+      });
 
   // done
   return 0;
