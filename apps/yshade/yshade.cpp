@@ -47,7 +47,7 @@
 using namespace yocto;
 
 // Application state
-struct shade_scene_state {
+struct app_state {
   // loading parameters
   string filename  = "scene.json";
   string imagename = "out.png";
@@ -190,7 +190,7 @@ void add_command(cli_command &cli, const string &name,
 
 int run_shade_scene(const shade_scene_params &params) {
   // initialize app
-  auto app = shade_scene_state();
+  auto app = app_state{};
 
   // copy command line
   app.filename = params.scene;
@@ -261,25 +261,6 @@ int run_shade_scene(const shade_scene_params &params) {
   // done
   return 0;
 }
-
-// Application state
-struct shade_shape_state {
-  // loading parameters
-  string filename  = "shape.ply";
-  string imagename = "out.png";
-  string outname   = "out.ply";
-  string name      = "";
-
-  // options
-  shade_params drawgl_prms = {};
-
-  // scene
-  sceneio_scene ioscene  = sceneio_scene{};
-  camera_handle iocamera = invalid_handle;
-
-  // rendering state
-  shade_scene glscene = {};
-};
 
 // Create a shape with small spheres for each point
 static shape_data make_spheres(
@@ -430,7 +411,7 @@ void add_command(cli_command &cli, const string &name,
 
 int run_shade_shape(const shade_shape_params &params) {
   // initialize app
-  auto app = shade_shape_state();
+  auto app = app_state{};
 
   // copy command line
   app.filename = params.shape;
