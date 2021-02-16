@@ -1,6 +1,5 @@
 add_executable(yshade  yshade.cpp 
   yshade_shape.h yshade_shape.cpp
-  yshade_scene.h yshade_scene.cpp 
   yshade_sculpt.h yshade_sculpt.cpp  
 )
 
