@@ -78,6 +78,7 @@ struct sculpt_buffers {
   vector<vec2f> coords        = {};
   vector<vec3f> old_positions = {};
   vector<vec3f> old_normals   = {};
+  scene_shape   old_shape     = {};
 };
 
 // Initialize all sculpting parameters.
@@ -100,6 +101,7 @@ sculpt_buffers make_sculpt_buffers(const shape_data &shape) {
   buffers.old_positions = shape.positions;
   buffers.old_normals   = shape.normals;
   buffers.coords        = vector<vec2f>(shape.positions.size(), vec2f{0, 0});
+  buffers.old_shape     = shape;
   return buffers;
 }
 
@@ -364,15 +366,34 @@ void apply_brush(shape_data &shape, const vector<vec3f> &positions,
 
 // To apply brush on intersected points' neighbors
 bool gaussian_brush(vector<vec3f> &positions, const hash_grid &grid,
-    const vector<pair<vec3f, vec3f>> &stroke_samples,
-    const sculpt_params &             params) {
-  if (stroke_samples.empty()) return false;
+    const vector<vec3i> &triangles, const vector<vec3f> &base_positions,
+    const vector<vec3f> &base_normals, const vector<shape_point> &stroke,
+    const sculpt_params &params) {
+  if (stroke.empty()) return false;
+
+  // helpers
+  auto eval_position = [](const vector<vec3i> & triangles,
+                           const vector<vec3f> &positions, int element,
+                           const vec2f &uv) {
+    auto &triangle = triangles[element];
+    return interpolate_triangle(positions[triangle.x], positions[triangle.y],
+        positions[triangle.z], uv);
+  };
+  auto eval_normal = [](const vector<vec3i> & triangles,
+                         const vector<vec3f> &normals, int element,
+                         const vec2f &uv) {
+    auto &triangle = triangles[element];
+    return normalize(interpolate_triangle(
+        normals[triangle.x], normals[triangle.y], normals[triangle.z], uv));
+  };
 
   // for a correct gaussian distribution
   float scale_factor = 3.5f / params.radius;
 
   auto neighbors = vector<int>{};
-  for (auto [position, normal] : stroke_samples) {
+  for (auto [element, uv] : stroke) {
+    auto position = eval_position(triangles, base_positions, element, uv);
+    auto normal   = eval_normal(triangles, base_normals, element, uv);
     find_neighbors(grid, neighbors, position, params.radius);
     if (params.negative) normal = -normal;
     for (auto neighbor : neighbors) {
@@ -447,12 +468,16 @@ float laplacian_weight(const vector<vec3f> &positions,
 
 // Smooth brush with Laplace Operator Discretization and Cotangents Weights
 bool smooth_brush(vector<vec3f> &positions, const geodesic_solver &solver,
-    const vector<vector<int>> &adjacencies, vector<int> &stroke_sampling,
-    const sculpt_params &params) {
-  if (stroke_sampling.empty()) return false;
+    const vector<vec3i> &triangles, const vector<vector<int>> &adjacencies,
+    vector<shape_point> &stroke, const sculpt_params &params) {
+  if (stroke.empty()) return false;
+
+  auto stroke_vertices = vector<int>{};
+  for (auto [element, uv] : stroke)
+    stroke_vertices.push_back(closest_vertex(triangles, element, uv));
 
   auto distances = vector<float>(solver.graph.size(), flt_max);
-  for (auto sample : stroke_sampling) distances[sample] = 0.0f;
+  for (auto sample : stroke_vertices) distances[sample] = 0.0f;
 
   auto current_node = -1;
   auto neighbors    = vector<int>{};
@@ -475,9 +500,7 @@ bool smooth_brush(vector<vec3f> &positions, const geodesic_solver &solver,
     neighbors.push_back(neighbor);
     weights.push_back(laplacian_weight(positions, adjacencies, node, neighbor));
   };
-  dijkstra(solver, stroke_sampling, distances, params.radius, update);
-
-  stroke_sampling.clear();
+  dijkstra(solver, stroke_vertices, distances, params.radius, update);
 
   return true;
 }
@@ -767,33 +790,22 @@ pair<bool, bool> update_stroke(sculpt_stroke &stroke, sculpt_state &state,
       if (!samples.empty()) {
         stroke.locked_uv = cur_uv;
         if (params.type == brush_type::gaussian) {
-          stroke.pairs_.clear();
+          auto pairs = vector<pair<vec3f, vec3f>>{};
           for (auto sample : samples) {
-            stroke.pairs_.push_back(
-                {eval_position(shape, sample.element, sample.uv),
-                    eval_normal(shape, sample.element, sample.uv)});
+            pairs.push_back({eval_position(shape, sample.element, sample.uv),
+                eval_normal(shape, sample.element, sample.uv)});
           }
-          printf(
-              "%d %d\n", (int)stroke.pairs.size(), (int)stroke.pairs_.size());
-          updated_shape = gaussian_brush(
-              shape.positions, state.grid, stroke.pairs_, params);
+          updated_shape = gaussian_brush(shape.positions, state.grid,
+              shape.triangles, buffers.old_positions, buffers.old_normals,
+              samples, params);
         } else if (params.type == brush_type::smooth) {
-          stroke.sampling_.clear();
-          for (auto sample : samples) {
-            stroke.sampling_.push_back(
-                closest_vertex(shape.triangles, sample.element, sample.uv));
-          }
-          printf("%d %d\n", (int)stroke.sampling.size(),
-              (int)stroke.sampling_.size());
           updated_shape = smooth_brush(shape.positions, state.solver,
-              state.adjacencies, stroke.sampling_, params);
-        } else if (params.type == brush_type::texture && !samples.empty()) {
+              shape.triangles, state.adjacencies, samples, params);
+        } else if (params.type == brush_type::texture) {
           for (auto sample : samples) {
             stroke.sampling_.push_back(
                 closest_vertex(shape.triangles, sample.element, sample.uv));
           }
-          printf("%d %d\n", (int)stroke.sampling.size(),
-              (int)stroke.sampling_.size());
           auto vertices = stroke_parameterization(buffers.coords, state.solver,
               stroke.sampling_, buffers.old_positions, buffers.old_normals,
               params.radius);
