@@ -74,9 +74,6 @@ struct sculpt_state {
   scene_shape   old_shape     = {};
 };
 
-// sculpt stroke
-struct sculpt_stroke {};
-
 // Initialize all sculpting parameters.
 sculpt_state make_sculpt_state(
     const shape_data &shape, const scene_texture &texture) {
@@ -317,16 +314,6 @@ vector<int> stroke_parameterization(vector<vec2f> &coords,
     coords[vec_vertices[i]] /= radius * 2.0f;
 
   return vec_vertices;
-}
-
-// End stroke settings
-void end_stroke(sculpt_params &params, sculpt_stroke &stroke,
-    sculpt_state &state, scene_shape &shape) {
-  state.instroke = false;
-  state.stroke.clear();
-  state.coords.assign(state.coords.size(), {0, 0});
-  state.old_positions = shape.positions;
-  state.old_normals   = shape.normals;
 }
 
 // Compute gaussian function
@@ -702,9 +689,9 @@ pair<vector<shape_point>, vec2f> sample_stroke(const shape_bvh &bvh,
   return {samples, cur_uv};
 }
 
-pair<bool, bool> update_stroke(sculpt_stroke &stroke, sculpt_state &state,
-    sculpt_params &params, scene_shape &shape, scene_shape &cursor,
-    const scene_camera &camera, const vec2f &mouse_uv, bool mouse_pressed) {
+pair<bool, bool> sculpt_update(sculpt_state &state, scene_shape &shape,
+    scene_shape &cursor, const scene_camera &camera, const vec2f &mouse_uv,
+    bool mouse_pressed, const sculpt_params &params) {
   auto updated_shape = false, updated_cursor = false;
 
   auto ray = camera_ray(
@@ -761,7 +748,13 @@ pair<bool, bool> update_stroke(sculpt_stroke &stroke, sculpt_state &state,
       state.grid = make_hash_grid(shape.positions, state.grid.cell_size);
     }
   } else {
-    if (state.instroke) end_stroke(params, stroke, state, shape);
+    if (state.instroke) {
+      state.instroke = false;
+      state.stroke.clear();
+      state.coords.assign(state.coords.size(), {0, 0});
+      state.old_positions = shape.positions;
+      state.old_normals   = shape.normals;
+    }
   }
 
   return {updated_shape, updated_cursor};
@@ -802,7 +795,6 @@ int run_shade_sculpt(const shade_sculpt_params &params_) {
 
   // sculpt params
   auto params = sculpt_params{};
-  auto stroke = sculpt_stroke{};
   auto state  = make_sculpt_state(app.ioscene.shapes.front(), iotexture);
 
   // callbacks
@@ -853,7 +845,7 @@ int run_shade_sculpt(const shade_sculpt_params &params_) {
   callbacks.update_cb = [](gui_window *win, const gui_input &input) {
     // pass
   };
-  callbacks.uiupdate_cb = [&app, &params, &stroke, &state](
+  callbacks.uiupdate_cb = [&app, &params, &state](
                               gui_window *win, const gui_input &input) {
     // intersect mouse position and shape
     auto  mouse_uv = vec2f{input.mouse_pos.x / float(input.window_size.x),
@@ -864,9 +856,8 @@ int run_shade_sculpt(const shade_sculpt_params &params_) {
     auto &glcamera = app.glscene.cameras.at(0);
     auto &glshape  = app.glscene.shapes.at(0);
     auto &glscene  = app.glscene;
-    auto [updated_shape, updated_cursor] = update_stroke(stroke, state, params,
-        shape, cursor, camera, mouse_uv,
-        input.mouse_left && !input.modifier_ctrl);
+    auto [updated_shape, updated_cursor] = sculpt_update(state, shape, cursor,
+        camera, mouse_uv, input.mouse_left && !input.modifier_ctrl, params);
     if (updated_cursor) {
       set_positions(glscene.shapes.at(1), cursor.positions);
       set_lines(glscene.shapes.at(1), cursor.lines);
