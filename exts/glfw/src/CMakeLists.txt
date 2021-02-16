@@ -73,58 +73,78 @@ if (_GLFW_X11 OR _GLFW_WAYLAND)
 endif()
 
 if (APPLE)
-    # For some reason, CMake doesn't know about .m
-    set_source_files_properties(${glfw_SOURCES} PROPERTIES LANGUAGE C)
-endif()
-
-# Make GCC and Clang warn about declarations that VS 2010 and 2012 won't accept
-# for all source files that VS will build
-if ("${CMAKE_C_COMPILER_ID}" STREQUAL "GNU" OR
-    "${CMAKE_C_COMPILER_ID}" STREQUAL "Clang" OR
-    "${CMAKE_C_COMPILER_ID}" STREQUAL "AppleClang")
-
-    if (WIN32)
-        set(windows_SOURCES ${glfw_SOURCES})
-    else()
-        set(windows_SOURCES ${common_SOURCES})
-    endif()
-    set_source_files_properties(${windows_SOURCES} PROPERTIES
-        COMPILE_FLAGS -Wdeclaration-after-statement)
+    # For some reason CMake didn't know about .m until version 3.16
+    set_source_files_properties(cocoa_init.m cocoa_joystick.m cocoa_monitor.m
+                                cocoa_window.m nsgl_context.m PROPERTIES
+                                LANGUAGE C)
 endif()
 
 add_library(glfw ${glfw_SOURCES} ${glfw_HEADERS})
 set_target_properties(glfw PROPERTIES
                       OUTPUT_NAME ${GLFW_LIB_NAME}
-                      VERSION ${GLFW_VERSION}
+                      VERSION ${GLFW_VERSION_MAJOR}.${GLFW_VERSION_MINOR}
                       SOVERSION ${GLFW_VERSION_MAJOR}
                       POSITION_INDEPENDENT_CODE ON
                       FOLDER "GLFW3")
 
+if (${CMAKE_VERSION} VERSION_EQUAL "3.1.0" OR
+    ${CMAKE_VERSION} VERSION_GREATER "3.1.0")
+
+    set_target_properties(glfw PROPERTIES C_STANDARD 99)
+else()
+    # Remove this fallback when removing support for CMake version less than 3.1
+    target_compile_options(glfw PRIVATE
+                           "$<$<C_COMPILER_ID:AppleClang>:-std=c99>"
+                           "$<$<C_COMPILER_ID:Clang>:-std=c99>"
+                           "$<$<C_COMPILER_ID:GNU>:-std=c99>")
+endif()
+
 target_compile_definitions(glfw PRIVATE _GLFW_USE_CONFIG_H)
 target_include_directories(glfw PUBLIC
                            "$<BUILD_INTERFACE:${GLFW_SOURCE_DIR}/include>"
-                           "$<INSTALL_INTERFACE:${CMAKE_INSTALL_FULL_INCLUDEDIR}>")
+                           "$<INSTALL_INTERFACE:${CMAKE_INSTALL_INCLUDEDIR}>")
 target_include_directories(glfw PRIVATE
                            "${GLFW_SOURCE_DIR}/src"
                            "${GLFW_BINARY_DIR}/src"
                            ${glfw_INCLUDE_DIRS})
+target_link_libraries(glfw PRIVATE ${glfw_LIBRARIES})
+
+if ("${CMAKE_C_COMPILER_ID}" STREQUAL "GNU" OR
+    "${CMAKE_C_COMPILER_ID}" STREQUAL "Clang" OR
+    "${CMAKE_C_COMPILER_ID}" STREQUAL "AppleClang")
+
+    # Make GCC and Clang warn about declarations that VS 2010 and 2012 won't
+    # accept for all source files that VS will build
+    set_source_files_properties(context.c init.c input.c monitor.c vulkan.c
+                                window.c win32_init.c win32_joystick.c
+                                win32_monitor.c win32_time.c win32_thread.c
+                                win32_window.c wgl_context.c egl_context.c
+                                osmesa_context.c PROPERTIES
+                                COMPILE_FLAGS -Wdeclaration-after-statement)
+
+    # Enable a reasonable set of warnings (no, -Wextra is not reasonable)
+    target_compile_options(glfw PRIVATE "-Wall")
+endif()
+
+if (WIN32)
+    target_compile_definitions(glfw PRIVATE _UNICODE)
+endif()
 
 # HACK: When building on MinGW, WINVER and UNICODE need to be defined before
 # the inclusion of stddef.h (by glfw3.h), which is itself included before
 # win32_platform.h.  We define them here until a saner solution can be found
 # NOTE: MinGW-w64 and Visual C++ do /not/ need this hack.
-target_compile_definitions(glfw PRIVATE
-                           "$<$<BOOL:${MINGW}>:UNICODE;WINVER=0x0501>")
-
-# Enable a reasonable set of warnings (no, -Wextra is not reasonable)
-target_compile_options(glfw PRIVATE
-                       "$<$<C_COMPILER_ID:AppleClang>:-Wall>"
-                       "$<$<C_COMPILER_ID:Clang>:-Wall>"
-                       "$<$<C_COMPILER_ID:GNU>:-Wall>")
+if (MINGW)
+    target_compile_definitions(glfw PRIVATE UNICODE WINVER=0x0501)
+endif()
 
 if (BUILD_SHARED_LIBS)
     if (WIN32)
         if (MINGW)
+            # Remove the dependency on the shared version of libgcc
+            # NOTE: MinGW-w64 has the correct default but MinGW needs this
+            target_link_libraries(glfw PRIVATE "-static-libgcc")
+
             # Remove the lib prefix on the DLL (but not the import library)
             set_target_properties(glfw PROPERTIES PREFIX "")
 
@@ -134,21 +154,20 @@ if (BUILD_SHARED_LIBS)
             # Add a suffix to the import library to avoid naming conflicts
             set_target_properties(glfw PROPERTIES IMPORT_SUFFIX "dll.lib")
         endif()
+
+        target_compile_definitions(glfw INTERFACE GLFW_DLL)
     elseif (APPLE)
         # Add -fno-common to work around a bug in Apple's GCC
         target_compile_options(glfw PRIVATE "-fno-common")
 
         set_target_properties(glfw PROPERTIES
                               INSTALL_NAME_DIR "${CMAKE_INSTALL_LIBDIR}")
-    elseif (UNIX)
+    endif()
+
+    if (UNIX)
         # Hide symbols not explicitly tagged for export from the shared library
         target_compile_options(glfw PRIVATE "-fvisibility=hidden")
     endif()
-
-    target_compile_definitions(glfw INTERFACE GLFW_DLL)
-    target_link_libraries(glfw PRIVATE ${glfw_LIBRARIES})
-else()
-    target_link_libraries(glfw INTERFACE ${glfw_LIBRARIES})
 endif()
 
 if (MSVC)

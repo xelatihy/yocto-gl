@@ -23,6 +23,8 @@
 //    distribution.
 //
 //========================================================================
+// It is fine to use C99 in this file because it will not be built with VS
+//========================================================================
 
 #define _GNU_SOURCE
 
@@ -132,7 +134,7 @@ static int createTmpfileCloexec(char* tmpname)
  * SCM_RIGHTS methods.
  *
  * posix_fallocate() is used to guarantee that disk space is available
- * for the file at the given size. If disk space is insufficent, errno
+ * for the file at the given size. If disk space is insufficient, errno
  * is set to ENOSPC. If posix_fallocate() is not supported, program may
  * receive SIGBUS on accessing mmap()'ed file contents instead.
  */
@@ -902,7 +904,7 @@ static char *translateCursorShape(int shape)
         case GLFW_CROSSHAIR_CURSOR:
             return "crosshair";
         case GLFW_HAND_CURSOR:
-            return "grabbing";
+            return "hand2";
         case GLFW_HRESIZE_CURSOR:
             return "sb_h_double_arrow";
         case GLFW_VRESIZE_CURSOR:

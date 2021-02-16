@@ -996,7 +996,7 @@ struct ImGuiAppLog {
     ImGui::EndChild();
   }
   void Draw(const char* title, bool* p_opened = nullptr) {
-    ImGui::SetNextWindowSize(ImVec2(500, 400), ImGuiSetCond_FirstUseEver);
+    ImGui::SetNextWindowSize(ImVec2(500, 400), ImGuiCond_FirstUseEver);
     ImGui::Begin(title, p_opened);
     Draw();
     ImGui::End();

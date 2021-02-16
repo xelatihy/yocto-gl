@@ -13,11 +13,13 @@ if(YOCTO_OPENGL)
     ext/imgui/imgui.cpp 
     ext/imgui/imgui_draw.cpp 
     ext/imgui/imgui_widgets.cpp
+    ext/imgui/imgui_tables.cpp 
     ext/imgui/imgui_impl_glfw.cpp 
     ext/imgui/imgui_impl_opengl3.cpp 
     ext/glad/glad.c)
   
   target_include_directories(yocto_gui PRIVATE .)
+  target_include_directories(yocto_gui PRIVATE ./ext)
   target_include_directories(yocto_gui PUBLIC ${CMAKE_SOURCE_DIR}/libs)
   target_compile_definitions(yocto_gui PRIVATE -DIMGUI_IMPL_OPENGL_LOADER_GLAD)
   target_compile_definitions(yocto_gui PUBLIC -DYOCTO_OPENGL)
