@@ -234,11 +234,56 @@ int run_view(const view_params& params) {
 
 #endif
 
+struct glview_params {
+  string scene = "scene.json"s;
+};
+
+// Cli
+void add_command(cli_command& cli, const string& name, glview_params& value,
+    const string& usage) {
+  auto& cmd = add_command(cli, name, usage);
+  add_argument(cmd, "scene", value.scene, "Input scene.");
+}
+
+#ifndef YOCTO_OPENGL
+
+// view scene
+int run_glview(const glview_params& params) {
+  return print_fatal("Opengl not compiled");
+}
+
+#else
+
+int run_glview(const glview_params& params) {
+  // loading scene
+  auto ioerror = ""s;
+  auto scene   = scene_scene{};
+  if (!load_scene(params.scene, scene, ioerror, print_progress))
+    print_fatal(ioerror);
+
+  // tesselation
+  tesselate_shapes(scene, print_progress);
+
+  // run viewer
+  glview_scene(
+      scene, params.scene, "", print_progress,
+      [](gui_window* win, const gui_input& input, scene_scene& scene,
+          shade_scene& glscene) {},
+      [](gui_window* win, const gui_input& input, scene_scene& scene,
+          shade_scene& glscene) {});
+
+  // done
+  return 0;
+}
+
+#endif
+
 struct app_params {
   string         command = "convert";
   convert_params convert = {};
   render_params  render  = {};
   view_params    view    = {};
+  glview_params  glview  = {};
 };
 
 // Cli
@@ -248,7 +293,8 @@ void add_commands(cli_command& cli, const string& name, app_params& value,
   add_command_name(cli, "command", value.command, "Command.");
   add_command(cli, "convert", value.convert, "Convert scenes.");
   add_command(cli, "render", value.render, "Render scenes.");
-  add_command(cli, "view", value.view, "View shapes.");
+  add_command(cli, "view", value.view, "View scenes.");
+  add_command(cli, "glview", value.glview, "View scenes with OpenGL.");
 }
 
 // Parse cli
@@ -270,6 +316,8 @@ int main(int argc, const char* argv[]) {
     return run_render(params.render);
   } else if (params.command == "view") {
     return run_view(params.view);
+  } else if (params.command == "glview") {
+    return run_glview(params.glview);
   } else {
     return print_fatal("unknown command " + params.command);
   }
