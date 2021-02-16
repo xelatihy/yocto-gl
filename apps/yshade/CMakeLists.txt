@@ -1,8 +1,4 @@
-add_executable(yshade  yshade.cpp 
-  yshade_shape.h yshade_shape.cpp
-  yshade_scene.h yshade_scene.cpp 
-  yshade_sculpt.h yshade_sculpt.cpp  
-)
+add_executable(yshade  yshade.cpp)
 
 set_target_properties(yshade  PROPERTIES CXX_STANDARD 17 CXX_STANDARD_REQUIRED YES)
 target_include_directories(yshade  PRIVATE ${CMAKE_SOURCE_DIR}/libs)

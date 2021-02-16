@@ -70,10 +70,10 @@ void view_shape(const string& title, const string& name,
   scene.shapes.emplace_back(shape);
   scene.material_names.emplace_back("material");
   auto& material = scene.materials.emplace_back();
-  material.color = {0.8,0.8,0.8};
+  material.color = {0.8, 0.8, 0.8};
   scene.instance_names.emplace_back("instance");
-  auto& instance = scene.instances.emplace_back();
-  instance.shape = 0;
+  auto& instance    = scene.instances.emplace_back();
+  instance.shape    = 0;
   instance.material = 0;
   add_camera(scene);
   if (addsky) add_sky(scene);
