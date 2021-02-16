@@ -563,7 +563,7 @@ int run_shade_shape(const shade_shape_params &params) {
   // callbacks
   auto callbacks    = gui_callbacks{};
   callbacks.init_cb = [&app](gui_window *win, const gui_input &input) {
-    init_glscene2(app.glscene, app.ioscene, print_progress);
+    init_glscene1(app.glscene, app.ioscene, print_progress);
     app.glscene.instances[1].hidden = true;
     app.glscene.instances[2].hidden = true;
   };
@@ -1188,7 +1188,7 @@ static void convert_scene2(scene_scene &scene, const scene_shape &ioshape_,
   if (progress_cb) progress_cb("create scene", progress.x++, progress.y);
 }
 
-static void init_glscene(shade_scene &glscene, const sceneio_scene &ioscene,
+static void init_glscene3(shade_scene &glscene, const sceneio_scene &ioscene,
     progress_callback progress_cb) {
   // handle progress
   auto progress = vec2i{
@@ -1455,7 +1455,7 @@ int run_shade_sculpt(const shade_sculpt_params &params_) {
   // callbacks
   auto callbacks    = gui_callbacks{};
   callbacks.init_cb = [&app](gui_window *win, const gui_input &input) {
-    init_glscene(app.glscene, app.ioscene, print_progress);
+    init_glscene1(app.glscene, app.ioscene, print_progress);
   };
   callbacks.clear_cb = [&app](gui_window *win, const gui_input &input) {
     clear_scene(app.glscene);
