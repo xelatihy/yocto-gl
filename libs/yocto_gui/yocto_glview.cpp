@@ -413,6 +413,174 @@ void view_scene(const string& title, const string& name, scene_scene& scene,
   view_scene(title, name, scene, params, progress_cb);
 }
 
+#if 1
+
+// Open a window and show an scene via path tracing
+void view_scene(const string& title, const string& name, scene_scene& scene,
+    const trace_params& params_, const progress_callback& progress_cb) {
+  // copy params and camera
+  auto params = params_;
+
+  // build bvh
+  auto bvh = make_bvh(scene, params, progress_cb);
+
+  // init renderer
+  auto lights = make_lights(scene, params, progress_cb);
+
+  // fix renderer type if no lights
+  if (lights.lights.empty() && is_sampler_lit(params)) {
+    // TODO(fabio): fix this
+  }
+
+  // init images
+  auto trace_size = [](const scene_scene&   scene,
+                        const trace_params& params) -> vec2i {
+    auto& camera = scene.cameras[params.camera];
+    if (camera.aspect >= 1) {
+      return {params.resolution, (int)round(params.resolution / camera.aspect)};
+    } else {
+      return {(int)round(params.resolution * camera.aspect), params.resolution};
+    }
+  };
+  auto [width, height] = trace_size(scene, params);
+  auto image           = make_image(width, height, true, false);
+  auto display         = make_image(width, height, false, true);
+  tonemap_image_mt(display, image, params.exposure);
+
+  // opengl image
+  auto glimage  = ogl_image{};
+  auto glparams = ogl_image_params{};
+
+  // top level combo
+  auto names    = vector<string>{name};
+  auto selected = 0;
+
+  // init state
+  auto worker = trace_worker{};
+  auto state  = trace_state{};
+
+  // renderer update
+  auto             render_counter = 0;
+  std::atomic<int> current;
+  auto             reset_display = [&]() {
+    // stop render
+    trace_stop(worker);
+
+    // start render
+    trace_start(
+        worker, state, scene, bvh, lights, params,
+        [&](const string& message, int sample, int nsamples) {
+          if (progress_cb) progress_cb("render sample", sample, params.samples);
+          current = sample;
+        },
+        [&](const image_data& render, int current, int total) {
+          // if (current > 0) return;
+          if (current == 0) render_counter = 0;
+          image = render;
+          tonemap_image_mt(display, image, params.exposure);
+        });
+  };
+
+  // start rendeting
+  reset_display();
+
+  // callbacks
+  auto callbacks    = gui_callbacks{};
+  callbacks.init_cb = [&](gui_window* win, const gui_input& input) {
+    init_image(glimage);
+    set_image(glimage, display, false, false);
+  };
+  callbacks.clear_cb = [&](gui_window* win, const gui_input& input) {
+    clear_image(glimage);
+  };
+  callbacks.draw_cb = [&](gui_window* win, const gui_input& input) {
+    // update image
+    if (!render_counter) {
+      set_image(glimage, display, false, false);
+    }
+    render_counter++;
+    if (render_counter > 10) render_counter = 0;
+    // draw image
+    glparams.window                           = input.window_size;
+    glparams.framebuffer                      = input.framebuffer_viewport;
+    std::tie(glparams.center, glparams.scale) = camera_imview(glparams.center,
+        glparams.scale, {display.width, display.height}, glparams.window,
+        glparams.fit);
+    draw_image(glimage, glparams);
+  };
+  callbacks.widgets_cb = [&](gui_window* win, const gui_input& input) {
+    auto edited = 0;
+    draw_combobox(win, "name", selected, names);
+    if (begin_header(win, "tonemap")) {
+      edited += draw_slider(win, "exposure", params.exposure, -5, 5);
+      end_header(win);
+      if (edited) {
+        if (progress_cb) progress_cb("tonemap image", 0, 1);
+        tonemap_image_mt(display, image, params.exposure);
+        set_image(glimage, display, false, false);
+        if (progress_cb) progress_cb("tonemap image", 0, 1);
+      }
+    }
+    if (begin_header(win, "inspect")) {
+      draw_slider(win, "zoom", glparams.scale, 0.1, 10);
+      draw_checkbox(win, "fit", glparams.fit);
+      auto [i, j] = image_coords(input.mouse_pos, glparams.center,
+          glparams.scale, {image.width, image.height});
+      auto ij     = vec2i{i, j};
+      draw_dragger(win, "mouse", ij);
+      auto hdr_pixel     = zero4f;
+      auto ldr_pixel     = zero4b;
+      auto display_pixel = zero4b;
+      if (i >= 0 && i < image.width && j >= 0 && j < image.height) {
+        display_pixel = image.pixelsb[j * image.width + i];
+        if (!image.pixelsf.empty())
+          hdr_pixel = image.pixelsf[j * image.width + i];
+        if (!image.pixelsb.empty())
+          ldr_pixel = image.pixelsb[j * image.width + i];
+      }
+      if (!image.pixelsf.empty()) {
+        draw_coloredit(win, "image", hdr_pixel);
+      } else {
+        draw_coloredit(win, "image", ldr_pixel);
+      }
+      draw_coloredit(win, "display", display_pixel);
+      end_header(win);
+    }
+  };
+  callbacks.uiupdate_cb = [&](gui_window* win, const gui_input& input) {
+    if ((input.mouse_left || input.mouse_right) && !input.modifier_alt &&
+        !input.widgets_active) {
+      auto dolly  = 0.0f;
+      auto pan    = zero2f;
+      auto rotate = zero2f;
+      if (input.mouse_left && !input.modifier_shift)
+        rotate = (input.mouse_pos - input.mouse_last) / 100.0f;
+      if (input.mouse_right)
+        dolly = (input.mouse_pos.x - input.mouse_last.x) / 100.0f;
+      auto camera = scene.cameras[params.camera];
+      if (input.mouse_left && input.modifier_shift)
+        pan = (input.mouse_pos - input.mouse_last) * camera.focus / 200.0f;
+      pan.x                                = -pan.x;
+      std::tie(camera.frame, camera.focus) = camera_turntable(
+          camera.frame, camera.focus, rotate, dolly, pan);
+      if (camera.frame != scene.cameras[params.camera].frame ||
+          camera.focus != scene.cameras[params.camera].focus) {
+        trace_stop(worker);
+        scene.cameras[params.camera] = camera;
+        reset_display();
+      }
+    }
+  };
+
+  // run ui
+  run_ui({1280, 720}, title, callbacks);
+
+  // done
+  trace_stop(worker);
+}
+
+#else
+
 // Parameter conversions
 void from_params(const gui_params& uiparams, trace_params& params) {
   params.camera     = uiparams.at("camera");
@@ -541,6 +709,8 @@ void view_scene(const string& title, const string& name, scene_scene& scene,
   // stop
   trace_stop(worker);
 }
+
+#endif
 
 }  // namespace yocto
 
