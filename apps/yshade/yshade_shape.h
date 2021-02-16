@@ -30,14 +30,14 @@
 using namespace yocto;
 
 struct shade_shape_params {
-  vector<string> shapes = {"shape.json"s};
+  string shape = "shape.ply";
 };
 
 // Cli
 inline void add_command(cli_command& cli, const string& name,
     shade_shape_params& value, const string& usage) {
   auto& cmd = add_command(cli, name, usage);
-  add_argument(cmd, "shapes", value.shapes, "Input shapes.");
+  add_argument(cmd, "shape", value.shape, "Input shape.");
 }
 
 int run_shade_shape(const shade_shape_params& params);

@@ -46,69 +46,21 @@ using namespace yocto;
 // Application state
 struct shade_shape_state {
   // loading parameters
-  string filename  = "shape.obj";
+  string filename  = "shape.ply";
   string imagename = "out.png";
-  string outname   = "out.obj";
+  string outname   = "out.ply";
   string name      = "";
 
   // options
   shade_params drawgl_prms = {};
 
   // scene
-  shape_data ioshape = {};
+  sceneio_scene ioscene  = sceneio_scene{};
+  camera_handle iocamera = invalid_handle;
 
   // rendering state
   shade_scene glscene = {};
-
-  // loading status
-  std::atomic<bool> ok           = false;
-  std::future<void> loader       = {};
-  string            status       = "";
-  string            error        = "";
-  std::atomic<int>  current      = 0;
-  std::atomic<int>  total        = 0;
-  string            loader_error = "";
 };
-
-// Application state
-struct shade_shape_states {
-  // data
-  vector<shade_shape_state*>     states   = {};
-  shade_shape_state*             selected = nullptr;
-  std::deque<shade_shape_state*> loading  = {};
-
-  // default options
-  shade_params drawgl_prms = {};
-
-  // cleanup
-  ~shade_shape_states() {
-    for (auto state : states) delete state;
-  }
-};
-
-static void load_shape_async(shade_shape_states* apps, const string& filename,
-    const string& camera_name = "") {
-  auto app         = apps->states.emplace_back(new shade_shape_state{});
-  app->filename    = filename;
-  app->imagename   = replace_extension(filename, ".png");
-  app->outname     = replace_extension(filename, ".edited.obj");
-  app->name        = path_filename(app->filename);
-  app->drawgl_prms = apps->drawgl_prms;
-  app->status      = "load";
-  app->loader      = std::async(std::launch::async, [app, camera_name]() {
-    if (!load_shape(app->filename, app->ioshape, app->loader_error)) return;
-  });
-  apps->loading.push_back(app);
-  if (!apps->selected) apps->selected = app;
-}
-
-// TODO(fabio): move this function to math
-static frame3f camera_frame(float lens, float aspect, float film = 0.036) {
-  auto camera_dir  = normalize(vec3f{0, 0.5, 1});
-  auto bbox_radius = 2.0f;
-  auto camera_dist = bbox_radius * lens / (film / aspect);
-  return lookat_frame(camera_dir * camera_dist, {0, 0, 0}, {0, 1, 0});
-}
 
 // Create a shape with small spheres for each point
 static shape_data make_spheres(
@@ -140,47 +92,65 @@ static shape_data make_cylinders(const vector<vec2i>& lines,
   return shape;
 }
 
-static void init_glscene(shade_shape_state* app, shade_scene& glscene,
-    shape_data& ioshape, progress_callback progress_cb) {
+static frame3f camera_frame(float lens, float aspect, float film = 0.036) {
+  auto camera_dir  = normalize(vec3f{0, 0.5, 1});
+  auto bbox_radius = 2.0f;
+  auto camera_dist = bbox_radius * lens / (film / aspect);
+  return lookat_frame(camera_dir * camera_dist, {0, 0, 0}, {0, 1, 0});
+}
+
+static void convert_scene(scene_scene& scene, const scene_shape& ioshape_,
+    progress_callback progress_cb) {
   // handle progress
-  auto progress = vec2i{0, 4};
+  auto progress = vec2i{0, 5};
+  if (progress_cb) progress_cb("create scene", progress.x++, progress.y);
 
   // init scene
-  init_scene(glscene, true);
+  scene = {};
 
-  // compute bounding box
-  auto bbox = invalidb3f;
+  // rescale shape to unit
+  auto ioshape = ioshape_;
+  auto bbox    = invalidb3f;
   for (auto& pos : ioshape.positions) bbox = merge(bbox, pos);
   for (auto& pos : ioshape.positions) pos -= center(bbox);
   for (auto& pos : ioshape.positions) pos /= max(size(bbox));
   // TODO(fabio): this should be a math function
 
   // camera
-  if (progress_cb) progress_cb("convert camera", progress.x++, progress.y);
-  auto  glcamera_id = add_camera(glscene,
-      camera_frame(0.050, 16.0f / 9.0f, 0.036), 0.050, 16.0f / 9.0f, 0.036);
-  auto& glcamera    = glscene.cameras.at(glcamera_id);
-  glcamera.focus    = length(glcamera.frame.o - center(bbox));
+  if (progress_cb) progress_cb("create camera", progress.x++, progress.y);
+  auto& camera  = scene.cameras.emplace_back();
+  camera.frame  = camera_frame(0.050, 16.0f / 9.0f, 0.036);
+  camera.lens   = 0.050;
+  camera.aspect = 16.0f / 9.0f;
+  camera.film   = 0.036;
+  camera.focus  = length(camera.frame.o - center(bbox));
 
   // material
-  if (progress_cb) progress_cb("convert material", progress.x++, progress.y);
-  auto glmaterial  = add_material(glscene, {0, 0, 0}, {0.5, 1, 0.5}, 1, 0, 0.2);
-  auto glmateriale = add_material(glscene, {0, 0, 0}, {0, 0, 0}, 0, 0, 1);
-  auto glmaterialv = add_material(glscene, {0, 0, 0}, {0, 0, 0}, 0, 0, 1);
-  set_unlit(glscene.materials.at(glmateriale), true);
-  set_unlit(glscene.materials.at(glmaterialv), true);
+  if (progress_cb) progress_cb("create material", progress.x++, progress.y);
+  auto& shape_material     = scene.materials.emplace_back();
+  shape_material.type      = material_type::plastic;
+  shape_material.color     = {0.5, 1, 0.5};
+  shape_material.roughness = 0.2;
+  auto& edges_material     = scene.materials.emplace_back();
+  edges_material.type      = material_type::matte;
+  edges_material.color     = {0, 0, 0};
+  auto& vertices_material  = scene.materials.emplace_back();
+  vertices_material.type   = material_type::matte;
+  vertices_material.color  = {0, 0, 0};
 
   // shapes
-  if (progress_cb) progress_cb("convert shape", progress.x++, progress.y);
-  auto model_shape = add_shape(glscene, ioshape.points, ioshape.lines,
-      ioshape.triangles, ioshape.quads, ioshape.positions, ioshape.normals,
-      ioshape.texcoords, ioshape.colors, true);
-  if (!has_normals(glscene.shapes[model_shape])) {
-    app->drawgl_prms.faceted = true;
-  }
-  set_instances(glscene.shapes[model_shape], {}, {});
+  if (progress_cb) progress_cb("create shape", progress.x++, progress.y);
+  scene.shapes.emplace_back(ioshape);
+  auto& edges_shape        = scene.shapes.emplace_back();
+  edges_shape.positions    = ioshape.positions;
+  edges_shape.lines        = get_edges(ioshape.triangles, ioshape.quads);
+  auto& vertices_shape     = scene.shapes.emplace_back(ioshape);
+  vertices_shape.positions = ioshape.positions;
+  vertices_shape.points    = vector<int>(ioshape.positions.size());
+  for (auto idx = 0; idx < (int)vertices_shape.points.size(); idx++)
+    vertices_shape.points[idx] = idx;
 
-  auto edges = get_edges(ioshape.triangles, ioshape.quads);
+#if 0
   auto froms = vector<vec3f>();
   auto tos   = vector<vec3f>();
   froms.reserve(edges.size());
@@ -201,172 +171,208 @@ static void init_glscene(shade_shape_state* app, shade_scene& glscene,
   }
   auto edges_shape = add_shape(glscene, {}, {}, {}, cylinder.quads,
       cylinder.positions, cylinder.normals, cylinder.texcoords, {});
-  set_instances(glscene.shapes[model_shape], froms, tos);
+  set_instances(glscene.shapes[edges_shape], froms, tos);
 
   auto vertices_radius = 3.0f * cylinder_radius;
   auto vertices        = make_spheres(ioshape.positions, vertices_radius, 2);
   auto vertices_shape  = add_shape(glscene, {}, {}, {}, vertices.quads,
       vertices.positions, vertices.normals, vertices.texcoords, {});
-  set_instances(glscene.shapes[model_shape], {}, {});
+  set_instances(glscene.shapes[vertices_shape], {}, {});
+#endif
 
-  // shapes
-  if (progress_cb) progress_cb("convert instance", progress.x++, progress.y);
-  add_instance(glscene, identity3x4f, model_shape, glmaterial);
-  add_instance(glscene, identity3x4f, edges_shape, glmateriale, true);
-  add_instance(glscene, identity3x4f, vertices_shape, glmaterialv, true);
+  // instances
+  if (progress_cb) progress_cb("create instance", progress.x++, progress.y);
+  auto& shape_instance       = scene.instances.emplace_back();
+  shape_instance.shape       = 0;
+  shape_instance.material    = 0;
+  auto& edges_instance       = scene.instances.emplace_back();
+  edges_instance.shape       = 1;
+  edges_instance.material    = 1;
+  auto& vertices_instance    = scene.instances.emplace_back();
+  vertices_instance.shape    = 2;
+  vertices_instance.material = 2;
 
   // done
-  if (progress_cb) progress_cb("convert done", progress.x++, progress.y);
+  if (progress_cb) progress_cb("create scene", progress.x++, progress.y);
 }
 
-// draw with shading
-static void draw_widgets(
-    gui_window* win, shade_shape_states* apps, const gui_input& input) {
-  static auto load_path = ""s, save_path = ""s, error_message = ""s;
-  if (draw_filedialog_button(win, "load", true, "load", load_path, false, "./",
-          "", "*.ply;*.obj")) {
-    load_shape_async(apps, load_path);
-    load_path = "";
-  }
-  continue_line(win);
-  if (draw_filedialog_button(win, "save", apps->selected && apps->selected->ok,
-          "save", save_path, true, path_dirname(save_path),
-          path_filename(save_path), "*.ply;*.obj")) {
-    auto app     = apps->selected;
-    app->outname = save_path;
-    save_shape(app->outname, app->ioshape, app->error);
-    save_path = "";
-  }
-  continue_line(win);
-  if (draw_button(win, "close", (bool)apps->selected)) {
-    if (apps->selected->loader.valid()) return;
-    delete apps->selected;
-    apps->states.erase(
-        std::find(apps->states.begin(), apps->states.end(), apps->selected));
-    apps->selected = apps->states.empty() ? nullptr : apps->states.front();
-  }
-  continue_line(win);
-  if (draw_button(win, "quit")) {
-    set_close(win, true);
-  }
-  if (apps->states.empty()) return;
-  draw_combobox(win, "shape", apps->selected, apps->states, false);
-  if (!apps->selected) return;
-  draw_progressbar(win, apps->selected->status.c_str(), apps->selected->current,
-      apps->selected->total);
-  if (apps->selected->error != "") {
-    draw_label(win, "error", apps->selected->error);
-    return;
-  }
-  if (!apps->selected->ok) return;
-  auto app = apps->selected;
-  if (begin_header(win, "view")) {
-    auto& glmaterial = app->glscene.materials.front();
-    auto& params     = app->drawgl_prms;
-    draw_checkbox(win, "faceted", params.faceted);
-    continue_line(win);
-    draw_checkbox(win, "lines", app->glscene.instances[1].hidden, true);
-    continue_line(win);
-    draw_checkbox(win, "points", app->glscene.instances[2].hidden, true);
-    draw_coloredit(win, "color", glmaterial.color);
-    draw_slider(win, "resolution", params.resolution, 0, 4096);
-    draw_combobox(win, "lighting", (int&)params.lighting, shade_lighting_names);
-    draw_checkbox(win, "wireframe", params.wireframe);
-    continue_line(win);
-    draw_checkbox(win, "double sided", params.double_sided);
-    draw_slider(win, "exposure", params.exposure, -10, 10);
-    draw_slider(win, "gamma", params.gamma, 0.1f, 4);
-    draw_slider(win, "near", params.near, 0.01f, 1.0f);
-    draw_slider(win, "far", params.far, 1000.0f, 10000.0f);
-    end_header(win);
-  }
-  if (begin_header(win, "inspect")) {
-    draw_label(win, "shape", app->name);
-    draw_label(win, "filename", app->filename);
-    draw_label(win, "outname", app->outname);
-    draw_label(win, "imagename", app->imagename);
-    auto& ioshape = app->ioshape;
-    draw_label(win, "points", std::to_string(ioshape.points.size()));
-    draw_label(win, "lines", std::to_string(ioshape.lines.size()));
-    draw_label(win, "triangles", std::to_string(ioshape.triangles.size()));
-    draw_label(win, "quads", std::to_string(ioshape.quads.size()));
-    draw_label(win, "positions", std::to_string(ioshape.positions.size()));
-    draw_label(win, "normals", std::to_string(ioshape.normals.size()));
-    draw_label(win, "texcoords", std::to_string(ioshape.texcoords.size()));
-    draw_label(win, "colors", std::to_string(ioshape.colors.size()));
-    draw_label(win, "radius", std::to_string(ioshape.radius.size()));
-    end_header(win);
-  }
-}
+static void init_glscene(shade_scene& glscene, const sceneio_scene& ioscene,
+    progress_callback progress_cb) {
+  // handle progress
+  auto progress = vec2i{
+      0, (int)ioscene.cameras.size() + (int)ioscene.materials.size() +
+             (int)ioscene.textures.size() + (int)ioscene.shapes.size() +
+             (int)ioscene.instances.size()};
 
-// draw with shading
-static void draw(
-    gui_window* win, shade_shape_states* apps, const gui_input& input) {
-  if (!apps->selected || !apps->selected->ok) return;
-  auto app = apps->selected;
-  draw_scene(app->glscene, app->glscene.cameras.at(0),
-      input.framebuffer_viewport, app->drawgl_prms);
-}
+  // init scene
+  init_scene(glscene);
 
-// update
-static void update(gui_window* win, shade_shape_states* apps) {
-  auto is_ready = [](const std::future<void>& result) -> bool {
-    return result.valid() && result.wait_for(std::chrono::microseconds(0)) ==
-                                 std::future_status::ready;
-  };
+  // camera
+  for (auto& iocamera : ioscene.cameras) {
+    if (progress_cb) progress_cb("convert camera", progress.x++, progress.y);
+    auto& camera = glscene.cameras.at(add_camera(glscene));
+    set_frame(camera, iocamera.frame);
+    set_lens(camera, iocamera.lens, iocamera.aspect, iocamera.film);
+    set_nearfar(camera, 0.001, 10000);
+  }
 
-  while (!apps->loading.empty()) {
-    auto app = apps->loading.front();
-    if (!is_ready(app->loader)) break;
-    apps->loading.pop_front();
-    auto progress_cb = [app](const string& message, int current, int total) {
-      app->current = current;
-      app->total   = total;
-    };
-    app->loader.get();
-    if (app->loader_error.empty()) {
-      init_glscene(app, app->glscene, app->ioshape, progress_cb);
-      app->ok     = true;
-      app->status = "ok";
-    } else {
-      app->status = "error";
-      app->error  = app->loader_error;
+  // textures
+  for (auto& iotexture : ioscene.textures) {
+    if (progress_cb) progress_cb("convert texture", progress.x++, progress.y);
+    auto  handle    = add_texture(glscene);
+    auto& gltexture = glscene.textures[handle];
+    if (!iotexture.pixelsf.empty()) {
+      set_texture(
+          gltexture, iotexture.width, iotexture.height, iotexture.pixelsf);
+    } else if (!iotexture.pixelsb.empty()) {
+      set_texture(
+          gltexture, iotexture.width, iotexture.height, iotexture.pixelsb);
     }
   }
+
+  // material
+  for (auto& iomaterial : ioscene.materials) {
+    if (progress_cb) progress_cb("convert material", progress.x++, progress.y);
+    auto  handle     = add_material(glscene);
+    auto& glmaterial = glscene.materials[handle];
+    set_emission(glmaterial, iomaterial.emission, iomaterial.emission_tex);
+    set_opacity(glmaterial, iomaterial.opacity, invalid_handle);
+    set_normalmap(glmaterial, iomaterial.normal_tex);
+    switch (iomaterial.type) {
+      case material_type::matte: {
+        set_color(glmaterial, iomaterial.color, iomaterial.color_tex);
+        set_specular(glmaterial, 0, invalid_handle);
+        set_metallic(glmaterial, 0, invalid_handle);
+        set_roughness(glmaterial, 0, invalid_handle);
+      } break;
+      case material_type::plastic: {
+        set_color(glmaterial, iomaterial.color, iomaterial.color_tex);
+        set_specular(glmaterial, 1, invalid_handle);
+        set_metallic(glmaterial, 0, invalid_handle);
+        set_roughness(glmaterial, iomaterial.roughness, invalid_handle);
+      } break;
+      case material_type::metal: {
+        set_color(glmaterial, iomaterial.color, iomaterial.color_tex);
+        set_specular(glmaterial, 0, invalid_handle);
+        set_metallic(glmaterial, 1, invalid_handle);
+        set_roughness(
+            glmaterial, iomaterial.roughness, iomaterial.roughness_tex);
+      } break;
+      case material_type::metallic: {
+        set_color(glmaterial, iomaterial.color, iomaterial.color_tex);
+        set_specular(glmaterial, 1, invalid_handle);
+        set_metallic(glmaterial, iomaterial.metallic, invalid_handle);
+        set_roughness(glmaterial, iomaterial.roughness, invalid_handle);
+      } break;
+      default: {
+        set_color(glmaterial, iomaterial.color, iomaterial.color_tex);
+        set_specular(glmaterial, 0, invalid_handle);
+        set_metallic(glmaterial, 0, invalid_handle);
+        set_roughness(
+            glmaterial, iomaterial.roughness, iomaterial.roughness_tex);
+      } break;
+    }
+  }
+
+  // shapes
+  for (auto& ioshape : ioscene.shapes) {
+    if (progress_cb) progress_cb("convert shape", progress.x++, progress.y);
+    add_shape(glscene, ioshape.points, ioshape.lines, ioshape.triangles,
+        ioshape.quads, ioshape.positions, ioshape.normals, ioshape.texcoords,
+        ioshape.colors);
+  }
+
+  // shapes
+  for (auto& ioinstance : ioscene.instances) {
+    if (progress_cb) progress_cb("convert instance", progress.x++, progress.y);
+    auto  handle     = add_instance(glscene);
+    auto& glinstance = glscene.instances[handle];
+    set_frame(glinstance, ioinstance.frame);
+    set_shape(glinstance, ioinstance.shape);
+    set_material(glinstance, ioinstance.material);
+  }
+
+  // environments
+  for (auto& ioenvironment : ioscene.environments) {
+    auto  handle        = add_environment(glscene);
+    auto& glenvironment = glscene.environments[handle];
+    set_frame(glenvironment, ioenvironment.frame);
+    set_emission(
+        glenvironment, ioenvironment.emission, ioenvironment.emission_tex);
+  }
+
+  // init environments
+  init_environments(glscene);
+
+  // done
+  if (progress_cb) progress_cb("convert scene", progress.x++, progress.y);
 }
 
 int run_shade_shape(const shade_shape_params& params) {
   // initialize app
-  auto apps_guard = std::make_unique<shade_shape_states>();
-  auto apps       = apps_guard.get();
+  auto app = shade_shape_state();
 
-  // loading images
-  for (auto& filename : params.shapes) {
-    load_shape_async(apps, filename, "");
-  }
+  // copy command line
+  app.filename = params.shape;
+
+  // loading shape
+  auto ioerror = ""s;
+  auto ioshape = scene_shape{};
+  print_progress("load shape", 0, 1);
+  if (!load_shape(app.filename, ioshape, ioerror)) print_fatal(ioerror);
+  print_progress("load shape", 1, 1);
+
+  // create scene
+  convert_scene(app.ioscene, ioshape, print_progress);
+
+  // get camera
+  app.iocamera = find_camera(app.ioscene, "");
 
   // callbacks
-  auto callbacks     = gui_callbacks{};
-  callbacks.clear_cb = [apps](gui_window* win, const gui_input& input) {
-    for (auto app : apps->states) clear_scene(app->glscene);
+  auto callbacks    = gui_callbacks{};
+  callbacks.init_cb = [&app](gui_window* win, const gui_input& input) {
+    init_glscene(app.glscene, app.ioscene, print_progress);
+    app.glscene.instances[1].hidden = true;
+    app.glscene.instances[2].hidden = true;
   };
-  callbacks.draw_cb = [apps](gui_window* win, const gui_input& input) {
-    draw(win, apps, input);
+  callbacks.clear_cb = [&app](gui_window* win, const gui_input& input) {
+    clear_scene(app.glscene);
   };
-  callbacks.widgets_cb = [apps](gui_window* win, const gui_input& input) {
-    draw_widgets(win, apps, input);
+  callbacks.draw_cb = [&app](gui_window* win, const gui_input& input) {
+    draw_scene(app.glscene, app.glscene.cameras.at(0),
+        input.framebuffer_viewport, app.drawgl_prms);
   };
-  callbacks.drop_cb = [apps](gui_window* win, const vector<string>& paths,
-                          const gui_input& input) {
-    for (auto& path : paths) load_shape_async(apps, path);
+  callbacks.widgets_cb = [&app](gui_window* win, const gui_input& input) {
+    auto& params = app.drawgl_prms;
+    draw_checkbox(win, "wireframe", params.wireframe);
+    continue_line(win);
+    draw_checkbox(win, "faceted", params.faceted);
+    continue_line(win);
+    draw_checkbox(win, "double sided", params.double_sided);
+    draw_combobox(win, "lighting", (int&)params.lighting, shade_lighting_names);
+    draw_slider(win, "exposure", params.exposure, -10, 10);
+    draw_slider(win, "gamma", params.gamma, 0.1f, 4);
+    draw_slider(win, "near", params.near, 0.01f, 1.0f);
+    draw_slider(win, "far", params.far, 1000.0f, 10000.0f);
+    // draw_label(win, "shape", app.name);
+    // draw_label(win, "filename", app.filename);
+    // draw_label(win, "outname", app.outname);
+    // draw_label(win, "imagename", app.imagename);
+    // auto& ioshape = app.ioshape;
+    // draw_label(win, "points", std::to_string(ioshape.points.size()));
+    // draw_label(win, "lines", std::to_string(ioshape.lines.size()));
+    // draw_label(win, "triangles", std::to_string(ioshape.triangles.size()));
+    // draw_label(win, "quads", std::to_string(ioshape.quads.size()));
+    // draw_label(win, "positions", std::to_string(ioshape.positions.size()));
+    // draw_label(win, "normals", std::to_string(ioshape.normals.size()));
+    // draw_label(win, "texcoords", std::to_string(ioshape.texcoords.size()));
+    // draw_label(win, "colors", std::to_string(ioshape.colors.size()));
+    // draw_label(win, "radius", std::to_string(ioshape.radius.size()));
   };
-  callbacks.update_cb = [apps](gui_window* win, const gui_input& input) {
-    update(win, apps);
+  callbacks.update_cb = [](gui_window* win, const gui_input& input) {
+    // update(win, apps);
   };
-  callbacks.uiupdate_cb = [apps](gui_window* win, const gui_input& input) {
-    if (!apps->selected || !apps->selected->ok) return;
-    auto app = apps->selected;
-
+  callbacks.uiupdate_cb = [&app](gui_window* win, const gui_input& input) {
     // handle mouse and keyboard for navigation
     if ((input.mouse_left || input.mouse_right) && !input.modifier_alt &&
         !input.widgets_active) {
@@ -379,17 +385,15 @@ int run_shade_shape(const shade_shape_params& params) {
         dolly = (input.mouse_pos.x - input.mouse_last.x) / 100.0f;
       if (input.mouse_left && input.modifier_shift)
         pan = (input.mouse_pos - input.mouse_last) / 100.0f;
-      pan.x    = -pan.x;
-      rotate.y = -rotate.y;
-
-      auto& glcamera                           = app->glscene.cameras.at(0);
-      std::tie(glcamera.frame, glcamera.focus) = camera_turntable(
-          glcamera.frame, glcamera.focus, rotate, dolly, pan);
+      auto& camera = app.ioscene.cameras.at(app.iocamera);
+      std::tie(camera.frame, camera.focus) = camera_turntable(
+          camera.frame, camera.focus, rotate, dolly, pan);
+      set_frame(app.glscene.cameras.at(app.iocamera), camera.frame);
     }
   };
 
   // run ui
-  run_ui({1280 + 320, 720}, "yshapeview", callbacks);
+  run_ui({1280 + 320, 720}, "yshade", callbacks);
 
   // done
   return 0;

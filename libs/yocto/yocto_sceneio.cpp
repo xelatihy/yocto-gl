@@ -191,7 +191,7 @@ bool load_text(const string& filename, string& str, string& error) {
 
 // Save a text file
 bool save_text(const string& filename, const string& str, string& error) {
-  auto fs = fopen_utf8(filename.c_str(), "rb");
+  auto fs = fopen_utf8(filename.c_str(), "wt");
   if (!fs) {
     error = filename + ": file not found";
     return false;
@@ -229,7 +229,7 @@ bool load_binary(const string& filename, vector<byte>& data, string& error) {
 // Save a binary file
 bool save_binary(
     const string& filename, const vector<byte>& data, string& error) {
-  auto fs = fopen_utf8(filename.c_str(), "rb");
+  auto fs = fopen_utf8(filename.c_str(), "wb");
   if (!fs) {
     error = filename + ": file not found";
     return false;
@@ -795,7 +795,7 @@ bool load_shape(const string& filename, shape_data& shape, string& error,
     return true;
   } else if (ext == ".obj" || ext == ".OBJ") {
     auto obj = obj_shape{};
-    if (!load_obj(filename, obj, error, true)) return false;
+    if (!load_obj(filename, obj, error, false)) return false;
     auto materials = vector<int>{};
     get_positions(obj, shape.positions);
     get_normals(obj, shape.normals);
@@ -1459,41 +1459,57 @@ bool make_fvshape_preset(
 // -----------------------------------------------------------------------------
 namespace yocto {
 
+// make element name
+[[maybe_unused]] static string get_element_name(
+    const string& name, int idx, size_t size) {
+  // there are much better ways to do this, but fine for now
+  auto num_str  = std::to_string(idx + 1);
+  auto size_str = std::to_string(size + 1);
+  while (num_str.size() < size_str.size()) num_str = "0" + num_str;
+  return name + num_str;
+}
+
 // get name
 [[maybe_unused]] static string get_camera_name(
     const scene_scene& scene, int idx) {
-  if (scene.camera_names.empty()) return "camera" + std::to_string(idx);
+  if (scene.camera_names.empty())
+    return get_element_name("camera", idx, scene.cameras.size());
   return scene.camera_names[idx];
 }
 [[maybe_unused]] static string get_environment_name(
     const scene_scene& scene, int idx) {
   if (scene.environment_names.empty())
-    return "environment" + std::to_string(idx);
+    return get_element_name("environment", idx, scene.environments.size());
   return scene.environment_names[idx];
 }
 [[maybe_unused]] static string get_shape_name(
     const scene_scene& scene, int idx) {
-  if (scene.shape_names.empty()) return "shape" + std::to_string(idx);
+  if (scene.shape_names.empty())
+    return get_element_name("shape", idx, scene.shapes.size());
   return scene.shape_names[idx];
 }
 [[maybe_unused]] static string get_texture_name(
     const scene_scene& scene, int idx) {
-  if (scene.texture_names.empty()) return "texture" + std::to_string(idx);
+  if (scene.texture_names.empty())
+    return get_element_name("texture", idx, scene.textures.size());
   return scene.texture_names[idx];
 }
 [[maybe_unused]] static string get_instance_name(
     const scene_scene& scene, int idx) {
-  if (scene.instance_names.empty()) return "instance" + std::to_string(idx);
+  if (scene.instance_names.empty())
+    return get_element_name("instance", idx, scene.instances.size());
   return scene.instance_names[idx];
 }
 [[maybe_unused]] static string get_material_name(
     const scene_scene& scene, int idx) {
-  if (scene.material_names.empty()) return "material" + std::to_string(idx);
+  if (scene.material_names.empty())
+    return get_element_name("material", idx, scene.materials.size());
   return scene.material_names[idx];
 }
 [[maybe_unused]] static string get_subdiv_name(
     const scene_scene& scene, int idx) {
-  if (scene.subdiv_names.empty()) return "subdiv" + std::to_string(idx);
+  if (scene.subdiv_names.empty())
+    return get_element_name("subdiv", idx, scene.subdivs.size());
   return scene.subdiv_names[idx];
 }
 
