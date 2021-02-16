@@ -703,7 +703,7 @@ bool sample_stroke(sculpt_stroke &stroke, const shape_bvh &bvh,
 }
 
 // To make the stroke sampling (position, normal) following the mouse
-vector<shape_point> sample_stroke(const shape_bvh &bvh,
+pair<vector<shape_point>, vec2f> sample_stroke(const shape_bvh &bvh,
     const scene_shape &shape, const vec2f &last_uv, const vec2f &mouse_uv,
     const scene_camera &camera, const sculpt_params &params) {
   // helper
@@ -717,7 +717,7 @@ vector<shape_point> sample_stroke(const shape_bvh &bvh,
   // eval current intersection
   auto last  = intersect_shape(last_uv);
   auto mouse = intersect_shape(mouse_uv);
-  if (!mouse.hit || !last.hit) return {};
+  if (!mouse.hit || !last.hit) return {{}, last_uv};
 
   // sample
   auto delta_pos   = distance(eval_position(shape, last.element, last.uv),
@@ -735,7 +735,7 @@ vector<shape_point> sample_stroke(const shape_bvh &bvh,
     samples.push_back({isec.element, isec.uv});
   }
 
-  return samples;
+  return {samples, cur_uv};
 }
 
 pair<bool, bool> update_stroke(sculpt_stroke &stroke, sculpt_state &state,
@@ -761,45 +761,46 @@ pair<bool, bool> update_stroke(sculpt_stroke &stroke, sculpt_state &state,
       stroke.lock      = true;
       stroke.locked_uv = mouse_uv;
     } else {
-      auto last_uv = stroke.locked_uv;
-      // sample_stroke(stroke, state.bvh, shape, mouse_uv, camera,
-      //     params.type != brush_type::texture, params);
-      auto samples = sample_stroke(
+      auto last_uv           = stroke.locked_uv;
+      auto [samples, cur_uv] = sample_stroke(
           state.bvh, shape, last_uv, mouse_uv, camera, params);
-      if (!samples.empty()) stroke.locked_uv = mouse_uv;
-      if (params.type == brush_type::gaussian) {
-        stroke.pairs_.clear();
-        for (auto sample : samples) {
-          stroke.pairs_.push_back(
-              {eval_position(shape, sample.element, sample.uv),
-                  eval_normal(shape, sample.element, sample.uv)});
+      if (!samples.empty()) {
+        stroke.locked_uv = cur_uv;
+        if (params.type == brush_type::gaussian) {
+          stroke.pairs_.clear();
+          for (auto sample : samples) {
+            stroke.pairs_.push_back(
+                {eval_position(shape, sample.element, sample.uv),
+                    eval_normal(shape, sample.element, sample.uv)});
+          }
+          printf(
+              "%d %d\n", (int)stroke.pairs.size(), (int)stroke.pairs_.size());
+          updated_shape = gaussian_brush(
+              shape.positions, state.grid, stroke.pairs_, params);
+        } else if (params.type == brush_type::smooth) {
+          stroke.sampling_.clear();
+          for (auto sample : samples) {
+            stroke.sampling_.push_back(
+                closest_vertex(shape.triangles, sample.element, sample.uv));
+          }
+          printf("%d %d\n", (int)stroke.sampling.size(),
+              (int)stroke.sampling_.size());
+          updated_shape = smooth_brush(shape.positions, state.solver,
+              state.adjacencies, stroke.sampling_, params);
+        } else if (params.type == brush_type::texture && !samples.empty()) {
+          for (auto sample : samples) {
+            stroke.sampling_.push_back(
+                closest_vertex(shape.triangles, sample.element, sample.uv));
+          }
+          printf("%d %d\n", (int)stroke.sampling.size(),
+              (int)stroke.sampling_.size());
+          auto vertices = stroke_parameterization(buffers.coords, state.solver,
+              stroke.sampling_, buffers.old_positions, buffers.old_normals,
+              params.radius);
+          updated_shape = texture_brush(shape.positions, vertices,
+              state.tex_image, buffers.coords, buffers.old_positions,
+              buffers.old_normals, params);
         }
-        printf("%d %d\n", (int)stroke.pairs.size(), (int)stroke.pairs_.size());
-        updated_shape = gaussian_brush(
-            shape.positions, state.grid, stroke.pairs_, params);
-      } else if (params.type == brush_type::smooth) {
-        stroke.sampling_.clear();
-        for (auto sample : samples) {
-          stroke.sampling_.push_back(
-              closest_vertex(shape.triangles, sample.element, sample.uv));
-        }
-        printf("%d %d\n", (int)stroke.sampling.size(),
-            (int)stroke.sampling_.size());
-        updated_shape = smooth_brush(shape.positions, state.solver,
-            state.adjacencies, stroke.sampling_, params);
-      } else if (params.type == brush_type::texture && !samples.empty()) {
-        for (auto sample : samples) {
-          stroke.sampling_.push_back(
-              closest_vertex(shape.triangles, sample.element, sample.uv));
-        }
-        printf("%d %d\n", (int)stroke.sampling.size(),
-            (int)stroke.sampling_.size());
-        auto vertices = stroke_parameterization(buffers.coords, state.solver,
-            stroke.sampling_, buffers.old_positions, buffers.old_normals,
-            params.radius);
-        updated_shape = texture_brush(shape.positions, vertices,
-            state.tex_image, buffers.coords, buffers.old_positions,
-            buffers.old_normals, params);
       }
     }
     if (updated_shape) {
