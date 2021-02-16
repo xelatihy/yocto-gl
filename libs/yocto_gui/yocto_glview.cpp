@@ -59,18 +59,20 @@ void view_image(
   auto glimage  = ogl_image{};
   auto glparams = ogl_image_params{};
 
+  // top level combo
+  auto names    = vector<string>{name};
+  auto selected = 0;
+
   // callbacks
   auto callbacks    = gui_callbacks{};
-  callbacks.init_cb = [&glimage, &display](
-                          gui_window* win, const gui_input& input) {
+  callbacks.init_cb = [&](gui_window* win, const gui_input& input) {
     init_image(glimage);
     set_image(glimage, display, false, false);
   };
-  callbacks.clear_cb = [&glimage](gui_window* win, const gui_input& input) {
+  callbacks.clear_cb = [&](gui_window* win, const gui_input& input) {
     clear_image(glimage);
   };
-  callbacks.draw_cb = [&glimage, &glparams, &display](
-                          gui_window* win, const gui_input& input) {
+  callbacks.draw_cb = [&](gui_window* win, const gui_input& input) {
     glparams.window                           = input.window_size;
     glparams.framebuffer                      = input.framebuffer_viewport;
     std::tie(glparams.center, glparams.scale) = camera_imview(glparams.center,
@@ -80,6 +82,7 @@ void view_image(
   };
   callbacks.widgets_cb = [&](gui_window* win, const gui_input& input) {
     auto edited = 0;
+    draw_combobox(win, "name", selected, names);
     if (begin_header(win, "tonemap")) {
       edited += draw_slider(win, "exposure", exposure, -5, 5);
       edited += draw_checkbox(win, "filmic", filmic);
@@ -89,44 +92,29 @@ void view_image(
         set_image(glimage, display, false, false);
       }
     }
-#if 0
-    if (begin_header(win, "colorgrade")) {
-      auto& params = app->params;
-      edited += draw_checkbox(win, "apply colorgrade", app->colorgrade);
-      edited += draw_slider(win, "exposure", params.exposure, -5, 5);
-      edited += draw_coloredit(win, "tint", params.tint);
-      edited += draw_slider(win, "lincontrast", params.lincontrast, 0, 1);
-      edited += draw_slider(win, "logcontrast", params.logcontrast, 0, 1);
-      edited += draw_slider(win, "linsaturation", params.linsaturation, 0, 1);
-      edited += draw_checkbox(win, "filmic", params.filmic);
-      continue_line(win);
-      edited += draw_checkbox(win, "srgb", params.srgb);
-      edited += draw_slider(win, "contrast", params.contrast, 0, 1);
-      edited += draw_slider(win, "saturation", params.saturation, 0, 1);
-      edited += draw_slider(win, "shadows", params.shadows, 0, 1);
-      edited += draw_slider(win, "midtones", params.midtones, 0, 1);
-      edited += draw_slider(win, "highlights", params.highlights, 0, 1);
-      edited += draw_coloredit(win, "shadows color", params.shadows_color);
-      edited += draw_coloredit(win, "midtones color", params.midtones_color);
-      edited += draw_coloredit(
-          win, "highlights color", params.highlights_color);
-      end_header(win);
-    }
-#endif
     if (begin_header(win, "inspect")) {
       draw_slider(win, "zoom", glparams.scale, 0.1, 10);
       draw_checkbox(win, "fit", glparams.fit);
-      auto ij = image_coords(input.mouse_pos, glparams.center, glparams.scale,
-          {image.width, image.height});
+      auto [i, j] = image_coords(input.mouse_pos, glparams.center,
+          glparams.scale, {image.width, image.height});
+      auto ij     = vec2i{i, j};
       draw_dragger(win, "mouse", ij);
-      auto img_pixel = zero4f, display_pixel = zero4f;
-      // if (ij.x >= 0 && ij.x < image.width && ij.y >= 0 && ij.y <
-      // image.height) {
-      //   img_pixel     = image[{ij.x, ij.y}];
-      //   display_pixel = display[{ij.x, ij.y}];
-      // }
-      draw_coloredit(win, "image", img_pixel);
-      draw_dragger(win, "display", display_pixel);
+      auto hdr_pixel     = zero4f;
+      auto ldr_pixel     = zero4b;
+      auto display_pixel = zero4b;
+      if (i >= 0 && i < image.width && j >= 0 && j < image.height) {
+        display_pixel = image.pixelsb[j * image.width + i];
+        if (!image.pixelsf.empty())
+          hdr_pixel = image.pixelsf[j * image.width + i];
+        if (!image.pixelsb.empty())
+          ldr_pixel = image.pixelsb[j * image.width + i];
+      }
+      if (!image.pixelsf.empty()) {
+        draw_coloredit(win, "image", hdr_pixel);
+      } else {
+        draw_coloredit(win, "image", ldr_pixel);
+      }
+      draw_coloredit(win, "display", display_pixel);
       end_header(win);
     }
   };
@@ -211,45 +199,30 @@ void view_images(const string& title, const vector<string>& names,
         set_image(glimage, display, false, false);
       }
     }
-#if 0
-    if (begin_header(win, "colorgrade")) {
-      auto& params = app->params;
-      edited += draw_checkbox(win, "apply colorgrade", app->colorgrade);
-      edited += draw_slider(win, "exposure", params.exposure, -5, 5);
-      edited += draw_coloredit(win, "tint", params.tint);
-      edited += draw_slider(win, "lincontrast", params.lincontrast, 0, 1);
-      edited += draw_slider(win, "logcontrast", params.logcontrast, 0, 1);
-      edited += draw_slider(win, "linsaturation", params.linsaturation, 0, 1);
-      edited += draw_checkbox(win, "filmic", params.filmic);
-      continue_line(win);
-      edited += draw_checkbox(win, "srgb", params.srgb);
-      edited += draw_slider(win, "contrast", params.contrast, 0, 1);
-      edited += draw_slider(win, "saturation", params.saturation, 0, 1);
-      edited += draw_slider(win, "shadows", params.shadows, 0, 1);
-      edited += draw_slider(win, "midtones", params.midtones, 0, 1);
-      edited += draw_slider(win, "highlights", params.highlights, 0, 1);
-      edited += draw_coloredit(win, "shadows color", params.shadows_color);
-      edited += draw_coloredit(win, "midtones color", params.midtones_color);
-      edited += draw_coloredit(
-          win, "highlights color", params.highlights_color);
-      end_header(win);
-    }
-#endif
     auto& glparams = glparamss[selected];
     if (begin_header(win, "inspect")) {
       draw_slider(win, "zoom", glparams.scale, 0.1, 10);
       draw_checkbox(win, "fit", glparams.fit);
-      auto ij = image_coords(input.mouse_pos, glparams.center, glparams.scale,
-          {image.width, image.height});
+      auto [i, j] = image_coords(input.mouse_pos, glparams.center,
+          glparams.scale, {image.width, image.height});
+      auto ij     = vec2i{i, j};
       draw_dragger(win, "mouse", ij);
-      auto img_pixel = zero4f, display_pixel = zero4f;
-      // if (ij.x >= 0 && ij.x < image.width && ij.y >= 0 && ij.y <
-      // image.height) {
-      //   img_pixel     = image[{ij.x, ij.y}];
-      //   display_pixel = display[{ij.x, ij.y}];
-      // }
-      draw_coloredit(win, "image", img_pixel);
-      draw_dragger(win, "display", display_pixel);
+      auto hdr_pixel     = zero4f;
+      auto ldr_pixel     = zero4b;
+      auto display_pixel = zero4b;
+      if (i >= 0 && i < image.width && j >= 0 && j < image.height) {
+        display_pixel = image.pixelsb[j * image.width + i];
+        if (!image.pixelsf.empty())
+          hdr_pixel = image.pixelsf[j * image.width + i];
+        if (!image.pixelsb.empty())
+          ldr_pixel = image.pixelsb[j * image.width + i];
+      }
+      if (!image.pixelsf.empty()) {
+        draw_coloredit(win, "image", hdr_pixel);
+      } else {
+        draw_coloredit(win, "image", ldr_pixel);
+      }
+      draw_coloredit(win, "display", display_pixel);
       end_header(win);
     }
   };

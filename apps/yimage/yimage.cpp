@@ -107,45 +107,22 @@ int run_view(const view_params& params) {
 
 // view images
 int run_view(const view_params& params) {
-#if 1
-
   // load
   auto images = vector<image_data>(params.images.size());
+  print_progress("load image", 0, (int)images.size());
   for (auto idx = 0; idx < (int)params.images.size(); idx++) {
+    print_progress("load image", idx, (int)images.size());
     auto ioerror = string{};
     if (!load_image(params.images[idx], images[idx], ioerror))
       return print_fatal(ioerror);
   }
+  print_progress("load image", (int)images.size(), (int)images.size());
 
   // run viewer
   view_images("yimage", params.images, images);
 
   // done
   return 0;
-
-#else
-
-  // open viewer
-  auto viewer = make_imageviewer("yimage");
-
-  // set image
-  for (auto& filename : params.images) {
-    // load
-    auto image   = image_data{};
-    auto ioerror = string{};
-    if (!load_image(filename, image, ioerror)) return print_fatal(ioerror);
-
-    // push image to the viewer
-    set_image(viewer, filename, image);
-  }
-
-  // run view
-  run_viewer(viewer);
-
-  // done
-  return 0;
-
-#endif
 }
 
 #endif
