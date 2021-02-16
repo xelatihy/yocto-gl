@@ -73,6 +73,7 @@ struct sculpt_state {
 
 // sculpt stroke
 struct sculpt_stroke {
+  vector<shape_point>        points    = {};
   vector<pair<vec3f, vec3f>> pairs_    = {};
   vector<int>                sampling_ = {};
   vec2f                      locked_uv = {};
@@ -325,6 +326,7 @@ vector<int> stroke_parameterization(vector<vec2f> &coords,
 void end_stroke(sculpt_params &params, sculpt_stroke &stroke,
     sculpt_state &state, scene_shape &shape) {
   stroke.lock = false;
+  stroke.points.clear();
   stroke.sampling_.clear();
   state.coords.assign(state.coords.size(), {0, 0});
   state.old_positions = shape.positions;
@@ -732,25 +734,24 @@ pair<bool, bool> update_stroke(sculpt_stroke &stroke, sculpt_state &state,
       if (!samples.empty()) {
         stroke.locked_uv = cur_uv;
         if (params.type == brush_type::gaussian) {
-          auto pairs = vector<pair<vec3f, vec3f>>{};
-          for (auto sample : samples) {
-            pairs.push_back({eval_position(shape, sample.element, sample.uv),
-                eval_normal(shape, sample.element, sample.uv)});
-          }
+          stroke.points = samples;
           updated_shape = gaussian_brush(shape.positions, state.grid,
-              shape.triangles, state.old_positions, state.old_normals, samples,
-              params);
+              shape.triangles, state.old_positions, state.old_normals,
+              stroke.points, params);
         } else if (params.type == brush_type::smooth) {
+          stroke.points = samples;
           updated_shape = smooth_brush(shape.positions, state.solver,
-              shape.triangles, state.adjacencies, samples, params);
+              shape.triangles, state.adjacencies, stroke.points, params);
         } else if (params.type == brush_type::texture) {
-          for (auto sample : samples) {
-            stroke.sampling_.push_back(
+          stroke.points.insert(
+              stroke.points.end(), samples.begin(), samples.end());
+          auto sampling = vector<int>{};
+          for (auto sample : stroke.points) {
+            sampling.push_back(
                 closest_vertex(shape.triangles, sample.element, sample.uv));
           }
           auto vertices = stroke_parameterization(state.coords, state.solver,
-              stroke.sampling_, state.old_positions, state.old_normals,
-              params.radius);
+              sampling, state.old_positions, state.old_normals, params.radius);
           updated_shape = texture_brush(shape.positions, vertices,
               state.tex_image, state.coords, state.old_positions,
               state.old_normals, params);
