@@ -922,7 +922,7 @@ int run_shade_sculpt(const shade_sculpt_params &params_) {
   };
 
   // run ui
-  run_ui({1900, 876}, "yshade", callbacks);
+  run_ui({1280 + 320, 720}, "yshade", callbacks);
 
   // done
   return 0;
