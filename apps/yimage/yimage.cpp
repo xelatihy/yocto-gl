@@ -107,22 +107,19 @@ int run_view(const view_params& params) {
 
 // view images
 int run_view(const view_params& params) {
-  // open viewer
-  auto viewer = make_imageviewer("yimage");
-
-  // set image
-  for (auto& filename : params.images) {
-    // load
-    auto image   = image_data{};
+  // load
+  auto images = vector<image_data>(params.images.size());
+  print_progress("load image", 0, (int)images.size());
+  for (auto idx = 0; idx < (int)params.images.size(); idx++) {
+    print_progress("load image", idx, (int)images.size());
     auto ioerror = string{};
-    if (!load_image(filename, image, ioerror)) return print_fatal(ioerror);
-
-    // push image to the viewer
-    set_image(viewer, filename, image);
+    if (!load_image(params.images[idx], images[idx], ioerror))
+      return print_fatal(ioerror);
   }
+  print_progress("load image", (int)images.size(), (int)images.size());
 
-  // run view
-  run_viewer(viewer);
+  // run viewer
+  view_images("yimage", params.images, images, print_progress);
 
   // done
   return 0;
@@ -153,42 +150,6 @@ int run_grade(const grade_params& params) {
 
 #else
 
-// Parameter conversions
-void from_params(const gui_params& uiparams, colorgrade_params& params) {
-  params.exposure         = uiparams.at("exposure");
-  params.tint             = uiparams.at("tint");
-  params.lincontrast      = uiparams.at("lincontrast");
-  params.logcontrast      = uiparams.at("logcontrast");
-  params.linsaturation    = uiparams.at("linsaturation");
-  params.filmic           = uiparams.at("filmic");
-  params.srgb             = uiparams.at("srgb");
-  params.contrast         = uiparams.at("contrast");
-  params.saturation       = uiparams.at("saturation");
-  params.shadows          = uiparams.at("shadows");
-  params.midtones         = uiparams.at("midtones");
-  params.highlights       = uiparams.at("highlights");
-  params.shadows_color    = uiparams.at("shadows_color");
-  params.midtones_color   = uiparams.at("midtones_color");
-  params.highlights_color = uiparams.at("highlights_color");
-}
-void to_params(gui_params& uiparams, const colorgrade_params& params) {
-  uiparams["exposure"]         = {params.exposure, {-10, 10}};
-  uiparams["tint"]             = {params.tint, true};
-  uiparams["lincontrast"]      = {params.lincontrast, {0, 1}};
-  uiparams["logcontrast"]      = {params.logcontrast, {0, 1}};
-  uiparams["linsaturation"]    = {params.linsaturation, {0, 1}};
-  uiparams["filmic"]           = {params.filmic};
-  uiparams["srgb"]             = {params.srgb};
-  uiparams["contrast"]         = {params.contrast, {0, 1}};
-  uiparams["saturation"]       = {params.saturation, {0, 1}};
-  uiparams["shadows"]          = {params.shadows, {0, 1}};
-  uiparams["midtones"]         = {params.midtones, {0, 1}};
-  uiparams["highlights"]       = {params.highlights, {0, 1}};
-  uiparams["shadows_color"]    = {params.shadows_color, true};
-  uiparams["midtones_color"]   = {params.midtones_color, true};
-  uiparams["highlights_color"] = {params.highlights_color, true};
-}
-
 // grade images
 int run_grade(const grade_params& params) {
   // open viewer
@@ -197,30 +158,12 @@ int run_grade(const grade_params& params) {
   // load image
   auto image   = image_data{};
   auto ioerror = string{};
+  print_progress("load image", 0, 1);
   if (!load_image(params.image, image, ioerror)) return print_fatal(ioerror);
+  print_progress("load image", 1, 1);
 
-  // grade image
-  auto graded = make_image(image.width, image.height, false, true);
-  colorgrade_image(graded, image, params);
-
-  // set view
-  set_image(viewer, params.image, graded);
-  auto uiparams = gui_params{};
-  to_params(uiparams, params);
-  set_params(viewer, params.image, "Color grade", uiparams);
-
-  // set callback
-  set_params_callback(
-      viewer, [&](const string& name, const gui_params& uiparams) {
-        if (uiparams.empty()) return;
-        auto gparams = params;
-        from_params(uiparams, gparams);
-        colorgrade_image_mt(graded, image, gparams);
-        set_image(viewer, name, graded);
-      });
-
-  // run view
-  run_viewer(viewer);
+  // run viewer
+  colorgrade_image("yimage", params.image, image, print_progress);
 
   // done
   return 0;
