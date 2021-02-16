@@ -511,6 +511,31 @@ void view_scene(const string& title, const string& name, scene_scene& scene,
   callbacks.widgets_cb = [&](gui_window* win, const gui_input& input) {
     auto edited = 0;
     draw_combobox(win, "name", selected, names);
+    // draw_progressbar(win, "render", app->current, app->total);
+    if (begin_header(win, "render")) {
+      auto edited  = 0;
+      auto tparams = params;
+      edited += draw_combobox(win, "camera", params.camera, scene.camera_names);
+      edited += draw_slider(win, "resolution", tparams.resolution, 180, 4096);
+      edited += draw_slider(win, "samples", tparams.samples, 16, 4096);
+      edited += draw_combobox(
+          win, "tracer", (int&)tparams.sampler, trace_sampler_names);
+      edited += draw_combobox(
+          win, "false color", (int&)tparams.falsecolor, trace_falsecolor_names);
+      edited += draw_slider(win, "bounces", tparams.bounces, 1, 128);
+      edited += draw_checkbox(win, "envhidden", tparams.envhidden);
+      continue_line(win);
+      edited += draw_checkbox(win, "filter", tparams.tentfilter);
+      edited += draw_slider(win, "seed", (int&)tparams.seed, 0, 1000000);
+      edited += draw_slider(win, "pratio", tparams.pratio, 1, 64);
+      edited += draw_slider(win, "exposure", tparams.exposure, -5, 5);
+      end_header(win);
+      if (edited) {
+        trace_stop(worker);
+        params = tparams;
+        reset_display();
+      }
+    }
     if (begin_header(win, "tonemap")) {
       edited += draw_slider(win, "exposure", params.exposure, -5, 5);
       end_header(win);
