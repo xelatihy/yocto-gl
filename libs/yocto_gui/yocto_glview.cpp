@@ -47,13 +47,15 @@ using std::make_unique;
 namespace yocto {
 
 // Open a window and show an image
-void view_image(
-    const string& title, const string& name, const image_data& image) {
+void view_image(const string& title, const string& name,
+    const image_data& image, const progress_callback& progress_cb) {
   // display image
+  if (progress_cb) progress_cb("tonemap image", 0, 1);
   auto  display  = make_image(image.width, image.height, false, true);
   float exposure = 0;
   bool  filmic   = false;
   tonemap_image_mt(display, image, exposure, filmic);
+  if (progress_cb) progress_cb("tonemap image", 1, 1);
 
   // opengl image
   auto glimage  = ogl_image{};
@@ -88,8 +90,10 @@ void view_image(
       edited += draw_checkbox(win, "filmic", filmic);
       end_header(win);
       if (edited) {
+        if (progress_cb) progress_cb("tonemap image", 0, 1);
         tonemap_image_mt(display, image, exposure, filmic);
         set_image(glimage, display, false, false);
+        if (progress_cb) progress_cb("tonemap image", 0, 1);
       }
     }
     if (begin_header(win, "inspect")) {
@@ -135,16 +139,20 @@ void view_image(
 
 // Open a window and show an image
 void view_images(const string& title, const vector<string>& names,
-    const vector<image_data>& images) {
+    const vector<image_data>& images, const progress_callback& progress_cb) {
   // display image
+  if (progress_cb) progress_cb("tonemap image", 0, (int)images.size());
   auto displays  = vector<image_data>(images.size());
   auto exposures = vector<float>(images.size(), 0);
   auto filmics   = vector<bool>(images.size(), false);
   for (auto idx = 0; idx < (int)images.size(); idx++) {
+    if (progress_cb) progress_cb("tonemap image", idx, (int)images.size());
     displays[idx] = make_image(
         images[idx].width, images[idx].height, false, true);
     tonemap_image_mt(displays[idx], images[idx], exposures[idx], filmics[idx]);
   }
+  if (progress_cb)
+    progress_cb("tonemap image", (int)images.size(), (int)images.size());
 
   // opengl image
   auto glimages  = vector<ogl_image>(images.size());
@@ -194,9 +202,11 @@ void view_images(const string& title, const vector<string>& names,
       edited += draw_checkbox(win, "filmic", filmic);
       end_header(win);
       if (edited) {
+        if (progress_cb) progress_cb("tonemap image", 0, 1);
         filmics[selected] = filmic;
         tonemap_image_mt(display, image, exposure, filmic);
         set_image(glimage, display, false, false);
+        if (progress_cb) progress_cb("tonemap image", 1, 1);
       }
     }
     auto& glparams = glparamss[selected];

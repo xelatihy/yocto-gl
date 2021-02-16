@@ -119,7 +119,7 @@ int run_view(const view_params& params) {
   print_progress("load image", (int)images.size(), (int)images.size());
 
   // run viewer
-  view_images("yimage", params.images, images);
+  view_images("yimage", params.images, images, print_progress);
 
   // done
   return 0;

@@ -66,11 +66,13 @@ using std::vector;
 namespace yocto {
 
 // Open a window and show an image
-void view_image(const string& title, const string& name, const image_data& img);
+void view_image(const string& title, const string& name,
+    const image_data& image, const progress_callback& progress_cb = {});
 
 // Open a window and show a set of images
 void view_images(const string& title, const vector<string>& names,
-    const vector<image_data>& images);
+    const vector<image_data>& images,
+    const progress_callback&  progress_cb = {});
 
 // Open a window and show a shape via path tracing
 void view_shape(const string& title, const string& name,
