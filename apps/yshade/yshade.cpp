@@ -177,8 +177,13 @@ static void init_glscene(shade_scene &glscene, const sceneio_scene &ioscene,
   if (progress_cb) progress_cb("convert done", progress.x++, progress.y);
 }
 
+using run_shade_scene_callback = std::function<void(gui_window *win,
+    const gui_input &input, scene_scene &scene, shade_scene &glscene)>;
+
 void run_shade_scene(const scene_scene &scene, const string &name,
-    const string &camname, const progress_callback &progress_cb) {
+    const string &camname, const progress_callback &progress_cb,
+    const run_shade_scene_callback &widgets_callback  = {},
+    const run_shade_scene_callback &uiupdate_callback = {}) {
   // initialize app
   auto app    = app_state{};
   app.ioscene = scene;
@@ -202,7 +207,8 @@ void run_shade_scene(const scene_scene &scene, const string &name,
     draw_scene(app.glscene, app.glscene.cameras.at(0),
         input.framebuffer_viewport, app.drawgl_prms);
   };
-  callbacks.widgets_cb = [&app](gui_window *win, const gui_input &input) {
+  callbacks.widgets_cb = [&app, &widgets_callback](
+                             gui_window *win, const gui_input &input) {
     auto &params = app.drawgl_prms;
     draw_checkbox(win, "wireframe", params.wireframe);
     continue_line(win);
@@ -215,12 +221,17 @@ void run_shade_scene(const scene_scene &scene, const string &name,
     draw_slider(win, "gamma", params.gamma, 0.1f, 4);
     draw_slider(win, "near", params.near, 0.01f, 1.0f);
     draw_slider(win, "far", params.far, 1000.0f, 10000.0f);
+    if (widgets_callback)
+      widgets_callback(win, input, app.ioscene, app.glscene);
   };
   callbacks.update_cb = [](gui_window *win, const gui_input &input) {
     // update(win, apps);
   };
-  callbacks.uiupdate_cb = [&app](gui_window *win, const gui_input &input) {
+  callbacks.uiupdate_cb = [&app, &uiupdate_callback](
+                              gui_window *win, const gui_input &input) {
     // handle mouse and keyboard for navigation
+    if (uiupdate_callback)
+      uiupdate_callback(win, input, app.ioscene, app.glscene);
     if ((input.mouse_left || input.mouse_right) && !input.modifier_alt &&
         !input.widgets_active) {
       auto dolly  = 0.0f;
@@ -419,92 +430,38 @@ void add_command(cli_command &cli, const string &name,
 }
 
 int run_shade_shape(const shade_shape_params &params) {
-  // initialize app
-  auto app = app_state{};
-
-  // copy command line
-  app.filename = params.shape;
-
   // loading shape
   auto ioerror = ""s;
-  auto ioshape = scene_shape{};
+  auto shape   = scene_shape{};
   print_progress("load shape", 0, 1);
-  if (!load_shape(app.filename, ioshape, ioerror)) print_fatal(ioerror);
+  if (!load_shape(params.shape, shape, ioerror)) print_fatal(ioerror);
   print_progress("load shape", 1, 1);
 
   // create scene
-  convert_scene1(app.ioscene, ioshape, print_progress);
+  auto scene = scene_scene{};
+  convert_scene1(scene, shape, print_progress);
 
-  // get camera
-  app.iocamera = find_camera(app.ioscene, "");
-
-  // callbacks
-  auto callbacks    = gui_callbacks{};
-  callbacks.init_cb = [&app](gui_window *win, const gui_input &input) {
-    init_glscene(app.glscene, app.ioscene, print_progress);
-    app.glscene.instances[1].hidden = true;
-    app.glscene.instances[2].hidden = true;
-  };
-  callbacks.clear_cb = [&app](gui_window *win, const gui_input &input) {
-    clear_scene(app.glscene);
-  };
-  callbacks.draw_cb = [&app](gui_window *win, const gui_input &input) {
-    draw_scene(app.glscene, app.glscene.cameras.at(0),
-        input.framebuffer_viewport, app.drawgl_prms);
-  };
-  callbacks.widgets_cb = [&app](gui_window *win, const gui_input &input) {
-    auto &params = app.drawgl_prms;
-    draw_checkbox(win, "wireframe", params.wireframe);
-    continue_line(win);
-    draw_checkbox(win, "faceted", params.faceted);
-    continue_line(win);
-    draw_checkbox(win, "double sided", params.double_sided);
-    draw_combobox(
-        win, "lighting", (int &)params.lighting, shade_lighting_names);
-    draw_slider(win, "exposure", params.exposure, -10, 10);
-    draw_slider(win, "gamma", params.gamma, 0.1f, 4);
-    draw_slider(win, "near", params.near, 0.01f, 1.0f);
-    draw_slider(win, "far", params.far, 1000.0f, 10000.0f);
-    // draw_label(win, "shape", app.name);
-    // draw_label(win, "filename", app.filename);
-    // draw_label(win, "outname", app.outname);
-    // draw_label(win, "imagename", app.imagename);
-    // auto& ioshape = app.ioshape;
-    // draw_label(win, "points", std::to_string(ioshape.points.size()));
-    // draw_label(win, "lines", std::to_string(ioshape.lines.size()));
-    // draw_label(win, "triangles", std::to_string(ioshape.triangles.size()));
-    // draw_label(win, "quads", std::to_string(ioshape.quads.size()));
-    // draw_label(win, "positions", std::to_string(ioshape.positions.size()));
-    // draw_label(win, "normals", std::to_string(ioshape.normals.size()));
-    // draw_label(win, "texcoords", std::to_string(ioshape.texcoords.size()));
-    // draw_label(win, "colors", std::to_string(ioshape.colors.size()));
-    // draw_label(win, "radius", std::to_string(ioshape.radius.size()));
-  };
-  callbacks.update_cb = [](gui_window *win, const gui_input &input) {
-    // update(win, apps);
-  };
-  callbacks.uiupdate_cb = [&app](gui_window *win, const gui_input &input) {
-    // handle mouse and keyboard for navigation
-    if ((input.mouse_left || input.mouse_right) && !input.modifier_alt &&
-        !input.widgets_active) {
-      auto dolly  = 0.0f;
-      auto pan    = zero2f;
-      auto rotate = zero2f;
-      if (input.mouse_left && !input.modifier_shift)
-        rotate = (input.mouse_pos - input.mouse_last) / 100.0f;
-      if (input.mouse_right)
-        dolly = (input.mouse_pos.x - input.mouse_last.x) / 100.0f;
-      if (input.mouse_left && input.modifier_shift)
-        pan = (input.mouse_pos - input.mouse_last) / 100.0f;
-      auto &camera = app.ioscene.cameras.at(app.iocamera);
-      std::tie(camera.frame, camera.focus) = camera_turntable(
-          camera.frame, camera.focus, rotate, dolly, pan);
-      set_frame(app.glscene.cameras.at(app.iocamera), camera.frame);
-    }
-  };
-
-  // run ui
-  run_ui({1280 + 320, 720}, "yshade", callbacks);
+  // run viewer
+  run_shade_scene(
+      scene, params.shape, "", print_progress,
+      [](gui_window *win, const gui_input &input, scene_scene &scene,
+          shade_scene &glscene) {
+        auto &ioshape = scene.shapes.at(0);
+        draw_label(win, "points", std::to_string(ioshape.points.size()));
+        draw_label(win, "lines", std::to_string(ioshape.lines.size()));
+        draw_label(win, "triangles", std::to_string(ioshape.triangles.size()));
+        draw_label(win, "quads", std::to_string(ioshape.quads.size()));
+        draw_label(win, "positions", std::to_string(ioshape.positions.size()));
+        draw_label(win, "normals", std::to_string(ioshape.normals.size()));
+        draw_label(win, "texcoords", std::to_string(ioshape.texcoords.size()));
+        draw_label(win, "colors", std::to_string(ioshape.colors.size()));
+        draw_label(win, "radius", std::to_string(ioshape.radius.size()));
+      },
+      [](gui_window *win, const gui_input &input, scene_scene &scene,
+          shade_scene &glscene) {
+        glscene.instances[1].hidden = true;
+        glscene.instances[2].hidden = true;
+      });
 
   // done
   return 0;
