@@ -279,23 +279,9 @@ int run_shade_scene(const shade_scene_params &params) {
   run_shade_scene(
       scene, params.scene, "", print_progress,
       [](gui_window *win, const gui_input &input, scene_scene &scene,
-          shade_scene &glscene) {
-        auto &ioshape = scene.shapes.at(0);
-        draw_label(win, "points", std::to_string(ioshape.points.size()));
-        draw_label(win, "lines", std::to_string(ioshape.lines.size()));
-        draw_label(win, "triangles", std::to_string(ioshape.triangles.size()));
-        draw_label(win, "quads", std::to_string(ioshape.quads.size()));
-        draw_label(win, "positions", std::to_string(ioshape.positions.size()));
-        draw_label(win, "normals", std::to_string(ioshape.normals.size()));
-        draw_label(win, "texcoords", std::to_string(ioshape.texcoords.size()));
-        draw_label(win, "colors", std::to_string(ioshape.colors.size()));
-        draw_label(win, "radius", std::to_string(ioshape.radius.size()));
-      },
+          shade_scene &glscene) {},
       [](gui_window *win, const gui_input &input, scene_scene &scene,
-          shade_scene &glscene) {
-        glscene.instances[1].hidden = true;
-        glscene.instances[2].hidden = true;
-      });
+          shade_scene &glscene) {});
 
   // done
   return 0;
