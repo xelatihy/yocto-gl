@@ -680,13 +680,11 @@ bool sample_stroke(sculpt_stroke &stroke, const shape_bvh &bvh,
   auto delta_pos   = distance(eval_position(shape, last.element, last.uv),
       eval_position(shape, mouse.element, mouse.uv));
   auto stroke_dist = params.radius * 0.2f;
-  auto delta_uv    = distance(mouse_uv, last_uv);
   auto steps       = int(delta_pos / stroke_dist);
   if (steps == 0) return true;
-  auto stroke_uv = delta_uv * stroke_dist / delta_pos;
-  auto mouse_dir = normalize(mouse_uv - last_uv);
+  auto update_uv = (mouse_uv - last_uv) * stroke_dist / delta_pos;
   for (auto step = 0; step < steps; step++) {
-    last_uv += stroke_uv * mouse_dir;
+    last_uv += update_uv;
     auto isec = intersect_shape(last_uv);
     if (!isec.hit) continue;
     stroke.pairs.push_back({eval_position(shape, isec.element, isec.uv),
