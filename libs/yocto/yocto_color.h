@@ -74,6 +74,7 @@
 // INCLUDES
 // -----------------------------------------------------------------------------
 
+#include <stdexcept>
 #include <utility>
 
 #include "yocto_math.h"

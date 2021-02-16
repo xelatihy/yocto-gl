@@ -31,6 +31,7 @@
 #include <yocto/yocto_image.h>
 #include <yocto/yocto_mesh.h>
 #include <yocto/yocto_parallel.h>
+#include <yocto/yocto_scene.h>
 #include <yocto/yocto_sceneio.h>
 #include <yocto/yocto_shape.h>
 #include <yocto_gui/yocto_glview.h>
@@ -44,6 +45,28 @@
 #endif
 
 using namespace yocto;
+
+struct glsculpt_params {
+  string shape   = "shape.ply"s;
+  string texture = "";
+};
+
+// Cli
+inline void add_command(cli_command &cli, const string &name,
+    glsculpt_params &value, const string &usage) {
+  auto &cmd = add_command(cli, name, usage);
+  add_argument(cmd, "shape", value.shape, "Input shape.");
+  add_option(cmd, "texture", value.texture, "Brush texture.");
+}
+
+#ifndef YOCTO_OPENGL
+
+// view scene
+int run_glsculpt(const glsculpt_params &params) {
+  return print_fatal("Opengl not compiled");
+}
+
+#else
 
 enum struct sculpt_brush_type { gaussian, texture, smooth };
 auto const sculpt_brush_names = vector<std::string>{
@@ -683,19 +706,6 @@ static pair<bool, bool> sculpt_update(sculpt_state &state, scene_shape &shape,
   return {updated_shape, updated_cursor};
 }
 
-struct glsculpt_params {
-  string shape   = "shape.ply"s;
-  string texture = "";
-};
-
-// Cli
-inline void add_command(cli_command &cli, const string &name,
-    glsculpt_params &value, const string &usage) {
-  auto &cmd = add_command(cli, name, usage);
-  add_argument(cmd, "shape", value.shape, "Input shape.");
-  add_option(cmd, "texture", value.texture, "Brush texture.");
-}
-
 int run_glsculpt(const glsculpt_params &params_) {
   // loading shape
   auto ioerror = ""s;
@@ -774,6 +784,8 @@ int run_glsculpt(const glsculpt_params &params_) {
   // done
   return 0;
 }
+
+#endif
 
 struct app_params {
   string          command  = "glsculpt";

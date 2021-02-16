@@ -1171,6 +1171,7 @@ bool draw_param(gui_window* win, const string& name, gui_param& param) {
                !param.readonly;
       }
       break;
+    default: return false;
   }
 }
 

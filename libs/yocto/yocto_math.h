@@ -57,8 +57,9 @@ using std::pair;
 // -----------------------------------------------------------------------------
 namespace yocto {
 
-using byte = unsigned char;
-using uint = unsigned int;
+using byte   = unsigned char;
+using uint   = unsigned int;
+using ushort = unsigned short;
 
 inline const double pi  = 3.14159265358979323846;
 inline const float  pif = (float)pi;
