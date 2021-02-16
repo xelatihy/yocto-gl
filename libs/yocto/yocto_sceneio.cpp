@@ -3344,8 +3344,6 @@ static bool load_obj_scene(const string& filename, scene_scene& scene,
         auto lock = std::lock_guard{mutex};
         if (!error.empty()) return;
         if (progress_cb) progress_cb("load texture", progress.x++, progress.y);
-        printf("%s %s\n", get_texture_name(scene, texture).c_str(),
-            texture_paths[&texture - &scene.textures.front()].c_str());
       }
       auto& path = texture_paths[&texture - &scene.textures.front()];
       auto  err  = string{};

@@ -33,8 +33,7 @@
 #include <yocto/yocto_parallel.h>
 #include <yocto/yocto_sceneio.h>
 #include <yocto/yocto_shape.h>
-#include <yocto_gui/yocto_imgui.h>
-#include <yocto_gui/yocto_shade.h>
+#include <yocto_gui/yocto_glview.h>
 
 #include <queue>
 #include <unordered_set>
@@ -45,407 +44,6 @@
 #endif
 
 using namespace yocto;
-
-static void init_glscene(shade_scene &glscene, const sceneio_scene &ioscene,
-    progress_callback progress_cb) {
-  // handle progress
-  auto progress = vec2i{
-      0, (int)ioscene.cameras.size() + (int)ioscene.materials.size() +
-             (int)ioscene.textures.size() + (int)ioscene.shapes.size() +
-             (int)ioscene.instances.size()};
-
-  // init scene
-  init_scene(glscene);
-
-  // camera
-  for (auto &iocamera : ioscene.cameras) {
-    if (progress_cb) progress_cb("convert camera", progress.x++, progress.y);
-    auto &camera = glscene.cameras.at(add_camera(glscene));
-    set_frame(camera, iocamera.frame);
-    set_lens(camera, iocamera.lens, iocamera.aspect, iocamera.film);
-    set_nearfar(camera, 0.001, 10000);
-  }
-
-  // textures
-  for (auto &iotexture : ioscene.textures) {
-    if (progress_cb) progress_cb("convert texture", progress.x++, progress.y);
-    auto  handle    = add_texture(glscene);
-    auto &gltexture = glscene.textures[handle];
-    if (!iotexture.pixelsf.empty()) {
-      set_texture(
-          gltexture, iotexture.width, iotexture.height, iotexture.pixelsf);
-    } else if (!iotexture.pixelsb.empty()) {
-      set_texture(
-          gltexture, iotexture.width, iotexture.height, iotexture.pixelsb);
-    }
-  }
-
-  // material
-  for (auto &iomaterial : ioscene.materials) {
-    if (progress_cb) progress_cb("convert material", progress.x++, progress.y);
-    auto  handle     = add_material(glscene);
-    auto &glmaterial = glscene.materials[handle];
-    set_emission(glmaterial, iomaterial.emission, iomaterial.emission_tex);
-    set_opacity(glmaterial, iomaterial.opacity, invalid_handle);
-    set_normalmap(glmaterial, iomaterial.normal_tex);
-    switch (iomaterial.type) {
-      case material_type::matte: {
-        set_color(glmaterial, iomaterial.color, iomaterial.color_tex);
-        set_specular(glmaterial, 0, invalid_handle);
-        set_metallic(glmaterial, 0, invalid_handle);
-        set_roughness(glmaterial, 0, invalid_handle);
-      } break;
-      case material_type::plastic: {
-        set_color(glmaterial, iomaterial.color, iomaterial.color_tex);
-        set_specular(glmaterial, 1, invalid_handle);
-        set_metallic(glmaterial, 0, invalid_handle);
-        set_roughness(glmaterial, iomaterial.roughness, invalid_handle);
-      } break;
-      case material_type::metal: {
-        set_color(glmaterial, iomaterial.color, iomaterial.color_tex);
-        set_specular(glmaterial, 0, invalid_handle);
-        set_metallic(glmaterial, 1, invalid_handle);
-        set_roughness(
-            glmaterial, iomaterial.roughness, iomaterial.roughness_tex);
-      } break;
-      case material_type::metallic: {
-        set_color(glmaterial, iomaterial.color, iomaterial.color_tex);
-        set_specular(glmaterial, 1, invalid_handle);
-        set_metallic(glmaterial, iomaterial.metallic, invalid_handle);
-        set_roughness(glmaterial, iomaterial.roughness, invalid_handle);
-      } break;
-      default: {
-        set_color(glmaterial, iomaterial.color, iomaterial.color_tex);
-        set_specular(glmaterial, 0, invalid_handle);
-        set_metallic(glmaterial, 0, invalid_handle);
-        set_roughness(
-            glmaterial, iomaterial.roughness, iomaterial.roughness_tex);
-      } break;
-    }
-  }
-
-  // shapes
-  for (auto &ioshape : ioscene.shapes) {
-    if (progress_cb) progress_cb("convert shape", progress.x++, progress.y);
-    add_shape(glscene, ioshape.points, ioshape.lines, ioshape.triangles,
-        ioshape.quads, ioshape.positions, ioshape.normals, ioshape.texcoords,
-        ioshape.colors);
-  }
-
-  // shapes
-  for (auto &ioinstance : ioscene.instances) {
-    if (progress_cb) progress_cb("convert instance", progress.x++, progress.y);
-    auto  handle     = add_instance(glscene);
-    auto &glinstance = glscene.instances[handle];
-    set_frame(glinstance, ioinstance.frame);
-    set_shape(glinstance, ioinstance.shape);
-    set_material(glinstance, ioinstance.material);
-  }
-
-  // environments
-  for (auto &ioenvironment : ioscene.environments) {
-    auto  handle        = add_environment(glscene);
-    auto &glenvironment = glscene.environments[handle];
-    set_frame(glenvironment, ioenvironment.frame);
-    set_emission(
-        glenvironment, ioenvironment.emission, ioenvironment.emission_tex);
-  }
-
-  // init environments
-  init_environments(glscene);
-
-  // done
-  if (progress_cb) progress_cb("convert done", progress.x++, progress.y);
-}
-
-using run_shade_scene_callback = std::function<void(gui_window *win,
-    const gui_input &input, scene_scene &scene, shade_scene &glscene)>;
-
-void run_shade_scene(scene_scene &scene, const string &name,
-    const string &camname, const progress_callback &progress_cb,
-    const run_shade_scene_callback &widgets_callback  = {},
-    const run_shade_scene_callback &uiupdate_callback = {}) {
-  // glscene
-  auto glscene = shade_scene{};
-
-  // draw params
-  auto params = shade_params{};
-
-  // callbacks
-  auto callbacks    = gui_callbacks{};
-  callbacks.init_cb = [&glscene, &scene, &progress_cb](
-                          gui_window *win, const gui_input &input) {
-    init_glscene(glscene, scene, progress_cb);
-  };
-  callbacks.clear_cb = [&glscene](gui_window *win, const gui_input &input) {
-    clear_scene(glscene);
-  };
-  callbacks.draw_cb = [&glscene, &params](
-                          gui_window *win, const gui_input &input) {
-    draw_scene(
-        glscene, glscene.cameras.at(0), input.framebuffer_viewport, params);
-  };
-  callbacks.widgets_cb = [&glscene, &scene, &params, &widgets_callback](
-                             gui_window *win, const gui_input &input) {
-    draw_checkbox(win, "wireframe", params.wireframe);
-    continue_line(win);
-    draw_checkbox(win, "faceted", params.faceted);
-    continue_line(win);
-    draw_checkbox(win, "double sided", params.double_sided);
-    draw_combobox(
-        win, "lighting", (int &)params.lighting, shade_lighting_names);
-    draw_slider(win, "exposure", params.exposure, -10, 10);
-    draw_slider(win, "gamma", params.gamma, 0.1f, 4);
-    draw_slider(win, "near", params.near, 0.01f, 1.0f);
-    draw_slider(win, "far", params.far, 1000.0f, 10000.0f);
-    if (widgets_callback) widgets_callback(win, input, scene, glscene);
-  };
-  callbacks.update_cb = [](gui_window *win, const gui_input &input) {
-    // update(win, apps);
-  };
-  callbacks.uiupdate_cb = [&glscene, &scene, &uiupdate_callback](
-                              gui_window *win, const gui_input &input) {
-    // handle mouse and keyboard for navigation
-    if (uiupdate_callback) uiupdate_callback(win, input, scene, glscene);
-    if ((input.mouse_left || input.mouse_right) && !input.modifier_alt &&
-        !input.modifier_ctrl && !input.widgets_active) {
-      auto dolly  = 0.0f;
-      auto pan    = zero2f;
-      auto rotate = zero2f;
-      if (input.mouse_left && !input.modifier_shift)
-        rotate = (input.mouse_pos - input.mouse_last) / 100.0f;
-      if (input.mouse_right)
-        dolly = (input.mouse_pos.x - input.mouse_last.x) / 100.0f;
-      if (input.mouse_left && input.modifier_shift)
-        pan = (input.mouse_pos - input.mouse_last) / 100.0f;
-      auto &camera                         = scene.cameras.at(0);
-      std::tie(camera.frame, camera.focus) = camera_turntable(
-          camera.frame, camera.focus, rotate, dolly, pan);
-      set_frame(glscene.cameras.at(0), camera.frame);
-    }
-  };
-
-  // run ui
-  run_ui({1280 + 320, 720}, "yshade", callbacks);
-}
-
-struct shade_scene_params {
-  string scene = "scene.json"s;
-};
-
-// Cli
-void add_command(cli_command &cli, const string &name,
-    shade_scene_params &value, const string &usage) {
-  auto &cmd = add_command(cli, name, usage);
-  add_argument(cmd, "scene", value.scene, "Input scene.");
-}
-
-int run_shade_scene(const shade_scene_params &params) {
-  // loading scene
-  auto ioerror = ""s;
-  auto scene   = scene_scene{};
-  if (!load_scene(params.scene, scene, ioerror, print_progress))
-    print_fatal(ioerror);
-
-  // tesselation
-  tesselate_shapes(scene, print_progress);
-
-  // run viewer
-  run_shade_scene(
-      scene, params.scene, "", print_progress,
-      [](gui_window *win, const gui_input &input, scene_scene &scene,
-          shade_scene &glscene) {},
-      [](gui_window *win, const gui_input &input, scene_scene &scene,
-          shade_scene &glscene) {});
-
-  // done
-  return 0;
-}
-
-// Create a shape with small spheres for each point
-static shape_data make_spheres(
-    const vector<vec3f> &positions, float radius, int steps) {
-  auto shape = shape_data{};
-  for (auto position : positions) {
-    auto sphere = make_sphere(steps, radius);
-    for (auto &p : sphere.positions) p += position;
-    merge_quads(shape.quads, shape.positions, shape.normals, shape.texcoords,
-        sphere.quads, sphere.positions, sphere.normals, sphere.texcoords);
-  }
-  return shape;
-}
-static shape_data make_cylinders(const vector<vec2i> &lines,
-    const vector<vec3f> &positions, float radius, const vec3i &steps) {
-  auto shape = shape_data{};
-  for (auto line : lines) {
-    auto len      = length(positions[line.x] - positions[line.y]);
-    auto dir      = normalize(positions[line.x] - positions[line.y]);
-    auto center   = (positions[line.x] + positions[line.y]) / 2;
-    auto cylinder = make_uvcylinder({4, 1, 1}, {radius, len / 2});
-    auto frame    = frame_fromz(center, dir);
-    for (auto &p : cylinder.positions) p = transform_point(frame, p);
-    for (auto &n : cylinder.normals) n = transform_direction(frame, n);
-    merge_quads(shape.quads, shape.positions, shape.normals, shape.texcoords,
-        cylinder.quads, cylinder.positions, cylinder.normals,
-        cylinder.texcoords);
-  }
-  return shape;
-}
-
-static scene_scene make_shapescene(
-    const scene_shape &ioshape_, progress_callback progress_cb) {
-  // Frame camera
-  auto camera_frame = [](float lens, float aspect,
-                          float film = 0.036) -> frame3f {
-    auto camera_dir  = normalize(vec3f{0, 0.5, 1});
-    auto bbox_radius = 2.0f;
-    auto camera_dist = bbox_radius * lens / (film / aspect);
-    return lookat_frame(camera_dir * camera_dist, {0, 0, 0}, {0, 1, 0});
-  };
-
-  // handle progress
-  auto progress = vec2i{0, 5};
-  if (progress_cb) progress_cb("create scene", progress.x++, progress.y);
-
-  // init scene
-  auto scene = scene_scene{};
-
-  // rescale shape to unit
-  auto ioshape = ioshape_;
-  auto bbox    = invalidb3f;
-  for (auto &pos : ioshape.positions) bbox = merge(bbox, pos);
-  for (auto &pos : ioshape.positions) pos -= center(bbox);
-  for (auto &pos : ioshape.positions) pos /= max(size(bbox));
-  // TODO(fabio): this should be a math function
-
-  // camera
-  if (progress_cb) progress_cb("create camera", progress.x++, progress.y);
-  auto &camera  = scene.cameras.emplace_back();
-  camera.frame  = camera_frame(0.050, 16.0f / 9.0f, 0.036);
-  camera.lens   = 0.050;
-  camera.aspect = 16.0f / 9.0f;
-  camera.film   = 0.036;
-  camera.focus  = length(camera.frame.o - center(bbox));
-
-  // material
-  if (progress_cb) progress_cb("create material", progress.x++, progress.y);
-  auto &shape_material     = scene.materials.emplace_back();
-  shape_material.type      = material_type::plastic;
-  shape_material.color     = {0.5, 1, 0.5};
-  shape_material.roughness = 0.2;
-  auto &edges_material     = scene.materials.emplace_back();
-  edges_material.type      = material_type::matte;
-  edges_material.color     = {0, 0, 0};
-  auto &vertices_material  = scene.materials.emplace_back();
-  vertices_material.type   = material_type::matte;
-  vertices_material.color  = {0, 0, 0};
-
-  // shapes
-  if (progress_cb) progress_cb("create shape", progress.x++, progress.y);
-  scene.shapes.emplace_back(ioshape);
-  auto &edges_shape        = scene.shapes.emplace_back();
-  edges_shape.positions    = ioshape.positions;
-  edges_shape.lines        = get_edges(ioshape.triangles, ioshape.quads);
-  auto &vertices_shape     = scene.shapes.emplace_back(ioshape);
-  vertices_shape.positions = ioshape.positions;
-  vertices_shape.points    = vector<int>(ioshape.positions.size());
-  for (auto idx = 0; idx < (int)vertices_shape.points.size(); idx++)
-    vertices_shape.points[idx] = idx;
-
-#if 0
-  auto froms = vector<vec3f>();
-  auto tos   = vector<vec3f>();
-  froms.reserve(edges.size());
-  tos.reserve(edges.size());
-  float avg_edge_length = 0;
-  for (auto& edge : edges) {
-    auto from = ioshape.positions[edge.x];
-    auto to   = ioshape.positions[edge.y];
-    froms.push_back(from);
-    tos.push_back(to);
-    avg_edge_length += length(from - to);
-  }
-  avg_edge_length /= edges.size();
-  auto cylinder_radius = 0.05f * avg_edge_length;
-  auto cylinder        = make_uvcylinder({4, 1, 1}, {cylinder_radius, 1});
-  for (auto& p : cylinder.positions) {
-    p.z = p.z * 0.5 + 0.5;
-  }
-  auto edges_shape = add_shape(glscene, {}, {}, {}, cylinder.quads,
-      cylinder.positions, cylinder.normals, cylinder.texcoords, {});
-  set_instances(glscene.shapes[edges_shape], froms, tos);
-
-  auto vertices_radius = 3.0f * cylinder_radius;
-  auto vertices        = make_spheres(ioshape.positions, vertices_radius, 2);
-  auto vertices_shape  = add_shape(glscene, {}, {}, {}, vertices.quads,
-      vertices.positions, vertices.normals, vertices.texcoords, {});
-  set_instances(glscene.shapes[vertices_shape], {}, {});
-#endif
-
-  // instances
-  if (progress_cb) progress_cb("create instance", progress.x++, progress.y);
-  auto &shape_instance       = scene.instances.emplace_back();
-  shape_instance.shape       = 0;
-  shape_instance.material    = 0;
-  auto &edges_instance       = scene.instances.emplace_back();
-  edges_instance.shape       = 1;
-  edges_instance.material    = 1;
-  auto &vertices_instance    = scene.instances.emplace_back();
-  vertices_instance.shape    = 2;
-  vertices_instance.material = 2;
-
-  // done
-  if (progress_cb) progress_cb("create scene", progress.x++, progress.y);
-  return scene;
-}
-
-struct shade_shape_params {
-  string shape = "shape.ply";
-};
-
-// Cli
-void add_command(cli_command &cli, const string &name,
-    shade_shape_params &value, const string &usage) {
-  auto &cmd = add_command(cli, name, usage);
-  add_argument(cmd, "shape", value.shape, "Input shape.");
-}
-
-int run_shade_shape(const shade_shape_params &params) {
-  // loading shape
-  auto ioerror = ""s;
-  auto shape   = scene_shape{};
-  print_progress("load shape", 0, 1);
-  if (!load_shape(params.shape, shape, ioerror)) print_fatal(ioerror);
-  print_progress("load shape", 1, 1);
-
-  // create scene
-  auto scene = make_shapescene(shape, print_progress);
-
-  // run viewer
-  run_shade_scene(
-      scene, params.shape, "", print_progress,
-      [](gui_window *win, const gui_input &input, scene_scene &scene,
-          shade_scene &glscene) {
-        auto &ioshape = scene.shapes.at(0);
-        draw_label(win, "points", std::to_string(ioshape.points.size()));
-        draw_label(win, "lines", std::to_string(ioshape.lines.size()));
-        draw_label(win, "triangles", std::to_string(ioshape.triangles.size()));
-        draw_label(win, "quads", std::to_string(ioshape.quads.size()));
-        draw_label(win, "positions", std::to_string(ioshape.positions.size()));
-        draw_label(win, "normals", std::to_string(ioshape.normals.size()));
-        draw_label(win, "texcoords", std::to_string(ioshape.texcoords.size()));
-        draw_label(win, "colors", std::to_string(ioshape.colors.size()));
-        draw_label(win, "radius", std::to_string(ioshape.radius.size()));
-      },
-      [](gui_window *win, const gui_input &input, scene_scene &scene,
-          shade_scene &glscene) {
-        glscene.instances[1].hidden = true;
-        glscene.instances[2].hidden = true;
-      });
-
-  // done
-  return 0;
-}
 
 enum struct sculpt_brush_type { gaussian, texture, smooth };
 auto const sculpt_brush_names = vector<std::string>{
@@ -1085,20 +683,20 @@ static pair<bool, bool> sculpt_update(sculpt_state &state, scene_shape &shape,
   return {updated_shape, updated_cursor};
 }
 
-struct shade_sculpt_params {
+struct glsculpt_params {
   string shape   = "shape.ply"s;
   string texture = "";
 };
 
 // Cli
 inline void add_command(cli_command &cli, const string &name,
-    shade_sculpt_params &value, const string &usage) {
+    glsculpt_params &value, const string &usage) {
   auto &cmd = add_command(cli, name, usage);
   add_argument(cmd, "shape", value.shape, "Input shape.");
   add_option(cmd, "texture", value.texture, "Brush texture.");
 }
 
-int run_shade_sculpt(const shade_sculpt_params &params_) {
+int run_glsculpt(const glsculpt_params &params_) {
   // loading shape
   auto ioerror = ""s;
   auto ioshape = scene_shape{};
@@ -1126,7 +724,7 @@ int run_shade_sculpt(const shade_sculpt_params &params_) {
   auto state  = make_sculpt_state(scene.shapes.front(), texture);
 
   // callbacks
-  run_shade_scene(
+  glview_scene(
       scene, params_.shape, "", print_progress,
       [&params](gui_window *win, const gui_input &input, scene_scene &scene,
           shade_scene &glscene) {
@@ -1178,10 +776,8 @@ int run_shade_sculpt(const shade_sculpt_params &params_) {
 }
 
 struct app_params {
-  string              command = "scene";
-  shade_scene_params  scene   = {};
-  shade_shape_params  shape   = {};
-  shade_sculpt_params sculpt  = {};
+  string          command  = "glsculpt";
+  glsculpt_params glsculpt = {};
 };
 
 // Cli
@@ -1189,15 +785,13 @@ void add_commands(cli_command &cli, const string &name, app_params &value,
     const string &usage) {
   cli = make_cli(name, usage);
   add_command_name(cli, "command", value.command, "Command.");
-  add_command(cli, "scene", value.scene, "View scenes.");
-  add_command(cli, "shape", value.shape, "View shapes.");
-  add_command(cli, "sculpt", value.sculpt, "Sculpt shapes.");
+  add_command(cli, "glsculpt", value.glsculpt, "Sculpt shapes.");
 }
 
 // Parse cli
 void parse_cli(app_params &params, int argc, const char **argv) {
   auto cli = cli_command{};
-  add_commands(cli, "yshade", params, "View and edit interactively");
+  add_commands(cli, "ysculpt", params, "Sculpt shapes interactively");
   parse_cli(cli, argc, argv);
 }
 
@@ -1207,12 +801,8 @@ int main(int argc, const char *argv[]) {
   parse_cli(params, argc, argv);
 
   // dispatch commands
-  if (params.command == "scene") {
-    return run_shade_scene(params.scene);
-  } else if (params.command == "shape") {
-    return run_shade_shape(params.shape);
-  } else if (params.command == "sculpt") {
-    return run_shade_sculpt(params.sculpt);
+  if (params.command == "glsculpt") {
+    return run_glsculpt(params.glsculpt);
   } else {
     return print_fatal("unknown command " + params.command);
   }

@@ -411,11 +411,110 @@ int run_heightfield(const heightfield_params& params) {
   return 0;
 }
 
+struct glview_params {
+  string shape = "shape.ply";
+};
+
+// Cli
+void add_command(cli_command& cli, const string& name, glview_params& value,
+    const string& usage) {
+  auto& cmd = add_command(cli, name, usage);
+  add_argument(cmd, "shape", value.shape, "Input shape.");
+}
+
+#ifndef YOCTO_OPENGL
+
+// view shapes
+int run_glview(const glview_params& params) {
+  return print_fatal("Opengl not compiled");
+}
+
+#else
+
+static scene_scene make_shapescene(
+    const scene_shape& ioshape_, progress_callback progress_cb) {
+  // Frame camera
+  auto camera_frame = [](float lens, float aspect,
+                          float film = 0.036) -> frame3f {
+    auto camera_dir  = normalize(vec3f{0, 0.5, 1});
+    auto bbox_radius = 2.0f;
+    auto camera_dist = bbox_radius * lens / (film / aspect);
+    return lookat_frame(camera_dir * camera_dist, {0, 0, 0}, {0, 1, 0});
+  };
+
+  // handle progress
+  auto progress = vec2i{0, 5};
+  if (progress_cb) progress_cb("create scene", progress.x++, progress.y);
+
+  // init scene
+  auto scene = scene_scene{};
+
+  // rescale shape to unit
+  auto ioshape = ioshape_;
+  auto bbox    = invalidb3f;
+  for (auto& pos : ioshape.positions) bbox = merge(bbox, pos);
+  for (auto& pos : ioshape.positions) pos -= center(bbox);
+  for (auto& pos : ioshape.positions) pos /= max(size(bbox));
+  // TODO(fabio): this should be a math function
+
+  // camera
+  if (progress_cb) progress_cb("create camera", progress.x++, progress.y);
+  auto& camera  = scene.cameras.emplace_back();
+  camera.frame  = camera_frame(0.050, 16.0f / 9.0f, 0.036);
+  camera.lens   = 0.050;
+  camera.aspect = 16.0f / 9.0f;
+  camera.film   = 0.036;
+  camera.focus  = length(camera.frame.o - center(bbox));
+
+  // material
+  if (progress_cb) progress_cb("create material", progress.x++, progress.y);
+  auto& shape_material     = scene.materials.emplace_back();
+  shape_material.type      = material_type::plastic;
+  shape_material.color     = {0.5, 1, 0.5};
+  shape_material.roughness = 0.2;
+
+  // shapes
+  if (progress_cb) progress_cb("create shape", progress.x++, progress.y);
+  scene.shapes.emplace_back(ioshape);
+
+  // instances
+  if (progress_cb) progress_cb("create instance", progress.x++, progress.y);
+  auto& shape_instance    = scene.instances.emplace_back();
+  shape_instance.shape    = 0;
+  shape_instance.material = 0;
+
+  // done
+  if (progress_cb) progress_cb("create scene", progress.x++, progress.y);
+  return scene;
+}
+
+int run_glview(const glview_params& params) {
+  // loading shape
+  auto ioerror = ""s;
+  auto shape   = scene_shape{};
+  print_progress("load shape", 0, 1);
+  if (!load_shape(params.shape, shape, ioerror)) print_fatal(ioerror);
+  print_progress("load shape", 1, 1);
+
+  // create scene
+  auto scene = make_shapescene(shape, print_progress);
+
+  // run viewer
+  glview_scene(scene, params.shape, "", print_progress);
+
+  // done
+  return 0;
+}
+
+#endif
+
 struct app_params {
-  string           command   = "convert";
-  convert_params   convert   = {};
-  fvconvert_params fvconvert = {};
-  view_params      view      = {};
+  string             command     = "convert";
+  convert_params     convert     = {};
+  fvconvert_params   fvconvert   = {};
+  view_params        view        = {};
+  heightfield_params heightfield = {};
+  glview_params      glview      = {};
 };
 
 // Cli
@@ -427,6 +526,8 @@ void add_commands(cli_command& cli, const string& name, app_params& value,
   add_command(
       cli, "fvconvert", value.fvconvert, "Convert face-varying shapes.");
   add_command(cli, "view", value.view, "View shapes.");
+  add_command(cli, "heightfield", value.heightfield, "Create an heightfield.");
+  add_command(cli, "glview", value.glview, "View shapes with OpenGL.");
 }
 
 // Parse cli
@@ -448,6 +549,10 @@ int main(int argc, const char* argv[]) {
     return run_view(params.view);
   } else if (params.command == "view") {
     return run_view(params.view);
+  } else if (params.command == "heightfield") {
+    return run_heightfield(params.heightfield);
+  } else if (params.command == "glview") {
+    return run_glview(params.glview);
   } else {
     return print_fatal("unknown command " + params.command);
   }

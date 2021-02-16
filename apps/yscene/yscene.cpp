@@ -94,6 +94,96 @@ int run_convert(const convert_params& params) {
   return 0;
 }
 
+// render params
+struct render_params : trace_params {
+  string scene     = "scene.json";
+  string output    = "out.png";
+  string camname   = "";
+  bool   addsky    = false;
+  bool   savebatch = false;
+};
+
+// Cli
+void add_command(cli_command& cli, const string& name, render_params& value,
+    const string& usage) {
+  auto& cmd = add_command(cli, name, usage);
+  add_argument(cmd, "scene", value.scene, "Scene filename.");
+  add_option(cmd, "output", value.output, "Output filename.", {}, "o");
+  add_option(cmd, "camera", value.camname, "Camera name.", {}, "c");
+  add_option(cmd, "addsky", value.addsky, "Add sky.");
+  add_option(cmd, "savebatch", value.savebatch, "Save batch.");
+  add_option(
+      cmd, "resolution", value.resolution, "Image resolution.", {1, 4096}, "r");
+  add_option(
+      cmd, "sampler", value.sampler, "Sampler type.", trace_sampler_names, "t");
+  add_option(cmd, "falsecolor", value.falsecolor, "False color type.",
+      trace_falsecolor_names, "F");
+  add_option(
+      cmd, "samples", value.samples, "Number of samples.", {1, 4096}, "s");
+  add_option(
+      cmd, "bounces", value.bounces, "Number of bounces.", {1, 128}, "b");
+  add_option(cmd, "clamp", value.clamp, "Clamp value.", {10, flt_max});
+  add_option(cmd, "nocaustics", value.nocaustics, "Disable caustics.");
+  add_option(cmd, "envhidden", value.envhidden, "Hide environment.");
+  add_option(cmd, "tentfilter", value.tentfilter, "Filter image.");
+  add_option(cmd, "bvh", value.bvh, "Bvh type.", bvh_names);
+  add_option(cmd, "noparallel", value.noparallel, "Disable threading.");
+}
+
+// convert images
+int run_render(const render_params& params_) {
+  // copy params
+  auto params = params_;
+
+  // scene loading
+  auto scene   = scene_scene{};
+  auto ioerror = string{};
+  if (!load_scene(params.scene, scene, ioerror, print_progress))
+    return print_fatal(ioerror);
+
+  // add sky
+  if (params.addsky) add_sky(scene);
+
+  // tesselation
+  tesselate_shapes(scene, print_progress);
+
+  // build bvh
+  auto bvh = make_bvh(scene, params, print_progress);
+
+  // init renderer
+  auto lights = make_lights(scene, params, print_progress);
+
+  // fix renderer type if no lights
+  if (lights.lights.empty() && is_sampler_lit(params)) {
+    print_info("no lights presents, image will be black");
+    params.sampler = trace_sampler_type::eyelight;
+  }
+
+  // camera
+  params.camera = find_camera(scene, params.camname);
+
+  // render
+  auto render = trace_image(scene, bvh, lights, params, print_progress,
+      [savebatch = params.savebatch, output = params.output](
+          const image_data& render, int sample, int samples) {
+        if (!savebatch) return;
+        auto ext = "-s" + std::to_string(sample + samples) +
+                   path_extension(output);
+        auto outfilename = replace_extension(output, ext);
+        auto ioerror     = ""s;
+        print_progress("save image", sample, samples);
+        if (!save_image(outfilename, render, ioerror)) print_fatal(ioerror);
+      });
+
+  // save image
+  print_progress("save image", 0, 1);
+  if (!save_image(params.output, render, ioerror)) return print_fatal(ioerror);
+  print_progress("save image", 1, 1);
+
+  // done
+  return 0;
+}
+
 // convert params
 struct view_params {
   string scene   = "scene.json";
@@ -144,10 +234,56 @@ int run_view(const view_params& params) {
 
 #endif
 
+struct glview_params {
+  string scene = "scene.json"s;
+};
+
+// Cli
+void add_command(cli_command& cli, const string& name, glview_params& value,
+    const string& usage) {
+  auto& cmd = add_command(cli, name, usage);
+  add_argument(cmd, "scene", value.scene, "Input scene.");
+}
+
+#ifndef YOCTO_OPENGL
+
+// view scene
+int run_glview(const glview_params& params) {
+  return print_fatal("Opengl not compiled");
+}
+
+#else
+
+int run_glview(const glview_params& params) {
+  // loading scene
+  auto ioerror = ""s;
+  auto scene   = scene_scene{};
+  if (!load_scene(params.scene, scene, ioerror, print_progress))
+    print_fatal(ioerror);
+
+  // tesselation
+  tesselate_shapes(scene, print_progress);
+
+  // run viewer
+  glview_scene(
+      scene, params.scene, "", print_progress,
+      [](gui_window* win, const gui_input& input, scene_scene& scene,
+          shade_scene& glscene) {},
+      [](gui_window* win, const gui_input& input, scene_scene& scene,
+          shade_scene& glscene) {});
+
+  // done
+  return 0;
+}
+
+#endif
+
 struct app_params {
   string         command = "convert";
   convert_params convert = {};
+  render_params  render  = {};
   view_params    view    = {};
+  glview_params  glview  = {};
 };
 
 // Cli
@@ -155,8 +291,10 @@ void add_commands(cli_command& cli, const string& name, app_params& value,
     const string& usage) {
   cli = make_cli(name, usage);
   add_command_name(cli, "command", value.command, "Command.");
-  add_command(cli, "convert", value.convert, "Convert shapes.");
-  add_command(cli, "view", value.view, "View shapes.");
+  add_command(cli, "convert", value.convert, "Convert scenes.");
+  add_command(cli, "render", value.render, "Render scenes.");
+  add_command(cli, "view", value.view, "View scenes.");
+  add_command(cli, "glview", value.glview, "View scenes with OpenGL.");
 }
 
 // Parse cli
@@ -174,8 +312,12 @@ int main(int argc, const char* argv[]) {
   // dispatch commands
   if (params.command == "convert") {
     return run_convert(params.convert);
+  } else if (params.command == "render") {
+    return run_render(params.render);
   } else if (params.command == "view") {
     return run_view(params.view);
+  } else if (params.command == "glview") {
+    return run_glview(params.glview);
   } else {
     return print_fatal("unknown command " + params.command);
   }
