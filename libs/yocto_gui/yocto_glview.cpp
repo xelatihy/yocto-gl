@@ -470,26 +470,26 @@ void view_scene(const string& title, const string& name, scene_scene& scene,
   auto state  = trace_state{};
 
   // renderer update
-  auto             render_counter = 0;
-  std::atomic<int> current;
-  std::mutex       mutex;
-  auto             reset_display = [&]() {
+  auto render_update  = std::atomic<bool>{};
+  auto render_current = std::atomic<int>{};
+  auto render_mutex   = std::mutex{};
+  auto reset_display  = [&]() {
     // stop render
     trace_stop(worker);
 
     // start render
     trace_start(
         worker, state, scene, bvh, lights, params,
-        [&](const string& message, int sample, int nsamples) {
+        [&](const string& message, int sample, int samples) {
           if (progress_cb) progress_cb("render sample", sample, params.samples);
-          current = sample;
+          render_current = sample;
         },
-        [&](const image_data& render, int current, int total) {
+        [&](const image_data& render, int sample, int samples) {
           // if (current > 0) return;
-          auto lock = std::lock_guard{mutex};
-          if (current == 0) render_counter = 0;
-          image = render;
+          auto lock = std::lock_guard{render_mutex};
+          image     = render;
           tonemap_image_mt(display, image, params.exposure);
+          render_update = true;
         });
   };
 
@@ -499,6 +499,7 @@ void view_scene(const string& title, const string& name, scene_scene& scene,
   // callbacks
   auto callbacks    = gui_callbacks{};
   callbacks.init_cb = [&](gui_window* win, const gui_input& input) {
+    auto lock = std::lock_guard{render_mutex};
     init_image(glimage);
     set_image(glimage, display, false, false);
   };
@@ -507,12 +508,11 @@ void view_scene(const string& title, const string& name, scene_scene& scene,
   };
   callbacks.draw_cb = [&](gui_window* win, const gui_input& input) {
     // update image
-    if (!render_counter) {
-      auto lock = std::lock_guard{mutex};
+    if (render_update) {
+      auto lock = std::lock_guard{render_mutex};
       set_image(glimage, display, false, false);
+      render_update = false;
     }
-    render_counter++;
-    if (render_counter > 10) render_counter = 0;
     // draw image
     glparams.window                           = input.window_size;
     glparams.framebuffer                      = input.framebuffer_viewport;
