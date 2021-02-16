@@ -148,26 +148,17 @@ shape_data make_cursor(const vec3f &position, const vec3f &normal, float radius,
   return cursor;
 }
 
-// Taking closest vertex of an intersection
-int closest_vertex(
-    const vector<vec3i> &triangles, int element, const vec2f &uv) {
-  auto &triangle = triangles[element];
-  if (uv.x < 0.5f && uv.y < 0.5f) return triangle.x;
-  if (uv.x > uv.y) return triangle.y;
-  return triangle.z;
-}
-
-// Project a vector on a plane, maintaining vector length
-inline vec2f project_onto_plane(const mat3f &basis, const vec3f &p) {
-  auto v  = p - dot(p, basis.z) * basis.z;
-  auto v1 = vec2f{dot(v, basis.x), dot(v, basis.y)};
-  return v1 * (length(p) / length(v1));
-}
-
 // Planar coordinates by local computation between neighbors
 inline void compute_coordinates(vector<vec2f> &coords,
     const vector<mat3f> &frames, const vector<vec3f> &positions, int node,
     int neighbor, float weight) {
+  // Project a vector on a plane, maintaining vector length
+  auto project_onto_plane = [](const mat3f &basis, const vec3f &p) -> vec2f {
+    auto v  = p - dot(p, basis.z) * basis.z;
+    auto v1 = vec2f{dot(v, basis.x), dot(v, basis.y)};
+    return v1 * (length(p) / length(v1));
+  };
+
   auto current_coord = coords[node];
   auto edge          = positions[node] - positions[neighbor];
   auto projection    = project_onto_plane(frames[neighbor], edge);
@@ -327,15 +318,6 @@ float gaussian_distribution(vec3f origin, vec3f position, float standard_dev,
   return N * yocto::exp(-E);
 }
 
-// Change positions, normals, bounding volume hierarchy and hash grid
-void apply_brush(shape_data &shape, const vector<vec3f> &positions,
-    shape_bvh &tree, hash_grid &grid) {
-  shape.positions = positions;
-  triangles_normals(shape.normals, shape.triangles, shape.positions);
-  update_triangles_bvh(tree, shape.triangles, shape.positions);
-  grid = make_hash_grid(positions, grid.cell_size);
-}
-
 // To apply brush on intersected points' neighbors
 bool gaussian_brush(vector<vec3f> &positions, const hash_grid &grid,
     const vector<vec3i> &triangles, const vector<vec3f> &base_positions,
@@ -387,6 +369,15 @@ bool texture_brush(vector<vec3f> &positions, vector<vec2f> &texcoords,
     const sculpt_params &params) {
   if (texture.pixelsf.empty() && texture.pixelsb.empty()) return false;
 
+  // Taking closest vertex of an intersection
+  auto closest_vertex = [](const vector<vec3i> &triangles, int element,
+                            const vec2f &uv) -> int {
+    auto &triangle = triangles[element];
+    if (uv.x < 0.5f && uv.y < 0.5f) return triangle.x;
+    if (uv.x > uv.y) return triangle.y;
+    return triangle.z;
+  };
+
   auto sampling = vector<int>{};
   for (auto [element, uv] : stroke) {
     sampling.push_back(closest_vertex(triangles, element, uv));
@@ -415,11 +406,14 @@ bool texture_brush(vector<vec3f> &positions, vector<vec2f> &texcoords,
 }
 
 // Cotangent operator
-float cotan(vec3f &a, vec3f &b) { return dot(a, b) / length(cross(a, b)); }
 
 // Compute edge cotangents weights
 float laplacian_weight(const vector<vec3f> &positions,
     const vector<vector<int>> &adjacencies, int node, int neighbor) {
+  auto cotan = [](vec3f &a, vec3f &b) {
+    return dot(a, b) / length(cross(a, b));
+  };
+
   auto num_neighbors = int(adjacencies[node].size());
 
   int ind = -1;
@@ -452,6 +446,15 @@ bool smooth_brush(vector<vec3f> &positions, const geodesic_solver &solver,
     const vector<vec3i> &triangles, const vector<vector<int>> &adjacencies,
     vector<shape_point> &stroke, const sculpt_params &params) {
   if (stroke.empty()) return false;
+
+  // Taking closest vertex of an intersection
+  auto closest_vertex = [](const vector<vec3i> &triangles, int element,
+                            const vec2f &uv) -> int {
+    auto &triangle = triangles[element];
+    if (uv.x < 0.5f && uv.y < 0.5f) return triangle.x;
+    if (uv.x > uv.y) return triangle.y;
+    return triangle.z;
+  };
 
   auto stroke_vertices = vector<int>{};
   for (auto [element, uv] : stroke)
@@ -733,10 +736,6 @@ pair<bool, bool> sculpt_update(sculpt_state &state, scene_shape &shape,
         } else if (params.type == sculpt_brush_type::texture) {
           state.stroke.insert(
               state.stroke.end(), samples.begin(), samples.end());
-          auto sampling = vector<int>{};
-          for (auto [element, uv] : state.stroke) {
-            sampling.push_back(closest_vertex(shape.triangles, element, uv));
-          }
           updated_shape = texture_brush(shape.positions,
               state.base_shape.texcoords, state.solver, state.tex_image,
               state.base_shape.triangles, state.base_shape.positions,
