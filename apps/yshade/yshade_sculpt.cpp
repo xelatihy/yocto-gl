@@ -44,15 +44,15 @@ struct shade_sculpt_state {
   shade_scene glscene = {};
 };
 
-enum struct brush_type { gaussian, texture, smooth };
-auto const brushes_names = vector<std::string>{
+enum struct sculpt_brush_type { gaussian, texture, smooth };
+auto const sculpt_brush_names = vector<std::string>{
     "gaussian brush", "texture brush", "smooth brush"};
 
 struct sculpt_params {
-  brush_type type     = brush_type::gaussian;
-  float      radius   = 0.35f;
-  float      strength = 1.0f;
-  bool       negative = false;
+  sculpt_brush_type type     = sculpt_brush_type::gaussian;
+  float             radius   = 0.35f;
+  float             strength = 1.0f;
+  bool              negative = false;
 };
 
 struct sculpt_state {
@@ -714,7 +714,8 @@ pair<bool, bool> update_stroke(sculpt_stroke &stroke, sculpt_state &state,
   if (isec.hit) {
     cursor         = make_cursor(eval_position(shape, isec.element, isec.uv),
         eval_normal(shape, isec.element, isec.uv),
-        params.radius * (params.type == brush_type::gaussian ? 0.5f : 1.0f));
+        params.radius *
+            (params.type == sculpt_brush_type::gaussian ? 0.5f : 1.0f));
     updated_cursor = true;
   }
 
@@ -729,16 +730,16 @@ pair<bool, bool> update_stroke(sculpt_stroke &stroke, sculpt_state &state,
           state.bvh, shape, last_uv, mouse_uv, camera, params);
       if (!samples.empty()) {
         state.last_uv = cur_uv;
-        if (params.type == brush_type::gaussian) {
+        if (params.type == sculpt_brush_type::gaussian) {
           state.stroke  = samples;
           updated_shape = gaussian_brush(shape.positions, state.grid,
               shape.triangles, state.old_positions, state.old_normals,
               state.stroke, params);
-        } else if (params.type == brush_type::smooth) {
+        } else if (params.type == sculpt_brush_type::smooth) {
           state.stroke  = samples;
           updated_shape = smooth_brush(shape.positions, state.solver,
               shape.triangles, state.adjacencies, state.stroke, params);
-        } else if (params.type == brush_type::texture) {
+        } else if (params.type == sculpt_brush_type::texture) {
           state.stroke.insert(
               state.stroke.end(), samples.begin(), samples.end());
           auto sampling = vector<int>{};
@@ -831,20 +832,20 @@ int run_shade_sculpt(const shade_sculpt_params &params_) {
     draw_slider(win, "far", glparams.far, 1000.0f, 10000.0f);
     draw_label(win, "", "");
     draw_label(win, "", "sculpt params");
-    draw_combobox(win, "brush type", (int &)params.type, brushes_names);
-    if (params.type == brush_type::gaussian) {
+    draw_combobox(win, "brush type", (int &)params.type, sculpt_brush_names);
+    if (params.type == sculpt_brush_type::gaussian) {
       if (params.strength < 0.8f || params.strength > 1.5f)
         params.strength = 1.0f;
       draw_slider(win, "radius", params.radius, 0.1f, 0.8f);
       draw_slider(win, "strength", params.strength, 1.5f, 0.9f);
       draw_checkbox(win, "negative", params.negative);
-    } else if (params.type == brush_type::texture) {
+    } else if (params.type == sculpt_brush_type::texture) {
       if (params.strength < 0.8f || params.strength > 1.5f)
         params.strength = 1.0f;
       draw_slider(win, "radius", params.radius, 0.1f, 0.8f);
       draw_slider(win, "strength", params.strength, 1.5f, 0.9f);
       draw_checkbox(win, "negative", params.negative);
-    } else if (params.type == brush_type::smooth) {
+    } else if (params.type == sculpt_brush_type::smooth) {
       draw_slider(win, "radius", params.radius, 0.1f, 0.8f);
       draw_slider(win, "strength", params.strength, 0.1f, 1.0f);
     }
