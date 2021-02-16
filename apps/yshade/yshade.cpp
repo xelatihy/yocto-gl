@@ -501,27 +501,6 @@ int run_shade_shape(const shade_shape_params &params) {
   return 0;
 }
 
-// Application state
-struct shade_sculpt_state {
-  // loading parameters
-  string shapename   = "";
-  string filename    = "shape.ply";
-  string imagename   = "";
-  string outname     = "out.ply";
-  string texturename = "";
-  string name        = "";
-
-  // scene
-  sceneio_scene ioscene  = sceneio_scene{};
-  camera_handle iocamera = invalid_handle;
-
-  // options
-  shade_params drawgl_prms = {};
-
-  // rendering state
-  shade_scene glscene = {};
-};
-
 enum struct sculpt_brush_type { gaussian, texture, smooth };
 auto const sculpt_brush_names = vector<std::string>{
     "gaussian brush", "texture brush", "smooth brush"};
@@ -1174,13 +1153,11 @@ inline void add_command(cli_command &cli, const string &name,
 
 int run_shade_sculpt(const shade_sculpt_params &params_) {
   // initialize app
-  auto app = shade_sculpt_state();
+  auto app = app_state{};
 
   // copy command line
-  app.filename    = params_.shape;
-  app.texturename = params_.texture;
-  app.imagename   = params_.texture;
-  app.shapename   = params_.shape;
+  app.filename  = params_.shape;
+  app.imagename = params_.texture;
 
   // loading shape
   auto ioerror = ""s;
@@ -1195,10 +1172,9 @@ int run_shade_sculpt(const shade_sculpt_params &params_) {
 
   // loading texture
   auto iotexture = scene_texture{};
-  if (!app.texturename.empty()) {
+  if (!app.imagename.empty()) {
     print_progress("load texture", 0, 1);
-    if (!load_texture(app.texturename, iotexture, ioerror))
-      print_fatal(ioerror);
+    if (!load_texture(app.imagename, iotexture, ioerror)) print_fatal(ioerror);
     print_progress("load texture", 1, 1);
   }
 
