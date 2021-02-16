@@ -48,15 +48,101 @@ namespace yocto {
 
 // Open a window and show an image
 void view_image(
-    const string& title, const string& name, const image_data& img) {
-  // open viewer
-  auto viewer = make_imageviewer(title);
+    const string& title, const string& name, const image_data& image) {
+  // display image
+  auto  display  = make_image(image.width, image.height, false, true);
+  float exposure = 0;
+  bool  filmic   = false;
+  tonemap_image_mt(display, image, exposure, filmic);
 
-  // set view
-  set_image(viewer, name, img);
+  // opengl image
+  auto glimage  = ogl_image{};
+  auto glparams = ogl_image_params{};
 
-  // run view
-  run_viewer(viewer);
+  // callbacks
+  auto callbacks    = gui_callbacks{};
+  callbacks.init_cb = [&glimage, &display](
+                          gui_window* win, const gui_input& input) {
+    init_image(glimage);
+    set_image(glimage, display, false, false);
+  };
+  callbacks.clear_cb = [&glimage](gui_window* win, const gui_input& input) {
+    clear_image(glimage);
+  };
+  callbacks.draw_cb = [&glimage, &glparams, &display](
+                          gui_window* win, const gui_input& input) {
+    glparams.window                           = input.window_size;
+    glparams.framebuffer                      = input.framebuffer_viewport;
+    std::tie(glparams.center, glparams.scale) = camera_imview(glparams.center,
+        glparams.scale, {display.width, display.height}, glparams.window,
+        glparams.fit);
+    draw_image(glimage, glparams);
+  };
+  callbacks.widgets_cb = [&](gui_window* win, const gui_input& input) {
+    auto edited = 0;
+    if (begin_header(win, "tonemap")) {
+      edited += draw_slider(win, "exposure", exposure, -5, 5);
+      edited += draw_checkbox(win, "filmic", filmic);
+      end_header(win);
+      if (edited) {
+        tonemap_image_mt(display, image, exposure, filmic);
+        set_image(glimage, display, false, false);
+      }
+    }
+#if 0
+    if (begin_header(win, "colorgrade")) {
+      auto& params = app->params;
+      edited += draw_checkbox(win, "apply colorgrade", app->colorgrade);
+      edited += draw_slider(win, "exposure", params.exposure, -5, 5);
+      edited += draw_coloredit(win, "tint", params.tint);
+      edited += draw_slider(win, "lincontrast", params.lincontrast, 0, 1);
+      edited += draw_slider(win, "logcontrast", params.logcontrast, 0, 1);
+      edited += draw_slider(win, "linsaturation", params.linsaturation, 0, 1);
+      edited += draw_checkbox(win, "filmic", params.filmic);
+      continue_line(win);
+      edited += draw_checkbox(win, "srgb", params.srgb);
+      edited += draw_slider(win, "contrast", params.contrast, 0, 1);
+      edited += draw_slider(win, "saturation", params.saturation, 0, 1);
+      edited += draw_slider(win, "shadows", params.shadows, 0, 1);
+      edited += draw_slider(win, "midtones", params.midtones, 0, 1);
+      edited += draw_slider(win, "highlights", params.highlights, 0, 1);
+      edited += draw_coloredit(win, "shadows color", params.shadows_color);
+      edited += draw_coloredit(win, "midtones color", params.midtones_color);
+      edited += draw_coloredit(
+          win, "highlights color", params.highlights_color);
+      end_header(win);
+    }
+#endif
+    if (begin_header(win, "inspect")) {
+      draw_slider(win, "zoom", glparams.scale, 0.1, 10);
+      draw_checkbox(win, "fit", glparams.fit);
+      auto ij = image_coords(input.mouse_pos, glparams.center, glparams.scale,
+          {image.width, image.height});
+      draw_dragger(win, "mouse", ij);
+      auto img_pixel = zero4f, display_pixel = zero4f;
+      // if (ij.x >= 0 && ij.x < image.width && ij.y >= 0 && ij.y <
+      // image.height) {
+      //   img_pixel     = image[{ij.x, ij.y}];
+      //   display_pixel = display[{ij.x, ij.y}];
+      // }
+      draw_coloredit(win, "image", img_pixel);
+      draw_dragger(win, "display", display_pixel);
+      end_header(win);
+    }
+  };
+  callbacks.uiupdate_cb = [&glparams](gui_window* win, const gui_input& input) {
+    // handle mouse
+    if (input.mouse_left && !input.widgets_active) {
+      glparams.center += input.mouse_pos - input.mouse_last;
+    }
+    if (input.mouse_right && !input.widgets_active) {
+      glparams.scale *= powf(
+          2, (input.mouse_pos.x - input.mouse_last.x) * 0.001f);
+    }
+  };
+
+  // run ui
+  run_ui({1280, 720}, title, callbacks);
 }
 
 // Open a window and show a shape via path tracing
