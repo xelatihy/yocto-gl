@@ -135,7 +135,7 @@ void view_image(const string& title, const string& name,
   };
 
   // run ui
-  run_ui({1280, 720}, title, callbacks);
+  run_ui({1280 + 320, 720}, title, callbacks);
 }
 
 // Open a window and show an image
@@ -250,7 +250,7 @@ void view_images(const string& title, const vector<string>& names,
   };
 
   // run ui
-  run_ui({1280, 720}, title, callbacks);
+  run_ui({1280 + 320, 720}, title, callbacks);
 }
 
 // Open a window and show an image
@@ -357,7 +357,7 @@ void colorgrade_image(const string& title, const string& name,
   };
 
   // run ui
-  run_ui({1280, 720}, title, callbacks);
+  run_ui({1280 + 320, 720}, title, callbacks);
 }
 
 // Open a window and show a shape via path tracing
@@ -611,7 +611,7 @@ void view_scene(const string& title, const string& name, scene_scene& scene,
   };
 
   // run ui
-  run_ui({1280, 720}, title, callbacks);
+  run_ui({1280 + 320, 720}, title, callbacks);
 
   // done
   trace_stop(worker);
