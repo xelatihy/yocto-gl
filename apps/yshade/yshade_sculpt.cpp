@@ -380,12 +380,21 @@ bool gaussian_brush(vector<vec3f> &positions, const hash_grid &grid,
 }
 
 // Compute texture values through the parameterization
-bool texture_brush(vector<vec3f> &positions, const vector<int> &vertices,
-    const image_data &texture, const vector<vec2f> &coords,
-    const vector<vec3f> &base_positions, const vector<vec3f> &base_normals,
+bool texture_brush(vector<vec3f> &positions, vector<vec2f> &texcoords,
+    const geodesic_solver &solver, const image_data &texture,
+    const vector<vec3i> &triangles, const vector<vec3f> &base_positions,
+    const vector<vec3f> &base_normals, const vector<shape_point> &stroke,
     const sculpt_params &params) {
-  if (vertices.empty()) return false;
   if (texture.pixelsf.empty() && texture.pixelsb.empty()) return false;
+
+  auto sampling = vector<int>{};
+  for (auto [element, uv] : stroke) {
+    sampling.push_back(closest_vertex(triangles, element, uv));
+  }
+
+  auto vertices = stroke_parameterization(
+      texcoords, solver, sampling, base_positions, base_normals, params.radius);
+  if (vertices.empty()) return false;
 
   positions = base_positions;
 
@@ -394,7 +403,7 @@ bool texture_brush(vector<vec3f> &positions, const vector<int> &vertices,
       zero3f, zero3f, 0.7f, scale_factor, params.strength, params.radius);
 
   for (auto idx : vertices) {
-    auto uv     = coords[idx];
+    auto uv     = texcoords[idx];
     auto height = max(xyz(eval_image(texture, uv)));
     auto normal = base_normals[idx];
     if (params.negative) normal = -normal;
@@ -728,12 +737,10 @@ pair<bool, bool> sculpt_update(sculpt_state &state, scene_shape &shape,
           for (auto [element, uv] : state.stroke) {
             sampling.push_back(closest_vertex(shape.triangles, element, uv));
           }
-          auto vertices = stroke_parameterization(state.base_shape.texcoords,
-              state.solver, sampling, state.base_shape.positions,
-              state.base_shape.normals, params.radius);
-          updated_shape = texture_brush(shape.positions, vertices,
-              state.tex_image, state.base_shape.texcoords,
-              state.base_shape.positions, state.base_shape.normals, params);
+          updated_shape = texture_brush(shape.positions,
+              state.base_shape.texcoords, state.solver, state.tex_image,
+              state.base_shape.triangles, state.base_shape.positions,
+              state.base_shape.normals, state.stroke, params);
         }
       }
     }
