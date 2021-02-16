@@ -316,8 +316,11 @@ int run_glpath(const glpath_params& params) {
             auto isec = intersect_triangles_bvh(
                 bvh, shape.triangles, shape.positions, ray, false);
             if (isec.hit) {
-              stroke.push_back({isec.element, isec.uv});
-              updated = true;
+              if (stroke.empty() || stroke.back().element != isec.element ||
+                  stroke.back().uv != isec.uv) {
+                stroke.push_back({isec.element, isec.uv});
+                updated = true;
+              }
             }
           }
         }
