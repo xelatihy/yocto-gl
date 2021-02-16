@@ -64,6 +64,9 @@ struct sculpt_state {
   // brush
   image_data tex_image = {};
   // stroke
+  vector<shape_point> stroke   = {};
+  vec2f               last_uv  = {};
+  bool                instroke = false;
   // shape at the beginning of the stroke
   vector<vec2f> coords        = {};
   vector<vec3f> old_positions = {};
@@ -72,13 +75,7 @@ struct sculpt_state {
 };
 
 // sculpt stroke
-struct sculpt_stroke {
-  vector<shape_point>        points    = {};
-  vector<pair<vec3f, vec3f>> pairs_    = {};
-  vector<int>                sampling_ = {};
-  vec2f                      locked_uv = {};
-  bool                       lock      = false;
-};
+struct sculpt_stroke {};
 
 // Initialize all sculpting parameters.
 sculpt_state make_sculpt_state(
@@ -325,9 +322,8 @@ vector<int> stroke_parameterization(vector<vec2f> &coords,
 // End stroke settings
 void end_stroke(sculpt_params &params, sculpt_stroke &stroke,
     sculpt_state &state, scene_shape &shape) {
-  stroke.lock = false;
-  stroke.points.clear();
-  stroke.sampling_.clear();
+  state.instroke = false;
+  state.stroke.clear();
   state.coords.assign(state.coords.size(), {0, 0});
   state.old_positions = shape.positions;
   state.old_normals   = shape.normals;
@@ -724,29 +720,29 @@ pair<bool, bool> update_stroke(sculpt_stroke &stroke, sculpt_state &state,
 
   // sculpting
   if (isec.hit && mouse_pressed) {
-    if (!stroke.lock) {
-      stroke.lock      = true;
-      stroke.locked_uv = mouse_uv;
+    if (!state.instroke) {
+      state.instroke = true;
+      state.last_uv  = mouse_uv;
     } else {
-      auto last_uv           = stroke.locked_uv;
+      auto last_uv           = state.last_uv;
       auto [samples, cur_uv] = sample_stroke(
           state.bvh, shape, last_uv, mouse_uv, camera, params);
       if (!samples.empty()) {
-        stroke.locked_uv = cur_uv;
+        state.last_uv = cur_uv;
         if (params.type == brush_type::gaussian) {
-          stroke.points = samples;
+          state.stroke  = samples;
           updated_shape = gaussian_brush(shape.positions, state.grid,
               shape.triangles, state.old_positions, state.old_normals,
-              stroke.points, params);
+              state.stroke, params);
         } else if (params.type == brush_type::smooth) {
-          stroke.points = samples;
+          state.stroke  = samples;
           updated_shape = smooth_brush(shape.positions, state.solver,
-              shape.triangles, state.adjacencies, stroke.points, params);
+              shape.triangles, state.adjacencies, state.stroke, params);
         } else if (params.type == brush_type::texture) {
-          stroke.points.insert(
-              stroke.points.end(), samples.begin(), samples.end());
+          state.stroke.insert(
+              state.stroke.end(), samples.begin(), samples.end());
           auto sampling = vector<int>{};
-          for (auto sample : stroke.points) {
+          for (auto sample : state.stroke) {
             sampling.push_back(
                 closest_vertex(shape.triangles, sample.element, sample.uv));
           }
@@ -764,7 +760,7 @@ pair<bool, bool> update_stroke(sculpt_stroke &stroke, sculpt_state &state,
       state.grid = make_hash_grid(shape.positions, state.grid.cell_size);
     }
   } else {
-    if (stroke.lock) end_stroke(params, stroke, state, shape);
+    if (state.instroke) end_stroke(params, stroke, state, shape);
   }
 
   return {updated_shape, updated_cursor};
