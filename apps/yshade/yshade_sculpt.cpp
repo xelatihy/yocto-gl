@@ -306,18 +306,15 @@ vector<int> stroke_parameterization(vector<vec2f> &coords,
 }
 
 // Compute gaussian function
-float gaussian_distribution(vec3f origin, vec3f position, float standard_dev,
-    float scale_factor, float strength, float radius) {
-  float scaled_strength = strength / ((((radius - 0.1f) * 0.5f) / 0.7f) + 0.2f);
-  float N               = 1.0f / (((standard_dev * scaled_strength) *
-                        (standard_dev * scaled_strength) *
-                        (standard_dev * scaled_strength)) *
-                       sqrt((2.0f * pi) * (2.0f * pi) * (2.0f * pi)));
-  float dx              = (origin.x - position.x) * scale_factor;
-  float dy              = (origin.y - position.y) * scale_factor;
-  float dz              = (origin.z - position.z) * scale_factor;
-  float E               = ((dx * dx) + (dy * dy) + (dz * dz)) /
-            (2.0f * standard_dev * standard_dev);
+float gaussian_distribution(const vec3f &origin, const vec3f &position,
+    float standard_dev, float scale_factor, float strength, float radius) {
+  auto scaled_strength = strength / ((((radius - 0.1f) * 0.5f) / 0.7f) + 0.2f);
+  auto N               = 1.0f / (((standard_dev * scaled_strength) *
+                       (standard_dev * scaled_strength) *
+                       (standard_dev * scaled_strength)) *
+                      sqrt((2.0f * pi) * (2.0f * pi) * (2.0f * pi)));
+  auto d               = (origin - position) * scale_factor;
+  auto E               = dot(d, d) / (2.0f * standard_dev * standard_dev);
   return N * yocto::exp(-E);
 }
 
