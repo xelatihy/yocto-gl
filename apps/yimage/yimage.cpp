@@ -110,13 +110,15 @@ int run_view(const view_params& params) {
 #if 1
 
   // load
-  auto image   = image_data{};
-  auto ioerror = string{};
-  if (!load_image(params.images[0], image, ioerror))
-    return print_fatal(ioerror);
+  auto images = vector<image_data>(params.images.size());
+  for (auto idx = 0; idx < (int)params.images.size(); idx++) {
+    auto ioerror = string{};
+    if (!load_image(params.images[idx], images[idx], ioerror))
+      return print_fatal(ioerror);
+  }
 
   // run viewer
-  view_image("yimage", params.images[0], image);
+  view_images("yimage", params.images, images);
 
   // done
   return 0;
