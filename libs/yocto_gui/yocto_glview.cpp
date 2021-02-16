@@ -457,6 +457,14 @@ void view_scene(const string& title, const string& name, scene_scene& scene,
   auto names    = vector<string>{name};
   auto selected = 0;
 
+  // camera names
+  auto camera_names = scene.camera_names;
+  if (camera_names.empty()) {
+    for (auto idx = 0; idx < (int)scene.cameras.size(); idx++) {
+      camera_names.push_back("camera" + std::to_string(idx + 1));
+    }
+  }
+
   // init state
   auto worker = trace_worker{};
   auto state  = trace_state{};
@@ -520,8 +528,7 @@ void view_scene(const string& title, const string& name, scene_scene& scene,
     if (begin_header(win, "render")) {
       auto edited  = 0;
       auto tparams = params;
-      edited += draw_combobox(
-          win, "camera", tparams.camera, scene.camera_names);
+      edited += draw_combobox(win, "camera", tparams.camera, camera_names);
       edited += draw_slider(win, "resolution", tparams.resolution, 180, 4096);
       edited += draw_slider(win, "samples", tparams.samples, 16, 4096);
       edited += draw_combobox(
