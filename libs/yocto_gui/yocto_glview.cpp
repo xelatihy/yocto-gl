@@ -515,7 +515,8 @@ void view_scene(const string& title, const string& name, scene_scene& scene,
     if (begin_header(win, "render")) {
       auto edited  = 0;
       auto tparams = params;
-      edited += draw_combobox(win, "camera", params.camera, scene.camera_names);
+      edited += draw_combobox(
+          win, "camera", tparams.camera, scene.camera_names);
       edited += draw_slider(win, "resolution", tparams.resolution, 180, 4096);
       edited += draw_slider(win, "samples", tparams.samples, 16, 4096);
       edited += draw_combobox(
@@ -526,12 +527,19 @@ void view_scene(const string& title, const string& name, scene_scene& scene,
       edited += draw_checkbox(win, "envhidden", tparams.envhidden);
       continue_line(win);
       edited += draw_checkbox(win, "filter", tparams.tentfilter);
-      edited += draw_slider(win, "seed", (int&)tparams.seed, 0, 1000000);
       edited += draw_slider(win, "pratio", tparams.pratio, 1, 64);
       // edited += draw_slider(win, "exposure", tparams.exposure, -5, 5);
       end_header(win);
       if (edited) {
         trace_stop(worker);
+        // check image changes
+        auto [width, height]   = trace_size(scene, params);
+        auto [twidth, theight] = trace_size(scene, tparams);
+        if (width != twidth || height != theight) {
+          image   = make_image(twidth, theight, true, false);
+          display = make_image(twidth, theight, false, true);
+          set_image(glimage, display, false, false);
+        }
         params = tparams;
         reset_display();
       }
