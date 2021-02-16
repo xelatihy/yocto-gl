@@ -31,6 +31,7 @@
 #include <yocto/yocto_image.h>
 #include <yocto/yocto_mesh.h>
 #include <yocto/yocto_parallel.h>
+#include <yocto/yocto_scene.h>
 #include <yocto/yocto_sceneio.h>
 #include <yocto/yocto_shape.h>
 #include <yocto_gui/yocto_glview.h>

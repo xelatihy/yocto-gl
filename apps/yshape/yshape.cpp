@@ -30,6 +30,8 @@
 #include <yocto/yocto_geometry.h>
 #include <yocto/yocto_image.h>
 #include <yocto/yocto_math.h>
+#include <yocto/yocto_scene.h>
+#include <yocto/yocto_sceneio.h>
 #include <yocto/yocto_shape.h>
 #if YOCTO_OPENGL == 1
 #include <yocto_gui/yocto_glview.h>

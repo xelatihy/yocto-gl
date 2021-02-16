@@ -28,6 +28,7 @@
 
 #include <yocto/yocto_cli.h>
 #include <yocto/yocto_math.h>
+#include <yocto/yocto_scene.h>
 #include <yocto/yocto_sceneio.h>
 #include <yocto/yocto_shape.h>
 #if YOCTO_OPENGL == 1
