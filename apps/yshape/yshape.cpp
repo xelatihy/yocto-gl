@@ -535,7 +535,7 @@ void add_commands(cli_command& cli, const string& name, app_params& value,
 // Parse cli
 void parse_cli(app_params& params, int argc, const char** argv) {
   auto cli = cli_command{};
-  add_commands(cli, "yhape", params, "Process and view shapes.");
+  add_commands(cli, "yshape", params, "Process and view shapes.");
   parse_cli(cli, argc, argv);
 }
 

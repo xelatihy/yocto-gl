@@ -38,247 +38,6 @@
 #endif
 using namespace yocto;
 
-// convert params
-struct convert_params {
-  string shape       = "shape.ply";
-  string output      = "out.ply";
-  bool   info        = false;
-  bool   smooth      = false;
-  bool   facet       = false;
-  bool   aspositions = false;
-  bool   astriangles = false;
-  vec3f  translate   = {0, 0, 0};
-  vec3f  rotate      = {0, 0, 0};
-  vec3f  scale       = {1, 1, 1};
-  float  scaleu      = 1;
-};
-
-void add_command(cli_command& cli, const string& name, convert_params& value,
-    const string& usage) {
-  auto& cmd = add_command(cli, name, usage);
-  add_argument(cmd, "shape", value.shape, "Input shape.");
-  add_option(cmd, "output", value.output, "Output shape.", {}, "o");
-  add_option(cmd, "smooth", value.smooth, "Smooth normals.");
-  add_option(cmd, "facet", value.facet, "Facet normals.");
-  add_option(
-      cmd, "aspositions", value.aspositions, "Remove all but positions.");
-  add_option(cmd, "astriangles", value.astriangles, "Convert to triangles.");
-  add_option(cmd, "translatex", value.translate.x, "Translate shape.");
-  add_option(cmd, "translatey", value.translate.y, "Translate shape.");
-  add_option(cmd, "translatez", value.translate.z, "Translate shape.");
-  add_option(cmd, "scalex", value.scale.x, "Scale shape.");
-  add_option(cmd, "scaley", value.scale.y, "Scale shape.");
-  add_option(cmd, "scalez", value.scale.z, "Scale shape.");
-  add_option(cmd, "scaleu", value.scaleu, "Scale shape.");
-  add_option(cmd, "rotatex", value.rotate.x, "Rotate shape.");
-  add_option(cmd, "rotatey", value.rotate.y, "Rotate shape.");
-  add_option(cmd, "rotatez", value.rotate.z, "Rotate shape.");
-}
-
-// convert images
-int run_convert(const convert_params& params) {
-  // shape data
-  auto shape = shape_data{};
-
-  // load mesh
-  auto ioerror = ""s;
-  print_progress("load shape", 0, 1);
-  if (!load_shape(params.shape, shape, ioerror, false)) print_fatal(ioerror);
-  print_progress("load shape", 1, 1);
-
-  // remove data
-  if (params.aspositions) {
-    shape.normals   = {};
-    shape.texcoords = {};
-    shape.colors    = {};
-    shape.radius    = {};
-  }
-
-  // convert data
-  if (params.astriangles) {
-    if (!shape.quads.empty()) {
-      shape.triangles = quads_to_triangles(shape.quads);
-      shape.quads     = {};
-    }
-  }
-
-  // print stats
-  if (params.info) {
-    print_info("shape stats ------------");
-    auto stats = shape_stats(shape);
-    for (auto& stat : stats) print_info(stat);
-  }
-
-  // transform
-  if (params.translate != vec3f{0, 0, 0} || params.rotate != vec3f{0, 0, 0} ||
-      params.scale != vec3f{1, 1, 1} || params.scaleu != 1) {
-    print_progress("transform shape", 0, 1);
-    auto translation = translation_frame(params.translate);
-    auto scaling     = scaling_frame(params.scale * params.scaleu);
-    auto rotation    = rotation_frame({1, 0, 0}, radians(params.rotate.x)) *
-                    rotation_frame({0, 0, 1}, radians(params.rotate.z)) *
-                    rotation_frame({0, 1, 0}, radians(params.rotate.y));
-    auto xform = translation * scaling * rotation;
-    for (auto& p : shape.positions) p = transform_point(xform, p);
-    auto nonuniform_scaling = min(params.scale) != max(params.scale);
-    for (auto& n : shape.normals)
-      n = transform_normal(xform, n, nonuniform_scaling);
-    print_progress("transform shape", 1, 1);
-  }
-
-  // compute normals
-  if (params.smooth) {
-    print_progress("smooth shape", 0, 1);
-    if (!shape.points.empty()) {
-      shape.normals = vector<vec3f>{shape.positions.size(), {0, 0, 1}};
-    } else if (!shape.lines.empty()) {
-      shape.normals = lines_tangents(shape.lines, shape.positions);
-    } else if (!shape.triangles.empty()) {
-      shape.normals = triangles_normals(shape.triangles, shape.positions);
-    } else if (!shape.quads.empty()) {
-      shape.normals = quads_normals(shape.quads, shape.positions);
-    }
-    print_progress("smooth shape", 1, 1);
-  }
-
-  // remove normals
-  if (params.facet) {
-    print_progress("facet shape", 0, 1);
-    shape.normals = {};
-    print_progress("facet shape", 1, 1);
-  }
-
-  if (params.info) {
-    print_info("shape stats ------------");
-    auto stats = shape_stats(shape);
-    for (auto& stat : stats) print_info(stat);
-  }
-
-  // save mesh
-  print_progress("save shape", 0, 1);
-  if (!save_shape(params.output, shape, ioerror, false)) print_fatal(ioerror);
-  print_progress("save shape", 1, 1);
-
-  // done
-  return 0;
-}
-
-// fvconvert params
-struct fvconvert_params {
-  string shape       = "shape.obj";
-  string output      = "out.obj";
-  bool   info        = false;
-  bool   smooth      = false;
-  bool   facet       = false;
-  bool   aspositions = false;
-  vec3f  translate   = {0, 0, 0};
-  vec3f  rotate      = {0, 0, 0};
-  vec3f  scale       = {1, 1, 1};
-  float  scaleu      = 1;
-};
-
-void add_command(cli_command& cli, const string& name, fvconvert_params& value,
-    const string& usage) {
-  auto& cmd = add_command(cli, name, usage);
-  add_argument(cmd, "shape", value.shape, "Input shape.");
-  add_option(cmd, "output", value.output, "Output shape.", {}, "o");
-  add_option(cmd, "smooth", value.smooth, "Smooth normals.");
-  add_option(cmd, "facet", value.facet, "Facet normals.");
-  add_option(
-      cmd, "aspositions", value.aspositions, "Remove all but positions.");
-  add_option(cmd, "translatex", value.translate.x, "Translate shape.");
-  add_option(cmd, "translatey", value.translate.y, "Translate shape.");
-  add_option(cmd, "translatez", value.translate.z, "Translate shape.");
-  add_option(cmd, "scalex", value.scale.x, "Scale shape.");
-  add_option(cmd, "scaley", value.scale.y, "Scale shape.");
-  add_option(cmd, "scalez", value.scale.z, "Scale shape.");
-  add_option(cmd, "scaleu", value.scaleu, "Scale shape.");
-  add_option(cmd, "rotatex", value.rotate.x, "Rotate shape.");
-  add_option(cmd, "rotatey", value.rotate.y, "Rotate shape.");
-  add_option(cmd, "rotatez", value.rotate.z, "Rotate shape.");
-}
-
-// convert images
-int run_fvconvert(const fvconvert_params& params) {
-  // mesh data
-  auto shape = fvshape_data{};
-
-  // load mesh
-  auto ioerror = ""s;
-  print_progress("load shape", 0, 1);
-  if (path_filename(params.shape) == ".ypreset") {
-    if (!make_fvshape_preset(shape, path_basename(params.shape), ioerror))
-      print_fatal(ioerror);
-  } else {
-    if (!load_fvshape(params.shape, shape, ioerror)) print_fatal(ioerror);
-  }
-  print_progress("load shape", 1, 1);
-
-  // remove data
-  if (params.aspositions) {
-    shape.normals       = {};
-    shape.texcoords     = {};
-    shape.quadsnorm     = {};
-    shape.quadstexcoord = {};
-  }
-
-  // print info
-  if (params.info) {
-    print_info("shape stats ------------");
-    auto stats = fvshape_stats(shape);
-    for (auto& stat : stats) print_info(stat);
-  }
-
-  // transform
-  if (params.translate != vec3f{0, 0, 0} || params.rotate != vec3f{0, 0, 0} ||
-      params.scale != vec3f{1, 1, 1} || params.scaleu != 1) {
-    print_progress("transform shape", 0, 1);
-    auto translation = translation_frame(params.translate);
-    auto scaling     = scaling_frame(params.scale * params.scaleu);
-    auto rotation    = rotation_frame({1, 0, 0}, radians(params.rotate.x)) *
-                    rotation_frame({0, 0, 1}, radians(params.rotate.z)) *
-                    rotation_frame({0, 1, 0}, radians(params.rotate.y));
-    auto xform = translation * scaling * rotation;
-    for (auto& p : shape.positions) p = transform_point(xform, p);
-    auto nonuniform_scaling = min(params.scale) != max(params.scale);
-    for (auto& n : shape.normals)
-      n = transform_normal(xform, n, nonuniform_scaling);
-    print_progress("transform shape", 1, 1);
-  }
-
-  // compute normals
-  if (params.smooth) {
-    print_progress("smooth shape", 0, 1);
-    if (!shape.quadspos.empty()) {
-      shape.normals = quads_normals(shape.quadspos, shape.positions);
-      if (!shape.quadspos.empty()) shape.quadsnorm = shape.quadspos;
-    }
-    print_progress("smooth shape", 1, 1);
-  }
-
-  // remove normals
-  if (params.facet) {
-    print_progress("facet shape", 0, 1);
-    shape.normals   = {};
-    shape.quadsnorm = {};
-    print_progress("facet shape", 1, 1);
-  }
-
-  if (params.info) {
-    print_info("shape stats ------------");
-    auto stats = fvshape_stats(shape);
-    for (auto& stat : stats) print_info(stat);
-  }
-
-  // save mesh
-  print_progress("save shape", 0, 1);
-  if (!save_fvshape(params.output, shape, ioerror, true)) print_fatal(ioerror);
-  print_progress("save shape", 1, 1);
-
-  // done
-  return 0;
-}
-
 // view params
 struct view_params {
   string shape  = "shape.ply";
@@ -327,91 +86,6 @@ int run_view(const view_params& params) {
 }
 
 #endif
-
-struct heightfield_params {
-  string image     = "heightfield.png"s;
-  string output    = "out.ply"s;
-  bool   smooth    = false;
-  float  height    = 1.0f;
-  bool   info      = false;
-  vec3f  translate = {0, 0, 0};
-  vec3f  rotate    = {0, 0, 0};
-  vec3f  scale     = {1, 1, 1};
-  float  scaleu    = 1;
-};
-
-void add_command(cli_command& cli, const string& name,
-    heightfield_params& value, const string& usage) {
-  auto& cmd = add_command(cli, name, usage);
-  add_argument(cmd, "image", value.image, "Input image.");
-  add_option(cmd, "output", value.output, "Output shape.", {}, "o");
-  add_option(cmd, "smooth", value.smooth, "Smoooth normals.");
-  add_option(cmd, "height", value.height, "Shape height.");
-  add_option(cmd, "info", value.info, "Print info.");
-  add_option(cmd, "translatex", value.translate.x, "Translate shape.");
-  add_option(cmd, "translatey", value.translate.y, "Translate shape.");
-  add_option(cmd, "translatez", value.translate.z, "Translate shape.");
-  add_option(cmd, "scalex", value.scale.x, "Scale shape.");
-  add_option(cmd, "scaley", value.scale.y, "Scale shape.");
-  add_option(cmd, "scalez", value.scale.z, "Scale shape.");
-  add_option(cmd, "scaleu", value.scaleu, "Scale shape.");
-  add_option(cmd, "rotatex", value.rotate.x, "Rotate shape.");
-  add_option(cmd, "rotatey", value.rotate.y, "Rotate shape.");
-  add_option(cmd, "rotatez", value.rotate.z, "Rotate shape.");
-}
-
-int run_heightfield(const heightfield_params& params) {
-  // load mesh
-  auto image   = image_data{};
-  auto ioerror = ""s;
-  print_progress("load image", 0, 1);
-  if (!load_image(params.image, image, ioerror)) print_fatal(ioerror);
-  print_progress("load image", 1, 1);
-
-  // convert to float
-  if (!!image.pixelsf.empty())
-    image = convert_image(image, image.linear, false);
-
-  // adjust height
-  if (params.height != 1) {
-    for (auto& pixel : image.pixelsf) pixel *= params.height;
-  }
-
-  // create heightfield
-  auto shape = make_heightfield({image.width, image.height}, image.pixelsf);
-  if (!params.smooth) shape.normals.clear();
-
-  // print info
-  if (params.info) {
-    print_info("shape stats ------------");
-    auto stats = shape_stats(shape);
-    for (auto& stat : stats) print_info(stat);
-  }
-
-  // transform
-  if (params.translate != vec3f{0, 0, 0} || params.rotate != vec3f{0, 0, 0} ||
-      params.scale != vec3f{1, 1, 1}) {
-    print_progress("transform shape", 0, 1);
-    auto translation = translation_frame(params.translate);
-    auto scaling     = scaling_frame(params.scale);
-    auto rotation    = rotation_frame({1, 0, 0}, radians(params.rotate.x)) *
-                    rotation_frame({0, 0, 1}, radians(params.rotate.z)) *
-                    rotation_frame({0, 1, 0}, radians(params.rotate.y));
-    auto xform = translation * scaling * rotation;
-    for (auto& p : shape.positions) p = transform_point(xform, p);
-    auto nonuniform_scaling = min(params.scale) != max(params.scale);
-    for (auto& n : shape.normals)
-      n = transform_normal(xform, n, nonuniform_scaling);
-    print_progress("transform shape", 1, 1);
-  }
-  // save mesh
-  print_progress("save shape", 0, 1);
-  if (!save_shape(params.output, shape, ioerror)) print_fatal(ioerror);
-  print_progress("save shape", 1, 1);
-
-  // done
-  return 0;
-}
 
 struct glview_params {
   string shape = "shape.ply";
@@ -510,13 +184,170 @@ int run_glview(const glview_params& params) {
 
 #endif
 
+struct glpath_params {
+  string shape = "shape.ply";
+};
+
+// Cli
+void add_command(cli_command& cli, const string& name, glpath_params& value,
+    const string& usage) {
+  auto& cmd = add_command(cli, name, usage);
+  add_argument(cmd, "shape", value.shape, "Input shape.");
+}
+
+#ifndef YOCTO_OPENGL
+
+// view shapes
+int run_glview(const glview_params& params) {
+  return print_fatal("Opengl not compiled");
+}
+
+#else
+
+static scene_scene make_pathscene(
+    const scene_shape& ioshape_, progress_callback progress_cb) {
+  // Frame camera
+  auto camera_frame = [](float lens, float aspect,
+                          float film = 0.036) -> frame3f {
+    auto camera_dir  = normalize(vec3f{0, 0.5, 1});
+    auto bbox_radius = 2.0f;
+    auto camera_dist = bbox_radius * lens / (film / aspect);
+    return lookat_frame(camera_dir * camera_dist, {0, 0, 0}, {0, 1, 0});
+  };
+
+  // handle progress
+  auto progress = vec2i{0, 5};
+  if (progress_cb) progress_cb("create scene", progress.x++, progress.y);
+
+  // init scene
+  auto scene = scene_scene{};
+
+  // rescale shape to unit
+  auto ioshape = ioshape_;
+  auto bbox    = invalidb3f;
+  for (auto& pos : ioshape.positions) bbox = merge(bbox, pos);
+  for (auto& pos : ioshape.positions) pos -= center(bbox);
+  for (auto& pos : ioshape.positions) pos /= max(size(bbox));
+  // TODO(fabio): this should be a math function
+
+  // camera
+  if (progress_cb) progress_cb("create camera", progress.x++, progress.y);
+  auto& camera  = scene.cameras.emplace_back();
+  camera.frame  = camera_frame(0.050, 16.0f / 9.0f, 0.036);
+  camera.lens   = 0.050;
+  camera.aspect = 16.0f / 9.0f;
+  camera.film   = 0.036;
+  camera.focus  = length(camera.frame.o - center(bbox));
+
+  // material
+  if (progress_cb) progress_cb("create material", progress.x++, progress.y);
+  auto& shape_material      = scene.materials.emplace_back();
+  shape_material.type       = material_type::plastic;
+  shape_material.color      = {0.5, 1, 0.5};
+  shape_material.roughness  = 0.2;
+  auto& points_material     = scene.materials.emplace_back();
+  points_material.type      = material_type::matte;
+  points_material.color     = {0, 0, 0};
+  points_material.roughness = 0.2;
+
+  // shapes
+  if (progress_cb) progress_cb("create shape", progress.x++, progress.y);
+  scene.shapes.emplace_back(ioshape);
+  auto& points_shape = scene.shapes.emplace_back();
+  points_shape.positions.push_back({0, 0, 0});
+  points_shape.points.push_back(0);
+
+  // instances
+  if (progress_cb) progress_cb("create instance", progress.x++, progress.y);
+  auto& shape_instance     = scene.instances.emplace_back();
+  shape_instance.shape     = 0;
+  shape_instance.material  = 0;
+  auto& points_instance    = scene.instances.emplace_back();
+  points_instance.shape    = 1;
+  points_instance.material = 1;
+
+  // done
+  if (progress_cb) progress_cb("create scene", progress.x++, progress.y);
+  return scene;
+}
+
+int run_glpath(const glpath_params& params) {
+  // loading shape
+  auto ioerror = ""s;
+  auto ioshape = scene_shape{};
+  print_progress("load shape", 0, 1);
+  if (!load_shape(params.shape, ioshape, ioerror)) print_fatal(ioerror);
+  if (!ioshape.quads.empty()) {
+    ioshape.triangles = quads_to_triangles(ioshape.quads);
+    ioshape.quads     = {};
+  }
+  print_progress("load shape", 1, 1);
+
+  // create scene
+  auto scene = make_pathscene(ioshape, print_progress);
+
+  // bvh
+  auto& shape = scene.shapes.at(0);
+  auto  bvh   = make_triangles_bvh(shape.triangles, shape.positions, {});
+
+  // stroke
+  auto stroke = vector<shape_point>{};
+
+  // run viewer
+  glview_scene(
+      scene, params.shape, "", print_progress,
+      [&](gui_window* win, const gui_input& input, scene_scene& scene,
+          shade_scene& glscene) {},
+      [&](gui_window* win, const gui_input& input, scene_scene& scene,
+          shade_scene& glscene) {
+        auto& shape   = scene.shapes.at(0);
+        auto& camera  = scene.cameras.at(0);
+        auto  updated = false;
+        if (input.mouse_left && input.modifier_ctrl) {
+          if (input.modifier_shift) {
+            stroke.clear();
+            updated = true;
+          } else {
+            auto mouse_uv = vec2f{
+                input.mouse_pos.x / float(input.window_size.x),
+                input.mouse_pos.y / float(input.window_size.y)};
+            auto ray  = camera_ray(camera.frame, camera.lens, camera.aspect,
+                camera.film, mouse_uv);
+            auto isec = intersect_triangles_bvh(
+                bvh, shape.triangles, shape.positions, ray, false);
+            if (isec.hit) {
+              stroke.push_back({isec.element, isec.uv});
+              updated = true;
+            }
+          }
+        }
+        if (updated) {
+          auto& points = scene.shapes.at(1);
+          points.positions.clear();
+          points.points.clear();
+          for (auto [element, uv] : stroke) {
+            points.positions.push_back(
+                eval_position(shape, element, uv) +
+                eval_normal(shape, element, uv) * 0.001f);
+            points.points.push_back((int)points.positions.size() - 1);
+          }
+          set_positions(glscene.shapes.at(1), points.positions);
+          set_points(glscene.shapes.at(1), points.points);
+          glscene.shapes.at(1).point_size = 10;
+        }
+      });
+
+  // done
+  return 0;
+}
+
+#endif
+
 struct app_params {
-  string             command     = "convert";
-  convert_params     convert     = {};
-  fvconvert_params   fvconvert   = {};
-  view_params        view        = {};
-  heightfield_params heightfield = {};
-  glview_params      glview      = {};
+  string        command = "view";
+  view_params   view    = {};
+  glview_params glview  = {};
+  glpath_params glpath  = {};
 };
 
 // Cli
@@ -524,18 +355,15 @@ void add_commands(cli_command& cli, const string& name, app_params& value,
     const string& usage) {
   cli = make_cli(name, usage);
   add_command_name(cli, "command", value.command, "Command.");
-  add_command(cli, "convert", value.convert, "Convert shapes.");
-  add_command(
-      cli, "fvconvert", value.fvconvert, "Convert face-varying shapes.");
   add_command(cli, "view", value.view, "View shapes.");
-  add_command(cli, "heightfield", value.heightfield, "Create an heightfield.");
   add_command(cli, "glview", value.glview, "View shapes with OpenGL.");
+  add_command(cli, "glpath", value.glpath, "Trace paths with OpenGL.");
 }
 
 // Parse cli
 void parse_cli(app_params& params, int argc, const char** argv) {
   auto cli = cli_command{};
-  add_commands(cli, "yhape", params, "Process and view shapes.");
+  add_commands(cli, "ymesh", params, "Process and view meshes.");
   parse_cli(cli, argc, argv);
 }
 
@@ -545,16 +373,12 @@ int main(int argc, const char* argv[]) {
   parse_cli(params, argc, argv);
 
   // dispatch commands
-  if (params.command == "convert") {
-    return run_convert(params.convert);
-  } else if (params.command == "fvconvert") {
+  if (params.command == "view") {
     return run_view(params.view);
-  } else if (params.command == "view") {
-    return run_view(params.view);
-  } else if (params.command == "heightfield") {
-    return run_heightfield(params.heightfield);
   } else if (params.command == "glview") {
     return run_glview(params.glview);
+  } else if (params.command == "glpath") {
+    return run_glpath(params.glpath);
   } else {
     return print_fatal("unknown command " + params.command);
   }
