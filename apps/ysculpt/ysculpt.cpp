@@ -711,7 +711,7 @@ int run_glsculpt(const glsculpt_params &params_) {
   auto ioerror = ""s;
   auto ioshape = scene_shape{};
   print_progress("load shape", 0, 1);
-  if (!load_shape(params_.shape, ioshape, ioerror)) print_fatal(ioerror);
+  if (!load_shape(params_.shape, ioshape, ioerror, true)) print_fatal(ioerror);
   if (!ioshape.quads.empty()) {
     ioshape.triangles = quads_to_triangles(ioshape.quads);
     ioshape.quads.clear();

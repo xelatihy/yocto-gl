@@ -3516,7 +3516,7 @@ static bool load_ply_scene(const string& filename, scene_scene& scene,
 
   // load ply mesh
   auto& shape = scene.shapes.emplace_back();
-  if (!load_shape(filename, shape, error, false)) return false;
+  if (!load_shape(filename, shape, error, true)) return false;
 
   // create instance
   auto& instance = scene.instances.emplace_back();
@@ -3568,7 +3568,7 @@ static bool load_stl_scene(const string& filename, scene_scene& scene,
 
   // load stl mesh
   auto& shape = scene.shapes.emplace_back();
-  if (!load_shape(filename, shape, error, false)) return false;
+  if (!load_shape(filename, shape, error, true)) return false;
 
   // create instance
   auto& instance = scene.instances.emplace_back();
