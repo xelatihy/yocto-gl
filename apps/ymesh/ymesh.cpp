@@ -304,6 +304,7 @@ int run_glpath(const glpath_params& params) {
   auto adjacencies = face_adjacencies(shape.triangles);
   auto solver      = make_dual_geodesic_solver(
       shape.triangles, shape.positions, adjacencies);
+  auto bezier = true;
 
   // run viewer
   glview_scene(
@@ -348,8 +349,12 @@ int run_glpath(const glpath_params& params) {
           set_texcoords(glscene.shapes.at(1), points.texcoords);
           set_quads(glscene.shapes.at(1), points.quads);
           glscene.shapes.at(1).point_size = 10;
-          auto path       = compute_shortest_path(solver, shape.triangles,
-              shape.positions, adjacencies, (vector<mesh_point>&)stroke);
+          auto path = bezier ? compute_bezier_path(solver, shape.triangles,
+                                   shape.positions, adjacencies,
+                                   (vector<mesh_point>&)stroke)
+                             : compute_shortest_path(solver, shape.triangles,
+                                   shape.positions, adjacencies,
+                                   (vector<mesh_point>&)stroke);
           auto ppositions = vector<vec3f>{};
           for (auto [element, uv] : path) {
             ppositions.push_back(eval_position(shape, element, uv));
