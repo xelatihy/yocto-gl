@@ -38,7 +38,6 @@
 
 #include <cassert>
 #include <deque>
-#include <filesystem>
 #include <memory>
 #include <stdexcept>
 #include <string>
@@ -58,23 +57,6 @@ using std::deque;
 using std::pair;
 using std::unordered_set;
 using namespace std::string_literals;
-
-}  // namespace yocto
-
-// -----------------------------------------------------------------------------
-// PATH UTILITIES
-// -----------------------------------------------------------------------------
-namespace yocto {
-
-// Make a path from a utf8 string
-static std::filesystem::path make_path(const string& filename) {
-  return std::filesystem::u8path(filename);
-}
-
-// Get extension (including .)
-static string path_extension(const string& filename) {
-  return make_path(filename).extension().u8string();
-}
 
 }  // namespace yocto
 
@@ -115,6 +97,8 @@ static int find_in_vec(const vec3i& vec, int x) {
   return -1;
 }
 
+inline int mod3(int i) { return (i > 2) ? i - 3 : i; }
+
 }  // namespace yocto
 
 // -----------------------------------------------------------------------------
@@ -122,7 +106,6 @@ static int find_in_vec(const vec3i& vec, int x) {
 // -----------------------------------------------------------------------------
 namespace yocto {
 
-// TODO: cleanup
 pair<bool, int> bary_is_vert(const vec3f& bary, float tol) {
   if (bary[0] > tol && bary[1] <= tol && bary[2] <= tol) return {true, 0};
   if (bary[1] > tol && bary[0] <= tol && bary[2] <= tol) return {true, 1};
@@ -130,7 +113,6 @@ pair<bool, int> bary_is_vert(const vec3f& bary, float tol) {
   return {false, -1};
 }
 
-// TODO: cleanup
 pair<bool, int> bary_is_edge(const vec3f& bary, float tol) {
   if (bary[0] > tol && bary[1] > tol && bary[2] <= tol) return {true, 0};
   if (bary[1] > tol && bary[2] > tol && bary[0] <= tol) return {true, 1};
@@ -138,7 +120,6 @@ pair<bool, int> bary_is_edge(const vec3f& bary, float tol) {
   return {false, -1};
 }
 
-// TODO: cleanup
 pair<bool, int> point_is_vert(const mesh_point& p, float tol) {
   auto bary = vec3f{1 - p.uv.x - p.uv.y, p.uv.x, p.uv.y};
   if (bary[0] > tol && bary[1] <= tol && bary[2] <= tol) return {true, 0};
@@ -147,7 +128,6 @@ pair<bool, int> point_is_vert(const mesh_point& p, float tol) {
   return {false, -1};
 }
 
-// TODO: cleanup
 pair<bool, int> point_is_edge(const mesh_point& p, float tol) {
   auto bary = vec3f{1 - p.uv.x - p.uv.y, p.uv.x, p.uv.y};
   if (bary[0] > tol && bary[1] > tol && bary[2] <= tol) return {true, 0};
@@ -156,7 +136,6 @@ pair<bool, int> point_is_edge(const mesh_point& p, float tol) {
   return {false, -1};
 }
 
-// TODO: cleanup
 pair<bool, vec2f> point_in_triangle(const vector<vec3i>& triangles,
     const vector<vec3f>& positions, int tid, const vec3f& point, float tol) {
   // http://www.r-5.org/files/books/computers/algo-list/realtime-3d/Christer_Ericson-Real-Time_Collision_Detection-EN.pdf
@@ -215,7 +194,6 @@ vec2f intersect_circles(const vec2f& c2, float R2, const vec2f& c1, float R1) {
   return result / 2;
 }
 
-// TODO: cleanup
 unfold_triangle init_flat_triangle(
     const vector<vec3f>& positions, const vec3i& tr) {
   auto tr2d = unfold_triangle{};
@@ -270,7 +248,6 @@ unfold_triangle unfold_face(const vector<vec3i>& triangles,
   return res;
 }
 
-// TODO: cleanup
 static unfold_triangle unfold_face(const vector<vec3i>& triangles,
     const vector<vec3f>& positions, const vector<vec3i>& adjacencies,
     const unfold_triangle& tr, int face, int k) {
@@ -346,7 +323,6 @@ vec2i get_edge(const vector<vec3i>& triangles, const vector<vec3f>& positions,
   return vec2i{tr[k], tr[mod3(k + 1)]};
 }
 
-// TODO: cleanup
 // "strip" must be such that strip.back()=p.face and strip[0] must share at
 // least one vertex with p.face.
 // Under this hypoteses, this function gives back the distance between the
@@ -940,7 +916,7 @@ vector<float> compute_geodesic_distances(const geodesic_solver& solver,
 // Compute all shortest paths from source vertices to any other vertex.
 // Paths are implicitly represented: each node is assigned its previous node
 // in the path. Graph search early exits when reching end_vertex.
-vector<int> compute_geodesic_paths(
+vector<int> compute_geodesic_parents(
     const geodesic_solver& solver, const vector<int>& sources, int end_vertex) {
   auto parents   = vector<int>(solver.graph.size(), -1);
   auto distances = vector<float>(solver.graph.size(), flt_max);
@@ -1111,6 +1087,17 @@ vec3f compute_gradient(const vec3i& triangle, const vector<vec3f>& positions,
   result += field[triangle.z] * cross(normal, xy);
   return result;
 }
+
+// Description of a discrete path along the surface of a triangle mesh.
+struct surface_path {
+  struct vertex {
+    vec2i edge  = {0, 0};
+    int   face  = 0;
+    float alpha = 0;
+  };
+  int            start, end;
+  vector<vertex> vertices;
+};
 
 // TODO: cleanup
 // The functionalities under namespace `integral_paths` are now obsolete and can
@@ -1467,7 +1454,6 @@ surface_path integrate_field(const vector<vec3i>& triangles,
       triangles, positions, adjacency, tags, tag, field, from);
 }
 
-// TODO: cleanup
 surface_path integrate_field(const vector<vec3i>& triangles,
     const vector<vec3f>& positions, const vector<vec3i>& adjacency,
     const vector<int>& tags, int tag, const vector<float>& field, int from,
@@ -1476,13 +1462,11 @@ surface_path integrate_field(const vector<vec3i>& triangles,
       triangles, positions, adjacency, tags, tag, field, from, to);
 }
 
-// TODO: cleanup
 vector<vec3f> make_positions_from_path(
     const surface_path& path, const vector<vec3f>& mesh_positions) {
   return integral_paths::make_positions_from_path(path, mesh_positions);
 }
 
-// TODO: cleanup
 // compute the distance between a point p and some vertices around him
 // handling concave path
 static vector<pair<int, float>> nodes_around_point(
@@ -1512,7 +1496,6 @@ static vector<pair<int, float>> nodes_around_point(
   return nodes;
 }
 
-// TODO: cleanup
 vector<float> solve_with_parents(const geodesic_solver& solver,
     const vector<pair<int, float>>&                     sources_and_dist,
     const vector<pair<int, float>>& targets, vector<int>& parents,
@@ -1546,7 +1529,6 @@ vector<float> solve_with_parents(const geodesic_solver& solver,
   return distances;
 }
 
-// TODO: cleanup
 // given a set of vertices and distances (nbr) computed with
 // "nodes_around_point" and a scalar field (f), returns the parent of the
 // point having nbr as neighborhood
@@ -1568,7 +1550,6 @@ int set_target_parent(const vector<pair<int, float>>& nbr,
   }
 }
 
-// TODO: cleanup
 // given a vector of parents(parents) and a starting vertex (target_parent),
 // return the vertex v such that parents[v]=-1; all the vertices visited
 // during the navigation are stored in "path"
@@ -1588,12 +1569,11 @@ int set_source_child(
   return prev;
 }
 
-// TODO: cleanup
 // utilities:nodes_around_point-->length_by_flattening
 // returns the shortest path starting from target to source as a list of
 // indices of nodes of the graph(solver). note: the list does not contains
 // source if it is a vertex
-vector<int> point_to_point_geodesic_path(const geodesic_solver& solver,
+vector<int> compute_geodesic_parents(const geodesic_solver& solver,
     const vector<vec3i>& triangles, const vector<vec3f>& positions,
     const vector<vec3i>& adjacencies, const mesh_point& source,
     const mesh_point& target) {
@@ -1618,11 +1598,10 @@ vector<int> point_to_point_geodesic_path(const geodesic_solver& solver,
   return path;
 }
 
-// TODO: cleanup
-// same function of "compute_geodesic_paths" of yocto_mesh.cpp that makes
+// same function of "compute_geodesic_parents" of yocto_mesh.cpp that makes
 // early exit when reaching end_vertex, the name is changed because the input
 // parameters are the same
-vector<int> compute_pruned_geodesic_paths(
+vector<int> compute_pruned_geodesic_parents(
     const geodesic_solver& solver, const vector<int>& sources, int end_vertex) {
   auto parents   = vector<int>(solver.graph.size(), -1);
   auto distances = vector<float>(solver.graph.size(), flt_max);
@@ -1636,22 +1615,21 @@ vector<int> compute_pruned_geodesic_paths(
   return parents;
 }
 
-// TODO: cleanup
 // returns the shortest path starting from target to source as a list of
 // indices of nodes of the graph(solver). note: the list does not contains
 // source and target.
-vector<int> point_to_point_geodesic_path(const geodesic_solver& solver,
+vector<int> compute_geodesic_parents(const geodesic_solver& solver,
     const vector<vec3i>& triangles, const vector<vec3f>& positions,
     const vector<vec3i>& adjacencies, int source, int target) {
   vector<int> sources = {source};
-  vector<int> parents = compute_pruned_geodesic_paths(solver, sources, target);
-  vector<int> path    = {};
+  vector<int> parents = compute_pruned_geodesic_parents(
+      solver, sources, target);
+  vector<int> path = {};
   set_source_child(parents, target, path);
   path.pop_back();  // we remove source from the list
   return path;
 }
 
-// TODO: cleanup
 static vector<pair<int, float>> check_nodes(vector<pair<int, float>>& nodes) {
   sort(nodes.begin(), nodes.end());
   auto new_nodes = vector<pair<int, float>>{};
@@ -1673,8 +1651,6 @@ static vector<pair<int, float>> check_nodes(vector<pair<int, float>>& nodes) {
   return nodes;
 }
 
-// TODO: cleanup
-// TODO(fabio): better name
 static vector<float> solve(const geodesic_solver& solver,
     const vector<pair<int, float>>&               sources_and_dist) {
   auto update = [](int node, int neighbor, float new_distance) {};
@@ -1730,7 +1706,6 @@ static vector<float> solve_with_parents(const geodesic_solver& solver,
 }
 #endif
 
-// TODO: cleanup
 vector<float> compute_geodesic_distances(const geodesic_solver& solver,
     const vector<vec3i>& triangles, const vector<vec3f>& positions,
     const vector<vec3i>& adjacencies, const vector<mesh_point>& sources) {
@@ -1978,16 +1953,6 @@ static bool set_ord(int s, int prev_entry, int next_entry, bool nei_is_dual) {
     return false;
 }
 
-// TODO: cleanup
-// static bool set_ord(float theta_next, float theta_prev) {
-//   if (theta_next > theta_prev) {
-//     return theta_next - theta_prev < pif;
-//   } else {
-//     return theta_prev - theta_next > pif;
-//   }
-// }
-
-// TODO: cleanup
 static void fill_strip(vector<int>& strip, const vector<vector<int>>& v2t,
     int vid, int first, int last, bool nei_is_dual, bool ccw) {
   auto  start = first, end = last;
@@ -2012,7 +1977,6 @@ static void fill_strip(vector<int>& strip, const vector<vector<int>>& v2t,
   }
 }
 
-// TODO: cleanup
 static int get_entry(vector<int>& strip, const geodesic_solver& solver,
     const vector<vec3i>& triangles, const vector<vec3f>& positions,
     const vector<vec3i>& adjacencies, const vector<vector<int>>& v2t,
@@ -2061,7 +2025,6 @@ static int get_entry(vector<int>& strip, const geodesic_solver& solver,
   return 0;  // TODO(fabio): cosa deve fare qui?
 }
 
-// TODO: cleanup
 void close_strip(vector<int>& strip, const vector<vector<int>>& v2t, int vid,
     int prev_tri, int last_tri) {
   auto star    = v2t[vid];
@@ -2076,7 +2039,6 @@ void close_strip(vector<int>& strip, const vector<vector<int>>& v2t, int vid,
   fill_strip(strip, v2t, vid, first, last, true, ccw);
 }
 
-// TODO: cleanup
 // particular case of "get strip" when one of the two point is the parent of
 // the other so the size of the strip is one or two
 static vector<int> short_strip(const geodesic_solver& solver,
@@ -2107,18 +2069,16 @@ static vector<int> short_strip(const geodesic_solver& solver,
   return strip;
 }
 
-// TODO: cleanup
 // returns a strip of triangles such target belongs to the first one and
 // source to the last one
-// TODO(fabio_): may be the names could change in order to get the call
-// more consistent with the output)
+// TODO(fabio): better name
 vector<int> get_strip(const geodesic_solver& solver,
     const vector<vec3i>& triangles, const vector<vec3f>& positions,
     const vector<vec3i>& adjacencies, const vector<vector<int>>& v2t,
     const vector<vector<float>>& angles, const mesh_point& source,
     const mesh_point& target) {
   if (target.face == source.face) return {target.face};
-  auto parents = point_to_point_geodesic_path(
+  auto parents = compute_geodesic_parents(
       solver, triangles, positions, adjacencies, source, target);
   auto N     = (int)parents.size();
   auto first = 0, last = 0, prev_entry = 0, next_entry = 0;
@@ -2665,304 +2625,10 @@ mesh_point eval_path_point(const geodesic_path& path,
   return mesh_point{face, uv};
 }
 
-}  // namespace yocto
-
-// -----------------------------------------------------------------------------
-// IMPLEMENTATION OF MESH IO
-// -----------------------------------------------------------------------------
-namespace yocto {
-
-// Load ply mesh
-bool load_mesh(const string& filename, vector<vec3i>& triangles,
-    vector<vec3f>& positions, vector<vec3f>& normals, vector<vec2f>& texcoords,
-    vector<vec4f>& colors, string& error, bool flip_texcoord) {
-  auto format_error = [filename, &error]() {
-    error = filename + ": unknown format";
-    return false;
-  };
-  auto shape_error = [filename, &error]() {
-    error = filename + ": empty shape";
-    return false;
-  };
-
-  triangles = {};
-  positions = {};
-  normals   = {};
-  texcoords = {};
-  colors    = {};
-
-  auto ext = path_extension(filename);
-  if (ext == ".ply" || ext == ".PLY") {
-    auto ply = ply_model{};
-    if (!load_ply(filename, ply, error)) return false;
-    get_positions(ply, positions);
-    get_normals(ply, normals);
-    get_texcoords(ply, texcoords, flip_texcoord);
-    get_colors(ply, colors);
-    get_triangles(ply, triangles);
-    if (triangles.empty()) return shape_error();
-    return true;
-  } else if (ext == ".obj" || ext == ".OBJ") {
-    auto obj = obj_shape{};
-    if (!load_obj(filename, obj, error, true)) return false;
-    auto materials = vector<int>{};
-    get_positions(obj, positions);
-    get_normals(obj, normals);
-    get_texcoords(obj, texcoords, flip_texcoord);
-    get_triangles(obj, triangles, materials);
-    if (triangles.empty()) return shape_error();
-    return true;
-  } else {
-    return format_error();
-  }
-}
-
-// Save ply mesh
-bool save_mesh(const string& filename, const vector<vec3i>& triangles,
-    const vector<vec3f>& positions, const vector<vec3f>& normals,
-    const vector<vec2f>& texcoords, const vector<vec4f>& colors, string& error,
-    bool ascii, bool flip_texcoord) {
-  auto format_error = [filename, &error]() {
-    error = filename + ": unknown format";
-    return false;
-  };
-  auto shape_error = [filename, &error]() {
-    error = filename + ": empty shape";
-    return false;
-  };
-
-  auto ext = path_extension(filename);
-  if (ext == ".ply" || ext == ".PLY") {
-    auto ply = ply_model{};
-    add_positions(ply, positions);
-    add_normals(ply, normals);
-    add_texcoords(ply, texcoords, flip_texcoord);
-    add_colors(ply, colors);
-    add_triangles(ply, triangles);
-    if (!save_ply(filename, ply, error)) return false;
-    return true;
-  } else if (ext == ".obj" || ext == ".OBJ") {
-    auto obj = obj_shape{};
-    add_positions(obj, positions);
-    add_normals(obj, normals);
-    add_texcoords(obj, texcoords, flip_texcoord);
-    add_triangles(obj, triangles, 0, !normals.empty(), !texcoords.empty());
-    if (!save_obj(filename, obj, error)) return false;
-    return true;
-  } else if (ext == ".stl" || ext == ".STL") {
-    auto stl = stl_model{};
-    if (triangles.empty()) return shape_error();
-    add_triangles(stl, triangles, positions, {});
-    if (!save_stl(filename, stl, error)) return false;
-    return true;
-  } else {
-    return format_error();
-  }
-}
-
-// Load ply mesh
-bool load_mesh(const string& filename, vector<vec3i>& triangles,
-    vector<vec3f>& positions, string& error) {
-  auto format_error = [filename, &error]() {
-    error = filename + ": unknown format";
-    return false;
-  };
-  auto shape_error = [filename, &error]() {
-    error = filename + ": empty shape";
-    return false;
-  };
-
-  triangles = {};
-  positions = {};
-
-  auto ext = path_extension(filename);
-  if (ext == ".ply" || ext == ".PLY") {
-    auto ply = ply_model{};
-    if (!load_ply(filename, ply, error)) return false;
-    get_positions(ply, positions);
-    get_triangles(ply, triangles);
-    if (positions.empty()) return shape_error();
-    return true;
-  } else if (ext == ".obj" || ext == ".OBJ") {
-    auto obj = obj_shape{};
-    if (!load_obj(filename, obj, error, true)) return false;
-    auto materials = vector<int>{};
-    get_positions(obj, positions);
-    get_triangles(obj, triangles, materials);
-    if (triangles.empty()) return shape_error();
-    return true;
-  } else if (ext == ".stl" || ext == ".STL") {
-    auto stl = stl_model{};
-    if (!load_stl(filename, stl, error)) return false;
-    if (stl.shapes.empty()) return shape_error();
-    if (stl.shapes.size() > 1) return shape_error();
-    auto fnormals = vector<vec3f>{};
-    if (!get_triangles(stl, 0, triangles, positions, fnormals))
-      return shape_error();
-    if (positions.empty()) return shape_error();
-    return true;
-  } else {
-    return format_error();
-  }
-}
-
-// Save ply mesh
-bool save_mesh(const string& filename, const vector<vec3i>& triangles,
-    const vector<vec3f>& positions, string& error, bool ascii) {
-  auto format_error = [filename, &error]() {
-    error = filename + ": unknown format";
-    return false;
-  };
-  auto shape_error = [filename, &error]() {
-    error = filename + ": empty shape";
-    return false;
-  };
-
-  auto ext = path_extension(filename);
-  if (ext == ".ply" || ext == ".PLY") {
-    auto ply = ply_model{};
-    if (triangles.empty()) return shape_error();
-    add_positions(ply, positions);
-    add_triangles(ply, triangles);
-    if (!save_ply(filename, ply, error)) return false;
-    return true;
-  } else if (ext == ".obj" || ext == ".OBJ") {
-    auto obj = obj_shape{};
-    add_positions(obj, positions);
-    add_triangles(obj, triangles, 0, false, false);
-    auto err = ""s;
-    if (!save_obj(filename, obj, error)) return false;
-    return true;
-  } else if (ext == ".stl" || ext == ".STL") {
-    auto stl = stl_model{};
-    if (triangles.empty()) return shape_error();
-    add_triangles(stl, triangles, positions, {});
-    if (!save_stl(filename, stl, error)) return false;
-    return true;
-  } else {
-    return format_error();
-  }
-}
-
-// Load ply mesh
-bool load_lines(const string& filename, vector<vec2i>& lines,
-    vector<vec3f>& positions, vector<vec3f>& normals, vector<vec2f>& texcoords,
-    vector<vec4f>& colors, string& error, bool flip_texcoord) {
-  auto format_error = [filename, &error]() {
-    error = filename + ": unknown format";
-    return false;
-  };
-  auto shape_error = [filename, &error]() {
-    error = filename + ": empty shape";
-    return false;
-  };
-
-  lines     = {};
-  positions = {};
-  normals   = {};
-  texcoords = {};
-  colors    = {};
-
-  auto ext = path_extension(filename);
-  if (ext == ".ply" || ext == ".PLY") {
-    auto ply = ply_model{};
-    if (!load_ply(filename, ply, error)) return false;
-    get_positions(ply, positions);
-    get_normals(ply, normals);
-    get_texcoords(ply, texcoords, flip_texcoord);
-    get_colors(ply, colors);
-    get_lines(ply, lines);
-    if (positions.empty()) return shape_error();
-    return true;
-  } else if (ext == ".obj" || ext == ".OBJ") {
-    auto obj = obj_shape{};
-    if (!load_obj(filename, obj, error, true)) return false;
-    auto materials = vector<int>{};
-    get_positions(obj, positions);
-    get_normals(obj, normals);
-    get_texcoords(obj, texcoords, flip_texcoord);
-    get_lines(obj, lines, materials);
-    if (lines.empty()) return shape_error();
-    return true;
-  } else {
-    return format_error();
-  }
-}
-
-// Save ply mesh
-bool save_lines(const string& filename, const vector<vec2i>& lines,
-    const vector<vec3f>& positions, const vector<vec3f>& normals,
-    const vector<vec2f>& texcoords, const vector<vec4f>& colors, string& error,
-    bool ascii, bool flip_texcoord) {
-  auto format_error = [filename, &error]() {
-    error = filename + ": unknown format";
-    return false;
-  };
-  auto shape_error = [filename, &error]() {
-    error = filename + ": empty shape";
-    return false;
-  };
-
-  auto ext = path_extension(filename);
-  if (ext == ".ply" || ext == ".PLY") {
-    auto ply = ply_model{};
-    add_positions(ply, positions);
-    add_normals(ply, normals);
-    add_texcoords(ply, texcoords, flip_texcoord);
-    add_colors(ply, colors);
-    add_lines(ply, lines);
-    if (!save_ply(filename, ply, error)) return false;
-    return true;
-  } else if (ext == ".obj" || ext == ".OBJ") {
-    auto obj = obj_shape{};
-    add_positions(obj, positions);
-    add_normals(obj, normals);
-    add_texcoords(obj, texcoords, flip_texcoord);
-    add_lines(obj, lines, 0, !normals.empty(), !texcoords.empty());
-    if (!save_obj(filename, obj, error)) return false;
-    return true;
-  } else {
-    return format_error();
-  }
-}
-
-}  // namespace yocto
-
-// -----------------------------------------------------------------------------
-// IMPLEMENTATION OF SHAPE STATS AND VALIDATION
-// -----------------------------------------------------------------------------
-namespace yocto {
-
-vector<string> mesh_stats(const vector<vec3i>& triangles,
-    const vector<vec3f>& positions, const vector<vec3f>& normals,
-    const vector<vec2f>& texcoords, const vector<vec4f>& colors, bool verbose) {
-  auto format = [](auto num) {
-    auto str = std::to_string(num);
-    while (str.size() < 13) str = " " + str;
-    return str;
-  };
-  auto format3 = [](auto num) {
-    auto str = std::to_string(num.x) + " " + std::to_string(num.y) + " " +
-               std::to_string(num.z);
-    while (str.size() < 13) str = " " + str;
-    return str;
-  };
-
-  auto bbox = invalidb3f;
-  for (auto& pos : positions) bbox = merge(bbox, pos);
-
-  auto stats = vector<string>{};
-  stats.push_back("triangles:    " + format(triangles.size()));
-  stats.push_back("positions:    " + format(positions.size()));
-  stats.push_back("normals:      " + format(normals.size()));
-  stats.push_back("texcoords:    " + format(texcoords.size()));
-  stats.push_back("colors:       " + format(colors.size()));
-  stats.push_back("center:       " + format3(center(bbox)));
-  stats.push_back("size:         " + format3(size(bbox)));
-  stats.push_back("min:          " + format3(bbox.min));
-  stats.push_back("max:          " + format3(bbox.max));
-
-  return stats;
+inline mesh_point eval_path_midpoint(const geodesic_path& path,
+    const vector<vec3i>& triangles, const vector<vec3f>& positions,
+    const vector<vec3i>& adjacencies) {
+  return eval_path_point(path, triangles, positions, adjacencies, 0.5);
 }
 
 }  // namespace yocto
