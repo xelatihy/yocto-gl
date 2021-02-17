@@ -2909,7 +2909,7 @@ vector<mesh_point> compute_bezier_path(const dual_geodesic_solver& dual_solver,
     const vector<vec3i>&      adjacencies,
     const vector<mesh_point>& control_points) {
   auto path = vector<mesh_point>{};
-  for (auto idx = 0; idx < (int)control_points.size() - 4; idx += 4) {
+  for (auto idx = 0; idx < (int)control_points.size() - 3; idx += 3) {
     auto polygon = spline_polygon{control_points[idx + 0],
         control_points[idx + 1], control_points[idx + 2],
         control_points[idx + 3]};
