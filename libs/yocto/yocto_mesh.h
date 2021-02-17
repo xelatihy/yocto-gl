@@ -73,16 +73,9 @@ void meandering_triangles(const vector<float>& field, float isoline,
 }  // namespace yocto
 
 // -----------------------------------------------------------------------------
-// GEODESIC COMPUTATION
-// -----------------------------------------------------------------------------
-namespace yocto {}
-
-// -----------------------------------------------------------------------------
 // ADJACENCIES
 // -----------------------------------------------------------------------------
 namespace yocto {
-
-inline int mod3(int i) { return (i > 2) ? i - 3 : i; }
 
 // Returns the list of triangles incident at each vertex in CCW order.
 // Note: this works only if the mesh does not have a boundary.
@@ -111,7 +104,7 @@ vector<int> triangle_fan(
 }  // namespace yocto
 
 // -----------------------------------------------------------------------------
-// SHAPE GEODESICS
+// GEODESIC COMPUTATION
 // -----------------------------------------------------------------------------
 namespace yocto {
 
@@ -122,22 +115,13 @@ struct geodesic_solver {
     int   node   = -1;
     float length = flt_max;
   };
-#ifdef YOCTO_ABSEIL
-  vector<short_vector<adjancency_list, min_arcs>> graph = {};
-#else
   vector<vector<graph_edge>> graph = {};
-#endif
 };
 
 // Construct a graph to compute geodesic distances
 geodesic_solver make_geodesic_solver(const vector<vec3i>& triangles,
     const vector<vec3i>& adjacencies, const vector<vec3f>& positions);
 
-// Compute angles in tangent space and total angles of every vertex
-vector<vector<float>> compute_angles(const vector<vec3i>& triangles,
-    const vector<vec3f>& positions, const vector<vec3i>& adjacencies,
-    const vector<vector<int>>& v2t, vector<float>& total_angles,
-    bool with_opposite);
 // Construct a graph to compute geodesic distances with arcs arranged in
 // counterclockwise order by using the vertex-to-face adjacencies
 geodesic_solver make_geodesic_solver(const vector<vec3i>& triangles,
@@ -145,17 +129,18 @@ geodesic_solver make_geodesic_solver(const vector<vec3i>& triangles,
     const vector<vector<int>>& vertex_to_faces);
 
 // Compute geodesic distances
+vector<float> compute_geodesic_distances(const geodesic_solver& solver,
+    const vector<int>& sources, float max_distance = flt_max);
+
+// Compute geodesic distances
 void update_geodesic_distances(vector<float>& distances,
     const geodesic_solver& solver, const vector<int>& sources,
     float max_distance = flt_max);
 
-vector<float> compute_geodesic_distances(const geodesic_solver& solver,
-    const vector<int>& sources, float max_distance = flt_max);
-
 // Compute all shortest paths from source vertices to any other vertex.
-// Paths are implicitly represented: each node is assignes its previous node
+// Paths are implicitly represented: each node is assigned its previous node
 // in the path. Graph search early exits when reching end_vertex.
-vector<int> compute_geodesic_paths(const geodesic_solver& solver,
+vector<int> compute_geodesic_parents(const geodesic_solver& solver,
     const vector<int>& sources, int end_vertex = -1);
 
 // Sample vertices with a Poisson distribution using geodesic distances.
@@ -172,51 +157,20 @@ vector<vector<float>> compute_voronoi_fields(
 vector<vec3f> colors_from_field(const vector<float>& field, float scale = 1,
     const vec3f& c0 = {1, 1, 1}, const vec3f& c1 = {1, 0.1f, 0.1f});
 
-vec3f compute_gradient(const vec3i& triangle, const vector<vec3f>& positions,
-    const vector<float>& field);
-
-// TODO(fabio): da buttare
-#if 1
-// Description of a discrete path along the surface of a triangle mesh.
-struct surface_path {
-  struct vertex {
-    vec2i edge  = {0, 0};
-    int   face  = 0;
-    float alpha = 0;
-  };
-  int            start, end;
-  vector<vertex> vertices;
-};
-
-// Trace integral path following the gradient of a scalar field
-surface_path integrate_field(const vector<vec3i>& triangles,
-    const vector<vec3f>& positions, const vector<vec3i>& adjacency,
-    const vector<int>& tags, int tag, const vector<float>& field, int from);
-surface_path integrate_field(const vector<vec3i>& triangles,
-    const vector<vec3f>& positions, const vector<vec3i>& adjacency,
-    const vector<int>& tags, int tag, const vector<float>& field, int from,
-    int to);
-
-vector<vec3f> make_positions_from_path(
-    const surface_path& path, const vector<vec3f>& mesh_positions);
-#endif
-
 struct mesh_point {
   int   face = -1;
   vec2f uv   = {0, 0};
 };
 
-// TODO(claudio): distance field
 // compute geodesic distance from  a source Point to all the vertices of the
 // mesh(triangles,positions,adjacencies)
 vector<float> compute_geodesic_distances(const geodesic_solver& solver,
     const vector<vec3i>& triangles, const vector<vec3f>& positions,
     const vector<vec3i>& adjacencies, const vector<mesh_point>& sources);
 
-// TODO(claudio): lista di parents
 // given a mesh(triangles,positions,adjacencies), computes the list of parents
 // from Point target to Point source (discrete shortest path in the graph)
-vector<int> point_to_point_geodesic_path(const geodesic_solver& solver,
+vector<int> compute_geodesic_parents(const geodesic_solver& solver,
     const vector<vec3i>& triangles, const vector<vec3f>& positions,
     const vector<vec3i>& adjacencies, const mesh_point& source,
     const mesh_point& target);
@@ -232,6 +186,25 @@ struct dual_geodesic_solver {
 
 // Construct a graph to compute geodesic distances
 dual_geodesic_solver make_dual_geodesic_solver(const vector<vec3i>& triangles,
+    const vector<vec3f>& positions, const vector<vec3i>& adjacencies);
+
+// TODO(fabio): implement wrapper
+// compute the shortest path connecting two surface points
+// initial guess of the connecting strip must be given
+vector<mesh_point> compute_shortest_path(const vector<vec3i>& triangles,
+    const vector<vec3f>& positions, const vector<vec3i>& adjacencies,
+    const mesh_point& start, const mesh_point& end);
+
+// TODO(fabio): implement wrapper
+// compute the straightest path given a surface point and tangent direction
+vector<mesh_point> compute_straightest_path(const vector<vec3i>& triangles,
+    const vector<vec3f>& positions, const vector<vec3i>& adjacencies,
+    const mesh_point& start, const vec2f& direction, float path_length);
+
+// TODO(fabio): implement wrapper
+// compute the 2d rotation in tangent space that tansport directions from
+// the staring point of the path to its ending point.
+mat2f parallel_transport_rotation(const vector<vec3i>& triangles,
     const vector<vec3f>& positions, const vector<vec3i>& adjacencies);
 
 }  // namespace yocto
@@ -295,18 +268,18 @@ mesh_point eval_path_point(const geodesic_path& path,
     const vector<vec3i>& triangles, const vector<vec3f>& positions,
     const vector<vec3i>& adjacencies, float t);
 
-inline mesh_point eval_path_midpoint(const geodesic_path& path,
-    const vector<vec3i>& triangles, const vector<vec3f>& positions,
-    const vector<vec3i>& adjacencies) {
-  return eval_path_point(path, triangles, positions, adjacencies, 0.5);
-}
-
 }  // namespace yocto
 
 // -----------------------------------------------------------------------------
 // STRIPS
 // -----------------------------------------------------------------------------
 namespace yocto {
+
+// Compute angles in tangent space and total angles of every vertex
+vector<vector<float>> compute_angles(const vector<vec3i>& triangles,
+    const vector<vec3f>& positions, const vector<vec3i>& adjacencies,
+    const vector<vector<int>>& v2t, vector<float>& total_angles,
+    bool with_opposite);
 
 // TODO(fabio): prendi la strip da splinesurf
 
