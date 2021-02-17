@@ -3125,4 +3125,32 @@ void make_heightfield(vector<vec4i>& quads, vector<vec3f>& positions,
   normals = quads_normals(quads, positions);
 }
 
+// Convert points to small spheres and lines to small cylinders. This is
+// intended for making very small primitives for display in interactive
+// applications. It should probably be used without tecoords and maybe
+// without normals if not lit.
+void points_to_spheres(vector<vec4i>& quads, vector<vec3f>& positions,
+    vector<vec3f>& normals, vector<vec2f>& texcoords,
+    const vector<vec3f>& vertices, int steps, float scale) {
+  auto sphere_quads     = vector<vec4i>{};
+  auto sphere_positions = vector<vec3f>{};
+  auto sphere_normals   = vector<vec3f>{};
+  auto sphere_texcoords = vector<vec2f>{};
+  make_sphere(sphere_quads, sphere_positions, sphere_normals, sphere_texcoords,
+      steps, scale, 1);
+  for (auto& vertex : vertices) {
+    auto transformed_positions = sphere_positions;
+    for (auto& position : transformed_positions) position += vertex;
+    merge_quads(quads, positions, normals, texcoords, sphere_quads,
+        transformed_positions, sphere_normals, sphere_texcoords);
+  }
+}
+void lines_to_cylinders(vector<vec4i>& quads, vector<vec3f>& positions,
+    vector<vec3f>& normals, vector<vec2f>& texcoords,
+    const vector<vec3f>& vertices, int steps, float scale) {}
+void lines_to_cylinders(vector<vec4i>& quads, vector<vec3f>& positions,
+    vector<vec3f>& normals, vector<vec2f>& texcoords,
+    const vector<vec2i>& lines, const vector<vec3f>& vertices, int steps,
+    float scale) {}
+
 }  // namespace yocto

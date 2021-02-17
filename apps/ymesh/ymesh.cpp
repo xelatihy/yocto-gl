@@ -253,9 +253,7 @@ static scene_scene make_pathscene(
   // shapes
   if (progress_cb) progress_cb("create shape", progress.x++, progress.y);
   scene.shapes.emplace_back(ioshape);
-  auto& points_shape = scene.shapes.emplace_back();
-  points_shape.positions.push_back({0, 0, 0});
-  points_shape.points.push_back(0);
+  scene.shapes.emplace_back(points_to_spheres({{0, 0, 0}}));
 
   // instances
   if (progress_cb) progress_cb("create instance", progress.x++, progress.y);
@@ -325,17 +323,16 @@ int run_glpath(const glpath_params& params) {
           }
         }
         if (updated) {
-          auto& points = scene.shapes.at(1);
-          points.positions.clear();
-          points.points.clear();
+          auto positions = vector<vec3f>{};
           for (auto [element, uv] : stroke) {
-            points.positions.push_back(
-                eval_position(shape, element, uv) +
-                eval_normal(shape, element, uv) * 0.001f);
-            points.points.push_back((int)points.positions.size() - 1);
+            positions.push_back(eval_position(shape, element, uv));
           }
+          auto& points = scene.shapes.at(1);
+          points       = points_to_spheres(positions);
           set_positions(glscene.shapes.at(1), points.positions);
-          set_points(glscene.shapes.at(1), points.points);
+          set_normals(glscene.shapes.at(1), points.normals);
+          set_texcoords(glscene.shapes.at(1), points.texcoords);
+          set_quads(glscene.shapes.at(1), points.quads);
           glscene.shapes.at(1).point_size = 10;
         }
       });
