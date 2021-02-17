@@ -207,6 +207,12 @@ vector<mesh_point> compute_straightest_path(const vector<vec3i>& triangles,
 mat2f parallel_transport_rotation(const vector<vec3i>& triangles,
     const vector<vec3f>& positions, const vector<vec3i>& adjacencies);
 
+// Compute angles in tangent space and total angles of every vertex
+vector<vector<float>> compute_angles(const vector<vec3i>& triangles,
+    const vector<vec3f>& positions, const vector<vec3i>& adjacencies,
+    const vector<vector<int>>& v2t, vector<float>& total_angles,
+    bool with_opposite);
+
 }  // namespace yocto
 
 // -----------------------------------------------------------------------------
@@ -274,12 +280,6 @@ mesh_point eval_path_point(const geodesic_path& path,
 // STRIPS
 // -----------------------------------------------------------------------------
 namespace yocto {
-
-// Compute angles in tangent space and total angles of every vertex
-vector<vector<float>> compute_angles(const vector<vec3i>& triangles,
-    const vector<vec3f>& positions, const vector<vec3i>& adjacencies,
-    const vector<vector<int>>& v2t, vector<float>& total_angles,
-    bool with_opposite);
 
 // TODO(fabio): prendi la strip da splinesurf
 
