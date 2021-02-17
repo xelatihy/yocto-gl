@@ -278,40 +278,6 @@ static scene_scene make_pathscene(
   return scene;
 }
 
-vector<mesh_point> trace_path(const dual_geodesic_solver& graph,
-    const vector<vec3i>& triangles, const vector<vec3f>& positions,
-    const vector<vec3i>& adjacencies, const vector<mesh_point>& points) {
-  auto trace_line =
-      [](const dual_geodesic_solver& graph, const vector<vec3i>& triangles,
-          const vector<vec3f>& positions, const vector<vec3i>& adjacencies,
-          const mesh_point& start, const mesh_point& end) {
-        auto path = geodesic_path{};
-        if (start.face == end.face) {
-          path.start = start;
-          path.end   = end;
-          path.strip = {start.face};
-        } else {
-          auto strip = strip_on_dual_graph(
-              graph, triangles, positions, end.face, start.face);
-          path = shortest_path(
-              triangles, positions, adjacencies, start, end, strip);
-        }
-        // get mesh points
-        return convert_mesh_path(triangles, adjacencies, path.strip, path.lerps,
-            path.start, path.end)
-            .points;
-      };
-
-  // geodesic path
-  auto path = vector<mesh_point>{};
-  for (auto idx = 0; idx < (int)points.size() - 1; idx++) {
-    auto segment = trace_line(
-        graph, triangles, positions, adjacencies, points[idx], points[idx + 1]);
-    path.insert(path.end(), segment.begin(), segment.end());
-  }
-  return path;
-}
-
 int run_glpath(const glpath_params& params) {
   // loading shape
   auto ioerror = ""s;
@@ -382,8 +348,8 @@ int run_glpath(const glpath_params& params) {
           set_texcoords(glscene.shapes.at(1), points.texcoords);
           set_quads(glscene.shapes.at(1), points.quads);
           glscene.shapes.at(1).point_size = 10;
-          auto path       = trace_path(solver, shape.triangles, shape.positions,
-              adjacencies, (vector<mesh_point>&)stroke);
+          auto path       = compute_shortest_path(solver, shape.triangles,
+              shape.positions, adjacencies, (vector<mesh_point>&)stroke);
           auto ppositions = vector<vec3f>{};
           for (auto [element, uv] : path) {
             ppositions.push_back(eval_position(shape, element, uv));
