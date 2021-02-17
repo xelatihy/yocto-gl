@@ -71,6 +71,31 @@ static bool uiupdate_image_params(
   return false;
 }
 
+static bool uiupdate_camera_params(
+    gui_window* win, const gui_input& input, scene_camera& camera) {
+  if ((input.mouse_left || input.mouse_right) && !input.modifier_alt &&
+      !input.modifier_ctrl && !input.widgets_active) {
+    auto dolly  = 0.0f;
+    auto pan    = zero2f;
+    auto rotate = zero2f;
+    if (input.mouse_left && !input.modifier_shift)
+      rotate = (input.mouse_pos - input.mouse_last) / 100.0f;
+    if (input.mouse_right)
+      dolly = (input.mouse_pos.x - input.mouse_last.x) / 100.0f;
+    if (input.mouse_left && input.modifier_shift)
+      pan = (input.mouse_pos - input.mouse_last) * camera.focus / 200.0f;
+    pan.x               = -pan.x;
+    auto [frame, focus] = camera_turntable(
+        camera.frame, camera.focus, rotate, dolly, pan);
+    if (camera.frame != frame || camera.focus != focus) {
+      camera.frame = frame;
+      camera.focus = focus;
+      return true;
+    }
+  }
+  return false;
+}
+
 static bool draw_tonemap_params(
     gui_window* win, const gui_input& input, float& exposure, bool& filmic) {
   auto edited = 0;
@@ -458,12 +483,7 @@ void view_scene(const string& title, const string& name, scene_scene& scene,
       set_image(glimage, display, false, false);
       render_update = false;
     }
-    // draw image
-    glparams.window                           = input.window_size;
-    glparams.framebuffer                      = input.framebuffer_viewport;
-    std::tie(glparams.center, glparams.scale) = camera_imview(glparams.center,
-        glparams.scale, {display.width, display.height}, glparams.window,
-        glparams.fit);
+    update_image_params(win, input, image, glparams);
     draw_image(glimage, glparams);
   };
   callbacks.widgets_cb = [&](gui_window* win, const gui_input& input) {
@@ -514,27 +534,11 @@ void view_scene(const string& title, const string& name, scene_scene& scene,
     draw_image_inspector(win, input, image, display, glparams);
   };
   callbacks.uiupdate_cb = [&](gui_window* win, const gui_input& input) {
-    if ((input.mouse_left || input.mouse_right) && !input.modifier_alt &&
-        !input.widgets_active) {
-      auto dolly  = 0.0f;
-      auto pan    = zero2f;
-      auto rotate = zero2f;
-      if (input.mouse_left && !input.modifier_shift)
-        rotate = (input.mouse_pos - input.mouse_last) / 100.0f;
-      if (input.mouse_right)
-        dolly = (input.mouse_pos.x - input.mouse_last.x) / 100.0f;
-      auto camera = scene.cameras[params.camera];
-      if (input.mouse_left && input.modifier_shift)
-        pan = (input.mouse_pos - input.mouse_last) * camera.focus / 200.0f;
-      pan.x                                = -pan.x;
-      std::tie(camera.frame, camera.focus) = camera_turntable(
-          camera.frame, camera.focus, rotate, dolly, pan);
-      if (camera.frame != scene.cameras[params.camera].frame ||
-          camera.focus != scene.cameras[params.camera].focus) {
-        trace_stop(worker);
-        scene.cameras[params.camera] = camera;
-        reset_display();
-      }
+    auto camera = scene.cameras[params.camera];
+    if (uiupdate_camera_params(win, input, camera)) {
+      trace_stop(worker);
+      scene.cameras[params.camera] = camera;
+      reset_display();
     }
   };
 
@@ -844,20 +848,9 @@ void glview_scene(scene_scene& scene, const string& name, const string& camname,
   callbacks.uiupdate_cb = [&](gui_window* win, const gui_input& input) {
     // handle mouse and keyboard for navigation
     if (uiupdate_callback) uiupdate_callback(win, input, scene, glscene);
-    if ((input.mouse_left || input.mouse_right) && !input.modifier_alt &&
-        !input.modifier_ctrl && !input.widgets_active) {
-      auto dolly  = 0.0f;
-      auto pan    = zero2f;
-      auto rotate = zero2f;
-      if (input.mouse_left && !input.modifier_shift)
-        rotate = (input.mouse_pos - input.mouse_last) / 100.0f;
-      if (input.mouse_right)
-        dolly = (input.mouse_pos.x - input.mouse_last.x) / 100.0f;
-      if (input.mouse_left && input.modifier_shift)
-        pan = (input.mouse_pos - input.mouse_last) / 100.0f;
-      auto& camera                         = scene.cameras.at(0);
-      std::tie(camera.frame, camera.focus) = camera_turntable(
-          camera.frame, camera.focus, rotate, dolly, pan);
+    auto camera = scene.cameras.at(0);
+    if (uiupdate_camera_params(win, input, camera)) {
+      scene.cameras.at(0) = camera;
       set_frame(glscene.cameras.at(0), camera.frame);
     }
   };
