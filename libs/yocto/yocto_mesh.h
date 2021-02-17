@@ -158,6 +158,7 @@ vector<vec3f> colors_from_field(const vector<float>& field, float scale = 1,
 vec3f compute_gradient(const vec3i& triangle, const vector<vec3f>& positions,
     const vector<float>& field);
 
+// TODO(fabio): da buttare
 #if 1
 // Description of a discrete path along the surface of a triangle mesh.
 struct surface_path {
@@ -188,12 +189,14 @@ struct mesh_point {
   vec2f uv   = {0, 0};
 };
 
+// TODO(claudio): distance field
 // compute geodesic distance from  a source Point to all the vertices of the
 // mesh(triangles,positions,adjacencies)
 vector<float> compute_geodesic_distances(const geodesic_solver& solver,
     const vector<vec3i>& triangles, const vector<vec3f>& positions,
     const vector<vec3i>& adjacencies, const vector<mesh_point>& sources);
 
+// TODO(claudio): lista di parents
 // given a mesh(triangles,positions,adjacencies), computes the list of parents
 // from Point target to Point source (discrete shortest path in the graph)
 vector<int> point_to_point_geodesic_path(const geodesic_solver& solver,
@@ -288,6 +291,8 @@ inline mesh_point eval_path_midpoint(const geodesic_path& path,
 // -----------------------------------------------------------------------------
 namespace yocto {
 
+// TODO(fabio): prendi la strip da splinesurf
+
 vector<int> strip_on_dual_graph(const dual_geodesic_solver& solver,
     const vector<vec3i>& triangles, const vector<vec3f>& positions, int start,
     int end);
@@ -298,8 +303,7 @@ vector<int> strip_ascending_distance_field(const geodesic_solver& solver,
 
 // returns a strip of triangles such target belongs to the first one and
 // source to the last one
-// TODO(fabio): the name should change in order to get the call
-// more consistent with the output)
+// TODO(fabio): rename geodesic_strip
 vector<int> get_strip(const geodesic_solver& solver,
     const vector<vec3i>& triangles, const vector<vec3f>& positions,
     const vector<vec3i>& adjacencies, const vector<vector<int>>& v2t,
