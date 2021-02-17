@@ -38,7 +38,6 @@
 
 #include <cassert>
 #include <deque>
-#include <filesystem>
 #include <memory>
 #include <stdexcept>
 #include <string>
@@ -58,23 +57,6 @@ using std::deque;
 using std::pair;
 using std::unordered_set;
 using namespace std::string_literals;
-
-}  // namespace yocto
-
-// -----------------------------------------------------------------------------
-// PATH UTILITIES
-// -----------------------------------------------------------------------------
-namespace yocto {
-
-// Make a path from a utf8 string
-static std::filesystem::path make_path(const string& filename) {
-  return std::filesystem::u8path(filename);
-}
-
-// Get extension (including .)
-static string path_extension(const string& filename) {
-  return make_path(filename).extension().u8string();
-}
 
 }  // namespace yocto
 

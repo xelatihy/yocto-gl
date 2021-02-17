@@ -61,6 +61,23 @@ using std::vector;
 }  // namespace yocto
 
 // -----------------------------------------------------------------------------
+// PROCEDURAL MODELING
+// -----------------------------------------------------------------------------
+namespace yocto {
+
+// Extract isoline from surface scalar field.
+void meandering_triangles(const vector<float>& field, float isoline,
+    int selected_tag, int t0, int t1, vector<vec3i>& triangles,
+    vector<int>& tags, vector<vec3f>& positions, vector<vec3f>& normals);
+
+}  // namespace yocto
+
+// -----------------------------------------------------------------------------
+// GEODESIC COMPUTATION
+// -----------------------------------------------------------------------------
+namespace yocto {}
+
+// -----------------------------------------------------------------------------
 // ADJACENCIES
 // -----------------------------------------------------------------------------
 namespace yocto {
@@ -313,7 +330,7 @@ vector<int> get_strip(const geodesic_solver& solver,
 }  // namespace yocto
 
 // -----------------------------------------------------------------------------
-// UTILITIES
+// MESH UTILITIES
 // -----------------------------------------------------------------------------
 namespace yocto {
 
@@ -372,18 +389,6 @@ unfold_triangle triangle_coordinates(const vector<vec3i>& triangles,
 // generic utilities for paths
 vec2i get_edge(const vector<vec3i>& triangles, const vector<vec3f>& positions,
     const vector<vec3i>& adjacencies, int f0, int f1);
-
-}  // namespace yocto
-
-// -----------------------------------------------------------------------------
-// PROCEDURAL MODELING
-// -----------------------------------------------------------------------------
-namespace yocto {
-
-// Extract isoline from surface scalar field.
-void meandering_triangles(const vector<float>& field, float isoline,
-    int selected_tag, int t0, int t1, vector<vec3i>& triangles,
-    vector<int>& tags, vector<vec3f>& positions, vector<vec3f>& normals);
 
 }  // namespace yocto
 
