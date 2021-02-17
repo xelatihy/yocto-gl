@@ -882,39 +882,45 @@ void glview_scene(scene_scene& scene, const string& name, const string& camname,
   // draw params
   auto params = shade_params{};
 
+  // top level combo
+  auto names    = vector<string>{name};
+  auto selected = 0;
+
   // callbacks
   auto callbacks    = gui_callbacks{};
   callbacks.init_cb = [&glscene, &scene, &progress_cb](
                           gui_window* win, const gui_input& input) {
     init_glscene(glscene, scene, progress_cb);
   };
-  callbacks.clear_cb = [&glscene](gui_window* win, const gui_input& input) {
+  callbacks.clear_cb = [&](gui_window* win, const gui_input& input) {
     clear_scene(glscene);
   };
-  callbacks.draw_cb = [&glscene, &params](
-                          gui_window* win, const gui_input& input) {
+  callbacks.draw_cb = [&](gui_window* win, const gui_input& input) {
     draw_scene(
         glscene, glscene.cameras.at(0), input.framebuffer_viewport, params);
   };
-  callbacks.widgets_cb = [&glscene, &scene, &params, &widgets_callback](
-                             gui_window* win, const gui_input& input) {
-    draw_checkbox(win, "wireframe", params.wireframe);
-    continue_line(win);
-    draw_checkbox(win, "faceted", params.faceted);
-    continue_line(win);
-    draw_checkbox(win, "double sided", params.double_sided);
-    draw_combobox(win, "lighting", (int&)params.lighting, shade_lighting_names);
-    draw_slider(win, "exposure", params.exposure, -10, 10);
-    draw_slider(win, "gamma", params.gamma, 0.1f, 4);
-    draw_slider(win, "near", params.near, 0.01f, 1.0f);
-    draw_slider(win, "far", params.far, 1000.0f, 10000.0f);
+  callbacks.widgets_cb = [&](gui_window* win, const gui_input& input) {
+    draw_combobox(win, "name", selected, names);
+    if (begin_header(win, "shade")) {
+      draw_checkbox(win, "wireframe", params.wireframe);
+      continue_line(win);
+      draw_checkbox(win, "faceted", params.faceted);
+      continue_line(win);
+      draw_checkbox(win, "double sided", params.double_sided);
+      draw_combobox(
+          win, "lighting", (int&)params.lighting, shade_lighting_names);
+      draw_slider(win, "exposure", params.exposure, -10, 10);
+      draw_slider(win, "gamma", params.gamma, 0.1f, 4);
+      draw_slider(win, "near", params.near, 0.01f, 1.0f);
+      draw_slider(win, "far", params.far, 1000.0f, 10000.0f);
+      end_header(win);
+    }
     if (widgets_callback) widgets_callback(win, input, scene, glscene);
   };
   callbacks.update_cb = [](gui_window* win, const gui_input& input) {
     // update(win, apps);
   };
-  callbacks.uiupdate_cb = [&glscene, &scene, &uiupdate_callback](
-                              gui_window* win, const gui_input& input) {
+  callbacks.uiupdate_cb = [&](gui_window* win, const gui_input& input) {
     // handle mouse and keyboard for navigation
     if (uiupdate_callback) uiupdate_callback(win, input, scene, glscene);
     if ((input.mouse_left || input.mouse_right) && !input.modifier_alt &&
