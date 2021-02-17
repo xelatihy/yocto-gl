@@ -74,7 +74,7 @@ int run_view(const view_params& params) {
     if (!make_shape_preset(shape, path_basename(params.shape), ioerror))
       print_fatal(ioerror);
   } else {
-    if (!load_shape(params.shape, shape, ioerror, false)) print_fatal(ioerror);
+    if (!load_shape(params.shape, shape, ioerror, true)) print_fatal(ioerror);
   }
   print_progress("load shape", 1, 1);
 
@@ -169,7 +169,7 @@ int run_glview(const glview_params& params) {
   auto ioerror = ""s;
   auto shape   = scene_shape{};
   print_progress("load shape", 0, 1);
-  if (!load_shape(params.shape, shape, ioerror)) print_fatal(ioerror);
+  if (!load_shape(params.shape, shape, ioerror, true)) print_fatal(ioerror);
   print_progress("load shape", 1, 1);
 
   // create scene
@@ -276,7 +276,7 @@ int run_glpath(const glpath_params& params) {
   auto ioerror = ""s;
   auto ioshape = scene_shape{};
   print_progress("load shape", 0, 1);
-  if (!load_shape(params.shape, ioshape, ioerror)) print_fatal(ioerror);
+  if (!load_shape(params.shape, ioshape, ioerror, true)) print_fatal(ioerror);
   if (!ioshape.quads.empty()) {
     ioshape.triangles = quads_to_triangles(ioshape.quads);
     ioshape.quads     = {};

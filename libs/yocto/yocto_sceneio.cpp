@@ -1575,6 +1575,20 @@ static void add_missing_radius(scene_scene& scene, float radius = 0.001f) {
   }
 }
 
+// Add missing cameras.
+void add_missing_material(scene_scene& scene) {
+  auto default_material = invalid_handle;
+  for (auto& instance : scene.instances) {
+    if (instance.material >= 0) continue;
+    if (default_material == invalid_handle) {
+      auto& material   = scene.materials.emplace_back();
+      material.color   = {0.8, 0.8, 0.8};
+      default_material = (int)scene.materials.size() - 1;
+    }
+    instance.material = default_material;
+  }
+}
+
 // Reduce memory usage
 static void trim_memory(scene_scene& scene) {
   for (auto& shape : scene.shapes) {
@@ -3516,13 +3530,14 @@ static bool load_ply_scene(const string& filename, scene_scene& scene,
 
   // load ply mesh
   auto& shape = scene.shapes.emplace_back();
-  if (!load_shape(filename, shape, error, false)) return false;
+  if (!load_shape(filename, shape, error, true)) return false;
 
   // create instance
   auto& instance = scene.instances.emplace_back();
   instance.shape = (int)scene.shapes.size() - 1;
 
   // fix scene
+  add_missing_material(scene);
   add_missing_camera(scene);
   add_missing_radius(scene);
 
@@ -3568,13 +3583,14 @@ static bool load_stl_scene(const string& filename, scene_scene& scene,
 
   // load stl mesh
   auto& shape = scene.shapes.emplace_back();
-  if (!load_shape(filename, shape, error, false)) return false;
+  if (!load_shape(filename, shape, error, true)) return false;
 
   // create instance
   auto& instance = scene.instances.emplace_back();
   instance.shape = (int)scene.shapes.size() - 1;
 
   // fix scene
+  add_missing_material(scene);
   add_missing_camera(scene);
   add_missing_radius(scene);
 
@@ -4101,6 +4117,7 @@ static bool load_gltf_scene(const string& filename, scene_scene& scene,
 
   // fix scene
   if (scene.asset.name.empty()) scene.asset.name = path_basename(filename);
+  add_missing_material(scene);
   add_missing_camera(scene);
   add_missing_radius(scene);
 

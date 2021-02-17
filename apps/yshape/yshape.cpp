@@ -83,7 +83,7 @@ int run_convert(const convert_params& params) {
   // load mesh
   auto ioerror = ""s;
   print_progress("load shape", 0, 1);
-  if (!load_shape(params.shape, shape, ioerror, false)) print_fatal(ioerror);
+  if (!load_shape(params.shape, shape, ioerror, true)) print_fatal(ioerror);
   print_progress("load shape", 1, 1);
 
   // remove data
@@ -156,7 +156,7 @@ int run_convert(const convert_params& params) {
 
   // save mesh
   print_progress("save shape", 0, 1);
-  if (!save_shape(params.output, shape, ioerror, false)) print_fatal(ioerror);
+  if (!save_shape(params.output, shape, ioerror, true)) print_fatal(ioerror);
   print_progress("save shape", 1, 1);
 
   // done
@@ -315,7 +315,7 @@ int run_view(const view_params& params) {
     if (!make_shape_preset(shape, path_basename(params.shape), ioerror))
       print_fatal(ioerror);
   } else {
-    if (!load_shape(params.shape, shape, ioerror, false)) print_fatal(ioerror);
+    if (!load_shape(params.shape, shape, ioerror, true)) print_fatal(ioerror);
   }
   print_progress("load shape", 1, 1);
 
@@ -406,7 +406,7 @@ int run_heightfield(const heightfield_params& params) {
   }
   // save mesh
   print_progress("save shape", 0, 1);
-  if (!save_shape(params.output, shape, ioerror)) print_fatal(ioerror);
+  if (!save_shape(params.output, shape, ioerror, true)) print_fatal(ioerror);
   print_progress("save shape", 1, 1);
 
   // done
@@ -495,7 +495,7 @@ int run_glview(const glview_params& params) {
   auto ioerror = ""s;
   auto shape   = scene_shape{};
   print_progress("load shape", 0, 1);
-  if (!load_shape(params.shape, shape, ioerror)) print_fatal(ioerror);
+  if (!load_shape(params.shape, shape, ioerror, true)) print_fatal(ioerror);
   print_progress("load shape", 1, 1);
 
   // create scene
