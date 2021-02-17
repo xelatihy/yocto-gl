@@ -249,11 +249,16 @@ static scene_scene make_pathscene(
   points_material.type      = material_type::plastic;
   points_material.color     = {1, 0.5, 0.5};
   points_material.roughness = 0.2;
+  auto& lines_material      = scene.materials.emplace_back();
+  lines_material.type       = material_type::plastic;
+  lines_material.color      = {0.5, 0.5, 1};
+  lines_material.roughness  = 0.2;
 
   // shapes
   if (progress_cb) progress_cb("create shape", progress.x++, progress.y);
   scene.shapes.emplace_back(ioshape);
   scene.shapes.emplace_back(points_to_spheres({{0, 0, 0}}));
+  scene.shapes.emplace_back(lines_to_cylinders({{0, 0, 0}, {0, 0, 0}}));
 
   // instances
   if (progress_cb) progress_cb("create instance", progress.x++, progress.y);
@@ -263,6 +268,9 @@ static scene_scene make_pathscene(
   auto& points_instance    = scene.instances.emplace_back();
   points_instance.shape    = 1;
   points_instance.material = 1;
+  auto& lines_instance     = scene.instances.emplace_back();
+  lines_instance.shape     = 2;
+  lines_instance.material  = 2;
 
   // done
   if (progress_cb) progress_cb("create scene", progress.x++, progress.y);
@@ -334,6 +342,12 @@ int run_glpath(const glpath_params& params) {
           set_texcoords(glscene.shapes.at(1), points.texcoords);
           set_quads(glscene.shapes.at(1), points.quads);
           glscene.shapes.at(1).point_size = 10;
+          auto& lines                     = scene.shapes.at(2);
+          lines                           = lines_to_cylinders(positions);
+          set_positions(glscene.shapes.at(2), lines.positions);
+          set_normals(glscene.shapes.at(2), lines.normals);
+          set_texcoords(glscene.shapes.at(2), lines.texcoords);
+          set_quads(glscene.shapes.at(2), lines.quads);
         }
       });
 

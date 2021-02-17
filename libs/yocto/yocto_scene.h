@@ -727,8 +727,6 @@ shape_data points_to_spheres(
     const vector<vec3f>& vertices, int steps = 2, float scale = 0.01f);
 shape_data lines_to_cylinders(
     const vector<vec3f>& vertices, int steps = 4, float scale = 0.01f);
-shape_data lines_to_cylinders(const vector<vec2i>& lines,
-    const vector<vec3f>& vertices, int steps = 4, float scale = 0.01f);
 
 // Make a heightfield mesh.
 shape_data make_heightfield(const vec2i& size, const vector<float>& height);

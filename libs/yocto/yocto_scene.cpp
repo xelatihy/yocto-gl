@@ -2297,13 +2297,6 @@ shape_data lines_to_cylinders(
       shape.texcoords, vertices, steps, scale);
   return shape;
 }
-shape_data lines_to_cylinders(const vector<vec2i>& lines,
-    const vector<vec3f>& vertices, int steps, float scale) {
-  auto shape = shape_data{};
-  lines_to_cylinders(shape.quads, shape.positions, shape.normals,
-      shape.texcoords, lines, vertices, steps, scale);
-  return shape;
-}
 
 }  // namespace yocto
 
