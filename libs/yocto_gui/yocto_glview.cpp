@@ -43,6 +43,79 @@ using std::make_unique;
 }  // namespace yocto
 
 // -----------------------------------------------------------------------------
+// VIEW HELPERS
+// -----------------------------------------------------------------------------
+namespace yocto {
+
+void update_image_params(gui_window* win, const gui_input& input,
+    const image_data& image, ogl_image_params& glparams) {
+  glparams.window                           = input.window_size;
+  glparams.framebuffer                      = input.framebuffer_viewport;
+  std::tie(glparams.center, glparams.scale) = camera_imview(glparams.center,
+      glparams.scale, {image.width, image.height}, glparams.window,
+      glparams.fit);
+}
+
+static bool uiupdate_image_params(
+    gui_window* win, const gui_input& input, ogl_image_params& glparams) {
+  // handle mouse
+  if (input.mouse_left && !input.widgets_active) {
+    glparams.center += input.mouse_pos - input.mouse_last;
+    return true;
+  }
+  if (input.mouse_right && !input.widgets_active) {
+    glparams.scale *= powf(
+        2, (input.mouse_pos.x - input.mouse_last.x) * 0.001f);
+    return true;
+  }
+  return false;
+}
+
+static bool draw_tonemap_params(
+    gui_window* win, const gui_input& input, float& exposure, bool& filmic) {
+  auto edited = 0;
+  if (begin_header(win, "tonemap")) {
+    edited += draw_slider(win, "exposure", exposure, -5, 5);
+    edited += draw_checkbox(win, "filmic", filmic);
+    end_header(win);
+  }
+  return (bool)edited;
+}
+
+static bool draw_image_inspector(gui_window* win, const gui_input& input,
+    const image_data& image, const image_data& display,
+    ogl_image_params& glparams) {
+  if (begin_header(win, "inspect")) {
+    draw_slider(win, "zoom", glparams.scale, 0.1, 10);
+    draw_checkbox(win, "fit", glparams.fit);
+    auto [i, j] = image_coords(input.mouse_pos, glparams.center, glparams.scale,
+        {image.width, image.height});
+    auto ij     = vec2i{i, j};
+    draw_dragger(win, "mouse", ij);
+    auto hdr_pixel     = zero4f;
+    auto ldr_pixel     = zero4b;
+    auto display_pixel = zero4b;
+    if (i >= 0 && i < image.width && j >= 0 && j < image.height) {
+      display_pixel = image.pixelsb[j * image.width + i];
+      if (!image.pixelsf.empty())
+        hdr_pixel = image.pixelsf[j * image.width + i];
+      if (!image.pixelsb.empty())
+        ldr_pixel = image.pixelsb[j * image.width + i];
+    }
+    if (!image.pixelsf.empty()) {
+      draw_coloredit(win, "image", hdr_pixel);
+    } else {
+      draw_coloredit(win, "image", ldr_pixel);
+    }
+    draw_coloredit(win, "display", display_pixel);
+    end_header(win);
+  }
+  return false;
+}
+
+}  // namespace yocto
+
+// -----------------------------------------------------------------------------
 // IMAGE AND TRACE VIEW
 // -----------------------------------------------------------------------------
 namespace yocto {
@@ -76,62 +149,21 @@ void view_image(const string& title, const string& name,
     clear_image(glimage);
   };
   callbacks.draw_cb = [&](gui_window* win, const gui_input& input) {
-    glparams.window                           = input.window_size;
-    glparams.framebuffer                      = input.framebuffer_viewport;
-    std::tie(glparams.center, glparams.scale) = camera_imview(glparams.center,
-        glparams.scale, {display.width, display.height}, glparams.window,
-        glparams.fit);
+    update_image_params(win, input, image, glparams);
     draw_image(glimage, glparams);
   };
   callbacks.widgets_cb = [&](gui_window* win, const gui_input& input) {
-    auto edited = 0;
     draw_combobox(win, "name", selected, names);
-    if (begin_header(win, "tonemap")) {
-      edited += draw_slider(win, "exposure", exposure, -5, 5);
-      edited += draw_checkbox(win, "filmic", filmic);
-      end_header(win);
-      if (edited) {
-        if (progress_cb) progress_cb("tonemap image", 0, 1);
-        tonemap_image_mt(display, image, exposure, filmic);
-        set_image(glimage, display, false, false);
-        if (progress_cb) progress_cb("tonemap image", 0, 1);
-      }
+    if (draw_tonemap_params(win, input, exposure, filmic)) {
+      if (progress_cb) progress_cb("tonemap image", 0, 1);
+      tonemap_image_mt(display, image, exposure, filmic);
+      set_image(glimage, display, false, false);
+      if (progress_cb) progress_cb("tonemap image", 0, 1);
     }
-    if (begin_header(win, "inspect")) {
-      draw_slider(win, "zoom", glparams.scale, 0.1, 10);
-      draw_checkbox(win, "fit", glparams.fit);
-      auto [i, j] = image_coords(input.mouse_pos, glparams.center,
-          glparams.scale, {image.width, image.height});
-      auto ij     = vec2i{i, j};
-      draw_dragger(win, "mouse", ij);
-      auto hdr_pixel     = zero4f;
-      auto ldr_pixel     = zero4b;
-      auto display_pixel = zero4b;
-      if (i >= 0 && i < image.width && j >= 0 && j < image.height) {
-        display_pixel = image.pixelsb[j * image.width + i];
-        if (!image.pixelsf.empty())
-          hdr_pixel = image.pixelsf[j * image.width + i];
-        if (!image.pixelsb.empty())
-          ldr_pixel = image.pixelsb[j * image.width + i];
-      }
-      if (!image.pixelsf.empty()) {
-        draw_coloredit(win, "image", hdr_pixel);
-      } else {
-        draw_coloredit(win, "image", ldr_pixel);
-      }
-      draw_coloredit(win, "display", display_pixel);
-      end_header(win);
-    }
+    draw_image_inspector(win, input, image, display, glparams);
   };
-  callbacks.uiupdate_cb = [&glparams](gui_window* win, const gui_input& input) {
-    // handle mouse
-    if (input.mouse_left && !input.widgets_active) {
-      glparams.center += input.mouse_pos - input.mouse_last;
-    }
-    if (input.mouse_right && !input.widgets_active) {
-      glparams.scale *= powf(
-          2, (input.mouse_pos.x - input.mouse_last.x) * 0.001f);
-    }
+  callbacks.uiupdate_cb = [&](gui_window* win, const gui_input& input) {
+    uiupdate_image_params(win, input, glparams);
   };
 
   // run ui
@@ -164,89 +196,37 @@ void view_images(const string& title, const vector<string>& names,
 
   // callbacks
   auto callbacks    = gui_callbacks{};
-  callbacks.init_cb = [&glimages, &displays, &images](
-                          gui_window* win, const gui_input& input) {
+  callbacks.init_cb = [&](gui_window* win, const gui_input& input) {
     for (auto idx = 0; idx < (int)images.size(); idx++) {
       init_image(glimages[idx]);
       set_image(glimages[idx], displays[idx], false, false);
     }
   };
-  callbacks.clear_cb = [&glimages, &images](
-                           gui_window* win, const gui_input& input) {
+  callbacks.clear_cb = [&](gui_window* win, const gui_input& input) {
     for (auto idx = 0; idx < (int)images.size(); idx++) {
       clear_image(glimages[idx]);
     }
   };
-  callbacks.draw_cb = [&glimages, &glparamss, &displays, &selected](
-                          gui_window* win, const gui_input& input) {
-    auto& glparams                            = glparamss[selected];
-    auto& display                             = displays[selected];
-    auto& glimage                             = glimages[selected];
-    glparams.window                           = input.window_size;
-    glparams.framebuffer                      = input.framebuffer_viewport;
-    std::tie(glparams.center, glparams.scale) = camera_imview(glparams.center,
-        glparams.scale, {display.width, display.height}, glparams.window,
-        glparams.fit);
-    draw_image(glimage, glparams);
+  callbacks.draw_cb = [&](gui_window* win, const gui_input& input) {
+    update_image_params(win, input, displays[selected], glparamss[selected]);
+    draw_image(glimages[selected], glparamss[selected]);
   };
   callbacks.widgets_cb = [&](gui_window* win, const gui_input& input) {
-    auto edited = 0;
-    if (draw_combobox(win, "name", selected, names)) {
+    draw_combobox(win, "name", selected, names);
+    auto filmic = (bool)filmics[selected];  // vector of bool ...
+    if (draw_tonemap_params(win, input, exposures[selected], filmic)) {
+      if (progress_cb) progress_cb("tonemap image", 0, 1);
+      filmics[selected] = filmic;
+      tonemap_image_mt(displays[selected], images[selected],
+          exposures[selected], filmics[selected]);
+      set_image(glimages[selected], displays[selected], false, false);
+      if (progress_cb) progress_cb("tonemap image", 1, 1);
     }
-    auto& display  = displays[selected];
-    auto& glimage  = glimages[selected];
-    auto& image    = images[selected];
-    auto& exposure = exposures[selected];
-    auto  filmic   = (bool)filmics[selected];  // vector of bool ...
-    if (begin_header(win, "tonemap")) {
-      edited += draw_slider(win, "exposure", exposure, -5, 5);
-      edited += draw_checkbox(win, "filmic", filmic);
-      end_header(win);
-      if (edited) {
-        if (progress_cb) progress_cb("tonemap image", 0, 1);
-        filmics[selected] = filmic;
-        tonemap_image_mt(display, image, exposure, filmic);
-        set_image(glimage, display, false, false);
-        if (progress_cb) progress_cb("tonemap image", 1, 1);
-      }
-    }
-    auto& glparams = glparamss[selected];
-    if (begin_header(win, "inspect")) {
-      draw_slider(win, "zoom", glparams.scale, 0.1, 10);
-      draw_checkbox(win, "fit", glparams.fit);
-      auto [i, j] = image_coords(input.mouse_pos, glparams.center,
-          glparams.scale, {image.width, image.height});
-      auto ij     = vec2i{i, j};
-      draw_dragger(win, "mouse", ij);
-      auto hdr_pixel     = zero4f;
-      auto ldr_pixel     = zero4b;
-      auto display_pixel = zero4b;
-      if (i >= 0 && i < image.width && j >= 0 && j < image.height) {
-        display_pixel = image.pixelsb[j * image.width + i];
-        if (!image.pixelsf.empty())
-          hdr_pixel = image.pixelsf[j * image.width + i];
-        if (!image.pixelsb.empty())
-          ldr_pixel = image.pixelsb[j * image.width + i];
-      }
-      if (!image.pixelsf.empty()) {
-        draw_coloredit(win, "image", hdr_pixel);
-      } else {
-        draw_coloredit(win, "image", ldr_pixel);
-      }
-      draw_coloredit(win, "display", display_pixel);
-      end_header(win);
-    }
+    draw_image_inspector(
+        win, input, images[selected], displays[selected], glparamss[selected]);
   };
   callbacks.uiupdate_cb = [&](gui_window* win, const gui_input& input) {
-    // handle mouse
-    auto& glparams = glparamss[selected];
-    if (input.mouse_left && !input.widgets_active) {
-      glparams.center += input.mouse_pos - input.mouse_last;
-    }
-    if (input.mouse_right && !input.widgets_active) {
-      glparams.scale *= powf(
-          2, (input.mouse_pos.x - input.mouse_last.x) * 0.001f);
-    }
+    uiupdate_image_params(win, input, glparamss[selected]);
   };
 
   // run ui
@@ -283,11 +263,7 @@ void colorgrade_image(const string& title, const string& name,
     clear_image(glimage);
   };
   callbacks.draw_cb = [&](gui_window* win, const gui_input& input) {
-    glparams.window                           = input.window_size;
-    glparams.framebuffer                      = input.framebuffer_viewport;
-    std::tie(glparams.center, glparams.scale) = camera_imview(glparams.center,
-        glparams.scale, {display.width, display.height}, glparams.window,
-        glparams.fit);
+    update_image_params(win, input, image, glparams);
     draw_image(glimage, glparams);
   };
   callbacks.widgets_cb = [&](gui_window* win, const gui_input& input) {
@@ -319,41 +295,10 @@ void colorgrade_image(const string& title, const string& name,
         if (progress_cb) progress_cb("colorgrade image", 0, 1);
       }
     }
-    if (begin_header(win, "inspect")) {
-      draw_slider(win, "zoom", glparams.scale, 0.1, 10);
-      draw_checkbox(win, "fit", glparams.fit);
-      auto [i, j] = image_coords(input.mouse_pos, glparams.center,
-          glparams.scale, {image.width, image.height});
-      auto ij     = vec2i{i, j};
-      draw_dragger(win, "mouse", ij);
-      auto hdr_pixel     = zero4f;
-      auto ldr_pixel     = zero4b;
-      auto display_pixel = zero4b;
-      if (i >= 0 && i < image.width && j >= 0 && j < image.height) {
-        display_pixel = image.pixelsb[j * image.width + i];
-        if (!image.pixelsf.empty())
-          hdr_pixel = image.pixelsf[j * image.width + i];
-        if (!image.pixelsb.empty())
-          ldr_pixel = image.pixelsb[j * image.width + i];
-      }
-      if (!image.pixelsf.empty()) {
-        draw_coloredit(win, "image", hdr_pixel);
-      } else {
-        draw_coloredit(win, "image", ldr_pixel);
-      }
-      draw_coloredit(win, "display", display_pixel);
-      end_header(win);
-    }
+    draw_image_inspector(win, input, image, display, glparams);
   };
   callbacks.uiupdate_cb = [&glparams](gui_window* win, const gui_input& input) {
-    // handle mouse
-    if (input.mouse_left && !input.widgets_active) {
-      glparams.center += input.mouse_pos - input.mouse_last;
-    }
-    if (input.mouse_right && !input.widgets_active) {
-      glparams.scale *= powf(
-          2, (input.mouse_pos.x - input.mouse_last.x) * 0.001f);
-    }
+    uiupdate_image_params(win, input, glparams);
   };
 
   // run ui
@@ -566,31 +511,7 @@ void view_scene(const string& title, const string& name, scene_scene& scene,
         if (progress_cb) progress_cb("tonemap image", 0, 1);
       }
     }
-    if (begin_header(win, "inspect")) {
-      draw_slider(win, "zoom", glparams.scale, 0.1, 10);
-      draw_checkbox(win, "fit", glparams.fit);
-      auto [i, j] = image_coords(input.mouse_pos, glparams.center,
-          glparams.scale, {image.width, image.height});
-      auto ij     = vec2i{i, j};
-      draw_dragger(win, "mouse", ij);
-      auto hdr_pixel     = zero4f;
-      auto ldr_pixel     = zero4b;
-      auto display_pixel = zero4b;
-      if (i >= 0 && i < image.width && j >= 0 && j < image.height) {
-        display_pixel = image.pixelsb[j * image.width + i];
-        if (!image.pixelsf.empty())
-          hdr_pixel = image.pixelsf[j * image.width + i];
-        if (!image.pixelsb.empty())
-          ldr_pixel = image.pixelsb[j * image.width + i];
-      }
-      if (!image.pixelsf.empty()) {
-        draw_coloredit(win, "image", hdr_pixel);
-      } else {
-        draw_coloredit(win, "image", ldr_pixel);
-      }
-      draw_coloredit(win, "display", display_pixel);
-      end_header(win);
-    }
+    draw_image_inspector(win, input, image, display, glparams);
   };
   callbacks.uiupdate_cb = [&](gui_window* win, const gui_input& input) {
     if ((input.mouse_left || input.mouse_right) && !input.modifier_alt &&
