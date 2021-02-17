@@ -2280,6 +2280,24 @@ shape_data make_heightfield(const vec2i& size, const vector<vec4f>& color) {
   return shape;
 }
 
+// Convert points to small spheres and lines to small cylinders. This is
+// intended for making very small primitives for display in interactive
+// applications, so the spheres are low res and without texcoords and normals.
+shape_data points_to_spheres(
+    const vector<vec3f>& vertices, int steps, float scale) {
+  auto shape = shape_data{};
+  points_to_spheres(shape.quads, shape.positions, shape.normals,
+      shape.texcoords, vertices, steps, scale);
+  return shape;
+}
+shape_data lines_to_cylinders(
+    const vector<vec3f>& vertices, int steps, float scale) {
+  auto shape = shape_data{};
+  lines_to_cylinders(shape.quads, shape.positions, shape.normals,
+      shape.texcoords, vertices, steps, scale);
+  return shape;
+}
+
 }  // namespace yocto
 
 // -----------------------------------------------------------------------------

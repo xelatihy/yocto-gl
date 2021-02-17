@@ -627,6 +627,16 @@ void make_fvcube(vector<vec4i>& quadspos, vector<vec4i>& quadsnorm,
 void make_geosphere(
     vector<vec3i>& triangles, vector<vec3f>& positions, float scale);
 
+// Convert points to small spheres and lines to small cylinders. This is
+// intended for making very small primitives for display in interactive
+// applications, so the spheres are low res and without texcoords and normals.
+void points_to_spheres(vector<vec4i>& quads, vector<vec3f>& positions,
+    vector<vec3f>& normals, vector<vec2f>& texcoords,
+    const vector<vec3f>& vertices, int steps = 2, float scale = 0.01f);
+void lines_to_cylinders(vector<vec4i>& quads, vector<vec3f>& positions,
+    vector<vec3f>& normals, vector<vec2f>& texcoords,
+    const vector<vec3f>& vertices, int steps = 4, float scale = 0.01f);
+
 // Make a hair ball around a shape
 void make_hair(vector<vec2i>& lines, vector<vec3f>& positions,
     vector<vec3f>& normals, vector<vec2f>& texcoords, vector<float>& radius,

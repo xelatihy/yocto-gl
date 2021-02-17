@@ -1069,6 +1069,39 @@ void visit_geodesic_graph(vector<float>& field,
   }
 }
 
+vector<mesh_point> compute_shortest_path(const dual_geodesic_solver& graph,
+    const vector<vec3i>& triangles, const vector<vec3f>& positions,
+    const vector<vec3i>& adjacencies, const mesh_point& start,
+    const mesh_point& end) {
+  auto path = geodesic_path{};
+  if (start.face == end.face) {
+    path.start = start;
+    path.end   = end;
+    path.strip = {start.face};
+  } else {
+    auto strip = strip_on_dual_graph(
+        graph, triangles, positions, end.face, start.face);
+    path = shortest_path(triangles, positions, adjacencies, start, end, strip);
+  }
+  // get mesh points
+  return convert_mesh_path(
+      triangles, adjacencies, path.strip, path.lerps, path.start, path.end)
+      .points;
+};
+
+vector<mesh_point> compute_shortest_path(const dual_geodesic_solver& graph,
+    const vector<vec3i>& triangles, const vector<vec3f>& positions,
+    const vector<vec3i>& adjacencies, const vector<mesh_point>& points) {
+  // geodesic path
+  auto path = vector<mesh_point>{};
+  for (auto idx = 0; idx < (int)points.size() - 1; idx++) {
+    auto segment = compute_shortest_path(
+        graph, triangles, positions, adjacencies, points[idx], points[idx + 1]);
+    path.insert(path.end(), segment.begin(), segment.end());
+  }
+  return path;
+}
+
 }  // namespace yocto
 
 // -----------------------------------------------------------------------------

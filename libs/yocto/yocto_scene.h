@@ -720,6 +720,14 @@ shape_data make_hair(const shape_data& shape, const vec2i& steps = {8, 65536},
     const vec2f& noise = {0, 10}, const vec2f& clump = {0, 128},
     const vec2f& rotation = {0, 0}, int seed = 7);
 
+// Convert points to small spheres and lines to small cylinders. This is
+// intended for making very small primitives for display in interactive
+// applications, so the spheres are low res and without texcoords and normals.
+shape_data points_to_spheres(
+    const vector<vec3f>& vertices, int steps = 2, float scale = 0.01f);
+shape_data lines_to_cylinders(
+    const vector<vec3f>& vertices, int steps = 4, float scale = 0.01f);
+
 // Make a heightfield mesh.
 shape_data make_heightfield(const vec2i& size, const vector<float>& height);
 shape_data make_heightfield(const vec2i& size, const vector<vec4f>& color);

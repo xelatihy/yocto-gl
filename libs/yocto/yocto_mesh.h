@@ -188,12 +188,15 @@ struct dual_geodesic_solver {
 dual_geodesic_solver make_dual_geodesic_solver(const vector<vec3i>& triangles,
     const vector<vec3f>& positions, const vector<vec3i>& adjacencies);
 
-// TODO(fabio): implement wrapper
-// compute the shortest path connecting two surface points
-// initial guess of the connecting strip must be given
-vector<mesh_point> compute_shortest_path(const vector<vec3i>& triangles,
-    const vector<vec3f>& positions, const vector<vec3i>& adjacencies,
-    const mesh_point& start, const mesh_point& end);
+// Compute the shortest path connecting two surface points.
+vector<mesh_point> compute_shortest_path(const dual_geodesic_solver& graph,
+    const vector<vec3i>& triangles, const vector<vec3f>& positions,
+    const vector<vec3i>& adjacencies, const mesh_point& start,
+    const mesh_point& end);
+// Compute the shortest path connecting a set of points.
+vector<mesh_point> compute_shortest_path(const dual_geodesic_solver& graph,
+    const vector<vec3i>& triangles, const vector<vec3f>& positions,
+    const vector<vec3i>& adjacencies, const vector<mesh_point>& points);
 
 // TODO(fabio): implement wrapper
 // compute the straightest path given a surface point and tangent direction
