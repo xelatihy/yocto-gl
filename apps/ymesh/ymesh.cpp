@@ -246,8 +246,8 @@ static scene_scene make_pathscene(
   shape_material.color      = {0.5, 1, 0.5};
   shape_material.roughness  = 0.2;
   auto& points_material     = scene.materials.emplace_back();
-  points_material.type      = material_type::matte;
-  points_material.color     = {0, 0, 0};
+  points_material.type      = material_type::plastic;
+  points_material.color     = {1, 0.5, 0.5};
   points_material.roughness = 0.2;
 
   // shapes
