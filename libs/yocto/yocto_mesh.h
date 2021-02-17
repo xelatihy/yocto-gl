@@ -318,24 +318,17 @@ vec3f eval_position(const vector<vec3i>& triangles,
 vec3f eval_normal(const vector<vec3i>& triangles, const vector<vec3f>& normals,
     const mesh_point& point);
 
-// TODO: cleanup
-pair<bool, int> bary_is_edge(const vec3f& bary, float tol = 1e-2f);
-// TODO: cleanup
-pair<bool, int> bary_is_vert(const vec3f& bary, float tol = 1e-2f);
-// TODO: cleanup
-pair<bool, int> point_is_vert(const mesh_point& p, float tol = 1e-2f);
-// TODO: cleanup
-pair<bool, int> point_is_edge(const mesh_point& p, float tol = 5e-3f);
-// TODO: cleanup
+pair<bool, int>   bary_is_edge(const vec3f& bary, float tol = 1e-2f);
+pair<bool, int>   bary_is_vert(const vec3f& bary, float tol = 1e-2f);
+pair<bool, int>   point_is_vert(const mesh_point& p, float tol = 1e-2f);
+pair<bool, int>   point_is_edge(const mesh_point& p, float tol = 5e-3f);
 pair<bool, vec2f> point_in_triangle(const vector<vec3i>& triangles,
     const vector<vec3f>& positions, int tid, const vec3f& point,
     float tol = 5e-3f);
 
-// TODO: cleanup
 std::array<vec2f, 3> init_flat_triangle(
     const vector<vec3f>& positions, const vec3i& tr);
 
-// TODO: cleanup
 float length_by_flattening(const vector<vec3i>& triangles,
     const vector<vec3f>& positions, const vector<vec3i>& adjacencies,
     const mesh_point& p, const vector<int>& strip);
