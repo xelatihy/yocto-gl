@@ -3928,8 +3928,7 @@ static std::array<spline_polygon, 2> insert_point(
 static std::array<spline_polygon, 2> insert_point_spline(
     const dual_geodesic_solver& solver, const vector<vec3i>& triangles,
     const vector<vec3f>& positions, const vector<vec3i>& adjacencies,
-    const spline_polygon& polygon, const float& t0,
-    const spline_params& params) {
+    const spline_polygon& polygon, float t0, float precision) {
   // Go down the tree and find the leaf node containing the point.
   std::array<spline_polygon, 2> result;
 
@@ -3942,7 +3941,7 @@ static std::array<spline_polygon, 2> insert_point_spline(
     result[1] = {polygon[3], polygon[3], polygon[3], polygon[3]};
 
   } else {
-    auto treshold         = params.precision;
+    auto treshold         = precision;
     auto [depth, t, leaf] = find_leaf(
         solver, triangles, positions, adjacencies, polygon, t0, treshold);
     float         step           = 1 / yocto::pow(2, depth);
@@ -3994,14 +3993,13 @@ static std::array<spline_polygon, 2> insert_point_spline(
   return result;
 }
 
-static array<spline_polygon, 2> insert_bezier_point(
-    const dual_geodesic_solver& solver, const vector<vec3i>& triangles,
-    const vector<vec3f>& positions, const vector<vec3i>& adjacencies,
-    const spline_polygon& polygon, float t0, bool line_riesenfeld,
-    const spline_params& params) {
+array<spline_polygon, 2> insert_bezier_point(const dual_geodesic_solver& solver,
+    const vector<vec3i>& triangles, const vector<vec3f>& positions,
+    const vector<vec3i>& adjacencies, const spline_polygon& polygon, float t,
+    bool line_riesenfeld, float precision) {
   if (line_riesenfeld) {
     return insert_point_spline(
-        solver, triangles, positions, adjacencies, polygon, t0, params);
+        solver, triangles, positions, adjacencies, polygon, t, precision);
   } else {
     throw std::invalid_argument{"not implemented yet"};
   }
