@@ -209,6 +209,30 @@ vector<mesh_point> compute_bezier_path(const dual_geodesic_solver& dual_solver,
     const vector<vec3i>& triangles, const vector<vec3f>& positions,
     const vector<vec3i>& adjacencies, const vector<mesh_point>& control_points);
 
+enum struct spline_algorithm {
+  de_casteljau_uniform = 0,
+  de_casteljau_adaptive,
+  line_riesenfeld_uniform,
+  line_riesenfeld_adaptive
+};
+const auto spline_algorithm_names = vector<string>{
+    "dc-uniform", "dc-adaptive", "lr-uniform", "lr-adaptive"};
+
+struct spline_params {
+  spline_algorithm algorithm      = spline_algorithm::de_casteljau_uniform;
+  int              subdivisions   = 4;
+  float            precision      = 0.1;
+  float            min_curve_size = 0.001;
+  int              max_depth      = 10;
+  bool             parallel       = false;
+};
+
+// compute a bezier on the surface
+vector<mesh_point> compute_bezier_path(const dual_geodesic_solver& dual_solver,
+    const vector<vec3i>& triangles, const vector<vec3f>& positions,
+    const vector<vec3i>& adjacencies, const vector<mesh_point>& control_points,
+    const spline_params& params);
+
 // TODO(fabio): implement wrapper
 // compute the 2d rotation in tangent space that tansport directions from
 // the staring point of the path to its ending point.

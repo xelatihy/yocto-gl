@@ -3132,16 +3132,6 @@ static vector<vec3f> path_positions(const dual_geodesic_solver& dual_solver,
   return path_positions(path, triangles, positions, adjacencies);
 }
 
-static vector<vec3f> path_positions(const dual_geodesic_solver& dual_solver,
-    const vector<vec3i>& triangles, const vector<vec3f>& positions,
-    const vector<vec3i>& adjacencies, const mesh_path& path) {
-  auto positions_ = vector<vec3f>(path.points.size());
-  for (int i = 0; i < positions_.size(); i++) {
-    positions_[i] = eval_position(triangles, positions, path.points[i]);
-  }
-  return positions_;
-}
-
 static float path_length(const dual_geodesic_solver& dual_solver,
     const vector<vec3i>& triangles, const vector<vec3f>& positions,
     const vector<vec3i>& adjacencies, const geodesic_path& path) {
@@ -3304,11 +3294,6 @@ void subdivide_bezier_node(bezier_tree& tree, int node,
   right.t_start = left.t_end;
   right.t_end   = polygon.t_end;
   // return {{P0, Q0, R0, S}, {S, R1, Q2, P3}};
-}
-
-static bool is_right_child(const bezier_tree& tree, int node) {
-  assert(tree.nodes[node].parent != -1);
-  return tree.nodes[tree.nodes[node].parent].children[1] == node;
 }
 
 static bool is_left_child(const bezier_tree& tree, int node) {
@@ -3840,24 +3825,6 @@ mesh_point eval_spline_point_cheap(const dual_geodesic_solver& dual_solver,
   }
   return curr_points.back();
 }
-
-enum struct spline_algorithm {
-  de_casteljau_uniform = 0,
-  de_casteljau_adaptive,
-  line_riesenfeld_uniform,
-  line_riesenfeld_adaptive
-};
-const auto spline_algorithm_names = vector<string>{
-    "dc-uniform", "dc-adaptive", "lr-uniform", "lr-adaptive"};
-
-struct spline_params {
-  spline_algorithm algorithm      = spline_algorithm::de_casteljau_uniform;
-  int              subdivisions   = 4;
-  float            precision      = 0.1;
-  float            min_curve_size = 0.001;
-  int              max_depth      = 10;
-  bool             parallel       = false;
-};
 
 mesh_point eval_spline_point(const dual_geodesic_solver& dual_solver,
     const vector<vec3i>& triangles, const vector<vec3f>& positions,
@@ -4404,6 +4371,50 @@ vector<vec3f> trace_spline(const dual_geodesic_solver& dual_solver,
   }
   return polyline_positions(
       dual_solver, triangles, positions, adjacencies, points);
+}
+
+vector<mesh_point> compute_bezier_path(const dual_geodesic_solver& dual_solver,
+    const vector<vec3i>& triangles, const vector<vec3f>& positions,
+    const vector<vec3i>& adjacencies, const spline_polygon& control_points,
+    const spline_params& params) {
+  switch (params.algorithm) {
+    case spline_algorithm::de_casteljau_uniform: {
+      if (params.parallel)
+        return bezier_uniform_parallel(dual_solver, triangles, positions,
+            adjacencies, control_points, params);
+      else
+        return bezier_uniform(dual_solver, triangles, positions, adjacencies,
+            control_points, params);
+    }
+    case spline_algorithm::de_casteljau_adaptive: {
+      return bezier_adaptive(dual_solver, triangles, positions, adjacencies,
+          control_points, params);
+    }
+    case spline_algorithm::line_riesenfeld_uniform: {
+      return line_riesenfeld_uniform(dual_solver, triangles, positions,
+          adjacencies, control_points, params.subdivisions);
+    }
+    case spline_algorithm::line_riesenfeld_adaptive: {
+      return line_riesenfeld_adaptive(dual_solver, triangles, positions,
+          adjacencies, control_points, params);
+    }
+  }
+}
+
+vector<mesh_point> compute_bezier_path(const dual_geodesic_solver& dual_solver,
+    const vector<vec3i>& triangles, const vector<vec3f>& positions,
+    const vector<vec3i>& adjacencies, const vector<mesh_point>& control_points,
+    const spline_params& params) {
+  auto path = vector<mesh_point>{};
+  for (auto idx = 0; idx < (int)control_points.size() - 3; idx += 3) {
+    auto polygon = spline_polygon{control_points[idx + 0],
+        control_points[idx + 1], control_points[idx + 2],
+        control_points[idx + 3]};
+    auto segment = compute_bezier_path(
+        dual_solver, triangles, positions, adjacencies, polygon, params);
+    path.insert(path.end(), segment.begin(), segment.end());
+  }
+  return path;
 }
 
 // weighted averages (Note:gradients needs to be a vector such that at the
