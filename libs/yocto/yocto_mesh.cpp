@@ -3070,7 +3070,7 @@ vector<mesh_point> compute_bezier_path(const dual_geodesic_solver& dual_solver,
 // -----------------------------------------------------------------------------
 namespace yocto {
 
-inline mesh_point geodesic_midpoint(const dual_geodesic_solver& dual_solver,
+static mesh_point geodesic_midpoint(const dual_geodesic_solver& dual_solver,
     const vector<vec3i>& triangles, const vector<vec3f>& positions,
     const vector<vec3i>& adjacencies, const mesh_point& start,
     const mesh_point& end) {
@@ -3087,7 +3087,7 @@ inline mesh_point geodesic_midpoint(const dual_geodesic_solver& dual_solver,
   return midpoint;
 }
 
-inline mesh_point geodesic_lerp(const dual_geodesic_solver& dual_solver,
+static mesh_point geodesic_lerp(const dual_geodesic_solver& dual_solver,
     const vector<vec3i>& triangles, const vector<vec3f>& positions,
     const vector<vec3i>& adjacencies, const mesh_point& a, const mesh_point& b,
     const mesh_point& c, float t0, float t1) {
@@ -3106,13 +3106,13 @@ struct bezier_polygon {
   std::array<geodesic_path, 3> lines;
 };
 
-inline mesh_point eval_path_point(const dual_geodesic_solver& dual_solver,
+static mesh_point eval_path_point(const dual_geodesic_solver& dual_solver,
     const vector<vec3i>& triangles, const vector<vec3f>& positions,
     const vector<vec3i>& adjacencies, const geodesic_path& path, float t) {
   return eval_path_point(path, triangles, positions, adjacencies, t);
 }
 
-inline mesh_point eval_path_point(const dual_geodesic_solver& dual_solver,
+static mesh_point eval_path_point(const dual_geodesic_solver& dual_solver,
     const vector<vec3i>& triangles, const vector<vec3f>& positions,
     const vector<vec3i>& adjacencies, const geodesic_path& path,
     const vector<float>& path_parameter_t, const float& t) {
@@ -3120,19 +3120,19 @@ inline mesh_point eval_path_point(const dual_geodesic_solver& dual_solver,
       path, triangles, positions, adjacencies, path_parameter_t, t);
 }
 
-inline mesh_point eval_path_midpoint(const dual_geodesic_solver& dual_solver,
+static mesh_point eval_path_midpoint(const dual_geodesic_solver& dual_solver,
     const vector<vec3i>& triangles, const vector<vec3f>& positions,
     const vector<vec3i>& adjacencies, const geodesic_path& path) {
   return eval_path_point(path, triangles, positions, adjacencies, 0.5);
 }
 
-inline vector<vec3f> path_positions(const dual_geodesic_solver& dual_solver,
+static vector<vec3f> path_positions(const dual_geodesic_solver& dual_solver,
     const vector<vec3i>& triangles, const vector<vec3f>& positions,
     const vector<vec3i>& adjacencies, const geodesic_path& path) {
   return path_positions(path, triangles, positions, adjacencies);
 }
 
-inline vector<vec3f> path_positions(const dual_geodesic_solver& dual_solver,
+static vector<vec3f> path_positions(const dual_geodesic_solver& dual_solver,
     const vector<vec3i>& triangles, const vector<vec3f>& positions,
     const vector<vec3i>& adjacencies, const mesh_path& path) {
   auto positions_ = vector<vec3f>(path.points.size());
@@ -3142,7 +3142,7 @@ inline vector<vec3f> path_positions(const dual_geodesic_solver& dual_solver,
   return positions_;
 }
 
-inline float path_length(const dual_geodesic_solver& dual_solver,
+static float path_length(const dual_geodesic_solver& dual_solver,
     const vector<vec3i>& triangles, const vector<vec3f>& positions,
     const vector<vec3i>& adjacencies, const geodesic_path& path) {
   auto positions_ = path_positions(
@@ -3156,7 +3156,7 @@ inline float path_length(const dual_geodesic_solver& dual_solver,
 }
 
 // TODO(giacomo): put in yocto_mesh (explode params)
-inline vec2f tangent_path_direction(const dual_geodesic_solver& dual_solver,
+static vec2f tangent_path_direction(const dual_geodesic_solver& dual_solver,
     const vector<vec3i>& triangles, const vector<vec3f>& positions,
     const vector<vec3i>& adjacencies, const geodesic_path& path,
     bool start = true) {
@@ -3194,7 +3194,7 @@ inline vec2f tangent_path_direction(const dual_geodesic_solver& dual_solver,
   return normalize(direction);
 }
 
-inline pair<bezier_polygon, bezier_polygon> subdivide_bezier(
+static pair<bezier_polygon, bezier_polygon> subdivide_bezier(
     const bezier_polygon& input, const dual_geodesic_solver& dual_solver,
     const vector<vec3i>& triangles, const vector<vec3f>& positions,
     const vector<vec3i>& adjacencies) {
@@ -3245,7 +3245,7 @@ struct bezier_tree {
   int                 depth = 0;
 };
 
-inline void add_children(bezier_tree& tree, int parent) {
+static void add_children(bezier_tree& tree, int parent) {
   auto id = (int)tree.nodes.size();
   tree.nodes.push_back({});
   tree.nodes.push_back({});
@@ -3306,12 +3306,12 @@ void subdivide_bezier_node(bezier_tree& tree, int node,
   // return {{P0, Q0, R0, S}, {S, R1, Q2, P3}};
 }
 
-inline bool is_right_child(const bezier_tree& tree, int node) {
+static bool is_right_child(const bezier_tree& tree, int node) {
   assert(tree.nodes[node].parent != -1);
   return tree.nodes[tree.nodes[node].parent].children[1] == node;
 }
 
-inline bool is_left_child(const bezier_tree& tree, int node) {
+static bool is_left_child(const bezier_tree& tree, int node) {
   assert(tree.nodes[node].parent != -1);
   return tree.nodes[tree.nodes[node].parent].children[0] == node;
 }
@@ -4344,17 +4344,17 @@ vector<mesh_point> line_riesenfeld_adaptive(
     const array<mesh_point, 4>& polygon, const spline_params& params);
 
 template <typename T>
-inline vector<T>& append(vector<T>& a, const vector<T>& b) {
+static vector<T>& append(vector<T>& a, const vector<T>& b) {
   a.insert(a.end(), b.begin(), b.end());
   return a;
 }
 template <typename T>
-inline vector<T>& append(vector<T>& a, const T& b) {
+static vector<T>& append(vector<T>& a, const T& b) {
   a.push_back(b);
   return a;
 }
 
-inline vector<vec3f> polyline_positions(const dual_geodesic_solver& dual_solver,
+static vector<vec3f> polyline_positions(const dual_geodesic_solver& dual_solver,
     const vector<vec3i>& triangles, const vector<vec3f>& positions,
     const vector<vec3i>& adjacencies, const vector<mesh_point>& points) {
   auto result = vector<vec3f>();
