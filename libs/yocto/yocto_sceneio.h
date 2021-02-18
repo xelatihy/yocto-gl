@@ -3,7 +3,8 @@
 //
 // Yocto/SceneIO supports loading and saving scenes from Ply, Obj, Pbrt, glTF
 // and a custom Json format.
-// Yocto/SceneIO is implemented in `yocto_sceneio.h` and `yocto_sceneio.cpp`.
+// Yocto/SceneIO is implemented in `yocto_sceneio.h` and `yocto_sceneio.cpp`
+// and depends on `stb_image.h`, `stb_image_write.h`, `tinyexr.h`.
 //
 
 //
