@@ -230,7 +230,6 @@ struct spline_params {
   float            precision      = 0.1;
   float            min_curve_size = 0.001;
   int              max_depth      = 10;
-  bool             parallel       = false;
 };
 
 // compute a bezier on the surface

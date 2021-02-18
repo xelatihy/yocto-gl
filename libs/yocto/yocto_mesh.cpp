@@ -3027,7 +3027,7 @@ static pair<spline_polygon, spline_polygon> subdivide_bezier_polygon(
   return {{input[0], Q0, R0, S}, {S, R1, Q2, input[3]}};
 }
 
-static vector<mesh_point> bezier_uniform(
+static vector<mesh_point> compute_bezier_de_casteljau_uniform(
     const dual_geodesic_solver& dual_solver, const vector<vec3i>& triangles,
     const vector<vec3f>& positions, const vector<vec3i>& adjacencies,
     const spline_polygon& control_points, int subdivisions) {
@@ -3051,8 +3051,8 @@ vector<mesh_point> compute_bezier_path(const dual_geodesic_solver& dual_solver,
     const vector<vec3i>& triangles, const vector<vec3f>& positions,
     const vector<vec3i>&        adjacencies,
     const array<mesh_point, 4>& control_points, int subdivisions) {
-  return bezier_uniform(dual_solver, triangles, positions, adjacencies,
-      control_points, subdivisions);
+  return compute_bezier_de_casteljau_uniform(dual_solver, triangles, positions,
+      adjacencies, control_points, subdivisions);
 }
 
 vector<mesh_point> compute_bezier_path(const dual_geodesic_solver& dual_solver,
@@ -3064,7 +3064,7 @@ vector<mesh_point> compute_bezier_path(const dual_geodesic_solver& dual_solver,
     auto polygon = spline_polygon{control_points[idx + 0],
         control_points[idx + 1], control_points[idx + 2],
         control_points[idx + 3]};
-    auto segment = bezier_uniform(
+    auto segment = compute_bezier_de_casteljau_uniform(
         dual_solver, triangles, positions, adjacencies, polygon, subdivisions);
     path.insert(path.end(), segment.begin(), segment.end());
   }
@@ -4143,10 +4143,10 @@ static std::array<spline_polygon, 2> insert_point_old(
   return {segment_left, segment_right};
 }
 
-static void subdivide_bezier_tree(const dual_geodesic_solver& dual_solver,
-    const vector<vec3i>& triangles, const vector<vec3f>& positions,
-    const vector<vec3i>& adjacencies, bezier_tree& tree, spline_params params,
-    float t) {
+[[maybe_unused]] static void subdivide_bezier_tree(
+    const dual_geodesic_solver& dual_solver, const vector<vec3i>& triangles,
+    const vector<vec3f>& positions, const vector<vec3i>& adjacencies,
+    bezier_tree& tree, spline_params params, float t) {
   // assuming bezier_tree is empty
   auto from = 0;
   auto to   = 1;
@@ -4217,10 +4217,11 @@ static bool is_bezier_straight_enough(const geodesic_path& a,
   return true;
 }
 
-static void subdivide_bezier_adaptive(const dual_geodesic_solver& dual_solver,
-    const vector<vec3i>& triangles, const vector<vec3f>& positions,
-    const vector<vec3i>& adjacencies, const spline_polygon& input,
-    spline_params params, vector<mesh_point>& result, int depth = 0) {
+static void subdivide_compute_bezier_de_casteljau_adaptive(
+    const dual_geodesic_solver& dual_solver, const vector<vec3i>& triangles,
+    const vector<vec3f>& positions, const vector<vec3i>& adjacencies,
+    const spline_polygon& input, spline_params params,
+    vector<mesh_point>& result, int depth = 0) {
   // resulting beziers: (P0, Q0, R0, S) (S, R1, Q2, P3)
 
   if (depth > params.max_depth) {
@@ -4259,23 +4260,24 @@ static void subdivide_bezier_adaptive(const dual_geodesic_solver& dual_solver,
 
   auto S = eval_path_midpoint(R0_R1, triangles, positions, adjacencies);
 
-  subdivide_bezier_adaptive(dual_solver, triangles, positions, adjacencies,
-      {P0, Q0, R0, S}, params, result, depth + 1);
-  subdivide_bezier_adaptive(dual_solver, triangles, positions, adjacencies,
-      {S, R1, Q2, P3}, params, result, depth + 1);
+  subdivide_compute_bezier_de_casteljau_adaptive(dual_solver, triangles,
+      positions, adjacencies, {P0, Q0, R0, S}, params, result, depth + 1);
+  subdivide_compute_bezier_de_casteljau_adaptive(dual_solver, triangles,
+      positions, adjacencies, {S, R1, Q2, P3}, params, result, depth + 1);
 }
 
-static vector<mesh_point> bezier_adaptive(
+static vector<mesh_point> compute_bezier_de_casteljau_adaptive(
     const dual_geodesic_solver& dual_solver, const vector<vec3i>& triangles,
     const vector<vec3f>& positions, const vector<vec3i>& adjacencies,
     const spline_polygon& control_points, const spline_params& params) {
   auto result = vector<mesh_point>{};
-  subdivide_bezier_adaptive(dual_solver, triangles, positions, adjacencies,
-      control_points, params, result);
+  subdivide_compute_bezier_de_casteljau_adaptive(dual_solver, triangles,
+      positions, adjacencies, control_points, params, result);
   return result;
 }
 
-static vector<mesh_point> bezier_uniform_parallel(
+[[maybe_unused]] static vector<mesh_point>
+compute_bezier_de_casteljau_uniform_parallel(
     const dual_geodesic_solver& dual_solver, const vector<vec3i>& triangles,
     const vector<vec3f>& positions, const vector<vec3i>& adjacencies,
     const spline_polygon& control_points, const spline_params& params) {
@@ -4304,7 +4306,7 @@ static vector<mesh_point> bezier_uniform_parallel(
       (mesh_point*)segments.data() + segments.size() * 4};
 }
 
-static vector<mesh_point> bezier_uniform(
+static vector<mesh_point> compute_bezier_de_casteljau_uniform(
     const dual_geodesic_solver& dual_solver, const vector<vec3i>& triangles,
     const vector<vec3f>& positions, const vector<vec3i>& adjacencies,
     const spline_polygon& control_points, const spline_params& params) {
@@ -4325,11 +4327,11 @@ static vector<mesh_point> bezier_uniform(
       (mesh_point*)segments.data() + segments.size() * 4};
 }
 
-static vector<mesh_point> line_riesenfeld_uniform(
+static vector<mesh_point> compute_bezier_line_riesenfeld_uniform(
     const dual_geodesic_solver& dual_solver, const vector<vec3i>& triangles,
     const vector<vec3f>& positions, const vector<vec3i>& adjacencies,
     const array<mesh_point, 4>& control_points, int num_subdivisions);
-static vector<mesh_point> line_riesenfeld_adaptive(
+static vector<mesh_point> compute_bezier_line_riesenfeld_adaptive(
     const dual_geodesic_solver& dual_solver, const vector<vec3i>& triangles,
     const vector<vec3f>& positions, const vector<vec3i>& adjacencies,
     const array<mesh_point, 4>& polygon, const spline_params& params);
@@ -4345,9 +4347,10 @@ static vector<T>& append(vector<T>& a, const T& b) {
   return a;
 }
 
-static vector<vec3f> polyline_positions(const dual_geodesic_solver& dual_solver,
-    const vector<vec3i>& triangles, const vector<vec3f>& positions,
-    const vector<vec3i>& adjacencies, const vector<mesh_point>& points) {
+[[maybe_unused]] static vector<vec3f> polyline_positions(
+    const dual_geodesic_solver& dual_solver, const vector<vec3i>& triangles,
+    const vector<vec3f>& positions, const vector<vec3i>& adjacencies,
+    const vector<mesh_point>& points) {
   auto result = vector<vec3f>();
   result.reserve(points.size() * 4);
   for (int i = 0; i < points.size() - 1; i++) {
@@ -4361,66 +4364,26 @@ static vector<vec3f> polyline_positions(const dual_geodesic_solver& dual_solver,
   return result;
 }
 
-static vector<vec3f> trace_spline(const dual_geodesic_solver& dual_solver,
-    const vector<vec3i>& triangles, const vector<vec3f>& positions,
-    const vector<vec3i>& adjacencies, const spline_polygon& control_points,
-    const spline_params& params) {
-  // profile_function();
-  auto points = vector<mesh_point>{};
-  switch (params.algorithm) {
-    case spline_algorithm::de_casteljau_uniform: {
-      if (params.parallel)
-        points = bezier_uniform_parallel(dual_solver, triangles, positions,
-            adjacencies, control_points, params);
-      else
-        points = bezier_uniform(dual_solver, triangles, positions, adjacencies,
-            control_points, params);
-      break;
-    }
-    case spline_algorithm::de_casteljau_adaptive: {
-      points = bezier_adaptive(dual_solver, triangles, positions, adjacencies,
-          control_points, params);
-      break;
-    }
-    case spline_algorithm::line_riesenfeld_uniform: {
-      points = line_riesenfeld_uniform(dual_solver, triangles, positions,
-          adjacencies, control_points, params.subdivisions);
-      break;
-    }
-    case spline_algorithm::line_riesenfeld_adaptive: {
-      points = line_riesenfeld_adaptive(dual_solver, triangles, positions,
-          adjacencies, control_points, params);
-      break;
-    }
-  }
-  return polyline_positions(
-      dual_solver, triangles, positions, adjacencies, points);
-}
-
 vector<mesh_point> compute_bezier_path(const dual_geodesic_solver& dual_solver,
     const vector<vec3i>& triangles, const vector<vec3f>& positions,
     const vector<vec3i>& adjacencies, const spline_polygon& control_points,
     const spline_params& params) {
   switch (params.algorithm) {
     case spline_algorithm::de_casteljau_uniform: {
-      if (params.parallel)
-        return bezier_uniform_parallel(dual_solver, triangles, positions,
-            adjacencies, control_points, params);
-      else
-        return bezier_uniform(dual_solver, triangles, positions, adjacencies,
-            control_points, params);
+      return compute_bezier_de_casteljau_uniform(dual_solver, triangles,
+          positions, adjacencies, control_points, params);
     }
     case spline_algorithm::de_casteljau_adaptive: {
-      return bezier_adaptive(dual_solver, triangles, positions, adjacencies,
-          control_points, params);
+      return compute_bezier_de_casteljau_adaptive(dual_solver, triangles,
+          positions, adjacencies, control_points, params);
     }
     case spline_algorithm::line_riesenfeld_uniform: {
-      return line_riesenfeld_uniform(dual_solver, triangles, positions,
-          adjacencies, control_points, params.subdivisions);
+      return compute_bezier_line_riesenfeld_uniform(dual_solver, triangles,
+          positions, adjacencies, control_points, params.subdivisions);
     }
     case spline_algorithm::line_riesenfeld_adaptive: {
-      return line_riesenfeld_adaptive(dual_solver, triangles, positions,
-          adjacencies, control_points, params);
+      return compute_bezier_line_riesenfeld_adaptive(dual_solver, triangles,
+          positions, adjacencies, control_points, params);
     }
   }
 }
@@ -4444,7 +4407,7 @@ vector<mesh_point> compute_bezier_path(const dual_geodesic_solver& dual_solver,
 // weighted averages (Note:gradients needs to be a vector such that at the
 // i-th entry constains the gradient field of the squared distance field from
 // the i-th control points)
-static vector<mesh_point> weighted_average(
+[[maybe_unused]] static vector<mesh_point> weighted_average(
     const dual_geodesic_solver& dual_solver, const vector<vec3i>& triangles,
     const vector<vec3f>& positions, const vector<vec3i>& adjacencies,
     const vector<mesh_point>& rectangle, const vector<vector<float>>& weights) {
@@ -4649,7 +4612,7 @@ static pair<spline_node, spline_node> split_spline_node(
   return {P0, P1};
 }
 
-static vector<mesh_point> line_riesenfeld_uniform(
+static vector<mesh_point> compute_bezier_line_riesenfeld_uniform(
     const dual_geodesic_solver& dual_solver, const vector<vec3i>& triangles,
     const vector<vec3f>& positions, const vector<vec3i>& adjacencies,
     const array<mesh_point, 4>& control_points, int num_subdivisions) {
@@ -4793,7 +4756,7 @@ static vector<mesh_point> line_riesenfeld_uniform(
   return q;
 }
 
-static vector<mesh_point> spline_subdivision_uniform_quadric(
+[[maybe_unused]] static vector<mesh_point> spline_subdivision_uniform_quadric(
     const dual_geodesic_solver& dual_solver, const vector<vec3i>& triangles,
     const vector<vec3f>& positions, const vector<vec3i>& adjacencies,
     const array<mesh_point, 3>& control_points, int num_subdivisions) {
@@ -4887,7 +4850,7 @@ static vector<mesh_point> spline_subdivision_uniform_quadric(
   return q;
 }
 
-static vector<mesh_point> line_riesenfeld_adaptive(
+static vector<mesh_point> compute_bezier_line_riesenfeld_adaptive(
     const dual_geodesic_solver& dual_solver, const vector<vec3i>& triangles,
     const vector<vec3f>& positions, const vector<vec3i>& adjacencies,
     const array<mesh_point, 4>& polygon, const spline_params& params) {
@@ -5040,7 +5003,7 @@ static vector<mesh_point> line_riesenfeld_adaptive(
   return polyline;
 }
 
-static vector<mesh_point> degree_elevation(
+[[maybe_unused]] static vector<mesh_point> degree_elevation(
     const dual_geodesic_solver& dual_solver, const vector<vec3i>& triangles,
     const vector<vec3f>& positions, const vector<vec3i>& adjacencies,
     const array<mesh_point, 4>& control_points, int num_subdivisions) {
