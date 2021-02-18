@@ -1679,7 +1679,7 @@ static image_data make_proc_image(
 // Make an image
 image_data make_grid(int width, int height, float scale, const vec4f& color0,
     const vec4f& color1) {
-  return make_proc_image(width, height, false, false, [=](vec2f uv) {
+  return make_proc_image(width, height, true, false, [=](vec2f uv) {
     uv *= 4 * scale;
     uv -= vec2f{(float)(int)uv.x, (float)(int)uv.y};
     auto thick = 0.01f / 2;
@@ -1693,7 +1693,7 @@ image_data make_grid(int width, int height, float scale, const vec4f& color0,
 
 image_data make_checker(int width, int height, float scale, const vec4f& color0,
     const vec4f& color1) {
-  return make_proc_image(width, height, false, false, [=](vec2f uv) {
+  return make_proc_image(width, height, true, false, [=](vec2f uv) {
     uv *= 4 * scale;
     uv -= vec2f{(float)(int)uv.x, (float)(int)uv.y};
     auto c = uv.x <= 0.5f != uv.y <= 0.5f;
@@ -1703,7 +1703,7 @@ image_data make_checker(int width, int height, float scale, const vec4f& color0,
 
 image_data make_bumps(int width, int height, float scale, const vec4f& color0,
     const vec4f& color1) {
-  return make_proc_image(width, height, false, false, [=](vec2f uv) {
+  return make_proc_image(width, height, true, false, [=](vec2f uv) {
     uv *= 4 * scale;
     uv -= vec2f{(float)(int)uv.x, (float)(int)uv.y};
     auto thick  = 0.125f;
@@ -1720,7 +1720,7 @@ image_data make_bumps(int width, int height, float scale, const vec4f& color0,
 
 image_data make_ramp(int width, int height, float scale, const vec4f& color0,
     const vec4f& color1) {
-  return make_proc_image(width, height, false, false, [=](vec2f uv) {
+  return make_proc_image(width, height, true, false, [=](vec2f uv) {
     uv *= scale;
     uv -= vec2f{(float)(int)uv.x, (float)(int)uv.y};
     return lerp(color0, color1, uv.x);
@@ -1729,7 +1729,7 @@ image_data make_ramp(int width, int height, float scale, const vec4f& color0,
 
 image_data make_gammaramp(int width, int height, float scale,
     const vec4f& color0, const vec4f& color1) {
-  return make_proc_image(width, height, false, false, [=](vec2f uv) {
+  return make_proc_image(width, height, true, false, [=](vec2f uv) {
     uv *= scale;
     uv -= vec2f{(float)(int)uv.x, (float)(int)uv.y};
     if (uv.y < 1 / 3.0f) {
@@ -1743,7 +1743,7 @@ image_data make_gammaramp(int width, int height, float scale,
 }
 
 image_data make_uvramp(int width, int height, float scale) {
-  return make_proc_image(width, height, false, false, [=](vec2f uv) {
+  return make_proc_image(width, height, true, false, [=](vec2f uv) {
     uv *= scale;
     uv -= vec2f{(float)(int)uv.x, (float)(int)uv.y};
     return vec4f{uv.x, uv.y, 0, 1};
@@ -1751,7 +1751,7 @@ image_data make_uvramp(int width, int height, float scale) {
 }
 
 image_data make_uvgrid(int width, int height, float scale, bool colored) {
-  return make_proc_image(width, height, false, false, [=](vec2f uv) {
+  return make_proc_image(width, height, true, false, [=](vec2f uv) {
     uv *= scale;
     uv -= vec2f{(float)(int)uv.x, (float)(int)uv.y};
     uv.y     = 1 - uv.y;
@@ -1780,7 +1780,7 @@ image_data make_uvgrid(int width, int height, float scale, bool colored) {
 
 image_data make_blackbodyramp(
     int width, int height, float scale, float from, float to) {
-  return make_proc_image(width, height, false, false, [=](vec2f uv) {
+  return make_proc_image(width, height, true, false, [=](vec2f uv) {
     uv *= scale;
     uv -= vec2f{(float)(int)uv.x, (float)(int)uv.y};
     auto rgb = blackbody_to_rgb(lerp(from, to, uv.x));
@@ -1789,7 +1789,7 @@ image_data make_blackbodyramp(
 }
 
 image_data make_colormapramp(int width, int height, float scale) {
-  return make_proc_image(width, height, false, false, [=](vec2f uv) {
+  return make_proc_image(width, height, true, false, [=](vec2f uv) {
     uv *= scale;
     uv -= vec2f{(float)(int)uv.x, (float)(int)uv.y};
     auto rgb = zero3f;
@@ -1808,7 +1808,7 @@ image_data make_colormapramp(int width, int height, float scale) {
 
 image_data make_noisemap(int width, int height, float scale,
     const vec4f& color0, const vec4f& color1) {
-  return make_proc_image(width, height, false, false, [=](vec2f uv) {
+  return make_proc_image(width, height, true, false, [=](vec2f uv) {
     uv *= 8 * scale;
     auto v = perlin_noise(vec3f{uv.x, uv.y, 0});
     v      = clamp(v, 0.0f, 1.0f);
@@ -1818,7 +1818,7 @@ image_data make_noisemap(int width, int height, float scale,
 
 image_data make_fbmmap(int width, int height, float scale, const vec4f& noise,
     const vec4f& color0, const vec4f& color1) {
-  return make_proc_image(width, height, false, false, [=](vec2f uv) {
+  return make_proc_image(width, height, true, false, [=](vec2f uv) {
     uv *= 8 * scale;
     auto v = perlin_fbm({uv.x, uv.y, 0}, noise.x, noise.y, (int)noise.z);
     v      = clamp(v, 0.0f, 1.0f);
@@ -1828,7 +1828,7 @@ image_data make_fbmmap(int width, int height, float scale, const vec4f& noise,
 
 image_data make_turbulencemap(int width, int height, float scale,
     const vec4f& noise, const vec4f& color0, const vec4f& color1) {
-  return make_proc_image(width, height, false, false, [=](vec2f uv) {
+  return make_proc_image(width, height, true, false, [=](vec2f uv) {
     uv *= 8 * scale;
     auto v = perlin_turbulence({uv.x, uv.y, 0}, noise.x, noise.y, (int)noise.z);
     v      = clamp(v, 0.0f, 1.0f);
@@ -1838,7 +1838,7 @@ image_data make_turbulencemap(int width, int height, float scale,
 
 image_data make_ridgemap(int width, int height, float scale, const vec4f& noise,
     const vec4f& color0, const vec4f& color1) {
-  return make_proc_image(width, height, false, false, [=](vec2f uv) {
+  return make_proc_image(width, height, true, false, [=](vec2f uv) {
     uv *= 8 * scale;
     auto v = perlin_ridge(
         {uv.x, uv.y, 0}, noise.x, noise.y, (int)noise.z, noise.w);
