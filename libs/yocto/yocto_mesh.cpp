@@ -102,6 +102,10 @@ static int find_in_vec(const vec3i& vec, int x) {
 
 static int mod3(int i) { return (i > 2) ? i - 3 : i; }
 
+static vec3f get_bary(const vec2f& uv) {
+  return vec3f{1 - uv.x - uv.y, uv.x, uv.y};
+}
+
 }  // namespace yocto
 
 // -----------------------------------------------------------------------------
@@ -1587,6 +1591,45 @@ vector<vec3f> make_positions_from_path(
   return integral_paths::make_positions_from_path(path, mesh_positions);
 }
 
+static vector<pair<int, float>> nodes_around_point(
+    const vector<vec3i>& triangles, const vector<vec3f>& positions,
+    const vector<vec3i>& adjacencies, const mesh_point& p) {
+  auto nodes               = vector<pair<int, float>>{};
+  auto [is_vertex, offset] = bary_is_vert(get_bary(p.uv));
+  if (is_vertex) {
+    auto vid = triangles[p.face][offset];
+    nodes.push_back({vid, 0});
+  } else {
+    auto pid = p.face;
+    auto pos = eval_position(triangles, positions, p);
+    for (int i = 0; i < 3; ++i) {
+      int   p0 = triangles[pid][i], p1 = triangles[pid][(i + 1) % 3];
+      float d = length(positions[p0] - pos);
+      nodes.push_back(std::make_pair(p0, d));
+      int         CW_pid = adjacencies[pid][i];
+      int         opp    = opposite_vertex(triangles, adjacencies, pid, i);
+      vector<int> strip  = {CW_pid, pid};
+      float       l      = length_by_flattening(
+          triangles, positions, adjacencies, p, strip);
+      nodes.push_back(std::make_pair(opp, l));
+      int opp_pid = opposite_face(triangles, adjacencies, CW_pid, p0);
+      strip       = {opp_pid, CW_pid, pid};
+      int k       = find_in_vec(adjacencies[CW_pid], opp_pid);
+      int q       = opposite_vertex(triangles, adjacencies, CW_pid, k);
+      d = length_by_flattening(triangles, positions, adjacencies, p, strip);
+      nodes.push_back(std::make_pair(q, d));
+      opp_pid = opposite_face(triangles, adjacencies, CW_pid, p1);
+      strip   = {opp_pid, CW_pid, pid};
+      k       = find_in_vec(adjacencies[CW_pid], opp_pid);
+      q       = opposite_vertex(triangles, adjacencies, CW_pid, k);
+      d = length_by_flattening(triangles, positions, adjacencies, p, strip);
+      nodes.push_back(std::make_pair(q, d));
+    }
+  }
+  return nodes;
+}
+
+#if 0
 // compute the distance between a point p and some vertices around him
 // handling concave path
 static vector<pair<int, float>> nodes_around_point(
@@ -1615,6 +1658,7 @@ static vector<pair<int, float>> nodes_around_point(
 
   return nodes;
 }
+#endif
 
 vector<float> solve_with_parents(const geodesic_solver& solver,
     const vector<pair<int, float>>&                     sources_and_dist,
@@ -2110,6 +2154,85 @@ static int get_entry(vector<int>& strip, const geodesic_solver& solver,
   if (auto [is_vert, offset] = point_is_vert(p); is_vert) {
     auto vid   = triangles[p.face][offset];
     auto entry = node_is_neighboor(solver, vid, parent);
+    if (entry < 0) {
+      assert(vid == parent);
+      return -1;
+    }
+    auto star        = v2t[vid];
+    auto s           = (int)star.size();
+    auto it          = find(star.begin(), star.end(), p.face);
+    auto first       = (int)distance(star.begin(), it);
+    auto last        = (entry % 2) ? (entry - 1) / 2 : (entry / 2) % s;
+    auto ccw         = set_ord(s, first, last, entry % 2);
+    auto nei_is_dual = (bool)((entry + 2) % 2);
+    fill_strip(strip, v2t, vid, first, last, nei_is_dual, ccw);
+    if (entry % 2) {
+      first    = (entry - 1) / 2;
+      auto tid = opposite_face(triangles, adjacencies, v2t[vid][first], vid);
+      strip.push_back(tid);
+    }
+    entry = node_is_neighboor(solver, parent, vid);
+    return entry;
+  } else {
+    auto        h = find_in_vec(triangles[p.face], parent);
+    vector<int> adj_tri(3);
+    if (h == -1) {
+      for (auto i = 0; i < 3; ++i) {
+        auto adj   = adjacencies[p.face][i];
+        adj_tri[i] = adj;
+        h          = find_in_vec(triangles[adj], parent);
+        if (h != -1) {
+          strip.push_back(adj);
+          auto entry = node_is_neighboor(
+              solver, parent, triangles[adj][(h + 1) % 3]);
+          assert(entry >= 0);
+          return entry + 1;
+        }
+      }
+    } else {
+      auto entry = node_is_neighboor(
+          solver, parent, triangles[p.face][(h + 1) % 3]);
+      assert(entry >= 0);
+      return entry + 1;
+    }
+    for (auto i = 0; i < 3; ++i) {
+      auto p0 = triangles[p.face][i], p1 = triangles[p.face][(i + 1) % 3];
+      auto adj = adj_tri[i];
+      auto opp = opposite_face(triangles, adjacencies, adj, p0);
+      h        = find_in_vec(triangles[opp], parent);
+      if (h != -1) {
+        strip.push_back(adj);
+        strip.push_back(opp);
+        auto entry = node_is_neighboor(
+            solver, parent, triangles[opp][(h + 1) % 3]);
+        assert(entry >= 0);
+        return entry + 1;
+      }
+      opp = opposite_face(triangles, adjacencies, adj, p1);
+      h   = find_in_vec(triangles[opp], parent);
+      if (h != -1) {
+        strip.push_back(adj);
+        strip.push_back(opp);
+        auto entry = node_is_neighboor(
+            solver, parent, triangles[opp][(h + 1) % 3]);
+        assert(entry >= 0);
+        return entry + 1;
+      }
+    }
+  }
+  assert(false);
+  return -1;
+}
+
+#if 0
+static int get_entry(vector<int>& strip, const geodesic_solver& solver,
+    const vector<vec3i>& triangles, const vector<vec3f>& positions,
+    const vector<vec3i>& adjacencies, const vector<vector<int>>& v2t,
+    const vector<vector<float>>& angles, int parent, const mesh_point& p) {
+  strip = {p.face};
+  if (auto [is_vert, offset] = point_is_vert(p); is_vert) {
+    auto vid   = triangles[p.face][offset];
+    auto entry = node_is_neighboor(solver, vid, parent);
     assert(entry >= 0);
     auto star        = v2t[vid];
     auto s           = (int)star.size();
@@ -2149,6 +2272,7 @@ static int get_entry(vector<int>& strip, const geodesic_solver& solver,
   }
   return 0;  // TODO(fabio): cosa deve fare qui?
 }
+#endif
 
 void close_strip(vector<int>& strip, const vector<vector<int>>& v2t, int vid,
     int prev_tri, int last_tri) {
