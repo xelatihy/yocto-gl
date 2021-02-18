@@ -314,9 +314,9 @@ int run_glpath(const glpath_params &params) {
   auto params2      = spline_params{};
   params2.algorithm = spline_algorithm::de_casteljau_adaptive;
   auto params3      = spline_params{};
-  params3.algorithm = spline_algorithm::line_riesenfeld_uniform;
+  params3.algorithm = spline_algorithm::lane_riesenfeld_uniform;
   auto params4      = spline_params{};
-  params4.algorithm = spline_algorithm::line_riesenfeld_adaptive;
+  params4.algorithm = spline_algorithm::lane_riesenfeld_adaptive;
 
   // run viewer
   glview_scene(
