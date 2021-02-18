@@ -99,7 +99,7 @@ static int find_in_vec(const vec3i& vec, int x) {
   return -1;
 }
 
-inline int mod3(int i) { return (i > 2) ? i - 3 : i; }
+static int mod3(int i) { return (i > 2) ? i - 3 : i; }
 
 }  // namespace yocto
 
@@ -196,7 +196,7 @@ vec2f intersect_circles(const vec2f& c2, float R2, const vec2f& c1, float R1) {
   return result / 2;
 }
 
-static vec2f intersect_circles_double(
+[[maybe_unused]] static vec2f intersect_circles_double(
     float c2x, float c2y, float R2, double c1x, double c1y, float R1) {
   auto R = (c2x - c1x) * (c2x - c1x) + (c2y - c1y) * (c2y - c1y);
   assert(R > 0);
@@ -226,7 +226,7 @@ unfold_triangle init_flat_triangle(
   return tr2d;
 }
 
-inline int find_adjacent_triangle(
+static int find_adjacent_triangle(
     const vec3i& triangle, const vec3i& adjacent) {
   for (int i = 0; i < 3; i++) {
     auto k = find_in_vec(adjacent, triangle[i]);
@@ -242,13 +242,13 @@ inline int find_adjacent_triangle(
   return -1;
 }
 
-inline int find_adjacent_triangle(
+static int find_adjacent_triangle(
     const vector<vec3i>& triangles, int face, int neighbor) {
   return find_adjacent_triangle(triangles[face], triangles[neighbor]);
 }
 
-inline vec2f unfold_point(const vec3f& pa, const vec3f& pb, const vec3f& pv,
-    const vec2f& ca, const vec2f& cb) {
+[[maybe_unused]] static vec2f unfold_point(const vec3f& pa, const vec3f& pb,
+    const vec3f& pv, const vec2f& ca, const vec2f& cb) {
   // Unfold position of vertex v
   auto ex = normalize(ca - cb);
   auto ey = vec2f{-ex.y, ex.x};
@@ -374,7 +374,7 @@ static vector<pair<vec2f, vec2f>> make_funnel_portals(
   return portals;
 }
 
-inline vector<pair<vec2f, vec2f>> unfold_funnel_portals(
+static vector<pair<vec2f, vec2f>> unfold_funnel_portals(
     const vector<vec3i>& triangles, const vector<vec3f>& positions,
     const vector<int>& strip, const mesh_point& start, const mesh_point& end) {
   auto coords = unfold_strip(triangles, positions, strip, start);
@@ -2411,7 +2411,7 @@ mat2f parallel_transport_rotation(const vector<vec3i>& triangles,
   return rotation;
 }
 
-inline float intersect_segments(const vec2f& start1, const vec2f& end1,
+static float intersect_segments(const vec2f& start1, const vec2f& end1,
     const vec2f& start2, const vec2f& end2) {
   if (end1 == start2) return 0;
   if (end2 == start1) return 1;
@@ -2795,7 +2795,7 @@ mesh_point eval_path_point(const geodesic_path& path,
       path, triangles, positions, adjacencies, parameter_t, t);
 }
 
-inline mesh_point eval_path_midpoint(const geodesic_path& path,
+[[maybe_unused]] static mesh_point eval_path_midpoint(const geodesic_path& path,
     const vector<vec3i>& triangles, const vector<vec3f>& positions,
     const vector<vec3i>& adjacencies) {
   return eval_path_point(path, triangles, positions, adjacencies, 0.5);
@@ -2809,13 +2809,13 @@ inline mesh_point eval_path_midpoint(const geodesic_path& path,
 namespace yocto {
 
 template <typename T>
-inline int find_in_vector(const T& vec, int x) {
+static int find_in_vector(const T& vec, int x) {
   for (int i = 0; i < size(vec); i++)
     if (vec[i] == x) return i;
   return -1;
 }
 
-inline bool check_strip(
+[[maybe_unused]] static bool check_strip(
     const vector<vec3i>& adjacencies, const vector<int>& strip) {
   auto faces = std::unordered_set<int>{};
   faces.insert(strip[0]);
@@ -2914,7 +2914,7 @@ void search_strip(vector<float>& field, vector<bool>& in_queue,
   }
 }
 
-inline vector<int> compute_strip(const dual_geodesic_solver& dual_solver,
+static vector<int> compute_strip(const dual_geodesic_solver& dual_solver,
     const vector<vec3i>& triangles, const vector<vec3f>& positions, int start,
     int end) {
   if (start == end) return {start};
@@ -2990,7 +2990,7 @@ geodesic_path compute_geodesic_path(const dual_geodesic_solver& dual_solver,
   path = shortest_path(triangles, positions, adjacencies, start, end, strip);
   return path;
 }
-inline mesh_point geodesic_lerp(const dual_geodesic_solver& dual_solver,
+static mesh_point geodesic_lerp(const dual_geodesic_solver& dual_solver,
     const vector<vec3i>& triangles, const vector<vec3f>& positions,
     const vector<vec3i>& adjacencies, const mesh_point& start,
     const mesh_point& end, float t) {
@@ -3010,7 +3010,7 @@ struct spline_params {
   int subdivisions = 4;
 };
 
-inline pair<spline_polygon, spline_polygon> subdivide_bezier_polygon(
+static pair<spline_polygon, spline_polygon> subdivide_bezier_polygon(
     const dual_geodesic_solver& dual_solver, const vector<vec3i>& triangles,
     const vector<vec3f>& positions, const vector<vec3i>& adjacencies,
     const spline_polygon& input, float t) {
@@ -3029,7 +3029,7 @@ inline pair<spline_polygon, spline_polygon> subdivide_bezier_polygon(
   return {{input[0], Q0, R0, S}, {S, R1, Q2, input[3]}};
 }
 
-inline vector<mesh_point> bezier_uniform(
+static vector<mesh_point> bezier_uniform(
     const dual_geodesic_solver& dual_solver, const vector<vec3i>& triangles,
     const vector<vec3f>& positions, const vector<vec3i>& adjacencies,
     const spline_polygon& control_points, const spline_params& params) {
