@@ -1991,6 +1991,8 @@ vector<int> strip_ascending_distance_field(const geodesic_solver& solver,
   return result;
 }
 
+// TODO(fabio): this is copied somewhere else. Make sure it is th proper
+// version.
 #if 0
 bool check_strip(const vector<vec3i>& adjacencies, const vector<int>& strip) {
   auto faces = std::unordered_set<int>{};
@@ -2033,7 +2035,11 @@ vector<int> strip_on_dual_graph(const dual_geodesic_solver& solver,
   auto node  = end;
   assert(parents[end] != -1);
   strip.reserve((int)sqrt(parents.size()));
+#ifdef TESTS_MAY_FAIL
   while (node != -1) {
+#else
+  for (int i = 0; i < parents.size() && node != -1; i++) {
+#endif
     assert(find_in_vec(strip, node) != 1);
     strip.push_back(node);
     node = parents[node];
@@ -2584,6 +2590,7 @@ static vector<int> fix_strip(const vector<vec3i>& adjacencies,
   // Create triangle fan that starts at face, walks backward along the strip for
   // a while, exits and then re-enters back.
   auto fan = triangle_fan(adjacencies, face, k, left);
+  if (fan.empty()) return strip;
 
   // strip in the array of faces and fan is a loop of faces which has partial
   // intersection with strip. We wan to remove the intersection from strip and
@@ -2615,11 +2622,15 @@ static vector<int> fix_strip(const vector<vec3i>& adjacencies,
     }
   }
 
+  if (first_strip_intersection >= second_strip_intersection) return strip;
+  if (first_fan_intersection >= second_fan_intersection) return strip;
+
   auto result = vector<int>{};
   result.reserve(strip.size() + 12);
-  // Initial part of original strip, until intersection with fan.
-  for (auto i = 0; i < first_strip_intersection; ++i)
-    result.push_back(strip[i]);
+
+  // Initial part of original strip, up until intersection with fan.
+  result.insert(
+      result.end(), strip.begin(), strip.begin() + first_strip_intersection);
 
   // Append out-flanking part of fan.
   result.insert(result.end(), fan.begin() + first_fan_intersection,
@@ -2641,7 +2652,8 @@ static void straighten_path(geodesic_path& path, const vector<vec3i>& triangles,
   path.lerps = funnel(init_portals, index);
 
   // while(true) { this may never break...
-  for (auto i = 0; i < path.strip.size() * 2 && index != -1; i++) {
+  auto max_iterations = path.strip.size() * 2;
+  for (auto i = 0; i < max_iterations && index != -1; i++) {
     auto new_vertex = -1;
     auto face       = path.strip[index];
     auto next       = path.strip[index + 1];
@@ -2698,7 +2710,11 @@ mesh_path convert_mesh_path(const vector<vec3i>& triangles,
 
 mesh_point eval_path_point(const geodesic_path& path,
     const vector<vec3i>& triangles, const vector<vec3f>& positions,
-    const vector<vec3i>& adjacencies, float t) {
+    const vector<vec3i>& adjacencies, const vector<float>& parameter_t,
+    float t) {
+  if (t <= 0) return path.start;
+  if (t >= 1) return path.end;
+
   // strip with 1 triangle are trivial, just average the uvs
   if (path.start.face == path.end.face) {
     return mesh_point{path.start.face, lerp(path.start.uv, path.end.uv, t)};
@@ -2713,17 +2729,38 @@ mesh_point eval_path_point(const geodesic_path& path,
       return vec3f{v.y, v.z, v.x};
   };
 
-  auto parameter_t = path_parameters(
-      path_positions(path, triangles, positions, adjacencies));
-
-  // find the point in the middle
+  // TODO(splinesurf): check which is better betwee linear saerch, binary search
+  // and "linear fit" search.
+#if 1
+  // linear search
   auto i = 0;
   for (; i < parameter_t.size() - 1; i++) {
-    if (parameter_t[i + 1] >= 0.5) break;
+    if (parameter_t[i + 1] >= t) break;
   }
-  auto t_low = parameter_t[i], t_high = parameter_t[i + 1];
-  auto alpha = (t - t_low) / (t_high - t_low);
-  // alpha == 0 -> t_low, alpha == 1 -> t_high
+#else
+  // binary search
+  // (but "linear fit search" should be faster here)
+  // https://blog.demofox.org/2019/03/22/linear-fit-search/
+  auto i      = -1;
+  auto i_low  = 0;
+  auto i_high = (int)parameter_t.size() - 1;
+  while (true) {
+    i           = (i_high + i_low) / 2;
+    auto t_low  = parameter_t[i];
+    auto t_high = parameter_t[i + 1];
+    if (t_low <= t && t_high >= t) break;
+
+    if (t_low > t) {
+      i_high = i;
+    } else {
+      i_low = i;
+    }
+  }
+#endif
+
+  auto t_low  = parameter_t[i];
+  auto t_high = parameter_t[i + 1];
+  auto alpha  = (t - t_low) / (t_high - t_low);
   auto face   = path.strip[i];
   auto uv_low = vec2f{0, 0};
   if (i == 0) {
@@ -2747,6 +2784,15 @@ mesh_point eval_path_point(const geodesic_path& path,
   }
   auto uv = lerp(uv_low, uv_high, alpha);
   return mesh_point{face, uv};
+}
+
+mesh_point eval_path_point(const geodesic_path& path,
+    const vector<vec3i>& triangles, const vector<vec3f>& positions,
+    const vector<vec3i>& adjacencies, float t) {
+  auto parameter_t = path_parameters(
+      path_positions(path, triangles, positions, adjacencies));
+  return eval_path_point(
+      path, triangles, positions, adjacencies, parameter_t, t);
 }
 
 inline mesh_point eval_path_midpoint(const geodesic_path& path,
