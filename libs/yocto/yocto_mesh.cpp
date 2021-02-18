@@ -41,6 +41,7 @@
 #include <memory>
 #include <stdexcept>
 #include <string>
+#include <thread>
 #include <unordered_set>
 #include <utility>
 
@@ -3007,30 +3008,6 @@ static mesh_point geodesic_lerp(const dual_geodesic_solver& dual_solver,
 
 using spline_polygon = array<mesh_point, 4>;
 
-enum struct spline_algorithm {
-  de_casteljau_uniform = 0,
-  de_casteljau_adaptive,
-  line_riesenfeld_uniform,
-  line_riesenfeld_adaptive,
-  flipout
-};
-const auto spline_algorithm_names = vector<string>{
-    "dc-uniform",
-    "dc-adaptive",
-    "lr-uniform",
-    "lr-adaptive",
-    "flipout",
-};
-
-struct spline_params {
-  spline_algorithm algorithm      = spline_algorithm::de_casteljau_uniform;
-  int              subdivisions   = 4;
-  float            precision      = 0.1;
-  float            min_curve_size = 0.001;
-  int              max_depth      = 10;
-  bool             parallel       = false;
-};
-
 static pair<spline_polygon, spline_polygon> subdivide_bezier_polygon(
     const dual_geodesic_solver& dual_solver, const vector<vec3i>& triangles,
     const vector<vec3f>& positions, const vector<vec3i>& adjacencies,
@@ -3053,10 +3030,10 @@ static pair<spline_polygon, spline_polygon> subdivide_bezier_polygon(
 static vector<mesh_point> bezier_uniform(
     const dual_geodesic_solver& dual_solver, const vector<vec3i>& triangles,
     const vector<vec3f>& positions, const vector<vec3i>& adjacencies,
-    const spline_polygon& control_points, const spline_params& params) {
+    const spline_polygon& control_points, int subdivisions) {
   auto segments = vector<spline_polygon>{control_points};
   auto result   = vector<spline_polygon>();
-  for (auto subdivision = 0; subdivision < params.subdivisions; subdivision++) {
+  for (auto subdivision = 0; subdivision < subdivisions; subdivision++) {
     result.resize(segments.size() * 2);
     for (auto i = 0; i < segments.size(); i++) {
       auto [split0, split1] = subdivide_bezier_polygon(
@@ -3080,7 +3057,7 @@ vector<mesh_point> compute_bezier_path(const dual_geodesic_solver& dual_solver,
         control_points[idx + 1], control_points[idx + 2],
         control_points[idx + 3]};
     auto segment = bezier_uniform(
-        dual_solver, triangles, positions, adjacencies, polygon, {});
+        dual_solver, triangles, positions, adjacencies, polygon, 4);
     path.insert(path.end(), segment.begin(), segment.end());
   }
   return path;
@@ -3863,6 +3840,25 @@ mesh_point eval_spline_point_cheap(const dual_geodesic_solver& dual_solver,
   }
   return curr_points.back();
 }
+
+enum struct spline_algorithm {
+  de_casteljau_uniform = 0,
+  de_casteljau_adaptive,
+  line_riesenfeld_uniform,
+  line_riesenfeld_adaptive
+};
+const auto spline_algorithm_names = vector<string>{
+    "dc-uniform", "dc-adaptive", "lr-uniform", "lr-adaptive"};
+
+struct spline_params {
+  spline_algorithm algorithm      = spline_algorithm::de_casteljau_uniform;
+  int              subdivisions   = 4;
+  float            precision      = 0.1;
+  float            min_curve_size = 0.001;
+  int              max_depth      = 10;
+  bool             parallel       = false;
+};
+
 mesh_point eval_spline_point(const dual_geodesic_solver& dual_solver,
     const vector<vec3i>& triangles, const vector<vec3f>& positions,
     const vector<vec3i>& adjacencies, const spline_polygon& polygon,
@@ -4288,7 +4284,6 @@ vector<mesh_point> bezier_adaptive(const dual_geodesic_solver& dual_solver,
   return result;
 }
 
-#include <thread>
 vector<mesh_point> bezier_uniform_parallel(
     const dual_geodesic_solver& dual_solver, const vector<vec3i>& triangles,
     const vector<vec3f>& positions, const vector<vec3i>& adjacencies,
@@ -4339,6 +4334,42 @@ vector<mesh_point> bezier_uniform(const dual_geodesic_solver& dual_solver,
       (mesh_point*)segments.data() + segments.size() * 4};
 }
 
+vector<mesh_point> line_riesenfeld_uniform(
+    const dual_geodesic_solver& dual_solver, const vector<vec3i>& triangles,
+    const vector<vec3f>& positions, const vector<vec3i>& adjacencies,
+    const array<mesh_point, 4>& control_points, int num_subdivisions);
+vector<mesh_point> line_riesenfeld_adaptive(
+    const dual_geodesic_solver& dual_solver, const vector<vec3i>& triangles,
+    const vector<vec3f>& positions, const vector<vec3i>& adjacencies,
+    const array<mesh_point, 4>& polygon, const spline_params& params);
+
+template <typename T>
+inline vector<T>& append(vector<T>& a, const vector<T>& b) {
+  a.insert(a.end(), b.begin(), b.end());
+  return a;
+}
+template <typename T>
+inline vector<T>& append(vector<T>& a, const T& b) {
+  a.push_back(b);
+  return a;
+}
+
+inline vector<vec3f> polyline_positions(const dual_geodesic_solver& dual_solver,
+    const vector<vec3i>& triangles, const vector<vec3f>& positions,
+    const vector<vec3i>& adjacencies, const vector<mesh_point>& points) {
+  auto result = vector<vec3f>();
+  result.reserve(points.size() * 4);
+  for (int i = 0; i < points.size() - 1; i++) {
+    auto a    = points[i];
+    auto b    = points[i + 1];
+    auto path = compute_geodesic_path(
+        dual_solver, triangles, positions, adjacencies, a, b);
+    append(result,
+        path_positions(dual_solver, triangles, positions, adjacencies, path));
+  }
+  return result;
+}
+
 vector<vec3f> trace_spline(const dual_geodesic_solver& dual_solver,
     const vector<vec3i>& triangles, const vector<vec3f>& positions,
     const vector<vec3i>& adjacencies, const spline_polygon& control_points,
@@ -4369,16 +4400,6 @@ vector<vec3f> trace_spline(const dual_geodesic_solver& dual_solver,
       points = line_riesenfeld_adaptive(dual_solver, triangles, positions,
           adjacencies, control_points, params);
       break;
-    }
-    case spline_algorithm::flipout: {
-      auto vertices = vector<int>(4);
-      for (int i = 0; i < 4; i++) {
-        vertices[i] = triangles[control_points[i].face].x;
-      }
-      auto bezier = make_polyline(
-          flipout.topology.get(), flipout.geometry.get(), vertices);
-      subdivide_bezier(bezier.get(), params.subdivisions);
-      return path_positions(bezier.get());
     }
   }
   return polyline_positions(
@@ -4474,6 +4495,14 @@ vector<mesh_point> weighted_average(const dual_geodesic_solver& dual_solver,
   return {};
 #endif
 }
+
+struct spline_node {
+  std::array<mesh_point, 4>    points  = {};
+  std::array<geodesic_path, 3> lines   = {};
+  vec2f                        t       = {};
+  int                          depth   = 0;
+  bool                         is_good = false;
+};
 
 pair<bool, vector<mesh_point>> handle_boundary_node(
     const dual_geodesic_solver& dual_solver, const vector<vec3i>& triangles,
@@ -4583,8 +4612,9 @@ pair<spline_node, spline_node> split_spline_node(
       {L12, L23, L01}, {curr_t, leaf.t.y}, leaf.depth + 1};
   return {P0, P1};
 }
-vector<mesh_point> line_riesenfeld_uniform(const spline_mesh& dual_solver,
-    triangles, positions, adjacencies,
+vector<mesh_point> line_riesenfeld_uniform(
+    const dual_geodesic_solver& dual_solver, const vector<vec3i>& triangles,
+    const vector<vec3f>& positions, const vector<vec3i>& adjacencies,
     const array<mesh_point, 4>& control_points, int num_subdivisions) {
   auto size = 7;
   struct parametric_path {
@@ -4737,9 +4767,9 @@ vector<mesh_point> spline_subdivision_uniform_quadric(
   parametric_path curr_path = {};
   parametric_path gamma01   = {};
   parametric_path gamma21   = {};
-  auto            prev      = mesh_point{};
-  auto            curr      = mesh_point{};
-  auto            q         = vector<mesh_point>(size);
+  // auto            prev      = mesh_point{};
+  // auto            curr      = mesh_point{};
+  auto q = vector<mesh_point>(size);
   // auto            count_paths = 0;
   // auto            count_eval  = 0;
   {
@@ -4868,8 +4898,8 @@ vector<mesh_point> line_riesenfeld_adaptive(
       dual_solver, triangles, positions, adjacencies, params);
   P3.is_good = is_bezier_straight_enough(P3.lines[0], P3.lines[1], P3.lines[2],
       dual_solver, triangles, positions, adjacencies, params);
-  auto                    count_path = 16;
-  auto                    count_eval = 8;
+  // auto                    count_path = 16;
+  // auto                    count_eval = 8;
   std::deque<spline_node> Q;
   Q.push_back(P3);
   Q.push_back(P2);
