@@ -308,6 +308,16 @@ int run_glpath(const glpath_params &params) {
       shape.triangles, shape.positions, adjacencies);
   auto bezier = true;
 
+  // bezier algos
+  auto params1      = spline_params{};
+  params1.algorithm = spline_algorithm::de_casteljau_uniform;
+  auto params2      = spline_params{};
+  params2.algorithm = spline_algorithm::de_casteljau_adaptive;
+  auto params3      = spline_params{};
+  params3.algorithm = spline_algorithm::line_riesenfeld_uniform;
+  auto params4      = spline_params{};
+  params4.algorithm = spline_algorithm::line_riesenfeld_adaptive;
+
   // run viewer
   glview_scene(
       scene, params.shape, "", print_progress,
@@ -353,7 +363,7 @@ int run_glpath(const glpath_params &params) {
           glscene.shapes.at(1).point_size = 10;
           auto path = bezier ? compute_bezier_path(solver, shape.triangles,
                                    shape.positions, adjacencies,
-                                   (vector<mesh_point> &)stroke)
+                                   (vector<mesh_point> &)stroke, params1)
                              : compute_shortest_path(solver, shape.triangles,
                                    shape.positions, adjacencies,
                                    (vector<mesh_point> &)stroke);
