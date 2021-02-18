@@ -97,41 +97,44 @@
   },
   "materials": {
     "floor": {
+      "type": "matte",
       "color": [0.7, 0.7, 0.7],
       "color_tex": "floor"
     },
     "arealight1": {
+      "type": "matte",
       "emission": [20, 20, 20]
     },
     "arealight2": {
+      "type": "matte",
       "emission": [20, 20, 20]
     },
     "sphere-uvgrid": {
-      "specular": 1,
+      "type": "plastic",
       "color": [1, 1, 1],
       "roughness": 0.1,
       "color_tex": "uvgrid"
     },
     "uvsphere-flipcap-uvgrid": {
-      "specular": 1,
+      "type": "plastic",
       "color": [1, 1, 1],
       "roughness": 0.1,
       "color_tex": "uvgrid"
     },
     "disk-uvgrid": {
-      "specular": 1,
+      "type": "plastic",
       "color": [1, 1, 1],
       "roughness": 0.1,
       "color_tex": "uvgrid"
     },
     "uvcylinder-uvgrid": {
-      "specular": 1,
+      "type": "plastic",
       "color": [1, 1, 1],
       "roughness": 0.1,
       "color_tex": "uvgrid"
     },
     "cube-uvgrid": {
-      "specular": 1,
+      "type": "plastic",
       "color": [1, 1, 1],
       "roughness": 0.1,
       "color_tex": "uvgrid"

@@ -71,24 +71,16 @@
     },
     "cube-subdiv-uvgrid": {
       "shape": "cube-subdiv",
-      "subdivisions": 4,
-      "smooth": false,
       "frame": [1, 0, 0, 0, 1, 0, 0, 0, 1, -0.4, 0, 0],
       "material": "cube-subdiv-uvgrid"
     },
     "suzanne-subdiv-plastic-sharp": {
       "shape": "suzanne-subdiv",
-      "subdivisions": 2,
-      "smooth": true,
       "frame": [1, 0, 0, 0, 1, 0, 0, 0, 1, -0.2, 0, 0],
       "material": "suzanne-subdiv-plastic-sharp"
     },
     "sphere-displaced-matte": {
       "shape": "sphere-displaced",
-      "subdivisions": 0,
-      "smooth": true,
-      "displacement": 0.025,
-      "displacement_tex": "bumps-displacement",
       "frame": [1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0],
       "material": "sphere-displaced-matte"
     },
@@ -103,40 +95,63 @@
       "material": "teapot-uvgrid"
     }
   },
+  "subdivs": {
+    "sphere-displaced": {
+      "shape": "sphere-displaced",
+      "subdivisions": 0,
+      "smooth": true,
+      "displacement": 0.025,
+      "displacement_tex": "bumps-displacement"
+    },
+    "suzanne-subdiv": {
+      "shape": "suzanne-subdiv",
+      "subdivisions": 2,
+      "smooth": true
+    },
+    "cube-subdiv": {
+      "shape": "cube-subdiv",
+      "subdivisions": 4,
+      "smooth": false
+    }
+  },
   "materials": {
     "floor": {
+      "type": "matte",
       "color": [0.7, 0.7, 0.7],
       "color_tex": "floor"
     },
     "arealight1": {
+      "type": "matte",
       "emission": [20, 20, 20]
     },
     "arealight2": {
+      "type": "matte",
       "emission": [20, 20, 20]
     },
     "cube-subdiv-uvgrid": {
-      "specular": 1,
+      "type": "plastic",
       "color": [1, 1, 1],
       "roughness": 0.1,
       "color_tex": "uvgrid"
     },
     "suzanne-subdiv-plastic-sharp": {
-      "specular": 1,
+      "type": "plastic",
       "color": [0.5, 0.5, 0.7],
       "roughness": 0.01
     },
     "sphere-displaced-matte": {
+      "type": "matte",
       "color": [0.7, 0.7, 0.7],
       "roughness": 1
     },
     "bunny-uvgrid": {
-      "specular": 1,
+      "type": "plastic",
       "color": [1, 1, 1],
       "roughness": 0.1,
       "color_tex": "uvgrid"
     },
     "teapot-uvgrid": {
-      "specular": 1,
+      "type": "plastic",
       "color": [1, 1, 1],
       "roughness": 0.1,
       "color_tex": "uvgrid"
