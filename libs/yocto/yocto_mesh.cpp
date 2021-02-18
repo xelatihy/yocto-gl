@@ -3300,49 +3300,6 @@ static bool is_left_child(const bezier_tree& tree, int node) {
   return tree.nodes[tree.nodes[node].parent].children[0] == node;
 }
 
-static bool is_control_polygon_unfoldable(const dual_geodesic_solver& solver,
-    const vector<vec3i>& triangles, const vector<vec3f>& positions,
-    const vector<vec3i>& adjacencies, const spline_polygon& segment) {
-  if (segment[0].face != segment[1].face) return false;
-  if (segment[1].face != segment[2].face) return false;
-  if (segment[2].face != segment[3].face) return false;
-  return true;
-
-  // auto faces = std::vector<int>(1);
-  // faces[0]   = P0.face;
-  // if (find_in_vector(faces, P1.face) == -1) faces.push_back(P1.face);
-  // if (find_in_vector(faces, P2.face) == -1) faces.push_back(P2.face);
-  // if (find_in_vector(faces, P3.face) == -1) faces.push_back(P3.face);
-  // if (faces.size() == 1) return true;
-  // if (faces.size() == 2) {
-  //   if (find_in_vector(adjacencies[faces[0]], faces[1]) != -1) {
-  //     return true;
-  //   }
-  // }
-  // return false;
-
-  // for (int i = 1; i < 4; ++i) {
-  //   if (segment[i - 1].face == segment[i].face) continue;
-  //   auto adj = adjacencies[segment[i - 1].face];
-  //   if (find_in_vector(adj, segment[i].face) == -1) return false;
-  // }
-  // return true;
-}
-
-static mesh_point eval_bezier_point_cheap(const dual_geodesic_solver& solver,
-    const vector<vec3i>& triangles, const vector<vec3f>& positions,
-    const vector<vec3i>& adjacencies, const spline_polygon& polygon, float t) {
-  auto Q0 = geodesic_lerp(
-      solver, triangles, positions, adjacencies, polygon[0], polygon[1], t);
-  auto Q1 = geodesic_lerp(
-      solver, triangles, positions, adjacencies, polygon[1], polygon[2], t);
-  auto Q2 = geodesic_lerp(
-      solver, triangles, positions, adjacencies, polygon[2], polygon[3], t);
-  auto R0 = geodesic_lerp(solver, triangles, positions, adjacencies, Q0, Q1, t);
-  auto R1 = geodesic_lerp(solver, triangles, positions, adjacencies, Q1, Q2, t);
-  return geodesic_lerp(solver, triangles, positions, adjacencies, R0, R1, t);
-}
-
 static spline_polygon bezier_polygon_from_spline_polygon(
     const dual_geodesic_solver& solver, const vector<vec3i>& triangles,
     const vector<vec3f>& positions, const vector<vec3i>& adjacencies,
@@ -3362,6 +3319,33 @@ static mesh_point de_casteljau_point(const dual_geodesic_solver& solver,
     const vector<vec3i>& triangles, const vector<vec3f>& positions,
     const vector<vec3i>& adjacencies, const spline_polygon& segment, float t0,
     float t_start, float t_end) {
+  auto is_control_polygon_unfoldable =
+      [](const dual_geodesic_solver& solver, const vector<vec3i>& triangles,
+          const vector<vec3f>& positions, const vector<vec3i>& adjacencies,
+          const spline_polygon& segment) -> bool {
+    if (segment[0].face != segment[1].face) return false;
+    if (segment[1].face != segment[2].face) return false;
+    if (segment[2].face != segment[3].face) return false;
+    return true;
+  };
+
+  auto eval_bezier_point_cheap =
+      [](const dual_geodesic_solver& solver, const vector<vec3i>& triangles,
+          const vector<vec3f>& positions, const vector<vec3i>& adjacencies,
+          const spline_polygon& polygon, float t) -> mesh_point {
+    auto Q0 = geodesic_lerp(
+        solver, triangles, positions, adjacencies, polygon[0], polygon[1], t);
+    auto Q1 = geodesic_lerp(
+        solver, triangles, positions, adjacencies, polygon[1], polygon[2], t);
+    auto Q2 = geodesic_lerp(
+        solver, triangles, positions, adjacencies, polygon[2], polygon[3], t);
+    auto R0 = geodesic_lerp(
+        solver, triangles, positions, adjacencies, Q0, Q1, t);
+    auto R1 = geodesic_lerp(
+        solver, triangles, positions, adjacencies, Q1, Q2, t);
+    return geodesic_lerp(solver, triangles, positions, adjacencies, R0, R1, t);
+  };
+
   auto points = segment;
 
   // Recursively subdivide, shrinking the active control polygon around the
@@ -4010,6 +3994,19 @@ static std::array<spline_polygon, 2> insert_point_spline(
   return result;
 }
 
+static array<spline_polygon, 2> insert_bezier_point(
+    const dual_geodesic_solver& solver, const vector<vec3i>& triangles,
+    const vector<vec3f>& positions, const vector<vec3i>& adjacencies,
+    const spline_polygon& polygon, float t0, bool line_riesenfeld,
+    const spline_params& params) {
+  if (line_riesenfeld) {
+    return insert_point_spline(
+        solver, triangles, positions, adjacencies, polygon, t0, params);
+  } else {
+    throw std::invalid_argument{"not implemented yet"};
+  }
+}
+
 static std::array<spline_polygon, 2> insert_point_old(
     const dual_geodesic_solver& solver, const vector<vec3i>& triangles,
     const vector<vec3f>& positions, const vector<vec3i>& adjacencies,
@@ -4331,17 +4328,6 @@ static vector<mesh_point> line_riesenfeld_adaptive(
     const vector<vec3f>& positions, const vector<vec3i>& adjacencies,
     const array<mesh_point, 4>& polygon, const spline_params& params);
 
-template <typename T>
-static vector<T>& append(vector<T>& a, const vector<T>& b) {
-  a.insert(a.end(), b.begin(), b.end());
-  return a;
-}
-template <typename T>
-static vector<T>& append(vector<T>& a, const T& b) {
-  a.push_back(b);
-  return a;
-}
-
 [[maybe_unused]] static vector<vec3f> polyline_positions(
     const dual_geodesic_solver& solver, const vector<vec3i>& triangles,
     const vector<vec3f>& positions, const vector<vec3i>& adjacencies,
@@ -4353,8 +4339,10 @@ static vector<T>& append(vector<T>& a, const T& b) {
     auto b    = points[i + 1];
     auto path = compute_geodesic_path(
         solver, triangles, positions, adjacencies, a, b);
-    append(result,
-        path_positions(solver, triangles, positions, adjacencies, path));
+    auto path_pos = path_positions(
+        solver, triangles, positions, adjacencies, path);
+    result.insert(result.end(), path_pos.begin(), path_pos.end());
+    // append(result, path_pos);
   }
   return result;
 }
@@ -4516,8 +4504,6 @@ static pair<bool, vector<mesh_point>> handle_boundary_node(
           adjacencies, leaf.lines[1], leaf.lines[2], true);
       new_ones[4] = eval_path_point(
           solver, triangles, positions, adjacencies, leaf.lines[2], 0.5);
-      // count_paths += 1;
-      // count_eval += 5;
     } else if (new_ones_entries[0] == 2) {
       new_ones[0] = eval_path_point(
           solver, triangles, positions, adjacencies, leaf.lines[0], 0.25);
@@ -4529,8 +4515,6 @@ static pair<bool, vector<mesh_point>> handle_boundary_node(
           adjacencies, leaf.lines[1], leaf.lines[2]);
       new_ones[4] = eval_path_point(
           solver, triangles, positions, adjacencies, leaf.lines[2], 0.5);
-      // count_paths += 2;
-      // count_eval += 7;
     } else
       assert(false);
   } else {
@@ -4544,8 +4528,6 @@ static pair<bool, vector<mesh_point>> handle_boundary_node(
       new_ones[3] = eval_path_point(
           solver, triangles, positions, adjacencies, leaf.lines[2], 0.5);
       new_ones[4] = leaf.points[3];
-      // count_paths += 1;
-      // count_eval += 5;
     } else if (new_ones_entries.back() == yocto::pow(2, k)) {
       new_ones[0] = eval_path_point(
           solver, triangles, positions, adjacencies, leaf.lines[0], 0.5);
@@ -4557,15 +4539,13 @@ static pair<bool, vector<mesh_point>> handle_boundary_node(
           adjacencies, leaf.lines[1], leaf.lines[2], false);
       new_ones[4] = eval_path_point(
           solver, triangles, positions, adjacencies, leaf.lines[2], 0.75);
-      // count_paths += 2;
-      // count_eval += 7;
     } else
       assert(false);
   }
   return {true, new_ones};
 }
 
-static pair<spline_node, spline_node> split_spline_node(
+static pair<spline_node, spline_node> line_riesenfeld_split_node(
     const dual_geodesic_solver& solver, const vector<vec3i>& triangles,
     const vector<vec3f>& positions, const vector<vec3i>& adjacencies,
     const spline_node& leaf, bool& max_depth_reached) {
@@ -4622,8 +4602,7 @@ static vector<mesh_point> line_riesenfeld_uniform(
   auto            prev      = mesh_point{};
   auto            curr      = mesh_point{};
   auto            q         = vector<mesh_point>(size);
-  // auto            count_paths = 0;
-  // auto            count_eval  = 0;
+
   {
     auto& p      = control_points;
     gamma01.path = compute_geodesic_path(
@@ -4669,8 +4648,7 @@ static vector<mesh_point> line_riesenfeld_uniform(
         gamma32.path, gamma32.t, 0.25);
     q[6] = p[3];
   }
-  // count_paths = 6;
-  // count_eval  = 10;
+
   auto p = vector<mesh_point>{};
 
   for (int subdiv = 0; subdiv < num_subdivisions; subdiv++) {
@@ -4699,8 +4677,6 @@ static vector<mesh_point> line_riesenfeld_uniform(
         solver, triangles, positions, adjacencies, prev, curr, 0.5);
     prev = eval_path_point(solver, triangles, positions, adjacencies,
         curr_path.path, curr_path.t, 0.5);
-    // count_paths += 3;
-    // count_eval += 6;
     for (int j = 4; j < 2 * size - 8; j += 2) {
       q[j] = prev;
       prev = eval_path_point(solver, triangles, positions, adjacencies,
@@ -4715,8 +4691,6 @@ static vector<mesh_point> line_riesenfeld_uniform(
           solver, triangles, positions, adjacencies, prev, curr, 1 / 2.f);
       prev = eval_path_point(solver, triangles, positions, adjacencies,
           curr_path.path, curr_path.t, 0.5);
-      // count_paths += 2;
-      // count_eval += 4;
     }
     q[2 * size - 8] = prev;
     {
@@ -4737,17 +4711,9 @@ static vector<mesh_point> line_riesenfeld_uniform(
       qq[2] = eval_path_point(solver, triangles, positions, adjacencies,
           gamma32.path, gamma32.t, 1.f / yocto::pow(2, 3 + subdiv));
       qq[3] = pp[3];
-      // count_paths += 2;
-      // count_eval += 5;
     }
     size = new_size;
   }
-  // std::cout << "Number of paths";
-  // std::cout << count_paths << std::endl;
-  // std::cout << "Number of eval";
-  // std::cout << count_eval << std::endl;
-  // std::cout << "Level";
-  // std::cout << num_subdivisions + 2 << std::endl;
   return q;
 }
 
@@ -4763,11 +4729,9 @@ static vector<mesh_point> line_riesenfeld_uniform(
   parametric_path curr_path = {};
   parametric_path gamma01   = {};
   parametric_path gamma21   = {};
-  // auto            prev      = mesh_point{};
-  // auto            curr      = mesh_point{};
+
   auto q = vector<mesh_point>(size);
-  // auto            count_paths = 0;
-  // auto            count_eval  = 0;
+
   {
     auto& p      = control_points;
     gamma01.path = compute_geodesic_path(
@@ -4795,8 +4759,7 @@ static vector<mesh_point> line_riesenfeld_uniform(
     q[3] = eval_path_point(solver, triangles, positions, adjacencies,
         curr_path.path, curr_path.t, 0.75);
   }
-  // count_paths    = 3;
-  // count_eval     = 5;
+
   auto p         = vector<mesh_point>{};
   curr_path.path = compute_geodesic_path(
       solver, triangles, positions, adjacencies, q[1], q[2]);
@@ -4815,8 +4778,6 @@ static vector<mesh_point> line_riesenfeld_uniform(
     curr_path.t = path_parameters(
         curr_path.path, triangles, positions, adjacencies);
 
-    // count_paths += 1;
-    // count_eval += 1;
     for (int j = 2; j < 2 * size - 4; j += 2) {
       q[j]     = eval_path_point(solver, triangles, positions, adjacencies,
           curr_path.path, curr_path.t, 0.25);
@@ -4826,22 +4787,13 @@ static vector<mesh_point> line_riesenfeld_uniform(
           adjacencies, p[j / 2 + 1], p[j / 2 + 2]);
       curr_path.t    = path_parameters(
           curr_path.path, triangles, positions, adjacencies);
-      // count_paths += 1;
-      // count_eval += 2;
     }
 
     q[2 * size - 4] = eval_path_point(solver, triangles, positions, adjacencies,
         gamma21.path, gamma21.t, 1.f / yocto::pow(2, 3 + subdiv));
     q[2 * size - 3] = p.back();
-    // count_eval += 1;
-    size = new_size;
+    size            = new_size;
   }
-  // std::cout << "Number of paths";
-  // std::cout << count_paths << std::endl;
-  // std::cout << "Number of eval";
-  // std::cout << count_eval << std::endl;
-  // std::cout << "Level";
-  // std::cout << num_subdivisions + 2 << std::endl;
   return q;
 }
 
@@ -4911,7 +4863,7 @@ static vector<mesh_point> line_riesenfeld_adaptive(
       P.push_back(curr);
 
     } else {
-      auto [left, right] = split_spline_node(
+      auto [left, right] = line_riesenfeld_split_node(
           solver, triangles, positions, adjacencies, curr, max_depth_reached);
       if (max_depth_reached) {
         curr.is_good = true;
