@@ -205,12 +205,12 @@ vector<mesh_point> compute_straightest_path(const vector<vec3i>& triangles,
     const mesh_point& start, const vec2f& direction, float path_length);
 
 // compute a bezier on the surface
-vector<mesh_point> compute_bezier_path(const dual_geodesic_solver& dual_solver,
+vector<mesh_point> compute_bezier_path(const dual_geodesic_solver& solver,
     const vector<vec3i>& triangles, const vector<vec3f>& positions,
     const vector<vec3i>& adjacencies, const vector<mesh_point>& control_points,
     int subdivision = 4);
 // compute a bezier on the surface
-vector<mesh_point> compute_bezier_path(const dual_geodesic_solver& dual_solver,
+vector<mesh_point> compute_bezier_path(const dual_geodesic_solver& solver,
     const vector<vec3i>& triangles, const vector<vec3f>& positions,
     const vector<vec3i>&        adjacencies,
     const array<mesh_point, 4>& control_points, int subdivision = 4);
@@ -246,11 +246,11 @@ struct spline_params {
 };
 
 // compute a bezier on the surface
-vector<mesh_point> compute_bezier_path(const dual_geodesic_solver& dual_solver,
+vector<mesh_point> compute_bezier_path(const dual_geodesic_solver& solver,
     const vector<vec3i>& triangles, const vector<vec3f>& positions,
     const vector<vec3i>& adjacencies, const vector<mesh_point>& control_points,
     const spline_params& params);
-vector<mesh_point> compute_bezier_path(const dual_geodesic_solver& dual_solver,
+vector<mesh_point> compute_bezier_path(const dual_geodesic_solver& solver,
     const vector<vec3i>& triangles, const vector<vec3f>& positions,
     const vector<vec3i>&        adjacencies,
     const array<mesh_point, 4>& control_points, const spline_params& params);
