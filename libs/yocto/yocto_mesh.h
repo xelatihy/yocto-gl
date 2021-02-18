@@ -215,6 +215,12 @@ vector<mesh_point> compute_bezier_path(const dual_geodesic_solver& dual_solver,
     const vector<vec3i>&        adjacencies,
     const array<mesh_point, 4>& control_points, int subdivision = 4);
 
+// evaluates a point a bezier by subdivision
+mesh_point eval_bezier_point(const dual_geodesic_solver& solver,
+    const vector<vec3i>& triangles, const vector<vec3f>& positions,
+    const vector<vec3i>& adjacencies, const array<mesh_point, 4>& segment,
+    float t, bool line_riesenfeld, float precision = 0.1);
+
 enum struct spline_algorithm {
   de_casteljau_uniform = 0,
   de_casteljau_adaptive,
