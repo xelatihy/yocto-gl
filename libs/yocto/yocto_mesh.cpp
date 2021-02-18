@@ -3294,7 +3294,7 @@ static vec2f tangent_path_direction(const dual_geodesic_solver& solver,
   return normalize(direction);
 }
 
-// TODO(fabio): compare with subdivid_bezier_polygon
+// TODO(fabio): compare with subdivided_bezier_polygon
 static pair<bezier_polygon, bezier_polygon> subdivide_bezier(
     const bezier_polygon& input, const dual_geodesic_solver& solver,
     const vector<vec3i>& triangles, const vector<vec3f>& positions,
