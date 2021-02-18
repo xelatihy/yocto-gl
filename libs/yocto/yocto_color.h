@@ -407,7 +407,7 @@ inline vec3f rgb_to_hsv(const vec3f& rgb) {
   return {abs(K + (g - b) / (6 * chroma + 1e-20f)), chroma / (r + 1e-20f), r};
 }
 
-#if 1
+#if 0
 
 // Approximate color of blackbody radiation from wavelength in nm.
 inline vec3f blackbody_to_rgb(float temperature) {
@@ -501,7 +501,8 @@ inline vec3f blackbody_to_rgb(float temperature) {
     }
   }
 
-  return srgb_to_rgb(rgb / 255);
+  // return srgb_to_rgb(rgb / 255);
+  return rgb / 255;
 }
 
 #endif
