@@ -47,6 +47,8 @@
 #include "yocto_geometry.h"
 #include "yocto_modelio.h"
 
+// #define TESTS_MAY_FAIL
+
 // -----------------------------------------------------------------------------
 // USING DIRECTIVES
 // -----------------------------------------------------------------------------
@@ -194,6 +196,25 @@ vec2f intersect_circles(const vec2f& c2, float R2, const vec2f& c1, float R1) {
   return result / 2;
 }
 
+static vec2f intersect_circles_double(
+    float c2x, float c2y, float R2, double c1x, double c1y, float R1) {
+  auto R = (c2x - c1x) * (c2x - c1x) + (c2y - c1y) * (c2y - c1y);
+  assert(R > 0);
+  auto invR    = 1 / R;
+  auto resultx = (c1x + c2x);
+  auto resulty = (c1y + c2y);
+  resultx += (c2x - c1x) * ((R1 - R2) * invR);
+  resulty += (c2y - c1y) * ((R1 - R2) * invR);
+
+  auto A = 2 * (R1 + R2) * invR;
+  auto B = (R1 - R2) * invR;
+  auto s = A - B * B - 1;
+  assert(s >= 0);
+  resultx += c2y - c1y * yocto::sqrt(s);
+  resulty += c1x - c2x * yocto::sqrt(s);
+  return vec2f{(float)(resultx / 2), (float)(resulty / 2)};
+}
+
 unfold_triangle init_flat_triangle(
     const vector<vec3f>& positions, const vec3i& tr) {
   auto tr2d = unfold_triangle{};
@@ -226,6 +247,27 @@ inline int find_adjacent_triangle(
   return find_adjacent_triangle(triangles[face], triangles[neighbor]);
 }
 
+inline vec2f unfold_point(const vec3f& pa, const vec3f& pb, const vec3f& pv,
+    const vec2f& ca, const vec2f& cb) {
+  // Unfold position of vertex v
+  auto ex = normalize(ca - cb);
+  auto ey = vec2f{-ex.y, ex.x};
+
+  auto result = vec2f{};
+
+  // Ortogonal projection
+  auto pv_pb = pv - pb;
+  auto x     = dot(pa - pb, pv_pb) / length(pa - pb);
+  result     = x * ex;
+
+  // Pythagorean theorem
+  auto y = dot(pv_pb, pv_pb) - x * x;
+  assert(y > 0);
+  y = yocto::sqrt(y);
+  result += y * ey;
+  return result;
+}
+
 // given the 2D coordinates in tanget space of a triangle, find the coordinates
 // of the k-th neighbor triangle
 unfold_triangle unfold_face(const vector<vec3i>& triangles,
@@ -235,17 +277,34 @@ unfold_triangle unfold_face(const vector<vec3i>& triangles,
   auto j = find_adjacent_triangle(triangles, neighbor, face);
   assert(j != -1);
   assert(k != -1);
-  auto v  = triangles[neighbor][mod3(j + 2)];
-  auto a  = triangles[face][k];
-  auto b  = triangles[face][mod3(k + 1)];
-  auto r0 = length_squared(positions[v] - positions[a]);
-  auto r1 = length_squared(positions[v] - positions[b]);
+  auto v = triangles[neighbor][mod3(j + 2)];
+  auto a = triangles[face][k];
+  auto b = triangles[face][mod3(k + 1)];
 
-  auto res         = unfold_triangle{};
-  res[j]           = tr[mod3(k + 1)];
-  res[mod3(j + 1)] = tr[k];
-  res[mod3(j + 2)] = intersect_circles(res[j], r1, res[mod3(j + 1)], r0);
-  return res;
+  auto result         = unfold_triangle{};
+  result[j]           = tr[mod3(k + 1)];
+  result[mod3(j + 1)] = tr[k];
+
+  // TODO(splinesurf): check which unfolding method is better.
+#if 1
+  // old method
+  auto r0             = length_squared(positions[v] - positions[a]);
+  auto r1             = length_squared(positions[v] - positions[b]);
+  result[mod3(j + 2)] = intersect_circles(
+      result[j], r1, result[mod3(j + 1)], r0);
+#else
+  // new method
+  auto& pa    = positions[a];
+  auto& pb    = positions[b];
+  auto& pv    = positions[v];
+  auto  point = unfold_point(pa, pb, pv, result[mod3(j + 1)], result[j]);
+  result[mod3(j + 2)] = result[j] + point;
+#endif
+
+  assert(result[0] != result[1]);
+  assert(result[1] != result[2]);
+  assert(result[2] != result[0]);
+  return result;
 }
 
 static unfold_triangle unfold_face(const vector<vec3i>& triangles,
@@ -258,21 +317,25 @@ static unfold_triangle unfold_face(const vector<vec3i>& triangles,
 // point, putting the point at (0, 0)
 unfold_triangle triangle_coordinates(const vector<vec3i>& triangles,
     const vector<vec3f>& positions, const mesh_point& point) {
-  auto first = unfold_triangle{};
-  auto tr    = triangles[point.face];
-  first[0]   = {0, 0};
-  first[1]   = {0, length(positions[tr.x] - positions[tr.y])};
-  auto rx    = length_squared(positions[tr.x] - positions[tr.z]);
-  auto ry    = length_squared(positions[tr.y] - positions[tr.z]);
-  first[2]   = intersect_circles(first[0], rx, first[1], ry);
+  auto result = unfold_triangle{};
+  auto tr     = triangles[point.face];
+  result[0]   = {0, 0};
+  result[1]   = {0, length(positions[tr.x] - positions[tr.y])};
+  auto rx     = length_squared(positions[tr.x] - positions[tr.z]);
+  auto ry     = length_squared(positions[tr.y] - positions[tr.z]);
+  result[2]   = intersect_circles(result[0], rx, result[1], ry);
 
   // Transform coordinates such that point = (0, 0)
   auto point_coords = interpolate_triangle(
-      first[0], first[1], first[2], point.uv);
-  first[0] -= point_coords;
-  first[1] -= point_coords;
-  first[2] -= point_coords;
-  return first;
+      result[0], result[1], result[2], point.uv);
+  result[0] -= point_coords;
+  result[1] -= point_coords;
+  result[2] -= point_coords;
+
+  assert(result[0] != result[1]);
+  assert(result[1] != result[2]);
+  assert(result[2] != result[0]);
+  return result;
 }
 
 // assign 2D coordinates to a strip of triangles. point start is at (0, 0)
@@ -284,6 +347,9 @@ vector<unfold_triangle> unfold_strip(const vector<vec3i>& triangles,
   coords[0] = triangle_coordinates(triangles, positions, start);
 
   for (auto i = 1; i < strip.size(); i++) {
+    assert(coords[i - 1][0] != coords[i - 1][1]);
+    assert(coords[i - 1][1] != coords[i - 1][2]);
+    assert(coords[i - 1][2] != coords[i - 1][0]);
     coords[i] = unfold_face(
         triangles, positions, coords[i - 1], strip[i - 1], strip[i]);
   }
@@ -380,7 +446,11 @@ vector<int> triangle_fan(
   auto prev   = face;
   auto node   = adjacencies[face][k];
   auto offset = 2 - (int)clockwise;
+#ifdef TESTS_MAY_FAIL
   while (true) {
+#else
+  for (int i = 0; i < 256; i++) {
+#endif
     if (node == -1) break;
     if (node == face) break;
     result.push_back(node);
@@ -696,16 +766,28 @@ dual_geodesic_solver make_dual_geodesic_solver(const vector<vec3i>& triangles,
       if (adjacencies[i][k] == -1) {
         solver.graph[i][k].length = flt_max;
       } else {
+        // TODO(splinesurf): check which solver is better/faster.
+#if 1
         solver.graph[i][k].length = length(
             get_triangle_center(triangles, positions, i) -
             get_triangle_center(triangles, positions, adjacencies[i][k]));
+#else
+        auto p0    = mesh_point{i, {1 / 3.f, 1 / 3.f}};
+        auto p1    = mesh_point{adjacencies[i][k], {1 / 3.f, 1 / 3.f}};
+        auto path  = geodesic_path{};
+        path.strip = {i, adjacencies[i][k]};
+        path.start = p0;
+        path.end   = p1;
+        straighten_path(path, triangles, positions, adjacencies);
+        auto len = path_length(path, triangles, positions, adjacencies);
+        solver.graph[i][k].length = len;
+#endif
       }
     }
   }
   return solver;
 }
 
-// TODO: cleanup
 // Builds a graph-based geodesic solver with arcs arranged in counterclockwise
 // order by using the vertex-to-face adjacencies
 geodesic_solver make_geodesic_solver(const vector<vec3i>& triangles,
@@ -1494,6 +1576,13 @@ surface_path integrate_field(const vector<vec3i>& triangles,
   return integral_paths::integrate_field(
       triangles, positions, adjacency, tags, tag, field, from, to);
 }
+
+}  // namespace yocto
+
+// -----------------------------------------------------------------------------
+// SHAPE GEODESICS
+// -----------------------------------------------------------------------------
+namespace yocto {
 
 vector<vec3f> make_positions_from_path(
     const surface_path& path, const vector<vec3f>& mesh_positions) {
@@ -2698,6 +2787,7 @@ void search_strip(vector<float>& field, vector<bool>& in_queue,
     const dual_geodesic_solver& solver, const vector<vec3i>& triangles,
     const vector<vec3f>& positions, int start, int end, Update&& update,
     Stop&& stop, Exit&& exit) {
+#ifdef TESTS_MAY_FAIL
   auto destination_pos = eval_position(
       triangles, positions, {end, {1.0f / 3, 1.0f / 3}});
 
@@ -2705,6 +2795,9 @@ void search_strip(vector<float>& field, vector<bool>& in_queue,
     auto p = eval_position(triangles, positions, {face, {1.0f / 3, 1.0f / 3}});
     return length(p - destination_pos);
   };
+#else
+  auto estimate_dist = [&](int face) { return 0; };
+#endif
   field[start] = estimate_dist(start);
 
   // Cumulative weights of elements in queue. Used to keep track of the
@@ -2809,12 +2902,18 @@ inline vector<int> compute_strip(const dual_geodesic_solver& dual_solver,
   auto node  = end;
   strip.reserve((int)yocto::sqrt((float)parents.size()));
 
+#ifdef TESTS_MAY_FAIL
   while (node != -1) {
+#else
+  for (int i = 0; i < parents.size() && node != -1; i++) {
+#endif
     assert(find_in_vector(strip, node) != 1);
     assert(strip.size() < parents.size());
     strip.push_back(node);
     node = parents[node];
-    // if (i == parents.size() - 1) printf("can't reconstruct strip (%d)\n", i);
+#ifndef TESTS_MAY_FAIL
+    if (i == parents.size() - 1) printf("can't reconstruct strip (%d)\n", i);
+#endif
   }
 
   // cleanup buffers
