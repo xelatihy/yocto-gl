@@ -2830,7 +2830,7 @@ static int find_in_vector(const T& vec, int x) {
 }
 
 template <typename Update, typename Stop, typename Exit>
-void search_strip(vector<float>& field, vector<bool>& in_queue,
+static void search_strip(vector<float>& field, vector<bool>& in_queue,
     const dual_geodesic_solver& solver, const vector<vec3i>& triangles,
     const vector<vec3f>& positions, int start, int end, Update&& update,
     Stop&& stop, Exit&& exit) {
@@ -2973,10 +2973,10 @@ static vector<int> compute_strip(const dual_geodesic_solver& dual_solver,
   return strip;
 }
 
-geodesic_path compute_geodesic_path(const dual_geodesic_solver& dual_solver,
-    const vector<vec3i>& triangles, const vector<vec3f>& positions,
-    const vector<vec3i>& adjacencies, const mesh_point& start,
-    const mesh_point& end) {
+static geodesic_path compute_geodesic_path(
+    const dual_geodesic_solver& dual_solver, const vector<vec3i>& triangles,
+    const vector<vec3f>& positions, const vector<vec3i>& adjacencies,
+    const mesh_point& start, const mesh_point& end) {
   check_point(start);
   check_point(end);
   auto path = geodesic_path{};
@@ -3254,7 +3254,7 @@ static void add_children(bezier_tree& tree, int parent) {
   tree.nodes[id + 1].parent      = parent;
 }
 
-void subdivide_bezier_node(bezier_tree& tree, int node,
+static void subdivide_bezier_node(bezier_tree& tree, int node,
     const dual_geodesic_solver& dual_solver, const vector<vec3i>& triangles,
     const vector<vec3f>& positions, const vector<vec3i>& adjacencies, float t) {
   add_children(tree, node);
