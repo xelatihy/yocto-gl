@@ -620,10 +620,8 @@ bool make_image_preset(image_data& image, const string& type_, string& error) {
     image = make_blackbodyramp(width, height);
   } else if (type == "uvgrid") {
     image = make_uvgrid(width, height);
-  } else if (type == "colormap") {
+  } else if (type == "colormapramp") {
     image = make_colormapramp(width, height);
-    // TODO(fabio): fix color space
-    // image   = srgb_to_rgb(image);
   } else if (type == "sky") {
     image = make_sunsky(
         width, height, pif / 4, 3.0, false, 1.0, 1.0, vec3f{0.7, 0.7, 0.7});
