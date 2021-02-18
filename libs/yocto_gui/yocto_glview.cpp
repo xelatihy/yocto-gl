@@ -1051,6 +1051,7 @@ void glview_scene(scene_scene& scene, const string& name, const string& camname,
       draw_slider(win, "far", params.far, 1000.0f, 10000.0f);
       end_header(win);
     }
+    // draw_scene_editor(win, scene, selection, {});
     if (widgets_callback) widgets_callback(win, input, scene, glscene);
   };
   callbacks.update_cb = [](gui_window* win, const gui_input& input) {
