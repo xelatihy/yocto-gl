@@ -138,6 +138,190 @@ static bool draw_image_inspector(gui_window* win, const gui_input& input,
   return false;
 }
 
+struct scene_selection {
+  int camera      = 0;
+  int instance    = 0;
+  int environment = 0;
+  int shape       = 0;
+  int texture     = 0;
+  int material    = 0;
+  int subdiv      = 0;
+};
+
+// // Material type
+// enum struct material_type {
+//   // clang-format off
+//   matte, plastic, metal, thinglass, glass, leaves, subsurface, volume,
+//   metallic
+//   // clang-format on
+// };
+
+// // Enum labels
+// inline const auto material_type_names = std::vector<std::string>{"matte",
+//     "plastic", "metal", "thinglass", "glass", "leaves", "subsurface",
+//     "volume", "metallic"};
+
+// // Material for surfaces, lines and triangles.
+// // For surfaces, uses a microfacet model with thin sheet transmission.
+// // The model is based on OBJ, but contains glTF compatibility.
+// // For the documentation on the values, please see the OBJ format.
+// struct scene_material {
+//   // material
+//   material_type type         = material_type::metallic;
+//   vec3f         emission     = {0, 0, 0};
+//   vec3f         color        = {0, 0, 0};
+//   float         roughness    = 0;
+//   float         metallic     = 0;
+//   float         ior          = 1.5;
+//   vec3f         scattering   = {0, 0, 0};
+//   float         scanisotropy = 0;
+//   float         trdepth      = 0.01;
+//   float         opacity      = 1;
+
+//   // textures
+//   texture_handle emission_tex   = invalid_handle;
+//   texture_handle color_tex      = invalid_handle;
+//   texture_handle roughness_tex  = invalid_handle;
+//   texture_handle scattering_tex = invalid_handle;
+//   texture_handle normal_tex     = invalid_handle;
+// };
+
+// // Shape data represented as indexed meshes of elements.
+// // May contain either points, lines, triangles and quads.
+// struct shape_data {
+//   // element data
+//   vector<int>   points    = {};
+//   vector<vec2i> lines     = {};
+//   vector<vec3i> triangles = {};
+//   vector<vec4i> quads     = {};
+
+//   // vertex data
+//   vector<vec3f> positions = {};
+//   vector<vec3f> normals   = {};
+//   vector<vec2f> texcoords = {};
+//   vector<vec4f> colors    = {};
+//   vector<float> radius    = {};
+//   vector<vec4f> tangents  = {};
+// };
+
+// // Environment map.
+// struct scene_environment {
+//   // environment data
+//   frame3f        frame        = identity3x4f;
+//   vec3f          emission     = {0, 0, 0};
+//   texture_handle emission_tex = invalid_handle;
+// };
+
+// // Subdiv data represented as face-varying primitives where
+// // each vertex data has its own topology.
+// struct scene_subdiv {
+//   // face-varying primitives
+//   vector<vec4i> quadspos      = {};
+//   vector<vec4i> quadsnorm     = {};
+//   vector<vec4i> quadstexcoord = {};
+
+//   // vertex data
+//   vector<vec3f> positions = {};
+//   vector<vec3f> normals   = {};
+//   vector<vec2f> texcoords = {};
+
+//   // subdivision data
+//   int  subdivisions = 0;
+//   bool catmullclark = true;
+//   bool smooth       = true;
+
+//   // displacement data
+//   float          displacement     = 0;
+//   texture_handle displacement_tex = invalid_handle;
+
+//   // shape reference
+//   shape_handle shape = invalid_handle;
+// };
+
+static bool draw_scene_editor(gui_window* win, scene_scene& scene,
+    scene_selection& selection, const function<void()>& before_edit) {
+  auto edited = 0;
+  if (begin_header(win, "cameras")) {
+    draw_combobox(win, "camera", selection.camera, scene.camera_names);
+    auto camera = scene.cameras.at(selection.camera);
+    edited += draw_checkbox(win, "ortho", camera.orthographic);
+    edited += draw_slider(win, "lens", camera.lens, 0.001, 1);
+    edited += draw_slider(win, "aspect", camera.aspect, 0.1, 5);
+    edited += draw_slider(win, "film", camera.film, 0.1, 0.5);
+    edited += draw_slider(win, "focus", camera.focus, 0.001, 100);
+    edited += draw_slider(win, "aperture", camera.aperture, 0, 1);
+    //   frame3f frame        = identity3x4f;
+    if (edited) {
+      if (before_edit) before_edit();
+      scene.cameras.at(selection.camera) = camera;
+    }
+    end_header(win);
+  }
+  if (begin_header(win, "environments")) {
+    draw_combobox(
+        win, "environment", selection.environment, scene.environment_names);
+    auto environment = scene.environments.at(selection.environment);
+    edited += draw_hdrcoloredit(win, "emission", environment.emission);
+    edited += draw_combobox(win, "emission_tex", environment.emission_tex,
+        scene.texture_names, true);
+    //   frame3f frame        = identity3x4f;
+    if (edited) {
+      if (before_edit) before_edit();
+      scene.environments.at(selection.environment) = environment;
+    }
+    end_header(win);
+  }
+  if (begin_header(win, "instances")) {
+    draw_combobox(win, "instance", selection.instance, scene.instance_names);
+    auto instance = scene.instances.at(selection.instance);
+    edited += draw_combobox(win, "shape", instance.shape, scene.shape_names);
+    edited += draw_combobox(
+        win, "material", instance.material, scene.material_names);
+    //   frame3f frame        = identity3x4f;
+    if (edited) {
+      if (before_edit) before_edit();
+      scene.instances.at(selection.instance) = instance;
+    }
+    end_header(win);
+  }
+  if (begin_header(win, "materials")) {
+    draw_combobox(win, "material", selection.material, scene.material_names);
+    auto material = scene.materials.at(selection.material);
+    edited += draw_hdrcoloredit(win, "emission", material.emission);
+    edited += draw_combobox(
+        win, "emission_tex", material.emission_tex, scene.texture_names, true);
+    edited += draw_hdrcoloredit(win, "color", material.color);
+    edited += draw_combobox(
+        win, "color_tex", material.color_tex, scene.texture_names, true);
+    edited += draw_slider(win, "roughness", material.roughness, 0, 1);
+    edited += draw_combobox(win, "roughness_tex", material.roughness_tex,
+        scene.texture_names, true);
+    edited += draw_slider(win, "metallic", material.metallic, 0, 1);
+    edited += draw_slider(win, "ior", material.ior, 0.1, 5);
+    if (edited) {
+      if (before_edit) before_edit();
+      scene.materials.at(selection.material) = material;
+    }
+    end_header(win);
+  }
+  if (begin_header(win, "shapes")) {
+    draw_combobox(win, "shape", selection.shape, scene.shape_names);
+    auto& shape = scene.shapes.at(selection.shape);
+    end_header(win);
+  }
+  if (begin_header(win, "textures")) {
+    draw_combobox(win, "texture", selection.texture, scene.texture_names);
+    auto& texture = scene.textures.at(selection.texture);
+    end_header(win);
+  }
+  if (begin_header(win, "subdivs")) {
+    draw_combobox(win, "subdiv", selection.subdiv, scene.subdiv_names);
+    auto& subdiv = scene.subdivs.at(selection.subdiv);
+    end_header(win);
+  }
+  return (bool)edited;
+}
+
 }  // namespace yocto
 
 // -----------------------------------------------------------------------------
@@ -466,6 +650,9 @@ void view_scene(const string& title, const string& name, scene_scene& scene,
   // start rendeting
   reset_display();
 
+  // prepare selection
+  auto selection = scene_selection{};
+
   // callbacks
   auto callbacks    = gui_callbacks{};
   callbacks.init_cb = [&](gui_window* win, const gui_input& input) {
@@ -532,6 +719,10 @@ void view_scene(const string& title, const string& name, scene_scene& scene,
       }
     }
     draw_image_inspector(win, input, image, display, glparams);
+    if (draw_scene_editor(
+            win, scene, selection, [&]() { trace_stop(worker); })) {
+      reset_display();
+    }
   };
   callbacks.uiupdate_cb = [&](gui_window* win, const gui_input& input) {
     auto camera = scene.cameras[params.camera];
