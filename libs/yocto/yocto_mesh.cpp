@@ -3049,15 +3049,23 @@ static vector<mesh_point> bezier_uniform(
 
 vector<mesh_point> compute_bezier_path(const dual_geodesic_solver& dual_solver,
     const vector<vec3i>& triangles, const vector<vec3f>& positions,
-    const vector<vec3i>&      adjacencies,
-    const vector<mesh_point>& control_points) {
+    const vector<vec3i>&        adjacencies,
+    const array<mesh_point, 4>& control_points, int subdivisions) {
+  return bezier_uniform(dual_solver, triangles, positions, adjacencies,
+      control_points, subdivisions);
+}
+
+vector<mesh_point> compute_bezier_path(const dual_geodesic_solver& dual_solver,
+    const vector<vec3i>& triangles, const vector<vec3f>& positions,
+    const vector<vec3i>& adjacencies, const vector<mesh_point>& control_points,
+    int subdivisions) {
   auto path = vector<mesh_point>{};
   for (auto idx = 0; idx < (int)control_points.size() - 3; idx += 3) {
     auto polygon = spline_polygon{control_points[idx + 0],
         control_points[idx + 1], control_points[idx + 2],
         control_points[idx + 3]};
     auto segment = bezier_uniform(
-        dual_solver, triangles, positions, adjacencies, polygon, 4);
+        dual_solver, triangles, positions, adjacencies, polygon, subdivisions);
     path.insert(path.end(), segment.begin(), segment.end());
   }
   return path;
@@ -3301,9 +3309,10 @@ static bool is_left_child(const bezier_tree& tree, int node) {
   return tree.nodes[tree.nodes[node].parent].children[0] == node;
 }
 
-bool is_control_polygon_unfoldable(const dual_geodesic_solver& dual_solver,
-    const vector<vec3i>& triangles, const vector<vec3f>& positions,
-    const vector<vec3i>& adjacencies, const spline_polygon& segment) {
+static bool is_control_polygon_unfoldable(
+    const dual_geodesic_solver& dual_solver, const vector<vec3i>& triangles,
+    const vector<vec3f>& positions, const vector<vec3i>& adjacencies,
+    const spline_polygon& segment) {
   if (segment[0].face != segment[1].face) return false;
   if (segment[1].face != segment[2].face) return false;
   if (segment[2].face != segment[3].face) return false;
@@ -3330,9 +3339,10 @@ bool is_control_polygon_unfoldable(const dual_geodesic_solver& dual_solver,
   // return true;
 }
 
-mesh_point eval_bezier_point_cheap(const dual_geodesic_solver& dual_solver,
-    const vector<vec3i>& triangles, const vector<vec3f>& positions,
-    const vector<vec3i>& adjacencies, const spline_polygon& polygon, float t) {
+static mesh_point eval_bezier_point_cheap(
+    const dual_geodesic_solver& dual_solver, const vector<vec3i>& triangles,
+    const vector<vec3f>& positions, const vector<vec3i>& adjacencies,
+    const spline_polygon& polygon, float t) {
   auto Q0 = geodesic_lerp(dual_solver, triangles, positions, adjacencies,
       polygon[0], polygon[1], t);
   auto Q1 = geodesic_lerp(dual_solver, triangles, positions, adjacencies,
@@ -3362,7 +3372,7 @@ static spline_polygon bezier_polygon_from_spline_polygon(
   return {p0, p1, p2, p3};
 }
 
-mesh_point eval_bezier_point(const dual_geodesic_solver& dual_solver,
+static mesh_point eval_bezier_point(const dual_geodesic_solver& dual_solver,
     const vector<vec3i>& triangles, const vector<vec3f>& positions,
     const vector<vec3i>& adjacencies, const spline_polygon& segment, float t0,
     float t_start, float t_end) {
@@ -3407,10 +3417,10 @@ mesh_point eval_bezier_point(const dual_geodesic_solver& dual_solver,
       dual_solver, triangles, positions, adjacencies, points, t);
 }
 
-spline_polygon from_spline_to_bezier(const dual_geodesic_solver& dual_solver,
-    const vector<vec3i>& triangles, const vector<vec3f>& positions,
-    const vector<vec3i>& adjacencies, const vector<float>& interval,
-    const spline_polygon& polygon) {
+static spline_polygon from_spline_to_bezier(
+    const dual_geodesic_solver& dual_solver, const vector<vec3i>& triangles,
+    const vector<vec3f>& positions, const vector<vec3i>& adjacencies,
+    const vector<float>& interval, const spline_polygon& polygon) {
   vector<float>  deltas(5);
   spline_polygon spline_polygon;
   for (auto i = 1; i < 6; ++i) {
@@ -3486,7 +3496,8 @@ spline_polygon from_spline_to_bezier(const dual_geodesic_solver& dual_solver,
 
   return spline_polygon;
 }
-mesh_point de_boor(const dual_geodesic_solver& dual_solver,
+
+static mesh_point de_boor(const dual_geodesic_solver& dual_solver,
     const vector<vec3i>& triangles, const vector<vec3f>& positions,
     const vector<vec3i>& adjacencies, const spline_polygon& polygon,
     const vector<float>& knot_vector, const float& t0) {
@@ -3503,7 +3514,8 @@ mesh_point de_boor(const dual_geodesic_solver& dual_solver,
   }
   return curr_points.back();
 }
-bool spline_stop_criterion(const dual_geodesic_solver& dual_solver,
+
+static bool spline_stop_criterion(const dual_geodesic_solver& dual_solver,
     const vector<vec3i>& triangles, const vector<vec3f>& positions,
     const vector<vec3i>& adjacencies, const spline_polygon& polygon,
     const float& treshold) {
@@ -3526,7 +3538,8 @@ bool spline_stop_criterion(const dual_geodesic_solver& dual_solver,
 
   return false;
 }
-mesh_point LR_regular(const dual_geodesic_solver& dual_solver,
+
+static mesh_point LR_regular(const dual_geodesic_solver& dual_solver,
     const vector<vec3i>& triangles, const vector<vec3f>& positions,
     const vector<vec3i>& adjacencies, const mesh_point& a, const mesh_point& b,
     const mesh_point& c) {
@@ -3537,7 +3550,8 @@ mesh_point LR_regular(const dual_geodesic_solver& dual_solver,
   return geodesic_lerp(
       dual_solver, triangles, positions, adjacencies, Q0, Q1, 0.5);
 }
-mesh_point LR_regular(const dual_geodesic_solver& dual_solver,
+
+static mesh_point LR_regular(const dual_geodesic_solver& dual_solver,
     const vector<vec3i>& triangles, const vector<vec3f>& positions,
     const vector<vec3i>& adjacencies, const geodesic_path& l0,
     const geodesic_path& l1) {
@@ -3548,7 +3562,8 @@ mesh_point LR_regular(const dual_geodesic_solver& dual_solver,
   return geodesic_lerp(
       dual_solver, triangles, positions, adjacencies, Q0, Q1, 0.5);
 }
-mesh_point LR_init(const dual_geodesic_solver& dual_solver,
+
+static mesh_point LR_init(const dual_geodesic_solver& dual_solver,
     const vector<vec3i>& triangles, const vector<vec3f>& positions,
     const vector<vec3i>& adjacencies, const mesh_point& a, const mesh_point& b,
     const mesh_point& c) {
@@ -3559,7 +3574,8 @@ mesh_point LR_init(const dual_geodesic_solver& dual_solver,
   return geodesic_lerp(
       dual_solver, triangles, positions, adjacencies, Q0, Q1, 0.5);
 }
-mesh_point LR_init(const dual_geodesic_solver& dual_solver,
+
+static mesh_point LR_init(const dual_geodesic_solver& dual_solver,
     const vector<vec3i>& triangles, const vector<vec3f>& positions,
     const vector<vec3i>& adjacencies, const geodesic_path& l0,
     const geodesic_path& l1) {
@@ -3571,7 +3587,7 @@ mesh_point LR_init(const dual_geodesic_solver& dual_solver,
       dual_solver, triangles, positions, adjacencies, Q0, Q1, 0.5);
 }
 
-mesh_point LR_boundary(const dual_geodesic_solver& dual_solver,
+static mesh_point LR_boundary(const dual_geodesic_solver& dual_solver,
     const vector<vec3i>& triangles, const vector<vec3f>& positions,
     const vector<vec3i>& adjacencies, const mesh_point& a, const mesh_point& b,
     const mesh_point& c, const bool& left) {
@@ -3592,7 +3608,8 @@ mesh_point LR_boundary(const dual_geodesic_solver& dual_solver,
   return geodesic_lerp(
       dual_solver, triangles, positions, adjacencies, Q0, Q1, 0.5);
 }
-mesh_point LR_boundary(const dual_geodesic_solver& dual_solver,
+
+static mesh_point LR_boundary(const dual_geodesic_solver& dual_solver,
     const vector<vec3i>& triangles, const vector<vec3f>& positions,
     const vector<vec3i>& adjacencies, const geodesic_path& l0,
     const geodesic_path& l1, const bool& left) {
@@ -3613,7 +3630,8 @@ mesh_point LR_boundary(const dual_geodesic_solver& dual_solver,
   return geodesic_lerp(
       dual_solver, triangles, positions, adjacencies, Q0, Q1, 0.5);
 }
-pair<bool, spline_polygon> handle_boundary(
+
+static pair<bool, spline_polygon> handle_boundary(
     const dual_geodesic_solver& dual_solver, const vector<vec3i>& triangles,
     const vector<vec3f>& positions, const vector<vec3i>& adjacencies,
     const spline_polygon& control_points, const vector<int>& new_ones_entries,
@@ -3711,7 +3729,8 @@ pair<bool, spline_polygon> handle_boundary(
   }
   return {true, new_ones};
 }
-std::tuple<int, vec2f, spline_polygon> find_leaf(
+
+static std::tuple<int, vec2f, spline_polygon> find_leaf(
     const dual_geodesic_solver& dual_solver, const vector<vec3i>& triangles,
     const vector<vec3f>& positions, const vector<vec3i>& adjacencies,
     const spline_polygon& control_points, const float& t0,
@@ -3803,10 +3822,12 @@ std::tuple<int, vec2f, spline_polygon> find_leaf(
       ++k;
   }
 }
-mesh_point eval_spline_point_cheap(const dual_geodesic_solver& dual_solver,
-    const vector<vec3i>& triangles, const vector<vec3f>& positions,
-    const vector<vec3i>& adjacencies, const vector<mesh_point>& control_polygon,
-    const vector<float>& knot_vector, const float& t0, const int entry) {
+
+static mesh_point eval_spline_point_cheap(
+    const dual_geodesic_solver& dual_solver, const vector<vec3i>& triangles,
+    const vector<vec3f>& positions, const vector<vec3i>& adjacencies,
+    const vector<mesh_point>& control_polygon, const vector<float>& knot_vector,
+    const float& t0, const int entry) {
   assert(entry >= 3);
   auto control_points = {control_polygon[entry], control_polygon[entry - 1],
       control_polygon[entry - 2], control_polygon[entry - 3]};
@@ -3826,7 +3847,7 @@ mesh_point eval_spline_point_cheap(const dual_geodesic_solver& dual_solver,
   return curr_points.back();
 }
 
-mesh_point eval_spline_point(const dual_geodesic_solver& dual_solver,
+static mesh_point eval_spline_point(const dual_geodesic_solver& dual_solver,
     const vector<vec3i>& triangles, const vector<vec3f>& positions,
     const vector<vec3i>& adjacencies, const spline_polygon& polygon,
     const spline_params& params, const float& t0) {
@@ -3850,7 +3871,8 @@ mesh_point eval_spline_point(const dual_geodesic_solver& dual_solver,
   return de_boor(
       dual_solver, triangles, positions, adjacencies, leaf, knots, t0);
 }
-std::array<spline_polygon, 2> insert_point(
+
+static std::array<spline_polygon, 2> insert_point(
     const dual_geodesic_solver& dual_solver, const vector<vec3i>& triangles,
     const vector<vec3f>& positions, const vector<vec3i>& adjacencies,
     bezier_tree& tree, float t0) {
@@ -3923,7 +3945,7 @@ std::array<spline_polygon, 2> insert_point(
   return {segment_left, segment_right};
 }
 
-std::array<spline_polygon, 2> insert_point_spline(
+static std::array<spline_polygon, 2> insert_point_spline(
     const dual_geodesic_solver& dual_solver, const vector<vec3i>& triangles,
     const vector<vec3f>& positions, const vector<vec3i>& adjacencies,
     const spline_polygon& polygon, const float& t0,
@@ -3991,7 +4013,8 @@ std::array<spline_polygon, 2> insert_point_spline(
   }
   return result;
 }
-std::array<spline_polygon, 2> insert_point_old(
+
+static std::array<spline_polygon, 2> insert_point_old(
     const dual_geodesic_solver& dual_solver, const vector<vec3i>& triangles,
     const vector<vec3f>& positions, const vector<vec3i>& adjacencies,
     bezier_tree& tree, float t0) {
@@ -4120,7 +4143,7 @@ std::array<spline_polygon, 2> insert_point_old(
   return {segment_left, segment_right};
 }
 
-void subdivide_bezier_tree(const dual_geodesic_solver& dual_solver,
+static void subdivide_bezier_tree(const dual_geodesic_solver& dual_solver,
     const vector<vec3i>& triangles, const vector<vec3f>& positions,
     const vector<vec3i>& adjacencies, bezier_tree& tree, spline_params params,
     float t) {
@@ -4141,10 +4164,11 @@ void subdivide_bezier_tree(const dual_geodesic_solver& dual_solver,
   tree.depth = params.subdivisions;
 }
 
-bool is_bezier_straight_enough(const geodesic_path& a, const geodesic_path& b,
-    const geodesic_path& c, const dual_geodesic_solver& dual_solver,
-    const vector<vec3i>& triangles, const vector<vec3f>& positions,
-    const vector<vec3i>& adjacencies, const spline_params& params) {
+static bool is_bezier_straight_enough(const geodesic_path& a,
+    const geodesic_path& b, const geodesic_path& c,
+    const dual_geodesic_solver& dual_solver, const vector<vec3i>& triangles,
+    const vector<vec3f>& positions, const vector<vec3i>& adjacencies,
+    const spline_params& params) {
   // TODO(giacomo): we don't need all positions!
   // auto a_positions = path_positions(dual_solver, triangles, positions,
   // adjacencies,  a); auto b_positions = path_positions(dual_solver, triangles,
@@ -4193,7 +4217,7 @@ bool is_bezier_straight_enough(const geodesic_path& a, const geodesic_path& b,
   return true;
 }
 
-void subdivide_bezier_adaptive(const dual_geodesic_solver& dual_solver,
+static void subdivide_bezier_adaptive(const dual_geodesic_solver& dual_solver,
     const vector<vec3i>& triangles, const vector<vec3f>& positions,
     const vector<vec3i>& adjacencies, const spline_polygon& input,
     spline_params params, vector<mesh_point>& result, int depth = 0) {
@@ -4241,17 +4265,17 @@ void subdivide_bezier_adaptive(const dual_geodesic_solver& dual_solver,
       {S, R1, Q2, P3}, params, result, depth + 1);
 }
 
-vector<mesh_point> bezier_adaptive(const dual_geodesic_solver& dual_solver,
-    const vector<vec3i>& triangles, const vector<vec3f>& positions,
-    const vector<vec3i>& adjacencies, const spline_polygon& control_points,
-    const spline_params& params) {
+static vector<mesh_point> bezier_adaptive(
+    const dual_geodesic_solver& dual_solver, const vector<vec3i>& triangles,
+    const vector<vec3f>& positions, const vector<vec3i>& adjacencies,
+    const spline_polygon& control_points, const spline_params& params) {
   auto result = vector<mesh_point>{};
   subdivide_bezier_adaptive(dual_solver, triangles, positions, adjacencies,
       control_points, params, result);
   return result;
 }
 
-vector<mesh_point> bezier_uniform_parallel(
+static vector<mesh_point> bezier_uniform_parallel(
     const dual_geodesic_solver& dual_solver, const vector<vec3i>& triangles,
     const vector<vec3f>& positions, const vector<vec3i>& adjacencies,
     const spline_polygon& control_points, const spline_params& params) {
@@ -4280,10 +4304,10 @@ vector<mesh_point> bezier_uniform_parallel(
       (mesh_point*)segments.data() + segments.size() * 4};
 }
 
-vector<mesh_point> bezier_uniform(const dual_geodesic_solver& dual_solver,
-    const vector<vec3i>& triangles, const vector<vec3f>& positions,
-    const vector<vec3i>& adjacencies, const spline_polygon& control_points,
-    const spline_params& params) {
+static vector<mesh_point> bezier_uniform(
+    const dual_geodesic_solver& dual_solver, const vector<vec3i>& triangles,
+    const vector<vec3f>& positions, const vector<vec3i>& adjacencies,
+    const spline_polygon& control_points, const spline_params& params) {
   auto segments = vector<spline_polygon>{control_points};
   auto result   = vector<spline_polygon>();
 
@@ -4301,11 +4325,11 @@ vector<mesh_point> bezier_uniform(const dual_geodesic_solver& dual_solver,
       (mesh_point*)segments.data() + segments.size() * 4};
 }
 
-vector<mesh_point> line_riesenfeld_uniform(
+static vector<mesh_point> line_riesenfeld_uniform(
     const dual_geodesic_solver& dual_solver, const vector<vec3i>& triangles,
     const vector<vec3f>& positions, const vector<vec3i>& adjacencies,
     const array<mesh_point, 4>& control_points, int num_subdivisions);
-vector<mesh_point> line_riesenfeld_adaptive(
+static vector<mesh_point> line_riesenfeld_adaptive(
     const dual_geodesic_solver& dual_solver, const vector<vec3i>& triangles,
     const vector<vec3f>& positions, const vector<vec3i>& adjacencies,
     const array<mesh_point, 4>& polygon, const spline_params& params);
@@ -4337,7 +4361,7 @@ static vector<vec3f> polyline_positions(const dual_geodesic_solver& dual_solver,
   return result;
 }
 
-vector<vec3f> trace_spline(const dual_geodesic_solver& dual_solver,
+static vector<vec3f> trace_spline(const dual_geodesic_solver& dual_solver,
     const vector<vec3i>& triangles, const vector<vec3f>& positions,
     const vector<vec3i>& adjacencies, const spline_polygon& control_points,
     const spline_params& params) {
@@ -4420,10 +4444,10 @@ vector<mesh_point> compute_bezier_path(const dual_geodesic_solver& dual_solver,
 // weighted averages (Note:gradients needs to be a vector such that at the
 // i-th entry constains the gradient field of the squared distance field from
 // the i-th control points)
-vector<mesh_point> weighted_average(const dual_geodesic_solver& dual_solver,
-    const vector<vec3i>& triangles, const vector<vec3f>& positions,
-    const vector<vec3i>& adjacencies, const vector<mesh_point>& rectangle,
-    const vector<vector<float>>& weights) {
+static vector<mesh_point> weighted_average(
+    const dual_geodesic_solver& dual_solver, const vector<vec3i>& triangles,
+    const vector<vec3f>& positions, const vector<vec3i>& adjacencies,
+    const vector<mesh_point>& rectangle, const vector<vector<float>>& weights) {
 #if HEAVY
   vector<vector<vec3f>> gradients(rectangle.size());
   vector<vector<float>> field(rectangle.size());
@@ -4515,7 +4539,7 @@ struct spline_node {
   bool                         is_good = false;
 };
 
-pair<bool, vector<mesh_point>> handle_boundary_node(
+static pair<bool, vector<mesh_point>> handle_boundary_node(
     const dual_geodesic_solver& dual_solver, const vector<vec3i>& triangles,
     const vector<vec3f>& positions, const vector<vec3i>& adjacencies,
     const spline_node& leaf, const vector<int>& new_ones_entries) {
@@ -4582,7 +4606,8 @@ pair<bool, vector<mesh_point>> handle_boundary_node(
   }
   return {true, new_ones};
 }
-pair<spline_node, spline_node> split_spline_node(
+
+static pair<spline_node, spline_node> split_spline_node(
     const dual_geodesic_solver& dual_solver, const vector<vec3i>& triangles,
     const vector<vec3f>& positions, const vector<vec3i>& adjacencies,
     const spline_node& leaf, bool& max_depth_reached) {
@@ -4623,7 +4648,8 @@ pair<spline_node, spline_node> split_spline_node(
       {L12, L23, L01}, {curr_t, leaf.t.y}, leaf.depth + 1};
   return {P0, P1};
 }
-vector<mesh_point> line_riesenfeld_uniform(
+
+static vector<mesh_point> line_riesenfeld_uniform(
     const dual_geodesic_solver& dual_solver, const vector<vec3i>& triangles,
     const vector<vec3f>& positions, const vector<vec3i>& adjacencies,
     const array<mesh_point, 4>& control_points, int num_subdivisions) {
@@ -4766,7 +4792,8 @@ vector<mesh_point> line_riesenfeld_uniform(
   // std::cout << num_subdivisions + 2 << std::endl;
   return q;
 }
-vector<mesh_point> spline_subdivision_uniform_quadric(
+
+static vector<mesh_point> spline_subdivision_uniform_quadric(
     const dual_geodesic_solver& dual_solver, const vector<vec3i>& triangles,
     const vector<vec3f>& positions, const vector<vec3i>& adjacencies,
     const array<mesh_point, 3>& control_points, int num_subdivisions) {
@@ -4859,7 +4886,8 @@ vector<mesh_point> spline_subdivision_uniform_quadric(
   // std::cout << num_subdivisions + 2 << std::endl;
   return q;
 }
-vector<mesh_point> line_riesenfeld_adaptive(
+
+static vector<mesh_point> line_riesenfeld_adaptive(
     const dual_geodesic_solver& dual_solver, const vector<vec3i>& triangles,
     const vector<vec3f>& positions, const vector<vec3i>& adjacencies,
     const array<mesh_point, 4>& polygon, const spline_params& params) {
@@ -5012,9 +5040,9 @@ vector<mesh_point> line_riesenfeld_adaptive(
   return polyline;
 }
 
-vector<mesh_point> degree_elevation(const dual_geodesic_solver& dual_solver,
-    const vector<vec3i>& triangles, const vector<vec3f>& positions,
-    const vector<vec3i>&        adjacencies,
+static vector<mesh_point> degree_elevation(
+    const dual_geodesic_solver& dual_solver, const vector<vec3i>& triangles,
+    const vector<vec3f>& positions, const vector<vec3i>& adjacencies,
     const array<mesh_point, 4>& control_points, int num_subdivisions) {
   auto p = vector<mesh_point>{control_points[0], control_points[1],
       control_points[2], control_points[3]};

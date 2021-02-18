@@ -363,7 +363,7 @@ int run_glpath(const glpath_params &params) {
           glscene.shapes.at(1).point_size = 10;
           auto path = bezier ? compute_bezier_path(solver, shape.triangles,
                                    shape.positions, adjacencies,
-                                   (vector<mesh_point> &)stroke, params4)
+                                   (vector<mesh_point> &)stroke, params1)
                              : compute_shortest_path(solver, shape.triangles,
                                    shape.positions, adjacencies,
                                    (vector<mesh_point> &)stroke);
