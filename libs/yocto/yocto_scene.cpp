@@ -119,15 +119,24 @@ void set_pixel(image_data& image, int i, int j, const vec4f& pixel) {
 
 // conversions
 image_data convert_image(const image_data& image, bool linear, bool as_byte) {
-  if (image.linear == linear && !image.pixelsf.empty() == as_byte) return image;
+  if (image.linear == linear && !image.pixelsb.empty() == as_byte) return image;
   auto result = make_image(image.width, image.height, linear, as_byte);
   convert_image(result, image);
   return result;
 }
 void convert_image(image_data& result, const image_data& image) {
-  if (image.linear == result.linear) {
-    result.pixelsb = image.pixelsb;
+  if (image.width != result.width || image.height != result.height)
+    throw std::invalid_argument{"image have to be the same size"};
+  if (image.linear == result.linear &&
+      image.pixelsf.empty() == result.pixelsf.empty()) {
     result.pixelsf = image.pixelsf;
+    result.pixelsb = image.pixelsb;
+  } else if (image.linear == result.linear) {
+    for (auto j = 0; j < image.height; j++) {
+      for (auto i = 0; i < image.width; i++) {
+        set_pixel(result, i, j, get_pixel(image, i, j));
+      }
+    }
   } else {
     for (auto j = 0; j < image.height; j++) {
       for (auto i = 0; i < image.width; i++) {

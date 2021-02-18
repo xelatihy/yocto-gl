@@ -1172,9 +1172,7 @@ static void update_display(ogl_imageview* view) {
   }
   if (view->image.linear) {
     tonemap_image_mt(view->display, view->image, view->exposure, view->filmic);
-  } else if (!view->image.pixelsf.empty() || !view->image.pixelsf.empty()) {
-    convert_image(view->display, view->image);
-  } else if (!view->image.pixelsb.empty() || !view->image.pixelsb.empty()) {
+  } else if (!view->image.pixelsf.empty() || !view->image.pixelsb.empty()) {
     convert_image(view->display, view->image);
   } else {
     // TODO(fabio): decide about empty images
