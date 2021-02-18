@@ -1,6 +1,4 @@
 add_subdirectory(yimage)
-add_subdirectory(ytrace)
 add_subdirectory(yshape)
 add_subdirectory(yscene)
-add_subdirectory(ysculpt)
 add_subdirectory(ymesh)
