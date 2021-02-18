@@ -205,21 +205,34 @@ vector<mesh_point> compute_straightest_path(const vector<vec3i>& triangles,
     const mesh_point& start, const vec2f& direction, float path_length);
 
 // compute a bezier on the surface
-vector<mesh_point> compute_bezier_path(const dual_geodesic_solver& dual_solver,
+vector<mesh_point> compute_bezier_path(const dual_geodesic_solver& solver,
     const vector<vec3i>& triangles, const vector<vec3f>& positions,
     const vector<vec3i>& adjacencies, const vector<mesh_point>& control_points,
     int subdivision = 4);
 // compute a bezier on the surface
-vector<mesh_point> compute_bezier_path(const dual_geodesic_solver& dual_solver,
+vector<mesh_point> compute_bezier_path(const dual_geodesic_solver& solver,
     const vector<vec3i>& triangles, const vector<vec3f>& positions,
     const vector<vec3i>&        adjacencies,
     const array<mesh_point, 4>& control_points, int subdivision = 4);
 
+// evaluates a point a bezier by subdivision
+mesh_point eval_bezier_point(const dual_geodesic_solver& solver,
+    const vector<vec3i>& triangles, const vector<vec3f>& positions,
+    const vector<vec3i>& adjacencies, const array<mesh_point, 4>& segment,
+    float t, bool lane_riesenfeld, float precision = 0.1);
+
+// evaluates a point a bezier by subdivision
+array<array<mesh_point, 4>, 2> insert_bezier_point(
+    const dual_geodesic_solver& solver, const vector<vec3i>& triangles,
+    const vector<vec3f>& positions, const vector<vec3i>& adjacencies,
+    const array<mesh_point, 4>& segment, float t, bool lane_riesenfeld,
+    float precision = 0.1);
+
 enum struct spline_algorithm {
   de_casteljau_uniform = 0,
   de_casteljau_adaptive,
-  line_riesenfeld_uniform,
-  line_riesenfeld_adaptive
+  lane_riesenfeld_uniform,
+  lane_riesenfeld_adaptive
 };
 const auto spline_algorithm_names = vector<string>{
     "dc-uniform", "dc-adaptive", "lr-uniform", "lr-adaptive"};
@@ -230,18 +243,24 @@ struct spline_params {
   float            precision      = 0.1;
   float            min_curve_size = 0.001;
   int              max_depth      = 10;
-  bool             parallel       = false;
 };
 
 // compute a bezier on the surface
-vector<mesh_point> compute_bezier_path(const dual_geodesic_solver& dual_solver,
+vector<mesh_point> compute_bezier_path(const dual_geodesic_solver& solver,
     const vector<vec3i>& triangles, const vector<vec3f>& positions,
     const vector<vec3i>& adjacencies, const vector<mesh_point>& control_points,
     const spline_params& params);
-vector<mesh_point> compute_bezier_path(const dual_geodesic_solver& dual_solver,
+vector<mesh_point> compute_bezier_path(const dual_geodesic_solver& solver,
     const vector<vec3i>& triangles, const vector<vec3f>& positions,
     const vector<vec3i>&        adjacencies,
     const array<mesh_point, 4>& control_points, const spline_params& params);
+
+}  // namespace yocto
+
+// -----------------------------------------------------------------------------
+// PARALLEL TRANSPORT AND ANGLES
+// -----------------------------------------------------------------------------
+namespace yocto {
 
 // TODO(fabio): implement wrapper
 // compute the 2d rotation in tangent space that tansport directions from
@@ -323,12 +342,12 @@ mesh_point eval_path_point(const geodesic_path& path,
 // -----------------------------------------------------------------------------
 namespace yocto {
 
-// TODO(fabio): prendi la strip da splinesurf
-
+// TODO(fabio): rename geodesic_strip
 vector<int> strip_on_dual_graph(const dual_geodesic_solver& solver,
     const vector<vec3i>& triangles, const vector<vec3f>& positions, int start,
     int end);
 
+// TODO(fabio): rename geodesic_strip_XXX
 vector<int> strip_ascending_distance_field(const geodesic_solver& solver,
     const vector<vec3i>& triangles, const vector<vec3f>& positions,
     const vector<vec3i>& adjacencies, int start, int end);
@@ -351,15 +370,18 @@ namespace yocto {
 
 using unfold_triangle = std::array<vec2f, 3>;
 
+// TODO(fabio): o faccio il .h, o vanno via
 // Find barycentric coordinates of a point inside a triangle (a, b, c).
 vec2f barycentric_coordinates(
     const vec2f& point, const vec2f& a, const vec2f& b, const vec2f& c);
 
+// TODO(fabio): mettere in evidenza
 vec3f eval_position(const vector<vec3i>& triangles,
     const vector<vec3f>& positions, const mesh_point& sample);
 vec3f eval_normal(const vector<vec3i>& triangles, const vector<vec3f>& normals,
     const mesh_point& point);
 
+// TODO(fabio): o faccio il .h, o vanno via
 pair<bool, int>   bary_is_edge(const vec3f& bary, float tol = 1e-2f);
 pair<bool, int>   bary_is_vert(const vec3f& bary, float tol = 1e-2f);
 pair<bool, int>   point_is_vert(const mesh_point& p, float tol = 1e-2f);
@@ -368,32 +390,39 @@ pair<bool, vec2f> point_in_triangle(const vector<vec3i>& triangles,
     const vector<vec3f>& positions, int tid, const vec3f& point,
     float tol = 5e-3f);
 
+// TODO(fabio): hide
 std::array<vec2f, 3> init_flat_triangle(
     const vector<vec3f>& positions, const vec3i& tr);
 
+// TODO(fabio): hide
 float length_by_flattening(const vector<vec3i>& triangles,
     const vector<vec3f>& positions, const vector<vec3i>& adjacencies,
     const mesh_point& p, const vector<int>& strip);
 
+// TODO(fabio): hide
 // intersection of two circles with centers c1, c2 and radii squared R1, R2
 vec2f intersect_circles(const vec2f& c2, float R2, const vec2f& c1, float R1);
 
+// TODO(fabio): hide
 // given the 2D coordinates in tanget space of a triangle, find the coordinates
 // of the k-th neighbor triangle
 unfold_triangle unfold_face(const vector<vec3i>& triangles,
     const vector<vec3f>& positions, const unfold_triangle& tr, int face,
     int neighbor);
 
+// TODO(fabio): hide
 // assign 2D coordinates to a strip of triangles. point start is at (0, 0)
 vector<unfold_triangle> unfold_strip(const vector<vec3i>& triangles,
     const vector<vec3f>& positions, const vector<int>& strip,
     const mesh_point& start);
 
+// TODO(fabio): hide
 // assign 2D coordinates to vertices of the triangle containing the mesh point,
 // putting the point at (0, 0)
 unfold_triangle triangle_coordinates(const vector<vec3i>& triangles,
     const vector<vec3f>& positions, const mesh_point& point);
 
+// TODO(fabio): hide
 // generic utilities for paths
 vec2i get_edge(const vector<vec3i>& triangles, const vector<vec3f>& positions,
     const vector<vec3i>& adjacencies, int f0, int f1);
