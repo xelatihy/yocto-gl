@@ -406,6 +406,8 @@ bool begin_header(gui_window* win, const char* title);
 void end_header(gui_window* win);
 
 void draw_label(gui_window* win, const char* lbl, const string& text);
+void draw_label(gui_window* win, const char* lbl, int value);
+void draw_label(gui_window* win, const char* lbl, bool value);
 
 void draw_separator(gui_window* win);
 void continue_line(gui_window* win);

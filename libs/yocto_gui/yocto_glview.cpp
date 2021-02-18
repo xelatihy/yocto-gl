@@ -43,6 +43,308 @@ using std::make_unique;
 }  // namespace yocto
 
 // -----------------------------------------------------------------------------
+// VIEW HELPERS
+// -----------------------------------------------------------------------------
+namespace yocto {
+
+void update_image_params(gui_window* win, const gui_input& input,
+    const image_data& image, ogl_image_params& glparams) {
+  glparams.window                           = input.window_size;
+  glparams.framebuffer                      = input.framebuffer_viewport;
+  std::tie(glparams.center, glparams.scale) = camera_imview(glparams.center,
+      glparams.scale, {image.width, image.height}, glparams.window,
+      glparams.fit);
+}
+
+static bool uiupdate_image_params(
+    gui_window* win, const gui_input& input, ogl_image_params& glparams) {
+  // handle mouse
+  if (input.mouse_left && !input.widgets_active) {
+    glparams.center += input.mouse_pos - input.mouse_last;
+    return true;
+  }
+  if (input.mouse_right && !input.widgets_active) {
+    glparams.scale *= powf(
+        2, (input.mouse_pos.x - input.mouse_last.x) * 0.001f);
+    return true;
+  }
+  return false;
+}
+
+static bool uiupdate_camera_params(
+    gui_window* win, const gui_input& input, scene_camera& camera) {
+  if ((input.mouse_left || input.mouse_right) && !input.modifier_alt &&
+      !input.modifier_ctrl && !input.widgets_active) {
+    auto dolly  = 0.0f;
+    auto pan    = zero2f;
+    auto rotate = zero2f;
+    if (input.mouse_left && !input.modifier_shift)
+      rotate = (input.mouse_pos - input.mouse_last) / 100.0f;
+    if (input.mouse_right)
+      dolly = (input.mouse_pos.x - input.mouse_last.x) / 100.0f;
+    if (input.mouse_left && input.modifier_shift)
+      pan = (input.mouse_pos - input.mouse_last) * camera.focus / 200.0f;
+    pan.x               = -pan.x;
+    auto [frame, focus] = camera_turntable(
+        camera.frame, camera.focus, rotate, dolly, pan);
+    if (camera.frame != frame || camera.focus != focus) {
+      camera.frame = frame;
+      camera.focus = focus;
+      return true;
+    }
+  }
+  return false;
+}
+
+static bool draw_tonemap_params(
+    gui_window* win, const gui_input& input, float& exposure, bool& filmic) {
+  auto edited = 0;
+  if (begin_header(win, "tonemap")) {
+    edited += draw_slider(win, "exposure", exposure, -5, 5);
+    edited += draw_checkbox(win, "filmic", filmic);
+    end_header(win);
+  }
+  return (bool)edited;
+}
+
+static bool draw_image_inspector(gui_window* win, const gui_input& input,
+    const image_data& image, const image_data& display,
+    ogl_image_params& glparams) {
+  if (begin_header(win, "inspect")) {
+    draw_slider(win, "zoom", glparams.scale, 0.1, 10);
+    draw_checkbox(win, "fit", glparams.fit);
+    auto [i, j] = image_coords(input.mouse_pos, glparams.center, glparams.scale,
+        {image.width, image.height});
+    auto ij     = vec2i{i, j};
+    draw_dragger(win, "mouse", ij);
+    auto hdr_pixel     = zero4f;
+    auto ldr_pixel     = zero4b;
+    auto display_pixel = zero4b;
+    if (i >= 0 && i < image.width && j >= 0 && j < image.height) {
+      display_pixel = image.pixelsb[j * image.width + i];
+      if (!image.pixelsf.empty())
+        hdr_pixel = image.pixelsf[j * image.width + i];
+      if (!image.pixelsb.empty())
+        ldr_pixel = image.pixelsb[j * image.width + i];
+    }
+    if (!image.pixelsf.empty()) {
+      draw_coloredit(win, "image", hdr_pixel);
+    } else {
+      draw_coloredit(win, "image", ldr_pixel);
+    }
+    draw_coloredit(win, "display", display_pixel);
+    end_header(win);
+  }
+  return false;
+}
+
+struct scene_selection {
+  int camera      = 0;
+  int instance    = 0;
+  int environment = 0;
+  int shape       = 0;
+  int texture     = 0;
+  int material    = 0;
+  int subdiv      = 0;
+};
+
+// // Material type
+// enum struct material_type {
+//   // clang-format off
+//   matte, plastic, metal, thinglass, glass, leaves, subsurface, volume,
+//   metallic
+//   // clang-format on
+// };
+
+// // Enum labels
+// inline const auto material_type_names = std::vector<std::string>{"matte",
+//     "plastic", "metal", "thinglass", "glass", "leaves", "subsurface",
+//     "volume", "metallic"};
+
+// // Material for surfaces, lines and triangles.
+// // For surfaces, uses a microfacet model with thin sheet transmission.
+// // The model is based on OBJ, but contains glTF compatibility.
+// // For the documentation on the values, please see the OBJ format.
+// struct scene_material {
+//   // material
+//   material_type type         = material_type::metallic;
+//   vec3f         emission     = {0, 0, 0};
+//   vec3f         color        = {0, 0, 0};
+//   float         roughness    = 0;
+//   float         metallic     = 0;
+//   float         ior          = 1.5;
+//   vec3f         scattering   = {0, 0, 0};
+//   float         scanisotropy = 0;
+//   float         trdepth      = 0.01;
+//   float         opacity      = 1;
+
+//   // textures
+//   texture_handle emission_tex   = invalid_handle;
+//   texture_handle color_tex      = invalid_handle;
+//   texture_handle roughness_tex  = invalid_handle;
+//   texture_handle scattering_tex = invalid_handle;
+//   texture_handle normal_tex     = invalid_handle;
+// };
+
+// // Shape data represented as indexed meshes of elements.
+// // May contain either points, lines, triangles and quads.
+// struct shape_data {
+//   // element data
+//   vector<int>   points    = {};
+//   vector<vec2i> lines     = {};
+//   vector<vec3i> triangles = {};
+//   vector<vec4i> quads     = {};
+
+//   // vertex data
+//   vector<vec3f> positions = {};
+//   vector<vec3f> normals   = {};
+//   vector<vec2f> texcoords = {};
+//   vector<vec4f> colors    = {};
+//   vector<float> radius    = {};
+//   vector<vec4f> tangents  = {};
+// };
+
+// // Environment map.
+// struct scene_environment {
+//   // environment data
+//   frame3f        frame        = identity3x4f;
+//   vec3f          emission     = {0, 0, 0};
+//   texture_handle emission_tex = invalid_handle;
+// };
+
+// // Subdiv data represented as face-varying primitives where
+// // each vertex data has its own topology.
+// struct scene_subdiv {
+//   // face-varying primitives
+//   vector<vec4i> quadspos      = {};
+//   vector<vec4i> quadsnorm     = {};
+//   vector<vec4i> quadstexcoord = {};
+
+//   // vertex data
+//   vector<vec3f> positions = {};
+//   vector<vec3f> normals   = {};
+//   vector<vec2f> texcoords = {};
+
+//   // subdivision data
+//   int  subdivisions = 0;
+//   bool catmullclark = true;
+//   bool smooth       = true;
+
+//   // displacement data
+//   float          displacement     = 0;
+//   texture_handle displacement_tex = invalid_handle;
+
+//   // shape reference
+//   shape_handle shape = invalid_handle;
+// };
+
+static bool draw_scene_editor(gui_window* win, scene_scene& scene,
+    scene_selection& selection, const function<void()>& before_edit) {
+  auto edited = 0;
+  if (begin_header(win, "cameras")) {
+    draw_combobox(win, "camera", selection.camera, scene.camera_names);
+    auto camera = scene.cameras.at(selection.camera);
+    edited += draw_checkbox(win, "ortho", camera.orthographic);
+    edited += draw_slider(win, "lens", camera.lens, 0.001, 1);
+    edited += draw_slider(win, "aspect", camera.aspect, 0.1, 5);
+    edited += draw_slider(win, "film", camera.film, 0.1, 0.5);
+    edited += draw_slider(win, "focus", camera.focus, 0.001, 100);
+    edited += draw_slider(win, "aperture", camera.aperture, 0, 1);
+    //   frame3f frame        = identity3x4f;
+    if (edited) {
+      if (before_edit) before_edit();
+      scene.cameras.at(selection.camera) = camera;
+    }
+    end_header(win);
+  }
+  if (begin_header(win, "environments")) {
+    draw_combobox(
+        win, "environment", selection.environment, scene.environment_names);
+    auto environment = scene.environments.at(selection.environment);
+    edited += draw_hdrcoloredit(win, "emission", environment.emission);
+    edited += draw_combobox(win, "emission_tex", environment.emission_tex,
+        scene.texture_names, true);
+    //   frame3f frame        = identity3x4f;
+    if (edited) {
+      if (before_edit) before_edit();
+      scene.environments.at(selection.environment) = environment;
+    }
+    end_header(win);
+  }
+  if (begin_header(win, "instances")) {
+    draw_combobox(win, "instance", selection.instance, scene.instance_names);
+    auto instance = scene.instances.at(selection.instance);
+    edited += draw_combobox(win, "shape", instance.shape, scene.shape_names);
+    edited += draw_combobox(
+        win, "material", instance.material, scene.material_names);
+    //   frame3f frame        = identity3x4f;
+    if (edited) {
+      if (before_edit) before_edit();
+      scene.instances.at(selection.instance) = instance;
+    }
+    end_header(win);
+  }
+  if (begin_header(win, "materials")) {
+    draw_combobox(win, "material", selection.material, scene.material_names);
+    auto material = scene.materials.at(selection.material);
+    edited += draw_hdrcoloredit(win, "emission", material.emission);
+    edited += draw_combobox(
+        win, "emission_tex", material.emission_tex, scene.texture_names, true);
+    edited += draw_hdrcoloredit(win, "color", material.color);
+    edited += draw_combobox(
+        win, "color_tex", material.color_tex, scene.texture_names, true);
+    edited += draw_slider(win, "roughness", material.roughness, 0, 1);
+    edited += draw_combobox(win, "roughness_tex", material.roughness_tex,
+        scene.texture_names, true);
+    edited += draw_slider(win, "metallic", material.metallic, 0, 1);
+    edited += draw_slider(win, "ior", material.ior, 0.1, 5);
+    if (edited) {
+      if (before_edit) before_edit();
+      scene.materials.at(selection.material) = material;
+    }
+    end_header(win);
+  }
+  if (begin_header(win, "shapes")) {
+    draw_combobox(win, "shape", selection.shape, scene.shape_names);
+    auto& shape = scene.shapes.at(selection.shape);
+    draw_label(win, "points", (int)shape.points.size());
+    draw_label(win, "lines", (int)shape.lines.size());
+    draw_label(win, "triangles", (int)shape.triangles.size());
+    draw_label(win, "quads", (int)shape.quads.size());
+    draw_label(win, "positions", (int)shape.positions.size());
+    draw_label(win, "normals", (int)shape.normals.size());
+    draw_label(win, "texcoords", (int)shape.texcoords.size());
+    draw_label(win, "colors", (int)shape.colors.size());
+    draw_label(win, "radius", (int)shape.radius.size());
+    draw_label(win, "tangents", (int)shape.tangents.size());
+    end_header(win);
+  }
+  if (begin_header(win, "textures")) {
+    draw_combobox(win, "texture", selection.texture, scene.texture_names);
+    auto& texture = scene.textures.at(selection.texture);
+    draw_label(win, "width", texture.width);
+    draw_label(win, "height", texture.height);
+    draw_label(win, "linear", texture.linear);
+    draw_label(win, "byte", !texture.pixelsb.empty());
+    end_header(win);
+  }
+  if (begin_header(win, "subdivs")) {
+    draw_combobox(win, "subdiv", selection.subdiv, scene.subdiv_names);
+    auto& subdiv = scene.subdivs.at(selection.subdiv);
+    draw_label(win, "quadspos", (int)subdiv.quadspos.size());
+    draw_label(win, "quadsnorm", (int)subdiv.quadsnorm.size());
+    draw_label(win, "quadstexcoord", (int)subdiv.quadstexcoord.size());
+    draw_label(win, "positions", (int)subdiv.positions.size());
+    draw_label(win, "normals", (int)subdiv.normals.size());
+    draw_label(win, "texcoords", (int)subdiv.texcoords.size());
+    end_header(win);
+  }
+  return (bool)edited;
+}
+
+}  // namespace yocto
+
+// -----------------------------------------------------------------------------
 // IMAGE AND TRACE VIEW
 // -----------------------------------------------------------------------------
 namespace yocto {
@@ -76,62 +378,21 @@ void view_image(const string& title, const string& name,
     clear_image(glimage);
   };
   callbacks.draw_cb = [&](gui_window* win, const gui_input& input) {
-    glparams.window                           = input.window_size;
-    glparams.framebuffer                      = input.framebuffer_viewport;
-    std::tie(glparams.center, glparams.scale) = camera_imview(glparams.center,
-        glparams.scale, {display.width, display.height}, glparams.window,
-        glparams.fit);
+    update_image_params(win, input, image, glparams);
     draw_image(glimage, glparams);
   };
   callbacks.widgets_cb = [&](gui_window* win, const gui_input& input) {
-    auto edited = 0;
     draw_combobox(win, "name", selected, names);
-    if (begin_header(win, "tonemap")) {
-      edited += draw_slider(win, "exposure", exposure, -5, 5);
-      edited += draw_checkbox(win, "filmic", filmic);
-      end_header(win);
-      if (edited) {
-        if (progress_cb) progress_cb("tonemap image", 0, 1);
-        tonemap_image_mt(display, image, exposure, filmic);
-        set_image(glimage, display, false, false);
-        if (progress_cb) progress_cb("tonemap image", 0, 1);
-      }
+    if (draw_tonemap_params(win, input, exposure, filmic)) {
+      if (progress_cb) progress_cb("tonemap image", 0, 1);
+      tonemap_image_mt(display, image, exposure, filmic);
+      set_image(glimage, display, false, false);
+      if (progress_cb) progress_cb("tonemap image", 0, 1);
     }
-    if (begin_header(win, "inspect")) {
-      draw_slider(win, "zoom", glparams.scale, 0.1, 10);
-      draw_checkbox(win, "fit", glparams.fit);
-      auto [i, j] = image_coords(input.mouse_pos, glparams.center,
-          glparams.scale, {image.width, image.height});
-      auto ij     = vec2i{i, j};
-      draw_dragger(win, "mouse", ij);
-      auto hdr_pixel     = zero4f;
-      auto ldr_pixel     = zero4b;
-      auto display_pixel = zero4b;
-      if (i >= 0 && i < image.width && j >= 0 && j < image.height) {
-        display_pixel = image.pixelsb[j * image.width + i];
-        if (!image.pixelsf.empty())
-          hdr_pixel = image.pixelsf[j * image.width + i];
-        if (!image.pixelsb.empty())
-          ldr_pixel = image.pixelsb[j * image.width + i];
-      }
-      if (!image.pixelsf.empty()) {
-        draw_coloredit(win, "image", hdr_pixel);
-      } else {
-        draw_coloredit(win, "image", ldr_pixel);
-      }
-      draw_coloredit(win, "display", display_pixel);
-      end_header(win);
-    }
+    draw_image_inspector(win, input, image, display, glparams);
   };
-  callbacks.uiupdate_cb = [&glparams](gui_window* win, const gui_input& input) {
-    // handle mouse
-    if (input.mouse_left && !input.widgets_active) {
-      glparams.center += input.mouse_pos - input.mouse_last;
-    }
-    if (input.mouse_right && !input.widgets_active) {
-      glparams.scale *= powf(
-          2, (input.mouse_pos.x - input.mouse_last.x) * 0.001f);
-    }
+  callbacks.uiupdate_cb = [&](gui_window* win, const gui_input& input) {
+    uiupdate_image_params(win, input, glparams);
   };
 
   // run ui
@@ -164,89 +425,37 @@ void view_images(const string& title, const vector<string>& names,
 
   // callbacks
   auto callbacks    = gui_callbacks{};
-  callbacks.init_cb = [&glimages, &displays, &images](
-                          gui_window* win, const gui_input& input) {
+  callbacks.init_cb = [&](gui_window* win, const gui_input& input) {
     for (auto idx = 0; idx < (int)images.size(); idx++) {
       init_image(glimages[idx]);
       set_image(glimages[idx], displays[idx], false, false);
     }
   };
-  callbacks.clear_cb = [&glimages, &images](
-                           gui_window* win, const gui_input& input) {
+  callbacks.clear_cb = [&](gui_window* win, const gui_input& input) {
     for (auto idx = 0; idx < (int)images.size(); idx++) {
       clear_image(glimages[idx]);
     }
   };
-  callbacks.draw_cb = [&glimages, &glparamss, &displays, &selected](
-                          gui_window* win, const gui_input& input) {
-    auto& glparams                            = glparamss[selected];
-    auto& display                             = displays[selected];
-    auto& glimage                             = glimages[selected];
-    glparams.window                           = input.window_size;
-    glparams.framebuffer                      = input.framebuffer_viewport;
-    std::tie(glparams.center, glparams.scale) = camera_imview(glparams.center,
-        glparams.scale, {display.width, display.height}, glparams.window,
-        glparams.fit);
-    draw_image(glimage, glparams);
+  callbacks.draw_cb = [&](gui_window* win, const gui_input& input) {
+    update_image_params(win, input, displays[selected], glparamss[selected]);
+    draw_image(glimages[selected], glparamss[selected]);
   };
   callbacks.widgets_cb = [&](gui_window* win, const gui_input& input) {
-    auto edited = 0;
-    if (draw_combobox(win, "name", selected, names)) {
+    draw_combobox(win, "name", selected, names);
+    auto filmic = (bool)filmics[selected];  // vector of bool ...
+    if (draw_tonemap_params(win, input, exposures[selected], filmic)) {
+      if (progress_cb) progress_cb("tonemap image", 0, 1);
+      filmics[selected] = filmic;
+      tonemap_image_mt(displays[selected], images[selected],
+          exposures[selected], filmics[selected]);
+      set_image(glimages[selected], displays[selected], false, false);
+      if (progress_cb) progress_cb("tonemap image", 1, 1);
     }
-    auto& display  = displays[selected];
-    auto& glimage  = glimages[selected];
-    auto& image    = images[selected];
-    auto& exposure = exposures[selected];
-    auto  filmic   = (bool)filmics[selected];  // vector of bool ...
-    if (begin_header(win, "tonemap")) {
-      edited += draw_slider(win, "exposure", exposure, -5, 5);
-      edited += draw_checkbox(win, "filmic", filmic);
-      end_header(win);
-      if (edited) {
-        if (progress_cb) progress_cb("tonemap image", 0, 1);
-        filmics[selected] = filmic;
-        tonemap_image_mt(display, image, exposure, filmic);
-        set_image(glimage, display, false, false);
-        if (progress_cb) progress_cb("tonemap image", 1, 1);
-      }
-    }
-    auto& glparams = glparamss[selected];
-    if (begin_header(win, "inspect")) {
-      draw_slider(win, "zoom", glparams.scale, 0.1, 10);
-      draw_checkbox(win, "fit", glparams.fit);
-      auto [i, j] = image_coords(input.mouse_pos, glparams.center,
-          glparams.scale, {image.width, image.height});
-      auto ij     = vec2i{i, j};
-      draw_dragger(win, "mouse", ij);
-      auto hdr_pixel     = zero4f;
-      auto ldr_pixel     = zero4b;
-      auto display_pixel = zero4b;
-      if (i >= 0 && i < image.width && j >= 0 && j < image.height) {
-        display_pixel = image.pixelsb[j * image.width + i];
-        if (!image.pixelsf.empty())
-          hdr_pixel = image.pixelsf[j * image.width + i];
-        if (!image.pixelsb.empty())
-          ldr_pixel = image.pixelsb[j * image.width + i];
-      }
-      if (!image.pixelsf.empty()) {
-        draw_coloredit(win, "image", hdr_pixel);
-      } else {
-        draw_coloredit(win, "image", ldr_pixel);
-      }
-      draw_coloredit(win, "display", display_pixel);
-      end_header(win);
-    }
+    draw_image_inspector(
+        win, input, images[selected], displays[selected], glparamss[selected]);
   };
   callbacks.uiupdate_cb = [&](gui_window* win, const gui_input& input) {
-    // handle mouse
-    auto& glparams = glparamss[selected];
-    if (input.mouse_left && !input.widgets_active) {
-      glparams.center += input.mouse_pos - input.mouse_last;
-    }
-    if (input.mouse_right && !input.widgets_active) {
-      glparams.scale *= powf(
-          2, (input.mouse_pos.x - input.mouse_last.x) * 0.001f);
-    }
+    uiupdate_image_params(win, input, glparamss[selected]);
   };
 
   // run ui
@@ -283,11 +492,7 @@ void colorgrade_image(const string& title, const string& name,
     clear_image(glimage);
   };
   callbacks.draw_cb = [&](gui_window* win, const gui_input& input) {
-    glparams.window                           = input.window_size;
-    glparams.framebuffer                      = input.framebuffer_viewport;
-    std::tie(glparams.center, glparams.scale) = camera_imview(glparams.center,
-        glparams.scale, {display.width, display.height}, glparams.window,
-        glparams.fit);
+    update_image_params(win, input, image, glparams);
     draw_image(glimage, glparams);
   };
   callbacks.widgets_cb = [&](gui_window* win, const gui_input& input) {
@@ -319,41 +524,10 @@ void colorgrade_image(const string& title, const string& name,
         if (progress_cb) progress_cb("colorgrade image", 0, 1);
       }
     }
-    if (begin_header(win, "inspect")) {
-      draw_slider(win, "zoom", glparams.scale, 0.1, 10);
-      draw_checkbox(win, "fit", glparams.fit);
-      auto [i, j] = image_coords(input.mouse_pos, glparams.center,
-          glparams.scale, {image.width, image.height});
-      auto ij     = vec2i{i, j};
-      draw_dragger(win, "mouse", ij);
-      auto hdr_pixel     = zero4f;
-      auto ldr_pixel     = zero4b;
-      auto display_pixel = zero4b;
-      if (i >= 0 && i < image.width && j >= 0 && j < image.height) {
-        display_pixel = image.pixelsb[j * image.width + i];
-        if (!image.pixelsf.empty())
-          hdr_pixel = image.pixelsf[j * image.width + i];
-        if (!image.pixelsb.empty())
-          ldr_pixel = image.pixelsb[j * image.width + i];
-      }
-      if (!image.pixelsf.empty()) {
-        draw_coloredit(win, "image", hdr_pixel);
-      } else {
-        draw_coloredit(win, "image", ldr_pixel);
-      }
-      draw_coloredit(win, "display", display_pixel);
-      end_header(win);
-    }
+    draw_image_inspector(win, input, image, display, glparams);
   };
   callbacks.uiupdate_cb = [&glparams](gui_window* win, const gui_input& input) {
-    // handle mouse
-    if (input.mouse_left && !input.widgets_active) {
-      glparams.center += input.mouse_pos - input.mouse_last;
-    }
-    if (input.mouse_right && !input.widgets_active) {
-      glparams.scale *= powf(
-          2, (input.mouse_pos.x - input.mouse_last.x) * 0.001f);
-    }
+    uiupdate_image_params(win, input, glparams);
   };
 
   // run ui
@@ -496,6 +670,9 @@ void view_scene(const string& title, const string& name, scene_scene& scene,
   // start rendeting
   reset_display();
 
+  // prepare selection
+  auto selection = scene_selection{};
+
   // callbacks
   auto callbacks    = gui_callbacks{};
   callbacks.init_cb = [&](gui_window* win, const gui_input& input) {
@@ -513,12 +690,7 @@ void view_scene(const string& title, const string& name, scene_scene& scene,
       set_image(glimage, display, false, false);
       render_update = false;
     }
-    // draw image
-    glparams.window                           = input.window_size;
-    glparams.framebuffer                      = input.framebuffer_viewport;
-    std::tie(glparams.center, glparams.scale) = camera_imview(glparams.center,
-        glparams.scale, {display.width, display.height}, glparams.window,
-        glparams.fit);
+    update_image_params(win, input, image, glparams);
     draw_image(glimage, glparams);
   };
   callbacks.widgets_cb = [&](gui_window* win, const gui_input& input) {
@@ -566,54 +738,18 @@ void view_scene(const string& title, const string& name, scene_scene& scene,
         if (progress_cb) progress_cb("tonemap image", 0, 1);
       }
     }
-    if (begin_header(win, "inspect")) {
-      draw_slider(win, "zoom", glparams.scale, 0.1, 10);
-      draw_checkbox(win, "fit", glparams.fit);
-      auto [i, j] = image_coords(input.mouse_pos, glparams.center,
-          glparams.scale, {image.width, image.height});
-      auto ij     = vec2i{i, j};
-      draw_dragger(win, "mouse", ij);
-      auto hdr_pixel     = zero4f;
-      auto ldr_pixel     = zero4b;
-      auto display_pixel = zero4b;
-      if (i >= 0 && i < image.width && j >= 0 && j < image.height) {
-        display_pixel = image.pixelsb[j * image.width + i];
-        if (!image.pixelsf.empty())
-          hdr_pixel = image.pixelsf[j * image.width + i];
-        if (!image.pixelsb.empty())
-          ldr_pixel = image.pixelsb[j * image.width + i];
-      }
-      if (!image.pixelsf.empty()) {
-        draw_coloredit(win, "image", hdr_pixel);
-      } else {
-        draw_coloredit(win, "image", ldr_pixel);
-      }
-      draw_coloredit(win, "display", display_pixel);
-      end_header(win);
+    draw_image_inspector(win, input, image, display, glparams);
+    if (draw_scene_editor(
+            win, scene, selection, [&]() { trace_stop(worker); })) {
+      reset_display();
     }
   };
   callbacks.uiupdate_cb = [&](gui_window* win, const gui_input& input) {
-    if ((input.mouse_left || input.mouse_right) && !input.modifier_alt &&
-        !input.widgets_active) {
-      auto dolly  = 0.0f;
-      auto pan    = zero2f;
-      auto rotate = zero2f;
-      if (input.mouse_left && !input.modifier_shift)
-        rotate = (input.mouse_pos - input.mouse_last) / 100.0f;
-      if (input.mouse_right)
-        dolly = (input.mouse_pos.x - input.mouse_last.x) / 100.0f;
-      auto camera = scene.cameras[params.camera];
-      if (input.mouse_left && input.modifier_shift)
-        pan = (input.mouse_pos - input.mouse_last) * camera.focus / 200.0f;
-      pan.x                                = -pan.x;
-      std::tie(camera.frame, camera.focus) = camera_turntable(
-          camera.frame, camera.focus, rotate, dolly, pan);
-      if (camera.frame != scene.cameras[params.camera].frame ||
-          camera.focus != scene.cameras[params.camera].focus) {
-        trace_stop(worker);
-        scene.cameras[params.camera] = camera;
-        reset_display();
-      }
+    auto camera = scene.cameras[params.camera];
+    if (uiupdate_camera_params(win, input, camera)) {
+      trace_stop(worker);
+      scene.cameras[params.camera] = camera;
+      reset_display();
     }
   };
 
@@ -882,55 +1018,51 @@ void glview_scene(scene_scene& scene, const string& name, const string& camname,
   // draw params
   auto params = shade_params{};
 
+  // top level combo
+  auto names    = vector<string>{name};
+  auto selected = 0;
+
   // callbacks
   auto callbacks    = gui_callbacks{};
   callbacks.init_cb = [&glscene, &scene, &progress_cb](
                           gui_window* win, const gui_input& input) {
     init_glscene(glscene, scene, progress_cb);
   };
-  callbacks.clear_cb = [&glscene](gui_window* win, const gui_input& input) {
+  callbacks.clear_cb = [&](gui_window* win, const gui_input& input) {
     clear_scene(glscene);
   };
-  callbacks.draw_cb = [&glscene, &params](
-                          gui_window* win, const gui_input& input) {
+  callbacks.draw_cb = [&](gui_window* win, const gui_input& input) {
     draw_scene(
         glscene, glscene.cameras.at(0), input.framebuffer_viewport, params);
   };
-  callbacks.widgets_cb = [&glscene, &scene, &params, &widgets_callback](
-                             gui_window* win, const gui_input& input) {
-    draw_checkbox(win, "wireframe", params.wireframe);
-    continue_line(win);
-    draw_checkbox(win, "faceted", params.faceted);
-    continue_line(win);
-    draw_checkbox(win, "double sided", params.double_sided);
-    draw_combobox(win, "lighting", (int&)params.lighting, shade_lighting_names);
-    draw_slider(win, "exposure", params.exposure, -10, 10);
-    draw_slider(win, "gamma", params.gamma, 0.1f, 4);
-    draw_slider(win, "near", params.near, 0.01f, 1.0f);
-    draw_slider(win, "far", params.far, 1000.0f, 10000.0f);
+  callbacks.widgets_cb = [&](gui_window* win, const gui_input& input) {
+    draw_combobox(win, "name", selected, names);
+    if (begin_header(win, "shade")) {
+      draw_checkbox(win, "wireframe", params.wireframe);
+      continue_line(win);
+      draw_checkbox(win, "faceted", params.faceted);
+      continue_line(win);
+      draw_checkbox(win, "double sided", params.double_sided);
+      draw_combobox(
+          win, "lighting", (int&)params.lighting, shade_lighting_names);
+      draw_slider(win, "exposure", params.exposure, -10, 10);
+      draw_slider(win, "gamma", params.gamma, 0.1f, 4);
+      draw_slider(win, "near", params.near, 0.01f, 1.0f);
+      draw_slider(win, "far", params.far, 1000.0f, 10000.0f);
+      end_header(win);
+    }
+    // draw_scene_editor(win, scene, selection, {});
     if (widgets_callback) widgets_callback(win, input, scene, glscene);
   };
   callbacks.update_cb = [](gui_window* win, const gui_input& input) {
     // update(win, apps);
   };
-  callbacks.uiupdate_cb = [&glscene, &scene, &uiupdate_callback](
-                              gui_window* win, const gui_input& input) {
+  callbacks.uiupdate_cb = [&](gui_window* win, const gui_input& input) {
     // handle mouse and keyboard for navigation
     if (uiupdate_callback) uiupdate_callback(win, input, scene, glscene);
-    if ((input.mouse_left || input.mouse_right) && !input.modifier_alt &&
-        !input.modifier_ctrl && !input.widgets_active) {
-      auto dolly  = 0.0f;
-      auto pan    = zero2f;
-      auto rotate = zero2f;
-      if (input.mouse_left && !input.modifier_shift)
-        rotate = (input.mouse_pos - input.mouse_last) / 100.0f;
-      if (input.mouse_right)
-        dolly = (input.mouse_pos.x - input.mouse_last.x) / 100.0f;
-      if (input.mouse_left && input.modifier_shift)
-        pan = (input.mouse_pos - input.mouse_last) / 100.0f;
-      auto& camera                         = scene.cameras.at(0);
-      std::tie(camera.frame, camera.focus) = camera_turntable(
-          camera.frame, camera.focus, rotate, dolly, pan);
+    auto camera = scene.cameras.at(0);
+    if (uiupdate_camera_params(win, input, camera)) {
+      scene.cameras.at(0) = camera;
       set_frame(glscene.cameras.at(0), camera.frame);
     }
   };
