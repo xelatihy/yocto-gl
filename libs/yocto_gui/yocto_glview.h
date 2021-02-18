@@ -94,7 +94,8 @@ void view_scene(const string& title, const string& name, scene_scene& scene,
 
 // Open a window and show an scene via path tracing
 void view_scene(const string& title, const string& name, scene_scene& scene,
-    const trace_params& params, const progress_callback& progress_cb = {});
+    const trace_params& params, const progress_callback& progress_cb = {},
+    bool edit = false);
 
 using glview_scene_callback = std::function<void(gui_window* win,
     const gui_input& input, scene_scene& scene, shade_scene& glscene)>;

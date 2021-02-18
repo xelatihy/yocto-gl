@@ -592,7 +592,8 @@ void view_scene(const string& title, const string& name, scene_scene& scene,
 
 // Open a window and show an scene via path tracing
 void view_scene(const string& title, const string& name, scene_scene& scene,
-    const trace_params& params_, const progress_callback& progress_cb) {
+    const trace_params& params_, const progress_callback& progress_cb,
+    bool edit) {
   // copy params and camera
   auto params = params_;
 
@@ -739,9 +740,11 @@ void view_scene(const string& title, const string& name, scene_scene& scene,
       }
     }
     draw_image_inspector(win, input, image, display, glparams);
-    if (draw_scene_editor(
-            win, scene, selection, [&]() { trace_stop(worker); })) {
-      reset_display();
+    if (edit) {
+      if (draw_scene_editor(
+              win, scene, selection, [&]() { trace_stop(worker); })) {
+        reset_display();
+      }
     }
   };
   callbacks.uiupdate_cb = [&](gui_window* win, const gui_input& input) {
