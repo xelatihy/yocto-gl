@@ -307,16 +307,36 @@ static bool draw_scene_editor(gui_window* win, scene_scene& scene,
   if (begin_header(win, "shapes")) {
     draw_combobox(win, "shape", selection.shape, scene.shape_names);
     auto& shape = scene.shapes.at(selection.shape);
+    draw_label(win, "points", (int)shape.points.size());
+    draw_label(win, "lines", (int)shape.lines.size());
+    draw_label(win, "triangles", (int)shape.triangles.size());
+    draw_label(win, "quads", (int)shape.quads.size());
+    draw_label(win, "positions", (int)shape.positions.size());
+    draw_label(win, "normals", (int)shape.normals.size());
+    draw_label(win, "texcoords", (int)shape.texcoords.size());
+    draw_label(win, "colors", (int)shape.colors.size());
+    draw_label(win, "radius", (int)shape.radius.size());
+    draw_label(win, "tangents", (int)shape.tangents.size());
     end_header(win);
   }
   if (begin_header(win, "textures")) {
     draw_combobox(win, "texture", selection.texture, scene.texture_names);
     auto& texture = scene.textures.at(selection.texture);
+    draw_label(win, "width", texture.width);
+    draw_label(win, "height", texture.height);
+    draw_label(win, "linear", texture.linear);
+    draw_label(win, "byte", !texture.pixelsb.empty());
     end_header(win);
   }
   if (begin_header(win, "subdivs")) {
     draw_combobox(win, "subdiv", selection.subdiv, scene.subdiv_names);
     auto& subdiv = scene.subdivs.at(selection.subdiv);
+    draw_label(win, "quadspos", (int)subdiv.quadspos.size());
+    draw_label(win, "quadsnorm", (int)subdiv.quadsnorm.size());
+    draw_label(win, "quadstexcoord", (int)subdiv.quadstexcoord.size());
+    draw_label(win, "positions", (int)subdiv.positions.size());
+    draw_label(win, "normals", (int)subdiv.normals.size());
+    draw_label(win, "texcoords", (int)subdiv.texcoords.size());
     end_header(win);
   }
   return (bool)edited;

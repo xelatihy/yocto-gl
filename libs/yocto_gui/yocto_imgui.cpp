@@ -639,6 +639,12 @@ bool draw_button(gui_window* win, const char* lbl, bool enabled) {
 void draw_label(gui_window* win, const char* lbl, const string& label) {
   ImGui::LabelText(lbl, "%s", label.c_str());
 }
+void draw_label(gui_window* win, const char* lbl, int value) {
+  ImGui::LabelText(lbl, "%s", std::to_string(value).c_str());
+}
+void draw_label(gui_window* win, const char* lbl, bool value) {
+  ImGui::LabelText(lbl, "%s", value ? "true" : "false");
+}
 
 void draw_separator(gui_window* win) { ImGui::Separator(); }
 
