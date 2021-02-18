@@ -28,7 +28,7 @@ def view(directory='mcguire', scene='*', format='json', mode='path'):
             if format == 'pbrt':
                 with open(filename) as f:
                     if 'WorldBegin' not in f.read(): continue
-            cmd = f'../yocto-gl/bin/ytrace view {options} {filename}'
+            cmd = f'../yocto-gl/bin/yscene view {options} {filename}'
             print(cmd, file=sys.stderr)
             os.system(cmd)
 
@@ -67,12 +67,12 @@ def render(directory='mcguire', scene='*', format='json', mode='path'):
             basename = os.path.basename(filename).replace(f'.{format}', '')
             os.system(f'mkdir -p {directory}/{outprefix}-{format}')
             imagename = f'{directory}/{outprefix}-{format}/{basename}.{outformat}'
-            cmd = f'../yocto-gl/bin/ytrace render -o {imagename} {options} {filename}'
+            cmd = f'../yocto-gl/bin/yscene render -o {imagename} {options} {filename}'
             print(cmd, file=sys.stderr)
             os.system(cmd)
             for idx, cam in enumerate(extracams, 1):
                 imagename = f'{directory}/{outprefix}-{format}/{basename}-c{idx}.{outformat}'
-                cmd = f'../yocto-gl/bin/ytrace render -o {imagename} --camera {cam} {options} {filename}'
+                cmd = f'../yocto-gl/bin/yscene render -o {imagename} --camera {cam} {options} {filename}'
                 print(cmd, file=sys.stderr)
                 os.system(cmd)
 

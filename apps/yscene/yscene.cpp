@@ -187,7 +187,7 @@ int run_render(const render_params& params_) {
 }
 
 // convert params
-struct view_params {
+struct view_params : trace_params {
   string scene   = "scene.json";
   string output  = "out.png";
   string camname = "";
@@ -202,6 +202,22 @@ void add_command(cli_command& cli, const string& name, view_params& value,
   add_option(cmd, "output", value.output, "Output filename.", {}, "o");
   add_option(cmd, "camera", value.camname, "Camera name.");
   add_option(cmd, "addsky", value.addsky, "Add sky.");
+  add_option(
+      cmd, "resolution", value.resolution, "Image resolution.", {1, 4096}, "r");
+  add_option(
+      cmd, "sampler", value.sampler, "Sampler type.", trace_sampler_names, "t");
+  add_option(cmd, "falsecolor", value.falsecolor, "False color type.",
+      trace_falsecolor_names, "F");
+  add_option(
+      cmd, "samples", value.samples, "Number of samples.", {1, 4096}, "s");
+  add_option(
+      cmd, "bounces", value.bounces, "Number of bounces.", {1, 128}, "b");
+  add_option(cmd, "clamp", value.clamp, "Clamp value.", {10, flt_max});
+  add_option(cmd, "nocaustics", value.nocaustics, "Disable caustics.");
+  add_option(cmd, "envhidden", value.envhidden, "Hide environment.");
+  add_option(cmd, "tentfilter", value.tentfilter, "Filter image.");
+  add_option(cmd, "bvh", value.bvh, "Bvh type.", bvh_names);
+  add_option(cmd, "noparallel", value.noparallel, "Disable threading.");
 }
 
 #ifndef YOCTO_OPENGL
@@ -214,7 +230,10 @@ int run_view(const view_params& params) {
 #else
 
 // view scene
-int run_view(const view_params& params) {
+int run_view(const view_params& params_) {
+  // copy params
+  auto params = params_;
+
   // load scene
   auto scene   = scene_scene{};
   auto ioerror = ""s;
@@ -227,8 +246,11 @@ int run_view(const view_params& params) {
   // tesselation
   tesselate_shapes(scene, print_progress);
 
+  // find camera
+  params.camera = find_camera(scene, params.camname);
+
   // run view
-  view_scene("yscene", params.scene, scene, params.camname, print_progress);
+  view_scene("yscene", params.scene, scene, params, print_progress);
 
   // done
   return 0;
