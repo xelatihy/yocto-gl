@@ -609,20 +609,12 @@ void view_scene(const string& title, const string& name, scene_scene& scene,
     params.sampler = trace_sampler_type::eyelight;
   }
 
-  // init images
-  auto trace_size = [](const scene_scene&   scene,
-                        const trace_params& params) -> vec2i {
-    auto& camera = scene.cameras[params.camera];
-    if (camera.aspect >= 1) {
-      return {params.resolution, (int)round(params.resolution / camera.aspect)};
-    } else {
-      return {(int)round(params.resolution * camera.aspect), params.resolution};
-    }
-  };
-  auto [width, height] = trace_size(scene, params);
-  auto image           = make_image(width, height, true, false);
-  auto display         = make_image(width, height, false, true);
-  tonemap_image_mt(display, image, params.exposure);
+  // init state
+  auto worker  = trace_worker{};
+  auto state   = make_state(scene, params);
+  auto image   = make_image(state.width, state.height, true, false);
+  auto display = make_image(state.width, state.height, false, true);
+  auto render  = make_image(state.width, state.height, true, false);
 
   // opengl image
   auto glimage  = ogl_image{};
@@ -640,10 +632,6 @@ void view_scene(const string& title, const string& name, scene_scene& scene,
     }
   }
 
-  // init state
-  auto worker = trace_worker{};
-  auto state  = trace_state{};
-
   // renderer update
   auto render_update  = std::atomic<bool>{};
   auto render_current = std::atomic<int>{};
@@ -652,14 +640,19 @@ void view_scene(const string& title, const string& name, scene_scene& scene,
     // stop render
     trace_stop(worker);
 
+    state   = make_state(scene, params);
+    image   = make_image(state.width, state.height, true, false);
+    display = make_image(state.width, state.height, false, true);
+    render  = make_image(state.width, state.height, true, false);
+
     // start render
     trace_start(
-        worker, state, scene, bvh, lights, params,
+        render, worker, state, scene, bvh, lights, params,
         [&](const string& message, int sample, int samples) {
           if (progress_cb) progress_cb("render sample", sample, params.samples);
           render_current = sample;
         },
-        [&](const image_data& render, int sample, int samples) {
+        [&](int sample, int samples) {
           // if (current > 0) return;
           auto lock = std::lock_guard{render_mutex};
           image     = render;
@@ -717,14 +710,6 @@ void view_scene(const string& title, const string& name, scene_scene& scene,
       end_header(win);
       if (edited) {
         trace_stop(worker);
-        // check image changes
-        auto [width, height]   = trace_size(scene, params);
-        auto [twidth, theight] = trace_size(scene, tparams);
-        if (width != twidth || height != theight) {
-          image   = make_image(twidth, theight, true, false);
-          display = make_image(twidth, theight, false, true);
-          set_image(glimage, display, false, false);
-        }
         params = tparams;
         reset_display();
       }

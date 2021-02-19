@@ -146,6 +146,9 @@ int run_render(const render_params& params_) {
   // add sky
   if (params.addsky) add_sky(scene);
 
+  // camera
+  params.camera = find_camera(scene, params.camname);
+
   // tesselation
   tesselate_shapes(scene, print_progress);
 
@@ -161,25 +164,25 @@ int run_render(const render_params& params_) {
     params.sampler = trace_sampler_type::eyelight;
   }
 
-  // camera
-  params.camera = find_camera(scene, params.camname);
+  // state
+  auto state = make_state(scene, params, print_progress);
+  auto image = make_image(state.width, state.height, true, false);
 
   // render
-  auto render = trace_image(scene, bvh, lights, params, print_progress,
-      [savebatch = params.savebatch, output = params.output](
-          const image_data& render, int sample, int samples) {
-        if (!savebatch) return;
+  trace_image(image, state, scene, bvh, lights, params, print_progress,
+      [&](int sample, int samples) {
+        if (!params.savebatch) return;
         auto ext = "-s" + std::to_string(sample + samples) +
-                   path_extension(output);
-        auto outfilename = replace_extension(output, ext);
+                   path_extension(params.output);
+        auto outfilename = replace_extension(params.output, ext);
         auto ioerror     = ""s;
         print_progress("save image", sample, samples);
-        if (!save_image(outfilename, render, ioerror)) print_fatal(ioerror);
+        if (!save_image(outfilename, image, ioerror)) print_fatal(ioerror);
       });
 
   // save image
   print_progress("save image", 0, 1);
-  if (!save_image(params.output, render, ioerror)) return print_fatal(ioerror);
+  if (!save_image(params.output, image, ioerror)) return print_fatal(ioerror);
   print_progress("save image", 1, 1);
 
   // done
