@@ -31,29 +31,6 @@
 // SOFTWARE.
 //
 //
-// LICENSE for blackbody code
-//
-// Copyright (c) 2015 Neil Bartlett
-//
-// Permission is hereby granted, free of charge, to any person obtaining a copy
-// of this software and associated documentation files (the "Software"), to deal
-// in the Software without restriction, including without limitation the rights
-// to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
-// copies of the Software, and to permit persons to whom the Software is
-// furnished to do so, subject to the following conditions:
-//
-// The above copyright notice and this permission notice shall be included in
-// all copies or substantial portions of the Software.
-//
-// THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
-// IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
-// FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
-// AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
-// LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
-// OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
-// THE SOFTWARE.
-//
-//
 // LICENSE for colormap code
 //
 // License CC0 (public domain)
@@ -357,12 +334,12 @@ inline vec3f xyz_to_rgb(const vec3f& xyz) {
 
 // Convert between CIE XYZ and xyY
 inline vec3f xyz_to_xyY(const vec3f& xyz) {
-  if (xyz == zero3f) return zero3f;
+  if (xyz == zero3f) return {0, 0, 0};
   return {
       xyz.x / (xyz.x + xyz.y + xyz.z), xyz.y / (xyz.x + xyz.y + xyz.z), xyz.y};
 }
 inline vec3f xyY_to_xyz(const vec3f& xyY) {
-  if (xyY.y == 0) return zero3f;
+  if (xyY.y == 0) return {0, 0, 0};
   return {xyY.x * xyY.z / xyY.y, xyY.z, (1 - xyY.x - xyY.y) * xyY.z / xyY.y};
 }
 
@@ -409,67 +386,30 @@ inline vec3f rgb_to_hsv(const vec3f& rgb) {
 
 // Approximate color of blackbody radiation from wavelength in nm.
 inline vec3f blackbody_to_rgb(float temperature) {
-  // https://github.com/neilbartlett/color-temperature
-  auto rgb = zero3f;
-  if ((temperature / 100) < 66) {
-    rgb.x = 255;
+  // clamp to valid range
+  auto t = clamp(temperature, 1667.0f, 25000.0f) / 1000.0f;
+  // compute x
+  auto x = 0.0f;
+  if (temperature < 4000.0f) {
+    x = -0.2661239f * 1 / (t * t * t) - 0.2343589f * 1 / (t * t) +
+        0.8776956f * (1 / t) + 0.179910f;
   } else {
-    // a + b x + c Log[x] /.
-    // {a -> 351.97690566805693`,
-    // b -> 0.114206453784165`,
-    // c -> -40.25366309332127
-    // x -> (kelvin/100) - 55}
-    rgb.x = (temperature / 100) - 55;
-    rgb.x = 351.97690566805693f + 0.114206453784165f * rgb.x -
-            40.25366309332127f * log(rgb.x);
-    if (rgb.x < 0) rgb.x = 0;
-    if (rgb.x > 255) rgb.x = 255;
+    x = -3.0258469f * 1 / (t * t * t) + 2.1070379f * 1 / (t * t) +
+        0.2226347f * (1 / t) + 0.240390f;
   }
-
-  if ((temperature / 100) < 66) {
-    // a + b x + c Log[x] /.
-    // {a -> -155.25485562709179`,
-    // b -> -0.44596950469579133`,
-    // c -> 104.49216199393888`,
-    // x -> (kelvin/100) - 2}
-    rgb.y = (temperature / 100) - 2;
-    rgb.y = -155.25485562709179f - 0.44596950469579133f * rgb.y +
-            104.49216199393888f * log(rgb.y);
-    if (rgb.y < 0) rgb.y = 0;
-    if (rgb.y > 255) rgb.y = 255;
+  // compute y
+  auto y = 0.0f;
+  if (temperature < 2222.0f) {
+    y = -1.1063814f * (x * x * x) - 1.34811020f * (x * x) + 2.18555832f * x -
+        0.20219683f;
+  } else if (temperature < 4000.0f) {
+    y = -0.9549476f * (x * x * x) - 1.37418593f * (x * x) + 2.09137015f * x -
+        0.16748867f;
   } else {
-    // a + b x + c Log[x] /.
-    // {a -> 325.4494125711974`,
-    // b -> 0.07943456536662342`,
-    // c -> -28.0852963507957`,
-    // x -> (kelvin/100) - 50}
-    rgb.y = (temperature / 100) - 50;
-    rgb.y = 325.4494125711974f + 0.07943456536662342f * rgb.y -
-            28.0852963507957f * log(rgb.y);
-    if (rgb.y < 0) rgb.y = 0;
-    if (rgb.y > 255) rgb.y = 255;
+    y = +3.0817580f * (x * x * x) - 5.87338670f * (x * x) + 3.75112997f * x -
+        0.37001483f;
   }
-
-  if ((temperature / 100) >= 66) {
-    rgb.z = 255;
-  } else {
-    if ((temperature / 100) <= 20) {
-      rgb.z = 0;
-    } else {
-      // a + b x + c Log[x] /.
-      // {a -> -254.76935184120902`,
-      // b -> 0.8274096064007395`,
-      // c -> 115.67994401066147`,
-      // x -> kelvin/100 - 10}
-      rgb.z = (temperature / 100) - 10;
-      rgb.z = -254.76935184120902f + 0.8274096064007395f * rgb.z +
-              115.67994401066147f * log(rgb.z);
-      if (rgb.z < 0) rgb.z = 0;
-      if (rgb.z > 255) rgb.z = 255;
-    }
-  }
-
-  return srgb_to_rgb(rgb / 255);
+  return xyz_to_rgb(xyY_to_xyz({x, y, 1}));
 }
 
 inline vec3f colormap_viridis(float t) {

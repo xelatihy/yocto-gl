@@ -369,8 +369,7 @@ int run_heightfield(const heightfield_params& params) {
   print_progress("load image", 1, 1);
 
   // convert to float
-  if (!!image.pixelsf.empty())
-    image = convert_image(image, image.linear, false);
+  if (image.pixelsf.empty()) image = convert_image(image, image.linear, false);
 
   // adjust height
   if (params.height != 1) {
