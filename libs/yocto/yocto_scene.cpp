@@ -1780,7 +1780,7 @@ image_data make_uvgrid(int width, int height, float scale, bool colored) {
 
 image_data make_blackbodyramp(
     int width, int height, float scale, float from, float to) {
-  return make_proc_image(width, height, false, false, [=](vec2f uv) {
+  return make_proc_image(width, height, true, false, [=](vec2f uv) {
     uv *= scale;
     uv -= vec2f{(float)(int)uv.x, (float)(int)uv.y};
     auto rgb = blackbody_to_rgb(lerp(from, to, uv.x));
