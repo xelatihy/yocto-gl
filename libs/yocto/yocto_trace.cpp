@@ -651,6 +651,7 @@ static vec4f trace_falsecolor(const scene_scene& scene, const bvh_scene& bvh,
     case trace_falsecolor_type::gfrontfacing:
       return make_vec(
           dot(gnormal, -ray.d) > 0 ? vec3f{0, 1, 0} : vec3f{1, 0, 0}, 1);
+    case trace_falsecolor_type::mtype: return hashed_color((int)material.type);
     case trace_falsecolor_type::texcoord:
       return {fmod(texcoord.x, 1.0f), fmod(texcoord.y, 1.0f), 0, 1};
     case trace_falsecolor_type::color: return make_vec(material.color, 1);
