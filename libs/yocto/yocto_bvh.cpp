@@ -443,6 +443,71 @@ static pair<int, int> split_middle(vector<int>& primitives,
 // Maximum number of primitives per BVH node.
 const int bvh_max_prims = 4;
 
+// Convert from binary to quad BVH
+static void build_quad_bvh(bvh_tree& bvh) {
+  // make sure it is not empty or leaf
+  if (bvh.nodes.empty()) return;
+
+  // prepare new nodes
+  auto& nodes = bvh.nodes;
+  auto  olds  = bvh.nodes;
+
+  // initialize nodes
+  nodes.clear();
+
+  // queue up first node
+  auto queue = deque<vec2i>{{0, 0}};
+  nodes.emplace_back();
+
+  // create nodes until the queue is empty
+  while (!queue.empty()) {
+    // grab node to work on
+    auto next = queue.front();
+    queue.pop_front();
+    auto [nodeid, oldid] = next;
+
+    // grab nodes
+    auto& node = nodes[nodeid];
+    auto& old  = olds[oldid];
+
+    // check if internal
+    if (old.internal) {
+      // initialize node
+      node.bbox     = old.bbox;
+      node.internal = true;
+      node.axis     = old.axis;
+      node.start    = (int)bvh.nodes.size();
+      node.num      = 0;
+      // handle children
+      for (auto idx = 0; idx < old.num; idx++) {
+        // grab child
+        auto& child = olds[old.start + idx];
+        // check internal
+        if (child.internal) {
+          // handle internal
+          nodes.emplace_back();
+          nodes.emplace_back();
+          queue.push_back({node.start + node.num++, child.start + 0});
+          queue.push_back({node.start + node.num++, child.start + 1});
+        } else {
+          // handle leaf
+          nodes.emplace_back();
+          queue.push_back({node.start + node.num++, old.start + idx});
+        }
+      }
+      // create children
+      for (auto idx = 0; idx < node.num; idx++) {
+      }
+    } else {
+      // copy leaf node
+      node = old;
+    }
+  }
+
+  // clear memory
+  nodes.shrink_to_fit();
+}
+
 // Build BVH nodes
 static void build_bvh_serial(
     bvh_tree& bvh, const vector<bbox3f>& bboxes, bool highquality) {
@@ -614,7 +679,7 @@ static void build_bvh_parallel(
 #endif
 
 // Update bvh
-static void update_bvh(bvh_tree& bvh, const vector<bbox3f>& bboxes) {
+static void refit_bvh(bvh_tree& bvh, const vector<bbox3f>& bboxes) {
   for (auto nodeid = (int)bvh.nodes.size() - 1; nodeid >= 0; nodeid--) {
     auto& node = bvh.nodes[nodeid];
     node.bbox  = invalidb3f;
@@ -671,6 +736,7 @@ static void build_bvh(
 
   // build nodes
   build_bvh_serial(bvh.bvh, bboxes, highquality);
+  if (highquality) build_quad_bvh(bvh.bvh);
 }
 
 static void build_bvh(bvh_scene& bvh, const scene_scene& scene,
@@ -694,6 +760,7 @@ static void build_bvh(bvh_scene& bvh, const scene_scene& scene,
 
   // build nodes
   build_bvh_serial(bvh.bvh, bboxes, highquality);
+  if (highquality) build_quad_bvh(bvh.bvh);
 }
 
 bvh_shape make_bvh(const scene_shape& shape, bool highquality, bool embree) {
@@ -787,7 +854,7 @@ static void refit_bvh(bvh_shape& bvh, const scene_shape& shape) {
   }
 
   // update nodes
-  update_bvh(bvh.bvh, bboxes);
+  refit_bvh(bvh.bvh, bboxes);
 }
 
 void refit_bvh(bvh_scene& bvh, const scene_scene& scene,
@@ -807,7 +874,7 @@ void refit_bvh(bvh_scene& bvh, const scene_scene& scene,
   }
 
   // update nodes
-  update_bvh(bvh.bvh, bboxes);
+  refit_bvh(bvh.bvh, bboxes);
 }
 
 void update_bvh(bvh_shape& bvh, const scene_shape& shape) {
@@ -891,14 +958,26 @@ static bool intersect_bvh(const bvh_shape& bvh, const scene_shape& shape,
     // intersect node, switching based on node type
     // for each type, iterate over the the primitive list
     if (node.internal) {
-      // for internal nodes, attempts to proceed along the
-      // split axis from smallest to largest nodes
-      if (ray_dsign[node.axis] != 0) {
-        node_stack[node_cur++] = node.start + 0;
-        node_stack[node_cur++] = node.start + 1;
+      if (node.num == 2) {
+        // for internal nodes, attempts to proceed along the
+        // split axis from smallest to largest nodes
+        if (ray_dsign[node.axis] != 0) {
+          node_stack[node_cur++] = node.start + 0;
+          node_stack[node_cur++] = node.start + 1;
+        } else {
+          node_stack[node_cur++] = node.start + 1;
+          node_stack[node_cur++] = node.start + 0;
+        }
       } else {
-        node_stack[node_cur++] = node.start + 1;
-        node_stack[node_cur++] = node.start + 0;
+        // for internal nodes, attempts to proceed along the
+        // split axis from smallest to largest nodes
+        if (ray_dsign[node.axis] != 0) {
+          for (auto idx = 0; idx < node.num; idx++)
+            node_stack[node_cur++] = node.start + idx;
+        } else {
+          for (auto idx = node.num - 1; idx >= 0; idx--)
+            node_stack[node_cur++] = node.start + idx;
+        }
       }
     } else if (!shape.points.empty()) {
       for (auto idx = node.start; idx < node.start + node.num; idx++) {
@@ -992,14 +1071,26 @@ static bool intersect_bvh(const bvh_scene& bvh, const scene_scene& scene,
     // intersect node, switching based on node type
     // for each type, iterate over the the primitive list
     if (node.internal) {
-      // for internal nodes, attempts to proceed along the
-      // split axis from smallest to largest nodes
-      if (ray_dsign[node.axis] != 0) {
-        node_stack[node_cur++] = node.start + 0;
-        node_stack[node_cur++] = node.start + 1;
+      if (node.num == 2) {
+        // for internal nodes, attempts to proceed along the
+        // split axis from smallest to largest nodes
+        if (ray_dsign[node.axis] != 0) {
+          node_stack[node_cur++] = node.start + 0;
+          node_stack[node_cur++] = node.start + 1;
+        } else {
+          node_stack[node_cur++] = node.start + 1;
+          node_stack[node_cur++] = node.start + 0;
+        }
       } else {
-        node_stack[node_cur++] = node.start + 1;
-        node_stack[node_cur++] = node.start + 0;
+        // for internal nodes, attempts to proceed along the
+        // split axis from smallest to largest nodes
+        if (ray_dsign[node.axis] != 0) {
+          for (auto idx = 0; idx < node.num; idx++)
+            node_stack[node_cur++] = node.start + idx;
+        } else {
+          for (auto idx = node.num - 1; idx >= 0; idx--)
+            node_stack[node_cur++] = node.start + idx;
+        }
       }
     } else {
       for (auto idx = node.start; idx < node.start + node.num; idx++) {

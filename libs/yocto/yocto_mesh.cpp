@@ -3914,7 +3914,7 @@ static std::array<spline_polygon, 2> de_casteljau_insert(
       adjacencies, segment_right[0], segment_right[1]);
   // P is the inserted mesh point that sepraters segment_left and
   // segment_right.
-  assert(segment_left[3] == segment_right[0]);
+  // assert(segment_left[3] == segment_right[0]);
   auto P = segment_right[0];
   // left part
   {
