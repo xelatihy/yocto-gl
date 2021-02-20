@@ -38,7 +38,6 @@
 // INCLUDES
 // -----------------------------------------------------------------------------
 
-#include <functional>
 #include <memory>
 #include <string>
 #include <utility>
@@ -52,7 +51,6 @@
 namespace yocto {
 
 // using directives
-using std::function;
 using std::pair;
 using std::string;
 using std::vector;

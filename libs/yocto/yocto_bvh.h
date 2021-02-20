@@ -40,7 +40,6 @@
 
 #include <array>
 #include <cstdint>
-#include <functional>
 #include <memory>
 #include <string>
 #include <vector>
@@ -56,7 +55,6 @@ namespace yocto {
 
 // using directives
 using std::array;
-using std::function;
 using std::string;
 using std::unique_ptr;
 using std::vector;
