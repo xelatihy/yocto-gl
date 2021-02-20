@@ -979,12 +979,14 @@ void trace_start(image_data& image, trace_worker& worker, trace_state& state,
 
   // render preview
   log_progress("trace preview", 0, params.samples);
-  auto pprms = params;
-  pprms.resolution /= params.pratio;
-  pprms.samples = 1;
-  auto pstate   = make_state(scene, pprms);
-  auto preview  = make_image(pstate.width, pstate.height, true, false);
-  trace_image(preview, pstate, scene, bvh, lights, pprms);
+  auto pparams = params;
+  pparams.resolution /= params.pratio;
+  pparams.samples = 1;
+  auto pstate     = make_state(scene, pparams);
+  auto preview    = make_image(pstate.width, pstate.height, true, false);
+  parallel_for(pstate.width, pstate.height, [&](int i, int j) {
+    trace_sample(preview, pstate, scene, bvh, lights, i, j, pparams);
+  });
   for (auto j = 0; j < state.height; j++) {
     for (auto i = 0; i < state.width; i++) {
       auto pi = clamp(i / params.pratio, 0, preview.width - 1),
