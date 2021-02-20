@@ -49,7 +49,8 @@ namespace yocto {
 
 // Build the bvh acceleration structure.
 bvh_scene make_bvh(const scene_scene& scene, const trace_params& params) {
-  return make_bvh(scene, bvh_params{params.bvh, params.noparallel});
+  return make_bvh(
+      scene, params.highqualitybvh, params.embreebvh, params.noparallel);
 }
 
 }  // namespace yocto

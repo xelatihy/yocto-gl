@@ -117,15 +117,16 @@ void clear_embree_bvh(void* embree_bvh) {
 
 // Initialize Embree BVH
 static void build_embree_bvh(
-    bvh_shape& bvh, const scene_shape& shape, const bvh_params& params) {
+    bvh_shape& bvh, const scene_shape& shape, bool highquality) {
   auto edevice   = bvh_embree_device();
   bvh.embree_bvh = unique_ptr<void, void (*)(void*)>{
       rtcNewScene(edevice), &clear_embree_bvh};
   auto escene = (RTCScene)bvh.embree_bvh.get();
-  if (params.bvh == bvh_type::embree_compact)
-    rtcSetSceneFlags(escene, RTC_SCENE_FLAG_COMPACT);
-  if (params.bvh == bvh_type::embree_highquality)
+  if (highquality) {
     rtcSetSceneBuildQuality(escene, RTC_BUILD_QUALITY_HIGH);
+  } else {
+    rtcSetSceneFlags(escene, RTC_SCENE_FLAG_COMPACT);
+  }
   if (!shape.points.empty()) {
     throw std::runtime_error("embree does not support points");
   } else if (!shape.lines.empty()) {
@@ -198,16 +199,17 @@ static void build_embree_bvh(
 }
 
 static void build_embree_bvh(
-    bvh_scene& bvh, const scene_scene& scene, const bvh_params& params) {
+    bvh_scene& bvh, const scene_scene& scene, bool highquality) {
   // scene bvh
   auto edevice   = bvh_embree_device();
   bvh.embree_bvh = unique_ptr<void, void (*)(void*)>{
       rtcNewScene(edevice), &clear_embree_bvh};
   auto escene = (RTCScene)bvh.embree_bvh.get();
-  if (params.bvh == bvh_type::embree_compact)
-    rtcSetSceneFlags(escene, RTC_SCENE_FLAG_COMPACT);
-  if (params.bvh == bvh_type::embree_highquality)
+  if (highquality) {
     rtcSetSceneBuildQuality(escene, RTC_BUILD_QUALITY_HIGH);
+  } else {
+    rtcSetSceneFlags(escene, RTC_SCENE_FLAG_COMPACT);
+  }
   for (auto instance_id = 0; instance_id < (int)scene.instances.size();
        instance_id++) {
     auto& instance  = scene.instances[instance_id];
@@ -362,7 +364,7 @@ static pair<int, int> split_sah(vector<int>& primitives,
 
 // Splits a BVH node using the balance heuristic. Returns split position and
 // axis.
-static pair<int, int> split_balanced(vector<int>& primitives,
+[[maybe_unused]] static pair<int, int> split_balanced(vector<int>& primitives,
     const vector<bbox3f>& bboxes, const vector<vec3f>& centers, int start,
     int end) {
   // initialize split axis and position
@@ -438,32 +440,12 @@ static pair<int, int> split_middle(vector<int>& primitives,
   return {mid, axis};
 }
 
-// Split bvh nodes according to a type
-static pair<int, int> split_nodes(vector<int>& primitives,
-    const vector<bbox3f>& bboxes, const vector<vec3f>& centers, int start,
-    int end, bvh_type type) {
-  switch (type) {
-    case bvh_type::default_:
-    case bvh_type::embree_default:
-    case bvh_type::embree_highquality:
-    case bvh_type::embree_compact:
-      return split_middle(primitives, bboxes, centers, start, end);
-    case bvh_type::highquality:
-      return split_sah(primitives, bboxes, centers, start, end);
-    case bvh_type::middle:
-      return split_middle(primitives, bboxes, centers, start, end);
-    case bvh_type::balanced:
-      return split_balanced(primitives, bboxes, centers, start, end);
-    default: throw std::runtime_error("should not have gotten here");
-  }
-}
-
 // Maximum number of primitives per BVH node.
 const int bvh_max_prims = 4;
 
 // Build BVH nodes
 static void build_bvh_serial(
-    bvh_tree& bvh, const vector<bbox3f>& bboxes, const bvh_params& params) {
+    bvh_tree& bvh, const vector<bbox3f>& bboxes, bool highquality) {
   // get values
   auto& nodes      = bvh.nodes;
   auto& primitives = bvh.primitives;
@@ -503,8 +485,9 @@ static void build_bvh_serial(
     // split into two children
     if (end - start > bvh_max_prims) {
       // get split
-      auto [mid, axis] = split_nodes(
-          primitives, bboxes, centers, start, end, params.bvh);
+      auto [mid, axis] =
+          highquality ? split_sah(primitives, bboxes, centers, start, end)
+                      : split_middle(primitives, bboxes, centers, start, end);
 
       // make an internal node
       node.internal = true;
@@ -531,7 +514,7 @@ static void build_bvh_serial(
 
 // Build BVH nodes
 static void build_bvh_parallel(
-    bvh_tree_& bvh, const vector<bbox3f>& bboxes, bvh_type type) {
+    bvh_tree_& bvh, const vector<bbox3f>& bboxes, bool highquality) {
   // get values
   auto& nodes      = bvh.nodes;
   auto& primitives = bvh.primitives;
@@ -596,8 +579,9 @@ static void build_bvh_parallel(
             // split into two children
             if (end - start > bvh_max_prims) {
               // get split
-              auto [mid, axis] = split_nodes(
-                  primitives, bboxes, centers, start, end, type);
+              auto [mid, axis] =
+                  highquality ? split_sah(primitives, bboxes, centers, start, end)
+                              : split_middle(primitives, bboxes, centers, start, end);
 
               // make an internal node
               {
@@ -647,12 +631,10 @@ static void update_bvh(bvh_tree& bvh, const vector<bbox3f>& bboxes) {
 }
 
 static void build_bvh(
-    bvh_shape& bvh, const scene_shape& shape, const bvh_params& params) {
+    bvh_shape& bvh, const scene_shape& shape, bool highquality, bool embree) {
 #ifdef YOCTO_EMBREE
-  if (params.bvh == bvh_type::embree_default ||
-      params.bvh == bvh_type::embree_highquality ||
-      params.bvh == bvh_type::embree_compact) {
-    return build_embree_bvh(bvh, shape, params);
+  if (embree) {
+    return build_embree_bvh(bvh, shape, highquality);
   }
 #endif
 
@@ -688,17 +670,15 @@ static void build_bvh(
   }
 
   // build nodes
-  build_bvh_serial(bvh.bvh, bboxes, params);
+  build_bvh_serial(bvh.bvh, bboxes, highquality);
 }
 
-static void build_bvh(
-    bvh_scene& bvh, const scene_scene& scene, const bvh_params& params) {
+static void build_bvh(bvh_scene& bvh, const scene_scene& scene,
+    bool highquality, bool embree, bool noparallel) {
   // embree
 #ifdef YOCTO_EMBREE
-  if (params.bvh == bvh_type::embree_default ||
-      params.bvh == bvh_type::embree_highquality ||
-      params.bvh == bvh_type::embree_compact) {
-    return build_embree_bvh(bvh, scene, params);
+  if (embree) {
+    return build_embree_bvh(bvh, scene, highquality);
   }
 #endif
 
@@ -713,10 +693,10 @@ static void build_bvh(
   }
 
   // build nodes
-  build_bvh_serial(bvh.bvh, bboxes, params);
+  build_bvh_serial(bvh.bvh, bboxes, highquality);
 }
 
-bvh_shape init_bvh(const scene_shape& shape, const bvh_params& params) {
+bvh_shape make_bvh(const scene_shape& shape, bool highquality, bool embree) {
   // handle progress
   auto progress = vec2i{0, 1};
 
@@ -725,14 +705,15 @@ bvh_shape init_bvh(const scene_shape& shape, const bvh_params& params) {
 
   // build scene bvh
   log_progress("build bvh", progress.x++, progress.y);
-  build_bvh(bvh, shape, params);
+  build_bvh(bvh, shape, highquality, embree);
 
   // handle progress
   log_progress("build bvh", progress.x++, progress.y);
   return bvh;
 }
 
-bvh_scene make_bvh(const scene_scene& scene, const bvh_params& params) {
+bvh_scene make_bvh(
+    const scene_scene& scene, bool highquality, bool embree, bool noparallel) {
   // handle progress
   auto progress = vec2i{0, 1 + (int)scene.shapes.size()};
 
@@ -741,10 +722,10 @@ bvh_scene make_bvh(const scene_scene& scene, const bvh_params& params) {
 
   // build shape bvh
   bvh.shapes.resize(scene.shapes.size());
-  if (params.noparallel) {
+  if (noparallel) {
     for (auto idx = (size_t)0; idx < scene.shapes.size(); idx++) {
       log_progress("build shape bvh", progress.x++, progress.y);
-      build_bvh(bvh.shapes[idx], scene.shapes[idx], params);
+      build_bvh(bvh.shapes[idx], scene.shapes[idx], highquality, embree);
     }
   } else {
     // mutex
@@ -754,20 +735,20 @@ bvh_scene make_bvh(const scene_scene& scene, const bvh_params& params) {
         auto lock = std::lock_guard{mutex};
         log_progress("build shape bvh", progress.x++, progress.y);
       }
-      build_bvh(bvh.shapes[idx], scene.shapes[idx], params);
+      build_bvh(bvh.shapes[idx], scene.shapes[idx], highquality, embree);
     });
   }
 
   // build scene bvh
   log_progress("build scene bvh", progress.x++, progress.y);
-  build_bvh(bvh, scene, params);
+  build_bvh(bvh, scene, highquality, embree, noparallel);
 
   // handle progress
   log_progress("build bvh", progress.x++, progress.y);
   return bvh;
 }
 
-static void update_bvh(bvh_shape& bvh, const scene_shape& shape) {
+static void refit_bvh(bvh_shape& bvh, const scene_shape& shape) {
 #ifdef YOCTO_EMBREE
   if (bvh.embree_bvh) {
     throw std::runtime_error("embree shape refit not supported");
@@ -809,7 +790,7 @@ static void update_bvh(bvh_shape& bvh, const scene_shape& shape) {
   update_bvh(bvh.bvh, bboxes);
 }
 
-void update_bvh(bvh_scene& bvh, const scene_scene& scene,
+void refit_bvh(bvh_scene& bvh, const scene_scene& scene,
     const vector<int>& updated_instances) {
 #ifdef YOCTO_EMBREE
   if (bvh.embree_bvh) {
@@ -829,34 +810,32 @@ void update_bvh(bvh_scene& bvh, const scene_scene& scene,
   update_bvh(bvh.bvh, bboxes);
 }
 
-void update_bvh(
-    bvh_shape& bvh, const scene_shape& shape, const bvh_params& params) {
+void update_bvh(bvh_shape& bvh, const scene_shape& shape) {
   // handle progress
   auto progress = vec2i{0, 1};
 
   // handle instances
   log_progress("update bvh", progress.x++, progress.y);
-  update_bvh(bvh, shape);
+  refit_bvh(bvh, shape);
 
   // handle progress
   log_progress("update bvh", progress.x++, progress.y);
 }
 
 void update_bvh(bvh_scene& bvh, const scene_scene& scene,
-    const vector<int>& updated_instances, const vector<int>& updated_shapes,
-    const bvh_params& params) {
+    const vector<int>& updated_instances, const vector<int>& updated_shapes) {
   // handle progress
   auto progress = vec2i{0, 1 + (int)updated_shapes.size()};
 
   // update shapes
   for (auto shape : updated_shapes) {
     log_progress("update shape bvh", progress.x++, progress.y);
-    update_bvh(bvh.shapes[shape], scene.shapes[shape]);
+    refit_bvh(bvh.shapes[shape], scene.shapes[shape]);
   }
 
   // handle instances
   log_progress("update scene bvh", progress.x++, progress.y);
-  update_bvh(bvh, scene, updated_instances);
+  refit_bvh(bvh, scene, updated_instances);
 
   // handle progress
   log_progress("update bvh", progress.x++, progress.y);

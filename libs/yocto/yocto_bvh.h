@@ -100,38 +100,16 @@ struct bvh_scene {
   unique_ptr<void, void (*)(void*)> embree_bvh = {nullptr, nullptr};  // embree
 };
 
-// Strategy used to build the bvh
-enum struct bvh_type {
-  default_,
-  highquality,
-  middle,
-  balanced,
-  embree_default,
-  embree_highquality,
-  embree_compact  // only for copy interface
-};
-
-const auto bvh_names = vector<string>{"default", "highquality", "middle",
-    "balanced", "embree-default", "embree-highquality", "embree-compact"};
-
-// Bvh parameters
-struct bvh_params {
-  bvh_type bvh        = bvh_type::default_;
-  bool     noparallel = false;
-};
-
 // Build the bvh acceleration structure.
-bvh_shape make_bvh(const scene_shape& shape, const bvh_params& params);
-bvh_scene make_bvh(const scene_scene& scene, const bvh_params& params);
+bvh_shape make_bvh(
+    const scene_shape& shape, bool highquality = false, bool embree = false);
+bvh_scene make_bvh(const scene_scene& scene, bool highquality = false,
+    bool embree = false, bool noparallel = false);
 
 // Refit bvh data
-void update_bvh(bvh_shape& bvh);
+void update_bvh(bvh_shape& bvh, const scene_shape& shape);
 void update_bvh(bvh_scene& bvh, const scene_scene& scene,
-    const vector<int>& updated_instances, const vector<int>& updated_shapes,
-    const bvh_params& params);
-void update_bvh(bvh_scene& bvh, const scene_scene& scene,
-    const vector<scene_instance*>& updated_instances,
-    const vector<scene_shape&>& updated_shapes, const bvh_params& params);
+    const vector<int>& updated_instances, const vector<int>& updated_shapes);
 
 // Results of intersect_xxx and overlap_xxx functions that include hit flag,
 // instance id, shape element id, shape element uv and intersection distance.
