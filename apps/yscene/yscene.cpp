@@ -62,8 +62,7 @@ int run_convert(const convert_params& params) {
   // load scene
   auto scene   = scene_scene{};
   auto ioerror = ""s;
-  if (!load_scene(params.scene, scene, ioerror, print_progress))
-    print_fatal(ioerror);
+  if (!load_scene(params.scene, scene, ioerror)) print_fatal(ioerror);
 
   // copyright
   if (params.copyright != "") {
@@ -82,15 +81,14 @@ int run_convert(const convert_params& params) {
   }
 
   // tesselate if needed
-  tesselate_shapes(scene, print_progress);
+  tesselate_shapes(scene);
 
   // make a directory if needed
   if (!make_scene_directories(params.output, scene, ioerror))
     print_fatal(ioerror);
 
   // save scene
-  if (!save_scene(params.output, scene, ioerror, print_progress))
-    print_fatal(ioerror);
+  if (!save_scene(params.output, scene, ioerror)) print_fatal(ioerror);
 
   // done
   return 0;
@@ -140,8 +138,7 @@ int run_render(const render_params& params_) {
   // scene loading
   auto scene   = scene_scene{};
   auto ioerror = string{};
-  if (!load_scene(params.scene, scene, ioerror, print_progress))
-    return print_fatal(ioerror);
+  if (!load_scene(params.scene, scene, ioerror)) return print_fatal(ioerror);
 
   // add sky
   if (params.addsky) add_sky(scene);
@@ -150,13 +147,13 @@ int run_render(const render_params& params_) {
   params.camera = find_camera(scene, params.camname);
 
   // tesselation
-  tesselate_shapes(scene, print_progress);
+  tesselate_shapes(scene);
 
   // build bvh
-  auto bvh = make_bvh(scene, params, print_progress);
+  auto bvh = make_bvh(scene, params);
 
   // init renderer
-  auto lights = make_lights(scene, params, print_progress);
+  auto lights = make_lights(scene, params);
 
   // fix renderer type if no lights
   if (lights.lights.empty() && is_sampler_lit(params)) {
@@ -165,25 +162,25 @@ int run_render(const render_params& params_) {
   }
 
   // state
-  auto state = make_state(scene, params, print_progress);
+  auto state = make_state(scene, params);
   auto image = make_image(state.width, state.height, true, false);
 
   // render
-  trace_image(image, state, scene, bvh, lights, params, print_progress,
-      [&](int sample, int samples) {
+  trace_image(
+      image, state, scene, bvh, lights, params, [&](int sample, int samples) {
         if (!params.savebatch) return;
         auto ext = "-s" + std::to_string(sample + samples) +
                    path_extension(params.output);
         auto outfilename = replace_extension(params.output, ext);
         auto ioerror     = ""s;
-        print_progress("save image", sample, samples);
+        log_progress("save image", sample, samples);
         if (!save_image(outfilename, image, ioerror)) print_fatal(ioerror);
       });
 
   // save image
-  print_progress("save image", 0, 1);
+  log_progress("save image", 0, 1);
   if (!save_image(params.output, image, ioerror)) return print_fatal(ioerror);
-  print_progress("save image", 1, 1);
+  log_progress("save image", 1, 1);
 
   // done
   return 0;
@@ -240,20 +237,19 @@ int run_view(const view_params& params_) {
   // load scene
   auto scene   = scene_scene{};
   auto ioerror = ""s;
-  if (!load_scene(params.scene, scene, ioerror, print_progress))
-    print_fatal(ioerror);
+  if (!load_scene(params.scene, scene, ioerror)) print_fatal(ioerror);
 
   // add sky
   if (params.addsky) add_sky(scene);
 
   // tesselation
-  tesselate_shapes(scene, print_progress);
+  tesselate_shapes(scene);
 
   // find camera
   params.camera = find_camera(scene, params.camname);
 
   // run view
-  view_scene("yscene", params.scene, scene, params, print_progress);
+  view_scene("yscene", params.scene, scene, params);
 
   // done
   return 0;
@@ -285,15 +281,14 @@ int run_glview(const glview_params& params) {
   // loading scene
   auto ioerror = ""s;
   auto scene   = scene_scene{};
-  if (!load_scene(params.scene, scene, ioerror, print_progress))
-    print_fatal(ioerror);
+  if (!load_scene(params.scene, scene, ioerror)) print_fatal(ioerror);
 
   // tesselation
-  tesselate_shapes(scene, print_progress);
+  tesselate_shapes(scene);
 
   // run viewer
   glview_scene(
-      scene, params.scene, "", print_progress,
+      scene, params.scene, "",
       [](gui_window* win, const gui_input& input, scene_scene& scene,
           shade_scene& glscene) {},
       [](gui_window* win, const gui_input& input, scene_scene& scene,
@@ -335,6 +330,7 @@ int main(int argc, const char* argv[]) {
   // command line parameters
   auto params = app_params{};
   parse_cli(params, argc, argv);
+  set_log_level(true);
 
   // dispatch commands
   if (params.command == "convert") {

@@ -63,14 +63,14 @@ using namespace std::string_literals;
 }  // namespace yocto
 
 // -----------------------------------------------------------------------------
-// PRINT/FORMATTING UTILITIES
+// PRINT/LOG/FORMATTING UTILITIES
 // -----------------------------------------------------------------------------
 namespace yocto {
 
 // Print a message to the console
-inline void print_info(const string& msg);
+inline void print_info(const string& message);
 // Prints a message to the console and exit with an error. Returns error code.
-inline int print_fatal(const string& msg);
+inline int print_fatal(const string& message);
 
 // Timer that prints as scope end. Create with `print_timed` and print with
 // `print_elapsed`.
@@ -79,7 +79,7 @@ struct print_timer {
   ~print_timer();  // print time if scope ends
 };
 // Print traces for timing and program debugging
-inline print_timer print_timed(const string& msg);
+inline print_timer print_timed(const string& message);
 inline int64_t     print_elapsed(print_timer& timer);
 
 // Print progress
@@ -89,6 +89,12 @@ inline void print_progress(const string& message, int current, int total);
 inline string format_duration(int64_t duration);
 // Format a large integer number in human readable form
 inline string format_num(uint64_t num);
+
+// Logging using the above functions but controlled by a log level
+inline void log_info(const string& message);
+inline int  log_fatal(const string& message);
+inline void log_progress(const string& message, int current, int total);
+inline void set_log_level(bool verbose);
 
 }  // namespace yocto
 
@@ -283,10 +289,12 @@ using cli_state [[deprecated]] = cli_command;
 namespace yocto {
 
 // Print a message to the console
-inline void print_info(const string& msg) { printf("%s\n", msg.c_str()); }
+inline void print_info(const string& message) {
+  printf("%s\n", message.c_str());
+}
 // Prints a messgae to the console and exit with an error.
-inline int print_fatal(const string& msg) {
-  printf("\n%s\n", msg.c_str());
+inline int print_fatal(const string& message) {
+  printf("\n%s\n", message.c_str());
   exit(1);
   return 1;
 }
@@ -320,8 +328,8 @@ inline string format_num(uint64_t num) {
 }
 
 // Print traces for timing and program debugging
-inline print_timer print_timed(const string& msg) {
-  printf("%s", msg.c_str());
+inline print_timer print_timed(const string& message) {
+  printf("%s", message.c_str());
   fflush(stdout);
   // print_info(fmt + " [started]", args...);
   return print_timer{get_time_()};
@@ -364,6 +372,17 @@ inline void print_progress(const string& message, int current, int total) {
   if (current == total) printf("\n");
   fflush(stdout);
 }
+
+// Logging using the above functions but controlled by a log level
+inline bool log_verbose = false;
+inline void log_info(const string& message) {
+  if (log_verbose) print_info(message);
+}
+inline int  log_fatal(const string& message) { return print_fatal(message); }
+inline void log_progress(const string& message, int current, int total) {
+  if (log_verbose) print_progress(message, current, total);
+}
+inline void set_log_level(bool verbose) { log_verbose = verbose; }
 
 }  // namespace yocto
 

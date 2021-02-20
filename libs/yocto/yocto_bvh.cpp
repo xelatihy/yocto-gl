@@ -42,6 +42,7 @@
 #include <string>
 #include <utility>
 
+#include "yocto_cli.h"
 #include "yocto_geometry.h"
 #include "yocto_parallel.h"
 
@@ -715,8 +716,7 @@ static void build_bvh(
   build_bvh_serial(bvh.bvh, bboxes, params);
 }
 
-bvh_shape init_bvh(const scene_shape& shape, const bvh_params& params,
-    const progress_callback& progress_cb) {
+bvh_shape init_bvh(const scene_shape& shape, const bvh_params& params) {
   // handle progress
   auto progress = vec2i{0, 1};
 
@@ -724,16 +724,15 @@ bvh_shape init_bvh(const scene_shape& shape, const bvh_params& params,
   auto bvh = bvh_shape{};
 
   // build scene bvh
-  if (progress_cb) progress_cb("build bvh", progress.x++, progress.y);
+  log_progress("build bvh", progress.x++, progress.y);
   build_bvh(bvh, shape, params);
 
   // handle progress
-  if (progress_cb) progress_cb("build bvh", progress.x++, progress.y);
+  log_progress("build bvh", progress.x++, progress.y);
   return bvh;
 }
 
-bvh_scene make_bvh(const scene_scene& scene, const bvh_params& params,
-    const progress_callback& progress_cb) {
+bvh_scene make_bvh(const scene_scene& scene, const bvh_params& params) {
   // handle progress
   auto progress = vec2i{0, 1 + (int)scene.shapes.size()};
 
@@ -744,7 +743,7 @@ bvh_scene make_bvh(const scene_scene& scene, const bvh_params& params,
   bvh.shapes.resize(scene.shapes.size());
   if (params.noparallel) {
     for (auto idx = (size_t)0; idx < scene.shapes.size(); idx++) {
-      if (progress_cb) progress_cb("build shape bvh", progress.x++, progress.y);
+      log_progress("build shape bvh", progress.x++, progress.y);
       build_bvh(bvh.shapes[idx], scene.shapes[idx], params);
     }
   } else {
@@ -753,19 +752,18 @@ bvh_scene make_bvh(const scene_scene& scene, const bvh_params& params,
     parallel_for(scene.shapes.size(), [&](size_t idx) {
       {
         auto lock = std::lock_guard{mutex};
-        if (progress_cb)
-          progress_cb("build shape bvh", progress.x++, progress.y);
+        log_progress("build shape bvh", progress.x++, progress.y);
       }
       build_bvh(bvh.shapes[idx], scene.shapes[idx], params);
     });
   }
 
   // build scene bvh
-  if (progress_cb) progress_cb("build scene bvh", progress.x++, progress.y);
+  log_progress("build scene bvh", progress.x++, progress.y);
   build_bvh(bvh, scene, params);
 
   // handle progress
-  if (progress_cb) progress_cb("build bvh", progress.x++, progress.y);
+  log_progress("build bvh", progress.x++, progress.y);
   return bvh;
 }
 
@@ -831,37 +829,37 @@ void update_bvh(bvh_scene& bvh, const scene_scene& scene,
   update_bvh(bvh.bvh, bboxes);
 }
 
-void update_bvh(bvh_shape& bvh, const scene_shape& shape,
-    const bvh_params& params, const progress_callback& progress_cb) {
+void update_bvh(
+    bvh_shape& bvh, const scene_shape& shape, const bvh_params& params) {
   // handle progress
   auto progress = vec2i{0, 1};
 
   // handle instances
-  if (progress_cb) progress_cb("update bvh", progress.x++, progress.y);
+  log_progress("update bvh", progress.x++, progress.y);
   update_bvh(bvh, shape);
 
   // handle progress
-  if (progress_cb) progress_cb("update bvh", progress.x++, progress.y);
+  log_progress("update bvh", progress.x++, progress.y);
 }
 
 void update_bvh(bvh_scene& bvh, const scene_scene& scene,
     const vector<int>& updated_instances, const vector<int>& updated_shapes,
-    const bvh_params& params, const progress_callback& progress_cb) {
+    const bvh_params& params) {
   // handle progress
   auto progress = vec2i{0, 1 + (int)updated_shapes.size()};
 
   // update shapes
   for (auto shape : updated_shapes) {
-    if (progress_cb) progress_cb("update shape bvh", progress.x++, progress.y);
+    log_progress("update shape bvh", progress.x++, progress.y);
     update_bvh(bvh.shapes[shape], scene.shapes[shape]);
   }
 
   // handle instances
-  if (progress_cb) progress_cb("update scene bvh", progress.x++, progress.y);
+  log_progress("update scene bvh", progress.x++, progress.y);
   update_bvh(bvh, scene, updated_instances);
 
   // handle progress
-  if (progress_cb) progress_cb("update bvh", progress.x++, progress.y);
+  log_progress("update bvh", progress.x++, progress.y);
 }
 
 }  // namespace yocto

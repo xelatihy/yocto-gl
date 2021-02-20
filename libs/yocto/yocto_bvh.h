@@ -122,24 +122,18 @@ struct bvh_params {
   bool     noparallel = false;
 };
 
-// Progress report callback
-using progress_callback =
-    function<void(const string& message, int current, int total)>;
-
 // Build the bvh acceleration structure.
 bvh_shape make_bvh(const scene_shape& shape, const bvh_params& params);
-bvh_scene make_bvh(const scene_scene& scene, const bvh_params& params,
-    const progress_callback& progress_cb = {});
+bvh_scene make_bvh(const scene_scene& scene, const bvh_params& params);
 
 // Refit bvh data
-void update_bvh(bvh_shape& bvh, const progress_callback& progress_cb = {});
+void update_bvh(bvh_shape& bvh);
 void update_bvh(bvh_scene& bvh, const scene_scene& scene,
     const vector<int>& updated_instances, const vector<int>& updated_shapes,
-    const bvh_params& params, const progress_callback& progress_cb = {});
+    const bvh_params& params);
 void update_bvh(bvh_scene& bvh, const scene_scene& scene,
     const vector<scene_instance*>& updated_instances,
-    const vector<scene_shape&>& updated_shapes, const bvh_params& params,
-    const progress_callback& progress_cb = {});
+    const vector<scene_shape&>& updated_shapes, const bvh_params& params);
 
 // Results of intersect_xxx and overlap_xxx functions that include hit flag,
 // instance id, shape element id, shape element uv and intersection distance.

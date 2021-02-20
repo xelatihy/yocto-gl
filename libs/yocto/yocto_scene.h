@@ -543,13 +543,8 @@ vector<string> scene_validation(
 // -----------------------------------------------------------------------------
 namespace yocto {
 
-// Progress callback called when loading.
-using progress_callback =
-    function<void(const string& message, int current, int total)>;
-
 // Apply subdivision and displacement rules.
-void tesselate_shapes(
-    scene_scene& scene, const progress_callback& progress_cb = {});
+void tesselate_shapes(scene_scene& scene);
 void tesselate_shape(scene_scene& scene, scene_shape& shape);
 
 }  // namespace yocto

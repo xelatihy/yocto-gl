@@ -37,6 +37,7 @@
 #include <unordered_map>
 
 #include "ext/stb_image_resize.h"
+#include "yocto_cli.h"
 #include "yocto_color.h"
 #include "yocto_geometry.h"
 #include "yocto_image.h"
@@ -1503,20 +1504,19 @@ void tesselate_subdiv(
       subdiv.positions, subdiv.normals, subdiv.texcoords);
 }
 
-void tesselate_shapes(
-    scene_scene& scene, const progress_callback& progress_cb) {
+void tesselate_shapes(scene_scene& scene) {
   // handle progress
   auto progress = vec2i{0, (int)scene.subdivs.size() + 1};
-  if (progress_cb) progress_cb("tesselate subdivs", progress.x++, progress.y);
+  log_progress("tesselate subdivs", progress.x++, progress.y);
 
   // tesselate shapes
   for (auto& subdiv : scene.subdivs) {
-    if (progress_cb) progress_cb("tesselate subdiv", progress.x++, progress.y);
+    log_progress("tesselate subdiv", progress.x++, progress.y);
     tesselate_subdiv(scene.shapes[subdiv.shape], subdiv, scene);
   }
 
   // done
-  if (progress_cb) progress_cb("tesselate subdivs", progress.x++, progress.y);
+  log_progress("tesselate subdivs", progress.x++, progress.y);
 }
 
 }  // namespace yocto

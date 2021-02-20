@@ -72,17 +72,17 @@ int run_view(const view_params &params) {
 
   // load mesh
   auto ioerror = ""s;
-  print_progress("load shape", 0, 1);
+  log_progress("load shape", 0, 1);
   if (path_filename(params.shape) == ".ypreset") {
     if (!make_shape_preset(shape, path_basename(params.shape), ioerror))
       print_fatal(ioerror);
   } else {
     if (!load_shape(params.shape, shape, ioerror, true)) print_fatal(ioerror);
   }
-  print_progress("load shape", 1, 1);
+  log_progress("load shape", 1, 1);
 
   // run view
-  view_shape("yshape", params.shape, shape, params.addsky, print_progress);
+  view_shape("yshape", params.shape, shape, params.addsky);
 
   // done
   return 0;
@@ -110,8 +110,7 @@ int run_glview(const glview_params& params) {
 
 #else
 
-static scene_scene make_shapescene(
-    const scene_shape &ioshape_, progress_callback progress_cb) {
+static scene_scene make_shapescene(const scene_shape &ioshape_) {
   // Frame camera
   auto camera_frame = [](float lens, float aspect,
                           float film = 0.036) -> frame3f {
@@ -123,7 +122,7 @@ static scene_scene make_shapescene(
 
   // handle progress
   auto progress = vec2i{0, 5};
-  if (progress_cb) progress_cb("create scene", progress.x++, progress.y);
+  log_progress("create scene", progress.x++, progress.y);
 
   // init scene
   auto scene = scene_scene{};
@@ -137,7 +136,7 @@ static scene_scene make_shapescene(
   // TODO(fabio): this should be a math function
 
   // camera
-  if (progress_cb) progress_cb("create camera", progress.x++, progress.y);
+  log_progress("create camera", progress.x++, progress.y);
   auto &camera  = scene.cameras.emplace_back();
   camera.frame  = camera_frame(0.050, 16.0f / 9.0f, 0.036);
   camera.lens   = 0.050;
@@ -146,24 +145,24 @@ static scene_scene make_shapescene(
   camera.focus  = length(camera.frame.o - center(bbox));
 
   // material
-  if (progress_cb) progress_cb("create material", progress.x++, progress.y);
+  log_progress("create material", progress.x++, progress.y);
   auto &shape_material     = scene.materials.emplace_back();
   shape_material.type      = material_type::plastic;
   shape_material.color     = {0.5, 1, 0.5};
   shape_material.roughness = 0.2;
 
   // shapes
-  if (progress_cb) progress_cb("create shape", progress.x++, progress.y);
+  log_progress("create shape", progress.x++, progress.y);
   scene.shapes.emplace_back(ioshape);
 
   // instances
-  if (progress_cb) progress_cb("create instance", progress.x++, progress.y);
+  log_progress("create instance", progress.x++, progress.y);
   auto &shape_instance    = scene.instances.emplace_back();
   shape_instance.shape    = 0;
   shape_instance.material = 0;
 
   // done
-  if (progress_cb) progress_cb("create scene", progress.x++, progress.y);
+  log_progress("create scene", progress.x++, progress.y);
   return scene;
 }
 
@@ -171,15 +170,15 @@ int run_glview(const glview_params &params) {
   // loading shape
   auto ioerror = ""s;
   auto shape   = scene_shape{};
-  print_progress("load shape", 0, 1);
+  log_progress("load shape", 0, 1);
   if (!load_shape(params.shape, shape, ioerror, true)) print_fatal(ioerror);
-  print_progress("load shape", 1, 1);
+  log_progress("load shape", 1, 1);
 
   // create scene
-  auto scene = make_shapescene(shape, print_progress);
+  auto scene = make_shapescene(shape);
 
   // run viewer
-  glview_scene(scene, params.shape, "", print_progress);
+  glview_scene(scene, params.shape, "");
 
   // done
   return 0;
@@ -207,8 +206,7 @@ int run_glview(const glview_params& params) {
 
 #else
 
-static scene_scene make_pathscene(
-    const scene_shape &ioshape_, progress_callback progress_cb) {
+static scene_scene make_pathscene(const scene_shape &ioshape_) {
   // Frame camera
   auto camera_frame = [](float lens, float aspect,
                           float film = 0.036) -> frame3f {
@@ -220,7 +218,7 @@ static scene_scene make_pathscene(
 
   // handle progress
   auto progress = vec2i{0, 5};
-  if (progress_cb) progress_cb("create scene", progress.x++, progress.y);
+  log_progress("create scene", progress.x++, progress.y);
 
   // init scene
   auto scene = scene_scene{};
@@ -234,7 +232,7 @@ static scene_scene make_pathscene(
   // TODO(fabio): this should be a math function
 
   // camera
-  if (progress_cb) progress_cb("create camera", progress.x++, progress.y);
+  log_progress("create camera", progress.x++, progress.y);
   auto &camera  = scene.cameras.emplace_back();
   camera.frame  = camera_frame(0.050, 16.0f / 9.0f, 0.036);
   camera.lens   = 0.050;
@@ -243,7 +241,7 @@ static scene_scene make_pathscene(
   camera.focus  = length(camera.frame.o - center(bbox));
 
   // material
-  if (progress_cb) progress_cb("create material", progress.x++, progress.y);
+  log_progress("create material", progress.x++, progress.y);
   auto &shape_material      = scene.materials.emplace_back();
   shape_material.type       = material_type::plastic;
   shape_material.color      = {0.5, 1, 0.5};
@@ -258,13 +256,13 @@ static scene_scene make_pathscene(
   lines_material.roughness  = 0.2;
 
   // shapes
-  if (progress_cb) progress_cb("create shape", progress.x++, progress.y);
+  log_progress("create shape", progress.x++, progress.y);
   scene.shapes.emplace_back(ioshape);
   scene.shapes.emplace_back(points_to_spheres({{0, 0, 0}}));
   scene.shapes.emplace_back(lines_to_cylinders({{0, 0, 0}, {0, 0, 0}}));
 
   // instances
-  if (progress_cb) progress_cb("create instance", progress.x++, progress.y);
+  log_progress("create instance", progress.x++, progress.y);
   auto &shape_instance     = scene.instances.emplace_back();
   shape_instance.shape     = 0;
   shape_instance.material  = 0;
@@ -276,7 +274,7 @@ static scene_scene make_pathscene(
   lines_instance.material  = 2;
 
   // done
-  if (progress_cb) progress_cb("create scene", progress.x++, progress.y);
+  log_progress("create scene", progress.x++, progress.y);
   return scene;
 }
 
@@ -284,16 +282,16 @@ int run_glpath(const glpath_params &params) {
   // loading shape
   auto ioerror = ""s;
   auto ioshape = scene_shape{};
-  print_progress("load shape", 0, 1);
+  log_progress("load shape", 0, 1);
   if (!load_shape(params.shape, ioshape, ioerror, true)) print_fatal(ioerror);
   if (!ioshape.quads.empty()) {
     ioshape.triangles = quads_to_triangles(ioshape.quads);
     ioshape.quads     = {};
   }
-  print_progress("load shape", 1, 1);
+  log_progress("load shape", 1, 1);
 
   // create scene
-  auto scene = make_pathscene(ioshape, print_progress);
+  auto scene = make_pathscene(ioshape);
 
   // bvh
   auto &shape = scene.shapes.at(0);
@@ -320,7 +318,7 @@ int run_glpath(const glpath_params &params) {
 
   // run viewer
   glview_scene(
-      scene, params.shape, "", print_progress,
+      scene, params.shape, "",
       [&](gui_window *win, const gui_input &input, scene_scene &scene,
           shade_scene &glscene) {},
       [&](gui_window *win, const gui_input &input, scene_scene &scene,
@@ -883,8 +881,7 @@ bool smooth_brush(vector<vec3f> &positions, const geodesic_solver &solver,
   return true;
 }
 
-static scene_scene make_sculptscene(
-    const scene_shape &ioshape_, progress_callback progress_cb) {
+static scene_scene make_sculptscene(const scene_shape &ioshape_) {
   // Frame camera
   auto camera_frame = [](float lens, float aspect,
                           float film = 0.036) -> frame3f {
@@ -896,7 +893,7 @@ static scene_scene make_sculptscene(
 
   // handle progress
   auto progress = vec2i{0, 5};
-  if (progress_cb) progress_cb("create scene", progress.x++, progress.y);
+  log_progress("create scene", progress.x++, progress.y);
 
   // init scene
   auto scene = scene_scene{};
@@ -909,7 +906,7 @@ static scene_scene make_sculptscene(
   for (auto &pos : ioshape.positions) pos /= max(size(bbox));
 
   // camera
-  if (progress_cb) progress_cb("create camera", progress.x++, progress.y);
+  log_progress("create camera", progress.x++, progress.y);
   auto &camera  = scene.cameras.emplace_back();
   camera.frame  = camera_frame(0.050, 16.0f / 9.0f, 0.036);
   camera.lens   = 0.050;
@@ -918,7 +915,7 @@ static scene_scene make_sculptscene(
   camera.focus  = length(camera.frame.o - center(bbox));
 
   // material
-  if (progress_cb) progress_cb("create material", progress.x++, progress.y);
+  log_progress("create material", progress.x++, progress.y);
   auto &shape_material  = scene.materials.emplace_back();
   shape_material.type   = material_type::matte;
   shape_material.color  = {0.78f, 0.31f, 0.23f};
@@ -926,12 +923,12 @@ static scene_scene make_sculptscene(
   cursor_material.type  = material_type::matte;
 
   // shapes
-  if (progress_cb) progress_cb("create shape", progress.x++, progress.y);
+  log_progress("create shape", progress.x++, progress.y);
   scene.shapes.emplace_back(ioshape);
   scene.shapes.emplace_back(make_cursor({0, 0, 0}, {0, 0, 1}, 1));
 
   // instances
-  if (progress_cb) progress_cb("create instance", progress.x++, progress.y);
+  log_progress("create instance", progress.x++, progress.y);
   auto &shape_instance     = scene.instances.emplace_back();
   shape_instance.shape     = 0;
   shape_instance.material  = 0;
@@ -940,7 +937,7 @@ static scene_scene make_sculptscene(
   cursor_instance.material = 1;
 
   // done
-  if (progress_cb) progress_cb("create scene", progress.x++, progress.y);
+  log_progress("create scene", progress.x++, progress.y);
   return scene;
 }
 
@@ -1050,24 +1047,24 @@ int run_glsculpt(const glsculpt_params &params_) {
   // loading shape
   auto ioerror = ""s;
   auto ioshape = scene_shape{};
-  print_progress("load shape", 0, 1);
+  log_progress("load shape", 0, 1);
   if (!load_shape(params_.shape, ioshape, ioerror, true)) print_fatal(ioerror);
   if (!ioshape.quads.empty()) {
     ioshape.triangles = quads_to_triangles(ioshape.quads);
     ioshape.quads.clear();
   }
-  print_progress("load shape", 1, 1);
+  log_progress("load shape", 1, 1);
 
   // loading texture
   auto texture = scene_texture{};
   if (!params_.texture.empty()) {
-    print_progress("load texture", 0, 1);
+    log_progress("load texture", 0, 1);
     if (!load_texture(params_.texture, texture, ioerror)) print_fatal(ioerror);
-    print_progress("load texture", 1, 1);
+    log_progress("load texture", 1, 1);
   }
 
   // setup app
-  auto scene = make_sculptscene(ioshape, print_progress);
+  auto scene = make_sculptscene(ioshape);
 
   // sculpt params
   auto params = sculpt_params{};
@@ -1075,7 +1072,7 @@ int run_glsculpt(const glsculpt_params &params_) {
 
   // callbacks
   glview_scene(
-      scene, params_.shape, "", print_progress,
+      scene, params_.shape, "",
       [&params](gui_window *win, const gui_input &input, scene_scene &scene,
           shade_scene &glscene) {
         draw_combobox(
@@ -1157,6 +1154,7 @@ int main(int argc, const char* argv[]) {
   // command line parameters
   auto params = app_params{};
   parse_cli(params, argc, argv);
+  set_log_level(true);
 
   // dispatch commands
   if (params.command == "view") {
