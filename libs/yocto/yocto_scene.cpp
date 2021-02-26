@@ -214,12 +214,22 @@ void tonemap_image(
   if (image.width != result.width || image.height != result.height)
     throw std::invalid_argument{"image should be the same size"};
   if (result.linear) throw std::invalid_argument{"ldr expected"};
-  if (!image.linear) throw std::invalid_argument{"hdr expected"};
-  for (auto j = 0; j < image.height; j++) {
-    for (auto i = 0; i < image.width; i++) {
-      auto hdr = get_pixel(image, i, j);
-      auto ldr = tonemap(hdr, exposure, filmic);
-      set_pixel(result, i, j, ldr);
+  if (image.linear) {
+    for (auto j = 0; j < image.height; j++) {
+      for (auto i = 0; i < image.width; i++) {
+        auto hdr = get_pixel(image, i, j);
+        auto ldr = tonemap(hdr, exposure, filmic);
+        set_pixel(result, i, j, ldr);
+      }
+    }
+  } else {
+    auto scale = vec4f{pow(2, exposure), pow(2, exposure), pow(2, exposure), 1};
+    for (auto j = 0; j < image.height; j++) {
+      for (auto i = 0; i < image.width; i++) {
+        auto hdr = get_pixel(image, i, j);
+        auto ldr = hdr * scale;
+        set_pixel(result, i, j, ldr);
+      }
     }
   }
 }
@@ -229,13 +239,22 @@ void tonemap_image_mt(
   if (image.width != result.width || image.height != result.height)
     throw std::invalid_argument{"image should be the same size"};
   if (result.linear) throw std::invalid_argument{"ldr expected"};
-  if (!image.linear) throw std::invalid_argument{"hdr expected"};
-  parallel_for(image.width, image.height,
-      [&result, &image, exposure, filmic](int i, int j) {
-        auto hdr = get_pixel(image, i, j);
-        auto ldr = tonemap(hdr, exposure, filmic);
-        set_pixel(result, i, j, ldr);
-      });
+  if (image.linear) {
+    parallel_for(image.width, image.height,
+        [&result, &image, exposure, filmic](int i, int j) {
+          auto hdr = get_pixel(image, i, j);
+          auto ldr = tonemap(hdr, exposure, filmic);
+          set_pixel(result, i, j, ldr);
+        });
+  } else {
+    auto scale = vec4f{pow(2, exposure), pow(2, exposure), pow(2, exposure), 1};
+    parallel_for(
+        image.width, image.height, [&result, &image, scale](int i, int j) {
+          auto hdr = get_pixel(image, i, j);
+          auto ldr = hdr * scale;
+          set_pixel(result, i, j, ldr);
+        });
+  }
 }
 
 // Resize an image.
