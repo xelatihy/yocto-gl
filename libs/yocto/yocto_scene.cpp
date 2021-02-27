@@ -271,19 +271,19 @@ image_data resize_image(
         res_height * (double)image.width / (double)image.height);
   }
   if (!image.pixelsf.empty()) {
-    auto result = make_image(res_width, res_height, image.linear, true);
-    stbir_resize_uint8_generic((byte*)image.pixelsb.data(), (int)image.width,
-        (int)image.height, (int)(sizeof(vec4b) * image.width),
-        (byte*)result.pixelsb.data(), (int)result.width, (int)result.height,
-        (int)(sizeof(vec4b) * result.width), 4, 3, 0, STBIR_EDGE_CLAMP,
-        STBIR_FILTER_DEFAULT, STBIR_COLORSPACE_LINEAR, nullptr);
-    return result;
-  } else {
     auto result = make_image(res_width, res_height, image.linear, false);
     stbir_resize_float_generic((float*)image.pixelsf.data(), (int)image.width,
         (int)image.height, (int)(sizeof(vec4f) * image.width),
         (float*)result.pixelsf.data(), (int)result.width, (int)result.height,
         (int)(sizeof(vec4f) * result.width), 4, 3, 0, STBIR_EDGE_CLAMP,
+        STBIR_FILTER_DEFAULT, STBIR_COLORSPACE_LINEAR, nullptr);
+    return result;
+  } else {
+    auto result = make_image(res_width, res_height, image.linear, true);
+    stbir_resize_uint8_generic((byte*)image.pixelsb.data(), (int)image.width,
+        (int)image.height, (int)(sizeof(vec4b) * image.width),
+        (byte*)result.pixelsb.data(), (int)result.width, (int)result.height,
+        (int)(sizeof(vec4b) * result.width), 4, 3, 0, STBIR_EDGE_CLAMP,
         STBIR_FILTER_DEFAULT, STBIR_COLORSPACE_LINEAR, nullptr);
     return result;
   }
