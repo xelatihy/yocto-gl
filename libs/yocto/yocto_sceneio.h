@@ -38,7 +38,6 @@
 // INCLUDES
 // -----------------------------------------------------------------------------
 
-#include <functional>
 #include <memory>
 #include <string>
 #include <utility>
@@ -52,7 +51,6 @@
 namespace yocto {
 
 // using directives
-using std::function;
 using std::pair;
 using std::string;
 using std::vector;
@@ -150,16 +148,12 @@ bool save_subdiv(
 // -----------------------------------------------------------------------------
 namespace yocto {
 
-// Progress callback called when loading.
-using progress_callback =
-    function<void(const string& message, int current, int total)>;
-
 // Load/save a scene in the supported formats.
 // Calls the progress callback, if defined, as we process more data.
 bool load_scene(const string& filename, scene_scene& scene, string& error,
-    const progress_callback& progress_cb = {}, bool noparallel = false);
+    bool noparallel = false);
 bool save_scene(const string& filename, const scene_scene& scene, string& error,
-    const progress_callback& progress_cb = {}, bool noparallel = false);
+    bool noparallel = false);
 
 // Make missing scene directories
 bool make_scene_directories(

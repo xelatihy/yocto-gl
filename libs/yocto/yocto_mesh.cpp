@@ -3331,85 +3331,14 @@ static pair<bezier_polygon, bezier_polygon> subdivide_bezier(
   // return {{P0, Q0, R0, S}, {S, R1, Q2, P3}};
 }
 
-struct bezier_node {
-  std::array<mesh_point, 4>    points      = {};
-  std::array<geodesic_path, 3> lines       = {};
-  int                          parent      = -1;
-  int                          children[2] = {-1, -1};
-  float                        t_start     = 0;
-  float                        t_end       = 1;
+static bool is_control_polygon_unfoldable(const dual_geodesic_solver& solver,
+    const vector<vec3i>& triangles, const vector<vec3f>& positions,
+    const vector<vec3i>& adjacencies, const spline_polygon& segment) {
+  if (segment[0].face != segment[1].face) return false;
+  if (segment[1].face != segment[2].face) return false;
+  if (segment[2].face != segment[3].face) return false;
+  return true;
 };
-
-// TODO(fabio): mi dice Claudio che va cancellato; chiedere a Giacomo
-struct bezier_tree {
-  vector<bezier_node> nodes = {};
-  int                 depth = 0;
-};
-
-static void add_children(bezier_tree& tree, int parent) {
-  auto id = (int)tree.nodes.size();
-  tree.nodes.push_back({});
-  tree.nodes.push_back({});
-
-  tree.nodes[parent].children[0] = id;
-  tree.nodes[parent].children[1] = id + 1;
-  tree.nodes[id].parent          = parent;
-  tree.nodes[id + 1].parent      = parent;
-}
-
-static void subdivide_bezier_node(bezier_tree& tree, int node,
-    const dual_geodesic_solver& solver, const vector<vec3i>& triangles,
-    const vector<vec3f>& positions, const vector<vec3i>& adjacencies, float t) {
-  add_children(tree, node);
-  auto& polygon = tree.nodes[node];
-  auto  Q0      = eval_path_point(
-      solver, triangles, positions, adjacencies, polygon.lines[0], t);
-  auto Q1 = eval_path_point(
-      solver, triangles, positions, adjacencies, polygon.lines[1], t);
-  auto Q2 = eval_path_point(
-      solver, triangles, positions, adjacencies, polygon.lines[2], t);
-  assert(check_point(Q0));
-  assert(check_point(Q1));
-  assert(check_point(Q2));
-
-  auto R0 = geodesic_lerp(solver, triangles, positions, adjacencies, Q0, Q1, t);
-  auto R1 = geodesic_lerp(solver, triangles, positions, adjacencies, Q1, Q2, t);
-  auto S  = geodesic_lerp(solver, triangles, positions, adjacencies, R0, R1, t);
-  assert(check_point(R0));
-  assert(check_point(R1));
-  assert(check_point(S));
-
-  auto& left  = tree.nodes[tree.nodes[node].children[0]];
-  left.points = {polygon.points[0], Q0, R0, S};
-  // TODO(fabio): put this back
-  // assert(check_segment(left.points));
-  left.lines[0] = compute_geodesic_path(
-      solver, triangles, positions, adjacencies, polygon.points[0], Q0);
-  left.lines[1] = compute_geodesic_path(
-      solver, triangles, positions, adjacencies, Q0, R0);
-  left.lines[2] = compute_geodesic_path(
-      solver, triangles, positions, adjacencies, S, R0);
-  left.t_start = polygon.t_start;
-  left.t_end   = lerp(polygon.t_start, polygon.t_end, t);
-  auto& right  = tree.nodes[tree.nodes[node].children[1]];
-  right.points = {S, R1, Q2, polygon.points[3]};
-  // TODO(fabio): put this back
-  // assert(check_segment(right.points));
-  right.lines[0] = compute_geodesic_path(
-      solver, triangles, positions, adjacencies, S, R1);
-  right.lines[1] = compute_geodesic_path(
-      solver, triangles, positions, adjacencies, R1, Q2);
-  right.lines[2] = compute_geodesic_path(
-      solver, triangles, positions, adjacencies, polygon.points[3], Q2);
-  right.t_start = left.t_end;
-  right.t_end   = polygon.t_end;
-  // return {{P0, Q0, R0, S}, {S, R1, Q2, P3}};
-}
-
-static bool is_left_child(const bezier_tree& tree, int node) {
-  assert(tree.nodes[node].parent != -1);
-  return tree.nodes[tree.nodes[node].parent].children[0] == node;
-}
 
 static mesh_point de_casteljau_point(const dual_geodesic_solver& solver,
     const vector<vec3i>& triangles, const vector<vec3f>& positions,
@@ -3937,82 +3866,89 @@ static mesh_point lane_riesenfeld_point(const dual_geodesic_solver& solver,
       solver, triangles, positions, adjacencies, leaf, knots, t0);
 }
 
-// TODO(fabio): chiedere a Giacomo se serve
-static std::array<spline_polygon, 2> insert_point(
+static std::array<spline_polygon, 2> de_casteljau_insert(
     const dual_geodesic_solver& solver, const vector<vec3i>& triangles,
     const vector<vec3f>& positions, const vector<vec3i>& adjacencies,
-    bezier_tree& tree, float t0) {
-  // Go down the tree and find the leaf node containing the point.
-  int leaf = 0;
+    const spline_polygon& polygon, float t0) {
+  auto t_start = 0.f;
+  auto t_end   = 1.f;
+  auto points  = polygon;
   while (true) {
-    if (t0 < (tree.nodes[leaf].t_start + tree.nodes[leaf].t_end) / 2) {
-      leaf = tree.nodes[leaf].children[0];
+    auto Q0 = geodesic_lerp(
+        solver, triangles, positions, adjacencies, points[0], points[1], 0.5);
+    auto Q1 = geodesic_lerp(
+        solver, triangles, positions, adjacencies, points[1], points[2], 0.5);
+    auto Q2 = geodesic_lerp(
+        solver, triangles, positions, adjacencies, points[2], points[3], 0.5);
+    auto R0 = geodesic_lerp(
+        solver, triangles, positions, adjacencies, Q0, Q1, 0.5);
+    auto R1 = geodesic_lerp(
+        solver, triangles, positions, adjacencies, Q1, Q2, 0.5);
+    auto S = geodesic_lerp(
+        solver, triangles, positions, adjacencies, R0, R1, 0.5);
+    auto mid_t = (t_start + t_end) / 2.f;
+    if (t0 < mid_t) {
+      points[1] = Q0;
+      points[2] = R0;
+      points[3] = S;
+      t_end     = mid_t;
     } else {
-      leaf = tree.nodes[leaf].children[1];
+      points[0] = S;
+      points[1] = R1;
+      points[2] = Q2;
+      t_start   = mid_t;
     }
-    if (tree.nodes[leaf].children[0] == -1) break;
+    if (is_control_polygon_unfoldable(
+            solver, triangles, positions, adjacencies, points))
+      break;
   }
-
   // Compute the parameter t local to the leaf control polygon.
-  auto t_start  = tree.nodes[leaf].t_start;
-  auto t_end    = tree.nodes[leaf].t_end;
   auto tP_local = (t0 - t_start) / (t_end - t_start);
-
   // Subdivide the leaf control with De Castljeau creating two new control
   // polygons. They are segment_left and segment_right.
-  subdivide_bezier_node(
-      tree, leaf, solver, triangles, positions, adjacencies, tP_local);
-  auto& left_leaf     = tree.nodes[tree.nodes[leaf].children[0]];
-  auto& right_leaf    = tree.nodes[tree.nodes[leaf].children[1]];
-  auto  segment_left  = left_leaf.points;
-  auto  segment_right = right_leaf.points;
-  // TODO(fabio) put this back with the propeer function
-  // assert(check_segment(segment_left));
-  // assert(check_segment(segment_right));
-
+  auto [segment_left, segment_right] = subdivide_bezier_polygon(
+      solver, triangles, positions, adjacencies, points, tP_local);
+  auto left_side  = compute_geodesic_path(solver, triangles, positions,
+      adjacencies, segment_left.back(), segment_left[2]);
+  auto right_side = compute_geodesic_path(solver, triangles, positions,
+      adjacencies, segment_right[0], segment_right[1]);
   // P is the inserted mesh point that sepraters segment_left and
   // segment_right.
   // assert(segment_left[3] == segment_right[0]);
   auto P = segment_right[0];
-
   // left part
   {
     auto Pp2_len = path_length(
-        solver, triangles, positions, adjacencies, left_leaf.lines[2]);
+        solver, triangles, positions, adjacencies, left_side);
     auto Pp2_dir = tangent_path_direction(
-        solver, triangles, positions, adjacencies, left_leaf.lines[2]);
+        solver, triangles, positions, adjacencies, left_side);
     //    assert(left_leaf.start == P);
-    auto delta_len = t0 * Pp2_len /
-                     (t0 - t_start);  // Pp2_len * t_start / (t0 - t_start);
-    auto path = straightest_path(
-        triangles, positions, adjacencies, P, Pp2_dir, delta_len);
+    auto delta_len = t_start * Pp2_len / (t0 - t_start);
+    auto path      = straightest_path(
+        triangles, positions, adjacencies, P, Pp2_dir, delta_len + Pp2_len);
     auto Pp2 = path.end;
-
-    auto Pp1 = geodesic_lerp(solver, triangles, positions, adjacencies,
-        tree.nodes[0].points[0], tree.nodes[0].points[1], t0);
-
-    segment_left = {tree.nodes[0].points[0], Pp1, Pp2, P};
+    auto Pp1 = geodesic_lerp(
+        solver, triangles, positions, adjacencies, polygon[0], polygon[1], t0);
+    segment_left = {polygon[0], Pp1, Pp2, P};
   }
-
   // right part
   {
     auto Pp1_len = path_length(
-        solver, triangles, positions, adjacencies, right_leaf.lines[0]);
+        solver, triangles, positions, adjacencies, right_side);
     auto Pp1_dir = tangent_path_direction(
-        solver, triangles, positions, adjacencies, right_leaf.lines[0]);
-    auto t0_local = (t_end - t0) / (1 - t0);
-    auto path     = straightest_path(
-        triangles, positions, adjacencies, P, Pp1_dir, Pp1_len / t0_local);
-    auto Pp1      = path.end;
-    auto Pp2      = geodesic_lerp(solver, triangles, positions, adjacencies,
-        tree.nodes[0].points[2], tree.nodes[0].points[3], t_end);
-    segment_right = {P, Pp1, Pp2, tree.nodes[0].points[3]};
+        solver, triangles, positions, adjacencies, right_side);
+    auto delta_len = (1 - t_end) / (t_end - t0) * Pp1_len;
+    auto path      = straightest_path(
+        triangles, positions, adjacencies, P, Pp1_dir, delta_len + Pp1_len);
+    auto Pp1 = path.end;
+    auto Pp2 = geodesic_lerp(
+        solver, triangles, positions, adjacencies, polygon[2], polygon[3], t0);
+    segment_right = {P, Pp1, Pp2, polygon[3]};
   }
-
   return {segment_left, segment_right};
 }
 
-static std::array<spline_polygon, 2> insert_point_spline(
+static std::array<spline_polygon, 2> lane_riesenfeld_insert(
     const dual_geodesic_solver& solver, const vector<vec3i>& triangles,
     const vector<vec3f>& positions, const vector<vec3i>& adjacencies,
     const spline_polygon& polygon, float t0, float precision) {
@@ -4085,32 +4021,12 @@ array<spline_polygon, 2> insert_bezier_point(const dual_geodesic_solver& solver,
     const vector<vec3i>& adjacencies, const spline_polygon& polygon, float t,
     bool lane_riesenfeld, float precision) {
   if (lane_riesenfeld) {
-    return insert_point_spline(
+    return lane_riesenfeld_insert(
         solver, triangles, positions, adjacencies, polygon, t, precision);
   } else {
-    throw std::invalid_argument{"not implemented yet"};
+    throw de_casteljau_insert(
+        solver, triangles, positions, adjacencies, polygon, t);
   }
-}
-
-[[maybe_unused]] static void subdivide_bezier_tree(
-    const dual_geodesic_solver& solver, const vector<vec3i>& triangles,
-    const vector<vec3f>& positions, const vector<vec3i>& adjacencies,
-    bezier_tree& tree, spline_params params, float t) {
-  // assuming bezier_tree is empty
-  auto from = 0;
-  auto to   = 1;
-  // auto depth = (params.subdivisions - tree.depth);
-  auto depth = params.subdivisions;
-  for (int i = 1; i < depth; i++) {
-    for (int k = from; k < to; k++) {
-      subdivide_bezier_node(
-          tree, k, solver, triangles, positions, adjacencies, t);
-    }
-    auto tmp = to - from;
-    from     = to;
-    to += 2 * tmp;
-  }
-  tree.depth = params.subdivisions;
 }
 
 static bool is_bezier_straight_enough(const geodesic_path& a,

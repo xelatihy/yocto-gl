@@ -44,6 +44,7 @@
 #include "ext/stb_image_resize.h"
 #include "ext/stb_image_write.h"
 #include "ext/tinyexr.h"
+#include "yocto_cli.h"
 #include "yocto_color.h"
 #include "yocto_geometry.h"
 #include "yocto_image.h"
@@ -2064,50 +2065,50 @@ bool make_scene_preset(scene_scene& scene, const string& type, string& error) {
 namespace yocto {
 
 // Load/save a scene in the builtin JSON format.
-static bool load_json_scene(const string& filename, scene_scene& scene,
-    string& error, const progress_callback& progress_cb, bool noparallel);
+static bool load_json_scene(
+    const string& filename, scene_scene& scene, string& error, bool noparallel);
 static bool save_json_scene(const string& filename, const scene_scene& scene,
-    string& error, const progress_callback& progress_cb, bool noparallel);
+    string& error, bool noparallel);
 
 // Load/save a scene from/to OBJ.
-static bool load_obj_scene(const string& filename, scene_scene& scene,
-    string& error, const progress_callback& progress_cb, bool noparallel);
+static bool load_obj_scene(
+    const string& filename, scene_scene& scene, string& error, bool noparallel);
 static bool save_obj_scene(const string& filename, const scene_scene& scene,
-    string& error, const progress_callback& progress_cb, bool noparallel);
+    string& error, bool noparallel);
 
 // Load/save a scene from/to PLY. Loads/saves only one mesh with no other data.
-static bool load_ply_scene(const string& filename, scene_scene& scene,
-    string& error, const progress_callback& progress_cb, bool noparallel);
+static bool load_ply_scene(
+    const string& filename, scene_scene& scene, string& error, bool noparallel);
 static bool save_ply_scene(const string& filename, const scene_scene& scene,
-    string& error, const progress_callback& progress_cb, bool noparallel);
+    string& error, bool noparallel);
 
 // Load/save a scene from/to STL. Loads/saves only one mesh with no other data.
-static bool load_stl_scene(const string& filename, scene_scene& scene,
-    string& error, const progress_callback& progress_cb, bool noparallel);
+static bool load_stl_scene(
+    const string& filename, scene_scene& scene, string& error, bool noparallel);
 static bool save_stl_scene(const string& filename, const scene_scene& scene,
-    string& error, const progress_callback& progress_cb, bool noparallel);
+    string& error, bool noparallel);
 
 // Load/save a scene from/to glTF.
-static bool load_gltf_scene(const string& filename, scene_scene& scene,
-    string& error, const progress_callback& progress_cb, bool noparallel);
+static bool load_gltf_scene(
+    const string& filename, scene_scene& scene, string& error, bool noparallel);
 static bool save_gltf_scene(const string& filename, const scene_scene& scene,
-    string& error, const progress_callback& progress_cb, bool noparallel);
+    string& error, bool noparallel);
 
 // Load/save a scene from/to pbrt-> This is not robust at all and only
 // works on scene that have been previously adapted since the two renderers
 // are too different to match.
-static bool load_pbrt_scene(const string& filename, scene_scene& scene,
-    string& error, const progress_callback& progress_cb, bool noparallel);
+static bool load_pbrt_scene(
+    const string& filename, scene_scene& scene, string& error, bool noparallel);
 static bool save_pbrt_scene(const string& filename, const scene_scene& scene,
-    string& error, const progress_callback& progress_cb, bool noparallel);
+    string& error, bool noparallel);
 
 // Load/save a scene preset.
-static bool load_preset_scene(const string& filename, scene_scene& scene,
-    string& error, const progress_callback& progress_cb, bool noparallel);
+static bool load_preset_scene(
+    const string& filename, scene_scene& scene, string& error, bool noparallel);
 
 // Load a scene
 bool load_scene(const string& filename, scene_scene& scene, string& error,
-    const progress_callback& progress_cb, bool noparallel) {
+    bool noparallel) {
   auto format_error = [filename, &error]() {
     error = filename + ": unknown format";
     return false;
@@ -2115,19 +2116,19 @@ bool load_scene(const string& filename, scene_scene& scene, string& error,
 
   auto ext = path_extension(filename);
   if (ext == ".json" || ext == ".JSON") {
-    return load_json_scene(filename, scene, error, progress_cb, noparallel);
+    return load_json_scene(filename, scene, error, noparallel);
   } else if (ext == ".obj" || ext == ".OBJ") {
-    return load_obj_scene(filename, scene, error, progress_cb, noparallel);
+    return load_obj_scene(filename, scene, error, noparallel);
   } else if (ext == ".gltf" || ext == ".GLTF") {
-    return load_gltf_scene(filename, scene, error, progress_cb, noparallel);
+    return load_gltf_scene(filename, scene, error, noparallel);
   } else if (ext == ".pbrt" || ext == ".PBRT") {
-    return load_pbrt_scene(filename, scene, error, progress_cb, noparallel);
+    return load_pbrt_scene(filename, scene, error, noparallel);
   } else if (ext == ".ply" || ext == ".PLY") {
-    return load_ply_scene(filename, scene, error, progress_cb, noparallel);
+    return load_ply_scene(filename, scene, error, noparallel);
   } else if (ext == ".stl" || ext == ".STL") {
-    return load_stl_scene(filename, scene, error, progress_cb, noparallel);
+    return load_stl_scene(filename, scene, error, noparallel);
   } else if (ext == ".ypreset" || ext == ".YPRESET") {
-    return load_preset_scene(filename, scene, error, progress_cb, noparallel);
+    return load_preset_scene(filename, scene, error, noparallel);
   } else {
     return format_error();
   }
@@ -2135,7 +2136,7 @@ bool load_scene(const string& filename, scene_scene& scene, string& error,
 
 // Save a scene
 bool save_scene(const string& filename, const scene_scene& scene, string& error,
-    const progress_callback& progress_cb, bool noparallel) {
+    bool noparallel) {
   auto format_error = [filename, &error]() {
     error = filename + ": unknown format";
     return false;
@@ -2143,17 +2144,17 @@ bool save_scene(const string& filename, const scene_scene& scene, string& error,
 
   auto ext = path_extension(filename);
   if (ext == ".json" || ext == ".JSON") {
-    return save_json_scene(filename, scene, error, progress_cb, noparallel);
+    return save_json_scene(filename, scene, error, noparallel);
   } else if (ext == ".obj" || ext == ".OBJ") {
-    return save_obj_scene(filename, scene, error, progress_cb, noparallel);
+    return save_obj_scene(filename, scene, error, noparallel);
   } else if (ext == ".pbrt" || ext == ".PBRT") {
-    return save_pbrt_scene(filename, scene, error, progress_cb, noparallel);
+    return save_pbrt_scene(filename, scene, error, noparallel);
   } else if (ext == ".gltf" || ext == ".GLTF") {
-    return save_gltf_scene(filename, scene, error, progress_cb, noparallel);
+    return save_gltf_scene(filename, scene, error, noparallel);
   } else if (ext == ".ply" || ext == ".PLY") {
-    return save_ply_scene(filename, scene, error, progress_cb, noparallel);
+    return save_ply_scene(filename, scene, error, noparallel);
   } else if (ext == ".stl" || ext == ".STL") {
-    return save_stl_scene(filename, scene, error, progress_cb, noparallel);
+    return save_stl_scene(filename, scene, error, noparallel);
   } else {
     return format_error();
   }
@@ -2161,21 +2162,21 @@ bool save_scene(const string& filename, const scene_scene& scene, string& error,
 
 // Load/save a scene preset.
 static bool load_preset_scene(const string& filename, scene_scene& scene,
-    string& error, const progress_callback& progress_cb, bool noparallel) {
+    string& error, bool noparallel) {
   auto preset_error = [filename, &error]() {
     error = filename + ": " + error;
     return false;
   };
 
   // handle progress
-  if (progress_cb) progress_cb("make preset", 0, 1);
+  log_progress("make preset", 0, 1);
 
   // make preset
   if (!make_scene_preset(scene, path_basename(filename), error))
     return preset_error();
 
   // handle progress
-  if (progress_cb) progress_cb("make preset", 0, 1);
+  log_progress("make preset", 0, 1);
 
   // done
   return true;
@@ -2389,7 +2390,7 @@ namespace yocto {
 
 // Load a scene in the builtin JSON format.
 static bool load_json_scene(const string& filename, scene_scene& scene,
-    string& error, const progress_callback& progress_cb, bool noparallel) {
+    string& error, bool noparallel) {
   auto json_error = [filename]() {
     // error does not need setting
     return false;
@@ -2421,7 +2422,7 @@ static bool load_json_scene(const string& filename, scene_scene& scene,
 
   // handle progress
   auto progress = vec2i{0, 2};
-  if (progress_cb) progress_cb("load scene", progress.x++, progress.y);
+  log_progress("load scene", progress.x++, progress.y);
 
   // open file
   auto js = njson{};
@@ -2537,7 +2538,7 @@ static bool load_json_scene(const string& filename, scene_scene& scene,
   auto check_object   = [](const njson& js) { return js.is_object(); };
 
   // handle progress
-  if (progress_cb) progress_cb("convert scene", progress.x++, progress.y);
+  log_progress("convert scene", progress.x++, progress.y);
 
   // loop over external dictionaries
   for (auto& [gname, group] : iterate_object(js)) {
@@ -2781,7 +2782,7 @@ static bool load_json_scene(const string& filename, scene_scene& scene,
   if (noparallel) {
     // load shapes
     for (auto& shape : scene.shapes) {
-      if (progress_cb) progress_cb("load shape", progress.x++, progress.y);
+      log_progress("load shape", progress.x++, progress.y);
       auto path = find_path(
           get_shape_name(scene, shape), "shapes", {".ply", ".obj"});
       if (!load_shape(path_join(dirname, path), shape, error, true))
@@ -2789,7 +2790,7 @@ static bool load_json_scene(const string& filename, scene_scene& scene,
     }
     // load subdivs
     for (auto& subdiv : scene.subdivs) {
-      if (progress_cb) progress_cb("load subdiv", progress.x++, progress.y);
+      log_progress("load subdiv", progress.x++, progress.y);
       auto path = find_path(
           get_subdiv_name(scene, subdiv), "subdivs", {".ply", ".obj"});
       if (!load_subdiv(path_join(dirname, path), subdiv, error))
@@ -2797,7 +2798,7 @@ static bool load_json_scene(const string& filename, scene_scene& scene,
     }
     // load textures
     for (auto& texture : scene.textures) {
-      if (progress_cb) progress_cb("load texture", progress.x++, progress.y);
+      log_progress("load texture", progress.x++, progress.y);
       auto path = find_path(get_texture_name(scene, texture), "textures",
           {".hdr", ".exr", ".png", ".jpg"});
       if (!load_texture(path_join(dirname, path), texture, error))
@@ -2805,7 +2806,7 @@ static bool load_json_scene(const string& filename, scene_scene& scene,
     }
     // load instances
     for (auto& ply_instance : ply_instances) {
-      if (progress_cb) progress_cb("load instances", progress.x++, progress.y);
+      log_progress("load instances", progress.x++, progress.y);
       auto path = find_path(
           get_ply_instance_name(scene, ply_instance), "instances", {".ply"});
       if (!load_instance(path_join(dirname, path), ply_instance.frames, error))
@@ -2819,7 +2820,7 @@ static bool load_json_scene(const string& filename, scene_scene& scene,
       {
         auto lock = std::lock_guard{mutex};
         if (!error.empty()) return;
-        if (progress_cb) progress_cb("load shape", progress.x++, progress.y);
+        log_progress("load shape", progress.x++, progress.y);
       }
       auto path = find_path(
           get_shape_name(scene, shape), "shapes", {".ply", ".obj"});
@@ -2836,7 +2837,7 @@ static bool load_json_scene(const string& filename, scene_scene& scene,
       {
         auto lock = std::lock_guard{mutex};
         if (!error.empty()) return;
-        if (progress_cb) progress_cb("load subdiv", progress.x++, progress.y);
+        log_progress("load subdiv", progress.x++, progress.y);
       }
       auto path = find_path(
           get_subdiv_name(scene, subdiv), "subdivs", {".ply", ".obj"});
@@ -2853,7 +2854,7 @@ static bool load_json_scene(const string& filename, scene_scene& scene,
       {
         auto lock = std::lock_guard{mutex};
         if (!error.empty()) return;
-        if (progress_cb) progress_cb("load texture", progress.x++, progress.y);
+        log_progress("load texture", progress.x++, progress.y);
       }
       auto path = find_path(get_texture_name(scene, texture), "textures",
           {".hdr", ".exr", ".png", ".jpg"});
@@ -2870,8 +2871,7 @@ static bool load_json_scene(const string& filename, scene_scene& scene,
       {
         auto lock = std::lock_guard{mutex};
         if (!error.empty()) return;
-        if (progress_cb)
-          progress_cb("load instances", progress.x++, progress.y);
+        log_progress("load instances", progress.x++, progress.y);
       }
       auto path = find_path(
           get_ply_instance_name(scene, ply_instance), "instances", {".ply"});
@@ -2887,8 +2887,7 @@ static bool load_json_scene(const string& filename, scene_scene& scene,
 
   // apply instances
   if (!ply_instances.empty()) {
-    if (progress_cb)
-      progress_cb("flatten instances", progress.x++, ++progress.y);
+    log_progress("flatten instances", progress.x++, ++progress.y);
     auto instances      = scene.instances;
     auto instance_names = scene.instance_names;
     scene.instances.clear();
@@ -2925,13 +2924,13 @@ static bool load_json_scene(const string& filename, scene_scene& scene,
   trim_memory(scene);
 
   // done
-  if (progress_cb) progress_cb("load scene", progress.x++, progress.y);
+  log_progress("load scene", progress.x++, progress.y);
   return true;
 }
 
 // Save a scene in the builtin JSON format.
 static bool save_json_scene(const string& filename, const scene_scene& scene,
-    string& error, const progress_callback& progress_cb, bool noparallel) {
+    string& error, bool noparallel) {
   auto conversion_error = [filename, &error](const string& message) {
     // should never happen
     throw std::runtime_error{"programmer error"};
@@ -2956,7 +2955,7 @@ static bool save_json_scene(const string& filename, const scene_scene& scene,
   auto progress = vec2i{0, 2 + (int)scene.shapes.size() +
                                (int)scene.subdivs.size() +
                                (int)scene.textures.size()};
-  if (progress_cb) progress_cb("convert scene", progress.x++, progress.y);
+  log_progress("convert scene", progress.x++, progress.y);
 
   // save json file
   auto js = njson::object();
@@ -3125,7 +3124,7 @@ static bool save_json_scene(const string& filename, const scene_scene& scene,
   }
 
   // handle progress
-  if (progress_cb) progress_cb("save scene", progress.x++, progress.y);
+  log_progress("save scene", progress.x++, progress.y);
 
   // save json
   if (!save_json(filename, js, error)) return false;
@@ -3136,7 +3135,7 @@ static bool save_json_scene(const string& filename, const scene_scene& scene,
   if (noparallel) {
     // save shapes
     for (auto& shape : scene.shapes) {
-      if (progress_cb) progress_cb("save shape", progress.x++, progress.y);
+      log_progress("save shape", progress.x++, progress.y);
       auto path = "shapes/" + get_shape_name(scene, shape) + ".ply";
       if (!save_shape(path_join(dirname, path), shape, error, true))
         return dependent_error();
@@ -3144,7 +3143,7 @@ static bool save_json_scene(const string& filename, const scene_scene& scene,
 
     // save subdiv
     for (auto& subdiv : scene.subdivs) {
-      if (progress_cb) progress_cb("save subdiv", progress.x++, progress.y);
+      log_progress("save subdiv", progress.x++, progress.y);
       auto path = "subdivs/" + get_subdiv_name(scene, subdiv) + ".obj";
       if (!save_subdiv(path_join(dirname, path), subdiv, error))
         return dependent_error();
@@ -3152,7 +3151,7 @@ static bool save_json_scene(const string& filename, const scene_scene& scene,
 
     // save textures
     for (auto& texture : scene.textures) {
-      if (progress_cb) progress_cb("save texture", progress.x++, progress.y);
+      log_progress("save texture", progress.x++, progress.y);
       auto path = "textures/" + get_texture_name(scene, texture) +
                   (!texture.pixelsf.empty() ? ".hdr"s : ".png"s);
       if (!save_texture(path_join(dirname, path), texture, error))
@@ -3166,7 +3165,7 @@ static bool save_json_scene(const string& filename, const scene_scene& scene,
       {
         auto lock = std::lock_guard{mutex};
         if (!error.empty()) return;
-        if (progress_cb) progress_cb("save shape", progress.x++, progress.y);
+        log_progress("save shape", progress.x++, progress.y);
       }
       auto path = "shapes/" + get_shape_name(scene, shape) + ".ply";
       auto err  = string{};
@@ -3182,7 +3181,7 @@ static bool save_json_scene(const string& filename, const scene_scene& scene,
       {
         auto lock = std::lock_guard{mutex};
         if (!error.empty()) return;
-        if (progress_cb) progress_cb("save subdiv", progress.x++, progress.y);
+        log_progress("save subdiv", progress.x++, progress.y);
       }
       auto path = "subdivs/" + get_subdiv_name(scene, subdiv) + ".obj";
       auto err  = string{};
@@ -3198,7 +3197,7 @@ static bool save_json_scene(const string& filename, const scene_scene& scene,
       {
         auto lock = std::lock_guard{mutex};
         if (!error.empty()) return;
-        if (progress_cb) progress_cb("save texture", progress.x++, progress.y);
+        log_progress("save texture", progress.x++, progress.y);
       }
       auto path = "textures/" + get_texture_name(scene, texture) +
                   (!texture.pixelsf.empty() ? ".hdr"s : ".png"s);
@@ -3213,7 +3212,7 @@ static bool save_json_scene(const string& filename, const scene_scene& scene,
   }
 
   // done
-  if (progress_cb) progress_cb("save scene", progress.x++, progress.y);
+  log_progress("save scene", progress.x++, progress.y);
   return true;
 }
 
@@ -3226,7 +3225,7 @@ namespace yocto {
 
 // Loads an OBJ
 static bool load_obj_scene(const string& filename, scene_scene& scene,
-    string& error, const progress_callback& progress_cb, bool noparallel) {
+    string& error, bool noparallel) {
   auto shape_error = [filename, &error]() {
     error = filename + ": empty shape";
     return false;
@@ -3242,14 +3241,14 @@ static bool load_obj_scene(const string& filename, scene_scene& scene,
 
   // handle progress
   auto progress = vec2i{0, 2};
-  if (progress_cb) progress_cb("load scene", progress.x++, progress.y);
+  log_progress("load scene", progress.x++, progress.y);
 
   // load obj
   auto obj = obj_model{};
   if (!load_obj(filename, obj, error, false, true)) return false;
 
   // handle progress
-  if (progress_cb) progress_cb("convert scene", progress.x++, progress.y);
+  log_progress("convert scene", progress.x++, progress.y);
 
   // convert cameras
   for (auto& ocamera : obj.cameras) {
@@ -3342,7 +3341,7 @@ static bool load_obj_scene(const string& filename, scene_scene& scene,
   if (noparallel) {
     // load textures
     for (auto& texture : scene.textures) {
-      if (progress_cb) progress_cb("load texture", progress.x++, progress.y);
+      log_progress("load texture", progress.x++, progress.y);
       auto& path = texture_paths[&texture - &scene.textures.front()];
       if (!load_texture(path_join(dirname, path), texture, error))
         return dependent_error();
@@ -3355,7 +3354,7 @@ static bool load_obj_scene(const string& filename, scene_scene& scene,
       {
         auto lock = std::lock_guard{mutex};
         if (!error.empty()) return;
-        if (progress_cb) progress_cb("load texture", progress.x++, progress.y);
+        log_progress("load texture", progress.x++, progress.y);
       }
       auto& path = texture_paths[&texture - &scene.textures.front()];
       auto  err  = string{};
@@ -3374,12 +3373,12 @@ static bool load_obj_scene(const string& filename, scene_scene& scene,
   add_missing_radius(scene);
 
   // done
-  if (progress_cb) progress_cb("load scene", progress.x++, progress.y);
+  log_progress("load scene", progress.x++, progress.y);
   return true;
 }
 
 static bool save_obj_scene(const string& filename, const scene_scene& scene,
-    string& error, const progress_callback& progress_cb, bool noparallel) {
+    string& error, bool noparallel) {
   auto shape_error = [filename, &error]() {
     error = filename + ": empty shape";
     return false;
@@ -3391,7 +3390,7 @@ static bool save_obj_scene(const string& filename, const scene_scene& scene,
 
   // handle progress
   auto progress = vec2i{0, 2 + (int)scene.textures.size()};
-  if (progress_cb) progress_cb("convert scene", progress.x++, progress.y);
+  log_progress("convert scene", progress.x++, progress.y);
 
   // build obj
   auto obj = obj_model{};
@@ -3469,7 +3468,7 @@ static bool save_obj_scene(const string& filename, const scene_scene& scene,
   }
 
   // handle progress
-  if (progress_cb) progress_cb("save scene", progress.x++, progress.y);
+  log_progress("save scene", progress.x++, progress.y);
 
   // save obj
   if (!save_obj(filename, obj, error)) return false;
@@ -3480,7 +3479,7 @@ static bool save_obj_scene(const string& filename, const scene_scene& scene,
   if (noparallel) {
     // save textures
     for (auto& texture : scene.textures) {
-      if (progress_cb) progress_cb("save texture", progress.x++, progress.y);
+      log_progress("save texture", progress.x++, progress.y);
       auto path = "textures/" + get_texture_name(scene, texture) +
                   (!texture.pixelsf.empty() ? ".hdr"s : ".png"s);
       if (!save_texture(path_join(dirname, path), texture, error))
@@ -3494,7 +3493,7 @@ static bool save_obj_scene(const string& filename, const scene_scene& scene,
       {
         auto lock = std::lock_guard{mutex};
         if (!error.empty()) return;
-        if (progress_cb) progress_cb("save texture", progress.x++, progress.y);
+        log_progress("save texture", progress.x++, progress.y);
       }
       auto path = "textures/" + get_texture_name(scene, texture) +
                   (!texture.pixelsf.empty() ? ".hdr"s : ".png"s);
@@ -3509,7 +3508,7 @@ static bool save_obj_scene(const string& filename, const scene_scene& scene,
   }
 
   // done
-  if (progress_cb) progress_cb("save scene", progress.x++, progress.y);
+  log_progress("save scene", progress.x++, progress.y);
   return true;
 }
 
@@ -3521,10 +3520,10 @@ static bool save_obj_scene(const string& filename, const scene_scene& scene,
 namespace yocto {
 
 static bool load_ply_scene(const string& filename, scene_scene& scene,
-    string& error, const progress_callback& progress_cb, bool noparallel) {
+    string& error, bool noparallel) {
   // handle progress
   auto progress = vec2i{0, 1};
-  if (progress_cb) progress_cb("load scene", progress.x++, progress.y);
+  log_progress("load scene", progress.x++, progress.y);
 
   // load ply mesh
   auto& shape = scene.shapes.emplace_back();
@@ -3540,12 +3539,12 @@ static bool load_ply_scene(const string& filename, scene_scene& scene,
   add_missing_radius(scene);
 
   // done
-  if (progress_cb) progress_cb("load scene", progress.x++, progress.y);
+  log_progress("load scene", progress.x++, progress.y);
   return true;
 }
 
 static bool save_ply_scene(const string& filename, const scene_scene& scene,
-    string& error, const progress_callback& progress_cb, bool noparallel) {
+    string& error, bool noparallel) {
   auto shape_error = [filename, &error]() {
     error = filename + ": empty shape";
     return false;
@@ -3555,14 +3554,14 @@ static bool save_ply_scene(const string& filename, const scene_scene& scene,
 
   // handle progress
   auto progress = vec2i{0, 1};
-  if (progress_cb) progress_cb("save scene", progress.x++, progress.y);
+  log_progress("save scene", progress.x++, progress.y);
 
   // save shape
   auto& shape = scene.shapes.front();
   if (!save_shape(filename, shape, error, false)) return false;
 
   // done
-  if (progress_cb) progress_cb("save scene", progress.x++, progress.y);
+  log_progress("save scene", progress.x++, progress.y);
   return true;
 }
 
@@ -3574,10 +3573,10 @@ static bool save_ply_scene(const string& filename, const scene_scene& scene,
 namespace yocto {
 
 static bool load_stl_scene(const string& filename, scene_scene& scene,
-    string& error, const progress_callback& progress_cb, bool noparallel) {
+    string& error, bool noparallel) {
   // handle progress
   auto progress = vec2i{0, 1};
-  if (progress_cb) progress_cb("load scene", progress.x++, progress.y);
+  log_progress("load scene", progress.x++, progress.y);
 
   // load stl mesh
   auto& shape = scene.shapes.emplace_back();
@@ -3593,12 +3592,12 @@ static bool load_stl_scene(const string& filename, scene_scene& scene,
   add_missing_radius(scene);
 
   // done
-  if (progress_cb) progress_cb("load scene", progress.x++, progress.y);
+  log_progress("load scene", progress.x++, progress.y);
   return true;
 }
 
 static bool save_stl_scene(const string& filename, const scene_scene& scene,
-    string& error, const progress_callback& progress_cb, bool noparallel) {
+    string& error, bool noparallel) {
   auto shape_error = [filename, &error]() {
     error = filename + ": empty shape";
     return false;
@@ -3608,14 +3607,14 @@ static bool save_stl_scene(const string& filename, const scene_scene& scene,
 
   // handle progress
   auto progress = vec2i{0, 1};
-  if (progress_cb) progress_cb("save scene", progress.x++, progress.y);
+  log_progress("save scene", progress.x++, progress.y);
 
   // save shape
   auto& shape = scene.shapes.front();
   if (!save_shape(filename, shape, error, false)) return false;
 
   // done
-  if (progress_cb) progress_cb("save scene", progress.x++, progress.y);
+  log_progress("save scene", progress.x++, progress.y);
   return true;
 }
 
@@ -3628,7 +3627,7 @@ namespace yocto {
 
 // Load a scene
 static bool load_gltf_scene(const string& filename, scene_scene& scene,
-    string& error, const progress_callback& progress_cb, bool noparallel) {
+    string& error, bool noparallel) {
   auto read_error = [filename, &error]() {
     error = filename + ": read error";
     return false;
@@ -3648,7 +3647,7 @@ static bool load_gltf_scene(const string& filename, scene_scene& scene,
 
   // handle progress
   auto progress = vec2i{0, 2};
-  if (progress_cb) progress_cb("load scene", progress.x++, progress.y);
+  log_progress("load scene", progress.x++, progress.y);
 
   // load gltf
   auto gltf = njson{};
@@ -3678,7 +3677,7 @@ static bool load_gltf_scene(const string& filename, scene_scene& scene,
   if (noparallel) {
     // load buffers
     for (auto& buffer : buffers) {
-      if (progress_cb) progress_cb("load buffer", progress.x++, progress.y);
+      log_progress("load buffer", progress.x++, progress.y);
       auto& path = buffers_paths[&buffer - &buffers.front()];
       if (!load_binary(path_join(dirname, path), buffer, error))
         return dependent_error();
@@ -3691,7 +3690,7 @@ static bool load_gltf_scene(const string& filename, scene_scene& scene,
       {
         auto lock = std::lock_guard{mutex};
         if (!error.empty()) return;
-        if (progress_cb) progress_cb("load buffer", progress.x++, progress.y);
+        log_progress("load buffer", progress.x++, progress.y);
       }
       auto& path = buffers_paths[&buffer - &buffers.front()];
       auto  err  = string{};
@@ -3705,7 +3704,7 @@ static bool load_gltf_scene(const string& filename, scene_scene& scene,
   }
 
   // handle progress
-  if (progress_cb) progress_cb("convert scene", progress.x++, progress.y);
+  log_progress("convert scene", progress.x++, progress.y);
 
   // convert asset
   if (gltf.contains("asset")) {
@@ -4087,7 +4086,7 @@ static bool load_gltf_scene(const string& filename, scene_scene& scene,
   if (noparallel) {
     // load texture
     for (auto& texture : scene.textures) {
-      if (progress_cb) progress_cb("load texture", progress.x++, progress.y);
+      log_progress("load texture", progress.x++, progress.y);
       auto& path = texture_paths[&texture - &scene.textures.front()];
       if (!load_texture(path_join(dirname, path), texture, error))
         return dependent_error();
@@ -4100,7 +4099,7 @@ static bool load_gltf_scene(const string& filename, scene_scene& scene,
       {
         auto lock = std::lock_guard{mutex};
         if (!error.empty()) return;
-        if (progress_cb) progress_cb("load texture", progress.x++, progress.y);
+        log_progress("load texture", progress.x++, progress.y);
       }
       auto& path = texture_paths[&texture - &scene.textures.front()];
       auto  err  = string{};
@@ -4120,13 +4119,13 @@ static bool load_gltf_scene(const string& filename, scene_scene& scene,
   add_missing_radius(scene);
 
   // load done
-  if (progress_cb) progress_cb("load scene", progress.x++, progress.y);
+  log_progress("load scene", progress.x++, progress.y);
   return true;
 }
 
 // Load a scene
 static bool save_gltf_scene(const string& filename, const scene_scene& scene,
-    string& error, const progress_callback& progress_cb, bool noparallel) {
+    string& error, bool noparallel) {
   auto write_error = [filename, &error]() {
     error = filename + ": write error";
     return false;
@@ -4143,7 +4142,7 @@ static bool save_gltf_scene(const string& filename, const scene_scene& scene,
   // handle progress
   auto progress = vec2i{
       0, 2 + (int)scene.shapes.size() + (int)scene.textures.size()};
-  if (progress_cb) progress_cb("convert scene", progress.x++, progress.y);
+  log_progress("convert scene", progress.x++, progress.y);
 
   // convert scene to json
   auto gltf = njson::object();
@@ -4434,7 +4433,7 @@ static bool save_gltf_scene(const string& filename, const scene_scene& scene,
   }
 
   // handle progress
-  if (progress_cb) progress_cb("save scene", progress.x++, progress.y);
+  log_progress("save scene", progress.x++, progress.y);
 
   // save json
   if (!save_json(filename, gltf, error)) return false;
@@ -4451,14 +4450,14 @@ static bool save_gltf_scene(const string& filename, const scene_scene& scene,
   if (noparallel) {
     // save shapes
     for (auto& shape : scene.shapes) {
-      if (progress_cb) progress_cb("save shape", progress.x++, progress.y);
+      log_progress("save shape", progress.x++, progress.y);
       auto path = "shapes/" + get_shape_name(scene, shape) + ".bin";
       if (!save_binshape(path_join(dirname, path), shape, error))
         return dependent_error();
     }
     // save textures
     for (auto& texture : scene.textures) {
-      if (progress_cb) progress_cb("save texture", progress.x++, progress.y);
+      log_progress("save texture", progress.x++, progress.y);
       auto path = "textures/" + get_texture_name(scene, texture) +
                   (!texture.pixelsf.empty() ? ".hdr" : ".png");
       if (!save_texture(path_join(dirname, path), texture, error))
@@ -4472,7 +4471,7 @@ static bool save_gltf_scene(const string& filename, const scene_scene& scene,
       {
         auto lock = std::lock_guard{mutex};
         if (!error.empty()) return;
-        if (progress_cb) progress_cb("save shape", progress.x++, progress.y);
+        log_progress("save shape", progress.x++, progress.y);
       }
       auto path = "shapes/" + get_shape_name(scene, shape) + ".bin";
       auto err  = string{};
@@ -4488,7 +4487,7 @@ static bool save_gltf_scene(const string& filename, const scene_scene& scene,
       {
         auto lock = std::lock_guard{mutex};
         if (!error.empty()) return;
-        if (progress_cb) progress_cb("save texture", progress.x++, progress.y);
+        log_progress("save texture", progress.x++, progress.y);
       }
       auto path = "textures/" + get_texture_name(scene, texture) +
                   (!texture.pixelsf.empty() ? ".hdr"s : ".png"s);
@@ -4503,7 +4502,7 @@ static bool save_gltf_scene(const string& filename, const scene_scene& scene,
   }
 
   // done
-  if (progress_cb) progress_cb("save scene", progress.x++, progress.y);
+  log_progress("save scene", progress.x++, progress.y);
   return true;
 }
 
@@ -4516,7 +4515,7 @@ namespace yocto {
 
 // load pbrt scenes
 static bool load_pbrt_scene(const string& filename, scene_scene& scene,
-    string& error, const progress_callback& progress_cb, bool noparallel) {
+    string& error, bool noparallel) {
   auto dependent_error = [filename, &error]() {
     error = filename + ": error in " + error;
     return false;
@@ -4524,14 +4523,14 @@ static bool load_pbrt_scene(const string& filename, scene_scene& scene,
 
   // handle progress
   auto progress = vec2i{0, 2};
-  if (progress_cb) progress_cb("load scene", progress.x++, progress.y);
+  log_progress("load scene", progress.x++, progress.y);
 
   // load pbrt
   auto pbrt = pbrt_model{};
   if (!load_pbrt(filename, pbrt, error)) return false;
 
   // handle progress
-  if (progress_cb) progress_cb("convert scene", progress.x++, progress.y);
+  log_progress("convert scene", progress.x++, progress.y);
 
   // convert cameras
   for (auto& pcamera : pbrt.cameras) {
@@ -4633,7 +4632,7 @@ static bool load_pbrt_scene(const string& filename, scene_scene& scene,
   if (noparallel) {
     // load shape
     for (auto& shape : scene.shapes) {
-      if (progress_cb) progress_cb("load shape", progress.x++, progress.y);
+      log_progress("load shape", progress.x++, progress.y);
       auto& path = shapes_paths[&shape - &scene.shapes.front()];
       if (path.empty()) continue;
       if (!load_shape(path_join(dirname, path), shape, error, true))
@@ -4641,7 +4640,7 @@ static bool load_pbrt_scene(const string& filename, scene_scene& scene,
     }
     // load texture
     for (auto& texture : scene.textures) {
-      if (progress_cb) progress_cb("load texture", progress.x++, progress.y);
+      log_progress("load texture", progress.x++, progress.y);
       auto& path = texture_paths[&texture - &scene.textures.front()];
       if (!load_texture(path_join(dirname, path), texture, error))
         return dependent_error();
@@ -4654,7 +4653,7 @@ static bool load_pbrt_scene(const string& filename, scene_scene& scene,
       {
         auto lock = std::lock_guard{mutex};
         if (!error.empty()) return;
-        if (progress_cb) progress_cb("load shape", progress.x++, progress.y);
+        log_progress("load shape", progress.x++, progress.y);
       }
       auto& path = shapes_paths[&shape - &scene.shapes.front()];
       if (path.empty()) return;
@@ -4671,7 +4670,7 @@ static bool load_pbrt_scene(const string& filename, scene_scene& scene,
       {
         auto lock = std::lock_guard{mutex};
         if (!error.empty()) return;
-        if (progress_cb) progress_cb("load texture", progress.x++, progress.y);
+        log_progress("load texture", progress.x++, progress.y);
       }
       auto& path = texture_paths[&texture - &scene.textures.front()];
       auto  err  = string{};
@@ -4690,13 +4689,13 @@ static bool load_pbrt_scene(const string& filename, scene_scene& scene,
   add_missing_radius(scene);
 
   // done
-  if (progress_cb) progress_cb("load scene", progress.x++, progress.y);
+  log_progress("load scene", progress.x++, progress.y);
   return true;
 }
 
 // Save a pbrt scene
 static bool save_pbrt_scene(const string& filename, const scene_scene& scene,
-    string& error, const progress_callback& progress_cb, bool noparallel) {
+    string& error, bool noparallel) {
   auto dependent_error = [filename, &error]() {
     error = filename + ": error in " + error;
     return false;
@@ -4705,7 +4704,7 @@ static bool save_pbrt_scene(const string& filename, const scene_scene& scene,
   // handle progress
   auto progress = vec2i{
       0, 2 + (int)scene.shapes.size() + (int)scene.textures.size()};
-  if (progress_cb) progress_cb("convert scene", progress.x++, progress.y);
+  log_progress("convert scene", progress.x++, progress.y);
 
   // save pbrt
   auto pbrt = pbrt_model{};
@@ -4766,7 +4765,7 @@ static bool save_pbrt_scene(const string& filename, const scene_scene& scene,
   }
 
   // handle progress
-  if (progress_cb) progress_cb("save scene", progress.x++, progress.y);
+  log_progress("save scene", progress.x++, progress.y);
 
   // save pbrt
   if (!save_pbrt(filename, pbrt, error)) return false;
@@ -4777,14 +4776,14 @@ static bool save_pbrt_scene(const string& filename, const scene_scene& scene,
   if (noparallel) {
     // save textures
     for (auto& shape : scene.shapes) {
-      if (progress_cb) progress_cb("save shape", progress.x++, progress.y);
+      log_progress("save shape", progress.x++, progress.y);
       auto path = "shapes/" + get_shape_name(scene, shape) + ".ply";
       if (!save_shape(path_join(dirname, path), shape, error, true))
         return dependent_error();
     }
     // save shapes
     for (auto& texture : scene.textures) {
-      if (progress_cb) progress_cb("save texture", progress.x++, progress.y);
+      log_progress("save texture", progress.x++, progress.y);
       auto path = "textures/" + get_texture_name(scene, texture) +
                   (!texture.pixelsf.empty() ? ".hdr" : ".png");
       if (!save_texture(path_join(dirname, path), texture, error))
@@ -4798,7 +4797,7 @@ static bool save_pbrt_scene(const string& filename, const scene_scene& scene,
       {
         auto lock = std::lock_guard{mutex};
         if (!error.empty()) return;
-        if (progress_cb) progress_cb("save shape", progress.x++, progress.y);
+        log_progress("save shape", progress.x++, progress.y);
       }
       auto path = "shapes/" + get_shape_name(scene, shape) + ".ply";
       auto err  = string{};
@@ -4814,7 +4813,7 @@ static bool save_pbrt_scene(const string& filename, const scene_scene& scene,
       {
         auto lock = std::lock_guard{mutex};
         if (!error.empty()) return;
-        if (progress_cb) progress_cb("save texture", progress.x++, progress.y);
+        log_progress("save texture", progress.x++, progress.y);
       }
       auto path = "textures/" + get_texture_name(scene, texture) +
                   (!texture.pixelsf.empty() ? ".hdr"s : ".png"s);
@@ -4829,7 +4828,7 @@ static bool save_pbrt_scene(const string& filename, const scene_scene& scene,
   }
 
   // done
-  if (progress_cb) progress_cb("save scene", progress.x++, progress.y);
+  log_progress("save scene", progress.x++, progress.y);
   return true;
 }
 

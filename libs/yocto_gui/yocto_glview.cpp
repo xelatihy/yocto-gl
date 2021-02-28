@@ -148,96 +148,6 @@ struct scene_selection {
   int subdiv      = 0;
 };
 
-// // Material type
-// enum struct material_type {
-//   // clang-format off
-//   matte, plastic, metal, thinglass, glass, leaves, subsurface, volume,
-//   metallic
-//   // clang-format on
-// };
-
-// // Enum labels
-// inline const auto material_type_names = std::vector<std::string>{"matte",
-//     "plastic", "metal", "thinglass", "glass", "leaves", "subsurface",
-//     "volume", "metallic"};
-
-// // Material for surfaces, lines and triangles.
-// // For surfaces, uses a microfacet model with thin sheet transmission.
-// // The model is based on OBJ, but contains glTF compatibility.
-// // For the documentation on the values, please see the OBJ format.
-// struct scene_material {
-//   // material
-//   material_type type         = material_type::metallic;
-//   vec3f         emission     = {0, 0, 0};
-//   vec3f         color        = {0, 0, 0};
-//   float         roughness    = 0;
-//   float         metallic     = 0;
-//   float         ior          = 1.5;
-//   vec3f         scattering   = {0, 0, 0};
-//   float         scanisotropy = 0;
-//   float         trdepth      = 0.01;
-//   float         opacity      = 1;
-
-//   // textures
-//   texture_handle emission_tex   = invalid_handle;
-//   texture_handle color_tex      = invalid_handle;
-//   texture_handle roughness_tex  = invalid_handle;
-//   texture_handle scattering_tex = invalid_handle;
-//   texture_handle normal_tex     = invalid_handle;
-// };
-
-// // Shape data represented as indexed meshes of elements.
-// // May contain either points, lines, triangles and quads.
-// struct shape_data {
-//   // element data
-//   vector<int>   points    = {};
-//   vector<vec2i> lines     = {};
-//   vector<vec3i> triangles = {};
-//   vector<vec4i> quads     = {};
-
-//   // vertex data
-//   vector<vec3f> positions = {};
-//   vector<vec3f> normals   = {};
-//   vector<vec2f> texcoords = {};
-//   vector<vec4f> colors    = {};
-//   vector<float> radius    = {};
-//   vector<vec4f> tangents  = {};
-// };
-
-// // Environment map.
-// struct scene_environment {
-//   // environment data
-//   frame3f        frame        = identity3x4f;
-//   vec3f          emission     = {0, 0, 0};
-//   texture_handle emission_tex = invalid_handle;
-// };
-
-// // Subdiv data represented as face-varying primitives where
-// // each vertex data has its own topology.
-// struct scene_subdiv {
-//   // face-varying primitives
-//   vector<vec4i> quadspos      = {};
-//   vector<vec4i> quadsnorm     = {};
-//   vector<vec4i> quadstexcoord = {};
-
-//   // vertex data
-//   vector<vec3f> positions = {};
-//   vector<vec3f> normals   = {};
-//   vector<vec2f> texcoords = {};
-
-//   // subdivision data
-//   int  subdivisions = 0;
-//   bool catmullclark = true;
-//   bool smooth       = true;
-
-//   // displacement data
-//   float          displacement     = 0;
-//   texture_handle displacement_tex = invalid_handle;
-
-//   // shape reference
-//   shape_handle shape = invalid_handle;
-// };
-
 static bool draw_scene_editor(gui_window* win, scene_scene& scene,
     scene_selection& selection, const function<void()>& before_edit) {
   auto edited = 0;
@@ -350,15 +260,15 @@ static bool draw_scene_editor(gui_window* win, scene_scene& scene,
 namespace yocto {
 
 // Open a window and show an image
-void view_image(const string& title, const string& name,
-    const image_data& image, const progress_callback& progress_cb) {
+void view_image(
+    const string& title, const string& name, const image_data& image) {
   // display image
-  if (progress_cb) progress_cb("tonemap image", 0, 1);
+  log_progress("tonemap image", 0, 1);
   auto  display  = make_image(image.width, image.height, false, true);
   float exposure = 0;
   bool  filmic   = false;
   tonemap_image_mt(display, image, exposure, filmic);
-  if (progress_cb) progress_cb("tonemap image", 1, 1);
+  log_progress("tonemap image", 1, 1);
 
   // opengl image
   auto glimage  = ogl_image{};
@@ -384,10 +294,10 @@ void view_image(const string& title, const string& name,
   callbacks.widgets_cb = [&](gui_window* win, const gui_input& input) {
     draw_combobox(win, "name", selected, names);
     if (draw_tonemap_params(win, input, exposure, filmic)) {
-      if (progress_cb) progress_cb("tonemap image", 0, 1);
+      log_progress("tonemap image", 0, 1);
       tonemap_image_mt(display, image, exposure, filmic);
       set_image(glimage, display, false, false);
-      if (progress_cb) progress_cb("tonemap image", 0, 1);
+      log_progress("tonemap image", 0, 1);
     }
     draw_image_inspector(win, input, image, display, glparams);
   };
@@ -401,20 +311,19 @@ void view_image(const string& title, const string& name,
 
 // Open a window and show an image
 void view_images(const string& title, const vector<string>& names,
-    const vector<image_data>& images, const progress_callback& progress_cb) {
+    const vector<image_data>& images) {
   // display image
-  if (progress_cb) progress_cb("tonemap image", 0, (int)images.size());
+  log_progress("tonemap image", 0, (int)images.size());
   auto displays  = vector<image_data>(images.size());
   auto exposures = vector<float>(images.size(), 0);
   auto filmics   = vector<bool>(images.size(), false);
   for (auto idx = 0; idx < (int)images.size(); idx++) {
-    if (progress_cb) progress_cb("tonemap image", idx, (int)images.size());
+    log_progress("tonemap image", idx, (int)images.size());
     displays[idx] = make_image(
         images[idx].width, images[idx].height, false, true);
     tonemap_image_mt(displays[idx], images[idx], exposures[idx], filmics[idx]);
   }
-  if (progress_cb)
-    progress_cb("tonemap image", (int)images.size(), (int)images.size());
+  log_progress("tonemap image", (int)images.size(), (int)images.size());
 
   // opengl image
   auto glimages  = vector<ogl_image>(images.size());
@@ -444,12 +353,12 @@ void view_images(const string& title, const vector<string>& names,
     draw_combobox(win, "name", selected, names);
     auto filmic = (bool)filmics[selected];  // vector of bool ...
     if (draw_tonemap_params(win, input, exposures[selected], filmic)) {
-      if (progress_cb) progress_cb("tonemap image", 0, 1);
+      log_progress("tonemap image", 0, 1);
       filmics[selected] = filmic;
       tonemap_image_mt(displays[selected], images[selected],
           exposures[selected], filmics[selected]);
       set_image(glimages[selected], displays[selected], false, false);
-      if (progress_cb) progress_cb("tonemap image", 1, 1);
+      log_progress("tonemap image", 1, 1);
     }
     draw_image_inspector(
         win, input, images[selected], displays[selected], glparamss[selected]);
@@ -463,16 +372,16 @@ void view_images(const string& title, const vector<string>& names,
 }
 
 // Open a window and show an image
-void colorgrade_image(const string& title, const string& name,
-    const image_data& image, const progress_callback& progress_cb) {
+void colorgrade_image(
+    const string& title, const string& name, const image_data& image) {
   // color grading parameters
   auto params = colorgrade_params{};
 
   // display image
-  if (progress_cb) progress_cb("colorgrade image", 0, 1);
+  log_progress("colorgrade image", 0, 1);
   auto display = make_image(image.width, image.height, false, true);
   colorgrade_image_mt(display, image, params);
-  if (progress_cb) progress_cb("colorgrade image", 1, 1);
+  log_progress("colorgrade image", 1, 1);
 
   // opengl image
   auto glimage  = ogl_image{};
@@ -518,10 +427,10 @@ void colorgrade_image(const string& title, const string& name,
           win, "highlights color", params.highlights_color);
       end_header(win);
       if (edited) {
-        if (progress_cb) progress_cb("colorgrade image", 0, 1);
+        log_progress("colorgrade image", 0, 1);
         colorgrade_image_mt(display, image, params);
         set_image(glimage, display, false, false);
-        if (progress_cb) progress_cb("colorgrade image", 0, 1);
+        log_progress("colorgrade image", 0, 1);
       }
     }
     draw_image_inspector(win, input, image, display, glparams);
@@ -536,11 +445,10 @@ void colorgrade_image(const string& title, const string& name,
 
 // Open a window and show a shape via path tracing
 void view_shape(const string& title, const string& name,
-    const shape_data& shape, bool addsky,
-    const progress_callback& progress_cb) {
+    const shape_data& shape, bool addsky) {
   // initialize path tracer scene
   auto scene = scene_scene{};
-  if (progress_cb) progress_cb("create scene", 0, 1);
+  log_progress("create scene", 0, 1);
   scene.shape_names.emplace_back("shape");
   scene.shapes.emplace_back(shape);
   scene.material_names.emplace_back("material");
@@ -552,21 +460,20 @@ void view_shape(const string& title, const string& name,
   instance.material = 0;
   add_camera(scene);
   if (addsky) add_sky(scene);
-  if (progress_cb) progress_cb("create scene", 0, 1);
+  log_progress("create scene", 0, 1);
 
   // run view
-  view_scene(title, name, scene, progress_cb);
+  view_scene(title, name, scene);
+}
+
+// Open a window and show an scene via path tracing
+void view_scene(const string& title, const string& name, scene_scene& scene) {
+  return view_scene(title, name, scene, "");
 }
 
 // Open a window and show an scene via path tracing
 void view_scene(const string& title, const string& name, scene_scene& scene,
-    const progress_callback& progress_cb) {
-  return view_scene(title, name, scene, "", progress_cb);
-}
-
-// Open a window and show an scene via path tracing
-void view_scene(const string& title, const string& name, scene_scene& scene,
-    const string& camname, const progress_callback& progress_cb) {
+    const string& camname) {
   // rendering params
   auto params     = trace_params{};
   auto has_lights = std::any_of(scene.instances.begin(), scene.instances.end(),
@@ -585,23 +492,22 @@ void view_scene(const string& title, const string& name, scene_scene& scene,
   params.camera = find_camera(scene, camname);
 
   // run viewer
-  view_scene(title, name, scene, params, progress_cb);
+  view_scene(title, name, scene, params);
 }
 
 #if 1
 
 // Open a window and show an scene via path tracing
 void view_scene(const string& title, const string& name, scene_scene& scene,
-    const trace_params& params_, const progress_callback& progress_cb,
-    bool edit) {
+    const trace_params& params_, bool edit) {
   // copy params and camera
   auto params = params_;
 
   // build bvh
-  auto bvh = make_bvh(scene, params, progress_cb);
+  auto bvh = make_bvh(scene, params);
 
   // init renderer
-  auto lights = make_lights(scene, params, progress_cb);
+  auto lights = make_lights(scene, params);
 
   // fix renderer type if no lights
   if (lights.lights.empty() && is_sampler_lit(params)) {
@@ -609,20 +515,12 @@ void view_scene(const string& title, const string& name, scene_scene& scene,
     params.sampler = trace_sampler_type::eyelight;
   }
 
-  // init images
-  auto trace_size = [](const scene_scene&   scene,
-                        const trace_params& params) -> vec2i {
-    auto& camera = scene.cameras[params.camera];
-    if (camera.aspect >= 1) {
-      return {params.resolution, (int)round(params.resolution / camera.aspect)};
-    } else {
-      return {(int)round(params.resolution * camera.aspect), params.resolution};
-    }
-  };
-  auto [width, height] = trace_size(scene, params);
-  auto image           = make_image(width, height, true, false);
-  auto display         = make_image(width, height, false, true);
-  tonemap_image_mt(display, image, params.exposure);
+  // init state
+  auto worker  = trace_worker{};
+  auto state   = make_state(scene, params);
+  auto image   = make_image(state.width, state.height, true, false);
+  auto display = make_image(state.width, state.height, false, true);
+  auto render  = make_image(state.width, state.height, true, false);
 
   // opengl image
   auto glimage  = ogl_image{};
@@ -640,10 +538,6 @@ void view_scene(const string& title, const string& name, scene_scene& scene,
     }
   }
 
-  // init state
-  auto worker = trace_worker{};
-  auto state  = trace_state{};
-
   // renderer update
   auto render_update  = std::atomic<bool>{};
   auto render_current = std::atomic<int>{};
@@ -652,17 +546,18 @@ void view_scene(const string& title, const string& name, scene_scene& scene,
     // stop render
     trace_stop(worker);
 
+    state   = make_state(scene, params);
+    image   = make_image(state.width, state.height, true, false);
+    display = make_image(state.width, state.height, false, true);
+    render  = make_image(state.width, state.height, true, false);
+
     // start render
-    trace_start(
-        worker, state, scene, bvh, lights, params,
-        [&](const string& message, int sample, int samples) {
-          if (progress_cb) progress_cb("render sample", sample, params.samples);
-          render_current = sample;
-        },
-        [&](const image_data& render, int sample, int samples) {
+    trace_start(render, worker, state, scene, bvh, lights, params,
+        [&](int sample, int samples) {
           // if (current > 0) return;
-          auto lock = std::lock_guard{render_mutex};
-          image     = render;
+          auto lock      = std::lock_guard{render_mutex};
+          render_current = sample;
+          image          = render;
           tonemap_image_mt(display, image, params.exposure);
           render_update = true;
         });
@@ -717,14 +612,6 @@ void view_scene(const string& title, const string& name, scene_scene& scene,
       end_header(win);
       if (edited) {
         trace_stop(worker);
-        // check image changes
-        auto [width, height]   = trace_size(scene, params);
-        auto [twidth, theight] = trace_size(scene, tparams);
-        if (width != twidth || height != theight) {
-          image   = make_image(twidth, theight, true, false);
-          display = make_image(twidth, theight, false, true);
-          set_image(glimage, display, false, false);
-        }
         params = tparams;
         reset_display();
       }
@@ -733,10 +620,10 @@ void view_scene(const string& title, const string& name, scene_scene& scene,
       edited += draw_slider(win, "exposure", params.exposure, -5, 5);
       end_header(win);
       if (edited) {
-        if (progress_cb) progress_cb("tonemap image", 0, 1);
+        log_progress("tonemap image", 0, 1);
         tonemap_image_mt(display, image, params.exposure);
         set_image(glimage, display, false, false);
-        if (progress_cb) progress_cb("tonemap image", 0, 1);
+        log_progress("tonemap image", 0, 1);
       }
     }
     draw_image_inspector(win, input, image, display, glparams);
@@ -794,7 +681,7 @@ void to_params(gui_params& uiparams, const trace_params& params,
 
 // Open a window and show an scene via path tracing
 void view_scene(const string& title, const string& name, scene_scene& scene,
-    const trace_params& params_, const progress_callback& progress_cb) {
+    const trace_params& params_) {
   // open viewer
   auto viewer = make_imageviewer(title);
 
@@ -802,10 +689,10 @@ void view_scene(const string& title, const string& name, scene_scene& scene,
   auto params = params_;
 
   // build bvh
-  auto bvh = make_bvh(scene, params, progress_cb);
+  auto bvh = make_bvh(scene, params);
 
   // init renderer
-  auto lights = make_lights(scene, params, progress_cb);
+  auto lights = make_lights(scene, params);
 
   // fix renderer type if no lights
   if (lights.lights.empty() && is_sampler_lit(params)) {
@@ -822,7 +709,7 @@ void view_scene(const string& title, const string& name, scene_scene& scene,
       [&viewer, &progress_cb, name](
           const string& message, int sample, int nsamples) {
         set_param(viewer, name, "sample", {sample, {1, 4096}, true});
-        if (progress_cb) progress_cb(message, sample, nsamples);
+        log_progress(message, sample, nsamples);
       },
       [&viewer, name](const image_data& render, int current, int total) {
         set_image(viewer, name, render);
@@ -851,7 +738,7 @@ void view_scene(const string& title, const string& name, scene_scene& scene,
             [&viewer, &progress_cb, name](
                 const string& message, int sample, int nsamples) {
               set_param(viewer, name, "sample", {sample, {1, 4096}, true});
-              if (progress_cb) progress_cb(message, sample, nsamples);
+              log_progress(message, sample, nsamples);
             },
             [&viewer, name](const image_data& render, int current, int total) {
               set_image(viewer, name, render);
@@ -879,7 +766,7 @@ void view_scene(const string& title, const string& name, scene_scene& scene,
           [&viewer, &progress_cb, name](
               const string& message, int sample, int nsamples) {
             set_param(viewer, name, "sample", {sample, {1, 4096}, true});
-            if (progress_cb) progress_cb(message, sample, nsamples);
+            log_progress(message, sample, nsamples);
           },
           [&viewer, name](const image_data& render, int current, int total) {
             set_image(viewer, name, render);
@@ -896,8 +783,7 @@ void view_scene(const string& title, const string& name, scene_scene& scene,
 
 #endif
 
-static void init_glscene(shade_scene& glscene, const sceneio_scene& ioscene,
-    progress_callback progress_cb) {
+static void init_glscene(shade_scene& glscene, const sceneio_scene& ioscene) {
   // handle progress
   auto progress = vec2i{
       0, (int)ioscene.cameras.size() + (int)ioscene.materials.size() +
@@ -909,7 +795,7 @@ static void init_glscene(shade_scene& glscene, const sceneio_scene& ioscene,
 
   // camera
   for (auto& iocamera : ioscene.cameras) {
-    if (progress_cb) progress_cb("convert camera", progress.x++, progress.y);
+    log_progress("convert camera", progress.x++, progress.y);
     auto& camera = glscene.cameras.at(add_camera(glscene));
     set_frame(camera, iocamera.frame);
     set_lens(camera, iocamera.lens, iocamera.aspect, iocamera.film);
@@ -918,7 +804,7 @@ static void init_glscene(shade_scene& glscene, const sceneio_scene& ioscene,
 
   // textures
   for (auto& iotexture : ioscene.textures) {
-    if (progress_cb) progress_cb("convert texture", progress.x++, progress.y);
+    log_progress("convert texture", progress.x++, progress.y);
     auto  handle    = add_texture(glscene);
     auto& gltexture = glscene.textures[handle];
     if (!iotexture.pixelsf.empty()) {
@@ -932,7 +818,7 @@ static void init_glscene(shade_scene& glscene, const sceneio_scene& ioscene,
 
   // material
   for (auto& iomaterial : ioscene.materials) {
-    if (progress_cb) progress_cb("convert material", progress.x++, progress.y);
+    log_progress("convert material", progress.x++, progress.y);
     auto  handle     = add_material(glscene);
     auto& glmaterial = glscene.materials[handle];
     set_emission(glmaterial, iomaterial.emission, iomaterial.emission_tex);
@@ -976,7 +862,7 @@ static void init_glscene(shade_scene& glscene, const sceneio_scene& ioscene,
 
   // shapes
   for (auto& ioshape : ioscene.shapes) {
-    if (progress_cb) progress_cb("convert shape", progress.x++, progress.y);
+    log_progress("convert shape", progress.x++, progress.y);
     add_shape(glscene, ioshape.points, ioshape.lines, ioshape.triangles,
         ioshape.quads, ioshape.positions, ioshape.normals, ioshape.texcoords,
         ioshape.colors);
@@ -984,7 +870,7 @@ static void init_glscene(shade_scene& glscene, const sceneio_scene& ioscene,
 
   // shapes
   for (auto& ioinstance : ioscene.instances) {
-    if (progress_cb) progress_cb("convert instance", progress.x++, progress.y);
+    log_progress("convert instance", progress.x++, progress.y);
     auto  handle     = add_instance(glscene);
     auto& glinstance = glscene.instances[handle];
     set_frame(glinstance, ioinstance.frame);
@@ -1005,14 +891,13 @@ static void init_glscene(shade_scene& glscene, const sceneio_scene& ioscene,
   init_environments(glscene);
 
   // done
-  if (progress_cb) progress_cb("convert done", progress.x++, progress.y);
+  log_progress("convert done", progress.x++, progress.y);
 }
 
 using glview_scene_callback = std::function<void(gui_window* win,
     const gui_input& input, scene_scene& scene, shade_scene& glscene)>;
 
 void glview_scene(scene_scene& scene, const string& name, const string& camname,
-    const progress_callback&     progress_cb,
     const glview_scene_callback& widgets_callback,
     const glview_scene_callback& uiupdate_callback) {
   // glscene
@@ -1027,9 +912,8 @@ void glview_scene(scene_scene& scene, const string& name, const string& camname,
 
   // callbacks
   auto callbacks    = gui_callbacks{};
-  callbacks.init_cb = [&glscene, &scene, &progress_cb](
-                          gui_window* win, const gui_input& input) {
-    init_glscene(glscene, scene, progress_cb);
+  callbacks.init_cb = [&](gui_window* win, const gui_input& input) {
+    init_glscene(glscene, scene);
   };
   callbacks.clear_cb = [&](gui_window* win, const gui_input& input) {
     clear_scene(glscene);

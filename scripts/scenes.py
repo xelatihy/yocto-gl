@@ -16,7 +16,7 @@ def cli():
 def view(directory='mcguire', scene='*', format='json', mode='path'):
     modes = {
         'path': '-r 720',
-        'embree': '-r 720 --bvh embree-highquality',
+        'embree': '-r 720 --embreebvh',
         'eyelight': '-r 720 -t eyelight',
         'eyelight-quick': '-r 720 -s 16 -t eyelight'
     }
@@ -42,13 +42,10 @@ def render(directory='mcguire', scene='*', format='json', mode='path'):
     modes = {
         'path': '-s 64 -r 1280',
         'path-face': '-s 256 -r 1280',
-        'embree': '-s 256 -r 1280 --bvh embree-highquality',
-        'embree-compact': '-s 256 -r 1280 --bvh embree-compact',
+        'embree': '-s 256 -r 1280 --embreebvh',
         'eyelight': '-s 16 -r 1280 -t eyelight',
-        'embree-face': '-s 1024 -r 1280 --bvh embree-highquality',
-        'final': '-s 4096 -r 1280 --bvh embree-highquality',
-        'final-compact': '-s 4096 -r 1280 --bvh embree-compact',
-        'final-face': '-s 4096 -r 1280 --bvh embree-highquality',
+        'embree-face': '-s 1024 -r 1280 --embreebvh',
+        'final': '-s 4096 -r 1280 --embreebvh',
     }
     options = modes[mode]
     outformat = 'png' if 'eyelight' in mode else 'hdr'

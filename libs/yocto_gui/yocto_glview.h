@@ -67,41 +67,36 @@ using std::vector;
 namespace yocto {
 
 // Open a window and show an image
-void view_image(const string& title, const string& name,
-    const image_data& image, const progress_callback& progress_cb = {});
+void view_image(
+    const string& title, const string& name, const image_data& image);
 
 // Open a window and show a set of images
 void view_images(const string& title, const vector<string>& names,
-    const vector<image_data>& images,
-    const progress_callback&  progress_cb = {});
+    const vector<image_data>& images);
 
 // Open a window and show an image for color grading
-void colorgrade_image(const string& title, const string& name,
-    const image_data& image, const progress_callback& progress_cb = {});
+void colorgrade_image(
+    const string& title, const string& name, const image_data& image);
 
 // Open a window and show a shape via path tracing
 void view_shape(const string& title, const string& name,
-    const shape_data& shape, bool addsky = false,
-    const progress_callback& progress_cb = {});
+    const shape_data& shape, bool addsky = false);
+
+// Open a window and show an scene via path tracing
+void view_scene(const string& title, const string& name, scene_scene& scene);
 
 // Open a window and show an scene via path tracing
 void view_scene(const string& title, const string& name, scene_scene& scene,
-    const progress_callback& progress_cb = {});
+    const string& camname);
 
 // Open a window and show an scene via path tracing
 void view_scene(const string& title, const string& name, scene_scene& scene,
-    const string& camname, const progress_callback& progress_cb = {});
-
-// Open a window and show an scene via path tracing
-void view_scene(const string& title, const string& name, scene_scene& scene,
-    const trace_params& params, const progress_callback& progress_cb = {},
-    bool edit = false);
+    const trace_params& params, bool edit = false);
 
 using glview_scene_callback = std::function<void(gui_window* win,
     const gui_input& input, scene_scene& scene, shade_scene& glscene)>;
 
 void glview_scene(scene_scene& scene, const string& name, const string& camname,
-    const progress_callback&     progress_cb,
     const glview_scene_callback& widgets_callback  = {},
     const glview_scene_callback& uiupdate_callback = {});
 

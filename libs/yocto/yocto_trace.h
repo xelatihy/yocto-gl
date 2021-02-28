@@ -82,7 +82,7 @@ enum struct trace_sampler_type {
 // Type of false color visualization
 enum struct trace_falsecolor_type {
   // clang-format off
-  position, normal, frontfacing, gnormal, gfrontfacing, texcoord, color,
+  position, normal, frontfacing, gnormal, gfrontfacing, texcoord, mtype, color,
   emission, roughness, opacity, instance, shape, material, element, highlight
   // clang-format on
 };
@@ -92,42 +92,38 @@ const auto trace_default_seed = 961748941ull;
 
 // Options for trace functions
 struct trace_params {
-  int                   camera     = 0;
-  int                   resolution = 1280;
-  trace_sampler_type    sampler    = trace_sampler_type::path;
-  trace_falsecolor_type falsecolor = trace_falsecolor_type::color;
-  int                   samples    = 512;
-  int                   bounces    = 8;
-  float                 clamp      = 100;
-  bool                  nocaustics = false;
-  bool                  envhidden  = false;
-  bool                  tentfilter = false;
-  uint64_t              seed       = trace_default_seed;
-  bvh_type              bvh        = bvh_type::default_;
-  bool                  noparallel = false;
-  int                   pratio     = 8;
-  float                 exposure   = 0;
+  int                   camera         = 0;
+  int                   resolution     = 1280;
+  trace_sampler_type    sampler        = trace_sampler_type::path;
+  trace_falsecolor_type falsecolor     = trace_falsecolor_type::color;
+  int                   samples        = 512;
+  int                   bounces        = 8;
+  float                 clamp          = 100;
+  bool                  nocaustics     = false;
+  bool                  envhidden      = false;
+  bool                  tentfilter     = false;
+  uint64_t              seed           = trace_default_seed;
+  bool                  embreebvh      = false;
+  bool                  highqualitybvh = false;
+  bool                  noparallel     = false;
+  int                   pratio         = 8;
+  float                 exposure       = 0;
 };
 
 inline const auto trace_sampler_names = std::vector<std::string>{
     "path", "naive", "eyelight", "falsecolor", "dalbedo", "dnormal"};
 
 inline const auto trace_falsecolor_names = vector<string>{"position", "normal",
-    "frontfacing", "gnormal", "gfrontfacing", "texcoord", "color", "emission",
-    "roughness", "opacity", "instance", "shape", "material", "element",
-    "highlight"};
+    "frontfacing", "gnormal", "gfrontfacing", "texcoord", "mtype", "color",
+    "emission", "roughness", "opacity", "instance", "shape", "material",
+    "element", "highlight"};
 
 // Progress report callback
-using progress_callback =
-    function<void(const string& message, int current, int total)>;
-// Callback used to report partially computed image
-using image_callback =
-    function<void(const image_data& render, int current, int total)>;
+using image_callback = function<void(int current, int total)>;
 
 // Progressively computes an image.
 image_data trace_image(const scene_scene& scene, const trace_params& params,
-    const progress_callback& progress_cb = {},
-    const image_callback&    image_cb    = {});
+    const image_callback& image_cb = {});
 
 }  // namespace yocto
 
@@ -148,31 +144,11 @@ struct trace_lights {
   vector<trace_light> lights = {};
 };
 
-// Initialize lights.
-trace_lights make_lights(const scene_scene& scene, const trace_params& params,
-    const progress_callback& progress_cb = {});
-
-// Define BVH
-using trace_bvh = bvh_scene;
-
-// Build the bvh acceleration structure.
-trace_bvh make_bvh(const scene_scene& scene, const trace_params& params,
-    const progress_callback& progress_cb = {});
-
-// Progressively computes an image.
-image_data trace_image(const scene_scene& scene, const trace_bvh& bvh,
-    const trace_lights& lights, const trace_params& params,
-    const progress_callback& progress_cb = {},
-    const image_callback&    image_cb    = {});
-
 // Check is a sampler requires lights
 bool is_sampler_lit(const trace_params& params);
 
 // Trace state
 struct trace_state {
-  // final rendered image
-  image_data image = {};
-  // computing buffers
   int               width        = 0;
   int               height       = 0;
   vector<vec4f>     accumulation = {};
@@ -180,22 +156,30 @@ struct trace_state {
   vector<rng_state> rngs         = {};
 };
 
+// Initialize state.
+trace_state make_state(const scene_scene& scene, const trace_params& params);
+
+// Initialize lights.
+trace_lights make_lights(const scene_scene& scene, const trace_params& params);
+
+// Build the bvh acceleration structure.
+bvh_scene make_bvh(const scene_scene& scene, const trace_params& params);
+
+// Progressively computes an image.
+void trace_image(image_data& image, trace_state& state,
+    const scene_scene& scene, const bvh_scene& bvh, const trace_lights& lights,
+    const trace_params& params, const image_callback& image_cb = {});
+
 // [experimental] Asynchronous state
 struct trace_worker {
   future<void> worker = {};  // async
   atomic<bool> stop   = {};  // async
 };
 
-// [experimental] Callback used to report partially computed image
-using async_callback = function<void(
-    const image_data& render, int current, int total, const vec2i& ij)>;
-
 // [experimental] Asynchronous interface
-struct trace_state;
-void trace_start(trace_worker& worker, trace_state& state,
-    const scene_scene& scene, const trace_bvh& bvh, const trace_lights& lights,
-    const trace_params& params, const progress_callback& progress_cb = {},
-    const image_callback& image_cb = {}, const async_callback& async_cb = {});
+void trace_start(image_data& image, trace_worker& worker, trace_state& state,
+    const scene_scene& scene, const bvh_scene& bvh, const trace_lights& lights,
+    const trace_params& params, const image_callback& image_cb = {});
 void trace_stop(trace_worker& worker);
 
 }  // namespace yocto

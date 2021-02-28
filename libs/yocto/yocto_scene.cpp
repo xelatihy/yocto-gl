@@ -37,6 +37,7 @@
 #include <unordered_map>
 
 #include "ext/stb_image_resize.h"
+#include "yocto_cli.h"
 #include "yocto_color.h"
 #include "yocto_geometry.h"
 #include "yocto_image.h"
@@ -213,12 +214,22 @@ void tonemap_image(
   if (image.width != result.width || image.height != result.height)
     throw std::invalid_argument{"image should be the same size"};
   if (result.linear) throw std::invalid_argument{"ldr expected"};
-  if (!image.linear) throw std::invalid_argument{"hdr expected"};
-  for (auto j = 0; j < image.height; j++) {
-    for (auto i = 0; i < image.width; i++) {
-      auto hdr = get_pixel(image, i, j);
-      auto ldr = tonemap(hdr, exposure, filmic);
-      set_pixel(result, i, j, ldr);
+  if (image.linear) {
+    for (auto j = 0; j < image.height; j++) {
+      for (auto i = 0; i < image.width; i++) {
+        auto hdr = get_pixel(image, i, j);
+        auto ldr = tonemap(hdr, exposure, filmic);
+        set_pixel(result, i, j, ldr);
+      }
+    }
+  } else {
+    auto scale = vec4f{pow(2, exposure), pow(2, exposure), pow(2, exposure), 1};
+    for (auto j = 0; j < image.height; j++) {
+      for (auto i = 0; i < image.width; i++) {
+        auto hdr = get_pixel(image, i, j);
+        auto ldr = hdr * scale;
+        set_pixel(result, i, j, ldr);
+      }
     }
   }
 }
@@ -228,13 +239,22 @@ void tonemap_image_mt(
   if (image.width != result.width || image.height != result.height)
     throw std::invalid_argument{"image should be the same size"};
   if (result.linear) throw std::invalid_argument{"ldr expected"};
-  if (!image.linear) throw std::invalid_argument{"hdr expected"};
-  parallel_for(image.width, image.height,
-      [&result, &image, exposure, filmic](int i, int j) {
-        auto hdr = get_pixel(image, i, j);
-        auto ldr = tonemap(hdr, exposure, filmic);
-        set_pixel(result, i, j, ldr);
-      });
+  if (image.linear) {
+    parallel_for(image.width, image.height,
+        [&result, &image, exposure, filmic](int i, int j) {
+          auto hdr = get_pixel(image, i, j);
+          auto ldr = tonemap(hdr, exposure, filmic);
+          set_pixel(result, i, j, ldr);
+        });
+  } else {
+    auto scale = vec4f{pow(2, exposure), pow(2, exposure), pow(2, exposure), 1};
+    parallel_for(
+        image.width, image.height, [&result, &image, scale](int i, int j) {
+          auto hdr = get_pixel(image, i, j);
+          auto ldr = hdr * scale;
+          set_pixel(result, i, j, ldr);
+        });
+  }
 }
 
 // Resize an image.
@@ -251,19 +271,19 @@ image_data resize_image(
         res_height * (double)image.width / (double)image.height);
   }
   if (!image.pixelsf.empty()) {
-    auto result = make_image(res_width, res_height, image.linear, true);
-    stbir_resize_uint8_generic((byte*)image.pixelsb.data(), (int)image.width,
-        (int)image.height, (int)(sizeof(vec4b) * image.width),
-        (byte*)result.pixelsb.data(), (int)result.width, (int)result.height,
-        (int)(sizeof(vec4b) * result.width), 4, 3, 0, STBIR_EDGE_CLAMP,
-        STBIR_FILTER_DEFAULT, STBIR_COLORSPACE_LINEAR, nullptr);
-    return result;
-  } else {
     auto result = make_image(res_width, res_height, image.linear, false);
     stbir_resize_float_generic((float*)image.pixelsf.data(), (int)image.width,
         (int)image.height, (int)(sizeof(vec4f) * image.width),
         (float*)result.pixelsf.data(), (int)result.width, (int)result.height,
         (int)(sizeof(vec4f) * result.width), 4, 3, 0, STBIR_EDGE_CLAMP,
+        STBIR_FILTER_DEFAULT, STBIR_COLORSPACE_LINEAR, nullptr);
+    return result;
+  } else {
+    auto result = make_image(res_width, res_height, image.linear, true);
+    stbir_resize_uint8_generic((byte*)image.pixelsb.data(), (int)image.width,
+        (int)image.height, (int)(sizeof(vec4b) * image.width),
+        (byte*)result.pixelsb.data(), (int)result.width, (int)result.height,
+        (int)(sizeof(vec4b) * result.width), 4, 3, 0, STBIR_EDGE_CLAMP,
         STBIR_FILTER_DEFAULT, STBIR_COLORSPACE_LINEAR, nullptr);
     return result;
   }
@@ -1503,20 +1523,19 @@ void tesselate_subdiv(
       subdiv.positions, subdiv.normals, subdiv.texcoords);
 }
 
-void tesselate_shapes(
-    scene_scene& scene, const progress_callback& progress_cb) {
+void tesselate_shapes(scene_scene& scene) {
   // handle progress
   auto progress = vec2i{0, (int)scene.subdivs.size() + 1};
-  if (progress_cb) progress_cb("tesselate subdivs", progress.x++, progress.y);
+  log_progress("tesselate subdivs", progress.x++, progress.y);
 
   // tesselate shapes
   for (auto& subdiv : scene.subdivs) {
-    if (progress_cb) progress_cb("tesselate subdiv", progress.x++, progress.y);
+    log_progress("tesselate subdiv", progress.x++, progress.y);
     tesselate_subdiv(scene.shapes[subdiv.shape], subdiv, scene);
   }
 
   // done
-  if (progress_cb) progress_cb("tesselate subdivs", progress.x++, progress.y);
+  log_progress("tesselate subdivs", progress.x++, progress.y);
 }
 
 }  // namespace yocto
