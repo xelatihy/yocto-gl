@@ -3792,6 +3792,18 @@ static bool load_gltf_scene(const string& filename, scene_scene& scene,
           material.roughness_tex = get_texture(
               gpbr, "metallicRoughnessTexture");
         }
+        if (gmaterial.contains("extensions") &&
+            gmaterial.at("extensions").contains("KHR_materials_transmission")) {
+          auto& gtransmission =
+              gmaterial.at("extensions").at("KHR_materials_transmission");
+          auto transmission = gtransmission.value("transmissionFactor", 1.0f);
+          if (transmission > 0) {
+            material.type      = material_type::thinglass;
+            material.color     = {transmission, transmission, transmission};
+            material.color_tex = get_texture(gmaterial, "transmissionTexture");
+            material.roughness = 0;
+          }
+        }
       }
     } catch (...) {
       return parse_error();
