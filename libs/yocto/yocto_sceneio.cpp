@@ -3861,6 +3861,7 @@ static bool load_gltf_scene(const string& filename, scene_scene& scene,
               data = (float*)shape.radius.data();
             } else {
               // ignore
+              continue;
             }
             // convert values
             auto current = buffer.data() +
