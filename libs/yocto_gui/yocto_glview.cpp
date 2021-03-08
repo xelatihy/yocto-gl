@@ -445,7 +445,7 @@ void colorgrade_image(
 
 // Open a window and show a shape via path tracing
 void view_shape(const string& title, const string& name,
-    const shape_data& shape, bool addsky) {
+    const scene_shape& shape, bool addsky) {
   // initialize path tracer scene
   auto scene = scene_scene{};
   log_progress("create scene", 0, 1);
@@ -825,26 +825,26 @@ static void init_glscene(shade_scene& glscene, const sceneio_scene& ioscene) {
     set_opacity(glmaterial, iomaterial.opacity, invalid_handle);
     set_normalmap(glmaterial, iomaterial.normal_tex);
     switch (iomaterial.type) {
-      case material_type::matte: {
+      case scene_material_type::matte: {
         set_color(glmaterial, iomaterial.color, iomaterial.color_tex);
         set_specular(glmaterial, 0, invalid_handle);
         set_metallic(glmaterial, 0, invalid_handle);
         set_roughness(glmaterial, 0, invalid_handle);
       } break;
-      case material_type::plastic: {
+      case scene_material_type::plastic: {
         set_color(glmaterial, iomaterial.color, iomaterial.color_tex);
         set_specular(glmaterial, 1, invalid_handle);
         set_metallic(glmaterial, 0, invalid_handle);
         set_roughness(glmaterial, iomaterial.roughness, invalid_handle);
       } break;
-      case material_type::metal: {
+      case scene_material_type::metal: {
         set_color(glmaterial, iomaterial.color, iomaterial.color_tex);
         set_specular(glmaterial, 0, invalid_handle);
         set_metallic(glmaterial, 1, invalid_handle);
         set_roughness(
             glmaterial, iomaterial.roughness, iomaterial.roughness_tex);
       } break;
-      case material_type::metallic: {
+      case scene_material_type::metallic: {
         set_color(glmaterial, iomaterial.color, iomaterial.color_tex);
         set_specular(glmaterial, 1, invalid_handle);
         set_metallic(glmaterial, iomaterial.metallic, invalid_handle);

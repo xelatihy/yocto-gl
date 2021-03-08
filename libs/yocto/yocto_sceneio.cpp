@@ -759,7 +759,7 @@ bool save_texture(
 namespace yocto {
 
 // Load ply mesh
-bool load_shape(const string& filename, shape_data& shape, string& error,
+bool load_shape(const string& filename, scene_shape& shape, string& error,
     bool flip_texcoord) {
   auto format_error = [filename, &error]() {
     error = filename + ": unknown format";
@@ -825,7 +825,7 @@ bool load_shape(const string& filename, shape_data& shape, string& error,
 }
 
 // Save ply mesh
-bool save_shape(const string& filename, const shape_data& shape, string& error,
+bool save_shape(const string& filename, const scene_shape& shape, string& error,
     bool flip_texcoord, bool ascii) {
   auto format_error = [filename, &error]() {
     error = filename + ": unknown format";
@@ -939,7 +939,7 @@ bool save_shape(const string& filename, const shape_data& shape, string& error,
 }
 
 // Load ply mesh
-bool load_fvshape(const string& filename, fvshape_data& shape, string& error,
+bool load_fvshape(const string& filename, scene_fvshape& shape, string& error,
     bool flip_texcoord) {
   auto format_error = [filename, &error]() {
     error = filename + ": unknown format";
@@ -1001,7 +1001,7 @@ bool load_fvshape(const string& filename, fvshape_data& shape, string& error,
 }
 
 // Save ply mesh
-bool save_fvshape(const string& filename, const fvshape_data& shape,
+bool save_fvshape(const string& filename, const scene_fvshape& shape,
     string& error, bool flip_texcoord, bool ascii) {
   auto format_error = [filename, &error]() {
     error = filename + ": unknown format";
@@ -1102,34 +1102,34 @@ bool save_fvshape(const string& filename, const fvshape_data& shape,
 }
 
 // Shape presets used ofr testing.
-bool make_shape_preset(shape_data& shape, const string& type, string& error) {
-  auto set_quads = [&](shape_data&& shape_) {
+bool make_shape_preset(scene_shape& shape, const string& type, string& error) {
+  auto set_quads = [&](scene_shape&& shape_) {
     shape.quads     = shape_.quads;
     shape.positions = shape_.positions;
     shape.normals   = shape_.normals;
     shape.texcoords = shape_.texcoords;
   };
-  auto set_triangles = [&](shape_data&& shape_) {
+  auto set_triangles = [&](scene_shape&& shape_) {
     shape.triangles = shape_.triangles;
     shape.positions = shape_.positions;
     shape.normals   = shape_.normals;
     shape.texcoords = shape_.texcoords;
   };
-  auto set_lines = [&](shape_data&& shape_) {
+  auto set_lines = [&](scene_shape&& shape_) {
     shape.lines     = shape_.lines;
     shape.positions = shape_.positions;
     shape.normals   = shape_.normals;
     shape.texcoords = shape_.texcoords;
     shape.radius    = shape_.radius;
   };
-  auto set_points = [&](shape_data&& shape_) {
+  auto set_points = [&](scene_shape&& shape_) {
     shape.points    = shape_.points;
     shape.positions = shape_.positions;
     shape.normals   = shape_.normals;
     shape.texcoords = shape_.texcoords;
     shape.radius    = shape_.radius;
   };
-  auto set_fvquads = [&](fvshape_data&& shape_) {
+  auto set_fvquads = [&](scene_fvshape&& shape_) {
     shape.quads     = shape_.quadspos;
     shape.positions = shape_.positions;
     shape.normals   = shape_.normals;
@@ -1281,8 +1281,8 @@ bool make_shape_preset(shape_data& shape, const string& type, string& error) {
 
 // Shape presets used for testing.
 bool make_fvshape_preset(
-    fvshape_data& shape, const string& type, string& error) {
-  auto set_quads = [&](shape_data&& shape_) {
+    scene_fvshape& shape, const string& type, string& error) {
+  auto set_quads = [&](scene_shape&& shape_) {
     shape.quadspos  = shape_.quads;
     shape.positions = shape_.positions;
     if (!shape_.normals.empty()) shape.quadsnorm = shape_.quads;
@@ -1290,16 +1290,16 @@ bool make_fvshape_preset(
     if (!shape_.texcoords.empty()) shape.quadstexcoord = shape_.quads;
     shape.texcoords = shape_.texcoords;
   };
-  auto set_triangles = [&](shape_data&& shape) {
+  auto set_triangles = [&](scene_shape&& shape) {
     throw std::invalid_argument{"bad shape type"};
   };
-  auto set_lines = [&](shape_data&& shape) {
+  auto set_lines = [&](scene_shape&& shape) {
     throw std::invalid_argument{"bad shape type"};
   };
-  auto set_points = [&](shape_data&& shape) {
+  auto set_points = [&](scene_shape&& shape) {
     throw std::invalid_argument{"bad shape type"};
   };
-  auto set_fvquads = [&](fvshape_data&& shape_) {
+  auto set_fvquads = [&](scene_fvshape&& shape_) {
     shape.quadspos      = shape_.quadspos;
     shape.quadsnorm     = shape_.quadsnorm;
     shape.quadstexcoord = shape_.quadstexcoord;
@@ -1729,10 +1729,10 @@ void make_test(scene_scene& scene, const test_params& params) {
   //             add_texture(scene, "floor", make_grid({1024, 1024}))));
   //   } break;
   // }
-  // auto shapes = vector<shape_handle>{}, shapesi = vector<shape_handle>{};
-  // auto subdivs   = vector<subdiv_handle>{};
-  // auto materials = vector<material_handle>{};
-  // switch (params.shapes) {
+  // auto shapes = vector<scene_shape_handle>{}, shapesi =
+  // vector<scene_shape_handle>{}; auto subdivs   =
+  // vector<scene_subdiv_handle>{}; auto materials =
+  // vector<scene_material_handle>{}; switch (params.shapes) {
   //   case test_shapes_type::features1: {
   //     auto bunny  = add_shape(scene, "sphere", make_sphere(32, 0.075, 1));
   //     auto sphere = add_shape(scene, "sphere", make_sphere(32, 0.075, 1));
@@ -2248,7 +2248,7 @@ bool save_instance(const string& filename, const vector<frame3f>& frames,
 
 // load subdiv
 bool load_subdiv(const string& filename, scene_subdiv& subdiv, string& error) {
-  auto lsubdiv = fvshape_data{};
+  auto lsubdiv = scene_fvshape{};
   if (!load_fvshape(filename, lsubdiv, error, true)) return false;
   subdiv.quadspos      = lsubdiv.quadspos;
   subdiv.quadsnorm     = lsubdiv.quadsnorm;
@@ -2262,7 +2262,7 @@ bool load_subdiv(const string& filename, scene_subdiv& subdiv, string& error) {
 // save subdiv
 bool save_subdiv(
     const string& filename, const scene_subdiv& subdiv, string& error) {
-  auto ssubdiv          = fvshape_data{};
+  auto ssubdiv          = scene_fvshape{};
   ssubdiv.quadspos      = subdiv.quadspos;
   ssubdiv.quadsnorm     = subdiv.quadsnorm;
   ssubdiv.quadstexcoord = subdiv.quadstexcoord;
@@ -2369,16 +2369,16 @@ inline void from_json(const njson& j, mat4f& value) {
   nlohmann::from_json(j, (array<float, 16>&)value);
 }
 
-inline void to_json(njson& j, material_type value) {
-  j = material_type_names.at((int)value);
+inline void to_json(njson& j, scene_material_type value) {
+  j = scene_material_names.at((int)value);
 }
-inline void from_json(const njson& j, material_type& value) {
+inline void from_json(const njson& j, scene_material_type& value) {
   auto values = j.get<string>();
   auto pos    = std::find(
-      material_type_names.begin(), material_type_names.end(), values);
-  if (pos == material_type_names.end())
+      scene_material_names.begin(), scene_material_names.end(), values);
+  if (pos == scene_material_names.end())
     throw std::invalid_argument{"unknown value"};
-  value = (material_type)(pos - material_type_names.begin());
+  value = (scene_material_type)(pos - scene_material_names.begin());
 }
 
 }  // namespace yocto
@@ -2439,9 +2439,9 @@ static bool load_json_scene(const string& filename, scene_scene& scene,
   };
 
   // parse json reference
-  auto shape_map = unordered_map<string, shape_handle>{};
+  auto shape_map = unordered_map<string, scene_shape_handle>{};
   auto get_shape = [&scene, &shape_map, &get_value](
-                       const njson& js, shape_handle& value) -> bool {
+                       const njson& js, scene_shape_handle& value) -> bool {
     auto name = ""s;
     if (!get_value(js, name)) return false;
     auto it = shape_map.find(name);
@@ -2458,10 +2458,11 @@ static bool load_json_scene(const string& filename, scene_scene& scene,
   };
 
   // parse json reference
-  auto material_map = unordered_map<string, material_handle>{};
+  auto material_map = unordered_map<string, scene_material_handle>{};
   auto material_set = vector<bool>{};
   auto get_material = [&scene, &material_map, &material_set, &get_value](
-                          const njson& js, material_handle& value) -> bool {
+                          const njson&           js,
+                          scene_material_handle& value) -> bool {
     auto name = ""s;
     if (!get_value(js, name)) return false;
     auto it = material_map.find(name);
@@ -2479,9 +2480,9 @@ static bool load_json_scene(const string& filename, scene_scene& scene,
   };
 
   // parse json reference
-  auto texture_map = unordered_map<string, texture_handle>{};
+  auto texture_map = unordered_map<string, scene_texture_handle>{};
   auto get_texture = [&scene, &texture_map, &get_value](
-                         const njson& js, texture_handle& value) -> bool {
+                         const njson& js, scene_texture_handle& value) -> bool {
     auto name = ""s;
     if (!get_value(js, name)) return false;
     auto it = texture_map.find(name);
@@ -2506,7 +2507,8 @@ static bool load_json_scene(const string& filename, scene_scene& scene,
   auto ply_instances_names  = vector<string>{};
   auto ply_instance_map     = unordered_map<string, ply_instance_handle>{
       {"", invalid_handle}};
-  auto instance_ply = unordered_map<instance_handle, ply_instance_handle>{};
+  auto instance_ply =
+      unordered_map<scene_instance_handle, ply_instance_handle>{};
   auto get_ply_instances = [&scene, &ply_instances, &ply_instances_names,
                                &ply_instance_map, &instance_ply,
                                &get_value](const njson& js,
@@ -2637,7 +2639,7 @@ static bool load_json_scene(const string& filename, scene_scene& scene,
         }
         auto& material = scene.materials.at(material_map.at(name));
         material_set[&material - &scene.materials.front()] = true;
-        material.type = material_type::metallic;
+        material.type = scene_material_type::metallic;
         for (auto& [key, value] : iterate_object(element)) {
           if (key == "type") {
             if (!get_value(value, material.type))
@@ -3282,23 +3284,23 @@ static bool load_obj_scene(const string& filename, scene_scene& scene,
   // handler for materials
   for (auto& omaterial : obj.materials) {
     auto& material        = scene.materials.emplace_back();
-    material.type         = material_type::metallic;
+    material.type         = scene_material_type::metallic;
     material.emission     = omaterial.emission;
     material.emission_tex = omaterial.emission_tex;
     if (max(omaterial.transmission) > 0.1) {
-      material.type      = material_type::thinglass;
+      material.type      = scene_material_type::thinglass;
       material.color     = omaterial.transmission;
       material.color_tex = omaterial.transmission_tex;
     } else if (max(omaterial.specular) > 0.2) {
-      material.type      = material_type::metal;
+      material.type      = scene_material_type::metal;
       material.color     = omaterial.specular;
       material.color_tex = omaterial.specular_tex;
     } else if (max(omaterial.specular) > 0) {
-      material.type      = material_type::plastic;
+      material.type      = scene_material_type::plastic;
       material.color     = omaterial.diffuse;
       material.color_tex = omaterial.diffuse_tex;
     } else {
-      material.type      = material_type::matte;
+      material.type      = scene_material_type::matte;
       material.color     = omaterial.diffuse;
       material.color_tex = omaterial.diffuse_tex;
     }
@@ -3752,7 +3754,7 @@ static bool load_gltf_scene(const string& filename, scene_scene& scene,
 
   // convert color textures
   auto get_texture = [&gltf](const njson& js,
-                         const string&    name) -> texture_handle {
+                         const string&    name) -> scene_texture_handle {
     if (!js.contains(name)) return invalid_handle;
     auto& ginfo    = js.at(name);
     auto& gtexture = gltf.at("textures").at(ginfo.value("index", -1));
@@ -3777,7 +3779,7 @@ static bool load_gltf_scene(const string& filename, scene_scene& scene,
     try {
       for (auto& gmaterial : gltf.at("materials")) {
         auto& material    = scene.materials.emplace_back();
-        material.type     = material_type::metallic;
+        material.type     = scene_material_type::metallic;
         material.emission = gmaterial.value("emissiveFactor", vec3f{0, 0, 0});
         material.emission_tex = get_texture(gmaterial, "emissiveTexture");
         material.normal_tex   = get_texture(gmaterial, "normalTexture");
@@ -3798,7 +3800,7 @@ static bool load_gltf_scene(const string& filename, scene_scene& scene,
               gmaterial.at("extensions").at("KHR_materials_transmission");
           auto transmission = gtransmission.value("transmissionFactor", 1.0f);
           if (transmission > 0) {
-            material.type      = material_type::thinglass;
+            material.type      = scene_material_type::thinglass;
             material.color     = {transmission, transmission, transmission};
             material.color_tex = get_texture(gmaterial, "transmissionTexture");
             // material.roughness = 0; // leave it set from before
@@ -4368,10 +4370,10 @@ static bool save_gltf_scene(const string& filename, const scene_scene& scene,
   }
 
   // meshes
-  using mesh_key = pair<shape_handle, material_handle>;
+  using mesh_key = pair<scene_shape_handle, scene_material_handle>;
   struct mesh_key_hash {
     size_t operator()(const mesh_key& v) const {
-      const std::hash<element_handle> hasher = std::hash<element_handle>();
+      const std::hash<int> hasher = std::hash<int>();
       auto                            h      = (size_t)0;
       h ^= hasher(v.first) + 0x9e3779b9 + (h << 6) + (h >> 2);
       h ^= hasher(v.second) + 0x9e3779b9 + (h << 6) + (h >> 2);
@@ -4563,13 +4565,13 @@ static bool load_pbrt_scene(const string& filename, scene_scene& scene,
   }
 
   // material type map
-  auto material_type_map = unordered_map<pbrt_mtype, material_type>{
-      {pbrt_mtype::matte, material_type::matte},
-      {pbrt_mtype::plastic, material_type::plastic},
-      {pbrt_mtype::metal, material_type::metal},
-      {pbrt_mtype::glass, material_type::glass},
-      {pbrt_mtype::thinglass, material_type::thinglass},
-      {pbrt_mtype::subsurface, material_type::matte},
+  auto material_type_map = unordered_map<pbrt_mtype, scene_material_type>{
+      {pbrt_mtype::matte, scene_material_type::matte},
+      {pbrt_mtype::plastic, scene_material_type::plastic},
+      {pbrt_mtype::metal, scene_material_type::metal},
+      {pbrt_mtype::glass, scene_material_type::glass},
+      {pbrt_mtype::thinglass, scene_material_type::thinglass},
+      {pbrt_mtype::subsurface, scene_material_type::matte},
   };
 
   // convert material
@@ -4577,7 +4579,7 @@ static bool load_pbrt_scene(const string& filename, scene_scene& scene,
     auto& material = scene.materials.emplace_back();
     material.type  = material_type_map.at(pmaterial.type);
     if (pmaterial.emission != zero3f) {
-      material.type = material_type::matte;
+      material.type = scene_material_type::matte;
     }
     material.emission  = pmaterial.emission;
     material.color     = pmaterial.color;
@@ -4738,14 +4740,14 @@ static bool save_pbrt_scene(const string& filename, const scene_scene& scene,
   }
 
   // material type map
-  auto material_type_map = unordered_map<material_type, pbrt_mtype>{
-      {material_type::matte, pbrt_mtype::matte},
-      {material_type::plastic, pbrt_mtype::plastic},
-      {material_type::metal, pbrt_mtype::metal},
-      {material_type::glass, pbrt_mtype::glass},
-      {material_type::thinglass, pbrt_mtype::thinglass},
-      {material_type::subsurface, pbrt_mtype::matte},
-      {material_type::volume, pbrt_mtype::matte},
+  auto material_type_map = unordered_map<scene_material_type, pbrt_mtype>{
+      {scene_material_type::matte, pbrt_mtype::matte},
+      {scene_material_type::plastic, pbrt_mtype::plastic},
+      {scene_material_type::metal, pbrt_mtype::metal},
+      {scene_material_type::glass, pbrt_mtype::glass},
+      {scene_material_type::thinglass, pbrt_mtype::thinglass},
+      {scene_material_type::subsurface, pbrt_mtype::matte},
+      {scene_material_type::volume, pbrt_mtype::matte},
   };
 
   // convert materials

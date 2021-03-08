@@ -68,7 +68,7 @@ int run_view(const view_params& params) {
 // view shapes
 int run_view(const view_params &params) {
   // shape data
-  auto shape = shape_data{};
+  auto shape = scene_shape{};
 
   // load mesh
   auto ioerror = ""s;
@@ -147,7 +147,7 @@ static scene_scene make_shapescene(const scene_shape &ioshape_) {
   // material
   log_progress("create material", progress.x++, progress.y);
   auto &shape_material     = scene.materials.emplace_back();
-  shape_material.type      = material_type::plastic;
+  shape_material.type      = scene_material_type::plastic;
   shape_material.color     = {0.5, 1, 0.5};
   shape_material.roughness = 0.2;
 
@@ -243,15 +243,15 @@ static scene_scene make_pathscene(const scene_shape &ioshape_) {
   // material
   log_progress("create material", progress.x++, progress.y);
   auto &shape_material      = scene.materials.emplace_back();
-  shape_material.type       = material_type::plastic;
+  shape_material.type       = scene_material_type::plastic;
   shape_material.color      = {0.5, 1, 0.5};
   shape_material.roughness  = 0.2;
   auto &points_material     = scene.materials.emplace_back();
-  points_material.type      = material_type::plastic;
+  points_material.type      = scene_material_type::plastic;
   points_material.color     = {1, 0.5, 0.5};
   points_material.roughness = 0.2;
   auto &lines_material      = scene.materials.emplace_back();
-  lines_material.type       = material_type::plastic;
+  lines_material.type       = scene_material_type::plastic;
   lines_material.color      = {0.5, 0.5, 1};
   lines_material.roughness  = 0.2;
 
@@ -435,7 +435,7 @@ struct sculpt_state {
 
 // Initialize all sculpting parameters.
 sculpt_state make_sculpt_state(
-    const shape_data &shape, const scene_texture &texture) {
+    const scene_shape &shape, const scene_texture &texture) {
   auto state = sculpt_state{};
   state.bvh  = make_triangles_bvh(
       shape.triangles, shape.positions, shape.radius);
@@ -450,7 +450,7 @@ sculpt_state make_sculpt_state(
   return state;
 }
 
-shape_data make_circle(
+scene_shape make_circle(
     const vec3f &center, const mat3f &basis, float radius, int steps) {
   // 4 initial vertices
   auto  lines    = make_lines({1, 4});
@@ -497,8 +497,8 @@ shape_data make_circle(
 }
 
 // To visualize mouse intersection on mesh
-shape_data make_cursor(const vec3f &position, const vec3f &normal, float radius,
-    float height = 0.05f) {
+scene_shape make_cursor(const vec3f &position, const vec3f &normal,
+    float radius, float height = 0.05f) {
   auto basis  = basis_fromz(normal);
   auto cursor = make_circle(position, basis, radius, 32);
   cursor.normals.clear();
@@ -917,10 +917,10 @@ static scene_scene make_sculptscene(const scene_shape &ioshape_) {
   // material
   log_progress("create material", progress.x++, progress.y);
   auto &shape_material  = scene.materials.emplace_back();
-  shape_material.type   = material_type::matte;
+  shape_material.type   = scene_material_type::matte;
   shape_material.color  = {0.78f, 0.31f, 0.23f};
   auto &cursor_material = scene.materials.emplace_back();
-  cursor_material.type  = material_type::matte;
+  cursor_material.type  = scene_material_type::matte;
 
   // shapes
   log_progress("create shape", progress.x++, progress.y);

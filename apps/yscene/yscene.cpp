@@ -81,7 +81,7 @@ int run_convert(const convert_params& params) {
   }
 
   // tesselate if needed
-  tesselate_shapes(scene);
+  tesselate_subdivs(scene);
 
   // make a directory if needed
   if (!make_scene_directories(params.output, scene, ioerror))
@@ -149,7 +149,7 @@ int run_render(const render_params& params_) {
   params.camera = find_camera(scene, params.camname);
 
   // tesselation
-  tesselate_shapes(scene);
+  tesselate_subdivs(scene);
 
   // build bvh
   auto bvh = make_bvh(scene, params);
@@ -247,7 +247,7 @@ int run_view(const view_params& params_) {
   if (params.addsky) add_sky(scene);
 
   // tesselation
-  tesselate_shapes(scene);
+  tesselate_subdivs(scene);
 
   // find camera
   params.camera = find_camera(scene, params.camname);
@@ -288,7 +288,7 @@ int run_glview(const glview_params& params) {
   if (!load_scene(params.scene, scene, ioerror)) print_fatal(ioerror);
 
   // tesselation
-  tesselate_shapes(scene);
+  tesselate_subdivs(scene);
 
   // run viewer
   glview_scene(

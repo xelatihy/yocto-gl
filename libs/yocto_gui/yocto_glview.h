@@ -80,7 +80,7 @@ void colorgrade_image(
 
 // Open a window and show a shape via path tracing
 void view_shape(const string& title, const string& name,
-    const shape_data& shape, bool addsky = false);
+    const scene_shape& shape, bool addsky = false);
 
 // Open a window and show an scene via path tracing
 void view_scene(const string& title, const string& name, scene_scene& scene);
