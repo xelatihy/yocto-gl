@@ -424,7 +424,7 @@ struct sculpt_state {
   vector<vector<int>> adjacencies = {};
   geodesic_solver     solver      = {};
   // brush
-  image_data tex_image = {};
+  color_image tex_image = {};
   // stroke
   vector<shape_point> stroke   = {};
   vec2f               last_uv  = {};
@@ -725,7 +725,7 @@ bool gaussian_brush(vector<vec3f> &positions, const hash_grid &grid,
 
 // Compute texture values through the parameterization
 bool texture_brush(vector<vec3f> &positions, vector<vec2f> &texcoords,
-    const geodesic_solver &solver, const image_data &texture,
+    const geodesic_solver &solver, const color_image &texture,
     const vector<vec3i> &triangles, const vector<vec3f> &base_positions,
     const vector<vec3f> &base_normals, const vector<shape_point> &stroke,
     const sculpt_params &params) {

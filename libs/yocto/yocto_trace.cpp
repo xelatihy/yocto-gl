@@ -827,7 +827,7 @@ bool is_sampler_lit(const trace_params& params) {
 }
 
 // Trace a block of samples
-void trace_sample(image_data& image, trace_state& state,
+void trace_sample(color_image& image, trace_state& state,
     const scene_scene& scene, const bvh_scene& bvh, const trace_lights& lights,
     int i, int j, const trace_params& params) {
   auto& camera  = scene.cameras[params.camera];
@@ -937,7 +937,7 @@ trace_lights make_lights(const scene_scene& scene, const trace_params& params) {
 }
 
 // Progressively computes an image.
-image_data trace_image(const scene_scene& scene, const trace_params& params,
+color_image trace_image(const scene_scene& scene, const trace_params& params,
     const image_callback& image_cb) {
   auto bvh    = make_bvh(scene, params);
   auto lights = make_lights(scene, params);
@@ -948,7 +948,7 @@ image_data trace_image(const scene_scene& scene, const trace_params& params,
 }
 
 // Progressively compute an image by calling trace_samples multiple times.
-void trace_image(image_data& image, trace_state& state,
+void trace_image(color_image& image, trace_state& state,
     const scene_scene& scene, const bvh_scene& bvh, const trace_lights& lights,
     const trace_params& params, const image_callback& image_cb) {
   for (auto sample = 0; sample < params.samples; sample++) {
@@ -971,7 +971,7 @@ void trace_image(image_data& image, trace_state& state,
 }
 
 // [experimental] Asynchronous interface
-void trace_start(image_data& image, trace_worker& worker, trace_state& state,
+void trace_start(color_image& image, trace_worker& worker, trace_state& state,
     const scene_scene& scene, const bvh_scene& bvh, const trace_lights& lights,
     const trace_params& params, const image_callback& image_cb) {
   state         = make_state(scene, params);

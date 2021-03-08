@@ -362,7 +362,7 @@ void add_command(cli_command& cli, const string& name,
 
 int run_heightfield(const heightfield_params& params) {
   // load mesh
-  auto image   = image_data{};
+  auto image   = color_image{};
   auto ioerror = ""s;
   log_progress("load image", 0, 1);
   if (!load_image(params.image, image, ioerror)) print_fatal(ioerror);

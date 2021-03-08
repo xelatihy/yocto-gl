@@ -86,11 +86,11 @@ bool is_hdr_filename(const string& filename);
 bool is_ldr_filename(const string& filename);
 
 // Loads/saves a 4 channels float/byte image in linear/srgb color space.
-bool load_image(const string& filename, image_data& img, string& error);
-bool save_image(const string& filename, const image_data& img, string& error);
+bool load_image(const string& filename, color_image& img, string& error);
+bool save_image(const string& filename, const color_image& img, string& error);
 
 // Make presets. Supported mostly in IO.
-bool make_image_preset(image_data& image, const string& type, string& error);
+bool make_image_preset(color_image& image, const string& type, string& error);
 
 }  // namespace yocto
 

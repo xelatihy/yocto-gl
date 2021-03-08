@@ -444,7 +444,7 @@ bool is_ldr_filename(const string& filename) {
 }
 
 // Loads/saves an image. Chooses hdr or ldr based on file name.
-bool load_image(const string& filename, image_data& image, string& error) {
+bool load_image(const string& filename, color_image& image, string& error) {
   auto format_error = [filename, &error]() {
     error = filename + ": unknown format";
     return false;
@@ -535,7 +535,7 @@ bool load_image(const string& filename, image_data& image, string& error) {
 
 // Saves an hdr image.
 bool save_image(
-    const string& filename, const image_data& image_, string& error) {
+    const string& filename, const color_image& image_, string& error) {
   auto format_error = [filename, &error]() {
     error = filename + ": unknown format";
     return false;
@@ -546,8 +546,8 @@ bool save_image(
   };
 
   // handle conversions if needed
-  auto image_ptr = (const image_data*)nullptr;
-  auto converted = image_data{};
+  auto image_ptr = (const color_image*)nullptr;
+  auto converted = color_image{};
   if (is_hdr_filename(filename) &&
       (!image_.pixelsf.empty() || !image_.linear)) {
     converted = convert_image(image_, true, false);
@@ -601,7 +601,7 @@ bool save_image(
   }
 }
 
-bool make_image_preset(image_data& image, const string& type_, string& error) {
+bool make_image_preset(color_image& image, const string& type_, string& error) {
   auto type = path_basename(type_);
 
   auto width = 1024, height = 1024;
@@ -644,7 +644,7 @@ bool make_image_preset(image_data& image, const string& type_, string& error) {
   } else if (type == "images1") {
     auto sub_types = vector<string>{"grid", "uvgrid", "checker", "gammaramp",
         "bumps", "bump-normal", "noise", "fbm", "blackbodyramp"};
-    auto sub_imgs  = vector<image_data>(sub_types.size());
+    auto sub_imgs  = vector<color_image>(sub_types.size());
     for (auto i = 0; i < sub_imgs.size(); i++) {
       if (!make_image_preset(sub_imgs[i], sub_types[i], error)) return false;
     }
@@ -662,7 +662,7 @@ bool make_image_preset(image_data& image, const string& type_, string& error) {
     }
   } else if (type == "images2") {
     auto sub_types = vector<string>{"sky", "sunsky"};
-    auto sub_imgs  = vector<image_data>(sub_types.size());
+    auto sub_imgs  = vector<color_image>(sub_types.size());
     for (auto i = 0; i < sub_imgs.size(); i++) {
       if (!make_image_preset(sub_imgs[i], sub_types[i], error)) return false;
     }

@@ -48,7 +48,7 @@ using std::make_unique;
 namespace yocto {
 
 void update_image_params(gui_window* win, const gui_input& input,
-    const image_data& image, ogl_image_params& glparams) {
+    const color_image& image, ogl_image_params& glparams) {
   glparams.window                           = input.window_size;
   glparams.framebuffer                      = input.framebuffer_viewport;
   std::tie(glparams.center, glparams.scale) = camera_imview(glparams.center,
@@ -108,7 +108,7 @@ static bool draw_tonemap_params(
 }
 
 static bool draw_image_inspector(gui_window* win, const gui_input& input,
-    const image_data& image, const image_data& display,
+    const color_image& image, const color_image& display,
     ogl_image_params& glparams) {
   if (begin_header(win, "inspect")) {
     draw_slider(win, "zoom", glparams.scale, 0.1, 10);
@@ -261,7 +261,7 @@ namespace yocto {
 
 // Open a window and show an image
 void view_image(
-    const string& title, const string& name, const image_data& image) {
+    const string& title, const string& name, const color_image& image) {
   // display image
   log_progress("tonemap image", 0, 1);
   auto  display  = make_image(image.width, image.height, false, true);
@@ -311,10 +311,10 @@ void view_image(
 
 // Open a window and show an image
 void view_images(const string& title, const vector<string>& names,
-    const vector<image_data>& images) {
+    const vector<color_image>& images) {
   // display image
   log_progress("tonemap image", 0, (int)images.size());
-  auto displays  = vector<image_data>(images.size());
+  auto displays  = vector<color_image>(images.size());
   auto exposures = vector<float>(images.size(), 0);
   auto filmics   = vector<bool>(images.size(), false);
   for (auto idx = 0; idx < (int)images.size(); idx++) {
@@ -373,7 +373,7 @@ void view_images(const string& title, const vector<string>& names,
 
 // Open a window and show an image
 void colorgrade_image(
-    const string& title, const string& name, const image_data& image) {
+    const string& title, const string& name, const color_image& image) {
   // color grading parameters
   auto params = colorgrade_params{};
 
@@ -711,7 +711,7 @@ void view_scene(const string& title, const string& name, scene_scene& scene,
         set_param(viewer, name, "sample", {sample, {1, 4096}, true});
         log_progress(message, sample, nsamples);
       },
-      [&viewer, name](const image_data& render, int current, int total) {
+      [&viewer, name](const color_image& render, int current, int total) {
         set_image(viewer, name, render);
       });
 
@@ -740,7 +740,7 @@ void view_scene(const string& title, const string& name, scene_scene& scene,
               set_param(viewer, name, "sample", {sample, {1, 4096}, true});
               log_progress(message, sample, nsamples);
             },
-            [&viewer, name](const image_data& render, int current, int total) {
+            [&viewer, name](const color_image& render, int current, int total) {
               set_image(viewer, name, render);
             });
       });
@@ -768,7 +768,7 @@ void view_scene(const string& title, const string& name, scene_scene& scene,
             set_param(viewer, name, "sample", {sample, {1, 4096}, true});
             log_progress(message, sample, nsamples);
           },
-          [&viewer, name](const image_data& render, int current, int total) {
+          [&viewer, name](const color_image& render, int current, int total) {
             set_image(viewer, name, render);
           });
     }
@@ -977,7 +977,7 @@ ogl_imageviewer make_imageviewer(const string& title) {
 
 // Set image
 void set_image(
-    ogl_imageviewer& viewer, const string& name, const image_data& image) {
+    ogl_imageviewer& viewer, const string& name, const color_image& image) {
   auto lock  = std::lock_guard{viewer.input_mutex};
   auto input = get_input(viewer, name);
   if (!input) {

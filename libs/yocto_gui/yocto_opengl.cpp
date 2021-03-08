@@ -1170,7 +1170,7 @@ void clear_image(ogl_image& oimg) {
 }
 
 void set_image(
-    ogl_image& oimg, const image_data& img, bool linear, bool mipmap) {
+    ogl_image& oimg, const color_image& img, bool linear, bool mipmap) {
   if (!img.pixelsf.empty()) {
     set_texture(oimg.texture, img.width, img.height, 4,
         (const float*)img.pixelsf.data(), false, linear, mipmap);

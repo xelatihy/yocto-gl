@@ -498,7 +498,7 @@ bool is_initialized(const ogl_image& oimg);
 void clear_image(ogl_image& oimg);
 
 // update image data
-void set_image(ogl_image& oimg, const image_data& img, bool linear = false,
+void set_image(ogl_image& oimg, const color_image& img, bool linear = false,
     bool mipmap = false);
 
 // OpenGL image drawing params
