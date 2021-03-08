@@ -2543,21 +2543,7 @@ static bool load_json_scene(const string& filename, scene_scene& scene,
 
   // loop over external dictionaries
   for (auto& [gname, group] : iterate_object(js)) {
-    if (gname == "asset") {
-      auto& asset = scene.asset;
-      if (!check_object(group)) return parse_error(gname);
-      for (auto& [key, value] : iterate_object(group)) {
-        if (key == "copyright") {
-          if (!get_value(value, asset.copyright))
-            return parse_error(gname, key);
-        } else if (key == "generator") {
-          if (!get_value(value, asset.generator))
-            return parse_error(gname, key);
-        } else {
-          return key_error(gname, key);
-        }
-      }
-    } else if (gname == "cameras") {
+    if (gname == "cameras") {
       if (!check_object(group)) return parse_error(gname);
       for (auto& [name, element] : iterate_object(group)) {
         if (!check_object(element)) return parse_error(gname, name);
@@ -2919,7 +2905,6 @@ static bool load_json_scene(const string& filename, scene_scene& scene,
   }
 
   // fix scene
-  if (scene.asset.name.empty()) scene.asset.name = path_basename(filename);
   add_missing_camera(scene);
   add_missing_radius(scene);
   trim_memory(scene);
@@ -2960,18 +2945,6 @@ static bool save_json_scene(const string& filename, const scene_scene& scene,
 
   // save json file
   auto js = njson::object();
-
-  // asset
-  {
-    auto& asset   = scene.asset;
-    auto& element = insert_object(js, "asset");
-    if (!asset.copyright.empty()) {
-      insert_value(element, "copyright", asset.copyright);
-    }
-    if (!asset.generator.empty()) {
-      insert_value(element, "generator", asset.generator);
-    }
-  }
 
   auto def_cam = sceneio_camera{};
   if (!scene.cameras.empty()) {
@@ -3369,7 +3342,6 @@ static bool load_obj_scene(const string& filename, scene_scene& scene,
   }
 
   // fix scene
-  if (scene.asset.name.empty()) scene.asset.name = path_basename(filename);
   add_missing_camera(scene);
   add_missing_radius(scene);
 
@@ -3706,15 +3678,6 @@ static bool load_gltf_scene(const string& filename, scene_scene& scene,
 
   // handle progress
   log_progress("convert scene", progress.x++, progress.y);
-
-  // convert asset
-  if (gltf.contains("asset")) {
-    try {
-      scene.asset.copyright = gltf.value("copyright", ""s);
-    } catch (...) {
-      return parse_error();
-    }
-  }
 
   // convert cameras
   auto cameras = vector<scene_camera>{};
@@ -4126,7 +4089,6 @@ static bool load_gltf_scene(const string& filename, scene_scene& scene,
   }
 
   // fix scene
-  if (scene.asset.name.empty()) scene.asset.name = path_basename(filename);
   add_missing_material(scene);
   add_missing_camera(scene);
   add_missing_radius(scene);
@@ -4162,11 +4124,9 @@ static bool save_gltf_scene(const string& filename, const scene_scene& scene,
 
   // asset
   {
-    auto& gasset        = gltf["asset"];
-    gasset              = njson::object();
-    gasset["version"]   = "2.0";
-    gasset["generator"] = scene.asset.generator;
-    gasset["copyright"] = scene.asset.copyright;
+    auto& gasset      = gltf["asset"];
+    gasset            = njson::object();
+    gasset["version"] = "2.0";
   }
 
   // cameras
@@ -4697,7 +4657,6 @@ static bool load_pbrt_scene(const string& filename, scene_scene& scene,
   }
 
   // fix scene
-  if (scene.asset.name.empty()) scene.asset.name = path_basename(filename);
   add_missing_camera(scene);
   add_missing_radius(scene);
 

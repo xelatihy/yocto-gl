@@ -1547,8 +1547,6 @@ scene_shape lines_to_cylinders(
 namespace yocto {
 
 void make_cornellbox(scene_scene& scene) {
-  scene.asset.name = "cornellbox";
-
   auto& camera    = scene.cameras.emplace_back();
   camera.frame    = frame3f{{1, 0, 0}, {0, 1, 0}, {0, 0, 1}, {0, 1, 3.9}};
   camera.lens     = 0.035;
