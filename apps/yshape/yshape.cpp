@@ -78,7 +78,7 @@ void add_command(cli_command& cli, const string& name, convert_params& value,
 // convert images
 int run_convert(const convert_params& params) {
   // shape data
-  auto shape = shape_data{};
+  auto shape = scene_shape{};
 
   // load mesh
   auto ioerror = ""s;
@@ -201,7 +201,7 @@ void add_command(cli_command& cli, const string& name, fvconvert_params& value,
 // convert images
 int run_fvconvert(const fvconvert_params& params) {
   // mesh data
-  auto shape = fvshape_data{};
+  auto shape = scene_fvshape{};
 
   // load mesh
   auto ioerror = ""s;
@@ -306,7 +306,7 @@ int run_view(const view_params& params) {
 // view shapes
 int run_view(const view_params& params) {
   // shape data
-  auto shape = shape_data{};
+  auto shape = scene_shape{};
 
   // load mesh
   auto ioerror = ""s;
@@ -362,7 +362,7 @@ void add_command(cli_command& cli, const string& name,
 
 int run_heightfield(const heightfield_params& params) {
   // load mesh
-  auto image   = image_data{};
+  auto image   = color_image{};
   auto ioerror = ""s;
   log_progress("load image", 0, 1);
   if (!load_image(params.image, image, ioerror)) print_fatal(ioerror);
@@ -469,7 +469,7 @@ static scene_scene make_shapescene(const scene_shape& ioshape_) {
   // material
   log_progress("create material", progress.x++, progress.y);
   auto& shape_material     = scene.materials.emplace_back();
-  shape_material.type      = material_type::plastic;
+  shape_material.type      = scene_material_type::plastic;
   shape_material.color     = {0.5, 1, 0.5};
   shape_material.roughness = 0.2;
 

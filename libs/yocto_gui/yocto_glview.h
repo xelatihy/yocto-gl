@@ -68,19 +68,19 @@ namespace yocto {
 
 // Open a window and show an image
 void view_image(
-    const string& title, const string& name, const image_data& image);
+    const string& title, const string& name, const color_image& image);
 
 // Open a window and show a set of images
 void view_images(const string& title, const vector<string>& names,
-    const vector<image_data>& images);
+    const vector<color_image>& images);
 
 // Open a window and show an image for color grading
 void colorgrade_image(
-    const string& title, const string& name, const image_data& image);
+    const string& title, const string& name, const color_image& image);
 
 // Open a window and show a shape via path tracing
 void view_shape(const string& title, const string& name,
-    const shape_data& shape, bool addsky = false);
+    const scene_shape& shape, bool addsky = false);
 
 // Open a window and show an scene via path tracing
 void view_scene(const string& title, const string& name, scene_scene& scene);
@@ -116,7 +116,7 @@ void run_viewer(ogl_imageviewer& viewer);
 
 // Set image
 void set_image(
-    ogl_imageviewer& viewer, const string& name, const image_data& image);
+    ogl_imageviewer& viewer, const string& name, const color_image& image);
 void close_image(ogl_imageviewer& viewer, const string& name);
 
 // Set params
@@ -156,10 +156,10 @@ struct ogl_imageinput {
 
   bool close = false;
 
-  bool       ichanged = true;
-  image_data image    = {};
-  float      exposure = 0;
-  bool       filmic   = false;
+  bool        ichanged = true;
+  color_image image    = {};
+  float       exposure = 0;
+  bool        filmic   = false;
 
   bool       pchanged = true;
   string     pname    = "Params";
@@ -172,12 +172,12 @@ struct ogl_imageview {
   string name = "image.png";
 
   // image data
-  image_data image = {};
+  color_image image = {};
 
   // diplay data
-  image_data display  = {};
-  float      exposure = 0;
-  bool       filmic   = false;
+  color_image display  = {};
+  float       exposure = 0;
+  bool        filmic   = false;
 
   // viewing properties
   ogl_image        glimage  = {};

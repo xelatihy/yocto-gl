@@ -122,7 +122,7 @@ inline const auto trace_falsecolor_names = vector<string>{"position", "normal",
 using image_callback = function<void(int current, int total)>;
 
 // Progressively computes an image.
-image_data trace_image(const scene_scene& scene, const trace_params& params,
+color_image trace_image(const scene_scene& scene, const trace_params& params,
     const image_callback& image_cb = {});
 
 }  // namespace yocto
@@ -134,9 +134,9 @@ namespace yocto {
 
 // Scene lights used during rendering. These are created automatically.
 struct trace_light {
-  instance_handle    instance     = invalid_handle;
-  environment_handle environment  = invalid_handle;
-  vector<float>      elements_cdf = {};
+  int           instance     = invalidid;
+  int           environment  = invalidid;
+  vector<float> elements_cdf = {};
 };
 
 // Scene lights
@@ -166,7 +166,7 @@ trace_lights make_lights(const scene_scene& scene, const trace_params& params);
 bvh_scene make_bvh(const scene_scene& scene, const trace_params& params);
 
 // Progressively computes an image.
-void trace_image(image_data& image, trace_state& state,
+void trace_image(color_image& image, trace_state& state,
     const scene_scene& scene, const bvh_scene& bvh, const trace_lights& lights,
     const trace_params& params, const image_callback& image_cb = {});
 
@@ -177,7 +177,7 @@ struct trace_worker {
 };
 
 // [experimental] Asynchronous interface
-void trace_start(image_data& image, trace_worker& worker, trace_state& state,
+void trace_start(color_image& image, trace_worker& worker, trace_state& state,
     const scene_scene& scene, const bvh_scene& bvh, const trace_lights& lights,
     const trace_params& params, const image_callback& image_cb = {});
 void trace_stop(trace_worker& worker);

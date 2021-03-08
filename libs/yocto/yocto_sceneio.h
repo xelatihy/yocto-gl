@@ -86,11 +86,11 @@ bool is_hdr_filename(const string& filename);
 bool is_ldr_filename(const string& filename);
 
 // Loads/saves a 4 channels float/byte image in linear/srgb color space.
-bool load_image(const string& filename, image_data& img, string& error);
-bool save_image(const string& filename, const image_data& img, string& error);
+bool load_image(const string& filename, color_image& img, string& error);
+bool save_image(const string& filename, const color_image& img, string& error);
 
 // Make presets. Supported mostly in IO.
-bool make_image_preset(image_data& image, const string& type, string& error);
+bool make_image_preset(color_image& image, const string& type, string& error);
 
 }  // namespace yocto
 
@@ -113,21 +113,21 @@ bool save_texture(
 namespace yocto {
 
 // Load/save a shape
-bool load_shape(const string& filename, shape_data& shape, string& error,
+bool load_shape(const string& filename, scene_shape& shape, string& error,
     bool flip_texcoords = true);
-bool save_shape(const string& filename, const shape_data& shape, string& error,
+bool save_shape(const string& filename, const scene_shape& shape, string& error,
     bool flip_texcoords = true, bool ascii = false);
 
 // Load/save a subdiv
-bool load_fvshape(const string& filename, fvshape_data& shape, string& error,
+bool load_fvshape(const string& filename, scene_fvshape& shape, string& error,
     bool flip_texcoords = true);
-bool save_fvshape(const string& filename, const fvshape_data& shape,
+bool save_fvshape(const string& filename, const scene_fvshape& shape,
     string& error, bool flip_texcoords = true, bool ascii = false);
 
 // Make presets. Supported mostly in IO.
-bool make_shape_preset(shape_data& shape, const string& type, string& error);
+bool make_shape_preset(scene_shape& shape, const string& type, string& error);
 bool make_fvshape_preset(
-    fvshape_data& shape, const string& type, string& error);
+    scene_fvshape& shape, const string& type, string& error);
 
 }  // namespace yocto
 

@@ -76,21 +76,21 @@ static vec3f eval_bsdfcos(const material_point& material, const vec3f& normal,
     const vec3f& outgoing, const vec3f& incoming) {
   if (material.roughness == 0) return zero3f;
 
-  if (material.type == material_type::matte) {
+  if (material.type == scene_material_type::matte) {
     return eval_diffuse(material.color, normal, outgoing, incoming);
-  } else if (material.type == material_type::plastic) {
+  } else if (material.type == scene_material_type::plastic) {
     return eval_specular(material.color, material.ior, material.roughness,
         normal, outgoing, incoming);
-  } else if (material.type == material_type::metal) {
+  } else if (material.type == scene_material_type::metal) {
     return eval_metal(reflectivity_to_eta(material.color), vec3f{0, 0, 0},
         material.roughness, normal, outgoing, incoming);
-  } else if (material.type == material_type::thinglass) {
+  } else if (material.type == scene_material_type::thinglass) {
     return eval_transmission(material.color, material.ior, material.roughness,
         normal, outgoing, incoming);
-  } else if (material.type == material_type::glass) {
+  } else if (material.type == scene_material_type::glass) {
     return eval_refraction(material.color, material.ior, material.roughness,
         normal, outgoing, incoming);
-  } else if (material.type == material_type::metallic) {
+  } else if (material.type == scene_material_type::metallic) {
     return eval_metallic(material.color, material.ior, material.roughness,
         material.metallic, normal, outgoing, incoming);
   } else {
@@ -102,15 +102,15 @@ static vec3f eval_delta(const material_point& material, const vec3f& normal,
     const vec3f& outgoing, const vec3f& incoming) {
   if (material.roughness != 0) return zero3f;
 
-  if (material.type == material_type::metal) {
+  if (material.type == scene_material_type::metal) {
     return eval_metal(material.color, normal, outgoing, incoming);
-  } else if (material.type == material_type::thinglass) {
+  } else if (material.type == scene_material_type::thinglass) {
     return eval_transmission(
         material.color, material.ior, normal, outgoing, incoming);
-  } else if (material.type == material_type::glass) {
+  } else if (material.type == scene_material_type::glass) {
     return eval_refraction(
         material.color, material.ior, normal, outgoing, incoming);
-  } else if (material.type == material_type::volume) {
+  } else if (material.type == scene_material_type::volume) {
     return eval_passthrough(material.color, normal, outgoing, incoming);
   } else {
     return {0, 0, 0};
@@ -122,21 +122,21 @@ static vec3f sample_bsdfcos(const material_point& material, const vec3f& normal,
     const vec3f& outgoing, float rnl, const vec2f& rn) {
   if (material.roughness == 0) return zero3f;
 
-  if (material.type == material_type::matte) {
+  if (material.type == scene_material_type::matte) {
     return sample_diffuse(material.color, normal, outgoing, rn);
-  } else if (material.type == material_type::plastic) {
+  } else if (material.type == scene_material_type::plastic) {
     return sample_specular(material.color, material.ior, material.roughness,
         normal, outgoing, rnl, rn);
-  } else if (material.type == material_type::metal) {
+  } else if (material.type == scene_material_type::metal) {
     return sample_metal(
         material.color, material.roughness, normal, outgoing, rn);
-  } else if (material.type == material_type::thinglass) {
+  } else if (material.type == scene_material_type::thinglass) {
     return sample_transmission(material.color, material.ior, material.roughness,
         normal, outgoing, rnl, rn);
-  } else if (material.type == material_type::glass) {
+  } else if (material.type == scene_material_type::glass) {
     return sample_refraction(material.color, material.ior, material.roughness,
         normal, outgoing, rnl, rn);
-  } else if (material.type == material_type::metallic) {
+  } else if (material.type == scene_material_type::metallic) {
     return sample_metallic(material.color, material.ior, material.roughness,
         material.metallic, normal, outgoing, rnl, rn);
   } else {
@@ -148,15 +148,15 @@ static vec3f sample_delta(const material_point& material, const vec3f& normal,
     const vec3f& outgoing, float rnl) {
   if (material.roughness != 0) return zero3f;
 
-  if (material.type == material_type::metal) {
+  if (material.type == scene_material_type::metal) {
     return sample_metal(material.color, normal, outgoing);
-  } else if (material.type == material_type::thinglass) {
+  } else if (material.type == scene_material_type::thinglass) {
     return sample_transmission(
         material.color, material.ior, normal, outgoing, rnl);
-  } else if (material.type == material_type::glass) {
+  } else if (material.type == scene_material_type::glass) {
     return sample_refraction(
         material.color, material.ior, normal, outgoing, rnl);
-  } else if (material.type == material_type::volume) {
+  } else if (material.type == scene_material_type::volume) {
     return sample_passthrough(material.color, normal, outgoing);
   } else {
     return {0, 0, 0};
@@ -168,21 +168,21 @@ static float sample_bsdfcos_pdf(const material_point& material,
     const vec3f& normal, const vec3f& outgoing, const vec3f& incoming) {
   if (material.roughness == 0) return 0;
 
-  if (material.type == material_type::matte) {
+  if (material.type == scene_material_type::matte) {
     return sample_diffuse_pdf(material.color, normal, outgoing, incoming);
-  } else if (material.type == material_type::plastic) {
+  } else if (material.type == scene_material_type::plastic) {
     return sample_specular_pdf(material.color, material.ior, material.roughness,
         normal, outgoing, incoming);
-  } else if (material.type == material_type::metal) {
+  } else if (material.type == scene_material_type::metal) {
     return sample_metal_pdf(
         material.color, material.roughness, normal, outgoing, incoming);
-  } else if (material.type == material_type::thinglass) {
+  } else if (material.type == scene_material_type::thinglass) {
     return sample_transmission_pdf(material.color, material.ior,
         material.roughness, normal, outgoing, incoming);
-  } else if (material.type == material_type::glass) {
+  } else if (material.type == scene_material_type::glass) {
     return sample_refraction_pdf(material.color, material.ior,
         material.roughness, normal, outgoing, incoming);
-  } else if (material.type == material_type::metallic) {
+  } else if (material.type == scene_material_type::metallic) {
     return sample_metallic_pdf(material.color, material.ior, material.roughness,
         material.metallic, normal, outgoing, incoming);
   } else {
@@ -194,15 +194,15 @@ static float sample_delta_pdf(const material_point& material,
     const vec3f& normal, const vec3f& outgoing, const vec3f& incoming) {
   if (material.roughness != 0) return 0;
 
-  if (material.type == material_type::metal) {
+  if (material.type == scene_material_type::metal) {
     return sample_metal_pdf(material.color, normal, outgoing, incoming);
-  } else if (material.type == material_type::thinglass) {
+  } else if (material.type == scene_material_type::thinglass) {
     return sample_transmission_pdf(
         material.color, material.ior, normal, outgoing, incoming);
-  } else if (material.type == material_type::glass) {
+  } else if (material.type == scene_material_type::glass) {
     return sample_refraction_pdf(
         material.color, material.ior, normal, outgoing, incoming);
-  } else if (material.type == material_type::volume) {
+  } else if (material.type == scene_material_type::volume) {
     return sample_passthrough_pdf(material.color, normal, outgoing, incoming);
   } else {
     return 0;
@@ -256,16 +256,16 @@ static vec3f sample_lights(const scene_scene& scene, const trace_lights& lights,
     const vec3f& position, float rl, float rel, const vec2f& ruv) {
   auto  light_id = sample_uniform((int)lights.lights.size(), rl);
   auto& light    = lights.lights[light_id];
-  if (light.instance != invalid_handle) {
+  if (light.instance != invalidid) {
     auto& instance  = scene.instances[light.instance];
     auto& shape     = scene.shapes[instance.shape];
     auto  element   = sample_discrete(light.elements_cdf, rel);
     auto  uv        = (!shape.triangles.empty()) ? sample_triangle(ruv) : ruv;
     auto  lposition = eval_position(scene, instance, element, uv);
     return normalize(lposition - position);
-  } else if (light.environment != invalid_handle) {
+  } else if (light.environment != invalidid) {
     auto& environment = scene.environments[light.environment];
-    if (environment.emission_tex != invalid_handle) {
+    if (environment.emission_tex != invalidid) {
       auto& emission_tex = scene.textures[environment.emission_tex];
       auto  idx          = sample_discrete(light.elements_cdf, rel);
       auto  uv = vec2f{((idx % emission_tex.width) + 0.5f) / emission_tex.width,
@@ -286,7 +286,7 @@ static float sample_lights_pdf(const scene_scene& scene, const bvh_scene& bvh,
     const trace_lights& lights, const vec3f& position, const vec3f& direction) {
   auto pdf = 0.0f;
   for (auto& light : lights.lights) {
-    if (light.instance != invalid_handle) {
+    if (light.instance != invalidid) {
       auto& instance = scene.instances[light.instance];
       // check all intersection
       auto lpdf          = 0.0f;
@@ -308,9 +308,9 @@ static float sample_lights_pdf(const scene_scene& scene, const bvh_scene& bvh,
         next_position = lposition + direction * 1e-3f;
       }
       pdf += lpdf;
-    } else if (light.environment != invalid_handle) {
+    } else if (light.environment != invalidid) {
       auto& environment = scene.environments[light.environment];
-      if (environment.emission_tex != invalid_handle) {
+      if (environment.emission_tex != invalidid) {
         auto& emission_tex = scene.textures[environment.emission_tex];
         auto  wl = transform_direction(inverse(environment.frame), direction);
         auto  texcoord = vec2f{atan2(wl.z, wl.x) / (2 * pif),
@@ -709,7 +709,7 @@ static vec4f trace_albedo(const scene_scene& scene, const bvh_scene& bvh,
   }
 
   if (material.roughness < 0.05 && bounce < 5) {
-    if (material.type == material_type::thinglass) {
+    if (material.type == scene_material_type::thinglass) {
       auto incoming     = -outgoing;
       auto trans_albedo = trace_albedo(scene, bvh, lights,
           ray3f{position, incoming}, rng, params, bounce + 1);
@@ -721,7 +721,7 @@ static vec4f trace_albedo(const scene_scene& scene, const bvh_scene& bvh,
       auto fresnel = fresnel_dielectric(material.ior, outgoing, normal);
       auto dielectric_albedo = lerp(trans_albedo, spec_albedo, fresnel);
       return dielectric_albedo * vec4f{albedo.x, albedo.y, albedo.z, 1};
-    } else if (material.type == material_type::metal) {
+    } else if (material.type == scene_material_type::metal) {
       auto incoming    = reflect(outgoing, normal);
       auto refl_albedo = trace_albedo(scene, bvh, lights,
           ray3f{position, incoming}, rng, params, bounce + 1);
@@ -764,7 +764,7 @@ static vec4f trace_normal(const scene_scene& scene, const bvh_scene& bvh,
   }
 
   if (material.roughness < 0.05f && bounce < 5) {
-    if (material.type == material_type::thinglass) {
+    if (material.type == scene_material_type::thinglass) {
       auto incoming   = -outgoing;
       auto trans_norm = trace_normal(scene, bvh, lights,
           ray3f{position, incoming}, rng, params, bounce + 1);
@@ -775,7 +775,7 @@ static vec4f trace_normal(const scene_scene& scene, const bvh_scene& bvh,
 
       auto fresnel = fresnel_dielectric(material.ior, outgoing, normal);
       return lerp(trans_norm, spec_norm, fresnel);
-    } else if (material.type == material_type::metal) {
+    } else if (material.type == scene_material_type::metal) {
       auto incoming = reflect(outgoing, normal);
       return trace_normal(scene, bvh, lights, ray3f{position, incoming}, rng,
           params, bounce + 1);
@@ -827,7 +827,7 @@ bool is_sampler_lit(const trace_params& params) {
 }
 
 // Trace a block of samples
-void trace_sample(image_data& image, trace_state& state,
+void trace_sample(color_image& image, trace_state& state,
     const scene_scene& scene, const bvh_scene& bvh, const trace_lights& lights,
     int i, int j, const trace_params& params) {
   auto& camera  = scene.cameras[params.camera];
@@ -891,7 +891,7 @@ trace_lights make_lights(const scene_scene& scene, const trace_params& params) {
     log_progress("build light", progress.x++, ++progress.y);
     auto& light       = add_light(lights);
     light.instance    = handle;
-    light.environment = invalid_handle;
+    light.environment = invalidid;
     if (!shape.triangles.empty()) {
       light.elements_cdf = vector<float>(shape.triangles.size());
       for (auto idx = 0; idx < light.elements_cdf.size(); idx++) {
@@ -916,15 +916,16 @@ trace_lights make_lights(const scene_scene& scene, const trace_params& params) {
     if (environment.emission == zero3f) continue;
     log_progress("build light", progress.x++, ++progress.y);
     auto& light       = add_light(lights);
-    light.instance    = invalid_handle;
+    light.instance    = invalidid;
     light.environment = handle;
-    if (environment.emission_tex != invalid_handle) {
+    if (environment.emission_tex != invalidid) {
       auto& texture      = scene.textures[environment.emission_tex];
       light.elements_cdf = vector<float>(texture.width * texture.height);
       for (auto idx = 0; idx < light.elements_cdf.size(); idx++) {
         auto ij    = vec2i{idx % texture.width, idx / texture.width};
         auto th    = (ij.y + 0.5f) * pif / texture.height;
-        auto value = get_pixel(texture, ij.x, ij.y);
+        auto value = get_pixel(
+            reinterpret_cast<const color_image&>(texture), ij.x, ij.y);
         light.elements_cdf[idx] = max(value) * sin(th);
         if (idx != 0) light.elements_cdf[idx] += light.elements_cdf[idx - 1];
       }
@@ -937,7 +938,7 @@ trace_lights make_lights(const scene_scene& scene, const trace_params& params) {
 }
 
 // Progressively computes an image.
-image_data trace_image(const scene_scene& scene, const trace_params& params,
+color_image trace_image(const scene_scene& scene, const trace_params& params,
     const image_callback& image_cb) {
   auto bvh    = make_bvh(scene, params);
   auto lights = make_lights(scene, params);
@@ -948,7 +949,7 @@ image_data trace_image(const scene_scene& scene, const trace_params& params,
 }
 
 // Progressively compute an image by calling trace_samples multiple times.
-void trace_image(image_data& image, trace_state& state,
+void trace_image(color_image& image, trace_state& state,
     const scene_scene& scene, const bvh_scene& bvh, const trace_lights& lights,
     const trace_params& params, const image_callback& image_cb) {
   for (auto sample = 0; sample < params.samples; sample++) {
@@ -971,7 +972,7 @@ void trace_image(image_data& image, trace_state& state,
 }
 
 // [experimental] Asynchronous interface
-void trace_start(image_data& image, trace_worker& worker, trace_state& state,
+void trace_start(color_image& image, trace_worker& worker, trace_state& state,
     const scene_scene& scene, const bvh_scene& bvh, const trace_lights& lights,
     const trace_params& params, const image_callback& image_cb) {
   state         = make_state(scene, params);

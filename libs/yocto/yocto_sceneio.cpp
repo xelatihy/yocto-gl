@@ -444,7 +444,7 @@ bool is_ldr_filename(const string& filename) {
 }
 
 // Loads/saves an image. Chooses hdr or ldr based on file name.
-bool load_image(const string& filename, image_data& image, string& error) {
+bool load_image(const string& filename, color_image& image, string& error) {
   auto format_error = [filename, &error]() {
     error = filename + ": unknown format";
     return false;
@@ -535,7 +535,7 @@ bool load_image(const string& filename, image_data& image, string& error) {
 
 // Saves an hdr image.
 bool save_image(
-    const string& filename, const image_data& image_, string& error) {
+    const string& filename, const color_image& image_, string& error) {
   auto format_error = [filename, &error]() {
     error = filename + ": unknown format";
     return false;
@@ -546,8 +546,8 @@ bool save_image(
   };
 
   // handle conversions if needed
-  auto image_ptr = (const image_data*)nullptr;
-  auto converted = image_data{};
+  auto image_ptr = (const color_image*)nullptr;
+  auto converted = color_image{};
   if (is_hdr_filename(filename) &&
       (!image_.pixelsf.empty() || !image_.linear)) {
     converted = convert_image(image_, true, false);
@@ -601,7 +601,7 @@ bool save_image(
   }
 }
 
-bool make_image_preset(image_data& image, const string& type_, string& error) {
+bool make_image_preset(color_image& image, const string& type_, string& error) {
   auto type = path_basename(type_);
 
   auto width = 1024, height = 1024;
@@ -644,7 +644,7 @@ bool make_image_preset(image_data& image, const string& type_, string& error) {
   } else if (type == "images1") {
     auto sub_types = vector<string>{"grid", "uvgrid", "checker", "gammaramp",
         "bumps", "bump-normal", "noise", "fbm", "blackbodyramp"};
-    auto sub_imgs  = vector<image_data>(sub_types.size());
+    auto sub_imgs  = vector<color_image>(sub_types.size());
     for (auto i = 0; i < sub_imgs.size(); i++) {
       if (!make_image_preset(sub_imgs[i], sub_types[i], error)) return false;
     }
@@ -662,7 +662,7 @@ bool make_image_preset(image_data& image, const string& type_, string& error) {
     }
   } else if (type == "images2") {
     auto sub_types = vector<string>{"sky", "sunsky"};
-    auto sub_imgs  = vector<image_data>(sub_types.size());
+    auto sub_imgs  = vector<color_image>(sub_types.size());
     for (auto i = 0; i < sub_imgs.size(); i++) {
       if (!make_image_preset(sub_imgs[i], sub_types[i], error)) return false;
     }
@@ -742,13 +742,14 @@ namespace yocto {
 // load texture
 bool load_texture(
     const string& filename, scene_texture& texture, string& error) {
-  return load_image(filename, texture, error);
+  return load_image(filename, reinterpret_cast<color_image&>(texture), error);
 }
 
 // save texture
 bool save_texture(
     const string& filename, const scene_texture& texture, string& error) {
-  return save_image(filename, texture, error);
+  return save_image(
+      filename, reinterpret_cast<const color_image&>(texture), error);
 }
 
 }  // namespace yocto
@@ -759,7 +760,7 @@ bool save_texture(
 namespace yocto {
 
 // Load ply mesh
-bool load_shape(const string& filename, shape_data& shape, string& error,
+bool load_shape(const string& filename, scene_shape& shape, string& error,
     bool flip_texcoord) {
   auto format_error = [filename, &error]() {
     error = filename + ": unknown format";
@@ -825,7 +826,7 @@ bool load_shape(const string& filename, shape_data& shape, string& error,
 }
 
 // Save ply mesh
-bool save_shape(const string& filename, const shape_data& shape, string& error,
+bool save_shape(const string& filename, const scene_shape& shape, string& error,
     bool flip_texcoord, bool ascii) {
   auto format_error = [filename, &error]() {
     error = filename + ": unknown format";
@@ -939,7 +940,7 @@ bool save_shape(const string& filename, const shape_data& shape, string& error,
 }
 
 // Load ply mesh
-bool load_fvshape(const string& filename, fvshape_data& shape, string& error,
+bool load_fvshape(const string& filename, scene_fvshape& shape, string& error,
     bool flip_texcoord) {
   auto format_error = [filename, &error]() {
     error = filename + ": unknown format";
@@ -1001,7 +1002,7 @@ bool load_fvshape(const string& filename, fvshape_data& shape, string& error,
 }
 
 // Save ply mesh
-bool save_fvshape(const string& filename, const fvshape_data& shape,
+bool save_fvshape(const string& filename, const scene_fvshape& shape,
     string& error, bool flip_texcoord, bool ascii) {
   auto format_error = [filename, &error]() {
     error = filename + ": unknown format";
@@ -1102,34 +1103,34 @@ bool save_fvshape(const string& filename, const fvshape_data& shape,
 }
 
 // Shape presets used ofr testing.
-bool make_shape_preset(shape_data& shape, const string& type, string& error) {
-  auto set_quads = [&](shape_data&& shape_) {
+bool make_shape_preset(scene_shape& shape, const string& type, string& error) {
+  auto set_quads = [&](scene_shape&& shape_) {
     shape.quads     = shape_.quads;
     shape.positions = shape_.positions;
     shape.normals   = shape_.normals;
     shape.texcoords = shape_.texcoords;
   };
-  auto set_triangles = [&](shape_data&& shape_) {
+  auto set_triangles = [&](scene_shape&& shape_) {
     shape.triangles = shape_.triangles;
     shape.positions = shape_.positions;
     shape.normals   = shape_.normals;
     shape.texcoords = shape_.texcoords;
   };
-  auto set_lines = [&](shape_data&& shape_) {
+  auto set_lines = [&](scene_shape&& shape_) {
     shape.lines     = shape_.lines;
     shape.positions = shape_.positions;
     shape.normals   = shape_.normals;
     shape.texcoords = shape_.texcoords;
     shape.radius    = shape_.radius;
   };
-  auto set_points = [&](shape_data&& shape_) {
+  auto set_points = [&](scene_shape&& shape_) {
     shape.points    = shape_.points;
     shape.positions = shape_.positions;
     shape.normals   = shape_.normals;
     shape.texcoords = shape_.texcoords;
     shape.radius    = shape_.radius;
   };
-  auto set_fvquads = [&](fvshape_data&& shape_) {
+  auto set_fvquads = [&](scene_fvshape&& shape_) {
     shape.quads     = shape_.quadspos;
     shape.positions = shape_.positions;
     shape.normals   = shape_.normals;
@@ -1281,8 +1282,8 @@ bool make_shape_preset(shape_data& shape, const string& type, string& error) {
 
 // Shape presets used for testing.
 bool make_fvshape_preset(
-    fvshape_data& shape, const string& type, string& error) {
-  auto set_quads = [&](shape_data&& shape_) {
+    scene_fvshape& shape, const string& type, string& error) {
+  auto set_quads = [&](scene_shape&& shape_) {
     shape.quadspos  = shape_.quads;
     shape.positions = shape_.positions;
     if (!shape_.normals.empty()) shape.quadsnorm = shape_.quads;
@@ -1290,16 +1291,16 @@ bool make_fvshape_preset(
     if (!shape_.texcoords.empty()) shape.quadstexcoord = shape_.quads;
     shape.texcoords = shape_.texcoords;
   };
-  auto set_triangles = [&](shape_data&& shape) {
+  auto set_triangles = [&](scene_shape&& shape) {
     throw std::invalid_argument{"bad shape type"};
   };
-  auto set_lines = [&](shape_data&& shape) {
+  auto set_lines = [&](scene_shape&& shape) {
     throw std::invalid_argument{"bad shape type"};
   };
-  auto set_points = [&](shape_data&& shape) {
+  auto set_points = [&](scene_shape&& shape) {
     throw std::invalid_argument{"bad shape type"};
   };
-  auto set_fvquads = [&](fvshape_data&& shape_) {
+  auto set_fvquads = [&](scene_fvshape&& shape_) {
     shape.quadspos      = shape_.quadspos;
     shape.quadsnorm     = shape_.quadsnorm;
     shape.quadstexcoord = shape_.quadstexcoord;
@@ -1576,10 +1577,10 @@ static void add_missing_radius(scene_scene& scene, float radius = 0.001f) {
 
 // Add missing cameras.
 void add_missing_material(scene_scene& scene) {
-  auto default_material = invalid_handle;
+  auto default_material = invalidid;
   for (auto& instance : scene.instances) {
     if (instance.material >= 0) continue;
-    if (default_material == invalid_handle) {
+    if (default_material == invalidid) {
       auto& material   = scene.materials.emplace_back();
       material.color   = {0.8, 0.8, 0.8};
       default_material = (int)scene.materials.size() - 1;
@@ -1700,24 +1701,24 @@ void make_test(scene_scene& scene, const test_params& params) {
   //         lookat_frame({-0.4, 0.8, 0.8}, {0, 0.1, 0}, {0, 1, 0}, true),
   //         add_shape(scene, "arealight1", make_rect({1, 1}, {0.2, 0.2})),
   //         add_emission_material(
-  //             scene, "arealight1", {20, 20, 20}, invalid_handle));
+  //             scene, "arealight1", {20, 20, 20}, invalidid));
   //     add_instance(scene, "arealight2",
   //         lookat_frame({+0.4, 0.8, 0.8}, {0, 0.1, 0}, {0, 1, 0}, true),
   //         add_shape(scene, "arealight2", make_rect({1, 1}, {0.2, 0.2})),
   //         add_emission_material(
-  //             scene, "arealight2", {20, 20, 20}, invalid_handle));
+  //             scene, "arealight2", {20, 20, 20}, invalidid));
   //   } break;
   //   case test_arealights_type::large: {
   //     add_instance(scene, "largearealight1",
   //         lookat_frame({-0.8, 1.6, 1.6}, {0, 0.1, 0}, {0, 1, 0}, true),
   //         add_shape(scene, "largearealight1", make_rect({1, 1}, {0.4, 0.4})),
   //         add_emission_material(
-  //             scene, "largearealight1", {10, 10, 10}, invalid_handle));
+  //             scene, "largearealight1", {10, 10, 10}, invalidid));
   //     add_instance(scene, "largearealight2",
   //         lookat_frame({+0.8, 1.6, 1.6}, {0, 0.1, 0}, {0, 1, 0}, true),
   //         add_shape(scene, "largearealight2", make_rect({1, 1}, {0.4, 0.4})),
   //         add_emission_material(
-  //             scene, "largearealight2", {10, 10, 10}, invalid_handle));
+  //             scene, "largearealight2", {10, 10, 10}, invalidid));
   //   } break;
   // }
   // switch (params.floor) {
@@ -1729,10 +1730,10 @@ void make_test(scene_scene& scene, const test_params& params) {
   //             add_texture(scene, "floor", make_grid({1024, 1024}))));
   //   } break;
   // }
-  // auto shapes = vector<shape_handle>{}, shapesi = vector<shape_handle>{};
-  // auto subdivs   = vector<subdiv_handle>{};
-  // auto materials = vector<material_handle>{};
-  // switch (params.shapes) {
+  // auto shapes = vector<int>{}, shapesi =
+  // vector<int>{}; auto subdivs   =
+  // vector<int>{}; auto materials =
+  // vector<int>{}; switch (params.shapes) {
   //   case test_shapes_type::features1: {
   //     auto bunny  = add_shape(scene, "sphere", make_sphere(32, 0.075, 1));
   //     auto sphere = add_shape(scene, "sphere", make_sphere(32, 0.075, 1));
@@ -1750,9 +1751,9 @@ void make_test(scene_scene& scene, const test_params& params) {
   //             make_rounded_box({32, 32, 32}, {0.075, 0.075, 0.075}, {1, 1,
   //             1},
   //                 0.3 * 0.075f))};
-  //     shapesi = {invalid_handle, invalid_handle,
+  //     shapesi = {invalidid, invalidid,
   //         add_shape(scene, "hairi", make_sphere(32, 0.075f * 0.8f, 1)),
-  //         invalid_handle, invalid_handle};
+  //         invalidid, invalidid};
   //     subdivs = {add_subdiv(scene, "suzanne", make_monkey(0.075f * 0.8f),
   //                    shapes[1], 2),
   //         add_subdiv(scene, "displaced", make_sphere(128, 0.075f, 1),
@@ -1809,7 +1810,7 @@ void make_test(scene_scene& scene, const test_params& params) {
   //   } break;
   //   case test_shapes_type::shapes3: {
   //     shapes = {
-  //         invalid_handle,
+  //         invalidid,
   //         add_shape(scene, "hair1",
   //             make_hair(make_sphere(32, 0.075f * 0.8f, 1), {4, 65536},
   //                 {0.1f * 0.15f, 0.1f * 0.15f},
@@ -1822,7 +1823,7 @@ void make_test(scene_scene& scene, const test_params& params) {
   //             make_hair(make_sphere(32, 0.075f * 0.8f, 1), {4, 65536},
   //                 {0.1f * 0.15f, 0.1f * 0.15f},
   //                 {0.001f * 0.15f, 0.0005f * 0.15f}, {0, 0}, {0.5, 128})),
-  //         invalid_handle,
+  //         invalidid,
   //     };
   //   } break;
   // }
@@ -1835,7 +1836,7 @@ void make_test(scene_scene& scene, const test_params& params) {
   //         add_glass_material(
   //             scene, "jade", {0.5, 0.5, 0.5}, 0, {0.3, 0.6, 0.3}),
   //         add_plastic_material(scene, "bumped", {0.5, 0.7, 0.5}, 0.2,
-  //             invalid_handle, invalid_handle,
+  //             invalidid, invalidid,
   //             add_texture(scene, "bumps-normal",
   //                 bump_to_normal(make_bumps({1024, 1024}), 0.05), false,
   //                 true)),
@@ -1891,10 +1892,10 @@ void make_test(scene_scene& scene, const test_params& params) {
   //         bump_to_normal(make_bumps({1024, 1024}), 0.05), false, true);
   //     materials         = {
   //         add_plastic_material(scene, "plastic1", {0.5, 0.5, 0.7}, 0.01,
-  //             invalid_handle, invalid_handle, bumps_normal),
+  //             invalidid, invalidid, bumps_normal),
   //         add_plastic_material(scene, "plastic2", {0.5, 0.7, 0.5}, 0.2),
   //         add_metal_material(scene, "metal1", {0.7, 0.7, 0.7}, 0,
-  //             invalid_handle, invalid_handle, bumps_normal),
+  //             invalidid, invalidid, bumps_normal),
   //         add_metal_material(scene, "metal2", {0.66, 0.45, 0.34}, 0.2),
   //         add_metal_material(scene, "metal3", {0.66, 0.45, 0.34}, 0.2),
   //     };
@@ -1915,20 +1916,20 @@ void make_test(scene_scene& scene, const test_params& params) {
   //   case test_materials_type::materials5: {
   //     materials = {
   //         add_glass_material(scene, "skin1a", {0.76, 0.48, 0.23}, 0.25,
-  //             {0.436, 0.227, 0.131}, invalid_handle, invalid_handle,
-  //             invalid_handle, 1.5, -0.8, 0.001),
+  //             {0.436, 0.227, 0.131}, invalidid, invalidid,
+  //             invalidid, 1.5, -0.8, 0.001),
   //         add_glass_material(scene, "skin2a", {0.82, 0.55, 0.4}, 0.25,
-  //             {0.623, 0.433, 0.343}, invalid_handle, invalid_handle,
-  //             invalid_handle, 1.5, -0.8, 0.001),
+  //             {0.623, 0.433, 0.343}, invalidid, invalidid,
+  //             invalidid, 1.5, -0.8, 0.001),
   //         add_glass_material(scene, "skins", {0.76, 0.48, 0.23}, 0,
-  //             {0.436, 0.227, 0.131}, invalid_handle, invalid_handle,
-  //             invalid_handle, 1.5, -0.8, 0.001),
+  //             {0.436, 0.227, 0.131}, invalidid, invalidid,
+  //             invalidid, 1.5, -0.8, 0.001),
   //         add_glass_material(scene, "skin1b", {0.76, 0.48, 0.23}, 0.25,
-  //             {0.436, 0.227, 0.131}, invalid_handle, invalid_handle,
-  //             invalid_handle, 1.5, -0.8, 0.001),
+  //             {0.436, 0.227, 0.131}, invalidid, invalidid,
+  //             invalidid, 1.5, -0.8, 0.001),
   //         add_glass_material(scene, "skin2b", {0.82, 0.55, 0.4}, 0.25,
-  //             {0.623, 0.433, 0.343}, invalid_handle, invalid_handle,
-  //             invalid_handle, 1.5, -0.8, 0.001),
+  //             {0.623, 0.433, 0.343}, invalidid, invalidid,
+  //             invalidid, 1.5, -0.8, 0.001),
   //     };
   //   } break;
   // }
@@ -2248,7 +2249,7 @@ bool save_instance(const string& filename, const vector<frame3f>& frames,
 
 // load subdiv
 bool load_subdiv(const string& filename, scene_subdiv& subdiv, string& error) {
-  auto lsubdiv = fvshape_data{};
+  auto lsubdiv = scene_fvshape{};
   if (!load_fvshape(filename, lsubdiv, error, true)) return false;
   subdiv.quadspos      = lsubdiv.quadspos;
   subdiv.quadsnorm     = lsubdiv.quadsnorm;
@@ -2262,7 +2263,7 @@ bool load_subdiv(const string& filename, scene_subdiv& subdiv, string& error) {
 // save subdiv
 bool save_subdiv(
     const string& filename, const scene_subdiv& subdiv, string& error) {
-  auto ssubdiv          = fvshape_data{};
+  auto ssubdiv          = scene_fvshape{};
   ssubdiv.quadspos      = subdiv.quadspos;
   ssubdiv.quadsnorm     = subdiv.quadsnorm;
   ssubdiv.quadstexcoord = subdiv.quadstexcoord;
@@ -2369,16 +2370,16 @@ inline void from_json(const njson& j, mat4f& value) {
   nlohmann::from_json(j, (array<float, 16>&)value);
 }
 
-inline void to_json(njson& j, material_type value) {
-  j = material_type_names.at((int)value);
+inline void to_json(njson& j, scene_material_type value) {
+  j = scene_material_names.at((int)value);
 }
-inline void from_json(const njson& j, material_type& value) {
+inline void from_json(const njson& j, scene_material_type& value) {
   auto values = j.get<string>();
   auto pos    = std::find(
-      material_type_names.begin(), material_type_names.end(), values);
-  if (pos == material_type_names.end())
+      scene_material_names.begin(), scene_material_names.end(), values);
+  if (pos == scene_material_names.end())
     throw std::invalid_argument{"unknown value"};
-  value = (material_type)(pos - material_type_names.begin());
+  value = (scene_material_type)(pos - scene_material_names.begin());
 }
 
 }  // namespace yocto
@@ -2439,9 +2440,9 @@ static bool load_json_scene(const string& filename, scene_scene& scene,
   };
 
   // parse json reference
-  auto shape_map = unordered_map<string, shape_handle>{};
+  auto shape_map = unordered_map<string, int>{};
   auto get_shape = [&scene, &shape_map, &get_value](
-                       const njson& js, shape_handle& value) -> bool {
+                       const njson& js, int& value) -> bool {
     auto name = ""s;
     if (!get_value(js, name)) return false;
     auto it = shape_map.find(name);
@@ -2458,10 +2459,10 @@ static bool load_json_scene(const string& filename, scene_scene& scene,
   };
 
   // parse json reference
-  auto material_map = unordered_map<string, material_handle>{};
+  auto material_map = unordered_map<string, int>{};
   auto material_set = vector<bool>{};
   auto get_material = [&scene, &material_map, &material_set, &get_value](
-                          const njson& js, material_handle& value) -> bool {
+                          const njson& js, int& value) -> bool {
     auto name = ""s;
     if (!get_value(js, name)) return false;
     auto it = material_map.find(name);
@@ -2479,9 +2480,9 @@ static bool load_json_scene(const string& filename, scene_scene& scene,
   };
 
   // parse json reference
-  auto texture_map = unordered_map<string, texture_handle>{};
+  auto texture_map = unordered_map<string, int>{};
   auto get_texture = [&scene, &texture_map, &get_value](
-                         const njson& js, texture_handle& value) -> bool {
+                         const njson& js, int& value) -> bool {
     auto name = ""s;
     if (!get_value(js, name)) return false;
     auto it = texture_map.find(name);
@@ -2505,8 +2506,8 @@ static bool load_json_scene(const string& filename, scene_scene& scene,
   auto ply_instances        = vector<ply_instance>{};
   auto ply_instances_names  = vector<string>{};
   auto ply_instance_map     = unordered_map<string, ply_instance_handle>{
-      {"", invalid_handle}};
-  auto instance_ply = unordered_map<instance_handle, ply_instance_handle>{};
+      {"", invalidid}};
+  auto instance_ply      = unordered_map<int, ply_instance_handle>{};
   auto get_ply_instances = [&scene, &ply_instances, &ply_instances_names,
                                &ply_instance_map, &instance_ply,
                                &get_value](const njson& js,
@@ -2542,21 +2543,7 @@ static bool load_json_scene(const string& filename, scene_scene& scene,
 
   // loop over external dictionaries
   for (auto& [gname, group] : iterate_object(js)) {
-    if (gname == "asset") {
-      auto& asset = scene.asset;
-      if (!check_object(group)) return parse_error(gname);
-      for (auto& [key, value] : iterate_object(group)) {
-        if (key == "copyright") {
-          if (!get_value(value, asset.copyright))
-            return parse_error(gname, key);
-        } else if (key == "generator") {
-          if (!get_value(value, asset.generator))
-            return parse_error(gname, key);
-        } else {
-          return key_error(gname, key);
-        }
-      }
-    } else if (gname == "cameras") {
+    if (gname == "cameras") {
       if (!check_object(group)) return parse_error(gname);
       for (auto& [name, element] : iterate_object(group)) {
         if (!check_object(element)) return parse_error(gname, name);
@@ -2637,7 +2624,7 @@ static bool load_json_scene(const string& filename, scene_scene& scene,
         }
         auto& material = scene.materials.at(material_map.at(name));
         material_set[&material - &scene.materials.front()] = true;
-        material.type = material_type::metallic;
+        material.type = scene_material_type::metallic;
         for (auto& [key, value] : iterate_object(element)) {
           if (key == "type") {
             if (!get_value(value, material.type))
@@ -2918,7 +2905,6 @@ static bool load_json_scene(const string& filename, scene_scene& scene,
   }
 
   // fix scene
-  if (scene.asset.name.empty()) scene.asset.name = path_basename(filename);
   add_missing_camera(scene);
   add_missing_radius(scene);
   trim_memory(scene);
@@ -2959,18 +2945,6 @@ static bool save_json_scene(const string& filename, const scene_scene& scene,
 
   // save json file
   auto js = njson::object();
-
-  // asset
-  {
-    auto& asset   = scene.asset;
-    auto& element = insert_object(js, "asset");
-    if (!asset.copyright.empty()) {
-      insert_value(element, "copyright", asset.copyright);
-    }
-    if (!asset.generator.empty()) {
-      insert_value(element, "generator", asset.generator);
-    }
-  }
 
   auto def_cam = sceneio_camera{};
   if (!scene.cameras.empty()) {
@@ -3013,7 +2987,7 @@ static bool save_json_scene(const string& filename, const scene_scene& scene,
       if (environment.emission != def_env.emission) {
         insert_value(element, "emission", environment.emission);
       }
-      if (environment.emission_tex != invalid_handle) {
+      if (environment.emission_tex != invalidid) {
         insert_value(element, "emission_tex",
             get_texture_name(scene, environment.emission_tex));
       }
@@ -3055,23 +3029,23 @@ static bool save_json_scene(const string& filename, const scene_scene& scene,
       if (material.opacity != def_material.opacity) {
         insert_value(element, "opacity", material.opacity);
       }
-      if (material.emission_tex != invalid_handle) {
+      if (material.emission_tex != invalidid) {
         insert_value(element, "emission_tex",
             get_texture_name(scene, material.emission_tex));
       }
-      if (material.color_tex != invalid_handle) {
+      if (material.color_tex != invalidid) {
         insert_value(
             element, "color_tex", get_texture_name(scene, material.color_tex));
       }
-      if (material.roughness_tex != invalid_handle) {
+      if (material.roughness_tex != invalidid) {
         insert_value(element, "roughness_tex",
             get_texture_name(scene, material.roughness_tex));
       }
-      if (material.scattering_tex != invalid_handle) {
+      if (material.scattering_tex != invalidid) {
         insert_value(element, "scattering_tex",
             get_texture_name(scene, material.scattering_tex));
       }
-      if (material.normal_tex != invalid_handle) {
+      if (material.normal_tex != invalidid) {
         insert_value(element, "normal_tex",
             get_texture_name(scene, material.normal_tex));
       }
@@ -3086,10 +3060,10 @@ static bool save_json_scene(const string& filename, const scene_scene& scene,
       if (instance.frame != def_instance.frame) {
         insert_value(element, "frame", instance.frame);
       }
-      if (instance.shape != invalid_handle) {
+      if (instance.shape != invalidid) {
         insert_value(element, "shape", get_shape_name(scene, instance.shape));
       }
-      if (instance.material != invalid_handle) {
+      if (instance.material != invalidid) {
         insert_value(
             element, "material", get_material_name(scene, instance.material));
       }
@@ -3101,7 +3075,7 @@ static bool save_json_scene(const string& filename, const scene_scene& scene,
     auto& group = insert_object(js, "subdivs");
     for (auto& subdiv : scene.subdivs) {
       auto& element = insert_object(group, get_subdiv_name(scene, subdiv));
-      if (subdiv.shape != invalid_handle) {
+      if (subdiv.shape != invalidid) {
         insert_value(element, "shape", get_shape_name(scene, subdiv.shape));
       }
       if (subdiv.subdivisions != def_subdiv.subdivisions) {
@@ -3116,7 +3090,7 @@ static bool save_json_scene(const string& filename, const scene_scene& scene,
       if (subdiv.displacement != def_subdiv.displacement) {
         insert_value(element, "displacement", subdiv.displacement);
       }
-      if (subdiv.displacement_tex != invalid_handle) {
+      if (subdiv.displacement_tex != invalidid) {
         insert_value(element, "displacement_tex",
             get_texture_name(scene, subdiv.displacement_tex));
       }
@@ -3282,23 +3256,23 @@ static bool load_obj_scene(const string& filename, scene_scene& scene,
   // handler for materials
   for (auto& omaterial : obj.materials) {
     auto& material        = scene.materials.emplace_back();
-    material.type         = material_type::metallic;
+    material.type         = scene_material_type::metallic;
     material.emission     = omaterial.emission;
     material.emission_tex = omaterial.emission_tex;
     if (max(omaterial.transmission) > 0.1) {
-      material.type      = material_type::thinglass;
+      material.type      = scene_material_type::thinglass;
       material.color     = omaterial.transmission;
       material.color_tex = omaterial.transmission_tex;
     } else if (max(omaterial.specular) > 0.2) {
-      material.type      = material_type::metal;
+      material.type      = scene_material_type::metal;
       material.color     = omaterial.specular;
       material.color_tex = omaterial.specular_tex;
     } else if (max(omaterial.specular) > 0) {
-      material.type      = material_type::plastic;
+      material.type      = scene_material_type::plastic;
       material.color     = omaterial.diffuse;
       material.color_tex = omaterial.diffuse_tex;
     } else {
-      material.type      = material_type::matte;
+      material.type      = scene_material_type::matte;
       material.color     = omaterial.diffuse;
       material.color_tex = omaterial.diffuse_tex;
     }
@@ -3368,7 +3342,6 @@ static bool load_obj_scene(const string& filename, scene_scene& scene,
   }
 
   // fix scene
-  if (scene.asset.name.empty()) scene.asset.name = path_basename(filename);
   add_missing_camera(scene);
   add_missing_radius(scene);
 
@@ -3706,15 +3679,6 @@ static bool load_gltf_scene(const string& filename, scene_scene& scene,
   // handle progress
   log_progress("convert scene", progress.x++, progress.y);
 
-  // convert asset
-  if (gltf.contains("asset")) {
-    try {
-      scene.asset.copyright = gltf.value("copyright", ""s);
-    } catch (...) {
-      return parse_error();
-    }
-  }
-
   // convert cameras
   auto cameras = vector<scene_camera>{};
   if (gltf.contains("cameras")) {
@@ -3751,9 +3715,8 @@ static bool load_gltf_scene(const string& filename, scene_scene& scene,
   }
 
   // convert color textures
-  auto get_texture = [&gltf](const njson& js,
-                         const string&    name) -> texture_handle {
-    if (!js.contains(name)) return invalid_handle;
+  auto get_texture = [&gltf](const njson& js, const string& name) -> int {
+    if (!js.contains(name)) return invalidid;
     auto& ginfo    = js.at(name);
     auto& gtexture = gltf.at("textures").at(ginfo.value("index", -1));
     return gtexture.value("source", -1);
@@ -3777,7 +3740,7 @@ static bool load_gltf_scene(const string& filename, scene_scene& scene,
     try {
       for (auto& gmaterial : gltf.at("materials")) {
         auto& material    = scene.materials.emplace_back();
-        material.type     = material_type::metallic;
+        material.type     = scene_material_type::metallic;
         material.emission = gmaterial.value("emissiveFactor", vec3f{0, 0, 0});
         material.emission_tex = get_texture(gmaterial, "emissiveTexture");
         material.normal_tex   = get_texture(gmaterial, "normalTexture");
@@ -3791,6 +3754,18 @@ static bool load_gltf_scene(const string& filename, scene_scene& scene,
           material.color_tex = get_texture(gpbr, "baseColorTexture");
           material.roughness_tex = get_texture(
               gpbr, "metallicRoughnessTexture");
+        }
+        if (gmaterial.contains("extensions") &&
+            gmaterial.at("extensions").contains("KHR_materials_transmission")) {
+          auto& gtransmission =
+              gmaterial.at("extensions").at("KHR_materials_transmission");
+          auto transmission = gtransmission.value("transmissionFactor", 1.0f);
+          if (transmission > 0) {
+            material.type      = scene_material_type::thinglass;
+            material.color     = {transmission, transmission, transmission};
+            material.color_tex = get_texture(gmaterial, "transmissionTexture");
+            // material.roughness = 0; // leave it set from before
+          }
         }
       }
     } catch (...) {
@@ -3861,6 +3836,7 @@ static bool load_gltf_scene(const string& filename, scene_scene& scene,
               data = (float*)shape.radius.data();
             } else {
               // ignore
+              continue;
             }
             // convert values
             auto current = buffer.data() +
@@ -4113,7 +4089,6 @@ static bool load_gltf_scene(const string& filename, scene_scene& scene,
   }
 
   // fix scene
-  if (scene.asset.name.empty()) scene.asset.name = path_basename(filename);
   add_missing_material(scene);
   add_missing_camera(scene);
   add_missing_radius(scene);
@@ -4149,11 +4124,9 @@ static bool save_gltf_scene(const string& filename, const scene_scene& scene,
 
   // asset
   {
-    auto& gasset        = gltf["asset"];
-    gasset              = njson::object();
-    gasset["version"]   = "2.0";
-    gasset["generator"] = scene.asset.generator;
-    gasset["copyright"] = scene.asset.copyright;
+    auto& gasset      = gltf["asset"];
+    gasset            = njson::object();
+    gasset["version"] = "2.0";
   }
 
   // cameras
@@ -4213,19 +4186,19 @@ static bool save_gltf_scene(const string& filename, const scene_scene& scene,
           material.color.z, material.opacity};
       gpbr["metallicFactor"]      = material.metallic;
       gpbr["roughnessFactor"]     = material.roughness;
-      if (material.emission_tex != invalid_handle) {
+      if (material.emission_tex != invalidid) {
         gmaterial["emissiveTexture"]          = njson::object();
         gmaterial["emissiveTexture"]["index"] = material.emission_tex;
       }
-      if (material.normal_tex != invalid_handle) {
+      if (material.normal_tex != invalidid) {
         gmaterial["normalTexture"]          = njson::object();
         gmaterial["normalTexture"]["index"] = material.normal_tex;
       }
-      if (material.color_tex != invalid_handle) {
+      if (material.color_tex != invalidid) {
         gpbr["baseColorTexture"]          = njson::object();
         gpbr["baseColorTexture"]["index"] = material.color_tex;
       }
-      if (material.roughness_tex != invalid_handle) {
+      if (material.roughness_tex != invalidid) {
         gpbr["metallicRoughnessTexture"]          = njson::object();
         gpbr["metallicRoughnessTexture"]["index"] = material.roughness_tex;
       }
@@ -4355,11 +4328,11 @@ static bool save_gltf_scene(const string& filename, const scene_scene& scene,
   }
 
   // meshes
-  using mesh_key = pair<shape_handle, material_handle>;
+  using mesh_key = pair<int, int>;
   struct mesh_key_hash {
     size_t operator()(const mesh_key& v) const {
-      const std::hash<element_handle> hasher = std::hash<element_handle>();
-      auto                            h      = (size_t)0;
+      const std::hash<int> hasher = std::hash<int>();
+      auto                 h      = (size_t)0;
       h ^= hasher(v.first) + 0x9e3779b9 + (h << 6) + (h >> 2);
       h ^= hasher(v.second) + 0x9e3779b9 + (h << 6) + (h >> 2);
       return h;
@@ -4550,13 +4523,13 @@ static bool load_pbrt_scene(const string& filename, scene_scene& scene,
   }
 
   // material type map
-  auto material_type_map = unordered_map<pbrt_mtype, material_type>{
-      {pbrt_mtype::matte, material_type::matte},
-      {pbrt_mtype::plastic, material_type::plastic},
-      {pbrt_mtype::metal, material_type::metal},
-      {pbrt_mtype::glass, material_type::glass},
-      {pbrt_mtype::thinglass, material_type::thinglass},
-      {pbrt_mtype::subsurface, material_type::matte},
+  auto material_type_map = unordered_map<pbrt_mtype, scene_material_type>{
+      {pbrt_mtype::matte, scene_material_type::matte},
+      {pbrt_mtype::plastic, scene_material_type::plastic},
+      {pbrt_mtype::metal, scene_material_type::metal},
+      {pbrt_mtype::glass, scene_material_type::glass},
+      {pbrt_mtype::thinglass, scene_material_type::thinglass},
+      {pbrt_mtype::subsurface, scene_material_type::matte},
   };
 
   // convert material
@@ -4564,7 +4537,7 @@ static bool load_pbrt_scene(const string& filename, scene_scene& scene,
     auto& material = scene.materials.emplace_back();
     material.type  = material_type_map.at(pmaterial.type);
     if (pmaterial.emission != zero3f) {
-      material.type = material_type::matte;
+      material.type = scene_material_type::matte;
     }
     material.emission  = pmaterial.emission;
     material.color     = pmaterial.color;
@@ -4684,7 +4657,6 @@ static bool load_pbrt_scene(const string& filename, scene_scene& scene,
   }
 
   // fix scene
-  if (scene.asset.name.empty()) scene.asset.name = path_basename(filename);
   add_missing_camera(scene);
   add_missing_radius(scene);
 
@@ -4725,14 +4697,14 @@ static bool save_pbrt_scene(const string& filename, const scene_scene& scene,
   }
 
   // material type map
-  auto material_type_map = unordered_map<material_type, pbrt_mtype>{
-      {material_type::matte, pbrt_mtype::matte},
-      {material_type::plastic, pbrt_mtype::plastic},
-      {material_type::metal, pbrt_mtype::metal},
-      {material_type::glass, pbrt_mtype::glass},
-      {material_type::thinglass, pbrt_mtype::thinglass},
-      {material_type::subsurface, pbrt_mtype::matte},
-      {material_type::volume, pbrt_mtype::matte},
+  auto material_type_map = unordered_map<scene_material_type, pbrt_mtype>{
+      {scene_material_type::matte, pbrt_mtype::matte},
+      {scene_material_type::plastic, pbrt_mtype::plastic},
+      {scene_material_type::metal, pbrt_mtype::metal},
+      {scene_material_type::glass, pbrt_mtype::glass},
+      {scene_material_type::thinglass, pbrt_mtype::thinglass},
+      {scene_material_type::subsurface, pbrt_mtype::matte},
+      {scene_material_type::volume, pbrt_mtype::matte},
   };
 
   // convert materials

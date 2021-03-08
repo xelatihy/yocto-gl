@@ -63,7 +63,7 @@ void add_command(cli_command& cli, const string& name, convert_params& value,
 // convert images
 int run_convert(const convert_params& params) {
   // load
-  auto image   = image_data{};
+  auto image   = color_image{};
   auto ioerror = string{};
   if (!load_image(params.image, image, ioerror)) return print_fatal(ioerror);
 
@@ -110,7 +110,7 @@ int run_view(const view_params& params) {
 // view images
 int run_view(const view_params& params) {
   // load
-  auto images = vector<image_data>(params.images.size());
+  auto images = vector<color_image>(params.images.size());
   log_progress("load image", 0, (int)images.size());
   for (auto idx = 0; idx < (int)params.images.size(); idx++) {
     log_progress("load image", idx, (int)images.size());
@@ -158,7 +158,7 @@ int run_grade(const grade_params& params) {
   auto viewer = make_imageviewer("yimage");
 
   // load image
-  auto image   = image_data{};
+  auto image   = color_image{};
   auto ioerror = string{};
   log_progress("load image", 0, 1);
   if (!load_image(params.image, image, ioerror)) return print_fatal(ioerror);
@@ -197,7 +197,7 @@ void add_command(cli_command& cli, const string& name, diff_params& value,
 int run_diff(const diff_params& params) {
   // load
   auto ioerror = string{};
-  auto image1 = image_data{}, image2 = image_data{};
+  auto image1 = color_image{}, image2 = color_image{};
   if (!load_image(params.image1, image1, ioerror)) return false;
   if (!load_image(params.image2, image2, ioerror)) return false;
 
@@ -262,7 +262,7 @@ void add_command(cli_command& cli, const string& name, setalpha_params& value,
 int run_setalpha(const setalpha_params& params) {
   // load
   auto ioerror = string{};
-  auto image = image_data{}, alpha = image_data{};
+  auto image = color_image{}, alpha = color_image{};
   if (!load_image(params.image, image, ioerror)) return print_fatal(ioerror);
   if (!load_image(params.alpha, alpha, ioerror)) return print_fatal(ioerror);
 
