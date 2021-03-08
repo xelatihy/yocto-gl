@@ -3801,7 +3801,7 @@ static bool load_gltf_scene(const string& filename, scene_scene& scene,
             material.type      = material_type::thinglass;
             material.color     = {transmission, transmission, transmission};
             material.color_tex = get_texture(gmaterial, "transmissionTexture");
-            material.roughness = 0;
+            // material.roughness = 0; // leave it set from before
           }
         }
       }
