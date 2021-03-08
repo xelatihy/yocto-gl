@@ -742,13 +742,14 @@ namespace yocto {
 // load texture
 bool load_texture(
     const string& filename, scene_texture& texture, string& error) {
-  return load_image(filename, texture, error);
+  return load_image(filename, reinterpret_cast<color_image&>(texture), error);
 }
 
 // save texture
 bool save_texture(
     const string& filename, const scene_texture& texture, string& error) {
-  return save_image(filename, texture, error);
+  return save_image(
+      filename, reinterpret_cast<const color_image&>(texture), error);
 }
 
 }  // namespace yocto

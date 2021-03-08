@@ -90,8 +90,15 @@ struct scene_camera {
   float   aperture     = 0;
 };
 
-// Texture containing either an LDR or HDR image.
-using scene_texture = color_image;
+// Texture data as array of float or byte pixels. Textures can be stored in
+// linear or non linear color space.
+struct scene_texture {
+  int           width   = 0;
+  int           height  = 0;
+  bool          linear  = false;
+  vector<vec4f> pixelsf = {};
+  vector<vec4b> pixelsb = {};
+};
 
 // Material type
 enum struct scene_material_type {

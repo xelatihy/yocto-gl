@@ -113,7 +113,8 @@ namespace yocto {
 // Evaluate a texture
 vec4f eval_texture(const scene_texture& texture, const vec2f& uv,
     bool as_linear, bool no_interpolation, bool clamp_to_edge) {
-  return eval_image(texture, uv, as_linear, no_interpolation, clamp_to_edge);
+  return eval_image(reinterpret_cast<const color_image&>(texture), uv,
+      as_linear, no_interpolation, clamp_to_edge);
 }
 
 // Helpers
@@ -1028,8 +1029,8 @@ void add_camera(scene_scene& scene) {
 // Add a sky environment
 void add_sky(scene_scene& scene, float sun_angle) {
   scene.texture_names.emplace_back("sky");
-  auto& texture = scene.textures.emplace_back();
-  texture       = make_sunsky(1024, 512, sun_angle);
+  auto& texture                           = scene.textures.emplace_back();
+  reinterpret_cast<color_image&>(texture) = make_sunsky(1024, 512, sun_angle);
   scene.environment_names.emplace_back("sky");
   auto& environment        = scene.environments.emplace_back();
   environment.emission     = {1, 1, 1};

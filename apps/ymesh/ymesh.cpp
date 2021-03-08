@@ -444,7 +444,7 @@ sculpt_state make_sculpt_state(
   state.solver     = make_geodesic_solver(
       shape.triangles, adjacencies, shape.positions);
   state.adjacencies = vertex_adjacencies(shape.triangles, adjacencies);
-  state.tex_image   = texture;
+  state.tex_image   = reinterpret_cast<const color_image &>(texture);
   state.base_shape  = shape;
   state.base_shape.texcoords.assign(shape.positions.size(), {0, 0});
   return state;
