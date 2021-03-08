@@ -1576,10 +1576,10 @@ static void add_missing_radius(scene_scene& scene, float radius = 0.001f) {
 
 // Add missing cameras.
 void add_missing_material(scene_scene& scene) {
-  auto default_material = invalid_handle;
+  auto default_material = invalidid;
   for (auto& instance : scene.instances) {
     if (instance.material >= 0) continue;
-    if (default_material == invalid_handle) {
+    if (default_material == invalidid) {
       auto& material   = scene.materials.emplace_back();
       material.color   = {0.8, 0.8, 0.8};
       default_material = (int)scene.materials.size() - 1;
@@ -1700,24 +1700,24 @@ void make_test(scene_scene& scene, const test_params& params) {
   //         lookat_frame({-0.4, 0.8, 0.8}, {0, 0.1, 0}, {0, 1, 0}, true),
   //         add_shape(scene, "arealight1", make_rect({1, 1}, {0.2, 0.2})),
   //         add_emission_material(
-  //             scene, "arealight1", {20, 20, 20}, invalid_handle));
+  //             scene, "arealight1", {20, 20, 20}, invalidid));
   //     add_instance(scene, "arealight2",
   //         lookat_frame({+0.4, 0.8, 0.8}, {0, 0.1, 0}, {0, 1, 0}, true),
   //         add_shape(scene, "arealight2", make_rect({1, 1}, {0.2, 0.2})),
   //         add_emission_material(
-  //             scene, "arealight2", {20, 20, 20}, invalid_handle));
+  //             scene, "arealight2", {20, 20, 20}, invalidid));
   //   } break;
   //   case test_arealights_type::large: {
   //     add_instance(scene, "largearealight1",
   //         lookat_frame({-0.8, 1.6, 1.6}, {0, 0.1, 0}, {0, 1, 0}, true),
   //         add_shape(scene, "largearealight1", make_rect({1, 1}, {0.4, 0.4})),
   //         add_emission_material(
-  //             scene, "largearealight1", {10, 10, 10}, invalid_handle));
+  //             scene, "largearealight1", {10, 10, 10}, invalidid));
   //     add_instance(scene, "largearealight2",
   //         lookat_frame({+0.8, 1.6, 1.6}, {0, 0.1, 0}, {0, 1, 0}, true),
   //         add_shape(scene, "largearealight2", make_rect({1, 1}, {0.4, 0.4})),
   //         add_emission_material(
-  //             scene, "largearealight2", {10, 10, 10}, invalid_handle));
+  //             scene, "largearealight2", {10, 10, 10}, invalidid));
   //   } break;
   // }
   // switch (params.floor) {
@@ -1729,10 +1729,10 @@ void make_test(scene_scene& scene, const test_params& params) {
   //             add_texture(scene, "floor", make_grid({1024, 1024}))));
   //   } break;
   // }
-  // auto shapes = vector<scene_shape_handle>{}, shapesi =
-  // vector<scene_shape_handle>{}; auto subdivs   =
-  // vector<scene_subdiv_handle>{}; auto materials =
-  // vector<scene_material_handle>{}; switch (params.shapes) {
+  // auto shapes = vector<int>{}, shapesi =
+  // vector<int>{}; auto subdivs   =
+  // vector<int>{}; auto materials =
+  // vector<int>{}; switch (params.shapes) {
   //   case test_shapes_type::features1: {
   //     auto bunny  = add_shape(scene, "sphere", make_sphere(32, 0.075, 1));
   //     auto sphere = add_shape(scene, "sphere", make_sphere(32, 0.075, 1));
@@ -1750,9 +1750,9 @@ void make_test(scene_scene& scene, const test_params& params) {
   //             make_rounded_box({32, 32, 32}, {0.075, 0.075, 0.075}, {1, 1,
   //             1},
   //                 0.3 * 0.075f))};
-  //     shapesi = {invalid_handle, invalid_handle,
+  //     shapesi = {invalidid, invalidid,
   //         add_shape(scene, "hairi", make_sphere(32, 0.075f * 0.8f, 1)),
-  //         invalid_handle, invalid_handle};
+  //         invalidid, invalidid};
   //     subdivs = {add_subdiv(scene, "suzanne", make_monkey(0.075f * 0.8f),
   //                    shapes[1], 2),
   //         add_subdiv(scene, "displaced", make_sphere(128, 0.075f, 1),
@@ -1809,7 +1809,7 @@ void make_test(scene_scene& scene, const test_params& params) {
   //   } break;
   //   case test_shapes_type::shapes3: {
   //     shapes = {
-  //         invalid_handle,
+  //         invalidid,
   //         add_shape(scene, "hair1",
   //             make_hair(make_sphere(32, 0.075f * 0.8f, 1), {4, 65536},
   //                 {0.1f * 0.15f, 0.1f * 0.15f},
@@ -1822,7 +1822,7 @@ void make_test(scene_scene& scene, const test_params& params) {
   //             make_hair(make_sphere(32, 0.075f * 0.8f, 1), {4, 65536},
   //                 {0.1f * 0.15f, 0.1f * 0.15f},
   //                 {0.001f * 0.15f, 0.0005f * 0.15f}, {0, 0}, {0.5, 128})),
-  //         invalid_handle,
+  //         invalidid,
   //     };
   //   } break;
   // }
@@ -1835,7 +1835,7 @@ void make_test(scene_scene& scene, const test_params& params) {
   //         add_glass_material(
   //             scene, "jade", {0.5, 0.5, 0.5}, 0, {0.3, 0.6, 0.3}),
   //         add_plastic_material(scene, "bumped", {0.5, 0.7, 0.5}, 0.2,
-  //             invalid_handle, invalid_handle,
+  //             invalidid, invalidid,
   //             add_texture(scene, "bumps-normal",
   //                 bump_to_normal(make_bumps({1024, 1024}), 0.05), false,
   //                 true)),
@@ -1891,10 +1891,10 @@ void make_test(scene_scene& scene, const test_params& params) {
   //         bump_to_normal(make_bumps({1024, 1024}), 0.05), false, true);
   //     materials         = {
   //         add_plastic_material(scene, "plastic1", {0.5, 0.5, 0.7}, 0.01,
-  //             invalid_handle, invalid_handle, bumps_normal),
+  //             invalidid, invalidid, bumps_normal),
   //         add_plastic_material(scene, "plastic2", {0.5, 0.7, 0.5}, 0.2),
   //         add_metal_material(scene, "metal1", {0.7, 0.7, 0.7}, 0,
-  //             invalid_handle, invalid_handle, bumps_normal),
+  //             invalidid, invalidid, bumps_normal),
   //         add_metal_material(scene, "metal2", {0.66, 0.45, 0.34}, 0.2),
   //         add_metal_material(scene, "metal3", {0.66, 0.45, 0.34}, 0.2),
   //     };
@@ -1915,20 +1915,20 @@ void make_test(scene_scene& scene, const test_params& params) {
   //   case test_materials_type::materials5: {
   //     materials = {
   //         add_glass_material(scene, "skin1a", {0.76, 0.48, 0.23}, 0.25,
-  //             {0.436, 0.227, 0.131}, invalid_handle, invalid_handle,
-  //             invalid_handle, 1.5, -0.8, 0.001),
+  //             {0.436, 0.227, 0.131}, invalidid, invalidid,
+  //             invalidid, 1.5, -0.8, 0.001),
   //         add_glass_material(scene, "skin2a", {0.82, 0.55, 0.4}, 0.25,
-  //             {0.623, 0.433, 0.343}, invalid_handle, invalid_handle,
-  //             invalid_handle, 1.5, -0.8, 0.001),
+  //             {0.623, 0.433, 0.343}, invalidid, invalidid,
+  //             invalidid, 1.5, -0.8, 0.001),
   //         add_glass_material(scene, "skins", {0.76, 0.48, 0.23}, 0,
-  //             {0.436, 0.227, 0.131}, invalid_handle, invalid_handle,
-  //             invalid_handle, 1.5, -0.8, 0.001),
+  //             {0.436, 0.227, 0.131}, invalidid, invalidid,
+  //             invalidid, 1.5, -0.8, 0.001),
   //         add_glass_material(scene, "skin1b", {0.76, 0.48, 0.23}, 0.25,
-  //             {0.436, 0.227, 0.131}, invalid_handle, invalid_handle,
-  //             invalid_handle, 1.5, -0.8, 0.001),
+  //             {0.436, 0.227, 0.131}, invalidid, invalidid,
+  //             invalidid, 1.5, -0.8, 0.001),
   //         add_glass_material(scene, "skin2b", {0.82, 0.55, 0.4}, 0.25,
-  //             {0.623, 0.433, 0.343}, invalid_handle, invalid_handle,
-  //             invalid_handle, 1.5, -0.8, 0.001),
+  //             {0.623, 0.433, 0.343}, invalidid, invalidid,
+  //             invalidid, 1.5, -0.8, 0.001),
   //     };
   //   } break;
   // }
@@ -2439,9 +2439,9 @@ static bool load_json_scene(const string& filename, scene_scene& scene,
   };
 
   // parse json reference
-  auto shape_map = unordered_map<string, scene_shape_handle>{};
+  auto shape_map = unordered_map<string, int>{};
   auto get_shape = [&scene, &shape_map, &get_value](
-                       const njson& js, scene_shape_handle& value) -> bool {
+                       const njson& js, int& value) -> bool {
     auto name = ""s;
     if (!get_value(js, name)) return false;
     auto it = shape_map.find(name);
@@ -2458,11 +2458,10 @@ static bool load_json_scene(const string& filename, scene_scene& scene,
   };
 
   // parse json reference
-  auto material_map = unordered_map<string, scene_material_handle>{};
+  auto material_map = unordered_map<string, int>{};
   auto material_set = vector<bool>{};
   auto get_material = [&scene, &material_map, &material_set, &get_value](
-                          const njson&           js,
-                          scene_material_handle& value) -> bool {
+                          const njson& js, int& value) -> bool {
     auto name = ""s;
     if (!get_value(js, name)) return false;
     auto it = material_map.find(name);
@@ -2480,9 +2479,9 @@ static bool load_json_scene(const string& filename, scene_scene& scene,
   };
 
   // parse json reference
-  auto texture_map = unordered_map<string, scene_texture_handle>{};
+  auto texture_map = unordered_map<string, int>{};
   auto get_texture = [&scene, &texture_map, &get_value](
-                         const njson& js, scene_texture_handle& value) -> bool {
+                         const njson& js, int& value) -> bool {
     auto name = ""s;
     if (!get_value(js, name)) return false;
     auto it = texture_map.find(name);
@@ -2506,9 +2505,8 @@ static bool load_json_scene(const string& filename, scene_scene& scene,
   auto ply_instances        = vector<ply_instance>{};
   auto ply_instances_names  = vector<string>{};
   auto ply_instance_map     = unordered_map<string, ply_instance_handle>{
-      {"", invalid_handle}};
-  auto instance_ply =
-      unordered_map<scene_instance_handle, ply_instance_handle>{};
+      {"", invalidid}};
+  auto instance_ply      = unordered_map<int, ply_instance_handle>{};
   auto get_ply_instances = [&scene, &ply_instances, &ply_instances_names,
                                &ply_instance_map, &instance_ply,
                                &get_value](const njson& js,
@@ -3015,7 +3013,7 @@ static bool save_json_scene(const string& filename, const scene_scene& scene,
       if (environment.emission != def_env.emission) {
         insert_value(element, "emission", environment.emission);
       }
-      if (environment.emission_tex != invalid_handle) {
+      if (environment.emission_tex != invalidid) {
         insert_value(element, "emission_tex",
             get_texture_name(scene, environment.emission_tex));
       }
@@ -3057,23 +3055,23 @@ static bool save_json_scene(const string& filename, const scene_scene& scene,
       if (material.opacity != def_material.opacity) {
         insert_value(element, "opacity", material.opacity);
       }
-      if (material.emission_tex != invalid_handle) {
+      if (material.emission_tex != invalidid) {
         insert_value(element, "emission_tex",
             get_texture_name(scene, material.emission_tex));
       }
-      if (material.color_tex != invalid_handle) {
+      if (material.color_tex != invalidid) {
         insert_value(
             element, "color_tex", get_texture_name(scene, material.color_tex));
       }
-      if (material.roughness_tex != invalid_handle) {
+      if (material.roughness_tex != invalidid) {
         insert_value(element, "roughness_tex",
             get_texture_name(scene, material.roughness_tex));
       }
-      if (material.scattering_tex != invalid_handle) {
+      if (material.scattering_tex != invalidid) {
         insert_value(element, "scattering_tex",
             get_texture_name(scene, material.scattering_tex));
       }
-      if (material.normal_tex != invalid_handle) {
+      if (material.normal_tex != invalidid) {
         insert_value(element, "normal_tex",
             get_texture_name(scene, material.normal_tex));
       }
@@ -3088,10 +3086,10 @@ static bool save_json_scene(const string& filename, const scene_scene& scene,
       if (instance.frame != def_instance.frame) {
         insert_value(element, "frame", instance.frame);
       }
-      if (instance.shape != invalid_handle) {
+      if (instance.shape != invalidid) {
         insert_value(element, "shape", get_shape_name(scene, instance.shape));
       }
-      if (instance.material != invalid_handle) {
+      if (instance.material != invalidid) {
         insert_value(
             element, "material", get_material_name(scene, instance.material));
       }
@@ -3103,7 +3101,7 @@ static bool save_json_scene(const string& filename, const scene_scene& scene,
     auto& group = insert_object(js, "subdivs");
     for (auto& subdiv : scene.subdivs) {
       auto& element = insert_object(group, get_subdiv_name(scene, subdiv));
-      if (subdiv.shape != invalid_handle) {
+      if (subdiv.shape != invalidid) {
         insert_value(element, "shape", get_shape_name(scene, subdiv.shape));
       }
       if (subdiv.subdivisions != def_subdiv.subdivisions) {
@@ -3118,7 +3116,7 @@ static bool save_json_scene(const string& filename, const scene_scene& scene,
       if (subdiv.displacement != def_subdiv.displacement) {
         insert_value(element, "displacement", subdiv.displacement);
       }
-      if (subdiv.displacement_tex != invalid_handle) {
+      if (subdiv.displacement_tex != invalidid) {
         insert_value(element, "displacement_tex",
             get_texture_name(scene, subdiv.displacement_tex));
       }
@@ -3753,9 +3751,8 @@ static bool load_gltf_scene(const string& filename, scene_scene& scene,
   }
 
   // convert color textures
-  auto get_texture = [&gltf](const njson& js,
-                         const string&    name) -> scene_texture_handle {
-    if (!js.contains(name)) return invalid_handle;
+  auto get_texture = [&gltf](const njson& js, const string& name) -> int {
+    if (!js.contains(name)) return invalidid;
     auto& ginfo    = js.at(name);
     auto& gtexture = gltf.at("textures").at(ginfo.value("index", -1));
     return gtexture.value("source", -1);
@@ -4228,19 +4225,19 @@ static bool save_gltf_scene(const string& filename, const scene_scene& scene,
           material.color.z, material.opacity};
       gpbr["metallicFactor"]      = material.metallic;
       gpbr["roughnessFactor"]     = material.roughness;
-      if (material.emission_tex != invalid_handle) {
+      if (material.emission_tex != invalidid) {
         gmaterial["emissiveTexture"]          = njson::object();
         gmaterial["emissiveTexture"]["index"] = material.emission_tex;
       }
-      if (material.normal_tex != invalid_handle) {
+      if (material.normal_tex != invalidid) {
         gmaterial["normalTexture"]          = njson::object();
         gmaterial["normalTexture"]["index"] = material.normal_tex;
       }
-      if (material.color_tex != invalid_handle) {
+      if (material.color_tex != invalidid) {
         gpbr["baseColorTexture"]          = njson::object();
         gpbr["baseColorTexture"]["index"] = material.color_tex;
       }
-      if (material.roughness_tex != invalid_handle) {
+      if (material.roughness_tex != invalidid) {
         gpbr["metallicRoughnessTexture"]          = njson::object();
         gpbr["metallicRoughnessTexture"]["index"] = material.roughness_tex;
       }
@@ -4370,11 +4367,11 @@ static bool save_gltf_scene(const string& filename, const scene_scene& scene,
   }
 
   // meshes
-  using mesh_key = pair<scene_shape_handle, scene_material_handle>;
+  using mesh_key = pair<int, int>;
   struct mesh_key_hash {
     size_t operator()(const mesh_key& v) const {
       const std::hash<int> hasher = std::hash<int>();
-      auto                            h      = (size_t)0;
+      auto                 h      = (size_t)0;
       h ^= hasher(v.first) + 0x9e3779b9 + (h << 6) + (h >> 2);
       h ^= hasher(v.second) + 0x9e3779b9 + (h << 6) + (h >> 2);
       return h;

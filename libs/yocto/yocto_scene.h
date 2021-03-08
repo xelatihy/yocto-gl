@@ -65,14 +65,7 @@ using std::vector;
 namespace yocto {
 
 // Handles to refer to scene elements
-inline const int invalid_handle = -1;
-using scene_camera_handle       = int;
-using scene_texture_handle      = int;
-using scene_material_handle     = int;
-using scene_shape_handle        = int;
-using scene_instance_handle     = int;
-using scene_environment_handle  = int;
-using scene_subdiv_handle       = int;
+inline const int invalidid = -1;
 
 // Image data as array of float or byte pixels. Images can be stored in linear
 // or non linear color space.
@@ -140,11 +133,11 @@ struct scene_material {
   float               opacity      = 1;
 
   // textures
-  scene_texture_handle emission_tex   = invalid_handle;
-  scene_texture_handle color_tex      = invalid_handle;
-  scene_texture_handle roughness_tex  = invalid_handle;
-  scene_texture_handle scattering_tex = invalid_handle;
-  scene_texture_handle normal_tex     = invalid_handle;
+  int emission_tex   = invalidid;
+  int color_tex      = invalidid;
+  int roughness_tex  = invalidid;
+  int scattering_tex = invalidid;
+  int normal_tex     = invalidid;
 };
 
 // Shape data represented as indexed meshes of elements.
@@ -181,17 +174,17 @@ struct scene_fvshape {
 // Instance.
 struct scene_instance {
   // instance data
-  frame3f               frame    = identity3x4f;
-  scene_shape_handle    shape    = invalid_handle;
-  scene_material_handle material = invalid_handle;
+  frame3f frame    = identity3x4f;
+  int     shape    = invalidid;
+  int     material = invalidid;
 };
 
 // Environment map.
 struct scene_environment {
   // environment data
-  frame3f              frame        = identity3x4f;
-  vec3f                emission     = {0, 0, 0};
-  scene_texture_handle emission_tex = invalid_handle;
+  frame3f frame        = identity3x4f;
+  vec3f   emission     = {0, 0, 0};
+  int     emission_tex = invalidid;
 };
 
 // Subdiv data represented as face-varying primitives where
@@ -213,11 +206,11 @@ struct scene_subdiv {
   bool smooth       = true;
 
   // displacement data
-  float                displacement     = 0;
-  scene_texture_handle displacement_tex = invalid_handle;
+  float displacement     = 0;
+  int   displacement_tex = invalidid;
 
   // shape reference
-  scene_shape_handle shape = invalid_handle;
+  int shape = invalidid;
 };
 
 // Metadata associated with the scene
@@ -352,8 +345,8 @@ namespace yocto {
 vec4f eval_texture(const scene_texture& texture, const vec2f& uv,
     bool as_linear = false, bool no_interpolation = false,
     bool clamp_to_edge = false);
-vec4f eval_texture(const scene_scene& scene, scene_texture_handle texture,
-    const vec2f& uv, bool as_linear = false, bool no_interpolation = false,
+vec4f eval_texture(const scene_scene& scene, int texture, const vec2f& uv,
+    bool as_linear = false, bool no_interpolation = false,
     bool clamp_to_edge = false);
 
 }  // namespace yocto
@@ -520,7 +513,7 @@ void add_camera(scene_scene& scene);
 void add_sky(scene_scene& scene, float sun_angle = pif / 4);
 
 // get named camera or default if name is empty
-scene_camera_handle find_camera(const scene_scene& scene, const string& name);
+int find_camera(const scene_scene& scene, const string& name);
 
 // Return scene statistics as list of strings.
 vector<string> scene_stats(const scene_scene& scene, bool verbose = false);

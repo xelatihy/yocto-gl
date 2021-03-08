@@ -256,16 +256,16 @@ static vec3f sample_lights(const scene_scene& scene, const trace_lights& lights,
     const vec3f& position, float rl, float rel, const vec2f& ruv) {
   auto  light_id = sample_uniform((int)lights.lights.size(), rl);
   auto& light    = lights.lights[light_id];
-  if (light.instance != invalid_handle) {
+  if (light.instance != invalidid) {
     auto& instance  = scene.instances[light.instance];
     auto& shape     = scene.shapes[instance.shape];
     auto  element   = sample_discrete(light.elements_cdf, rel);
     auto  uv        = (!shape.triangles.empty()) ? sample_triangle(ruv) : ruv;
     auto  lposition = eval_position(scene, instance, element, uv);
     return normalize(lposition - position);
-  } else if (light.environment != invalid_handle) {
+  } else if (light.environment != invalidid) {
     auto& environment = scene.environments[light.environment];
-    if (environment.emission_tex != invalid_handle) {
+    if (environment.emission_tex != invalidid) {
       auto& emission_tex = scene.textures[environment.emission_tex];
       auto  idx          = sample_discrete(light.elements_cdf, rel);
       auto  uv = vec2f{((idx % emission_tex.width) + 0.5f) / emission_tex.width,
@@ -286,7 +286,7 @@ static float sample_lights_pdf(const scene_scene& scene, const bvh_scene& bvh,
     const trace_lights& lights, const vec3f& position, const vec3f& direction) {
   auto pdf = 0.0f;
   for (auto& light : lights.lights) {
-    if (light.instance != invalid_handle) {
+    if (light.instance != invalidid) {
       auto& instance = scene.instances[light.instance];
       // check all intersection
       auto lpdf          = 0.0f;
@@ -308,9 +308,9 @@ static float sample_lights_pdf(const scene_scene& scene, const bvh_scene& bvh,
         next_position = lposition + direction * 1e-3f;
       }
       pdf += lpdf;
-    } else if (light.environment != invalid_handle) {
+    } else if (light.environment != invalidid) {
       auto& environment = scene.environments[light.environment];
-      if (environment.emission_tex != invalid_handle) {
+      if (environment.emission_tex != invalidid) {
         auto& emission_tex = scene.textures[environment.emission_tex];
         auto  wl = transform_direction(inverse(environment.frame), direction);
         auto  texcoord = vec2f{atan2(wl.z, wl.x) / (2 * pif),
@@ -891,7 +891,7 @@ trace_lights make_lights(const scene_scene& scene, const trace_params& params) {
     log_progress("build light", progress.x++, ++progress.y);
     auto& light       = add_light(lights);
     light.instance    = handle;
-    light.environment = invalid_handle;
+    light.environment = invalidid;
     if (!shape.triangles.empty()) {
       light.elements_cdf = vector<float>(shape.triangles.size());
       for (auto idx = 0; idx < light.elements_cdf.size(); idx++) {
@@ -916,9 +916,9 @@ trace_lights make_lights(const scene_scene& scene, const trace_params& params) {
     if (environment.emission == zero3f) continue;
     log_progress("build light", progress.x++, ++progress.y);
     auto& light       = add_light(lights);
-    light.instance    = invalid_handle;
+    light.instance    = invalidid;
     light.environment = handle;
-    if (environment.emission_tex != invalid_handle) {
+    if (environment.emission_tex != invalidid) {
       auto& texture      = scene.textures[environment.emission_tex];
       light.elements_cdf = vector<float>(texture.width * texture.height);
       for (auto idx = 0; idx < light.elements_cdf.size(); idx++) {

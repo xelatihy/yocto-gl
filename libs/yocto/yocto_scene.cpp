@@ -499,10 +499,9 @@ vec4f eval_texture(const scene_texture& texture, const vec2f& uv,
 }
 
 // Helpers
-vec4f eval_texture(const scene_scene& scene, scene_texture_handle texture,
-    const vec2f& uv, bool ldr_as_linear, bool no_interpolation,
-    bool clamp_to_edge) {
-  if (texture == invalid_handle) return {1, 1, 1, 1};
+vec4f eval_texture(const scene_scene& scene, int texture, const vec2f& uv,
+    bool ldr_as_linear, bool no_interpolation, bool clamp_to_edge) {
+  if (texture == invalidid) return {1, 1, 1, 1};
   return eval_texture(
       scene.textures[texture], uv, ldr_as_linear, no_interpolation);
 }
@@ -1237,7 +1236,7 @@ vec3f eval_normalmap(const scene_scene& scene, const scene_instance& instance,
   // apply normal mapping
   auto normal   = eval_normal(scene, instance, element, uv);
   auto texcoord = eval_texcoord(scene, instance, element, uv);
-  if (material.normal_tex != invalid_handle &&
+  if (material.normal_tex != invalidid &&
       (!shape.triangles.empty() || !shape.quads.empty())) {
     auto& normal_tex = scene.textures[material.normal_tex];
     auto  normalmap  = -1 + 2 * xyz(eval_texture(normal_tex, texcoord, false));
@@ -1260,7 +1259,7 @@ vec3f eval_shading_normal(const scene_scene& scene,
   auto& material = scene.materials[instance.material];
   if (!shape.triangles.empty() || !shape.quads.empty()) {
     auto normal = eval_normal(scene, instance, element, uv);
-    if (material.normal_tex != invalid_handle) {
+    if (material.normal_tex != invalidid) {
       normal = eval_normalmap(scene, instance, element, uv);
     }
     if (material.type == scene_material_type::glass) return normal;
@@ -1420,8 +1419,8 @@ void add_sky(scene_scene& scene, float sun_angle) {
 }
 
 // get named camera or default if camera is empty
-scene_camera_handle find_camera(const scene_scene& scene, const string& name) {
-  if (scene.cameras.empty()) return invalid_handle;
+int find_camera(const scene_scene& scene, const string& name) {
+  if (scene.cameras.empty()) return invalidid;
   if (scene.camera_names.empty()) return 0;
   for (auto idx = 0; idx < (int)scene.camera_names.size(); idx++) {
     if (scene.camera_names[idx] == name) return idx;
@@ -1492,7 +1491,7 @@ void tesselate_subdiv(
     }
   }
 
-  if (subdiv.displacement != 0 && subdiv.displacement_tex != invalid_handle) {
+  if (subdiv.displacement != 0 && subdiv.displacement_tex != invalidid) {
     if (subdiv.texcoords.empty())
       throw std::runtime_error("missing texture coordinates");
 
