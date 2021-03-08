@@ -173,10 +173,6 @@ def convert(directory='mcguire',
         if not os.path.isdir(dirname): continue
         if '/_' in dirname: continue
         copyright_options = ''
-        if os.path.exists(f'{dirname}/AUTHOR.txt'):
-            with open(f'{dirname}/AUTHOR.txt') as f:
-                copyright = f.read().strip().replace('"', '')
-            copyright_options += f'--copyright "{copyright}"'
         outdirname = dirname.replace(f'/source/', f'/{outformat}/')
         if clean: os.system(f'rm -rf {outdirname}')
         os.system(f'mkdir -p {outdirname}')
