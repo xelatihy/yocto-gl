@@ -495,8 +495,6 @@ bool load_image(const string& filename, color_image& image, string& error) {
     image.pixelsb = vector<vec4b>{
         (vec4b*)pixels, (vec4b*)pixels + width * height};
     free(pixels);
-    // HACK
-    image = convert_image(image, image.linear, false);
     return true;
   } else if (ext == ".jpg" || ext == ".JPG") {
     auto width = 0, height = 0, ncomp = 0;
@@ -506,8 +504,6 @@ bool load_image(const string& filename, color_image& image, string& error) {
     image.pixelsb = vector<vec4b>{
         (vec4b*)pixels, (vec4b*)pixels + width * height};
     free(pixels);
-    // HACK
-    image = convert_image(image, image.linear, false);
     return true;
   } else if (ext == ".tga" || ext == ".TGA") {
     auto width = 0, height = 0, ncomp = 0;

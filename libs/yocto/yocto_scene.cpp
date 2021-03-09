@@ -1219,14 +1219,19 @@ vector<string> scene_stats(const scene_model& scene, bool verbose) {
     return sum;
   };
   auto format = [](size_t num) {
-    auto str = std::to_string(num);
-    while (str.size() < 13) str = " " + str;
+    auto str = string{};
+    while (num > 0) {
+      str = std::to_string(num % 1000) + (str.empty() ? "" : ",") + str;
+      num /= 1000;
+    }
+    if (str.empty()) str = "0";
+    while (str.size() < 20) str = " " + str;
     return str;
   };
   auto format3 = [](auto num) {
     auto str = std::to_string(num.x) + " " + std::to_string(num.y) + " " +
                std::to_string(num.z);
-    while (str.size() < 13) str = " " + str;
+    while (str.size() < 48) str = " " + str;
     return str;
   };
 
