@@ -110,11 +110,60 @@ ray3f eval_camera(
 // -----------------------------------------------------------------------------
 namespace yocto {
 
-// Evaluate a texture
+// pixel access
+vec4f lookup_texture(const scene_texture& texture, int i, int j) {
+  if (!texture.pixelsf.empty()) {
+    return texture.pixelsf[j * texture.width + i];
+  } else {
+    return byte_to_float(texture.pixelsb[j * texture.width + i]);
+  }
+}
+
+// Evaluates an image at a point `uv`.
 vec4f eval_texture(const scene_texture& texture, const vec2f& uv,
     bool as_linear, bool no_interpolation, bool clamp_to_edge) {
-  return eval_image(reinterpret_cast<const color_image&>(texture), uv,
-      as_linear, no_interpolation, clamp_to_edge);
+  if (texture.width == 0 || texture.height == 0) return {0, 0, 0, 0};
+
+  // get texture width/height
+  auto size = vec2i{texture.width, texture.height};
+
+  // get coordinates normalized for tiling
+  auto s = 0.0f, t = 0.0f;
+  if (clamp_to_edge) {
+    s = clamp(uv.x, 0.0f, 1.0f) * size.x;
+    t = clamp(uv.y, 0.0f, 1.0f) * size.y;
+  } else {
+    s = fmod(uv.x, 1.0f) * size.x;
+    if (s < 0) s += size.x;
+    t = fmod(uv.y, 1.0f) * size.y;
+    if (t < 0) t += size.y;
+  }
+
+  // get image coordinates and residuals
+  auto i = clamp((int)s, 0, size.x - 1), j = clamp((int)t, 0, size.y - 1);
+  auto ii = (i + 1) % size.x, jj = (j + 1) % size.y;
+  auto u = s - i, v = t - j;
+
+  if (no_interpolation) {
+    if (as_linear && !texture.linear) {
+      return srgb_to_rgb(lookup_texture(texture, i, j));
+    } else {
+      return lookup_texture(texture, i, j);
+    }
+  } else {
+    // handle interpolation
+    if (as_linear && !texture.linear) {
+      return srgb_to_rgb(lookup_texture(texture, i, j)) * (1 - u) * (1 - v) +
+             srgb_to_rgb(lookup_texture(texture, i, jj)) * (1 - u) * v +
+             srgb_to_rgb(lookup_texture(texture, ii, j)) * u * (1 - v) +
+             srgb_to_rgb(lookup_texture(texture, ii, jj)) * u * v;
+    } else {
+      return lookup_texture(texture, i, j) * (1 - u) * (1 - v) +
+             lookup_texture(texture, i, jj) * (1 - u) * v +
+             lookup_texture(texture, ii, j) * u * (1 - v) +
+             lookup_texture(texture, ii, jj) * u * v;
+    }
+  }
 }
 
 // Helpers
