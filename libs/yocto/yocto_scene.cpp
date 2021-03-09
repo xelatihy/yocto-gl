@@ -1074,8 +1074,12 @@ void add_camera(scene_model& scene) {
 // Add a sky environment
 void add_sky(scene_model& scene, float sun_angle) {
   scene.texture_names.emplace_back("sky");
-  auto& texture                           = scene.textures.emplace_back();
-  reinterpret_cast<color_image&>(texture) = make_sunsky(1024, 512, sun_angle);
+  auto& texture   = scene.textures.emplace_back();
+  auto  image     = make_sunsky(1024, 512, sun_angle);
+  texture.width   = image.width;
+  texture.height  = image.height;
+  texture.pixelsf = image.pixelsf;
+  texture.linear  = image.linear;
   scene.environment_names.emplace_back("sky");
   auto& environment        = scene.environments.emplace_back();
   environment.emission     = {1, 1, 1};

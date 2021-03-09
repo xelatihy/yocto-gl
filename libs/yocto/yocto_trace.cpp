@@ -924,8 +924,7 @@ trace_lights make_lights(const scene_model& scene, const trace_params& params) {
       for (auto idx = 0; idx < light.elements_cdf.size(); idx++) {
         auto ij    = vec2i{idx % texture.width, idx / texture.width};
         auto th    = (ij.y + 0.5f) * pif / texture.height;
-        auto value = get_pixel(
-            reinterpret_cast<const color_image&>(texture), ij.x, ij.y);
+        auto value = lookup_texture(texture, ij.x, ij.y);
         light.elements_cdf[idx] = max(value) * sin(th);
         if (idx != 0) light.elements_cdf[idx] += light.elements_cdf[idx - 1];
       }

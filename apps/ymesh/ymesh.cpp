@@ -435,7 +435,7 @@ struct sculpt_state {
 
 // Initialize all sculpting parameters.
 sculpt_state make_sculpt_state(
-    const scene_shape &shape, const scene_texture &texture) {
+    const scene_shape &shape, const color_image &texture) {
   auto state = sculpt_state{};
   state.bvh  = make_triangles_bvh(
       shape.triangles, shape.positions, shape.radius);
@@ -444,7 +444,7 @@ sculpt_state make_sculpt_state(
   state.solver     = make_geodesic_solver(
       shape.triangles, adjacencies, shape.positions);
   state.adjacencies = vertex_adjacencies(shape.triangles, adjacencies);
-  state.tex_image   = reinterpret_cast<const color_image &>(texture);
+  state.tex_image   = texture;
   state.base_shape  = shape;
   state.base_shape.texcoords.assign(shape.positions.size(), {0, 0});
   return state;
@@ -1056,10 +1056,10 @@ int run_glsculpt(const glsculpt_params &params_) {
   log_progress("load shape", 1, 1);
 
   // loading texture
-  auto texture = scene_texture{};
+  auto texture = color_image{};
   if (!params_.texture.empty()) {
     log_progress("load texture", 0, 1);
-    if (!load_texture(params_.texture, texture, ioerror)) print_fatal(ioerror);
+    if (!load_image(params_.texture, texture, ioerror)) print_fatal(ioerror);
     log_progress("load texture", 1, 1);
   }
 

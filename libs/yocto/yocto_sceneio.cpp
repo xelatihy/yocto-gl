@@ -742,14 +742,22 @@ namespace yocto {
 // load texture
 bool load_texture(
     const string& filename, scene_texture& texture, string& error) {
-  return load_image(filename, reinterpret_cast<color_image&>(texture), error);
+  auto image = color_image{};
+  if (!load_image(filename, image, error)) return false;
+  texture.width   = image.width;
+  texture.height  = image.height;
+  texture.linear  = image.linear;
+  texture.pixelsf = image.pixelsf;
+  texture.pixelsb = image.pixelsb;
+  return true;
 }
 
 // save texture
 bool save_texture(
     const string& filename, const scene_texture& texture, string& error) {
-  return save_image(
-      filename, reinterpret_cast<const color_image&>(texture), error);
+  auto image = color_image{texture.width, texture.height, texture.linear,
+      texture.pixelsf, texture.pixelsb};
+  return save_image(filename, image, error);
 }
 
 }  // namespace yocto
