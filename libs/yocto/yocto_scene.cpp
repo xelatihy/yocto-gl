@@ -1258,7 +1258,7 @@ vector<string> scene_stats(const scene_model& scene, bool verbose) {
   stats.push_back(
       "quads:        " + format(accumulate(scene.shapes,
                              [](auto& shape) { return shape.quads.size(); })));
-  stats.push_back("fvquads:     " +
+  stats.push_back("fvquads:      " +
                   format(accumulate(scene.subdivs,
                       [](auto& subdiv) { return subdiv.quadspos.size(); })));
   stats.push_back("texels4b:     " +
