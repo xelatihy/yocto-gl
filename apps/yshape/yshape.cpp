@@ -432,7 +432,7 @@ int run_glview(const glview_params& params) {
 
 #else
 
-static scene_scene make_shapescene(const scene_shape& ioshape_) {
+static scene_model make_shapescene(const scene_shape& ioshape_) {
   // Frame camera
   auto camera_frame = [](float lens, float aspect,
                           float film = 0.036) -> frame3f {
@@ -447,7 +447,7 @@ static scene_scene make_shapescene(const scene_shape& ioshape_) {
   log_progress("create scene", progress.x++, progress.y);
 
   // init scene
-  auto scene = scene_scene{};
+  auto scene = scene_model{};
 
   // rescale shape to unit
   auto ioshape = ioshape_;

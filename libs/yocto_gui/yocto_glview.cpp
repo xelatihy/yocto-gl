@@ -148,7 +148,7 @@ struct scene_selection {
   int subdiv      = 0;
 };
 
-static bool draw_scene_editor(gui_window* win, scene_scene& scene,
+static bool draw_scene_editor(gui_window* win, scene_model& scene,
     scene_selection& selection, const function<void()>& before_edit) {
   auto edited = 0;
   if (begin_header(win, "cameras")) {
@@ -447,7 +447,7 @@ void colorgrade_image(
 void view_shape(const string& title, const string& name,
     const scene_shape& shape, bool addsky) {
   // initialize path tracer scene
-  auto scene = scene_scene{};
+  auto scene = scene_model{};
   log_progress("create scene", 0, 1);
   scene.shape_names.emplace_back("shape");
   scene.shapes.emplace_back(shape);
@@ -467,12 +467,12 @@ void view_shape(const string& title, const string& name,
 }
 
 // Open a window and show an scene via path tracing
-void view_scene(const string& title, const string& name, scene_scene& scene) {
+void view_scene(const string& title, const string& name, scene_model& scene) {
   return view_scene(title, name, scene, "");
 }
 
 // Open a window and show an scene via path tracing
-void view_scene(const string& title, const string& name, scene_scene& scene,
+void view_scene(const string& title, const string& name, scene_model& scene,
     const string& camname) {
   // rendering params
   auto params     = trace_params{};
@@ -498,7 +498,7 @@ void view_scene(const string& title, const string& name, scene_scene& scene,
 #if 1
 
 // Open a window and show an scene via path tracing
-void view_scene(const string& title, const string& name, scene_scene& scene,
+void view_scene(const string& title, const string& name, scene_model& scene,
     const trace_params& params_, bool edit) {
   // copy params and camera
   auto params = params_;
@@ -680,7 +680,7 @@ void to_params(gui_params& uiparams, const trace_params& params,
 }
 
 // Open a window and show an scene via path tracing
-void view_scene(const string& title, const string& name, scene_scene& scene,
+void view_scene(const string& title, const string& name, scene_model& scene,
     const trace_params& params_) {
   // open viewer
   auto viewer = make_imageviewer(title);
@@ -895,9 +895,9 @@ static void init_glscene(shade_scene& glscene, const sceneio_scene& ioscene) {
 }
 
 using glview_scene_callback = std::function<void(gui_window* win,
-    const gui_input& input, scene_scene& scene, shade_scene& glscene)>;
+    const gui_input& input, scene_model& scene, shade_scene& glscene)>;
 
-void glview_scene(scene_scene& scene, const string& name, const string& camname,
+void glview_scene(scene_model& scene, const string& name, const string& camname,
     const glview_scene_callback& widgets_callback,
     const glview_scene_callback& uiupdate_callback) {
   // glscene

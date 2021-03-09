@@ -110,7 +110,7 @@ int run_glview(const glview_params& params) {
 
 #else
 
-static scene_scene make_shapescene(const scene_shape &ioshape_) {
+static scene_model make_shapescene(const scene_shape &ioshape_) {
   // Frame camera
   auto camera_frame = [](float lens, float aspect,
                           float film = 0.036) -> frame3f {
@@ -125,7 +125,7 @@ static scene_scene make_shapescene(const scene_shape &ioshape_) {
   log_progress("create scene", progress.x++, progress.y);
 
   // init scene
-  auto scene = scene_scene{};
+  auto scene = scene_model{};
 
   // rescale shape to unit
   auto ioshape = ioshape_;
@@ -206,7 +206,7 @@ int run_glview(const glview_params& params) {
 
 #else
 
-static scene_scene make_pathscene(const scene_shape &ioshape_) {
+static scene_model make_pathscene(const scene_shape &ioshape_) {
   // Frame camera
   auto camera_frame = [](float lens, float aspect,
                           float film = 0.036) -> frame3f {
@@ -221,7 +221,7 @@ static scene_scene make_pathscene(const scene_shape &ioshape_) {
   log_progress("create scene", progress.x++, progress.y);
 
   // init scene
-  auto scene = scene_scene{};
+  auto scene = scene_model{};
 
   // rescale shape to unit
   auto ioshape = ioshape_;
@@ -319,9 +319,9 @@ int run_glpath(const glpath_params &params) {
   // run viewer
   glview_scene(
       scene, params.shape, "",
-      [&](gui_window *win, const gui_input &input, scene_scene &scene,
+      [&](gui_window *win, const gui_input &input, scene_model &scene,
           shade_scene &glscene) {},
-      [&](gui_window *win, const gui_input &input, scene_scene &scene,
+      [&](gui_window *win, const gui_input &input, scene_model &scene,
           shade_scene &glscene) {
         auto &shape   = scene.shapes.at(0);
         auto &camera  = scene.cameras.at(0);
@@ -881,7 +881,7 @@ bool smooth_brush(vector<vec3f> &positions, const geodesic_solver &solver,
   return true;
 }
 
-static scene_scene make_sculptscene(const scene_shape &ioshape_) {
+static scene_model make_sculptscene(const scene_shape &ioshape_) {
   // Frame camera
   auto camera_frame = [](float lens, float aspect,
                           float film = 0.036) -> frame3f {
@@ -896,7 +896,7 @@ static scene_scene make_sculptscene(const scene_shape &ioshape_) {
   log_progress("create scene", progress.x++, progress.y);
 
   // init scene
-  auto scene = scene_scene{};
+  auto scene = scene_model{};
 
   // rescale shape to unit
   auto ioshape = ioshape_;
@@ -1073,7 +1073,7 @@ int run_glsculpt(const glsculpt_params &params_) {
   // callbacks
   glview_scene(
       scene, params_.shape, "",
-      [&params](gui_window *win, const gui_input &input, scene_scene &scene,
+      [&params](gui_window *win, const gui_input &input, scene_model &scene,
           shade_scene &glscene) {
         draw_combobox(
             win, "brush type", (int &)params.type, sculpt_brush_names);
@@ -1095,7 +1095,7 @@ int run_glsculpt(const glsculpt_params &params_) {
         }
       },
       [&state, &params](gui_window *win, const gui_input &input,
-          scene_scene &scene, shade_scene &glscene) {
+          scene_model &scene, shade_scene &glscene) {
         auto  mouse_uv = vec2f{input.mouse_pos.x / float(input.window_size.x),
             input.mouse_pos.y / float(input.window_size.y)};
         auto &shape    = scene.shapes.at(0);

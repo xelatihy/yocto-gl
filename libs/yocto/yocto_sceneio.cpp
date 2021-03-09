@@ -495,6 +495,8 @@ bool load_image(const string& filename, color_image& image, string& error) {
     image.pixelsb = vector<vec4b>{
         (vec4b*)pixels, (vec4b*)pixels + width * height};
     free(pixels);
+    // HACK
+    image = convert_image(image, image.linear, false);
     return true;
   } else if (ext == ".jpg" || ext == ".JPG") {
     auto width = 0, height = 0, ncomp = 0;
@@ -504,6 +506,8 @@ bool load_image(const string& filename, color_image& image, string& error) {
     image.pixelsb = vector<vec4b>{
         (vec4b*)pixels, (vec4b*)pixels + width * height};
     free(pixels);
+    // HACK
+    image = convert_image(image, image.linear, false);
     return true;
   } else if (ext == ".tga" || ext == ".TGA") {
     auto width = 0, height = 0, ncomp = 0;
@@ -1471,80 +1475,80 @@ namespace yocto {
 
 // get name
 [[maybe_unused]] static string get_camera_name(
-    const scene_scene& scene, int idx) {
+    const scene_model& scene, int idx) {
   if (scene.camera_names.empty())
     return get_element_name("camera", idx, scene.cameras.size());
   return scene.camera_names[idx];
 }
 [[maybe_unused]] static string get_environment_name(
-    const scene_scene& scene, int idx) {
+    const scene_model& scene, int idx) {
   if (scene.environment_names.empty())
     return get_element_name("environment", idx, scene.environments.size());
   return scene.environment_names[idx];
 }
 [[maybe_unused]] static string get_shape_name(
-    const scene_scene& scene, int idx) {
+    const scene_model& scene, int idx) {
   if (scene.shape_names.empty())
     return get_element_name("shape", idx, scene.shapes.size());
   return scene.shape_names[idx];
 }
 [[maybe_unused]] static string get_texture_name(
-    const scene_scene& scene, int idx) {
+    const scene_model& scene, int idx) {
   if (scene.texture_names.empty())
     return get_element_name("texture", idx, scene.textures.size());
   return scene.texture_names[idx];
 }
 [[maybe_unused]] static string get_instance_name(
-    const scene_scene& scene, int idx) {
+    const scene_model& scene, int idx) {
   if (scene.instance_names.empty())
     return get_element_name("instance", idx, scene.instances.size());
   return scene.instance_names[idx];
 }
 [[maybe_unused]] static string get_material_name(
-    const scene_scene& scene, int idx) {
+    const scene_model& scene, int idx) {
   if (scene.material_names.empty())
     return get_element_name("material", idx, scene.materials.size());
   return scene.material_names[idx];
 }
 [[maybe_unused]] static string get_subdiv_name(
-    const scene_scene& scene, int idx) {
+    const scene_model& scene, int idx) {
   if (scene.subdiv_names.empty())
     return get_element_name("subdiv", idx, scene.subdivs.size());
   return scene.subdiv_names[idx];
 }
 
 [[maybe_unused]] static string get_camera_name(
-    const scene_scene& scene, const scene_camera& camera) {
+    const scene_model& scene, const scene_camera& camera) {
   return get_camera_name(scene, (int)(&camera - scene.cameras.data()));
 }
 [[maybe_unused]] static string get_environment_name(
-    const scene_scene& scene, const scene_environment& environment) {
+    const scene_model& scene, const scene_environment& environment) {
   return get_environment_name(
       scene, (int)(&environment - scene.environments.data()));
 }
 [[maybe_unused]] static string get_shape_name(
-    const scene_scene& scene, const scene_shape& shape) {
+    const scene_model& scene, const scene_shape& shape) {
   return get_shape_name(scene, (int)(&shape - scene.shapes.data()));
 }
 [[maybe_unused]] static string get_texture_name(
-    const scene_scene& scene, const scene_texture& texture) {
+    const scene_model& scene, const scene_texture& texture) {
   return get_texture_name(scene, (int)(&texture - scene.textures.data()));
 }
 [[maybe_unused]] static string get_instance_name(
-    const scene_scene& scene, const scene_instance& instance) {
+    const scene_model& scene, const scene_instance& instance) {
   return get_instance_name(scene, (int)(&instance - scene.instances.data()));
 }
 [[maybe_unused]] static string get_material_name(
-    const scene_scene& scene, const scene_material& material) {
+    const scene_model& scene, const scene_material& material) {
   return get_material_name(scene, (int)(&material - scene.materials.data()));
 }
 [[maybe_unused]] static string get_subdiv_name(
-    const scene_scene& scene, const scene_subdiv& subdiv) {
+    const scene_model& scene, const scene_subdiv& subdiv) {
   return get_subdiv_name(scene, (int)(&subdiv - scene.subdivs.data()));
 }
 
 // Add missing cameras.
-void add_missing_camera(scene_scene& scene) {
+void add_missing_camera(scene_model& scene) {
   if (!scene.cameras.empty()) return;
   scene.camera_names.emplace_back("camera");
   auto& camera        = scene.cameras.emplace_back();
@@ -1567,7 +1571,7 @@ void add_missing_camera(scene_scene& scene) {
 }
 
 // Add missing radius.
-static void add_missing_radius(scene_scene& scene, float radius = 0.001f) {
+static void add_missing_radius(scene_model& scene, float radius = 0.001f) {
   for (auto& shape : scene.shapes) {
     if (shape.points.empty() && shape.lines.empty()) continue;
     if (!shape.radius.empty()) continue;
@@ -1576,7 +1580,7 @@ static void add_missing_radius(scene_scene& scene, float radius = 0.001f) {
 }
 
 // Add missing cameras.
-void add_missing_material(scene_scene& scene) {
+void add_missing_material(scene_model& scene) {
   auto default_material = invalidid;
   for (auto& instance : scene.instances) {
     if (instance.material >= 0) continue;
@@ -1590,7 +1594,7 @@ void add_missing_material(scene_scene& scene) {
 }
 
 // Reduce memory usage
-static void trim_memory(scene_scene& scene) {
+static void trim_memory(scene_model& scene) {
   for (auto& shape : scene.shapes) {
     shape.points.shrink_to_fit();
     shape.lines.shrink_to_fit();
@@ -1660,7 +1664,7 @@ struct test_params {
 };
 
 // Scene test
-void make_test(scene_scene& scene, const test_params& params) {
+void make_test(scene_model& scene, const test_params& params) {
   return;
   // // cameras
   // switch (params.cameras) {
@@ -1959,7 +1963,7 @@ void make_test(scene_scene& scene, const test_params& params) {
 }
 
 // Scene presets used for testing.
-bool make_scene_preset(scene_scene& scene, const string& type, string& error) {
+bool make_scene_preset(scene_model& scene, const string& type, string& error) {
   if (type == "cornellbox") {
     make_cornellbox(scene);
     return true;
@@ -2067,48 +2071,48 @@ namespace yocto {
 
 // Load/save a scene in the builtin JSON format.
 static bool load_json_scene(
-    const string& filename, scene_scene& scene, string& error, bool noparallel);
-static bool save_json_scene(const string& filename, const scene_scene& scene,
+    const string& filename, scene_model& scene, string& error, bool noparallel);
+static bool save_json_scene(const string& filename, const scene_model& scene,
     string& error, bool noparallel);
 
 // Load/save a scene from/to OBJ.
 static bool load_obj_scene(
-    const string& filename, scene_scene& scene, string& error, bool noparallel);
-static bool save_obj_scene(const string& filename, const scene_scene& scene,
+    const string& filename, scene_model& scene, string& error, bool noparallel);
+static bool save_obj_scene(const string& filename, const scene_model& scene,
     string& error, bool noparallel);
 
 // Load/save a scene from/to PLY. Loads/saves only one mesh with no other data.
 static bool load_ply_scene(
-    const string& filename, scene_scene& scene, string& error, bool noparallel);
-static bool save_ply_scene(const string& filename, const scene_scene& scene,
+    const string& filename, scene_model& scene, string& error, bool noparallel);
+static bool save_ply_scene(const string& filename, const scene_model& scene,
     string& error, bool noparallel);
 
 // Load/save a scene from/to STL. Loads/saves only one mesh with no other data.
 static bool load_stl_scene(
-    const string& filename, scene_scene& scene, string& error, bool noparallel);
-static bool save_stl_scene(const string& filename, const scene_scene& scene,
+    const string& filename, scene_model& scene, string& error, bool noparallel);
+static bool save_stl_scene(const string& filename, const scene_model& scene,
     string& error, bool noparallel);
 
 // Load/save a scene from/to glTF.
 static bool load_gltf_scene(
-    const string& filename, scene_scene& scene, string& error, bool noparallel);
-static bool save_gltf_scene(const string& filename, const scene_scene& scene,
+    const string& filename, scene_model& scene, string& error, bool noparallel);
+static bool save_gltf_scene(const string& filename, const scene_model& scene,
     string& error, bool noparallel);
 
 // Load/save a scene from/to pbrt-> This is not robust at all and only
 // works on scene that have been previously adapted since the two renderers
 // are too different to match.
 static bool load_pbrt_scene(
-    const string& filename, scene_scene& scene, string& error, bool noparallel);
-static bool save_pbrt_scene(const string& filename, const scene_scene& scene,
+    const string& filename, scene_model& scene, string& error, bool noparallel);
+static bool save_pbrt_scene(const string& filename, const scene_model& scene,
     string& error, bool noparallel);
 
 // Load/save a scene preset.
 static bool load_preset_scene(
-    const string& filename, scene_scene& scene, string& error, bool noparallel);
+    const string& filename, scene_model& scene, string& error, bool noparallel);
 
 // Load a scene
-bool load_scene(const string& filename, scene_scene& scene, string& error,
+bool load_scene(const string& filename, scene_model& scene, string& error,
     bool noparallel) {
   auto format_error = [filename, &error]() {
     error = filename + ": unknown format";
@@ -2136,7 +2140,7 @@ bool load_scene(const string& filename, scene_scene& scene, string& error,
 }
 
 // Save a scene
-bool save_scene(const string& filename, const scene_scene& scene, string& error,
+bool save_scene(const string& filename, const scene_model& scene, string& error,
     bool noparallel) {
   auto format_error = [filename, &error]() {
     error = filename + ": unknown format";
@@ -2162,7 +2166,7 @@ bool save_scene(const string& filename, const scene_scene& scene, string& error,
 }
 
 // Load/save a scene preset.
-static bool load_preset_scene(const string& filename, scene_scene& scene,
+static bool load_preset_scene(const string& filename, scene_model& scene,
     string& error, bool noparallel) {
   auto preset_error = [filename, &error]() {
     error = filename + ": " + error;
@@ -2185,7 +2189,7 @@ static bool load_preset_scene(const string& filename, scene_scene& scene,
 
 // Make missing scene directories
 bool make_scene_directories(
-    const string& filename, const scene_scene& scene, string& error) {
+    const string& filename, const scene_model& scene, string& error) {
   // make a directory if needed
   if (!make_directory(path_dirname(filename), error)) return false;
   if (!scene.shapes.empty()) {
@@ -2390,7 +2394,7 @@ inline void from_json(const njson& j, scene_material_type& value) {
 namespace yocto {
 
 // Load a scene in the builtin JSON format.
-static bool load_json_scene(const string& filename, scene_scene& scene,
+static bool load_json_scene(const string& filename, scene_model& scene,
     string& error, bool noparallel) {
   auto json_error = [filename]() {
     // error does not need setting
@@ -2529,7 +2533,7 @@ static bool load_json_scene(const string& filename, scene_scene& scene,
     return true;
   };
   auto get_ply_instance_name = [&ply_instances, &ply_instances_names](
-                                   const scene_scene&  scene,
+                                   const scene_model&  scene,
                                    const ply_instance& instance) -> string {
     return ply_instances_names[&instance - ply_instances.data()];
   };
@@ -2927,7 +2931,7 @@ static bool load_json_scene(const string& filename, scene_scene& scene,
 }
 
 // Save a scene in the builtin JSON format.
-static bool save_json_scene(const string& filename, const scene_scene& scene,
+static bool save_json_scene(const string& filename, const scene_model& scene,
     string& error, bool noparallel) {
   auto conversion_error = [filename, &error](const string& message) {
     // should never happen
@@ -3220,7 +3224,7 @@ static bool save_json_scene(const string& filename, const scene_scene& scene,
 namespace yocto {
 
 // Loads an OBJ
-static bool load_obj_scene(const string& filename, scene_scene& scene,
+static bool load_obj_scene(const string& filename, scene_model& scene,
     string& error, bool noparallel) {
   auto shape_error = [filename, &error]() {
     error = filename + ": empty shape";
@@ -3372,7 +3376,7 @@ static bool load_obj_scene(const string& filename, scene_scene& scene,
   return true;
 }
 
-static bool save_obj_scene(const string& filename, const scene_scene& scene,
+static bool save_obj_scene(const string& filename, const scene_model& scene,
     string& error, bool noparallel) {
   auto shape_error = [filename, &error]() {
     error = filename + ": empty shape";
@@ -3514,7 +3518,7 @@ static bool save_obj_scene(const string& filename, const scene_scene& scene,
 // -----------------------------------------------------------------------------
 namespace yocto {
 
-static bool load_ply_scene(const string& filename, scene_scene& scene,
+static bool load_ply_scene(const string& filename, scene_model& scene,
     string& error, bool noparallel) {
   // handle progress
   auto progress = vec2i{0, 1};
@@ -3538,7 +3542,7 @@ static bool load_ply_scene(const string& filename, scene_scene& scene,
   return true;
 }
 
-static bool save_ply_scene(const string& filename, const scene_scene& scene,
+static bool save_ply_scene(const string& filename, const scene_model& scene,
     string& error, bool noparallel) {
   auto shape_error = [filename, &error]() {
     error = filename + ": empty shape";
@@ -3567,7 +3571,7 @@ static bool save_ply_scene(const string& filename, const scene_scene& scene,
 // -----------------------------------------------------------------------------
 namespace yocto {
 
-static bool load_stl_scene(const string& filename, scene_scene& scene,
+static bool load_stl_scene(const string& filename, scene_model& scene,
     string& error, bool noparallel) {
   // handle progress
   auto progress = vec2i{0, 1};
@@ -3591,7 +3595,7 @@ static bool load_stl_scene(const string& filename, scene_scene& scene,
   return true;
 }
 
-static bool save_stl_scene(const string& filename, const scene_scene& scene,
+static bool save_stl_scene(const string& filename, const scene_model& scene,
     string& error, bool noparallel) {
   auto shape_error = [filename, &error]() {
     error = filename + ": empty shape";
@@ -3621,7 +3625,7 @@ static bool save_stl_scene(const string& filename, const scene_scene& scene,
 namespace yocto {
 
 // Load a scene
-static bool load_gltf_scene(const string& filename, scene_scene& scene,
+static bool load_gltf_scene(const string& filename, scene_model& scene,
     string& error, bool noparallel) {
   auto read_error = [filename, &error]() {
     error = filename + ": read error";
@@ -4130,7 +4134,7 @@ static bool load_gltf_scene(const string& filename, scene_scene& scene,
 }
 
 // Load a scene
-static bool save_gltf_scene(const string& filename, const scene_scene& scene,
+static bool save_gltf_scene(const string& filename, const scene_model& scene,
     string& error, bool noparallel) {
   auto write_error = [filename, &error]() {
     error = filename + ": write error";
@@ -4520,7 +4524,7 @@ static bool save_gltf_scene(const string& filename, const scene_scene& scene,
 namespace yocto {
 
 // load pbrt scenes
-static bool load_pbrt_scene(const string& filename, scene_scene& scene,
+static bool load_pbrt_scene(const string& filename, scene_model& scene,
     string& error, bool noparallel) {
   auto dependent_error = [filename, &error]() {
     error = filename + ": error in " + error;
@@ -4699,7 +4703,7 @@ static bool load_pbrt_scene(const string& filename, scene_scene& scene,
 }
 
 // Save a pbrt scene
-static bool save_pbrt_scene(const string& filename, const scene_scene& scene,
+static bool save_pbrt_scene(const string& filename, const scene_model& scene,
     string& error, bool noparallel) {
   auto dependent_error = [filename, &error]() {
     error = filename + ": error in " + error;
