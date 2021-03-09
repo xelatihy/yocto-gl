@@ -111,11 +111,18 @@ ray3f eval_camera(
 namespace yocto {
 
 // pixel access
-vec4f lookup_texture(const scene_texture& texture, int i, int j) {
+vec4f lookup_texture(
+    const scene_texture& texture, int i, int j, bool as_linear) {
+  auto color = vec4f{0, 0, 0, 0};
   if (!texture.pixelsf.empty()) {
-    return texture.pixelsf[j * texture.width + i];
+    color = texture.pixelsf[j * texture.width + i];
   } else {
-    return byte_to_float(texture.pixelsb[j * texture.width + i]);
+    color = byte_to_float(texture.pixelsb[j * texture.width + i]);
+  }
+  if (as_linear && !texture.linear) {
+    return srgb_to_rgb(color);
+  } else {
+    return color;
   }
 }
 
@@ -144,25 +151,14 @@ vec4f eval_texture(const scene_texture& texture, const vec2f& uv,
   auto ii = (i + 1) % size.x, jj = (j + 1) % size.y;
   auto u = s - i, v = t - j;
 
+  // handle interpolation
   if (no_interpolation) {
-    if (as_linear && !texture.linear) {
-      return srgb_to_rgb(lookup_texture(texture, i, j));
-    } else {
-      return lookup_texture(texture, i, j);
-    }
+    return lookup_texture(texture, i, j, as_linear);
   } else {
-    // handle interpolation
-    if (as_linear && !texture.linear) {
-      return srgb_to_rgb(lookup_texture(texture, i, j)) * (1 - u) * (1 - v) +
-             srgb_to_rgb(lookup_texture(texture, i, jj)) * (1 - u) * v +
-             srgb_to_rgb(lookup_texture(texture, ii, j)) * u * (1 - v) +
-             srgb_to_rgb(lookup_texture(texture, ii, jj)) * u * v;
-    } else {
-      return lookup_texture(texture, i, j) * (1 - u) * (1 - v) +
-             lookup_texture(texture, i, jj) * (1 - u) * v +
-             lookup_texture(texture, ii, j) * u * (1 - v) +
-             lookup_texture(texture, ii, jj) * u * v;
-    }
+    return lookup_texture(texture, i, j, as_linear) * (1 - u) * (1 - v) +
+           lookup_texture(texture, i, jj, as_linear) * (1 - u) * v +
+           lookup_texture(texture, ii, j, as_linear) * u * (1 - v) +
+           lookup_texture(texture, ii, jj, as_linear) * u * v;
   }
 }
 

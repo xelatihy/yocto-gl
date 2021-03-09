@@ -267,7 +267,8 @@ vec4f eval_texture(const scene_model& scene, int texture, const vec2f& uv,
     bool clamp_to_edge = false);
 
 // pixel access
-vec4f lookup_texture(const scene_texture& texture, int i, int j);
+vec4f lookup_texture(
+    const scene_texture& texture, int i, int j, bool as_linear = false);
 
 }  // namespace yocto
 
