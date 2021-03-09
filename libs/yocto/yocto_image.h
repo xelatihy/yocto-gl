@@ -6,8 +6,7 @@
 // utilities and tone mapping, loading and saving functionality, and image
 // resizing.
 // Yocto/Image is implemented in `yocto_image.h` and `yocto_image.cpp`, and
-// depends on `stb_image.h`, `stb_image_write.h`, `stb_image_resize.h`,
-// `tinyexr.h` for the image serialization.
+// depends on `stb_image_resize.h` for image resizing.
 //
 
 //
