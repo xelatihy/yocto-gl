@@ -39,10 +39,11 @@ using namespace yocto;
 
 // convert params
 struct convert_params {
-  string scene    = "scene.ply";
-  string output   = "out.ply";
-  bool   info     = false;
-  bool   validate = false;
+  string scene     = "scene.ply";
+  string output    = "out.ply";
+  bool   info      = false;
+  bool   validate  = false;
+  string copyright = "";
 };
 
 // Cli
@@ -53,6 +54,7 @@ void add_command(cli_command& cli, const string& name, convert_params& value,
   add_option(cmd, "output", value.output, "Output scene.", {}, "o");
   add_option(cmd, "info", value.info, "Print info.");
   add_option(cmd, "validate", value.validate, "Validate scene.");
+  add_option(cmd, "copyright", value.copyright, "Set scene copyright.");
 }
 
 // convert images
@@ -61,6 +63,11 @@ int run_convert(const convert_params& params) {
   auto scene   = scene_scene{};
   auto ioerror = ""s;
   if (!load_scene(params.scene, scene, ioerror)) print_fatal(ioerror);
+
+  // copyright
+  if (params.copyright != "") {
+    scene.copyright = params.copyright;
+  }
 
   // validate scene
   if (params.validate) {

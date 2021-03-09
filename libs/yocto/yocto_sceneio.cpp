@@ -2543,7 +2543,19 @@ static bool load_json_scene(const string& filename, scene_scene& scene,
 
   // loop over external dictionaries
   for (auto& [gname, group] : iterate_object(js)) {
-    if (gname == "cameras") {
+    if (gname == "asset") {
+      if (!check_object(group)) return parse_error(gname);
+      for (auto& [key, value] : iterate_object(group)) {
+        if (key == "copyright") {
+          if (!get_value(value, scene.copyright))
+            return parse_error(gname, key);
+        } else if (key == "generator") {
+          // skip
+        } else {
+          return key_error(gname, key);
+        }
+      }
+    } else if (gname == "cameras") {
       if (!check_object(group)) return parse_error(gname);
       for (auto& [name, element] : iterate_object(group)) {
         if (!check_object(element)) return parse_error(gname, name);
@@ -2945,6 +2957,16 @@ static bool save_json_scene(const string& filename, const scene_scene& scene,
 
   // save json file
   auto js = njson::object();
+
+  // asset
+  {
+    auto& element = insert_object(js, "asset");
+    if (!scene.copyright.empty()) {
+      insert_value(element, "copyright", scene.copyright);
+    }
+    insert_value(element, "generator",
+        "Yocto/GL - https://github.com/xelatihy/yocto-gl");
+  }
 
   auto def_cam = sceneio_camera{};
   if (!scene.cameras.empty()) {
@@ -3679,6 +3701,15 @@ static bool load_gltf_scene(const string& filename, scene_scene& scene,
   // handle progress
   log_progress("convert scene", progress.x++, progress.y);
 
+  // convert asset
+  if (gltf.contains("asset")) {
+    try {
+      scene.copyright = gltf.value("copyright", ""s);
+    } catch (...) {
+      return parse_error();
+    }
+  }
+
   // convert cameras
   auto cameras = vector<scene_camera>{};
   if (gltf.contains("cameras")) {
@@ -4124,9 +4155,11 @@ static bool save_gltf_scene(const string& filename, const scene_scene& scene,
 
   // asset
   {
-    auto& gasset      = gltf["asset"];
-    gasset            = njson::object();
-    gasset["version"] = "2.0";
+    auto& gasset        = gltf["asset"];
+    gasset              = njson::object();
+    gasset["version"]   = "2.0";
+    gasset["generator"] = "Yocto/GL - https://github.com/xelatihy/yocto-gl";
+    if (!scene.copyright.empty()) gasset["copyright"] = scene.copyright;
   }
 
   // cameras

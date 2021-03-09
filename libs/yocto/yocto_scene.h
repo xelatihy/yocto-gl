@@ -235,6 +235,9 @@ struct scene_scene {
   vector<string> instance_names    = {};
   vector<string> environment_names = {};
   vector<string> subdiv_names      = {};
+
+  // copyright info preserve in IO
+  string copyright = "";
 };
 
 }  // namespace yocto
