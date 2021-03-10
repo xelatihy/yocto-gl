@@ -558,6 +558,8 @@ scene_shape make_hair(const scene_shape& shape, const vec2i& steps = {8, 65536},
 // applications, so the spheres are low res and without texcoords and normals.
 scene_shape points_to_spheres(
     const vector<vec3f>& vertices, int steps = 2, float scale = 0.01f);
+scene_shape polyline_to_cylinders(
+    const vector<vec3f>& vertices, int steps = 4, float scale = 0.01f);
 scene_shape lines_to_cylinders(
     const vector<vec3f>& vertices, int steps = 4, float scale = 0.01f);
 

@@ -239,7 +239,7 @@ static scene_model make_pathscene(const scene_shape &ioshape_) {
   // shapes
   scene.shapes.emplace_back(ioshape);
   scene.shapes.emplace_back(points_to_spheres({{0, 0, 0}}));
-  scene.shapes.emplace_back(lines_to_cylinders({{0, 0, 0}, {0, 0, 0}}));
+  scene.shapes.emplace_back(polyline_to_cylinders({{0, 0, 0}, {0, 0, 0}}));
 
   // instances
   auto &shape_instance     = scene.instances.emplace_back();
@@ -346,7 +346,7 @@ int run_glpath(const glpath_params &params) {
             ppositions.push_back(eval_position(shape, element, uv));
           }
           auto &lines = scene.shapes.at(2);
-          lines       = lines_to_cylinders(ppositions);
+          lines       = polyline_to_cylinders(ppositions);
           set_positions(glscene.shapes.at(2), lines.positions);
           set_normals(glscene.shapes.at(2), lines.normals);
           set_texcoords(glscene.shapes.at(2), lines.texcoords);
@@ -402,45 +402,48 @@ static scene_model make_pathdscene(const scene_shape &ioshape) {
   camera.focus  = length(camera.frame.o);
 
   // material
-  auto &shape_material      = scene.materials.emplace_back();
-  shape_material.type       = scene_material_type::glossy;
-  shape_material.color      = {0.5, 1, 0.5};
-  shape_material.roughness  = 0.2;
-  auto &points_material     = scene.materials.emplace_back();
-  points_material.type      = scene_material_type::glossy;
-  points_material.color     = {1, 0.5, 0.5};
-  points_material.roughness = 0.2;
-  auto &lines1_material     = scene.materials.emplace_back();
-  lines1_material.type      = scene_material_type::glossy;
-  lines1_material.color     = {0.5, 0.5, 1};
-  lines1_material.roughness = 0.2;
-  auto &lines2_material     = scene.materials.emplace_back();
-  lines2_material.type      = scene_material_type::glossy;
-  lines2_material.color     = {1, 1, 0.5};
-  lines2_material.roughness = 0.2;
-  auto &lines3_material     = scene.materials.emplace_back();
-  lines3_material.type      = scene_material_type::glossy;
-  lines3_material.color     = {1, 0.5, 1};
-  lines3_material.roughness = 0.2;
-  auto &edges_material      = scene.materials.emplace_back();
-  edges_material.type       = scene_material_type::glossy;
-  edges_material.color      = {0.01, 0.01, 0.01};
-  edges_material.roughness  = 0.2;
+  auto &shape_material     = scene.materials.emplace_back();
+  shape_material.type      = scene_material_type::glossy;
+  shape_material.color     = {0.5, 1, 0.5};
+  shape_material.roughness = 0.2;
+  auto &points_material    = scene.materials.emplace_back();
+  points_material.type     = scene_material_type::matte;
+  points_material.color    = {1, 0.5, 0.5};
+  auto &lines1_material    = scene.materials.emplace_back();
+  lines1_material.type     = scene_material_type::matte;
+  lines1_material.color    = {0.5, 0.5, 1};
+  auto &lines2_material    = scene.materials.emplace_back();
+  lines2_material.type     = scene_material_type::matte;
+  lines2_material.color    = {1, 1, 0.5};
+  auto &lines3_material    = scene.materials.emplace_back();
+  lines3_material.type     = scene_material_type::matte;
+  lines3_material.color    = {1, 0.5, 1};
+  auto &lines4_material    = scene.materials.emplace_back();
+  lines4_material.type     = scene_material_type::matte;
+  lines4_material.color    = {0.5, 0.5, 0.5};
+  auto &edges_material     = scene.materials.emplace_back();
+  edges_material.type      = scene_material_type::matte;
+  edges_material.color     = {0, 0, 0};
 
   // shapes
   scene.shapes.emplace_back(ioshape);
   scene.shapes.emplace_back(points_to_spheres({{0, 0, 0}}));
-  scene.shapes.emplace_back(lines_to_cylinders({{0, 0, 0}, {0, 0, 0}}));
-  scene.shapes.emplace_back(lines_to_cylinders({{0, 0, 0}, {0, 0, 0}}));
-  scene.shapes.emplace_back(lines_to_cylinders({{0, 0, 0}, {0, 0, 0}}));
-  scene.shapes.emplace_back(lines_to_cylinders({{0, 0, 0}, {0, 0, 0}}));
+  scene.shapes.emplace_back(polyline_to_cylinders({{0, 0, 0}, {0, 0, 0}}));
+  scene.shapes.emplace_back(polyline_to_cylinders({{0, 0, 0}, {0, 0, 0}}));
+  scene.shapes.emplace_back(polyline_to_cylinders({{0, 0, 0}, {0, 0, 0}}));
+  scene.shapes.emplace_back(polyline_to_cylinders({{0, 0, 0}, {0, 0, 0}}));
+  scene.shapes.emplace_back(polyline_to_cylinders({{0, 0, 0}, {0, 0, 0}}));
 
-  // make edges
-  // auto  edges      = get_edges(ioshape.triangles);
-  // auto &edge_shape = scene.shapes.back();
-  // for (auto [i, j] : edges) {
-  //   line_to_quads();
-  // }
+// make edges
+#if 0
+  auto edges         = get_edges(ioshape.triangles);
+  auto edge_vertices = vector<vec3f>{};
+  for (auto [i, j] : edges) {
+    edge_vertices.push_back(ioshape.positions[i]);
+    edge_vertices.push_back(ioshape.positions[j]);
+  }
+  scene.shapes.back() = lines_to_cylinders(edge_vertices, 4, 0.001);
+#endif
 
   // instances
   auto &shape_instance     = scene.instances.emplace_back();
@@ -458,9 +461,12 @@ static scene_model make_pathdscene(const scene_shape &ioshape) {
   auto &lines3_instance    = scene.instances.emplace_back();
   lines3_instance.shape    = 4;
   lines3_instance.material = 4;
+  auto &lines4_instance    = scene.instances.emplace_back();
+  lines4_instance.shape    = 5;
+  lines4_instance.material = 5;
   auto &edges_instance     = scene.instances.emplace_back();
-  edges_instance.shape     = 5;
-  edges_instance.material  = 5;
+  edges_instance.shape     = 6;
+  edges_instance.material  = 6;
 
   // done
   return scene;
@@ -489,18 +495,22 @@ int run_glpathd(const glpathd_params &params) {
   auto &shape = scene.shapes.at(0);
   auto  bvh   = make_triangles_bvh(shape.triangles, shape.positions, {});
 
-  // stroke
-  auto stroke = vector<shape_point>{};
-
   // geodesic solver
   auto adjacencies = face_adjacencies(shape.triangles);
   auto solver      = make_dual_geodesic_solver(
       shape.triangles, shape.positions, adjacencies);
-  auto bezier = true;
 
-  // bezier algos
-  auto params1      = spline_params{};
-  params1.algorithm = spline_algorithm::de_casteljau_uniform;
+  // other solver
+  auto v2t = vertex_to_triangles(shape.triangles, shape.positions, adjacencies);
+  auto solver2 = make_geodesic_solver(
+      shape.triangles, shape.positions, adjacencies, v2t);
+  auto total_angles = vector<float>{};
+  auto angles       = compute_angles(
+      shape.triangles, shape.positions, adjacencies, v2t, total_angles, true);
+
+  // points at random
+  auto point1 = mesh_point{0, {0.5, 0.5}};
+  auto point2 = mesh_point{1, {0.5, 0.5}};
 
   // run viewer
   glview_scene(
@@ -513,31 +523,25 @@ int run_glpathd(const glpathd_params &params) {
         auto &camera  = scene.cameras.at(0);
         auto  updated = false;
         if (input.mouse_left && input.modifier_ctrl) {
-          if (input.modifier_shift) {
-            stroke.clear();
-            updated = true;
-          } else {
-            auto mouse_uv = vec2f{
-                input.mouse_pos.x / float(input.window_size.x),
-                input.mouse_pos.y / float(input.window_size.y)};
-            auto ray  = camera_ray(camera.frame, camera.lens, camera.aspect,
-                camera.film, mouse_uv);
-            auto isec = intersect_triangles_bvh(
-                bvh, shape.triangles, shape.positions, ray, false);
-            if (isec.hit) {
-              if (stroke.empty() || stroke.back().element != isec.element ||
-                  stroke.back().uv != isec.uv) {
-                stroke.push_back({isec.element, isec.uv});
-                updated = true;
-              }
+          auto mouse_uv = vec2f{input.mouse_pos.x / float(input.window_size.x),
+              input.mouse_pos.y / float(input.window_size.y)};
+          auto ray      = camera_ray(
+              camera.frame, camera.lens, camera.aspect, camera.film, mouse_uv);
+          auto isec = intersect_triangles_bvh(
+              bvh, shape.triangles, shape.positions, ray, false);
+          if (isec.hit) {
+            if (input.modifier_shift) {
+              point2 = {isec.element, isec.uv};
+            } else {
+              point1 = {isec.element, isec.uv};
             }
+            updated = true;
           }
         }
         if (updated) {
           auto positions = vector<vec3f>{};
-          for (auto [element, uv] : stroke) {
-            positions.push_back(eval_position(shape, element, uv));
-          }
+          positions.push_back(eval_position(shape, point1.face, point1.uv));
+          positions.push_back(eval_position(shape, point2.face, point2.uv));
           auto &points = scene.shapes.at(1);
           points       = points_to_spheres(positions, 2, 0.002);
           set_positions(glscene.shapes.at(1), points.positions);
@@ -545,43 +549,56 @@ int run_glpathd(const glpathd_params &params) {
           set_texcoords(glscene.shapes.at(1), points.texcoords);
           set_quads(glscene.shapes.at(1), points.quads);
           glscene.shapes.at(1).point_size = 10;
-          auto path1      = compute_bezier_path(solver, shape.triangles,
-              shape.positions, adjacencies, (vector<mesh_point> &)stroke,
-              params1);
+          auto path1      = compute_shortest_path(solver, shape.triangles,
+              shape.positions, adjacencies, point1, point2);
           auto positions1 = vector<vec3f>{};
           for (auto [element, uv] : path1) {
             positions1.push_back(eval_position(shape, element, uv));
           }
           auto &lines1 = scene.shapes.at(2);
-          lines1       = lines_to_cylinders(positions1, 4, 0.002);
+          lines1       = polyline_to_cylinders(positions1, 4, 0.002);
           set_positions(glscene.shapes.at(2), lines1.positions);
           set_normals(glscene.shapes.at(2), lines1.normals);
           set_texcoords(glscene.shapes.at(2), lines1.texcoords);
           set_quads(glscene.shapes.at(2), lines1.quads);
-          auto path2      = compute_shortest_path(solver, shape.triangles,
-              shape.positions, adjacencies, (vector<mesh_point> &)stroke);
+          auto path2      = visualize_shortest_path(solver, shape.triangles,
+              shape.positions, adjacencies, point1, point2, true);
           auto positions2 = vector<vec3f>{};
           for (auto [element, uv] : path2) {
             positions2.push_back(eval_position(shape, element, uv));
           }
           auto &lines2 = scene.shapes.at(3);
-          lines2       = lines_to_cylinders(positions2, 4, 0.002);
+          lines2       = polyline_to_cylinders(positions2, 4, 0.002);
           set_positions(glscene.shapes.at(3), lines2.positions);
           set_normals(glscene.shapes.at(3), lines2.normals);
           set_texcoords(glscene.shapes.at(3), lines2.texcoords);
           set_quads(glscene.shapes.at(3), lines2.quads);
-          auto positions3 = vector<vec3f>{};
-          auto path3      = visualize_shortest_path(solver, shape.triangles,
-              shape.positions, adjacencies, (vector<mesh_point> &)stroke, true);
-          for (auto [element, uv] : path3) {
-            positions3.push_back(eval_position(shape, element, uv));
-          }
-          auto &lines3 = scene.shapes.at(4);
-          lines3       = lines_to_cylinders(positions3, 4, 0.002);
-          set_positions(glscene.shapes.at(4), lines3.positions);
-          set_normals(glscene.shapes.at(4), lines3.normals);
-          set_texcoords(glscene.shapes.at(4), lines3.texcoords);
-          set_quads(glscene.shapes.at(4), lines3.quads);
+          // auto path3 = visualize_shortest_path(solver2, shape.triangles,
+          //     shape.positions, adjacencies, v2t, angles, point1, point2,
+          //     false);
+          // auto positions3 = vector<vec3f>{};
+          // for (auto [element, uv] : path3) {
+          //   positions3.push_back(eval_position(shape, element, uv));
+          // }
+          // auto &lines3 = scene.shapes.at(4);
+          // lines3       = polyline_to_cylinders(positions3, 4, 0.002);
+          // set_positions(glscene.shapes.at(4), lines3.positions);
+          // set_normals(glscene.shapes.at(4), lines3.normals);
+          // set_texcoords(glscene.shapes.at(4), lines3.texcoords);
+          // set_quads(glscene.shapes.at(4), lines3.quads);
+          // auto path4      = visualize_shortest_path(solver2, shape.triangles,
+          //     shape.positions, adjacencies, v2t, angles, point1, point2,
+          //     true);
+          // auto positions4 = vector<vec3f>{};
+          // for (auto [element, uv] : path2) {
+          //   positions4.push_back(eval_position(shape, element, uv));
+          // }
+          // auto &lines4 = scene.shapes.at(5);
+          // lines4       = polyline_to_cylinders(positions4, 4, 0.002);
+          // set_positions(glscene.shapes.at(5), lines4.positions);
+          // set_normals(glscene.shapes.at(5), lines4.normals);
+          // set_texcoords(glscene.shapes.at(5), lines4.texcoords);
+          // set_quads(glscene.shapes.at(5), lines4.quads);
         }
       });
 

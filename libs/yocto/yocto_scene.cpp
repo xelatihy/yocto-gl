@@ -1634,6 +1634,13 @@ scene_shape points_to_spheres(
       shape.texcoords, vertices, steps, scale);
   return shape;
 }
+scene_shape polyline_to_cylinders(
+    const vector<vec3f>& vertices, int steps, float scale) {
+  auto shape = scene_shape{};
+  polyline_to_cylinders(shape.quads, shape.positions, shape.normals,
+      shape.texcoords, vertices, steps, scale);
+  return shape;
+}
 scene_shape lines_to_cylinders(
     const vector<vec3f>& vertices, int steps, float scale) {
   auto shape = scene_shape{};

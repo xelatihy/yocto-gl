@@ -633,6 +633,9 @@ void make_geosphere(
 void points_to_spheres(vector<vec4i>& quads, vector<vec3f>& positions,
     vector<vec3f>& normals, vector<vec2f>& texcoords,
     const vector<vec3f>& vertices, int steps = 2, float scale = 0.01f);
+void polyline_to_cylinders(vector<vec4i>& quads, vector<vec3f>& positions,
+    vector<vec3f>& normals, vector<vec2f>& texcoords,
+    const vector<vec3f>& vertices, int steps = 4, float scale = 0.01f);
 void lines_to_cylinders(vector<vec4i>& quads, vector<vec3f>& positions,
     vector<vec3f>& normals, vector<vec2f>& texcoords,
     const vector<vec3f>& vertices, int steps = 4, float scale = 0.01f);
