@@ -416,12 +416,17 @@ static scene_model make_pathdscene(const scene_shape &ioshape) {
   lines1_material.roughness = 0.2;
   auto &lines2_material     = scene.materials.emplace_back();
   lines2_material.type      = scene_material_type::glossy;
-  lines2_material.color     = {0.5, 1, 0.5};
+  lines2_material.color     = {1, 1, 0.5};
   lines2_material.roughness = 0.2;
+  auto &lines3_material     = scene.materials.emplace_back();
+  lines3_material.type      = scene_material_type::glossy;
+  lines3_material.color     = {1, 0.5, 1};
+  lines3_material.roughness = 0.2;
 
   // shapes
   scene.shapes.emplace_back(ioshape);
   scene.shapes.emplace_back(points_to_spheres({{0, 0, 0}}));
+  scene.shapes.emplace_back(lines_to_cylinders({{0, 0, 0}, {0, 0, 0}}));
   scene.shapes.emplace_back(lines_to_cylinders({{0, 0, 0}, {0, 0, 0}}));
   scene.shapes.emplace_back(lines_to_cylinders({{0, 0, 0}, {0, 0, 0}}));
 
@@ -438,6 +443,9 @@ static scene_model make_pathdscene(const scene_shape &ioshape) {
   auto &lines2_instance    = scene.instances.emplace_back();
   lines2_instance.shape    = 3;
   lines2_instance.material = 3;
+  auto &lines3_instance    = scene.instances.emplace_back();
+  lines3_instance.shape    = 4;
+  lines3_instance.material = 4;
 
   // done
   return scene;
@@ -516,7 +524,7 @@ int run_glpathd(const glpathd_params &params) {
             positions.push_back(eval_position(shape, element, uv));
           }
           auto &points = scene.shapes.at(1);
-          points       = points_to_spheres(positions);
+          points       = points_to_spheres(positions, 2, 0.002);
           set_positions(glscene.shapes.at(1), points.positions);
           set_normals(glscene.shapes.at(1), points.normals);
           set_texcoords(glscene.shapes.at(1), points.texcoords);
@@ -525,28 +533,40 @@ int run_glpathd(const glpathd_params &params) {
           auto path1      = compute_bezier_path(solver, shape.triangles,
               shape.positions, adjacencies, (vector<mesh_point> &)stroke,
               params1);
-          auto path2      = compute_shortest_path(solver, shape.triangles,
-              shape.positions, adjacencies, (vector<mesh_point> &)stroke);
           auto positions1 = vector<vec3f>{};
           for (auto [element, uv] : path1) {
             positions1.push_back(eval_position(shape, element, uv));
           }
           auto &lines1 = scene.shapes.at(2);
-          lines1       = lines_to_cylinders(positions1);
+          lines1       = lines_to_cylinders(positions1, 4, 0.002);
           set_positions(glscene.shapes.at(2), lines1.positions);
           set_normals(glscene.shapes.at(2), lines1.normals);
           set_texcoords(glscene.shapes.at(2), lines1.texcoords);
           set_quads(glscene.shapes.at(2), lines1.quads);
+          auto path2      = compute_shortest_path(solver, shape.triangles,
+              shape.positions, adjacencies, (vector<mesh_point> &)stroke);
           auto positions2 = vector<vec3f>{};
           for (auto [element, uv] : path2) {
             positions2.push_back(eval_position(shape, element, uv));
           }
           auto &lines2 = scene.shapes.at(3);
-          lines2       = lines_to_cylinders(positions2);
+          lines2       = lines_to_cylinders(positions2, 4, 0.002);
           set_positions(glscene.shapes.at(3), lines2.positions);
           set_normals(glscene.shapes.at(3), lines2.normals);
           set_texcoords(glscene.shapes.at(3), lines2.texcoords);
           set_quads(glscene.shapes.at(3), lines2.quads);
+          auto positions3 = vector<vec3f>{};
+          auto path3      = visualize_shortest_path(solver, shape.triangles,
+              shape.positions, adjacencies, (vector<mesh_point> &)stroke, true);
+          for (auto [element, uv] : path3) {
+            positions3.push_back(eval_position(shape, element, uv));
+          }
+          auto &lines3 = scene.shapes.at(4);
+          lines3       = lines_to_cylinders(positions3, 4, 0.002);
+          set_positions(glscene.shapes.at(4), lines3.positions);
+          set_normals(glscene.shapes.at(4), lines3.normals);
+          set_texcoords(glscene.shapes.at(4), lines3.texcoords);
+          set_quads(glscene.shapes.at(4), lines3.quads);
         }
       });
 
