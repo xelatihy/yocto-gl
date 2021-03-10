@@ -489,18 +489,15 @@ int run_glpathd(const glpathd_params &params) {
   auto &shape = scene.shapes.at(0);
   auto  bvh   = make_triangles_bvh(shape.triangles, shape.positions, {});
 
-  // stroke
-  auto stroke = vector<shape_point>{};
-
   // geodesic solver
   auto adjacencies = face_adjacencies(shape.triangles);
   auto solver      = make_dual_geodesic_solver(
       shape.triangles, shape.positions, adjacencies);
   auto bezier = true;
 
-  // bezier algos
-  auto params1      = spline_params{};
-  params1.algorithm = spline_algorithm::de_casteljau_uniform;
+  // points at random
+  auto point1 = mesh_point{0, {0.5, 0.5}};
+  auto point2 = mesh_point{1, {0.5, 0.5}};
 
   // run viewer
   glview_scene(
@@ -513,31 +510,25 @@ int run_glpathd(const glpathd_params &params) {
         auto &camera  = scene.cameras.at(0);
         auto  updated = false;
         if (input.mouse_left && input.modifier_ctrl) {
-          if (input.modifier_shift) {
-            stroke.clear();
-            updated = true;
-          } else {
-            auto mouse_uv = vec2f{
-                input.mouse_pos.x / float(input.window_size.x),
-                input.mouse_pos.y / float(input.window_size.y)};
-            auto ray  = camera_ray(camera.frame, camera.lens, camera.aspect,
-                camera.film, mouse_uv);
-            auto isec = intersect_triangles_bvh(
-                bvh, shape.triangles, shape.positions, ray, false);
-            if (isec.hit) {
-              if (stroke.empty() || stroke.back().element != isec.element ||
-                  stroke.back().uv != isec.uv) {
-                stroke.push_back({isec.element, isec.uv});
-                updated = true;
-              }
+          auto mouse_uv = vec2f{input.mouse_pos.x / float(input.window_size.x),
+              input.mouse_pos.y / float(input.window_size.y)};
+          auto ray      = camera_ray(
+              camera.frame, camera.lens, camera.aspect, camera.film, mouse_uv);
+          auto isec = intersect_triangles_bvh(
+              bvh, shape.triangles, shape.positions, ray, false);
+          if (isec.hit) {
+            if (input.modifier_shift) {
+              point2 = {isec.element, isec.uv};
+            } else {
+              point1 = {isec.element, isec.uv};
             }
+            updated = true;
           }
         }
         if (updated) {
           auto positions = vector<vec3f>{};
-          for (auto [element, uv] : stroke) {
-            positions.push_back(eval_position(shape, element, uv));
-          }
+          positions.push_back(eval_position(shape, point1.face, point1.uv));
+          positions.push_back(eval_position(shape, point2.face, point2.uv));
           auto &points = scene.shapes.at(1);
           points       = points_to_spheres(positions, 2, 0.002);
           set_positions(glscene.shapes.at(1), points.positions);
@@ -545,9 +536,8 @@ int run_glpathd(const glpathd_params &params) {
           set_texcoords(glscene.shapes.at(1), points.texcoords);
           set_quads(glscene.shapes.at(1), points.quads);
           glscene.shapes.at(1).point_size = 10;
-          auto path1      = compute_bezier_path(solver, shape.triangles,
-              shape.positions, adjacencies, (vector<mesh_point> &)stroke,
-              params1);
+          auto path1      = compute_shortest_path(solver, shape.triangles,
+              shape.positions, adjacencies, point1, point2);
           auto positions1 = vector<vec3f>{};
           for (auto [element, uv] : path1) {
             positions1.push_back(eval_position(shape, element, uv));
@@ -558,8 +548,8 @@ int run_glpathd(const glpathd_params &params) {
           set_normals(glscene.shapes.at(2), lines1.normals);
           set_texcoords(glscene.shapes.at(2), lines1.texcoords);
           set_quads(glscene.shapes.at(2), lines1.quads);
-          auto path2      = compute_shortest_path(solver, shape.triangles,
-              shape.positions, adjacencies, (vector<mesh_point> &)stroke);
+          auto path2      = visualize_shortest_path(solver, shape.triangles,
+              shape.positions, adjacencies, point1, point2, true);
           auto positions2 = vector<vec3f>{};
           for (auto [element, uv] : path2) {
             positions2.push_back(eval_position(shape, element, uv));
@@ -570,18 +560,6 @@ int run_glpathd(const glpathd_params &params) {
           set_normals(glscene.shapes.at(3), lines2.normals);
           set_texcoords(glscene.shapes.at(3), lines2.texcoords);
           set_quads(glscene.shapes.at(3), lines2.quads);
-          auto positions3 = vector<vec3f>{};
-          auto path3      = visualize_shortest_path(solver, shape.triangles,
-              shape.positions, adjacencies, (vector<mesh_point> &)stroke, true);
-          for (auto [element, uv] : path3) {
-            positions3.push_back(eval_position(shape, element, uv));
-          }
-          auto &lines3 = scene.shapes.at(4);
-          lines3       = lines_to_cylinders(positions3, 4, 0.002);
-          set_positions(glscene.shapes.at(4), lines3.positions);
-          set_normals(glscene.shapes.at(4), lines3.normals);
-          set_texcoords(glscene.shapes.at(4), lines3.texcoords);
-          set_quads(glscene.shapes.at(4), lines3.quads);
         }
       });
 
