@@ -3145,7 +3145,8 @@ void points_to_spheres(vector<vec4i>& quads, vector<vec3f>& positions,
         transformed_positions, sphere_normals, sphere_texcoords);
   }
 }
-void lines_to_cylinders(vector<vec4i>& quads, vector<vec3f>& positions,
+
+void polyline_to_cylinders(vector<vec4i>& quads, vector<vec3f>& positions,
     vector<vec3f>& normals, vector<vec2f>& texcoords,
     const vector<vec3f>& vertices, int steps, float scale) {
   auto cylinder_quads     = vector<vec4i>{};
@@ -3158,6 +3159,30 @@ void lines_to_cylinders(vector<vec4i>& quads, vector<vec3f>& positions,
     auto frame  = frame_fromz((vertices[idx] + vertices[idx + 1]) / 2,
         vertices[idx] - vertices[idx + 1]);
     auto length = distance(vertices[idx], vertices[idx + 1]);
+    auto transformed_positions = cylinder_positions;
+    auto transformed_normals   = cylinder_normals;
+    for (auto& position : transformed_positions)
+      position = transform_point(frame, position * vec3f{1, 1, length / 2});
+    for (auto& normal : transformed_normals)
+      normal = transform_direction(frame, normal);
+    merge_quads(quads, positions, normals, texcoords, cylinder_quads,
+        transformed_positions, cylinder_normals, cylinder_texcoords);
+  }
+}
+
+void lines_to_cylinders(vector<vec4i>& quads, vector<vec3f>& positions,
+    vector<vec3f>& normals, vector<vec2f>& texcoords,
+    const vector<vec3f>& vertices, int steps, float scale) {
+  auto cylinder_quads     = vector<vec4i>{};
+  auto cylinder_positions = vector<vec3f>{};
+  auto cylinder_normals   = vector<vec3f>{};
+  auto cylinder_texcoords = vector<vec2f>{};
+  make_uvcylinder(cylinder_quads, cylinder_positions, cylinder_normals,
+      cylinder_texcoords, {steps, 1, 1}, {scale, 1}, {1, 1, 1});
+  for (auto idx = 0; idx < (int)vertices.size(); idx += 2) {
+    auto frame  = frame_fromz((vertices[idx + 0] + vertices[idx + 1]) / 2,
+        vertices[idx + 0] - vertices[idx + 1]);
+    auto length = distance(vertices[idx + 0], vertices[idx + 1]);
     auto transformed_positions = cylinder_positions;
     auto transformed_normals   = cylinder_normals;
     for (auto& position : transformed_positions)

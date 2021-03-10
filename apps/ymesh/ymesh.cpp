@@ -239,7 +239,7 @@ static scene_model make_pathscene(const scene_shape &ioshape_) {
   // shapes
   scene.shapes.emplace_back(ioshape);
   scene.shapes.emplace_back(points_to_spheres({{0, 0, 0}}));
-  scene.shapes.emplace_back(lines_to_cylinders({{0, 0, 0}, {0, 0, 0}}));
+  scene.shapes.emplace_back(polyline_to_cylinders({{0, 0, 0}, {0, 0, 0}}));
 
   // instances
   auto &shape_instance     = scene.instances.emplace_back();
@@ -346,7 +346,7 @@ int run_glpath(const glpath_params &params) {
             ppositions.push_back(eval_position(shape, element, uv));
           }
           auto &lines = scene.shapes.at(2);
-          lines       = lines_to_cylinders(ppositions);
+          lines       = polyline_to_cylinders(ppositions);
           set_positions(glscene.shapes.at(2), lines.positions);
           set_normals(glscene.shapes.at(2), lines.normals);
           set_texcoords(glscene.shapes.at(2), lines.texcoords);
@@ -402,45 +402,44 @@ static scene_model make_pathdscene(const scene_shape &ioshape) {
   camera.focus  = length(camera.frame.o);
 
   // material
-  auto &shape_material      = scene.materials.emplace_back();
-  shape_material.type       = scene_material_type::glossy;
-  shape_material.color      = {0.5, 1, 0.5};
-  shape_material.roughness  = 0.2;
-  auto &points_material     = scene.materials.emplace_back();
-  points_material.type      = scene_material_type::glossy;
-  points_material.color     = {1, 0.5, 0.5};
-  points_material.roughness = 0.2;
-  auto &lines1_material     = scene.materials.emplace_back();
-  lines1_material.type      = scene_material_type::glossy;
-  lines1_material.color     = {0.5, 0.5, 1};
-  lines1_material.roughness = 0.2;
-  auto &lines2_material     = scene.materials.emplace_back();
-  lines2_material.type      = scene_material_type::glossy;
-  lines2_material.color     = {1, 1, 0.5};
-  lines2_material.roughness = 0.2;
-  auto &lines3_material     = scene.materials.emplace_back();
-  lines3_material.type      = scene_material_type::glossy;
-  lines3_material.color     = {1, 0.5, 1};
-  lines3_material.roughness = 0.2;
-  auto &edges_material      = scene.materials.emplace_back();
-  edges_material.type       = scene_material_type::glossy;
-  edges_material.color      = {0.01, 0.01, 0.01};
-  edges_material.roughness  = 0.2;
+  auto &shape_material     = scene.materials.emplace_back();
+  shape_material.type      = scene_material_type::glossy;
+  shape_material.color     = {0.5, 1, 0.5};
+  shape_material.roughness = 0.2;
+  auto &points_material    = scene.materials.emplace_back();
+  points_material.type     = scene_material_type::matte;
+  points_material.color    = {1, 0.5, 0.5};
+  auto &lines1_material    = scene.materials.emplace_back();
+  lines1_material.type     = scene_material_type::matte;
+  lines1_material.color    = {0.5, 0.5, 1};
+  auto &lines2_material    = scene.materials.emplace_back();
+  lines2_material.type     = scene_material_type::matte;
+  lines2_material.color    = {1, 1, 0.5};
+  auto &lines3_material    = scene.materials.emplace_back();
+  lines3_material.type     = scene_material_type::matte;
+  lines3_material.color    = {1, 0.5, 1};
+  auto &edges_material     = scene.materials.emplace_back();
+  edges_material.type      = scene_material_type::matte;
+  edges_material.color     = {0, 0, 0};
 
   // shapes
   scene.shapes.emplace_back(ioshape);
   scene.shapes.emplace_back(points_to_spheres({{0, 0, 0}}));
-  scene.shapes.emplace_back(lines_to_cylinders({{0, 0, 0}, {0, 0, 0}}));
-  scene.shapes.emplace_back(lines_to_cylinders({{0, 0, 0}, {0, 0, 0}}));
-  scene.shapes.emplace_back(lines_to_cylinders({{0, 0, 0}, {0, 0, 0}}));
-  scene.shapes.emplace_back(lines_to_cylinders({{0, 0, 0}, {0, 0, 0}}));
+  scene.shapes.emplace_back(polyline_to_cylinders({{0, 0, 0}, {0, 0, 0}}));
+  scene.shapes.emplace_back(polyline_to_cylinders({{0, 0, 0}, {0, 0, 0}}));
+  scene.shapes.emplace_back(polyline_to_cylinders({{0, 0, 0}, {0, 0, 0}}));
+  scene.shapes.emplace_back(polyline_to_cylinders({{0, 0, 0}, {0, 0, 0}}));
 
-  // make edges
-  // auto  edges      = get_edges(ioshape.triangles);
-  // auto &edge_shape = scene.shapes.back();
-  // for (auto [i, j] : edges) {
-  //   line_to_quads();
-  // }
+// make edges
+#if 0
+  auto edges         = get_edges(ioshape.triangles);
+  auto edge_vertices = vector<vec3f>{};
+  for (auto [i, j] : edges) {
+    edge_vertices.push_back(ioshape.positions[i]);
+    edge_vertices.push_back(ioshape.positions[j]);
+  }
+  scene.shapes.back() = lines_to_cylinders(edge_vertices, 4, 0.001);
+#endif
 
   // instances
   auto &shape_instance     = scene.instances.emplace_back();
@@ -543,7 +542,7 @@ int run_glpathd(const glpathd_params &params) {
             positions1.push_back(eval_position(shape, element, uv));
           }
           auto &lines1 = scene.shapes.at(2);
-          lines1       = lines_to_cylinders(positions1, 4, 0.002);
+          lines1       = polyline_to_cylinders(positions1, 4, 0.002);
           set_positions(glscene.shapes.at(2), lines1.positions);
           set_normals(glscene.shapes.at(2), lines1.normals);
           set_texcoords(glscene.shapes.at(2), lines1.texcoords);
@@ -555,7 +554,7 @@ int run_glpathd(const glpathd_params &params) {
             positions2.push_back(eval_position(shape, element, uv));
           }
           auto &lines2 = scene.shapes.at(3);
-          lines2       = lines_to_cylinders(positions2, 4, 0.002);
+          lines2       = polyline_to_cylinders(positions2, 4, 0.002);
           set_positions(glscene.shapes.at(3), lines2.positions);
           set_normals(glscene.shapes.at(3), lines2.normals);
           set_texcoords(glscene.shapes.at(3), lines2.texcoords);
