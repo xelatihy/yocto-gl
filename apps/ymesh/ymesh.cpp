@@ -573,7 +573,7 @@ int run_glpathd(const glpathd_params &params) {
           set_normals(glscene.shapes.at(3), lines2.normals);
           set_texcoords(glscene.shapes.at(3), lines2.texcoords);
           set_quads(glscene.shapes.at(3), lines2.quads);
-          // auto path3      = visualize_shortest_path(solver2, shape.triangles,
+          // auto path3 = visualize_shortest_path(solver2, shape.triangles,
           //     shape.positions, adjacencies, v2t, angles, point1, point2,
           //     false);
           // auto positions3 = vector<vec3f>{};
