@@ -2375,9 +2375,11 @@ vector<int> get_strip(const geodesic_solver& solver,
     const vector<vec3i>& triangles, const vector<vec3f>& positions,
     const vector<vec3i>& adjacencies, const vector<vector<int>>& v2t,
     const vector<vector<float>>& angles, const mesh_point& source,
-    const mesh_point& target) {
+    const mesh_point& target, vector<int>& parents) {
   if (target.face == source.face) return {target.face};
-  auto parents = compute_geodesic_parents(
+  if (find_in_vec(adjacencies[target.face], source.face) != -1)
+    return {target.face, source.face};
+  parents = point_to_point_geodesic_path(
       solver, triangles, positions, adjacencies, source, target);
   auto N     = (int)parents.size();
   auto first = 0, last = 0, prev_entry = 0, next_entry = 0;
@@ -2406,7 +2408,6 @@ vector<int> get_strip(const geodesic_solver& solver,
     prev_entry = get_entry(strip, solver, triangles, positions, adjacencies,
         v2t, angles, parents[0], target);
   }
-
   for (auto i = 0; i < N; ++i) {
     auto v = parents[i];
     if (i == N - 1) {
@@ -2423,15 +2424,12 @@ vector<int> get_strip(const geodesic_solver& solver,
       last        = (nei_is_dual) ? (next_entry - 1) / 2 : next_entry / 2;
       ccw         = set_ord((int)v2t[v].size(), first, last, nei_is_dual);
     }
-
     fill_strip(strip, v2t, v, first, last, nei_is_dual, ccw);
-
     if (nei_is_dual && i != N - 1) {
       auto tid = opposite_face(triangles, adjacencies, strip.back(), v);
       strip.push_back(tid);
     }
   }
-
   close_strip(strip, v2t, parents.back(), strip.back(), strip_to_point.back());
   if (strip.back() == strip_to_point.back()) strip_to_point.pop_back();
   reverse(strip_to_point.begin(), strip_to_point.end());

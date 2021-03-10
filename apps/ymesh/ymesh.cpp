@@ -422,6 +422,10 @@ static scene_model make_pathdscene(const scene_shape &ioshape) {
   lines3_material.type      = scene_material_type::glossy;
   lines3_material.color     = {1, 0.5, 1};
   lines3_material.roughness = 0.2;
+  auto &edges_material      = scene.materials.emplace_back();
+  edges_material.type       = scene_material_type::glossy;
+  edges_material.color      = {0.01, 0.01, 0.01};
+  edges_material.roughness  = 0.2;
 
   // shapes
   scene.shapes.emplace_back(ioshape);
@@ -429,6 +433,14 @@ static scene_model make_pathdscene(const scene_shape &ioshape) {
   scene.shapes.emplace_back(lines_to_cylinders({{0, 0, 0}, {0, 0, 0}}));
   scene.shapes.emplace_back(lines_to_cylinders({{0, 0, 0}, {0, 0, 0}}));
   scene.shapes.emplace_back(lines_to_cylinders({{0, 0, 0}, {0, 0, 0}}));
+  scene.shapes.emplace_back(lines_to_cylinders({{0, 0, 0}, {0, 0, 0}}));
+
+  // make edges
+  // auto  edges      = get_edges(ioshape.triangles);
+  // auto &edge_shape = scene.shapes.back();
+  // for (auto [i, j] : edges) {
+  //   line_to_quads();
+  // }
 
   // instances
   auto &shape_instance     = scene.instances.emplace_back();
@@ -446,6 +458,9 @@ static scene_model make_pathdscene(const scene_shape &ioshape) {
   auto &lines3_instance    = scene.instances.emplace_back();
   lines3_instance.shape    = 4;
   lines3_instance.material = 4;
+  auto &edges_instance     = scene.instances.emplace_back();
+  edges_instance.shape     = 5;
+  edges_instance.material  = 5;
 
   // done
   return scene;
