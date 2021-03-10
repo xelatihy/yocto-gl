@@ -224,16 +224,17 @@ int run_render(const render_params& params_) {
   print_progress_end();
 
   // render
-  trace_image(
-      image, state, scene, bvh, lights, params, [&](int sample, int samples) {
-        print_progress_next();
-        if (!params.savebatch) return;
-        auto ext = "-s" + std::to_string(sample + samples) +
-                   path_extension(params.output);
-        auto outfilename = replace_extension(params.output, ext);
-        auto ioerror     = ""s;
-        if (!save_image(outfilename, image, ioerror)) print_fatal(ioerror);
-      });
+  print_progress_begin("render image", params.samples);
+  for (auto sample = 0; sample < params.samples; sample++) {
+    trace_samples(image, state, scene, bvh, lights, params);
+    if (params.savebatch) {
+      auto ext = "-s" + std::to_string(sample) + path_extension(params.output);
+      auto outfilename = replace_extension(params.output, ext);
+      auto ioerror     = ""s;
+      if (!save_image(outfilename, image, ioerror)) print_fatal(ioerror);
+    }
+    print_progress_next();
+  }
 
   // save image
   print_progress_begin("save image");

@@ -930,33 +930,31 @@ trace_lights make_lights(const scene_model& scene, const trace_params& params) {
 }
 
 // Progressively computes an image.
-color_image trace_image(const scene_model& scene, const trace_params& params,
-    const image_callback& image_cb) {
+color_image trace_image(const scene_model& scene, const trace_params& params) {
   auto bvh    = make_bvh(scene, params);
   auto lights = make_lights(scene, params);
   auto state  = make_state(scene, params);
   auto image  = make_image(state.width, state.height, true);
-  trace_image(image, state, scene, bvh, lights, params, image_cb);
+  for (auto sample = 0; sample < params.samples; sample++) {
+    trace_samples(image, state, scene, bvh, lights, params);
+  }
   return image;
 }
 
 // Progressively compute an image by calling trace_samples multiple times.
-void trace_image(color_image& image, trace_state& state,
+void trace_samples(color_image& image, trace_state& state,
     const scene_model& scene, const bvh_scene& bvh, const trace_lights& lights,
-    const trace_params& params, const image_callback& image_cb) {
-  for (auto sample = 0; sample < params.samples; sample++) {
-    if (params.noparallel) {
-      for (auto j = 0; j < state.height; j++) {
-        for (auto i = 0; i < state.width; i++) {
-          trace_sample(image, state, scene, bvh, lights, i, j, params);
-        }
-      }
-    } else {
-      parallel_for(state.width, state.height, [&](int i, int j) {
+    const trace_params& params) {
+  if (params.noparallel) {
+    for (auto j = 0; j < state.height; j++) {
+      for (auto i = 0; i < state.width; i++) {
         trace_sample(image, state, scene, bvh, lights, i, j, params);
-      });
+      }
     }
-    if (image_cb) image_cb(sample + 1, params.samples);
+  } else {
+    parallel_for(state.width, state.height, [&](int i, int j) {
+      trace_sample(image, state, scene, bvh, lights, i, j, params);
+    });
   }
 }
 
