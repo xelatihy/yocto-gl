@@ -432,7 +432,7 @@ static scene_model make_shapescene(const scene_shape& ioshape_) {
 
   // material
   auto& shape_material     = scene.materials.emplace_back();
-  shape_material.type      = scene_material_type::plastic;
+  shape_material.type      = scene_material_type::glossy;
   shape_material.color     = {0.5, 1, 0.5};
   shape_material.roughness = 0.2;
 

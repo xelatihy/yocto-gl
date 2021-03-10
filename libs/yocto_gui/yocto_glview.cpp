@@ -842,20 +842,20 @@ static void init_glscene(shade_scene& glscene, const sceneio_scene& ioscene) {
         set_metallic(glmaterial, 0, invalidid);
         set_roughness(glmaterial, 0, invalidid);
       } break;
-      case scene_material_type::plastic: {
+      case scene_material_type::glossy: {
         set_color(glmaterial, iomaterial.color, iomaterial.color_tex);
         set_specular(glmaterial, 1, invalidid);
         set_metallic(glmaterial, 0, invalidid);
         set_roughness(glmaterial, iomaterial.roughness, invalidid);
       } break;
-      case scene_material_type::metal: {
+      case scene_material_type::metallic: {
         set_color(glmaterial, iomaterial.color, iomaterial.color_tex);
         set_specular(glmaterial, 0, invalidid);
         set_metallic(glmaterial, 1, invalidid);
         set_roughness(
             glmaterial, iomaterial.roughness, iomaterial.roughness_tex);
       } break;
-      case scene_material_type::metallic: {
+      case scene_material_type::gltfpbr: {
         set_color(glmaterial, iomaterial.color, iomaterial.color_tex);
         set_specular(glmaterial, 1, invalidid);
         set_metallic(glmaterial, iomaterial.metallic, invalidid);

@@ -2794,7 +2794,7 @@ static bool load_json_scene(const string& filename, scene_model& scene,
         }
         auto& material = scene.materials.at(material_map.at(name));
         material_set[&material - &scene.materials.front()] = true;
-        material.type = scene_material_type::metallic;
+        material.type = scene_material_type::gltfpbr;
         for (auto& [key, value] : iterate_object(element)) {
           if (key == "type") {
             if (!get_value(value, material.type))
@@ -3397,19 +3397,19 @@ static bool load_obj_scene(const string& filename, scene_model& scene,
   // handler for materials
   for (auto& omaterial : obj.materials) {
     auto& material        = scene.materials.emplace_back();
-    material.type         = scene_material_type::metallic;
+    material.type         = scene_material_type::gltfpbr;
     material.emission     = omaterial.emission;
     material.emission_tex = omaterial.emission_tex;
     if (max(omaterial.transmission) > 0.1) {
-      material.type      = scene_material_type::thinglass;
+      material.type      = scene_material_type::transparent;
       material.color     = omaterial.transmission;
       material.color_tex = omaterial.transmission_tex;
     } else if (max(omaterial.specular) > 0.2) {
-      material.type      = scene_material_type::metal;
+      material.type      = scene_material_type::metallic;
       material.color     = omaterial.specular;
       material.color_tex = omaterial.specular_tex;
     } else if (max(omaterial.specular) > 0) {
-      material.type      = scene_material_type::plastic;
+      material.type      = scene_material_type::glossy;
       material.color     = omaterial.diffuse;
       material.color_tex = omaterial.diffuse_tex;
     } else {
@@ -3842,7 +3842,7 @@ static bool load_gltf_scene(const string& filename, scene_model& scene,
     try {
       for (auto& gmaterial : gltf.at("materials")) {
         auto& material    = scene.materials.emplace_back();
-        material.type     = scene_material_type::metallic;
+        material.type     = scene_material_type::gltfpbr;
         material.emission = gmaterial.value("emissiveFactor", vec3f{0, 0, 0});
         material.emission_tex = get_texture(gmaterial, "emissiveTexture");
         material.normal_tex   = get_texture(gmaterial, "normalTexture");
@@ -3863,7 +3863,7 @@ static bool load_gltf_scene(const string& filename, scene_model& scene,
               gmaterial.at("extensions").at("KHR_materials_transmission");
           auto transmission = gtransmission.value("transmissionFactor", 1.0f);
           if (transmission > 0) {
-            material.type      = scene_material_type::thinglass;
+            material.type      = scene_material_type::transparent;
             material.color     = {transmission, transmission, transmission};
             material.color_tex = get_texture(gmaterial, "transmissionTexture");
             // material.roughness = 0; // leave it set from before
@@ -4603,10 +4603,10 @@ static bool load_pbrt_scene(const string& filename, scene_model& scene,
   // material type map
   auto material_type_map = unordered_map<pbrt_mtype, scene_material_type>{
       {pbrt_mtype::matte, scene_material_type::matte},
-      {pbrt_mtype::plastic, scene_material_type::plastic},
-      {pbrt_mtype::metal, scene_material_type::metal},
-      {pbrt_mtype::glass, scene_material_type::glass},
-      {pbrt_mtype::thinglass, scene_material_type::thinglass},
+      {pbrt_mtype::plastic, scene_material_type::glossy},
+      {pbrt_mtype::metal, scene_material_type::metallic},
+      {pbrt_mtype::glass, scene_material_type::refractive},
+      {pbrt_mtype::thinglass, scene_material_type::transparent},
       {pbrt_mtype::subsurface, scene_material_type::matte},
   };
 
@@ -4763,10 +4763,10 @@ static bool save_pbrt_scene(const string& filename, const scene_model& scene,
   // material type map
   auto material_type_map = unordered_map<scene_material_type, pbrt_mtype>{
       {scene_material_type::matte, pbrt_mtype::matte},
-      {scene_material_type::plastic, pbrt_mtype::plastic},
-      {scene_material_type::metal, pbrt_mtype::metal},
-      {scene_material_type::glass, pbrt_mtype::glass},
-      {scene_material_type::thinglass, pbrt_mtype::thinglass},
+      {scene_material_type::glossy, pbrt_mtype::plastic},
+      {scene_material_type::metallic, pbrt_mtype::metal},
+      {scene_material_type::refractive, pbrt_mtype::glass},
+      {scene_material_type::transparent, pbrt_mtype::thinglass},
       {scene_material_type::subsurface, pbrt_mtype::matte},
       {scene_material_type::volume, pbrt_mtype::matte},
   };

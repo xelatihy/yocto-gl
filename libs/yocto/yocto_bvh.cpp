@@ -764,9 +764,6 @@ static void build_bvh(bvh_scene& bvh, const scene_model& scene,
 }
 
 bvh_shape make_bvh(const scene_shape& shape, bool highquality, bool embree) {
-  // handle progress
-  auto progress = vec2i{0, 1};
-
   // bvh
   auto bvh = bvh_shape{};
 
@@ -779,9 +776,6 @@ bvh_shape make_bvh(const scene_shape& shape, bool highquality, bool embree) {
 
 bvh_scene make_bvh(
     const scene_model& scene, bool highquality, bool embree, bool noparallel) {
-  // handle progress
-  auto progress = vec2i{0, 1 + (int)scene.shapes.size()};
-
   // bvh
   auto bvh = bvh_scene{};
 
