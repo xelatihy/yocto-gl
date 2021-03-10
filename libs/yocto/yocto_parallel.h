@@ -97,6 +97,11 @@ inline void parallel_for(T num, Func&& func);
 // parallel algorithms. `Func` takes the two integer indices.
 template <typename T, typename Func>
 inline void parallel_for(T num1, T num2, Func&& func);
+// Simple parallel for used since our target platforms do not yet support
+// parallel algorithms. `Func` takes the integer index.
+// Works on `batch` sized chunks.
+template <typename T, typename Func>
+inline void parallel_for_batch(T num, T batch, Func&& func);
 
 // Simple parallel for used since our target platforms do not yet support
 // parallel algorithms. `Func` takes a reference to a `T`.
@@ -196,6 +201,27 @@ inline void parallel_for(T num1, T num2, Func&& func) {
             auto j = next_idx.fetch_add(1);
             if (j >= num2) break;
             for (auto i = (T)0; i < num1; i++) func(i, j);
+          }
+        }));
+  }
+  for (auto& f : futures) f.get();
+}
+
+// Simple parallel for used since our target platforms do not yet support
+// parallel algorithms. `Func` takes the integer index.
+template <typename T, typename Func>
+inline void parallel_for_batch(T num, T batch, Func&& func) {
+  auto      futures  = vector<future<void>>{};
+  auto      nthreads = std::thread::hardware_concurrency();
+  atomic<T> next_idx(0);
+  for (auto thread_id = 0; thread_id < nthreads; thread_id++) {
+    futures.emplace_back(
+        std::async(std::launch::async, [&func, &next_idx, num, batch]() {
+          while (true) {
+            auto start = next_idx.fetch_add(batch);
+            if (start >= num) break;
+            auto end = std::min(num, start + batch);
+            for (auto i = (T)start; i < end; i++) func(i);
           }
         }));
   }

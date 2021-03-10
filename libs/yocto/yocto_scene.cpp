@@ -110,19 +110,76 @@ ray3f eval_camera(
 // -----------------------------------------------------------------------------
 namespace yocto {
 
-// Evaluate a texture
+// pixel access
+vec4f lookup_texture(
+    const scene_texture& texture, int i, int j, bool as_linear) {
+  auto color = vec4f{0, 0, 0, 0};
+  if (!texture.pixelsf.empty()) {
+    color = texture.pixelsf[j * texture.width + i];
+  } else {
+    color = byte_to_float(texture.pixelsb[j * texture.width + i]);
+  }
+  if (as_linear && !texture.linear) {
+    return srgb_to_rgb(color);
+  } else {
+    return color;
+  }
+}
+
+// Evaluates an image at a point `uv`.
 vec4f eval_texture(const scene_texture& texture, const vec2f& uv,
     bool as_linear, bool no_interpolation, bool clamp_to_edge) {
-  return eval_image(reinterpret_cast<const color_image&>(texture), uv,
-      as_linear, no_interpolation, clamp_to_edge);
+  if (texture.width == 0 || texture.height == 0) return {0, 0, 0, 0};
+
+  // get texture width/height
+  auto size = vec2i{texture.width, texture.height};
+
+  // get coordinates normalized for tiling
+  auto s = 0.0f, t = 0.0f;
+  if (clamp_to_edge) {
+    s = clamp(uv.x, 0.0f, 1.0f) * size.x;
+    t = clamp(uv.y, 0.0f, 1.0f) * size.y;
+  } else {
+    s = fmod(uv.x, 1.0f) * size.x;
+    if (s < 0) s += size.x;
+    t = fmod(uv.y, 1.0f) * size.y;
+    if (t < 0) t += size.y;
+  }
+
+  // get image coordinates and residuals
+  auto i = clamp((int)s, 0, size.x - 1), j = clamp((int)t, 0, size.y - 1);
+  auto ii = (i + 1) % size.x, jj = (j + 1) % size.y;
+  auto u = s - i, v = t - j;
+
+  // handle interpolation
+  if (no_interpolation) {
+    return lookup_texture(texture, i, j, as_linear);
+  } else {
+    return lookup_texture(texture, i, j, as_linear) * (1 - u) * (1 - v) +
+           lookup_texture(texture, i, jj, as_linear) * (1 - u) * v +
+           lookup_texture(texture, ii, j, as_linear) * u * (1 - v) +
+           lookup_texture(texture, ii, jj, as_linear) * u * v;
+  }
 }
 
 // Helpers
-vec4f eval_texture(const scene_scene& scene, int texture, const vec2f& uv,
+vec4f eval_texture(const scene_model& scene, int texture, const vec2f& uv,
     bool ldr_as_linear, bool no_interpolation, bool clamp_to_edge) {
   if (texture == invalidid) return {1, 1, 1, 1};
   return eval_texture(
       scene.textures[texture], uv, ldr_as_linear, no_interpolation);
+}
+
+// conversion from image
+scene_texture image_to_texture(const color_image& image) {
+  auto texture = scene_texture{image.width, image.height, image.linear, {}, {}};
+  if (image.linear) {
+    texture.pixelsf = image.pixels;
+  } else {
+    texture.pixelsb.resize(image.pixels.size());
+    float_to_byte(texture.pixelsb, image.pixels);
+  }
+  return texture;
 }
 
 }  // namespace yocto
@@ -136,7 +193,7 @@ namespace yocto {
 static const auto min_roughness = 0.03f * 0.03f;
 
 // Evaluate material
-material_point eval_material(const scene_scene& scene,
+material_point eval_material(const scene_model& scene,
     const scene_material& material, const vec2f& texcoord,
     const vec4f& color_shp) {
   // evaluate textures
@@ -690,7 +747,7 @@ vector<string> fvshape_stats(const scene_fvshape& shape, bool verbose) {
 namespace yocto {
 
 // Eval position
-vec3f eval_position(const scene_scene& scene, const scene_instance& instance,
+vec3f eval_position(const scene_model& scene, const scene_instance& instance,
     int element, const vec2f& uv) {
   auto& shape = scene.shapes[instance.shape];
   if (!shape.triangles.empty()) {
@@ -717,7 +774,7 @@ vec3f eval_position(const scene_scene& scene, const scene_instance& instance,
 
 // Shape element normal.
 vec3f eval_element_normal(
-    const scene_scene& scene, const scene_instance& instance, int element) {
+    const scene_model& scene, const scene_instance& instance, int element) {
   auto& shape = scene.shapes[instance.shape];
   if (!shape.triangles.empty()) {
     auto t = shape.triangles[element];
@@ -741,7 +798,7 @@ vec3f eval_element_normal(
 }
 
 // Eval normal
-vec3f eval_normal(const scene_scene& scene, const scene_instance& instance,
+vec3f eval_normal(const scene_model& scene, const scene_instance& instance,
     int element, const vec2f& uv) {
   auto& shape = scene.shapes[instance.shape];
   if (shape.normals.empty())
@@ -770,7 +827,7 @@ vec3f eval_normal(const scene_scene& scene, const scene_instance& instance,
 }
 
 // Eval texcoord
-vec2f eval_texcoord(const scene_scene& scene, const scene_instance& instance,
+vec2f eval_texcoord(const scene_model& scene, const scene_instance& instance,
     int element, const vec2f& uv) {
   auto& shape = scene.shapes[instance.shape];
   if (shape.texcoords.empty()) return uv;
@@ -826,7 +883,7 @@ static pair<vec3f, vec3f> eval_tangents(
 
 // Shape element normal.
 pair<vec3f, vec3f> eval_element_tangents(
-    const scene_scene& scene, const scene_instance& instance, int element) {
+    const scene_model& scene, const scene_instance& instance, int element) {
   auto& shape = scene.shapes[instance.shape];
   if (!shape.triangles.empty() && !shape.texcoords.empty()) {
     auto t        = shape.triangles[element];
@@ -848,7 +905,7 @@ pair<vec3f, vec3f> eval_element_tangents(
   }
 }
 
-vec3f eval_normalmap(const scene_scene& scene, const scene_instance& instance,
+vec3f eval_normalmap(const scene_model& scene, const scene_instance& instance,
     int element, const vec2f& uv) {
   auto& shape    = scene.shapes[instance.shape];
   auto& material = scene.materials[instance.material];
@@ -871,7 +928,7 @@ vec3f eval_normalmap(const scene_scene& scene, const scene_instance& instance,
 }
 
 // Eval shading normal
-vec3f eval_shading_normal(const scene_scene& scene,
+vec3f eval_shading_normal(const scene_model& scene,
     const scene_instance& instance, int element, const vec2f& uv,
     const vec3f& outgoing) {
   auto& shape    = scene.shapes[instance.shape];
@@ -894,7 +951,7 @@ vec3f eval_shading_normal(const scene_scene& scene,
 }
 
 // Eval color
-vec4f eval_color(const scene_scene& scene, const scene_instance& instance,
+vec4f eval_color(const scene_model& scene, const scene_instance& instance,
     int element, const vec2f& uv) {
   auto& shape = scene.shapes[instance.shape];
   if (shape.colors.empty()) return {1, 1, 1, 1};
@@ -917,7 +974,7 @@ vec4f eval_color(const scene_scene& scene, const scene_instance& instance,
 }
 
 // Evaluate material
-material_point eval_material(const scene_scene& scene,
+material_point eval_material(const scene_model& scene,
     const scene_instance& instance, int element, const vec2f& uv) {
   auto& material = scene.materials[instance.material];
   auto  texcoord = eval_texcoord(scene, instance, element, uv);
@@ -966,7 +1023,7 @@ material_point eval_material(const scene_scene& scene,
 }
 
 // check if an instance is volumetric
-bool is_volumetric(const scene_scene& scene, const scene_instance& instance) {
+bool is_volumetric(const scene_model& scene, const scene_instance& instance) {
   return is_volumetric(scene.materials[instance.material]);
 }
 
@@ -978,7 +1035,7 @@ bool is_volumetric(const scene_scene& scene, const scene_instance& instance) {
 namespace yocto {
 
 // Evaluate environment color.
-vec3f eval_environment(const scene_scene& scene,
+vec3f eval_environment(const scene_model& scene,
     const scene_environment& environment, const vec3f& direction) {
   auto wl       = transform_direction(inverse(environment.frame), direction);
   auto texcoord = vec2f{
@@ -989,7 +1046,7 @@ vec3f eval_environment(const scene_scene& scene,
 }
 
 // Evaluate all environment color.
-vec3f eval_environment(const scene_scene& scene, const vec3f& direction) {
+vec3f eval_environment(const scene_model& scene, const vec3f& direction) {
   auto emission = zero3f;
   for (auto environment : scene.environments) {
     emission += eval_environment(scene, environment, direction);
@@ -1005,7 +1062,7 @@ vec3f eval_environment(const scene_scene& scene, const vec3f& direction) {
 namespace yocto {
 
 // Add missing cameras.
-void add_camera(scene_scene& scene) {
+void add_camera(scene_model& scene) {
   scene.camera_names.emplace_back("camera");
   auto& camera        = scene.cameras.emplace_back();
   camera.orthographic = false;
@@ -1027,10 +1084,10 @@ void add_camera(scene_scene& scene) {
 }
 
 // Add a sky environment
-void add_sky(scene_scene& scene, float sun_angle) {
+void add_sky(scene_model& scene, float sun_angle) {
   scene.texture_names.emplace_back("sky");
-  auto& texture                           = scene.textures.emplace_back();
-  reinterpret_cast<color_image&>(texture) = make_sunsky(1024, 512, sun_angle);
+  auto& texture = scene.textures.emplace_back();
+  texture       = image_to_texture(make_sunsky(1024, 512, sun_angle));
   scene.environment_names.emplace_back("sky");
   auto& environment        = scene.environments.emplace_back();
   environment.emission     = {1, 1, 1};
@@ -1038,7 +1095,7 @@ void add_sky(scene_scene& scene, float sun_angle) {
 }
 
 // get named camera or default if camera is empty
-int find_camera(const scene_scene& scene, const string& name) {
+int find_camera(const scene_model& scene, const string& name) {
   if (scene.cameras.empty()) return invalidid;
   if (scene.camera_names.empty()) return 0;
   for (auto idx = 0; idx < (int)scene.camera_names.size(); idx++) {
@@ -1060,7 +1117,7 @@ int find_camera(const scene_scene& scene, const string& name) {
 }
 
 // Updates the scene and scene's instances bounding boxes
-bbox3f compute_bounds(const scene_scene& scene) {
+bbox3f compute_bounds(const scene_model& scene) {
   auto shape_bbox = vector<bbox3f>{};
   auto bbox       = invalidb3f;
   for (auto& shape : scene.shapes) {
@@ -1082,7 +1139,7 @@ bbox3f compute_bounds(const scene_scene& scene) {
 namespace yocto {
 
 void tesselate_subdiv(
-    scene_shape& shape, scene_subdiv& subdiv_, const scene_scene& scene) {
+    scene_shape& shape, scene_subdiv& subdiv_, const scene_model& scene) {
   auto subdiv = subdiv_;
 
   if (subdiv.subdivisions > 0) {
@@ -1145,7 +1202,7 @@ void tesselate_subdiv(
       subdiv.positions, subdiv.normals, subdiv.texcoords);
 }
 
-void tesselate_subdivs(scene_scene& scene) {
+void tesselate_subdivs(scene_model& scene) {
   // handle progress
   auto progress = vec2i{0, (int)scene.subdivs.size() + 1};
   log_progress("tesselate subdivs", progress.x++, progress.y);
@@ -1167,21 +1224,71 @@ void tesselate_subdivs(scene_scene& scene) {
 // -----------------------------------------------------------------------------
 namespace yocto {
 
-vector<string> scene_stats(const scene_scene& scene, bool verbose) {
+size_t compute_memory(const scene_model& scene) {
+  auto vector_memory = [](auto& values) -> size_t {
+    if (values.empty()) return 0;
+    return values.size() * sizeof(values[0]);
+  };
+
+  auto memory = (size_t)0;
+  memory += vector_memory(scene.cameras);
+  memory += vector_memory(scene.instances);
+  memory += vector_memory(scene.materials);
+  memory += vector_memory(scene.shapes);
+  memory += vector_memory(scene.textures);
+  memory += vector_memory(scene.environments);
+  memory += vector_memory(scene.camera_names);
+  memory += vector_memory(scene.instance_names);
+  memory += vector_memory(scene.material_names);
+  memory += vector_memory(scene.shape_names);
+  memory += vector_memory(scene.texture_names);
+  memory += vector_memory(scene.environment_names);
+  for (auto& shape : scene.shapes) {
+    memory += vector_memory(shape.points);
+    memory += vector_memory(shape.lines);
+    memory += vector_memory(shape.triangles);
+    memory += vector_memory(shape.quads);
+    memory += vector_memory(shape.positions);
+    memory += vector_memory(shape.normals);
+    memory += vector_memory(shape.texcoords);
+    memory += vector_memory(shape.colors);
+    memory += vector_memory(shape.triangles);
+  }
+  for (auto& subdiv : scene.subdivs) {
+    memory += vector_memory(subdiv.quadspos);
+    memory += vector_memory(subdiv.quadsnorm);
+    memory += vector_memory(subdiv.quadstexcoord);
+    memory += vector_memory(subdiv.positions);
+    memory += vector_memory(subdiv.normals);
+    memory += vector_memory(subdiv.texcoords);
+  }
+  for (auto& texture : scene.textures) {
+    memory += vector_memory(texture.pixelsb);
+    memory += vector_memory(texture.pixelsf);
+  }
+  return memory;
+}
+
+vector<string> scene_stats(const scene_model& scene, bool verbose) {
   auto accumulate = [](const auto& values, const auto& func) -> size_t {
     auto sum = (size_t)0;
     for (auto& value : values) sum += func(value);
     return sum;
   };
-  auto format = [](auto num) {
-    auto str = std::to_string(num);
-    while (str.size() < 13) str = " " + str;
+  auto format = [](size_t num) {
+    auto str = string{};
+    while (num > 0) {
+      str = std::to_string(num % 1000) + (str.empty() ? "" : ",") + str;
+      num /= 1000;
+    }
+    if (str.empty()) str = "0";
+    while (str.size() < 20) str = " " + str;
     return str;
   };
   auto format3 = [](auto num) {
     auto str = std::to_string(num.x) + " " + std::to_string(num.y) + " " +
                std::to_string(num.z);
-    while (str.size() < 13) str = " " + str;
+    while (str.size() < 48) str = " " + str;
     return str;
   };
 
@@ -1189,9 +1296,13 @@ vector<string> scene_stats(const scene_scene& scene, bool verbose) {
 
   auto stats = vector<string>{};
   stats.push_back("cameras:      " + format(scene.cameras.size()));
+  stats.push_back("instances:    " + format(scene.instances.size()));
+  stats.push_back("materials:    " + format(scene.materials.size()));
   stats.push_back("shapes:       " + format(scene.shapes.size()));
+  stats.push_back("subdivs:      " + format(scene.subdivs.size()));
   stats.push_back("environments: " + format(scene.environments.size()));
   stats.push_back("textures:     " + format(scene.textures.size()));
+  stats.push_back("memory:       " + format(compute_memory(scene)));
   stats.push_back(
       "points:       " + format(accumulate(scene.shapes,
                              [](auto& shape) { return shape.points.size(); })));
@@ -1204,7 +1315,7 @@ vector<string> scene_stats(const scene_scene& scene, bool verbose) {
   stats.push_back(
       "quads:        " + format(accumulate(scene.shapes,
                              [](auto& shape) { return shape.quads.size(); })));
-  stats.push_back("fvquads:     " +
+  stats.push_back("fvquads:      " +
                   format(accumulate(scene.subdivs,
                       [](auto& subdiv) { return subdiv.quadspos.size(); })));
   stats.push_back("texels4b:     " +
@@ -1220,7 +1331,7 @@ vector<string> scene_stats(const scene_scene& scene, bool verbose) {
 }
 
 // Checks for validity of the scene.
-vector<string> scene_validation(const scene_scene& scene, bool notextures) {
+vector<string> scene_validation(const scene_model& scene, bool notextures) {
   auto errs        = vector<string>();
   auto check_names = [&errs](const vector<string>& names, const string& base) {
     auto used = unordered_map<string, int>();
@@ -1234,7 +1345,7 @@ vector<string> scene_validation(const scene_scene& scene, bool notextures) {
       }
     }
   };
-  auto check_empty_textures = [&errs](const scene_scene& scene) {
+  auto check_empty_textures = [&errs](const scene_model& scene) {
     for (auto idx = 0; idx < (int)scene.textures.size(); idx++) {
       auto& texture = scene.textures[idx];
       if (texture.pixelsf.empty() && texture.pixelsb.empty()) {
@@ -1546,7 +1657,7 @@ scene_shape lines_to_cylinders(
 // -----------------------------------------------------------------------------
 namespace yocto {
 
-void make_cornellbox(scene_scene& scene) {
+void make_cornellbox(scene_model& scene) {
   auto& camera    = scene.cameras.emplace_back();
   camera.frame    = frame3f{{1, 0, 0}, {0, 1, 0}, {0, 0, 1}, {0, 1, 3.9}};
   camera.lens     = 0.035;

@@ -39,10 +39,11 @@ using namespace yocto;
 
 // convert params
 struct convert_params {
-  string scene    = "scene.ply";
-  string output   = "out.ply";
-  bool   info     = false;
-  bool   validate = false;
+  string scene     = "scene.ply";
+  string output    = "out.ply";
+  bool   info      = false;
+  bool   validate  = false;
+  string copyright = "";
 };
 
 // Cli
@@ -53,14 +54,20 @@ void add_command(cli_command& cli, const string& name, convert_params& value,
   add_option(cmd, "output", value.output, "Output scene.", {}, "o");
   add_option(cmd, "info", value.info, "Print info.");
   add_option(cmd, "validate", value.validate, "Validate scene.");
+  add_option(cmd, "copyright", value.copyright, "Set scene copyright.");
 }
 
 // convert images
 int run_convert(const convert_params& params) {
   // load scene
-  auto scene   = scene_scene{};
+  auto scene   = scene_model{};
   auto ioerror = ""s;
   if (!load_scene(params.scene, scene, ioerror)) print_fatal(ioerror);
+
+  // copyright
+  if (params.copyright != "") {
+    scene.copyright = params.copyright;
+  }
 
   // validate scene
   if (params.validate) {
@@ -82,6 +89,40 @@ int run_convert(const convert_params& params) {
 
   // save scene
   if (!save_scene(params.output, scene, ioerror)) print_fatal(ioerror);
+
+  // done
+  return 0;
+}
+
+// info params
+struct info_params {
+  string scene    = "scene.ply";
+  bool   validate = false;
+};
+
+// Cli
+void add_command(cli_command& cli, const string& name, info_params& value,
+    const string& usage) {
+  auto& cmd = add_command(cli, name, usage);
+  add_argument(cmd, "scene", value.scene, "Input scene.");
+  add_option(cmd, "validate", value.validate, "Validate scene.");
+}
+
+// print info for scenes
+int run_info(const info_params& params) {
+  // load scene
+  auto scene   = scene_model{};
+  auto ioerror = ""s;
+  if (!load_scene(params.scene, scene, ioerror)) print_fatal(ioerror);
+
+  // validate scene
+  if (params.validate) {
+    for (auto& error : scene_validation(scene)) print_info("error: " + error);
+  }
+
+  // print info
+  print_info("scene stats ------------");
+  for (auto stat : scene_stats(scene)) print_info(stat);
 
   // done
   return 0;
@@ -131,7 +172,7 @@ int run_render(const render_params& params_) {
   auto params = params_;
 
   // scene loading
-  auto scene   = scene_scene{};
+  auto scene   = scene_model{};
   auto ioerror = string{};
   if (!load_scene(params.scene, scene, ioerror)) return print_fatal(ioerror);
 
@@ -158,7 +199,7 @@ int run_render(const render_params& params_) {
 
   // state
   auto state = make_state(scene, params);
-  auto image = make_image(state.width, state.height, true, false);
+  auto image = make_image(state.width, state.height, true);
 
   // render
   trace_image(
@@ -232,7 +273,7 @@ int run_view(const view_params& params_) {
   auto params = params_;
 
   // load scene
-  auto scene   = scene_scene{};
+  auto scene   = scene_model{};
   auto ioerror = ""s;
   if (!load_scene(params.scene, scene, ioerror)) print_fatal(ioerror);
 
@@ -277,7 +318,7 @@ int run_glview(const glview_params& params) {
 int run_glview(const glview_params& params) {
   // loading scene
   auto ioerror = ""s;
-  auto scene   = scene_scene{};
+  auto scene   = scene_model{};
   if (!load_scene(params.scene, scene, ioerror)) print_fatal(ioerror);
 
   // tesselation
@@ -286,9 +327,9 @@ int run_glview(const glview_params& params) {
   // run viewer
   glview_scene(
       scene, params.scene, "",
-      [](gui_window* win, const gui_input& input, scene_scene& scene,
+      [](gui_window* win, const gui_input& input, scene_model& scene,
           shade_scene& glscene) {},
-      [](gui_window* win, const gui_input& input, scene_scene& scene,
+      [](gui_window* win, const gui_input& input, scene_model& scene,
           shade_scene& glscene) {});
 
   // done
@@ -300,6 +341,7 @@ int run_glview(const glview_params& params) {
 struct app_params {
   string         command = "convert";
   convert_params convert = {};
+  info_params    info    = {};
   render_params  render  = {};
   view_params    view    = {};
   glview_params  glview  = {};
@@ -311,6 +353,7 @@ void add_commands(cli_command& cli, const string& name, app_params& value,
   cli = make_cli(name, usage);
   add_command_name(cli, "command", value.command, "Command.");
   add_command(cli, "convert", value.convert, "Convert scenes.");
+  add_command(cli, "info", value.info, "Print scenes info.");
   add_command(cli, "render", value.render, "Render scenes.");
   add_command(cli, "view", value.view, "View scenes.");
   add_command(cli, "glview", value.glview, "View scenes with OpenGL.");
@@ -332,6 +375,8 @@ int main(int argc, const char* argv[]) {
   // dispatch commands
   if (params.command == "convert") {
     return run_convert(params.convert);
+  } else if (params.command == "info") {
+    return run_info(params.info);
   } else if (params.command == "render") {
     return run_render(params.render);
   } else if (params.command == "view") {

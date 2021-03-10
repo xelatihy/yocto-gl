@@ -437,6 +437,7 @@ bool is_hdr_filename(const string& filename) {
   auto ext = path_extension(filename);
   return ext == ".hdr" || ext == ".exr" || ext == ".pfm";
 }
+
 bool is_ldr_filename(const string& filename) {
   auto ext = path_extension(filename);
   return ext == ".png" || ext == ".jpg" || ext == ".jpeg" || ext == ".bmp" ||
@@ -458,69 +459,81 @@ bool load_image(const string& filename, color_image& image, string& error) {
     return false;
   };
 
+  // conversion helpers
+  auto from_linear = [](const float* pixels, int width, int height) {
+    return vector<vec4f>{
+        (vec4f*)pixels, (vec4f*)pixels + (size_t)width * (size_t)height};
+  };
+  auto from_srgb = [](const byte* pixels, int width, int height) {
+    auto pixelsf = vector<vec4f>((size_t)width * (size_t)height);
+    for (auto idx = (size_t)0; idx < pixelsf.size(); idx++) {
+      pixelsf[idx] = byte_to_float(((vec4b*)pixels)[idx]);
+    }
+    return pixelsf;
+  };
+
   auto ext = path_extension(filename);
   if (ext == ".exr" || ext == ".EXR") {
-    auto width = 0, height = 0;
     auto pixels = (float*)nullptr;
-    if (LoadEXR(&pixels, &width, &height, filename.c_str(), nullptr) != 0)
+    if (LoadEXR(&pixels, &image.width, &image.height, filename.c_str(),
+            nullptr) != 0)
       return read_error();
-    image         = make_image(width, height, true, false);
-    image.pixelsf = vector<vec4f>{
-        (vec4f*)pixels, (vec4f*)pixels + width * height};
+    image.linear = true;
+    image.pixels = from_linear(pixels, image.width, image.height);
     free(pixels);
     return true;
   } else if (ext == ".pfm" || ext == ".PFM") {
-    auto width = 0, height = 0, ncomp = 0;
-    auto pixels = load_pfm(filename.c_str(), &width, &height, &ncomp, 4);
+    auto ncomp  = 0;
+    auto pixels = load_pfm(
+        filename.c_str(), &image.width, &image.height, &ncomp, 4);
     if (!pixels) return read_error();
-    image         = make_image(width, height, true, false);
-    image.pixelsf = vector<vec4f>{
-        (vec4f*)pixels, (vec4f*)pixels + width * height};
+    image.linear = true;
+    image.pixels = from_linear(pixels, image.width, image.height);
     delete[] pixels;
     return true;
   } else if (ext == ".hdr" || ext == ".HDR") {
-    auto width = 0, height = 0, ncomp = 0;
-    auto pixels = stbi_loadf(filename.c_str(), &width, &height, &ncomp, 4);
+    auto ncomp  = 0;
+    auto pixels = stbi_loadf(
+        filename.c_str(), &image.width, &image.height, &ncomp, 4);
     if (!pixels) return read_error();
-    image         = make_image(width, height, true, false);
-    image.pixelsf = vector<vec4f>{
-        (vec4f*)pixels, (vec4f*)pixels + width * height};
+    image.linear = true;
+    image.pixels = from_linear(pixels, image.width, image.height);
     free(pixels);
     return true;
   } else if (ext == ".png" || ext == ".PNG") {
-    auto width = 0, height = 0, ncomp = 0;
-    auto pixels = stbi_load(filename.c_str(), &width, &height, &ncomp, 4);
+    auto ncomp  = 0;
+    auto pixels = stbi_load(
+        filename.c_str(), &image.width, &image.height, &ncomp, 4);
     if (!pixels) return read_error();
-    image         = make_image(width, height, false, true);
-    image.pixelsb = vector<vec4b>{
-        (vec4b*)pixels, (vec4b*)pixels + width * height};
+    image.linear = false;
+    image.pixels = from_srgb(pixels, image.width, image.height);
     free(pixels);
     return true;
   } else if (ext == ".jpg" || ext == ".JPG") {
-    auto width = 0, height = 0, ncomp = 0;
-    auto pixels = stbi_load(filename.c_str(), &width, &height, &ncomp, 4);
+    auto ncomp  = 0;
+    auto pixels = stbi_load(
+        filename.c_str(), &image.width, &image.height, &ncomp, 4);
     if (!pixels) return read_error();
-    image         = make_image(width, height, false, true);
-    image.pixelsb = vector<vec4b>{
-        (vec4b*)pixels, (vec4b*)pixels + width * height};
+    image.linear = false;
+    image.pixels = from_srgb(pixels, image.width, image.height);
     free(pixels);
     return true;
   } else if (ext == ".tga" || ext == ".TGA") {
-    auto width = 0, height = 0, ncomp = 0;
-    auto pixels = stbi_load(filename.c_str(), &width, &height, &ncomp, 4);
+    auto ncomp  = 0;
+    auto pixels = stbi_load(
+        filename.c_str(), &image.width, &image.height, &ncomp, 4);
     if (!pixels) return read_error();
-    image         = make_image(width, height, false, true);
-    image.pixelsb = vector<vec4b>{
-        (vec4b*)pixels, (vec4b*)pixels + width * height};
+    image.linear = false;
+    image.pixels = from_srgb(pixels, image.width, image.height);
     free(pixels);
     return true;
   } else if (ext == ".bmp" || ext == ".BMP") {
-    auto width = 0, height = 0, ncomp = 0;
-    auto pixels = stbi_load(filename.c_str(), &width, &height, &ncomp, 4);
+    auto ncomp  = 0;
+    auto pixels = stbi_load(
+        filename.c_str(), &image.width, &image.height, &ncomp, 4);
     if (!pixels) return read_error();
-    image         = make_image(width, height, false, true);
-    image.pixelsb = vector<vec4b>{
-        (vec4b*)pixels, (vec4b*)pixels + width * height};
+    image.linear = false;
+    image.pixels = from_srgb(pixels, image.width, image.height);
     free(pixels);
     return true;
   } else if (ext == ".ypreset" || ext == ".YPRESET") {
@@ -535,7 +548,7 @@ bool load_image(const string& filename, color_image& image, string& error) {
 
 // Saves an hdr image.
 bool save_image(
-    const string& filename, const color_image& image_, string& error) {
+    const string& filename, const color_image& image, string& error) {
   auto format_error = [filename, &error]() {
     error = filename + ": unknown format";
     return false;
@@ -545,55 +558,57 @@ bool save_image(
     return false;
   };
 
-  // handle conversions if needed
-  auto image_ptr = (const color_image*)nullptr;
-  auto converted = color_image{};
-  if (is_hdr_filename(filename) &&
-      (!image_.pixelsf.empty() || !image_.linear)) {
-    converted = convert_image(image_, true, false);
-    image_ptr = &converted;
-  } else if (is_ldr_filename(filename) && !image_.pixelsf.empty()) {
-    converted = convert_image(image_, false, true);
-    image_ptr = &converted;
-  } else {
-    image_ptr = &image_;
-  }
-  auto& image = *image_ptr;
+  // conversion helpers
+  auto to_linear = [](const color_image& image) {
+    if (image.linear) return image.pixels;
+    auto pixelsf = vector<vec4f>(image.pixels.size());
+    srgb_to_rgb(pixelsf, image.pixels);
+    return pixelsf;
+  };
+  auto to_srgb = [](const color_image& image) {
+    auto pixelsb = vector<vec4b>(image.pixels.size());
+    if (image.linear) {
+      rgb_to_srgb(pixelsb, image.pixels);
+    } else {
+      float_to_byte(pixelsb, image.pixels);
+    }
+    return pixelsb;
+  };
 
   auto ext = path_extension(filename);
   if (ext == ".hdr" || ext == ".HDR") {
     if (!stbi_write_hdr(filename.c_str(), (int)image.width, (int)image.height,
-            4, (const float*)image.pixelsf.data()))
+            4, (const float*)to_linear(image).data()))
       return write_error();
     return true;
   } else if (ext == ".pfm" || ext == ".PFM") {
     if (!save_pfm(filename.c_str(), image.width, image.height, 4,
-            (const float*)image.pixelsf.data()))
+            (const float*)to_linear(image).data()))
       return write_error();
     return true;
   } else if (ext == ".exr" || ext == ".EXR") {
-    if (SaveEXR((const float*)image.pixelsf.data(), (int)image.width,
+    if (SaveEXR((const float*)to_linear(image).data(), (int)image.width,
             (int)image.height, 4, 1, filename.c_str(), nullptr) < 0)
       return write_error();
     return true;
   } else if (ext == ".png" || ext == ".PNG") {
     if (!stbi_write_png(filename.c_str(), (int)image.width, (int)image.height,
-            4, (const byte*)image.pixelsb.data(), (int)image.width * 4))
+            4, (const byte*)to_srgb(image).data(), (int)image.width * 4))
       return write_error();
     return true;
   } else if (ext == ".jpg" || ext == ".JPG") {
     if (!stbi_write_jpg(filename.c_str(), (int)image.width, (int)image.height,
-            4, (const byte*)image.pixelsb.data(), 75))
+            4, (const byte*)to_srgb(image).data(), 75))
       return write_error();
     return true;
   } else if (ext == ".tga" || ext == ".TGA") {
     if (!stbi_write_tga(filename.c_str(), (int)image.width, (int)image.height,
-            4, (const byte*)image.pixelsb.data()))
+            4, (const byte*)to_srgb(image).data()))
       return write_error();
     return true;
   } else if (ext == ".bmp" || ext == ".BMP") {
     if (!stbi_write_bmp(filename.c_str(), (int)image.width, (int)image.height,
-            4, (const byte*)image.pixelsb.data()))
+            4, (const byte*)to_srgb(image).data()))
       return write_error();
     return true;
   } else {
@@ -653,8 +668,7 @@ bool make_image_preset(color_image& image, const string& type_, string& error) {
       montage_size.x += sub_img.width;
       montage_size.y = max(montage_size.y, sub_img.height);
     }
-    image    = make_image(montage_size.x, montage_size.y, sub_imgs[0].linear,
-        !sub_imgs[0].pixelsb.empty());
+    image    = make_image(montage_size.x, montage_size.y, sub_imgs[0].linear);
     auto pos = 0;
     for (auto& sub_img : sub_imgs) {
       set_region(image, sub_img, pos, 0);
@@ -671,8 +685,7 @@ bool make_image_preset(color_image& image, const string& type_, string& error) {
       montage_size.x += sub_img.width;
       montage_size.y = max(montage_size.y, sub_img.height);
     }
-    image    = make_image(montage_size.x, montage_size.y, sub_imgs[0].linear,
-        !sub_imgs[0].pixelsb.empty());
+    image    = make_image(montage_size.x, montage_size.y, sub_imgs[0].linear);
     auto pos = 0;
     for (auto& sub_img : sub_imgs) {
       set_region(image, sub_img, pos, 0);
@@ -739,17 +752,175 @@ bool make_image_preset(color_image& image, const string& type_, string& error) {
 // -----------------------------------------------------------------------------
 namespace yocto {
 
-// load texture
+// Loads/saves an image. Chooses hdr or ldr based on file name.
 bool load_texture(
     const string& filename, scene_texture& texture, string& error) {
-  return load_image(filename, reinterpret_cast<color_image&>(texture), error);
+  auto format_error = [filename, &error]() {
+    error = filename + ": unknown format";
+    return false;
+  };
+  auto read_error = [filename, &error]() {
+    error = filename + ": read error";
+    return false;
+  };
+  auto preset_error = [filename, &error]() {
+    error = filename + ": " + error;
+    return false;
+  };
+
+  auto ext = path_extension(filename);
+  if (ext == ".exr" || ext == ".EXR") {
+    auto pixels = (float*)nullptr;
+    if (LoadEXR(&pixels, &texture.width, &texture.height, filename.c_str(),
+            nullptr) != 0)
+      return read_error();
+    texture.linear  = true;
+    texture.pixelsf = vector<vec4f>{
+        (vec4f*)pixels, (vec4f*)pixels + texture.width * texture.height};
+    free(pixels);
+    return true;
+  } else if (ext == ".pfm" || ext == ".PFM") {
+    auto ncomp  = 0;
+    auto pixels = load_pfm(
+        filename.c_str(), &texture.width, &texture.height, &ncomp, 4);
+    if (!pixels) return read_error();
+    texture.linear  = true;
+    texture.pixelsf = vector<vec4f>{
+        (vec4f*)pixels, (vec4f*)pixels + texture.width * texture.height};
+    delete[] pixels;
+    return true;
+  } else if (ext == ".hdr" || ext == ".HDR") {
+    auto ncomp  = 0;
+    auto pixels = stbi_loadf(
+        filename.c_str(), &texture.width, &texture.height, &ncomp, 4);
+    if (!pixels) return read_error();
+    texture.linear  = true;
+    texture.pixelsf = vector<vec4f>{
+        (vec4f*)pixels, (vec4f*)pixels + texture.width * texture.height};
+    free(pixels);
+    return true;
+  } else if (ext == ".png" || ext == ".PNG") {
+    auto ncomp  = 0;
+    auto pixels = stbi_load(
+        filename.c_str(), &texture.width, &texture.height, &ncomp, 4);
+    if (!pixels) return read_error();
+    texture.linear  = false;
+    texture.pixelsb = vector<vec4b>{
+        (vec4b*)pixels, (vec4b*)pixels + texture.width * texture.height};
+    free(pixels);
+    return true;
+  } else if (ext == ".jpg" || ext == ".JPG") {
+    auto ncomp  = 0;
+    auto pixels = stbi_load(
+        filename.c_str(), &texture.width, &texture.height, &ncomp, 4);
+    if (!pixels) return read_error();
+    texture.linear  = false;
+    texture.pixelsb = vector<vec4b>{
+        (vec4b*)pixels, (vec4b*)pixels + texture.width * texture.height};
+    free(pixels);
+    return true;
+  } else if (ext == ".tga" || ext == ".TGA") {
+    auto ncomp  = 0;
+    auto pixels = stbi_load(
+        filename.c_str(), &texture.width, &texture.height, &ncomp, 4);
+    if (!pixels) return read_error();
+    texture.linear  = false;
+    texture.pixelsb = vector<vec4b>{
+        (vec4b*)pixels, (vec4b*)pixels + texture.width * texture.height};
+    free(pixels);
+    return true;
+  } else if (ext == ".bmp" || ext == ".BMP") {
+    auto ncomp  = 0;
+    auto pixels = stbi_load(
+        filename.c_str(), &texture.width, &texture.height, &ncomp, 4);
+    if (!pixels) return read_error();
+    texture.linear  = false;
+    texture.pixelsb = vector<vec4b>{
+        (vec4b*)pixels, (vec4b*)pixels + texture.width * texture.height};
+    free(pixels);
+    return true;
+  } else if (ext == ".ypreset" || ext == ".YPRESET") {
+    // create preset
+    if (!make_texture_preset(texture, path_basename(filename), error))
+      return preset_error();
+    return true;
+  } else {
+    return format_error();
+  }
 }
 
-// save texture
+// Saves an hdr image.
 bool save_texture(
     const string& filename, const scene_texture& texture, string& error) {
-  return save_image(
-      filename, reinterpret_cast<const color_image&>(texture), error);
+  auto format_error = [filename, &error]() {
+    error = filename + ": unknown format";
+    return false;
+  };
+  auto write_error = [filename, &error]() {
+    error = filename + ": write error";
+    return false;
+  };
+  auto hdr_error = [filename, &error]() {
+    error = filename + ": cannot save hdr texture to ldr file";
+    return false;
+  };
+  auto ldr_error = [filename, &error]() {
+    error = filename + ": cannot save ldr texture to hdr file";
+    return false;
+  };
+
+  // check for correct handling
+  if (!texture.pixelsf.empty() && is_ldr_filename(filename)) return hdr_error();
+  if (!texture.pixelsb.empty() && is_hdr_filename(filename)) return ldr_error();
+
+  auto ext = path_extension(filename);
+  if (ext == ".hdr" || ext == ".HDR") {
+    if (!stbi_write_hdr(filename.c_str(), (int)texture.width,
+            (int)texture.height, 4, (const float*)texture.pixelsf.data()))
+      return write_error();
+    return true;
+  } else if (ext == ".pfm" || ext == ".PFM") {
+    if (!save_pfm(filename.c_str(), texture.width, texture.height, 4,
+            (const float*)texture.pixelsf.data()))
+      return write_error();
+    return true;
+  } else if (ext == ".exr" || ext == ".EXR") {
+    if (SaveEXR((const float*)texture.pixelsf.data(), (int)texture.width,
+            (int)texture.height, 4, 1, filename.c_str(), nullptr) < 0)
+      return write_error();
+    return true;
+  } else if (ext == ".png" || ext == ".PNG") {
+    if (!stbi_write_png(filename.c_str(), (int)texture.width,
+            (int)texture.height, 4, (const byte*)texture.pixelsb.data(),
+            (int)texture.width * 4))
+      return write_error();
+    return true;
+  } else if (ext == ".jpg" || ext == ".JPG") {
+    if (!stbi_write_jpg(filename.c_str(), (int)texture.width,
+            (int)texture.height, 4, (const byte*)texture.pixelsb.data(), 75))
+      return write_error();
+    return true;
+  } else if (ext == ".tga" || ext == ".TGA") {
+    if (!stbi_write_tga(filename.c_str(), (int)texture.width,
+            (int)texture.height, 4, (const byte*)texture.pixelsb.data()))
+      return write_error();
+    return true;
+  } else if (ext == ".bmp" || ext == ".BMP") {
+    if (!stbi_write_bmp(filename.c_str(), (int)texture.width,
+            (int)texture.height, 4, (const byte*)texture.pixelsb.data()))
+      return write_error();
+    return true;
+  } else {
+    return format_error();
+  }
+}
+
+bool make_texture_preset(
+    scene_texture& texture, const string& type, string& error) {
+  auto image = color_image{};
+  if (!make_image_preset(image, type, error)) return false;
+  texture = image_to_texture(image);
+  return true;
 }
 
 }  // namespace yocto
@@ -1471,80 +1642,80 @@ namespace yocto {
 
 // get name
 [[maybe_unused]] static string get_camera_name(
-    const scene_scene& scene, int idx) {
+    const scene_model& scene, int idx) {
   if (scene.camera_names.empty())
     return get_element_name("camera", idx, scene.cameras.size());
   return scene.camera_names[idx];
 }
 [[maybe_unused]] static string get_environment_name(
-    const scene_scene& scene, int idx) {
+    const scene_model& scene, int idx) {
   if (scene.environment_names.empty())
     return get_element_name("environment", idx, scene.environments.size());
   return scene.environment_names[idx];
 }
 [[maybe_unused]] static string get_shape_name(
-    const scene_scene& scene, int idx) {
+    const scene_model& scene, int idx) {
   if (scene.shape_names.empty())
     return get_element_name("shape", idx, scene.shapes.size());
   return scene.shape_names[idx];
 }
 [[maybe_unused]] static string get_texture_name(
-    const scene_scene& scene, int idx) {
+    const scene_model& scene, int idx) {
   if (scene.texture_names.empty())
     return get_element_name("texture", idx, scene.textures.size());
   return scene.texture_names[idx];
 }
 [[maybe_unused]] static string get_instance_name(
-    const scene_scene& scene, int idx) {
+    const scene_model& scene, int idx) {
   if (scene.instance_names.empty())
     return get_element_name("instance", idx, scene.instances.size());
   return scene.instance_names[idx];
 }
 [[maybe_unused]] static string get_material_name(
-    const scene_scene& scene, int idx) {
+    const scene_model& scene, int idx) {
   if (scene.material_names.empty())
     return get_element_name("material", idx, scene.materials.size());
   return scene.material_names[idx];
 }
 [[maybe_unused]] static string get_subdiv_name(
-    const scene_scene& scene, int idx) {
+    const scene_model& scene, int idx) {
   if (scene.subdiv_names.empty())
     return get_element_name("subdiv", idx, scene.subdivs.size());
   return scene.subdiv_names[idx];
 }
 
 [[maybe_unused]] static string get_camera_name(
-    const scene_scene& scene, const scene_camera& camera) {
+    const scene_model& scene, const scene_camera& camera) {
   return get_camera_name(scene, (int)(&camera - scene.cameras.data()));
 }
 [[maybe_unused]] static string get_environment_name(
-    const scene_scene& scene, const scene_environment& environment) {
+    const scene_model& scene, const scene_environment& environment) {
   return get_environment_name(
       scene, (int)(&environment - scene.environments.data()));
 }
 [[maybe_unused]] static string get_shape_name(
-    const scene_scene& scene, const scene_shape& shape) {
+    const scene_model& scene, const scene_shape& shape) {
   return get_shape_name(scene, (int)(&shape - scene.shapes.data()));
 }
 [[maybe_unused]] static string get_texture_name(
-    const scene_scene& scene, const scene_texture& texture) {
+    const scene_model& scene, const scene_texture& texture) {
   return get_texture_name(scene, (int)(&texture - scene.textures.data()));
 }
 [[maybe_unused]] static string get_instance_name(
-    const scene_scene& scene, const scene_instance& instance) {
+    const scene_model& scene, const scene_instance& instance) {
   return get_instance_name(scene, (int)(&instance - scene.instances.data()));
 }
 [[maybe_unused]] static string get_material_name(
-    const scene_scene& scene, const scene_material& material) {
+    const scene_model& scene, const scene_material& material) {
   return get_material_name(scene, (int)(&material - scene.materials.data()));
 }
 [[maybe_unused]] static string get_subdiv_name(
-    const scene_scene& scene, const scene_subdiv& subdiv) {
+    const scene_model& scene, const scene_subdiv& subdiv) {
   return get_subdiv_name(scene, (int)(&subdiv - scene.subdivs.data()));
 }
 
 // Add missing cameras.
-void add_missing_camera(scene_scene& scene) {
+void add_missing_camera(scene_model& scene) {
   if (!scene.cameras.empty()) return;
   scene.camera_names.emplace_back("camera");
   auto& camera        = scene.cameras.emplace_back();
@@ -1567,7 +1738,7 @@ void add_missing_camera(scene_scene& scene) {
 }
 
 // Add missing radius.
-static void add_missing_radius(scene_scene& scene, float radius = 0.001f) {
+static void add_missing_radius(scene_model& scene, float radius = 0.001f) {
   for (auto& shape : scene.shapes) {
     if (shape.points.empty() && shape.lines.empty()) continue;
     if (!shape.radius.empty()) continue;
@@ -1576,7 +1747,7 @@ static void add_missing_radius(scene_scene& scene, float radius = 0.001f) {
 }
 
 // Add missing cameras.
-void add_missing_material(scene_scene& scene) {
+void add_missing_material(scene_model& scene) {
   auto default_material = invalidid;
   for (auto& instance : scene.instances) {
     if (instance.material >= 0) continue;
@@ -1590,7 +1761,7 @@ void add_missing_material(scene_scene& scene) {
 }
 
 // Reduce memory usage
-static void trim_memory(scene_scene& scene) {
+static void trim_memory(scene_model& scene) {
   for (auto& shape : scene.shapes) {
     shape.points.shrink_to_fit();
     shape.lines.shrink_to_fit();
@@ -1660,7 +1831,7 @@ struct test_params {
 };
 
 // Scene test
-void make_test(scene_scene& scene, const test_params& params) {
+void make_test(scene_model& scene, const test_params& params) {
   return;
   // // cameras
   // switch (params.cameras) {
@@ -1959,7 +2130,7 @@ void make_test(scene_scene& scene, const test_params& params) {
 }
 
 // Scene presets used for testing.
-bool make_scene_preset(scene_scene& scene, const string& type, string& error) {
+bool make_scene_preset(scene_model& scene, const string& type, string& error) {
   if (type == "cornellbox") {
     make_cornellbox(scene);
     return true;
@@ -2067,48 +2238,48 @@ namespace yocto {
 
 // Load/save a scene in the builtin JSON format.
 static bool load_json_scene(
-    const string& filename, scene_scene& scene, string& error, bool noparallel);
-static bool save_json_scene(const string& filename, const scene_scene& scene,
+    const string& filename, scene_model& scene, string& error, bool noparallel);
+static bool save_json_scene(const string& filename, const scene_model& scene,
     string& error, bool noparallel);
 
 // Load/save a scene from/to OBJ.
 static bool load_obj_scene(
-    const string& filename, scene_scene& scene, string& error, bool noparallel);
-static bool save_obj_scene(const string& filename, const scene_scene& scene,
+    const string& filename, scene_model& scene, string& error, bool noparallel);
+static bool save_obj_scene(const string& filename, const scene_model& scene,
     string& error, bool noparallel);
 
 // Load/save a scene from/to PLY. Loads/saves only one mesh with no other data.
 static bool load_ply_scene(
-    const string& filename, scene_scene& scene, string& error, bool noparallel);
-static bool save_ply_scene(const string& filename, const scene_scene& scene,
+    const string& filename, scene_model& scene, string& error, bool noparallel);
+static bool save_ply_scene(const string& filename, const scene_model& scene,
     string& error, bool noparallel);
 
 // Load/save a scene from/to STL. Loads/saves only one mesh with no other data.
 static bool load_stl_scene(
-    const string& filename, scene_scene& scene, string& error, bool noparallel);
-static bool save_stl_scene(const string& filename, const scene_scene& scene,
+    const string& filename, scene_model& scene, string& error, bool noparallel);
+static bool save_stl_scene(const string& filename, const scene_model& scene,
     string& error, bool noparallel);
 
 // Load/save a scene from/to glTF.
 static bool load_gltf_scene(
-    const string& filename, scene_scene& scene, string& error, bool noparallel);
-static bool save_gltf_scene(const string& filename, const scene_scene& scene,
+    const string& filename, scene_model& scene, string& error, bool noparallel);
+static bool save_gltf_scene(const string& filename, const scene_model& scene,
     string& error, bool noparallel);
 
 // Load/save a scene from/to pbrt-> This is not robust at all and only
 // works on scene that have been previously adapted since the two renderers
 // are too different to match.
 static bool load_pbrt_scene(
-    const string& filename, scene_scene& scene, string& error, bool noparallel);
-static bool save_pbrt_scene(const string& filename, const scene_scene& scene,
+    const string& filename, scene_model& scene, string& error, bool noparallel);
+static bool save_pbrt_scene(const string& filename, const scene_model& scene,
     string& error, bool noparallel);
 
 // Load/save a scene preset.
 static bool load_preset_scene(
-    const string& filename, scene_scene& scene, string& error, bool noparallel);
+    const string& filename, scene_model& scene, string& error, bool noparallel);
 
 // Load a scene
-bool load_scene(const string& filename, scene_scene& scene, string& error,
+bool load_scene(const string& filename, scene_model& scene, string& error,
     bool noparallel) {
   auto format_error = [filename, &error]() {
     error = filename + ": unknown format";
@@ -2136,7 +2307,7 @@ bool load_scene(const string& filename, scene_scene& scene, string& error,
 }
 
 // Save a scene
-bool save_scene(const string& filename, const scene_scene& scene, string& error,
+bool save_scene(const string& filename, const scene_model& scene, string& error,
     bool noparallel) {
   auto format_error = [filename, &error]() {
     error = filename + ": unknown format";
@@ -2162,7 +2333,7 @@ bool save_scene(const string& filename, const scene_scene& scene, string& error,
 }
 
 // Load/save a scene preset.
-static bool load_preset_scene(const string& filename, scene_scene& scene,
+static bool load_preset_scene(const string& filename, scene_model& scene,
     string& error, bool noparallel) {
   auto preset_error = [filename, &error]() {
     error = filename + ": " + error;
@@ -2185,7 +2356,7 @@ static bool load_preset_scene(const string& filename, scene_scene& scene,
 
 // Make missing scene directories
 bool make_scene_directories(
-    const string& filename, const scene_scene& scene, string& error) {
+    const string& filename, const scene_model& scene, string& error) {
   // make a directory if needed
   if (!make_directory(path_dirname(filename), error)) return false;
   if (!scene.shapes.empty()) {
@@ -2390,7 +2561,7 @@ inline void from_json(const njson& j, scene_material_type& value) {
 namespace yocto {
 
 // Load a scene in the builtin JSON format.
-static bool load_json_scene(const string& filename, scene_scene& scene,
+static bool load_json_scene(const string& filename, scene_model& scene,
     string& error, bool noparallel) {
   auto json_error = [filename]() {
     // error does not need setting
@@ -2529,7 +2700,7 @@ static bool load_json_scene(const string& filename, scene_scene& scene,
     return true;
   };
   auto get_ply_instance_name = [&ply_instances, &ply_instances_names](
-                                   const scene_scene&  scene,
+                                   const scene_model&  scene,
                                    const ply_instance& instance) -> string {
     return ply_instances_names[&instance - ply_instances.data()];
   };
@@ -2543,7 +2714,19 @@ static bool load_json_scene(const string& filename, scene_scene& scene,
 
   // loop over external dictionaries
   for (auto& [gname, group] : iterate_object(js)) {
-    if (gname == "cameras") {
+    if (gname == "asset") {
+      if (!check_object(group)) return parse_error(gname);
+      for (auto& [key, value] : iterate_object(group)) {
+        if (key == "copyright") {
+          if (!get_value(value, scene.copyright))
+            return parse_error(gname, key);
+        } else if (key == "generator") {
+          // skip
+        } else {
+          return key_error(gname, key);
+        }
+      }
+    } else if (gname == "cameras") {
       if (!check_object(group)) return parse_error(gname);
       for (auto& [name, element] : iterate_object(group)) {
         if (!check_object(element)) return parse_error(gname, name);
@@ -2915,7 +3098,7 @@ static bool load_json_scene(const string& filename, scene_scene& scene,
 }
 
 // Save a scene in the builtin JSON format.
-static bool save_json_scene(const string& filename, const scene_scene& scene,
+static bool save_json_scene(const string& filename, const scene_model& scene,
     string& error, bool noparallel) {
   auto conversion_error = [filename, &error](const string& message) {
     // should never happen
@@ -2945,6 +3128,16 @@ static bool save_json_scene(const string& filename, const scene_scene& scene,
 
   // save json file
   auto js = njson::object();
+
+  // asset
+  {
+    auto& element = insert_object(js, "asset");
+    if (!scene.copyright.empty()) {
+      insert_value(element, "copyright", scene.copyright);
+    }
+    insert_value(element, "generator",
+        "Yocto/GL - https://github.com/xelatihy/yocto-gl");
+  }
 
   auto def_cam = sceneio_camera{};
   if (!scene.cameras.empty()) {
@@ -3198,7 +3391,7 @@ static bool save_json_scene(const string& filename, const scene_scene& scene,
 namespace yocto {
 
 // Loads an OBJ
-static bool load_obj_scene(const string& filename, scene_scene& scene,
+static bool load_obj_scene(const string& filename, scene_model& scene,
     string& error, bool noparallel) {
   auto shape_error = [filename, &error]() {
     error = filename + ": empty shape";
@@ -3350,7 +3543,7 @@ static bool load_obj_scene(const string& filename, scene_scene& scene,
   return true;
 }
 
-static bool save_obj_scene(const string& filename, const scene_scene& scene,
+static bool save_obj_scene(const string& filename, const scene_model& scene,
     string& error, bool noparallel) {
   auto shape_error = [filename, &error]() {
     error = filename + ": empty shape";
@@ -3492,7 +3685,7 @@ static bool save_obj_scene(const string& filename, const scene_scene& scene,
 // -----------------------------------------------------------------------------
 namespace yocto {
 
-static bool load_ply_scene(const string& filename, scene_scene& scene,
+static bool load_ply_scene(const string& filename, scene_model& scene,
     string& error, bool noparallel) {
   // handle progress
   auto progress = vec2i{0, 1};
@@ -3516,7 +3709,7 @@ static bool load_ply_scene(const string& filename, scene_scene& scene,
   return true;
 }
 
-static bool save_ply_scene(const string& filename, const scene_scene& scene,
+static bool save_ply_scene(const string& filename, const scene_model& scene,
     string& error, bool noparallel) {
   auto shape_error = [filename, &error]() {
     error = filename + ": empty shape";
@@ -3545,7 +3738,7 @@ static bool save_ply_scene(const string& filename, const scene_scene& scene,
 // -----------------------------------------------------------------------------
 namespace yocto {
 
-static bool load_stl_scene(const string& filename, scene_scene& scene,
+static bool load_stl_scene(const string& filename, scene_model& scene,
     string& error, bool noparallel) {
   // handle progress
   auto progress = vec2i{0, 1};
@@ -3569,7 +3762,7 @@ static bool load_stl_scene(const string& filename, scene_scene& scene,
   return true;
 }
 
-static bool save_stl_scene(const string& filename, const scene_scene& scene,
+static bool save_stl_scene(const string& filename, const scene_model& scene,
     string& error, bool noparallel) {
   auto shape_error = [filename, &error]() {
     error = filename + ": empty shape";
@@ -3599,7 +3792,7 @@ static bool save_stl_scene(const string& filename, const scene_scene& scene,
 namespace yocto {
 
 // Load a scene
-static bool load_gltf_scene(const string& filename, scene_scene& scene,
+static bool load_gltf_scene(const string& filename, scene_model& scene,
     string& error, bool noparallel) {
   auto read_error = [filename, &error]() {
     error = filename + ": read error";
@@ -3678,6 +3871,15 @@ static bool load_gltf_scene(const string& filename, scene_scene& scene,
 
   // handle progress
   log_progress("convert scene", progress.x++, progress.y);
+
+  // convert asset
+  if (gltf.contains("asset")) {
+    try {
+      scene.copyright = gltf.value("copyright", ""s);
+    } catch (...) {
+      return parse_error();
+    }
+  }
 
   // convert cameras
   auto cameras = vector<scene_camera>{};
@@ -4099,7 +4301,7 @@ static bool load_gltf_scene(const string& filename, scene_scene& scene,
 }
 
 // Load a scene
-static bool save_gltf_scene(const string& filename, const scene_scene& scene,
+static bool save_gltf_scene(const string& filename, const scene_model& scene,
     string& error, bool noparallel) {
   auto write_error = [filename, &error]() {
     error = filename + ": write error";
@@ -4124,9 +4326,11 @@ static bool save_gltf_scene(const string& filename, const scene_scene& scene,
 
   // asset
   {
-    auto& gasset      = gltf["asset"];
-    gasset            = njson::object();
-    gasset["version"] = "2.0";
+    auto& gasset        = gltf["asset"];
+    gasset              = njson::object();
+    gasset["version"]   = "2.0";
+    gasset["generator"] = "Yocto/GL - https://github.com/xelatihy/yocto-gl";
+    if (!scene.copyright.empty()) gasset["copyright"] = scene.copyright;
   }
 
   // cameras
@@ -4487,7 +4691,7 @@ static bool save_gltf_scene(const string& filename, const scene_scene& scene,
 namespace yocto {
 
 // load pbrt scenes
-static bool load_pbrt_scene(const string& filename, scene_scene& scene,
+static bool load_pbrt_scene(const string& filename, scene_model& scene,
     string& error, bool noparallel) {
   auto dependent_error = [filename, &error]() {
     error = filename + ": error in " + error;
@@ -4666,7 +4870,7 @@ static bool load_pbrt_scene(const string& filename, scene_scene& scene,
 }
 
 // Save a pbrt scene
-static bool save_pbrt_scene(const string& filename, const scene_scene& scene,
+static bool save_pbrt_scene(const string& filename, const scene_model& scene,
     string& error, bool noparallel) {
   auto dependent_error = [filename, &error]() {
     error = filename + ": error in " + error;

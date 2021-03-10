@@ -368,16 +368,13 @@ int run_heightfield(const heightfield_params& params) {
   if (!load_image(params.image, image, ioerror)) print_fatal(ioerror);
   log_progress("load image", 1, 1);
 
-  // convert to float
-  if (image.pixelsf.empty()) image = convert_image(image, image.linear, false);
-
   // adjust height
   if (params.height != 1) {
-    for (auto& pixel : image.pixelsf) pixel *= params.height;
+    for (auto& pixel : image.pixels) pixel *= params.height;
   }
 
   // create heightfield
-  auto shape = make_heightfield({image.width, image.height}, image.pixelsf);
+  auto shape = make_heightfield({image.width, image.height}, image.pixels);
   if (!params.smooth) shape.normals.clear();
 
   // print info
@@ -432,7 +429,7 @@ int run_glview(const glview_params& params) {
 
 #else
 
-static scene_scene make_shapescene(const scene_shape& ioshape_) {
+static scene_model make_shapescene(const scene_shape& ioshape_) {
   // Frame camera
   auto camera_frame = [](float lens, float aspect,
                           float film = 0.036) -> frame3f {
@@ -447,7 +444,7 @@ static scene_scene make_shapescene(const scene_shape& ioshape_) {
   log_progress("create scene", progress.x++, progress.y);
 
   // init scene
-  auto scene = scene_scene{};
+  auto scene = scene_model{};
 
   // rescale shape to unit
   auto ioshape = ioshape_;

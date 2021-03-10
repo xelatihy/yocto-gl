@@ -6,8 +6,7 @@
 // utilities and tone mapping, loading and saving functionality, and image
 // resizing.
 // Yocto/Image is implemented in `yocto_image.h` and `yocto_image.cpp`, and
-// depends on `stb_image.h`, `stb_image_write.h`, `stb_image_resize.h`,
-// `tinyexr.h` for the image serialization.
+// depends on `stb_image_resize.h` for image resizing.
 //
 
 //
@@ -67,17 +66,19 @@ namespace yocto {
 // Image data as array of float or byte pixels. Images can be stored in linear
 // or non linear color space.
 struct color_image {
-  int           width   = 0;
-  int           height  = 0;
-  bool          linear  = false;
-  vector<vec4f> pixelsf = {};
-  vector<vec4b> pixelsb = {};
+  // image data
+  int           width  = 0;
+  int           height = 0;
+  bool          linear = false;
+  vector<vec4f> pixels = {};
+
+  // pixel access
+  vec4f&       operator[](vec2i ij);
+  const vec4f& operator[](vec2i ij) const;
 };
 
 // image creation
-color_image make_image(int width, int height, bool linear, bool as_byte);
-color_image make_image(int width, int height, bool linear, const vec4f* data);
-color_image make_image(int width, int height, bool linear, const vec4b* data);
+color_image make_image(int width, int height, bool linear);
 
 // equality
 bool operator==(const color_image& a, const color_image& b);
@@ -87,11 +88,11 @@ bool operator!=(const color_image& a, const color_image& b);
 void swap(color_image& a, color_image& b);
 
 // pixel access
-vec4f get_pixel(const color_image& image, int i, int j);
-void  set_pixel(color_image& image, int i, int j, const vec4f& pixel);
+inline vec4f get_pixel(const color_image& image, int i, int j);
+inline void  set_pixel(color_image& image, int i, int j, const vec4f& pixel);
 
 // conversions
-color_image convert_image(const color_image& image, bool linear, bool as_byte);
+color_image convert_image(const color_image& image, bool linear);
 void        convert_image(color_image& result, const color_image& image);
 
 // Evaluates an image at a point `uv`.
@@ -100,8 +101,8 @@ vec4f eval_image(const color_image& image, const vec2f& uv,
     bool clamp_to_edge = false);
 
 // Apply tone mapping returning a float or byte image.
-color_image tonemap_image(const color_image& image, float exposure,
-    bool filmic = false, bool as_byte = false);
+color_image tonemap_image(
+    const color_image& image, float exposure, bool filmic = false);
 
 // Apply tone mapping. If the input image is an ldr, does nothing.
 void tonemap_image(color_image& ldr, const color_image& image, float exposure,
@@ -123,8 +124,8 @@ color_image image_difference(
     const color_image& image_a, const color_image& image_b, bool display_diff);
 
 // Color grade an hsr or ldr image to an ldr image.
-color_image colorgrade_image(const color_image& image,
-    const colorgrade_params& params, bool as_byte = false);
+color_image colorgrade_image(
+    const color_image& image, const colorgrade_params& params);
 
 // Color grade an hsr or ldr image to an ldr image.
 // Uses multithreading for speed.
@@ -330,6 +331,37 @@ void bump_to_normal(vector<vec4f>& normal, const vector<vec4f>& bump, int width,
 // Add a border to an image
 void add_border(vector<vec4f>& pixels, const vector<vec4f>& source, int width,
     int height, float thickness, const vec4f& color = {0, 0, 0, 1});
+
+}  // namespace yocto
+
+// -----------------------------------------------------------------------------
+//
+//
+// IMPLEMENTATION
+//
+//
+// -----------------------------------------------------------------------------
+
+// -----------------------------------------------------------------------------
+// IMPLEMENTATION OF IMAGE FUNCTIONS
+// -----------------------------------------------------------------------------
+namespace yocto {
+
+// pixel access
+inline vec4f& color_image::operator[](vec2i ij) {
+  return pixels[ij.y * width + ij.x];
+}
+inline const vec4f& color_image::operator[](vec2i ij) const {
+  return pixels[ij.y * width + ij.x];
+}
+
+// pixel access
+inline vec4f get_pixel(const color_image& image, int i, int j) {
+  return image.pixels[j * image.width + i];
+}
+inline void set_pixel(color_image& image, int i, int j, const vec4f& pixel) {
+  image.pixels[j * image.width + i] = pixel;
+}
 
 }  // namespace yocto
 

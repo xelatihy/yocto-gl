@@ -74,7 +74,7 @@ int run_convert(const convert_params& params) {
 
   // tonemap if needed
   if (image.linear && is_ldr_filename(params.output)) {
-    image = tonemap_image(image, params.exposure, params.filmic, true);
+    image = tonemap_image(image, params.exposure, params.filmic);
   }
 
   // save
@@ -208,8 +208,7 @@ int run_diff(const diff_params& params) {
   }
 
   // check types
-  if (!image1.pixelsf.empty() != !image2.pixelsf.empty() ||
-      !image1.pixelsf.empty() != !image2.pixelsf.empty()) {
+  if (image1.linear != image2.linear) {
     ioerror = "image types are different";
     return print_fatal(ioerror);
   }
@@ -224,7 +223,7 @@ int run_diff(const diff_params& params) {
 
   // check diff
   if (params.signal) {
-    for (auto& c : diff.pixelsf) {
+    for (auto& c : diff.pixels) {
       if (max(xyz(c)) > params.threshold) {
         ioerror = "image content differs";
         return print_fatal(ioerror);
@@ -273,8 +272,7 @@ int run_setalpha(const setalpha_params& params) {
   }
 
   // check types
-  if (!image.pixelsf.empty() != !alpha.pixelsf.empty() ||
-      !image.pixelsf.empty() != !alpha.pixelsf.empty()) {
+  if (image.linear != alpha.linear) {
     ioerror = "image types are different";
     return print_fatal(ioerror);
   }
@@ -286,22 +284,18 @@ int run_setalpha(const setalpha_params& params) {
   }
 
   // edit alpha
-  auto out = make_image(
-      image.width, image.height, image.linear, image.pixelsf.empty());
-  for (auto j = 0; j < image.height; j++) {
-    for (auto i = 0; i < image.width; i++) {
-      auto calpha = get_pixel(alpha, i, j);
-      auto alpha_ = params.from_color ? mean(xyz(calpha))
-                    : params.from_black
-                        ? (mean(xyz(calpha)) > 0.01 ? 1.0f : 0.0f)
-                        : calpha.w;
-      if (params.to_color) {
-        set_pixel(out, i, j, {alpha_, alpha_, alpha_, alpha_});
-      } else {
-        auto color = get_pixel(image, i, j);
-        color.w    = alpha_;
-        set_pixel(out, i, j, color);
-      }
+  auto out = make_image(image.width, image.height, image.linear);
+  for (auto idx = (size_t)0; idx < image.pixels.size(); idx++) {
+    auto calpha = alpha.pixels[idx];
+    auto alpha_ = params.from_color   ? mean(xyz(calpha))
+                  : params.from_black ? (mean(xyz(calpha)) > 0.01 ? 1.0f : 0.0f)
+                                      : calpha.w;
+    if (params.to_color) {
+      out.pixels[idx] = {alpha_, alpha_, alpha_, alpha_};
+    } else {
+      auto color      = image.pixels[idx];
+      color.w         = alpha_;
+      out.pixels[idx] = color;
     }
   }
 

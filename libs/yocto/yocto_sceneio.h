@@ -105,6 +105,10 @@ bool load_texture(
 bool save_texture(
     const string& filename, const scene_texture& texture, string& error);
 
+// Make presets. Supported mostly in IO.
+bool make_texture_preset(
+    scene_texture& texture, const string& type, string& error);
+
 }  // namespace yocto
 
 // -----------------------------------------------------------------------------
@@ -150,17 +154,17 @@ namespace yocto {
 
 // Load/save a scene in the supported formats.
 // Calls the progress callback, if defined, as we process more data.
-bool load_scene(const string& filename, scene_scene& scene, string& error,
+bool load_scene(const string& filename, scene_model& scene, string& error,
     bool noparallel = false);
-bool save_scene(const string& filename, const scene_scene& scene, string& error,
+bool save_scene(const string& filename, const scene_model& scene, string& error,
     bool noparallel = false);
 
 // Make missing scene directories
 bool make_scene_directories(
-    const string& filename, const scene_scene& scene, string& error);
+    const string& filename, const scene_model& scene, string& error);
 
 // Scene presets used for testing.
-bool make_scene_preset(scene_scene& scene, const string& type, string& error);
+bool make_scene_preset(scene_model& scene, const string& type, string& error);
 
 }  // namespace yocto
 

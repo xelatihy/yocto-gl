@@ -122,7 +122,7 @@ inline const auto trace_falsecolor_names = vector<string>{"position", "normal",
 using image_callback = function<void(int current, int total)>;
 
 // Progressively computes an image.
-color_image trace_image(const scene_scene& scene, const trace_params& params,
+color_image trace_image(const scene_model& scene, const trace_params& params,
     const image_callback& image_cb = {});
 
 }  // namespace yocto
@@ -157,17 +157,17 @@ struct trace_state {
 };
 
 // Initialize state.
-trace_state make_state(const scene_scene& scene, const trace_params& params);
+trace_state make_state(const scene_model& scene, const trace_params& params);
 
 // Initialize lights.
-trace_lights make_lights(const scene_scene& scene, const trace_params& params);
+trace_lights make_lights(const scene_model& scene, const trace_params& params);
 
 // Build the bvh acceleration structure.
-bvh_scene make_bvh(const scene_scene& scene, const trace_params& params);
+bvh_scene make_bvh(const scene_model& scene, const trace_params& params);
 
 // Progressively computes an image.
 void trace_image(color_image& image, trace_state& state,
-    const scene_scene& scene, const bvh_scene& bvh, const trace_lights& lights,
+    const scene_model& scene, const bvh_scene& bvh, const trace_lights& lights,
     const trace_params& params, const image_callback& image_cb = {});
 
 // [experimental] Asynchronous state
@@ -178,7 +178,7 @@ struct trace_worker {
 
 // [experimental] Asynchronous interface
 void trace_start(color_image& image, trace_worker& worker, trace_state& state,
-    const scene_scene& scene, const bvh_scene& bvh, const trace_lights& lights,
+    const scene_model& scene, const bvh_scene& bvh, const trace_lights& lights,
     const trace_params& params, const image_callback& image_cb = {});
 void trace_stop(trace_worker& worker);
 

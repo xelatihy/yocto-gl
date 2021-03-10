@@ -117,21 +117,13 @@ static bool draw_image_inspector(gui_window* win, const gui_input& input,
         {image.width, image.height});
     auto ij     = vec2i{i, j};
     draw_dragger(win, "mouse", ij);
-    auto hdr_pixel     = zero4f;
-    auto ldr_pixel     = zero4b;
-    auto display_pixel = zero4b;
+    auto image_pixel   = zero4f;
+    auto display_pixel = zero4f;
     if (i >= 0 && i < image.width && j >= 0 && j < image.height) {
-      display_pixel = image.pixelsb[j * image.width + i];
-      if (!image.pixelsf.empty())
-        hdr_pixel = image.pixelsf[j * image.width + i];
-      if (!image.pixelsb.empty())
-        ldr_pixel = image.pixelsb[j * image.width + i];
+      image_pixel   = image.pixels[j * image.width + i];
+      display_pixel = image.pixels[j * image.width + i];
     }
-    if (!image.pixelsf.empty()) {
-      draw_coloredit(win, "image", hdr_pixel);
-    } else {
-      draw_coloredit(win, "image", ldr_pixel);
-    }
+    draw_coloredit(win, "image", image_pixel);
     draw_coloredit(win, "display", display_pixel);
     end_header(win);
   }
@@ -148,7 +140,7 @@ struct scene_selection {
   int subdiv      = 0;
 };
 
-static bool draw_scene_editor(gui_window* win, scene_scene& scene,
+static bool draw_scene_editor(gui_window* win, scene_model& scene,
     scene_selection& selection, const function<void()>& before_edit) {
   auto edited = 0;
   if (begin_header(win, "cameras")) {
@@ -264,7 +256,7 @@ void view_image(
     const string& title, const string& name, const color_image& image) {
   // display image
   log_progress("tonemap image", 0, 1);
-  auto  display  = make_image(image.width, image.height, false, true);
+  auto  display  = make_image(image.width, image.height, false);
   float exposure = 0;
   bool  filmic   = false;
   tonemap_image_mt(display, image, exposure, filmic);
@@ -319,8 +311,7 @@ void view_images(const string& title, const vector<string>& names,
   auto filmics   = vector<bool>(images.size(), false);
   for (auto idx = 0; idx < (int)images.size(); idx++) {
     log_progress("tonemap image", idx, (int)images.size());
-    displays[idx] = make_image(
-        images[idx].width, images[idx].height, false, true);
+    displays[idx] = make_image(images[idx].width, images[idx].height, false);
     tonemap_image_mt(displays[idx], images[idx], exposures[idx], filmics[idx]);
   }
   log_progress("tonemap image", (int)images.size(), (int)images.size());
@@ -379,7 +370,7 @@ void colorgrade_image(
 
   // display image
   log_progress("colorgrade image", 0, 1);
-  auto display = make_image(image.width, image.height, false, true);
+  auto display = make_image(image.width, image.height, false);
   colorgrade_image_mt(display, image, params);
   log_progress("colorgrade image", 1, 1);
 
@@ -447,7 +438,7 @@ void colorgrade_image(
 void view_shape(const string& title, const string& name,
     const scene_shape& shape, bool addsky) {
   // initialize path tracer scene
-  auto scene = scene_scene{};
+  auto scene = scene_model{};
   log_progress("create scene", 0, 1);
   scene.shape_names.emplace_back("shape");
   scene.shapes.emplace_back(shape);
@@ -467,12 +458,12 @@ void view_shape(const string& title, const string& name,
 }
 
 // Open a window and show an scene via path tracing
-void view_scene(const string& title, const string& name, scene_scene& scene) {
+void view_scene(const string& title, const string& name, scene_model& scene) {
   return view_scene(title, name, scene, "");
 }
 
 // Open a window and show an scene via path tracing
-void view_scene(const string& title, const string& name, scene_scene& scene,
+void view_scene(const string& title, const string& name, scene_model& scene,
     const string& camname) {
   // rendering params
   auto params     = trace_params{};
@@ -498,7 +489,7 @@ void view_scene(const string& title, const string& name, scene_scene& scene,
 #if 1
 
 // Open a window and show an scene via path tracing
-void view_scene(const string& title, const string& name, scene_scene& scene,
+void view_scene(const string& title, const string& name, scene_model& scene,
     const trace_params& params_, bool edit) {
   // copy params and camera
   auto params = params_;
@@ -518,9 +509,9 @@ void view_scene(const string& title, const string& name, scene_scene& scene,
   // init state
   auto worker  = trace_worker{};
   auto state   = make_state(scene, params);
-  auto image   = make_image(state.width, state.height, true, false);
-  auto display = make_image(state.width, state.height, false, true);
-  auto render  = make_image(state.width, state.height, true, false);
+  auto image   = make_image(state.width, state.height, true);
+  auto display = make_image(state.width, state.height, false);
+  auto render  = make_image(state.width, state.height, true);
 
   // opengl image
   auto glimage  = ogl_image{};
@@ -547,9 +538,9 @@ void view_scene(const string& title, const string& name, scene_scene& scene,
     trace_stop(worker);
 
     state   = make_state(scene, params);
-    image   = make_image(state.width, state.height, true, false);
-    display = make_image(state.width, state.height, false, true);
-    render  = make_image(state.width, state.height, true, false);
+    image   = make_image(state.width, state.height, true);
+    display = make_image(state.width, state.height, false);
+    render  = make_image(state.width, state.height, true);
 
     // start render
     trace_start(render, worker, state, scene, bvh, lights, params,
@@ -680,7 +671,7 @@ void to_params(gui_params& uiparams, const trace_params& params,
 }
 
 // Open a window and show an scene via path tracing
-void view_scene(const string& title, const string& name, scene_scene& scene,
+void view_scene(const string& title, const string& name, scene_model& scene,
     const trace_params& params_) {
   // open viewer
   auto viewer = make_imageviewer(title);
@@ -895,9 +886,9 @@ static void init_glscene(shade_scene& glscene, const sceneio_scene& ioscene) {
 }
 
 using glview_scene_callback = std::function<void(gui_window* win,
-    const gui_input& input, scene_scene& scene, shade_scene& glscene)>;
+    const gui_input& input, scene_model& scene, shade_scene& glscene)>;
 
-void glview_scene(scene_scene& scene, const string& name, const string& camname,
+void glview_scene(scene_model& scene, const string& name, const string& camname,
     const glview_scene_callback& widgets_callback,
     const glview_scene_callback& uiupdate_callback) {
   // glscene
@@ -1051,15 +1042,12 @@ static ogl_imageinput* get_input(ogl_imageviewer& viewer, const string& name) {
 static void update_display(ogl_imageview* view) {
   if (view->display.width != view->image.width ||
       view->display.height != view->image.height) {
-    view->display = make_image(
-        view->image.width, view->image.height, false, true);
+    view->display = make_image(view->image.width, view->image.height, false);
   }
   if (view->image.linear) {
     tonemap_image_mt(view->display, view->image, view->exposure, view->filmic);
-  } else if (!view->image.pixelsf.empty() || !view->image.pixelsb.empty()) {
-    convert_image(view->display, view->image);
   } else {
-    // TODO(fabio): decide about empty images
+    view->display.pixels = view->image.pixels;
   }
   if (!is_initialized(view->glimage)) init_image(view->glimage);
   set_image(view->glimage, view->display, false, false);
@@ -1102,28 +1090,18 @@ void draw_widgets(
         view->glparams.scale, vec2i{view->display.width, view->display.height});
     auto ij     = vec2i{i, j};
     draw_dragger(win, "mouse", ij);
-    auto hdr_pixel     = zero4f;
-    auto ldr_pixel     = zero4b;
-    auto display_pixel = zero4b;
+    auto image_pixel   = zero4f;
+    auto display_pixel = zero4f;
     auto width = view->display.width, height = view->display.height;
     if (i >= 0 && i < width && j >= 0 && j < height) {
-      hdr_pixel     = !view->image.pixelsf.empty()
-                          ? view->image.pixelsf[j * width + i]
-                          : zero4f;
-      ldr_pixel     = !view->image.pixelsb.empty()
-                          ? view->image.pixelsb[j * width + i]
-                          : zero4b;
-      display_pixel = view->display.pixelsb[j * width + i];
+      image_pixel   = view->image.pixels[j * width + i];
+      display_pixel = view->display.pixels[j * width + i];
     }
-    if (!view->image.pixelsf.empty()) {
-      draw_coloredit(win, "source", hdr_pixel);
-    } else {
-      draw_coloredit(win, "source", ldr_pixel);
-    }
+    draw_coloredit(win, "source", image_pixel);
     draw_coloredit(win, "display", display_pixel);
     end_header(win);
   }
-  if (!viewer.selected->image.pixelsf.empty()) {
+  if (viewer.selected->image.linear) {
     if (begin_header(win, "tonemap")) {
       auto view   = viewer.selected;
       auto edited = 0;
