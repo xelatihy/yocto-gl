@@ -437,6 +437,7 @@ bool is_hdr_filename(const string& filename) {
   auto ext = path_extension(filename);
   return ext == ".hdr" || ext == ".exr" || ext == ".pfm";
 }
+
 bool is_ldr_filename(const string& filename) {
   auto ext = path_extension(filename);
   return ext == ".png" || ext == ".jpg" || ext == ".jpeg" || ext == ".bmp" ||
@@ -739,25 +740,179 @@ bool make_image_preset(color_image& image, const string& type_, string& error) {
 // -----------------------------------------------------------------------------
 namespace yocto {
 
-// load texture
+// Loads/saves an image. Chooses hdr or ldr based on file name.
 bool load_texture(
     const string& filename, scene_texture& texture, string& error) {
+  auto format_error = [filename, &error]() {
+    error = filename + ": unknown format";
+    return false;
+  };
+  auto read_error = [filename, &error]() {
+    error = filename + ": read error";
+    return false;
+  };
+  auto preset_error = [filename, &error]() {
+    error = filename + ": " + error;
+    return false;
+  };
+
+  auto ext = path_extension(filename);
+  if (ext == ".exr" || ext == ".EXR") {
+    auto pixels = (float*)nullptr;
+    if (LoadEXR(&pixels, &texture.width, &texture.height, filename.c_str(),
+            nullptr) != 0)
+      return read_error();
+    texture.linear  = true;
+    texture.pixelsf = vector<vec4f>{
+        (vec4f*)pixels, (vec4f*)pixels + texture.width * texture.height};
+    free(pixels);
+    return true;
+  } else if (ext == ".pfm" || ext == ".PFM") {
+    auto ncomp = 0;
+    auto pixels = load_pfm(
+        filename.c_str(), &texture.width, &texture.height, &ncomp, 4);
+    if (!pixels) return read_error();
+    texture.linear  = true;
+    texture.pixelsf = vector<vec4f>{
+        (vec4f*)pixels, (vec4f*)pixels + texture.width * texture.height};
+    delete[] pixels;
+    return true;
+  } else if (ext == ".hdr" || ext == ".HDR") {
+    auto ncomp = 0;
+    auto pixels = stbi_loadf(
+        filename.c_str(), &texture.width, &texture.height, &ncomp, 4);
+    if (!pixels) return read_error();
+    texture.linear  = true;
+    texture.pixelsf = vector<vec4f>{
+        (vec4f*)pixels, (vec4f*)pixels + texture.width * texture.height};
+    free(pixels);
+    return true;
+  } else if (ext == ".png" || ext == ".PNG") {
+    auto ncomp  = 0;
+    auto pixels = stbi_load(
+        filename.c_str(), &texture.width, &texture.height, &ncomp, 4);
+    if (!pixels) return read_error();
+    texture.linear  = false;
+    texture.pixelsb = vector<vec4b>{
+        (vec4b*)pixels, (vec4b*)pixels + texture.width * texture.height};
+    free(pixels);
+    return true;
+  } else if (ext == ".jpg" || ext == ".JPG") {
+    auto ncomp  = 0;
+    auto pixels = stbi_load(
+        filename.c_str(), &texture.width, &texture.height, &ncomp, 4);
+    if (!pixels) return read_error();
+    texture.linear  = false;
+    texture.pixelsb = vector<vec4b>{
+        (vec4b*)pixels, (vec4b*)pixels + texture.width * texture.height};
+    free(pixels);
+    return true;
+  } else if (ext == ".tga" || ext == ".TGA") {
+    auto ncomp  = 0;
+    auto pixels = stbi_load(
+        filename.c_str(), &texture.width, &texture.height, &ncomp, 4);
+    if (!pixels) return read_error();
+    texture.linear  = false;
+    texture.pixelsb = vector<vec4b>{
+        (vec4b*)pixels, (vec4b*)pixels + texture.width * texture.height};
+    free(pixels);
+    return true;
+  } else if (ext == ".bmp" || ext == ".BMP") {
+    auto ncomp  = 0;
+    auto pixels = stbi_load(
+        filename.c_str(), &texture.width, &texture.height, &ncomp, 4);
+    if (!pixels) return read_error();
+    texture.linear  = false;
+    texture.pixelsb = vector<vec4b>{
+        (vec4b*)pixels, (vec4b*)pixels + texture.width * texture.height};
+    free(pixels);
+    return true;
+  } else if (ext == ".ypreset" || ext == ".YPRESET") {
+    // create preset
+    if (!make_texture_preset(texture, path_basename(filename), error))
+      return preset_error();
+    return true;
+  } else {
+    return format_error();
+  }
+}
+
+// Saves an hdr image.
+bool save_texture(
+    const string& filename, const scene_texture& texture, string& error) {
+  auto format_error = [filename, &error]() {
+    error = filename + ": unknown format";
+    return false;
+  };
+  auto write_error = [filename, &error]() {
+    error = filename + ": write error";
+    return false;
+  };
+  auto hdr_error = [filename, &error]() {
+    error = filename + ": cannot save hdr texture to ldr file";
+    return false;
+  };
+  auto ldr_error = [filename, &error]() {
+    error = filename + ": cannot save ldr texture to hdr file";
+    return false;
+  };
+
+  // check for correct handling
+  if (!texture.pixelsf.empty() && is_ldr_filename(filename)) return hdr_error();
+  if (!texture.pixelsb.empty() && is_hdr_filename(filename)) return ldr_error();
+
+  auto ext = path_extension(filename);
+  if (ext == ".hdr" || ext == ".HDR") {
+    if (!stbi_write_hdr(filename.c_str(), (int)texture.width,
+            (int)texture.height, 4, (const float*)texture.pixelsf.data()))
+      return write_error();
+    return true;
+  } else if (ext == ".pfm" || ext == ".PFM") {
+    if (!save_pfm(filename.c_str(), texture.width, texture.height, 4,
+            (const float*)texture.pixelsf.data()))
+      return write_error();
+    return true;
+  } else if (ext == ".exr" || ext == ".EXR") {
+    if (SaveEXR((const float*)texture.pixelsf.data(), (int)texture.width,
+            (int)texture.height, 4, 1, filename.c_str(), nullptr) < 0)
+      return write_error();
+    return true;
+  } else if (ext == ".png" || ext == ".PNG") {
+    if (!stbi_write_png(filename.c_str(), (int)texture.width,
+            (int)texture.height, 4, (const byte*)texture.pixelsb.data(),
+            (int)texture.width * 4))
+      return write_error();
+    return true;
+  } else if (ext == ".jpg" || ext == ".JPG") {
+    if (!stbi_write_jpg(filename.c_str(), (int)texture.width,
+            (int)texture.height, 4, (const byte*)texture.pixelsb.data(), 75))
+      return write_error();
+    return true;
+  } else if (ext == ".tga" || ext == ".TGA") {
+    if (!stbi_write_tga(filename.c_str(), (int)texture.width,
+            (int)texture.height, 4, (const byte*)texture.pixelsb.data()))
+      return write_error();
+    return true;
+  } else if (ext == ".bmp" || ext == ".BMP") {
+    if (!stbi_write_bmp(filename.c_str(), (int)texture.width,
+            (int)texture.height, 4, (const byte*)texture.pixelsb.data()))
+      return write_error();
+    return true;
+  } else {
+    return format_error();
+  }
+}
+
+bool make_texture_preset(
+    scene_texture& texture, const string& type, string& error) {
   auto image = color_image{};
-  if (!load_image(filename, image, error)) return false;
+  if (!make_image_preset(image, type, error)) return false;
   texture.width   = image.width;
   texture.height  = image.height;
   texture.linear  = image.linear;
   texture.pixelsf = image.pixelsf;
   texture.pixelsb = image.pixelsb;
   return true;
-}
-
-// save texture
-bool save_texture(
-    const string& filename, const scene_texture& texture, string& error) {
-  auto image = color_image{texture.width, texture.height, texture.linear,
-      texture.pixelsf, texture.pixelsb};
-  return save_image(filename, image, error);
 }
 
 }  // namespace yocto

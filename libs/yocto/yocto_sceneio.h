@@ -105,6 +105,10 @@ bool load_texture(
 bool save_texture(
     const string& filename, const scene_texture& texture, string& error);
 
+// Make presets. Supported mostly in IO.
+bool make_texture_preset(
+    scene_texture& texture, const string& type, string& error);
+
 }  // namespace yocto
 
 // -----------------------------------------------------------------------------
