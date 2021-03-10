@@ -83,14 +83,6 @@ void swap(color_image& a, color_image& b) {
   std::swap(a.pixels, b.pixels);
 }
 
-// pixel access
-vec4f get_pixel(const color_image& image, int i, int j) {
-  return image.pixels[j * image.width + i];
-}
-void set_pixel(color_image& image, int i, int j, const vec4f& pixel) {
-  image.pixels[j * image.width + i] = pixel;
-}
-
 // conversions
 color_image convert_image(const color_image& image, bool linear) {
   if (image.linear == linear) return image;

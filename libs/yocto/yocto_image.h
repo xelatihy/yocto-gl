@@ -66,16 +66,20 @@ namespace yocto {
 // Image data as array of float or byte pixels. Images can be stored in linear
 // or non linear color space.
 struct color_image {
+  // image data
   int           width  = 0;
   int           height = 0;
   bool          linear = false;
   vector<vec4f> pixels = {};
+
+  // pixel access
+  vec4f&       operator[](vec2i ij);
+  const vec4f& operator[](vec2i ij) const;
 };
 
 // image creation
 color_image make_image(int width, int height, bool linear);
 color_image make_image(int width, int height, bool linear, const vec4f* data);
-color_image make_image(int width, int height, bool linear, const vec4b* data);
 
 // equality
 bool operator==(const color_image& a, const color_image& b);
@@ -85,8 +89,8 @@ bool operator!=(const color_image& a, const color_image& b);
 void swap(color_image& a, color_image& b);
 
 // pixel access
-vec4f get_pixel(const color_image& image, int i, int j);
-void  set_pixel(color_image& image, int i, int j, const vec4f& pixel);
+inline vec4f get_pixel(const color_image& image, int i, int j);
+inline void  set_pixel(color_image& image, int i, int j, const vec4f& pixel);
 
 // conversions
 color_image convert_image(const color_image& image, bool linear);
@@ -328,6 +332,37 @@ void bump_to_normal(vector<vec4f>& normal, const vector<vec4f>& bump, int width,
 // Add a border to an image
 void add_border(vector<vec4f>& pixels, const vector<vec4f>& source, int width,
     int height, float thickness, const vec4f& color = {0, 0, 0, 1});
+
+}  // namespace yocto
+
+// -----------------------------------------------------------------------------
+//
+//
+// IMPLEMENTATION
+//
+//
+// -----------------------------------------------------------------------------
+
+// -----------------------------------------------------------------------------
+// IMPLEMENTATION OF IMAGE FUNCTIONS
+// -----------------------------------------------------------------------------
+namespace yocto {
+
+// pixel access
+inline vec4f& color_image::operator[](vec2i ij) {
+  return pixels[ij.y * width + ij.x];
+}
+inline const vec4f& color_image::operator[](vec2i ij) const {
+  return pixels[ij.y * width + ij.x];
+}
+
+// pixel access
+inline vec4f get_pixel(const color_image& image, int i, int j) {
+  return image.pixels[j * image.width + i];
+}
+inline void set_pixel(color_image& image, int i, int j, const vec4f& pixel) {
+  image.pixels[j * image.width + i] = pixel;
+}
 
 }  // namespace yocto
 
