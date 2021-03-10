@@ -184,17 +184,15 @@ void tonemap_image_mt(color_image& result, const color_image& image,
     throw std::invalid_argument{"image should be the same size"};
   if (result.linear) throw std::invalid_argument{"ldr expected"};
   if (image.linear) {
-    parallel_for(image.width, image.height,
-        [&result, &image, exposure, filmic](int i, int j) {
-          result.pixels[j * result.width + i] = tonemap(
-              image.pixels[j * image.width + i], exposure, filmic);
+    parallel_for_batch((size_t)image.width * (size_t)image.height,
+        (size_t)image.width, [&result, &image, exposure, filmic](size_t idx) {
+          result.pixels[idx] = tonemap(image.pixels[idx], exposure, filmic);
         });
   } else {
     auto scale = vec4f{pow(2, exposure), pow(2, exposure), pow(2, exposure), 1};
-    parallel_for(
-        image.width, image.height, [&result, &image, scale](int i, int j) {
-          result.pixels[j * result.width + i] =
-              image.pixels[j * image.width + i] * scale;
+    parallel_for_batch((size_t)image.width * (size_t)image.height,
+        (size_t)image.width, [&result, &image, scale](size_t idx) {
+          result.pixels[idx] = image.pixels[idx] * scale;
         });
   }
 }
@@ -331,10 +329,10 @@ void colorgrade_image_mt(color_image& result, const color_image& image,
   if (image.width != result.width || image.height != result.height)
     throw std::invalid_argument{"image should be the same size"};
   if (!!result.linear) throw std::invalid_argument{"non linear expected"};
-  parallel_for(
-      image.width, image.height, [&result, &image, &params](int i, int j) {
-        result.pixels[j * result.width + i] = colorgrade(
-            image.pixels[j * result.width + i], image.linear, params);
+  parallel_for_batch((size_t)image.width * (size_t)image.height,
+      (size_t)image.width, [&result, &image, &params](size_t idx) {
+        result.pixels[idx] = colorgrade(
+            image.pixels[idx], image.linear, params);
       });
 }
 
