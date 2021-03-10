@@ -270,6 +270,9 @@ vec4f eval_texture(const scene_model& scene, int texture, const vec2f& uv,
 vec4f lookup_texture(
     const scene_texture& texture, int i, int j, bool as_linear = false);
 
+// conversion from image
+scene_texture image_to_texture(const color_image& image);
+
 }  // namespace yocto
 
 // -----------------------------------------------------------------------------

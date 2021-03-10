@@ -459,69 +459,81 @@ bool load_image(const string& filename, color_image& image, string& error) {
     return false;
   };
 
+  // conversion helpers
+  auto from_linear = [](const float* pixels, int width, int height) {
+    return vector<vec4f>{
+        (vec4f*)pixels, (vec4f*)pixels + (size_t)width * (size_t)height};
+  };
+  auto from_srgb = [](const byte* pixels, int width, int height) {
+    auto pixelsf = vector<vec4f>((size_t)width * (size_t)height);
+    for (auto idx = (size_t)0; idx < pixelsf.size(); idx++) {
+      pixelsf[idx] = byte_to_float(((vec4b*)pixels)[idx]);
+    }
+    return pixelsf;
+  };
+
   auto ext = path_extension(filename);
   if (ext == ".exr" || ext == ".EXR") {
-    auto width = 0, height = 0;
     auto pixels = (float*)nullptr;
-    if (LoadEXR(&pixels, &width, &height, filename.c_str(), nullptr) != 0)
+    if (LoadEXR(&pixels, &image.width, &image.height, filename.c_str(),
+            nullptr) != 0)
       return read_error();
-    image         = make_image(width, height, true, false);
-    image.pixelsf = vector<vec4f>{
-        (vec4f*)pixels, (vec4f*)pixels + width * height};
+    image.linear = true;
+    image.pixels = from_linear(pixels, image.width, image.height);
     free(pixels);
     return true;
   } else if (ext == ".pfm" || ext == ".PFM") {
-    auto width = 0, height = 0, ncomp = 0;
-    auto pixels = load_pfm(filename.c_str(), &width, &height, &ncomp, 4);
+    auto ncomp  = 0;
+    auto pixels = load_pfm(
+        filename.c_str(), &image.width, &image.height, &ncomp, 4);
     if (!pixels) return read_error();
-    image         = make_image(width, height, true, false);
-    image.pixelsf = vector<vec4f>{
-        (vec4f*)pixels, (vec4f*)pixels + width * height};
+    image.linear = true;
+    image.pixels = from_linear(pixels, image.width, image.height);
     delete[] pixels;
     return true;
   } else if (ext == ".hdr" || ext == ".HDR") {
-    auto width = 0, height = 0, ncomp = 0;
-    auto pixels = stbi_loadf(filename.c_str(), &width, &height, &ncomp, 4);
+    auto ncomp  = 0;
+    auto pixels = stbi_loadf(
+        filename.c_str(), &image.width, &image.height, &ncomp, 4);
     if (!pixels) return read_error();
-    image         = make_image(width, height, true, false);
-    image.pixelsf = vector<vec4f>{
-        (vec4f*)pixels, (vec4f*)pixels + width * height};
+    image.linear = true;
+    image.pixels = from_linear(pixels, image.width, image.height);
     free(pixels);
     return true;
   } else if (ext == ".png" || ext == ".PNG") {
-    auto width = 0, height = 0, ncomp = 0;
-    auto pixels = stbi_load(filename.c_str(), &width, &height, &ncomp, 4);
+    auto ncomp  = 0;
+    auto pixels = stbi_load(
+        filename.c_str(), &image.width, &image.height, &ncomp, 4);
     if (!pixels) return read_error();
-    image         = make_image(width, height, false, true);
-    image.pixelsb = vector<vec4b>{
-        (vec4b*)pixels, (vec4b*)pixels + width * height};
+    image.linear = false;
+    image.pixels = from_srgb(pixels, image.width, image.height);
     free(pixels);
     return true;
   } else if (ext == ".jpg" || ext == ".JPG") {
-    auto width = 0, height = 0, ncomp = 0;
-    auto pixels = stbi_load(filename.c_str(), &width, &height, &ncomp, 4);
+    auto ncomp  = 0;
+    auto pixels = stbi_load(
+        filename.c_str(), &image.width, &image.height, &ncomp, 4);
     if (!pixels) return read_error();
-    image         = make_image(width, height, false, true);
-    image.pixelsb = vector<vec4b>{
-        (vec4b*)pixels, (vec4b*)pixels + width * height};
+    image.linear = false;
+    image.pixels = from_srgb(pixels, image.width, image.height);
     free(pixels);
     return true;
   } else if (ext == ".tga" || ext == ".TGA") {
-    auto width = 0, height = 0, ncomp = 0;
-    auto pixels = stbi_load(filename.c_str(), &width, &height, &ncomp, 4);
+    auto ncomp  = 0;
+    auto pixels = stbi_load(
+        filename.c_str(), &image.width, &image.height, &ncomp, 4);
     if (!pixels) return read_error();
-    image         = make_image(width, height, false, true);
-    image.pixelsb = vector<vec4b>{
-        (vec4b*)pixels, (vec4b*)pixels + width * height};
+    image.linear = false;
+    image.pixels = from_srgb(pixels, image.width, image.height);
     free(pixels);
     return true;
   } else if (ext == ".bmp" || ext == ".BMP") {
-    auto width = 0, height = 0, ncomp = 0;
-    auto pixels = stbi_load(filename.c_str(), &width, &height, &ncomp, 4);
+    auto ncomp  = 0;
+    auto pixels = stbi_load(
+        filename.c_str(), &image.width, &image.height, &ncomp, 4);
     if (!pixels) return read_error();
-    image         = make_image(width, height, false, true);
-    image.pixelsb = vector<vec4b>{
-        (vec4b*)pixels, (vec4b*)pixels + width * height};
+    image.linear = false;
+    image.pixels = from_srgb(pixels, image.width, image.height);
     free(pixels);
     return true;
   } else if (ext == ".ypreset" || ext == ".YPRESET") {
@@ -536,7 +548,7 @@ bool load_image(const string& filename, color_image& image, string& error) {
 
 // Saves an hdr image.
 bool save_image(
-    const string& filename, const color_image& image_, string& error) {
+    const string& filename, const color_image& image, string& error) {
   auto format_error = [filename, &error]() {
     error = filename + ": unknown format";
     return false;
@@ -546,55 +558,57 @@ bool save_image(
     return false;
   };
 
-  // handle conversions if needed
-  auto image_ptr = (const color_image*)nullptr;
-  auto converted = color_image{};
-  if (is_hdr_filename(filename) &&
-      (!image_.pixelsf.empty() || !image_.linear)) {
-    converted = convert_image(image_, true, false);
-    image_ptr = &converted;
-  } else if (is_ldr_filename(filename) && !image_.pixelsf.empty()) {
-    converted = convert_image(image_, false, true);
-    image_ptr = &converted;
-  } else {
-    image_ptr = &image_;
-  }
-  auto& image = *image_ptr;
+  // conversion helpers
+  auto to_linear = [](const color_image& image) {
+    if (image.linear) return image.pixels;
+    auto pixelsf = vector<vec4f>(image.pixels.size());
+    srgb_to_rgb(pixelsf, image.pixels);
+    return pixelsf;
+  };
+  auto to_srgb = [](const color_image& image) {
+    auto pixelsb = vector<vec4b>(image.pixels.size());
+    if (image.linear) {
+      rgb_to_srgb(pixelsb, image.pixels);
+    } else {
+      float_to_byte(pixelsb, image.pixels);
+    }
+    return pixelsb;
+  };
 
   auto ext = path_extension(filename);
   if (ext == ".hdr" || ext == ".HDR") {
     if (!stbi_write_hdr(filename.c_str(), (int)image.width, (int)image.height,
-            4, (const float*)image.pixelsf.data()))
+            4, (const float*)to_linear(image).data()))
       return write_error();
     return true;
   } else if (ext == ".pfm" || ext == ".PFM") {
     if (!save_pfm(filename.c_str(), image.width, image.height, 4,
-            (const float*)image.pixelsf.data()))
+            (const float*)to_linear(image).data()))
       return write_error();
     return true;
   } else if (ext == ".exr" || ext == ".EXR") {
-    if (SaveEXR((const float*)image.pixelsf.data(), (int)image.width,
+    if (SaveEXR((const float*)to_linear(image).data(), (int)image.width,
             (int)image.height, 4, 1, filename.c_str(), nullptr) < 0)
       return write_error();
     return true;
   } else if (ext == ".png" || ext == ".PNG") {
     if (!stbi_write_png(filename.c_str(), (int)image.width, (int)image.height,
-            4, (const byte*)image.pixelsb.data(), (int)image.width * 4))
+            4, (const byte*)to_srgb(image).data(), (int)image.width * 4))
       return write_error();
     return true;
   } else if (ext == ".jpg" || ext == ".JPG") {
     if (!stbi_write_jpg(filename.c_str(), (int)image.width, (int)image.height,
-            4, (const byte*)image.pixelsb.data(), 75))
+            4, (const byte*)to_srgb(image).data(), 75))
       return write_error();
     return true;
   } else if (ext == ".tga" || ext == ".TGA") {
     if (!stbi_write_tga(filename.c_str(), (int)image.width, (int)image.height,
-            4, (const byte*)image.pixelsb.data()))
+            4, (const byte*)to_srgb(image).data()))
       return write_error();
     return true;
   } else if (ext == ".bmp" || ext == ".BMP") {
     if (!stbi_write_bmp(filename.c_str(), (int)image.width, (int)image.height,
-            4, (const byte*)image.pixelsb.data()))
+            4, (const byte*)to_srgb(image).data()))
       return write_error();
     return true;
   } else {
@@ -654,8 +668,7 @@ bool make_image_preset(color_image& image, const string& type_, string& error) {
       montage_size.x += sub_img.width;
       montage_size.y = max(montage_size.y, sub_img.height);
     }
-    image    = make_image(montage_size.x, montage_size.y, sub_imgs[0].linear,
-        !sub_imgs[0].pixelsb.empty());
+    image    = make_image(montage_size.x, montage_size.y, sub_imgs[0].linear);
     auto pos = 0;
     for (auto& sub_img : sub_imgs) {
       set_region(image, sub_img, pos, 0);
@@ -672,8 +685,7 @@ bool make_image_preset(color_image& image, const string& type_, string& error) {
       montage_size.x += sub_img.width;
       montage_size.y = max(montage_size.y, sub_img.height);
     }
-    image    = make_image(montage_size.x, montage_size.y, sub_imgs[0].linear,
-        !sub_imgs[0].pixelsb.empty());
+    image    = make_image(montage_size.x, montage_size.y, sub_imgs[0].linear);
     auto pos = 0;
     for (auto& sub_img : sub_imgs) {
       set_region(image, sub_img, pos, 0);
@@ -768,7 +780,7 @@ bool load_texture(
     free(pixels);
     return true;
   } else if (ext == ".pfm" || ext == ".PFM") {
-    auto ncomp = 0;
+    auto ncomp  = 0;
     auto pixels = load_pfm(
         filename.c_str(), &texture.width, &texture.height, &ncomp, 4);
     if (!pixels) return read_error();
@@ -778,7 +790,7 @@ bool load_texture(
     delete[] pixels;
     return true;
   } else if (ext == ".hdr" || ext == ".HDR") {
-    auto ncomp = 0;
+    auto ncomp  = 0;
     auto pixels = stbi_loadf(
         filename.c_str(), &texture.width, &texture.height, &ncomp, 4);
     if (!pixels) return read_error();
@@ -907,11 +919,7 @@ bool make_texture_preset(
     scene_texture& texture, const string& type, string& error) {
   auto image = color_image{};
   if (!make_image_preset(image, type, error)) return false;
-  texture.width   = image.width;
-  texture.height  = image.height;
-  texture.linear  = image.linear;
-  texture.pixelsf = image.pixelsf;
-  texture.pixelsb = image.pixelsb;
+  texture = image_to_texture(image);
   return true;
 }
 

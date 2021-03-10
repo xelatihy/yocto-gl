@@ -199,7 +199,7 @@ int run_render(const render_params& params_) {
 
   // state
   auto state = make_state(scene, params);
-  auto image = make_image(state.width, state.height, true, false);
+  auto image = make_image(state.width, state.height, true);
 
   // render
   trace_image(

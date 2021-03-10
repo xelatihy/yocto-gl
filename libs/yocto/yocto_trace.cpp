@@ -942,7 +942,7 @@ color_image trace_image(const scene_model& scene, const trace_params& params,
   auto bvh    = make_bvh(scene, params);
   auto lights = make_lights(scene, params);
   auto state  = make_state(scene, params);
-  auto image  = make_image(state.width, state.height, true, false);
+  auto image  = make_image(state.width, state.height, true);
   trace_image(image, state, scene, bvh, lights, params, image_cb);
   return image;
 }
@@ -984,7 +984,7 @@ void trace_start(color_image& image, trace_worker& worker, trace_state& state,
   pparams.resolution /= params.pratio;
   pparams.samples = 1;
   auto pstate     = make_state(scene, pparams);
-  auto preview    = make_image(pstate.width, pstate.height, true, false);
+  auto preview    = make_image(pstate.width, pstate.height, true);
   parallel_for(pstate.width, pstate.height, [&](int i, int j) {
     trace_sample(preview, pstate, scene, bvh, lights, i, j, pparams);
   });

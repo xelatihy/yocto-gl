@@ -424,7 +424,7 @@ struct sculpt_state {
   vector<vector<int>> adjacencies = {};
   geodesic_solver     solver      = {};
   // brush
-  color_image tex_image = {};
+  scene_texture tex_image = {};
   // stroke
   vector<shape_point> stroke   = {};
   vec2f               last_uv  = {};
@@ -435,7 +435,7 @@ struct sculpt_state {
 
 // Initialize all sculpting parameters.
 sculpt_state make_sculpt_state(
-    const scene_shape &shape, const color_image &texture) {
+    const scene_shape &shape, const scene_texture &texture) {
   auto state = sculpt_state{};
   state.bvh  = make_triangles_bvh(
       shape.triangles, shape.positions, shape.radius);
@@ -725,7 +725,7 @@ bool gaussian_brush(vector<vec3f> &positions, const hash_grid &grid,
 
 // Compute texture values through the parameterization
 bool texture_brush(vector<vec3f> &positions, vector<vec2f> &texcoords,
-    const geodesic_solver &solver, const color_image &texture,
+    const geodesic_solver &solver, const scene_texture &texture,
     const vector<vec3i> &triangles, const vector<vec3f> &base_positions,
     const vector<vec3f> &base_normals, const vector<shape_point> &stroke,
     const sculpt_params &params) {
@@ -757,7 +757,7 @@ bool texture_brush(vector<vec3f> &positions, vector<vec2f> &texcoords,
 
   for (auto idx : vertices) {
     auto uv     = texcoords[idx];
-    auto height = max(xyz(eval_image(texture, uv)));
+    auto height = max(xyz(eval_texture(texture, uv)));
     auto normal = base_normals[idx];
     if (params.negative) normal = -normal;
     height *= max_height;
@@ -1056,10 +1056,10 @@ int run_glsculpt(const glsculpt_params &params_) {
   log_progress("load shape", 1, 1);
 
   // loading texture
-  auto texture = color_image{};
+  auto texture = scene_texture{};
   if (!params_.texture.empty()) {
     log_progress("load texture", 0, 1);
-    if (!load_image(params_.texture, texture, ioerror)) print_fatal(ioerror);
+    if (!load_texture(params_.texture, texture, ioerror)) print_fatal(ioerror);
     log_progress("load texture", 1, 1);
   }
 

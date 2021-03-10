@@ -74,7 +74,7 @@ int run_convert(const convert_params& params) {
 
   // tonemap if needed
   if (image.linear && is_ldr_filename(params.output)) {
-    image = tonemap_image(image, params.exposure, params.filmic, true);
+    image = tonemap_image(image, params.exposure, params.filmic);
   }
 
   // save
@@ -208,8 +208,7 @@ int run_diff(const diff_params& params) {
   }
 
   // check types
-  if (!image1.pixelsf.empty() != !image2.pixelsf.empty() ||
-      !image1.pixelsf.empty() != !image2.pixelsf.empty()) {
+  if (image1.linear != image2.linear) {
     ioerror = "image types are different";
     return print_fatal(ioerror);
   }
@@ -224,7 +223,7 @@ int run_diff(const diff_params& params) {
 
   // check diff
   if (params.signal) {
-    for (auto& c : diff.pixelsf) {
+    for (auto& c : diff.pixels) {
       if (max(xyz(c)) > params.threshold) {
         ioerror = "image content differs";
         return print_fatal(ioerror);
@@ -273,8 +272,7 @@ int run_setalpha(const setalpha_params& params) {
   }
 
   // check types
-  if (!image.pixelsf.empty() != !alpha.pixelsf.empty() ||
-      !image.pixelsf.empty() != !alpha.pixelsf.empty()) {
+  if (image.linear != alpha.linear) {
     ioerror = "image types are different";
     return print_fatal(ioerror);
   }
@@ -286,8 +284,7 @@ int run_setalpha(const setalpha_params& params) {
   }
 
   // edit alpha
-  auto out = make_image(
-      image.width, image.height, image.linear, image.pixelsf.empty());
+  auto out = make_image(image.width, image.height, image.linear);
   for (auto j = 0; j < image.height; j++) {
     for (auto i = 0; i < image.width; i++) {
       auto calpha = get_pixel(alpha, i, j);

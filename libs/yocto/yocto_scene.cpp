@@ -170,6 +170,18 @@ vec4f eval_texture(const scene_model& scene, int texture, const vec2f& uv,
       scene.textures[texture], uv, ldr_as_linear, no_interpolation);
 }
 
+// conversion from image
+scene_texture image_to_texture(const color_image& image) {
+  auto texture = scene_texture{image.width, image.height, image.linear, {}, {}};
+  if (image.linear) {
+    texture.pixelsf = image.pixels;
+  } else {
+    texture.pixelsb.resize(image.pixels.size());
+    float_to_byte(texture.pixelsb, image.pixels);
+  }
+  return texture;
+}
+
 }  // namespace yocto
 
 // -----------------------------------------------------------------------------
@@ -1074,12 +1086,8 @@ void add_camera(scene_model& scene) {
 // Add a sky environment
 void add_sky(scene_model& scene, float sun_angle) {
   scene.texture_names.emplace_back("sky");
-  auto& texture   = scene.textures.emplace_back();
-  auto  image     = make_sunsky(1024, 512, sun_angle);
-  texture.width   = image.width;
-  texture.height  = image.height;
-  texture.pixelsf = image.pixelsf;
-  texture.linear  = image.linear;
+  auto& texture = scene.textures.emplace_back();
+  texture       = image_to_texture(make_sunsky(1024, 512, sun_angle));
   scene.environment_names.emplace_back("sky");
   auto& environment        = scene.environments.emplace_back();
   environment.emission     = {1, 1, 1};

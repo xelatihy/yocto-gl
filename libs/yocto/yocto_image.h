@@ -66,15 +66,14 @@ namespace yocto {
 // Image data as array of float or byte pixels. Images can be stored in linear
 // or non linear color space.
 struct color_image {
-  int           width   = 0;
-  int           height  = 0;
-  bool          linear  = false;
-  vector<vec4f> pixelsf = {};
-  vector<vec4b> pixelsb = {};
+  int           width  = 0;
+  int           height = 0;
+  bool          linear = false;
+  vector<vec4f> pixels = {};
 };
 
 // image creation
-color_image make_image(int width, int height, bool linear, bool as_byte);
+color_image make_image(int width, int height, bool linear);
 color_image make_image(int width, int height, bool linear, const vec4f* data);
 color_image make_image(int width, int height, bool linear, const vec4b* data);
 
@@ -90,7 +89,7 @@ vec4f get_pixel(const color_image& image, int i, int j);
 void  set_pixel(color_image& image, int i, int j, const vec4f& pixel);
 
 // conversions
-color_image convert_image(const color_image& image, bool linear, bool as_byte);
+color_image convert_image(const color_image& image, bool linear);
 void        convert_image(color_image& result, const color_image& image);
 
 // Evaluates an image at a point `uv`.
@@ -99,8 +98,8 @@ vec4f eval_image(const color_image& image, const vec2f& uv,
     bool clamp_to_edge = false);
 
 // Apply tone mapping returning a float or byte image.
-color_image tonemap_image(const color_image& image, float exposure,
-    bool filmic = false, bool as_byte = false);
+color_image tonemap_image(
+    const color_image& image, float exposure, bool filmic = false);
 
 // Apply tone mapping. If the input image is an ldr, does nothing.
 void tonemap_image(color_image& ldr, const color_image& image, float exposure,
@@ -122,8 +121,8 @@ color_image image_difference(
     const color_image& image_a, const color_image& image_b, bool display_diff);
 
 // Color grade an hsr or ldr image to an ldr image.
-color_image colorgrade_image(const color_image& image,
-    const colorgrade_params& params, bool as_byte = false);
+color_image colorgrade_image(
+    const color_image& image, const colorgrade_params& params);
 
 // Color grade an hsr or ldr image to an ldr image.
 // Uses multithreading for speed.

@@ -368,16 +368,13 @@ int run_heightfield(const heightfield_params& params) {
   if (!load_image(params.image, image, ioerror)) print_fatal(ioerror);
   log_progress("load image", 1, 1);
 
-  // convert to float
-  if (image.pixelsf.empty()) image = convert_image(image, image.linear, false);
-
   // adjust height
   if (params.height != 1) {
-    for (auto& pixel : image.pixelsf) pixel *= params.height;
+    for (auto& pixel : image.pixels) pixel *= params.height;
   }
 
   // create heightfield
-  auto shape = make_heightfield({image.width, image.height}, image.pixelsf);
+  auto shape = make_heightfield({image.width, image.height}, image.pixels);
   if (!params.smooth) shape.normals.clear();
 
   // print info
