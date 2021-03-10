@@ -2379,7 +2379,7 @@ vector<int> get_strip(const geodesic_solver& solver,
   if (target.face == source.face) return {target.face};
   if (find_in_vec(adjacencies[target.face], source.face) != -1)
     return {target.face, source.face};
-  parents = point_to_point_geodesic_path(
+  parents = compute_geodesic_parents(
       solver, triangles, positions, adjacencies, source, target);
   auto N     = (int)parents.size();
   auto first = 0, last = 0, prev_entry = 0, next_entry = 0;
