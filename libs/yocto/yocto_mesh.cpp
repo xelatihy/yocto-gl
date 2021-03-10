@@ -291,7 +291,7 @@ unfold_triangle unfold_face(const vector<vec3i>& triangles,
   result[mod3(j + 1)] = tr[k];
 
   // TODO(splinesurf): check which unfolding method is better.
-#if 1
+#if 0
   // old method
   auto r0             = length_squared(positions[v] - positions[a]);
   auto r1             = length_squared(positions[v] - positions[b]);
@@ -3771,7 +3771,7 @@ static std::tuple<int, vec2f, spline_polygon> find_leaf(
   auto k = 3;
   while (true) {
     auto curr_t     = (t.x + t.y) / 2;
-    int  curr_entry = (int)pow(2.0f, (float)k) * curr_t;
+    auto curr_entry = (int)(pow(2.0f, (float)k) * curr_t);
     curr_entry += 3;
     assert(curr_entry % 2 == 0);
     if (t0 < curr_t) {
