@@ -263,6 +263,16 @@ vector<mesh_point> visualize_shortest_path(const dual_geodesic_solver& graph,
     const vector<vec3i>& triangles, const vector<vec3f>& positions,
     const vector<vec3i>& adjacencies, const vector<mesh_point>& points,
     bool strip);
+vector<mesh_point> visualize_shortest_path(const geodesic_solver& graph,
+    const vector<vec3i>& triangles, const vector<vec3f>& positions,
+    const vector<vec3i>& adjacencies, const vector<vector<int>>& v2t,
+    const vector<vector<float>>& angles, const mesh_point& start,
+    const mesh_point& end, bool strip);
+vector<mesh_point> visualize_shortest_path(const geodesic_solver& graph,
+    const vector<vec3i>& triangles, const vector<vec3f>& positions,
+    const vector<vec3i>& adjacencies, const vector<vector<int>>& v2t,
+    const vector<vector<float>>& angles, const vector<mesh_point>& points,
+    bool strip);
 
 }  // namespace yocto
 
@@ -368,7 +378,7 @@ vector<int> get_strip(const geodesic_solver& solver,
     const vector<vec3i>& triangles, const vector<vec3f>& positions,
     const vector<vec3i>& adjacencies, const vector<vector<int>>& v2t,
     const vector<vector<float>>& angles, const mesh_point& source,
-    const mesh_point& target);
+    const mesh_point& target, vector<int>& parents);
 
 }  // namespace yocto
 

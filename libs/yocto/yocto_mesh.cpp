@@ -1236,6 +1236,60 @@ vector<mesh_point> visualize_shortest_path(const dual_geodesic_solver& graph,
   return path;
 }
 
+// Compute visualizations for the shortest path connecting a set of points.
+vector<mesh_point> visualize_shortest_path(const geodesic_solver& graph,
+    const vector<vec3i>& triangles, const vector<vec3f>& positions,
+    const vector<vec3i>& adjacencies, const vector<vector<int>>& v2t,
+    const vector<vector<float>>& angles, const mesh_point& start,
+    const mesh_point& end, bool strip) {
+  if (strip) {
+    auto strip = vector<int>{};
+    if (start.face == end.face) {
+      strip.push_back(start.face);
+      strip.push_back(end.face);
+    } else {
+      auto parents = vector<int>{};
+      strip = get_strip(graph, triangles, positions, adjacencies, v2t, angles,
+          end, start, parents);
+    }
+    auto path = vector<mesh_point>{};
+    for (auto face : strip) path.push_back({face, {0.5, 0.5}});
+    return path;
+  } else {
+    auto path = geodesic_path{};
+    if (start.face == end.face) {
+      path.start = start;
+      path.end   = end;
+      path.strip = {start.face};
+    } else {
+      auto parents = vector<int>{};
+      auto strip   = get_strip(graph, triangles, positions, adjacencies, v2t,
+          angles, end, start, parents);
+      path         = shortest_path(
+          triangles, positions, adjacencies, start, end, strip);
+    }
+    // get mesh points
+    return convert_mesh_path(
+        triangles, adjacencies, path.strip, path.lerps, path.start, path.end)
+        .points;
+  }
+}
+
+vector<mesh_point> visualize_shortest_path(const geodesic_solver& graph,
+    const vector<vec3i>& triangles, const vector<vec3f>& positions,
+    const vector<vec3i>& adjacencies, const vector<vector<int>>& v2t,
+    const vector<vector<float>>& angles, const vector<mesh_point>& points,
+    bool strip) {
+  // geodesic path
+  auto path = vector<mesh_point>{};
+  for (auto idx = 0; idx < (int)points.size() - 1; idx++) {
+    auto segment = visualize_shortest_path(graph, triangles, positions,
+        adjacencies, v2t, angles, points[idx], points[idx + 1], strip);
+    path.insert(path.end(), segment.begin(), segment.end());
+  }
+  return path;
+}
+
 }  // namespace yocto
 
 // -----------------------------------------------------------------------------

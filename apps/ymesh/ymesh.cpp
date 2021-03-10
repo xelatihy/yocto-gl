@@ -492,7 +492,14 @@ int run_glpathd(const glpathd_params &params) {
   auto adjacencies = face_adjacencies(shape.triangles);
   auto solver      = make_dual_geodesic_solver(
       shape.triangles, shape.positions, adjacencies);
-  auto bezier = true;
+
+  // other solver
+  auto v2t = vertex_to_triangles(shape.triangles, shape.positions, adjacencies);
+  auto solver2 = make_geodesic_solver(
+      shape.triangles, shape.positions, adjacencies, v2t);
+  auto total_angles = vector<float>{};
+  auto angles       = compute_angles(
+      shape.triangles, shape.positions, adjacencies, v2t, total_angles, true);
 
   // points at random
   auto point1 = mesh_point{0, {0.5, 0.5}};
