@@ -863,12 +863,12 @@ void tonemap_image(vector<vec4b>& ldr, const vector<vec4f>& hdr, float exposure,
 
 void tonemap_image_mt(vector<vec4f>& ldr, const vector<vec4f>& hdr,
     float exposure, bool filmic, bool srgb) {
-  parallel_for(hdr.size(),
+  parallel_for_batch(hdr.size(), (size_t)1024,
       [&](size_t i) { ldr[i] = tonemap(hdr[i], exposure, filmic, srgb); });
 }
 void tonemap_image_mt(vector<vec4b>& ldr, const vector<vec4f>& hdr,
     float exposure, bool filmic, bool srgb) {
-  parallel_for(hdr.size(), [&](size_t i) {
+  parallel_for_batch(hdr.size(), (size_t)1024, [&](size_t i) {
     ldr[i] = float_to_byte(tonemap(hdr[i], exposure, filmic, srgb));
   });
 }
@@ -884,12 +884,12 @@ void colorgrade_image(vector<vec4f>& corrected, const vector<vec4f>& img,
 // Apply exposure and filmic tone mapping
 void colorgrade_image_mt(vector<vec4f>& corrected, const vector<vec4f>& img,
     bool linear, const colorgrade_params& params) {
-  parallel_for(img.size(),
+  parallel_for_batch(img.size(), (size_t)1024,
       [&](size_t i) { corrected[i] = colorgrade(img[i], linear, params); });
 }
 void colorgrade_image_mt(vector<vec4b>& corrected, const vector<vec4f>& img,
     bool linear, const colorgrade_params& params) {
-  parallel_for(img.size(), [&](size_t i) {
+  parallel_for_batch(img.size(), (size_t)1024, [&](size_t i) {
     corrected[i] = float_to_byte(colorgrade(img[i], linear, params));
   });
 }
