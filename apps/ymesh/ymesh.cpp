@@ -380,7 +380,7 @@ int run_glpathd(const glpathd_params& params) {
 
 #else
 
-static scene_model make_pathdscene(const scene_shape &ioshape_) {
+static scene_model make_pathdscene(const scene_shape &ioshape) {
   // Frame camera
   auto camera_frame = [](float lens, float aspect,
                           float film = 0.036) -> frame3f {
@@ -393,21 +393,13 @@ static scene_model make_pathdscene(const scene_shape &ioshape_) {
   // init scene
   auto scene = scene_model{};
 
-  // rescale shape to unit
-  auto ioshape = ioshape_;
-  auto bbox    = invalidb3f;
-  for (auto &pos : ioshape.positions) bbox = merge(bbox, pos);
-  for (auto &pos : ioshape.positions) pos -= center(bbox);
-  for (auto &pos : ioshape.positions) pos /= max(size(bbox));
-  // TODO(fabio): this should be a math function
-
   // camera
   auto &camera  = scene.cameras.emplace_back();
   camera.frame  = camera_frame(0.050, 16.0f / 9.0f, 0.036);
   camera.lens   = 0.050;
   camera.aspect = 16.0f / 9.0f;
   camera.film   = 0.036;
-  camera.focus  = length(camera.frame.o - center(bbox));
+  camera.focus  = length(camera.frame.o);
 
   // material
   auto &shape_material      = scene.materials.emplace_back();
@@ -452,6 +444,12 @@ int run_glpathd(const glpathd_params &params) {
     ioshape.triangles = quads_to_triangles(ioshape.quads);
     ioshape.quads     = {};
   }
+
+  // rescale shape to unit
+  auto bbox = invalidb3f;
+  for (auto &pos : ioshape.positions) bbox = merge(bbox, pos);
+  for (auto &pos : ioshape.positions) pos -= center(bbox);
+  for (auto &pos : ioshape.positions) pos /= max(size(bbox));
 
   // create scene
   auto scene = make_pathdscene(ioshape);
@@ -1291,7 +1289,7 @@ void add_commands(cli_command& cli, const string& name, app_params& value,
   add_command(cli, "view", value.view, "View shapes.");
   add_command(cli, "glview", value.glview, "View shapes with OpenGL.");
   add_command(cli, "glpath", value.glpath, "Trace paths with OpenGL.");
-  add_command(cli, "glpathd", value.glpath, "Trace debug paths with OpenGL.");
+  add_command(cli, "glpathd", value.glpathd, "Trace debug paths with OpenGL.");
   add_command(cli, "glsculpt", value.glsculpt, "Sculpt meshes with OpenGL.");
 }
 
