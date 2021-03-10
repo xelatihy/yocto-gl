@@ -84,17 +84,14 @@ inline int64_t     print_elapsed(print_timer& timer);
 
 // Print progress
 inline void print_progress(const string& message, int current, int total);
+inline void print_progress_begin(const string& message, int total = 1);
+inline void print_progress_end();
+inline void print_progress_next();
 
 // Format duration string from nanoseconds
 inline string format_duration(int64_t duration);
 // Format a large integer number in human readable form
 inline string format_num(uint64_t num);
-
-// Logging using the above functions but controlled by a log level
-inline void log_info(const string& message);
-inline int  log_fatal(const string& message);
-inline void log_progress(const string& message, int current, int total);
-inline void set_log_level(bool verbose);
 
 }  // namespace yocto
 
@@ -373,16 +370,26 @@ inline void print_progress(const string& message, int current, int total) {
   fflush(stdout);
 }
 
-// Logging using the above functions but controlled by a log level
-inline bool log_verbose = false;
-inline void log_info(const string& message) {
-  if (log_verbose) print_info(message);
+inline int    print_progress_current = 0;
+inline int    print_progress_total   = 0;
+inline string print_progress_message = "";
+inline void   print_progress_begin(const string& message, int total) {
+  print_progress_current = 0;
+  print_progress_total   = total;
+  print_progress_message = message;
+  print_progress(
+      print_progress_message, print_progress_current, print_progress_total);
 }
-inline int  log_fatal(const string& message) { return print_fatal(message); }
-inline void log_progress(const string& message, int current, int total) {
-  if (log_verbose) print_progress(message, current, total);
+inline void print_progress_end() {
+  print_progress_current = print_progress_total;
+  print_progress(
+      print_progress_message, print_progress_current, print_progress_total);
 }
-inline void set_log_level(bool verbose) { log_verbose = verbose; }
+inline void print_progress_next() {
+  print_progress_current += 1;
+  print_progress(
+      print_progress_message, print_progress_current, print_progress_total);
+}
 
 }  // namespace yocto
 

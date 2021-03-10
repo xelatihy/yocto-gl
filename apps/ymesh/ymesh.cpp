@@ -72,14 +72,12 @@ int run_view(const view_params &params) {
 
   // load mesh
   auto ioerror = ""s;
-  log_progress("load shape", 0, 1);
   if (path_filename(params.shape) == ".ypreset") {
     if (!make_shape_preset(shape, path_basename(params.shape), ioerror))
       print_fatal(ioerror);
   } else {
     if (!load_shape(params.shape, shape, ioerror, true)) print_fatal(ioerror);
   }
-  log_progress("load shape", 1, 1);
 
   // run view
   view_shape("yshape", params.shape, shape, params.addsky);
@@ -120,10 +118,6 @@ static scene_model make_shapescene(const scene_shape &ioshape_) {
     return lookat_frame(camera_dir * camera_dist, {0, 0, 0}, {0, 1, 0});
   };
 
-  // handle progress
-  auto progress = vec2i{0, 5};
-  log_progress("create scene", progress.x++, progress.y);
-
   // init scene
   auto scene = scene_model{};
 
@@ -136,7 +130,6 @@ static scene_model make_shapescene(const scene_shape &ioshape_) {
   // TODO(fabio): this should be a math function
 
   // camera
-  log_progress("create camera", progress.x++, progress.y);
   auto &camera  = scene.cameras.emplace_back();
   camera.frame  = camera_frame(0.050, 16.0f / 9.0f, 0.036);
   camera.lens   = 0.050;
@@ -145,24 +138,20 @@ static scene_model make_shapescene(const scene_shape &ioshape_) {
   camera.focus  = length(camera.frame.o - center(bbox));
 
   // material
-  log_progress("create material", progress.x++, progress.y);
   auto &shape_material     = scene.materials.emplace_back();
-  shape_material.type      = scene_material_type::plastic;
+  shape_material.type      = scene_material_type::glossy;
   shape_material.color     = {0.5, 1, 0.5};
   shape_material.roughness = 0.2;
 
   // shapes
-  log_progress("create shape", progress.x++, progress.y);
   scene.shapes.emplace_back(ioshape);
 
   // instances
-  log_progress("create instance", progress.x++, progress.y);
   auto &shape_instance    = scene.instances.emplace_back();
   shape_instance.shape    = 0;
   shape_instance.material = 0;
 
   // done
-  log_progress("create scene", progress.x++, progress.y);
   return scene;
 }
 
@@ -170,9 +159,7 @@ int run_glview(const glview_params &params) {
   // loading shape
   auto ioerror = ""s;
   auto shape   = scene_shape{};
-  log_progress("load shape", 0, 1);
   if (!load_shape(params.shape, shape, ioerror, true)) print_fatal(ioerror);
-  log_progress("load shape", 1, 1);
 
   // create scene
   auto scene = make_shapescene(shape);
@@ -200,7 +187,7 @@ void add_command(cli_command& cli, const string& name, glpath_params& value,
 #ifndef YOCTO_OPENGL
 
 // view shapes
-int run_glview(const glview_params& params) {
+int run_glpath(const glpath_params& params) {
   return print_fatal("Opengl not compiled");
 }
 
@@ -216,10 +203,6 @@ static scene_model make_pathscene(const scene_shape &ioshape_) {
     return lookat_frame(camera_dir * camera_dist, {0, 0, 0}, {0, 1, 0});
   };
 
-  // handle progress
-  auto progress = vec2i{0, 5};
-  log_progress("create scene", progress.x++, progress.y);
-
   // init scene
   auto scene = scene_model{};
 
@@ -232,7 +215,6 @@ static scene_model make_pathscene(const scene_shape &ioshape_) {
   // TODO(fabio): this should be a math function
 
   // camera
-  log_progress("create camera", progress.x++, progress.y);
   auto &camera  = scene.cameras.emplace_back();
   camera.frame  = camera_frame(0.050, 16.0f / 9.0f, 0.036);
   camera.lens   = 0.050;
@@ -241,28 +223,25 @@ static scene_model make_pathscene(const scene_shape &ioshape_) {
   camera.focus  = length(camera.frame.o - center(bbox));
 
   // material
-  log_progress("create material", progress.x++, progress.y);
   auto &shape_material      = scene.materials.emplace_back();
-  shape_material.type       = scene_material_type::plastic;
+  shape_material.type       = scene_material_type::glossy;
   shape_material.color      = {0.5, 1, 0.5};
   shape_material.roughness  = 0.2;
   auto &points_material     = scene.materials.emplace_back();
-  points_material.type      = scene_material_type::plastic;
+  points_material.type      = scene_material_type::glossy;
   points_material.color     = {1, 0.5, 0.5};
   points_material.roughness = 0.2;
   auto &lines_material      = scene.materials.emplace_back();
-  lines_material.type       = scene_material_type::plastic;
+  lines_material.type       = scene_material_type::glossy;
   lines_material.color      = {0.5, 0.5, 1};
   lines_material.roughness  = 0.2;
 
   // shapes
-  log_progress("create shape", progress.x++, progress.y);
   scene.shapes.emplace_back(ioshape);
   scene.shapes.emplace_back(points_to_spheres({{0, 0, 0}}));
   scene.shapes.emplace_back(lines_to_cylinders({{0, 0, 0}, {0, 0, 0}}));
 
   // instances
-  log_progress("create instance", progress.x++, progress.y);
   auto &shape_instance     = scene.instances.emplace_back();
   shape_instance.shape     = 0;
   shape_instance.material  = 0;
@@ -274,7 +253,6 @@ static scene_model make_pathscene(const scene_shape &ioshape_) {
   lines_instance.material  = 2;
 
   // done
-  log_progress("create scene", progress.x++, progress.y);
   return scene;
 }
 
@@ -282,13 +260,11 @@ int run_glpath(const glpath_params &params) {
   // loading shape
   auto ioerror = ""s;
   auto ioshape = scene_shape{};
-  log_progress("load shape", 0, 1);
   if (!load_shape(params.shape, ioshape, ioerror, true)) print_fatal(ioerror);
   if (!ioshape.quads.empty()) {
     ioshape.triangles = quads_to_triangles(ioshape.quads);
     ioshape.quads     = {};
   }
-  log_progress("load shape", 1, 1);
 
   // create scene
   auto scene = make_pathscene(ioshape);
@@ -375,6 +351,237 @@ int run_glpath(const glpath_params &params) {
           set_normals(glscene.shapes.at(2), lines.normals);
           set_texcoords(glscene.shapes.at(2), lines.texcoords);
           set_quads(glscene.shapes.at(2), lines.quads);
+        }
+      });
+
+  // done
+  return 0;
+}
+
+#endif
+
+struct glpathd_params {
+  string shape = "shape.ply";
+};
+
+// Cli
+void add_command(cli_command& cli, const string& name, glpathd_params& value,
+    const string& usage) {
+  auto& cmd = add_command(cli, name, usage);
+  add_argument(cmd, "shape", value.shape, "Input shape.");
+}
+
+#ifndef YOCTO_OPENGL
+
+// view shapes
+int run_glpathd(const glpathd_params& params) {
+  return print_fatal("Opengl not compiled");
+}
+
+#else
+
+static scene_model make_pathdscene(const scene_shape &ioshape) {
+  // Frame camera
+  auto camera_frame = [](float lens, float aspect,
+                          float film = 0.036) -> frame3f {
+    auto camera_dir  = normalize(vec3f{0, 0.5, 1});
+    auto bbox_radius = 2.0f;
+    auto camera_dist = bbox_radius * lens / (film / aspect);
+    return lookat_frame(camera_dir * camera_dist, {0, 0, 0}, {0, 1, 0});
+  };
+
+  // init scene
+  auto scene = scene_model{};
+
+  // camera
+  auto &camera  = scene.cameras.emplace_back();
+  camera.frame  = camera_frame(0.050, 16.0f / 9.0f, 0.036);
+  camera.lens   = 0.050;
+  camera.aspect = 16.0f / 9.0f;
+  camera.film   = 0.036;
+  camera.focus  = length(camera.frame.o);
+
+  // material
+  auto &shape_material      = scene.materials.emplace_back();
+  shape_material.type       = scene_material_type::glossy;
+  shape_material.color      = {0.5, 1, 0.5};
+  shape_material.roughness  = 0.2;
+  auto &points_material     = scene.materials.emplace_back();
+  points_material.type      = scene_material_type::glossy;
+  points_material.color     = {1, 0.5, 0.5};
+  points_material.roughness = 0.2;
+  auto &lines1_material     = scene.materials.emplace_back();
+  lines1_material.type      = scene_material_type::glossy;
+  lines1_material.color     = {0.5, 0.5, 1};
+  lines1_material.roughness = 0.2;
+  auto &lines2_material     = scene.materials.emplace_back();
+  lines2_material.type      = scene_material_type::glossy;
+  lines2_material.color     = {1, 1, 0.5};
+  lines2_material.roughness = 0.2;
+  auto &lines3_material     = scene.materials.emplace_back();
+  lines3_material.type      = scene_material_type::glossy;
+  lines3_material.color     = {1, 0.5, 1};
+  lines3_material.roughness = 0.2;
+  auto &edges_material      = scene.materials.emplace_back();
+  edges_material.type       = scene_material_type::glossy;
+  edges_material.color      = {0.01, 0.01, 0.01};
+  edges_material.roughness  = 0.2;
+
+  // shapes
+  scene.shapes.emplace_back(ioshape);
+  scene.shapes.emplace_back(points_to_spheres({{0, 0, 0}}));
+  scene.shapes.emplace_back(lines_to_cylinders({{0, 0, 0}, {0, 0, 0}}));
+  scene.shapes.emplace_back(lines_to_cylinders({{0, 0, 0}, {0, 0, 0}}));
+  scene.shapes.emplace_back(lines_to_cylinders({{0, 0, 0}, {0, 0, 0}}));
+  scene.shapes.emplace_back(lines_to_cylinders({{0, 0, 0}, {0, 0, 0}}));
+
+  // make edges
+  // auto  edges      = get_edges(ioshape.triangles);
+  // auto &edge_shape = scene.shapes.back();
+  // for (auto [i, j] : edges) {
+  //   line_to_quads();
+  // }
+
+  // instances
+  auto &shape_instance     = scene.instances.emplace_back();
+  shape_instance.shape     = 0;
+  shape_instance.material  = 0;
+  auto &points_instance    = scene.instances.emplace_back();
+  points_instance.shape    = 1;
+  points_instance.material = 1;
+  auto &lines1_instance    = scene.instances.emplace_back();
+  lines1_instance.shape    = 2;
+  lines1_instance.material = 2;
+  auto &lines2_instance    = scene.instances.emplace_back();
+  lines2_instance.shape    = 3;
+  lines2_instance.material = 3;
+  auto &lines3_instance    = scene.instances.emplace_back();
+  lines3_instance.shape    = 4;
+  lines3_instance.material = 4;
+  auto &edges_instance     = scene.instances.emplace_back();
+  edges_instance.shape     = 5;
+  edges_instance.material  = 5;
+
+  // done
+  return scene;
+}
+
+int run_glpathd(const glpathd_params &params) {
+  // loading shape
+  auto ioerror = ""s;
+  auto ioshape = scene_shape{};
+  if (!load_shape(params.shape, ioshape, ioerror, true)) print_fatal(ioerror);
+  if (!ioshape.quads.empty()) {
+    ioshape.triangles = quads_to_triangles(ioshape.quads);
+    ioshape.quads     = {};
+  }
+
+  // rescale shape to unit
+  auto bbox = invalidb3f;
+  for (auto &pos : ioshape.positions) bbox = merge(bbox, pos);
+  for (auto &pos : ioshape.positions) pos -= center(bbox);
+  for (auto &pos : ioshape.positions) pos /= max(size(bbox));
+
+  // create scene
+  auto scene = make_pathdscene(ioshape);
+
+  // bvh
+  auto &shape = scene.shapes.at(0);
+  auto  bvh   = make_triangles_bvh(shape.triangles, shape.positions, {});
+
+  // stroke
+  auto stroke = vector<shape_point>{};
+
+  // geodesic solver
+  auto adjacencies = face_adjacencies(shape.triangles);
+  auto solver      = make_dual_geodesic_solver(
+      shape.triangles, shape.positions, adjacencies);
+  auto bezier = true;
+
+  // bezier algos
+  auto params1      = spline_params{};
+  params1.algorithm = spline_algorithm::de_casteljau_uniform;
+
+  // run viewer
+  glview_scene(
+      scene, params.shape, "",
+      [&](gui_window *win, const gui_input &input, scene_model &scene,
+          shade_scene &glscene) {},
+      [&](gui_window *win, const gui_input &input, scene_model &scene,
+          shade_scene &glscene) {
+        auto &shape   = scene.shapes.at(0);
+        auto &camera  = scene.cameras.at(0);
+        auto  updated = false;
+        if (input.mouse_left && input.modifier_ctrl) {
+          if (input.modifier_shift) {
+            stroke.clear();
+            updated = true;
+          } else {
+            auto mouse_uv = vec2f{
+                input.mouse_pos.x / float(input.window_size.x),
+                input.mouse_pos.y / float(input.window_size.y)};
+            auto ray  = camera_ray(camera.frame, camera.lens, camera.aspect,
+                camera.film, mouse_uv);
+            auto isec = intersect_triangles_bvh(
+                bvh, shape.triangles, shape.positions, ray, false);
+            if (isec.hit) {
+              if (stroke.empty() || stroke.back().element != isec.element ||
+                  stroke.back().uv != isec.uv) {
+                stroke.push_back({isec.element, isec.uv});
+                updated = true;
+              }
+            }
+          }
+        }
+        if (updated) {
+          auto positions = vector<vec3f>{};
+          for (auto [element, uv] : stroke) {
+            positions.push_back(eval_position(shape, element, uv));
+          }
+          auto &points = scene.shapes.at(1);
+          points       = points_to_spheres(positions, 2, 0.002);
+          set_positions(glscene.shapes.at(1), points.positions);
+          set_normals(glscene.shapes.at(1), points.normals);
+          set_texcoords(glscene.shapes.at(1), points.texcoords);
+          set_quads(glscene.shapes.at(1), points.quads);
+          glscene.shapes.at(1).point_size = 10;
+          auto path1      = compute_bezier_path(solver, shape.triangles,
+              shape.positions, adjacencies, (vector<mesh_point> &)stroke,
+              params1);
+          auto positions1 = vector<vec3f>{};
+          for (auto [element, uv] : path1) {
+            positions1.push_back(eval_position(shape, element, uv));
+          }
+          auto &lines1 = scene.shapes.at(2);
+          lines1       = lines_to_cylinders(positions1, 4, 0.002);
+          set_positions(glscene.shapes.at(2), lines1.positions);
+          set_normals(glscene.shapes.at(2), lines1.normals);
+          set_texcoords(glscene.shapes.at(2), lines1.texcoords);
+          set_quads(glscene.shapes.at(2), lines1.quads);
+          auto path2      = compute_shortest_path(solver, shape.triangles,
+              shape.positions, adjacencies, (vector<mesh_point> &)stroke);
+          auto positions2 = vector<vec3f>{};
+          for (auto [element, uv] : path2) {
+            positions2.push_back(eval_position(shape, element, uv));
+          }
+          auto &lines2 = scene.shapes.at(3);
+          lines2       = lines_to_cylinders(positions2, 4, 0.002);
+          set_positions(glscene.shapes.at(3), lines2.positions);
+          set_normals(glscene.shapes.at(3), lines2.normals);
+          set_texcoords(glscene.shapes.at(3), lines2.texcoords);
+          set_quads(glscene.shapes.at(3), lines2.quads);
+          auto positions3 = vector<vec3f>{};
+          auto path3      = visualize_shortest_path(solver, shape.triangles,
+              shape.positions, adjacencies, (vector<mesh_point> &)stroke, true);
+          for (auto [element, uv] : path3) {
+            positions3.push_back(eval_position(shape, element, uv));
+          }
+          auto &lines3 = scene.shapes.at(4);
+          lines3       = lines_to_cylinders(positions3, 4, 0.002);
+          set_positions(glscene.shapes.at(4), lines3.positions);
+          set_normals(glscene.shapes.at(4), lines3.normals);
+          set_texcoords(glscene.shapes.at(4), lines3.texcoords);
+          set_quads(glscene.shapes.at(4), lines3.quads);
         }
       });
 
@@ -891,10 +1098,6 @@ static scene_model make_sculptscene(const scene_shape &ioshape_) {
     return lookat_frame(camera_dir * camera_dist, {0, 0, 0}, {0, 1, 0});
   };
 
-  // handle progress
-  auto progress = vec2i{0, 5};
-  log_progress("create scene", progress.x++, progress.y);
-
   // init scene
   auto scene = scene_model{};
 
@@ -906,7 +1109,6 @@ static scene_model make_sculptscene(const scene_shape &ioshape_) {
   for (auto &pos : ioshape.positions) pos /= max(size(bbox));
 
   // camera
-  log_progress("create camera", progress.x++, progress.y);
   auto &camera  = scene.cameras.emplace_back();
   camera.frame  = camera_frame(0.050, 16.0f / 9.0f, 0.036);
   camera.lens   = 0.050;
@@ -915,7 +1117,6 @@ static scene_model make_sculptscene(const scene_shape &ioshape_) {
   camera.focus  = length(camera.frame.o - center(bbox));
 
   // material
-  log_progress("create material", progress.x++, progress.y);
   auto &shape_material  = scene.materials.emplace_back();
   shape_material.type   = scene_material_type::matte;
   shape_material.color  = {0.78f, 0.31f, 0.23f};
@@ -923,12 +1124,10 @@ static scene_model make_sculptscene(const scene_shape &ioshape_) {
   cursor_material.type  = scene_material_type::matte;
 
   // shapes
-  log_progress("create shape", progress.x++, progress.y);
   scene.shapes.emplace_back(ioshape);
   scene.shapes.emplace_back(make_cursor({0, 0, 0}, {0, 0, 1}, 1));
 
   // instances
-  log_progress("create instance", progress.x++, progress.y);
   auto &shape_instance     = scene.instances.emplace_back();
   shape_instance.shape     = 0;
   shape_instance.material  = 0;
@@ -937,7 +1136,6 @@ static scene_model make_sculptscene(const scene_shape &ioshape_) {
   cursor_instance.material = 1;
 
   // done
-  log_progress("create scene", progress.x++, progress.y);
   return scene;
 }
 
@@ -1047,20 +1245,16 @@ int run_glsculpt(const glsculpt_params &params_) {
   // loading shape
   auto ioerror = ""s;
   auto ioshape = scene_shape{};
-  log_progress("load shape", 0, 1);
   if (!load_shape(params_.shape, ioshape, ioerror, true)) print_fatal(ioerror);
   if (!ioshape.quads.empty()) {
     ioshape.triangles = quads_to_triangles(ioshape.quads);
     ioshape.quads.clear();
   }
-  log_progress("load shape", 1, 1);
 
   // loading texture
   auto texture = scene_texture{};
   if (!params_.texture.empty()) {
-    log_progress("load texture", 0, 1);
     if (!load_texture(params_.texture, texture, ioerror)) print_fatal(ioerror);
-    log_progress("load texture", 1, 1);
   }
 
   // setup app
@@ -1129,6 +1323,7 @@ struct app_params {
   view_params     view     = {};
   glview_params   glview   = {};
   glpath_params   glpath   = {};
+  glpathd_params  glpathd  = {};
   glsculpt_params glsculpt = {};
 };
 
@@ -1140,6 +1335,7 @@ void add_commands(cli_command& cli, const string& name, app_params& value,
   add_command(cli, "view", value.view, "View shapes.");
   add_command(cli, "glview", value.glview, "View shapes with OpenGL.");
   add_command(cli, "glpath", value.glpath, "Trace paths with OpenGL.");
+  add_command(cli, "glpathd", value.glpathd, "Trace debug paths with OpenGL.");
   add_command(cli, "glsculpt", value.glsculpt, "Sculpt meshes with OpenGL.");
 }
 
@@ -1154,7 +1350,6 @@ int main(int argc, const char* argv[]) {
   // command line parameters
   auto params = app_params{};
   parse_cli(params, argc, argv);
-  set_log_level(true);
 
   // dispatch commands
   if (params.command == "view") {
@@ -1163,6 +1358,8 @@ int main(int argc, const char* argv[]) {
     return run_glview(params.glview);
   } else if (params.command == "glpath") {
     return run_glpath(params.glpath);
+  } else if (params.command == "glpathd") {
+    return run_glpathd(params.glpathd);
   } else {
     return print_fatal("unknown command " + params.command);
   }

@@ -82,9 +82,7 @@ int run_convert(const convert_params& params) {
 
   // load mesh
   auto ioerror = ""s;
-  log_progress("load shape", 0, 1);
   if (!load_shape(params.shape, shape, ioerror, true)) print_fatal(ioerror);
-  log_progress("load shape", 1, 1);
 
   // remove data
   if (params.aspositions) {
@@ -112,7 +110,6 @@ int run_convert(const convert_params& params) {
   // transform
   if (params.translate != vec3f{0, 0, 0} || params.rotate != vec3f{0, 0, 0} ||
       params.scale != vec3f{1, 1, 1} || params.scaleu != 1) {
-    log_progress("transform shape", 0, 1);
     auto translation = translation_frame(params.translate);
     auto scaling     = scaling_frame(params.scale * params.scaleu);
     auto rotation    = rotation_frame({1, 0, 0}, radians(params.rotate.x)) *
@@ -123,12 +120,10 @@ int run_convert(const convert_params& params) {
     auto nonuniform_scaling = min(params.scale) != max(params.scale);
     for (auto& n : shape.normals)
       n = transform_normal(xform, n, nonuniform_scaling);
-    log_progress("transform shape", 1, 1);
   }
 
   // compute normals
   if (params.smooth) {
-    log_progress("smooth shape", 0, 1);
     if (!shape.points.empty()) {
       shape.normals = vector<vec3f>{shape.positions.size(), {0, 0, 1}};
     } else if (!shape.lines.empty()) {
@@ -138,14 +133,11 @@ int run_convert(const convert_params& params) {
     } else if (!shape.quads.empty()) {
       shape.normals = quads_normals(shape.quads, shape.positions);
     }
-    log_progress("smooth shape", 1, 1);
   }
 
   // remove normals
   if (params.facet) {
-    log_progress("facet shape", 0, 1);
     shape.normals = {};
-    log_progress("facet shape", 1, 1);
   }
 
   if (params.info) {
@@ -155,9 +147,7 @@ int run_convert(const convert_params& params) {
   }
 
   // save mesh
-  log_progress("save shape", 0, 1);
   if (!save_shape(params.output, shape, ioerror, true)) print_fatal(ioerror);
-  log_progress("save shape", 1, 1);
 
   // done
   return 0;
@@ -205,14 +195,12 @@ int run_fvconvert(const fvconvert_params& params) {
 
   // load mesh
   auto ioerror = ""s;
-  log_progress("load shape", 0, 1);
   if (path_filename(params.shape) == ".ypreset") {
     if (!make_fvshape_preset(shape, path_basename(params.shape), ioerror))
       print_fatal(ioerror);
   } else {
     if (!load_fvshape(params.shape, shape, ioerror)) print_fatal(ioerror);
   }
-  log_progress("load shape", 1, 1);
 
   // remove data
   if (params.aspositions) {
@@ -232,7 +220,6 @@ int run_fvconvert(const fvconvert_params& params) {
   // transform
   if (params.translate != vec3f{0, 0, 0} || params.rotate != vec3f{0, 0, 0} ||
       params.scale != vec3f{1, 1, 1} || params.scaleu != 1) {
-    log_progress("transform shape", 0, 1);
     auto translation = translation_frame(params.translate);
     auto scaling     = scaling_frame(params.scale * params.scaleu);
     auto rotation    = rotation_frame({1, 0, 0}, radians(params.rotate.x)) *
@@ -243,25 +230,20 @@ int run_fvconvert(const fvconvert_params& params) {
     auto nonuniform_scaling = min(params.scale) != max(params.scale);
     for (auto& n : shape.normals)
       n = transform_normal(xform, n, nonuniform_scaling);
-    log_progress("transform shape", 1, 1);
   }
 
   // compute normals
   if (params.smooth) {
-    log_progress("smooth shape", 0, 1);
     if (!shape.quadspos.empty()) {
       shape.normals = quads_normals(shape.quadspos, shape.positions);
       if (!shape.quadspos.empty()) shape.quadsnorm = shape.quadspos;
     }
-    log_progress("smooth shape", 1, 1);
   }
 
   // remove normals
   if (params.facet) {
-    log_progress("facet shape", 0, 1);
     shape.normals   = {};
     shape.quadsnorm = {};
-    log_progress("facet shape", 1, 1);
   }
 
   if (params.info) {
@@ -271,9 +253,7 @@ int run_fvconvert(const fvconvert_params& params) {
   }
 
   // save mesh
-  log_progress("save shape", 0, 1);
   if (!save_fvshape(params.output, shape, ioerror, true)) print_fatal(ioerror);
-  log_progress("save shape", 1, 1);
 
   // done
   return 0;
@@ -310,14 +290,12 @@ int run_view(const view_params& params) {
 
   // load mesh
   auto ioerror = ""s;
-  log_progress("load shape", 0, 1);
   if (path_filename(params.shape) == ".ypreset") {
     if (!make_shape_preset(shape, path_basename(params.shape), ioerror))
       print_fatal(ioerror);
   } else {
     if (!load_shape(params.shape, shape, ioerror, true)) print_fatal(ioerror);
   }
-  log_progress("load shape", 1, 1);
 
   // run view
   view_shape("yshape", params.shape, shape, params.addsky);
@@ -364,9 +342,7 @@ int run_heightfield(const heightfield_params& params) {
   // load mesh
   auto image   = color_image{};
   auto ioerror = ""s;
-  log_progress("load image", 0, 1);
   if (!load_image(params.image, image, ioerror)) print_fatal(ioerror);
-  log_progress("load image", 1, 1);
 
   // adjust height
   if (params.height != 1) {
@@ -387,7 +363,6 @@ int run_heightfield(const heightfield_params& params) {
   // transform
   if (params.translate != vec3f{0, 0, 0} || params.rotate != vec3f{0, 0, 0} ||
       params.scale != vec3f{1, 1, 1}) {
-    log_progress("transform shape", 0, 1);
     auto translation = translation_frame(params.translate);
     auto scaling     = scaling_frame(params.scale);
     auto rotation    = rotation_frame({1, 0, 0}, radians(params.rotate.x)) *
@@ -398,12 +373,9 @@ int run_heightfield(const heightfield_params& params) {
     auto nonuniform_scaling = min(params.scale) != max(params.scale);
     for (auto& n : shape.normals)
       n = transform_normal(xform, n, nonuniform_scaling);
-    log_progress("transform shape", 1, 1);
   }
   // save mesh
-  log_progress("save shape", 0, 1);
   if (!save_shape(params.output, shape, ioerror, true)) print_fatal(ioerror);
-  log_progress("save shape", 1, 1);
 
   // done
   return 0;
@@ -439,10 +411,6 @@ static scene_model make_shapescene(const scene_shape& ioshape_) {
     return lookat_frame(camera_dir * camera_dist, {0, 0, 0}, {0, 1, 0});
   };
 
-  // handle progress
-  auto progress = vec2i{0, 5};
-  log_progress("create scene", progress.x++, progress.y);
-
   // init scene
   auto scene = scene_model{};
 
@@ -455,7 +423,6 @@ static scene_model make_shapescene(const scene_shape& ioshape_) {
   // TODO(fabio): this should be a math function
 
   // camera
-  log_progress("create camera", progress.x++, progress.y);
   auto& camera  = scene.cameras.emplace_back();
   camera.frame  = camera_frame(0.050, 16.0f / 9.0f, 0.036);
   camera.lens   = 0.050;
@@ -464,24 +431,20 @@ static scene_model make_shapescene(const scene_shape& ioshape_) {
   camera.focus  = length(camera.frame.o - center(bbox));
 
   // material
-  log_progress("create material", progress.x++, progress.y);
   auto& shape_material     = scene.materials.emplace_back();
-  shape_material.type      = scene_material_type::plastic;
+  shape_material.type      = scene_material_type::glossy;
   shape_material.color     = {0.5, 1, 0.5};
   shape_material.roughness = 0.2;
 
   // shapes
-  log_progress("create shape", progress.x++, progress.y);
   scene.shapes.emplace_back(ioshape);
 
   // instances
-  log_progress("create instance", progress.x++, progress.y);
   auto& shape_instance    = scene.instances.emplace_back();
   shape_instance.shape    = 0;
   shape_instance.material = 0;
 
   // done
-  log_progress("create scene", progress.x++, progress.y);
   return scene;
 }
 
@@ -489,9 +452,7 @@ int run_glview(const glview_params& params) {
   // loading shape
   auto ioerror = ""s;
   auto shape   = scene_shape{};
-  log_progress("load shape", 0, 1);
   if (!load_shape(params.shape, shape, ioerror, true)) print_fatal(ioerror);
-  log_progress("load shape", 1, 1);
 
   // create scene
   auto scene = make_shapescene(shape);
@@ -538,7 +499,6 @@ int main(int argc, const char* argv[]) {
   // command line parameters
   auto params = app_params{};
   parse_cli(params, argc, argv);
-  set_log_level(true);
 
   // dispatch commands
   if (params.command == "convert") {

@@ -103,14 +103,14 @@ struct scene_texture {
 // Material type
 enum struct scene_material_type {
   // clang-format off
-  matte, plastic, metal, thinglass, glass, leaves, subsurface, volume, metallic
+  matte, glossy, metallic, transparent, refractive, subsurface, volume, gltfpbr
   // clang-format on
 };
 
 // Enum labels
 inline const auto scene_material_names = std::vector<std::string>{"matte",
-    "plastic", "metal", "thinglass", "glass", "leaves", "subsurface", "volume",
-    "metallic"};
+    "glossy", "metallic", "transparent", "refractive", "subsurface", "volume",
+    "gltfpbr"};
 
 // Material for surfaces, lines and triangles.
 // For surfaces, uses a microfacet model with thin sheet transmission.
@@ -118,7 +118,7 @@ inline const auto scene_material_names = std::vector<std::string>{"matte",
 // For the documentation on the values, please see the OBJ format.
 struct scene_material {
   // material
-  scene_material_type type         = scene_material_type::metallic;
+  scene_material_type type         = scene_material_type::matte;
   vec3f               emission     = {0, 0, 0};
   vec3f               color        = {0, 0, 0};
   float               roughness    = 0;
@@ -282,7 +282,7 @@ namespace yocto {
 
 // Material parameters evaluated at a point on the surface
 struct material_point {
-  scene_material_type type         = scene_material_type::metallic;
+  scene_material_type type         = scene_material_type::gltfpbr;
   vec3f               emission     = {0, 0, 0};
   vec3f               color        = {0, 0, 0};
   float               opacity      = 1;

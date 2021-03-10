@@ -220,7 +220,7 @@ material_point eval_material(const scene_model& scene,
   point.trdepth      = material.trdepth;
 
   // volume density
-  if (material.type == scene_material_type::glass ||
+  if (material.type == scene_material_type::refractive ||
       material.type == scene_material_type::volume ||
       material.type == scene_material_type::subsurface) {
     point.density = -log(clamp(point.color, 0.0001f, 1.0f)) / point.trdepth;
@@ -230,8 +230,8 @@ material_point eval_material(const scene_model& scene,
 
   // fix roughness
   if (point.type == scene_material_type::matte ||
-      point.type == scene_material_type::metallic ||
-      point.type == scene_material_type::plastic) {
+      point.type == scene_material_type::gltfpbr ||
+      point.type == scene_material_type::glossy) {
     point.roughness = clamp(point.roughness, min_roughness, 1.0f);
   }
 
@@ -240,32 +240,32 @@ material_point eval_material(const scene_model& scene,
 
 // check if a material is a delta or volumetric
 bool is_delta(const scene_material& material) {
-  return (material.type == scene_material_type::metal &&
+  return (material.type == scene_material_type::metallic &&
              material.roughness == 0) ||
-         (material.type == scene_material_type::glass &&
+         (material.type == scene_material_type::refractive &&
              material.roughness == 0) ||
-         (material.type == scene_material_type::thinglass &&
+         (material.type == scene_material_type::transparent &&
              material.roughness == 0) ||
          (material.type == scene_material_type::volume);
 }
 bool is_volumetric(const scene_material& material) {
-  return material.type == scene_material_type::glass ||
+  return material.type == scene_material_type::refractive ||
          material.type == scene_material_type::volume ||
          material.type == scene_material_type::subsurface;
 }
 
 // check if a brdf is a delta
 bool is_delta(const material_point& material) {
-  return (material.type == scene_material_type::metal &&
+  return (material.type == scene_material_type::metallic &&
              material.roughness == 0) ||
-         (material.type == scene_material_type::glass &&
+         (material.type == scene_material_type::refractive &&
              material.roughness == 0) ||
-         (material.type == scene_material_type::thinglass &&
+         (material.type == scene_material_type::transparent &&
              material.roughness == 0) ||
          (material.type == scene_material_type::volume);
 }
 bool has_volume(const material_point& material) {
-  return material.type == scene_material_type::glass ||
+  return material.type == scene_material_type::refractive ||
          material.type == scene_material_type::volume ||
          material.type == scene_material_type::subsurface;
 }
@@ -938,7 +938,7 @@ vec3f eval_shading_normal(const scene_model& scene,
     if (material.normal_tex != invalidid) {
       normal = eval_normalmap(scene, instance, element, uv);
     }
-    if (material.type == scene_material_type::glass) return normal;
+    if (material.type == scene_material_type::refractive) return normal;
     return dot(normal, outgoing) >= 0 ? normal : -normal;
   } else if (!shape.lines.empty()) {
     auto normal = eval_normal(scene, instance, element, uv);
@@ -1004,7 +1004,7 @@ material_point eval_material(const scene_model& scene,
   point.trdepth      = material.trdepth;
 
   // volume density
-  if (material.type == scene_material_type::glass ||
+  if (material.type == scene_material_type::refractive ||
       material.type == scene_material_type::volume ||
       material.type == scene_material_type::subsurface) {
     point.density = -log(clamp(point.color, 0.0001f, 1.0f)) / point.trdepth;
@@ -1014,8 +1014,8 @@ material_point eval_material(const scene_model& scene,
 
   // fix roughness
   if (point.type == scene_material_type::matte ||
-      point.type == scene_material_type::metallic ||
-      point.type == scene_material_type::plastic) {
+      point.type == scene_material_type::gltfpbr ||
+      point.type == scene_material_type::glossy) {
     point.roughness = clamp(point.roughness, min_roughness, 1.0f);
   }
 
@@ -1203,18 +1203,10 @@ void tesselate_subdiv(
 }
 
 void tesselate_subdivs(scene_model& scene) {
-  // handle progress
-  auto progress = vec2i{0, (int)scene.subdivs.size() + 1};
-  log_progress("tesselate subdivs", progress.x++, progress.y);
-
   // tesselate shapes
   for (auto& subdiv : scene.subdivs) {
-    log_progress("tesselate subdiv", progress.x++, progress.y);
     tesselate_subdiv(scene.shapes[subdiv.shape], subdiv, scene);
   }
-
-  // done
-  log_progress("tesselate subdivs", progress.x++, progress.y);
 }
 
 }  // namespace yocto

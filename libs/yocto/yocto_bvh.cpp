@@ -764,26 +764,18 @@ static void build_bvh(bvh_scene& bvh, const scene_model& scene,
 }
 
 bvh_shape make_bvh(const scene_shape& shape, bool highquality, bool embree) {
-  // handle progress
-  auto progress = vec2i{0, 1};
-
   // bvh
   auto bvh = bvh_shape{};
 
   // build scene bvh
-  log_progress("build bvh", progress.x++, progress.y);
   build_bvh(bvh, shape, highquality, embree);
 
   // handle progress
-  log_progress("build bvh", progress.x++, progress.y);
   return bvh;
 }
 
 bvh_scene make_bvh(
     const scene_model& scene, bool highquality, bool embree, bool noparallel) {
-  // handle progress
-  auto progress = vec2i{0, 1 + (int)scene.shapes.size()};
-
   // bvh
   auto bvh = bvh_scene{};
 
@@ -791,27 +783,19 @@ bvh_scene make_bvh(
   bvh.shapes.resize(scene.shapes.size());
   if (noparallel) {
     for (auto idx = (size_t)0; idx < scene.shapes.size(); idx++) {
-      log_progress("build shape bvh", progress.x++, progress.y);
       build_bvh(bvh.shapes[idx], scene.shapes[idx], highquality, embree);
     }
   } else {
     // mutex
-    auto mutex = std::mutex{};
     parallel_for(scene.shapes.size(), [&](size_t idx) {
-      {
-        auto lock = std::lock_guard{mutex};
-        log_progress("build shape bvh", progress.x++, progress.y);
-      }
       build_bvh(bvh.shapes[idx], scene.shapes[idx], highquality, embree);
     });
   }
 
   // build scene bvh
-  log_progress("build scene bvh", progress.x++, progress.y);
   build_bvh(bvh, scene, highquality, embree, noparallel);
 
   // handle progress
-  log_progress("build bvh", progress.x++, progress.y);
   return bvh;
 }
 
@@ -878,34 +862,19 @@ void refit_bvh(bvh_scene& bvh, const scene_model& scene,
 }
 
 void update_bvh(bvh_shape& bvh, const scene_shape& shape) {
-  // handle progress
-  auto progress = vec2i{0, 1};
-
   // handle instances
-  log_progress("update bvh", progress.x++, progress.y);
   refit_bvh(bvh, shape);
-
-  // handle progress
-  log_progress("update bvh", progress.x++, progress.y);
 }
 
 void update_bvh(bvh_scene& bvh, const scene_model& scene,
     const vector<int>& updated_instances, const vector<int>& updated_shapes) {
-  // handle progress
-  auto progress = vec2i{0, 1 + (int)updated_shapes.size()};
-
   // update shapes
   for (auto shape : updated_shapes) {
-    log_progress("update shape bvh", progress.x++, progress.y);
     refit_bvh(bvh.shapes[shape], scene.shapes[shape]);
   }
 
   // handle instances
-  log_progress("update scene bvh", progress.x++, progress.y);
   refit_bvh(bvh, scene, updated_instances);
-
-  // handle progress
-  log_progress("update bvh", progress.x++, progress.y);
 }
 
 }  // namespace yocto

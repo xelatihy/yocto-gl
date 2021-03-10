@@ -291,7 +291,7 @@ unfold_triangle unfold_face(const vector<vec3i>& triangles,
   result[mod3(j + 1)] = tr[k];
 
   // TODO(splinesurf): check which unfolding method is better.
-#if 1
+#if 0
   // old method
   auto r0             = length_squared(positions[v] - positions[a]);
   auto r1             = length_squared(positions[v] - positions[b]);
@@ -1181,6 +1181,56 @@ vector<mesh_point> compute_shortest_path(const dual_geodesic_solver& graph,
   for (auto idx = 0; idx < (int)points.size() - 1; idx++) {
     auto segment = compute_shortest_path(
         graph, triangles, positions, adjacencies, points[idx], points[idx + 1]);
+    path.insert(path.end(), segment.begin(), segment.end());
+  }
+  return path;
+}
+
+// Compute visualizations for the shortest path connecting a set of points.
+vector<mesh_point> visualize_shortest_path(const dual_geodesic_solver& graph,
+    const vector<vec3i>& triangles, const vector<vec3f>& positions,
+    const vector<vec3i>& adjacencies, const mesh_point& start,
+    const mesh_point& end, bool strip) {
+  if (strip) {
+    auto strip = vector<int>{};
+    if (start.face == end.face) {
+      strip.push_back(start.face);
+      strip.push_back(end.face);
+    } else {
+      strip = strip_on_dual_graph(
+          graph, triangles, positions, end.face, start.face);
+    }
+    auto path = vector<mesh_point>{};
+    for (auto face : strip) path.push_back({face, {0.5, 0.5}});
+    return path;
+  } else {
+    auto path = geodesic_path{};
+    if (start.face == end.face) {
+      path.start = start;
+      path.end   = end;
+      path.strip = {start.face};
+    } else {
+      auto strip = strip_on_dual_graph(
+          graph, triangles, positions, end.face, start.face);
+      path = shortest_path(
+          triangles, positions, adjacencies, start, end, strip);
+    }
+    // get mesh points
+    return convert_mesh_path(
+        triangles, adjacencies, path.strip, path.lerps, path.start, path.end)
+        .points;
+  }
+}
+
+vector<mesh_point> visualize_shortest_path(const dual_geodesic_solver& graph,
+    const vector<vec3i>& triangles, const vector<vec3f>& positions,
+    const vector<vec3i>& adjacencies, const vector<mesh_point>& points,
+    bool strip) {
+  // geodesic path
+  auto path = vector<mesh_point>{};
+  for (auto idx = 0; idx < (int)points.size() - 1; idx++) {
+    auto segment = visualize_shortest_path(graph, triangles, positions,
+        adjacencies, points[idx], points[idx + 1], strip);
     path.insert(path.end(), segment.begin(), segment.end());
   }
   return path;
@@ -2325,9 +2375,11 @@ vector<int> get_strip(const geodesic_solver& solver,
     const vector<vec3i>& triangles, const vector<vec3f>& positions,
     const vector<vec3i>& adjacencies, const vector<vector<int>>& v2t,
     const vector<vector<float>>& angles, const mesh_point& source,
-    const mesh_point& target) {
+    const mesh_point& target, vector<int>& parents) {
   if (target.face == source.face) return {target.face};
-  auto parents = compute_geodesic_parents(
+  if (find_in_vec(adjacencies[target.face], source.face) != -1)
+    return {target.face, source.face};
+  parents = compute_geodesic_parents(
       solver, triangles, positions, adjacencies, source, target);
   auto N     = (int)parents.size();
   auto first = 0, last = 0, prev_entry = 0, next_entry = 0;
@@ -2356,7 +2408,6 @@ vector<int> get_strip(const geodesic_solver& solver,
     prev_entry = get_entry(strip, solver, triangles, positions, adjacencies,
         v2t, angles, parents[0], target);
   }
-
   for (auto i = 0; i < N; ++i) {
     auto v = parents[i];
     if (i == N - 1) {
@@ -2373,15 +2424,12 @@ vector<int> get_strip(const geodesic_solver& solver,
       last        = (nei_is_dual) ? (next_entry - 1) / 2 : next_entry / 2;
       ccw         = set_ord((int)v2t[v].size(), first, last, nei_is_dual);
     }
-
     fill_strip(strip, v2t, v, first, last, nei_is_dual, ccw);
-
     if (nei_is_dual && i != N - 1) {
       auto tid = opposite_face(triangles, adjacencies, strip.back(), v);
       strip.push_back(tid);
     }
   }
-
   close_strip(strip, v2t, parents.back(), strip.back(), strip_to_point.back());
   if (strip.back() == strip_to_point.back()) strip_to_point.pop_back();
   reverse(strip_to_point.begin(), strip_to_point.end());
@@ -3771,7 +3819,7 @@ static std::tuple<int, vec2f, spline_polygon> find_leaf(
   auto k = 3;
   while (true) {
     auto curr_t     = (t.x + t.y) / 2;
-    int  curr_entry = (int)pow(2.0f, (float)k) * curr_t;
+    auto curr_entry = (int)(pow(2.0f, (float)k) * curr_t);
     curr_entry += 3;
     assert(curr_entry % 2 == 0);
     if (t0 < curr_t) {

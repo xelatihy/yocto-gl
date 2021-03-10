@@ -62,7 +62,9 @@ int run_convert(const convert_params& params) {
   // load scene
   auto scene   = scene_model{};
   auto ioerror = ""s;
+  print_progress_begin("load scene");
   if (!load_scene(params.scene, scene, ioerror)) print_fatal(ioerror);
+  print_progress_end();
 
   // copyright
   if (params.copyright != "") {
@@ -81,14 +83,20 @@ int run_convert(const convert_params& params) {
   }
 
   // tesselate if needed
-  tesselate_subdivs(scene);
+  if (!scene.subdivs.empty()) {
+    print_progress_begin("tesselate subdivs");
+    tesselate_subdivs(scene);
+    print_progress_end();
+  }
 
   // make a directory if needed
   if (!make_scene_directories(params.output, scene, ioerror))
     print_fatal(ioerror);
 
   // save scene
+  print_progress_begin("save scene");
   if (!save_scene(params.output, scene, ioerror)) print_fatal(ioerror);
+  print_progress_end();
 
   // done
   return 0;
@@ -113,7 +121,9 @@ int run_info(const info_params& params) {
   // load scene
   auto scene   = scene_model{};
   auto ioerror = ""s;
+  print_progress_begin("load scene");
   if (!load_scene(params.scene, scene, ioerror)) print_fatal(ioerror);
+  print_progress_end();
 
   // validate scene
   if (params.validate) {
@@ -174,7 +184,9 @@ int run_render(const render_params& params_) {
   // scene loading
   auto scene   = scene_model{};
   auto ioerror = string{};
+  print_progress_begin("load scene");
   if (!load_scene(params.scene, scene, ioerror)) return print_fatal(ioerror);
+  print_progress_end();
 
   // add sky
   if (params.addsky) add_sky(scene);
@@ -183,13 +195,21 @@ int run_render(const render_params& params_) {
   params.camera = find_camera(scene, params.camname);
 
   // tesselation
-  tesselate_subdivs(scene);
+  if (!scene.subdivs.empty()) {
+    print_progress_begin("tesselate subdivs");
+    tesselate_subdivs(scene);
+    print_progress_end();
+  }
 
   // build bvh
+  print_progress_begin("build bvh");
   auto bvh = make_bvh(scene, params);
+  print_progress_end();
 
   // init renderer
+  print_progress_begin("build lights");
   auto lights = make_lights(scene, params);
+  print_progress_end();
 
   // fix renderer type if no lights
   if (lights.lights.empty() && is_sampler_lit(params)) {
@@ -198,25 +218,27 @@ int run_render(const render_params& params_) {
   }
 
   // state
+  print_progress_begin("init state");
   auto state = make_state(scene, params);
   auto image = make_image(state.width, state.height, true);
+  print_progress_end();
 
   // render
-  trace_image(
-      image, state, scene, bvh, lights, params, [&](int sample, int samples) {
-        if (!params.savebatch) return;
-        auto ext = "-s" + std::to_string(sample + samples) +
-                   path_extension(params.output);
-        auto outfilename = replace_extension(params.output, ext);
-        auto ioerror     = ""s;
-        log_progress("save image", sample, samples);
-        if (!save_image(outfilename, image, ioerror)) print_fatal(ioerror);
-      });
+  print_progress_begin("render image", params.samples);
+  for (auto sample = 0; sample < params.samples; sample++) {
+    trace_samples(image, state, scene, bvh, lights, params);
+    if (params.savebatch) {
+      auto ext = "-s" + std::to_string(sample) + path_extension(params.output);
+      auto outfilename = replace_extension(params.output, ext);
+      auto ioerror     = ""s;
+      if (!save_image(outfilename, image, ioerror)) print_fatal(ioerror);
+    }
+    print_progress_next();
+  }
 
   // save image
-  log_progress("save image", 0, 1);
+  print_progress_begin("save image");
   if (!save_image(params.output, image, ioerror)) return print_fatal(ioerror);
-  log_progress("save image", 1, 1);
 
   // done
   return 0;
@@ -275,13 +297,19 @@ int run_view(const view_params& params_) {
   // load scene
   auto scene   = scene_model{};
   auto ioerror = ""s;
+  print_progress_begin("load scene");
   if (!load_scene(params.scene, scene, ioerror)) print_fatal(ioerror);
+  print_progress_end();
 
   // add sky
   if (params.addsky) add_sky(scene);
 
   // tesselation
-  tesselate_subdivs(scene);
+  if (!scene.subdivs.empty()) {
+    print_progress_begin("tesselate subdivs");
+    tesselate_subdivs(scene);
+    print_progress_end();
+  }
 
   // find camera
   params.camera = find_camera(scene, params.camname);
@@ -319,10 +347,16 @@ int run_glview(const glview_params& params) {
   // loading scene
   auto ioerror = ""s;
   auto scene   = scene_model{};
+  print_progress_begin("load scene");
   if (!load_scene(params.scene, scene, ioerror)) print_fatal(ioerror);
+  print_progress_end();
 
   // tesselation
-  tesselate_subdivs(scene);
+  if (!scene.subdivs.empty()) {
+    print_progress_begin("tesselate subdivs");
+    tesselate_subdivs(scene);
+    print_progress_end();
+  }
 
   // run viewer
   glview_scene(
@@ -370,7 +404,6 @@ int main(int argc, const char* argv[]) {
   // command line parameters
   auto params = app_params{};
   parse_cli(params, argc, argv);
-  set_log_level(true);
 
   // dispatch commands
   if (params.command == "convert") {

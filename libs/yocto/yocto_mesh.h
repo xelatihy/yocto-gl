@@ -198,7 +198,6 @@ vector<mesh_point> compute_shortest_path(const dual_geodesic_solver& graph,
     const vector<vec3i>& triangles, const vector<vec3f>& positions,
     const vector<vec3i>& adjacencies, const vector<mesh_point>& points);
 
-// TODO(fabio): implement wrapper
 // compute the straightest path given a surface point and tangent direction
 vector<mesh_point> compute_straightest_path(const vector<vec3i>& triangles,
     const vector<vec3f>& positions, const vector<vec3i>& adjacencies,
@@ -254,6 +253,16 @@ vector<mesh_point> compute_bezier_path(const dual_geodesic_solver& solver,
     const vector<vec3i>& triangles, const vector<vec3f>& positions,
     const vector<vec3i>&        adjacencies,
     const array<mesh_point, 4>& control_points, const spline_params& params);
+
+// Compute visualizations for the shortest path connecting a set of points.
+vector<mesh_point> visualize_shortest_path(const dual_geodesic_solver& graph,
+    const vector<vec3i>& triangles, const vector<vec3f>& positions,
+    const vector<vec3i>& adjacencies, const mesh_point& start,
+    const mesh_point& end, bool strip);
+vector<mesh_point> visualize_shortest_path(const dual_geodesic_solver& graph,
+    const vector<vec3i>& triangles, const vector<vec3f>& positions,
+    const vector<vec3i>& adjacencies, const vector<mesh_point>& points,
+    bool strip);
 
 }  // namespace yocto
 
