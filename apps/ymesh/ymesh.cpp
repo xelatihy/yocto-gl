@@ -410,14 +410,19 @@ static scene_model make_pathdscene(const scene_shape &ioshape) {
   points_material.type      = scene_material_type::glossy;
   points_material.color     = {1, 0.5, 0.5};
   points_material.roughness = 0.2;
-  auto &lines_material      = scene.materials.emplace_back();
-  lines_material.type       = scene_material_type::glossy;
-  lines_material.color      = {0.5, 0.5, 1};
-  lines_material.roughness  = 0.2;
+  auto &lines1_material     = scene.materials.emplace_back();
+  lines1_material.type      = scene_material_type::glossy;
+  lines1_material.color     = {0.5, 0.5, 1};
+  lines1_material.roughness = 0.2;
+  auto &lines2_material     = scene.materials.emplace_back();
+  lines2_material.type      = scene_material_type::glossy;
+  lines2_material.color     = {0.5, 1, 0.5};
+  lines2_material.roughness = 0.2;
 
   // shapes
   scene.shapes.emplace_back(ioshape);
   scene.shapes.emplace_back(points_to_spheres({{0, 0, 0}}));
+  scene.shapes.emplace_back(lines_to_cylinders({{0, 0, 0}, {0, 0, 0}}));
   scene.shapes.emplace_back(lines_to_cylinders({{0, 0, 0}, {0, 0, 0}}));
 
   // instances
@@ -427,9 +432,12 @@ static scene_model make_pathdscene(const scene_shape &ioshape) {
   auto &points_instance    = scene.instances.emplace_back();
   points_instance.shape    = 1;
   points_instance.material = 1;
-  auto &lines_instance     = scene.instances.emplace_back();
-  lines_instance.shape     = 2;
-  lines_instance.material  = 2;
+  auto &lines1_instance    = scene.instances.emplace_back();
+  lines1_instance.shape    = 2;
+  lines1_instance.material = 2;
+  auto &lines2_instance    = scene.instances.emplace_back();
+  lines2_instance.shape    = 3;
+  lines2_instance.material = 3;
 
   // done
   return scene;
@@ -470,12 +478,6 @@ int run_glpathd(const glpathd_params &params) {
   // bezier algos
   auto params1      = spline_params{};
   params1.algorithm = spline_algorithm::de_casteljau_uniform;
-  auto params2      = spline_params{};
-  params2.algorithm = spline_algorithm::de_casteljau_adaptive;
-  auto params3      = spline_params{};
-  params3.algorithm = spline_algorithm::lane_riesenfeld_uniform;
-  auto params4      = spline_params{};
-  params4.algorithm = spline_algorithm::lane_riesenfeld_adaptive;
 
   // run viewer
   glview_scene(
@@ -520,22 +522,31 @@ int run_glpathd(const glpathd_params &params) {
           set_texcoords(glscene.shapes.at(1), points.texcoords);
           set_quads(glscene.shapes.at(1), points.quads);
           glscene.shapes.at(1).point_size = 10;
-          auto path = bezier ? compute_bezier_path(solver, shape.triangles,
-                                   shape.positions, adjacencies,
-                                   (vector<mesh_point> &)stroke, params1)
-                             : compute_shortest_path(solver, shape.triangles,
-                                   shape.positions, adjacencies,
-                                   (vector<mesh_point> &)stroke);
-          auto ppositions = vector<vec3f>{};
-          for (auto [element, uv] : path) {
-            ppositions.push_back(eval_position(shape, element, uv));
+          auto path1      = compute_bezier_path(solver, shape.triangles,
+              shape.positions, adjacencies, (vector<mesh_point> &)stroke,
+              params1);
+          auto path2      = compute_shortest_path(solver, shape.triangles,
+              shape.positions, adjacencies, (vector<mesh_point> &)stroke);
+          auto positions1 = vector<vec3f>{};
+          for (auto [element, uv] : path1) {
+            positions1.push_back(eval_position(shape, element, uv));
           }
-          auto &lines = scene.shapes.at(2);
-          lines       = lines_to_cylinders(ppositions);
-          set_positions(glscene.shapes.at(2), lines.positions);
-          set_normals(glscene.shapes.at(2), lines.normals);
-          set_texcoords(glscene.shapes.at(2), lines.texcoords);
-          set_quads(glscene.shapes.at(2), lines.quads);
+          auto &lines1 = scene.shapes.at(2);
+          lines1       = lines_to_cylinders(positions1);
+          set_positions(glscene.shapes.at(2), lines1.positions);
+          set_normals(glscene.shapes.at(2), lines1.normals);
+          set_texcoords(glscene.shapes.at(2), lines1.texcoords);
+          set_quads(glscene.shapes.at(2), lines1.quads);
+          auto positions2 = vector<vec3f>{};
+          for (auto [element, uv] : path2) {
+            positions2.push_back(eval_position(shape, element, uv));
+          }
+          auto &lines2 = scene.shapes.at(3);
+          lines2       = lines_to_cylinders(positions2);
+          set_positions(glscene.shapes.at(3), lines2.positions);
+          set_normals(glscene.shapes.at(3), lines2.normals);
+          set_texcoords(glscene.shapes.at(3), lines2.texcoords);
+          set_quads(glscene.shapes.at(3), lines2.quads);
         }
       });
 
