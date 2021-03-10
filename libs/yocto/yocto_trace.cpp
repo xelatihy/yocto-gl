@@ -250,11 +250,6 @@ static ray3f sample_camera(const scene_camera& camera, const vec2i& ij,
     return eval_camera(camera, uv, sample_disk(luv));
   }
 }
-static ray3f sample_camera(const scene_camera& camera, int idx,
-    const vec2i& image_size, const vec2f& puv, const vec2f& luv, bool tent) {
-  return sample_camera(camera, {idx % image_size.x, idx / image_size.x},
-      image_size, puv, luv, tent);
-}
 
 // Sample lights wrt solid angle
 static vec3f sample_lights(const scene_model& scene, const trace_lights& lights,
@@ -834,10 +829,11 @@ bool is_sampler_lit(const trace_params& params) {
 // Trace a block of samples
 void trace_sample(color_image& image, trace_state& state,
     const scene_model& scene, const bvh_scene& bvh, const trace_lights& lights,
-    int idx, const trace_params& params) {
+    int i, int j, const trace_params& params) {
   auto& camera  = scene.cameras[params.camera];
   auto  sampler = get_trace_sampler_func(params);
-  auto  ray     = sample_camera(camera, idx, {state.width, state.height},
+  auto  idx     = state.width * j + i;
+  auto  ray     = sample_camera(camera, {i, j}, {state.width, state.height},
       rand2f(state.rngs[idx]), rand2f(state.rngs[idx]), params.tentfilter);
   auto  sample  = sampler(scene, bvh, lights, ray, state.rngs[idx], params);
   if (!isfinite(xyz(sample))) sample = {0, 0, 0, sample.w};
@@ -958,12 +954,14 @@ void trace_image(color_image& image, trace_state& state,
   for (auto sample = 0; sample < params.samples; sample++) {
     log_progress("trace image", sample, params.samples);
     if (params.noparallel) {
-      for (auto idx = 0; idx < state.width * state.height; idx++) {
-        trace_sample(image, state, scene, bvh, lights, idx, params);
+      for (auto j = 0; j < state.height; j++) {
+        for (auto i = 0; i < state.width; i++) {
+          trace_sample(image, state, scene, bvh, lights, i, j, params);
+        }
       }
     } else {
-      parallel_for_batch(state.width * state.height, state.width, [&](int idx) {
-        trace_sample(image, state, scene, bvh, lights, idx, params);
+      parallel_for(state.width, state.height, [&](int i, int j) {
+        trace_sample(image, state, scene, bvh, lights, i, j, params);
       });
     }
     if (image_cb) image_cb(sample + 1, params.samples);
@@ -987,8 +985,8 @@ void trace_start(color_image& image, trace_worker& worker, trace_state& state,
   pparams.samples = 1;
   auto pstate     = make_state(scene, pparams);
   auto preview    = make_image(pstate.width, pstate.height, true);
-  parallel_for_batch(pstate.width * pstate.height, pstate.width, [&](int idx) {
-    trace_sample(preview, pstate, scene, bvh, lights, idx, pparams);
+  parallel_for(pstate.width, pstate.height, [&](int i, int j) {
+    trace_sample(preview, pstate, scene, bvh, lights, i, j, pparams);
   });
   for (auto idx = 0; idx < state.width * state.height; idx++) {
     auto i = idx % image.width, j = idx / image.width;
@@ -1004,9 +1002,9 @@ void trace_start(color_image& image, trace_worker& worker, trace_state& state,
     for (auto sample = 0; sample < params.samples; sample++) {
       if (worker.stop) return;
       log_progress("trace image", sample, params.samples);
-      parallel_for_batch(state.width * state.height, state.width, [&](int idx) {
+      parallel_for(state.width * state.height, state.width, [&](int i, int j) {
         if (worker.stop) return;
-        trace_sample(image, state, scene, bvh, lights, idx, params);
+        trace_sample(image, state, scene, bvh, lights, i, j, params);
       });
       if (image_cb) image_cb(sample + 1, params.samples);
     }
