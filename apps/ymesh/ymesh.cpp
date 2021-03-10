@@ -418,6 +418,9 @@ static scene_model make_pathdscene(const scene_shape &ioshape) {
   auto &lines3_material    = scene.materials.emplace_back();
   lines3_material.type     = scene_material_type::matte;
   lines3_material.color    = {1, 0.5, 1};
+  auto &lines4_material    = scene.materials.emplace_back();
+  lines4_material.type     = scene_material_type::matte;
+  lines4_material.color    = {0.5, 0.5, 0.5};
   auto &edges_material     = scene.materials.emplace_back();
   edges_material.type      = scene_material_type::matte;
   edges_material.color     = {0, 0, 0};
@@ -425,6 +428,7 @@ static scene_model make_pathdscene(const scene_shape &ioshape) {
   // shapes
   scene.shapes.emplace_back(ioshape);
   scene.shapes.emplace_back(points_to_spheres({{0, 0, 0}}));
+  scene.shapes.emplace_back(polyline_to_cylinders({{0, 0, 0}, {0, 0, 0}}));
   scene.shapes.emplace_back(polyline_to_cylinders({{0, 0, 0}, {0, 0, 0}}));
   scene.shapes.emplace_back(polyline_to_cylinders({{0, 0, 0}, {0, 0, 0}}));
   scene.shapes.emplace_back(polyline_to_cylinders({{0, 0, 0}, {0, 0, 0}}));
@@ -457,9 +461,12 @@ static scene_model make_pathdscene(const scene_shape &ioshape) {
   auto &lines3_instance    = scene.instances.emplace_back();
   lines3_instance.shape    = 4;
   lines3_instance.material = 4;
+  auto &lines4_instance    = scene.instances.emplace_back();
+  lines4_instance.shape    = 5;
+  lines4_instance.material = 5;
   auto &edges_instance     = scene.instances.emplace_back();
-  edges_instance.shape     = 5;
-  edges_instance.material  = 5;
+  edges_instance.shape     = 6;
+  edges_instance.material  = 6;
 
   // done
   return scene;
@@ -566,6 +573,32 @@ int run_glpathd(const glpathd_params &params) {
           set_normals(glscene.shapes.at(3), lines2.normals);
           set_texcoords(glscene.shapes.at(3), lines2.texcoords);
           set_quads(glscene.shapes.at(3), lines2.quads);
+          // auto path3      = visualize_shortest_path(solver2, shape.triangles,
+          //     shape.positions, adjacencies, v2t, angles, point1, point2,
+          //     false);
+          // auto positions3 = vector<vec3f>{};
+          // for (auto [element, uv] : path3) {
+          //   positions3.push_back(eval_position(shape, element, uv));
+          // }
+          // auto &lines3 = scene.shapes.at(4);
+          // lines3       = polyline_to_cylinders(positions3, 4, 0.002);
+          // set_positions(glscene.shapes.at(4), lines3.positions);
+          // set_normals(glscene.shapes.at(4), lines3.normals);
+          // set_texcoords(glscene.shapes.at(4), lines3.texcoords);
+          // set_quads(glscene.shapes.at(4), lines3.quads);
+          // auto path4      = visualize_shortest_path(solver2, shape.triangles,
+          //     shape.positions, adjacencies, v2t, angles, point1, point2,
+          //     true);
+          // auto positions4 = vector<vec3f>{};
+          // for (auto [element, uv] : path2) {
+          //   positions4.push_back(eval_position(shape, element, uv));
+          // }
+          // auto &lines4 = scene.shapes.at(5);
+          // lines4       = polyline_to_cylinders(positions4, 4, 0.002);
+          // set_positions(glscene.shapes.at(5), lines4.positions);
+          // set_normals(glscene.shapes.at(5), lines4.normals);
+          // set_texcoords(glscene.shapes.at(5), lines4.texcoords);
+          // set_quads(glscene.shapes.at(5), lines4.quads);
         }
       });
 
