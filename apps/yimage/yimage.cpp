@@ -111,14 +111,11 @@ int run_view(const view_params& params) {
 int run_view(const view_params& params) {
   // load
   auto images = vector<color_image>(params.images.size());
-  log_progress("load image", 0, (int)images.size());
   for (auto idx = 0; idx < (int)params.images.size(); idx++) {
-    log_progress("load image", idx, (int)images.size());
     auto ioerror = string{};
     if (!load_image(params.images[idx], images[idx], ioerror))
       return print_fatal(ioerror);
   }
-  log_progress("load image", (int)images.size(), (int)images.size());
 
   // run viewer
   view_images("yimage", params.images, images);
@@ -160,9 +157,7 @@ int run_grade(const grade_params& params) {
   // load image
   auto image   = color_image{};
   auto ioerror = string{};
-  log_progress("load image", 0, 1);
   if (!load_image(params.image, image, ioerror)) return print_fatal(ioerror);
-  log_progress("load image", 1, 1);
 
   // run viewer
   colorgrade_image("yimage", params.image, image);
@@ -338,7 +333,6 @@ int main(int argc, const char* argv[]) {
   // command line parameters
   auto params = app_params{};
   parse_cli(params, argc, argv);
-  set_log_level(true);
 
   // dispatch commands
   if (params.command == "convert") {

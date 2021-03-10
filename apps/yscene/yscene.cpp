@@ -209,14 +209,11 @@ int run_render(const render_params& params_) {
                    path_extension(params.output);
         auto outfilename = replace_extension(params.output, ext);
         auto ioerror     = ""s;
-        log_progress("save image", sample, samples);
         if (!save_image(outfilename, image, ioerror)) print_fatal(ioerror);
       });
 
   // save image
-  log_progress("save image", 0, 1);
   if (!save_image(params.output, image, ioerror)) return print_fatal(ioerror);
-  log_progress("save image", 1, 1);
 
   // done
   return 0;
@@ -370,7 +367,6 @@ int main(int argc, const char* argv[]) {
   // command line parameters
   auto params = app_params{};
   parse_cli(params, argc, argv);
-  set_log_level(true);
 
   // dispatch commands
   if (params.command == "convert") {

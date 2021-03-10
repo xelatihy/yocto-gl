@@ -255,12 +255,10 @@ namespace yocto {
 void view_image(
     const string& title, const string& name, const color_image& image) {
   // display image
-  log_progress("tonemap image", 0, 1);
   auto  display  = make_image(image.width, image.height, false);
   float exposure = 0;
   bool  filmic   = false;
   tonemap_image_mt(display, image, exposure, filmic);
-  log_progress("tonemap image", 1, 1);
 
   // opengl image
   auto glimage  = ogl_image{};
@@ -286,10 +284,8 @@ void view_image(
   callbacks.widgets_cb = [&](gui_window* win, const gui_input& input) {
     draw_combobox(win, "name", selected, names);
     if (draw_tonemap_params(win, input, exposure, filmic)) {
-      log_progress("tonemap image", 0, 1);
       tonemap_image_mt(display, image, exposure, filmic);
       set_image(glimage, display, false, false);
-      log_progress("tonemap image", 0, 1);
     }
     draw_image_inspector(win, input, image, display, glparams);
   };
@@ -305,16 +301,13 @@ void view_image(
 void view_images(const string& title, const vector<string>& names,
     const vector<color_image>& images) {
   // display image
-  log_progress("tonemap image", 0, (int)images.size());
   auto displays  = vector<color_image>(images.size());
   auto exposures = vector<float>(images.size(), 0);
   auto filmics   = vector<bool>(images.size(), false);
   for (auto idx = 0; idx < (int)images.size(); idx++) {
-    log_progress("tonemap image", idx, (int)images.size());
     displays[idx] = make_image(images[idx].width, images[idx].height, false);
     tonemap_image_mt(displays[idx], images[idx], exposures[idx], filmics[idx]);
   }
-  log_progress("tonemap image", (int)images.size(), (int)images.size());
 
   // opengl image
   auto glimages  = vector<ogl_image>(images.size());
@@ -344,12 +337,10 @@ void view_images(const string& title, const vector<string>& names,
     draw_combobox(win, "name", selected, names);
     auto filmic = (bool)filmics[selected];  // vector of bool ...
     if (draw_tonemap_params(win, input, exposures[selected], filmic)) {
-      log_progress("tonemap image", 0, 1);
       filmics[selected] = filmic;
       tonemap_image_mt(displays[selected], images[selected],
           exposures[selected], filmics[selected]);
       set_image(glimages[selected], displays[selected], false, false);
-      log_progress("tonemap image", 1, 1);
     }
     draw_image_inspector(
         win, input, images[selected], displays[selected], glparamss[selected]);
@@ -369,10 +360,8 @@ void colorgrade_image(
   auto params = colorgrade_params{};
 
   // display image
-  log_progress("colorgrade image", 0, 1);
   auto display = make_image(image.width, image.height, false);
   colorgrade_image_mt(display, image, params);
-  log_progress("colorgrade image", 1, 1);
 
   // opengl image
   auto glimage  = ogl_image{};
@@ -418,10 +407,8 @@ void colorgrade_image(
           win, "highlights color", params.highlights_color);
       end_header(win);
       if (edited) {
-        log_progress("colorgrade image", 0, 1);
         colorgrade_image_mt(display, image, params);
         set_image(glimage, display, false, false);
-        log_progress("colorgrade image", 0, 1);
       }
     }
     draw_image_inspector(win, input, image, display, glparams);
@@ -439,7 +426,6 @@ void view_shape(const string& title, const string& name,
     const scene_shape& shape, bool addsky) {
   // initialize path tracer scene
   auto scene = scene_model{};
-  log_progress("create scene", 0, 1);
   scene.shape_names.emplace_back("shape");
   scene.shapes.emplace_back(shape);
   scene.material_names.emplace_back("material");
@@ -451,7 +437,6 @@ void view_shape(const string& title, const string& name,
   instance.material = 0;
   add_camera(scene);
   if (addsky) add_sky(scene);
-  log_progress("create scene", 0, 1);
 
   // run view
   view_scene(title, name, scene);
@@ -611,10 +596,8 @@ void view_scene(const string& title, const string& name, scene_model& scene,
       edited += draw_slider(win, "exposure", params.exposure, -5, 5);
       end_header(win);
       if (edited) {
-        log_progress("tonemap image", 0, 1);
         tonemap_image_mt(display, image, params.exposure);
         set_image(glimage, display, false, false);
-        log_progress("tonemap image", 0, 1);
       }
     }
     draw_image_inspector(win, input, image, display, glparams);
@@ -775,18 +758,11 @@ void view_scene(const string& title, const string& name, scene_model& scene,
 #endif
 
 static void init_glscene(shade_scene& glscene, const sceneio_scene& ioscene) {
-  // handle progress
-  auto progress = vec2i{
-      0, (int)ioscene.cameras.size() + (int)ioscene.materials.size() +
-             (int)ioscene.textures.size() + (int)ioscene.shapes.size() +
-             (int)ioscene.instances.size()};
-
   // init scene
   init_scene(glscene);
 
   // camera
   for (auto& iocamera : ioscene.cameras) {
-    log_progress("convert camera", progress.x++, progress.y);
     auto& camera = glscene.cameras.at(add_camera(glscene));
     set_frame(camera, iocamera.frame);
     set_lens(camera, iocamera.lens, iocamera.aspect, iocamera.film);
@@ -795,7 +771,6 @@ static void init_glscene(shade_scene& glscene, const sceneio_scene& ioscene) {
 
   // textures
   for (auto& iotexture : ioscene.textures) {
-    log_progress("convert texture", progress.x++, progress.y);
     auto  handle    = add_texture(glscene);
     auto& gltexture = glscene.textures[handle];
     if (!iotexture.pixelsf.empty()) {
@@ -809,7 +784,6 @@ static void init_glscene(shade_scene& glscene, const sceneio_scene& ioscene) {
 
   // material
   for (auto& iomaterial : ioscene.materials) {
-    log_progress("convert material", progress.x++, progress.y);
     auto  handle     = add_material(glscene);
     auto& glmaterial = glscene.materials[handle];
     set_emission(glmaterial, iomaterial.emission, iomaterial.emission_tex);
@@ -853,7 +827,6 @@ static void init_glscene(shade_scene& glscene, const sceneio_scene& ioscene) {
 
   // shapes
   for (auto& ioshape : ioscene.shapes) {
-    log_progress("convert shape", progress.x++, progress.y);
     add_shape(glscene, ioshape.points, ioshape.lines, ioshape.triangles,
         ioshape.quads, ioshape.positions, ioshape.normals, ioshape.texcoords,
         ioshape.colors);
@@ -861,7 +834,6 @@ static void init_glscene(shade_scene& glscene, const sceneio_scene& ioscene) {
 
   // shapes
   for (auto& ioinstance : ioscene.instances) {
-    log_progress("convert instance", progress.x++, progress.y);
     auto  handle     = add_instance(glscene);
     auto& glinstance = glscene.instances[handle];
     set_frame(glinstance, ioinstance.frame);
@@ -880,9 +852,6 @@ static void init_glscene(shade_scene& glscene, const sceneio_scene& ioscene) {
 
   // init environments
   init_environments(glscene);
-
-  // done
-  log_progress("convert done", progress.x++, progress.y);
 }
 
 using glview_scene_callback = std::function<void(gui_window* win,

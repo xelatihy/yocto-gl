@@ -1203,18 +1203,10 @@ void tesselate_subdiv(
 }
 
 void tesselate_subdivs(scene_model& scene) {
-  // handle progress
-  auto progress = vec2i{0, (int)scene.subdivs.size() + 1};
-  log_progress("tesselate subdivs", progress.x++, progress.y);
-
   // tesselate shapes
   for (auto& subdiv : scene.subdivs) {
-    log_progress("tesselate subdiv", progress.x++, progress.y);
     tesselate_subdiv(scene.shapes[subdiv.shape], subdiv, scene);
   }
-
-  // done
-  log_progress("tesselate subdivs", progress.x++, progress.y);
 }
 
 }  // namespace yocto

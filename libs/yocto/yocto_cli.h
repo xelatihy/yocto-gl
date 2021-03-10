@@ -90,12 +90,6 @@ inline string format_duration(int64_t duration);
 // Format a large integer number in human readable form
 inline string format_num(uint64_t num);
 
-// Logging using the above functions but controlled by a log level
-inline void log_info(const string& message);
-inline int  log_fatal(const string& message);
-inline void log_progress(const string& message, int current, int total);
-inline void set_log_level(bool verbose);
-
 }  // namespace yocto
 
 // -----------------------------------------------------------------------------
@@ -372,17 +366,6 @@ inline void print_progress(const string& message, int current, int total) {
   if (current == total) printf("\n");
   fflush(stdout);
 }
-
-// Logging using the above functions but controlled by a log level
-inline bool log_verbose = false;
-inline void log_info(const string& message) {
-  if (log_verbose) print_info(message);
-}
-inline int  log_fatal(const string& message) { return print_fatal(message); }
-inline void log_progress(const string& message, int current, int total) {
-  if (log_verbose) print_progress(message, current, total);
-}
-inline void set_log_level(bool verbose) { log_verbose = verbose; }
 
 }  // namespace yocto
 

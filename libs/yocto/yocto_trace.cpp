@@ -876,10 +876,6 @@ static trace_light& add_light(trace_lights& lights) {
 
 // Init trace lights
 trace_lights make_lights(const scene_model& scene, const trace_params& params) {
-  // handle progress
-  auto progress = vec2i{0, 1};
-  log_progress("build light", progress.x++, progress.y);
-
   auto lights = trace_lights{};
 
   for (auto handle = 0; handle < scene.instances.size(); handle++) {
@@ -888,7 +884,6 @@ trace_lights make_lights(const scene_model& scene, const trace_params& params) {
     if (material.emission == zero3f) continue;
     auto& shape = scene.shapes[instance.shape];
     if (shape.triangles.empty() && shape.quads.empty()) continue;
-    log_progress("build light", progress.x++, ++progress.y);
     auto& light       = add_light(lights);
     light.instance    = handle;
     light.environment = invalidid;
@@ -914,7 +909,6 @@ trace_lights make_lights(const scene_model& scene, const trace_params& params) {
   for (auto handle = 0; handle < scene.environments.size(); handle++) {
     auto& environment = scene.environments[handle];
     if (environment.emission == zero3f) continue;
-    log_progress("build light", progress.x++, ++progress.y);
     auto& light       = add_light(lights);
     light.instance    = invalidid;
     light.environment = handle;
@@ -932,7 +926,6 @@ trace_lights make_lights(const scene_model& scene, const trace_params& params) {
   }
 
   // handle progress
-  log_progress("build light", progress.x++, progress.y);
   return lights;
 }
 
@@ -952,7 +945,6 @@ void trace_image(color_image& image, trace_state& state,
     const scene_model& scene, const bvh_scene& bvh, const trace_lights& lights,
     const trace_params& params, const image_callback& image_cb) {
   for (auto sample = 0; sample < params.samples; sample++) {
-    log_progress("trace image", sample, params.samples);
     if (params.noparallel) {
       for (auto j = 0; j < state.height; j++) {
         for (auto i = 0; i < state.width; i++) {
@@ -966,8 +958,6 @@ void trace_image(color_image& image, trace_state& state,
     }
     if (image_cb) image_cb(sample + 1, params.samples);
   }
-
-  log_progress("trace image", params.samples, params.samples);
 }
 
 // [experimental] Asynchronous interface
@@ -979,7 +969,6 @@ void trace_start(color_image& image, trace_worker& worker, trace_state& state,
   worker.stop   = false;
 
   // render preview
-  log_progress("trace preview", 0, params.samples);
   auto pparams = params;
   pparams.resolution /= params.pratio;
   pparams.samples = 1;
@@ -1001,14 +990,12 @@ void trace_start(color_image& image, trace_worker& worker, trace_state& state,
       [=, &image, &worker, &state, &scene, &lights, &bvh]() {
         for (auto sample = 0; sample < params.samples; sample++) {
           if (worker.stop) return;
-          log_progress("trace image", sample, params.samples);
           parallel_for(state.width, state.height, [&](int i, int j) {
             if (worker.stop) return;
             trace_sample(image, state, scene, bvh, lights, i, j, params);
           });
           if (image_cb) image_cb(sample + 1, params.samples);
         }
-        log_progress("trace image", params.samples, params.samples);
         if (image_cb) image_cb(params.samples, params.samples);
       });
 }
