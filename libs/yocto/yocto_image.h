@@ -79,7 +79,6 @@ struct color_image {
 
 // image creation
 color_image make_image(int width, int height, bool linear);
-color_image make_image(int width, int height, bool linear, const vec4f* data);
 
 // equality
 bool operator==(const color_image& a, const color_image& b);

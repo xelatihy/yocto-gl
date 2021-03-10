@@ -60,10 +60,6 @@ color_image make_image(int width, int height, bool linear) {
   return color_image{
       width, height, linear, vector<vec4f>(width * height, vec4f{0, 0, 0, 0})};
 }
-color_image make_image(int width, int height, bool linear, const vec4f* data) {
-  return color_image{
-      width, height, linear, vector<vec4f>(data, data + width * height)};
-}
 
 // equality
 bool operator==(const color_image& a, const color_image& b) {
