@@ -139,7 +139,7 @@ static scene_model make_shapescene(const scene_shape &ioshape_) {
 
   // material
   auto &shape_material     = scene.materials.emplace_back();
-  shape_material.type      = scene_material_type::plastic;
+  shape_material.type      = scene_material_type::glossy;
   shape_material.color     = {0.5, 1, 0.5};
   shape_material.roughness = 0.2;
 
@@ -224,15 +224,15 @@ static scene_model make_pathscene(const scene_shape &ioshape_) {
 
   // material
   auto &shape_material      = scene.materials.emplace_back();
-  shape_material.type       = scene_material_type::plastic;
+  shape_material.type       = scene_material_type::glossy;
   shape_material.color      = {0.5, 1, 0.5};
   shape_material.roughness  = 0.2;
   auto &points_material     = scene.materials.emplace_back();
-  points_material.type      = scene_material_type::plastic;
+  points_material.type      = scene_material_type::glossy;
   points_material.color     = {1, 0.5, 0.5};
   points_material.roughness = 0.2;
   auto &lines_material      = scene.materials.emplace_back();
-  lines_material.type       = scene_material_type::plastic;
+  lines_material.type       = scene_material_type::glossy;
   lines_material.color      = {0.5, 0.5, 1};
   lines_material.roughness  = 0.2;
 
