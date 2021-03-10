@@ -96,13 +96,20 @@ void convert_image(color_image& result, const color_image& image) {
   if (image.linear == result.linear) {
     result.pixels = image.pixels;
   } else {
-    for (auto j = 0; j < image.height; j++) {
-      for (auto i = 0; i < image.width; i++) {
-        auto color     = get_pixel(image, i, j);
-        auto converted = image.linear ? rgb_to_srgb(color) : srgb_to_rgb(color);
-        set_pixel(result, i, j, converted);
-      }
+    for (auto idx = (size_t)0; idx < image.pixels.size(); idx++) {
+      result.pixels[idx] = image.linear ? rgb_to_srgb(image.pixels[idx])
+                                        : srgb_to_rgb(image.pixels[idx]);
     }
+  }
+}
+
+// Lookup pixel for evaluation
+static vec4f lookup_image(
+    const color_image& image, int i, int j, bool as_linear) {
+  if (as_linear && !image.linear) {
+    return srgb_to_rgb(image.pixels[j * image.width + i]);
+  } else {
+    return image.pixels[j * image.width + i];
   }
 }
 
@@ -131,25 +138,14 @@ vec4f eval_image(const color_image& image, const vec2f& uv, bool as_linear,
   auto ii = (i + 1) % size.x, jj = (j + 1) % size.y;
   auto u = s - i, v = t - j;
 
+  // handle interpolation
   if (no_interpolation) {
-    if (as_linear && !image.linear) {
-      return srgb_to_rgb(get_pixel(image, i, j));
-    } else {
-      return get_pixel(image, i, j);
-    }
+    return lookup_image(image, i, j, as_linear);
   } else {
-    // handle interpolation
-    if (as_linear && !image.linear) {
-      return srgb_to_rgb(get_pixel(image, i, j)) * (1 - u) * (1 - v) +
-             srgb_to_rgb(get_pixel(image, i, jj)) * (1 - u) * v +
-             srgb_to_rgb(get_pixel(image, ii, j)) * u * (1 - v) +
-             srgb_to_rgb(get_pixel(image, ii, jj)) * u * v;
-    } else {
-      return get_pixel(image, i, j) * (1 - u) * (1 - v) +
-             get_pixel(image, i, jj) * (1 - u) * v +
-             get_pixel(image, ii, j) * u * (1 - v) +
-             get_pixel(image, ii, jj) * u * v;
-    }
+    return lookup_image(image, i, j, as_linear) * (1 - u) * (1 - v) +
+           lookup_image(image, i, jj, as_linear) * (1 - u) * v +
+           lookup_image(image, ii, j, as_linear) * u * (1 - v) +
+           lookup_image(image, ii, jj, as_linear) * u * v;
   }
 }
 
@@ -171,21 +167,13 @@ void tonemap_image(color_image& result, const color_image& image,
     throw std::invalid_argument{"image should be the same size"};
   if (result.linear) throw std::invalid_argument{"ldr expected"};
   if (image.linear) {
-    for (auto j = 0; j < image.height; j++) {
-      for (auto i = 0; i < image.width; i++) {
-        auto hdr = get_pixel(image, i, j);
-        auto ldr = tonemap(hdr, exposure, filmic);
-        set_pixel(result, i, j, ldr);
-      }
+    for (auto idx = (size_t)0; idx < image.pixels.size(); idx++) {
+      result.pixels[idx] = tonemap(image.pixels[idx], exposure, filmic);
     }
   } else {
     auto scale = vec4f{pow(2, exposure), pow(2, exposure), pow(2, exposure), 1};
-    for (auto j = 0; j < image.height; j++) {
-      for (auto i = 0; i < image.width; i++) {
-        auto hdr = get_pixel(image, i, j);
-        auto ldr = hdr * scale;
-        set_pixel(result, i, j, ldr);
-      }
+    for (auto idx = (size_t)0; idx < image.pixels.size(); idx++) {
+      result.pixels[idx] = image.pixels[idx] * scale;
     }
   }
 }
@@ -198,17 +186,15 @@ void tonemap_image_mt(color_image& result, const color_image& image,
   if (image.linear) {
     parallel_for(image.width, image.height,
         [&result, &image, exposure, filmic](int i, int j) {
-          auto hdr = get_pixel(image, i, j);
-          auto ldr = tonemap(hdr, exposure, filmic);
-          set_pixel(result, i, j, ldr);
+          result.pixels[j * result.width + i] = tonemap(
+              image.pixels[j * image.width + i], exposure, filmic);
         });
   } else {
     auto scale = vec4f{pow(2, exposure), pow(2, exposure), pow(2, exposure), 1};
     parallel_for(
         image.width, image.height, [&result, &image, scale](int i, int j) {
-          auto hdr = get_pixel(image, i, j);
-          auto ldr = hdr * scale;
-          set_pixel(result, i, j, ldr);
+          result.pixels[j * result.width + i] =
+              image.pixels[j * image.width + i] * scale;
         });
   }
 }
@@ -250,16 +236,10 @@ color_image image_difference(
 
   // compute diff
   auto difference = make_image(image1.width, image1.height, image1.linear);
-  for (auto j = 0; j < image1.height; j++) {
-    for (auto i = 0; i < image1.width; i++) {
-      auto diff = abs(get_pixel(image1, i, j) - get_pixel(image2, i, j));
-      if (display) {
-        auto d = max(diff);
-        set_pixel(difference, i, j, {d, d, d, 1});
-      } else {
-        set_pixel(difference, i, j, diff);
-      }
-    }
+  for (auto idx = (size_t)0; idx < difference.pixels.size(); idx++) {
+    auto diff              = abs(image1.pixels[idx] - image2.pixels[idx]);
+    difference.pixels[idx] = display ? vec4f{max(diff), max(diff), max(diff), 1}
+                                     : diff;
   }
   return difference;
 }
@@ -267,7 +247,8 @@ color_image image_difference(
 void set_region(color_image& image, const color_image& region, int x, int y) {
   for (auto j = 0; j < region.height; j++) {
     for (auto i = 0; i < region.width; i++) {
-      set_pixel(image, i + x, j + y, get_pixel(region, i, j));
+      image.pixels[(j + y) * image.width + (i + x)] =
+          region.pixels[j * region.width + i];
     }
   }
 }
@@ -279,7 +260,8 @@ void get_region(color_image& region, const color_image& image, int x, int y,
   }
   for (auto j = 0; j < height; j++) {
     for (auto i = 0; i < width; i++) {
-      set_pixel(region, i, j, get_pixel(region, i + x, j + y));
+      region.pixels[j * region.width + i] =
+          image.pixels[(j + y) * image.width + (i + x)];
     }
   }
 }
@@ -324,12 +306,8 @@ vec4f colorgradeb(
 color_image colorgrade_image(
     const color_image& image, const colorgrade_params& params) {
   auto result = make_image(image.width, image.height, false);
-  for (auto j = 0; j < image.height; j++) {
-    for (auto i = 0; i < image.width; i++) {
-      auto color  = get_pixel(image, i, j);
-      auto graded = colorgrade(color, image.linear, params);
-      set_pixel(result, i, j, graded);
-    }
+  for (auto idx = (size_t)0; idx < image.pixels.size(); idx++) {
+    result.pixels[idx] = colorgrade(image.pixels[idx], image.linear, params);
   }
   return result;
 }
@@ -341,12 +319,8 @@ void colorgrade_image(color_image& result, const color_image& image,
   if (image.width != result.width || image.height != result.height)
     throw std::invalid_argument{"image should be the same size"};
   if (!!result.linear) throw std::invalid_argument{"non linear expected"};
-  for (auto j = 0; j < image.height; j++) {
-    for (auto i = 0; i < image.width; i++) {
-      auto color  = get_pixel(image, i, j);
-      auto graded = colorgrade(color, image.linear, params);
-      set_pixel(result, i, j, graded);
-    }
+  for (auto idx = (size_t)0; idx < image.pixels.size(); idx++) {
+    result.pixels[idx] = colorgrade(image.pixels[idx], image.linear, params);
   }
 }
 
@@ -359,19 +333,16 @@ void colorgrade_image_mt(color_image& result, const color_image& image,
   if (!!result.linear) throw std::invalid_argument{"non linear expected"};
   parallel_for(
       image.width, image.height, [&result, &image, &params](int i, int j) {
-        auto color  = get_pixel(image, i, j);
-        auto graded = colorgrade(color, image.linear, params);
-        set_pixel(result, i, j, graded);
+        result.pixels[j * result.width + i] = colorgrade(
+            image.pixels[j * result.width + i], image.linear, params);
       });
 }
 
 // determine white balance colors
 vec4f compute_white_balance(const color_image& image) {
   auto rgb = vec3f{0, 0, 0};
-  for (auto j = 0; image.height; j++) {
-    for (auto i = 0; image.width; i++) {
-      rgb += xyz(get_pixel(image, i, j));
-    }
+  for (auto idx = (size_t)0; image.pixels.size(); idx++) {
+    rgb += xyz(image.pixels[idx]);
   }
   if (rgb == vec3f{0, 0, 0}) return {0, 0, 0, 1};
   rgb /= max(rgb);
@@ -396,8 +367,9 @@ void bump_to_normal(
   for (int j = 0; j < height; j++) {
     for (int i = 0; i < width; i++) {
       auto i1 = (i + 1) % width, j1 = (j + 1) % height;
-      auto p00 = get_pixel(bumpmap, i, j), p10 = get_pixel(bumpmap, i1, j),
-           p01    = get_pixel(bumpmap, i, j1);
+      auto p00    = bumpmap.pixels[j * bumpmap.width + i],
+           p10    = bumpmap.pixels[j * bumpmap.width + i1],
+           p01    = bumpmap.pixels[j1 * bumpmap.width + i];
       auto g00    = (p00.x + p00.y + p00.z) / 3;
       auto g01    = (p01.x + p01.y + p01.z) / 3;
       auto g10    = (p10.x + p10.y + p10.z) / 3;

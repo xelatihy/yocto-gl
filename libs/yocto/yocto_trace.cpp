@@ -992,7 +992,8 @@ void trace_start(color_image& image, trace_worker& worker, trace_state& state,
     for (auto i = 0; i < state.width; i++) {
       auto pi = clamp(i / params.pratio, 0, preview.width - 1),
            pj = clamp(j / params.pratio, 0, preview.height - 1);
-      set_pixel(image, i, j, get_pixel(preview, pi, pj));
+      image.pixels[j * image.width + i] =
+          preview.pixels[pj * preview.width + pi];
     }
   }
   if (image_cb) image_cb(0, params.samples);

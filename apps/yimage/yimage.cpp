@@ -285,20 +285,17 @@ int run_setalpha(const setalpha_params& params) {
 
   // edit alpha
   auto out = make_image(image.width, image.height, image.linear);
-  for (auto j = 0; j < image.height; j++) {
-    for (auto i = 0; i < image.width; i++) {
-      auto calpha = get_pixel(alpha, i, j);
-      auto alpha_ = params.from_color ? mean(xyz(calpha))
-                    : params.from_black
-                        ? (mean(xyz(calpha)) > 0.01 ? 1.0f : 0.0f)
-                        : calpha.w;
-      if (params.to_color) {
-        set_pixel(out, i, j, {alpha_, alpha_, alpha_, alpha_});
-      } else {
-        auto color = get_pixel(image, i, j);
-        color.w    = alpha_;
-        set_pixel(out, i, j, color);
-      }
+  for (auto idx = (size_t)0; idx < image.pixels.size(); idx++) {
+    auto calpha = alpha.pixels[idx];
+    auto alpha_ = params.from_color   ? mean(xyz(calpha))
+                  : params.from_black ? (mean(xyz(calpha)) > 0.01 ? 1.0f : 0.0f)
+                                      : calpha.w;
+    if (params.to_color) {
+      out.pixels[idx] = {alpha_, alpha_, alpha_, alpha_};
+    } else {
+      auto color      = image.pixels[idx];
+      color.w         = alpha_;
+      out.pixels[idx] = color;
     }
   }
 
