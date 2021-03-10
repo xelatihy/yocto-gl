@@ -168,6 +168,9 @@ bvh_scene make_bvh(const scene_model& scene, const trace_params& params);
 void trace_samples(color_image& image, trace_state& state,
     const scene_model& scene, const bvh_scene& bvh, const trace_lights& lights,
     const trace_params& params);
+void trace_sample(color_image& image, trace_state& state,
+    const scene_model& scene, const bvh_scene& bvh, const trace_lights& lights,
+    int i, int j, const trace_params& params);
 
 // [experimental] Asynchronous state
 struct trace_worker {

@@ -498,7 +498,6 @@ void view_scene(const string& title, const string& name, scene_model& scene,
 
   // init state
   if (print) print_progress_begin("init state");
-  auto worker  = trace_worker{};
   auto state   = make_state(scene, params);
   auto image   = make_image(state.width, state.height, true);
   auto display = make_image(state.width, state.height, false);
@@ -525,28 +524,69 @@ void view_scene(const string& title, const string& name, scene_model& scene,
   auto render_update  = std::atomic<bool>{};
   auto render_current = std::atomic<int>{};
   auto render_mutex   = std::mutex{};
+  auto render_worker  = future<void>{};
+  auto render_stop    = atomic<bool>{};
   auto reset_display  = [&]() {
     // stop render
-    trace_stop(worker);
+    render_stop = true;
+    if (render_worker.valid()) render_worker.get();
 
     state   = make_state(scene, params);
     image   = make_image(state.width, state.height, true);
     display = make_image(state.width, state.height, false);
     render  = make_image(state.width, state.height, true);
 
-    // start render
-    trace_start(render, worker, state, scene, bvh, lights, params,
-        [&](int sample, int samples) {
-          // if (current > 0) return;
+    render_worker = {};
+    render_stop   = false;
+
+    // preview
+    auto pparams = params;
+    pparams.resolution /= params.pratio;
+    pparams.samples = 1;
+    auto pstate     = make_state(scene, pparams);
+    auto preview    = make_image(pstate.width, pstate.height, true);
+    trace_samples(preview, pstate, scene, bvh, lights, pparams);
+    for (auto idx = 0; idx < state.width * state.height; idx++) {
+      auto i = idx % render.width, j = idx / render.width;
+      auto pi            = clamp(i / params.pratio, 0, preview.width - 1),
+           pj            = clamp(j / params.pratio, 0, preview.height - 1);
+      render.pixels[idx] = preview.pixels[pj * preview.width + pi];
+    }
+    // if (current > 0) return;
+    {
+      auto lock      = std::lock_guard{render_mutex};
+      render_current = 0;
+      image          = render;
+      tonemap_image_mt(display, image, params.exposure);
+      render_update = true;
+    }
+
+    // start renderer
+    render_worker = std::async(std::launch::async, [&]() {
+      for (auto sample = 0; sample < params.samples; sample++) {
+        if (render_stop) return;
+        parallel_for(state.width, state.height, [&](int i, int j) {
+          if (render_stop) return;
+          trace_sample(render, state, scene, bvh, lights, i, j, params);
+        });
+        {
           auto lock      = std::lock_guard{render_mutex};
-          render_current = sample;
+          render_current = 0;
           image          = render;
           tonemap_image_mt(display, image, params.exposure);
           render_update = true;
-        });
+        }
+      }
+    });
   };
 
-  // start rendeting
+  // stop render
+  auto stop_render = [&]() {
+    render_stop = true;
+    if (render_worker.valid()) render_worker.get();
+  };
+
+  // start rendering
   reset_display();
 
   // prepare selection
@@ -594,7 +634,7 @@ void view_scene(const string& title, const string& name, scene_model& scene,
       // edited += draw_slider(win, "exposure", tparams.exposure, -5, 5);
       end_header(win);
       if (edited) {
-        trace_stop(worker);
+        stop_render();
         params = tparams;
         reset_display();
       }
@@ -609,8 +649,7 @@ void view_scene(const string& title, const string& name, scene_model& scene,
     }
     draw_image_inspector(win, input, image, display, glparams);
     if (edit) {
-      if (draw_scene_editor(
-              win, scene, selection, [&]() { trace_stop(worker); })) {
+      if (draw_scene_editor(win, scene, selection, [&]() { stop_render(); })) {
         reset_display();
       }
     }
@@ -618,7 +657,7 @@ void view_scene(const string& title, const string& name, scene_model& scene,
   callbacks.uiupdate_cb = [&](gui_window* win, const gui_input& input) {
     auto camera = scene.cameras[params.camera];
     if (uiupdate_camera_params(win, input, camera)) {
-      trace_stop(worker);
+      stop_render();
       scene.cameras[params.camera] = camera;
       reset_display();
     }
@@ -628,7 +667,7 @@ void view_scene(const string& title, const string& name, scene_model& scene,
   run_ui({1280 + 320, 720}, title, callbacks);
 
   // done
-  trace_stop(worker);
+  stop_render();
 }
 
 #else

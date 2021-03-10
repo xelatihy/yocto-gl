@@ -984,18 +984,18 @@ void trace_start(color_image& image, trace_worker& worker, trace_state& state,
   if (image_cb) image_cb(0, params.samples);
 
   // start renderer
-  worker.worker = std::async(std::launch::async,
-      [=, &image, &worker, &state, &scene, &lights, &bvh]() {
-        for (auto sample = 0; sample < params.samples; sample++) {
-          if (worker.stop) return;
-          parallel_for(state.width, state.height, [&](int i, int j) {
-            if (worker.stop) return;
-            trace_sample(image, state, scene, bvh, lights, i, j, params);
-          });
-          if (image_cb) image_cb(sample + 1, params.samples);
-        }
-        if (image_cb) image_cb(params.samples, params.samples);
-      });
+  // worker.worker = std::async(std::launch::async,
+  //     [=, &image, &worker, &state, &scene, &lights, &bvh]() {
+  //       for (auto sample = 0; sample < params.samples; sample++) {
+  //         if (worker.stop) return;
+  //         parallel_for(state.width, state.height, [&](int i, int j) {
+  //           if (worker.stop) return;
+  //           trace_sample(image, state, scene, bvh, lights, i, j, params);
+  //         });
+  //         if (image_cb) image_cb(sample + 1, params.samples);
+  //       }
+  //       if (image_cb) image_cb(params.samples, params.samples);
+  //     });
 }
 void trace_stop(trace_worker& worker) {
   worker.stop = true;
