@@ -439,17 +439,18 @@ void view_shape(const string& title, const string& name,
   if (addsky) add_sky(scene);
 
   // run view
-  view_scene(title, name, scene);
+  view_scene(title, name, scene, false);
 }
 
 // Open a window and show an scene via path tracing
-void view_scene(const string& title, const string& name, scene_model& scene) {
-  return view_scene(title, name, scene, "");
+void view_scene(
+    const string& title, const string& name, scene_model& scene, bool print) {
+  return view_scene(title, name, scene, "", print);
 }
 
 // Open a window and show an scene via path tracing
 void view_scene(const string& title, const string& name, scene_model& scene,
-    const string& camname) {
+    const string& camname, bool print) {
   // rendering params
   auto params     = trace_params{};
   auto has_lights = std::any_of(scene.instances.begin(), scene.instances.end(),
@@ -468,35 +469,41 @@ void view_scene(const string& title, const string& name, scene_model& scene,
   params.camera = find_camera(scene, camname);
 
   // run viewer
-  view_scene(title, name, scene, params);
+  view_scene(title, name, scene, params, print);
 }
 
 #if 1
 
 // Open a window and show an scene via path tracing
 void view_scene(const string& title, const string& name, scene_model& scene,
-    const trace_params& params_, bool edit) {
+    const trace_params& params_, bool print, bool edit) {
   // copy params and camera
   auto params = params_;
 
   // build bvh
+  if (print) print_progress_begin("build bvh");
   auto bvh = make_bvh(scene, params);
+  if (print) print_progress_end();
 
   // init renderer
+  if (print) print_progress_begin("init lights");
   auto lights = make_lights(scene, params);
+  if (print) print_progress_end();
 
   // fix renderer type if no lights
   if (lights.lights.empty() && is_sampler_lit(params)) {
-    print_info("no lights presents --- switching to eyelight");
+    if (print) print_info("no lights presents --- switching to eyelight");
     params.sampler = trace_sampler_type::eyelight;
   }
 
   // init state
+  if (print) print_progress_begin("init state");
   auto worker  = trace_worker{};
   auto state   = make_state(scene, params);
   auto image   = make_image(state.width, state.height, true);
   auto display = make_image(state.width, state.height, false);
   auto render  = make_image(state.width, state.height, true);
+  if (print) print_progress_end();
 
   // opengl image
   auto glimage  = ogl_image{};
