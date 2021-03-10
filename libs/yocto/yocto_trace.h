@@ -172,18 +172,6 @@ void trace_sample(color_image& image, trace_state& state,
     const scene_model& scene, const bvh_scene& bvh, const trace_lights& lights,
     int i, int j, const trace_params& params);
 
-// [experimental] Asynchronous state
-struct trace_worker {
-  future<void> worker = {};  // async
-  atomic<bool> stop   = {};  // async
-};
-
-// [experimental] Asynchronous interface
-void trace_start(color_image& image, trace_worker& worker, trace_state& state,
-    const scene_model& scene, const bvh_scene& bvh, const trace_lights& lights,
-    const trace_params& params, const image_callback& image_cb = {});
-void trace_stop(trace_worker& worker);
-
 }  // namespace yocto
 
 #endif

@@ -958,48 +958,4 @@ void trace_samples(color_image& image, trace_state& state,
   }
 }
 
-// [experimental] Asynchronous interface
-void trace_start(color_image& image, trace_worker& worker, trace_state& state,
-    const scene_model& scene, const bvh_scene& bvh, const trace_lights& lights,
-    const trace_params& params, const image_callback& image_cb) {
-  state         = make_state(scene, params);
-  worker.worker = {};
-  worker.stop   = false;
-
-  // render preview
-  auto pparams = params;
-  pparams.resolution /= params.pratio;
-  pparams.samples = 1;
-  auto pstate     = make_state(scene, pparams);
-  auto preview    = make_image(pstate.width, pstate.height, true);
-  parallel_for(pstate.width, pstate.height, [&](int i, int j) {
-    trace_sample(preview, pstate, scene, bvh, lights, i, j, pparams);
-  });
-  for (auto idx = 0; idx < state.width * state.height; idx++) {
-    auto i = idx % image.width, j = idx / image.width;
-    auto pi           = clamp(i / params.pratio, 0, preview.width - 1),
-         pj           = clamp(j / params.pratio, 0, preview.height - 1);
-    image.pixels[idx] = preview.pixels[pj * preview.width + pi];
-  }
-  if (image_cb) image_cb(0, params.samples);
-
-  // start renderer
-  // worker.worker = std::async(std::launch::async,
-  //     [=, &image, &worker, &state, &scene, &lights, &bvh]() {
-  //       for (auto sample = 0; sample < params.samples; sample++) {
-  //         if (worker.stop) return;
-  //         parallel_for(state.width, state.height, [&](int i, int j) {
-  //           if (worker.stop) return;
-  //           trace_sample(image, state, scene, bvh, lights, i, j, params);
-  //         });
-  //         if (image_cb) image_cb(sample + 1, params.samples);
-  //       }
-  //       if (image_cb) image_cb(params.samples, params.samples);
-  //     });
-}
-void trace_stop(trace_worker& worker) {
-  worker.stop = true;
-  if (worker.worker.valid()) worker.worker.get();
-}
-
 }  // namespace yocto
