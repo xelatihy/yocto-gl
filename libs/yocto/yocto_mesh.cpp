@@ -298,7 +298,7 @@ static int find_adjacent_triangle(
     y = sqrt(y);
     result += y * ey;
   } else {
-    assert(0);
+    //    assert(0);
   }
   return result;
 }
@@ -3530,11 +3530,7 @@ static void search_strip(vector<float>& field, vector<bool>& in_queue,
 
       // Update distance of neighbor.
       field[neighbor] = new_distance;
-#if YOCTO_BEZIER_PRECISE == 0
       if (update(node, neighbor, new_distance)) return;
-#else
-      update(node, neighbor, new_distance);
-#endif
     }
   }
 }
