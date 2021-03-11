@@ -387,7 +387,8 @@ vector<int> get_strip(const geodesic_solver& solver,
 // -----------------------------------------------------------------------------
 namespace yocto {
 
-using unfold_triangle = std::array<vec2f, 3>;
+using unfold_triangle  = std::array<vec2f, 3>;
+using unfold_triangled = std::array<vec2d, 3>;
 
 // TODO(fabio): o faccio il .h, o vanno via
 // Find barycentric coordinates of a point inside a triangle (a, b, c).

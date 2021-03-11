@@ -51,6 +51,7 @@
 // #define TESTS_MAY_FAIL
 
 #define YOCTO_BEZIER_PRECISE 1
+#define YOCTO_BEZIER_DOUBLE 1
 
 // -----------------------------------------------------------------------------
 // USING DIRECTIVES
@@ -107,6 +108,9 @@ static int mod3(int i) { return (i > 2) ? i - 3 : i; }
 static vec3f get_bary(const vec2f& uv) {
   return vec3f{1 - uv.x - uv.y, uv.x, uv.y};
 }
+
+static vec2d to_double(const vec2f& v) { return vec2d{v.x, v.y}; }
+static vec3d to_double(const vec3f& v) { return vec3d{v.x, v.y, v.z}; }
 
 }  // namespace yocto
 
@@ -275,6 +279,27 @@ static int find_adjacent_triangle(
   return result;
 }
 
+[[maybe_unused]] static vec2d unfold_point_double(const vec3d& pa,
+    const vec3d& pb, const vec3d& pv, const vec2d& ca, const vec2d& cb) {
+  // Unfold position of vertex v
+  auto ex = normalize(ca - cb);
+  auto ey = vec2d{-ex.y, ex.x};
+
+  auto result = vec2d{};
+
+  // Ortogonal projection
+  auto pv_pb = pv - pb;
+  auto x     = dot(pa - pb, pv_pb) / length(pa - pb);
+  result     = x * ex;
+
+  // Pythagorean theorem
+  auto y = dot(pv_pb, pv_pb) - x * x;
+  assert(y > 0);
+  y = sqrt(y);
+  result += y * ey;
+  return result;
+}
+
 // given the 2D coordinates in tanget space of a triangle, find the coordinates
 // of the k-th neighbor triangle
 unfold_triangle unfold_face(const vector<vec3i>& triangles,
@@ -314,10 +339,56 @@ unfold_triangle unfold_face(const vector<vec3i>& triangles,
   return result;
 }
 
+// given the 2D coordinates in tanget space of a triangle, find the coordinates
+// of the k-th neighbor triangle
+unfold_triangled unfold_face_double(const vector<vec3i>& triangles,
+    const vector<vec3f>& positions, const unfold_triangled& tr, int face,
+    int neighbor) {
+  auto k = find_adjacent_triangle(triangles, face, neighbor);
+  auto j = find_adjacent_triangle(triangles, neighbor, face);
+  assert(j != -1);
+  assert(k != -1);
+  auto v = triangles[neighbor][mod3(j + 2)];
+  auto a = triangles[face][k];
+  auto b = triangles[face][mod3(k + 1)];
+
+  auto result         = unfold_triangled{};
+  result[j]           = tr[mod3(k + 1)];
+  result[mod3(j + 1)] = tr[k];
+
+  // TODO(splinesurf): check which unfolding method is better.
+#if 0
+  // old method
+  auto r0             = length_squared(positions[v] - positions[a]);
+  auto r1             = length_squared(positions[v] - positions[b]);
+  result[mod3(j + 2)] = intersect_circles(
+      result[j], r1, result[mod3(j + 1)], r0);
+#else
+  // new method
+  auto pa    = to_double(positions[a]);
+  auto pb    = to_double(positions[b]);
+  auto pv    = to_double(positions[v]);
+  auto point = unfold_point_double(pa, pb, pv, result[mod3(j + 1)], result[j]);
+  result[mod3(j + 2)] = result[j] + point;
+#endif
+
+  assert(result[0] != result[1]);
+  assert(result[1] != result[2]);
+  assert(result[2] != result[0]);
+  return result;
+}
+
 static unfold_triangle unfold_face(const vector<vec3i>& triangles,
     const vector<vec3f>& positions, const vector<vec3i>& adjacencies,
     const unfold_triangle& tr, int face, int k) {
   return unfold_face(triangles, positions, tr, face, adjacencies[face][k]);
+}
+
+static unfold_triangled unfold_face_double(const vector<vec3i>& triangles,
+    const vector<vec3f>& positions, const vector<vec3i>& adjacencies,
+    const unfold_triangled& tr, int face, int k) {
+  return unfold_face_double(
+      triangles, positions, tr, face, adjacencies[face][k]);
 }
 
 // assign 2D coordinates to vertices of the triangle containing the mesh
@@ -328,12 +399,40 @@ unfold_triangle triangle_coordinates(const vector<vec3i>& triangles,
   auto tr     = triangles[point.face];
   result[0]   = {0, 0};
   result[1]   = {0, length(positions[tr.x] - positions[tr.y])};
-  auto rx     = length_squared(positions[tr.x] - positions[tr.z]);
-  auto ry     = length_squared(positions[tr.y] - positions[tr.z]);
+  // auto rx     = length_squared(positions[tr.x] - positions[tr.z]);
+  // auto ry     = length_squared(positions[tr.y] - positions[tr.z]);
   // result[2]   = intersect_circles(result[0], rx, result[1], ry);
   // result[2]   = intersect_circles(result[0], rx, result[1], ry);
   result[2] = result[0] + unfold_point(positions[tr.y], positions[tr.x],
                               positions[tr.z], result[1], result[0]);
+
+  // Transform coordinates such that point = (0, 0)
+  auto point_coords = interpolate_triangle(
+      result[0], result[1], result[2], point.uv);
+  result[0] -= point_coords;
+  result[1] -= point_coords;
+  result[2] -= point_coords;
+
+  assert(result[0] != result[1]);
+  assert(result[1] != result[2]);
+  assert(result[2] != result[0]);
+  return result;
+}
+
+unfold_triangled triangle_coordinates_double(const vector<vec3i>& triangles,
+    const vector<vec3f>& positions, const mesh_point& point) {
+  auto result = unfold_triangled{};
+  auto tr     = triangles[point.face];
+  result[0]   = {0, 0};
+  result[1]   = {
+      0, length(to_double(positions[tr.x]) - to_double(positions[tr.y]))};
+  // auto rx     = length_squared(positions[tr.x] - positions[tr.z]);
+  // auto ry     = length_squared(positions[tr.y] - positions[tr.z]);
+  // result[2]   = intersect_circles(result[0], rx, result[1], ry);
+  // result[2]   = intersect_circles(result[0], rx, result[1], ry);
+  result[2] = result[0] + unfold_point_double(to_double(positions[tr.y]),
+                              to_double(positions[tr.x]),
+                              to_double(positions[tr.z]), result[1], result[0]);
 
   // Transform coordinates such that point = (0, 0)
   auto point_coords = interpolate_triangle(
@@ -367,6 +466,25 @@ vector<unfold_triangle> unfold_strip(const vector<vec3i>& triangles,
   return coords;
 }
 
+// assign 2D coordinates to a strip of triangles. point start is at (0, 0)
+vector<unfold_triangled> unfold_strip_double(const vector<vec3i>& triangles,
+    const vector<vec3f>& positions, const vector<int>& strip,
+    const mesh_point& start) {
+  auto coords = vector<unfold_triangled>(strip.size());
+  assert(start.face == strip[0]);
+  coords[0] = triangle_coordinates_double(triangles, positions, start);
+
+  for (auto i = 1; i < strip.size(); i++) {
+    assert(coords[i - 1][0] != coords[i - 1][1]);
+    assert(coords[i - 1][1] != coords[i - 1][2]);
+    assert(coords[i - 1][2] != coords[i - 1][0]);
+    coords[i] = unfold_face_double(
+        triangles, positions, coords[i - 1], strip[i - 1], strip[i]);
+  }
+
+  return coords;
+}
+
 // Create sequence of 2D segments (portals) needed for funneling.
 static vector<pair<vec2f, vec2f>> make_funnel_portals(
     const vector<vec3i>& triangles, const vector<unfold_triangle>& coords,
@@ -384,11 +502,35 @@ static vector<pair<vec2f, vec2f>> make_funnel_portals(
   return portals;
 }
 
+// Create sequence of 2D segments (portals) needed for funneling.
+static vector<pair<vec2d, vec2d>> make_funnel_portals_double(
+    const vector<vec3i>& triangles, const vector<unfold_triangled>& coords,
+    const vector<int>& strip, const mesh_point& to) {
+  auto portals = vector<pair<vec2d, vec2d>>(strip.size());
+  for (auto i = 0; i < strip.size() - 1; i++) {
+    auto curr = strip[i], next = strip[i + 1];
+    auto k     = find_adjacent_triangle(triangles, curr, next);
+    auto tr    = coords[i];
+    portals[i] = {tr[k], tr[mod3(k + 1)]};
+  }
+  auto end = interpolate_triangle(
+      coords.back()[0], coords.back()[1], coords.back()[2], to.uv);
+  portals.back() = {end, end};
+  return portals;
+}
+
 static vector<pair<vec2f, vec2f>> unfold_funnel_portals(
     const vector<vec3i>& triangles, const vector<vec3f>& positions,
     const vector<int>& strip, const mesh_point& start, const mesh_point& end) {
   auto coords = unfold_strip(triangles, positions, strip, start);
   return make_funnel_portals(triangles, coords, strip, end);
+}
+
+static vector<pair<vec2d, vec2d>> unfold_funnel_portals_double(
+    const vector<vec3i>& triangles, const vector<vec3f>& positions,
+    const vector<int>& strip, const mesh_point& start, const mesh_point& end) {
+  auto coords = unfold_strip_double(triangles, positions, strip, start);
+  return make_funnel_portals_double(triangles, coords, strip, end);
 }
 
 vec2i get_edge(const vector<vec3i>& triangles, const vector<vec3f>& positions,
@@ -2574,7 +2716,7 @@ vec2f barycentric_coordinates(
   float d21   = dot(v2, v1);
   float denom = d00 * d11 - d01 * d01;
   return vec2f{d11 * d20 - d01 * d21, d00 * d21 - d01 * d20} / denom;
-};
+}
 
 // given a direction expressed in tangent space of the face start,
 // continue the path as straight as possible.
@@ -2663,6 +2805,20 @@ static float intersect_segments(const vec2f& start1, const vec2f& end1,
   return (a.x * d.y - a.y * d.x) / det;
 }
 
+static double intersect_segments_double(const vec2d& start1, const vec2d& end1,
+    const vec2d& start2, const vec2d& end2) {
+  if (end1 == start2) return 0;
+  if (end2 == start1) return 1;
+  if (start2 == start1) return 0;
+  if (end2 == end1) return 1;
+  auto a   = end1 - start1;    // direction of line a
+  auto b   = start2 - end2;    // direction of line b, reversed
+  auto d   = start2 - start1;  // right-hand side
+  auto det = a.x * b.y - a.y * b.x;
+  assert(det);
+  return (a.x * d.y - a.y * d.x) / det;
+}
+
 bool path_check_strip(
     const vector<vec3i>& adjacencies, const vector<int>& strip) {
   auto faces = unordered_set<int>{};
@@ -2681,7 +2837,33 @@ struct funnel_point {
   vec2f pos  = {0, 0};
 };
 
+struct funnel_pointd {
+  int   face = 0;
+  vec2d pos  = {0, 0};
+};
+
 static int max_curvature_point(const vector<funnel_point>& path) {
+  // Among vertices around which the path curves, find the vertex
+  // with maximum angle. We are going to fix that vertex. Actually, max_index is
+  // the index of the first face containing that vertex.
+  auto max_index = -1;
+  auto max_angle = 0.0f;
+  for (auto i = 1; i < path.size() - 1; ++i) {
+    auto pos   = path[i].pos;
+    auto prev  = path[i - 1].pos;
+    auto next  = path[i + 1].pos;
+    auto v0    = normalize(pos - prev);
+    auto v1    = normalize(next - pos);
+    auto angle = 1 - dot(v0, v1);
+    if (angle > max_angle) {
+      max_index = path[i].face;
+      max_angle = angle;
+    }
+  }
+  return max_index;
+}
+
+static int max_curvature_point_double(const vector<funnel_pointd>& path) {
   // Among vertices around which the path curves, find the vertex
   // with maximum angle. We are going to fix that vertex. Actually, max_index is
   // the index of the first face containing that vertex.
@@ -2809,6 +2991,113 @@ static vector<float> funnel(
   return lerps;
 }
 
+static vector<float> funnel_double(
+    const vector<pair<vec2d, vec2d>>& portals, int& max_index) {
+  // Find straight path.
+  auto start       = vec2d{0, 0};
+  auto apex_index  = 0;
+  auto left_index  = 0;
+  auto right_index = 0;
+  auto apex        = start;
+  auto left_bound  = portals[0].first;
+  auto right_bound = portals[0].second;
+
+  // Add start point.
+  auto points = vector<funnel_pointd>{{apex_index, apex}};
+  points.reserve(portals.size());
+
+  // @Speed: is this slower than an inlined function?
+  auto area = [](const vec2d a, const vec2d b, const vec2d c) {
+    return cross(b - a, c - a);
+  };
+
+  for (auto i = 1; i < portals.size(); ++i) {
+    auto left = portals[i].first, right = portals[i].second;
+    // Update right vertex.
+    if (area(apex, right_bound, right) <= 0) {
+      if (apex == right_bound || area(apex, left_bound, right) > 0) {
+        // Tighten the funnel.
+        right_bound = right;
+        right_index = i;
+      } else {
+        // Right over left, insert left to path and restart scan from
+        // portal left point.
+        if (left_bound != apex) {
+          points.push_back({left_index, left_bound});
+          // Make current left the new apex.
+          apex       = left_bound;
+          apex_index = left_index;
+          // Reset portal
+          left_bound  = apex;
+          right_bound = apex;
+          left_index  = apex_index;
+          right_index = apex_index;
+          // Restart scan
+          i = apex_index;
+          continue;
+        }
+      }
+    }
+
+    // Update left vertex.
+    if (area(apex, left_bound, left) >= 0) {
+      if (apex == left_bound || area(apex, right_bound, left) < 0) {
+        // Tighten the funnel.
+        left_bound = left;
+        left_index = i;
+      } else {
+        if (right_bound != apex) {
+          points.push_back({right_index, right_bound});
+          // Make current right the new apex.
+          apex       = right_bound;
+          apex_index = right_index;
+          // Reset portal
+          left_bound  = apex;
+          right_bound = apex;
+          left_index  = apex_index;
+          right_index = apex_index;
+          // Restart scan
+          i = apex_index;
+          continue;
+        }
+      }
+    }
+  }
+
+  // This happens when we got an apex on the last edge of the strip
+  if (points.back().pos != portals.back().first) {
+    points.push_back({(int)portals.size() - 1, portals.back().first});
+  }
+  assert(points.back().pos == portals.back().first);
+  assert(points.back().pos == portals.back().second);
+
+  auto lerps = vector<float>();
+  lerps.reserve(portals.size());
+  for (auto i = 0; i < points.size() - 1; i++) {
+    auto a = points[i].pos;
+    auto b = points[i + 1].pos;
+    for (auto k = points[i].face; k < points[i + 1].face; k++) {
+      auto portal = portals[k];
+      auto s = intersect_segments_double(a, b, portal.first, portal.second);
+      assert(s >= -0.01f && s <= 1.01f);
+      auto p = clamp(s, 0.0, 1.0);
+      lerps.push_back(p);
+    }
+  }
+
+  auto index = 1;
+  for (auto i = 1; i < portals.size(); ++i) {
+    if ((portals[i].first == points[index].pos) ||
+        (portals[i].second == points[index].pos)) {
+      points[index].face = i;
+      index += 1;
+    }
+  }
+  max_index = max_curvature_point_double(points);
+  assert(lerps.size() == portals.size() - 1);
+  return lerps;
+}
+
 bool check_point(const mesh_point& point) {
   assert(point.face != -1);
   assert(point.uv.x >= 0);
@@ -2885,9 +3174,15 @@ static vector<int> fix_strip(const vector<vec3i>& adjacencies,
 static void straighten_path(geodesic_path& path, const vector<vec3i>& triangles,
     const vector<vec3f>& positions, const vector<vec3i>& adjacencies) {
   auto index = -1, vertex = -1;
+#if YOCTO_BEZIER_DOUBLE == 0
   auto init_portals = unfold_funnel_portals(
       triangles, positions, path.strip, path.start, path.end);
   path.lerps = funnel(init_portals, index);
+#else
+  auto init_portals = unfold_funnel_portals_double(
+      triangles, positions, path.strip, path.start, path.end);
+  path.lerps          = funnel_double(init_portals, index);
+#endif
 
 // while(true) { this may never break...
 #if YOCTO_BEZIER_PRECISE == 0
@@ -2914,9 +3209,15 @@ static void straighten_path(geodesic_path& path, const vector<vec3i>& triangles,
     path.strip = fix_strip(adjacencies, path.strip, index,
         find_in_vec(triangles[face], vertex), flank_left);
 
+#if YOCTO_BEZIER_DOUBLE == 0
     auto portals = unfold_funnel_portals(
         triangles, positions, path.strip, path.start, path.end);
     path.lerps = funnel(portals, index);
+#else
+    auto portals = unfold_funnel_portals_double(
+        triangles, positions, path.strip, path.start, path.end);
+    path.lerps = funnel_double(portals, index);
+#endif
   }
 }
 
@@ -3566,17 +3867,17 @@ static spline_polygon from_spline_to_bezier(const dual_geodesic_solver& solver,
   for (auto i = 1; i < 6; ++i) {
     deltas[i] = interval[i] - interval[i - 1];
   }
-  auto a = (yocto::pow(deltas[2], 2)) /
+  auto a = (pow(deltas[2], 2.0f)) /
            ((deltas[0] + deltas[1] + deltas[2]) * (deltas[1] + deltas[2]));
-  auto b = (yocto::pow(deltas[2], 2)) /
+  auto b = (pow(deltas[2], 2.0f)) /
            ((deltas[1] + deltas[2] + deltas[3]) * (deltas[1] + deltas[2]));
-  auto c = (yocto::pow(deltas[2], 2)) /
+  auto c = (pow(deltas[2], 2.0f)) /
            ((deltas[1] + deltas[2] + deltas[3]) * (deltas[2] + deltas[3]));
-  auto d = (yocto::pow(deltas[2], 2)) /
+  auto d = (pow(deltas[2], 2.0f)) /
            ((deltas[2] + deltas[3] + deltas[4]) * (deltas[3] + deltas[4]));
   auto e = (deltas[1] * deltas[2]) /
            ((deltas[1] + deltas[2] + deltas[3]) * (deltas[1] + deltas[2]));
-  auto f = (yocto::pow(deltas[1], 2)) /
+  auto f = (pow(deltas[1], 2.0f)) /
            ((deltas[1] + deltas[2] + deltas[3]) * (deltas[1] + deltas[2]));
   if (a != 0 && 1 - a - f != 0 && f != 0)
     spline_polygon[0] = geodesic_lerp(solver, triangles, positions, adjacencies,
@@ -3980,14 +4281,14 @@ static mesh_point lane_riesenfeld_point(const dual_geodesic_solver& solver,
       solver, triangles, positions, adjacencies, polygon, t0, treshold);
   float         step  = 1 / pow((float)2, (float)k);
   vector<float> knots = {
-      yocto::max(t.x - 3 * step, 0.f),
-      yocto::max(t.x - 2 * step, 0.f),
-      yocto::max(t.x - step, 0.f),
+      max(t.x - 3 * step, 0.f),
+      max(t.x - 2 * step, 0.f),
+      max(t.x - step, 0.f),
       t.x,
       t.y,
-      yocto::min(t.y + step, 1.f),
-      yocto::min(t.y + 2 * step, 1.f),
-      yocto::min(t.y + 3 * step, 1.f),
+      min(t.y + step, 1.f),
+      min(t.y + 2 * step, 1.f),
+      min(t.y + 3 * step, 1.f),
   };
 
   return de_boor_point(
@@ -4095,11 +4396,10 @@ static std::array<spline_polygon, 2> lane_riesenfeld_insert(
     auto treshold         = precision;
     auto [depth, t, leaf] = find_leaf(
         solver, triangles, positions, adjacencies, polygon, t0, treshold);
-    float         step           = 1 / pow((float)2, (float)depth);
-    vector<float> knots          = {yocto::max(t.x - 3 * step, 0.f),
-        yocto::max(t.x - 2 * step, 0.f), yocto::max(t.x - step, 0.f), t.x, t.y,
-        yocto::min(t.y + step, 1.f), yocto::min(t.y + 2 * step, 1.f),
-        yocto::min(t.y + 3 * step, 1.f)};
+    float         step  = 1 / pow((float)2, (float)depth);
+    vector<float> knots = {max(t.x - 3 * step, 0.f), max(t.x - 2 * step, 0.f),
+        max(t.x - step, 0.f), t.x, t.y, min(t.y + step, 1.f),
+        min(t.y + 2 * step, 1.f), min(t.y + 3 * step, 1.f)};
     auto          spline_polygon = from_spline_to_bezier(
         solver, triangles, positions, adjacencies, knots, leaf);
     auto t_rel         = (t0 - t.x) / (t.y - t.x);
