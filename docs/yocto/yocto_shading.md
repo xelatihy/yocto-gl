@@ -135,22 +135,21 @@ Yocto/Shading supports the following materials:
 auto normal   = vec3f{...};            // shading normal
 auto incoming = vec3f{...}             // incoming direction
 auto outgoing = vec3f{...};            // outgoing direction
-auto rs = float{0.1};                  // roughness
+auto color = vec3f{1, 0.5, 0.5};       // surface color
+auto roughness = float{0.1};           // roughness
 auto ior = float{1.5};                 // dielectric ior
-auto [eta, etak] = conductor_eta("Au");// conductor complex ior
 // evaluate smooth lobes
-auto b1 = eval_diffuse_reflection(normal, outgoing, incoming);
-auto b2 = eval_diffuse_transmission(normal, outgoing, incoming);
-auto b3 = eval_microfacet_reflection(ior, rs, normal, outgoing, incoming);
-auto b4 = eval_microfacet_reflection(eta,etak, rs, normal, outgoing, incoming);
-auto b5 = eval_microfacet_transmission(ior, rs, normal, outgoing,  incoming);
-auto b6 = eval_microfacet_refraction(ior, rs, normal, outgoing, incoming);
+auto b1 = eval_matte(color, normal, outgoing, incoming);
+auto b3 = eval_glossy(color, ior, roughness, normal, outgoing, incoming);
+auto b4 = eval_metallic(color, roughness, normal, outgoing, incoming);
+auto b5 = eval_transparent(color, ior, roughness, normal, outgoing,  incoming);
+auto b6 = eval_refractive(color, ior, roughness, normal, outgoing, incoming);
 // sample smooth lobes
-auto incoming1 = sample_diffuse_reflection(normal, outgoing, rand2f(rng));
-auto pdf1 = sample_diffuse_reflection_pdf(normal, outgoing, incoming)
+auto incoming1 = sample_matte(color, normal, outgoing, rand2f(rng));
+auto pdf1 = sample_matte_pdf(color, normal, outgoing, incoming)
 // eval and sample delta lobes
-auto incoming2 = sample_delta_reflection(ior, normal, outgoing);
-auto b7 = eval_delta_reflection(ior, normal, outgoing, incoming);
+auto incoming2 = sample_metallic(color, normal, outgoing);
+auto b7 = eval_metallic(color, normal, outgoing, incoming);
 ```
 
 ## Design considerations
