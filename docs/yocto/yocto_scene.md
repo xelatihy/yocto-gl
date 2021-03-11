@@ -112,7 +112,7 @@ Several functions are defined to evaluate the geometric and material
 properties of points on shapes and instances, indicated by the shape element id
 and, when needed, the shape element barycentric coordinates. The difference
 between the shape and instance methods is that the former returns quantities
-on object space, while the latter in world space.
+in object space, while the latter in world space.
 Use `eval_position(...)` to evaluate the point position,
 `eval_normal(...)` to evaluate the interpolate point normal,
 `eval_texcoord(...)` to evaluate the point texture coordinates,

@@ -474,3 +474,28 @@ auto enva = eval_environment(scene, dir);        // eval all environments
 auto environment = scene->environments.front();  // get first environment
 auto envi = eval_environment(environment, dir);  // eval environment
 ```
+
+## Text and binary serialization
+
+Text files are loaded with `load_text(filename, text, error)` and saved with
+`save_text(filename, text, error)`.
+Binary files are loaded with `load_binary(filename, binary, error)` and saved
+with `save_binary(filename, binary, error)`.
+Both loading and saving take a filename, a text or binary buffer, and return
+whether or not the file was loaded successfully.
+In the case of an error, the IO functions set the `error` string with a
+message suitable for displaying to a user.
+
+```cpp
+auto error = string{};                  // error buffer
+auto text  = string{};                  // text buffer
+if(!load_text(filename, text, error))   // load a text file
+  print_error(error);                   // check and print error
+if(!save_text(filename, text, error))   // save a text file
+  print_error(error);                   // check and print error
+auto data  = vector<byte>{};            // data buffer
+if(!load_binary(filename, data, error)) // load a binary file
+  print_error(error);                   // check and print error
+if(!save_binary(filename, data, error)) // save a binary file
+  print_error(error);                   // check and print error
+```
