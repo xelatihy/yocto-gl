@@ -207,23 +207,19 @@ vec2f intersect_circles(const vec2f& c2, float R2, const vec2f& c1, float R1) {
   return result / 2;
 }
 
-[[maybe_unused]] static vec2f intersect_circles_double(
-    float c2x, float c2y, float R2, double c1x, double c1y, float R1) {
-  auto R = (c2x - c1x) * (c2x - c1x) + (c2y - c1y) * (c2y - c1y);
+[[maybe_unused]] vec2d intersect_circles_double(
+    const vec2d& c2, double R2, const vec2d& c1, double R1) {
+  auto R = length_squared(c2 - c1);
   assert(R > 0);
-  auto invR    = 1 / R;
-  auto resultx = (c1x + c2x);
-  auto resulty = (c1y + c2y);
-  resultx += (c2x - c1x) * ((R1 - R2) * invR);
-  resulty += (c2y - c1y) * ((R1 - R2) * invR);
-
+  auto invR   = 1 / R;
+  auto result = (c1 + c2);
+  result += (c2 - c1) * ((R1 - R2) * invR);
   auto A = 2 * (R1 + R2) * invR;
   auto B = (R1 - R2) * invR;
   auto s = A - B * B - 1;
   assert(s >= 0);
-  resultx += (c2y - c1y) * std::sqrt(s);
-  resulty += (c1x - c2x) * std::sqrt(s);
-  return vec2f{(float)(resultx / 2), (float)(resulty / 2)};
+  result += vec2d{c2.y - c1.y, c1.x - c2.x} * sqrt(s);
+  return result / 2;
 }
 
 unfold_triangle init_flat_triangle(
@@ -382,6 +378,11 @@ unfold_triangled unfold_face_double(const vector<vec3i>& triangles,
   assert(result[0] != result[1]);
   assert(result[1] != result[2]);
   assert(result[2] != result[0]);
+
+  if (!isfinite(result[0])) printf("NaN!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!\n");
+  if (!isfinite(result[1])) printf("NaN!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!\n");
+  if (!isfinite(result[2])) printf("NaN!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!\n");
+
   return result;
 }
 
@@ -1356,6 +1357,9 @@ vector<mesh_point> compute_shortest_path(const dual_geodesic_solver& graph,
         graph, triangles, positions, end.face, start.face);
     path = shortest_path(triangles, positions, adjacencies, start, end, strip);
   }
+  for (auto& value : path.lerps)
+    if (!isfinite(value)) printf("NaN!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!\n");
+
   // get mesh points
   return convert_mesh_path(
       triangles, adjacencies, path.strip, path.lerps, path.start, path.end)
@@ -3157,6 +3161,7 @@ static vector<float> funnel_double(
       auto portal = portals[k];
       auto s = intersect_segments_double(a, b, portal.first, portal.second);
       assert(s >= -0.01f && s <= 1.01f);
+      if (!isfinite(s)) printf("NaN!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!\n");
       auto p = clamp(s, 0.0, 1.0);
       lerps.push_back(p);
     }
