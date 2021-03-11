@@ -8,14 +8,18 @@ Yocto/Scene is implemented in `yocto_scene.h` and `yocto_scene.cpp`.
 
 Scenes are stored in `scene_model` structs and are comprised of arrays of objects.
 Scenes are comprised of camera, instances, shapes, materials, textures
-and environments. Animation is not currently supported.
+and environments, and stored as arrays named as before.
+Animation is not currently supported.
 The scene representation is geared toward modeling physically-based environments.
 In Yocto/Scene, lights are not explicitly defined, but implicitly comprised of
 instances with emissive materials and environment maps.
 All scenes and objects properties are accessible directly.
 
 All scenes objects may have names that are used in IO. If names are defined,
-that have to be unique. If not, names are automatically generated.
+that have to be unique. If not, names are automatically generated. Names are
+stored separately from objects, for performance reasons. So for each object
+array, Yocto/Scene stores a corresponding names array. For examples,
+cameras as stored as `cameras` and their names are stored as `camera_names`.
 
 Cameras, instances and environments have coordinate frames to define the local
 to world transformation. Frames are presented as affine 3x4 matrices and are
@@ -83,16 +87,6 @@ positions, normals, texture coords, colors, radius and tangent spaces.
 Additionally, Yocto/Scene supports face-varying primitives, as `scene_fvshape`,
 where each vertex data has its own topology.
 
-Shapes supports tesselation and displacement mapping. Shape specify a
-level of subdivision and can be subdivide elements either linearly
-or using Catmull-Clark subdivision. Shapes also support displacement
-by specifying both a displacement texture and a displacement amount.
-Differently from most systems, in Yocto/SceneIO displacement is specified
-in the shape and not the material, that only controls shading.
-Subdivision and displacement are only specified in shapes, but not
-taken into account when evaluating shape properties. For this to happen,
-shapes have to be tessellated, as shown later.
-
 **Instances**, represented as `scene_instance`, place shapes in the scene by
 defining their coordinate frame, a shape index and a material index.
 Through the use of instancing, Yocto/Scen scales well to large environments
@@ -104,7 +98,16 @@ an emission term and an optional emission texture.
 The emission texture is an HDR environment map stored in a LatLon
 parametrization.
 
-**Subdivs**
+**Subdivs**, represented as `scene_subdiv, support tesselation and displacement
+mapping. Subdivs are represented as facee-varying shapes.
+Subdivs specify a level of subdivision and can be subdivide elements
+either linearly or using Catmull-Clark subdivision. Shapes also support displacement
+by specifying both a displacement texture and a displacement amount.
+Differently from most systems, in Yocto/Scene displacement is specified
+in the shape and not the material. Subdivs only support tesselation to shapes,
+but do not directly support additional evaluation of properties.
+Subdivs specified to the shape index to which they are sub divided into,
+and provide tesselation support as discussed later.
 
 ## Scene Creation
 
