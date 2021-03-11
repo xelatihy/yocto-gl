@@ -22,11 +22,6 @@ markdown_extensions:
   - codehilite
   - admonition
 
-# Versions
-extra:
-  version:
-    provider: mike
-
 # Pages
 nav:
   - About: index.md
