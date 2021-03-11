@@ -488,6 +488,13 @@ int run_glpathd(const glpathd_params &params) {
   for (auto &pos : ioshape.positions) pos -= center(bbox);
   for (auto &pos : ioshape.positions) pos /= max(size(bbox));
 
+  // reordina indici nei triangoli
+  auto rng = rng_state{};
+  for (auto &t : ioshape.triangles) {
+    auto o = rand1i(rng, 3);
+    t      = {t[(0 + o) % 3], t[(1 + o) % 3], t[(2 + o) % 3]};
+  }
+
   // create scene
   auto scene = make_pathdscene(ioshape);
 

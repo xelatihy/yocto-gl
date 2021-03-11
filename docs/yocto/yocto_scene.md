@@ -45,9 +45,15 @@ and set the aperture to focal length over f-stop.
 
 **Textures**, represented as `scene_texture`, contains either 8-bit LDR or
 32-bit float HDR images with four channels. Textures can be encoded in either
-a linear color space or as sRGBs.
+a linear color space or as sRGBs, depending on an internal flag. The use of
+float vs byte is just a memory saving feature.
 
-**Materials** are modeled similarly to the
+**Materials**, represented as `scene_material`, are defined by a material type
+and a few parameters, common to all materials. In particular, we support the
+following materials:
+
+- `matte`, for material that have a d
+
 [Disney Principled BSDF](https://blog.selfshadow.com/publications/s2015-shading-course/#course_content) and the
 [Autodesk Standard Surface](https://autodesk.github.io/standard-surface/).
 Materials are defined using many parameters that control material emission,
@@ -98,11 +104,11 @@ an emission term and an optional emission texture.
 The emission texture is an HDR environment map stored in a LatLon
 parametrization.
 
-**Subdivs**, represented as `scene_subdiv, support tesselation and displacement
+**Subdivs**, represented as `scene_subdiv`, support tesselation and displacement
 mapping. Subdivs are represented as facee-varying shapes.
 Subdivs specify a level of subdivision and can be subdivide elements
-either linearly or using Catmull-Clark subdivision. Shapes also support displacement
-by specifying both a displacement texture and a displacement amount.
+either linearly or using Catmull-Clark subdivision. Subdivs also support
+displacement by specifying both a displacement texture and a displacement amount.
 Differently from most systems, in Yocto/Scene displacement is specified
 in the shape and not the material. Subdivs only support tesselation to shapes,
 but do not directly support additional evaluation of properties.
@@ -111,121 +117,136 @@ and provide tesselation support as discussed later.
 
 ## Scene Creation
 
-Objects are added to the scene via `add_<object>(scene,name)` functions,
-where `<object>` is the object type name. In these functions,
-the name is optional and, if left blank, a unique name will be generated
-automatically. For each object type, properties can be set directly.
+Objects are added to the scene by directly adding elements to the corresponding
+arrays. References to elements are expressed as indices to the
+corresponding arrays. For each element type, properties can be set directly.
 
-For camera, you should set the camera frame, the camera view,
+For cameras, you should set the camera frame, the camera view,
 via lens, aspect and film, and optionally the camera aperture and focus.
 
 ```cpp
-auto scene = new trace_scene{};       // create a scene
-auto camera = add_camera(scene);      // create a camera named cam
-camera->frame = identity3x4f;         // set frame to identity
-camera->lens = 0.050;                 // set as 50mm lens
-camera->aspect = 1.5;                 // set 3:2 aspect ratio
-camera->film = 0.036;                 // set the film as 35mm
-camera->aperture = 0.01;              // set 10mm aperture
-camera->focus = 10;                   // set the focus at 10m
+auto scene = new scene_model{};              // create a scene
+auto& camera = scene.cameras.emplace_back(); // create a camera
+camera.frame = identity3x4f;                // set frame to identity
+camera.lens = 0.050;                        // set as 50mm lens
+camera.aspect = 1.5;                        // set 3:2 aspect ratio
+camera.film = 0.036;                        // set the film as 35mm
+camera.aperture = 0.01;                     // set 10mm aperture
+camera.focus = 10;                          // set the focus at 10m
 ```
 
 For instances, you should set the instance frame, shape and material.
 
 ```cpp
-auto scene = new trace_scene{};       // create a scene
-auto instance = add_instance(scene);  // create an instance named ist
-instance->frame = identity3x4f;       // set frame to identity
-auto shape = add_shape(scene);
-instance->shape = shape;              // set shape pointer
+auto scene = new scene_model{};                     // create a scene
+auto& instance = scene.instances.emplace_back();    // create an instance
+instance.frame = identity3x4f;                      // set frame to identity
+auto& shape = scene.shapes.emplace_back();
+instance.shape = (int)scene.shapes.size()-1;        // set shape index
 auto material = add_material(scene);
-instance->material = material;        // set material pointer
+instance.material = (int)scene.materials.size()-1;  // set material index
 ```
 
-For textures, set _either_ the hdr or ldr image.
+For textures, set the size, the color space, and _either_ the hdr or ldr pixels.
 
 ```cpp
-auto scene = new trace_scene{};       // create a scene
-auto texture = add_texture(scene);    // create a texture named tex
-texture->hdr = image<vec4f>{...};     // set as a HDR texture
-texture->ldr = ,image<vec4b>{...};    // set as a LDR texture
+auto scene = new scene_model{};               // create a scene
+auto texture = scene.textures.emplace_back(); // create a texture
+texture.width = ...;  texture.height = ...;   // set size
+texture.linear = ...;                         // set color space
+if (...) {
+  texture.pixelsf = vector<vec4f>{...};       // set float pixels
+} else {
+  texture.pixelsb = vector<vec4b>{...};       // set byte pixels
+}
 ```
 
 For materials, we adopt a Disney0like model that has many parameters,
-but can render a large varierty of looks. Here are some examples.
+but can render a large variety of looks. Here are some examples.
 
 ```cpp
 auto scene = new trace_scene{};               // create a scene
 auto matte = add_texture(scene);              // create a matte material
-matte->color = {1,0.5,0.5};                   // with baese color and
-matte->color_tex = add_texture(scene);        // textured albedo
+matte.color = {1,0.5,0.5};                    // with baese color and
+matte.color_tex = add_texture(scene);         // textured albedo
 auto plastic = add_texture(scene);            // create a plastic material
-plastic->color = {0.5,1,0.5};                 // with constant color
-plastic->specular = 1;                        // constant specular
-plastic->roughness = 0.1;                     // base roughness and a
-plastic->roughness_tex = add_texture(scene);  // roughness texture
+plastic.color = {0.5,1,0.5};                  // with constant color
+plastic.specular = 1;                         // constant specular
+plastic.roughness = 0.1;                      // base roughness and a
+plastic.roughness_tex = add_texture(scene);   // roughness texture
 auto metal = add_texture(scene);              // create a metal material
-metal->color = {0.5,0.5,1};                   // constant color
-metal->metallic = 1;                          // constant metallic
-metal->roughness = 0.1;                       // constant roughness
+metal.color = {0.5,0.5,1};                    // constant color
+metal.metallic = 1;                           // constant metallic
+metal.roughness = 0.1;                        // constant roughness
 auto tglass = add_texture(scene);             // create a thin glass material
-tglass->color = {1,1,1};                      // with constant color
-tglass->specular = 1;                         // constant specular
-tglass->transmission = 1;                     // constant transmission
+tglass.color = {1,1,1};                       // with constant color
+tglass.specular = 1;                          // constant specular
+tglass.transmission = 1;                      // constant transmission
 auto glass = add_texture(scene);              // create a glass material
-glass->color = {1,1,1};                       // constant color
-glass->specular, = 1;                         // constant specular
-glass->transmission = 1;                      // constant transmission
-glass->thin = false;                          // non-volumetric material
+glass.color = {1,1,1};                        // constant color
+glass.specular, = 1;                          // constant specular
+glass.transmission = 1;                       // constant transmission
+glass.thin = false;                           // non-volumetric material
 auto subsurf = add_texture(scene);            // create a subsurface material
-subsurf->color = {1,1,1};                     // constant color
-subsurf->specular = 1;                        // constant specular
-subsurf->transmission = 1;                    // constant transmission
-subsurf->thin = false;                        // volumetric material
-subsurf->scattering = {0.5,1,0.5};            // volumetric scattering
+subsurf.color = {1,1,1};                      // constant color
+subsurf.specular = 1;                         // constant specular
+subsurf.transmission = 1;                     // constant transmission
+subsurf.thin = false;                         // volumetric material
+subsurf.scattering = {0.5,1,0.5};             // volumetric scattering
 ```
 
 For shapes, you should set the shape elements, i.e. point, limes, triangles
 or quads, and the vertex properties, i.e. positions, normals, texture
-coordiantes, colors and radia. Shapes support only one element type.
+coordinates, colors and radia. Shapes support only one element type.
 
 ```cpp
-auto scene = new trace_scene{};             // create a scene
-auto shape = add_shape(scene);              // create a shape named shp
-shape->triangles = vector<vec3i>{...};      // set triangle indices
-shape->positions = vector<vec3f>{...};      // set positions
-shape->normals = vector<vec3f>{...};        // set normals
-shape->texcoords = vector<vec2f>{...};      // set texture coordinates
+auto scene = new scene_model{};               // create a scene
+auto& shape = scene.shapes.emplace_back();    // create a shape
+shape.triangles = vector<vec3i>{...};         // set triangle indices
+shape.positions = vector<vec3f>{...};         // set positions
+shape.normals = vector<vec3f>{...};           // set normals
+shape.texcoords = vector<vec2f>{...};         // set texture coordinates
 ```
 
-Shapes can also be face-varying. In this case, set the quads for positions,
-normals and texture coordinates. This is helpful when using subdivision
-surfaces, which are specified by settings the subdivision level, and whether
-to use Catmull-Clark or linear subdivision. Finally, displacement can also
-be applied by setting a displacement scale and texture.
+We also support subdivision surfaces, stored as face-varying shapes.
+In this case, set the quads for positions, normals and texture coordinates.
+Also set the subdivision level, and whether to use Catmull-Clark or linear
+subdivision. Finally, displacement can also be applied by setting a displacement
+scale and texture.
 
 ```cpp
-auto scene = new trace_scene{};             // create a scene
-auto shape = add_shape(scene);              // create a shape named shp
-shape->quadspos = vector<vec4i>{...};       // set face-varying indices
-shape->quadstexcoord = vector<vec4i>{...};  // for positions and textures
-shape->positions = vector<vec3f>{...};      // set positions
-shape->texcoords = vector<vec2f>{...};      // set texture coordinates
-shape>subdivisions = 2;                     // set subdivision level
-shape->catmullclark = true;                 // set Catmull-Clark subdivision
-shape->displacement = 1;                    // set displacement scale
-shape->displacement_tex = tex;              // and displacement map
+auto scene = new scene_model{};                 // create a scene
+auto& subdiv = scene.subdivs.emplace_back();    // create a subdiv
+subdiv.quadspos = vector<vec4i>{...};           // set face-varying indices
+subdiv.quadstexcoord = vector<vec4i>{...};      // for positions and textures
+subdiv.positions = vector<vec3f>{...};          // set positions
+subdiv.texcoords = vector<vec2f>{...};          // set texture coordinates
+subdiv.subdivisions = 2;                        // set subdivision level
+subdiv.catmullclark = true;                     // set Catmull-Clark subdivision
+subdiv.displacement = 1;                        // set displacement scale
+subdiv.displacement_tex = texture_id;           // and displacement map
 ```
 
 For environments, set the frame, emission and optionally the emission texture.
 
 ```cpp
-auto scene = new trace_scene{};             // create a scene
-auto environment = add_environment(scene);  // create an environment
-environment->frame = identity3x4f;          // set identity transform
-auto tex = add_scene(scene, "sky");         // add hdr texture
-environment->emission = {1,1,1};            // set emission scale
-environment->emission_tex = tex;            // add emission texture
+auto scene = new scene_model{};                 // create a scene
+auto& environment = scene.environments.emplace_back(); // create an environment
+environment.frame = identity3x4f;               // set identity transform
+environment.emission = {1,1,1};                 // set emission scale
+environment.emission_tex = texture_id;          // add emission texture
+```
+
+We also support face-varying shapes, albeit not stored in the scene
+(see subdivs above). In this case, set the quads for positions,
+normals and texture coordinates.
+
+```cpp
+auto& shape = scene_fvshape{};              // create a shape
+shape.quadspos = vector<vec4i>{...};        // set face-varying indices
+shape.quadstexcoord = vector<vec4i>{...};   // for positions and textures
+shape.positions = vector<vec3f>{...};       // set positions
+shape.texcoords = vector<vec2f>{...};       // set texture coordinates
 ```
 
 ## Scene tesselation
@@ -264,7 +285,7 @@ the texture representation.
 
 ```cpp
 auto scene = new trace_scene{...};           // create a complete scene
-auto texture = scene->textures.front();        // get first texture
+auto texture = scene.textures.front();        // get first texture
 auto col = eval_texture(texture,{0.5,0.5});    // eval texture
 ```
 
@@ -275,7 +296,7 @@ textures defined.
 
 ```cpp
 auto scene = new trace_scene{...};             // create a complete scene
-auto material = scene->materials.front();        // get first material
+auto material = scene.materials.front();        // get first material
 auto mat = eval_material(material,{0.5,0.5});    // eval material
 ```
 
@@ -292,7 +313,7 @@ properties of instance points.
 
 ```cpp
 auto scene = new trace_scene{...};             // create a complete scene
-auto instance = scene->instances.front();      // get first instance
+auto instance = scene.instances.front();      // get first instance
 auto eid = 0; auto euv = vec3f{0.5,0.5};       // element id and uvs
 auto pos  = eval_position(instance, eid, euv); // eval point position
 auto norm = eval_normal(instance, eid, euv);   // eval point normal
@@ -310,7 +331,7 @@ environment maps.
 ```cpp
 auto scene = new trace_scene{...};               // create a complete scene
 auto enva = eval_environment(scene, dir);        // eval all environments
-auto environment = scene->environments.front();  // get first environment
+auto environment = scene.environments.front();  // get first environment
 auto envi = eval_environment(environment, dir);  // eval environment
 ```
 
@@ -421,7 +442,7 @@ the texture representation.
 
 ```cpp
 auto scene = new sceneio_scene{...};           // create a complete scene
-auto texture = scene->textures.front();        // get first texture
+auto texture = scene.textures.front();        // get first texture
 auto col = eval_texture(texture,{0.5,0.5});    // eval texture
 ```
 
@@ -432,7 +453,7 @@ textures defined.
 
 ```cpp
 auto scene = new sceneio_scene{...};             // create a complete scene
-auto material = scene->materials.front();        // get first material
+auto material = scene.materials.front();        // get first material
 auto mat = eval_material(material,{0.5,0.5});    // eval material
 ```
 
@@ -449,7 +470,7 @@ properties of instance points.
 
 ```cpp
 auto scene = new sceneio_scene{...};             // create a complete scene
-auto instance = scene->instances.front();      // get first instance
+auto instance = scene.instances.front();      // get first instance
 auto eid = 0; auto euv = vec3f{0.5,0.5};       // element id and uvs
 auto pos  = eval_position(instance, eid, euv); // eval point position
 auto norm = eval_normal(instance, eid, euv);   // eval point normal
@@ -467,6 +488,6 @@ environment maps.
 ```cpp
 auto scene = new sceneio_scene{...};               // create a complete scene
 auto enva = eval_environment(scene, dir);        // eval all environments
-auto environment = scene->environments.front();  // get first environment
+auto environment = scene.environments.front();  // get first environment
 auto envi = eval_environment(environment, dir);  // eval environment
 ```
