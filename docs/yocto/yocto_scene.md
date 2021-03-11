@@ -342,10 +342,10 @@ auto envi = eval_environment(environment, dir);  // eval environment
 
 ## Serialization formats
 
-Yocto/SceneIO supports loading and saving to Ply, Obj, Pbrt, glTF,
+Yocto/Scene supports loading and saving to Ply, Obj, Pbrt, glTF,
 and a custom Json format. For the standard formats, loading is best effort,
 since scene data is transformed from the formats' scene models to the
-Yocto/SceneIO model.
+Yocto/Scene model.
 
 The custom Json format is a serialization of the internal properties for
 most scene objects, with a few conventions taken for extensibility.
@@ -389,7 +389,7 @@ if(!save_scene(filename, scene, error, progress))  // save scene
 
 ## Scene stats and validation
 
-Yocto/SceneIO has functions to compute scene stats and provide validation of
+Yocto/Scene has functions to compute scene stats and provide validation of
 scene data. Use `scene_stats(scene)` to get scene stats and
 `scene_validation(scene)` to validate scene objects.
 
@@ -403,7 +403,7 @@ for(auto error : errors) print_error(error);// print error
 
 ## Example scenes
 
-Yocto/SceneIO has a function to create a simple Cornell Box scene for testing.
+Yocto/Scene has a function to create a simple Cornell Box scene for testing.
 There are plans to increase support for more test scenes in the future.
 
 ```cpp
@@ -413,7 +413,7 @@ make_cornellbox(scene);                     // make cornell box
 
 ## Evaluation of scene properties
 
-Yocto/SceneIO defines several function to evaluate scene properties.
+Yocto/Scene defines several function to evaluate scene properties.
 Use `compute_bounds(scene)` to compute the scene bounding boxes.
 Use `get_camera(scene, name)` to get a camera by name or the default camera
 is the name is not given. Use `eval_camera(camera, image_uv, lens_uv)`
