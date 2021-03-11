@@ -273,9 +273,13 @@ static int find_adjacent_triangle(
 
   // Pythagorean theorem
   auto y = dot(pv_pb, pv_pb) - x * x;
-  assert(y > 0);
-  y = yocto::sqrt(y);
-  result += y * ey;
+  if (y > 0) {
+    y = sqrt(y);
+    result += y * ey;
+  } else {
+    assert(0);
+  }
+
   return result;
 }
 
@@ -294,9 +298,12 @@ static int find_adjacent_triangle(
 
   // Pythagorean theorem
   auto y = dot(pv_pb, pv_pb) - x * x;
-  assert(y > 0);
-  y = sqrt(y);
-  result += y * ey;
+  if (y > 0) {
+    y = sqrt(y);
+    result += y * ey;
+  } else {
+    assert(0);
+  }
   return result;
 }
 
@@ -896,11 +903,47 @@ geodesic_solver make_geodesic_solver(const vector<vec3i>& triangles,
   return solver;
 }
 
+int find_small_edge(
+    const vector<vec3i>& triangles, const vector<vec3f>& positions, int face) {
+  int verts[3] = {triangles[face].x, triangles[face].y, triangles[face].z};
+
+  vec3f pos[3] = {
+      positions[verts[0]], positions[verts[1]], positions[verts[2]]};
+
+  float lengths[3] = {length(pos[0] - pos[1]), length(pos[1] - pos[2]),
+      length(pos[2] - pos[0])};
+
+  int small = 0;
+  if (lengths[0] < lengths[1] && lengths[0] < lengths[2]) small = 0;
+  if (lengths[1] < lengths[0] && lengths[1] < lengths[2]) small = 1;
+  if (lengths[2] < lengths[0] && lengths[2] < lengths[1]) small = 2;
+
+  if (lengths[small] < 0.1 * lengths[(small + 1) % 3] &&
+      lengths[small] < 0.1 * lengths[(small + 2) % 3]) {
+    return small;
+  }
+  return -1;
+}
+
 // Construct a graph to compute geodesic distances
 dual_geodesic_solver make_dual_geodesic_solver(const vector<vec3i>& triangles,
     const vector<vec3f>& positions, const vector<vec3i>& adjacencies) {
   auto get_triangle_center = [](const vector<vec3i>&  triangles,
                                  const vector<vec3f>& positions, int face) {
+    auto small = find_small_edge(triangles, positions, face);
+    if (small != -1) {
+      auto& tr = triangles[face];
+      // auto  a  = (positions[tr.x] + positions[tr.y]) / 2;
+      // auto  b  = (positions[tr.y] + positions[tr.z]) / 2;
+      // auto  c  = (positions[tr.z] + positions[tr.x]) / 2;
+      auto a =
+          (positions[tr[mod3(small + 1)]] + positions[tr[mod3(small + 2)]]) / 2;
+      auto b = (positions[tr[mod3(small + 2)]] + positions[tr[small]]) / 2;
+      // auto c = ((positions[tr[mod3(small + 1)]]) +
+      // (positions[tr[small]])) / 2;
+      return (a + b) / 2;
+    }
+
     return (positions[triangles[face].x] + positions[triangles[face].y] +
                positions[triangles[face].z]) /
            3;
