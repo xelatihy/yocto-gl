@@ -1393,7 +1393,9 @@ vector<mesh_point> visualize_shortest_path(const dual_geodesic_solver& graph,
       strip.push_back(start.face);
       strip.push_back(end.face);
     } else {
-      strip = strip_on_dual_graph(
+      // auto strip = strip_on_dual_graph(
+      //     graph, triangles, positions, end.face, start.face);
+      strip = compute_strip(
           graph, triangles, positions, end.face, start.face);
     }
     auto path = vector<mesh_point>{};

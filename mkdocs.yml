@@ -35,11 +35,10 @@ nav:
   - Image utilities: yocto/yocto_image.md
   - Shape utilities: yocto/yocto_shape.md
   - Mesh processing: yocto/yocto_mesh.md
+  - Scene representation: yocto/yocto_scene.md
   - Ray-scene intersection: yocto/yocto_bvh.md
   - Model serialization: yocto/yocto_modelio.md
   - Scene serialization: yocto/yocto_sceneio.md
   - Path tracing: yocto/yocto_trace.md
-  - JSON utilities: yocto/yocto_json.md
-  - Command-line utilities: yocto/yocto_commonio.md
-  - Generic utilities: yocto/yocto_common.md
+  - Command-line utilities: yocto/yocto_cli.md
   - Concurrency utilities: yocto/yocto_parallel.md
