@@ -929,24 +929,17 @@ int find_small_edge(
 dual_geodesic_solver make_dual_geodesic_solver(const vector<vec3i>& triangles,
     const vector<vec3f>& positions, const vector<vec3i>& adjacencies) {
   auto get_triangle_center = [](const vector<vec3i>&  triangles,
-                                 const vector<vec3f>& positions, int face) {
-    auto small = find_small_edge(triangles, positions, face);
-    if (small != -1) {
-      auto& tr = triangles[face];
-      // auto  a  = (positions[tr.x] + positions[tr.y]) / 2;
-      // auto  b  = (positions[tr.y] + positions[tr.z]) / 2;
-      // auto  c  = (positions[tr.z] + positions[tr.x]) / 2;
-      auto a =
-          (positions[tr[mod3(small + 1)]] + positions[tr[mod3(small + 2)]]) / 2;
-      auto b = (positions[tr[mod3(small + 2)]] + positions[tr[small]]) / 2;
-      // auto c = ((positions[tr[mod3(small + 1)]]) +
-      // (positions[tr[small]])) / 2;
-      return (a + b) / 2;
-    }
-
-    return (positions[triangles[face].x] + positions[triangles[face].y] +
-               positions[triangles[face].z]) /
-           3;
+                                 const vector<vec3f>& positions,
+                                 int                  face) -> vec3f {
+    vec3f pos[3] = {positions[triangles[face].x], positions[triangles[face].y],
+        positions[triangles[face].z]};
+    auto  l0     = length(pos[0] - pos[1]);
+    auto  p0     = (pos[0] + pos[1]) / 2;
+    auto  l1     = length(pos[1] - pos[2]);
+    auto  p1     = (pos[1] + pos[2]) / 2;
+    auto  l2     = length(pos[2] - pos[0]);
+    auto  p2     = (pos[2] + pos[0]) / 2;
+    return (l0 * p0 + l1 * p1 + l2 * p2) / (l0 + l1 + l2);
   };
 
   auto solver = dual_geodesic_solver{};
@@ -3226,7 +3219,7 @@ static void straighten_path(geodesic_path& path, const vector<vec3i>& triangles,
 #else
   auto init_portals = unfold_funnel_portals_double(
       triangles, positions, path.strip, path.start, path.end);
-  path.lerps          = funnel_double(init_portals, index);
+  path.lerps = funnel_double(init_portals, index);
 #endif
 
 // while(true) { this may never break...
