@@ -2197,7 +2197,7 @@ vector<int> strip_on_dual_graph(const dual_geodesic_solver& solver,
   auto strip = vector<int>{};
   auto node  = end;
   assert(parents[end] != -1);
-  strip.reserve((int)sqrt(parents.size()));
+  strip.reserve((int)sqrt((float)parents.size()));
   // for (int i = 0; i < parents.size() && node != -1; i++) {
   while (node != -1) {
     assert(find_in_vec(strip, node) != 1);
@@ -3753,7 +3753,8 @@ static pair<bool, spline_polygon> handle_boundary(
     const spline_polygon& control_points, const vector<int>& new_ones_entries,
     const int k) {
   spline_polygon new_ones = {};
-  if (new_ones_entries[0] > 3 && new_ones_entries.back() < yocto::pow(2, k) - 1)
+  if (new_ones_entries[0] > 3 &&
+      new_ones_entries.back() < pow((float)2, (float)k) - 1)
     return {false, {}};
   else if (new_ones_entries[0] <= 3) {
     switch (new_ones_entries[0]) {
@@ -3808,7 +3809,7 @@ static pair<bool, spline_polygon> handle_boundary(
       } break;
     }
   } else {
-    if (new_ones_entries.back() == yocto::pow(2, k) + 2) {
+    if (new_ones_entries.back() == pow((float)2, (float)k) + 2) {
       new_ones[0] = lane_riesenfeld_boundary(solver, triangles, positions,
           adjacencies, control_points[0], control_points[1], control_points[2],
           false);
@@ -3817,7 +3818,7 @@ static pair<bool, spline_polygon> handle_boundary(
       new_ones[2] = geodesic_lerp(solver, triangles, positions, adjacencies,
           control_points[2], control_points[3], 0.5);
       new_ones[3] = control_points[3];
-    } else if (new_ones_entries.back() == yocto::pow(2, k) + 1) {
+    } else if (new_ones_entries.back() == pow((float)2, (float)k) + 1) {
       new_ones[0] = geodesic_lerp(solver, triangles, positions, adjacencies,
           control_points[0], control_points[1], 0.5);
       new_ones[1] = lane_riesenfeld_boundary(solver, triangles, positions,
@@ -3827,7 +3828,7 @@ static pair<bool, spline_polygon> handle_boundary(
           control_points[1], control_points[2], 0.75);
       new_ones[3] = geodesic_lerp(solver, triangles, positions, adjacencies,
           control_points[2], control_points[3], 0.5);
-    } else if (new_ones_entries.back() == yocto::pow(2, k)) {
+    } else if (new_ones_entries.back() == pow((float)2, (float)k)) {
       new_ones[0] = lane_riesenfeld_regular(solver, triangles, positions,
           adjacencies, control_points[0], control_points[1], control_points[2]);
       new_ones[1] = geodesic_lerp(solver, triangles, positions, adjacencies,
@@ -3837,7 +3838,7 @@ static pair<bool, spline_polygon> handle_boundary(
           false);
       new_ones[3] = geodesic_lerp(solver, triangles, positions, adjacencies,
           control_points[2], control_points[3], 0.75);
-    } else if (new_ones_entries.back() == yocto::pow(2, k) - 1) {
+    } else if (new_ones_entries.back() == pow((float)2, (float)k) - 1) {
       new_ones[0] = geodesic_lerp(solver, triangles, positions, adjacencies,
           control_points[0], control_points[1], 0.5);
       new_ones[1] = lane_riesenfeld_regular(solver, triangles, positions,
@@ -3977,7 +3978,7 @@ static mesh_point lane_riesenfeld_point(const dual_geodesic_solver& solver,
   auto treshold     = precision;
   auto [k, t, leaf] = find_leaf(
       solver, triangles, positions, adjacencies, polygon, t0, treshold);
-  float         step  = 1 / yocto::pow(2, k);
+  float         step  = 1 / pow((float)2, (float)k);
   vector<float> knots = {
       yocto::max(t.x - 3 * step, 0.f),
       yocto::max(t.x - 2 * step, 0.f),
@@ -4094,7 +4095,7 @@ static std::array<spline_polygon, 2> lane_riesenfeld_insert(
     auto treshold         = precision;
     auto [depth, t, leaf] = find_leaf(
         solver, triangles, positions, adjacencies, polygon, t0, treshold);
-    float         step           = 1 / yocto::pow(2, depth);
+    float         step           = 1 / pow((float)2, (float)depth);
     vector<float> knots          = {yocto::max(t.x - 3 * step, 0.f),
         yocto::max(t.x - 2 * step, 0.f), yocto::max(t.x - step, 0.f), t.x, t.y,
         yocto::min(t.y + step, 1.f), yocto::min(t.y + 2 * step, 1.f),
@@ -4274,7 +4275,8 @@ static vector<mesh_point> de_casteljau_adaptive(
     const spline_polygon& control_points, const spline_params& params) {
   auto segments = vector<spline_polygon>{control_points};
   auto result   = vector<spline_polygon>();
-  auto threads  = vector<std::thread>((int)yocto::pow(2, params.subdivisions));
+  auto threads  = vector<std::thread>(
+      (int)pow((float)2, (float)params.subdivisions));
 
   auto f = [&](int k) {
     auto [split0, split1] = subdivide_bezier_polygon(
@@ -4490,7 +4492,8 @@ static pair<bool, vector<mesh_point>> handle_boundary_node(
     const spline_node& leaf, const vector<int>& new_ones_entries) {
   vector<mesh_point> new_ones(5);
   auto               k = leaf.depth + 1;
-  if (new_ones_entries[0] > 3 && new_ones_entries.back() < yocto::pow(2, k) - 1)
+  if (new_ones_entries[0] > 3 &&
+      new_ones_entries.back() < pow((float)2, (float)k) - 1)
     return {false, new_ones};
   else if (new_ones_entries[0] <= 3) {
     if (new_ones_entries[0] == 0) {
@@ -4517,7 +4520,7 @@ static pair<bool, vector<mesh_point>> handle_boundary_node(
     } else
       assert(false);
   } else {
-    if (new_ones_entries.back() == yocto::pow(2, k) + 2) {
+    if (new_ones_entries.back() == pow((float)2, (float)k) + 2) {
       new_ones[0] = eval_path_point(
           solver, triangles, positions, adjacencies, leaf.lines[0], 0.5);
       new_ones[1] = lane_riesenfeld_boundary(solver, triangles, positions,
@@ -4527,7 +4530,7 @@ static pair<bool, vector<mesh_point>> handle_boundary_node(
       new_ones[3] = eval_path_point(
           solver, triangles, positions, adjacencies, leaf.lines[2], 0.5);
       new_ones[4] = leaf.points[3];
-    } else if (new_ones_entries.back() == yocto::pow(2, k)) {
+    } else if (new_ones_entries.back() == pow((float)2, (float)k)) {
       new_ones[0] = eval_path_point(
           solver, triangles, positions, adjacencies, leaf.lines[0], 0.5);
       new_ones[1] = lane_riesenfeld_regular(solver, triangles, positions,
@@ -4549,7 +4552,7 @@ static pair<spline_node, spline_node> lane_riesenfeld_split_node(
     const vector<vec3f>& positions, const vector<vec3i>& adjacencies,
     const spline_node& leaf, bool& max_depth_reached) {
   auto curr_t     = (leaf.t.x + leaf.t.y) / 2;
-  int  curr_entry = (int)(yocto::pow(2, leaf.depth + 1) * curr_t);
+  int  curr_entry = (int)(pow((float)2, (float)leaf.depth + 1) * curr_t);
   curr_entry += 3;
   if (curr_entry % 2) {
     max_depth_reached = true;
@@ -4657,7 +4660,7 @@ static vector<mesh_point> lane_riesenfeld_uniform(
     q.resize(new_size);
     q[0]           = p[0];
     q[1]           = eval_path_point(solver, triangles, positions, adjacencies,
-        gamma01.path, gamma01.t, 1.f / yocto::pow(2, 3 + subdiv));
+        gamma01.path, gamma01.t, 1.f / pow((float)2, (float)3 + subdiv));
     curr_path.path = compute_geodesic_path(
         solver, triangles, positions, adjacencies, p[1], p[2]);
     curr_path.t = path_parameters(
@@ -4708,7 +4711,7 @@ static vector<mesh_point> lane_riesenfeld_uniform(
       qq[1] = eval_path_point(solver, triangles, positions, adjacencies,
           curr_path.path, curr_path.t, 0.75);
       qq[2] = eval_path_point(solver, triangles, positions, adjacencies,
-          gamma32.path, gamma32.t, 1.f / yocto::pow(2, 3 + subdiv));
+          gamma32.path, gamma32.t, 1.f / pow((float)2, (float)3 + subdiv));
       qq[3] = pp[3];
     }
     size = new_size;
@@ -4771,7 +4774,7 @@ static vector<mesh_point> lane_riesenfeld_uniform(
     q.resize(new_size);
     q[0]           = p[0];
     q[1]           = eval_path_point(solver, triangles, positions, adjacencies,
-        gamma01.path, gamma01.t, 1.f / yocto::pow(2, 3 + subdiv));
+        gamma01.path, gamma01.t, 1.f / pow((float)2, (float)3 + subdiv));
     curr_path.path = compute_geodesic_path(
         solver, triangles, positions, adjacencies, p[1], p[2]);
     curr_path.t = path_parameters(
@@ -4789,7 +4792,7 @@ static vector<mesh_point> lane_riesenfeld_uniform(
     }
 
     q[2 * size - 4] = eval_path_point(solver, triangles, positions, adjacencies,
-        gamma21.path, gamma21.t, 1.f / yocto::pow(2, 3 + subdiv));
+        gamma21.path, gamma21.t, 1.f / pow((float)2, (float)3 + subdiv));
     q[2 * size - 3] = p.back();
     size            = new_size;
   }

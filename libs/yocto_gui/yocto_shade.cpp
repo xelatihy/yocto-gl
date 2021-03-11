@@ -651,7 +651,7 @@ static void precompute_cubemap(ogl_cubemap& cubemap, const Sampler& environment,
 
     for (auto i = 0; i < 6; ++i) {
       // perspective_mat(fov, aspect, near, far)
-      auto camera_proj = perspective_mat(radians(90), 1, 1, 100);
+      auto camera_proj = perspective_mat(radians(90.0f), 1, 1, 100);
       auto camera_view = frame_to_mat(inverse(cameras[i]));
 
       set_framebuffer_texture(framebuffer, cubemap, i, mipmap_level);

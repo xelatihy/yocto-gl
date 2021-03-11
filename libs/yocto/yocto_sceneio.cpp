@@ -3797,7 +3797,7 @@ static bool load_gltf_scene(const string& filename, scene_model& scene,
         } else if (type == "perspective") {
           auto& gpersp  = gcamera.at("perspective");
           camera.aspect = gpersp.value("aspectRatio", 0.0f);
-          auto yfov     = gpersp.value("yfov", radians(45));
+          auto yfov     = gpersp.value("yfov", radians(45.0f));
           if (camera.aspect == 0) camera.aspect = 16.0f / 9.0f;
           camera.film = 0.036;
           if (camera.aspect >= 1) {
