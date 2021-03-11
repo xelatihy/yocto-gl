@@ -568,14 +568,10 @@ int run_glpathd(const glpathd_params &params) {
           set_normals(glscene.shapes.at(2), lines1.normals);
           set_texcoords(glscene.shapes.at(2), lines1.texcoords);
           set_quads(glscene.shapes.at(2), lines1.quads);
-          auto path2      = visualize_shortest_path(solver, shape.triangles,
+          auto  positions2 = visualize_shortest_path(solver, shape.triangles,
               shape.positions, adjacencies, point1, point2, true);
-          auto positions2 = vector<vec3f>{};
-          for (auto [element, uv] : path2) {
-            positions2.push_back(eval_position(shape, element, uv));
-          }
-          auto &lines2 = scene.shapes.at(3);
-          lines2       = polyline_to_cylinders(positions2, 4, 0.002);
+          auto &lines2     = scene.shapes.at(3);
+          lines2           = polyline_to_cylinders(positions2, 4, 0.002);
           set_positions(glscene.shapes.at(3), lines2.positions);
           set_normals(glscene.shapes.at(3), lines2.normals);
           set_texcoords(glscene.shapes.at(3), lines2.texcoords);

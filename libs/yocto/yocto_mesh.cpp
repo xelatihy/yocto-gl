@@ -1376,7 +1376,7 @@ vector<mesh_point> compute_shortest_path(const dual_geodesic_solver& graph,
 }
 
 // Compute visualizations for the shortest path connecting a set of points.
-vector<mesh_point> visualize_shortest_path(const dual_geodesic_solver& graph,
+vector<vec3f> visualize_shortest_path(const dual_geodesic_solver& graph,
     const vector<vec3i>& triangles, const vector<vec3f>& positions,
     const vector<vec3i>& adjacencies, const mesh_point& start,
     const mesh_point& end, bool strip) {
@@ -1388,11 +1388,24 @@ vector<mesh_point> visualize_shortest_path(const dual_geodesic_solver& graph,
     } else {
       // auto strip = strip_on_dual_graph(
       //     graph, triangles, positions, end.face, start.face);
-      strip = compute_strip(
-          graph, triangles, positions, end.face, start.face);
+      strip = compute_strip(graph, triangles, positions, end.face, start.face);
     }
-    auto path = vector<mesh_point>{};
-    for (auto face : strip) path.push_back({face, {0.5, 0.5}});
+    auto get_triangle_center = [](const vector<vec3i>&  triangles,
+                                   const vector<vec3f>& positions,
+                                   int                  face) -> vec3f {
+      vec3f pos[3] = {positions[triangles[face].x],
+          positions[triangles[face].y], positions[triangles[face].z]};
+      auto  l0     = length(pos[0] - pos[1]);
+      auto  p0     = (pos[0] + pos[1]) / 2;
+      auto  l1     = length(pos[1] - pos[2]);
+      auto  p1     = (pos[1] + pos[2]) / 2;
+      auto  l2     = length(pos[2] - pos[0]);
+      auto  p2     = (pos[2] + pos[0]) / 2;
+      return (l0 * p0 + l1 * p1 + l2 * p2) / (l0 + l1 + l2);
+    };
+    auto path = vector<vec3f>{};
+    for (auto face : strip)
+      path.push_back(get_triangle_center(triangles, positions, face));
     return path;
   } else {
     auto path = geodesic_path{};
@@ -1409,18 +1422,24 @@ vector<mesh_point> visualize_shortest_path(const dual_geodesic_solver& graph,
           triangles, positions, adjacencies, start, end, strip);
     }
     // get mesh points
-    return convert_mesh_path(
+    auto points = convert_mesh_path(
         triangles, adjacencies, path.strip, path.lerps, path.start, path.end)
-        .points;
+                      .points;
+
+    auto path_positions = vector<vec3f>{};
+    for (auto point : points) {
+      path_positions.push_back(eval_position(triangles, positions, point));
+    }
+    return path_positions;
   }
 }
 
-vector<mesh_point> visualize_shortest_path(const dual_geodesic_solver& graph,
+vector<vec3f> visualize_shortest_path(const dual_geodesic_solver& graph,
     const vector<vec3i>& triangles, const vector<vec3f>& positions,
     const vector<vec3i>& adjacencies, const vector<mesh_point>& points,
     bool strip) {
   // geodesic path
-  auto path = vector<mesh_point>{};
+  auto path = vector<vec3f>{};
   for (auto idx = 0; idx < (int)points.size() - 1; idx++) {
     auto segment = visualize_shortest_path(graph, triangles, positions,
         adjacencies, points[idx], points[idx + 1], strip);
@@ -1430,7 +1449,7 @@ vector<mesh_point> visualize_shortest_path(const dual_geodesic_solver& graph,
 }
 
 // Compute visualizations for the shortest path connecting a set of points.
-vector<mesh_point> visualize_shortest_path(const geodesic_solver& graph,
+vector<vec3f> visualize_shortest_path(const geodesic_solver& graph,
     const vector<vec3i>& triangles, const vector<vec3f>& positions,
     const vector<vec3i>& adjacencies, const vector<vector<int>>& v2t,
     const vector<vector<float>>& angles, const mesh_point& start,
@@ -1445,8 +1464,22 @@ vector<mesh_point> visualize_shortest_path(const geodesic_solver& graph,
       strip = get_strip(graph, triangles, positions, adjacencies, v2t, angles,
           end, start, parents);
     }
-    auto path = vector<mesh_point>{};
-    for (auto face : strip) path.push_back({face, {0.5, 0.5}});
+    auto get_triangle_center = [](const vector<vec3i>&  triangles,
+                                   const vector<vec3f>& positions,
+                                   int                  face) -> vec3f {
+      vec3f pos[3] = {positions[triangles[face].x],
+          positions[triangles[face].y], positions[triangles[face].z]};
+      auto  l0     = length(pos[0] - pos[1]);
+      auto  p0     = (pos[0] + pos[1]) / 2;
+      auto  l1     = length(pos[1] - pos[2]);
+      auto  p1     = (pos[1] + pos[2]) / 2;
+      auto  l2     = length(pos[2] - pos[0]);
+      auto  p2     = (pos[2] + pos[0]) / 2;
+      return (l0 * p0 + l1 * p1 + l2 * p2) / (l0 + l1 + l2);
+    };
+    auto path = vector<vec3f>{};
+    for (auto face : strip)
+      path.push_back(get_triangle_center(triangles, positions, face));
     return path;
   } else {
     auto path = geodesic_path{};
@@ -1461,20 +1494,26 @@ vector<mesh_point> visualize_shortest_path(const geodesic_solver& graph,
       path         = shortest_path(
           triangles, positions, adjacencies, start, end, strip);
     }
+
     // get mesh points
-    return convert_mesh_path(
+    auto points = convert_mesh_path(
         triangles, adjacencies, path.strip, path.lerps, path.start, path.end)
-        .points;
+                      .points;
+    auto path_positions = vector<vec3f>{};
+    for (auto point : points) {
+      path_positions.push_back(eval_position(triangles, positions, point));
+    }
+    return path_positions;
   }
 }
 
-vector<mesh_point> visualize_shortest_path(const geodesic_solver& graph,
+vector<vec3f> visualize_shortest_path(const geodesic_solver& graph,
     const vector<vec3i>& triangles, const vector<vec3f>& positions,
     const vector<vec3i>& adjacencies, const vector<vector<int>>& v2t,
     const vector<vector<float>>& angles, const vector<mesh_point>& points,
     bool strip) {
   // geodesic path
-  auto path = vector<mesh_point>{};
+  auto path = vector<vec3f>{};
   for (auto idx = 0; idx < (int)points.size() - 1; idx++) {
     auto segment = visualize_shortest_path(graph, triangles, positions,
         adjacencies, v2t, angles, points[idx], points[idx + 1], strip);
@@ -3219,7 +3258,7 @@ static void straighten_path(geodesic_path& path, const vector<vec3i>& triangles,
 #else
   auto init_portals = unfold_funnel_portals_double(
       triangles, positions, path.strip, path.start, path.end);
-  path.lerps = funnel_double(init_portals, index);
+  path.lerps          = funnel_double(init_portals, index);
 #endif
 
 // while(true) { this may never break...
