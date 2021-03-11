@@ -103,7 +103,7 @@
     },
     "bunny-metal-rough": {
       "color": [0.66, 0.45, 0.34],
-      "metallic": 1,
+      "gltfpbr": 1,
       "roughness": 0.2
     },
     "sphere-plastic-rough": {
@@ -113,7 +113,7 @@
     },
     "bunny-metal-sharp": {
       "color": [0.7, 0.7, 0.7],
-      "metallic": 1,
+      "gltfpbr": 1,
       "roughness": 0
     }
   }

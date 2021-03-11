@@ -114,7 +114,7 @@
       "scattering": [0.3, 0.6, 0.3]
     },
     "bunny-metal-rough": {
-      "type": "metal",
+      "type": "metallic",
       "color": [0.66, 0.45, 0.34],
       "roughness": 0.2
     },

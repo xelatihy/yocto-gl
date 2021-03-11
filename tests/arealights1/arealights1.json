@@ -115,7 +115,7 @@
       "roughness": 0.01
     },
     "bunny-metal-rough": {
-      "type": "metal",
+      "type": "mtallic",
       "color": [0.66, 0.45, 0.34],
       "roughness": 0.2
     },

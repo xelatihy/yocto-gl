@@ -146,18 +146,18 @@
       "roughness": 0.2
     },
     "sphere-metal-sharp-bumped": {
-      "type": "metal",
+      "type": "metallic",
       "color": [0.7, 0.7, 0.7],
       "roughness": 0,
       "normal_tex": "bumps-normal"
     },
     "sphere-metal-rough-coated": {
-      "type": "metal",
+      "type": "metallic",
       "color": [0.66, 0.45, 0.34],
       "roughness": 0.2
     },
     "sphere-metal-rough": {
-      "type": "metal",
+      "type": "metallic",
       "color": [0.66, 0.45, 0.34],
       "roughness": 0.2
     },
@@ -173,18 +173,18 @@
       "roughness": 0.2
     },
     "bunny-metal-sharp-bumped": {
-      "type": "metal",
+      "type": "metallic",
       "color": [0.7, 0.7, 0.7],
       "roughness": 0,
       "normal_tex": "bumps-normal"
     },
     "bunny-metal-rough-coated": {
-      "type": "metal",
+      "type": "metallic",
       "color": [0.66, 0.45, 0.34],
       "roughness": 0.2
     },
     "bunny-metal-rough": {
-      "type": "metal",
+      "type": "metallic",
       "color": [0.66, 0.45, 0.34],
       "roughness": 0.2
     }

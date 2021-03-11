@@ -150,12 +150,12 @@
       "roughness": 1
     },
     "sphere-metal-sharp": {
-      "type": "metal",
+      "type": "metallic",
       "color": [0.7, 0.7, 0.7],
       "roughness": 0
     },
     "sphere-metal-rough": {
-      "type": "metal",
+      "type": "metallic",
       "color": [0.66, 0.45, 0.34],
       "roughness": 0.2
     },
@@ -175,12 +175,12 @@
       "roughness": 1
     },
     "bunny-metal-sharp": {
-      "type": "metal",
+      "type": "metallic",
       "color": [0.7, 0.7, 0.7],
       "roughness": 0
     },
     "bunny-metal-rough": {
-      "type": "metal",
+      "type": "metallic",
       "color": [0.66, 0.45, 0.34],
       "roughness": 0.2
     }
