@@ -90,6 +90,9 @@ static vec3f eval_bsdfcos(const material_point& material, const vec3f& normal,
   } else if (material.type == scene_material_type::refractive) {
     return eval_refractive(material.color, material.ior, material.roughness,
         normal, outgoing, incoming);
+  } else if (material.type == scene_material_type::subsurface) {
+    return eval_refractive(material.color, material.ior, material.roughness,
+        normal, outgoing, incoming);
   } else if (material.type == scene_material_type::gltfpbr) {
     return eval_gltfpbr(material.color, material.ior, material.roughness,
         material.metallic, normal, outgoing, incoming);
@@ -136,6 +139,9 @@ static vec3f sample_bsdfcos(const material_point& material, const vec3f& normal,
   } else if (material.type == scene_material_type::refractive) {
     return sample_refractive(material.color, material.ior, material.roughness,
         normal, outgoing, rnl, rn);
+  } else if (material.type == scene_material_type::subsurface) {
+    return sample_refractive(material.color, material.ior, material.roughness,
+        normal, outgoing, rnl, rn);
   } else if (material.type == scene_material_type::gltfpbr) {
     return sample_gltfpbr(material.color, material.ior, material.roughness,
         material.metallic, normal, outgoing, rnl, rn);
@@ -180,6 +186,9 @@ static float sample_bsdfcos_pdf(const material_point& material,
     return sample_tranparent_pdf(material.color, material.ior,
         material.roughness, normal, outgoing, incoming);
   } else if (material.type == scene_material_type::refractive) {
+    return sample_refractive_pdf(material.color, material.ior,
+        material.roughness, normal, outgoing, incoming);
+  } else if (material.type == scene_material_type::subsurface) {
     return sample_refractive_pdf(material.color, material.ior,
         material.roughness, normal, outgoing, incoming);
   } else if (material.type == scene_material_type::gltfpbr) {
