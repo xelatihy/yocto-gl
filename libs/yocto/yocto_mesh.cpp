@@ -918,8 +918,8 @@ int find_small_edge(
   if (lengths[1] < lengths[0] && lengths[1] < lengths[2]) small = 1;
   if (lengths[2] < lengths[0] && lengths[2] < lengths[1]) small = 2;
 
-  if (lengths[small] < 0.1 * lengths[(small + 1) % 3] &&
-      lengths[small] < 0.1 * lengths[(small + 2) % 3]) {
+  if (lengths[small] < 0.3 * lengths[(small + 1) % 3] &&
+      lengths[small] < 0.3 * lengths[(small + 2) % 3]) {
     return small;
   }
   return -1;
