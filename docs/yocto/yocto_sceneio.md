@@ -6,6 +6,9 @@ Yocto/SceneIO supports loading and saving scenes from Ply, Obj, Pbrt, glTF
 and a custom Json format.
 Yocto/SceneIO is implemented in `yocto_sceneio.h` and `yocto_sceneio.cpp`,
 and depends on `cgltf.h`.
+Yocto/Image is implemented in `yocto_image.h` and `yocto_image.cpp`, and
+depends on `stb_image.h`, `stb_image_write.h`, `stb_image_resize.h`,
+`tinyexr.h` for the image serialization.
 
 ## Scene representation
 
@@ -497,5 +500,51 @@ auto data  = vector<byte>{};            // data buffer
 if(!load_binary(filename, data, error)) // load a binary file
   print_error(error);                   // check and print error
 if(!save_binary(filename, data, error)) // save a binary file
+  print_error(error);                   // check and print error
+```
+
+## Image loading and saving
+
+Images are loaded with `load_image(filename, img, error)` and saved with
+`save_image(filename, img, error)`. Both loading and saving take a filename,
+an image buffer and return whether or not the image was loaded successfully.
+In the case of an error, the IO functions set the `error` string with a
+message suitable for displaying to a user.
+Yocto/Images supports loading and saving to JPG, PNG, TGA, BMP, HDR, EXR for
+images of either float or byte. The type is selected using overloads.
+
+When loading images, the desired number of channels is determined by the
+function overload. If the image content does not contain the same number of
+channels, these are automatically converted to the desired color format.
+Float images are returned encoded in linear RGB color space, while 8bit
+images are returned encoded in sRGB. Since color space information is not
+present in many images and since it is customary in 3D graphics to misuse
+color encoding, e.g. normal maps stored in sRGB, during loading 8bit file
+formats are assume to be encoded sRGB, while float formats are assume to
+be encoded in linear RGB. When channel type differ between the desired
+output and the file one, the appropriate linear-to-sRGB conversion is applied.
+Use `is_hdr_filename(filename)` to determine whether a supported format
+contains linear float data.
+
+When saving images, float images are expected to be encoded in linear RGB and
+are saved as is to file formats capable of storing floats, or converted to
+sRGB for file formats that support only that. Byte images are expected
+to be encoded is sRGB and saved as is to 8bit file formats or converted to
+linear RGB for saving to floating point file formats.
+
+```cpp
+auto error = string{};
+auto img4f = image<vec4f>{};            // define desired image format
+if(!load_image(filename, img4f, error)) // load image as 4-channel linear
+  print_error(error);                   // check and print error
+auto img4b = image<vec4b>{};            // define desired image format
+if(!load_image(filename, img4b, error)) // load image as 4-channel sRGB
+  print_error(error);                   // check and print error
+auto is_hdr = is_hdr_filename(filename);// check if hdr format
+if(is_hdr) ok = load_image(filename, img4f, error); // load as linear
+else       ok = load_image(filename, img4b, error); // or sRGB
+if(!save_image(filename, img4f, error)) // save image as 4-channel linear
+  print_error(error);                   // check and print error
+if(!save_image(filename, img4f, error)) // save image as 4-channel linear
   print_error(error);                   // check and print error
 ```
