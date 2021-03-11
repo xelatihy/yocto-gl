@@ -129,13 +129,13 @@
       "emission": [20, 20, 20]
     },
     "cube-subdiv-uvgrid": {
-      "type": "plastic",
+      "type": "glossy",
       "color": [1, 1, 1],
       "roughness": 0.1,
       "color_tex": "uvgrid"
     },
     "suzanne-subdiv-plastic-sharp": {
-      "type": "plastic",
+      "type": "glossy",
       "color": [0.5, 0.5, 0.7],
       "roughness": 0.01
     },
@@ -145,13 +145,13 @@
       "roughness": 1
     },
     "bunny-uvgrid": {
-      "type": "plastic",
+      "type": "glossy",
       "color": [1, 1, 1],
       "roughness": 0.1,
       "color_tex": "uvgrid"
     },
     "teapot-uvgrid": {
-      "type": "plastic",
+      "type": "glossy",
       "color": [1, 1, 1],
       "roughness": 0.1,
       "color_tex": "uvgrid"

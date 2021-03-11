@@ -135,7 +135,7 @@
       "emission": [10, 10, 10]
     },
     "skin1a": {
-      "type": "glass",
+      "type": "refractive",
       "roughness": 0.25,
       "color": [0.76, 0.48, 0.23],
       "scattering": [0.436, 0.227, 0.131],
@@ -143,7 +143,7 @@
       "trdepth": 0.001
     },
     "skin2a": {
-      "type": "glass",
+      "type": "refractive",
       "roughness": 0.25,
       "color": [0.82, 0.55, 0.4],
       "scattering": [0.623, 0.433, 0.343],
@@ -151,7 +151,7 @@
       "trdepth": 0.001
     },
     "skins": {
-      "type": "glass",
+      "type": "refractive",
       "roughness": 0,
       "color": [0.76, 0.48, 0.23],
       "scattering": [0.436, 0.227, 0.131],
@@ -159,7 +159,7 @@
       "trdepth": 0.001
     },
     "skin1b": {
-      "type": "glass",
+      "type": "refractive",
       "roughness": 0.25,
       "color": [0.76, 0.48, 0.23],
       "scattering": [0.436, 0.227, 0.131],

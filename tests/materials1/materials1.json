@@ -135,12 +135,12 @@
       "emission": [10, 10, 10]
     },
     "sphere-plastic-sharp": {
-      "type": "plastic",
+      "type": "glossy",
       "color": [0.5, 0.5, 0.7],
       "roughness": 0.01
     },
     "sphere-plastic-rough": {
-      "type": "plastic",
+      "type": "glossy",
       "color": [0.5, 0.7, 0.5],
       "roughness": 0.2
     },
@@ -160,12 +160,12 @@
       "roughness": 0.2
     },
     "bunny-plastic-sharp": {
-      "type": "plastic",
+      "type": "glossy",
       "color": [0.5, 0.5, 0.7],
       "roughness": 0.01
     },
     "bunny-plastic-rough": {
-      "type": "plastic",
+      "type": "glossy",
       "color": [0.5, 0.7, 0.5],
       "roughness": 0.2
     },
