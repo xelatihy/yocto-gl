@@ -330,7 +330,10 @@ unfold_triangle triangle_coordinates(const vector<vec3i>& triangles,
   result[1]   = {0, length(positions[tr.x] - positions[tr.y])};
   auto rx     = length_squared(positions[tr.x] - positions[tr.z]);
   auto ry     = length_squared(positions[tr.y] - positions[tr.z]);
-  result[2]   = intersect_circles(result[0], rx, result[1], ry);
+  // result[2]   = intersect_circles(result[0], rx, result[1], ry);
+  // result[2]   = intersect_circles(result[0], rx, result[1], ry);
+  result[2] = result[0] + unfold_point(positions[tr.y], positions[tr.x],
+                              positions[tr.z], result[1], result[0]);
 
   // Transform coordinates such that point = (0, 0)
   auto point_coords = interpolate_triangle(
