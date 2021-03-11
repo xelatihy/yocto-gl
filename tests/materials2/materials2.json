@@ -182,7 +182,7 @@
       "roughness": 0
     },
     "bunny-thinglass-rough": {
-      "type": "thinglass",
+      "type": "transparent",
       "color": [1, 0.7, 0.7],
       "roughness": 0.05
     }

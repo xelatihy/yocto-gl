@@ -2794,7 +2794,6 @@ static bool load_json_scene(const string& filename, scene_model& scene,
         }
         auto& material = scene.materials.at(material_map.at(name));
         material_set[&material - &scene.materials.front()] = true;
-        material.type = scene_material_type::gltfpbr;
         for (auto& [key, value] : iterate_object(element)) {
           if (key == "type") {
             if (!get_value(value, material.type))
