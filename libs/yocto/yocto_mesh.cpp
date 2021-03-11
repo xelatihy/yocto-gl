@@ -50,6 +50,8 @@
 
 // #define TESTS_MAY_FAIL
 
+#define YOCTO_BEZIER_PRECISE 1
+
 // -----------------------------------------------------------------------------
 // USING DIRECTIVES
 // -----------------------------------------------------------------------------
@@ -215,8 +217,8 @@ vec2f intersect_circles(const vec2f& c2, float R2, const vec2f& c1, float R1) {
   auto B = (R1 - R2) * invR;
   auto s = A - B * B - 1;
   assert(s >= 0);
-  resultx += c2y - c1y * yocto::sqrt(s);
-  resulty += c1x - c2x * yocto::sqrt(s);
+  resultx += (c2y - c1y) * std::sqrt(s);
+  resulty += (c1x - c2x) * std::sqrt(s);
   return vec2f{(float)(resultx / 2), (float)(resulty / 2)};
 }
 
@@ -1153,6 +1155,10 @@ void visit_geodesic_graph(vector<float>& field,
   }
 }
 
+static vector<int> compute_strip(const dual_geodesic_solver& solver,
+    const vector<vec3i>& triangles, const vector<vec3f>& positions, int start,
+    int end);
+
 vector<mesh_point> compute_shortest_path(const dual_geodesic_solver& graph,
     const vector<vec3i>& triangles, const vector<vec3f>& positions,
     const vector<vec3i>& adjacencies, const mesh_point& start,
@@ -1163,7 +1169,9 @@ vector<mesh_point> compute_shortest_path(const dual_geodesic_solver& graph,
     path.end   = end;
     path.strip = {start.face};
   } else {
-    auto strip = strip_on_dual_graph(
+    // auto strip = strip_on_dual_graph(
+    //     graph, triangles, positions, end.face, start.face);
+    auto strip = compute_strip(
         graph, triangles, positions, end.face, start.face);
     path = shortest_path(triangles, positions, adjacencies, start, end, strip);
   }
@@ -1210,7 +1218,9 @@ vector<mesh_point> visualize_shortest_path(const dual_geodesic_solver& graph,
       path.end   = end;
       path.strip = {start.face};
     } else {
-      auto strip = strip_on_dual_graph(
+      // auto strip = strip_on_dual_graph(
+      //     graph, triangles, positions, end.face, start.face);
+      auto strip = compute_strip(
           graph, triangles, positions, end.face, start.face);
       path = shortest_path(
           triangles, positions, adjacencies, start, end, strip);
@@ -2078,7 +2088,11 @@ void heuristic_visit_geodesic_graph(vector<float>& field,
 
       // Update distance of neighbor.
       field[neighbor] = new_distance;
+#if YOCTO_BEZIER_PRECISE == 0
       if (update(node, neighbor, new_distance)) return;
+#else
+      update(node, neighbor, new_distance);
+#endif
     }
   }
 }
@@ -2872,8 +2886,12 @@ static void straighten_path(geodesic_path& path, const vector<vec3i>& triangles,
       triangles, positions, path.strip, path.start, path.end);
   path.lerps = funnel(init_portals, index);
 
-  // while(true) { this may never break...
+// while(true) { this may never break...
+#if YOCTO_BEZIER_PRECISE == 0
   auto max_iterations = path.strip.size() * 2;
+#else
+  auto max_iterations = path.strip.size() * 100;
+#endif
   for (auto i = 0; i < max_iterations && index != -1; i++) {
     auto new_vertex = -1;
     auto face       = path.strip[index];
@@ -3126,7 +3144,11 @@ static void search_strip(vector<float>& field, vector<bool>& in_queue,
 
       // Update distance of neighbor.
       field[neighbor] = new_distance;
+#if YOCTO_BEZIER_PRECISE == 0
       if (update(node, neighbor, new_distance)) return;
+#else
+      update(node, neighbor, new_distance);
+#endif
     }
   }
 }

@@ -156,5 +156,10 @@
   ],
   "python.pythonPath": "/usr/local/bin/python3",
   "editor.formatOnSave": true,
-  "python.formatting.provider": "yapf"
+  "python.formatting.provider": "yapf",
+  "cSpell.words": [
+    "bsdf",
+    "bsdfs",
+    "khronos"
+  ]
 }
