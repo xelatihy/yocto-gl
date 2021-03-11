@@ -47,7 +47,18 @@ instance.material = (int)scene.materials.size()-1;
 ```
 
 Yocto/Scene defines several function to evaluate scene properties.
-Use `compute_bounds(scene)` to compute the scene bounding boxes.
+Use `compute_bounds(scene)` to compute the scene bounding boxes,  
+`scene_stats(scene)` to get scene stats and
+`scene_validation(scene)` to validate scene objects.
+
+```cpp
+auto scene = scene_scene{...};              // create a complete scene
+auto bbox = compute_bounds(scene);          // get bounds
+auto stats = scene_stats(scene);            // get stats
+for(auto stat : stats) print_info(stat);    // print stats
+auto errors = validate_stats(scene);        // get validation errors
+for(auto error : errors) print_error(error);// print error
+```
 
 ## Cameras
 
