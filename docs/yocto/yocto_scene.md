@@ -52,37 +52,38 @@ float vs byte is just a memory saving feature.
 and a few parameters, common to all materials. In particular, we support the
 following materials:
 
-- `matte`, for material that have a d
+- `matte`, for materials like concrete or stucco, implemented as a lambertian bsdf;
+- `glossy`, for materials like plastic or painted wood, implemented as the sum
+  of a lambertian and a microfacet dielectric lobe;
+- `metallic`, for materials like metals, implemented as either a delta or
+  microfacet brdf lobe;
+- `transparent`, for materials for thin glass, implemented as a delta or
+  microfacet transmission bsdf;
+- `refractive`, for materials for glass or water, implemented as a delta or
+  microfacet refraction bsdf; also support homogenous volume scattering;
+- `subsurface`, for materials for skin, implemented as a microfacet refraction
+  bsdf with homogenous volume scattering - for no this is like `refractive`;
+- `volume`, for materials like homogeneous smoke or fog, implemented as the lack
+  of a surface interface but with volumetric scattering.
+- `gltfpbr`, for materials that range from glossy to metallic, implemented as
+  the sum of a lambertian and a microfacet dielectric lobe;
+  this is a compatibility material for loading and saving Khronos glTF data.
 
-[Disney Principled BSDF](https://blog.selfshadow.com/publications/s2015-shading-course/#course_content) and the
-[Autodesk Standard Surface](https://autodesk.github.io/standard-surface/).
-Materials are defined using many parameters that control material emission,
-surface scattering and homogeneous volumetric scattering.
-Each material parameter has an associated texture, where texture values are
-multiplied by parameter values.
-
-Materials specify a diffuse surface emission `emission` with HDR values
+All materials can specify a diffuse surface emission `emission` with HDR values
 that represent emitted radiance.
 
-Surface scattering is modeled by defining the main surface
-color `color`, that represent the surface albedo.
-Specular reflection is modeled by default as a dielectric with index of
-refraction `ior`, roughness `roughness` and is scaled by a specular
-weight `specular`. By default, specular reflection is dielectric.
-Materials can reflect light as metals by setting the `metallic` parameter.
-In this case, a metallic specular reflection is defined by the surface color
-interpreted as metallic reflectivity, and surface roughness defined by
-the previous parameter. Surfaces are optionally covered by a coating layer
-defined by a `coat` parameter. By default surfaces are fully opaque, but
+Surface scattering is controlled by specifying the main surface color `color`,
+that represent the surface albedo, the surface roughness `roughness` and
+the index of refraction `ior`. The physical meaning of each parameter depends
+on the material type. By default surfaces are fully opaque, but
 can defined a `opacity` parameter and texture to define the surface coverage.
 
-Materials also define volumetric scattering properties by setting a
-`transmission` parameter that sets the transmitted surface color.
-Surfaces are be default considered as thin sheet, but can be modeled as
-isotropic volumes if the `thin` parameter is set to false. In that case,
-the surface transmission controls the volumetric parameters by defining the
-volume density, while the volume scattering albedo is defined by the
-`scattering` property.
+Materials like `refractive`, `subsurface` and `volume` may also specify
+volumetric properties. In these cases, the `color` parameter controls the volume density,
+while the `scattering` also define volumetric scattering properties by setting a
+`transmission` parameter controls the homogenous volume scattering.
+
+All parameters can modulated by a corresponding textures, if present.
 
 **Shapes**, represented by `scene_shape`, are indexed meshes of elements.
 Shapes can contain only one type of element, either
@@ -125,20 +126,20 @@ For cameras, you should set the camera frame, the camera view,
 via lens, aspect and film, and optionally the camera aperture and focus.
 
 ```cpp
-auto scene = new scene_model{};              // create a scene
+auto scene = scene_model{};                  // create a scene
 auto& camera = scene.cameras.emplace_back(); // create a camera
-camera.frame = identity3x4f;                // set frame to identity
-camera.lens = 0.050;                        // set as 50mm lens
-camera.aspect = 1.5;                        // set 3:2 aspect ratio
-camera.film = 0.036;                        // set the film as 35mm
-camera.aperture = 0.01;                     // set 10mm aperture
-camera.focus = 10;                          // set the focus at 10m
+camera.frame = identity3x4f;                 // set frame to identity
+camera.lens = 0.050;                         // set as 50mm lens
+camera.aspect = 1.5;                         // set 3:2 aspect ratio
+camera.film = 0.036;                         // set the film as 35mm
+camera.aperture = 0.01;                      // set 10mm aperture
+camera.focus = 10;                           // set the focus at 10m
 ```
 
 For instances, you should set the instance frame, shape and material.
 
 ```cpp
-auto scene = new scene_model{};                     // create a scene
+auto scene = scene_model{};                         // create a scene
 auto& instance = scene.instances.emplace_back();    // create an instance
 instance.frame = identity3x4f;                      // set frame to identity
 auto& shape = scene.shapes.emplace_back();
@@ -150,7 +151,7 @@ instance.material = (int)scene.materials.size()-1;  // set material index
 For textures, set the size, the color space, and _either_ the hdr or ldr pixels.
 
 ```cpp
-auto scene = new scene_model{};               // create a scene
+auto scene = scene_model{};                   // create a scene
 auto texture = scene.textures.emplace_back(); // create a texture
 texture.width = ...;  texture.height = ...;   // set size
 texture.linear = ...;                         // set color space
@@ -161,38 +162,45 @@ if (...) {
 }
 ```
 
-For materials, we adopt a Disney0like model that has many parameters,
-but can render a large variety of looks. Here are some examples.
+For materials, we need to specify the material type and color at the minimum.
+We can further control the appearance by changing surface roughness, index of
+refraction and volumetric properties, when appropriate. Here are some examples.
 
 ```cpp
-auto scene = new trace_scene{};               // create a scene
-auto matte = add_texture(scene);              // create a matte material
-matte.color = {1,0.5,0.5};                    // with baese color and
-matte.color_tex = add_texture(scene);         // textured albedo
-auto plastic = add_texture(scene);            // create a plastic material
-plastic.color = {0.5,1,0.5};                  // with constant color
-plastic.specular = 1;                         // constant specular
-plastic.roughness = 0.1;                      // base roughness and a
-plastic.roughness_tex = add_texture(scene);   // roughness texture
-auto metal = add_texture(scene);              // create a metal material
+auto scene = scene_model{};                   // create a scene
+auto& matte = scene.materials.emplace_back(); // create a material
+matte.type = scene_material_type::matte;      // with matte appearance
+matte.color = {1,0.5,0.5};                    // with base color and
+matte.color_tex = texture_id;                 // textured albedo
+auto& glossy =  scene.materials.emplace_back(); // create a material
+glossy.type = scene_material_type::glossy;    // with glossy appearance
+glossy.color = {0.5,1,0.5};                   // with constant color
+glossyv.roughness = 0.1;                      // base roughness and a
+glossy.roughness_tex = add_texture(scene);    // roughness texture
+auto& metallic =  scene.materials.emplace_back(); // create a material
+glossy.type = scene_material_type::glossy;    // with metallic appearance
 metal.color = {0.5,0.5,1};                    // constant color
-metal.metallic = 1;                           // constant metallic
 metal.roughness = 0.1;                        // constant roughness
-auto tglass = add_texture(scene);             // create a thin glass material
+auto& tglass = scene.materials.emplace_back(); // create a material
+tglass.type = scene_material_type::transparent;// with a transparent appearance
 tglass.color = {1,1,1};                       // with constant color
-tglass.specular = 1;                          // constant specular
-tglass.transmission = 1;                      // constant transmission
-auto glass = add_texture(scene);              // create a glass material
-glass.color = {1,1,1};                        // constant color
-glass.specular, = 1;                          // constant specular
-glass.transmission = 1;                       // constant transmission
-glass.thin = false;                           // non-volumetric material
-auto subsurf = add_texture(scene);            // create a subsurface material
-subsurf.color = {1,1,1};                      // constant color
-subsurf.specular = 1;                         // constant specular
-subsurf.transmission = 1;                     // constant transmission
-subsurf.thin = false;                         // volumetric material
-subsurf.scattering = {0.5,1,0.5};             // volumetric scattering
+auto& glass = scene.materials.emplace_back(); // create a material
+glass.type = scene_material_type::transparent;// with a refractive appearance
+glass.color = {1,0.9,0.9};                    // constant color
+auto& subsurf = scene.materials.emplace_back();// create a material
+subsurf.type = scene_material_type::subsurface;// with a refractive appearance
+subsurf.color = {1,1,1};                      // that transmits all light
+subsurf.scattering = {0.5,1,0.5};             // and as volumetric scattering
+```
+
+Lights are not explicit in Yocto/Scene but are specified by assigning emissive
+materials.
+
+```cpp
+auto scene = scene_model{};                   // create a scene
+auto& light = scene.materials.emplace_back(); // create a material
+light.color = {0,0,0};                        // that does not reflect light
+light.emission = {10,10,10};                  // but emits it instead
 ```
 
 For shapes, you should set the shape elements, i.e. point, limes, triangles
@@ -200,7 +208,7 @@ or quads, and the vertex properties, i.e. positions, normals, texture
 coordinates, colors and radia. Shapes support only one element type.
 
 ```cpp
-auto scene = new scene_model{};               // create a scene
+auto scene = scene_model{};                   // create a scene
 auto& shape = scene.shapes.emplace_back();    // create a shape
 shape.triangles = vector<vec3i>{...};         // set triangle indices
 shape.positions = vector<vec3f>{...};         // set positions
@@ -215,7 +223,7 @@ subdivision. Finally, displacement can also be applied by setting a displacement
 scale and texture.
 
 ```cpp
-auto scene = new scene_model{};                 // create a scene
+auto scene = scene_model{};                     // create a scene
 auto& subdiv = scene.subdivs.emplace_back();    // create a subdiv
 subdiv.quadspos = vector<vec4i>{...};           // set face-varying indices
 subdiv.quadstexcoord = vector<vec4i>{...};      // for positions and textures
@@ -230,7 +238,7 @@ subdiv.displacement_tex = texture_id;           // and displacement map
 For environments, set the frame, emission and optionally the emission texture.
 
 ```cpp
-auto scene = new scene_model{};                 // create a scene
+auto scene = scene_model{};                     // create a scene
 auto& environment = scene.environments.emplace_back(); // create an environment
 environment.frame = identity3x4f;               // set identity transform
 environment.emission = {1,1,1};                 // set emission scale
@@ -251,21 +259,18 @@ shape.texcoords = vector<vec2f>{...};       // set texture coordinates
 
 ## Scene tesselation
 
-The evaluation functions defined above and the ray intersection functions do
-not support subdivision surfaces or displaced shapes directly. Instead,
-shapes should be converted to indexed meshes using `tesselate_shape(shape)`
-for a specific shape, or `tesselate_shapes(scene, progress)` for the
-whole scene. Note that tesselations are destructive, meaning that the original
-shape data is lost. This is done to avoid copying whenever possible.
+Scene specify geometry as instance shapes. For convenience we also support
+subdivision surfaces, that need to be tessellated into indexed meshes before
+use with `tesselate_sudivs(scene)`.
 
 ```cpp
-auto scene = new trace_scene{...};          // create a complete scene
-void tesselate_shapes(scene);               // tesselate shapes in the scene
+auto scene =  scene_model{...};          // create a complete scene
+void tesselate_subdivs(scene);           // tesselate subdivs
 ```
 
 ## Evaluation of scene properties
 
-Yocto/Trace defines several function to evaluate scene properties.
+Yocto/Scene defines several function to evaluate scene properties.
 Use `compute_bounds(scene)` to compute the scene bounding boxes.
 Use `get_camera(scene, name)` to get a camera by name or the default camera
 is the name is not given. Use `eval_camera(camera, image_uv, lens_uv)`
@@ -333,20 +338,6 @@ auto scene = new trace_scene{...};               // create a complete scene
 auto enva = eval_environment(scene, dir);        // eval all environments
 auto environment = scene.environments.front();  // get first environment
 auto envi = eval_environment(environment, dir);  // eval environment
-```
-
-## Scene tesselation
-
-The evaluation functions defined above and the ray intersection functions do
-not support subdivision surfaces or displaced shapes directly. Instead,
-shapes should be converted to indexed meshes using `tesselate_shape(shape)`
-for a specific shape, or `tesselate_shapes(scene, progress)` for the
-whole scene. Note that tesselations are destructive, meaning that the original
-shape data is lost. This is done to avoid copying whenever possible.
-
-```cpp
-auto scene = new sceneio_scene{...};          // create a complete scene
-void tesselate_shapes(scene);               // tesselate shapes in the scene
 ```
 
 ## Serialization formats
