@@ -85,9 +85,12 @@ static vec3f eval_bsdfcos(const material_point& material, const vec3f& normal,
     return eval_metallic(reflectivity_to_eta(material.color), vec3f{0, 0, 0},
         material.roughness, normal, outgoing, incoming);
   } else if (material.type == scene_material_type::transparent) {
-    return eval_transmission(material.color, material.ior, material.roughness,
+    return eval_transparent(material.color, material.ior, material.roughness,
         normal, outgoing, incoming);
   } else if (material.type == scene_material_type::refractive) {
+    return eval_refractive(material.color, material.ior, material.roughness,
+        normal, outgoing, incoming);
+  } else if (material.type == scene_material_type::subsurface) {
     return eval_refractive(material.color, material.ior, material.roughness,
         normal, outgoing, incoming);
   } else if (material.type == scene_material_type::gltfpbr) {
@@ -105,7 +108,7 @@ static vec3f eval_delta(const material_point& material, const vec3f& normal,
   if (material.type == scene_material_type::metallic) {
     return eval_metallic(material.color, normal, outgoing, incoming);
   } else if (material.type == scene_material_type::transparent) {
-    return eval_transmission(
+    return eval_transparent(
         material.color, material.ior, normal, outgoing, incoming);
   } else if (material.type == scene_material_type::refractive) {
     return eval_refractive(
@@ -131,9 +134,12 @@ static vec3f sample_bsdfcos(const material_point& material, const vec3f& normal,
     return sample_metallic(
         material.color, material.roughness, normal, outgoing, rn);
   } else if (material.type == scene_material_type::transparent) {
-    return sample_transmission(material.color, material.ior, material.roughness,
+    return sample_transparent(material.color, material.ior, material.roughness,
         normal, outgoing, rnl, rn);
   } else if (material.type == scene_material_type::refractive) {
+    return sample_refractive(material.color, material.ior, material.roughness,
+        normal, outgoing, rnl, rn);
+  } else if (material.type == scene_material_type::subsurface) {
     return sample_refractive(material.color, material.ior, material.roughness,
         normal, outgoing, rnl, rn);
   } else if (material.type == scene_material_type::gltfpbr) {
@@ -151,7 +157,7 @@ static vec3f sample_delta(const material_point& material, const vec3f& normal,
   if (material.type == scene_material_type::metallic) {
     return sample_metallic(material.color, normal, outgoing);
   } else if (material.type == scene_material_type::transparent) {
-    return sample_transmission(
+    return sample_transparent(
         material.color, material.ior, normal, outgoing, rnl);
   } else if (material.type == scene_material_type::refractive) {
     return sample_refractive(
@@ -177,9 +183,12 @@ static float sample_bsdfcos_pdf(const material_point& material,
     return sample_metallic_pdf(
         material.color, material.roughness, normal, outgoing, incoming);
   } else if (material.type == scene_material_type::transparent) {
-    return sample_transmission_pdf(material.color, material.ior,
+    return sample_tranparent_pdf(material.color, material.ior,
         material.roughness, normal, outgoing, incoming);
   } else if (material.type == scene_material_type::refractive) {
+    return sample_refractive_pdf(material.color, material.ior,
+        material.roughness, normal, outgoing, incoming);
+  } else if (material.type == scene_material_type::subsurface) {
     return sample_refractive_pdf(material.color, material.ior,
         material.roughness, normal, outgoing, incoming);
   } else if (material.type == scene_material_type::gltfpbr) {
@@ -197,7 +206,7 @@ static float sample_delta_pdf(const material_point& material,
   if (material.type == scene_material_type::metallic) {
     return sample_metallic_pdf(material.color, normal, outgoing, incoming);
   } else if (material.type == scene_material_type::transparent) {
-    return sample_transmission_pdf(
+    return sample_tranparent_pdf(
         material.color, material.ior, normal, outgoing, incoming);
   } else if (material.type == scene_material_type::refractive) {
     return sample_refractive_pdf(

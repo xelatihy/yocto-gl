@@ -110,31 +110,31 @@
       "emission": [20, 20, 20]
     },
     "sphere-uvgrid": {
-      "type": "plastic",
+      "type": "glossy",
       "color": [1, 1, 1],
       "roughness": 0.1,
       "color_tex": "uvgrid"
     },
     "uvsphere-flipcap-uvgrid": {
-      "type": "plastic",
+      "type": "glossy",
       "color": [1, 1, 1],
       "roughness": 0.1,
       "color_tex": "uvgrid"
     },
     "disk-uvgrid": {
-      "type": "plastic",
+      "type": "glossy",
       "color": [1, 1, 1],
       "roughness": 0.1,
       "color_tex": "uvgrid"
     },
     "uvcylinder-uvgrid": {
-      "type": "plastic",
+      "type": "glossy",
       "color": [1, 1, 1],
       "roughness": 0.1,
       "color_tex": "uvgrid"
     },
     "cube-uvgrid": {
-      "type": "plastic",
+      "type": "glossy",
       "color": [1, 1, 1],
       "roughness": 0.1,
       "color_tex": "uvgrid"

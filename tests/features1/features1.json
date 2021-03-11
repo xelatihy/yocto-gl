@@ -102,29 +102,29 @@
       "color_tex": "floor"
     },
     "bunny-uvgrid-coated": {
-      "type": "plastic",
+      "type": "glossy",
       "color": [1, 1, 1],
       "roughness": 0.2,
       "color_tex": "uvgrid"
     },
     "bunny-volume-jade": {
-      "type": "glass",
+      "type": "refractive",
       "color": [0.5, 0.5, 0.5],
       "roughness": 0,
       "scattering": [0.3, 0.6, 0.3]
     },
     "bunny-metal-rough": {
-      "type": "metal",
+      "type": "metallic",
       "color": [0.66, 0.45, 0.34],
       "roughness": 0.2
     },
     "sphere-volume-glass": {
-      "type": "glass",
+      "type": "refractive",
       "color": [1, 0.5, 0.5],
       "roughness": 0
     },
     "sphere-plastic-rough-bumped": {
-      "type": "plastic",
+      "type": "glossy",
       "color": [0.5, 0.7, 0.5],
       "roughness": 0.2,
       "normal_tex": "bumps-normal"

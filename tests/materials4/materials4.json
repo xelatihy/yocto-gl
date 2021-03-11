@@ -140,17 +140,17 @@
       "scattering": [0.9, 0.9, 0.9]
     },
     "sphere-volume-glass": {
-      "type": "glass",
+      "type": "refractive",
       "color": [1, 0.5, 0.5],
       "trdepth": 0.02
     },
     "sphere-volume-jade": {
-      "type": "glass",
+      "type": "refractive",
       "color": [0.5, 0.5, 0.5],
       "scattering": [0.3, 0.6, 0.3]
     },
     "sphere-volume-jade2": {
-      "type": "glass",
+      "type": "refractive",
       "color": [0.5, 0.5, 0.5],
       "scattering": [0.3, 0.6, 0.3]
     },
@@ -165,19 +165,19 @@
       "scattering": [0.9, 0.9, 0.9]
     },
     "bunny-volume-glass": {
-      "type": "glass",
+      "type": "refractive",
       "roughness": 0,
       "color": [1, 0.5, 0.5],
       "trdepth": 0.02
     },
     "bunny-volume-jade": {
-      "type": "glass",
+      "type": "refractive",
       "roughness": 0,
       "color": [0.5, 0.5, 0.5],
       "scattering": [0.3, 0.6, 0.3]
     },
     "bunny-volume-jade2": {
-      "type": "glass",
+      "type": "refractive",
       "roughness": 0.1,
       "color": [0.5, 0.5, 0.5],
       "scattering": [0.3, 0.6, 0.3]

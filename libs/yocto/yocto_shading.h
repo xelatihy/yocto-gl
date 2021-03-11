@@ -173,24 +173,24 @@ inline float sample_gltfpbr_pdf(const vec3f& color, float ior, float roughness,
     const vec3f& incoming);
 
 // Evaluates a transmission BRDF lobe.
-inline vec3f eval_transmission(const vec3f& color, float ior, float roughness,
+inline vec3f eval_transparent(const vec3f& color, float ior, float roughness,
     const vec3f& normal, const vec3f& outgoing, const vec3f& incoming);
 // Sample a transmission BRDF lobe.
-inline vec3f sample_transmission(float ior, float roughness,
-    const vec3f& normal, const vec3f& outgoing, float rnl, const vec2f& rn);
+inline vec3f sample_transparent(float ior, float roughness, const vec3f& normal,
+    const vec3f& outgoing, float rnl, const vec2f& rn);
 // Pdf for transmission BRDF lobe sampling.
-inline float sample_transmission_pdf(const vec3f& color, float ior,
+inline float sample_tranparent_pdf(const vec3f& color, float ior,
     float roughness, const vec3f& normal, const vec3f& outgoing,
     const vec3f& incoming);
 
 // Evaluate a delta transmission BRDF lobe.
-inline vec3f eval_transmission(const vec3f& color, float ior,
+inline vec3f eval_transparent(const vec3f& color, float ior,
     const vec3f& normal, const vec3f& outgoing, const vec3f& incoming);
 // Sample a delta transmission BRDF lobe.
-inline vec3f sample_transmission(const vec3f& color, float ior,
+inline vec3f sample_transparent(const vec3f& color, float ior,
     const vec3f& normal, const vec3f& outgoing, float rnl);
 // Pdf for delta transmission BRDF lobe sampling.
-inline float sample_transmission_pdf(const vec3f& color, float ior,
+inline float sample_tranparent_pdf(const vec3f& color, float ior,
     const vec3f& normal, const vec3f& outgoing, const vec3f& incoming);
 
 // Evaluates a refraction BRDF lobe.
@@ -717,7 +717,7 @@ inline float sample_gltfpbr_pdf(const vec3f& color, float ior, float roughness,
 }
 
 // Evaluate a transmission BRDF lobe.
-inline vec3f eval_transmission(const vec3f& color, float ior, float roughness,
+inline vec3f eval_transparent(const vec3f& color, float ior, float roughness,
     const vec3f& normal, const vec3f& outgoing, const vec3f& incoming) {
   auto up_normal = dot(normal, outgoing) <= 0 ? -normal : normal;
   if (dot(normal, incoming) * dot(normal, outgoing) >= 0) {
@@ -743,7 +743,7 @@ inline vec3f eval_transmission(const vec3f& color, float ior, float roughness,
 }
 
 // Sample a transmission BRDF lobe.
-inline vec3f sample_transmission(const vec3f& color, float ior, float roughness,
+inline vec3f sample_transparent(const vec3f& color, float ior, float roughness,
     const vec3f& normal, const vec3f& outgoing, float rnl, const vec2f& rn) {
   auto up_normal = dot(normal, outgoing) <= 0 ? -normal : normal;
   auto halfway   = sample_microfacet(roughness, up_normal, rn);
@@ -756,7 +756,7 @@ inline vec3f sample_transmission(const vec3f& color, float ior, float roughness,
 }
 
 // Pdf for transmission BRDF lobe sampling.
-inline float sample_transmission_pdf(const vec3f& color, float ior,
+inline float sample_tranparent_pdf(const vec3f& color, float ior,
     float roughness, const vec3f& normal, const vec3f& outgoing,
     const vec3f& incoming) {
   auto up_normal = dot(normal, outgoing) <= 0 ? -normal : normal;
@@ -775,7 +775,7 @@ inline float sample_transmission_pdf(const vec3f& color, float ior,
 }
 
 // Evaluate a delta transmission BRDF lobe.
-inline vec3f eval_transmission(const vec3f& color, float ior,
+inline vec3f eval_transparent(const vec3f& color, float ior,
     const vec3f& normal, const vec3f& outgoing, const vec3f& incoming) {
   auto up_normal = dot(normal, outgoing) <= 0 ? -normal : normal;
   if (dot(normal, incoming) * dot(normal, outgoing) >= 0) {
@@ -786,7 +786,7 @@ inline vec3f eval_transmission(const vec3f& color, float ior,
 }
 
 // Sample a delta transmission BRDF lobe.
-inline vec3f sample_transmission(const vec3f& color, float ior,
+inline vec3f sample_transparent(const vec3f& color, float ior,
     const vec3f& normal, const vec3f& outgoing, float rnl) {
   auto up_normal = dot(normal, outgoing) <= 0 ? -normal : normal;
   if (rnl < fresnel_dielectric(ior, up_normal, outgoing)) {
@@ -797,7 +797,7 @@ inline vec3f sample_transmission(const vec3f& color, float ior,
 }
 
 // Pdf for delta transmission BRDF lobe sampling.
-inline float sample_transmission_pdf(const vec3f& color, float ior,
+inline float sample_tranparent_pdf(const vec3f& color, float ior,
     const vec3f& normal, const vec3f& outgoing, const vec3f& incoming) {
   auto up_normal = dot(normal, outgoing) <= 0 ? -normal : normal;
   if (dot(normal, incoming) * dot(normal, outgoing) >= 0) {

@@ -135,12 +135,12 @@
       "emission": [10, 10, 10]
     },
     "sphere-glass-sharp": {
-      "type": "glass",
+      "type": "refractive",
       "color": [1, 1, 1],
       "roughness": 0
     },
     "sphere-glass-rough": {
-      "type": "glass",
+      "type": "refractive",
       "color": [1, 0.7, 0.7],
       "roughness": 0.1
     },
@@ -151,22 +151,22 @@
       "opacity": 0.2
     },
     "sphere-thinglass-sharp": {
-      "type": "thinglass",
+      "type": "transparent",
       "color": [1, 1, 1],
       "roughness": 0
     },
     "sphere-thinglass-rough": {
-      "type": "thinglass",
+      "type": "transparent",
       "color": [1, 0.7, 0.7],
       "roughness": 0.05
     },
     "bunny-glass-sharp": {
-      "type": "glass",
+      "type": "refractive",
       "color": [1, 1, 1],
       "roughness": 0
     },
     "bunny-glass-rough": {
-      "type": "glass",
+      "type": "refractive",
       "color": [1, 0.7, 0.7],
       "roughness": 0.1
     },
@@ -177,12 +177,12 @@
       "opacity": 0.2
     },
     "bunny-thinglass-sharp": {
-      "type": "thinglass",
+      "type": "transparent",
       "color": [1, 1, 1],
       "roughness": 0
     },
     "bunny-thinglass-rough": {
-      "type": "thinglass",
+      "type": "transparent",
       "color": [1, 0.7, 0.7],
       "roughness": 0.05
     }

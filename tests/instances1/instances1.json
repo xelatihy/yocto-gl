@@ -83,7 +83,7 @@
       "color_tex": "floor"
     },
     "sphere-uvgrid": {
-      "type": "plastic",
+      "type": "glossy",
       "color": [1, 1, 1],
       "roughness": 0.2,
       "color_tex": "uvgrid"
