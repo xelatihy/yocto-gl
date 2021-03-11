@@ -121,7 +121,7 @@ lobe BSDF multiplied by the cosine,
 direction, and
 `sample_<material>_pdf(<params>, normal, outgoing, incoming)` to compute
 the sampled direction pdf.
-Yocto/Shading supports the following material:
+Yocto/Shading supports the following materials:
 
 - `matte`: matte appearance implemented as a diffuse bsdf
 - `glossy`: glossy appearance implemented as a sum of diffuse and microfacet bsdfs
