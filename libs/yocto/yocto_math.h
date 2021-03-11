@@ -624,6 +624,338 @@ inline bool operator!=(const vec4b& a, const vec4b& b);
 }  // namespace yocto
 
 // -----------------------------------------------------------------------------
+// MATH FUNCTIONS IN DOUBLE
+// -----------------------------------------------------------------------------
+namespace yocto {
+
+inline const auto dbl_max = std::numeric_limits<double>::max();
+inline const auto dbl_min = std::numeric_limits<double>::lowest();
+inline const auto dbl_eps = std::numeric_limits<double>::epsilon();
+
+inline double abs(double a);
+inline double min(double a, double b);
+inline double max(double a, double b);
+inline double clamp(double a, double min, double max);
+inline double sign(double a);
+inline double sqrt(double a);
+inline double sin(double a);
+inline double cos(double a);
+inline double tan(double a);
+inline double asin(double a);
+inline double acos(double a);
+inline double atan(double a);
+inline double log(double a);
+inline double exp(double a);
+inline double log2(double a);
+inline double exp2(double a);
+inline double pow(double a, double b);
+inline bool   isfinite(double a);
+inline double atan2(double a, double b);
+inline double fmod(double a, double b);
+inline double radians(double a);
+inline double degrees(double a);
+inline double lerp(double a, double b, double u);
+inline void   swap(double& a, double& b);
+inline double smoothstep(double a, double b, double u);
+inline double bias(double a, double bias);
+inline double gain(double a, double gain);
+
+}  // namespace yocto
+
+// -----------------------------------------------------------------------------
+// VECTORS
+// -----------------------------------------------------------------------------
+namespace yocto {
+
+struct vec2d {
+  double x = 0;
+  double y = 0;
+
+  double&       operator[](int i);
+  const double& operator[](int i) const;
+};
+
+struct vec3d {
+  double x = 0;
+  double y = 0;
+  double z = 0;
+
+  double&       operator[](int i);
+  const double& operator[](int i) const;
+};
+
+struct vec4d {
+  double x = 0;
+  double y = 0;
+  double z = 0;
+  double w = 0;
+
+  double&       operator[](int i);
+  const double& operator[](int i) const;
+};
+
+// Zero vector constants.
+inline const auto zero2d = vec2d{0, 0};
+inline const auto zero3d = vec3d{0, 0, 0};
+inline const auto zero4d = vec4d{0, 0, 0, 0};
+
+// One vector constants.
+inline const auto one2d = vec2d{1, 1};
+inline const auto one3d = vec3d{1, 1, 1};
+inline const auto one4d = vec4d{1, 1, 1, 1};
+
+// Element access
+inline vec3d xyz(const vec4d& a);
+
+// Vector sequence operations.
+inline int           size(const vec2d& a);
+inline const double* begin(const vec2d& a);
+inline const double* end(const vec2d& a);
+inline double*       begin(vec2d& a);
+inline double*       end(vec2d& a);
+inline const double* data(const vec2d& a);
+inline double*       data(vec2d& a);
+
+// Vector comparison operations.
+inline bool operator==(const vec2d& a, const vec2d& b);
+inline bool operator!=(const vec2d& a, const vec2d& b);
+
+// Vector operations.
+inline vec2d operator+(const vec2d& a);
+inline vec2d operator-(const vec2d& a);
+inline vec2d operator+(const vec2d& a, const vec2d& b);
+inline vec2d operator+(const vec2d& a, double b);
+inline vec2d operator+(double a, const vec2d& b);
+inline vec2d operator-(const vec2d& a, const vec2d& b);
+inline vec2d operator-(const vec2d& a, double b);
+inline vec2d operator-(double a, const vec2d& b);
+inline vec2d operator*(const vec2d& a, const vec2d& b);
+inline vec2d operator*(const vec2d& a, double b);
+inline vec2d operator*(double a, const vec2d& b);
+inline vec2d operator/(const vec2d& a, const vec2d& b);
+inline vec2d operator/(const vec2d& a, double b);
+inline vec2d operator/(double a, const vec2d& b);
+
+// Vector assignments
+inline vec2d& operator+=(vec2d& a, const vec2d& b);
+inline vec2d& operator+=(vec2d& a, double b);
+inline vec2d& operator-=(vec2d& a, const vec2d& b);
+inline vec2d& operator-=(vec2d& a, double b);
+inline vec2d& operator*=(vec2d& a, const vec2d& b);
+inline vec2d& operator*=(vec2d& a, double b);
+inline vec2d& operator/=(vec2d& a, const vec2d& b);
+inline vec2d& operator/=(vec2d& a, double b);
+
+// Vector products and lengths.
+inline double dot(const vec2d& a, const vec2d& b);
+inline double cross(const vec2d& a, const vec2d& b);
+
+inline double length(const vec2d& a);
+inline double length_squared(const vec2d& a);
+inline vec2d  normalize(const vec2d& a);
+inline double distance(const vec2d& a, const vec2d& b);
+inline double distance_squared(const vec2d& a, const vec2d& b);
+inline double angle(const vec2d& a, const vec2d& b);
+
+// Max element and clamp.
+inline vec2d max(const vec2d& a, double b);
+inline vec2d min(const vec2d& a, double b);
+inline vec2d max(const vec2d& a, const vec2d& b);
+inline vec2d min(const vec2d& a, const vec2d& b);
+inline vec2d clamp(const vec2d& x, double min, double max);
+inline vec2d lerp(const vec2d& a, const vec2d& b, double u);
+inline vec2d lerp(const vec2d& a, const vec2d& b, const vec2d& u);
+
+inline double max(const vec2d& a);
+inline double min(const vec2d& a);
+inline double sum(const vec2d& a);
+inline double mean(const vec2d& a);
+
+// Functions applied to vector elements
+inline vec2d abs(const vec2d& a);
+inline vec2d sqrt(const vec2d& a);
+inline vec2d exp(const vec2d& a);
+inline vec2d log(const vec2d& a);
+inline vec2d exp2(const vec2d& a);
+inline vec2d log2(const vec2d& a);
+inline bool  isfinite(const vec2d& a);
+inline vec2d pow(const vec2d& a, double b);
+inline vec2d pow(const vec2d& a, const vec2d& b);
+inline vec2d gain(const vec2d& a, double b);
+inline void  swap(vec2d& a, vec2d& b);
+
+// Vector sequence operations.
+inline int           size(const vec3d& a);
+inline const double* begin(const vec3d& a);
+inline const double* end(const vec3d& a);
+inline double*       begin(vec3d& a);
+inline double*       end(vec3d& a);
+inline const double* data(const vec3d& a);
+inline double*       data(vec3d& a);
+
+// Vector comparison operations.
+inline bool operator==(const vec3d& a, const vec3d& b);
+inline bool operator!=(const vec3d& a, const vec3d& b);
+
+// Vector operations.
+inline vec3d operator+(const vec3d& a);
+inline vec3d operator-(const vec3d& a);
+inline vec3d operator+(const vec3d& a, const vec3d& b);
+inline vec3d operator+(const vec3d& a, double b);
+inline vec3d operator+(double a, const vec3d& b);
+inline vec3d operator-(const vec3d& a, const vec3d& b);
+inline vec3d operator-(const vec3d& a, double b);
+inline vec3d operator-(double a, const vec3d& b);
+inline vec3d operator*(const vec3d& a, const vec3d& b);
+inline vec3d operator*(const vec3d& a, double b);
+inline vec3d operator*(double a, const vec3d& b);
+inline vec3d operator/(const vec3d& a, const vec3d& b);
+inline vec3d operator/(const vec3d& a, double b);
+inline vec3d operator/(double a, const vec3d& b);
+
+// Vector assignments
+inline vec3d& operator+=(vec3d& a, const vec3d& b);
+inline vec3d& operator+=(vec3d& a, double b);
+inline vec3d& operator-=(vec3d& a, const vec3d& b);
+inline vec3d& operator-=(vec3d& a, double b);
+inline vec3d& operator*=(vec3d& a, const vec3d& b);
+inline vec3d& operator*=(vec3d& a, double b);
+inline vec3d& operator/=(vec3d& a, const vec3d& b);
+inline vec3d& operator/=(vec3d& a, double b);
+
+// Vector products and lengths.
+inline double dot(const vec3d& a, const vec3d& b);
+inline vec3d  cross(const vec3d& a, const vec3d& b);
+
+inline double length(const vec3d& a);
+inline double length_squared(const vec3d& a);
+inline vec3d  normalize(const vec3d& a);
+inline double distance(const vec3d& a, const vec3d& b);
+inline double distance_squared(const vec3d& a, const vec3d& b);
+inline double angle(const vec3d& a, const vec3d& b);
+
+// Orthogonal vectors.
+inline vec3d orthogonal(const vec3d& v);
+inline vec3d orthonormalize(const vec3d& a, const vec3d& b);
+
+// Reflected and refracted vector.
+inline vec3d reflect(const vec3d& w, const vec3d& n);
+inline vec3d refract(const vec3d& w, const vec3d& n, double inv_eta);
+
+// Max element and clamp.
+inline vec3d max(const vec3d& a, double b);
+inline vec3d min(const vec3d& a, double b);
+inline vec3d max(const vec3d& a, const vec3d& b);
+inline vec3d min(const vec3d& a, const vec3d& b);
+inline vec3d clamp(const vec3d& x, double min, double max);
+inline vec3d lerp(const vec3d& a, const vec3d& b, double u);
+inline vec3d lerp(const vec3d& a, const vec3d& b, const vec3d& u);
+
+inline double max(const vec3d& a);
+inline double min(const vec3d& a);
+inline double sum(const vec3d& a);
+inline double mean(const vec3d& a);
+
+// Functions applied to vector elements
+inline vec3d abs(const vec3d& a);
+inline vec3d sqrt(const vec3d& a);
+inline vec3d exp(const vec3d& a);
+inline vec3d log(const vec3d& a);
+inline vec3d exp2(const vec3d& a);
+inline vec3d log2(const vec3d& a);
+inline vec3d pow(const vec3d& a, double b);
+inline vec3d pow(const vec3d& a, const vec3d& b);
+inline vec3d gain(const vec3d& a, double b);
+inline bool  isfinite(const vec3d& a);
+inline void  swap(vec3d& a, vec3d& b);
+
+// Vector sequence operations.
+inline int           size(const vec4d& a);
+inline const double* begin(const vec4d& a);
+inline const double* end(const vec4d& a);
+inline double*       begin(vec4d& a);
+inline double*       end(vec4d& a);
+inline const double* data(const vec4d& a);
+inline double*       data(vec4d& a);
+
+// Vector comparison operations.
+inline bool operator==(const vec4d& a, const vec4d& b);
+inline bool operator!=(const vec4d& a, const vec4d& b);
+
+// Vector operations.
+inline vec4d operator+(const vec4d& a);
+inline vec4d operator-(const vec4d& a);
+inline vec4d operator+(const vec4d& a, const vec4d& b);
+inline vec4d operator+(const vec4d& a, double b);
+inline vec4d operator+(double a, const vec4d& b);
+inline vec4d operator-(const vec4d& a, const vec4d& b);
+inline vec4d operator-(const vec4d& a, double b);
+inline vec4d operator-(double a, const vec4d& b);
+inline vec4d operator*(const vec4d& a, const vec4d& b);
+inline vec4d operator*(const vec4d& a, double b);
+inline vec4d operator*(double a, const vec4d& b);
+inline vec4d operator/(const vec4d& a, const vec4d& b);
+inline vec4d operator/(const vec4d& a, double b);
+inline vec4d operator/(double a, const vec4d& b);
+
+// Vector assignments
+inline vec4d& operator+=(vec4d& a, const vec4d& b);
+inline vec4d& operator+=(vec4d& a, double b);
+inline vec4d& operator-=(vec4d& a, const vec4d& b);
+inline vec4d& operator-=(vec4d& a, double b);
+inline vec4d& operator*=(vec4d& a, const vec4d& b);
+inline vec4d& operator*=(vec4d& a, double b);
+inline vec4d& operator/=(vec4d& a, const vec4d& b);
+inline vec4d& operator/=(vec4d& a, double b);
+
+// Vector products and lengths.
+inline double dot(const vec4d& a, const vec4d& b);
+inline double length(const vec4d& a);
+inline double length_squared(const vec4d& a);
+inline vec4d  normalize(const vec4d& a);
+inline double distance(const vec4d& a, const vec4d& b);
+inline double distance_squared(const vec4d& a, const vec4d& b);
+inline double angle(const vec4d& a, const vec4d& b);
+
+inline vec4d slerp(const vec4d& a, const vec4d& b, double u);
+
+// Max element and clamp.
+inline vec4d max(const vec4d& a, double b);
+inline vec4d min(const vec4d& a, double b);
+inline vec4d max(const vec4d& a, const vec4d& b);
+inline vec4d min(const vec4d& a, const vec4d& b);
+inline vec4d clamp(const vec4d& x, double min, double max);
+inline vec4d lerp(const vec4d& a, const vec4d& b, double u);
+inline vec4d lerp(const vec4d& a, const vec4d& b, const vec4d& u);
+
+inline double max(const vec4d& a);
+inline double min(const vec4d& a);
+inline double sum(const vec4d& a);
+inline double mean(const vec4d& a);
+
+// Functions applied to vector elements
+inline vec4d abs(const vec4d& a);
+inline vec4d sqrt(const vec4d& a);
+inline vec4d exp(const vec4d& a);
+inline vec4d log(const vec4d& a);
+inline vec4d exp2(const vec4d& a);
+inline vec4d log2(const vec4d& a);
+inline vec4d pow(const vec4d& a, double b);
+inline vec4d pow(const vec4d& a, const vec4d& b);
+inline vec4d gain(const vec4d& a, double b);
+inline bool  isfinite(const vec4d& a);
+inline void  swap(vec4d& a, vec4d& b);
+
+// Quaternion operatons represented as xi + yj + zk + w
+// const auto identity_quat4f = vec4d{0, 0, 0, 1};
+inline vec4d quat_mul(const vec4d& a, double b);
+inline vec4d quat_mul(const vec4d& a, const vec4d& b);
+inline vec4d quat_conjugate(const vec4d& a);
+inline vec4d quat_inverse(const vec4d& a);
+
+}  // namespace yocto
+
+// -----------------------------------------------------------------------------
 // MATRICES
 // -----------------------------------------------------------------------------
 namespace yocto {

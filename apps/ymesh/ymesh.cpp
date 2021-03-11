@@ -905,7 +905,7 @@ float gaussian_distribution(const vec3f &origin, const vec3f &position,
   auto N               = 1.0f / (((standard_dev * scaled_strength) *
                        (standard_dev * scaled_strength) *
                        (standard_dev * scaled_strength)) *
-                      sqrt((2.0f * pi) * (2.0f * pi) * (2.0f * pi)));
+                      yocto::sqrt((2.0f * pif) * (2.0f * pif) * (2.0f * pif)));
   auto d               = (origin - position) * scale_factor;
   auto E               = dot(d, d) / (2.0f * standard_dev * standard_dev);
   return N * yocto::exp(-E);
