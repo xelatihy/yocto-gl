@@ -3522,7 +3522,7 @@ static int find_in_vector(const T& vec, int x) {
 }
 
 template <typename Update>
-static void search_strip(vector<float>& field, vector<bool>& in_queue,
+static void search_strip(vector<float>& weight, vector<bool>& in_queue,
     const dual_geodesic_solver& solver, const vector<vec3i>& triangles,
     const vector<vec3f>& positions, const mesh_point& start,
     const mesh_point& end, Update&& update) {
@@ -3532,7 +3532,7 @@ static void search_strip(vector<float>& field, vector<bool>& in_queue,
   auto estimate_dist = [&](int face) {
     return length(solver.centroids[face] - end_pos);
   };
-  field[start.face] = estimate_dist(start.face);
+  weight[start.face] = length(start_pos - end_pos);
 
   // Cumulative weights of elements in queue. Used to keep track of the
   // average weight of the queue.
@@ -3541,7 +3541,7 @@ static void search_strip(vector<float>& field, vector<bool>& in_queue,
   // setup queue
   auto queue           = std::deque<int>{};
   in_queue[start.face] = true;
-  cumulative_weight += field[start.face];
+  cumulative_weight += weight[start.face];
   queue.push_back(start.face);
 
   while (!queue.empty()) {
@@ -3550,7 +3550,7 @@ static void search_strip(vector<float>& field, vector<bool>& in_queue,
 
     // Large Label Last (see comment at the beginning)
     for (auto tries = 0; tries < queue.size() + 1; tries++) {
-      if (field[node] <= average_weight) break;
+      if (weight[node] <= average_weight) break;
       queue.pop_front();
       queue.push_back(node);
       node = queue.front();
@@ -3559,19 +3559,19 @@ static void search_strip(vector<float>& field, vector<bool>& in_queue,
     // Remove node from queue.
     queue.pop_front();
     in_queue[node] = false;
-    cumulative_weight -= field[node];
+    cumulative_weight -= weight[node];
 
     for (auto i = 0; i < (int)solver.graph[node].size(); i++) {
       auto neighbor = solver.graph[node][i].node;
       if (neighbor == -1) continue;
 
       // Distance of neighbor through this node
-      auto new_distance = field[node];
+      auto new_distance = weight[node];
       new_distance += solver.graph[node][i].length;
       new_distance += estimate_dist(neighbor);
       new_distance -= estimate_dist(node);
 
-      auto old_distance = field[neighbor];
+      auto old_distance = weight[neighbor];
       if (new_distance >= old_distance) continue;
 
       if (in_queue[neighbor]) {
@@ -3581,7 +3581,7 @@ static void search_strip(vector<float>& field, vector<bool>& in_queue,
       } else {
         // If neighbor not in queue, add node to queue using Small Label
         // First (see comment at the beginning).
-        if (queue.empty() || (new_distance < field[queue.front()]))
+        if (queue.empty() || (new_distance < weight[queue.front()]))
           queue.push_front(neighbor);
         else
           queue.push_back(neighbor);
@@ -3592,7 +3592,7 @@ static void search_strip(vector<float>& field, vector<bool>& in_queue,
       }
 
       // Update distance of neighbor.
-      field[neighbor] = new_distance;
+      weight[neighbor] = new_distance;
       if (update(node, neighbor, new_distance)) return;
     }
   }
