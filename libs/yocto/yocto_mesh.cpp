@@ -3115,7 +3115,7 @@ static vector<float> funnel(
 }
 
 static vector<float> funnel_double(
-    const vector<pair<vec2d, vec2d>>& portals, int& max_index) {
+    const vector<pair<vec2d, vec2d>>& portals, vector<funnel_pointd>& points) {
   // Find straight path.
   auto start       = vec2d{0, 0};
   auto apex_index  = 0;
@@ -3126,7 +3126,7 @@ static vector<float> funnel_double(
   auto right_bound = portals[0].second;
 
   // Add start point.
-  auto points = vector<funnel_pointd>{{apex_index, apex}};
+  points = vector<funnel_pointd>{{apex_index, apex}};
   points.reserve(portals.size());
 
   // @Speed: is this slower than an inlined function?
@@ -3216,7 +3216,7 @@ static vector<float> funnel_double(
       index += 1;
     }
   }
-  max_index = max_curvature_point_double(points);
+  // max_index = max_curvature_point_double(points);
   assert(lerps.size() == portals.size() - 1);
   return lerps;
 }
@@ -3242,7 +3242,7 @@ static vector<int> fix_strip(const vector<vec3i>& adjacencies,
   auto fan = triangle_fan(adjacencies, face, k, left);
   if (fan.empty()) return strip;
 
-  // strip in the array of faces and fan is a loop of faces which has partial
+  // fan is a loop of faces which has partial
   // intersection with strip. We wan to remove the intersection from strip and
   // insert there the remaining part of fan, so that we have a new valid strip.
   auto first_strip_intersection = index;
@@ -3296,7 +3296,6 @@ static vector<int> fix_strip(const vector<vec3i>& adjacencies,
 
 static void straighten_path(geodesic_path& path, const vector<vec3i>& triangles,
     const vector<vec3f>& positions, const vector<vec3i>& adjacencies) {
-  auto index = -1, vertex = -1;
 #if YOCTO_BEZIER_DOUBLE == 0
   auto init_portals = unfold_funnel_portals(
       triangles, positions, path.strip, path.start, path.end);
@@ -3304,43 +3303,71 @@ static void straighten_path(geodesic_path& path, const vector<vec3i>& triangles,
 #else
   auto init_portals = unfold_funnel_portals_double(
       triangles, positions, path.strip, path.start, path.end);
-  path.lerps          = funnel_double(init_portals, index);
+  vector<funnel_pointd> points;
+  path.lerps = funnel_double(init_portals, points);
 #endif
 
-// while(true) { this may never break...
+  auto already_fixed_vertices = unordered_set<int>{};
+
+  struct bend_info {
+    int  index      = -1;     // Index of bend in the strip array.
+    int  vertex     = -1;     // Vertex of the mesh.
+    bool flank_left = false;  // Where to flank the problematic vertex.
+  };
+
+  auto max_curvature_point = [&]() {
+    // Among vertices around which the path bends, find the vertex
+    // with maximum angle. We are going to fix that bend around that vertex.
+    auto result    = bend_info{};
+    auto max_angle = 0.0f;
+    for (auto i = 1; i < points.size() - 1; ++i) {
+      auto bend      = bend_info{};
+      bend.index     = points[i].face;
+      auto face      = path.strip[points[i].face];
+      auto face_next = path.strip[points[i].face + 1];
+      auto edge      = common_edge(triangles[face], triangles[face_next]);
+      if (path.lerps[bend.index] == 0) {
+        bend.vertex = edge.x;
+      } else if (path.lerps[bend.index] == 1) {
+        bend.vertex     = edge.y;
+        bend.flank_left = true;
+      }
+      if (already_fixed_vertices.count(bend.vertex)) {
+        continue;
+      }
+      auto pos   = points[i].pos;
+      auto prev  = points[i - 1].pos;
+      auto next  = points[i + 1].pos;
+      auto v0    = normalize(pos - prev);
+      auto v1    = normalize(next - pos);
+      auto angle = 1 - dot(v0, v1);
+      if (angle > max_angle) {
+        max_angle = angle;
+        result    = bend;
+      }
+    }
+    if (result.vertex != -1) {
+      already_fixed_vertices.insert(result.vertex);
+    }
+    return result;
+  };
+
+  auto bend = max_curvature_point();
+
 #if YOCTO_BEZIER_PRECISE == 0
   auto max_iterations = path.strip.size() * 2;
+  for (auto i = 0; i < max_iterations && bend.index != -1; i++) {
 #else
-  auto max_iterations = path.strip.size() * 100;
+  while (bend.index != -1) {
 #endif
-  for (auto i = 0; i < max_iterations && index != -1; i++) {
-    auto new_vertex = -1;
-    auto face       = path.strip[index];
-    auto next       = path.strip[index + 1];
-    auto edge       = common_edge(triangles[face], triangles[next]);
-    auto flank_left = false;
-    if (path.lerps[index] == 0) {
-      new_vertex = edge.x;
-      flank_left = false;
-    } else if (path.lerps[index] == 1) {
-      new_vertex = edge.y;
-      flank_left = true;
-    }
-    if (new_vertex == vertex) break;
-    vertex = new_vertex;
+    auto& tr   = triangles[path.strip[bend.index]];
+    path.strip = fix_strip(adjacencies, path.strip, bend.index,
+        find_in_vec(tr, bend.vertex), bend.flank_left);
 
-    path.strip = fix_strip(adjacencies, path.strip, index,
-        find_in_vec(triangles[face], vertex), flank_left);
-
-#if YOCTO_BEZIER_DOUBLE == 0
-    auto portals = unfold_funnel_portals(
-        triangles, positions, path.strip, path.start, path.end);
-    path.lerps = funnel(portals, index);
-#else
     auto portals = unfold_funnel_portals_double(
         triangles, positions, path.strip, path.start, path.end);
-    path.lerps = funnel_double(portals, index);
-#endif
+    path.lerps = funnel_double(portals, points);
+    bend       = max_curvature_point();
   }
 }
 
