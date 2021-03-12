@@ -42,6 +42,7 @@
 #include <stdexcept>
 #include <string>
 #include <thread>
+#include <unordered_map>
 #include <unordered_set>
 #include <utility>
 
@@ -52,7 +53,7 @@
 
 #define YOCTO_BEZIER_PRECISE 1
 #define YOCTO_BEZIER_DOUBLE 1
-#define UNFOLD_INTERSECTING_CIRCLES 1
+#define UNFOLD_INTERSECTING_CIRCLES 0
 
 // -----------------------------------------------------------------------------
 // USING DIRECTIVES
@@ -93,7 +94,7 @@ namespace yocto {
 
 #define report_floating_point(x) \
   if (!isfinite(x))              \
-    printf("%s, line %d: %lf detected\n", x, __FILE__, __LINE__);
+    printf("%s, line %d: nan/infinity detected\n", __FILE__, __LINE__);
 
 // find a value in a vector or vecs
 static int find_in_vec(const vector<int>& vec, int x) {
@@ -2948,12 +2949,34 @@ bool path_check_strip(
   auto faces = unordered_set<int>{};
   faces.insert(strip[0]);
   for (auto i = 1; i < strip.size(); ++i) {
-    assert(faces.count(strip[i]) == 0);  // face appears twice in the strip
+    if (faces.count(strip[i]) != 0) {
+      printf("strip[%d] (face: %d) appears twice\n", i, strip[i]);
+    }
     faces.insert(strip[i]);
     assert(find_in_vec(adjacencies[strip[i - 1]], strip[i]) != -1);
     assert(find_in_vec(adjacencies[strip[i]], strip[i - 1]) != -1);
   }
   return true;
+}
+
+static void remove_loops_from_strip(vector<int>& strip) {
+  auto faces      = unordered_map<int, int>{};
+  faces[strip[0]] = 0;
+  auto result     = vector<int>(strip.size());
+  result[0]       = strip[0];
+  auto index      = 1;
+  for (auto i = 1; i < strip.size(); ++i) {
+    if (faces.count(strip[i]) != 0) {
+      // printf("fixing %d (%d)\n", i, strip[i]);
+      auto t = faces[strip[i]];
+      index  = t + 1;
+      continue;
+    }
+    faces[strip[i]] = i;
+    result[index++] = strip[i];
+  }
+  result.resize(index);
+  strip = result;
 }
 
 struct funnel_point {
@@ -3233,7 +3256,6 @@ bool check_point(const mesh_point& point) {
 
 static vector<int> fix_strip(const vector<vec3i>& adjacencies,
     const vector<int>& strip, int index, int k, bool left) {
-  assert(path_check_strip(adjacencies, strip));
   assert(index < strip.size() - 1);
   auto face = strip[index];
   if (!left) k = mod3(k + 2);
@@ -3291,6 +3313,8 @@ static vector<int> fix_strip(const vector<vec3i>& adjacencies,
   for (auto i = second_strip_intersection; i < strip.size(); ++i)
     result.push_back(strip[i]);
 
+  assert(path_check_strip(adjacencies, result));
+  remove_loops_from_strip(result);
   assert(path_check_strip(adjacencies, result));
   return result;
 }
