@@ -91,6 +91,10 @@ struct hash<yocto::vec2i> {
 // -----------------------------------------------------------------------------
 namespace yocto {
 
+#define report_floating_point(x) \
+  if (!isfinite(x))              \
+    printf("%s, line %d: %lf detected\n", x, __FILE__, __LINE__);
+
 // find a value in a vector or vecs
 static int find_in_vec(const vector<int>& vec, int x) {
   for (int i = 0; i < size(vec); i++)
@@ -418,13 +422,9 @@ unfold_triangled unfold_face_double(const vector<vec3i>& triangles,
   assert(result[1] != result[2]);
   assert(result[2] != result[0]);
 
-  if (!isfinite(result[0]))
-    printf("%s, line %d: NaN detected\n", __FILE__, __LINE__);
-  if (!isfinite(result[1]))
-    printf("%s, line %d: NaN detected\n", __FILE__, __LINE__);
-  if (!isfinite(result[2]))
-    printf("%s, line %d: NaN detected\n", __FILE__, __LINE__);
-
+  report_floating_point(result[0]);
+  report_floating_point(result[1]);
+  report_floating_point(result[2]);
   return result;
 }
 
@@ -1401,10 +1401,8 @@ vector<mesh_point> compute_shortest_path(const dual_geodesic_solver& graph,
     auto strip = compute_strip(graph, triangles, positions, end, start);
     path = shortest_path(triangles, positions, adjacencies, start, end, strip);
   }
-  for (auto& value : path.lerps) {
-    if (!isfinite(value))
-      printf("%s, line %d: NaN detected\n", __FILE__, __LINE__);
-  }
+
+  for (auto& value : path.lerps) report_floating_point(value);
 
   // get mesh points
   return convert_mesh_path(
@@ -3205,9 +3203,7 @@ static vector<float> funnel_double(
     for (auto k = points[i].face; k < points[i + 1].face; k++) {
       auto portal = portals[k];
       auto s = intersect_segments_double(a, b, portal.first, portal.second);
-      if (!isfinite(s)) {
-        printf("%s, line %d: NaN detected\n", __FILE__, __LINE__);
-      }
+      report_floating_point(s);
       auto p = clamp(s, 0.0, 1.0);
       lerps.push_back(p);
     }
