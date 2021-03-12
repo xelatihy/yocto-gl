@@ -974,9 +974,11 @@ int find_small_edge(
 // Construct a graph to compute geodesic distances
 dual_geodesic_solver make_dual_geodesic_solver(const vector<vec3i>& triangles,
     const vector<vec3f>& positions, const vector<vec3i>& adjacencies) {
-  auto get_triangle_center = [](const vector<vec3i>&  triangles,
-                                 const vector<vec3f>& positions,
-                                 int                  face) -> vec3f {
+  auto solver = dual_geodesic_solver{};
+  solver.centroids.resize(triangles.size());
+
+  // Init centroids.
+  for (int face = 0; face < triangles.size(); face++) {
     vec3f pos[3] = {positions[triangles[face].x], positions[triangles[face].y],
         positions[triangles[face].z]};
     auto  l0     = length(pos[0] - pos[1]);
@@ -985,10 +987,9 @@ dual_geodesic_solver make_dual_geodesic_solver(const vector<vec3i>& triangles,
     auto  p1     = (pos[1] + pos[2]) / 2;
     auto  l2     = length(pos[2] - pos[0]);
     auto  p2     = (pos[2] + pos[0]) / 2;
-    return (l0 * p0 + l1 * p1 + l2 * p2) / (l0 + l1 + l2);
-  };
+    solver.centroids[face] = (l0 * p0 + l1 * p1 + l2 * p2) / (l0 + l1 + l2);
+  }
 
-  auto solver = dual_geodesic_solver{};
   solver.graph.resize(triangles.size());
   for (auto i = 0; i < solver.graph.size(); ++i) {
     for (auto k = 0; k < 3; ++k) {
@@ -1000,8 +1001,7 @@ dual_geodesic_solver make_dual_geodesic_solver(const vector<vec3i>& triangles,
         // TODO(splinesurf): check which solver is better/faster.
 #if 1
         solver.graph[i][k].length = length(
-            get_triangle_center(triangles, positions, i) -
-            get_triangle_center(triangles, positions, adjacencies[i][k]));
+            solver.centroids[i] - solver.centroids[adjacencies[i][k]]);
 #else
         auto p0    = mesh_point{i, {1 / 3.f, 1 / 3.f}};
         auto p1    = mesh_point{adjacencies[i][k], {1 / 3.f, 1 / 3.f}};
@@ -1383,8 +1383,8 @@ void visit_geodesic_graph(vector<float>& field,
 }
 
 static vector<int> compute_strip(const dual_geodesic_solver& solver,
-    const vector<vec3i>& triangles, const vector<vec3f>& positions, int start,
-    int end);
+    const vector<vec3i>& triangles, const vector<vec3f>& positions,
+    const mesh_point& start, const mesh_point& end);
 
 vector<mesh_point> compute_shortest_path(const dual_geodesic_solver& graph,
     const vector<vec3i>& triangles, const vector<vec3f>& positions,
@@ -1398,8 +1398,7 @@ vector<mesh_point> compute_shortest_path(const dual_geodesic_solver& graph,
   } else {
     // auto strip = strip_on_dual_graph(
     //     graph, triangles, positions, end.face, start.face);
-    auto strip = compute_strip(
-        graph, triangles, positions, end.face, start.face);
+    auto strip = compute_strip(graph, triangles, positions, end, start);
     path = shortest_path(triangles, positions, adjacencies, start, end, strip);
   }
   for (auto& value : path.lerps) {
@@ -1439,7 +1438,7 @@ vector<vec3f> visualize_shortest_path(const dual_geodesic_solver& graph,
     } else {
       // auto strip = strip_on_dual_graph(
       //     graph, triangles, positions, end.face, start.face);
-      strip = compute_strip(graph, triangles, positions, end.face, start.face);
+      strip = compute_strip(graph, triangles, positions, end, start);
     }
     auto get_triangle_center = [](const vector<vec3i>&  triangles,
                                    const vector<vec3f>& positions,
@@ -1467,9 +1466,8 @@ vector<vec3f> visualize_shortest_path(const dual_geodesic_solver& graph,
     } else {
       // auto strip = strip_on_dual_graph(
       //     graph, triangles, positions, end.face, start.face);
-      auto strip = compute_strip(
-          graph, triangles, positions, end.face, start.face);
-      path = shortest_path(
+      auto strip = compute_strip(graph, triangles, positions, end, start);
+      path       = shortest_path(
           triangles, positions, adjacencies, start, end, strip);
     }
     // get mesh points
@@ -3523,29 +3521,28 @@ static int find_in_vector(const T& vec, int x) {
   return true;
 }
 
-template <typename Update, typename Stop, typename Exit>
+template <typename Update>
 static void search_strip(vector<float>& field, vector<bool>& in_queue,
     const dual_geodesic_solver& solver, const vector<vec3i>& triangles,
-    const vector<vec3f>& positions, int start, int end, Update&& update,
-    Stop&& stop, Exit&& exit) {
-  auto destination_pos = eval_position(
-      triangles, positions, {end, {1.0f / 3, 1.0f / 3}});
+    const vector<vec3f>& positions, const mesh_point& start,
+    const mesh_point& end, Update&& update) {
+  auto start_pos = eval_position(triangles, positions, start);
+  auto end_pos   = eval_position(triangles, positions, end);
 
   auto estimate_dist = [&](int face) {
-    auto p = eval_position(triangles, positions, {face, {1.0f / 3, 1.0f / 3}});
-    return length(p - destination_pos);
+    return length(solver.centroids[face] - end_pos);
   };
-  field[start] = estimate_dist(start);
+  field[start.face] = estimate_dist(start.face);
 
   // Cumulative weights of elements in queue. Used to keep track of the
   // average weight of the queue.
   double cumulative_weight = 0.0;
 
   // setup queue
-  auto queue      = std::deque<int>{};
-  in_queue[start] = true;
-  cumulative_weight += field[start];
-  queue.push_back(start);
+  auto queue           = std::deque<int>{};
+  in_queue[start.face] = true;
+  cumulative_weight += field[start.face];
+  queue.push_back(start.face);
 
   while (!queue.empty()) {
     auto node           = queue.front();
@@ -3563,10 +3560,6 @@ static void search_strip(vector<float>& field, vector<bool>& in_queue,
     queue.pop_front();
     in_queue[node] = false;
     cumulative_weight -= field[node];
-
-    // Check early exit condition.
-    if (exit(node)) break;
-    if (stop(node)) continue;
 
     for (auto i = 0; i < (int)solver.graph[node].size(); i++) {
       auto neighbor = solver.graph[node][i].node;
@@ -3606,9 +3599,9 @@ static void search_strip(vector<float>& field, vector<bool>& in_queue,
 }
 
 static vector<int> compute_strip(const dual_geodesic_solver& solver,
-    const vector<vec3i>& triangles, const vector<vec3f>& positions, int start,
-    int end) {
-  if (start == end) return {start};
+    const vector<vec3i>& triangles, const vector<vec3f>& positions,
+    const mesh_point& start, const mesh_point& end) {
+  if (start.face == end.face) return {start.face};
 
   thread_local static auto parents  = vector<int>{};
   thread_local static auto field    = vector<float>{};
@@ -3621,22 +3614,20 @@ static vector<int> compute_strip(const dual_geodesic_solver& solver,
   }
 
   // initialize once for all and sparsely cleanup at the end of every solve
-  auto visited = vector<int>{start};
-  auto sources = vector<int>{start};
+  auto visited = vector<int>{start.face};
+  auto sources = vector<int>{start.face};
   auto update  = [&visited, end](int node, int neighbor, float new_distance) {
     parents[neighbor] = node;
     visited.push_back(neighbor);
-    return neighbor == end;
+    return neighbor == end.face;
   };
-  auto stop = [](int node) { return false; };
-  auto exit = [](int node) { return false; };
 
-  search_strip(field, in_queue, solver, triangles, positions, start, end,
-      update, stop, exit);
+  search_strip(
+      field, in_queue, solver, triangles, positions, start, end, update);
 
   // extract_strip
   auto strip = vector<int>{};
-  auto node  = end;
+  auto node  = end.face;
   strip.reserve((int)yocto::sqrt((float)parents.size()));
 
   // for (int i = 0; i < parents.size() && node != -1; i++) {
@@ -3669,8 +3660,7 @@ static geodesic_path compute_geodesic_path(const dual_geodesic_solver& solver,
     path.strip = {start.face};
     return path;
   }
-  auto strip = compute_strip(
-      solver, triangles, positions, end.face, start.face);
+  auto strip = compute_strip(solver, triangles, positions, end, start);
   path = shortest_path(triangles, positions, adjacencies, start, end, strip);
   return path;
 }

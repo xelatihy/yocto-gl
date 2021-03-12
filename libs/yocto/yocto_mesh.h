@@ -181,7 +181,8 @@ struct dual_geodesic_solver {
     int   node   = -1;
     float length = flt_max;
   };
-  vector<array<edge, 3>> graph = {};
+  vector<array<edge, 3>> graph     = {};
+  vector<vec3f>          centroids = {};
 };
 
 // Construct a graph to compute geodesic distances
