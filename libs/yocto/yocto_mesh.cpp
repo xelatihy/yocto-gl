@@ -418,9 +418,12 @@ unfold_triangled unfold_face_double(const vector<vec3i>& triangles,
   assert(result[1] != result[2]);
   assert(result[2] != result[0]);
 
-  if (!isfinite(result[0])) printf("NaN!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!\n");
-  if (!isfinite(result[1])) printf("NaN!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!\n");
-  if (!isfinite(result[2])) printf("NaN!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!\n");
+  if (!isfinite(result[0]))
+    printf("%s, line %d: NaN detected\n", __FILE__, __LINE__);
+  if (!isfinite(result[1]))
+    printf("%s, line %d: NaN detected\n", __FILE__, __LINE__);
+  if (!isfinite(result[2]))
+    printf("%s, line %d: NaN detected\n", __FILE__, __LINE__);
 
   return result;
 }
@@ -1399,8 +1402,10 @@ vector<mesh_point> compute_shortest_path(const dual_geodesic_solver& graph,
         graph, triangles, positions, end.face, start.face);
     path = shortest_path(triangles, positions, adjacencies, start, end, strip);
   }
-  for (auto& value : path.lerps)
-    if (!isfinite(value)) printf("NaN!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!\n");
+  for (auto& value : path.lerps) {
+    if (!isfinite(value))
+      printf("%s, line %d: NaN detected\n", __FILE__, __LINE__);
+  }
 
   // get mesh points
   return convert_mesh_path(
@@ -3202,7 +3207,9 @@ static vector<float> funnel_double(
     for (auto k = points[i].face; k < points[i + 1].face; k++) {
       auto portal = portals[k];
       auto s = intersect_segments_double(a, b, portal.first, portal.second);
-      if (!isfinite(s)) printf("NaN!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!\n");
+      if (!isfinite(s)) {
+        printf("%s, line %d: NaN detected\n", __FILE__, __LINE__);
+      }
       auto p = clamp(s, 0.0, 1.0);
       lerps.push_back(p);
     }
