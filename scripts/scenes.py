@@ -15,10 +15,10 @@ def cli():
 @click.option('--mode', '-m', default='path')
 def view(directory='mcguire', scene='*', format='json', mode='path'):
     modes = {
-        'path': '-r 720',
-        'embree': '-r 720 --embreebvh',
-        'eyelight': '-r 720 -t eyelight',
-        'eyelight-quick': '-r 720 -s 16 -t eyelight'
+        'path': '-r 1280',
+        'embree': '-r 1280 --embreebvh',
+        'eyelight': '-r 1280 -t eyelight',
+        'eyelight-quick': '-r 1280 -s 16 -t eyelight'
     }
     options = modes[mode]
     for dirname in sorted(glob.glob(f'{directory}/{format}/{scene}')):
@@ -46,6 +46,7 @@ def render(directory='mcguire', scene='*', format='json', mode='path'):
         'eyelight': '-s 16 -r 1280 -t eyelight',
         'embree-face': '-s 1024 -r 1280 --embreebvh',
         'final': '-s 4096 -r 1280 --embreebvh',
+        'final-face': '-s 4096 -r 1280 --embreebvh',
     }
     options = modes[mode]
     outformat = 'png' if 'eyelight' in mode else 'hdr'
@@ -54,9 +55,9 @@ def render(directory='mcguire', scene='*', format='json', mode='path'):
         if not os.path.isdir(dirname): continue
         if '/_' in dirname: continue
         extracams = []
-        if 'sanmiguel' in dirname: extracams = ['camera1', 'camera2']
+        if 'sanmiguel' in dirname: extracams = ['camera2', 'camera3']
         if 'island' in dirname: extracams = ["beachCam", "birdseyeCam", "dunesACam", "grassCam", "palmsCam", "rootsCam", "shotCam"]
-        if 'landscape' in dirname: extracams = ['camera1', 'camera2', 'camera3']
+        if 'landscape' in dirname: extracams = ['camera2', 'camera3', 'camera4']
         for filename in sorted(glob.glob(f'{dirname}/*.{format}')):
             if format == 'pbrt':
                 with open(filename) as f:

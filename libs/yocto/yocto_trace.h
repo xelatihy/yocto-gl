@@ -97,7 +97,7 @@ struct trace_params {
   trace_sampler_type    sampler        = trace_sampler_type::path;
   trace_falsecolor_type falsecolor     = trace_falsecolor_type::color;
   int                   samples        = 512;
-  int                   bounces        = 8;
+  int                   bounces        = 64;
   float                 clamp          = 100;
   bool                  nocaustics     = false;
   bool                  envhidden      = false;

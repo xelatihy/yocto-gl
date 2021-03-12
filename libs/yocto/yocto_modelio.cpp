@@ -4310,12 +4310,8 @@ inline bool convert_material(pbrt_material& pmaterial,
     return true;
   } else if (command.type == "glass") {
     pmaterial.type = pbrt_mtype::glass;
-    // get_texture(
-    //     values, "Kr", material->specular, material->specular_tex,
-    //     vec3f{1});
-    // get_texture(command.values, "Kt", material->transmission,
-    //     material->transmission_tex, vec3f{1});
-    pmaterial.color = {1, 1, 1};
+    get_texture(
+        command.values, "Kt", pmaterial.color, pmaterial.color_tex, vec3f{1});
     if (!get_scalar(command.values, "eta", pmaterial.ior, 1.5))
       return parse_error();
     pmaterial.roughness = 0;
