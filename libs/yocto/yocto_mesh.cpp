@@ -3296,22 +3296,17 @@ static vector<int> fix_strip(const vector<vec3i>& adjacencies,
 
 static void straighten_path(geodesic_path& path, const vector<vec3i>& triangles,
     const vector<vec3f>& positions, const vector<vec3i>& adjacencies) {
-#if YOCTO_BEZIER_DOUBLE == 0
-  auto init_portals = unfold_funnel_portals(
-      triangles, positions, path.strip, path.start, path.end);
-  path.lerps = funnel(init_portals, index);
-#else
   auto init_portals = unfold_funnel_portals_double(
       triangles, positions, path.strip, path.start, path.end);
   vector<funnel_pointd> points;
   path.lerps = funnel_double(init_portals, points);
-#endif
 
   auto already_fixed_vertices = unordered_set<int>{};
 
   struct bend_info {
     int  index      = -1;     // Index of bend in the strip array.
     int  vertex     = -1;     // Vertex of the mesh.
+    int  k          = -1;     // Index of the vertex in its containing triangle.
     bool flank_left = false;  // Where to flank the problematic vertex.
   };
 
@@ -3335,12 +3330,13 @@ static void straighten_path(geodesic_path& path, const vector<vec3i>& triangles,
       if (already_fixed_vertices.count(bend.vertex)) {
         continue;
       }
-      auto pos   = points[i].pos;
-      auto prev  = points[i - 1].pos;
-      auto next  = points[i + 1].pos;
-      auto v0    = normalize(pos - prev);
-      auto v1    = normalize(next - pos);
-      auto angle = 1 - dot(v0, v1);
+      bend.k      = find_in_vec(triangles[face], bend.vertex);
+      auto& pos   = points[i].pos;
+      auto& prev  = points[i - 1].pos;
+      auto& next  = points[i + 1].pos;
+      auto  v0    = normalize(pos - prev);
+      auto  v1    = normalize(next - pos);
+      auto  angle = 1 - dot(v0, v1);
       if (angle > max_angle) {
         max_angle = angle;
         result    = bend;
@@ -3360,9 +3356,8 @@ static void straighten_path(geodesic_path& path, const vector<vec3i>& triangles,
 #else
   while (bend.index != -1) {
 #endif
-    auto& tr   = triangles[path.strip[bend.index]];
-    path.strip = fix_strip(adjacencies, path.strip, bend.index,
-        find_in_vec(tr, bend.vertex), bend.flank_left);
+    path.strip = fix_strip(
+        adjacencies, path.strip, bend.index, bend.k, bend.flank_left);
 
     auto portals = unfold_funnel_portals_double(
         triangles, positions, path.strip, path.start, path.end);
