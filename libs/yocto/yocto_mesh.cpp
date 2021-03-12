@@ -52,6 +52,7 @@
 
 #define YOCTO_BEZIER_PRECISE 1
 #define YOCTO_BEZIER_DOUBLE 1
+#define UNFOLD_INTERSECTING_CIRCLES 1
 
 // -----------------------------------------------------------------------------
 // USING DIRECTIVES
@@ -207,7 +208,45 @@ vec2f intersect_circles(const vec2f& c2, float R2, const vec2f& c1, float R1) {
   return result / 2;
 }
 
-[[maybe_unused]] vec2d intersect_circles_double(
+[[maybe_unused]] static vec2d intersect_circles_double(
+    const vec2d& c0, double R0, const vec2d& c1, double R1) {
+  auto r0 = yocto::sqrt(R0);
+  auto r1 = yocto::sqrt(R1);
+  auto dx = c1.x - c0.x;
+  auto dy = c1.y - c0.y;
+  auto d  = hypot(dx, dy);
+  if (d > (r0 + r1)) {  // not a triangle
+    if (r0 > r1) {
+      auto q = zero2d;
+      q.x    = 0;
+      q.y    = r0 / (r0 + r1);
+      assert(std::isfinite(q.y));
+      return q;
+    } else {
+      auto q = zero2d;
+      q.x    = 0;
+      q.y    = r1 / (r0 + r1);
+      assert(std::isfinite(q.y));
+      return q;
+    }
+  }
+  if (d < fabs(r0 - r1)) return {r0, c0.y};  // not a triangle
+  if (d == 0) return {r0, c0.y};             // degenerate case
+  auto a = ((r0 * r0) - (r1 * r1) + (d * d)) / (2.0 * d);
+  auto p = zero2d;
+  p.x    = c0.x + (dx * a / d);
+  p.y    = c0.y + (dy * a / d);
+  auto h = r0 * r0 - a * a;
+  if (h <= 0) return p;
+  h       = sqrt(h);
+  auto rx = zero2d;
+  rx.x    = -dy * (h / d);
+  rx.y    = dx * (h / d);
+  auto q  = p + rx;
+  return q;
+}
+
+[[maybe_unused]] vec2d intersect_circles_double_old(
     const vec2d& c2, double R2, const vec2d& c1, double R1) {
   auto R = length_squared(c2 - c1);
   assert(R > 0);
@@ -360,11 +399,11 @@ unfold_triangled unfold_face_double(const vector<vec3i>& triangles,
   result[mod3(j + 1)] = tr[k];
 
   // TODO(splinesurf): check which unfolding method is better.
-#if 0
+#if UNFOLD_INTERSECTING_CIRCLES
   // old method
   auto r0             = length_squared(positions[v] - positions[a]);
   auto r1             = length_squared(positions[v] - positions[b]);
-  result[mod3(j + 2)] = intersect_circles(
+  result[mod3(j + 2)] = intersect_circles_double(
       result[j], r1, result[mod3(j + 1)], r0);
 #else
   // new method
@@ -434,13 +473,16 @@ unfold_triangled triangle_coordinates_double(const vector<vec3i>& triangles,
   result[0]   = {0, 0};
   result[1]   = {
       0, length(to_double(positions[tr.x]) - to_double(positions[tr.y]))};
-  // auto rx     = length_squared(positions[tr.x] - positions[tr.z]);
-  // auto ry     = length_squared(positions[tr.y] - positions[tr.z]);
-  // result[2]   = intersect_circles(result[0], rx, result[1], ry);
-  // result[2]   = intersect_circles(result[0], rx, result[1], ry);
+
+#if UNFOLD_INTERSECTING_CIRCLES
+  auto rx   = length_squared(positions[tr.x] - positions[tr.z]);
+  auto ry   = length_squared(positions[tr.y] - positions[tr.z]);
+  result[2] = intersect_circles_double(result[0], rx, result[1], ry);
+#else
   result[2] = result[0] + unfold_point_double(to_double(positions[tr.y]),
                               to_double(positions[tr.x]),
                               to_double(positions[tr.z]), result[1], result[0]);
+#endif
 
   // Transform coordinates such that point = (0, 0)
   auto point_coords = interpolate_triangle(
@@ -3160,7 +3202,6 @@ static vector<float> funnel_double(
     for (auto k = points[i].face; k < points[i + 1].face; k++) {
       auto portal = portals[k];
       auto s = intersect_segments_double(a, b, portal.first, portal.second);
-      assert(s >= -0.01f && s <= 1.01f);
       if (!isfinite(s)) printf("NaN!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!\n");
       auto p = clamp(s, 0.0, 1.0);
       lerps.push_back(p);
