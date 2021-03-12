@@ -16,11 +16,18 @@ theme:
   language: en
   extra_css:
     - css/extra.css
+  palette:
+    primary: blue
+  features:
+    - navigation.instant
 
 # Extensions
 markdown_extensions:
-  - codehilite
-  - admonition
+  - pymdownx.highlight
+  - pymdownx.superfences
+  - pymdownx.inlinehilite
+  - attr_list
+  - meta
 
 # Pages
 nav:

@@ -1,3 +1,8 @@
+---
+hide:
+  - toc # Hide table of contents
+---
+
 # Gallery
 
 This page contains a collection of images rendered with the Yocto/GL path tracer.
@@ -32,11 +37,9 @@ This page contains a collection of images rendered with the Yocto/GL path tracer
 
 ## Objects
 
-![Yocto/GL pathtraced image](images/coffee.png){: style="max-height: 416px"}
-{: style="text-align: center"}
+![Yocto/GL pathtraced image](images/coffee.png)
 
-![Yocto/GL pathtraced image](images/crown.png){: style="max-height: 416px"}
-{: style="text-align: center"}
+![Yocto/GL pathtraced image](images/crown.png)
 
 ## Vehicles
 
@@ -49,4 +52,3 @@ This page contains a collection of images rendered with the Yocto/GL path tracer
 ![Yocto/GL pathtraced image](images/rungholt.png)
 
 ![Yocto/GL pathtraced image](images/vokselia.png)
-

@@ -1,56 +1,103 @@
 # Yocto/Bvh: Accelerated ray-intersection and point-overlap
 
 Yocto/Bvh provides ray-intersection and point-overlap queries accelerated
-by a two-level BVH using an internal or wrapping Embree.
+using a two-level BVH or wrapping Intel's Embree.
 Yocto/Bvh is implemented in `yocto_bvh.h` and `yocto_bvh.cpp`.
 
-**This library is experimental** and will be documented appropriately when
-the code reaches stability.
-For now, use the [Yocto/Scene](yocto_scene.md) support for this.
+## BVH representation
 
-<!--
+Yocto/Bvh provides ray-scene intersection for points, lines, triangles and
+quads accelerated by a BVH data structure. Our BVH is written for
+minimal code and not maximum speed, but still gives fast-enough results.
 
-## Ray-Scene and Closest-Point Queries
+The BVH tree is stored in a `bvh_tree` struct. The tree stores an array of
+nodes and an array of element indices. Each node in the tree has references
+to either other nodes or elements. References are represented as indices
+in the nodes or elements arrays. Nodes indices refer to the nodes array,
+for internal nodes, or the element arrays, for leaf nodes.
+The BVH does not store shape data, which is instead passed explicitly
+to all calls.
 
-Yocto/BVH is a simple implementation of ray intersection and
-closest queries using a two-level BVH data structure. We also include
-low-level intersection and closet point primitives.
-Alternatively the library also support wrapping Intel's Embree.
+BVH nodes contain their bounds, indices to the BVH arrays of either
+primitives or internal nodes, node element type,
+and the split axis. Leaf and internal nodes are identical, except that
+indices refer to primitives for leaf nodes or other nodes for internal nodes.
 
-Yocto/GL provides ray-scene intersection for points, lines, triangles and
-quads accelerated by a two-level BVH data structure. Our BVH is written for
-minimal code and not maximum speed, but still gives reasonable results. We
-suggest the use of Intel's Embree as a more efficient alternative.
+Two wrappers, `bvh_scene` and `bvh_shape` are used to store the BVH for
+[Yocto/Scene](yocto_scene.md) scenes and shapes. For shapes, we store a
+single BVH, while for scene we store the scene BVH and all shapes BVHs.
+These wrappers also store references to Intel's Embree BVH, if available.
+These wrappers does not store copies to shape or scene data, so that data is
+passed in for all subsequent calls.
 
-In Yocto/Bvh, shapes are described as collections of indexed primitives
-(points/lines/triangles/quads) like the standard triangle mesh used in
-real-time graphics. A scene if represented as transformed instances of
-shapes. The internal data structure is a two-level BVH, with a BVH for each
-shape and one top-level BVH for the whole scene. This design support
-instancing for large scenes and easy BVH refitting for interactive
-applications.
+## Building BVH
 
-In these functions triangles are parameterized with uv written
-w.r.t the (p1-p0) and (p2-p0) axis respectively. Quads are internally handled
-as pairs of two triangles p0,p1,p3 and p2,p3,p1, with the u/v coordinates
-of the second triangle corrected as 1-u and 1-v to produce a quad
-parametrization where u and v go from 0 to 1. Degenerate quads with p2==p3
-represent triangles correctly, an this convention is used throught the
-library. This is equivalent to Intel's Embree.
+Use `make_bvh(scene,highquality,embree)` or `make_bvh(shape,highquaity,embree)`
+to build a bvh for a scene or shape BVH respectively.
+These functions takes as input scenes and shapes from
+[Yocto/Scene](yocto_scene.md). By default, the BVH is build with a fast heuristic,
+that can be improved slightly by setting `highquality` to true. By default, we
+use the internal BVH, but Intel's Embree can be used, when available, if
+`embree` is set to true.
 
-Shape and scene data is not copied from the application to the BVH to
-improve memory footprint at the price of convenience. Shape data is
-explixitly passed on evey call, while instance data uses callbacks,
-since each application has its own conventions for storing those.
-To make usage more convenite, we provide `bvh_XXX_data` to hold application
-data and convenience wrappers for all functions.
+```cpp
+auto scene = scene_model{...};            // make a complete scene
+auto bvh = build_bvh(scene);              // build a BVH
+auto embree = build_bvh(scene,true,true); // use Embree
+```
 
-We support working either on the whole scene or on a single shape. In the
-description below yoi will see this dual API defined.
+Use `update_bvh(bvh,shape)` to update a shape BVH, and
+`update_bvh(bvh,scene,updated_instances,updated_shapes)` to update a scene BVH,
+where we indicate the indices of the instances and shapes that have beed modified.
+Updating works ony for change to instance frames and shapes positions.
+For changes like adding or removing elements, the BVH has to be built again.
 
-1. build the shape/scene BVH with `make_XXX_bvh()`;
-2. perform ray-shape intersection with `intersect_XXX_bvh()`
-3. perform point overlap queries with `overlap_XXX_bvh()`
-4. refit BVH for dynamic applications with `update_XXX_bvh`
+```cpp
+auto scene = scene_model{...};            // make a complete scene
+auto bvh = build_bvh(scene);              // build a BVH
+auto shapes = update_shapes(scene);       // updates some shapes
+auto instances = update_instances(scene); // updates some instances
+update_bvh(bvh, scene, shapes, instances);// update bvh
+```
 
--->
+## Ray intersection
+
+Use `intersect_bvh(bvh,scene,ray)` and `intersect_bvh(bvh,shape,ray)` to
+compute the ray-scene and ray-shape intersection respectively, and
+`intersect_bvh(bvh,scene,instance,ray)` to intersect a single scene instance.
+These functions return a `bvh_intersection` that includes a `hit` flag,
+the `instance` index, the shape `element` index and shape element `uv`s and
+the intersection `distance`. Results values are set only if `hit` is true.
+By default Yocto/Bvh computes the closet intersection, but this can be
+relaxed to accept any intersection, for shadow rays, by passing an optional flag.
+
+```cpp
+auto isec = intersect_bvh(bvh,scene,ray); // ray-scene intersection
+if (isec.hit) {                           // check intersection
+  handle_intersection(isec.instance,      // work on intersection data
+    isec.element, isec.uv, isec.distance);
+}
+auto isecv = intersect_bvh(bvh,scene,ray,true); // check any intersection
+if (!isecv.hit) {                         // check for not intersection
+  handle_unoccluded(...);                 // handle unoccluded case
+}
+```
+
+## Point overlap
+
+Use `overlap_bvh(bvh,scene,position,max_distance)` and
+`overlap_bvh(bvh,shape,position,max_distance)` to compute the scene or
+shape element closest to a given point and within a maximum distance.
+Use `overlap_bvh(bvh,scene,instance,position,max_distance)` to test
+a single scene instance. These functions return a `bvh_intersection`
+as the intersection ones.
+By default Yocto/Bvh computes the closet element, but this can be
+relaxed to accept any element, by passing an optional flag.
+
+```cpp
+auto isec = overlap_bvh(bvh,scene,point,dist); // closest element
+if (isec.hit) {                                // check intersection
+  handle_intersection(isec.instance,      // work on intersection data
+    isec.element, isec.uv, isec.distance);
+}
+```

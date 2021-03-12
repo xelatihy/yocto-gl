@@ -11,39 +11,38 @@ Yocto/GL is split into small libraries to make code navigation easier.
 See each header file for documentation.
 
 - [Yocto/Math](yocto/yocto_math.md): fixed-size vectors, matrices, rigid frames,
-  rays, bounding boxes, transforms
+  transforms
 - [Yocto/Color](yocto/yocto_color.md): color conversion, color adjustment,
-  tone mapping functions, Perlin noise, shading and integration utilities
-- [Yocto/Geometry](yocto/yocto_geometry.md): geometry functions, ray-primitive
-  intersection, point-primitive overlap
+  tone mapping functions, color grading, color maps, color spaces
+- [Yocto/Geometry](yocto/yocto_geometry.md): rays, bounding boxes,
+  geometry functions, ray-primitive intersection, point-primitive overlap
 - [Yocto/Noise](yocto/yocto_noise.md): Perlin noise
 - [Yocto/Sampling](yocto/yocto_sampling.md): random number generation,
   generation of points and directions, Monte Carlo utilities
 - [Yocto/Shading](yocto/yocto_shading.md): evaluation and sampling of fresnel
   functions, bsdf lobes, transmittance lobes, phase functions
-- [Yocto/Shape](yocto/yocto_shape.md): various utilities for manipulating
+- [Yocto/Image](yocto/yocto_image.md): simple image data type, image resizing,
+  tonemapping, color correction, procedural images, procedural sun-sky
+- [Yocto/Shape](yocto/yocto_shape.md): utilities for manipulating
   triangle meshes, quads meshes and line sets, computation of normals and
-  tangents, linear and Catmull-Clark subdivision, mesh loading and saving,
-  procedural shapes generation, ray intersection and closest point queries
+  tangents, linear and Catmull-Clark subdivision, procedural shapes generation,
+  ray intersection and closest point queries
 - [Yocto/Mesh](yocto/yocto_mesh.md): computational geometry utilities for
-  triangle meshes, mesh geodesic, mesh cutting, mesh loading and saving
+  triangle meshes, mesh geodesic, mesh cutting
 - [Yocto/Bvh](yocto/yocto_bvh.md): ray intersection and closest point queries
   of triangle meshes, quads meshes, line sets and instances scenes using a
   two-level bounding volume hierarchy
-- [Yocto/Image](yocto/yocto_image.md): simple image data type, image resizing,
-  tonemapping, color correction, image loading and saving,
-  procedural images, procedural sun-sky, advanced color conversion utilities
 - [Yocto/Scen](yocto/yocto_scene.md): scene representation and properties
   evaluation
-- [Yocto/SceneIO](yocto/yocto_sceneio.md): scene loading and
-  saving of Ply/Obj/Pbrt/glTF and a custom and scalable Json format,
-  image loading and saving, text and binary loading and saving, path helpers
+- [Yocto/SceneIO](yocto/yocto_sceneio.md): image serialization,
+  shape serialization, scene serialization, text and binary serialization,
+  path helpers
 - [Yocto/Trace](yocto/yocto_trace.md): path tracing of surfaces and hairs
   supporting area and environment illumination, microfacet GGX and subsurface
   scattering, multiple importance sampling
-- [Yocto/ModelIO](yocto/yocto_modelio.md): parsing and writing for Ply/Obj/Pbrt
-  formats
-- [Yocto/CommonIO](yocto/yocto_cli.md): printing utilities and command line parsing
+- [Yocto/ModelIO](yocto/yocto_modelio.md): parsing and writing for Ply, Obj,
+  Stl, Pbrt formats
+- [Yocto/Cli](yocto/yocto_cli.md): printing utilities and command line parsing
 - [Yocto/Parallel](yocto/yocto_parallel.md): concurrency utilities
 
 ## Example Applications
@@ -51,15 +50,9 @@ See each header file for documentation.
 You can see Yocto/GL in action in the following applications written to
 test the library:
 
-- `apps/yscenetrace.cpp`: command-line path-tracer
-- `apps/ysceneitrace.cpp`: interactive path-tracer
-- `apps/ysceneitraces.cpp`: simpler version of `apps/ysceneitrace.cpp` for demos
-- `apps/ysceneproc.cpp`: command-line scene manipulation and conversion
-- `apps/yshapeproc.cpp`: command-line mesh manipulation and conversion
-- `apps/yimageview.cpp`: Hdr/Ldr image viewer with tonemapping and color grading
-- `apps/yimageviews.cpp`: simpler version of `apps/yimageview.cpp` for demos
-- `apps/yimageproc.cpp`: command-line image manipulation
-- `apps/ysceneview.cpp`: simple OpenGL viewer
+- `apps/yscene.cpp`: command-line scene manipulation and rendering, and interactive viewing
+- `apps/yshape.cpp`: command-line shape manipulation and rendering, and interactive viewing
+- `apps/yimage.cpp`: command-line image manipulation, and interactive viewing
 
 Here are some test images rendered with the path tracer. More images are
 included in the [project site](https://xelatihy.github.io/yocto-gl/).
@@ -97,15 +90,14 @@ code, while keeping many APIs explicitly typed.
 We do not use exception for error reporting, but only to report "programmers"
 errors. For example, IO operations use boolean flags and error strings for
 human readable errors, while exceptions are used when preconditions or
-postconditions are violatd in functions.
+post conditions are violated in functions.
 
-The current version of the library (2.x) is a major refactoring of the previous
-library versions (1.x) in three main aspects. First, we now allow the use of
-reference semantic via pointers and adopt it for all large objects, while
-keeping value semantic for all others. We did this to avoid erroneous copies
-that cannot detected and avoided at compile time. Second, we had trouble
-interacting with C libraries that mostly use reference semantic. Third, we
-reduce the use of exceptions, again for better integration with external code.
+After several refactoring, we settled on a value-based approach, since the use
+of pointers and reference semantics was hard for many of our users. While
+this has the drawback of potentially introducing spurious copies, it does
+have th benefit of ensuring that no memory corruption can occur, which
+turned out was a major issue for novice C++ users, even in a very small
+library like this one.
 
 ## Credits
 

@@ -47,7 +47,18 @@ instance.material = (int)scene.materials.size()-1;
 ```
 
 Yocto/Scene defines several function to evaluate scene properties.
-Use `compute_bounds(scene)` to compute the scene bounding boxes.
+Use `compute_bounds(scene)` to compute the scene bounding boxes,  
+`scene_stats(scene)` to get scene stats and
+`scene_validation(scene)` to validate scene objects.
+
+```cpp
+auto scene = scene_scene{...};              // create a complete scene
+auto bbox = compute_bounds(scene);          // get bounds
+auto stats = scene_stats(scene);            // get stats
+for(auto stat : stats) print_info(stat);    // print stats
+auto errors = validate_stats(scene);        // get validation errors
+for(auto error : errors) print_error(error);// print error
+```
 
 ## Cameras
 
@@ -112,7 +123,7 @@ Several functions are defined to evaluate the geometric and material
 properties of points on shapes and instances, indicated by the shape element id
 and, when needed, the shape element barycentric coordinates. The difference
 between the shape and instance methods is that the former returns quantities
-on object space, while the latter in world space.
+in object space, while the latter in world space.
 Use `eval_position(...)` to evaluate the point position,
 `eval_normal(...)` to evaluate the interpolate point normal,
 `eval_texcoord(...)` to evaluate the point texture coordinates,
@@ -399,13 +410,127 @@ auto scene = new sceneio_scene{...};         // create a complete scene
 make_cornellbox(scene);                      // make cornell box
 ```
 
-## Example shapes
+## Procedural shapes
 
 Yocto/Scene has convenience function to create various procedural shapes,
 both for testing and for use in shape creation. These are wrappers to the
 corresponding functions in [Yocto/Shape](yocto_shape.md), where we maintain
 a comprehensive list of all procedural shapes supported.
 
+Procedural shapes take as input the desired shape resolution, the shape scale,
+the uv scale, and additional parameters specific to that procedural shape.
+These functions return a quad mesh, stored as a `scene_shape` struct.
+Use `make_rect(...)` for a rectangle in the XY plane,
+`make_bulged_rect(...)` for a bulged rectangle,
+`make_recty(...)` for a rectangle in the XZ plane,
+`make_bulged_recty(...)` for a bulged rectangle in the XZ plane,
+`make_box(...)` for a box,
+`make_rounded_box(...)` for a rounded box,
+`make_floor(...)` for a floor in the XZ plane,
+`make_bent_floor(...)` for a bent floor,
+`make_sphere(...)` for a sphere obtained from a cube,
+`make_uvsphere(...)` for a sphere tessellated along its uvs,
+`make_capped_uvsphere(...)` for a sphere with flipped caps,
+`make_disk(...)` for a disk obtained from a quad,
+`make_bulged_disk(...)` for a bulged disk,
+`make_uvdisk(...)` for a disk tessellated along its uvs,
+`make_uvcylinder(...)` for a cylinder tessellated along its uvs,
+`make_rounded_uvcylinder(...)` for a rounded cylinder.
+
 ```cpp
-auto sphere = make_sphere(32, 1); // make a sphere with 32 subdivisions
+// make shapes with 32 steps in resolution and scale of 1
+auto shape_01 = make_rect({32,32}, {1,1});
+auto shape_02 = make_bulged_rect({32,32}, {1,1});
+auto shape_03 = make_recty({32,32}, {1,1});
+auto shape_04 = make_box({32,32,32}, {1,1,1});
+auto shape_05 = make_rounded_box({32,32,32}, {1,1,1});
+auto shape_06 = make_floor({32,32}, {10,10});
+auto shape_07 = make_bent_floor({32,32}, {10,10});
+auto shape_08 = make_sphere(32, 1);
+auto shape_09 = make_uvsphere({32,32}, 1);
+auto shape_10 = make_capped_uvsphere({32,32}, 1);
+auto shape_11 = make_disk(32, 1);
+auto shape_12 = make_bulged_disk(32, 1);
+auto shape_13 = make_uvdiskm({32,32}, 1);
+auto shape_14 = make_uvcylinder({32,32,32}, {1,1});
+auto shape_15 = make_rounded_uvcylinder({32,32,32}, {1,1});
+```
+
+Yocto/Shape defines a few procedural face-varying shapes with similar interfaces
+to the above functions. In this case, the functions return face-varying quads
+packed in a `scene_fvshape` struct.
+Use `make_fvrect(...)` for a rectangle in the XY plane,
+`make_fvbox(...)` for a box,
+`make_fvsphere(...)` for a sphere obtained from a cube.
+
+```cpp
+// make face-varying shapes with 32 steps in resolution and scale of 1
+auto fvshape_01 = make_fvrect({32,32}, {1,1});
+auto fvshape_02 = make_fvbox({32,32,32}, {1,1,1});
+auto fvshape_03 = make_fvsphere(32, 1);
+```
+
+Yocto/Shape provides functions to create predefined shapes helpful in testing.
+These functions take only a scale and often provide only the positions as
+vertex data. These functions return either triangles, quads, or
+face-varying quads in a `scene_shape` or `scene_fvshape` struct.
+Use `make_monkey(...)` for the Blender monkey as quads and positions only,
+`make_quad(...)` for a simple quad,
+`make_quady(...)` for a simple quad in the XZ plane,
+`make_cube(...)` for a simple cube as quads and positions only,
+`make_fvcube(...)` for a simple face-varying unit cube,
+`make_geosphere(...)` for a geodesic sphere as triangles and positions only.
+These functions return a `scene_shape` or `scene_fvshape`.
+
+```cpp
+auto monkey = make_monkey(1);
+auto quad   = make_quad(1);
+auto quady  = make_quady(1);
+auto cube   = make_cube(1);
+auto geosph = make_geosphere(1);
+auto fvcube = make_fvcube(1);
+```
+
+Yocto/Shape supports the generation of points and lines sets.
+Use `make_lines(...)` to create a line set in the XY plane,
+`make_points(...)` for a collection of points at the origin,
+adn `make_random_points(...)` for a point set randomly placed in a box.
+These functions return points or lines, packed in a `scene_shape` struct.
+
+```cpp
+auto lines_01 = make_lines({4, 65536},      // line steps and number of lines
+                           {1, 1}, {1, 1},  // line set scale and uvscale
+                           {0.001, 0.001}); // radius at the bottom and top
+// procedural points return points, positions, normals, texcoords, radia
+auto [points, positions, normals, texcoords, radius] = make_points(65536);
+auto points_01 = make_points(65536,        // number of points
+                             1,            // uvscale
+                             0.001);       // point radius
+auto points_02 = make_random_points(65536, // number of points
+                             {1, 1, 1}, 1, // line set scale and uvscale
+                             0.001);       // point radius
+```
+
+Yocto/Shape also defines a simple functions to generate randomized hairs
+on a triangle or quad mesh. Use `make_hair(...)` to create a hair shape
+from a triangle and quad mesh, and return a line set.
+
+```cpp
+// Make a hair ball around a shape
+auto lines =  make_hair(
+  make_sphere(),  // sampled surface
+  {8, 65536},     // steps: line steps and number of lines
+  {0.1, 0.1},     // length: minimum and maximum length
+  {0.001, 0.001}, // radius: minimum and maximum radius from base to tip
+  {0, 10},        // noise: noise added to hair (strength/scale)
+  {0, 128},       // clump: clump added to hair (strength/number)
+  {0, 0});        // rotation: rotation added to hair (angle/strength)
+```
+
+Finally, Yocto/Shape defines a function to create a quad mesh from a heighfield.
+Use `make_heightfield(...)` to create a heightfield meshes.
+
+```cpp
+auto heightfield = vctor<float>{...};             // heightfield data
+auto shape = make_heightfield(size, heightfield); // make heightfield mesh
 ```
