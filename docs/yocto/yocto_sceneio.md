@@ -55,7 +55,7 @@ if(!save_scene(filename, scene, error))  // save scene
   print_error(error);
 ```
 
-## Shapes serialization
+## Shape serialization
 
 Shapes are loaded with `load_shape(filename, shape, error)` and
 saved with `save_shape(filename, shape, error)`.
@@ -137,3 +137,18 @@ if(!load_binary(filename, data, error)) // load a binary file
 if(!save_binary(filename, data, error)) // save a binary file
   print_error(error);                   // check and print error
 ```
+
+## Path utilities
+
+Yocto/SceneIO contains several helper function to manipulate paths. These are
+just convenience wrapper of `std::filesystem`.
+Use `path_dirname(filename)`, `path_extension(filename)`,  
+`path_filename(filename)`, `path_basename(fillename)`
+to extract the directory, extension, filename and basename from a path.
+Use `path_join(patha,pathb)` to joins paths and
+`replace_extension(filename,ext)` to replace a path extension.
+Use `path_exists(filename)` to check if a path exists and
+`path_isdir(filename)` and `path_isfile(filename)` to check whether
+it is a directory ot file respectively.
+Use `list_directory(dirname)` to list directory contents, and
+`path_current()` to get the current directory.
