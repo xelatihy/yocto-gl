@@ -4,6 +4,32 @@ Yocto/Bvh provides ray-intersection and point-overlap queries accelerated
 using a two-level BVH or wrapping Intel's Embree.
 Yocto/Bvh is implemented in `yocto_bvh.h` and `yocto_bvh.cpp`.
 
+## BVH representation
+
+Yocto/Bvh provides ray-scene intersection for points, lines, triangles and
+quads accelerated by a BVH data structure. Our BVH is written for
+minimal code and not maximum speed, but still gives fast-enough results.
+
+The BVH tree is stored in a `bvh_tree` struct. The tree stores an array of
+nodes and an array of element indices. Each node in the tree has references
+to either other nodes or elements. References are represented as indices
+in the nodes or elements arrays. Nodes indices refer to the nodes array,
+for internal nodes, or the element arrays, for leaf nodes.
+The BVH does not store shape data, which is instead passed explicitly
+to all calls.
+
+BVH nodes contain their bounds, indices to the BVH arrays of either
+primitives or internal nodes, node element type,
+and the split axis. Leaf and internal nodes are identical, except that
+indices refer to primitives for leaf nodes or other nodes for internal nodes.
+
+Two wrappers, `bvh_scene` and `bvh_shape` are used to store the BVH for
+[Yocto/Scene](yocto_scene.md) scenes and shapes. For shapes, we store a
+single BVH, while for scene we store the scene BVH and all shapes BVHs.
+These wrappers also store references to Intel's Embree BVH, if available.
+These wrappers does not store copies to shape or scene data, so that data is
+passed in for all subsequent calls.
+
 ## Building BVH
 
 Use `make_bvh(scene,highquality,embree)` or `make_bvh(shape,highquaity,embree)`
@@ -13,8 +39,6 @@ These functions takes as input scenes and shapes from
 that can be improved slightly by setting `highquality` to true. By default, we
 use the internal BVH, but Intel's Embree can be used, when available, if
 `embree` is set to true.
-Yocto/BVH works in shared memory so the data structures returned do not
-copy scene or shape data.
 
 ```cpp
 auto scene = scene_model{...};            // make a complete scene

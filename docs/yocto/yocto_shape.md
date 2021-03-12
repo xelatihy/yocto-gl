@@ -42,13 +42,21 @@ directly as input and output, or may pack these array in structs if deemed
 appropriate. This design tries to balance readability and generality, without
 forcing a single convention that would not be appropriate everywhere.
 
+If a higher level design is needed, [Yocto/Scene](yocto_scene.md) contains
+the standalone types `scene_shape` and `scene_fvshape` to store indexed
+and face-varying shapes respectively, a a collection of methods to work
+on these type, that are essentially wrappers to the functionality in this
+library.
+
+Shape loading and saving is defined in [Yocto/SceneIO](yocto_sceneio.md).
+
 ## Vertex properties
 
 Yocto/Shape provides many facilities to compute vertex properties for indexed
-elements. Use `compute_normals(...)` to compute vertex normals for triangle and
-quad meshes, and `compute_tangents(...)` for line tangents.
-Use `compute_skinning(...)` to apply linear-blend skinning.
-Use `compute_tangents_spaces(...)` to compute tangents spaces for each ech
+elements. Use `triangles_normals(...)` and `quads_normals(...)` to compute
+vertex normals for triangle and quad meshes, and `line_tangents(...)` for
+line tangents. Use `skin_vertices(...)` to apply linear-blend skinning.
+Use `triangle_tangent_spaces(...)` to compute tangents spaces for each ech
 meshes.
 
 ```cpp
@@ -56,13 +64,13 @@ auto triangles = vector<vec3i>{...};   // triangle indices
 auto positions = vector<vec3f>{...};   // vertex positions
 auto texcoords = vector<vec2f>{...};   // vertex uvs
 
-auto normals = compute_normals(triangles,positions);   // vertex normals
-auto tangsp = compute_tangent_spaces(triangles, positions, normals, texcoords);
+auto normals = triangle_normals(triangles,positions);   // vertex normals
+auto tangsp = triangle_tangent_spaces(triangles, positions, normals, texcoords);
 
 auto weights = vector<vec4f>{...};   // skinning weights for 4 bones per vertex
 auto joints  = vector<vec4i>{...};   // bine indices for 4 bones per vertex
 auto frames  = vector<frame3f>{...}; // bone frames
-auto [skinned_pos, skinned_norm] = compute_skinning(positions, normals,
+auto [skinned_pos, skinned_norm] = skin_vertices(positions, normals,
    weights, joints, frames);       // skinned positions ans normals
 ```
 
@@ -117,9 +125,10 @@ auto boundary = get_boundary(emap);   // get unsorted boundary edges
 Yocto/Shape provides ray-scene intersection for points, lines, triangles and
 quads accelerated by a BVH data structure. Our BVH is written for
 minimal code and not maximum speed, but still gives fast-enough results.
-See [Yocto/Geometry](yocto_geometry.md) for intersection parametrization.
+See [Yocto/Geometry](yocto_geometry.md) for intersection parametrization,
+and [Yocto/Bvh](yocto_bvh.md) for a more comprehensive version.
 
-The BVH tree is stored in a `bvh_tree` struct. The tree stored an array of
+The BVH tree is stored in a `shape_bvh` struct. The tree stored an array of
 nodes and an array of element indices. Each node in the tree has references
 to either other nodes or elements. References are represented as indices
 in the nodes or elements arrays. Nodes indices refer to the nodes array,

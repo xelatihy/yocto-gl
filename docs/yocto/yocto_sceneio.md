@@ -59,30 +59,32 @@ if(!save_scene(filename, scene, error))  // save scene
 
 Shapes are loaded with `load_shape(filename, shape, error)` and
 saved with `save_shape(filename, shape, error)`.
+Face-varying shapes with `load_fvshape(filename, shape, error)`
+and saved with `save_fvshape(filename, shape, error)`.
 Both loading and saving take a filename, a scene reference and return
 whether or not the scene was loaded successfully.
 In the case of an error, the IO functions set the `error` string with a
 message suitable for displaying to a user.
 Yocto/SceneIO supports loading and saving to Ply, Obj, Stl.
 
-```cpp
-auto scene = scene_shape{};              // shape
-auto error = string{};                   // error buffer
-if(!load_shape(filename, shape, error))  // load shape
-  print_error(error);
-if(!save_shape(filename, shape, error))  // save shape
-  print_error(error);
-```
-
-We also support face-varying shapes with `load_fvshape(filename, shape, error)`
-and saved with `save_fvshape(filename, shape, error)`.
+For indexed meshes, the type of elements is determined during loading,
+while face-varying coerce all face to quads. By default, texture coordinates
+are flipped vertically to match the convention of OpenGL texturing;
+this can be disabled by setting the `flipv` flag.
 
 ```cpp
-auto scene = scene_fvshape{};            // shape
-auto error = string{};                   // error buffer
-if(!load_fvshape(filename, shape, error))// load shape
+auto shape = scene_shape{};                  // shape
+auto error = string{};                       // error buffer
+if(!load_shape(filename, shape, error))      // load shape
   print_error(error);
-if(!save_fvshape(filename, shape, error))// save shape
+if(!save_shape(filename, shape, error))      // save shape
+  print_error(error);
+
+auto fvshape = scene_fvshape{};              // face-varying shape
+auto error = string{};                       // error buffer
+if(!load_fvshape(filename, fvshape, error))  // load shape
+  print_error(error);
+if(!save_fvshape(filename, fvshape, error))  // save shape
   print_error(error);
 ```
 
