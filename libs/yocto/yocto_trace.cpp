@@ -395,7 +395,6 @@ static vec4f trace_path(const scene_model& scene, const bvh_scene& bvh,
       // handle opacity
       if (material.opacity < 1 && rand1f(rng) >= material.opacity) {
         ray = {position + ray.d * 1e-2f, ray.d};
-        bounce -= 1;
         continue;
       }
       hit = true;
