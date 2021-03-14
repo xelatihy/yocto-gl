@@ -3972,7 +3972,7 @@ inline bool convert_texture(pbrt_texture& ptexture, const pbrt_command& command,
     return true;
   } else if (command.type == "checkerboard") {
     // auto tex1     = if(!get_pbrt_value(command.values, "tex1",
-    // pair{vec3f{1},
+    // pair{vec3f{1,1,1},
     // ""s}); auto tex2     = if(!get_pbrt_value(command.values, "tex2",
     //  pair{vec3f{0}, ""s}); auto rgb1     = tex1.second == "" ?
     //  tex1.first :
@@ -4253,7 +4253,7 @@ inline bool convert_material(pbrt_material& pmaterial,
     pmaterial.type = pbrt_mtype::metal;
     // get_texture(
     //     values, "Kr", material->specular, material->specular_tex,
-    //     vec3f{1});
+    //     vec3f{1,1,1});
     auto eta = zero3f, etak = zero3f;
     if (!get_color(command.values, "eta", eta,
             vec3f{0.2004376970f, 0.9240334304f, 1.1022119527f}))
@@ -4310,8 +4310,8 @@ inline bool convert_material(pbrt_material& pmaterial,
     return true;
   } else if (command.type == "glass") {
     pmaterial.type = pbrt_mtype::glass;
-    get_texture(
-        command.values, "Kt", pmaterial.color, pmaterial.color_tex, vec3f{1});
+    get_texture(command.values, "Kt", pmaterial.color, pmaterial.color_tex,
+        vec3f{1, 1, 1});
     if (!get_scalar(command.values, "eta", pmaterial.ior, 1.5))
       return parse_error();
     pmaterial.roughness = 0;
