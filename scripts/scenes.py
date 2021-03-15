@@ -125,6 +125,29 @@ def tonemap(directory='mcguire', scene='*', format='json', mode='filmic'):
 @cli.command()
 @click.option('--directory', '-d', default='mcguire')
 @click.option('--scene', '-s', default='*')
+@click.option('--format', '-f', default='json')
+@click.option('--mode', '-m', default='jpg')
+def gallery(directory='mcguire', scene='*', format='json', mode='filmic'):
+    modes = {
+        'jpg': ''
+    }
+    options = modes[mode]
+    inprefix = 'images'
+    outformat = 'jpg'
+    outprefix = 'gallery'
+    os.system(f'mkdir -p {directory}/{outprefix}-{format}')
+    from PIL import Image, ImageFont, ImageDraw
+    for filename in sorted(glob.glob(f'{directory}/{inprefix}-{format}/{scene}.png')):
+        imagename = filename.replace(f'{inprefix}-', f'{outprefix}-').replace('.png',f'.{outformat}')
+        print(filename, file=sys.stderr)
+        img = Image.open(filename)
+        rgb_img = img.convert('RGB')
+        rgb_img.save(imagename)
+
+
+@cli.command()
+@click.option('--directory', '-d', default='mcguire')
+@click.option('--scene', '-s', default='*')
 @click.option('--format', '-f', default='obj')
 @click.option('--clean/--no-clean', '-C', default=False)
 def sync_images(directory='mcguire',
