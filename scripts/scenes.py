@@ -15,10 +15,10 @@ def cli():
 @click.option('--mode', '-m', default='path')
 def view(directory='mcguire', scene='*', format='json', mode='path'):
     modes = {
-        'path': '-r 1280',
-        'embree': '-r 1280 --embreebvh',
-        'eyelight': '-r 1280 -t eyelight',
-        'eyelight-quick': '-r 1280 -s 16 -t eyelight'
+        'path': '-r 1280 -b 8 -c 10',
+        'embree': '-r 1280 -b 8 -c 10 --embreebvh',
+        'eyelight': '-r 1280 -t eyelight -b 8 -c 10',
+        'eyelight-quick': '-r 1280 -s 16 -t eyelight -b 8 -c 10'
     }
     options = modes[mode]
     for dirname in sorted(glob.glob(f'{directory}/{format}/{scene}')):
@@ -44,13 +44,13 @@ def view(directory='mcguire', scene='*', format='json', mode='path'):
 @click.option('--mode', '-m', default='path')
 def render(directory='mcguire', scene='*', format='json', mode='path'):
     modes = {
-        'path': '-s 64 -r 1280',
-        'path-face': '-s 256 -r 1280',
-        'embree': '-s 256 -r 1280 --embreebvh',
-        'eyelight': '-s 16 -r 1280 -t eyelight',
-        'embree-face': '-s 1024 -r 1280 --embreebvh',
-        'final': '-s 4096 -r 1280 --embreebvh',
-        'final-face': '-s 4096 -r 1280 --embreebvh',
+        'path': '-s 64 -r 1280 -b 8 -c 10',
+        'path-face': '-s 256 -r 1280 -b 8 -c 10',
+        'embree': '-s 256 -r 1280 -b 8 -c 10 --embreebvh',
+        'eyelight': '-s 16 -r 1280 -b 8 -c 10 -t eyelight',
+        'embree-face': '-s 1024 -b 8 -c 10 -r 1280 --embreebvh',
+        'final': '-s 4096 -r 1280 -b 8 -c 10 --embreebvh',
+        'final-face': '-s 4096 -b 8 -c 10 -r 1280 --embreebvh',
     }
     options = modes[mode]
     outformat = 'png' if 'eyelight' in mode else 'hdr'
