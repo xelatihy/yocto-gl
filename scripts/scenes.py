@@ -25,8 +25,8 @@ def view(directory='mcguire', scene='*', format='json', mode='path'):
         if not os.path.isdir(dirname): continue
         if '/_' in dirname: continue
         extraoptions = ''
-        if os.path.exists(f'{dirname}/render-options.txt'):
-            with open(f'{dirname}/render-options.txt') as f:
+        if os.path.exists(f'{dirname}/yscene_render.txt'):
+            with open(f'{dirname}/yscene_render.txt') as f:
                 extraoptions = f.read().strip()
         for filename in sorted(glob.glob(f'{dirname}/*.{format}')):
             if format == 'pbrt':
@@ -63,8 +63,8 @@ def render(directory='mcguire', scene='*', format='json', mode='path'):
         if 'island' in dirname: extracams = ["beachCam", "birdseyeCam", "dunesACam", "grassCam", "palmsCam", "rootsCam", "shotCam"]
         if 'landscape' in dirname: extracams = ['camera2', 'camera3', 'camera4']
         extraoptions = ''
-        if os.path.exists(f'{dirname}/render-options.txt'):
-            with open(f'{dirname}/render-options.txt') as f:
+        if os.path.exists(f'{dirname}/yscene_render.txt'):
+            with open(f'{dirname}/yscene_render.txt') as f:
                 extraoptions = f.read().strip()
         for filename in sorted(glob.glob(f'{dirname}/*.{format}')):
             if format == 'pbrt':
@@ -144,7 +144,7 @@ def gallery(directory='mcguire', scene='*', format='json', mode='filmic'):
     outformat = 'jpg'
     outprefix = 'gallery'
     os.system(f'mkdir -p {directory}/{outprefix}-{format}')
-    from PIL import Image, ImageFont, ImageDraw
+    from PIL import Image
     for filename in sorted(glob.glob(f'{directory}/{inprefix}-{format}/{scene}.png')):
         imagename = filename.replace(f'{inprefix}-', f'{outprefix}-').replace('.png',f'.{outformat}')
         print(filename, file=sys.stderr)
@@ -212,12 +212,9 @@ def convert(directory='mcguire',
         outdirname = dirname.replace(f'/source/', f'/{outformat}/')
         if clean: os.system(f'rm -rf {outdirname}')
         os.system(f'mkdir -p {outdirname}')
-        if os.path.exists(f'{dirname}/AUTHOR.txt'):
-            os.system(f'cp {dirname}/AUTHOR.txt {outdirname}/')
-        if os.path.exists(f'{dirname}/LICENSE.txt'):
-            os.system(f'cp {dirname}/LICENSE.txt {outdirname}/')
-        if os.path.exists(f'{dirname}/LINKS.txt'):
-            os.system(f'cp {dirname}/LINKS.txt {outdirname}/')
+        for auxname in ['AUTHOR.txt', 'LICENSE.txt', 'LINKS.txt', 'README.txt', 'yscene_render.txt']:
+            if os.path.exists(f'{dirname}/{auxname}'):
+                os.system(f'cp {dirname}/{auxname} {outdirname}/')
         for filename in sorted(glob.glob(f'{dirname}/*.{format}')):
             if format == 'pbrt':
                 with open(filename) as f:
