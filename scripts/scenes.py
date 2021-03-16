@@ -50,7 +50,6 @@ def render(directory='mcguire', scene='*', format='json', mode='path'):
         'eyelight': '--samples 16 --resolution 1280 --bounces 8 --clamp 10 --sampler eyelight',
         'embree-face': '--samples 1024 --resolution 1280 --bounces 8 --clamp 10 --embreebvh',
         'final': '--samples 4096 --resolution 1280 --bounces 8 --clamp 10 --embreebvh',
-        'final-face': '--samples 4096 --resolution 1280 --bounces 8 --clamp 10 --embreebvh',
     }
     options = modes[mode]
     outformat = 'png' if 'eyelight' in mode else 'hdr'
@@ -73,12 +72,12 @@ def render(directory='mcguire', scene='*', format='json', mode='path'):
             basename = os.path.basename(filename).replace(f'.{format}', '')
             os.system(f'mkdir -p {directory}/{outprefix}-{format}')
             imagename = f'{directory}/{outprefix}-{format}/{basename}.{outformat}'
-            cmd = f'../yocto-gl/bin/yscene render -o {imagename} {options} {extraoptions} {filename}'
+            cmd = f'../yocto-gl/bin/yscene render --output {imagename} {options} {extraoptions} {filename}'
             print(cmd, file=sys.stderr)
             os.system(cmd)
             for idx, cam in enumerate(extracams, 1):
                 imagename = f'{directory}/{outprefix}-{format}/{basename}-c{idx}.{outformat}'
-                cmd = f'../yocto-gl/bin/yscene render -o {imagename} --camera {cam} {options} {extraoptions} {filename}'
+                cmd = f'../yocto-gl/bin/yscene render --output {imagename} --camera {cam} {options} {extraoptions} {filename}'
                 print(cmd, file=sys.stderr)
                 os.system(cmd)
 
@@ -90,8 +89,7 @@ def render(directory='mcguire', scene='*', format='json', mode='path'):
 @click.option('--mode', '-m', default='linear')
 def tonemap(directory='mcguire', scene='*', format='json', mode='filmic'):
     modes = {
-        'linear': '',
-        'contrast1': '-t --logcontrast 0.6 --logo',
+        'linear': ''
     }
     options = modes[mode]
     outformat = 'png'
