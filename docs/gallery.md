@@ -37,9 +37,9 @@ This page contains a collection of images rendered with the Yocto/GL path tracer
 
 ## Objects
 
-![Yocto/GL pathtraced image](images/coffee.jpg)
+![Yocto/GL pathtraced image](images/coffee.jpg){: width=720px }
 
-![Yocto/GL pathtraced image](images/crown.jpg)
+![Yocto/GL pathtraced image](images/crown.jpg){: width=720px }
 
 ## Vehicles
 
