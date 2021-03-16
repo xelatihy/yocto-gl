@@ -4827,6 +4827,7 @@ vector<mesh_point> compute_bezier_path(const dual_geodesic_solver& solver,
       return lane_riesenfeld_adaptive(
           solver, triangles, positions, adjacencies, control_points, params);
     }
+    default: return {};
   }
 }
 
