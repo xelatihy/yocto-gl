@@ -24,11 +24,15 @@ def view(directory='mcguire', scene='*', format='json', mode='path'):
     for dirname in sorted(glob.glob(f'{directory}/{format}/{scene}')):
         if not os.path.isdir(dirname): continue
         if '/_' in dirname: continue
+        extraoptions = ''
+        if os.path.exists(f'{dirname}/render-options.txt'):
+            with open(f'{dirname}/render-options.txt') as f:
+                extraoptions = f.read().strip()
         for filename in sorted(glob.glob(f'{dirname}/*.{format}')):
             if format == 'pbrt':
                 with open(filename) as f:
                     if 'WorldBegin' not in f.read(): continue
-            cmd = f'../yocto-gl/bin/yscene view {options} {filename}'
+            cmd = f'../yocto-gl/bin/yscene view {options} {extraoptions} {filename}'
             print(cmd, file=sys.stderr)
             os.system(cmd)
 
@@ -58,6 +62,10 @@ def render(directory='mcguire', scene='*', format='json', mode='path'):
         if 'sanmiguel' in dirname: extracams = ['camera2', 'camera3']
         if 'island' in dirname: extracams = ["beachCam", "birdseyeCam", "dunesACam", "grassCam", "palmsCam", "rootsCam", "shotCam"]
         if 'landscape' in dirname: extracams = ['camera2', 'camera3', 'camera4']
+        extraoptions = ''
+        if os.path.exists(f'{dirname}/render-options.txt'):
+            with open(f'{dirname}/render-options.txt') as f:
+                extraoptions = f.read().strip()
         for filename in sorted(glob.glob(f'{dirname}/*.{format}')):
             if format == 'pbrt':
                 with open(filename) as f:
@@ -65,12 +73,12 @@ def render(directory='mcguire', scene='*', format='json', mode='path'):
             basename = os.path.basename(filename).replace(f'.{format}', '')
             os.system(f'mkdir -p {directory}/{outprefix}-{format}')
             imagename = f'{directory}/{outprefix}-{format}/{basename}.{outformat}'
-            cmd = f'../yocto-gl/bin/yscene render -o {imagename} {options} {filename}'
+            cmd = f'../yocto-gl/bin/yscene render -o {imagename} {options} {extraoptions} {filename}'
             print(cmd, file=sys.stderr)
             os.system(cmd)
             for idx, cam in enumerate(extracams, 1):
                 imagename = f'{directory}/{outprefix}-{format}/{basename}-c{idx}.{outformat}'
-                cmd = f'../yocto-gl/bin/yscene render -o {imagename} --camera {cam} {options} {filename}'
+                cmd = f'../yocto-gl/bin/yscene render -o {imagename} --camera {cam} {options} {extraoptions} {filename}'
                 print(cmd, file=sys.stderr)
                 os.system(cmd)
 
