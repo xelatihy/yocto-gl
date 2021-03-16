@@ -115,8 +115,8 @@ def tonemap(directory='mcguire', scene='*', format='json', mode='filmic'):
         tw, _ = draw.textsize("Yocto/GL", font=font1)
         draw.rectangle([w - 8, h - 32 - 8, w - 8 - 8 - tw, h - 8], (0, 0, 0))
         draw.text((w - 8 - 4, h - 26 - 8 - 4), "Yocto/GL", (255, 255, 255), font=font1, anchor='rt')
-        if directory in ['bitterli', 'disney', 'mcguire', 'pbrt3']:
-            authorfilename = filename.replace('images-json/', 'source/').replace(
+        if directory in ['bitterli', 'disney', 'mcguire', 'pbrt3', 'yocto']:
+            authorfilename = filename.replace('images-json/', f'{format}/').replace(
                 '-fr.', '.').replace('-hr.', '.').replace('-c1.', '.').replace(
                     '-c2.', '.').replace('-c3.', '.').replace('-c4.', '.').replace(
                         '-c5.', '.').replace('-c6.', '.').replace(
