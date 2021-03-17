@@ -1982,7 +1982,7 @@ static vector<pair<int, float>> nodes_around_point(
   auto [is_vertex, offset] = bary_is_vert(get_bary(p.uv));
   if (is_vertex) {
     auto vid = triangles[p.face][offset];
-    nodes.push_back({vid, 0});
+    nodes.push_back({vid, 0.0f});
   } else {
     auto pid = p.face;
     auto pos = eval_position(triangles, positions, p);
