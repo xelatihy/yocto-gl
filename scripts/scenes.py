@@ -219,7 +219,7 @@ def convert(directory='mcguire',
                     if 'WorldBegin' not in f.read(): continue
             outname = filename.replace(f'/source/', f'/{outformat}/').replace(
                 f'.{format}', f'.{outformat}')
-            cmd = f'../yocto-gl/bin/yscene convert -o {outname} {options} {filename} {copyright_options}'
+            cmd = f'../yocto-gl/bin/yscene convert --output {outname} {options} {filename} {copyright_options}'
             print(cmd, file=sys.stderr)
             os.system(cmd)
 
