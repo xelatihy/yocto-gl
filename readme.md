@@ -60,7 +60,7 @@ included in the [project site](https://xelatihy.github.io/yocto-gl/).
 
 ![Example shapes: procedural shapes, Catmull-Clark subdivision, hairs, displacement mapping](images/features2.jpg)
 
-![Image rendered with Yocto/GL path tracer. Model by Disney Animation Studios.](images/island.png)
+![Image rendered with Yocto/GL path tracer. Model by Disney Animation Studios.](images/island.jpg)
 
 ## Design Considerations
 

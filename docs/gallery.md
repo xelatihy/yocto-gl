@@ -11,7 +11,7 @@ This page contains a collection of images rendered with the Yocto/GL path tracer
 
 ![Yocto/GL pathtraced image](images/island.jpg)
 
-![Yocto/GL pathtraced image](images/island-c6.jpg)
+![Yocto/GL pathtraced image](images/island-c7.jpg)
 
 ![Yocto/GL pathtraced image](images/bistroexterior.jpg)
 
@@ -34,6 +34,12 @@ This page contains a collection of images rendered with the Yocto/GL path tracer
 ![Yocto/GL pathtraced image](images/breakfastroom.jpg)
 
 ![Yocto/GL pathtraced image](images/bistrointerior.jpg)
+
+## Humans
+
+![Yocto/GL pathtraced image](images/head1ss.jpg){: width=720px }
+
+![Yocto/GL pathtraced image](images/head2ss.jpg){: width=720px }
 
 ## Objects
 
