@@ -4,25 +4,25 @@
       "name": "x64-Debug",
       "generator": "Ninja",
       "configurationType": "Debug",
-      "inheritEnvironments": [ "msvc_x64_x64" ],
+      "inheritEnvironments": ["msvc_x64_x64"],
       "buildRoot": "${projectDir}\\build\\vscmake\\x64-Debug",
       "installRoot": "${projectDir}\\bin\\debug",
       "cmakeCommandArgs": "",
       "buildCommandArgs": "-v",
       "ctestCommandArgs": "",
-      "variables": []
+      "variables": [{ "name": "YOCTO_EMBREE", "value": "ON" }]
     },
     {
       "name": "x64-Release",
       "generator": "Ninja",
       "configurationType": "RelWithDebInfo",
-      "inheritEnvironments": [ "msvc_x64_x64" ],
+      "inheritEnvironments": ["msvc_x64_x64"],
       "buildRoot": "${projectDir}\\build\\vscmake\\x64-Release",
       "installRoot": "${projectDir}\\bin",
       "cmakeCommandArgs": "",
       "buildCommandArgs": "-v",
       "ctestCommandArgs": "",
-      "variables": []
+      "variables": [{ "name": "YOCTO_EMBREE", "value": "ON" }]
     }
   ]
 }
