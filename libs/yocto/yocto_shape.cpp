@@ -3108,7 +3108,7 @@ void make_heightfield(vector<vec4i>& quads, vector<vec3f>& positions,
     vector<vec3f>& normals, vector<vec2f>& texcoords, const vec2i& size,
     const vector<float>& height) {
   make_recty(quads, positions, normals, texcoords, size - 1,
-      vec2f{(float)size.x, (float)size.y} / max(size), {1, 1});
+      vec2f{(float)size.x, (float)size.y} / (float)max(size), {1, 1});
   for (auto j = 0; j < size.y; j++)
     for (auto i = 0; i < size.x; i++)
       positions[j * size.x + i].y = height[j * size.x + i];
@@ -3118,7 +3118,7 @@ void make_heightfield(vector<vec4i>& quads, vector<vec3f>& positions,
     vector<vec3f>& normals, vector<vec2f>& texcoords, const vec2i& size,
     const vector<vec4f>& color) {
   make_recty(quads, positions, normals, texcoords, size - 1,
-      vec2f{(float)size.x, (float)size.y} / max(size), {1, 1});
+      vec2f{(float)size.x, (float)size.y} / (float)max(size), {1, 1});
   for (auto j = 0; j < size.y; j++)
     for (auto i = 0; i < size.x; i++)
       positions[j * size.x + i].y = mean(xyz(color[j * size.x + i]));

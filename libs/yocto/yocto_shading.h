@@ -824,7 +824,7 @@ inline vec3f eval_refractive(const vec3f& color, float ior, float roughness,
            abs(dot(normal, incoming));
   } else {
     auto halfway = -normalize(rel_ior * incoming + outgoing) *
-                   (entering ? 1 : -1);
+                   (entering ? 1.0f : -1.0f);
     auto F = fresnel_dielectric(rel_ior, halfway, outgoing);
     auto D = microfacet_distribution(roughness, up_normal, halfway);
     auto G = microfacet_shadowing(
@@ -866,7 +866,7 @@ inline float sample_refractive_pdf(const vec3f& color, float ior,
            (4 * abs(dot(outgoing, halfway)));
   } else {
     auto halfway = -normalize(rel_ior * incoming + outgoing) *
-                   (entering ? 1 : -1);
+                   (entering ? 1.0f : -1.0f);
     // [Walter 2007] equation 17
     return (1 - fresnel_dielectric(rel_ior, halfway, outgoing)) *
            sample_microfacet_pdf(roughness, up_normal, halfway) *
@@ -910,7 +910,7 @@ inline vec3f sample_refractive(const vec3f& color, float ior,
 inline float sample_refractive_pdf(const vec3f& color, float ior,
     const vec3f& normal, const vec3f& outgoing, const vec3f& incoming) {
   if (abs(ior - 1) < 1e-3)
-    return dot(normal, incoming) * dot(normal, outgoing) < 0 ? 1 : 0;
+    return dot(normal, incoming) * dot(normal, outgoing) < 0 ? 1.0f : 0.0f;
   auto entering  = dot(normal, outgoing) >= 0;
   auto up_normal = entering ? normal : -normal;
   auto rel_ior   = entering ? ior : (1 / ior);

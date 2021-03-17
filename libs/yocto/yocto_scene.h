@@ -83,9 +83,9 @@ inline const int invalidid = -1;
 struct scene_camera {
   frame3f frame        = identity3x4f;
   bool    orthographic = false;
-  float   lens         = 0.050;
-  float   film         = 0.036;
-  float   aspect       = 1.500;
+  float   lens         = 0.050f;
+  float   film         = 0.036f;
+  float   aspect       = 1.500f;
   float   focus        = 10000;
   float   aperture     = 0;
 };
@@ -123,10 +123,10 @@ struct scene_material {
   vec3f               color        = {0, 0, 0};
   float               roughness    = 0;
   float               metallic     = 0;
-  float               ior          = 1.5;
+  float               ior          = 1.5f;
   vec3f               scattering   = {0, 0, 0};
   float               scanisotropy = 0;
-  float               trdepth      = 0.01;
+  float               trdepth      = 0.01f;
   float               opacity      = 1;
 
   // textures
@@ -292,7 +292,7 @@ struct material_point {
   vec3f               density      = {0, 0, 0};
   vec3f               scattering   = {0, 0, 0};
   float               scanisotropy = 0;
-  float               trdepth      = 0.01;
+  float               trdepth      = 0.01f;
 };
 
 // Eval material to obtain emission, brdf and opacity.
@@ -525,14 +525,14 @@ scene_fvshape make_fvsphere(int steps = 32, float scale = 1, float uvscale = 1);
 // Generate lines set along a quad. Returns lines, pos, norm, texcoord, radius.
 scene_shape make_lines(const vec2i& steps = {4, 65536},
     const vec2f& scale = {1, 1}, const vec2f& uvscale = {1, 1},
-    const vec2f& radius = {0.001, 0.001});
+    const vec2f& radius = {0.001f, 0.001f});
 
 // Make point primitives. Returns points, pos, norm, texcoord, radius.
-scene_shape make_point(float radius = 0.001);
+scene_shape make_point(float radius = 0.001f);
 scene_shape make_points(
-    int num = 65536, float uvscale = 1, float radius = 0.001);
+    int num = 65536, float uvscale = 1, float radius = 0.001f);
 scene_shape make_random_points(int num = 65536, const vec3f& size = {1, 1, 1},
-    float uvscale = 1, float radius = 0.001, uint64_t seed = 17);
+    float uvscale = 1, float radius = 0.001f, uint64_t seed = 17);
 
 // Predefined meshes
 scene_shape   make_monkey(float scale = 1);
@@ -549,7 +549,7 @@ scene_shape   make_geosphere(float scale = 1);
 // clump: clump added to hair (strength/number)
 // rotation: rotation added to hair (angle/strength)
 scene_shape make_hair(const scene_shape& shape, const vec2i& steps = {8, 65536},
-    const vec2f& length = {0.1, 0.1}, const vec2f& rad = {0.001, 0.001},
+    const vec2f& length = {0.1f, 0.1f}, const vec2f& rad = {0.001f, 0.001f},
     const vec2f& noise = {0, 10}, const vec2f& clump = {0, 128},
     const vec2f& rotation = {0, 0}, int seed = 7);
 

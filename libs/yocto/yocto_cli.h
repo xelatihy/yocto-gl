@@ -796,7 +796,7 @@ inline string get_usage(const cli_command& root, const cli_command& cli) {
           len = 16;
         }
         line += choice + ", ";
-        len += choice.size() + 2;
+        len += (int)choice.size() + 2;
       }
       line = line.substr(0, line.size() - 2);
       line += "\n";
@@ -806,7 +806,7 @@ inline string get_usage(const cli_command& root, const cli_command& cli) {
   {
     auto line = "  --help" + string{};
     while (line.size() < 32) line += " ";
-    line += "Prints help. [false]";
+    line += "Prints help. [false]\n";
     usage_options += line;
   }
   for (auto& option : cli.arguments) {
@@ -824,7 +824,7 @@ inline string get_usage(const cli_command& root, const cli_command& cli) {
           len = 16;
         }
         line += choice + ", ";
-        len += choice.size() + 2;
+        len += (int)choice.size() + 2;
       }
       line = line.substr(0, line.size() - 2);
       line += "\n";

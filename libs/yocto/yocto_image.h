@@ -149,12 +149,12 @@ namespace yocto {
 
 // Make a grid image.
 color_image make_grid(int width, int height, float scale = 1,
-    const vec4f& color0 = vec4f{0.2, 0.2, 0.2, 1},
-    const vec4f& color1 = vec4f{0.5, 0.5, 0.5, 1});
+    const vec4f& color0 = vec4f{0.2f, 0.2f, 0.2f, 1.0f},
+    const vec4f& color1 = vec4f{0.5f, 0.5f, 0.5f, 1.0f});
 // Make a checker image.
 color_image make_checker(int width, int height, float scale = 1,
-    const vec4f& color0 = vec4f{0.2, 0.2, 0.2, 1},
-    const vec4f& color1 = vec4f{0.5, 0.5, 0.5, 1});
+    const vec4f& color0 = vec4f{0.2f, 0.2f, 0.2f, 1.0f},
+    const vec4f& color1 = vec4f{0.5f, 0.5f, 0.5f, 1.0f});
 // Make a bump map.
 color_image make_bumps(int width, int height, float scale = 1,
     const vec4f& color0 = vec4f{0, 0, 0, 1},
@@ -197,7 +197,7 @@ color_image make_ridgemap(int width, int height, float scale = 1,
 // of 0 sets the eath sun defaults (ignoring intensity too).
 color_image make_sunsky(int width, int height, float sun_angle,
     float turbidity = 3, bool has_sun = false, float sun_intensity = 1,
-    float sun_radius = 1, const vec3f& ground_albedo = {0.2, 0.2, 0.2});
+    float sun_radius = 1, const vec3f& ground_albedo = {0.2f, 0.2f, 0.2f});
 // Make an image of multiple lights.
 color_image make_lights(int width, int height, const vec3f& le = {1, 1, 1},
     int nlights = 4, float langle = pif / 4, float lwidth = pif / 16,
@@ -268,12 +268,12 @@ namespace yocto {
 
 // Make a grid image.
 void make_grid(vector<vec4f>& pixels, int width, int height, float scale = 1,
-    const vec4f& color0 = vec4f{0.2, 0.2, 0.2, 1},
-    const vec4f& color1 = vec4f{0.5, 0.5, 0.5, 1});
+    const vec4f& color0 = vec4f{0.2f, 0.2f, 0.2f, 1.0f},
+    const vec4f& color1 = vec4f{0.5f, 0.5f, 0.5f, 1.0f});
 // Make a checker image.
 void make_checker(vector<vec4f>& pixels, int width, int height, float scale = 1,
-    const vec4f& color0 = vec4f{0.2, 0.2, 0.2, 1},
-    const vec4f& color1 = vec4f{0.5, 0.5, 0.5, 1});
+    const vec4f& color0 = vec4f{0.2f, 0.2f, 0.2f, 1.0f},
+    const vec4f& color1 = vec4f{0.5f, 0.5f, 0.5f, 1.0f});
 // Make a bump map.
 void make_bumps(vector<vec4f>& pixels, int width, int height, float scale = 1,
     const vec4f& color0 = vec4f{0, 0, 0, 1},
@@ -318,7 +318,7 @@ void make_ridgemap(vector<vec4f>& pixels, int width, int height,
 // of 0 sets the eath sun defaults (ignoring intensity too).
 void make_sunsky(vector<vec4f>& pixels, int width, int height, float sun_angle,
     float turbidity = 3, bool has_sun = false, float sun_intensity = 1,
-    float sun_radius = 1, const vec3f& ground_albedo = {0.2, 0.2, 0.2});
+    float sun_radius = 1, const vec3f& ground_albedo = {0.2f, 0.2f, 0.2f});
 // Make an image of multiple lights.
 void make_lights(vector<vec4f>& pixels, int width, int height,
     const vec3f& le = {1, 1, 1}, int nlights = 4, float langle = pif / 4,
