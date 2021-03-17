@@ -639,11 +639,11 @@ bool make_image_preset(color_image& image, const string& type_, string& error) {
   } else if (type == "colormapramp") {
     image = make_colormapramp(width, height);
   } else if (type == "sky") {
-    image = make_sunsky(
-        width, height, pif / 4, 3.0f, false, 1.0f, 1.0f, vec3f{0.7f, 0.7f, 0.7f});
+    image = make_sunsky(width, height, pif / 4, 3.0f, false, 1.0f, 1.0f,
+        vec3f{0.7f, 0.7f, 0.7f});
   } else if (type == "sunsky") {
-    image = make_sunsky(
-        width, height, pif / 4, 3.0f, true, 1.0f, 1.0f, vec3f{0.7f, 0.7f, 0.7f});
+    image = make_sunsky(width, height, pif / 4, 3.0f, true, 1.0f, 1.0f,
+        vec3f{0.7f, 0.7f, 0.7f});
   } else if (type == "noise") {
     image = make_noisemap(width, height, 1);
   } else if (type == "fbm") {
@@ -713,11 +713,11 @@ bool make_image_preset(color_image& image, const string& type_, string& error) {
   } else if (type == "test-uvgrid") {
     image = make_uvgrid(width, height);
   } else if (type == "test-sky") {
-    image = make_sunsky(
-        width, height, pif / 4, 3.0f, false, 1.0f, 1.0f, vec3f{0.7f, 0.7f, 0.7f});
+    image = make_sunsky(width, height, pif / 4, 3.0f, false, 1.0f, 1.0f,
+        vec3f{0.7f, 0.7f, 0.7f});
   } else if (type == "test-sunsky") {
-    image = make_sunsky(
-        width, height, pif / 4, 3.0f, true, 1.0f, 1.0f, vec3f{0.7f, 0.7f, 0.7f});
+    image = make_sunsky(width, height, pif / 4, 3.0f, true, 1.0f, 1.0f,
+        vec3f{0.7f, 0.7f, 0.7f});
   } else if (type == "test-noise") {
     image = make_noisemap(width, height);
   } else if (type == "test-fbm") {

@@ -623,8 +623,8 @@ inline color_space_params get_color_scape_params(color_space space) {
 
   // color space parameters
   // https://en.wikipedia.org/wiki/Rec._709
-  static auto rgb_params = make_linear_rgb_space(
-      {0.6400f, 0.3300f}, {0.3000f, 0.6000f}, {0.1500f, 0.0600f}, {0.3127f, 0.3290f});
+  static auto rgb_params = make_linear_rgb_space({0.6400f, 0.3300f},
+      {0.3000f, 0.6000f}, {0.1500f, 0.0600f}, {0.3127f, 0.3290f});
   // https://en.wikipedia.org/wiki/Rec._709
   static auto srgb_params = make_gamma_rgb_space({0.6400f, 0.3300f},
       {0.3000f, 0.6000f}, {0.1500f, 0.0600f}, {0.3127f, 0.3290f}, 2.4f,
