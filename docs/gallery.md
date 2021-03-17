@@ -35,6 +35,12 @@ This page contains a collection of images rendered with the Yocto/GL path tracer
 
 ![Yocto/GL pathtraced image](images/bistrointerior.jpg)
 
+## Humans
+
+![Yocto/GL pathtraced image](images/head1ss.jpg){: width=720px }
+
+![Yocto/GL pathtraced image](images/head2ss.jpg){: width=720px }
+
 ## Objects
 
 ![Yocto/GL pathtraced image](images/coffee.jpg){: width=720px }
