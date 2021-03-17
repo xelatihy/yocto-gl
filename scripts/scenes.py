@@ -104,7 +104,7 @@ def tonemap(directory='mcguire', scene='*', format='json', mode='filmic'):
             glob.glob(f'{directory}/{outprefix}-{format}/{scene}.exr')):
         imagename = filename.replace(f'.exr', f'.{outformat}').replace(
             f'.hdr', f'.{outformat}')
-        cmd = f'../yocto-gl/bin/yimage convert -o {imagename} {options} {filename}'
+        cmd = f'../yocto-gl/bin/yimage convert --output {imagename} {options} {filename}'
         print(cmd, file=sys.stderr)
         os.system(cmd)
         img = Image.open(imagename)
@@ -113,11 +113,11 @@ def tonemap(directory='mcguire', scene='*', format='json', mode='filmic'):
         tw, _ = draw.textsize("Yocto/GL", font=font1)
         draw.rectangle([w - 8, h - 32 - 8, w - 8 - 8 - tw, h - 8], (0, 0, 0))
         draw.text((w - 8 - 4, h - 26 - 8 - 4), "Yocto/GL", (255, 255, 255), font=font1, anchor='rt')
-        if directory in ['bitterli', 'disney', 'mcguire', 'pbrt3', 'yocto']:
+        if directory in ['bitterli', 'disney', 'mcguire', 'pbrt3', 'yocto', 'heads']:
             authorfilename = filename.replace('images-json/', f'{format}/').replace(
                 '-fr.', '.').replace('-hr.', '.').replace('-c1.', '.').replace(
                     '-c2.', '.').replace('-c3.', '.').replace('-c4.', '.').replace(
-                        '-c5.', '.').replace('-c6.', '.').replace(
+                        '-c5.', '.').replace('-c6.', '.').replace('-c7.', '.').replace(
                             '.hdr', '') + '/AUTHOR.txt'
             print(authorfilename)
             with open(authorfilename) as f:
