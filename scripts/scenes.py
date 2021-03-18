@@ -89,7 +89,8 @@ def render(directory='mcguire', scene='*', format='json', mode='path'):
 @click.option('--mode', '-m', default='linear')
 def tonemap(directory='mcguire', scene='*', format='json', mode='filmic'):
     modes = {
-        'linear': ''
+        'linear': '',
+        'filmic': '--filmic --exposure 0.5'
     }
     options = modes[mode]
     outformat = 'png'
