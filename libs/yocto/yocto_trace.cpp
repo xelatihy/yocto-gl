@@ -56,11 +56,6 @@ bvh_scene make_bvh(const scene_model& scene, const trace_params& params) {
 }  // namespace yocto
 
 // -----------------------------------------------------------------------------
-// IMPLEMENTATION FOR MATERIALS
-// -----------------------------------------------------------------------------
-namespace yocto {}  // namespace yocto
-
-// -----------------------------------------------------------------------------
 // IMPLEMENTATION FOR PATH TRACING
 // -----------------------------------------------------------------------------
 namespace yocto {
@@ -68,7 +63,7 @@ namespace yocto {
 // Evaluates/sample the BRDF scaled by the cosine of the incoming direction.
 static vec3f eval_emission(const material_point& material, const vec3f& normal,
     const vec3f& outgoing) {
-  return material.emission;
+  return dot(normal, outgoing) >= 0 ? material.emission : vec3f{0, 0, 0};
 }
 
 // Evaluates/sample the BRDF scaled by the cosine of the incoming direction.
@@ -400,7 +395,6 @@ static vec4f trace_path(const scene_model& scene, const bvh_scene& bvh,
       // handle opacity
       if (material.opacity < 1 && rand1f(rng) >= material.opacity) {
         ray = {position + ray.d * 1e-2f, ray.d};
-        bounce -= 1;
         continue;
       }
       hit = true;

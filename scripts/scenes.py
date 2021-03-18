@@ -15,20 +15,24 @@ def cli():
 @click.option('--mode', '-m', default='path')
 def view(directory='mcguire', scene='*', format='json', mode='path'):
     modes = {
-        'path': '-r 720',
-        'embree': '-r 720 --embreebvh',
-        'eyelight': '-r 720 -t eyelight',
-        'eyelight-quick': '-r 720 -s 16 -t eyelight'
+        'path': '--resolution 1280 --bounces 8 --clamp 10',
+        'embree': '--resolution 1280 --bounces 8 --clamp 10 --embreebvh',
+        'eyelight': '--resolution 1280 -t eyelight --bounces 8 --clamp 10',
+        'eyelight-quick': '--resolution 1280 --samples 16 --sampler eyelight --bounces 8 --clamp 10'
     }
     options = modes[mode]
     for dirname in sorted(glob.glob(f'{directory}/{format}/{scene}')):
         if not os.path.isdir(dirname): continue
         if '/_' in dirname: continue
+        extraoptions = ''
+        if os.path.exists(f'{dirname}/yscene_render.txt'):
+            with open(f'{dirname}/yscene_render.txt') as f:
+                extraoptions = f.read().strip()
         for filename in sorted(glob.glob(f'{dirname}/*.{format}')):
             if format == 'pbrt':
                 with open(filename) as f:
                     if 'WorldBegin' not in f.read(): continue
-            cmd = f'../yocto-gl/bin/yscene view {options} {filename}'
+            cmd = f'../yocto-gl/bin/yscene view {options} {extraoptions} {filename}'
             print(cmd, file=sys.stderr)
             os.system(cmd)
 
@@ -40,12 +44,12 @@ def view(directory='mcguire', scene='*', format='json', mode='path'):
 @click.option('--mode', '-m', default='path')
 def render(directory='mcguire', scene='*', format='json', mode='path'):
     modes = {
-        'path': '-s 64 -r 1280',
-        'path-face': '-s 256 -r 1280',
-        'embree': '-s 256 -r 1280 --embreebvh',
-        'eyelight': '-s 16 -r 1280 -t eyelight',
-        'embree-face': '-s 1024 -r 1280 --embreebvh',
-        'final': '-s 4096 -r 1280 --embreebvh',
+        'path': '--samples 64 --resolution 1280 --bounces 8 --clamp 10',
+        'path-face': '--samples 256 --resolution 1280 --bounces 8 --clamp 10',
+        'embree': '--samples 256 --resolution 1280 --bounces 8 --clamp 10 --embreebvh',
+        'eyelight': '--samples 16 --resolution 1280 --bounces 8 --clamp 10 --sampler eyelight',
+        'embree-face': '--samples 1024 --resolution 1280 --bounces 8 --clamp 10 --embreebvh',
+        'final': '--samples 4096 --resolution 1280 --bounces 8 --clamp 10 --embreebvh',
     }
     options = modes[mode]
     outformat = 'png' if 'eyelight' in mode else 'hdr'
@@ -54,9 +58,13 @@ def render(directory='mcguire', scene='*', format='json', mode='path'):
         if not os.path.isdir(dirname): continue
         if '/_' in dirname: continue
         extracams = []
-        if 'sanmiguel' in dirname: extracams = ['camera1', 'camera2']
+        if 'sanmiguel' in dirname: extracams = ['camera2', 'camera3']
         if 'island' in dirname: extracams = ["beachCam", "birdseyeCam", "dunesACam", "grassCam", "palmsCam", "rootsCam", "shotCam"]
-        if 'landscape' in dirname: extracams = ['camera1', 'camera2', 'camera3']
+        if 'landscape' in dirname: extracams = ['camera2', 'camera3', 'camera4']
+        extraoptions = ''
+        if os.path.exists(f'{dirname}/yscene_render.txt'):
+            with open(f'{dirname}/yscene_render.txt') as f:
+                extraoptions = f.read().strip()
         for filename in sorted(glob.glob(f'{dirname}/*.{format}')):
             if format == 'pbrt':
                 with open(filename) as f:
@@ -64,12 +72,12 @@ def render(directory='mcguire', scene='*', format='json', mode='path'):
             basename = os.path.basename(filename).replace(f'.{format}', '')
             os.system(f'mkdir -p {directory}/{outprefix}-{format}')
             imagename = f'{directory}/{outprefix}-{format}/{basename}.{outformat}'
-            cmd = f'../yocto-gl/bin/yscene render -o {imagename} {options} {filename}'
+            cmd = f'../yocto-gl/bin/yscene render --output {imagename} {options} {extraoptions} {filename}'
             print(cmd, file=sys.stderr)
             os.system(cmd)
             for idx, cam in enumerate(extracams, 1):
                 imagename = f'{directory}/{outprefix}-{format}/{basename}-c{idx}.{outformat}'
-                cmd = f'../yocto-gl/bin/yscene render -o {imagename} --camera {cam} {options} {filename}'
+                cmd = f'../yocto-gl/bin/yscene render --output {imagename} --camera {cam} {options} {extraoptions} {filename}'
                 print(cmd, file=sys.stderr)
                 os.system(cmd)
 
@@ -81,8 +89,7 @@ def render(directory='mcguire', scene='*', format='json', mode='path'):
 @click.option('--mode', '-m', default='linear')
 def tonemap(directory='mcguire', scene='*', format='json', mode='filmic'):
     modes = {
-        'linear': '',
-        'contrast1': '-t --logcontrast 0.6 --logo',
+        'linear': ''
     }
     options = modes[mode]
     outformat = 'png'
@@ -97,7 +104,7 @@ def tonemap(directory='mcguire', scene='*', format='json', mode='filmic'):
             glob.glob(f'{directory}/{outprefix}-{format}/{scene}.exr')):
         imagename = filename.replace(f'.exr', f'.{outformat}').replace(
             f'.hdr', f'.{outformat}')
-        cmd = f'../yocto-gl/bin/yimage convert -o {imagename} {options} {filename}'
+        cmd = f'../yocto-gl/bin/yimage convert --output {imagename} {options} {filename}'
         print(cmd, file=sys.stderr)
         os.system(cmd)
         img = Image.open(imagename)
@@ -106,11 +113,11 @@ def tonemap(directory='mcguire', scene='*', format='json', mode='filmic'):
         tw, _ = draw.textsize("Yocto/GL", font=font1)
         draw.rectangle([w - 8, h - 32 - 8, w - 8 - 8 - tw, h - 8], (0, 0, 0))
         draw.text((w - 8 - 4, h - 26 - 8 - 4), "Yocto/GL", (255, 255, 255), font=font1, anchor='rt')
-        if directory in ['bitterli', 'disney', 'mcguire', 'pbrt']:
-            authorfilename = filename.replace('images-json/', 'source/').replace(
+        if directory in ['bitterli', 'disney', 'mcguire', 'pbrt3', 'yocto', 'heads']:
+            authorfilename = filename.replace('images-json/', f'{format}/').replace(
                 '-fr.', '.').replace('-hr.', '.').replace('-c1.', '.').replace(
                     '-c2.', '.').replace('-c3.', '.').replace('-c4.', '.').replace(
-                        '-c5.', '.').replace('-c6.', '.').replace(
+                        '-c5.', '.').replace('-c6.', '.').replace('-c7.', '.').replace(
                             '.hdr', '') + '/AUTHOR.txt'
             print(authorfilename)
             with open(authorfilename) as f:
@@ -119,6 +126,29 @@ def tonemap(directory='mcguire', scene='*', format='json', mode='filmic'):
             draw.rectangle([8, h - 26 - 8, 8 + 8 + tw, h - 8], (0, 0, 0))
             draw.text((8 + 4, h - 20 - 8 - 4), text, (255, 255, 255), font=font2)
         img.save(imagename)
+
+
+@cli.command()
+@click.option('--directory', '-d', default='mcguire')
+@click.option('--scene', '-s', default='*')
+@click.option('--format', '-f', default='json')
+@click.option('--mode', '-m', default='jpg')
+def gallery(directory='mcguire', scene='*', format='json', mode='filmic'):
+    modes = {
+        'jpg': ''
+    }
+    options = modes[mode]
+    inprefix = 'images'
+    outformat = 'jpg'
+    outprefix = 'gallery'
+    os.system(f'mkdir -p {directory}/{outprefix}-{format}')
+    from PIL import Image
+    for filename in sorted(glob.glob(f'{directory}/{inprefix}-{format}/{scene}.png')):
+        imagename = filename.replace(f'{inprefix}-', f'{outprefix}-').replace('.png',f'.{outformat}')
+        print(filename, file=sys.stderr)
+        img = Image.open(filename)
+        rgb_img = img.convert('RGB')
+        rgb_img.save(imagename)
 
 
 @cli.command()
@@ -180,19 +210,16 @@ def convert(directory='mcguire',
         outdirname = dirname.replace(f'/source/', f'/{outformat}/')
         if clean: os.system(f'rm -rf {outdirname}')
         os.system(f'mkdir -p {outdirname}')
-        if os.path.exists(f'{dirname}/AUTHOR.txt'):
-            os.system(f'cp {dirname}/AUTHOR.txt {outdirname}/')
-        if os.path.exists(f'{dirname}/LICENSE.txt'):
-            os.system(f'cp {dirname}/LICENSE.txt {outdirname}/')
-        if os.path.exists(f'{dirname}/LINKS.txt'):
-            os.system(f'cp {dirname}/LINKS.txt {outdirname}/')
+        for auxname in ['AUTHOR.txt', 'LICENSE.txt', 'LINKS.txt', 'README.txt', 'yscene_render.txt']:
+            if os.path.exists(f'{dirname}/{auxname}'):
+                os.system(f'cp {dirname}/{auxname} {outdirname}/')
         for filename in sorted(glob.glob(f'{dirname}/*.{format}')):
             if format == 'pbrt':
                 with open(filename) as f:
                     if 'WorldBegin' not in f.read(): continue
             outname = filename.replace(f'/source/', f'/{outformat}/').replace(
                 f'.{format}', f'.{outformat}')
-            cmd = f'../yocto-gl/bin/yscene convert -o {outname} {options} {filename} {copyright_options}'
+            cmd = f'../yocto-gl/bin/yscene convert --output {outname} {options} {filename} {copyright_options}'
             print(cmd, file=sys.stderr)
             os.system(cmd)
 

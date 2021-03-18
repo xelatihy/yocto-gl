@@ -627,6 +627,7 @@ void view_scene(const string& title, const string& name, scene_model& scene,
       edited += draw_combobox(
           win, "false color", (int&)tparams.falsecolor, trace_falsecolor_names);
       edited += draw_slider(win, "bounces", tparams.bounces, 1, 128);
+      edited += draw_slider(win, "clamp", tparams.clamp, 10, 1000);
       edited += draw_checkbox(win, "envhidden", tparams.envhidden);
       continue_line(win);
       edited += draw_checkbox(win, "filter", tparams.tentfilter);

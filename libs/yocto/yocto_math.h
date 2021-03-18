@@ -1333,7 +1333,7 @@ inline float max(float a, float b) { return (a > b) ? a : b; }
 inline float clamp(float a, float min_, float max_) {
   return min(max(a, min_), max_);
 }
-inline float sign(float a) { return a < 0 ? -1 : 1; }
+inline float sign(float a) { return a < 0 ? -1.0f : 1.0f; }
 inline float sqrt(float a) { return std::sqrt(a); }
 inline float sin(float a) { return std::sin(a); }
 inline float cos(float a) { return std::cos(a); }
@@ -1353,7 +1353,7 @@ inline void  swap(float& a, float& b) { std::swap(a, b); }
 inline float radians(float a) { return a * pif / 180; }
 inline float degrees(float a) { return a * 180 / pif; }
 inline float lerp(float a, float b, float u) { return a * (1 - u) + b * u; }
-inline float step(float a, float u) { return u < a ? 0 : 1; }
+inline float step(float a, float u) { return u < a ? 0.0f : 1.0f; }
 inline float smoothstep(float a, float b, float u) {
   auto t = clamp((u - a) / (b - a), 0.0f, 1.0f);
   return t * t * (3 - 2 * t);

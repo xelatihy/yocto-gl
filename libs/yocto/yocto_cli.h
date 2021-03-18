@@ -617,8 +617,8 @@ inline void add_argumentv_impl(cli_command& cli, const string& name,
 inline void add_option(cli_command& cli, const string& name, int& value,
     const string& usage, const vector<int>& minmax, const string& alt,
     bool req) {
-  return add_option_impl(cli, name, value, cli_type::integer, 1, usage,
-      {minmax[0], minmax[1]}, {}, alt, req);
+  return add_option_impl(
+      cli, name, value, cli_type::integer, 1, usage, minmax, {}, alt, req);
 }
 inline void add_option(cli_command& cli, const string& name, float& value,
     const string& usage, const vector<float>& minmax, const string& alt,
@@ -796,7 +796,7 @@ inline string get_usage(const cli_command& root, const cli_command& cli) {
           len = 16;
         }
         line += choice + ", ";
-        len += choice.size() + 2;
+        len += (int)choice.size() + 2;
       }
       line = line.substr(0, line.size() - 2);
       line += "\n";
@@ -806,7 +806,7 @@ inline string get_usage(const cli_command& root, const cli_command& cli) {
   {
     auto line = "  --help" + string{};
     while (line.size() < 32) line += " ";
-    line += "Prints help. [false]";
+    line += "Prints help. [false]\n";
     usage_options += line;
   }
   for (auto& option : cli.arguments) {
@@ -824,7 +824,7 @@ inline string get_usage(const cli_command& root, const cli_command& cli) {
           len = 16;
         }
         line += choice + ", ";
-        len += choice.size() + 2;
+        len += (int)choice.size() + 2;
       }
       line = line.substr(0, line.size() - 2);
       line += "\n";
@@ -888,6 +888,10 @@ inline static bool parse_value(
           auto end      = (char*)nullptr;
           value.integer = (int)strtol(arg.c_str(), &end, 10);
           if (end == nullptr) return false;
+          if (option.minmax.size() >= 2) {
+            if (value.integer < option.minmax[0].integer) return false;
+            if (value.integer > option.minmax[1].integer) return false;
+          }
         } else {
           value.integer = (int64_t)(
               std::find(choices.begin(), choices.end(), arg) - choices.begin());
@@ -898,6 +902,10 @@ inline static bool parse_value(
           auto end       = (char*)nullptr;
           value.uinteger = (int)strtoul(arg.c_str(), &end, 10);
           if (end == nullptr) return false;
+          if (option.minmax.size() >= 2) {
+            if (value.uinteger < option.minmax[0].uinteger) return false;
+            if (value.uinteger > option.minmax[1].uinteger) return false;
+          }
         } else {
           value.uinteger = (uint64_t)(
               std::find(choices.begin(), choices.end(), arg) - choices.begin());
@@ -907,6 +915,10 @@ inline static bool parse_value(
         auto end     = (char*)nullptr;
         value.number = strtod(arg.c_str(), &end);
         if (end == nullptr) return false;
+        if (option.minmax.size() >= 2) {
+          if (value.number < option.minmax[0].number) return false;
+          if (value.number > option.minmax[1].number) return false;
+        }
       } break;
     }
   }

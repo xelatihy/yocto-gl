@@ -314,7 +314,7 @@ static float* load_pfm(
   // read scale
   if (!fgets(buffer.data(), (int)buffer.size(), fs)) return nullptr;
   toks   = split_string(buffer.data());
-  auto s = atof(toks[0].c_str());
+  auto s = (float)atof(toks[0].c_str());
 
   // read the data (flip y)
   auto npixels = (size_t)*width * (size_t)*height;
@@ -639,11 +639,11 @@ bool make_image_preset(color_image& image, const string& type_, string& error) {
   } else if (type == "colormapramp") {
     image = make_colormapramp(width, height);
   } else if (type == "sky") {
-    image = make_sunsky(
-        width, height, pif / 4, 3.0, false, 1.0, 1.0, vec3f{0.7, 0.7, 0.7});
+    image = make_sunsky(width, height, pif / 4, 3.0f, false, 1.0f, 1.0f,
+        vec3f{0.7f, 0.7f, 0.7f});
   } else if (type == "sunsky") {
-    image = make_sunsky(
-        width, height, pif / 4, 3.0, true, 1.0, 1.0, vec3f{0.7, 0.7, 0.7});
+    image = make_sunsky(width, height, pif / 4, 3.0f, true, 1.0f, 1.0f,
+        vec3f{0.7f, 0.7f, 0.7f});
   } else if (type == "noise") {
     image = make_noisemap(width, height, 1);
   } else if (type == "fbm") {
@@ -693,7 +693,7 @@ bool make_image_preset(color_image& image, const string& type_, string& error) {
     }
   } else if (type == "test-floor") {
     image = make_grid(width, height);
-    image = add_border(image, 0.0025);
+    image = add_border(image, 0.0025f);
   } else if (type == "test-grid") {
     image = make_grid(width, height);
   } else if (type == "test-checker") {
@@ -713,18 +713,18 @@ bool make_image_preset(color_image& image, const string& type_, string& error) {
   } else if (type == "test-uvgrid") {
     image = make_uvgrid(width, height);
   } else if (type == "test-sky") {
-    image = make_sunsky(
-        width, height, pif / 4, 3.0, false, 1.0, 1.0, vec3f{0.7, 0.7, 0.7});
+    image = make_sunsky(width, height, pif / 4, 3.0f, false, 1.0f, 1.0f,
+        vec3f{0.7f, 0.7f, 0.7f});
   } else if (type == "test-sunsky") {
-    image = make_sunsky(
-        width, height, pif / 4, 3.0, true, 1.0, 1.0, vec3f{0.7, 0.7, 0.7});
+    image = make_sunsky(width, height, pif / 4, 3.0f, true, 1.0f, 1.0f,
+        vec3f{0.7f, 0.7f, 0.7f});
   } else if (type == "test-noise") {
     image = make_noisemap(width, height);
   } else if (type == "test-fbm") {
     image = make_noisemap(width, height);
   } else if (type == "test-bumps-normal") {
     image = make_bumps(width, height);
-    image = bump_to_normal(image, 0.05);
+    image = bump_to_normal(image, 0.05f);
   } else if (type == "test-bumps-displacement") {
     image = make_bumps(width, height);
     // TODO(fabio): fix color space
@@ -1343,10 +1343,10 @@ bool make_shape_preset(scene_shape& shape, const string& type, string& error) {
   } else if (type == "default-matball") {
     set_quads(make_sphere());
   } else if (type == "default-hairball") {
-    auto base = make_sphere(pow2(5), 0.8);
-    set_lines(make_hair(base, {4, 65536}, {0.2, 0.2}, {0.002, 0.001}));
+    auto base = make_sphere(pow2(5), 0.8f);
+    set_lines(make_hair(base, {4, 65536}, {0.2f, 0.2f}, {0.002f, 0.001f}));
   } else if (type == "default-hairball-interior") {
-    set_quads(make_sphere(pow2(5), 0.8));
+    set_quads(make_sphere(pow2(5), 0.8f));
   } else if (type == "default-suzanne") {
     set_quads(make_monkey());
   } else if (type == "default-cube-facevarying") {
@@ -1360,74 +1360,74 @@ bool make_shape_preset(scene_shape& shape, const string& type, string& error) {
   } else if (type == "test-cube") {
     set_quads(make_rounded_box(
         {32, 32, 32}, {0.075f, 0.075f, 0.075f}, {1, 1, 1}, 0.3 * 0.075f));
-    for (auto& p : shape.positions) p += {0, 0.075, 0};
+    for (auto& p : shape.positions) p += {0, 0.075f, 0};
   } else if (type == "test-uvsphere") {
-    set_quads(make_uvsphere({32, 32}, 0.075));
-    for (auto& p : shape.positions) p += {0, 0.075, 0};
+    set_quads(make_uvsphere({32, 32}, 0.075f));
+    for (auto& p : shape.positions) p += {0, 0.075f, 0};
   } else if (type == "test-uvsphere-flipcap") {
-    set_quads(make_capped_uvsphere({32, 32}, 0.075, {1, 1}, 0.3 * 0.075));
-    for (auto& p : shape.positions) p += {0, 0.075, 0};
+    set_quads(make_capped_uvsphere({32, 32}, 0.075f, {1, 1}, 0.3f * 0.075f));
+    for (auto& p : shape.positions) p += {0, 0.075f, 0};
   } else if (type == "test-sphere") {
     set_quads(make_sphere(32, 0.075f, 1));
-    for (auto& p : shape.positions) p += {0, 0.075, 0};
+    for (auto& p : shape.positions) p += {0, 0.075f, 0};
   } else if (type == "test-sphere-displaced") {
     set_quads(make_sphere(128, 0.075f, 1));
-    for (auto& p : shape.positions) p += {0, 0.075, 0};
+    for (auto& p : shape.positions) p += {0, 0.075f, 0};
   } else if (type == "test-disk") {
     set_quads(make_disk(32, 0.075f, 1));
-    for (auto& p : shape.positions) p += {0, 0.075, 0};
+    for (auto& p : shape.positions) p += {0, 0.075f, 0};
   } else if (type == "test-uvcylinder") {
     set_quads(make_rounded_uvcylinder(
-        {32, 32, 32}, {0.075, 0.075}, {1, 1, 1}, 0.3 * 0.075));
-    for (auto& p : shape.positions) p += {0, 0.075, 0};
+        {32, 32, 32}, {0.075f, 0.075f}, {1, 1, 1}, 0.3f * 0.075f));
+    for (auto& p : shape.positions) p += {0, 0.075f, 0};
   } else if (type == "test-floor") {
     set_quads(make_floor({1, 1}, {2, 2}, {20, 20}));
   } else if (type == "test-quad") {
-    set_quads(make_rect({1, 1}, {0.075, 0.075}, {1, 1}));
+    set_quads(make_rect({1, 1}, {0.075f, 0.075f}, {1, 1}));
   } else if (type == "test-quady") {
-    set_quads(make_recty({1, 1}, {0.075, 0.075}, {1, 1}));
+    set_quads(make_recty({1, 1}, {0.075f, 0.075f}, {1, 1}));
   } else if (type == "test-quad-displaced") {
-    set_quads(make_rect({256, 256}, {0.075, 0.075}, {1, 1}));
+    set_quads(make_rect({256, 256}, {0.075f, 0.075f}, {1, 1}));
   } else if (type == "test-quady-displaced") {
-    set_quads(make_recty({256, 256}, {0.075, 0.075}, {1, 1}));
+    set_quads(make_recty({256, 256}, {0.075f, 0.075f}, {1, 1}));
   } else if (type == "test-matball") {
-    set_quads(make_sphere(32, 0.075));
-    for (auto& p : shape.positions) p += {0, 0.075, 0};
+    set_quads(make_sphere(32, 0.075f));
+    for (auto& p : shape.positions) p += {0, 0.075f, 0};
   } else if (type == "test-hairball1") {
     auto base = make_sphere(32, 0.075f * 0.8f, 1);
-    for (auto& p : base.positions) p += {0, 0.075, 0};
+    for (auto& p : base.positions) p += {0, 0.075f, 0};
     set_lines(make_hair(base, {4, 65536}, {0.1f * 0.15f, 0.1f * 0.15f},
-        {0.001f * 0.15f, 0.0005f * 0.15f}, {0.03, 100}));
+        {0.001f * 0.15f, 0.0005f * 0.15f}, {0.03f, 100}));
   } else if (type == "test-hairball2") {
     auto base = make_sphere(32, 0.075f * 0.8f, 1);
-    for (auto& p : base.positions) p += {0, 0.075, 0};
+    for (auto& p : base.positions) p += {0, 0.075f, 0};
     set_lines(make_hair(base, {4, 65536}, {0.1f * 0.15f, 0.1f * 0.15f},
         {0.001f * 0.15f, 0.0005f * 0.15f}));
   } else if (type == "test-hairball3") {
     auto base = make_sphere(32, 0.075f * 0.8f, 1);
-    for (auto& p : base.positions) p += {0, 0.075, 0};
+    for (auto& p : base.positions) p += {0, 0.075f, 0};
     set_lines(make_hair(base, {4, 65536}, {0.1f * 0.15f, 0.1f * 0.15f},
         {0.001f * 0.15f, 0.0005f * 0.15f}, {0, 0}, {0.5, 128}));
   } else if (type == "test-hairball-interior") {
     set_quads(make_sphere(32, 0.075f * 0.8f, 1));
-    for (auto& p : shape.positions) p += {0, 0.075, 0};
+    for (auto& p : shape.positions) p += {0, 0.075f, 0};
   } else if (type == "test-suzanne-subdiv") {
     set_quads(make_monkey(0.075f * 0.8f));
-    for (auto& p : shape.positions) p += {0, 0.075, 0};
+    for (auto& p : shape.positions) p += {0, 0.075f, 0};
   } else if (type == "test-cube-subdiv") {
     // set_quads(make_cube( 0.075f);
     set_fvquads(make_fvcube(0.075f));
     // make_fvbox(quadspos, quadsnorm, quadstexcoord, positions, normals,
     //      texcoords, {1, 1, 1}, {0.075f, 0.075f, 0.075f});
-    for (auto& p : shape.positions) p += {0, 0.075, 0};
+    for (auto& p : shape.positions) p += {0, 0.075f, 0};
   } else if (type == "test-arealight1") {
-    set_quads(make_rect({1, 1}, {0.2, 0.2}));
+    set_quads(make_rect({1, 1}, {0.2f, 0.2f}));
   } else if (type == "test-arealight2") {
-    set_quads(make_rect({1, 1}, {0.2, 0.2}));
+    set_quads(make_rect({1, 1}, {0.2f, 0.2f}));
   } else if (type == "test-largearealight1") {
-    set_quads(make_rect({1, 1}, {0.4, 0.4}));
+    set_quads(make_rect({1, 1}, {0.4f, 0.4f}));
   } else if (type == "test-largearealight2") {
-    set_quads(make_rect({1, 1}, {0.4, 0.4}));
+    set_quads(make_rect({1, 1}, {0.4f, 0.4f}));
   } else if (type == "test-pointlight1") {
     set_points(make_point(0));
   } else if (type == "test-pointlight2") {
@@ -1437,13 +1437,13 @@ bool make_shape_preset(scene_shape& shape, const string& type, string& error) {
   } else if (type == "test-points") {
     set_points(make_points(4096));
   } else if (type == "test-points-random") {
-    set_points(make_random_points(4096, {0.2, 0.2, 0.2}));
+    set_points(make_random_points(4096, {0.2f, 0.2f, 0.2f}));
   } else if (type == "test-particles") {
     set_points(make_points(4096));
   } else if (type == "test-cloth") {
-    set_quads(make_rect({64, 64}, {0.2, 0.2}));
+    set_quads(make_rect({64, 64}, {0.2f, 0.2f}));
   } else if (type == "test-clothy") {
-    set_quads(make_recty({64, 64}, {0.2, 0.2}));
+    set_quads(make_recty({64, 64}, {0.2f, 0.2f}));
   } else {
     error = "unknown preset";
     return false;
@@ -1515,10 +1515,10 @@ bool make_fvshape_preset(
   } else if (type == "default-matball") {
     set_quads(make_sphere());
   } else if (type == "default-hairball") {
-    auto base = make_sphere(pow2(5), 0.8);
-    set_lines(make_hair(base, {4, 65536}, {0.2, 0.2}, {0.002, 0.001}));
+    auto base = make_sphere(pow2(5), 0.8f);
+    set_lines(make_hair(base, {4, 65536}, {0.2f, 0.2f}, {0.002f, 0.001f}));
   } else if (type == "default-hairball-interior") {
-    set_quads(make_sphere(pow2(5), 0.8));
+    set_quads(make_sphere(pow2(5), 0.8f));
   } else if (type == "default-suzanne") {
     set_quads(make_monkey());
   } else if (type == "default-cube-facevarying") {
@@ -1531,75 +1531,75 @@ bool make_fvshape_preset(
     set_quads(make_sphere(128));
   } else if (type == "test-cube") {
     set_quads(make_rounded_box(
-        {32, 32, 32}, {0.075f, 0.075f, 0.075f}, {1, 1, 1}, 0.3 * 0.075f));
-    for (auto& p : shape.positions) p += {0, 0.075, 0};
+        {32, 32, 32}, {0.075f, 0.075f, 0.075f}, {1, 1, 1}, 0.3f * 0.075f));
+    for (auto& p : shape.positions) p += {0, 0.075f, 0};
   } else if (type == "test-uvsphere") {
-    set_quads(make_uvsphere({32, 32}, 0.075));
-    for (auto& p : shape.positions) p += {0, 0.075, 0};
+    set_quads(make_uvsphere({32, 32}, 0.075f));
+    for (auto& p : shape.positions) p += {0, 0.075f, 0};
   } else if (type == "test-uvsphere-flipcap") {
-    set_quads(make_capped_uvsphere({32, 32}, 0.075, {1, 1}, 0.3 * 0.075));
-    for (auto& p : shape.positions) p += {0, 0.075, 0};
+    set_quads(make_capped_uvsphere({32, 32}, 0.075f, {1, 1}, 0.3f * 0.075f));
+    for (auto& p : shape.positions) p += {0, 0.075f, 0};
   } else if (type == "test-sphere") {
     set_quads(make_sphere(32, 0.075f, 1));
-    for (auto& p : shape.positions) p += {0, 0.075, 0};
+    for (auto& p : shape.positions) p += {0, 0.075f, 0};
   } else if (type == "test-sphere-displaced") {
     set_quads(make_sphere(128, 0.075f, 1));
-    for (auto& p : shape.positions) p += {0, 0.075, 0};
+    for (auto& p : shape.positions) p += {0, 0.075f, 0};
   } else if (type == "test-disk") {
     set_quads(make_disk(32, 0.075f, 1));
-    for (auto& p : shape.positions) p += {0, 0.075, 0};
+    for (auto& p : shape.positions) p += {0, 0.075f, 0};
   } else if (type == "test-uvcylinder") {
     set_quads(make_rounded_uvcylinder(
-        {32, 32, 32}, {0.075, 0.075}, {1, 1, 1}, 0.3 * 0.075));
-    for (auto& p : shape.positions) p += {0, 0.075, 0};
+        {32, 32, 32}, {0.075f, 0.075f}, {1, 1, 1}, 0.3f * 0.075f));
+    for (auto& p : shape.positions) p += {0, 0.075f, 0};
   } else if (type == "test-floor") {
     set_quads(make_floor({1, 1}, {2, 2}, {20, 20}));
   } else if (type == "test-quad") {
-    set_quads(make_rect({1, 1}, {0.075, 0.075}, {1, 1}));
+    set_quads(make_rect({1, 1}, {0.075f, 0.075f}, {1, 1}));
   } else if (type == "test-quady") {
-    set_quads(make_recty({1, 1}, {0.075, 0.075}, {1, 1}));
+    set_quads(make_recty({1, 1}, {0.075f, 0.075f}, {1, 1}));
   } else if (type == "test-quad-displaced") {
-    set_quads(make_rect({256, 256}, {0.075, 0.075}, {1, 1}));
+    set_quads(make_rect({256, 256}, {0.075f, 0.075f}, {1, 1}));
   } else if (type == "test-quady-displaced") {
-    set_quads(make_recty({256, 256}, {0.075, 0.075}, {1, 1}));
+    set_quads(make_recty({256, 256}, {0.075f, 0.075f}, {1, 1}));
   } else if (type == "test-matball") {
-    set_quads(make_sphere(32, 0.075));
-    for (auto& p : shape.positions) p += {0, 0.075, 0};
+    set_quads(make_sphere(32, 0.075f));
+    for (auto& p : shape.positions) p += {0, 0.075f, 0};
   } else if (type == "test-hairball1") {
     auto base = make_sphere(32, 0.075f * 0.8f, 1);
-    for (auto& p : base.positions) p += {0, 0.075, 0};
+    for (auto& p : base.positions) p += {0, 0.075f, 0};
     set_lines(make_hair(base, {4, 65536}, {0.1f * 0.15f, 0.1f * 0.15f},
-        {0.001f * 0.15f, 0.0005f * 0.15f}, {0.03, 100}));
+        {0.001f * 0.15f, 0.0005f * 0.15f}, {0.03f, 100}));
   } else if (type == "test-hairball2") {
     auto base = make_sphere(32, 0.075f * 0.8f, 1);
-    for (auto& p : base.positions) p += {0, 0.075, 0};
+    for (auto& p : base.positions) p += {0, 0.075f, 0};
     set_lines(make_hair(base, {4, 65536}, {0.1f * 0.15f, 0.1f * 0.15f},
         {0.001f * 0.15f, 0.0005f * 0.15f}));
   } else if (type == "test-hairball3") {
     auto base = make_sphere(32, 0.075f * 0.8f, 1);
-    for (auto& p : base.positions) p += {0, 0.075, 0};
+    for (auto& p : base.positions) p += {0, 0.075f, 0};
     set_lines(make_hair(base, {4, 65536}, {0.1f * 0.15f, 0.1f * 0.15f},
-        {0.001f * 0.15f, 0.0005f * 0.15f}, {0, 0}, {0.5, 128}));
+        {0.001f * 0.15f, 0.0005f * 0.15f}, {0, 0}, {0.5f, 128}));
   } else if (type == "test-hairball-interior") {
     set_quads(make_sphere(32, 0.075f * 0.8f, 1));
-    for (auto& p : shape.positions) p += {0, 0.075, 0};
+    for (auto& p : shape.positions) p += {0, 0.075f, 0};
   } else if (type == "test-suzanne-subdiv") {
     set_quads(make_monkey(0.075f * 0.8f));
-    for (auto& p : shape.positions) p += {0, 0.075, 0};
+    for (auto& p : shape.positions) p += {0, 0.075f, 0};
   } else if (type == "test-cube-subdiv") {
     // set_quads(make_cube( 0.075f);
     set_fvquads(make_fvcube(0.075f));
     // make_fvbox(quadspos, quadsnorm, quadstexcoord, positions, normals,
     //      texcoords, {1, 1, 1}, {0.075f, 0.075f, 0.075f});
-    for (auto& p : shape.positions) p += {0, 0.075, 0};
+    for (auto& p : shape.positions) p += {0, 0.075f, 0};
   } else if (type == "test-arealight1") {
-    set_quads(make_rect({1, 1}, {0.2, 0.2}));
+    set_quads(make_rect({1, 1}, {0.2f, 0.2f}));
   } else if (type == "test-arealight2") {
-    set_quads(make_rect({1, 1}, {0.2, 0.2}));
+    set_quads(make_rect({1, 1}, {0.2f, 0.2f}));
   } else if (type == "test-largearealight1") {
-    set_quads(make_rect({1, 1}, {0.4, 0.4}));
+    set_quads(make_rect({1, 1}, {0.4f, 0.4f}));
   } else if (type == "test-largearealight2") {
-    set_quads(make_rect({1, 1}, {0.4, 0.4}));
+    set_quads(make_rect({1, 1}, {0.4f, 0.4f}));
   } else if (type == "test-pointlight1") {
     set_points(make_point(0));
   } else if (type == "test-pointlight2") {
@@ -1609,13 +1609,13 @@ bool make_fvshape_preset(
   } else if (type == "test-points") {
     set_points(make_points(4096));
   } else if (type == "test-points-random") {
-    set_points(make_random_points(4096, {0.2, 0.2, 0.2}));
+    set_points(make_random_points(4096, {0.2f, 0.2f, 0.2f}));
   } else if (type == "test-particles") {
     set_points(make_points(4096));
   } else if (type == "test-cloth") {
-    set_quads(make_rect({64, 64}, {0.2, 0.2}));
+    set_quads(make_rect({64, 64}, {0.2f, 0.2f}));
   } else if (type == "test-clothy") {
-    set_quads(make_recty({64, 64}, {0.2, 0.2}));
+    set_quads(make_recty({64, 64}, {0.2f, 0.2f}));
   } else {
     error = "unknown preset";
     return false;
@@ -1720,10 +1720,10 @@ void add_missing_camera(scene_model& scene) {
   scene.camera_names.emplace_back("camera");
   auto& camera        = scene.cameras.emplace_back();
   camera.orthographic = false;
-  camera.film         = 0.036;
+  camera.film         = 0.036f;
   camera.aspect       = (float)16 / (float)9;
   camera.aperture     = 0;
-  camera.lens         = 0.050;
+  camera.lens         = 0.050f;
   auto bbox           = compute_bounds(scene);
   auto center         = (bbox.max + bbox.min) / 2;
   auto bbox_radius    = length(bbox.max - bbox.min) / 2;
@@ -1753,7 +1753,7 @@ void add_missing_material(scene_model& scene) {
     if (instance.material >= 0) continue;
     if (default_material == invalidid) {
       auto& material   = scene.materials.emplace_back();
-      material.color   = {0.8, 0.8, 0.8};
+      material.color   = {0.8f, 0.8f, 0.8f};
       default_material = (int)scene.materials.size() - 1;
     }
     instance.material = default_material;
@@ -3793,13 +3793,13 @@ static bool load_gltf_scene(const string& filename, scene_model& scene,
           auto  ymag    = gortho.value("ymag", 1.0f);
           camera.aspect = xmag / ymag;
           camera.lens   = ymag;  // this is probably bogus
-          camera.film   = 0.036;
+          camera.film   = 0.036f;
         } else if (type == "perspective") {
           auto& gpersp  = gcamera.at("perspective");
           camera.aspect = gpersp.value("aspectRatio", 0.0f);
           auto yfov     = gpersp.value("yfov", radians(45.0f));
           if (camera.aspect == 0) camera.aspect = 16.0f / 9.0f;
-          camera.film = 0.036;
+          camera.film = 0.036f;
           if (camera.aspect >= 1) {
             camera.lens = (camera.film / camera.aspect) / (2 * tan(yfov / 2));
           } else {
@@ -3823,13 +3823,26 @@ static bool load_gltf_scene(const string& filename, scene_model& scene,
     return gtexture.value("source", -1);
   };
 
+  // https://stackoverflow.com/questions/3418231/replace-part-of-a-string-with-another-string
+  auto replace = [](const std::string& str_, const std::string& from,
+                     const std::string& to) -> string {
+    auto str = str_;
+    if (from.empty()) return str;
+    size_t start_pos = 0;
+    while ((start_pos = str.find(from, start_pos)) != std::string::npos) {
+      str.replace(start_pos, from.length(), to);
+      start_pos += to.length();
+    }
+    return str;
+  };
+
   // convert textures
   auto texture_paths = vector<string>{};
   if (gltf.contains("images")) {
     try {
       for (auto& gimage : gltf.at("images")) {
         scene.textures.emplace_back();
-        texture_paths.push_back(gimage.value("uri", ""));
+        texture_paths.push_back(replace(gimage.value("uri", ""), "%20", " "));
       }
     } catch (...) {
       return parse_error();
@@ -4587,7 +4600,7 @@ static bool load_pbrt_scene(const string& filename, scene_model& scene,
     auto& camera  = scene.cameras.emplace_back();
     camera.frame  = pcamera.frame;
     camera.aspect = pcamera.aspect;
-    camera.film   = 0.036;
+    camera.film   = 0.036f;
     camera.lens   = pcamera.lens;
     camera.focus  = pcamera.focus;
   }

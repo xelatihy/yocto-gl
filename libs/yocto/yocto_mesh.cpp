@@ -1982,7 +1982,7 @@ static vector<pair<int, float>> nodes_around_point(
   auto [is_vertex, offset] = bary_is_vert(get_bary(p.uv));
   if (is_vertex) {
     auto vid = triangles[p.face][offset];
-    nodes.push_back({vid, 0});
+    nodes.push_back({vid, 0.0f});
   } else {
     auto pid = p.face;
     auto pos = eval_position(triangles, positions, p);
@@ -3015,7 +3015,7 @@ static int max_curvature_point_double(const vector<funnel_pointd>& path) {
   // with maximum angle. We are going to fix that vertex. Actually, max_index is
   // the index of the first face containing that vertex.
   auto max_index = -1;
-  auto max_angle = 0.0f;
+  auto max_angle = 0.0;
   for (auto i = 1; i < path.size() - 1; ++i) {
     auto pos   = path[i].pos;
     auto prev  = path[i - 1].pos;
@@ -3228,7 +3228,7 @@ static vector<float> funnel_double(
       auto s = intersect_segments_double(a, b, portal.first, portal.second);
       report_floating_point(s);
       auto p = clamp(s, 0.0, 1.0);
-      lerps.push_back(p);
+      lerps.push_back((float)p);
     }
   }
 
@@ -3339,7 +3339,7 @@ static void straighten_path(geodesic_path& path, const vector<vec3i>& triangles,
     // Among vertices around which the path bends, find the vertex
     // with maximum angle. We are going to fix that bend around that vertex.
     auto result    = bend_info{};
-    auto max_angle = 0.0f;
+    auto max_angle = 0.0;
     for (auto i = 1; i < points.size() - 1; ++i) {
       auto bend      = bend_info{};
       bend.index     = points[i].face;
@@ -4827,6 +4827,7 @@ vector<mesh_point> compute_bezier_path(const dual_geodesic_solver& solver,
       return lane_riesenfeld_adaptive(
           solver, triangles, positions, adjacencies, control_points, params);
     }
+    default: return {};
   }
 }
 

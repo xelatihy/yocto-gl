@@ -1066,10 +1066,10 @@ void add_camera(scene_model& scene) {
   scene.camera_names.emplace_back("camera");
   auto& camera        = scene.cameras.emplace_back();
   camera.orthographic = false;
-  camera.film         = 0.036;
+  camera.film         = 0.036f;
   camera.aspect       = (float)16 / (float)9;
   camera.aperture     = 0;
-  camera.lens         = 0.050;
+  camera.lens         = 0.050f;
   auto bbox           = compute_bounds(scene);
   auto center         = (bbox.max + bbox.min) / 2;
   auto bbox_radius    = length(bbox.max - bbox.min) / 2;
@@ -1188,7 +1188,7 @@ void tesselate_subdiv(
     }
     auto normals = quads_normals(subdiv.quadspos, subdiv.positions);
     for (auto vid = 0; vid < subdiv.positions.size(); vid++) {
-      subdiv.positions[vid] += normals[vid] * offset[vid] / count[vid];
+      subdiv.positions[vid] += normals[vid] * offset[vid] / (float)count[vid];
     }
     if (subdiv.smooth || !subdiv.normals.empty()) {
       subdiv.quadsnorm = subdiv.quadspos;
@@ -1658,18 +1658,18 @@ namespace yocto {
 
 void make_cornellbox(scene_model& scene) {
   auto& camera    = scene.cameras.emplace_back();
-  camera.frame    = frame3f{{1, 0, 0}, {0, 1, 0}, {0, 0, 1}, {0, 1, 3.9}};
-  camera.lens     = 0.035;
+  camera.frame    = frame3f{{1, 0, 0}, {0, 1, 0}, {0, 0, 1}, {0, 1, 3.9f}};
+  camera.lens     = 0.035f;
   camera.aperture = 0.0;
-  camera.focus    = 3.9;
-  camera.film     = 0.024;
+  camera.focus    = 3.9f;
+  camera.film     = 0.024f;
   camera.aspect   = 1;
 
   auto& floor_shape       = scene.shapes.emplace_back();
   floor_shape.positions   = {{-1, 0, 1}, {1, 0, 1}, {1, 0, -1}, {-1, 0, -1}};
   floor_shape.triangles   = {{0, 1, 2}, {2, 3, 0}};
   auto& floor_material    = scene.materials.emplace_back();
-  floor_material.color    = {0.725, 0.71, 0.68};
+  floor_material.color    = {0.725f, 0.71f, 0.68f};
   auto& floor_instance    = scene.instances.emplace_back();
   floor_instance.shape    = (int)scene.shapes.size() - 1;
   floor_instance.material = (int)scene.materials.size() - 1;
@@ -1678,7 +1678,7 @@ void make_cornellbox(scene_model& scene) {
   ceiling_shape.positions   = {{-1, 2, 1}, {-1, 2, -1}, {1, 2, -1}, {1, 2, 1}};
   ceiling_shape.triangles   = {{0, 1, 2}, {2, 3, 0}};
   auto& ceiling_material    = scene.materials.emplace_back();
-  ceiling_material.color    = {0.725, 0.71, 0.68};
+  ceiling_material.color    = {0.725f, 0.71f, 0.68f};
   auto& ceiling_instance    = scene.instances.emplace_back();
   ceiling_instance.shape    = (int)scene.shapes.size() - 1;
   ceiling_instance.material = (int)scene.materials.size() - 1;
@@ -1687,7 +1687,7 @@ void make_cornellbox(scene_model& scene) {
   backwall_shape.positions = {{-1, 0, -1}, {1, 0, -1}, {1, 2, -1}, {-1, 2, -1}};
   backwall_shape.triangles = {{0, 1, 2}, {2, 3, 0}};
   auto& backwall_material  = scene.materials.emplace_back();
-  backwall_material.color  = {0.725, 0.71, 0.68};
+  backwall_material.color  = {0.725f, 0.71f, 0.68f};
   auto& backwall_instance  = scene.instances.emplace_back();
   backwall_instance.shape  = (int)scene.shapes.size() - 1;
   backwall_instance.material = (int)scene.materials.size() - 1;
@@ -1696,7 +1696,7 @@ void make_cornellbox(scene_model& scene) {
   rightwall_shape.positions   = {{1, 0, -1}, {1, 0, 1}, {1, 2, 1}, {1, 2, -1}};
   rightwall_shape.triangles   = {{0, 1, 2}, {2, 3, 0}};
   auto& rightwall_material    = scene.materials.emplace_back();
-  rightwall_material.color    = {0.14, 0.45, 0.091};
+  rightwall_material.color    = {0.14f, 0.45f, 0.091f};
   auto& rightwall_instance    = scene.instances.emplace_back();
   rightwall_instance.shape    = (int)scene.shapes.size() - 1;
   rightwall_instance.material = (int)scene.materials.size() - 1;
@@ -1705,51 +1705,52 @@ void make_cornellbox(scene_model& scene) {
   leftwall_shape.positions = {{-1, 0, 1}, {-1, 0, -1}, {-1, 2, -1}, {-1, 2, 1}};
   leftwall_shape.triangles = {{0, 1, 2}, {2, 3, 0}};
   auto& leftwall_material  = scene.materials.emplace_back();
-  leftwall_material.color  = {0.63, 0.065, 0.05};
+  leftwall_material.color  = {0.63f, 0.065f, 0.05f};
   auto& leftwall_instance  = scene.instances.emplace_back();
   leftwall_instance.shape  = (int)scene.shapes.size() - 1;
   leftwall_instance.material = (int)scene.materials.size() - 1;
 
   auto& shortbox_shape       = scene.shapes.emplace_back();
-  shortbox_shape.positions   = {{0.53, 0.6, 0.75}, {0.7, 0.6, 0.17},
-      {0.13, 0.6, 0.0}, {-0.05, 0.6, 0.57}, {-0.05, 0.0, 0.57},
-      {-0.05, 0.6, 0.57}, {0.13, 0.6, 0.0}, {0.13, 0.0, 0.0}, {0.53, 0.0, 0.75},
-      {0.53, 0.6, 0.75}, {-0.05, 0.6, 0.57}, {-0.05, 0.0, 0.57},
-      {0.7, 0.0, 0.17}, {0.7, 0.6, 0.17}, {0.53, 0.6, 0.75}, {0.53, 0.0, 0.75},
-      {0.13, 0.0, 0.0}, {0.13, 0.6, 0.0}, {0.7, 0.6, 0.17}, {0.7, 0.0, 0.17},
-      {0.53, 0.0, 0.75}, {0.7, 0.0, 0.17}, {0.13, 0.0, 0.0},
-      {-0.05, 0.0, 0.57}};
+  shortbox_shape.positions   = {{0.53f, 0.6f, 0.75f}, {0.7f, 0.6f, 0.17f},
+      {0.13f, 0.6f, 0.0f}, {-0.05f, 0.6f, 0.57f}, {-0.05f, 0.0f, 0.57f},
+      {-0.05f, 0.6f, 0.57f}, {0.13f, 0.6f, 0.0f}, {0.13f, 0.0f, 0.0f},
+      {0.53f, 0.0f, 0.75f}, {0.53f, 0.6f, 0.75f}, {-0.05f, 0.6f, 0.57f},
+      {-0.05f, 0.0f, 0.57f}, {0.7f, 0.0f, 0.17f}, {0.7f, 0.6f, 0.17f},
+      {0.53f, 0.6f, 0.75f}, {0.53f, 0.0f, 0.75f}, {0.13f, 0.0f, 0.0f},
+      {0.13f, 0.6f, 0.0f}, {0.7f, 0.6f, 0.17f}, {0.7f, 0.0f, 0.17f},
+      {0.53f, 0.0f, 0.75f}, {0.7f, 0.0f, 0.17f}, {0.13f, 0.0f, 0.0f},
+      {-0.05f, 0.0f, 0.57f}};
   shortbox_shape.triangles   = {{0, 1, 2}, {2, 3, 0}, {4, 5, 6}, {6, 7, 4},
       {8, 9, 10}, {10, 11, 8}, {12, 13, 14}, {14, 15, 12}, {16, 17, 18},
       {18, 19, 16}, {20, 21, 22}, {22, 23, 20}};
   auto& shortbox_material    = scene.materials.emplace_back();
-  shortbox_material.color    = {0.725, 0.71, 0.68};
+  shortbox_material.color    = {0.725f, 0.71f, 0.68f};
   auto& shortbox_instance    = scene.instances.emplace_back();
   shortbox_instance.shape    = (int)scene.shapes.size() - 1;
   shortbox_instance.material = (int)scene.materials.size() - 1;
 
   auto& tallbox_shape       = scene.shapes.emplace_back();
-  tallbox_shape.positions   = {{-0.53, 1.2, 0.09}, {0.04, 1.2, -0.09},
-      {-0.14, 1.2, -0.67}, {-0.71, 1.2, -0.49}, {-0.53, 0.0, 0.09},
-      {-0.53, 1.2, 0.09}, {-0.71, 1.2, -0.49}, {-0.71, 0.0, -0.49},
-      {-0.71, 0.0, -0.49}, {-0.71, 1.2, -0.49}, {-0.14, 1.2, -0.67},
-      {-0.14, 0.0, -0.67}, {-0.14, 0.0, -0.67}, {-0.14, 1.2, -0.67},
-      {0.04, 1.2, -0.09}, {0.04, 0.0, -0.09}, {0.04, 0.0, -0.09},
-      {0.04, 1.2, -0.09}, {-0.53, 1.2, 0.09}, {-0.53, 0.0, 0.09},
-      {-0.53, 0.0, 0.09}, {0.04, 0.0, -0.09}, {-0.14, 0.0, -0.67},
-      {-0.71, 0.0, -0.49}};
+  tallbox_shape.positions   = {{-0.53f, 1.2f, 0.09f}, {0.04f, 1.2f, -0.09f},
+      {-0.14f, 1.2f, -0.67f}, {-0.71f, 1.2f, -0.49f}, {-0.53f, 0.0f, 0.09f},
+      {-0.53f, 1.2f, 0.09f}, {-0.71f, 1.2f, -0.49f}, {-0.71f, 0.0f, -0.49f},
+      {-0.71f, 0.0f, -0.49f}, {-0.71f, 1.2f, -0.49f}, {-0.14f, 1.2f, -0.67f},
+      {-0.14f, 0.0f, -0.67f}, {-0.14f, 0.0f, -0.67f}, {-0.14f, 1.2f, -0.67f},
+      {0.04f, 1.2f, -0.09f}, {0.04f, 0.0f, -0.09f}, {0.04f, 0.0f, -0.09f},
+      {0.04f, 1.2f, -0.09f}, {-0.53f, 1.2f, 0.09f}, {-0.53f, 0.0f, 0.09f},
+      {-0.53f, 0.0f, 0.09f}, {0.04f, 0.0f, -0.09f}, {-0.14f, 0.0f, -0.67f},
+      {-0.71f, 0.0f, -0.49f}};
   tallbox_shape.triangles   = {{0, 1, 2}, {2, 3, 0}, {4, 5, 6}, {6, 7, 4},
       {8, 9, 10}, {10, 11, 8}, {12, 13, 14}, {14, 15, 12}, {16, 17, 18},
       {18, 19, 16}, {20, 21, 22}, {22, 23, 20}};
   auto& tallbox_material    = scene.materials.emplace_back();
-  tallbox_material.color    = {0.725, 0.71, 0.68};
+  tallbox_material.color    = {0.725f, 0.71f, 0.68f};
   auto& tallbox_instance    = scene.instances.emplace_back();
   tallbox_instance.shape    = (int)scene.shapes.size() - 1;
   tallbox_instance.material = (int)scene.materials.size() - 1;
 
   auto& light_shape       = scene.shapes.emplace_back();
-  light_shape.positions   = {{-0.25, 1.99, 0.25}, {-0.25, 1.99, -0.25},
-      {0.25, 1.99, -0.25}, {0.25, 1.99, 0.25}};
+  light_shape.positions   = {{-0.25f, 1.99f, 0.25f}, {-0.25f, 1.99f, -0.25f},
+      {0.25f, 1.99f, -0.25f}, {0.25f, 1.99f, 0.25f}};
   light_shape.triangles   = {{0, 1, 2}, {2, 3, 0}};
   auto& light_material    = scene.materials.emplace_back();
   light_material.emission = {17, 12, 4};

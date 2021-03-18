@@ -180,7 +180,8 @@ inline uint32_t _advance_rng(rng_state& rng) {
   rng.state         = oldstate * 6364136223846793005ULL + rng.inc;
   auto xorshifted   = (uint32_t)(((oldstate >> 18u) ^ oldstate) >> 27u);
   auto rot          = (uint32_t)(oldstate >> 59u);
-  return (xorshifted >> rot) | (xorshifted << ((-rot) & 31));
+  // return (xorshifted >> rot) | (xorshifted << ((-rot) & 31));
+  return (xorshifted >> rot) | (xorshifted << ((~rot + 1u) & 31));
 }
 
 // Init a random number generator with a state state from the sequence seq.

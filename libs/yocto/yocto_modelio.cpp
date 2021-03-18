@@ -1482,7 +1482,7 @@ inline bool parse_value(string_view& str, obj_texture& info) {
   // texture params
   auto last = string();
   for (auto i = 0; i < tokens.size() - 1; i++) {
-    if (tokens[i] == "-bm") info.scale = atof(tokens[i + 1].c_str());
+    if (tokens[i] == "-bm") info.scale = (float)atof(tokens[i + 1].c_str());
     if (tokens[i] == "-clamp") info.clamp = true;
   }
 
@@ -1793,7 +1793,7 @@ bool load_obj(const string& filename, obj_model& obj, string& error,
       if (cur_material < 0) {
         auto& material              = obj.materials.emplace_back();
         material.name               = "__default__";
-        material.diffuse            = {0.8, 0.8, 0.8};
+        material.diffuse            = {0.8f, 0.8f, 0.8f};
         cur_material                = 0;
         material_map[material.name] = 0;
       }
@@ -2885,7 +2885,7 @@ bool load_stl(const string& filename, stl_model& stl, string& error,
       shape.positions.resize(ntriangles * 3);
 
       // read all data
-      for (auto triangle_id = 0; triangle_id < ntriangles; triangle_id++) {
+      for (auto triangle_id = 0; triangle_id < (int)ntriangles; triangle_id++) {
         // read triangle data
         if (!read_value(fs, shape.fnormals[triangle_id])) return read_error();
         if (!read_value(fs, shape.positions[triangle_id * 3 + 0]))
@@ -3560,86 +3560,91 @@ inline pair<vec3f, vec3f> get_subsurface(const string& name) {
       // From "A Practical Model for Subsurface Light Transport"
       // Jensen, Marschner, Levoy, Hanrahan
       // Proc SIGGRAPH 2001
-      {"Apple", {{2.29, 2.39, 1.97}, {0.0030, 0.0034, 0.046}}},
-      {"Chicken1", {{0.15, 0.21, 0.38}, {0.015, 0.077, 0.19}}},
-      {"Chicken2", {{0.19, 0.25, 0.32}, {0.018, 0.088, 0.20}}},
-      {"Cream", {{7.38, 5.47, 3.15}, {0.0002, 0.0028, 0.0163}}},
-      {"Ketchup", {{0.18, 0.07, 0.03}, {0.061, 0.97, 1.45}}},
-      {"Marble", {{2.19, 2.62, 3.00}, {0.0021, 0.0041, 0.0071}}},
-      {"Potato", {{0.68, 0.70, 0.55}, {0.0024, 0.0090, 0.12}}},
-      {"Skimmilk", {{0.70, 1.22, 1.90}, {0.0014, 0.0025, 0.0142}}},
-      {"Skin1", {{0.74, 0.88, 1.01}, {0.032, 0.17, 0.48}}},
-      {"Skin2", {{1.09, 1.59, 1.79}, {0.013, 0.070, 0.145}}},
-      {"Spectralon", {{11.6, 20.4, 14.9}, {0.00, 0.00, 0.00}}},
-      {"Wholemilk", {{2.55, 3.21, 3.77}, {0.0011, 0.0024, 0.014}}},
+      {"Apple", {{2.29f, 2.39f, 1.97f}, {0.0030f, 0.0034f, 0.046f}}},
+      {"Chicken1", {{0.15f, 0.21f, 0.38f}, {0.015f, 0.077f, 0.19f}}},
+      {"Chicken2", {{0.19f, 0.25f, 0.32f}, {0.018f, 0.088f, 0.20f}}},
+      {"Cream", {{7.38f, 5.47f, 3.15f}, {0.0002f, 0.0028f, 0.0163f}}},
+      {"Ketchup", {{0.18f, 0.07f, 0.03f}, {0.061f, 0.97f, 1.45f}}},
+      {"Marble", {{2.19f, 2.62f, 3.00f}, {0.0021f, 0.0041f, 0.0071f}}},
+      {"Potato", {{0.68f, 0.70f, 0.55f}, {0.0024f, 0.0090f, 0.12f}}},
+      {"Skimmilk", {{0.70f, 1.22f, 1.90f}, {0.0014f, 0.0025f, 0.0142f}}},
+      {"Skin1", {{0.74f, 0.88f, 1.01f}, {0.032f, 0.17f, 0.48f}}},
+      {"Skin2", {{1.09f, 1.59f, 1.79f}, {0.013f, 0.070f, 0.145f}}},
+      {"Spectralon", {{11.6f, 20.4f, 14.9f}, {0.00f, 0.00f, 0.00f}}},
+      {"Wholemilk", {{2.55f, 3.21f, 3.77f}, {0.0011f, 0.0024f, 0.014f}}},
       // From "Acquiring Scattering Properties of Participating Media by
       // Dilution",
       // Narasimhan, Gupta, Donner, Ramamoorthi, Nayar, Jensen
       // Proc SIGGRAPH 2006
-      {"Lowfat Milk", {{0.89187, 1.5136, 2.532}, {0.002875, 0.00575, 0.0115}}},
+      {"Lowfat Milk",
+          {{0.89187f, 1.5136f, 2.532f}, {0.002875f, 0.00575f, 0.0115f}}},
       {"Reduced Milk",
-          {{2.4858, 3.1669, 4.5214}, {0.0025556, 0.0051111, 0.012778}}},
+          {{2.4858f, 3.1669f, 4.5214f}, {0.0025556f, 0.0051111f, 0.012778f}}},
       {"Regular Milk",
-          {{4.5513, 5.8294, 7.136}, {0.0015333, 0.0046, 0.019933}}},
-      {"Espresso", {{0.72378, 0.84557, 1.0247}, {4.7984, 6.5751, 8.8493}}},
+          {{4.5513f, 5.8294f, 7.136f}, {0.0015333f, 0.0046f, 0.019933f}}},
+      {"Espresso",
+          {{0.72378f, 0.84557f, 1.0247f}, {4.7984f, 6.5751f, 8.8493f}}},
       {"Mint Mocha Coffee",
-          {{0.31602, 0.38538, 0.48131}, {3.772, 5.8228, 7.82}}},
-      {"Lowfat Soy Milk",
-          {{0.30576, 0.34233, 0.61664}, {0.0014375, 0.0071875, 0.035937}}},
+          {{0.31602f, 0.38538f, 0.48131f}, {3.772f, 5.8228f, 7.82f}}},
+      {"Lowfat Soy Milk", {{0.30576f, 0.34233f, 0.61664f},
+                              {0.0014375f, 0.0071875f, 0.035937f}}},
       {"Regular Soy Milk",
-          {{0.59223, 0.73866, 1.4693}, {0.0019167, 0.0095833, 0.065167}}},
+          {{0.59223f, 0.73866f, 1.4693f}, {0.0019167f, 0.0095833f, 0.065167f}}},
       {"Lowfat Chocolate Milk",
-          {{0.64925, 0.83916, 1.1057}, {0.0115, 0.0368, 0.1564}}},
+          {{0.64925f, 0.83916f, 1.1057f}, {0.0115f, 0.0368f, 0.1564f}}},
       {"Regular Chocolate Milk",
-          {{1.4585, 2.1289, 2.9527}, {0.010063, 0.043125, 0.14375}}},
-      {"Coke", {{8.9053e-05, 8.372e-05, 0}, {0.10014, 0.16503, 0.2468}}},
-      {"Pepsi", {{6.1697e-05, 4.2564e-05, 0}, {0.091641, 0.14158, 0.20729}}},
-      {"Sprite", {{6.0306e-06, 6.4139e-06, 6.5504e-06},
-                     {0.001886, 0.0018308, 0.0020025}}},
-      {"Gatorade",
-          {{0.0024574, 0.003007, 0.0037325}, {0.024794, 0.019289, 0.008878}}},
-      {"Chardonnay", {{1.7982e-05, 1.3758e-05, 1.2023e-05},
-                         {0.010782, 0.011855, 0.023997}}},
-      {"White Zinfandel", {{1.7501e-05, 1.9069e-05, 1.288e-05},
-                              {0.012072, 0.016184, 0.019843}}},
-      {"Merlot", {{2.1129e-05, 0, 0}, {0.11632, 0.25191, 0.29434}}},
-      {"Budweiser Beer", {{2.4356e-05, 2.4079e-05, 1.0564e-05},
-                             {0.011492, 0.024911, 0.057786}}},
+          {{1.4585f, 2.1289f, 2.9527f}, {0.010063f, 0.043125f, 0.14375f}}},
+      {"Coke",
+          {{8.9053e-05f, 8.372e-05f, 0.0f}, {0.10014f, 0.16503f, 0.2468f}}},
+      {"Pepsi",
+          {{6.1697e-05f, 4.2564e-05f, 0.0f}, {0.091641f, 0.14158f, 0.20729f}}},
+      {"Sprite", {{6.0306e-06f, 6.4139e-06f, 6.5504e-06f},
+                     {0.001886f, 0.0018308f, 0.0020025f}}},
+      {"Gatorade", {{0.0024574f, 0.003007f, 0.0037325f},
+                       {0.024794f, 0.019289f, 0.008878f}}},
+      {"Chardonnay", {{1.7982e-05f, 1.3758e-05f, 1.2023e-05f},
+                         {0.010782f, 0.011855f, 0.023997f}}},
+      {"White Zinfandel", {{1.7501e-05f, 1.9069e-05f, 1.288e-05f},
+                              {0.012072f, 0.016184f, 0.019843f}}},
+      {"Merlot", {{2.1129e-05f, 0.0f, 0.0f}, {0.11632f, 0.25191f, 0.29434f}}},
+      {"Budweiser Beer", {{2.4356e-05f, 2.4079e-05f, 1.0564e-05f},
+                             {0.011492f, 0.024911f, 0.057786f}}},
       {"Coors Light Beer",
-          {{5.0922e-05, 4.301e-05, 0}, {0.006164, 0.013984, 0.034983}}},
-      {"Clorox",
-          {{0.0024035, 0.0031373, 0.003991}, {0.0033542, 0.014892, 0.026297}}},
-      {"Apple Juice",
-          {{0.00013612, 0.00015836, 0.000227}, {0.012957, 0.023741, 0.052184}}},
-      {"Cranberry Juice", {{0.00010402, 0.00011646, 7.8139e-05},
-                              {0.039437, 0.094223, 0.12426}}},
-      {"Grape Juice", {{5.382e-05, 0, 0}, {0.10404, 0.23958, 0.29325}}},
+          {{5.0922e-05f, 4.301e-05f, 0.0f}, {0.006164f, 0.013984f, 0.034983f}}},
+      {"Clorox", {{0.0024035f, 0.0031373f, 0.003991f},
+                     {0.0033542f, 0.014892f, 0.026297f}}},
+      {"Apple Juice", {{0.00013612f, 0.00015836f, 0.000227f},
+                          {0.012957f, 0.023741f, 0.052184f}}},
+      {"Cranberry Juice", {{0.00010402f, 0.00011646f, 7.8139e-05f},
+                              {0.039437f, 0.094223f, 0.12426f}}},
+      {"Grape Juice",
+          {{5.382e-05f, 0.0f, 0.0f}, {0.10404f, 0.23958f, 0.29325f}}},
       {"Ruby Grapefruit Juice",
-          {{0.011002, 0.010927, 0.011036}, {0.085867, 0.18314, 0.25262}}},
+          {{0.011002f, 0.010927f, 0.011036f}, {0.085867f, 0.18314f, 0.25262f}}},
       {"White Grapefruit Juice",
-          {{0.22826, 0.23998, 0.32748}, {0.0138, 0.018831, 0.056781}}},
-      {"Shampoo",
-          {{0.0007176, 0.0008303, 0.0009016}, {0.014107, 0.045693, 0.061717}}},
-      {"Strawberry Shampoo",
-          {{0.00015671, 0.00015947, 1.518e-05}, {0.01449, 0.05796, 0.075823}}},
+          {{0.22826f, 0.23998f, 0.32748f}, {0.0138f, 0.018831f, 0.056781f}}},
+      {"Shampoo", {{0.0007176f, 0.0008303f, 0.0009016f},
+                      {0.014107f, 0.045693f, 0.061717f}}},
+      {"Strawberry Shampoo", {{0.00015671f, 0.00015947f, 1.518e-05f},
+                                 {0.01449f, 0.05796f, 0.075823f}}},
       {"Head & Shoulders Shampoo",
-          {{0.023805, 0.028804, 0.034306}, {0.084621, 0.15688, 0.20365}}},
+          {{0.023805f, 0.028804f, 0.034306f}, {0.084621f, 0.15688f, 0.20365f}}},
       {"Lemon Tea Powder",
-          {{0.040224, 0.045264, 0.051081}, {2.4288, 4.5757, 7.2127}}},
-      {"Orange Powder", {{0.00015617, 0.00017482, 0.0001762},
-                            {0.001449, 0.003441, 0.007863}}},
-      {"Pink Lemonade Powder", {{0.00012103, 0.00013073, 0.00012528},
-                                   {0.001165, 0.002366, 0.003195}}},
+          {{0.040224f, 0.045264f, 0.051081f}, {2.4288f, 4.5757f, 7.2127f}}},
+      {"Orange Powder", {{0.00015617f, 0.00017482f, 0.0001762f},
+                            {0.001449f, 0.003441f, 0.007863f}}},
+      {"Pink Lemonade Powder", {{0.00012103f, 0.00013073f, 0.00012528f},
+                                   {0.001165f, 0.002366f, 0.003195f}}},
       {"Cappuccino Powder",
-          {{1.8436, 2.5851, 2.1662}, {35.844, 49.547, 61.084}}},
+          {{1.8436f, 2.5851f, 2.1662f}, {35.844f, 49.547f, 61.084f}}},
       {"Salt Powder",
-          {{0.027333, 0.032451, 0.031979}, {0.28415, 0.3257, 0.34148}}},
-      {"Sugar Powder",
-          {{0.00022272, 0.00025513, 0.000271}, {0.012638, 0.031051, 0.050124}}},
+          {{0.027333f, 0.032451f, 0.031979f}, {0.28415f, 0.3257f, 0.34148f}}},
+      {"Sugar Powder", {{0.00022272f, 0.00025513f, 0.000271f},
+                           {0.012638f, 0.031051f, 0.050124f}}},
       {"Suisse Mocha Powder",
-          {{2.7979, 3.5452, 4.3365}, {17.502, 27.004, 35.433}}},
-      {"Pacific Ocean Surface Water", {{0.0001764, 0.00032095, 0.00019617},
-                                          {0.031845, 0.031324, 0.030147}}},
+          {{2.7979f, 3.5452f, 4.3365f}, {17.502f, 27.004f, 35.433f}}},
+      {"Pacific Ocean Surface Water", {{0.0001764f, 0.00032095f, 0.00019617f},
+                                          {0.031845f, 0.031324f, 0.030147f}}},
   };
   return params.at(name);
 }
@@ -3904,9 +3909,9 @@ inline bool convert_camera(pbrt_camera& pcamera, const pbrt_command& command,
     // auto lensradius = if(!get_pbrt_value(values, "lensradius", 0.0f);
     pcamera.aspect = film_aspect;
     if (pcamera.aspect >= 1) {
-      pcamera.lens = (0.036 / pcamera.aspect) / (2 * tan(radians(fov) / 2));
+      pcamera.lens = (0.036f / pcamera.aspect) / (2 * tan(radians(fov) / 2));
     } else {
-      pcamera.lens = (0.036 * pcamera.aspect) / (2 * tan(radians(fov) / 2));
+      pcamera.lens = (0.036f * pcamera.aspect) / (2 * tan(radians(fov) / 2));
     }
     if (!get_pbrt_value(command.values, "frameaspectratio", pcamera.aspect))
       return parse_error();
@@ -3972,7 +3977,7 @@ inline bool convert_texture(pbrt_texture& ptexture, const pbrt_command& command,
     return true;
   } else if (command.type == "checkerboard") {
     // auto tex1     = if(!get_pbrt_value(command.values, "tex1",
-    // pair{vec3f{1},
+    // pair{vec3f{1,1,1},
     // ""s}); auto tex2     = if(!get_pbrt_value(command.values, "tex2",
     //  pair{vec3f{0}, ""s}); auto rgb1     = tex1.second == "" ?
     //  tex1.first :
@@ -4178,9 +4183,9 @@ inline bool convert_material(pbrt_material& pmaterial,
     }
     if (!get_scalar(command.values, "opacity", pmaterial.opacity, 1))
       return parse_error();
-    if (!get_scalar(command.values, "eta", pmaterial.ior, 1.5))
+    if (!get_scalar(command.values, "eta", pmaterial.ior, 1.5f))
       return parse_error();
-    if (!get_roughness(command.values, pmaterial.roughness, 0.1))
+    if (!get_roughness(command.values, pmaterial.roughness, 0.1f))
       return parse_error();
     return true;
   } else if (command.type == "plastic") {
@@ -4190,10 +4195,10 @@ inline bool convert_material(pbrt_material& pmaterial,
       return parse_error();
     // if (!get_scalar(command.values, "Ks", pmaterial.specular, 0.25))
     //   return parse_error();
-    if (!get_scalar(command.values, "eta", pmaterial.ior, 1.5))
+    if (!get_scalar(command.values, "eta", pmaterial.ior, 1.5f))
       return parse_error();
     pmaterial.roughness = 0.1f;
-    if (!get_roughness(command.values, pmaterial.roughness, 0.1))
+    if (!get_roughness(command.values, pmaterial.roughness, 0.1f))
       return parse_error();
     return true;
   } else if (command.type == "coateddiffuse") {
@@ -4201,10 +4206,10 @@ inline bool convert_material(pbrt_material& pmaterial,
     if (!get_texture(command.values, "reflectance", pmaterial.color,
             pmaterial.color_tex, vec3f{0.25, 0.25, 0.25}))
       return parse_error();
-    if (!get_scalar(command.values, "eta", pmaterial.ior, 1.5))
+    if (!get_scalar(command.values, "eta", pmaterial.ior, 1.5f))
       return parse_error();
     pmaterial.roughness = 0.1f;
-    if (!get_roughness(command.values, pmaterial.roughness, 0.1))
+    if (!get_roughness(command.values, pmaterial.roughness, 0.1f))
       return parse_error();
     return true;
   } else if (command.type == "translucent") {
@@ -4224,7 +4229,7 @@ inline bool convert_material(pbrt_material& pmaterial,
     // not well supported yet
     pmaterial.type = pbrt_mtype::matte;
     if (!get_texture(command.values, "reflectance", pmaterial.color,
-            pmaterial.color_tex, vec3f{0.25, 0.25, 0.25}))
+            pmaterial.color_tex, vec3f{0.25f, 0.25f, 0.25f}))
       return parse_error();
     // if (!get_texture(command.values, "transmittance", pmaterial.color,
     //         pmaterial.color_tex, vec3f{0.25, 0.25, 0.25}))
@@ -4239,13 +4244,13 @@ inline bool convert_material(pbrt_material& pmaterial,
   } else if (command.type == "diffuse") {
     pmaterial.type = pbrt_mtype::matte;
     if (!get_texture(command.values, "reflectance", pmaterial.color,
-            pmaterial.color_tex, vec3f{0.5, 0.5, 0.5}))
+            pmaterial.color_tex, vec3f{0.5f, 0.5f, 0.5f}))
       return parse_error();
     return true;
   } else if (command.type == "mirror") {
     pmaterial.type = pbrt_mtype::metal;
     if (!get_texture(command.values, "Kr", pmaterial.color, pmaterial.color_tex,
-            vec3f{0.9, 0.9, 0.9}))
+            vec3f{0.9f, 0.9f, 0.9f}))
       return parse_error();
     pmaterial.roughness = 0;
     return true;
@@ -4253,7 +4258,7 @@ inline bool convert_material(pbrt_material& pmaterial,
     pmaterial.type = pbrt_mtype::metal;
     // get_texture(
     //     values, "Kr", material->specular, material->specular_tex,
-    //     vec3f{1});
+    //     vec3f{1,1,1});
     auto eta = zero3f, etak = zero3f;
     if (!get_color(command.values, "eta", eta,
             vec3f{0.2004376970f, 0.9240334304f, 1.1022119527f}))
@@ -4263,7 +4268,7 @@ inline bool convert_material(pbrt_material& pmaterial,
       return parse_error();
     pmaterial.color     = eta_to_reflectivity(eta, etak);
     pmaterial.roughness = 0.01f;
-    if (!get_roughness(command.values, pmaterial.roughness, 0.01))
+    if (!get_roughness(command.values, pmaterial.roughness, 0.01f))
       return parse_error();
     return true;
   } else if (command.type == "conductor") {
@@ -4277,7 +4282,7 @@ inline bool convert_material(pbrt_material& pmaterial,
       return parse_error();
     pmaterial.color     = eta_to_reflectivity(eta, etak);
     pmaterial.roughness = 0.01f;
-    if (!get_roughness(command.values, pmaterial.roughness, 0.01))
+    if (!get_roughness(command.values, pmaterial.roughness, 0.01f))
       return parse_error();
     return true;
   } else if (command.type == "coatedconductor") {
@@ -4291,53 +4296,49 @@ inline bool convert_material(pbrt_material& pmaterial,
       return parse_error();
     pmaterial.color     = eta_to_reflectivity(eta, etak);
     pmaterial.roughness = 0.01f;
-    if (!get_roughness(command.values, pmaterial.roughness, 0.01))
+    if (!get_roughness(command.values, pmaterial.roughness, 0.01f))
       return parse_error();
     return true;
   } else if (command.type == "substrate") {
     // not well supported
     pmaterial.type = pbrt_mtype::plastic;
     if (!get_texture(command.values, "Kd", pmaterial.color, pmaterial.color_tex,
-            vec3f{0.5, 0.5, 0.5}))
+            vec3f{0.5f, 0.5f, 0.5f}))
       return parse_error();
     auto specular = 0.0f;
-    if (!get_scalar(command.values, "Ks", specular, 0.5)) return parse_error();
-    if (!get_scalar(command.values, "eta", pmaterial.ior, 1.5))
+    if (!get_scalar(command.values, "Ks", specular, 0.5f)) return parse_error();
+    if (!get_scalar(command.values, "eta", pmaterial.ior, 1.5f))
       return parse_error();
     pmaterial.roughness = 0.1f;
-    if (!get_roughness(command.values, pmaterial.roughness, 0.1))
+    if (!get_roughness(command.values, pmaterial.roughness, 0.1f))
       return parse_error();
     return true;
   } else if (command.type == "glass") {
     pmaterial.type = pbrt_mtype::glass;
-    // get_texture(
-    //     values, "Kr", material->specular, material->specular_tex,
-    //     vec3f{1});
-    // get_texture(command.values, "Kt", material->transmission,
-    //     material->transmission_tex, vec3f{1});
-    pmaterial.color = {1, 1, 1};
-    if (!get_scalar(command.values, "eta", pmaterial.ior, 1.5))
+    get_texture(command.values, "Kt", pmaterial.color, pmaterial.color_tex,
+        vec3f{1, 1, 1});
+    if (!get_scalar(command.values, "eta", pmaterial.ior, 1.5f))
       return parse_error();
     pmaterial.roughness = 0;
-    if (!get_roughness(command.values, pmaterial.roughness, 0))
+    if (!get_roughness(command.values, pmaterial.roughness, 0.0f))
       return parse_error();
     return true;
   } else if (command.type == "dielectric") {
     pmaterial.type  = pbrt_mtype::glass;
     pmaterial.color = {1, 1, 1};
-    if (!get_scalar(command.values, "eta", pmaterial.ior, 1.5))
+    if (!get_scalar(command.values, "eta", pmaterial.ior, 1.5f))
       return parse_error();
     pmaterial.roughness = 0;
-    if (!get_roughness(command.values, pmaterial.roughness, 0))
+    if (!get_roughness(command.values, pmaterial.roughness, 0.0f))
       return parse_error();
     return true;
   } else if (command.type == "thindielectric") {
     pmaterial.type  = pbrt_mtype::thinglass;
     pmaterial.color = {1, 1, 1};
-    if (!get_scalar(command.values, "eta", pmaterial.ior, 1.5))
+    if (!get_scalar(command.values, "eta", pmaterial.ior, 1.5f))
       return parse_error();
     pmaterial.roughness = 0;
-    if (!get_roughness(command.values, pmaterial.roughness, 0))
+    if (!get_roughness(command.values, pmaterial.roughness, 0.0f))
       return parse_error();
     return true;
   } else if (command.type == "hair") {
@@ -4351,7 +4352,7 @@ inline bool convert_material(pbrt_material& pmaterial,
   } else if (command.type == "disney") {
     pmaterial.type = pbrt_mtype::matte;
     if (!get_texture(command.values, "color", pmaterial.color,
-            pmaterial.color_tex, vec3f{0.5, 0.5, 0.5}))
+            pmaterial.color_tex, vec3f{0.5f, 0.5f, 0.5f}))
       return parse_error();
     pmaterial.roughness = 1;
     if (verbose) printf("disney material not properly supported\n");
@@ -4359,11 +4360,11 @@ inline bool convert_material(pbrt_material& pmaterial,
   } else if (command.type == "kdsubsurface") {
     pmaterial.type = pbrt_mtype::plastic;
     if (!get_texture(command.values, "Kd", pmaterial.color, pmaterial.color_tex,
-            vec3f{0.5, 0.5, 0.5}))
+            vec3f{0.5f, 0.5f, 0.5f}))
       return parse_error();
     // if (!get_scalar(command.values, "Kr", pmaterial.specular, 1))
     //   return parse_error();
-    if (!get_scalar(command.values, "eta", pmaterial.ior, 1.5))
+    if (!get_scalar(command.values, "eta", pmaterial.ior, 1.5f))
       return parse_error();
     pmaterial.roughness = 0;
     if (!get_roughness(command.values, pmaterial.roughness, 0))
@@ -4388,10 +4389,10 @@ inline bool convert_material(pbrt_material& pmaterial,
     auto sigma_a = zero3f, sigma_s = zero3f;
     auto sigma_a_tex = -1, sigma_s_tex = -1;
     if (!get_texture(command.values, "sigma_a", sigma_a, sigma_a_tex,
-            vec3f{0011, .0024, .014}))
+            vec3f{0.011f, .0024f, .014f}))
       return parse_error();
     if (!get_texture(command.values, "sigma_prime_s", sigma_s, sigma_s_tex,
-            vec3f{2.55, 3.12, 3.77}))
+            vec3f{2.55f, 3.12f, 3.77f}))
       return parse_error();
     pmaterial.volmeanfreepath = 1 / (sigma_a + sigma_s);
     pmaterial.volscatter      = sigma_s / (sigma_a + sigma_s);
@@ -4420,35 +4421,35 @@ inline bool convert_material(pbrt_material& pmaterial,
     if (bsdffile == "paint.bsdf") {
       pmaterial.type      = pbrt_mtype::plastic;
       pmaterial.color     = {0.6f, 0.6f, 0.6f};
-      pmaterial.ior       = 1.5;
-      pmaterial.roughness = 0.2;
+      pmaterial.ior       = 1.5f;
+      pmaterial.roughness = 0.2f;
     } else if (bsdffile == "ceramic.bsdf") {
       pmaterial.type      = pbrt_mtype::plastic;
       pmaterial.color     = {0.6f, 0.6f, 0.6f};
-      pmaterial.ior       = 1.5;
-      pmaterial.roughness = 0.25;
+      pmaterial.ior       = 1.5f;
+      pmaterial.roughness = 0.25f;
     } else if (bsdffile == "leather.bsdf") {
       pmaterial.type      = pbrt_mtype::plastic;
       pmaterial.color     = {0.6f, 0.57f, 0.48f};
-      pmaterial.ior       = 1.5;
-      pmaterial.roughness = 0.3;
+      pmaterial.ior       = 1.5f;
+      pmaterial.roughness = 0.3f;
     } else if (bsdffile == "coated_copper.bsdf") {
       pmaterial.type      = pbrt_mtype::metal;
       auto eta            = vec3f{0.2004376970f, 0.9240334304f, 1.1022119527f};
       auto etak           = vec3f{3.9129485033f, 2.4528477015f, 2.1421879552f};
       pmaterial.color     = eta_to_reflectivity(eta, etak);
-      pmaterial.roughness = 0.01;
+      pmaterial.roughness = 0.01f;
     } else if (bsdffile == "roughglass_alpha_0.2.bsdf") {
       pmaterial.type      = pbrt_mtype::glass;
       pmaterial.color     = {1, 1, 1};
-      pmaterial.ior       = 1.5;
-      pmaterial.roughness = 0.2;
+      pmaterial.ior       = 1.5f;
+      pmaterial.roughness = 0.2f;
     } else if (bsdffile == "roughgold_alpha_0.2.bsdf") {
       pmaterial.type      = pbrt_mtype::metal;
       auto eta            = vec3f{0.1431189557f, 0.3749570432f, 1.4424785571f};
       auto etak           = vec3f{3.9831604247f, 2.3857207478f, 1.6032152899f};
       pmaterial.color     = eta_to_reflectivity(eta, etak);
-      pmaterial.roughness = 0.2;
+      pmaterial.roughness = 0.2f;
     } else {
       return bsdf_error(bsdffile);
     }
@@ -4668,7 +4669,7 @@ inline bool convert_light(pbrt_light& plight, const pbrt_command& command,
       return parse_error();
     if (!get_pbrt_value(command.values, "to", plight.to)) return parse_error();
     plight.distant       = true;
-    auto distant_dist    = 100;
+    auto distant_dist    = 100.0f;
     auto size            = distant_dist * sin(5 * pif / 180);
     plight.area_emission = plight.emission * (distant_dist * distant_dist) /
                            (size * size);

@@ -90,7 +90,7 @@ inline vec3f logcontrast(const vec3f& rgb, float logcontrast, float grey);
 inline vec3f contrast(const vec3f& rgb, float contrast);
 // Apply saturation.
 inline vec3f saturate(const vec3f& rgb, float saturation,
-    const vec3f& weights = vec3f{0.333333, 0.333333, 0.333333});
+    const vec3f& weights = vec3f{0.333333f, 0.333333f, 0.333333f});
 
 // Apply tone mapping
 inline vec3f tonemap(
@@ -279,15 +279,15 @@ inline vec3f tonemap_filmic(const vec3f& hdr_, bool accurate_fit = false) {
     // https://github.com/TheRealMJP/BakingLab/blob/master/BakingLab/ACES.hlsl
     // sRGB => XYZ => D65_2_D60 => AP1 => RRT_SAT
     static const auto ACESInputMat = transpose(mat3f{
-        {0.59719, 0.35458, 0.04823},
-        {0.07600, 0.90834, 0.01566},
-        {0.02840, 0.13383, 0.83777},
+        {0.59719f, 0.35458f, 0.04823f},
+        {0.07600f, 0.90834f, 0.01566f},
+        {0.02840f, 0.13383f, 0.83777f},
     });
     // ODT_SAT => XYZ => D60_2_D65 => sRGB
     static const auto ACESOutputMat = transpose(mat3f{
-        {1.60475, -0.53108, -0.07367},
-        {-0.10208, 1.10813, -0.00605},
-        {-0.00327, -0.07276, 1.07602},
+        {1.60475f, -0.53108f, -0.07367f},
+        {-0.10208f, 1.10813f, -0.00605f},
+        {-0.00327f, -0.07276f, 1.07602f},
     });
     // RRT => ODT
     auto RRTAndODTFit = [](const vec3f& v) -> vec3f {
@@ -316,18 +316,18 @@ inline vec4f tonemap(const vec4f& hdr, float exposure, bool filmic, bool srgb) {
 inline vec3f rgb_to_xyz(const vec3f& rgb) {
   // https://en.wikipedia.org/wiki/SRGB
   static const auto mat = mat3f{
-      {0.4124, 0.2126, 0.0193},
-      {0.3576, 0.7152, 0.1192},
-      {0.1805, 0.0722, 0.9504},
+      {0.4124f, 0.2126f, 0.0193f},
+      {0.3576f, 0.7152f, 0.1192f},
+      {0.1805f, 0.0722f, 0.9504f},
   };
   return mat * rgb;
 }
 inline vec3f xyz_to_rgb(const vec3f& xyz) {
   // https://en.wikipedia.org/wiki/SRGB
   static const auto mat = mat3f{
-      {+3.2406, -0.9689, +0.0557},
-      {-1.5372, +1.8758, -0.2040},
-      {-0.4986, +0.0415, +1.0570},
+      {+3.2406f, -0.9689f, +0.0557f},
+      {-1.5372f, +1.8758f, -0.2040f},
+      {-0.4986f, +0.0415f, +1.0570f},
   };
   return mat * xyz;
 }
@@ -415,76 +415,76 @@ inline vec3f blackbody_to_rgb(float temperature) {
 inline vec3f colormap_viridis(float t) {
   // https://www.shadertoy.com/view/WlfXRN
   static const auto c0 = vec3f{
-      0.2777273272234177, 0.005407344544966578, 0.3340998053353061};
+      0.2777273272234177f, 0.005407344544966578f, 0.3340998053353061f};
   static const auto c1 = vec3f{
-      0.1050930431085774, 1.404613529898575, 1.384590162594685};
+      0.1050930431085774f, 1.404613529898575f, 1.384590162594685f};
   static const auto c2 = vec3f{
-      -0.3308618287255563, 0.214847559468213, 0.09509516302823659};
+      -0.3308618287255563f, 0.214847559468213f, 0.09509516302823659f};
   static const auto c3 = vec3f{
-      -4.634230498983486, -5.799100973351585, -19.33244095627987};
+      -4.634230498983486f, -5.799100973351585f, -19.33244095627987f};
   static const auto c4 = vec3f{
-      6.228269936347081, 14.17993336680509, 56.69055260068105};
+      6.228269936347081f, 14.17993336680509f, 56.69055260068105f};
   static const auto c5 = vec3f{
-      4.776384997670288, -13.74514537774601, -65.35303263337234};
+      4.776384997670288f, -13.74514537774601f, -65.35303263337234f};
   static const auto c6 = vec3f{
-      -5.435455855934631, 4.645852612178535, 26.3124352495832};
+      -5.435455855934631f, 4.645852612178535f, 26.3124352495832f};
   return c0 + t * (c1 + t * (c2 + t * (c3 + t * (c4 + t * (c5 + t * c6)))));
 }
 
 inline vec3f colormap_plasma(float t) {
   // https://www.shadertoy.com/view/WlfXRN
   static const auto c0 = vec3f{
-      0.05873234392399702, 0.02333670892565664, 0.5433401826748754};
+      0.05873234392399702f, 0.02333670892565664f, 0.5433401826748754f};
   static const auto c1 = vec3f{
-      2.176514634195958, 0.2383834171260182, 0.7539604599784036};
+      2.176514634195958f, 0.2383834171260182f, 0.7539604599784036f};
   static const auto c2 = vec3f{
-      -2.689460476458034, -7.455851135738909, 3.110799939717086};
+      -2.689460476458034f, -7.455851135738909f, 3.110799939717086f};
   static const auto c3 = vec3f{
-      6.130348345893603, 42.3461881477227, -28.51885465332158};
+      6.130348345893603f, 42.3461881477227f, -28.51885465332158f};
   static const auto c4 = vec3f{
-      -11.10743619062271, -82.66631109428045, 60.13984767418263};
+      -11.10743619062271f, -82.66631109428045f, 60.13984767418263f};
   static const auto c5 = vec3f{
-      10.02306557647065, 71.41361770095349, -54.07218655560067};
+      10.02306557647065f, 71.41361770095349f, -54.07218655560067f};
   static const auto c6 = vec3f{
-      -3.658713842777788, -22.93153465461149, 18.19190778539828};
+      -3.658713842777788f, -22.93153465461149f, 18.19190778539828f};
   return c0 + t * (c1 + t * (c2 + t * (c3 + t * (c4 + t * (c5 + t * c6)))));
 }
 
 inline vec3f colormap_magma(float t) {
   // https://www.shadertoy.com/view/WlfXRN
   static const auto c0 = vec3f{
-      -0.002136485053939582, -0.000749655052795221, -0.005386127855323933};
+      -0.002136485053939582f, -0.000749655052795221f, -0.005386127855323933f};
   static const auto c1 = vec3f{
-      0.2516605407371642, 0.6775232436837668, 2.494026599312351};
+      0.2516605407371642f, 0.6775232436837668f, 2.494026599312351f};
   static const auto c2 = vec3f{
-      8.353717279216625, -3.577719514958484, 0.3144679030132573};
+      8.353717279216625f, -3.577719514958484f, 0.3144679030132573f};
   static const auto c3 = vec3f{
-      -27.66873308576866, 14.26473078096533, -13.64921318813922};
+      -27.66873308576866f, 14.26473078096533f, -13.64921318813922f};
   static const auto c4 = vec3f{
-      52.17613981234068, -27.94360607168351, 12.94416944238394};
+      52.17613981234068f, -27.94360607168351f, 12.94416944238394f};
   static const auto c5 = vec3f{
-      -50.76852536473588, 29.04658282127291, 4.23415299384598};
+      -50.76852536473588f, 29.04658282127291f, 4.23415299384598f};
   static const auto c6 = vec3f{
-      18.65570506591883, -11.48977351997711, -5.601961508734096};
+      18.65570506591883f, -11.48977351997711f, -5.601961508734096f};
   return c0 + t * (c1 + t * (c2 + t * (c3 + t * (c4 + t * (c5 + t * c6)))));
 }
 
 inline vec3f colormap_inferno(float t) {
   // https://www.shadertoy.com/view/WlfXRN
   static const auto c0 = vec3f{
-      0.0002189403691192265, 0.001651004631001012, -0.01948089843709184};
+      0.0002189403691192265f, 0.001651004631001012f, -0.01948089843709184f};
   static const auto c1 = vec3f{
-      0.1065134194856116, 0.5639564367884091, 3.932712388889277};
+      0.1065134194856116f, 0.5639564367884091f, 3.932712388889277f};
   static const auto c2 = vec3f{
-      11.60249308247187, -3.972853965665698, -15.9423941062914};
+      11.60249308247187f, -3.972853965665698f, -15.9423941062914f};
   static const auto c3 = vec3f{
-      -41.70399613139459, 17.43639888205313, 44.35414519872813};
+      -41.70399613139459f, 17.43639888205313f, 44.35414519872813f};
   static const auto c4 = vec3f{
-      77.162935699427, -33.40235894210092, -81.80730925738993};
+      77.162935699427f, -33.40235894210092f, -81.80730925738993f};
   static const auto c5 = vec3f{
-      -71.31942824499214, 32.62606426397723, 73.20951985803202};
+      -71.31942824499214f, 32.62606426397723f, 73.20951985803202f};
   static const auto c6 = vec3f{
-      25.13112622477341, -12.24266895238567, -23.07032500287172};
+      25.13112622477341f, -12.24266895238567f, -23.07032500287172f};
   return c0 + t * (c1 + t * (c2 + t * (c3 + t * (c4 + t * (c5 + t * c6)))));
 }
 
@@ -623,62 +623,62 @@ inline color_space_params get_color_scape_params(color_space space) {
 
   // color space parameters
   // https://en.wikipedia.org/wiki/Rec._709
-  static auto rgb_params = make_linear_rgb_space(
-      {0.6400, 0.3300}, {0.3000, 0.6000}, {0.1500, 0.0600}, {0.3127, 0.3290});
+  static auto rgb_params = make_linear_rgb_space({0.6400f, 0.3300f},
+      {0.3000f, 0.6000f}, {0.1500f, 0.0600f}, {0.3127f, 0.3290f});
   // https://en.wikipedia.org/wiki/Rec._709
-  static auto srgb_params = make_gamma_rgb_space({0.6400, 0.3300},
-      {0.3000, 0.6000}, {0.1500, 0.0600}, {0.3127, 0.3290}, 2.4,
-      {1.055, 0.055, 12.92, 0.0031308});
+  static auto srgb_params = make_gamma_rgb_space({0.6400f, 0.3300f},
+      {0.3000f, 0.6000f}, {0.1500f, 0.0600f}, {0.3127f, 0.3290f}, 2.4f,
+      {1.055f, 0.055f, 12.92f, 0.0031308f});
   // https://en.wikipedia.org/wiki/Academy_Color_Encoding_System
-  static auto aces2065_params = make_linear_rgb_space({0.7347, 0.2653},
-      {0.0000, 1.0000}, {0.0001, -0.0770}, {0.32168, 0.33767});
+  static auto aces2065_params = make_linear_rgb_space({0.7347f, 0.2653f},
+      {0.0000f, 1.0000f}, {0.0001f, -0.0770f}, {0.32168f, 0.33767f});
   // https://en.wikipedia.org/wiki/Academy_Color_Encoding_Systemx
-  static auto acescg_params = make_linear_rgb_space({0.7130, 0.2930},
-      {0.1650, 0.8300}, {0.1280, +0.0440}, {0.32168, 0.33767});
+  static auto acescg_params = make_linear_rgb_space({0.7130f, 0.2930f},
+      {0.1650f, 0.8300f}, {0.1280f, +0.0440f}, {0.32168f, 0.33767f});
   // https://en.wikipedia.org/wiki/Academy_Color_Encoding_Systemx
-  static auto acescc_params = make_other_rgb_space({0.7130, 0.2930},
-      {0.1650, 0.8300}, {0.1280, +0.0440}, {0.32168, 0.33767},
+  static auto acescc_params = make_other_rgb_space({0.7130f, 0.2930f},
+      {0.1650f, 0.8300f}, {0.1280f, +0.0440f}, {0.32168f, 0.33767f},
       color_space_params::curve_t::aces_cc);
   // https://en.wikipedia.org/wiki/Academy_Color_Encoding_Systemx
-  static auto acescct_params = make_other_rgb_space({0.7130, 0.2930},
-      {0.1650, 0.8300}, {0.1280, +0.0440}, {0.32168, 0.33767},
+  static auto acescct_params = make_other_rgb_space({0.7130f, 0.2930f},
+      {0.1650f, 0.8300f}, {0.1280f, +0.0440f}, {0.32168f, 0.33767f},
       color_space_params::curve_t::aces_cct);
   // https://en.wikipedia.org/wiki/Adobe_RGB_color_space
-  static auto adobe_params = make_gamma_rgb_space({0.6400, 0.3300},
-      {0.2100, 0.7100}, {0.1500, 0.0600}, {0.3127, 0.3290}, 2.19921875);
+  static auto adobe_params = make_gamma_rgb_space({0.6400f, 0.3300f},
+      {0.2100f, 0.7100f}, {0.1500f, 0.0600f}, {0.3127f, 0.3290f}, 2.19921875f);
   // https://en.wikipedia.org/wiki/Rec._709
-  static auto rec709_params = make_gamma_rgb_space({0.6400, 0.3300},
-      {0.3000, 0.6000}, {0.1500, 0.0600}, {0.3127, 0.3290}, 1 / 0.45,
-      {1.099, 0.099, 4.500, 0.018});
+  static auto rec709_params = make_gamma_rgb_space({0.6400f, 0.3300f},
+      {0.3000f, 0.6000f}, {0.1500f, 0.0600f}, {0.3127f, 0.3290f}, 1 / 0.45f,
+      {1.099f, 0.099f, 4.500f, 0.018f});
   // https://en.wikipedia.org/wiki/Rec._2020
-  static auto rec2020_params = make_gamma_rgb_space({0.7080, 0.2920},
-      {0.1700, 0.7970}, {0.1310, 0.0460}, {0.3127, 0.3290}, 1 / 0.45,
-      {1.09929682680944, 0.09929682680944, 4.5, 0.018053968510807});
+  static auto rec2020_params = make_gamma_rgb_space({0.7080f, 0.2920f},
+      {0.1700f, 0.7970f}, {0.1310f, 0.0460f}, {0.3127f, 0.3290f}, 1 / 0.45f,
+      {1.09929682680944f, 0.09929682680944f, 4.5f, 0.018053968510807f});
   // https://en.wikipedia.org/wiki/Rec._2020
-  static auto rec2100pq_params = make_other_rgb_space({0.7080, 0.2920},
-      {0.1700, 0.7970}, {0.1310, 0.0460}, {0.3127, 0.3290},
+  static auto rec2100pq_params = make_other_rgb_space({0.7080f, 0.2920f},
+      {0.1700f, 0.7970f}, {0.1310f, 0.0460f}, {0.3127f, 0.3290f},
       color_space_params::curve_t::pq);
   // https://en.wikipedia.org/wiki/Rec._2020
-  static auto rec2100hlg_params = make_other_rgb_space({0.7080, 0.2920},
-      {0.1700, 0.7970}, {0.1310, 0.0460}, {0.3127, 0.3290},
+  static auto rec2100hlg_params = make_other_rgb_space({0.7080f, 0.2920f},
+      {0.1700f, 0.7970f}, {0.1310f, 0.0460f}, {0.3127f, 0.3290f},
       color_space_params::curve_t::hlg);
   // https://en.wikipedia.org/wiki/DCI-P3
-  static auto p3dci_params = make_gamma_rgb_space({0.6800, 0.3200},
-      {0.2650, 0.6900}, {0.1500, 0.0600}, {0.3140, 0.3510}, 1.6);
+  static auto p3dci_params = make_gamma_rgb_space({0.6800f, 0.3200f},
+      {0.2650f, 0.6900f}, {0.1500f, 0.0600f}, {0.3140f, 0.3510f}, 1.6f);
   // https://en.wikipedia.org/wiki/DCI-P3
-  static auto p3d60_params = make_gamma_rgb_space({0.6800, 0.3200},
-      {0.2650, 0.6900}, {0.1500, 0.0600}, {0.32168, 0.33767}, 1.6);
+  static auto p3d60_params = make_gamma_rgb_space({0.6800f, 0.3200f},
+      {0.2650f, 0.6900f}, {0.1500f, 0.0600f}, {0.32168f, 0.33767f}, 1.6f);
   // https://en.wikipedia.org/wiki/DCI-P3
-  static auto p3d65_params = make_gamma_rgb_space({0.6800, 0.3200},
-      {0.2650, 0.6900}, {0.1500, 0.0600}, {0.3127, 0.3290}, 1.6);
+  static auto p3d65_params = make_gamma_rgb_space({0.6800f, 0.3200f},
+      {0.2650f, 0.6900f}, {0.1500f, 0.0600f}, {0.3127f, 0.3290f}, 1.6f);
   // https://en.wikipedia.org/wiki/DCI-P3
-  static auto p3display_params = make_gamma_rgb_space({0.6800, 0.3200},
-      {0.2650, 0.6900}, {0.1500, 0.0600}, {0.3127, 0.3290}, 2.4,
-      {1.055, 0.055, 12.92, 0.0031308});
+  static auto p3display_params = make_gamma_rgb_space({0.6800f, 0.3200f},
+      {0.2650f, 0.6900f}, {0.1500f, 0.0600f}, {0.3127f, 0.3290f}, 2.4f,
+      {1.055f, 0.055f, 12.92f, 0.0031308f});
   // https://en.wikipedia.org/wiki/ProPhoto_RGB_color_space
-  static auto prophoto_params = make_gamma_rgb_space({0.7347, 0.2653},
-      {0.1596, 0.8404}, {0.0366, 0.0001}, {0.3457, 0.3585}, 1.8,
-      {1, 0, 16, 0.001953125});
+  static auto prophoto_params = make_gamma_rgb_space({0.7347f, 0.2653f},
+      {0.1596f, 0.8404f}, {0.0366f, 0.0001f}, {0.3457f, 0.3585f}, 1.8f,
+      {1.0f, 0.0f, 16.0f, 0.001953125f});
 
   // return values;
   switch (space) {

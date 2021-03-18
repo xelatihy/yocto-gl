@@ -51,7 +51,7 @@ void add_command(cli_command& cli, const string& name, convert_params& value,
     const string& usage) {
   auto& cmd = add_command(cli, name, usage);
   add_argument(cmd, "scene", value.scene, "Input scene.");
-  add_option(cmd, "output", value.output, "Output scene.", {}, "o");
+  add_option(cmd, "output", value.output, "Output scene.");
   add_option(cmd, "info", value.info, "Print info.");
   add_option(cmd, "validate", value.validate, "Validate scene.");
   add_option(cmd, "copyright", value.copyright, "Set scene copyright.");
@@ -152,20 +152,18 @@ void add_command(cli_command& cli, const string& name, render_params& value,
     const string& usage) {
   auto& cmd = add_command(cli, name, usage);
   add_argument(cmd, "scene", value.scene, "Scene filename.");
-  add_option(cmd, "output", value.output, "Output filename.", {}, "o");
-  add_option(cmd, "camera", value.camname, "Camera name.", {}, "c");
+  add_option(cmd, "output", value.output, "Output filename.");
+  add_option(cmd, "camera", value.camname, "Camera name.");
   add_option(cmd, "addsky", value.addsky, "Add sky.");
   add_option(cmd, "savebatch", value.savebatch, "Save batch.");
   add_option(
-      cmd, "resolution", value.resolution, "Image resolution.", {1, 4096}, "r");
+      cmd, "resolution", value.resolution, "Image resolution.", {1, 4096});
   add_option(
-      cmd, "sampler", value.sampler, "Sampler type.", trace_sampler_names, "t");
+      cmd, "sampler", value.sampler, "Sampler type.", trace_sampler_names);
   add_option(cmd, "falsecolor", value.falsecolor, "False color type.",
-      trace_falsecolor_names, "F");
-  add_option(
-      cmd, "samples", value.samples, "Number of samples.", {1, 4096}, "s");
-  add_option(
-      cmd, "bounces", value.bounces, "Number of bounces.", {1, 128}, "b");
+      trace_falsecolor_names);
+  add_option(cmd, "samples", value.samples, "Number of samples.", {1, 4096});
+  add_option(cmd, "bounces", value.bounces, "Number of bounces.", {1, 128});
   add_option(cmd, "clamp", value.clamp, "Clamp value.", {10, flt_max});
   add_option(cmd, "nocaustics", value.nocaustics, "Disable caustics.");
   add_option(cmd, "envhidden", value.envhidden, "Hide environment.");
@@ -257,19 +255,17 @@ void add_command(cli_command& cli, const string& name, view_params& value,
     const string& usage) {
   auto& cmd = add_command(cli, name, usage);
   add_argument(cmd, "scene", value.scene, "Scene filename.");
-  add_option(cmd, "output", value.output, "Output filename.", {}, "o");
+  add_option(cmd, "output", value.output, "Output filename.");
   add_option(cmd, "camera", value.camname, "Camera name.");
   add_option(cmd, "addsky", value.addsky, "Add sky.");
   add_option(
-      cmd, "resolution", value.resolution, "Image resolution.", {1, 4096}, "r");
+      cmd, "resolution", value.resolution, "Image resolution.", {1, 4096});
   add_option(
-      cmd, "sampler", value.sampler, "Sampler type.", trace_sampler_names, "t");
+      cmd, "sampler", value.sampler, "Sampler type.", trace_sampler_names);
   add_option(cmd, "falsecolor", value.falsecolor, "False color type.",
-      trace_falsecolor_names, "F");
-  add_option(
-      cmd, "samples", value.samples, "Number of samples.", {1, 4096}, "s");
-  add_option(
-      cmd, "bounces", value.bounces, "Number of bounces.", {1, 128}, "b");
+      trace_falsecolor_names);
+  add_option(cmd, "samples", value.samples, "Number of samples.", {1, 4096});
+  add_option(cmd, "bounces", value.bounces, "Number of bounces.", {1, 128});
   add_option(cmd, "clamp", value.clamp, "Clamp value.", {10, flt_max});
   add_option(cmd, "nocaustics", value.nocaustics, "Disable caustics.");
   add_option(cmd, "envhidden", value.envhidden, "Hide environment.");

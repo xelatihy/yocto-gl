@@ -286,8 +286,8 @@ struct obj_camera {
   frame3f frame    = identity3x4f;
   bool    ortho    = false;
   float   aspect   = 16.0f / 9.0f;
-  float   lens     = 0.50;
-  float   film     = 0.036;
+  float   lens     = 0.50f;
+  float   film     = 0.036f;
   float   focus    = 0;
   float   aperture = 0;
 };
@@ -456,12 +456,12 @@ struct pbrt_material {
   vec3f      emission        = {0, 0, 0};
   vec3f      color           = {0, 0, 0};
   float      roughness       = 0;
-  float      ior             = 1.5;
+  float      ior             = 1.5f;
   float      opacity         = 1;
   int        color_tex       = -1;
   vec3f      volmeanfreepath = {0, 0, 0};
   vec3f      volscatter      = {0, 0, 0};
-  float      volscale        = 0.01;
+  float      volscale        = 0.01f;
 };
 
 // Pbrt shape

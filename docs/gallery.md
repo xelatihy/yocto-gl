@@ -9,46 +9,52 @@ This page contains a collection of images rendered with the Yocto/GL path tracer
 
 ## Environments
 
-![Yocto/GL pathtraced image](images/island.png)
+![Yocto/GL pathtraced image](images/island.jpg)
 
-![Yocto/GL pathtraced image](images/island-c6.png)
+![Yocto/GL pathtraced image](images/island-c7.jpg)
 
-![Yocto/GL pathtraced image](images/bistroexterior.png)
+![Yocto/GL pathtraced image](images/bistroexterior.jpg)
 
-![Yocto/GL pathtraced image](images/sanmiguel-c1.png)
+![Yocto/GL pathtraced image](images/sanmiguel-c1.jpg)
 
-![Yocto/GL pathtraced image](images/sanmiguel-c2.png)
+![Yocto/GL pathtraced image](images/sanmiguel-c2.jpg)
 
-![Yocto/GL pathtraced image](images/landscape.png)
+![Yocto/GL pathtraced image](images/landscape.jpg)
 
-![Yocto/GL pathtraced image](images/landscape-c3.png)
+![Yocto/GL pathtraced image](images/landscape-c3.jpg)
 
 ## Interiors
 
-![Yocto/GL pathtraced image](images/bathroom1.png)
+![Yocto/GL pathtraced image](images/bathroom1.jpg)
 
-![Yocto/GL pathtraced image](images/classroom.png)
+![Yocto/GL pathtraced image](images/classroom.jpg)
 
-![Yocto/GL pathtraced image](images/kitchen.png)
+![Yocto/GL pathtraced image](images/kitchen.jpg)
 
-![Yocto/GL pathtraced image](images/breakfastroom.png)
+![Yocto/GL pathtraced image](images/breakfastroom.jpg)
 
-![Yocto/GL pathtraced image](images/bistrointerior.png)
+![Yocto/GL pathtraced image](images/bistrointerior.jpg)
+
+## Humans
+
+![Yocto/GL pathtraced image](images/head1ss.jpg){: width=720px }
+
+![Yocto/GL pathtraced image](images/head2ss.jpg){: width=720px }
 
 ## Objects
 
-![Yocto/GL pathtraced image](images/coffee.png)
+![Yocto/GL pathtraced image](images/coffee.jpg){: width=720px }
 
-![Yocto/GL pathtraced image](images/crown.png)
+![Yocto/GL pathtraced image](images/crown.jpg){: width=720px }
 
 ## Vehicles
 
-![Yocto/GL pathtraced image](images/spaceship.png)
+![Yocto/GL pathtraced image](images/spaceship.jpg)
 
-![Yocto/GL pathtraced image](images/car2.png)
+![Yocto/GL pathtraced image](images/car2.jpg)
 
 ## Minecraft
 
-![Yocto/GL pathtraced image](images/rungholt.png)
+![Yocto/GL pathtraced image](images/rungholt.jpg)
 
-![Yocto/GL pathtraced image](images/vokselia.png)
+![Yocto/GL pathtraced image](images/vokselia.jpg)

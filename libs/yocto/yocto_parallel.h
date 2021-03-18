@@ -174,7 +174,7 @@ inline void parallel_for(T num, Func&& func) {
   auto      futures  = vector<future<void>>{};
   auto      nthreads = std::thread::hardware_concurrency();
   atomic<T> next_idx(0);
-  for (auto thread_id = 0; thread_id < nthreads; thread_id++) {
+  for (auto thread_id = 0; thread_id < (int)nthreads; thread_id++) {
     futures.emplace_back(
         std::async(std::launch::async, [&func, &next_idx, num]() {
           while (true) {
@@ -194,7 +194,7 @@ inline void parallel_for(T num1, T num2, Func&& func) {
   auto      futures  = vector<future<void>>{};
   auto      nthreads = std::thread::hardware_concurrency();
   atomic<T> next_idx(0);
-  for (auto thread_id = 0; thread_id < nthreads; thread_id++) {
+  for (auto thread_id = 0; thread_id < (int)nthreads; thread_id++) {
     futures.emplace_back(
         std::async(std::launch::async, [&func, &next_idx, num1, num2]() {
           while (true) {
@@ -214,7 +214,7 @@ inline void parallel_for_batch(T num, T batch, Func&& func) {
   auto      futures  = vector<future<void>>{};
   auto      nthreads = std::thread::hardware_concurrency();
   atomic<T> next_idx(0);
-  for (auto thread_id = 0; thread_id < nthreads; thread_id++) {
+  for (auto thread_id = 0; thread_id < (int)nthreads; thread_id++) {
     futures.emplace_back(
         std::async(std::launch::async, [&func, &next_idx, num, batch]() {
           while (true) {

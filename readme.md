@@ -56,11 +56,11 @@ test the library:
 Here are some test images rendered with the path tracer. More images are
 included in the [project site](https://xelatihy.github.io/yocto-gl/).
 
-![Example materials: matte, plastic, metal, glass, subsurface, normal mapping](images/features1.png)
+![Example materials: matte, plastic, metal, glass, subsurface, normal mapping](images/features1.jpg)
 
-![Example shapes: procedural shapes, Catmull-Clark subdivision, hairs, displacement mapping](images/features2.png)
+![Example shapes: procedural shapes, Catmull-Clark subdivision, hairs, displacement mapping](images/features2.jpg)
 
-![Image rendered with Yocto/GL path tracer. Model by Disney Animation Studios.](images/island.png)
+![Image rendered with Yocto/GL path tracer. Model by Disney Animation Studios.](images/island.jpg)
 
 ## Design Considerations
 

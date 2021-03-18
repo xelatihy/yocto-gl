@@ -240,8 +240,8 @@ const auto spline_algorithm_names = vector<string>{
 struct spline_params {
   spline_algorithm algorithm      = spline_algorithm::de_casteljau_uniform;
   int              subdivisions   = 4;
-  float            precision      = 0.1;
-  float            min_curve_size = 0.001;
+  float            precision      = 0.1f;
+  float            min_curve_size = 0.001f;
   int              max_depth      = 10;
 };
 

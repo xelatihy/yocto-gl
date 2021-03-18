@@ -57,7 +57,7 @@ void add_command(cli_command& cli, const string& name, convert_params& value,
     const string& usage) {
   auto& cmd = add_command(cli, name, usage);
   add_argument(cmd, "shape", value.shape, "Input shape.");
-  add_option(cmd, "output", value.output, "Output shape.", {}, "o");
+  add_option(cmd, "output", value.output, "Output shape.");
   add_option(cmd, "smooth", value.smooth, "Smooth normals.");
   add_option(cmd, "facet", value.facet, "Facet normals.");
   add_option(
@@ -171,7 +171,7 @@ void add_command(cli_command& cli, const string& name, fvconvert_params& value,
     const string& usage) {
   auto& cmd = add_command(cli, name, usage);
   add_argument(cmd, "shape", value.shape, "Input shape.");
-  add_option(cmd, "output", value.output, "Output shape.", {}, "o");
+  add_option(cmd, "output", value.output, "Output shape.");
   add_option(cmd, "smooth", value.smooth, "Smooth normals.");
   add_option(cmd, "facet", value.facet, "Facet normals.");
   add_option(
@@ -270,7 +270,7 @@ void add_command(cli_command& cli, const string& name, view_params& value,
     const string& usage) {
   auto& cmd = add_command(cli, name, usage);
   add_argument(cmd, "shape", value.shape, "Input shape.");
-  add_option(cmd, "output", value.output, "Output shape.", {}, "o");
+  add_option(cmd, "output", value.output, "Output shape.");
   add_option(cmd, "addsky", value.addsky, "Add sky.");
 }
 
@@ -322,7 +322,7 @@ void add_command(cli_command& cli, const string& name,
     heightfield_params& value, const string& usage) {
   auto& cmd = add_command(cli, name, usage);
   add_argument(cmd, "image", value.image, "Input image.");
-  add_option(cmd, "output", value.output, "Output shape.", {}, "o");
+  add_option(cmd, "output", value.output, "Output shape.");
   add_option(cmd, "smooth", value.smooth, "Smoooth normals.");
   add_option(cmd, "height", value.height, "Shape height.");
   add_option(cmd, "info", value.info, "Print info.");
