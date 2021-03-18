@@ -509,7 +509,8 @@ bool load_image(const string& filename, color_image& image, string& error) {
     image.pixels = from_srgb(pixels, image.width, image.height);
     free(pixels);
     return true;
-  } else if (ext == ".jpg" || ext == ".JPG") {
+  } else if (ext == ".jpg" || ext == ".JPG" || ext == ".jpeg" ||
+             ext == ".JPEG") {
     auto ncomp  = 0;
     auto pixels = stbi_load(
         filename.c_str(), &image.width, &image.height, &ncomp, 4);
@@ -596,7 +597,8 @@ bool save_image(
             4, (const byte*)to_srgb(image).data(), (int)image.width * 4))
       return write_error();
     return true;
-  } else if (ext == ".jpg" || ext == ".JPG") {
+  } else if (ext == ".jpg" || ext == ".JPG" || ext == ".jpeg" ||
+             ext == ".JPEG") {
     if (!stbi_write_jpg(filename.c_str(), (int)image.width, (int)image.height,
             4, (const byte*)to_srgb(image).data(), 75))
       return write_error();
@@ -809,7 +811,8 @@ bool load_texture(
         (vec4b*)pixels, (vec4b*)pixels + texture.width * texture.height};
     free(pixels);
     return true;
-  } else if (ext == ".jpg" || ext == ".JPG") {
+  } else if (ext == ".jpg" || ext == ".JPG" || ext == ".jpeg" ||
+             ext == ".JPEG") {
     auto ncomp  = 0;
     auto pixels = stbi_load(
         filename.c_str(), &texture.width, &texture.height, &ncomp, 4);
@@ -895,7 +898,8 @@ bool save_texture(
             (int)texture.width * 4))
       return write_error();
     return true;
-  } else if (ext == ".jpg" || ext == ".JPG") {
+  } else if (ext == ".jpg" || ext == ".JPG" || ext == ".jpeg" ||
+             ext == ".JPEG") {
     if (!stbi_write_jpg(filename.c_str(), (int)texture.width,
             (int)texture.height, 4, (const byte*)texture.pixelsb.data(), 75))
       return write_error();
