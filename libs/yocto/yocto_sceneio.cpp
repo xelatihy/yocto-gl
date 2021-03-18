@@ -3823,13 +3823,26 @@ static bool load_gltf_scene(const string& filename, scene_model& scene,
     return gtexture.value("source", -1);
   };
 
+  // https://stackoverflow.com/questions/3418231/replace-part-of-a-string-with-another-string
+  auto replace = [](const std::string& str_, const std::string& from,
+                     const std::string& to) -> string {
+    auto str = str_;
+    if (from.empty()) return str;
+    size_t start_pos = 0;
+    while ((start_pos = str.find(from, start_pos)) != std::string::npos) {
+      str.replace(start_pos, from.length(), to);
+      start_pos += to.length();
+    }
+    return str;
+  };
+
   // convert textures
   auto texture_paths = vector<string>{};
   if (gltf.contains("images")) {
     try {
       for (auto& gimage : gltf.at("images")) {
         scene.textures.emplace_back();
-        texture_paths.push_back(gimage.value("uri", ""));
+        texture_paths.push_back(replace(gimage.value("uri", ""), "%20", " "));
       }
     } catch (...) {
       return parse_error();
