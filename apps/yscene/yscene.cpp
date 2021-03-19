@@ -144,6 +144,7 @@ struct render_params : trace_params {
   string output    = "out.png";
   string camname   = "";
   bool   addsky    = false;
+  string envname   = "";
   bool   savebatch = false;
 };
 
@@ -155,6 +156,7 @@ void add_command(cli_command& cli, const string& name, render_params& value,
   add_option(cmd, "output", value.output, "Output filename.");
   add_option(cmd, "camera", value.camname, "Camera name.");
   add_option(cmd, "addsky", value.addsky, "Add sky.");
+  add_option(cmd, "envname", value.envname, "Add environment map.");
   add_option(cmd, "savebatch", value.savebatch, "Save batch.");
   add_option(
       cmd, "resolution", value.resolution, "Image resolution.", {1, 4096});
@@ -188,6 +190,11 @@ int run_render(const render_params& params_) {
 
   // add sky
   if (params.addsky) add_sky(scene);
+
+  // add environment
+  if (!params.envname.empty()) {
+    if (!add_environment(scene, params.envname, ioerror)) return false;
+  }
 
   // camera
   params.camera = find_camera(scene, params.camname);
@@ -248,6 +255,7 @@ struct view_params : trace_params {
   string output  = "out.png";
   string camname = "";
   bool   addsky  = false;
+  string envname = "";
 };
 
 // Cli
@@ -258,6 +266,7 @@ void add_command(cli_command& cli, const string& name, view_params& value,
   add_option(cmd, "output", value.output, "Output filename.");
   add_option(cmd, "camera", value.camname, "Camera name.");
   add_option(cmd, "addsky", value.addsky, "Add sky.");
+  add_option(cmd, "envname", value.envname, "Add environment map.");
   add_option(
       cmd, "resolution", value.resolution, "Image resolution.", {1, 4096});
   add_option(
@@ -299,6 +308,11 @@ int run_view(const view_params& params_) {
 
   // add sky
   if (params.addsky) add_sky(scene);
+
+  // add environment
+  if (!params.envname.empty()) {
+    if (!add_environment(scene, params.envname, ioerror)) return false;
+  }
 
   // tesselation
   if (!scene.subdivs.empty()) {

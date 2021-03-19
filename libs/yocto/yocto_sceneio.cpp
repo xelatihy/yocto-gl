@@ -2368,6 +2368,22 @@ bool make_scene_directories(
   return true;
 }
 
+// Add environment
+bool add_environment(
+    scene_model& scene, const string& filename, string& error) {
+  // load texture
+  auto& texture = scene.textures.emplace_back();
+  if (!load_texture(filename, texture, error)) return false;
+
+  // create envirironment
+  auto& environment        = scene.environments.emplace_back();
+  environment.emission     = {1, 1, 1};
+  environment.emission_tex = (int)scene.textures.size() - 1;
+
+  // done
+  return true;
+}
+
 }  // namespace yocto
 
 // -----------------------------------------------------------------------------

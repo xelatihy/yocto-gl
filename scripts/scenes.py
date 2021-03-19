@@ -13,7 +13,8 @@ def cli():
 @click.option('--scene', '-s', default='*')
 @click.option('--format', '-f', default='json')
 @click.option('--mode', '-m', default='path')
-def view(directory='mcguire', scene='*', format='json', mode='path'):
+@click.option('--envname', '-e', default='')
+def view(directory='mcguire', scene='*', format='json', mode='path', envname=''):
     modes = {
         'path': '--resolution 1280 --bounces 8 --clamp 10',
         'embree': '--resolution 1280 --bounces 8 --clamp 10 --embreebvh',
@@ -21,6 +22,7 @@ def view(directory='mcguire', scene='*', format='json', mode='path'):
         'eyelight-quick': '--resolution 1280 --samples 16 --sampler eyelight --bounces 8 --clamp 10'
     }
     options = modes[mode]
+    envoptions = f'--envname {envname}' if envname else ''
     for dirname in sorted(glob.glob(f'{directory}/{format}/{scene}')):
         if not os.path.isdir(dirname): continue
         if '/_' in dirname: continue
@@ -32,7 +34,7 @@ def view(directory='mcguire', scene='*', format='json', mode='path'):
             if format == 'pbrt':
                 with open(filename) as f:
                     if 'WorldBegin' not in f.read(): continue
-            cmd = f'../yocto-gl/bin/yscene view {options} {extraoptions} {filename}'
+            cmd = f'../yocto-gl/bin/yscene view {options} {extraoptions} {envoptions} {filename}'
             print(cmd, file=sys.stderr)
             os.system(cmd)
 
@@ -114,7 +116,7 @@ def tonemap(directory='mcguire', scene='*', format='json', mode='filmic'):
         tw, _ = draw.textsize("Yocto/GL", font=font1)
         draw.rectangle([w - 8, h - 32 - 8, w - 8 - 8 - tw, h - 8], (0, 0, 0))
         draw.text((w - 8 - 4, h - 26 - 8 - 4), "Yocto/GL", (255, 255, 255), font=font1, anchor='rt')
-        if directory in ['bitterli', 'disney', 'mcguire', 'pbrt3', 'yocto', 'heads']:
+        if directory in ['bitterli', 'disney', 'mcguire', 'pbrt3', 'yocto', 'heads', 'blender', 'fabio']:
             authorfilename = filename.replace('images-json/', f'{format}/').replace(
                 '-fr.', '.').replace('-hr.', '.').replace('-c1.', '.').replace(
                     '-c2.', '.').replace('-c3.', '.').replace('-c4.', '.').replace(

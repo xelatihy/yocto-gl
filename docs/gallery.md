@@ -23,6 +23,8 @@ This page contains a collection of images rendered with the Yocto/GL path tracer
 
 ![Yocto/GL pathtraced image](images/landscape-c3.jpg)
 
+![Yocto/GL pathtraced image](images/lonemonk.jpg)
+
 ## Interiors
 
 ![Yocto/GL pathtraced image](images/bathroom1.jpg)
@@ -35,11 +37,23 @@ This page contains a collection of images rendered with the Yocto/GL path tracer
 
 ![Yocto/GL pathtraced image](images/bistrointerior.jpg)
 
+![Yocto/GL pathtraced image](images/classroom2.jpg)
+
+![Yocto/GL pathtraced image](images/interior.jpg)
+
 ## Humans
 
 ![Yocto/GL pathtraced image](images/head1ss.jpg){: width=720px }
 
 ![Yocto/GL pathtraced image](images/head2ss.jpg){: width=720px }
+
+## Animation
+
+![Yocto/GL pathtraced image](images/junkshop.jpg)
+
+![Yocto/GL pathtraced image](images/painterly.jpg)
+
+![Yocto/GL pathtraced image](images/fox.jpg)
 
 ## Objects
 

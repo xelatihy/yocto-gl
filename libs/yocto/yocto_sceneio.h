@@ -166,6 +166,9 @@ bool make_scene_directories(
 // Scene presets used for testing.
 bool make_scene_preset(scene_model& scene, const string& type, string& error);
 
+// Add environment
+bool add_environment(scene_model& scene, const string& filename, string& error);
+
 }  // namespace yocto
 
 // -----------------------------------------------------------------------------
