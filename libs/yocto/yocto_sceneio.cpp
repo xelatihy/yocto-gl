@@ -161,8 +161,9 @@ namespace yocto {
 // Opens a file with a utf8 file name
 static FILE* fopen_utf8(const char* filename, const char* mode) {
 #ifdef _WIN32
-  auto path8 = std::filesystem::u8path(filename);
-  auto wmode = std::wstring(string{mode}.begin(), string{mode}.end());
+  auto path8    = std::filesystem::u8path(filename);
+  auto str_mode = string{mode};
+  auto wmode    = std::wstring(str_mode.begin(), str_mode.end());
   return _wfopen(path8.c_str(), wmode.c_str());
 #else
   return fopen(filename, mode);
