@@ -351,6 +351,7 @@ static vec4f trace_path(const scene_model& scene, const bvh_scene& bvh,
   auto volume_stack  = vector<material_point>{};
   auto max_roughness = 0.0f;
   auto hit           = !params.envhidden && !scene.environments.empty();
+  auto opbounce      = 0;
 
   // trace  path
   for (auto bounce = 0; bounce < params.bounces; bounce++) {
@@ -394,7 +395,9 @@ static vec4f trace_path(const scene_model& scene, const bvh_scene& bvh,
 
       // handle opacity
       if (material.opacity < 1 && rand1f(rng) >= material.opacity) {
+        if (opbounce++ > 128) break;
         ray = {position + ray.d * 1e-2f, ray.d};
+        bounce -= 1;
         continue;
       }
       hit = true;
@@ -493,6 +496,7 @@ static vec4f trace_pathdirect(const scene_model& scene, const bvh_scene& bvh,
   auto max_roughness = 0.0f;
   auto hit           = !params.envhidden && !scene.environments.empty();
   auto next_emission = true;
+  auto opbounce      = 0;
 
   // trace  path
   for (auto bounce = 0; bounce < params.bounces; bounce++) {
@@ -536,7 +540,9 @@ static vec4f trace_pathdirect(const scene_model& scene, const bvh_scene& bvh,
 
       // handle opacity
       if (material.opacity < 1 && rand1f(rng) >= material.opacity) {
+        if (opbounce++ > 128) break;
         ray = {position + ray.d * 1e-2f, ray.d};
+        bounce -= 1;
         continue;
       }
       hit = true;
@@ -637,9 +643,7 @@ static vec4f trace_pathdirect(const scene_model& scene, const bvh_scene& bvh,
     if (weight == zero3f || !isfinite(weight)) break;
 
     // russian roulette
-    // HACK
-    if (bounce > 4) {
-      // if (bounce > 3) {
+    if (bounce > 3) {
       auto rr_prob = min((float)0.99, max(weight));
       if (rand1f(rng) >= rr_prob) break;
       weight *= 1 / rr_prob;
@@ -662,6 +666,7 @@ static vec4f trace_pathmis(const scene_model& scene, const bvh_scene& bvh,
   auto volume_stack  = vector<material_point>{};
   auto max_roughness = 0.0f;
   auto hit           = !params.envhidden && !scene.environments.empty();
+  auto opbounce      = 0;
 
   // MIS helpers
   auto mis_heuristic = [](float this_pdf, float other_pdf) {
@@ -714,7 +719,9 @@ static vec4f trace_pathmis(const scene_model& scene, const bvh_scene& bvh,
 
       // handle opacity
       if (material.opacity < 1 && rand1f(rng) >= material.opacity) {
+        if (opbounce++ > 128) break;
         ray = {position + ray.d * 1e-2f, ray.d};
+        bounce -= 1;
         continue;
       }
       hit = true;
@@ -839,6 +846,7 @@ static vec4f trace_naive(const scene_model& scene, const bvh_scene& bvh,
   auto weight   = vec3f{1, 1, 1};
   auto ray      = ray_;
   auto hit      = !params.envhidden && !scene.environments.empty();
+  auto opbounce = 0;
 
   // trace  path
   for (auto bounce = 0; bounce < params.bounces; bounce++) {
@@ -861,6 +869,7 @@ static vec4f trace_naive(const scene_model& scene, const bvh_scene& bvh,
 
     // handle opacity
     if (material.opacity < 1 && rand1f(rng) >= material.opacity) {
+      if (opbounce++ > 128) break;
       ray = {position + ray.d * 1e-2f, ray.d};
       bounce -= 1;
       continue;
@@ -909,6 +918,7 @@ static vec4f trace_eyelight(const scene_model& scene, const bvh_scene& bvh,
   auto weight   = vec3f{1, 1, 1};
   auto ray      = ray_;
   auto hit      = !params.envhidden && !scene.environments.empty();
+  auto opbounce = 0;
 
   // trace  path
   for (auto bounce = 0; bounce < max(params.bounces, 4); bounce++) {
@@ -931,6 +941,7 @@ static vec4f trace_eyelight(const scene_model& scene, const bvh_scene& bvh,
 
     // handle opacity
     if (material.opacity < 1 && rand1f(rng) >= material.opacity) {
+      if (opbounce++ > 128) break;
       ray = {position + ray.d * 1e-2f, ray.d};
       bounce -= 1;
       continue;
