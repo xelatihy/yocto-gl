@@ -73,6 +73,8 @@ namespace yocto {
 // Type of tracing algorithm
 enum struct trace_sampler_type {
   path,        // path tracing
+  pathdirect,  // path tracing with direct
+  pathmis,     // path tracing with mis
   naive,       // naive path tracing
   eyelight,    // eyelight rendering
   falsecolor,  // false color rendering
@@ -83,7 +85,8 @@ enum struct trace_sampler_type {
 enum struct trace_falsecolor_type {
   // clang-format off
   position, normal, frontfacing, gnormal, gfrontfacing, texcoord, mtype, color,
-  emission, roughness, opacity, instance, shape, material, element, highlight
+  emission, roughness, opacity, metallic, delta, instance, shape, material, 
+  element, highlight
   // clang-format on
 };
 
@@ -110,13 +113,14 @@ struct trace_params {
   float                 exposure       = 0;
 };
 
-inline const auto trace_sampler_names = std::vector<std::string>{
-    "path", "naive", "eyelight", "falsecolor", "dalbedo", "dnormal"};
+inline const auto trace_sampler_names = std::vector<std::string>{"path",
+    "pathdirect", "pathmis", "naive", "eyelight", "falsecolor", "dalbedo",
+    "dnormal"};
 
 inline const auto trace_falsecolor_names = vector<string>{"position", "normal",
     "frontfacing", "gnormal", "gfrontfacing", "texcoord", "mtype", "color",
-    "emission", "roughness", "opacity", "instance", "shape", "material",
-    "element", "highlight"};
+    "emission", "roughness", "opacity", "metallic", "delta", "instance",
+    "shape", "material", "element", "highlight"};
 
 // Progress report callback
 using image_callback = function<void(int current, int total)>;
