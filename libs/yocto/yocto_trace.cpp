@@ -496,13 +496,14 @@ static vec4f trace_pathmis(const scene_model& scene, const bvh_scene& bvh,
     return (this_pdf * this_pdf) /
            (this_pdf * this_pdf + other_pdf * other_pdf);
   };
-
-  auto next_emission = true;
+  auto next_emission     = true;
+  auto next_intersection = bvh_intersection{};
 
   // trace  path
   for (auto bounce = 0; bounce < params.bounces; bounce++) {
     // intersect next point
-    auto intersection = intersect_bvh(bvh, scene, ray);
+    auto intersection = next_emission ? intersect_bvh(bvh, scene, ray)
+                                      : next_intersection;
     if (!intersection.hit) {
       if ((bounce > 0 || !params.envhidden) && next_emission)
         radiance += weight * eval_environment(scene, ray.d);
@@ -555,17 +556,23 @@ static vec4f trace_pathmis(const scene_model& scene, const bvh_scene& bvh,
       auto incoming = zero3f;
       if (!is_delta(material)) {
         // direct with MIS --- light
-        {
-          auto incoming = sample_lights(
-              scene, lights, position, rand1f(rng), rand1f(rng), rand2f(rng));
+        for (auto sample_light : {true, false}) {
+          incoming       = sample_light ? sample_lights(scene, lights, position,
+                                        rand1f(rng), rand1f(rng), rand2f(rng))
+                                        : sample_bsdfcos(material, normal, outgoing,
+                                        rand1f(rng), rand2f(rng));
           auto bsdfcos   = eval_bsdfcos(material, normal, outgoing, incoming);
           auto light_pdf = sample_lights_pdf(
               scene, bvh, lights, position, incoming);
           auto bsdf_pdf = sample_bsdfcos_pdf(
               material, normal, outgoing, incoming);
-          if (bsdfcos != zero3f && light_pdf != 0) {
+          auto mis_weight = sample_light
+                                ? mis_heuristic(light_pdf, bsdf_pdf) / light_pdf
+                                : mis_heuristic(bsdf_pdf, light_pdf) / bsdf_pdf;
+          if (bsdfcos != zero3f && mis_weight != 0) {
             auto intersection = intersect_bvh(bvh, scene, {position, incoming});
-            auto emission     = zero3f;
+            if (!sample_light) next_intersection = intersection;
+            auto emission = zero3f;
             if (!intersection.hit) {
               emission = eval_environment(scene, incoming);
             } else {
@@ -578,43 +585,11 @@ static vec4f trace_pathmis(const scene_model& scene, const bvh_scene& bvh,
                       intersection.element, intersection.uv, -incoming),
                   -incoming);
             }
-            radiance += weight * bsdfcos * emission *
-                        mis_heuristic(light_pdf, bsdf_pdf) / light_pdf;
-          }
-        }
-
-        // direct with MIS --- bsdf
-        {
-          auto incoming = sample_bsdfcos(
-              material, normal, outgoing, rand1f(rng), rand2f(rng));
-          auto bsdfcos   = eval_bsdfcos(material, normal, outgoing, incoming);
-          auto light_pdf = sample_lights_pdf(
-              scene, bvh, lights, position, incoming);
-          auto bsdf_pdf = sample_bsdfcos_pdf(
-              material, normal, outgoing, incoming);
-          if (bsdfcos != zero3f && bsdf_pdf != 0) {
-            auto intersection = intersect_bvh(bvh, scene, {position, incoming});
-            auto emission     = zero3f;
-            if (!intersection.hit) {
-              emission = eval_environment(scene, incoming);
-            } else {
-              auto material = eval_material(scene,
-                  scene.instances[intersection.instance], intersection.element,
-                  intersection.uv);
-              emission      = eval_emission(material,
-                  eval_shading_normal(scene,
-                      scene.instances[intersection.instance],
-                      intersection.element, intersection.uv, -incoming),
-                  -incoming);
-            }
-            radiance += weight * bsdfcos * emission *
-                        mis_heuristic(bsdf_pdf, light_pdf) / bsdf_pdf;
+            radiance += weight * bsdfcos * emission * mis_weight;
           }
         }
 
         // indirect
-        incoming = sample_bsdfcos(
-            material, normal, outgoing, rand1f(rng), rand2f(rng));
         weight *= eval_bsdfcos(material, normal, outgoing, incoming) /
                   sample_bsdfcos_pdf(material, normal, outgoing, incoming);
         next_emission = false;
