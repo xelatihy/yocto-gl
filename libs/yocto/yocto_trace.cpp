@@ -476,6 +476,8 @@ static vec4f trace_path(const scene_model& scene, const bvh_scene& bvh,
     }
   }
 
+  if (!isfinite(radiance)) printf("nope\n");
+
   return {radiance.x, radiance.y, radiance.z, hit ? 1.0f : 0.0f};
 }
 
@@ -807,6 +809,7 @@ static vec4f trace_falsecolor(const scene_model& scene, const bvh_scene& bvh,
   auto gnormal  = eval_element_normal(scene, instance, element);
   auto texcoord = eval_texcoord(scene, instance, element, uv);
   auto material = eval_material(scene, instance, element, uv);
+  auto delta    = is_delta(material) ? 1.0f : 0.0f;
 
   // hash color
   auto hashed_color = [](int id) {
@@ -842,6 +845,9 @@ static vec4f trace_falsecolor(const scene_model& scene, const bvh_scene& bvh,
       return {material.roughness, material.roughness, material.roughness, 1};
     case trace_falsecolor_type::opacity:
       return {material.opacity, material.opacity, material.opacity, 1};
+    case trace_falsecolor_type::metallic:
+      return {material.metallic, material.metallic, material.metallic, 1};
+    case trace_falsecolor_type::delta: return {delta, delta, delta, 1};
     case trace_falsecolor_type::element:
       return hashed_color(intersection.element);
     case trace_falsecolor_type::instance:

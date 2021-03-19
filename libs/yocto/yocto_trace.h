@@ -84,7 +84,8 @@ enum struct trace_sampler_type {
 enum struct trace_falsecolor_type {
   // clang-format off
   position, normal, frontfacing, gnormal, gfrontfacing, texcoord, mtype, color,
-  emission, roughness, opacity, instance, shape, material, element, highlight
+  emission, roughness, opacity, metallic, delta, instance, shape, material, 
+  element, highlight
   // clang-format on
 };
 
@@ -116,8 +117,8 @@ inline const auto trace_sampler_names = std::vector<std::string>{
 
 inline const auto trace_falsecolor_names = vector<string>{"position", "normal",
     "frontfacing", "gnormal", "gfrontfacing", "texcoord", "mtype", "color",
-    "emission", "roughness", "opacity", "instance", "shape", "material",
-    "element", "highlight"};
+    "emission", "roughness", "opacity", "metallic", "delta", "instance",
+    "shape", "material", "element", "highlight"};
 
 // Progress report callback
 using image_callback = function<void(int current, int total)>;
