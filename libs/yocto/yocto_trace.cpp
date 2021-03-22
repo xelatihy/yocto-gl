@@ -1313,10 +1313,10 @@ void get_denoised(color_image& render, const trace_state& state) {
   filter.setImage("color", render.pixels.data(), oidn::Format::Float3,
       render.width, render.height, 0, sizeof(vec4f),
       sizeof(vec4f) * render.width);
-  // filter.setImage(
-  //     "albedo", albedoPtr, oidn::Format::Float3, width, height);  // optional
-  // filter.setImage(
-  //     "normal", normalPtr, oidn::Format::Float3, width, height);  // optional
+  filter.setImage("albedo", (void*)state.albedo.data(), oidn::Format::Float3,
+      state.width, state.height);
+  filter.setImage("normal", (void*)state.normal.data(), oidn::Format::Float3,
+      state.width, state.height);
   filter.setImage("output", render.pixels.data(), oidn::Format::Float3,
       render.width, render.height, 0, sizeof(vec4f),
       sizeof(vec4f) * render.width);
