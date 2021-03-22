@@ -192,6 +192,12 @@ void        get_albedo(color_image& albedo, const trace_state& state);
 color_image get_normal(const trace_state& state);
 void        get_normal(color_image& normal, const trace_state& state);
 
+// Denoise image
+color_image denoise_render(const color_image& render, const color_image& albedo,
+    const color_image& normal);
+void        denoise_render(color_image& denoised, const color_image& render,
+           const color_image& albedo, const color_image& normal);
+
 }  // namespace yocto
 
 #endif

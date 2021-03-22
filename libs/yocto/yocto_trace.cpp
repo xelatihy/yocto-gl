@@ -1358,4 +1358,49 @@ void get_normal(color_image& normal, const trace_state& state) {
   }
 }
 
+// Denoise image
+color_image denoise_render(const color_image& render, const color_image& albedo,
+    const color_image& normal) {
+  auto denoised = make_image(render.width, render.height, render.linear);
+  denoise_render(denoised, render, albedo, normal);
+  return denoised;
+}
+void denoise_render(color_image& denoised, const color_image& render,
+    const color_image& albedo, const color_image& normal) {
+  check_image(denoised, render.width, render.height, render.linear);
+  check_image(albedo, render.width, render.height, albedo.linear);
+  check_image(normal, render.width, render.height, normal.linear);
+#if YOCTO_DENOISE
+  // Create an Intel Open Image Denoise device
+  oidn::DeviceRef device = oidn::newDevice();
+  device.commit();
+
+  // set image
+  denoised = render;
+
+  // Create a denoising filter
+  oidn::FilterRef filter = device.newFilter("RT");  // ray tracing filter
+  filter.setImage("color", (void*)render.pixels.data(), oidn::Format::Float3,
+      render.width, render.height, 0, sizeof(vec4f),
+      sizeof(vec4f) * render.width);
+  filter.setImage("albedo", (void*)albedo.pixels.data(), oidn::Format::Float3,
+      albedo.width, albedo.height, 0, sizeof(vec4f),
+      sizeof(vec4f) * albedo.width);
+  filter.setImage("normal", (void*)normal.pixels.data(), oidn::Format::Float3,
+      normal.width, normal.height, 0, sizeof(vec4f),
+      sizeof(vec4f) * normal.width);
+  filter.setImage("output", denoised.pixels.data(), oidn::Format::Float3,
+      denoised.width, denoised.height, 0, sizeof(vec4f),
+      sizeof(vec4f) * denoised.width);
+  filter.set("inputScale", 1.0f);  // set scale as fixed
+  filter.set("hdr", true);         // image is HDR
+  filter.commit();
+
+  // Filter the image
+  filter.execute();
+#else
+  denoised = render;
+#endif
+}
+
 }  // namespace yocto

@@ -99,8 +99,8 @@ bvh and lights, with `make_bvh(scene, params)` and
 with `make_state(state, scene)`.
 
 Then, for each sample, call `trace_samples(state, scene, lights, params)`
-and retrieve the computed image with `get_image(state)` or
-`get_image(image, state)`. This interface can be useful to provide user
+and retrieve the computed image with `get_render(state)` or
+`get_render(image, state)`. This interface can be useful to provide user
 feedback by either saving or displaying partial images.
 
 ```cpp
@@ -113,17 +113,17 @@ auto state = make_state(scene, params);     // init state
 for(auto sample : range(params.samples)) {  // for each sample
   trace_samples(state, scene, camera, bvh,  // render sample
                 lights, params);
-  process_image(get_image(state));          // get image computed so far
+  process_image(get_render(state));          // get image computed so far
 };
 ```
 
 ## Denoising with Intel's Open Image Denoise
 
 We support denoising of rendered images in the low-level interface.
-Just call `get_denoised(...)` instead of `get_image(...)` to get a denoised image.
+Just call `get_denoised(...)` instead of `get_render(...)` to get a denoised image.
 Alternatively, you can call `get_albedo(state)` or `get_normal(state)` to get
 denoising buffers and either run the denoiser in a different process, or
-calll `denoise_image(image, render, albedo, normal)` to denoise the image.
+call `denoise_render(render, albedo, normal)` to denoise the image.
 To denoise within Yocto/GL, the library should be compiled with OIDN support by
 setting the `YOCTO_DENOISE` compile flag and linking to OIDN's libraries.
 
@@ -140,9 +140,9 @@ for(auto sample : range(params.samples)) {  // for each sample
 };
 auto denoised = get_denoised(state);        // get denoised final image
 // alternative interface
-auto image = get_image(state);              // get final image
+auto render = get_render(state);            // get final image
 auto albedo = get_albedo(state);            // get denoising buffers
 auto normal = get_normal(state);
 // run denoiser here or save buffers and run elsewhere
-auto denoised2 = denoise_image(image, albedo, normal);
+auto denoised2 = denoise_render(render, albedo, normal);
 ```
