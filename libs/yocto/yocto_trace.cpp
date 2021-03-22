@@ -1331,21 +1331,28 @@ void get_denoised(color_image& image, const trace_state& state) {
 }
 
 // Get denoising buffers
-pair<color_image, color_image> get_denoise_buffers(const trace_state& state) {
+color_image get_albedo(const trace_state& state) {
   auto albedo = make_image(state.width, state.height, true);
-  auto normal = make_image(state.width, state.height, true);
-  get_denoise_buffers(albedo, normal, state);
-  return {albedo, normal};
+  get_albedo(albedo, state);
+  return albedo;
 }
-// Get denoising buffers
-void get_denoise_buffers(
-    color_image& albedo, color_image& normal, const trace_state& state) {
+void get_albedo(color_image& albedo, const trace_state& state) {
   check_image(albedo, state.width, state.height, true);
-  check_image(normal, state.width, state.height, true);
   auto scale = 1.0f / (float)state.samples;
   for (auto idx = 0; idx < state.width * state.height; idx++) {
     albedo.pixels[idx] = {state.albedo[idx].x * scale,
         state.albedo[idx].y * scale, state.albedo[idx].z * scale, 1.0f};
+  }
+}
+color_image get_normal(const trace_state& state) {
+  auto normal = make_image(state.width, state.height, true);
+  get_normal(normal, state);
+  return normal;
+}
+void get_normal(color_image& normal, const trace_state& state) {
+  check_image(normal, state.width, state.height, true);
+  auto scale = 1.0f / (float)state.samples;
+  for (auto idx = 0; idx < state.width * state.height; idx++) {
     normal.pixels[idx] = {state.normal[idx].x * scale,
         state.normal[idx].y * scale, state.normal[idx].z * scale, 1.0f};
   }

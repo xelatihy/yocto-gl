@@ -187,10 +187,10 @@ color_image get_denoised(const trace_state& state);
 void        get_denoised(color_image& render, const trace_state& state);
 
 // Get denoising buffers
-pair<color_image, color_image> get_denoise_buffers(const trace_state& state);
-// Get denoising buffers
-void get_denoise_buffers(
-    color_image& albedo, color_image& normal, const trace_state& state);
+color_image get_albedo(const trace_state& state);
+void        get_albedo(color_image& albedo, const trace_state& state);
+color_image get_normal(const trace_state& state);
+void        get_normal(color_image& normal, const trace_state& state);
 
 }  // namespace yocto
 
