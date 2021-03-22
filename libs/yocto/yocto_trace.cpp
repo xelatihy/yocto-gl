@@ -1135,14 +1135,14 @@ void trace_sample(trace_state& state, const scene_model& scene,
   if (max(radiance) > params.clamp)
     radiance = radiance * (params.clamp / max(radiance));
   if (hit) {
-    state.image_acc[idx] += {radiance.x, radiance.y, radiance.z, 1};
-    state.albedo_acc[idx] += albedo;
-    state.normal_acc[idx] += normal;
+    state.image[idx] += {radiance.x, radiance.y, radiance.z, 1};
+    state.albedo[idx] += albedo;
+    state.normal[idx] += normal;
     state.hits[idx] += 1;
   } else if (!params.envhidden && !scene.environments.empty()) {
-    state.image_acc[idx] += {radiance.x, radiance.y, radiance.z, 1};
-    state.albedo_acc[idx] += {1, 1, 1};
-    state.normal_acc[idx] += -ray.d;
+    state.image[idx] += {radiance.x, radiance.y, radiance.z, 1};
+    state.albedo[idx] += {1, 1, 1};
+    state.normal[idx] += -ray.d;
     state.hits[idx] += 1;
   }
 }
@@ -1159,9 +1159,9 @@ trace_state make_state(const scene_model& scene, const trace_params& params) {
     state.width  = (int)round(params.resolution * camera.aspect);
   }
   state.samples = 0;
-  state.image_acc.assign(state.width * state.height, {0, 0, 0, 0});
-  state.albedo_acc.assign(state.width * state.height, {0, 0, 0});
-  state.normal_acc.assign(state.width * state.height, {0, 0, 0});
+  state.image.assign(state.width * state.height, {0, 0, 0, 0});
+  state.albedo.assign(state.width * state.height, {0, 0, 0});
+  state.normal.assign(state.width * state.height, {0, 0, 0});
   state.hits.assign(state.width * state.height, 0);
   state.rngs.assign(state.width * state.height, {});
   auto rng_ = make_rng(1301081);
@@ -1281,7 +1281,7 @@ void get_render(color_image& image, const trace_state& state) {
   check_image(image, state.width, state.height, true);
   auto scale = 1.0f / (float)state.samples;
   for (auto idx = 0; idx < state.width * state.height; idx++) {
-    image.pixels[idx] = state.image_acc[idx] * scale;
+    image.pixels[idx] = state.image[idx] * scale;
   }
 }
 
@@ -1305,8 +1305,8 @@ void get_denoised(color_image& image, const trace_state& state) {
        normal = vector<vec3f>(image.pixels.size());
   auto scale  = 1.0f / (float)state.samples;
   for (auto idx = 0; idx < state.width * state.height; idx++) {
-    albedo[idx] = state.albedo_acc[idx] * scale;
-    normal[idx] = state.normal_acc[idx] * scale;
+    albedo[idx] = state.albedo[idx] * scale;
+    normal[idx] = state.normal[idx] * scale;
   }
 
   // Create a denoising filter
@@ -1344,10 +1344,10 @@ void get_denoise_buffers(
   check_image(normal, state.width, state.height, true);
   auto scale = 1.0f / (float)state.samples;
   for (auto idx = 0; idx < state.width * state.height; idx++) {
-    albedo.pixels[idx] = {state.albedo_acc[idx].x * scale,
-        state.albedo_acc[idx].y * scale, state.albedo_acc[idx].z * scale, 1.0f};
-    normal.pixels[idx] = {state.normal_acc[idx].x * scale,
-        state.normal_acc[idx].y * scale, state.normal_acc[idx].z * scale, 1.0f};
+    albedo.pixels[idx] = {state.albedo[idx].x * scale,
+        state.albedo[idx].y * scale, state.albedo[idx].z * scale, 1.0f};
+    normal.pixels[idx] = {state.normal[idx].x * scale,
+        state.normal[idx].y * scale, state.normal[idx].z * scale, 1.0f};
   }
 }
 
