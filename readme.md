@@ -130,12 +130,9 @@ become part of the Yocto/GL libraries. OpenGL support is enabled by defining
 the cmake option `YOCTO_OPENGL` and contained in the `yocto_gui` library.
 
 Yocto/GL optionally supports the use of Intel's Embree for ray casting.
-At this point, we rely on prebuilt binaries distributed by Intel.
 See the main CMake file for how to link to it. Embree support is enabled by
 defining the cmake option `YOCTO_EMBREE`.
 
-Yocto/GL optionally supports the use of Intel's Open Image Denoise for denoising
-renders. At this point, we rely on prebuilt binaries distributed by Intel.
-See the main CMake file for how to link to it. Open Image Denoise support is enabled by
-defining the cmake option `YOCTO_DENOISE`. See `apps/yimagedenoise` for
-a demonstration.
+Yocto/GL optionally supports the use of Intel's Open Image Denoise for denoising.
+See the main CMake file for how to link to it. Open Image Denoise support
+is enabled by defining the cmake option `YOCTO_DENOISE`.
