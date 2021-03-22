@@ -111,6 +111,8 @@ struct trace_params {
   bool                  noparallel     = false;
   int                   pratio         = 8;
   float                 exposure       = 0;
+  bool                  filmic         = false;
+  bool                  denoise        = false;
 };
 
 inline const auto trace_sampler_names = std::vector<std::string>{"path",
@@ -154,6 +156,7 @@ bool is_sampler_lit(const trace_params& params);
 struct trace_state {
   int               width        = 0;
   int               height       = 0;
+  vector<vec4f>     image        = {};
   vector<vec4f>     accumulation = {};
   vector<int>       samples      = {};
   vector<rng_state> rngs         = {};
@@ -175,6 +178,20 @@ void trace_samples(color_image& image, trace_state& state,
 void trace_sample(color_image& image, trace_state& state,
     const scene_model& scene, const bvh_scene& bvh, const trace_lights& lights,
     int i, int j, const trace_params& params);
+
+// Get resulting render
+color_image get_render(const trace_state& state);
+void        get_render(color_image& render, const trace_state& state);
+
+// Get denoised result
+color_image get_denoised(const trace_state& state);
+void        get_denoised(color_image& render, const trace_state& state);
+
+// Get denoising buffers
+pair<color_image, color_image> get_denoise_buffers(const trace_state& state);
+// Get denoising buffers
+void get_denoise_buffers(
+    color_image& albedo, color_image& normal, const trace_state& state);
 
 }  // namespace yocto
 

@@ -42,6 +42,10 @@
 #include "yocto_shading.h"
 #include "yocto_shape.h"
 
+#if YOCTO_DENOISE
+#include <OpenImageDenoise/oidn.h>
+#endif
+
 // -----------------------------------------------------------------------------
 // IMPLEMENTATION OF RAY-SCENE INTERSECTION
 // -----------------------------------------------------------------------------
@@ -1216,6 +1220,7 @@ void trace_sample(color_image& image, trace_state& state,
                           ? xyz(state.accumulation[idx]) / state.accumulation[idx].w
                           : zero3f;
   auto coverage     = state.accumulation[idx].w / state.samples[idx];
+  state.image[idx]  = {radiance.x, radiance.y, radiance.z, coverage};
   image.pixels[idx] = {radiance.x, radiance.y, radiance.z, coverage};
 }
 
@@ -1230,6 +1235,7 @@ trace_state make_state(const scene_model& scene, const trace_params& params) {
     state.height = params.resolution;
     state.width  = (int)round(params.resolution * camera.aspect);
   }
+  state.image.assign(state.width * state.height, zero4f);
   state.accumulation.assign(state.width * state.height, zero4f);
   state.samples.assign(state.width * state.height, 0);
   state.rngs.assign(state.width * state.height, {});
@@ -1327,6 +1333,53 @@ void trace_samples(color_image& image, trace_state& state,
       trace_sample(image, state, scene, bvh, lights, i, j, params);
     });
   }
+}
+
+// Check image type
+static void check_image(
+    const color_image& image, int width, int height, bool linear) {
+  if (image.width != width || image.height != height)
+    throw std::invalid_argument{"image should have the same size"};
+  if (image.linear != linear)
+    throw std::invalid_argument{
+        linear ? "expected linear image" : "expected srgb image"};
+}
+
+// Get resulting render
+color_image get_render(const trace_state& state) {
+  auto render = make_image(state.width, state.height, true);
+  get_render(render, state);
+  return render;
+}
+void get_render(color_image& render, const trace_state& state) {
+  check_image(render, state.width, state.height, true);
+  render.pixels = state.image;
+}
+
+// Get denoised render
+color_image get_denoised(const trace_state& state) {
+  auto render = make_image(state.width, state.height, true);
+  get_denoised(render, state);
+  return render;
+}
+void get_denoised(color_image& render, const trace_state& state) {
+  get_render(render, state);
+#if YOCTO_DENOISE
+#endif
+}
+
+// Get denoising buffers
+pair<color_image, color_image> get_denoise_buffers(const trace_state& state) {
+  auto albedo = make_image(state.width, state.height, true);
+  auto normal = make_image(state.width, state.height, true);
+  get_denoise_buffers(albedo, normal, state);
+  return {albedo, normal};
+}
+// Get denoising buffers
+void get_denoise_buffers(
+    color_image& albedo, color_image& normal, const trace_state& state) {
+  check_image(albedo, state.width, state.height, true);
+  check_image(normal, state.width, state.height, true);
 }
 
 }  // namespace yocto
