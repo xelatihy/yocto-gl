@@ -361,7 +361,7 @@ static trace_result trace_path(const scene_model& scene, const bvh_scene& bvh,
   auto ray           = ray_;
   auto volume_stack  = vector<material_point>{};
   auto max_roughness = 0.0f;
-  auto hit           = !params.envhidden && !scene.environments.empty();
+  auto hit           = false;
   auto hit_albedo    = vec3f{0, 0, 0};
   auto hit_normal    = vec3f{0, 0, 0};
   auto opbounce      = 0;
@@ -508,7 +508,7 @@ static trace_result trace_pathdirect(const scene_model& scene,
   auto ray           = ray_;
   auto volume_stack  = vector<material_point>{};
   auto max_roughness = 0.0f;
-  auto hit           = !params.envhidden && !scene.environments.empty();
+  auto hit           = false;
   auto hit_albedo    = vec3f{0, 0, 0};
   auto hit_normal    = vec3f{0, 0, 0};
   auto next_emission = true;
@@ -681,7 +681,7 @@ static trace_result trace_pathmis(const scene_model& scene,
   auto ray           = ray_;
   auto volume_stack  = vector<material_point>{};
   auto max_roughness = 0.0f;
-  auto hit           = !params.envhidden && !scene.environments.empty();
+  auto hit           = false;
   auto hit_albedo    = vec3f{0, 0, 0};
   auto hit_normal    = vec3f{0, 0, 0};
   auto opbounce      = 0;
@@ -863,7 +863,7 @@ static trace_result trace_naive(const scene_model& scene, const bvh_scene& bvh,
   auto radiance   = zero3f;
   auto weight     = vec3f{1, 1, 1};
   auto ray        = ray_;
-  auto hit        = !params.envhidden && !scene.environments.empty();
+  auto hit        = false;
   auto hit_albedo = vec3f{0, 0, 0};
   auto hit_normal = vec3f{0, 0, 0};
   auto opbounce   = 0;
@@ -943,7 +943,7 @@ static trace_result trace_eyelight(const scene_model& scene,
   auto radiance   = zero3f;
   auto weight     = vec3f{1, 1, 1};
   auto ray        = ray_;
-  auto hit        = !params.envhidden && !scene.environments.empty();
+  auto hit        = false;
   auto hit_albedo = vec3f{0, 0, 0};
   auto hit_normal = vec3f{0, 0, 0};
   auto opbounce   = 0;
@@ -1141,7 +1141,7 @@ void trace_sample(trace_state& state, const scene_model& scene,
     state.albedo_acc[idx] += albedo;
     state.normal_acc[idx] += normal;
     state.hits[idx] += 1;
-  } else if (!params.envhidden) {
+  } else if (!params.envhidden && !scene.environments.empty()) {
     state.image_acc[idx] += {radiance.x, radiance.y, radiance.z, 1};
     state.albedo_acc[idx] += {1, 1, 1};
     state.normal_acc[idx] += -ray.d;
