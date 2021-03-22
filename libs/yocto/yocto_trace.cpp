@@ -1209,9 +1209,9 @@ bool is_sampler_lit(const trace_params& params) {
 }
 
 // Trace a block of samples
-void trace_sample(color_image& image, trace_state& state,
-    const scene_model& scene, const bvh_scene& bvh, const trace_lights& lights,
-    int i, int j, const trace_params& params) {
+void trace_sample(trace_state& state, const scene_model& scene,
+    const bvh_scene& bvh, const trace_lights& lights, int i, int j,
+    const trace_params& params) {
   auto& camera  = scene.cameras[params.camera];
   auto  sampler = get_trace_sampler_func(params);
   auto  idx     = state.width * j + i;
@@ -1223,12 +1223,11 @@ void trace_sample(color_image& image, trace_state& state,
     sample = sample * (params.clamp / max(sample));
   state.accumulation[idx] += sample;
   state.samples[idx] += 1;
-  auto radiance     = state.accumulation[idx].w != 0
-                          ? xyz(state.accumulation[idx]) / state.accumulation[idx].w
-                          : zero3f;
-  auto coverage     = state.accumulation[idx].w / state.samples[idx];
-  state.image[idx]  = {radiance.x, radiance.y, radiance.z, coverage};
-  image.pixels[idx] = {radiance.x, radiance.y, radiance.z, coverage};
+  auto radiance    = state.accumulation[idx].w != 0
+                         ? xyz(state.accumulation[idx]) / state.accumulation[idx].w
+                         : zero3f;
+  auto coverage    = state.accumulation[idx].w / state.samples[idx];
+  state.image[idx] = {radiance.x, radiance.y, radiance.z, coverage};
 }
 
 // Init a sequence of random number generators.
@@ -1318,26 +1317,25 @@ color_image trace_image(const scene_model& scene, const trace_params& params) {
   auto bvh    = make_bvh(scene, params);
   auto lights = make_lights(scene, params);
   auto state  = make_state(scene, params);
-  auto image  = make_image(state.width, state.height, true);
   for (auto sample = 0; sample < params.samples; sample++) {
-    trace_samples(image, state, scene, bvh, lights, params);
+    trace_samples(state, scene, bvh, lights, params);
   }
-  return image;
+  return get_render(state);
 }
 
 // Progressively compute an image by calling trace_samples multiple times.
-void trace_samples(color_image& image, trace_state& state,
-    const scene_model& scene, const bvh_scene& bvh, const trace_lights& lights,
+void trace_samples(trace_state& state, const scene_model& scene,
+    const bvh_scene& bvh, const trace_lights& lights,
     const trace_params& params) {
   if (params.noparallel) {
     for (auto j = 0; j < state.height; j++) {
       for (auto i = 0; i < state.width; i++) {
-        trace_sample(image, state, scene, bvh, lights, i, j, params);
+        trace_sample(state, scene, bvh, lights, i, j, params);
       }
     }
   } else {
     parallel_for(state.width, state.height, [&](int i, int j) {
-      trace_sample(image, state, scene, bvh, lights, i, j, params);
+      trace_sample(state, scene, bvh, lights, i, j, params);
     });
   }
 }

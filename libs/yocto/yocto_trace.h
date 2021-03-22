@@ -172,12 +172,12 @@ trace_lights make_lights(const scene_model& scene, const trace_params& params);
 bvh_scene make_bvh(const scene_model& scene, const trace_params& params);
 
 // Progressively computes an image.
-void trace_samples(color_image& image, trace_state& state,
-    const scene_model& scene, const bvh_scene& bvh, const trace_lights& lights,
+void trace_samples(trace_state& state, const scene_model& scene,
+    const bvh_scene& bvh, const trace_lights& lights,
     const trace_params& params);
-void trace_sample(color_image& image, trace_state& state,
-    const scene_model& scene, const bvh_scene& bvh, const trace_lights& lights,
-    int i, int j, const trace_params& params);
+void trace_sample(trace_state& state, const scene_model& scene,
+    const bvh_scene& bvh, const trace_lights& lights, int i, int j,
+    const trace_params& params);
 
 // Get resulting render
 color_image get_render(const trace_state& state);
