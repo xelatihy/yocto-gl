@@ -344,6 +344,13 @@ static float sample_lights_pdf(const scene_model& scene, const bvh_scene& bvh,
   return pdf;
 }
 
+struct trace_result {
+  vec3f radiance = {0, 0, 0};
+  bool  hit      = false;
+  vec3f albedo   = {0, 0, 0};
+  vec3f normal   = {0, 0, 0};
+};
+
 // Recursive path tracing.
 static vec4f trace_path(const scene_model& scene, const bvh_scene& bvh,
     const trace_lights& lights, const ray3f& ray_, rng_state& rng,
@@ -1371,15 +1378,18 @@ void get_denoised(color_image& render, const trace_state& state) {
 
   // Create a denoising filter
   oidn::FilterRef filter = device.newFilter("RT");  // ray tracing filter
-  filter.setImage("color", render.pixels.data(), oidn::Format::Float4,
-      render.width, render.height);
+  filter.setImage("color", render.pixels.data(), oidn::Format::Float3,
+      render.width, render.height, 0, sizeof(vec4f),
+      sizeof(vec4f) * render.width);
   // filter.setImage(
   //     "albedo", albedoPtr, oidn::Format::Float3, width, height);  // optional
   // filter.setImage(
   //     "normal", normalPtr, oidn::Format::Float3, width, height);  // optional
-  filter.setImage("output", render.pixels.data(), oidn::Format::Float4,
-      render.width, render.height);
-  filter.set("hdr", true);  // image is HDR
+  filter.setImage("output", render.pixels.data(), oidn::Format::Float3,
+      render.width, render.height, 0, sizeof(vec4f),
+      sizeof(vec4f) * render.width);
+  filter.set("inputScale", 1.0f);  // set scale as fixed
+  filter.set("hdr", true);         // image is HDR
   filter.commit();
 
   // Filter the image
