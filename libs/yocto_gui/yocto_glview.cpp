@@ -569,7 +569,7 @@ void view_scene(const string& title, const string& name, scene_model& scene,
           if (render_stop) return;
           trace_sample(state, scene, bvh, lights, i, j, params);
         });
-        {
+        if (!render_stop) {
           auto lock      = std::lock_guard{render_mutex};
           render_current = 0;
           if (!params.denoise || render_stop) {
