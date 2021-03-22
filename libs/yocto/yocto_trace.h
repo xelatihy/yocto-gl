@@ -78,8 +78,6 @@ enum struct trace_sampler_type {
   naive,       // naive path tracing
   eyelight,    // eyelight rendering
   falsecolor,  // false color rendering
-  albedo,      // renders the (approximate) albedo of objects for denoising
-  normal,      // renders the normals of objects for denoising
 };
 // Type of false color visualization
 enum struct trace_falsecolor_type {
@@ -111,11 +109,12 @@ struct trace_params {
   bool                  noparallel     = false;
   int                   pratio         = 8;
   float                 exposure       = 0;
+  bool                  filmic         = false;
+  bool                  denoise        = false;
 };
 
-inline const auto trace_sampler_names = std::vector<std::string>{"path",
-    "pathdirect", "pathmis", "naive", "eyelight", "falsecolor", "dalbedo",
-    "dnormal"};
+inline const auto trace_sampler_names = std::vector<std::string>{
+    "path", "pathdirect", "pathmis", "naive", "eyelight", "falsecolor"};
 
 inline const auto trace_falsecolor_names = vector<string>{"position", "normal",
     "frontfacing", "gnormal", "gfrontfacing", "texcoord", "mtype", "color",
@@ -152,11 +151,14 @@ bool is_sampler_lit(const trace_params& params);
 
 // Trace state
 struct trace_state {
-  int               width        = 0;
-  int               height       = 0;
-  vector<vec4f>     accumulation = {};
-  vector<int>       samples      = {};
-  vector<rng_state> rngs         = {};
+  int               width   = 0;
+  int               height  = 0;
+  int               samples = 0;
+  vector<vec4f>     image   = {};
+  vector<vec3f>     albedo  = {};
+  vector<vec3f>     normal  = {};
+  vector<int>       hits    = {};
+  vector<rng_state> rngs    = {};
 };
 
 // Initialize state.
@@ -169,12 +171,32 @@ trace_lights make_lights(const scene_model& scene, const trace_params& params);
 bvh_scene make_bvh(const scene_model& scene, const trace_params& params);
 
 // Progressively computes an image.
-void trace_samples(color_image& image, trace_state& state,
-    const scene_model& scene, const bvh_scene& bvh, const trace_lights& lights,
+void trace_samples(trace_state& state, const scene_model& scene,
+    const bvh_scene& bvh, const trace_lights& lights,
     const trace_params& params);
-void trace_sample(color_image& image, trace_state& state,
-    const scene_model& scene, const bvh_scene& bvh, const trace_lights& lights,
-    int i, int j, const trace_params& params);
+void trace_sample(trace_state& state, const scene_model& scene,
+    const bvh_scene& bvh, const trace_lights& lights, int i, int j,
+    const trace_params& params);
+
+// Get resulting render
+color_image get_render(const trace_state& state);
+void        get_render(color_image& render, const trace_state& state);
+
+// Get denoised result
+color_image get_denoised(const trace_state& state);
+void        get_denoised(color_image& render, const trace_state& state);
+
+// Get denoising buffers
+color_image get_albedo(const trace_state& state);
+void        get_albedo(color_image& albedo, const trace_state& state);
+color_image get_normal(const trace_state& state);
+void        get_normal(color_image& normal, const trace_state& state);
+
+// Denoise image
+color_image denoise_render(const color_image& render, const color_image& albedo,
+    const color_image& normal);
+void        denoise_render(color_image& denoised, const color_image& render,
+           const color_image& albedo, const color_image& normal);
 
 }  // namespace yocto
 

@@ -161,6 +161,8 @@
   "cSpell.words": [
     "bsdf",
     "bsdfs",
+    "denoise",
+    "denoising",
     "khronos",
     "lambertian",
     "microfacet"

@@ -131,57 +131,9 @@ become part of the Yocto/GL libraries. OpenGL support is enabled by defining
 the cmake option `YOCTO_OPENGL` and contained in the `yocto_gui` library.
 
 Yocto/GL optionally supports the use of Intel's Embree for ray casting.
-At this point, we rely on prebuilt binaries distributed by Intel.
 See the main CMake file for how to link to it. Embree support is enabled by
 defining the cmake option `YOCTO_EMBREE`.
 
-Yocto/GL optionally supports the use of Intel's Open Image Denoise for denoising
-renders. At this point, we rely on prebuilt binaries distributed by Intel.
-See the main CMake file for how to link to it. Open Image Denoise support is enabled by
-defining the cmake option `YOCTO_DENOISE`. See `apps/yimagedenoise` for
-a demonstration.
-
-<!--
-
-<style type="text/css">
-.slider {width:100%; height:100%; padding-bottom: 50%; overflow:hidden; position:relative; }
-.slider img{ position:absolute; animation:slider 80s infinite; opacity:0; width: 100%; height: auto; top: auto; left: 0; right: 0; bottom: 0;}
-@keyframes slider {6.25%{opacity:1;} 9%{opacity:0;}}
-.slider img:nth-child(16){animation-delay:0s;}
-.slider img:nth-child(15){animation-delay:5s;}
-.slider img:nth-child(14){animation-delay:10s;}
-.slider img:nth-child(13){animation-delay:15s;}
-.slider img:nth-child(12){animation-delay:20s;}
-.slider img:nth-child(11){animation-delay:25s;}
-.slider img:nth-child(10){animation-delay:30s;}
-.slider img:nth-child(9){animation-delay:35s;}
-.slider img:nth-child(8){animation-delay:40s;}
-.slider img:nth-child(7){animation-delay:45s;}
-.slider img:nth-child(6){animation-delay:50s;}
-.slider img:nth-child(5){animation-delay:55s;}
-.slider img:nth-child(4){animation-delay:60s;}
-.slider img:nth-child(3){animation-delay:65s;}
-.slider img:nth-child(2){animation-delay:70s;}
-.slider img:nth-child(1){animation-delay:75s;}
-</style>
-
-<div class="slider">
- <img src="images/vokselia-thumb.png" alt="Image rendered with Yocto/GL path tracer" />
- <img src="images/rungholt-thumb.png" alt="Image rendered with Yocto/GL path tracer" />
- <img src="images/car2-thumb.png" alt="Image rendered with Yocto/GL path tracer" />
- <img src="images/spaceship-thumb.png" alt="Image rendered with Yocto/GL path tracer" />
- <img src="images/bistrointerior-thumb.png" alt="Image rendered with Yocto/GL path tracer" />
- <img src="images/breakfastroom-thumb.png" alt="Image rendered with Yocto/GL path tracer" />
- <img src="images/kitchen-thumb.png" alt="Image rendered with Yocto/GL path tracer" />
- <img src="images/classroom-thumb.png" alt="Image rendered with Yocto/GL path tracer" />
- <img src="images/bathroom1-thumb.png" alt="Image rendered with Yocto/GL path tracer" />
- <img src="images/landscape-c3-thumb.png" alt="Image rendered with Yocto/GL path tracer" />
- <img src="images/landscape-thumb.png" alt="Image rendered with Yocto/GL path tracer" />
- <img src="images/sanmiguel-c2-thumb.png" alt="Image rendered with Yocto/GL path tracer" />
- <img src="images/sanmiguel-c1-thumb.png" alt="Image rendered with Yocto/GL path tracer" />
- <img src="images/bistroexterior-thumb.png" alt="Image rendered with Yocto/GL path tracer" />
- <img src="images/island-c6-thumb.png" alt="Image rendered with Yocto/GL path tracer" />
- <img src="images/island-thumb.png" alt="Image rendered with Yocto/GL path tracer" />
-</div>
-
--->
+Yocto/GL optionally supports the use of Intel's Open Image Denoise for denoising.
+See the main CMake file for how to link to it. Open Image Denoise support
+is enabled by defining the cmake option `YOCTO_DENOISE`.

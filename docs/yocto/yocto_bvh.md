@@ -26,9 +26,13 @@ indices refer to primitives for leaf nodes or other nodes for internal nodes.
 Two wrappers, `bvh_scene` and `bvh_shape` are used to store the BVH for
 [Yocto/Scene](yocto_scene.md) scenes and shapes. For shapes, we store a
 single BVH, while for scene we store the scene BVH and all shapes BVHs.
-These wrappers also store references to Intel's Embree BVH, if available.
 These wrappers does not store copies to shape or scene data, so that data is
 passed in for all subsequent calls.
+
+These wrappers can alternatively store references to Intel's Embree BVH,
+for faster ray-scene intersection. To use Embree, the library should be
+compiled with Embree support by setting the `YOCTO_EMBREE` compile flag and
+linking to Embree's libraries.
 
 ## Building BVH
 
@@ -36,9 +40,9 @@ Use `make_bvh(scene,highquality,embree)` or `make_bvh(shape,highquaity,embree)`
 to build a bvh for a scene or shape BVH respectively.
 These functions takes as input scenes and shapes from
 [Yocto/Scene](yocto_scene.md). By default, the BVH is build with a fast heuristic,
-that can be improved slightly by setting `highquality` to true. By default, we
-use the internal BVH, but Intel's Embree can be used, when available, if
-`embree` is set to true.
+that can be improved slightly by setting `highquality` to true.
+By default, Yocto/BVH uses the internal BVH. Intel's Embree can be used
+by setting the `embree` flag to true.
 
 ```cpp
 auto scene = scene_model{...};            // make a complete scene

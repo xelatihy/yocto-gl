@@ -544,8 +544,8 @@ void view_scene(const string& title, const string& name, scene_model& scene,
     pparams.resolution /= params.pratio;
     pparams.samples = 1;
     auto pstate     = make_state(scene, pparams);
-    auto preview    = make_image(pstate.width, pstate.height, true);
-    trace_samples(preview, pstate, scene, bvh, lights, pparams);
+    trace_samples(pstate, scene, bvh, lights, pparams);
+    auto preview = get_render(pstate);
     for (auto idx = 0; idx < state.width * state.height; idx++) {
       auto i = idx % render.width, j = idx / render.width;
       auto pi            = clamp(i / params.pratio, 0, preview.width - 1),
@@ -557,7 +557,7 @@ void view_scene(const string& title, const string& name, scene_model& scene,
       auto lock      = std::lock_guard{render_mutex};
       render_current = 0;
       image          = render;
-      tonemap_image_mt(display, image, params.exposure);
+      tonemap_image_mt(display, image, params.exposure, params.filmic);
       render_update = true;
     }
 
@@ -567,13 +567,19 @@ void view_scene(const string& title, const string& name, scene_model& scene,
         if (render_stop) return;
         parallel_for(state.width, state.height, [&](int i, int j) {
           if (render_stop) return;
-          trace_sample(render, state, scene, bvh, lights, i, j, params);
+          trace_sample(state, scene, bvh, lights, i, j, params);
         });
-        {
+        state.samples += 1;
+        if (!render_stop) {
           auto lock      = std::lock_guard{render_mutex};
           render_current = 0;
-          image          = render;
-          tonemap_image_mt(display, image, params.exposure);
+          if (!params.denoise || render_stop) {
+            get_render(render, state);
+          } else {
+            get_denoised(render, state);
+          }
+          image = render;
+          tonemap_image_mt(display, image, params.exposure, params.filmic);
           render_update = true;
         }
       }
@@ -642,9 +648,11 @@ void view_scene(const string& title, const string& name, scene_model& scene,
     }
     if (begin_header(win, "tonemap")) {
       edited += draw_slider(win, "exposure", params.exposure, -5, 5);
+      edited += draw_checkbox(win, "filmic", params.filmic);
+      edited += draw_checkbox(win, "denoise", params.denoise);
       end_header(win);
       if (edited) {
-        tonemap_image_mt(display, image, params.exposure);
+        tonemap_image_mt(display, image, params.exposure, params.filmic);
         set_image(glimage, display, false, false);
       }
     }

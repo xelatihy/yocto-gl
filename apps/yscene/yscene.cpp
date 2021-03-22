@@ -225,14 +225,14 @@ int run_render(const render_params& params_) {
   // state
   print_progress_begin("init state");
   auto state = make_state(scene, params);
-  auto image = make_image(state.width, state.height, true);
   print_progress_end();
 
   // render
   print_progress_begin("render image", params.samples);
   for (auto sample = 0; sample < params.samples; sample++) {
-    trace_samples(image, state, scene, bvh, lights, params);
+    trace_samples(state, scene, bvh, lights, params);
     if (params.savebatch) {
+      auto image = get_render(state);
       auto ext = "-s" + std::to_string(sample) + path_extension(params.output);
       auto outfilename = replace_extension(params.output, ext);
       auto ioerror     = ""s;
@@ -243,7 +243,9 @@ int run_render(const render_params& params_) {
 
   // save image
   print_progress_begin("save image");
+  auto image = get_render(state);
   if (!save_image(params.output, image, ioerror)) return print_fatal(ioerror);
+  print_progress_end();
 
   // done
   return 0;

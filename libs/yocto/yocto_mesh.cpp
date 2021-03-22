@@ -115,8 +115,12 @@ static vec3f get_bary(const vec2f& uv) {
   return vec3f{1 - uv.x - uv.y, uv.x, uv.y};
 }
 
-static vec2d to_double(const vec2f& v) { return vec2d{v.x, v.y}; }
-static vec3d to_double(const vec3f& v) { return vec3d{v.x, v.y, v.z}; }
+[[maybe_unused]] static vec2d to_double(const vec2f& v) {
+  return vec2d{v.x, v.y};
+}
+[[maybe_unused]] static vec3d to_double(const vec3f& v) {
+  return vec3d{v.x, v.y, v.z};
+}
 
 }  // namespace yocto
 
@@ -429,15 +433,17 @@ unfold_triangled unfold_face_double(const vector<vec3i>& triangles,
   return result;
 }
 
-static unfold_triangle unfold_face(const vector<vec3i>& triangles,
-    const vector<vec3f>& positions, const vector<vec3i>& adjacencies,
-    const unfold_triangle& tr, int face, int k) {
+[[maybe_unused]] static unfold_triangle unfold_face(
+    const vector<vec3i>& triangles, const vector<vec3f>& positions,
+    const vector<vec3i>& adjacencies, const unfold_triangle& tr, int face,
+    int k) {
   return unfold_face(triangles, positions, tr, face, adjacencies[face][k]);
 }
 
-static unfold_triangled unfold_face_double(const vector<vec3i>& triangles,
-    const vector<vec3f>& positions, const vector<vec3i>& adjacencies,
-    const unfold_triangled& tr, int face, int k) {
+[[maybe_unused]] static unfold_triangled unfold_face_double(
+    const vector<vec3i>& triangles, const vector<vec3f>& positions,
+    const vector<vec3i>& adjacencies, const unfold_triangled& tr, int face,
+    int k) {
   return unfold_face_double(
       triangles, positions, tr, face, adjacencies[face][k]);
 }
@@ -573,7 +579,7 @@ static vector<pair<vec2d, vec2d>> make_funnel_portals_double(
   return portals;
 }
 
-static vector<pair<vec2f, vec2f>> unfold_funnel_portals(
+[[maybe_unused]] static vector<pair<vec2f, vec2f>> unfold_funnel_portals(
     const vector<vec3i>& triangles, const vector<vec3f>& positions,
     const vector<int>& strip, const mesh_point& start, const mesh_point& end) {
   auto coords = unfold_strip(triangles, positions, strip, start);
@@ -3010,7 +3016,8 @@ static int max_curvature_point(const vector<funnel_point>& path) {
   return max_index;
 }
 
-static int max_curvature_point_double(const vector<funnel_pointd>& path) {
+[[maybe_unused]] static int max_curvature_point_double(
+    const vector<funnel_pointd>& path) {
   // Among vertices around which the path curves, find the vertex
   // with maximum angle. We are going to fix that vertex. Actually, max_index is
   // the index of the first face containing that vertex.
@@ -3031,7 +3038,7 @@ static int max_curvature_point_double(const vector<funnel_pointd>& path) {
   return max_index;
 }
 
-static vector<float> funnel(
+[[maybe_unused]] static vector<float> funnel(
     const vector<pair<vec2f, vec2f>>& portals, int& max_index) {
   // Find straight path.
   auto start       = vec2f{0, 0};
@@ -3881,7 +3888,7 @@ static vec2f tangent_path_direction(const dual_geodesic_solver& solver,
 }
 
 // TODO(fabio): compare with subdivided_bezier_polygon
-static pair<bezier_polygon, bezier_polygon> subdivide_bezier(
+[[maybe_unused]] static pair<bezier_polygon, bezier_polygon> subdivide_bezier(
     const bezier_polygon& input, const dual_geodesic_solver& solver,
     const vector<vec3i>& triangles, const vector<vec3f>& positions,
     const vector<vec3i>& adjacencies) {
@@ -4405,10 +4412,11 @@ static std::tuple<int, vec2f, spline_polygon> find_leaf(
   }
 }
 
-static mesh_point eval_spline_point_cheap(const dual_geodesic_solver& solver,
-    const vector<vec3i>& triangles, const vector<vec3f>& positions,
-    const vector<vec3i>& adjacencies, const vector<mesh_point>& control_polygon,
-    const vector<float>& knot_vector, const float& t0, const int entry) {
+[[maybe_unused]] static mesh_point eval_spline_point_cheap(
+    const dual_geodesic_solver& solver, const vector<vec3i>& triangles,
+    const vector<vec3f>& positions, const vector<vec3i>& adjacencies,
+    const vector<mesh_point>& control_polygon, const vector<float>& knot_vector,
+    const float& t0, const int entry) {
   assert(entry >= 3);
   auto control_points = {control_polygon[entry], control_polygon[entry - 1],
       control_polygon[entry - 2], control_polygon[entry - 3]};

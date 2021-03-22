@@ -37,6 +37,24 @@
       }
     }
   },
+  "useDenoise": {
+    "default": "yes",
+    "description": "Build with Denoise",
+    "choices": {
+      "yes": {
+        "short": "Denoise",
+        "settings": {
+          "YOCTO_DENOISE": "yes"
+        }
+      },
+      "no": {
+        "short": "NoDenoise",
+        "settings": {
+          "YOCTO_DENOISE": "no"
+        }
+      }
+    }
+  },
   "useOpenGL": {
     "default": "yes",
     "description": "Build with OpenGL",
