@@ -557,7 +557,7 @@ void view_scene(const string& title, const string& name, scene_model& scene,
       auto lock      = std::lock_guard{render_mutex};
       render_current = 0;
       image          = render;
-      tonemap_image_mt(display, image, params.exposure);
+      tonemap_image_mt(display, image, params.exposure, params.filmic);
       render_update = true;
     }
 
@@ -572,9 +572,13 @@ void view_scene(const string& title, const string& name, scene_model& scene,
         {
           auto lock      = std::lock_guard{render_mutex};
           render_current = 0;
-          get_render(render, state);
+          if (!params.denoise) {
+            get_render(render, state);
+          } else {
+            get_denoised(render, state);
+          }
           image = render;
-          tonemap_image_mt(display, image, params.exposure);
+          tonemap_image_mt(display, image, params.exposure, params.filmic);
           render_update = true;
         }
       }
@@ -643,9 +647,11 @@ void view_scene(const string& title, const string& name, scene_model& scene,
     }
     if (begin_header(win, "tonemap")) {
       edited += draw_slider(win, "exposure", params.exposure, -5, 5);
+      edited += draw_checkbox(win, "filmic", params.filmic);
+      edited += draw_checkbox(win, "denoise", params.denoise);
       end_header(win);
       if (edited) {
-        tonemap_image_mt(display, image, params.exposure);
+        tonemap_image_mt(display, image, params.exposure, params.filmic);
         set_image(glimage, display, false, false);
       }
     }
