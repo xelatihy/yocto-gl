@@ -666,8 +666,6 @@ static trace_result trace_pathdirect(const scene_model& scene,
     }
   }
 
-  if (!isfinite(radiance)) printf("nope\n");
-
   return {radiance, hit, hit_albedo, hit_normal};
 }
 
@@ -1147,12 +1145,6 @@ void trace_sample(trace_state& state, const scene_model& scene,
     state.normal_acc[idx] += -ray.d;
     state.hits[idx] += 1;
   }
-  if (state.hits[idx]) {
-    state.image[idx]   = state.image_acc[idx] / (float)state.hits[idx];
-    state.image[idx].w = (float)state.hits[idx] / (float)state.samples;
-  } else {
-    state.image[idx] = {0, 0, 0, 0};
-  }
 }
 
 // Init a sequence of random number generators.
@@ -1167,7 +1159,6 @@ trace_state make_state(const scene_model& scene, const trace_params& params) {
     state.width  = (int)round(params.resolution * camera.aspect);
   }
   state.samples = 0;
-  state.image.assign(state.width * state.height, {0, 0, 0, 0});
   state.image_acc.assign(state.width * state.height, {0, 0, 0, 0});
   state.albedo_acc.assign(state.width * state.height, {0, 0, 0});
   state.normal_acc.assign(state.width * state.height, {0, 0, 0});
@@ -1288,7 +1279,10 @@ color_image get_render(const trace_state& state) {
 }
 void get_render(color_image& image, const trace_state& state) {
   check_image(image, state.width, state.height, true);
-  image.pixels = state.image;
+  auto scale = 1.0f / (float)state.samples;
+  for (auto idx = 0; idx < state.width * state.height; idx++) {
+    image.pixels[idx] = state.image_acc[idx] * scale;
+  }
 }
 
 // Get denoised render
@@ -1303,6 +1297,9 @@ void get_denoised(color_image& image, const trace_state& state) {
   oidn::DeviceRef device = oidn::newDevice();
   device.commit();
 
+  // get image
+  get_render(image, state);
+
   // get albedo and normal
   auto albedo = vector<vec3f>(image.pixels.size()),
        normal = vector<vec3f>(image.pixels.size());
@@ -1314,7 +1311,7 @@ void get_denoised(color_image& image, const trace_state& state) {
 
   // Create a denoising filter
   oidn::FilterRef filter = device.newFilter("RT");  // ray tracing filter
-  filter.setImage("color", (void*)state.image.data(), oidn::Format::Float3,
+  filter.setImage("color", (void*)image.pixels.data(), oidn::Format::Float3,
       state.width, state.height, 0, sizeof(vec4f), sizeof(vec4f) * state.width);
   filter.setImage("albedo", (void*)albedo.data(), oidn::Format::Float3,
       state.width, state.height);
@@ -1328,10 +1325,6 @@ void get_denoised(color_image& image, const trace_state& state) {
 
   // Filter the image
   filter.execute();
-
-  // Set alpha
-  for (auto idx = 0; idx < state.width * state.height; idx++)
-    image.pixels[idx].w = state.image[idx].w;
 #else
   get_render(image, state);
 #endif

@@ -154,7 +154,6 @@ struct trace_state {
   int               width      = 0;
   int               height     = 0;
   int               samples    = 0;
-  vector<vec4f>     image      = {};
   vector<vec4f>     image_acc  = {};
   vector<vec3f>     albedo_acc = {};
   vector<vec3f>     normal_acc = {};
