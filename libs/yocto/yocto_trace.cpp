@@ -1286,23 +1286,22 @@ static void check_image(
 
 // Get resulting render
 color_image get_render(const trace_state& state) {
-  auto render = make_image(state.width, state.height, true);
-  get_render(render, state);
-  return render;
+  auto image = make_image(state.width, state.height, true);
+  get_render(image, state);
+  return image;
 }
-void get_render(color_image& render, const trace_state& state) {
-  check_image(render, state.width, state.height, true);
-  render.pixels = state.image;
+void get_render(color_image& image, const trace_state& state) {
+  check_image(image, state.width, state.height, true);
+  image.pixels = state.image;
 }
 
 // Get denoised render
 color_image get_denoised(const trace_state& state) {
-  auto render = make_image(state.width, state.height, true);
-  get_denoised(render, state);
-  return render;
+  auto image = make_image(state.width, state.height, true);
+  get_denoised(image, state);
+  return image;
 }
-void get_denoised(color_image& render, const trace_state& state) {
-  get_render(render, state);
+void get_denoised(color_image& image, const trace_state& state) {
 #if YOCTO_DENOISE
   // Create an Intel Open Image Denoise device
   oidn::DeviceRef device = oidn::newDevice();
@@ -1310,22 +1309,26 @@ void get_denoised(color_image& render, const trace_state& state) {
 
   // Create a denoising filter
   oidn::FilterRef filter = device.newFilter("RT");  // ray tracing filter
-  filter.setImage("color", render.pixels.data(), oidn::Format::Float3,
-      render.width, render.height, 0, sizeof(vec4f),
-      sizeof(vec4f) * render.width);
+  filter.setImage("color", (void*)state.image.data(), oidn::Format::Float3,
+      state.width, state.height, 0, sizeof(vec4f), sizeof(vec4f) * state.width);
   filter.setImage("albedo", (void*)state.albedo.data(), oidn::Format::Float3,
       state.width, state.height);
   filter.setImage("normal", (void*)state.normal.data(), oidn::Format::Float3,
       state.width, state.height);
-  filter.setImage("output", render.pixels.data(), oidn::Format::Float3,
-      render.width, render.height, 0, sizeof(vec4f),
-      sizeof(vec4f) * render.width);
+  filter.setImage("output", image.pixels.data(), oidn::Format::Float3,
+      state.width, state.height, 0, sizeof(vec4f), sizeof(vec4f) * state.width);
   filter.set("inputScale", 1.0f);  // set scale as fixed
   filter.set("hdr", true);         // image is HDR
   filter.commit();
 
   // Filter the image
   filter.execute();
+
+  // Set alpha
+  for (auto idx = 0; idx < state.width * state.height; idx++)
+    image.pixels[idx].w = state.image[idx].w;
+#else
+  get_render(image, state);
 #endif
 }
 
@@ -1341,6 +1344,12 @@ void get_denoise_buffers(
     color_image& albedo, color_image& normal, const trace_state& state) {
   check_image(albedo, state.width, state.height, true);
   check_image(normal, state.width, state.height, true);
+  for (auto idx = 0; idx < state.width * state.height; idx++) {
+    albedo.pixels[idx] = {
+        state.albedo[idx].x, state.albedo[idx].y, state.albedo[idx].z, 1.0f};
+    normal.pixels[idx] = {
+        state.normal[idx].x, state.normal[idx].y, state.normal[idx].z, 1.0f};
+  }
 }
 
 }  // namespace yocto
