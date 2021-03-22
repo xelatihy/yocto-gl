@@ -572,7 +572,7 @@ void view_scene(const string& title, const string& name, scene_model& scene,
         {
           auto lock      = std::lock_guard{render_mutex};
           render_current = 0;
-          if (!params.denoise) {
+          if (!params.denoise || render_stop) {
             get_render(render, state);
           } else {
             get_denoised(render, state);
