@@ -18,7 +18,7 @@ jobs:
         run: |
           mkdir build
           cd build
-          cmake .. -G"Unix Makefiles" -DYOCTO_OPENGL=OFF -DYOCTO_EMBREE=OFF
+          cmake .. -G"Unix Makefiles" -DYOCTO_OPENGL=OFF -DYOCTO_EMBREE=OFF -DYOCTO_DENOISE=OFF
       - name: build
         run: |
           cd build
