@@ -156,9 +156,7 @@ struct trace_state {
   int               samples    = 0;
   vector<vec4f>     image      = {};
   vector<vec4f>     image_acc  = {};
-  vector<vec3f>     albedo     = {};
   vector<vec3f>     albedo_acc = {};
-  vector<vec3f>     normal     = {};
   vector<vec3f>     normal_acc = {};
   vector<int>       hits       = {};
   vector<rng_state> rngs       = {};

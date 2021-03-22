@@ -1150,12 +1150,8 @@ void trace_sample(trace_state& state, const scene_model& scene,
   if (state.hits[idx]) {
     state.image[idx]   = state.image_acc[idx] / (float)state.hits[idx];
     state.image[idx].w = (float)state.hits[idx] / (float)state.samples;
-    state.albedo[idx]  = state.albedo_acc[idx] / (float)state.hits[idx];
-    state.normal[idx]  = state.normal_acc[idx] / (float)state.hits[idx];
   } else {
-    state.image[idx]  = {0, 0, 0, 0};
-    state.albedo[idx] = {0, 0, 0};
-    state.normal[idx] = {0, 0, 0};
+    state.image[idx] = {0, 0, 0, 0};
   }
 }
 
@@ -1173,9 +1169,7 @@ trace_state make_state(const scene_model& scene, const trace_params& params) {
   state.samples = 0;
   state.image.assign(state.width * state.height, {0, 0, 0, 0});
   state.image_acc.assign(state.width * state.height, {0, 0, 0, 0});
-  state.albedo.assign(state.width * state.height, {0, 0, 0});
   state.albedo_acc.assign(state.width * state.height, {0, 0, 0});
-  state.normal.assign(state.width * state.height, {0, 0, 0});
   state.normal_acc.assign(state.width * state.height, {0, 0, 0});
   state.hits.assign(state.width * state.height, 0);
   state.rngs.assign(state.width * state.height, {});
@@ -1261,6 +1255,7 @@ color_image trace_image(const scene_model& scene, const trace_params& params) {
 void trace_samples(trace_state& state, const scene_model& scene,
     const bvh_scene& bvh, const trace_lights& lights,
     const trace_params& params) {
+  if (state.samples >= params.samples) return;
   if (params.noparallel) {
     for (auto j = 0; j < state.height; j++) {
       for (auto i = 0; i < state.width; i++) {
@@ -1272,6 +1267,7 @@ void trace_samples(trace_state& state, const scene_model& scene,
       trace_sample(state, scene, bvh, lights, i, j, params);
     });
   }
+  state.samples += 1;
 }
 
 // Check image type
@@ -1307,13 +1303,22 @@ void get_denoised(color_image& image, const trace_state& state) {
   oidn::DeviceRef device = oidn::newDevice();
   device.commit();
 
+  // get albedo and normal
+  auto albedo = vector<vec3f>(image.pixels.size()),
+       normal = vector<vec3f>(image.pixels.size());
+  auto scale  = 1.0f / (float)state.samples;
+  for (auto idx = 0; idx < state.width * state.height; idx++) {
+    albedo[idx] = state.albedo_acc[idx] * scale;
+    normal[idx] = state.normal_acc[idx] * scale;
+  }
+
   // Create a denoising filter
   oidn::FilterRef filter = device.newFilter("RT");  // ray tracing filter
   filter.setImage("color", (void*)state.image.data(), oidn::Format::Float3,
       state.width, state.height, 0, sizeof(vec4f), sizeof(vec4f) * state.width);
-  filter.setImage("albedo", (void*)state.albedo.data(), oidn::Format::Float3,
+  filter.setImage("albedo", (void*)albedo.data(), oidn::Format::Float3,
       state.width, state.height);
-  filter.setImage("normal", (void*)state.normal.data(), oidn::Format::Float3,
+  filter.setImage("normal", (void*)normal.data(), oidn::Format::Float3,
       state.width, state.height);
   filter.setImage("output", image.pixels.data(), oidn::Format::Float3,
       state.width, state.height, 0, sizeof(vec4f), sizeof(vec4f) * state.width);
@@ -1344,11 +1349,12 @@ void get_denoise_buffers(
     color_image& albedo, color_image& normal, const trace_state& state) {
   check_image(albedo, state.width, state.height, true);
   check_image(normal, state.width, state.height, true);
+  auto scale = 1.0f / (float)state.samples;
   for (auto idx = 0; idx < state.width * state.height; idx++) {
-    albedo.pixels[idx] = {
-        state.albedo[idx].x, state.albedo[idx].y, state.albedo[idx].z, 1.0f};
-    normal.pixels[idx] = {
-        state.normal[idx].x, state.normal[idx].y, state.normal[idx].z, 1.0f};
+    albedo.pixels[idx] = {state.albedo_acc[idx].x * scale,
+        state.albedo_acc[idx].y * scale, state.albedo_acc[idx].z * scale, 1.0f};
+    normal.pixels[idx] = {state.normal_acc[idx].x * scale,
+        state.normal_acc[idx].y * scale, state.normal_acc[idx].z * scale, 1.0f};
   }
 }
 
