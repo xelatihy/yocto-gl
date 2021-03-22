@@ -43,7 +43,7 @@
 #include "yocto_shape.h"
 
 #if YOCTO_DENOISE
-#include <OpenImageDenoise/oidn.h>
+#include <OpenImageDenoise/oidn.hpp>
 #endif
 
 // -----------------------------------------------------------------------------
@@ -1365,6 +1365,25 @@ color_image get_denoised(const trace_state& state) {
 void get_denoised(color_image& render, const trace_state& state) {
   get_render(render, state);
 #if YOCTO_DENOISE
+  // Create an Intel Open Image Denoise device
+  oidn::DeviceRef device = oidn::newDevice();
+  device.commit();
+
+  // Create a denoising filter
+  oidn::FilterRef filter = device.newFilter("RT");  // ray tracing filter
+  filter.setImage("color", render.pixels.data(), oidn::Format::Float4,
+      render.width, render.height);
+  // filter.setImage(
+  //     "albedo", albedoPtr, oidn::Format::Float3, width, height);  // optional
+  // filter.setImage(
+  //     "normal", normalPtr, oidn::Format::Float3, width, height);  // optional
+  filter.setImage("output", render.pixels.data(), oidn::Format::Float4,
+      render.width, render.height);
+  filter.set("hdr", true);  // image is HDR
+  filter.commit();
+
+  // Filter the image
+  filter.execute();
 #endif
 }
 
