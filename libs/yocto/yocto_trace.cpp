@@ -352,7 +352,7 @@ struct trace_result {
 };
 
 // Recursive path tracing.
-static vec4f trace_path(const scene_model& scene, const bvh_scene& bvh,
+static trace_result trace_path(const scene_model& scene, const bvh_scene& bvh,
     const trace_lights& lights, const ray3f& ray_, rng_state& rng,
     const trace_params& params) {
   // initialize
@@ -362,6 +362,8 @@ static vec4f trace_path(const scene_model& scene, const bvh_scene& bvh,
   auto volume_stack  = vector<material_point>{};
   auto max_roughness = 0.0f;
   auto hit           = !params.envhidden && !scene.environments.empty();
+  auto hit_albedo    = vec3f{0, 0, 0};
+  auto hit_normal    = vec3f{0, 0, 0};
   auto opbounce      = 0;
 
   // trace  path
@@ -411,7 +413,13 @@ static vec4f trace_path(const scene_model& scene, const bvh_scene& bvh,
         bounce -= 1;
         continue;
       }
-      hit = true;
+
+      // set hit variables
+      if (bounce == 0) {
+        hit        = true;
+        hit_albedo = material.color;
+        hit_normal = normal;
+      }
 
       // accumulate emission
       radiance += weight * eval_emission(material, normal, outgoing);
@@ -456,9 +464,6 @@ static vec4f trace_path(const scene_model& scene, const bvh_scene& bvh,
       auto  position = ray.o + ray.d * intersection.distance;
       auto& vsdf     = volume_stack.back();
 
-      // handle opacity
-      hit = true;
-
       // accumulate emission
       // radiance += weight * eval_volemission(emission, outgoing);
 
@@ -490,15 +495,13 @@ static vec4f trace_path(const scene_model& scene, const bvh_scene& bvh,
     }
   }
 
-  if (!isfinite(radiance)) printf("nope\n");
-
-  return {radiance.x, radiance.y, radiance.z, hit ? 1.0f : 0.0f};
+  return {radiance, hit, hit_albedo, hit_normal};
 }
 
 // Recursive path tracing.
-static vec4f trace_pathdirect(const scene_model& scene, const bvh_scene& bvh,
-    const trace_lights& lights, const ray3f& ray_, rng_state& rng,
-    const trace_params& params) {
+static trace_result trace_pathdirect(const scene_model& scene,
+    const bvh_scene& bvh, const trace_lights& lights, const ray3f& ray_,
+    rng_state& rng, const trace_params& params) {
   // initialize
   auto radiance      = zero3f;
   auto weight        = vec3f{1, 1, 1};
@@ -506,6 +509,8 @@ static vec4f trace_pathdirect(const scene_model& scene, const bvh_scene& bvh,
   auto volume_stack  = vector<material_point>{};
   auto max_roughness = 0.0f;
   auto hit           = !params.envhidden && !scene.environments.empty();
+  auto hit_albedo    = vec3f{0, 0, 0};
+  auto hit_normal    = vec3f{0, 0, 0};
   auto next_emission = true;
   auto opbounce      = 0;
 
@@ -556,7 +561,13 @@ static vec4f trace_pathdirect(const scene_model& scene, const bvh_scene& bvh,
         bounce -= 1;
         continue;
       }
-      hit = true;
+
+      // set hit variables
+      if (bounce == 0) {
+        hit        = true;
+        hit_albedo = material.color;
+        hit_normal = normal;
+      }
 
       // accumulate emission
       if (next_emission)
@@ -627,12 +638,6 @@ static vec4f trace_pathdirect(const scene_model& scene, const bvh_scene& bvh,
       auto  position = ray.o + ray.d * intersection.distance;
       auto& vsdf     = volume_stack.back();
 
-      // handle opacity
-      hit = true;
-
-      // accumulate emission
-      // radiance += weight * eval_volemission(emission, outgoing);
-
       // next direction
       auto incoming = zero3f;
       if (rand1f(rng) < 0.5f) {
@@ -663,13 +668,13 @@ static vec4f trace_pathdirect(const scene_model& scene, const bvh_scene& bvh,
 
   if (!isfinite(radiance)) printf("nope\n");
 
-  return {radiance.x, radiance.y, radiance.z, hit ? 1.0f : 0.0f};
+  return {radiance, hit, hit_albedo, hit_normal};
 }
 
 // Recursive path tracing with MIS.
-static vec4f trace_pathmis(const scene_model& scene, const bvh_scene& bvh,
-    const trace_lights& lights, const ray3f& ray_, rng_state& rng,
-    const trace_params& params) {
+static trace_result trace_pathmis(const scene_model& scene,
+    const bvh_scene& bvh, const trace_lights& lights, const ray3f& ray_,
+    rng_state& rng, const trace_params& params) {
   // initialize
   auto radiance      = zero3f;
   auto weight        = vec3f{1, 1, 1};
@@ -677,6 +682,8 @@ static vec4f trace_pathmis(const scene_model& scene, const bvh_scene& bvh,
   auto volume_stack  = vector<material_point>{};
   auto max_roughness = 0.0f;
   auto hit           = !params.envhidden && !scene.environments.empty();
+  auto hit_albedo    = vec3f{0, 0, 0};
+  auto hit_normal    = vec3f{0, 0, 0};
   auto opbounce      = 0;
 
   // MIS helpers
@@ -735,7 +742,13 @@ static vec4f trace_pathmis(const scene_model& scene, const bvh_scene& bvh,
         bounce -= 1;
         continue;
       }
-      hit = true;
+
+      // set hit variables
+      if (bounce == 0) {
+        hit        = true;
+        hit_albedo = material.color;
+        hit_normal = normal;
+      }
 
       // accumulate emission
       if (next_emission) {
@@ -809,12 +822,6 @@ static vec4f trace_pathmis(const scene_model& scene, const bvh_scene& bvh,
       auto  position = ray.o + ray.d * intersection.distance;
       auto& vsdf     = volume_stack.back();
 
-      // handle opacity
-      hit = true;
-
-      // accumulate emission
-      // radiance += weight * eval_volemission(emission, outgoing);
-
       // next direction
       auto incoming = zero3f;
       if (rand1f(rng) < 0.5f) {
@@ -845,19 +852,21 @@ static vec4f trace_pathmis(const scene_model& scene, const bvh_scene& bvh,
     }
   }
 
-  return {radiance.x, radiance.y, radiance.z, hit ? 1.0f : 0.0f};
+  return {radiance, hit, hit_albedo, hit_normal};
 }
 
 // Recursive path tracing.
-static vec4f trace_naive(const scene_model& scene, const bvh_scene& bvh,
+static trace_result trace_naive(const scene_model& scene, const bvh_scene& bvh,
     const trace_lights& lights, const ray3f& ray_, rng_state& rng,
     const trace_params& params) {
   // initialize
-  auto radiance = zero3f;
-  auto weight   = vec3f{1, 1, 1};
-  auto ray      = ray_;
-  auto hit      = !params.envhidden && !scene.environments.empty();
-  auto opbounce = 0;
+  auto radiance   = zero3f;
+  auto weight     = vec3f{1, 1, 1};
+  auto ray        = ray_;
+  auto hit        = !params.envhidden && !scene.environments.empty();
+  auto hit_albedo = vec3f{0, 0, 0};
+  auto hit_normal = vec3f{0, 0, 0};
+  auto opbounce   = 0;
 
   // trace  path
   for (auto bounce = 0; bounce < params.bounces; bounce++) {
@@ -885,7 +894,13 @@ static vec4f trace_naive(const scene_model& scene, const bvh_scene& bvh,
       bounce -= 1;
       continue;
     }
-    hit = true;
+
+    // set hit variables
+    if (bounce == 0) {
+      hit        = true;
+      hit_albedo = material.color;
+      hit_normal = normal;
+    }
 
     // accumulate emission
     radiance += weight * eval_emission(material, normal, outgoing);
@@ -917,19 +932,21 @@ static vec4f trace_naive(const scene_model& scene, const bvh_scene& bvh,
     ray = {position, incoming};
   }
 
-  return {radiance.x, radiance.y, radiance.z, hit ? 1.0f : 0.0f};
+  return {radiance, hit, hit_albedo, hit_normal};
 }
 
 // Eyelight for quick previewing.
-static vec4f trace_eyelight(const scene_model& scene, const bvh_scene& bvh,
-    const trace_lights& lights, const ray3f& ray_, rng_state& rng,
-    const trace_params& params) {
+static trace_result trace_eyelight(const scene_model& scene,
+    const bvh_scene& bvh, const trace_lights& lights, const ray3f& ray_,
+    rng_state& rng, const trace_params& params) {
   // initialize
-  auto radiance = zero3f;
-  auto weight   = vec3f{1, 1, 1};
-  auto ray      = ray_;
-  auto hit      = !params.envhidden && !scene.environments.empty();
-  auto opbounce = 0;
+  auto radiance   = zero3f;
+  auto weight     = vec3f{1, 1, 1};
+  auto ray        = ray_;
+  auto hit        = !params.envhidden && !scene.environments.empty();
+  auto hit_albedo = vec3f{0, 0, 0};
+  auto hit_normal = vec3f{0, 0, 0};
+  auto opbounce   = 0;
 
   // trace  path
   for (auto bounce = 0; bounce < max(params.bounces, 4); bounce++) {
@@ -957,7 +974,13 @@ static vec4f trace_eyelight(const scene_model& scene, const bvh_scene& bvh,
       bounce -= 1;
       continue;
     }
-    hit = true;
+
+    // set hit variables
+    if (bounce == 0) {
+      hit        = true;
+      hit_albedo = material.color;
+      hit_normal = normal;
+    }
 
     // accumulate emission
     auto incoming = outgoing;
@@ -978,18 +1001,16 @@ static vec4f trace_eyelight(const scene_model& scene, const bvh_scene& bvh,
     ray = {position, incoming};
   }
 
-  return {radiance.x, radiance.y, radiance.z, hit ? 1.0f : 0.0f};
+  return {radiance, hit, hit_albedo, hit_normal};
 }
 
 // False color rendering
-static vec4f trace_falsecolor(const scene_model& scene, const bvh_scene& bvh,
-    const trace_lights& lights, const ray3f& ray, rng_state& rng,
-    const trace_params& params) {
+static trace_result trace_falsecolor(const scene_model& scene,
+    const bvh_scene& bvh, const trace_lights& lights, const ray3f& ray,
+    rng_state& rng, const trace_params& params) {
   // intersect next point
   auto intersection = intersect_bvh(bvh, scene, ray);
-  if (!intersection.hit) {
-    return {0, 0, 0, 0};
-  }
+  if (!intersection.hit) return {};
 
   // prepare shading point
   auto outgoing = -ray.d;
@@ -1007,174 +1028,69 @@ static vec4f trace_falsecolor(const scene_model& scene, const bvh_scene& bvh,
   auto hashed_color = [](int id) {
     auto hashed = std::hash<int>()(id);
     auto rng    = make_rng(trace_default_seed, hashed);
-    auto rgb    = pow(0.5f + 0.5f * rand3f(rng), 2.2f);
-    return vec4f{rgb.x, rgb.y, rgb.z, 1};
+    return pow(0.5f + 0.5f * rand3f(rng), 2.2f);
   };
 
-  // make vec4f
-  auto make_vec = [](const vec3f& xyz, float w) {
-    return vec4f{xyz.x, xyz.y, xyz.z, w};
-  };
-
+  // compute result
+  auto result = vec3f{0, 0, 0};
   switch (params.falsecolor) {
     case trace_falsecolor_type::position:
-      return make_vec(position * 0.5f + 0.5f, 1);
-    case trace_falsecolor_type::normal:
-      return make_vec(normal * 0.5f + 0.5f, 1);
+      result = position * 0.5f + 0.5f;
+      break;
+    case trace_falsecolor_type::normal: result = normal * 0.5f + 0.5f; break;
     case trace_falsecolor_type::frontfacing:
-      return dot(normal, -ray.d) > 0 ? vec4f{0, 1, 0, 1} : vec4f{1, 0, 0, 1};
-    case trace_falsecolor_type::gnormal:
-      return make_vec(gnormal * 0.5f + 0.5f, 1);
+      result = dot(normal, -ray.d) > 0 ? vec3f{0, 1, 0} : vec3f{1, 0, 0};
+      break;
+    case trace_falsecolor_type::gnormal: result = gnormal * 0.5f + 0.5f; break;
     case trace_falsecolor_type::gfrontfacing:
-      return make_vec(
-          dot(gnormal, -ray.d) > 0 ? vec3f{0, 1, 0} : vec3f{1, 0, 0}, 1);
-    case trace_falsecolor_type::mtype: return hashed_color((int)material.type);
+      result = dot(gnormal, -ray.d) > 0 ? vec3f{0, 1, 0} : vec3f{1, 0, 0};
+      break;
+    case trace_falsecolor_type::mtype:
+      result = hashed_color((int)material.type);
+      break;
     case trace_falsecolor_type::texcoord:
-      return {fmod(texcoord.x, 1.0f), fmod(texcoord.y, 1.0f), 0, 1};
-    case trace_falsecolor_type::color: return make_vec(material.color, 1);
-    case trace_falsecolor_type::emission: return make_vec(material.emission, 1);
+      result = {fmod(texcoord.x, 1.0f), fmod(texcoord.y, 1.0f), 0};
+      break;
+    case trace_falsecolor_type::color: result = material.color; break;
+    case trace_falsecolor_type::emission: result = material.emission; break;
     case trace_falsecolor_type::roughness:
-      return {material.roughness, material.roughness, material.roughness, 1};
+      result = {material.roughness, material.roughness, material.roughness};
+      break;
     case trace_falsecolor_type::opacity:
-      return {material.opacity, material.opacity, material.opacity, 1};
+      result = {material.opacity, material.opacity, material.opacity};
+      break;
     case trace_falsecolor_type::metallic:
-      return {material.metallic, material.metallic, material.metallic, 1};
-    case trace_falsecolor_type::delta: return {delta, delta, delta, 1};
+      result = {material.metallic, material.metallic, material.metallic};
+      break;
+    case trace_falsecolor_type::delta: result = {delta, delta, delta}; break;
     case trace_falsecolor_type::element:
-      return hashed_color(intersection.element);
+      result = hashed_color(intersection.element);
+      break;
     case trace_falsecolor_type::instance:
-      return hashed_color(intersection.instance);
+      result = hashed_color(intersection.instance);
+      break;
     case trace_falsecolor_type::shape:
-      return hashed_color(scene.instances[intersection.instance].shape);
+      result = hashed_color(scene.instances[intersection.instance].shape);
+      break;
     case trace_falsecolor_type::material:
-      return hashed_color(scene.instances[intersection.instance].material);
+      result = hashed_color(scene.instances[intersection.instance].material);
+      break;
     case trace_falsecolor_type::highlight: {
       if (material.emission == zero3f) material.emission = {0.2f, 0.2f, 0.2f};
-      return make_vec(material.emission * abs(dot(-ray.d, normal)), 1);
+      result = material.emission * abs(dot(-ray.d, normal));
+      break;
     } break;
-    default: return {0, 0, 0, 0};
-  }
-}
-
-static vec4f trace_albedo(const scene_model& scene, const bvh_scene& bvh,
-    const trace_lights& lights, const ray3f& ray, rng_state& rng,
-    const trace_params& params, int bounce) {
-  auto intersection = intersect_bvh(bvh, scene, ray);
-  if (!intersection.hit) {
-    auto radiance = eval_environment(scene, ray.d);
-    return {radiance.x, radiance.y, radiance.z, 1};
+    default: result = {0, 0, 0};
   }
 
-  // prepare shading point
-  auto  outgoing = -ray.d;
-  auto& instance = scene.instances[intersection.instance];
-  auto  element  = intersection.element;
-  auto  uv       = intersection.uv;
-  auto  position = eval_position(scene, instance, element, uv);
-  auto  normal   = eval_shading_normal(scene, instance, element, uv, outgoing);
-  auto  material = eval_material(scene, instance, element, uv);
-
-  if (material.emission != zero3f) {
-    return {material.emission.x, material.emission.y, material.emission.z, 1};
-  }
-
-  auto albedo = material.color;
-
-  // handle opacity
-  if (material.opacity < 1.0f) {
-    auto blend_albedo = trace_albedo(scene, bvh, lights,
-        ray3f{position + ray.d * 1e-2f, ray.d}, rng, params, bounce);
-    return lerp(
-        blend_albedo, vec4f{albedo.x, albedo.y, albedo.z, 1}, material.opacity);
-  }
-
-  if (material.roughness < 0.05 && bounce < 5) {
-    if (material.type == scene_material_type::transparent) {
-      auto incoming     = -outgoing;
-      auto trans_albedo = trace_albedo(scene, bvh, lights,
-          ray3f{position, incoming}, rng, params, bounce + 1);
-
-      incoming         = reflect(outgoing, normal);
-      auto spec_albedo = trace_albedo(scene, bvh, lights,
-          ray3f{position, incoming}, rng, params, bounce + 1);
-
-      auto fresnel = fresnel_dielectric(material.ior, outgoing, normal);
-      auto dielectric_albedo = lerp(trans_albedo, spec_albedo, fresnel);
-      return dielectric_albedo * vec4f{albedo.x, albedo.y, albedo.z, 1};
-    } else if (material.type == scene_material_type::metallic) {
-      auto incoming    = reflect(outgoing, normal);
-      auto refl_albedo = trace_albedo(scene, bvh, lights,
-          ray3f{position, incoming}, rng, params, bounce + 1);
-      return refl_albedo * vec4f{albedo.x, albedo.y, albedo.z, 1};
-    }
-  }
-
-  return {albedo.x, albedo.y, albedo.z, 1};
-}
-
-static vec4f trace_albedo(const scene_model& scene, const bvh_scene& bvh,
-    const trace_lights& lights, const ray3f& ray, rng_state& rng,
-    const trace_params& params) {
-  auto albedo = trace_albedo(scene, bvh, lights, ray, rng, params, 0);
-  return clamp(albedo, 0.0, 1.0);
-}
-
-static vec4f trace_normal(const scene_model& scene, const bvh_scene& bvh,
-    const trace_lights& lights, const ray3f& ray, rng_state& rng,
-    const trace_params& params, int bounce) {
-  auto intersection = intersect_bvh(bvh, scene, ray);
-  if (!intersection.hit) {
-    return {0, 0, 0, 1};
-  }
-
-  // prepare shading point
-  auto  outgoing = -ray.d;
-  auto& instance = scene.instances[intersection.instance];
-  auto  element  = intersection.element;
-  auto  uv       = intersection.uv;
-  auto  position = eval_position(scene, instance, element, uv);
-  auto  normal   = eval_shading_normal(scene, instance, element, uv, outgoing);
-  auto  material = eval_material(scene, instance, element, uv);
-
-  // handle opacity
-  if (material.opacity < 1.0f) {
-    auto normal = trace_normal(scene, bvh, lights,
-        ray3f{position + ray.d * 1e-2f, ray.d}, rng, params, bounce);
-    return lerp(normal, normal, material.opacity);
-  }
-
-  if (material.roughness < 0.05f && bounce < 5) {
-    if (material.type == scene_material_type::transparent) {
-      auto incoming   = -outgoing;
-      auto trans_norm = trace_normal(scene, bvh, lights,
-          ray3f{position, incoming}, rng, params, bounce + 1);
-
-      incoming       = reflect(outgoing, normal);
-      auto spec_norm = trace_normal(scene, bvh, lights,
-          ray3f{position, incoming}, rng, params, bounce + 1);
-
-      auto fresnel = fresnel_dielectric(material.ior, outgoing, normal);
-      return lerp(trans_norm, spec_norm, fresnel);
-    } else if (material.type == scene_material_type::metallic) {
-      auto incoming = reflect(outgoing, normal);
-      return trace_normal(scene, bvh, lights, ray3f{position, incoming}, rng,
-          params, bounce + 1);
-    }
-  }
-
-  return {normal.x, normal.y, normal.z, 1};
-}
-
-static vec4f trace_normal(const scene_model& scene, const bvh_scene& bvh,
-    const trace_lights& lights, const ray3f& ray, rng_state& rng,
-    const trace_params& params) {
-  return trace_normal(scene, bvh, lights, ray, rng, params, 0);
+  // done
+  return {srgb_to_rgb(result), true, material.color, normal};
 }
 
 // Trace a single ray from the camera using the given algorithm.
-using sampler_func = vec4f (*)(const scene_model& scene, const bvh_scene& bvh,
-    const trace_lights& lights, const ray3f& ray, rng_state& rng,
-    const trace_params& params);
+using sampler_func = trace_result (*)(const scene_model& scene,
+    const bvh_scene& bvh, const trace_lights& lights, const ray3f& ray,
+    rng_state& rng, const trace_params& params);
 static sampler_func get_trace_sampler_func(const trace_params& params) {
   switch (params.sampler) {
     case trace_sampler_type::path: return trace_path;
@@ -1183,8 +1099,6 @@ static sampler_func get_trace_sampler_func(const trace_params& params) {
     case trace_sampler_type::naive: return trace_naive;
     case trace_sampler_type::eyelight: return trace_eyelight;
     case trace_sampler_type::falsecolor: return trace_falsecolor;
-    case trace_sampler_type::albedo: return trace_albedo;
-    case trace_sampler_type::normal: return trace_normal;
     default: {
       throw std::runtime_error("sampler unknown");
       return nullptr;
@@ -1196,11 +1110,11 @@ static sampler_func get_trace_sampler_func(const trace_params& params) {
 bool is_sampler_lit(const trace_params& params) {
   switch (params.sampler) {
     case trace_sampler_type::path: return true;
+    case trace_sampler_type::pathdirect: return true;
+    case trace_sampler_type::pathmis: return true;
     case trace_sampler_type::naive: return true;
     case trace_sampler_type::eyelight: return false;
     case trace_sampler_type::falsecolor: return false;
-    case trace_sampler_type::albedo: return false;
-    case trace_sampler_type::normal: return false;
     default: {
       throw std::runtime_error("sampler unknown");
       return false;
@@ -1217,17 +1131,32 @@ void trace_sample(trace_state& state, const scene_model& scene,
   auto  idx     = state.width * j + i;
   auto  ray     = sample_camera(camera, {i, j}, {state.width, state.height},
       rand2f(state.rngs[idx]), rand2f(state.rngs[idx]), params.tentfilter);
-  auto  sample  = sampler(scene, bvh, lights, ray, state.rngs[idx], params);
-  if (!isfinite(xyz(sample))) sample = {0, 0, 0, sample.w};
-  if (max(sample) > params.clamp)
-    sample = sample * (params.clamp / max(sample));
-  state.accumulation[idx] += sample;
-  state.samples[idx] += 1;
-  auto radiance    = state.accumulation[idx].w != 0
-                         ? xyz(state.accumulation[idx]) / state.accumulation[idx].w
-                         : zero3f;
-  auto coverage    = state.accumulation[idx].w / state.samples[idx];
-  state.image[idx] = {radiance.x, radiance.y, radiance.z, coverage};
+  auto [radiance, hit, albedo, normal] = sampler(
+      scene, bvh, lights, ray, state.rngs[idx], params);
+  if (!isfinite(radiance)) radiance = {0, 0, 0};
+  if (max(radiance) > params.clamp)
+    radiance = radiance * (params.clamp / max(radiance));
+  if (hit) {
+    state.image_acc[idx] += {radiance.x, radiance.y, radiance.z, 1};
+    state.albedo_acc[idx] += albedo;
+    state.normal_acc[idx] += normal;
+    state.hits[idx] += 1;
+  } else if (!params.envhidden) {
+    state.image_acc[idx] += {radiance.x, radiance.y, radiance.z, 1};
+    state.albedo_acc[idx] += {1, 1, 1};
+    state.normal_acc[idx] += -ray.d;
+    state.hits[idx] += 1;
+  }
+  if (state.hits[idx]) {
+    state.image[idx]   = state.image_acc[idx] / (float)state.hits[idx];
+    state.image[idx].w = (float)state.hits[idx] / (float)state.samples;
+    state.albedo[idx]  = state.albedo_acc[idx] / (float)state.hits[idx];
+    state.normal[idx]  = state.normal_acc[idx] / (float)state.hits[idx];
+  } else {
+    state.image[idx]  = {0, 0, 0, 0};
+    state.albedo[idx] = {0, 0, 0};
+    state.normal[idx] = {0, 0, 0};
+  }
 }
 
 // Init a sequence of random number generators.
@@ -1241,9 +1170,14 @@ trace_state make_state(const scene_model& scene, const trace_params& params) {
     state.height = params.resolution;
     state.width  = (int)round(params.resolution * camera.aspect);
   }
-  state.image.assign(state.width * state.height, zero4f);
-  state.accumulation.assign(state.width * state.height, zero4f);
-  state.samples.assign(state.width * state.height, 0);
+  state.samples = 0;
+  state.image.assign(state.width * state.height, {0, 0, 0, 0});
+  state.image_acc.assign(state.width * state.height, {0, 0, 0, 0});
+  state.albedo.assign(state.width * state.height, {0, 0, 0});
+  state.albedo_acc.assign(state.width * state.height, {0, 0, 0});
+  state.normal.assign(state.width * state.height, {0, 0, 0});
+  state.normal_acc.assign(state.width * state.height, {0, 0, 0});
+  state.hits.assign(state.width * state.height, 0);
   state.rngs.assign(state.width * state.height, {});
   auto rng_ = make_rng(1301081);
   for (auto& rng : state.rngs) {

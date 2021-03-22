@@ -78,8 +78,6 @@ enum struct trace_sampler_type {
   naive,       // naive path tracing
   eyelight,    // eyelight rendering
   falsecolor,  // false color rendering
-  albedo,      // renders the (approximate) albedo of objects for denoising
-  normal,      // renders the normals of objects for denoising
 };
 // Type of false color visualization
 enum struct trace_falsecolor_type {
@@ -115,9 +113,8 @@ struct trace_params {
   bool                  denoise        = false;
 };
 
-inline const auto trace_sampler_names = std::vector<std::string>{"path",
-    "pathdirect", "pathmis", "naive", "eyelight", "falsecolor", "dalbedo",
-    "dnormal"};
+inline const auto trace_sampler_names = std::vector<std::string>{
+    "path", "pathdirect", "pathmis", "naive", "eyelight", "falsecolor"};
 
 inline const auto trace_falsecolor_names = vector<string>{"position", "normal",
     "frontfacing", "gnormal", "gfrontfacing", "texcoord", "mtype", "color",
@@ -154,12 +151,17 @@ bool is_sampler_lit(const trace_params& params);
 
 // Trace state
 struct trace_state {
-  int               width        = 0;
-  int               height       = 0;
-  vector<vec4f>     image        = {};
-  vector<vec4f>     accumulation = {};
-  vector<int>       samples      = {};
-  vector<rng_state> rngs         = {};
+  int               width      = 0;
+  int               height     = 0;
+  int               samples    = 0;
+  vector<vec4f>     image      = {};
+  vector<vec4f>     image_acc  = {};
+  vector<vec3f>     albedo     = {};
+  vector<vec3f>     albedo_acc = {};
+  vector<vec3f>     normal     = {};
+  vector<vec3f>     normal_acc = {};
+  vector<int>       hits       = {};
+  vector<rng_state> rngs       = {};
 };
 
 // Initialize state.
