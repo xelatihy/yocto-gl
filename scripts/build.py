@@ -15,7 +15,7 @@ def cli():
 def release(clear=False):
     os.makedirs('build/terminal/Release', exist_ok=True)
     os.chdir('build/terminal/Release')
-    os.system('cmake ../../.. -GNinja -DCMAKE_BUILD_TYPE=Release -DYOCTO_EMBREE=ON')
+    os.system('cmake ../../.. -GNinja -DCMAKE_BUILD_TYPE=Release -DYOCTO_EMBREE=ON -DYOCTO_DENOISE=ON')
     os.system('cmake --build . --parallel 8' +
               (' --clean-first' if clear else ''))
 
@@ -25,7 +25,7 @@ def release(clear=False):
 def debug(clear=False):
     os.makedirs('build/terminal/Debug', exist_ok=True)
     os.chdir('build/terminal/Debug')
-    os.system('cmake ../../.. -GNinja -DCMAKE_BUILD_TYPE=Debug -DYOCTO_EMBREE=ON')
+    os.system('cmake ../../.. -GNinja -DCMAKE_BUILD_TYPE=Debug -DYOCTO_EMBREE=ON -DYOCTO_DENOISE=ON')
     os.system('cmake --build . --parallel 8' +
               (' --clean-first' if clear else ''))
 
@@ -34,7 +34,7 @@ def debug(clear=False):
 def xcode():
     os.makedirs('build/xcode', exist_ok=True)
     os.chdir('build/xcode')
-    os.system('cmake ../.. -GXcode -DYOCTO_EMBREE=ON')
+    os.system('cmake ../.. -GXcode -DYOCTO_EMBREE=ON -DYOCTO_DENOISE=ON')
     os.system('open yocto_gl.xcodeproj')
 
 
@@ -42,7 +42,7 @@ def xcode():
 def visualstudio():
     os.makedirs('build/vs', exist_ok=True)
     os.chdir('build/vs')
-    os.system('cmake ../.. -G  "Visual Studio 15 2017" -DYOCTO_EMBREE=ON')
+    os.system('cmake ../.. -G  "Visual Studio 15 2017" -DYOCTO_EMBREE=ON -DYOCTO_DENOISE=ON')
     os.system('yocto_gl.sln')
 
 
