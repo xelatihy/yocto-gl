@@ -109,6 +109,10 @@ inline vec3f sample_microfacet(float roughness, const vec3f& normal,
 inline float sample_microfacet_pdf(float roughness, const vec3f& normal,
     const vec3f& halfway, const vec3f& outgoing, bool ggx = true);
 
+// Microfacet energy compensation (E(cos(w)))
+inline float microfacet_cosintegral(
+    float roughness, const vec3f& normal, const vec3f& outgoing);
+
 // Evaluates a diffuse BRDF lobe.
 inline vec3f eval_matte(const vec3f& color, const vec3f& normal,
     const vec3f& outgoing, const vec3f& incoming);
@@ -131,7 +135,8 @@ inline float sample_glossy_pdf(const vec3f& color, float ior, float roughness,
 
 // Evaluates a metal BRDF lobe.
 inline vec3f eval_metallic(const vec3f& color, float roughness,
-    const vec3f& normal, const vec3f& outgoing, const vec3f& incoming);
+    const vec3f& normal, const vec3f& outgoing, const vec3f& incoming,
+    bool compensation = false);
 // Sample a metal BRDF lobe.
 inline vec3f sample_metallic(const vec3f& color, float roughness,
     const vec3f& normal, const vec3f& outgoing, const vec2f& rn);
@@ -491,6 +496,21 @@ inline float sample_microfacet_pdf(float roughness, const vec3f& normal,
          max(0.0f, dot(halfway, outgoing)) / abs(dot(normal, outgoing));
 }
 
+// Microfacet energy compensation (E(cos(w)))
+inline float microfacet_cosintegral(
+    float roughness, const vec3f& normal, const vec3f& outgoing) {
+  // https://blog.selfshadow.com/publications/s2017-shading-course/imageworks/s2017_pbs_imageworks_slides_v2.pdf
+  const float S[5] = {-0.170718f, 4.07985f, -11.5295f, 18.4961f, -9.23618f};
+  const float T[5] = {0.0632331f, 3.1434f, -7.47567f, 13.0482f, -7.0401f};
+  auto        m    = abs(dot(normal, outgoing));
+  auto        r    = roughness;
+  auto        s = S[0] * sqrt(m) + S[1] * r + S[2] * r * r + S[3] * r * r * r +
+           S[4] * r * r * r * r;
+  auto t = T[0] * m + T[1] * r + T[2] * r * r + T[3] * r * r * r +
+           T[4] * r * r * r * r;
+  return 1 - pow(s, 6.0f) * pow(m, 3.0f / 4.0f) / (pow(t, 6.0f) + pow(m, 2.0f));
+}
+
 // Evaluate a diffuse BRDF lobe.
 inline vec3f eval_matte(const vec3f& color, const vec3f& normal,
     const vec3f& outgoing, const vec3f& incoming) {
@@ -556,7 +576,8 @@ inline float sample_glossy_pdf(const vec3f& color, float ior, float roughness,
 
 // Evaluate a metal BRDF lobe.
 inline vec3f eval_metallic(const vec3f& color, float roughness,
-    const vec3f& normal, const vec3f& outgoing, const vec3f& incoming) {
+    const vec3f& normal, const vec3f& outgoing, const vec3f& incoming,
+    bool compensation) {
   if (dot(normal, incoming) * dot(normal, outgoing) <= 0) return zero3f;
   auto up_normal = dot(normal, outgoing) <= 0 ? -normal : normal;
   auto halfway   = normalize(incoming + outgoing);
@@ -565,7 +586,10 @@ inline vec3f eval_metallic(const vec3f& color, float roughness,
   auto D = microfacet_distribution(roughness, up_normal, halfway);
   auto G = microfacet_shadowing(
       roughness, up_normal, halfway, outgoing, incoming);
-  return F * D * G / (4 * dot(up_normal, outgoing) * dot(up_normal, incoming)) *
+  auto C = compensation ? microfacet_cosintegral(roughness, normal, outgoing)
+                        : 1.0f;
+  return C * F * D * G /
+         (4 * dot(up_normal, outgoing) * dot(up_normal, incoming)) *
          abs(dot(up_normal, incoming));
 }
 
