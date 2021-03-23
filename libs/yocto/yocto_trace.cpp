@@ -81,8 +81,8 @@ static vec3f eval_bsdfcos(const material_point& material, const vec3f& normal,
     return eval_glossy(material.color, material.ior, material.roughness, normal,
         outgoing, incoming);
   } else if (material.type == scene_material_type::metallic) {
-    return eval_metallic(reflectivity_to_eta(material.color), vec3f{0, 0, 0},
-        material.roughness, normal, outgoing, incoming);
+    return eval_metallic(
+        material.color, material.roughness, normal, outgoing, incoming);
   } else if (material.type == scene_material_type::transparent) {
     return eval_transparent(material.color, material.ior, material.roughness,
         normal, outgoing, incoming);

@@ -109,6 +109,13 @@ inline vec3f sample_microfacet(float roughness, const vec3f& normal,
 inline float sample_microfacet_pdf(float roughness, const vec3f& normal,
     const vec3f& halfway, const vec3f& outgoing, bool ggx = true);
 
+// Microfacet energy compensation (E(cos(w)))
+inline float microfacet_cosintegral(
+    float roughness, const vec3f& normal, const vec3f& outgoing);
+// Approximate microfacet compensation for metals with Schlick's Fresnel
+inline vec3f microfacet_compensation(const vec3f& color, float roughness,
+    const vec3f& normal, const vec3f& outgoing);
+
 // Evaluates a diffuse BRDF lobe.
 inline vec3f eval_matte(const vec3f& color, const vec3f& normal,
     const vec3f& outgoing, const vec3f& incoming);
@@ -148,6 +155,16 @@ inline vec3f sample_metallic(
 // Pdf for delta metal BRDF lobe sampling.
 inline float sample_metallic_pdf(const vec3f& color, const vec3f& normal,
     const vec3f& outgoing, const vec3f& incoming);
+
+// Evaluate a delta metal BRDF lobe.
+inline vec3f eval_metallic(const vec3f& eta, const vec3f& etak,
+    const vec3f& normal, const vec3f& outgoing, const vec3f& incoming);
+// Sample a delta metal BRDF lobe.
+inline vec3f sample_metallic(const vec3f& eta, const vec3f& etak,
+    const vec3f& normal, const vec3f& outgoing);
+// Pdf for delta metal BRDF lobe sampling.
+inline float sample_metallic_pdf(const vec3f& eta, const vec3f& etak,
+    const vec3f& normal, const vec3f& outgoing, const vec3f& incoming);
 
 // Evaluate a delta metal BRDF lobe.
 inline vec3f eval_metallic(const vec3f& eta, const vec3f& etak,
@@ -489,6 +506,28 @@ inline float sample_microfacet_pdf(float roughness, const vec3f& normal,
   return microfacet_distribution(roughness, normal, halfway, ggx) *
          microfacet_shadowing1(roughness, normal, halfway, outgoing, ggx) *
          max(0.0f, dot(halfway, outgoing)) / abs(dot(normal, outgoing));
+}
+
+// Microfacet energy compensation (E(cos(w)))
+inline float microfacet_cosintegral(
+    float roughness, const vec3f& normal, const vec3f& outgoing) {
+  // https://blog.selfshadow.com/publications/s2017-shading-course/imageworks/s2017_pbs_imageworks_slides_v2.pdf
+  const float S[5] = {-0.170718f, 4.07985f, -11.5295f, 18.4961f, -9.23618f};
+  const float T[5] = {0.0632331f, 3.1434f, -7.47567f, 13.0482f, -7.0401f};
+  auto        m    = abs(dot(normal, outgoing));
+  auto        r    = roughness;
+  auto        s = S[0] * sqrt(m) + S[1] * r + S[2] * r * r + S[3] * r * r * r +
+           S[4] * r * r * r * r;
+  auto t = T[0] * m + T[1] * r + T[2] * r * r + T[3] * r * r * r +
+           T[4] * r * r * r * r;
+  return 1 - pow(s, 6.0f) * pow(m, 3.0f / 4.0f) / (pow(t, 6.0f) + pow(m, 2.0f));
+}
+// Approximate microfacet compensation for metals with Schlick's Fresnel
+inline vec3f microfacet_compensation(const vec3f& color, float roughness,
+    const vec3f& normal, const vec3f& outgoing) {
+  // https://blog.selfshadow.com/publications/turquin/ms_comp_final.pdf
+  auto E = microfacet_cosintegral(sqrt(roughness), normal, outgoing);
+  return 1 + color * (1 - E) / E;
 }
 
 // Evaluate a diffuse BRDF lobe.
