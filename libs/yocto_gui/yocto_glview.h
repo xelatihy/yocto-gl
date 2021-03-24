@@ -35,16 +35,13 @@
 // -----------------------------------------------------------------------------
 
 #include <yocto/yocto_image.h>
-#include <yocto/yocto_parallel.h>
-#include <yocto/yocto_sceneio.h>
-#include <yocto/yocto_shape.h>
+#include <yocto/yocto_scene.h>
 #include <yocto/yocto_trace.h>
 #include <yocto_gui/yocto_imgui.h>
 #include <yocto_gui/yocto_opengl.h>
 #include <yocto_gui/yocto_shade.h>
 
 #include <array>
-#include <memory>
 #include <string>
 #include <vector>
 
@@ -56,7 +53,6 @@ namespace yocto {
 // using directives
 using std::array;
 using std::string;
-using std::unique_ptr;
 using std::vector;
 
 }  // namespace yocto
@@ -78,131 +74,19 @@ void view_images(const string& title, const vector<string>& names,
 void colorgrade_image(
     const string& title, const string& name, const color_image& image);
 
-// Open a window and show a shape via path tracing
-void view_shape(const string& title, const string& name,
-    const scene_shape& shape, bool addsky = false);
-
 // Open a window and show an scene via path tracing
 void view_scene(const string& title, const string& name, scene_model& scene,
-    bool print = true);
+    const trace_params& params = {}, bool print = true, bool edit = false);
 
-// Open a window and show an scene via path tracing
-void view_scene(const string& title, const string& name, scene_model& scene,
-    const string& camname, bool print = true);
+using glview_callback =
+    std::function<void(gui_window* win, const gui_input& input,
+        vector<int>& updated_shapes, vector<int>& updated_textures)>;
 
-// Open a window and show an scene via path tracing
-void view_scene(const string& title, const string& name, scene_model& scene,
-    const trace_params& params, bool print = true, bool edit = false);
-
-using glview_scene_callback = std::function<void(gui_window* win,
-    const gui_input& input, scene_model& scene, shade_scene& glscene)>;
-
-void glview_scene(scene_model& scene, const string& name, const string& camname,
-    const glview_scene_callback& widgets_callback  = {},
-    const glview_scene_callback& uiupdate_callback = {},
-    const glview_scene_callback& update_callback   = {});
-
-}  // namespace yocto
-
-// -----------------------------------------------------------------------------
-// IMAGE VIEWER
-// -----------------------------------------------------------------------------
-namespace yocto {
-
-// Make an image view
-struct ogl_imageviewer;
-ogl_imageviewer make_imageviewer(const string& title);
-
-// Run view
-void run_viewer(ogl_imageviewer& viewer);
-
-// Set image
-void set_image(
-    ogl_imageviewer& viewer, const string& name, const color_image& image);
-void close_image(ogl_imageviewer& viewer, const string& name);
-
-// Set params
-void set_param(ogl_imageviewer& viewer, const string& name, const string& pname,
-    const gui_param& param);
-void set_params(ogl_imageviewer& viewer, const string& name,
-    const string& pname, const gui_params& params);
-
-// Set ui callback
-using ogl_imageviewer_pcallback =
-    function<void(const string&, const gui_params&)>;
-using ogl_imageviewer_icallback =
-    function<void(const string&, const gui_input&)>;
-void set_params_callback(
-    ogl_imageviewer& viewer, const ogl_imageviewer_pcallback& callback);
-void set_input_callback(
-    ogl_imageviewer& viewer, const ogl_imageviewer_icallback& callback);
-
-}  // namespace yocto
-
-// -----------------------------------------------------------------------------
-//
-//
-// IMPLEMENTATION
-//
-//
-// -----------------------------------------------------------------------------
-
-// -----------------------------------------------------------------------------
-// IMPLEMENTATION OF IMAGE VIEWER
-// -----------------------------------------------------------------------------
-namespace yocto {
-
-// Input image
-struct ogl_imageinput {
-  string name = "";
-
-  bool close = false;
-
-  bool        ichanged = true;
-  color_image image    = {};
-  float       exposure = 0;
-  bool        filmic   = false;
-
-  bool       pchanged = true;
-  string     pname    = "Params";
-  gui_params params   = {};
-};
-
-// An image visualized
-struct ogl_imageview {
-  // original data
-  string name = "image.png";
-
-  // image data
-  color_image image = {};
-
-  // diplay data
-  color_image display  = {};
-  float       exposure = 0;
-  bool        filmic   = false;
-
-  // viewing properties
-  ogl_image        glimage  = {};
-  ogl_image_params glparams = {};
-
-  // user params
-  string     pname  = "Params";
-  gui_params params = gui_params{};
-};
-
-// Image pointer
-using ogl_imageview_ptr  = unique_ptr<ogl_imageview>;
-using ogl_imageinput_ptr = unique_ptr<ogl_imageinput>;
-
-// Simple image viewer
-struct ogl_imageviewer {
-  vector<ogl_imageview_ptr>  views       = {};       // views
-  ogl_imageview*             selected    = nullptr;  // selected
-  std::mutex                 input_mutex = {};
-  vector<ogl_imageinput_ptr> inputs      = {};  // input images
-  ogl_imageviewer_pcallback  pcallback   = {};  // params callback
-  ogl_imageviewer_icallback  icallback   = {};  // input callback
-};
+void glview_scene(const string& title, const string& name, scene_model& scene,
+    const shade_params&    params            = {},
+    const glview_callback& widgets_callback  = {},
+    const glview_callback& uiupdate_callback = {},
+    const glview_callback& update_callback   = {});
 
 }  // namespace yocto
 

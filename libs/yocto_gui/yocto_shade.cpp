@@ -606,12 +606,13 @@ static shade_view make_scene_view(const shade_camera& camera,
   return view;
 }
 
-void draw_scene(shade_scene& scene, const shade_camera& camera,
-    const vec4i& viewport, const shade_params& params) {
+void draw_scene(
+    shade_scene& scene, const vec4i& viewport, const shade_params& params) {
   clear_ogl_framebuffer(params.background);
   set_ogl_viewport(viewport);
 
-  auto view = make_scene_view(camera, viewport, params);
+  auto& camera = scene.cameras.at(params.camera);
+  auto  view   = make_scene_view(camera, viewport, params);
   draw_instances(scene, view, params);
   draw_environments(scene, view, params);
 }

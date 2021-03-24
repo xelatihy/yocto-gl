@@ -439,6 +439,9 @@ void add_sky(scene_model& scene, float sun_angle = pif / 4);
 // get named camera or default if name is empty
 int find_camera(const scene_model& scene, const string& name);
 
+// create a scene from a shape
+scene_model make_shape_scene(const scene_shape& shape, bool add_sky = false);
+
 // Return scene statistics as list of strings.
 vector<string> scene_stats(const scene_model& scene, bool verbose = false);
 // Return validation errors as list of strings.

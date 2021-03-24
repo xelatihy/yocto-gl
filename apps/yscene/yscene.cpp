@@ -335,8 +335,9 @@ int run_view(const view_params& params_) {
 
 #endif
 
-struct glview_params {
-  string scene = "scene.json"s;
+struct glview_params : shade_params {
+  string scene   = "scene.json"s;
+  string camname = "";
 };
 
 // Cli
@@ -344,6 +345,7 @@ void add_command(cli_command& cli, const string& name, glview_params& value,
     const string& usage) {
   auto& cmd = add_command(cli, name, usage);
   add_argument(cmd, "scene", value.scene, "Input scene.");
+  add_option(cmd, "camera", value.camname, "Camera name.");
 }
 
 #ifndef YOCTO_OPENGL
@@ -355,7 +357,10 @@ int run_glview(const glview_params& params) {
 
 #else
 
-int run_glview(const glview_params& params) {
+int run_glview(const glview_params& params_) {
+  // copy params
+  auto params = params_;
+
   // loading scene
   auto ioerror = ""s;
   auto scene   = scene_model{};
@@ -370,13 +375,11 @@ int run_glview(const glview_params& params) {
     print_progress_end();
   }
 
+  // camera
+  params.camera = find_camera(scene, params.camname);
+
   // run viewer
-  glview_scene(
-      scene, params.scene, "",
-      [](gui_window* win, const gui_input& input, scene_model& scene,
-          shade_scene& glscene) {},
-      [](gui_window* win, const gui_input& input, scene_model& scene,
-          shade_scene& glscene) {});
+  glview_scene("yscene", params.scene, scene);
 
   // done
   return 0;

@@ -67,10 +67,8 @@ int run_view(const view_params& params) {
 
 // view shapes
 int run_view(const view_params& params) {
-  // shape data
-  auto shape = scene_shape{};
-
   // load mesh
+  auto shape   = scene_shape{};
   auto ioerror = ""s;
   if (path_filename(params.shape) == ".ypreset") {
     if (!make_shape_preset(shape, path_basename(params.shape), ioerror))
@@ -79,8 +77,11 @@ int run_view(const view_params& params) {
     if (!load_shape(params.shape, shape, ioerror, true)) print_fatal(ioerror);
   }
 
+  // make scene
+  auto scene = make_shape_scene(shape, params.addsky);
+
   // run view
-  view_shape("yshape", params.shape, shape, params.addsky);
+  view_scene("ymesh", params.shape, scene);
 
   // done
   return 0;
@@ -165,7 +166,7 @@ int run_glview(const glview_params& params) {
   auto scene = make_shapescene(shape);
 
   // run viewer
-  glview_scene(scene, params.shape, "");
+  glview_scene("ymesh", params.shape, scene);
 
   // done
   return 0;
@@ -294,11 +295,10 @@ int run_glpath(const glpath_params& params) {
 
   // run viewer
   glview_scene(
-      scene, params.shape, "",
-      [&](gui_window* win, const gui_input& input, scene_model& scene,
-          shade_scene& glscene) {},
-      [&](gui_window* win, const gui_input& input, scene_model& scene,
-          shade_scene& glscene) {
+      "ymesh", params.shape, scene, {},
+      [&](gui_window*, const gui_input&, vector<int>&, vector<int>&) {},
+      [&](gui_window* win, const gui_input& input, vector<int>& updated_shapes,
+          vector<int>&) {
         auto& shape   = scene.shapes.at(0);
         auto& camera  = scene.cameras.at(0);
         auto  updated = false;
@@ -328,13 +328,8 @@ int run_glpath(const glpath_params& params) {
           for (auto [element, uv] : stroke) {
             positions.push_back(eval_position(shape, element, uv));
           }
-          auto& points = scene.shapes.at(1);
-          points       = points_to_spheres(positions);
-          set_positions(glscene.shapes.at(1), points.positions);
-          set_normals(glscene.shapes.at(1), points.normals);
-          set_texcoords(glscene.shapes.at(1), points.texcoords);
-          set_quads(glscene.shapes.at(1), points.quads);
-          glscene.shapes.at(1).point_size = 10;
+          scene.shapes.at(1) = points_to_spheres(positions);
+          updated_shapes.push_back(1);
           auto path = bezier ? compute_bezier_path(solver, shape.triangles,
                                    shape.positions, adjacencies,
                                    (vector<mesh_point>&)stroke, params1)
@@ -345,12 +340,8 @@ int run_glpath(const glpath_params& params) {
           for (auto [element, uv] : path) {
             ppositions.push_back(eval_position(shape, element, uv));
           }
-          auto& lines = scene.shapes.at(2);
-          lines       = polyline_to_cylinders(ppositions);
-          set_positions(glscene.shapes.at(2), lines.positions);
-          set_normals(glscene.shapes.at(2), lines.normals);
-          set_texcoords(glscene.shapes.at(2), lines.texcoords);
-          set_quads(glscene.shapes.at(2), lines.quads);
+          scene.shapes.at(2) = polyline_to_cylinders(ppositions);
+          updated_shapes.push_back(2);
         }
       });
 
@@ -522,11 +513,10 @@ int run_glpathd(const glpathd_params& params) {
 
   // run viewer
   glview_scene(
-      scene, params.shape, "",
-      [&](gui_window* win, const gui_input& input, scene_model& scene,
-          shade_scene& glscene) {},
-      [&](gui_window* win, const gui_input& input, scene_model& scene,
-          shade_scene& glscene) {
+      "ymesh", params.shape, scene, {},
+      [&](gui_window*, const gui_input&, vector<int>&, vector<int>&) {},
+      [&](gui_window* win, const gui_input& input, vector<int>& updated_shapes,
+          vector<int>&) {
         auto& shape   = scene.shapes.at(0);
         auto& camera  = scene.cameras.at(0);
         auto  updated = false;
@@ -550,33 +540,20 @@ int run_glpathd(const glpathd_params& params) {
           auto positions = vector<vec3f>{};
           positions.push_back(eval_position(shape, point1.face, point1.uv));
           positions.push_back(eval_position(shape, point2.face, point2.uv));
-          auto& points = scene.shapes.at(1);
-          points       = points_to_spheres(positions, 2, 0.002);
-          set_positions(glscene.shapes.at(1), points.positions);
-          set_normals(glscene.shapes.at(1), points.normals);
-          set_texcoords(glscene.shapes.at(1), points.texcoords);
-          set_quads(glscene.shapes.at(1), points.quads);
-          glscene.shapes.at(1).point_size = 10;
+          scene.shapes.at(1) = points_to_spheres(positions, 2, 0.002);
+          updated_shapes.push_back(1);
           auto path1      = compute_shortest_path(solver, shape.triangles,
               shape.positions, adjacencies, point1, point2);
           auto positions1 = vector<vec3f>{};
           for (auto [element, uv] : path1) {
             positions1.push_back(eval_position(shape, element, uv));
           }
-          auto& lines1 = scene.shapes.at(2);
-          lines1       = polyline_to_cylinders(positions1, 4, 0.002);
-          set_positions(glscene.shapes.at(2), lines1.positions);
-          set_normals(glscene.shapes.at(2), lines1.normals);
-          set_texcoords(glscene.shapes.at(2), lines1.texcoords);
-          set_quads(glscene.shapes.at(2), lines1.quads);
-          auto  positions2 = visualize_shortest_path(solver, shape.triangles,
+          scene.shapes.at(2) = polyline_to_cylinders(positions1, 4, 0.002);
+          updated_shapes.push_back(2);
+          auto positions2    = visualize_shortest_path(solver, shape.triangles,
               shape.positions, adjacencies, point1, point2, true);
-          auto& lines2     = scene.shapes.at(3);
-          lines2           = polyline_to_cylinders(positions2, 4, 0.002);
-          set_positions(glscene.shapes.at(3), lines2.positions);
-          set_normals(glscene.shapes.at(3), lines2.normals);
-          set_texcoords(glscene.shapes.at(3), lines2.texcoords);
-          set_quads(glscene.shapes.at(3), lines2.quads);
+          scene.shapes.at(3) = polyline_to_cylinders(positions2, 4, 0.002);
+          updated_shapes.push_back(3);
           // auto path3 = visualize_shortest_path(solver2, shape.triangles,
           //     shape.positions, adjacencies, v2t, angles, point1, point2,
           //     false);
@@ -1287,9 +1264,8 @@ int run_glsculpt(const glsculpt_params& params_) {
 
   // callbacks
   glview_scene(
-      scene, params_.shape, "",
-      [&params](gui_window* win, const gui_input& input, scene_model& scene,
-          shade_scene& glscene) {
+      "ymesh", params_.shape, scene, {},
+      [&](gui_window* win, const gui_input&, vector<int>&, vector<int>&) {
         draw_combobox(win, "brush type", (int&)params.type, sculpt_brush_names);
         if (params.type == sculpt_brush_type::gaussian) {
           if (params.strength < 0.8f || params.strength > 1.5f)
@@ -1308,27 +1284,24 @@ int run_glsculpt(const glsculpt_params& params_) {
           draw_slider(win, "strength", params.strength, 0.1f, 1.0f);
         }
       },
-      [&state, &params](gui_window* win, const gui_input& input,
-          scene_model& scene, shade_scene& glscene) {
+      [&](gui_window* win, const gui_input& input, vector<int>& updated_shapes,
+          vector<int>&) {
         auto  mouse_uv = vec2f{input.mouse_pos.x / float(input.window_size.x),
             input.mouse_pos.y / float(input.window_size.y)};
         auto& shape    = scene.shapes.at(0);
         auto& cursor   = scene.shapes.at(1);
         auto& camera   = scene.cameras.at(0);
-        auto& glshape  = glscene.shapes.at(0);
         auto [updated_shape, updated_cursor] = sculpt_update(state, shape,
             cursor, camera, mouse_uv, input.mouse_left && input.modifier_ctrl,
             params);
         if (updated_cursor) {
-          set_positions(glscene.shapes.at(1), cursor.positions);
-          set_lines(glscene.shapes.at(1), cursor.lines);
-          glscene.instances.at(1).hidden = false;
+          updated_shapes.push_back(1);
+          // glscene.instances.at(1).hidden = false;
         } else {
-          glscene.instances.at(1).hidden = true;
+          // glscene.instances.at(1).hidden = true;
         }
         if (updated_shape) {
-          set_positions(glshape, shape.positions);
-          set_normals(glshape, shape.normals);
+          updated_shapes.push_back(0);
         }
       });
 
@@ -1380,6 +1353,8 @@ int main(int argc, const char* argv[]) {
     return run_glpath(params.glpath);
   } else if (params.command == "glpathd") {
     return run_glpathd(params.glpathd);
+  } else if (params.command == "glsculpt") {
+    return run_glsculpt(params.glsculpt);
   } else {
     return print_fatal("unknown command " + params.command);
   }
