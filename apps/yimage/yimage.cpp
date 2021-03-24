@@ -151,9 +151,6 @@ int run_grade(const grade_params& params) {
 
 // grade images
 int run_grade(const grade_params& params) {
-  // open viewer
-  auto viewer = make_imageviewer("yimage");
-
   // load image
   auto image   = color_image{};
   auto ioerror = string{};
