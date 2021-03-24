@@ -265,14 +265,6 @@ void set_emission(glscene_environment& environment, const vec3f& emission,
     gltexture_handle emission_tex = glinvalid_handle);
 
 // shortcuts
-glmaterial_handle    add_material(glscene_state& scene, const vec3f& emission,
-       const vec3f& color, float specular, float metallic, float roughness,
-       gltexture_handle emission_tex  = glinvalid_handle,
-       gltexture_handle color_tex     = glinvalid_handle,
-       gltexture_handle specular_tex  = glinvalid_handle,
-       gltexture_handle metallic_tex  = glinvalid_handle,
-       gltexture_handle roughness_tex = glinvalid_handle,
-       gltexture_handle normalmap_tex = glinvalid_handle);
 glshape_handle       add_shape(glscene_state& scene, const vector<int>& points,
           const vector<vec2i>& lines, const vector<vec3i>& triangles,
           const vector<vec4i>& quads, const vector<vec3f>& positions,
