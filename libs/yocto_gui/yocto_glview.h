@@ -98,7 +98,7 @@ void glview_scene(const string& title, const string& name, scene_model& scene,
 namespace yocto {
 
 // OpenGL image data
-struct gui_image {
+struct glimage_state {
   // image properties
   int width  = 0;
   int height = 0;
@@ -114,16 +114,16 @@ struct gui_image {
 };
 
 // create image drawing program
-bool init_image(gui_image& oimg);
+bool init_image(glimage_state& glimage);
 
 // clear image
-void clear_image(gui_image& oimg);
+void clear_image(glimage_state& glimage);
 
 // update image data
-void set_image(gui_image& oimg, const color_image& img);
+void set_image(glimage_state& glimage, const color_image& image);
 
 // OpenGL image drawing params
-struct gui_image_params {
+struct glimage_params {
   vec2i window      = {512, 512};
   vec4i framebuffer = {0, 0, 512, 512};
   vec2f center      = {0, 0};
@@ -135,6 +135,6 @@ struct gui_image_params {
 };
 
 // draw image
-void draw_image(gui_image& image, const gui_image_params& params);
+void draw_image(glimage_state& image, const glimage_params& params);
 
 }  // namespace yocto

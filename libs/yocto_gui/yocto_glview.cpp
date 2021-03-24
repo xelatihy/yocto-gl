@@ -58,7 +58,7 @@ void update_image_params(gui_window* win, const gui_input& input,
 }
 
 void update_image_params(gui_window* win, const gui_input& input,
-    const color_image& image, gui_image_params& glparams) {
+    const color_image& image, glimage_params& glparams) {
   glparams.window                           = input.window_size;
   glparams.framebuffer                      = input.framebuffer_viewport;
   std::tie(glparams.center, glparams.scale) = camera_imview(glparams.center,
@@ -67,7 +67,7 @@ void update_image_params(gui_window* win, const gui_input& input,
 }
 
 static bool uiupdate_image_params(
-    gui_window* win, const gui_input& input, gui_image_params& glparams) {
+    gui_window* win, const gui_input& input, glimage_params& glparams) {
   // handle mouse
   if (input.mouse_left && !input.widgets_active) {
     glparams.center += input.mouse_pos - input.mouse_last;
@@ -119,7 +119,7 @@ static bool draw_tonemap_params(
 
 static bool draw_image_inspector(gui_window* win, const gui_input& input,
     const color_image& image, const color_image& display,
-    gui_image_params& glparams) {
+    glimage_params& glparams) {
   if (begin_header(win, "inspect")) {
     draw_slider(win, "zoom", glparams.scale, 0.1, 10);
     draw_checkbox(win, "fit", glparams.fit);
@@ -271,8 +271,8 @@ void view_image(
   tonemap_image_mt(display, image, exposure, filmic);
 
   // opengl image
-  auto glimage  = gui_image{};
-  auto glparams = gui_image_params{};
+  auto glimage  = glimage_state{};
+  auto glparams = glimage_params{};
 
   // top level combo
   auto names    = vector<string>{name};
@@ -320,8 +320,8 @@ void view_images(const string& title, const vector<string>& names,
   }
 
   // opengl image
-  auto glimages  = vector<gui_image>(images.size());
-  auto glparamss = vector<gui_image_params>(images.size());
+  auto glimages  = vector<glimage_state>(images.size());
+  auto glparamss = vector<glimage_params>(images.size());
 
   // selection
   auto selected = 0;
@@ -374,8 +374,8 @@ void colorgrade_image(
   colorgrade_image_mt(display, image, params);
 
   // opengl image
-  auto glimage  = gui_image{};
-  auto glparams = gui_image_params{};
+  auto glimage  = glimage_state{};
+  auto glparams = glimage_params{};
 
   // top level combo
   auto names    = vector<string>{name};
@@ -462,8 +462,8 @@ void view_scene(const string& title, const string& name, scene_model& scene,
   if (print) print_progress_end();
 
   // opengl image
-  auto glimage  = gui_image{};
-  auto glparams = gui_image_params{};
+  auto glimage  = glimage_state{};
+  auto glparams = glimage_params{};
 
   // top level combo
   auto names    = vector<string>{name};
@@ -1019,28 +1019,28 @@ void main() {
 #endif
 
 // init image program
-bool init_image(gui_image& oimg) {
+bool init_image(glimage_state& glimage) {
   // program
-  set_program(oimg.program, oimg.vertex, oimg.fragment, ogl_image_vertex,
-      ogl_image_fragment);
+  set_program(glimage.program, glimage.vertex, glimage.fragment,
+      ogl_image_vertex, ogl_image_fragment);
 
   // vertex arrays
-  glGenVertexArrays(1, &oimg.vertexarray);
-  glBindVertexArray(oimg.vertexarray);
+  glGenVertexArrays(1, &glimage.vertexarray);
+  glBindVertexArray(glimage.vertexarray);
 
   // buffers
   auto positions = vector<vec3f>{
       {-1, -1, 0}, {1, -1, 0}, {1, 1, 0}, {-1, 1, 0}};
-  glGenBuffers(1, &oimg.positions);
-  glBindBuffer(GL_ARRAY_BUFFER, oimg.positions);
+  glGenBuffers(1, &glimage.positions);
+  glBindBuffer(GL_ARRAY_BUFFER, glimage.positions);
   glBufferData(GL_ARRAY_BUFFER, sizeof(vec3f) * positions.size(),
       positions.data(), GL_STATIC_DRAW);
   glEnableVertexAttribArray(0);
   glVertexAttribPointer(0, 3, GL_FLOAT, false, 0, nullptr);
   glBindBuffer(GL_ARRAY_BUFFER, 0);
   auto triangles = vector<vec3i>{{0, 1, 3}, {3, 2, 1}};
-  glGenBuffers(1, &oimg.triangles);
-  glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, oimg.triangles);
+  glGenBuffers(1, &glimage.triangles);
+  glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, glimage.triangles);
   glBufferData(GL_ELEMENT_ARRAY_BUFFER, sizeof(vec3i) * triangles.size(),
       triangles.data(), GL_STATIC_DRAW);
   glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, 0);
@@ -1051,36 +1051,37 @@ bool init_image(gui_image& oimg) {
 }
 
 // clear an opengl image
-void clear_image(gui_image& oimg) {
-  if (oimg.texture) glDeleteTextures(1, &oimg.texture);
-  if (oimg.program) glDeleteProgram(oimg.program);
-  if (oimg.vertex) glDeleteProgram(oimg.vertex);
-  if (oimg.fragment) glDeleteProgram(oimg.fragment);
-  if (oimg.vertexarray) glDeleteVertexArrays(1, &oimg.vertexarray);
-  if (oimg.positions) glDeleteBuffers(1, &oimg.positions);
-  if (oimg.triangles) glDeleteBuffers(1, &oimg.triangles);
-  oimg = {};
+void clear_image(glimage_state& glimage) {
+  if (glimage.texture) glDeleteTextures(1, &glimage.texture);
+  if (glimage.program) glDeleteProgram(glimage.program);
+  if (glimage.vertex) glDeleteProgram(glimage.vertex);
+  if (glimage.fragment) glDeleteProgram(glimage.fragment);
+  if (glimage.vertexarray) glDeleteVertexArrays(1, &glimage.vertexarray);
+  if (glimage.positions) glDeleteBuffers(1, &glimage.positions);
+  if (glimage.triangles) glDeleteBuffers(1, &glimage.triangles);
+  glimage = {};
 }
 
-void set_image(gui_image& oimg, const color_image& img) {
-  if (!oimg.texture || oimg.width != img.width || oimg.height != img.height) {
-    if (!oimg.texture) glGenTextures(1, &oimg.texture);
-    glBindTexture(GL_TEXTURE_2D, oimg.texture);
+void set_image(glimage_state& glimage, const color_image& img) {
+  if (!glimage.texture || glimage.width != img.width ||
+      glimage.height != img.height) {
+    if (!glimage.texture) glGenTextures(1, &glimage.texture);
+    glBindTexture(GL_TEXTURE_2D, glimage.texture);
     glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, img.width, img.height, 0, GL_RGBA,
         GL_FLOAT, img.pixels.data());
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
   } else {
-    glBindTexture(GL_TEXTURE_2D, oimg.texture);
+    glBindTexture(GL_TEXTURE_2D, glimage.texture);
     glTexSubImage2D(GL_TEXTURE_2D, 0, 0, 0, img.width, img.height, GL_RGBA,
         GL_FLOAT, img.pixels.data());
   }
-  oimg.width  = img.width;
-  oimg.height = img.height;
+  glimage.width  = img.width;
+  glimage.height = img.height;
 }
 
 // draw image
-void draw_image(gui_image& oimg, const gui_image_params& params) {
+void draw_image(glimage_state& glimage, const glimage_params& params) {
   // check errors
   assert_ogl_error_();
 
@@ -1093,22 +1094,23 @@ void draw_image(gui_image& oimg, const gui_image_params& params) {
   glEnable(GL_DEPTH_TEST);
 
   // bind program and params
-  glUseProgram(oimg.program);
+  glUseProgram(glimage.program);
   glActiveTexture(GL_TEXTURE0);
-  glBindTexture(GL_TEXTURE_2D, oimg.texture);
-  glUniform1i(glGetUniformLocation(oimg.program, "txt"), 0);
-  glUniform2f(glGetUniformLocation(oimg.program, "window_size"),
+  glBindTexture(GL_TEXTURE_2D, glimage.texture);
+  glUniform1i(glGetUniformLocation(glimage.program, "txt"), 0);
+  glUniform2f(glGetUniformLocation(glimage.program, "window_size"),
       (float)params.window.x, (float)params.window.y);
-  glUniform2f(glGetUniformLocation(oimg.program, "image_size"),
-      (float)oimg.width, (float)oimg.height);
-  glUniform2f(glGetUniformLocation(oimg.program, "image_center"),
+  glUniform2f(glGetUniformLocation(glimage.program, "image_size"),
+      (float)glimage.width, (float)glimage.height);
+  glUniform2f(glGetUniformLocation(glimage.program, "image_center"),
       params.center.x, params.center.y);
-  glUniform1f(glGetUniformLocation(oimg.program, "image_scale"), params.scale);
+  glUniform1f(
+      glGetUniformLocation(glimage.program, "image_scale"), params.scale);
   assert_ogl_error_();
 
   // draw
-  glBindVertexArray(oimg.vertexarray);
-  glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, oimg.triangles);
+  glBindVertexArray(glimage.vertexarray);
+  glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, glimage.triangles);
   glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_INT, nullptr);
   glBindVertexArray(0);
   assert_ogl_error_();
