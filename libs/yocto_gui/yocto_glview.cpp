@@ -653,49 +653,6 @@ static void init_glscene(glscene_state& glscene, const scene_model& ioscene) {
     }
   }
 
-  // material
-  for (auto& iomaterial : ioscene.materials) {
-    auto  handle     = add_material(glscene);
-    auto& glmaterial = glscene.materials[handle];
-    set_emission(glmaterial, iomaterial.emission, iomaterial.emission_tex);
-    set_opacity(glmaterial, iomaterial.opacity, invalidid);
-    set_normalmap(glmaterial, iomaterial.normal_tex);
-    switch (iomaterial.type) {
-      case scene_material_type::matte: {
-        set_color(glmaterial, iomaterial.color, iomaterial.color_tex);
-        set_specular(glmaterial, 0, invalidid);
-        set_metallic(glmaterial, 0, invalidid);
-        set_roughness(glmaterial, 0, invalidid);
-      } break;
-      case scene_material_type::glossy: {
-        set_color(glmaterial, iomaterial.color, iomaterial.color_tex);
-        set_specular(glmaterial, 1, invalidid);
-        set_metallic(glmaterial, 0, invalidid);
-        set_roughness(glmaterial, iomaterial.roughness, invalidid);
-      } break;
-      case scene_material_type::metallic: {
-        set_color(glmaterial, iomaterial.color, iomaterial.color_tex);
-        set_specular(glmaterial, 0, invalidid);
-        set_metallic(glmaterial, 1, invalidid);
-        set_roughness(
-            glmaterial, iomaterial.roughness, iomaterial.roughness_tex);
-      } break;
-      case scene_material_type::gltfpbr: {
-        set_color(glmaterial, iomaterial.color, iomaterial.color_tex);
-        set_specular(glmaterial, 1, invalidid);
-        set_metallic(glmaterial, iomaterial.metallic, invalidid);
-        set_roughness(glmaterial, iomaterial.roughness, invalidid);
-      } break;
-      default: {
-        set_color(glmaterial, iomaterial.color, iomaterial.color_tex);
-        set_specular(glmaterial, 0, invalidid);
-        set_metallic(glmaterial, 0, invalidid);
-        set_roughness(
-            glmaterial, iomaterial.roughness, iomaterial.roughness_tex);
-      } break;
-    }
-  }
-
   // shapes
   for (auto& ioshape : ioscene.shapes) {
     add_shape(glscene, ioshape.points, ioshape.lines, ioshape.triangles,
@@ -1293,47 +1250,6 @@ glshape_handle add_shape(glscene_state& scene) {
   return (int)scene.shapes.size() - 1;
 }
 
-// add material
-glmaterial_handle add_material(glscene_state& scene) {
-  scene.materials.emplace_back();
-  return (int)scene.materials.size() - 1;
-}
-void set_emission(glscene_material& material, const vec3f& emission,
-    gltexture_handle emission_tex) {
-  material.emission     = emission;
-  material.emission_tex = emission_tex;
-}
-void set_color(glscene_material& material, const vec3f& color,
-    gltexture_handle color_tex) {
-  material.color     = color;
-  material.color_tex = color_tex;
-}
-void set_specular(
-    glscene_material& material, float specular, gltexture_handle specular_tex) {
-  material.specular     = specular;
-  material.specular_tex = specular_tex;
-}
-void set_roughness(glscene_material& material, float roughness,
-    gltexture_handle roughness_tex) {
-  material.roughness     = roughness;
-  material.roughness_tex = roughness_tex;
-}
-void set_opacity(
-    glscene_material& material, float opacity, gltexture_handle opacity_tex) {
-  material.opacity = opacity;
-}
-void set_metallic(
-    glscene_material& material, float metallic, gltexture_handle metallic_tex) {
-  material.metallic     = metallic;
-  material.metallic_tex = metallic_tex;
-}
-void set_normalmap(glscene_material& material, gltexture_handle normal_tex) {
-  material.normal_tex = normal_tex;
-}
-void set_unlit(glscene_material& material, bool unlit) {
-  material.unlit = unlit;
-}
-
 glshape_handle add_shape(glscene_state& scene, const vector<int>& points,
     const vector<vec2i>& lines, const vector<vec3i>& triangles,
     const vector<vec4i>& quads, const vector<vec3f>& positions,
@@ -1371,23 +1287,6 @@ void set_emission(glscene_environment& environment, const vec3f& emission,
   environment.emission_tex = emission_tex;
 }
 
-// shortcuts
-glmaterial_handle add_material(glscene_state& scene, const vec3f& emission,
-    const vec3f& color, float specular, float metallic, float roughness,
-    gltexture_handle emission_tex, gltexture_handle color_tex,
-    gltexture_handle specular_tex, gltexture_handle metallic_tex,
-    gltexture_handle roughness_tex, gltexture_handle normalmap_tex) {
-  auto  handle   = add_material(scene);
-  auto& material = scene.materials[handle];
-  set_emission(material, emission, emission_tex);
-  set_color(material, color, color_tex);
-  set_specular(material, specular, specular_tex);
-  set_metallic(material, metallic, metallic_tex);
-  set_roughness(material, roughness, roughness_tex);
-  set_normalmap(material, normalmap_tex);
-  return handle;
-}
-
 glenvironment_handle add_environment(glscene_state& scene, const frame3f& frame,
     const vec3f& emission, gltexture_handle emission_tex) {
   auto  handle      = add_environment(scene);
@@ -1418,7 +1317,7 @@ void set_params_uniforms(ogl_program& program, const glscene_params& params) {
 // Draw a shape
 void set_instance_uniforms(const glscene_state& scene, ogl_program& program,
     const frame3f& frame, const glscene_shape& shape,
-    const glscene_material& material, const glscene_params& params) {
+    const scene_material& material, const glscene_params& params) {
   auto shape_xform     = frame_to_mat(frame);
   auto shape_inv_xform = transpose(
       frame_to_mat(inverse(frame, params.non_rigid_frames)));
@@ -1443,7 +1342,7 @@ void set_instance_uniforms(const glscene_state& scene, ogl_program& program,
     }
   };
 
-  set_uniform(program, "unlit", material.unlit);
+  set_uniform(program, "unlit", false);
   set_uniform(program, "emission", material.emission);
   set_uniform(program, "diffuse", material.color);
   set_uniform(program, "specular",
@@ -1454,12 +1353,10 @@ void set_instance_uniforms(const glscene_state& scene, ogl_program& program,
   set_texture(
       program, "emission_tex", "emission_tex_on", material.emission_tex, 0);
   set_texture(program, "diffuse_tex", "diffuse_tex_on", material.color_tex, 1);
-  set_texture(
-      program, "specular_tex", "specular_tex_on", material.metallic_tex, 2);
+  set_texture(program, "specular_tex", "specular_tex_on", -1, 2);
   set_texture(
       program, "roughness_tex", "roughness_tex_on", material.roughness_tex, 3);
-  set_texture(
-      program, "opacity_tex", "opacity_tex_on", material.opacity_tex, 4);
+  set_texture(program, "opacity_tex", "opacity_tex_on", -1, 4);
   set_texture(
       program, "normalmap_tex", "normalmap_tex_on", material.normal_tex, 5);
 
@@ -1583,7 +1480,7 @@ void draw_instances(glscene_state& glscene, const scene_model& scene,
     // if (instance.hidden) continue;
     set_instance_uniforms(glscene, program, instance.frame,
         glscene.shapes.at(instance.shape),
-        glscene.materials.at(instance.material), params);
+        scene.materials.at(instance.material), params);
     draw_shape(glscene.shapes.at(instance.shape));
   }
   unbind_program();

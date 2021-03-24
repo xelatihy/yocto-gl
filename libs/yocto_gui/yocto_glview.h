@@ -146,25 +146,6 @@ namespace yocto {
 // Opengl texture
 struct glscene_texture : ogl_texture {};
 
-// Opengl material
-struct glscene_material {
-  // material
-  vec3f            emission      = {0, 0, 0};
-  vec3f            color         = {0, 0, 0};
-  float            metallic      = 0;
-  float            roughness     = 0;
-  float            specular      = 0;
-  float            opacity       = 1;
-  gltexture_handle emission_tex  = glinvalid_handle;
-  gltexture_handle color_tex     = glinvalid_handle;
-  gltexture_handle metallic_tex  = glinvalid_handle;
-  gltexture_handle roughness_tex = glinvalid_handle;
-  gltexture_handle specular_tex  = glinvalid_handle;
-  gltexture_handle opacity_tex   = glinvalid_handle;
-  gltexture_handle normal_tex    = glinvalid_handle;
-  bool             unlit         = false;
-};
-
 // Opengl shape
 struct glscene_shape : ogl_shape {};
 
@@ -189,7 +170,6 @@ struct glscene_environment {
 struct glscene_state {
   // scene objects
   vector<glscene_shape>       shapes       = {};
-  vector<glscene_material>    materials    = {};
   vector<glscene_texture>     textures     = {};
   vector<glscene_environment> environments = {};
 
@@ -252,26 +232,8 @@ void clear_scene(glscene_state& scene);
 
 // add scene elements
 gltexture_handle     add_texture(glscene_state& scene);
-glmaterial_handle    add_material(glscene_state& scene);
 glshape_handle       add_shape(glscene_state& scene);
-glinstance_handle    add_instance(glscene_state& scene);
 glenvironment_handle add_environment(glscene_state& scene);
-
-// material properties
-void set_emission(glscene_material& material, const vec3f& emission,
-    gltexture_handle emission_tex = glinvalid_handle);
-void set_color(glscene_material& material, const vec3f& color,
-    gltexture_handle color_tex = glinvalid_handle);
-void set_metallic(glscene_material& material, float metallic,
-    gltexture_handle metallic_tex = glinvalid_handle);
-void set_roughness(glscene_material& material, float roughness,
-    gltexture_handle roughness_tex = glinvalid_handle);
-void set_specular(glscene_material& material, float specular,
-    gltexture_handle specular_tex = glinvalid_handle);
-void set_opacity(glscene_material& material, float opacity,
-    gltexture_handle opacity_tex = glinvalid_handle);
-void set_normalmap(glscene_material& material, gltexture_handle normal_tex);
-void set_unlit(glscene_material& material, bool unlit);
 
 // shape properties
 void set_points(glscene_shape& shape, const vector<int>& points);
