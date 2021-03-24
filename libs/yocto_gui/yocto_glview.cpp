@@ -282,7 +282,7 @@ void view_image(
   auto callbacks    = gui_callbacks{};
   callbacks.init_cb = [&](gui_window* win, const gui_input& input) {
     init_image(glimage);
-    set_image(glimage, display, false, false);
+    set_image(glimage, display);
   };
   callbacks.clear_cb = [&](gui_window* win, const gui_input& input) {
     clear_image(glimage);
@@ -295,7 +295,7 @@ void view_image(
     draw_combobox(win, "name", selected, names);
     if (draw_tonemap_params(win, input, exposure, filmic)) {
       tonemap_image_mt(display, image, exposure, filmic);
-      set_image(glimage, display, false, false);
+      set_image(glimage, display);
     }
     draw_image_inspector(win, input, image, display, glparams);
   };
@@ -331,7 +331,7 @@ void view_images(const string& title, const vector<string>& names,
   callbacks.init_cb = [&](gui_window* win, const gui_input& input) {
     for (auto idx = 0; idx < (int)images.size(); idx++) {
       init_image(glimages[idx]);
-      set_image(glimages[idx], displays[idx], false, false);
+      set_image(glimages[idx], displays[idx]);
     }
   };
   callbacks.clear_cb = [&](gui_window* win, const gui_input& input) {
@@ -350,7 +350,7 @@ void view_images(const string& title, const vector<string>& names,
       filmics[selected] = filmic;
       tonemap_image_mt(displays[selected], images[selected],
           exposures[selected], filmics[selected]);
-      set_image(glimages[selected], displays[selected], false, false);
+      set_image(glimages[selected], displays[selected]);
     }
     draw_image_inspector(
         win, input, images[selected], displays[selected], glparamss[selected]);
@@ -385,7 +385,7 @@ void colorgrade_image(
   auto callbacks    = gui_callbacks{};
   callbacks.init_cb = [&](gui_window* win, const gui_input& input) {
     init_image(glimage);
-    set_image(glimage, display, false, false);
+    set_image(glimage, display);
   };
   callbacks.clear_cb = [&](gui_window* win, const gui_input& input) {
     clear_image(glimage);
@@ -418,7 +418,7 @@ void colorgrade_image(
       end_header(win);
       if (edited) {
         colorgrade_image_mt(display, image, params);
-        set_image(glimage, display, false, false);
+        set_image(glimage, display);
       }
     }
     draw_image_inspector(win, input, image, display, glparams);
@@ -560,7 +560,7 @@ void view_scene(const string& title, const string& name, scene_model& scene,
   callbacks.init_cb = [&](gui_window* win, const gui_input& input) {
     auto lock = std::lock_guard{render_mutex};
     init_image(glimage);
-    set_image(glimage, display, false, false);
+    set_image(glimage, display);
   };
   callbacks.clear_cb = [&](gui_window* win, const gui_input& input) {
     clear_image(glimage);
@@ -569,7 +569,7 @@ void view_scene(const string& title, const string& name, scene_model& scene,
     // update image
     if (render_update) {
       auto lock = std::lock_guard{render_mutex};
-      set_image(glimage, display, false, false);
+      set_image(glimage, display);
       render_update = false;
     }
     update_image_params(win, input, image, glparams);
@@ -610,7 +610,7 @@ void view_scene(const string& title, const string& name, scene_model& scene,
       end_header(win);
       if (edited) {
         tonemap_image_mt(display, image, params.exposure, params.filmic);
-        set_image(glimage, display, false, false);
+        set_image(glimage, display);
       }
     }
     draw_image_inspector(win, input, image, display, glparams);
@@ -959,14 +959,25 @@ bool init_image(gui_image& oimg) {
 // clear an opengl image
 void clear_image(gui_image& oimg) {
   clear_program(oimg.program);
-  clear_texture(oimg.texture);
   clear_shape(oimg.quad);
+  if (oimg.texture) glDeleteTextures(1, &oimg.texture);
 }
 
-void set_image(
-    gui_image& oimg, const color_image& img, bool linear, bool mipmap) {
-  set_texture(oimg.texture, img.width, img.height, 4,
-      (const float*)img.pixels.data(), false, linear, mipmap);
+void set_image(gui_image& oimg, const color_image& img) {
+  if (!oimg.texture || oimg.width != img.width || oimg.height != img.height) {
+    if (!oimg.texture) glGenTextures(1, &oimg.texture);
+    glBindTexture(GL_TEXTURE_2D, oimg.texture);
+    glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, img.width, img.height, 0, GL_RGBA,
+        GL_FLOAT, img.pixels.data());
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+  } else {
+    glBindTexture(GL_TEXTURE_2D, oimg.texture);
+    glTexSubImage2D(GL_TEXTURE_2D, 0, 0, 0, img.width, img.height, GL_RGBA,
+        GL_FLOAT, img.pixels.data());
+  }
+  oimg.width  = img.width;
+  oimg.height = img.height;
 }
 
 // draw image
@@ -985,12 +996,12 @@ void draw_image(gui_image& oimg, const gui_image_params& params) {
   // bind program and params
   glUseProgram(oimg.program.program_id);
   glActiveTexture(GL_TEXTURE0);
-  glBindTexture(GL_TEXTURE_2D, oimg.texture.texture_id);
+  glBindTexture(GL_TEXTURE_2D, oimg.texture);
   glUniform1i(glGetUniformLocation(oimg.program.program_id, "txt"), 0);
   glUniform2f(glGetUniformLocation(oimg.program.program_id, "window_size"),
       (float)params.window.x, (float)params.window.y);
   glUniform2f(glGetUniformLocation(oimg.program.program_id, "image_size"),
-      (float)oimg.texture.width, (float)oimg.texture.height);
+      (float)oimg.width, (float)oimg.height);
   glUniform2f(glGetUniformLocation(oimg.program.program_id, "image_center"),
       params.center.x, params.center.y);
   glUniform1f(glGetUniformLocation(oimg.program.program_id, "image_scale"),

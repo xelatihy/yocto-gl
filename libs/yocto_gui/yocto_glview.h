@@ -100,8 +100,10 @@ namespace yocto {
 // OpenGL image data
 struct gui_image {
   ogl_program program = {};
-  ogl_texture texture = {};
   ogl_shape   quad    = {};
+  int         width   = 0;
+  int         height  = 0;
+  uint        texture = 0;
 };
 
 // create image drawing program
@@ -111,8 +113,7 @@ bool init_image(gui_image& oimg);
 void clear_image(gui_image& oimg);
 
 // update image data
-void set_image(gui_image& oimg, const color_image& img, bool linear = false,
-    bool mipmap = false);
+void set_image(gui_image& oimg, const color_image& img);
 
 // OpenGL image drawing params
 struct gui_image_params {
