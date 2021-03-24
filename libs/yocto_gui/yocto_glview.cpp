@@ -47,8 +47,32 @@ void update_image_params(gui_window* win, const gui_input& input,
       glparams.fit);
 }
 
+void update_image_params(gui_window* win, const gui_input& input,
+    const color_image& image, gui_image_params& glparams) {
+  glparams.window                           = input.window_size;
+  glparams.framebuffer                      = input.framebuffer_viewport;
+  std::tie(glparams.center, glparams.scale) = camera_imview(glparams.center,
+      glparams.scale, {image.width, image.height}, glparams.window,
+      glparams.fit);
+}
+
 static bool uiupdate_image_params(
     gui_window* win, const gui_input& input, ogl_image_params& glparams) {
+  // handle mouse
+  if (input.mouse_left && !input.widgets_active) {
+    glparams.center += input.mouse_pos - input.mouse_last;
+    return true;
+  }
+  if (input.mouse_right && !input.widgets_active) {
+    glparams.scale *= powf(
+        2, (input.mouse_pos.x - input.mouse_last.x) * 0.001f);
+    return true;
+  }
+  return false;
+}
+
+static bool uiupdate_image_params(
+    gui_window* win, const gui_input& input, gui_image_params& glparams) {
   // handle mouse
   if (input.mouse_left && !input.widgets_active) {
     glparams.center += input.mouse_pos - input.mouse_last;
@@ -101,6 +125,29 @@ static bool draw_tonemap_params(
 static bool draw_image_inspector(gui_window* win, const gui_input& input,
     const color_image& image, const color_image& display,
     ogl_image_params& glparams) {
+  if (begin_header(win, "inspect")) {
+    draw_slider(win, "zoom", glparams.scale, 0.1, 10);
+    draw_checkbox(win, "fit", glparams.fit);
+    auto [i, j] = image_coords(input.mouse_pos, glparams.center, glparams.scale,
+        {image.width, image.height});
+    auto ij     = vec2i{i, j};
+    draw_dragger(win, "mouse", ij);
+    auto image_pixel   = zero4f;
+    auto display_pixel = zero4f;
+    if (i >= 0 && i < image.width && j >= 0 && j < image.height) {
+      image_pixel   = image.pixels[j * image.width + i];
+      display_pixel = image.pixels[j * image.width + i];
+    }
+    draw_coloredit(win, "image", image_pixel);
+    draw_coloredit(win, "display", display_pixel);
+    end_header(win);
+  }
+  return false;
+}
+
+static bool draw_image_inspector(gui_window* win, const gui_input& input,
+    const color_image& image, const color_image& display,
+    gui_image_params& glparams) {
   if (begin_header(win, "inspect")) {
     draw_slider(win, "zoom", glparams.scale, 0.1, 10);
     draw_checkbox(win, "fit", glparams.fit);
@@ -252,8 +299,8 @@ void view_image(
   tonemap_image_mt(display, image, exposure, filmic);
 
   // opengl image
-  auto glimage  = ogl_image{};
-  auto glparams = ogl_image_params{};
+  auto glimage  = gui_image{};
+  auto glparams = gui_image_params{};
 
   // top level combo
   auto names    = vector<string>{name};
@@ -301,8 +348,8 @@ void view_images(const string& title, const vector<string>& names,
   }
 
   // opengl image
-  auto glimages  = vector<ogl_image>(images.size());
-  auto glparamss = vector<ogl_image_params>(images.size());
+  auto glimages  = vector<gui_image>(images.size());
+  auto glparamss = vector<gui_image_params>(images.size());
 
   // selection
   auto selected = 0;
@@ -355,8 +402,8 @@ void colorgrade_image(
   colorgrade_image_mt(display, image, params);
 
   // opengl image
-  auto glimage  = ogl_image{};
-  auto glparams = ogl_image_params{};
+  auto glimage  = gui_image{};
+  auto glparams = gui_image_params{};
 
   // top level combo
   auto names    = vector<string>{name};
@@ -443,8 +490,8 @@ void view_scene(const string& title, const string& name, scene_model& scene,
   if (print) print_progress_end();
 
   // opengl image
-  auto glimage  = ogl_image{};
-  auto glparams = ogl_image_params{};
+  auto glimage  = gui_image{};
+  auto glparams = gui_image_params{};
 
   // top level combo
   auto names    = vector<string>{name};
@@ -833,6 +880,114 @@ void glview_scene(const string& title, const string& name, scene_model& scene,
 
   // run ui
   run_ui({1280 + 320, 720}, "yshade", callbacks);
+}
+
+}  // namespace yocto
+
+// -----------------------------------------------------------------------------
+// HIGH-LEVEL OPENGL IMAGE DRAWING
+// -----------------------------------------------------------------------------
+namespace yocto {
+
+static auto ogl_image_vertex =
+    R"(
+#version 330
+in vec2 positions;
+out vec2 frag_texcoord;
+uniform vec2 window_size, image_size;
+uniform vec2 image_center;
+uniform float image_scale;
+void main() {
+    vec2 pos = (positions * 0.5) * image_size * image_scale + image_center;
+    gl_Position = vec4(2 * pos.x / window_size.x - 1, 1 - 2 * pos.y / window_size.y, 0, 1);
+    frag_texcoord = positions * 0.5 + 0.5;
+}
+)";
+#if 0
+static auto ogl_image_vertex = R"(
+#version 330
+in vec2 positions;
+out vec2 frag_texcoord;
+uniform vec2 window_size, image_size, border_size;
+uniform vec2 image_center;
+uniform float image_scale;
+void main() {
+    vec2 pos = (positions * 0.5) * (image_size + border_size*2) * image_scale + image_center;
+    gl_Position = vec4(2 * pos.x / window_size.x - 1, 1 - 2 * pos.y / window_size.y, 0.1, 1);
+    frag_texcoord = positions * 0.5 + 0.5;
+}
+)";
+#endif
+static auto ogl_image_fragment =
+    R"(
+#version 330
+in vec2 frag_texcoord;
+out vec4 frag_color;
+uniform sampler2D txt;
+void main() {
+    frag_color = texture(txt, frag_texcoord);
+}
+)";
+#if 0
+static auto ogl_image_fragment = R"(
+#version 330
+in vec2 frag_texcoord;
+out vec4 frag_color;
+uniform vec2 image_size, border_size;
+uniform float image_scale;
+void main() {
+    ivec2 imcoord = ivec2(frag_texcoord * (image_size + border_size*2) - border_size);
+    ivec2 tilecoord = ivec2(frag_texcoord * (image_size + border_size*2) * image_scale - border_size);
+    ivec2 tile = tilecoord / 16;
+    if(imcoord.x <= 0 || imcoord.y <= 0 || 
+        imcoord.x >= image_size.x || imcoord.y >= image_size.y) frag_color = vec4(0,0,0,1);
+    else if((tile.x + tile.y) % 2 == 0) frag_color = vec4(0.1,0.1,0.1,1);
+    else frag_color = vec4(0.3,0.3,0.3,1);
+}
+)";
+#endif
+
+bool is_initialized(const gui_image& oimg) {
+  return is_initialized(oimg.program);
+}
+
+// init image program
+bool init_image(gui_image& oimg) {
+  if (is_initialized(oimg)) return true;
+  if (!set_program(oimg.program, ogl_image_vertex, ogl_image_fragment))
+    return false;
+  set_quad_shape(oimg.quad);
+  return true;
+}
+
+// clear an opengl image
+void clear_image(gui_image& oimg) {
+  clear_program(oimg.program);
+  clear_texture(oimg.texture);
+  clear_shape(oimg.quad);
+}
+
+void set_image(
+    gui_image& oimg, const color_image& img, bool linear, bool mipmap) {
+  set_texture(oimg.texture, img.width, img.height, 4,
+      (const float*)img.pixels.data(), false, linear, mipmap);
+}
+
+// draw image
+void draw_image(gui_image& oimg, const gui_image_params& params) {
+  assert_ogl_error();
+  set_ogl_viewport(params.framebuffer);
+  clear_ogl_framebuffer(params.background);
+  bind_program(oimg.program);
+  set_uniform(oimg.program, "txt", oimg.texture, 0);
+  set_uniform(oimg.program, "window_size",
+      vec2f{(float)params.window.x, (float)params.window.y});
+  set_uniform(oimg.program, "image_size",
+      vec2f{(float)oimg.texture.width, (float)oimg.texture.height});
+  set_uniform(oimg.program, "image_center", params.center);
+  set_uniform(oimg.program, "image_scale", params.scale);
+  draw_shape(oimg.quad);
+  unbind_program();
 }
 
 }  // namespace yocto
