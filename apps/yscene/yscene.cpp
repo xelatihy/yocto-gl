@@ -371,12 +371,7 @@ int run_glview(const glview_params& params) {
   }
 
   // run viewer
-  glview_scene(
-      scene, params.scene, "",
-      [](gui_window* win, const gui_input& input, scene_model& scene,
-          shade_scene& glscene) {},
-      [](gui_window* win, const gui_input& input, scene_model& scene,
-          shade_scene& glscene) {});
+  glview_scene("yscene", params.scene, scene);
 
   // done
   return 0;

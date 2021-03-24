@@ -414,7 +414,7 @@ int run_glview(const glview_params& params) {
   auto scene = make_shape_scene(shape, params.addsky);
 
   // run viewer
-  glview_scene(scene, params.shape, "");
+  glview_scene("yshape", params.shape, scene);
 
   // done
   return 0;

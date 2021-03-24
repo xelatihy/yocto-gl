@@ -166,7 +166,7 @@ int run_glview(const glview_params& params) {
   auto scene = make_shapescene(shape);
 
   // run viewer
-  glview_scene(scene, params.shape, "");
+  glview_scene("ymesh", params.shape, scene);
 
   // done
   return 0;
@@ -295,7 +295,7 @@ int run_glpath(const glpath_params& params) {
 
   // run viewer
   glview_scene(
-      scene, params.shape, "",
+      "ymesh", params.shape, scene, {},
       [&](gui_window* win, const gui_input& input, scene_model& scene,
           shade_scene& glscene) {},
       [&](gui_window* win, const gui_input& input, scene_model& scene,
@@ -523,7 +523,7 @@ int run_glpathd(const glpathd_params& params) {
 
   // run viewer
   glview_scene(
-      scene, params.shape, "",
+      "ymesh", params.shape, scene, {},
       [&](gui_window* win, const gui_input& input, scene_model& scene,
           shade_scene& glscene) {},
       [&](gui_window* win, const gui_input& input, scene_model& scene,
@@ -1288,7 +1288,7 @@ int run_glsculpt(const glsculpt_params& params_) {
 
   // callbacks
   glview_scene(
-      scene, params_.shape, "",
+      "ymesh", params_.shape, scene, {},
       [&params](gui_window* win, const gui_input& input, scene_model& scene,
           shade_scene& glscene) {
         draw_combobox(win, "brush type", (int&)params.type, sculpt_brush_names);

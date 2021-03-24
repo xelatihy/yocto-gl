@@ -726,15 +726,15 @@ static void init_glscene(shade_scene& glscene, const sceneio_scene& ioscene) {
 using glview_scene_callback = std::function<void(gui_window* win,
     const gui_input& input, scene_model& scene, shade_scene& glscene)>;
 
-void glview_scene(scene_model& scene, const string& name, const string& camname,
-    const glview_scene_callback& widgets_callback,
+void glview_scene(const string& title, const string& name, scene_model& scene,
+    const shade_params& params_, const glview_scene_callback& widgets_callback,
     const glview_scene_callback& uiupdate_callback,
     const glview_scene_callback& update_callback) {
   // glscene
   auto glscene = shade_scene{};
 
   // draw params
-  auto params = shade_params{};
+  auto params = params_;
 
   // top level combo
   auto names    = vector<string>{name};
