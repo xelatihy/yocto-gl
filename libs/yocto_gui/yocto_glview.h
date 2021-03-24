@@ -80,15 +80,7 @@ void colorgrade_image(
 
 // Open a window and show an scene via path tracing
 void view_scene(const string& title, const string& name, scene_model& scene,
-    bool print = true);
-
-// Open a window and show an scene via path tracing
-void view_scene(const string& title, const string& name, scene_model& scene,
-    const string& camname, bool print = true);
-
-// Open a window and show an scene via path tracing
-void view_scene(const string& title, const string& name, scene_model& scene,
-    const trace_params& params, bool print = true, bool edit = false);
+    const trace_params& params = {}, bool print = true, bool edit = false);
 
 using glview_scene_callback = std::function<void(gui_window* win,
     const gui_input& input, scene_model& scene, shade_scene& glscene)>;
