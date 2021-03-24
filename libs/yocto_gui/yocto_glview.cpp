@@ -740,6 +740,14 @@ void glview_scene(const string& title, const string& name, scene_model& scene,
   auto names    = vector<string>{name};
   auto selected = 0;
 
+  // camera names
+  auto camera_names = scene.camera_names;
+  if (camera_names.empty()) {
+    for (auto idx = 0; idx < (int)scene.cameras.size(); idx++) {
+      camera_names.push_back("camera" + std::to_string(idx + 1));
+    }
+  }
+
   // callbacks
   auto callbacks    = gui_callbacks{};
   callbacks.init_cb = [&](gui_window* win, const gui_input& input) {
@@ -754,6 +762,7 @@ void glview_scene(const string& title, const string& name, scene_model& scene,
   callbacks.widgets_cb = [&](gui_window* win, const gui_input& input) {
     draw_combobox(win, "name", selected, names);
     if (begin_header(win, "shade")) {
+      draw_combobox(win, "camera", params.camera, camera_names);
       draw_checkbox(win, "wireframe", params.wireframe);
       continue_line(win);
       draw_checkbox(win, "faceted", params.faceted);
