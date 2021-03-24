@@ -1,6 +1,6 @@
 cmake_minimum_required (VERSION 3.12)
 
-project (yocto_gl VERSION 2.0)
+project (yocto_gl VERSION 4.0)
 
 option(YOCTO_OPENGL "Build OpenGL apps" ON)
 option(YOCTO_DENOISE "Build denoise app based on Intel OIDN" OFF)
