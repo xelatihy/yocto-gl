@@ -66,7 +66,7 @@ int run_view(const view_params& params) {
 #else
 
 // view shapes
-int run_view(const view_params &params) {
+int run_view(const view_params& params) {
   // shape data
   auto shape = scene_shape{};
 
@@ -108,7 +108,7 @@ int run_glview(const glview_params& params) {
 
 #else
 
-static scene_model make_shapescene(const scene_shape &ioshape_) {
+static scene_model make_shapescene(const scene_shape& ioshape_) {
   // Frame camera
   auto camera_frame = [](float lens, float aspect,
                           float film = 0.036) -> frame3f {
@@ -124,13 +124,13 @@ static scene_model make_shapescene(const scene_shape &ioshape_) {
   // rescale shape to unit
   auto ioshape = ioshape_;
   auto bbox    = invalidb3f;
-  for (auto &pos : ioshape.positions) bbox = merge(bbox, pos);
-  for (auto &pos : ioshape.positions) pos -= center(bbox);
-  for (auto &pos : ioshape.positions) pos /= max(size(bbox));
+  for (auto& pos : ioshape.positions) bbox = merge(bbox, pos);
+  for (auto& pos : ioshape.positions) pos -= center(bbox);
+  for (auto& pos : ioshape.positions) pos /= max(size(bbox));
   // TODO(fabio): this should be a math function
 
   // camera
-  auto &camera  = scene.cameras.emplace_back();
+  auto& camera  = scene.cameras.emplace_back();
   camera.frame  = camera_frame(0.050, 16.0f / 9.0f, 0.036);
   camera.lens   = 0.050;
   camera.aspect = 16.0f / 9.0f;
@@ -138,7 +138,7 @@ static scene_model make_shapescene(const scene_shape &ioshape_) {
   camera.focus  = length(camera.frame.o - center(bbox));
 
   // material
-  auto &shape_material     = scene.materials.emplace_back();
+  auto& shape_material     = scene.materials.emplace_back();
   shape_material.type      = scene_material_type::glossy;
   shape_material.color     = {0.5, 1, 0.5};
   shape_material.roughness = 0.2;
@@ -147,7 +147,7 @@ static scene_model make_shapescene(const scene_shape &ioshape_) {
   scene.shapes.emplace_back(ioshape);
 
   // instances
-  auto &shape_instance    = scene.instances.emplace_back();
+  auto& shape_instance    = scene.instances.emplace_back();
   shape_instance.shape    = 0;
   shape_instance.material = 0;
 
@@ -155,7 +155,7 @@ static scene_model make_shapescene(const scene_shape &ioshape_) {
   return scene;
 }
 
-int run_glview(const glview_params &params) {
+int run_glview(const glview_params& params) {
   // loading shape
   auto ioerror = ""s;
   auto shape   = scene_shape{};
@@ -193,7 +193,7 @@ int run_glpath(const glpath_params& params) {
 
 #else
 
-static scene_model make_pathscene(const scene_shape &ioshape_) {
+static scene_model make_pathscene(const scene_shape& ioshape_) {
   // Frame camera
   auto camera_frame = [](float lens, float aspect,
                           float film = 0.036) -> frame3f {
@@ -209,13 +209,13 @@ static scene_model make_pathscene(const scene_shape &ioshape_) {
   // rescale shape to unit
   auto ioshape = ioshape_;
   auto bbox    = invalidb3f;
-  for (auto &pos : ioshape.positions) bbox = merge(bbox, pos);
-  for (auto &pos : ioshape.positions) pos -= center(bbox);
-  for (auto &pos : ioshape.positions) pos /= max(size(bbox));
+  for (auto& pos : ioshape.positions) bbox = merge(bbox, pos);
+  for (auto& pos : ioshape.positions) pos -= center(bbox);
+  for (auto& pos : ioshape.positions) pos /= max(size(bbox));
   // TODO(fabio): this should be a math function
 
   // camera
-  auto &camera  = scene.cameras.emplace_back();
+  auto& camera  = scene.cameras.emplace_back();
   camera.frame  = camera_frame(0.050, 16.0f / 9.0f, 0.036);
   camera.lens   = 0.050;
   camera.aspect = 16.0f / 9.0f;
@@ -223,15 +223,15 @@ static scene_model make_pathscene(const scene_shape &ioshape_) {
   camera.focus  = length(camera.frame.o - center(bbox));
 
   // material
-  auto &shape_material      = scene.materials.emplace_back();
+  auto& shape_material      = scene.materials.emplace_back();
   shape_material.type       = scene_material_type::glossy;
   shape_material.color      = {0.5, 1, 0.5};
   shape_material.roughness  = 0.2;
-  auto &points_material     = scene.materials.emplace_back();
+  auto& points_material     = scene.materials.emplace_back();
   points_material.type      = scene_material_type::glossy;
   points_material.color     = {1, 0.5, 0.5};
   points_material.roughness = 0.2;
-  auto &lines_material      = scene.materials.emplace_back();
+  auto& lines_material      = scene.materials.emplace_back();
   lines_material.type       = scene_material_type::glossy;
   lines_material.color      = {0.5, 0.5, 1};
   lines_material.roughness  = 0.2;
@@ -242,13 +242,13 @@ static scene_model make_pathscene(const scene_shape &ioshape_) {
   scene.shapes.emplace_back(polyline_to_cylinders({{0, 0, 0}, {0, 0, 0}}));
 
   // instances
-  auto &shape_instance     = scene.instances.emplace_back();
+  auto& shape_instance     = scene.instances.emplace_back();
   shape_instance.shape     = 0;
   shape_instance.material  = 0;
-  auto &points_instance    = scene.instances.emplace_back();
+  auto& points_instance    = scene.instances.emplace_back();
   points_instance.shape    = 1;
   points_instance.material = 1;
-  auto &lines_instance     = scene.instances.emplace_back();
+  auto& lines_instance     = scene.instances.emplace_back();
   lines_instance.shape     = 2;
   lines_instance.material  = 2;
 
@@ -256,7 +256,7 @@ static scene_model make_pathscene(const scene_shape &ioshape_) {
   return scene;
 }
 
-int run_glpath(const glpath_params &params) {
+int run_glpath(const glpath_params& params) {
   // loading shape
   auto ioerror = ""s;
   auto ioshape = scene_shape{};
@@ -270,7 +270,7 @@ int run_glpath(const glpath_params &params) {
   auto scene = make_pathscene(ioshape);
 
   // bvh
-  auto &shape = scene.shapes.at(0);
+  auto& shape = scene.shapes.at(0);
   auto  bvh   = make_triangles_bvh(shape.triangles, shape.positions, {});
 
   // stroke
@@ -295,12 +295,12 @@ int run_glpath(const glpath_params &params) {
   // run viewer
   glview_scene(
       scene, params.shape, "",
-      [&](gui_window *win, const gui_input &input, scene_model &scene,
-          shade_scene &glscene) {},
-      [&](gui_window *win, const gui_input &input, scene_model &scene,
-          shade_scene &glscene) {
-        auto &shape   = scene.shapes.at(0);
-        auto &camera  = scene.cameras.at(0);
+      [&](gui_window* win, const gui_input& input, scene_model& scene,
+          shade_scene& glscene) {},
+      [&](gui_window* win, const gui_input& input, scene_model& scene,
+          shade_scene& glscene) {
+        auto& shape   = scene.shapes.at(0);
+        auto& camera  = scene.cameras.at(0);
         auto  updated = false;
         if (input.mouse_left && input.modifier_ctrl) {
           if (input.modifier_shift) {
@@ -328,7 +328,7 @@ int run_glpath(const glpath_params &params) {
           for (auto [element, uv] : stroke) {
             positions.push_back(eval_position(shape, element, uv));
           }
-          auto &points = scene.shapes.at(1);
+          auto& points = scene.shapes.at(1);
           points       = points_to_spheres(positions);
           set_positions(glscene.shapes.at(1), points.positions);
           set_normals(glscene.shapes.at(1), points.normals);
@@ -337,15 +337,15 @@ int run_glpath(const glpath_params &params) {
           glscene.shapes.at(1).point_size = 10;
           auto path = bezier ? compute_bezier_path(solver, shape.triangles,
                                    shape.positions, adjacencies,
-                                   (vector<mesh_point> &)stroke, params1)
+                                   (vector<mesh_point>&)stroke, params1)
                              : compute_shortest_path(solver, shape.triangles,
                                    shape.positions, adjacencies,
-                                   (vector<mesh_point> &)stroke);
+                                   (vector<mesh_point>&)stroke);
           auto ppositions = vector<vec3f>{};
           for (auto [element, uv] : path) {
             ppositions.push_back(eval_position(shape, element, uv));
           }
-          auto &lines = scene.shapes.at(2);
+          auto& lines = scene.shapes.at(2);
           lines       = polyline_to_cylinders(ppositions);
           set_positions(glscene.shapes.at(2), lines.positions);
           set_normals(glscene.shapes.at(2), lines.normals);
@@ -380,7 +380,7 @@ int run_glpathd(const glpathd_params& params) {
 
 #else
 
-static scene_model make_pathdscene(const scene_shape &ioshape) {
+static scene_model make_pathdscene(const scene_shape& ioshape) {
   // Frame camera
   auto camera_frame = [](float lens, float aspect,
                           float film = 0.036) -> frame3f {
@@ -394,7 +394,7 @@ static scene_model make_pathdscene(const scene_shape &ioshape) {
   auto scene = scene_model{};
 
   // camera
-  auto &camera  = scene.cameras.emplace_back();
+  auto& camera  = scene.cameras.emplace_back();
   camera.frame  = camera_frame(0.050, 16.0f / 9.0f, 0.036);
   camera.lens   = 0.050;
   camera.aspect = 16.0f / 9.0f;
@@ -402,26 +402,26 @@ static scene_model make_pathdscene(const scene_shape &ioshape) {
   camera.focus  = length(camera.frame.o);
 
   // material
-  auto &shape_material     = scene.materials.emplace_back();
+  auto& shape_material     = scene.materials.emplace_back();
   shape_material.type      = scene_material_type::glossy;
   shape_material.color     = {0.5, 1, 0.5};
   shape_material.roughness = 0.2;
-  auto &points_material    = scene.materials.emplace_back();
+  auto& points_material    = scene.materials.emplace_back();
   points_material.type     = scene_material_type::matte;
   points_material.color    = {1, 0.5, 0.5};
-  auto &lines1_material    = scene.materials.emplace_back();
+  auto& lines1_material    = scene.materials.emplace_back();
   lines1_material.type     = scene_material_type::matte;
   lines1_material.color    = {0.5, 0.5, 1};
-  auto &lines2_material    = scene.materials.emplace_back();
+  auto& lines2_material    = scene.materials.emplace_back();
   lines2_material.type     = scene_material_type::matte;
   lines2_material.color    = {1, 1, 0.5};
-  auto &lines3_material    = scene.materials.emplace_back();
+  auto& lines3_material    = scene.materials.emplace_back();
   lines3_material.type     = scene_material_type::matte;
   lines3_material.color    = {1, 0.5, 1};
-  auto &lines4_material    = scene.materials.emplace_back();
+  auto& lines4_material    = scene.materials.emplace_back();
   lines4_material.type     = scene_material_type::matte;
   lines4_material.color    = {0.5, 0.5, 0.5};
-  auto &edges_material     = scene.materials.emplace_back();
+  auto& edges_material     = scene.materials.emplace_back();
   edges_material.type      = scene_material_type::matte;
   edges_material.color     = {0, 0, 0};
 
@@ -446,25 +446,25 @@ static scene_model make_pathdscene(const scene_shape &ioshape) {
 #endif
 
   // instances
-  auto &shape_instance     = scene.instances.emplace_back();
+  auto& shape_instance     = scene.instances.emplace_back();
   shape_instance.shape     = 0;
   shape_instance.material  = 0;
-  auto &points_instance    = scene.instances.emplace_back();
+  auto& points_instance    = scene.instances.emplace_back();
   points_instance.shape    = 1;
   points_instance.material = 1;
-  auto &lines1_instance    = scene.instances.emplace_back();
+  auto& lines1_instance    = scene.instances.emplace_back();
   lines1_instance.shape    = 2;
   lines1_instance.material = 2;
-  auto &lines2_instance    = scene.instances.emplace_back();
+  auto& lines2_instance    = scene.instances.emplace_back();
   lines2_instance.shape    = 3;
   lines2_instance.material = 3;
-  auto &lines3_instance    = scene.instances.emplace_back();
+  auto& lines3_instance    = scene.instances.emplace_back();
   lines3_instance.shape    = 4;
   lines3_instance.material = 4;
-  auto &lines4_instance    = scene.instances.emplace_back();
+  auto& lines4_instance    = scene.instances.emplace_back();
   lines4_instance.shape    = 5;
   lines4_instance.material = 5;
-  auto &edges_instance     = scene.instances.emplace_back();
+  auto& edges_instance     = scene.instances.emplace_back();
   edges_instance.shape     = 6;
   edges_instance.material  = 6;
 
@@ -472,7 +472,7 @@ static scene_model make_pathdscene(const scene_shape &ioshape) {
   return scene;
 }
 
-int run_glpathd(const glpathd_params &params) {
+int run_glpathd(const glpathd_params& params) {
   // loading shape
   auto ioerror = ""s;
   auto ioshape = scene_shape{};
@@ -484,13 +484,13 @@ int run_glpathd(const glpathd_params &params) {
 
   // rescale shape to unit
   auto bbox = invalidb3f;
-  for (auto &pos : ioshape.positions) bbox = merge(bbox, pos);
-  for (auto &pos : ioshape.positions) pos -= center(bbox);
-  for (auto &pos : ioshape.positions) pos /= max(size(bbox));
+  for (auto& pos : ioshape.positions) bbox = merge(bbox, pos);
+  for (auto& pos : ioshape.positions) pos -= center(bbox);
+  for (auto& pos : ioshape.positions) pos /= max(size(bbox));
 
   // reordina indici nei triangoli
   auto rng = rng_state{};
-  for (auto &t : ioshape.triangles) {
+  for (auto& t : ioshape.triangles) {
     auto o = rand1i(rng, 3);
     t      = {t[(0 + o) % 3], t[(1 + o) % 3], t[(2 + o) % 3]};
   }
@@ -499,7 +499,7 @@ int run_glpathd(const glpathd_params &params) {
   auto scene = make_pathdscene(ioshape);
 
   // bvh
-  auto &shape = scene.shapes.at(0);
+  auto& shape = scene.shapes.at(0);
   auto  bvh   = make_triangles_bvh(shape.triangles, shape.positions, {});
 
   // geodesic solver
@@ -523,12 +523,12 @@ int run_glpathd(const glpathd_params &params) {
   // run viewer
   glview_scene(
       scene, params.shape, "",
-      [&](gui_window *win, const gui_input &input, scene_model &scene,
-          shade_scene &glscene) {},
-      [&](gui_window *win, const gui_input &input, scene_model &scene,
-          shade_scene &glscene) {
-        auto &shape   = scene.shapes.at(0);
-        auto &camera  = scene.cameras.at(0);
+      [&](gui_window* win, const gui_input& input, scene_model& scene,
+          shade_scene& glscene) {},
+      [&](gui_window* win, const gui_input& input, scene_model& scene,
+          shade_scene& glscene) {
+        auto& shape   = scene.shapes.at(0);
+        auto& camera  = scene.cameras.at(0);
         auto  updated = false;
         if (input.mouse_left && input.modifier_ctrl) {
           auto mouse_uv = vec2f{input.mouse_pos.x / float(input.window_size.x),
@@ -550,7 +550,7 @@ int run_glpathd(const glpathd_params &params) {
           auto positions = vector<vec3f>{};
           positions.push_back(eval_position(shape, point1.face, point1.uv));
           positions.push_back(eval_position(shape, point2.face, point2.uv));
-          auto &points = scene.shapes.at(1);
+          auto& points = scene.shapes.at(1);
           points       = points_to_spheres(positions, 2, 0.002);
           set_positions(glscene.shapes.at(1), points.positions);
           set_normals(glscene.shapes.at(1), points.normals);
@@ -563,7 +563,7 @@ int run_glpathd(const glpathd_params &params) {
           for (auto [element, uv] : path1) {
             positions1.push_back(eval_position(shape, element, uv));
           }
-          auto &lines1 = scene.shapes.at(2);
+          auto& lines1 = scene.shapes.at(2);
           lines1       = polyline_to_cylinders(positions1, 4, 0.002);
           set_positions(glscene.shapes.at(2), lines1.positions);
           set_normals(glscene.shapes.at(2), lines1.normals);
@@ -571,7 +571,7 @@ int run_glpathd(const glpathd_params &params) {
           set_quads(glscene.shapes.at(2), lines1.quads);
           auto  positions2 = visualize_shortest_path(solver, shape.triangles,
               shape.positions, adjacencies, point1, point2, true);
-          auto &lines2     = scene.shapes.at(3);
+          auto& lines2     = scene.shapes.at(3);
           lines2           = polyline_to_cylinders(positions2, 4, 0.002);
           set_positions(glscene.shapes.at(3), lines2.positions);
           set_normals(glscene.shapes.at(3), lines2.normals);
@@ -663,7 +663,7 @@ struct sculpt_state {
 
 // Initialize all sculpting parameters.
 sculpt_state make_sculpt_state(
-    const scene_shape &shape, const scene_texture &texture) {
+    const scene_shape& shape, const scene_texture& texture) {
   auto state = sculpt_state{};
   state.bvh  = make_triangles_bvh(
       shape.triangles, shape.positions, shape.radius);
@@ -679,7 +679,7 @@ sculpt_state make_sculpt_state(
 }
 
 scene_shape make_circle(
-    const vec3f &center, const mat3f &basis, float radius, int steps) {
+    const vec3f& center, const mat3f& basis, float radius, int steps) {
   // 4 initial vertices
   auto  lines    = make_lines({1, 4});
   vec3f next_dir = basis.x;
@@ -725,7 +725,7 @@ scene_shape make_circle(
 }
 
 // To visualize mouse intersection on mesh
-scene_shape make_cursor(const vec3f &position, const vec3f &normal,
+scene_shape make_cursor(const vec3f& position, const vec3f& normal,
     float radius, float height = 0.05f) {
   auto basis  = basis_fromz(normal);
   auto cursor = make_circle(position, basis, radius, 32);
@@ -739,19 +739,19 @@ scene_shape make_cursor(const vec3f &position, const vec3f &normal,
 }
 
 // To take shape positions indices associate with planar coordinates
-vector<int> stroke_parameterization(vector<vec2f> &coords,
-    const geodesic_solver &solver, const vector<int> &sampling,
-    const vector<vec3f> &positions, const vector<vec3f> &normals,
+vector<int> stroke_parameterization(vector<vec2f>& coords,
+    const geodesic_solver& solver, const vector<int>& sampling,
+    const vector<vec3f>& positions, const vector<vec3f>& normals,
     float radius) {
   if (normals.empty()) return vector<int>{};
 
   // Planar coordinates by local computation between neighbors
-  auto compute_coordinates = [](vector<vec2f> &       coords,
-                                 const vector<mat3f> &frames,
-                                 const vector<vec3f> &positions, int node,
+  auto compute_coordinates = [](vector<vec2f>&        coords,
+                                 const vector<mat3f>& frames,
+                                 const vector<vec3f>& positions, int node,
                                  int neighbor, float weight) -> void {
     // Project a vector on a plane, maintaining vector length
-    auto project_onto_plane = [](const mat3f &basis, const vec3f &p) -> vec2f {
+    auto project_onto_plane = [](const mat3f& basis, const vec3f& p) -> vec2f {
       auto v  = p - dot(p, basis.z) * basis.z;
       auto v1 = vec2f{dot(v, basis.x), dot(v, basis.y)};
       return v1 * (length(p) / length(v1));
@@ -771,7 +771,7 @@ vector<int> stroke_parameterization(vector<vec2f> &coords,
   };
 
   // Frame by local computation between neighbors
-  auto compute_frame = [](vector<mat3f> &frames, const vector<vec3f> &normals,
+  auto compute_frame = [](vector<mat3f>& frames, const vector<vec3f>& normals,
                            int node, int neighbor, float weight) -> void {
     auto current_dir = frames[node].x;
     auto rotation    = basis_fromz(normals[neighbor]) *
@@ -784,9 +784,9 @@ vector<int> stroke_parameterization(vector<vec2f> &coords,
   };
 
   // Classic Dijkstra
-  auto dijkstra = [](const geodesic_solver &solver, const vector<int> &sources,
-                      vector<float> &distances, float max_distance,
-                      auto &&update) -> void {
+  auto dijkstra = [](const geodesic_solver& solver, const vector<int>& sources,
+                      vector<float>& distances, float max_distance,
+                      auto&& update) -> void {
     auto compare = [&](int i, int j) { return distances[i] > distances[j]; };
     std::priority_queue<int, vector<int>, decltype(compare)> queue(compare);
 
@@ -814,10 +814,10 @@ vector<int> stroke_parameterization(vector<vec2f> &coords,
   };
 
   // Compute initial frames of stroke sampling vertices
-  auto compute_stroke_frames = [](vector<mat3f> &       frames,
-                                   const vector<vec3f> &positions,
-                                   const vector<vec3f> &normals,
-                                   const vector<int> &stroke_sampling) -> void {
+  auto compute_stroke_frames = [](vector<mat3f>&        frames,
+                                   const vector<vec3f>& positions,
+                                   const vector<vec3f>& normals,
+                                   const vector<int>& stroke_sampling) -> void {
     // frames follow stroke direction
     for (int i = 0; i < (int)stroke_sampling.size() - 1; i++) {
       int  curr    = stroke_sampling[i];
@@ -896,7 +896,7 @@ vector<int> stroke_parameterization(vector<vec2f> &coords,
 }
 
 // Compute gaussian function
-float gaussian_distribution(const vec3f &origin, const vec3f &position,
+float gaussian_distribution(const vec3f& origin, const vec3f& position,
     float standard_dev, float scale_factor, float strength, float radius) {
   auto scaled_strength = strength / ((((radius - 0.1f) * 0.5f) / 0.7f) + 0.2f);
   auto N               = 1.0f / (((standard_dev * scaled_strength) *
@@ -909,24 +909,24 @@ float gaussian_distribution(const vec3f &origin, const vec3f &position,
 }
 
 // To apply brush on intersected points' neighbors
-bool gaussian_brush(vector<vec3f> &positions, const hash_grid &grid,
-    const vector<vec3i> &triangles, const vector<vec3f> &base_positions,
-    const vector<vec3f> &base_normals, const vector<shape_point> &stroke,
-    const sculpt_params &params) {
+bool gaussian_brush(vector<vec3f>& positions, const hash_grid& grid,
+    const vector<vec3i>& triangles, const vector<vec3f>& base_positions,
+    const vector<vec3f>& base_normals, const vector<shape_point>& stroke,
+    const sculpt_params& params) {
   if (stroke.empty()) return false;
 
   // helpers
-  auto eval_position = [](const vector<vec3i> & triangles,
-                           const vector<vec3f> &positions, int element,
-                           const vec2f &uv) {
-    auto &triangle = triangles[element];
+  auto eval_position = [](const vector<vec3i>&  triangles,
+                           const vector<vec3f>& positions, int element,
+                           const vec2f& uv) {
+    auto& triangle = triangles[element];
     return interpolate_triangle(positions[triangle.x], positions[triangle.y],
         positions[triangle.z], uv);
   };
-  auto eval_normal = [](const vector<vec3i> & triangles,
-                         const vector<vec3f> &normals, int element,
-                         const vec2f &uv) {
-    auto &triangle = triangles[element];
+  auto eval_normal = [](const vector<vec3i>&  triangles,
+                         const vector<vec3f>& normals, int element,
+                         const vec2f& uv) {
+    auto& triangle = triangles[element];
     return normalize(interpolate_triangle(
         normals[triangle.x], normals[triangle.y], normals[triangle.z], uv));
   };
@@ -952,17 +952,17 @@ bool gaussian_brush(vector<vec3f> &positions, const hash_grid &grid,
 }
 
 // Compute texture values through the parameterization
-bool texture_brush(vector<vec3f> &positions, vector<vec2f> &texcoords,
-    const geodesic_solver &solver, const scene_texture &texture,
-    const vector<vec3i> &triangles, const vector<vec3f> &base_positions,
-    const vector<vec3f> &base_normals, const vector<shape_point> &stroke,
-    const sculpt_params &params) {
+bool texture_brush(vector<vec3f>& positions, vector<vec2f>& texcoords,
+    const geodesic_solver& solver, const scene_texture& texture,
+    const vector<vec3i>& triangles, const vector<vec3f>& base_positions,
+    const vector<vec3f>& base_normals, const vector<shape_point>& stroke,
+    const sculpt_params& params) {
   if (texture.pixelsf.empty() && texture.pixelsb.empty()) return false;
 
   // Taking closest vertex of an intersection
-  auto closest_vertex = [](const vector<vec3i> &triangles, int element,
-                            const vec2f &uv) -> int {
-    auto &triangle = triangles[element];
+  auto closest_vertex = [](const vector<vec3i>& triangles, int element,
+                            const vec2f& uv) -> int {
+    auto& triangle = triangles[element];
     if (uv.x < 0.5f && uv.y < 0.5f) return triangle.x;
     if (uv.x > uv.y) return triangle.y;
     return triangle.z;
@@ -998,9 +998,9 @@ bool texture_brush(vector<vec3f> &positions, vector<vec2f> &texcoords,
 // Cotangent operator
 
 // Compute edge cotangents weights
-float laplacian_weight(const vector<vec3f> &positions,
-    const vector<vector<int>> &adjacencies, int node, int neighbor) {
-  auto cotan = [](vec3f &a, vec3f &b) {
+float laplacian_weight(const vector<vec3f>& positions,
+    const vector<vector<int>>& adjacencies, int node, int neighbor) {
+  auto cotan = [](vec3f& a, vec3f& b) {
     return dot(a, b) / length(cross(a, b));
   };
 
@@ -1032,15 +1032,15 @@ float laplacian_weight(const vector<vec3f> &positions,
 }
 
 // Smooth brush with Laplace Operator Discretization and Cotangents Weights
-bool smooth_brush(vector<vec3f> &positions, const geodesic_solver &solver,
-    const vector<vec3i> &triangles, const vector<vector<int>> &adjacencies,
-    vector<shape_point> &stroke, const sculpt_params &params) {
+bool smooth_brush(vector<vec3f>& positions, const geodesic_solver& solver,
+    const vector<vec3i>& triangles, const vector<vector<int>>& adjacencies,
+    vector<shape_point>& stroke, const sculpt_params& params) {
   if (stroke.empty()) return false;
 
   // Taking closest vertex of an intersection
-  auto closest_vertex = [](const vector<vec3i> &triangles, int element,
-                            const vec2f &uv) -> int {
-    auto &triangle = triangles[element];
+  auto closest_vertex = [](const vector<vec3i>& triangles, int element,
+                            const vec2f& uv) -> int {
+    auto& triangle = triangles[element];
     if (uv.x < 0.5f && uv.y < 0.5f) return triangle.x;
     if (uv.x > uv.y) return triangle.y;
     return triangle.z;
@@ -1051,9 +1051,9 @@ bool smooth_brush(vector<vec3f> &positions, const geodesic_solver &solver,
     stroke_vertices.push_back(closest_vertex(triangles, element, uv));
 
   // Classic Dijkstra
-  auto dijkstra = [](const geodesic_solver &solver, const vector<int> &sources,
-                      vector<float> &distances, float max_distance,
-                      auto &&update) -> void {
+  auto dijkstra = [](const geodesic_solver& solver, const vector<int>& sources,
+                      vector<float>& distances, float max_distance,
+                      auto&& update) -> void {
     auto compare = [&](int i, int j) { return distances[i] > distances[j]; };
     std::priority_queue<int, vector<int>, decltype(compare)> queue(compare);
 
@@ -1109,7 +1109,7 @@ bool smooth_brush(vector<vec3f> &positions, const geodesic_solver &solver,
   return true;
 }
 
-static scene_model make_sculptscene(const scene_shape &ioshape_) {
+static scene_model make_sculptscene(const scene_shape& ioshape_) {
   // Frame camera
   auto camera_frame = [](float lens, float aspect,
                           float film = 0.036) -> frame3f {
@@ -1125,12 +1125,12 @@ static scene_model make_sculptscene(const scene_shape &ioshape_) {
   // rescale shape to unit
   auto ioshape = ioshape_;
   auto bbox    = invalidb3f;
-  for (auto &pos : ioshape.positions) bbox = merge(bbox, pos);
-  for (auto &pos : ioshape.positions) pos -= center(bbox);
-  for (auto &pos : ioshape.positions) pos /= max(size(bbox));
+  for (auto& pos : ioshape.positions) bbox = merge(bbox, pos);
+  for (auto& pos : ioshape.positions) pos -= center(bbox);
+  for (auto& pos : ioshape.positions) pos /= max(size(bbox));
 
   // camera
-  auto &camera  = scene.cameras.emplace_back();
+  auto& camera  = scene.cameras.emplace_back();
   camera.frame  = camera_frame(0.050, 16.0f / 9.0f, 0.036);
   camera.lens   = 0.050;
   camera.aspect = 16.0f / 9.0f;
@@ -1138,10 +1138,10 @@ static scene_model make_sculptscene(const scene_shape &ioshape_) {
   camera.focus  = length(camera.frame.o - center(bbox));
 
   // material
-  auto &shape_material  = scene.materials.emplace_back();
+  auto& shape_material  = scene.materials.emplace_back();
   shape_material.type   = scene_material_type::matte;
   shape_material.color  = {0.78f, 0.31f, 0.23f};
-  auto &cursor_material = scene.materials.emplace_back();
+  auto& cursor_material = scene.materials.emplace_back();
   cursor_material.type  = scene_material_type::matte;
 
   // shapes
@@ -1149,10 +1149,10 @@ static scene_model make_sculptscene(const scene_shape &ioshape_) {
   scene.shapes.emplace_back(make_cursor({0, 0, 0}, {0, 0, 1}, 1));
 
   // instances
-  auto &shape_instance     = scene.instances.emplace_back();
+  auto& shape_instance     = scene.instances.emplace_back();
   shape_instance.shape     = 0;
   shape_instance.material  = 0;
-  auto &cursor_instance    = scene.instances.emplace_back();
+  auto& cursor_instance    = scene.instances.emplace_back();
   cursor_instance.shape    = 1;
   cursor_instance.material = 1;
 
@@ -1161,11 +1161,11 @@ static scene_model make_sculptscene(const scene_shape &ioshape_) {
 }
 
 // To make the stroke sampling (position, normal) following the mouse
-static pair<vector<shape_point>, vec2f> sample_stroke(const shape_bvh &bvh,
-    const scene_shape &shape, const vec2f &last_uv, const vec2f &mouse_uv,
-    const scene_camera &camera, const sculpt_params &params) {
+static pair<vector<shape_point>, vec2f> sample_stroke(const shape_bvh& bvh,
+    const scene_shape& shape, const vec2f& last_uv, const vec2f& mouse_uv,
+    const scene_camera& camera, const sculpt_params& params) {
   // helper
-  auto intersect_shape = [&](const vec2f &uv) {
+  auto intersect_shape = [&](const vec2f& uv) {
     auto ray = camera_ray(
         camera.frame, camera.lens, camera.aspect, camera.film, uv);
     return intersect_triangles_bvh(
@@ -1196,9 +1196,9 @@ static pair<vector<shape_point>, vec2f> sample_stroke(const shape_bvh &bvh,
   return {samples, cur_uv};
 }
 
-static pair<bool, bool> sculpt_update(sculpt_state &state, scene_shape &shape,
-    scene_shape &cursor, const scene_camera &camera, const vec2f &mouse_uv,
-    bool mouse_pressed, const sculpt_params &params) {
+static pair<bool, bool> sculpt_update(sculpt_state& state, scene_shape& shape,
+    scene_shape& cursor, const scene_camera& camera, const vec2f& mouse_uv,
+    bool mouse_pressed, const sculpt_params& params) {
   auto updated_shape = false, updated_cursor = false;
 
   auto ray = camera_ray(
@@ -1262,7 +1262,7 @@ static pair<bool, bool> sculpt_update(sculpt_state &state, scene_shape &shape,
   return {updated_shape, updated_cursor};
 }
 
-int run_glsculpt(const glsculpt_params &params_) {
+int run_glsculpt(const glsculpt_params& params_) {
   // loading shape
   auto ioerror = ""s;
   auto ioshape = scene_shape{};
@@ -1288,10 +1288,9 @@ int run_glsculpt(const glsculpt_params &params_) {
   // callbacks
   glview_scene(
       scene, params_.shape, "",
-      [&params](gui_window *win, const gui_input &input, scene_model &scene,
-          shade_scene &glscene) {
-        draw_combobox(
-            win, "brush type", (int &)params.type, sculpt_brush_names);
+      [&params](gui_window* win, const gui_input& input, scene_model& scene,
+          shade_scene& glscene) {
+        draw_combobox(win, "brush type", (int&)params.type, sculpt_brush_names);
         if (params.type == sculpt_brush_type::gaussian) {
           if (params.strength < 0.8f || params.strength > 1.5f)
             params.strength = 1.0f;
@@ -1309,14 +1308,14 @@ int run_glsculpt(const glsculpt_params &params_) {
           draw_slider(win, "strength", params.strength, 0.1f, 1.0f);
         }
       },
-      [&state, &params](gui_window *win, const gui_input &input,
-          scene_model &scene, shade_scene &glscene) {
+      [&state, &params](gui_window* win, const gui_input& input,
+          scene_model& scene, shade_scene& glscene) {
         auto  mouse_uv = vec2f{input.mouse_pos.x / float(input.window_size.x),
             input.mouse_pos.y / float(input.window_size.y)};
-        auto &shape    = scene.shapes.at(0);
-        auto &cursor   = scene.shapes.at(1);
-        auto &camera   = scene.cameras.at(0);
-        auto &glshape  = glscene.shapes.at(0);
+        auto& shape    = scene.shapes.at(0);
+        auto& cursor   = scene.shapes.at(1);
+        auto& camera   = scene.cameras.at(0);
+        auto& glshape  = glscene.shapes.at(0);
         auto [updated_shape, updated_cursor] = sculpt_update(state, shape,
             cursor, camera, mouse_uv, input.mouse_left && input.modifier_ctrl,
             params);
