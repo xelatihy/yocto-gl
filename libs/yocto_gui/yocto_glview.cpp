@@ -626,7 +626,7 @@ void view_scene(const string& title, const string& name, scene_model& scene,
   stop_render();
 }
 
-static void init_glscene(shade_scene& glscene, const sceneio_scene& ioscene) {
+static void init_glscene(shade_scene& glscene, const scene_model& ioscene) {
   // init scene
   init_scene(glscene);
 
@@ -723,13 +723,36 @@ static void init_glscene(shade_scene& glscene, const sceneio_scene& ioscene) {
   init_environments(glscene);
 }
 
-using glview_scene_callback = std::function<void(gui_window* win,
-    const gui_input& input, scene_model& scene, shade_scene& glscene)>;
+static void update_glscene(shade_scene& glscene, const scene_model& scene,
+    const vector<int>& updated_shapes, const vector<int>& updated_textures) {
+  for (auto shape_id : updated_shapes) {
+    auto& shape   = scene.shapes.at(shape_id);
+    auto& glshape = glscene.shapes.at(shape_id);
+    if (!shape.points.empty()) set_points(glshape, shape.points);
+    if (!shape.lines.empty()) set_lines(glshape, shape.lines);
+    if (!shape.triangles.empty()) set_triangles(glshape, shape.triangles);
+    if (!shape.quads.empty()) set_quads(glshape, shape.quads);
+    if (!shape.positions.empty()) set_positions(glshape, shape.positions);
+    if (!shape.normals.empty()) set_normals(glshape, shape.normals);
+    if (!shape.texcoords.empty()) set_texcoords(glshape, shape.texcoords);
+    if (!shape.colors.empty()) set_colors(glshape, shape.colors);
+    if (!shape.tangents.empty()) set_tangents(glshape, shape.tangents);
+  }
+  for (auto texture_id : updated_textures) {
+    auto& texture   = scene.textures.at(texture_id);
+    auto& gltexture = glscene.textures.at(texture_id);
+    if (!texture.pixelsf.empty()) {
+      set_texture(gltexture, texture.width, texture.height, texture.pixelsf);
+    } else if (!texture.pixelsb.empty()) {
+      set_texture(gltexture, texture.width, texture.height, texture.pixelsb);
+    }
+  }
+}
 
 void glview_scene(const string& title, const string& name, scene_model& scene,
-    const shade_params& params_, const glview_scene_callback& widgets_callback,
-    const glview_scene_callback& uiupdate_callback,
-    const glview_scene_callback& update_callback) {
+    const shade_params& params_, const glview_callback& widgets_callback,
+    const glview_callback& uiupdate_callback,
+    const glview_callback& update_callback) {
   // glscene
   auto glscene = shade_scene{};
 
@@ -747,6 +770,10 @@ void glview_scene(const string& title, const string& name, scene_model& scene,
       camera_names.push_back("camera" + std::to_string(idx + 1));
     }
   }
+
+  // gpu updates
+  auto updated_shapes   = vector<int>{};
+  auto updated_textures = vector<int>{};
 
   // callbacks
   auto callbacks    = gui_callbacks{};
@@ -777,14 +804,35 @@ void glview_scene(const string& title, const string& name, scene_model& scene,
       end_header(win);
     }
     // draw_scene_editor(win, scene, selection, {});
-    if (widgets_callback) widgets_callback(win, input, scene, glscene);
+    if (widgets_callback) {
+      widgets_callback(win, input, updated_shapes, updated_textures);
+      if (!updated_shapes.empty() || !updated_textures.empty()) {
+        update_glscene(glscene, scene, updated_shapes, updated_textures);
+        updated_shapes.clear();
+        updated_textures.clear();
+      }
+    }
   };
   callbacks.update_cb = [&](gui_window* win, const gui_input& input) {
-    if (update_callback) update_callback(win, input, scene, glscene);
+    if (update_callback) {
+      update_callback(win, input, updated_shapes, updated_textures);
+      if (!updated_shapes.empty() || !updated_textures.empty()) {
+        update_glscene(glscene, scene, updated_shapes, updated_textures);
+        updated_shapes.clear();
+        updated_textures.clear();
+      }
+    }
   };
   callbacks.uiupdate_cb = [&](gui_window* win, const gui_input& input) {
     // handle mouse and keyboard for navigation
-    if (uiupdate_callback) uiupdate_callback(win, input, scene, glscene);
+    if (uiupdate_callback) {
+      uiupdate_callback(win, input, updated_shapes, updated_textures);
+      if (!updated_shapes.empty() || !updated_textures.empty()) {
+        update_glscene(glscene, scene, updated_shapes, updated_textures);
+        updated_shapes.clear();
+        updated_textures.clear();
+      }
+    }
     auto camera = scene.cameras.at(0);
     if (uiupdate_camera_params(win, input, camera)) {
       scene.cameras.at(0) = camera;

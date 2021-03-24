@@ -82,14 +82,15 @@ void colorgrade_image(
 void view_scene(const string& title, const string& name, scene_model& scene,
     const trace_params& params = {}, bool print = true, bool edit = false);
 
-using glview_scene_callback = std::function<void(gui_window* win,
-    const gui_input& input, scene_model& scene, shade_scene& glscene)>;
+using glview_callback =
+    std::function<void(gui_window* win, const gui_input& input,
+        vector<int>& updated_shapes, vector<int>& updated_textures)>;
 
 void glview_scene(const string& title, const string& name, scene_model& scene,
-    const shade_params&          params            = {},
-    const glview_scene_callback& widgets_callback  = {},
-    const glview_scene_callback& uiupdate_callback = {},
-    const glview_scene_callback& update_callback   = {});
+    const shade_params&    params            = {},
+    const glview_callback& widgets_callback  = {},
+    const glview_callback& uiupdate_callback = {},
+    const glview_callback& update_callback   = {});
 
 }  // namespace yocto
 
