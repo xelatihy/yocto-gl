@@ -104,13 +104,13 @@ struct gui_image {
   int height = 0;
 
   // Opengl state
-  uint texture  = 0;
-  uint program  = 0;
-  uint vertex   = 0;
-  uint fragment = 0;
-
-  // to be converted
-  ogl_shape quad = {};
+  uint texture   = 0;
+  uint program   = 0;
+  uint vertex    = 0;
+  uint fragment  = 0;
+  uint vao       = 0;
+  uint positions = 0;
+  uint triangles = 0;
 };
 
 // create image drawing program

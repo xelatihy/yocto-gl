@@ -1020,9 +1020,33 @@ void main() {
 
 // init image program
 bool init_image(gui_image& oimg) {
+  // program
   set_program(oimg.program, oimg.vertex, oimg.fragment, ogl_image_vertex,
       ogl_image_fragment);
-  set_quad_shape(oimg.quad);
+
+  // vertex arrays
+  glGenVertexArrays(1, &oimg.vao);
+  glBindVertexArray(oimg.vao);
+
+  // buffers
+  auto positions = vector<vec3f>{
+      {-1, -1, 0}, {1, -1, 0}, {1, 1, 0}, {-1, 1, 0}};
+  glGenBuffers(1, &oimg.positions);
+  glBindBuffer(GL_ARRAY_BUFFER, oimg.positions);
+  glBufferData(GL_ARRAY_BUFFER, sizeof(vec3f) * positions.size(),
+      positions.data(), GL_STATIC_DRAW);
+  glEnableVertexAttribArray(0);
+  glVertexAttribPointer(0, 3, GL_FLOAT, false, 0, nullptr);
+  glBindBuffer(GL_ARRAY_BUFFER, 0);
+  auto triangles = vector<vec3i>{{0, 1, 3}, {3, 2, 1}};
+  glGenBuffers(1, &oimg.triangles);
+  glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, oimg.triangles);
+  glBufferData(GL_ELEMENT_ARRAY_BUFFER, sizeof(vec3i) * triangles.size(),
+      triangles.data(), GL_STATIC_DRAW);
+  glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, 0);
+
+  // done
+  // glBindVertexArray(0);
   return true;
 }
 
@@ -1032,8 +1056,10 @@ void clear_image(gui_image& oimg) {
   if (oimg.program) glDeleteProgram(oimg.program);
   if (oimg.vertex) glDeleteProgram(oimg.vertex);
   if (oimg.fragment) glDeleteProgram(oimg.fragment);
-  clear_shape(oimg.quad);
-  // oimg = {};
+  if (oimg.vao) glDeleteVertexArrays(1, &oimg.vao);
+  if (oimg.positions) glDeleteBuffers(1, &oimg.positions);
+  if (oimg.triangles) glDeleteBuffers(1, &oimg.triangles);
+  oimg = {};
 }
 
 void set_image(gui_image& oimg, const color_image& img) {
@@ -1078,14 +1104,17 @@ void draw_image(gui_image& oimg, const gui_image_params& params) {
   glUniform2f(glGetUniformLocation(oimg.program, "image_center"),
       params.center.x, params.center.y);
   glUniform1f(glGetUniformLocation(oimg.program, "image_scale"), params.scale);
+  assert_ogl_error_();
 
-  // draw shape
-  draw_shape(oimg.quad);
+  // draw
+  glBindVertexArray(oimg.vao);
+  glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, oimg.triangles);
+  glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_INT, nullptr);
+  glBindVertexArray(0);
+  assert_ogl_error_();
 
   // unbind program
   glUseProgram(0);
-
-  // check errors
   assert_ogl_error_();
 }
 
