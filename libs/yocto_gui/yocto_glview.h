@@ -143,18 +143,6 @@ void draw_image(glimage_state& image, const glimage_params& params);
 // -----------------------------------------------------------------------------
 namespace yocto {
 
-// Opengl caemra
-struct glscene_camera {
-  frame3f frame    = identity3x4f;
-  float   lens     = 0.050;
-  float   aspect   = 1.000;
-  float   film     = 0.036;
-  float   near     = 0.001;
-  float   far      = 10000;
-  float   aperture = 0;
-  float   focus    = 0;
-};
-
 // Opengl texture
 struct glscene_texture : ogl_texture {};
 
@@ -210,7 +198,6 @@ struct glscene_environment {
 // Opengl scene
 struct glscene_state {
   // scene objects
-  vector<glscene_camera>      cameras      = {};
   vector<glscene_instance>    instances    = {};
   vector<glscene_shape>       shapes       = {};
   vector<glscene_material>    materials    = {};
@@ -282,17 +269,11 @@ bool has_envlight(const glscene_state& scene);
 void clear_scene(glscene_state& scene);
 
 // add scene elements
-glcamera_handle      add_camera(glscene_state& scene);
 gltexture_handle     add_texture(glscene_state& scene);
 glmaterial_handle    add_material(glscene_state& scene);
 glshape_handle       add_shape(glscene_state& scene);
 glinstance_handle    add_instance(glscene_state& scene);
 glenvironment_handle add_environment(glscene_state& scene);
-
-// camera properties
-void set_frame(glscene_camera& camera, const frame3f& frame);
-void set_lens(glscene_camera& camera, float lens, float aspect, float film);
-void set_nearfar(glscene_camera& camera, float near, float far);
 
 // material properties
 void set_emission(glscene_material& material, const vec3f& emission,
@@ -347,9 +328,6 @@ void set_emission(glscene_environment& environment, const vec3f& emission,
     gltexture_handle emission_tex = glinvalid_handle);
 
 // shortcuts
-glcamera_handle      add_camera(glscene_state& scene, const frame3f& frame,
-         float lens, float aspect, float film = 0.036, float near = 0.001,
-         float far = 10000);
 glmaterial_handle    add_material(glscene_state& scene, const vec3f& emission,
        const vec3f& color, float specular, float metallic, float roughness,
        gltexture_handle emission_tex  = glinvalid_handle,

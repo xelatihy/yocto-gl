@@ -640,14 +640,6 @@ static void init_glscene(glscene_state& glscene, const scene_model& ioscene) {
   // init scene
   init_scene(glscene);
 
-  // camera
-  for (auto& iocamera : ioscene.cameras) {
-    auto& camera = glscene.cameras.at(add_camera(glscene));
-    set_frame(camera, iocamera.frame);
-    set_lens(camera, iocamera.lens, iocamera.aspect, iocamera.film);
-    set_nearfar(camera, 0.001, 10000);
-  }
-
   // textures
   for (auto& iotexture : ioscene.textures) {
     auto  handle    = add_texture(glscene);
@@ -843,10 +835,9 @@ void glview_scene(const string& title, const string& name, scene_model& scene,
         updated_textures.clear();
       }
     }
-    auto camera = scene.cameras.at(0);
+    auto camera = scene.cameras.at(params.camera);
     if (uiupdate_camera_params(win, input, camera)) {
-      scene.cameras.at(0) = camera;
-      set_frame(glscene.cameras.at(0), camera.frame);
+      scene.cameras.at(params.camera) = camera;
     }
   };
 
@@ -1299,24 +1290,6 @@ void clear_scene(glscene_state& scene) {
   clear_program(scene.instance_program);
 }
 
-// add camera
-glcamera_handle add_camera(glscene_state& scene) {
-  scene.cameras.emplace_back();
-  return (int)scene.cameras.size() - 1;
-}
-void set_frame(glscene_camera& camera, const frame3f& frame) {
-  camera.frame = frame;
-}
-void set_lens(glscene_camera& camera, float lens, float aspect, float film) {
-  camera.lens   = lens;
-  camera.aspect = aspect;
-  camera.film   = film;
-}
-void set_nearfar(glscene_camera& camera, float near, float far) {
-  camera.near = near;
-  camera.far  = far;
-}
-
 // add texture
 gltexture_handle add_texture(glscene_state& scene) {
   scene.textures.emplace_back();
@@ -1429,15 +1402,6 @@ void set_emission(glscene_environment& environment, const vec3f& emission,
 }
 
 // shortcuts
-glcamera_handle add_camera(glscene_state& scene, const frame3f& frame,
-    float lens, float aspect, float film, float near, float far) {
-  auto  handle = add_camera(scene);
-  auto& camera = scene.cameras[handle];
-  set_frame(camera, frame);
-  set_lens(camera, lens, aspect, film);
-  set_nearfar(camera, near, far);
-  return handle;
-}
 glmaterial_handle add_material(glscene_state& scene, const vec3f& emission,
     const vec3f& color, float specular, float metallic, float roughness,
     gltexture_handle emission_tex, gltexture_handle color_tex,
@@ -1644,10 +1608,10 @@ void set_lighting_uniforms(ogl_program& program, const glscene_state& scene,
   assert_ogl_error();
 }
 
-void draw_instances(glscene_state& scene, const shade_view& view,
+void draw_instances(glscene_state& glscene, const shade_view& view,
     const glscene_params& params) {
   // set program
-  auto& program = scene.instance_program;
+  auto& program = glscene.instance_program;
   bind_program(program);
 
   // set scene uniforms
@@ -1655,20 +1619,20 @@ void draw_instances(glscene_state& scene, const shade_view& view,
   set_params_uniforms(program, params);
 
   // set lighting uniforms
-  set_lighting_uniforms(program, scene, view, params);
+  set_lighting_uniforms(program, glscene, view, params);
 
   set_ogl_wireframe(params.wireframe);
-  for (auto& instance : scene.instances) {
+  for (auto& instance : glscene.instances) {
     if (instance.hidden) continue;
-    set_instance_uniforms(scene, program, instance.frame,
-        scene.shapes.at(instance.shape), scene.materials.at(instance.material),
-        params);
-    draw_shape(scene.shapes.at(instance.shape));
+    set_instance_uniforms(glscene, program, instance.frame,
+        glscene.shapes.at(instance.shape),
+        glscene.materials.at(instance.material), params);
+    draw_shape(glscene.shapes.at(instance.shape));
   }
   unbind_program();
 }
 
-static shade_view make_scene_view(const glscene_camera& camera,
+static shade_view make_scene_view(const scene_camera& camera,
     const vec4i& viewport, const glscene_params& params) {
   auto camera_aspect = (float)viewport.z / (float)viewport.w;
   auto camera_yfov =
@@ -1691,7 +1655,7 @@ void draw_scene(glscene_state& glscene, const scene_model& scene,
   clear_ogl_framebuffer(params.background);
   set_ogl_viewport(viewport);
 
-  auto& camera = glscene.cameras.at(params.camera);
+  auto& camera = scene.cameras.at(params.camera);
   auto  view   = make_scene_view(camera, viewport, params);
   draw_instances(glscene, view, params);
   draw_environments(glscene, view, params);
