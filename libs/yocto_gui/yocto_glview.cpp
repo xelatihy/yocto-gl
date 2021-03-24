@@ -749,8 +749,7 @@ void glview_scene(const string& title, const string& name, scene_model& scene,
     clear_scene(glscene);
   };
   callbacks.draw_cb = [&](gui_window* win, const gui_input& input) {
-    draw_scene(
-        glscene, glscene.cameras.at(0), input.framebuffer_viewport, params);
+    draw_scene(glscene, input.framebuffer_viewport, params);
   };
   callbacks.widgets_cb = [&](gui_window* win, const gui_input& input) {
     draw_combobox(win, "name", selected, names);

@@ -177,6 +177,7 @@ const auto shade_lighting_names = vector<string>{
 
 // Draw options
 struct shade_params {
+  int                 camera           = 0;
   int                 resolution       = 1280;
   bool                wireframe        = false;
   shade_lighting_type lighting         = shade_lighting_type::camlight;
@@ -292,8 +293,8 @@ glenvironment_handle add_environment(shade_scene& scene, const frame3f& frame,
     const vec3f& emission, gltexture_handle emission_tex = glinvalid_handle);
 
 // draw scene
-void draw_scene(shade_scene& scene, const shade_camera& camera,
-    const vec4i& viewport, const shade_params& params);
+void draw_scene(
+    shade_scene& scene, const vec4i& viewport, const shade_params& params);
 
 }  // namespace yocto
 
