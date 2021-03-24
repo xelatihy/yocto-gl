@@ -937,11 +937,12 @@ void set_program(uint& program_id, uint& vertex_id, uint& fragment_id,
     glGetProgramInfoLog(program_id, 10000, 0, errbuf.data());
     return program_error("program not linked", errbuf.data());
   }
-  // TODO(fabio): Apparently validation must be done just before drawing.
-  //    https://community.khronos.org/t/samplers-of-different-types-use-the-same-textur/66329
-  // If done here, validation fails when using cubemaps and textures in the
-  // same shader. We should create a function validate_program() anc call it
-  // separately.
+// TODO(fabio): Apparently validation must be done just before drawing.
+//    https://community.khronos.org/t/samplers-of-different-types-use-the-same-textur/66329
+// If done here, validation fails when using cubemaps and textures in the
+// same shader. We should create a function validate_program() anc call it
+// separately.
+#if 0
   glValidateProgram(program_id);
   glGetProgramiv(program_id, GL_VALIDATE_STATUS, &errflags);
   if (!errflags) {
@@ -949,6 +950,7 @@ void set_program(uint& program_id, uint& vertex_id, uint& fragment_id,
     return program_error("program not validated", errbuf.data());
   }
   assert_ogl_error_();
+#endif
 }
 
 }  // namespace yocto
