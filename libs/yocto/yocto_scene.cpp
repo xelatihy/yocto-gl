@@ -1140,7 +1140,6 @@ scene_model make_shape_scene(const scene_shape& shape) {
   // done
   return scene;
 }
-scene_model make_shapeview_scene(const scene_shape& shape) {}
 
 // Updates the scene and scene's instances bounding boxes
 bbox3f compute_bounds(const scene_model& scene) {

@@ -405,53 +405,6 @@ int run_glview(const glview_params& params) {
 
 #else
 
-static scene_model make_shapescene(const scene_shape& ioshape_) {
-  // Frame camera
-  auto camera_frame = [](float lens, float aspect,
-                          float film = 0.036) -> frame3f {
-    auto camera_dir  = normalize(vec3f{0, 0.5, 1});
-    auto bbox_radius = 2.0f;
-    auto camera_dist = bbox_radius * lens / (film / aspect);
-    return lookat_frame(camera_dir * camera_dist, {0, 0, 0}, {0, 1, 0});
-  };
-
-  // init scene
-  auto scene = scene_model{};
-
-  // rescale shape to unit
-  auto ioshape = ioshape_;
-  auto bbox    = invalidb3f;
-  for (auto& pos : ioshape.positions) bbox = merge(bbox, pos);
-  for (auto& pos : ioshape.positions) pos -= center(bbox);
-  for (auto& pos : ioshape.positions) pos /= max(size(bbox));
-  // TODO(fabio): this should be a math function
-
-  // camera
-  auto& camera  = scene.cameras.emplace_back();
-  camera.frame  = camera_frame(0.050, 16.0f / 9.0f, 0.036);
-  camera.lens   = 0.050;
-  camera.aspect = 16.0f / 9.0f;
-  camera.film   = 0.036;
-  camera.focus  = length(camera.frame.o - center(bbox));
-
-  // material
-  auto& shape_material     = scene.materials.emplace_back();
-  shape_material.type      = scene_material_type::glossy;
-  shape_material.color     = {0.5, 1, 0.5};
-  shape_material.roughness = 0.2;
-
-  // shapes
-  scene.shapes.emplace_back(ioshape);
-
-  // instances
-  auto& shape_instance    = scene.instances.emplace_back();
-  shape_instance.shape    = 0;
-  shape_instance.material = 0;
-
-  // done
-  return scene;
-}
-
 int run_glview(const glview_params& params) {
   // loading shape
   auto ioerror = ""s;
