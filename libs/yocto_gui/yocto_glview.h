@@ -370,8 +370,8 @@ glenvironment_handle add_environment(glscene_state& scene, const frame3f& frame,
     const vec3f& emission, gltexture_handle emission_tex = glinvalid_handle);
 
 // draw scene
-void draw_scene(
-    glscene_state& scene, const vec4i& viewport, const glscene_params& params);
+void draw_scene(glscene_state& glscene, const scene_model& scene,
+    const vec4i& viewport, const glscene_params& params);
 
 }  // namespace yocto
 

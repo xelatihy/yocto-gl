@@ -794,7 +794,7 @@ void glview_scene(const string& title, const string& name, scene_model& scene,
     clear_scene(glscene);
   };
   callbacks.draw_cb = [&](gui_window* win, const gui_input& input) {
-    draw_scene(glscene, input.framebuffer_viewport, params);
+    draw_scene(glscene, scene, input.framebuffer_viewport, params);
   };
   callbacks.widgets_cb = [&](gui_window* win, const gui_input& input) {
     draw_combobox(win, "name", selected, names);
@@ -1686,15 +1686,15 @@ static shade_view make_scene_view(const glscene_camera& camera,
   return view;
 }
 
-void draw_scene(
-    glscene_state& scene, const vec4i& viewport, const glscene_params& params) {
+void draw_scene(glscene_state& glscene, const scene_model& scene,
+    const vec4i& viewport, const glscene_params& params) {
   clear_ogl_framebuffer(params.background);
   set_ogl_viewport(viewport);
 
-  auto& camera = scene.cameras.at(params.camera);
+  auto& camera = glscene.cameras.at(params.camera);
   auto  view   = make_scene_view(camera, viewport, params);
-  draw_instances(scene, view, params);
-  draw_environments(scene, view, params);
+  draw_instances(glscene, view, params);
+  draw_environments(glscene, view, params);
 }
 
 // image based lighting
