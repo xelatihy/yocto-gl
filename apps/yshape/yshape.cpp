@@ -392,7 +392,7 @@ void add_command(cli_command& cli, const string& name, glview_params& value,
     const string& usage) {
   auto& cmd = add_command(cli, name, usage);
   add_argument(cmd, "shape", value.shape, "Input shape.");
-  add_argument(cmd, "addsky", value.addsky, "Add sky.");
+  add_option(cmd, "addsky", value.addsky, "Add sky.");
 }
 
 #ifndef YOCTO_OPENGL
