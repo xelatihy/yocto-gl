@@ -47,14 +47,14 @@ struct convert_params {
 };
 
 // Cli
-void add_command(cli_command& cli, const string& name, convert_params& value,
+void add_command(cli_command& cli, const string& name, convert_params& params,
     const string& usage) {
   auto& cmd = add_command(cli, name, usage);
-  add_argument(cmd, "scene", value.scene, "Input scene.");
-  add_option(cmd, "output", value.output, "Output scene.");
-  add_option(cmd, "info", value.info, "Print info.");
-  add_option(cmd, "validate", value.validate, "Validate scene.");
-  add_option(cmd, "copyright", value.copyright, "Set scene copyright.");
+  add_argument(cmd, "scene", params.scene, "Input scene.");
+  add_option(cmd, "output", params.output, "Output scene.");
+  add_option(cmd, "info", params.info, "Print info.");
+  add_option(cmd, "validate", params.validate, "Validate scene.");
+  add_option(cmd, "copyright", params.copyright, "Set scene copyright.");
 }
 
 // convert images
@@ -109,11 +109,11 @@ struct info_params {
 };
 
 // Cli
-void add_command(cli_command& cli, const string& name, info_params& value,
+void add_command(cli_command& cli, const string& name, info_params& params,
     const string& usage) {
   auto& cmd = add_command(cli, name, usage);
-  add_argument(cmd, "scene", value.scene, "Input scene.");
-  add_option(cmd, "validate", value.validate, "Validate scene.");
+  add_argument(cmd, "scene", params.scene, "Input scene.");
+  add_option(cmd, "validate", params.validate, "Validate scene.");
 }
 
 // print info for scenes
@@ -149,31 +149,31 @@ struct render_params : trace_params {
 };
 
 // Cli
-void add_command(cli_command& cli, const string& name, render_params& value,
+void add_command(cli_command& cli, const string& name, render_params& params,
     const string& usage) {
   auto& cmd = add_command(cli, name, usage);
-  add_argument(cmd, "scene", value.scene, "Scene filename.");
-  add_option(cmd, "output", value.output, "Output filename.");
-  add_option(cmd, "camera", value.camname, "Camera name.");
-  add_option(cmd, "addsky", value.addsky, "Add sky.");
-  add_option(cmd, "envname", value.envname, "Add environment map.");
-  add_option(cmd, "savebatch", value.savebatch, "Save batch.");
+  add_argument(cmd, "scene", params.scene, "Scene filename.");
+  add_option(cmd, "output", params.output, "Output filename.");
+  add_option(cmd, "camera", params.camname, "Camera name.");
+  add_option(cmd, "addsky", params.addsky, "Add sky.");
+  add_option(cmd, "envname", params.envname, "Add environment map.");
+  add_option(cmd, "savebatch", params.savebatch, "Save batch.");
   add_option(
-      cmd, "resolution", value.resolution, "Image resolution.", {1, 4096});
+      cmd, "resolution", params.resolution, "Image resolution.", {1, 4096});
   add_option(
-      cmd, "sampler", value.sampler, "Sampler type.", trace_sampler_names);
-  add_option(cmd, "falsecolor", value.falsecolor, "False color type.",
+      cmd, "sampler", params.sampler, "Sampler type.", trace_sampler_names);
+  add_option(cmd, "falsecolor", params.falsecolor, "False color type.",
       trace_falsecolor_names);
-  add_option(cmd, "samples", value.samples, "Number of samples.", {1, 4096});
-  add_option(cmd, "bounces", value.bounces, "Number of bounces.", {1, 128});
-  add_option(cmd, "clamp", value.clamp, "Clamp value.", {10, flt_max});
-  add_option(cmd, "nocaustics", value.nocaustics, "Disable caustics.");
-  add_option(cmd, "envhidden", value.envhidden, "Hide environment.");
-  add_option(cmd, "tentfilter", value.tentfilter, "Filter image.");
-  add_option(cmd, "embreebvh", value.embreebvh, "Use Embree as BVH.");
+  add_option(cmd, "samples", params.samples, "Number of samples.", {1, 4096});
+  add_option(cmd, "bounces", params.bounces, "Number of bounces.", {1, 128});
+  add_option(cmd, "clamp", params.clamp, "Clamp params.", {10, flt_max});
+  add_option(cmd, "nocaustics", params.nocaustics, "Disable caustics.");
+  add_option(cmd, "envhidden", params.envhidden, "Hide environment.");
+  add_option(cmd, "tentfilter", params.tentfilter, "Filter image.");
+  add_option(cmd, "embreebvh", params.embreebvh, "Use Embree as BVH.");
   add_option(
-      cmd, "highqualitybvh", value.highqualitybvh, "Use high quality BVH.");
-  add_option(cmd, "noparallel", value.noparallel, "Disable threading.");
+      cmd, "highqualitybvh", params.highqualitybvh, "Use high quality BVH.");
+  add_option(cmd, "noparallel", params.noparallel, "Disable threading.");
 }
 
 // convert images
@@ -261,30 +261,30 @@ struct view_params : trace_params {
 };
 
 // Cli
-void add_command(cli_command& cli, const string& name, view_params& value,
+void add_command(cli_command& cli, const string& name, view_params& params,
     const string& usage) {
   auto& cmd = add_command(cli, name, usage);
-  add_argument(cmd, "scene", value.scene, "Scene filename.");
-  add_option(cmd, "output", value.output, "Output filename.");
-  add_option(cmd, "camera", value.camname, "Camera name.");
-  add_option(cmd, "addsky", value.addsky, "Add sky.");
-  add_option(cmd, "envname", value.envname, "Add environment map.");
+  add_argument(cmd, "scene", params.scene, "Scene filename.");
+  add_option(cmd, "output", params.output, "Output filename.");
+  add_option(cmd, "camera", params.camname, "Camera name.");
+  add_option(cmd, "addsky", params.addsky, "Add sky.");
+  add_option(cmd, "envname", params.envname, "Add environment map.");
   add_option(
-      cmd, "resolution", value.resolution, "Image resolution.", {1, 4096});
+      cmd, "resolution", params.resolution, "Image resolution.", {1, 4096});
   add_option(
-      cmd, "sampler", value.sampler, "Sampler type.", trace_sampler_names);
-  add_option(cmd, "falsecolor", value.falsecolor, "False color type.",
+      cmd, "sampler", params.sampler, "Sampler type.", trace_sampler_names);
+  add_option(cmd, "falsecolor", params.falsecolor, "False color type.",
       trace_falsecolor_names);
-  add_option(cmd, "samples", value.samples, "Number of samples.", {1, 4096});
-  add_option(cmd, "bounces", value.bounces, "Number of bounces.", {1, 128});
-  add_option(cmd, "clamp", value.clamp, "Clamp value.", {10, flt_max});
-  add_option(cmd, "nocaustics", value.nocaustics, "Disable caustics.");
-  add_option(cmd, "envhidden", value.envhidden, "Hide environment.");
-  add_option(cmd, "tentfilter", value.tentfilter, "Filter image.");
-  add_option(cmd, "embreebvh", value.embreebvh, "Use Embree as BVH.");
+  add_option(cmd, "samples", params.samples, "Number of samples.", {1, 4096});
+  add_option(cmd, "bounces", params.bounces, "Number of bounces.", {1, 128});
+  add_option(cmd, "clamp", params.clamp, "Clamp params.", {10, flt_max});
+  add_option(cmd, "nocaustics", params.nocaustics, "Disable caustics.");
+  add_option(cmd, "envhidden", params.envhidden, "Hide environment.");
+  add_option(cmd, "tentfilter", params.tentfilter, "Filter image.");
+  add_option(cmd, "embreebvh", params.embreebvh, "Use Embree as BVH.");
   add_option(
-      cmd, "highqualitybvh", value.highqualitybvh, "Use high quality BVH.");
-  add_option(cmd, "noparallel", value.noparallel, "Disable threading.");
+      cmd, "highqualitybvh", params.highqualitybvh, "Use high quality BVH.");
+  add_option(cmd, "noparallel", params.noparallel, "Disable threading.");
 }
 
 #ifndef YOCTO_OPENGL
@@ -335,17 +335,17 @@ int run_view(const view_params& params_) {
 
 #endif
 
-struct glview_params : shade_params {
+struct glview_params {
   string scene   = "scene.json"s;
   string camname = "";
 };
 
 // Cli
-void add_command(cli_command& cli, const string& name, glview_params& value,
+void add_command(cli_command& cli, const string& name, glview_params& params,
     const string& usage) {
   auto& cmd = add_command(cli, name, usage);
-  add_argument(cmd, "scene", value.scene, "Input scene.");
-  add_option(cmd, "camera", value.camname, "Camera name.");
+  add_argument(cmd, "scene", params.scene, "Input scene.");
+  add_option(cmd, "camera", params.camname, "Camera name.");
 }
 
 #ifndef YOCTO_OPENGL
@@ -376,10 +376,11 @@ int run_glview(const glview_params& params_) {
   }
 
   // camera
-  params.camera = find_camera(scene, params.camname);
+  auto glparams   = shade_params{};
+  glparams.camera = find_camera(scene, params.camname);
 
   // run viewer
-  glview_scene("yscene", params.scene, scene);
+  glview_scene("yscene", params.scene, scene, glparams);
 
   // done
   return 0;
@@ -397,15 +398,15 @@ struct app_params {
 };
 
 // Cli
-void add_commands(cli_command& cli, const string& name, app_params& value,
+void add_commands(cli_command& cli, const string& name, app_params& params,
     const string& usage) {
   cli = make_cli(name, usage);
-  add_command_name(cli, "command", value.command, "Command.");
-  add_command(cli, "convert", value.convert, "Convert scenes.");
-  add_command(cli, "info", value.info, "Print scenes info.");
-  add_command(cli, "render", value.render, "Render scenes.");
-  add_command(cli, "view", value.view, "View scenes.");
-  add_command(cli, "glview", value.glview, "View scenes with OpenGL.");
+  add_command_name(cli, "command", params.command, "Command.");
+  add_command(cli, "convert", params.convert, "Convert scenes.");
+  add_command(cli, "info", params.info, "Print scenes info.");
+  add_command(cli, "render", params.render, "Render scenes.");
+  add_command(cli, "view", params.view, "View scenes.");
+  add_command(cli, "glview", params.glview, "View scenes with OpenGL.");
 }
 
 // Parse cli
