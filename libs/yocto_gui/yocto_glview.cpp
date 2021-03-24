@@ -33,6 +33,16 @@
 #include <yocto/yocto_geometry.h>
 #include <yocto/yocto_parallel.h>
 
+#include <cassert>
+#include <stdexcept>
+
+#include "ext/glad/glad.h"
+
+#ifdef _WIN32
+#undef near
+#undef far
+#endif
+
 // -----------------------------------------------------------------------------
 // VIEW HELPERS
 // -----------------------------------------------------------------------------
@@ -54,21 +64,6 @@ void update_image_params(gui_window* win, const gui_input& input,
   std::tie(glparams.center, glparams.scale) = camera_imview(glparams.center,
       glparams.scale, {image.width, image.height}, glparams.window,
       glparams.fit);
-}
-
-static bool uiupdate_image_params(
-    gui_window* win, const gui_input& input, ogl_image_params& glparams) {
-  // handle mouse
-  if (input.mouse_left && !input.widgets_active) {
-    glparams.center += input.mouse_pos - input.mouse_last;
-    return true;
-  }
-  if (input.mouse_right && !input.widgets_active) {
-    glparams.scale *= powf(
-        2, (input.mouse_pos.x - input.mouse_last.x) * 0.001f);
-    return true;
-  }
-  return false;
 }
 
 static bool uiupdate_image_params(
@@ -120,29 +115,6 @@ static bool draw_tonemap_params(
     end_header(win);
   }
   return (bool)edited;
-}
-
-static bool draw_image_inspector(gui_window* win, const gui_input& input,
-    const color_image& image, const color_image& display,
-    ogl_image_params& glparams) {
-  if (begin_header(win, "inspect")) {
-    draw_slider(win, "zoom", glparams.scale, 0.1, 10);
-    draw_checkbox(win, "fit", glparams.fit);
-    auto [i, j] = image_coords(input.mouse_pos, glparams.center, glparams.scale,
-        {image.width, image.height});
-    auto ij     = vec2i{i, j};
-    draw_dragger(win, "mouse", ij);
-    auto image_pixel   = zero4f;
-    auto display_pixel = zero4f;
-    if (i >= 0 && i < image.width && j >= 0 && j < image.height) {
-      image_pixel   = image.pixels[j * image.width + i];
-      display_pixel = image.pixels[j * image.width + i];
-    }
-    draw_coloredit(win, "image", image_pixel);
-    draw_coloredit(win, "display", display_pixel);
-    end_header(win);
-  }
-  return false;
 }
 
 static bool draw_image_inspector(gui_window* win, const gui_input& input,
@@ -885,6 +857,35 @@ void glview_scene(const string& title, const string& name, scene_model& scene,
 }  // namespace yocto
 
 // -----------------------------------------------------------------------------
+// OPENGL HELPERS
+// -----------------------------------------------------------------------------
+namespace yocto {
+
+// assert on error
+[[maybe_unused]] static GLenum _assert_ogl_error() {
+  auto error_code = glGetError();
+  if (error_code != GL_NO_ERROR) {
+    auto error = ""s;
+    switch (error_code) {
+      case GL_INVALID_ENUM: error = "INVALID_ENUM"; break;
+      case GL_INVALID_VALUE: error = "INVALID_VALUE"; break;
+      case GL_INVALID_OPERATION: error = "INVALID_OPERATION"; break;
+      // case GL_STACK_OVERFLOW: error = "STACK_OVERFLOW"; break;
+      // case GL_STACK_UNDERFLOW: error = "STACK_UNDERFLOW"; break;
+      case GL_OUT_OF_MEMORY: error = "OUT_OF_MEMORY"; break;
+      case GL_INVALID_FRAMEBUFFER_OPERATION:
+        error = "INVALID_FRAMEBUFFER_OPERATION";
+        break;
+    }
+    printf("\n    OPENGL ERROR: %s\n\n", error.c_str());
+  }
+  return error_code;
+}
+static void assert_ogl_error_() { assert(_assert_ogl_error() == GL_NO_ERROR); }
+
+}  // namespace yocto
+
+// -----------------------------------------------------------------------------
 // HIGH-LEVEL OPENGL IMAGE DRAWING
 // -----------------------------------------------------------------------------
 namespace yocto {
@@ -947,13 +948,8 @@ void main() {
 )";
 #endif
 
-bool is_initialized(const gui_image& oimg) {
-  return is_initialized(oimg.program);
-}
-
 // init image program
 bool init_image(gui_image& oimg) {
-  if (is_initialized(oimg)) return true;
   if (!set_program(oimg.program, ogl_image_vertex, ogl_image_fragment))
     return false;
   set_quad_shape(oimg.quad);
@@ -975,19 +971,39 @@ void set_image(
 
 // draw image
 void draw_image(gui_image& oimg, const gui_image_params& params) {
-  assert_ogl_error();
-  set_ogl_viewport(params.framebuffer);
-  clear_ogl_framebuffer(params.background);
-  bind_program(oimg.program);
-  set_uniform(oimg.program, "txt", oimg.texture, 0);
-  set_uniform(oimg.program, "window_size",
-      vec2f{(float)params.window.x, (float)params.window.y});
-  set_uniform(oimg.program, "image_size",
-      vec2f{(float)oimg.texture.width, (float)oimg.texture.height});
-  set_uniform(oimg.program, "image_center", params.center);
-  set_uniform(oimg.program, "image_scale", params.scale);
+  // check errors
+  assert_ogl_error_();
+
+  // viewport and framebuffer
+  glViewport(params.framebuffer.x, params.framebuffer.y, params.framebuffer.z,
+      params.framebuffer.w);
+  glClearColor(params.background.x, params.background.y, params.background.z,
+      params.background.w);
+  glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+  glEnable(GL_DEPTH_TEST);
+
+  // bind program and params
+  glUseProgram(oimg.program.program_id);
+  glActiveTexture(GL_TEXTURE0);
+  glBindTexture(GL_TEXTURE_2D, oimg.texture.texture_id);
+  glUniform1i(glGetUniformLocation(oimg.program.program_id, "txt"), 0);
+  glUniform2f(glGetUniformLocation(oimg.program.program_id, "window_size"),
+      (float)params.window.x, (float)params.window.y);
+  glUniform2f(glGetUniformLocation(oimg.program.program_id, "image_size"),
+      (float)oimg.texture.width, (float)oimg.texture.height);
+  glUniform2f(glGetUniformLocation(oimg.program.program_id, "image_center"),
+      params.center.x, params.center.y);
+  glUniform1f(glGetUniformLocation(oimg.program.program_id, "image_scale"),
+      params.scale);
+
+  // draw shape
   draw_shape(oimg.quad);
-  unbind_program();
+
+  // unbind program
+  glUseProgram(0);
+
+  // check errors
+  assert_ogl_error_();
 }
 
 }  // namespace yocto

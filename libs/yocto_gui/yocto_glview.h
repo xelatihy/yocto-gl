@@ -102,16 +102,10 @@ struct gui_image {
   ogl_program program = {};
   ogl_texture texture = {};
   ogl_shape   quad    = {};
-
-  // Disable copy construction
-  gui_image()                 = default;
-  gui_image(const gui_image&) = delete;
-  gui_image& operator=(const gui_image&) = delete;
 };
 
 // create image drawing program
 bool init_image(gui_image& oimg);
-bool is_initialized(const gui_image& oimg);
 
 // clear image
 void clear_image(gui_image& oimg);
