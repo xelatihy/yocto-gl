@@ -104,13 +104,13 @@ struct gui_image {
   int height = 0;
 
   // Opengl state
-  uint texture   = 0;
-  uint program   = 0;
-  uint vertex    = 0;
-  uint fragment  = 0;
-  uint vao       = 0;
-  uint positions = 0;
-  uint triangles = 0;
+  uint texture     = 0;  // texture
+  uint program     = 0;  // program
+  uint vertex      = 0;
+  uint fragment    = 0;
+  uint vertexarray = 0;  // vertex
+  uint positions   = 0;
+  uint triangles   = 0;  // elements
 };
 
 // create image drawing program

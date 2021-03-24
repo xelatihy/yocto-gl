@@ -1025,8 +1025,8 @@ bool init_image(gui_image& oimg) {
       ogl_image_fragment);
 
   // vertex arrays
-  glGenVertexArrays(1, &oimg.vao);
-  glBindVertexArray(oimg.vao);
+  glGenVertexArrays(1, &oimg.vertexarray);
+  glBindVertexArray(oimg.vertexarray);
 
   // buffers
   auto positions = vector<vec3f>{
@@ -1056,7 +1056,7 @@ void clear_image(gui_image& oimg) {
   if (oimg.program) glDeleteProgram(oimg.program);
   if (oimg.vertex) glDeleteProgram(oimg.vertex);
   if (oimg.fragment) glDeleteProgram(oimg.fragment);
-  if (oimg.vao) glDeleteVertexArrays(1, &oimg.vao);
+  if (oimg.vertexarray) glDeleteVertexArrays(1, &oimg.vertexarray);
   if (oimg.positions) glDeleteBuffers(1, &oimg.positions);
   if (oimg.triangles) glDeleteBuffers(1, &oimg.triangles);
   oimg = {};
@@ -1107,7 +1107,7 @@ void draw_image(gui_image& oimg, const gui_image_params& params) {
   assert_ogl_error_();
 
   // draw
-  glBindVertexArray(oimg.vao);
+  glBindVertexArray(oimg.vertexarray);
   glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, oimg.triangles);
   glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_INT, nullptr);
   glBindVertexArray(0);
