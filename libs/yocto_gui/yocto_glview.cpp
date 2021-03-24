@@ -421,27 +421,6 @@ void colorgrade_image(
   run_ui({1280 + 320, 720}, title, callbacks);
 }
 
-// Open a window and show a shape via path tracing
-void view_shape(const string& title, const string& name,
-    const scene_shape& shape, bool addsky) {
-  // initialize path tracer scene
-  auto scene = scene_model{};
-  scene.shape_names.emplace_back("shape");
-  scene.shapes.emplace_back(shape);
-  scene.material_names.emplace_back("material");
-  auto& material = scene.materials.emplace_back();
-  material.color = {0.8, 0.8, 0.8};
-  scene.instance_names.emplace_back("instance");
-  auto& instance    = scene.instances.emplace_back();
-  instance.shape    = 0;
-  instance.material = 0;
-  add_camera(scene);
-  if (addsky) add_sky(scene);
-
-  // run view
-  view_scene(title, name, scene, false);
-}
-
 // Open a window and show an scene via path tracing
 void view_scene(
     const string& title, const string& name, scene_model& scene, bool print) {

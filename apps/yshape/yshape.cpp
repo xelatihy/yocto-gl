@@ -296,10 +296,7 @@ int run_view(const view_params& params) {
   }
 
   // make scene
-  auto scene = make_shape_scene(shape);
-
-  // add sky if necessary
-  if (params.addsky) add_sky(scene);
+  auto scene = make_shape_scene(shape, params.addsky);
 
   // run view
   view_scene("yshape", params.shape, scene);
@@ -386,7 +383,8 @@ int run_heightfield(const heightfield_params& params) {
 }
 
 struct glview_params {
-  string shape = "shape.ply";
+  string shape  = "shape.ply";
+  bool   addsky = false;
 };
 
 // Cli
@@ -394,6 +392,7 @@ void add_command(cli_command& cli, const string& name, glview_params& value,
     const string& usage) {
   auto& cmd = add_command(cli, name, usage);
   add_argument(cmd, "shape", value.shape, "Input shape.");
+  add_argument(cmd, "addsky", value.addsky, "Add sky.");
 }
 
 #ifndef YOCTO_OPENGL
@@ -412,7 +411,7 @@ int run_glview(const glview_params& params) {
   if (!load_shape(params.shape, shape, ioerror, true)) print_fatal(ioerror);
 
   // make scene
-  auto scene = make_shape_scene(shape);
+  auto scene = make_shape_scene(shape, params.addsky);
 
   // run viewer
   glview_scene(scene, params.shape, "");

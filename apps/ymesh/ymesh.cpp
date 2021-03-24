@@ -67,10 +67,8 @@ int run_view(const view_params& params) {
 
 // view shapes
 int run_view(const view_params& params) {
-  // shape data
-  auto shape = scene_shape{};
-
   // load mesh
+  auto shape   = scene_shape{};
   auto ioerror = ""s;
   if (path_filename(params.shape) == ".ypreset") {
     if (!make_shape_preset(shape, path_basename(params.shape), ioerror))
@@ -79,8 +77,11 @@ int run_view(const view_params& params) {
     if (!load_shape(params.shape, shape, ioerror, true)) print_fatal(ioerror);
   }
 
+  // make scene
+  auto scene = make_shape_scene(shape, params.addsky);
+
   // run view
-  view_shape("yshape", params.shape, shape, params.addsky);
+  view_scene("ymesh", params.shape, scene);
 
   // done
   return 0;

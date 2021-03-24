@@ -1121,22 +1121,29 @@ int find_camera(const scene_model& scene, const string& name) {
 }
 
 // create a scene from a shape
-scene_model make_shape_scene(const scene_shape& shape) {
+scene_model make_shape_scene(const scene_shape& shape, bool addsky) {
   // scene
   auto scene = scene_model{};
   // shape
-  scene.shapes.push_back(shape);
+  scene.shape_names.emplace_back("shape");
+  auto& material = scene.materials.emplace_back();
+  material.color = {0.8, 0.8, 0.8};
   // material
+  scene.material_names.emplace_back("material");
   auto& shape_material     = scene.materials.emplace_back();
   shape_material.type      = scene_material_type::glossy;
   shape_material.color     = {0.5, 1, 0.5};
   shape_material.roughness = 0.2;
   // instance
+  scene.instance_names.emplace_back("instance");
+  scene.shapes.push_back(shape);
   auto& shape_instance    = scene.instances.emplace_back();
   shape_instance.shape    = 0;
   shape_instance.material = 0;
   // camera
   add_camera(scene);
+  // environment
+  if (addsky) add_sky(scene);
   // done
   return scene;
 }
