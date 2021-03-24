@@ -883,6 +883,74 @@ namespace yocto {
 }
 static void assert_ogl_error_() { assert(_assert_ogl_error() == GL_NO_ERROR); }
 
+// initialize program
+void set_program(uint& program_id, uint& vertex_id, uint& fragment_id,
+    const string& vertex, const string& fragment) {
+  // error
+  auto program_error = [&](const char* message, const char* log) {
+    if (program_id) glDeleteProgram(program_id);
+    if (vertex_id) glDeleteShader(program_id);
+    if (fragment_id) glDeleteShader(program_id);
+    program_id  = 0;
+    vertex_id   = 0;
+    fragment_id = 0;
+    printf("%s\n", message);
+    printf("%s\n", log);
+  };
+
+  const char* ccvertex   = vertex.data();
+  const char* ccfragment = fragment.data();
+  auto        errflags   = 0;
+  auto        errbuf     = array<char, 10000>{};
+
+  assert_ogl_error_();
+
+  // create vertex
+  vertex_id = glCreateShader(GL_VERTEX_SHADER);
+  glShaderSource(vertex_id, 1, &ccvertex, NULL);
+  glCompileShader(vertex_id);
+  glGetShaderiv(vertex_id, GL_COMPILE_STATUS, &errflags);
+  if (errflags == 0) {
+    glGetShaderInfoLog(vertex_id, 10000, 0, errbuf.data());
+    return program_error("vertex shader not compiled", errbuf.data());
+  }
+  assert_ogl_error_();
+
+  // create fragment
+  fragment_id = glCreateShader(GL_FRAGMENT_SHADER);
+  glShaderSource(fragment_id, 1, &ccfragment, NULL);
+  glCompileShader(fragment_id);
+  glGetShaderiv(fragment_id, GL_COMPILE_STATUS, &errflags);
+  if (errflags == 0) {
+    glGetShaderInfoLog(fragment_id, 10000, 0, errbuf.data());
+    return program_error("fragment shader not compiled", errbuf.data());
+  }
+  assert_ogl_error_();
+
+  // create program
+  program_id = glCreateProgram();
+  glAttachShader(program_id, vertex_id);
+  glAttachShader(program_id, fragment_id);
+  glLinkProgram(program_id);
+  glGetProgramiv(program_id, GL_LINK_STATUS, &errflags);
+  if (errflags == 0) {
+    glGetProgramInfoLog(program_id, 10000, 0, errbuf.data());
+    return program_error("program not linked", errbuf.data());
+  }
+  // TODO(fabio): Apparently validation must be done just before drawing.
+  //    https://community.khronos.org/t/samplers-of-different-types-use-the-same-textur/66329
+  // If done here, validation fails when using cubemaps and textures in the
+  // same shader. We should create a function validate_program() anc call it
+  // separately.
+  glValidateProgram(program_id);
+  glGetProgramiv(program_id, GL_VALIDATE_STATUS, &errflags);
+  if (!errflags) {
+    glGetProgramInfoLog(program_id, 10000, 0, errbuf.data());
+    return program_error("program not validated", errbuf.data());
+  }
+  assert_ogl_error_();
+}
+
 }  // namespace yocto
 
 // -----------------------------------------------------------------------------
@@ -950,17 +1018,20 @@ void main() {
 
 // init image program
 bool init_image(gui_image& oimg) {
-  if (!set_program(oimg.program, ogl_image_vertex, ogl_image_fragment))
-    return false;
+  set_program(oimg.program, oimg.vertex, oimg.fragment, ogl_image_vertex,
+      ogl_image_fragment);
   set_quad_shape(oimg.quad);
   return true;
 }
 
 // clear an opengl image
 void clear_image(gui_image& oimg) {
-  clear_program(oimg.program);
-  clear_shape(oimg.quad);
   if (oimg.texture) glDeleteTextures(1, &oimg.texture);
+  if (oimg.program) glDeleteProgram(oimg.program);
+  if (oimg.vertex) glDeleteProgram(oimg.vertex);
+  if (oimg.fragment) glDeleteProgram(oimg.fragment);
+  clear_shape(oimg.quad);
+  // oimg = {};
 }
 
 void set_image(gui_image& oimg, const color_image& img) {
@@ -994,18 +1065,17 @@ void draw_image(gui_image& oimg, const gui_image_params& params) {
   glEnable(GL_DEPTH_TEST);
 
   // bind program and params
-  glUseProgram(oimg.program.program_id);
+  glUseProgram(oimg.program);
   glActiveTexture(GL_TEXTURE0);
   glBindTexture(GL_TEXTURE_2D, oimg.texture);
-  glUniform1i(glGetUniformLocation(oimg.program.program_id, "txt"), 0);
-  glUniform2f(glGetUniformLocation(oimg.program.program_id, "window_size"),
+  glUniform1i(glGetUniformLocation(oimg.program, "txt"), 0);
+  glUniform2f(glGetUniformLocation(oimg.program, "window_size"),
       (float)params.window.x, (float)params.window.y);
-  glUniform2f(glGetUniformLocation(oimg.program.program_id, "image_size"),
+  glUniform2f(glGetUniformLocation(oimg.program, "image_size"),
       (float)oimg.width, (float)oimg.height);
-  glUniform2f(glGetUniformLocation(oimg.program.program_id, "image_center"),
+  glUniform2f(glGetUniformLocation(oimg.program, "image_center"),
       params.center.x, params.center.y);
-  glUniform1f(glGetUniformLocation(oimg.program.program_id, "image_scale"),
-      params.scale);
+  glUniform1f(glGetUniformLocation(oimg.program, "image_scale"), params.scale);
 
   // draw shape
   draw_shape(oimg.quad);

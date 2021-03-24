@@ -99,11 +99,18 @@ namespace yocto {
 
 // OpenGL image data
 struct gui_image {
-  ogl_program program = {};
-  ogl_shape   quad    = {};
-  int         width   = 0;
-  int         height  = 0;
-  uint        texture = 0;
+  // image properties
+  int width  = 0;
+  int height = 0;
+
+  // Opengl state
+  uint texture  = 0;
+  uint program  = 0;
+  uint vertex   = 0;
+  uint fragment = 0;
+
+  // to be converted
+  ogl_shape quad = {};
 };
 
 // create image drawing program
