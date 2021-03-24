@@ -216,13 +216,6 @@ struct glscene_state {
 // Shading type
 enum struct glscene_lighting_type { envlight, camlight, eyelight };
 
-// Shading labels
-const auto glscene_lighting_labels =
-    vector<pair<glscene_lighting_type, string>>{
-        {glscene_lighting_type::envlight, "envlight"},
-        {glscene_lighting_type::camlight, "camlight"},
-        {glscene_lighting_type::eyelight, "eyelight"}};
-
 // Shading name
 const auto glscene_lighting_names = vector<string>{
     "envlight", "camlight", "eyelight"};
