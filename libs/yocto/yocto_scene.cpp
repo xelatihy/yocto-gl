@@ -1120,6 +1120,28 @@ int find_camera(const scene_model& scene, const string& name) {
   return 0;
 }
 
+// create a scene from a shape
+scene_model make_shape_scene(const scene_shape& shape) {
+  // scene
+  auto scene = scene_model{};
+  // shape
+  scene.shapes.push_back(shape);
+  // material
+  auto& shape_material     = scene.materials.emplace_back();
+  shape_material.type      = scene_material_type::glossy;
+  shape_material.color     = {0.5, 1, 0.5};
+  shape_material.roughness = 0.2;
+  // instance
+  auto& shape_instance    = scene.instances.emplace_back();
+  shape_instance.shape    = 0;
+  shape_instance.material = 0;
+  // camera
+  add_camera(scene);
+  // done
+  return scene;
+}
+scene_model make_shapeview_scene(const scene_shape& shape) {}
+
 // Updates the scene and scene's instances bounding boxes
 bbox3f compute_bounds(const scene_model& scene) {
   auto shape_bbox = vector<bbox3f>{};

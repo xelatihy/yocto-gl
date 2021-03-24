@@ -285,10 +285,8 @@ int run_view(const view_params& params) {
 
 // view shapes
 int run_view(const view_params& params) {
-  // shape data
-  auto shape = scene_shape{};
-
-  // load mesh
+  // load shape
+  auto shape   = scene_shape{};
   auto ioerror = ""s;
   if (path_filename(params.shape) == ".ypreset") {
     if (!make_shape_preset(shape, path_basename(params.shape), ioerror))
@@ -297,8 +295,14 @@ int run_view(const view_params& params) {
     if (!load_shape(params.shape, shape, ioerror, true)) print_fatal(ioerror);
   }
 
+  // make scene
+  auto scene = make_shape_scene(shape);
+
+  // add sky if necessary
+  if (params.addsky) add_sky(scene);
+
   // run view
-  view_shape("yshape", params.shape, shape, params.addsky);
+  view_scene("yshape", params.shape, scene);
 
   // done
   return 0;
@@ -454,8 +458,8 @@ int run_glview(const glview_params& params) {
   auto shape   = scene_shape{};
   if (!load_shape(params.shape, shape, ioerror, true)) print_fatal(ioerror);
 
-  // create scene
-  auto scene = make_shapescene(shape);
+  // make scene
+  auto scene = make_shape_scene(shape);
 
   // run viewer
   glview_scene(scene, params.shape, "");
