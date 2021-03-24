@@ -914,7 +914,8 @@ using glview_scene_callback = std::function<void(gui_window* win,
 
 void glview_scene(scene_model& scene, const string& name, const string& camname,
     const glview_scene_callback& widgets_callback,
-    const glview_scene_callback& uiupdate_callback) {
+    const glview_scene_callback& uiupdate_callback,
+    const glview_scene_callback& update_callback) {
   // glscene
   auto glscene = shade_scene{};
 
@@ -956,8 +957,8 @@ void glview_scene(scene_model& scene, const string& name, const string& camname,
     // draw_scene_editor(win, scene, selection, {});
     if (widgets_callback) widgets_callback(win, input, scene, glscene);
   };
-  callbacks.update_cb = [](gui_window* win, const gui_input& input) {
-    // update(win, apps);
+  callbacks.update_cb = [&](gui_window* win, const gui_input& input) {
+    if (update_callback) update_callback(win, input, scene, glscene);
   };
   callbacks.uiupdate_cb = [&](gui_window* win, const gui_input& input) {
     // handle mouse and keyboard for navigation

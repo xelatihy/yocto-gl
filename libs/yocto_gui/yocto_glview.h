@@ -99,7 +99,8 @@ using glview_scene_callback = std::function<void(gui_window* win,
 
 void glview_scene(scene_model& scene, const string& name, const string& camname,
     const glview_scene_callback& widgets_callback  = {},
-    const glview_scene_callback& uiupdate_callback = {});
+    const glview_scene_callback& uiupdate_callback = {},
+    const glview_scene_callback& update_callback   = {});
 
 }  // namespace yocto
 
