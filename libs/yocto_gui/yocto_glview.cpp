@@ -703,15 +703,6 @@ static void init_glscene(glscene_state& glscene, const scene_model& ioscene) {
         ioshape.colors);
   }
 
-  // shapes
-  for (auto& ioinstance : ioscene.instances) {
-    auto  handle     = add_instance(glscene);
-    auto& glinstance = glscene.instances[handle];
-    set_frame(glinstance, ioinstance.frame);
-    set_shape(glinstance, ioinstance.shape);
-    set_material(glinstance, ioinstance.material);
-  }
-
   // environments
   for (auto& ioenvironment : ioscene.environments) {
     auto  handle        = add_environment(glscene);
@@ -1302,27 +1293,6 @@ glshape_handle add_shape(glscene_state& scene) {
   return (int)scene.shapes.size() - 1;
 }
 
-// add instance
-glinstance_handle add_instance(glscene_state& scene) {
-  scene.instances.emplace_back();
-  return (int)scene.instances.size() - 1;
-}
-void set_frame(glscene_instance& instance, const frame3f& frame) {
-  instance.frame = frame;
-}
-void set_shape(glscene_instance& instance, glshape_handle shape) {
-  instance.shape = shape;
-}
-void set_material(glscene_instance& instance, glmaterial_handle material) {
-  instance.material = material;
-}
-void set_hidden(glscene_instance& instance, bool hidden) {
-  instance.hidden = hidden;
-}
-void set_highlighted(glscene_instance& instance, bool highlighted) {
-  instance.highlighted = highlighted;
-}
-
 // add material
 glmaterial_handle add_material(glscene_state& scene) {
   scene.materials.emplace_back();
@@ -1415,19 +1385,6 @@ glmaterial_handle add_material(glscene_state& scene, const vec3f& emission,
   set_metallic(material, metallic, metallic_tex);
   set_roughness(material, roughness, roughness_tex);
   set_normalmap(material, normalmap_tex);
-  return handle;
-}
-
-glinstance_handle add_instance(glscene_state& scene, const frame3f& frame,
-    glshape_handle shape, glmaterial_handle material, bool hidden,
-    bool highlighted) {
-  auto  handle   = add_instance(scene);
-  auto& instance = scene.instances.back();
-  set_frame(instance, frame);
-  set_shape(instance, shape);
-  set_material(instance, material);
-  set_hidden(instance, hidden);
-  set_highlighted(instance, highlighted);
   return handle;
 }
 
@@ -1608,8 +1565,8 @@ void set_lighting_uniforms(ogl_program& program, const glscene_state& scene,
   assert_ogl_error();
 }
 
-void draw_instances(glscene_state& glscene, const shade_view& view,
-    const glscene_params& params) {
+void draw_instances(glscene_state& glscene, const scene_model& scene,
+    const shade_view& view, const glscene_params& params) {
   // set program
   auto& program = glscene.instance_program;
   bind_program(program);
@@ -1622,8 +1579,8 @@ void draw_instances(glscene_state& glscene, const shade_view& view,
   set_lighting_uniforms(program, glscene, view, params);
 
   set_ogl_wireframe(params.wireframe);
-  for (auto& instance : glscene.instances) {
-    if (instance.hidden) continue;
+  for (auto& instance : scene.instances) {
+    // if (instance.hidden) continue;
     set_instance_uniforms(glscene, program, instance.frame,
         glscene.shapes.at(instance.shape),
         glscene.materials.at(instance.material), params);
@@ -1657,7 +1614,7 @@ void draw_scene(glscene_state& glscene, const scene_model& scene,
 
   auto& camera = scene.cameras.at(params.camera);
   auto  view   = make_scene_view(camera, viewport, params);
-  draw_instances(glscene, view, params);
+  draw_instances(glscene, scene, view, params);
   draw_environments(glscene, view, params);
 }
 

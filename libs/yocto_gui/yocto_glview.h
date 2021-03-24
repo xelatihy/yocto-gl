@@ -168,16 +168,6 @@ struct glscene_material {
 // Opengl shape
 struct glscene_shape : ogl_shape {};
 
-// Opengl instance
-struct glscene_instance {
-  // instance properties
-  frame3f           frame       = identity3x4f;
-  glshape_handle    shape       = glinvalid_handle;
-  glmaterial_handle material    = glinvalid_handle;
-  bool              hidden      = false;
-  bool              highlighted = false;
-};
-
 // Opengl environment
 struct glscene_environment {
   // environment properties
@@ -198,7 +188,6 @@ struct glscene_environment {
 // Opengl scene
 struct glscene_state {
   // scene objects
-  vector<glscene_instance>    instances    = {};
   vector<glscene_shape>       shapes       = {};
   vector<glscene_material>    materials    = {};
   vector<glscene_texture>     textures     = {};
@@ -315,13 +304,6 @@ const ogl_arraybuffer& get_texcoords(const glscene_shape& shape);
 const ogl_arraybuffer& get_colors(const glscene_shape& shape);
 const ogl_arraybuffer& get_tangents(const glscene_shape& shape);
 
-// instance properties
-void set_frame(glscene_instance& instance, const frame3f& frame);
-void set_shape(glscene_instance& instance, glshape_handle shape);
-void set_material(glscene_instance& instance, glmaterial_handle material);
-void set_hidden(glscene_instance& instance, bool hidden);
-void set_highlighted(glscene_instance& instance, bool highlighted);
-
 // environment properties
 void set_frame(glscene_environment& environment, const frame3f& frame);
 void set_emission(glscene_environment& environment, const vec3f& emission,
@@ -341,9 +323,6 @@ glshape_handle       add_shape(glscene_state& scene, const vector<int>& points,
           const vector<vec4i>& quads, const vector<vec3f>& positions,
           const vector<vec3f>& normals, const vector<vec2f>& texcoords,
           const vector<vec4f>& colors, bool edges = false);
-glinstance_handle    add_instance(glscene_state& scene, const frame3f& frame,
-       glmaterial_handle shape, glmaterial_handle material, bool hidden = false,
-       bool highlighted = false);
 glenvironment_handle add_environment(glscene_state& scene, const frame3f& frame,
     const vec3f& emission, gltexture_handle emission_tex = glinvalid_handle);
 
