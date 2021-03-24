@@ -91,3 +91,50 @@ void glview_scene(const string& title, const string& name, scene_model& scene,
 }  // namespace yocto
 
 #endif
+
+// -----------------------------------------------------------------------------
+// IMAGE DRAWING
+// -----------------------------------------------------------------------------
+namespace yocto {
+
+// OpenGL image data
+struct glimage_state {
+  // image properties
+  int width  = 0;
+  int height = 0;
+
+  // Opengl state
+  uint texture     = 0;  // texture
+  uint program     = 0;  // program
+  uint vertex      = 0;
+  uint fragment    = 0;
+  uint vertexarray = 0;  // vertex
+  uint positions   = 0;
+  uint triangles   = 0;  // elements
+};
+
+// create image drawing program
+bool init_image(glimage_state& glimage);
+
+// clear image
+void clear_image(glimage_state& glimage);
+
+// update image data
+void set_image(glimage_state& glimage, const color_image& image);
+
+// OpenGL image drawing params
+struct glimage_params {
+  vec2i window      = {512, 512};
+  vec4i framebuffer = {0, 0, 512, 512};
+  vec2f center      = {0, 0};
+  float scale       = 1;
+  bool  fit         = true;
+  bool  checker     = true;
+  float border_size = 2;
+  vec4f background  = {0.15f, 0.15f, 0.15f, 1.0f};
+};
+
+// draw image
+void draw_image(glimage_state& image, const glimage_params& params);
+
+}  // namespace yocto

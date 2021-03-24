@@ -33,6 +33,16 @@
 #include <yocto/yocto_geometry.h>
 #include <yocto/yocto_parallel.h>
 
+#include <cassert>
+#include <stdexcept>
+
+#include "ext/glad/glad.h"
+
+#ifdef _WIN32
+#undef near
+#undef far
+#endif
+
 // -----------------------------------------------------------------------------
 // VIEW HELPERS
 // -----------------------------------------------------------------------------
@@ -47,8 +57,17 @@ void update_image_params(gui_window* win, const gui_input& input,
       glparams.fit);
 }
 
+void update_image_params(gui_window* win, const gui_input& input,
+    const color_image& image, glimage_params& glparams) {
+  glparams.window                           = input.window_size;
+  glparams.framebuffer                      = input.framebuffer_viewport;
+  std::tie(glparams.center, glparams.scale) = camera_imview(glparams.center,
+      glparams.scale, {image.width, image.height}, glparams.window,
+      glparams.fit);
+}
+
 static bool uiupdate_image_params(
-    gui_window* win, const gui_input& input, ogl_image_params& glparams) {
+    gui_window* win, const gui_input& input, glimage_params& glparams) {
   // handle mouse
   if (input.mouse_left && !input.widgets_active) {
     glparams.center += input.mouse_pos - input.mouse_last;
@@ -100,7 +119,7 @@ static bool draw_tonemap_params(
 
 static bool draw_image_inspector(gui_window* win, const gui_input& input,
     const color_image& image, const color_image& display,
-    ogl_image_params& glparams) {
+    glimage_params& glparams) {
   if (begin_header(win, "inspect")) {
     draw_slider(win, "zoom", glparams.scale, 0.1, 10);
     draw_checkbox(win, "fit", glparams.fit);
@@ -252,8 +271,8 @@ void view_image(
   tonemap_image_mt(display, image, exposure, filmic);
 
   // opengl image
-  auto glimage  = ogl_image{};
-  auto glparams = ogl_image_params{};
+  auto glimage  = glimage_state{};
+  auto glparams = glimage_params{};
 
   // top level combo
   auto names    = vector<string>{name};
@@ -263,7 +282,7 @@ void view_image(
   auto callbacks    = gui_callbacks{};
   callbacks.init_cb = [&](gui_window* win, const gui_input& input) {
     init_image(glimage);
-    set_image(glimage, display, false, false);
+    set_image(glimage, display);
   };
   callbacks.clear_cb = [&](gui_window* win, const gui_input& input) {
     clear_image(glimage);
@@ -276,7 +295,7 @@ void view_image(
     draw_combobox(win, "name", selected, names);
     if (draw_tonemap_params(win, input, exposure, filmic)) {
       tonemap_image_mt(display, image, exposure, filmic);
-      set_image(glimage, display, false, false);
+      set_image(glimage, display);
     }
     draw_image_inspector(win, input, image, display, glparams);
   };
@@ -301,8 +320,8 @@ void view_images(const string& title, const vector<string>& names,
   }
 
   // opengl image
-  auto glimages  = vector<ogl_image>(images.size());
-  auto glparamss = vector<ogl_image_params>(images.size());
+  auto glimages  = vector<glimage_state>(images.size());
+  auto glparamss = vector<glimage_params>(images.size());
 
   // selection
   auto selected = 0;
@@ -312,7 +331,7 @@ void view_images(const string& title, const vector<string>& names,
   callbacks.init_cb = [&](gui_window* win, const gui_input& input) {
     for (auto idx = 0; idx < (int)images.size(); idx++) {
       init_image(glimages[idx]);
-      set_image(glimages[idx], displays[idx], false, false);
+      set_image(glimages[idx], displays[idx]);
     }
   };
   callbacks.clear_cb = [&](gui_window* win, const gui_input& input) {
@@ -331,7 +350,7 @@ void view_images(const string& title, const vector<string>& names,
       filmics[selected] = filmic;
       tonemap_image_mt(displays[selected], images[selected],
           exposures[selected], filmics[selected]);
-      set_image(glimages[selected], displays[selected], false, false);
+      set_image(glimages[selected], displays[selected]);
     }
     draw_image_inspector(
         win, input, images[selected], displays[selected], glparamss[selected]);
@@ -355,8 +374,8 @@ void colorgrade_image(
   colorgrade_image_mt(display, image, params);
 
   // opengl image
-  auto glimage  = ogl_image{};
-  auto glparams = ogl_image_params{};
+  auto glimage  = glimage_state{};
+  auto glparams = glimage_params{};
 
   // top level combo
   auto names    = vector<string>{name};
@@ -366,7 +385,7 @@ void colorgrade_image(
   auto callbacks    = gui_callbacks{};
   callbacks.init_cb = [&](gui_window* win, const gui_input& input) {
     init_image(glimage);
-    set_image(glimage, display, false, false);
+    set_image(glimage, display);
   };
   callbacks.clear_cb = [&](gui_window* win, const gui_input& input) {
     clear_image(glimage);
@@ -399,7 +418,7 @@ void colorgrade_image(
       end_header(win);
       if (edited) {
         colorgrade_image_mt(display, image, params);
-        set_image(glimage, display, false, false);
+        set_image(glimage, display);
       }
     }
     draw_image_inspector(win, input, image, display, glparams);
@@ -443,8 +462,8 @@ void view_scene(const string& title, const string& name, scene_model& scene,
   if (print) print_progress_end();
 
   // opengl image
-  auto glimage  = ogl_image{};
-  auto glparams = ogl_image_params{};
+  auto glimage  = glimage_state{};
+  auto glparams = glimage_params{};
 
   // top level combo
   auto names    = vector<string>{name};
@@ -541,7 +560,7 @@ void view_scene(const string& title, const string& name, scene_model& scene,
   callbacks.init_cb = [&](gui_window* win, const gui_input& input) {
     auto lock = std::lock_guard{render_mutex};
     init_image(glimage);
-    set_image(glimage, display, false, false);
+    set_image(glimage, display);
   };
   callbacks.clear_cb = [&](gui_window* win, const gui_input& input) {
     clear_image(glimage);
@@ -550,7 +569,7 @@ void view_scene(const string& title, const string& name, scene_model& scene,
     // update image
     if (render_update) {
       auto lock = std::lock_guard{render_mutex};
-      set_image(glimage, display, false, false);
+      set_image(glimage, display);
       render_update = false;
     }
     update_image_params(win, input, image, glparams);
@@ -591,7 +610,7 @@ void view_scene(const string& title, const string& name, scene_model& scene,
       end_header(win);
       if (edited) {
         tonemap_image_mt(display, image, params.exposure, params.filmic);
-        set_image(glimage, display, false, false);
+        set_image(glimage, display);
       }
     }
     draw_image_inspector(win, input, image, display, glparams);
@@ -833,6 +852,272 @@ void glview_scene(const string& title, const string& name, scene_model& scene,
 
   // run ui
   run_ui({1280 + 320, 720}, "yshade", callbacks);
+}
+
+}  // namespace yocto
+
+// -----------------------------------------------------------------------------
+// OPENGL HELPERS
+// -----------------------------------------------------------------------------
+namespace yocto {
+
+// assert on error
+[[maybe_unused]] static GLenum _assert_ogl_error() {
+  auto error_code = glGetError();
+  if (error_code != GL_NO_ERROR) {
+    auto error = ""s;
+    switch (error_code) {
+      case GL_INVALID_ENUM: error = "INVALID_ENUM"; break;
+      case GL_INVALID_VALUE: error = "INVALID_VALUE"; break;
+      case GL_INVALID_OPERATION: error = "INVALID_OPERATION"; break;
+      // case GL_STACK_OVERFLOW: error = "STACK_OVERFLOW"; break;
+      // case GL_STACK_UNDERFLOW: error = "STACK_UNDERFLOW"; break;
+      case GL_OUT_OF_MEMORY: error = "OUT_OF_MEMORY"; break;
+      case GL_INVALID_FRAMEBUFFER_OPERATION:
+        error = "INVALID_FRAMEBUFFER_OPERATION";
+        break;
+    }
+    printf("\n    OPENGL ERROR: %s\n\n", error.c_str());
+  }
+  return error_code;
+}
+static void assert_ogl_error_() { assert(_assert_ogl_error() == GL_NO_ERROR); }
+
+// initialize program
+void set_program(uint& program_id, uint& vertex_id, uint& fragment_id,
+    const string& vertex, const string& fragment) {
+  // error
+  auto program_error = [&](const char* message, const char* log) {
+    if (program_id) glDeleteProgram(program_id);
+    if (vertex_id) glDeleteShader(program_id);
+    if (fragment_id) glDeleteShader(program_id);
+    program_id  = 0;
+    vertex_id   = 0;
+    fragment_id = 0;
+    printf("%s\n", message);
+    printf("%s\n", log);
+  };
+
+  const char* ccvertex   = vertex.data();
+  const char* ccfragment = fragment.data();
+  auto        errflags   = 0;
+  auto        errbuf     = array<char, 10000>{};
+
+  assert_ogl_error_();
+
+  // create vertex
+  vertex_id = glCreateShader(GL_VERTEX_SHADER);
+  glShaderSource(vertex_id, 1, &ccvertex, NULL);
+  glCompileShader(vertex_id);
+  glGetShaderiv(vertex_id, GL_COMPILE_STATUS, &errflags);
+  if (errflags == 0) {
+    glGetShaderInfoLog(vertex_id, 10000, 0, errbuf.data());
+    return program_error("vertex shader not compiled", errbuf.data());
+  }
+  assert_ogl_error_();
+
+  // create fragment
+  fragment_id = glCreateShader(GL_FRAGMENT_SHADER);
+  glShaderSource(fragment_id, 1, &ccfragment, NULL);
+  glCompileShader(fragment_id);
+  glGetShaderiv(fragment_id, GL_COMPILE_STATUS, &errflags);
+  if (errflags == 0) {
+    glGetShaderInfoLog(fragment_id, 10000, 0, errbuf.data());
+    return program_error("fragment shader not compiled", errbuf.data());
+  }
+  assert_ogl_error_();
+
+  // create program
+  program_id = glCreateProgram();
+  glAttachShader(program_id, vertex_id);
+  glAttachShader(program_id, fragment_id);
+  glLinkProgram(program_id);
+  glGetProgramiv(program_id, GL_LINK_STATUS, &errflags);
+  if (errflags == 0) {
+    glGetProgramInfoLog(program_id, 10000, 0, errbuf.data());
+    return program_error("program not linked", errbuf.data());
+  }
+// TODO(fabio): Apparently validation must be done just before drawing.
+//    https://community.khronos.org/t/samplers-of-different-types-use-the-same-textur/66329
+// If done here, validation fails when using cubemaps and textures in the
+// same shader. We should create a function validate_program() anc call it
+// separately.
+#if 0
+  glValidateProgram(program_id);
+  glGetProgramiv(program_id, GL_VALIDATE_STATUS, &errflags);
+  if (!errflags) {
+    glGetProgramInfoLog(program_id, 10000, 0, errbuf.data());
+    return program_error("program not validated", errbuf.data());
+  }
+  assert_ogl_error_();
+#endif
+}
+
+}  // namespace yocto
+
+// -----------------------------------------------------------------------------
+// HIGH-LEVEL OPENGL IMAGE DRAWING
+// -----------------------------------------------------------------------------
+namespace yocto {
+
+static auto ogl_image_vertex =
+    R"(
+#version 330
+in vec2 positions;
+out vec2 frag_texcoord;
+uniform vec2 window_size, image_size;
+uniform vec2 image_center;
+uniform float image_scale;
+void main() {
+    vec2 pos = (positions * 0.5) * image_size * image_scale + image_center;
+    gl_Position = vec4(2 * pos.x / window_size.x - 1, 1 - 2 * pos.y / window_size.y, 0, 1);
+    frag_texcoord = positions * 0.5 + 0.5;
+}
+)";
+#if 0
+static auto ogl_image_vertex = R"(
+#version 330
+in vec2 positions;
+out vec2 frag_texcoord;
+uniform vec2 window_size, image_size, border_size;
+uniform vec2 image_center;
+uniform float image_scale;
+void main() {
+    vec2 pos = (positions * 0.5) * (image_size + border_size*2) * image_scale + image_center;
+    gl_Position = vec4(2 * pos.x / window_size.x - 1, 1 - 2 * pos.y / window_size.y, 0.1, 1);
+    frag_texcoord = positions * 0.5 + 0.5;
+}
+)";
+#endif
+static auto ogl_image_fragment =
+    R"(
+#version 330
+in vec2 frag_texcoord;
+out vec4 frag_color;
+uniform sampler2D txt;
+void main() {
+    frag_color = texture(txt, frag_texcoord);
+}
+)";
+#if 0
+static auto ogl_image_fragment = R"(
+#version 330
+in vec2 frag_texcoord;
+out vec4 frag_color;
+uniform vec2 image_size, border_size;
+uniform float image_scale;
+void main() {
+    ivec2 imcoord = ivec2(frag_texcoord * (image_size + border_size*2) - border_size);
+    ivec2 tilecoord = ivec2(frag_texcoord * (image_size + border_size*2) * image_scale - border_size);
+    ivec2 tile = tilecoord / 16;
+    if(imcoord.x <= 0 || imcoord.y <= 0 || 
+        imcoord.x >= image_size.x || imcoord.y >= image_size.y) frag_color = vec4(0,0,0,1);
+    else if((tile.x + tile.y) % 2 == 0) frag_color = vec4(0.1,0.1,0.1,1);
+    else frag_color = vec4(0.3,0.3,0.3,1);
+}
+)";
+#endif
+
+// init image program
+bool init_image(glimage_state& glimage) {
+  // program
+  set_program(glimage.program, glimage.vertex, glimage.fragment,
+      ogl_image_vertex, ogl_image_fragment);
+
+  // vertex arrays
+  glGenVertexArrays(1, &glimage.vertexarray);
+  glBindVertexArray(glimage.vertexarray);
+
+  // buffers
+  auto positions = vector<vec3f>{
+      {-1, -1, 0}, {1, -1, 0}, {1, 1, 0}, {-1, 1, 0}};
+  glGenBuffers(1, &glimage.positions);
+  glBindBuffer(GL_ARRAY_BUFFER, glimage.positions);
+  glBufferData(GL_ARRAY_BUFFER, sizeof(vec3f) * positions.size(),
+      positions.data(), GL_STATIC_DRAW);
+  glEnableVertexAttribArray(0);
+  glVertexAttribPointer(0, 3, GL_FLOAT, false, 0, nullptr);
+  glBindBuffer(GL_ARRAY_BUFFER, 0);
+  auto triangles = vector<vec3i>{{0, 1, 3}, {3, 2, 1}};
+  glGenBuffers(1, &glimage.triangles);
+  glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, glimage.triangles);
+  glBufferData(GL_ELEMENT_ARRAY_BUFFER, sizeof(vec3i) * triangles.size(),
+      triangles.data(), GL_STATIC_DRAW);
+  glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, 0);
+
+  // done
+  // glBindVertexArray(0);
+  return true;
+}
+
+// clear an opengl image
+void clear_image(glimage_state& glimage) {
+  if (glimage.texture) glDeleteTextures(1, &glimage.texture);
+  if (glimage.program) glDeleteProgram(glimage.program);
+  if (glimage.vertex) glDeleteProgram(glimage.vertex);
+  if (glimage.fragment) glDeleteProgram(glimage.fragment);
+  if (glimage.vertexarray) glDeleteVertexArrays(1, &glimage.vertexarray);
+  if (glimage.positions) glDeleteBuffers(1, &glimage.positions);
+  if (glimage.triangles) glDeleteBuffers(1, &glimage.triangles);
+  glimage = {};
+}
+
+void set_image(glimage_state& glimage, const color_image& img) {
+  if (!glimage.texture || glimage.width != img.width ||
+      glimage.height != img.height) {
+    if (!glimage.texture) glGenTextures(1, &glimage.texture);
+    glBindTexture(GL_TEXTURE_2D, glimage.texture);
+    glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, img.width, img.height, 0, GL_RGBA,
+        GL_FLOAT, img.pixels.data());
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+  } else {
+    glBindTexture(GL_TEXTURE_2D, glimage.texture);
+    glTexSubImage2D(GL_TEXTURE_2D, 0, 0, 0, img.width, img.height, GL_RGBA,
+        GL_FLOAT, img.pixels.data());
+  }
+  glimage.width  = img.width;
+  glimage.height = img.height;
+}
+
+// draw image
+void draw_image(glimage_state& glimage, const glimage_params& params) {
+  // check errors
+  assert_ogl_error_();
+
+  // viewport and framebuffer
+  glViewport(params.framebuffer.x, params.framebuffer.y, params.framebuffer.z,
+      params.framebuffer.w);
+  glClearColor(params.background.x, params.background.y, params.background.z,
+      params.background.w);
+  glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+  glEnable(GL_DEPTH_TEST);
+
+  // bind program and params
+  glUseProgram(glimage.program);
+  glActiveTexture(GL_TEXTURE0);
+  glBindTexture(GL_TEXTURE_2D, glimage.texture);
+  glUniform1i(glGetUniformLocation(glimage.program, "txt"), 0);
+  glUniform2f(glGetUniformLocation(glimage.program, "window_size"),
+      (float)params.window.x, (float)params.window.y);
+  glUniform2f(glGetUniformLocation(glimage.program, "image_size"),
+      (float)glimage.width, (float)glimage.height);
+  glUniform2f(glGetUniformLocation(glimage.program, "image_center"),
+      params.center.x, params.center.y);
+  glUniform1f(
+      glGetUniformLocation(glimage.program, "image_scale"), params.scale);
+  assert_ogl_error_();
+
+  // draw
+  glBindVertexArray(glimage.vertexarray);
+  glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, glimage.triangles);
+  glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_INT, nullptr);
+  glBindVertexArray(0);
+  assert_ogl_error_();
+
+  // unbind program
+  glUseProgram(0);
+  assert_ogl_error_();
 }
 
 }  // namespace yocto
