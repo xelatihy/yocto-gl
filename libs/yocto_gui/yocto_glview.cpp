@@ -31,16 +31,7 @@
 
 #include <yocto/yocto_cli.h>
 #include <yocto/yocto_geometry.h>
-
-// -----------------------------------------------------------------------------
-// USING DIRECTIVES
-// -----------------------------------------------------------------------------
-namespace yocto {
-
-// using directives
-using std::make_unique;
-
-}  // namespace yocto
+#include <yocto/yocto_parallel.h>
 
 // -----------------------------------------------------------------------------
 // VIEW HELPERS

@@ -35,16 +35,13 @@
 // -----------------------------------------------------------------------------
 
 #include <yocto/yocto_image.h>
-#include <yocto/yocto_parallel.h>
-#include <yocto/yocto_sceneio.h>
-#include <yocto/yocto_shape.h>
+#include <yocto/yocto_scene.h>
 #include <yocto/yocto_trace.h>
 #include <yocto_gui/yocto_imgui.h>
 #include <yocto_gui/yocto_opengl.h>
 #include <yocto_gui/yocto_shade.h>
 
 #include <array>
-#include <memory>
 #include <string>
 #include <vector>
 
@@ -56,7 +53,6 @@ namespace yocto {
 // using directives
 using std::array;
 using std::string;
-using std::unique_ptr;
 using std::vector;
 
 }  // namespace yocto
