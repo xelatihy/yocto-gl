@@ -48,12 +48,12 @@ struct view_params {
   bool   addsky = false;
 };
 
-void add_command(cli_command& cli, const string& name, view_params& value,
+void add_command(cli_command& cli, const string& name, view_params& params,
     const string& usage) {
   auto& cmd = add_command(cli, name, usage);
-  add_argument(cmd, "shape", value.shape, "Input shape.");
-  add_option(cmd, "output", value.output, "Output shape.", {});
-  add_option(cmd, "addsky", value.addsky, "Add sky.");
+  add_argument(cmd, "shape", params.shape, "Input shape.");
+  add_option(cmd, "output", params.output, "Output shape.", {});
+  add_option(cmd, "addsky", params.addsky, "Add sky.");
 }
 
 #ifndef YOCTO_OPENGL
@@ -94,10 +94,10 @@ struct glview_params {
 };
 
 // Cli
-void add_command(cli_command& cli, const string& name, glview_params& value,
+void add_command(cli_command& cli, const string& name, glview_params& params,
     const string& usage) {
   auto& cmd = add_command(cli, name, usage);
-  add_argument(cmd, "shape", value.shape, "Input shape.");
+  add_argument(cmd, "shape", params.shape, "Input shape.");
 }
 
 #ifndef YOCTO_OPENGL
@@ -179,10 +179,10 @@ struct glpath_params {
 };
 
 // Cli
-void add_command(cli_command& cli, const string& name, glpath_params& value,
+void add_command(cli_command& cli, const string& name, glpath_params& params,
     const string& usage) {
   auto& cmd = add_command(cli, name, usage);
-  add_argument(cmd, "shape", value.shape, "Input shape.");
+  add_argument(cmd, "shape", params.shape, "Input shape.");
 }
 
 #ifndef YOCTO_OPENGL
@@ -356,10 +356,10 @@ struct glpathd_params {
 };
 
 // Cli
-void add_command(cli_command& cli, const string& name, glpathd_params& value,
+void add_command(cli_command& cli, const string& name, glpathd_params& params,
     const string& usage) {
   auto& cmd = add_command(cli, name, usage);
-  add_argument(cmd, "shape", value.shape, "Input shape.");
+  add_argument(cmd, "shape", params.shape, "Input shape.");
 }
 
 #ifndef YOCTO_OPENGL
@@ -596,10 +596,10 @@ struct glsculpt_params {
 
 // Cli
 inline void add_command(cli_command& cli, const string& name,
-    glsculpt_params& value, const string& usage) {
+    glsculpt_params& params, const string& usage) {
   auto& cmd = add_command(cli, name, usage);
-  add_argument(cmd, "shape", value.shape, "Input shape.");
-  add_option(cmd, "texture", value.texture, "Brush texture.");
+  add_argument(cmd, "shape", params.shape, "Input shape.");
+  add_option(cmd, "texture", params.texture, "Brush texture.");
 }
 
 #ifndef YOCTO_OPENGL
@@ -1321,15 +1321,15 @@ struct app_params {
 };
 
 // Cli
-void add_commands(cli_command& cli, const string& name, app_params& value,
+void add_commands(cli_command& cli, const string& name, app_params& params,
     const string& usage) {
   cli = make_cli(name, usage);
-  add_command_name(cli, "command", value.command, "Command.");
-  add_command(cli, "view", value.view, "View shapes.");
-  add_command(cli, "glview", value.glview, "View shapes with OpenGL.");
-  add_command(cli, "glpath", value.glpath, "Trace paths with OpenGL.");
-  add_command(cli, "glpathd", value.glpathd, "Trace debug paths with OpenGL.");
-  add_command(cli, "glsculpt", value.glsculpt, "Sculpt meshes with OpenGL.");
+  add_command_name(cli, "command", params.command, "Command.");
+  add_command(cli, "view", params.view, "View shapes.");
+  add_command(cli, "glview", params.glview, "View shapes with OpenGL.");
+  add_command(cli, "glpath", params.glpath, "Trace paths with OpenGL.");
+  add_command(cli, "glpathd", params.glpathd, "Trace debug paths with OpenGL.");
+  add_command(cli, "glsculpt", params.glsculpt, "Sculpt meshes with OpenGL.");
 }
 
 // Parse cli
