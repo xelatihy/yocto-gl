@@ -530,7 +530,7 @@ void view_scene(const string& title, const string& name, scene_model& scene,
         state.samples += 1;
         if (!render_stop) {
           auto lock      = std::lock_guard{render_mutex};
-          render_current = 0;
+          render_current = state.samples;
           if (!params.denoise || render_stop) {
             get_render(render, state);
           } else {
@@ -579,7 +579,8 @@ void view_scene(const string& title, const string& name, scene_model& scene,
   callbacks.widgets_cb = [&](const glinput_state& input) {
     auto edited = 0;
     draw_glcombobox("name", selected, names);
-    // draw_glprogressbar("render", app->current, app->total);
+    auto current = (int)render_current;
+    draw_glprogressbar("sample", current, params.samples);
     if (begin_glheader("render")) {
       auto edited  = 0;
       auto tparams = params;

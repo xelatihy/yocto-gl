@@ -366,6 +366,10 @@ bool draw_glcombobox(const char* lbl, int& idx, const vector<string>& labels,
 bool draw_glcombobox(const char* lbl, string& value,
     const vector<string>& labels, bool include_null = false);
 
+// Progress bar
+void draw_glprogressbar(const char* lbl, float fraction);
+void draw_glprogressbar(const char* lbl, int current, int total);
+
 }  // namespace yocto
 
 #endif
