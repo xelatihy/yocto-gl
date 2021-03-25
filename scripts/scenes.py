@@ -2,77 +2,56 @@
 
 import click, glob, os, sys, math, json, csv
 
+
 @click.group()
 def cli():
     pass
 
-@cli.command()
-@click.option('--directory', '-d', default='mcguire')
-@click.option('--scene', '-s', default='*')
-@click.option('--format','-f', default='json')
-@click.option('--mode','-m', default='path')
-def itrace(directory='mcguire',scene='*',format='json',mode='path'):
-    modes = {
-        'path': '',
-        'path-skyenv': '--skyenv',
-        'embree': '--bvh embree-highquality',
-        'embree-compact': '--bvh embree-compact',
-        'eyelight': '-t eyelight --bvh highquality',
-        'eyelight-quick': '--all-cameras -s 16 -r 1280 -t eyelight --bvh default'
-    }
-    options = modes[mode]
-    for dirname in sorted(glob.glob(f'{directory}/{format}/{scene}')):
-        if not os.path.isdir(dirname): continue
-        if '/_' in dirname: continue
-        for filename in sorted(glob.glob(f'{dirname}/*.{format}')):
-            if format == 'pbrt':
-                with open(filename) as f:
-                    if 'WorldBegin' not in f.read(): continue
-            cmd = f'../yocto-gl/bin/ysceneitrace {options} {filename}'
-            print(cmd, file=sys.stderr)
-            os.system(cmd)
 
 @cli.command()
 @click.option('--directory', '-d', default='mcguire')
 @click.option('--scene', '-s', default='*')
-@click.option('--format','-f', default='json')
-@click.option('--mode','-m', default='default')
-def view(directory='mcguire',scene='*',format='json',mode='path'):
+@click.option('--format', '-f', default='json')
+@click.option('--mode', '-m', default='path')
+@click.option('--envname', '-e', default='')
+def view(directory='mcguire', scene='*', format='json', mode='path', envname=''):
     modes = {
-        'default': '--double-sided',
-        'double-sided': '--double-sided',
-        'eyelight': '--double-sided --eyelight'
+        'path': '--resolution 1280 --bounces 8 --clamp 10',
+        'embree': '--resolution 1280 --bounces 8 --clamp 10 --embreebvh',
+        'eyelight': '--resolution 1280 -t eyelight --bounces 8 --clamp 10',
+        'eyelight-quick': '--resolution 1280 --samples 16 --sampler eyelight --bounces 8 --clamp 10'
     }
     options = modes[mode]
+    envoptions = f'--envname {envname}' if envname else ''
     for dirname in sorted(glob.glob(f'{directory}/{format}/{scene}')):
         if not os.path.isdir(dirname): continue
         if '/_' in dirname: continue
+        extraoptions = ''
+        if os.path.exists(f'{dirname}/yscene_render.txt'):
+            with open(f'{dirname}/yscene_render.txt') as f:
+                extraoptions = f.read().strip()
         for filename in sorted(glob.glob(f'{dirname}/*.{format}')):
             if format == 'pbrt':
                 with open(filename) as f:
                     if 'WorldBegin' not in f.read(): continue
-            cmd = f'../yocto-gl/bin/yscnview {options} {filename}'
+            cmd = f'../yocto-gl/bin/yscene view {options} {extraoptions} {envoptions} {filename}'
             print(cmd, file=sys.stderr)
             os.system(cmd)
+
 
 @cli.command()
 @click.option('--directory', '-d', default='mcguire')
 @click.option('--scene', '-s', default='*')
-@click.option('--format','-f', default='json')
-@click.option('--mode','-m', default='path')
-def trace(directory='mcguire',scene='*',format='json',mode='path'):
+@click.option('--format', '-f', default='json')
+@click.option('--mode', '-m', default='path')
+def render(directory='mcguire', scene='*', format='json', mode='path'):
     modes = {
-        'path': '-s 64 -r 640',
-        'path-skyenv': '-s 64 -r 640 --skyenv',
-        'path-face': '-s 256 -r 640',
-        'embree': '-s 256 -r 1280 --bvh embree-highquality',
-        'embree-compact': '-s 256 -r 1280 --bvh embree-compact',
-        'eyelight': '-s 16 -r 1280 -t eyelight',
-        'embree-face': '-s 1024 -r 640 --bvh embree-highquality',
-        'final': '-s 4096 -r 1280 --bvh embree-highquality',
-        'final-compact': '-s 4096 -r 1280 --bvh embree-compact',
-        'final-filter': '-s 4096 -r 1280 --filter --bvh embree-highquality',
-        'final-face': '-s 4096 -r 1280 --bvh embree-highquality',
+        'path': '--samples 64 --resolution 1280 --bounces 8 --clamp 10',
+        'path-face': '--samples 256 --resolution 1280 --bounces 8 --clamp 10',
+        'embree': '--samples 256 --resolution 1280 --bounces 8 --clamp 10 --embreebvh',
+        'eyelight': '--samples 16 --resolution 1280 --bounces 8 --clamp 10 --sampler eyelight',
+        'embree-face': '--samples 1024 --resolution 1280 --bounces 8 --clamp 10 --embreebvh',
+        'final': '--samples 4096 --resolution 1280 --bounces 8 --clamp 10 --embreebvh',
     }
     options = modes[mode]
     outformat = 'png' if 'eyelight' in mode else 'hdr'
@@ -81,68 +60,109 @@ def trace(directory='mcguire',scene='*',format='json',mode='path'):
         if not os.path.isdir(dirname): continue
         if '/_' in dirname: continue
         extracams = []
-        if 'sanmiguel' in dirname: extracams = [1, 2]
-        if 'island' in dirname: extracams = [1, 2, 3, 4, 5, 6]
-        if 'landscape' in dirname: extracams = [1, 2, 3]
+        if 'sanmiguel' in dirname: extracams = ['camera2', 'camera3']
+        if 'island' in dirname: extracams = ["beachCam", "birdseyeCam", "dunesACam", "grassCam", "palmsCam", "rootsCam", "shotCam"]
+        if 'landscape' in dirname: extracams = ['camera2', 'camera3', 'camera4']
+        extraoptions = ''
+        if os.path.exists(f'{dirname}/yscene_render.txt'):
+            with open(f'{dirname}/yscene_render.txt') as f:
+                extraoptions = f.read().strip()
         for filename in sorted(glob.glob(f'{dirname}/*.{format}')):
             if format == 'pbrt':
                 with open(filename) as f:
                     if 'WorldBegin' not in f.read(): continue
-            basename = os.path.basename(filename).replace(f'.{format}','')
+            basename = os.path.basename(filename).replace(f'.{format}', '')
             os.system(f'mkdir -p {directory}/{outprefix}-{format}')
             imagename = f'{directory}/{outprefix}-{format}/{basename}.{outformat}'
-            cmd = f'../yocto-gl/bin/yscenetrace -o {imagename} {options} {filename}'
+            cmd = f'../yocto-gl/bin/yscene render --output {imagename} {options} {extraoptions} {filename}'
             print(cmd, file=sys.stderr)
             os.system(cmd)
-            for cam in extracams:
-                imagename = f'{directory}/{outprefix}-{format}/{basename}-c{cam}.{outformat}'
-                cmd = f'../yocto-gl/bin/yscenetrace -o {imagename} --camera {cam} {options} {filename}'
+            for idx, cam in enumerate(extracams, 1):
+                imagename = f'{directory}/{outprefix}-{format}/{basename}-c{idx}.{outformat}'
+                cmd = f'../yocto-gl/bin/yscene render --output {imagename} --camera {cam} {options} {extraoptions} {filename}'
                 print(cmd, file=sys.stderr)
                 os.system(cmd)
+
 
 @cli.command()
 @click.option('--directory', '-d', default='mcguire')
 @click.option('--scene', '-s', default='*')
-@click.option('--format','-f', default='json')
-@click.option('--mode','-m', default='linear')
-def tonemap(directory='mcguire',scene='*',format='json',mode='filmic'):
+@click.option('--format', '-f', default='json')
+@click.option('--mode', '-m', default='linear')
+def tonemap(directory='mcguire', scene='*', format='json', mode='filmic'):
     modes = {
-        'linear': '-t --logo',
-        'contrast1': '-t --logcontrast 0.6 --logo',
+        'linear': '',
+        'filmic': '--filmic --exposure 0.5'
     }
     options = modes[mode]
     outformat = 'png'
     outprefix = 'images'
-    from PIL import Image
-    from PIL import ImageFont
-    from PIL import ImageDraw 
-    font = ImageFont.truetype('~/Library/Fonts/FiraSansCondensed-Regular.otf', 18)
-    for filename in sorted(glob.glob(f'{directory}/{outprefix}-{format}/{scene}.hdr')+
-                           glob.glob(f'{directory}/{outprefix}-{format}/{scene}.exr')):
-        imagename = filename.replace(f'.exr',f'.{outformat}').replace(f'.hdr',f'.{outformat}')
-        cmd = f'../yocto-gl/bin/yimgproc -o {imagename} {options} {filename}'
+    from PIL import Image, ImageFont, ImageDraw
+    fontname1 = '~/Library/Fonts/FiraSansCondensed-Regular.ttf'
+    fontname2 = '~/Library/Fonts/FiraSansCondensed-Regular.ttf'
+    font1 = ImageFont.truetype(fontname1, 30)
+    font2 = ImageFont.truetype(fontname2, 18)
+    for filename in sorted(
+            glob.glob(f'{directory}/{outprefix}-{format}/{scene}.hdr') +
+            glob.glob(f'{directory}/{outprefix}-{format}/{scene}.exr')):
+        imagename = filename.replace(f'.exr', f'.{outformat}').replace(
+            f'.hdr', f'.{outformat}')
+        cmd = f'../yocto-gl/bin/yimage convert --output {imagename} {options} {filename}'
         print(cmd, file=sys.stderr)
         os.system(cmd)
-        if directory not in ['bitterli', 'disney', 'mcguire', 'pbrt']: continue
-        authorfilename = filename.replace('images-json/','source/').replace('-fr.','.').replace('-hr.','.').replace('-c1.','.').replace('-c2.','.').replace('-c3.','.').replace('-c4.','.').replace('-c5.','.').replace('-c6.','.').replace('.hdr','') + '/AUTHOR.txt'
-        print(authorfilename)
-        with open(authorfilename) as f: text = f.read().strip()
         img = Image.open(imagename)
-        _, h = img.size
+        w, h = img.size
         draw = ImageDraw.Draw(img)
-        tw, _ = draw.textsize(text, font=font)
-        draw.rectangle([8,h-26-8,8+8+tw,h-8], (0,0,0))
-        draw.text((8+4, h-20-8-4),text,(255,255,255),font=font)
+        tw, _ = draw.textsize("Yocto/GL", font=font1)
+        draw.rectangle([w - 8, h - 32 - 8, w - 8 - 8 - tw, h - 8], (0, 0, 0))
+        draw.text((w - 8 - 4, h - 26 - 8 - 4), "Yocto/GL", (255, 255, 255), font=font1, anchor='rt')
+        if directory in ['bitterli', 'disney', 'mcguire', 'pbrt3', 'yocto', 'heads', 'blender', 'fabio']:
+            authorfilename = filename.replace('images-json/', f'{format}/').replace(
+                '-fr.', '.').replace('-hr.', '.').replace('-c1.', '.').replace(
+                    '-c2.', '.').replace('-c3.', '.').replace('-c4.', '.').replace(
+                        '-c5.', '.').replace('-c6.', '.').replace('-c7.', '.').replace(
+                            '.hdr', '') + '/AUTHOR.txt'
+            print(authorfilename)
+            with open(authorfilename) as f:
+                text = f.read().strip()
+            tw, _ = draw.textsize(text, font=font2)
+            draw.rectangle([8, h - 26 - 8, 8 + 8 + tw, h - 8], (0, 0, 0))
+            draw.text((8 + 4, h - 20 - 8 - 4), text, (255, 255, 255), font=font2)
         img.save(imagename)
-            
+
 
 @cli.command()
 @click.option('--directory', '-d', default='mcguire')
 @click.option('--scene', '-s', default='*')
-@click.option('--format','-f', default='obj')
-# @click.option('--mode','-m', default='no-clear')
-@click.option('--clean/--no-clean','-C', default=False)
-def sync_images(directory='mcguire',scene='*',format='obj',mode='path',clean=True):
+@click.option('--format', '-f', default='json')
+@click.option('--mode', '-m', default='jpg')
+def gallery(directory='mcguire', scene='*', format='json', mode='filmic'):
+    modes = {
+        'jpg': ''
+    }
+    options = modes[mode]
+    inprefix = 'images'
+    outformat = 'jpg'
+    outprefix = 'gallery'
+    os.system(f'mkdir -p {directory}/{outprefix}-{format}')
+    from PIL import Image
+    for filename in sorted(glob.glob(f'{directory}/{inprefix}-{format}/{scene}.png')):
+        imagename = filename.replace(f'{inprefix}-', f'{outprefix}-').replace('.png',f'.{outformat}')
+        print(filename, file=sys.stderr)
+        img = Image.open(filename)
+        rgb_img = img.convert('RGB')
+        rgb_img.save(imagename)
+
+
+@cli.command()
+@click.option('--directory', '-d', default='mcguire')
+@click.option('--scene', '-s', default='*')
+@click.option('--format', '-f', default='obj')
+@click.option('--clean/--no-clean', '-C', default=False)
+def sync_images(directory='mcguire',
+                scene='*',
+                format='obj',
+                clean=True):
     for dirname in sorted(glob.glob(f'{directory}/{format}/{scene}')):
         if not os.path.isdir(dirname): continue
         if '/_' in dirname: continue
@@ -150,7 +170,7 @@ def sync_images(directory='mcguire',scene='*',format='obj',mode='path',clean=Tru
             if format == 'pbrt':
                 with open(filename) as f:
                     if 'WorldBegin' not in f.read(): continue
-            basename = os.path.basename(filename).replace(f'.{format}','')
+            basename = os.path.basename(filename).replace(f'.{format}', '')
             os.system(f'mkdir -p {directory}/images-{format}')
             imagename = f'{directory}/images-{format}/ytrace-{mode}-{basename}.*'
             if clean:
@@ -164,17 +184,21 @@ def sync_images(directory='mcguire',scene='*',format='obj',mode='path',clean=Tru
             print(cmd, file=sys.stderr)
             os.system(cmd)
 
+
 @cli.command()
 @click.option('--directory', '-d', default='mcguire')
 @click.option('--scene', '-s', default='*')
-@click.option('--format','-f', default='obj')
-@click.option('--outformat','-F', default='json')
-@click.option('--mode','-m', default='default')
-@click.option('--clean/--no-clean','-C', default=False)
-def convert(directory='mcguire',scene='*',format='obj',outformat="json",mode='path',clean=True):
+@click.option('--format', '-f', default='obj')
+@click.option('--outformat', '-F', default='json')
+@click.option('--mode', '-m', default='default')
+@click.option('--clean/--no-clean', '-C', default=False)
+def convert(directory='mcguire',
+            scene='*',
+            format='obj',
+            outformat="json",
+            mode='path',
+            clean=True):
     modes = {
-        # 'default': '--uniform-textures --mesh-filenames',
-        # 'gltf': '--uniform-textures --mesh-filenames --mesh-directory gltf_meshes/'
         'default': '',
     }
     options = modes[mode]
@@ -183,49 +207,37 @@ def convert(directory='mcguire',scene='*',format='obj',outformat="json",mode='pa
         if '/_' in dirname: continue
         copyright_options = ''
         if os.path.exists(f'{dirname}/AUTHOR.txt'):
-            with open(f'{dirname}/AUTHOR.txt') as f: 
-                copyright = f.read().strip().replace('"','')
+            with open(f'{dirname}/AUTHOR.txt') as f:
+                copyright = f.read().strip().replace('"', '')
             copyright_options += f'--copyright "{copyright}"'
-        obj_options = ''
-        if 'bunny2' in dirname and outformat == 'obj': obj_options = '--obj-instances'
-        if 'ecosys' in dirname and outformat == 'obj': obj_options = '--obj-instances'
-        if 'landscape' in dirname and outformat == 'obj': obj_options = '--obj-instances'
-        if 'fractal' in dirname and outformat == 'obj': obj_options = '--obj-instances'
-        if 'pavilion' in dirname and outformat == 'obj': continue
-        if 'sanmiguel' in dirname and 'pbrt' in dirname and outformat == 'obj': continue
-        outdirname = dirname.replace(f'/source/',f'/{outformat}/')
+        outdirname = dirname.replace(f'/source/', f'/{outformat}/')
         if clean: os.system(f'rm -rf {outdirname}')
         os.system(f'mkdir -p {outdirname}')
-        os.system(f'mkdir -p {outdirname}/textures')
-        if os.path.exists(f'{dirname}/AUTHOR.txt'):
-            os.system(f'cp {dirname}/AUTHOR.txt {outdirname}/')
-        if os.path.exists(f'{dirname}/LICENSE.txt'):
-            os.system(f'cp {dirname}/LICENSE.txt {outdirname}/')
-        if os.path.exists(f'{dirname}/LINKS.txt'):
-            os.system(f'cp {dirname}/LINKS.txt {outdirname}/')
-        if outformat == 'yaml' or outformat == 'json':        
-            os.system(f'mkdir -p {outdirname}/shapes')
+        for auxname in ['AUTHOR.txt', 'LICENSE.txt', 'LINKS.txt', 'README.txt', 'yscene_render.txt']:
+            if os.path.exists(f'{dirname}/{auxname}'):
+                os.system(f'cp {dirname}/{auxname} {outdirname}/')
         for filename in sorted(glob.glob(f'{dirname}/*.{format}')):
             if format == 'pbrt':
                 with open(filename) as f:
                     if 'WorldBegin' not in f.read(): continue
-            outname = filename.replace(f'/source/',f'/{outformat}/').replace(f'.{format}',f'.{outformat}')
-            if format != 'dijson':
-                cmd = f'../yocto-gl/bin/ysceneproc -o {outname} {options} {obj_options} {filename} {copyright_options}'
-                print(cmd, file=sys.stderr)
-                os.system(cmd)
-            else:
-                cmd = f'../yocto-gl/bin/yislandproc -o {outname} {options} {obj_options} {filename}'
-                print(cmd, file=sys.stderr)
-                os.system(cmd)
+            outname = filename.replace(f'/source/', f'/{outformat}/').replace(
+                f'.{format}', f'.{outformat}')
+            cmd = f'../yocto-gl/bin/yscene convert --output {outname} {options} {filename} {copyright_options}'
+            print(cmd, file=sys.stderr)
+            os.system(cmd)
+
 
 @cli.command()
 @click.option('--directory', '-d', default='mcguire')
 @click.option('--scene', '-s', default='*')
-@click.option('--format','-f', default='obj')
-@click.option('--outformat','-F', default='json')
-@click.option('--mode','-m', default='default')
-def copyright(directory='mcguire',scene='*',format='obj',outformat="json",mode='default'):
+@click.option('--format', '-f', default='obj')
+@click.option('--outformat', '-F', default='json')
+@click.option('--mode', '-m', default='default')
+def copyright(directory='mcguire',
+              scene='*',
+              format='obj',
+              outformat="json",
+              mode='default'):
     modes = {
         'default': '',
     }
@@ -233,7 +245,7 @@ def copyright(directory='mcguire',scene='*',format='obj',outformat="json",mode='
     for dirname in sorted(glob.glob(f'{directory}/source/{scene}')):
         if not os.path.isdir(dirname): continue
         if '/_' in dirname: continue
-        outdirname = dirname.replace(f'/source/',f'/{outformat}/')
+        outdirname = dirname.replace(f'/source/', f'/{outformat}/')
         os.system(f'mkdir -p {outdirname}')
         if os.path.exists(f'{dirname}/AUTHOR.txt'):
             os.system(f'cp {dirname}/AUTHOR.txt {outdirname}/')
@@ -242,17 +254,21 @@ def copyright(directory='mcguire',scene='*',format='obj',outformat="json",mode='
         if os.path.exists(f'{dirname}/LINKS.txt'):
             os.system(f'cp {dirname}/LINKS.txt {outdirname}/')
 
+
 @cli.command()
 @click.option('--directory', '-d', default='yuksel')
 @click.option('--scene', '-s', default='*')
-@click.option('--format','-f', default='hair')
-@click.option('--outformat','-F', default='ply')
-@click.option('--mode','-m', default='default')
-@click.option('--clean-models/--no-clean-models','-C', default=False)
-def convert_hair(directory='yuksel',scene='*',format='hair',outformat="ply",mode='path',clean_models=True):
-    modes = {
-        'default': ''
-    }
+@click.option('--format', '-f', default='hair')
+@click.option('--outformat', '-F', default='ply')
+@click.option('--mode', '-m', default='default')
+@click.option('--clean-models/--no-clean-models', '-C', default=False)
+def convert_hair(directory='yuksel',
+                 scene='*',
+                 format='hair',
+                 outformat="ply",
+                 mode='path',
+                 clean_models=True):
+    modes = {'default': ''}
     options = modes[mode]
     for dirname in sorted(glob.glob(f'{directory}/{scene}')):
         if not os.path.isdir(dirname): continue
@@ -262,18 +278,20 @@ def convert_hair(directory='yuksel',scene='*',format='hair',outformat="ply",mode
         if 'fractal' in dirname and outformat == 'obj': continue
         if 'pavilion' in dirname and outformat == 'obj': continue
         for filename in sorted(glob.glob(f'{dirname}/{format}/*.{format}')):
-            outname = filename.replace(f'/{format}/',f'/json/').replace(f'.{format}',f'.{outformat}')
+            outname = filename.replace(f'/{format}/', f'/json/').replace(
+                f'.{format}', f'.{outformat}')
             filedir = os.path.dirname(filename)
             cmd = f'../yocto-gl/bin/ymshproc -o {outname} {options} {filename}'
             print(cmd, file=sys.stderr)
             os.system(cmd)
 
+
 @cli.command()
 @click.option('--directory', '-d', default='mcguire')
 @click.option('--scene', '-s', default='*')
-@click.option('--format','-f', default='obj')
-@click.option('--mode','-m', default='default')
-def backup(directory='mcguire',scene='*',format='obj',mode='default'):
+@click.option('--format', '-f', default='obj')
+@click.option('--mode', '-m', default='default')
+def backup(directory='mcguire', scene='*', format='obj', mode='default'):
     modes = {
         'default': '-r -X -q',
     }
@@ -284,25 +302,26 @@ def backup(directory='mcguire',scene='*',format='obj',mode='default'):
         outdir = f'{directory}/backup-{format}'
         basedir = f'{directory}/{format}'
         os.system(f'mkdir -p {outdir}')
-        dirname = dirname.replace(basedir+'/','')
+        dirname = dirname.replace(basedir + '/', '')
         outname = dirname + '.zip'
         os.system(f'rm {outdir}/{outname}')
         cmd = f'cd {basedir}; zip {options} {outname} {dirname}; mv {outname} ../../{outdir}/'
         print(cmd)
         os.system(cmd)
 
+
 @cli.command()
 @click.option('--directory', '-d', default='procedurals')
-@click.option('--mode','-m', default='skies')
-@click.option('--clean/--no-clean','-C', default=False)
-def make_procedurals(directory='procedurals',mode='skies',clean=False):
+@click.option('--mode', '-m', default='skies')
+@click.option('--clean/--no-clean', '-C', default=False)
+def make_procedurals(directory='procedurals', mode='skies', clean=False):
     if mode == 'skies':
         dirname = f'{directory}/hdr/textures'
         os.system(f'mkdir -p {dirname}')
         angles = [0, 5, 10, 20, 30, 40, 50, 60, 70, 80, 85, 90]
         for name in ['sky', 'sun']:
             for angle in angles:
-                jsonname = f'{dirname}/_proc.json' 
+                jsonname = f'{dirname}/_proc.json'
                 outname = f'{dirname}/{name}-{angle:02}.hdr'
                 js = {
                     'type': 'sky',
@@ -312,7 +331,8 @@ def make_procedurals(directory='procedurals',mode='skies',clean=False):
                     'has_sun': 'sun' in name,
                     'turbidity': 3
                 }
-                with open(jsonname, 'w') as f: json.dump(js, f, indent=2)
+                with open(jsonname, 'w') as f:
+                    json.dump(js, f, indent=2)
                 cmd = f'../yocto-gl/bin/yimproc -o {outname} {jsonname}'
                 print(cmd, file=sys.stderr)
                 os.system(cmd)
@@ -320,15 +340,19 @@ def make_procedurals(directory='procedurals',mode='skies',clean=False):
     else:
         print('unknown mode')
 
+
 @cli.command()
 def sync():
-    os.system("rsync -avcm --delete --include '*/' --include '*.zip' --include '*.tgz' --include '*.pdf' --exclude='*' ./ ../yocto-scenes")
+    os.system(
+        "rsync -avcm --delete --include '*/' --include '*.zip' --include '*.tgz' --include '*.pdf' --exclude='*' ./ ../yocto-scenes"
+    )
     # os.system('rsync -avc --delete ./ ../yocto-scenes')
+
 
 @cli.command()
 @click.option('--directory', '-d', default='pbrt-v3-scenes')
 @click.option('--scene', '-s', default='*')
-def pbrtparse(directory='pbrt-v3-scenes',scene='*'):
+def pbrtparse(directory='pbrt-v3-scenes', scene='*'):
     broken_scenes = [
         'bunny-fur/f3-15.pbrt',
         "dambreak/dambreak0.pbrt",
@@ -393,27 +417,39 @@ def pbrtparse(directory='pbrt-v3-scenes',scene='*'):
         print(cmd, file=sys.stderr)
         os.system(cmd)
 
+
 @cli.command()
 @click.option('--directory', '-d', default='mcguire')
 @click.option('--scene', '-s', default='*')
-@click.option('--format','-f', default='json')
-@click.option('--outformat','-F', default='csv')
-@click.option('--mode','-m', default='default')
-def stats(directory='mcguire',scene='*',format='json',outformat="csv",mode='default'):
+@click.option('--format', '-f', default='json')
+@click.option('--outformat', '-F', default='csv')
+@click.option('--mode', '-m', default='default')
+def stats(directory='mcguire',
+          scene='*',
+          format='json',
+          outformat="csv",
+          mode='default'):
     stats = []
-    keys = ['name', 'cameras', 'environments', 'shapes', 'subdivs', 'textures', 'stextures']
+    keys = [
+        'name', 'cameras', 'environments', 'shapes', 'subdivs', 'textures',
+        'stextures'
+    ]
     for dirname in sorted(glob.glob(f'{directory}/{format}/{scene}')):
         if not os.path.isdir(dirname): continue
         if '/_' in dirname: continue
         for filename in sorted(glob.glob(f'{dirname}/*.{format}')):
-            with open(filename) as f: scene = json.load(f)
+            with open(filename) as f:
+                scene = json.load(f)
             stat = {}
             stat['name'] = filename.partition('/')[2].partition('.')[0]
-            stat['cameras'] = len(scene['cameras']) if 'cameras' in scene else 0
-            stat['environments'] = len(scene['environments']) if 'environments' in scene else 0
+            stat['cameras'] = len(
+                scene['cameras']) if 'cameras' in scene else 0
+            stat['environments'] = len(
+                scene['environments']) if 'environments' in scene else 0
             stat['shapes'] = len(scene['shapes']) if 'shapes' in scene else 0
-            stat['subdivs'] = len(scene['subdivs']) if 'subdivs' in scene else 0
-            textures = { }
+            stat['subdivs'] = len(
+                scene['subdivs']) if 'subdivs' in scene else 0
+            textures = {}
             for shape in scene['shapes']:
                 for key, value in shape.items():
                     if '_tex' not in key: continue
@@ -423,10 +459,43 @@ def stats(directory='mcguire',scene='*',format='json',outformat="csv",mode='defa
             stat['stextures'] = sum(count for _, count in textures.items())
             stats += [stat]
     os.system(f'mkdir -p {directory}/_stats-{format}')
-    with open(f'{directory}/_stats-{format}/stats.{outformat}', 'w', newline='') as f:
+    with open(f'{directory}/_stats-{format}/stats.{outformat}',
+              'w',
+              newline='') as f:
         writer = csv.writer(f)
         writer.writerow(keys)
         for stat in stats:
             writer.writerow([stat[key] for key in keys])
+
+@cli.command()
+@click.option('--directory', '-d', default='mcguire')
+def fix_objx(directory='mcguire'):
+    for filename in glob.glob(directory + "/source/*/*.objx"):
+        newname = filename.replace('.objx', '.obx')
+        obx = ''
+        with open(filename) as f:
+            for line in f:
+                if line.startswith('c'):
+                    tokens = line.split()
+                    for i in range(len(tokens)):
+                        if i in [0, 1, 2]: continue
+                        tokens[i] = float(tokens[i])
+                    obx += 'newCam {}\n'.format(tokens[1])
+                    obx += '  Ca {}\n'.format(round(tokens[3] / tokens[4], 3))
+                    obx += '  Cl {}\n'.format(round(tokens[5] * 0.036 / tokens[3],3))
+                    obx += '  Ct {} {} {} {} {} {} 0 1 0\n'.format(round(tokens[17], 2), round(tokens[18], 2), round(tokens[19], 2), round(tokens[17] - tokens[14] * tokens[6], 2), round(tokens[18] - tokens[15] * tokens[6], 2), round(tokens[19] - tokens[16] * tokens[6], 2))
+                    obx += '\n';
+                if line.startswith('e'):
+                    tokens = line.split()
+                    for i in range(len(tokens)):
+                        if i in [0, 1, 5]: continue
+                        tokens[i] = float(tokens[i])
+                    obx += 'newEnv {}\n'.format(tokens[1])
+                    obx += '  Ee {} {} {}\n'.format(round(tokens[2], 1), round(tokens[3], 1), round(tokens[4], 1))
+                    if tokens[5] != '""': obx += '  map_Ee {}\n'.format(tokens[5])
+                    obx += '  Et {} {} {} {} {} {} 0 1 0\n'.format(round(tokens[15], 2), round(tokens[16], 2), round(tokens[17], 2), round(tokens[15] + tokens[12], 2), round(tokens[16] + tokens[13], 2), round(tokens[17] + tokens[14], 2))
+                    obx += '\n';
+        with open(newname, 'wt') as f:
+            f.write(obx)
 
 cli()

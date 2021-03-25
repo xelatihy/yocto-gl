@@ -38,7 +38,6 @@
 #include <utility>
 
 #include "yocto_color.h"
-#include "yocto_commonio.h"
 
 // -----------------------------------------------------------------------------
 // USING DIRECTIVES
@@ -54,11 +53,211 @@ using namespace std::string_literals;
 }  // namespace yocto
 
 // -----------------------------------------------------------------------------
+// PATH UTILITIES
+// -----------------------------------------------------------------------------
+namespace yocto {
+
+// Make a path from a utf8 string
+static std::filesystem::path make_path(const string& filename) {
+  return std::filesystem::u8path(filename);
+}
+
+// Get directory name (not including /)
+static string path_dirname(const string& filename) {
+  return make_path(filename).parent_path().generic_u8string();
+}
+
+// Get filename without directory.
+static string path_filename(const string& filename) {
+  return make_path(filename).filename().u8string();
+}
+
+// Joins paths
+static string path_join(const string& patha, const string& pathb) {
+  return (make_path(patha) / make_path(pathb)).generic_u8string();
+}
+
+// Replaces extensions
+static string replace_extension(const string& filename, const string& ext) {
+  return make_path(filename).replace_extension(ext).u8string();
+}
+
+// Check if a file can be opened for reading.
+static bool path_exists(const string& filename) {
+  return exists(make_path(filename));
+}
+
+}  // namespace yocto
+
+// -----------------------------------------------------------------------------
+// FILE IO
+// -----------------------------------------------------------------------------
+namespace yocto {
+
+// Safe wrapper for FILE stream
+struct file_stream {
+  // file parameters
+  string filename = "";
+  FILE*  fs       = nullptr;
+  bool   owned    = false;
+
+  // move-only type
+  file_stream(const file_stream&) = delete;
+  file_stream& operator=(const file_stream&) = delete;
+  ~file_stream() {
+    if (owned && fs) fclose(fs);
+  }
+
+  // operator bool to check for error
+  explicit operator bool() const { return fs != nullptr; }
+};
+
+// Open a file
+static file_stream open_file(const string& filename, const string& mode) {
+#ifdef _WIN32
+  auto path8 = std::filesystem::u8path(filename);
+  auto wmode = std::wstring(mode.begin(), mode.end());
+  auto fs    = _wfopen(path8.c_str(), wmode.c_str());
+#else
+  auto fs = fopen(filename.c_str(), mode.c_str());
+#endif
+  return {filename, fs, true};
+}
+
+// Close a file
+static void close_file(file_stream& fs) {
+  if (fs.owned && fs.fs) fclose(fs.fs);
+  fs.filename = "";
+  fs.fs       = nullptr;
+  fs.owned    = false;
+}
+
+// Read a line of text
+static bool read_line(file_stream& fs, char* buffer, size_t size) {
+  return fgets(buffer, (int)size, fs.fs);
+}
+
+// Write text to a file
+static bool write_text(file_stream& fs, const string& str) {
+  return fprintf(fs.fs, "%s", str.c_str()) >= 0;
+}
+
+// Read data from a file
+static bool read_data(file_stream& fs, void* buffer, size_t count) {
+  return fread(buffer, 1, count, fs.fs) == count;
+}
+
+// Write data from a file
+static bool write_data(file_stream& fs, const void* buffer, size_t count) {
+  return fwrite(buffer, 1, count, fs.fs) == count;
+}
+
+// Read a line of text
+template <size_t N>
+static bool read_line(file_stream& fs, array<char, N>& buffer) {
+  return read_line(fs, buffer.data(), buffer.size());
+}
+
+// Read data from a file
+template <typename T>
+static bool read_value(file_stream& fs, T& buffer) {
+  return read_data(fs, &buffer, sizeof(T));
+}
+
+// Write data from a file
+template <typename T>
+static bool write_value(file_stream& fs, const T& buffer) {
+  return write_data(fs, &buffer, sizeof(T));
+}
+
+// Read data from a file
+template <typename T>
+static bool read_values(file_stream& fs, T* buffer, size_t count) {
+  return read_data(fs, buffer, sizeof(T) * count);
+}
+
+// Write data from a file
+template <typename T>
+static bool write_values(file_stream& fs, const T* buffer, size_t count) {
+  return write_data(fs, buffer, sizeof(T) * count);
+}
+
+// Write data from a file
+template <typename T>
+static bool write_values(file_stream& fs, const vector<T>& values) {
+  return write_data(fs, values.data(), sizeof(T) * values.size());
+}
+
+template <typename T>
+static T swap_endian(T value) {
+  // https://stackoverflow.com/questions/105252/how-do-i-convert-between-big-endian-and-little-endian-values-in-c
+  static_assert(sizeof(char) == 1, "sizeof(char) == 1");
+  union {
+    T             value;
+    unsigned char bytes[sizeof(T)];
+  } source, dest;
+  source.value = value;
+  for (auto k = (size_t)0; k < sizeof(T); k++)
+    dest.bytes[k] = source.bytes[sizeof(T) - k - 1];
+  return dest.value;
+}
+
+template <typename T>
+static bool read_value(file_stream& fs, T& value, bool big_endian) {
+  if (!read_value(fs, value)) return false;
+  if (big_endian) value = swap_endian(value);
+  return true;
+}
+
+template <typename T>
+static bool write_value(file_stream& fs, const T& value_, bool big_endian) {
+  auto value = big_endian ? swap_endian(value_) : value_;
+  return write_value(fs, value);
+}
+
+}  // namespace yocto
+
+// -----------------------------------------------------------------------------
 // IMPLEMENTATION FOR UTILITIES
 // -----------------------------------------------------------------------------
 namespace yocto {
 
 // Formats values to string
+inline void format_value(string& str, const string& value) { str += value; }
+inline void format_value(string& str, int8_t value) {
+  str += std::to_string((int32_t)value);
+}
+inline void format_value(string& str, int16_t value) {
+  str += std::to_string(value);
+}
+inline void format_value(string& str, int32_t value) {
+  str += std::to_string(value);
+}
+inline void format_value(string& str, int64_t value) {
+  str += std::to_string(value);
+}
+inline void format_value(string& str, uint8_t value) {
+  str += std::to_string((uint32_t)value);
+}
+inline void format_value(string& str, uint16_t value) {
+  str += std::to_string(value);
+}
+inline void format_value(string& str, uint32_t value) {
+  str += std::to_string(value);
+}
+inline void format_value(string& str, uint64_t value) {
+  str += std::to_string(value);
+}
+inline void format_value(string& str, float value) {
+  auto buf = array<char, 256>{};
+  snprintf(buf.data(), buf.size(), "%g", value);
+  str += buf.data();
+}
+inline void format_value(string& str, double value) {
+  auto buf = array<char, 256>{};
+  snprintf(buf.data(), buf.size(), "%g", value);
+  str += buf.data();
+}
 inline void format_value(string& str, const vec2f& value) {
   for (auto i = 0; i < 2; i++) {
     if (i != 0) str += " ";
@@ -88,6 +287,36 @@ inline void format_value(string& str, const mat4f& value) {
     if (i != 0) str += " ";
     format_value(str, value[i]);
   }
+}
+
+// Foramt to file
+inline void format_values(string& str, const string& fmt) {
+  auto pos = fmt.find("{}");
+  if (pos != string::npos) throw std::invalid_argument("bad format string");
+  str += fmt;
+}
+template <typename Arg, typename... Args>
+inline void format_values(
+    string& str, const string& fmt, const Arg& arg, const Args&... args) {
+  auto pos = fmt.find("{}");
+  if (pos == string::npos) throw std::invalid_argument("bad format string");
+  str += fmt.substr(0, pos);
+  format_value(str, arg);
+  format_values(str, fmt.substr(pos + 2), args...);
+}
+
+template <typename... Args>
+inline bool format_values(
+    file_stream& fs, const string& fmt, const Args&... args) {
+  auto str = ""s;
+  format_values(str, fmt, args...);
+  return write_text(fs, str);
+}
+template <typename T>
+inline bool format_value(file_stream& fs, const T& value) {
+  auto str = ""s;
+  format_value(str, value);
+  return write_text(fs, str);
 }
 
 inline bool is_newline(char c) { return c == '\r' || c == '\n'; }
@@ -249,6 +478,11 @@ inline bool parse_value(string_view& str, vec4f& value) {
     if (!parse_value(str, value[i])) return false;
   return true;
 }
+inline bool parse_value(string_view& str, mat3f& value) {
+  for (auto i = 0; i < 3; i++)
+    if (!parse_value(str, value[i])) return false;
+  return true;
+}
 inline bool parse_value(string_view& str, mat4f& value) {
   for (auto i = 0; i < 4; i++)
     if (!parse_value(str, value[i])) return false;
@@ -267,15 +501,8 @@ inline bool parse_value(string_view& str, frame3f& value) {
 // -----------------------------------------------------------------------------
 namespace yocto {
 
-ply_element::~ply_element() {
-  for (auto property : properties) delete property;
-}
-ply_model::~ply_model() {
-  for (auto element : elements) delete element;
-}
-
 // Load ply
-bool load_ply(const string& filename, ply_model* ply, string& error) {
+bool load_ply(const string& filename, ply_model& ply, string& error) {
   // ply type names
   static auto type_map = unordered_map<string, ply_type>{{"char", ply_type::i8},
       {"short", ply_type::i16}, {"int", ply_type::i32}, {"long", ply_type::i64},
@@ -287,10 +514,6 @@ bool load_ply(const string& filename, ply_model* ply, string& error) {
       {"uint8", ply_type::u8}, {"uint16", ply_type::u16},
       {"uint32", ply_type::u32}, {"uint64", ply_type::u64},
       {"float32", ply_type::f32}, {"float64", ply_type::f64}};
-
-  // initialize data
-  ply->comments.clear();
-  ply->elements.clear();
 
   // error helpers
   auto open_error = [filename, &error]() {
@@ -342,44 +565,43 @@ bool load_ply(const string& filename, ply_model* ply, string& error) {
       auto fmt = ""s;
       if (!parse_value(str, fmt)) return parse_error();
       if (fmt == "ascii") {
-        ply->format = ply_format::ascii;
+        ply.format = ply_format::ascii;
       } else if (fmt == "binary_little_endian") {
-        ply->format = ply_format::binary_little_endian;
+        ply.format = ply_format::binary_little_endian;
       } else if (fmt == "binary_big_endian") {
-        ply->format = ply_format::binary_big_endian;
+        ply.format = ply_format::binary_big_endian;
       } else {
         return parse_error();
       }
     } else if (cmd == "comment") {
       skip_whitespace(str);
-      ply->comments.emplace_back(str);
+      ply.comments.emplace_back(str);
     } else if (cmd == "obj_info") {
       skip_whitespace(str);
       // comment is the rest of the str
     } else if (cmd == "element") {
-      auto elem = ply->elements.emplace_back(new ply_element{});
-      if (!parse_value(str, elem->name)) return parse_error();
-      if (!parse_value(str, elem->count)) return parse_error();
+      auto& elem = ply.elements.emplace_back();
+      if (!parse_value(str, elem.name)) return parse_error();
+      if (!parse_value(str, elem.count)) return parse_error();
     } else if (cmd == "property") {
-      if (ply->elements.empty()) return parse_error();
-      auto prop = ply->elements.back()->properties.emplace_back(
-          new ply_property{});
-      auto tname = ""s;
+      if (ply.elements.empty()) return parse_error();
+      auto& prop  = ply.elements.back().properties.emplace_back();
+      auto  tname = ""s;
       if (!parse_value(str, tname)) return parse_error();
       if (tname == "list") {
-        prop->is_list = true;
+        prop.is_list = true;
         if (!parse_value(str, tname)) return parse_error();
         auto itype = type_map.at(tname);
         if (itype != ply_type::u8) return parse_error();
         if (!parse_value(str, tname)) return parse_error();
         if (type_map.find(tname) == type_map.end()) return parse_error();
-        prop->type = type_map.at(tname);
+        prop.type = type_map.at(tname);
       } else {
-        prop->is_list = false;
+        prop.is_list = false;
         if (type_map.find(tname) == type_map.end()) return parse_error();
-        prop->type = type_map.at(tname);
+        prop.type = type_map.at(tname);
       }
-      if (!parse_value(str, prop->name)) return parse_error();
+      if (!parse_value(str, prop.name)) return parse_error();
     } else if (cmd == "end_header") {
       end_header = true;
       break;
@@ -392,78 +614,78 @@ bool load_ply(const string& filename, ply_model* ply, string& error) {
   if (!end_header) return parse_error();
 
   // allocate data ---------------------------------
-  for (auto element : ply->elements) {
-    for (auto property : element->properties) {
-      auto count = property->is_list ? element->count * 3 : element->count;
-      switch (property->type) {
-        case ply_type::i8: property->data_i8.reserve(count); break;
-        case ply_type::i16: property->data_i16.reserve(count); break;
-        case ply_type::i32: property->data_i32.reserve(count); break;
-        case ply_type::i64: property->data_i64.reserve(count); break;
-        case ply_type::u8: property->data_u8.reserve(count); break;
-        case ply_type::u16: property->data_u16.reserve(count); break;
-        case ply_type::u32: property->data_u32.reserve(count); break;
-        case ply_type::u64: property->data_u64.reserve(count); break;
-        case ply_type::f32: property->data_f32.reserve(count); break;
-        case ply_type::f64: property->data_f64.reserve(count); break;
+  for (auto& element : ply.elements) {
+    for (auto& property : element.properties) {
+      auto count = property.is_list ? element.count * 3 : element.count;
+      switch (property.type) {
+        case ply_type::i8: property.data_i8.reserve(count); break;
+        case ply_type::i16: property.data_i16.reserve(count); break;
+        case ply_type::i32: property.data_i32.reserve(count); break;
+        case ply_type::i64: property.data_i64.reserve(count); break;
+        case ply_type::u8: property.data_u8.reserve(count); break;
+        case ply_type::u16: property.data_u16.reserve(count); break;
+        case ply_type::u32: property.data_u32.reserve(count); break;
+        case ply_type::u64: property.data_u64.reserve(count); break;
+        case ply_type::f32: property.data_f32.reserve(count); break;
+        case ply_type::f64: property.data_f64.reserve(count); break;
       }
-      if (property->is_list) property->ldata_u8.reserve(element->count);
+      if (property.is_list) property.ldata_u8.reserve(element.count);
     }
   }
 
   // read data -------------------------------------
-  if (ply->format == ply_format::ascii) {
+  if (ply.format == ply_format::ascii) {
     auto buffer = array<char, 4096>{};
-    for (auto elem : ply->elements) {
-      for (auto idx = 0; idx < elem->count; idx++) {
+    for (auto& elem : ply.elements) {
+      for (auto idx = 0; idx < elem.count; idx++) {
         if (!read_line(fs, buffer)) return read_error();
         auto str = string_view{buffer.data()};
-        for (auto prop : elem->properties) {
-          if (prop->is_list) {
-            if (!parse_value(str, prop->ldata_u8.emplace_back()))
+        for (auto& prop : elem.properties) {
+          if (prop.is_list) {
+            if (!parse_value(str, prop.ldata_u8.emplace_back()))
               return parse_error();
           }
-          auto vcount = prop->is_list ? prop->ldata_u8.back() : 1;
+          auto vcount = prop.is_list ? prop.ldata_u8.back() : 1;
           for (auto i = 0; i < vcount; i++) {
-            switch (prop->type) {
+            switch (prop.type) {
               case ply_type::i8:
-                if (!parse_value(str, prop->data_i8.emplace_back()))
+                if (!parse_value(str, prop.data_i8.emplace_back()))
                   return parse_error();
                 break;
               case ply_type::i16:
-                if (!parse_value(str, prop->data_i16.emplace_back()))
+                if (!parse_value(str, prop.data_i16.emplace_back()))
                   return parse_error();
                 break;
               case ply_type::i32:
-                if (!parse_value(str, prop->data_i32.emplace_back()))
+                if (!parse_value(str, prop.data_i32.emplace_back()))
                   return parse_error();
                 break;
               case ply_type::i64:
-                if (!parse_value(str, prop->data_i64.emplace_back()))
+                if (!parse_value(str, prop.data_i64.emplace_back()))
                   return parse_error();
                 break;
               case ply_type::u8:
-                if (!parse_value(str, prop->data_u8.emplace_back()))
+                if (!parse_value(str, prop.data_u8.emplace_back()))
                   return parse_error();
                 break;
               case ply_type::u16:
-                if (!parse_value(str, prop->data_u16.emplace_back()))
+                if (!parse_value(str, prop.data_u16.emplace_back()))
                   return parse_error();
                 break;
               case ply_type::u32:
-                if (!parse_value(str, prop->data_u32.emplace_back()))
+                if (!parse_value(str, prop.data_u32.emplace_back()))
                   return parse_error();
                 break;
               case ply_type::u64:
-                if (!parse_value(str, prop->data_u64.emplace_back()))
+                if (!parse_value(str, prop.data_u64.emplace_back()))
                   return parse_error();
                 break;
               case ply_type::f32:
-                if (!parse_value(str, prop->data_f32.emplace_back()))
+                if (!parse_value(str, prop.data_f32.emplace_back()))
                   return parse_error();
                 break;
               case ply_type::f64:
-                if (!parse_value(str, prop->data_f64.emplace_back()))
+                if (!parse_value(str, prop.data_f64.emplace_back()))
                   return parse_error();
                 break;
             }
@@ -472,55 +694,55 @@ bool load_ply(const string& filename, ply_model* ply, string& error) {
       }
     }
   } else {
-    auto big_endian = ply->format == ply_format::binary_big_endian;
-    for (auto elem : ply->elements) {
-      for (auto idx = 0; idx < elem->count; idx++) {
-        for (auto prop : elem->properties) {
-          if (prop->is_list) {
-            if (!read_value(fs, prop->ldata_u8.emplace_back(), big_endian))
+    auto big_endian = ply.format == ply_format::binary_big_endian;
+    for (auto& elem : ply.elements) {
+      for (auto idx = 0; idx < elem.count; idx++) {
+        for (auto& prop : elem.properties) {
+          if (prop.is_list) {
+            if (!read_value(fs, prop.ldata_u8.emplace_back(), big_endian))
               return read_error();
           }
-          auto vcount = prop->is_list ? prop->ldata_u8.back() : 1;
+          auto vcount = prop.is_list ? prop.ldata_u8.back() : 1;
           for (auto i = 0; i < vcount; i++) {
-            switch (prop->type) {
+            switch (prop.type) {
               case ply_type::i8:
-                if (!read_value(fs, prop->data_i8.emplace_back(), big_endian))
+                if (!read_value(fs, prop.data_i8.emplace_back(), big_endian))
                   return read_error();
                 break;
               case ply_type::i16:
-                if (!read_value(fs, prop->data_i16.emplace_back(), big_endian))
+                if (!read_value(fs, prop.data_i16.emplace_back(), big_endian))
                   return read_error();
                 break;
               case ply_type::i32:
-                if (!read_value(fs, prop->data_i32.emplace_back(), big_endian))
+                if (!read_value(fs, prop.data_i32.emplace_back(), big_endian))
                   return read_error();
                 break;
               case ply_type::i64:
-                if (!read_value(fs, prop->data_i64.emplace_back(), big_endian))
+                if (!read_value(fs, prop.data_i64.emplace_back(), big_endian))
                   return read_error();
                 break;
               case ply_type::u8:
-                if (!read_value(fs, prop->data_u8.emplace_back(), big_endian))
+                if (!read_value(fs, prop.data_u8.emplace_back(), big_endian))
                   return read_error();
                 break;
               case ply_type::u16:
-                if (!read_value(fs, prop->data_u16.emplace_back(), big_endian))
+                if (!read_value(fs, prop.data_u16.emplace_back(), big_endian))
                   return read_error();
                 break;
               case ply_type::u32:
-                if (!read_value(fs, prop->data_u32.emplace_back(), big_endian))
+                if (!read_value(fs, prop.data_u32.emplace_back(), big_endian))
                   return read_error();
                 break;
               case ply_type::u64:
-                if (!read_value(fs, prop->data_u64.emplace_back(), big_endian))
+                if (!read_value(fs, prop.data_u64.emplace_back(), big_endian))
                   return read_error();
                 break;
               case ply_type::f32:
-                if (!read_value(fs, prop->data_f32.emplace_back(), big_endian))
+                if (!read_value(fs, prop.data_f32.emplace_back(), big_endian))
                   return read_error();
                 break;
               case ply_type::f64:
-                if (!read_value(fs, prop->data_f64.emplace_back(), big_endian))
+                if (!read_value(fs, prop.data_f64.emplace_back(), big_endian))
                   return read_error();
                 break;
             }
@@ -533,7 +755,7 @@ bool load_ply(const string& filename, ply_model* ply, string& error) {
 }
 
 // Save ply
-bool save_ply(const string& filename, const ply_model* ply, string& error) {
+bool save_ply(const string& filename, const ply_model& ply, string& error) {
   // ply type names
   static auto type_map = unordered_map<ply_type, string>{{ply_type::i8, "char"},
       {ply_type::i16, "short"}, {ply_type::i32, "int"}, {ply_type::i64, "uint"},
@@ -561,25 +783,24 @@ bool save_ply(const string& filename, const ply_model* ply, string& error) {
 
   // header
   if (!format_values(fs, "ply\n")) return write_error();
-  if (!format_values(fs, "format {} 1.0\n", format_map.at(ply->format)))
+  if (!format_values(fs, "format {} 1.0\n", format_map.at(ply.format)))
     return write_error();
   if (!format_values(fs, "comment Written by Yocto/GL\n")) return write_error();
   if (!format_values(fs, "comment https://github.com/xelatihy/yocto-gl\n"))
     return write_error();
-  for (auto& comment : ply->comments)
+  for (auto& comment : ply.comments)
     if (!format_values(fs, "comment {}\n", comment)) return write_error();
-  for (auto elem : ply->elements) {
-    if (!format_values(
-            fs, "element {} {}\n", elem->name, (uint64_t)elem->count))
+  for (auto& elem : ply.elements) {
+    if (!format_values(fs, "element {} {}\n", elem.name, (uint64_t)elem.count))
       return write_error();
-    for (auto prop : elem->properties) {
-      if (prop->is_list) {
+    for (auto& prop : elem.properties) {
+      if (prop.is_list) {
         if (!format_values(fs, "property list uchar {} {}\n",
-                type_map[prop->type], prop->name))
+                type_map[prop.type], prop.name))
           return write_error();
       } else {
         if (!format_values(
-                fs, "property {} {}\n", type_map[prop->type], prop->name))
+                fs, "property {} {}\n", type_map[prop.type], prop.name))
           return write_error();
       }
     }
@@ -588,55 +809,55 @@ bool save_ply(const string& filename, const ply_model* ply, string& error) {
   if (!format_values(fs, "end_header\n")) return write_error();
 
   // properties
-  if (ply->format == ply_format::ascii) {
-    for (auto elem : ply->elements) {
-      auto cur = vector<size_t>(elem->properties.size(), 0);
-      for (auto idx = 0; idx < elem->count; idx++) {
-        for (auto prop : elem->properties) {
-          if (prop->is_list)
-            if (!format_values(fs, "{} ", (int)prop->ldata_u8[idx]))
+  if (ply.format == ply_format::ascii) {
+    for (auto& elem : ply.elements) {
+      auto cur = vector<size_t>(elem.properties.size(), 0);
+      for (auto idx = 0; idx < elem.count; idx++) {
+        for (auto& prop : elem.properties) {
+          if (prop.is_list)
+            if (!format_values(fs, "{} ", (int)prop.ldata_u8[idx]))
               return write_error();
-          auto vcount = prop->is_list ? prop->ldata_u8[idx] : 1;
+          auto vcount = prop.is_list ? prop.ldata_u8[idx] : 1;
           for (auto i = 0; i < vcount; i++) {
-            switch (prop->type) {
+            switch (prop.type) {
               case ply_type::i8:
-                if (!format_values(fs, "{} ", prop->data_i8[cur[idx]++]))
+                if (!format_values(fs, "{} ", prop.data_i8[cur[idx]++]))
                   return write_error();
                 break;
               case ply_type::i16:
-                if (!format_values(fs, "{} ", prop->data_i16[cur[idx]++]))
+                if (!format_values(fs, "{} ", prop.data_i16[cur[idx]++]))
                   return write_error();
                 break;
               case ply_type::i32:
-                if (!format_values(fs, "{} ", prop->data_i32[cur[idx]++]))
+                if (!format_values(fs, "{} ", prop.data_i32[cur[idx]++]))
                   return write_error();
                 break;
               case ply_type::i64:
-                if (!format_values(fs, "{} ", prop->data_i64[cur[idx]++]))
+                if (!format_values(fs, "{} ", prop.data_i64[cur[idx]++]))
                   return write_error();
                 break;
               case ply_type::u8:
-                if (!format_values(fs, "{} ", prop->data_u8[cur[idx]++]))
+                if (!format_values(fs, "{} ", prop.data_u8[cur[idx]++]))
                   return write_error();
                 break;
               case ply_type::u16:
-                if (!format_values(fs, "{} ", prop->data_u16[cur[idx]++]))
+                if (!format_values(fs, "{} ", prop.data_u16[cur[idx]++]))
                   return write_error();
                 break;
               case ply_type::u32:
-                if (!format_values(fs, "{} ", prop->data_u32[cur[idx]++]))
+                if (!format_values(fs, "{} ", prop.data_u32[cur[idx]++]))
                   return write_error();
                 break;
               case ply_type::u64:
-                if (!format_values(fs, "{} ", prop->data_u64[cur[idx]++]))
+                if (!format_values(fs, "{} ", prop.data_u64[cur[idx]++]))
                   return write_error();
                 break;
               case ply_type::f32:
-                if (!format_values(fs, "{} ", prop->data_f32[cur[idx]++]))
+                if (!format_values(fs, "{} ", prop.data_f32[cur[idx]++]))
                   return write_error();
                 break;
               case ply_type::f64:
-                if (!format_values(fs, "{} ", prop->data_f64[cur[idx]++]))
+                if (!format_values(fs, "{} ", prop.data_f64[cur[idx]++]))
                   return write_error();
                 break;
             }
@@ -646,56 +867,56 @@ bool save_ply(const string& filename, const ply_model* ply, string& error) {
       }
     }
   } else {
-    auto big_endian = ply->format == ply_format::binary_big_endian;
-    for (auto elem : ply->elements) {
-      auto cur = vector<size_t>(elem->properties.size(), 0);
-      for (auto idx = 0; idx < elem->count; idx++) {
-        for (auto pidx = 0; pidx < elem->properties.size(); pidx++) {
-          auto prop = elem->properties[pidx];
-          if (prop->is_list)
-            if (!write_value(fs, prop->ldata_u8[idx], big_endian))
+    auto big_endian = ply.format == ply_format::binary_big_endian;
+    for (auto& elem : ply.elements) {
+      auto cur = vector<size_t>(elem.properties.size(), 0);
+      for (auto idx = 0; idx < elem.count; idx++) {
+        for (auto pidx = 0; pidx < elem.properties.size(); pidx++) {
+          auto& prop = elem.properties[pidx];
+          if (prop.is_list)
+            if (!write_value(fs, prop.ldata_u8[idx], big_endian))
               return write_error();
-          auto vcount = prop->is_list ? prop->ldata_u8[idx] : 1;
+          auto vcount = prop.is_list ? prop.ldata_u8[idx] : 1;
           for (auto i = 0; i < vcount; i++) {
-            switch (prop->type) {
+            switch (prop.type) {
               case ply_type::i8:
-                if (!write_value(fs, prop->data_i8[cur[pidx]++], big_endian))
+                if (!write_value(fs, prop.data_i8[cur[pidx]++], big_endian))
                   return write_error();
                 break;
               case ply_type::i16:
-                if (!write_value(fs, prop->data_i16[cur[pidx]++], big_endian))
+                if (!write_value(fs, prop.data_i16[cur[pidx]++], big_endian))
                   return write_error();
                 break;
               case ply_type::i32:
-                if (!write_value(fs, prop->data_i32[cur[pidx]++], big_endian))
+                if (!write_value(fs, prop.data_i32[cur[pidx]++], big_endian))
                   return write_error();
                 break;
               case ply_type::i64:
-                if (!write_value(fs, prop->data_i64[cur[pidx]++], big_endian))
+                if (!write_value(fs, prop.data_i64[cur[pidx]++], big_endian))
                   return write_error();
                 break;
               case ply_type::u8:
-                if (!write_value(fs, prop->data_u8[cur[pidx]++], big_endian))
+                if (!write_value(fs, prop.data_u8[cur[pidx]++], big_endian))
                   return write_error();
                 break;
               case ply_type::u16:
-                if (!write_value(fs, prop->data_u16[cur[pidx]++], big_endian))
+                if (!write_value(fs, prop.data_u16[cur[pidx]++], big_endian))
                   return write_error();
                 break;
               case ply_type::u32:
-                if (!write_value(fs, prop->data_u32[cur[pidx]++], big_endian))
+                if (!write_value(fs, prop.data_u32[cur[pidx]++], big_endian))
                   return write_error();
                 break;
               case ply_type::u64:
-                if (!write_value(fs, prop->data_u64[cur[pidx]++], big_endian))
+                if (!write_value(fs, prop.data_u64[cur[pidx]++], big_endian))
                   return write_error();
                 break;
               case ply_type::f32:
-                if (!write_value(fs, prop->data_f32[cur[pidx]++], big_endian))
+                if (!write_value(fs, prop.data_f32[cur[pidx]++], big_endian))
                   return write_error();
                 break;
               case ply_type::f64:
-                if (!write_value(fs, prop->data_f64[cur[pidx]++], big_endian))
+                if (!write_value(fs, prop.data_f64[cur[pidx]++], big_endian))
                   return write_error();
                 break;
             }
@@ -710,21 +931,31 @@ bool save_ply(const string& filename, const ply_model* ply, string& error) {
 
 // Get ply properties
 bool has_property(
-    ply_model* ply, const string& element, const string& property) {
-  for (auto elem : ply->elements) {
-    if (elem->name != element) continue;
-    for (auto prop : elem->properties) {
-      if (prop->name == property) return true;
+    const ply_model& ply, const string& element, const string& property) {
+  for (auto& elem : ply.elements) {
+    if (elem.name != element) continue;
+    for (auto& prop : elem.properties) {
+      if (prop.name == property) return true;
     }
   }
   return false;
 }
-ply_property* get_property(
-    ply_model* ply, const string& element, const string& property) {
-  for (auto elem : ply->elements) {
-    if (elem->name != element) continue;
-    for (auto prop : elem->properties) {
-      if (prop->name == property) return prop;
+ply_property& get_property(
+    ply_model& ply, const string& element, const string& property) {
+  for (auto& elem : ply.elements) {
+    if (elem.name != element) continue;
+    for (auto& prop : elem.properties) {
+      if (prop.name == property) return prop;
+    }
+  }
+  throw std::runtime_error("property not found");
+}
+const ply_property& get_property(
+    const ply_model& ply, const string& element, const string& property) {
+  for (auto& elem : ply.elements) {
+    if (elem.name != element) continue;
+    for (auto& prop : elem.properties) {
+      if (prop.name == property) return prop;
     }
   }
   throw std::runtime_error("property not found");
@@ -736,33 +967,33 @@ inline bool convert_property(const vector<T1>& prop, vector<T>& values) {
   return true;
 }
 template <typename T>
-inline bool convert_property(ply_property* prop, vector<T>& values) {
-  switch (prop->type) {
-    case ply_type::i8: return convert_property(prop->data_i8, values);
-    case ply_type::i16: return convert_property(prop->data_i16, values);
-    case ply_type::i32: return convert_property(prop->data_i32, values);
-    case ply_type::i64: return convert_property(prop->data_i64, values);
-    case ply_type::u8: return convert_property(prop->data_u8, values);
-    case ply_type::u16: return convert_property(prop->data_u16, values);
-    case ply_type::u32: return convert_property(prop->data_u32, values);
-    case ply_type::u64: return convert_property(prop->data_u64, values);
-    case ply_type::f32: return convert_property(prop->data_f32, values);
-    case ply_type::f64: return convert_property(prop->data_f64, values);
+inline bool convert_property(const ply_property& prop, vector<T>& values) {
+  switch (prop.type) {
+    case ply_type::i8: return convert_property(prop.data_i8, values);
+    case ply_type::i16: return convert_property(prop.data_i16, values);
+    case ply_type::i32: return convert_property(prop.data_i32, values);
+    case ply_type::i64: return convert_property(prop.data_i64, values);
+    case ply_type::u8: return convert_property(prop.data_u8, values);
+    case ply_type::u16: return convert_property(prop.data_u16, values);
+    case ply_type::u32: return convert_property(prop.data_u32, values);
+    case ply_type::u64: return convert_property(prop.data_u64, values);
+    case ply_type::f32: return convert_property(prop.data_f32, values);
+    case ply_type::f64: return convert_property(prop.data_f64, values);
   }
   // return here to silence warnings
   throw std::runtime_error{"should not have gotten here"};
   return false;
 }
-bool get_value(ply_model* ply, const string& element, const string& property,
-    vector<float>& values) {
+bool get_value(const ply_model& ply, const string& element,
+    const string& property, vector<float>& values) {
   values.clear();
   if (!has_property(ply, element, property)) return false;
-  auto prop = get_property(ply, element, property);
-  if (prop->is_list) return false;
+  auto& prop = get_property(ply, element, property);
+  if (prop.is_list) return false;
   if (!convert_property(prop, values)) return false;
   return true;
 }
-bool get_values(ply_model* ply, const string& element,
+bool get_values(const ply_model& ply, const string& element,
     const array<string, 2>& properties, vector<vec2f>& values) {
   values.clear();
   auto x = vector<float>{}, y = vector<float>{};
@@ -772,7 +1003,7 @@ bool get_values(ply_model* ply, const string& element,
   for (auto i = (size_t)0; i < values.size(); i++) values[i] = {x[i], y[i]};
   return true;
 }
-bool get_values(ply_model* ply, const string& element,
+bool get_values(const ply_model& ply, const string& element,
     const array<string, 3>& properties, vector<vec3f>& values) {
   values.clear();
   auto x = vector<float>{}, y = vector<float>{}, z = vector<float>{};
@@ -784,7 +1015,7 @@ bool get_values(ply_model* ply, const string& element,
     values[i] = {x[i], y[i], z[i]};
   return true;
 }
-bool get_values(ply_model* ply, const string& element,
+bool get_values(const ply_model& ply, const string& element,
     const array<string, 4>& properties, vector<vec4f>& values) {
   values.clear();
   auto x = vector<float>{}, y = vector<float>{}, z = vector<float>{},
@@ -798,7 +1029,7 @@ bool get_values(ply_model* ply, const string& element,
     values[i] = {x[i], y[i], z[i], w[i]};
   return true;
 }
-bool get_values(ply_model* ply, const string& element,
+bool get_values(const ply_model& ply, const string& element,
     const array<string, 12>& properties, vector<frame3f>& values) {
   values.clear();
   auto coords = array<vector<float>, 12>{};
@@ -810,13 +1041,13 @@ bool get_values(ply_model* ply, const string& element,
   }
   return true;
 }
-bool get_lists(ply_model* ply, const string& element, const string& property,
-    vector<vector<int>>& lists) {
+bool get_lists(const ply_model& ply, const string& element,
+    const string& property, vector<vector<int>>& lists) {
   lists.clear();
   if (!has_property(ply, element, property)) return false;
-  auto prop = get_property(ply, element, property);
-  if (!prop->is_list) return false;
-  auto& sizes  = prop->ldata_u8;
+  auto& prop = get_property(ply, element, property);
+  if (!prop.is_list) return false;
+  auto& sizes  = prop.ldata_u8;
   auto  values = vector<int>{};
   if (!convert_property(prop, values)) return false;
   lists    = vector<vector<int>>(sizes.size());
@@ -829,19 +1060,19 @@ bool get_lists(ply_model* ply, const string& element, const string& property,
   }
   return true;
 }
-bool get_list_sizes(ply_model* ply, const string& element,
+bool get_list_sizes(const ply_model& ply, const string& element,
     const string& property, vector<byte>& sizes) {
   if (!has_property(ply, element, property)) return {};
-  auto prop = get_property(ply, element, property);
-  if (!prop->is_list) return {};
-  sizes = prop->ldata_u8;
+  auto& prop = get_property(ply, element, property);
+  if (!prop.is_list) return {};
+  sizes = prop.ldata_u8;
   return true;
 }
-bool get_list_values(ply_model* ply, const string& element,
+bool get_list_values(const ply_model& ply, const string& element,
     const string& property, vector<int>& values) {
   if (!has_property(ply, element, property)) return {};
-  auto prop = get_property(ply, element, property);
-  if (!prop->is_list) return {};
+  auto& prop = get_property(ply, element, property);
+  if (!prop.is_list) return {};
   return convert_property<int>(prop, values);
 }
 
@@ -852,13 +1083,13 @@ inline vector<vec2f> flip_ply_texcoord(const vector<vec2f>& texcoords) {
 }
 
 // Get ply properties for meshes
-bool get_positions(ply_model* ply, vector<vec3f>& positions) {
+bool get_positions(const ply_model& ply, vector<vec3f>& positions) {
   return get_values(ply, "vertex", {"x", "y", "z"}, positions);
 }
-bool get_normals(ply_model* ply, vector<vec3f>& normals) {
+bool get_normals(const ply_model& ply, vector<vec3f>& normals) {
   return get_values(ply, "vertex", {"nx", "ny", "nz"}, normals);
 }
-bool get_texcoords(ply_model* ply, vector<vec2f>& texcoords, bool flipv) {
+bool get_texcoords(const ply_model& ply, vector<vec2f>& texcoords, bool flipv) {
   if (has_property(ply, "vertex", "u")) {
     if (!get_values(ply, "vertex", {"u", "v"}, texcoords)) return false;
   } else {
@@ -869,10 +1100,10 @@ bool get_texcoords(ply_model* ply, vector<vec2f>& texcoords, bool flipv) {
   }
   return true;
 }
-bool get_colors(ply_model* ply, vector<vec3f>& colors) {
+bool get_colors(const ply_model& ply, vector<vec3f>& colors) {
   return get_values(ply, "vertex", {"red", "green", "blue"}, colors);
 }
-bool get_colors(ply_model* ply, vector<vec4f>& colors) {
+bool get_colors(const ply_model& ply, vector<vec4f>& colors) {
   if (has_property(ply, "vertex", "alpha")) {
     return get_values(ply, "vertex", {"red", "green", "blue", "alpha"}, colors);
   } else {
@@ -885,13 +1116,13 @@ bool get_colors(ply_model* ply, vector<vec4f>& colors) {
     return true;
   }
 }
-bool get_radius(ply_model* ply, vector<float>& radius) {
+bool get_radius(const ply_model& ply, vector<float>& radius) {
   return get_value(ply, "vertex", "radius", radius);
 }
-bool get_faces(ply_model* ply, vector<vector<int>>& faces) {
+bool get_faces(const ply_model& ply, vector<vector<int>>& faces) {
   return get_lists(ply, "face", "vertex_indices", faces);
 }
-bool get_triangles(ply_model* ply, vector<vec3i>& triangles) {
+bool get_triangles(const ply_model& ply, vector<vec3i>& triangles) {
   triangles.clear();
   auto indices = vector<int>{};
   auto sizes   = vector<uint8_t>{};
@@ -909,7 +1140,7 @@ bool get_triangles(ply_model* ply, vector<vec3i>& triangles) {
   }
   return true;
 }
-bool get_quads(ply_model* ply, vector<vec4i>& quads) {
+bool get_quads(const ply_model& ply, vector<vec4i>& quads) {
   quads.clear();
   auto indices = vector<int>{};
   auto sizes   = vector<uint8_t>{};
@@ -932,7 +1163,15 @@ bool get_quads(ply_model* ply, vector<vec4i>& quads) {
   }
   return true;
 }
-bool get_lines(ply_model* ply, vector<vec2i>& lines) {
+bool get_faces(
+    const ply_model& ply, vector<vec3i>& triangles, vector<vec4i>& quads) {
+  if (has_quads(ply)) {
+    return get_quads(ply, quads);
+  } else {
+    return get_triangles(ply, triangles);
+  }
+}
+bool get_lines(const ply_model& ply, vector<vec2i>& lines) {
   auto indices = vector<int>{};
   auto sizes   = vector<uint8_t>{};
   if (!get_list_values(ply, "line", "vertex_indices", indices)) return false;
@@ -948,10 +1187,10 @@ bool get_lines(ply_model* ply, vector<vec2i>& lines) {
   }
   return true;
 }
-bool get_points(ply_model* ply, vector<int>& values) {
+bool get_points(const ply_model& ply, vector<int>& values) {
   return get_list_values(ply, "point", "vertex_indices", values);
 }
-bool has_quads(ply_model* ply) {
+bool has_quads(const ply_model& ply) {
   auto sizes = vector<uint8_t>{};
   if (!get_list_sizes(ply, "face", "vertex_indices", sizes)) return false;
   for (auto size : sizes)
@@ -960,31 +1199,31 @@ bool has_quads(ply_model* ply) {
 }
 
 // Add ply properties
-inline ply_element* add_element(
-    ply_model* ply, const string& element_name, size_t count) {
-  for (auto elem : ply->elements) {
-    if (elem->name == element_name) return elem;
+inline ply_element& add_element(
+    ply_model& ply, const string& element_name, size_t count) {
+  for (auto& elem : ply.elements) {
+    if (elem.name == element_name) return elem;
   }
-  auto elem   = ply->elements.emplace_back(new ply_element{});
-  elem->name  = element_name;
-  elem->count = count;
+  auto& elem = ply.elements.emplace_back();
+  elem.name  = element_name;
+  elem.count = count;
   return elem;
 }
-inline ply_property* add_property(ply_model* ply, const string& element_name,
+inline ply_property& add_property(ply_model& ply, const string& element_name,
     const string& property_name, size_t count, ply_type type, bool is_list) {
-  if (add_element(ply, element_name, count) == nullptr) return nullptr;
-  for (auto elem : ply->elements) {
-    if (elem->name != element_name) continue;
-    for (auto prop : elem->properties) {
-      if (prop->name == property_name) return prop;
+  add_element(ply, element_name, count);
+  for (auto& elem : ply.elements) {
+    if (elem.name != element_name) continue;
+    for (auto& prop : elem.properties) {
+      if (prop.name == property_name) return prop;
     }
-    auto prop     = elem->properties.emplace_back(new ply_property{});
-    prop->name    = property_name;
-    prop->type    = type;
-    prop->is_list = is_list;
+    auto& prop   = elem.properties.emplace_back();
+    prop.name    = property_name;
+    prop.type    = type;
+    prop.is_list = is_list;
     return prop;
   }
-  return nullptr;
+  throw std::invalid_argument{"should not have gotten here"};
 }
 template <typename T>
 inline vector<T> make_vector(const T* value, size_t count, int stride) {
@@ -993,174 +1232,164 @@ inline vector<T> make_vector(const T* value, size_t count, int stride) {
   return ret;
 }
 
-inline bool add_values(ply_model* ply, const float* values, size_t count,
+inline bool add_values(ply_model& ply, const float* values, size_t count,
     const string& element, const string* properties, int nprops) {
   if (values == nullptr) return false;
   for (auto p = 0; p < nprops; p++) {
-    if (add_property(ply, element, properties[p], count, ply_type::f32,
-            false) == nullptr)
-      return false;
-    auto prop = get_property(ply, element, properties[p]);
-    prop->data_f32.resize(count);
-    for (auto i = 0; i < count; i++) prop->data_f32[i] = values[p + i * nprops];
+    add_property(ply, element, properties[p], count, ply_type::f32, false);
+    auto& prop = get_property(ply, element, properties[p]);
+    prop.data_f32.resize(count);
+    for (auto i = 0; i < count; i++) prop.data_f32[i] = values[p + i * nprops];
   }
   return true;
 }
 
-inline bool add_values(ply_model* ply, const int* values, size_t count,
+inline bool add_values(ply_model& ply, const int* values, size_t count,
     const string& element, const string* properties, int nprops) {
   if (values == nullptr) return false;
   for (auto p = 0; p < nprops; p++) {
-    if (add_property(ply, element, properties[p], count, ply_type::i32,
-            false) == nullptr)
-      return false;
-    auto prop = get_property(ply, element, properties[p]);
-    prop->data_i32.resize(count);
-    for (auto i = 0; i < count; i++) prop->data_i32[i] = values[p + i * nprops];
+    add_property(ply, element, properties[p], count, ply_type::i32, false);
+    auto& prop = get_property(ply, element, properties[p]);
+    prop.data_i32.resize(count);
+    for (auto i = 0; i < count; i++) prop.data_i32[i] = values[p + i * nprops];
   }
   return true;
 }
 
-bool add_value(ply_model* ply, const string& element, const string& property,
+bool add_value(ply_model& ply, const string& element, const string& property,
     const vector<float>& values) {
   if (values.empty()) return false;
   auto properties = vector{property};
   return add_values(
       ply, values.data(), values.size(), element, properties.data(), 1);
 }
-bool add_values(ply_model* ply, const string& element,
+bool add_values(ply_model& ply, const string& element,
     const array<string, 2>& properties, const vector<vec2f>& values) {
   if (values.empty()) return false;
   return add_values(
       ply, &values.front().x, values.size(), element, properties.data(), 2);
 }
-bool add_values(ply_model* ply, const string& element,
+bool add_values(ply_model& ply, const string& element,
     const array<string, 3>& properties, const vector<vec3f>& values) {
   if (values.empty()) return false;
   return add_values(
       ply, &values.front().x, values.size(), element, properties.data(), 3);
 }
-bool add_values(ply_model* ply, const string& element,
+bool add_values(ply_model& ply, const string& element,
     const array<string, 4>& properties, const vector<vec4f>& values) {
   if (values.empty()) return false;
   return add_values(
       ply, &values.front().x, values.size(), element, properties.data(), 4);
 }
-bool add_values(ply_model* ply, const string& element,
+bool add_values(ply_model& ply, const string& element,
     const array<string, 12>& properties, const vector<frame3f>& values) {
   if (values.empty()) return false;
   return add_values(ply, &values.front().x.x, values.size(), element,
       properties.data(), (int)properties.size());
 }
 
-bool add_value(ply_model* ply, const string& element, const string& property,
+bool add_value(ply_model& ply, const string& element, const string& property,
     const vector<int>& values) {
   if (values.empty()) return false;
   auto properties = vector{property};
   return add_values(
       ply, values.data(), values.size(), element, properties.data(), 1);
 }
-bool add_values(ply_model* ply, const string& element,
+bool add_values(ply_model& ply, const string& element,
     const array<string, 2>& properties, const vector<vec2i>& values) {
   if (values.empty()) return false;
   return add_values(
       ply, &values.front().x, values.size(), element, properties.data(), 2);
 }
-bool add_values(ply_model* ply, const string& element,
+bool add_values(ply_model& ply, const string& element,
     const array<string, 3>& properties, const vector<vec3i>& values) {
   if (values.empty()) return false;
   return add_values(
       ply, &values.front().x, values.size(), element, properties.data(), 3);
 }
-bool add_values(ply_model* ply, const string& element,
+bool add_values(ply_model& ply, const string& element,
     const array<string, 4>& properties, const vector<vec4i>& values) {
   if (values.empty()) return false;
   return add_values(
       ply, &values.front().x, values.size(), element, properties.data(), 4);
 }
 
-bool add_lists(ply_model* ply, const string& element, const string& property,
+bool add_lists(ply_model& ply, const string& element, const string& property,
     const vector<vector<int>>& values) {
   if (values.empty()) return false;
-  if (add_property(ply, element, property, values.size(), ply_type::i32,
-          true) == nullptr)
-    return false;
-  auto prop = get_property(ply, element, property);
-  prop->data_i32.reserve(values.size() * 4);
-  prop->ldata_u8.reserve(values.size());
+  add_property(ply, element, property, values.size(), ply_type::i32, true);
+  auto& prop = get_property(ply, element, property);
+  prop.data_i32.reserve(values.size() * 4);
+  prop.ldata_u8.reserve(values.size());
   for (auto& value : values) {
-    prop->data_i32.insert(prop->data_i32.end(), value.begin(), value.end());
-    prop->ldata_u8.push_back((uint8_t)value.size());
+    prop.data_i32.insert(prop.data_i32.end(), value.begin(), value.end());
+    prop.ldata_u8.push_back((uint8_t)value.size());
   }
   return true;
 }
-bool add_lists(ply_model* ply, const string& element, const string& property,
+bool add_lists(ply_model& ply, const string& element, const string& property,
     const vector<byte>& sizes, const vector<int>& values) {
   if (values.empty()) return false;
-  if (add_property(ply, element, property, sizes.size(), ply_type::i32, true) ==
-      nullptr)
-    return false;
-  auto prop      = get_property(ply, element, property);
-  prop->data_i32 = values;
-  prop->ldata_u8 = sizes;
+  add_property(ply, element, property, sizes.size(), ply_type::i32, true);
+  auto& prop    = get_property(ply, element, property);
+  prop.data_i32 = values;
+  prop.ldata_u8 = sizes;
   return true;
 }
-bool add_lists(ply_model* ply, const int* values, size_t count, int size,
+bool add_lists(ply_model& ply, const int* values, size_t count, int size,
     const string& element, const string& property) {
   if (values == nullptr) return false;
-  if (add_property(ply, element, property, count, ply_type::i32, true) ==
-      nullptr)
-    return false;
-  auto prop = get_property(ply, element, property);
-  prop->data_i32.assign(values, values + count * size);
-  prop->ldata_u8.assign(count, (byte)size);
+  add_property(ply, element, property, count, ply_type::i32, true);
+  auto& prop = get_property(ply, element, property);
+  prop.data_i32.assign(values, values + count * size);
+  prop.ldata_u8.assign(count, (byte)size);
   return true;
 }
-bool add_lists(ply_model* ply, const string& element, const string& property,
+bool add_lists(ply_model& ply, const string& element, const string& property,
     const vector<int>& values) {
   if (values.empty()) return false;
   return add_lists(ply, values.data(), values.size(), 1, element, property);
 }
-bool add_lists(ply_model* ply, const string& element, const string& property,
+bool add_lists(ply_model& ply, const string& element, const string& property,
     const vector<vec2i>& values) {
   if (values.empty()) return false;
   return add_lists(ply, &values.front().x, values.size(), 2, element, property);
 }
-bool add_lists(ply_model* ply, const string& element, const string& property,
+bool add_lists(ply_model& ply, const string& element, const string& property,
     const vector<vec3i>& values) {
   if (values.empty()) return false;
   return add_lists(ply, &values.front().x, values.size(), 3, element, property);
 }
-bool add_lists(ply_model* ply, const string& element, const string& property,
+bool add_lists(ply_model& ply, const string& element, const string& property,
     const vector<vec4i>& values) {
   if (values.empty()) return false;
   return add_lists(ply, &values.front().x, values.size(), 4, element, property);
 }
 
 // Add ply properties for meshes
-bool add_positions(ply_model* ply, const vector<vec3f>& values) {
+bool add_positions(ply_model& ply, const vector<vec3f>& values) {
   return add_values(ply, "vertex", {"x", "y", "z"}, values);
 }
-bool add_normals(ply_model* ply, const vector<vec3f>& values) {
+bool add_normals(ply_model& ply, const vector<vec3f>& values) {
   return add_values(ply, "vertex", {"nx", "ny", "nz"}, values);
 }
-bool add_texcoords(ply_model* ply, const vector<vec2f>& values, bool flipv) {
+bool add_texcoords(ply_model& ply, const vector<vec2f>& values, bool flipv) {
   return add_values(
       ply, "vertex", {"u", "v"}, flipv ? flip_ply_texcoord(values) : values);
 }
-bool add_colors(ply_model* ply, const vector<vec3f>& values) {
+bool add_colors(ply_model& ply, const vector<vec3f>& values) {
   return add_values(ply, "vertex", {"red", "green", "blue"}, values);
 }
-bool add_colors(ply_model* ply, const vector<vec4f>& values) {
+bool add_colors(ply_model& ply, const vector<vec4f>& values) {
   return add_values(ply, "vertex", {"red", "green", "blue", "alpha"}, values);
 }
-bool add_radius(ply_model* ply, const vector<float>& values) {
+bool add_radius(ply_model& ply, const vector<float>& values) {
   return add_value(ply, "vertex", "radius", values);
 }
-bool add_faces(ply_model* ply, const vector<vector<int>>& values) {
+bool add_faces(ply_model& ply, const vector<vector<int>>& values) {
   return add_lists(ply, "face", "vertex_indices", values);
 }
-bool add_faces(ply_model* ply, const vector<vec3i>& triangles,
+bool add_faces(ply_model& ply, const vector<vec3i>& triangles,
     const vector<vec4i>& quads) {
   if (triangles.empty() && quads.empty()) return false;
   if (quads.empty()) {
@@ -1190,16 +1419,16 @@ bool add_faces(ply_model* ply, const vector<vec3i>& triangles,
     return add_lists(ply, "face", "vertex_indices", sizes, indices);
   }
 }
-bool add_triangles(ply_model* ply, const vector<vec3i>& values) {
+bool add_triangles(ply_model& ply, const vector<vec3i>& values) {
   return add_faces(ply, values, {});
 }
-bool add_quads(ply_model* ply, const vector<vec4i>& values) {
+bool add_quads(ply_model& ply, const vector<vec4i>& values) {
   return add_faces(ply, {}, values);
 }
-bool add_lines(ply_model* ply, const vector<vec2i>& values) {
+bool add_lines(ply_model& ply, const vector<vec2i>& values) {
   return add_lists(ply, "line", "vertex_indices", values);
 }
-bool add_points(ply_model* ply, const vector<int>& values) {
+bool add_points(ply_model& ply, const vector<int>& values) {
   return add_lists(ply, "point", "vertex_indices", values);
 }
 
@@ -1253,7 +1482,7 @@ inline bool parse_value(string_view& str, obj_texture& info) {
   // texture params
   auto last = string();
   for (auto i = 0; i < tokens.size() - 1; i++) {
-    if (tokens[i] == "-bm") info.scale = atof(tokens[i + 1].c_str());
+    if (tokens[i] == "-bm") info.scale = (float)atof(tokens[i + 1].c_str());
     if (tokens[i] == "-clamp") info.clamp = true;
   }
 
@@ -1261,7 +1490,7 @@ inline bool parse_value(string_view& str, obj_texture& info) {
 }
 
 // Read obj
-inline bool load_mtl(const string& filename, obj_scene* obj, string& error) {
+inline bool load_mtl(const string& filename, obj_model& obj, string& error) {
   // error helpers
   auto open_error = [filename, &error]() {
     error = filename + ": file not found";
@@ -1276,12 +1505,31 @@ inline bool load_mtl(const string& filename, obj_scene* obj, string& error) {
     return false;
   };
 
+  // texture map
+  auto texture_map = unordered_map<string, int>{};
+  auto texture_id  = 0;
+  for (auto& texture : obj.textures) texture_map[texture.path] = texture_id++;
+  auto parse_texture = [&texture_map, &obj](string_view& str, int& texture_id) {
+    auto texture_path = obj_texture{};
+    if (!parse_value(str, texture_path)) return false;
+    auto texture_it = texture_map.find(texture_path.path);
+    if (texture_it == texture_map.end()) {
+      auto& texture             = obj.textures.emplace_back();
+      texture.path              = texture_path.path;
+      texture_id                = (int)obj.textures.size() - 1;
+      texture_map[texture.path] = texture_id;
+    } else {
+      texture_id = texture_it->second;
+    }
+    return true;
+  };
+
   // open file
   auto fs = open_file(filename, "rt");
   if (!fs) return open_error();
 
   // init parsing
-  add_material(obj);
+  obj.materials.emplace_back();
 
   // read the file str by str
   auto buffer = array<char, 4096>{};
@@ -1298,196 +1546,66 @@ inline bool load_mtl(const string& filename, obj_scene* obj, string& error) {
     if (cmd.empty()) continue;
 
     // grab material
-    auto material = obj->materials.back();
+    auto& material = obj.materials.back();
 
     // possible token values
     if (cmd == "newmtl") {
-      auto material = add_material(obj);
-      if (!parse_value(str, material->name)) return parse_error();
+      auto& material = obj.materials.emplace_back();
+      if (!parse_value(str, material.name)) return parse_error();
     } else if (cmd == "illum") {
-      if (!parse_value(str, material->illum)) return parse_error();
+      if (!parse_value(str, material.illum)) return parse_error();
     } else if (cmd == "Ke") {
-      if (!parse_value(str, material->emission)) return parse_error();
+      if (!parse_value(str, material.emission)) return parse_error();
     } else if (cmd == "Ka") {
-      if (!parse_value(str, material->ambient)) return parse_error();
+      if (!parse_value(str, material.ambient)) return parse_error();
     } else if (cmd == "Kd") {
-      if (!parse_value(str, material->diffuse)) return parse_error();
+      if (!parse_value(str, material.diffuse)) return parse_error();
     } else if (cmd == "Ks") {
-      if (!parse_value(str, material->specular)) return parse_error();
+      if (!parse_value(str, material.specular)) return parse_error();
     } else if (cmd == "Kt") {
-      if (!parse_value(str, material->transmission)) return parse_error();
+      if (!parse_value(str, material.transmission)) return parse_error();
     } else if (cmd == "Tf") {
-      if (!parse_value(str, material->transmission)) return parse_error();
-      material->transmission = max(1 - material->transmission, 0.0f);
-      if (max(material->transmission) < 0.001)
-        material->transmission = {0, 0, 0};
+      if (!parse_value(str, material.transmission)) return parse_error();
+      material.transmission = max(1 - material.transmission, 0.0f);
+      if (max(material.transmission) < 0.001) material.transmission = {0, 0, 0};
     } else if (cmd == "Tr") {
-      if (!parse_value(str, material->opacity)) return parse_error();
-      material->opacity = 1 - material->opacity;
+      if (!parse_value(str, material.opacity)) return parse_error();
+      material.opacity = 1 - material.opacity;
     } else if (cmd == "Ns") {
-      if (!parse_value(str, material->exponent)) return parse_error();
+      if (!parse_value(str, material.exponent)) return parse_error();
     } else if (cmd == "d") {
-      if (!parse_value(str, material->opacity)) return parse_error();
+      if (!parse_value(str, material.opacity)) return parse_error();
     } else if (cmd == "map_Ke") {
-      if (!parse_value(str, material->emission_tex)) return parse_error();
+      if (!parse_texture(str, material.emission_tex)) return parse_error();
     } else if (cmd == "map_Ka") {
-      if (!parse_value(str, material->ambient_tex)) return parse_error();
+      if (!parse_texture(str, material.ambient_tex)) return parse_error();
     } else if (cmd == "map_Kd") {
-      if (!parse_value(str, material->diffuse_tex)) return parse_error();
+      if (!parse_texture(str, material.diffuse_tex)) return parse_error();
     } else if (cmd == "map_Ks") {
-      if (!parse_value(str, material->specular_tex)) return parse_error();
+      if (!parse_texture(str, material.specular_tex)) return parse_error();
     } else if (cmd == "map_Tr") {
-      if (!parse_value(str, material->transmission_tex)) return parse_error();
+      if (!parse_texture(str, material.transmission_tex)) return parse_error();
     } else if (cmd == "map_d" || cmd == "map_Tr") {
-      if (!parse_value(str, material->opacity_tex)) return parse_error();
+      if (!parse_texture(str, material.opacity_tex)) return parse_error();
     } else if (cmd == "map_bump" || cmd == "bump") {
-      if (!parse_value(str, material->bump_tex)) return parse_error();
+      if (!parse_texture(str, material.bump_tex)) return parse_error();
     } else if (cmd == "map_disp" || cmd == "disp") {
-      if (!parse_value(str, material->displacement_tex)) return parse_error();
+      if (!parse_texture(str, material.displacement_tex)) return parse_error();
     } else if (cmd == "map_norm" || cmd == "norm") {
-      if (!parse_value(str, material->normal_tex)) return parse_error();
-    } else if (cmd == "Pe") {
-      if (!parse_value(str, material->pbr_emission)) return parse_error();
-      material->as_pbr = true;
-    } else if (cmd == "Pb") {
-      if (!parse_value(str, material->pbr_base)) return parse_error();
-      material->as_pbr = true;
-    } else if (cmd == "Ps") {
-      if (!parse_value(str, material->pbr_specular)) return parse_error();
-      material->as_pbr = true;
-    } else if (cmd == "Pm") {
-      if (!parse_value(str, material->pbr_metallic)) return parse_error();
-      material->as_pbr = true;
-    } else if (cmd == "Pr") {
-      if (!parse_value(str, material->pbr_roughness)) return parse_error();
-      material->as_pbr = true;
-    } else if (cmd == "Psh") {
-      if (!parse_value(str, material->pbr_sheen)) return parse_error();
-      material->as_pbr = true;
-    } else if (cmd == "Pc") {
-      if (!parse_value(str, material->pbr_coat)) return parse_error();
-      material->as_pbr = true;
-    } else if (cmd == "Pcr") {
-      if (!parse_value(str, material->pbr_coatroughness)) return parse_error();
-      material->as_pbr = true;
-    } else if (cmd == "Pt") {
-      if (!parse_value(str, material->pbr_transmission)) return parse_error();
-      material->as_pbr = true;
-    } else if (cmd == "Pss") {
-      if (!parse_value(str, material->pbr_translucency)) return parse_error();
-      material->as_pbr = true;
-    } else if (cmd == "Pn") {
-      if (!parse_value(str, material->pbr_ior)) return parse_error();
-      material->as_pbr = true;
-    } else if (cmd == "Po") {
-      if (!parse_value(str, material->pbr_opacity)) return parse_error();
-      material->as_pbr = true;
-    } else if (cmd == "Pvs") {
-      if (!parse_value(str, material->pbr_volscattering)) return parse_error();
-      material->as_pbr = true;
-    } else if (cmd == "Pvg") {
-      if (!parse_value(str, material->pbr_volanisotropy)) return parse_error();
-      material->as_pbr = true;
-    } else if (cmd == "Pvr") {
-      if (!parse_value(str, material->pbr_volscale)) return parse_error();
-      material->as_pbr = true;
-    } else if (cmd == "Pthin") {
-      if (!parse_value(str, material->pbr_thin)) return parse_error();
-      material->as_pbr = true;
-    } else if (cmd == "map_Pe") {
-      if (!parse_value(str, material->pbr_emission_tex)) return parse_error();
-      material->as_pbr = true;
-    } else if (cmd == "map_Pb") {
-      if (!parse_value(str, material->pbr_base_tex)) return parse_error();
-      material->as_pbr = true;
-    } else if (cmd == "map_Ps") {
-      if (!parse_value(str, material->pbr_specular_tex)) return parse_error();
-      material->as_pbr = true;
-    } else if (cmd == "map_Pm") {
-      if (!parse_value(str, material->pbr_metallic_tex)) return parse_error();
-      material->as_pbr = true;
-    } else if (cmd == "map_Pr") {
-      if (!parse_value(str, material->pbr_roughness_tex)) return parse_error();
-      material->as_pbr = true;
-    } else if (cmd == "map_Psh") {
-      if (!parse_value(str, material->pbr_sheen_tex)) return parse_error();
-      material->as_pbr = true;
-    } else if (cmd == "map_Pc") {
-      if (!parse_value(str, material->pbr_coat_tex)) return parse_error();
-      material->as_pbr = true;
-    } else if (cmd == "map_Pcr") {
-      if (!parse_value(str, material->pbr_coatroughness_tex))
-        return parse_error();
-      material->as_pbr = true;
-    } else if (cmd == "map_Po") {
-      if (!parse_value(str, material->pbr_opacity_tex)) return parse_error();
-      material->as_pbr = true;
-    } else if (cmd == "map_Pt") {
-      if (!parse_value(str, material->pbr_transmission_tex))
-        return parse_error();
-      material->as_pbr = true;
-    } else if (cmd == "map_Pss") {
-      if (!parse_value(str, material->pbr_translucency_tex))
-        return parse_error();
-      material->as_pbr = true;
-    } else if (cmd == "map_Pvs") {
-      if (!parse_value(str, material->pbr_volscattering_tex))
-        return parse_error();
-      material->as_pbr = true;
-    } else if (cmd == "map_Pdisp") {
-      if (!parse_value(str, material->pbr_displacement_tex))
-        return parse_error();
-    } else if (cmd == "map_Pnorm") {
-      if (!parse_value(str, material->pbr_normal_tex)) return parse_error();
+      if (!parse_texture(str, material.normal_tex)) return parse_error();
     } else {
       continue;
     }
   }
 
   // remove placeholder material
-  obj->materials.erase(obj->materials.begin());
-
-  // convert between roughness and exponent
-  auto exponent_to_roughness = [](float exponent) {
-    auto roughness = exponent;
-    roughness      = pow(2 / (roughness + 2), 1 / 4.0f);
-    if (roughness < 0.01f) roughness = 0;
-    if (roughness > 0.99f) roughness = 1;
-    return roughness;
-  };
-
-  // convert values when possible
-  for (auto material : obj->materials) {
-    if (material->as_pbr) continue;
-    material->pbr_emission     = material->emission;
-    material->pbr_emission_tex = material->emission_tex;
-    material->pbr_roughness    = exponent_to_roughness(material->exponent);
-    material->pbr_ior          = material->ior;
-    material->pbr_opacity      = material->opacity;
-    material->pbr_opacity_tex  = material->opacity_tex;
-    if (max(material->transmission) > 0.1) {
-      material->pbr_base         = material->transmission;
-      material->pbr_transmission = 1;
-      material->pbr_specular     = 1;
-    } else if (max(material->specular) > 0.2) {
-      material->pbr_base     = material->specular;
-      material->pbr_base_tex = material->specular_tex;
-      material->pbr_metallic = 1;
-    } else {
-      material->pbr_base     = material->diffuse;
-      material->pbr_base_tex = material->diffuse_tex;
-      material->pbr_specular = max(material->specular) != 0 ? 1 : 0;
-    }
-    material->pbr_bump_tex         = material->bump_tex;
-    material->pbr_normal_tex       = material->normal_tex;
-    material->pbr_displacement_tex = material->displacement_tex;
-  }
+  obj.materials.erase(obj.materials.begin());
 
   return true;
 }
 
 // Read obj
-inline bool load_objx(const string& filename, obj_scene* obj, string& error) {
+inline bool load_obx(const string& filename, obj_model& obj, string& error) {
   // error helpers
   auto open_error = [filename, &error]() {
     error = filename + ": file not found";
@@ -1502,15 +1620,32 @@ inline bool load_objx(const string& filename, obj_scene* obj, string& error) {
     return false;
   };
 
+  // texture map
+  auto texture_map = unordered_map<string, int>{};
+  auto texture_id  = 0;
+  for (auto& texture : obj.textures) texture_map[texture.path] = texture_id++;
+  auto parse_texture = [&texture_map, &obj](string_view& str, int& texture_id) {
+    auto texture_path = obj_texture{};
+    if (!parse_value(str, texture_path)) return false;
+    auto texture_it = texture_map.find(texture_path.path);
+    if (texture_it == texture_map.end()) {
+      auto& texture             = obj.textures.emplace_back();
+      texture.path              = texture_path.path;
+      texture_id                = (int)obj.textures.size() - 1;
+      texture_map[texture.path] = texture_id;
+    } else {
+      texture_id = texture_it->second;
+    }
+    return true;
+  };
+
   // open file
   auto fs = open_file(filename, "rt");
   if (!fs) return open_error();
 
-  // shape map for instances
-  auto shape_map = unordered_map<string, vector<obj_shape*>>{};
-  for (auto shape : obj->shapes) {
-    shape_map[shape->name].push_back(shape);
-  }
+  // init parsing
+  obj.cameras.emplace_back();
+  obj.environments.emplace_back();
 
   // read the file str by str
   auto buffer = array<char, 4096>{};
@@ -1526,69 +1661,61 @@ inline bool load_objx(const string& filename, obj_scene* obj, string& error) {
     if (!parse_value(str, cmd)) return parse_error();
     if (cmd.empty()) continue;
 
+    // grab elements
+    auto& camera      = obj.cameras.back();
+    auto& environment = obj.environments.back();
+
     // read values
-    if (cmd == "c") {
-      auto camera = add_camera(obj);
-      if (!parse_value(str, camera->name)) return parse_error();
-      if (!parse_value(str, camera->ortho)) return parse_error();
-      if (!parse_value(str, camera->width)) return parse_error();
-      if (!parse_value(str, camera->height)) return parse_error();
-      if (!parse_value(str, camera->lens)) return parse_error();
-      if (!parse_value(str, camera->focus)) return parse_error();
-      if (!parse_value(str, camera->aperture)) return parse_error();
-      if (!parse_value(str, camera->frame)) return parse_error();
-    } else if (cmd == "e") {
-      auto environment = add_environment(obj);
-      if (!parse_value(str, environment->name)) return parse_error();
-      if (!parse_value(str, environment->emission)) return parse_error();
-      auto emission_path = ""s;
-      if (!parse_value(str, emission_path)) return parse_error();
-      if (emission_path == "\"\"") emission_path = "";
-      environment->emission_tex.path = emission_path;
-      if (!parse_value(str, environment->frame)) return parse_error();
-    } else if (cmd == "i") {
-      auto object = ""s;
-      auto frame  = identity3x4f;
-      if (!parse_value(str, object)) return parse_error();
-      if (!parse_value(str, frame)) return parse_error();
-      if (shape_map.find(object) == shape_map.end()) {
-        return parse_error();
-      }
-      for (auto shape : shape_map.at(object)) {
-        shape->instances.push_back(frame);
-      }
+    if (cmd == "newCam") {
+      auto& camera = obj.cameras.emplace_back();
+      if (!parse_value(str, camera.name)) return parse_error();
+    } else if (cmd == "Co") {
+      if (!parse_value(str, camera.ortho)) return parse_error();
+    } else if (cmd == "Ca") {
+      if (!parse_value(str, camera.aspect)) return parse_error();
+    } else if (cmd == "Cl") {
+      if (!parse_value(str, camera.lens)) return parse_error();
+    } else if (cmd == "Cs") {
+      if (!parse_value(str, camera.film)) return parse_error();
+    } else if (cmd == "Cf") {
+      if (!parse_value(str, camera.focus)) return parse_error();
+    } else if (cmd == "Cp") {
+      if (!parse_value(str, camera.aperture)) return parse_error();
+    } else if (cmd == "Cx") {
+      if (!parse_value(str, camera.frame)) return parse_error();
+    } else if (cmd == "Ct") {
+      auto lookat = mat3f{};
+      if (!parse_value(str, lookat)) return parse_error();
+      camera.frame = lookat_frame(lookat.x, lookat.y, lookat.z);
+      if (camera.focus == 0) camera.focus = length(lookat.y - lookat.x);
+    } else if (cmd == "newEnv") {
+      auto& environment = obj.environments.emplace_back();
+      if (!parse_value(str, environment.name)) return parse_error();
+    } else if (cmd == "Ee") {
+      if (!parse_value(str, environment.emission)) return parse_error();
+    } else if (cmd == "map_Ee") {
+      if (!parse_texture(str, environment.emission_tex)) return parse_error();
+    } else if (cmd == "Ex") {
+      if (!parse_value(str, environment.frame)) return parse_error();
+    } else if (cmd == "Et") {
+      auto lookat = mat3f{};
+      if (!parse_value(str, lookat)) return parse_error();
+      environment.frame = lookat_frame(lookat.x, lookat.y, lookat.z, true);
     } else {
       // unused
     }
   }
 
+  // remove placeholders
+  obj.cameras.erase(obj.cameras.begin());
+  obj.environments.erase(obj.environments.begin());
+
   return true;
 }
 
-obj_scene::~obj_scene() {
-  for (auto shape : shapes) delete shape;
-  for (auto material : materials) delete material;
-  for (auto camera : cameras) delete camera;
-  for (auto environment : environments) delete environment;
-}
-
-// Make obj
-obj_camera* add_camera(obj_scene* obj) {
-  return obj->cameras.emplace_back(new obj_camera{});
-}
-obj_material* add_material(obj_scene* obj) {
-  return obj->materials.emplace_back(new obj_material{});
-}
-obj_environment* add_environment(obj_scene* obj) {
-  return obj->environments.emplace_back(new obj_environment{});
-}
-obj_shape* add_shape(obj_scene* obj) {
-  return obj->shapes.emplace_back(new obj_shape{});
-}
-
 // Read obj
-bool load_obj(const string& filename, obj_scene* obj, string& error,
-    bool geom_only, bool split_elements, bool split_materials) {
+bool load_obj(const string& filename, obj_model& obj, string& error,
+    bool face_varying, bool split_materials) {
   // error helpers
   auto open_error = [filename, &error]() {
     error = filename + ": file not found";
@@ -1600,6 +1727,10 @@ bool load_obj(const string& filename, obj_scene* obj, string& error,
   };
   auto read_error = [filename, &error]() {
     error = filename + ": read error";
+    return false;
+  };
+  auto material_error = [filename, &error](const string& name) {
+    error = filename + ": missing material " + name;
     return false;
   };
   auto dependent_error = [filename, &error]() {
@@ -1615,23 +1746,20 @@ bool load_obj(const string& filename, obj_scene* obj, string& error,
   auto opositions   = vector<vec3f>{};
   auto onormals     = vector<vec3f>{};
   auto otexcoords   = vector<vec2f>{};
-  auto vert_size    = obj_vertex{};
   auto oname        = ""s;
   auto gname        = ""s;
-  auto mname        = ""s;
   auto mtllibs      = vector<string>{};
-  auto material_map = unordered_map<string, obj_material*>{};
+  auto material_map = unordered_map<string, int>{};
+  int  cur_material = -1;
+  auto cur_shape    = (obj_shape*)nullptr;
+  auto cur_shapes   = unordered_map<int, int>{};
 
   // initialize obj
-  obj->~obj_scene();
-  obj->cameras.clear();
-  obj->environments.clear();
-  obj->shapes.clear();
-  obj->materials.clear();
-
-  // initialize load
-  obj->shapes.emplace_back(new obj_shape{});
-  auto empty_material = (obj_material*)nullptr;
+  obj       = {};
+  cur_shape = &obj.shapes.emplace_back();
+  if (split_materials) {
+    cur_shapes = {{cur_material, (int)obj.shapes.size() - 1}};
+  }
 
   // read the file str by str
   auto buffer = array<char, 4096>{};
@@ -1650,54 +1778,27 @@ bool load_obj(const string& filename, obj_scene* obj, string& error,
     // possible token values
     if (cmd == "v") {
       if (!parse_value(str, opositions.emplace_back())) return parse_error();
-      vert_size.position += 1;
     } else if (cmd == "vn") {
       if (!parse_value(str, onormals.emplace_back())) return parse_error();
-      vert_size.normal += 1;
     } else if (cmd == "vt") {
       if (!parse_value(str, otexcoords.emplace_back())) return parse_error();
-      vert_size.texcoord += 1;
     } else if (cmd == "f" || cmd == "l" || cmd == "p") {
-      // split if split_elements and different primitives
-      if (auto shape = obj->shapes.back();
-          split_elements && !shape->vertices.empty()) {
-        if ((cmd == "f" && (!shape->lines.empty() || !shape->points.empty())) ||
-            (cmd == "l" && (!shape->faces.empty() || !shape->points.empty())) ||
-            (cmd == "p" && (!shape->faces.empty() || !shape->lines.empty()))) {
-          add_shape(obj);
-          obj->shapes.back()->name = oname + gname;
-        }
-      }
-      // split if splt_material and different materials
-      if (auto shape = obj->shapes.back();
-          !geom_only && split_materials && !shape->materials.empty()) {
-        if (shape->materials.size() > 1)
-          throw std::runtime_error("should not have happened");
-        if (shape->materials.back() != mname) {
-          add_shape(obj);
-          obj->shapes.back()->name = oname + gname;
-        }
-      }
+      // elemnet type
+      auto etype = (cmd == "f")   ? obj_etype::face
+                   : (cmd == "l") ? obj_etype::line
+                                  : obj_etype::point;
       // grab shape and add element
-      auto  shape   = obj->shapes.back();
-      auto& element = (cmd == "f")   ? shape->faces.emplace_back()
-                      : (cmd == "l") ? shape->lines.emplace_back()
-                                     : shape->points.emplace_back();
-      // get element material or add if needed
-      if (!geom_only) {
-        if (mname.empty() && empty_material == nullptr) {
-          empty_material   = obj->materials.emplace_back(new obj_material{});
-          material_map[""] = empty_material;
-        }
-        auto mat_idx = -1;
-        for (auto midx = 0; midx < shape->materials.size(); midx++)
-          if (shape->materials[midx] == mname) mat_idx = midx;
-        if (mat_idx < 0) {
-          shape->materials.push_back(mname);
-          mat_idx = (int)shape->materials.size() - 1;
-        }
-        element.material = (uint8_t)mat_idx;
+      auto& shape   = *cur_shape;
+      auto& element = shape.elements.emplace_back();
+      if (cur_material < 0) {
+        auto& material              = obj.materials.emplace_back();
+        material.name               = "__default__";
+        material.diffuse            = {0.8f, 0.8f, 0.8f};
+        cur_material                = 0;
+        material_map[material.name] = 0;
       }
+      element.material = cur_material;
+      element.etype    = etype;
       // parse vertices
       skip_whitespace(str);
       while (!str.empty()) {
@@ -1705,98 +1806,264 @@ bool load_obj(const string& filename, obj_scene* obj, string& error,
         if (!parse_value(str, vert)) return parse_error();
         if (vert.position == 0) break;
         if (vert.position < 0)
-          vert.position = vert_size.position + vert.position + 1;
+          vert.position = (int)opositions.size() + vert.position + 1;
         if (vert.texcoord < 0)
-          vert.texcoord = vert_size.texcoord + vert.texcoord + 1;
-        if (vert.normal < 0) vert.normal = vert_size.normal + vert.normal + 1;
-        shape->vertices.push_back(vert);
+          vert.texcoord = (int)otexcoords.size() + vert.texcoord + 1;
+        if (vert.normal < 0)
+          vert.normal = (int)onormals.size() + vert.normal + 1;
+        shape.vertices.push_back(vert);
         element.size += 1;
         skip_whitespace(str);
       }
     } else if (cmd == "o" || cmd == "g") {
-      if (geom_only) continue;
       skip_whitespace(str);
-      if (cmd == "o") {
-        if (str.empty()) {
-          oname = "";
-        } else {
-          if (!parse_value(str, oname)) return parse_error();
-        }
+      auto& name = cmd == "o" ? oname : gname;
+      if (str.empty()) {
+        name = "";
       } else {
-        if (str.empty()) {
-          gname = "";
-        } else {
-          if (!parse_value(str, gname)) return parse_error();
-        }
+        if (!parse_value(str, name)) return parse_error();
       }
-      if (!obj->shapes.back()->vertices.empty()) {
-        obj->shapes.emplace_back(new obj_shape{});
-        obj->shapes.back()->name = oname + gname;
+      if (split_materials) {
+        cur_shape       = &obj.shapes.emplace_back();
+        cur_shapes      = {{cur_material, (int)obj.shapes.size() - 1}};
+        cur_shape->name = oname + gname;
       } else {
-        obj->shapes.back()->name = oname + gname;
+        if (!cur_shape->vertices.empty()) {
+          cur_shape = &obj.shapes.emplace_back();
+        }
+        cur_shape->name = oname + gname;
       }
     } else if (cmd == "usemtl") {
-      if (geom_only) continue;
+      auto mname = string{};
       if (!parse_value(str, mname)) return parse_error();
-    } else if (cmd == "s") {
-      if (geom_only) continue;
+      auto material_it = material_map.find(mname);
+      if (material_it == material_map.end()) return material_error(mname);
+      if (split_materials && cur_material != material_it->second) {
+        cur_material  = material_it->second;
+        auto shape_it = cur_shapes.find(cur_material);
+        if (shape_it == cur_shapes.end()) {
+          cur_shape                = &obj.shapes.emplace_back();
+          cur_shapes[cur_material] = (int)obj.shapes.size() - 1;
+          cur_shape->name          = oname + gname;
+        } else {
+          cur_shape = &obj.shapes.at(shape_it->second);
+        }
+      } else {
+        cur_material = material_it->second;
+      }
     } else if (cmd == "mtllib") {
-      if (geom_only) continue;
       auto mtllib = ""s;
       if (!parse_value(str, mtllib)) return parse_error();
       if (std::find(mtllibs.begin(), mtllibs.end(), mtllib) == mtllibs.end()) {
         mtllibs.push_back(mtllib);
         if (!load_mtl(path_join(path_dirname(filename), mtllib), obj, error))
           return dependent_error();
-        for (auto material : obj->materials)
-          material_map[material->name] = material;
+        auto material_id = 0;
+        for (auto& material : obj.materials)
+          material_map[material.name] = material_id++;
       }
     } else {
       // unused
     }
   }
 
-  // fix empty material
-  if (empty_material != nullptr) {
-    empty_material->name     = "empty_material";
-    empty_material->diffuse  = {0.8, 0.8, 0.8};
-    empty_material->pbr_base = {0.8, 0.8, 0.8};
+  // remove empty shapes if splitting by materials
+  if (split_materials) {
+    obj.shapes.erase(
+        std::remove_if(obj.shapes.begin(), obj.shapes.end(),
+            [](const obj_shape& shape) { return shape.elements.empty(); }),
+        obj.shapes.end());
   }
 
   // convert vertex data
-  auto ipositions = vector<int>{};
-  auto inormals   = vector<int>{};
-  auto itexcoords = vector<int>{};
-  for (auto shape : obj->shapes) {
-    ipositions.assign(opositions.size() + 1, 0);
-    inormals.assign(onormals.size() + 1, 0);
-    itexcoords.assign(otexcoords.size() + 1, 0);
-    for (auto& vertex : shape->vertices) {
-      if (vertex.position != 0 && ipositions[vertex.position] == 0) {
-        shape->positions.push_back(opositions[vertex.position - 1]);
-        ipositions[vertex.position] = (int)shape->positions.size();
+  if (face_varying) {
+    auto ipositions = vector<int>{};
+    auto inormals   = vector<int>{};
+    auto itexcoords = vector<int>{};
+    for (auto& shape : obj.shapes) {
+      ipositions.assign(opositions.size() + 1, 0);
+      inormals.assign(onormals.size() + 1, 0);
+      itexcoords.assign(otexcoords.size() + 1, 0);
+      for (auto& vertex : shape.vertices) {
+        if (vertex.position != 0 && ipositions[vertex.position] == 0) {
+          shape.positions.push_back(opositions[vertex.position - 1]);
+          ipositions[vertex.position] = (int)shape.positions.size();
+        }
+        if (vertex.normal != 0 && inormals[vertex.normal] == 0) {
+          shape.normals.push_back(onormals[vertex.normal - 1]);
+          inormals[vertex.normal] = (int)shape.normals.size();
+        }
+        if (vertex.texcoord != 0 && itexcoords[vertex.texcoord] == 0) {
+          shape.texcoords.push_back(otexcoords[vertex.texcoord - 1]);
+          itexcoords[vertex.texcoord] = (int)shape.texcoords.size();
+        }
+        vertex.position = ipositions[vertex.position];
+        vertex.normal   = inormals[vertex.normal];
+        vertex.texcoord = itexcoords[vertex.texcoord];
       }
-      if (vertex.normal != 0 && inormals[vertex.normal] == 0) {
-        shape->normals.push_back(onormals[vertex.normal - 1]);
-        inormals[vertex.normal] = (int)shape->normals.size();
+    }
+  } else {
+    auto vertex_map = unordered_map<obj_vertex, obj_vertex>{};
+    for (auto& shape : obj.shapes) {
+      vertex_map.clear();
+      for (auto& vertex : shape.vertices) {
+        auto vertex_it = vertex_map.find(vertex);
+        if (vertex_it == vertex_map.end()) {
+          auto new_vertex = vertex;
+          auto index      = (int)vertex_map.size();
+          if (vertex.position > 0) {
+            shape.positions.push_back(opositions[vertex.position - 1]);
+            new_vertex.position = index + 1;
+          }
+          if (vertex.normal > 0) {
+            shape.normals.push_back(onormals[vertex.normal - 1]);
+            new_vertex.normal = index + 1;
+          }
+          if (vertex.texcoord > 0) {
+            shape.texcoords.push_back(otexcoords[vertex.texcoord - 1]);
+            new_vertex.texcoord = index + 1;
+          }
+          vertex_map[vertex] = new_vertex;
+          vertex             = new_vertex;
+        } else {
+          vertex = vertex_it->second;
+        }
       }
-      if (vertex.texcoord != 0 && itexcoords[vertex.texcoord] == 0) {
-        shape->texcoords.push_back(otexcoords[vertex.texcoord - 1]);
-        itexcoords[vertex.texcoord] = (int)shape->texcoords.size();
-      }
-      vertex.position = ipositions[vertex.position];
-      vertex.normal   = inormals[vertex.normal];
-      vertex.texcoord = itexcoords[vertex.texcoord];
     }
   }
 
-  // exit if done
-  if (geom_only) return true;
-
   // load extensions
-  auto extfilename = replace_extension(filename, ".objx");
+  auto extfilename = replace_extension(filename, ".obx");
   if (path_exists(extfilename)) {
-    if (!load_objx(extfilename, obj, error)) return dependent_error();
+    if (!load_obx(extfilename, obj, error)) return dependent_error();
+  }
+
+  return true;
+}
+
+// Read obj
+bool load_obj(const string& filename, obj_shape& shape, string& error,
+    bool face_varying) {
+  // error helpers
+  auto open_error = [filename, &error]() {
+    error = filename + ": file not found";
+    return false;
+  };
+  auto parse_error = [filename, &error]() {
+    error = filename + ": parse error";
+    return false;
+  };
+  auto read_error = [filename, &error]() {
+    error = filename + ": read error";
+    return false;
+  };
+
+  // open file
+  auto fs = open_file(filename, "rt");
+  if (!fs) return open_error();
+
+  // parsing state
+  auto material_map = unordered_map<string, int>{};
+  int  cur_material = -1;
+
+  // initialize obj
+  shape = {};
+
+  // read the file str by str
+  auto buffer = array<char, 4096>{};
+  while (read_line(fs, buffer)) {
+    // str
+    auto str = string_view{buffer.data()};
+    remove_comment(str);
+    skip_whitespace(str);
+    if (str.empty()) continue;
+
+    // get command
+    auto cmd = ""s;
+    if (!parse_value(str, cmd)) return parse_error();
+    if (cmd.empty()) continue;
+
+    // possible token values
+    if (cmd == "v") {
+      if (!parse_value(str, shape.positions.emplace_back()))
+        return parse_error();
+    } else if (cmd == "vn") {
+      if (!parse_value(str, shape.normals.emplace_back())) return parse_error();
+    } else if (cmd == "vt") {
+      if (!parse_value(str, shape.texcoords.emplace_back()))
+        return parse_error();
+    } else if (cmd == "f" || cmd == "l" || cmd == "p") {
+      // elemnet type
+      auto etype = (cmd == "f")   ? obj_etype::face
+                   : (cmd == "l") ? obj_etype::line
+                                  : obj_etype::point;
+      // grab shape and add element
+      auto& element    = shape.elements.emplace_back();
+      element.material = cur_material;
+      element.etype    = etype;
+      // parse vertices
+      skip_whitespace(str);
+      while (!str.empty()) {
+        auto vert = obj_vertex{};
+        if (!parse_value(str, vert)) return parse_error();
+        if (vert.position == 0) break;
+        if (vert.position < 0)
+          vert.position = (int)shape.positions.size() + vert.position + 1;
+        if (vert.texcoord < 0)
+          vert.texcoord = (int)shape.texcoords.size() + vert.texcoord + 1;
+        if (vert.normal < 0)
+          vert.normal = (int)shape.normals.size() + vert.normal + 1;
+        shape.vertices.push_back(vert);
+        element.size += 1;
+        skip_whitespace(str);
+      }
+    } else if (cmd == "usemtl") {
+      auto mname = string{};
+      if (!parse_value(str, mname)) return parse_error();
+      auto material_it = material_map.find(mname);
+      if (material_it == material_map.end()) {
+        cur_material        = (int)material_map.size();
+        material_map[mname] = cur_material;
+      } else {
+        cur_material = material_it->second;
+      }
+    } else {
+      // unused
+    }
+  }
+
+  // convert vertex data
+  if (!face_varying) {
+    auto opositions = vector<vec3f>{};
+    auto onormals   = vector<vec3f>{};
+    auto otexcoords = vector<vec2f>{};
+    shape.positions.swap(opositions);
+    shape.normals.swap(onormals);
+    shape.texcoords.swap(otexcoords);
+    auto vertex_map = unordered_map<obj_vertex, obj_vertex>{};
+    for (auto& vertex : shape.vertices) {
+      auto vertex_it = vertex_map.find(vertex);
+      if (vertex_it == vertex_map.end()) {
+        auto new_vertex = vertex;
+        auto index      = (int)vertex_map.size();
+        if (vertex.position > 0) {
+          shape.positions.push_back(opositions[vertex.position - 1]);
+          new_vertex.position = index + 1;
+        }
+        if (vertex.normal > 0) {
+          shape.normals.push_back(onormals[vertex.normal - 1]);
+          new_vertex.normal = index + 1;
+        }
+        if (vertex.texcoord > 0) {
+          shape.texcoords.push_back(otexcoords[vertex.texcoord - 1]);
+          new_vertex.texcoord = index + 1;
+        }
+        vertex_map[vertex] = new_vertex;
+        vertex             = new_vertex;
+      } else {
+        vertex = vertex_it->second;
+      }
+    }
   }
 
   return true;
@@ -1823,7 +2090,7 @@ inline void format_value(string& str, const obj_vertex& value) {
 
 // Save obj
 inline bool save_mtl(
-    const string& filename, const obj_scene* obj, string& error) {
+    const string& filename, const obj_model& obj, string& error) {
   // throw helpers
   // error helpers
   auto open_error = [filename, &error]() {
@@ -1845,161 +2112,80 @@ inline bool save_mtl(
   if (!format_values(fs, "# https://github.com/xelatihy/yocto-gl\n"))
     return write_error();
   if (!format_values(fs, "#\n\n")) return write_error();
-  for (auto& comment : obj->comments) {
+  for (auto& comment : obj.comments) {
     if (!format_values(fs, "# {}\n", comment)) return write_error();
   }
   if (!format_values(fs, "\n")) return write_error();
 
   // write material
-  for (auto material : obj->materials) {
-    if (!format_values(fs, "newmtl {}\n", material->name)) return write_error();
-    if (!material->as_pbr) {
-      if (!format_values(fs, "illum {}\n", material->illum))
+  for (auto& material : obj.materials) {
+    if (!format_values(fs, "newmtl {}\n", material.name)) return write_error();
+    if (!format_values(fs, "illum {}\n", material.illum)) return write_error();
+    if (material.emission != zero3f)
+      if (!format_values(fs, "Ke {}\n", material.emission))
         return write_error();
-      if (material->emission != zero3f)
-        if (!format_values(fs, "Ke {}\n", material->emission))
-          return write_error();
-      if (material->ambient != zero3f)
-        if (!format_values(fs, "Ka {}\n", material->ambient))
-          return write_error();
-      if (!format_values(fs, "Kd {}\n", material->diffuse))
+    if (material.ambient != zero3f)
+      if (!format_values(fs, "Ka {}\n", material.ambient)) return write_error();
+    if (!format_values(fs, "Kd {}\n", material.diffuse)) return write_error();
+    if (!format_values(fs, "Ks {}\n", material.specular)) return write_error();
+    if (material.reflection != zero3f)
+      if (!format_values(fs, "Kr {}\n", material.reflection))
         return write_error();
-      if (!format_values(fs, "Ks {}\n", material->specular))
+    if (material.transmission != zero3f)
+      if (!format_values(fs, "Kt {}\n", material.transmission))
         return write_error();
-      if (material->reflection != zero3f)
-        if (!format_values(fs, "Kr {}\n", material->reflection))
-          return write_error();
-      if (material->transmission != zero3f)
-        if (!format_values(fs, "Kt {}\n", material->transmission))
-          return write_error();
-      if (!format_values(fs, "Ns {}\n", (int)material->exponent))
+    if (!format_values(fs, "Ns {}\n", (int)material.exponent))
+      return write_error();
+    if (material.opacity != 1)
+      if (!format_values(fs, "d {}\n", material.opacity)) return write_error();
+    if (material.emission_tex >= 0)
+      if (!format_values(
+              fs, "map_Ke {}\n", obj.textures[material.emission_tex].path))
         return write_error();
-      if (material->opacity != 1)
-        if (!format_values(fs, "d {}\n", material->opacity))
-          return write_error();
-      if (!material->emission_tex.path.empty())
-        if (!format_values(fs, "map_Ke {}\n", material->emission_tex))
-          return write_error();
-      if (!material->diffuse_tex.path.empty())
-        if (!format_values(fs, "map_Kd {}\n", material->diffuse_tex))
-          return write_error();
-      if (!material->specular_tex.path.empty())
-        if (!format_values(fs, "map_Ks {}\n", material->specular_tex))
-          return write_error();
-      if (!material->transmission_tex.path.empty())
-        if (!format_values(fs, "map_Kt {}\n", material->transmission_tex))
-          return write_error();
-      if (!material->reflection_tex.path.empty())
-        if (!format_values(fs, "map_Kr {}\n", material->reflection_tex))
-          return write_error();
-      if (!material->exponent_tex.path.empty())
-        if (!format_values(fs, "map_Ns {}\n", material->exponent_tex))
-          return write_error();
-      if (!material->opacity_tex.path.empty())
-        if (!format_values(fs, "map_d {}\n", material->opacity_tex))
-          return write_error();
-      if (!material->bump_tex.path.empty())
-        if (!format_values(fs, "map_bump {}\n", material->bump_tex))
-          return write_error();
-      if (!material->displacement_tex.path.empty())
-        if (!format_values(fs, "map_disp {}\n", material->displacement_tex))
-          return write_error();
-      if (!material->normal_tex.path.empty())
-        if (!format_values(fs, "map_norm {}\n", material->normal_tex))
-          return write_error();
-    } else {
-      if (!format_values(fs, "illum 2\n")) return write_error();
-      if (material->pbr_emission != zero3f)
-        if (!format_values(fs, "Pe {}\n", material->pbr_emission))
-          return write_error();
-      if (material->pbr_base != zero3f)
-        if (!format_values(fs, "Pb {}\n", material->pbr_base))
-          return write_error();
-      if (material->pbr_specular != 0)
-        if (!format_values(fs, "Ps {}\n", material->pbr_specular))
-          return write_error();
-      if (material->pbr_roughness != 0)
-        if (!format_values(fs, "Pr {}\n", material->pbr_roughness))
-          return write_error();
-      if (material->pbr_metallic != 0)
-        if (!format_values(fs, "Pm {}\n", material->pbr_metallic))
-          return write_error();
-      if (material->pbr_sheen != 0)
-        if (!format_values(fs, "Psh {}\n", material->pbr_sheen))
-          return write_error();
-      if (material->pbr_transmission != 0)
-        if (!format_values(fs, "Pt {}\n", material->pbr_transmission))
-          return write_error();
-      if (material->pbr_translucency != 0)
-        if (!format_values(fs, "Pss {}\n", material->pbr_translucency))
-          return write_error();
-      if (material->pbr_coat != 0)
-        if (!format_values(fs, "Pc {}\n", material->pbr_coat))
-          return write_error();
-      if (material->pbr_coatroughness != 0)
-        if (!format_values(fs, "Pcr {}\n", material->pbr_coatroughness))
-          return write_error();
-      if (material->pbr_volscattering != zero3f)
-        if (!format_values(fs, "Pvs {}\n", material->pbr_volscattering))
-          return write_error();
-      if (material->pbr_volanisotropy != 0)
-        if (!format_values(fs, "Pvg {}\n", material->pbr_volanisotropy))
-          return write_error();
-      if (material->pbr_volscale != 0)
-        if (!format_values(fs, "Pvr {}\n", material->pbr_volscale))
-          return write_error();
-      if (!material->pbr_emission_tex.path.empty())
-        if (!format_values(fs, "map_Pe {}\n", material->pbr_emission_tex))
-          return write_error();
-      if (!material->pbr_base_tex.path.empty())
-        if (!format_values(fs, "map_Pb {}\n", material->pbr_base_tex))
-          return write_error();
-      if (!material->pbr_specular_tex.path.empty())
-        if (!format_values(fs, "map_Ps {}\n", material->pbr_specular_tex))
-          return write_error();
-      if (!material->pbr_roughness_tex.path.empty())
-        if (!format_values(fs, "map_Pr {}\n", material->pbr_roughness_tex))
-          return write_error();
-      if (!material->pbr_metallic_tex.path.empty())
-        if (!format_values(fs, "map_Pm {}\n", material->pbr_metallic_tex))
-          return write_error();
-      if (!material->pbr_sheen_tex.path.empty())
-        if (!format_values(fs, "map_Psh {}\n", material->pbr_sheen_tex))
-          return write_error();
-      if (!material->pbr_transmission_tex.path.empty())
-        if (!format_values(fs, "map_Pt {}\n", material->pbr_transmission_tex))
-          return write_error();
-      if (!material->pbr_translucency_tex.path.empty())
-        if (!format_values(fs, "map_Pss {}\n", material->pbr_translucency_tex))
-          return write_error();
-      if (!material->pbr_coat_tex.path.empty())
-        if (!format_values(fs, "map_Pc {}\n", material->pbr_coat_tex))
-          return write_error();
-      if (!material->pbr_coatroughness_tex.path.empty())
-        if (!format_values(fs, "map_Pcr {}\n", material->pbr_coatroughness_tex))
-          return write_error();
-      if (!material->pbr_volscattering_tex.path.empty())
-        if (!format_values(fs, "map_Pvs {}\n", material->pbr_volscattering_tex))
-          return write_error();
-      if (!material->bump_tex.path.empty())
-        if (!format_values(fs, "map_Pbump {}\n", material->pbr_bump_tex))
-          return write_error();
-      if (!material->displacement_tex.path.empty())
-        if (!format_values(
-                fs, "map_Pdisp {}\n", material->pbr_displacement_tex))
-          return write_error();
-      if (!material->normal_tex.path.empty())
-        if (!format_values(fs, "map_Pnorm {}\n", material->pbr_normal_tex))
-          return write_error();
-    }
+    if (material.diffuse_tex >= 0)
+      if (!format_values(
+              fs, "map_Kd {}\n", obj.textures[material.diffuse_tex].path))
+        return write_error();
+    if (material.specular_tex >= 0)
+      if (!format_values(
+              fs, "map_Ks {}\n", obj.textures[material.specular_tex].path))
+        return write_error();
+    if (material.transmission_tex >= 0)
+      if (!format_values(
+              fs, "map_Kt {}\n", obj.textures[material.transmission_tex].path))
+        return write_error();
+    if (material.reflection_tex >= 0)
+      if (!format_values(
+              fs, "map_Kr {}\n", obj.textures[material.reflection_tex].path))
+        return write_error();
+    if (material.exponent_tex >= 0)
+      if (!format_values(
+              fs, "map_Ns {}\n", obj.textures[material.exponent_tex].path))
+        return write_error();
+    if (material.opacity_tex >= 0)
+      if (!format_values(
+              fs, "map_d {}\n", obj.textures[material.opacity_tex].path))
+        return write_error();
+    if (material.bump_tex >= 0)
+      if (!format_values(
+              fs, "map_bump {}\n", obj.textures[material.bump_tex].path))
+        return write_error();
+    if (material.displacement_tex >= 0)
+      if (!format_values(fs, "map_disp {}\n",
+              obj.textures[material.displacement_tex].path))
+        return write_error();
+    if (material.normal_tex >= 0)
+      if (!format_values(
+              fs, "map_norm {}\n", obj.textures[material.normal_tex].path))
+        return write_error();
     if (!format_values(fs, "\n")) return write_error();
   }
   return true;
 }
 
 // Save obj
-inline bool save_objx(
-    const string& filename, const obj_scene* obj, string& error) {
+inline bool save_obx(
+    const string& filename, const obj_model& obj, string& error) {
   // error helpers
   auto open_error = [filename, &error]() {
     error = filename + ": file not found";
@@ -2020,36 +2206,36 @@ inline bool save_objx(
   if (!format_values(fs, "# https://github.com/xelatihy/yocto-gl\n"))
     return write_error();
   if (!format_values(fs, "#\n\n")) return write_error();
-  for (auto& comment : obj->comments) {
+  for (auto& comment : obj.comments) {
     if (!format_values(fs, "# {}\n", comment)) return write_error();
   }
   if (!format_values(fs, "\n")) return write_error();
 
   // cameras
-  for (auto camera : obj->cameras) {
-    if (!format_values(fs, "c {} {} {} {} {} {} {} {}\n", camera->name,
-            camera->ortho, camera->width, camera->height, camera->lens,
-            camera->focus, camera->aperture, camera->frame))
-      return write_error();
+  for (auto& camera : obj.cameras) {
+    if (!format_values(fs, "newCam {}\n", camera.name)) return write_error();
+    if (!format_values(fs, "  Co {}\n", camera.ortho)) return write_error();
+    if (!format_values(fs, "  Ca {}\n", camera.aspect)) return write_error();
+    if (!format_values(fs, "  Cl {}\n", camera.lens)) return write_error();
+    if (!format_values(fs, "  Cs {}\n", camera.film)) return write_error();
+    if (!format_values(fs, "  Cf {}\n", camera.focus)) return write_error();
+    if (!format_values(fs, "  Cp {}\n", camera.aperture)) return write_error();
+    if (!format_values(fs, "  Cx {}\n", camera.frame)) return write_error();
   }
 
   // environments
-  for (auto environment : obj->environments) {
-    if (!format_values(fs, "e {} {} {} {}\n", environment->name,
-            environment->emission,
-            environment->emission_tex.path.empty()
-                ? "\"\""s
-                : environment->emission_tex.path,
-            environment->frame))
+  for (auto& environment : obj.environments) {
+    if (!format_values(fs, "newEnv {}\n", environment.name))
       return write_error();
-  }
-
-  // instances
-  for (auto shape : obj->shapes) {
-    for (auto& frame : shape->instances) {
-      if (!format_values(fs, "i {} {}\n", shape->name, frame))
+    if (!format_values(fs, "  Ee {}\n", environment.emission))
+      return write_error();
+    if (environment.emission_tex >= 0) {
+      if (!format_values(
+              fs, "  map_Ee {}\n", obj.textures[environment.emission_tex].path))
         return write_error();
     }
+    if (!format_values(fs, "  Ex {}\n", environment.frame))
+      return write_error();
   }
 
   // done
@@ -2057,7 +2243,7 @@ inline bool save_objx(
 }
 
 // Save obj
-bool save_obj(const string& filename, const obj_scene* obj, string& error) {
+bool save_obj(const string& filename, const obj_model& obj, string& error) {
   // error helpers
   auto open_error = [filename, &error]() {
     error = filename + ": file not found";
@@ -2082,13 +2268,13 @@ bool save_obj(const string& filename, const obj_scene* obj, string& error) {
   if (!format_values(fs, "# https://github.com/xelatihy/yocto-gl\n"))
     return write_error();
   if (!format_values(fs, "#\n\n")) return write_error();
-  for (auto& comment : obj->comments) {
+  for (auto& comment : obj.comments) {
     if (!format_values(fs, "# {}\n", comment)) return write_error();
   }
   if (!format_values(fs, "\n")) return write_error();
 
   // save material library
-  if (!obj->materials.empty()) {
+  if (!obj.materials.empty()) {
     if (!format_values(fs, "mtllib {}\n\n",
             replace_extension(path_filename(filename), ".mtl")))
       return write_error();
@@ -2096,56 +2282,53 @@ bool save_obj(const string& filename, const obj_scene* obj, string& error) {
 
   // save objects
   auto vert_size = obj_vertex{0, 0, 0};
-  for (auto shape : obj->shapes) {
-    if (!format_values(fs, "o {}\n", shape->name)) return write_error();
-    for (auto& p : shape->positions)
+  for (auto& shape : obj.shapes) {
+    if (!format_values(fs, "o {}\n", shape.name)) return write_error();
+    for (auto& p : shape.positions)
       if (!format_values(fs, "v {}\n", p)) return write_error();
-    for (auto& n : shape->normals)
+    for (auto& n : shape.normals)
       if (!format_values(fs, "vn {}\n", n)) return write_error();
-    for (auto& t : shape->texcoords)
+    for (auto& t : shape.texcoords)
       if (!format_values(fs, "vt {}\n", t)) return write_error();
-    auto element_labels = vector<string>{"f", "l", "p"};
-    auto element_groups = vector<const vector<obj_element>*>{
-        &shape->faces, &shape->lines, &shape->points};
-    for (auto element_idx = 0; element_idx < 3; element_idx++) {
-      auto& label        = element_labels[element_idx];
-      auto& elements     = *element_groups[element_idx];
-      auto  cur_material = -1, cur_vertex = 0;
-      for (auto& element : elements) {
-        if (!shape->materials.empty() && cur_material != element.material) {
-          if (!format_values(
-                  fs, "usemtl {}\n", shape->materials[element.material]))
-            return write_error();
-          cur_material = element.material;
-        }
-        if (!format_values(fs, "{}", label)) return write_error();
-        for (auto c = 0; c < element.size; c++) {
-          auto vert = shape->vertices[cur_vertex++];
-          if (vert.position != 0) vert.position += vert_size.position;
-          if (vert.normal != 0) vert.normal += vert_size.normal;
-          if (vert.texcoord != 0) vert.texcoord += vert_size.texcoord;
-          if (!format_values(fs, " {}", vert)) return write_error();
-        }
-        if (!format_values(fs, "\n")) return write_error();
+    auto cur_material = -1, cur_vertex = 0;
+    for (auto& element : shape.elements) {
+      if (!obj.materials.empty() && cur_material != element.material) {
+        if (!format_values(
+                fs, "usemtl {}\n", obj.materials[element.material].name))
+          return write_error();
+        cur_material = element.material;
       }
+      if (element.etype == obj_etype::face) {
+        if (!format_values(fs, "{}", "f")) return write_error();
+      } else if (element.etype == obj_etype::line) {
+        if (!format_values(fs, "{}", "l")) return write_error();
+      } else if (element.etype == obj_etype::point) {
+        if (!format_values(fs, "{}", "p")) return write_error();
+      }
+      for (auto c = 0; c < element.size; c++) {
+        auto vert = shape.vertices[cur_vertex++];
+        if (vert.position != 0) vert.position += vert_size.position;
+        if (vert.normal != 0) vert.normal += vert_size.normal;
+        if (vert.texcoord != 0) vert.texcoord += vert_size.texcoord;
+        if (!format_values(fs, " {}", vert)) return write_error();
+      }
+      if (!format_values(fs, "\n")) return write_error();
     }
     if (!format_values(fs, "\n")) return write_error();
-    vert_size.position += (int)shape->positions.size();
-    vert_size.normal += (int)shape->normals.size();
-    vert_size.texcoord += (int)shape->texcoords.size();
+    vert_size.position += (int)shape.positions.size();
+    vert_size.normal += (int)shape.normals.size();
+    vert_size.texcoord += (int)shape.texcoords.size();
   }
 
   // save mtl
-  if (!obj->materials.empty()) {
+  if (!obj.materials.empty()) {
     if (!save_mtl(replace_extension(filename, ".mtl"), obj, error))
       return dependent_error();
   }
 
-  // save objx
-  if (!obj->cameras.empty() || !obj->environments.empty() ||
-      std::any_of(obj->shapes.begin(), obj->shapes.end(),
-          [](auto shape) { return !shape->instances.empty(); })) {
-    if (!save_objx(replace_extension(filename, ".objx"), obj, error))
+  // save obx
+  if (!obj.cameras.empty() || !obj.environments.empty()) {
+    if (!save_obx(replace_extension(filename, ".obx"), obj, error))
       return dependent_error();
   }
 
@@ -2153,418 +2336,458 @@ bool save_obj(const string& filename, const obj_scene* obj, string& error) {
   return true;
 }
 
-// Get obj vertices
-void get_vertices(const obj_shape* shape, vector<vec3f>& positions,
-    vector<vec3f>& normals, vector<vec2f>& texcoords, vector<int>& vindex,
-    bool flipv) {
-  auto vmap = unordered_map<obj_vertex, int>{};
-  vmap.reserve(shape->vertices.size());
-  vindex.reserve(shape->vertices.size());
-  for (auto& vert : shape->vertices) {
-    auto it = vmap.find(vert);
-    if (it != vmap.end()) {
-      vindex.push_back(it->second);
-      continue;
+// Save obj
+bool save_obj(const string& filename, const obj_shape& shape, string& error) {
+  // error helpers
+  auto open_error = [filename, &error]() {
+    error = filename + ": file not found";
+    return false;
+  };
+  auto write_error = [filename, &error]() {
+    error = filename + ": write error";
+    return false;
+  };
+
+  // open file
+  auto fs = open_file(filename, "wt");
+  if (!fs) return open_error();
+
+  // save comments
+  if (!format_values(fs, "#\n")) return write_error();
+  if (!format_values(fs, "# Written by Yocto/GL\n")) return write_error();
+  if (!format_values(fs, "# https://github.com/xelatihy/yocto-gl\n"))
+    return write_error();
+  if (!format_values(fs, "#\n\n")) return write_error();
+  if (!format_values(fs, "\n")) return write_error();
+
+  // save objects
+  if (!format_values(fs, "o {}\n", shape.name)) return write_error();
+  for (auto& p : shape.positions)
+    if (!format_values(fs, "v {}\n", p)) return write_error();
+  for (auto& n : shape.normals)
+    if (!format_values(fs, "vn {}\n", n)) return write_error();
+  for (auto& t : shape.texcoords)
+    if (!format_values(fs, "vt {}\n", t)) return write_error();
+  auto cur_material = -1, cur_vertex = 0;
+  for (auto& element : shape.elements) {
+    if (cur_material != element.material) {
+      if (!format_values(
+              fs, "usemtl {}\n", "material" + std::to_string(element.material)))
+        return write_error();
+      cur_material = element.material;
     }
-    auto nverts = (int)positions.size();
-    vindex.push_back(nverts);
-    vmap.insert(it, {vert, nverts});
-    if (!shape->positions.empty() && vert.position != 0)
-      positions.push_back(shape->positions[vert.position - 1]);
-    if (!shape->normals.empty() && vert.normal != 0)
-      normals.push_back(shape->normals[vert.normal - 1]);
-    if (!shape->texcoords.empty() && vert.texcoord != 0)
-      texcoords.push_back(shape->texcoords[vert.texcoord - 1]);
+    if (element.etype == obj_etype::face) {
+      if (!format_values(fs, "{}", "f")) return write_error();
+    } else if (element.etype == obj_etype::line) {
+      if (!format_values(fs, "{}", "l")) return write_error();
+    } else if (element.etype == obj_etype::point) {
+      if (!format_values(fs, "{}", "p")) return write_error();
+    }
+    for (auto c = 0; c < element.size; c++) {
+      auto& vert = shape.vertices[cur_vertex++];
+      if (!format_values(fs, " {}", vert)) return write_error();
+    }
+    if (!format_values(fs, "\n")) return write_error();
   }
+
+  // done
+  return true;
+}
+
+// Get obj shape.
+void get_positions(const obj_shape& shape, vector<vec3f>& positions) {
+  positions = shape.positions;
+}
+void get_normals(const obj_shape& shape, vector<vec3f>& normals) {
+  normals = shape.normals;
+}
+void get_texcoords(
+    const obj_shape& shape, vector<vec2f>& texcoords, bool flipv) {
+  texcoords = shape.texcoords;
   if (flipv) {
     for (auto& texcoord : texcoords) texcoord.y = 1 - texcoord.y;
   }
 }
-inline vector<vec2f> flip_obj_texcoord(const vector<vec2f>& texcoord) {
-  auto flipped = texcoord;
-  for (auto& uv : flipped) uv.y = 1 - uv.y;
-  return flipped;
-}
-
-// Get obj shape
-void get_triangles(const obj_shape* shape, vector<vec3i>& triangles,
-    vector<vec3f>& positions, vector<vec3f>& normals, vector<vec2f>& texcoords,
-    vector<string>& materials, vector<int>& ematerials, bool flipv) {
-  if (shape->faces.empty()) return;
-  auto vindex = vector<int>{};
-  get_vertices(shape, positions, normals, texcoords, vindex, flipv);
-  materials = shape->materials;
-  triangles.reserve(shape->faces.size());
-  if (!materials.empty()) ematerials.reserve(shape->faces.size());
-  auto cur = 0;
-  for (auto& face : shape->faces) {
-    for (auto c = 2; c < face.size; c++) {
-      triangles.push_back(
-          {vindex[cur + 0], vindex[cur + c - 1], vindex[cur + c]});
-      if (!materials.empty()) ematerials.push_back(face.material);
-    }
-    cur += face.size;
+void get_faces(const obj_shape& shape, vector<vec3i>& triangles,
+    vector<vec4i>& quads, vector<int>& materials) {
+  if (has_quads(shape)) {
+    get_quads(shape, quads, materials);
+  } else {
+    get_triangles(shape, triangles, materials);
   }
 }
-void get_quads(const obj_shape* shape, vector<vec4i>& quads,
-    vector<vec3f>& positions, vector<vec3f>& normals, vector<vec2f>& texcoords,
-    vector<string>& materials, vector<int>& ematerials, bool flipv) {
-  if (shape->faces.empty()) return;
-  auto vindex = vector<int>{};
-  get_vertices(shape, positions, normals, texcoords, vindex, flipv);
-  materials = shape->materials;
-  quads.reserve(shape->faces.size());
-  if (!materials.empty()) ematerials.reserve(shape->faces.size());
+void get_triangles(
+    const obj_shape& shape, vector<vec3i>& triangles, vector<int>& materials) {
+  triangles.clear();
+  materials.clear();
+  triangles.reserve(shape.elements.size());
+  materials.reserve(shape.elements.size());
   auto cur = 0;
-  for (auto& face : shape->faces) {
-    if (face.size == 4) {
-      quads.push_back(
-          {vindex[cur + 0], vindex[cur + 1], vindex[cur + 2], vindex[cur + 3]});
-      if (!materials.empty()) ematerials.push_back(face.material);
+  for (auto& element : shape.elements) {
+    if (element.etype != obj_etype::face) continue;
+    for (auto c = 2; c < element.size; c++) {
+      triangles.push_back({shape.vertices[cur + 0].position - 1,
+          shape.vertices[cur + c - 1].position - 1,
+          shape.vertices[cur + c].position - 1});
+      materials.push_back(element.material);
+    }
+    cur += element.size;
+  }
+}
+void get_quads(
+    const obj_shape& shape, vector<vec4i>& quads, vector<int>& materials) {
+  quads.clear();
+  materials.clear();
+  quads.reserve(shape.elements.size());
+  materials.reserve(shape.elements.size());
+  auto cur = 0;
+  for (auto& element : shape.elements) {
+    if (element.etype != obj_etype::face) continue;
+    if (element.size == 4) {
+      quads.push_back({shape.vertices[cur + 0].position - 1,
+          shape.vertices[cur + 1].position - 1,
+          shape.vertices[cur + 2].position - 1,
+          shape.vertices[cur + 3].position - 1});
+      materials.push_back(element.material);
     } else {
-      for (auto c = 2; c < face.size; c++) {
-        quads.push_back({vindex[cur + 0], vindex[cur + c - 1], vindex[cur + c],
-            vindex[cur + c]});
-        if (!materials.empty()) ematerials.push_back(face.material);
+      for (auto c = 2; c < element.size; c++) {
+        quads.push_back({shape.vertices[cur + 0].position - 1,
+            shape.vertices[cur + c - 1].position - 1,
+            shape.vertices[cur + c].position - 1,
+            shape.vertices[cur + c].position - 1});
+        materials.push_back(element.material);
       }
     }
-    cur += face.size;
+    cur += element.size;
   }
 }
-void get_lines(const obj_shape* shape, vector<vec2i>& lines,
-    vector<vec3f>& positions, vector<vec3f>& normals, vector<vec2f>& texcoords,
-    vector<string>& materials, vector<int>& ematerials, bool flipv) {
-  if (shape->lines.empty()) return;
-  auto vindex = vector<int>{};
-  get_vertices(shape, positions, normals, texcoords, vindex, flipv);
-  materials = shape->materials;
-  lines.reserve(shape->lines.size());
-  if (!materials.empty()) ematerials.reserve(shape->faces.size());
+void get_lines(
+    const obj_shape& shape, vector<vec2i>& lines, vector<int>& materials) {
+  lines.clear();
+  materials.clear();
+  lines.reserve(shape.elements.size());
+  materials.reserve(shape.elements.size());
   auto cur = 0;
-  for (auto& str : shape->lines) {
-    for (auto c = 1; c < str.size; c++) {
-      lines.push_back({vindex[cur + c - 1], vindex[cur + c]});
-      if (!materials.empty()) ematerials.push_back(str.material);
+  for (auto& element : shape.elements) {
+    if (element.etype != obj_etype::line) continue;
+    for (auto c = 1; c < element.size; c++) {
+      lines.push_back({shape.vertices[cur + c - 1].position - 1,
+          shape.vertices[cur + c].position - 1});
+      materials.push_back(element.material);
     }
-    cur += str.size;
+    cur += element.size;
   }
 }
-void get_points(const obj_shape* shape, vector<int>& points,
-    vector<vec3f>& positions, vector<vec3f>& normals, vector<vec2f>& texcoords,
-    vector<string>& materials, vector<int>& ematerials, bool flipv) {
-  if (shape->points.empty()) return;
-  auto vindex = vector<int>{};
-  get_vertices(shape, positions, normals, texcoords, vindex, flipv);
-  materials = shape->materials;
-  points.reserve(shape->points.size());
-  if (!materials.empty()) ematerials.reserve(shape->faces.size());
+void get_points(
+    const obj_shape& shape, vector<int>& points, vector<int>& materials) {
+  points.clear();
+  materials.clear();
+  points.reserve(shape.elements.size());
+  materials.reserve(shape.elements.size());
   auto cur = 0;
-  for (auto& point : shape->points) {
-    for (auto c = 0; c < point.size; c++) {
-      points.push_back({vindex[cur + 0]});
-      if (!materials.empty()) ematerials.push_back(point.material);
+  for (auto& element : shape.elements) {
+    if (element.etype != obj_etype::point) continue;
+    for (auto c = 0; c < element.size; c++) {
+      points.push_back({shape.vertices[cur + 0].position - 1});
+      materials.push_back(element.material);
     }
-    cur += point.size;
+    cur += element.size;
   }
 }
-void get_fvquads(const obj_shape* shape, vector<vec4i>& quadspos,
+void get_fvquads(const obj_shape& shape, vector<vec4i>& quadspos,
     vector<vec4i>& quadsnorm, vector<vec4i>& quadstexcoord,
-    vector<vec3f>& positions, vector<vec3f>& normals, vector<vec2f>& texcoords,
-    vector<string>& materials, vector<int>& ematerials, bool flipv) {
-  if (shape->faces.empty()) return;
-  positions = shape->positions;
-  normals   = shape->normals;
-  texcoords = flipv ? flip_obj_texcoord(shape->texcoords) : shape->texcoords;
-  materials = shape->materials;
-  if (shape->vertices[0].position != 0) quadspos.reserve(shape->faces.size());
-  if (shape->vertices[0].normal != 0) quadsnorm.reserve(shape->faces.size());
-  if (shape->vertices[0].texcoord != 0)
-    quadstexcoord.reserve(shape->faces.size());
-  if (!materials.empty()) ematerials.reserve(shape->faces.size());
+    vector<int>& materials) {
+  quadspos.clear();
+  quadsnorm.clear();
+  quadstexcoord.clear();
+  materials.clear();
+  quadspos.reserve(shape.elements.size());
+  quadsnorm.reserve(shape.elements.size());
+  quadstexcoord.reserve(shape.elements.size());
+  materials.reserve(shape.elements.size());
   auto cur = 0;
-  for (auto& face : shape->faces) {
-    if (face.size == 4) {
-      if (shape->vertices[0].position != 0)
-        quadspos.push_back({shape->vertices[cur + 0].position - 1,
-            shape->vertices[cur + 1].position - 1,
-            shape->vertices[cur + 2].position - 1,
-            shape->vertices[cur + 3].position - 1});
-      if (shape->vertices[0].normal != 0)
-        quadsnorm.push_back({shape->vertices[cur + 0].normal - 1,
-            shape->vertices[cur + 1].normal - 1,
-            shape->vertices[cur + 2].normal - 1,
-            shape->vertices[cur + 3].normal - 1});
-      if (shape->vertices[0].texcoord != 0)
-        quadstexcoord.push_back({shape->vertices[cur + 0].texcoord - 1,
-            shape->vertices[cur + 1].texcoord - 1,
-            shape->vertices[cur + 2].texcoord - 1,
-            shape->vertices[cur + 3].texcoord - 1});
-      if (!materials.empty()) ematerials.push_back(face.material);
+  for (auto& element : shape.elements) {
+    if (element.etype != obj_etype::face) continue;
+    if (element.size == 4) {
+      if (shape.vertices[0].position != 0)
+        quadspos.push_back({shape.vertices[cur + 0].position - 1,
+            shape.vertices[cur + 1].position - 1,
+            shape.vertices[cur + 2].position - 1,
+            shape.vertices[cur + 3].position - 1});
+      if (shape.vertices[0].normal != 0)
+        quadsnorm.push_back({shape.vertices[cur + 0].normal - 1,
+            shape.vertices[cur + 1].normal - 1,
+            shape.vertices[cur + 2].normal - 1,
+            shape.vertices[cur + 3].normal - 1});
+      if (shape.vertices[0].texcoord != 0)
+        quadstexcoord.push_back({shape.vertices[cur + 0].texcoord - 1,
+            shape.vertices[cur + 1].texcoord - 1,
+            shape.vertices[cur + 2].texcoord - 1,
+            shape.vertices[cur + 3].texcoord - 1});
+      materials.push_back(element.material);
     } else {
-      for (auto c = 2; c < face.size; c++) {
-        if (shape->vertices[0].position != 0)
-          quadspos.push_back({shape->vertices[cur + 0].position - 1,
-              shape->vertices[cur + c - 1].position - 1,
-              shape->vertices[cur + c].position - 1,
-              shape->vertices[cur + c].position - 1});
-        if (shape->vertices[0].normal != 0)
-          quadsnorm.push_back({shape->vertices[cur + 0].normal - 1,
-              shape->vertices[cur + c - 1].normal - 1,
-              shape->vertices[cur + c].normal - 1,
-              shape->vertices[cur + c].normal - 1});
-        if (shape->vertices[0].texcoord != 0)
-          quadstexcoord.push_back({shape->vertices[cur + 0].texcoord - 1,
-              shape->vertices[cur + c - 1].texcoord - 1,
-              shape->vertices[cur + c].texcoord - 1,
-              shape->vertices[cur + c].texcoord - 1});
-        if (!materials.empty()) ematerials.push_back(face.material);
+      for (auto c = 2; c < element.size; c++) {
+        if (shape.vertices[0].position != 0)
+          quadspos.push_back({shape.vertices[cur + 0].position - 1,
+              shape.vertices[cur + c - 1].position - 1,
+              shape.vertices[cur + c].position - 1,
+              shape.vertices[cur + c].position - 1});
+        if (shape.vertices[0].normal != 0)
+          quadsnorm.push_back({shape.vertices[cur + 0].normal - 1,
+              shape.vertices[cur + c - 1].normal - 1,
+              shape.vertices[cur + c].normal - 1,
+              shape.vertices[cur + c].normal - 1});
+        if (shape.vertices[0].texcoord != 0)
+          quadstexcoord.push_back({shape.vertices[cur + 0].texcoord - 1,
+              shape.vertices[cur + c - 1].texcoord - 1,
+              shape.vertices[cur + c].texcoord - 1,
+              shape.vertices[cur + c].texcoord - 1});
+        materials.push_back(element.material);
       }
     }
-    cur += face.size;
+    cur += element.size;
+  }
+}
+void get_faces(const obj_shape& shape, int material, vector<vec3i>& triangles,
+    vector<vec4i>& quads) {
+  if (has_quads(shape)) {
+    get_quads(shape, material, quads);
+  } else {
+    get_triangles(shape, material, triangles);
+  }
+}
+void get_triangles(
+    const obj_shape& shape, int material, vector<vec3i>& triangles) {
+  triangles.clear();
+  if (shape.elements.empty()) return;
+  triangles.reserve(shape.elements.size());
+  auto cur = 0;
+  for (auto& element : shape.elements) {
+    if (element.etype != obj_etype::face) continue;
+    if (element.material != material) continue;
+    for (auto c = 2; c < element.size; c++) {
+      triangles.push_back({shape.vertices[cur + 0].position - 1,
+          shape.vertices[cur + c - 1].position - 1,
+          shape.vertices[cur + c].position - 1});
+    }
+    cur += element.size;
+  }
+}
+void get_quads(const obj_shape& shape, int material, vector<vec4i>& quads) {
+  quads.clear();
+  if (shape.elements.empty()) return;
+  quads.reserve(shape.elements.size());
+  auto cur = 0;
+  for (auto& element : shape.elements) {
+    if (element.etype != obj_etype::face) continue;
+    if (element.material != material) continue;
+    if (element.size == 4) {
+      quads.push_back({shape.vertices[cur + 0].position - 1,
+          shape.vertices[cur + 1].position - 1,
+          shape.vertices[cur + 2].position - 1,
+          shape.vertices[cur + 3].position - 1});
+    } else {
+      for (auto c = 2; c < element.size; c++) {
+        quads.push_back({shape.vertices[cur + 0].position - 1,
+            shape.vertices[cur + c - 1].position - 1,
+            shape.vertices[cur + c].position - 1,
+            shape.vertices[cur + c].position - 1});
+      }
+    }
+    cur += element.size;
+  }
+}
+void get_lines(const obj_shape& shape, int material, vector<vec2i>& lines) {
+  lines.clear();
+  if (shape.elements.empty()) return;
+  lines.reserve(shape.elements.size());
+  auto cur = 0;
+  for (auto& element : shape.elements) {
+    if (element.etype != obj_etype::line) continue;
+    if (element.material != material) continue;
+    for (auto c = 1; c < element.size; c++) {
+      lines.push_back({shape.vertices[cur + c - 1].position - 1,
+          shape.vertices[cur + c].position - 1});
+    }
+    cur += element.size;
+  }
+}
+void get_points(const obj_shape& shape, int material, vector<int>& points) {
+  points.clear();
+  if (shape.elements.empty()) return;
+  points.reserve(shape.elements.size());
+  auto cur = 0;
+  for (auto& element : shape.elements) {
+    if (element.etype != obj_etype::point) continue;
+    if (element.material != material) continue;
+    for (auto c = 0; c < element.size; c++) {
+      points.push_back({shape.vertices[cur + 0].position - 1});
+    }
+    cur += element.size;
   }
 }
 
-bool has_quads(obj_shape* shape) {
-  for (auto& face : shape->faces)
-    if (face.size == 4) return true;
+bool has_quads(const obj_shape& shape) {
+  for (auto& element : shape.elements)
+    if (element.etype == obj_etype::face && element.size == 4) return true;
   return false;
 }
 
-// Get obj vertices
-void get_vertices(const obj_shape* shape, int material,
-    vector<vec3f>& positions, vector<vec3f>& normals, vector<vec2f>& texcoords,
-    vector<int>& vindex, bool flipv) {
-  auto used_vertices = vector<bool>(shape->vertices.size(), false);
-  auto count         = 0;
-  for (auto& elem : shape->faces) {
-    if (elem.material == material) {
-      for (auto vid = count; vid < count + elem.size; vid++)
-        used_vertices[vid] = true;
+vector<int> get_materials(const obj_shape& shape) {
+  auto materials    = vector<int>{};
+  auto material_set = unordered_set<int>{};
+  for (auto& element : shape.elements) {
+    if (material_set.find(element.material) == material_set.end()) {
+      material_set.insert(element.material);
+      materials.push_back(element.material);
     }
-    count += elem.size;
   }
-  for (auto& elem : shape->lines) {
-    if (elem.material == material) {
-      for (auto vid = count; vid < count + elem.size; vid++)
-        used_vertices[vid] = true;
-    }
-    count += elem.size;
-  }
-  auto vmap = unordered_map<obj_vertex, int>{};
-  vmap.reserve(shape->vertices.size());
-  vindex.resize(shape->vertices.size());
-  for (auto vid = 0; vid < shape->vertices.size(); vid++) {
-    if (!used_vertices[vid]) {
-      vindex[vid] = -1;
-      continue;
-    }
-    auto& vert = shape->vertices[vid];
-    auto  it   = vmap.find(vert);
-    if (it != vmap.end()) {
-      vindex[vid] = it->second;
-      continue;
-    }
-    auto nverts = (int)positions.size();
-    vindex[vid] = nverts;
-    vmap.insert(it, {vert, nverts});
-    if (!shape->positions.empty() && vert.position != 0)
-      positions.push_back(shape->positions[vert.position - 1]);
-    if (!shape->normals.empty() && vert.normal != 0)
-      normals.push_back(shape->normals[vert.normal - 1]);
-    if (!shape->texcoords.empty() && vert.texcoord != 0)
-      texcoords.push_back(shape->texcoords[vert.texcoord - 1]);
-  }
-  if (flipv) {
-    for (auto& texcoord : texcoords) texcoord.y = 1 - texcoord.y;
-  }
-}
-
-// Get obj shape
-void get_triangles(const obj_shape* shape, int material,
-    vector<vec3i>& triangles, vector<vec3f>& positions, vector<vec3f>& normals,
-    vector<vec2f>& texcoords, bool flipv) {
-  if (shape->faces.empty()) return;
-  auto vindex = vector<int>{};
-  get_vertices(shape, material, positions, normals, texcoords, vindex, flipv);
-  triangles.reserve(shape->faces.size());
-  auto cur = 0;
-  for (auto& elem : shape->faces) {
-    if (elem.material == material) {
-      for (auto c = 2; c < elem.size; c++) {
-        triangles.push_back(
-            {vindex[cur + 0], vindex[cur + c - 1], vindex[cur + c]});
-      }
-    }
-    cur += elem.size;
-  }
-  triangles.shrink_to_fit();
-}
-void get_quads(const obj_shape* shape, int material, vector<vec4i>& quads,
-    vector<vec3f>& positions, vector<vec3f>& normals, vector<vec2f>& texcoords,
-    bool flipv) {
-  if (shape->faces.empty()) return;
-  auto vindex = vector<int>{};
-  get_vertices(shape, material, positions, normals, texcoords, vindex, flipv);
-  quads.reserve(shape->faces.size());
-  auto cur = 0;
-  for (auto& elem : shape->faces) {
-    if (elem.material == material) {
-      if (elem.size == 4) {
-        quads.push_back({vindex[cur + 0], vindex[cur + 1], vindex[cur + 2],
-            vindex[cur + 3]});
-      } else {
-        for (auto c = 2; c < elem.size; c++) {
-          quads.push_back({vindex[cur + 0], vindex[cur + c - 1],
-              vindex[cur + c], vindex[cur + c]});
-        }
-      }
-    }
-    cur += elem.size;
-  }
-  quads.shrink_to_fit();
-}
-void get_lines(const obj_shape* shape, int material, vector<vec2i>& lines,
-    vector<vec3f>& positions, vector<vec3f>& normals, vector<vec2f>& texcoords,
-    bool flipv) {
-  if (shape->lines.empty()) return;
-  auto vindex = vector<int>{};
-  get_vertices(shape, material, positions, normals, texcoords, vindex, flipv);
-  lines.reserve(shape->lines.size());
-  auto cur = 0;
-  for (auto& elem : shape->lines) {
-    if (elem.material == material) {
-      for (auto c = 1; c < elem.size; c++) {
-        lines.push_back({vindex[cur + c - 1], vindex[cur + c]});
-      }
-    }
-    cur += elem.size;
-  }
-  lines.shrink_to_fit();
-}
-void get_points(const obj_shape* shape, int material, vector<int>& points,
-    vector<vec3f>& positions, vector<vec3f>& normals, vector<vec2f>& texcoords,
-    bool flipv) {
-  if (shape->points.empty()) return;
-  auto vindex = vector<int>{};
-  get_vertices(shape, material, positions, normals, texcoords, vindex, flipv);
-  points.reserve(shape->points.size());
-  auto cur = 0;
-  for (auto& elem : shape->points) {
-    if (elem.material == material) {
-      for (auto c = 0; c < elem.size; c++) {
-        points.push_back({vindex[cur + 0]});
-      }
-    }
-    cur += elem.size;
-  }
+  return materials;
 }
 
 // Add obj shape
-void set_triangles(obj_shape* shape, const vector<vec3i>& triangles,
-    const vector<vec3f>& positions, const vector<vec3f>& normals,
-    const vector<vec2f>& texcoords, const vector<int>& ematerials, bool flipv) {
-  shape->positions = positions;
-  shape->normals   = normals;
-  shape->texcoords = flipv ? flip_obj_texcoord(texcoords) : texcoords;
-  shape->vertices.reserve(triangles.size() * 3);
+void add_positions(obj_shape& shape, const vector<vec3f>& positions) {
+  shape.positions.insert(
+      shape.positions.end(), positions.begin(), positions.end());
+}
+void add_normals(obj_shape& shape, const vector<vec3f>& normals) {
+  shape.normals.insert(shape.normals.end(), normals.begin(), normals.end());
+}
+void add_texcoords(
+    obj_shape& shape, const vector<vec2f>& texcoords, bool flipv) {
+  shape.texcoords.insert(
+      shape.texcoords.end(), texcoords.begin(), texcoords.end());
+  if (flipv) {
+    for (auto idx = shape.texcoords.size() - texcoords.size();
+         idx < shape.texcoords.size(); idx++)
+      shape.texcoords[idx].y = 1 - shape.texcoords[idx].y;
+  }
+}
+void add_triangles(obj_shape& shape, const vector<vec3i>& triangles,
+    int material, bool has_normals, bool has_texcoord) {
   for (auto idx = 0; idx < triangles.size(); idx++) {
     auto& triangle = triangles[idx];
     for (auto c = 0; c < 3; c++) {
-      shape->vertices.push_back({
-          positions.empty() ? 0 : triangle[c] + 1,
-          texcoords.empty() ? 0 : triangle[c] + 1,
-          normals.empty() ? 0 : triangle[c] + 1,
+      shape.vertices.push_back({
+          triangle[c] + 1,
+          !has_texcoord ? 0 : triangle[c] + 1,
+          !has_normals ? 0 : triangle[c] + 1,
       });
     }
-    shape->faces.push_back(
-        {3, ematerials.empty() ? (uint8_t)0 : (uint8_t)ematerials[idx]});
+    shape.elements.push_back({3, obj_etype::face, material});
   }
 }
-void set_quads(obj_shape* shape, const vector<vec4i>& quads,
-    const vector<vec3f>& positions, const vector<vec3f>& normals,
-    const vector<vec2f>& texcoords, const vector<int>& ematerials, bool flipv) {
-  shape->positions = positions;
-  shape->normals   = normals;
-  shape->texcoords = flipv ? flip_obj_texcoord(texcoords) : texcoords;
-  shape->vertices.reserve(quads.size() * 4);
+void add_quads(obj_shape& shape, const vector<vec4i>& quads, int material,
+    bool has_normals, bool has_texcoord) {
   for (auto idx = 0; idx < quads.size(); idx++) {
     auto& quad = quads[idx];
     auto  nv   = quad.z == quad.w ? 3 : 4;
     for (auto c = 0; c < nv; c++) {
-      shape->vertices.push_back({
-          positions.empty() ? 0 : quad[c] + 1,
-          texcoords.empty() ? 0 : quad[c] + 1,
-          normals.empty() ? 0 : quad[c] + 1,
+      shape.vertices.push_back({
+          quad[c] + 1,
+          !has_texcoord ? 0 : quad[c] + 1,
+          !has_normals ? 0 : quad[c] + 1,
       });
     }
-    shape->faces.push_back({(uint8_t)nv,
-        ematerials.empty() ? (uint8_t)0 : (uint8_t)ematerials[idx]});
+    shape.elements.push_back({(uint16_t)nv, obj_etype::face, material});
   }
 }
-void set_lines(obj_shape* shape, const vector<vec2i>& lines,
-    const vector<vec3f>& positions, const vector<vec3f>& normals,
-    const vector<vec2f>& texcoords, const vector<int>& ematerials, bool flipv) {
-  shape->positions = positions;
-  shape->normals   = normals;
-  shape->texcoords = flipv ? flip_obj_texcoord(texcoords) : texcoords;
-  shape->vertices.reserve(lines.size() * 2);
+void add_lines(obj_shape& shape, const vector<vec2i>& lines, int material,
+    bool has_normals, bool has_texcoord) {
   for (auto idx = 0; idx < lines.size(); idx++) {
-    auto& str = lines[idx];
+    auto& line = lines[idx];
     for (auto c = 0; c < 2; c++) {
-      shape->vertices.push_back({
-          positions.empty() ? 0 : str[c] + 1,
-          texcoords.empty() ? 0 : str[c] + 1,
-          normals.empty() ? 0 : str[c] + 1,
+      shape.vertices.push_back({
+          line[c] + 1,
+          !has_texcoord ? 0 : line[c] + 1,
+          !has_normals ? 0 : line[c] + 1,
       });
     }
-    shape->lines.push_back(
-        {2, ematerials.empty() ? (uint8_t)0 : (uint8_t)ematerials[idx]});
+    shape.elements.push_back({2, obj_etype::line, material});
   }
 }
-void set_points(obj_shape* shape, const vector<int>& points,
-    const vector<vec3f>& positions, const vector<vec3f>& normals,
-    const vector<vec2f>& texcoords, const vector<int>& ematerials, bool flipv) {
-  shape->positions = positions;
-  shape->normals   = normals;
-  shape->texcoords = flipv ? flip_obj_texcoord(texcoords) : texcoords;
-  shape->vertices.reserve(points.size());
+void add_points(obj_shape& shape, const vector<int>& points, int material,
+    bool has_normals, bool has_texcoord) {
   for (auto idx = 0; idx < points.size(); idx++) {
     auto& point = points[idx];
-    shape->vertices.push_back({
-        positions.empty() ? 0 : point + 1,
-        texcoords.empty() ? 0 : point + 1,
-        normals.empty() ? 0 : point + 1,
+    shape.vertices.push_back({
+        point + 1,
+        !has_texcoord ? 0 : point + 1,
+        !has_normals ? 0 : point + 1,
     });
-    shape->faces.push_back(
-        {1, ematerials.empty() ? (uint8_t)0 : (uint8_t)ematerials[idx]});
+    shape.elements.push_back({1, obj_etype::point, material});
   }
 }
-void set_fvquads(obj_shape* shape, const vector<vec4i>& quadspos,
+void add_fvquads(obj_shape& shape, const vector<vec4i>& quadspos,
     const vector<vec4i>& quadsnorm, const vector<vec4i>& quadstexcoord,
-    const vector<vec3f>& positions, const vector<vec3f>& normals,
-    const vector<vec2f>& texcoords, const vector<int>& ematerials, bool flipv) {
-  shape->positions = positions;
-  shape->normals   = normals;
-  shape->texcoords = flipv ? flip_obj_texcoord(texcoords) : texcoords;
-  shape->vertices.reserve(quadspos.size() * 4);
+    int material) {
   for (auto idx = 0; idx < quadspos.size(); idx++) {
     auto nv = quadspos[idx].z == quadspos[idx].w ? 3 : 4;
     for (auto c = 0; c < nv; c++) {
-      shape->vertices.push_back({
+      shape.vertices.push_back({
           quadspos.empty() ? 0 : quadspos[idx][c] + 1,
           quadstexcoord.empty() ? 0 : quadstexcoord[idx][c] + 1,
           quadsnorm.empty() ? 0 : quadsnorm[idx][c] + 1,
       });
     }
-    shape->faces.push_back({(uint8_t)nv,
-        ematerials.empty() ? (uint8_t)0 : (uint8_t)ematerials[idx]});
+    shape.elements.push_back({(uint16_t)nv, obj_etype::face, material});
   }
 }
-void set_materials(obj_shape* shape, const vector<string>& materials) {
-  shape->materials = materials;
+void add_quads(obj_shape& shape, const vector<vec4i>& quads,
+    const vector<int>& materials, bool has_normals, bool has_texcoord) {
+  for (auto idx = 0; idx < quads.size(); idx++) {
+    auto& quad = quads[idx];
+    auto  nv   = quad.z == quad.w ? 3 : 4;
+    for (auto c = 0; c < nv; c++) {
+      shape.vertices.push_back({
+          quad[c] + 1,
+          !has_texcoord ? 0 : quad[c] + 1,
+          !has_normals ? 0 : quad[c] + 1,
+      });
+    }
+    shape.elements.push_back({(uint16_t)nv, obj_etype::face, materials[idx]});
+  }
 }
-void set_instances(obj_shape* shape, const vector<frame3f>& instances) {
-  shape->instances = instances;
+void add_lines(obj_shape& shape, const vector<vec2i>& lines,
+    const vector<int>& materials, bool has_normals, bool has_texcoord) {
+  for (auto idx = 0; idx < lines.size(); idx++) {
+    auto& line = lines[idx];
+    for (auto c = 0; c < 2; c++) {
+      shape.vertices.push_back({
+          line[c] + 1,
+          !has_texcoord ? 0 : line[c] + 1,
+          !has_normals ? 0 : line[c] + 1,
+      });
+    }
+    shape.elements.push_back({2, obj_etype::line, materials[idx]});
+  }
+}
+void add_points(obj_shape& shape, const vector<int>& points,
+    const vector<int>& materials, bool has_normals, bool has_texcoord) {
+  for (auto idx = 0; idx < points.size(); idx++) {
+    auto& point = points[idx];
+    shape.vertices.push_back({
+        point + 1,
+        !has_texcoord ? 0 : point + 1,
+        !has_normals ? 0 : point + 1,
+    });
+    shape.elements.push_back({1, obj_etype::point, materials[idx]});
+  }
+}
+void add_fvquads(obj_shape& shape, const vector<vec4i>& quadspos,
+    const vector<vec4i>& quadsnorm, const vector<vec4i>& quadstexcoord,
+    const vector<int>& materials) {
+  for (auto idx = 0; idx < quadspos.size(); idx++) {
+    auto nv = quadspos[idx].z == quadspos[idx].w ? 3 : 4;
+    for (auto c = 0; c < nv; c++) {
+      shape.vertices.push_back({
+          quadspos.empty() ? 0 : quadspos[idx][c] + 1,
+          quadstexcoord.empty() ? 0 : quadstexcoord[idx][c] + 1,
+          quadsnorm.empty() ? 0 : quadsnorm[idx][c] + 1,
+      });
+    }
+    shape.elements.push_back({(uint16_t)nv, obj_etype::face, materials[idx]});
+  }
 }
 
 }  // namespace yocto
@@ -2594,13 +2817,8 @@ struct hash<yocto::vec3f> {
 // -----------------------------------------------------------------------------
 namespace yocto {
 
-// cleanup
-stl_model::~stl_model() {
-  for (auto shape : shapes) delete shape;
-}
-
 // Load/save stl
-bool load_stl(const string& filename, stl_model* stl, string& error,
+bool load_stl(const string& filename, stl_model& stl, string& error,
     bool unique_vertices) {
   // error helpers
   auto open_error = [filename, &error]() {
@@ -2616,8 +2834,7 @@ bool load_stl(const string& filename, stl_model* stl, string& error,
     return false;
   };
 
-  for (auto shape : stl->shapes) delete shape;
-  stl->shapes.clear();
+  stl.shapes.clear();
 
   // open file
   auto fs = open_file(filename, "rb");
@@ -2660,24 +2877,24 @@ bool load_stl(const string& filename, stl_model* stl, string& error,
     auto ntriangles = (uint32_t)0;
     while (read_value(fs, ntriangles)) {
       // append shape
-      auto shape = stl->shapes.emplace_back(new stl_shape{});
+      auto& shape = stl.shapes.emplace_back();
 
       // resize buffers
-      shape->fnormals.resize(ntriangles);
-      shape->triangles.resize(ntriangles);
-      shape->positions.resize(ntriangles * 3);
+      shape.fnormals.resize(ntriangles);
+      shape.triangles.resize(ntriangles);
+      shape.positions.resize(ntriangles * 3);
 
       // read all data
-      for (auto triangle_id = 0; triangle_id < ntriangles; triangle_id++) {
+      for (auto triangle_id = 0; triangle_id < (int)ntriangles; triangle_id++) {
         // read triangle data
-        if (!read_value(fs, shape->fnormals[triangle_id])) return read_error();
-        if (!read_value(fs, shape->positions[triangle_id * 3 + 0]))
+        if (!read_value(fs, shape.fnormals[triangle_id])) return read_error();
+        if (!read_value(fs, shape.positions[triangle_id * 3 + 0]))
           return read_error();
-        if (!read_value(fs, shape->positions[triangle_id * 3 + 1]))
+        if (!read_value(fs, shape.positions[triangle_id * 3 + 1]))
           return read_error();
-        if (!read_value(fs, shape->positions[triangle_id * 3 + 2]))
+        if (!read_value(fs, shape.positions[triangle_id * 3 + 2]))
           return read_error();
-        shape->triangles[triangle_id] = {
+        shape.triangles[triangle_id] = {
             triangle_id * 3 + 0, triangle_id * 3 + 1, triangle_id * 3 + 2};
         // read unused attrobute count
         auto attribute_count = (uint16_t)0;
@@ -2687,7 +2904,7 @@ bool load_stl(const string& filename, stl_model* stl, string& error,
     }
 
     // check if read at least one
-    if (stl->shapes.empty()) return read_error();
+    if (stl.shapes.empty()) return read_error();
   } else {
     // if ascii, re-open the file as text
     auto fs = open_file(filename, "rt");
@@ -2713,7 +2930,7 @@ bool load_stl(const string& filename, stl_model* stl, string& error,
       if (cmd == "solid") {
         if (in_solid) return parse_error();
         in_solid = true;
-        stl->shapes.emplace_back(new stl_shape{});
+        stl.shapes.emplace_back();
       } else if (cmd == "endsolid") {
         if (!in_solid) return parse_error();
         in_solid = false;
@@ -2724,20 +2941,20 @@ bool load_stl(const string& filename, stl_model* stl, string& error,
         if (!parse_value(str, cmd)) return parse_error();
         if (cmd != "normal") return parse_error();
         // vertex normal
-        if (!parse_value(str, stl->shapes.back()->fnormals.emplace_back()))
+        if (!parse_value(str, stl.shapes.back().fnormals.emplace_back()))
           return parse_error();
       } else if (cmd == "endfacet") {
         if (!in_solid || !in_facet || in_loop) return parse_error();
         in_facet = false;
         // check that it was a triangle
-        auto last_pos = (int)stl->shapes.back()->positions.size() - 3;
-        if (stl->shapes.back()->triangles.empty() && last_pos != 0)
+        auto last_pos = (int)stl.shapes.back().positions.size() - 3;
+        if (stl.shapes.back().triangles.empty() && last_pos != 0)
           return parse_error();
-        if (!stl->shapes.back()->triangles.empty() &&
-            last_pos != stl->shapes.back()->triangles.back().z + 1)
+        if (!stl.shapes.back().triangles.empty() &&
+            last_pos != stl.shapes.back().triangles.back().z + 1)
           return parse_error();
         // add triangle
-        stl->shapes.back()->triangles.push_back(
+        stl.shapes.back().triangles.push_back(
             {last_pos + 0, last_pos + 1, last_pos + 2});
       } else if (cmd == "outer") {
         if (!in_solid || !in_facet || in_loop) return parse_error();
@@ -2750,7 +2967,7 @@ bool load_stl(const string& filename, stl_model* stl, string& error,
         in_loop = false;
       } else if (cmd == "vertex") {
         // vertex position
-        if (!parse_value(str, stl->shapes.back()->positions.emplace_back()))
+        if (!parse_value(str, stl.shapes.back().positions.emplace_back()))
           return parse_error();
       } else {
         return parse_error();
@@ -2760,15 +2977,15 @@ bool load_stl(const string& filename, stl_model* stl, string& error,
 
   // make unique vertices
   if (unique_vertices) {
-    for (auto& shape : stl->shapes) {
+    for (auto& shape : stl.shapes) {
       auto vertex_map       = unordered_map<vec3f, int>{};
       auto unique_positions = vector<vec3f>{};
-      for (auto& triangle : shape->triangles) {
+      for (auto& triangle : shape.triangles) {
         for (auto& vertex_id : triangle) {
-          auto vertex_it = vertex_map.find(shape->positions[vertex_id]);
+          auto vertex_it = vertex_map.find(shape.positions[vertex_id]);
           if (vertex_it == vertex_map.end()) {
             auto new_vertex_id = (int)unique_positions.size();
-            unique_positions.push_back(shape->positions[vertex_id]);
+            unique_positions.push_back(shape.positions[vertex_id]);
             vertex_map.insert(
                 vertex_it, {unique_positions.back(), new_vertex_id});
             vertex_id = new_vertex_id;
@@ -2777,7 +2994,7 @@ bool load_stl(const string& filename, stl_model* stl, string& error,
           }
         }
       }
-      std::swap(unique_positions, shape->positions);
+      std::swap(unique_positions, shape.positions);
     }
   }
 
@@ -2786,7 +3003,7 @@ bool load_stl(const string& filename, stl_model* stl, string& error,
 }
 
 bool save_stl(
-    const string& filename, const stl_model* stl, string& error, bool ascii) {
+    const string& filename, const stl_model& stl, string& error, bool ascii) {
   // error helpers
   auto open_error = [filename, &error]() {
     error = filename + ": file not found";
@@ -2814,47 +3031,44 @@ bool save_stl(
     if (!write_value(fs, header)) return write_error();
 
     // write shapes
-    for (auto& shape : stl->shapes) {
-      auto ntriangles = (uint32_t)shape->triangles.size();
+    for (auto& shape : stl.shapes) {
+      auto ntriangles = (uint32_t)shape.triangles.size();
       if (!write_value(fs, ntriangles)) return write_error();
-      for (auto triangle_idx = 0; triangle_idx < shape->triangles.size();
+      for (auto triangle_idx = 0; triangle_idx < shape.triangles.size();
            triangle_idx++) {
-        auto& triangle = shape->triangles[triangle_idx];
-        auto  fnormal  = !shape->fnormals.empty()
-                             ? shape->fnormals[triangle_idx]
-                             : triangle_normal(shape->positions[triangle.x],
-                                 shape->positions[triangle.y],
-                                 shape->positions[triangle.z]);
+        auto& triangle = shape.triangles[triangle_idx];
+        auto  fnormal  = !shape.fnormals.empty()
+                             ? shape.fnormals[triangle_idx]
+                             : triangle_normal(shape.positions[triangle.x],
+                                 shape.positions[triangle.y],
+                                 shape.positions[triangle.z]);
         if (!write_value(fs, fnormal)) return write_error();
-        if (!write_value(fs, shape->positions[triangle.x]))
-          return write_error();
-        if (!write_value(fs, shape->positions[triangle.y]))
-          return write_error();
-        if (!write_value(fs, shape->positions[triangle.z]))
-          return write_error();
+        if (!write_value(fs, shape.positions[triangle.x])) return write_error();
+        if (!write_value(fs, shape.positions[triangle.y])) return write_error();
+        if (!write_value(fs, shape.positions[triangle.z])) return write_error();
         auto attribute_count = (uint16_t)0;
         if (!write_value(fs, attribute_count)) return write_error();
       }
     }
   } else {
-    for (auto& shape : stl->shapes) {
+    for (auto& shape : stl.shapes) {
       if (!format_values(fs, "solid \n")) return write_error();
-      for (auto triangle_idx = 0; triangle_idx < shape->triangles.size();
+      for (auto triangle_idx = 0; triangle_idx < shape.triangles.size();
            triangle_idx++) {
-        auto& triangle = shape->triangles[triangle_idx];
-        auto  fnormal  = !shape->fnormals.empty()
-                             ? shape->fnormals[triangle_idx]
-                             : triangle_normal(shape->positions[triangle.x],
-                                 shape->positions[triangle.y],
-                                 shape->positions[triangle.z]);
+        auto& triangle = shape.triangles[triangle_idx];
+        auto  fnormal  = !shape.fnormals.empty()
+                             ? shape.fnormals[triangle_idx]
+                             : triangle_normal(shape.positions[triangle.x],
+                                 shape.positions[triangle.y],
+                                 shape.positions[triangle.z]);
         if (!format_values(fs, "facet normal {}\n", fnormal))
           return write_error();
         if (!format_values(fs, "outer loop\n")) return write_error();
-        if (!format_values(fs, "vertex {}\n", shape->positions[triangle.x]))
+        if (!format_values(fs, "vertex {}\n", shape.positions[triangle.x]))
           return write_error();
-        if (!format_values(fs, "vertex {}\n", shape->positions[triangle.y]))
+        if (!format_values(fs, "vertex {}\n", shape.positions[triangle.y]))
           return write_error();
-        if (!format_values(fs, "vertex {}\n", shape->positions[triangle.z]))
+        if (!format_values(fs, "vertex {}\n", shape.positions[triangle.z]))
           return write_error();
         if (!format_values(fs, "endloop\n")) return write_error();
         if (!format_values(fs, "endfacet\n")) return write_error();
@@ -2868,21 +3082,21 @@ bool save_stl(
 }
 
 // Get/set data
-bool get_triangles(const stl_model* stl, int shape_id, vector<vec3i>& triangles,
+bool get_triangles(const stl_model& stl, int shape_id, vector<vec3i>& triangles,
     vector<vec3f>& positions, vector<vec3f>& fnormals) {
-  if (shape_id < 0 || shape_id >= stl->shapes.size()) return false;
-  auto shape = stl->shapes.at(shape_id);
-  triangles  = shape->triangles;
-  positions  = shape->positions;
-  fnormals   = shape->fnormals;
+  if (shape_id < 0 || shape_id >= stl.shapes.size()) return false;
+  auto& shape = stl.shapes.at(shape_id);
+  triangles   = shape.triangles;
+  positions   = shape.positions;
+  fnormals    = shape.fnormals;
   return true;
 }
-void add_triangles(stl_model* stl, const vector<vec3i>& triangles,
+void add_triangles(stl_model& stl, const vector<vec3i>& triangles,
     const vector<vec3f>& positions, const vector<vec3f>& fnormals) {
-  auto shape       = stl->shapes.emplace_back(new stl_shape{});
-  shape->triangles = triangles;
-  shape->positions = positions;
-  shape->fnormals  = fnormals;
+  auto& shape     = stl.shapes.emplace_back();
+  shape.triangles = triangles;
+  shape.positions = positions;
+  shape.fnormals  = fnormals;
 }
 
 }  // namespace yocto
@@ -3346,86 +3560,91 @@ inline pair<vec3f, vec3f> get_subsurface(const string& name) {
       // From "A Practical Model for Subsurface Light Transport"
       // Jensen, Marschner, Levoy, Hanrahan
       // Proc SIGGRAPH 2001
-      {"Apple", {{2.29, 2.39, 1.97}, {0.0030, 0.0034, 0.046}}},
-      {"Chicken1", {{0.15, 0.21, 0.38}, {0.015, 0.077, 0.19}}},
-      {"Chicken2", {{0.19, 0.25, 0.32}, {0.018, 0.088, 0.20}}},
-      {"Cream", {{7.38, 5.47, 3.15}, {0.0002, 0.0028, 0.0163}}},
-      {"Ketchup", {{0.18, 0.07, 0.03}, {0.061, 0.97, 1.45}}},
-      {"Marble", {{2.19, 2.62, 3.00}, {0.0021, 0.0041, 0.0071}}},
-      {"Potato", {{0.68, 0.70, 0.55}, {0.0024, 0.0090, 0.12}}},
-      {"Skimmilk", {{0.70, 1.22, 1.90}, {0.0014, 0.0025, 0.0142}}},
-      {"Skin1", {{0.74, 0.88, 1.01}, {0.032, 0.17, 0.48}}},
-      {"Skin2", {{1.09, 1.59, 1.79}, {0.013, 0.070, 0.145}}},
-      {"Spectralon", {{11.6, 20.4, 14.9}, {0.00, 0.00, 0.00}}},
-      {"Wholemilk", {{2.55, 3.21, 3.77}, {0.0011, 0.0024, 0.014}}},
+      {"Apple", {{2.29f, 2.39f, 1.97f}, {0.0030f, 0.0034f, 0.046f}}},
+      {"Chicken1", {{0.15f, 0.21f, 0.38f}, {0.015f, 0.077f, 0.19f}}},
+      {"Chicken2", {{0.19f, 0.25f, 0.32f}, {0.018f, 0.088f, 0.20f}}},
+      {"Cream", {{7.38f, 5.47f, 3.15f}, {0.0002f, 0.0028f, 0.0163f}}},
+      {"Ketchup", {{0.18f, 0.07f, 0.03f}, {0.061f, 0.97f, 1.45f}}},
+      {"Marble", {{2.19f, 2.62f, 3.00f}, {0.0021f, 0.0041f, 0.0071f}}},
+      {"Potato", {{0.68f, 0.70f, 0.55f}, {0.0024f, 0.0090f, 0.12f}}},
+      {"Skimmilk", {{0.70f, 1.22f, 1.90f}, {0.0014f, 0.0025f, 0.0142f}}},
+      {"Skin1", {{0.74f, 0.88f, 1.01f}, {0.032f, 0.17f, 0.48f}}},
+      {"Skin2", {{1.09f, 1.59f, 1.79f}, {0.013f, 0.070f, 0.145f}}},
+      {"Spectralon", {{11.6f, 20.4f, 14.9f}, {0.00f, 0.00f, 0.00f}}},
+      {"Wholemilk", {{2.55f, 3.21f, 3.77f}, {0.0011f, 0.0024f, 0.014f}}},
       // From "Acquiring Scattering Properties of Participating Media by
       // Dilution",
       // Narasimhan, Gupta, Donner, Ramamoorthi, Nayar, Jensen
       // Proc SIGGRAPH 2006
-      {"Lowfat Milk", {{0.89187, 1.5136, 2.532}, {0.002875, 0.00575, 0.0115}}},
+      {"Lowfat Milk",
+          {{0.89187f, 1.5136f, 2.532f}, {0.002875f, 0.00575f, 0.0115f}}},
       {"Reduced Milk",
-          {{2.4858, 3.1669, 4.5214}, {0.0025556, 0.0051111, 0.012778}}},
+          {{2.4858f, 3.1669f, 4.5214f}, {0.0025556f, 0.0051111f, 0.012778f}}},
       {"Regular Milk",
-          {{4.5513, 5.8294, 7.136}, {0.0015333, 0.0046, 0.019933}}},
-      {"Espresso", {{0.72378, 0.84557, 1.0247}, {4.7984, 6.5751, 8.8493}}},
+          {{4.5513f, 5.8294f, 7.136f}, {0.0015333f, 0.0046f, 0.019933f}}},
+      {"Espresso",
+          {{0.72378f, 0.84557f, 1.0247f}, {4.7984f, 6.5751f, 8.8493f}}},
       {"Mint Mocha Coffee",
-          {{0.31602, 0.38538, 0.48131}, {3.772, 5.8228, 7.82}}},
-      {"Lowfat Soy Milk",
-          {{0.30576, 0.34233, 0.61664}, {0.0014375, 0.0071875, 0.035937}}},
+          {{0.31602f, 0.38538f, 0.48131f}, {3.772f, 5.8228f, 7.82f}}},
+      {"Lowfat Soy Milk", {{0.30576f, 0.34233f, 0.61664f},
+                              {0.0014375f, 0.0071875f, 0.035937f}}},
       {"Regular Soy Milk",
-          {{0.59223, 0.73866, 1.4693}, {0.0019167, 0.0095833, 0.065167}}},
+          {{0.59223f, 0.73866f, 1.4693f}, {0.0019167f, 0.0095833f, 0.065167f}}},
       {"Lowfat Chocolate Milk",
-          {{0.64925, 0.83916, 1.1057}, {0.0115, 0.0368, 0.1564}}},
+          {{0.64925f, 0.83916f, 1.1057f}, {0.0115f, 0.0368f, 0.1564f}}},
       {"Regular Chocolate Milk",
-          {{1.4585, 2.1289, 2.9527}, {0.010063, 0.043125, 0.14375}}},
-      {"Coke", {{8.9053e-05, 8.372e-05, 0}, {0.10014, 0.16503, 0.2468}}},
-      {"Pepsi", {{6.1697e-05, 4.2564e-05, 0}, {0.091641, 0.14158, 0.20729}}},
-      {"Sprite", {{6.0306e-06, 6.4139e-06, 6.5504e-06},
-                     {0.001886, 0.0018308, 0.0020025}}},
-      {"Gatorade",
-          {{0.0024574, 0.003007, 0.0037325}, {0.024794, 0.019289, 0.008878}}},
-      {"Chardonnay", {{1.7982e-05, 1.3758e-05, 1.2023e-05},
-                         {0.010782, 0.011855, 0.023997}}},
-      {"White Zinfandel", {{1.7501e-05, 1.9069e-05, 1.288e-05},
-                              {0.012072, 0.016184, 0.019843}}},
-      {"Merlot", {{2.1129e-05, 0, 0}, {0.11632, 0.25191, 0.29434}}},
-      {"Budweiser Beer", {{2.4356e-05, 2.4079e-05, 1.0564e-05},
-                             {0.011492, 0.024911, 0.057786}}},
+          {{1.4585f, 2.1289f, 2.9527f}, {0.010063f, 0.043125f, 0.14375f}}},
+      {"Coke",
+          {{8.9053e-05f, 8.372e-05f, 0.0f}, {0.10014f, 0.16503f, 0.2468f}}},
+      {"Pepsi",
+          {{6.1697e-05f, 4.2564e-05f, 0.0f}, {0.091641f, 0.14158f, 0.20729f}}},
+      {"Sprite", {{6.0306e-06f, 6.4139e-06f, 6.5504e-06f},
+                     {0.001886f, 0.0018308f, 0.0020025f}}},
+      {"Gatorade", {{0.0024574f, 0.003007f, 0.0037325f},
+                       {0.024794f, 0.019289f, 0.008878f}}},
+      {"Chardonnay", {{1.7982e-05f, 1.3758e-05f, 1.2023e-05f},
+                         {0.010782f, 0.011855f, 0.023997f}}},
+      {"White Zinfandel", {{1.7501e-05f, 1.9069e-05f, 1.288e-05f},
+                              {0.012072f, 0.016184f, 0.019843f}}},
+      {"Merlot", {{2.1129e-05f, 0.0f, 0.0f}, {0.11632f, 0.25191f, 0.29434f}}},
+      {"Budweiser Beer", {{2.4356e-05f, 2.4079e-05f, 1.0564e-05f},
+                             {0.011492f, 0.024911f, 0.057786f}}},
       {"Coors Light Beer",
-          {{5.0922e-05, 4.301e-05, 0}, {0.006164, 0.013984, 0.034983}}},
-      {"Clorox",
-          {{0.0024035, 0.0031373, 0.003991}, {0.0033542, 0.014892, 0.026297}}},
-      {"Apple Juice",
-          {{0.00013612, 0.00015836, 0.000227}, {0.012957, 0.023741, 0.052184}}},
-      {"Cranberry Juice", {{0.00010402, 0.00011646, 7.8139e-05},
-                              {0.039437, 0.094223, 0.12426}}},
-      {"Grape Juice", {{5.382e-05, 0, 0}, {0.10404, 0.23958, 0.29325}}},
+          {{5.0922e-05f, 4.301e-05f, 0.0f}, {0.006164f, 0.013984f, 0.034983f}}},
+      {"Clorox", {{0.0024035f, 0.0031373f, 0.003991f},
+                     {0.0033542f, 0.014892f, 0.026297f}}},
+      {"Apple Juice", {{0.00013612f, 0.00015836f, 0.000227f},
+                          {0.012957f, 0.023741f, 0.052184f}}},
+      {"Cranberry Juice", {{0.00010402f, 0.00011646f, 7.8139e-05f},
+                              {0.039437f, 0.094223f, 0.12426f}}},
+      {"Grape Juice",
+          {{5.382e-05f, 0.0f, 0.0f}, {0.10404f, 0.23958f, 0.29325f}}},
       {"Ruby Grapefruit Juice",
-          {{0.011002, 0.010927, 0.011036}, {0.085867, 0.18314, 0.25262}}},
+          {{0.011002f, 0.010927f, 0.011036f}, {0.085867f, 0.18314f, 0.25262f}}},
       {"White Grapefruit Juice",
-          {{0.22826, 0.23998, 0.32748}, {0.0138, 0.018831, 0.056781}}},
-      {"Shampoo",
-          {{0.0007176, 0.0008303, 0.0009016}, {0.014107, 0.045693, 0.061717}}},
-      {"Strawberry Shampoo",
-          {{0.00015671, 0.00015947, 1.518e-05}, {0.01449, 0.05796, 0.075823}}},
+          {{0.22826f, 0.23998f, 0.32748f}, {0.0138f, 0.018831f, 0.056781f}}},
+      {"Shampoo", {{0.0007176f, 0.0008303f, 0.0009016f},
+                      {0.014107f, 0.045693f, 0.061717f}}},
+      {"Strawberry Shampoo", {{0.00015671f, 0.00015947f, 1.518e-05f},
+                                 {0.01449f, 0.05796f, 0.075823f}}},
       {"Head & Shoulders Shampoo",
-          {{0.023805, 0.028804, 0.034306}, {0.084621, 0.15688, 0.20365}}},
+          {{0.023805f, 0.028804f, 0.034306f}, {0.084621f, 0.15688f, 0.20365f}}},
       {"Lemon Tea Powder",
-          {{0.040224, 0.045264, 0.051081}, {2.4288, 4.5757, 7.2127}}},
-      {"Orange Powder", {{0.00015617, 0.00017482, 0.0001762},
-                            {0.001449, 0.003441, 0.007863}}},
-      {"Pink Lemonade Powder", {{0.00012103, 0.00013073, 0.00012528},
-                                   {0.001165, 0.002366, 0.003195}}},
+          {{0.040224f, 0.045264f, 0.051081f}, {2.4288f, 4.5757f, 7.2127f}}},
+      {"Orange Powder", {{0.00015617f, 0.00017482f, 0.0001762f},
+                            {0.001449f, 0.003441f, 0.007863f}}},
+      {"Pink Lemonade Powder", {{0.00012103f, 0.00013073f, 0.00012528f},
+                                   {0.001165f, 0.002366f, 0.003195f}}},
       {"Cappuccino Powder",
-          {{1.8436, 2.5851, 2.1662}, {35.844, 49.547, 61.084}}},
+          {{1.8436f, 2.5851f, 2.1662f}, {35.844f, 49.547f, 61.084f}}},
       {"Salt Powder",
-          {{0.027333, 0.032451, 0.031979}, {0.28415, 0.3257, 0.34148}}},
-      {"Sugar Powder",
-          {{0.00022272, 0.00025513, 0.000271}, {0.012638, 0.031051, 0.050124}}},
+          {{0.027333f, 0.032451f, 0.031979f}, {0.28415f, 0.3257f, 0.34148f}}},
+      {"Sugar Powder", {{0.00022272f, 0.00025513f, 0.000271f},
+                           {0.012638f, 0.031051f, 0.050124f}}},
       {"Suisse Mocha Powder",
-          {{2.7979, 3.5452, 4.3365}, {17.502, 27.004, 35.433}}},
-      {"Pacific Ocean Surface Water", {{0.0001764, 0.00032095, 0.00019617},
-                                          {0.031845, 0.031324, 0.030147}}},
+          {{2.7979f, 3.5452f, 4.3365f}, {17.502f, 27.004f, 35.433f}}},
+      {"Pacific Ocean Surface Water", {{0.0001764f, 0.00032095f, 0.00019617f},
+                                          {0.031845f, 0.031324f, 0.030147f}}},
   };
   return params.at(name);
 }
@@ -3455,6 +3674,15 @@ inline bool parse_params(string_view& str, vector<pbrt_value>& values) {
     } else {
       return parse_value(str, value);
     }
+  };
+
+  auto starts_with = [](string_view value, string_view prefix) {
+    if (prefix.size() > value.size()) return false;
+    return value.rfind(prefix, 0) == 0;
+  };
+  auto ends_with = [](string_view value, string_view postfix) {
+    if (postfix.size() > value.size()) return false;
+    return std::equal(postfix.rbegin(), postfix.rend(), value.rbegin());
   };
 
   values.clear();
@@ -3504,12 +3732,20 @@ inline bool parse_params(string_view& str, vector<pbrt_value>& values) {
       value.type = pbrt_type::vector2;
       parse_pvalues(str, value.value2f, value.vector2f);
     } else if (type == "blackbody") {
-      value.type     = pbrt_type::color;
-      auto blackbody = zero2f;
-      auto vector2f  = vector<vec2f>{};
-      parse_pvalues(str, blackbody, vector2f);
-      if (!vector2f.empty()) return false;
-      value.value3f = blackbody_to_rgb(blackbody.x) * blackbody.y;
+      value.type = pbrt_type::color;
+      // auto blackbody = zero2f;
+      // auto vec tor2f  = vector<vec2f>{};
+      // parse_pvalues(str, blackbody, vector2f);
+      // if (!vector2f.empty()) return false;
+      // value.value3f = blackbody_to_rgb(blackbody.x) * blackbody.y;
+      auto blackbody = 0.0f;
+      auto vector1f  = vector<float>{};
+      parse_pvalues(str, blackbody, vector1f);
+      if (vector1f.size() < 2) {
+        value.value3f = blackbody_to_rgb(blackbody);
+      } else {
+        value.value3f = blackbody_to_rgb(vector1f[0]) * vector1f[1];
+      }
     } else if (type == "color" || type == "rgb") {
       value.type = pbrt_type::color;
       if (!parse_pvalues(str, value.value3f, value.vector3f)) return false;
@@ -3533,22 +3769,48 @@ inline bool parse_params(string_view& str, vector<pbrt_value>& values) {
         value.type     = pbrt_type::color;
         auto filename  = ""s;
         auto filenames = vector<string>{};
+        skip_whitespace(str);
+        auto has_parens = str.front() == '[';
+        if (has_parens) str.remove_prefix(1);
         if (!parse_value(str, filename)) return false;
+        if (has_parens) {
+          skip_whitespace(str);
+          if (str.front() != ']') return false;
+          str.remove_prefix(1);
+        }
         if (str.empty()) return false;
         auto filenamep = path_filename(filename);
-        if (path_extension(filenamep) == ".spd") {
-          filenamep = replace_extension(filenamep, "");
-          if (filenamep == "SHPS") {
+        auto name      = string_view{filenamep};
+        if (ends_with(name, ".spd")) {
+          name.remove_suffix(4);
+          if (name == "SHPS") {
             value.value3f = {1, 1, 1};
-          } else if (path_extension(filenamep) == ".eta") {
-            auto eta      = get_etak(replace_extension(filenamep, "")).first;
+          } else if (ends_with(name, ".eta")) {
+            name.remove_suffix(4);
+            auto eta      = get_etak(string{name}).first;
             value.value3f = {eta.x, eta.y, eta.z};
-          } else if (path_extension(filenamep) == ".k") {
-            auto k        = get_etak(replace_extension(filenamep, "")).second;
+          } else if (ends_with(name, ".k")) {
+            name.remove_suffix(2);
+            auto k        = get_etak(string{name}).second;
             value.value3f = {k.x, k.y, k.z};
           } else {
             return false;
           }
+        } else if (starts_with(name, "metal-")) {
+          name.remove_prefix(6);
+          if (ends_with(name, "-eta")) {
+            name.remove_suffix(4);
+            auto eta      = get_etak(string{name}).first;
+            value.value3f = {eta.x, eta.y, eta.z};
+          } else if (ends_with(name, "-k")) {
+            name.remove_suffix(2);
+            auto k        = get_etak(string{name}).second;
+            value.value3f = {k.x, k.y, k.z};
+          } else {
+            return false;
+          }
+        } else if (starts_with(name, "glass-")) {
+          value.value3f = {1.5, 1.5, 1.5};
         } else {
           return false;
         }
@@ -3571,14 +3833,6 @@ struct pbrt_film {
   vec2i  resolution = {0, 0};
 };
 
-// Pbrt texture
-struct pbrt_texture {
-  // texture parameters
-  string name     = "";
-  vec3f  constant = {1, 1, 1};
-  string filename = "";
-};
-
 // Pbrt area light
 struct pbrt_arealight {
   // arealight parameters
@@ -3593,7 +3847,7 @@ struct pbrt_medium {
 };
 
 // convert pbrt films
-inline bool convert_film(pbrt_film* film, const pbrt_command& command,
+inline bool convert_film(pbrt_film& film, const pbrt_command& command,
     const string& filename, string& error, bool verbose = false) {
   auto parse_error = [filename, &error]() {
     error = filename + ": parse error";
@@ -3605,13 +3859,23 @@ inline bool convert_film(pbrt_film* film, const pbrt_command& command,
   };
 
   if (command.type == "image") {
-    film->resolution = {512, 512};
-    if (!get_pbrt_value(command.values, "xresolution", film->resolution.x))
+    film.resolution = {512, 512};
+    if (!get_pbrt_value(command.values, "xresolution", film.resolution.x))
       return parse_error();
-    if (!get_pbrt_value(command.values, "yresolution", film->resolution.y))
+    if (!get_pbrt_value(command.values, "yresolution", film.resolution.y))
       return parse_error();
-    film->filename = "out.png"s;
-    if (!get_pbrt_value(command.values, "filename", film->filename))
+    film.filename = "out.png"s;
+    if (!get_pbrt_value(command.values, "filename", film.filename))
+      return parse_error();
+    return true;
+  } else if (command.type == "rgb") {
+    film.resolution = {512, 512};
+    if (!get_pbrt_value(command.values, "xresolution", film.resolution.x))
+      return parse_error();
+    if (!get_pbrt_value(command.values, "yresolution", film.resolution.y))
+      return parse_error();
+    film.filename = "out.png"s;
+    if (!get_pbrt_value(command.values, "filename", film.filename))
       return parse_error();
     return true;
   } else {
@@ -3620,7 +3884,7 @@ inline bool convert_film(pbrt_film* film, const pbrt_command& command,
 }
 
 // convert pbrt elements
-inline bool convert_camera(pbrt_camera* pcamera, const pbrt_command& command,
+inline bool convert_camera(pbrt_camera& pcamera, const pbrt_command& command,
     const vec2i& resolution, const string& filename, string& error,
     bool verbose = false) {
   auto parse_error = [filename, &error]() {
@@ -3632,45 +3896,45 @@ inline bool convert_camera(pbrt_camera* pcamera, const pbrt_command& command,
     return false;
   };
 
-  pcamera->frame      = command.frame;
-  pcamera->frend      = command.frend;
-  pcamera->frame      = inverse((frame3f)pcamera->frame);
-  pcamera->frame.z    = -pcamera->frame.z;
-  pcamera->resolution = resolution;
+  pcamera.frame      = command.frame;
+  pcamera.frend      = command.frend;
+  pcamera.frame      = inverse((frame3f)pcamera.frame);
+  pcamera.frame.z    = -pcamera.frame.z;
+  pcamera.resolution = resolution;
   auto film_aspect =
       (resolution == zero2i) ? 1 : (float)resolution.x / (float)resolution.y;
   if (command.type == "perspective") {
     auto fov = 90.0f;
     if (!get_pbrt_value(command.values, "fov", fov)) return parse_error();
     // auto lensradius = if(!get_pbrt_value(values, "lensradius", 0.0f);
-    pcamera->aspect = film_aspect;
-    if (pcamera->aspect >= 1) {
-      pcamera->lens = (0.036 / pcamera->aspect) / (2 * tan(radians(fov) / 2));
+    pcamera.aspect = film_aspect;
+    if (pcamera.aspect >= 1) {
+      pcamera.lens = (0.036f / pcamera.aspect) / (2 * tan(radians(fov) / 2));
     } else {
-      pcamera->lens = (0.036 * pcamera->aspect) / (2 * tan(radians(fov) / 2));
+      pcamera.lens = (0.036f * pcamera.aspect) / (2 * tan(radians(fov) / 2));
     }
-    if (!get_pbrt_value(command.values, "frameaspectratio", pcamera->aspect))
+    if (!get_pbrt_value(command.values, "frameaspectratio", pcamera.aspect))
       return parse_error();
-    pcamera->focus = 10.0f;
-    if (!get_pbrt_value(command.values, "focaldistance", pcamera->focus))
+    pcamera.focus = 10.0f;
+    if (!get_pbrt_value(command.values, "focaldistance", pcamera.focus))
       return parse_error();
     return true;
   } else if (command.type == "realistic") {
     auto lensfile = ""s;
     if (!get_pbrt_value(command.values, "lensfile", lensfile))
       return parse_error();
-    lensfile          = lensfile.substr(0, lensfile.size() - 4);
-    lensfile          = lensfile.substr(lensfile.find('.') + 1);
-    lensfile          = lensfile.substr(0, lensfile.size() - 2);
-    auto lens         = max((float)std::atof(lensfile.c_str()), 35.0f) * 0.001f;
-    pcamera->lens     = 2 * atan(0.036f / (2 * lens));
-    pcamera->aperture = 0.0f;
-    if (!get_pbrt_value(command.values, "aperturediameter", pcamera->aperture))
+    lensfile         = lensfile.substr(0, lensfile.size() - 4);
+    lensfile         = lensfile.substr(lensfile.find('.') + 1);
+    lensfile         = lensfile.substr(0, lensfile.size() - 2);
+    auto lens        = max((float)std::atof(lensfile.c_str()), 35.0f) * 0.001f;
+    pcamera.lens     = 2 * atan(0.036f / (2 * lens));
+    pcamera.aperture = 0.0f;
+    if (!get_pbrt_value(command.values, "aperturediameter", pcamera.aperture))
       return parse_error();
-    pcamera->focus = 10.0f;
-    if (!get_pbrt_value(command.values, "focusdistance", pcamera->focus))
+    pcamera.focus = 10.0f;
+    if (!get_pbrt_value(command.values, "focusdistance", pcamera.focus))
       return parse_error();
-    pcamera->aspect = film_aspect;
+    pcamera.aspect = film_aspect;
     return true;
   } else {
     return type_error();
@@ -3678,7 +3942,7 @@ inline bool convert_camera(pbrt_camera* pcamera, const pbrt_command& command,
 }
 
 // convert pbrt textures
-inline bool convert_texture(pbrt_texture* ptexture, const pbrt_command& command,
+inline bool convert_texture(pbrt_texture& ptexture, const pbrt_command& command,
     unordered_map<string, pbrt_texture>& texture_map, const string& filename,
     string& error, bool verbose = false) {
   auto parse_error = [filename, &error]() {
@@ -3697,23 +3961,23 @@ inline bool convert_texture(pbrt_texture* ptexture, const pbrt_command& command,
     return pos->second.filename;
   };
 
-  ptexture->name = command.name;
+  ptexture.name = command.name;
   if (command.type == "imagemap") {
-    ptexture->filename = "";
-    if (!get_pbrt_value(command.values, "filename", ptexture->filename))
+    ptexture.filename = "";
+    if (!get_pbrt_value(command.values, "filename", ptexture.filename))
       return parse_error();
     return true;
   } else if (command.type == "constant") {
-    ptexture->constant = vec3f{1, 1, 1};
-    if (!get_pbrt_value(command.values, "value", ptexture->constant))
+    ptexture.constant = vec3f{1, 1, 1};
+    if (!get_pbrt_value(command.values, "value", ptexture.constant))
       return parse_error();
     return true;
   } else if (command.type == "bilerp") {
-    ptexture->constant = {1, 0, 0};
+    ptexture.constant = {1, 0, 0};
     return true;
   } else if (command.type == "checkerboard") {
     // auto tex1     = if(!get_pbrt_value(command.values, "tex1",
-    // pair{vec3f{1},
+    // pair{vec3f{1,1,1},
     // ""s}); auto tex2     = if(!get_pbrt_value(command.values, "tex2",
     //  pair{vec3f{0}, ""s}); auto rgb1     = tex1.second == "" ?
     //  tex1.first :
@@ -3723,27 +3987,27 @@ inline bool convert_texture(pbrt_texture* ptexture, const pbrt_command& command,
     // rgb1.z, 1}; params.color1 = {rgb2.x, rgb2.y, rgb2.z, 1}; params.scale
     // = 2; make_proc_image(texture.hdr, params); float_to_byte(texture.ldr,
     // texture.hdr); texture.hdr = {};
-    ptexture->constant = {0.5, 0.5, 0.5};
+    ptexture.constant = {0.5, 0.5, 0.5};
     return true;
   } else if (command.type == "dots") {
-    ptexture->constant = {0.5, 0.5, 0.5};
+    ptexture.constant = {0.5, 0.5, 0.5};
     return true;
   } else if (command.type == "fbm") {
-    ptexture->constant = {0.5, 0.5, 0.5};
+    ptexture.constant = {0.5, 0.5, 0.5};
     return true;
   } else if (command.type == "marble") {
-    ptexture->constant = {0.5, 0.5, 0.5};
+    ptexture.constant = {0.5, 0.5, 0.5};
     return true;
   } else if (command.type == "mix") {
     auto tex1 = pair{vec3f{0, 0, 0}, ""s}, tex2 = pair{vec3f{1, 1, 1}, ""s};
     if (!get_pbrt_value(command.values, "tex1", tex1)) return parse_error();
     if (!get_pbrt_value(command.values, "tex2", tex2)) return parse_error();
     if (!make_filename(tex1.second).empty()) {
-      ptexture->filename = make_filename(tex1.second);
+      ptexture.filename = make_filename(tex1.second);
     } else if (!make_filename(tex2.second).empty()) {
-      ptexture->filename = make_filename(tex2.second);
+      ptexture.filename = make_filename(tex2.second);
     } else {
-      ptexture->constant = {1, 0, 0};
+      ptexture.constant = {1, 0, 0};
     }
     return true;
   } else if (command.type == "scale") {
@@ -3751,21 +4015,21 @@ inline bool convert_texture(pbrt_texture* ptexture, const pbrt_command& command,
     if (!get_pbrt_value(command.values, "tex1", tex2)) return parse_error();
     if (!get_pbrt_value(command.values, "tex2", tex1)) return parse_error();
     if (!make_filename(tex1.second).empty()) {
-      ptexture->filename = make_filename(tex1.second);
+      ptexture.filename = make_filename(tex1.second);
     } else if (!make_filename(tex2.second).empty()) {
-      ptexture->filename = make_filename(tex2.second);
+      ptexture.filename = make_filename(tex2.second);
     } else {
-      ptexture->constant = {1, 0, 0};
+      ptexture.constant = {1, 0, 0};
     }
     return true;
   } else if (command.type == "uv") {
-    ptexture->constant = {1, 0, 0};
+    ptexture.constant = {1, 0, 0};
     return true;
   } else if (command.type == "windy") {
-    ptexture->constant = {1, 0, 0};
+    ptexture.constant = {1, 0, 0};
     return true;
   } else if (command.type == "wrinkled") {
-    ptexture->constant = {1, 0, 0};
+    ptexture.constant = {1, 0, 0};
     return true;
   } else {
     return type_error();
@@ -3773,8 +4037,8 @@ inline bool convert_texture(pbrt_texture* ptexture, const pbrt_command& command,
 }
 
 // convert pbrt materials
-inline bool convert_material(pbrt_material*     pmaterial,
-    const pbrt_command&                         command,
+inline bool convert_material(pbrt_material& pmaterial,
+    const pbrt_command& command, unordered_map<string, int>& texture_map,
     const unordered_map<string, pbrt_material>& named_materials,
     const unordered_map<string, pbrt_texture>&  named_textures,
     const string& filename, string& error, bool verbose = false) {
@@ -3796,22 +4060,33 @@ inline bool convert_material(pbrt_material*     pmaterial,
   };
 
   // helpers
+  auto get_texture_id = [&texture_map](const string& path) {
+    if (path.empty()) return -1;
+    auto texture_it = texture_map.find(path);
+    if (texture_it == texture_map.end()) {
+      auto texture_id   = (int)texture_map.size();
+      texture_map[path] = texture_id;
+      return texture_id;
+    } else {
+      return texture_it->second;
+    }
+  };
   auto get_texture = [&](const vector<pbrt_value>& values, const string& name,
-                         vec3f& color, string& filename,
+                         vec3f& color, int& texture_id,
                          const vec3f& def) -> bool {
     auto textured = pair{def, ""s};
     if (!get_pbrt_value(values, name, textured)) return parse_error();
     if (textured.second.empty()) {
-      color    = textured.first;
-      filename = "";
+      color      = textured.first;
+      texture_id = -1;
     } else {
       auto& texture = named_textures.at(textured.second);
       if (texture.filename.empty()) {
-        color    = texture.constant;
-        filename = "";
+        color      = texture.constant;
+        texture_id = -1;
       } else {
-        color    = {1, 1, 1};
-        filename = texture.filename;
+        color      = {1, 1, 1};
+        texture_id = get_texture_id(texture.filename);
       }
     }
     return true;
@@ -3880,10 +4155,10 @@ inline bool convert_material(pbrt_material*     pmaterial,
            ((eta + 1) * (eta + 1) + etak * etak);
   };
 
-  pmaterial->name = command.name;
+  pmaterial.name = command.name;
   if (command.type == "uber") {
     auto diffuse = zero3f, specular = zero3f, transmission = zero3f;
-    auto diffuse_map = ""s, specular_map = ""s, transmission_map = ""s;
+    auto diffuse_map = -1, specular_map = -1, transmission_map = -1;
     if (!get_texture(command.values, "Kd", diffuse, diffuse_map,
             vec3f{0.25, 0.25, 0.25}))
       return parse_error();
@@ -3894,61 +4169,96 @@ inline bool convert_material(pbrt_material*     pmaterial,
             vec3f{0, 0, 0}))
       return parse_error();
     if (max(transmission) > 0.1) {
-      pmaterial->color        = transmission;
-      pmaterial->color_tex    = transmission_map;
-      pmaterial->specular     = 1;
-      pmaterial->transmission = 1;
+      pmaterial.type      = pbrt_mtype::thinglass;
+      pmaterial.color     = transmission;
+      pmaterial.color_tex = transmission_map;
+    } else if (max(specular) > 0.1) {
+      pmaterial.type      = pbrt_mtype::plastic;
+      pmaterial.color     = diffuse;
+      pmaterial.color_tex = diffuse_map;
     } else {
-      pmaterial->color     = diffuse;
-      pmaterial->color_tex = diffuse_map;
-      pmaterial->specular  = 1;
+      pmaterial.type      = pbrt_mtype::plastic;
+      pmaterial.color     = diffuse;
+      pmaterial.color_tex = diffuse_map;
     }
-    if (!get_scalar(command.values, "opacity", pmaterial->opacity, 1))
+    if (!get_scalar(command.values, "opacity", pmaterial.opacity, 1))
       return parse_error();
-    if (!get_scalar(command.values, "eta", pmaterial->ior, 1.5))
+    if (!get_scalar(command.values, "eta", pmaterial.ior, 1.5f))
       return parse_error();
-    if (!get_roughness(command.values, pmaterial->roughness, 0.1))
+    if (!get_roughness(command.values, pmaterial.roughness, 0.1f))
       return parse_error();
     return true;
   } else if (command.type == "plastic") {
-    if (!get_texture(command.values, "Kd", pmaterial->color,
-            pmaterial->color_tex, vec3f{0.25, 0.25, 0.25}))
+    pmaterial.type = pbrt_mtype::plastic;
+    if (!get_texture(command.values, "Kd", pmaterial.color, pmaterial.color_tex,
+            vec3f{0.25, 0.25, 0.25}))
       return parse_error();
-    if (!get_scalar(command.values, "Ks", pmaterial->specular, 0.25))
+    // if (!get_scalar(command.values, "Ks", pmaterial.specular, 0.25))
+    //   return parse_error();
+    if (!get_scalar(command.values, "eta", pmaterial.ior, 1.5f))
       return parse_error();
-    if (!get_scalar(command.values, "eta", pmaterial->ior, 1.5))
+    pmaterial.roughness = 0.1f;
+    if (!get_roughness(command.values, pmaterial.roughness, 0.1f))
       return parse_error();
-    pmaterial->roughness = 0.1f;
-    if (!get_roughness(command.values, pmaterial->roughness, 0.1))
+    return true;
+  } else if (command.type == "coateddiffuse") {
+    pmaterial.type = pbrt_mtype::plastic;
+    if (!get_texture(command.values, "reflectance", pmaterial.color,
+            pmaterial.color_tex, vec3f{0.25, 0.25, 0.25}))
+      return parse_error();
+    if (!get_scalar(command.values, "eta", pmaterial.ior, 1.5f))
+      return parse_error();
+    pmaterial.roughness = 0.1f;
+    if (!get_roughness(command.values, pmaterial.roughness, 0.1f))
       return parse_error();
     return true;
   } else if (command.type == "translucent") {
-    if (!get_texture(command.values, "Kd", pmaterial->color,
-            pmaterial->color_tex, vec3f{0.25, 0.25, 0.25}))
+    // not well supported yet
+    pmaterial.type = pbrt_mtype::matte;
+    if (!get_texture(command.values, "Kd", pmaterial.color, pmaterial.color_tex,
+            vec3f{0.25, 0.25, 0.25}))
       return parse_error();
-    if (!get_scalar(command.values, "Ks", pmaterial->specular, 0.25))
+    // if (!get_scalar(command.values, "Ks", pmaterial.specular, 0.25))
+    //   return parse_error();
+    // if (!get_scalar(command.values, "eta", pmaterial.ior, 1.5))
+    //   return parse_error();
+    // if (!get_roughness(command.values, pmaterial.roughness, 0.1))
+    //   return parse_error();
+    return true;
+  } else if (command.type == "diffusetransmission") {
+    // not well supported yet
+    pmaterial.type = pbrt_mtype::matte;
+    if (!get_texture(command.values, "reflectance", pmaterial.color,
+            pmaterial.color_tex, vec3f{0.25f, 0.25f, 0.25f}))
       return parse_error();
-    if (!get_scalar(command.values, "eta", pmaterial->ior, 1.5))
-      return parse_error();
-    if (!get_roughness(command.values, pmaterial->roughness, 0.1))
-      return parse_error();
+    // if (!get_texture(command.values, "transmittance", pmaterial.color,
+    //         pmaterial.color_tex, vec3f{0.25, 0.25, 0.25}))
+    //   return parse_error();
     return true;
   } else if (command.type == "matte") {
-    if (!get_texture(command.values, "Kd", pmaterial->color,
-            pmaterial->color_tex, vec3f{0.5, 0.5, 0.5}))
+    pmaterial.type = pbrt_mtype::matte;
+    if (!get_texture(command.values, "Kd", pmaterial.color, pmaterial.color_tex,
+            vec3f{0.5, 0.5, 0.5}))
+      return parse_error();
+    return true;
+  } else if (command.type == "diffuse") {
+    pmaterial.type = pbrt_mtype::matte;
+    if (!get_texture(command.values, "reflectance", pmaterial.color,
+            pmaterial.color_tex, vec3f{0.5f, 0.5f, 0.5f}))
       return parse_error();
     return true;
   } else if (command.type == "mirror") {
-    if (!get_texture(command.values, "Kr", pmaterial->color,
-            pmaterial->color_tex, vec3f{0.9, 0.9, 0.9}))
+    pmaterial.type = pbrt_mtype::metal;
+    if (!get_texture(command.values, "Kr", pmaterial.color, pmaterial.color_tex,
+            vec3f{0.9f, 0.9f, 0.9f}))
       return parse_error();
-    pmaterial->metallic  = 1;
-    pmaterial->roughness = 0;
+    pmaterial.roughness = 0;
     return true;
   } else if (command.type == "metal") {
+    pmaterial.type = pbrt_mtype::metal;
     // get_texture(
     //     values, "Kr", material->specular, material->specular_tex,
-    //     vec3f{1});
+    //     vec3f{1,1,1});
     auto eta = zero3f, etak = zero3f;
     if (!get_color(command.values, "eta", eta,
             vec3f{0.2004376970f, 0.9240334304f, 1.1022119527f}))
@@ -3956,90 +4266,136 @@ inline bool convert_material(pbrt_material*     pmaterial,
     if (!get_color(command.values, "k", etak,
             vec3f{3.9129485033f, 2.4528477015f, 2.1421879552f}))
       return parse_error();
-    pmaterial->color     = eta_to_reflectivity(eta, etak);
-    pmaterial->roughness = 0.01f;
-    if (!get_roughness(command.values, pmaterial->roughness, 0.01))
+    pmaterial.color     = eta_to_reflectivity(eta, etak);
+    pmaterial.roughness = 0.01f;
+    if (!get_roughness(command.values, pmaterial.roughness, 0.01f))
+      return parse_error();
+    return true;
+  } else if (command.type == "conductor") {
+    pmaterial.type = pbrt_mtype::metal;
+    auto eta = zero3f, etak = zero3f;
+    if (!get_color(command.values, "eta", eta,
+            vec3f{0.2004376970f, 0.9240334304f, 1.1022119527f}))
+      return parse_error();
+    if (!get_color(command.values, "k", etak,
+            vec3f{3.9129485033f, 2.4528477015f, 2.1421879552f}))
+      return parse_error();
+    pmaterial.color     = eta_to_reflectivity(eta, etak);
+    pmaterial.roughness = 0.01f;
+    if (!get_roughness(command.values, pmaterial.roughness, 0.01f))
+      return parse_error();
+    return true;
+  } else if (command.type == "coatedconductor") {
+    pmaterial.type = pbrt_mtype::metal;
+    auto eta = zero3f, etak = zero3f;
+    if (!get_color(command.values, "conductor.eta", eta,
+            vec3f{0.2004376970f, 0.9240334304f, 1.1022119527f}))
+      return parse_error();
+    if (!get_color(command.values, "conductor.k", etak,
+            vec3f{3.9129485033f, 2.4528477015f, 2.1421879552f}))
+      return parse_error();
+    pmaterial.color     = eta_to_reflectivity(eta, etak);
+    pmaterial.roughness = 0.01f;
+    if (!get_roughness(command.values, pmaterial.roughness, 0.01f))
       return parse_error();
     return true;
   } else if (command.type == "substrate") {
-    if (!get_texture(command.values, "Kd", pmaterial->color,
-            pmaterial->color_tex, vec3f{0.5, 0.5, 0.5}))
+    // not well supported
+    pmaterial.type = pbrt_mtype::plastic;
+    if (!get_texture(command.values, "Kd", pmaterial.color, pmaterial.color_tex,
+            vec3f{0.5f, 0.5f, 0.5f}))
       return parse_error();
-    if (!get_scalar(command.values, "Ks", pmaterial->specular, 0.5))
+    auto specular = 0.0f;
+    if (!get_scalar(command.values, "Ks", specular, 0.5f)) return parse_error();
+    if (!get_scalar(command.values, "eta", pmaterial.ior, 1.5f))
       return parse_error();
-    if (!get_scalar(command.values, "eta", pmaterial->ior, 1.5))
-      return parse_error();
-    pmaterial->roughness = 0.1f;
-    if (!get_roughness(command.values, pmaterial->roughness, 0.1))
+    pmaterial.roughness = 0.1f;
+    if (!get_roughness(command.values, pmaterial.roughness, 0.1f))
       return parse_error();
     return true;
   } else if (command.type == "glass") {
-    // get_texture(
-    //     values, "Kr", material->specular, material->specular_tex,
-    //     vec3f{1});
-    // get_texture(command.values, "Kt", material->transmission,
-    //     material->transmission_tex, vec3f{1});
-    pmaterial->color        = {1, 1, 1};
-    pmaterial->specular     = 1;
-    pmaterial->transmission = 1;
-    pmaterial->thin         = false;
-    if (!get_scalar(command.values, "eta", pmaterial->ior, 1.5))
+    pmaterial.type = pbrt_mtype::glass;
+    get_texture(command.values, "Kt", pmaterial.color, pmaterial.color_tex,
+        vec3f{1, 1, 1});
+    if (!get_scalar(command.values, "eta", pmaterial.ior, 1.5f))
       return parse_error();
-    pmaterial->roughness = 0;
-    if (!get_roughness(command.values, pmaterial->roughness, 0))
+    pmaterial.roughness = 0;
+    if (!get_roughness(command.values, pmaterial.roughness, 0.0f))
+      return parse_error();
+    return true;
+  } else if (command.type == "dielectric") {
+    pmaterial.type  = pbrt_mtype::glass;
+    pmaterial.color = {1, 1, 1};
+    if (!get_scalar(command.values, "eta", pmaterial.ior, 1.5f))
+      return parse_error();
+    pmaterial.roughness = 0;
+    if (!get_roughness(command.values, pmaterial.roughness, 0.0f))
+      return parse_error();
+    return true;
+  } else if (command.type == "thindielectric") {
+    pmaterial.type  = pbrt_mtype::thinglass;
+    pmaterial.color = {1, 1, 1};
+    if (!get_scalar(command.values, "eta", pmaterial.ior, 1.5f))
+      return parse_error();
+    pmaterial.roughness = 0;
+    if (!get_roughness(command.values, pmaterial.roughness, 0.0f))
       return parse_error();
     return true;
   } else if (command.type == "hair") {
-    if (!get_texture(command.values, "color", pmaterial->color,
-            pmaterial->color_tex, vec3f{0, 0, 0}))
+    pmaterial.type = pbrt_mtype::matte;
+    if (!get_texture(command.values, "color", pmaterial.color,
+            pmaterial.color_tex, vec3f{0, 0, 0}))
       return parse_error();
-    pmaterial->roughness = 1;
+    pmaterial.roughness = 1;
     if (verbose) printf("hair material not properly supported\n");
     return true;
   } else if (command.type == "disney") {
-    if (!get_texture(command.values, "color", pmaterial->color,
-            pmaterial->color_tex, vec3f{0.5, 0.5, 0.5}))
+    pmaterial.type = pbrt_mtype::matte;
+    if (!get_texture(command.values, "color", pmaterial.color,
+            pmaterial.color_tex, vec3f{0.5f, 0.5f, 0.5f}))
       return parse_error();
-    pmaterial->roughness = 1;
+    pmaterial.roughness = 1;
     if (verbose) printf("disney material not properly supported\n");
     return true;
   } else if (command.type == "kdsubsurface") {
-    if (!get_texture(command.values, "Kd", pmaterial->color,
-            pmaterial->color_tex, vec3f{0.5, 0.5, 0.5}))
+    pmaterial.type = pbrt_mtype::plastic;
+    if (!get_texture(command.values, "Kd", pmaterial.color, pmaterial.color_tex,
+            vec3f{0.5f, 0.5f, 0.5f}))
       return parse_error();
-    if (!get_scalar(command.values, "Kr", pmaterial->specular, 1))
+    // if (!get_scalar(command.values, "Kr", pmaterial.specular, 1))
+    //   return parse_error();
+    if (!get_scalar(command.values, "eta", pmaterial.ior, 1.5f))
       return parse_error();
-    if (!get_scalar(command.values, "eta", pmaterial->ior, 1.5))
-      return parse_error();
-    pmaterial->roughness = 0;
-    if (!get_roughness(command.values, pmaterial->roughness, 0))
+    pmaterial.roughness = 0;
+    if (!get_roughness(command.values, pmaterial.roughness, 0))
       return parse_error();
     if (verbose) printf("kdsubsurface material not properly supported\n");
     return true;
   } else if (command.type == "subsurface") {
-    if (!get_scalar(command.values, "Kr", pmaterial->specular, 1))
+    pmaterial.type = pbrt_mtype::subsurface;
+    // if (!get_scalar(command.values, "Kr", pmaterial.specular, 1))
+    //   return parse_error();
+    // if (!get_scalar(command.values, "Kt", pmaterial.transmission, 1))
+    //   return parse_error();
+    pmaterial.color = {1, 1, 1};
+    if (!get_scalar(command.values, "eta", pmaterial.ior, 1.5))
       return parse_error();
-    if (!get_scalar(command.values, "Kt", pmaterial->transmission, 1))
-      return parse_error();
-    pmaterial->color = {1, 1, 1};
-    if (!get_scalar(command.values, "eta", pmaterial->ior, 1.5))
-      return parse_error();
-    pmaterial->roughness = 0;
-    if (!get_roughness(command.values, pmaterial->roughness, 0))
+    pmaterial.roughness = 0;
+    if (!get_roughness(command.values, pmaterial.roughness, 0))
       return parse_error();
     auto scale = 1.0f;
     if (!get_pbrt_value(command.values, "scale", scale)) return parse_error();
-    pmaterial->volscale = 1 / scale;
+    pmaterial.volscale = 1 / scale;
     auto sigma_a = zero3f, sigma_s = zero3f;
-    auto sigma_a_tex = ""s, sigma_s_tex = ""s;
+    auto sigma_a_tex = -1, sigma_s_tex = -1;
     if (!get_texture(command.values, "sigma_a", sigma_a, sigma_a_tex,
-            vec3f{0011, .0024, .014}))
+            vec3f{0.011f, .0024f, .014f}))
       return parse_error();
     if (!get_texture(command.values, "sigma_prime_s", sigma_s, sigma_s_tex,
-            vec3f{2.55, 3.12, 3.77}))
+            vec3f{2.55f, 3.12f, 3.77f}))
       return parse_error();
-    pmaterial->volmeanfreepath = 1 / (sigma_a + sigma_s);
-    pmaterial->volscatter      = sigma_s / (sigma_a + sigma_s);
+    pmaterial.volmeanfreepath = 1 / (sigma_a + sigma_s);
+    pmaterial.volscatter      = sigma_s / (sigma_a + sigma_s);
     if (verbose) printf("subsurface material not properly supported\n");
     return true;
   } else if (command.type == "mix") {
@@ -4051,9 +4407,9 @@ inline bool convert_material(pbrt_material*     pmaterial,
     auto matname = (!namedmaterial1.empty()) ? namedmaterial1 : namedmaterial2;
     auto matit   = named_materials.find(matname);
     if (matit == named_materials.end()) return material_error(matname);
-    auto saved_name = pmaterial->name;
-    *pmaterial      = matit->second;
-    pmaterial->name = saved_name;
+    auto saved_name = pmaterial.name;
+    pmaterial       = matit->second;
+    pmaterial.name  = saved_name;
     if (verbose) printf("mix material not properly supported\n");
     return true;
   } else if (command.type == "fourier") {
@@ -4063,38 +4419,37 @@ inline bool convert_material(pbrt_material*     pmaterial,
     if (bsdffile.rfind('/') != string::npos)
       bsdffile = bsdffile.substr(bsdffile.rfind('/') + 1);
     if (bsdffile == "paint.bsdf") {
-      pmaterial->color     = {0.6f, 0.6f, 0.6f};
-      pmaterial->specular  = 1;
-      pmaterial->ior       = 1.5;
-      pmaterial->roughness = 0.2;
+      pmaterial.type      = pbrt_mtype::plastic;
+      pmaterial.color     = {0.6f, 0.6f, 0.6f};
+      pmaterial.ior       = 1.5f;
+      pmaterial.roughness = 0.2f;
     } else if (bsdffile == "ceramic.bsdf") {
-      pmaterial->color     = {0.6f, 0.6f, 0.6f};
-      pmaterial->specular  = 1;
-      pmaterial->ior       = 1.5;
-      pmaterial->roughness = 0.25;
+      pmaterial.type      = pbrt_mtype::plastic;
+      pmaterial.color     = {0.6f, 0.6f, 0.6f};
+      pmaterial.ior       = 1.5f;
+      pmaterial.roughness = 0.25f;
     } else if (bsdffile == "leather.bsdf") {
-      pmaterial->color     = {0.6f, 0.57f, 0.48f};
-      pmaterial->specular  = 1;
-      pmaterial->ior       = 1.5;
-      pmaterial->roughness = 0.3;
+      pmaterial.type      = pbrt_mtype::plastic;
+      pmaterial.color     = {0.6f, 0.57f, 0.48f};
+      pmaterial.ior       = 1.5f;
+      pmaterial.roughness = 0.3f;
     } else if (bsdffile == "coated_copper.bsdf") {
-      auto eta             = vec3f{0.2004376970f, 0.9240334304f, 1.1022119527f};
-      auto etak            = vec3f{3.9129485033f, 2.4528477015f, 2.1421879552f};
-      pmaterial->color     = eta_to_reflectivity(eta, etak);
-      pmaterial->metallic  = 1;
-      pmaterial->roughness = 0.01;
+      pmaterial.type      = pbrt_mtype::metal;
+      auto eta            = vec3f{0.2004376970f, 0.9240334304f, 1.1022119527f};
+      auto etak           = vec3f{3.9129485033f, 2.4528477015f, 2.1421879552f};
+      pmaterial.color     = eta_to_reflectivity(eta, etak);
+      pmaterial.roughness = 0.01f;
     } else if (bsdffile == "roughglass_alpha_0.2.bsdf") {
-      pmaterial->color        = {1, 1, 1};
-      pmaterial->specular     = 1;
-      pmaterial->ior          = 1.5;
-      pmaterial->transmission = 1;
-      pmaterial->roughness    = 0.2;
+      pmaterial.type      = pbrt_mtype::glass;
+      pmaterial.color     = {1, 1, 1};
+      pmaterial.ior       = 1.5f;
+      pmaterial.roughness = 0.2f;
     } else if (bsdffile == "roughgold_alpha_0.2.bsdf") {
-      auto eta             = vec3f{0.1431189557f, 0.3749570432f, 1.4424785571f};
-      auto etak            = vec3f{3.9831604247f, 2.3857207478f, 1.6032152899f};
-      pmaterial->color     = eta_to_reflectivity(eta, etak);
-      pmaterial->metallic  = 1;
-      pmaterial->roughness = 0.2;
+      pmaterial.type      = pbrt_mtype::metal;
+      auto eta            = vec3f{0.1431189557f, 0.3749570432f, 1.4424785571f};
+      auto etak           = vec3f{3.9831604247f, 2.3857207478f, 1.6032152899f};
+      pmaterial.color     = eta_to_reflectivity(eta, etak);
+      pmaterial.roughness = 0.2f;
     } else {
       return bsdf_error(bsdffile);
     }
@@ -4144,7 +4499,7 @@ inline void make_sphere(vector<vec3i>& triangles, vector<vec3f>& positions,
       },
       [](const vec2f& uv) {
         auto pt = vec2f{2 * pif * uv.x, pif * (1 - uv.y)};
-        return vec3f{cos(pt.x) * cos(pt.y), sin(pt.x) * cos(pt.y), sin(pt.y)};
+        return vec3f{cos(pt.x) * sin(pt.y), sin(pt.x) * sin(pt.y), cos(pt.y)};
       });
 }
 inline void make_disk(vector<vec3i>& triangles, vector<vec3f>& positions,
@@ -4174,10 +4529,10 @@ inline void make_quad(vector<vec3i>& triangles, vector<vec3f>& positions,
 }
 
 // Convert pbrt shapes
-inline bool convert_shape(pbrt_shape* shape, const pbrt_command& command,
+inline bool convert_shape(pbrt_shape& pshape, const pbrt_command& command,
     string& alphamap, const unordered_map<string, pbrt_texture>& named_textures,
-    const string& ply_dirname, const string& filename, string& error,
-    bool verbose = false) {
+    const string& ply_dirname, bool ply_meshes, const string& filename,
+    string& error, bool verbose = false) {
   auto parse_error = [filename, &error]() {
     error = filename + ": parse error";
     return false;
@@ -4205,57 +4560,59 @@ inline bool convert_shape(pbrt_shape* shape, const pbrt_command& command,
     return true;
   };
 
-  shape->frame = command.frame;
-  shape->frend = command.frend;
+  pshape.frame = command.frame;
+  pshape.frend = command.frend;
   if (command.type == "trianglemesh") {
-    shape->positions = {};
-    shape->normals   = {};
-    shape->texcoords = {};
-    shape->triangles = {};
-    if (!get_pbrt_value(command.values, "P", shape->positions))
+    pshape.positions = {};
+    pshape.normals   = {};
+    pshape.texcoords = {};
+    pshape.triangles = {};
+    if (!get_pbrt_value(command.values, "P", pshape.positions))
       return parse_error();
-    if (!get_pbrt_value(command.values, "N", shape->normals))
+    if (!get_pbrt_value(command.values, "N", pshape.normals))
       return parse_error();
-    if (!get_pbrt_value(command.values, "uv", shape->texcoords))
+    if (!get_pbrt_value(command.values, "uv", pshape.texcoords))
       return parse_error();
-    for (auto& uv : shape->texcoords) uv.y = (1 - uv.y);
-    if (!get_pbrt_value(command.values, "indices", shape->triangles))
+    for (auto& uv : pshape.texcoords) uv.y = (1 - uv.y);
+    if (!get_pbrt_value(command.values, "indices", pshape.triangles))
       return parse_error();
     return true;
   } else if (command.type == "loopsubdiv") {
-    shape->positions = {};
-    shape->triangles = {};
-    if (!get_pbrt_value(command.values, "P", shape->positions))
+    pshape.positions = {};
+    pshape.triangles = {};
+    if (!get_pbrt_value(command.values, "P", pshape.positions))
       return parse_error();
-    if (!get_pbrt_value(command.values, "indices", shape->triangles))
+    if (!get_pbrt_value(command.values, "indices", pshape.triangles))
       return parse_error();
-    shape->normals.resize(shape->positions.size());
-    // compute_normals(shape->normals, shape->triangles, shape->positions);
+    pshape.normals.resize(pshape.positions.size());
+    // compute_normals(pshape.normals, pshape.triangles, pshape.positions);
     return true;
   } else if (command.type == "plymesh") {
-    shape->filename_ = ""s;
-    if (!get_pbrt_value(command.values, "filename", shape->filename_))
+    pshape.filename_ = ""s;
+    if (!get_pbrt_value(command.values, "filename", pshape.filename_))
       return parse_error();
     if (!get_alpha(command.values, "alpha", alphamap)) return parse_error();
-    auto ply = std::make_unique<ply_model>();
-    if (!load_ply(path_join(ply_dirname, shape->filename_), ply.get(), error))
-      return dependent_error();
-    get_positions(ply.get(), shape->positions);
-    get_normals(ply.get(), shape->normals);
-    get_texcoords(ply.get(), shape->texcoords);
-    get_triangles(ply.get(), shape->triangles);
+    if (ply_meshes) {
+      auto ply = ply_model{};
+      if (!load_ply(path_join(ply_dirname, pshape.filename_), ply, error))
+        return dependent_error();
+      get_positions(ply, pshape.positions);
+      get_normals(ply, pshape.normals);
+      get_texcoords(ply, pshape.texcoords);
+      get_triangles(ply, pshape.triangles);
+    }
     return true;
   } else if (command.type == "sphere") {
     auto radius = 1.0f;
     if (!get_pbrt_value(command.values, "radius", radius)) return parse_error();
-    make_sphere(shape->triangles, shape->positions, shape->normals,
-        shape->texcoords, {32, 16}, radius);
+    make_sphere(pshape.triangles, pshape.positions, pshape.normals,
+        pshape.texcoords, {32, 16}, radius);
     return true;
   } else if (command.type == "disk") {
     auto radius = 1.0f;
     if (!get_pbrt_value(command.values, "radius", radius)) return parse_error();
-    make_disk(shape->triangles, shape->positions, shape->normals,
-        shape->texcoords, {32, 1}, radius);
+    make_disk(pshape.triangles, pshape.positions, pshape.normals,
+        pshape.texcoords, {32, 1}, radius);
     return true;
   } else {
     return type_error();
@@ -4263,7 +4620,7 @@ inline bool convert_shape(pbrt_shape* shape, const pbrt_command& command,
 }
 
 // Convert pbrt arealights
-inline bool convert_arealight(pbrt_arealight* parealight,
+inline bool convert_arealight(pbrt_arealight& parealight,
     const pbrt_command& command, const string& filename, string& error,
     bool verbose = false) {
   auto parse_error = [filename, &error]() {
@@ -4275,12 +4632,12 @@ inline bool convert_arealight(pbrt_arealight* parealight,
     return false;
   };
 
-  parealight->name = command.name;
+  parealight.name = command.name;
   if (command.type == "diffuse") {
     auto l = vec3f{1, 1, 1}, scale = vec3f{1, 1, 1};
     if (!get_pbrt_value(command.values, "L", l)) return parse_error();
     if (!get_pbrt_value(command.values, "scale", scale)) return parse_error();
-    parealight->emission = l * scale;
+    parealight.emission = l * scale;
     return true;
   } else {
     return type_error();
@@ -4288,7 +4645,7 @@ inline bool convert_arealight(pbrt_arealight* parealight,
 }
 
 // Convert pbrt lights
-inline bool convert_light(pbrt_light* plight, const pbrt_command& command,
+inline bool convert_light(pbrt_light& plight, const pbrt_command& command,
     const string& filename, string& error, bool verbose = false) {
   auto parse_error = [filename, &error]() {
     error = filename + ": parse error";
@@ -4299,59 +4656,59 @@ inline bool convert_light(pbrt_light* plight, const pbrt_command& command,
     return false;
   };
 
-  plight->frame = command.frame;
-  plight->frend = command.frend;
+  plight.frame = command.frame;
+  plight.frend = command.frend;
   if (command.type == "distant") {
     auto l = vec3f{1, 1, 1}, scale = vec3f{1, 1, 1};
     if (!get_pbrt_value(command.values, "L", l)) return parse_error();
     if (!get_pbrt_value(command.values, "scale", scale)) return parse_error();
-    plight->emission = l * scale;
-    plight->from     = vec3f{0, 0, 0};
-    plight->to       = vec3f{0, 0, 1};
-    if (!get_pbrt_value(command.values, "from", plight->from))
+    plight.emission = l * scale;
+    plight.from     = vec3f{0, 0, 0};
+    plight.to       = vec3f{0, 0, 1};
+    if (!get_pbrt_value(command.values, "from", plight.from))
       return parse_error();
-    if (!get_pbrt_value(command.values, "to", plight->to)) return parse_error();
-    plight->distant       = true;
-    auto distant_dist     = 100;
-    auto size             = distant_dist * sin(5 * pif / 180);
-    plight->area_emission = plight->emission * (distant_dist * distant_dist) /
-                            (size * size);
-    plight->area_frame =
-        plight->frame *
-        lookat_frame(normalize(plight->from - plight->to) * distant_dist,
-            {0, 0, 0}, {0, 1, 0}, true);
-    plight->area_frend =
-        plight->frend *
-        lookat_frame(normalize(plight->from - plight->to) * distant_dist,
-            {0, 0, 0}, {0, 1, 0}, true);
+    if (!get_pbrt_value(command.values, "to", plight.to)) return parse_error();
+    plight.distant       = true;
+    auto distant_dist    = 100.0f;
+    auto size            = distant_dist * sin(5 * pif / 180);
+    plight.area_emission = plight.emission * (distant_dist * distant_dist) /
+                           (size * size);
+    plight.area_frame = plight.frame *
+                        lookat_frame(
+                            normalize(plight.from - plight.to) * distant_dist,
+                            {0, 0, 0}, {0, 1, 0}, true);
+    plight.area_frend = plight.frend *
+                        lookat_frame(
+                            normalize(plight.from - plight.to) * distant_dist,
+                            {0, 0, 0}, {0, 1, 0}, true);
     auto texcoords = vector<vec2f>{};
-    make_quad(plight->area_triangles, plight->area_positions,
-        plight->area_normals, texcoords, {4, 2}, size);
+    make_quad(plight.area_triangles, plight.area_positions, plight.area_normals,
+        texcoords, {4, 2}, size);
     return true;
   } else if (command.type == "point" || command.type == "goniometric" ||
              command.type == "spot") {
     auto i = vec3f{1, 1, 1}, scale = vec3f{1, 1, 1};
     if (!get_pbrt_value(command.values, "I", i)) return parse_error();
     if (!get_pbrt_value(command.values, "scale", scale)) return parse_error();
-    plight->emission = i * scale;
-    plight->from     = zero3f;
-    if (!get_pbrt_value(command.values, "from", plight->from))
+    plight.emission = i * scale;
+    plight.from     = zero3f;
+    if (!get_pbrt_value(command.values, "from", plight.from))
       return parse_error();
-    plight->area_emission = plight->emission;
-    plight->area_frame    = plight->frame * translation_frame(plight->from);
-    plight->area_frend    = plight->frend * translation_frame(plight->from);
-    auto texcoords        = vector<vec2f>{};
-    make_sphere(plight->area_triangles, plight->area_positions,
-        plight->area_normals, texcoords, {4, 2}, 0.0025f);
+    plight.area_emission = plight.emission;
+    plight.area_frame    = plight.frame * translation_frame(plight.from);
+    plight.area_frend    = plight.frend * translation_frame(plight.from);
+    auto texcoords       = vector<vec2f>{};
+    make_sphere(plight.area_triangles, plight.area_positions,
+        plight.area_normals, texcoords, {4, 2}, 0.0025f);
     return true;
   } else {
     return type_error();
   }
 }
 
-inline bool convert_environment(pbrt_environment* penvironment,
-    const pbrt_command& command, const string& filename, string& error,
-    bool verbose = false) {
+inline bool convert_environment(pbrt_environment& penvironment,
+    const pbrt_command& command, unordered_map<string, int>& texture_map,
+    const string& filename, string& error, bool verbose = false) {
   auto parse_error = [filename, &error]() {
     error = filename + ": parse error";
     return false;
@@ -4361,20 +4718,28 @@ inline bool convert_environment(pbrt_environment* penvironment,
     return false;
   };
 
-  penvironment->frame = command.frame;
-  penvironment->frend = command.frend;
-  penvironment->frame = penvironment->frame *
-                        frame3f{{1, 0, 0}, {0, 0, 1}, {0, 1, 0}, {0, 0, 0}};
-  penvironment->frend = penvironment->frend *
-                        frame3f{{1, 0, 0}, {0, 0, 1}, {0, 1, 0}, {0, 0, 0}};
+  penvironment.frame = command.frame;
+  penvironment.frend = command.frend;
+  penvironment.frame = penvironment.frame *
+                       frame3f{{1, 0, 0}, {0, 0, 1}, {0, 1, 0}, {0, 0, 0}};
+  penvironment.frend = penvironment.frend *
+                       frame3f{{1, 0, 0}, {0, 0, 1}, {0, 1, 0}, {0, 0, 0}};
   if (command.type == "infinite") {
     auto l = vec3f{1, 1, 1}, scale = vec3f{1, 1, 1};
     if (!get_pbrt_value(command.values, "L", l)) return parse_error();
     if (!get_pbrt_value(command.values, "scale", scale)) return parse_error();
-    penvironment->emission     = scale * l;
-    penvironment->emission_tex = ""s;
-    if (!get_pbrt_value(command.values, "mapname", penvironment->emission_tex))
+    penvironment.emission     = scale * l;
+    penvironment.emission_tex = -1;
+    auto mapname              = ""s;
+    if (!get_pbrt_value(command.values, "mapname", mapname))
       return parse_error();
+    if (!mapname.empty()) {
+      if (texture_map.find(mapname) == texture_map.end()) {
+        auto texture_id      = (int)texture_map.size();
+        texture_map[mapname] = texture_id;
+      }
+      penvironment.emission_tex = texture_map.at(mapname);
+    }
     return true;
   } else {
     return type_error();
@@ -4396,20 +4761,21 @@ struct pbrt_stack_element {
 
 // pbrt parsing context
 struct pbrt_context {
-  vector<pbrt_stack_element>                 stack           = {};
-  unordered_map<string, pbrt_stack_element>  coordsys        = {};
-  unordered_map<string, vector<pbrt_shape*>> objects         = {};
-  string                                     cur_object      = "";
-  vec2i                                      film_resolution = {512, 512};
+  vector<pbrt_stack_element>                stack           = {};
+  unordered_map<string, pbrt_stack_element> coordsys        = {};
+  string                                    cur_object      = "";
+  vec2i                                     film_resolution = {512, 512};
 };
 
 // load pbrt
-inline bool load_pbrt(const string& filename, pbrt_scene* pbrt, string& error,
-    pbrt_context& ctx, unordered_map<string, string>& material_map,
+inline bool load_pbrt(const string& filename, pbrt_model& pbrt, string& error,
+    pbrt_context& ctx, unordered_map<string, int>& material_map,
+    unordered_map<string, int>&           texture_map,
     unordered_map<string, pbrt_material>& named_materials,
     unordered_map<string, pbrt_texture>&  named_textures,
     unordered_map<string, pbrt_medium>&   named_mediums,
-    const string&                         ply_dirname) {
+    unordered_map<string, vector<int>>&   named_objects,
+    const string& ply_dirname, bool ply_meshes) {
   // error helpers
   auto open_error = [filename, &error]() {
     error = filename + ": file not found";
@@ -4437,6 +4803,10 @@ inline bool load_pbrt(const string& filename, pbrt_scene* pbrt, string& error,
   };
   auto object_error = [filename, &error](const string& obj) {
     error = filename + ": unknown object " + obj;
+    return false;
+  };
+  auto material_error = [filename, &error](const string& name) {
+    error = filename + ": missing material " + name;
     return false;
   };
 
@@ -4483,18 +4853,21 @@ inline bool load_pbrt(const string& filename, pbrt_scene* pbrt, string& error,
     } else if (cmd == "ObjectBegin") {
       ctx.stack.push_back(ctx.stack.back());
       if (!parse_param(str, ctx.cur_object)) return parse_error();
-      ctx.objects[ctx.cur_object] = {};
+      named_objects[ctx.cur_object] = {};
     } else if (cmd == "ObjectEnd") {
       ctx.stack.pop_back();
       ctx.cur_object = "";
     } else if (cmd == "ObjectInstance") {
       auto object = ""s;
       if (!parse_param(str, object)) return parse_error();
-      if (ctx.objects.find(object) == ctx.objects.end())
+      if (named_objects.find(object) == named_objects.end())
         return object_error(object);
-      for (auto shape : ctx.objects.at(object)) {
-        shape->instances.push_back(ctx.stack.back().transform_start);
-        shape->instaends.push_back(ctx.stack.back().transform_end);
+      auto& named_object = named_objects.at(object);
+      for (auto& shape_id : named_object) {
+        pbrt.shapes[shape_id].instances.push_back(
+            ctx.stack.back().transform_start);
+        pbrt.shapes[shape_id].instaends.push_back(
+            ctx.stack.back().transform_end);
       }
     } else if (cmd == "ActiveTransform") {
       auto name = ""s;
@@ -4571,7 +4944,7 @@ inline bool load_pbrt(const string& filename, pbrt_scene* pbrt, string& error,
       if (!parse_param(str, command.type)) return parse_error();
       if (!parse_params(str, command.values)) return parse_error();
       auto film = pbrt_film{};
-      if (!convert_film(&film, command, filename, error)) return false;
+      if (!convert_film(film, command, filename, error)) return false;
       ctx.film_resolution = film.resolution;
     } else if (cmd == "Accelerator") {
       auto command = pbrt_command{};
@@ -4583,7 +4956,7 @@ inline bool load_pbrt(const string& filename, pbrt_scene* pbrt, string& error,
       if (!parse_params(str, command.values)) return parse_error();
       command.frame = ctx.stack.back().transform_start;
       command.frend = ctx.stack.back().transform_end;
-      auto camera   = add_camera(pbrt);
+      auto& camera  = pbrt.cameras.emplace_back();
       if (!convert_camera(
               camera, command, ctx.film_resolution, filename, error))
         return false;
@@ -4595,7 +4968,7 @@ inline bool load_pbrt(const string& filename, pbrt_scene* pbrt, string& error,
       if (!parse_param(str, comptype)) return parse_error();
       if (!parse_param(str, command.type)) return parse_error();
       if (!parse_params(str, command.values)) return parse_error();
-      if (!convert_texture(&named_textures[command.name], command,
+      if (!convert_texture(named_textures[command.name], command,
               named_textures, filename, error))
         return false;
     } else if (cmd == "Material") {
@@ -4608,7 +4981,7 @@ inline bool load_pbrt(const string& filename, pbrt_scene* pbrt, string& error,
         ctx.stack.back().material = {};
       } else {
         ctx.stack.back().material = {};
-        if (!convert_material(&ctx.stack.back().material, command,
+        if (!convert_material(ctx.stack.back().material, command, texture_map,
                 named_materials, named_textures, filename, error))
           return false;
       }
@@ -4619,37 +4992,40 @@ inline bool load_pbrt(const string& filename, pbrt_scene* pbrt, string& error,
       command.type = "";
       for (auto& value : command.values)
         if (value.name == "type") command.type = value.value1s;
-      if (!convert_material(&named_materials[command.name], command,
+      if (!convert_material(named_materials[command.name], command, texture_map,
               named_materials, named_textures, filename, error))
         return false;
     } else if (cmd == "NamedMaterial") {
       auto name = ""s;
       if (!parse_param(str, name)) return parse_error();
+      if (named_materials.find(name) == named_materials.end())
+        return material_error(name);
       ctx.stack.back().material = named_materials.at(name);
     } else if (cmd == "Shape") {
       auto command = pbrt_command{};
       if (!parse_param(str, command.type)) return parse_error();
       if (!parse_params(str, command.values)) return parse_error();
-      command.frame = ctx.stack.back().transform_start;
-      command.frend = ctx.stack.back().transform_end;
-      auto shape    = add_shape(pbrt);
-      auto alphamap = ""s;
+      command.frame  = ctx.stack.back().transform_start;
+      command.frend  = ctx.stack.back().transform_end;
+      auto& shape    = pbrt.shapes.emplace_back();
+      auto  alphamap = ""s;
       if (!convert_shape(shape, command, alphamap, named_textures, ply_dirname,
-              filename, error))
+              ply_meshes, filename, error))
         return false;
       auto matkey = "?!!!?" + ctx.stack.back().material.name + "?!!!?" +
                     ctx.stack.back().arealight.name + "?!!!?" + alphamap;
       if (material_map.find(matkey) == material_map.end()) {
-        auto material  = add_material(pbrt);
-        (*material)    = ctx.stack.back().material;
-        material->name = "material" + std::to_string(pbrt->materials.size());
-        material->emission   = ctx.stack.back().arealight.emission;
-        material->alpha_tex  = alphamap;
-        material_map[matkey] = material->name;
+        auto& material    = pbrt.materials.emplace_back();
+        material          = ctx.stack.back().material;
+        material.name     = "material" + std::to_string(pbrt.materials.size());
+        material.emission = ctx.stack.back().arealight.emission;
+        // material.alpha_tex = alphamap;
+        material_map[matkey] = (int)pbrt.materials.size() - 1;
       }
-      shape->material = material_map.at(matkey);
+      shape.material = material_map.at(matkey);
       if (!ctx.cur_object.empty()) {
-        ctx.objects[ctx.cur_object].push_back(shape);
+        named_objects[ctx.cur_object].push_back((int)pbrt.shapes.size() - 1);
+        shape.instanced = true;
       }
     } else if (cmd == "AreaLightSource") {
       static auto arealight_id = 0;
@@ -4660,7 +5036,7 @@ inline bool load_pbrt(const string& filename, pbrt_scene* pbrt, string& error,
       command.frame = ctx.stack.back().transform_start;
       command.frend = ctx.stack.back().transform_end;
       if (!convert_arealight(
-              &ctx.stack.back().arealight, command, filename, error))
+              ctx.stack.back().arealight, command, filename, error))
         return false;
     } else if (cmd == "LightSource") {
       auto command = pbrt_command{};
@@ -4669,11 +5045,12 @@ inline bool load_pbrt(const string& filename, pbrt_scene* pbrt, string& error,
       command.frame = ctx.stack.back().transform_start;
       command.frend = ctx.stack.back().transform_end;
       if (command.type == "infinite") {
-        auto environment = add_environment(pbrt);
-        if (!convert_environment(environment, command, filename, error))
+        auto& environment = pbrt.environments.emplace_back();
+        if (!convert_environment(
+                environment, command, texture_map, filename, error))
           return false;
       } else {
-        auto light = add_light(pbrt);
+        auto& light = pbrt.lights.emplace_back();
         if (!convert_light(light, command, filename, error)) return false;
       }
     } else if (cmd == "MakeNamedMedium") {
@@ -4695,8 +5072,9 @@ inline bool load_pbrt(const string& filename, pbrt_scene* pbrt, string& error,
       auto includename = ""s;
       if (!parse_param(str, includename)) return parse_error();
       if (!load_pbrt(path_join(path_dirname(filename), includename), pbrt,
-              error, ctx, material_map, named_materials, named_textures,
-              named_mediums, ply_dirname))
+              error, ctx, material_map, texture_map, named_materials,
+              named_textures, named_mediums, named_objects, ply_dirname,
+              ply_meshes))
         return dependent_error();
     } else {
       return command_error(cmd);
@@ -4705,55 +5083,24 @@ inline bool load_pbrt(const string& filename, pbrt_scene* pbrt, string& error,
   return true;
 }
 
-pbrt_scene::~pbrt_scene() {
-  for (auto camera : cameras) delete camera;
-  for (auto shape : shapes) delete shape;
-  for (auto environment : environments) delete environment;
-  for (auto light : lights) delete light;
-  for (auto material : materials) delete material;
-}
-
-// Make pbrt
-pbrt_camera* add_camera(pbrt_scene* pbrt) {
-  return pbrt->cameras.emplace_back(new pbrt_camera{});
-}
-pbrt_shape* add_shape(pbrt_scene* pbrt) {
-  return pbrt->shapes.emplace_back(new pbrt_shape{});
-}
-pbrt_material* add_material(pbrt_scene* pbrt) {
-  return pbrt->materials.emplace_back(new pbrt_material{});
-}
-pbrt_environment* add_environment(pbrt_scene* pbrt) {
-  return pbrt->environments.emplace_back(new pbrt_environment{});
-}
-pbrt_light* add_light(pbrt_scene* pbrt) {
-  return pbrt->lights.emplace_back(new pbrt_light{});
-}
-
 // load pbrt
-bool load_pbrt(const string& filename, pbrt_scene* pbrt, string& error) {
+bool load_pbrt(
+    const string& filename, pbrt_model& pbrt, string& error, bool ply_meshes) {
   auto ctx             = pbrt_context{};
-  auto material_map    = unordered_map<string, string>{};
+  auto material_map    = unordered_map<string, int>{};
+  auto texture_map     = unordered_map<string, int>{};
   auto named_materials = unordered_map<string, pbrt_material>{{"", {}}};
   auto named_mediums   = unordered_map<string, pbrt_medium>{{"", {}}};
   auto named_textures  = unordered_map<string, pbrt_texture>{{"", {}}};
-  if (!load_pbrt(filename, pbrt, error, ctx, material_map, named_materials,
-          named_textures, named_mediums, path_dirname(filename)))
+  auto named_objects   = unordered_map<string, vector<int>>{};
+  if (!load_pbrt(filename, pbrt, error, ctx, material_map, texture_map,
+          named_materials, named_textures, named_mediums, named_objects,
+          path_dirname(filename), ply_meshes))
     return false;
-
-  // remove unused materials
-  auto used_materials = unordered_set<string>{};
-  for (auto shape : pbrt->shapes) used_materials.insert(shape->material);
-  pbrt->materials.erase(
-      std::remove_if(pbrt->materials.begin(), pbrt->materials.end(),
-          [&used_materials](auto material) {
-            auto found = used_materials.find(material->name) !=
-                         used_materials.end();
-            if (!found) delete material;
-            return !found;
-          }),
-      pbrt->materials.end());
-
+  pbrt.textures.resize(texture_map.size());
+  for (auto& [path, texture_id] : texture_map) {
+    pbrt.textures[texture_id].filename = path;
+  }
   return true;
 }
 
@@ -4832,7 +5179,7 @@ inline void format_value(string& str, const vector<pbrt_value>& values) {
   }
 }
 
-bool save_pbrt(const string& filename, const pbrt_scene* pbrt, string& error,
+bool save_pbrt(const string& filename, const pbrt_model& pbrt, string& error,
     bool ply_meshes) {
   // error helpers
   auto open_error = [filename, &error]() {
@@ -4858,29 +5205,29 @@ bool save_pbrt(const string& filename, const pbrt_scene* pbrt, string& error,
   if (!format_values(fs, "# https://github.com/xelatihy/yocto-gl\n"))
     return write_error();
   if (!format_values(fs, "#\n\n")) return write_error();
-  for (auto& comment : pbrt->comments) {
+  for (auto& comment : pbrt.comments) {
     if (!format_values(fs, "# {}\n", comment)) return write_error();
   }
   if (!format_values(fs, "\n")) return write_error();
 
-  for (auto camera : pbrt->cameras) {
+  for (auto& camera : pbrt.cameras) {
     auto command = pbrt_command{};
     command.type = "image";
     command.values.push_back(
-        make_pbrt_value("xresolution", camera->resolution.x));
+        make_pbrt_value("xresolution", camera.resolution.x));
     command.values.push_back(
-        make_pbrt_value("yresolution", camera->resolution.y));
+        make_pbrt_value("yresolution", camera.resolution.y));
     command.values.push_back(make_pbrt_value("filename", "image.exr"s));
     if (!format_values(fs, "Film \"{}\" {}\n", command.type, command.values))
       return write_error();
   }
 
-  for (auto camera : pbrt->cameras) {
+  for (auto& camera : pbrt.cameras) {
     auto command  = pbrt_command{};
     command.type  = "perspective";
-    command.frame = camera->frame;
+    command.frame = camera.frame;
     command.values.push_back(make_pbrt_value(
-        "fov", 2 * tan(0.036f / (2 * camera->lens)) * 180 / pif));
+        "fov", 2 * tan(0.036f / (2 * camera.lens)) * 180 / pif));
     if (!format_values(fs, "LookAt {} {} {}\n", command.frame.o,
             command.frame.o - command.frame.z, command.frame.y))
       return write_error();
@@ -4890,15 +5237,15 @@ bool save_pbrt(const string& filename, const pbrt_scene* pbrt, string& error,
 
   if (!format_values(fs, "\nWorldBegin\n\n")) return write_error();
 
-  for (auto light : pbrt->lights) {
+  for (auto& light : pbrt.lights) {
     auto command  = pbrt_command{};
-    command.frame = light->frame;
-    if (light->distant) {
+    command.frame = light.frame;
+    if (light.distant) {
       command.type = "distance";
-      command.values.push_back(make_pbrt_value("L", light->emission));
+      command.values.push_back(make_pbrt_value("L", light.emission));
     } else {
       command.type = "point";
-      command.values.push_back(make_pbrt_value("I", light->emission));
+      command.values.push_back(make_pbrt_value("I", light.emission));
     }
     if (!format_values(fs, "AttributeBegin\n")) return write_error();
     if (!format_values(fs, "Transform {}\n", frame_to_mat(command.frame)))
@@ -4909,13 +5256,13 @@ bool save_pbrt(const string& filename, const pbrt_scene* pbrt, string& error,
     if (!format_values(fs, "AttributeEnd\n")) return write_error();
   }
 
-  for (auto environment : pbrt->environments) {
+  for (auto& environment : pbrt.environments) {
     auto command  = pbrt_command{};
-    command.frame = environment->frame;
+    command.frame = environment.frame;
     command.type  = "infinite";
-    command.values.push_back(make_pbrt_value("L", environment->emission));
+    command.values.push_back(make_pbrt_value("L", environment.emission));
     command.values.push_back(
-        make_pbrt_value("mapname", environment->emission_tex));
+        make_pbrt_value("mapname", environment.emission_tex));
     if (!format_values(fs, "AttributeBegin\n")) return write_error();
     if (!format_values(fs, "Transform {}\n", frame_to_mat(command.frame)))
       return write_error();
@@ -4929,113 +5276,114 @@ bool save_pbrt(const string& filename, const pbrt_scene* pbrt, string& error,
     return (1 + sqrt(reflectivity)) / (1 - sqrt(reflectivity));
   };
 
-  auto material_map = unordered_map<string, pbrt_material*>{};
-  for (auto material : pbrt->materials) {
+  for (auto& material : pbrt.materials) {
     auto command = pbrt_command{};
-    if (material->specular != 0 && material->transmission != 0 &&
-        !material->thin) {
-      command.type = "glass";
-      command.values.push_back(make_pbrt_value("Kr", vec3f{1, 1, 1}));
-      command.values.push_back(make_pbrt_value("Kt", vec3f{1, 1, 1}));
-      command.values.push_back(
-          make_pbrt_value("roughness", pow(material->roughness, 2)));
-      command.values.push_back(make_pbrt_value("eta", material->ior));
-      command.values.push_back(make_pbrt_value("remaproughness", false));
-    } else if (material->metallic > 0.1f) {
-      command.type = "metal";
-      command.values.push_back(make_pbrt_value("Kr", vec3f{1, 1, 1}));
-      command.values.push_back(
-          make_pbrt_value("roughness", pow(material->roughness, 2)));
-      command.values.push_back(
-          make_pbrt_value("eta", reflectivity_to_eta(material->color)));
-      command.values.push_back(make_pbrt_value("remaproughness", false));
-    } else {
-      command.type = "uber";
-      if (material->color_tex.empty()) {
-        command.values.push_back(make_pbrt_value("Kd", material->color));
-      } else if (material->color != zero3f) {
+    switch (material.type) {
+      case pbrt_mtype::matte: {
+        command.type = "matte";
+        command.values.push_back(make_pbrt_value("Kd", material.color));
+      } break;
+      case pbrt_mtype::plastic: {
+        command.type = "matte";
+        command.values.push_back(make_pbrt_value("Kd", material.color));
+        command.values.push_back(make_pbrt_value("Ks", vec3f{1, 1, 1}));
         command.values.push_back(
-            make_pbrt_value("Kd", material->color_tex, pbrt_type::texture));
-      }
-      if (material->specular != 0) {
-        command.values.push_back(make_pbrt_value("Ks",
-            vec3f{material->specular, material->specular, material->specular}));
+            make_pbrt_value("roughness", pow(material.roughness, 2)));
         command.values.push_back(
-            make_pbrt_value("roughness", pow(material->roughness, 2)));
-        command.values.push_back(make_pbrt_value("eta", material->ior));
+            make_pbrt_value("eta", reflectivity_to_eta(material.color)));
         command.values.push_back(make_pbrt_value("remaproughness", false));
-      }
-      if (material->transmission != 0) {
-        command.values.push_back(make_pbrt_value(
-            "Kt", vec3f{material->transmission, material->transmission,
-                      material->transmission}));
-      }
-      if (!material->opacity_tex.empty()) {
-        command.values.push_back(make_pbrt_value(
-            "opacity", material->opacity_tex, pbrt_type::texture));
-      } else if (material->opacity != 1) {
-        command.values.push_back(make_pbrt_value("opacity", material->opacity));
-      }
+      } break;
+      case pbrt_mtype::metal: {
+        command.type = "metal";
+        command.values.push_back(make_pbrt_value("Kr", vec3f{1, 1, 1}));
+        command.values.push_back(
+            make_pbrt_value("roughness", pow(material.roughness, 2)));
+        command.values.push_back(
+            make_pbrt_value("eta", reflectivity_to_eta(material.color)));
+        command.values.push_back(make_pbrt_value("remaproughness", false));
+      } break;
+      case pbrt_mtype::thinglass: {
+        command.type = "uber";
+        command.values.push_back(make_pbrt_value("Ks", vec3f{1, 1, 1}));
+        command.values.push_back(make_pbrt_value("Kt", material.color));
+        command.values.push_back(
+            make_pbrt_value("roughness", pow(material.roughness, 2)));
+        command.values.push_back(
+            make_pbrt_value("eta", reflectivity_to_eta(material.color)));
+        command.values.push_back(make_pbrt_value("remaproughness", false));
+      } break;
+      case pbrt_mtype::glass: {
+        command.type = "glass";
+        command.values.push_back(make_pbrt_value("Kr", vec3f{1, 1, 1}));
+        command.values.push_back(make_pbrt_value("Kt", vec3f{1, 1, 1}));
+        command.values.push_back(
+            make_pbrt_value("roughness", pow(material.roughness, 2)));
+        command.values.push_back(make_pbrt_value("eta", material.ior));
+        command.values.push_back(make_pbrt_value("remaproughness", false));
+      } break;
+      case pbrt_mtype::subsurface: {
+        command.type = "matte";
+        command.values.push_back(make_pbrt_value("Kd", material.color));
+      } break;
     }
+
     if (!format_values(fs,
             "MakeNamedMaterial \"{}\" \"string type\" \"{}\" {}\n",
-            material->name, command.type, command.values))
+            material.name, command.type, command.values))
       return write_error();
   }
 
   auto object_id = 0;
-  for (auto shape : pbrt->shapes) {
-    auto material = material_map.at(shape->material);
-    auto command  = pbrt_command{};
-    command.frame = shape->frame;
+  for (auto& shape : pbrt.shapes) {
+    auto& material = pbrt.materials.at(shape.material);
+    auto  command  = pbrt_command{};
+    command.frame  = shape.frame;
     if (ply_meshes) {
       command.type = "plymesh";
-      command.values.push_back(make_pbrt_value("filename", shape->filename_));
+      command.values.push_back(make_pbrt_value("filename", shape.filename_));
     } else {
       command.type = "trianglemesh";
-      command.values.push_back(make_pbrt_value("indices", shape->triangles));
+      command.values.push_back(make_pbrt_value("indices", shape.triangles));
       command.values.push_back(
-          make_pbrt_value("P", shape->positions, pbrt_type::point));
-      if (!shape->normals.empty())
+          make_pbrt_value("P", shape.positions, pbrt_type::point));
+      if (!shape.normals.empty())
         command.values.push_back(
-            make_pbrt_value("N", shape->triangles, pbrt_type::normal));
-      if (!shape->texcoords.empty())
-        command.values.push_back(make_pbrt_value("uv", shape->texcoords));
+            make_pbrt_value("N", shape.triangles, pbrt_type::normal));
+      if (!shape.texcoords.empty())
+        command.values.push_back(make_pbrt_value("uv", shape.texcoords));
     }
     if (ply_meshes) {
-      auto ply_guard = std::make_unique<ply_model>();
-      auto ply       = ply_guard.get();
-      add_positions(ply, shape->positions);
-      add_normals(ply, shape->normals);
-      add_texcoords(ply, shape->texcoords);
-      add_triangles(ply, shape->triangles);
-      if (!save_ply(
-              path_dirname(filename) + "/" + shape->filename_, ply, error))
+      auto ply = ply_model{};
+      add_positions(ply, shape.positions);
+      add_normals(ply, shape.normals);
+      add_texcoords(ply, shape.texcoords);
+      add_triangles(ply, shape.triangles);
+      if (!save_ply(path_dirname(filename) + "/" + shape.filename_, ply, error))
         return dependent_error();
     }
     auto object = "object" + std::to_string(object_id++);
-    if (!shape->instances.empty())
+    if (!shape.instances.empty())
       if (!format_values(fs, "ObjectBegin \"{}\"\n", object))
         return write_error();
     if (!format_values(fs, "AttributeBegin\n")) return write_error();
-    if (!format_values(fs, "Transform {}\n", frame_to_mat(shape->frame)))
+    if (!format_values(fs, "Transform {}\n", frame_to_mat(shape.frame)))
       return write_error();
-    if (material->emission != zero3f) {
+    if (material.emission != zero3f) {
       auto acommand = pbrt_command{};
       acommand.type = "diffuse";
-      acommand.values.push_back(make_pbrt_value("L", material->emission));
+      acommand.values.push_back(make_pbrt_value("L", material.emission));
       if (!format_values(fs, "AreaLightSource \"{}\" {}\n", acommand.type,
               acommand.values))
         return write_error();
     }
-    if (!format_values(fs, "NamedMaterial \"{}\"\n", material->name))
+    if (!format_values(fs, "NamedMaterial \"{}\"\n", material.name))
       return write_error();
     if (!format_values(fs, "Shape \"{}\" {}\n", command.type, command.values))
       return write_error();
     if (!format_values(fs, "AttributeEnd\n")) return write_error();
-    if (!shape->instances.empty())
+    if (!shape.instances.empty())
       if (!format_values(fs, "ObjectEnd\n")) return write_error();
-    for (auto& iframe : shape->instances) {
+    for (auto& iframe : shape.instances) {
       if (!format_values(fs, "AttributeBegin\n")) return write_error();
       if (!format_values(fs, "Transform {}\n", frame_to_mat(iframe)))
         return write_error();

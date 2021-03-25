@@ -97,47 +97,44 @@
   },
   "materials": {
     "floor": {
+      "type": "matte",
       "color": [0.7, 0.7, 0.7],
-      "color_tex": "floor",
-      "specular": 0
+      "color_tex": "floor"
     },
     "bunny-uvgrid-coated": {
+      "type": "glossy",
       "color": [1, 1, 1],
-      "specular": 1,
       "roughness": 0.2,
-      "coat": 1,
       "color_tex": "uvgrid"
     },
     "bunny-volume-jade": {
+      "type": "refractive",
       "color": [0.5, 0.5, 0.5],
       "roughness": 0,
-      "specular": 1,
-      "transmission": 1,
-      "scattering": [0.3, 0.6, 0.3],
-      "thin": false
+      "scattering": [0.3, 0.6, 0.3]
     },
     "bunny-metal-rough": {
+      "type": "metallic",
       "color": [0.66, 0.45, 0.34],
-      "metallic": 1,
       "roughness": 0.2
     },
     "sphere-volume-glass": {
+      "type": "refractive",
       "color": [1, 0.5, 0.5],
-      "roughness": 0,
-      "specular": 1,
-      "transmission": 1,
-      "thin": false
+      "roughness": 0
     },
     "sphere-plastic-rough-bumped": {
+      "type": "glossy",
       "color": [0.5, 0.7, 0.5],
-      "specular": 1,
       "roughness": 0.2,
       "normal_tex": "bumps-normal"
     },
     "arealight1": {
+      "type": "matte",
       "emission": [20, 20, 20]
     },
     "arealight2": {
+      "type": "matte",
       "emission": [20, 20, 20]
     }
   }

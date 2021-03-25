@@ -122,80 +122,69 @@
   },
   "materials": {
     "floor": {
+      "type": "matte",
       "color": [0.7, 0.7, 0.7],
       "color_tex": "floor"
     },
     "largearealight1": {
+      "type": "matte",
       "emission": [10, 10, 10]
     },
     "largearealight2": {
+      "type": "matte",
       "emission": [10, 10, 10]
     },
     "sphere-glass-sharp": {
+      "type": "refractive",
       "color": [1, 1, 1],
-      "specular": 1,
-      "transmission": 1,
-      "roughness": 0,
-      "thin": false
+      "roughness": 0
     },
     "sphere-glass-rough": {
-      "specular": 1,
+      "type": "refractive",
       "color": [1, 0.7, 0.7],
-      "transmission": 1,
-      "roughness": 0.1,
-      "thin": false
+      "roughness": 0.1
     },
     "sphere-transparent": {
+      "type": "matte",
       "color": [0.7, 0.5, 0.5],
       "roughness": 1,
       "opacity": 0.2
     },
     "sphere-thinglass-sharp": {
-      "specular": 1,
+      "type": "transparent",
       "color": [1, 1, 1],
-      "transmission": 1,
-      "roughness": 0,
-      "thin": true
+      "roughness": 0
     },
     "sphere-thinglass-rough": {
-      "specular": 1,
+      "type": "transparent",
       "color": [1, 0.7, 0.7],
-      "transmission": 1,
-      "roughness": 0.05,
-      "thin": true
+      "roughness": 0.05
     },
     "bunny-glass-sharp": {
+      "type": "refractive",
       "color": [1, 1, 1],
-      "specular": 1,
-      "transmission": 1,
-      "roughness": 0,
-      "thin": false
+      "roughness": 0
     },
     "bunny-glass-rough": {
-      "specular": 1,
+      "type": "refractive",
       "color": [1, 0.7, 0.7],
-      "transmission": 1,
-      "roughness": 0.1,
-      "thin": false
+      "roughness": 0.1
     },
     "bunny-transparent": {
+      "type": "matte",
       "color": [0.7, 0.5, 0.5],
       "roughness": 1,
       "opacity": 0.2
     },
     "bunny-thinglass-sharp": {
-      "specular": 1,
+      "type": "transparent",
       "color": [1, 1, 1],
-      "transmission": 1,
-      "roughness": 0,
-      "thin": true
+      "roughness": 0
     },
     "bunny-thinglass-rough": {
-      "specular": 1,
+      "type": "transparent",
       "color": [1, 0.7, 0.7],
-      "transmission": 1,
-      "roughness": 0.05,
-      "thin": true
+      "roughness": 0.05
     }
   }
 }

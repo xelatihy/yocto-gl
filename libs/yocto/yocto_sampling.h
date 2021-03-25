@@ -151,28 +151,9 @@ inline float sample_uniform(const vector<float>& elements, float r);
 inline float sample_uniform_pdf(const vector<float>& elements);
 
 // Sample a discrete distribution represented by its cdf.
-[[deprecated]] inline int sample_discrete(const vector<float>& cdf, float r);
+inline int sample_discrete(const vector<float>& cdf, float r);
 // Pdf for uniform discrete distribution sampling.
-[[deprecated]] inline float sample_discrete_pdf(
-    const vector<float>& cdf, int idx);
-
-// Sample a discrete distribution represented by its cdf.
-inline int sample_discrete_cdf(const vector<float>& cdf, float r);
-// Pdf for uniform discrete distribution sampling.
-inline float sample_discrete_cdf_pdf(const vector<float>& cdf, int idx);
-
-// Sample a discrete distribution represented by its weights.
-inline int sample_discrete_weights(const vector<float>& weights, float r);
-// Pdf for uniform discrete distribution sampling.
-inline float sample_discrete_weights_pdf(const vector<float>& weights, int idx);
-
-// Sample a discrete distribution represented by its weights.
-template <size_t N>
-inline int sample_discrete_weights(const array<float, N>& weights, float r);
-// Pdf for uniform discrete distribution sampling.
-template <size_t N>
-inline float sample_discrete_weights_pdf(
-    const array<float, N>& weights, int idx);
+inline float sample_discrete_pdf(const vector<float>& cdf, int idx);
 
 }  // namespace yocto
 
@@ -199,7 +180,8 @@ inline uint32_t _advance_rng(rng_state& rng) {
   rng.state         = oldstate * 6364136223846793005ULL + rng.inc;
   auto xorshifted   = (uint32_t)(((oldstate >> 18u) ^ oldstate) >> 27u);
   auto rot          = (uint32_t)(oldstate >> 59u);
-  return (xorshifted >> rot) | (xorshifted << ((-rot) & 31));
+  // return (xorshifted >> rot) | (xorshifted << ((-rot) & 31));
+  return (xorshifted >> rot) | (xorshifted << ((~rot + 1u) & 31));
 }
 
 // Init a random number generator with a state state from the sequence seq.
@@ -389,57 +371,6 @@ inline int sample_discrete(const vector<float>& cdf, float r) {
 inline float sample_discrete_pdf(const vector<float>& cdf, int idx) {
   if (idx == 0) return cdf.at(0);
   return cdf.at(idx) - cdf.at(idx - 1);
-}
-
-// Sample a discrete distribution represented by its cdf.
-inline int sample_discrete_cdf(const vector<float>& cdf, float r) {
-  r        = clamp(r * cdf.back(), (float)0, cdf.back() - (float)0.00001);
-  auto idx = (int)(std::upper_bound(cdf.data(), cdf.data() + cdf.size(), r) -
-                   cdf.data());
-  return clamp(idx, 0, (int)cdf.size() - 1);
-}
-// Pdf for uniform discrete distribution sampling.
-inline float sample_discrete_cdf_pdf(const vector<float>& cdf, int idx) {
-  if (idx == 0) return cdf.at(0);
-  return cdf.at(idx) - cdf.at(idx - 1);
-}
-
-// Sample a discrete distribution represented by its cdf.
-inline int sample_discrete_weights(const vector<float>& weights, float r) {
-  auto sum = 0.0f;
-  for (auto weight : weights) sum += weight;
-  r            = clamp(r * sum, (float)0, sum - (float)0.00001);
-  auto cur_sum = 0.0f;
-  for (auto idx = 0; idx < weights.size(); idx++) {
-    cur_sum += weights[idx];
-    if (r < cur_sum) return idx;
-  }
-  return (int)weights.size() - 1;
-}
-// Pdf for uniform discrete distribution sampling.
-inline float sample_discrete_weights_pdf(
-    const vector<float>& weights, int idx) {
-  return weights[idx];
-}
-
-// Sample a discrete distribution represented by its cdf.
-template <size_t N>
-inline int sample_discrete_weights(const array<float, N>& weights, float r) {
-  auto sum = 0.0f;
-  for (auto weight : weights) sum += weight;
-  r            = clamp(r * sum, (float)0, sum - (float)0.00001);
-  auto cur_sum = 0.0f;
-  for (auto idx = 0; idx < weights.size(); idx++) {
-    cur_sum += weights[idx];
-    if (r < cur_sum) return idx;
-  }
-  return (int)weights.size() - 1;
-}
-// Pdf for uniform discrete distribution sampling.
-template <size_t N>
-inline float sample_discrete_weights_pdf(
-    const array<float, N>& weights, int idx) {
-  return weights[idx];
 }
 
 }  // namespace yocto

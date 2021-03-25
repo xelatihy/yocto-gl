@@ -34,8 +34,8 @@
 // INCLUDES
 // -----------------------------------------------------------------------------
 
-#include <yocto/yocto_image.h>
 #include <yocto/yocto_math.h>
+#include <yocto/yocto_scene.h>
 
 #include <array>
 #include <string>
@@ -73,15 +73,30 @@ void set_ogl_blending(bool enabled);
 void set_ogl_point_size(int size);
 void set_ogl_msaa();
 
+// Utility for move contructions
+template <typename T>
+inline void move_by_swap(T* self, T&& other) {
+  // https://stackoverflow.com/questions/8166502/c-fastest-method-to-swap-two-memory-blocks-of-equal-size
+  unsigned char*       p      = (unsigned char*)self;
+  unsigned char*       q      = (unsigned char*)&other;
+  unsigned char* const sentry = p + sizeof(T);
+  for (; p < sentry; ++p, ++q) {
+    const unsigned char t = *p;
+    *p                    = *q;
+    *q                    = t;
+  }
+}
+
 // OpenGL texture
 struct ogl_texture {
   // Texture properties
-  vec2i size         = {0, 0};
-  int   num_channels = 0;
-  bool  is_srgb      = false;
-  bool  is_float     = false;
-  bool  linear       = false;
-  bool  mipmap       = false;
+  int  width    = 0;
+  int  height   = 0;
+  int  channels = 0;
+  bool is_srgb  = false;
+  bool is_float = false;
+  bool linear   = false;
+  bool mipmap   = false;
 
   // OpenGL state
   uint texture_id = 0;
@@ -90,38 +105,31 @@ struct ogl_texture {
   ogl_texture()                   = default;
   ogl_texture(const ogl_texture&) = delete;
   ogl_texture& operator=(const ogl_texture&) = delete;
+  ogl_texture(ogl_texture&& other) { move_by_swap(this, std::move(other)); }
 
   // cleanup
   ~ogl_texture();
 };
 
 // set texture
-void set_texture(ogl_texture* texture, const vec2i& size, int num_channels,
+void set_texture(ogl_texture& texture, int width, int height, int channels,
     const byte* img, bool as_srgb = false, bool linear = true,
     bool mipmap = true, bool wrap_repeat = true);
-void set_texture(ogl_texture* texture, const vec2i& size, int num_channels,
+void set_texture(ogl_texture& texture, int width, int height, int channels,
     const float* img, bool as_float = false, bool linear = true,
+    bool mipmap = true, bool wrap_repeat = true);
+void set_texture(ogl_texture& texture, int width, int height,
+    const vector<vec4b>& img, bool as_srgb = false, bool linear = true,
+    bool mipmap = true, bool wrap_repeat = true);
+void set_texture(ogl_texture& texture, int width, int height,
+    const vector<vec4f>& img, bool as_float = false, bool linear = true,
     bool mipmap = true, bool wrap_repeat = true);
 
 // check if texture is initialized
-bool is_initialized(const ogl_texture* texture);
+bool is_initialized(const ogl_texture& texture);
 
 // clear texture
-void clear_texture(ogl_texture* texture);
-
-// set texture
-void set_texture(ogl_texture* texture, const image<vec4b>& img,
-    bool as_srgb = true, bool linear = true, bool mipmap = true);
-void set_texture(ogl_texture* texture, const image<vec4f>& img,
-    bool as_float = false, bool linear = true, bool mipmap = true);
-void set_texture(ogl_texture* texture, const image<vec3b>& img,
-    bool as_srgb = true, bool linear = true, bool mipmap = true);
-void set_texture(ogl_texture* texture, const image<vec3f>& img,
-    bool as_float = false, bool linear = true, bool mipmap = true);
-void set_texture(ogl_texture* texture, const image<byte>& img,
-    bool as_srgb = true, bool linear = true, bool mipmap = true);
-void set_texture(ogl_texture* texture, const image<float>& img,
-    bool as_float = false, bool linear = true, bool mipmap = true);
+void clear_texture(ogl_texture& texture);
 
 // OpenGL cubemap
 struct ogl_cubemap {
@@ -140,43 +148,25 @@ struct ogl_cubemap {
   ogl_cubemap()                   = default;
   ogl_cubemap(const ogl_cubemap&) = delete;
   ogl_cubemap& operator=(const ogl_cubemap&) = delete;
+  ogl_cubemap(ogl_cubemap&& other) { move_by_swap(this, std::move(other)); }
 
   // cleanup
   ~ogl_cubemap();
 };
 
 // set cubemap
-void set_cubemap(ogl_cubemap* cubemap, int size, int num_channels,
+void set_cubemap(ogl_cubemap& cubemap, int size, int num_channels,
     const array<byte*, 6>& img, bool as_srgb = false, bool linear = true,
     bool mipmap = true);
-void set_cubemap(ogl_cubemap* cubemap, int size, int num_channels,
+void set_cubemap(ogl_cubemap& cubemap, int size, int num_channels,
     const array<float*, 6>& img, bool as_float = false, bool linear = true,
     bool mipmap = true);
 
 // check if cubemap is initialized
-bool is_initialized(const ogl_cubemap* cubemap);
+bool is_initialized(const ogl_cubemap& cubemap);
 
 // clear cubemap
-void clear_cubemap(ogl_cubemap* cubemap);
-
-void set_cubemap(ogl_cubemap* cubemap, const array<image<vec4b>, 6>& img,
-    int num_channels, bool as_srgb = true, bool linear = true,
-    bool mipmap = true);
-void set_cubemap(ogl_cubemap* cubemap, const array<image<vec4f>, 6>& img,
-    int num_channels, bool as_float = false, bool linear = true,
-    bool mipmap = true);
-void set_cubemap(ogl_cubemap* cubemap, const array<image<vec3b>, 6>& img,
-    int num_channels, bool as_srgb = true, bool linear = true,
-    bool mipmap = true);
-void set_cubemap(ogl_cubemap* cubemap, const array<image<vec3f>, 6>& img,
-    int num_channels, bool as_float = false, bool linear = true,
-    bool mipmap = true);
-void set_cubemap(ogl_cubemap* cubemap, const array<image<byte>, 6>& img,
-    int num_channels, bool as_srgb = true, bool linear = true,
-    bool mipmap = true);
-void set_cubemap(ogl_cubemap* cubemap, const array<image<float>, 6>& img,
-    int num_channels, bool as_float = false, bool linear = true,
-    bool mipmap = true);
+void clear_cubemap(ogl_cubemap& cubemap);
 
 // Opengl array/element buffer
 struct ogl_arraybuffer {
@@ -192,30 +182,37 @@ struct ogl_arraybuffer {
   ogl_arraybuffer()                       = default;
   ogl_arraybuffer(const ogl_arraybuffer&) = delete;
   ogl_arraybuffer& operator=(const ogl_arraybuffer&) = delete;
+  ogl_arraybuffer(ogl_arraybuffer&& other) {
+    move_by_swap(this, std::move(other));
+  }
+  ogl_arraybuffer& operator=(ogl_arraybuffer&& other) {
+    move_by_swap(this, std::move(other));
+    return *this;
+  }
 
   // Cleanup
   ~ogl_arraybuffer();
 };
 
 // set buffer
-void set_arraybuffer(ogl_arraybuffer* buffer, size_t size, int esize,
+void set_arraybuffer(ogl_arraybuffer& buffer, size_t size, int esize,
     const float* data, bool dynamic = false);
 
 // check if buffer is initialized
-bool is_initialized(const ogl_arraybuffer* buffer);
+bool is_initialized(const ogl_arraybuffer& buffer);
 
 // clear buffer
-void clear_arraybuffer(ogl_arraybuffer* buffer);
+void clear_arraybuffer(ogl_arraybuffer& buffer);
 
 // set buffer
 void set_arraybuffer(
-    ogl_arraybuffer* buffer, const vector<float>& data, bool dynamic = false);
+    ogl_arraybuffer& buffer, const vector<float>& data, bool dynamic = false);
 void set_arraybuffer(
-    ogl_arraybuffer* buffer, const vector<vec2f>& data, bool dynamic = false);
+    ogl_arraybuffer& buffer, const vector<vec2f>& data, bool dynamic = false);
 void set_arraybuffer(
-    ogl_arraybuffer* buffer, const vector<vec3f>& data, bool dynamic = false);
+    ogl_arraybuffer& buffer, const vector<vec3f>& data, bool dynamic = false);
 void set_arraybuffer(
-    ogl_arraybuffer* buffer, const vector<vec4f>& data, bool dynamic = false);
+    ogl_arraybuffer& buffer, const vector<vec4f>& data, bool dynamic = false);
 
 // Opengl array/element buffer
 struct ogl_elementbuffer {
@@ -231,27 +228,34 @@ struct ogl_elementbuffer {
   ogl_elementbuffer()                         = default;
   ogl_elementbuffer(const ogl_elementbuffer&) = delete;
   ogl_elementbuffer& operator=(const ogl_elementbuffer&) = delete;
+  ogl_elementbuffer(ogl_elementbuffer&& other) {
+    move_by_swap(this, std::move(other));
+  }
+  ogl_elementbuffer& operator=(ogl_elementbuffer&& other) {
+    move_by_swap(this, std::move(other));
+    return *this;
+  }
 
   // Cleanup
   ~ogl_elementbuffer();
 };
 
 // set buffer
-void set_elementbuffer(ogl_elementbuffer* buffer, size_t size, const int* data,
+void set_elementbuffer(ogl_elementbuffer& buffer, size_t size, const int* data,
     bool dynamic = false);
 
 // check if buffer is initialized
-bool is_initialized(const ogl_elementbuffer* buffer);
+bool is_initialized(const ogl_elementbuffer& buffer);
 
 // clear buffer
-void clear_elementbuffer(ogl_elementbuffer* buffer);
+void clear_elementbuffer(ogl_elementbuffer& buffer);
 
 // set buffer
 void set_elementbuffer(
-    ogl_elementbuffer* buffer, const vector<int>& points, bool dynamic = false);
-void set_elementbuffer(ogl_elementbuffer* buffer, const vector<vec2i>& lines,
+    ogl_elementbuffer& buffer, const vector<int>& points, bool dynamic = false);
+void set_elementbuffer(ogl_elementbuffer& buffer, const vector<vec2i>& lines,
     bool dynamic = false);
-void set_elementbuffer(ogl_elementbuffer* buffer,
+void set_elementbuffer(ogl_elementbuffer& buffer,
     const vector<vec3i>& triangles, bool dynamic = false);
 
 // Opengl program
@@ -272,74 +276,75 @@ struct ogl_program {
   ogl_program()                   = default;
   ogl_program(const ogl_program&) = delete;
   ogl_program& operator=(const ogl_program&) = delete;
+  ogl_program(ogl_program&& other) { move_by_swap(this, std::move(other)); }
 
   // Cleanup
   ~ogl_program();
 };
 
 // initialize program
-bool set_program(ogl_program* program, const string& vertex,
+bool set_program(ogl_program& program, const string& vertex,
     const string& fragment, string& error);
-bool set_program(ogl_program* program, const string& vertex,
+bool set_program(ogl_program& program, const string& vertex,
     const string& fragment, string& error, string& errorlog);
-bool set_program(ogl_program* program, const string& vertex,
+bool set_program(ogl_program& program, const string& vertex,
     const string& fragment, bool exceptions = true);
-bool is_initialized(const ogl_program* program);
+bool is_initialized(const ogl_program& program);
 
 // clear program
-void clear_program(ogl_program* program);
+void clear_program(ogl_program& program);
 
 // bind program
-void bind_program(const ogl_program* program);
+void bind_program(const ogl_program& program);
 
 // unbind program
 void unbind_program();
 
 // get uniform location
-int get_uniform_location(const ogl_program* program, const char* name);
+int get_uniform_location(const ogl_program& program, const char* name);
 
 // set uniforms
-void set_uniform(const ogl_program* program, int location, int value);
-void set_uniform(const ogl_program* program, int location, const vec2i& value);
-void set_uniform(const ogl_program* program, int location, const vec3i& value);
-void set_uniform(const ogl_program* program, int location, const vec4i& value);
-void set_uniform(const ogl_program* program, int location, float value);
-void set_uniform(const ogl_program* program, int location, const vec2f& value);
-void set_uniform(const ogl_program* program, int location, const vec3f& value);
-void set_uniform(const ogl_program* program, int location, const vec4f& value);
-void set_uniform(const ogl_program* program, int location, const mat2f& value);
-void set_uniform(const ogl_program* program, int location, const mat3f& value);
-void set_uniform(const ogl_program* program, int location, const mat4f& value);
+void set_uniform(const ogl_program& program, int location, int value);
+void set_uniform(const ogl_program& program, int location, const vec2i& value);
+void set_uniform(const ogl_program& program, int location, const vec3i& value);
+void set_uniform(const ogl_program& program, int location, const vec4i& value);
+void set_uniform(const ogl_program& program, int location, float value);
+void set_uniform(const ogl_program& program, int location, const vec2f& value);
+void set_uniform(const ogl_program& program, int location, const vec3f& value);
+void set_uniform(const ogl_program& program, int location, const vec4f& value);
+void set_uniform(const ogl_program& program, int location, const mat2f& value);
+void set_uniform(const ogl_program& program, int location, const mat3f& value);
+void set_uniform(const ogl_program& program, int location, const mat4f& value);
 void set_uniform(
-    const ogl_program* program, int location, const frame2f& value);
+    const ogl_program& program, int location, const frame2f& value);
 void set_uniform(
-    const ogl_program* program, int location, const frame3f& value);
+    const ogl_program& program, int location, const frame3f& value);
 
 template <typename T>
 inline void set_uniform(
-    const ogl_program* program, const char* name, const T& value) {
+    const ogl_program& program, const char* name, const T& value) {
   return set_uniform(program, get_uniform_location(program, name), value);
 }
 
 // set uniform texture
-void set_uniform(const ogl_program* program, int location,
-    const ogl_texture* texture, int unit);
-void set_uniform(const ogl_program* program, const char* name,
-    const ogl_texture* texture, int unit);
-void set_uniform(const ogl_program* program, int location, int location_on,
-    const ogl_texture* texture, int unit);
-void set_uniform(const ogl_program* program, const char* name,
-    const char* name_on, const ogl_texture* texture, int unit);
+void set_uniform(const ogl_program& program, int location,
+    const ogl_texture& texture, int unit);
+void set_uniform(const ogl_program& program, const char* name,
+    const ogl_texture& texture, int unit);
+void set_uniform(const ogl_program& program, int location, int location_on,
+    const ogl_texture& texture, int unit);
+void set_uniform(const ogl_program& program, const char* name,
+    const char* name_on, const ogl_texture& texture, int unit);
 
 // set uniform cubemap
-void set_uniform(const ogl_program* program, int location,
-    const ogl_cubemap* cubemap, int unit);
-void set_uniform(const ogl_program* program, const char* name,
-    const ogl_cubemap* cubemap, int unit);
-void set_uniform(ogl_program* program, int location, int location_on,
-    const ogl_cubemap* cubemap, int unit);
-void set_uniform(ogl_program* program, const char* name, const char* name_on,
-    const ogl_cubemap* cubemap, int unit);
+void set_uniform(const ogl_program& program, int location,
+    const ogl_cubemap& cubemap, int unit);
+void set_uniform(const ogl_program& program, const char* name,
+    const ogl_cubemap& cubemap, int unit);
+void set_uniform(ogl_program& program, int location, int location_on,
+    const ogl_cubemap& cubemap, int unit);
+void set_uniform(ogl_program& program, const char* name, const char* name_on,
+    const ogl_cubemap& cubemap, int unit);
 }  // namespace yocto
 
 // -----------------------------------------------------------------------------
@@ -362,22 +367,25 @@ struct ogl_framebuffer {
   ogl_framebuffer()                       = default;
   ogl_framebuffer(const ogl_framebuffer&) = delete;
   ogl_framebuffer& operator=(const ogl_framebuffer&) = delete;
+  ogl_framebuffer(ogl_framebuffer&& other) {
+    move_by_swap(this, std::move(other));
+  }
 
   // Cleanup
   ~ogl_framebuffer();
 };
 
-void set_framebuffer(ogl_framebuffer* framebuffer, const vec2i& size);
+void set_framebuffer(ogl_framebuffer& framebuffer, const vec2i& size);
 
-void set_framebuffer_texture(const ogl_framebuffer* framebuffer,
-    const ogl_texture* texture, uint mipmap_level = 0);
+void set_framebuffer_texture(const ogl_framebuffer& framebuffer,
+    const ogl_texture& texture, uint mipmap_level = 0);
 
-void set_framebuffer_texture(const ogl_framebuffer* framebuffer,
-    const ogl_cubemap* cubemap, uint face, uint mipmap_level = 0);
+void set_framebuffer_texture(const ogl_framebuffer& framebuffer,
+    const ogl_cubemap& cubemap, uint face, uint mipmap_level = 0);
 
-void bind_framebuffer(const ogl_framebuffer* target);
+void bind_framebuffer(const ogl_framebuffer& target);
 void unbind_framebuffer();
-void clear_framebuffer(ogl_framebuffer* target);
+void clear_framebuffer(ogl_framebuffer& target);
 }  // namespace yocto
 
 // -----------------------------------------------------------------------------
@@ -398,11 +406,11 @@ enum struct ogl_element_type {
 // Opengl shape
 struct ogl_shape {
   // OpenGL objects
-  vector<ogl_arraybuffer*> vertex_buffers = {};
-  ogl_elementbuffer*       index_buffer   = new ogl_elementbuffer{};
-  ogl_element_type         elements       = ogl_element_type::triangles;
-  size_t                   num_instances  = 0;
-  float                    point_size     = 1;
+  vector<ogl_arraybuffer> vertex_buffers = {};
+  ogl_elementbuffer       index_buffer   = {};
+  ogl_element_type        elements       = ogl_element_type::triangles;
+  size_t                  num_instances  = 0;
+  float                   point_size     = 1;
 
   // OpenGl state
   uint shape_id = 0;
@@ -411,6 +419,14 @@ struct ogl_shape {
   ogl_shape()                 = default;
   ogl_shape(const ogl_shape&) = delete;
   ogl_shape& operator=(const ogl_shape&) = delete;
+  ogl_shape(ogl_shape&& other) {
+    vertex_buffers.swap(other.vertex_buffers);
+    std::swap(index_buffer, other.index_buffer);
+    std::swap(elements, other.elements);
+    std::swap(num_instances, other.num_instances);
+    std::swap(point_size, other.point_size);
+    std::swap(shape_id, other.shape_id);
+  }
 
   // Cleanup
   ~ogl_shape();
@@ -418,46 +434,46 @@ struct ogl_shape {
 
 // set vertex buffer
 void set_vertex_buffer(
-    ogl_shape* shape, const vector<float>& values, int location);
+    ogl_shape& shape, const vector<float>& values, int location);
 void set_vertex_buffer(
-    ogl_shape* shape, const vector<vec2f>& values, int location);
+    ogl_shape& shape, const vector<vec2f>& values, int location);
 void set_vertex_buffer(
-    ogl_shape* shape, const vector<vec3f>& values, int location);
+    ogl_shape& shape, const vector<vec3f>& values, int location);
 void set_vertex_buffer(
-    ogl_shape* shape, const vector<vec4f>& values, int location);
+    ogl_shape& shape, const vector<vec4f>& values, int location);
 
 // set vertex buffer with constant value
-void set_vertex_buffer(ogl_shape* shape, float attribute, int location);
-void set_vertex_buffer(ogl_shape* shape, const vec2f& attribute, int location);
-void set_vertex_buffer(ogl_shape* shape, const vec3f& attribute, int location);
-void set_vertex_buffer(ogl_shape* shape, const vec4f& attribute, int location);
+void set_vertex_buffer(ogl_shape& shape, float attribute, int location);
+void set_vertex_buffer(ogl_shape& shape, const vec2f& attribute, int location);
+void set_vertex_buffer(ogl_shape& shape, const vec3f& attribute, int location);
+void set_vertex_buffer(ogl_shape& shape, const vec4f& attribute, int location);
 
 // set vertex buffer instance
-void set_instance_buffer(ogl_shape* shape, int location, bool is_instance);
+void set_instance_buffer(ogl_shape& shape, int location, bool is_instance);
 
 // set element buffer
-void set_index_buffer(ogl_shape* shape, const vector<int>& indices);
-void set_index_buffer(ogl_shape* shape, const vector<vec2i>& indices);
-void set_index_buffer(ogl_shape* shape, const vector<vec3i>& indices);
+void set_index_buffer(ogl_shape& shape, const vector<int>& indices);
+void set_index_buffer(ogl_shape& shape, const vector<vec2i>& indices);
+void set_index_buffer(ogl_shape& shape, const vector<vec3i>& indices);
 
 // set point size
-void set_point_size(ogl_shape* shape, float point_size);
+void set_point_size(ogl_shape& shape, float point_size);
 
 // check if shape is initialized
-bool is_initialized(const ogl_shape* shape);
+bool is_initialized(const ogl_shape& shape);
 
 // clear buffer
-void clear_shape(ogl_shape* shape);
+void clear_shape(ogl_shape& shape);
 
 // bind shape
-void bind_shape(const ogl_shape* shape);
+void bind_shape(const ogl_shape& shape);
 
 // draw shape
-void draw_shape(const ogl_shape* shape);
+void draw_shape(const ogl_shape& shape);
 
 // init common shapes
-void set_cube_shape(ogl_shape* shape);
-void set_quad_shape(ogl_shape* shape);
+void set_cube_shape(ogl_shape& shape);
+void set_quad_shape(ogl_shape& shape);
 
 }  // namespace yocto
 
@@ -468,30 +484,25 @@ namespace yocto {
 
 // OpenGL image data
 struct ogl_image {
-  ogl_program* program = new ogl_program{};
-  ogl_texture* texture = new ogl_texture{};
-  ogl_shape*   quad    = new ogl_shape{};
+  ogl_program program = {};
+  ogl_texture texture = {};
+  ogl_shape   quad    = {};
 
   // Disable copy construction
   ogl_image()                 = default;
   ogl_image(const ogl_image&) = delete;
   ogl_image& operator=(const ogl_image&) = delete;
-
-  // Cleanup
-  ~ogl_image();
 };
 
 // create image drawing program
-bool init_image(ogl_image* oimg);
-bool is_initialized(const ogl_image* oimg);
+bool init_image(ogl_image& oimg);
+bool is_initialized(const ogl_image& oimg);
 
 // clear image
-void clear_image(ogl_image* oimg);
+void clear_image(ogl_image& oimg);
 
 // update image data
-void set_image(ogl_image* oimg, const image<vec4f>& img, bool linear = false,
-    bool mipmap = false);
-void set_image(ogl_image* oimg, const image<vec4b>& img, bool linear = false,
+void set_image(ogl_image& oimg, const color_image& img, bool linear = false,
     bool mipmap = false);
 
 // OpenGL image drawing params
@@ -507,7 +518,7 @@ struct ogl_image_params {
 };
 
 // draw image
-void draw_image(ogl_image* image, const ogl_image_params& params);
+void draw_image(ogl_image& image, const ogl_image_params& params);
 
 }  // namespace yocto
 

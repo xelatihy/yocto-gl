@@ -30,12 +30,11 @@
 #include "yocto_imgui.h"
 
 #include <yocto/yocto_color.h>
-#include <yocto/yocto_commonio.h>
-#include <yocto/yocto_json.h>
 
 #include <algorithm>
 #include <array>
 #include <cstdarg>
+#include <filesystem>
 #include <memory>
 #include <mutex>
 #include <stdexcept>
@@ -70,6 +69,67 @@ using std::mutex;
 using std::pair;
 using std::unordered_map;
 using namespace std::string_literals;
+
+}  // namespace yocto
+
+// -----------------------------------------------------------------------------
+// PATH UTILITIES
+// -----------------------------------------------------------------------------
+namespace yocto {
+
+// Make a path from a utf8 string
+static std::filesystem::path make_path(const string& filename) {
+  return std::filesystem::u8path(filename);
+}
+
+// Normalize path
+static string normalize_path(const string& filename) {
+  return make_path(filename).generic_u8string();
+}
+
+// Get extension (including .)
+static string path_extension(const string& filename) {
+  return make_path(filename).extension().u8string();
+}
+
+// Get filename without directory.
+static string path_filename(const string& filename) {
+  return make_path(filename).filename().u8string();
+}
+
+// Get filename without directory and extension.
+static string path_basename(const string& filename) {
+  return make_path(filename).stem().u8string();
+}
+
+// Joins paths
+static string path_join(const string& patha, const string& pathb) {
+  return (make_path(patha) / make_path(pathb)).generic_u8string();
+}
+
+// Check if a file can be opened for reading.
+static bool path_exists(const string& filename) {
+  return exists(make_path(filename));
+}
+
+// Check if a file is a directory
+static bool path_isdir(const string& filename) {
+  return is_directory(make_path(filename));
+}
+
+// List the contents of a directory
+static vector<string> list_directory(const string& filename) {
+  auto entries = vector<string>{};
+  for (auto entry : std::filesystem::directory_iterator(make_path(filename))) {
+    entries.push_back(entry.path().generic_u8string());
+  }
+  return entries;
+}
+
+// Get the current directory
+static string path_current() {
+  return std::filesystem::current_path().u8string();
+}
 
 }  // namespace yocto
 
@@ -579,6 +639,12 @@ bool draw_button(gui_window* win, const char* lbl, bool enabled) {
 void draw_label(gui_window* win, const char* lbl, const string& label) {
   ImGui::LabelText(lbl, "%s", label.c_str());
 }
+void draw_label(gui_window* win, const char* lbl, int value) {
+  ImGui::LabelText(lbl, "%s", std::to_string(value).c_str());
+}
+void draw_label(gui_window* win, const char* lbl, bool value) {
+  ImGui::LabelText(lbl, "%s", value ? "true" : "false");
+}
 
 void draw_separator(gui_window* win) { ImGui::Separator(); }
 
@@ -754,16 +820,6 @@ bool draw_hdrcoloredit(gui_window* win, const char* lbl, vec4f& value) {
   }
 }
 
-bool draw_coloredit(gui_window* win, const char* lbl, vec3b& value) {
-  auto valuef = byte_to_float(value);
-  if (ImGui::ColorEdit3(lbl, &valuef.x)) {
-    value = float_to_byte(valuef);
-    return true;
-  } else {
-    return false;
-  }
-}
-
 bool draw_coloredit(gui_window* win, const char* lbl, vec4b& value) {
   auto valuef = byte_to_float(value);
   if (ImGui::ColorEdit4(lbl, &valuef.x)) {
@@ -775,9 +831,16 @@ bool draw_coloredit(gui_window* win, const char* lbl, vec4b& value) {
 }
 
 bool draw_combobox(gui_window* win, const char* lbl, int& value,
-    const vector<string>& labels) {
-  if (!ImGui::BeginCombo(lbl, labels[value].c_str())) return false;
+    const vector<string>& labels, bool include_null) {
+  if (!ImGui::BeginCombo(lbl, value >= 0 ? labels.at(value).c_str() : "<none>"))
+    return false;
   auto old_val = value;
+  if (include_null) {
+    ImGui::PushID(100000);
+    if (ImGui::Selectable("<none>", value < 0)) value = -1;
+    if (value < 0) ImGui::SetItemDefaultFocus();
+    ImGui::PopID();
+  }
   for (auto i = 0; i < labels.size(); i++) {
     ImGui::PushID(i);
     if (ImGui::Selectable(labels[i].c_str(), value == i)) value = i;
@@ -789,9 +852,15 @@ bool draw_combobox(gui_window* win, const char* lbl, int& value,
 }
 
 bool draw_combobox(gui_window* win, const char* lbl, string& value,
-    const vector<string>& labels) {
+    const vector<string>& labels, bool include_null) {
   if (!ImGui::BeginCombo(lbl, value.c_str())) return false;
   auto old_val = value;
+  if (include_null) {
+    ImGui::PushID(100000);
+    if (ImGui::Selectable("<none>", value.empty())) value = "";
+    if (value.empty()) ImGui::SetItemDefaultFocus();
+    ImGui::PopID();
+  }
   for (auto i = 0; i < labels.size(); i++) {
     ImGui::PushID(i);
     if (ImGui::Selectable(labels[i].c_str(), value == labels[i]))
@@ -933,7 +1002,7 @@ struct ImGuiAppLog {
     ImGui::EndChild();
   }
   void Draw(const char* title, bool* p_opened = nullptr) {
-    ImGui::SetNextWindowSize(ImVec2(500, 400), ImGuiSetCond_FirstUseEver);
+    ImGui::SetNextWindowSize(ImVec2(500, 400), ImGuiCond_FirstUseEver);
     ImGui::Begin(title, p_opened);
     Draw();
     ImGui::End();
@@ -963,171 +1032,166 @@ void draw_log(gui_window* win) {
   _log_mutex.unlock();
 }
 
-template <typename T>
-static bool draw_number_param(
-    gui_window* win, const char* lbl, json_value& value, bool readonly) {
-  // This should work but breaks on windows
-  // auto gvalue = value.get<T>();
-  auto gvalue = from_json<T>(value);  // windows fix
-  if (draw_dragger(win, lbl, gvalue) && !readonly) {
-    value = gvalue;
-    return true;
-  } else {
-    return false;
-  }
-}
-
-static bool draw_boolean_param(
-    gui_window* win, const char* lbl, json_value& value, bool readonly) {
-  auto gvalue = value.get<bool>();
-  if (draw_checkbox(win, lbl, gvalue) && !readonly) {
-    value = gvalue;
-    return true;
-  } else {
-    return false;
-  }
-}
-
-static bool draw_string_param(
-    gui_window* win, const char* lbl, json_value& value, bool readonly) {
-  auto gvalue = value.get<string>();
-  if (draw_textinput(win, lbl, gvalue) && !readonly) {
-    value = gvalue;
-    return true;
-  } else {
-    return false;
-  }
-}
-
-static bool draw_enum_param(gui_window* win, const char* lbl, json_value& value,
-    bool readonly, const json_value& labels) {
-  auto gvalue = value.get<string>();
-  // this code should work by break windows
-  // auto glabels = labels.get<vector<string>>();
-  auto glabels = from_json<vector<string>>(labels);  // windows fix
-  if (draw_combobox(win, lbl, gvalue, glabels) && !readonly) {
-    value = gvalue;
-    return true;
-  } else {
-    return false;
-  }
-}
-
-bool draw_params(
-    gui_window* win, const char* lbl, json_value& value, bool readonly) {
-  if (value.is_integer()) {
-    return draw_number_param<int>(win, lbl, value, readonly);
-  } else if (value.is_number()) {
-    return draw_number_param<float>(win, lbl, value, readonly);
-  } else if (value.is_boolean()) {
-    return draw_boolean_param(win, lbl, value, readonly);
-  } else if (value.is_string()) {
-    return draw_string_param(win, lbl, value, readonly);
-  } else if (value.is_array()) {
-    if (value.size() > 4) return false;  // skip
-    auto is_integer_array = true, is_number_array = true;
-    for (auto& item : value) {
-      if (!item.is_integer()) is_integer_array = false;
-      if (!item.is_number()) is_number_array = false;
-    }
-    if (!is_integer_array && !is_number_array) return false;  // skip
-    if (is_integer_array) {
-      if (value.size() == 2)
-        return draw_number_param<array<int, 2>>(win, lbl, value, readonly);
-      if (value.size() == 3)
-        return draw_number_param<array<int, 3>>(win, lbl, value, readonly);
-      if (value.size() == 4)
-        return draw_number_param<array<int, 4>>(win, lbl, value, readonly);
-      return false;  // skip
-    } else if (is_number_array) {
-      if (value.size() == 2)
-        return draw_number_param<array<float, 2>>(win, lbl, value, readonly);
-      if (value.size() == 3)
-        return draw_number_param<array<float, 2>>(win, lbl, value, readonly);
-      if (value.size() == 4)
-        return draw_number_param<array<float, 2>>(win, lbl, value, readonly);
-      return false;  // skip
-    } else {
-      return false;  // skip
-    }
-  } else if (value.is_object()) {
-    if (begin_header(win, lbl)) {
-      auto edited = 0;
-      for (auto& [name, item] : value.items()) {
-        edited += (int)draw_params(win, name.c_str(), item, readonly);
+// draw param
+bool draw_param(gui_window* win, const string& name, gui_param& param) {
+  auto copy = param;
+  switch (param.type) {
+    case gui_param_type::value1f:
+      if (param.minmaxf.x == param.minmaxf.y) {
+        return draw_dragger(win, name.c_str(),
+                   param.readonly ? (float&)copy.valuef
+                                  : (float&)param.valuef) &&
+               !param.readonly;
+      } else {
+        return draw_slider(win, name.c_str(),
+                   param.readonly ? (float&)copy.valuef : (float&)param.valuef,
+                   param.minmaxf.x, param.minmaxf.y) &&
+               !param.readonly;
       }
-      end_header(win);
-      return (bool)edited;
-    } else {
-      return false;
-    }
-  } else {
-    return false;  // skip
+      break;
+    case gui_param_type::value2f:
+      if (param.minmaxf.x == param.minmaxf.y) {
+        return draw_dragger(win, name.c_str(),
+                   param.readonly ? (vec2f&)copy.valuef
+                                  : (vec2f&)param.valuef) &&
+               !param.readonly;
+      } else {
+        return draw_slider(win, name.c_str(),
+                   param.readonly ? (vec2f&)copy.valuef : (vec2f&)param.valuef,
+                   param.minmaxf.x, param.minmaxf.y) &&
+               !param.readonly;
+      }
+      break;
+    case gui_param_type::value3f:
+      if (param.color) {
+        return draw_coloredit(win, name.c_str(),
+                   param.readonly ? (vec3f&)copy.valuef
+                                  : (vec3f&)param.valuef) &&
+               !param.readonly;
+      } else if (param.minmaxf.x == param.minmaxf.y) {
+        return draw_dragger(win, name.c_str(),
+                   param.readonly ? (vec3f&)copy.valuef
+                                  : (vec3f&)param.valuef) &&
+               !param.readonly;
+      } else {
+        return draw_slider(win, name.c_str(),
+                   param.readonly ? copy.valuef : param.valuef, param.minmaxf.x,
+                   param.minmaxf.y) &&
+               !param.readonly;
+      }
+      break;
+    case gui_param_type::value4f:
+      if (param.color) {
+        return draw_coloredit(win, name.c_str(),
+                   param.readonly ? (vec4f&)copy.valuef
+                                  : (vec4f&)param.valuef) &&
+               !param.readonly;
+      } else if (param.minmaxf.x == param.minmaxf.y) {
+        return draw_dragger(win, name.c_str(),
+                   param.readonly ? (vec4f&)copy.valuef
+                                  : (vec4f&)param.valuef) &&
+               !param.readonly;
+      } else {
+        return draw_slider(win, name.c_str(),
+                   param.readonly ? (vec4f&)copy.valuef : (vec4f&)param.valuef,
+                   param.minmaxf.x, param.minmaxf.y) &&
+               !param.readonly;
+      }
+      break;
+    case gui_param_type::value1i:
+      if (!param.labels.empty()) {
+        return draw_combobox(win, name.c_str(),
+                   param.readonly ? (int&)copy.valuei : (int&)param.valuei,
+                   param.labels) &&
+               !param.readonly;
+      } else if (param.minmaxi.x == param.minmaxi.y) {
+        return draw_dragger(win, name.c_str(),
+                   param.readonly ? (int&)copy.valuei : (int&)param.valuei) &&
+               !param.readonly;
+      } else {
+        return draw_slider(win, name.c_str(),
+                   param.readonly ? (int&)copy.valuei : (int&)param.valuei,
+                   param.minmaxi.x, param.minmaxi.y) &&
+               !param.readonly;
+      }
+      break;
+    case gui_param_type::value2i:
+      if (param.minmaxi.x == param.minmaxi.y) {
+        return draw_dragger(win, name.c_str(),
+                   param.readonly ? (vec2i&)copy.valuei
+                                  : (vec2i&)param.valuei) &&
+               !param.readonly;
+      } else {
+        return draw_slider(win, name.c_str(),
+                   param.readonly ? (vec2i&)copy.valuei : (vec2i&)param.valuei,
+                   param.minmaxi.x, param.minmaxi.y) &&
+               !param.readonly;
+      }
+      break;
+    case gui_param_type::value3i:
+      if (param.minmaxi.x == param.minmaxi.y) {
+        return draw_dragger(win, name.c_str(),
+                   param.readonly ? (vec3i&)copy.valuei
+                                  : (vec3i&)param.valuei) &&
+               !param.readonly;
+      } else {
+        return draw_slider(win, name.c_str(),
+                   param.readonly ? (vec3i&)copy.valuei : (vec3i&)param.valuei,
+                   param.minmaxi.x, param.minmaxi.y) &&
+               !param.readonly;
+      }
+      break;
+    case gui_param_type::value4i:
+      if (param.minmaxi.x == param.minmaxi.y) {
+        return draw_dragger(win, name.c_str(),
+                   param.readonly ? (vec4i&)copy.valuei
+                                  : (vec4i&)param.valuei) &&
+               !param.readonly;
+      } else {
+        return draw_slider(win, name.c_str(),
+                   param.readonly ? (vec4i&)copy.valuei : (vec4i&)param.valuei,
+                   param.minmaxi.x, param.minmaxi.y) &&
+               !param.readonly;
+      }
+      break;
+    case gui_param_type::value1s:
+      if (!param.labels.empty()) {
+        return draw_combobox(win, name.c_str(),
+                   param.readonly ? copy.values : param.values, param.labels) &&
+               !param.readonly;
+      } else {
+        return draw_textinput(win, name.c_str(),
+                   param.readonly ? copy.values : param.values) &&
+               !param.readonly;
+      }
+      break;
+    case gui_param_type::value1b:
+      if (!param.labels.empty()) {
+        // maybe we should implement something different here
+        return draw_checkbox(win, name.c_str(),
+                   param.readonly ? copy.valueb : param.valueb) &&
+               !param.readonly;
+      } else {
+        return draw_checkbox(win, name.c_str(),
+                   param.readonly ? copy.valueb : param.valueb) &&
+               !param.readonly;
+      }
+      break;
+    default: return false;
   }
 }
 
-bool draw_params(gui_window* win, const char* lbl, json_value& value,
-    const json_value& schema, bool readonly) {
-  if (value.is_integer()) {
-    return draw_number_param<int>(win, lbl, value, readonly);
-  } else if (value.is_number()) {
-    return draw_number_param<float>(win, lbl, value, readonly);
-  } else if (value.is_boolean()) {
-    return draw_boolean_param(win, lbl, value, readonly);
-  } else if (value.is_string()) {
-    if (schema.contains("enum")) {
-      return draw_enum_param(win, lbl, value, readonly, schema.at("enum"));
-    } else {
-      return draw_string_param(win, lbl, value, readonly);
+// draw params
+bool draw_params(gui_window* win, const string& name, gui_params& params) {
+  auto edited = false;
+  if (begin_header(win, name.c_str())) {
+    for (auto& [name, param] : params) {
+      auto pedited = draw_param(win, name, param);
+      edited       = edited || pedited;
     }
-  } else if (value.is_array()) {
-    if (value.size() > 4) return false;  // skip
-    auto is_integer_array = true, is_number_array = true;
-    for (auto& item : value) {
-      if (!item.is_integer()) is_integer_array = false;
-      if (!item.is_number()) is_number_array = false;
-    }
-    if (!is_integer_array && !is_number_array) return false;  // skip
-    if (is_integer_array) {
-      if (value.size() == 2)
-        return draw_number_param<array<int, 2>>(win, lbl, value, readonly);
-      if (value.size() == 3)
-        return draw_number_param<array<int, 3>>(win, lbl, value, readonly);
-      if (value.size() == 4)
-        return draw_number_param<array<int, 4>>(win, lbl, value, readonly);
-      return false;  // skip
-    } else if (is_number_array) {
-      if (value.size() == 2)
-        return draw_number_param<array<float, 2>>(win, lbl, value, readonly);
-      if (value.size() == 3)
-        return draw_number_param<array<float, 3>>(win, lbl, value, readonly);
-      if (value.size() == 4)
-        return draw_number_param<array<float, 4>>(win, lbl, value, readonly);
-      return false;  // skip
-    } else {
-      return false;  // skip
-    }
-  } else if (value.is_object()) {
-    if (begin_header(win, lbl)) {
-      auto edited = 0;
-      for (auto& [name, item] : value.items()) {
-        auto item_readonly = false;
-        if (!readonly && schema.contains("gui_readonly")) {
-          for (auto& readonly_name : schema.at("gui_readonly")) {
-            if (name == readonly_name.get<string>()) item_readonly = true;
-          }
-        }
-        edited += (int)draw_params(win, name.c_str(), item,
-            schema.at("properties").at(name), readonly || item_readonly);
-      }
-      end_header(win);
-      return (bool)edited;
-    } else {
-      return false;
-    }
-  } else {
-    return false;  // skip
+    end_header(win);
   }
+  return edited;
 }
 
 }  // namespace yocto

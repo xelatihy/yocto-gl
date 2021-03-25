@@ -59,7 +59,7 @@ namespace yocto {
 
 using byte   = unsigned char;
 using uint   = unsigned int;
-using ushort = uint16_t;
+using ushort = unsigned short;
 
 inline const double pi  = 3.14159265358979323846;
 inline const float  pif = (float)pi;
@@ -105,6 +105,9 @@ inline int  clamp(int a, int min, int max);
 inline int  sign(int a);
 inline int  pow2(int a);
 inline void swap(int& a, int& b);
+
+inline size_t min(size_t a, size_t b);
+inline size_t max(size_t a, size_t b);
 
 }  // namespace yocto
 
@@ -433,15 +436,6 @@ struct vec4i {
   const int& operator[](int i) const;
 };
 
-struct vec3b {
-  byte x = 0;
-  byte y = 0;
-  byte z = 0;
-
-  byte&       operator[](int i);
-  const byte& operator[](int i) const;
-};
-
 struct vec4b {
   byte x = 0;
   byte y = 0;
@@ -452,42 +446,14 @@ struct vec4b {
   const byte& operator[](int i) const;
 };
 
-struct vec3s {
-  ushort x = 0;
-  ushort y = 0;
-  ushort z = 0;
-
-  ushort&       operator[](int i);
-  const ushort& operator[](int i) const;
-};
-
-struct vec4s {
-  ushort x = 0;
-  ushort y = 0;
-  ushort z = 0;
-  ushort w = 0;
-
-  ushort&       operator[](int i);
-  const ushort& operator[](int i) const;
-};
-
 // Zero vector constants.
 inline const auto zero2i = vec2i{0, 0};
 inline const auto zero3i = vec3i{0, 0, 0};
 inline const auto zero4i = vec4i{0, 0, 0, 0};
-inline const auto zero3b = vec3b{0, 0, 0};
 inline const auto zero4b = vec4b{0, 0, 0, 0};
-inline const auto zero3s = vec3s{0, 0, 0};
-inline const auto zero4s = vec4s{0, 0, 0, 0};
 
 // Element access
 inline vec3i xyz(const vec4i& a);
-
-// Element access
-inline vec3b xyz(const vec4b& a);
-
-// Element access
-inline vec3s xyz(const vec4s& a);
 
 // Vector sequence operations.
 inline int        size(const vec2i& a);
@@ -650,6 +616,342 @@ inline int sum(const vec4i& a);
 // Functions applied to vector elements
 inline vec4i abs(const vec4i& a);
 inline void  swap(vec4i& a, vec4i& b);
+
+// Vector comparison operations.
+inline bool operator==(const vec4b& a, const vec4b& b);
+inline bool operator!=(const vec4b& a, const vec4b& b);
+
+}  // namespace yocto
+
+// -----------------------------------------------------------------------------
+// MATH FUNCTIONS IN DOUBLE
+// -----------------------------------------------------------------------------
+namespace yocto {
+
+inline const auto dbl_max = std::numeric_limits<double>::max();
+inline const auto dbl_min = std::numeric_limits<double>::lowest();
+inline const auto dbl_eps = std::numeric_limits<double>::epsilon();
+
+inline double abs(double a);
+inline double min(double a, double b);
+inline double max(double a, double b);
+inline double clamp(double a, double min, double max);
+inline double sign(double a);
+inline double sqrt(double a);
+inline double sin(double a);
+inline double cos(double a);
+inline double tan(double a);
+inline double asin(double a);
+inline double acos(double a);
+inline double atan(double a);
+inline double log(double a);
+inline double exp(double a);
+inline double log2(double a);
+inline double exp2(double a);
+inline double pow(double a, double b);
+inline bool   isfinite(double a);
+inline double atan2(double a, double b);
+inline double fmod(double a, double b);
+inline double radians(double a);
+inline double degrees(double a);
+inline double lerp(double a, double b, double u);
+inline void   swap(double& a, double& b);
+inline double smoothstep(double a, double b, double u);
+inline double bias(double a, double bias);
+inline double gain(double a, double gain);
+
+}  // namespace yocto
+
+// -----------------------------------------------------------------------------
+// VECTORS
+// -----------------------------------------------------------------------------
+namespace yocto {
+
+struct vec2d {
+  double x = 0;
+  double y = 0;
+
+  double&       operator[](int i);
+  const double& operator[](int i) const;
+};
+
+struct vec3d {
+  double x = 0;
+  double y = 0;
+  double z = 0;
+
+  double&       operator[](int i);
+  const double& operator[](int i) const;
+};
+
+struct vec4d {
+  double x = 0;
+  double y = 0;
+  double z = 0;
+  double w = 0;
+
+  double&       operator[](int i);
+  const double& operator[](int i) const;
+};
+
+// Zero vector constants.
+inline const auto zero2d = vec2d{0, 0};
+inline const auto zero3d = vec3d{0, 0, 0};
+inline const auto zero4d = vec4d{0, 0, 0, 0};
+
+// One vector constants.
+inline const auto one2d = vec2d{1, 1};
+inline const auto one3d = vec3d{1, 1, 1};
+inline const auto one4d = vec4d{1, 1, 1, 1};
+
+// Element access
+inline vec3d xyz(const vec4d& a);
+
+// Vector sequence operations.
+inline int           size(const vec2d& a);
+inline const double* begin(const vec2d& a);
+inline const double* end(const vec2d& a);
+inline double*       begin(vec2d& a);
+inline double*       end(vec2d& a);
+inline const double* data(const vec2d& a);
+inline double*       data(vec2d& a);
+
+// Vector comparison operations.
+inline bool operator==(const vec2d& a, const vec2d& b);
+inline bool operator!=(const vec2d& a, const vec2d& b);
+
+// Vector operations.
+inline vec2d operator+(const vec2d& a);
+inline vec2d operator-(const vec2d& a);
+inline vec2d operator+(const vec2d& a, const vec2d& b);
+inline vec2d operator+(const vec2d& a, double b);
+inline vec2d operator+(double a, const vec2d& b);
+inline vec2d operator-(const vec2d& a, const vec2d& b);
+inline vec2d operator-(const vec2d& a, double b);
+inline vec2d operator-(double a, const vec2d& b);
+inline vec2d operator*(const vec2d& a, const vec2d& b);
+inline vec2d operator*(const vec2d& a, double b);
+inline vec2d operator*(double a, const vec2d& b);
+inline vec2d operator/(const vec2d& a, const vec2d& b);
+inline vec2d operator/(const vec2d& a, double b);
+inline vec2d operator/(double a, const vec2d& b);
+
+// Vector assignments
+inline vec2d& operator+=(vec2d& a, const vec2d& b);
+inline vec2d& operator+=(vec2d& a, double b);
+inline vec2d& operator-=(vec2d& a, const vec2d& b);
+inline vec2d& operator-=(vec2d& a, double b);
+inline vec2d& operator*=(vec2d& a, const vec2d& b);
+inline vec2d& operator*=(vec2d& a, double b);
+inline vec2d& operator/=(vec2d& a, const vec2d& b);
+inline vec2d& operator/=(vec2d& a, double b);
+
+// Vector products and lengths.
+inline double dot(const vec2d& a, const vec2d& b);
+inline double cross(const vec2d& a, const vec2d& b);
+
+inline double length(const vec2d& a);
+inline double length_squared(const vec2d& a);
+inline vec2d  normalize(const vec2d& a);
+inline double distance(const vec2d& a, const vec2d& b);
+inline double distance_squared(const vec2d& a, const vec2d& b);
+inline double angle(const vec2d& a, const vec2d& b);
+
+// Max element and clamp.
+inline vec2d max(const vec2d& a, double b);
+inline vec2d min(const vec2d& a, double b);
+inline vec2d max(const vec2d& a, const vec2d& b);
+inline vec2d min(const vec2d& a, const vec2d& b);
+inline vec2d clamp(const vec2d& x, double min, double max);
+inline vec2d lerp(const vec2d& a, const vec2d& b, double u);
+inline vec2d lerp(const vec2d& a, const vec2d& b, const vec2d& u);
+
+inline double max(const vec2d& a);
+inline double min(const vec2d& a);
+inline double sum(const vec2d& a);
+inline double mean(const vec2d& a);
+
+// Functions applied to vector elements
+inline vec2d abs(const vec2d& a);
+inline vec2d sqrt(const vec2d& a);
+inline vec2d exp(const vec2d& a);
+inline vec2d log(const vec2d& a);
+inline vec2d exp2(const vec2d& a);
+inline vec2d log2(const vec2d& a);
+inline bool  isfinite(const vec2d& a);
+inline vec2d pow(const vec2d& a, double b);
+inline vec2d pow(const vec2d& a, const vec2d& b);
+inline vec2d gain(const vec2d& a, double b);
+inline void  swap(vec2d& a, vec2d& b);
+
+// Vector sequence operations.
+inline int           size(const vec3d& a);
+inline const double* begin(const vec3d& a);
+inline const double* end(const vec3d& a);
+inline double*       begin(vec3d& a);
+inline double*       end(vec3d& a);
+inline const double* data(const vec3d& a);
+inline double*       data(vec3d& a);
+
+// Vector comparison operations.
+inline bool operator==(const vec3d& a, const vec3d& b);
+inline bool operator!=(const vec3d& a, const vec3d& b);
+
+// Vector operations.
+inline vec3d operator+(const vec3d& a);
+inline vec3d operator-(const vec3d& a);
+inline vec3d operator+(const vec3d& a, const vec3d& b);
+inline vec3d operator+(const vec3d& a, double b);
+inline vec3d operator+(double a, const vec3d& b);
+inline vec3d operator-(const vec3d& a, const vec3d& b);
+inline vec3d operator-(const vec3d& a, double b);
+inline vec3d operator-(double a, const vec3d& b);
+inline vec3d operator*(const vec3d& a, const vec3d& b);
+inline vec3d operator*(const vec3d& a, double b);
+inline vec3d operator*(double a, const vec3d& b);
+inline vec3d operator/(const vec3d& a, const vec3d& b);
+inline vec3d operator/(const vec3d& a, double b);
+inline vec3d operator/(double a, const vec3d& b);
+
+// Vector assignments
+inline vec3d& operator+=(vec3d& a, const vec3d& b);
+inline vec3d& operator+=(vec3d& a, double b);
+inline vec3d& operator-=(vec3d& a, const vec3d& b);
+inline vec3d& operator-=(vec3d& a, double b);
+inline vec3d& operator*=(vec3d& a, const vec3d& b);
+inline vec3d& operator*=(vec3d& a, double b);
+inline vec3d& operator/=(vec3d& a, const vec3d& b);
+inline vec3d& operator/=(vec3d& a, double b);
+
+// Vector products and lengths.
+inline double dot(const vec3d& a, const vec3d& b);
+inline vec3d  cross(const vec3d& a, const vec3d& b);
+
+inline double length(const vec3d& a);
+inline double length_squared(const vec3d& a);
+inline vec3d  normalize(const vec3d& a);
+inline double distance(const vec3d& a, const vec3d& b);
+inline double distance_squared(const vec3d& a, const vec3d& b);
+inline double angle(const vec3d& a, const vec3d& b);
+
+// Orthogonal vectors.
+inline vec3d orthogonal(const vec3d& v);
+inline vec3d orthonormalize(const vec3d& a, const vec3d& b);
+
+// Reflected and refracted vector.
+inline vec3d reflect(const vec3d& w, const vec3d& n);
+inline vec3d refract(const vec3d& w, const vec3d& n, double inv_eta);
+
+// Max element and clamp.
+inline vec3d max(const vec3d& a, double b);
+inline vec3d min(const vec3d& a, double b);
+inline vec3d max(const vec3d& a, const vec3d& b);
+inline vec3d min(const vec3d& a, const vec3d& b);
+inline vec3d clamp(const vec3d& x, double min, double max);
+inline vec3d lerp(const vec3d& a, const vec3d& b, double u);
+inline vec3d lerp(const vec3d& a, const vec3d& b, const vec3d& u);
+
+inline double max(const vec3d& a);
+inline double min(const vec3d& a);
+inline double sum(const vec3d& a);
+inline double mean(const vec3d& a);
+
+// Functions applied to vector elements
+inline vec3d abs(const vec3d& a);
+inline vec3d sqrt(const vec3d& a);
+inline vec3d exp(const vec3d& a);
+inline vec3d log(const vec3d& a);
+inline vec3d exp2(const vec3d& a);
+inline vec3d log2(const vec3d& a);
+inline vec3d pow(const vec3d& a, double b);
+inline vec3d pow(const vec3d& a, const vec3d& b);
+inline vec3d gain(const vec3d& a, double b);
+inline bool  isfinite(const vec3d& a);
+inline void  swap(vec3d& a, vec3d& b);
+
+// Vector sequence operations.
+inline int           size(const vec4d& a);
+inline const double* begin(const vec4d& a);
+inline const double* end(const vec4d& a);
+inline double*       begin(vec4d& a);
+inline double*       end(vec4d& a);
+inline const double* data(const vec4d& a);
+inline double*       data(vec4d& a);
+
+// Vector comparison operations.
+inline bool operator==(const vec4d& a, const vec4d& b);
+inline bool operator!=(const vec4d& a, const vec4d& b);
+
+// Vector operations.
+inline vec4d operator+(const vec4d& a);
+inline vec4d operator-(const vec4d& a);
+inline vec4d operator+(const vec4d& a, const vec4d& b);
+inline vec4d operator+(const vec4d& a, double b);
+inline vec4d operator+(double a, const vec4d& b);
+inline vec4d operator-(const vec4d& a, const vec4d& b);
+inline vec4d operator-(const vec4d& a, double b);
+inline vec4d operator-(double a, const vec4d& b);
+inline vec4d operator*(const vec4d& a, const vec4d& b);
+inline vec4d operator*(const vec4d& a, double b);
+inline vec4d operator*(double a, const vec4d& b);
+inline vec4d operator/(const vec4d& a, const vec4d& b);
+inline vec4d operator/(const vec4d& a, double b);
+inline vec4d operator/(double a, const vec4d& b);
+
+// Vector assignments
+inline vec4d& operator+=(vec4d& a, const vec4d& b);
+inline vec4d& operator+=(vec4d& a, double b);
+inline vec4d& operator-=(vec4d& a, const vec4d& b);
+inline vec4d& operator-=(vec4d& a, double b);
+inline vec4d& operator*=(vec4d& a, const vec4d& b);
+inline vec4d& operator*=(vec4d& a, double b);
+inline vec4d& operator/=(vec4d& a, const vec4d& b);
+inline vec4d& operator/=(vec4d& a, double b);
+
+// Vector products and lengths.
+inline double dot(const vec4d& a, const vec4d& b);
+inline double length(const vec4d& a);
+inline double length_squared(const vec4d& a);
+inline vec4d  normalize(const vec4d& a);
+inline double distance(const vec4d& a, const vec4d& b);
+inline double distance_squared(const vec4d& a, const vec4d& b);
+inline double angle(const vec4d& a, const vec4d& b);
+
+inline vec4d slerp(const vec4d& a, const vec4d& b, double u);
+
+// Max element and clamp.
+inline vec4d max(const vec4d& a, double b);
+inline vec4d min(const vec4d& a, double b);
+inline vec4d max(const vec4d& a, const vec4d& b);
+inline vec4d min(const vec4d& a, const vec4d& b);
+inline vec4d clamp(const vec4d& x, double min, double max);
+inline vec4d lerp(const vec4d& a, const vec4d& b, double u);
+inline vec4d lerp(const vec4d& a, const vec4d& b, const vec4d& u);
+
+inline double max(const vec4d& a);
+inline double min(const vec4d& a);
+inline double sum(const vec4d& a);
+inline double mean(const vec4d& a);
+
+// Functions applied to vector elements
+inline vec4d abs(const vec4d& a);
+inline vec4d sqrt(const vec4d& a);
+inline vec4d exp(const vec4d& a);
+inline vec4d log(const vec4d& a);
+inline vec4d exp2(const vec4d& a);
+inline vec4d log2(const vec4d& a);
+inline vec4d pow(const vec4d& a, double b);
+inline vec4d pow(const vec4d& a, const vec4d& b);
+inline vec4d gain(const vec4d& a, double b);
+inline bool  isfinite(const vec4d& a);
+inline void  swap(vec4d& a, vec4d& b);
+
+// Quaternion operatons represented as xi + yj + zk + w
+// const auto identity_quat4f = vec4d{0, 0, 0, 1};
+inline vec4d quat_mul(const vec4d& a, double b);
+inline vec4d quat_mul(const vec4d& a, const vec4d& b);
+inline vec4d quat_conjugate(const vec4d& a);
+inline vec4d quat_inverse(const vec4d& a);
 
 }  // namespace yocto
 
@@ -997,6 +1299,22 @@ inline frame3f camera_fpscam(
 }  // namespace yocto
 
 // -----------------------------------------------------------------------------
+// PYTHON-LIKE ITERATORS
+// -----------------------------------------------------------------------------
+namespace yocto {
+
+// Python `range()` equivalent. Construct an object that iterates over an
+// integer sequence.
+template <typename T>
+constexpr auto range(T max);
+template <typename T>
+constexpr auto range(T min, T max);
+template <typename T>
+constexpr auto range(T min, T max, T step);
+
+}  // namespace yocto
+
+// -----------------------------------------------------------------------------
 //
 //
 // IMPLEMENTATION
@@ -1005,7 +1323,7 @@ inline frame3f camera_fpscam(
 // -----------------------------------------------------------------------------
 
 // -----------------------------------------------------------------------------
-// IMPLEMENTATION OF MATH CONSTANTS AND FUNCTIONS
+// MATH CONSTANTS AND FUNCTIONS
 // -----------------------------------------------------------------------------
 namespace yocto {
 
@@ -1015,7 +1333,7 @@ inline float max(float a, float b) { return (a > b) ? a : b; }
 inline float clamp(float a, float min_, float max_) {
   return min(max(a, min_), max_);
 }
-inline float sign(float a) { return a < 0 ? -1 : 1; }
+inline float sign(float a) { return a < 0 ? -1.0f : 1.0f; }
 inline float sqrt(float a) { return std::sqrt(a); }
 inline float sin(float a) { return std::sin(a); }
 inline float cos(float a) { return std::cos(a); }
@@ -1035,7 +1353,7 @@ inline void  swap(float& a, float& b) { std::swap(a, b); }
 inline float radians(float a) { return a * pif / 180; }
 inline float degrees(float a) { return a * 180 / pif; }
 inline float lerp(float a, float b, float u) { return a * (1 - u) + b * u; }
-inline float step(float a, float u) { return u < a ? 0 : 1; }
+inline float step(float a, float u) { return u < a ? 0.0f : 1.0f; }
 inline float smoothstep(float a, float b, float u) {
   auto t = clamp((u - a) / (b - a), 0.0f, 1.0f);
   return t * t * (3 - 2 * t);
@@ -1055,6 +1373,9 @@ inline int  clamp(int a, int min_, int max_) { return min(max(a, min_), max_); }
 inline int  sign(int a) { return a < 0 ? -1 : 1; }
 inline int  pow2(int a) { return 1 << a; }
 inline void swap(int& a, int& b) { std::swap(a, b); }
+
+inline size_t min(size_t a, size_t b) { return (a < b) ? a : b; }
+inline size_t max(size_t a, size_t b) { return (a > b) ? a : b; }
 
 }  // namespace yocto
 
@@ -1547,29 +1868,11 @@ inline int& vec4i::operator[](int i) { return (&x)[i]; }
 inline const int& vec4i::operator[](int i) const { return (&x)[i]; }
 
 // Vector data types
-inline byte& vec3b::operator[](int i) { return (&x)[i]; }
-inline const byte& vec3b::operator[](int i) const { return (&x)[i]; }
-
-// Vector data types
 inline byte& vec4b::operator[](int i) { return (&x)[i]; }
 inline const byte& vec4b::operator[](int i) const { return (&x)[i]; }
 
-// Vector data types
-inline ushort& vec3s::operator[](int i) { return (&x)[i]; }
-inline const ushort& vec3s::operator[](int i) const { return (&x)[i]; }
-
-// Vector data types
-inline ushort& vec4s::operator[](int i) { return (&x)[i]; }
-inline const ushort& vec4s::operator[](int i) const { return (&x)[i]; }
-
 // Element access
 inline vec3i xyz(const vec4i& a) { return {a.x, a.y, a.z}; }
-
-// Element access
-inline vec3b xyz(const vec4b& a) { return {a.x, a.y, a.z}; }
-
-// Element access
-inline vec3s xyz(const vec4s& a) { return {a.x, a.y, a.z}; }
 
 // Vector sequence operations.
 inline int        size(const vec2i& a) { return 2; }
@@ -1829,6 +2132,537 @@ inline vec4i abs(const vec4i& a) {
   return {abs(a.x), abs(a.y), abs(a.z), abs(a.w)};
 }
 inline void swap(vec4i& a, vec4i& b) { std::swap(a, b); }
+
+// Vector comparison operations.
+inline bool operator==(const vec4b& a, const vec4b& b) {
+  return a.x == b.x && a.y == b.y && a.z == b.z && a.w == b.w;
+}
+inline bool operator!=(const vec4b& a, const vec4b& b) {
+  return a.x != b.x || a.y != b.y || a.z != b.z || a.w != b.w;
+}
+
+}  // namespace yocto
+
+// -----------------------------------------------------------------------------
+// MATH CONSTANTS AND FUNCTIONS IN DOUBLE
+// -----------------------------------------------------------------------------
+namespace yocto {
+
+inline double abs(double a) { return a < 0 ? -a : a; }
+inline double min(double a, double b) { return (a < b) ? a : b; }
+inline double max(double a, double b) { return (a > b) ? a : b; }
+inline double clamp(double a, double min_, double max_) {
+  return min(max(a, min_), max_);
+}
+inline double sign(double a) { return a < 0 ? -1 : 1; }
+inline double sqrt(double a) { return std::sqrt(a); }
+inline double sin(double a) { return std::sin(a); }
+inline double cos(double a) { return std::cos(a); }
+inline double tan(double a) { return std::tan(a); }
+inline double asin(double a) { return std::asin(a); }
+inline double acos(double a) { return std::acos(a); }
+inline double atan(double a) { return std::atan(a); }
+inline double log(double a) { return std::log(a); }
+inline double exp(double a) { return std::exp(a); }
+inline double log2(double a) { return std::log2(a); }
+inline double exp2(double a) { return std::exp2(a); }
+inline double pow(double a, double b) { return std::pow(a, b); }
+inline bool   isfinite(double a) { return std::isfinite(a); }
+inline double atan2(double a, double b) { return std::atan2(a, b); }
+inline double fmod(double a, double b) { return std::fmod(a, b); }
+inline void   swap(double& a, double& b) { std::swap(a, b); }
+inline double radians(double a) { return a * pif / 180; }
+inline double degrees(double a) { return a * 180 / pif; }
+inline double lerp(double a, double b, double u) { return a * (1 - u) + b * u; }
+inline double step(double a, double u) { return u < a ? 0 : 1; }
+inline double smoothstep(double a, double b, double u) {
+  auto t = clamp((u - a) / (b - a), 0.0, 1.0);
+  return t * t * (3 - 2 * t);
+}
+inline double bias(double a, double bias) {
+  return a / ((1 / bias - 2) * (1 - a) + 1);
+}
+inline double gain(double a, double gain) {
+  return (a < 0.5) ? bias(a * 2, gain) / 2
+                   : bias(a * 2 - 1, 1 - gain) / 2 + 0.5;
+}
+
+}  // namespace yocto
+
+// -----------------------------------------------------------------------------
+// DOUBLE VECTORS
+// -----------------------------------------------------------------------------
+namespace yocto {
+
+// Vec2
+inline double& vec2d::operator[](int i) { return (&x)[i]; }
+inline const double& vec2d::operator[](int i) const { return (&x)[i]; }
+
+// Vec3
+inline double& vec3d::operator[](int i) { return (&x)[i]; }
+inline const double& vec3d::operator[](int i) const { return (&x)[i]; }
+
+// Vec4
+inline double& vec4d::operator[](int i) { return (&x)[i]; }
+inline const double& vec4d::operator[](int i) const { return (&x)[i]; }
+
+// Element access
+inline vec3d xyz(const vec4d& a) { return {a.x, a.y, a.z}; }
+
+// Vector sequence operations.
+inline int           size(const vec2d& a) { return 2; }
+inline const double* begin(const vec2d& a) { return &a.x; }
+inline const double* end(const vec2d& a) { return &a.x + 2; }
+inline double*       begin(vec2d& a) { return &a.x; }
+inline double*       end(vec2d& a) { return &a.x + 2; }
+inline const double* data(const vec2d& a) { return &a.x; }
+inline double*       data(vec2d& a) { return &a.x; }
+
+// Vector comparison operations.
+inline bool operator==(const vec2d& a, const vec2d& b) {
+  return a.x == b.x && a.y == b.y;
+}
+inline bool operator!=(const vec2d& a, const vec2d& b) {
+  return a.x != b.x || a.y != b.y;
+}
+
+// Vector operations.
+inline vec2d operator+(const vec2d& a) { return a; }
+inline vec2d operator-(const vec2d& a) { return {-a.x, -a.y}; }
+inline vec2d operator+(const vec2d& a, const vec2d& b) {
+  return {a.x + b.x, a.y + b.y};
+}
+inline vec2d operator+(const vec2d& a, double b) { return {a.x + b, a.y + b}; }
+inline vec2d operator+(double a, const vec2d& b) { return {a + b.x, a + b.y}; }
+inline vec2d operator-(const vec2d& a, const vec2d& b) {
+  return {a.x - b.x, a.y - b.y};
+}
+inline vec2d operator-(const vec2d& a, double b) { return {a.x - b, a.y - b}; }
+inline vec2d operator-(double a, const vec2d& b) { return {a - b.x, a - b.y}; }
+inline vec2d operator*(const vec2d& a, const vec2d& b) {
+  return {a.x * b.x, a.y * b.y};
+}
+inline vec2d operator*(const vec2d& a, double b) { return {a.x * b, a.y * b}; }
+inline vec2d operator*(double a, const vec2d& b) { return {a * b.x, a * b.y}; }
+inline vec2d operator/(const vec2d& a, const vec2d& b) {
+  return {a.x / b.x, a.y / b.y};
+}
+inline vec2d operator/(const vec2d& a, double b) { return {a.x / b, a.y / b}; }
+inline vec2d operator/(double a, const vec2d& b) { return {a / b.x, a / b.y}; }
+
+// Vector assignments
+inline vec2d& operator+=(vec2d& a, const vec2d& b) { return a = a + b; }
+inline vec2d& operator+=(vec2d& a, double b) { return a = a + b; }
+inline vec2d& operator-=(vec2d& a, const vec2d& b) { return a = a - b; }
+inline vec2d& operator-=(vec2d& a, double b) { return a = a - b; }
+inline vec2d& operator*=(vec2d& a, const vec2d& b) { return a = a * b; }
+inline vec2d& operator*=(vec2d& a, double b) { return a = a * b; }
+inline vec2d& operator/=(vec2d& a, const vec2d& b) { return a = a / b; }
+inline vec2d& operator/=(vec2d& a, double b) { return a = a / b; }
+
+// Vector products and lengths.
+inline double dot(const vec2d& a, const vec2d& b) {
+  return a.x * b.x + a.y * b.y;
+}
+inline double cross(const vec2d& a, const vec2d& b) {
+  return a.x * b.y - a.y * b.x;
+}
+
+inline double length(const vec2d& a) { return sqrt(dot(a, a)); }
+inline double length_squared(const vec2d& a) { return dot(a, a); }
+inline vec2d  normalize(const vec2d& a) {
+  auto l = length(a);
+  return (l != 0) ? a / l : a;
+}
+inline double distance(const vec2d& a, const vec2d& b) { return length(a - b); }
+inline double distance_squared(const vec2d& a, const vec2d& b) {
+  return dot(a - b, a - b);
+}
+inline double angle(const vec2d& a, const vec2d& b) {
+  return acos(clamp(dot(normalize(a), normalize(b)), (double)-1, (double)1));
+}
+
+// Max element and clamp.
+inline vec2d max(const vec2d& a, double b) {
+  return {max(a.x, b), max(a.y, b)};
+}
+inline vec2d min(const vec2d& a, double b) {
+  return {min(a.x, b), min(a.y, b)};
+}
+inline vec2d max(const vec2d& a, const vec2d& b) {
+  return {max(a.x, b.x), max(a.y, b.y)};
+}
+inline vec2d min(const vec2d& a, const vec2d& b) {
+  return {min(a.x, b.x), min(a.y, b.y)};
+}
+inline vec2d clamp(const vec2d& x, double min, double max) {
+  return {clamp(x.x, min, max), clamp(x.y, min, max)};
+}
+inline vec2d lerp(const vec2d& a, const vec2d& b, double u) {
+  return a * (1 - u) + b * u;
+}
+inline vec2d lerp(const vec2d& a, const vec2d& b, const vec2d& u) {
+  return a * (1 - u) + b * u;
+}
+
+inline double max(const vec2d& a) { return max(a.x, a.y); }
+inline double min(const vec2d& a) { return min(a.x, a.y); }
+inline double sum(const vec2d& a) { return a.x + a.y; }
+inline double mean(const vec2d& a) { return sum(a) / 2; }
+
+// Functions applied to vector elements
+inline vec2d abs(const vec2d& a) { return {abs(a.x), abs(a.y)}; }
+inline vec2d sqrt(const vec2d& a) { return {sqrt(a.x), sqrt(a.y)}; }
+inline vec2d exp(const vec2d& a) { return {exp(a.x), exp(a.y)}; }
+inline vec2d log(const vec2d& a) { return {log(a.x), log(a.y)}; }
+inline vec2d exp2(const vec2d& a) { return {exp2(a.x), exp2(a.y)}; }
+inline vec2d log2(const vec2d& a) { return {log2(a.x), log2(a.y)}; }
+inline bool  isfinite(const vec2d& a) { return isfinite(a.x) && isfinite(a.y); }
+inline vec2d pow(const vec2d& a, double b) {
+  return {pow(a.x, b), pow(a.y, b)};
+}
+inline vec2d pow(const vec2d& a, const vec2d& b) {
+  return {pow(a.x, b.x), pow(a.y, b.y)};
+}
+inline vec2d gain(const vec2d& a, double b) {
+  return {gain(a.x, b), gain(a.y, b)};
+}
+inline void swap(vec2d& a, vec2d& b) { std::swap(a, b); }
+
+// Vector sequence operations.
+inline int           size(const vec3d& a) { return 3; }
+inline const double* begin(const vec3d& a) { return &a.x; }
+inline const double* end(const vec3d& a) { return &a.x + 3; }
+inline double*       begin(vec3d& a) { return &a.x; }
+inline double*       end(vec3d& a) { return &a.x + 3; }
+inline const double* data(const vec3d& a) { return &a.x; }
+inline double*       data(vec3d& a) { return &a.x; }
+
+// Vector comparison operations.
+inline bool operator==(const vec3d& a, const vec3d& b) {
+  return a.x == b.x && a.y == b.y && a.z == b.z;
+}
+inline bool operator!=(const vec3d& a, const vec3d& b) {
+  return a.x != b.x || a.y != b.y || a.z != b.z;
+}
+
+// Vector operations.
+inline vec3d operator+(const vec3d& a) { return a; }
+inline vec3d operator-(const vec3d& a) { return {-a.x, -a.y, -a.z}; }
+inline vec3d operator+(const vec3d& a, const vec3d& b) {
+  return {a.x + b.x, a.y + b.y, a.z + b.z};
+}
+inline vec3d operator+(const vec3d& a, double b) {
+  return {a.x + b, a.y + b, a.z + b};
+}
+inline vec3d operator+(double a, const vec3d& b) {
+  return {a + b.x, a + b.y, a + b.z};
+}
+inline vec3d operator-(const vec3d& a, const vec3d& b) {
+  return {a.x - b.x, a.y - b.y, a.z - b.z};
+}
+inline vec3d operator-(const vec3d& a, double b) {
+  return {a.x - b, a.y - b, a.z - b};
+}
+inline vec3d operator-(double a, const vec3d& b) {
+  return {a - b.x, a - b.y, a - b.z};
+}
+inline vec3d operator*(const vec3d& a, const vec3d& b) {
+  return {a.x * b.x, a.y * b.y, a.z * b.z};
+}
+inline vec3d operator*(const vec3d& a, double b) {
+  return {a.x * b, a.y * b, a.z * b};
+}
+inline vec3d operator*(double a, const vec3d& b) {
+  return {a * b.x, a * b.y, a * b.z};
+}
+inline vec3d operator/(const vec3d& a, const vec3d& b) {
+  return {a.x / b.x, a.y / b.y, a.z / b.z};
+}
+inline vec3d operator/(const vec3d& a, double b) {
+  return {a.x / b, a.y / b, a.z / b};
+}
+inline vec3d operator/(double a, const vec3d& b) {
+  return {a / b.x, a / b.y, a / b.z};
+}
+
+// Vector assignments
+inline vec3d& operator+=(vec3d& a, const vec3d& b) { return a = a + b; }
+inline vec3d& operator+=(vec3d& a, double b) { return a = a + b; }
+inline vec3d& operator-=(vec3d& a, const vec3d& b) { return a = a - b; }
+inline vec3d& operator-=(vec3d& a, double b) { return a = a - b; }
+inline vec3d& operator*=(vec3d& a, const vec3d& b) { return a = a * b; }
+inline vec3d& operator*=(vec3d& a, double b) { return a = a * b; }
+inline vec3d& operator/=(vec3d& a, const vec3d& b) { return a = a / b; }
+inline vec3d& operator/=(vec3d& a, double b) { return a = a / b; }
+
+// Vector products and lengths.
+inline double dot(const vec3d& a, const vec3d& b) {
+  return a.x * b.x + a.y * b.y + a.z * b.z;
+}
+inline vec3d cross(const vec3d& a, const vec3d& b) {
+  return {a.y * b.z - a.z * b.y, a.z * b.x - a.x * b.z, a.x * b.y - a.y * b.x};
+}
+
+inline double length(const vec3d& a) { return sqrt(dot(a, a)); }
+inline double length_squared(const vec3d& a) { return dot(a, a); }
+inline vec3d  normalize(const vec3d& a) {
+  auto l = length(a);
+  return (l != 0) ? a / l : a;
+}
+inline double distance(const vec3d& a, const vec3d& b) { return length(a - b); }
+inline double distance_squared(const vec3d& a, const vec3d& b) {
+  return dot(a - b, a - b);
+}
+inline double angle(const vec3d& a, const vec3d& b) {
+  return acos(clamp(dot(normalize(a), normalize(b)), (double)-1, (double)1));
+}
+
+// Orthogonal vectors.
+inline vec3d orthogonal(const vec3d& v) {
+  // http://lolengine.net/blog/2013/09/21/picking-orthogonal-vector-combing-coconuts)
+  return abs(v.x) > abs(v.z) ? vec3d{-v.y, v.x, 0} : vec3d{0, -v.z, v.y};
+}
+inline vec3d orthonormalize(const vec3d& a, const vec3d& b) {
+  return normalize(a - b * dot(a, b));
+}
+
+// Reflected and refracted vector.
+inline vec3d reflect(const vec3d& w, const vec3d& n) {
+  return -w + 2 * dot(n, w) * n;
+}
+inline vec3d refract(const vec3d& w, const vec3d& n, double inv_eta) {
+  auto cosine = dot(n, w);
+  auto k      = 1 + inv_eta * inv_eta * (cosine * cosine - 1);
+  if (k < 0) return {0, 0, 0};  // tir
+  return -w * inv_eta + (inv_eta * cosine - sqrt(k)) * n;
+}
+
+// Max element and clamp.
+inline vec3d max(const vec3d& a, double b) {
+  return {max(a.x, b), max(a.y, b), max(a.z, b)};
+}
+inline vec3d min(const vec3d& a, double b) {
+  return {min(a.x, b), min(a.y, b), min(a.z, b)};
+}
+inline vec3d max(const vec3d& a, const vec3d& b) {
+  return {max(a.x, b.x), max(a.y, b.y), max(a.z, b.z)};
+}
+inline vec3d min(const vec3d& a, const vec3d& b) {
+  return {min(a.x, b.x), min(a.y, b.y), min(a.z, b.z)};
+}
+inline vec3d clamp(const vec3d& x, double min, double max) {
+  return {clamp(x.x, min, max), clamp(x.y, min, max), clamp(x.z, min, max)};
+}
+inline vec3d lerp(const vec3d& a, const vec3d& b, double u) {
+  return a * (1 - u) + b * u;
+}
+inline vec3d lerp(const vec3d& a, const vec3d& b, const vec3d& u) {
+  return a * (1 - u) + b * u;
+}
+
+inline double max(const vec3d& a) { return max(max(a.x, a.y), a.z); }
+inline double min(const vec3d& a) { return min(min(a.x, a.y), a.z); }
+inline double sum(const vec3d& a) { return a.x + a.y + a.z; }
+inline double mean(const vec3d& a) { return sum(a) / 3; }
+
+// Functions applied to vector elements
+inline vec3d abs(const vec3d& a) { return {abs(a.x), abs(a.y), abs(a.z)}; }
+inline vec3d sqrt(const vec3d& a) { return {sqrt(a.x), sqrt(a.y), sqrt(a.z)}; }
+inline vec3d exp(const vec3d& a) { return {exp(a.x), exp(a.y), exp(a.z)}; }
+inline vec3d log(const vec3d& a) { return {log(a.x), log(a.y), log(a.z)}; }
+inline vec3d exp2(const vec3d& a) { return {exp2(a.x), exp2(a.y), exp2(a.z)}; }
+inline vec3d log2(const vec3d& a) { return {log2(a.x), log2(a.y), log2(a.z)}; }
+inline vec3d pow(const vec3d& a, double b) {
+  return {pow(a.x, b), pow(a.y, b), pow(a.z, b)};
+}
+inline vec3d pow(const vec3d& a, const vec3d& b) {
+  return {pow(a.x, b.x), pow(a.y, b.y), pow(a.z, b.z)};
+}
+inline vec3d gain(const vec3d& a, double b) {
+  return {gain(a.x, b), gain(a.y, b), gain(a.z, b)};
+}
+inline bool isfinite(const vec3d& a) {
+  return isfinite(a.x) && isfinite(a.y) && isfinite(a.z);
+}
+inline void swap(vec3d& a, vec3d& b) { std::swap(a, b); }
+
+// Vector sequence operations.
+inline int           size(const vec4d& a) { return 4; }
+inline const double* begin(const vec4d& a) { return &a.x; }
+inline const double* end(const vec4d& a) { return &a.x + 4; }
+inline double*       begin(vec4d& a) { return &a.x; }
+inline double*       end(vec4d& a) { return &a.x + 4; }
+inline const double* data(const vec4d& a) { return &a.x; }
+inline double*       data(vec4d& a) { return &a.x; }
+
+// Vector comparison operations.
+inline bool operator==(const vec4d& a, const vec4d& b) {
+  return a.x == b.x && a.y == b.y && a.z == b.z && a.w == b.w;
+}
+inline bool operator!=(const vec4d& a, const vec4d& b) {
+  return a.x != b.x || a.y != b.y || a.z != b.z || a.w != b.w;
+}
+
+// Vector operations.
+inline vec4d operator+(const vec4d& a) { return a; }
+inline vec4d operator-(const vec4d& a) { return {-a.x, -a.y, -a.z, -a.w}; }
+inline vec4d operator+(const vec4d& a, const vec4d& b) {
+  return {a.x + b.x, a.y + b.y, a.z + b.z, a.w + b.w};
+}
+inline vec4d operator+(const vec4d& a, double b) {
+  return {a.x + b, a.y + b, a.z + b, a.w + b};
+}
+inline vec4d operator+(double a, const vec4d& b) {
+  return {a + b.x, a + b.y, a + b.z, a + b.w};
+}
+inline vec4d operator-(const vec4d& a, const vec4d& b) {
+  return {a.x - b.x, a.y - b.y, a.z - b.z, a.w - b.w};
+}
+inline vec4d operator-(const vec4d& a, double b) {
+  return {a.x - b, a.y - b, a.z - b, a.w - b};
+}
+inline vec4d operator-(double a, const vec4d& b) {
+  return {a - b.x, a - b.y, a - b.z, a - b.w};
+}
+inline vec4d operator*(const vec4d& a, const vec4d& b) {
+  return {a.x * b.x, a.y * b.y, a.z * b.z, a.w * b.w};
+}
+inline vec4d operator*(const vec4d& a, double b) {
+  return {a.x * b, a.y * b, a.z * b, a.w * b};
+}
+inline vec4d operator*(double a, const vec4d& b) {
+  return {a * b.x, a * b.y, a * b.z, a * b.w};
+}
+inline vec4d operator/(const vec4d& a, const vec4d& b) {
+  return {a.x / b.x, a.y / b.y, a.z / b.z, a.w / b.w};
+}
+inline vec4d operator/(const vec4d& a, double b) {
+  return {a.x / b, a.y / b, a.z / b, a.w / b};
+}
+inline vec4d operator/(double a, const vec4d& b) {
+  return {a / b.x, a / b.y, a / b.z, a / b.w};
+}
+
+// Vector assignments
+inline vec4d& operator+=(vec4d& a, const vec4d& b) { return a = a + b; }
+inline vec4d& operator+=(vec4d& a, double b) { return a = a + b; }
+inline vec4d& operator-=(vec4d& a, const vec4d& b) { return a = a - b; }
+inline vec4d& operator-=(vec4d& a, double b) { return a = a - b; }
+inline vec4d& operator*=(vec4d& a, const vec4d& b) { return a = a * b; }
+inline vec4d& operator*=(vec4d& a, double b) { return a = a * b; }
+inline vec4d& operator/=(vec4d& a, const vec4d& b) { return a = a / b; }
+inline vec4d& operator/=(vec4d& a, double b) { return a = a / b; }
+
+// Vector products and lengths.
+inline double dot(const vec4d& a, const vec4d& b) {
+  return a.x * b.x + a.y * b.y + a.z * b.z + a.w * b.w;
+}
+inline double length(const vec4d& a) { return sqrt(dot(a, a)); }
+inline double length_squared(const vec4d& a) { return dot(a, a); }
+inline vec4d  normalize(const vec4d& a) {
+  auto l = length(a);
+  return (l != 0) ? a / l : a;
+}
+inline double distance(const vec4d& a, const vec4d& b) { return length(a - b); }
+inline double distance_squared(const vec4d& a, const vec4d& b) {
+  return dot(a - b, a - b);
+}
+inline double angle(const vec4d& a, const vec4d& b) {
+  return acos(clamp(dot(normalize(a), normalize(b)), (double)-1, (double)1));
+}
+
+inline vec4d slerp(const vec4d& a, const vec4d& b, double u) {
+  // https://en.wikipedia.org/wiki/Slerp
+  auto an = normalize(a), bn = normalize(b);
+  auto d = dot(an, bn);
+  if (d < 0) {
+    bn = -bn;
+    d  = -d;
+  }
+  if (d > (double)0.9995) return normalize(an + u * (bn - an));
+  auto th = acos(clamp(d, (double)-1, (double)1));
+  if (th == 0) return an;
+  return an * (sin(th * (1 - u)) / sin(th)) + bn * (sin(th * u) / sin(th));
+}
+
+// Max element and clamp.
+inline vec4d max(const vec4d& a, double b) {
+  return {max(a.x, b), max(a.y, b), max(a.z, b), max(a.w, b)};
+}
+inline vec4d min(const vec4d& a, double b) {
+  return {min(a.x, b), min(a.y, b), min(a.z, b), min(a.w, b)};
+}
+inline vec4d max(const vec4d& a, const vec4d& b) {
+  return {max(a.x, b.x), max(a.y, b.y), max(a.z, b.z), max(a.w, b.w)};
+}
+inline vec4d min(const vec4d& a, const vec4d& b) {
+  return {min(a.x, b.x), min(a.y, b.y), min(a.z, b.z), min(a.w, b.w)};
+}
+inline vec4d clamp(const vec4d& x, double min, double max) {
+  return {clamp(x.x, min, max), clamp(x.y, min, max), clamp(x.z, min, max),
+      clamp(x.w, min, max)};
+}
+inline vec4d lerp(const vec4d& a, const vec4d& b, double u) {
+  return a * (1 - u) + b * u;
+}
+inline vec4d lerp(const vec4d& a, const vec4d& b, const vec4d& u) {
+  return a * (1 - u) + b * u;
+}
+
+inline double max(const vec4d& a) { return max(max(max(a.x, a.y), a.z), a.w); }
+inline double min(const vec4d& a) { return min(min(min(a.x, a.y), a.z), a.w); }
+inline double sum(const vec4d& a) { return a.x + a.y + a.z + a.w; }
+inline double mean(const vec4d& a) { return sum(a) / 4; }
+
+// Functions applied to vector elements
+inline vec4d abs(const vec4d& a) {
+  return {abs(a.x), abs(a.y), abs(a.z), abs(a.w)};
+}
+inline vec4d sqrt(const vec4d& a) {
+  return {sqrt(a.x), sqrt(a.y), sqrt(a.z), sqrt(a.w)};
+}
+inline vec4d exp(const vec4d& a) {
+  return {exp(a.x), exp(a.y), exp(a.z), exp(a.w)};
+}
+inline vec4d log(const vec4d& a) {
+  return {log(a.x), log(a.y), log(a.z), log(a.w)};
+}
+inline vec4d exp2(const vec4d& a) {
+  return {exp2(a.x), exp2(a.y), exp2(a.z), exp2(a.w)};
+}
+inline vec4d log2(const vec4d& a) {
+  return {log2(a.x), log2(a.y), log2(a.z), log2(a.w)};
+}
+inline vec4d pow(const vec4d& a, double b) {
+  return {pow(a.x, b), pow(a.y, b), pow(a.z, b), pow(a.w, b)};
+}
+inline vec4d pow(const vec4d& a, const vec4d& b) {
+  return {pow(a.x, b.x), pow(a.y, b.y), pow(a.z, b.z), pow(a.w, b.w)};
+}
+inline vec4d gain(const vec4d& a, double b) {
+  return {gain(a.x, b), gain(a.y, b), gain(a.z, b), gain(a.w, b)};
+}
+inline bool isfinite(const vec4d& a) {
+  return isfinite(a.x) && isfinite(a.y) && isfinite(a.z) && isfinite(a.w);
+}
+inline void swap(vec4d& a, vec4d& b) { std::swap(a, b); }
+
+// Quaternion operatons represented as xi + yj + zk + w
+// const auto identity_quat4f = vec4d{0, 0, 0, 1};
+inline vec4d quat_mul(const vec4d& a, double b) {
+  return {a.x * b, a.y * b, a.z * b, a.w * b};
+}
+inline vec4d quat_mul(const vec4d& a, const vec4d& b) {
+  return {a.x * b.w + a.w * b.x + a.y * b.w - a.z * b.y,
+      a.y * b.w + a.w * b.y + a.z * b.x - a.x * b.z,
+      a.z * b.w + a.w * b.z + a.x * b.y - a.y * b.x,
+      a.w * b.w - a.x * b.x - a.y * b.y - a.z * b.z};
+}
+inline vec4d quat_conjugate(const vec4d& a) { return {-a.x, -a.y, -a.z, a.w}; }
+inline vec4d quat_inverse(const vec4d& a) {
+  return quat_conjugate(a) / dot(a, a);
+}
 
 }  // namespace yocto
 
@@ -2347,7 +3181,7 @@ inline vec4f rotation_quat(const vec4f& axisangle) {
 }  // namespace yocto
 
 // -----------------------------------------------------------------------------
-// IMPLEMENTATION OF USER INTERFACE UTILITIES
+// USER INTERFACE UTILITIES
 // -----------------------------------------------------------------------------
 namespace yocto {
 
@@ -2565,6 +3399,40 @@ inline void update_fpscam(
   auto pos = frame.o + transl.x * x + transl.y * y + transl.z * z;
 
   frame = {rot.x, rot.y, rot.z, pos};
+}
+
+}  // namespace yocto
+
+// -----------------------------------------------------------------------------
+// PYTHON-LIKE ITERATORS
+// -----------------------------------------------------------------------------
+namespace yocto {
+
+// Python `range()` equivalent. Construct an object to iterate over a sequence.
+template <typename T>
+constexpr auto range(T max) {
+  return range((T)0, max, (T)1);
+}
+template <typename T>
+constexpr auto range(T min, T max) {
+  return range(min, max, (T)1);
+}
+template <typename T>
+constexpr auto range(T min, T max, T step) {
+  struct iterator {
+    T    index;
+    void operator++() { ++index; }
+    bool operator!=(const iterator& other) const {
+      return index != other.index;
+    }
+    T operator*() const { return index; }
+  };
+  struct range_helper {
+    T        begin_ = 0, end_ = 0;
+    iterator begin() const { return {begin_}; }
+    iterator end() const { return {end_}; }
+  };
+  return range_helper{min, max};
 }
 
 }  // namespace yocto

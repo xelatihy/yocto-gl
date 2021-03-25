@@ -38,16 +38,22 @@
 
 #include <cassert>
 #include <deque>
-#include <filesystem>
 #include <memory>
 #include <stdexcept>
 #include <string>
+#include <thread>
+#include <unordered_map>
 #include <unordered_set>
 #include <utility>
 
-#include "yocto_commonio.h"
 #include "yocto_geometry.h"
 #include "yocto_modelio.h"
+
+// #define TESTS_MAY_FAIL
+
+#define YOCTO_BEZIER_PRECISE 1
+#define YOCTO_BEZIER_DOUBLE 1
+#define UNFOLD_INTERSECTING_CIRCLES 0
 
 // -----------------------------------------------------------------------------
 // USING DIRECTIVES
@@ -86,6 +92,10 @@ struct hash<yocto::vec2i> {
 // -----------------------------------------------------------------------------
 namespace yocto {
 
+#define report_floating_point(x) \
+  if (!isfinite(x))              \
+    printf("%s, line %d: nan/infinity detected\n", __FILE__, __LINE__);
+
 // find a value in a vector or vecs
 static int find_in_vec(const vector<int>& vec, int x) {
   for (int i = 0; i < size(vec); i++)
@@ -99,6 +109,19 @@ static int find_in_vec(const vec3i& vec, int x) {
   return -1;
 }
 
+static int mod3(int i) { return (i > 2) ? i - 3 : i; }
+
+static vec3f get_bary(const vec2f& uv) {
+  return vec3f{1 - uv.x - uv.y, uv.x, uv.y};
+}
+
+[[maybe_unused]] static vec2d to_double(const vec2f& v) {
+  return vec2d{v.x, v.y};
+}
+[[maybe_unused]] static vec3d to_double(const vec3f& v) {
+  return vec3d{v.x, v.y, v.z};
+}
+
 }  // namespace yocto
 
 // -----------------------------------------------------------------------------
@@ -106,7 +129,6 @@ static int find_in_vec(const vec3i& vec, int x) {
 // -----------------------------------------------------------------------------
 namespace yocto {
 
-// TODO: cleanup
 pair<bool, int> bary_is_vert(const vec3f& bary, float tol) {
   if (bary[0] > tol && bary[1] <= tol && bary[2] <= tol) return {true, 0};
   if (bary[1] > tol && bary[0] <= tol && bary[2] <= tol) return {true, 1};
@@ -114,7 +136,6 @@ pair<bool, int> bary_is_vert(const vec3f& bary, float tol) {
   return {false, -1};
 }
 
-// TODO: cleanup
 pair<bool, int> bary_is_edge(const vec3f& bary, float tol) {
   if (bary[0] > tol && bary[1] > tol && bary[2] <= tol) return {true, 0};
   if (bary[1] > tol && bary[2] > tol && bary[0] <= tol) return {true, 1};
@@ -122,7 +143,6 @@ pair<bool, int> bary_is_edge(const vec3f& bary, float tol) {
   return {false, -1};
 }
 
-// TODO: cleanup
 pair<bool, int> point_is_vert(const mesh_point& p, float tol) {
   auto bary = vec3f{1 - p.uv.x - p.uv.y, p.uv.x, p.uv.y};
   if (bary[0] > tol && bary[1] <= tol && bary[2] <= tol) return {true, 0};
@@ -131,7 +151,6 @@ pair<bool, int> point_is_vert(const mesh_point& p, float tol) {
   return {false, -1};
 }
 
-// TODO: cleanup
 pair<bool, int> point_is_edge(const mesh_point& p, float tol) {
   auto bary = vec3f{1 - p.uv.x - p.uv.y, p.uv.x, p.uv.y};
   if (bary[0] > tol && bary[1] > tol && bary[2] <= tol) return {true, 0};
@@ -140,7 +159,6 @@ pair<bool, int> point_is_edge(const mesh_point& p, float tol) {
   return {false, -1};
 }
 
-// TODO: cleanup
 pair<bool, vec2f> point_in_triangle(const vector<vec3i>& triangles,
     const vector<vec3f>& positions, int tid, const vec3f& point, float tol) {
   // http://www.r-5.org/files/books/computers/algo-list/realtime-3d/Christer_Ericson-Real-Time_Collision_Detection-EN.pdf
@@ -199,7 +217,59 @@ vec2f intersect_circles(const vec2f& c2, float R2, const vec2f& c1, float R1) {
   return result / 2;
 }
 
-// TODO: cleanup
+[[maybe_unused]] static vec2d intersect_circles_double(
+    const vec2d& c0, double R0, const vec2d& c1, double R1) {
+  auto r0 = yocto::sqrt(R0);
+  auto r1 = yocto::sqrt(R1);
+  auto dx = c1.x - c0.x;
+  auto dy = c1.y - c0.y;
+  auto d  = hypot(dx, dy);
+  if (d > (r0 + r1)) {  // not a triangle
+    if (r0 > r1) {
+      auto q = zero2d;
+      q.x    = 0;
+      q.y    = r0 / (r0 + r1);
+      assert(std::isfinite(q.y));
+      return q;
+    } else {
+      auto q = zero2d;
+      q.x    = 0;
+      q.y    = r1 / (r0 + r1);
+      assert(std::isfinite(q.y));
+      return q;
+    }
+  }
+  if (d < fabs(r0 - r1)) return {r0, c0.y};  // not a triangle
+  if (d == 0) return {r0, c0.y};             // degenerate case
+  auto a = ((r0 * r0) - (r1 * r1) + (d * d)) / (2.0 * d);
+  auto p = zero2d;
+  p.x    = c0.x + (dx * a / d);
+  p.y    = c0.y + (dy * a / d);
+  auto h = r0 * r0 - a * a;
+  if (h <= 0) return p;
+  h       = sqrt(h);
+  auto rx = zero2d;
+  rx.x    = -dy * (h / d);
+  rx.y    = dx * (h / d);
+  auto q  = p + rx;
+  return q;
+}
+
+[[maybe_unused]] vec2d intersect_circles_double_old(
+    const vec2d& c2, double R2, const vec2d& c1, double R1) {
+  auto R = length_squared(c2 - c1);
+  assert(R > 0);
+  auto invR   = 1 / R;
+  auto result = (c1 + c2);
+  result += (c2 - c1) * ((R1 - R2) * invR);
+  auto A = 2 * (R1 + R2) * invR;
+  auto B = (R1 - R2) * invR;
+  auto s = A - B * B - 1;
+  assert(s >= 0);
+  result += vec2d{c2.y - c1.y, c1.x - c2.x} * sqrt(s);
+  return result / 2;
+}
+
 unfold_triangle init_flat_triangle(
     const vector<vec3f>& positions, const vec3i& tr) {
   auto tr2d = unfold_triangle{};
@@ -211,7 +281,7 @@ unfold_triangle init_flat_triangle(
   return tr2d;
 }
 
-inline int find_adjacent_triangle(
+static int find_adjacent_triangle(
     const vec3i& triangle, const vec3i& adjacent) {
   for (int i = 0; i < 3; i++) {
     auto k = find_in_vec(adjacent, triangle[i]);
@@ -227,9 +297,58 @@ inline int find_adjacent_triangle(
   return -1;
 }
 
-inline int find_adjacent_triangle(
+static int find_adjacent_triangle(
     const vector<vec3i>& triangles, int face, int neighbor) {
   return find_adjacent_triangle(triangles[face], triangles[neighbor]);
+}
+
+[[maybe_unused]] static vec2f unfold_point(const vec3f& pa, const vec3f& pb,
+    const vec3f& pv, const vec2f& ca, const vec2f& cb) {
+  // Unfold position of vertex v
+  auto ex = normalize(ca - cb);
+  auto ey = vec2f{-ex.y, ex.x};
+
+  auto result = vec2f{};
+
+  // Ortogonal projection
+  auto pv_pb = pv - pb;
+  auto x     = dot(pa - pb, pv_pb) / length(pa - pb);
+  result     = x * ex;
+
+  // Pythagorean theorem
+  auto y = dot(pv_pb, pv_pb) - x * x;
+  if (y > 0) {
+    y = sqrt(y);
+    result += y * ey;
+  } else {
+    assert(0);
+  }
+
+  return result;
+}
+
+[[maybe_unused]] static vec2d unfold_point_double(const vec3d& pa,
+    const vec3d& pb, const vec3d& pv, const vec2d& ca, const vec2d& cb) {
+  // Unfold position of vertex v
+  auto ex = normalize(ca - cb);
+  auto ey = vec2d{-ex.y, ex.x};
+
+  auto result = vec2d{};
+
+  // Ortogonal projection
+  auto pv_pb = pv - pb;
+  auto x     = dot(pa - pb, pv_pb) / length(pa - pb);
+  result     = x * ex;
+
+  // Pythagorean theorem
+  auto y = dot(pv_pb, pv_pb) - x * x;
+  if (y > 0) {
+    y = sqrt(y);
+    result += y * ey;
+  } else {
+    //    assert(0);
+  }
+  return result;
 }
 
 // given the 2D coordinates in tanget space of a triangle, find the coordinates
@@ -241,45 +360,151 @@ unfold_triangle unfold_face(const vector<vec3i>& triangles,
   auto j = find_adjacent_triangle(triangles, neighbor, face);
   assert(j != -1);
   assert(k != -1);
-  auto v  = triangles[neighbor][mod3(j + 2)];
-  auto a  = triangles[face][k];
-  auto b  = triangles[face][mod3(k + 1)];
-  auto r0 = length_squared(positions[v] - positions[a]);
-  auto r1 = length_squared(positions[v] - positions[b]);
+  auto v = triangles[neighbor][mod3(j + 2)];
+  auto a = triangles[face][k];
+  auto b = triangles[face][mod3(k + 1)];
 
-  auto res         = unfold_triangle{};
-  res[j]           = tr[mod3(k + 1)];
-  res[mod3(j + 1)] = tr[k];
-  res[mod3(j + 2)] = intersect_circles(res[j], r1, res[mod3(j + 1)], r0);
-  return res;
+  auto result         = unfold_triangle{};
+  result[j]           = tr[mod3(k + 1)];
+  result[mod3(j + 1)] = tr[k];
+
+  // TODO(splinesurf): check which unfolding method is better.
+#if 0
+  // old method
+  auto r0             = length_squared(positions[v] - positions[a]);
+  auto r1             = length_squared(positions[v] - positions[b]);
+  result[mod3(j + 2)] = intersect_circles(
+      result[j], r1, result[mod3(j + 1)], r0);
+#else
+  // new method
+  auto& pa    = positions[a];
+  auto& pb    = positions[b];
+  auto& pv    = positions[v];
+  auto  point = unfold_point(pa, pb, pv, result[mod3(j + 1)], result[j]);
+  result[mod3(j + 2)] = result[j] + point;
+#endif
+
+  assert(result[0] != result[1]);
+  assert(result[1] != result[2]);
+  assert(result[2] != result[0]);
+  return result;
 }
 
-// TODO: cleanup
-static unfold_triangle unfold_face(const vector<vec3i>& triangles,
-    const vector<vec3f>& positions, const vector<vec3i>& adjacencies,
-    const unfold_triangle& tr, int face, int k) {
+// given the 2D coordinates in tanget space of a triangle, find the coordinates
+// of the k-th neighbor triangle
+unfold_triangled unfold_face_double(const vector<vec3i>& triangles,
+    const vector<vec3f>& positions, const unfold_triangled& tr, int face,
+    int neighbor) {
+  auto k = find_adjacent_triangle(triangles, face, neighbor);
+  auto j = find_adjacent_triangle(triangles, neighbor, face);
+  assert(j != -1);
+  assert(k != -1);
+  auto v = triangles[neighbor][mod3(j + 2)];
+  auto a = triangles[face][k];
+  auto b = triangles[face][mod3(k + 1)];
+
+  auto result         = unfold_triangled{};
+  result[j]           = tr[mod3(k + 1)];
+  result[mod3(j + 1)] = tr[k];
+
+  // TODO(splinesurf): check which unfolding method is better.
+#if UNFOLD_INTERSECTING_CIRCLES
+  // old method
+  auto r0             = length_squared(positions[v] - positions[a]);
+  auto r1             = length_squared(positions[v] - positions[b]);
+  result[mod3(j + 2)] = intersect_circles_double(
+      result[j], r1, result[mod3(j + 1)], r0);
+#else
+  // new method
+  auto pa    = to_double(positions[a]);
+  auto pb    = to_double(positions[b]);
+  auto pv    = to_double(positions[v]);
+  auto point = unfold_point_double(pa, pb, pv, result[mod3(j + 1)], result[j]);
+  result[mod3(j + 2)] = result[j] + point;
+#endif
+
+  assert(result[0] != result[1]);
+  assert(result[1] != result[2]);
+  assert(result[2] != result[0]);
+
+  report_floating_point(result[0]);
+  report_floating_point(result[1]);
+  report_floating_point(result[2]);
+  return result;
+}
+
+[[maybe_unused]] static unfold_triangle unfold_face(
+    const vector<vec3i>& triangles, const vector<vec3f>& positions,
+    const vector<vec3i>& adjacencies, const unfold_triangle& tr, int face,
+    int k) {
   return unfold_face(triangles, positions, tr, face, adjacencies[face][k]);
+}
+
+[[maybe_unused]] static unfold_triangled unfold_face_double(
+    const vector<vec3i>& triangles, const vector<vec3f>& positions,
+    const vector<vec3i>& adjacencies, const unfold_triangled& tr, int face,
+    int k) {
+  return unfold_face_double(
+      triangles, positions, tr, face, adjacencies[face][k]);
 }
 
 // assign 2D coordinates to vertices of the triangle containing the mesh
 // point, putting the point at (0, 0)
 unfold_triangle triangle_coordinates(const vector<vec3i>& triangles,
     const vector<vec3f>& positions, const mesh_point& point) {
-  auto first = unfold_triangle{};
-  auto tr    = triangles[point.face];
-  first[0]   = {0, 0};
-  first[1]   = {0, length(positions[tr.x] - positions[tr.y])};
-  auto rx    = length_squared(positions[tr.x] - positions[tr.z]);
-  auto ry    = length_squared(positions[tr.y] - positions[tr.z]);
-  first[2]   = intersect_circles(first[0], rx, first[1], ry);
+  auto result = unfold_triangle{};
+  auto tr     = triangles[point.face];
+  result[0]   = {0, 0};
+  result[1]   = {0, length(positions[tr.x] - positions[tr.y])};
+  // auto rx     = length_squared(positions[tr.x] - positions[tr.z]);
+  // auto ry     = length_squared(positions[tr.y] - positions[tr.z]);
+  // result[2]   = intersect_circles(result[0], rx, result[1], ry);
+  // result[2]   = intersect_circles(result[0], rx, result[1], ry);
+  result[2] = result[0] + unfold_point(positions[tr.y], positions[tr.x],
+                              positions[tr.z], result[1], result[0]);
 
   // Transform coordinates such that point = (0, 0)
   auto point_coords = interpolate_triangle(
-      first[0], first[1], first[2], point.uv);
-  first[0] -= point_coords;
-  first[1] -= point_coords;
-  first[2] -= point_coords;
-  return first;
+      result[0], result[1], result[2], point.uv);
+  result[0] -= point_coords;
+  result[1] -= point_coords;
+  result[2] -= point_coords;
+
+  assert(result[0] != result[1]);
+  assert(result[1] != result[2]);
+  assert(result[2] != result[0]);
+  return result;
+}
+
+unfold_triangled triangle_coordinates_double(const vector<vec3i>& triangles,
+    const vector<vec3f>& positions, const mesh_point& point) {
+  auto result = unfold_triangled{};
+  auto tr     = triangles[point.face];
+  result[0]   = {0, 0};
+  result[1]   = {
+      0, length(to_double(positions[tr.x]) - to_double(positions[tr.y]))};
+
+#if UNFOLD_INTERSECTING_CIRCLES
+  auto rx   = length_squared(positions[tr.x] - positions[tr.z]);
+  auto ry   = length_squared(positions[tr.y] - positions[tr.z]);
+  result[2] = intersect_circles_double(result[0], rx, result[1], ry);
+#else
+  result[2] = result[0] + unfold_point_double(to_double(positions[tr.y]),
+                              to_double(positions[tr.x]),
+                              to_double(positions[tr.z]), result[1], result[0]);
+#endif
+
+  // Transform coordinates such that point = (0, 0)
+  auto point_coords = interpolate_triangle(
+      result[0], result[1], result[2], point.uv);
+  result[0] -= point_coords;
+  result[1] -= point_coords;
+  result[2] -= point_coords;
+
+  assert(result[0] != result[1]);
+  assert(result[1] != result[2]);
+  assert(result[2] != result[0]);
+  return result;
 }
 
 // assign 2D coordinates to a strip of triangles. point start is at (0, 0)
@@ -291,7 +516,29 @@ vector<unfold_triangle> unfold_strip(const vector<vec3i>& triangles,
   coords[0] = triangle_coordinates(triangles, positions, start);
 
   for (auto i = 1; i < strip.size(); i++) {
+    assert(coords[i - 1][0] != coords[i - 1][1]);
+    assert(coords[i - 1][1] != coords[i - 1][2]);
+    assert(coords[i - 1][2] != coords[i - 1][0]);
     coords[i] = unfold_face(
+        triangles, positions, coords[i - 1], strip[i - 1], strip[i]);
+  }
+
+  return coords;
+}
+
+// assign 2D coordinates to a strip of triangles. point start is at (0, 0)
+vector<unfold_triangled> unfold_strip_double(const vector<vec3i>& triangles,
+    const vector<vec3f>& positions, const vector<int>& strip,
+    const mesh_point& start) {
+  auto coords = vector<unfold_triangled>(strip.size());
+  assert(start.face == strip[0]);
+  coords[0] = triangle_coordinates_double(triangles, positions, start);
+
+  for (auto i = 1; i < strip.size(); i++) {
+    assert(coords[i - 1][0] != coords[i - 1][1]);
+    assert(coords[i - 1][1] != coords[i - 1][2]);
+    assert(coords[i - 1][2] != coords[i - 1][0]);
+    coords[i] = unfold_face_double(
         triangles, positions, coords[i - 1], strip[i - 1], strip[i]);
   }
 
@@ -315,11 +562,35 @@ static vector<pair<vec2f, vec2f>> make_funnel_portals(
   return portals;
 }
 
-inline vector<pair<vec2f, vec2f>> unfold_funnel_portals(
+// Create sequence of 2D segments (portals) needed for funneling.
+static vector<pair<vec2d, vec2d>> make_funnel_portals_double(
+    const vector<vec3i>& triangles, const vector<unfold_triangled>& coords,
+    const vector<int>& strip, const mesh_point& to) {
+  auto portals = vector<pair<vec2d, vec2d>>(strip.size());
+  for (auto i = 0; i < strip.size() - 1; i++) {
+    auto curr = strip[i], next = strip[i + 1];
+    auto k     = find_adjacent_triangle(triangles, curr, next);
+    auto tr    = coords[i];
+    portals[i] = {tr[k], tr[mod3(k + 1)]};
+  }
+  auto end = interpolate_triangle(
+      coords.back()[0], coords.back()[1], coords.back()[2], to.uv);
+  portals.back() = {end, end};
+  return portals;
+}
+
+[[maybe_unused]] static vector<pair<vec2f, vec2f>> unfold_funnel_portals(
     const vector<vec3i>& triangles, const vector<vec3f>& positions,
     const vector<int>& strip, const mesh_point& start, const mesh_point& end) {
   auto coords = unfold_strip(triangles, positions, strip, start);
   return make_funnel_portals(triangles, coords, strip, end);
+}
+
+static vector<pair<vec2d, vec2d>> unfold_funnel_portals_double(
+    const vector<vec3i>& triangles, const vector<vec3f>& positions,
+    const vector<int>& strip, const mesh_point& start, const mesh_point& end) {
+  auto coords = unfold_strip_double(triangles, positions, strip, start);
+  return make_funnel_portals_double(triangles, coords, strip, end);
 }
 
 vec2i get_edge(const vector<vec3i>& triangles, const vector<vec3f>& positions,
@@ -330,7 +601,6 @@ vec2i get_edge(const vector<vec3i>& triangles, const vector<vec3f>& positions,
   return vec2i{tr[k], tr[mod3(k + 1)]};
 }
 
-// TODO: cleanup
 // "strip" must be such that strip.back()=p.face and strip[0] must share at
 // least one vertex with p.face.
 // Under this hypoteses, this function gives back the distance between the
@@ -388,6 +658,7 @@ vector<int> triangle_fan(
   auto prev   = face;
   auto node   = adjacencies[face][k];
   auto offset = 2 - (int)clockwise;
+  // for (int i = 0; i < 256; i++) {
   while (true) {
     if (node == -1) break;
     if (node == face) break;
@@ -685,17 +956,47 @@ geodesic_solver make_geodesic_solver(const vector<vec3i>& triangles,
   return solver;
 }
 
+int find_small_edge(
+    const vector<vec3i>& triangles, const vector<vec3f>& positions, int face) {
+  int verts[3] = {triangles[face].x, triangles[face].y, triangles[face].z};
+
+  vec3f pos[3] = {
+      positions[verts[0]], positions[verts[1]], positions[verts[2]]};
+
+  float lengths[3] = {length(pos[0] - pos[1]), length(pos[1] - pos[2]),
+      length(pos[2] - pos[0])};
+
+  int small = 0;
+  if (lengths[0] < lengths[1] && lengths[0] < lengths[2]) small = 0;
+  if (lengths[1] < lengths[0] && lengths[1] < lengths[2]) small = 1;
+  if (lengths[2] < lengths[0] && lengths[2] < lengths[1]) small = 2;
+
+  if (lengths[small] < 0.3 * lengths[(small + 1) % 3] &&
+      lengths[small] < 0.3 * lengths[(small + 2) % 3]) {
+    return small;
+  }
+  return -1;
+}
+
 // Construct a graph to compute geodesic distances
 dual_geodesic_solver make_dual_geodesic_solver(const vector<vec3i>& triangles,
     const vector<vec3f>& positions, const vector<vec3i>& adjacencies) {
-  auto get_triangle_center = [](const vector<vec3i>&  triangles,
-                                 const vector<vec3f>& positions, int face) {
-    return (positions[triangles[face].x] + positions[triangles[face].y] +
-               positions[triangles[face].z]) /
-           3;
-  };
-
   auto solver = dual_geodesic_solver{};
+  solver.centroids.resize(triangles.size());
+
+  // Init centroids.
+  for (int face = 0; face < triangles.size(); face++) {
+    vec3f pos[3] = {positions[triangles[face].x], positions[triangles[face].y],
+        positions[triangles[face].z]};
+    auto  l0     = length(pos[0] - pos[1]);
+    auto  p0     = (pos[0] + pos[1]) / 2;
+    auto  l1     = length(pos[1] - pos[2]);
+    auto  p1     = (pos[1] + pos[2]) / 2;
+    auto  l2     = length(pos[2] - pos[0]);
+    auto  p2     = (pos[2] + pos[0]) / 2;
+    solver.centroids[face] = (l0 * p0 + l1 * p1 + l2 * p2) / (l0 + l1 + l2);
+  }
+
   solver.graph.resize(triangles.size());
   for (auto i = 0; i < solver.graph.size(); ++i) {
     for (auto k = 0; k < 3; ++k) {
@@ -704,16 +1005,27 @@ dual_geodesic_solver make_dual_geodesic_solver(const vector<vec3i>& triangles,
       if (adjacencies[i][k] == -1) {
         solver.graph[i][k].length = flt_max;
       } else {
+        // TODO(splinesurf): check which solver is better/faster.
+#if 1
         solver.graph[i][k].length = length(
-            get_triangle_center(triangles, positions, i) -
-            get_triangle_center(triangles, positions, adjacencies[i][k]));
+            solver.centroids[i] - solver.centroids[adjacencies[i][k]]);
+#else
+        auto p0    = mesh_point{i, {1 / 3.f, 1 / 3.f}};
+        auto p1    = mesh_point{adjacencies[i][k], {1 / 3.f, 1 / 3.f}};
+        auto path  = geodesic_path{};
+        path.strip = {i, adjacencies[i][k]};
+        path.start = p0;
+        path.end   = p1;
+        straighten_path(path, triangles, positions, adjacencies);
+        auto len = path_length(path, triangles, positions, adjacencies);
+        solver.graph[i][k].length = len;
+#endif
       }
     }
   }
   return solver;
 }
 
-// TODO: cleanup
 // Builds a graph-based geodesic solver with arcs arranged in counterclockwise
 // order by using the vertex-to-face adjacencies
 geodesic_solver make_geodesic_solver(const vector<vec3i>& triangles,
@@ -924,7 +1236,7 @@ vector<float> compute_geodesic_distances(const geodesic_solver& solver,
 // Compute all shortest paths from source vertices to any other vertex.
 // Paths are implicitly represented: each node is assigned its previous node
 // in the path. Graph search early exits when reching end_vertex.
-vector<int> compute_geodesic_paths(
+vector<int> compute_geodesic_parents(
     const geodesic_solver& solver, const vector<int>& sources, int end_vertex) {
   auto parents   = vector<int>(solver.graph.size(), -1);
   auto distances = vector<float>(solver.graph.size(), flt_max);
@@ -968,7 +1280,6 @@ vector<vector<float>> compute_voronoi_fields(
   // computation time weakly dependant on the number of generators.
   auto total = compute_geodesic_distances(solver, generators);
   auto max   = *std::max_element(total.begin(), total.end());
-  // @Speed: use parallel_for
   for (auto i = 0; i < generators.size(); ++i) {
     fields[i]                = vector<float>(solver.graph.size(), flt_max);
     fields[i][generators[i]] = 0;
@@ -1078,6 +1389,193 @@ void visit_geodesic_graph(vector<float>& field,
   }
 }
 
+static vector<int> compute_strip(const dual_geodesic_solver& solver,
+    const vector<vec3i>& triangles, const vector<vec3f>& positions,
+    const mesh_point& start, const mesh_point& end);
+
+vector<mesh_point> compute_shortest_path(const dual_geodesic_solver& graph,
+    const vector<vec3i>& triangles, const vector<vec3f>& positions,
+    const vector<vec3i>& adjacencies, const mesh_point& start,
+    const mesh_point& end) {
+  auto path = geodesic_path{};
+  if (start.face == end.face) {
+    path.start = start;
+    path.end   = end;
+    path.strip = {start.face};
+  } else {
+    // auto strip = strip_on_dual_graph(
+    //     graph, triangles, positions, end.face, start.face);
+    auto strip = compute_strip(graph, triangles, positions, end, start);
+    path = shortest_path(triangles, positions, adjacencies, start, end, strip);
+  }
+
+  for (auto& value : path.lerps) report_floating_point(value);
+
+  // get mesh points
+  return convert_mesh_path(
+      triangles, adjacencies, path.strip, path.lerps, path.start, path.end)
+      .points;
+};
+
+vector<mesh_point> compute_shortest_path(const dual_geodesic_solver& graph,
+    const vector<vec3i>& triangles, const vector<vec3f>& positions,
+    const vector<vec3i>& adjacencies, const vector<mesh_point>& points) {
+  // geodesic path
+  auto path = vector<mesh_point>{};
+  for (auto idx = 0; idx < (int)points.size() - 1; idx++) {
+    auto segment = compute_shortest_path(
+        graph, triangles, positions, adjacencies, points[idx], points[idx + 1]);
+    path.insert(path.end(), segment.begin(), segment.end());
+  }
+  return path;
+}
+
+// Compute visualizations for the shortest path connecting a set of points.
+vector<vec3f> visualize_shortest_path(const dual_geodesic_solver& graph,
+    const vector<vec3i>& triangles, const vector<vec3f>& positions,
+    const vector<vec3i>& adjacencies, const mesh_point& start,
+    const mesh_point& end, bool strip) {
+  if (strip) {
+    auto strip = vector<int>{};
+    if (start.face == end.face) {
+      strip.push_back(start.face);
+      strip.push_back(end.face);
+    } else {
+      // auto strip = strip_on_dual_graph(
+      //     graph, triangles, positions, end.face, start.face);
+      strip = compute_strip(graph, triangles, positions, end, start);
+    }
+    auto get_triangle_center = [](const vector<vec3i>&  triangles,
+                                   const vector<vec3f>& positions,
+                                   int                  face) -> vec3f {
+      vec3f pos[3] = {positions[triangles[face].x],
+          positions[triangles[face].y], positions[triangles[face].z]};
+      auto  l0     = length(pos[0] - pos[1]);
+      auto  p0     = (pos[0] + pos[1]) / 2;
+      auto  l1     = length(pos[1] - pos[2]);
+      auto  p1     = (pos[1] + pos[2]) / 2;
+      auto  l2     = length(pos[2] - pos[0]);
+      auto  p2     = (pos[2] + pos[0]) / 2;
+      return (l0 * p0 + l1 * p1 + l2 * p2) / (l0 + l1 + l2);
+    };
+    auto path = vector<vec3f>{};
+    for (auto face : strip)
+      path.push_back(get_triangle_center(triangles, positions, face));
+    return path;
+  } else {
+    auto path = geodesic_path{};
+    if (start.face == end.face) {
+      path.start = start;
+      path.end   = end;
+      path.strip = {start.face};
+    } else {
+      // auto strip = strip_on_dual_graph(
+      //     graph, triangles, positions, end.face, start.face);
+      auto strip = compute_strip(graph, triangles, positions, end, start);
+      path       = shortest_path(
+          triangles, positions, adjacencies, start, end, strip);
+    }
+    // get mesh points
+    auto points = convert_mesh_path(
+        triangles, adjacencies, path.strip, path.lerps, path.start, path.end)
+                      .points;
+
+    auto path_positions = vector<vec3f>{};
+    for (auto point : points) {
+      path_positions.push_back(eval_position(triangles, positions, point));
+    }
+    return path_positions;
+  }
+}
+
+vector<vec3f> visualize_shortest_path(const dual_geodesic_solver& graph,
+    const vector<vec3i>& triangles, const vector<vec3f>& positions,
+    const vector<vec3i>& adjacencies, const vector<mesh_point>& points,
+    bool strip) {
+  // geodesic path
+  auto path = vector<vec3f>{};
+  for (auto idx = 0; idx < (int)points.size() - 1; idx++) {
+    auto segment = visualize_shortest_path(graph, triangles, positions,
+        adjacencies, points[idx], points[idx + 1], strip);
+    path.insert(path.end(), segment.begin(), segment.end());
+  }
+  return path;
+}
+
+// Compute visualizations for the shortest path connecting a set of points.
+vector<vec3f> visualize_shortest_path(const geodesic_solver& graph,
+    const vector<vec3i>& triangles, const vector<vec3f>& positions,
+    const vector<vec3i>& adjacencies, const vector<vector<int>>& v2t,
+    const vector<vector<float>>& angles, const mesh_point& start,
+    const mesh_point& end, bool strip) {
+  if (strip) {
+    auto strip = vector<int>{};
+    if (start.face == end.face) {
+      strip.push_back(start.face);
+      strip.push_back(end.face);
+    } else {
+      auto parents = vector<int>{};
+      strip = get_strip(graph, triangles, positions, adjacencies, v2t, angles,
+          end, start, parents);
+    }
+    auto get_triangle_center = [](const vector<vec3i>&  triangles,
+                                   const vector<vec3f>& positions,
+                                   int                  face) -> vec3f {
+      vec3f pos[3] = {positions[triangles[face].x],
+          positions[triangles[face].y], positions[triangles[face].z]};
+      auto  l0     = length(pos[0] - pos[1]);
+      auto  p0     = (pos[0] + pos[1]) / 2;
+      auto  l1     = length(pos[1] - pos[2]);
+      auto  p1     = (pos[1] + pos[2]) / 2;
+      auto  l2     = length(pos[2] - pos[0]);
+      auto  p2     = (pos[2] + pos[0]) / 2;
+      return (l0 * p0 + l1 * p1 + l2 * p2) / (l0 + l1 + l2);
+    };
+    auto path = vector<vec3f>{};
+    for (auto face : strip)
+      path.push_back(get_triangle_center(triangles, positions, face));
+    return path;
+  } else {
+    auto path = geodesic_path{};
+    if (start.face == end.face) {
+      path.start = start;
+      path.end   = end;
+      path.strip = {start.face};
+    } else {
+      auto parents = vector<int>{};
+      auto strip   = get_strip(graph, triangles, positions, adjacencies, v2t,
+          angles, end, start, parents);
+      path         = shortest_path(
+          triangles, positions, adjacencies, start, end, strip);
+    }
+
+    // get mesh points
+    auto points = convert_mesh_path(
+        triangles, adjacencies, path.strip, path.lerps, path.start, path.end)
+                      .points;
+    auto path_positions = vector<vec3f>{};
+    for (auto point : points) {
+      path_positions.push_back(eval_position(triangles, positions, point));
+    }
+    return path_positions;
+  }
+}
+
+vector<vec3f> visualize_shortest_path(const geodesic_solver& graph,
+    const vector<vec3i>& triangles, const vector<vec3f>& positions,
+    const vector<vec3i>& adjacencies, const vector<vector<int>>& v2t,
+    const vector<vector<float>>& angles, const vector<mesh_point>& points,
+    bool strip) {
+  // geodesic path
+  auto path = vector<vec3f>{};
+  for (auto idx = 0; idx < (int)points.size() - 1; idx++) {
+    auto segment = visualize_shortest_path(graph, triangles, positions,
+        adjacencies, v2t, angles, points[idx], points[idx + 1], strip);
+    path.insert(path.end(), segment.begin(), segment.end());
+  }
+  return path;
+}
+
 }  // namespace yocto
 
 // -----------------------------------------------------------------------------
@@ -1096,6 +1594,17 @@ vec3f compute_gradient(const vec3i& triangle, const vector<vec3f>& positions,
   result += field[triangle.z] * cross(normal, xy);
   return result;
 }
+
+// Description of a discrete path along the surface of a triangle
+struct surface_path {
+  struct vertex {
+    vec2i edge  = {0, 0};
+    int   face  = 0;
+    float alpha = 0;
+  };
+  int            start, end;
+  vector<vertex> vertices;
+};
 
 // TODO: cleanup
 // The functionalities under namespace `integral_paths` are now obsolete and can
@@ -1452,7 +1961,6 @@ surface_path integrate_field(const vector<vec3i>& triangles,
       triangles, positions, adjacency, tags, tag, field, from);
 }
 
-// TODO: cleanup
 surface_path integrate_field(const vector<vec3i>& triangles,
     const vector<vec3f>& positions, const vector<vec3i>& adjacency,
     const vector<int>& tags, int tag, const vector<float>& field, int from,
@@ -1461,13 +1969,57 @@ surface_path integrate_field(const vector<vec3i>& triangles,
       triangles, positions, adjacency, tags, tag, field, from, to);
 }
 
-// TODO: cleanup
+}  // namespace yocto
+
+// -----------------------------------------------------------------------------
+// SHAPE GEODESICS
+// -----------------------------------------------------------------------------
+namespace yocto {
+
 vector<vec3f> make_positions_from_path(
     const surface_path& path, const vector<vec3f>& mesh_positions) {
   return integral_paths::make_positions_from_path(path, mesh_positions);
 }
 
-// TODO: cleanup
+static vector<pair<int, float>> nodes_around_point(
+    const vector<vec3i>& triangles, const vector<vec3f>& positions,
+    const vector<vec3i>& adjacencies, const mesh_point& p) {
+  auto nodes               = vector<pair<int, float>>{};
+  auto [is_vertex, offset] = bary_is_vert(get_bary(p.uv));
+  if (is_vertex) {
+    auto vid = triangles[p.face][offset];
+    nodes.push_back({vid, 0.0f});
+  } else {
+    auto pid = p.face;
+    auto pos = eval_position(triangles, positions, p);
+    for (int i = 0; i < 3; ++i) {
+      int   p0 = triangles[pid][i], p1 = triangles[pid][(i + 1) % 3];
+      float d = length(positions[p0] - pos);
+      nodes.push_back(std::make_pair(p0, d));
+      int         CW_pid = adjacencies[pid][i];
+      int         opp    = opposite_vertex(triangles, adjacencies, pid, i);
+      vector<int> strip  = {CW_pid, pid};
+      float       l      = length_by_flattening(
+          triangles, positions, adjacencies, p, strip);
+      nodes.push_back(std::make_pair(opp, l));
+      int opp_pid = opposite_face(triangles, adjacencies, CW_pid, p0);
+      strip       = {opp_pid, CW_pid, pid};
+      int k       = find_in_vec(adjacencies[CW_pid], opp_pid);
+      int q       = opposite_vertex(triangles, adjacencies, CW_pid, k);
+      d = length_by_flattening(triangles, positions, adjacencies, p, strip);
+      nodes.push_back(std::make_pair(q, d));
+      opp_pid = opposite_face(triangles, adjacencies, CW_pid, p1);
+      strip   = {opp_pid, CW_pid, pid};
+      k       = find_in_vec(adjacencies[CW_pid], opp_pid);
+      q       = opposite_vertex(triangles, adjacencies, CW_pid, k);
+      d = length_by_flattening(triangles, positions, adjacencies, p, strip);
+      nodes.push_back(std::make_pair(q, d));
+    }
+  }
+  return nodes;
+}
+
+#if 0
 // compute the distance between a point p and some vertices around him
 // handling concave path
 static vector<pair<int, float>> nodes_around_point(
@@ -1496,8 +2048,8 @@ static vector<pair<int, float>> nodes_around_point(
 
   return nodes;
 }
+#endif
 
-// TODO: cleanup
 vector<float> solve_with_parents(const geodesic_solver& solver,
     const vector<pair<int, float>>&                     sources_and_dist,
     const vector<pair<int, float>>& targets, vector<int>& parents,
@@ -1531,7 +2083,6 @@ vector<float> solve_with_parents(const geodesic_solver& solver,
   return distances;
 }
 
-// TODO: cleanup
 // given a set of vertices and distances (nbr) computed with
 // "nodes_around_point" and a scalar field (f), returns the parent of the
 // point having nbr as neighborhood
@@ -1553,7 +2104,6 @@ int set_target_parent(const vector<pair<int, float>>& nbr,
   }
 }
 
-// TODO: cleanup
 // given a vector of parents(parents) and a starting vertex (target_parent),
 // return the vertex v such that parents[v]=-1; all the vertices visited
 // during the navigation are stored in "path"
@@ -1573,12 +2123,11 @@ int set_source_child(
   return prev;
 }
 
-// TODO: cleanup
 // utilities:nodes_around_point-->length_by_flattening
 // returns the shortest path starting from target to source as a list of
 // indices of nodes of the graph(solver). note: the list does not contains
 // source if it is a vertex
-vector<int> point_to_point_geodesic_path(const geodesic_solver& solver,
+vector<int> compute_geodesic_parents(const geodesic_solver& solver,
     const vector<vec3i>& triangles, const vector<vec3f>& positions,
     const vector<vec3i>& adjacencies, const mesh_point& source,
     const mesh_point& target) {
@@ -1603,11 +2152,10 @@ vector<int> point_to_point_geodesic_path(const geodesic_solver& solver,
   return path;
 }
 
-// TODO: cleanup
-// same function of "compute_geodesic_paths" of yocto_mesh.cpp that makes
+// same function of "compute_geodesic_parents" of yocto_mesh.cpp that makes
 // early exit when reaching end_vertex, the name is changed because the input
 // parameters are the same
-vector<int> compute_pruned_geodesic_paths(
+vector<int> compute_pruned_geodesic_parents(
     const geodesic_solver& solver, const vector<int>& sources, int end_vertex) {
   auto parents   = vector<int>(solver.graph.size(), -1);
   auto distances = vector<float>(solver.graph.size(), flt_max);
@@ -1621,22 +2169,21 @@ vector<int> compute_pruned_geodesic_paths(
   return parents;
 }
 
-// TODO: cleanup
 // returns the shortest path starting from target to source as a list of
 // indices of nodes of the graph(solver). note: the list does not contains
 // source and target.
-vector<int> point_to_point_geodesic_path(const geodesic_solver& solver,
+vector<int> compute_geodesic_parents(const geodesic_solver& solver,
     const vector<vec3i>& triangles, const vector<vec3f>& positions,
     const vector<vec3i>& adjacencies, int source, int target) {
   vector<int> sources = {source};
-  vector<int> parents = compute_pruned_geodesic_paths(solver, sources, target);
-  vector<int> path    = {};
+  vector<int> parents = compute_pruned_geodesic_parents(
+      solver, sources, target);
+  vector<int> path = {};
   set_source_child(parents, target, path);
   path.pop_back();  // we remove source from the list
   return path;
 }
 
-// TODO: cleanup
 static vector<pair<int, float>> check_nodes(vector<pair<int, float>>& nodes) {
   sort(nodes.begin(), nodes.end());
   auto new_nodes = vector<pair<int, float>>{};
@@ -1658,8 +2205,6 @@ static vector<pair<int, float>> check_nodes(vector<pair<int, float>>& nodes) {
   return nodes;
 }
 
-// TODO: cleanup
-// TODO(fabio): better name
 static vector<float> solve(const geodesic_solver& solver,
     const vector<pair<int, float>>&               sources_and_dist) {
   auto update = [](int node, int neighbor, float new_distance) {};
@@ -1715,7 +2260,6 @@ static vector<float> solve_with_parents(const geodesic_solver& solver,
 }
 #endif
 
-// TODO: cleanup
 vector<float> compute_geodesic_distances(const geodesic_solver& solver,
     const vector<vec3i>& triangles, const vector<vec3f>& positions,
     const vector<vec3i>& adjacencies, const vector<mesh_point>& sources) {
@@ -1820,7 +2364,11 @@ void heuristic_visit_geodesic_graph(vector<float>& field,
 
       // Update distance of neighbor.
       field[neighbor] = new_distance;
+#if YOCTO_BEZIER_PRECISE == 0
       if (update(node, neighbor, new_distance)) return;
+#else
+      update(node, neighbor, new_distance);
+#endif
     }
   }
 }
@@ -1879,6 +2427,9 @@ vector<int> strip_ascending_distance_field(const geodesic_solver& solver,
   return result;
 }
 
+// TODO(fabio): this is copied somewhere else. Make sure it is th proper
+// version.
+#if 0
 bool check_strip(const vector<vec3i>& adjacencies, const vector<int>& strip) {
   auto faces = std::unordered_set<int>{};
   faces.insert(strip[0]);
@@ -1890,6 +2441,7 @@ bool check_strip(const vector<vec3i>& adjacencies, const vector<int>& strip) {
   }
   return true;
 }
+#endif
 
 vector<int> strip_on_dual_graph(const dual_geodesic_solver& solver,
     const vector<vec3i>& triangles, const vector<vec3f>& positions, int start,
@@ -1918,7 +2470,8 @@ vector<int> strip_on_dual_graph(const dual_geodesic_solver& solver,
   auto strip = vector<int>{};
   auto node  = end;
   assert(parents[end] != -1);
-  strip.reserve((int)sqrt(parents.size()));
+  strip.reserve((int)sqrt((float)parents.size()));
+  // for (int i = 0; i < parents.size() && node != -1; i++) {
   while (node != -1) {
     assert(find_in_vec(strip, node) != 1);
     strip.push_back(node);
@@ -1931,7 +2484,7 @@ vector<int> strip_on_dual_graph(const dual_geodesic_solver& solver,
   //   field[v]    = flt_max;
   //   in_queue[v] = false;
   // }
-  // assert(check_strip(mesh.adjacencies, strip));
+  // assert(check_strip(adjacencies, strip));
   return strip;
 }
 
@@ -1963,16 +2516,6 @@ static bool set_ord(int s, int prev_entry, int next_entry, bool nei_is_dual) {
     return false;
 }
 
-// TODO: cleanup
-// static bool set_ord(float theta_next, float theta_prev) {
-//   if (theta_next > theta_prev) {
-//     return theta_next - theta_prev < pif;
-//   } else {
-//     return theta_prev - theta_next > pif;
-//   }
-// }
-
-// TODO: cleanup
 static void fill_strip(vector<int>& strip, const vector<vector<int>>& v2t,
     int vid, int first, int last, bool nei_is_dual, bool ccw) {
   auto  start = first, end = last;
@@ -1997,7 +2540,85 @@ static void fill_strip(vector<int>& strip, const vector<vector<int>>& v2t,
   }
 }
 
-// TODO: cleanup
+static int get_entry(vector<int>& strip, const geodesic_solver& solver,
+    const vector<vec3i>& triangles, const vector<vec3f>& positions,
+    const vector<vec3i>& adjacencies, const vector<vector<int>>& v2t,
+    const vector<vector<float>>& angles, int parent, const mesh_point& p) {
+  strip = {p.face};
+  if (auto [is_vert, offset] = point_is_vert(p); is_vert) {
+    auto vid   = triangles[p.face][offset];
+    auto entry = node_is_neighboor(solver, vid, parent);
+    if (entry < 0) {
+      assert(vid == parent);
+      return -1;
+    }
+    auto star        = v2t[vid];
+    auto s           = (int)star.size();
+    auto it          = find(star.begin(), star.end(), p.face);
+    auto first       = (int)distance(star.begin(), it);
+    auto last        = (entry % 2) ? (entry - 1) / 2 : (entry / 2) % s;
+    auto ccw         = set_ord(s, first, last, entry % 2);
+    auto nei_is_dual = (bool)((entry + 2) % 2);
+    fill_strip(strip, v2t, vid, first, last, nei_is_dual, ccw);
+    if (entry % 2) {
+      first    = (entry - 1) / 2;
+      auto tid = opposite_face(triangles, adjacencies, v2t[vid][first], vid);
+      strip.push_back(tid);
+    }
+    entry = node_is_neighboor(solver, parent, vid);
+    return entry;
+  } else {
+    auto        h = find_in_vec(triangles[p.face], parent);
+    vector<int> adj_tri(3);
+    if (h == -1) {
+      for (auto i = 0; i < 3; ++i) {
+        auto adj   = adjacencies[p.face][i];
+        adj_tri[i] = adj;
+        h          = find_in_vec(triangles[adj], parent);
+        if (h != -1) {
+          strip.push_back(adj);
+          auto entry = node_is_neighboor(
+              solver, parent, triangles[adj][(h + 1) % 3]);
+          assert(entry >= 0);
+          return entry + 1;
+        }
+      }
+    } else {
+      auto entry = node_is_neighboor(
+          solver, parent, triangles[p.face][(h + 1) % 3]);
+      assert(entry >= 0);
+      return entry + 1;
+    }
+    for (auto i = 0; i < 3; ++i) {
+      auto p0 = triangles[p.face][i], p1 = triangles[p.face][(i + 1) % 3];
+      auto adj = adj_tri[i];
+      auto opp = opposite_face(triangles, adjacencies, adj, p0);
+      h        = find_in_vec(triangles[opp], parent);
+      if (h != -1) {
+        strip.push_back(adj);
+        strip.push_back(opp);
+        auto entry = node_is_neighboor(
+            solver, parent, triangles[opp][(h + 1) % 3]);
+        assert(entry >= 0);
+        return entry + 1;
+      }
+      opp = opposite_face(triangles, adjacencies, adj, p1);
+      h   = find_in_vec(triangles[opp], parent);
+      if (h != -1) {
+        strip.push_back(adj);
+        strip.push_back(opp);
+        auto entry = node_is_neighboor(
+            solver, parent, triangles[opp][(h + 1) % 3]);
+        assert(entry >= 0);
+        return entry + 1;
+      }
+    }
+  }
+  assert(false);
+  return -1;
+}
+
+#if 0
 static int get_entry(vector<int>& strip, const geodesic_solver& solver,
     const vector<vec3i>& triangles, const vector<vec3f>& positions,
     const vector<vec3i>& adjacencies, const vector<vector<int>>& v2t,
@@ -2045,8 +2666,8 @@ static int get_entry(vector<int>& strip, const geodesic_solver& solver,
   }
   return 0;  // TODO(fabio): cosa deve fare qui?
 }
+#endif
 
-// TODO: cleanup
 void close_strip(vector<int>& strip, const vector<vector<int>>& v2t, int vid,
     int prev_tri, int last_tri) {
   auto star    = v2t[vid];
@@ -2061,7 +2682,6 @@ void close_strip(vector<int>& strip, const vector<vector<int>>& v2t, int vid,
   fill_strip(strip, v2t, vid, first, last, true, ccw);
 }
 
-// TODO: cleanup
 // particular case of "get strip" when one of the two point is the parent of
 // the other so the size of the strip is one or two
 static vector<int> short_strip(const geodesic_solver& solver,
@@ -2092,18 +2712,18 @@ static vector<int> short_strip(const geodesic_solver& solver,
   return strip;
 }
 
-// TODO: cleanup
 // returns a strip of triangles such target belongs to the first one and
 // source to the last one
-// TODO(fabio_): may be the names could change in order to get the call
-// more consistent with the output)
+// TODO(fabio): better name
 vector<int> get_strip(const geodesic_solver& solver,
     const vector<vec3i>& triangles, const vector<vec3f>& positions,
     const vector<vec3i>& adjacencies, const vector<vector<int>>& v2t,
     const vector<vector<float>>& angles, const mesh_point& source,
-    const mesh_point& target) {
+    const mesh_point& target, vector<int>& parents) {
   if (target.face == source.face) return {target.face};
-  auto parents = point_to_point_geodesic_path(
+  if (find_in_vec(adjacencies[target.face], source.face) != -1)
+    return {target.face, source.face};
+  parents = compute_geodesic_parents(
       solver, triangles, positions, adjacencies, source, target);
   auto N     = (int)parents.size();
   auto first = 0, last = 0, prev_entry = 0, next_entry = 0;
@@ -2132,7 +2752,6 @@ vector<int> get_strip(const geodesic_solver& solver,
     prev_entry = get_entry(strip, solver, triangles, positions, adjacencies,
         v2t, angles, parents[0], target);
   }
-
   for (auto i = 0; i < N; ++i) {
     auto v = parents[i];
     if (i == N - 1) {
@@ -2149,15 +2768,12 @@ vector<int> get_strip(const geodesic_solver& solver,
       last        = (nei_is_dual) ? (next_entry - 1) / 2 : next_entry / 2;
       ccw         = set_ord((int)v2t[v].size(), first, last, nei_is_dual);
     }
-
     fill_strip(strip, v2t, v, first, last, nei_is_dual, ccw);
-
     if (nei_is_dual && i != N - 1) {
       auto tid = opposite_face(triangles, adjacencies, strip.back(), v);
       strip.push_back(tid);
     }
   }
-
   close_strip(strip, v2t, parents.back(), strip.back(), strip_to_point.back());
   if (strip.back() == strip_to_point.back()) strip_to_point.pop_back();
   reverse(strip_to_point.begin(), strip_to_point.end());
@@ -2231,7 +2847,7 @@ vec2f barycentric_coordinates(
   float d21   = dot(v2, v1);
   float denom = d00 * d11 - d01 * d01;
   return vec2f{d11 * d20 - d01 * d21, d00 * d21 - d01 * d20} / denom;
-};
+}
 
 // given a direction expressed in tangent space of the face start,
 // continue the path as straight as possible.
@@ -2306,8 +2922,22 @@ mat2f parallel_transport_rotation(const vector<vec3i>& triangles,
   return rotation;
 }
 
-inline float intersect_segments(const vec2f& start1, const vec2f& end1,
+static float intersect_segments(const vec2f& start1, const vec2f& end1,
     const vec2f& start2, const vec2f& end2) {
+  if (end1 == start2) return 0;
+  if (end2 == start1) return 1;
+  if (start2 == start1) return 0;
+  if (end2 == end1) return 1;
+  auto a   = end1 - start1;    // direction of line a
+  auto b   = start2 - end2;    // direction of line b, reversed
+  auto d   = start2 - start1;  // right-hand side
+  auto det = a.x * b.y - a.y * b.x;
+  assert(det);
+  return (a.x * d.y - a.y * d.x) / det;
+}
+
+static double intersect_segments_double(const vec2d& start1, const vec2d& end1,
+    const vec2d& start2, const vec2d& end2) {
   if (end1 == start2) return 0;
   if (end2 == start1) return 1;
   if (start2 == start1) return 0;
@@ -2325,7 +2955,9 @@ bool path_check_strip(
   auto faces = unordered_set<int>{};
   faces.insert(strip[0]);
   for (auto i = 1; i < strip.size(); ++i) {
-    assert(faces.count(strip[i]) == 0);  // face appears twice in the strip
+    if (faces.count(strip[i]) != 0) {
+      printf("strip[%d] (face: %d) appears twice\n", i, strip[i]);
+    }
     faces.insert(strip[i]);
     assert(find_in_vec(adjacencies[strip[i - 1]], strip[i]) != -1);
     assert(find_in_vec(adjacencies[strip[i]], strip[i - 1]) != -1);
@@ -2333,9 +2965,34 @@ bool path_check_strip(
   return true;
 }
 
+static void remove_loops_from_strip(vector<int>& strip) {
+  auto faces      = unordered_map<int, int>{};
+  faces[strip[0]] = 0;
+  auto result     = vector<int>(strip.size());
+  result[0]       = strip[0];
+  auto index      = 1;
+  for (auto i = 1; i < strip.size(); ++i) {
+    if (faces.count(strip[i]) != 0) {
+      // printf("fixing %d (%d)\n", i, strip[i]);
+      auto t = faces[strip[i]];
+      index  = t + 1;
+      continue;
+    }
+    faces[strip[i]] = i;
+    result[index++] = strip[i];
+  }
+  result.resize(index);
+  strip = result;
+}
+
 struct funnel_point {
   int   face = 0;
   vec2f pos  = {0, 0};
+};
+
+struct funnel_pointd {
+  int   face = 0;
+  vec2d pos  = {0, 0};
 };
 
 static int max_curvature_point(const vector<funnel_point>& path) {
@@ -2359,7 +3016,29 @@ static int max_curvature_point(const vector<funnel_point>& path) {
   return max_index;
 }
 
-static vector<float> funnel(
+[[maybe_unused]] static int max_curvature_point_double(
+    const vector<funnel_pointd>& path) {
+  // Among vertices around which the path curves, find the vertex
+  // with maximum angle. We are going to fix that vertex. Actually, max_index is
+  // the index of the first face containing that vertex.
+  auto max_index = -1;
+  auto max_angle = 0.0;
+  for (auto i = 1; i < path.size() - 1; ++i) {
+    auto pos   = path[i].pos;
+    auto prev  = path[i - 1].pos;
+    auto next  = path[i + 1].pos;
+    auto v0    = normalize(pos - prev);
+    auto v1    = normalize(next - pos);
+    auto angle = 1 - dot(v0, v1);
+    if (angle > max_angle) {
+      max_index = path[i].face;
+      max_angle = angle;
+    }
+  }
+  return max_index;
+}
+
+[[maybe_unused]] static vector<float> funnel(
     const vector<pair<vec2f, vec2f>>& portals, int& max_index) {
   // Find straight path.
   auto start       = vec2f{0, 0};
@@ -2466,6 +3145,113 @@ static vector<float> funnel(
   return lerps;
 }
 
+static vector<float> funnel_double(
+    const vector<pair<vec2d, vec2d>>& portals, vector<funnel_pointd>& points) {
+  // Find straight path.
+  auto start       = vec2d{0, 0};
+  auto apex_index  = 0;
+  auto left_index  = 0;
+  auto right_index = 0;
+  auto apex        = start;
+  auto left_bound  = portals[0].first;
+  auto right_bound = portals[0].second;
+
+  // Add start point.
+  points = vector<funnel_pointd>{{apex_index, apex}};
+  points.reserve(portals.size());
+
+  // @Speed: is this slower than an inlined function?
+  auto area = [](const vec2d a, const vec2d b, const vec2d c) {
+    return cross(b - a, c - a);
+  };
+
+  for (auto i = 1; i < portals.size(); ++i) {
+    auto left = portals[i].first, right = portals[i].second;
+    // Update right vertex.
+    if (area(apex, right_bound, right) <= 0) {
+      if (apex == right_bound || area(apex, left_bound, right) > 0) {
+        // Tighten the funnel.
+        right_bound = right;
+        right_index = i;
+      } else {
+        // Right over left, insert left to path and restart scan from
+        // portal left point.
+        if (left_bound != apex) {
+          points.push_back({left_index, left_bound});
+          // Make current left the new apex.
+          apex       = left_bound;
+          apex_index = left_index;
+          // Reset portal
+          left_bound  = apex;
+          right_bound = apex;
+          left_index  = apex_index;
+          right_index = apex_index;
+          // Restart scan
+          i = apex_index;
+          continue;
+        }
+      }
+    }
+
+    // Update left vertex.
+    if (area(apex, left_bound, left) >= 0) {
+      if (apex == left_bound || area(apex, right_bound, left) < 0) {
+        // Tighten the funnel.
+        left_bound = left;
+        left_index = i;
+      } else {
+        if (right_bound != apex) {
+          points.push_back({right_index, right_bound});
+          // Make current right the new apex.
+          apex       = right_bound;
+          apex_index = right_index;
+          // Reset portal
+          left_bound  = apex;
+          right_bound = apex;
+          left_index  = apex_index;
+          right_index = apex_index;
+          // Restart scan
+          i = apex_index;
+          continue;
+        }
+      }
+    }
+  }
+
+  // This happens when we got an apex on the last edge of the strip
+  if (points.back().pos != portals.back().first) {
+    points.push_back({(int)portals.size() - 1, portals.back().first});
+  }
+  assert(points.back().pos == portals.back().first);
+  assert(points.back().pos == portals.back().second);
+
+  auto lerps = vector<float>();
+  lerps.reserve(portals.size());
+  for (auto i = 0; i < points.size() - 1; i++) {
+    auto a = points[i].pos;
+    auto b = points[i + 1].pos;
+    for (auto k = points[i].face; k < points[i + 1].face; k++) {
+      auto portal = portals[k];
+      auto s = intersect_segments_double(a, b, portal.first, portal.second);
+      report_floating_point(s);
+      auto p = clamp(s, 0.0, 1.0);
+      lerps.push_back((float)p);
+    }
+  }
+
+  auto index = 1;
+  for (auto i = 1; i < portals.size(); ++i) {
+    if ((portals[i].first == points[index].pos) ||
+        (portals[i].second == points[index].pos)) {
+      points[index].face = i;
+      index += 1;
+    }
+  }
+  // max_index = max_curvature_point_double(points);
+  assert(lerps.size() == portals.size() - 1);
+  return lerps;
+}
+
 bool check_point(const mesh_point& point) {
   assert(point.face != -1);
   assert(point.uv.x >= 0);
@@ -2477,7 +3263,6 @@ bool check_point(const mesh_point& point) {
 
 static vector<int> fix_strip(const vector<vec3i>& adjacencies,
     const vector<int>& strip, int index, int k, bool left) {
-  assert(path_check_strip(adjacencies, strip));
   assert(index < strip.size() - 1);
   auto face = strip[index];
   if (!left) k = mod3(k + 2);
@@ -2485,8 +3270,9 @@ static vector<int> fix_strip(const vector<vec3i>& adjacencies,
   // Create triangle fan that starts at face, walks backward along the strip for
   // a while, exits and then re-enters back.
   auto fan = triangle_fan(adjacencies, face, k, left);
+  if (fan.empty()) return strip;
 
-  // strip in the array of faces and fan is a loop of faces which has partial
+  // fan is a loop of faces which has partial
   // intersection with strip. We wan to remove the intersection from strip and
   // insert there the remaining part of fan, so that we have a new valid strip.
   auto first_strip_intersection = index;
@@ -2516,11 +3302,15 @@ static vector<int> fix_strip(const vector<vec3i>& adjacencies,
     }
   }
 
+  if (first_strip_intersection >= second_strip_intersection) return strip;
+  if (first_fan_intersection >= second_fan_intersection) return strip;
+
   auto result = vector<int>{};
   result.reserve(strip.size() + 12);
-  // Initial part of original strip, until intersection with fan.
-  for (auto i = 0; i < first_strip_intersection; ++i)
-    result.push_back(strip[i]);
+
+  // Initial part of original strip, up until intersection with fan.
+  result.insert(
+      result.end(), strip.begin(), strip.begin() + first_strip_intersection);
 
   // Append out-flanking part of fan.
   result.insert(result.end(), fan.begin() + first_fan_intersection,
@@ -2531,39 +3321,80 @@ static vector<int> fix_strip(const vector<vec3i>& adjacencies,
     result.push_back(strip[i]);
 
   assert(path_check_strip(adjacencies, result));
+  remove_loops_from_strip(result);
+  assert(path_check_strip(adjacencies, result));
   return result;
 }
 
 static void straighten_path(geodesic_path& path, const vector<vec3i>& triangles,
     const vector<vec3f>& positions, const vector<vec3i>& adjacencies) {
-  auto index = -1, vertex = -1;
-  auto init_portals = unfold_funnel_portals(
+  auto init_portals = unfold_funnel_portals_double(
       triangles, positions, path.strip, path.start, path.end);
-  path.lerps = funnel(init_portals, index);
+  vector<funnel_pointd> points;
+  path.lerps = funnel_double(init_portals, points);
 
-  // while(true) { this may never break...
-  for (auto i = 0; i < path.strip.size() * 2 && index != -1; i++) {
-    auto new_vertex = -1;
-    auto face       = path.strip[index];
-    auto next       = path.strip[index + 1];
-    auto edge       = common_edge(triangles[face], triangles[next]);
-    auto flank_left = false;
-    if (path.lerps[index] == 0) {
-      new_vertex = edge.x;
-      flank_left = false;
-    } else if (path.lerps[index] == 1) {
-      new_vertex = edge.y;
-      flank_left = true;
+  auto already_fixed_vertices = unordered_set<int>{};
+
+  struct bend_info {
+    int  index      = -1;     // Index of bend in the strip array.
+    int  vertex     = -1;     // Vertex of the mesh.
+    int  k          = -1;     // Index of the vertex in its containing triangle.
+    bool flank_left = false;  // Where to flank the problematic vertex.
+  };
+
+  auto max_curvature_point = [&]() {
+    // Among vertices around which the path bends, find the vertex
+    // with maximum angle. We are going to fix that bend around that vertex.
+    auto result    = bend_info{};
+    auto max_angle = 0.0;
+    for (auto i = 1; i < points.size() - 1; ++i) {
+      auto bend      = bend_info{};
+      bend.index     = points[i].face;
+      auto face      = path.strip[points[i].face];
+      auto face_next = path.strip[points[i].face + 1];
+      auto edge      = common_edge(triangles[face], triangles[face_next]);
+      if (path.lerps[bend.index] == 0) {
+        bend.vertex = edge.x;
+      } else if (path.lerps[bend.index] == 1) {
+        bend.vertex     = edge.y;
+        bend.flank_left = true;
+      }
+      if (already_fixed_vertices.count(bend.vertex)) {
+        continue;
+      }
+      bend.k      = find_in_vec(triangles[face], bend.vertex);
+      auto& pos   = points[i].pos;
+      auto& prev  = points[i - 1].pos;
+      auto& next  = points[i + 1].pos;
+      auto  v0    = normalize(pos - prev);
+      auto  v1    = normalize(next - pos);
+      auto  angle = 1 - dot(v0, v1);
+      if (angle > max_angle) {
+        max_angle = angle;
+        result    = bend;
+      }
     }
-    if (new_vertex == vertex) break;
-    vertex = new_vertex;
+    if (result.vertex != -1) {
+      already_fixed_vertices.insert(result.vertex);
+    }
+    return result;
+  };
 
-    path.strip = fix_strip(adjacencies, path.strip, index,
-        find_in_vec(triangles[face], vertex), flank_left);
+  auto bend = max_curvature_point();
 
-    auto portals = unfold_funnel_portals(
+#if YOCTO_BEZIER_PRECISE == 0
+  auto max_iterations = path.strip.size() * 2;
+  for (auto i = 0; i < max_iterations && bend.index != -1; i++) {
+#else
+  while (bend.index != -1) {
+#endif
+    path.strip = fix_strip(
+        adjacencies, path.strip, bend.index, bend.k, bend.flank_left);
+
+    auto portals = unfold_funnel_portals_double(
         triangles, positions, path.strip, path.start, path.end);
-    path.lerps = funnel(portals, index);
+    path.lerps = funnel_double(portals, points);
+    bend       = max_curvature_point();
   }
 }
 
@@ -2599,7 +3430,11 @@ mesh_path convert_mesh_path(const vector<vec3i>& triangles,
 
 mesh_point eval_path_point(const geodesic_path& path,
     const vector<vec3i>& triangles, const vector<vec3f>& positions,
-    const vector<vec3i>& adjacencies, float t) {
+    const vector<vec3i>& adjacencies, const vector<float>& parameter_t,
+    float t) {
+  if (t <= 0) return path.start;
+  if (t >= 1) return path.end;
+
   // strip with 1 triangle are trivial, just average the uvs
   if (path.start.face == path.end.face) {
     return mesh_point{path.start.face, lerp(path.start.uv, path.end.uv, t)};
@@ -2614,17 +3449,38 @@ mesh_point eval_path_point(const geodesic_path& path,
       return vec3f{v.y, v.z, v.x};
   };
 
-  auto parameter_t = path_parameters(
-      path_positions(path, triangles, positions, adjacencies));
-
-  // find the point in the middle
+  // TODO(splinesurf): check which is better betwee linear saerch, binary search
+  // and "linear fit" search.
+#if 1
+  // linear search
   auto i = 0;
   for (; i < parameter_t.size() - 1; i++) {
-    if (parameter_t[i + 1] >= 0.5) break;
+    if (parameter_t[i + 1] >= t) break;
   }
-  auto t_low = parameter_t[i], t_high = parameter_t[i + 1];
-  auto alpha = (t - t_low) / (t_high - t_low);
-  // alpha == 0 -> t_low, alpha == 1 -> t_high
+#else
+  // binary search
+  // (but "linear fit search" should be faster here)
+  // https://blog.demofox.org/2019/03/22/linear-fit-search/
+  auto i      = -1;
+  auto i_low  = 0;
+  auto i_high = (int)parameter_t.size() - 1;
+  while (true) {
+    i           = (i_high + i_low) / 2;
+    auto t_low  = parameter_t[i];
+    auto t_high = parameter_t[i + 1];
+    if (t_low <= t && t_high >= t) break;
+
+    if (t_low > t) {
+      i_high = i;
+    } else {
+      i_low = i;
+    }
+  }
+#endif
+
+  auto t_low  = parameter_t[i];
+  auto t_high = parameter_t[i + 1];
+  auto alpha  = (t - t_low) / (t_high - t_low);
   auto face   = path.strip[i];
   auto uv_low = vec2f{0, 0};
   if (i == 0) {
@@ -2650,367 +3506,1940 @@ mesh_point eval_path_point(const geodesic_path& path,
   return mesh_point{face, uv};
 }
 
-}  // namespace yocto
-
-// -----------------------------------------------------------------------------
-// IMPLEMENTATION OF MESH IO
-// -----------------------------------------------------------------------------
-namespace yocto {
-
-// Convert quads to triangles
-static vector<vec3i> quads_to_triangles(const vector<vec4i>& quads) {
-  auto triangles = vector<vec3i>{};
-  triangles.reserve(quads.size() * 2);
-  for (auto& q : quads) {
-    triangles.push_back({q.x, q.y, q.w});
-    if (q.z != q.w) triangles.push_back({q.z, q.w, q.y});
-  }
-  return triangles;
+mesh_point eval_path_point(const geodesic_path& path,
+    const vector<vec3i>& triangles, const vector<vec3f>& positions,
+    const vector<vec3i>& adjacencies, float t) {
+  auto parameter_t = path_parameters(
+      path_positions(path, triangles, positions, adjacencies));
+  return eval_path_point(
+      path, triangles, positions, adjacencies, parameter_t, t);
 }
 
-// Load ply mesh
-bool load_mesh(const string& filename, vector<vec3i>& triangles,
-    vector<vec3f>& positions, vector<vec3f>& normals, vector<vec2f>& texcoords,
-    vector<vec4f>& colors, string& error, bool flip_texcoord) {
-  auto format_error = [filename, &error]() {
-    error = filename + ": unknown format";
-    return false;
-  };
-  auto shape_error = [filename, &error]() {
-    error = filename + ": empty shape";
-    return false;
-  };
-
-  triangles = {};
-  positions = {};
-  normals   = {};
-  texcoords = {};
-  colors    = {};
-
-  auto ext = path_extension(filename);
-  if (ext == ".ply" || ext == ".PLY") {
-    // open ply
-    auto ply_guard = std::make_unique<ply_model>();
-    auto ply       = ply_guard.get();
-    if (!load_ply(filename, ply, error)) return false;
-    // gets vertex
-    get_positions(ply, positions);
-    get_normals(ply, normals);
-    get_texcoords(ply, texcoords, flip_texcoord);
-    get_colors(ply, colors);
-    // get faces
-    get_triangles(ply, triangles);
-    if (positions.empty()) return shape_error();
-    return true;
-  } else if (ext == ".obj" || ext == ".OBJ") {
-    // load obj
-    auto obj_guard = std::make_unique<obj_scene>();
-    auto obj       = obj_guard.get();
-    if (!load_obj(filename, obj, error, true)) return false;
-    // get shape
-    if (obj->shapes.empty()) return shape_error();
-    if (obj->shapes.size() > 1) return shape_error();
-    auto shape = obj->shapes.front();
-    if (shape->faces.empty()) return shape_error();
-    // decide what to do and get properties
-    auto materials  = vector<string>{};
-    auto ematerials = vector<int>{};
-    get_triangles(shape, triangles, positions, normals, texcoords, materials,
-        ematerials, flip_texcoord);
-    if (positions.empty()) return shape_error();
-    return true;
-  } else {
-    return format_error();
-  }
-}
-
-// Save ply mesh
-bool save_mesh(const string& filename, const vector<vec3i>& triangles,
-    const vector<vec3f>& positions, const vector<vec3f>& normals,
-    const vector<vec2f>& texcoords, const vector<vec4f>& colors, string& error,
-    bool ascii, bool flip_texcoord) {
-  auto format_error = [filename, &error]() {
-    error = filename + ": unknown format";
-    return false;
-  };
-  auto shape_error = [filename, &error]() {
-    error = filename + ": empty shape";
-    return false;
-  };
-
-  auto ext = path_extension(filename);
-  if (ext == ".ply" || ext == ".PLY") {
-    // create ply
-    auto ply_guard = std::make_unique<ply_model>();
-    auto ply       = ply_guard.get();
-    add_positions(ply, positions);
-    add_normals(ply, normals);
-    add_texcoords(ply, texcoords, flip_texcoord);
-    add_colors(ply, colors);
-    add_triangles(ply, triangles);
-    if (!save_ply(filename, ply, error)) return false;
-    return true;
-  } else if (ext == ".obj" || ext == ".OBJ") {
-    auto obj_guard = std::make_unique<obj_scene>();
-    auto obj       = obj_guard.get();
-    auto oshape    = add_shape(obj);
-    if (triangles.empty()) return shape_error();
-    set_triangles(
-        oshape, triangles, positions, normals, texcoords, {}, flip_texcoord);
-    if (!save_obj(filename, obj, error)) return false;
-    return true;
-  } else if (ext == ".stl" || ext == ".STL") {
-    auto stl_guard = std::make_unique<stl_model>();
-    auto stl       = stl_guard.get();
-    if (triangles.empty()) return shape_error();
-    add_triangles(stl, triangles, positions, {});
-    if (!save_stl(filename, stl, error)) return false;
-    return true;
-  } else {
-    return format_error();
-  }
-}
-
-// Load ply mesh
-bool load_mesh(const string& filename, vector<vec3i>& triangles,
-    vector<vec3f>& positions, string& error) {
-  auto format_error = [filename, &error]() {
-    error = filename + ": unknown format";
-    return false;
-  };
-  auto shape_error = [filename, &error]() {
-    error = filename + ": empty shape";
-    return false;
-  };
-
-  triangles = {};
-  positions = {};
-
-  auto ext = path_extension(filename);
-  if (ext == ".ply" || ext == ".PLY") {
-    // open ply
-    auto ply_guard = std::make_unique<ply_model>();
-    auto ply       = ply_guard.get();
-    if (!load_ply(filename, ply, error)) return false;
-    get_positions(ply, positions);
-    get_triangles(ply, triangles);
-    if (positions.empty()) return shape_error();
-    return true;
-  } else if (ext == ".obj" || ext == ".OBJ") {
-    // load obj
-    auto obj_guard = std::make_unique<obj_scene>();
-    auto obj       = obj_guard.get();
-    if (!load_obj(filename, obj, error, true)) return false;
-    // get shape
-    if (obj->shapes.empty()) return shape_error();
-    if (obj->shapes.size() > 1) return shape_error();
-    auto shape = obj->shapes.front();
-    if (shape->faces.empty()) return shape_error();
-    // decide what to do and get properties
-    auto materials     = vector<string>{};
-    auto ematerials    = vector<int>{};
-    auto quadspos      = vector<vec4i>{};
-    auto quadsnorm     = vector<vec4i>{};
-    auto quadstexcoord = vector<vec4i>{};
-    auto normals       = vector<vec3f>{};
-    auto texcoords     = vector<vec2f>{};
-    get_fvquads(shape, quadspos, quadsnorm, quadstexcoord, positions, normals,
-        texcoords, materials, ematerials);
-    triangles = quads_to_triangles(quadspos);
-    if (positions.empty()) return shape_error();
-    return true;
-  } else if (ext == ".stl" || ext == ".STL") {
-    // open ply
-    auto stl_guard = std::make_unique<stl_model>();
-    auto stl       = stl_guard.get();
-    if (!load_stl(filename, stl, error)) return false;
-    if (stl->shapes.empty()) return shape_error();
-    if (stl->shapes.size() > 1) return shape_error();
-    auto fnormals = vector<vec3f>{};
-    if (!get_triangles(stl, 0, triangles, positions, fnormals))
-      return shape_error();
-    if (positions.empty()) return shape_error();
-    return true;
-  } else {
-    return format_error();
-  }
-}
-
-// Save ply mesh
-bool save_mesh(const string& filename, const vector<vec3i>& triangles,
-    const vector<vec3f>& positions, string& error, bool ascii) {
-  auto format_error = [filename, &error]() {
-    error = filename + ": unknown format";
-    return false;
-  };
-  auto shape_error = [filename, &error]() {
-    error = filename + ": empty shape";
-    return false;
-  };
-
-  auto ext = path_extension(filename);
-  if (ext == ".ply" || ext == ".PLY") {
-    // create ply
-    auto ply_guard = std::make_unique<ply_model>();
-    auto ply       = ply_guard.get();
-    if (triangles.empty()) return shape_error();
-    add_positions(ply, positions);
-    add_triangles(ply, triangles);
-    if (!save_ply(filename, ply, error)) return false;
-    return true;
-  } else if (ext == ".obj" || ext == ".OBJ") {
-    auto obj_guard = std::make_unique<obj_scene>();
-    auto obj       = obj_guard.get();
-    auto oshape    = add_shape(obj);
-    if (triangles.empty()) return shape_error();
-    set_triangles(oshape, triangles, positions, {}, {}, {});
-    auto err = ""s;
-    if (!save_obj(filename, obj, error)) return false;
-    return true;
-  } else if (ext == ".stl" || ext == ".STL") {
-    auto stl_guard = std::make_unique<stl_model>();
-    auto stl       = stl_guard.get();
-    if (triangles.empty()) return shape_error();
-    add_triangles(stl, triangles, positions, {});
-    if (!save_stl(filename, stl, error)) return false;
-    return true;
-  } else {
-    return format_error();
-  }
-}
-
-// Load ply mesh
-bool load_lines(const string& filename, vector<vec2i>& lines,
-    vector<vec3f>& positions, vector<vec3f>& normals, vector<vec2f>& texcoords,
-    vector<vec4f>& colors, string& error, bool flip_texcoord) {
-  auto format_error = [filename, &error]() {
-    error = filename + ": unknown format";
-    return false;
-  };
-  auto shape_error = [filename, &error]() {
-    error = filename + ": empty shape";
-    return false;
-  };
-
-  lines     = {};
-  positions = {};
-  normals   = {};
-  texcoords = {};
-  colors    = {};
-
-  auto ext = path_extension(filename);
-  if (ext == ".ply" || ext == ".PLY") {
-    // open ply
-    auto ply_guard = std::make_unique<ply_model>();
-    auto ply       = ply_guard.get();
-    if (!load_ply(filename, ply, error)) return false;
-    // gets vertex
-    get_positions(ply, positions);
-    get_normals(ply, normals);
-    get_texcoords(ply, texcoords, flip_texcoord);
-    get_colors(ply, colors);
-    // get faces
-    get_lines(ply, lines);
-    if (positions.empty()) return shape_error();
-    return true;
-  } else if (ext == ".obj" || ext == ".OBJ") {
-    // load obj
-    auto obj_guard = std::make_unique<obj_scene>();
-    auto obj       = obj_guard.get();
-    if (!load_obj(filename, obj, error, true)) return false;
-    // get shape
-    if (obj->shapes.empty()) return shape_error();
-    if (obj->shapes.size() > 1) return shape_error();
-    auto shape = obj->shapes.front();
-    if (shape->lines.empty()) return shape_error();
-    // decide what to do and get properties
-    auto materials  = vector<string>{};
-    auto ematerials = vector<int>{};
-    get_lines(shape, lines, positions, normals, texcoords, materials,
-        ematerials, flip_texcoord);
-    if (positions.empty()) return shape_error();
-    return true;
-  } else {
-    return format_error();
-  }
-}
-
-// Save ply mesh
-bool save_lines(const string& filename, const vector<vec2i>& lines,
-    const vector<vec3f>& positions, const vector<vec3f>& normals,
-    const vector<vec2f>& texcoords, const vector<vec4f>& colors, string& error,
-    bool ascii, bool flip_texcoord) {
-  auto format_error = [filename, &error]() {
-    error = filename + ": unknown format";
-    return false;
-  };
-  auto shape_error = [filename, &error]() {
-    error = filename + ": empty shape";
-    return false;
-  };
-
-  auto ext = path_extension(filename);
-  if (ext == ".ply" || ext == ".PLY") {
-    // create ply
-    auto ply_guard = std::make_unique<ply_model>();
-    auto ply       = ply_guard.get();
-    add_positions(ply, positions);
-    add_normals(ply, normals);
-    add_texcoords(ply, texcoords, flip_texcoord);
-    add_colors(ply, colors);
-    add_lines(ply, lines);
-    if (!save_ply(filename, ply, error)) return false;
-    return true;
-  } else if (ext == ".obj" || ext == ".OBJ") {
-    auto obj_guard = std::make_unique<obj_scene>();
-    auto obj       = obj_guard.get();
-    auto oshape    = add_shape(obj);
-    if (lines.empty()) return shape_error();
-    set_lines(oshape, lines, positions, normals, texcoords, {}, flip_texcoord);
-    if (!save_obj(filename, obj, error)) return false;
-    return true;
-  } else {
-    return format_error();
-  }
+[[maybe_unused]] static mesh_point eval_path_midpoint(const geodesic_path& path,
+    const vector<vec3i>& triangles, const vector<vec3f>& positions,
+    const vector<vec3i>& adjacencies) {
+  return eval_path_point(path, triangles, positions, adjacencies, 0.5);
 }
 
 }  // namespace yocto
 
 // -----------------------------------------------------------------------------
-// IMPLEMENTATION OF SHAPE STATS AND VALIDATION
+// MESH BEZIER
 // -----------------------------------------------------------------------------
 namespace yocto {
 
-vector<string> mesh_stats(const vector<vec3i>& triangles,
-    const vector<vec3f>& positions, const vector<vec3f>& normals,
-    const vector<vec2f>& texcoords, const vector<vec4f>& colors, bool verbose) {
-  auto format = [](auto num) {
-    auto str = std::to_string(num);
-    while (str.size() < 13) str = " " + str;
-    return str;
+template <typename T>
+static int find_in_vector(const T& vec, int x) {
+  for (int i = 0; i < size(vec); i++)
+    if (vec[i] == x) return i;
+  return -1;
+}
+
+[[maybe_unused]] static bool check_strip(
+    const vector<vec3i>& adjacencies, const vector<int>& strip) {
+  auto faces = std::unordered_set<int>{};
+  faces.insert(strip[0]);
+  for (auto i = 1; i < strip.size(); ++i) {
+    assert(faces.count(strip[i]) == 0);  // face appears twice in the strip
+    faces.insert(strip[i]);
+    assert(find_in_vector(adjacencies[strip[i - 1]], strip[i]) != -1);
+    assert(find_in_vector(adjacencies[strip[i]], strip[i - 1]) != -1);
+  }
+  return true;
+}
+
+template <typename Update>
+static void search_strip(vector<float>& weight, vector<bool>& in_queue,
+    const dual_geodesic_solver& solver, const vector<vec3i>& triangles,
+    const vector<vec3f>& positions, const mesh_point& start,
+    const mesh_point& end, Update&& update) {
+  auto start_pos = eval_position(triangles, positions, start);
+  auto end_pos   = eval_position(triangles, positions, end);
+
+  auto estimate_dist = [&](int face) {
+    return length(solver.centroids[face] - end_pos);
   };
-  auto format3 = [](auto num) {
-    auto str = std::to_string(num.x) + " " + std::to_string(num.y) + " " +
-               std::to_string(num.z);
-    while (str.size() < 13) str = " " + str;
-    return str;
+  weight[start.face] = length(start_pos - end_pos);
+
+  // Cumulative weights of elements in queue. Used to keep track of the
+  // average weight of the queue.
+  double cumulative_weight = 0.0;
+
+  // setup queue
+  auto queue           = std::deque<int>{};
+  in_queue[start.face] = true;
+  cumulative_weight += weight[start.face];
+  queue.push_back(start.face);
+
+  while (!queue.empty()) {
+    auto node           = queue.front();
+    auto average_weight = (float)(cumulative_weight / queue.size());
+
+    // Large Label Last (see comment at the beginning)
+    for (auto tries = 0; tries < queue.size() + 1; tries++) {
+      if (weight[node] <= average_weight) break;
+      queue.pop_front();
+      queue.push_back(node);
+      node = queue.front();
+    }
+
+    // Remove node from queue.
+    queue.pop_front();
+    in_queue[node] = false;
+    cumulative_weight -= weight[node];
+
+    for (auto i = 0; i < (int)solver.graph[node].size(); i++) {
+      auto neighbor = solver.graph[node][i].node;
+      if (neighbor == -1) continue;
+
+      // Distance of neighbor through this node
+      auto new_distance = weight[node];
+      new_distance += solver.graph[node][i].length;
+      new_distance += estimate_dist(neighbor);
+      new_distance -= estimate_dist(node);
+
+      auto old_distance = weight[neighbor];
+      if (new_distance >= old_distance) continue;
+
+      if (in_queue[neighbor]) {
+        // If neighbor already in queue, don't add it.
+        // Just update cumulative weight.
+        cumulative_weight += new_distance - old_distance;
+      } else {
+        // If neighbor not in queue, add node to queue using Small Label
+        // First (see comment at the beginning).
+        if (queue.empty() || (new_distance < weight[queue.front()]))
+          queue.push_front(neighbor);
+        else
+          queue.push_back(neighbor);
+
+        // Update queue information.
+        in_queue[neighbor] = true;
+        cumulative_weight += new_distance;
+      }
+
+      // Update distance of neighbor.
+      weight[neighbor] = new_distance;
+      if (update(node, neighbor, new_distance)) return;
+    }
+  }
+}
+
+static vector<int> compute_strip(const dual_geodesic_solver& solver,
+    const vector<vec3i>& triangles, const vector<vec3f>& positions,
+    const mesh_point& start, const mesh_point& end) {
+  if (start.face == end.face) return {start.face};
+
+  thread_local static auto parents  = vector<int>{};
+  thread_local static auto field    = vector<float>{};
+  thread_local static auto in_queue = vector<bool>{};
+
+  if (parents.size() != solver.graph.size()) {
+    parents.assign(solver.graph.size(), -1);
+    field.assign(solver.graph.size(), flt_max);
+    in_queue.assign(solver.graph.size(), false);
+  }
+
+  // initialize once for all and sparsely cleanup at the end of every solve
+  auto visited = vector<int>{start.face};
+  auto sources = vector<int>{start.face};
+  auto update  = [&visited, end](int node, int neighbor, float new_distance) {
+    parents[neighbor] = node;
+    visited.push_back(neighbor);
+    return neighbor == end.face;
   };
 
-  auto bbox = invalidb3f;
-  for (auto& pos : positions) bbox = merge(bbox, pos);
+  search_strip(
+      field, in_queue, solver, triangles, positions, start, end, update);
 
-  auto stats = vector<string>{};
-  stats.push_back("triangles:    " + format(triangles.size()));
-  stats.push_back("positions:    " + format(positions.size()));
-  stats.push_back("normals:      " + format(normals.size()));
-  stats.push_back("texcoords:    " + format(texcoords.size()));
-  stats.push_back("colors:       " + format(colors.size()));
-  stats.push_back("center:       " + format3(center(bbox)));
-  stats.push_back("size:         " + format3(size(bbox)));
-  stats.push_back("min:          " + format3(bbox.min));
-  stats.push_back("max:          " + format3(bbox.max));
+  // extract_strip
+  auto strip = vector<int>{};
+  auto node  = end.face;
+  strip.reserve((int)yocto::sqrt((float)parents.size()));
 
-  return stats;
+  // for (int i = 0; i < parents.size() && node != -1; i++) {
+  while (node != -1) {
+    assert(find_in_vector(strip, node) != 1);
+    assert(strip.size() < parents.size());
+    strip.push_back(node);
+    node = parents[node];
+  }
+
+  // cleanup buffers
+  for (auto& v : visited) {
+    parents[v]  = -1;
+    field[v]    = flt_max;
+    in_queue[v] = false;
+  }
+  return strip;
+}
+
+static geodesic_path compute_geodesic_path(const dual_geodesic_solver& solver,
+    const vector<vec3i>& triangles, const vector<vec3f>& positions,
+    const vector<vec3i>& adjacencies, const mesh_point& start,
+    const mesh_point& end) {
+  check_point(start);
+  check_point(end);
+  auto path = geodesic_path{};
+  if (start.face == end.face) {
+    path.start = start;
+    path.end   = end;
+    path.strip = {start.face};
+    return path;
+  }
+  auto strip = compute_strip(solver, triangles, positions, end, start);
+  path = shortest_path(triangles, positions, adjacencies, start, end, strip);
+  return path;
+}
+static mesh_point geodesic_lerp(const dual_geodesic_solver& solver,
+    const vector<vec3i>& triangles, const vector<vec3f>& positions,
+    const vector<vec3i>& adjacencies, const mesh_point& start,
+    const mesh_point& end, float t) {
+  // profile_function();
+  if (start.face == end.face) {
+    return mesh_point{start.face, lerp(start.uv, end.uv, t)};
+  }
+  auto path = compute_geodesic_path(
+      solver, triangles, positions, adjacencies, start, end);
+  auto point = eval_path_point(path, triangles, positions, adjacencies, t);
+  assert(check_point(point));
+  return point;
+}
+
+using spline_polygon = array<mesh_point, 4>;
+
+static pair<spline_polygon, spline_polygon> subdivide_bezier_polygon(
+    const dual_geodesic_solver& solver, const vector<vec3i>& triangles,
+    const vector<vec3f>& positions, const vector<vec3i>& adjacencies,
+    const spline_polygon& input, float t) {
+  auto Q0 = geodesic_lerp(
+      solver, triangles, positions, adjacencies, input[0], input[1], t);
+  auto Q1 = geodesic_lerp(
+      solver, triangles, positions, adjacencies, input[1], input[2], t);
+  auto Q2 = geodesic_lerp(
+      solver, triangles, positions, adjacencies, input[2], input[3], t);
+  auto R0 = geodesic_lerp(solver, triangles, positions, adjacencies, Q0, Q1, t);
+  auto R1 = geodesic_lerp(solver, triangles, positions, adjacencies, Q1, Q2, t);
+  auto S  = geodesic_lerp(solver, triangles, positions, adjacencies, R0, R1, t);
+  return {{input[0], Q0, R0, S}, {S, R1, Q2, input[3]}};
+}
+
+static vector<mesh_point> de_casteljau_uniform(
+    const dual_geodesic_solver& solver, const vector<vec3i>& triangles,
+    const vector<vec3f>& positions, const vector<vec3i>& adjacencies,
+    const spline_polygon& control_points, int subdivisions) {
+  auto segments = vector<spline_polygon>{control_points};
+  auto result   = vector<spline_polygon>();
+  for (auto subdivision = 0; subdivision < subdivisions; subdivision++) {
+    result.resize(segments.size() * 2);
+    for (auto i = 0; i < segments.size(); i++) {
+      auto [split0, split1] = subdivide_bezier_polygon(
+          solver, triangles, positions, adjacencies, segments[i], 0.5);
+      result[2 * i]     = split0;
+      result[2 * i + 1] = split1;
+    }
+    swap(segments, result);
+  }
+  return {(mesh_point*)segments.data(),
+      (mesh_point*)segments.data() + segments.size() * 4};
+}
+
+vector<mesh_point> compute_bezier_path(const dual_geodesic_solver& solver,
+    const vector<vec3i>& triangles, const vector<vec3f>& positions,
+    const vector<vec3i>&        adjacencies,
+    const array<mesh_point, 4>& control_points, int subdivisions) {
+  return de_casteljau_uniform(
+      solver, triangles, positions, adjacencies, control_points, subdivisions);
+}
+
+vector<mesh_point> compute_bezier_path(const dual_geodesic_solver& solver,
+    const vector<vec3i>& triangles, const vector<vec3f>& positions,
+    const vector<vec3i>& adjacencies, const vector<mesh_point>& control_points,
+    int subdivisions) {
+  auto path = vector<mesh_point>{};
+  for (auto idx = 0; idx < (int)control_points.size() - 3; idx += 3) {
+    auto polygon = spline_polygon{control_points[idx + 0],
+        control_points[idx + 1], control_points[idx + 2],
+        control_points[idx + 3]};
+    auto segment = de_casteljau_uniform(
+        solver, triangles, positions, adjacencies, polygon, subdivisions);
+    path.insert(path.end(), segment.begin(), segment.end());
+  }
+  return path;
+}
+
+}  // namespace yocto
+
+// -----------------------------------------------------------------------------
+// MESH BEZIER
+// -----------------------------------------------------------------------------
+namespace yocto {
+
+static mesh_point geodesic_midpoint(const dual_geodesic_solver& solver,
+    const vector<vec3i>& triangles, const vector<vec3f>& positions,
+    const vector<vec3i>& adjacencies, const mesh_point& start,
+    const mesh_point& end) {
+  // profile_function();
+
+  if (start.face == end.face) {
+    return mesh_point{start.face, (start.uv + end.uv) * 0.5};
+  }
+
+  auto path = compute_geodesic_path(
+      solver, triangles, positions, adjacencies, start, end);
+  auto midpoint = eval_path_midpoint(path, triangles, positions, adjacencies);
+  //  assert(check_point(midpoint));
+  return midpoint;
+}
+
+static mesh_point geodesic_lerp(const dual_geodesic_solver& solver,
+    const vector<vec3i>& triangles, const vector<vec3f>& positions,
+    const vector<vec3i>& adjacencies, const mesh_point& a, const mesh_point& b,
+    const mesh_point& c, float t0, float t1) {
+  // den := (1-t0-t1) + t0 = 1 - t1;
+  auto t  = t0 / (1 - t1);
+  auto ab = geodesic_lerp(solver, triangles, positions, adjacencies, a, b, t);
+  return geodesic_lerp(solver, triangles, positions, adjacencies, ab, c, t1);
+}
+
+using spline_polygon = array<mesh_point, 4>;
+
+struct bezier_polygon {
+  spline_polygon               segment;
+  std::array<geodesic_path, 3> lines;
+};
+
+static mesh_point eval_path_point(const dual_geodesic_solver& solver,
+    const vector<vec3i>& triangles, const vector<vec3f>& positions,
+    const vector<vec3i>& adjacencies, const geodesic_path& path, float t) {
+  return eval_path_point(path, triangles, positions, adjacencies, t);
+}
+
+static mesh_point eval_path_point(const dual_geodesic_solver& solver,
+    const vector<vec3i>& triangles, const vector<vec3f>& positions,
+    const vector<vec3i>& adjacencies, const geodesic_path& path,
+    const vector<float>& path_parameter_t, const float& t) {
+  return eval_path_point(
+      path, triangles, positions, adjacencies, path_parameter_t, t);
+}
+
+static mesh_point eval_path_midpoint(const dual_geodesic_solver& solver,
+    const vector<vec3i>& triangles, const vector<vec3f>& positions,
+    const vector<vec3i>& adjacencies, const geodesic_path& path) {
+  return eval_path_point(path, triangles, positions, adjacencies, 0.5);
+}
+
+static vector<vec3f> path_positions(const dual_geodesic_solver& solver,
+    const vector<vec3i>& triangles, const vector<vec3f>& positions,
+    const vector<vec3i>& adjacencies, const geodesic_path& path) {
+  return path_positions(path, triangles, positions, adjacencies);
+}
+
+static float path_length(const dual_geodesic_solver& solver,
+    const vector<vec3i>& triangles, const vector<vec3f>& positions,
+    const vector<vec3i>& adjacencies, const geodesic_path& path) {
+  auto positions_ = path_positions(
+      solver, triangles, positions, adjacencies, path);
+
+  auto result = 0.0f;
+  for (int i = 1; i < positions_.size(); ++i)
+    result += length(positions_[i] - positions_[i - 1]);
+
+  return result;
+}
+
+// TODO(giacomo): put in yocto_mesh (explode params)
+static vec2f tangent_path_direction(const dual_geodesic_solver& solver,
+    const vector<vec3i>& triangles, const vector<vec3f>& positions,
+    const vector<vec3i>& adjacencies, const geodesic_path& path,
+    bool start = true) {
+  auto find = [](const vec3i& vec, int x) {
+    for (int i = 0; i < size(vec); i++)
+      if (vec[i] == x) return i;
+    return -1;
+  };
+
+  auto direction = vec2f{};
+
+  if (start) {
+    auto start_tr = triangle_coordinates(triangles, positions, path.start);
+
+    if (path.lerps.empty()) {
+      direction = interpolate_triangle(
+          start_tr[0], start_tr[1], start_tr[2], path.end.uv);
+    } else {
+      auto x    = path.lerps[0];
+      auto k    = find(adjacencies[path.strip[0]], path.strip[1]);
+      direction = lerp(start_tr[k], start_tr[(k + 1) % 3], x);
+    }
+  } else {
+    auto end_tr = triangle_coordinates(triangles, positions, path.end);
+    if (path.lerps.empty()) {
+      direction = interpolate_triangle(
+          end_tr[0], end_tr[1], end_tr[2], path.start.uv);
+    } else {
+      auto x = path.lerps.back();
+      auto k = find(
+          adjacencies[path.strip.rbegin()[0]], path.strip.rbegin()[1]);
+      direction = lerp(end_tr[k], end_tr[(k + 1) % 3], 1 - x);
+    }
+  }
+  return normalize(direction);
+}
+
+// TODO(fabio): compare with subdivided_bezier_polygon
+[[maybe_unused]] static pair<bezier_polygon, bezier_polygon> subdivide_bezier(
+    const bezier_polygon& input, const dual_geodesic_solver& solver,
+    const vector<vec3i>& triangles, const vector<vec3f>& positions,
+    const vector<vec3i>& adjacencies) {
+  auto& segment = input.segment;
+  auto  Q0      = eval_path_midpoint(
+      solver, triangles, positions, adjacencies, input.lines[0]);
+  auto Q1 = eval_path_midpoint(
+      solver, triangles, positions, adjacencies, input.lines[1]);
+  auto Q2 = eval_path_midpoint(
+      solver, triangles, positions, adjacencies, input.lines[2]);
+
+  auto R0 = geodesic_midpoint(
+      solver, triangles, positions, adjacencies, Q0, Q1);
+  auto R1 = geodesic_midpoint(
+      solver, triangles, positions, adjacencies, Q1, Q2);
+  auto S = geodesic_midpoint(solver, triangles, positions, adjacencies, R0, R1);
+  auto result           = pair<bezier_polygon, bezier_polygon>{};
+  result.first.lines[0] = compute_geodesic_path(
+      solver, triangles, positions, adjacencies, segment[0], Q0);
+  result.first.lines[1] = compute_geodesic_path(
+      solver, triangles, positions, adjacencies, Q0, R0);
+  result.first.lines[2] = compute_geodesic_path(
+      solver, triangles, positions, adjacencies, R0, S);
+  result.first.segment   = {segment[0], Q0, R0, S};
+  result.second.lines[0] = compute_geodesic_path(
+      solver, triangles, positions, adjacencies, S, R1);
+  result.second.lines[1] = compute_geodesic_path(
+      solver, triangles, positions, adjacencies, R1, Q2);
+  result.second.lines[2] = compute_geodesic_path(
+      solver, triangles, positions, adjacencies, Q2, segment[3]);
+  result.second.segment = {S, R1, Q2, segment[1]};
+  return result;
+  // return {{P0, Q0, R0, S}, {S, R1, Q2, P3}};
+}
+
+static bool is_control_polygon_unfoldable(const dual_geodesic_solver& solver,
+    const vector<vec3i>& triangles, const vector<vec3f>& positions,
+    const vector<vec3i>& adjacencies, const spline_polygon& segment) {
+  if (segment[0].face != segment[1].face) return false;
+  if (segment[1].face != segment[2].face) return false;
+  if (segment[2].face != segment[3].face) return false;
+  return true;
+};
+
+static mesh_point de_casteljau_point(const dual_geodesic_solver& solver,
+    const vector<vec3i>& triangles, const vector<vec3f>& positions,
+    const vector<vec3i>& adjacencies, const spline_polygon& segment, float t0,
+    float t_start, float t_end) {
+  auto is_control_polygon_unfoldable =
+      [](const dual_geodesic_solver& solver, const vector<vec3i>& triangles,
+          const vector<vec3f>& positions, const vector<vec3i>& adjacencies,
+          const spline_polygon& segment) -> bool {
+    if (segment[0].face != segment[1].face) return false;
+    if (segment[1].face != segment[2].face) return false;
+    if (segment[2].face != segment[3].face) return false;
+    return true;
+  };
+
+  auto eval_bezier_point_cheap =
+      [](const dual_geodesic_solver& solver, const vector<vec3i>& triangles,
+          const vector<vec3f>& positions, const vector<vec3i>& adjacencies,
+          const spline_polygon& polygon, float t) -> mesh_point {
+    auto Q0 = geodesic_lerp(
+        solver, triangles, positions, adjacencies, polygon[0], polygon[1], t);
+    auto Q1 = geodesic_lerp(
+        solver, triangles, positions, adjacencies, polygon[1], polygon[2], t);
+    auto Q2 = geodesic_lerp(
+        solver, triangles, positions, adjacencies, polygon[2], polygon[3], t);
+    auto R0 = geodesic_lerp(
+        solver, triangles, positions, adjacencies, Q0, Q1, t);
+    auto R1 = geodesic_lerp(
+        solver, triangles, positions, adjacencies, Q1, Q2, t);
+    return geodesic_lerp(solver, triangles, positions, adjacencies, R0, R1, t);
+  };
+
+  auto points = segment;
+
+  // Recursively subdivide, shrinking the active control polygon around the
+  // point of interest, until it is unfoldable.
+  while (true) {
+    auto Q0 = geodesic_lerp(
+        solver, triangles, positions, adjacencies, points[0], points[1], 0.5);
+    auto Q1 = geodesic_lerp(
+        solver, triangles, positions, adjacencies, points[1], points[2], 0.5);
+    auto Q2 = geodesic_lerp(
+        solver, triangles, positions, adjacencies, points[2], points[3], 0.5);
+    auto R0 = geodesic_lerp(
+        solver, triangles, positions, adjacencies, Q0, Q1, 0.5);
+    auto R1 = geodesic_lerp(
+        solver, triangles, positions, adjacencies, Q1, Q2, 0.5);
+    auto S = geodesic_lerp(
+        solver, triangles, positions, adjacencies, R0, R1, 0.5);
+    auto mid_t = (t_start + t_end) / 2;
+    if (t0 < mid_t) {
+      points[1] = Q0;
+      points[2] = R0;
+      points[3] = S;
+      t_end     = mid_t;
+    } else {
+      points[0] = S;
+      points[1] = R1;
+      points[2] = Q2;
+      t_start   = mid_t;
+    }
+
+    if (is_control_polygon_unfoldable(
+            solver, triangles, positions, adjacencies, points))
+      break;
+  }
+
+  // Exact evaluation.
+  float t = (t0 - t_start) / (t_end - t_start);
+  return eval_bezier_point_cheap(
+      solver, triangles, positions, adjacencies, points, t);
+}
+
+static mesh_point lane_riesenfeld_point(const dual_geodesic_solver& solver,
+    const vector<vec3i>& triangles, const vector<vec3f>& positions,
+    const vector<vec3i>& adjacencies, const spline_polygon& polygon, float t0,
+    float precision);
+
+mesh_point eval_bezier_point(const dual_geodesic_solver& solver,
+    const vector<vec3i>& triangles, const vector<vec3f>& positions,
+    const vector<vec3i>& adjacencies, const spline_polygon& segment, float t,
+    bool lane_riesenfeld, float precision) {
+  if (lane_riesenfeld) {
+    return lane_riesenfeld_point(
+        solver, triangles, positions, adjacencies, segment, t, precision);
+  } else {
+    return de_casteljau_point(
+        solver, triangles, positions, adjacencies, segment, t, 0, 1);
+  }
+}
+
+static spline_polygon from_spline_to_bezier(const dual_geodesic_solver& solver,
+    const vector<vec3i>& triangles, const vector<vec3f>& positions,
+    const vector<vec3i>& adjacencies, const vector<float>& interval,
+    const spline_polygon& polygon) {
+  vector<float>  deltas(5);
+  spline_polygon spline_polygon;
+  for (auto i = 1; i < 6; ++i) {
+    deltas[i] = interval[i] - interval[i - 1];
+  }
+  auto a = (pow(deltas[2], 2.0f)) /
+           ((deltas[0] + deltas[1] + deltas[2]) * (deltas[1] + deltas[2]));
+  auto b = (pow(deltas[2], 2.0f)) /
+           ((deltas[1] + deltas[2] + deltas[3]) * (deltas[1] + deltas[2]));
+  auto c = (pow(deltas[2], 2.0f)) /
+           ((deltas[1] + deltas[2] + deltas[3]) * (deltas[2] + deltas[3]));
+  auto d = (pow(deltas[2], 2.0f)) /
+           ((deltas[2] + deltas[3] + deltas[4]) * (deltas[3] + deltas[4]));
+  auto e = (deltas[1] * deltas[2]) /
+           ((deltas[1] + deltas[2] + deltas[3]) * (deltas[1] + deltas[2]));
+  auto f = (pow(deltas[1], 2.0f)) /
+           ((deltas[1] + deltas[2] + deltas[3]) * (deltas[1] + deltas[2]));
+  if (a != 0 && 1 - a - f != 0 && f != 0)
+    spline_polygon[0] = geodesic_lerp(solver, triangles, positions, adjacencies,
+        polygon[0], polygon[1], polygon[2], 1 - a - f, f);
+  else if (a != 0 && 1 - a != 0)
+    spline_polygon[0] = geodesic_lerp(solver, triangles, positions, adjacencies,
+        polygon[0], polygon[1], 1 - a);
+  else if (a != 0 && f != 0)
+    spline_polygon[0] = geodesic_lerp(
+        solver, triangles, positions, adjacencies, polygon[0], polygon[2], f);
+  else if (a != 0)
+    spline_polygon[0] = polygon[0];
+  else if (f != 0 && 1 - f != 0)
+    spline_polygon[0] = geodesic_lerp(solver, triangles, positions, adjacencies,
+        polygon[1], polygon[2], 1 - f);
+  else if (f != 0)
+    spline_polygon[0] = polygon[2];
+  else
+    spline_polygon[0] = polygon[1];
+
+  if (1 - e - f != 0 && e + f != 0)
+    spline_polygon[1] = geodesic_lerp(solver, triangles, positions, adjacencies,
+        polygon[1], polygon[2], e + f);
+  else if (1 - e - f != 0)
+    spline_polygon[1] = polygon[1];
+  else
+    spline_polygon[1] = polygon[2];
+
+  if (1 - 2 * e - b - f != 0 && b + 2 * e + f != 0)
+    spline_polygon[2] = geodesic_lerp(solver, triangles, positions, adjacencies,
+        polygon[1], polygon[2], b + 2 * e + f);
+  else if (1 - 2 * e - b - f != 0)
+    spline_polygon[2] = polygon[1];
+  else
+    spline_polygon[2] = polygon[2];
+
+  if (1 - 3 * e - 2 * b + c - f != 0 && 2 * b - c - d + 3 * e + f != 0 &&
+      d != 0)
+    spline_polygon[3] = geodesic_lerp(solver, triangles, positions, adjacencies,
+        polygon[1], polygon[2], polygon[3], 2 * c - c - d + 3 * e + f, d);
+  else if (1 - 3 * e - 2 * b + c - f != 0 && 2 * b - c + 3 * e + f != 0)
+    spline_polygon[3] = geodesic_lerp(solver, triangles, positions, adjacencies,
+        polygon[1], polygon[2], 2 * b - c + 3 * e + f);
+  else if (1 - 3 * e - 2 * b + c - f != 0 && d != 0)
+    spline_polygon[3] = geodesic_lerp(
+        solver, triangles, positions, adjacencies, polygon[1], polygon[2], d);
+  else if (1 - 3 * e - 2 * b + c - f != 0)
+    spline_polygon[3] = polygon[1];
+  else if (2 * b - c - d + 3 * e + f != 0 && d != 0)
+    spline_polygon[3] = geodesic_lerp(
+        solver, triangles, positions, adjacencies, polygon[2], polygon[3], d);
+  else if (d != 0)
+    spline_polygon[3] = polygon[3];
+  else
+    spline_polygon[3] = polygon[2];
+
+  return spline_polygon;
+}
+
+static mesh_point de_boor_point(const dual_geodesic_solver& solver,
+    const vector<vec3i>& triangles, const vector<vec3f>& positions,
+    const vector<vec3i>& adjacencies, const spline_polygon& polygon,
+    const vector<float>& knot_vector, const float& t0) {
+  spline_polygon old_points  = polygon;
+  spline_polygon curr_points = {};
+  for (auto j = 1; j <= 3; ++j) {
+    for (auto i = 3; i >= j; --i) {
+      auto alpha = (t0 - knot_vector[i]) /
+                   (knot_vector[i - j + 4] - knot_vector[i]);
+      curr_points[i] = geodesic_lerp(solver, triangles, positions, adjacencies,
+          old_points[i - 1], old_points[i], alpha);
+    }
+    old_points = curr_points;
+  }
+  return curr_points.back();
+}
+
+static bool spline_stop_criterion(const dual_geodesic_solver& solver,
+    const vector<vec3i>& triangles, const vector<vec3f>& positions,
+    const vector<vec3i>& adjacencies, const spline_polygon& polygon,
+    const float& treshold) {
+  auto L01 = compute_geodesic_path(
+      solver, triangles, positions, adjacencies, polygon[0], polygon[1]);
+  auto L12 = compute_geodesic_path(
+      solver, triangles, positions, adjacencies, polygon[1], polygon[2]);
+  auto L23 = compute_geodesic_path(
+      solver, triangles, positions, adjacencies, polygon[2], polygon[3]);
+  auto L03 = compute_geodesic_path(
+      solver, triangles, positions, adjacencies, polygon[0], polygon[3]);
+  auto perimeter = path_length(solver, triangles, positions, adjacencies, L01) +
+                   path_length(solver, triangles, positions, adjacencies, L12) +
+                   path_length(solver, triangles, positions, adjacencies, L23);
+  if (perimeter - path_length(solver, triangles, positions, adjacencies, L03) <=
+      treshold)
+    return true;
+
+  return false;
+}
+
+static mesh_point lane_riesenfeld_regular(const dual_geodesic_solver& solver,
+    const vector<vec3i>& triangles, const vector<vec3f>& positions,
+    const vector<vec3i>& adjacencies, const mesh_point& a, const mesh_point& b,
+    const mesh_point& c) {
+  auto Q0 = geodesic_lerp(
+      solver, triangles, positions, adjacencies, a, b, 0.75);
+  auto Q1 = geodesic_lerp(
+      solver, triangles, positions, adjacencies, b, c, 0.25);
+  return geodesic_lerp(solver, triangles, positions, adjacencies, Q0, Q1, 0.5);
+}
+
+static mesh_point lane_riesenfeld_regular(const dual_geodesic_solver& solver,
+    const vector<vec3i>& triangles, const vector<vec3f>& positions,
+    const vector<vec3i>& adjacencies, const geodesic_path& l0,
+    const geodesic_path& l1) {
+  auto Q0 = eval_path_point(
+      solver, triangles, positions, adjacencies, l0, 0.75);
+  auto Q1 = eval_path_point(
+      solver, triangles, positions, adjacencies, l1, 0.25);
+  return geodesic_lerp(solver, triangles, positions, adjacencies, Q0, Q1, 0.5);
+}
+
+static mesh_point lane_riesenfeld_init(const dual_geodesic_solver& solver,
+    const vector<vec3i>& triangles, const vector<vec3f>& positions,
+    const vector<vec3i>& adjacencies, const mesh_point& a, const mesh_point& b,
+    const mesh_point& c) {
+  auto Q0 = geodesic_lerp(
+      solver, triangles, positions, adjacencies, a, b, 5 / 8.f);
+  auto Q1 = geodesic_lerp(
+      solver, triangles, positions, adjacencies, b, c, 3 / 8.f);
+  return geodesic_lerp(solver, triangles, positions, adjacencies, Q0, Q1, 0.5);
+}
+
+static mesh_point lane_riesenfeld_boundary(const dual_geodesic_solver& solver,
+    const vector<vec3i>& triangles, const vector<vec3f>& positions,
+    const vector<vec3i>& adjacencies, const mesh_point& a, const mesh_point& b,
+    const mesh_point& c, const bool& left) {
+  auto Q0 = mesh_point{};
+  auto Q1 = mesh_point{};
+  if (left) {
+    Q0 = geodesic_lerp(
+        solver, triangles, positions, adjacencies, a, b, 5 / 8.f);
+    Q1 = geodesic_lerp(solver, triangles, positions, adjacencies, b, c, 0.25);
+
+  } else {
+    Q0 = geodesic_lerp(solver, triangles, positions, adjacencies, a, b, 0.75);
+    Q1 = geodesic_lerp(
+        solver, triangles, positions, adjacencies, b, c, 3 / 8.f);
+  }
+  return geodesic_lerp(solver, triangles, positions, adjacencies, Q0, Q1, 0.5);
+}
+
+static mesh_point lane_riesenfeld_boundary(const dual_geodesic_solver& solver,
+    const vector<vec3i>& triangles, const vector<vec3f>& positions,
+    const vector<vec3i>& adjacencies, const geodesic_path& l0,
+    const geodesic_path& l1, const bool& left) {
+  auto Q0 = mesh_point{};
+  auto Q1 = mesh_point{};
+  if (left) {
+    Q0 = eval_path_point(
+        solver, triangles, positions, adjacencies, l0, 5 / 8.f);
+    Q1 = eval_path_point(solver, triangles, positions, adjacencies, l1, 0.25);
+
+  } else {
+    Q0 = eval_path_point(solver, triangles, positions, adjacencies, l0, 0.75);
+    Q1 = eval_path_point(
+        solver, triangles, positions, adjacencies, l1, 3 / 8.f);
+  }
+  return geodesic_lerp(solver, triangles, positions, adjacencies, Q0, Q1, 0.5);
+}
+
+static pair<bool, spline_polygon> handle_boundary(
+    const dual_geodesic_solver& solver, const vector<vec3i>& triangles,
+    const vector<vec3f>& positions, const vector<vec3i>& adjacencies,
+    const spline_polygon& control_points, const vector<int>& new_ones_entries,
+    const int k) {
+  spline_polygon new_ones = {};
+  if (new_ones_entries[0] > 3 &&
+      new_ones_entries.back() < pow((float)2, (float)k) - 1)
+    return {false, {}};
+  else if (new_ones_entries[0] <= 3) {
+    switch (new_ones_entries[0]) {
+      case 0: {
+        new_ones[0] = control_points[0];
+        new_ones[1] = geodesic_lerp(solver, triangles, positions, adjacencies,
+            control_points[0], control_points[1], 0.5);
+        new_ones[2] = geodesic_lerp(solver, triangles, positions, adjacencies,
+            control_points[1], control_points[2], 0.25);
+        new_ones[3] = lane_riesenfeld_boundary(solver, triangles, positions,
+            adjacencies, control_points[1], control_points[2],
+            control_points[3], true);
+      } break;
+      case 1: {
+        new_ones[0] = geodesic_lerp(solver, triangles, positions, adjacencies,
+            control_points[0], control_points[1], 0.5);
+        new_ones[1] = geodesic_lerp(solver, triangles, positions, adjacencies,
+            control_points[1], control_points[2], 0.25);
+        new_ones[2] = lane_riesenfeld_boundary(solver, triangles, positions,
+            adjacencies, control_points[1], control_points[2],
+            control_points[3], true);
+        new_ones[3] = geodesic_lerp(solver, triangles, positions, adjacencies,
+            control_points[2], control_points[3], 0.5);
+
+      } break;
+      case 2: {
+        new_ones[0] = geodesic_lerp(solver, triangles, positions, adjacencies,
+            control_points[0], control_points[1], 0.25);
+        new_ones[1] = lane_riesenfeld_boundary(solver, triangles, positions,
+            adjacencies, control_points[0], control_points[1],
+            control_points[2], true);
+        new_ones[2] = geodesic_lerp(solver, triangles, positions, adjacencies,
+            control_points[1], control_points[2], 0.5);
+        new_ones[3] = lane_riesenfeld_regular(solver, triangles, positions,
+            adjacencies, control_points[1], control_points[2],
+            control_points[3]);
+
+      } break;
+
+      case 3: {
+        new_ones[0] = lane_riesenfeld_boundary(solver, triangles, positions,
+            adjacencies, control_points[0], control_points[1],
+            control_points[2], true);
+        new_ones[1] = geodesic_lerp(solver, triangles, positions, adjacencies,
+            control_points[1], control_points[2], 0.5);
+        new_ones[2] = lane_riesenfeld_regular(solver, triangles, positions,
+            adjacencies, control_points[1], control_points[2],
+            control_points[3]);
+        new_ones[3] = geodesic_lerp(solver, triangles, positions, adjacencies,
+            control_points[2], control_points[3], 0.5);
+
+      } break;
+    }
+  } else {
+    if (new_ones_entries.back() == pow((float)2, (float)k) + 2) {
+      new_ones[0] = lane_riesenfeld_boundary(solver, triangles, positions,
+          adjacencies, control_points[0], control_points[1], control_points[2],
+          false);
+      new_ones[1] = geodesic_lerp(solver, triangles, positions, adjacencies,
+          control_points[1], control_points[2], 0.75);
+      new_ones[2] = geodesic_lerp(solver, triangles, positions, adjacencies,
+          control_points[2], control_points[3], 0.5);
+      new_ones[3] = control_points[3];
+    } else if (new_ones_entries.back() == pow((float)2, (float)k) + 1) {
+      new_ones[0] = geodesic_lerp(solver, triangles, positions, adjacencies,
+          control_points[0], control_points[1], 0.5);
+      new_ones[1] = lane_riesenfeld_boundary(solver, triangles, positions,
+          adjacencies, control_points[0], control_points[1], control_points[2],
+          false);
+      new_ones[2] = geodesic_lerp(solver, triangles, positions, adjacencies,
+          control_points[1], control_points[2], 0.75);
+      new_ones[3] = geodesic_lerp(solver, triangles, positions, adjacencies,
+          control_points[2], control_points[3], 0.5);
+    } else if (new_ones_entries.back() == pow((float)2, (float)k)) {
+      new_ones[0] = lane_riesenfeld_regular(solver, triangles, positions,
+          adjacencies, control_points[0], control_points[1], control_points[2]);
+      new_ones[1] = geodesic_lerp(solver, triangles, positions, adjacencies,
+          control_points[1], control_points[2], 0.5);
+      new_ones[2] = lane_riesenfeld_boundary(solver, triangles, positions,
+          adjacencies, control_points[1], control_points[2], control_points[3],
+          false);
+      new_ones[3] = geodesic_lerp(solver, triangles, positions, adjacencies,
+          control_points[2], control_points[3], 0.75);
+    } else if (new_ones_entries.back() == pow((float)2, (float)k) - 1) {
+      new_ones[0] = geodesic_lerp(solver, triangles, positions, adjacencies,
+          control_points[0], control_points[1], 0.5);
+      new_ones[1] = lane_riesenfeld_regular(solver, triangles, positions,
+          adjacencies, control_points[0], control_points[1], control_points[2]);
+      new_ones[2] = geodesic_lerp(solver, triangles, positions, adjacencies,
+          control_points[1], control_points[2], 0.5);
+      new_ones[3] = lane_riesenfeld_boundary(solver, triangles, positions,
+          adjacencies, control_points[1], control_points[2], control_points[3],
+          false);
+    }
+  }
+  return {true, new_ones};
+}
+
+static std::tuple<int, vec2f, spline_polygon> find_leaf(
+    const dual_geodesic_solver& solver, const vector<vec3i>& triangles,
+    const vector<vec3f>& positions, const vector<vec3i>& adjacencies,
+    const spline_polygon& control_points, const float& t0,
+    const float& treshold) {
+  auto q = vector<mesh_point>(7);
+
+  auto& p = control_points;
+  q[0]    = p[0];
+  q[1]    = geodesic_lerp(
+      solver, triangles, positions, adjacencies, p[0], p[1], 1 / 4.f);
+  auto p0p1 = geodesic_lerp(
+      solver, triangles, positions, adjacencies, p[0], p[1], 1 / 2.f);
+  auto p1p2 = geodesic_lerp(
+      solver, triangles, positions, adjacencies, p[1], p[2], 1 / 2.f);
+  q[2] = geodesic_lerp(
+      solver, triangles, positions, adjacencies, p0p1, p1p2, 1 / 4.f);
+  auto p2p3 = geodesic_lerp(
+      solver, triangles, positions, adjacencies, p[2], p[3], 1 / 2.f);
+  q[3] = lane_riesenfeld_init(
+      solver, triangles, positions, adjacencies, p0p1, p1p2, p2p3);
+  q[4] = geodesic_lerp(
+      solver, triangles, positions, adjacencies, p1p2, p2p3, 3 / 4.f);
+  q[5] = geodesic_lerp(
+      solver, triangles, positions, adjacencies, p2p3, p[3], 1 / 2.f);
+  q[6] = p[3];
+
+  spline_polygon leaf = {};
+  auto           t    = zero2f;
+  if (t0 <= 0.25) {
+    leaf = {q[0], q[1], q[2], q[3]};
+    t    = {0, 0.25};
+  } else if (t0 <= 0.5) {
+    leaf = {q[1], q[2], q[3], q[4]};
+    t    = {0.25, 0.5};
+  } else if (t0 <= 0.75) {
+    leaf = {q[2], q[3], q[4], q[5]};
+    t    = {0.5, 0.75};
+  } else if (t0 < 1) {
+    leaf = {q[3], q[4], q[5], q[6]};
+    t    = {0.75, 1};
+  } else
+    assert(false);
+  auto k = 3;
+  while (true) {
+    auto curr_t     = (t.x + t.y) / 2;
+    auto curr_entry = (int)(pow(2.0f, (float)k) * curr_t);
+    curr_entry += 3;
+    assert(curr_entry % 2 == 0);
+    if (t0 < curr_t) {
+      auto curr_entries = vector<int>{
+          curr_entry - 4, curr_entry - 3, curr_entry - 2, curr_entry - 1};
+      auto [are_boundaries, new_ones] = handle_boundary(
+          solver, triangles, positions, adjacencies, leaf, curr_entries, k);
+      if (!are_boundaries) {
+        new_ones[0] = geodesic_lerp(
+            solver, triangles, positions, adjacencies, leaf[0], leaf[1], 0.5);
+        new_ones[1] = lane_riesenfeld_regular(solver, triangles, positions,
+            adjacencies, leaf[0], leaf[1], leaf[2]);
+        new_ones[2] = geodesic_lerp(
+            solver, triangles, positions, adjacencies, leaf[1], leaf[2], 0.5);
+        new_ones[3] = lane_riesenfeld_regular(solver, triangles, positions,
+            adjacencies, leaf[1], leaf[2], leaf[3]);
+      }
+      leaf = new_ones;
+      t    = {t.x, curr_t};
+    } else {
+      auto curr_entries = vector<int>{
+          curr_entry - 3, curr_entry - 2, curr_entry - 1, curr_entry};
+      auto [are_boundaries, new_ones] = handle_boundary(
+          solver, triangles, positions, adjacencies, leaf, curr_entries, k);
+      if (!are_boundaries) {
+        new_ones[0] = lane_riesenfeld_regular(solver, triangles, positions,
+            adjacencies, leaf[0], leaf[1], leaf[2]);
+        new_ones[1] = geodesic_lerp(
+            solver, triangles, positions, adjacencies, leaf[1], leaf[2], 0.5);
+        new_ones[2] = lane_riesenfeld_regular(solver, triangles, positions,
+            adjacencies, leaf[1], leaf[2], leaf[3]);
+        new_ones[3] = geodesic_lerp(
+            solver, triangles, positions, adjacencies, leaf[2], leaf[3], 0.5);
+      }
+      leaf = new_ones;
+      t    = {curr_t, t.y};
+    }
+
+    if (spline_stop_criterion(
+            solver, triangles, positions, adjacencies, leaf, treshold))
+      return {k, t, leaf};
+    else
+      ++k;
+  }
+}
+
+[[maybe_unused]] static mesh_point eval_spline_point_cheap(
+    const dual_geodesic_solver& solver, const vector<vec3i>& triangles,
+    const vector<vec3f>& positions, const vector<vec3i>& adjacencies,
+    const vector<mesh_point>& control_polygon, const vector<float>& knot_vector,
+    const float& t0, const int entry) {
+  assert(entry >= 3);
+  auto control_points = {control_polygon[entry], control_polygon[entry - 1],
+      control_polygon[entry - 2], control_polygon[entry - 3]};
+  vector<mesh_point> old_points = control_points;
+  vector<mesh_point> curr_points(4);
+  auto               offset = entry - 3;
+  for (auto j = 1; j <= 3; ++j) {
+    for (auto i = entry - 3 + j; i <= entry; ++i) {
+      auto alpha = (t0 - knot_vector[i]) /
+                   (knot_vector[i - j + 4] - knot_vector[i]);
+      curr_points[i - offset] = geodesic_lerp(solver, triangles, positions,
+          adjacencies, old_points[i - 1 - offset], old_points[i - offset],
+          alpha);
+    }
+    old_points = curr_points;
+  }
+  return curr_points.back();
+}
+
+static mesh_point lane_riesenfeld_point(const dual_geodesic_solver& solver,
+    const vector<vec3i>& triangles, const vector<vec3f>& positions,
+    const vector<vec3i>& adjacencies, const spline_polygon& polygon, float t0,
+    float precision) {
+  if (t0 <= 0) return polygon[0];
+  if (t0 >= 1) return polygon[3];
+  auto treshold     = precision;
+  auto [k, t, leaf] = find_leaf(
+      solver, triangles, positions, adjacencies, polygon, t0, treshold);
+  float         step  = 1 / pow((float)2, (float)k);
+  vector<float> knots = {
+      max(t.x - 3 * step, 0.f),
+      max(t.x - 2 * step, 0.f),
+      max(t.x - step, 0.f),
+      t.x,
+      t.y,
+      min(t.y + step, 1.f),
+      min(t.y + 2 * step, 1.f),
+      min(t.y + 3 * step, 1.f),
+  };
+
+  return de_boor_point(
+      solver, triangles, positions, adjacencies, leaf, knots, t0);
+}
+
+static std::array<spline_polygon, 2> de_casteljau_insert(
+    const dual_geodesic_solver& solver, const vector<vec3i>& triangles,
+    const vector<vec3f>& positions, const vector<vec3i>& adjacencies,
+    const spline_polygon& polygon, float t0) {
+  auto t_start = 0.f;
+  auto t_end   = 1.f;
+  auto points  = polygon;
+  while (true) {
+    auto Q0 = geodesic_lerp(
+        solver, triangles, positions, adjacencies, points[0], points[1], 0.5);
+    auto Q1 = geodesic_lerp(
+        solver, triangles, positions, adjacencies, points[1], points[2], 0.5);
+    auto Q2 = geodesic_lerp(
+        solver, triangles, positions, adjacencies, points[2], points[3], 0.5);
+    auto R0 = geodesic_lerp(
+        solver, triangles, positions, adjacencies, Q0, Q1, 0.5);
+    auto R1 = geodesic_lerp(
+        solver, triangles, positions, adjacencies, Q1, Q2, 0.5);
+    auto S = geodesic_lerp(
+        solver, triangles, positions, adjacencies, R0, R1, 0.5);
+    auto mid_t = (t_start + t_end) / 2.f;
+    if (t0 < mid_t) {
+      points[1] = Q0;
+      points[2] = R0;
+      points[3] = S;
+      t_end     = mid_t;
+    } else {
+      points[0] = S;
+      points[1] = R1;
+      points[2] = Q2;
+      t_start   = mid_t;
+    }
+    if (is_control_polygon_unfoldable(
+            solver, triangles, positions, adjacencies, points))
+      break;
+  }
+  // Compute the parameter t local to the leaf control polygon.
+  auto tP_local = (t0 - t_start) / (t_end - t_start);
+  // Subdivide the leaf control with De Castljeau creating two new control
+  // polygons. They are segment_left and segment_right.
+  auto [segment_left, segment_right] = subdivide_bezier_polygon(
+      solver, triangles, positions, adjacencies, points, tP_local);
+  auto left_side  = compute_geodesic_path(solver, triangles, positions,
+      adjacencies, segment_left.back(), segment_left[2]);
+  auto right_side = compute_geodesic_path(solver, triangles, positions,
+      adjacencies, segment_right[0], segment_right[1]);
+  // P is the inserted mesh point that sepraters segment_left and
+  // segment_right.
+  // assert(segment_left[3] == segment_right[0]);
+  auto P = segment_right[0];
+  // left part
+  {
+    auto Pp2_len = path_length(
+        solver, triangles, positions, adjacencies, left_side);
+    auto Pp2_dir = tangent_path_direction(
+        solver, triangles, positions, adjacencies, left_side);
+    //    assert(left_leaf.start == P);
+    auto delta_len = t_start * Pp2_len / (t0 - t_start);
+    auto path      = straightest_path(
+        triangles, positions, adjacencies, P, Pp2_dir, delta_len + Pp2_len);
+    auto Pp2 = path.end;
+    auto Pp1 = geodesic_lerp(
+        solver, triangles, positions, adjacencies, polygon[0], polygon[1], t0);
+    segment_left = {polygon[0], Pp1, Pp2, P};
+  }
+  // right part
+  {
+    auto Pp1_len = path_length(
+        solver, triangles, positions, adjacencies, right_side);
+    auto Pp1_dir = tangent_path_direction(
+        solver, triangles, positions, adjacencies, right_side);
+    auto delta_len = (1 - t_end) / (t_end - t0) * Pp1_len;
+    auto path      = straightest_path(
+        triangles, positions, adjacencies, P, Pp1_dir, delta_len + Pp1_len);
+    auto Pp1 = path.end;
+    auto Pp2 = geodesic_lerp(
+        solver, triangles, positions, adjacencies, polygon[2], polygon[3], t0);
+    segment_right = {P, Pp1, Pp2, polygon[3]};
+  }
+  return {segment_left, segment_right};
+}
+
+static std::array<spline_polygon, 2> lane_riesenfeld_insert(
+    const dual_geodesic_solver& solver, const vector<vec3i>& triangles,
+    const vector<vec3f>& positions, const vector<vec3i>& adjacencies,
+    const spline_polygon& polygon, float t0, float precision) {
+  // Go down the tree and find the leaf node containing the point.
+  std::array<spline_polygon, 2> result;
+
+  if (t0 <= 0) {
+    result[0] = {polygon[0], polygon[0], polygon[0], polygon[0]};
+    result[1] = polygon;
+
+  } else if (t0 >= 1) {
+    result[0] = polygon;
+    result[1] = {polygon[3], polygon[3], polygon[3], polygon[3]};
+
+  } else {
+    auto treshold         = precision;
+    auto [depth, t, leaf] = find_leaf(
+        solver, triangles, positions, adjacencies, polygon, t0, treshold);
+    float         step  = 1 / pow((float)2, (float)depth);
+    vector<float> knots = {max(t.x - 3 * step, 0.f), max(t.x - 2 * step, 0.f),
+        max(t.x - step, 0.f), t.x, t.y, min(t.y + step, 1.f),
+        min(t.y + 2 * step, 1.f), min(t.y + 3 * step, 1.f)};
+    auto          spline_polygon = from_spline_to_bezier(
+        solver, triangles, positions, adjacencies, knots, leaf);
+    auto t_rel         = (t0 - t.x) / (t.y - t.x);
+    auto [left, right] = subdivide_bezier_polygon(
+        solver, triangles, positions, adjacencies, spline_polygon, t_rel);
+
+    {
+      auto L32 = compute_geodesic_path(
+          solver, triangles, positions, adjacencies, left[3], left[2]);
+      auto Pp2_len = path_length(
+          solver, triangles, positions, adjacencies, L32);
+      auto Pp2_dir = tangent_path_direction(
+          solver, triangles, positions, adjacencies, L32);
+      auto delta_len = t0 * Pp2_len / (t0 - t.x);
+      auto path      = straightest_path(
+          triangles, positions, adjacencies, left[3], Pp2_dir, delta_len);
+      auto Pp2 = path.end;
+
+      auto Pp1 = geodesic_lerp(solver, triangles, positions, adjacencies,
+          polygon[0], polygon[1], t0);
+
+      result[0] = {polygon[0], Pp1, Pp2, left[3]};
+    }
+
+    // right part
+    {
+      auto L01 = compute_geodesic_path(
+          solver, triangles, positions, adjacencies, right[0], right[1]);
+      auto Pp1_len = path_length(
+          solver, triangles, positions, adjacencies, L01);
+      auto Pp1_dir = tangent_path_direction(
+          solver, triangles, positions, adjacencies, L01);
+      auto t0_local = (t.y - t0) / (1 - t0);
+      auto path = straightest_path(triangles, positions, adjacencies, right[0],
+          Pp1_dir, Pp1_len / t0_local);
+      auto Pp1  = path.end;
+      auto Pp2  = geodesic_lerp(solver, triangles, positions, adjacencies,
+          polygon[2], polygon[3], t.y);
+      result[1] = {right[0], Pp1, Pp2, polygon[3]};
+    }
+  }
+  return result;
+}
+
+array<spline_polygon, 2> insert_bezier_point(const dual_geodesic_solver& solver,
+    const vector<vec3i>& triangles, const vector<vec3f>& positions,
+    const vector<vec3i>& adjacencies, const spline_polygon& polygon, float t,
+    bool lane_riesenfeld, float precision) {
+  if (lane_riesenfeld) {
+    return lane_riesenfeld_insert(
+        solver, triangles, positions, adjacencies, polygon, t, precision);
+  } else {
+    throw de_casteljau_insert(
+        solver, triangles, positions, adjacencies, polygon, t);
+  }
+}
+
+static bool is_bezier_straight_enough(const geodesic_path& a,
+    const geodesic_path& b, const geodesic_path& c,
+    const dual_geodesic_solver& solver, const vector<vec3i>& triangles,
+    const vector<vec3f>& positions, const vector<vec3i>& adjacencies,
+    const spline_params& params) {
+  // TODO(giacomo): we don't need all positions!
+  // auto a_positions = path_positions(solver, triangles, positions,
+  // adjacencies,  a); auto b_positions = path_positions(solver, triangles,
+  // positions, adjacencies,  b); auto c_positions = path_positions(solver,
+  // triangles, positions, adjacencies,  c);
+
+  {
+    // On curve apex we may never reach straightess, so we check curve
+    // length.
+    auto pos  = array<vec3f, 4>{};
+    pos[0]    = eval_position(triangles, positions, a.start);
+    pos[1]    = eval_position(triangles, positions, b.start);
+    pos[2]    = eval_position(triangles, positions, c.start);
+    pos[3]    = eval_position(triangles, positions, c.end);
+    float len = 0;
+    for (int i = 0; i < 3; i++) {
+      len += length(pos[i] - pos[i + 1]);
+    }
+    if (len < params.min_curve_size) return true;
+  }
+
+  {
+    auto dir0 = tangent_path_direction(
+        solver, triangles, positions, adjacencies, a, false);  // end
+    auto dir1 = tangent_path_direction(
+        solver, triangles, positions, adjacencies, b, true);  // start
+    auto angle1 = cross(dir0, dir1);
+    if (fabs(angle1) > params.precision) {
+      // printf("a1: %f > %f\n", angle1, params.precision);
+      return false;
+    }
+  }
+
+  {
+    auto dir0 = tangent_path_direction(
+        solver, triangles, positions, adjacencies, b, false);  // end
+    auto dir1 = tangent_path_direction(
+        solver, triangles, positions, adjacencies, c, true);  // start
+    auto angle1 = cross(dir0, dir1);
+    if (fabs(angle1) > params.precision) {
+      // printf("a2: %f > %f\n", angle1, params.precision);
+      return false;
+    }
+  }
+
+  return true;
+}
+
+static void subdivide_compute_bezier_de_casteljau_adaptive(
+    const dual_geodesic_solver& solver, const vector<vec3i>& triangles,
+    const vector<vec3f>& positions, const vector<vec3i>& adjacencies,
+    const spline_polygon& input, spline_params params,
+    vector<mesh_point>& result, int depth = 0) {
+  // resulting beziers: (P0, Q0, R0, S) (S, R1, Q2, P3)
+
+  if (depth > params.max_depth) {
+    return;
+  }
+  auto [P0, P1, P2, P3] = input;
+
+  auto P0_P1 = compute_geodesic_path(
+      solver, triangles, positions, adjacencies, P0, P1);
+  auto P1_P2 = compute_geodesic_path(
+      solver, triangles, positions, adjacencies, P1, P2);
+  auto P2_P3 = compute_geodesic_path(
+      solver, triangles, positions, adjacencies, P2, P3);
+
+  if (is_bezier_straight_enough(P0_P1, P1_P2, P2_P3, solver, triangles,
+          positions, adjacencies, params)) {
+    result.push_back(P0);
+    result.push_back(P1);
+    result.push_back(P2);
+    result.push_back(P3);
+    return;
+  }
+
+  auto Q0    = eval_path_midpoint(P0_P1, triangles, positions, adjacencies);
+  auto Q1    = eval_path_midpoint(P1_P2, triangles, positions, adjacencies);
+  auto Q2    = eval_path_midpoint(P2_P3, triangles, positions, adjacencies);
+  auto Q0_Q1 = compute_geodesic_path(
+      solver, triangles, positions, adjacencies, Q0, Q1);
+  auto Q1_Q2 = compute_geodesic_path(
+      solver, triangles, positions, adjacencies, Q1, Q2);
+
+  auto R0    = eval_path_midpoint(Q0_Q1, triangles, positions, adjacencies);
+  auto R1    = eval_path_midpoint(Q1_Q2, triangles, positions, adjacencies);
+  auto R0_R1 = compute_geodesic_path(
+      solver, triangles, positions, adjacencies, R0, R1);
+
+  auto S = eval_path_midpoint(R0_R1, triangles, positions, adjacencies);
+
+  subdivide_compute_bezier_de_casteljau_adaptive(solver, triangles, positions,
+      adjacencies, {P0, Q0, R0, S}, params, result, depth + 1);
+  subdivide_compute_bezier_de_casteljau_adaptive(solver, triangles, positions,
+      adjacencies, {S, R1, Q2, P3}, params, result, depth + 1);
+}
+
+static vector<mesh_point> de_casteljau_adaptive(
+    const dual_geodesic_solver& solver, const vector<vec3i>& triangles,
+    const vector<vec3f>& positions, const vector<vec3i>& adjacencies,
+    const spline_polygon& control_points, const spline_params& params) {
+  auto result = vector<mesh_point>{};
+  subdivide_compute_bezier_de_casteljau_adaptive(solver, triangles, positions,
+      adjacencies, control_points, params, result);
+  return result;
+}
+
+[[maybe_unused]] static vector<mesh_point> de_casteljau_uniform_mt(
+    const dual_geodesic_solver& solver, const vector<vec3i>& triangles,
+    const vector<vec3f>& positions, const vector<vec3i>& adjacencies,
+    const spline_polygon& control_points, const spline_params& params) {
+  auto segments = vector<spline_polygon>{control_points};
+  auto result   = vector<spline_polygon>();
+  auto threads  = vector<std::thread>(
+      (int)pow((float)2, (float)params.subdivisions));
+
+  auto f = [&](int k) {
+    auto [split0, split1] = subdivide_bezier_polygon(
+        solver, triangles, positions, adjacencies, segments[k], 0.5);
+    result[k * 2]     = split0;
+    result[k * 2 + 1] = split1;
+  };
+
+  for (auto subdivision = 0; subdivision < params.subdivisions; subdivision++) {
+    result.resize(segments.size() * 2);
+    for (auto i = 0; i < segments.size(); i++) {
+      threads[i] = std::thread(f, i);
+    }
+    for (auto i = 0; i < segments.size(); i++) threads[i].join();
+
+    swap(segments, result);
+  }
+
+  return {(mesh_point*)segments.data(),
+      (mesh_point*)segments.data() + segments.size() * 4};
+}
+
+static vector<mesh_point> de_casteljau_uniform(
+    const dual_geodesic_solver& solver, const vector<vec3i>& triangles,
+    const vector<vec3f>& positions, const vector<vec3i>& adjacencies,
+    const spline_polygon& control_points, const spline_params& params) {
+  auto segments = vector<spline_polygon>{control_points};
+  auto result   = vector<spline_polygon>();
+
+  for (auto subdivision = 0; subdivision < params.subdivisions; subdivision++) {
+    result.resize(segments.size() * 2);
+    for (auto i = 0; i < segments.size(); i++) {
+      auto [split0, split1] = subdivide_bezier_polygon(
+          solver, triangles, positions, adjacencies, segments[i], 0.5);
+      result[2 * i]     = split0;
+      result[2 * i + 1] = split1;
+    }
+    swap(segments, result);
+  }
+  return {(mesh_point*)segments.data(),
+      (mesh_point*)segments.data() + segments.size() * 4};
+}
+
+static vector<mesh_point> lane_riesenfeld_uniform(
+    const dual_geodesic_solver& solver, const vector<vec3i>& triangles,
+    const vector<vec3f>& positions, const vector<vec3i>& adjacencies,
+    const array<mesh_point, 4>& control_points, int num_subdivisions);
+static vector<mesh_point> lane_riesenfeld_adaptive(
+    const dual_geodesic_solver& solver, const vector<vec3i>& triangles,
+    const vector<vec3f>& positions, const vector<vec3i>& adjacencies,
+    const array<mesh_point, 4>& polygon, const spline_params& params);
+
+[[maybe_unused]] static vector<vec3f> polyline_positions(
+    const dual_geodesic_solver& solver, const vector<vec3i>& triangles,
+    const vector<vec3f>& positions, const vector<vec3i>& adjacencies,
+    const vector<mesh_point>& points) {
+  auto result = vector<vec3f>();
+  result.reserve(points.size() * 4);
+  for (int i = 0; i < points.size() - 1; i++) {
+    auto a    = points[i];
+    auto b    = points[i + 1];
+    auto path = compute_geodesic_path(
+        solver, triangles, positions, adjacencies, a, b);
+    auto path_pos = path_positions(
+        solver, triangles, positions, adjacencies, path);
+    result.insert(result.end(), path_pos.begin(), path_pos.end());
+    // append(result, path_pos);
+  }
+  return result;
+}
+
+vector<mesh_point> compute_bezier_path(const dual_geodesic_solver& solver,
+    const vector<vec3i>& triangles, const vector<vec3f>& positions,
+    const vector<vec3i>& adjacencies, const spline_polygon& control_points,
+    const spline_params& params) {
+  switch (params.algorithm) {
+    case spline_algorithm::de_casteljau_uniform: {
+      return de_casteljau_uniform(
+          solver, triangles, positions, adjacencies, control_points, params);
+    }
+    case spline_algorithm::de_casteljau_adaptive: {
+      return de_casteljau_adaptive(
+          solver, triangles, positions, adjacencies, control_points, params);
+    }
+    case spline_algorithm::lane_riesenfeld_uniform: {
+      return lane_riesenfeld_uniform(solver, triangles, positions, adjacencies,
+          control_points, params.subdivisions);
+    }
+    case spline_algorithm::lane_riesenfeld_adaptive: {
+      return lane_riesenfeld_adaptive(
+          solver, triangles, positions, adjacencies, control_points, params);
+    }
+    default: return {};
+  }
+}
+
+vector<mesh_point> compute_bezier_path(const dual_geodesic_solver& solver,
+    const vector<vec3i>& triangles, const vector<vec3f>& positions,
+    const vector<vec3i>& adjacencies, const vector<mesh_point>& control_points,
+    const spline_params& params) {
+  auto path = vector<mesh_point>{};
+  for (auto idx = 0; idx < (int)control_points.size() - 3; idx += 3) {
+    auto polygon = spline_polygon{control_points[idx + 0],
+        control_points[idx + 1], control_points[idx + 2],
+        control_points[idx + 3]};
+    auto segment = compute_bezier_path(
+        solver, triangles, positions, adjacencies, polygon, params);
+    path.insert(path.end(), segment.begin(), segment.end());
+  }
+  return path;
+}
+
+// weighted averages (Note:gradients needs to be a vector such that at the
+// i-th entry constains the gradient field of the squared distance field from
+// the i-th control points)
+[[maybe_unused]] static vector<mesh_point> weighted_average(
+    const dual_geodesic_solver& solver, const vector<vec3i>& triangles,
+    const vector<vec3f>& positions, const vector<vec3i>& adjacencies,
+    const vector<mesh_point>& rectangle, const vector<vector<float>>& weights) {
+#if HEAVY
+  vector<vector<vec3f>> gradients(rectangle.size());
+  vector<vector<float>> field(rectangle.size());
+  vector<mesh_point>    points_on_surface(weights.size(), {-1, zero2f});
+  for (auto i = 0; i < rectangle.size(); ++i) {
+    auto f = compute_distance_field(
+        triangles, positions, adjacencies, v2t, solver, i, rectangle, graph);
+    field[i] = f;
+    std::transform(f.begin(), f.end(), f.begin(),
+        [](float lambda) { return lambda * lambda; });
+    gradients[i] = compute_grad(solver, triangles, positions, normals, Grad, f);
+  }
+  // set from as the control points associate to greatest weight
+  vector<pair<vector<float>, int>> badones;
+  for (auto i = 0; i < weights.size(); ++i) {
+    auto from = optimal_seed(rectangle, weights[i]);
+    auto p = gradient_descent(triangles, positions, adjacencies, v2t, normals,
+        solver, angles, total_angles, gradients, weights[i], from);
+    if (p.face != -1)
+      points_on_surface[i] = p;
+    else
+      badones.push_back({weights[i], i});
+  }
+  if (points_on_surface.size() == 0) {
+    std::cout << "rectangle is too big" << std::endl;
+    return {};
+  }
+  bool stop              = badones.size() == 0;
+  bool needs_subdivision = false;
+  auto prev_proccessed   = badones.size();
+  auto curr_processed    = 0;
+  while (!stop) {
+    stop = true;
+    for (auto i = 0; i < badones.size(); ++i) {
+      if (points_on_surface[badones[i].second].face == -1) {
+        stop      = false;
+        auto from = optimal_seed(points_on_surface, badones[i].first, weights);
+        auto p    = gradient_descent(triangles, positions, adjacencies, v2t,
+            normals, solver, angles, total_angles, gradients, badones[i].first,
+            from);
+        if (p.face != -1)
+          points_on_surface[badones[i].second] = p;
+        else
+          ++curr_processed;
+      }
+      if (curr_processed == prev_proccessed) {
+        stop              = true;
+        needs_subdivision = true;
+
+      } else {
+        prev_proccessed = curr_processed;
+        curr_processed  = 0;
+      }
+    }
+  }
+  // this part doesn't work yet
+  if (needs_subdivision) {
+    for (auto i = 0; i < badones.size(); ++i) {
+      if (points_on_surface[badones[i].second].face == -1) {
+        auto from = optimal_seed_with_weights(
+            points_on_surface, badones[i].first, weights);
+        auto curr_gradients = gradients_inside_cell(triangles, positions,
+            adjacencies, v2t, solver, angles, normals, Grad, field, rectangle,
+            from.first, from.second, badones[i].first);
+        auto p = gradient_descent(triangles, positions, adjacencies, v2t,
+            normals, solver, angles, total_angles, curr_gradients,
+            badones[i].first, from.first);
+        if (p.face != -1) {
+          points_on_surface[badones[i].second] = p;
+          std::cout << "we subdivide" << std::endl;
+        } else {
+          std::cout << "rectangle is too big" << std::endl;
+        }
+      }
+    }
+  }
+
+  return points_on_surface;
+#else
+  return {};
+#endif
+}
+
+struct spline_node {
+  std::array<mesh_point, 4>    points  = {};
+  std::array<geodesic_path, 3> lines   = {};
+  vec2f                        t       = {};
+  int                          depth   = 0;
+  bool                         is_good = false;
+};
+
+static pair<bool, vector<mesh_point>> handle_boundary_node(
+    const dual_geodesic_solver& solver, const vector<vec3i>& triangles,
+    const vector<vec3f>& positions, const vector<vec3i>& adjacencies,
+    const spline_node& leaf, const vector<int>& new_ones_entries) {
+  vector<mesh_point> new_ones(5);
+  auto               k = leaf.depth + 1;
+  if (new_ones_entries[0] > 3 &&
+      new_ones_entries.back() < pow((float)2, (float)k) - 1)
+    return {false, new_ones};
+  else if (new_ones_entries[0] <= 3) {
+    if (new_ones_entries[0] == 0) {
+      new_ones[0] = leaf.points[0];
+      new_ones[1] = eval_path_point(
+          solver, triangles, positions, adjacencies, leaf.lines[0], 0.5);
+      new_ones[2] = eval_path_point(
+          solver, triangles, positions, adjacencies, leaf.lines[1], 0.25);
+      new_ones[3] = lane_riesenfeld_boundary(solver, triangles, positions,
+          adjacencies, leaf.lines[1], leaf.lines[2], true);
+      new_ones[4] = eval_path_point(
+          solver, triangles, positions, adjacencies, leaf.lines[2], 0.5);
+    } else if (new_ones_entries[0] == 2) {
+      new_ones[0] = eval_path_point(
+          solver, triangles, positions, adjacencies, leaf.lines[0], 0.25);
+      new_ones[1] = lane_riesenfeld_boundary(solver, triangles, positions,
+          adjacencies, leaf.lines[0], leaf.lines[1], true);
+      new_ones[2] = eval_path_point(
+          solver, triangles, positions, adjacencies, leaf.lines[1], 0.5);
+      new_ones[3] = lane_riesenfeld_regular(solver, triangles, positions,
+          adjacencies, leaf.lines[1], leaf.lines[2]);
+      new_ones[4] = eval_path_point(
+          solver, triangles, positions, adjacencies, leaf.lines[2], 0.5);
+    } else
+      assert(false);
+  } else {
+    if (new_ones_entries.back() == pow((float)2, (float)k) + 2) {
+      new_ones[0] = eval_path_point(
+          solver, triangles, positions, adjacencies, leaf.lines[0], 0.5);
+      new_ones[1] = lane_riesenfeld_boundary(solver, triangles, positions,
+          adjacencies, leaf.lines[0], leaf.lines[1], false);
+      new_ones[2] = eval_path_point(
+          solver, triangles, positions, adjacencies, leaf.lines[1], 0.75);
+      new_ones[3] = eval_path_point(
+          solver, triangles, positions, adjacencies, leaf.lines[2], 0.5);
+      new_ones[4] = leaf.points[3];
+    } else if (new_ones_entries.back() == pow((float)2, (float)k)) {
+      new_ones[0] = eval_path_point(
+          solver, triangles, positions, adjacencies, leaf.lines[0], 0.5);
+      new_ones[1] = lane_riesenfeld_regular(solver, triangles, positions,
+          adjacencies, leaf.lines[0], leaf.lines[1]);
+      new_ones[2] = eval_path_point(
+          solver, triangles, positions, adjacencies, leaf.lines[1], 0.5);
+      new_ones[3] = lane_riesenfeld_boundary(solver, triangles, positions,
+          adjacencies, leaf.lines[1], leaf.lines[2], false);
+      new_ones[4] = eval_path_point(
+          solver, triangles, positions, adjacencies, leaf.lines[2], 0.75);
+    } else
+      assert(false);
+  }
+  return {true, new_ones};
+}
+
+static pair<spline_node, spline_node> lane_riesenfeld_split_node(
+    const dual_geodesic_solver& solver, const vector<vec3i>& triangles,
+    const vector<vec3f>& positions, const vector<vec3i>& adjacencies,
+    const spline_node& leaf, bool& max_depth_reached) {
+  auto curr_t     = (leaf.t.x + leaf.t.y) / 2;
+  int  curr_entry = (int)(pow((float)2, (float)leaf.depth + 1) * curr_t);
+  curr_entry += 3;
+  if (curr_entry % 2) {
+    max_depth_reached = true;
+    return {leaf, {}};
+  }
+  auto curr_entries               = vector<int>{curr_entry - 4, curr_entry - 3,
+      curr_entry - 2, curr_entry - 1, curr_entry};
+  auto [are_boundaries, new_ones] = handle_boundary_node(
+      solver, triangles, positions, adjacencies, leaf, curr_entries);
+  if (!are_boundaries) {
+    new_ones[0] = eval_path_point(
+        solver, triangles, positions, adjacencies, leaf.lines[0], 0.5);
+    new_ones[1] = lane_riesenfeld_regular(solver, triangles, positions,
+        adjacencies, leaf.lines[0], leaf.lines[1]);
+    new_ones[2] = eval_path_point(
+        solver, triangles, positions, adjacencies, leaf.lines[1], 0.5);
+    new_ones[3] = lane_riesenfeld_regular(solver, triangles, positions,
+        adjacencies, leaf.lines[1], leaf.lines[2]);
+    new_ones[4] = eval_path_point(
+        solver, triangles, positions, adjacencies, leaf.lines[2], 0.5);
+  }
+  auto L01 = compute_geodesic_path(
+      solver, triangles, positions, adjacencies, new_ones[0], new_ones[1]);
+  auto L12 = compute_geodesic_path(
+      solver, triangles, positions, adjacencies, new_ones[1], new_ones[2]);
+  auto L23 = compute_geodesic_path(
+      solver, triangles, positions, adjacencies, new_ones[2], new_ones[3]);
+  spline_node P0 = {{new_ones[0], new_ones[1], new_ones[2], new_ones[3]},
+      {L01, L12, L23}, {leaf.t.x, curr_t}, leaf.depth + 1};
+  L01            = compute_geodesic_path(
+      solver, triangles, positions, adjacencies, new_ones[3], new_ones[4]);
+  spline_node P1 = {{new_ones[1], new_ones[2], new_ones[3], new_ones[4]},
+      {L12, L23, L01}, {curr_t, leaf.t.y}, leaf.depth + 1};
+  return {P0, P1};
+}
+
+static vector<mesh_point> lane_riesenfeld_uniform(
+    const dual_geodesic_solver& solver, const vector<vec3i>& triangles,
+    const vector<vec3f>& positions, const vector<vec3i>& adjacencies,
+    const array<mesh_point, 4>& control_points, int num_subdivisions) {
+  auto size = 7;
+  struct parametric_path {
+    geodesic_path path = {};
+    vector<float> t    = {};
+  };
+  parametric_path curr_path = {};
+  parametric_path gamma01   = {};
+  parametric_path gamma32   = {};
+  auto            prev      = mesh_point{};
+  auto            curr      = mesh_point{};
+  auto            q         = vector<mesh_point>(size);
+
+  {
+    auto& p      = control_points;
+    gamma01.path = compute_geodesic_path(
+        solver, triangles, positions, adjacencies, p[0], p[1]);
+    gamma01.t = path_parameters(
+        gamma01.path, triangles, positions, adjacencies);
+    gamma32.path = compute_geodesic_path(
+        solver, triangles, positions, adjacencies, p[3], p[2]);
+    gamma32.t = path_parameters(
+        gamma32.path, triangles, positions, adjacencies);
+    curr_path.path = compute_geodesic_path(
+        solver, triangles, positions, adjacencies, p[1], p[2]);
+    curr_path.t = path_parameters(
+        curr_path.path, triangles, positions, adjacencies);
+    q[0]           = p[0];
+    q[1]           = eval_path_point(solver, triangles, positions, adjacencies,
+        gamma01.path, gamma01.t, 0.25);
+    auto p0p1      = eval_path_point(solver, triangles, positions, adjacencies,
+        gamma01.path, gamma01.t, 0.5);
+    auto p1p2      = eval_path_point(solver, triangles, positions, adjacencies,
+        curr_path.path, curr_path.t, 0.5);
+    curr_path.path = compute_geodesic_path(
+        solver, triangles, positions, adjacencies, p0p1, p1p2);
+    curr_path.t = path_parameters(
+        curr_path.path, triangles, positions, adjacencies);
+    q[2]           = eval_path_point(solver, triangles, positions, adjacencies,
+        curr_path.path, curr_path.t, 0.25);
+    auto p2p3      = eval_path_point(solver, triangles, positions, adjacencies,
+        gamma32.path, gamma32.t, 0.5);
+    prev           = eval_path_point(solver, triangles, positions, adjacencies,
+        curr_path.path, curr_path.t, 5 / 8.f);
+    curr_path.path = compute_geodesic_path(
+        solver, triangles, positions, adjacencies, p1p2, p2p3);
+    curr_path.t = path_parameters(
+        curr_path.path, triangles, positions, adjacencies);
+    curr = eval_path_point(solver, triangles, positions, adjacencies,
+        curr_path.path, curr_path.t, 3 / 8.f);
+    q[3] = geodesic_lerp(
+        solver, triangles, positions, adjacencies, prev, curr, 0.5);
+    q[4] = eval_path_point(solver, triangles, positions, adjacencies,
+        curr_path.path, curr_path.t, 0.75);
+    q[5] = eval_path_point(solver, triangles, positions, adjacencies,
+        gamma32.path, gamma32.t, 0.25);
+    q[6] = p[3];
+  }
+
+  auto p = vector<mesh_point>{};
+
+  for (int subdiv = 0; subdiv < num_subdivisions; subdiv++) {
+    std::swap(p, q);
+
+    auto new_size = 2 * size - 3;
+    q.resize(new_size);
+    q[0]           = p[0];
+    q[1]           = eval_path_point(solver, triangles, positions, adjacencies,
+        gamma01.path, gamma01.t, 1.f / pow((float)2, (float)3 + subdiv));
+    curr_path.path = compute_geodesic_path(
+        solver, triangles, positions, adjacencies, p[1], p[2]);
+    curr_path.t = path_parameters(
+        curr_path.path, triangles, positions, adjacencies);
+    q[2]           = eval_path_point(solver, triangles, positions, adjacencies,
+        curr_path.path, curr_path.t, 0.25);
+    prev           = eval_path_point(solver, triangles, positions, adjacencies,
+        curr_path.path, curr_path.t, 5 / 8.f);
+    curr_path.path = compute_geodesic_path(
+        solver, triangles, positions, adjacencies, p[2], p[3]);
+    curr_path.t = path_parameters(
+        curr_path.path, triangles, positions, adjacencies);
+    curr = eval_path_point(solver, triangles, positions, adjacencies,
+        curr_path.path, curr_path.t, 0.25);
+    q[3] = geodesic_lerp(
+        solver, triangles, positions, adjacencies, prev, curr, 0.5);
+    prev = eval_path_point(solver, triangles, positions, adjacencies,
+        curr_path.path, curr_path.t, 0.5);
+    for (int j = 4; j < 2 * size - 8; j += 2) {
+      q[j] = prev;
+      prev = eval_path_point(solver, triangles, positions, adjacencies,
+          curr_path.path, curr_path.t, 0.75);
+      curr_path.path = compute_geodesic_path(solver, triangles, positions,
+          adjacencies, p[j / 2 + 1], p[j / 2 + 2]);
+      curr_path.t    = path_parameters(
+          curr_path.path, triangles, positions, adjacencies);
+      curr     = eval_path_point(solver, triangles, positions, adjacencies,
+          curr_path.path, curr_path.t, 0.25);
+      q[j + 1] = geodesic_lerp(
+          solver, triangles, positions, adjacencies, prev, curr, 1 / 2.f);
+      prev = eval_path_point(solver, triangles, positions, adjacencies,
+          curr_path.path, curr_path.t, 0.5);
+    }
+    q[2 * size - 8] = prev;
+    {
+      auto qq = &q[new_size - 4];
+      auto pp = &p[size - 4];
+      prev    = eval_path_point(solver, triangles, positions, adjacencies,
+          curr_path.path, curr_path.t, 0.75);
+      curr_path.path = compute_geodesic_path(
+          solver, triangles, positions, adjacencies, pp[1], pp[2]);
+      curr_path.t = path_parameters(
+          curr_path.path, triangles, positions, adjacencies);
+      curr  = eval_path_point(solver, triangles, positions, adjacencies,
+          curr_path.path, curr_path.t, 3 / 8.f);
+      qq[0] = geodesic_lerp(
+          solver, triangles, positions, adjacencies, prev, curr, 0.5);
+      qq[1] = eval_path_point(solver, triangles, positions, adjacencies,
+          curr_path.path, curr_path.t, 0.75);
+      qq[2] = eval_path_point(solver, triangles, positions, adjacencies,
+          gamma32.path, gamma32.t, 1.f / pow((float)2, (float)3 + subdiv));
+      qq[3] = pp[3];
+    }
+    size = new_size;
+  }
+  return q;
+}
+
+[[maybe_unused]] static vector<mesh_point> spline_subdivision_uniform_quadric(
+    const dual_geodesic_solver& solver, const vector<vec3i>& triangles,
+    const vector<vec3f>& positions, const vector<vec3i>& adjacencies,
+    const array<mesh_point, 3>& control_points, int num_subdivisions) {
+  auto size = 6;
+  struct parametric_path {
+    geodesic_path path = {};
+    vector<float> t    = {};
+  };
+  parametric_path curr_path = {};
+  parametric_path gamma01   = {};
+  parametric_path gamma21   = {};
+
+  auto q = vector<mesh_point>(size);
+
+  {
+    auto& p      = control_points;
+    gamma01.path = compute_geodesic_path(
+        solver, triangles, positions, adjacencies, p[0], p[1]);
+    gamma01.t = path_parameters(
+        gamma01.path, triangles, positions, adjacencies);
+    gamma21.path = compute_geodesic_path(
+        solver, triangles, positions, adjacencies, p[2], p[1]);
+    gamma21.t = path_parameters(
+        gamma21.path, triangles, positions, adjacencies);
+    q[0] = p[0];
+    q[1] = eval_path_point(solver, triangles, positions, adjacencies,
+        gamma01.path, gamma01.t, 0.25);
+    q[4] = eval_path_point(solver, triangles, positions, adjacencies,
+        gamma21.path, gamma21.t, 0.25);
+    q[5] = p[2];
+
+    curr_path.path = compute_geodesic_path(
+        solver, triangles, positions, adjacencies, q[2], q[5]);
+    curr_path.t = path_parameters(
+        curr_path.path, triangles, positions, adjacencies);
+
+    q[2] = eval_path_point(solver, triangles, positions, adjacencies,
+        curr_path.path, curr_path.t, 0.25);
+    q[3] = eval_path_point(solver, triangles, positions, adjacencies,
+        curr_path.path, curr_path.t, 0.75);
+  }
+
+  auto p         = vector<mesh_point>{};
+  curr_path.path = compute_geodesic_path(
+      solver, triangles, positions, adjacencies, q[1], q[2]);
+  curr_path.t = path_parameters(
+      curr_path.path, triangles, positions, adjacencies);
+  for (int subdiv = 0; subdiv < num_subdivisions; subdiv++) {
+    std::swap(p, q);
+
+    auto new_size = 2 * size - 2;
+    q.resize(new_size);
+    q[0]           = p[0];
+    q[1]           = eval_path_point(solver, triangles, positions, adjacencies,
+        gamma01.path, gamma01.t, 1.f / pow((float)2, (float)3 + subdiv));
+    curr_path.path = compute_geodesic_path(
+        solver, triangles, positions, adjacencies, p[1], p[2]);
+    curr_path.t = path_parameters(
+        curr_path.path, triangles, positions, adjacencies);
+
+    for (int j = 2; j < 2 * size - 4; j += 2) {
+      q[j]     = eval_path_point(solver, triangles, positions, adjacencies,
+          curr_path.path, curr_path.t, 0.25);
+      q[j + 1] = eval_path_point(solver, triangles, positions, adjacencies,
+          curr_path.path, curr_path.t, 0.75);
+      curr_path.path = compute_geodesic_path(solver, triangles, positions,
+          adjacencies, p[j / 2 + 1], p[j / 2 + 2]);
+      curr_path.t    = path_parameters(
+          curr_path.path, triangles, positions, adjacencies);
+    }
+
+    q[2 * size - 4] = eval_path_point(solver, triangles, positions, adjacencies,
+        gamma21.path, gamma21.t, 1.f / pow((float)2, (float)3 + subdiv));
+    q[2 * size - 3] = p.back();
+    size            = new_size;
+  }
+  return q;
+}
+
+static vector<mesh_point> lane_riesenfeld_adaptive(
+    const dual_geodesic_solver& solver, const vector<vec3i>& triangles,
+    const vector<vec3f>& positions, const vector<vec3i>& adjacencies,
+    const array<mesh_point, 4>& polygon, const spline_params& params) {
+  auto q = vector<mesh_point>(7);
+
+  auto& p = polygon;
+  q[0]    = p[0];
+  q[1]    = geodesic_lerp(
+      solver, triangles, positions, adjacencies, p[0], p[1], 1 / 4.f);
+  auto p0p1 = geodesic_lerp(
+      solver, triangles, positions, adjacencies, p[0], p[1], 1 / 2.f);
+  auto p1p2 = geodesic_lerp(
+      solver, triangles, positions, adjacencies, p[1], p[2], 1 / 2.f);
+  q[2] = geodesic_lerp(
+      solver, triangles, positions, adjacencies, p0p1, p1p2, 1 / 4.f);
+  auto p2p3 = geodesic_lerp(
+      solver, triangles, positions, adjacencies, p[2], p[3], 1 / 2.f);
+  q[3] = lane_riesenfeld_init(
+      solver, triangles, positions, adjacencies, p0p1, p1p2, p2p3);
+  q[4] = geodesic_lerp(
+      solver, triangles, positions, adjacencies, p1p2, p2p3, 3 / 4.f);
+  q[5] = geodesic_lerp(
+      solver, triangles, positions, adjacencies, p2p3, p[3], 1 / 2.f);
+  q[6]     = p[3];
+  auto L01 = compute_geodesic_path(
+      solver, triangles, positions, adjacencies, q[0], q[1]);
+  auto L12 = compute_geodesic_path(
+      solver, triangles, positions, adjacencies, q[1], q[2]);
+  auto L23 = compute_geodesic_path(
+      solver, triangles, positions, adjacencies, q[2], q[3]);
+  spline_node P0 = {{q[0], q[1], q[2], q[3]}, {L01, L12, L23}, {0, 0.25}, 2};
+  L01            = compute_geodesic_path(
+      solver, triangles, positions, adjacencies, q[3], q[4]);
+  spline_node P1 = {{q[1], q[2], q[3], q[4]}, {L12, L23, L01}, {0.25, 0.5}, 2};
+  L12            = compute_geodesic_path(
+      solver, triangles, positions, adjacencies, q[4], q[5]);
+  spline_node P2 = {{q[2], q[3], q[4], q[5]}, {L23, L01, L12}, {0.5, 0.75}, 2};
+  L23            = compute_geodesic_path(
+      solver, triangles, positions, adjacencies, q[5], q[6]);
+  spline_node P3 = {{q[3], q[4], q[5], q[6]}, {L01, L12, L23}, {0.75, 1}, 2};
+
+  P0.is_good = is_bezier_straight_enough(P0.lines[0], P0.lines[1], P0.lines[2],
+      solver, triangles, positions, adjacencies, params);
+  P1.is_good = is_bezier_straight_enough(P1.lines[0], P1.lines[1], P1.lines[2],
+      solver, triangles, positions, adjacencies, params);
+  P2.is_good = is_bezier_straight_enough(P2.lines[0], P2.lines[1], P2.lines[2],
+      solver, triangles, positions, adjacencies, params);
+  P3.is_good = is_bezier_straight_enough(P3.lines[0], P3.lines[1], P3.lines[2],
+      solver, triangles, positions, adjacencies, params);
+  // auto                    count_path = 16;
+  // auto                    count_eval = 8;
+  std::deque<spline_node> Q;
+  Q.push_back(P3);
+  Q.push_back(P2);
+  Q.push_back(P1);
+  Q.push_back(P0);
+  auto P                 = vector<spline_node>{};
+  bool max_depth_reached = false;
+  while (!Q.empty()) {
+    auto curr = Q.back();
+    Q.pop_back();
+    if (P.size() > 0 && P.back().depth == curr.depth && curr.is_good) {
+      P.push_back(curr);
+
+    } else {
+      auto [left, right] = lane_riesenfeld_split_node(
+          solver, triangles, positions, adjacencies, curr, max_depth_reached);
+      if (max_depth_reached) {
+        curr.is_good = true;
+        if (P.size() > 0) {
+          auto last = P.back();
+          auto L    = compute_geodesic_path(solver, triangles, positions,
+              adjacencies, last.points[0], curr.points[0]);
+          if (is_bezier_straight_enough(L, curr.lines[0], curr.lines[1], solver,
+                  triangles, positions, adjacencies, params))
+            P.push_back(curr);
+          else {
+            P.pop_back();
+            last = {{last.points[0], curr.points[0], curr.points[1],
+                        curr.points[2]},
+                {L, curr.lines[0], curr.lines[1]}, last.t, last.depth, false};
+            Q.push_back(curr);
+            Q.push_back(last);
+          }
+        } else
+          P.push_back(curr);
+
+        max_depth_reached = false;
+      } else {
+        left.is_good  = is_bezier_straight_enough(left.lines[0], left.lines[1],
+            left.lines[2], solver, triangles, positions, adjacencies, params);
+        right.is_good = is_bezier_straight_enough(right.lines[0],
+            right.lines[1], right.lines[2], solver, triangles, positions,
+            adjacencies, params);
+        if (left.is_good && right.is_good) {
+          if (P.size() == 0) {
+            P.push_back(left);
+            P.push_back(right);
+          } else {
+            auto last = P.back();
+            auto L    = compute_geodesic_path(solver, triangles, positions,
+                adjacencies, last.points[0], left.points[0]);
+            if (is_bezier_straight_enough(L, left.lines[0], left.lines[1],
+                    solver, triangles, positions, adjacencies, params)) {
+              last     = {{last.points[0], left.points[0], left.points[1],
+                          left.points[2]},
+                  {L, left.lines[0], left.lines[1]}, last.t, last.depth, true};
+              P.back() = last;
+              P.push_back(left);
+              P.push_back(right);
+            } else if (left.depth < last.depth) {
+              left.is_good  = false;
+              right.is_good = false;
+              Q.push_back(right);
+              Q.push_back(left);
+            } else {
+              P.pop_back();
+              last = {{last.points[0], left.points[0], left.points[1],
+                          left.points[2]},
+                  {L, left.lines[0], left.lines[1]}, last.t, last.depth, false};
+              Q.push_back(right);
+              Q.push_back(left);
+              Q.push_back(last);
+            }
+          }
+        } else {
+          Q.push_back(right);
+          Q.push_back(left);
+        }
+      }
+    }
+  }
+  // std::cout << "Number of paths";
+  // std::cout << count_path << std::endl;
+  // std::cout << "Number of eval";
+  // std::cout << count_eval << std::endl;
+  // std::cout << "Precision";
+  // std::cout << yocto::pow(2, -params.precision) / pif * 180 << std::endl;
+  auto polyline = vector<mesh_point>{};
+  for (auto i = 0; i < P.size(); ++i) {
+    if (i == 0) {
+      for (auto j = 0; j < 4; ++j) {
+        polyline.push_back(P[i].points[j]);
+      }
+    } else
+      polyline.push_back(P[i].points.back());
+  }
+
+  return polyline;
+}
+
+[[maybe_unused]] static vector<mesh_point> degree_elevation(
+    const dual_geodesic_solver& solver, const vector<vec3i>& triangles,
+    const vector<vec3f>& positions, const vector<vec3i>& adjacencies,
+    const array<mesh_point, 4>& control_points, int num_subdivisions) {
+  auto p = vector<mesh_point>{control_points[0], control_points[1],
+      control_points[2], control_points[3]};
+  auto q = p;
+
+  for (auto i = 0; i < num_subdivisions; ++i) {
+    std::swap(p, q);
+    auto new_size = p.size() + 1;
+    q.resize(new_size);
+    q[0] = p[0];
+    for (auto j = 1; j < new_size - 1; ++j) {
+      float alpha = (new_size - 1 - j) / (float)(new_size - 1);
+      q[j]        = geodesic_lerp(
+          solver, triangles, positions, adjacencies, p[j - 1], p[j], alpha);
+    }
+    q.back() = p.back();
+  }
+
+  return q;
 }
 
 }  // namespace yocto

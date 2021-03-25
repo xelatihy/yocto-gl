@@ -76,53 +76,6 @@ auto halfway1 = sample_microfacet(roughness, normal, rand2f(rng)); // sample
 auto pdf = sample_microfacet_pdf(roughness, normal, halfway1);// sample pdf
 ```
 
-## Bsdf lobes
-
-Most path tracing shaders are defined as sum of single BSDF lobes.
-Yocto/Shading provides and implementation for several common BSDF lobes.
-Three functions are implemented for each lobe. Use
-`eval_<lobe>(<params>, normal, outgoing, incoming)` to evaluates the
-lobe BSDF multiplied by the cosine,
-`sample_<lobe>(<params>, normal, outgoing, rn)` to sample an
-incoming direction, and
-`sample_<lobe>_pdf(<params>, normal, outgoing, incoming)` to compute
-the sampled direction pdf.
-Yocto/Shading supports the following lobes:
-
-- `diffuse_reflection`: diffuse brdf
-- `diffuse_transmission`: translucency brdf, as a flipped diffuse
-- `microfacet_reflection`: specular brdf for dielectrics and metals
-- `microfacet_transmission`: transmission brdf for thin dielectrics
-- `microfacet_refraction`: refraction brdf for dielectrics,
-  includes reflection and refraction
-- `delta_reflection`: delta specular for dielectrics and metals
-- `delta_transmission`: delta transmission for thin dielectrics
-- `delta_refraction`: delta refraction for dielectrics
-
-```cpp
-auto normal   = vec3f{...};            // shading normal
-auto incoming = vec3f{...}             // incoming direction
-auto outgoing = vec3f{...};            // outgoing direction
-auto rs = float{0.1};                  // roughness
-auto ior = float{1.5};                 // dielectric ior
-auto [eta, etak] = conductor_eta("Au");// conductor complex ior
-// evaluate smooth lobes
-auto b1 = eval_diffuse_reflection(normal, outgoing, incoming);
-auto b2 = eval_diffuse_transmission(normal, outgoing, incoming);
-auto b3 = eval_microfacet_reflection(ior, rs, normal, outgoing, incoming);
-auto b4 = eval_microfacet_reflection(eta,etak, rs, normal, outgoing, incoming);
-auto b5 = eval_microfacet_transmission(ior, rs, normal, outgoing,  incoming);
-auto b6 = eval_microfacet_refraction(ior, rs, normal, outgoing, incoming);
-// sample smooth lobes
-auto incoming1 = sample_diffuse_reflection(normal, outgoing, rand2f(rng));
-auto pdf1 = sample_diffuse_reflection_pdf(normal, outgoing, incoming)
-// eval and sample delta lobes
-auto incoming2 = sample_delta_reflection(ior, normal, outgoing);
-auto b7 = eval_delta_reflection(ior, normal, outgoing, incoming);
-```
-
-## Volumetric lobes
-
 Yocto/Shading defines functions to simplify the implementation of volumetric
 effects. Use `eval_transmittance(density, distance)` to evaluate the
 transmittance of a homogeneous volume,
@@ -158,3 +111,57 @@ auto incoming = sample_phasefunction(anisotropy, outgoing, rand2f(rng));
 auto phasefunc = eval_phasefunction(anisotropy, outgoing, incoming);
 auto pdf = sample_phasefunction_pdf(anisotropy, outgoing, incoming);
 ```
+
+## Surface materials
+
+Yocto/Shading provides implementation for several material types.
+Use `eval_<material>(<params>, normal, outgoing, incoming)` to evaluates the
+lobe BSDF multiplied by the cosine,
+`sample_<material>(<params>, normal, outgoing, rn)` to sample an incoming
+direction, and
+`sample_<material>_pdf(<params>, normal, outgoing, incoming)` to compute
+the sampled direction pdf.
+Yocto/Shading supports the following materials:
+
+- `matte`: matte appearance implemented as a diffuse bsdf
+- `glossy`: glossy appearance implemented as a sum of diffuse and microfacet bsdfs
+- `metallic`: metallic appearance implemented as a delta or microfacet bsdfs
+- `transparent`: thin glass-like appearance brdf implemented as a delta or microfacet bsdf
+- `refractive`: glass-like appearance implemented as a delta or microfacet bsdf
+- `passthrough`: used in volume rendering to simulated the absence of an interface
+- `gltfpbr`: the pbr model used in Khronos glTF
+
+```cpp
+auto normal   = vec3f{...};            // shading normal
+auto incoming = vec3f{...}             // incoming direction
+auto outgoing = vec3f{...};            // outgoing direction
+auto color = vec3f{1, 0.5, 0.5};       // surface color
+auto roughness = float{0.1};           // roughness
+auto ior = float{1.5};                 // dielectric ior
+// evaluate smooth lobes
+auto b1 = eval_matte(color, normal, outgoing, incoming);
+auto b3 = eval_glossy(color, ior, roughness, normal, outgoing, incoming);
+auto b4 = eval_metallic(color, roughness, normal, outgoing, incoming);
+auto b5 = eval_transparent(color, ior, roughness, normal, outgoing,  incoming);
+auto b6 = eval_refractive(color, ior, roughness, normal, outgoing, incoming);
+// sample smooth lobes
+auto incoming1 = sample_matte(color, normal, outgoing, rand2f(rng));
+auto pdf1 = sample_matte_pdf(color, normal, outgoing, incoming)
+// eval and sample delta lobes
+auto incoming2 = sample_metallic(color, normal, outgoing);
+auto b7 = eval_metallic(color, normal, outgoing, incoming);
+```
+
+## Design considerations
+
+Yocto/Shading evolved from using sum of Bsdf lobes to use full Bsdfs.
+Coincidentally, this evolution is similar to the way PBRT evolved from
+version 3 to version 4. But the motivation for this is different.
+In PBRT, the motivation for removing the sum of lobes representation was that
+a sum of lobes cannot reproduce materials in a physically-correct manner.
+In Yocto/Shading, the motivation is simplicity, which is a guiding principle in
+Yocto/GL. In the end, all materials are just _approximations_ of
+real-world behavior. So saying that a material does not properly follow
+physics is weak in Yocto/GL, but entirely reasonable in systems that have
+different goals. On the other hand, the resulting code is significantly simpler
+and produces th same same results visually for all scenes that we have.

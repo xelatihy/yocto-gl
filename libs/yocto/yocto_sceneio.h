@@ -1,12 +1,10 @@
 //
 // # Yocto/SceneIO: Scene serialization
 //
-// Yocto/Scene defines a simple scene representation, and related utilities,
-// mostly geared towards scene creation and serialization.
 // Yocto/SceneIO supports loading and saving scenes from Ply, Obj, Pbrt, glTF
 // and a custom Json format.
-// Yocto/SceneIO is implemented in `yocto_sceneio.h` and `yocto_sceneio.cpp`,
-// and depends on `cgltf.h`.
+// Yocto/SceneIO is implemented in `yocto_sceneio.h` and `yocto_sceneio.cpp`
+// and depends on `stb_image.h`, `stb_image_write.h`, `tinyexr.h`.
 //
 
 //
@@ -40,15 +38,12 @@
 // INCLUDES
 // -----------------------------------------------------------------------------
 
-#include <functional>
 #include <memory>
 #include <string>
 #include <utility>
 #include <vector>
 
-#include "yocto_geometry.h"
-#include "yocto_image.h"
-#include "yocto_math.h"
+#include "yocto_scene.h"
 
 // -----------------------------------------------------------------------------
 // USING DIRECTIVES
@@ -56,7 +51,6 @@
 namespace yocto {
 
 // using directives
-using std::function;
 using std::pair;
 using std::string;
 using std::vector;
@@ -64,332 +58,163 @@ using std::vector;
 }  // namespace yocto
 
 // -----------------------------------------------------------------------------
-// SCENE DATA
+// FILE IO
 // -----------------------------------------------------------------------------
 namespace yocto {
 
-// Camera based on a simple lens model. The camera is placed using a frame.
-// Camera projection is described in photographic terms. In particular,
-// we specify film size (35mm by default), film aspect ration,
-// the lens' focal length, the focus distance and the lens aperture.
-// All values are in meters. Here are some common aspect ratios used in video
-// and still photography.
-// 3:2    on 35 mm:  0.036 x 0.024
-// 16:9   on 35 mm:  0.036 x 0.02025 or 0.04267 x 0.024
-// 2.35:1 on 35 mm:  0.036 x 0.01532 or 0.05640 x 0.024
-// 2.39:1 on 35 mm:  0.036 x 0.01506 or 0.05736 x 0.024
-// 2.4:1  on 35 mm:  0.036 x 0.015   or 0.05760 x 0.024 (approx. 2.39 : 1)
-// To compute good apertures, one can use the F-stop number from photography
-// and set the aperture to focal length over f-stop.
-struct sceneio_camera {
-  string  name         = "";
-  frame3f frame        = identity3x4f;
-  bool    orthographic = false;
-  float   lens         = 0.050;
-  float   film         = 0.036;
-  float   aspect       = 1.500;
-  float   focus        = 10000;
-  float   aperture     = 0;
-};
+// Load/save a text file
+bool load_text(const string& filename, string& str, string& error);
+bool save_text(const string& filename, const string& str, string& error);
 
-// Texture containing either an LDR or HDR image. HdR images are encoded
-// in linear color space, while LDRs are encoded as sRGB.
-struct sceneio_texture {
-  string       name = "";
-  image<vec4f> hdr  = {};
-  image<vec4b> ldr  = {};
-};
+// Using directive
+using byte = unsigned char;
 
-// Material for surfaces, lines and triangles.
-// For surfaces, uses a microfacet model with thin sheet transmission.
-// The model is based on OBJ, but contains glTF compatibility.
-// For the documentation on the values, please see the OBJ format.
-struct sceneio_material {
-  // material data
-  string name = "";
-
-  // material
-  vec3f emission     = {0, 0, 0};
-  vec3f color        = {0, 0, 0};
-  float specular     = 0;
-  float roughness    = 0;
-  float metallic     = 0;
-  float ior          = 1.5;
-  vec3f spectint     = {1, 1, 1};
-  float coat         = 0;
-  float transmission = 0;
-  float translucency = 0;
-  vec3f scattering   = {0, 0, 0};
-  float scanisotropy = 0;
-  float trdepth      = 0.01;
-  float opacity      = 1;
-  bool  thin         = true;
-
-  // textures
-  sceneio_texture* emission_tex     = nullptr;
-  sceneio_texture* color_tex        = nullptr;
-  sceneio_texture* specular_tex     = nullptr;
-  sceneio_texture* metallic_tex     = nullptr;
-  sceneio_texture* roughness_tex    = nullptr;
-  sceneio_texture* transmission_tex = nullptr;
-  sceneio_texture* translucency_tex = nullptr;
-  sceneio_texture* spectint_tex     = nullptr;
-  sceneio_texture* scattering_tex   = nullptr;
-  sceneio_texture* coat_tex         = nullptr;
-  sceneio_texture* opacity_tex      = nullptr;
-  sceneio_texture* normal_tex       = nullptr;
-};
-
-// Shape data represented as indexed meshes of elements.
-// May contain either points, lines, triangles and quads.
-// Additionally, we support face-varying primitives where
-// each vertex data has its own topology.
-struct sceneio_shape {
-  // shape data
-  string name = "";
-
-  // primitives
-  vector<int>   points    = {};
-  vector<vec2i> lines     = {};
-  vector<vec3i> triangles = {};
-  vector<vec4i> quads     = {};
-
-  // face-varying primitives
-  vector<vec4i> quadspos      = {};
-  vector<vec4i> quadsnorm     = {};
-  vector<vec4i> quadstexcoord = {};
-
-  // vertex data
-  vector<vec3f> positions = {};
-  vector<vec3f> normals   = {};
-  vector<vec2f> texcoords = {};
-  vector<vec4f> colors    = {};
-  vector<float> radius    = {};
-  vector<vec4f> tangents  = {};
-
-  // subdivision data [experimental]
-  int  subdivisions = 0;
-  bool catmullclark = true;
-  bool smooth       = true;
-
-  // displacement data [experimental]
-  float            displacement     = 0;
-  sceneio_texture* displacement_tex = nullptr;
-
-  // element cdf for sampling
-  vector<float> elements_cdf = {};
-};
-
-// Object.
-struct sceneio_instance {
-  // instance data
-  string            name     = "";
-  frame3f           frame    = identity3x4f;
-  sceneio_shape*    shape    = nullptr;
-  sceneio_material* material = nullptr;
-};
-
-// Environment map.
-struct sceneio_environment {
-  string           name         = "";
-  frame3f          frame        = identity3x4f;
-  vec3f            emission     = {0, 0, 0};
-  sceneio_texture* emission_tex = nullptr;
-
-  // computed properties
-  vector<float> texels_cdf = {};
-};
-
-// Scene comprised an array of objects whose memory is owened by the scene.
-// All members are optional,Scene objects (camera, instances, environments)
-// have transforms defined internally. A scene can optionally contain a
-// node hierarchy where each node might point to a camera, instance or
-// environment. In that case, the element transforms are computed from
-// the hierarchy. Animation is also optional, with keyframe data that
-// updates node transformations only if defined.
-struct sceneio_scene {
-  // additional information
-  string name      = "";
-  string copyright = "";
-
-  // scene elements
-  vector<sceneio_camera*>      cameras      = {};
-  vector<sceneio_instance*>    instances    = {};
-  vector<sceneio_environment*> environments = {};
-  vector<sceneio_shape*>       shapes       = {};
-  vector<sceneio_texture*>     textures     = {};
-  vector<sceneio_material*>    materials    = {};
-
-  // cleanup
-  ~sceneio_scene();
-};
+// Load/save a binary file
+bool load_binary(const string& filename, vector<byte>& data, string& error);
+bool save_binary(
+    const string& filename, const vector<byte>& data, string& error);
 
 }  // namespace yocto
 
 // -----------------------------------------------------------------------------
-// SCENE CREATION
+// IMAGE IO
 // -----------------------------------------------------------------------------
 namespace yocto {
 
-// add element to a scene
-sceneio_camera*      add_camera(sceneio_scene* scene, const string& name = "");
-sceneio_environment* add_environment(
-    sceneio_scene* scene, const string& name = "");
-sceneio_instance* add_instance(sceneio_scene* scene, const string& name = "");
-sceneio_material* add_material(sceneio_scene* scene, const string& name = "");
-sceneio_shape*    add_shape(sceneio_scene* scene, const string& name = "");
-sceneio_texture*  add_texture(sceneio_scene* scene, const string& name = "");
-sceneio_instance* add_complete_instance(
-    sceneio_scene* scene, const string& name);
+// Check if an image is HDR or LDR based on filename.
+bool is_hdr_filename(const string& filename);
+bool is_ldr_filename(const string& filename);
 
-// add missing elements
-void add_cameras(sceneio_scene* scene);
-void add_radius(sceneio_scene* scene, float radius = 0.001f);
-void add_materials(sceneio_scene* scene);
-void add_sky(sceneio_scene* scene, float sun_angle = pif / 4);
+// Loads/saves a 4 channels float/byte image in linear/srgb color space.
+bool load_image(const string& filename, color_image& img, string& error);
+bool save_image(const string& filename, const color_image& img, string& error);
 
-// Trim all unused memory
-void trim_memory(sceneio_scene* scene);
-
-// compute scene bounds
-bbox3f compute_bounds(const sceneio_scene* scene);
-
-// get named camera or default if name is empty
-sceneio_camera* get_camera(const sceneio_scene* scene, const string& name = "");
+// Make presets. Supported mostly in IO.
+bool make_image_preset(color_image& image, const string& type, string& error);
 
 }  // namespace yocto
 
 // -----------------------------------------------------------------------------
-// SCENE IO FUNCTIONS
+// TEXTURE IO
 // -----------------------------------------------------------------------------
 namespace yocto {
 
-// Progress callback called when loading.
-using progress_callback =
-    function<void(const string& message, int current, int total)>;
+// Load/save a texture in the supported formats.
+bool load_texture(
+    const string& filename, scene_texture& texture, string& error);
+bool save_texture(
+    const string& filename, const scene_texture& texture, string& error);
 
-// Load/save a scene in the supported formats. Throws on error.
+// Make presets. Supported mostly in IO.
+bool make_texture_preset(
+    scene_texture& texture, const string& type, string& error);
+
+}  // namespace yocto
+
+// -----------------------------------------------------------------------------
+// SHAPE IO
+// -----------------------------------------------------------------------------
+namespace yocto {
+
+// Load/save a shape
+bool load_shape(const string& filename, scene_shape& shape, string& error,
+    bool flip_texcoords = true);
+bool save_shape(const string& filename, const scene_shape& shape, string& error,
+    bool flip_texcoords = true, bool ascii = false);
+
+// Load/save a subdiv
+bool load_fvshape(const string& filename, scene_fvshape& shape, string& error,
+    bool flip_texcoords = true);
+bool save_fvshape(const string& filename, const scene_fvshape& shape,
+    string& error, bool flip_texcoords = true, bool ascii = false);
+
+// Make presets. Supported mostly in IO.
+bool make_shape_preset(scene_shape& shape, const string& type, string& error);
+bool make_fvshape_preset(
+    scene_fvshape& shape, const string& type, string& error);
+
+}  // namespace yocto
+
+// -----------------------------------------------------------------------------
+// SUBDIV IO
+// -----------------------------------------------------------------------------
+namespace yocto {
+
+// Load/save a subdiv in the supported formats.
+bool load_subdiv(const string& filename, scene_subdiv& subdiv, string& error);
+bool save_subdiv(
+    const string& filename, const scene_subdiv& subdiv, string& error);
+
+}  // namespace yocto
+
+// -----------------------------------------------------------------------------
+// SCENE IO
+// -----------------------------------------------------------------------------
+namespace yocto {
+
+// Load/save a scene in the supported formats.
 // Calls the progress callback, if defined, as we process more data.
-bool load_scene(const string& filename, sceneio_scene* scene, string& error,
-    const progress_callback& progress_cb = {}, bool noparallel = false);
-bool save_scene(const string& filename, const sceneio_scene* scene,
-    string& error, const progress_callback& progress_cb = {},
+bool load_scene(const string& filename, scene_model& scene, string& error,
+    bool noparallel = false);
+bool save_scene(const string& filename, const scene_model& scene, string& error,
     bool noparallel = false);
 
-}  // namespace yocto
+// Make missing scene directories
+bool make_scene_directories(
+    const string& filename, const scene_model& scene, string& error);
 
-// -----------------------------------------------------------------------------
-// SCENE TESSELATION
-// -----------------------------------------------------------------------------
-namespace yocto {
+// Scene presets used for testing.
+bool make_scene_preset(scene_model& scene, const string& type, string& error);
 
-// Apply subdivision and displacement rules.
-void tesselate_shapes(
-    sceneio_scene* scene, const progress_callback& progress_cb = {});
-void tesselate_shape(sceneio_shape* shape);
+// Add environment
+bool add_environment(scene_model& scene, const string& filename, string& error);
 
 }  // namespace yocto
 
 // -----------------------------------------------------------------------------
-// EVALUATION OF SCENE PROPERTIES
+// PATH UTILITIES
 // -----------------------------------------------------------------------------
 namespace yocto {
 
-// Generates a ray from a camera.
-ray3f eval_camera(
-    const sceneio_camera* camera, const vec2f& image_uv, const vec2f& lens_uv);
+// Utility to normalize a path
+string normalize_path(const string& filename);
 
-// Evaluates a texture
-vec2i texture_size(const sceneio_texture* texture);
-vec4f lookup_texture(const sceneio_texture* texture, const vec2i& ij,
-    bool ldr_as_linear = false);
-vec4f eval_texture(const sceneio_texture* texture, const vec2f& uv,
-    bool ldr_as_linear = false, bool no_interpolation = false,
-    bool clamp_to_edge = false);
+// Get directory name (not including '/').
+string path_dirname(const string& filename);
 
-// Evaluate instance properties
-vec3f eval_position(
-    const sceneio_instance* instance, int element, const vec2f& uv);
-vec3f eval_element_normal(const sceneio_instance* instance, int element);
-vec3f eval_normal(
-    const sceneio_instance* instance, int element, const vec2f& uv);
-vec2f eval_texcoord(
-    const sceneio_instance* instance, int element, const vec2f& uv);
-pair<vec3f, vec3f> eval_element_tangents(
-    const sceneio_instance* instance, int element);
-vec3f eval_normalmap(
-    const sceneio_instance* instance, int element, const vec2f& uv);
-vec3f eval_shading_normal(const sceneio_instance* instance, int element,
-    const vec2f& uv, const vec3f& outgoing);
-vec4f eval_color(
-    const sceneio_instance* instance, int element, const vec2f& uv);
+// Get extension (including '.').
+string path_extension(const string& filename);
 
-// Environment
-vec3f eval_environment(
-    const sceneio_environment* environment, const vec3f& direction);
-vec3f eval_environment(const sceneio_scene* scene, const vec3f& direction);
+// Get filename without directory.
+string path_filename(const string& filename);
 
-// Material sample
-struct scene_material_sample {
-  vec3f emission     = {0, 0, 0};
-  vec3f color        = {0, 0, 0};
-  float specular     = 0;
-  float roughness    = 0;
-  float metallic     = 0;
-  float ior          = 1.5;
-  vec3f spectint     = {1, 1, 1};
-  float coat         = 0;
-  float transmission = 0;
-  float translucency = 0;
-  vec3f scattering   = {0, 0, 0};
-  float scanisotropy = 0;
-  float trdepth      = 0.01;
-  float opacity      = 1;
-  bool  thin         = true;
-  vec3f normalmap    = {0, 0, 1};
-};
+// Get filename without directory and extension.
+string path_basename(const string& filename);
 
-// Evaluates material and textures
-scene_material_sample eval_material(
-    const sceneio_material* material, const vec2f& texcoord);
+// Joins paths
+string path_join(const string& patha, const string& pathb);
+string path_join(const string& patha, const string& pathb, const string& pathc);
 
-}  // namespace yocto
+// Replaces extensions
+string replace_extension(const string& filename, const string& ext);
 
-// -----------------------------------------------------------------------------
-// EXAMPLE SCENES
-// -----------------------------------------------------------------------------
-namespace yocto {
+// Check if a file can be opened for reading.
+bool path_exists(const string& filename);
 
-// Make Cornell Box scene
-void make_cornellbox(sceneio_scene* scene);
+// Check if a file is a directory
+bool path_isdir(const string& filename);
 
-}  // namespace yocto
+// Check if a file is a file
+bool path_isfile(const string& filename);
 
-// -----------------------------------------------------------------------------
-// SCENE STATS AND VALIDATION
-// -----------------------------------------------------------------------------
-namespace yocto {
+// List the contents of a directory
+vector<string> list_directory(const string& filename);
 
-// Return scene statistics as list of strings.
-vector<string> scene_stats(const sceneio_scene* scene, bool verbose = false);
-// Return validation errors as list of strings.
-vector<string> scene_validation(
-    const sceneio_scene* scene, bool notextures = false);
+// Create a directory and all missing parent directories if needed
+bool make_directory(const string& dirname, string& error);
 
-}  // namespace yocto
-
-// -----------------------------------------------------------------------------
-// BACKWARDS COMPATIBILITY
-// -----------------------------------------------------------------------------
-namespace yocto {
-
-using scene_model [[deprecated]]       = sceneio_scene;
-using scene_camera [[deprecated]]      = sceneio_camera;
-using scene_texture [[deprecated]]     = sceneio_texture;
-using scene_material [[deprecated]]    = sceneio_material;
-using scene_shape [[deprecated]]       = sceneio_shape;
-using scene_instance [[deprecated]]    = sceneio_instance;
-using scene_environment [[deprecated]] = sceneio_environment;
+// Get the current directory
+string path_current();
 
 }  // namespace yocto
 

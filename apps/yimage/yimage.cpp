@@ -26,316 +26,59 @@
 // POSSIBILITY OF SUCH DAMAGE.
 //
 
-#include <yocto/yocto_commonio.h>
+#include <yocto/yocto_cli.h>
+#include <yocto/yocto_color.h>
 #include <yocto/yocto_image.h>
 #include <yocto/yocto_math.h>
+#include <yocto/yocto_scene.h>
+#include <yocto/yocto_sceneio.h>
 #if YOCTO_OPENGL == 1
-#include <yocto_gui/yocto_imageviewer.h>
+#include <yocto_gui/yocto_glview.h>
 #endif
 using namespace yocto;
-
-namespace yocto {
-
-image<vec4f> filter_bilateral(const image<vec4f>& img, float spatial_sigma,
-    float range_sigma, const vector<image<vec4f>>& features,
-    const vector<float>& features_sigma) {
-  auto filtered     = image{img.imsize(), zero4f};
-  auto filter_width = (int)ceil(2.57f * spatial_sigma);
-  auto sw           = 1 / (2.0f * spatial_sigma * spatial_sigma);
-  auto rw           = 1 / (2.0f * range_sigma * range_sigma);
-  auto fw           = vector<float>();
-  for (auto feature_sigma : features_sigma)
-    fw.push_back(1 / (2.0f * feature_sigma * feature_sigma));
-  for (auto j = 0; j < img.height(); j++) {
-    for (auto i = 0; i < img.width(); i++) {
-      auto av = zero4f;
-      auto aw = 0.0f;
-      for (auto fj = -filter_width; fj <= filter_width; fj++) {
-        for (auto fi = -filter_width; fi <= filter_width; fi++) {
-          auto ii = i + fi, jj = j + fj;
-          if (ii < 0 || jj < 0) continue;
-          if (ii >= img.width() || jj >= img.height()) continue;
-          auto uv  = vec2f{float(i - ii), float(j - jj)};
-          auto rgb = img[{i, j}] - img[{i, j}];
-          auto w   = (float)exp(-dot(uv, uv) * sw) *
-                   (float)exp(-dot(rgb, rgb) * rw);
-          for (auto fi = 0; fi < features.size(); fi++) {
-            auto feat = features[fi][{i, j}] - features[fi][{i, j}];
-            w *= exp(-dot(feat, feat) * fw[fi]);
-          }
-          av += w * img[{ii, jj}];
-          aw += w;
-        }
-      }
-      filtered[{i, j}] = av / aw;
-    }
-  }
-  return filtered;
-}
-
-image<vec4f> filter_bilateral(
-    const image<vec4f>& img, float spatial_sigma, float range_sigma) {
-  auto filtered = image{img.imsize(), zero4f};
-  auto fwidth   = (int)ceil(2.57f * spatial_sigma);
-  auto sw       = 1 / (2.0f * spatial_sigma * spatial_sigma);
-  auto rw       = 1 / (2.0f * range_sigma * range_sigma);
-  for (auto j = 0; j < img.height(); j++) {
-    for (auto i = 0; i < img.width(); i++) {
-      auto av = zero4f;
-      auto aw = 0.0f;
-      for (auto fj = -fwidth; fj <= fwidth; fj++) {
-        for (auto fi = -fwidth; fi <= fwidth; fi++) {
-          auto ii = i + fi, jj = j + fj;
-          if (ii < 0 || jj < 0) continue;
-          if (ii >= img.width() || jj >= img.height()) continue;
-          auto uv  = vec2f{float(i - ii), float(j - jj)};
-          auto rgb = img[{i, j}] - img[{ii, jj}];
-          auto w   = exp(-dot(uv, uv) * sw) * exp(-dot(rgb, rgb) * rw);
-          av += w * img[{ii, jj}];
-          aw += w;
-        }
-      }
-      filtered[{i, j}] = av / aw;
-    }
-  }
-  return filtered;
-}
-
-bool make_image_preset(const string& type_, image<vec4f>& img, string& error) {
-  auto set_region = [](image<vec4f>& img, const image<vec4f>& region,
-                        const vec2i& offset) {
-    for (auto j = 0; j < region.height(); j++) {
-      for (auto i = 0; i < region.width(); i++) {
-        if (!img.contains({i, j})) continue;
-        img[vec2i{i, j} + offset] = region[{i, j}];
-      }
-    }
-  };
-
-  auto type = path_basename(type_);
-
-  auto size = vec2i{1024, 1024};
-  if (type.find("sky") != type.npos) size = {2048, 1024};
-  if (type.find("images2") != type.npos) size = {2048, 1024};
-  if (type == "grid") {
-    img = make_grid(size);
-  } else if (type == "checker") {
-    img = make_checker(size);
-  } else if (type == "bumps") {
-    img = make_bumps(size);
-  } else if (type == "uvramp") {
-    img = make_uvramp(size);
-  } else if (type == "gammaramp") {
-    img = make_gammaramp(size);
-  } else if (type == "blackbodyramp") {
-    img = make_blackbodyramp(size);
-  } else if (type == "uvgrid") {
-    img = make_uvgrid(size);
-  } else if (type == "colormap") {
-    img = make_colormapramp(size);
-    img = srgb_to_rgb(img);
-  } else if (type == "sky") {
-    img = make_sunsky(
-        size, pif / 4, 3.0, false, 1.0, 1.0, vec3f{0.7, 0.7, 0.7});
-  } else if (type == "sunsky") {
-    img = make_sunsky(size, pif / 4, 3.0, true, 1.0, 1.0, vec3f{0.7, 0.7, 0.7});
-  } else if (type == "noise") {
-    img = make_noisemap(size, 1);
-  } else if (type == "fbm") {
-    img = make_fbmmap(size, 1);
-  } else if (type == "ridge") {
-    img = make_ridgemap(size, 1);
-  } else if (type == "turbulence") {
-    img = make_turbulencemap(size, 1);
-  } else if (type == "bump-normal") {
-    img = make_bumps(size);
-    img = srgb_to_rgb(bump_to_normal(img, 0.05f));
-  } else if (type == "images1") {
-    auto sub_types = vector<string>{"grid", "uvgrid", "checker", "gammaramp",
-        "bumps", "bump-normal", "noise", "fbm", "blackbodyramp"};
-    auto sub_imgs  = vector<image<vec4f>>(sub_types.size());
-    for (auto i = 0; i < sub_imgs.size(); i++) {
-      if (!make_image_preset(sub_types[i], sub_imgs[i], error)) return false;
-    }
-    auto montage_size = zero2i;
-    for (auto& sub_img : sub_imgs) {
-      montage_size.x += sub_img.width();
-      montage_size.y = max(montage_size.y, sub_img.height());
-    }
-    img      = image<vec4f>(montage_size);
-    auto pos = 0;
-    for (auto& sub_img : sub_imgs) {
-      set_region(img, sub_img, {pos, 0});
-      pos += sub_img.width();
-    }
-  } else if (type == "images2") {
-    auto sub_types = vector<string>{"sky", "sunsky"};
-    auto sub_imgs  = vector<image<vec4f>>(sub_types.size());
-    for (auto i = 0; i < sub_imgs.size(); i++) {
-      if (!make_image_preset(sub_types[i], sub_imgs[i], error)) return false;
-    }
-    auto montage_size = zero2i;
-    for (auto& sub_img : sub_imgs) {
-      montage_size.x += sub_img.width();
-      montage_size.y = max(montage_size.y, sub_img.height());
-    }
-    img      = image<vec4f>(montage_size);
-    auto pos = 0;
-    for (auto& sub_img : sub_imgs) {
-      set_region(img, sub_img, {pos, 0});
-      pos += sub_img.width();
-    }
-  } else if (type == "test-floor") {
-    img = make_grid(size);
-    img = add_border(img, 0.0025);
-  } else if (type == "test-grid") {
-    img = make_grid(size);
-  } else if (type == "test-checker") {
-    img = make_checker(size);
-  } else if (type == "test-bumps") {
-    img = make_bumps(size);
-  } else if (type == "test-uvramp") {
-    img = make_uvramp(size);
-  } else if (type == "test-gammaramp") {
-    img = make_gammaramp(size);
-  } else if (type == "test-blackbodyramp") {
-    img = make_blackbodyramp(size);
-  } else if (type == "test-colormapramp") {
-    img = make_colormapramp(size);
-    img = srgb_to_rgb(img);
-  } else if (type == "test-uvgrid") {
-    img = make_uvgrid(size);
-  } else if (type == "test-sky") {
-    img = make_sunsky(
-        size, pif / 4, 3.0, false, 1.0, 1.0, vec3f{0.7, 0.7, 0.7});
-  } else if (type == "test-sunsky") {
-    img = make_sunsky(size, pif / 4, 3.0, true, 1.0, 1.0, vec3f{0.7, 0.7, 0.7});
-  } else if (type == "test-noise") {
-    img = make_noisemap(size);
-  } else if (type == "test-fbm") {
-    img = make_noisemap(size);
-  } else if (type == "test-bumps-normal") {
-    img = make_bumps(size);
-    img = bump_to_normal(img, 0.05);
-  } else if (type == "test-bumps-displacement") {
-    img = make_bumps(size);
-    img = srgb_to_rgb(img);
-  } else if (type == "test-fbm-displacement") {
-    img = make_fbmmap(size);
-    img = srgb_to_rgb(img);
-  } else if (type == "test-checker-opacity") {
-    img = make_checker(size, 1, {1, 1, 1, 1}, {0, 0, 0, 0});
-  } else if (type == "test-grid-opacity") {
-    img = make_grid(size, 1, {1, 1, 1, 1}, {0, 0, 0, 0});
-  } else {
-    error = "unknown preset";
-    img   = {};
-    return false;
-  }
-  return true;
-}
-
-bool make_image_preset(const string& type, image<vec4b>& img, string& error) {
-  auto imgf = image<vec4f>{};
-  if (make_image_preset(type, imgf, error)) return false;
-  img = rgb_to_srgbb(imgf);
-  return true;
-}
-
-bool is_preset_filename(const string& filename) {
-  return path_extension(filename) == ".ypreset";
-}
-
-bool is_preset_hdr(const string& type_) {
-  auto type = path_basename(type_);
-  return type.find("sky") != string::npos && type.find("sun") != string::npos;
-}
-
-}  // namespace yocto
 
 // convert params
 struct convert_params {
   string image    = "image.png";
   string output   = "out.png";
-  bool   logo     = false;
   float  exposure = 0;
   bool   filmic   = false;
   int    width    = 0;
   int    height   = 0;
 };
 
-// Json IO
-void serialize_value(json_mode mode, json_value& json, convert_params& value,
-    const string& description) {
-  serialize_object(mode, json, value, description);
-  serialize_property(mode, json, value.image, "image", "Input image.", true);
-  serialize_property(mode, json, value.output, "output", "Output image.");
-  serialize_property(
-      mode, json, value.exposure, "exposure", "Tonemap exposure.");
-  serialize_property(mode, json, value.filmic, "filmic", "Tonemap filmic.");
-  serialize_property(mode, json, value.width, "width", "Resize width.");
-  serialize_property(mode, json, value.height, "height", "Resize height.");
-  serialize_property(mode, json, value.logo, "logo", "Add logo.");
-  serialize_clipositionals(mode, json, {"image"});
-  serialize_clialternates(mode, json,
-      {{"output", "o"}, {"exposure", "e"}, {"filmic", "f"}, {"width", "w"},
-          {"height", "h"}, {"logo", "L"}});
+// Cli
+void add_command(cli_command& cli, const string& name, convert_params& params,
+    const string& usage) {
+  auto& cmd = add_command(cli, name, usage);
+  add_argument(cmd, "image", params.image, "Input image.");
+  add_option(cmd, "output", params.output, "Output image.");
+  add_option(
+      cmd, "exposure", params.exposure, "Tonemap exposure.", {-100, +100});
+  add_option(cmd, "filmic", params.filmic, "Tonemap filmic.");
+  add_option(cmd, "width", params.width, "Resize width.", {1, int_max});
+  add_option(cmd, "height", params.height, "Resize height.", {1, int_max});
 }
 
 // convert images
 int run_convert(const convert_params& params) {
   // load
-  auto hdr     = image<vec4f>{};
-  auto ldr     = image<vec4b>{};
+  auto image   = color_image{};
   auto ioerror = string{};
-  if (is_preset_filename(params.image)) {
-    if (is_preset_hdr(params.image)) {
-      if (!make_image_preset(path_basename(params.image), hdr, ioerror))
-        return print_fatal(ioerror);
-    } else {
-      if (!make_image_preset(path_basename(params.image), ldr, ioerror))
-        return print_fatal(ioerror);
-    }
-  } else if (is_hdr_filename(params.image)) {
-    if (!load_image(params.image, hdr, ioerror)) return print_fatal(ioerror);
-  } else {
-    if (!load_image(params.image, ldr, ioerror)) return print_fatal(ioerror);
-  }
+  if (!load_image(params.image, image, ioerror)) return print_fatal(ioerror);
 
   // resize if needed
   if (params.width != 0 || params.height != 0) {
-    if (!hdr.empty()) {
-      hdr = resize_image(hdr, params.width, params.height);
-    } else {
-      ldr = resize_image(ldr, params.width, params.height);
-    }
+    image = resize_image(image, params.width, params.height);
   }
 
   // tonemap if needed
-  if (!hdr.empty() && !is_hdr_filename(params.output)) {
-    ldr = tonemap_imageb(hdr, params.exposure, params.filmic);
-    hdr = {};
-  }
-  if (!ldr.empty() && is_hdr_filename(params.output)) {
-    hdr = srgb_to_rgb(ldr);
-    ldr = {};
-  }
-
-  // apply logo
-  if (params.logo) {
-    if (!hdr.empty()) {
-      hdr = add_logo(hdr);
-    } else {
-      ldr = add_logo(ldr);
-    }
+  if (image.linear && is_ldr_filename(params.output)) {
+    image = tonemap_image(image, params.exposure, params.filmic);
   }
 
   // save
-  if (!hdr.empty()) {
-    if (!save_image(params.output, hdr, ioerror)) return print_fatal(ioerror);
-  } else {
-    if (!save_image(params.output, ldr, ioerror)) return print_fatal(ioerror);
-  }
+  if (!save_image(params.output, image, ioerror)) return print_fatal(ioerror);
 
   // done
   return 0;
@@ -345,17 +88,14 @@ int run_convert(const convert_params& params) {
 struct view_params {
   vector<string> images = {"image.png"};
   string         output = "out.png";
-  bool           logo   = false;
 };
 
-// Json IO
-void serialize_value(json_mode mode, json_value& json, view_params& value,
-    const string& description) {
-  serialize_object(mode, json, value, description);
-  serialize_property(mode, json, value.images, "images", "Input images.", true);
-  serialize_property(mode, json, value.output, "output", "Output image.");
-  serialize_clipositionals(mode, json, {"images"});
-  serialize_clialternates(mode, json, {{"output", "o"}});
+// Cli
+void add_command(cli_command& cli, const string& name, view_params& params,
+    const string& usage) {
+  auto& cmd = add_command(cli, name, usage);
+  add_argument(cmd, "images", params.images, "Input images.");
+  add_option(cmd, "output", params.output, "Output image.");
 }
 
 #ifndef YOCTO_OPENGL
@@ -369,40 +109,16 @@ int run_view(const view_params& params) {
 
 // view images
 int run_view(const view_params& params) {
-  // open viewer
-  auto viewer_guard = make_imageview("yimage");
-  auto viewer       = viewer_guard.get();
-
-  // set image
-  for (auto& filename : params.images) {
-    // load
-    auto hdr     = image<vec4f>{};
-    auto ldr     = image<vec4b>{};
+  // load
+  auto images = vector<color_image>(params.images.size());
+  for (auto idx = 0; idx < (int)params.images.size(); idx++) {
     auto ioerror = string{};
-    if (is_preset_filename(filename)) {
-      if (is_preset_hdr(filename)) {
-        if (!make_image_preset(path_basename(filename), hdr, ioerror))
-          return print_fatal(ioerror);
-      } else {
-        if (!make_image_preset(path_basename(filename), ldr, ioerror))
-          return print_fatal(ioerror);
-      }
-    } else if (is_hdr_filename(filename)) {
-      if (!load_image(filename, hdr, ioerror)) return print_fatal(ioerror);
-    } else {
-      if (!load_image(filename, ldr, ioerror)) return print_fatal(ioerror);
-    }
-
-    // push image to the viewer
-    if (!hdr.empty()) {
-      set_image(viewer, filename, hdr);
-    } else {
-      set_image(viewer, filename, ldr);
-    }
+    if (!load_image(params.images[idx], images[idx], ioerror))
+      return print_fatal(ioerror);
   }
 
-  // run view
-  run_view(viewer);
+  // run viewer
+  view_images("yimage", params.images, images);
 
   // done
   return 0;
@@ -414,48 +130,14 @@ int run_view(const view_params& params) {
 struct grade_params : colorgrade_params {
   string image  = "image.png";
   string output = "out.png";
-  bool   logo   = false;
 };
 
-// Json IO
-void serialize_value(json_mode mode, json_value& json, colorgrade_params& value,
-    const string& description) {
-  serialize_object(mode, json, value, description);
-  serialize_property(mode, json, value.exposure, "exposure", "Hdr exposure");
-  serialize_property(
-      mode, json, (array<float, 3>&)value.tint, "tint", "Hdr tint");
-  serialize_property(
-      mode, json, value.lincontrast, "lincontrast", "Hdr lin contrast");
-  serialize_property(
-      mode, json, value.logcontrast, "logcontrast", "Hdr log contrast");
-  serialize_property(
-      mode, json, value.linsaturation, "linsaturation", "Hdr saturation");
-  serialize_property(mode, json, value.filmic, "filmic", "Hdr filmic curve");
-  serialize_property(mode, json, value.srgb, "srgb", "sRGB coversion");
-  serialize_property(mode, json, value.contrast, "contrast", "Ldr contrast");
-  serialize_property(
-      mode, json, value.saturation, "saturation", "Ldr saturation");
-  serialize_property(mode, json, value.shadows, "shadows", "Ldr shadows");
-  serialize_property(mode, json, value.midtones, "midtones", "Ldr midtones");
-  serialize_property(
-      mode, json, value.highlights, "highlights", "Ldr highlights");
-  serialize_property(mode, json, (array<float, 3>&)value.shadows_color,
-      "shadows_color", "Ldr shadows color");
-  serialize_property(mode, json, (array<float, 3>&)value.midtones_color,
-      "midtones_color", "Ldr sidtones color");
-  serialize_property(mode, json, (array<float, 3>&)value.highlights_color,
-      "highlights_color", "Ldr sighlights color");
-}
-
-// Json IO
-void serialize_value(json_mode mode, json_value& json, grade_params& value,
-    const string& description) {
-  serialize_object(mode, json, value, description);
-  serialize_property(mode, json, value.image, "image", "Input image.", true);
-  serialize_property(mode, json, value.output, "output", "Output image.");
-  serialize_value(mode, json, (colorgrade_params&)value, description);
-  serialize_clipositionals(mode, json, {"image"});
-  serialize_clialternates(mode, json, {{"output", "o"}});
+// Cli
+void add_command(cli_command& cli, const string& name, grade_params& params,
+    const string& usage) {
+  auto& cmd = add_command(cli, name, usage);
+  add_argument(cmd, "image", params.image, "Input image.");
+  add_option(cmd, "output", params.output, "Output image.");
 }
 
 #ifndef YOCTO_OPENGL
@@ -469,41 +151,13 @@ int run_grade(const grade_params& params) {
 
 // grade images
 int run_grade(const grade_params& params) {
-  // open viewer
-  auto viewer_guard = make_imageview("yimage");
-  auto viewer       = viewer_guard.get();
-
   // load image
-  auto img     = image<vec4f>{};
+  auto image   = color_image{};
   auto ioerror = string{};
-  if (is_preset_filename(params.image)) {
-    if (!make_image_preset(path_basename(params.image), img, ioerror))
-      return print_fatal(ioerror);
-  } else {
-    if (!load_image(params.image, img, ioerror)) return print_fatal(ioerror);
-  }
+  if (!load_image(params.image, image, ioerror)) return print_fatal(ioerror);
 
-  // grade image
-  auto graded = image<vec4b>{img.imsize()};
-  colorgrade_image_mt(graded, img, true, params);
-
-  // set view
-  set_image(viewer, params.image, graded);
-  set_params(
-      viewer, params.image, to_json(params), to_schema(params, "Color grade"));
-
-  // set callback
-  set_callback(viewer, [&params, &graded, &img, viewer](const string& name,
-                           const json_value& uiparams, const gui_input&) {
-    if (uiparams.is_null()) return;
-    serialize_value(json_mode::from_json, (json_value&)uiparams,
-        (colorgrade_params&)params, "");
-    colorgrade_image_mt(graded, img, true, params);
-    set_image(viewer, name, graded);
-  });
-
-  // run view
-  run_view(viewer);
+  // run viewer
+  colorgrade_image("yimage", params.image, image);
 
   // done
   return 0;
@@ -516,65 +170,52 @@ struct diff_params {
   string image1    = "image1.png";
   string image2    = "image2.png";
   string output    = "";
-  bool   logo      = false;
   bool   signal    = false;
   float  threshold = 0;
 };
 
-// Json IO
-void serialize_value(json_mode mode, json_value& json, diff_params& value,
-    const string& description) {
-  serialize_object(mode, json, value, description);
-  serialize_property(
-      mode, json, value.image1, "image1", "Input image 1.", true);
-  serialize_property(
-      mode, json, value.image2, "image2", "Input image 2.", true);
-  serialize_property(mode, json, value.output, "output", "Output image.");
-  serialize_property(mode, json, value.signal, "signal", "Error on diff.");
-  serialize_property(
-      mode, json, value.threshold, "threshold", "Diff threshold.");
-  serialize_property(mode, json, value.logo, "logo", "Add logo.");
-  serialize_clipositionals(mode, json, {"image1", "image2"});
-  serialize_clialternates(mode, json, {{"output", "o"}});
+// Cli
+void add_command(cli_command& cli, const string& name, diff_params& params,
+    const string& usage) {
+  auto& cmd = add_command(cli, name, usage);
+  add_argument(cmd, "image1", params.image1, "Input image 1.");
+  add_argument(cmd, "image2", params.image2, "Input image 2.");
+  add_option(cmd, "output", params.output, "Output image.");
+  add_option(cmd, "signal", params.signal, "Error on diff.");
+  add_option(cmd, "threshold", params.threshold, "Diff threshold.");
 }
 
 // resize images
 int run_diff(const diff_params& params) {
   // load
   auto ioerror = string{};
-  auto img1 = image<vec4f>{}, img2 = image<vec4f>{};
-  if (path_extension(params.image1) == ".ypreset") {
-    if (!make_image_preset(path_basename(params.image1), img1, ioerror))
-      return false;
-  } else {
-    if (!load_image(params.image1, img1, ioerror)) return false;
-  }
-  if (path_extension(params.image2) == ".ypreset") {
-    if (!make_image_preset(path_basename(params.image2), img2, ioerror))
-      return false;
-  } else {
-    if (!load_image(params.image2, img2, ioerror)) return false;
-  }
+  auto image1 = color_image{}, image2 = color_image{};
+  if (!load_image(params.image1, image1, ioerror)) return false;
+  if (!load_image(params.image2, image2, ioerror)) return false;
 
   // check sizes
-  if (img1.imsize() != img2.imsize()) {
+  if (image1.width != image2.width || image1.height != image2.height) {
     ioerror = "image sizes are different";
     return print_fatal(ioerror);
   }
 
+  // check types
+  if (image1.linear != image2.linear) {
+    ioerror = "image types are different";
+    return print_fatal(ioerror);
+  }
+
   // compute diff
-  auto diff = image_difference(img1, img2, true);
+  auto diff = image_difference(image1, image2, true);
 
   // save
   if (params.output != "") {
-    if (!save_image(
-            params.output, params.logo ? add_logo(diff) : diff, ioerror))
-      return print_fatal(ioerror);
+    if (!save_image(params.output, diff, ioerror)) return print_fatal(ioerror);
   }
 
   // check diff
   if (params.signal) {
-    for (auto& c : diff) {
+    for (auto& c : diff.pixels) {
       if (max(xyz(c)) > params.threshold) {
         ioerror = "image content differs";
         return print_fatal(ioerror);
@@ -591,76 +232,67 @@ struct setalpha_params {
   string image      = "image.png";
   string alpha      = "alpha.png";
   string output     = "out.png";
-  bool   logo       = false;
   bool   from_color = false;
+  bool   from_black = false;
   bool   to_color   = false;
 };
 
-// Json IO
-void serialize_value(json_mode mode, json_value& json, setalpha_params& value,
-    const string& description) {
-  serialize_object(mode, json, value, description);
-  serialize_property(mode, json, value.image, "image", "Input image.", true);
-  serialize_property(mode, json, value.alpha, "alpha", "Alpha image.", true);
-  serialize_property(mode, json, value.output, "output", "Output image.");
-  serialize_property(
-      mode, json, value.from_color, "from-color", "Alpha from color.");
-  serialize_property(
-      mode, json, value.to_color, "to-color", "Color from alpha.");
-  serialize_property(mode, json, value.logo, "logo", "Add logo.");
-  serialize_clipositionals(mode, json, {"image", "alpha"});
-  serialize_clialternates(mode, json, {{"output", "o"}});
+// Cli
+void add_command(cli_command& cli, const string& name, setalpha_params& params,
+    const string& usage) {
+  auto& cmd = add_command(cli, name, usage);
+  add_argument(cmd, "image", params.image, "Input image.");
+  add_argument(cmd, "alpha", params.alpha, "Alpha image.");
+  add_option(cmd, "output", params.output, "Output image.");
+  add_option(cmd, "from-color", params.from_color, "Alpha from color.");
+  add_option(cmd, "from-black", params.from_black, "Alpha from black.");
+  add_option(cmd, "to-color", params.to_color, "Color from alpha.");
 }
 
 // setalpha images
 int run_setalpha(const setalpha_params& params) {
   // load
   auto ioerror = string{};
-  auto img = image<vec4f>{}, alpha = image<vec4f>{};
-  if (path_extension(params.image) == ".ypreset") {
-    if (!make_image_preset(path_basename(params.image), img, ioerror))
-      return print_fatal(ioerror);
-  } else {
-    if (!load_image(params.image, img, ioerror)) return print_fatal(ioerror);
-  }
-  if (path_extension(params.alpha) == ".ypreset") {
-    if (!make_image_preset(path_basename(params.alpha), alpha, ioerror))
-      return print_fatal(ioerror);
-  } else {
-    if (!load_image(params.alpha, alpha, ioerror)) return print_fatal(ioerror);
+  auto image = color_image{}, alpha = color_image{};
+  if (!load_image(params.image, image, ioerror)) return print_fatal(ioerror);
+  if (!load_image(params.alpha, alpha, ioerror)) return print_fatal(ioerror);
+
+  // check sizes
+  if (image.width != alpha.width || image.height != alpha.height) {
+    ioerror = "image sizes are different";
+    return print_fatal(ioerror);
   }
 
-  // set alpha
-  if (params.from_color) {
-    if (img.imsize() != alpha.imsize()) print_fatal("bad image size");
-    for (auto j = 0; j < img.height(); j++)
-      for (auto i = 0; i < img.width(); i++)
-        img[{i, j}].w = mean(xyz(alpha[{i, j}]));
-  } else {
-    if (img.imsize() != alpha.imsize()) print_fatal("bad image size");
-    for (auto j = 0; j < img.height(); j++)
-      for (auto i = 0; i < img.width(); i++) img[{i, j}].w = alpha[{i, j}].w;
+  // check types
+  if (image.linear != alpha.linear) {
+    ioerror = "image types are different";
+    return print_fatal(ioerror);
   }
 
-  // set color from alpha
-  if (params.to_color) {
-    for (auto& c : img) c = vec4f{c.w, c.w, c.w, c.w};
+  // check types
+  if (image.linear != alpha.linear || !image.linear != !alpha.linear) {
+    ioerror = "image types are different";
+    return print_fatal(ioerror);
   }
 
   // edit alpha
-  auto out = image<vec4f>{img.imsize()};
-  for (auto idx = (size_t)0; idx < out.count(); idx++) {
-    auto a = params.from_color ? mean(xyz(img[idx])) : img[idx].w;
+  auto out = make_image(image.width, image.height, image.linear);
+  for (auto idx = (size_t)0; idx < image.pixels.size(); idx++) {
+    auto calpha = alpha.pixels[idx];
+    auto alpha_ = params.from_color   ? mean(xyz(calpha))
+                  : params.from_black ? (mean(xyz(calpha)) > 0.01 ? 1.0f : 0.0f)
+                                      : calpha.w;
     if (params.to_color) {
-      out[idx] = {a, a, a, a};
+      out.pixels[idx] = {alpha_, alpha_, alpha_, alpha_};
     } else {
-      out[idx].w = a;
+      auto color      = image.pixels[idx];
+      color.w         = alpha_;
+      out.pixels[idx] = color;
     }
   }
 
   // save
-  if (!save_image(params.output, params.logo ? add_logo(out) : out, ioerror))
-    return print_fatal(ioerror);
+  if (!save_image(params.output, out, ioerror)) return print_fatal(ioerror);
 
   // done
   return 0;
@@ -675,23 +307,29 @@ struct app_params {
   setalpha_params setalpha = {};
 };
 
-// Json IO
-void serialize_value(json_mode mode, json_value& json, app_params& value,
-    const string& description) {
-  serialize_object(mode, json, value, description);
-  serialize_command(mode, json, value.command, "command", "Command.");
-  serialize_property(mode, json, value.convert, "convert", "Convert images.");
-  serialize_property(mode, json, value.view, "view", "View images.");
-  serialize_property(mode, json, value.grade, "grade", "Grade images.");
-  serialize_property(mode, json, value.diff, "diff", "Diff two images.");
-  serialize_property(
-      mode, json, value.setalpha, "setalpha", "Set alpha in images.");
+// Cli
+void add_commands(cli_command& cli, const string& name, app_params& params,
+    const string& usage) {
+  cli = make_cli(name, usage);
+  add_command_name(cli, "command", params.command, "Command.");
+  add_command(cli, "convert", params.convert, "Convert images.");
+  add_command(cli, "view", params.view, "View images.");
+  add_command(cli, "grade", params.grade, "Grade images.");
+  add_command(cli, "diff", params.diff, "Diff two images.");
+  add_command(cli, "setalpha", params.setalpha, "Set alpha in images.");
+}
+
+// Parse cli
+void parse_cli(app_params& params, int argc, const char** argv) {
+  auto cli = cli_command{};
+  add_commands(cli, "yimage", params, "Process and view images.");
+  parse_cli(cli, argc, argv);
 }
 
 int main(int argc, const char* argv[]) {
   // command line parameters
   auto params = app_params{};
-  parse_cli(params, "Process and view images", argc, argv);
+  parse_cli(params, argc, argv);
 
   // dispatch commands
   if (params.command == "convert") {

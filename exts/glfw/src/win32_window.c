@@ -24,6 +24,8 @@
 //    distribution.
 //
 //========================================================================
+// Please use C89 style variable declarations in this file because VS 2010
+//========================================================================
 
 #include "internal.h"
 
@@ -33,8 +35,6 @@
 #include <string.h>
 #include <windowsx.h>
 #include <shellapi.h>
-
-#define _GLFW_KEY_INVALID -2
 
 // Returns the window style for the specified window
 //
@@ -377,12 +377,17 @@ static void updateWindowStyles(const _GLFWwindow* window)
 //
 static void updateFramebufferTransparency(const _GLFWwindow* window)
 {
-    BOOL enabled;
+    BOOL composition, opaque;
+    DWORD color;
 
     if (!IsWindowsVistaOrGreater())
         return;
 
-    if (SUCCEEDED(DwmIsCompositionEnabled(&enabled)) && enabled)
+    if (FAILED(DwmIsCompositionEnabled(&composition)) || !composition)
+       return;
+
+    if (IsWindows8OrGreater() ||
+        (SUCCEEDED(DwmGetColorizationColor(&color, &opaque)) && !opaque))
     {
         HRGN region = CreateRectRgn(0, 0, -1, -1);
         DWM_BLURBEHIND bb = {0};
@@ -390,37 +395,18 @@ static void updateFramebufferTransparency(const _GLFWwindow* window)
         bb.hRgnBlur = region;
         bb.fEnable = TRUE;
 
-        if (SUCCEEDED(DwmEnableBlurBehindWindow(window->win32.handle, &bb)))
-        {
-            // Decorated windows don't repaint the transparent background
-            // leaving a trail behind animations
-            // HACK: Making the window layered with a transparency color key
-            //       seems to fix this.  Normally, when specifying
-            //       a transparency color key to be used when composing the
-            //       layered window, all pixels painted by the window in this
-            //       color will be transparent.  That doesn't seem to be the
-            //       case anymore, at least when used with blur behind window
-            //       plus negative region.
-            LONG exStyle = GetWindowLongW(window->win32.handle, GWL_EXSTYLE);
-            exStyle |= WS_EX_LAYERED;
-            SetWindowLongW(window->win32.handle, GWL_EXSTYLE, exStyle);
-
-            // Using a color key not equal to black to fix the trailing
-            // issue.  When set to black, something is making the hit test
-            // not resize with the window frame.
-            SetLayeredWindowAttributes(window->win32.handle,
-                                       RGB(0, 193, 48), 255, LWA_COLORKEY);
-        }
-
+        DwmEnableBlurBehindWindow(window->win32.handle, &bb);
         DeleteObject(region);
     }
     else
     {
-        LONG exStyle = GetWindowLongW(window->win32.handle, GWL_EXSTYLE);
-        exStyle &= ~WS_EX_LAYERED;
-        SetWindowLongW(window->win32.handle, GWL_EXSTYLE, exStyle);
-        RedrawWindow(window->win32.handle, NULL, NULL,
-                     RDW_ERASE | RDW_INVALIDATE | RDW_FRAME);
+        // HACK: Disable framebuffer transparency on Windows 7 when the
+        //       colorization color is opaque, because otherwise the window
+        //       contents is blended additively with the previous frame instead
+        //       of replacing it
+        DWM_BLURBEHIND bb = {0};
+        bb.dwFlags = DWM_BB_ENABLE;
+        DwmEnableBlurBehindWindow(window->win32.handle, &bb);
     }
 }
 
@@ -444,77 +430,6 @@ static int getKeyMods(void)
         mods |= GLFW_MOD_NUM_LOCK;
 
     return mods;
-}
-
-// Retrieves and translates modifier keys
-//
-static int getAsyncKeyMods(void)
-{
-    int mods = 0;
-
-    if (GetAsyncKeyState(VK_SHIFT) & 0x8000)
-        mods |= GLFW_MOD_SHIFT;
-    if (GetAsyncKeyState(VK_CONTROL) & 0x8000)
-        mods |= GLFW_MOD_CONTROL;
-    if (GetAsyncKeyState(VK_MENU) & 0x8000)
-        mods |= GLFW_MOD_ALT;
-    if ((GetAsyncKeyState(VK_LWIN) | GetAsyncKeyState(VK_RWIN)) & 0x8000)
-        mods |= GLFW_MOD_SUPER;
-    if (GetAsyncKeyState(VK_CAPITAL) & 1)
-        mods |= GLFW_MOD_CAPS_LOCK;
-    if (GetAsyncKeyState(VK_NUMLOCK) & 1)
-        mods |= GLFW_MOD_NUM_LOCK;
-
-    return mods;
-}
-
-// Translates a Windows key to the corresponding GLFW key
-//
-static int translateKey(WPARAM wParam, LPARAM lParam)
-{
-    // The Ctrl keys require special handling
-    if (wParam == VK_CONTROL)
-    {
-        MSG next;
-        DWORD time;
-
-        // Right side keys have the extended key bit set
-        if (lParam & 0x01000000)
-            return GLFW_KEY_RIGHT_CONTROL;
-
-        // HACK: Alt Gr sends Left Ctrl and then Right Alt in close sequence
-        //       We only want the Right Alt message, so if the next message is
-        //       Right Alt we ignore this (synthetic) Left Ctrl message
-        time = GetMessageTime();
-
-        if (PeekMessageW(&next, NULL, 0, 0, PM_NOREMOVE))
-        {
-            if (next.message == WM_KEYDOWN ||
-                next.message == WM_SYSKEYDOWN ||
-                next.message == WM_KEYUP ||
-                next.message == WM_SYSKEYUP)
-            {
-                if (next.wParam == VK_MENU &&
-                    (next.lParam & 0x01000000) &&
-                    next.time == time)
-                {
-                    // Next message is Right Alt down so discard this
-                    return _GLFW_KEY_INVALID;
-                }
-            }
-        }
-
-        return GLFW_KEY_LEFT_CONTROL;
-    }
-
-    if (wParam == VK_PROCESSKEY)
-    {
-        // IME notifies that keys have been filtered by setting the virtual
-        // key-code to VK_PROCESSKEY
-        return _GLFW_KEY_INVALID;
-    }
-
-    return _glfw.win32.keycodes[HIWORD(lParam) & 0x1FF];
 }
 
 static void fitToMonitor(_GLFWwindow* window)
@@ -590,7 +505,17 @@ static LRESULT CALLBACK windowProc(HWND hWnd, UINT uMsg,
             case WM_NCCREATE:
             {
                 if (_glfwIsWindows10AnniversaryUpdateOrGreaterWin32())
-                    EnableNonClientDpiScaling(hWnd);
+                {
+                    const CREATESTRUCTW* cs = (const CREATESTRUCTW*) lParam;
+                    const _GLFWwndconfig* wndconfig = cs->lpCreateParams;
+
+                    // On per-monitor DPI aware V1 systems, only enable
+                    // non-client scaling for windows that scale the client area
+                    // We need WM_GETDPISCALEDSIZE from V2 to keep the client
+                    // area static when the non-client area is scaled
+                    if (wndconfig && wndconfig->scaleToMonitor)
+                        EnableNonClientDpiScaling(hWnd);
+                }
 
                 break;
             }
@@ -629,12 +554,8 @@ static LRESULT CALLBACK windowProc(HWND hWnd, UINT uMsg,
             //       clicking a caption button
             if (HIWORD(lParam) == WM_LBUTTONDOWN)
             {
-                if (LOWORD(lParam) == HTCLOSE ||
-                    LOWORD(lParam) == HTMINBUTTON ||
-                    LOWORD(lParam) == HTMAXBUTTON)
-                {
+                if (LOWORD(lParam) != HTCLIENT)
                     window->win32.frameAction = GLFW_TRUE;
-                }
             }
 
             break;
@@ -720,11 +641,35 @@ static LRESULT CALLBACK windowProc(HWND hWnd, UINT uMsg,
 
         case WM_CHAR:
         case WM_SYSCHAR:
+        {
+            if (wParam >= 0xd800 && wParam <= 0xdbff)
+                window->win32.highSurrogate = (WCHAR) wParam;
+            else
+            {
+                unsigned int codepoint = 0;
+
+                if (wParam >= 0xdc00 && wParam <= 0xdfff)
+                {
+                    if (window->win32.highSurrogate)
+                    {
+                        codepoint += (window->win32.highSurrogate - 0xd800) << 10;
+                        codepoint += (WCHAR) wParam - 0xdc00;
+                        codepoint += 0x10000;
+                    }
+                }
+                else
+                    codepoint = (WCHAR) wParam;
+
+                window->win32.highSurrogate = 0;
+                _glfwInputChar(window, codepoint, getKeyMods(), uMsg != WM_SYSCHAR);
+            }
+
+            return 0;
+        }
+
         case WM_UNICHAR:
         {
-            const GLFWbool plain = (uMsg != WM_SYSCHAR);
-
-            if (uMsg == WM_UNICHAR && wParam == UNICODE_NOCHAR)
+            if (wParam == UNICODE_NOCHAR)
             {
                 // WM_UNICHAR is not sent by Windows, but is sent by some
                 // third-party input method engine
@@ -732,7 +677,7 @@ static LRESULT CALLBACK windowProc(HWND hWnd, UINT uMsg,
                 return TRUE;
             }
 
-            _glfwInputChar(window, (unsigned int) wParam, getKeyMods(), plain);
+            _glfwInputChar(window, (unsigned int) wParam, getKeyMods(), GLFW_TRUE);
             return 0;
         }
 
@@ -741,13 +686,64 @@ static LRESULT CALLBACK windowProc(HWND hWnd, UINT uMsg,
         case WM_KEYUP:
         case WM_SYSKEYUP:
         {
-            const int key = translateKey(wParam, lParam);
-            const int scancode = (lParam >> 16) & 0x1ff;
-            const int action = ((lParam >> 31) & 1) ? GLFW_RELEASE : GLFW_PRESS;
+            int key, scancode;
+            const int action = (HIWORD(lParam) & KF_UP) ? GLFW_RELEASE : GLFW_PRESS;
             const int mods = getKeyMods();
 
-            if (key == _GLFW_KEY_INVALID)
+            scancode = (HIWORD(lParam) & (KF_EXTENDED | 0xff));
+            if (!scancode)
+            {
+                // NOTE: Some synthetic key messages have a scancode of zero
+                // HACK: Map the virtual key back to a usable scancode
+                scancode = MapVirtualKeyW((UINT) wParam, MAPVK_VK_TO_VSC);
+            }
+
+            key = _glfw.win32.keycodes[scancode];
+
+            // The Ctrl keys require special handling
+            if (wParam == VK_CONTROL)
+            {
+                if (HIWORD(lParam) & KF_EXTENDED)
+                {
+                    // Right side keys have the extended key bit set
+                    key = GLFW_KEY_RIGHT_CONTROL;
+                }
+                else
+                {
+                    // NOTE: Alt Gr sends Left Ctrl followed by Right Alt
+                    // HACK: We only want one event for Alt Gr, so if we detect
+                    //       this sequence we discard this Left Ctrl message now
+                    //       and later report Right Alt normally
+                    MSG next;
+                    const DWORD time = GetMessageTime();
+
+                    if (PeekMessageW(&next, NULL, 0, 0, PM_NOREMOVE))
+                    {
+                        if (next.message == WM_KEYDOWN ||
+                            next.message == WM_SYSKEYDOWN ||
+                            next.message == WM_KEYUP ||
+                            next.message == WM_SYSKEYUP)
+                        {
+                            if (next.wParam == VK_MENU &&
+                                (HIWORD(next.lParam) & KF_EXTENDED) &&
+                                next.time == time)
+                            {
+                                // Next message is Right Alt down so discard this
+                                break;
+                            }
+                        }
+                    }
+
+                    // This is a regular Left Ctrl message
+                    key = GLFW_KEY_LEFT_CONTROL;
+                }
+            }
+            else if (wParam == VK_PROCESSKEY)
+            {
+                // IME notifies that keys have been filtered by setting the
+                // virtual key-code to VK_PROCESSKEY
                 break;
+            }
 
             if (action == GLFW_RELEASE && wParam == VK_SHIFT)
             {
@@ -830,7 +826,19 @@ static LRESULT CALLBACK windowProc(HWND hWnd, UINT uMsg,
             const int x = GET_X_LPARAM(lParam);
             const int y = GET_Y_LPARAM(lParam);
 
-            // Disabled cursor motion input is provided by WM_INPUT
+            if (!window->win32.cursorTracked)
+            {
+                TRACKMOUSEEVENT tme;
+                ZeroMemory(&tme, sizeof(tme));
+                tme.cbSize = sizeof(tme);
+                tme.dwFlags = TME_LEAVE;
+                tme.hwndTrack = window->win32.handle;
+                TrackMouseEvent(&tme);
+
+                window->win32.cursorTracked = GLFW_TRUE;
+                _glfwInputCursorEnter(window, GLFW_TRUE);
+            }
+
             if (window->cursorMode == GLFW_CURSOR_DISABLED)
             {
                 const int dx = x - window->win32.lastCursorPosX;
@@ -850,19 +858,6 @@ static LRESULT CALLBACK windowProc(HWND hWnd, UINT uMsg,
 
             window->win32.lastCursorPosX = x;
             window->win32.lastCursorPosY = y;
-
-            if (!window->win32.cursorTracked)
-            {
-                TRACKMOUSEEVENT tme;
-                ZeroMemory(&tme, sizeof(tme));
-                tme.cbSize = sizeof(tme);
-                tme.dwFlags = TME_LEAVE;
-                tme.hwndTrack = window->win32.handle;
-                TrackMouseEvent(&tme);
-
-                window->win32.cursorTracked = GLFW_TRUE;
-                _glfwInputCursorEnter(window, GLFW_TRUE);
-            }
 
             return 0;
         }
@@ -942,6 +937,9 @@ static LRESULT CALLBACK windowProc(HWND hWnd, UINT uMsg,
         case WM_ENTERSIZEMOVE:
         case WM_ENTERMENULOOP:
         {
+            if (window->win32.frameAction)
+                break;
+
             // HACK: Enable the cursor while the user is moving or
             //       resizing the window or using the window menu
             if (window->cursorMode == GLFW_CURSOR_DISABLED)
@@ -953,6 +951,9 @@ static LRESULT CALLBACK windowProc(HWND hWnd, UINT uMsg,
         case WM_EXITSIZEMOVE:
         case WM_EXITMENULOOP:
         {
+            if (window->win32.frameAction)
+                break;
+
             // HACK: Disable the cursor once the user is done moving or
             //       resizing the window or using the menu
             if (window->cursorMode == GLFW_CURSOR_DISABLED)
@@ -963,6 +964,8 @@ static LRESULT CALLBACK windowProc(HWND hWnd, UINT uMsg,
 
         case WM_SIZE:
         {
+            const int width = LOWORD(lParam);
+            const int height = HIWORD(lParam);
             const GLFWbool iconified = wParam == SIZE_MINIMIZED;
             const GLFWbool maximized = wParam == SIZE_MAXIMIZED ||
                                        (window->win32.maximized &&
@@ -977,8 +980,14 @@ static LRESULT CALLBACK windowProc(HWND hWnd, UINT uMsg,
             if (window->win32.maximized != maximized)
                 _glfwInputWindowMaximize(window, maximized);
 
-            _glfwInputFramebufferSize(window, LOWORD(lParam), HIWORD(lParam));
-            _glfwInputWindowSize(window, LOWORD(lParam), HIWORD(lParam));
+            if (width != window->win32.width || height != window->win32.height)
+            {
+                window->win32.width = width;
+                window->win32.height = height;
+
+                _glfwInputFramebufferSize(window, width, height);
+                _glfwInputWindowSize(window, width, height);
+            }
 
             if (window->monitor && window->win32.iconified != iconified)
             {
@@ -1092,6 +1101,7 @@ static LRESULT CALLBACK windowProc(HWND hWnd, UINT uMsg,
         }
 
         case WM_DWMCOMPOSITIONCHANGED:
+        case WM_DWMCOLORIZATIONCOLORCHANGED:
         {
             if (window->win32.transparent)
                 updateFramebufferTransparency(window);
@@ -1131,9 +1141,11 @@ static LRESULT CALLBACK windowProc(HWND hWnd, UINT uMsg,
             const float xscale = HIWORD(wParam) / (float) USER_DEFAULT_SCREEN_DPI;
             const float yscale = LOWORD(wParam) / (float) USER_DEFAULT_SCREEN_DPI;
 
-            // Only apply the suggested size if the OS is new enough to have
-            // sent a WM_GETDPISCALEDSIZE before this
-            if (_glfwIsWindows10CreatorsUpdateOrGreaterWin32())
+            // Resize windowed mode windows that either permit rescaling or that
+            // need it to compensate for non-client area scaling
+            if (!window->monitor &&
+                (window->win32.scaleToMonitor ||
+                 _glfwIsWindows10CreatorsUpdateOrGreaterWin32()))
             {
                 RECT* suggested = (RECT*) lParam;
                 SetWindowPos(window->win32.handle, HWND_TOP,
@@ -1225,6 +1237,7 @@ static int createNativeWindow(_GLFWwindow* window,
         xpos = CW_USEDEFAULT;
         ypos = CW_USEDEFAULT;
 
+        window->win32.maximized = wndconfig->maximized;
         if (wndconfig->maximized)
             style |= WS_MAXIMIZE;
 
@@ -1247,7 +1260,7 @@ static int createNativeWindow(_GLFWwindow* window,
                                            NULL, // No parent window
                                            NULL, // No window menu
                                            GetModuleHandleW(NULL),
-                                           NULL);
+                                           (LPVOID) wndconfig);
 
     free(wideTitle);
 
@@ -1272,12 +1285,13 @@ static int createNativeWindow(_GLFWwindow* window,
 
     window->win32.scaleToMonitor = wndconfig->scaleToMonitor;
 
-    // Adjust window size to account for DPI scaling of the window frame and
-    // optionally DPI scaling of the content area
-    // This cannot be done until we know what monitor it was placed on
+    // Adjust window rect to account for DPI scaling of the window frame and
+    // (if enabled) DPI scaling of the content area
+    // This cannot be done until we know what monitor the window was placed on
     if (!window->monitor)
     {
         RECT rect = { 0, 0, wndconfig->width, wndconfig->height };
+        WINDOWPLACEMENT wp = { sizeof(wp) };
 
         if (wndconfig->scaleToMonitor)
         {
@@ -1298,10 +1312,11 @@ static int createNativeWindow(_GLFWwindow* window,
         else
             AdjustWindowRectEx(&rect, style, FALSE, exStyle);
 
-        SetWindowPos(window->win32.handle, NULL,
-                     rect.left, rect.top,
-                     rect.right - rect.left, rect.bottom - rect.top,
-                     SWP_NOACTIVATE | SWP_NOZORDER);
+        // Only update the restored window rect as the window may be maximized
+        GetWindowPlacement(window->win32.handle, &wp);
+        wp.rcNormalPosition = rect;
+        wp.showCmd = SW_HIDE;
+        SetWindowPlacement(window->win32.handle, &wp);
     }
 
     DragAcceptFiles(window->win32.handle, TRUE);
@@ -1311,6 +1326,8 @@ static int createNativeWindow(_GLFWwindow* window,
         updateFramebufferTransparency(window);
         window->win32.transparent = GLFW_TRUE;
     }
+
+    _glfwPlatformGetWindowSize(window, &window->win32.width, &window->win32.height);
 
     return GLFW_TRUE;
 }
@@ -1722,7 +1739,7 @@ void _glfwPlatformSetWindowMonitor(_GLFWwindow* window,
 
     _glfwInputWindowMonitor(window, monitor);
 
-    if (monitor)
+    if (window->monitor)
     {
         MONITORINFO mi = { sizeof(mi) };
         UINT flags = SWP_SHOWWINDOW | SWP_NOACTIVATE | SWP_NOCOPYBITS;
@@ -1813,7 +1830,8 @@ int _glfwPlatformWindowHovered(_GLFWwindow* window)
 
 int _glfwPlatformFramebufferTransparent(_GLFWwindow* window)
 {
-    BOOL enabled;
+    BOOL composition, opaque;
+    DWORD color;
 
     if (!window->win32.transparent)
         return GLFW_FALSE;
@@ -1821,7 +1839,20 @@ int _glfwPlatformFramebufferTransparent(_GLFWwindow* window)
     if (!IsWindowsVistaOrGreater())
         return GLFW_FALSE;
 
-    return SUCCEEDED(DwmIsCompositionEnabled(&enabled)) && enabled;
+    if (FAILED(DwmIsCompositionEnabled(&composition)) || !composition)
+        return GLFW_FALSE;
+
+    if (!IsWindows8OrGreater())
+    {
+        // HACK: Disable framebuffer transparency on Windows 7 when the
+        //       colorization color is opaque, because otherwise the window
+        //       contents is blended additively with the previous frame instead
+        //       of replacing it
+        if (FAILED(DwmGetColorizationColor(&color, &opaque)) || opaque)
+            return GLFW_FALSE;
+    }
+
+    return GLFW_TRUE;
 }
 
 void _glfwPlatformSetWindowResizable(_GLFWwindow* window, GLFWbool enabled)
@@ -1918,30 +1949,40 @@ void _glfwPlatformPollEvents(void)
         }
     }
 
+    // HACK: Release modifier keys that the system did not emit KEYUP for
+    // NOTE: Shift keys on Windows tend to "stick" when both are pressed as
+    //       no key up message is generated by the first key release
+    // NOTE: Windows key is not reported as released by the Win+V hotkey
+    //       Other Win hotkeys are handled implicitly by _glfwInputWindowFocus
+    //       because they change the input focus
+    // NOTE: The other half of this is in the WM_*KEY* handler in windowProc
     handle = GetActiveWindow();
     if (handle)
     {
-        // NOTE: Shift keys on Windows tend to "stick" when both are pressed as
-        //       no key up message is generated by the first key release
-        //       The other half of this is in the handling of WM_KEYUP
-        // HACK: Query actual key state and synthesize release events as needed
         window = GetPropW(handle, L"GLFW");
         if (window)
         {
-            const GLFWbool lshift = (GetAsyncKeyState(VK_LSHIFT) >> 15) & 1;
-            const GLFWbool rshift = (GetAsyncKeyState(VK_RSHIFT) >> 15) & 1;
+            int i;
+            const int keys[4][2] =
+            {
+                { VK_LSHIFT, GLFW_KEY_LEFT_SHIFT },
+                { VK_RSHIFT, GLFW_KEY_RIGHT_SHIFT },
+                { VK_LWIN, GLFW_KEY_LEFT_SUPER },
+                { VK_RWIN, GLFW_KEY_RIGHT_SUPER }
+            };
 
-            if (!lshift && window->keys[GLFW_KEY_LEFT_SHIFT] == GLFW_PRESS)
+            for (i = 0;  i < 4;  i++)
             {
-                const int mods = getAsyncKeyMods();
-                const int scancode = _glfw.win32.scancodes[GLFW_KEY_LEFT_SHIFT];
-                _glfwInputKey(window, GLFW_KEY_LEFT_SHIFT, scancode, GLFW_RELEASE, mods);
-            }
-            else if (!rshift && window->keys[GLFW_KEY_RIGHT_SHIFT] == GLFW_PRESS)
-            {
-                const int mods = getAsyncKeyMods();
-                const int scancode = _glfw.win32.scancodes[GLFW_KEY_RIGHT_SHIFT];
-                _glfwInputKey(window, GLFW_KEY_RIGHT_SHIFT, scancode, GLFW_RELEASE, mods);
+                const int vk = keys[i][0];
+                const int key = keys[i][1];
+                const int scancode = _glfw.win32.scancodes[key];
+
+                if ((GetKeyState(vk) & 0x8000))
+                    continue;
+                if (window->keys[key] != GLFW_PRESS)
+                    continue;
+
+                _glfwInputKey(window, key, scancode, GLFW_RELEASE, getKeyMods());
             }
         }
     }
@@ -2023,6 +2064,13 @@ void _glfwPlatformSetCursorMode(_GLFWwindow* window, int mode)
 
 const char* _glfwPlatformGetScancodeName(int scancode)
 {
+    if (scancode < 0 || scancode > (KF_EXTENDED | 0xff) ||
+        _glfw.win32.keycodes[scancode] == GLFW_KEY_UNKNOWN)
+    {
+        _glfwInputError(GLFW_INVALID_VALUE, "Invalid scancode");
+        return NULL;
+    }
+
     return _glfw.win32.keynames[_glfw.win32.keycodes[scancode]];
 }
 

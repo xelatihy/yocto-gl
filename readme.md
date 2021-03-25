@@ -11,65 +11,56 @@ development and use.
 Yocto/GL is split into small libraries to make code navigation easier.
 See each header file for documentation.
 
-- `yocto/yocto_math.{h}`: fixed-size vectors, matrices, rigid frames, rays,
-  bounding boxes, transforms
-- `yocto/yocto_color.{h}`: color conversion, color adjustment, tone mapping
-  functions, Perlin noise, shading and integration utilities
-- `yocto/yocto_geometry.{h}`: geometry functions, ray-primitive intersection,
-  point-primitive overlap
+- `yocto/yocto_math.{h}`: fixed-size vectors, matrices, rigid frames,
+  transforms
+- `yocto/yocto_color.{h}`: color conversion, color adjustment,
+  tone mapping functions, color grading, color maps, color spaces
+- `yocto/yocto_geometry.{h}`: rays, bounding boxes,
+  geometry functions, ray-primitive intersection, point-primitive overlap
 - `yocto/yocto_noise.{h}`: Perlin noise
 - `yocto/yocto_sampling.{h}`: random number generation, generation of points
   and directions, Monte Carlo utilities
-- `yocto/yocto_shading.{h}`: evaluation and sampling of fresnel functions,
-  bsdf lobes, transmittance lobes, phase functions
-- `yocto/yocto_shape.{h,cpp}`: various utilities for manipulating
-  triangle meshes, quads meshes and line sets, computation of normals and
-  tangents, linear and Catmull-Clark subdivision, mesh loading and saving,
-  procedural shapes generation, ray intersection and closest point queries
-- `yocto/yocto_mesh.{h,cpp}`: computational geometry utilities for triangle
-  meshes, mesh geodesic, mesh cutting, mesh loading and saving
-- `yocto/yocto_bvh.{h,cpp}`: ray intersection and closest point queries of
-  triangle meshes, quads meshes, line sets and instances scenes using a
-  two-level bounding volume hierarchy
+- `yocto/yocto_shading.{h}`: evaluation and sampling of fresnel
+  functions, bsdf lobes, transmittance lobes, phase functions
 - `yocto/yocto_image.{h,cpp}`: simple image data type, image resizing,
-  tone mapping, color correction, image loading and saving,
-  procedural images, procedural sun-sky, advanced color conversion utilities
-- `yocto/yocto_sceneio.{h,cpp}`: simple scene and scene loading and
-  saving of Ply/Obj/Pbrt/glTF and a custom and scalable Json format
+  tonemapping, color correction, procedural images, procedural sun-sky
+- `yocto/yocto_shape.{h,cpp}`: utilities for manipulating
+  triangle meshes, quads meshes and line sets, computation of normals and
+  tangents, linear and Catmull-Clark subdivision, procedural shapes generation,
+  ray intersection and closest point queries
+- `yocto/yocto_mesh.{h,cpp}`: computational geometry utilities for
+  triangle meshes, mesh geodesic, mesh cutting
+- `yocto/yocto_bvh.{h,cpp}`: ray intersection and closest point queries
+  of triangle meshes, quads meshes, line sets and instances scenes using a
+  two-level bounding volume hierarchy
+- `yocto/yocto_scene.{h,cpp}`: scene representation and properties
+  evaluation
+- `yocto/yocto_sceneio.{h,cpp}`: image serialization,
+  shape serialization, scene serialization, text and binary serialization,
+  path helpers
 - `yocto/yocto_trace.{h,cpp}`: path tracing of surfaces and hairs supporting
   area and environment illumination, microfacet GGX and subsurface scattering,
   multiple importance sampling
-- `yocto/yocto_modelio.{h,cpp}`: parsing and writing for Ply/Obj/Pbrt formats
-- `yocto/yocto_commonio.h`: printing utilities, file io utilities,
-  command line parsing
-- `yocto/yocto_json.h`: JSON data type, json io utilities,
-  command line parsing
-- `yocto/yocto_common.h`: container and iterator utilities
+- `yocto/yocto_modelio.{h,cpp}`: parsing and writing for Ply, Obj,
+  Stl, Pbrt formats
+- `yocto/yocto_cli.h`: printing utilities, command line parsing
 - `yocto/yocto_parallel.h`: concurrency utilities
 
 You can see Yocto/GL in action in the following applications written to
 test the library:
 
-- `apps/yscenetrace.cpp`: command-line path-tracer
-- `apps/ysceneitrace.cpp`: interactive path-tracer
-- `apps/ysceneitraces.cpp`: simpler version of `apps/ysceneitrace.cpp` for demos
-- `apps/ysceneproc.cpp`: command-line scene manipulation and conversion
-- `apps/yshapeproc.cpp`: command-line mesh manipulation and conversion
-- `apps/yimageview.cpp`: Hdr/Ldr image viewer with tonemapping and color grading
-- `apps/yimageviews.cpp`: simpler version of `apps/yimageview.cpp` for demos
-- `apps/yimageproc.cpp`: command-line image manipulation
-- `apps/yimagedenoise.cpp`: command-line image denoiser that uses Intel Open Image
-  Denoise
-- `apps/ysceneview.cpp`: simple OpenGL viewer
+- `apps/yscene.cpp`: command-line scene manipulation and rendering, and interactive viewing
+- `apps/yshape.cpp`: command-line shape manipulation and rendering, and interactive viewing
+- `apps/yimage.cpp`: command-line image manipulation, and interactive viewing
 
 Here are some test images rendered with the path tracer. More images are
 included in the [project site](https://xelatihy.github.io/yocto-gl/).
 
-![Example materials: matte, plastic, metal, glass, subsurface, normal mapping](images/features1.png)
+![Example materials: matte, plastic, metal, glass, subsurface, normal mapping](images/features1.jpg)
 
-![Example shapes: procedural shapes, Catmull-Clark subdivision, hairs, displacement mapping](images/features2.png)
+![Example shapes: procedural shapes, Catmull-Clark subdivision, hairs, displacement mapping](images/features2.jpg)
 
-![Image rendered with Yocto/GL path tracer. Model by Disney Animation Studios.](images/island.png)
+![Image rendered with Yocto/GL path tracer. Model by Disney Animation Studios.](images/island.jpg)
 
 ## Design Considerations
 
@@ -77,7 +68,7 @@ Yocto/GL follows a "data-oriented programming model" that makes data explicit.
 Data is stored in simple structs and accessed with free functions or directly.
 All data is public, so we make no attempt at encapsulation.
 Most objects is Yocto/GL have value semantic, while large data structures
-use reference semnatic with strict ownership. This means that everything
+use reference semantic with strict ownership. This means that everything
 can be trivially serialized and there is no need for memory management.
 
 We do this since this makes Yocto/GL easier to extend and quicker to learn,
@@ -100,13 +91,12 @@ errors. For example, IO operations use boolean flags and error strings for
 human readable errors, while exceptions are used when preconditions or
 post conditions are violated in functions.
 
-The current version of the library (2.x) is a major refactoring of the previous
-library versions (1.x) in three main aspects. First, we now allow the use of
-reference semantic via pointers and adopt it for all large objects, while
-keeping value semantic for all others. We did this to avoid erroneous copies
-that cannot detected and avoided at compile time. Second, we had trouble
-interacting with C libraries that mostly use reference semantic. Third, we
-reduce the use of exceptions, again for better integration with external code.
+After several refactoring, we settled on a value-based approach, since the use
+of pointers and reference semantics was hard for many of our users. While
+this has the drawback of potentially introducing spurious copies, it does
+have th benefit of ensuring that no memory corruption can occur, which
+turned out was a major issue for novice C++ users, even in a very small
+library like this one.
 
 ## Credits
 
@@ -140,12 +130,9 @@ become part of the Yocto/GL libraries. OpenGL support is enabled by defining
 the cmake option `YOCTO_OPENGL` and contained in the `yocto_gui` library.
 
 Yocto/GL optionally supports the use of Intel's Embree for ray casting.
-At this point, we rely on prebuilt binaries distributed by Intel.
 See the main CMake file for how to link to it. Embree support is enabled by
 defining the cmake option `YOCTO_EMBREE`.
 
-Yocto/GL optionally supports the use of Intel's Open Image Denoise for denoising
-renders. At this point, we rely on prebuilt binaries distributed by Intel.
-See the main CMake file for how to link to it. Open Image Denoise support is enabled by
-defining the cmake option `YOCTO_DENOISE`. See `apps/yimagedenoise` for
-a demonstration.
+Yocto/GL optionally supports the use of Intel's Open Image Denoise for denoising.
+See the main CMake file for how to link to it. Open Image Denoise support
+is enabled by defining the cmake option `YOCTO_DENOISE`.

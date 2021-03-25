@@ -2,6 +2,7 @@
   "C_Cpp.default.configurationProvider": "vector-of-bool.cmake-tools",
   "cmake.buildDirectory": "${workspaceFolder}/build/vscode/${variant:buildType}",
   "cmake.parallelJobs": 8,
+  "cmake.preferredGenerators": [ "Ninja" ],
   "files.associations": {
     "iosfwd": "cpp",
     "__functional_03": "cpp",
@@ -154,5 +155,16 @@
     "-modernize-use-nodiscard",
     "-modernize-use-trailing-return-type"
   ],
-  "python.pythonPath": "/usr/local/bin/python3"
+  "python.pythonPath": "/usr/local/bin/python3",
+  "editor.formatOnSave": true,
+  "python.formatting.provider": "yapf",
+  "cSpell.words": [
+    "bsdf",
+    "bsdfs",
+    "denoise",
+    "denoising",
+    "khronos",
+    "lambertian",
+    "microfacet"
+  ]
 }

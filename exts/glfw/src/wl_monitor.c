@@ -23,6 +23,8 @@
 //    distribution.
 //
 //========================================================================
+// It is fine to use C99 in this file because it will not be built with VS
+//========================================================================
 
 #include "internal.h"
 
@@ -85,6 +87,14 @@ static void outputHandleMode(void* data,
 static void outputHandleDone(void* data, struct wl_output* output)
 {
     struct _GLFWmonitor *monitor = data;
+
+    if (monitor->widthMM <= 0 || monitor->heightMM <= 0)
+    {
+        // If Wayland does not provide a physical size, assume the default 96 DPI
+        const GLFWvidmode* mode = &monitor->modes[monitor->wl.currentMode];
+        monitor->widthMM  = (int) (mode->width * 25.4f / 96.f);
+        monitor->heightMM = (int) (mode->height * 25.4f / 96.f);
+    }
 
     _glfwInputMonitor(monitor, GLFW_CONNECTED, _GLFW_INSERT_LAST);
 }
@@ -198,7 +208,7 @@ void _glfwPlatformGetVideoMode(_GLFWmonitor* monitor, GLFWvidmode* mode)
 GLFWbool _glfwPlatformGetGammaRamp(_GLFWmonitor* monitor, GLFWgammaramp* ramp)
 {
     _glfwInputError(GLFW_PLATFORM_ERROR,
-                    "Wayland: Gamma ramp access it not available");
+                    "Wayland: Gamma ramp access is not available");
     return GLFW_FALSE;
 }
 
