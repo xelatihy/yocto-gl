@@ -2176,65 +2176,6 @@ void draw_histogram(const char* lbl, const vector<vec4f>& values) {
       (int)values.size(), 0, nullptr, flt_max, flt_max, {0, 0}, sizeof(vec4f));
 }
 
-// https://github.com/ocornut/imgui/issues/300
-struct ImGuiAppLog {
-  ImGuiTextBuffer Buf;
-  ImGuiTextFilter Filter;
-  ImVector<int>   LineOffsets;  // Index to lines offset
-  bool            ScrollToBottom;
-
-  void Clear() {
-    Buf.clear();
-    LineOffsets.clear();
-  }
-
-  void AddLog(const char* msg, const char* lbl) {
-    auto old_size = Buf.size();
-    Buf.appendf("[%s] %s\n", lbl, msg);
-    for (auto new_size = Buf.size(); old_size < new_size; old_size++)
-      if (Buf[old_size] == '\n') LineOffsets.push_back(old_size);
-    ScrollToBottom = true;
-  }
-
-  void Draw() {
-    if (ImGui::Button("Clear")) Clear();
-    ImGui::SameLine();
-    bool copy = ImGui::Button("Copy");
-    ImGui::SameLine();
-    Filter.Draw("Filter", -100.0f);
-    ImGui::Separator();
-    ImGui::BeginChild("scrolling");
-    ImGui::PushStyleVar(ImGuiStyleVar_ItemSpacing, ImVec2(0, 1));
-    if (copy) ImGui::LogToClipboard();
-
-    if (Filter.IsActive()) {
-      const char* buf_begin = Buf.begin();
-      const char* line      = buf_begin;
-      for (int line_no = 0; line != nullptr; line_no++) {
-        const char* line_end = (line_no < LineOffsets.Size)
-                                   ? buf_begin + LineOffsets[line_no]
-                                   : nullptr;
-        if (Filter.PassFilter(line, line_end))
-          ImGui::TextUnformatted(line, line_end);
-        line = line_end != nullptr && line_end[1] != 0 ? line_end + 1 : nullptr;
-      }
-    } else {
-      ImGui::TextUnformatted(Buf.begin());
-    }
-
-    if (ScrollToBottom) ImGui::SetScrollHere(1.0f);
-    ScrollToBottom = false;
-    ImGui::PopStyleVar();
-    ImGui::EndChild();
-  }
-  void Draw(const char* title, bool* p_opened = nullptr) {
-    ImGui::SetNextWindowSize(ImVec2(500, 400), ImGuiCond_FirstUseEver);
-    ImGui::Begin(title, p_opened);
-    Draw();
-    ImGui::End();
-  }
-};
-
 }  // namespace yocto
 
 // -----------------------------------------------------------------------------
