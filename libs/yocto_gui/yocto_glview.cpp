@@ -1083,9 +1083,9 @@ void clear_texture(glscene_texture& gltexture) {
 template <typename T>
 static void set_vertex_buffer(glscene_shape& shape, ogl_arraybuffer& buffer,
     const vector<T>& data, int location) {
-  if (!shape.shape_id) glGenVertexArrays(1, &shape.shape_id);
+  if (!shape.vertexarray) glGenVertexArrays(1, &shape.vertexarray);
   set_arraybuffer(buffer, data, false);
-  glBindVertexArray(shape.shape_id);
+  glBindVertexArray(shape.vertexarray);
   assert_ogl_error();
   glBindBuffer(GL_ARRAY_BUFFER, buffer.buffer_id);
   glEnableVertexAttribArray(location);
@@ -1096,22 +1096,22 @@ static void set_vertex_buffer(glscene_shape& shape, ogl_arraybuffer& buffer,
 
 static void set_vertex_buffer(
     glscene_shape& shape, const vec2f& value, int location) {
-  if (!shape.shape_id) glGenVertexArrays(1, &shape.shape_id);
-  glBindVertexArray(shape.shape_id);
+  if (!shape.vertexarray) glGenVertexArrays(1, &shape.vertexarray);
+  glBindVertexArray(shape.vertexarray);
   glVertexAttrib2f(location, value.x, value.y);
   assert_ogl_error();
 }
 static void set_vertex_buffer(
     glscene_shape& shape, const vec3f& value, int location) {
-  if (!shape.shape_id) glGenVertexArrays(1, &shape.shape_id);
-  glBindVertexArray(shape.shape_id);
+  if (!shape.vertexarray) glGenVertexArrays(1, &shape.vertexarray);
+  glBindVertexArray(shape.vertexarray);
   glVertexAttrib3f(location, value.x, value.y, value.z);
   assert_ogl_error();
 }
 static void set_vertex_buffer(
     glscene_shape& shape, const vec4f& value, int location) {
-  if (!shape.shape_id) glGenVertexArrays(1, &shape.shape_id);
-  glBindVertexArray(shape.shape_id);
+  if (!shape.vertexarray) glGenVertexArrays(1, &shape.vertexarray);
+  glBindVertexArray(shape.vertexarray);
   glVertexAttrib4f(location, value.x, value.y, value.z, value.w);
   assert_ogl_error();
 }
@@ -1177,10 +1177,9 @@ void clear_shape(glscene_shape& glshape) {
   clear_arraybuffer(glshape.colors);
   clear_arraybuffer(glshape.tangents);
   clear_elementbuffer(glshape.index_buffer);
-  glDeleteVertexArrays(1, &glshape.shape_id);
-  glshape.num_instances = 0;
-  glshape.shape_id      = 0;
-  assert_ogl_error();
+  if (glshape.vertexarray) glDeleteVertexArrays(1, &glshape.vertexarray);
+  glshape.vertexarray = 0;
+  assert_ogl_error_();
 }
 
 glscene_state::~glscene_state() { clear_scene(*this); }
@@ -1349,11 +1348,11 @@ void set_instance_uniforms(const glscene_state& scene, ogl_program& program,
 }
 
 static void bind_shape(const glscene_shape& shape) {
-  glBindVertexArray(shape.shape_id);
+  glBindVertexArray(shape.vertexarray);
 }
 
 static void draw_shape(glscene_shape& shape) {
-  if (shape.shape_id == 0) return;
+  if (shape.vertexarray == 0) return;
   bind_shape(shape);
   auto type = GL_TRIANGLES;
   switch (shape.elements) {
@@ -1372,14 +1371,8 @@ static void draw_shape(glscene_shape& shape) {
   auto& indices = shape.index_buffer;
   if (indices.buffer_id != 0) {
     glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, indices.buffer_id);
-    if (shape.num_instances == 0) {
-      glDrawElements(type, (GLsizei)indices.num_elements * indices.element_size,
-          GL_UNSIGNED_INT, nullptr);
-    } else {
-      glDrawElementsInstanced(type,
-          (GLsizei)indices.num_elements * indices.element_size, GL_UNSIGNED_INT,
-          nullptr, (GLsizei)shape.num_instances);
-    }
+    glDrawElements(type, (GLsizei)indices.num_elements * indices.element_size,
+        GL_UNSIGNED_INT, nullptr);
   } else {
     auto& vertices = shape.positions;
     glDrawArrays(type, 0, (int)vertices.num_elements);
