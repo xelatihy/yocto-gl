@@ -1020,7 +1020,6 @@ layout(location = 4) in vec4 tangents;            // vertex tangent space
 
 uniform mat4 frame;             // shape transform
 uniform mat4 frameit;           // shape transform
-uniform float offset;           // shape normal offset
 
 uniform mat4 view;              // inverse of the camera frame (as a matrix)
 uniform mat4 projection;        // camera projection
@@ -1039,11 +1038,6 @@ void main() {
   tangsp = tangents;
   texcoord = texcoords;
   color = colors;
-
-  // normal offset
-  if(offset != 0) {
-    position += offset * normal;
-  }
 
   // world projection
   position = (frame * vec4(position,1)).xyz;
@@ -1471,7 +1465,6 @@ void set_instance_uniforms(const glscene_state& scene, uint program,
       glGetUniformLocation(program, "frame"), 1, false, &shape_xform.x.x);
   glUniformMatrix4fv(
       glGetUniformLocation(program, "frameit"), 1, false, &shape_inv_xform.x.x);
-  glUniform1f(glGetUniformLocation(program, "offset"), 0.0f);
   glUniform1i(glGetUniformLocation(program, "faceted"),
       (params.faceted || shape.normals == 0) ? 1 : 0);
 
