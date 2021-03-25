@@ -1238,14 +1238,19 @@ void set_instance_uniforms(const glscene_state& scene, ogl_program& program,
     }
   };
 
-  set_uniform(program, "unlit", false);
-  set_uniform(program, "emission", material.emission);
-  set_uniform(program, "diffuse", material.color);
-  set_uniform(program, "specular",
-      vec3f{material.metallic, material.metallic, material.metallic});
-  set_uniform(program, "roughness", material.roughness);
-  set_uniform(program, "opacity", material.opacity);
-  set_uniform(program, "double_sided", params.double_sided);
+  glUniform1i(glGetUniformLocation(program.program_id, "unlit"), 0);
+  glUniform3f(glGetUniformLocation(program.program_id, "emission"),
+      material.emission.x, material.emission.y, material.emission.z);
+  glUniform3f(glGetUniformLocation(program.program_id, "diffuse"),
+      material.color.x, material.color.y, material.color.z);
+  glUniform3f(glGetUniformLocation(program.program_id, "specular"),
+      material.metallic, material.metallic, material.metallic);
+  glUniform1f(glGetUniformLocation(program.program_id, "roughness"),
+      material.roughness);
+  glUniform1f(
+      glGetUniformLocation(program.program_id, "opacity"), material.opacity);
+  glUniform1f(glGetUniformLocation(program.program_id, "double_sided"),
+      params.double_sided ? 1 : 0);
   set_texture(program.program_id, "emission_tex", "emission_tex_on",
       material.emission_tex, 0);
   set_texture(program.program_id, "diffuse_tex", "diffuse_tex_on",
