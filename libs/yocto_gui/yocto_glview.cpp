@@ -942,21 +942,21 @@ void clear_image(glimage_state& glimage) {
 }
 
 void set_image(glimage_state& glimage, const color_image& img) {
-  if (!glimage.texture || glimage.width != img.width ||
-      glimage.height != img.height) {
+  if (!glimage.texture || glimage.width != image.width ||
+      glimage.height != image.height) {
     if (!glimage.texture) glGenTextures(1, &glimage.texture);
     glBindTexture(GL_TEXTURE_2D, glimage.texture);
-    glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, img.width, img.height, 0, GL_RGBA,
-        GL_FLOAT, img.pixels.data());
+    glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, image.width, image.height, 0,
+        GL_RGBA, GL_FLOAT, image.pixels.data());
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
   } else {
     glBindTexture(GL_TEXTURE_2D, glimage.texture);
-    glTexSubImage2D(GL_TEXTURE_2D, 0, 0, 0, img.width, img.height, GL_RGBA,
-        GL_FLOAT, img.pixels.data());
+    glTexSubImage2D(GL_TEXTURE_2D, 0, 0, 0, image.width, image.height, GL_RGBA,
+        GL_FLOAT, image.pixels.data());
   }
-  glimage.width  = img.width;
-  glimage.height = img.height;
+  glimage.width  = image.width;
+  glimage.height = image.height;
 }
 
 // draw image
