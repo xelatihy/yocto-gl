@@ -274,32 +274,7 @@ void clear_scene(glscene_state& scene);
 
 // add scene elements
 gltexture_handle     add_texture(glscene_state& scene);
-glshape_handle       add_shape(glscene_state& scene);
 glenvironment_handle add_environment(glscene_state& scene);
-
-// shape properties
-void set_points(glscene_shape& shape, const vector<int>& points);
-void set_lines(glscene_shape& shape, const vector<vec2i>& lines);
-void set_triangles(glscene_shape& shape, const vector<vec3i>& triangles);
-void set_quads(glscene_shape& shape, const vector<vec4i>& quads);
-void set_positions(glscene_shape& shape, const vector<vec3f>& positions);
-void set_normals(glscene_shape& shape, const vector<vec3f>& normals);
-void set_texcoords(glscene_shape& shape, const vector<vec2f>& texcoords);
-void set_colors(glscene_shape& shape, const vector<vec4f>& colors);
-void set_tangents(glscene_shape& shape, const vector<vec4f>& tangents);
-void set_instances(
-    glscene_shape& shape, const vector<vec3f>& froms, const vector<vec3f>& tos);
-
-// set point size
-void set_point_size(glscene_shape& shape, float point_size);
-
-// get shape properties
-bool                   has_normals(const glscene_shape& shape);
-const ogl_arraybuffer& get_positions(const glscene_shape& shape);
-const ogl_arraybuffer& get_normals(const glscene_shape& shape);
-const ogl_arraybuffer& get_texcoords(const glscene_shape& shape);
-const ogl_arraybuffer& get_colors(const glscene_shape& shape);
-const ogl_arraybuffer& get_tangents(const glscene_shape& shape);
 
 // environment properties
 void set_frame(glscene_environment& environment, const frame3f& frame);
@@ -307,11 +282,6 @@ void set_emission(glscene_environment& environment, const vec3f& emission,
     gltexture_handle emission_tex = glinvalid_handle);
 
 // shortcuts
-glshape_handle       add_shape(glscene_state& scene, const vector<int>& points,
-          const vector<vec2i>& lines, const vector<vec3i>& triangles,
-          const vector<vec4i>& quads, const vector<vec3f>& positions,
-          const vector<vec3f>& normals, const vector<vec2f>& texcoords,
-          const vector<vec4f>& colors, bool edges = false);
 glenvironment_handle add_environment(glscene_state& scene, const frame3f& frame,
     const vec3f& emission, gltexture_handle emission_tex = glinvalid_handle);
 

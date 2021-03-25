@@ -1154,18 +1154,39 @@ static void set_index_buffer(
 // Create shape
 void set_shape(glscene_shape& glshape, const scene_shape& shape) {
   if (shape.points.size() != 0) {
-    set_points(glshape, shape.points);
+    set_index_buffer(glshape, shape.points);
   } else if (shape.lines.size() != 0) {
-    set_lines(glshape, shape.lines);
+    set_index_buffer(glshape, shape.lines);
   } else if (shape.triangles.size() != 0) {
-    set_triangles(glshape, shape.triangles);
+    set_index_buffer(glshape, shape.triangles);
   } else if (shape.quads.size() != 0) {
-    set_quads(glshape, shape.quads);
+    set_index_buffer(glshape, quads_to_triangles(shape.quads));
   }
-  set_positions(glshape, shape.positions);
-  set_normals(glshape, shape.normals);
-  set_texcoords(glshape, shape.texcoords);
-  set_colors(glshape, shape.colors);
+  if (shape.positions.empty()) {
+    set_vertex_buffer(glshape, vec3f{0, 0, 0}, 0);
+  } else {
+    set_vertex_buffer(glshape, shape.positions, 0);
+  }
+  if (shape.normals.empty()) {
+    set_vertex_buffer(glshape, vec3f{0, 0, 1}, 1);
+  } else {
+    set_vertex_buffer(glshape, shape.normals, 1);
+  }
+  if (shape.texcoords.empty()) {
+    set_vertex_buffer(glshape, vec2f{0, 0}, 2);
+  } else {
+    set_vertex_buffer(glshape, shape.texcoords, 2);
+  }
+  if (shape.colors.empty()) {
+    set_vertex_buffer(glshape, vec4f{1, 1, 1, 1}, 3);
+  } else {
+    set_vertex_buffer(glshape, shape.colors, 3);
+  }
+  if (shape.tangents.empty()) {
+    set_vertex_buffer(glshape, vec4f{0, 0, 1, 1}, 4);
+  } else {
+    set_vertex_buffer(glshape, shape.tangents, 4);
+  }
 }
 
 // Clean shape
@@ -1178,91 +1199,6 @@ void clear_shape(glscene_shape& glshape) {
   glshape.num_instances = 0;
   glshape.shape_id      = 0;
   assert_ogl_error();
-}
-
-bool has_normals(const glscene_shape& shape) {
-  if (shape.vertex_buffers.size() <= 1) return false;
-  return is_initialized(shape.vertex_buffers[1]);
-}
-const ogl_arraybuffer& get_positions(const glscene_shape& shape) {
-  if (shape.vertex_buffers.size() <= 0)
-    throw std::out_of_range{"no vertex buffer"};
-  return shape.vertex_buffers[0];
-}
-const ogl_arraybuffer& get_normals(const glscene_shape& shape) {
-  if (shape.vertex_buffers.size() <= 1)
-    throw std::out_of_range{"no vertex buffer"};
-  return shape.vertex_buffers[1];
-}
-const ogl_arraybuffer& get_texcoords(const glscene_shape& shape) {
-  if (shape.vertex_buffers.size() <= 2)
-    throw std::out_of_range{"no vertex buffer"};
-  return shape.vertex_buffers[2];
-}
-const ogl_arraybuffer& get_colors(const glscene_shape& shape) {
-  if (shape.vertex_buffers.size() <= 3)
-    throw std::out_of_range{"no vertex buffer"};
-  return shape.vertex_buffers[3];
-}
-const ogl_arraybuffer& get_tangents(const glscene_shape& shape) {
-  if (shape.vertex_buffers.size() <= 4)
-    throw std::out_of_range{"no vertex buffer"};
-  return shape.vertex_buffers[4];
-}
-
-void set_positions(glscene_shape& shape, const vector<vec3f>& positions) {
-  if (positions.empty()) {
-    set_vertex_buffer(shape, vec3f{0, 0, 0}, 0);
-  } else {
-    set_vertex_buffer(shape, positions, 0);
-  }
-}
-void set_normals(glscene_shape& shape, const vector<vec3f>& normals) {
-  if (normals.empty()) {
-    set_vertex_buffer(shape, vec3f{0, 0, 1}, 1);
-  } else {
-    set_vertex_buffer(shape, normals, 1);
-  }
-}
-void set_texcoords(glscene_shape& shape, const vector<vec2f>& texcoords) {
-  if (texcoords.empty()) {
-    set_vertex_buffer(shape, vec2f{0, 0}, 2);
-  } else {
-    set_vertex_buffer(shape, texcoords, 2);
-  }
-}
-void set_colors(glscene_shape& shape, const vector<vec4f>& colors) {
-  if (colors.empty()) {
-    set_vertex_buffer(shape, vec4f{1, 1, 1, 1}, 3);
-  } else {
-    set_vertex_buffer(shape, colors, 3);
-  }
-}
-void set_tangents(glscene_shape& shape, const vector<vec4f>& tangents) {
-  if (tangents.empty()) {
-    set_vertex_buffer(shape, vec4f{0, 0, 1, 1}, 4);
-  } else {
-    set_vertex_buffer(shape, tangents, 4);
-  }
-}
-
-void set_points(glscene_shape& shape, const vector<int>& points) {
-  set_index_buffer(shape, points);
-}
-void set_lines(glscene_shape& shape, const vector<vec2i>& lines) {
-  set_index_buffer(shape, lines);
-}
-void set_triangles(glscene_shape& shape, const vector<vec3i>& triangles) {
-  set_index_buffer(shape, triangles);
-}
-void set_quads(glscene_shape& shape, const vector<vec4i>& quads) {
-  auto triangles = vector<vec3i>{};
-  triangles.reserve(quads.size() * 2);
-  for (auto& q : quads) {
-    triangles.push_back({q.x, q.y, q.w});
-    if (q.z != q.w) triangles.push_back({q.z, q.w, q.y});
-  }
-  set_index_buffer(shape, triangles);
 }
 
 glscene_state::~glscene_state() { clear_scene(*this); }
@@ -1324,41 +1260,6 @@ void clear_scene(glscene_state& scene) {
   clear_program(scene.instance_program);
 }
 
-// add texture
-gltexture_handle add_texture(glscene_state& scene) {
-  scene.textures.emplace_back();
-  return (int)scene.textures.size() - 1;
-}
-
-// add shape
-glshape_handle add_shape(glscene_state& scene) {
-  scene.shapes.emplace_back();
-  return (int)scene.shapes.size() - 1;
-}
-
-glshape_handle add_shape(glscene_state& scene, const vector<int>& points,
-    const vector<vec2i>& lines, const vector<vec3i>& triangles,
-    const vector<vec4i>& quads, const vector<vec3f>& positions,
-    const vector<vec3f>& normals, const vector<vec2f>& texcoords,
-    const vector<vec4f>& colors, bool edges) {
-  auto  handle = add_shape(scene);
-  auto& shape  = scene.shapes[handle];
-  if (points.size() != 0) {
-    set_points(shape, points);
-  } else if (lines.size() != 0) {
-    set_lines(shape, lines);
-  } else if (triangles.size() != 0) {
-    set_triangles(shape, triangles);
-  } else if (quads.size() != 0) {
-    set_quads(shape, quads);
-  }
-  set_positions(shape, positions);
-  set_normals(shape, normals);
-  set_texcoords(shape, texcoords);
-  set_colors(shape, colors);
-  return handle;
-}
-
 // environment properties
 glenvironment_handle add_environment(glscene_state& scene) {
   scene.environments.emplace_back();
@@ -1410,7 +1311,8 @@ void set_instance_uniforms(const glscene_state& scene, ogl_program& program,
   set_uniform(program, "frame", shape_xform);
   set_uniform(program, "frameit", shape_inv_xform);
   set_uniform(program, "offset", 0.0f);
-  set_uniform(program, "faceted", params.faceted || !has_normals(shape));
+  set_uniform(program, "faceted",
+      params.faceted || !is_initialized(shape.vertex_buffers[1]));
   //  if (instance.highlighted) {
   //    set_uniform(program, "highlight", vec4f{1, 1, 0, 1});
   //  } else {
