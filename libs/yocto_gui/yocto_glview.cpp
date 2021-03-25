@@ -1376,7 +1376,6 @@ void set_shape(glscene_shape& glshape, const scene_shape& shape) {
 // Clean shape
 void clear_shape(glscene_shape& glshape) {
   if (glshape.vertexarray) glDeleteVertexArrays(1, &glshape.vertexarray);
-  glshape.vertexarray = 0;
   if (glshape.positions) glDeleteBuffers(1, &glshape.positions);
   if (glshape.normals) glDeleteBuffers(1, &glshape.normals);
   if (glshape.texcoords) glDeleteBuffers(1, &glshape.texcoords);
@@ -1386,6 +1385,7 @@ void clear_shape(glscene_shape& glshape) {
   if (glshape.lines) glDeleteBuffers(1, &glshape.lines);
   if (glshape.triangles) glDeleteBuffers(1, &glshape.triangles);
   if (glshape.quads) glDeleteBuffers(1, &glshape.quads);
+  glshape = {};
   assert_ogl_error_();
 }
 
