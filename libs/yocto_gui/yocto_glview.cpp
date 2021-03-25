@@ -1675,8 +1675,12 @@ static void draw_window(glwindow_state* win) {
   glfwSwapBuffers(win->win);
 }
 
-void init_window(glwindow_state* win, const vec2i& size, const string& title,
-    bool widgets, int widgets_width, bool widgets_left) {
+// run the user interface with the give callbacks
+void run_ui(const vec2i& size, const string& title,
+    const glwindow_callbacks& callbacks, int widgets_width, bool widgets_left) {
+  auto win_guard = std::make_unique<glwindow_state>();
+  auto win       = win_guard.get();
+
   // init glfw
   if (!glfwInit())
     throw std::runtime_error("cannot initialize windowing system");
@@ -1729,7 +1733,7 @@ void init_window(glwindow_state* win, const vec2i& size, const string& title,
     throw std::runtime_error{"cannot initialize OpenGL extensions"};
 
   // widgets
-  if (widgets) {
+  if (callbacks.widgets_cb) {
     ImGui::CreateContext();
     ImGui::GetIO().IniFilename       = nullptr;
     ImGui::GetStyle().WindowRounding = 0;
@@ -1743,20 +1747,19 @@ void init_window(glwindow_state* win, const vec2i& size, const string& title,
     win->widgets_width = widgets_width;
     win->widgets_left  = widgets_left;
   }
-}
 
-void clear_window(glwindow_state* win) {
-  glfwDestroyWindow(win->win);
-  glfwTerminate();
-  win->win = nullptr;
-}
+  // callbacks
+  win->init_cb     = callbacks.init_cb;
+  win->clear_cb    = callbacks.clear_cb;
+  win->draw_cb     = callbacks.draw_cb;
+  win->widgets_cb  = callbacks.widgets_cb;
+  win->update_cb   = callbacks.update_cb;
+  win->uiupdate_cb = callbacks.uiupdate_cb;
 
-// Run loop
-void run_ui(glwindow_state* win) {
   // init
   if (win->init_cb) win->init_cb(win, win->input);
 
-  // loop
+  // run ui
   while (!glfwWindowShouldClose(win->win)) {
     // update input
     win->input.mouse_last = win->input.mouse_pos;
@@ -1824,32 +1827,11 @@ void run_ui(glwindow_state* win) {
 
   // clear
   if (win->clear_cb) win->clear_cb(win, win->input);
-}
-
-void set_close(glwindow_state* win, bool close) {
-  glfwSetWindowShouldClose(win->win, close ? GLFW_TRUE : GLFW_FALSE);
-}
-
-// run the user interface with the give callbacks
-void run_ui(const vec2i& size, const string& title,
-    const glwindow_callbacks& callbacks, int widgets_width, bool widgets_left) {
-  auto win_guard = std::make_unique<glwindow_state>();
-  auto win       = win_guard.get();
-  init_window(win, size, title, (bool)callbacks.widgets_cb, widgets_width,
-      widgets_left);
-
-  win->init_cb     = callbacks.init_cb;
-  win->clear_cb    = callbacks.clear_cb;
-  win->draw_cb     = callbacks.draw_cb;
-  win->widgets_cb  = callbacks.widgets_cb;
-  win->update_cb   = callbacks.update_cb;
-  win->uiupdate_cb = callbacks.uiupdate_cb;
-
-  // run ui
-  run_ui(win);
 
   // clear
-  clear_window(win);
+  glfwDestroyWindow(win->win);
+  glfwTerminate();
+  win->win = nullptr;
 }
 
 }  // namespace yocto
