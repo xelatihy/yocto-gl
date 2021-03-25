@@ -1222,19 +1222,19 @@ void set_instance_uniforms(const glscene_state& scene, ogl_program& program,
   glUniform1i(glGetUniformLocation(program.program_id, "faceted"),
       (params.faceted || shape.normals == 0) ? 1 : 0);
 
-  auto set_texture = [&scene](ogl_program& program, const char* name,
+  auto set_texture = [&scene](uint program, const char* name,
                          const char* name_on, int texture_idx, int unit) {
     if (texture_idx >= 0) {
       auto& texture = scene.textures.at(texture_idx);
       glActiveTexture(GL_TEXTURE0 + unit);
       glBindTexture(GL_TEXTURE_2D, texture.texture);
-      glUniform1i(glGetUniformLocation(program.program_id, name), unit);
-      glUniform1i(glGetUniformLocation(program.program_id, name_on), 1);
+      glUniform1i(glGetUniformLocation(program, name), unit);
+      glUniform1i(glGetUniformLocation(program, name_on), 1);
     } else {
       glActiveTexture(GL_TEXTURE0 + unit);
       glBindTexture(GL_TEXTURE_2D, 0);
-      glUniform1i(glGetUniformLocation(program.program_id, name), unit);
-      glUniform1i(glGetUniformLocation(program.program_id, name_on), 0);
+      glUniform1i(glGetUniformLocation(program, name), unit);
+      glUniform1i(glGetUniformLocation(program, name_on), 0);
     }
   };
 
@@ -1246,15 +1246,16 @@ void set_instance_uniforms(const glscene_state& scene, ogl_program& program,
   set_uniform(program, "roughness", material.roughness);
   set_uniform(program, "opacity", material.opacity);
   set_uniform(program, "double_sided", params.double_sided);
-  set_texture(
-      program, "emission_tex", "emission_tex_on", material.emission_tex, 0);
-  set_texture(program, "diffuse_tex", "diffuse_tex_on", material.color_tex, 1);
-  set_texture(program, "specular_tex", "specular_tex_on", -1, 2);
-  set_texture(
-      program, "roughness_tex", "roughness_tex_on", material.roughness_tex, 3);
-  set_texture(program, "opacity_tex", "opacity_tex_on", -1, 4);
-  set_texture(
-      program, "normalmap_tex", "normalmap_tex_on", material.normal_tex, 5);
+  set_texture(program.program_id, "emission_tex", "emission_tex_on",
+      material.emission_tex, 0);
+  set_texture(program.program_id, "diffuse_tex", "diffuse_tex_on",
+      material.color_tex, 1);
+  set_texture(program.program_id, "specular_tex", "specular_tex_on", -1, 2);
+  set_texture(program.program_id, "roughness_tex", "roughness_tex_on",
+      material.roughness_tex, 3);
+  set_texture(program.program_id, "opacity_tex", "opacity_tex_on", -1, 4);
+  set_texture(program.program_id, "normalmap_tex", "normalmap_tex_on",
+      material.normal_tex, 5);
 
   assert_ogl_error();
 
