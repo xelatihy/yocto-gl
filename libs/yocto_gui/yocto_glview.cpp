@@ -648,9 +648,8 @@ static void init_glscene(glscene_state& glscene, const scene_model& ioscene) {
 
   // shapes
   for (auto& ioshape : ioscene.shapes) {
-    add_shape(glscene, ioshape.points, ioshape.lines, ioshape.triangles,
-        ioshape.quads, ioshape.positions, ioshape.normals, ioshape.texcoords,
-        ioshape.colors);
+    auto& glshape = glscene.shapes.emplace_back();
+    set_shape(glshape, ioshape);
   }
 
   // environments
