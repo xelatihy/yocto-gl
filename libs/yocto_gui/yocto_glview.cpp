@@ -59,7 +59,7 @@
 // -----------------------------------------------------------------------------
 namespace yocto {
 
-static void update_image_params(glwindow_state* win, const glinput_state& input,
+static void update_image_params(const glinput_state& input,
     const color_image& image, glimage_params& glparams) {
   glparams.window                           = input.window_size;
   glparams.framebuffer                      = input.framebuffer_viewport;
@@ -69,7 +69,7 @@ static void update_image_params(glwindow_state* win, const glinput_state& input,
 }
 
 static bool uiupdate_image_params(
-    glwindow_state* win, const glinput_state& input, glimage_params& glparams) {
+    const glinput_state& input, glimage_params& glparams) {
   // handle mouse
   if (input.mouse_left && !input.widgets_active) {
     glparams.center += input.mouse_pos - input.mouse_last;
@@ -84,7 +84,7 @@ static bool uiupdate_image_params(
 }
 
 static bool uiupdate_camera_params(
-    glwindow_state* win, const glinput_state& input, scene_camera& camera) {
+    const glinput_state& input, scene_camera& camera) {
   if ((input.mouse_left || input.mouse_right) && !input.modifier_alt &&
       !input.modifier_ctrl && !input.widgets_active) {
     auto dolly  = 0.0f;
@@ -108,8 +108,8 @@ static bool uiupdate_camera_params(
   return false;
 }
 
-static bool draw_tonemap_params(glwindow_state* win, const glinput_state& input,
-    float& exposure, bool& filmic) {
+static bool draw_tonemap_params(
+    const glinput_state& input, float& exposure, bool& filmic) {
   auto edited = 0;
   if (begin_glheader("tonemap")) {
     edited += draw_glslider("exposure", exposure, -5, 5);
@@ -119,9 +119,9 @@ static bool draw_tonemap_params(glwindow_state* win, const glinput_state& input,
   return (bool)edited;
 }
 
-static bool draw_image_inspector(glwindow_state* win,
-    const glinput_state& input, const color_image& image,
-    const color_image& display, glimage_params& glparams) {
+static bool draw_image_inspector(const glinput_state& input,
+    const color_image& image, const color_image& display,
+    glimage_params& glparams) {
   if (begin_glheader("inspect")) {
     draw_glslider("zoom", glparams.scale, 0.1, 10);
     draw_glcheckbox("fit", glparams.fit);
@@ -152,8 +152,8 @@ struct scene_selection {
   int subdiv      = 0;
 };
 
-static bool draw_scene_editor(glwindow_state* win, scene_model& scene,
-    scene_selection& selection, const function<void()>& before_edit) {
+static bool draw_scene_editor(scene_model& scene, scene_selection& selection,
+    const function<void()>& before_edit) {
   auto edited = 0;
   if (begin_glheader("cameras")) {
     draw_glcombobox("camera", selection.camera, scene.camera_names);
@@ -282,27 +282,27 @@ void view_image(
 
   // callbacks
   auto callbacks    = glwindow_callbacks{};
-  callbacks.init_cb = [&](glwindow_state* win, const glinput_state& input) {
+  callbacks.init_cb = [&](const glinput_state& input) {
     init_image(glimage);
     set_image(glimage, display);
   };
-  callbacks.clear_cb = [&](glwindow_state* win, const glinput_state& input) {
+  callbacks.clear_cb = [&](const glinput_state& input) {
     clear_image(glimage);
   };
-  callbacks.draw_cb = [&](glwindow_state* win, const glinput_state& input) {
-    update_image_params(win, input, image, glparams);
+  callbacks.draw_cb = [&](const glinput_state& input) {
+    update_image_params(input, image, glparams);
     draw_image(glimage, glparams);
   };
-  callbacks.widgets_cb = [&](glwindow_state* win, const glinput_state& input) {
+  callbacks.widgets_cb = [&](const glinput_state& input) {
     draw_glcombobox("name", selected, names);
-    if (draw_tonemap_params(win, input, exposure, filmic)) {
+    if (draw_tonemap_params(input, exposure, filmic)) {
       tonemap_image_mt(display, image, exposure, filmic);
       set_image(glimage, display);
     }
-    draw_image_inspector(win, input, image, display, glparams);
+    draw_image_inspector(input, image, display, glparams);
   };
-  callbacks.uiupdate_cb = [&](glwindow_state* win, const glinput_state& input) {
-    uiupdate_image_params(win, input, glparams);
+  callbacks.uiupdate_cb = [&](const glinput_state& input) {
+    uiupdate_image_params(input, glparams);
   };
 
   // run ui
@@ -330,35 +330,35 @@ void view_images(const string& title, const vector<string>& names,
 
   // callbacks
   auto callbacks    = glwindow_callbacks{};
-  callbacks.init_cb = [&](glwindow_state* win, const glinput_state& input) {
+  callbacks.init_cb = [&](const glinput_state& input) {
     for (auto idx = 0; idx < (int)images.size(); idx++) {
       init_image(glimages[idx]);
       set_image(glimages[idx], displays[idx]);
     }
   };
-  callbacks.clear_cb = [&](glwindow_state* win, const glinput_state& input) {
+  callbacks.clear_cb = [&](const glinput_state& input) {
     for (auto idx = 0; idx < (int)images.size(); idx++) {
       clear_image(glimages[idx]);
     }
   };
-  callbacks.draw_cb = [&](glwindow_state* win, const glinput_state& input) {
-    update_image_params(win, input, displays[selected], glparamss[selected]);
+  callbacks.draw_cb = [&](const glinput_state& input) {
+    update_image_params(input, displays[selected], glparamss[selected]);
     draw_image(glimages[selected], glparamss[selected]);
   };
-  callbacks.widgets_cb = [&](glwindow_state* win, const glinput_state& input) {
+  callbacks.widgets_cb = [&](const glinput_state& input) {
     draw_glcombobox("name", selected, names);
     auto filmic = (bool)filmics[selected];  // vector of bool ...
-    if (draw_tonemap_params(win, input, exposures[selected], filmic)) {
+    if (draw_tonemap_params(input, exposures[selected], filmic)) {
       filmics[selected] = filmic;
       tonemap_image_mt(displays[selected], images[selected],
           exposures[selected], filmics[selected]);
       set_image(glimages[selected], displays[selected]);
     }
     draw_image_inspector(
-        win, input, images[selected], displays[selected], glparamss[selected]);
+        input, images[selected], displays[selected], glparamss[selected]);
   };
-  callbacks.uiupdate_cb = [&](glwindow_state* win, const glinput_state& input) {
-    uiupdate_image_params(win, input, glparamss[selected]);
+  callbacks.uiupdate_cb = [&](const glinput_state& input) {
+    uiupdate_image_params(input, glparamss[selected]);
   };
 
   // run ui
@@ -385,18 +385,18 @@ void colorgrade_image(
 
   // callbacks
   auto callbacks    = glwindow_callbacks{};
-  callbacks.init_cb = [&](glwindow_state* win, const glinput_state& input) {
+  callbacks.init_cb = [&](const glinput_state& input) {
     init_image(glimage);
     set_image(glimage, display);
   };
-  callbacks.clear_cb = [&](glwindow_state* win, const glinput_state& input) {
+  callbacks.clear_cb = [&](const glinput_state& input) {
     clear_image(glimage);
   };
-  callbacks.draw_cb = [&](glwindow_state* win, const glinput_state& input) {
-    update_image_params(win, input, image, glparams);
+  callbacks.draw_cb = [&](const glinput_state& input) {
+    update_image_params(input, image, glparams);
     draw_image(glimage, glparams);
   };
-  callbacks.widgets_cb = [&](glwindow_state* win, const glinput_state& input) {
+  callbacks.widgets_cb = [&](const glinput_state& input) {
     draw_glcombobox("name", selected, names);
     if (begin_glheader("colorgrade")) {
       auto edited = 0;
@@ -422,11 +422,10 @@ void colorgrade_image(
         set_image(glimage, display);
       }
     }
-    draw_image_inspector(win, input, image, display, glparams);
+    draw_image_inspector(input, image, display, glparams);
   };
-  callbacks.uiupdate_cb = [&glparams](
-                              glwindow_state* win, const glinput_state& input) {
-    uiupdate_image_params(win, input, glparams);
+  callbacks.uiupdate_cb = [&glparams](const glinput_state& input) {
+    uiupdate_image_params(input, glparams);
   };
 
   // run ui
@@ -559,28 +558,28 @@ void view_scene(const string& title, const string& name, scene_model& scene,
 
   // callbacks
   auto callbacks    = glwindow_callbacks{};
-  callbacks.init_cb = [&](glwindow_state* win, const glinput_state& input) {
+  callbacks.init_cb = [&](const glinput_state& input) {
     auto lock = std::lock_guard{render_mutex};
     init_image(glimage);
     set_image(glimage, display);
   };
-  callbacks.clear_cb = [&](glwindow_state* win, const glinput_state& input) {
+  callbacks.clear_cb = [&](const glinput_state& input) {
     clear_image(glimage);
   };
-  callbacks.draw_cb = [&](glwindow_state* win, const glinput_state& input) {
+  callbacks.draw_cb = [&](const glinput_state& input) {
     // update image
     if (render_update) {
       auto lock = std::lock_guard{render_mutex};
       set_image(glimage, display);
       render_update = false;
     }
-    update_image_params(win, input, image, glparams);
+    update_image_params(input, image, glparams);
     draw_image(glimage, glparams);
   };
-  callbacks.widgets_cb = [&](glwindow_state* win, const glinput_state& input) {
+  callbacks.widgets_cb = [&](const glinput_state& input) {
     auto edited = 0;
     draw_glcombobox("name", selected, names);
-    // draw_glprogressbar(win, "render", app->current, app->total);
+    // draw_glprogressbar("render", app->current, app->total);
     if (begin_glheader("render")) {
       auto edited  = 0;
       auto tparams = params;
@@ -615,16 +614,16 @@ void view_scene(const string& title, const string& name, scene_model& scene,
         set_image(glimage, display);
       }
     }
-    draw_image_inspector(win, input, image, display, glparams);
+    draw_image_inspector(input, image, display, glparams);
     if (edit) {
-      if (draw_scene_editor(win, scene, selection, [&]() { stop_render(); })) {
+      if (draw_scene_editor(scene, selection, [&]() { stop_render(); })) {
         reset_display();
       }
     }
   };
-  callbacks.uiupdate_cb = [&](glwindow_state* win, const glinput_state& input) {
+  callbacks.uiupdate_cb = [&](const glinput_state& input) {
     auto camera = scene.cameras[params.camera];
-    if (uiupdate_camera_params(win, input, camera)) {
+    if (uiupdate_camera_params(input, camera)) {
       stop_render();
       scene.cameras[params.camera] = camera;
       reset_display();
@@ -666,16 +665,16 @@ void glview_scene(const string& title, const string& name, scene_model& scene,
 
   // callbacks
   auto callbacks    = glwindow_callbacks{};
-  callbacks.init_cb = [&](glwindow_state* win, const glinput_state& input) {
+  callbacks.init_cb = [&](const glinput_state& input) {
     init_glscene(glscene, scene);
   };
-  callbacks.clear_cb = [&](glwindow_state* win, const glinput_state& input) {
+  callbacks.clear_cb = [&](const glinput_state& input) {
     clear_scene(glscene);
   };
-  callbacks.draw_cb = [&](glwindow_state* win, const glinput_state& input) {
+  callbacks.draw_cb = [&](const glinput_state& input) {
     draw_scene(glscene, scene, input.framebuffer_viewport, params);
   };
-  callbacks.widgets_cb = [&](glwindow_state* win, const glinput_state& input) {
+  callbacks.widgets_cb = [&](const glinput_state& input) {
     draw_glcombobox("name", selected, names);
     if (begin_glheader("shade")) {
       draw_glcombobox("camera", params.camera, camera_names);
@@ -692,9 +691,9 @@ void glview_scene(const string& title, const string& name, scene_model& scene,
       draw_glslider("far", params.far, 1000.0f, 10000.0f);
       end_glheader();
     }
-    // draw_scene_editor(win, scene, selection, {});
+    // draw_scene_editor(scene, selection, {});
     if (widgets_callback) {
-      widgets_callback(win, input, updated_shapes, updated_textures);
+      widgets_callback(input, updated_shapes, updated_textures);
       if (!updated_shapes.empty() || !updated_textures.empty()) {
         update_glscene(glscene, scene, updated_shapes, updated_textures);
         updated_shapes.clear();
@@ -702,9 +701,9 @@ void glview_scene(const string& title, const string& name, scene_model& scene,
       }
     }
   };
-  callbacks.update_cb = [&](glwindow_state* win, const glinput_state& input) {
+  callbacks.update_cb = [&](const glinput_state& input) {
     if (update_callback) {
-      update_callback(win, input, updated_shapes, updated_textures);
+      update_callback(input, updated_shapes, updated_textures);
       if (!updated_shapes.empty() || !updated_textures.empty()) {
         update_glscene(glscene, scene, updated_shapes, updated_textures);
         updated_shapes.clear();
@@ -712,10 +711,10 @@ void glview_scene(const string& title, const string& name, scene_model& scene,
       }
     }
   };
-  callbacks.uiupdate_cb = [&](glwindow_state* win, const glinput_state& input) {
+  callbacks.uiupdate_cb = [&](const glinput_state& input) {
     // handle mouse and keyboard for navigation
     if (uiupdate_callback) {
-      uiupdate_callback(win, input, updated_shapes, updated_textures);
+      uiupdate_callback(input, updated_shapes, updated_textures);
       if (!updated_shapes.empty() || !updated_textures.empty()) {
         update_glscene(glscene, scene, updated_shapes, updated_textures);
         updated_shapes.clear();
@@ -723,7 +722,7 @@ void glview_scene(const string& title, const string& name, scene_model& scene,
       }
     }
     auto camera = scene.cameras.at(params.camera);
-    if (uiupdate_camera_params(win, input, camera)) {
+    if (uiupdate_camera_params(input, camera)) {
       scene.cameras.at(params.camera) = camera;
     }
   };
@@ -1645,7 +1644,7 @@ static void draw_window(glwindow_state* win) {
   glClearColor(win->background.x, win->background.y, win->background.z,
       win->background.w);
   glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
-  if (win->draw_cb) win->draw_cb(win, win->input);
+  if (win->draw_cb) win->draw_cb(win->input);
   if (win->widgets_cb) {
     ImGui_ImplOpenGL3_NewFrame();
     ImGui_ImplGlfw_NewFrame();
@@ -1665,7 +1664,7 @@ static void draw_window(glwindow_state* win) {
             ImGuiWindowFlags_NoTitleBar | ImGuiWindowFlags_NoResize |
                 ImGuiWindowFlags_NoMove | ImGuiWindowFlags_NoCollapse |
                 ImGuiWindowFlags_NoSavedSettings)) {
-      win->widgets_cb(win, win->input);
+      win->widgets_cb(win->input);
     }
     ImGui::End();
     ImGui::Render();
@@ -1756,7 +1755,7 @@ void run_ui(const vec2i& size, const string& title,
   win->uiupdate_cb = callbacks.uiupdate_cb;
 
   // init
-  if (win->init_cb) win->init_cb(win, win->input);
+  if (win->init_cb) win->init_cb(win->input);
 
   // run ui
   while (!glfwWindowShouldClose(win->win)) {
@@ -1812,10 +1811,10 @@ void run_ui(const vec2i& size, const string& title,
 
     // update ui
     if (win->uiupdate_cb && !win->input.widgets_active)
-      win->uiupdate_cb(win, win->input);
+      win->uiupdate_cb(win->input);
 
     // update
-    if (win->update_cb) win->update_cb(win, win->input);
+    if (win->update_cb) win->update_cb(win->input);
 
     // draw
     draw_window(win);
@@ -1825,7 +1824,7 @@ void run_ui(const vec2i& size, const string& title,
   }
 
   // clear
-  if (win->clear_cb) win->clear_cb(win, win->input);
+  if (win->clear_cb) win->clear_cb(win->input);
 
   // clear
   glfwDestroyWindow(win->win);

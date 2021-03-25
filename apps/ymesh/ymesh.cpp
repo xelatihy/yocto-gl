@@ -296,9 +296,9 @@ int run_glpath(const glpath_params& params) {
   // run viewer
   glview_scene(
       "ymesh", params.shape, scene, {},
-      [&](glwindow_state*, const glinput_state&, vector<int>&, vector<int>&) {},
-      [&](glwindow_state* win, const glinput_state& input,
-          vector<int>& updated_shapes, vector<int>&) {
+      [&](const glinput_state&, vector<int>&, vector<int>&) {},
+      [&](const glinput_state& input, vector<int>& updated_shapes,
+          vector<int>&) {
         auto& shape   = scene.shapes.at(0);
         auto& camera  = scene.cameras.at(0);
         auto  updated = false;
@@ -514,9 +514,9 @@ int run_glpathd(const glpathd_params& params) {
   // run viewer
   glview_scene(
       "ymesh", params.shape, scene, {},
-      [&](glwindow_state*, const glinput_state&, vector<int>&, vector<int>&) {},
-      [&](glwindow_state* win, const glinput_state& input,
-          vector<int>& updated_shapes, vector<int>&) {
+      [&](const glinput_state&, vector<int>&, vector<int>&) {},
+      [&](const glinput_state& input, vector<int>& updated_shapes,
+          vector<int>&) {
         auto& shape   = scene.shapes.at(0);
         auto& camera  = scene.cameras.at(0);
         auto  updated = false;
@@ -1265,8 +1265,7 @@ int run_glsculpt(const glsculpt_params& params_) {
   // callbacks
   glview_scene(
       "ymesh", params_.shape, scene, {},
-      [&](glwindow_state* win, const glinput_state&, vector<int>&,
-          vector<int>&) {
+      [&](const glinput_state&, vector<int>&, vector<int>&) {
         draw_glcombobox("brush type", (int&)params.type, sculpt_brush_names);
         if (params.type == sculpt_brush_type::gaussian) {
           if (params.strength < 0.8f || params.strength > 1.5f)
@@ -1285,8 +1284,8 @@ int run_glsculpt(const glsculpt_params& params_) {
           draw_glslider("strength", params.strength, 0.1f, 1.0f);
         }
       },
-      [&](glwindow_state* win, const glinput_state& input,
-          vector<int>& updated_shapes, vector<int>&) {
+      [&](const glinput_state& input, vector<int>& updated_shapes,
+          vector<int>&) {
         auto  mouse_uv = vec2f{input.mouse_pos.x / float(input.window_size.x),
             input.mouse_pos.y / float(input.window_size.y)};
         auto& shape    = scene.shapes.at(0);

@@ -79,9 +79,8 @@ void view_scene(const string& title, const string& name, scene_model& scene,
 // GUI callback
 struct glwindow_state;
 struct glinput_state;
-using glview_callback =
-    std::function<void(glwindow_state* win, const glinput_state& input,
-        vector<int>& updated_shapes, vector<int>& updated_textures)>;
+using glview_callback = std::function<void(const glinput_state& input,
+    vector<int>& updated_shapes, vector<int>& updated_textures)>;
 
 // Open a window and show an scene via OpenGL shading
 struct glscene_params;
@@ -276,26 +275,17 @@ struct glinput_state {
 };
 
 // Init callback called after the window has opened
-using init_glcallback =
-    function<void(glwindow_state*, const glinput_state& input)>;
+using init_glcallback = function<void(const glinput_state& input)>;
 // Clear callback called after the window is cloased
-using clear_glcallback =
-    function<void(glwindow_state*, const glinput_state& input)>;
+using clear_glcallback = function<void(const glinput_state& input)>;
 // Draw callback called every frame and when resizing
-using draw_glcallback =
-    function<void(glwindow_state*, const glinput_state& input)>;
+using draw_glcallback = function<void(const glinput_state& input)>;
 // Draw callback for drawing widgets
-using widgets_glcallback =
-    function<void(glwindow_state*, const glinput_state& input)>;
-// Drop callback that returns that list of dropped strings.
-using drop_glcallback = function<void(
-    glwindow_state*, const vector<string>&, const glinput_state& input)>;
+using widgets_glcallback = function<void(const glinput_state& input)>;
 // Update functions called every frame
-using update_glcallback =
-    function<void(glwindow_state*, const glinput_state& input)>;
+using update_glcallback = function<void(const glinput_state& input)>;
 // Update functions called every frame
-using uiupdate_glcallback =
-    function<void(glwindow_state*, const glinput_state& input)>;
+using uiupdate_glcallback = function<void(const glinput_state& input)>;
 
 // User interface callcaks
 struct glwindow_callbacks {
