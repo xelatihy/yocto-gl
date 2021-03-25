@@ -376,7 +376,7 @@ int run_glview(const glview_params& params_) {
   }
 
   // camera
-  auto glparams   = shade_params{};
+  auto glparams   = glscene_params{};
   glparams.camera = find_camera(scene, params.camname);
 
   // run viewer

@@ -166,7 +166,7 @@ int run_glview(const glview_params& params) {
   auto scene = make_shapescene(shape);
 
   // run viewer
-  glview_scene("ymesh", params.shape, scene);
+  glview_scene("ymesh", params.shape, scene, {});
 
   // done
   return 0;

@@ -83,9 +83,9 @@ using glview_callback =
         vector<int>& updated_shapes, vector<int>& updated_textures)>;
 
 // Open a window and show an scene via OpenGL shading
+struct glscene_params;
 void glview_scene(const string& title, const string& name, scene_model& scene,
-    const shade_params&    params            = {},
-    const glview_callback& widgets_callback  = {},
+    const glscene_params& params, const glview_callback& widgets_callback = {},
     const glview_callback& uiupdate_callback = {},
     const glview_callback& update_callback   = {});
 
@@ -205,11 +205,10 @@ struct glscene_state {
 };
 
 // Shading type
-enum struct glscene_lighting_type { envlight, camlight, eyelight };
+enum struct glscene_lighting_type { camlight, eyelight };
 
 // Shading name
-const auto glscene_lighting_names = vector<string>{
-    "envlight", "camlight", "eyelight"};
+const auto glscene_lighting_names = vector<string>{"camlight", "eyelight"};
 
 // Draw options
 struct glscene_params {

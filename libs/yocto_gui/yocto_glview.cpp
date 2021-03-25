@@ -637,14 +637,14 @@ void view_scene(const string& title, const string& name, scene_model& scene,
 }
 
 void glview_scene(const string& title, const string& name, scene_model& scene,
-    const shade_params& params_, const glview_callback& widgets_callback,
+    const glscene_params& params_, const glview_callback& widgets_callback,
     const glview_callback& uiupdate_callback,
     const glview_callback& update_callback) {
   // glscene
   auto glscene = glscene_state{};
 
   // draw params
-  auto params = (glscene_params&)params_;
+  auto params = params_;
 
   // top level combo
   auto names    = vector<string>{name};
@@ -683,7 +683,7 @@ void glview_scene(const string& title, const string& name, scene_model& scene,
       continue_line(win);
       draw_checkbox(win, "double sided", params.double_sided);
       draw_combobox(
-          win, "lighting", (int&)params.lighting, shade_lighting_names);
+          win, "lighting", (int&)params.lighting, glscene_lighting_names);
       draw_slider(win, "exposure", params.exposure, -10, 10);
       draw_slider(win, "gamma", params.gamma, 0.1f, 4);
       draw_slider(win, "near", params.near, 0.01f, 1.0f);
