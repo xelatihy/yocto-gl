@@ -1198,10 +1198,9 @@ static void init_envlight(
     glscene_state& scene, glscene_environment& environment);
 
 // Initialize an OpenGL scene
-void init_scene(glscene_state& scene, bool instanced_drawing) {
+void init_scene(glscene_state& scene) {
   if (is_initialized(scene.instance_program)) return;
-  set_program(scene.instance_program,
-      instanced_drawing ? shade_instanced_vertex() : shade_instance_vertex(),
+  set_program(scene.instance_program, shade_instance_vertex(),
       shade_instance_fragment(), true);
   // set_program(scene.envlight_program, shade_instance_vertex(),
   //     shade_instance_fragment(), true);
@@ -1758,7 +1757,7 @@ void main() {
   return code;
 }
 
-static const char* shade_instanced_vertex() {
+[[maybe_unused]] static const char* shade_instanced_vertex() {
   static const char* code = R"(
 #version 330
 

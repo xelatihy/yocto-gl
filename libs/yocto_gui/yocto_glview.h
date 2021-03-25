@@ -261,7 +261,7 @@ struct glscene_params {
 };
 
 // Initialize an OpenGL scene
-void init_scene(glscene_state& scene, bool instanced_drawing = false);
+void init_scene(glscene_state& scene);
 bool is_initialized(const glscene_state& scene);
 
 // Initialize data for environment lighting
