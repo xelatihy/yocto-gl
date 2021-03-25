@@ -124,6 +124,7 @@ static bool draw_image_inspector(const glinput_state& input,
   if (begin_glheader("inspect")) {
     draw_glslider("zoom", glparams.scale, 0.1, 10);
     draw_glcheckbox("fit", glparams.fit);
+    draw_glcoloredit("background", glparams.background);
     auto [i, j] = image_coords(input.mouse_pos, glparams.center, glparams.scale,
         {image.width, image.height});
     auto ij     = vec2i{i, j};
@@ -689,6 +690,7 @@ void glview_scene(const string& title, const string& name, scene_model& scene,
       draw_glslider("gamma", params.gamma, 0.1f, 4);
       draw_glslider("near", params.near, 0.01f, 1.0f);
       draw_glslider("far", params.far, 1000.0f, 10000.0f);
+      draw_glcoloredit("background", params.background);
       end_glheader();
     }
     // draw_scene_editor(scene, selection, {});
