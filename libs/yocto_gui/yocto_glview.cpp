@@ -1640,6 +1640,22 @@ void draw_scene(glscene_state& glscene, const scene_model& scene,
 // -----------------------------------------------------------------------------
 namespace yocto {
 
+// OpenGL window wrapper
+struct glwindow_state {
+  GLFWwindow*         win           = nullptr;
+  string              title         = "";
+  init_glcallback     init_cb       = {};
+  clear_glcallback    clear_cb      = {};
+  draw_glcallback     draw_cb       = {};
+  widgets_glcallback  widgets_cb    = {};
+  update_glcallback   update_cb     = {};
+  uiupdate_glcallback uiupdate_cb   = {};
+  int                 widgets_width = 0;
+  bool                widgets_left  = true;
+  glinput_state       input         = {};
+  vec4f               background    = {0.15f, 0.15f, 0.15f, 1.0f};
+};
+
 static void draw_window(glwindow_state* win) {
   glClearColor(win->background.x, win->background.y, win->background.z,
       win->background.w);

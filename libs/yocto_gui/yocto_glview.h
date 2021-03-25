@@ -77,7 +77,6 @@ void view_scene(const string& title, const string& name, scene_model& scene,
     const trace_params& params = {}, bool print = true, bool edit = false);
 
 // GUI callback
-struct glwindow_state;
 struct glinput_state;
 using glview_callback = std::function<void(const glinput_state& input,
     vector<int>& updated_shapes, vector<int>& updated_textures)>;
@@ -243,16 +242,10 @@ void draw_scene(glscene_state& glscene, const scene_model& scene,
 
 }  // namespace yocto
 
-// forward declaration
-struct GLFWwindow;
-
 // -----------------------------------------------------------------------------
 // WINDOW
 // -----------------------------------------------------------------------------
 namespace yocto {
-
-// Forward declaration
-struct glwindow_state;
 
 // Input state
 struct glinput_state {
@@ -295,22 +288,6 @@ struct glwindow_callbacks {
   widgets_glcallback  widgets_cb  = {};
   update_glcallback   update_cb   = {};
   uiupdate_glcallback uiupdate_cb = {};
-};
-
-// OpenGL window wrapper
-struct glwindow_state {
-  GLFWwindow*         win           = nullptr;
-  string              title         = "";
-  init_glcallback     init_cb       = {};
-  clear_glcallback    clear_cb      = {};
-  draw_glcallback     draw_cb       = {};
-  widgets_glcallback  widgets_cb    = {};
-  update_glcallback   update_cb     = {};
-  uiupdate_glcallback uiupdate_cb   = {};
-  int                 widgets_width = 0;
-  bool                widgets_left  = true;
-  glinput_state       input         = {};
-  vec4f               background    = {0.15f, 0.15f, 0.15f, 1.0f};
 };
 
 // run the user interface with the give callbacks
