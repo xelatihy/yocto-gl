@@ -1124,17 +1124,17 @@ float eval_brdf_value(float value, sampler2D tex, bool tex_on) {
 }
 
 shade_brdf eval_brdf() {
+  vec4 base = vec4(diffuse, opacity);
+  if (diffuse_tex_on) base *= texture(diffuse_tex, texcoord);
+  float metallic = specular.x;
+
   // color?
   shade_brdf brdf;
   brdf.emission  = eval_brdf_color(emission, emission_tex, emission_tex_on);
-  brdf.diffuse   = eval_brdf_color(diffuse, diffuse_tex, diffuse_tex_on);
-  brdf.specular  = eval_brdf_color(specular, specular_tex, specular_tex_on);
+  brdf.diffuse   = base.xyz * (1 - metallic);
+  brdf.specular  = base.xyz * metallic + vec3(0.04) * (1 - metallic);
   brdf.roughness = eval_brdf_value(roughness, roughness_tex, roughness_tex_on);
   brdf.opacity   = eval_brdf_value(opacity, opacity_tex, opacity_tex_on);
-  vec3 base = brdf.diffuse;
-  float metallic = brdf.specular.x;
-  brdf.diffuse = base * (1 - metallic);
-  brdf.specular = base * metallic + vec3(0.04) * (1 - metallic);
   brdf.roughness = brdf.roughness * brdf.roughness;
   return brdf;
 }
