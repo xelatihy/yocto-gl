@@ -1191,9 +1191,12 @@ struct shade_view {
 };
 
 void set_view_uniforms(ogl_program& program, const shade_view& view) {
-  set_uniform(program, "eye", view.camera_frame.o);
-  set_uniform(program, "view", view.view_matrix);
-  set_uniform(program, "projection", view.projection_matrix);
+  glUniform3f(glGetUniformLocation(program.program_id, "eye"),
+      view.camera_frame.o.x, view.camera_frame.o.y, view.camera_frame.o.z);
+  glUniformMatrix4fv(glGetUniformLocation(program.program_id, "view"), 1, false,
+      &view.view_matrix.x.x);
+  glUniformMatrix4fv(glGetUniformLocation(program.program_id, "projection"), 1,
+      false, &view.projection_matrix.x.x);
 }
 
 void set_params_uniforms(ogl_program& program, const glscene_params& params) {
