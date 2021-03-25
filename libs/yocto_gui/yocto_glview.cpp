@@ -1080,6 +1080,77 @@ void clear_texture(glscene_texture& gltexture) {
   }
 }
 
+template <typename T>
+static void set_vertex_buffer_impl(
+    glscene_shape& shape, const vector<T>& data, int location) {
+  if (!shape.shape_id) glGenVertexArrays(1, &shape.shape_id);
+  while (shape.vertex_buffers.size() <= location) {
+    shape.vertex_buffers.emplace_back();
+  }
+  set_arraybuffer(shape.vertex_buffers[location], data, false);
+  glBindVertexArray(shape.shape_id);
+  auto& buffer = shape.vertex_buffers[location];
+  assert_ogl_error();
+  glBindBuffer(GL_ARRAY_BUFFER, buffer.buffer_id);
+  glEnableVertexAttribArray(location);
+  glVertexAttribPointer(
+      location, buffer.element_size, GL_FLOAT, false, 0, nullptr);
+  assert_ogl_error();
+}
+
+static void set_vertex_buffer(
+    glscene_shape& shape, const vector<vec2f>& values, int location) {
+  if (!shape.shape_id) glGenVertexArrays(1, &shape.shape_id);
+  set_vertex_buffer_impl(shape, values, location);
+}
+static void set_vertex_buffer(
+    glscene_shape& shape, const vector<vec3f>& values, int location) {
+  if (!shape.shape_id) glGenVertexArrays(1, &shape.shape_id);
+  set_vertex_buffer_impl(shape, values, location);
+}
+static void set_vertex_buffer(
+    glscene_shape& shape, const vector<vec4f>& values, int location) {
+  if (!shape.shape_id) glGenVertexArrays(1, &shape.shape_id);
+  set_vertex_buffer_impl(shape, values, location);
+}
+
+static void set_vertex_buffer(
+    glscene_shape& shape, const vec2f& value, int location) {
+  if (!shape.shape_id) glGenVertexArrays(1, &shape.shape_id);
+  glBindVertexArray(shape.shape_id);
+  glVertexAttrib2f(location, value.x, value.y);
+  assert_ogl_error();
+}
+static void set_vertex_buffer(
+    glscene_shape& shape, const vec3f& value, int location) {
+  if (!shape.shape_id) glGenVertexArrays(1, &shape.shape_id);
+  glBindVertexArray(shape.shape_id);
+  glVertexAttrib3f(location, value.x, value.y, value.z);
+  assert_ogl_error();
+}
+static void set_vertex_buffer(
+    glscene_shape& shape, const vec4f& value, int location) {
+  if (!shape.shape_id) glGenVertexArrays(1, &shape.shape_id);
+  glBindVertexArray(shape.shape_id);
+  glVertexAttrib4f(location, value.x, value.y, value.z, value.w);
+  assert_ogl_error();
+}
+
+static void set_index_buffer(glscene_shape& shape, const vector<int>& indices) {
+  set_elementbuffer(shape.index_buffer, indices);
+  shape.elements = ogl_element_type::points;
+}
+static void set_index_buffer(
+    glscene_shape& shape, const vector<vec2i>& indices) {
+  set_elementbuffer(shape.index_buffer, indices);
+  shape.elements = ogl_element_type::lines;
+}
+static void set_index_buffer(
+    glscene_shape& shape, const vector<vec3i>& indices) {
+  set_elementbuffer(shape.index_buffer, indices);
+  shape.elements = ogl_element_type::triangles;
+}
+
 // Create shape
 void set_shape(glscene_shape& glshape, const scene_shape& shape) {
   if (shape.points.size() != 0) {
@@ -1141,65 +1212,48 @@ const ogl_arraybuffer& get_tangents(const glscene_shape& shape) {
 
 void set_positions(glscene_shape& shape, const vector<vec3f>& positions) {
   if (positions.empty()) {
-    set_vertex_buffer((ogl_shape&)shape, vec3f{0, 0, 0}, 0);
+    set_vertex_buffer(shape, vec3f{0, 0, 0}, 0);
   } else {
-    set_vertex_buffer((ogl_shape&)shape, positions, 0);
+    set_vertex_buffer(shape, positions, 0);
   }
 }
 void set_normals(glscene_shape& shape, const vector<vec3f>& normals) {
   if (normals.empty()) {
-    set_vertex_buffer((ogl_shape&)shape, vec3f{0, 0, 1}, 1);
+    set_vertex_buffer(shape, vec3f{0, 0, 1}, 1);
   } else {
-    set_vertex_buffer((ogl_shape&)shape, normals, 1);
+    set_vertex_buffer(shape, normals, 1);
   }
 }
 void set_texcoords(glscene_shape& shape, const vector<vec2f>& texcoords) {
   if (texcoords.empty()) {
-    set_vertex_buffer((ogl_shape&)shape, vec2f{0, 0}, 2);
+    set_vertex_buffer(shape, vec2f{0, 0}, 2);
   } else {
-    set_vertex_buffer((ogl_shape&)shape, texcoords, 2);
+    set_vertex_buffer(shape, texcoords, 2);
   }
 }
 void set_colors(glscene_shape& shape, const vector<vec4f>& colors) {
   if (colors.empty()) {
-    set_vertex_buffer((ogl_shape&)shape, vec4f{1, 1, 1, 1}, 3);
+    set_vertex_buffer(shape, vec4f{1, 1, 1, 1}, 3);
   } else {
-    set_vertex_buffer((ogl_shape&)shape, colors, 3);
+    set_vertex_buffer(shape, colors, 3);
   }
 }
 void set_tangents(glscene_shape& shape, const vector<vec4f>& tangents) {
   if (tangents.empty()) {
-    set_vertex_buffer((ogl_shape&)shape, vec4f{0, 0, 1, 1}, 4);
+    set_vertex_buffer(shape, vec4f{0, 0, 1, 1}, 4);
   } else {
-    set_vertex_buffer((ogl_shape&)shape, tangents, 4);
-  }
-}
-void set_instances(glscene_shape& shape, const vector<vec3f>& froms,
-    const vector<vec3f>& tos) {
-  if (froms.empty()) {
-    set_vertex_buffer((ogl_shape&)(ogl_shape&)shape, vec3f{0, 0, 0}, 5);
-    set_instance_buffer((ogl_shape&)shape, 5, false);
-  } else {
-    set_vertex_buffer((ogl_shape&)shape, froms, 5);
-    set_instance_buffer((ogl_shape&)shape, 5, true);
-  }
-  if (tos.empty()) {
-    set_vertex_buffer((ogl_shape&)shape, vec3f{0, 0, 0}, 5);
-    set_instance_buffer((ogl_shape&)shape, 6, false);
-  } else {
-    set_vertex_buffer((ogl_shape&)shape, tos, 6);
-    set_instance_buffer((ogl_shape&)shape, 6, true);
+    set_vertex_buffer(shape, tangents, 4);
   }
 }
 
 void set_points(glscene_shape& shape, const vector<int>& points) {
-  set_index_buffer((ogl_shape&)shape, points);
+  set_index_buffer(shape, points);
 }
 void set_lines(glscene_shape& shape, const vector<vec2i>& lines) {
-  set_index_buffer((ogl_shape&)shape, lines);
+  set_index_buffer(shape, lines);
 }
 void set_triangles(glscene_shape& shape, const vector<vec3i>& triangles) {
-  set_index_buffer((ogl_shape&)shape, triangles);
+  set_index_buffer(shape, triangles);
 }
 void set_quads(glscene_shape& shape, const vector<vec4i>& quads) {
   auto triangles = vector<vec3i>{};
@@ -1208,12 +1262,7 @@ void set_quads(glscene_shape& shape, const vector<vec4i>& quads) {
     triangles.push_back({q.x, q.y, q.w});
     if (q.z != q.w) triangles.push_back({q.z, q.w, q.y});
   }
-  set_index_buffer((ogl_shape&)shape, triangles);
-}
-
-// set point size
-void set_point_size(glscene_shape& shape, float point_size) {
-  set_point_size((ogl_shape&)shape, point_size);
+  set_index_buffer(shape, triangles);
 }
 
 glscene_state::~glscene_state() { clear_scene(*this); }
@@ -1415,7 +1464,49 @@ void set_instance_uniforms(const glscene_state& scene, ogl_program& program,
   assert_ogl_error();
 }
 
-static void draw_shape(glscene_shape& shape) { draw_shape((ogl_shape&)shape); }
+static void bind_shape(const glscene_shape& shape) {
+  glBindVertexArray(shape.shape_id);
+}
+
+static void draw_shape(glscene_shape& shape) {
+  if (shape.shape_id == 0) return;
+  bind_shape(shape);
+  auto type = GL_TRIANGLES;
+  switch (shape.elements) {
+    case ogl_element_type::points: type = GL_POINTS; break;
+    case ogl_element_type::lines: type = GL_LINES; break;
+    case ogl_element_type::line_strip: type = GL_LINE_STRIP; break;
+    case ogl_element_type::triangles: type = GL_TRIANGLES; break;
+    case ogl_element_type::triangle_strip: type = GL_TRIANGLE_STRIP; break;
+    case ogl_element_type::triangle_fan: type = GL_TRIANGLE_FAN; break;
+  }
+
+  if (shape.elements == ogl_element_type::points) {
+    glPointSize(shape.point_size);
+  }
+
+  auto& indices = shape.index_buffer;
+  if (indices.buffer_id != 0) {
+    glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, indices.buffer_id);
+    if (shape.num_instances == 0) {
+      glDrawElements(type, (GLsizei)indices.num_elements * indices.element_size,
+          GL_UNSIGNED_INT, nullptr);
+    } else {
+      glDrawElementsInstanced(type,
+          (GLsizei)indices.num_elements * indices.element_size, GL_UNSIGNED_INT,
+          nullptr, (GLsizei)shape.num_instances);
+    }
+  } else {
+    auto& vertices = shape.vertex_buffers[0];
+    glDrawArrays(type, 0, (int)vertices.num_elements);
+  }
+
+  if (shape.elements == ogl_element_type::points) {
+    glPointSize(shape.point_size);
+  }
+
+  assert_ogl_error();
+}
 
 void draw_environments(glscene_state& scene, const shade_view& view,
     const glscene_params& params) {
