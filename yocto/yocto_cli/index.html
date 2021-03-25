@@ -16,7 +16,7 @@
     
     
       
-        <title>Ray-scene intersection - Yocto/GL</title>
+        <title>Command-line utilities - Yocto/GL</title>
       
     
     
@@ -64,7 +64,7 @@
     <div data-md-component="skip">
       
         
-        <a href="#yoctobvh-accelerated-ray-intersection-and-point-overlap" class="md-skip">
+        <a href="#yoctocli-utilities-for-writing-command-line-apps" class="md-skip">
           Skip to content
         </a>
       
@@ -96,7 +96,7 @@
         <div class="md-header__topic" data-md-component="header-topic">
           <span class="md-ellipsis">
             
-              Ray-scene intersection
+              Command-line utilities
             
           </span>
         </div>
@@ -383,70 +383,11 @@
 
   
   
-    
   
-  
-    <li class="md-nav__item md-nav__item--active">
-      
-      <input class="md-nav__toggle md-toggle" data-md-toggle="toc" type="checkbox" id="__toc">
-      
-        
-      
-      
-        <label class="md-nav__link md-nav__link--active" for="__toc">
-          Ray-scene intersection
-          <span class="md-nav__icon md-icon"></span>
-        </label>
-      
-      <a href="./" class="md-nav__link md-nav__link--active">
+    <li class="md-nav__item">
+      <a href="../yocto_bvh/" class="md-nav__link">
         Ray-scene intersection
       </a>
-      
-        
-<nav class="md-nav md-nav--secondary" aria-label="Table of contents">
-  
-  
-    
-  
-  
-    <label class="md-nav__title" for="__toc">
-      <span class="md-nav__icon md-icon"></span>
-      Table of contents
-    </label>
-    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
-      
-        <li class="md-nav__item">
-  <a href="#bvh-representation" class="md-nav__link">
-    BVH representation
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#building-bvh" class="md-nav__link">
-    Building BVH
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#ray-intersection" class="md-nav__link">
-    Ray intersection
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#point-overlap" class="md-nav__link">
-    Point overlap
-  </a>
-  
-</li>
-      
-    </ul>
-  
-</nav>
-      
     </li>
   
 
@@ -502,11 +443,56 @@
 
   
   
+    
   
-    <li class="md-nav__item">
-      <a href="../yocto_cli/" class="md-nav__link">
+  
+    <li class="md-nav__item md-nav__item--active">
+      
+      <input class="md-nav__toggle md-toggle" data-md-toggle="toc" type="checkbox" id="__toc">
+      
+        
+      
+      
+        <label class="md-nav__link md-nav__link--active" for="__toc">
+          Command-line utilities
+          <span class="md-nav__icon md-icon"></span>
+        </label>
+      
+      <a href="./" class="md-nav__link md-nav__link--active">
         Command-line utilities
       </a>
+      
+        
+<nav class="md-nav md-nav--secondary" aria-label="Table of contents">
+  
+  
+    
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      Table of contents
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#printing-values" class="md-nav__link">
+    Printing values
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#command-line-parsing" class="md-nav__link">
+    Command-Line Parsing
+  </a>
+  
+</li>
+      
+    </ul>
+  
+</nav>
+      
     </li>
   
 
@@ -551,29 +537,15 @@
     <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
       
         <li class="md-nav__item">
-  <a href="#bvh-representation" class="md-nav__link">
-    BVH representation
+  <a href="#printing-values" class="md-nav__link">
+    Printing values
   </a>
   
 </li>
       
         <li class="md-nav__item">
-  <a href="#building-bvh" class="md-nav__link">
-    Building BVH
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#ray-intersection" class="md-nav__link">
-    Ray intersection
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#point-overlap" class="md-nav__link">
-    Point overlap
+  <a href="#command-line-parsing" class="md-nav__link">
+    Command-Line Parsing
   </a>
   
 </li>
@@ -591,90 +563,78 @@
               
                 
                 
-                <h1 id="yoctobvh-accelerated-ray-intersection-and-point-overlap">Yocto/Bvh: Accelerated ray-intersection and point-overlap</h1>
-<p>Yocto/Bvh provides ray-intersection and point-overlap queries accelerated
-using a two-level BVH or wrapping Intel's Embree.
-Yocto/Bvh is implemented in <code>yocto_bvh.h</code> and <code>yocto_bvh.cpp</code>.</p>
-<h2 id="bvh-representation">BVH representation</h2>
-<p>Yocto/Bvh provides ray-scene intersection for points, lines, triangles and
-quads accelerated by a BVH data structure. Our BVH is written for
-minimal code and not maximum speed, but still gives fast-enough results.</p>
-<p>The BVH tree is stored in a <code>bvh_tree</code> struct. The tree stores an array of
-nodes and an array of element indices. Each node in the tree has references
-to either other nodes or elements. References are represented as indices
-in the nodes or elements arrays. Nodes indices refer to the nodes array,
-for internal nodes, or the element arrays, for leaf nodes.
-The BVH does not store shape data, which is instead passed explicitly
-to all calls.</p>
-<p>BVH nodes contain their bounds, indices to the BVH arrays of either
-primitives or internal nodes, node element type,
-and the split axis. Leaf and internal nodes are identical, except that
-indices refer to primitives for leaf nodes or other nodes for internal nodes.</p>
-<p>Two wrappers, <code>bvh_scene</code> and <code>bvh_shape</code> are used to store the BVH for
-<a href="../yocto_scene/">Yocto/Scene</a> scenes and shapes. For shapes, we store a
-single BVH, while for scene we store the scene BVH and all shapes BVHs.
-These wrappers does not store copies to shape or scene data, so that data is
-passed in for all subsequent calls.</p>
-<p>These wrappers can alternatively store references to Intel's Embree BVH,
-for faster ray-scene intersection. To use Embree, the library should be
-compiled with Embree support by setting the <code>YOCTO_EMBREE</code> compile flag and
-linking to Embree's libraries.</p>
-<h2 id="building-bvh">Building BVH</h2>
-<p>Use <code>make_bvh(scene,highquality,embree)</code> or <code>make_bvh(shape,highquaity,embree)</code>
-to build a bvh for a scene or shape BVH respectively.
-These functions takes as input scenes and shapes from
-<a href="../yocto_scene/">Yocto/Scene</a>. By default, the BVH is build with a fast heuristic,
-that can be improved slightly by setting <code>highquality</code> to true.
-By default, Yocto/BVH uses the internal BVH. Intel's Embree can be used
-by setting the <code>embree</code> flag to true.</p>
-<div class="highlight"><pre><span></span><code><span class="k">auto</span> <span class="n">scene</span> <span class="o">=</span> <span class="n">scene_model</span><span class="p">{...};</span>            <span class="c1">// make a complete scene</span>
-<span class="k">auto</span> <span class="n">bvh</span> <span class="o">=</span> <span class="n">build_bvh</span><span class="p">(</span><span class="n">scene</span><span class="p">);</span>              <span class="c1">// build a BVH</span>
-<span class="k">auto</span> <span class="n">embree</span> <span class="o">=</span> <span class="n">build_bvh</span><span class="p">(</span><span class="n">scene</span><span class="p">,</span><span class="nb">true</span><span class="p">,</span><span class="nb">true</span><span class="p">);</span> <span class="c1">// use Embree</span>
+                <h1 id="yoctocli-utilities-for-writing-command-line-apps">Yocto/Cli: Utilities for writing command-line apps</h1>
+<p>Yocto/Cli is a collection of utilities used in writing command-line
+applications, including parsing command line arguments, printing values,
+timers and progress bars.
+Yocto/Cli is implemented in <code>yocto_cli.h</code>.</p>
+<h2 id="printing-values">Printing values</h2>
+<p>Use <code>print_info(message)</code> to print a message, and <code>print_fatal(message)</code>
+to print and exit. To time a block of code use <code>print_timed(message)</code>
+to use an RIIA timer or call <code>print_elapsed(timer)</code> to print the elapsed
+time as needed. Use <code>print_progress(message, current, total)</code> to print
+a progress bar with a message for a given current and total number of tasks,
+or <code>print_progress_start(message, total)</code>, <code>print_progress_next()</code> and
+<code>print_progress_end()</code> to use a progress bar without managing manually the
+progress counter.</p>
+<div class="highlight"><pre><span></span><code><span class="n">print_info</span><span class="p">(</span><span class="s">&quot;Message&quot;</span><span class="p">);</span>                      <span class="c1">// print message</span>
+<span class="n">print_fatal</span><span class="p">(</span><span class="s">&quot;Error and exit&quot;</span><span class="p">);</span>              <span class="c1">// print error and exit</span>
+<span class="p">{</span> <span class="k">auto</span> <span class="n">timer</span> <span class="o">=</span> <span class="n">print_timed</span><span class="p">(</span><span class="s">&quot;Timer&quot;</span><span class="p">);</span> <span class="p">...</span> <span class="p">}</span>  <span class="c1">// time a block of code</span>
+<span class="k">auto</span> <span class="n">timer</span> <span class="o">=</span> <span class="n">print_timed</span><span class="p">(</span><span class="s">&quot;Timer&quot;</span><span class="p">);</span>          <span class="c1">// start timer</span>
+<span class="n">print_elapsed</span><span class="p">(</span><span class="n">timer</span><span class="p">);</span>                       <span class="c1">// Print elapsed time</span>
+<span class="k">for</span><span class="p">(</span><span class="k">auto</span> <span class="nl">task</span> <span class="p">:</span> <span class="n">range</span><span class="p">(</span><span class="mi">10</span><span class="p">))</span>                  <span class="c1">// iterate over tasks</span>
+  <span class="n">print_progress</span><span class="p">(</span><span class="s">&quot;Progress bar&quot;</span><span class="p">,</span> <span class="n">task</span><span class="p">,</span> <span class="mi">10</span><span class="p">);</span> <span class="c1">// print progress bar</span>
+<span class="n">print_progress_start</span><span class="p">(</span><span class="s">&quot;Progress bar&quot;</span><span class="p">,</span> <span class="mi">10</span><span class="p">);</span>   <span class="c1">// start progress bar</span>
+<span class="k">for</span><span class="p">(</span><span class="k">auto</span> <span class="nl">task</span> <span class="p">:</span> <span class="n">range</span><span class="p">(</span><span class="mi">10</span><span class="p">))</span>                  <span class="c1">// iterate over tasks</span>
+  <span class="n">print_progress_next</span><span class="p">();</span>                    <span class="c1">// print progress bar</span>
 </code></pre></div>
-<p>Use <code>update_bvh(bvh,shape)</code> to update a shape BVH, and
-<code>update_bvh(bvh,scene,updated_instances,updated_shapes)</code> to update a scene BVH,
-where we indicate the indices of the instances and shapes that have beed modified.
-Updating works ony for change to instance frames and shapes positions.
-For changes like adding or removing elements, the BVH has to be built again.</p>
-<div class="highlight"><pre><span></span><code><span class="k">auto</span> <span class="n">scene</span> <span class="o">=</span> <span class="n">scene_model</span><span class="p">{...};</span>            <span class="c1">// make a complete scene</span>
-<span class="k">auto</span> <span class="n">bvh</span> <span class="o">=</span> <span class="n">build_bvh</span><span class="p">(</span><span class="n">scene</span><span class="p">);</span>              <span class="c1">// build a BVH</span>
-<span class="k">auto</span> <span class="n">shapes</span> <span class="o">=</span> <span class="n">update_shapes</span><span class="p">(</span><span class="n">scene</span><span class="p">);</span>       <span class="c1">// updates some shapes</span>
-<span class="k">auto</span> <span class="n">instances</span> <span class="o">=</span> <span class="n">update_instances</span><span class="p">(</span><span class="n">scene</span><span class="p">);</span> <span class="c1">// updates some instances</span>
-<span class="n">update_bvh</span><span class="p">(</span><span class="n">bvh</span><span class="p">,</span> <span class="n">scene</span><span class="p">,</span> <span class="n">shapes</span><span class="p">,</span> <span class="n">instances</span><span class="p">);</span><span class="c1">// update bvh</span>
+<h2 id="command-line-parsing">Command-Line Parsing</h2>
+<p>Yocto/Cli includes a simple command-line parser that supports optional
+and positional arguments, automatic help generation, and error checking.</p>
+<p>The command-line parser is initialized with <code>make_cli(name, help)</code> that takes
+a program name and a help string. Then add command-line options with
+<code>add_option(cli, name, value, help, check, alt, req)</code> for optional arguments and
+<code>add_argument(cli, name, value, help, check, req)</code> for positional arguments.
+In these commands, <code>name</code> is the option name, <code>value</code> is a reference to the
+variable that we want to set, <code>help</code> is a usage message, <code>alt</code> is the short
+option flag, and <code>req</code> determines whether the option is required, and <code>check</code>
+is either a range of valid values er a list of valid choices.
+After adding all arguments, use <code>parse_cli(cli)</code> to parse the
+command-line. If an error occurs, the parser exists. A help flag is also
+handled in this function.</p>
+<p>For positional arguments, the argument name is only used for printing help.
+For optional arguments, the command line is parsed for options named <code>--</code> followed
+by the option <code>name</code> or <code>-</code> followed by the <code>alt</code> short name.
+The type of each option is determined by the passed reference.
+The parser supports integers, floating point numbers, strings, boolean flags,
+enums and arrays of strings.</p>
+<p>An help command is added automatically and checked for printing help and exiting
+without errors.</p>
+<div class="highlight"><pre><span></span><code><span class="k">auto</span> <span class="n">samples</span> <span class="o">=</span> <span class="mi">10</span><span class="p">;</span> <span class="k">auto</span> <span class="n">flag</span> <span class="o">=</span> <span class="nb">false</span><span class="p">;</span>                <span class="c1">// state</span>
+<span class="k">auto</span> <span class="n">out</span> <span class="o">=</span> <span class="s">&quot;&quot;</span><span class="n">s</span><span class="p">,</span> <span class="n">scene</span> <span class="o">=</span> <span class="s">&quot;&quot;</span><span class="n">s</span><span class="p">;</span>
+<span class="k">auto</span> <span class="n">scenes</span> <span class="o">=</span> <span class="n">vector</span><span class="o">&lt;</span><span class="n">string</span><span class="o">&gt;</span><span class="p">{};</span>
+<span class="k">auto</span> <span class="n">cli</span> <span class="o">=</span> <span class="n">make_cli</span><span class="p">(</span><span class="s">&quot;app&quot;</span><span class="p">,</span> <span class="s">&quot;testing cli&quot;</span><span class="p">);</span>      <span class="c1">// initialize cli</span>
+<span class="n">add_option</span><span class="p">(</span><span class="n">cli</span><span class="p">,</span> <span class="s">&quot;out&quot;</span><span class="p">,</span> <span class="n">out</span><span class="p">,</span> <span class="s">&quot;out&quot;</span><span class="p">);</span>             <span class="c1">// optional argument</span>
+<span class="n">add_option</span><span class="p">(</span><span class="n">cli</span><span class="p">,</span> <span class="s">&quot;samples&quot;</span><span class="p">,</span> <span class="n">samples</span><span class="p">,</span> <span class="s">&quot;samples&quot;</span><span class="p">);</span> <span class="c1">// optional argument</span>
+<span class="n">add_option</span><span class="p">(</span><span class="n">cli</span><span class="p">,</span> <span class="s">&quot;flag&quot;</span><span class="p">,</span> <span class="n">flag</span><span class="p">,</span> <span class="s">&quot;flag&quot;</span><span class="p">);</span>          <span class="c1">// optional flag</span>
+<span class="n">add_argument</span><span class="p">(</span><span class="n">cli</span><span class="p">,</span> <span class="s">&quot;scene&quot;</span><span class="p">,</span> <span class="n">scene</span><span class="p">,</span> <span class="s">&quot;scene&quot;</span><span class="p">);</span>     <span class="c1">// positional argument</span>
+<span class="n">add_option</span><span class="p">(</span><span class="n">cli</span><span class="p">,</span> <span class="s">&quot;scenes&quot;</span><span class="p">,</span> <span class="n">scenes</span><span class="p">,</span> <span class="s">&quot;scenes&quot;</span><span class="p">);</span>    <span class="c1">// positional arguments</span>
+<span class="n">parse_cli</span><span class="p">(</span><span class="n">cli</span><span class="p">);</span>
 </code></pre></div>
-<h2 id="ray-intersection">Ray intersection</h2>
-<p>Use <code>intersect_bvh(bvh,scene,ray)</code> and <code>intersect_bvh(bvh,shape,ray)</code> to
-compute the ray-scene and ray-shape intersection respectively, and
-<code>intersect_bvh(bvh,scene,instance,ray)</code> to intersect a single scene instance.
-These functions return a <code>bvh_intersection</code> that includes a <code>hit</code> flag,
-the <code>instance</code> index, the shape <code>element</code> index and shape element <code>uv</code>s and
-the intersection <code>distance</code>. Results values are set only if <code>hit</code> is true.
-By default Yocto/Bvh computes the closet intersection, but this can be
-relaxed to accept any intersection, for shadow rays, by passing an optional flag.</p>
-<div class="highlight"><pre><span></span><code><span class="k">auto</span> <span class="n">isec</span> <span class="o">=</span> <span class="n">intersect_bvh</span><span class="p">(</span><span class="n">bvh</span><span class="p">,</span><span class="n">scene</span><span class="p">,</span><span class="n">ray</span><span class="p">);</span> <span class="c1">// ray-scene intersection</span>
-<span class="k">if</span> <span class="p">(</span><span class="n">isec</span><span class="p">.</span><span class="n">hit</span><span class="p">)</span> <span class="p">{</span>                           <span class="c1">// check intersection</span>
-  <span class="n">handle_intersection</span><span class="p">(</span><span class="n">isec</span><span class="p">.</span><span class="n">instance</span><span class="p">,</span>      <span class="c1">// work on intersection data</span>
-    <span class="n">isec</span><span class="p">.</span><span class="n">element</span><span class="p">,</span> <span class="n">isec</span><span class="p">.</span><span class="n">uv</span><span class="p">,</span> <span class="n">isec</span><span class="p">.</span><span class="n">distance</span><span class="p">);</span>
-<span class="p">}</span>
-<span class="k">auto</span> <span class="n">isecv</span> <span class="o">=</span> <span class="n">intersect_bvh</span><span class="p">(</span><span class="n">bvh</span><span class="p">,</span><span class="n">scene</span><span class="p">,</span><span class="n">ray</span><span class="p">,</span><span class="nb">true</span><span class="p">);</span> <span class="c1">// check any intersection</span>
-<span class="k">if</span> <span class="p">(</span><span class="o">!</span><span class="n">isecv</span><span class="p">.</span><span class="n">hit</span><span class="p">)</span> <span class="p">{</span>                         <span class="c1">// check for not intersection</span>
-  <span class="n">handle_unoccluded</span><span class="p">(...);</span>                 <span class="c1">// handle unoccluded case</span>
-<span class="p">}</span>
-</code></pre></div>
-<h2 id="point-overlap">Point overlap</h2>
-<p>Use <code>overlap_bvh(bvh,scene,position,max_distance)</code> and
-<code>overlap_bvh(bvh,shape,position,max_distance)</code> to compute the scene or
-shape element closest to a given point and within a maximum distance.
-Use <code>overlap_bvh(bvh,scene,instance,position,max_distance)</code> to test
-a single scene instance. These functions return a <code>bvh_intersection</code>
-as the intersection ones.
-By default Yocto/Bvh computes the closet element, but this can be
-relaxed to accept any element, by passing an optional flag.</p>
-<div class="highlight"><pre><span></span><code><span class="k">auto</span> <span class="n">isec</span> <span class="o">=</span> <span class="n">overlap_bvh</span><span class="p">(</span><span class="n">bvh</span><span class="p">,</span><span class="n">scene</span><span class="p">,</span><span class="n">point</span><span class="p">,</span><span class="n">dist</span><span class="p">);</span> <span class="c1">// closest element</span>
-<span class="k">if</span> <span class="p">(</span><span class="n">isec</span><span class="p">.</span><span class="n">hit</span><span class="p">)</span> <span class="p">{</span>                                <span class="c1">// check intersection</span>
-  <span class="n">handle_intersection</span><span class="p">(</span><span class="n">isec</span><span class="p">.</span><span class="n">instance</span><span class="p">,</span>      <span class="c1">// work on intersection data</span>
-    <span class="n">isec</span><span class="p">.</span><span class="n">element</span><span class="p">,</span> <span class="n">isec</span><span class="p">.</span><span class="n">uv</span><span class="p">,</span> <span class="n">isec</span><span class="p">.</span><span class="n">distance</span><span class="p">);</span>
-<span class="p">}</span>
+<p>The command line parser also support commands, that are created by
+<code>add_command(cli, name, help)</code>, where <code>name</code> is the command name and
+<code>help</code> is the command usage message. You can add options to commands
+using the functions above. Commands can have any optional arguments,
+but support either sub-commands or positional arguments.</p>
+<div class="highlight"><pre><span></span><code><span class="k">auto</span> <span class="n">samples</span> <span class="o">=</span> <span class="mi">10</span><span class="p">;</span>                              <span class="c1">// state</span>
+<span class="k">auto</span> <span class="n">scene</span> <span class="o">=</span> <span class="s">&quot;&quot;</span><span class="n">s</span><span class="p">;</span>
+<span class="k">auto</span> <span class="n">cli</span> <span class="o">=</span> <span class="n">make_cli</span><span class="p">(</span><span class="s">&quot;app&quot;</span><span class="p">,</span> <span class="s">&quot;testing cli&quot;</span><span class="p">);</span>      <span class="c1">// initialize cli</span>
+<span class="k">auto</span><span class="o">&amp;</span> <span class="n">render</span> <span class="o">=</span> <span class="n">add_command</span><span class="p">(</span><span class="n">cli</span><span class="p">,</span> <span class="s">&quot;render&quot;</span><span class="p">,</span> <span class="s">&quot;render&quot;</span><span class="p">);</span>    <span class="c1">// command</span>
+<span class="n">add_option</span><span class="p">(</span><span class="n">render</span><span class="p">,</span> <span class="s">&quot;samples&quot;</span><span class="p">,</span> <span class="n">samples</span><span class="p">,</span> <span class="s">&quot;samples&quot;</span><span class="p">);</span> <span class="c1">// optional argument</span>
+<span class="n">add_argument</span><span class="p">(</span><span class="n">render</span><span class="p">,</span> <span class="s">&quot;scene&quot;</span><span class="p">,</span> <span class="n">scene</span><span class="p">,</span> <span class="s">&quot;scene&quot;</span><span class="p">);</span>  <span class="c1">// positional argument</span>
+<span class="k">auto</span><span class="o">&amp;</span> <span class="n">convert</span> <span class="o">=</span> <span class="n">add_command</span><span class="p">(</span><span class="n">cli</span><span class="p">,</span> <span class="s">&quot;convert&quot;</span><span class="p">,</span> <span class="s">&quot;convert&quot;</span><span class="p">);</span> <span class="c1">// command</span>
+<span class="n">add_argument</span><span class="p">(</span><span class="n">convert</span><span class="p">,</span> <span class="s">&quot;scene&quot;</span><span class="p">,</span> <span class="n">scene</span><span class="p">,</span> <span class="s">&quot;scene&quot;</span><span class="p">);</span> <span class="c1">// positional argument</span>
+<span class="n">parse_cli</span><span class="p">(</span><span class="n">cli</span><span class="p">);</span>
 </code></pre></div>
                 
               
@@ -693,7 +653,7 @@ relaxed to accept any element, by passing an optional flag.</p>
   
     <nav class="md-footer__inner md-grid" aria-label="Footer">
       
-        <a href="../yocto_scene/" class="md-footer__link md-footer__link--prev" rel="prev">
+        <a href="../yocto_trace/" class="md-footer__link md-footer__link--prev" rel="prev">
           <div class="md-footer__button md-icon">
             <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M20 11v2H8l5.5 5.5-1.42 1.42L4.16 12l7.92-7.92L13.5 5.5 8 11h12z"/></svg>
           </div>
@@ -702,19 +662,19 @@ relaxed to accept any element, by passing an optional flag.</p>
               <span class="md-footer__direction">
                 Previous
               </span>
-              Scene representation
+              Path tracing
             </div>
           </div>
         </a>
       
       
-        <a href="../yocto_modelio/" class="md-footer__link md-footer__link--next" rel="next">
+        <a href="../yocto_parallel/" class="md-footer__link md-footer__link--next" rel="next">
           <div class="md-footer__title">
             <div class="md-ellipsis">
               <span class="md-footer__direction">
                 Next
               </span>
-              Model serialization
+              Concurrency utilities
             </div>
           </div>
           <div class="md-footer__button md-icon">

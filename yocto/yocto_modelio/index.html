@@ -12,7 +12,7 @@
       
       
       <link rel="shortcut icon" href="../../assets/images/favicon.png">
-      <meta name="generator" content="mkdocs-1.1.2, mkdocs-material-6.2.2">
+      <meta name="generator" content="mkdocs-1.1.2, mkdocs-material-7.0.5">
     
     
       
@@ -20,10 +20,14 @@
       
     
     
-      <link rel="stylesheet" href="../../assets/stylesheets/main.73f7c429.min.css">
+      <link rel="stylesheet" href="../../assets/stylesheets/main.77f3fd56.min.css">
       
         
-        <link rel="stylesheet" href="../../assets/stylesheets/palette.39b8e14a.min.css">
+        <link rel="stylesheet" href="../../assets/stylesheets/palette.7fa14f5b.min.css">
+        
+          
+          
+          <meta name="theme-color" content="#2094f3">
         
       
     
@@ -33,7 +37,7 @@
         
         <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
         <link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Roboto:300,400,400i,700%7CRoboto+Mono&display=fallback">
-        <style>body,input{font-family:"Roboto",-apple-system,BlinkMacSystemFont,Helvetica,Arial,sans-serif}code,kbd,pre{font-family:"Roboto Mono",SFMono-Regular,Consolas,Menlo,monospace}</style>
+        <style>:root{--md-text-font-family:"Roboto";--md-code-font-family:"Roboto Mono"}</style>
       
     
     
@@ -50,7 +54,7 @@
     
     
     
-    <body dir="ltr" data-md-color-scheme="" data-md-color-primary="none" data-md-color-accent="none">
+    <body dir="ltr" data-md-color-scheme="" data-md-color-primary="blue" data-md-color-accent="">
       
   
     
@@ -72,24 +76,24 @@
       
 
 <header class="md-header" data-md-component="header">
-  <nav class="md-header-nav md-grid" aria-label="Header">
-    <a href="../.." title="Yocto/GL" class="md-header-nav__button md-logo" aria-label="Yocto/GL">
+  <nav class="md-header__inner md-grid" aria-label="Header">
+    <a href="../.." title="Yocto/GL" class="md-header__button md-logo" aria-label="Yocto/GL">
       
   
-  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a3 3 0 003-3 3 3 0 00-3-3 3 3 0 00-3 3 3 3 0 003 3m0 3.54C9.64 9.35 6.5 8 3 8v11c3.5 0 6.64 1.35 9 3.54 2.36-2.19 5.5-3.54 9-3.54V8c-3.5 0-6.64 1.35-9 3.54z"/></svg>
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a3 3 0 0 0 3-3 3 3 0 0 0-3-3 3 3 0 0 0-3 3 3 3 0 0 0 3 3m0 3.54C9.64 9.35 6.5 8 3 8v11c3.5 0 6.64 1.35 9 3.54 2.36-2.19 5.5-3.54 9-3.54V8c-3.5 0-6.64 1.35-9 3.54z"/></svg>
 
     </a>
-    <label class="md-header-nav__button md-icon" for="__drawer">
+    <label class="md-header__button md-icon" for="__drawer">
       <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M3 6h18v2H3V6m0 5h18v2H3v-2m0 5h18v2H3v-2z"/></svg>
     </label>
-    <div class="md-header-nav__title" data-md-component="header-title">
-      <div class="md-header-nav__ellipsis">
-        <div class="md-header-nav__topic">
+    <div class="md-header__title" data-md-component="header-title">
+      <div class="md-header__ellipsis">
+        <div class="md-header__topic">
           <span class="md-ellipsis">
             Yocto/GL
           </span>
         </div>
-        <div class="md-header-nav__topic">
+        <div class="md-header__topic" data-md-component="header-topic">
           <span class="md-ellipsis">
             
               Model serialization
@@ -98,9 +102,12 @@
         </div>
       </div>
     </div>
+    <div class="md-header__options">
+      
+    </div>
     
-      <label class="md-header-nav__button md-icon" for="__search">
-        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M9.5 3A6.5 6.5 0 0116 9.5c0 1.61-.59 3.09-1.56 4.23l.27.27h.79l5 5-1.5 1.5-5-5v-.79l-.27-.27A6.516 6.516 0 019.5 16 6.5 6.5 0 013 9.5 6.5 6.5 0 019.5 3m0 2C7 5 5 7 5 9.5S7 14 9.5 14 14 12 14 9.5 12 5 9.5 5z"/></svg>
+      <label class="md-header__button md-icon" for="__search">
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M9.5 3A6.5 6.5 0 0 1 16 9.5c0 1.61-.59 3.09-1.56 4.23l.27.27h.79l5 5-1.5 1.5-5-5v-.79l-.27-.27A6.516 6.516 0 0 1 9.5 16 6.5 6.5 0 0 1 3 9.5 6.5 6.5 0 0 1 9.5 3m0 2C7 5 5 7 5 9.5S7 14 9.5 14 14 12 14 9.5 12 5 9.5 5z"/></svg>
       </label>
       
 <div class="md-search" data-md-component="search" role="dialog">
@@ -109,10 +116,10 @@
     <form class="md-search__form" name="search">
       <input type="text" class="md-search__input" name="query" aria-label="Search" placeholder="Search" autocapitalize="off" autocorrect="off" autocomplete="off" spellcheck="false" data-md-component="search-query" data-md-state="active" required>
       <label class="md-search__icon md-icon" for="__search">
-        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M9.5 3A6.5 6.5 0 0116 9.5c0 1.61-.59 3.09-1.56 4.23l.27.27h.79l5 5-1.5 1.5-5-5v-.79l-.27-.27A6.516 6.516 0 019.5 16 6.5 6.5 0 013 9.5 6.5 6.5 0 019.5 3m0 2C7 5 5 7 5 9.5S7 14 9.5 14 14 12 14 9.5 12 5 9.5 5z"/></svg>
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M9.5 3A6.5 6.5 0 0 1 16 9.5c0 1.61-.59 3.09-1.56 4.23l.27.27h.79l5 5-1.5 1.5-5-5v-.79l-.27-.27A6.516 6.516 0 0 1 9.5 16 6.5 6.5 0 0 1 3 9.5 6.5 6.5 0 0 1 9.5 3m0 2C7 5 5 7 5 9.5S7 14 9.5 14 14 12 14 9.5 12 5 9.5 5z"/></svg>
         <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M20 11v2H8l5.5 5.5-1.42 1.42L4.16 12l7.92-7.92L13.5 5.5 8 11h12z"/></svg>
       </label>
-      <button type="reset" class="md-search__icon md-icon" aria-label="Clear" data-md-component="search-reset" tabindex="-1">
+      <button type="reset" class="md-search__icon md-icon" aria-label="Clear" tabindex="-1">
         <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12 19 6.41z"/></svg>
       </button>
     </form>
@@ -130,12 +137,12 @@
 </div>
     
     
-      <div class="md-header-nav__source">
+      <div class="md-header__source">
         
-<a href="https://github.com/xelatihy/yocto-gl/" title="Go to repository" class="md-source">
+<a href="https://github.com/xelatihy/yocto-gl/" title="Go to repository" class="md-source" data-md-component="source">
   <div class="md-source__icon md-icon">
     
-    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 448 512"><path d="M439.55 236.05L244 40.45a28.87 28.87 0 00-40.81 0l-40.66 40.63 51.52 51.52c27.06-9.14 52.68 16.77 43.39 43.68l49.66 49.66c34.23-11.8 61.18 31 35.47 56.69-26.49 26.49-70.21-2.87-56-37.34L240.22 199v121.85c25.3 12.54 22.26 41.85 9.08 55a34.34 34.34 0 01-48.55 0c-17.57-17.6-11.07-46.91 11.25-56v-123c-20.8-8.51-24.6-30.74-18.64-45L142.57 101 8.45 235.14a28.86 28.86 0 000 40.81l195.61 195.6a28.86 28.86 0 0040.8 0l194.69-194.69a28.86 28.86 0 000-40.81z"/></svg>
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 448 512"><path d="M439.55 236.05L244 40.45a28.87 28.87 0 0 0-40.81 0l-40.66 40.63 51.52 51.52c27.06-9.14 52.68 16.77 43.39 43.68l49.66 49.66c34.23-11.8 61.18 31 35.47 56.69-26.49 26.49-70.21-2.87-56-37.34L240.22 199v121.85c25.3 12.54 22.26 41.85 9.08 55a34.34 34.34 0 0 1-48.55 0c-17.57-17.6-11.07-46.91 11.25-56v-123c-20.8-8.51-24.6-30.74-18.64-45L142.57 101 8.45 235.14a28.86 28.86 0 0 0 0 40.81l195.61 195.6a28.86 28.86 0 0 0 40.8 0l194.69-194.69a28.86 28.86 0 0 0 0-40.81z"/></svg>
   </div>
   <div class="md-source__repository">
     xelatihy/yocto-gl
@@ -156,7 +163,7 @@
           
             
               
-              <div class="md-sidebar md-sidebar--primary" data-md-component="navigation" >
+              <div class="md-sidebar md-sidebar--primary" data-md-component="sidebar" data-md-type="navigation" >
                 <div class="md-sidebar__scrollwrap">
                   <div class="md-sidebar__inner">
                     
@@ -169,7 +176,7 @@
     <a href="../.." title="Yocto/GL" class="md-nav__button md-logo" aria-label="Yocto/GL">
       
   
-  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a3 3 0 003-3 3 3 0 00-3-3 3 3 0 00-3 3 3 3 0 003 3m0 3.54C9.64 9.35 6.5 8 3 8v11c3.5 0 6.64 1.35 9 3.54 2.36-2.19 5.5-3.54 9-3.54V8c-3.5 0-6.64 1.35-9 3.54z"/></svg>
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a3 3 0 0 0 3-3 3 3 0 0 0-3-3 3 3 0 0 0-3 3 3 3 0 0 0 3 3m0 3.54C9.64 9.35 6.5 8 3 8v11c3.5 0 6.64 1.35 9 3.54 2.36-2.19 5.5-3.54 9-3.54V8c-3.5 0-6.64 1.35-9 3.54z"/></svg>
 
     </a>
     Yocto/GL
@@ -177,10 +184,10 @@
   
     <div class="md-nav__source">
       
-<a href="https://github.com/xelatihy/yocto-gl/" title="Go to repository" class="md-source">
+<a href="https://github.com/xelatihy/yocto-gl/" title="Go to repository" class="md-source" data-md-component="source">
   <div class="md-source__icon md-icon">
     
-    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 448 512"><path d="M439.55 236.05L244 40.45a28.87 28.87 0 00-40.81 0l-40.66 40.63 51.52 51.52c27.06-9.14 52.68 16.77 43.39 43.68l49.66 49.66c34.23-11.8 61.18 31 35.47 56.69-26.49 26.49-70.21-2.87-56-37.34L240.22 199v121.85c25.3 12.54 22.26 41.85 9.08 55a34.34 34.34 0 01-48.55 0c-17.57-17.6-11.07-46.91 11.25-56v-123c-20.8-8.51-24.6-30.74-18.64-45L142.57 101 8.45 235.14a28.86 28.86 0 000 40.81l195.61 195.6a28.86 28.86 0 0040.8 0l194.69-194.69a28.86 28.86 0 000-40.81z"/></svg>
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 448 512"><path d="M439.55 236.05L244 40.45a28.87 28.87 0 0 0-40.81 0l-40.66 40.63 51.52 51.52c27.06-9.14 52.68 16.77 43.39 43.68l49.66 49.66c34.23-11.8 61.18 31 35.47 56.69-26.49 26.49-70.21-2.87-56-37.34L240.22 199v121.85c25.3 12.54 22.26 41.85 9.08 55a34.34 34.34 0 0 1-48.55 0c-17.57-17.6-11.07-46.91 11.25-56v-123c-20.8-8.51-24.6-30.74-18.64-45L142.57 101 8.45 235.14a28.86 28.86 0 0 0 0 40.81l195.61 195.6a28.86 28.86 0 0 0 40.8 0l194.69-194.69a28.86 28.86 0 0 0 0-40.81z"/></svg>
   </div>
   <div class="md-source__repository">
     xelatihy/yocto-gl
@@ -194,183 +201,223 @@
       
       
 
-
-
-  <li class="md-nav__item">
-    <a href="../.." class="md-nav__link">
-      About
-    </a>
-  </li>
-
-    
-      
-      
-      
-
-
-
-  <li class="md-nav__item">
-    <a href="../../gallery/" class="md-nav__link">
-      Gallery
-    </a>
-  </li>
-
-    
-      
-      
-      
-
-
-
-  <li class="md-nav__item">
-    <a href="../yocto_math/" class="md-nav__link">
-      Math types
-    </a>
-  </li>
-
-    
-      
-      
-      
-
-
-
-  <li class="md-nav__item">
-    <a href="../yocto_color/" class="md-nav__link">
-      Color operations
-    </a>
-  </li>
-
-    
-      
-      
-      
-
-
-
-  <li class="md-nav__item">
-    <a href="../yocto_geometry/" class="md-nav__link">
-      Geometry operations
-    </a>
-  </li>
-
-    
-      
-      
-      
-
-
-
-  <li class="md-nav__item">
-    <a href="../yocto_sampling/" class="md-nav__link">
-      Sampling routines
-    </a>
-  </li>
-
-    
-      
-      
-      
-
-
-
-  <li class="md-nav__item">
-    <a href="../yocto_noise/" class="md-nav__link">
-      Noise functions
-    </a>
-  </li>
-
-    
-      
-      
-      
-
-
-
-  <li class="md-nav__item">
-    <a href="../yocto_shading/" class="md-nav__link">
-      Shading routines
-    </a>
-  </li>
-
-    
-      
-      
-      
-
-
-
-  <li class="md-nav__item">
-    <a href="../yocto_image/" class="md-nav__link">
-      Image utilities
-    </a>
-  </li>
-
-    
-      
-      
-      
-
-
-
-  <li class="md-nav__item">
-    <a href="../yocto_shape/" class="md-nav__link">
-      Shape utilities
-    </a>
-  </li>
-
-    
-      
-      
-      
-
-
-
-  <li class="md-nav__item">
-    <a href="../yocto_mesh/" class="md-nav__link">
-      Mesh processing
-    </a>
-  </li>
-
-    
-      
-      
-      
-
-
-
-  <li class="md-nav__item">
-    <a href="../yocto_bvh/" class="md-nav__link">
-      Ray-scene intersection
-    </a>
-  </li>
-
-    
-      
-      
-      
-
-
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../.." class="md-nav__link">
+        About
+      </a>
+    </li>
   
 
+    
+      
+      
+      
 
-  <li class="md-nav__item md-nav__item--active">
-    
-    <input class="md-nav__toggle md-toggle" data-md-toggle="toc" type="checkbox" id="__toc">
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../gallery/" class="md-nav__link">
+        Gallery
+      </a>
+    </li>
+  
+
     
       
+      
+      
+
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../yocto_math/" class="md-nav__link">
+        Math types
+      </a>
+    </li>
+  
+
     
+      
+      
+      
+
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../yocto_color/" class="md-nav__link">
+        Color operations
+      </a>
+    </li>
+  
+
     
-      <label class="md-nav__link md-nav__link--active" for="__toc">
+      
+      
+      
+
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../yocto_geometry/" class="md-nav__link">
+        Geometry operations
+      </a>
+    </li>
+  
+
+    
+      
+      
+      
+
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../yocto_sampling/" class="md-nav__link">
+        Sampling routines
+      </a>
+    </li>
+  
+
+    
+      
+      
+      
+
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../yocto_noise/" class="md-nav__link">
+        Noise functions
+      </a>
+    </li>
+  
+
+    
+      
+      
+      
+
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../yocto_shading/" class="md-nav__link">
+        Shading routines
+      </a>
+    </li>
+  
+
+    
+      
+      
+      
+
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../yocto_image/" class="md-nav__link">
+        Image utilities
+      </a>
+    </li>
+  
+
+    
+      
+      
+      
+
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../yocto_shape/" class="md-nav__link">
+        Shape utilities
+      </a>
+    </li>
+  
+
+    
+      
+      
+      
+
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../yocto_mesh/" class="md-nav__link">
+        Mesh processing
+      </a>
+    </li>
+  
+
+    
+      
+      
+      
+
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../yocto_scene/" class="md-nav__link">
+        Scene representation
+      </a>
+    </li>
+  
+
+    
+      
+      
+      
+
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../yocto_bvh/" class="md-nav__link">
+        Ray-scene intersection
+      </a>
+    </li>
+  
+
+    
+      
+      
+      
+
+  
+  
+    
+  
+  
+    <li class="md-nav__item md-nav__item--active">
+      
+      <input class="md-nav__toggle md-toggle" data-md-toggle="toc" type="checkbox" id="__toc">
+      
+        
+      
+      
+        <label class="md-nav__link md-nav__link--active" for="__toc">
+          Model serialization
+          <span class="md-nav__icon md-icon"></span>
+        </label>
+      
+      <a href="./" class="md-nav__link md-nav__link--active">
         Model serialization
-        <span class="md-nav__icon md-icon"></span>
-      </label>
-    
-    <a href="./" class="md-nav__link md-nav__link--active">
-      Model serialization
-    </a>
-    
+      </a>
       
+        
 <nav class="md-nav md-nav--secondary" aria-label="Table of contents">
   
   
@@ -381,7 +428,7 @@
       <span class="md-nav__icon md-icon"></span>
       Table of contents
     </label>
-    <ul class="md-nav__list" data-md-scrollfix>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
       
         <li class="md-nav__item">
   <a href="#ply-models" class="md-nav__link">
@@ -435,86 +482,69 @@
     </ul>
   
 </nav>
-    
-  </li>
-
-    
       
-      
-      
-
-
-
-  <li class="md-nav__item">
-    <a href="../yocto_sceneio/" class="md-nav__link">
-      Scene serialization
-    </a>
-  </li>
+    </li>
+  
 
     
       
       
       
 
-
-
-  <li class="md-nav__item">
-    <a href="../yocto_trace/" class="md-nav__link">
-      Path tracing
-    </a>
-  </li>
-
-    
-      
-      
-      
-
-
-
-  <li class="md-nav__item">
-    <a href="../yocto_json/" class="md-nav__link">
-      JSON utilities
-    </a>
-  </li>
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../yocto_sceneio/" class="md-nav__link">
+        Scene serialization
+      </a>
+    </li>
+  
 
     
       
       
       
 
-
-
-  <li class="md-nav__item">
-    <a href="../yocto_commonio/" class="md-nav__link">
-      Command-line utilities
-    </a>
-  </li>
-
-    
-      
-      
-      
-
-
-
-  <li class="md-nav__item">
-    <a href="../yocto_common/" class="md-nav__link">
-      Generic utilities
-    </a>
-  </li>
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../yocto_trace/" class="md-nav__link">
+        Path tracing
+      </a>
+    </li>
+  
 
     
       
       
       
 
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../yocto_cli/" class="md-nav__link">
+        Command-line utilities
+      </a>
+    </li>
+  
 
+    
+      
+      
+      
 
-  <li class="md-nav__item">
-    <a href="../yocto_parallel/" class="md-nav__link">
-      Concurrency utilities
-    </a>
-  </li>
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../yocto_parallel/" class="md-nav__link">
+        Concurrency utilities
+      </a>
+    </li>
+  
 
     
   </ul>
@@ -525,7 +555,7 @@
             
             
               
-              <div class="md-sidebar md-sidebar--secondary" data-md-component="toc" >
+              <div class="md-sidebar md-sidebar--secondary" data-md-component="sidebar" data-md-type="toc" >
                 <div class="md-sidebar__scrollwrap">
                   <div class="md-sidebar__inner">
                     
@@ -539,7 +569,7 @@
       <span class="md-nav__icon md-icon"></span>
       Table of contents
     </label>
-    <ul class="md-nav__list" data-md-scrollfix>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
       
         <li class="md-nav__item">
   <a href="#ply-models" class="md-nav__link">
@@ -598,14 +628,14 @@
               </div>
             
           
-          <div class="md-content">
+          <div class="md-content" data-md-component="content">
             <article class="md-content__inner md-typeset">
               
                 
                 
                 <h1 id="yoctomodelio-serialization-for-obj-ply-and-pbrt-models">Yocto/ModelIO: Serialization for Obj, Ply and Pbrt models</h1>
 <p>Yocto/ModelIO is a collection of utilities for loading and saving scenes
-and meshes in Ply, Obj and Pbrt formats.
+and meshes in Ply, Obj, Stl and Pbrt formats.
 Yocto/ModelIO is implemented in <code>yocto_modelio.h</code> and <code>yocto_modelio.cpp</code>.</p>
 <h2 id="ply-models">Ply models</h2>
 <p>The Ply file format is a generic file format used to serialize meshes and point
@@ -622,18 +652,17 @@ Yocto/ModelIO provides several functions to read and write Ply data
 whose use is preferred over direct data access.</p>
 <p>Use <code>load_ply(filename, ply, error)</code> to load Ply files and
 <code>save_ply(filename, ply, error)</code> to save them.<br />
-Both loading and saving take a filename, a pointer to a Ply model,
+Both loading and saving take a filename, a reference to a Ply model,
 and returns whether or not the file was loaded successfully.
 In the case of an error, the IO functions set the <code>error</code> string with a
 message suitable for displaying to a user.</p>
-<div class="codehilite"><pre><span></span><code><span class="k">auto</span> <span class="n">ply</span> <span class="o">=</span> <span class="k">new</span> <span class="n">ply_model</span><span class="p">{};</span>             <span class="c1">// ply model buffer</span>
+<div class="highlight"><pre><span></span><code><span class="k">auto</span> <span class="n">ply</span> <span class="o">=</span> <span class="n">ply_model</span><span class="p">{};</span>                 <span class="c1">// ply model buffer</span>
 <span class="k">auto</span> <span class="n">error</span> <span class="o">=</span> <span class="n">string</span><span class="p">{};</span>                  <span class="c1">// error buffer</span>
 <span class="k">if</span><span class="p">(</span><span class="o">!</span><span class="n">load_ply</span><span class="p">(</span><span class="n">filename</span><span class="p">,</span> <span class="n">ply</span><span class="p">,</span> <span class="n">error</span><span class="p">))</span>     <span class="c1">// load ply</span>
   <span class="n">print_error</span><span class="p">(</span><span class="n">error</span><span class="p">);</span>                   <span class="c1">// check and print error</span>
 <span class="k">if</span><span class="p">(</span><span class="o">!</span><span class="n">save_ply</span><span class="p">(</span><span class="n">filename</span><span class="p">,</span> <span class="n">ply</span><span class="p">,</span> <span class="n">error</span><span class="p">))</span>     <span class="c1">// save ply</span>
   <span class="n">print_error</span><span class="p">(</span><span class="n">error</span><span class="p">);</span>                   <span class="c1">// check and print error</span>
 </code></pre></div>
-
 <h2 id="ply-reading">Ply reading</h2>
 <p>Yocto/ModelIO defines several functions to make it easy to extract data
 from Ply files. Since Ply properties cane be stored with many different
@@ -655,7 +684,7 @@ A faster, but harder to use, method is to get lists sizes and values as
 separate arrays, where list values are packed together to avoid small memory
 allocations. Use <code>get_list_sizes(ply, element, property, sizes)</code> for sizes
 and <code>get_list_values(ply, element, property, values)</code> for values.</p>
-<div class="codehilite"><pre><span></span><code><span class="k">auto</span> <span class="n">ply</span> <span class="o">=</span> <span class="k">new</span> <span class="n">ply_model</span><span class="p">{};</span>             <span class="c1">// ply model buffer</span>
+<div class="highlight"><pre><span></span><code><span class="k">auto</span> <span class="n">ply</span> <span class="o">=</span> <span class="n">ply_model</span><span class="p">{};</span>                 <span class="c1">// ply model buffer</span>
 <span class="k">auto</span> <span class="n">error</span> <span class="o">=</span> <span class="n">string</span><span class="p">{};</span>                  <span class="c1">// error buffer</span>
 <span class="n">load_ply</span><span class="p">(</span><span class="n">filename</span><span class="p">,</span> <span class="n">ply</span><span class="p">,</span> <span class="n">error</span><span class="p">);</span>         <span class="c1">// load ply</span>
 
@@ -677,7 +706,6 @@ and <code>get_list_values(ply, element, property, values)</code> for values.</p>
 <span class="k">if</span><span class="p">(</span><span class="o">!</span><span class="n">get_list_values</span><span class="p">(</span><span class="n">ply</span><span class="p">,</span> <span class="s">&quot;face&quot;</span><span class="p">,</span> <span class="s">&quot;indices&quot;</span><span class="p">,</span> <span class="n">faces_values</span><span class="p">))</span> <span class="c1">// read lists values</span>
   <span class="n">print_error</span><span class="p">(</span><span class="s">&quot;missing faces&quot;</span><span class="p">);</span>                  <span class="c1">// error if missing</span>
 </code></pre></div>
-
 <p>Yocto/Shape defines convenience functions to read the most used properties
 of meshes, using standard element and property names.
 For vertex properties, use <code>get_positions(ply, positions)</code>,
@@ -686,13 +714,14 @@ For vertex properties, use <code>get_positions(ply, positions)</code>,
 normals, texcoords, colors and radius if present. Texture coordinates can be
 optionally flipped vertically. For shape elements, use
 <code>get_points(ply, points)</code>, <code>get_lines(ply, lines)</code>,
-<code>get_triangles(ply, triangles)</code>, and <code>get_quads(ply, quads)</code> , to read
+<code>get_triangles(ply, triangles)</code>, and <code>get_quads(ply, quads)</code>, to read
 points, lines, triangles and quads. Note that since Ply support arbitrary
 polygons and polylines, these functions tesselate the Ply polygons into
 the desired element type, for now using a simple fan-like algorithm that
 works only for convex elements. Use <code>has_quads(ply)</code> to check whether
-the Ply data has quads.</p>
-<div class="codehilite"><pre><span></span><code><span class="k">auto</span> <span class="n">ply</span> <span class="o">=</span> <span class="k">new</span> <span class="n">ply_model</span><span class="p">{};</span>             <span class="c1">// ply model buffer</span>
+the Ply data has quads, or use <code>get_faces(ply, triangles, quads)</code> to
+triangles or quads.</p>
+<div class="highlight"><pre><span></span><code><span class="k">auto</span> <span class="n">ply</span> <span class="o">=</span> <span class="n">ply_model</span><span class="p">{};</span>                 <span class="c1">// ply model buffer</span>
 <span class="k">auto</span> <span class="n">error</span> <span class="o">=</span> <span class="n">string</span><span class="p">{};</span>                  <span class="c1">// error buffer</span>
 <span class="n">load_ply</span><span class="p">(</span><span class="n">filename</span><span class="p">,</span> <span class="n">ply</span><span class="p">,</span> <span class="n">error</span><span class="p">);</span>         <span class="c1">// load ply</span>
 
@@ -716,7 +745,6 @@ the Ply data has quads.</p>
 <span class="k">if</span><span class="p">(</span><span class="n">has_quads</span><span class="p">(</span><span class="n">ply</span><span class="p">))</span> <span class="n">get_quads</span><span class="p">(</span><span class="n">ply</span><span class="p">,</span> <span class="n">quads</span><span class="p">);</span>
 <span class="k">else</span> <span class="nf">get_triangles</span><span class="p">(</span><span class="n">ply</span><span class="p">,</span> <span class="n">triangles</span><span class="p">);</span>
 </code></pre></div>
-
 <h2 id="ply-writing">Ply writing</h2>
 <p>Yocto/ModelIO defines several functions to make it easy to fill Ply data
 to save to file. Since Ply properties cane be stored with many different
@@ -737,7 +765,7 @@ allocations. Use <code>add_lists(ply, element, property, sizes, values)</code>.
 Finally, Yocto/ModelIO supports adding lists of fixed lengths, where the
 parameters are packed into <code>vecXi</code>,
 with <code>add_lists(ply,element,property,values)</code>.</p>
-<div class="codehilite"><pre><span></span><code><span class="k">auto</span> <span class="n">ply</span> <span class="o">=</span> <span class="k">new</span> <span class="n">ply_model</span><span class="p">{};</span>             <span class="c1">// ply model buffer</span>
+<div class="highlight"><pre><span></span><code><span class="k">auto</span> <span class="n">ply</span> <span class="o">=</span> <span class="n">ply_model</span><span class="p">{};</span>               <span class="c1">// ply model buffer</span>
 
 <span class="k">auto</span> <span class="n">radius</span> <span class="o">=</span> <span class="n">vector</span><span class="o">&lt;</span><span class="kt">float</span><span class="o">&gt;</span><span class="p">{...};</span>                <span class="c1">// property buffer</span>
 <span class="k">if</span><span class="p">(</span><span class="o">!</span><span class="n">add_value</span><span class="p">(</span><span class="n">ply</span><span class="p">,</span> <span class="s">&quot;vertex&quot;</span><span class="p">,</span> <span class="s">&quot;radius&quot;</span><span class="p">,</span> <span class="n">radius</span><span class="p">))</span>  <span class="c1">// add property</span>
@@ -762,7 +790,6 @@ with <code>add_lists(ply,element,property,values)</code>.</p>
 <span class="k">auto</span> <span class="n">error</span> <span class="o">=</span> <span class="n">string</span><span class="p">{};</span>                  <span class="c1">// error buffer</span>
 <span class="n">save_ply</span><span class="p">(</span><span class="n">filename</span><span class="p">,</span> <span class="n">ply</span><span class="p">,</span> <span class="n">error</span><span class="p">);</span>         <span class="c1">// save ply</span>
 </code></pre></div>
-
 <p>Yocto/ModelIO defines convenience functions to add the most used properties
 of meshes, using standard element and property names.
 For vertex properties, use <code>add_positions(ply, positions)</code>,
@@ -774,7 +801,7 @@ optionally flipped vertically. For shape elements, use
 <code>add_triangles(ply, triangles)</code>, and <code>add_quads(ply, quads)</code>, to add
 points, lines, triangles and quads. Use <code>add_faces(ply, faces)</code> to add
 arbitrary polygonal faces.</p>
-<div class="codehilite"><pre><span></span><code><span class="k">auto</span> <span class="n">ply</span> <span class="o">=</span> <span class="k">new</span> <span class="n">ply_model</span><span class="p">{};</span>             <span class="c1">// ply model buffer</span>
+<div class="highlight"><pre><span></span><code><span class="k">auto</span> <span class="n">ply</span> <span class="o">=</span> <span class="n">ply_model</span><span class="p">{};</span>                 <span class="c1">// ply model buffer</span>
 
 <span class="k">auto</span> <span class="n">positions</span> <span class="o">=</span> <span class="n">vector</span><span class="o">&lt;</span><span class="n">vec3f</span><span class="o">&gt;</span><span class="p">{...};</span>    <span class="c1">// vertex properties buffers</span>
 <span class="k">auto</span> <span class="n">normals</span>   <span class="o">=</span> <span class="n">vector</span><span class="o">&lt;</span><span class="n">vec3f</span><span class="o">&gt;</span><span class="p">{...};</span>
@@ -799,14 +826,13 @@ arbitrary polygonal faces.</p>
 <span class="k">auto</span> <span class="n">error</span> <span class="o">=</span> <span class="n">string</span><span class="p">{};</span>                  <span class="c1">// error buffer</span>
 <span class="n">save_ply</span><span class="p">(</span><span class="n">filename</span><span class="p">,</span> <span class="n">ply</span><span class="p">,</span> <span class="n">error</span><span class="p">);</span>         <span class="c1">// save ply</span>
 </code></pre></div>
-
 <h2 id="obj-models">Obj models</h2>
 <p>The Obj file format is a file format used to serialize meshes and materials.
 To use this library is helpful to understand the basic of the Obj
 file format for example from the
 <a href="https://en.wikipedia.org/wiki/OBJ_(file_format)">Obj Wikipedia page</a>.
 Obj files come in pairs, <code>.obj</code> for shapes and <code>.mtl</code> for materials.</p>
-<p>Yocto/ModelIO represents Obj data with the <code>obj_scene</code> struct.
+<p>Yocto/ModelIO represents Obj data with the <code>obj_model</code> struct.
 Obj models are defined as collections of shapes and materials.
 Obj shapes use a face-varying representation that has vertex positions,
 normals and texture coordinates, with their their own topology.
@@ -816,177 +842,184 @@ Yocto/ModelIO provides direct access to these tagged shapes by inspecting the
 <p>In Yocto/Obj, materials are represented by the <code>obj_material</code> struct.
 Each material is a collection of values and textures that specify the material
 lobes, like emission, diffuse, specular, reflection, etc. Each value
-has a corresponding texture stored by saving its filename and lookup properties
-in <code>obj_texture_info</code>. The meaning of these parameters often depend on the
-application since Obj was used in many different contexts by reinterpreting the
-material values.</p>
-<p>Yocto/ModelIO defines three extensions to the Obj file format. Materials have
-additional parameters that specify a PBR parametrization similar to glTF, which
-is common used in most engines today. Yocto/ModelIO adds another file,
-namely <code>.objx</code>, that stores cameras and environment maps, respectively as
-<code>obj_camera</code> and <code>obj_environment</code>. This addition makes the extended Obj format
-capable of storing full scenes.</p>
+has a corresponding texture stored as an index to the texture array.</p>
+<p>Yocto/ModelIO defines two extensions to the Obj file format.
+Yocto/ModelIO adds another file, namely <code>.obx</code>, that stores cameras and
+environment maps, respectively as <code>obj_camera</code> and <code>obj_environment</code>. T
+his addition makes the extended Obj format capable of storing full scenes.</p>
 <p>The Obj model is defined as an array of objects of the types defined above.
-Obj objects are pointers owned by the main <code>obj_scene</code>.
+Obj objects are pointers owned by the main <code>obj_model</code>.
 Objects properties can be read and written directly from the model data,
 and are documented in the header file for now.
 For shapes, Yocto/ModelIO provides several functions to read and write Obj
 shapes, with a simpler interface than accessing data directly.</p>
-<div class="codehilite"><pre><span></span><code><span class="k">auto</span> <span class="n">obj</span> <span class="o">=</span> <span class="k">new</span> <span class="n">obj_scene</span><span class="p">{...};</span>             <span class="c1">// obj model buffer</span>
-<span class="k">for</span><span class="p">(</span><span class="k">auto</span> <span class="nl">shape</span> <span class="p">:</span> <span class="n">obj</span><span class="o">-&gt;</span><span class="n">shapes</span><span class="p">)</span>              <span class="c1">// access shapes</span>
-  <span class="n">print_info</span><span class="p">(</span><span class="n">shape</span><span class="o">-&gt;</span><span class="n">name</span><span class="p">);</span>                 <span class="c1">// access shape properties</span>
-<span class="k">for</span><span class="p">(</span><span class="k">auto</span> <span class="nl">material</span> <span class="p">:</span> <span class="n">obj</span><span class="o">-&gt;</span><span class="n">material</span><span class="p">)</span>         <span class="c1">// access materials</span>
-  <span class="n">print_info</span><span class="p">(</span><span class="n">material</span><span class="o">-&gt;</span><span class="n">diffuse</span><span class="p">);</span>           <span class="c1">// access material properties</span>
-<span class="k">for</span><span class="p">(</span><span class="k">auto</span> <span class="nl">material</span> <span class="p">:</span> <span class="n">obj</span><span class="o">-&gt;</span><span class="n">material</span><span class="p">)</span>         <span class="c1">// access materials</span>
-  <span class="n">print_info</span><span class="p">(</span><span class="n">material</span><span class="o">-&gt;</span><span class="n">diffuse_tex</span><span class="p">);</span>       <span class="c1">// access material textures</span>
-<span class="k">for</span><span class="p">(</span><span class="k">auto</span> <span class="nl">camera</span> <span class="p">:</span> <span class="n">obj</span><span class="o">-&gt;</span><span class="n">cameras</span><span class="p">)</span>            <span class="c1">// access cameras [extension]</span>
-  <span class="n">print_info</span><span class="p">(</span><span class="n">camera</span><span class="o">-&gt;</span><span class="n">frame</span><span class="p">);</span>               <span class="c1">// access camera properties</span>
-<span class="k">for</span><span class="p">(</span><span class="k">auto</span> <span class="nl">environment</span> <span class="p">:</span> <span class="n">obj</span><span class="o">-&gt;</span><span class="n">environments</span><span class="p">)</span>  <span class="c1">// access environments [extension]</span>
-  <span class="n">print_info</span><span class="p">(</span><span class="n">environment</span><span class="o">-&gt;</span><span class="n">emission</span><span class="p">);</span>       <span class="c1">// access environment properties</span>
+<div class="highlight"><pre><span></span><code><span class="k">auto</span> <span class="n">obj</span> <span class="o">=</span> <span class="n">obj_model</span><span class="p">{...};</span>                <span class="c1">// obj model buffer</span>
+<span class="k">for</span><span class="p">(</span><span class="k">auto</span> <span class="nl">shape</span> <span class="p">:</span> <span class="n">obj</span><span class="p">.</span><span class="n">shapes</span><span class="p">)</span>              <span class="c1">// access shapes</span>
+  <span class="n">print_info</span><span class="p">(</span><span class="n">shape</span><span class="p">.</span><span class="n">name</span><span class="p">);</span>                 <span class="c1">// access shape properties</span>
+<span class="k">for</span><span class="p">(</span><span class="k">auto</span> <span class="nl">material</span> <span class="p">:</span> <span class="n">obj</span><span class="p">.</span><span class="n">material</span><span class="p">)</span>         <span class="c1">// access materials</span>
+  <span class="n">print_info</span><span class="p">(</span><span class="n">material</span><span class="p">.</span><span class="n">diffuse</span><span class="p">);</span>           <span class="c1">// access material properties</span>
+<span class="k">for</span><span class="p">(</span><span class="k">auto</span> <span class="nl">material</span> <span class="p">:</span> <span class="n">obj</span><span class="p">.</span><span class="n">material</span><span class="p">)</span>         <span class="c1">// access materials</span>
+  <span class="n">print_info</span><span class="p">(</span><span class="n">material</span><span class="p">.</span><span class="n">diffuse_tex</span><span class="p">);</span>       <span class="c1">// access material textures</span>
+<span class="k">for</span><span class="p">(</span><span class="k">auto</span> <span class="nl">camera</span> <span class="p">:</span> <span class="n">obj</span><span class="p">.</span><span class="n">cameras</span><span class="p">)</span>            <span class="c1">// access cameras [extension]</span>
+  <span class="n">print_info</span><span class="p">(</span><span class="n">camera</span><span class="p">.</span><span class="n">frame</span><span class="p">);</span>               <span class="c1">// access camera properties</span>
+<span class="k">for</span><span class="p">(</span><span class="k">auto</span> <span class="nl">environment</span> <span class="p">:</span> <span class="n">obj</span><span class="p">.</span><span class="n">environments</span><span class="p">)</span>  <span class="c1">// access environments [extension]</span>
+  <span class="n">print_info</span><span class="p">(</span><span class="n">environment</span><span class="p">.</span><span class="n">emission</span><span class="p">);</span>       <span class="c1">// access environment properties</span>
 </code></pre></div>
-
 <p>Use <code>load_obj(filename, obj, error)</code> to load Obj files and
-<code>save_obj(filename, obj, error)</code> to save them.<br />
-Both loading and saving take a filename, a pointer to a Obj model,
-and returns whether or not the file was loaded successfully.
+<code>save_obj(filename, obj, error)</code> to save them.
+Both loading and saving take a filename, a reference to an Obj model,
+and return whether or not the file was loaded successfully.
 In the case of an error, the IO functions set the <code>error</code> string with a
 message suitable for displaying to a user.</p>
-<div class="codehilite"><pre><span></span><code><span class="k">auto</span> <span class="n">obj</span> <span class="o">=</span> <span class="k">new</span> <span class="n">obj_scene</span><span class="p">{};</span>             <span class="c1">// obj model buffer</span>
-<span class="k">auto</span> <span class="n">error</span> <span class="o">=</span> <span class="n">string</span><span class="p">{};</span>                  <span class="c1">// error buffer</span>
-<span class="k">if</span><span class="p">(</span><span class="o">!</span><span class="n">load_obj</span><span class="p">(</span><span class="n">filename</span><span class="p">,</span> <span class="n">obj</span><span class="p">,</span> <span class="n">error</span><span class="p">))</span>     <span class="c1">// load obj</span>
+<p>Obj is a face-varying file format, while most applications handle only
+indexed meshes. The loading function takes an optional that specify whether
+to load as face-varying or convert to indexed meshes, which is the default.</p>
+<div class="highlight"><pre><span></span><code><span class="k">auto</span> <span class="n">obj</span> <span class="o">=</span> <span class="n">obj_model</span><span class="p">{};</span>                 <span class="c1">// obj model</span>
+<span class="k">auto</span> <span class="n">error</span> <span class="o">=</span> <span class="n">string</span><span class="p">{};</span>                  <span class="c1">// error</span>
+<span class="k">if</span><span class="p">(</span><span class="o">!</span><span class="n">load_obj</span><span class="p">(</span><span class="n">filename</span><span class="p">,</span> <span class="n">obj</span><span class="p">,</span> <span class="n">error</span><span class="p">))</span>     <span class="c1">// load obj as indexed meshes</span>
+  <span class="n">print_error</span><span class="p">(</span><span class="n">error</span><span class="p">);</span>                   <span class="c1">// check and print error</span>
+<span class="k">if</span><span class="p">(</span><span class="o">!</span><span class="n">load_obj</span><span class="p">(</span><span class="n">filename</span><span class="p">,</span> <span class="n">obj</span><span class="p">,</span> <span class="n">error</span><span class="p">,</span> <span class="nb">true</span><span class="p">))</span> <span class="c1">// load obj as face-varying</span>
   <span class="n">print_error</span><span class="p">(</span><span class="n">error</span><span class="p">);</span>                   <span class="c1">// check and print error</span>
 <span class="k">if</span><span class="p">(</span><span class="o">!</span><span class="n">save_obj</span><span class="p">(</span><span class="n">filename</span><span class="p">,</span> <span class="n">obj</span><span class="p">,</span> <span class="n">error</span><span class="p">))</span>     <span class="c1">// save obj</span>
   <span class="n">print_error</span><span class="p">(</span><span class="n">error</span><span class="p">);</span>                   <span class="c1">// check and print error</span>
 </code></pre></div>
-
+<p>It is common in graphics to use Obj file to store single meshes. Yocto/Obj
+supports this modality by providing specialized loading and saving functions
+that take references to shapes as parameters.
+Use <code>load_obj(filename, shape, error)</code> to load Obj shapes and
+<code>save_obj(filename, shape, error)</code> to save them. The loading function takes
+an optional that specify whether to load as face-varying or convert to
+indexed meshes, which is the default.</p>
+<div class="highlight"><pre><span></span><code><span class="k">auto</span> <span class="n">shape</span> <span class="o">=</span> <span class="n">obj_shape</span><span class="p">{};</span>                 <span class="c1">// obj shape</span>
+<span class="k">auto</span> <span class="n">error</span> <span class="o">=</span> <span class="n">string</span><span class="p">{};</span>                    <span class="c1">// error</span>
+<span class="k">if</span><span class="p">(</span><span class="o">!</span><span class="n">load_obj</span><span class="p">(</span><span class="n">filename</span><span class="p">,</span> <span class="n">shape</span><span class="p">,</span> <span class="n">error</span><span class="p">))</span>     <span class="c1">// load obj as indexed meshes</span>
+  <span class="n">print_error</span><span class="p">(</span><span class="n">error</span><span class="p">);</span>                     <span class="c1">// check and print error</span>
+<span class="k">if</span><span class="p">(</span><span class="o">!</span><span class="n">load_obj</span><span class="p">(</span><span class="n">filename</span><span class="p">,</span> <span class="n">shape</span><span class="p">,</span> <span class="n">error</span><span class="p">,</span> <span class="nb">true</span><span class="p">))</span> <span class="c1">// load obj as face-varying</span>
+  <span class="n">print_error</span><span class="p">(</span><span class="n">error</span><span class="p">);</span>                     <span class="c1">// check and print error</span>
+<span class="k">if</span><span class="p">(</span><span class="o">!</span><span class="n">save_obj</span><span class="p">(</span><span class="n">filename</span><span class="p">,</span> <span class="n">shape</span><span class="p">,</span> <span class="n">error</span><span class="p">))</span>     <span class="c1">// save obj</span>
+  <span class="n">print_error</span><span class="p">(</span><span class="n">error</span><span class="p">);</span>                     <span class="c1">// check and print error</span>
+</code></pre></div>
 <h2 id="obj-reading">Obj reading</h2>
 <p>Obj is a face-varying format and that geometry representation is maintained
 in <code>obj_shape</code>. Yocto/ModelIO provides easier accessed to Obj shape data,
 both as indexed meshes and as face-varying meshes.</p>
-<p>To get data as a standard indexed meshes, use
-<code>get_triangles(obj, triangles, &lt;vertex&gt;, &lt;materials&gt;)</code>,
-<code>get_quads(obj, quads, &lt;vertex&gt;, &lt;materials&gt;)</code>,
-<code>get_lines(obj, lines, &lt;vertex&gt;, &lt;materials&gt;)</code>, and
-<code>get_points(obj, points, &lt;vertex&gt;, &lt;materials&gt;)</code>,
-to read triangles, quads, lines and points respectively.
-In these functions, vertex data is comprised of positions, normals and texture
-coordinated stored as separate arrays.
-Note that in these functions, vertices may end up being duplicated when
-going from the face-varying representation to an indexed mesh.
-Material data is comprised of a list of material names used in the shape and
-the per-element indices to the material arrays.
-Since Obj stored faces as polygons, these functions are performing a tesselation
-when necessary that for now work only for convex shapes. You can check whether
-a shape contains quads with <code>has_quads(shape)</code>.</p>
+<p>Use <code>get_positions(shape, positions)</code>, <code>get_normals(shape, normals)</code>,
+<code>get_texcoords(shape, texcoords, flipv)</code>, to read positions,
+normals, texcoords, if present. Texture coordinates can be
+optionally flipped vertically. For shape elements, use
+<code>get_points(shape, points, materials)</code>, <code>get_lines(shape, lines, materials)</code>,
+<code>get_triangles(shape, triangles, materials)</code>, and
+<code>get_quads(shape, quads, materials)</code>, to read points, lines, triangles and quads.
+Note that since Obj support arbitrary polygons and polylines, these functions
+tesselate the Obj polygons into the desired element type, for now using a
+simple fan-like algorithm that works only for convex elements.
+Use <code>has_quads(shape)</code> to check whether the Obj data has quads,
+or use <code>get_faces(shape, triangles, quads, materials)</code> to triangles or quads.</p>
 <p>In some cases, it may be desireable to extract the shape elements corresponding
 to a single material, for example for use in renderers that support a single
-shader per shape. Yocto/ModelIO defines convenience functions for this case,
+shader per shape. To filtering elements by material index use
+<code>get_points(shape, material, points)</code>, <code>get_lines(shape, material, lines)</code>,
+<code>get_triangles(shape, material, triangles)</code>, and <code>get_quads(shape, material, quads)</code>.
 that are overrides of the previous <code>get_&lt;element&gt;(...)</code> functions,
 but differ in that they take a material is as input, instead of returning
 materials tags.</p>
-<div class="codehilite"><pre><span></span><code><span class="k">auto</span> <span class="n">obj</span> <span class="o">=</span> <span class="k">new</span> <span class="n">obj_scene</span><span class="p">{};</span>             <span class="c1">// obj model buffer</span>
-<span class="k">auto</span> <span class="n">error</span> <span class="o">=</span> <span class="n">string</span><span class="p">{};</span>                  <span class="c1">// error buffer</span>
-<span class="n">load_obj</span><span class="p">(</span><span class="n">filename</span><span class="p">,</span> <span class="n">obj</span><span class="p">,</span> <span class="n">error</span><span class="p">);</span>         <span class="c1">// load obj</span>
-<span class="k">auto</span> <span class="n">shape</span> <span class="o">=</span> <span class="n">obj</span><span class="o">-&gt;</span><span class="n">shapes</span><span class="p">.</span><span class="n">front</span><span class="p">();</span>       <span class="c1">// get shape</span>
+<div class="highlight"><pre><span></span><code><span class="k">auto</span> <span class="n">obj</span> <span class="o">=</span> <span class="n">obj_model</span><span class="p">{};</span>                <span class="c1">// obj model buffer</span>
+<span class="k">auto</span> <span class="n">error</span> <span class="o">=</span> <span class="n">string</span><span class="p">{};</span>                 <span class="c1">// error buffer</span>
+<span class="n">load_obj</span><span class="p">(</span><span class="n">filename</span><span class="p">,</span> <span class="n">obj</span><span class="p">,</span> <span class="n">error</span><span class="p">);</span>        <span class="c1">// load obj</span>
+<span class="k">auto</span><span class="o">&amp;</span> <span class="n">shape</span> <span class="o">=</span> <span class="n">obj</span><span class="p">.</span><span class="n">shapes</span><span class="p">.</span><span class="n">front</span><span class="p">();</span>      <span class="c1">// get shape</span>
 
+<span class="k">auto</span> <span class="n">positions</span> <span class="o">=</span> <span class="n">vector</span><span class="o">&lt;</span><span class="n">vec3f</span><span class="o">&gt;</span><span class="p">{};</span>       <span class="c1">// vertex properties</span>
+<span class="n">get_positions</span><span class="p">(</span><span class="n">shape</span><span class="p">,</span> <span class="n">positions</span><span class="p">);</span>
+<span class="k">auto</span> <span class="n">normals</span>   <span class="o">=</span> <span class="n">vector</span><span class="o">&lt;</span><span class="n">vec3f</span><span class="o">&gt;</span><span class="p">{};</span>
+<span class="n">get_normals</span><span class="p">(</span><span class="n">shape</span><span class="p">,</span> <span class="n">normals</span><span class="p">);</span>
+<span class="k">auto</span> <span class="n">texcoords</span> <span class="o">=</span> <span class="n">vector</span><span class="o">&lt;</span><span class="n">vec2f</span><span class="o">&gt;</span><span class="p">{};</span>
+<span class="n">get_texcoords</span><span class="p">(</span><span class="n">shape</span><span class="p">,</span> <span class="n">texcoords</span><span class="p">);</span>
 <span class="k">auto</span> <span class="n">triangles</span> <span class="o">=</span> <span class="n">vector</span><span class="o">&lt;</span><span class="n">vec3i</span><span class="o">&gt;</span><span class="p">{};</span>       <span class="c1">// element data</span>
 <span class="k">auto</span> <span class="n">quads</span>     <span class="o">=</span> <span class="n">vector</span><span class="o">&lt;</span><span class="n">vec4i</span><span class="o">&gt;</span><span class="p">{};</span>
-<span class="k">auto</span> <span class="n">positions</span> <span class="o">=</span> <span class="n">vector</span><span class="o">&lt;</span><span class="n">vec3f</span><span class="o">&gt;</span><span class="p">{};</span>       <span class="c1">// vertex properties</span>
-<span class="k">auto</span> <span class="n">normals</span>   <span class="o">=</span> <span class="n">vector</span><span class="o">&lt;</span><span class="n">vec3f</span><span class="o">&gt;</span><span class="p">{};</span>
-<span class="k">auto</span> <span class="n">texcoords</span> <span class="o">=</span> <span class="n">vector</span><span class="o">&lt;</span><span class="n">vec2f</span><span class="o">&gt;</span><span class="p">{};</span>
-<span class="k">auto</span> <span class="n">materials</span> <span class="o">=</span> <span class="n">vector</span><span class="o">&lt;</span><span class="n">string</span><span class="o">&gt;</span><span class="p">{};</span>      <span class="c1">// materials</span>
-<span class="k">auto</span> <span class="n">ematerials</span> <span class="o">=</span> <span class="n">vector</span><span class="o">&lt;</span><span class="kt">int</span><span class="o">&gt;</span><span class="p">{};</span>        <span class="c1">// per-face material ids</span>
+<span class="k">auto</span> <span class="n">materials</span> <span class="o">=</span> <span class="n">vector</span><span class="o">&lt;</span><span class="kt">int</span><span class="o">&gt;</span><span class="p">{};</span>         <span class="c1">// per-face material ids</span>
 <span class="k">if</span><span class="p">(</span><span class="n">has_quads</span><span class="p">(</span><span class="n">shape</span><span class="p">))</span> <span class="p">{</span>
-  <span class="n">get_triangles</span><span class="p">(</span><span class="n">shape</span><span class="p">,</span> <span class="n">triangles</span><span class="p">,</span>       <span class="c1">// read as triangles</span>
-    <span class="n">positions</span><span class="p">,</span> <span class="n">normals</span><span class="p">,</span> <span class="n">texcoords</span><span class="p">,</span>
-    <span class="n">materials</span><span class="p">,</span> <span class="n">ematerials</span><span class="p">,</span> <span class="nb">false</span><span class="p">);</span>      <span class="c1">// flip texcoords if desired</span>
+  <span class="n">get_triangles</span><span class="p">(</span><span class="n">shape</span><span class="p">,</span> <span class="n">triangles</span><span class="p">,</span> <span class="n">materials</span><span class="p">);</span> <span class="c1">// read as triangles</span>
 <span class="p">}</span> <span class="k">else</span> <span class="p">{</span>
-  <span class="n">get_quads</span><span class="p">(</span><span class="n">shape</span><span class="p">,</span> <span class="n">quads</span><span class="p">,</span>               <span class="c1">// read as quads</span>
-    <span class="n">positions</span><span class="p">,</span> <span class="n">normals</span><span class="p">,</span> <span class="n">texcoords</span><span class="p">,</span>
-    <span class="n">materials</span><span class="p">,</span> <span class="n">ematerials</span><span class="p">,</span> <span class="nb">false</span><span class="p">);</span>      <span class="c1">// flip texcoords if desired</span>
+  <span class="n">get_quads</span><span class="p">(</span><span class="n">shape</span><span class="p">,</span> <span class="n">quads</span><span class="p">,</span> <span class="n">materials</span><span class="p">);</span>   <span class="c1">// read as quads</span>
 <span class="p">}</span>
 
-<span class="k">auto</span> <span class="n">material_id</span> <span class="o">=</span> <span class="mi">0</span><span class="p">;</span>                     <span class="c1">// material kd to extract to</span>
+<span class="k">auto</span> <span class="n">material_id</span> <span class="o">=</span> <span class="mi">0</span><span class="p">;</span>                     <span class="c1">// material id to extract to</span>
 <span class="k">if</span><span class="p">(</span><span class="n">has_quads</span><span class="p">(</span><span class="n">shape</span><span class="p">))</span> <span class="p">{</span>
-  <span class="n">get_triangles</span><span class="p">(</span><span class="n">shape</span><span class="p">,</span> <span class="n">material_id</span><span class="p">,</span>       <span class="c1">// read as triangles for material id</span>
-    <span class="n">triangles</span><span class="p">,</span> <span class="n">positions</span><span class="p">,</span>
-    <span class="n">normals</span><span class="p">,</span> <span class="n">texcoords</span><span class="p">,</span> <span class="nb">false</span><span class="p">);</span>           <span class="c1">// flip texcoords if desired</span>
+  <span class="n">get_triangles</span><span class="p">(</span><span class="n">shape</span><span class="p">,</span> <span class="n">material_id</span><span class="p">,</span> <span class="n">triangles</span><span class="p">);</span> <span class="c1">// read as triangles</span>
 <span class="p">}</span> <span class="k">else</span> <span class="p">{</span>
-  <span class="n">get_quads</span><span class="p">(</span><span class="n">shape</span><span class="p">,</span> <span class="n">material_id</span><span class="p">,</span>           <span class="c1">// read as quads for material 0</span>
-    <span class="n">quads</span><span class="p">,</span> <span class="n">positions</span><span class="p">,</span>
-    <span class="n">normals</span><span class="p">,</span> <span class="n">texcoords</span><span class="p">,</span> <span class="nb">false</span><span class="p">);</span>           <span class="c1">// flip texcoords if desired</span>
+  <span class="n">get_quads</span><span class="p">(</span><span class="n">shape</span><span class="p">,</span> <span class="n">material_id</span><span class="p">,</span> <span class="n">quads</span><span class="p">);</span>   <span class="c1">// read as quads</span>
 <span class="p">}</span>
 </code></pre></div>
-
 <p>Yocto/ModelIO supports also reading Obj shapes as face-varying quads
-with <code>get_fvquads(...)</code>.</p>
-<div class="codehilite"><pre><span></span><code><span class="k">auto</span> <span class="n">obj</span> <span class="o">=</span> <span class="k">new</span> <span class="n">obj_scene</span><span class="p">{};</span>             <span class="c1">// obj model buffer</span>
+with <code>get_fvquads(...)</code>. In this case, the model should be loaded as
+face-varying.</p>
+<div class="highlight"><pre><span></span><code><span class="k">auto</span> <span class="n">obj</span> <span class="o">=</span> <span class="k">new</span> <span class="n">obj_model</span><span class="p">{};</span>             <span class="c1">// obj model buffer</span>
 <span class="k">auto</span> <span class="n">error</span> <span class="o">=</span> <span class="n">string</span><span class="p">{};</span>                  <span class="c1">// error buffer</span>
-<span class="n">load_obj</span><span class="p">(</span><span class="n">filename</span><span class="p">,</span> <span class="n">obj</span><span class="p">,</span> <span class="n">error</span><span class="p">);</span>         <span class="c1">// load obj</span>
-<span class="k">auto</span> <span class="n">shape</span> <span class="o">=</span> <span class="n">obj</span><span class="o">-&gt;</span><span class="n">shapes</span><span class="p">.</span><span class="n">front</span><span class="p">();</span>       <span class="c1">// get shape</span>
+<span class="n">load_obj</span><span class="p">(</span><span class="n">filename</span><span class="p">,</span> <span class="n">obj</span><span class="p">,</span> <span class="n">error</span><span class="p">,</span> <span class="nb">true</span><span class="p">);</span>   <span class="c1">// load obj as face-varying</span>
+<span class="k">auto</span><span class="o">&amp;</span> <span class="n">shape</span> <span class="o">=</span> <span class="n">obj</span><span class="p">.</span><span class="n">shapes</span><span class="p">.</span><span class="n">front</span><span class="p">();</span>       <span class="c1">// get shape</span>
 
+<span class="k">auto</span> <span class="n">positions</span> <span class="o">=</span> <span class="n">vector</span><span class="o">&lt;</span><span class="n">vec3f</span><span class="o">&gt;</span><span class="p">{};</span>       <span class="c1">// vertex properties</span>
+<span class="n">get_positions</span><span class="p">(</span><span class="n">shape</span><span class="p">,</span> <span class="n">positions</span><span class="p">);</span>
+<span class="k">auto</span> <span class="n">normals</span>   <span class="o">=</span> <span class="n">vector</span><span class="o">&lt;</span><span class="n">vec3f</span><span class="o">&gt;</span><span class="p">{};</span>
+<span class="n">get_normals</span><span class="p">(</span><span class="n">shape</span><span class="p">,</span> <span class="n">normals</span><span class="p">);</span>
+<span class="k">auto</span> <span class="n">texcoords</span> <span class="o">=</span> <span class="n">vector</span><span class="o">&lt;</span><span class="n">vec2f</span><span class="o">&gt;</span><span class="p">{};</span>
+<span class="n">get_texcoords</span><span class="p">(</span><span class="n">shape</span><span class="p">,</span> <span class="n">texcoords</span><span class="p">);</span>
 <span class="k">auto</span> <span class="n">quadspos</span>  <span class="o">=</span> <span class="n">vector</span><span class="o">&lt;</span><span class="n">vec4i</span><span class="o">&gt;</span><span class="p">{};</span>       <span class="c1">// face-varying element data</span>
 <span class="k">auto</span> <span class="n">quadsnorm</span> <span class="o">=</span> <span class="n">vector</span><span class="o">&lt;</span><span class="n">vec4i</span><span class="o">&gt;</span><span class="p">{};</span>
 <span class="k">auto</span> <span class="n">quadsuv</span>   <span class="o">=</span> <span class="n">vector</span><span class="o">&lt;</span><span class="n">vec4i</span><span class="o">&gt;</span><span class="p">{};</span>
-<span class="k">auto</span> <span class="n">positions</span> <span class="o">=</span> <span class="n">vector</span><span class="o">&lt;</span><span class="n">vec3f</span><span class="o">&gt;</span><span class="p">{};</span>       <span class="c1">// vertex properties</span>
-<span class="k">auto</span> <span class="n">normals</span>   <span class="o">=</span> <span class="n">vector</span><span class="o">&lt;</span><span class="n">vec3f</span><span class="o">&gt;</span><span class="p">{};</span>
-<span class="k">auto</span> <span class="n">texcoords</span> <span class="o">=</span> <span class="n">vector</span><span class="o">&lt;</span><span class="n">vec2f</span><span class="o">&gt;</span><span class="p">{};</span>
-<span class="k">auto</span> <span class="n">materials</span> <span class="o">=</span> <span class="n">vector</span><span class="o">&lt;</span><span class="n">string</span><span class="o">&gt;</span><span class="p">{};</span>      <span class="c1">// materials</span>
-<span class="k">auto</span> <span class="n">ematerials</span> <span class="o">=</span> <span class="n">vector</span><span class="o">&lt;</span><span class="kt">int</span><span class="o">&gt;</span><span class="p">{};</span>        <span class="c1">// per-face material ids</span>
+<span class="k">auto</span> <span class="n">materials</span> <span class="o">=</span> <span class="n">vector</span><span class="o">&lt;</span><span class="kt">int</span><span class="o">&gt;</span><span class="p">{};</span>         <span class="c1">// per-face material ids</span>
 <span class="n">get_fvquads</span><span class="p">(</span><span class="n">shape</span><span class="p">,</span>                      <span class="c1">// read as face-varying quads</span>
-  <span class="n">quadspos</span><span class="p">,</span> <span class="n">quadsnorm</span><span class="p">,</span> <span class="n">quadsuv</span><span class="p">,</span>
-  <span class="n">positions</span><span class="p">,</span> <span class="n">normals</span><span class="p">,</span> <span class="n">texcoords</span><span class="p">,</span>
-  <span class="n">materials</span><span class="p">,</span> <span class="n">ematerials</span><span class="p">,</span> <span class="nb">false</span><span class="p">);</span>        <span class="c1">// flip texcoords if desired</span>
+  <span class="n">quadspos</span><span class="p">,</span> <span class="n">quadsnorm</span><span class="p">,</span> <span class="n">quadsuv</span><span class="p">,</span> <span class="n">materias</span><span class="p">);</span>
 </code></pre></div>
-
 <h2 id="obj-writing">Obj writing</h2>
-<p>To save an Obj, create a scene and add objects to it using
-<code>add_camera(obj)</code>, <code>add_material(obj)</code>, <code>add_environment(obj)</code>
-and <code>add_shape(obj)</code> for camera, materials, environments and shapes
-respectively. For all objects, set the objects' properties directly.</p>
+<p>To save an Obj, create a scene and add objects to it by manipulating the
+objects' arrays directly. For all objects, set the objects' properties directly.</p>
 <p>For shapes, Yocto/ModelIO defines convenience functions that take either
 indexed mesh or face-varying meshes as input and create the appropriate
-Obj shape elements.
-Use <code>set_triangles(shape, triangles, &lt;vertex&gt;, &lt;materials&gt;)</code>,
-<code>set_quads(shape, quads, &lt;vertex&gt;, &lt;materials&gt;)</code>,
-<code>set_lines(shape, lines, &lt;vertex&gt;, &lt;materials&gt;)</code>,
-<code>set_points(shape, points, &lt;vertex&gt;, &lt;materials&gt;)</code> to set shapes as an indexed
-mesh of triangles, quads, lines or points respectively.
-In these functions, vertex data is comprised of positions, normals and texture
-coordinated stored as separate arrays.
+Obj shape elements. Use <code>add_positions(shape, positions)</code>,
+<code>add_normals(shape, normals)</code> and <code>add_texcoords(shape, texcoords, flipv)</code>
+to add vertex properties to a shape.
+Use <code>add_triangles(shape, triangles, material, has_normals, has_texcoords)</code>,
+<code>add_quads(shape, quads, material, has_normals, has_texcoords)</code>,
+<code>add_lines(shape, lines, material, has_normals, has_texcoords)</code>,
+<code>add_points(shape, points, material, has_normals, has_texcoords)</code>
+to add triangles, quads, lines or points to shapes respectively.
 Material data is only represented as tags and can be left
 empty if only one material is used. To set material names
-use <code>set_materials(shape, materials)</code>.</p>
-<div class="codehilite"><pre><span></span><code><span class="k">auto</span> <span class="n">obj</span> <span class="o">=</span> <span class="k">new</span> <span class="n">obj_scene</span><span class="p">{};</span>             <span class="c1">// obj model buffer</span>
+use <code>set_materials(shape, materials)</code>.
+To add face-varying shapes, use <code>add_fvquads(...)</code>.</p>
+<div class="highlight"><pre><span></span><code><span class="k">auto</span> <span class="n">obj</span> <span class="o">=</span>  <span class="n">obj_model</span><span class="p">{};</span>                 <span class="c1">// obj model</span>
 
-<span class="k">auto</span> <span class="n">camera</span> <span class="o">=</span> <span class="n">add_camera</span><span class="p">(</span><span class="n">obj</span><span class="p">);</span>          <span class="c1">// add camera</span>
-<span class="n">camera</span><span class="o">-&gt;</span><span class="n">name</span> <span class="o">=</span> <span class="s">&quot;camera&quot;</span><span class="p">;</span>                <span class="c1">// set camera name</span>
-<span class="n">camera</span><span class="o">-&gt;</span><span class="n">frame</span> <span class="o">=</span> <span class="n">identity3x4f</span><span class="p">;</span>           <span class="c1">// set camera properties</span>
-<span class="k">auto</span> <span class="n">environment</span> <span class="o">=</span> <span class="n">add_environment</span><span class="p">(</span><span class="n">obj</span><span class="p">);</span><span class="c1">// add environment</span>
-<span class="n">environment</span><span class="o">-&gt;</span><span class="n">name</span> <span class="o">=</span> <span class="s">&quot;environment&quot;</span><span class="p">;</span>      <span class="c1">// set environment name</span>
-<span class="n">environment</span><span class="o">-&gt;</span><span class="n">emission</span> <span class="o">=</span> <span class="p">{</span><span class="mi">1</span><span class="p">,</span><span class="mi">1</span><span class="p">,</span><span class="mi">1</span><span class="p">};</span>        <span class="c1">// set environment properties</span>
-<span class="k">auto</span> <span class="n">material</span> <span class="o">=</span> <span class="n">add_material</span><span class="p">(</span><span class="n">obj</span><span class="p">);</span>      <span class="c1">// add material</span>
-<span class="n">material</span><span class="o">-&gt;</span><span class="n">name</span> <span class="o">=</span> <span class="s">&quot;camera&quot;</span><span class="p">;</span>              <span class="c1">// set material name</span>
-<span class="n">material</span><span class="o">-&gt;</span><span class="n">diffuse</span> <span class="o">=</span> <span class="p">{</span><span class="mi">1</span><span class="p">,</span><span class="mi">0</span><span class="p">,</span><span class="mi">0</span><span class="p">};</span>            <span class="c1">// set material properties</span>
+<span class="k">auto</span> <span class="n">camera</span> <span class="o">=</span> <span class="n">obj_camera</span><span class="p">{};</span>              <span class="c1">// init camera</span>
+<span class="n">camera</span><span class="p">.</span><span class="n">name</span> <span class="o">=</span> <span class="s">&quot;camera&quot;</span><span class="p">;</span>                  <span class="c1">// set camera name</span>
+<span class="n">camera</span><span class="p">.</span><span class="n">frame</span> <span class="o">=</span> <span class="n">identity3x4f</span><span class="p">;</span>             <span class="c1">// set camera properties</span>
+<span class="n">obj</span><span class="p">.</span><span class="n">cameras</span><span class="p">.</span><span class="n">push_back</span><span class="p">(</span><span class="n">camera</span><span class="p">);</span>           <span class="c1">// add camera</span>
+<span class="k">auto</span> <span class="n">environment</span> <span class="o">=</span> <span class="n">add_environment</span><span class="p">(</span><span class="n">obj</span><span class="p">);</span> <span class="c1">// init environment</span>
+<span class="n">environment</span><span class="p">.</span><span class="n">name</span> <span class="o">=</span> <span class="s">&quot;environment&quot;</span><span class="p">;</span>        <span class="c1">// set environment name</span>
+<span class="n">environment</span><span class="p">.</span><span class="n">emission</span> <span class="o">=</span> <span class="p">{</span><span class="mi">1</span><span class="p">,</span><span class="mi">1</span><span class="p">,</span><span class="mi">1</span><span class="p">};</span>          <span class="c1">// set environment properties</span>
+<span class="n">obj</span><span class="p">.</span><span class="n">environments</span><span class="p">.</span><span class="n">push_back</span><span class="p">(</span><span class="n">environment</span><span class="p">);</span> <span class="c1">// add environment</span>
+<span class="k">auto</span> <span class="n">material</span> <span class="o">=</span> <span class="n">add_material</span><span class="p">(</span><span class="n">obj</span><span class="p">);</span>       <span class="c1">// init material</span>
+<span class="n">material</span><span class="p">.</span><span class="n">name</span> <span class="o">=</span> <span class="s">&quot;material&quot;</span><span class="p">;</span>              <span class="c1">// set material name</span>
+<span class="n">material</span><span class="p">.</span><span class="n">diffuse</span> <span class="o">=</span> <span class="p">{</span><span class="mi">1</span><span class="p">,</span><span class="mi">0</span><span class="p">,</span><span class="mi">0</span><span class="p">};</span>              <span class="c1">// set material properties</span>
+<span class="n">obj</span><span class="p">.</span><span class="n">materials</span><span class="p">.</span><span class="n">push_back</span><span class="p">(</span><span class="n">material</span><span class="p">);</span>       <span class="c1">// add material</span>
 
-<span class="k">auto</span> <span class="n">triangles</span> <span class="o">=</span> <span class="n">vector</span><span class="o">&lt;</span><span class="n">vec3i</span><span class="o">&gt;</span><span class="p">{...};</span>    <span class="c1">// element data</span>
-<span class="k">auto</span> <span class="n">positions</span> <span class="o">=</span> <span class="n">vector</span><span class="o">&lt;</span><span class="n">vec3f</span><span class="o">&gt;</span><span class="p">{...};</span>    <span class="c1">// vertex properties</span>
+<span class="k">auto</span> <span class="n">triangles</span> <span class="o">=</span> <span class="n">vector</span><span class="o">&lt;</span><span class="n">vec3i</span><span class="o">&gt;</span><span class="p">{...};</span>     <span class="c1">// element data</span>
+<span class="k">auto</span> <span class="n">positions</span> <span class="o">=</span> <span class="n">vector</span><span class="o">&lt;</span><span class="n">vec3f</span><span class="o">&gt;</span><span class="p">{...};</span>     <span class="c1">// vertex properties</span>
 <span class="k">auto</span> <span class="n">normals</span>   <span class="o">=</span> <span class="n">vector</span><span class="o">&lt;</span><span class="n">vec3f</span><span class="o">&gt;</span><span class="p">{...};</span>
 <span class="k">auto</span> <span class="n">texcoords</span> <span class="o">=</span> <span class="n">vector</span><span class="o">&lt;</span><span class="n">vec2f</span><span class="o">&gt;</span><span class="p">{...};</span>
 
-<span class="k">auto</span> <span class="n">shape</span> <span class="o">=</span> <span class="n">add_shape</span><span class="p">(</span><span class="n">obj</span><span class="p">);</span>            <span class="c1">// add shape</span>
-<span class="n">shape</span><span class="o">-&gt;</span><span class="n">name</span> <span class="o">=</span> <span class="s">&quot;shape&quot;</span><span class="p">;</span>                  <span class="c1">// set shape name</span>
-<span class="n">set_triangles</span><span class="p">(</span><span class="n">shape</span><span class="p">,</span> <span class="n">triangles</span><span class="p">,</span>         <span class="c1">// set shape geometry</span>
-  <span class="n">positions</span><span class="p">,</span> <span class="n">normals</span><span class="p">,</span> <span class="n">texcoords</span><span class="p">);</span>
-<span class="n">set_materials</span><span class="p">(</span><span class="n">shape</span><span class="p">,</span> <span class="p">{</span><span class="n">material</span><span class="p">});</span>       <span class="c1">// set shape material;</span>
+<span class="k">auto</span> <span class="n">shape</span> <span class="o">=</span> <span class="n">obj_shape</span><span class="p">{};</span>                <span class="c1">// init shape</span>
+<span class="n">shape</span><span class="p">.</span><span class="n">name</span> <span class="o">=</span> <span class="s">&quot;shape&quot;</span><span class="p">;</span>                    <span class="c1">// set shape name</span>
+<span class="n">add_triangles</span><span class="p">(</span><span class="n">shape</span><span class="p">,</span> <span class="n">triangles</span><span class="p">,</span> <span class="mi">0</span><span class="p">);</span>      <span class="c1">// set shape geometry</span>
+<span class="n">add_positions</span><span class="p">(</span><span class="n">shape</span><span class="p">,</span> <span class="n">positions</span><span class="p">);</span>
+<span class="n">add_normals</span><span class="p">(</span><span class="n">shape</span><span class="p">,</span> <span class="n">normals</span><span class="p">);</span>
+<span class="n">add_texcoords</span><span class="p">(</span><span class="n">shape</span><span class="p">,</span> <span class="n">texcoords</span><span class="p">);</span>
 
 <span class="k">auto</span> <span class="n">error</span> <span class="o">=</span> <span class="n">string</span><span class="p">{};</span>                  <span class="c1">// error buffer</span>
 <span class="n">save_obj</span><span class="p">(</span><span class="n">filename</span><span class="p">,</span> <span class="n">obj</span><span class="p">,</span> <span class="n">error</span><span class="p">);</span>         <span class="c1">// save obj</span>
 </code></pre></div>
-
-<p>Yocto/ModelIO supports also writing of face-varying shapes with
-<code>set_fvquads(...)</code> with an API similar to above.</p>
-<div class="codehilite"><pre><span></span><code><span class="k">auto</span> <span class="n">obj</span> <span class="o">=</span> <span class="k">new</span> <span class="n">obj_scene</span><span class="p">{};</span>             <span class="c1">// obj model buffer</span>
+<p>And similarly for face-varying shapes.</p>
+<div class="highlight"><pre><span></span><code><span class="k">auto</span> <span class="n">obj</span> <span class="o">=</span> <span class="n">obj_model</span><span class="p">{};</span>                 <span class="c1">// obj model buffer</span>
 
 <span class="k">auto</span> <span class="n">quadspos</span>  <span class="o">=</span> <span class="n">vector</span><span class="o">&lt;</span><span class="n">vec4i</span><span class="o">&gt;</span><span class="p">{...};</span>    <span class="c1">// face-varying element data</span>
 <span class="k">auto</span> <span class="n">quadsnorm</span> <span class="o">=</span> <span class="n">vector</span><span class="o">&lt;</span><span class="n">vec4i</span><span class="o">&gt;</span><span class="p">{...};</span>
@@ -995,17 +1028,17 @@ use <code>set_materials(shape, materials)</code>.</p>
 <span class="k">auto</span> <span class="n">normals</span>   <span class="o">=</span> <span class="n">vector</span><span class="o">&lt;</span><span class="n">vec3f</span><span class="o">&gt;</span><span class="p">{...};</span>
 <span class="k">auto</span> <span class="n">texcoords</span> <span class="o">=</span> <span class="n">vector</span><span class="o">&lt;</span><span class="n">vec2f</span><span class="o">&gt;</span><span class="p">....{};</span>
 
-<span class="k">auto</span> <span class="n">shape</span> <span class="o">=</span> <span class="n">add_shape</span><span class="p">(</span><span class="n">obj</span><span class="p">);</span>            <span class="c1">// add shape</span>
-<span class="n">shape</span><span class="o">-&gt;</span><span class="n">name</span> <span class="o">=</span> <span class="s">&quot;shape&quot;</span><span class="p">;</span>                  <span class="c1">// set shape name</span>
-<span class="n">set_fvquads</span><span class="p">(</span><span class="n">shape</span><span class="p">,</span> <span class="n">quadspos</span><span class="p">,</span>            <span class="c1">// set shape geometry</span>
-  <span class="n">quadsnorm</span><span class="p">,</span> <span class="n">quadstexcoord</span><span class="p">,</span>
-  <span class="n">positions</span><span class="p">,</span> <span class="n">normals</span><span class="p">,</span> <span class="n">texcoords</span><span class="p">);</span>
-<span class="n">set_materials</span><span class="p">(</span><span class="n">shape</span><span class="p">,</span> <span class="p">{</span><span class="n">material</span><span class="p">});</span>       <span class="c1">// set shape material;</span>
+<span class="k">auto</span> <span class="n">shape</span> <span class="o">=</span> <span class="n">obj_shape</span><span class="p">{};</span>               <span class="c1">// add shape</span>
+<span class="n">shape</span><span class="p">.</span><span class="n">name</span> <span class="o">=</span> <span class="s">&quot;shape&quot;</span><span class="p">;</span>                   <span class="c1">// set shape name</span>
+<span class="n">add_fvquads</span><span class="p">(</span><span class="n">shape</span><span class="p">,</span> <span class="n">quadspos</span><span class="p">,</span>            <span class="c1">// set shape geometry</span>
+  <span class="n">quadsnorm</span><span class="p">,</span> <span class="n">quadstexcoord</span><span class="p">,</span> <span class="mi">0</span><span class="p">);</span>
+<span class="n">add_positions</span><span class="p">(</span><span class="n">shape</span><span class="p">,</span> <span class="n">positions</span><span class="p">);</span>
+<span class="n">add_normals</span><span class="p">(</span><span class="n">shape</span><span class="p">,</span> <span class="n">normals</span><span class="p">);</span>
+<span class="n">add_texcoords</span><span class="p">(</span><span class="n">shape</span><span class="p">,</span> <span class="n">texcoords</span><span class="p">);</span>
 
 <span class="k">auto</span> <span class="n">error</span> <span class="o">=</span> <span class="n">string</span><span class="p">{};</span>                  <span class="c1">// error buffer</span>
 <span class="n">save_obj</span><span class="p">(</span><span class="n">filename</span><span class="p">,</span> <span class="n">obj</span><span class="p">,</span> <span class="n">error</span><span class="p">);</span>         <span class="c1">// save obj</span>
 </code></pre></div>
-
 <h2 id="pbrt-models">Pbrt models</h2>
 <p>The Pbrt file format is a scene representation suitable for realistic rendering
 and implemented by the Pbrt renderer.
@@ -1034,26 +1067,25 @@ shapes with a simpler interface than accessing data directly.</p>
 <p>In general, Pbrt support is still experimental even if the library can
 parse most Pbrt files. The objects properties documentations are for now
 stored in the header file.</p>
-<div class="codehilite"><pre><span></span><code><span class="k">auto</span> <span class="n">pbrt</span> <span class="o">=</span> <span class="k">new</span> <span class="n">pbrt_scene</span><span class="p">{...};</span>            <span class="c1">// obj model buffer</span>
-<span class="k">for</span><span class="p">(</span><span class="k">auto</span> <span class="nl">shape</span> <span class="p">:</span> <span class="n">pbrt</span><span class="o">-&gt;</span><span class="n">shapes</span><span class="p">)</span>              <span class="c1">// access shapes</span>
-  <span class="n">print_info</span><span class="p">(</span><span class="n">shape</span><span class="o">-&gt;</span><span class="n">name</span><span class="p">);</span>                  <span class="c1">// access shape properties</span>
-<span class="k">for</span><span class="p">(</span><span class="k">auto</span> <span class="nl">material</span> <span class="p">:</span> <span class="n">pbrt</span><span class="o">-&gt;</span><span class="n">material</span><span class="p">)</span>         <span class="c1">// access materials</span>
-  <span class="n">print_info</span><span class="p">(</span><span class="n">material</span><span class="o">-&gt;</span><span class="n">diffuse</span><span class="p">);</span>            <span class="c1">// access material properties</span>
-<span class="k">for</span><span class="p">(</span><span class="k">auto</span> <span class="nl">material</span> <span class="p">:</span> <span class="n">pbrt</span><span class="o">-&gt;</span><span class="n">material</span><span class="p">)</span>         <span class="c1">// access materials</span>
-  <span class="n">print_info</span><span class="p">(</span><span class="n">material</span><span class="o">-&gt;</span><span class="n">color_tex</span><span class="p">);</span>          <span class="c1">// access material textures</span>
-<span class="k">for</span><span class="p">(</span><span class="k">auto</span> <span class="nl">camera</span> <span class="p">:</span> <span class="n">pbrt</span><span class="o">-&gt;</span><span class="n">cameras</span><span class="p">)</span>            <span class="c1">// access cameras [extension]</span>
-  <span class="n">print_info</span><span class="p">(</span><span class="n">camera</span><span class="o">-&gt;</span><span class="n">frame</span><span class="p">);</span>                <span class="c1">// access camera properties</span>
-<span class="k">for</span><span class="p">(</span><span class="k">auto</span> <span class="nl">environment</span> <span class="p">:</span> <span class="n">pbrt</span><span class="o">-&gt;</span><span class="n">environments</span><span class="p">)</span>  <span class="c1">// access environments [extension]</span>
-  <span class="n">print_info</span><span class="p">(</span><span class="n">environment</span><span class="o">-&gt;</span><span class="n">emission</span><span class="p">);</span>        <span class="c1">// access environment properties</span>
+<div class="highlight"><pre><span></span><code><span class="k">auto</span> <span class="n">pbrt</span> <span class="o">=</span> <span class="k">new</span> <span class="n">pbrt_scene</span><span class="p">{...};</span>            <span class="c1">// obj model buffer</span>
+<span class="k">for</span><span class="p">(</span><span class="k">auto</span> <span class="nl">shape</span> <span class="p">:</span> <span class="n">pbrt</span><span class="p">.</span><span class="n">shapes</span><span class="p">)</span>              <span class="c1">// access shapes</span>
+  <span class="n">print_info</span><span class="p">(</span><span class="n">shape</span><span class="p">.</span><span class="n">name</span><span class="p">);</span>                  <span class="c1">// access shape properties</span>
+<span class="k">for</span><span class="p">(</span><span class="k">auto</span> <span class="nl">material</span> <span class="p">:</span> <span class="n">pbrt</span><span class="p">.</span><span class="n">material</span><span class="p">)</span>         <span class="c1">// access materials</span>
+  <span class="n">print_info</span><span class="p">(</span><span class="n">material</span><span class="p">.</span><span class="n">diffuse</span><span class="p">);</span>            <span class="c1">// access material properties</span>
+<span class="k">for</span><span class="p">(</span><span class="k">auto</span> <span class="nl">material</span> <span class="p">:</span> <span class="n">pbrt</span><span class="p">.</span><span class="n">material</span><span class="p">)</span>         <span class="c1">// access materials</span>
+  <span class="n">print_info</span><span class="p">(</span><span class="n">material</span><span class="p">.</span><span class="n">color_tex</span><span class="p">);</span>          <span class="c1">// access material textures</span>
+<span class="k">for</span><span class="p">(</span><span class="k">auto</span> <span class="nl">camera</span> <span class="p">:</span> <span class="n">pbrt</span><span class="p">.</span><span class="n">cameras</span><span class="p">)</span>            <span class="c1">// access cameras [extension]</span>
+  <span class="n">print_info</span><span class="p">(</span><span class="n">camera</span><span class="p">.</span><span class="n">frame</span><span class="p">);</span>                <span class="c1">// access camera properties</span>
+<span class="k">for</span><span class="p">(</span><span class="k">auto</span> <span class="nl">environment</span> <span class="p">:</span> <span class="n">pbrt</span><span class="p">.</span><span class="n">environments</span><span class="p">)</span>  <span class="c1">// access environments [extension]</span>
+  <span class="n">print_info</span><span class="p">(</span><span class="n">environment</span><span class="p">.</span><span class="n">emission</span><span class="p">);</span>        <span class="c1">// access environment properties</span>
 </code></pre></div>
-
 <p>Use <code>load_pbrt(filename, pbrt, error)</code> to load Pbrt files and
 <code>save_pbrt(filename, pbrt, error)</code> to save them.<br />
 Both loading and saving take a filename, a pointer to a Pbrt model,
 and returns whether or not the file was loaded successfully.
 In the case of an error, the IO functions set the <code>error</code> string with a
 message suitable for displaying to a user.</p>
-<div class="codehilite"><pre><span></span><code><span class="k">auto</span> <span class="n">pbrt</span> <span class="o">=</span> <span class="k">new</span> <span class="n">pbrt_scene</span><span class="p">{};</span>           <span class="c1">// obj model buffer</span>
+<div class="highlight"><pre><span></span><code><span class="k">auto</span> <span class="n">pbrt</span> <span class="o">=</span> <span class="k">new</span> <span class="n">pbrt_scene</span><span class="p">{};</span>           <span class="c1">// obj model buffer</span>
 <span class="k">auto</span> <span class="n">error</span> <span class="o">=</span> <span class="n">string</span><span class="p">{};</span>                  <span class="c1">// error buffer</span>
 <span class="k">if</span><span class="p">(</span><span class="o">!</span><span class="n">load_pbrt</span><span class="p">(</span><span class="n">filename</span><span class="p">,</span> <span class="n">pbrt</span><span class="p">,</span> <span class="n">error</span><span class="p">))</span>   <span class="c1">// load obj</span>
   <span class="n">print_error</span><span class="p">(</span><span class="n">error</span><span class="p">);</span>                   <span class="c1">// check and print error</span>
@@ -1075,40 +1107,38 @@ message suitable for displaying to a user.</p>
         
 <footer class="md-footer">
   
-    <div class="md-footer-nav">
-      <nav class="md-footer-nav__inner md-grid" aria-label="Footer">
-        
-          <a href="../yocto_bvh/" class="md-footer-nav__link md-footer-nav__link--prev" rel="prev">
-            <div class="md-footer-nav__button md-icon">
-              <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M20 11v2H8l5.5 5.5-1.42 1.42L4.16 12l7.92-7.92L13.5 5.5 8 11h12z"/></svg>
+    <nav class="md-footer__inner md-grid" aria-label="Footer">
+      
+        <a href="../yocto_bvh/" class="md-footer__link md-footer__link--prev" rel="prev">
+          <div class="md-footer__button md-icon">
+            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M20 11v2H8l5.5 5.5-1.42 1.42L4.16 12l7.92-7.92L13.5 5.5 8 11h12z"/></svg>
+          </div>
+          <div class="md-footer__title">
+            <div class="md-ellipsis">
+              <span class="md-footer__direction">
+                Previous
+              </span>
+              Ray-scene intersection
             </div>
-            <div class="md-footer-nav__title">
-              <div class="md-ellipsis">
-                <span class="md-footer-nav__direction">
-                  Previous
-                </span>
-                Ray-scene intersection
-              </div>
+          </div>
+        </a>
+      
+      
+        <a href="../yocto_sceneio/" class="md-footer__link md-footer__link--next" rel="next">
+          <div class="md-footer__title">
+            <div class="md-ellipsis">
+              <span class="md-footer__direction">
+                Next
+              </span>
+              Scene serialization
             </div>
-          </a>
-        
-        
-          <a href="../yocto_sceneio/" class="md-footer-nav__link md-footer-nav__link--next" rel="next">
-            <div class="md-footer-nav__title">
-              <div class="md-ellipsis">
-                <span class="md-footer-nav__direction">
-                  Next
-                </span>
-                Scene serialization
-              </div>
-            </div>
-            <div class="md-footer-nav__button md-icon">
-              <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M4 11v2h12l-5.5 5.5 1.42 1.42L19.84 12l-7.92-7.92L10.5 5.5 16 11H4z"/></svg>
-            </div>
-          </a>
-        
-      </nav>
-    </div>
+          </div>
+          <div class="md-footer__button md-icon">
+            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M4 11v2h12l-5.5 5.5 1.42 1.42L19.84 12l-7.92-7.92L10.5 5.5 16 11H4z"/></svg>
+          </div>
+        </a>
+      
+    </nav>
   
   <div class="md-footer-meta md-typeset">
     <div class="md-footer-meta__inner md-grid">
@@ -1122,6 +1152,7 @@ message suitable for displaying to a user.</p>
         <a href="https://squidfunk.github.io/mkdocs-material/" target="_blank" rel="noopener">
           Material for MkDocs
         </a>
+        
       </div>
       
     </div>
@@ -1129,19 +1160,13 @@ message suitable for displaying to a user.</p>
 </footer>
       
     </div>
+    <div class="md-dialog" data-md-component="dialog">
+      <div class="md-dialog__inner md-typeset"></div>
+    </div>
+    <script id="__config" type="application/json">{"base": "../..", "features": ["navigation.instant"], "translations": {"clipboard.copy": "Copy to clipboard", "clipboard.copied": "Copied to clipboard", "search.config.lang": "en", "search.config.pipeline": "trimmer, stopWordFilter", "search.config.separator": "[\\s\\-]+", "search.placeholder": "Search", "search.result.placeholder": "Type to start searching", "search.result.none": "No matching documents", "search.result.one": "1 matching document", "search.result.other": "# matching documents", "search.result.more.one": "1 more on this page", "search.result.more.other": "# more on this page", "search.result.term.missing": "Missing"}, "search": "../../assets/javascripts/workers/search.fb4a9340.min.js", "version": null}</script>
     
-      <script src="../../assets/javascripts/vendor.08c56446.min.js"></script>
-      <script src="../../assets/javascripts/bundle.6ced434e.min.js"></script><script id="__lang" type="application/json">{"clipboard.copy": "Copy to clipboard", "clipboard.copied": "Copied to clipboard", "search.config.lang": "en", "search.config.pipeline": "trimmer, stopWordFilter", "search.config.separator": "[\\s\\-]+", "search.placeholder": "Search", "search.result.placeholder": "Type to start searching", "search.result.none": "No matching documents", "search.result.one": "1 matching document", "search.result.other": "# matching documents", "search.result.more.one": "1 more on this page", "search.result.more.other": "# more on this page", "search.result.term.missing": "Missing"}</script>
-      
-      <script>
-        app = initialize({
-          base: "../..",
-          features: [],
-          search: Object.assign({
-            worker: "../../assets/javascripts/worker/search.8c7e0a7e.min.js"
-          }, typeof search !== "undefined" && search)
-        })
-      </script>
+    
+      <script src="../../assets/javascripts/bundle.5cf3e710.min.js"></script>
       
     
   </body>

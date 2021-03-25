@@ -12,7 +12,7 @@
       
       
       <link rel="shortcut icon" href="../../assets/images/favicon.png">
-      <meta name="generator" content="mkdocs-1.1.2, mkdocs-material-6.2.2">
+      <meta name="generator" content="mkdocs-1.1.2, mkdocs-material-7.0.5">
     
     
       
@@ -20,10 +20,14 @@
       
     
     
-      <link rel="stylesheet" href="../../assets/stylesheets/main.73f7c429.min.css">
+      <link rel="stylesheet" href="../../assets/stylesheets/main.77f3fd56.min.css">
       
         
-        <link rel="stylesheet" href="../../assets/stylesheets/palette.39b8e14a.min.css">
+        <link rel="stylesheet" href="../../assets/stylesheets/palette.7fa14f5b.min.css">
+        
+          
+          
+          <meta name="theme-color" content="#2094f3">
         
       
     
@@ -33,7 +37,7 @@
         
         <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
         <link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Roboto:300,400,400i,700%7CRoboto+Mono&display=fallback">
-        <style>body,input{font-family:"Roboto",-apple-system,BlinkMacSystemFont,Helvetica,Arial,sans-serif}code,kbd,pre{font-family:"Roboto Mono",SFMono-Regular,Consolas,Menlo,monospace}</style>
+        <style>:root{--md-text-font-family:"Roboto";--md-code-font-family:"Roboto Mono"}</style>
       
     
     
@@ -50,7 +54,7 @@
     
     
     
-    <body dir="ltr" data-md-color-scheme="" data-md-color-primary="none" data-md-color-accent="none">
+    <body dir="ltr" data-md-color-scheme="" data-md-color-primary="blue" data-md-color-accent="">
       
   
     
@@ -72,24 +76,24 @@
       
 
 <header class="md-header" data-md-component="header">
-  <nav class="md-header-nav md-grid" aria-label="Header">
-    <a href="../.." title="Yocto/GL" class="md-header-nav__button md-logo" aria-label="Yocto/GL">
+  <nav class="md-header__inner md-grid" aria-label="Header">
+    <a href="../.." title="Yocto/GL" class="md-header__button md-logo" aria-label="Yocto/GL">
       
   
-  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a3 3 0 003-3 3 3 0 00-3-3 3 3 0 00-3 3 3 3 0 003 3m0 3.54C9.64 9.35 6.5 8 3 8v11c3.5 0 6.64 1.35 9 3.54 2.36-2.19 5.5-3.54 9-3.54V8c-3.5 0-6.64 1.35-9 3.54z"/></svg>
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a3 3 0 0 0 3-3 3 3 0 0 0-3-3 3 3 0 0 0-3 3 3 3 0 0 0 3 3m0 3.54C9.64 9.35 6.5 8 3 8v11c3.5 0 6.64 1.35 9 3.54 2.36-2.19 5.5-3.54 9-3.54V8c-3.5 0-6.64 1.35-9 3.54z"/></svg>
 
     </a>
-    <label class="md-header-nav__button md-icon" for="__drawer">
+    <label class="md-header__button md-icon" for="__drawer">
       <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M3 6h18v2H3V6m0 5h18v2H3v-2m0 5h18v2H3v-2z"/></svg>
     </label>
-    <div class="md-header-nav__title" data-md-component="header-title">
-      <div class="md-header-nav__ellipsis">
-        <div class="md-header-nav__topic">
+    <div class="md-header__title" data-md-component="header-title">
+      <div class="md-header__ellipsis">
+        <div class="md-header__topic">
           <span class="md-ellipsis">
             Yocto/GL
           </span>
         </div>
-        <div class="md-header-nav__topic">
+        <div class="md-header__topic" data-md-component="header-topic">
           <span class="md-ellipsis">
             
               Shape utilities
@@ -98,9 +102,12 @@
         </div>
       </div>
     </div>
+    <div class="md-header__options">
+      
+    </div>
     
-      <label class="md-header-nav__button md-icon" for="__search">
-        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M9.5 3A6.5 6.5 0 0116 9.5c0 1.61-.59 3.09-1.56 4.23l.27.27h.79l5 5-1.5 1.5-5-5v-.79l-.27-.27A6.516 6.516 0 019.5 16 6.5 6.5 0 013 9.5 6.5 6.5 0 019.5 3m0 2C7 5 5 7 5 9.5S7 14 9.5 14 14 12 14 9.5 12 5 9.5 5z"/></svg>
+      <label class="md-header__button md-icon" for="__search">
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M9.5 3A6.5 6.5 0 0 1 16 9.5c0 1.61-.59 3.09-1.56 4.23l.27.27h.79l5 5-1.5 1.5-5-5v-.79l-.27-.27A6.516 6.516 0 0 1 9.5 16 6.5 6.5 0 0 1 3 9.5 6.5 6.5 0 0 1 9.5 3m0 2C7 5 5 7 5 9.5S7 14 9.5 14 14 12 14 9.5 12 5 9.5 5z"/></svg>
       </label>
       
 <div class="md-search" data-md-component="search" role="dialog">
@@ -109,10 +116,10 @@
     <form class="md-search__form" name="search">
       <input type="text" class="md-search__input" name="query" aria-label="Search" placeholder="Search" autocapitalize="off" autocorrect="off" autocomplete="off" spellcheck="false" data-md-component="search-query" data-md-state="active" required>
       <label class="md-search__icon md-icon" for="__search">
-        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M9.5 3A6.5 6.5 0 0116 9.5c0 1.61-.59 3.09-1.56 4.23l.27.27h.79l5 5-1.5 1.5-5-5v-.79l-.27-.27A6.516 6.516 0 019.5 16 6.5 6.5 0 013 9.5 6.5 6.5 0 019.5 3m0 2C7 5 5 7 5 9.5S7 14 9.5 14 14 12 14 9.5 12 5 9.5 5z"/></svg>
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M9.5 3A6.5 6.5 0 0 1 16 9.5c0 1.61-.59 3.09-1.56 4.23l.27.27h.79l5 5-1.5 1.5-5-5v-.79l-.27-.27A6.516 6.516 0 0 1 9.5 16 6.5 6.5 0 0 1 3 9.5 6.5 6.5 0 0 1 9.5 3m0 2C7 5 5 7 5 9.5S7 14 9.5 14 14 12 14 9.5 12 5 9.5 5z"/></svg>
         <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M20 11v2H8l5.5 5.5-1.42 1.42L4.16 12l7.92-7.92L13.5 5.5 8 11h12z"/></svg>
       </label>
-      <button type="reset" class="md-search__icon md-icon" aria-label="Clear" data-md-component="search-reset" tabindex="-1">
+      <button type="reset" class="md-search__icon md-icon" aria-label="Clear" tabindex="-1">
         <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12 19 6.41z"/></svg>
       </button>
     </form>
@@ -130,12 +137,12 @@
 </div>
     
     
-      <div class="md-header-nav__source">
+      <div class="md-header__source">
         
-<a href="https://github.com/xelatihy/yocto-gl/" title="Go to repository" class="md-source">
+<a href="https://github.com/xelatihy/yocto-gl/" title="Go to repository" class="md-source" data-md-component="source">
   <div class="md-source__icon md-icon">
     
-    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 448 512"><path d="M439.55 236.05L244 40.45a28.87 28.87 0 00-40.81 0l-40.66 40.63 51.52 51.52c27.06-9.14 52.68 16.77 43.39 43.68l49.66 49.66c34.23-11.8 61.18 31 35.47 56.69-26.49 26.49-70.21-2.87-56-37.34L240.22 199v121.85c25.3 12.54 22.26 41.85 9.08 55a34.34 34.34 0 01-48.55 0c-17.57-17.6-11.07-46.91 11.25-56v-123c-20.8-8.51-24.6-30.74-18.64-45L142.57 101 8.45 235.14a28.86 28.86 0 000 40.81l195.61 195.6a28.86 28.86 0 0040.8 0l194.69-194.69a28.86 28.86 0 000-40.81z"/></svg>
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 448 512"><path d="M439.55 236.05L244 40.45a28.87 28.87 0 0 0-40.81 0l-40.66 40.63 51.52 51.52c27.06-9.14 52.68 16.77 43.39 43.68l49.66 49.66c34.23-11.8 61.18 31 35.47 56.69-26.49 26.49-70.21-2.87-56-37.34L240.22 199v121.85c25.3 12.54 22.26 41.85 9.08 55a34.34 34.34 0 0 1-48.55 0c-17.57-17.6-11.07-46.91 11.25-56v-123c-20.8-8.51-24.6-30.74-18.64-45L142.57 101 8.45 235.14a28.86 28.86 0 0 0 0 40.81l195.61 195.6a28.86 28.86 0 0 0 40.8 0l194.69-194.69a28.86 28.86 0 0 0 0-40.81z"/></svg>
   </div>
   <div class="md-source__repository">
     xelatihy/yocto-gl
@@ -156,7 +163,7 @@
           
             
               
-              <div class="md-sidebar md-sidebar--primary" data-md-component="navigation" >
+              <div class="md-sidebar md-sidebar--primary" data-md-component="sidebar" data-md-type="navigation" >
                 <div class="md-sidebar__scrollwrap">
                   <div class="md-sidebar__inner">
                     
@@ -169,7 +176,7 @@
     <a href="../.." title="Yocto/GL" class="md-nav__button md-logo" aria-label="Yocto/GL">
       
   
-  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a3 3 0 003-3 3 3 0 00-3-3 3 3 0 00-3 3 3 3 0 003 3m0 3.54C9.64 9.35 6.5 8 3 8v11c3.5 0 6.64 1.35 9 3.54 2.36-2.19 5.5-3.54 9-3.54V8c-3.5 0-6.64 1.35-9 3.54z"/></svg>
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a3 3 0 0 0 3-3 3 3 0 0 0-3-3 3 3 0 0 0-3 3 3 3 0 0 0 3 3m0 3.54C9.64 9.35 6.5 8 3 8v11c3.5 0 6.64 1.35 9 3.54 2.36-2.19 5.5-3.54 9-3.54V8c-3.5 0-6.64 1.35-9 3.54z"/></svg>
 
     </a>
     Yocto/GL
@@ -177,10 +184,10 @@
   
     <div class="md-nav__source">
       
-<a href="https://github.com/xelatihy/yocto-gl/" title="Go to repository" class="md-source">
+<a href="https://github.com/xelatihy/yocto-gl/" title="Go to repository" class="md-source" data-md-component="source">
   <div class="md-source__icon md-icon">
     
-    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 448 512"><path d="M439.55 236.05L244 40.45a28.87 28.87 0 00-40.81 0l-40.66 40.63 51.52 51.52c27.06-9.14 52.68 16.77 43.39 43.68l49.66 49.66c34.23-11.8 61.18 31 35.47 56.69-26.49 26.49-70.21-2.87-56-37.34L240.22 199v121.85c25.3 12.54 22.26 41.85 9.08 55a34.34 34.34 0 01-48.55 0c-17.57-17.6-11.07-46.91 11.25-56v-123c-20.8-8.51-24.6-30.74-18.64-45L142.57 101 8.45 235.14a28.86 28.86 0 000 40.81l195.61 195.6a28.86 28.86 0 0040.8 0l194.69-194.69a28.86 28.86 0 000-40.81z"/></svg>
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 448 512"><path d="M439.55 236.05L244 40.45a28.87 28.87 0 0 0-40.81 0l-40.66 40.63 51.52 51.52c27.06-9.14 52.68 16.77 43.39 43.68l49.66 49.66c34.23-11.8 61.18 31 35.47 56.69-26.49 26.49-70.21-2.87-56-37.34L240.22 199v121.85c25.3 12.54 22.26 41.85 9.08 55a34.34 34.34 0 0 1-48.55 0c-17.57-17.6-11.07-46.91 11.25-56v-123c-20.8-8.51-24.6-30.74-18.64-45L142.57 101 8.45 235.14a28.86 28.86 0 0 0 0 40.81l195.61 195.6a28.86 28.86 0 0 0 40.8 0l194.69-194.69a28.86 28.86 0 0 0 0-40.81z"/></svg>
   </div>
   <div class="md-source__repository">
     xelatihy/yocto-gl
@@ -194,144 +201,163 @@
       
       
 
-
-
-  <li class="md-nav__item">
-    <a href="../.." class="md-nav__link">
-      About
-    </a>
-  </li>
-
-    
-      
-      
-      
-
-
-
-  <li class="md-nav__item">
-    <a href="../../gallery/" class="md-nav__link">
-      Gallery
-    </a>
-  </li>
-
-    
-      
-      
-      
-
-
-
-  <li class="md-nav__item">
-    <a href="../yocto_math/" class="md-nav__link">
-      Math types
-    </a>
-  </li>
-
-    
-      
-      
-      
-
-
-
-  <li class="md-nav__item">
-    <a href="../yocto_color/" class="md-nav__link">
-      Color operations
-    </a>
-  </li>
-
-    
-      
-      
-      
-
-
-
-  <li class="md-nav__item">
-    <a href="../yocto_geometry/" class="md-nav__link">
-      Geometry operations
-    </a>
-  </li>
-
-    
-      
-      
-      
-
-
-
-  <li class="md-nav__item">
-    <a href="../yocto_sampling/" class="md-nav__link">
-      Sampling routines
-    </a>
-  </li>
-
-    
-      
-      
-      
-
-
-
-  <li class="md-nav__item">
-    <a href="../yocto_noise/" class="md-nav__link">
-      Noise functions
-    </a>
-  </li>
-
-    
-      
-      
-      
-
-
-
-  <li class="md-nav__item">
-    <a href="../yocto_shading/" class="md-nav__link">
-      Shading routines
-    </a>
-  </li>
-
-    
-      
-      
-      
-
-
-
-  <li class="md-nav__item">
-    <a href="../yocto_image/" class="md-nav__link">
-      Image utilities
-    </a>
-  </li>
-
-    
-      
-      
-      
-
-
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../.." class="md-nav__link">
+        About
+      </a>
+    </li>
   
 
+    
+      
+      
+      
 
-  <li class="md-nav__item md-nav__item--active">
-    
-    <input class="md-nav__toggle md-toggle" data-md-toggle="toc" type="checkbox" id="__toc">
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../gallery/" class="md-nav__link">
+        Gallery
+      </a>
+    </li>
+  
+
     
       
+      
+      
+
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../yocto_math/" class="md-nav__link">
+        Math types
+      </a>
+    </li>
+  
+
     
+      
+      
+      
+
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../yocto_color/" class="md-nav__link">
+        Color operations
+      </a>
+    </li>
+  
+
     
-      <label class="md-nav__link md-nav__link--active" for="__toc">
+      
+      
+      
+
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../yocto_geometry/" class="md-nav__link">
+        Geometry operations
+      </a>
+    </li>
+  
+
+    
+      
+      
+      
+
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../yocto_sampling/" class="md-nav__link">
+        Sampling routines
+      </a>
+    </li>
+  
+
+    
+      
+      
+      
+
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../yocto_noise/" class="md-nav__link">
+        Noise functions
+      </a>
+    </li>
+  
+
+    
+      
+      
+      
+
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../yocto_shading/" class="md-nav__link">
+        Shading routines
+      </a>
+    </li>
+  
+
+    
+      
+      
+      
+
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../yocto_image/" class="md-nav__link">
+        Image utilities
+      </a>
+    </li>
+  
+
+    
+      
+      
+      
+
+  
+  
+    
+  
+  
+    <li class="md-nav__item md-nav__item--active">
+      
+      <input class="md-nav__toggle md-toggle" data-md-toggle="toc" type="checkbox" id="__toc">
+      
+        
+      
+      
+        <label class="md-nav__link md-nav__link--active" for="__toc">
+          Shape utilities
+          <span class="md-nav__icon md-icon"></span>
+        </label>
+      
+      <a href="./" class="md-nav__link md-nav__link--active">
         Shape utilities
-        <span class="md-nav__icon md-icon"></span>
-      </label>
-    
-    <a href="./" class="md-nav__link md-nav__link--active">
-      Shape utilities
-    </a>
-    
+      </a>
       
+        
 <nav class="md-nav md-nav--secondary" aria-label="Table of contents">
   
   
@@ -342,7 +368,7 @@
       <span class="md-nav__icon md-icon"></span>
       Table of contents
     </label>
-    <ul class="md-nav__list" data-md-scrollfix>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
       
         <li class="md-nav__item">
   <a href="#shape-representation" class="md-nav__link">
@@ -403,13 +429,6 @@
         <li class="md-nav__item">
   <a href="#shape-sampling" class="md-nav__link">
     Shape sampling
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#shape-loading-and-saving" class="md-nav__link">
-    Shape loading and saving
   </a>
   
 </li>
@@ -424,125 +443,129 @@
     </ul>
   
 </nav>
-    
-  </li>
-
-    
       
-      
-      
-
-
-
-  <li class="md-nav__item">
-    <a href="../yocto_mesh/" class="md-nav__link">
-      Mesh processing
-    </a>
-  </li>
+    </li>
+  
 
     
       
       
       
 
-
-
-  <li class="md-nav__item">
-    <a href="../yocto_bvh/" class="md-nav__link">
-      Ray-scene intersection
-    </a>
-  </li>
-
-    
-      
-      
-      
-
-
-
-  <li class="md-nav__item">
-    <a href="../yocto_modelio/" class="md-nav__link">
-      Model serialization
-    </a>
-  </li>
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../yocto_mesh/" class="md-nav__link">
+        Mesh processing
+      </a>
+    </li>
+  
 
     
       
       
       
 
-
-
-  <li class="md-nav__item">
-    <a href="../yocto_sceneio/" class="md-nav__link">
-      Scene serialization
-    </a>
-  </li>
-
-    
-      
-      
-      
-
-
-
-  <li class="md-nav__item">
-    <a href="../yocto_trace/" class="md-nav__link">
-      Path tracing
-    </a>
-  </li>
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../yocto_scene/" class="md-nav__link">
+        Scene representation
+      </a>
+    </li>
+  
 
     
       
       
       
 
-
-
-  <li class="md-nav__item">
-    <a href="../yocto_json/" class="md-nav__link">
-      JSON utilities
-    </a>
-  </li>
-
-    
-      
-      
-      
-
-
-
-  <li class="md-nav__item">
-    <a href="../yocto_commonio/" class="md-nav__link">
-      Command-line utilities
-    </a>
-  </li>
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../yocto_bvh/" class="md-nav__link">
+        Ray-scene intersection
+      </a>
+    </li>
+  
 
     
       
       
       
 
-
-
-  <li class="md-nav__item">
-    <a href="../yocto_common/" class="md-nav__link">
-      Generic utilities
-    </a>
-  </li>
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../yocto_modelio/" class="md-nav__link">
+        Model serialization
+      </a>
+    </li>
+  
 
     
       
       
       
 
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../yocto_sceneio/" class="md-nav__link">
+        Scene serialization
+      </a>
+    </li>
+  
 
+    
+      
+      
+      
 
-  <li class="md-nav__item">
-    <a href="../yocto_parallel/" class="md-nav__link">
-      Concurrency utilities
-    </a>
-  </li>
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../yocto_trace/" class="md-nav__link">
+        Path tracing
+      </a>
+    </li>
+  
+
+    
+      
+      
+      
+
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../yocto_cli/" class="md-nav__link">
+        Command-line utilities
+      </a>
+    </li>
+  
+
+    
+      
+      
+      
+
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../yocto_parallel/" class="md-nav__link">
+        Concurrency utilities
+      </a>
+    </li>
+  
 
     
   </ul>
@@ -553,7 +576,7 @@
             
             
               
-              <div class="md-sidebar md-sidebar--secondary" data-md-component="toc" >
+              <div class="md-sidebar md-sidebar--secondary" data-md-component="sidebar" data-md-type="toc" >
                 <div class="md-sidebar__scrollwrap">
                   <div class="md-sidebar__inner">
                     
@@ -567,7 +590,7 @@
       <span class="md-nav__icon md-icon"></span>
       Table of contents
     </label>
-    <ul class="md-nav__list" data-md-scrollfix>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
       
         <li class="md-nav__item">
   <a href="#shape-representation" class="md-nav__link">
@@ -628,13 +651,6 @@
         <li class="md-nav__item">
   <a href="#shape-sampling" class="md-nav__link">
     Shape sampling
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#shape-loading-and-saving" class="md-nav__link">
-    Shape loading and saving
   </a>
   
 </li>
@@ -654,7 +670,7 @@
               </div>
             
           
-          <div class="md-content">
+          <div class="md-content" data-md-component="content">
             <article class="md-content__inner md-typeset">
               
                 
@@ -674,53 +690,56 @@ For element parametrization, we follow <a href="../yocto_geometry/">Yocto/Geomet
 <p>Vertex data is stored as <code>vector&lt;vecXf&gt;</code>, while element indices are stored
 as <code>vector&lt;vec3i&gt;</code>, <code>vector&lt;vec4i&gt;</code>, <code>vector&lt;vec2i&gt;</code>, <code>vector&lt;int&gt;</code>
 for triangle meshes, quad meshes, line sets and point sets respectively.</p>
-<div class="codehilite"><pre><span></span><code><span class="k">auto</span> <span class="n">triangles</span> <span class="o">=</span> <span class="n">vector</span><span class="o">&lt;</span><span class="n">vec3i</span><span class="o">&gt;</span><span class="p">{...};</span>   <span class="c1">// triangle indices</span>
+<div class="highlight"><pre><span></span><code><span class="k">auto</span> <span class="n">triangles</span> <span class="o">=</span> <span class="n">vector</span><span class="o">&lt;</span><span class="n">vec3i</span><span class="o">&gt;</span><span class="p">{...};</span>   <span class="c1">// triangle indices</span>
 <span class="k">auto</span> <span class="n">positions</span> <span class="o">=</span> <span class="n">vector</span><span class="o">&lt;</span><span class="n">vec3f</span><span class="o">&gt;</span><span class="p">{...};</span>   <span class="c1">// vertex positions</span>
 <span class="k">auto</span> <span class="n">texcoords</span> <span class="o">=</span> <span class="n">vector</span><span class="o">&lt;</span><span class="n">vec2f</span><span class="o">&gt;</span><span class="p">{...};</span>   <span class="c1">// vertex uvs</span>
 </code></pre></div>
-
 <p>Face-varying shapes are also supported by specifying separate element indices
 for each vertex property, with arrays of vertex properties possibly of different
 length. This makes sure that any topology can be represented. For now, only
 face-varying quads are supported.</p>
-<div class="codehilite"><pre><span></span><code><span class="k">auto</span> <span class="n">quadspos</span> <span class="o">=</span> <span class="n">vector</span><span class="o">&lt;</span><span class="n">vec4i</span><span class="o">&gt;</span><span class="p">{...};</span>        <span class="c1">// quads indices for positions</span>
+<div class="highlight"><pre><span></span><code><span class="k">auto</span> <span class="n">quadspos</span> <span class="o">=</span> <span class="n">vector</span><span class="o">&lt;</span><span class="n">vec4i</span><span class="o">&gt;</span><span class="p">{...};</span>        <span class="c1">// quads indices for positions</span>
 <span class="k">auto</span> <span class="n">positions</span> <span class="o">=</span> <span class="n">vector</span><span class="o">&lt;</span><span class="n">vec3f</span><span class="o">&gt;</span><span class="p">{...};</span>       <span class="c1">// vertex positions</span>
 <span class="k">auto</span> <span class="n">quadstexcoords</span> <span class="o">=</span> <span class="n">vector</span><span class="o">&lt;</span><span class="n">vec4i</span><span class="o">&gt;</span><span class="p">{...};</span>  <span class="c1">// quads indices for uvs</span>
 <span class="k">auto</span> <span class="n">texcoords</span> <span class="o">=</span> <span class="n">vector</span><span class="o">&lt;</span><span class="n">vec2f</span><span class="o">&gt;</span><span class="p">{...};</span>       <span class="c1">// vertex uvs</span>
 </code></pre></div>
-
 <p>Throughout the library, functions may either take index and vertex arrays
 directly as input and output, or may pack these array in structs if deemed
 appropriate. This design tries to balance readability and generality, without
 forcing a single convention that would not be appropriate everywhere.</p>
+<p>If a higher level design is needed, <a href="../yocto_scene/">Yocto/Scene</a> contains
+the standalone types <code>scene_shape</code> and <code>scene_fvshape</code> to store indexed
+and face-varying shapes respectively, a a collection of methods to work
+on these type, that are essentially wrappers to the functionality in this
+library.</p>
+<p>Shape loading and saving is defined in <a href="../yocto_sceneio/">Yocto/SceneIO</a>.</p>
 <h2 id="vertex-properties">Vertex properties</h2>
 <p>Yocto/Shape provides many facilities to compute vertex properties for indexed
-elements. Use <code>compute_normals(...)</code> to compute vertex normals for triangle and
-quad meshes, and <code>compute_tangents(...)</code> for line tangents.
-Use <code>compute_skinning(...)</code> to apply linear-blend skinning.
-Use <code>compute_tangents_spaces(...)</code> to compute tangents spaces for each ech
+elements. Use <code>triangles_normals(...)</code> and <code>quads_normals(...)</code> to compute
+vertex normals for triangle and quad meshes, and <code>line_tangents(...)</code> for
+line tangents. Use <code>skin_vertices(...)</code> to apply linear-blend skinning.
+Use <code>triangle_tangent_spaces(...)</code> to compute tangents spaces for each ech
 meshes.</p>
-<div class="codehilite"><pre><span></span><code><span class="k">auto</span> <span class="n">triangles</span> <span class="o">=</span> <span class="n">vector</span><span class="o">&lt;</span><span class="n">vec3i</span><span class="o">&gt;</span><span class="p">{...};</span>   <span class="c1">// triangle indices</span>
+<div class="highlight"><pre><span></span><code><span class="k">auto</span> <span class="n">triangles</span> <span class="o">=</span> <span class="n">vector</span><span class="o">&lt;</span><span class="n">vec3i</span><span class="o">&gt;</span><span class="p">{...};</span>   <span class="c1">// triangle indices</span>
 <span class="k">auto</span> <span class="n">positions</span> <span class="o">=</span> <span class="n">vector</span><span class="o">&lt;</span><span class="n">vec3f</span><span class="o">&gt;</span><span class="p">{...};</span>   <span class="c1">// vertex positions</span>
 <span class="k">auto</span> <span class="n">texcoords</span> <span class="o">=</span> <span class="n">vector</span><span class="o">&lt;</span><span class="n">vec2f</span><span class="o">&gt;</span><span class="p">{...};</span>   <span class="c1">// vertex uvs</span>
 
-<span class="k">auto</span> <span class="n">normals</span> <span class="o">=</span> <span class="n">compute_normals</span><span class="p">(</span><span class="n">triangles</span><span class="p">,</span><span class="n">positions</span><span class="p">);</span>   <span class="c1">// vertex normals</span>
-<span class="k">auto</span> <span class="n">tangsp</span> <span class="o">=</span> <span class="n">compute_tangent_spaces</span><span class="p">(</span><span class="n">triangles</span><span class="p">,</span> <span class="n">positions</span><span class="p">,</span> <span class="n">normals</span><span class="p">,</span> <span class="n">texcoords</span><span class="p">);</span>
+<span class="k">auto</span> <span class="n">normals</span> <span class="o">=</span> <span class="n">triangle_normals</span><span class="p">(</span><span class="n">triangles</span><span class="p">,</span><span class="n">positions</span><span class="p">);</span>   <span class="c1">// vertex normals</span>
+<span class="k">auto</span> <span class="n">tangsp</span> <span class="o">=</span> <span class="n">triangle_tangent_spaces</span><span class="p">(</span><span class="n">triangles</span><span class="p">,</span> <span class="n">positions</span><span class="p">,</span> <span class="n">normals</span><span class="p">,</span> <span class="n">texcoords</span><span class="p">);</span>
 
 <span class="k">auto</span> <span class="n">weights</span> <span class="o">=</span> <span class="n">vector</span><span class="o">&lt;</span><span class="n">vec4f</span><span class="o">&gt;</span><span class="p">{...};</span>   <span class="c1">// skinning weights for 4 bones per vertex</span>
 <span class="k">auto</span> <span class="n">joints</span>  <span class="o">=</span> <span class="n">vector</span><span class="o">&lt;</span><span class="n">vec4i</span><span class="o">&gt;</span><span class="p">{...};</span>   <span class="c1">// bine indices for 4 bones per vertex</span>
 <span class="k">auto</span> <span class="n">frames</span>  <span class="o">=</span> <span class="n">vector</span><span class="o">&lt;</span><span class="n">frame3f</span><span class="o">&gt;</span><span class="p">{...};</span> <span class="c1">// bone frames</span>
-<span class="k">auto</span> <span class="p">[</span><span class="n">skinned_pos</span><span class="p">,</span> <span class="n">skinned_norm</span><span class="p">]</span> <span class="o">=</span> <span class="n">compute_skinning</span><span class="p">(</span><span class="n">positions</span><span class="p">,</span> <span class="n">normals</span><span class="p">,</span>
+<span class="k">auto</span> <span class="p">[</span><span class="n">skinned_pos</span><span class="p">,</span> <span class="n">skinned_norm</span><span class="p">]</span> <span class="o">=</span> <span class="n">skin_vertices</span><span class="p">(</span><span class="n">positions</span><span class="p">,</span> <span class="n">normals</span><span class="p">,</span>
    <span class="n">weights</span><span class="p">,</span> <span class="n">joints</span><span class="p">,</span> <span class="n">frames</span><span class="p">);</span>       <span class="c1">// skinned positions ans normals</span>
 </code></pre></div>
-
 <h2 id="flipping-and-aligning">Flipping and aligning</h2>
 <p>Yocto/Shape provides functions to correct shapes that have inconsistent
 orientations or normals. Use <code>flip_normals(normals)</code> to flip all mesh normals.
 Use <code>flip_triangles(triangles)</code> and <code>flip_quads(quads)</code> to change face
 orientations. Use <code>align_vertices(positions,alignment)</code> to align vertex
 positions to the main axes.</p>
-<div class="codehilite"><pre><span></span><code><span class="k">auto</span> <span class="n">triangles</span> <span class="o">=</span> <span class="n">vector</span><span class="o">&lt;</span><span class="n">vec3i</span><span class="o">&gt;</span><span class="p">{...};</span>   <span class="c1">// triangle indices</span>
+<div class="highlight"><pre><span></span><code><span class="k">auto</span> <span class="n">triangles</span> <span class="o">=</span> <span class="n">vector</span><span class="o">&lt;</span><span class="n">vec3i</span><span class="o">&gt;</span><span class="p">{...};</span>   <span class="c1">// triangle indices</span>
 <span class="k">auto</span> <span class="n">positions</span> <span class="o">=</span> <span class="n">vector</span><span class="o">&lt;</span><span class="n">vec3f</span><span class="o">&gt;</span><span class="p">{...};</span>   <span class="c1">// vertex positions</span>
 <span class="k">auto</span> <span class="n">normals</span>   <span class="o">=</span> <span class="n">vector</span><span class="o">&lt;</span><span class="n">vec3f</span><span class="o">&gt;</span><span class="p">{...};</span>   <span class="c1">// vertex normals</span>
 
@@ -730,34 +749,32 @@ positions to the main axes.</p>
 <span class="c1">// align positions to the origin along the y axis only</span>
 <span class="n">positions</span> <span class="o">=</span> <span class="n">align_vertices</span><span class="p">(</span><span class="n">positions</span><span class="p">,</span> <span class="p">{</span><span class="mi">0</span><span class="p">,</span><span class="mi">1</span><span class="p">,</span><span class="mi">0</span><span class="p">});</span>
 </code></pre></div>
-
 <h2 id="edges-and-adjacencies">Edges and adjacencies</h2>
 <p>Use <code>get_edges(triangles)</code> amd <code>get_edges(quads)</code> to get a list of unique edges
 for a triangle or quads mesh.</p>
-<div class="codehilite"><pre><span></span><code><span class="k">auto</span> <span class="n">triangles</span> <span class="o">=</span> <span class="n">vector</span><span class="o">&lt;</span><span class="n">vec3i</span><span class="o">&gt;</span><span class="p">{...};</span>  <span class="c1">// triangle indices</span>
+<div class="highlight"><pre><span></span><code><span class="k">auto</span> <span class="n">triangles</span> <span class="o">=</span> <span class="n">vector</span><span class="o">&lt;</span><span class="n">vec3i</span><span class="o">&gt;</span><span class="p">{...};</span>  <span class="c1">// triangle indices</span>
 <span class="k">auto</span> <span class="n">edges</span> <span class="o">=</span> <span class="n">get_edges</span><span class="p">(</span><span class="n">triangles</span><span class="p">);</span>    <span class="c1">// edge indices</span>
 </code></pre></div>
-
 <p>Internally, these functions use an <code>edge_map</code>, that is a dictionary that has
 pairs of vertex ids as keys and an edge index as value.
 Two opposing half-edges have the same representation in an <code>edge_map</code>,
 making it useful in tesselation algorithms to avoid cracks.
 In Yocto/Shape, edge maps also stores the number of incident faces per edge,
 so that we can determine which edges belong to the boundary.</p>
-<div class="codehilite"><pre><span></span><code><span class="k">auto</span> <span class="n">triangles</span> <span class="o">=</span> <span class="n">vector</span><span class="o">&lt;</span><span class="n">vec3i</span><span class="o">&gt;</span><span class="p">{...};</span>  <span class="c1">// triangle indices</span>
+<div class="highlight"><pre><span></span><code><span class="k">auto</span> <span class="n">triangles</span> <span class="o">=</span> <span class="n">vector</span><span class="o">&lt;</span><span class="n">vec3i</span><span class="o">&gt;</span><span class="p">{...};</span>  <span class="c1">// triangle indices</span>
 <span class="k">auto</span> <span class="n">emap</span> <span class="o">=</span> <span class="n">make_edge_map</span><span class="p">(</span><span class="n">triangles</span><span class="p">);</span> <span class="c1">// edge map</span>
 <span class="k">auto</span> <span class="n">edges</span> <span class="o">=</span> <span class="n">get_edges</span><span class="p">(</span><span class="n">emap</span><span class="p">);</span>         <span class="c1">// edge indices</span>
 <span class="k">for</span><span class="p">(</span><span class="k">auto</span><span class="o">&amp;</span> <span class="nl">edge</span> <span class="p">:</span> <span class="n">edges</span><span class="p">)</span>               <span class="c1">// iterate over edges</span>
    <span class="n">print</span><span class="p">(</span><span class="n">edge_index</span><span class="p">(</span><span class="n">emap</span><span class="p">,</span> <span class="n">edge</span><span class="p">));</span>     <span class="c1">// get edge indices</span>
 <span class="k">auto</span> <span class="n">boundary</span> <span class="o">=</span> <span class="n">get_boundary</span><span class="p">(</span><span class="n">emap</span><span class="p">);</span>   <span class="c1">// get unsorted boundary edges</span>
 </code></pre></div>
-
 <h2 id="ray-intersection-and-point-overlap">Ray-intersection and point-overlap</h2>
 <p>Yocto/Shape provides ray-scene intersection for points, lines, triangles and
 quads accelerated by a BVH data structure. Our BVH is written for
 minimal code and not maximum speed, but still gives fast-enough results.
-See <a href="../yocto_geometry/">Yocto/Geometry</a> for intersection parametrization.</p>
-<p>The BVH tree is stored in a <code>bvh_tree</code> struct. The tree stored an array of
+See <a href="../yocto_geometry/">Yocto/Geometry</a> for intersection parametrization,
+and <a href="../yocto_bvh/">Yocto/Bvh</a> for a more comprehensive version.</p>
+<p>The BVH tree is stored in a <code>shape_bvh</code> struct. The tree stored an array of
 nodes and an array of element indices. Each node in the tree has references
 to either other nodes or elements. References are represented as indices
 in the nodes or elements arrays. Nodes indices refer to the nodes array,
@@ -772,11 +789,10 @@ indices refer to primitives for leaf nodes or other nodes for internal nodes.</p
 triangles, <code>make_quads_bvh(bvh,quads,positions)</code> for quads,
 <code>make_lines_bvh(bvh,lines,positions,radius)</code> for lines, and
 <code>make_points_bvh(bvh,points,positions,radius)</code> for points.</p>
-<div class="codehilite"><pre><span></span><code><span class="k">auto</span> <span class="n">triangles</span> <span class="o">=</span> <span class="n">vector</span><span class="o">&lt;</span><span class="n">vec3i</span><span class="o">&gt;</span><span class="p">{...};</span>                 <span class="c1">// mesh data</span>
+<div class="highlight"><pre><span></span><code><span class="k">auto</span> <span class="n">triangles</span> <span class="o">=</span> <span class="n">vector</span><span class="o">&lt;</span><span class="n">vec3i</span><span class="o">&gt;</span><span class="p">{...};</span>                 <span class="c1">// mesh data</span>
 <span class="k">auto</span> <span class="n">positions</span> <span class="o">=</span> <span class="n">vector</span><span class="o">&lt;</span><span class="n">vec3f</span><span class="o">&gt;</span><span class="p">{...};</span>
 <span class="k">auto</span> <span class="n">bvh</span> <span class="o">=</span> <span class="n">make_triangles_bvh</span><span class="p">(</span><span class="n">triangles</span><span class="p">,</span> <span class="n">positions</span><span class="p">);</span> <span class="c1">// BVH construction</span>
 </code></pre></div>
-
 <p>Intersect and overlap functions return a <code>bvh_intersection</code> that bundles
 the intersection distance, the intersected element index and uvs,
 and a <code>hit</code> flag that signals whether an element was hit.</p>
@@ -785,13 +801,12 @@ Use <code>intersect_triangles_bvh(bvh,triangles,positions, ray)</code> for
 triangles, <code>intersect_quads_bvh(bvh,quads,positions)</code> for quads,
 <code>intersect_lines_bvh(bvh,lines,positions,radius,ray)</code> for lines, and
 <code>intersect_points_bvh(bvh,points,positions,radius,ray)</code> for points.</p>
-<div class="codehilite"><pre><span></span><code><span class="k">auto</span> <span class="n">ray</span> <span class="o">=</span> <span class="n">ray3f</span><span class="p">{...};</span>
+<div class="highlight"><pre><span></span><code><span class="k">auto</span> <span class="n">ray</span> <span class="o">=</span> <span class="n">ray3f</span><span class="p">{...};</span>
 <span class="c1">// computes ray-triangles intersection</span>
 <span class="k">auto</span> <span class="n">isec</span> <span class="o">=</span> <span class="n">intersect_triangles_bvh</span><span class="p">(</span><span class="n">bvh</span><span class="p">,</span> <span class="n">triangles</span><span class="p">,</span> <span class="n">positions</span><span class="p">,</span> <span class="n">ray</span><span class="p">);</span>
 <span class="k">if</span><span class="p">(</span><span class="n">isec</span><span class="p">.</span><span class="n">hit</span><span class="p">)</span> <span class="n">print_info</span><span class="p">(</span><span class="n">isec</span><span class="p">.</span><span class="n">element</span><span class="p">,</span> <span class="n">isec</span><span class="p">.</span><span class="n">uv</span><span class="p">,</span> <span class="n">isec</span><span class="p">.</span><span class="n">distance</span><span class="p">);</span>
 <span class="k">else</span> <span class="nf">print_info</span><span class="p">(</span><span class="s">&quot;no hit&quot;</span><span class="p">);</span>
 </code></pre></div>
-
 <p><code>overlap_&lt;element&gt;_bvh(...)</code> checks whether a shape overlaps a point within a
 given maximum distance and returns the distance, element and uv of the
 closest element.
@@ -799,22 +814,20 @@ Use <code>overlap_triangles_bvh(bvh, triangles, positions, ray)</code> for
 triangles, <code>overlap_quads_bvh(bvh, quads, positions)</code> for quads,
 <code>overlap_lines_bvh(bvh, lines, positions, radius, ray)</code> for lines, and
 <code>overlap_points_bvh(bvh, points, positions, radius, ray)</code> for points.</p>
-<div class="codehilite"><pre><span></span><code><span class="k">auto</span> <span class="n">pt</span> <span class="o">=</span> <span class="n">vec3f</span><span class="p">{...};</span> <span class="k">auto</span> <span class="n">max_dist</span> <span class="o">=</span> <span class="kt">float</span><span class="p">{...};</span>
+<div class="highlight"><pre><span></span><code><span class="k">auto</span> <span class="n">pt</span> <span class="o">=</span> <span class="n">vec3f</span><span class="p">{...};</span> <span class="k">auto</span> <span class="n">max_dist</span> <span class="o">=</span> <span class="kt">float</span><span class="p">{...};</span>
 <span class="c1">// comnpute point-triangles overlap</span>
 <span class="k">auto</span> <span class="n">ovr</span> <span class="o">=</span> <span class="n">overlap_triangles_bvh</span><span class="p">(</span><span class="n">bvh</span><span class="p">,</span> <span class="n">triangles</span><span class="p">,</span> <span class="n">positions</span><span class="p">,</span> <span class="n">pt</span><span class="p">,</span> <span class="n">mat_dist</span><span class="p">);</span>
 <span class="k">if</span><span class="p">(</span><span class="n">ovr</span><span class="p">.</span><span class="n">hit</span><span class="p">)</span> <span class="n">print_info</span><span class="p">(</span><span class="n">ovrl</span><span class="p">.</span><span class="n">element</span><span class="p">,</span> <span class="n">ovrl</span><span class="p">.</span><span class="n">uv</span><span class="p">,</span> <span class="n">ovrl</span><span class="p">.</span><span class="n">distance</span><span class="p">);</span>
 <span class="k">else</span> <span class="nf">print_info</span><span class="p">(</span><span class="s">&quot;no overlap&quot;</span><span class="p">);</span>
 </code></pre></div>
-
 <p>If vertices have moved little, BVHs can be updated instead of fully rebuild.
 Use <code>update_triangles_bvh(bvh, triangles, positions)</code> for
 triangles, <code>update_quads_bvh(bvh, quads, positions)</code> for quads,
 <code>update_lines_bvh(bvh, lines, positions, radius)</code> for lines, and
 <code>update_points_bvh(bvh, points, positions, radius)</code> for points.</p>
-<div class="codehilite"><pre><span></span><code><span class="n">positions</span><span class="p">[...]</span> <span class="o">=</span> <span class="p">{...};</span>                           <span class="c1">// update positions</span>
+<div class="highlight"><pre><span></span><code><span class="n">positions</span><span class="p">[...]</span> <span class="o">=</span> <span class="p">{...};</span>                           <span class="c1">// update positions</span>
 <span class="n">update_triangles_bvh</span><span class="p">(</span><span class="n">bvh</span><span class="p">,</span> <span class="n">triangles</span><span class="p">,</span> <span class="n">positions</span><span class="p">);</span>  <span class="c1">// update BVH</span>
 </code></pre></div>
-
 <h2 id="nearest-neighbors">Nearest neighbors</h2>
 <p>Nearest neighbors queries are computed by building a sparse hash grid
 defined as <code>hash_grid</code>. The grid is created by specifying a cell size for the
@@ -824,30 +837,28 @@ using a dictionary, so that only cells with at least one vertex are defined.</p>
 <p>Initialize a hash grid with <code>make_hash_grid(positions, size)</code>.
 Use <code>find_neighbors(grid, neighbors, position, max_radius)</code> to find
 nearest neighbors.</p>
-<div class="codehilite"><pre><span></span><code><span class="k">auto</span> <span class="n">positions</span> <span class="o">=</span> <span class="n">vector</span><span class="o">&lt;</span><span class="n">vec3f</span><span class="o">&gt;</span><span class="p">{...};</span>               <span class="c1">// point positions</span>
+<div class="highlight"><pre><span></span><code><span class="k">auto</span> <span class="n">positions</span> <span class="o">=</span> <span class="n">vector</span><span class="o">&lt;</span><span class="n">vec3f</span><span class="o">&gt;</span><span class="p">{...};</span>               <span class="c1">// point positions</span>
 <span class="k">auto</span> <span class="n">grid</span> <span class="o">=</span> <span class="n">make_hash_grid</span><span class="p">(</span><span class="n">positions</span><span class="p">,</span> <span class="n">cell_size</span><span class="p">);</span>  <span class="c1">// create hash grid</span>
 <span class="k">auto</span> <span class="n">pt</span> <span class="o">=</span> <span class="n">vec3f</span><span class="p">{...};</span> <span class="k">auto</span> <span class="n">max_dist</span> <span class="o">=</span> <span class="kt">float</span><span class="p">{...};</span>  <span class="c1">// query point and dist</span>
 <span class="k">auto</span> <span class="n">neighbors</span> <span class="o">=</span> <span class="n">vector</span><span class="o">&lt;</span><span class="kt">int</span><span class="o">&gt;</span><span class="p">{};</span>                    <span class="c1">// neighbor buffer</span>
 <span class="n">find_neighbors</span><span class="p">(</span><span class="n">grid</span><span class="p">,</span> <span class="n">neighbors</span><span class="p">,</span> <span class="n">pt</span><span class="p">,</span> <span class="n">max_dist</span><span class="p">);</span>     <span class="c1">// find neighbors by pos</span>
 <span class="n">find_neighbors</span><span class="p">(</span><span class="n">grid</span><span class="p">,</span> <span class="n">neighbors</span><span class="p">,</span> <span class="n">id</span><span class="p">,</span> <span class="n">max_dist</span><span class="p">);</span>     <span class="c1">// find neighbors by id</span>
 </code></pre></div>
-
 <h2 id="element-conversions-and-grouping">Element conversions and grouping</h2>
 <p>Yocto/Shape support conversion between shape elements.
 Use <code>quads_to_triangles(quads)</code> to convert quads to triangles and
 <code>triangles_to_quads(triangles)</code> to convert triangles to degenerate quads.
 Use <code>bezier_to_lines(lines)</code> to convert Bézier segments to lines using three
 lines for each Bézier segment.</p>
-<div class="codehilite"><pre><span></span><code><span class="k">auto</span> <span class="n">quads</span> <span class="o">=</span> <span class="n">vector</span><span class="o">&lt;</span><span class="n">vec4i</span><span class="o">&gt;</span><span class="p">{...};</span>
+<div class="highlight"><pre><span></span><code><span class="k">auto</span> <span class="n">quads</span> <span class="o">=</span> <span class="n">vector</span><span class="o">&lt;</span><span class="n">vec4i</span><span class="o">&gt;</span><span class="p">{...};</span>
 <span class="k">auto</span> <span class="n">triangles</span> <span class="o">=</span> <span class="n">quads_to_triangles</span><span class="p">(</span><span class="n">quads</span><span class="p">);</span>  <span class="c1">// convert quads to triangles</span>
 </code></pre></div>
-
 <p>Face-varying meshes are stored by having different face indices for each
 vertex propeerty. This way, every vertex property has its own topology.
 Use <code>split_facevarying(...)</code> to convert to an indexed mesh. During conversion
 vertices may be duplicated since the same topology is used for all vertex
 properties.</p>
-<div class="codehilite"><pre><span></span><code><span class="k">auto</span> <span class="n">fvquadspos</span> <span class="o">=</span> <span class="n">vector</span><span class="o">&lt;</span><span class="n">vec4i</span><span class="o">&gt;</span><span class="p">{...};</span>      <span class="c1">// face-varying indices</span>
+<div class="highlight"><pre><span></span><code><span class="k">auto</span> <span class="n">fvquadspos</span> <span class="o">=</span> <span class="n">vector</span><span class="o">&lt;</span><span class="n">vec4i</span><span class="o">&gt;</span><span class="p">{...};</span>      <span class="c1">// face-varying indices</span>
 <span class="k">auto</span> <span class="n">fvquadsnorm</span> <span class="o">=</span> <span class="n">vector</span><span class="o">&lt;</span><span class="n">vec4i</span><span class="o">&gt;</span><span class="p">{...};</span>     <span class="c1">// arrays have some length</span>
 <span class="k">auto</span> <span class="n">fvquadstexcoord</span> <span class="o">=</span> <span class="n">vector</span><span class="o">&lt;</span><span class="n">vec4i</span><span class="o">&gt;</span><span class="p">{...};</span>
 <span class="k">auto</span> <span class="n">fvpositions</span> <span class="o">=</span> <span class="n">vector</span><span class="o">&lt;</span><span class="n">vec3f</span><span class="o">&gt;</span><span class="p">{...};</span>     <span class="c1">// face-varying vertices</span>
@@ -857,7 +868,6 @@ properties.</p>
    <span class="n">split_facevarying</span><span class="p">(</span><span class="n">fvquadspos</span><span class="p">,</span> <span class="n">fvquadsnorm</span><span class="p">,</span> <span class="n">fvquadstexcoord</span><span class="p">,</span>
    <span class="n">fvpositions</span><span class="p">,</span> <span class="n">fvnormals</span><span class="p">,</span> <span class="n">fvtexcoords</span><span class="p">);</span>
 </code></pre></div>
-
 <p>Yocto/Shape supports eliminating duplicate vertices in triangle and quad meshes.
 All vertices within a threshold are merged in a greedy fashion, which works well
 when duplicated vertices are near other while other vertices are further away.
@@ -865,28 +875,26 @@ Use <code>weld_triangles(triangles, positions, threshold)</code> to eliminate du
 triangle vertices and <code>weld_quads(quads, positions, threshold)</code> to eliminate
 duplicated quad vertices. For lower-level algorithms, use
 <code>weld_vertices(positions, threshold)</code> to group vertices together.</p>
-<div class="codehilite"><pre><span></span><code><span class="k">auto</span> <span class="n">triangles</span> <span class="o">=</span> <span class="n">vector</span><span class="o">&lt;</span><span class="n">vec3i</span><span class="o">&gt;</span><span class="p">{...};</span>  <span class="c1">// mesh data</span>
+<div class="highlight"><pre><span></span><code><span class="k">auto</span> <span class="n">triangles</span> <span class="o">=</span> <span class="n">vector</span><span class="o">&lt;</span><span class="n">vec3i</span><span class="o">&gt;</span><span class="p">{...};</span>  <span class="c1">// mesh data</span>
 <span class="k">auto</span> <span class="n">positions</span> <span class="o">=</span> <span class="n">vector</span><span class="o">&lt;</span><span class="n">vec3f</span><span class="o">&gt;</span><span class="p">{...};</span>
 <span class="k">auto</span> <span class="n">tolerance</span> <span class="o">=</span> <span class="mf">0.1f</span><span class="p">;</span>
 <span class="k">auto</span> <span class="p">[</span><span class="n">mtriangles</span><span class="p">,</span> <span class="n">mpositions</span><span class="p">]</span> <span class="o">=</span>       <span class="c1">// remove duplicates</span>
    <span class="n">weld_triangles</span><span class="p">(</span><span class="n">triangles</span><span class="p">,</span> <span class="n">positions</span><span class="p">,</span> <span class="n">tolerance</span><span class="p">);</span>
 </code></pre></div>
-
 <p>Yocto/Shape supports splitting shapes that are tagged by ids. This is helpful
 for example when drawing meshes that have per-face materials using renders
 that do support one material per shape only. Use <code>ungroup_lines(lines,ids)</code>,
 <code>ungroud_triangles(triangles,ids)</code> and <code>ungroup_quads(quads,ids)</code> for lines,
 triangles and quads respectively.</p>
-<div class="codehilite"><pre><span></span><code><span class="k">auto</span> <span class="n">triangles</span> <span class="o">=</span> <span class="n">vector</span><span class="o">&lt;</span><span class="n">vec3i</span><span class="o">&gt;</span><span class="p">{...};</span>  <span class="c1">// tagged mesh with one id per face</span>
+<div class="highlight"><pre><span></span><code><span class="k">auto</span> <span class="n">triangles</span> <span class="o">=</span> <span class="n">vector</span><span class="o">&lt;</span><span class="n">vec3i</span><span class="o">&gt;</span><span class="p">{...};</span>  <span class="c1">// tagged mesh with one id per face</span>
 <span class="k">auto</span> <span class="n">ids</span>       <span class="o">=</span> <span class="n">vector</span><span class="o">&lt;</span><span class="kt">int</span><span class="o">&gt;</span><span class="p">{...};</span>
 <span class="k">auto</span> <span class="n">split</span> <span class="o">=</span> <span class="n">ungroup_triangles</span><span class="p">(</span><span class="n">triangles</span><span class="p">,</span> <span class="n">ids</span><span class="p">);</span> <span class="c1">// returns list of meshes</span>
 </code></pre></div>
-
 <p>Yocto/Shape supports merging shape elements. This is useful, for example, when
 building up shapes from parts. The merged shapes are just concatenation of
 the individual shape without vertex merging. Use <code>merge_lines(...)</code> for lines,
 <code>merge_triangles(...)</code> for triangles and <code>merge_quads(...)</code> for quads.</p>
-<div class="codehilite"><pre><span></span><code><span class="k">auto</span> <span class="n">triangles</span> <span class="o">=</span> <span class="n">vector</span><span class="o">&lt;</span><span class="n">vec3i</span><span class="o">&gt;</span><span class="p">{...};</span>   <span class="c1">// initial shape</span>
+<div class="highlight"><pre><span></span><code><span class="k">auto</span> <span class="n">triangles</span> <span class="o">=</span> <span class="n">vector</span><span class="o">&lt;</span><span class="n">vec3i</span><span class="o">&gt;</span><span class="p">{...};</span>   <span class="c1">// initial shape</span>
 <span class="k">auto</span> <span class="n">positions</span> <span class="o">=</span> <span class="n">vector</span><span class="o">&lt;</span><span class="n">vec3f</span><span class="o">&gt;</span><span class="p">{...};</span>
 <span class="k">auto</span> <span class="n">normals</span> <span class="o">=</span> <span class="n">vector</span><span class="o">&lt;</span><span class="n">vec3f</span><span class="o">&gt;</span><span class="p">{...};</span>
 <span class="k">auto</span> <span class="n">texcoords</span> <span class="o">=</span> <span class="n">vector</span><span class="o">&lt;</span><span class="n">vec2f</span><span class="o">&gt;</span><span class="p">{...};</span>
@@ -898,7 +906,6 @@ the individual shape without vertex merging. Use <code>merge_lines(...)</code> f
 <span class="n">merge_triangles</span><span class="p">(</span><span class="n">triangles</span><span class="p">,</span> <span class="n">positions</span><span class="p">,</span> <span class="n">normals</span><span class="p">,</span> <span class="n">texcoords</span><span class="p">,</span>
   <span class="n">mtriangles</span><span class="p">,</span> <span class="n">mpositions</span><span class="p">,</span> <span class="n">mnormals</span><span class="p">,</span> <span class="n">mtexcoords</span><span class="p">);</span>
 </code></pre></div>
-
 <p>You can also merge triangles and quads together in other to have one
 primitive only. Use <code>merge_triangles_and_quads(triangles, quads, force_triangles)</code>
 to merge elements in-place. The algorithms will output quads if present or
@@ -917,18 +924,17 @@ each triangle in three triangles,
 each quad in four quads, and each Bezier segment in two segments.
 The functions apply the subdivision rules <code>level</code> number of times
 and act on a single vertex property at a time for maximum flexibility.</p>
-<div class="codehilite"><pre><span></span><code><span class="k">auto</span> <span class="n">triangles</span> <span class="o">=</span> <span class="n">vector</span><span class="o">&lt;</span><span class="n">vec3i</span><span class="o">&gt;</span><span class="p">{...};</span>   <span class="c1">// initial shape</span>
+<div class="highlight"><pre><span></span><code><span class="k">auto</span> <span class="n">triangles</span> <span class="o">=</span> <span class="n">vector</span><span class="o">&lt;</span><span class="n">vec3i</span><span class="o">&gt;</span><span class="p">{...};</span>   <span class="c1">// initial shape</span>
 <span class="k">auto</span> <span class="n">positions</span> <span class="o">=</span> <span class="n">vector</span><span class="o">&lt;</span><span class="n">vec3f</span><span class="o">&gt;</span><span class="p">{...};</span>
 <span class="c1">// subdivide the triangle mesh recursively two times</span>
 <span class="k">auto</span> <span class="p">[</span><span class="n">striangles</span><span class="p">,</span> <span class="n">spositions</span><span class="p">]</span> <span class="o">=</span> <span class="n">subdivide_triangles</span><span class="p">(</span><span class="n">triangles</span><span class="p">,</span> <span class="n">positions</span><span class="p">,</span> <span class="mi">2</span><span class="p">);</span>
 </code></pre></div>
-
 <p>Yocto/Shape also supports Catmull-Clark subdivision surfaces with
 <code>subdivide_catmullclark(quads, vert, level, creased)</code>. In this case,
 Catmull-Clark subdivision rules are used to smooth the mesh after
 linear subdivision. The boundary can be treated as creases with <code>creased</code>,
 which is necessary when subdividing texture coordinates.</p>
-<div class="codehilite"><pre><span></span><code><span class="k">auto</span> <span class="n">quads</span> <span class="o">=</span> <span class="n">vector</span><span class="o">&lt;</span><span class="n">vec4i</span><span class="o">&gt;</span><span class="p">{...};</span>     <span class="c1">// initial shape</span>
+<div class="highlight"><pre><span></span><code><span class="k">auto</span> <span class="n">quads</span> <span class="o">=</span> <span class="n">vector</span><span class="o">&lt;</span><span class="n">vec4i</span><span class="o">&gt;</span><span class="p">{...};</span>     <span class="c1">// initial shape</span>
 <span class="k">auto</span> <span class="n">positions</span> <span class="o">=</span> <span class="n">vector</span><span class="o">&lt;</span><span class="n">vec3f</span><span class="o">&gt;</span><span class="p">{...};</span>
 <span class="c1">// subdivide the quad mesh recursively two times</span>
 <span class="k">auto</span> <span class="p">[</span><span class="n">squads</span><span class="p">,</span> <span class="n">spositions</span><span class="p">]</span> <span class="o">=</span> <span class="n">subdivide_catmullclark</span><span class="p">(</span><span class="n">quads</span><span class="p">,</span> <span class="n">positions</span><span class="p">,</span> <span class="mi">2</span><span class="p">,</span> <span class="nb">false</span><span class="p">);</span>
@@ -938,7 +944,6 @@ which is necessary when subdividing texture coordinates.</p>
 <span class="c1">// subdivide the triangle mesh recursively two times</span>
 <span class="k">auto</span> <span class="p">[</span><span class="n">stquads</span><span class="p">,</span> <span class="n">stexcoords</span><span class="p">]</span> <span class="o">=</span> <span class="n">subdivide_catmullclark</span><span class="p">(</span><span class="n">tquads</span><span class="p">,</span> <span class="n">texcoords</span><span class="p">,</span> <span class="mi">2</span><span class="p">,</span> <span class="nb">true</span><span class="p">);</span>
 </code></pre></div>
-
 <h2 id="shape-sampling">Shape sampling</h2>
 <p>Yocto/Shape supports sampling meshes uniformly. All sampling require to first
 compute the shape CDF and then use it to sample the shape. For each shape type,
@@ -949,7 +954,7 @@ coordinates. Use <code>sample_lines(cdf, re, rn)</code> to sample lines,
 <code>sample_lines_dcf(lines, positions)</code>,
 <code>sample_triangles_dcf(triangles, positions)</code>,
 and <code>sample_quads_dcf(quads, positions)</code>.</p>
-<div class="codehilite"><pre><span></span><code><span class="k">auto</span> <span class="n">triangles</span> <span class="o">=</span> <span class="n">vector</span><span class="o">&lt;</span><span class="n">vec3i</span><span class="o">&gt;</span><span class="p">{...};</span>   <span class="c1">// initial shape</span>
+<div class="highlight"><pre><span></span><code><span class="k">auto</span> <span class="n">triangles</span> <span class="o">=</span> <span class="n">vector</span><span class="o">&lt;</span><span class="n">vec3i</span><span class="o">&gt;</span><span class="p">{...};</span>   <span class="c1">// initial shape</span>
 <span class="k">auto</span> <span class="n">positions</span> <span class="o">=</span> <span class="n">vector</span><span class="o">&lt;</span><span class="n">vec3f</span><span class="o">&gt;</span><span class="p">{...};</span>
 <span class="k">auto</span> <span class="n">cdf</span> <span class="o">=</span> <span class="n">sample_triangles_cdf</span><span class="p">(</span><span class="n">triangles</span><span class="p">,</span> <span class="n">positions</span><span class="p">);</span> <span class="c1">// shape cdf</span>
 <span class="k">for</span><span class="p">(</span><span class="k">auto</span> <span class="nl">sample</span> <span class="p">:</span> <span class="n">range</span><span class="p">(</span><span class="n">samples</span><span class="p">))</span> <span class="p">{</span>
@@ -957,11 +962,10 @@ and <code>sample_quads_dcf(quads, positions)</code>.</p>
    <span class="k">auto</span> <span class="p">[</span><span class="n">triangle_id</span><span class="p">,</span> <span class="n">uv</span><span class="p">]</span> <span class="o">=</span> <span class="n">sample_triangles</span><span class="p">(</span><span class="n">cdf</span><span class="p">,</span> <span class="n">rand1f</span><span class="p">(</span><span class="n">rng</span><span class="p">),</span> <span class="n">rand2f</span><span class="p">(</span><span class="n">rng</span><span class="p">));</span>
 <span class="p">}</span>
 </code></pre></div>
-
 <p>For triangles and quads, Yocto/Shape defines convenience functions that
 generate a set of points on the shape surface. Use <code>sample_triangles(...)</code>
 and <code>sample_quads(...)</code> for triangles and quads respectively.</p>
-<div class="codehilite"><pre><span></span><code><span class="k">auto</span> <span class="n">triangles</span> <span class="o">=</span> <span class="n">vector</span><span class="o">&lt;</span><span class="n">vec3i</span><span class="o">&gt;</span><span class="p">{...};</span>   <span class="c1">// initial shape</span>
+<div class="highlight"><pre><span></span><code><span class="k">auto</span> <span class="n">triangles</span> <span class="o">=</span> <span class="n">vector</span><span class="o">&lt;</span><span class="n">vec3i</span><span class="o">&gt;</span><span class="p">{...};</span>   <span class="c1">// initial shape</span>
 <span class="k">auto</span> <span class="n">positions</span> <span class="o">=</span> <span class="n">vector</span><span class="o">&lt;</span><span class="n">vec3f</span><span class="o">&gt;</span><span class="p">{...};</span>
 <span class="k">auto</span> <span class="n">normals</span>   <span class="o">=</span> <span class="n">vector</span><span class="o">&lt;</span><span class="n">vec3f</span><span class="o">&gt;</span><span class="p">{...};</span>
 <span class="k">auto</span> <span class="n">texcoords</span> <span class="o">=</span> <span class="n">vector</span><span class="o">&lt;</span><span class="n">vec2f</span><span class="o">&gt;</span><span class="p">{...};</span>
@@ -973,65 +977,13 @@ and <code>sample_quads(...)</code> for triangles and quads respectively.</p>
 <span class="n">sample_triangles</span><span class="p">(</span><span class="n">sampled_positions</span><span class="p">,</span> <span class="n">sampled_normals</span><span class="p">,</span> <span class="n">sampled_texcoords</span><span class="p">,</span>
                  <span class="n">triangles</span><span class="p">,</span> <span class="n">positions</span><span class="p">,</span> <span class="n">normals</span><span class="p">,</span> <span class="n">texcoords</span><span class="p">,</span> <span class="n">npoints</span><span class="p">);</span>
 </code></pre></div>
-
-<h2 id="shape-loading-and-saving">Shape loading and saving</h2>
-<p>Shapes are loaded with <code>load_shape(filename, &lt;shape data&gt;, error, facevarying, flipv)</code>
-and saved with <code>save_shape(filename, &lt;shape data&gt;, error, facevarying, flipv)</code>.
-Both loading and saving take a filename, and buffers for shape elements and
-vertex data, and return whether or not the shape was loaded or saved successfully.
-In the case of an error, the IO functions set the <code>error</code> string with a
-message suitable for displaying to a user. Yocto/Shape supports loading
-and saving to OBJ and PLY.</p>
-<p>The library has overrides for using separate arrays for each property or using
-a <code>generic_shape</code> struct that collects shape data for convenience.
-Yocto/Shape supports loading and saving shapes that are composed of
-either points, lines, triangles, quads or face-varying quads.
-For indexed meshes, the type of elements is determined during loading,
-while face-varying representations are requested by setting the <code>facevarying</code>
-flag in load and save functions. By default, texture coordinates are flipped
-vertically to match the convention of OpenGL texturing; this can be disabled
-by setting the <code>flipv</code> flag.</p>
-<p>Use <code>shape_stats(&lt;shape data&gt;)</code> to get statistics on the shape.</p>
-<div class="codehilite"><pre><span></span><code><span class="k">auto</span> <span class="n">error</span> <span class="o">=</span> <span class="n">string</span><span class="p">{};</span>
-<span class="k">auto</span> <span class="n">shape</span> <span class="o">=</span> <span class="n">generic_shape</span><span class="p">{};</span>       <span class="c1">// shape data</span>
-<span class="c1">// interface using shape buffers</span>
-<span class="k">if</span><span class="p">(</span><span class="o">!</span><span class="n">load_shape</span><span class="p">(</span><span class="n">filename</span><span class="p">,</span> <span class="n">shape</span><span class="p">,</span> <span class="n">error</span><span class="p">))</span>    <span class="c1">// load shape</span>
-   <span class="n">print_error</span><span class="p">(</span><span class="n">error</span><span class="p">);</span>                     <span class="c1">// check and print error</span>
-<span class="k">auto</span> <span class="n">stats</span> <span class="o">=</span> <span class="n">shape_stats</span><span class="p">(</span><span class="n">shape</span><span class="p">);</span>           <span class="c1">// shape stats</span>
-<span class="k">for</span><span class="p">(</span><span class="k">auto</span><span class="o">&amp;</span> <span class="nl">stat</span> <span class="p">:</span> <span class="n">stats</span><span class="p">)</span> <span class="n">print_info</span><span class="p">(</span><span class="n">stat</span><span class="p">);</span>  <span class="c1">// print stats</span>
-<span class="k">if</span><span class="p">(</span><span class="o">!</span><span class="n">save_shape</span><span class="p">(</span><span class="n">filename</span><span class="p">,</span> <span class="n">shape</span><span class="p">,</span> <span class="n">error</span><span class="p">))</span>    <span class="c1">// save shape</span>
-  <span class="n">print_error</span><span class="p">(</span><span class="n">error</span><span class="p">);</span>                      <span class="c1">// check and print error</span>
-<span class="c1">// interface using explicit buffers</span>
-<span class="k">auto</span><span class="o">&amp;</span> <span class="p">[</span><span class="n">points</span><span class="p">,</span> <span class="n">lines</span><span class="p">,</span> <span class="n">triangles</span><span class="p">,</span> <span class="n">quads</span><span class="p">,</span> <span class="n">quadspos</span><span class="p">,</span> <span class="n">quadsnorm</span><span class="p">,</span> <span class="n">quadstexcoord</span><span class="p">,</span>
-       <span class="n">positions</span><span class="p">,</span> <span class="n">normals</span><span class="p">,</span> <span class="n">texcoords</span><span class="p">,</span> <span class="n">colors</span><span class="p">,</span> <span class="n">radius</span><span class="p">]</span> <span class="o">=</span> <span class="n">shape</span><span class="p">;</span>
-<span class="k">if</span><span class="p">(</span><span class="o">!</span><span class="n">load_shape</span><span class="p">(</span><span class="n">filename</span><span class="p">,</span> <span class="n">points</span><span class="p">,</span> <span class="n">lines</span><span class="p">,</span> <span class="n">triangles</span><span class="p">,</span> <span class="n">quads</span><span class="p">,</span>  <span class="n">quadspos</span><span class="p">,</span>
-               <span class="n">quadsnorm</span><span class="p">,</span> <span class="n">quadstexcoord</span><span class="p">,</span> <span class="n">positions</span><span class="p">,</span> <span class="n">normals</span><span class="p">,</span> <span class="n">texcoords</span><span class="p">,</span>
-               <span class="n">colors</span><span class="p">,</span> <span class="n">radius</span><span class="p">,</span> <span class="n">error</span><span class="p">))</span>     <span class="c1">// load shape</span>
-  <span class="n">print_error</span><span class="p">(</span><span class="n">error</span><span class="p">);</span>                      <span class="c1">// check and print error</span>
-<span class="k">auto</span> <span class="n">stats</span> <span class="o">=</span> <span class="n">shape_stats</span><span class="p">(</span><span class="n">points</span><span class="p">,</span> <span class="n">lines</span><span class="p">,</span> <span class="n">triangles</span><span class="p">,</span> <span class="n">quads</span><span class="p">,</span> <span class="n">quadspos</span><span class="p">,</span>
-                         <span class="n">quadsnorm</span><span class="p">,</span> <span class="n">quadstexcoord</span><span class="p">,</span> <span class="n">positions</span><span class="p">,</span> <span class="n">normals</span><span class="p">,</span>
-                         <span class="n">texcoords</span><span class="p">,</span> <span class="n">colors</span><span class="p">,</span> <span class="n">radius</span><span class="p">);</span> <span class="c1">// stats</span>
-<span class="k">for</span><span class="p">(</span><span class="k">auto</span><span class="o">&amp;</span> <span class="nl">stat</span> <span class="p">:</span> <span class="n">stats</span><span class="p">)</span> <span class="n">print_info</span><span class="p">(</span><span class="n">stat</span><span class="p">);</span>  <span class="c1">// print stats</span>
-<span class="k">if</span><span class="p">(</span><span class="o">!</span><span class="n">save_shape</span><span class="p">(</span><span class="n">filename</span><span class="p">,</span> <span class="n">points</span><span class="p">,</span> <span class="n">lines</span><span class="p">,</span> <span class="n">triangles</span><span class="p">,</span> <span class="n">quads</span><span class="p">,</span>  <span class="n">quadspos</span><span class="p">,</span>
-               <span class="n">quadsnorm</span><span class="p">,</span> <span class="n">quadstexcoord</span><span class="p">,</span> <span class="n">positions</span><span class="p">,</span> <span class="n">normals</span><span class="p">,</span> <span class="n">texcoords</span><span class="p">,</span>
-               <span class="n">colors</span><span class="p">,</span> <span class="n">radius</span><span class="p">,</span> <span class="n">error</span><span class="p">))</span>     <span class="c1">// save shape</span>
-  <span class="n">print_error</span><span class="p">(</span><span class="n">error</span><span class="p">);</span>                      <span class="c1">// check and print error</span>
-<span class="c1">// load using different conventions</span>
-<span class="k">auto</span> <span class="n">facevarying</span> <span class="o">=</span> <span class="nb">true</span><span class="p">;</span>
-<span class="k">if</span><span class="p">(</span><span class="o">!</span><span class="n">load_shape</span><span class="p">(</span><span class="n">filename</span><span class="p">,</span> <span class="n">shape</span><span class="p">,</span> <span class="n">error</span><span class="p">,</span> <span class="n">facevarying</span><span class="p">))</span> <span class="c1">// load face-varying shape</span>
-   <span class="n">print_error</span><span class="p">(</span><span class="n">error</span><span class="p">);</span>                               <span class="c1">// check and print error</span>
-<span class="k">auto</span> <span class="n">flipv</span> <span class="o">=</span> <span class="nb">false</span><span class="p">;</span>
-<span class="k">if</span><span class="p">(</span><span class="o">!</span><span class="n">load_shape</span><span class="p">(</span><span class="n">filename</span><span class="p">,</span> <span class="n">shape</span><span class="p">,</span> <span class="n">error</span><span class="p">,</span> <span class="nb">false</span><span class="p">,</span> <span class="n">flipv</span><span class="p">))</span><span class="c1">// load flipping uvs</span>
-   <span class="n">print_error</span><span class="p">(</span><span class="n">error</span><span class="p">);</span>                               <span class="c1">// check and print error</span>
-</code></pre></div>
-
 <h2 id="procedural-shapes">Procedural shapes</h2>
 <p>Yocto/Shape defines several procedural shapes used for both testing and
-to quickly create shapes for procedural scenes. Procedural shapes as input the
-desired shape resolution, the shape scale, the uv scale, and additional
-parameters specific to that procedural shape. Most procedural shapes are
-defined in terms of quads and return quads indices and vertex positions,
-normals and texture coordinates packed in a <code>quads_shape</code> struct.
+to quickly create shapes for procedural scenes. Procedural shapes take as
+input the desired shape resolution, the shape scale, the uv scale, and
+additional parameters specific to that procedural shape. These functions
+return quads indices and vertex positions, normals and texture coordinates,
+with arrays passed in.
 Use <code>make_rect(...)</code> for a rectangle in the XY plane,
 <code>make_bulged_rect(...)</code> for a bulged rectangle,
 <code>make_recty(...)</code> for a rectangle in the XZ plane,
@@ -1048,26 +1000,28 @@ Use <code>make_rect(...)</code> for a rectangle in the XY plane,
 <code>make_uvdisk(...)</code> for a disk tessellated along its uvs,
 <code>make_uvcylinder(...)</code> for a cylinder tessellated along its uvs,
 <code>make_rounded_uvcylinder(...)</code> for a rounded cylinder.</p>
-<div class="codehilite"><pre><span></span><code><span class="c1">// most procedural shapes return quads, positions, normals, and texcoords</span>
-<span class="k">auto</span> <span class="p">[</span><span class="n">quads</span><span class="p">,</span> <span class="n">positions</span><span class="p">,</span> <span class="n">normals</span><span class="p">,</span> <span class="n">texcoords</span><span class="p">]</span> <span class="o">=</span> <span class="n">make_rect</span><span class="p">({</span><span class="mi">32</span><span class="p">,</span><span class="mi">32</span><span class="p">},</span> <span class="p">{</span><span class="mi">1</span><span class="p">,</span><span class="mi">1</span><span class="p">});</span>
+<div class="highlight"><pre><span></span><code><span class="c1">// most procedural shapes return quads, positions, normals, and texcoords</span>
+<span class="k">auto</span> <span class="n">quads</span> <span class="o">=</span> <span class="n">vector</span><span class="o">&lt;</span><span class="n">vec4i</span><span class="o">&gt;</span><span class="p">{};</span>
+<span class="k">auto</span> <span class="n">positions</span> <span class="o">=</span> <span class="n">vector</span><span class="o">&lt;</span><span class="n">vec3f</span><span class="o">&gt;</span><span class="p">{};</span>
+<span class="k">auto</span> <span class="n">normals</span> <span class="o">=</span> <span class="n">vector</span><span class="o">&lt;</span><span class="n">vec3f</span><span class="o">&gt;</span><span class="p">{};</span>
+<span class="k">auto</span> <span class="n">texcoords</span> <span class="o">=</span> <span class="n">vector</span><span class="o">&lt;</span><span class="n">vec2f</span><span class="o">&gt;</span><span class="p">{};</span>
 <span class="c1">// make shapes with 32 steps in resolution and scale of 1</span>
-<span class="k">auto</span> <span class="n">shape_01</span> <span class="o">=</span> <span class="n">make_rect</span><span class="p">({</span><span class="mi">32</span><span class="p">,</span><span class="mi">32</span><span class="p">},</span> <span class="p">{</span><span class="mi">1</span><span class="p">,</span><span class="mi">1</span><span class="p">});</span>
-<span class="k">auto</span> <span class="n">shape_02</span> <span class="o">=</span> <span class="n">make_bilged_rect</span><span class="p">({</span><span class="mi">32</span><span class="p">,</span><span class="mi">32</span><span class="p">},</span> <span class="p">{</span><span class="mi">1</span><span class="p">,</span><span class="mi">1</span><span class="p">});</span>
-<span class="k">auto</span> <span class="n">shape_03</span> <span class="o">=</span> <span class="n">make_recty</span><span class="p">({</span><span class="mi">32</span><span class="p">,</span><span class="mi">32</span><span class="p">},</span> <span class="p">{</span><span class="mi">1</span><span class="p">,</span><span class="mi">1</span><span class="p">});</span>
-<span class="k">auto</span> <span class="n">shape_04</span> <span class="o">=</span> <span class="n">make_box</span><span class="p">({</span><span class="mi">32</span><span class="p">,</span><span class="mi">32</span><span class="p">,</span><span class="mi">32</span><span class="p">},</span> <span class="p">{</span><span class="mi">1</span><span class="p">,</span><span class="mi">1</span><span class="p">,</span><span class="mi">1</span><span class="p">});</span>
-<span class="k">auto</span> <span class="n">shape_05</span> <span class="o">=</span> <span class="n">make_rounded_box</span><span class="p">({</span><span class="mi">32</span><span class="p">,</span><span class="mi">32</span><span class="p">,</span><span class="mi">32</span><span class="p">},</span> <span class="p">{</span><span class="mi">1</span><span class="p">,</span><span class="mi">1</span><span class="p">,</span><span class="mi">1</span><span class="p">});</span>
-<span class="k">auto</span> <span class="n">shape_06</span> <span class="o">=</span> <span class="n">make_floor</span><span class="p">({</span><span class="mi">32</span><span class="p">,</span><span class="mi">32</span><span class="p">},</span> <span class="p">{</span><span class="mi">10</span><span class="p">,</span><span class="mi">10</span><span class="p">});</span>
-<span class="k">auto</span> <span class="n">shape_07</span> <span class="o">=</span> <span class="n">make_bent_floor</span><span class="p">({</span><span class="mi">32</span><span class="p">,</span><span class="mi">32</span><span class="p">},</span> <span class="p">{</span><span class="mi">10</span><span class="p">,</span><span class="mi">10</span><span class="p">});</span>
-<span class="k">auto</span> <span class="n">shape_08</span> <span class="o">=</span> <span class="n">make_sphere</span><span class="p">(</span><span class="mi">32</span><span class="p">,</span> <span class="mi">1</span><span class="p">);</span>
-<span class="k">auto</span> <span class="n">shape_09</span> <span class="o">=</span> <span class="n">make_uvsphere</span><span class="p">({</span><span class="mi">32</span><span class="p">,</span><span class="mi">32</span><span class="p">},</span> <span class="mi">1</span><span class="p">);</span>
-<span class="k">auto</span> <span class="n">shape_10</span> <span class="o">=</span> <span class="n">make_capped_uvsphere</span><span class="p">({</span><span class="mi">32</span><span class="p">,</span><span class="mi">32</span><span class="p">},</span> <span class="mi">1</span><span class="p">);</span>
-<span class="k">auto</span> <span class="n">shape_11</span> <span class="o">=</span> <span class="n">make_disk</span><span class="p">(</span><span class="mi">32</span><span class="p">,</span> <span class="mi">1</span><span class="p">);</span>
-<span class="k">auto</span> <span class="n">shape_12</span> <span class="o">=</span> <span class="n">make_bulged_disk</span><span class="p">(</span><span class="mi">32</span><span class="p">,</span> <span class="mi">1</span><span class="p">);</span>
-<span class="k">auto</span> <span class="n">shape_13</span> <span class="o">=</span> <span class="n">ake_uvdiskm</span><span class="p">({</span><span class="mi">32</span><span class="p">,</span><span class="mi">32</span><span class="p">},</span> <span class="mi">1</span><span class="p">);</span>
-<span class="k">auto</span> <span class="n">shape_14</span> <span class="o">=</span> <span class="n">make_uvcylinder</span><span class="p">({</span><span class="mi">32</span><span class="p">,</span><span class="mi">32</span><span class="p">,</span><span class="mi">32</span><span class="p">},</span> <span class="p">{</span><span class="mi">1</span><span class="p">,</span><span class="mi">1</span><span class="p">});</span>
-<span class="k">auto</span> <span class="n">shape_15</span> <span class="o">=</span> <span class="n">make_rounded_uvcylinder</span><span class="p">({</span><span class="mi">32</span><span class="p">,</span><span class="mi">32</span><span class="p">,</span><span class="mi">32</span><span class="p">},</span> <span class="p">{</span><span class="mi">1</span><span class="p">,</span><span class="mi">1</span><span class="p">});</span>
+<span class="n">make_rect</span><span class="p">(</span><span class="n">quads</span><span class="p">,</span> <span class="n">positions</span><span class="p">,</span> <span class="n">normals</span><span class="p">,</span> <span class="n">texcoords</span><span class="p">,</span> <span class="p">{</span><span class="mi">32</span><span class="p">,</span><span class="mi">32</span><span class="p">},</span> <span class="p">{</span><span class="mi">1</span><span class="p">,</span><span class="mi">1</span><span class="p">});</span>
+<span class="n">make_bulged_rect</span><span class="p">(</span><span class="n">quads</span><span class="p">,</span> <span class="n">positions</span><span class="p">,</span> <span class="n">normals</span><span class="p">,</span> <span class="n">texcoords</span><span class="p">,</span> <span class="p">{</span><span class="mi">32</span><span class="p">,</span><span class="mi">32</span><span class="p">},</span> <span class="p">{</span><span class="mi">1</span><span class="p">,</span><span class="mi">1</span><span class="p">});</span>
+<span class="n">make_recty</span><span class="p">(</span><span class="n">quads</span><span class="p">,</span> <span class="n">positions</span><span class="p">,</span> <span class="n">normals</span><span class="p">,</span> <span class="n">texcoords</span><span class="p">,</span> <span class="p">{</span><span class="mi">32</span><span class="p">,</span><span class="mi">32</span><span class="p">},</span> <span class="p">{</span><span class="mi">1</span><span class="p">,</span><span class="mi">1</span><span class="p">});</span>
+<span class="n">make_box</span><span class="p">(</span><span class="n">quads</span><span class="p">,</span> <span class="n">positions</span><span class="p">,</span> <span class="n">normals</span><span class="p">,</span> <span class="n">texcoords</span><span class="p">,</span> <span class="p">{</span><span class="mi">32</span><span class="p">,</span><span class="mi">32</span><span class="p">,</span><span class="mi">32</span><span class="p">},</span> <span class="p">{</span><span class="mi">1</span><span class="p">,</span><span class="mi">1</span><span class="p">,</span><span class="mi">1</span><span class="p">});</span>
+<span class="n">make_rounded_box</span><span class="p">(</span><span class="n">quads</span><span class="p">,</span> <span class="n">positions</span><span class="p">,</span> <span class="n">normals</span><span class="p">,</span> <span class="n">texcoords</span><span class="p">,</span> <span class="p">{</span><span class="mi">32</span><span class="p">,</span><span class="mi">32</span><span class="p">,</span><span class="mi">32</span><span class="p">},</span> <span class="p">{</span><span class="mi">1</span><span class="p">,</span><span class="mi">1</span><span class="p">,</span><span class="mi">1</span><span class="p">});</span>
+<span class="n">make_floor</span><span class="p">(</span><span class="n">quads</span><span class="p">,</span> <span class="n">positions</span><span class="p">,</span> <span class="n">normals</span><span class="p">,</span> <span class="n">texcoords</span><span class="p">,</span> <span class="p">{</span><span class="mi">32</span><span class="p">,</span><span class="mi">32</span><span class="p">},</span> <span class="p">{</span><span class="mi">10</span><span class="p">,</span><span class="mi">10</span><span class="p">});</span>
+<span class="n">make_bent_floor</span><span class="p">(</span><span class="n">quads</span><span class="p">,</span> <span class="n">positions</span><span class="p">,</span> <span class="n">normals</span><span class="p">,</span> <span class="n">texcoords</span><span class="p">,</span> <span class="p">{</span><span class="mi">32</span><span class="p">,</span><span class="mi">32</span><span class="p">},</span> <span class="p">{</span><span class="mi">10</span><span class="p">,</span><span class="mi">10</span><span class="p">});</span>
+<span class="n">make_sphere</span><span class="p">(</span><span class="n">quads</span><span class="p">,</span> <span class="n">positions</span><span class="p">,</span> <span class="n">normals</span><span class="p">,</span> <span class="n">texcoords</span><span class="p">,</span> <span class="mi">32</span><span class="p">,</span> <span class="mi">1</span><span class="p">);</span>
+<span class="n">make_uvsphere</span><span class="p">(</span><span class="n">quads</span><span class="p">,</span> <span class="n">positions</span><span class="p">,</span> <span class="n">normals</span><span class="p">,</span> <span class="n">texcoords</span><span class="p">,</span> <span class="p">{</span><span class="mi">32</span><span class="p">,</span><span class="mi">32</span><span class="p">},</span> <span class="mi">1</span><span class="p">);</span>
+<span class="n">make_capped_uvsphere</span><span class="p">(</span><span class="n">quads</span><span class="p">,</span> <span class="n">positions</span><span class="p">,</span> <span class="n">normals</span><span class="p">,</span> <span class="n">texcoords</span><span class="p">,</span> <span class="p">{</span><span class="mi">32</span><span class="p">,</span><span class="mi">32</span><span class="p">},</span> <span class="mi">1</span><span class="p">);</span>
+<span class="n">make_disk</span><span class="p">(</span><span class="n">quads</span><span class="p">,</span> <span class="n">positions</span><span class="p">,</span> <span class="n">normals</span><span class="p">,</span> <span class="n">texcoords</span><span class="p">,</span> <span class="mi">32</span><span class="p">,</span> <span class="mi">1</span><span class="p">);</span>
+<span class="n">make_bulged_disk</span><span class="p">(</span><span class="n">quads</span><span class="p">,</span> <span class="n">positions</span><span class="p">,</span> <span class="n">normals</span><span class="p">,</span> <span class="n">texcoords</span><span class="p">,</span> <span class="mi">32</span><span class="p">,</span> <span class="mi">1</span><span class="p">);</span>
+<span class="n">make_uvdiskm</span><span class="p">(</span><span class="n">quads</span><span class="p">,</span> <span class="n">positions</span><span class="p">,</span> <span class="n">normals</span><span class="p">,</span> <span class="n">texcoords</span><span class="p">,</span> <span class="p">{</span><span class="mi">32</span><span class="p">,</span><span class="mi">32</span><span class="p">},</span> <span class="mi">1</span><span class="p">);</span>
+<span class="n">make_uvcylinder</span><span class="p">(</span><span class="n">quads</span><span class="p">,</span> <span class="n">positions</span><span class="p">,</span> <span class="n">normals</span><span class="p">,</span> <span class="n">texcoords</span><span class="p">,</span> <span class="p">{</span><span class="mi">32</span><span class="p">,</span><span class="mi">32</span><span class="p">,</span><span class="mi">32</span><span class="p">},</span> <span class="p">{</span><span class="mi">1</span><span class="p">,</span><span class="mi">1</span><span class="p">});</span>
+<span class="n">make_rounded_uvcylinder</span><span class="p">(</span><span class="n">quads</span><span class="p">,</span> <span class="n">positions</span><span class="p">,</span> <span class="n">normals</span><span class="p">,</span> <span class="n">texcoords</span><span class="p">,</span> <span class="p">{</span><span class="mi">32</span><span class="p">,</span><span class="mi">32</span><span class="p">,</span><span class="mi">32</span><span class="p">},</span> <span class="p">{</span><span class="mi">1</span><span class="p">,</span><span class="mi">1</span><span class="p">});</span>
 </code></pre></div>
-
 <p>Yocto/Shape defines a few procedural face-varying shapes with similar interfaces
 to the above functions. In this case, the functions return face indices and
 vertex data for positions, normals and texture coordinates packed in a
@@ -1075,15 +1029,21 @@ vertex data for positions, normals and texture coordinates packed in a
 Use <code>make_fvrect(...)</code> for a rectangle in the XY plane,
 <code>make_fvbox(...)</code> for a box,
 <code>make_fvsphere(...)</code> for a sphere obtained from a cube.</p>
-<div class="codehilite"><pre><span></span><code><span class="c1">// procedural face-varying shapes return positions, normals, and texcoords</span>
-<span class="k">auto</span> <span class="p">[</span><span class="n">quadspos</span><span class="p">,</span> <span class="n">quadsnorm</span><span class="p">,</span> <span class="n">quadstexcoord</span><span class="p">,</span> <span class="n">positions</span><span class="p">,</span> <span class="n">normals</span><span class="p">,</span> <span class="n">texcoords</span><span class="p">]</span> <span class="o">=</span>
-   <span class="n">make_fvrect</span><span class="p">({</span><span class="mi">32</span><span class="p">,</span><span class="mi">32</span><span class="p">},</span> <span class="p">{</span><span class="mi">1</span><span class="p">,</span><span class="mi">1</span><span class="p">});</span>
+<div class="highlight"><pre><span></span><code><span class="c1">// procedural face-varying shapes return positions, normals, and texcoords</span>
+<span class="k">auto</span> <span class="n">quadspos</span> <span class="o">=</span> <span class="n">vector</span><span class="o">&lt;</span><span class="n">vec4i</span><span class="o">&gt;</span><span class="p">{};</span>
+<span class="k">auto</span> <span class="n">quadsnorm</span> <span class="o">=</span> <span class="n">vector</span><span class="o">&lt;</span><span class="n">vec4i</span><span class="o">&gt;</span><span class="p">{};</span>
+<span class="k">auto</span> <span class="n">quadstexcoord</span> <span class="o">=</span> <span class="n">vector</span><span class="o">&lt;</span><span class="n">vec4i</span><span class="o">&gt;</span><span class="p">{};</span>
+<span class="k">auto</span> <span class="n">positions</span> <span class="o">=</span> <span class="n">vector</span><span class="o">&lt;</span><span class="n">vec3f</span><span class="o">&gt;</span><span class="p">{};</span>
+<span class="k">auto</span> <span class="n">normals</span> <span class="o">=</span> <span class="n">vector</span><span class="o">&lt;</span><span class="n">vec3f</span><span class="o">&gt;</span><span class="p">{};</span>
+<span class="k">auto</span> <span class="n">texcoords</span> <span class="o">=</span> <span class="n">vector</span><span class="o">&lt;</span><span class="n">vec2f</span><span class="o">&gt;</span><span class="p">{};</span>
 <span class="c1">// make face-varying shapes with 32 steps in resolution and scale of 1</span>
-<span class="k">auto</span> <span class="n">fvshape_01</span> <span class="o">=</span> <span class="n">make_fvrect</span><span class="p">({</span><span class="mi">32</span><span class="p">,</span><span class="mi">32</span><span class="p">},</span> <span class="p">{</span><span class="mi">1</span><span class="p">,</span><span class="mi">1</span><span class="p">});</span>
-<span class="k">auto</span> <span class="n">fvshape_02</span> <span class="o">=</span> <span class="n">make_fvbox</span><span class="p">({</span><span class="mi">32</span><span class="p">,</span><span class="mi">32</span><span class="p">,</span><span class="mi">32</span><span class="p">},</span> <span class="p">{</span><span class="mi">1</span><span class="p">,</span><span class="mi">1</span><span class="p">,</span><span class="mi">1</span><span class="p">});</span>
-<span class="k">auto</span> <span class="n">fvshape_03</span> <span class="o">=</span> <span class="n">make_fvsphere</span><span class="p">(</span><span class="mi">32</span><span class="p">,</span> <span class="mi">1</span><span class="p">);</span>
+<span class="n">make_fvrect</span><span class="p">(</span><span class="n">quadspos</span><span class="p">,</span> <span class="n">quadsnorm</span><span class="p">,</span> <span class="n">quadstexcoord</span><span class="p">,</span>
+            <span class="n">positions</span><span class="p">,</span> <span class="n">normals</span><span class="p">,</span> <span class="n">texcoords</span><span class="p">,</span> <span class="p">{</span><span class="mi">32</span><span class="p">,</span><span class="mi">32</span><span class="p">},</span> <span class="p">{</span><span class="mi">1</span><span class="p">,</span><span class="mi">1</span><span class="p">});</span>
+<span class="n">make_fvbox</span><span class="p">(</span><span class="n">quadspos</span><span class="p">,</span> <span class="n">quadsnorm</span><span class="p">,</span> <span class="n">quadstexcoord</span><span class="p">,</span>
+           <span class="n">positions</span><span class="p">,</span> <span class="n">normals</span><span class="p">,</span> <span class="n">texcoords</span><span class="p">,</span> <span class="p">{</span><span class="mi">32</span><span class="p">,</span><span class="mi">32</span><span class="p">,</span><span class="mi">32</span><span class="p">},</span> <span class="p">{</span><span class="mi">1</span><span class="p">,</span><span class="mi">1</span><span class="p">,</span><span class="mi">1</span><span class="p">});</span>
+<span class="n">make_fvsphere</span><span class="p">(</span><span class="n">quadspos</span><span class="p">,</span> <span class="n">quadsnorm</span><span class="p">,</span> <span class="n">quadstexcoord</span><span class="p">,</span>
+              <span class="n">positions</span><span class="p">,</span> <span class="n">normals</span><span class="p">,</span> <span class="n">texcoords</span><span class="p">,</span> <span class="mi">32</span><span class="p">,</span> <span class="mi">1</span><span class="p">);</span>
 </code></pre></div>
-
 <p>Yocto/Shape provides functions to create predefined shapes helpful in testing.
 These functions take only a scale and often provide only the positions as
 vertex data. These functions return either triangles, quads, or
@@ -1094,14 +1054,24 @@ Use <code>make_monkey(...)</code> for the Blender monkey as quads and positions 
 <code>make_cube(...)</code> for a simple cube as quads and positions only,
 <code>make_fvcube(...)</code> for a simple face-varying unit cube,
 <code>make_geosphere(...)</code> for a geodesic sphere as triangles and positions only.</p>
-<div class="codehilite"><pre><span></span><code><span class="k">auto</span> <span class="n">monkey</span> <span class="o">=</span> <span class="n">make_monkey</span><span class="p">(</span><span class="mi">1</span><span class="p">);</span>
-<span class="k">auto</span> <span class="n">quad</span>   <span class="o">=</span> <span class="n">make_quad</span><span class="p">(</span><span class="mi">1</span><span class="p">);</span>
-<span class="k">auto</span> <span class="n">quady</span>  <span class="o">=</span> <span class="n">make_quady</span><span class="p">(</span><span class="mi">1</span><span class="p">);</span>
-<span class="k">auto</span> <span class="n">cube</span>   <span class="o">=</span> <span class="n">make_cube</span><span class="p">(</span><span class="mi">1</span><span class="p">);</span>
-<span class="k">auto</span> <span class="n">geosph</span> <span class="o">=</span> <span class="n">make_geosphere</span><span class="p">(</span><span class="mi">1</span><span class="p">);</span>
-<span class="k">auto</span> <span class="n">fvcube</span> <span class="o">=</span> <span class="n">make_fvcube</span><span class="p">(</span><span class="mi">1</span><span class="p">);</span>
+<div class="highlight"><pre><span></span><code><span class="c1">// built-in shapes return elemeents, positions, normals, and texcoords</span>
+<span class="k">auto</span> <span class="n">quads</span> <span class="o">=</span> <span class="n">vector</span><span class="o">&lt;</span><span class="n">vec4i</span><span class="o">&gt;</span><span class="p">{};</span>
+<span class="k">auto</span> <span class="n">triangles</span> <span class="o">=</span> <span class="n">vector</span><span class="o">&lt;</span><span class="n">vec3i</span><span class="o">&gt;</span><span class="p">{};</span>
+<span class="k">auto</span> <span class="n">quadspos</span> <span class="o">=</span> <span class="n">vector</span><span class="o">&lt;</span><span class="n">vec4i</span><span class="o">&gt;</span><span class="p">{};</span>
+<span class="k">auto</span> <span class="n">quadsnorm</span> <span class="o">=</span> <span class="n">vector</span><span class="o">&lt;</span><span class="n">vec4i</span><span class="o">&gt;</span><span class="p">{};</span>
+<span class="k">auto</span> <span class="n">quadstexcoord</span> <span class="o">=</span> <span class="n">vector</span><span class="o">&lt;</span><span class="n">vec4i</span><span class="o">&gt;</span><span class="p">{};</span>
+<span class="k">auto</span> <span class="n">positions</span> <span class="o">=</span> <span class="n">vector</span><span class="o">&lt;</span><span class="n">vec3f</span><span class="o">&gt;</span><span class="p">{};</span>
+<span class="k">auto</span> <span class="n">normals</span> <span class="o">=</span> <span class="n">vector</span><span class="o">&lt;</span><span class="n">vec3f</span><span class="o">&gt;</span><span class="p">{};</span>
+<span class="k">auto</span> <span class="n">texcoords</span> <span class="o">=</span> <span class="n">vector</span><span class="o">&lt;</span><span class="n">vec2f</span><span class="o">&gt;</span><span class="p">{};</span>
+<span class="c1">// make built-in shapes with scale of 1</span>
+<span class="n">make_monkey</span><span class="p">(</span><span class="n">quads</span><span class="p">,</span> <span class="n">positions</span><span class="p">,</span> <span class="n">normals</span><span class="p">,</span> <span class="n">texcoords</span><span class="p">,</span> <span class="mi">1</span><span class="p">);</span>
+<span class="n">make_quad</span><span class="p">(</span><span class="n">quads</span><span class="p">,</span> <span class="n">positions</span><span class="p">,</span> <span class="n">normals</span><span class="p">,</span> <span class="n">texcoords</span><span class="p">,</span> <span class="mi">1</span><span class="p">);</span>
+<span class="n">make_quady</span><span class="p">(</span><span class="n">quads</span><span class="p">,</span> <span class="n">positions</span><span class="p">,</span> <span class="n">normals</span><span class="p">,</span> <span class="n">texcoords</span><span class="p">,</span> <span class="mi">1</span><span class="p">);</span>
+<span class="n">make_cube</span><span class="p">(</span><span class="n">quads</span><span class="p">,</span> <span class="n">positions</span><span class="p">,</span> <span class="n">normals</span><span class="p">,</span> <span class="n">texcoords</span><span class="p">,</span> <span class="mi">1</span><span class="p">);</span>
+<span class="n">make_geosphere</span><span class="p">(</span><span class="n">triangles</span><span class="p">,</span> <span class="n">positions</span><span class="p">,</span> <span class="n">normals</span><span class="p">,</span> <span class="n">texcoords</span><span class="p">,</span> <span class="mi">1</span><span class="p">);</span>
+<span class="n">make_fvcube</span><span class="p">(</span><span class="n">quadspos</span><span class="p">,</span> <span class="n">quadsnorm</span><span class="p">,</span> <span class="n">quadstexcoord</span><span class="p">,</span>
+              <span class="n">positions</span><span class="p">,</span> <span class="n">normals</span><span class="p">,</span> <span class="n">texcoords</span><span class="p">,</span> <span class="mi">1</span><span class="p">);</span>
 </code></pre></div>
-
 <p>Yocto/Shape supports the generation of points and lines sets.
 Use <code>make_lines(...)</code> to create a line set in the XY plane,
 <code>make_points(...)</code> for a collection of points at the origin,
@@ -1110,27 +1080,38 @@ These functions return shapes that are defined in terms of lines or points
 and return lines or points indices, and vertex positions,
 normals, texture coordinates and radia, packed in a <code>lines_shape</code>
 or <code>points_shape</code> struct.</p>
-<div class="codehilite"><pre><span></span><code><span class="c1">// procedural lines return lines, positions, normals, texcoords, radia</span>
-<span class="k">auto</span> <span class="p">[</span><span class="n">lines</span><span class="p">,</span> <span class="n">positions</span><span class="p">,</span> <span class="n">normals</span><span class="p">,</span> <span class="n">texcoords</span><span class="p">,</span> <span class="n">radius</span><span class="p">]</span> <span class="o">=</span> <span class="n">make_lines</span><span class="p">({</span><span class="mi">4</span><span class="p">,</span> <span class="mi">65536</span><span class="p">});</span>
-<span class="k">auto</span> <span class="n">lines_01</span> <span class="o">=</span> <span class="n">make_lines</span><span class="p">({</span><span class="mi">4</span><span class="p">,</span> <span class="mi">65536</span><span class="p">},</span>      <span class="c1">// line steps and number of lines</span>
-                           <span class="p">{</span><span class="mi">1</span><span class="p">,</span> <span class="mi">1</span><span class="p">},</span> <span class="p">{</span><span class="mi">1</span><span class="p">,</span> <span class="mi">1</span><span class="p">},</span>  <span class="c1">// line set scale and uvscale</span>
-                           <span class="p">{</span><span class="mf">0.001</span><span class="p">,</span> <span class="mf">0.001</span><span class="p">});</span> <span class="c1">// radius at the bottom and top</span>
+<div class="highlight"><pre><span></span><code><span class="c1">// procedural lines return lines, positions, normals, texcoords, radia</span>
+<span class="k">auto</span> <span class="n">lines</span> <span class="o">=</span> <span class="n">vector</span><span class="o">&lt;</span><span class="n">vec2i</span><span class="o">&gt;</span><span class="p">{};</span>
+<span class="k">auto</span> <span class="n">positions</span> <span class="o">=</span> <span class="n">vector</span><span class="o">&lt;</span><span class="n">vec3f</span><span class="o">&gt;</span><span class="p">{};</span>
+<span class="k">auto</span> <span class="n">normals</span> <span class="o">=</span> <span class="n">vector</span><span class="o">&lt;</span><span class="n">vec3f</span><span class="o">&gt;</span><span class="p">{};</span>
+<span class="k">auto</span> <span class="n">texcoords</span> <span class="o">=</span> <span class="n">vector</span><span class="o">&lt;</span><span class="n">vec2f</span><span class="o">&gt;</span><span class="p">{};</span>
+<span class="k">auto</span> <span class="n">radius</span> <span class="o">=</span> <span class="n">vector</span><span class="o">&lt;</span><span class="kt">float</span><span class="o">&gt;</span><span class="p">{};</span>
+<span class="n">make_lines</span><span class="p">(</span><span class="n">lines</span><span class="p">,</span> <span class="n">positions</span><span class="p">,</span> <span class="n">normals</span><span class="p">,</span> <span class="n">texcoords</span><span class="p">,</span> <span class="n">radius</span><span class="p">,</span>
+           <span class="p">{</span><span class="mi">4</span><span class="p">,</span> <span class="mi">65536</span><span class="p">},</span>      <span class="c1">// line steps and number of lines</span>
+           <span class="p">{</span><span class="mi">1</span><span class="p">,</span> <span class="mi">1</span><span class="p">},</span> <span class="p">{</span><span class="mi">1</span><span class="p">,</span> <span class="mi">1</span><span class="p">},</span>  <span class="c1">// line set scale and uvscale</span>
+           <span class="p">{</span><span class="mf">0.001</span><span class="p">,</span> <span class="mf">0.001</span><span class="p">});</span> <span class="c1">// radius at the bottom and top</span>
 <span class="c1">// procedural points return points, positions, normals, texcoords, radia</span>
-<span class="k">auto</span> <span class="p">[</span><span class="n">points</span><span class="p">,</span> <span class="n">positions</span><span class="p">,</span> <span class="n">normals</span><span class="p">,</span> <span class="n">texcoords</span><span class="p">,</span> <span class="n">radius</span><span class="p">]</span> <span class="o">=</span> <span class="n">make_points</span><span class="p">(</span><span class="mi">65536</span><span class="p">);</span>
-<span class="k">auto</span> <span class="n">points_01</span> <span class="o">=</span> <span class="n">make_points</span><span class="p">(</span><span class="mi">65536</span><span class="p">,</span>        <span class="c1">// number of points</span>
-                             <span class="mi">1</span><span class="p">,</span>            <span class="c1">// uvscale</span>
-                             <span class="mf">0.001</span><span class="p">);</span>       <span class="c1">// point radius</span>
-<span class="k">auto</span> <span class="n">points_02</span> <span class="o">=</span> <span class="n">make_random_points</span><span class="p">(</span><span class="mi">65536</span><span class="p">,</span> <span class="c1">// number of points</span>
-                             <span class="p">{</span><span class="mi">1</span><span class="p">,</span> <span class="mi">1</span><span class="p">,</span> <span class="mi">1</span><span class="p">},</span> <span class="mi">1</span><span class="p">,</span> <span class="c1">// line set scale and uvscale</span>
-                             <span class="mf">0.001</span><span class="p">);</span>       <span class="c1">// point radius</span>
+<span class="n">make_points</span><span class="p">(</span><span class="n">points</span><span class="p">,</span> <span class="n">positions</span><span class="p">,</span> <span class="n">normals</span><span class="p">,</span> <span class="n">texcoords</span><span class="p">,</span> <span class="n">radius</span><span class="p">,</span>
+            <span class="mi">65536</span><span class="p">,</span>        <span class="c1">// number of points</span>
+            <span class="mi">1</span><span class="p">,</span>            <span class="c1">// uvscale</span>
+            <span class="mf">0.001</span><span class="p">);</span>       <span class="c1">// point radius</span>
+<span class="n">make_random_points</span><span class="p">(</span><span class="n">points</span><span class="p">,</span> <span class="n">positions</span><span class="p">,</span> <span class="n">normals</span><span class="p">,</span> <span class="n">texcoords</span><span class="p">,</span> <span class="n">radius</span><span class="p">,</span>
+            <span class="mi">65536</span><span class="p">,</span> <span class="c1">// number of points</span>
+            <span class="p">{</span><span class="mi">1</span><span class="p">,</span> <span class="mi">1</span><span class="p">,</span> <span class="mi">1</span><span class="p">},</span> <span class="mi">1</span><span class="p">,</span> <span class="c1">// line set scale and uvscale</span>
+            <span class="mf">0.001</span><span class="p">);</span>       <span class="c1">// point radius</span>
 </code></pre></div>
-
 <p>Yocto/Shape also defines a simple function to generate randomized hairs
 on a triangle or quad mesh. Use <code>make_hair(...)</code> to create a hair shape
 from a triangle and quad mesh, and return a line set.</p>
-<div class="codehilite"><pre><span></span><code><span class="c1">// Make a hair ball around a shape</span>
-<span class="k">auto</span> <span class="p">[</span><span class="n">lines</span><span class="p">,</span> <span class="n">positions</span><span class="p">,</span> <span class="n">normals</span><span class="p">,</span> <span class="n">texcoords</span><span class="p">,</span> <span class="n">radius</span><span class="p">]</span> <span class="o">=</span>  <span class="n">make_hair</span><span class="p">(</span>
-  <span class="n">make_sphere</span><span class="p">(),</span>  <span class="c1">// sampled surface</span>
+<div class="highlight"><pre><span></span><code><span class="c1">// Make a hair ball around a shape</span>
+<span class="k">auto</span> <span class="n">lines</span> <span class="o">=</span> <span class="n">vector</span><span class="o">&lt;</span><span class="n">vec2i</span><span class="o">&gt;</span><span class="p">{};</span>
+<span class="k">auto</span> <span class="n">positions</span> <span class="o">=</span> <span class="n">vector</span><span class="o">&lt;</span><span class="n">vec3f</span><span class="o">&gt;</span><span class="p">{};</span>
+<span class="k">auto</span> <span class="n">normals</span> <span class="o">=</span> <span class="n">vector</span><span class="o">&lt;</span><span class="n">vec3f</span><span class="o">&gt;</span><span class="p">{};</span>
+<span class="k">auto</span> <span class="n">texcoords</span> <span class="o">=</span> <span class="n">vector</span><span class="o">&lt;</span><span class="n">vec2f</span><span class="o">&gt;</span><span class="p">{};</span>
+<span class="k">auto</span> <span class="n">radius</span> <span class="o">=</span> <span class="n">vector</span><span class="o">&lt;</span><span class="kt">float</span><span class="o">&gt;</span><span class="p">{};</span>
+<span class="n">make_hair</span><span class="p">(</span><span class="n">lines</span><span class="p">,</span> <span class="n">positions</span><span class="p">,</span> <span class="n">normals</span><span class="p">,</span> <span class="n">texcoords</span><span class="p">,</span> <span class="n">radius</span><span class="p">,</span>
+  <span class="n">surface_triangles</span><span class="p">,</span> <span class="n">surface_quads</span><span class="p">,</span> <span class="c1">// sampled surface</span>
+  <span class="n">surface_positions</span><span class="p">,</span> <span class="n">surface_normals</span><span class="p">,</span> <span class="n">surface_texcoords</span>
   <span class="p">{</span><span class="mi">8</span><span class="p">,</span> <span class="mi">65536</span><span class="p">},</span>     <span class="c1">// steps: line steps and number of lines</span>
   <span class="p">{</span><span class="mf">0.1</span><span class="p">,</span> <span class="mf">0.1</span><span class="p">},</span>     <span class="c1">// length: minimum and maximum length</span>
   <span class="p">{</span><span class="mf">0.001</span><span class="p">,</span> <span class="mf">0.001</span><span class="p">},</span> <span class="c1">// radius: minimum and maximum radius from base to tip</span>
@@ -1138,10 +1119,9 @@ from a triangle and quad mesh, and return a line set.</p>
   <span class="p">{</span><span class="mi">0</span><span class="p">,</span> <span class="mi">128</span><span class="p">},</span>       <span class="c1">// clump: clump added to hair (strength/number)</span>
   <span class="p">{</span><span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">});</span>        <span class="c1">// rotation: rotation added to hair (angle/strength)</span>
 </code></pre></div>
-
 <p>Finally, Yocto/Shape defines a function to create a quad mesh from a heighfield.
 Use <code>make_heightfield(...)</code> to create a heightfield meshes.</p>
-<div class="codehilite"><pre><span></span><code><span class="k">auto</span> <span class="n">quads</span>     <span class="o">=</span> <span class="n">vector</span><span class="o">&lt;</span><span class="n">vec4i</span><span class="o">&gt;</span><span class="p">{};</span>   <span class="c1">// shape element buffer</span>
+<div class="highlight"><pre><span></span><code><span class="k">auto</span> <span class="n">quads</span>     <span class="o">=</span> <span class="n">vector</span><span class="o">&lt;</span><span class="n">vec4i</span><span class="o">&gt;</span><span class="p">{};</span>   <span class="c1">// shape element buffer</span>
 <span class="k">auto</span> <span class="n">positions</span> <span class="o">=</span> <span class="n">vector</span><span class="o">&lt;</span><span class="n">vec3f</span><span class="o">&gt;</span><span class="p">{};</span>   <span class="c1">// vertex data buffers</span>
 <span class="k">auto</span> <span class="n">normals</span>   <span class="o">=</span> <span class="n">vector</span><span class="o">&lt;</span><span class="n">vec3f</span><span class="o">&gt;</span><span class="p">{};</span>
 <span class="k">auto</span> <span class="n">texcoords</span> <span class="o">=</span> <span class="n">vector</span><span class="o">&lt;</span><span class="n">vec2f</span><span class="o">&gt;</span><span class="p">{};</span>
@@ -1165,40 +1145,38 @@ Use <code>make_heightfield(...)</code> to create a heightfield meshes.</p>
         
 <footer class="md-footer">
   
-    <div class="md-footer-nav">
-      <nav class="md-footer-nav__inner md-grid" aria-label="Footer">
-        
-          <a href="../yocto_image/" class="md-footer-nav__link md-footer-nav__link--prev" rel="prev">
-            <div class="md-footer-nav__button md-icon">
-              <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M20 11v2H8l5.5 5.5-1.42 1.42L4.16 12l7.92-7.92L13.5 5.5 8 11h12z"/></svg>
+    <nav class="md-footer__inner md-grid" aria-label="Footer">
+      
+        <a href="../yocto_image/" class="md-footer__link md-footer__link--prev" rel="prev">
+          <div class="md-footer__button md-icon">
+            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M20 11v2H8l5.5 5.5-1.42 1.42L4.16 12l7.92-7.92L13.5 5.5 8 11h12z"/></svg>
+          </div>
+          <div class="md-footer__title">
+            <div class="md-ellipsis">
+              <span class="md-footer__direction">
+                Previous
+              </span>
+              Image utilities
             </div>
-            <div class="md-footer-nav__title">
-              <div class="md-ellipsis">
-                <span class="md-footer-nav__direction">
-                  Previous
-                </span>
-                Image utilities
-              </div>
+          </div>
+        </a>
+      
+      
+        <a href="../yocto_mesh/" class="md-footer__link md-footer__link--next" rel="next">
+          <div class="md-footer__title">
+            <div class="md-ellipsis">
+              <span class="md-footer__direction">
+                Next
+              </span>
+              Mesh processing
             </div>
-          </a>
-        
-        
-          <a href="../yocto_mesh/" class="md-footer-nav__link md-footer-nav__link--next" rel="next">
-            <div class="md-footer-nav__title">
-              <div class="md-ellipsis">
-                <span class="md-footer-nav__direction">
-                  Next
-                </span>
-                Mesh processing
-              </div>
-            </div>
-            <div class="md-footer-nav__button md-icon">
-              <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M4 11v2h12l-5.5 5.5 1.42 1.42L19.84 12l-7.92-7.92L10.5 5.5 16 11H4z"/></svg>
-            </div>
-          </a>
-        
-      </nav>
-    </div>
+          </div>
+          <div class="md-footer__button md-icon">
+            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M4 11v2h12l-5.5 5.5 1.42 1.42L19.84 12l-7.92-7.92L10.5 5.5 16 11H4z"/></svg>
+          </div>
+        </a>
+      
+    </nav>
   
   <div class="md-footer-meta md-typeset">
     <div class="md-footer-meta__inner md-grid">
@@ -1212,6 +1190,7 @@ Use <code>make_heightfield(...)</code> to create a heightfield meshes.</p>
         <a href="https://squidfunk.github.io/mkdocs-material/" target="_blank" rel="noopener">
           Material for MkDocs
         </a>
+        
       </div>
       
     </div>
@@ -1219,19 +1198,13 @@ Use <code>make_heightfield(...)</code> to create a heightfield meshes.</p>
 </footer>
       
     </div>
+    <div class="md-dialog" data-md-component="dialog">
+      <div class="md-dialog__inner md-typeset"></div>
+    </div>
+    <script id="__config" type="application/json">{"base": "../..", "features": ["navigation.instant"], "translations": {"clipboard.copy": "Copy to clipboard", "clipboard.copied": "Copied to clipboard", "search.config.lang": "en", "search.config.pipeline": "trimmer, stopWordFilter", "search.config.separator": "[\\s\\-]+", "search.placeholder": "Search", "search.result.placeholder": "Type to start searching", "search.result.none": "No matching documents", "search.result.one": "1 matching document", "search.result.other": "# matching documents", "search.result.more.one": "1 more on this page", "search.result.more.other": "# more on this page", "search.result.term.missing": "Missing"}, "search": "../../assets/javascripts/workers/search.fb4a9340.min.js", "version": null}</script>
     
-      <script src="../../assets/javascripts/vendor.08c56446.min.js"></script>
-      <script src="../../assets/javascripts/bundle.6ced434e.min.js"></script><script id="__lang" type="application/json">{"clipboard.copy": "Copy to clipboard", "clipboard.copied": "Copied to clipboard", "search.config.lang": "en", "search.config.pipeline": "trimmer, stopWordFilter", "search.config.separator": "[\\s\\-]+", "search.placeholder": "Search", "search.result.placeholder": "Type to start searching", "search.result.none": "No matching documents", "search.result.one": "1 matching document", "search.result.other": "# matching documents", "search.result.more.one": "1 more on this page", "search.result.more.other": "# more on this page", "search.result.term.missing": "Missing"}</script>
-      
-      <script>
-        app = initialize({
-          base: "../..",
-          features: [],
-          search: Object.assign({
-            worker: "../../assets/javascripts/worker/search.8c7e0a7e.min.js"
-          }, typeof search !== "undefined" && search)
-        })
-      </script>
+    
+      <script src="../../assets/javascripts/bundle.5cf3e710.min.js"></script>
       
     
   </body>
