@@ -199,15 +199,9 @@ struct glscene_state {
   vector<glscene_texture> textures = {};
 
   // programs
-  ogl_program instance_program;
-
-  // disable copy construction
-  glscene_state()                     = default;
-  glscene_state(const glscene_state&) = delete;
-  glscene_state& operator=(const glscene_state&) = delete;
-
-  // cleanup
-  ~glscene_state();
+  uint program  = 0;
+  uint vertex   = 0;
+  uint fragment = 0;
 };
 
 // Shading type

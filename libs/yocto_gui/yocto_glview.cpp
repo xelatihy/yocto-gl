@@ -1164,24 +1164,23 @@ void clear_shape(glscene_shape& glshape) {
   assert_ogl_error_();
 }
 
-glscene_state::~glscene_state() { clear_scene(*this); }
-
 static const char* shade_instance_vertex();
 static const char* shade_instanced_vertex();
 static const char* shade_instance_fragment();
 
 // Initialize an OpenGL scene
-void init_scene(glscene_state& scene) {
-  if (is_initialized(scene.instance_program)) return;
-  set_program(scene.instance_program, shade_instance_vertex(),
-      shade_instance_fragment(), true);
+void init_scene(glscene_state& glscene) {
+  set_program(glscene.program, glscene.vertex, glscene.fragment,
+      shade_instance_vertex(), shade_instance_fragment());
 }
 
 // Clear an OpenGL scene
-void clear_scene(glscene_state& scene) {
-  for (auto& texture : scene.textures) clear_texture(texture);
-  for (auto& shape : scene.shapes) clear_shape(shape);
-  clear_program(scene.instance_program);
+void clear_scene(glscene_state& glscene) {
+  for (auto& texture : glscene.textures) clear_texture(texture);
+  for (auto& shape : glscene.shapes) clear_shape(shape);
+  if (glscene.program) glDeleteProgram(glscene.program);
+  if (glscene.vertex) glDeleteProgram(glscene.vertex);
+  if (glscene.fragment) glDeleteProgram(glscene.fragment);
 }
 
 struct shade_view {
@@ -1190,36 +1189,35 @@ struct shade_view {
   mat4f   projection_matrix = {};
 };
 
-void set_view_uniforms(ogl_program& program, const shade_view& view) {
-  glUniform3f(glGetUniformLocation(program.program_id, "eye"),
-      view.camera_frame.o.x, view.camera_frame.o.y, view.camera_frame.o.z);
-  glUniformMatrix4fv(glGetUniformLocation(program.program_id, "view"), 1, false,
-      &view.view_matrix.x.x);
-  glUniformMatrix4fv(glGetUniformLocation(program.program_id, "projection"), 1,
-      false, &view.projection_matrix.x.x);
+void set_view_uniforms(uint program, const shade_view& view) {
+  glUniform3f(glGetUniformLocation(program, "eye"), view.camera_frame.o.x,
+      view.camera_frame.o.y, view.camera_frame.o.z);
+  glUniformMatrix4fv(
+      glGetUniformLocation(program, "view"), 1, false, &view.view_matrix.x.x);
+  glUniformMatrix4fv(glGetUniformLocation(program, "projection"), 1, false,
+      &view.projection_matrix.x.x);
 }
 
-void set_params_uniforms(ogl_program& program, const glscene_params& params) {
-  glUniform1f(
-      glGetUniformLocation(program.program_id, "exposure"), params.exposure);
-  glUniform1f(glGetUniformLocation(program.program_id, "gamma"), params.gamma);
-  glUniform1i(glGetUniformLocation(program.program_id, "double_sided"),
+void set_params_uniforms(uint program, const glscene_params& params) {
+  glUniform1f(glGetUniformLocation(program, "exposure"), params.exposure);
+  glUniform1f(glGetUniformLocation(program, "gamma"), params.gamma);
+  glUniform1i(glGetUniformLocation(program, "double_sided"),
       params.double_sided ? 1 : 0);
 }
 
 // Draw a shape
-void set_instance_uniforms(const glscene_state& scene, ogl_program& program,
+void set_instance_uniforms(const glscene_state& scene, uint program,
     const frame3f& frame, const glscene_shape& shape,
     const scene_material& material, const glscene_params& params) {
   auto shape_xform     = frame_to_mat(frame);
   auto shape_inv_xform = transpose(
       frame_to_mat(inverse(frame, params.non_rigid_frames)));
-  glUniformMatrix4fv(glGetUniformLocation(program.program_id, "frame"), 1,
-      false, &shape_xform.x.x);
-  glUniformMatrix4fv(glGetUniformLocation(program.program_id, "frameit"), 1,
-      false, &shape_inv_xform.x.x);
-  glUniform1f(glGetUniformLocation(program.program_id, "offset"), 0.0f);
-  glUniform1i(glGetUniformLocation(program.program_id, "faceted"),
+  glUniformMatrix4fv(
+      glGetUniformLocation(program, "frame"), 1, false, &shape_xform.x.x);
+  glUniformMatrix4fv(
+      glGetUniformLocation(program, "frameit"), 1, false, &shape_inv_xform.x.x);
+  glUniform1f(glGetUniformLocation(program, "offset"), 0.0f);
+  glUniform1i(glGetUniformLocation(program, "faceted"),
       (params.faceted || shape.normals == 0) ? 1 : 0);
 
   auto set_texture = [&scene](uint program, const char* name,
@@ -1238,39 +1236,32 @@ void set_instance_uniforms(const glscene_state& scene, ogl_program& program,
     }
   };
 
-  glUniform1i(glGetUniformLocation(program.program_id, "unlit"), 0);
-  glUniform3f(glGetUniformLocation(program.program_id, "emission"),
-      material.emission.x, material.emission.y, material.emission.z);
-  glUniform3f(glGetUniformLocation(program.program_id, "diffuse"),
-      material.color.x, material.color.y, material.color.z);
-  glUniform3f(glGetUniformLocation(program.program_id, "specular"),
-      material.metallic, material.metallic, material.metallic);
-  glUniform1f(glGetUniformLocation(program.program_id, "roughness"),
-      material.roughness);
-  glUniform1f(
-      glGetUniformLocation(program.program_id, "opacity"), material.opacity);
-  glUniform1f(glGetUniformLocation(program.program_id, "double_sided"),
+  glUniform1i(glGetUniformLocation(program, "unlit"), 0);
+  glUniform3f(glGetUniformLocation(program, "emission"), material.emission.x,
+      material.emission.y, material.emission.z);
+  glUniform3f(glGetUniformLocation(program, "diffuse"), material.color.x,
+      material.color.y, material.color.z);
+  glUniform3f(glGetUniformLocation(program, "specular"), material.metallic,
+      material.metallic, material.metallic);
+  glUniform1f(glGetUniformLocation(program, "roughness"), material.roughness);
+  glUniform1f(glGetUniformLocation(program, "opacity"), material.opacity);
+  glUniform1f(glGetUniformLocation(program, "double_sided"),
       params.double_sided ? 1 : 0);
-  set_texture(program.program_id, "emission_tex", "emission_tex_on",
-      material.emission_tex, 0);
-  set_texture(program.program_id, "diffuse_tex", "diffuse_tex_on",
-      material.color_tex, 1);
-  set_texture(program.program_id, "specular_tex", "specular_tex_on", -1, 2);
-  set_texture(program.program_id, "roughness_tex", "roughness_tex_on",
-      material.roughness_tex, 3);
-  set_texture(program.program_id, "opacity_tex", "opacity_tex_on", -1, 4);
-  set_texture(program.program_id, "normalmap_tex", "normalmap_tex_on",
-      material.normal_tex, 5);
+  set_texture(
+      program, "emission_tex", "emission_tex_on", material.emission_tex, 0);
+  set_texture(program, "diffuse_tex", "diffuse_tex_on", material.color_tex, 1);
+  set_texture(program, "specular_tex", "specular_tex_on", -1, 2);
+  set_texture(
+      program, "roughness_tex", "roughness_tex_on", material.roughness_tex, 3);
+  set_texture(program, "opacity_tex", "opacity_tex_on", -1, 4);
+  set_texture(
+      program, "normalmap_tex", "normalmap_tex_on", material.normal_tex, 5);
   assert_ogl_error_();
 
-  if (shape.points)
-    glUniform1i(glGetUniformLocation(program.program_id, "element"), 1);
-  if (shape.lines)
-    glUniform1i(glGetUniformLocation(program.program_id, "element"), 2);
-  if (shape.triangles)
-    glUniform1i(glGetUniformLocation(program.program_id, "element"), 3);
-  if (shape.quads)
-    glUniform1i(glGetUniformLocation(program.program_id, "element"), 3);
+  if (shape.points) glUniform1i(glGetUniformLocation(program, "element"), 1);
+  if (shape.lines) glUniform1i(glGetUniformLocation(program, "element"), 2);
+  if (shape.triangles) glUniform1i(glGetUniformLocation(program, "element"), 3);
+  if (shape.quads) glUniform1i(glGetUniformLocation(program, "element"), 3);
   assert_ogl_error_();
 }
 
@@ -1305,7 +1296,7 @@ static void draw_shape(glscene_shape& shape) {
   assert_ogl_error_();
 }
 
-void set_lighting_uniforms(ogl_program& program, const glscene_state& scene,
+void set_lighting_uniforms(uint program, const glscene_state& scene,
     const shade_view& view, const glscene_params& params) {
   struct gui_light {
     vec3f position = {0, 0, 0};
@@ -1327,34 +1318,34 @@ void set_lighting_uniforms(ogl_program& program, const glscene_state& scene,
   auto lighting = params.lighting;
   if (lighting == glscene_lighting_type::camlight) {
     auto& lights = camera_lights;
-    glUniform1i(glGetUniformLocation(program.program_id, "lighting"), 1);
-    glUniform3f(glGetUniformLocation(program.program_id, "ambient"), 0, 0, 0);
-    glUniform1i(glGetUniformLocation(program.program_id, "lights_num"),
-        (int)lights.size());
+    glUniform1i(glGetUniformLocation(program, "lighting"), 1);
+    glUniform3f(glGetUniformLocation(program, "ambient"), 0, 0, 0);
+    glUniform1i(
+        glGetUniformLocation(program, "lights_num"), (int)lights.size());
     auto lid = 0;
     for (auto light : lights) {
       auto is = std::to_string(lid);
       if (light->camera) {
         auto position = transform_direction(view.camera_frame, light->position);
-        glUniform3f(glGetUniformLocation(program.program_id,
-                        ("lights_position[" + is + "]").c_str()),
+        glUniform3f(glGetUniformLocation(
+                        program, ("lights_position[" + is + "]").c_str()),
             position.x, position.y, position.z);
       } else {
-        glUniform3f(glGetUniformLocation(program.program_id,
-                        ("lights_position[" + is + "]").c_str()),
+        glUniform3f(glGetUniformLocation(
+                        program, ("lights_position[" + is + "]").c_str()),
             light->position.x, light->position.y, light->position.z);
       }
-      glUniform3f(glGetUniformLocation(program.program_id,
-                      ("lights_emission[" + is + "]").c_str()),
+      glUniform3f(glGetUniformLocation(
+                      program, ("lights_emission[" + is + "]").c_str()),
           light->emission.x, light->emission.y, light->emission.z);
-      glUniform1i(glGetUniformLocation(
-                      program.program_id, ("lights_type[" + is + "]").c_str()),
+      glUniform1i(
+          glGetUniformLocation(program, ("lights_type[" + is + "]").c_str()),
           1);
       lid++;
     }
   } else if (lighting == glscene_lighting_type::eyelight) {
-    glUniform1i(glGetUniformLocation(program.program_id, "lighting"), 0);
-    glUniform1i(glGetUniformLocation(program.program_id, "lights_num"), 0);
+    glUniform1i(glGetUniformLocation(program, "lighting"), 0);
+    glUniform1i(glGetUniformLocation(program, "lights_num"), 0);
   } else {
     throw std::invalid_argument{"unknown lighting type"};
   }
@@ -1364,8 +1355,8 @@ void set_lighting_uniforms(ogl_program& program, const glscene_state& scene,
 void draw_instances(glscene_state& glscene, const scene_model& scene,
     const shade_view& view, const glscene_params& params) {
   // set program
-  auto& program = glscene.instance_program;
-  bind_program(program);
+  auto& program = glscene.program;
+  glUseProgram(program);
 
   // set scene uniforms
   set_view_uniforms(program, view);
