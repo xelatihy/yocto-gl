@@ -1131,6 +1131,29 @@ static void set_index_buffer(glscene_shape& shape, ogl_elementbuffer& buffer,
 
 // Create shape
 void set_shape(glscene_shape& glshape, const scene_shape& shape) {
+  auto set_vertex = [](ogl_arraybuffer& buffer, const auto& data,
+                        const auto& def, int location) {
+    if (data.empty()) {
+      glDisableVertexAttribArray(location);
+      if constexpr (sizeof(def) == sizeof(float))
+        glVertexAttrib1f(location, (float)def);
+      if constexpr (sizeof(def) == sizeof(vec2f))
+        glVertexAttrib2fv(location, (float*)&def.x);
+      if constexpr (sizeof(def) == sizeof(vec3f))
+        glVertexAttrib3fv(location, (float*)&def.x);
+      if constexpr (sizeof(def) == sizeof(vec4f))
+        glVertexAttrib4fv(location, (float*)&def.x);
+    } else {
+      set_arraybuffer(buffer, data, false);
+      glBindBuffer(GL_ARRAY_BUFFER, buffer.buffer_id);
+      glEnableVertexAttribArray(location);
+      glVertexAttribPointer(
+          location, buffer.element_size, GL_FLOAT, false, 0, nullptr);
+    }
+  };
+
+  if (!glshape.vertexarray) glGenVertexArrays(1, &glshape.vertexarray);
+  glBindVertexArray(glshape.vertexarray);
   if (shape.points.size() != 0) {
     set_index_buffer(glshape, glshape.points, shape.points);
   } else if (shape.lines.size() != 0) {
@@ -1140,31 +1163,12 @@ void set_shape(glscene_shape& glshape, const scene_shape& shape) {
   } else if (shape.quads.size() != 0) {
     set_index_buffer(glshape, glshape.quads, quads_to_triangles(shape.quads));
   }
-  if (shape.positions.empty()) {
-    set_vertex_buffer(glshape, vec3f{0, 0, 0}, 0);
-  } else {
-    set_vertex_buffer(glshape, glshape.positions, shape.positions, 0);
-  }
-  if (shape.normals.empty()) {
-    set_vertex_buffer(glshape, vec3f{0, 0, 1}, 1);
-  } else {
-    set_vertex_buffer(glshape, glshape.normals, shape.normals, 1);
-  }
-  if (shape.texcoords.empty()) {
-    set_vertex_buffer(glshape, vec2f{0, 0}, 2);
-  } else {
-    set_vertex_buffer(glshape, glshape.texcoords, shape.texcoords, 2);
-  }
-  if (shape.colors.empty()) {
-    set_vertex_buffer(glshape, vec4f{1, 1, 1, 1}, 3);
-  } else {
-    set_vertex_buffer(glshape, glshape.colors, shape.colors, 3);
-  }
-  if (shape.tangents.empty()) {
-    set_vertex_buffer(glshape, vec4f{0, 0, 1, 1}, 4);
-  } else {
-    set_vertex_buffer(glshape, glshape.tangents, shape.tangents, 4);
-  }
+  set_vertex(glshape.positions, shape.positions, vec3f{0, 0, 0}, 0);
+  set_vertex(glshape.normals, shape.normals, vec3f{0, 0, 1}, 1);
+  set_vertex(glshape.texcoords, shape.texcoords, vec2f{0, 0}, 2);
+  set_vertex(glshape.colors, shape.colors, vec4f{1, 1, 1, 1}, 3);
+  set_vertex(glshape.tangents, shape.tangents, vec4f{0, 0, 1, 1}, 4);
+  glBindVertexArray(0);
 }
 
 // Clean shape
