@@ -1277,11 +1277,6 @@ static void draw_shape(glscene_shape& shape) {
   assert_ogl_error_();
 }
 
-void set_lighting_uniforms(uint program, const glscene_state& scene,
-    const shade_view& view, const glscene_params& params) {
-  assert_ogl_error();
-}
-
 void draw_scene(glscene_state& glscene, const scene_model& scene,
     const vec4i& viewport, const glscene_params& params) {
   // check errors
@@ -1372,13 +1367,70 @@ void draw_scene(glscene_state& glscene, const scene_model& scene,
     throw std::invalid_argument{"unknown lighting type"};
   }
 
+  // helper
+  auto set_texture = [&glscene](uint program, const char* name,
+                         const char* name_on, int texture_idx, int unit) {
+    if (texture_idx >= 0) {
+      auto& gltexture = glscene.textures.at(texture_idx);
+      glActiveTexture(GL_TEXTURE0 + unit);
+      glBindTexture(GL_TEXTURE_2D, gltexture.texture);
+      glUniform1i(glGetUniformLocation(program, name), unit);
+      glUniform1i(glGetUniformLocation(program, name_on), 1);
+    } else {
+      glActiveTexture(GL_TEXTURE0 + unit);
+      glBindTexture(GL_TEXTURE_2D, 0);
+      glUniform1i(glGetUniformLocation(program, name), unit);
+      glUniform1i(glGetUniformLocation(program, name_on), 0);
+    }
+  };
+
   // draw instances
   if (params.wireframe) glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
   for (auto& instance : scene.instances) {
-    // if (instance.hidden) continue;
-    set_instance_uniforms(glscene, program, instance.frame,
-        glscene.shapes.at(instance.shape),
-        scene.materials.at(instance.material), params);
+    auto& glshape  = glscene.shapes.at(instance.shape);
+    auto& material = scene.materials.at(instance.material);
+
+    auto shape_xform     = frame_to_mat(instance.frame);
+    auto shape_inv_xform = transpose(
+        frame_to_mat(inverse(instance.frame, params.non_rigid_frames)));
+    glUniformMatrix4fv(
+        glGetUniformLocation(program, "frame"), 1, false, &shape_xform.x.x);
+    glUniformMatrix4fv(glGetUniformLocation(program, "frameit"), 1, false,
+        &shape_inv_xform.x.x);
+    glUniform1f(glGetUniformLocation(program, "offset"), 0.0f);
+    glUniform1i(glGetUniformLocation(program, "faceted"),
+        (params.faceted || glshape.normals == 0) ? 1 : 0);
+
+    glUniform1i(glGetUniformLocation(program, "unlit"), 0);
+    glUniform3f(glGetUniformLocation(program, "emission"), material.emission.x,
+        material.emission.y, material.emission.z);
+    glUniform3f(glGetUniformLocation(program, "diffuse"), material.color.x,
+        material.color.y, material.color.z);
+    glUniform3f(glGetUniformLocation(program, "specular"), material.metallic,
+        material.metallic, material.metallic);
+    glUniform1f(glGetUniformLocation(program, "roughness"), material.roughness);
+    glUniform1f(glGetUniformLocation(program, "opacity"), material.opacity);
+    glUniform1f(glGetUniformLocation(program, "double_sided"),
+        params.double_sided ? 1 : 0);
+    set_texture(
+        program, "emission_tex", "emission_tex_on", material.emission_tex, 0);
+    set_texture(
+        program, "diffuse_tex", "diffuse_tex_on", material.color_tex, 1);
+    set_texture(program, "specular_tex", "specular_tex_on", -1, 2);
+    set_texture(program, "roughness_tex", "roughness_tex_on",
+        material.roughness_tex, 3);
+    set_texture(program, "opacity_tex", "opacity_tex_on", -1, 4);
+    set_texture(
+        program, "normalmap_tex", "normalmap_tex_on", material.normal_tex, 5);
+    assert_ogl_error_();
+
+    if (glshape.points)
+      glUniform1i(glGetUniformLocation(program, "element"), 1);
+    if (glshape.lines) glUniform1i(glGetUniformLocation(program, "element"), 2);
+    if (glshape.triangles)
+      glUniform1i(glGetUniformLocation(program, "element"), 3);
+    if (glshape.quads) glUniform1i(glGetUniformLocation(program, "element"), 3);
+
     draw_shape(glscene.shapes.at(instance.shape));
   }
   if (params.wireframe) glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
