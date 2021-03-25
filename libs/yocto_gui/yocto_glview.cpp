@@ -651,18 +651,6 @@ static void init_glscene(glscene_state& glscene, const scene_model& ioscene) {
     auto& glshape = glscene.shapes.emplace_back();
     set_shape(glshape, ioshape);
   }
-
-  // environments
-  for (auto& ioenvironment : ioscene.environments) {
-    auto  handle        = add_environment(glscene);
-    auto& glenvironment = glscene.environments[handle];
-    set_frame(glenvironment, ioenvironment.frame);
-    set_emission(
-        glenvironment, ioenvironment.emission, ioenvironment.emission_tex);
-  }
-
-  // init environments
-  init_environments(glscene);
 }
 
 static void update_glscene(glscene_state& glscene, const scene_model& scene,
@@ -1182,79 +1170,18 @@ static const char* shade_instance_vertex();
 static const char* shade_instanced_vertex();
 static const char* shade_instance_fragment();
 
-static const char* shade_environment_fragment();
-
-static const char* precompute_brdflut_vertex();
-static const char* precompute_brdflut_fragment();
-
-static const char* precompute_cubemap_vertex();
-static const char* precompute_environment_fragment();
-static const char* precompute_irradiance_fragment();
-static const char* precompute_reflections_fragment();
-
-static void init_environment(
-    glscene_state& scene, glscene_environment& environment);
-static void init_envlight(
-    glscene_state& scene, glscene_environment& environment);
-
 // Initialize an OpenGL scene
 void init_scene(glscene_state& scene) {
   if (is_initialized(scene.instance_program)) return;
   set_program(scene.instance_program, shade_instance_vertex(),
       shade_instance_fragment(), true);
-  // set_program(scene.envlight_program, shade_instance_vertex(),
-  //     shade_instance_fragment(), true);
-  set_program(scene.environment_program, precompute_cubemap_vertex(),
-      shade_environment_fragment(), true);
-}
-
-// Initialize data for environment lighting
-void init_environments(glscene_state& scene, bool precompute_envlight) {
-  for (auto& environment : scene.environments) {
-    init_environment(scene, environment);
-    if (precompute_envlight) init_envlight(scene, environment);
-  }
-}
-
-// Check if we have an envlight
-bool has_envlight(const glscene_state& scene) {
-  return !scene.environments.empty() && !scene.envlight_shapes.empty();
 }
 
 // Clear an OpenGL scene
 void clear_scene(glscene_state& scene) {
   for (auto& texture : scene.textures) clear_texture(texture);
   for (auto& shape : scene.shapes) clear_shape(shape);
-  for (auto& shape : scene.envlight_shapes) clear_shape(shape);
-  for (auto& cubemap : scene.envlight_cubemaps) clear_cubemap(cubemap);
-  for (auto& cubemap : scene.envlight_diffuses) clear_cubemap(cubemap);
-  for (auto& cubemap : scene.envlight_speculars) clear_cubemap(cubemap);
-  for (auto& texture : scene.envlight_brdfluts) clear_texture(texture);
-  clear_program(scene.environment_program);
   clear_program(scene.instance_program);
-}
-
-// environment properties
-glenvironment_handle add_environment(glscene_state& scene) {
-  scene.environments.emplace_back();
-  return (int)scene.environments.size() - 1;
-}
-void set_frame(glscene_environment& environment, const frame3f& frame) {
-  environment.frame = frame;
-}
-void set_emission(glscene_environment& environment, const vec3f& emission,
-    gltexture_handle emission_tex) {
-  environment.emission     = emission;
-  environment.emission_tex = emission_tex;
-}
-
-glenvironment_handle add_environment(glscene_state& scene, const frame3f& frame,
-    const vec3f& emission, gltexture_handle emission_tex) {
-  auto  handle      = add_environment(scene);
-  auto& environment = scene.environments[handle];
-  set_frame(environment, frame);
-  set_emission(environment, emission, emission_tex);
-  return handle;
 }
 
 struct shade_view {
@@ -1361,24 +1288,6 @@ static void draw_shape(glscene_shape& shape) {
   assert_ogl_error_();
 }
 
-void draw_environments(glscene_state& scene, const shade_view& view,
-    const glscene_params& params) {
-  if (params.hide_environment) return;
-  auto& program = scene.environment_program;
-  if (!is_initialized(program)) return;
-  bind_program(program);
-  set_view_uniforms(program, view);
-  set_params_uniforms(program, params);
-  for (auto& environment : scene.environments) {
-    if (environment.envlight_cubemap == glinvalid_handle) continue;
-    set_uniform(program, "emission", environment.emission);
-    set_uniform(program, "emission_tex",
-        scene.envlight_cubemaps[environment.envlight_cubemap], 0);
-    draw_shape(scene.envlight_shapes[environment.envlight_shape]);
-  }
-  unbind_program();
-}
-
 void set_lighting_uniforms(ogl_program& program, const glscene_state& scene,
     const shade_view& view, const glscene_params& params) {
   struct gui_light {
@@ -1399,21 +1308,7 @@ void set_lighting_uniforms(ogl_program& program, const glscene_state& scene,
       &camera_light0, &camera_light1, &camera_light2, &camera_light3};
 
   auto lighting = params.lighting;
-  if (lighting == glscene_lighting_type::envlight && !has_envlight(scene))
-    lighting = glscene_lighting_type::camlight;
-  if (lighting == glscene_lighting_type::envlight && has_envlight(scene)) {
-    if (!has_envlight(scene)) return;
-    auto environment = scene.environments.front();
-    set_uniform(program, "lighting", 2);
-    set_uniform(program, "lights_num", 0);
-    set_uniform(program, "envlight_scale", environment.emission);
-    set_uniform(program, "envlight_irradiance",
-        scene.envlight_diffuses[environment.envlight_diffuse_], 6);
-    set_uniform(program, "envlight_reflection",
-        scene.envlight_speculars[environment.envlight_specular_], 7);
-    set_uniform(program, "envlight_brdflut",
-        scene.envlight_brdfluts[environment.envlight_brdflut_], 8);
-  } else if (lighting == glscene_lighting_type::camlight) {
+  if (lighting == glscene_lighting_type::camlight) {
     auto& lights = camera_lights;
     set_uniform(program, "lighting", 1);
     set_uniform(program, "ambient", vec3f{0, 0, 0});
@@ -1498,208 +1393,6 @@ void draw_scene(glscene_state& glscene, const scene_model& scene,
   auto& camera = scene.cameras.at(params.camera);
   auto  view   = make_scene_view(camera, viewport, params);
   draw_instances(glscene, scene, view, params);
-  draw_environments(glscene, view, params);
-}
-
-// image based lighting
-
-// Using 6 render passes, precompute a cubemap given a sampler for the
-// environment. The input sampler can be either a cubemap or a latlong texture.
-template <typename Sampler>
-static void precompute_cubemap(ogl_cubemap& cubemap, const Sampler& environment,
-    ogl_program& program, int size, int num_mipmap_levels = 1) {
-  // init cubemap with no data
-  set_cubemap(cubemap, size, 3,
-      array<float*, 6>{nullptr, nullptr, nullptr, nullptr, nullptr, nullptr},
-      true, true, true);
-  auto cube = ogl_shape{};
-  set_cube_shape(cube);
-
-  auto framebuffer = ogl_framebuffer{};
-  set_framebuffer(framebuffer, {size, size});
-
-  auto cameras = array<frame3f, 6>{
-      lookat_frame({0, 0, 0}, {1, 0, 0}, {0, 1, 0}),
-      lookat_frame({0, 0, 0}, {-1, 0, 0}, {0, 1, 0}),
-      lookat_frame({0, 0, 0}, {0, -1, 0}, {0, 0, -1}),
-      lookat_frame({0, 0, 0}, {0, 1, 0}, {0, 0, 1}),
-      lookat_frame({0, 0, 0}, {0, 0, -1}, {0, 1, 0}),
-      lookat_frame({0, 0, 0}, {0, 0, 1}, {0, 1, 0}),
-  };
-
-  bind_framebuffer(framebuffer);
-  bind_program(program);
-  for (int mipmap_level = 0; mipmap_level < num_mipmap_levels; mipmap_level++) {
-    // resize render buffer and viewport
-    set_framebuffer(framebuffer, {size, size});
-    set_ogl_viewport(vec2i{size, size});
-
-    for (auto i = 0; i < 6; ++i) {
-      // perspective_mat(fov, aspect, near, far)
-      auto camera_proj = perspective_mat(radians(90.0f), 1, 1, 100);
-      auto camera_view = frame_to_mat(inverse(cameras[i]));
-
-      set_framebuffer_texture(framebuffer, cubemap, i, mipmap_level);
-      clear_ogl_framebuffer({0, 0, 0, 0}, true);
-
-      set_uniform(program, "view", camera_view);
-      set_uniform(program, "projection", camera_proj);
-      set_uniform(program, "eye", vec3f{0, 0, 0});
-      set_uniform(program, "mipmap_level", mipmap_level);
-      set_uniform(program, "environment", environment, 0);
-
-      draw_shape(cube);
-    }
-    size /= 2;
-  }
-  unbind_program();
-  unbind_framebuffer();
-}
-
-// Using 6 render passes, precompute a cubemap given a sampler for the
-// environment. The input sampler can be either a cubemap or a latlong texture.
-static void precompute_cubemap(ogl_cubemap& cubemap,
-    const glscene_texture& environment, ogl_program& program, int size,
-    int num_mipmap_levels = 1) {
-  // init cubemap with no data
-  set_cubemap(cubemap, size, 3,
-      array<float*, 6>{nullptr, nullptr, nullptr, nullptr, nullptr, nullptr},
-      true, true, true);
-  auto cube = ogl_shape{};
-  set_cube_shape(cube);
-
-  auto framebuffer = ogl_framebuffer{};
-  set_framebuffer(framebuffer, {size, size});
-
-  auto cameras = array<frame3f, 6>{
-      lookat_frame({0, 0, 0}, {1, 0, 0}, {0, 1, 0}),
-      lookat_frame({0, 0, 0}, {-1, 0, 0}, {0, 1, 0}),
-      lookat_frame({0, 0, 0}, {0, -1, 0}, {0, 0, -1}),
-      lookat_frame({0, 0, 0}, {0, 1, 0}, {0, 0, 1}),
-      lookat_frame({0, 0, 0}, {0, 0, -1}, {0, 1, 0}),
-      lookat_frame({0, 0, 0}, {0, 0, 1}, {0, 1, 0}),
-  };
-
-  bind_framebuffer(framebuffer);
-  bind_program(program);
-  for (int mipmap_level = 0; mipmap_level < num_mipmap_levels; mipmap_level++) {
-    // resize render buffer and viewport
-    set_framebuffer(framebuffer, {size, size});
-    set_ogl_viewport(vec2i{size, size});
-
-    for (auto i = 0; i < 6; ++i) {
-      // perspective_mat(fov, aspect, near, far)
-      auto camera_proj = perspective_mat(radians(90.0f), 1, 1, 100);
-      auto camera_view = frame_to_mat(inverse(cameras[i]));
-
-      set_framebuffer_texture(framebuffer, cubemap, i, mipmap_level);
-      clear_ogl_framebuffer({0, 0, 0, 0}, true);
-
-      set_uniform(program, "view", camera_view);
-      set_uniform(program, "projection", camera_proj);
-      set_uniform(program, "eye", vec3f{0, 0, 0});
-      set_uniform(program, "mipmap_level", mipmap_level);
-
-      glActiveTexture(GL_TEXTURE0 + 0);
-      glBindTexture(GL_TEXTURE_2D, environment.texture);
-      glUniform1i(glGetUniformLocation(program.program_id, "environment"), 0);
-
-      draw_shape(cube);
-    }
-    size /= 2;
-  }
-  unbind_program();
-  unbind_framebuffer();
-}
-
-static void precompute_brdflut(ogl_texture& texture) {
-  auto size        = vec2i{512, 512};
-  auto screen_quad = ogl_shape{};
-  set_quad_shape(screen_quad);
-
-  auto program = ogl_program{};
-  set_program(program, precompute_brdflut_vertex(),
-      precompute_brdflut_fragment(), true);
-
-  set_texture(
-      texture, size.x, size.y, 3, (float*)nullptr, true, true, false, false);
-
-  auto framebuffer = ogl_framebuffer{};
-  set_framebuffer(framebuffer, size);
-  set_framebuffer_texture(framebuffer, texture, 0);
-
-  bind_framebuffer(framebuffer);
-  bind_program(program);
-
-  set_ogl_viewport(size);
-  clear_ogl_framebuffer({0, 0, 0, 0}, true);
-
-  draw_shape(screen_quad);
-
-  unbind_program();
-  unbind_framebuffer();
-}
-
-static void init_environment(
-    glscene_state& scene, glscene_environment& environment) {
-  // init drawing data
-  if (environment.envlight_cubemap == glinvalid_handle) {
-    scene.envlight_cubemaps.emplace_back();
-    environment.envlight_cubemap = (int)scene.envlight_cubemaps.size() - 1;
-  }
-  if (environment.envlight_shape == glinvalid_handle) {
-    scene.envlight_shapes.emplace_back();
-    environment.envlight_shape = (int)scene.envlight_shapes.size() - 1;
-  }
-
-  // init program and shape for drawing the environment
-  set_cube_shape(scene.envlight_shapes[environment.envlight_shape]);
-
-  // precompute cubemap from environment texture
-  auto size    = scene.textures[environment.emission_tex].height;
-  auto program = ogl_program{};
-  set_program(program, precompute_cubemap_vertex(),
-      precompute_environment_fragment(), true);
-  precompute_cubemap(scene.envlight_cubemaps[environment.envlight_cubemap],
-      scene.textures[environment.emission_tex], program, size, 1);
-}
-
-void init_envlight(glscene_state& scene, glscene_environment& environment) {
-  // init drawing data
-  if (environment.envlight_diffuse_ == glinvalid_handle) {
-    scene.envlight_diffuses.emplace_back();
-    environment.envlight_diffuse_ = (int)scene.envlight_diffuses.size() - 1;
-  }
-  if (environment.envlight_cubemap == glinvalid_handle) {
-    scene.envlight_cubemaps.emplace_back();
-    environment.envlight_cubemap = (int)scene.envlight_cubemaps.size() - 1;
-  }
-  if (environment.envlight_specular_ == glinvalid_handle) {
-    scene.envlight_speculars.emplace_back();
-    environment.envlight_specular_ = (int)scene.envlight_speculars.size() - 1;
-  }
-  if (environment.envlight_brdflut_ == glinvalid_handle) {
-    scene.envlight_brdfluts.emplace_back();
-    environment.envlight_brdflut_ = (int)scene.envlight_brdfluts.size() - 1;
-  }
-  // precompute irradiance map
-  auto diffuse_program = ogl_program{};
-  set_program(diffuse_program, precompute_cubemap_vertex(),
-      precompute_irradiance_fragment(), true);
-  precompute_cubemap(scene.envlight_diffuses[environment.envlight_diffuse_],
-      scene.envlight_cubemaps[environment.envlight_cubemap], diffuse_program,
-      64);
-
-  // precompute specular map
-  auto specular_program = ogl_program{};
-  set_program(specular_program, precompute_cubemap_vertex(),
-      precompute_reflections_fragment(), true);
-  precompute_cubemap(scene.envlight_speculars[environment.envlight_specular_],
-      scene.envlight_cubemaps[environment.envlight_cubemap], specular_program,
-      256, 6);
-
-  // precompute lookup texture for specular brdf
-  precompute_brdflut(scene.envlight_brdfluts[environment.envlight_brdflut_]);
 }
 
 #ifndef _WIN32

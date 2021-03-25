@@ -192,39 +192,13 @@ void set_shape(glscene_shape& glshape, const scene_shape& shape);
 // Clean shape
 void clear_shape(glscene_shape& glshape);
 
-// Opengl environment
-struct glscene_environment {
-  // environment properties
-  frame3f          frame        = identity3x4f;
-  vec3f            emission     = {1, 1, 1};
-  gltexture_handle emission_tex = glinvalid_handle;
-
-  // drawing data
-  glshape_handle   envlight_shape   = glinvalid_handle;
-  glcubemap_handle envlight_cubemap = glinvalid_handle;
-
-  // envlight precomputed data
-  glcubemap_handle envlight_diffuse_  = glinvalid_handle;
-  glcubemap_handle envlight_specular_ = glinvalid_handle;
-  gltexture_handle envlight_brdflut_  = glinvalid_handle;
-};
-
 // Opengl scene
 struct glscene_state {
   // scene objects
-  vector<glscene_shape>       shapes       = {};
-  vector<glscene_texture>     textures     = {};
-  vector<glscene_environment> environments = {};
-
-  // data for envmaps
-  vector<ogl_shape>   envlight_shapes    = {};
-  vector<ogl_cubemap> envlight_cubemaps  = {};
-  vector<ogl_cubemap> envlight_diffuses  = {};
-  vector<ogl_cubemap> envlight_speculars = {};
-  vector<ogl_texture> envlight_brdfluts  = {};
+  vector<glscene_shape>   shapes   = {};
+  vector<glscene_texture> textures = {};
 
   // programs
-  ogl_program environment_program;
   ogl_program instance_program;
 
   // disable copy construction
@@ -264,27 +238,8 @@ struct glscene_params {
 void init_scene(glscene_state& scene);
 bool is_initialized(const glscene_state& scene);
 
-// Initialize data for environment lighting
-void init_environments(glscene_state& scene, bool precompute_envlight = true);
-
-// Check if we have an envlight
-bool has_envlight(const glscene_state& scene);
-
 // Clear an OpenGL scene
 void clear_scene(glscene_state& scene);
-
-// add scene elements
-gltexture_handle     add_texture(glscene_state& scene);
-glenvironment_handle add_environment(glscene_state& scene);
-
-// environment properties
-void set_frame(glscene_environment& environment, const frame3f& frame);
-void set_emission(glscene_environment& environment, const vec3f& emission,
-    gltexture_handle emission_tex = glinvalid_handle);
-
-// shortcuts
-glenvironment_handle add_environment(glscene_state& scene, const frame3f& frame,
-    const vec3f& emission, gltexture_handle emission_tex = glinvalid_handle);
 
 // draw scene
 void draw_scene(glscene_state& glscene, const scene_model& scene,
