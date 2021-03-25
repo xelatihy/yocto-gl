@@ -1372,7 +1372,8 @@ void draw_scene(glscene_state& glscene, const scene_model& scene,
     throw std::invalid_argument{"unknown lighting type"};
   }
 
-  set_ogl_wireframe(params.wireframe);
+  // draw instances
+  if (params.wireframe) glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
   for (auto& instance : scene.instances) {
     // if (instance.hidden) continue;
     set_instance_uniforms(glscene, program, instance.frame,
@@ -1380,7 +1381,10 @@ void draw_scene(glscene_state& glscene, const scene_model& scene,
         scene.materials.at(instance.material), params);
     draw_shape(glscene.shapes.at(instance.shape));
   }
-  unbind_program();
+  if (params.wireframe) glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
+
+  // done
+  glUseProgram(0);
 }
 
 #ifndef _WIN32
