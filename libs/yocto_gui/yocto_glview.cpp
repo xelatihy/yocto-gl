@@ -65,8 +65,8 @@ static bool uiupdate_image_params(
     return true;
   }
   if (input.mouse_right && !input.widgets_active) {
-    glparams.scale *= powf(
-        2, (input.mouse_pos.x - input.mouse_last.x) * 0.001f);
+    glparams.scale *= pow(
+        2.0f, (input.mouse_pos.x - input.mouse_last.x) * 0.001f);
     return true;
   }
   return false;
