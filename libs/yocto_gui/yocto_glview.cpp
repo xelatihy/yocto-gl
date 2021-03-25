@@ -836,7 +836,7 @@ void set_program(uint& program_id, uint& vertex_id, uint& fragment_id,
 // -----------------------------------------------------------------------------
 namespace yocto {
 
-static auto ogl_image_vertex =
+static auto glimage_vertex =
     R"(
 #version 330
 in vec2 positions;
@@ -851,7 +851,7 @@ void main() {
 }
 )";
 #if 0
-static auto ogl_image_vertex = R"(
+static auto glimage_vertex = R"(
 #version 330
 in vec2 positions;
 out vec2 frag_texcoord;
@@ -865,7 +865,7 @@ void main() {
 }
 )";
 #endif
-static auto ogl_image_fragment =
+static auto glimage_fragment =
     R"(
 #version 330
 in vec2 frag_texcoord;
@@ -876,7 +876,7 @@ void main() {
 }
 )";
 #if 0
-static auto ogl_image_fragment = R"(
+static auto glimage_fragment = R"(
 #version 330
 in vec2 frag_texcoord;
 out vec4 frag_color;
@@ -897,8 +897,8 @@ void main() {
 // init image program
 bool init_image(glimage_state& glimage) {
   // program
-  set_program(glimage.program, glimage.vertex, glimage.fragment,
-      ogl_image_vertex, ogl_image_fragment);
+  set_program(glimage.program, glimage.vertex, glimage.fragment, glimage_vertex,
+      glimage_fragment);
 
   // vertex arrays
   glGenVertexArrays(1, &glimage.vertexarray);
@@ -1002,6 +1002,284 @@ void draw_image(glimage_state& glimage, const glimage_params& params) {
 // SCENE DRAWING
 // -----------------------------------------------------------------------------
 namespace yocto {
+
+#ifndef _WIN32
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Woverlength-strings"
+#endif
+
+static const char* glscene_vertex =
+    R"(
+#version 330
+
+layout(location = 0) in vec3 positions;           // vertex position (in mesh coordinate frame)
+layout(location = 1) in vec3 normals;             // vertex normal (in mesh coordinate frame)
+layout(location = 2) in vec2 texcoords;           // vertex texcoords
+layout(location = 3) in vec4 colors;              // vertex color
+layout(location = 4) in vec4 tangents;            // vertex tangent space
+
+uniform mat4 frame;             // shape transform
+uniform mat4 frameit;           // shape transform
+uniform float offset;           // shape normal offset
+
+uniform mat4 view;              // inverse of the camera frame (as a matrix)
+uniform mat4 projection;        // camera projection
+
+out vec3 position;              // [to fragment shader] vertex position (in world coordinate)
+out vec3 normal;                // [to fragment shader] vertex normal (in world coordinate)
+out vec2 texcoord;              // [to fragment shader] vertex texture coordinates
+out vec4 color;                 // [to fragment shader] vertex color
+out vec4 tangsp;                // [to fragment shader] vertex tangent space
+
+// main function
+void main() {
+  // copy values
+  position = positions;
+  normal = normals;
+  tangsp = tangents;
+  texcoord = texcoords;
+  color = colors;
+
+  // normal offset
+  if(offset != 0) {
+    position += offset * normal;
+  }
+
+  // world projection
+  position = (frame * vec4(position,1)).xyz;
+  normal = (frameit * vec4(normal,0)).xyz;
+  tangsp.xyz = (frame * vec4(tangsp.xyz,0)).xyz;
+
+  // clip
+  gl_Position = projection * view * vec4(position,1);
+}
+)";
+
+static const char* glscene_fragment =
+    R"(
+#version 330
+
+in vec3 position;  // [from vertex shader] position in world space
+in vec3 normal;    // [from vertex shader] normal in world space
+in vec2 texcoord;  // [from vertex shader] texcoord
+in vec4 color;     // [from vertex shader] color
+in vec4 tangsp;    // [from vertex shader] tangent space
+
+uniform int element;
+uniform bool unlit;
+uniform bool faceted;
+uniform vec4 highlight;
+uniform bool double_sided;
+
+uniform vec3 emission;            // material ke
+uniform vec3 diffuse;             // material kd
+uniform vec3 specular;            // material ks
+uniform float roughness;          // material rs
+uniform float opacity;            // material op
+
+uniform bool emission_tex_on;     // material ke texture on
+uniform sampler2D emission_tex;   // material ke texture
+uniform bool diffuse_tex_on;      // material kd texture on
+uniform sampler2D diffuse_tex;    // material kd texture
+uniform bool specular_tex_on;     // material ks texture on
+uniform sampler2D specular_tex;   // material ks texture
+uniform bool roughness_tex_on;    // material rs texture on
+uniform sampler2D roughness_tex;  // material rs texture
+uniform bool opacity_tex_on;      // material op texture on
+uniform sampler2D opacity_tex;    // material op texture
+uniform bool normalmap_tex_on;    // material normal texture on
+uniform sampler2D normalmap_tex;  // material normal texture
+
+uniform int  lighting;            // eyelight shading
+uniform vec3 ambient;             // ambient light
+uniform int  lights_num;                // number of lights
+uniform int  lights_type[16];     // light type (0 -> point, 1 -> directional)
+uniform vec3 lights_position[16];            // light positions
+uniform vec3 lights_emission[16]; // light intensities
+
+uniform mat4 frame;              // shape transform
+uniform mat4 frameit;            // shape transform
+
+uniform vec3 eye;              // camera position
+uniform mat4 view;             // inverse of the camera frame (as a matrix)
+uniform mat4 projection;       // camera projection
+
+uniform float exposure; 
+uniform float gamma;
+
+out vec4 frag_color;      
+
+float pif = 3.14159265;
+
+struct shade_brdf {
+  vec3  emission;
+  vec3  diffuse;
+  vec3  specular;
+  float roughness;
+  float opacity;
+};
+
+vec3 eval_brdf_color(vec3 value, sampler2D tex, bool tex_on) {
+  vec3 result = value;
+  if (tex_on) result *= texture(tex, texcoord).rgb;
+  return result;
+}
+float eval_brdf_value(float value, sampler2D tex, bool tex_on) {
+  float result = value;
+  if (tex_on) result *= texture(tex, texcoord).r;
+  return result;
+}
+
+shade_brdf eval_brdf() {
+  // color?
+  shade_brdf brdf;
+  brdf.emission  = eval_brdf_color(emission, emission_tex, emission_tex_on);
+  brdf.diffuse   = eval_brdf_color(diffuse, diffuse_tex, diffuse_tex_on);
+  brdf.specular  = eval_brdf_color(specular, specular_tex, specular_tex_on);
+  brdf.roughness = eval_brdf_value(roughness, roughness_tex, roughness_tex_on);
+  brdf.opacity   = eval_brdf_value(opacity, opacity_tex, opacity_tex_on);
+  vec3 base = brdf.diffuse;
+  float metallic = brdf.specular.x;
+  brdf.diffuse = base * (1 - metallic);
+  brdf.specular = base * metallic + vec3(0.04) * (1 - metallic);
+  brdf.roughness = brdf.roughness * brdf.roughness;
+  return brdf;
+}
+
+void eval_light(int lid, vec3 position, out vec3 radiance, out vec3 incoming) {
+  radiance = vec3(0,0,0);
+  incoming = vec3(0,0,0);
+  if(lights_type[lid] == 0) {
+    // compute point light color at position
+    radiance = lights_emission[lid] / pow(length(lights_position[lid]-position),2);
+    // compute light direction at position
+    incoming = normalize(lights_position[lid]-position);
+  }
+  else if(lights_type[lid] == 1) {
+    // compute light color
+    radiance = lights_emission[lid];
+    // compute light direction
+    incoming = normalize(lights_position[lid]);
+  }
+}
+
+vec3 eval_brdfcos(shade_brdf brdf, vec3 n, vec3 incoming, vec3 outgoing) {
+  vec3 halfway = normalize(incoming+outgoing);
+  float ndi = dot(incoming,n), ndo = dot(outgoing,n), ndh = dot(halfway,n);
+  if(ndi<=0 || ndo <=0) return vec3(0);
+  vec3 diff = ndi * brdf.diffuse / pif;
+  if(ndh<=0) return diff;
+  float cos2 = ndh * ndh;
+  float tan2 = (1 - cos2) / cos2;
+  float alpha2 = brdf.roughness * brdf.roughness;
+  float d = alpha2 / (pif * cos2 * cos2 * (alpha2 + tan2) * (alpha2 + tan2));
+  float lambda_o = (-1 + sqrt(1 + (1 - ndo * ndo) / (ndo * ndo))) / 2;
+  float lambda_i = (-1 + sqrt(1 + (1 - ndi * ndi) / (ndi * ndi))) / 2;
+  float g = 1 / (1 + lambda_o + lambda_i);
+  vec3 spec = ndi * brdf.specular * d * g / (4*ndi*ndo);
+  return diff+spec;
+}
+
+vec3 apply_normal_map(vec2 texcoord, vec3 normal, vec4 tangsp) {
+    if(!normalmap_tex_on) return normal;
+  vec3 tangu = normalize((frame * vec4(normalize(tangsp.xyz),0)).xyz);
+  vec3 tangv = normalize(cross(normal, tangu));
+  if(tangsp.w < 0) tangv = -tangv;
+  vec3 texture = 2 * pow(texture(normalmap_tex,texcoord).xyz, vec3(1/2.2)) - 1;
+  // texture.y = -texture.y;
+  return normalize( tangu * texture.x + tangv * texture.y + normal * texture.z );
+}
+
+vec3 triangle_normal(vec3 position) {
+  vec3 fdx = dFdx(position); 
+  vec3 fdy = dFdy(position); 
+  return normalize((frame * vec4(normalize(cross(fdx, fdy)), 0)).xyz);
+}
+
+#define element_points 1
+#define element_lines 2
+#define element_triangles 3
+
+vec3 eval_normal(vec3 outgoing) {
+  vec3 norm;
+  if (element == element_triangles) {
+    if (faceted) {
+      norm = triangle_normal(position);
+    } else {
+      norm = normalize(normal);
+    }
+  }
+
+  if (element == element_lines) {
+    vec3 tangent = normalize(normal);
+    norm         = normalize(outgoing - tangent * dot(outgoing, tangent));
+  }
+
+  // apply normal map
+  norm = apply_normal_map(texcoord, norm, tangsp);
+
+  // use faceforward to ensure the normals points toward us
+  if (double_sided) norm = faceforward(norm, -outgoing, norm);
+  return norm;
+}
+
+#define lighting_eyelight 0
+#define lighting_camlight 1
+
+// main
+void main() {
+  // view vector
+  vec3 outgoing = normalize(eye - position);
+  vec3 n = eval_normal(outgoing);
+
+  // get material color from textures
+  shade_brdf brdf = eval_brdf();
+  if(brdf.opacity < 0.005) discard;
+
+  if(unlit) {
+    frag_color = vec4(brdf.emission + brdf.diffuse, brdf.opacity);
+    return; 
+  }
+
+  // emission
+  vec3 radiance = brdf.emission;
+
+  // check early exit
+  if(brdf.diffuse != vec3(0,0,0) || brdf.specular != vec3(0,0,0)) {
+    // eyelight shading
+    if(lighting == lighting_eyelight) {
+      vec3 incoming = outgoing;
+      radiance += pif * eval_brdfcos(brdf, n, incoming, outgoing);
+    }
+    if(lighting == lighting_camlight) {
+      // accumulate ambient
+      radiance += ambient * brdf.diffuse;
+      // foreach light
+      for(int lid = 0; lid < lights_num; lid ++) {
+        vec3 cl = vec3(0,0,0); vec3 incoming = vec3(0,0,0);
+        eval_light(lid, position, cl, incoming);
+        radiance += cl * eval_brdfcos(brdf, n, incoming, outgoing);
+      }
+    }
+  }
+
+  // final color correction
+  radiance = pow(radiance * pow(2,exposure), vec3(1/gamma));
+
+  // highlighting
+  if(highlight.w > 0) {
+    if(mod(int(gl_FragCoord.x)/4 + int(gl_FragCoord.y)/4, 2)  == 0)
+        radiance = highlight.xyz * highlight.w + radiance * (1-highlight.w);
+  }
+
+  // output final color by setting gl_FragColor
+  frag_color = vec4(radiance, brdf.opacity);
+}
+)";
+
+#ifndef _WIN32
+#pragma GCC diagnostic pop
+#endif
 
 // Create texture
 void set_texture(glscene_texture& gltexture, const scene_texture& texture) {
@@ -1137,15 +1415,11 @@ void clear_shape(glscene_shape& glshape) {
   assert_ogl_error_();
 }
 
-static const char* shade_instance_vertex();
-static const char* shade_instanced_vertex();
-static const char* shade_instance_fragment();
-
 // init scene
 void init_glscene(glscene_state& glscene, const scene_model& ioscene) {
   // program
-  set_program(glscene.program, glscene.vertex, glscene.fragment,
-      shade_instance_vertex(), shade_instance_fragment());
+  set_program(glscene.program, glscene.vertex, glscene.fragment, glscene_vertex,
+      glscene_fragment);
 
   // textures
   for (auto& iotexture : ioscene.textures) {
@@ -1464,358 +1738,5 @@ void draw_scene(glscene_state& glscene, const scene_model& scene,
   // done
   glUseProgram(0);
 }
-
-#ifndef _WIN32
-#pragma GCC diagnostic push
-#pragma GCC diagnostic ignored "-Woverlength-strings"
-#endif
-
-static const char* shade_instance_vertex() {
-  static const char* code =
-      R"(
-#version 330
-
-layout(location = 0) in vec3 positions;           // vertex position (in mesh coordinate frame)
-layout(location = 1) in vec3 normals;             // vertex normal (in mesh coordinate frame)
-layout(location = 2) in vec2 texcoords;           // vertex texcoords
-layout(location = 3) in vec4 colors;              // vertex color
-layout(location = 4) in vec4 tangents;            // vertex tangent space
-
-uniform mat4 frame;             // shape transform
-uniform mat4 frameit;           // shape transform
-uniform float offset;           // shape normal offset
-
-uniform mat4 view;              // inverse of the camera frame (as a matrix)
-uniform mat4 projection;        // camera projection
-
-out vec3 position;              // [to fragment shader] vertex position (in world coordinate)
-out vec3 normal;                // [to fragment shader] vertex normal (in world coordinate)
-out vec2 texcoord;              // [to fragment shader] vertex texture coordinates
-out vec4 color;                 // [to fragment shader] vertex color
-out vec4 tangsp;                // [to fragment shader] vertex tangent space
-
-// main function
-void main() {
-  // copy values
-  position = positions;
-  normal = normals;
-  tangsp = tangents;
-  texcoord = texcoords;
-  color = colors;
-
-  // normal offset
-  if(offset != 0) {
-    position += offset * normal;
-  }
-
-  // world projection
-  position = (frame * vec4(position,1)).xyz;
-  normal = (frameit * vec4(normal,0)).xyz;
-  tangsp.xyz = (frame * vec4(tangsp.xyz,0)).xyz;
-
-  // clip
-  gl_Position = projection * view * vec4(position,1);
-}
-)";
-  return code;
-}
-
-[[maybe_unused]] static const char* shade_instanced_vertex() {
-  static const char* code = R"(
-#version 330
-
-layout(location = 0) in vec3 positions;
-layout(location = 1) in vec3 normals;
-layout(location = 2) in vec2 texcoords;
-layout(location = 3) in vec4 colors;
-layout(location = 4) in vec4 tangents;
-layout(location = 5) in vec3 instance_from;
-layout(location = 6) in vec3 instance_to;
-
-uniform mat4  frame;
-uniform mat4  frameit;
-uniform float offset = 0;
-
-uniform mat4 view;
-uniform mat4 projection;
-
-out vec3 position;
-out vec3 normal;
-out vec2 texcoord;
-out vec4 color;
-out vec4 tangsp;
-
-// main function
-void main() {
-  // copy values
-  position = positions;
-  normal   = normals;
-  tangsp   = tangents;
-  texcoord = texcoords;
-  color    = colors;
-
-  // normal offset
-  if (offset != 0) {
-    position += offset * normal;
-  }
-
-  // world projection
-  position   = (frame * vec4(position, 1)).xyz;
-  normal     = (frameit * vec4(normal, 0)).xyz;
-  tangsp.xyz = (frame * vec4(tangsp.xyz, 0)).xyz;
-
-  if (instance_from != instance_to) {
-    vec3 dir = instance_to - instance_from;
-
-    vec3 up = abs(dir.z) < 0.999 ? vec3(0.0, 0.0, 1.0) : vec3(1.0, 0.0, 0.0);
-    vec3 tangent   = normalize(cross(up, dir));
-    vec3 bitangent = normalize(cross(dir, tangent));
-
-    mat3 mat;
-    mat[2]    = dir;
-    mat[0]    = tangent;
-    mat[1]    = bitangent;
-    position  = mat * position;
-    normal    = mat * normal;
-    tangent   = mat * tangent;
-    bitangent = mat * bitangent;
-  }
-  position += instance_from;
-
-  // clip
-  gl_Position = projection * view * vec4(position, 1);
-}
-)";
-  return code;
-}
-
-static const char* shade_instance_fragment() {
-  static const char* code =
-      R"(
-#version 330
-
-in vec3 position;  // [from vertex shader] position in world space
-in vec3 normal;    // [from vertex shader] normal in world space
-in vec2 texcoord;  // [from vertex shader] texcoord
-in vec4 color;     // [from vertex shader] color
-in vec4 tangsp;    // [from vertex shader] tangent space
-
-uniform int element;
-uniform bool unlit;
-uniform bool faceted;
-uniform vec4 highlight;
-uniform bool double_sided;
-
-uniform vec3 emission;            // material ke
-uniform vec3 diffuse;             // material kd
-uniform vec3 specular;            // material ks
-uniform float roughness;          // material rs
-uniform float opacity;            // material op
-
-uniform bool emission_tex_on;     // material ke texture on
-uniform sampler2D emission_tex;   // material ke texture
-uniform bool diffuse_tex_on;      // material kd texture on
-uniform sampler2D diffuse_tex;    // material kd texture
-uniform bool specular_tex_on;     // material ks texture on
-uniform sampler2D specular_tex;   // material ks texture
-uniform bool roughness_tex_on;    // material rs texture on
-uniform sampler2D roughness_tex;  // material rs texture
-uniform bool opacity_tex_on;      // material op texture on
-uniform sampler2D opacity_tex;    // material op texture
-uniform bool normalmap_tex_on;    // material normal texture on
-uniform sampler2D normalmap_tex;  // material normal texture
-
-uniform int  lighting;            // eyelight shading
-uniform vec3 ambient;             // ambient light
-uniform int  lights_num;                // number of lights
-uniform int  lights_type[16];     // light type (0 -> point, 1 -> directional)
-uniform vec3 lights_position[16];            // light positions
-uniform vec3 lights_emission[16]; // light intensities
-
-uniform mat4 frame;              // shape transform
-uniform mat4 frameit;            // shape transform
-
-uniform vec3 eye;              // camera position
-uniform mat4 view;             // inverse of the camera frame (as a matrix)
-uniform mat4 projection;       // camera projection
-
-uniform float exposure; 
-uniform float gamma;
-
-out vec4 frag_color;      
-
-float pif = 3.14159265;
-
-struct shade_brdf {
-  vec3  emission;
-  vec3  diffuse;
-  vec3  specular;
-  float roughness;
-  float opacity;
-};
-
-vec3 eval_brdf_color(vec3 value, sampler2D tex, bool tex_on) {
-  vec3 result = value;
-  if (tex_on) result *= texture(tex, texcoord).rgb;
-  return result;
-}
-float eval_brdf_value(float value, sampler2D tex, bool tex_on) {
-  float result = value;
-  if (tex_on) result *= texture(tex, texcoord).r;
-  return result;
-}
-
-shade_brdf eval_brdf() {
-  // color?
-  shade_brdf brdf;
-  brdf.emission  = eval_brdf_color(emission, emission_tex, emission_tex_on);
-  brdf.diffuse   = eval_brdf_color(diffuse, diffuse_tex, diffuse_tex_on);
-  brdf.specular  = eval_brdf_color(specular, specular_tex, specular_tex_on);
-  brdf.roughness = eval_brdf_value(roughness, roughness_tex, roughness_tex_on);
-  brdf.opacity   = eval_brdf_value(opacity, opacity_tex, opacity_tex_on);
-  vec3 base = brdf.diffuse;
-  float metallic = brdf.specular.x;
-  brdf.diffuse = base * (1 - metallic);
-  brdf.specular = base * metallic + vec3(0.04) * (1 - metallic);
-  brdf.roughness = brdf.roughness * brdf.roughness;
-  return brdf;
-}
-
-void eval_light(int lid, vec3 position, out vec3 radiance, out vec3 incoming) {
-  radiance = vec3(0,0,0);
-  incoming = vec3(0,0,0);
-  if(lights_type[lid] == 0) {
-    // compute point light color at position
-    radiance = lights_emission[lid] / pow(length(lights_position[lid]-position),2);
-    // compute light direction at position
-    incoming = normalize(lights_position[lid]-position);
-  }
-  else if(lights_type[lid] == 1) {
-    // compute light color
-    radiance = lights_emission[lid];
-    // compute light direction
-    incoming = normalize(lights_position[lid]);
-  }
-}
-
-vec3 eval_brdfcos(shade_brdf brdf, vec3 n, vec3 incoming, vec3 outgoing) {
-  vec3 halfway = normalize(incoming+outgoing);
-  float ndi = dot(incoming,n), ndo = dot(outgoing,n), ndh = dot(halfway,n);
-  if(ndi<=0 || ndo <=0) return vec3(0);
-  vec3 diff = ndi * brdf.diffuse / pif;
-  if(ndh<=0) return diff;
-  float cos2 = ndh * ndh;
-  float tan2 = (1 - cos2) / cos2;
-  float alpha2 = brdf.roughness * brdf.roughness;
-  float d = alpha2 / (pif * cos2 * cos2 * (alpha2 + tan2) * (alpha2 + tan2));
-  float lambda_o = (-1 + sqrt(1 + (1 - ndo * ndo) / (ndo * ndo))) / 2;
-  float lambda_i = (-1 + sqrt(1 + (1 - ndi * ndi) / (ndi * ndi))) / 2;
-  float g = 1 / (1 + lambda_o + lambda_i);
-  vec3 spec = ndi * brdf.specular * d * g / (4*ndi*ndo);
-  return diff+spec;
-}
-
-vec3 apply_normal_map(vec2 texcoord, vec3 normal, vec4 tangsp) {
-    if(!normalmap_tex_on) return normal;
-  vec3 tangu = normalize((frame * vec4(normalize(tangsp.xyz),0)).xyz);
-  vec3 tangv = normalize(cross(normal, tangu));
-  if(tangsp.w < 0) tangv = -tangv;
-  vec3 texture = 2 * pow(texture(normalmap_tex,texcoord).xyz, vec3(1/2.2)) - 1;
-  // texture.y = -texture.y;
-  return normalize( tangu * texture.x + tangv * texture.y + normal * texture.z );
-}
-
-vec3 triangle_normal(vec3 position) {
-  vec3 fdx = dFdx(position); 
-  vec3 fdy = dFdy(position); 
-  return normalize((frame * vec4(normalize(cross(fdx, fdy)), 0)).xyz);
-}
-
-#define element_points 1
-#define element_lines 2
-#define element_triangles 3
-
-vec3 eval_normal(vec3 outgoing) {
-  vec3 norm;
-  if (element == element_triangles) {
-    if (faceted) {
-      norm = triangle_normal(position);
-    } else {
-      norm = normalize(normal);
-    }
-  }
-
-  if (element == element_lines) {
-    vec3 tangent = normalize(normal);
-    norm         = normalize(outgoing - tangent * dot(outgoing, tangent));
-  }
-
-  // apply normal map
-  norm = apply_normal_map(texcoord, norm, tangsp);
-
-  // use faceforward to ensure the normals points toward us
-  if (double_sided) norm = faceforward(norm, -outgoing, norm);
-  return norm;
-}
-
-#define lighting_eyelight 0
-#define lighting_camlight 1
-
-// main
-void main() {
-  // view vector
-  vec3 outgoing = normalize(eye - position);
-  vec3 n = eval_normal(outgoing);
-
-  // get material color from textures
-  shade_brdf brdf = eval_brdf();
-  if(brdf.opacity < 0.005) discard;
-
-  if(unlit) {
-    frag_color = vec4(brdf.emission + brdf.diffuse, brdf.opacity);
-    return; 
-  }
-
-  // emission
-  vec3 radiance = brdf.emission;
-
-  // check early exit
-  if(brdf.diffuse != vec3(0,0,0) || brdf.specular != vec3(0,0,0)) {
-    // eyelight shading
-    if(lighting == lighting_eyelight) {
-      vec3 incoming = outgoing;
-      radiance += pif * eval_brdfcos(brdf, n, incoming, outgoing);
-    }
-    if(lighting == lighting_camlight) {
-      // accumulate ambient
-      radiance += ambient * brdf.diffuse;
-      // foreach light
-      for(int lid = 0; lid < lights_num; lid ++) {
-        vec3 cl = vec3(0,0,0); vec3 incoming = vec3(0,0,0);
-        eval_light(lid, position, cl, incoming);
-        radiance += cl * eval_brdfcos(brdf, n, incoming, outgoing);
-      }
-    }
-  }
-
-  // final color correction
-  radiance = pow(radiance * pow(2,exposure), vec3(1/gamma));
-
-  // highlighting
-  if(highlight.w > 0) {
-    if(mod(int(gl_FragCoord.x)/4 + int(gl_FragCoord.y)/4, 2)  == 0)
-        radiance = highlight.xyz * highlight.w + radiance * (1-highlight.w);
-  }
-
-  // output final color by setting gl_FragColor
-  frag_color = vec4(radiance, brdf.opacity);
-}
-)";
-  return code;
-}
-
-#ifndef _WIN32
-#pragma GCC diagnostic pop
-#endif
 
 }  // namespace yocto
