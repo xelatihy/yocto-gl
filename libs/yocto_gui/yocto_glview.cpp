@@ -1075,12 +1075,8 @@ uniform bool emission_tex_on;     // material ke texture on
 uniform sampler2D emission_tex;   // material ke texture
 uniform bool diffuse_tex_on;      // material kd texture on
 uniform sampler2D diffuse_tex;    // material kd texture
-uniform bool specular_tex_on;     // material ks texture on
-uniform sampler2D specular_tex;   // material ks texture
 uniform bool roughness_tex_on;    // material rs texture on
 uniform sampler2D roughness_tex;  // material rs texture
-uniform bool opacity_tex_on;      // material op texture on
-uniform sampler2D opacity_tex;    // material op texture
 uniform bool normalmap_tex_on;    // material normal texture on
 uniform sampler2D normalmap_tex;  // material normal texture
 
@@ -1579,10 +1575,8 @@ void draw_scene(glscene_state& glscene, const scene_model& scene,
         program, "emission_tex", "emission_tex_on", material.emission_tex, 0);
     set_texture(
         program, "diffuse_tex", "diffuse_tex_on", material.color_tex, 1);
-    set_texture(program, "specular_tex", "specular_tex_on", -1, 2);
     set_texture(program, "roughness_tex", "roughness_tex_on",
         material.roughness_tex, 3);
-    set_texture(program, "opacity_tex", "opacity_tex_on", -1, 4);
     set_texture(
         program, "normalmap_tex", "normalmap_tex_on", material.normal_tex, 5);
     assert_ogl_error_();
