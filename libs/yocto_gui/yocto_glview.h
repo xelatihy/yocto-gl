@@ -144,7 +144,20 @@ void draw_image(glimage_state& image, const glimage_params& params);
 namespace yocto {
 
 // Opengl texture
-struct glscene_texture : ogl_texture {};
+struct glscene_texture {
+  // texture properties
+  int width  = 0;
+  int height = 0;
+
+  // opengl state
+  uint texture = 0;
+};
+
+// Create texture
+void set_texture(glscene_texture& gltexture, const scene_texture& texture);
+
+// Clean texture
+void clear_texture(glscene_texture& gltexture);
 
 // Opengl shape
 struct glscene_shape : ogl_shape {};

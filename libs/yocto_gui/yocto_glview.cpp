@@ -642,15 +642,8 @@ static void init_glscene(glscene_state& glscene, const scene_model& ioscene) {
 
   // textures
   for (auto& iotexture : ioscene.textures) {
-    auto  handle    = add_texture(glscene);
-    auto& gltexture = glscene.textures[handle];
-    if (!iotexture.pixelsf.empty()) {
-      set_texture(
-          gltexture, iotexture.width, iotexture.height, iotexture.pixelsf);
-    } else if (!iotexture.pixelsb.empty()) {
-      set_texture(
-          gltexture, iotexture.width, iotexture.height, iotexture.pixelsb);
-    }
+    auto& gltexture = glscene.textures.emplace_back();
+    set_texture(gltexture, iotexture);
   }
 
   // shapes
@@ -689,13 +682,7 @@ static void update_glscene(glscene_state& glscene, const scene_model& scene,
     if (!shape.tangents.empty()) set_tangents(glshape, shape.tangents);
   }
   for (auto texture_id : updated_textures) {
-    auto& texture   = scene.textures.at(texture_id);
-    auto& gltexture = glscene.textures.at(texture_id);
-    if (!texture.pixelsf.empty()) {
-      set_texture(gltexture, texture.width, texture.height, texture.pixelsf);
-    } else if (!texture.pixelsb.empty()) {
-      set_texture(gltexture, texture.width, texture.height, texture.pixelsb);
-    }
+    set_texture(glscene.textures[texture_id], scene.textures[texture_id]);
   }
 }
 
@@ -1061,16 +1048,48 @@ void draw_image(glimage_state& glimage, const glimage_params& params) {
 
 }  // namespace yocto
 
+// -----------------------------------------------------------------------------
+// SCENE DRAWING
+// -----------------------------------------------------------------------------
 namespace yocto {
 
-#ifndef _WIN32
-#pragma GCC diagnostic push
-#pragma GCC diagnostic ignored "-Woverlength-strings"
-#endif
+// Create texture
+void set_texture(glscene_texture& gltexture, const scene_texture& texture) {
+  if (!gltexture.texture || gltexture.width != texture.width ||
+      gltexture.height != texture.height) {
+    if (!gltexture.texture) glGenTextures(1, &gltexture.texture);
+    glBindTexture(GL_TEXTURE_2D, gltexture.texture);
+    if (!texture.pixelsb.empty()) {
+      glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, texture.width, texture.height, 0,
+          GL_RGBA, GL_UNSIGNED_BYTE, texture.pixelsb.data());
+    } else {
+      glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, texture.width, texture.height, 0,
+          GL_RGBA, GL_FLOAT, texture.pixelsf.data());
+    }
+    glGenerateMipmap(GL_TEXTURE_2D);
+    glTexParameteri(
+        GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR_MIPMAP_LINEAR);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+  } else {
+    glBindTexture(GL_TEXTURE_2D, gltexture.texture);
+    if (!texture.pixelsb.empty()) {
+      glTexSubImage2D(GL_TEXTURE_2D, 0, 0, 0, texture.width, texture.height,
+          GL_RGBA, GL_UNSIGNED_BYTE, texture.pixelsb.data());
+    } else {
+      glTexSubImage2D(GL_TEXTURE_2D, 0, 0, 0, texture.width, texture.height,
+          GL_RGBA, GL_FLOAT, texture.pixelsf.data());
+    }
+    glGenerateMipmap(GL_TEXTURE_2D);
+  }
+}
 
-#ifndef _WIN32
-#pragma GCC diagnostic pop
-#endif
+// Clean texture
+void clear_texture(glscene_texture& gltexture) {
+  if (gltexture.texture) {
+    glDeleteTextures(1, &gltexture.texture);
+    gltexture.texture = 0;
+  }
+}
 
 bool has_normals(const glscene_shape& shape) {
   if (shape.vertex_buffers.size() <= 1) return false;
@@ -1332,13 +1351,18 @@ void set_instance_uniforms(const glscene_state& scene, ogl_program& program,
   //  }
 
   auto set_texture = [&scene](ogl_program& program, const char* name,
-                         const char* name_on, gltexture_handle texture,
-                         int unit) {
-    if (texture == glinvalid_handle) {
-      auto otexture = ogl_texture{};
-      set_uniform(program, name, name_on, otexture, unit);
+                         const char* name_on, int texture_idx, int unit) {
+    if (texture_idx >= 0) {
+      auto& texture = scene.textures.at(texture_idx);
+      glActiveTexture(GL_TEXTURE0 + unit);
+      glBindTexture(GL_TEXTURE_2D, texture.texture);
+      glUniform1i(glGetUniformLocation(program.program_id, name), unit);
+      glUniform1i(glGetUniformLocation(program.program_id, name_on), 1);
     } else {
-      set_uniform(program, name, name_on, scene.textures[texture], unit);
+      glActiveTexture(GL_TEXTURE0 + unit);
+      glBindTexture(GL_TEXTURE_2D, 0);
+      glUniform1i(glGetUniformLocation(program.program_id, name), unit);
+      glUniform1i(glGetUniformLocation(program.program_id, name_on), 0);
     }
   };
 
@@ -1570,6 +1594,62 @@ static void precompute_cubemap(ogl_cubemap& cubemap, const Sampler& environment,
   unbind_framebuffer();
 }
 
+// Using 6 render passes, precompute a cubemap given a sampler for the
+// environment. The input sampler can be either a cubemap or a latlong texture.
+static void precompute_cubemap(ogl_cubemap& cubemap,
+    const glscene_texture& environment, ogl_program& program, int size,
+    int num_mipmap_levels = 1) {
+  // init cubemap with no data
+  set_cubemap(cubemap, size, 3,
+      array<float*, 6>{nullptr, nullptr, nullptr, nullptr, nullptr, nullptr},
+      true, true, true);
+  auto cube = ogl_shape{};
+  set_cube_shape(cube);
+
+  auto framebuffer = ogl_framebuffer{};
+  set_framebuffer(framebuffer, {size, size});
+
+  auto cameras = array<frame3f, 6>{
+      lookat_frame({0, 0, 0}, {1, 0, 0}, {0, 1, 0}),
+      lookat_frame({0, 0, 0}, {-1, 0, 0}, {0, 1, 0}),
+      lookat_frame({0, 0, 0}, {0, -1, 0}, {0, 0, -1}),
+      lookat_frame({0, 0, 0}, {0, 1, 0}, {0, 0, 1}),
+      lookat_frame({0, 0, 0}, {0, 0, -1}, {0, 1, 0}),
+      lookat_frame({0, 0, 0}, {0, 0, 1}, {0, 1, 0}),
+  };
+
+  bind_framebuffer(framebuffer);
+  bind_program(program);
+  for (int mipmap_level = 0; mipmap_level < num_mipmap_levels; mipmap_level++) {
+    // resize render buffer and viewport
+    set_framebuffer(framebuffer, {size, size});
+    set_ogl_viewport(vec2i{size, size});
+
+    for (auto i = 0; i < 6; ++i) {
+      // perspective_mat(fov, aspect, near, far)
+      auto camera_proj = perspective_mat(radians(90.0f), 1, 1, 100);
+      auto camera_view = frame_to_mat(inverse(cameras[i]));
+
+      set_framebuffer_texture(framebuffer, cubemap, i, mipmap_level);
+      clear_ogl_framebuffer({0, 0, 0, 0}, true);
+
+      set_uniform(program, "view", camera_view);
+      set_uniform(program, "projection", camera_proj);
+      set_uniform(program, "eye", vec3f{0, 0, 0});
+      set_uniform(program, "mipmap_level", mipmap_level);
+
+      glActiveTexture(GL_TEXTURE0 + 0);
+      glBindTexture(GL_TEXTURE_2D, environment.texture);
+      glUniform1i(glGetUniformLocation(program.program_id, "environment"), 0);
+
+      draw_shape(cube);
+    }
+    size /= 2;
+  }
+  unbind_program();
+  unbind_framebuffer();
+}
+
 static void precompute_brdflut(ogl_texture& texture) {
   auto size        = vec2i{512, 512};
   auto screen_quad = ogl_shape{};
@@ -1659,6 +1739,11 @@ void init_envlight(glscene_state& scene, glscene_environment& environment) {
   // precompute lookup texture for specular brdf
   precompute_brdflut(scene.envlight_brdfluts[environment.envlight_brdflut_]);
 }
+
+#ifndef _WIN32
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Woverlength-strings"
+#endif
 
 static const char* shade_instance_vertex() {
   static const char* code =
@@ -2552,5 +2637,9 @@ void main() {
 )";
   return code;
 }
+
+#ifndef _WIN32
+#pragma GCC diagnostic pop
+#endif
 
 }  // namespace yocto
