@@ -1,5 +1,5 @@
 //
-// Yocto/ImageViewer: Simpler image viewer.
+// Yocto/GlView: Simple OpenGL viewers.
 //
 
 //
@@ -27,8 +27,8 @@
 //
 //
 
-#ifndef _YOCTO_IMAGEVIEWER_
-#define _YOCTO_IMAGEVIEWER_
+#ifndef _YOCTO_GLVIEW_
+#define _YOCTO_GLVIEW_
 
 // -----------------------------------------------------------------------------
 // INCLUDES
@@ -37,7 +37,6 @@
 #include <yocto/yocto_image.h>
 #include <yocto/yocto_scene.h>
 #include <yocto/yocto_trace.h>
-#include <yocto_gui/yocto_imgui.h>
 
 #include <array>
 #include <string>

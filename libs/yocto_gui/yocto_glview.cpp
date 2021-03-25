@@ -32,7 +32,6 @@
 #include <yocto/yocto_cli.h>
 #include <yocto/yocto_geometry.h>
 #include <yocto/yocto_parallel.h>
-#include <yocto/yocto_sceneio.h>
 
 #include <cassert>
 #include <stdexcept>
@@ -1864,179 +1863,6 @@ bool begin_glheader(const char* lbl) {
 }
 void end_glheader() { ImGui::PopID(); }
 
-void open_glmodal(const char* lbl) { ImGui::OpenPopup(lbl); }
-void clear_glmodal(glwindow_state* win) { ImGui::CloseCurrentPopup(); }
-bool begin_glmodal(const char* lbl) { return ImGui::BeginPopupModal(lbl); }
-void end_glmodal(glwindow_state* win) { ImGui::EndPopup(); }
-bool is_glmodal_open(const char* lbl) { return ImGui::IsPopupOpen(lbl); }
-
-struct filedialog_state {
-  string                     dirname       = "";
-  string                     filename      = "";
-  vector<pair<string, bool>> entries       = {};
-  bool                       save          = false;
-  bool                       remove_hidden = true;
-  string                     filter        = "";
-  vector<string>             extensions    = {};
-
-  filedialog_state() = default;
-  filedialog_state(const string& dirname, const string& filename,
-      const string& filter, bool save) {
-    set(dirname, filename, filter, save);
-  }
-
-  void set(const string& dirname, const string& filename, const string& filter,
-      bool save) {
-    this->save = save;
-    _set_filter(filter);
-    _set_dirname(dirname);
-    _set_filename(filename);
-  }
-
-  void _set_dirname(const string& name) {
-    if (path_exists(name) && path_isdir(name)) {
-      dirname = name;
-    } else if (path_exists(dirname) && path_isdir(dirname)) {
-      // leave it like this
-    } else {
-      dirname = path_current();
-    }
-    dirname = normalize_path(dirname);
-    entries.clear();
-    for (auto entry : list_directory(dirname)) {
-      if (remove_hidden && path_basename(entry)[0] == '.') continue;
-      if (path_isdir(entry)) {
-        entries.push_back({path_filename(entry) + "/", true});
-      } else {
-        entries.push_back({path_filename(entry), false});
-      }
-    }
-    std::sort(entries.begin(), entries.end(), [](auto& a, auto& b) {
-      if (a.second == b.second) return a.first < b.first;
-      return a.second;
-    });
-  }
-
-  void _set_filename(const string& name) {
-    filename = name;
-    if (filename.empty()) return;
-    auto ext = path_extension(filename);
-    if (std::find(extensions.begin(), extensions.end(), ext) ==
-        extensions.end()) {
-      filename = "";
-      return;
-    }
-    if (!save && !path_exists(path_join(dirname, filename))) {
-      filename = "";
-      return;
-    }
-  }
-
-  void _set_filter(const string& flt) {
-    auto globs = vector<string>{""};
-    for (auto i = 0; i < flt.size(); i++) {
-      if (flt[i] == ';') {
-        globs.push_back("");
-      } else {
-        globs.back() += flt[i];
-      }
-    }
-    filter = "";
-    extensions.clear();
-    for (auto pattern : globs) {
-      if (pattern == "") continue;
-      auto ext = path_extension(pattern);
-      if (ext != "") {
-        extensions.push_back(ext);
-        filter += (filter == "") ? ("*." + ext) : (";*." + ext);
-      }
-    }
-  }
-
-  void select(int idx) {
-    if (entries[idx].second) {
-      set(path_join(dirname, entries[idx].first), filename, filter, save);
-    } else {
-      set(dirname, entries[idx].first, filter, save);
-    }
-  }
-
-  string get_path() const { return path_join(dirname, filename); }
-};
-
-bool draw_glfiledialog(const char* lbl, string& path, bool save,
-    const string& dirname, const string& filename, const string& filter) {
-  static auto states = unordered_map<string, filedialog_state>{};
-  ImGui::SetNextWindowSize({500, 300}, ImGuiCond_FirstUseEver);
-  if (ImGui::BeginPopupModal(lbl)) {
-    if (states.find(lbl) == states.end()) {
-      states[lbl] = filedialog_state{dirname, filename, filter, save};
-    }
-    auto& state      = states.at(lbl);
-    auto  dir_buffer = array<char, 1024>{};
-    snprintf(dir_buffer.data(), dir_buffer.size(), "%s", state.dirname.c_str());
-    if (ImGui::InputText("dir", dir_buffer.data(), sizeof(dir_buffer))) {
-      state.set(dir_buffer.data(), state.filename, state.filter, save);
-    }
-    auto current_item = -1;
-    if (ImGui::ListBox(
-            "entries", &current_item,
-            [](void* data, int idx, const char** out_text) -> bool {
-              auto& state = *(filedialog_state*)data;
-              *out_text   = state.entries[idx].first.c_str();
-              return true;
-            },
-            &state, (int)state.entries.size())) {
-      state.select(current_item);
-    }
-    auto file_buffer = array<char, 1024>{};
-    snprintf(
-        file_buffer.data(), file_buffer.size(), "%s", state.filename.c_str());
-    if (ImGui::InputText("file", file_buffer.data(), file_buffer.size())) {
-      state.set(state.dirname, file_buffer.data(), state.filter, save);
-    }
-    auto filter_buffer = array<char, 1024>{};
-    snprintf(
-        filter_buffer.data(), filter_buffer.size(), "%s", state.filter.c_str());
-    if (ImGui::InputText(
-            "filter", filter_buffer.data(), filter_buffer.size())) {
-      state.set(state.dirname, state.filename, filter_buffer.data(), save);
-    }
-    auto ok = false, exit = false;
-    if (ImGui::Button("Ok")) {
-      path = state.dirname + state.filename;
-      ok   = true;
-      exit = true;
-    }
-    ImGui::SameLine();
-    if (ImGui::Button("Cancel")) {
-      exit = true;
-    }
-    if (exit) {
-      ImGui::CloseCurrentPopup();
-      states.erase(lbl);
-    }
-    ImGui::EndPopup();
-    return ok;
-  } else {
-    return false;
-  }
-}
-
-bool draw_filedialog_button(const char* button_lbl, bool button_active,
-    const char* lbl, string& path, bool save, const string& dirname,
-    const string& filename, const string& filter) {
-  if (is_glmodal_open(lbl)) {
-    draw_glbutton(button_lbl, button_active);
-    return draw_glfiledialog(lbl, path, save, dirname, filename, filter);
-  } else {
-    if (draw_glbutton(button_lbl, button_active)) {
-      open_glmodal(lbl);
-    }
-    return false;
-  }
-}
-
 bool draw_glbutton(const char* lbl, bool enabled) {
   if (enabled) {
     return ImGui::Button(lbl);
@@ -2350,70 +2176,235 @@ void draw_histogram(const char* lbl, const vector<vec4f>& values) {
       (int)values.size(), 0, nullptr, flt_max, flt_max, {0, 0}, sizeof(vec4f));
 }
 
-// https://github.com/ocornut/imgui/issues/300
-struct ImGuiAppLog {
-  ImGuiTextBuffer Buf;
-  ImGuiTextFilter Filter;
-  ImVector<int>   LineOffsets;  // Index to lines offset
-  bool            ScrollToBottom;
+}  // namespace yocto
 
-  void Clear() {
-    Buf.clear();
-    LineOffsets.clear();
+// -----------------------------------------------------------------------------
+// OPENGL WIDGETS
+// -----------------------------------------------------------------------------
+namespace yocto {
+
+enum struct glwidgets_param_type {
+  // clang-format off
+  value1f, value2f, value3f, value4f, 
+  value1i, value2i, value3i, value4i, 
+  value1s, value1b
+  // clang-format on
+};
+
+struct glwidgets_param {
+  // constructors
+  glwidgets_param()
+      : type{glwidgets_param_type::value1f}
+      , valuef{0, 0, 0, 0}
+      , minmaxf{0, 0}
+      , readonly{true} {}
+  glwidgets_param(
+      float value, const vec2f& minmax = {0, 0}, bool readonly = false)
+      : type{glwidgets_param_type::value1f}
+      , valuef{value, 0, 0, 0}
+      , minmaxf{minmax}
+      , readonly{readonly} {}
+  glwidgets_param(
+      vec2f value, const vec2f& minmax = {0, 0}, bool readonly = false)
+      : type{glwidgets_param_type::value2f}
+      , valuef{value.x, value.y, 0, 0}
+      , minmaxf{minmax}
+      , readonly{readonly} {}
+  glwidgets_param(
+      vec3f value, const vec2f& minmax = {0, 0}, bool readonly = false)
+      : type{glwidgets_param_type::value3f}
+      , valuef{value.x, value.y, value.z}
+      , minmaxf{minmax}
+      , readonly{readonly} {}
+  glwidgets_param(
+      vec4f value, const vec2f& minmax = {0, 0}, bool readonly = false)
+      : type{glwidgets_param_type::value4f}
+      , valuef{value.x, value.y, value.z, value.w}
+      , minmaxf{minmax}
+      , readonly{readonly} {}
+  glwidgets_param(vec3f value, bool color, bool readonly = false)
+      : type{glwidgets_param_type::value3f}
+      , valuef{value.x, value.y, value.z, 1}
+      , color{color}
+      , readonly{readonly} {}
+  glwidgets_param(vec4f value, bool color, bool readonly = false)
+      : type{glwidgets_param_type::value4f}
+      , valuef{value.x, value.y, value.z, value.w}
+      , color{color}
+      , readonly{readonly} {}
+  glwidgets_param(
+      int value, const vec2i& minmax = {0, 0}, bool readonly = false)
+      : type{glwidgets_param_type::value1i}
+      , valuei{value, 0, 0, 0}
+      , minmaxi{minmax}
+      , readonly{readonly} {}
+  glwidgets_param(
+      vec2i value, const vec2i& minmax = {0, 0}, bool readonly = false)
+      : type{glwidgets_param_type::value2i}
+      , valuei{value.x, value.y, 0, 0}
+      , minmaxi{minmax}
+      , readonly{readonly} {}
+  glwidgets_param(
+      vec3i value, const vec2i& minmax = {0, 0}, bool readonly = false)
+      : type{glwidgets_param_type::value3i}
+      , valuei{value.x, value.y, value.z, 0}
+      , minmaxi{minmax}
+      , readonly{readonly} {}
+  glwidgets_param(
+      vec4i value, const vec2i& minmax = {0, 0}, bool readonly = false)
+      : type{glwidgets_param_type::value4i}
+      , valuei{value.x, value.y, value.z, value.w}
+      , minmaxi{minmax}
+      , readonly{readonly} {}
+  glwidgets_param(bool value, bool readonly = false)
+      : type{glwidgets_param_type::value1b}
+      , valueb{value}
+      , readonly{readonly} {}
+  glwidgets_param(const string& value, bool readonly = false)
+      : type{glwidgets_param_type::value1s}
+      , values{value}
+      , readonly{readonly} {}
+  glwidgets_param(
+      const string& value, const vector<string>& labels, bool readonly = false)
+      : type{glwidgets_param_type::value1s}
+      , values{value}
+      , labels{labels}
+      , readonly{readonly} {}
+  glwidgets_param(
+      int value, const vector<string>& labels, bool readonly = false)
+      : type{glwidgets_param_type::value1i}
+      , valuei{value, 0, 0, 0}
+      , labels{labels}
+      , readonly{readonly} {}
+  template <typename T, typename = std::enable_if_t<std::is_enum_v<T>>>
+  glwidgets_param(T value, const vector<string>& labels, bool readonly = false)
+      : type{glwidgets_param_type::value1i}
+      , valuei{(int)value, 0, 0, 0}
+      , labels{labels}
+      , readonly{readonly} {}
+
+  // conversions
+  operator float() const {
+    check_type(glwidgets_param_type::value1f);
+    return valuef.x;
+  }
+  operator vec2f() const {
+    check_type(glwidgets_param_type::value2f);
+    return {valuef.x, valuef.y};
+  }
+  operator vec3f() const {
+    check_type(glwidgets_param_type::value3f);
+    return {valuef.x, valuef.y, valuef.z};
+  }
+  operator vec4f() const {
+    check_type(glwidgets_param_type::value4f);
+    return {valuef.x, valuef.y, valuef.z, valuef.w};
+  }
+  operator int() const {
+    check_type(glwidgets_param_type::value1i);
+    return valuei.x;
+  }
+  operator vec2i() const {
+    check_type(glwidgets_param_type::value2i);
+    return {valuei.x, valuei.y};
+  }
+  operator vec3i() const {
+    check_type(glwidgets_param_type::value3i);
+    return {valuei.x, valuei.y, valuei.z};
+  }
+  operator vec4i() const {
+    check_type(glwidgets_param_type::value4i);
+    return {valuei.x, valuei.y, valuei.z, valuei.w};
+  }
+  operator bool() const {
+    check_type(glwidgets_param_type::value1b);
+    return valueb;
+  }
+  operator string() const {
+    check_type(glwidgets_param_type::value1s);
+    return values;
+  }
+  template <typename T, typename = std::enable_if_t<std::is_enum_v<T>>>
+  operator T() const {
+    check_type(glwidgets_param_type::value1i);
+    return (T)valuei.x;
   }
 
-  void AddLog(const char* msg, const char* lbl) {
-    auto old_size = Buf.size();
-    Buf.appendf("[%s] %s\n", lbl, msg);
-    for (auto new_size = Buf.size(); old_size < new_size; old_size++)
-      if (Buf[old_size] == '\n') LineOffsets.push_back(old_size);
-    ScrollToBottom = true;
+  // type checking
+  void check_type(glwidgets_param_type type) const {
+    if (type != this->type) throw std::invalid_argument{"bad gui type"};
   }
 
-  void Draw() {
-    if (ImGui::Button("Clear")) Clear();
-    ImGui::SameLine();
-    bool copy = ImGui::Button("Copy");
-    ImGui::SameLine();
-    Filter.Draw("Filter", -100.0f);
-    ImGui::Separator();
-    ImGui::BeginChild("scrolling");
-    ImGui::PushStyleVar(ImGuiStyleVar_ItemSpacing, ImVec2(0, 1));
-    if (copy) ImGui::LogToClipboard();
+  // value
+  glwidgets_param_type type   = glwidgets_param_type::value1f;
+  vec4f                valuef = {0, 0, 0, 0};
+  vec4i                valuei = {0, 0, 0, 0};
+  bool                 valueb = false;
+  string               values = "";
 
-    if (Filter.IsActive()) {
-      const char* buf_begin = Buf.begin();
-      const char* line      = buf_begin;
-      for (int line_no = 0; line != nullptr; line_no++) {
-        const char* line_end = (line_no < LineOffsets.Size)
-                                   ? buf_begin + LineOffsets[line_no]
-                                   : nullptr;
-        if (Filter.PassFilter(line, line_end))
-          ImGui::TextUnformatted(line, line_end);
-        line = line_end != nullptr && line_end[1] != 0 ? line_end + 1 : nullptr;
-      }
-    } else {
-      ImGui::TextUnformatted(Buf.begin());
+  // display properties
+  vec2f          minmaxf  = {0, 0};
+  vec2i          minmaxi  = {0, 0};
+  bool           color    = false;
+  vector<string> labels   = {};
+  bool           readonly = false;
+};
+
+struct glwidgets_params {
+  using container      = vector<pair<string, glwidgets_param>>;
+  using iterator       = container::iterator;
+  using const_iterator = container::const_iterator;
+
+  glwidgets_params() {}
+
+  bool   empty() const { return items.empty(); }
+  size_t size() const { return items.size(); }
+
+  glwidgets_param& operator[](const string& key) {
+    auto item = find(key);
+    if (item == end()) return items.emplace_back(key, glwidgets_param{}).second;
+    return item->second;
+  }
+  const glwidgets_param& operator[](const string& key) const { return at(key); }
+
+  glwidgets_param& at(const string& key) {
+    auto item = find(key);
+    if (item == end()) throw std::out_of_range{"key not found " + key};
+    return item->second;
+  }
+  const glwidgets_param& at(const string& key) const {
+    auto item = find(key);
+    if (item == end()) throw std::out_of_range{"key not found " + key};
+    return item->second;
+  }
+
+  iterator find(const string& key) {
+    for (auto iterator = items.begin(); iterator != items.end(); ++iterator) {
+      if (iterator->first == key) return iterator;
     }
+    return items.end();
+  }
+  const_iterator find(const string& key) const {
+    for (auto iterator = items.begin(); iterator != items.end(); ++iterator) {
+      if (iterator->first == key) return iterator;
+    }
+    return items.end();
+  }
 
-    if (ScrollToBottom) ImGui::SetScrollHere(1.0f);
-    ScrollToBottom = false;
-    ImGui::PopStyleVar();
-    ImGui::EndChild();
-  }
-  void Draw(const char* title, bool* p_opened = nullptr) {
-    ImGui::SetNextWindowSize(ImVec2(500, 400), ImGuiCond_FirstUseEver);
-    ImGui::Begin(title, p_opened);
-    Draw();
-    ImGui::End();
-  }
+  iterator       begin() { return items.begin(); }
+  iterator       end() { return items.end(); }
+  const_iterator begin() const { return items.begin(); }
+  const_iterator end() const { return items.end(); }
+
+ private:
+  vector<pair<string, glwidgets_param>> items;
 };
 
 // draw param
-bool draw_glparam(const string& name, gui_param& param) {
+bool draw_glparam(const string& name, glwidgets_param& param) {
   auto copy = param;
   switch (param.type) {
-    case gui_param_type::value1f:
+    case glwidgets_param_type::value1f:
       if (param.minmaxf.x == param.minmaxf.y) {
         return draw_gldragger(name.c_str(), param.readonly
                                                 ? (float&)copy.valuef
@@ -2426,7 +2417,7 @@ bool draw_glparam(const string& name, gui_param& param) {
                !param.readonly;
       }
       break;
-    case gui_param_type::value2f:
+    case glwidgets_param_type::value2f:
       if (param.minmaxf.x == param.minmaxf.y) {
         return draw_gldragger(name.c_str(), param.readonly
                                                 ? (vec2f&)copy.valuef
@@ -2439,7 +2430,7 @@ bool draw_glparam(const string& name, gui_param& param) {
                !param.readonly;
       }
       break;
-    case gui_param_type::value3f:
+    case glwidgets_param_type::value3f:
       if (param.color) {
         return draw_glcoloredit(name.c_str(), param.readonly
                                                   ? (vec3f&)copy.valuef
@@ -2457,7 +2448,7 @@ bool draw_glparam(const string& name, gui_param& param) {
                !param.readonly;
       }
       break;
-    case gui_param_type::value4f:
+    case glwidgets_param_type::value4f:
       if (param.color) {
         return draw_glcoloredit(name.c_str(), param.readonly
                                                   ? (vec4f&)copy.valuef
@@ -2475,7 +2466,7 @@ bool draw_glparam(const string& name, gui_param& param) {
                !param.readonly;
       }
       break;
-    case gui_param_type::value1i:
+    case glwidgets_param_type::value1i:
       if (!param.labels.empty()) {
         return draw_glcombobox(name.c_str(),
                    param.readonly ? (int&)copy.valuei : (int&)param.valuei,
@@ -2492,7 +2483,7 @@ bool draw_glparam(const string& name, gui_param& param) {
                !param.readonly;
       }
       break;
-    case gui_param_type::value2i:
+    case glwidgets_param_type::value2i:
       if (param.minmaxi.x == param.minmaxi.y) {
         return draw_gldragger(name.c_str(), param.readonly
                                                 ? (vec2i&)copy.valuei
@@ -2505,7 +2496,7 @@ bool draw_glparam(const string& name, gui_param& param) {
                !param.readonly;
       }
       break;
-    case gui_param_type::value3i:
+    case glwidgets_param_type::value3i:
       if (param.minmaxi.x == param.minmaxi.y) {
         return draw_gldragger(name.c_str(), param.readonly
                                                 ? (vec3i&)copy.valuei
@@ -2518,7 +2509,7 @@ bool draw_glparam(const string& name, gui_param& param) {
                !param.readonly;
       }
       break;
-    case gui_param_type::value4i:
+    case glwidgets_param_type::value4i:
       if (param.minmaxi.x == param.minmaxi.y) {
         return draw_gldragger(name.c_str(), param.readonly
                                                 ? (vec4i&)copy.valuei
@@ -2531,7 +2522,7 @@ bool draw_glparam(const string& name, gui_param& param) {
                !param.readonly;
       }
       break;
-    case gui_param_type::value1s:
+    case glwidgets_param_type::value1s:
       if (!param.labels.empty()) {
         return draw_glcombobox(name.c_str(),
                    param.readonly ? copy.values : param.values, param.labels) &&
@@ -2542,7 +2533,7 @@ bool draw_glparam(const string& name, gui_param& param) {
                !param.readonly;
       }
       break;
-    case gui_param_type::value1b:
+    case glwidgets_param_type::value1b:
       if (!param.labels.empty()) {
         // maybe we should implement something different here
         return draw_glcheckbox(
@@ -2559,7 +2550,7 @@ bool draw_glparam(const string& name, gui_param& param) {
 }
 
 // draw params
-bool draw_glparams(const string& name, gui_params& params) {
+bool draw_glparams(const string& name, glwidgets_params& params) {
   auto edited = false;
   if (begin_glheader(name.c_str())) {
     for (auto& [name, param] : params) {
