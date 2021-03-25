@@ -1128,14 +1128,14 @@ shade_brdf eval_brdf() {
   float metallic_t = metallic;
   float roughness_t = roughness;
   roughness_t = roughness_t * roughness_t;
-  // if (roughness_t < 0.03 * 0.03) roughness_t = 0.03 * 0.03;
+  if (roughness_t < 0.03 * 0.03) roughness_t = 0.03 * 0.03;
   float specular_t = specular;
 
   // color?
   shade_brdf brdf;
   brdf.emission  = emission_t.xyz;
   brdf.diffuse   = base_t.xyz * (1 - metallic_t);
-  brdf.specular  = specular_t * base_t.xyz * metallic_t + vec3(0.04) * (1 - metallic_t);
+  brdf.specular  = specular_t * (base_t.xyz * metallic_t + vec3(0.04) * (1 - metallic_t));
   brdf.roughness = roughness_t;
   brdf.opacity   = base_t.w;
   return brdf;
@@ -1572,7 +1572,11 @@ void draw_scene(glscene_state& glscene, const scene_model& scene,
     glUniform1f(glGetUniformLocation(program, "metallic"), material.metallic);
     glUniform1f(glGetUniformLocation(program, "roughness"), material.roughness);
     glUniform1f(glGetUniformLocation(program, "opacity"), material.opacity);
-    if (material.type == scene_material_type::matte) {
+    if (material.type == scene_material_type::matte ||
+        material.type == scene_material_type::transparent ||
+        material.type == scene_material_type::refractive ||
+        material.type == scene_material_type::subsurface ||
+        material.type == scene_material_type::volume) {
       glUniform1f(glGetUniformLocation(program, "specular"), 0);
     }
     if (material.type == scene_material_type::metallic) {
