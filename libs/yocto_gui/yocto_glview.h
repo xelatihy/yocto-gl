@@ -162,14 +162,16 @@ void clear_texture(glscene_texture& gltexture);
 // Opengl shape
 struct glscene_shape {
   // OpenGL objects
-  ogl_arraybuffer   positions    = {};
-  ogl_arraybuffer   normals      = {};
-  ogl_arraybuffer   texcoords    = {};
-  ogl_arraybuffer   colors       = {};
-  ogl_arraybuffer   tangents     = {};
-  ogl_elementbuffer index_buffer = {};
-  ogl_element_type  elements     = ogl_element_type::triangles;
-  float             point_size   = 1;
+  ogl_arraybuffer   positions  = {};
+  ogl_arraybuffer   normals    = {};
+  ogl_arraybuffer   texcoords  = {};
+  ogl_arraybuffer   colors     = {};
+  ogl_arraybuffer   tangents   = {};
+  ogl_elementbuffer points     = {};
+  ogl_elementbuffer lines      = {};
+  ogl_elementbuffer triangles  = {};
+  ogl_elementbuffer quads      = {};
+  float             point_size = 1;
 
   // OpenGl state
   uint vertexarray = 0;
@@ -184,8 +186,10 @@ struct glscene_shape {
     std::swap(texcoords, other.texcoords);
     std::swap(colors, other.colors);
     std::swap(tangents, other.tangents);
-    std::swap(index_buffer, other.index_buffer);
-    std::swap(elements, other.elements);
+    std::swap(points, other.points);
+    std::swap(lines, other.lines);
+    std::swap(triangles, other.triangles);
+    std::swap(quads, other.quads);
     std::swap(point_size, other.point_size);
     std::swap(vertexarray, other.vertexarray);
   }
