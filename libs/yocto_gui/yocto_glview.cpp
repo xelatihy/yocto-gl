@@ -757,7 +757,7 @@ namespace yocto {
   }
   return error_code;
 }
-static void assert_ogl_error_() { assert(_assert_ogl_error() == GL_NO_ERROR); }
+static void assert_glerror() { assert(_assert_ogl_error() == GL_NO_ERROR); }
 
 // initialize program
 void set_program(uint& program_id, uint& vertex_id, uint& fragment_id,
@@ -779,7 +779,7 @@ void set_program(uint& program_id, uint& vertex_id, uint& fragment_id,
   auto        errflags   = 0;
   auto        errbuf     = array<char, 10000>{};
 
-  assert_ogl_error_();
+  assert_glerror();
 
   // create vertex
   vertex_id = glCreateShader(GL_VERTEX_SHADER);
@@ -790,7 +790,7 @@ void set_program(uint& program_id, uint& vertex_id, uint& fragment_id,
     glGetShaderInfoLog(vertex_id, 10000, 0, errbuf.data());
     return program_error("vertex shader not compiled", errbuf.data());
   }
-  assert_ogl_error_();
+  assert_glerror();
 
   // create fragment
   fragment_id = glCreateShader(GL_FRAGMENT_SHADER);
@@ -801,7 +801,7 @@ void set_program(uint& program_id, uint& vertex_id, uint& fragment_id,
     glGetShaderInfoLog(fragment_id, 10000, 0, errbuf.data());
     return program_error("fragment shader not compiled", errbuf.data());
   }
-  assert_ogl_error_();
+  assert_glerror();
 
   // create program
   program_id = glCreateProgram();
@@ -825,7 +825,7 @@ void set_program(uint& program_id, uint& vertex_id, uint& fragment_id,
     glGetProgramInfoLog(program_id, 10000, 0, errbuf.data());
     return program_error("program not validated", errbuf.data());
   }
-  assert_ogl_error_();
+  assert_glerror();
 #endif
 }
 
@@ -959,7 +959,7 @@ void set_image(glimage_state& glimage, const color_image& img) {
 // draw image
 void draw_image(glimage_state& glimage, const glimage_params& params) {
   // check errors
-  assert_ogl_error_();
+  assert_glerror();
 
   // viewport and framebuffer
   glViewport(params.framebuffer.x, params.framebuffer.y, params.framebuffer.z,
@@ -982,18 +982,18 @@ void draw_image(glimage_state& glimage, const glimage_params& params) {
       params.center.x, params.center.y);
   glUniform1f(
       glGetUniformLocation(glimage.program, "image_scale"), params.scale);
-  assert_ogl_error_();
+  assert_glerror();
 
   // draw
   glBindVertexArray(glimage.vertexarray);
   glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, glimage.triangles);
   glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_INT, nullptr);
   glBindVertexArray(0);
-  assert_ogl_error_();
+  assert_glerror();
 
   // unbind program
   glUseProgram(0);
-  assert_ogl_error_();
+  assert_glerror();
 }
 
 }  // namespace yocto
@@ -1387,7 +1387,7 @@ void clear_shape(glscene_shape& glshape) {
   if (glshape.triangles) glDeleteBuffers(1, &glshape.triangles);
   if (glshape.quads) glDeleteBuffers(1, &glshape.quads);
   glshape = {};
-  assert_ogl_error_();
+  assert_glerror();
 }
 
 // init scene
@@ -1457,13 +1457,13 @@ void clear_scene(glscene_state& glscene) {
   }
 
   glBindVertexArray(0);
-  assert_ogl_error_();
+  assert_glerror();
 }
 
 void draw_scene(glscene_state& glscene, const scene_model& scene,
     const vec4i& viewport, const glscene_params& params) {
   // check errors
-  assert_ogl_error_();
+  assert_glerror();
 
   // viewport and framebuffer
   glViewport(viewport.x, viewport.y, viewport.z, viewport.w);
@@ -1589,7 +1589,7 @@ void draw_scene(glscene_state& glscene, const scene_model& scene,
         material.roughness_tex, 3);
     set_texture(
         program, "normalmap_tex", "normalmap_tex_on", material.normal_tex, 5);
-    assert_ogl_error_();
+    assert_glerror();
 
     if (glshape.points)
       glUniform1i(glGetUniformLocation(program, "element"), 1);
@@ -1597,7 +1597,7 @@ void draw_scene(glscene_state& glscene, const scene_model& scene,
     if (glshape.triangles)
       glUniform1i(glGetUniformLocation(program, "element"), 3);
     if (glshape.quads) glUniform1i(glGetUniformLocation(program, "element"), 3);
-    assert_ogl_error_();
+    assert_glerror();
 
     glBindVertexArray(glshape.vertexarray);
     if (glshape.points) {
@@ -1624,7 +1624,7 @@ void draw_scene(glscene_state& glscene, const scene_model& scene,
     }
 
     glBindVertexArray(0);
-    assert_ogl_error_();
+    assert_glerror();
   }
   if (params.wireframe) glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
 
