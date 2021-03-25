@@ -874,8 +874,10 @@ static auto glimage_fragment =
 in vec2 frag_texcoord;
 out vec4 frag_color;
 uniform sampler2D txt;
+uniform vec4 background;
 void main() {
-    frag_color = texture(txt, frag_texcoord);
+  vec4 col = texture(txt, frag_texcoord);
+  frag_color = vec4(col.xyz * col.w + background.xyz * (1 - col.w), col.w);
 }
 )";
 #if 0
@@ -941,7 +943,7 @@ void clear_image(glimage_state& glimage) {
   glimage = {};
 }
 
-void set_image(glimage_state& glimage, const color_image& img) {
+void set_image(glimage_state& glimage, const color_image& image) {
   if (!glimage.texture || glimage.width != image.width ||
       glimage.height != image.height) {
     if (!glimage.texture) glGenTextures(1, &glimage.texture);
@@ -972,9 +974,6 @@ void draw_image(glimage_state& glimage, const glimage_params& params) {
   glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
   glEnable(GL_DEPTH_TEST);
 
-  // enable blending
-  glEnable(GL_BLEND);
-
   // bind program and params
   glUseProgram(glimage.program);
   glActiveTexture(GL_TEXTURE0);
@@ -988,6 +987,9 @@ void draw_image(glimage_state& glimage, const glimage_params& params) {
       params.center.x, params.center.y);
   glUniform1f(
       glGetUniformLocation(glimage.program, "image_scale"), params.scale);
+  glUniform4f(glGetUniformLocation(glimage.program, "background"),
+      params.background.x, params.background.y, params.background.z,
+      params.background.w);
   assert_glerror();
 
   // draw
@@ -1000,9 +1002,6 @@ void draw_image(glimage_state& glimage, const glimage_params& params) {
   // unbind program
   glUseProgram(0);
   assert_glerror();
-
-  // enable blending
-  glDisable(GL_BLEND);
 }
 
 }  // namespace yocto
