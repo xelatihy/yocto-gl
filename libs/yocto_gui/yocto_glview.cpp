@@ -876,8 +876,7 @@ out vec4 frag_color;
 uniform sampler2D txt;
 uniform vec4 background;
 void main() {
-  vec4 col = texture(txt, frag_texcoord);
-  frag_color = vec4(col.xyz * col.w + background.xyz * (1 - col.w), col.w);
+  frag_color = texture(txt, frag_texcoord);
 }
 )";
 #if 0
@@ -974,6 +973,11 @@ void draw_image(glimage_state& glimage, const glimage_params& params) {
   glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
   glEnable(GL_DEPTH_TEST);
 
+  // blend
+  glEnable(GL_BLEND);
+  glBlendEquationSeparate(GL_FUNC_ADD, GL_FUNC_ADD);
+  glBlendFuncSeparate(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA, GL_ONE, GL_ZERO);
+
   // bind program and params
   glUseProgram(glimage.program);
   glActiveTexture(GL_TEXTURE0);
@@ -1002,6 +1006,9 @@ void draw_image(glimage_state& glimage, const glimage_params& params) {
   // unbind program
   glUseProgram(0);
   assert_glerror();
+
+  // blend
+  glDisable(GL_BLEND);
 }
 
 }  // namespace yocto
