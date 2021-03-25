@@ -1129,12 +1129,13 @@ shade_brdf eval_brdf() {
   float roughness_t = roughness;
   roughness_t = roughness_t * roughness_t;
   // if (roughness_t < 0.03 * 0.03) roughness_t = 0.03 * 0.03;
+  float specular_t = specular;
 
   // color?
   shade_brdf brdf;
   brdf.emission  = emission_t.xyz;
   brdf.diffuse   = base_t.xyz * (1 - metallic_t);
-  brdf.specular  = specular * base_t.xyz * metallic_t + vec3(0.04) * (1 - metallic_t);
+  brdf.specular  = specular_t * base_t.xyz * metallic_t + vec3(0.04) * (1 - metallic_t);
   brdf.roughness = roughness_t;
   brdf.opacity   = base_t.w;
   return brdf;
