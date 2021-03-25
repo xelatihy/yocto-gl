@@ -1347,13 +1347,9 @@ void set_instance_uniforms(const glscene_state& scene, ogl_program& program,
   assert_ogl_error();
 }
 
-static void bind_shape(const glscene_shape& shape) {
-  glBindVertexArray(shape.vertexarray);
-}
-
 static void draw_shape(glscene_shape& shape) {
   if (shape.vertexarray == 0) return;
-  bind_shape(shape);
+  glBindVertexArray(shape.vertexarray);
   auto type = GL_TRIANGLES;
   switch (shape.elements) {
     case ogl_element_type::points: type = GL_POINTS; break;
@@ -1382,7 +1378,8 @@ static void draw_shape(glscene_shape& shape) {
     glPointSize(shape.point_size);
   }
 
-  assert_ogl_error();
+  glBindVertexArray(0);
+  assert_ogl_error_();
 }
 
 void draw_environments(glscene_state& scene, const shade_view& view,
